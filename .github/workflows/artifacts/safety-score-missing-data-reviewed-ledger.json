@@ -24149,6 +24149,863 @@
       ],
       "nextReviewTrigger": "Issuer publishes a bounded delivery-fee schedule and fixed deliverable lot; then structure the route terms and re-capture.",
       "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_OUTPUT:paxg-paxos",
+      "taskIds": [
+        "V9G-e5d0c0a808ea8db9"
+      ],
+      "workType": "EXIT_OUTPUT",
+      "resolutionMode": "agent-curation",
+      "decision": "structured-pending-production",
+      "reviewedAt": "2026-09-21",
+      "reviewer": "Claude curation campaign 2026-09-21 (PhysicalDeliveryB)",
+      "evidence": [
+        "https://www.paxos.com/terms-and-conditions/pax-gold-terms-conditions",
+        "https://www.paxos.com/pax-gold"
+      ],
+      "rationale": "Ruling B structures the documented lot and deducts published fees only; zero encoded fee means no published USD deduction, not free service. Unpriced delivery/handling remains explicit at quality cap55. Historical replay still lacks raw USD/oz and closes no output fact. PAXG is one fine troy ounce per token and has a 430 PAXG minimum per London Good Delivery bar. Paxos defers the numeric redemption fee to a non-public User Guide or customer Pricing Supplement, and makes the customer responsible for delivery without publishing a charge ceiling. Its USD streaming-quote alternative likewise has no public numeric commission or minimum and is not the physical-delivery output.",
+      "changeRefs": [
+        "shared/lib/physical-commodity-delivery.ts",
+        "shared/lib/redemption-backstop-configs/offchain-issuer/commodity.ts",
+        "shared/lib/redemption-backstop-configs/offchain-issuer/remediation-and-late-audit.ts"
+      ],
+      "sentinels": [
+        "paxg-paxos:gap:route:redemption:redemption:c9f6f2a1-3b26-4d13-aa4b-c81a449256a4:redemption:paxg-paxos:offchain-issuer:output"
+      ],
+      "nextReviewTrigger": "Fresh peg cycle with raw usdPerTroyOunce and refreshed redemption output, followed by production replay.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_OUTPUT:kau-kinesis",
+      "taskIds": [
+        "V9G-83f40a359fb056d5"
+      ],
+      "workType": "EXIT_OUTPUT",
+      "resolutionMode": "agent-curation",
+      "decision": "structured-pending-production",
+      "reviewedAt": "2026-09-21",
+      "reviewer": "Claude curation campaign 2026-09-21 (PhysicalDeliveryB)",
+      "evidence": [
+        "https://kinesis.money/about-us/fees/",
+        "https://support.kinesis.money/hc/en-gb/articles/12439302237085-How-to-redeem-physical-gold-and-silver"
+      ],
+      "rationale": "Ruling B structures the documented lot and deducts published fees only; zero encoded fee means no published USD deduction, not free service. Unpriced delivery/handling remains explicit at quality cap55. Historical replay still lacks raw USD/oz and closes no output fact. KAU represents one gram of gold and has a 100 KAU minimum plus 0.45% and $100 charges, but Kinesis adds a delivery fee that varies by country and provides only a location-dependent quote, with no numeric upper bound.",
+      "changeRefs": [
+        "shared/lib/physical-commodity-delivery.ts",
+        "shared/lib/redemption-backstop-configs/offchain-issuer/commodity.ts",
+        "shared/lib/redemption-backstop-configs/offchain-issuer/remediation-and-late-audit.ts"
+      ],
+      "sentinels": [
+        "kau-kinesis:gap:route:redemption:redemption:c9f6f2a1-3b26-4d13-aa4b-c81a449256a4:redemption:kau-kinesis:offchain-issuer:output"
+      ],
+      "nextReviewTrigger": "Fresh peg cycle with raw usdPerTroyOunce and refreshed redemption output, followed by production replay.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_OUTPUT:kag-kinesis",
+      "taskIds": [
+        "V9G-35f5024e53083ff6"
+      ],
+      "workType": "EXIT_OUTPUT",
+      "resolutionMode": "agent-curation",
+      "decision": "structured-pending-production",
+      "reviewedAt": "2026-09-21",
+      "reviewer": "Claude curation campaign 2026-09-21 (PhysicalDeliveryB)",
+      "evidence": [
+        "https://kinesis.money/about-us/fees/",
+        "https://support.kinesis.money/hc/en-gb/articles/12439302237085-How-to-redeem-physical-gold-and-silver"
+      ],
+      "rationale": "Ruling B structures the documented lot and deducts published fees only; zero encoded fee means no published USD deduction, not free service. Unpriced delivery/handling remains explicit at quality cap55. Historical replay still lacks raw USD/oz and closes no output fact. KAG represents one troy ounce of silver and has a 200 KAG minimum plus 0.45% and $100 charges, but Kinesis adds a delivery fee that varies by country and provides only a location-dependent quote, with no numeric upper bound.",
+      "changeRefs": [
+        "shared/lib/physical-commodity-delivery.ts",
+        "shared/lib/redemption-backstop-configs/offchain-issuer/commodity.ts",
+        "shared/lib/redemption-backstop-configs/offchain-issuer/remediation-and-late-audit.ts"
+      ],
+      "sentinels": [
+        "kag-kinesis:gap:route:redemption:redemption:c9f6f2a1-3b26-4d13-aa4b-c81a449256a4:redemption:kag-kinesis:offchain-issuer:output"
+      ],
+      "nextReviewTrigger": "Fresh peg cycle with raw usdPerTroyOunce and refreshed redemption output, followed by production replay.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_OUTPUT:pgold-pleasing",
+      "taskIds": [
+        "V9G-891ba3879109b328"
+      ],
+      "workType": "EXIT_OUTPUT",
+      "resolutionMode": "agent-curation",
+      "decision": "structured-pending-production",
+      "reviewedAt": "2026-09-21",
+      "reviewer": "Claude curation campaign 2026-09-21 (PhysicalDeliveryB)",
+      "evidence": [
+        "https://pleasing.gitbook.io/docs/user-guide/redeem-physical-gold",
+        "https://pleasing.gitbook.io/docs/legal/terms-of-sale-and-service",
+        "https://www.pleasingmarket.com/tokens/pgold"
+      ],
+      "rationale": "Ruling B structures the documented lot and deducts published fees only; zero encoded fee means no published USD deduction, not free service. Unpriced delivery/handling remains explicit at quality cap55. Historical replay still lacks raw USD/oz and closes no output fact. PGOLD represents one troy ounce and has a 32.15 PGOLD minimum plus a published 0.5% redemption fee. Pleasing's legal terms additionally impose handling, insurance and delivery fees under an unpublished Fee Schedule, with no public numeric amount or ceiling; those charges cannot be treated as zero.",
+      "changeRefs": [
+        "shared/lib/physical-commodity-delivery.ts",
+        "shared/lib/redemption-backstop-configs/offchain-issuer/commodity.ts",
+        "shared/lib/redemption-backstop-configs/offchain-issuer/remediation-and-late-audit.ts"
+      ],
+      "sentinels": [
+        "pgold-pleasing:gap:route:redemption:redemption:c9f6f2a1-3b26-4d13-aa4b-c81a449256a4:redemption:pgold-pleasing:offchain-issuer:output"
+      ],
+      "nextReviewTrigger": "Fresh peg cycle with raw usdPerTroyOunce and refreshed redemption output, followed by production replay.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_OUTPUT:gldy-streamex",
+      "taskIds": [
+        "V9G-912f5414f2f01c9e"
+      ],
+      "workType": "EXIT_OUTPUT",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-09-21",
+      "reviewer": "Claude curation campaign 2026-09-21 (PhysicalDeliveryB)",
+      "evidence": [
+        "https://www.streamex.com/products/gldy/",
+        "https://ir.streamex.com/news-releases/news-release-details/streamex-corp-details-gldys-liquidity-infrastructure-12-million",
+        "https://app.rwa.xyz/assets/GLDY",
+        "https://www.streamex.com/terms-of-service/"
+      ],
+      "rationale": "No primary source publishes any physical minimum. Parent explicitly approved retaining GLDY unstructured rather than inventing a lot; conflicting secondary fees are not promoted.",
+      "changeRefs": [
+        "shared/lib/physical-commodity-delivery.ts",
+        "shared/lib/redemption-backstop-configs/offchain-issuer/commodity.ts",
+        "shared/lib/redemption-backstop-configs/offchain-issuer/remediation-and-late-audit.ts"
+      ],
+      "sentinels": [
+        "gldy-streamex:gap:route:redemption:redemption:c9f6f2a1-3b26-4d13-aa4b-c81a449256a4:redemption:gldy-streamex:offchain-issuer:output"
+      ],
+      "nextReviewTrigger": "Primary physical minimum and current fee schedule published.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_OUTPUT:xagm-matrixdock",
+      "taskIds": [
+        "V9G-b4e9b6db43e0b04b"
+      ],
+      "workType": "EXIT_OUTPUT",
+      "resolutionMode": "agent-curation",
+      "decision": "structured-pending-production",
+      "reviewedAt": "2026-09-21",
+      "reviewer": "Claude curation campaign 2026-09-21 (PhysicalDeliveryB)",
+      "evidence": [
+        "https://www.matrixdock.com/xagm",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/minting-and-redeeming",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/faq"
+      ],
+      "rationale": "Ruling B structures the documented lot and deducts published fees only; zero encoded fee means no published USD deduction, not free service. Unpriced delivery/handling remains explicit at quality cap55. Historical replay still lacks raw USD/oz and closes no output fact. XAGm has a 2,100-token minimum, a 0.50% redemption fee and a live 0.998463014 ozPerToken when reviewed. Physical redemption is by pickup or secured delivery, but Matrixdock publishes no numeric secured-delivery price or ceiling; the ozPerToken custody deduction can also change under the terms.",
+      "changeRefs": [
+        "shared/lib/physical-commodity-delivery.ts",
+        "shared/lib/redemption-backstop-configs/offchain-issuer/commodity.ts",
+        "shared/lib/redemption-backstop-configs/offchain-issuer/remediation-and-late-audit.ts"
+      ],
+      "sentinels": [
+        "xagm-matrixdock:gap:route:redemption:redemption:c9f6f2a1-3b26-4d13-aa4b-c81a449256a4:redemption:xagm-matrixdock:offchain-issuer:output"
+      ],
+      "nextReviewTrigger": "Fresh peg cycle with raw usdPerTroyOunce and refreshed redemption output, followed by production replay.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_OUTPUT:cgo-comtech",
+      "taskIds": [
+        "V9G-f1f444bd49d03438"
+      ],
+      "workType": "EXIT_OUTPUT",
+      "resolutionMode": "agent-curation",
+      "decision": "structured-pending-production",
+      "reviewedAt": "2026-09-21",
+      "reviewer": "Claude curation campaign 2026-09-21 (PhysicalDeliveryB)",
+      "evidence": [
+        "https://comtechgold.com/assets/pdf/ComTech_Gold_FAQ_Final.pdf",
+        "https://comtechgold.com/assets/pdf/Terms_and_Conditions.pdf",
+        "https://comtechgold.com/fee-structure.html"
+      ],
+      "rationale": "Ruling B structures the documented lot and deducts published fees only; zero encoded fee means no published USD deduction, not free service. Unpriced delivery/handling remains explicit at quality cap55. Historical replay still lacks raw USD/oz and closes no output fact. CGO represents one gram of gold. The current FAQ says 10 CGO minimum while the contractual 2022 Terms say 1,000 CGO; making and delivery are charged without numeric bounds, post-24-month storage is described only as nominal, and the linked fee-structure page publishes no readable numeric schedule.",
+      "changeRefs": [
+        "shared/lib/physical-commodity-delivery.ts",
+        "shared/lib/redemption-backstop-configs/offchain-issuer/commodity.ts",
+        "shared/lib/redemption-backstop-configs/offchain-issuer/remediation-and-late-audit.ts"
+      ],
+      "sentinels": [
+        "cgo-comtech:gap:route:redemption:redemption:c9f6f2a1-3b26-4d13-aa4b-c81a449256a4:redemption:cgo-comtech:offchain-issuer:output"
+      ],
+      "nextReviewTrigger": "Fresh peg cycle with raw usdPerTroyOunce and refreshed redemption output, followed by production replay.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_OUTPUT:gldt-gold-dao",
+      "taskIds": [
+        "V9G-26fc9820504a2d27"
+      ],
+      "workType": "EXIT_OUTPUT",
+      "resolutionMode": "agent-curation",
+      "decision": "structured-pending-production",
+      "reviewedAt": "2026-09-21",
+      "reviewer": "Claude curation campaign 2026-09-21 (PhysicalDeliveryB)",
+      "evidence": [
+        "https://docs.gold-dao.org/how-to/redeem-physical-gold",
+        "https://bity.com/en/gold/",
+        "https://help.bity.com/en/articles/9680077-how-can-i-redeem-the-physical-gold-bar-from-my-nfts"
+      ],
+      "rationale": "Ruling B structures the documented lot and deducts published fees only; zero encoded fee means no published USD deduction, not free service. Unpriced delivery/handling remains explicit at quality cap55. Historical replay still lacks raw USD/oz and closes no output fact. Each GLDT represents 0.01 gram and the advertised physical minimum is 100 GLDT / 1 gram through a reverse swap into a GLD NFT. Gold DAO's current redemption instructions do not publish the reverse-swap fee. Bity separately charges CHF 300 per vault pickup regardless of size or quantity, permits pickup only in Zurich, and publishes no USD-denominated flat bound or delivery service/charge. The end-to-end terms therefore do not fit the required bounded USD fee model.",
+      "changeRefs": [
+        "shared/lib/physical-commodity-delivery.ts",
+        "shared/lib/redemption-backstop-configs/offchain-issuer/commodity.ts",
+        "shared/lib/redemption-backstop-configs/offchain-issuer/remediation-and-late-audit.ts"
+      ],
+      "sentinels": [
+        "gldt-gold-dao:gap:route:redemption:redemption:c9f6f2a1-3b26-4d13-aa4b-c81a449256a4:redemption:gldt-gold-dao:offchain-issuer:output"
+      ],
+      "nextReviewTrigger": "Fresh peg cycle with raw usdPerTroyOunce and refreshed redemption output, followed by production replay.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:aid-gaib",
+      "taskIds": [
+        "V9G-c5cbf3b90949303f"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-09-21",
+      "reviewer": "Claude curation campaign 2026-09-21 (DexPhaseAShadow)",
+      "evidence": [
+        "agents/v9-captures/dex-phase-a-shadow-verification.json",
+        "agents/v9-captures/dex-phase-a-shadow-smoke.json"
+      ],
+      "rationale": "Verified deployment pins and shadow collection configured; score activation remains pending fork-equivalence, independent cross-check, drift window and first-cycle packet.",
+      "changeRefs": [],
+      "sentinels": [
+        "aid-gaib:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "First production shadow cycle, then completed activation packet and two distinct post-deploy captures.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:brlv-crown",
+      "taskIds": [
+        "V9G-667237fcaba7960e"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-09-21",
+      "reviewer": "Claude curation campaign 2026-09-21 (DexPhaseAShadow)",
+      "evidence": [
+        "agents/v9-captures/dex-phase-a-shadow-verification.json",
+        "agents/v9-captures/dex-phase-a-shadow-smoke.json"
+      ],
+      "rationale": "Verified deployment pins and shadow collection configured; score activation remains pending fork-equivalence, independent cross-check, drift window and first-cycle packet.",
+      "changeRefs": [],
+      "sentinels": [
+        "brlv-crown:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "First production shadow cycle, then completed activation packet and two distinct post-deploy captures.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:gtusdcp-gauntlet",
+      "taskIds": [
+        "V9G-dca8e88b335a2f32"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-09-21",
+      "reviewer": "Claude curation campaign 2026-09-21 (DexPhaseAShadow)",
+      "evidence": [
+        "agents/v9-captures/dex-phase-a-shadow-verification.json",
+        "agents/v9-captures/dex-phase-a-shadow-smoke.json"
+      ],
+      "rationale": "Verified deployment pins and shadow collection configured; score activation remains pending fork-equivalence, independent cross-check, drift window and first-cycle packet.",
+      "changeRefs": [],
+      "sentinels": [
+        "gtusdcp-gauntlet:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "First production shadow cycle, then completed activation packet and two distinct post-deploy captures.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:iauon-ondo",
+      "taskIds": [
+        "V9G-3f6ecc6ba5663481"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-09-21",
+      "reviewer": "Claude curation campaign 2026-09-21 (DexPhaseAShadow)",
+      "evidence": [
+        "agents/v9-captures/dex-phase-a-shadow-verification.json",
+        "agents/v9-captures/dex-phase-a-shadow-smoke.json"
+      ],
+      "rationale": "Verified deployment pins and shadow collection configured; score activation remains pending fork-equivalence, independent cross-check, drift window and first-cycle packet.",
+      "changeRefs": [],
+      "sentinels": [
+        "iauon-ondo:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "First production shadow cycle, then completed activation packet and two distinct post-deploy captures.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:idrt-rupiah-token",
+      "taskIds": [
+        "V9G-567c5f3b599fd922"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-09-21",
+      "reviewer": "Claude curation campaign 2026-09-21 (DexPhaseAShadow)",
+      "evidence": [
+        "agents/v9-captures/dex-phase-a-shadow-verification.json",
+        "agents/v9-captures/dex-phase-a-shadow-smoke.json"
+      ],
+      "rationale": "Verified deployment pins and shadow collection configured; score activation remains pending fork-equivalence, independent cross-check, drift window and first-cycle packet.",
+      "changeRefs": [],
+      "sentinels": [
+        "idrt-rupiah-token:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "First production shadow cycle, then completed activation packet and two distinct post-deploy captures.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:mmev-midas",
+      "taskIds": [
+        "V9G-2e51dffc0e65a55f"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-09-21",
+      "reviewer": "Claude curation campaign 2026-09-21 (DexPhaseAShadow)",
+      "evidence": [
+        "agents/v9-captures/dex-phase-a-shadow-verification.json",
+        "agents/v9-captures/dex-phase-a-shadow-smoke.json"
+      ],
+      "rationale": "Verified deployment pins and shadow collection configured; score activation remains pending fork-equivalence, independent cross-check, drift window and first-cycle packet.",
+      "changeRefs": [],
+      "sentinels": [
+        "mmev-midas:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "First production shadow cycle, then completed activation packet and two distinct post-deploy captures.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:mre7yield-midas",
+      "taskIds": [
+        "V9G-649d9bad5dbc3916"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-09-21",
+      "reviewer": "Claude curation campaign 2026-09-21 (DexPhaseAShadow)",
+      "evidence": [
+        "agents/v9-captures/dex-phase-a-shadow-verification.json",
+        "agents/v9-captures/dex-phase-a-shadow-smoke.json"
+      ],
+      "rationale": "Verified deployment pins and shadow collection configured; score activation remains pending fork-equivalence, independent cross-check, drift window and first-cycle packet.",
+      "changeRefs": [],
+      "sentinels": [
+        "mre7yield-midas:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "First production shadow cycle, then completed activation packet and two distinct post-deploy captures.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:mtbill-midas",
+      "taskIds": [
+        "V9G-a302f8b5bd0e2691"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-09-21",
+      "reviewer": "Claude curation campaign 2026-09-21 (DexPhaseAShadow)",
+      "evidence": [
+        "agents/v9-captures/dex-phase-a-shadow-verification.json",
+        "agents/v9-captures/dex-phase-a-shadow-smoke.json"
+      ],
+      "rationale": "Verified deployment pins and shadow collection configured; score activation remains pending fork-equivalence, independent cross-check, drift window and first-cycle packet.",
+      "changeRefs": [],
+      "sentinels": [
+        "mtbill-midas:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "First production shadow cycle, then completed activation packet and two distinct post-deploy captures.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:satusd-river",
+      "taskIds": [
+        "V9G-db5d9fcac6e9c265"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-09-21",
+      "reviewer": "Claude curation campaign 2026-09-21 (DexPhaseAShadow)",
+      "evidence": [
+        "agents/v9-captures/dex-phase-a-shadow-verification.json",
+        "agents/v9-captures/dex-phase-a-shadow-smoke.json"
+      ],
+      "rationale": "Verified deployment pins and shadow collection configured; score activation remains pending fork-equivalence, independent cross-check, drift window and first-cycle packet.",
+      "changeRefs": [],
+      "sentinels": [
+        "satusd-river:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "First production shadow cycle, then completed activation packet and two distinct post-deploy captures.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:weusd-picwe",
+      "taskIds": [
+        "V9G-03c5ad0622fe060b"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-09-21",
+      "reviewer": "Claude curation campaign 2026-09-21 (DexPhaseAShadow)",
+      "evidence": [
+        "agents/v9-captures/dex-phase-a-shadow-verification.json",
+        "agents/v9-captures/dex-phase-a-shadow-smoke.json"
+      ],
+      "rationale": "Verified deployment pins and shadow collection configured; score activation remains pending fork-equivalence, independent cross-check, drift window and first-cycle packet.",
+      "changeRefs": [],
+      "sentinels": [
+        "weusd-picwe:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "First production shadow cycle, then completed activation packet and two distinct post-deploy captures.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:wusd-worldwide",
+      "taskIds": [
+        "V9G-f4ee76cff675bb6b"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-09-21",
+      "reviewer": "Claude curation campaign 2026-09-21 (DexPhaseAShadow)",
+      "evidence": [
+        "agents/v9-captures/dex-phase-a-shadow-verification.json",
+        "agents/v9-captures/dex-phase-a-shadow-smoke.json"
+      ],
+      "rationale": "Verified deployment pins and shadow collection configured; score activation remains pending fork-equivalence, independent cross-check, drift window and first-cycle packet.",
+      "changeRefs": [],
+      "sentinels": [
+        "wusd-worldwide:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "First production shadow cycle, then completed activation packet and two distinct post-deploy captures.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:yousd-yield-optimizer",
+      "taskIds": [
+        "V9G-12fd9b2d2ba220a9"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "defer",
+      "reviewedAt": "2026-09-21",
+      "reviewer": "Claude curation campaign 2026-09-21 (DexPhaseAShadow)",
+      "evidence": [
+        "agents/v9-captures/dex-phase-a-shadow-verification.json",
+        "agents/v9-captures/dex-phase-a-shadow-smoke.json"
+      ],
+      "rationale": "Verified deployment pins and shadow collection configured; score activation remains pending fork-equivalence, independent cross-check, drift window and first-cycle packet.",
+      "changeRefs": [],
+      "sentinels": [
+        "yousd-yield-optimizer:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "First production shadow cycle, then completed activation packet and two distinct post-deploy captures.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:cash-phantom",
+      "taskIds": [
+        "V9G-e87d036c9b3d93ce"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "shadow-collecting",
+      "reviewedAt": "2026-09-21",
+      "reviewer": "Claude curation campaign 2026-09-21 (RaydiumNative)",
+      "evidence": [
+        "worker/src/cron/dex-liquidity/__tests__/fixtures/raydium-slot-449058549.json: exact native 1000000000 JUPUSD raw input -> 999152114 output at slot 449058549, matching paired reference at 0 bps.",
+        "agents/v9-captures/dex-phase-b-sdk-quotes-20260921.json",
+        "33 scoped native quote, shadow collector and scheduler tests passed; check:cron-connections passed (all 24 triggers); migration fresh replay and SQL safety passed.",
+        "Native model size: 15231 source bytes; 7420 minified ESM bytes, excluding shared imports; no SDK dependency. This is not Worker memory proof."
+      ],
+      "rationale": "Native Raydium CLMM producer implemented and locally verified; transitions the Raydium-family portion from deferred implementation to shadow collection on deployment. Profile remains measured-adapter-shadow, score_eligible=0; overlapping Orca/Meteora claims and score activation are not closed. Production collection has not yet been observed.",
+      "changeRefs": [
+        "worker/src/cron/dex-liquidity/solana/raydium-clmm-quote.ts",
+        "worker/src/cron/dex-liquidity/solana/whirlpool-shadow.ts",
+        "worker/src/cron/dex-liquidity/execution-targets/raydium-clmm.ts",
+        "worker/src/handlers/scheduled/half-hourly-measured-execution.ts",
+        "worker/migrations/0243_native_shadow_quote_families.sql",
+        "docs/dex-liquidity.md"
+      ],
+      "sentinels": [
+        "cash-phantom:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Apply additive 0243 before Worker, observe first serialized Raydium cycle and v2 quote rows/runtime/memory diagnostics; obtain full cohort same-slot independent quotes and two production captures at least 90 minutes apart before considering score activation.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:chfau-allunity",
+      "taskIds": [
+        "V9G-fa0f3568c7df09bb"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "shadow-collecting",
+      "reviewedAt": "2026-09-21",
+      "reviewer": "Claude curation campaign 2026-09-21 (RaydiumNative)",
+      "evidence": [
+        "worker/src/cron/dex-liquidity/__tests__/fixtures/raydium-slot-449058549.json: exact native 1000000000 JUPUSD raw input -> 999152114 output at slot 449058549, matching paired reference at 0 bps.",
+        "agents/v9-captures/dex-phase-b-sdk-quotes-20260921.json",
+        "33 scoped native quote, shadow collector and scheduler tests passed; check:cron-connections passed (all 24 triggers); migration fresh replay and SQL safety passed.",
+        "Native model size: 15231 source bytes; 7420 minified ESM bytes, excluding shared imports; no SDK dependency. This is not Worker memory proof."
+      ],
+      "rationale": "Native Raydium CLMM producer implemented and locally verified; transitions the Raydium-family portion from deferred implementation to shadow collection on deployment. Profile remains measured-adapter-shadow, score_eligible=0; overlapping Orca/Meteora claims and score activation are not closed. Production collection has not yet been observed.",
+      "changeRefs": [
+        "worker/src/cron/dex-liquidity/solana/raydium-clmm-quote.ts",
+        "worker/src/cron/dex-liquidity/solana/whirlpool-shadow.ts",
+        "worker/src/cron/dex-liquidity/execution-targets/raydium-clmm.ts",
+        "worker/src/handlers/scheduled/half-hourly-measured-execution.ts",
+        "worker/migrations/0243_native_shadow_quote_families.sql",
+        "docs/dex-liquidity.md"
+      ],
+      "sentinels": [
+        "chfau-allunity:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Apply additive 0243 before Worker, observe first serialized Raydium cycle and v2 quote rows/runtime/memory diagnostics; obtain full cohort same-slot independent quotes and two production captures at least 90 minutes apart before considering score activation.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:jupusd-jupiter",
+      "taskIds": [
+        "V9G-e5e384017020eed2"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "shadow-collecting",
+      "reviewedAt": "2026-09-21",
+      "reviewer": "Claude curation campaign 2026-09-21 (RaydiumNative)",
+      "evidence": [
+        "worker/src/cron/dex-liquidity/__tests__/fixtures/raydium-slot-449058549.json: exact native 1000000000 JUPUSD raw input -> 999152114 output at slot 449058549, matching paired reference at 0 bps.",
+        "agents/v9-captures/dex-phase-b-sdk-quotes-20260921.json",
+        "33 scoped native quote, shadow collector and scheduler tests passed; check:cron-connections passed (all 24 triggers); migration fresh replay and SQL safety passed.",
+        "Native model size: 15231 source bytes; 7420 minified ESM bytes, excluding shared imports; no SDK dependency. This is not Worker memory proof."
+      ],
+      "rationale": "Native Raydium CLMM producer implemented and locally verified; transitions the Raydium-family portion from deferred implementation to shadow collection on deployment. Profile remains measured-adapter-shadow, score_eligible=0; overlapping Orca/Meteora claims and score activation are not closed. Production collection has not yet been observed.",
+      "changeRefs": [
+        "worker/src/cron/dex-liquidity/solana/raydium-clmm-quote.ts",
+        "worker/src/cron/dex-liquidity/solana/whirlpool-shadow.ts",
+        "worker/src/cron/dex-liquidity/execution-targets/raydium-clmm.ts",
+        "worker/src/handlers/scheduled/half-hourly-measured-execution.ts",
+        "worker/migrations/0243_native_shadow_quote_families.sql",
+        "docs/dex-liquidity.md"
+      ],
+      "sentinels": [
+        "jupusd-jupiter:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Apply additive 0243 before Worker, observe first serialized Raydium cycle and v2 quote rows/runtime/memory diagnostics; obtain full cohort same-slot independent quotes and two production captures at least 90 minutes apart before considering score activation.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:onyc-onre",
+      "taskIds": [
+        "V9G-3e5bb4c8e6e80469"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "shadow-collecting",
+      "reviewedAt": "2026-09-21",
+      "reviewer": "Claude curation campaign 2026-09-21 (RaydiumNative)",
+      "evidence": [
+        "worker/src/cron/dex-liquidity/__tests__/fixtures/raydium-slot-449058549.json: exact native 1000000000 JUPUSD raw input -> 999152114 output at slot 449058549, matching paired reference at 0 bps.",
+        "agents/v9-captures/dex-phase-b-sdk-quotes-20260921.json",
+        "33 scoped native quote, shadow collector and scheduler tests passed; check:cron-connections passed (all 24 triggers); migration fresh replay and SQL safety passed.",
+        "Native model size: 15231 source bytes; 7420 minified ESM bytes, excluding shared imports; no SDK dependency. This is not Worker memory proof."
+      ],
+      "rationale": "Native Raydium CLMM producer implemented and locally verified; transitions the Raydium-family portion from deferred implementation to shadow collection on deployment. Profile remains measured-adapter-shadow, score_eligible=0; overlapping Orca/Meteora claims and score activation are not closed. Production collection has not yet been observed.",
+      "changeRefs": [
+        "worker/src/cron/dex-liquidity/solana/raydium-clmm-quote.ts",
+        "worker/src/cron/dex-liquidity/solana/whirlpool-shadow.ts",
+        "worker/src/cron/dex-liquidity/execution-targets/raydium-clmm.ts",
+        "worker/src/handlers/scheduled/half-hourly-measured-execution.ts",
+        "worker/migrations/0243_native_shadow_quote_families.sql",
+        "docs/dex-liquidity.md"
+      ],
+      "sentinels": [
+        "onyc-onre:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Apply additive 0243 before Worker, observe first serialized Raydium cycle and v2 quote rows/runtime/memory diagnostics; obtain full cohort same-slot independent quotes and two production captures at least 90 minutes apart before considering score activation.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:susd-solayer",
+      "taskIds": [
+        "V9G-68f936f099d7d063"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "shadow-collecting",
+      "reviewedAt": "2026-09-21",
+      "reviewer": "Claude curation campaign 2026-09-21 (RaydiumNative)",
+      "evidence": [
+        "worker/src/cron/dex-liquidity/__tests__/fixtures/raydium-slot-449058549.json: exact native 1000000000 JUPUSD raw input -> 999152114 output at slot 449058549, matching paired reference at 0 bps.",
+        "agents/v9-captures/dex-phase-b-sdk-quotes-20260921.json",
+        "33 scoped native quote, shadow collector and scheduler tests passed; check:cron-connections passed (all 24 triggers); migration fresh replay and SQL safety passed.",
+        "Native model size: 15231 source bytes; 7420 minified ESM bytes, excluding shared imports; no SDK dependency. This is not Worker memory proof."
+      ],
+      "rationale": "Native Raydium CLMM producer implemented and locally verified; transitions the Raydium-family portion from deferred implementation to shadow collection on deployment. Profile remains measured-adapter-shadow, score_eligible=0; overlapping Orca/Meteora claims and score activation are not closed. Production collection has not yet been observed.",
+      "changeRefs": [
+        "worker/src/cron/dex-liquidity/solana/raydium-clmm-quote.ts",
+        "worker/src/cron/dex-liquidity/solana/whirlpool-shadow.ts",
+        "worker/src/cron/dex-liquidity/execution-targets/raydium-clmm.ts",
+        "worker/src/handlers/scheduled/half-hourly-measured-execution.ts",
+        "worker/migrations/0243_native_shadow_quote_families.sql",
+        "docs/dex-liquidity.md"
+      ],
+      "sentinels": [
+        "susd-solayer:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Apply additive 0243 before Worker, observe first serialized Raydium cycle and v2 quote rows/runtime/memory diagnostics; obtain full cohort same-slot independent quotes and two production captures at least 90 minutes apart before considering score activation.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:usdh-hubble",
+      "taskIds": [
+        "V9G-331f1aeb506f26a6"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "shadow-collecting",
+      "reviewedAt": "2026-09-21",
+      "reviewer": "Claude curation campaign 2026-09-21 (RaydiumNative)",
+      "evidence": [
+        "worker/src/cron/dex-liquidity/__tests__/fixtures/raydium-slot-449058549.json: exact native 1000000000 JUPUSD raw input -> 999152114 output at slot 449058549, matching paired reference at 0 bps.",
+        "agents/v9-captures/dex-phase-b-sdk-quotes-20260921.json",
+        "33 scoped native quote, shadow collector and scheduler tests passed; check:cron-connections passed (all 24 triggers); migration fresh replay and SQL safety passed.",
+        "Native model size: 15231 source bytes; 7420 minified ESM bytes, excluding shared imports; no SDK dependency. This is not Worker memory proof."
+      ],
+      "rationale": "Native Raydium CLMM producer implemented and locally verified; transitions the Raydium-family portion from deferred implementation to shadow collection on deployment. Profile remains measured-adapter-shadow, score_eligible=0; overlapping Orca/Meteora claims and score activation are not closed. Production collection has not yet been observed.",
+      "changeRefs": [
+        "worker/src/cron/dex-liquidity/solana/raydium-clmm-quote.ts",
+        "worker/src/cron/dex-liquidity/solana/whirlpool-shadow.ts",
+        "worker/src/cron/dex-liquidity/execution-targets/raydium-clmm.ts",
+        "worker/src/handlers/scheduled/half-hourly-measured-execution.ts",
+        "worker/migrations/0243_native_shadow_quote_families.sql",
+        "docs/dex-liquidity.md"
+      ],
+      "sentinels": [
+        "usdh-hubble:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Apply additive 0243 before Worker, observe first serialized Raydium cycle and v2 quote rows/runtime/memory diagnostics; obtain full cohort same-slot independent quotes and two production captures at least 90 minutes apart before considering score activation.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:usdu-unitas",
+      "taskIds": [
+        "V9G-e588c4a22395ca09"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "shadow-collecting",
+      "reviewedAt": "2026-09-21",
+      "reviewer": "Claude curation campaign 2026-09-21 (RaydiumNative)",
+      "evidence": [
+        "worker/src/cron/dex-liquidity/__tests__/fixtures/raydium-slot-449058549.json: exact native 1000000000 JUPUSD raw input -> 999152114 output at slot 449058549, matching paired reference at 0 bps.",
+        "agents/v9-captures/dex-phase-b-sdk-quotes-20260921.json",
+        "33 scoped native quote, shadow collector and scheduler tests passed; check:cron-connections passed (all 24 triggers); migration fresh replay and SQL safety passed.",
+        "Native model size: 15231 source bytes; 7420 minified ESM bytes, excluding shared imports; no SDK dependency. This is not Worker memory proof."
+      ],
+      "rationale": "Native Raydium CLMM producer implemented and locally verified; transitions the Raydium-family portion from deferred implementation to shadow collection on deployment. Profile remains measured-adapter-shadow, score_eligible=0; overlapping Orca/Meteora claims and score activation are not closed. Production collection has not yet been observed.",
+      "changeRefs": [
+        "worker/src/cron/dex-liquidity/solana/raydium-clmm-quote.ts",
+        "worker/src/cron/dex-liquidity/solana/whirlpool-shadow.ts",
+        "worker/src/cron/dex-liquidity/execution-targets/raydium-clmm.ts",
+        "worker/src/handlers/scheduled/half-hourly-measured-execution.ts",
+        "worker/migrations/0243_native_shadow_quote_families.sql",
+        "docs/dex-liquidity.md"
+      ],
+      "sentinels": [
+        "usdu-unitas:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Apply additive 0243 before Worker, observe first serialized Raydium cycle and v2 quote rows/runtime/memory diagnostics; obtain full cohort same-slot independent quotes and two production captures at least 90 minutes apart before considering score activation.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:usdy-ondo-finance",
+      "taskIds": [
+        "V9G-701cd915f27462df"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "shadow-collecting",
+      "reviewedAt": "2026-09-21",
+      "reviewer": "Claude curation campaign 2026-09-21 (RaydiumNative)",
+      "evidence": [
+        "worker/src/cron/dex-liquidity/__tests__/fixtures/raydium-slot-449058549.json: exact native 1000000000 JUPUSD raw input -> 999152114 output at slot 449058549, matching paired reference at 0 bps.",
+        "agents/v9-captures/dex-phase-b-sdk-quotes-20260921.json",
+        "33 scoped native quote, shadow collector and scheduler tests passed; check:cron-connections passed (all 24 triggers); migration fresh replay and SQL safety passed.",
+        "Native model size: 15231 source bytes; 7420 minified ESM bytes, excluding shared imports; no SDK dependency. This is not Worker memory proof."
+      ],
+      "rationale": "Native Raydium CLMM producer implemented and locally verified; transitions the Raydium-family portion from deferred implementation to shadow collection on deployment. Profile remains measured-adapter-shadow, score_eligible=0; overlapping Orca/Meteora claims and score activation are not closed. Production collection has not yet been observed.",
+      "changeRefs": [
+        "worker/src/cron/dex-liquidity/solana/raydium-clmm-quote.ts",
+        "worker/src/cron/dex-liquidity/solana/whirlpool-shadow.ts",
+        "worker/src/cron/dex-liquidity/execution-targets/raydium-clmm.ts",
+        "worker/src/handlers/scheduled/half-hourly-measured-execution.ts",
+        "worker/migrations/0243_native_shadow_quote_families.sql",
+        "docs/dex-liquidity.md"
+      ],
+      "sentinels": [
+        "usdy-ondo-finance:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Apply additive 0243 before Worker, observe first serialized Raydium cycle and v2 quote rows/runtime/memory diagnostics; obtain full cohort same-slot independent quotes and two production captures at least 90 minutes apart before considering score activation.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_DEX_COVERAGE:usx-solstice",
+      "taskIds": [
+        "V9G-51118de44fd8a95a"
+      ],
+      "workType": "EXIT_DEX_COVERAGE",
+      "resolutionMode": "producer-runtime",
+      "decision": "shadow-collecting",
+      "reviewedAt": "2026-09-21",
+      "reviewer": "Claude curation campaign 2026-09-21 (RaydiumNative)",
+      "evidence": [
+        "worker/src/cron/dex-liquidity/__tests__/fixtures/raydium-slot-449058549.json: exact native 1000000000 JUPUSD raw input -> 999152114 output at slot 449058549, matching paired reference at 0 bps.",
+        "agents/v9-captures/dex-phase-b-sdk-quotes-20260921.json",
+        "33 scoped native quote, shadow collector and scheduler tests passed; check:cron-connections passed (all 24 triggers); migration fresh replay and SQL safety passed.",
+        "Native model size: 15231 source bytes; 7420 minified ESM bytes, excluding shared imports; no SDK dependency. This is not Worker memory proof."
+      ],
+      "rationale": "Native Raydium CLMM producer implemented and locally verified; transitions the Raydium-family portion from deferred implementation to shadow collection on deployment. Profile remains measured-adapter-shadow, score_eligible=0; overlapping Orca/Meteora claims and score activation are not closed. Production collection has not yet been observed.",
+      "changeRefs": [
+        "worker/src/cron/dex-liquidity/solana/raydium-clmm-quote.ts",
+        "worker/src/cron/dex-liquidity/solana/whirlpool-shadow.ts",
+        "worker/src/cron/dex-liquidity/execution-targets/raydium-clmm.ts",
+        "worker/src/handlers/scheduled/half-hourly-measured-execution.ts",
+        "worker/migrations/0243_native_shadow_quote_families.sql",
+        "docs/dex-liquidity.md"
+      ],
+      "sentinels": [
+        "usx-solstice:gap:exit-portfolio-coverage"
+      ],
+      "nextReviewTrigger": "Apply additive 0243 before Worker, observe first serialized Raydium cycle and v2 quote rows/runtime/memory diagnostics; obtain full cohort same-slot independent quotes and two production captures at least 90 minutes apart before considering score activation.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_OUTPUT:xaut-tether",
+      "taskIds": [
+        "V9G-5031fcf839e68a98"
+      ],
+      "workType": "EXIT_OUTPUT",
+      "resolutionMode": "agent-curation",
+      "decision": "structured-pending-production",
+      "reviewedAt": "2026-09-21",
+      "reviewer": "Claude curation campaign 2026-09-21 (PhysicalDeliveryB)",
+      "evidence": [
+        "https://gold.tether.to/Relevant%20Information%20Document%20-%20TG%20Commodities,%20S.A.%20de%20C.V.%20(ENG).pdf"
+      ],
+      "rationale": "Primary RID section2.6.2 confirms25bps redemption plus unpriced Swiss delivery;430 tokens is a conservative deposit threshold, variable full bars return excess tokens. RulingB values published deductions with cap55; missing historical raw USD/oz keeps output unresolved.",
+      "changeRefs": [
+        "shared/lib/physical-commodity-delivery.ts",
+        "shared/lib/redemption-backstop-configs/offchain-issuer/commodity.ts",
+        "shared/lib/redemption-backstop-configs/offchain-issuer/remediation-and-late-audit.ts"
+      ],
+      "sentinels": [
+        "xaut-tether:gap:route:redemption:redemption:c9f6f2a1-3b26-4d13-aa4b-c81a449256a4:redemption:xaut-tether:offchain-issuer:output"
+      ],
+      "nextReviewTrigger": "Fresh peg cycle with raw usdPerTroyOunce and refreshed redemption output, followed by production replay.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_OUTPUT:ggbr-goldfish-gold",
+      "taskIds": [
+        "V9G-ade8aacbf6108072"
+      ],
+      "workType": "EXIT_OUTPUT",
+      "resolutionMode": "agent-curation",
+      "decision": "structured-pending-production",
+      "reviewedAt": "2026-09-21",
+      "reviewer": "Claude curation campaign 2026-09-21 (PhysicalDeliveryB)",
+      "evidence": [
+        "https://app.goldfishgold.com/redemption"
+      ],
+      "rationale": "Ruling B structures the documented lot and deducts published fees only; zero encoded fee means no published USD deduction, not free service. Unpriced delivery/handling remains explicit at quality cap55. Historical replay still lacks raw USD/oz and closes no output fact. Current app: 13,500-token minimum and 3% fee, but additional shipping/insurance unbounded.",
+      "changeRefs": [
+        "shared/lib/physical-commodity-delivery.ts",
+        "shared/lib/redemption-backstop-configs/offchain-issuer/commodity.ts",
+        "shared/lib/redemption-backstop-configs/offchain-issuer/remediation-and-late-audit.ts"
+      ],
+      "sentinels": [
+        "ggbr-goldfish-gold:gap:route:redemption:redemption:c9f6f2a1-3b26-4d13-aa4b-c81a449256a4:redemption:ggbr-goldfish-gold:offchain-issuer:output"
+      ],
+      "nextReviewTrigger": "Fresh peg cycle with raw usdPerTroyOunce and refreshed redemption output, followed by production replay.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_OUTPUT:xaum-matrixdock",
+      "taskIds": [
+        "V9G-f9f789e1f60391d6"
+      ],
+      "workType": "EXIT_OUTPUT",
+      "resolutionMode": "agent-curation",
+      "decision": "structured-pending-production",
+      "reviewedAt": "2026-09-21",
+      "reviewer": "Claude curation campaign 2026-09-21 (PhysicalDeliveryB)",
+      "evidence": [
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/minting-and-redeeming.md"
+      ],
+      "rationale": "Ruling B structures the documented lot and deducts published fees only; zero encoded fee means no published USD deduction, not free service. Unpriced delivery/handling remains explicit at quality cap55. Historical replay still lacks raw USD/oz and closes no output fact. 32.148-token / 1kg minimum published, but collection/delivery fee not bounded.",
+      "changeRefs": [
+        "shared/lib/physical-commodity-delivery.ts",
+        "shared/lib/redemption-backstop-configs/offchain-issuer/commodity.ts",
+        "shared/lib/redemption-backstop-configs/offchain-issuer/remediation-and-late-audit.ts"
+      ],
+      "sentinels": [
+        "xaum-matrixdock:gap:route:redemption:redemption:c9f6f2a1-3b26-4d13-aa4b-c81a449256a4:redemption:xaum-matrixdock:offchain-issuer:output"
+      ],
+      "nextReviewTrigger": "Fresh peg cycle with raw usdPerTroyOunce and refreshed redemption output, followed by production replay.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_OUTPUT:dgld-gold-token-sa",
+      "taskIds": [
+        "V9G-5c4eca4c05461c1a"
+      ],
+      "workType": "EXIT_OUTPUT",
+      "resolutionMode": "agent-curation",
+      "decision": "structured-pending-production",
+      "reviewedAt": "2026-09-21",
+      "reviewer": "Claude curation campaign 2026-09-21 (PhysicalDeliveryB)",
+      "evidence": [
+        "https://dgld.ch/news/dgld-european-swiss-redemptions"
+      ],
+      "rationale": "Ruling B structures the documented lot and deducts published fees only; zero encoded fee means no published USD deduction, not free service. Unpriced delivery/handling remains explicit at quality cap55. Historical replay still lacks raw USD/oz and closes no output fact. One-gram delivery minimum and one oz/token published, but Gold Avenue redemption/delivery fee bound absent.",
+      "changeRefs": [
+        "shared/lib/physical-commodity-delivery.ts",
+        "shared/lib/redemption-backstop-configs/offchain-issuer/commodity.ts",
+        "shared/lib/redemption-backstop-configs/offchain-issuer/remediation-and-late-audit.ts"
+      ],
+      "sentinels": [
+        "dgld-gold-token-sa:gap:route:redemption:redemption:c9f6f2a1-3b26-4d13-aa4b-c81a449256a4:redemption:dgld-gold-token-sa:offchain-issuer:output"
+      ],
+      "nextReviewTrigger": "Fresh peg cycle with raw usdPerTroyOunce and refreshed redemption output, followed by production replay.",
+      "factsClosed": 0
     }
   ]
 }
