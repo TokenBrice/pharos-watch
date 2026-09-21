@@ -35,6 +35,7 @@ import {
 import {
   type SafetyScoreV9FactSetExtensionV2,
 } from "./fact-set";
+import { controlCanCarryKnownStatus } from "./fact-set-control";
 import {
   buildSafetyScoreV9MechanismReview,
   getSafetyScoreV9MechanismExitFacts,
@@ -1677,19 +1678,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
       const reviewedEvidence = reviewEvidence.finish();
       const controlsFullyResolved =
         controls.length > 0 &&
-        controls.every(
-          (control) =>
-            control.economicLossScope === "access-only" ||
-            (control.economicLossScope === "deployment" &&
-              control.materialSupplyShare !== null &&
-              control.materialSupplyShare < DEPLOYMENT_MATERIAL_SHARE_THRESHOLD) ||
-            (control.capSemantics.kind !== "unknown" &&
-              control.claimImpairment !== "unknown" &&
-              control.economicLossScope !== "unknown" &&
-              control.incidentState !== "unknown" &&
-              control.authority !== null &&
-              control.authority.model !== "unknown"),
-        );
+        controls.every(controlCanCarryKnownStatus);
       return {
         assetId,
         assetIssuerKey,

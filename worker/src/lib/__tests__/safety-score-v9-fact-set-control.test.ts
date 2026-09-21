@@ -57,7 +57,10 @@ describe("Safety Score v9 exact base fact-set adapter — control and wrapper di
     const fixed = exactFixedInput();
     const unresolved = buildSafetyScoreV9BaselineExtension(fixed, { metaById: metaMap(unresolvedMintMeta()) });
     expect(unresolved.assets[0]!.controlReview).toMatchObject({ state: "partially-reviewed-controls" });
-    expect(compileSafetyScoreV9FactSetFromFixedInput(fixed, unresolved).assets[0]!.controls[0]).toMatchObject({ status: { observationState: "bounded-unknown" }, claimImpairment: "unbounded" });
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, unresolved);
+    const control = compiled.assets[0]!.controls[0]!;
+    expect(control).toMatchObject({ status: { observationState: "bounded-unknown" }, claimImpairment: "unbounded" });
+    expect(compiled.assets[0]!.gaps).toContainEqual(expect.objectContaining({ reasonCode: "unresolved-control-identity" }));
   });
 
   it("reviews strategy-vault holder-loss controls from a partial inventory", () => {
@@ -209,10 +212,14 @@ describe("Safety Score v9 exact base fact-set adapter — control and wrapper di
     expect(unmatchedFixture({ ethereum: 1 }, [bridgeRoute("futurechain:0x5555555555555555555555555555555555555555")]).asset.economicControlReview?.bridge.status.observationState).toBe("bounded-unknown");
   });
 
-  it("does not let an unresolved access-only control contaminate the aggregate", () => {
+  it("keeps access-only controls known without an unresolved identity gap", () => {
     const fixed = exactFixedInput();
     const baseline = buildSafetyScoreV9BaselineExtension(fixed, { metaById: metaMap(accessOnlyMeta()) });
     expect(baseline.assets[0]!.controlReview).toMatchObject({ state: "reviewed-controls", controls: [expect.objectContaining({ economicLossScope: "access-only", authority: null })] });
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
+    expect(compiled.assets[0]!.controls[0]!.status).toMatchObject({ observationState: "known", gapIds: [] });
+    expect(compiled.assets[0]!.gaps.some((gap) => gap.reasonCode === "unresolved-control-identity")).toBe(false);
+    expect(evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.control.score).toBe(45);
   });
 
   it("rejects registry drift and future reviews before quarantining stale known evidence", () => {
