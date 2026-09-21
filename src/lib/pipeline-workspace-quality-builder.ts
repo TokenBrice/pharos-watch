@@ -3,6 +3,7 @@ import { formatApproxDurationSeconds } from "@shared/lib/relative-time";
 import {
   STATUS_BLACKLIST_THRESHOLDS,
   STATUS_MISSING_PRICE_THRESHOLDS,
+  STATUS_ONCHAIN_FRESH_WINDOW_SEC,
   STATUS_ONCHAIN_THRESHOLDS,
   hasRepresentativeOnchainRatioSample,
 } from "@shared/lib/status-thresholds";
@@ -183,7 +184,7 @@ export function buildPipelineQualityModel(data: StatusResponse): PipelineQuality
       state: staleState,
       stateDetail: staleUnknown
         ? onchainUnknownReason
-        : "Snapshots older than two hours count as stale for this threshold.",
+        : `Snapshots older than ${formatApproxDurationSeconds(STATUS_ONCHAIN_FRESH_WINDOW_SEC)} count as stale for this threshold.`,
       trend: formatAge(onchainAge),
     },
   ];

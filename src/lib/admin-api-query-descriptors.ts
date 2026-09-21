@@ -69,6 +69,7 @@ export type StatusHistoryWindow = "6h" | "24h" | "7d" | "30d";
 export interface ApiKeyRequestsQueryOptions {
   status?: ApiKeySelfServeStatus;
   limit?: number;
+  cursor?: string;
 }
 
 const STATUS_HISTORY_WINDOW_SECONDS: Record<StatusHistoryWindow, number> = {
@@ -148,8 +149,12 @@ export const ADMIN_API_QUERY_DESCRIPTORS = {
   >(ApiKeySelfServeRequestAdminListResponseSchema, (options) => {
     const limit = options.limit ?? 50;
     return {
-      queryKey: ["api-key-requests", options.status ?? "all", limit] as const,
-      path: buildQueryPath(API_PATHS.apiKeyRequestsAdmin(), { status: options.status, limit }),
+      queryKey: ["api-key-requests", options.status ?? "all", limit, options.cursor ?? "first"] as const,
+      path: buildQueryPath(API_PATHS.apiKeyRequestsAdmin(), {
+        status: options.status,
+        limit,
+        cursor: options.cursor,
+      }),
     };
   }),
 } as const;

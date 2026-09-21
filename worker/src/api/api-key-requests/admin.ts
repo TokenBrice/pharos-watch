@@ -47,22 +47,57 @@ export async function selectRequestWithKeyStateByRequestId(
     .first<ApiKeyRequestAdminRow>();
 }
 
+export interface ApiKeyRequestAdminCursor {
+  createdAt: number;
+  id: number;
+}
+
 export async function listAdminRequests(
   db: ApiKeyRequestDb,
   status: ApiKeySelfServeStatus | null,
   limit: number,
-): Promise<ApiKeyRequestAdminRow[]> {
-  const where = status ? "WHERE r.status = ?" : "";
-  const statement = db.prepare(
+  cursor: ApiKeyRequestAdminCursor | null,
+): Promise<{
+  rows: ApiKeyRequestAdminRow[];
+  total: number;
+  nextCursor: ApiKeyRequestAdminCursor | null;
+}> {
+  const filters: string[] = [];
+  const bindings: unknown[] = [];
+  if (status) {
+    filters.push("r.status = ?");
+    bindings.push(status);
+  }
+  if (cursor) {
+    filters.push("(r.created_at < ? OR (r.created_at = ? AND r.id < ?))");
+    bindings.push(cursor.createdAt, cursor.createdAt, cursor.id);
+  }
+  const where = filters.length > 0 ? `WHERE ${filters.join(" AND ")}` : "";
+  const pageQuery = db.prepare(
     `${ADMIN_REQUEST_WITH_KEY_STATE_SELECT}
      ${where}
      ORDER BY r.created_at DESC, r.id DESC
      LIMIT ?`,
+  )
+    .bind(...bindings, limit + 1)
+    .all<ApiKeyRequestAdminRow>();
+  const countStatement = db.prepare(
+    `SELECT COUNT(*) AS total
+     FROM api_key_requests r
+     ${status ? "WHERE r.status = ?" : ""}`,
   );
-  const result = status
-    ? await statement.bind(status, limit).all<ApiKeyRequestAdminRow>()
-    : await statement.bind(limit).all<ApiKeyRequestAdminRow>();
-  return result.results ?? [];
+  const countQuery = status
+    ? countStatement.bind(status).first<{ total: number }>()
+    : countStatement.first<{ total: number }>();
+  const [pageResult, countRow] = await Promise.all([pageQuery, countQuery]);
+  const pageRows = pageResult.results ?? [];
+  const rows = pageRows.slice(0, limit);
+  const last = pageRows.length > limit ? rows[rows.length - 1] : null;
+  return {
+    rows,
+    total: countRow?.total ?? 0,
+    nextCursor: last ? { createdAt: last.created_at, id: last.id } : null,
+  };
 }
 
 export function mapAdminRow(row: ApiKeyRequestAdminRow): ApiKeySelfServeRequestAdminSummary {

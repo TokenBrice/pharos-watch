@@ -94,6 +94,8 @@ export type ApiKeySelfServeRequestAdminSummary = z.output<typeof ApiKeySelfServe
 export const ApiKeySelfServeRequestAdminListResponseSchema = z.object({
   generatedAt: z.number(),
   requests: z.array(ApiKeySelfServeRequestAdminSummarySchema),
+  total: z.number().int().nonnegative(),
+  nextCursor: z.string().nullable(),
 });
 export type ApiKeySelfServeRequestAdminListResponse = z.output<typeof ApiKeySelfServeRequestAdminListResponseSchema>;
 

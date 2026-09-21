@@ -18,6 +18,7 @@ export interface ApiKeySelfServeEnv {
 export type ApiKeyRequestDb = MinimalD1Database;
 
 export interface ApiKeyRequestRow {
+  id: number;
   request_id: string;
   api_key_id: number | null;
   status: ApiKeySelfServeStatus;

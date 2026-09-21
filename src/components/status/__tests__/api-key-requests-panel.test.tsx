@@ -53,6 +53,8 @@ function renderPanel(
   const data: ApiKeySelfServeRequestAdminListResponse = {
     generatedAt: GENERATED_AT,
     requests,
+    total: requests.length,
+    nextCursor: null,
   };
   useApiKeyRequestsMock.mockReturnValue({
     data,
@@ -72,16 +74,71 @@ afterEach(() => {
 
 describe("ApiKeyRequestsPanel", () => {
 
-  it("uses server-side status and limit query options", () => {
+  it("uses server-side status, limit, and cursor query options", () => {
     renderPanel();
 
-    expect(useApiKeyRequestsMock).toHaveBeenLastCalledWith({ status: "pending_verification", limit: 50 });
+    expect(useApiKeyRequestsMock).toHaveBeenLastCalledWith({
+      status: "pending_verification",
+      limit: 50,
+      cursor: undefined,
+    });
     expect(screen.getByRole("button", { name: "Pending" }).getAttribute("aria-pressed")).toBe("true");
 
     fireEvent.click(screen.getByRole("button", { name: "All" }));
 
-    expect(useApiKeyRequestsMock).toHaveBeenLastCalledWith({ status: undefined, limit: 50 });
+    expect(useApiKeyRequestsMock).toHaveBeenLastCalledWith({ status: undefined, limit: 50, cursor: undefined });
     expect(screen.getByRole("button", { name: "All" }).getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("navigates to requests 51-100 and reports the accurate total", () => {
+    const firstPage = Array.from({ length: 50 }, (_, index) =>
+      makeRequest({
+        requestId: `akr_page_1_${index + 1}`,
+        requesterName: `Requester ${index + 1}`,
+        organization: "",
+        email: `requester-${index + 1}@example.com`,
+      }),
+    );
+    const secondPage = Array.from({ length: 50 }, (_, index) =>
+      makeRequest({
+        requestId: `akr_page_2_${index + 51}`,
+        requesterName: `Requester ${index + 51}`,
+        organization: "",
+        email: `requester-${index + 51}@example.com`,
+      }),
+    );
+    useApiKeyRequestsMock.mockImplementation((options: { cursor?: string }) => ({
+      data: {
+        generatedAt: GENERATED_AT,
+        requests: options.cursor === "page-2" ? secondPage : firstPage,
+        total: 105,
+        nextCursor: options.cursor === "page-2" ? "page-3" : "page-2",
+      },
+      error: null,
+      isLoading: false,
+      isFetching: false,
+      refetch: vi.fn().mockResolvedValue(undefined),
+    }));
+
+    render(<ApiKeyRequestsPanel />);
+    expect(screen.getByRole("navigation", { name: "API key request pagination" }).textContent).toContain(
+      "Showing 1-50 of 105 matching requests.",
+    );
+    expect(screen.queryByRole("heading", { name: "Requester 51" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Go to next API key request page" }));
+
+    expect(useApiKeyRequestsMock).toHaveBeenLastCalledWith({
+      status: "pending_verification",
+      limit: 50,
+      cursor: "page-2",
+    });
+    expect(screen.getByRole("navigation", { name: "API key request pagination" }).textContent).toContain(
+      "Showing 51-100 of 105 matching requests.",
+    );
+    expect(screen.getByRole("heading", { name: "Requester 51" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Requester 100" })).toBeTruthy();
+    expect(screen.getByText("Page 2 / 3")).toBeTruthy();
   });
 
   it("returns focus to the request action and sends nothing when confirmation is cancelled", async () => {
@@ -326,6 +383,8 @@ describe("ApiKeyRequestsPanel", () => {
             linkedKeyActive: false,
           },
         ],
+        total: 1,
+        nextCursor: null,
       },
       error: null,
       isLoading: false,

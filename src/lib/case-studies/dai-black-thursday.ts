@@ -28,11 +28,24 @@ export const content: CaseStudy = {
   outcome: "survived",
   eventDateLabel: "March 2020 & March 2023",
   eventWindow: {
-    startISO: "2020-03-12",
+    startISO: "2023-03-11",
     endISO: "2023-03-13",
     peakDeviationBps: -1500,
     lowPrice: 0.85,
+    metricScope: "March 2023 USDC/SVB pass-through",
   },
+  eventWindows: [
+    {
+      startISO: "2020-03-12",
+      endISO: "2020-04-01",
+      relatedCoinIds: [],
+    },
+    {
+      startISO: "2023-03-11",
+      endISO: "2023-03-13",
+      relatedCoinIds: ["usdc-circle"],
+    },
+  ],
   timeline: [
     {
       dateISO: "2020-03-12",

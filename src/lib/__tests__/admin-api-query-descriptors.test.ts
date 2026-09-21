@@ -12,4 +12,17 @@ describe("admin API query descriptors", () => {
       path: "/api/request-source-stats?hours=24&bucketSec=3600&routeLimit=5&apiKeyLimit=25",
     });
   });
+
+  it("includes the request-page cursor in both the fetch path and query identity", () => {
+    expect(
+      ADMIN_API_QUERY_DESCRIPTORS.apiKeyRequests({
+        status: "pending_verification",
+        limit: 50,
+        cursor: "page-2",
+      }),
+    ).toMatchObject({
+      queryKey: ["api-key-requests", "pending_verification", 50, "page-2"],
+      path: "/api/api-key-requests-admin?status=pending_verification&limit=50&cursor=page-2",
+    });
+  });
 });

@@ -80,15 +80,18 @@ export const CASE_STUDY_BY_DEPEG_SLUG: Record<string, CaseStudy> = Object.fromEn
   CASE_STUDY_LIST.filter((s) => s.depegEventSlug).map((s) => [s.depegEventSlug!, s]),
 );
 
-const CASE_STUDY_EVENT_WINDOWS: readonly CaseStudyEventWindowResolverItem[] = CASE_STUDY_LIST.map(
-  (study) => ({
-    slug: study.slug,
-    primaryCoinId: study.primaryCoinId ?? null,
-    relatedCoinIds: (study.relatedCoins ?? []).map((coin) => coin.coinId),
-    startISO: study.eventWindow.startISO,
-    endISO: study.eventWindow.endISO ?? null,
-  }),
-);
+const CASE_STUDY_EVENT_WINDOWS: readonly CaseStudyEventWindowResolverItem[] =
+  CASE_STUDY_LIST.flatMap((study) =>
+    (study.eventWindows ?? [study.eventWindow]).map((window) => ({
+      slug: study.slug,
+      primaryCoinId: study.primaryCoinId ?? null,
+      relatedCoinIds:
+        window.relatedCoinIds ??
+        (study.relatedCoins ?? []).map((coin) => coin.coinId),
+      startISO: window.startISO,
+      endISO: window.endISO ?? null,
+    })),
+  );
 
 /**
  * Server-side resolver for surfaces that already import the full content

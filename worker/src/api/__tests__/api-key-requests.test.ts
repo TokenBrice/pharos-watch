@@ -425,6 +425,71 @@ describe("api key self-serve request handlers", () => {
     expect(body.requests[0]?.token).toBeUndefined();
   });
 
+  it("pages request rows 51-100 with an exact status-filtered total", async () => {
+    const insert = sqlite.prepare(`
+      INSERT INTO api_key_requests (
+        request_id, status, normalized_email, email_hash, use_case, accepted_terms,
+        self_serve_rate_limit_per_minute, ip_hash, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, 'Pagination test', 1, 30, ?, 1900000000, 1900000000)
+    `);
+    for (let index = 1; index <= 105; index++) {
+      const suffix = String(index).padStart(3, "0");
+      insert.run(
+        `akr_page_${suffix}`,
+        "pending_verification",
+        `request-${suffix}@example.com`,
+        `email-hash-${suffix}`,
+        `ip-hash-${suffix}`,
+      );
+    }
+    insert.run("akr_issued_extra", "issued", "issued@example.com", "issued-email-hash", "issued-ip-hash");
+
+    const firstResponse = await handleApiKeyRequestsAdmin(
+      db,
+      true,
+      new Request(
+        "https://api.pharos.watch/api/api-key-requests-admin?status=pending_verification&limit=50",
+      ),
+    );
+    const firstPage = await readJsonResponse(firstResponse, 200) as {
+      requests: Array<{ email: string }>;
+      total: number;
+      nextCursor: string | null;
+    };
+
+    expect(firstPage.requests).toHaveLength(50);
+    expect(firstPage.total).toBe(105);
+    expect(firstPage.nextCursor).toBeTypeOf("string");
+
+    const mismatchedFilterResponse = await handleApiKeyRequestsAdmin(
+      db,
+      true,
+      new Request(
+        `https://api.pharos.watch/api/api-key-requests-admin?status=issued&limit=50&cursor=${encodeURIComponent(firstPage.nextCursor!)}`,
+      ),
+    );
+    expect(mismatchedFilterResponse.status).toBe(400);
+
+    const secondResponse = await handleApiKeyRequestsAdmin(
+      db,
+      true,
+      new Request(
+        `https://api.pharos.watch/api/api-key-requests-admin?status=pending_verification&limit=50&cursor=${encodeURIComponent(firstPage.nextCursor!)}`,
+      ),
+    );
+    const secondPage = await readJsonResponse(secondResponse, 200) as {
+      requests: Array<{ email: string }>;
+      total: number;
+      nextCursor: string | null;
+    };
+
+    expect(secondPage.requests).toHaveLength(50);
+    expect(secondPage.requests[0]?.email).toBe("request-055@example.com");
+    expect(secondPage.requests[49]?.email).toBe("request-006@example.com");
+    expect(secondPage.total).toBe(105);
+    expect(secondPage.nextCursor).toBeTypeOf("string");
+  });
+
   it("lets admins reject a pending request and releases its claim", async () => {
     const pending = await handleApiKeyRequest(db, postRequest("/api/api-key-requests", validBody()), env());
     expect(pending.status).toBe(202);

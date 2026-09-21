@@ -46,6 +46,7 @@ interface Row {
 
 const ROWS: Row[] = [{ name: "USDC" }];
 const COLUMNS = [{ header: "Name", accessor: (row: Row) => row.name }];
+const SOURCE_AS_OF_ISO = "2026-05-16T06:00:00.000Z";
 
 describe("TableExportMenu", () => {
   beforeEach(() => {
@@ -67,6 +68,7 @@ describe("TableExportMenu", () => {
         data={ROWS}
         columns={COLUMNS}
         filename="stablecoins"
+        asOfISO={SOURCE_AS_OF_ISO}
         endpoint="stablecoins"
         methodologyLabel="safety-score v7.25"
       />,
@@ -83,6 +85,7 @@ describe("TableExportMenu", () => {
         data={ROWS}
         columns={COLUMNS}
         filename="stablecoins"
+        asOfISO={SOURCE_AS_OF_ISO}
         endpoint="stablecoins"
         methodologyLabel="safety-score v7.25"
       />,
@@ -97,7 +100,7 @@ describe("TableExportMenu", () => {
     expect(filename).toBe("stablecoins");
     expect(preamble).toMatchObject({
       endpoint: "stablecoins",
-      asOfISO: "2026-05-16T12:00:00.000Z",
+      asOfISO: SOURCE_AS_OF_ISO,
       methodologyLabel: "safety-score v7.25",
     });
     expect(typeof preamble.sourceUrl).toBe("string");
@@ -109,6 +112,7 @@ describe("TableExportMenu", () => {
         data={ROWS}
         columns={COLUMNS}
         filename="stablecoins"
+        asOfISO={SOURCE_AS_OF_ISO}
         endpoint="stablecoins"
         methodologyLabel="safety-score v7.25"
         disabled
@@ -130,6 +134,7 @@ describe("TableExportMenu", () => {
         data={ROWS}
         columns={COLUMNS}
         filename="stablecoins"
+        asOfISO={SOURCE_AS_OF_ISO}
         endpoint="stablecoins"
         methodologyLabel="safety-score v7.25"
       />,
@@ -147,6 +152,7 @@ describe("TableExportMenu", () => {
         data={ROWS}
         columns={COLUMNS}
         filename="stablecoins"
+        asOfISO={SOURCE_AS_OF_ISO}
         endpoint="stablecoins"
         methodologyLabel="safety-score v7.25"
       />,
@@ -166,7 +172,7 @@ describe("TableExportMenu", () => {
     const baseline = vi.getTimerCount();
     const { unmount } = render(
       <TableExportMenu data={ROWS} columns={COLUMNS} filename="stablecoins"
-        endpoint="stablecoins" methodologyLabel="safety-score v7.25" />,
+        asOfISO={SOURCE_AS_OF_ISO} endpoint="stablecoins" methodologyLabel="safety-score v7.25" />,
     );
     const copy = async () => {
       await act(async () => {
@@ -192,7 +198,7 @@ describe("TableExportMenu", () => {
     copyMarkdownWithPreambleMock.mockReturnValueOnce(new Promise<boolean>((resolve) => { finish = resolve; }));
     const { unmount } = render(
       <TableExportMenu data={ROWS} columns={COLUMNS} filename="stablecoins"
-        endpoint="stablecoins" methodologyLabel="safety-score v7.25" />,
+        asOfISO={SOURCE_AS_OF_ISO} endpoint="stablecoins" methodologyLabel="safety-score v7.25" />,
     );
     fireEvent.click(screen.getByRole("button", { name: "Copy as Markdown" }));
     unmount();
@@ -209,6 +215,7 @@ describe("TableExportMenu", () => {
         data={ROWS}
         columns={COLUMNS}
         filename="stablecoins"
+        asOfISO={SOURCE_AS_OF_ISO}
         endpoint="stablecoins"
         methodologyLabel="safety-score v7.25"
       />,

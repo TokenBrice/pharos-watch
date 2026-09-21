@@ -24,6 +24,8 @@ export interface TableExportMenuProps<T> {
   columns: CsvColumn<T>[];
   /** Short stem for the downloaded filename (date is appended automatically). */
   filename: string;
+  /** ISO timestamp for the source data generation represented by this export. */
+  asOfISO: string;
   /** Short endpoint label written into the preamble, e.g. "stablecoins". */
   endpoint: string;
   /** Methodology label written into the preamble, e.g. "safety-score v7.25". */
@@ -36,10 +38,14 @@ export interface TableExportMenuProps<T> {
   disabled?: boolean;
 }
 
-function buildPreamble(endpoint: string, methodologyLabel: string): ExportPreamble {
+function buildPreamble(
+  endpoint: string,
+  methodologyLabel: string,
+  asOfISO: string,
+): ExportPreamble {
   return {
     endpoint,
-    asOfISO: new Date().toISOString(),
+    asOfISO,
     sourceUrl: typeof window === "undefined" ? "" : window.location.href,
     methodologyLabel,
   };
@@ -49,6 +55,7 @@ export function TableExportMenu<T>({
   data,
   columns,
   filename,
+  asOfISO,
   endpoint,
   methodologyLabel,
   triggerLabel = "Export",
@@ -74,25 +81,35 @@ export function TableExportMenu<T>({
 
   const handleCsv = useCallback(() => {
     if (disabled) return;
-    downloadCsvWithPreamble(data, columns, filename, buildPreamble(endpoint, methodologyLabel));
-  }, [columns, data, disabled, endpoint, filename, methodologyLabel]);
+    downloadCsvWithPreamble(
+      data,
+      columns,
+      filename,
+      buildPreamble(endpoint, methodologyLabel, asOfISO),
+    );
+  }, [asOfISO, columns, data, disabled, endpoint, filename, methodologyLabel]);
 
   const handleNdjson = useCallback(() => {
     if (disabled) return;
-    downloadNdjsonWithPreamble(data, columns, filename, buildPreamble(endpoint, methodologyLabel));
-  }, [columns, data, disabled, endpoint, filename, methodologyLabel]);
+    downloadNdjsonWithPreamble(
+      data,
+      columns,
+      filename,
+      buildPreamble(endpoint, methodologyLabel, asOfISO),
+    );
+  }, [asOfISO, columns, data, disabled, endpoint, filename, methodologyLabel]);
 
   const handleMarkdown = useCallback(async () => {
     if (disabled) return;
     const ok = await copyMarkdownWithPreamble(
       data,
       columns,
-      buildPreamble(endpoint, methodologyLabel),
+      buildPreamble(endpoint, methodologyLabel, asOfISO),
     );
     if (!mounted.current) return;
     setStatus(ok ? "copied" : "error");
     resetStatusAfterDelay();
-  }, [columns, data, disabled, endpoint, methodologyLabel, resetStatusAfterDelay]);
+  }, [asOfISO, columns, data, disabled, endpoint, methodologyLabel, resetStatusAfterDelay]);
 
   const triggerText =
     status === "copied" ? "Copied!" : status === "error" ? "Copy failed" : triggerLabel;

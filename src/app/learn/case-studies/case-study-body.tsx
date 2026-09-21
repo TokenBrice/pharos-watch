@@ -250,6 +250,7 @@ function RelatedStudies({
 function FactStrip({ study }: { study: CaseStudy }) {
   const peak = study.eventWindow.peakDeviationBps;
   const low = study.eventWindow.lowPrice;
+  const metricScope = study.eventWindow.metricScope;
   return (
     <dl className="pharos-card-shell grid grid-cols-2 gap-x-6 gap-y-4 p-5 sm:grid-cols-4 sm:p-6">
       <div className="space-y-1">
@@ -291,6 +292,11 @@ function FactStrip({ study }: { study: CaseStudy }) {
               low ${low.toFixed(3)}
             </span>
           ) : null}
+          {metricScope ? (
+            <span className="block font-sans text-xs font-normal text-muted-foreground">
+              Scope: {metricScope}
+            </span>
+          ) : null}
         </dd>
       </div>
     </dl>
@@ -328,6 +334,11 @@ function EvidenceSnapshot({ study }: { study: CaseStudy }) {
             {study.eventWindow.peakDeviationBps != null
               ? `${study.eventWindow.peakDeviationBps > 0 ? "+" : ""}${study.eventWindow.peakDeviationBps} bps`
               : "n/a"}
+            {study.eventWindow.metricScope ? (
+              <span className="block font-sans text-xs font-normal text-muted-foreground">
+                Scope: {study.eventWindow.metricScope}
+              </span>
+            ) : null}
           </p>
         </div>
         <div className="space-y-1">
@@ -375,7 +386,11 @@ function HowPharosSawIt({
       {widgets.length ? (
         <div className="space-y-6">
           {widgets.map((widget, i) => (
-            <CaseStudyChart key={`${widget.coinId}-${i}`} widget={widget} />
+            <CaseStudyChart
+              key={`${widget.coinId}-${i}`}
+              widget={widget}
+              eventWindows={study.eventWindows ?? [study.eventWindow]}
+            />
           ))}
         </div>
       ) : (

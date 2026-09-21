@@ -24,7 +24,7 @@ export const content: CaseStudy = {
     "A multi-year locked claim that pays par only at maturity is a bond, not a dollar: at a few percent yearly yield its fair present value sits in the high-80-cent range, so the floor codified a discount rather than a loss.",
     "Hardcoded 1:1 oracles in Morpho markets turned the contractual repricing into forced deleveraging; collateral plumbing that pins a derivative to its base removes the very price signal that would warn of this.",
   ],
-  primaryCoinId: "usd0-usual",
+  primaryCoinId: "busd0-usual",
   archetype: "rwa-credit-fund",
   outcome: "wounded",
   eventDateLabel: "January 2025",
@@ -92,7 +92,7 @@ export const content: CaseStudy = {
   dataWidgets: [
     {
       kind: "peg-deviation",
-      coinId: "usd0-usual",
+      coinId: "busd0-usual",
       caption:
         "Pharos peg-deviation series around the January 2025 floor-exit repricing, when Usual's $0.87 early-redemption floor pulled USD0++ to roughly 89 cents.",
     },
@@ -109,8 +109,8 @@ export const content: CaseStudy = {
       label: "Mechanism: tokenized credit and RWA-backed dollars",
     },
     {
-      href: "/stablecoin/usd0-usual/",
-      label: "USD0 (Usual) coin page",
+      href: "/stablecoin/busd0-usual/",
+      label: "bUSD0 (formerly USD0++) coin page",
     },
     {
       href: "/dependency-map/",

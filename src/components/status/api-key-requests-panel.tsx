@@ -7,7 +7,7 @@ import type {
   ApiKeySelfServeRequestAdminSummary,
   ApiKeySelfServeStatus,
 } from "@shared/types";
-import { AlertCircle, RefreshCw } from "lucide-react";
+import { AlertCircle, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -49,9 +49,12 @@ function requestMutationLane(action: ApiKeyRequestAction, requestId: string): st
 
 export function ApiKeyRequestsPanel() {
   const [statusFilter, setStatusFilter] = useState<"all" | ApiKeySelfServeStatus>("pending_verification");
+  const [pageCursors, setPageCursors] = useState<(string | undefined)[]>([undefined]);
+  const pageCursor = pageCursors[pageCursors.length - 1];
   const { data, error, isLoading, refetch, isFetching } = useApiKeyRequests({
     status: statusFilter === "all" ? undefined : statusFilter,
     limit: REQUEST_LIST_LIMIT,
+    cursor: pageCursor,
   });
   const { executions, runIntent, clear } = useAdminMutationIntents();
   const [busyRequestId, setBusyRequestId] = useState<string | null>(null);
@@ -73,6 +76,12 @@ export function ApiKeyRequestsPanel() {
 
   const requests = data?.requests ?? EMPTY_REQUESTS;
   const generatedAt = data?.generatedAt ?? mountedAtSeconds;
+  const totalRequests = data?.total ?? 0;
+  const nextRequestCursor = data?.nextCursor ?? null;
+  const currentPage = pageCursors.length;
+  const totalPages = Math.max(1, Math.ceil(totalRequests / REQUEST_LIST_LIMIT));
+  const firstRequestNumber = requests.length > 0 ? (currentPage - 1) * REQUEST_LIST_LIMIT + 1 : 0;
+  const lastRequestNumber = requests.length > 0 ? firstRequestNumber + requests.length - 1 : 0;
   const requestSummary = useMemo(
     () => buildApiKeyRequestSummary(requests, generatedAt, statusFilter, REQUEST_LIST_LIMIT),
     [generatedAt, requests, statusFilter],
@@ -195,7 +204,10 @@ export function ApiKeyRequestsPanel() {
               className="min-h-11"
               variant={statusFilter === status ? "default" : "outline"}
               aria-pressed={statusFilter === status}
-              onClick={() => setStatusFilter(status)}
+              onClick={() => {
+                setStatusFilter(status);
+                setPageCursors([undefined]);
+              }}
             >
               {API_KEY_REQUEST_STATUS_LABELS[status]}
             </Button>
@@ -259,6 +271,54 @@ export function ApiKeyRequestsPanel() {
               />
             ))}
           </div>
+        ) : null}
+
+        {!isLoading && !error && data && totalRequests > 0 ? (
+          <nav
+            aria-label="API key request pagination"
+            className="flex flex-col gap-3 border-t border-border/60 pt-3 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <p className="text-xs text-muted-foreground" aria-live="polite">
+              Showing{" "}
+              <span className="pharos-numeric">
+                {firstRequestNumber}-{lastRequestNumber}
+              </span>{" "}
+              of <span className="pharos-numeric">{totalRequests}</span> matching requests.
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="min-w-20 text-center pharos-numeric text-xs text-muted-foreground">
+                Page {currentPage} / {totalPages}
+              </span>
+              <Button
+                type="button"
+                size="icon-sm"
+                className="size-11"
+                variant="outline"
+                disabled={currentPage <= 1}
+                aria-label="Go to previous API key request page"
+                title="Previous page"
+                onClick={() => setPageCursors((previous) => previous.slice(0, -1))}
+              >
+                <ChevronLeft aria-hidden="true" />
+              </Button>
+              <Button
+                type="button"
+                size="icon-sm"
+                className="size-11"
+                variant="outline"
+                disabled={!nextRequestCursor}
+                aria-label="Go to next API key request page"
+                title="Next page"
+                onClick={() => {
+                  if (nextRequestCursor) {
+                    setPageCursors((previous) => [...previous, nextRequestCursor]);
+                  }
+                }}
+              >
+                <ChevronRight aria-hidden="true" />
+              </Button>
+            </div>
+          </nav>
         ) : null}
 
         <Dialog

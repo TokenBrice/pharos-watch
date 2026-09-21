@@ -1,7 +1,7 @@
 /**
- * Deterministic "as-of" header prepended to every CSV/NDJSON/Markdown export
- * so a saved file can be cited and replayed against a known methodology
- * version. Per research/07-power-user.md §"URL Contracts Summary".
+ * Deterministic source-data "as-of" header prepended to every CSV/NDJSON/Markdown
+ * export so a saved file can be cited and replayed against a known methodology
+ * version. See docs/exports.md#export-contract.
  */
 export interface ExportPreamble {
   /** Short endpoint label, e.g. "stablecoins", "report-cards". */

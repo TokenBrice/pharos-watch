@@ -14,7 +14,12 @@ import {
   CASE_STUDY_EVENT_WINDOWS,
   caseStudySlugForEvent as clientCaseStudySlugForEvent,
 } from "@/lib/case-study-client-index";
-import { resolveCaseStudySlugForEvent as resolveCaseStudySlugForEventFromWindows } from "@/lib/case-study-event-window";
+import {
+  CASE_STUDY_CHART_MAX_DAYS,
+  getCaseStudyChartDays,
+  resolveCaseStudySlugForEvent as resolveCaseStudySlugForEventFromWindows,
+} from "@/lib/case-study-event-window";
+import { DAY_MS } from "@/lib/constants";
 import type { CaseStudy } from "@/lib/case-studies/types";
 import { eventBySlug } from "@/lib/depeg-event-page-data";
 
@@ -95,13 +100,15 @@ function isDepegEventSlug(slug: string): boolean {
 }
 
 function eventWindowProjection(study: CaseStudy) {
-  return {
+  return (study.eventWindows ?? [study.eventWindow]).map((window) => ({
     slug: study.slug,
     primaryCoinId: study.primaryCoinId ?? null,
-    relatedCoinIds: (study.relatedCoins ?? []).map((coin) => coin.coinId),
-    startISO: study.eventWindow.startISO,
-    endISO: study.eventWindow.endISO ?? null,
-  };
+    relatedCoinIds:
+      window.relatedCoinIds ??
+      (study.relatedCoins ?? []).map((coin) => coin.coinId),
+    startISO: window.startISO,
+    endISO: window.endISO ?? null,
+  }));
 }
 
 function stripFragment(href: string): string {
@@ -203,7 +210,34 @@ describe("case-study content", () => {
   });
 
   it("keeps the client-safe event-window index in sync without importing article bodies", () => {
-    expect(CASE_STUDY_EVENT_WINDOWS).toEqual(CASE_STUDY_LIST.map(eventWindowProjection));
+    expect(CASE_STUDY_EVENT_WINDOWS).toEqual(CASE_STUDY_LIST.flatMap(eventWindowProjection));
+  });
+
+  it("uses the tracked bUSD0 identity for the USD0++ live chart", () => {
+    const study = CASE_STUDIES["usd0pp-usual-2025"];
+    expect(study.primaryCoinId).toBe("busd0-usual");
+    expect(study.dataWidgets?.map((widget) => widget.coinId)).toEqual(["busd0-usual"]);
+  });
+
+  it("keeps every captioned event reachable inside the supply-history API limit", () => {
+    const nowMs = Date.now();
+    for (const study of CASE_STUDY_LIST.filter((entry) => entry.dataWidgets?.length)) {
+      const windows = study.eventWindows ?? [study.eventWindow];
+      const earliestStart = Math.min(...windows.map((window) => Date.parse(window.startISO)));
+      const days = getCaseStudyChartDays(windows, nowMs);
+      expect(days, `chart days exceed API max in ${study.slug}`).toBeLessThanOrEqual(
+        CASE_STUDY_CHART_MAX_DAYS,
+      );
+      expect(
+        nowMs - days * DAY_MS,
+        `chart cannot reach the earliest captioned event in ${study.slug}`,
+      ).toBeLessThanOrEqual(earliestStart);
+    }
+  });
+
+  it("keeps Terra's displayed low and basis-point deviation in the same window", () => {
+    const { lowPrice, peakDeviationBps } = CASE_STUDIES["terra-ust-2022"].eventWindow;
+    expect(peakDeviationBps).toBe(Math.round(((lowPrice ?? 1) - 1) * 10_000));
   });
 
   describe.each(CASE_STUDY_LIST)("$slug", (study) => {
@@ -260,11 +294,22 @@ describe("case-study content", () => {
     });
 
     it("uses parseable chronological timeline and event-window dates", () => {
-      const windowStart = Date.parse(study.eventWindow.startISO);
-      const windowEnd = study.eventWindow.endISO ? Date.parse(study.eventWindow.endISO) : windowStart;
-      expect(Number.isFinite(windowStart), `invalid eventWindow.startISO: ${study.eventWindow.startISO}`).toBe(true);
-      expect(Number.isFinite(windowEnd), `invalid eventWindow.endISO: ${study.eventWindow.endISO}`).toBe(true);
-      expect(windowEnd).toBeGreaterThanOrEqual(windowStart);
+      const windows = study.eventWindows ?? [study.eventWindow];
+      expect(windows.length).toBeGreaterThan(0);
+      const windowEnds = windows.map((window) => {
+        const windowStart = Date.parse(window.startISO);
+        const windowEnd = window.endISO ? Date.parse(window.endISO) : windowStart;
+        expect(
+          Number.isFinite(windowStart),
+          `invalid event window start: ${window.startISO}`,
+        ).toBe(true);
+        expect(
+          Number.isFinite(windowEnd),
+          `invalid event window end: ${window.endISO}`,
+        ).toBe(true);
+        expect(windowEnd).toBeGreaterThanOrEqual(windowStart);
+        return windowEnd;
+      });
 
       let previous = Number.NEGATIVE_INFINITY;
       for (const entry of study.timeline) {
@@ -274,13 +319,14 @@ describe("case-study content", () => {
         previous = next;
       }
 
+      const latestWindowEnd = Math.max(...windowEnds);
       const highSeverityAfterWindow = study.timeline
         .filter((entry) => (entry.severity ?? "low") === "high")
-        .filter((entry) => Date.parse(entry.dateISO) > windowEnd)
+        .filter((entry) => Date.parse(entry.dateISO) > latestWindowEnd)
         .map((entry) => `${entry.dateISO} ${entry.headline}`);
       expect(
         highSeverityAfterWindow,
-        `high-severity timeline entries after eventWindow.endISO in ${study.slug}`,
+        `high-severity timeline entries after the final event window in ${study.slug}`,
       ).toEqual([]);
     });
 
@@ -308,8 +354,14 @@ describe("case-study content", () => {
 
     it("uses sane deviation metadata when provided", () => {
       if (study.eventWindow.lowPrice !== undefined) {
-        expect(study.eventWindow.lowPrice, `implausible lowPrice: ${study.eventWindow.lowPrice}`).toBeGreaterThan(0.05);
-        expect(study.eventWindow.lowPrice, `implausible lowPrice: ${study.eventWindow.lowPrice}`).toBeLessThanOrEqual(2);
+        expect(
+          study.eventWindow.lowPrice,
+          `implausible lowPrice: ${study.eventWindow.lowPrice}`,
+        ).toBeGreaterThan(0);
+        expect(
+          study.eventWindow.lowPrice,
+          `implausible lowPrice: ${study.eventWindow.lowPrice}`,
+        ).toBeLessThanOrEqual(2);
       }
       if (study.eventWindow.peakDeviationBps !== undefined) {
         expect(
@@ -364,18 +416,31 @@ describe("caseStudySlugForEvent", () => {
     expect(caseStudySlugForEvent("usdc-circle", Date.UTC(2024, 5, 30))).toBeUndefined();
   });
 
+  it("does not absorb annotations from the gap between Dai's two incidents", () => {
+    expect(caseStudySlugForEvent("dai-makerdao", Date.UTC(2021, 6, 1))).toBeUndefined();
+  });
+
+  it("does not attach USDC annotations to Dai's unrelated 2020 incident window", () => {
+    expect(caseStudySlugForEvent("usdc-circle", Date.UTC(2020, 2, 12))).toBeUndefined();
+  });
+
   it("matches the generated client-safe resolver", () => {
     for (const study of CASE_STUDY_LIST) {
-      const ts = Date.parse(study.eventWindow.startISO);
-      if (study.primaryCoinId) {
-        expect(clientCaseStudySlugForEvent(study.primaryCoinId, ts)).toBe(
-          caseStudySlugForEvent(study.primaryCoinId, ts),
-        );
-      }
-      for (const related of study.relatedCoins ?? []) {
-        expect(clientCaseStudySlugForEvent(related.coinId, ts)).toBe(
-          caseStudySlugForEvent(related.coinId, ts),
-        );
+      for (const window of study.eventWindows ?? [study.eventWindow]) {
+        const ts = Date.parse(window.startISO);
+        if (study.primaryCoinId) {
+          expect(clientCaseStudySlugForEvent(study.primaryCoinId, ts)).toBe(
+            caseStudySlugForEvent(study.primaryCoinId, ts),
+          );
+        }
+        const relatedCoinIds =
+          window.relatedCoinIds ??
+          (study.relatedCoins ?? []).map((related) => related.coinId);
+        for (const coinId of relatedCoinIds) {
+          expect(clientCaseStudySlugForEvent(coinId, ts)).toBe(
+            caseStudySlugForEvent(coinId, ts),
+          );
+        }
       }
     }
   });

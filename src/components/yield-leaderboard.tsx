@@ -178,10 +178,7 @@ const YIELD_EXPORT_COLUMNS: CsvColumn<YieldExportRow>[] = [
   { header: "Safety score", accessor: (entry) => entry.row.safetyScore ?? "NR" },
   {
     header: "Safety provenance",
-    accessor: (entry) =>
-      isOpportunityDerivedSafety(entry.row.provenance?.safetyProvenance)
-        ? "opportunity-derived"
-        : "safety-score-v9",
+    accessor: (entry) => entry.row.provenance?.safetyProvenance ?? "unknown",
   },
   { header: "Yield source", accessor: (entry) => entry.row.yieldSource },
   { header: "Yield type", accessor: (entry) => entry.row.yieldType },

@@ -462,6 +462,25 @@
       "checks": ["npm run lint:changed", "npm run typecheck", "npx vitest run src/app/depeg"]
     },
     {
+      "id": "table-exports",
+      "label": "Interactive table export contracts",
+      "risk": "medium",
+      "sources": [
+        "src/lib/exports/**",
+        "src/components/table-export-menu.tsx",
+        "src/app/screener/client.tsx",
+        "src/components/yield-leaderboard.tsx"
+      ],
+      "docs": [{ "path": "docs/exports.md", "anchor": "export-contract" }],
+      "checks": [
+        "npx vitest run src/components/__tests__/table-export-menu.test.tsx src/components/__tests__/yield-leaderboard-export.test.tsx src/app/screener/client.test.tsx"
+      ],
+      "rules": [
+        "Export as-of timestamps identify source-data generation, not download time.",
+        "Unknown values and provenance remain unknown in published export cells."
+      ]
+    },
+    {
       "id": "frontend-routes",
       "label": "Frontend page or route behavior",
       "risk": "medium",

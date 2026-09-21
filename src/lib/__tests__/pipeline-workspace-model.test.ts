@@ -83,6 +83,26 @@ describe("pipeline quality model", () => {
     });
   });
 
+  it("describes stale snapshots with the canonical eight-hour freshness window", () => {
+    const base = withReadyQuality();
+    const data = degraded(base, {
+      dataQuality: {
+        ...base.dataQuality,
+        onchainSupplyQueryStatus: "ok",
+        onchainSupplyMonitoring: "active",
+        onchainSupplyTrackedCoins: 10,
+        onchainSupplyDivergences: 0,
+        onchainDivergenceRatio: 0,
+        staleOnchainSupply: 1,
+        onchainStaleRatio: 0.1,
+      },
+    });
+
+    expect(buildPipelineQualityModel(data).rows.find((row) => row.id === "stale-onchain")?.stateDetail).toBe(
+      "Snapshots older than 8h count as stale for this threshold.",
+    );
+  });
+
   it("does not let informational depegs or Integrity repair debt drive the Quality badge", () => {
     const base = withReadyQuality();
     const data = degraded(base, {

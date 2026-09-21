@@ -56,7 +56,7 @@ const EXPORT_COLUMNS: CsvColumn<ScreenerRow>[] = [
     accessor: (row) => (row.mechanism ? getMechanismArchetypeLabel(row.mechanism) : ""),
   },
   { header: "peg", accessor: (row) => PEG_METADATA[row.peg]?.filterLabel ?? row.peg },
-  { header: "supply_usd", accessor: (row) => row.supplyUsd },
+  { header: "supply_usd", accessor: (row) => (row.supplyUsd > 0 ? row.supplyUsd : "") },
   { header: "peg_score", accessor: (row) => row.pegScore ?? "" },
   { header: "dews_score", accessor: (row) => row.dewsScore ?? "" },
   { header: "liquidity_score", accessor: (row) => row.liquidityScore ?? "" },
@@ -293,6 +293,15 @@ export function ScreenerClient() {
       refetch: refetchDex,
     },
   ]);
+  const exportAsOfISO = new Date(
+    Math.max(
+      stablecoinsUpdatedAt,
+      pegUpdatedAt,
+      reportUpdatedAt,
+      stressUpdatedAt,
+      dexUpdatedAt,
+    ),
+  ).toISOString();
 
   const totalTracked = CLIENT_TRACKED_STABLECOINS.filter(
     (coin) => coin.status !== "quarantined" && coin.status !== "delisted",
@@ -330,6 +339,7 @@ export function ScreenerClient() {
             data={exportRows}
             columns={EXPORT_COLUMNS}
             filename="screener"
+            asOfISO={exportAsOfISO}
             endpoint="screener"
             // 9.1: the mint columns are the published V9 mint component, so
             // they are stamped with the safety-score identity. The retired

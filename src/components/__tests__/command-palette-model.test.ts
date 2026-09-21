@@ -41,6 +41,22 @@ describe("command palette model", () => {
     ]);
   });
 
+  it("caps every ranked section for a one-letter query", () => {
+    const groups = groupCommandPaletteResults(
+      buildCommandPaletteResultDescriptors({
+        query: "a",
+        history: [],
+        isDark: false,
+        watchlistCount: 2,
+      }),
+    );
+
+    expect(groups.find((group) => group.section === "Stablecoins")?.items).toHaveLength(5);
+    expect(groups.find((group) => group.section === "Pages")?.items).toHaveLength(5);
+    expect(groups.find((group) => group.section === "Actions")?.items).toHaveLength(5);
+    expect(groups.every((group) => group.items.length <= 5)).toBe(true);
+  });
+
   it("demotes frozen entries on tied scores", () => {
     const ranked = rankCommandPaletteResults([
       { id: "frozen-coin", score: 5, status: "frozen" as const },
@@ -115,7 +131,7 @@ describe("command palette model", () => {
     }
   });
 
-  it("floats the canonical asset and major vaults above obscure same-substring wrappers", () => {
+  it("keeps the canonical asset and major vaults inside capped substring results", () => {
     const order = buildCommandPaletteResultDescriptors({
       query: "USDC",
       history: [],
@@ -124,22 +140,15 @@ describe("command palette model", () => {
       .filter((result) => result.section === "Stablecoins")
       .map((result) => result.href ?? "");
 
-    const usdCoin = order.indexOf("/stablecoin/usdc-circle/");
-    const sparkVault = order.indexOf("/stablecoin/susdc-spark/");
-    const movementUsdcx = order.indexOf("/stablecoin/usdcx-movement/");
-
-    expect(usdCoin).toBe(0);
-    // Prominence keeps the large Spark USDC vault above the negligible
-    // "Movement USDCx" wrapper even though the wrapper scores a symbol prefix.
-    expect(sparkVault).toBeGreaterThan(-1);
-    expect(movementUsdcx).toBeGreaterThan(-1);
-    expect(sparkVault).toBeLessThan(movementUsdcx);
+    expect(order).toHaveLength(5);
+    expect(order[0]).toBe("/stablecoin/usdc-circle/");
+    expect(order).toContain("/stablecoin/susdc-spark/");
+    expect(order).not.toContain("/stablecoin/usdcx-movement/");
   });
 
-  it("uses live market cap prominence when live metadata is available", () => {
+  it("uses live market cap prominence before capping stablecoin results", () => {
     const stablecoinLiveMetadata = new Map([
-      ["syrupusdc-maple", { marketCapUsd: 1_400_000_000 }],
-      ["usdcx-movement", { marketCapUsd: 2_300_000 }],
+      ["syrupusdc-maple", { marketCapUsd: 100_000_000_000 }],
     ]);
     const results = buildCommandPaletteResultDescriptors({
       query: "USDC",
@@ -149,11 +158,14 @@ describe("command palette model", () => {
     }).filter((result) => result.section === "Stablecoins");
     const order = results.map((result) => result.href ?? "");
 
+    expect(results).toHaveLength(5);
+    expect(order).toContain("/stablecoin/syrupusdc-maple/");
+    expect(order).toContain("/stablecoin/gtusdcp-gauntlet/");
     expect(order.indexOf("/stablecoin/syrupusdc-maple/")).toBeLessThan(
-      order.indexOf("/stablecoin/usdcx-movement/"),
+      order.indexOf("/stablecoin/gtusdcp-gauntlet/"),
     );
     expect(results.find((result) => result.href === "/stablecoin/syrupusdc-maple/")).toMatchObject({
-      marketCapUsd: 1_400_000_000,
+      marketCapUsd: 100_000_000_000,
     });
   });
 
@@ -294,6 +306,7 @@ describe("command palette model", () => {
 
     expect(yieldRows.length).toBeGreaterThan(0);
     expect(yieldRows.length).toBeLessThanOrEqual(3);
+    expect(results.filter((result) => result.section === "Stablecoins").length).toBeLessThanOrEqual(5);
     for (const row of yieldRows) {
       expect(row.href).toMatch(/^\/stablecoin\/[a-z0-9-]+\/yield\/$/);
       expect(row.label).toMatch(/ · Yield$/);

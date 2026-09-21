@@ -34,7 +34,7 @@ export const content: CaseStudy = {
     startISO: "2022-05-07",
     endISO: "2022-05-13",
     peakDeviationBps: -9900,
-    lowPrice: 0.1,
+    lowPrice: 0.01,
   },
   cemeteryId: "ust-terrausd-2022-05",
   timeline: [
