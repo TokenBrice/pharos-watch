@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import type { ComponentType } from "react";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { HomeAltRankingsSection } from "@/components/home-alt-rankings-section";
@@ -18,6 +18,7 @@ const {
   stablecoinTablePropsMock,
   useActiveDepegEventsMock,
   useBlacklistEventsPageMock,
+  useBlacklistSummaryMock,
   useDexLiquidityMock,
   useHomeAltFiltersMock,
   useMintBurnFlowsMock,
@@ -31,6 +32,7 @@ const {
   stablecoinTablePropsMock: vi.fn(),
   useActiveDepegEventsMock: vi.fn(),
   useBlacklistEventsPageMock: vi.fn(),
+  useBlacklistSummaryMock: vi.fn(),
   useDexLiquidityMock: vi.fn(),
   useHomeAltFiltersMock: vi.fn(),
   useMintBurnFlowsMock: vi.fn(),
@@ -63,7 +65,10 @@ vi.mock("@/hooks/api-hooks", () => ({
   useStabilityIndex: useStabilityIndexMock,
   useStressSignals: useStressSignalsMock,
 }));
-vi.mock("@/hooks/use-blacklist-events", () => ({ useBlacklistEventsPage: useBlacklistEventsPageMock }));
+vi.mock("@/hooks/use-blacklist-events", () => ({
+  useBlacklistEventsPage: useBlacklistEventsPageMock,
+  useBlacklistSummary: useBlacklistSummaryMock,
+}));
 vi.mock("@/hooks/use-depeg-events", () => ({ useActiveDepegEvents: useActiveDepegEventsMock }));
 vi.mock("@/hooks/use-home-alt-filters", () => ({ useHomeAltFilters: useHomeAltFiltersMock }));
 vi.mock("@/hooks/use-mint-burn-flows", () => ({ useMintBurnFlows: useMintBurnFlowsMock }));
@@ -150,6 +155,22 @@ const freezesReady = {
     timestamp: Math.floor(UPDATED_AT / 1000) - 60,
   }],
 };
+const freezeSummaryReady = {
+  stats: {
+    recentFreezeCount24h: 1,
+    recentFreezeCount7d: 1,
+    recentFreezeAmount24hUsd: 1_000,
+    recentFreezeAmount7dUsd: 1_000,
+  },
+};
+const freezeSummaryEmpty = {
+  stats: {
+    recentFreezeCount24h: 0,
+    recentFreezeCount7d: 0,
+    recentFreezeAmount24hUsd: 0,
+    recentFreezeAmount7dUsd: 0,
+  },
+};
 
 interface SurfaceCase {
   Component: ComponentType;
@@ -211,6 +232,7 @@ const SURFACES: SurfaceCase[] = [
     Component: RecentFreezesCard,
     configure(state) {
       useBlacklistEventsPageMock.mockReturnValue(queryFor(state, freezesReady, { events: [] }));
+      useBlacklistSummaryMock.mockReturnValue(queryFor(state, freezeSummaryReady, freezeSummaryEmpty));
     },
     emptyText: "$0",
     emptyExtraText: "0X",
@@ -279,3 +301,53 @@ describe.each(SURFACES)(
     });
   },
 );
+
+describe("RecentFreezesCard authoritative totals", () => {
+  it("uses freeze-only summary windows when a release and later freezes saturate the 200-row page", () => {
+    const pageEvents = [
+      {
+        amountUsdAtEvent: 1,
+        eventType: "unblacklist",
+        id: "release",
+        stablecoin: "USDC",
+        stablecoinId: "usdc-circle",
+        timestamp: Math.floor(UPDATED_AT / 1000) - 1,
+      },
+      ...Array.from({ length: 199 }, (_, index) => ({
+        amountUsdAtEvent: 10,
+        eventType: "blacklist",
+        id: `freeze-${index}`,
+        stablecoin: "USDC",
+        stablecoinId: "usdc-circle",
+        timestamp: Math.floor(UPDATED_AT / 1000) - index - 2,
+      })),
+    ];
+    useBlacklistEventsPageMock.mockReturnValue(queryFor("ready", { events: pageEvents }, { events: [] }));
+    useBlacklistSummaryMock.mockReturnValue(
+      queryFor(
+        "ready",
+        {
+          stats: {
+            recentCount24h: 201,
+            recentFreezeCount24h: 200,
+            recentFreezeCount7d: 350,
+            recentFreezeAmount24hUsd: 123_456,
+            recentFreezeAmount7dUsd: 456_789,
+          },
+        },
+        freezeSummaryEmpty,
+      ),
+    );
+
+    render(<RecentFreezesCard />);
+
+    expect(useBlacklistEventsPageMock).toHaveBeenCalledWith(expect.objectContaining({ limit: 200 }));
+    expect(screen.getByText("200X")).toBeTruthy();
+    expect(screen.getByText("$123K")).toBeTruthy();
+    expect(screen.queryByText("199X")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "7d" }));
+    expect(screen.getByText("350X")).toBeTruthy();
+    expect(screen.getByText("$457K")).toBeTruthy();
+  });
+});

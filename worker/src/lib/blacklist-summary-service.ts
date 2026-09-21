@@ -540,9 +540,8 @@ async function buildBlacklistSummaryPayload(
       .all<{ stablecoin: string; event_type: string; n: number }>(),
 
     // Collapse total / max(timestamp) / recoverable-gap / recent-30d /
-    // recent-24h into a single aggregate pass so we don't hit the
-    // public-events table five separate times under the
-    // WHERE suppression_reason IS NULL predicate.
+    // recent-24h and freeze-only window totals into a single aggregate pass
+    // under the WHERE suppression_reason IS NULL predicate.
     db
       .prepare(
         `/* blacklist-summary-public-aggregate */
@@ -550,12 +549,25 @@ async function buildBlacklistSummaryPayload(
              COUNT(*) AS total,
              MAX(timestamp) AS max_ts,
              SUM(CASE WHEN timestamp >= ? THEN 1 ELSE 0 END) AS recent_30d,
-             SUM(CASE WHEN timestamp >= ? THEN 1 ELSE 0 END) AS recent_24h
+             SUM(CASE WHEN timestamp >= ? THEN 1 ELSE 0 END) AS recent_24h,
+             SUM(CASE WHEN event_type IN ('blacklist', 'destroy') AND timestamp >= ? THEN 1 ELSE 0 END) AS freeze_24h,
+             SUM(CASE WHEN event_type IN ('blacklist', 'destroy') AND timestamp >= ? THEN 1 ELSE 0 END) AS freeze_7d,
+             SUM(CASE WHEN event_type IN ('blacklist', 'destroy') AND timestamp >= ? THEN COALESCE(amount_usd_at_event, 0) ELSE 0 END) AS freeze_usd_24h,
+             SUM(CASE WHEN event_type IN ('blacklist', 'destroy') AND timestamp >= ? THEN COALESCE(amount_usd_at_event, 0) ELSE 0 END) AS freeze_usd_7d
            FROM blacklist_events
            WHERE suppression_reason IS NULL`,
       )
-      .bind(now - 30 * 86400, now - 86400)
-      .first<{ total: number; max_ts: number | null; recent_30d: number; recent_24h: number }>(),
+      .bind(now - 30 * 86400, now - 86400, now - 86400, sevenDayCutoffSec, now - 86400, sevenDayCutoffSec)
+      .first<{
+        total: number;
+        max_ts: number | null;
+        recent_30d: number;
+        recent_24h: number;
+        freeze_24h: number;
+        freeze_7d: number;
+        freeze_usd_24h: number;
+        freeze_usd_7d: number;
+      }>(),
 
     loadBlacklistCurrentBalanceMap(db, now - BLACKLIST_SUMMARY_CURRENT_BALANCE_MAX_AGE_SEC),
 
@@ -651,6 +663,10 @@ async function buildBlacklistSummaryPayload(
         destroyedTotal,
         recentCount: aggregateRow?.recent_30d ?? 0,
         recentCount24h: aggregateRow?.recent_24h ?? 0,
+        recentFreezeCount24h: aggregateRow?.freeze_24h ?? 0,
+        recentFreezeCount7d: aggregateRow?.freeze_7d ?? 0,
+        recentFreezeAmount24hUsd: aggregateRow?.freeze_usd_24h ?? 0,
+        recentFreezeAmount7dUsd: aggregateRow?.freeze_usd_7d ?? 0,
         recoverableGapCount: gapMetrics.missingAmounts,
         activeAddressCount: activeStats.activeAddressCount,
         activeFrozenTotal: activeStats.activeFrozenTotal,
