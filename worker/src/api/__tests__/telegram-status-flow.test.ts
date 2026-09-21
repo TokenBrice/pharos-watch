@@ -92,4 +92,21 @@ describe("buildStatusMessage Telegram HTML escaping", () => {
     expect(msg).not.toContain('<a href="https://attacker.example/phish">');
     expect(msg).not.toContain("<b>verified</b>");
   });
+
+  it("renders PYS unavailable only when the status loader cannot resolve a score", () => {
+    const msg = buildStatusMessage(
+      "USDC",
+      baseStatus({
+        yield: {
+          currentApy: 4.8,
+          apy30d: 4.2,
+          source: "Aave V3",
+          pharosYieldScore: null,
+          pysUnavailableReason: "yield-ranking-not-found",
+          updatedAt: Math.floor(Date.now() / 1000),
+        },
+      }),
+    );
+    expect(msg).toContain("PYS unavailable");
+  });
 });

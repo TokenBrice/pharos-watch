@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 as baseMockD1 } from "@shared/test-utils/mock-d1";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
+import { makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
 import { loadStatusForCoin } from "../telegram-webhook-status";
 import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
 import {
@@ -11,10 +12,15 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 
 const mocks = vi.hoisted(() => ({
   loadActiveSafetyScoreSource: vi.fn(),
+  handleYieldRankings: vi.fn(),
 }));
 
 vi.mock("../../lib/safety-score-active-source", () => ({
   loadActiveSafetyScoreSource: mocks.loadActiveSafetyScoreSource,
+}));
+
+vi.mock("../cache-handlers", () => ({
+  handleYieldRankings: mocks.handleYieldRankings,
 }));
 
 function mockD1(
@@ -36,6 +42,17 @@ afterEach(() => {
 });
 
 describe("loadStatusForCoin", () => {
+  beforeEach(() => {
+    mocks.handleYieldRankings.mockReset().mockImplementation(async () =>
+      new Response(JSON.stringify({
+        rankings: [makeYieldRanking({ pharosYieldScore: 73 })],
+        riskFreeRate: 4.25,
+        scalingFactor: 8,
+        medianApy: 5,
+        updatedAt: 123,
+      })),
+    );
+  });
   beforeEach(() => {
     const snapshot = makeWorkerReportCardsV9Response({
       asOfSec: 122,
@@ -141,6 +158,8 @@ describe("loadStatusForCoin", () => {
     expect(status.dews).toBeNull();
     expect(status.safety).toBeNull();
     expect(status.priceUsd).toBeNull();
+    expect(status.yield).toBeNull();
+    expect(mocks.handleYieldRankings).not.toHaveBeenCalled();
     expect(status.depeg.status).toBe("stable");
   });
 
@@ -172,6 +191,8 @@ describe("loadStatusForCoin", () => {
 
     const yieldSql = history.find((s) => s.includes("FROM yield_data"));
     expect(yieldSql).toContain("publication_generation_id IS NULL OR publication_state = 'published'");
+    expect(yieldSql).not.toContain("pharos_yield_score");
+    expect(yieldSql).toContain("ORDER BY apy_30d DESC, updated_at DESC");
   });
 
   it("fails closed when canonical safety identity is unavailable", async () => {
@@ -212,8 +233,8 @@ describe("loadStatusForCoin", () => {
 
       expect(status.yield?.source).toBe("Published source");
       expect(status.yield).toMatchObject({
-        pharosYieldScore: null,
-        pysUnavailableReason: "pys-v8-retired",
+        pharosYieldScore: 73,
+        pysUnavailableReason: null,
       });
     } finally {
       sqlite.close();
