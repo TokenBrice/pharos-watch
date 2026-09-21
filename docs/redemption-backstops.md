@@ -132,6 +132,16 @@ The public registry import lives in `shared/lib/redemption-backstops.ts`. The ac
 
 `outputAssets` records concrete holder-route outputs, not every reserve asset. Stable outputs use tracked stablecoin IDs; collateral outputs use canonical `asset:<symbol>` keys. Configured baskets are limited to 16 members, matching the `ExitRouteOutput.assetKeys` bound. Leave the field unset when the published route is incomplete or when its tracked and untracked members cannot all be represented: an incomplete subset must not turn an unresolved basket into a resolved one. When a complete reviewed route contains untracked assets, `unresolvedOutputAssetKeys` may preserve the exact identities for diagnostics; those keys do not resolve or score the output.
 
+### Output-key identity contract
+
+Output identity is kind-specific and must remain stable from the configured route through the producer observation and Safety Score V9 review:
+
+- `tracked-stablecoin` outputs use tracked stablecoin registry IDs. Unknown IDs are rejected rather than inferred from symbols.
+- `collateral` outputs use the reviewed non-tracked `asset:<symbol>` vocabulary derived from the redemption config registry. These keys are deliberate collateral identities, not aliases for tracked stablecoins.
+- `unresolved-asset` outputs may use only the exact keys declared by `unresolvedOutputAssetKeys`; they remain unresolved and are never promoted by a consumer.
+
+The registry validator enforces configured identities, while the V9 review boundary rejects unknown identities and preserves a captured identity mismatch for diagnostics rather than rewriting the producer's observation. USD0 (`usd0-usual`) therefore keeps its reviewed mixed-collateral outputs `asset:usyc`, `asset:m`, and `asset:ustbl`; renaming them to tracked IDs or moving them to an unresolved namespace would silently break exact output matching and valuation.
+
 ### July 2026 Output Reconciliation
 
 The 2026-07-15 source pass made the following config-only evidence rulings. It did not change scoring weights or formulas.

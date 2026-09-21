@@ -499,6 +499,10 @@ describe("derived supply-model route observations", () => {
       kind: "tracked-stablecoin",
       trackedAssetIds: ["usdc-circle", "usdt-tether"],
     });
+    expect(buildConfigured("usd0-usual")?.output).toEqual({
+      kind: "collateral",
+      assetKeys: ["asset:usyc", "asset:m", "asset:ustbl"],
+    });
 
     const dusd = buildConfigured("dusd-dtrinity", { capacityConfidence: "heuristic" });
     expect(dusd).toMatchObject({

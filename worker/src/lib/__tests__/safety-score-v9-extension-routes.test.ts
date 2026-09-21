@@ -613,6 +613,31 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     };
     expect(buildSafetyScoreV9RouteReviews(fixedInput, "dai-makerdao")[0]!.output?.valuation).toBeNull();
   });
+  it("preserves USD0 mixed-collateral identities through the reviewed route output", () => {
+    const row = makeSupplyFullRedemption({
+      stablecoinId: "usd0-usual",
+      routeFamily: "stablecoin-redeem",
+      outputAssetType: "mixed-collateral",
+    });
+    const derived = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInputStub(row), row.stablecoinId)[0]!;
+    row.capacityProfile = {
+      ...row.capacityProfile!,
+      exitRouteObservations: [derived.observation],
+    };
+
+    const review = buildSafetyScoreV9RouteReviews(fixedInputStub(row), row.stablecoinId)[0]!;
+    expect(review.output).toMatchObject({
+      kind: "collateral",
+      assetKeys: ["asset:m", "asset:ustbl", "asset:usyc"],
+      valuation: {
+        referenceAssetKey: "asset:m",
+        unitValueUsd: 1,
+        expectedUnitValueUsd: 1,
+        sourceId: "report-cards-dex-usd-normalized",
+      },
+    });
+  });
+
 
   it("admits reviewed unresolved-output ownership only after the review date", () => {
     const row = makeSupplyFullRedemption({

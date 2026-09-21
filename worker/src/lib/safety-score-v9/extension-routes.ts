@@ -5,6 +5,7 @@ import {
   getRedemptionBackstopConfig,
   resolveMoreConservativeRedemptionSettlement,
   resolveV9RedemptionRouteCostBpsAtNotional,
+  validateRedemptionOutputIdentity,
   type RedemptionBackstopConfig,
 } from "@shared/lib/redemption-backstops";
 import { isRedemptionSettlementFaster } from "@shared/lib/redemption-backstop-configs/settlement";
@@ -766,6 +767,12 @@ function buildRedemptionRouteReview(
       : scope.kind === "protocol"
         ? [`protocol:${scope.protocol}${scope.chain ? `:${scope.chain}` : ""}`]
         : dexPhysicalResourceKeys(observation);
+  const outputIdentityIssues = validateRedemptionOutputIdentity(entry.stablecoinId, observation.output);
+  const outputReview =
+    outputIdentityIssues.every((issue) => issue.code === "output-identity-mismatch")
+      ? buildOutputReview(fixedInput, observation, fixedInput.redemptionGenerationId, entry.stablecoinId)
+      : null;
+
   return {
     lane: "redemption",
     routeId: observation.routeId,
@@ -782,9 +789,9 @@ function buildRedemptionRouteReview(
     queueDepthUsd: entry.queueDepthUsd ?? null,
     dailyLimitUsd: entry.dailyLimitUsd ?? null,
     minRedeemUsd: reviewedTerms.minRedeemUsd,
-    physicalResourceKeys,
     executionCosts: redemptionExecutionCosts(entry, observation),
-    output: buildOutputReview(fixedInput, observation, fixedInput.redemptionGenerationId, entry.stablecoinId),
+    physicalResourceKeys,
+    output: outputReview,
     ...(unresolvedOutputResponsibility === null ? {} : { unresolvedOutputResponsibility }),
     failureDomains: [],
   };
