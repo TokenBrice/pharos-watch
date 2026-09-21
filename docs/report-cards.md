@@ -10,6 +10,7 @@ Safety Score V9 is the sole active stablecoin safety model. It publishes evidenc
 - **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v9.8`<!-- GENERATED-END: methodology-version-safety-score -->
 - Public response schema: report v5 with score trace v3
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`, parsed and digested by `shared/lib/safety-score-v9/policy.ts`
+- **Evaluation build:** `352f3bd95b7dba8181299f079676087c3d67807fa18e09117ac1c305aef81966` (`SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST`), generated from the evaluator and fact-producer source manifest. The manifest's evaluator closure includes the policy's reviewed chain-maturity registry, so score-bearing source edits rotate the identity used by replay and publication comparability.
 - Implementation: `shared/lib/safety-score-v9/`
 - Structured changelog: `shared/data/methodology-changelogs/safety-score/`
 - Public methodology: `/methodology/#safety-scores-methodology`
@@ -46,6 +47,8 @@ Curated collateral links enter the dependency overlay only when the same curated
 Since methodology 9.49, structural dependencies are derived independently of reserve composition: variant parents and explicit wrapped-asset identities retain their unit serial claims, and manual non-collateral relationships survive either composition source. The 9.48 no-revival rule still applies to reserve weights: a live composition with no mapped tracked-asset slices retains `baseSource: live-unmapped` and never restores curated or manual collateral weights. A surviving variant uses `source: variant`; unmapped reserve provenance and zero mapped live weight remain visible. Dependency facts retain structured `rejectionReasons` entries (`sliceIndex`, `reason`) distinguishing `no-match`, `expired` matching classification, and explicit reviewed `non-link`. Curated reserve fallback is available only when no live composition exists. Partial live mappings keep their live weights.
 
 Economic Control prices mint, upgrade, oracle, bridge, and other binding control paths. Mint-component posture derivation, the scoped-control-question contract, and the ceilings each takes are owned by [mint-authority-scoring.md](./mint-authority-scoring.md#current-v9-scope); this document keeps only the pillar-level contract.
+
+Control resolution uses one predicate across the extension and fact set: access-only controls are resolved without a privileged identity, deployment controls are resolved when their reconciled share is below the deployment-materiality threshold, and every other control needs known authority, cap, impairment, loss-scope, and incident semantics. The `unresolved-control-identity` gap is published only when those conditions are not met.
 
 The policy semantic digest binds every score-bearing reshape and freshness gate: the insufficient-evidence withhold band, danger and F-grade peg predicates, pre-exit danger predicate, material-bridge high-share band, and the separately named evidence-expiry windows used by reviewed research, access, overlays, and reserve evidence. Counterfactual replay can change those fields in a policy clone and receives a distinct semantic digest for any changed gate. Report-card presentation also derives grade thresholds from the active scoring policy rather than maintaining another threshold table.
 

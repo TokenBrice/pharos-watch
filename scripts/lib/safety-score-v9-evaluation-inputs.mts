@@ -5,6 +5,7 @@
  */
 export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
   "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
+  "shared/data/safety-score-v9/chain-maturity-reviews-v1.ts",
   "shared/lib/dependency-graph.ts",
   "shared/lib/exit-route-scoring.ts",
   "shared/lib/sha256.ts",
@@ -26,7 +27,9 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
   "shared/lib/safety-score-v9/exit.ts",
   "shared/lib/safety-score-v9/facts.ts",
   "shared/lib/safety-score-v9/formula.ts",
+  "shared/lib/safety-score-v9/gap-index.ts",
   "shared/lib/safety-score-v9/mechanism-profiles.ts",
+  "shared/lib/safety-score-v9/operational-market-depth.ts",
   "shared/lib/safety-score-v9/operational-resilience.ts",
   "shared/lib/safety-score-v9/policy.ts",
   "shared/lib/safety-score-v9/primitives.ts",
@@ -35,6 +38,7 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
   "shared/lib/safety-score-v9/score.ts",
   "shared/lib/safety-score-v9/stress.ts",
   "shared/lib/safety-score-v9/trace.ts",
+  "shared/lib/safety-score-v9/unavailability-roots.ts",
   "shared/lib/safety-score-v9/wrapper-risk.ts",
   "shared/types/safety-score-v9-backing.ts",
   "shared/types/safety-score-v9-fact-primitives.ts",

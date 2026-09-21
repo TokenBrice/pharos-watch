@@ -51,6 +51,14 @@ describe("Safety Score v9 evaluation-build manifest", () => {
     expect(V9_SCORE_EVALUATOR_SOURCE_PATHS).toContain("shared/lib/safety-score-v9/wrapper-risk.ts");
     expect(V9_SCORE_EVALUATOR_SOURCE_PATHS).toContain("shared/lib/safety-score-v9/mechanism-profiles.ts");
     expect(V9_SCORE_EVALUATOR_SOURCE_PATHS).toContain("shared/lib/safety-score-v9/operational-resilience.ts");
+    expect(V9_SCORE_EVALUATOR_SOURCE_PATHS).toContain("shared/lib/safety-score-v9/gap-index.ts");
+    expect(V9_SCORE_EVALUATOR_SOURCE_PATHS).toContain(
+      "shared/lib/safety-score-v9/operational-market-depth.ts",
+    );
+    expect(V9_SCORE_EVALUATOR_SOURCE_PATHS).toContain("shared/lib/safety-score-v9/unavailability-roots.ts");
+    expect(V9_SCORE_EVALUATOR_SOURCE_PATHS).toContain(
+      "shared/data/safety-score-v9/chain-maturity-reviews-v1.ts",
+    );
     expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain("worker/src/lib/safety-score-v9/fact-set.ts");
     expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain("shared/lib/p4-exit-route-capacity.ts");
     expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain("shared/lib/supply.ts");
