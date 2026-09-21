@@ -9,7 +9,7 @@ import { useStabilityIndex } from "@/hooks/api-hooks";
 import { CHART_BLUE } from "@/lib/chart-colors";
 import { resolveQueryViewState } from "@/lib/query-view-state";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
-import { buildPsiChartData } from "@shared/lib/psi-view-model";
+import { buildPsiChartData, getDisplayedPsi, getDisplayedPsiBasis } from "@shared/lib/psi-view-model";
 
 function StabilityAreaChart({ values, color }: { values: number[]; color: string }): React.JSX.Element | null {
   return (
@@ -51,6 +51,8 @@ export function PsiBandCard({ embedded = false }: { embedded?: boolean } = {}): 
     const avg = sparkValues.reduce((sum, value) => sum + value, 0) / sparkValues.length;
     return current.score - avg;
   }, [current, sparkValues]);
+  const displayedPsi = current ? getDisplayedPsi(current) : null;
+  const displayedPsiBasis = current ? getDisplayedPsiBasis(current) : null;
 
   const band = current?.band as ConditionBand | undefined;
   const sparkColor = CHART_BLUE;
@@ -100,6 +102,18 @@ export function PsiBandCard({ embedded = false }: { embedded?: boolean } = {}): 
                 </span>
               ) : null}
               <p className="mt-1.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                {current ? (
+                  <>
+                    <span>raw instant</span>
+                    {displayedPsi && displayedPsiBasis === "rolling 24h avg" ? (
+                      <>
+                        {" · "}
+                        {displayedPsiBasis} <span className="pharos-numeric">{displayedPsi.score.toFixed(1)}</span>
+                      </>
+                    ) : null}
+                    {" · "}
+                  </>
+                ) : null}
                 90D{" "}
                 {avgDelta !== null ? (
                   <span className={`pharos-numeric ${avgDeltaClass}`}>

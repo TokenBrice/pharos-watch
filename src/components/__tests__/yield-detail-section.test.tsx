@@ -546,9 +546,12 @@ describe("YieldDetailSection", () => {
     const { container } = render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
     expect(screen.getByText("Movement vs last publication")).toBeTruthy();
-    // Arrow + signed delta together: "▲ +3"
-    expect(container.textContent ?? "").toMatch(/▲\s*\+3/);
-    expect(container.textContent ?? "").toMatch(/PYS\s+\+4\.50%/);
+    // Arrow + signed delta together: "▲ +3 places"
+    expect(container.textContent ?? "").toMatch(/▲\s*\+3 places/);
+    expect(container.textContent ?? "").toMatch(/\+4\.50\s+PYS/);
+    expect(container.textContent ?? "").not.toMatch(/PYS\s*\+4\.50%/);
+    expect(container.textContent ?? "").toMatch(/APY:\s*\+3\.20\s+PYS/);
+    expect(container.textContent ?? "").toMatch(/Benchmark:\s*\+0\.80\s+PYS/);
     expect(container.textContent ?? "").toMatch(/Previous rank/);
     expect(container.textContent ?? "").toMatch(/#12/);
     expect(container.textContent ?? "").toMatch(/#9/);

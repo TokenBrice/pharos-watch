@@ -39,6 +39,7 @@ import { StatTile } from "@/components/stat-tile";
 import { YieldSourceRiskCard } from "@/components/yield-source-risk-card";
 import { YieldDecisionLedgerCard } from "@/components/yield-decision-ledger-card";
 import { classifyApyChange, type YieldChangeAttributionResult } from "@/lib/yield-change-attribution";
+import { formatSignedPysDelta } from "@/lib/yield-presentation";
 
 interface YieldDetailSectionProps {
   stablecoinId: string;
@@ -600,18 +601,18 @@ export function YieldRankMovementCard({ attribution }: { attribution: YieldRankC
           aria-label={
             rankDelta != null
               ? rankDelta > 0
-                ? `Rank improved by ${Math.abs(rankDelta)}`
+                ? `Rank improved by ${Math.abs(rankDelta)} places`
                 : rankDelta < 0
-                  ? `Rank fell by ${Math.abs(rankDelta)}`
+                  ? `Rank fell by ${Math.abs(rankDelta)} places`
                   : "Rank unchanged"
               : "Rank delta unavailable"
           }
         >
-          {arrow} {rankDelta != null ? formatSignedRankDelta(rankDelta) : "—"}
+          {arrow} {rankDelta != null ? `${formatSignedRankDelta(rankDelta)} places` : "—"}
         </span>
         {pysDelta != null ? (
           <span className="font-mono text-xs tabular-nums text-muted-foreground">
-            PYS {formatSignedPercent(pysDelta, 2)}
+            {formatSignedPysDelta(pysDelta)}
             {driverLabel ? ` (${driverLabel})` : ""}
           </span>
         ) : null}
@@ -641,7 +642,7 @@ export function YieldRankMovementCard({ attribution }: { attribution: YieldRankC
               return (
                 <li key={key}>
                   <span className="text-foreground">{label.short}</span>:{" "}
-                  <span className="font-mono tabular-nums text-foreground">{formatSignedPercent(value, 2)} PYS</span>{" "}
+                  <span className="font-mono tabular-nums text-foreground">{formatSignedPysDelta(value)}</span>{" "}
                   <span className="text-muted-foreground/80">— {label.long}</span>
                 </li>
               );
