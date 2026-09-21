@@ -388,7 +388,7 @@ describe("integrateDirectApiLiquidityPhase", () => {
       project: "raydium",
       chain: "Solana",
       tvlUsd: 4_000_000,
-      symbol: "USDC / USDT",
+      symbol: "USDT-USDC",
       volumeUsd1d: 100_000,
       poolType: "raydium-amm",
       source: "dl",

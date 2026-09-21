@@ -118,6 +118,7 @@ index	idx_dex_liquidity_scoring_stage_chunks_retention
 index	idx_dex_liquidity_scoring_stages_slot
 index	idx_dex_measured_quotes_target_generation
 index	idx_dex_measured_targets_generation_coin
+index	idx_dex_native_shadow_quotes_retention
 index	idx_dex_pool_registry_refreshed
 index	idx_dex_price_challengers_lookup
 index	idx_dex_price_run_rows_retention
@@ -365,6 +366,7 @@ table	dex_liquidity_scoring_stage_chunks
 table	dex_liquidity_scoring_stages
 table	dex_measured_execution_quotes
 table	dex_measured_execution_targets
+table	dex_native_shadow_quotes
 table	dex_pool_registry
 table	dex_pool_staging
 table	dex_price_challenger_snapshots

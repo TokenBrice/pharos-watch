@@ -32,7 +32,7 @@ import { fetchPancakeSwapPools } from "../fetch-pancakeswap";
 import { fetchSlipstreamPools } from "../fetch-slipstream";
 import { fetchUniswapV3BscShadowPools } from "../fetch-uniswap-v3-bsc";
 import { mergeGtPools } from "../fetch-crawlers";
-import { normalizeProtocol } from "../pool-helpers";
+import { normalizeProtocol, parsePoolSymbols } from "../pool-helpers";
 import { buildDirectApiPoolIdentity } from "../direct-source-helpers";
 import {
   countPoolIdentityKeys,
@@ -1012,12 +1012,24 @@ function isCompatibleExactDuplicateEvidence(existingPool: PoolEntry, incomingPoo
 }
 
 function poolSymbolSet(symbol: string): string {
-  return symbol
-    .split(/\s*\/\s*/)
-    .map((part) => part.trim().toLowerCase())
-    .filter(Boolean)
+  return parsePoolSymbols(stripTrailingFeeTier(symbol))
+    .map((part) => part.toLowerCase())
     .sort()
     .join("/");
+}
+
+// Provider display names may append a fee tier ("USDC / USDT 0.01%"); it is
+// metadata, not a token. Only a final whitespace-separated numeric percentage
+// is removed.
+function stripTrailingFeeTier(symbol: string): string {
+  const trimmed = symbol.trimEnd();
+  const lastSpace = trimmed.search(/\s\S*$/);
+  if (lastSpace < 0) return trimmed;
+  const tail = trimmed.slice(lastSpace + 1);
+  if (!tail.endsWith("%")) return trimmed;
+  const value = tail.slice(0, -1);
+  if (value === "" || !/^[0-9.]+$/.test(value) || Number.isNaN(Number(value))) return trimmed;
+  return trimmed.slice(0, lastSpace);
 }
 
 function incrementReason(record: Record<string, number>, reason: string, count = 1): void {
