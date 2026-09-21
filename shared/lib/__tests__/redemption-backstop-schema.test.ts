@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import { RedemptionBackstopConfigSchema } from "@shared/lib/redemption-backstop-configs/schema";
 import { resolveReviewedRedemptionSettlement } from "@shared/lib/redemption-backstop-configs/settlement";
 import type { RedemptionSettlementModel } from "@shared/types";
+import { getRedemptionBackstopConfig } from "../redemption-backstops";
+import { valuePhysicalCommodityDelivery } from "../physical-commodity-delivery";
+import { computeRedemptionOutputAssetQuality } from "../redemption-backstop-scoring";
 
 function settlementReviewConfig(
   settlementModel: RedemptionSettlementModel,
@@ -20,6 +23,32 @@ function settlementReviewConfig(
 }
 
 describe("redemption backstop schema", () => {
+  it.each([
+    ["xaut-tether", 1, 430, 25, 0],
+    ["paxg-paxos", 1, 430, 0, 0],
+    ["kau-kinesis", 1 / 31.1034768, 100, 45, 100],
+    ["kag-kinesis", 1, 200, 45, 100],
+    ["ggbr-goldfish-gold", 0.001, 13500, 300, 0],
+    ["pgold-pleasing", 1, 32.15, 50, 0],
+    ["xaum-matrixdock", 1, 32.148, 25, 0],
+    ["dgld-gold-token-sa", 1, 1 / 31.1034768, 0, 0],
+    ["xagm-matrixdock", 0.998463014, 2100, 50, 0],
+    ["cgo-comtech", 1 / 31.1034768, 1000, 0, 0],
+    ["gldt-gold-dao", 0.01 / 31.1034768, 100, 0, 0],
+  ] as const)("values %s only above its cited lot, with published fees and the unbounded tier", (id, ounces, minimum, bps, flatUsd) => {
+    const config = RedemptionBackstopConfigSchema.parse(getRedemptionBackstopConfig(id));
+    const terms = config.physicalCommodityDelivery!;
+    const spot = 5000;
+    const lotUsd = spot * ounces * minimum;
+    expect(valuePhysicalCommodityDelivery(terms, spot, lotUsd - 0.01)?.unitValueUsd).toBe(0);
+    const notional = lotUsd * 2;
+    const value = valuePhysicalCommodityDelivery(terms, spot, notional)!;
+    expect(value.expectedUnitValueUsd).toBeCloseTo(spot * ounces);
+    expect(value.unitValueUsd).toBeCloseTo(spot * ounces * Math.max(0, 1 - bps / 10_000 - flatUsd / notional));
+    expect(value.unboundedDeliveryCap).toBe(55);
+    expect(terms.sameNotionalEligible).toBe(false);
+    expect(computeRedemptionOutputAssetQuality(config.outputAssetType, terms.deliveryTermsUnbounded)).toBe(55);
+  });
   it("allows a more conservative reviewed settlement without evidence", () => {
     expect(
       RedemptionBackstopConfigSchema.safeParse(

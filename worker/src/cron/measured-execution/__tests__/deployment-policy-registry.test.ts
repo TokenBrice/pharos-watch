@@ -4,11 +4,13 @@ import {
   CURVE_STABLESWAP_NG_DEPLOYMENTS,
   CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT,
   UNISWAP_V4_DEPLOYMENT,
+  CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS,
 } from "@shared/lib/measured-execution-deployment-policies";
 import { CURVE_3POOL_STABLESWAP_POLICY } from "../curve-stableswap";
 import {
   CURVE_DUSD_USDC_STABLESWAP_NG_POLICY,
   CURVE_USDG_USDC_STABLESWAP_NG_POLICY,
+  getCurveStableSwapNgPolicy,
 } from "../curve-stableswap-ng";
 import { getUniswapV4Deployment } from "../uniswap-v4";
 import {
@@ -17,6 +19,9 @@ import {
   CURVE_LUSD_3CRV_METAPOOL_POLICY,
   CURVE_R3_METAPOOL_POLICIES,
 } from "../curve-composite-policies";
+import { getDexMeasuredExecutionDeployment } from "../registry";
+import { isDexMeasuredExecutionTargetScoreEligible, resolveTargetDeployment } from "../admission";
+import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
 
 describe("measured deployment policy registry", () => {
   it("projects the legacy Curve identity byte-for-byte into the producer policy", () => {
@@ -51,21 +56,42 @@ describe("measured deployment policy registry", () => {
     });
   });
 
-  it("projects the Uniswap V4 runtime identities without widening the cohort", () => {
-    expect(getUniswapV4Deployment("ethereum")).toEqual({
-      adapterProfileId: UNISWAP_V4_DEPLOYMENT.adapterProfileId,
-      protocol: UNISWAP_V4_DEPLOYMENT.protocol,
-      chain: UNISWAP_V4_DEPLOYMENT.chain,
-      mode: "active",
-      scoreEligible: true,
-      poolManagerAddress: UNISWAP_V4_DEPLOYMENT.poolManagerAddress,
-      expectedPoolManagerCodeHash: UNISWAP_V4_DEPLOYMENT.poolManagerCodeHash,
-      stateViewAddress: UNISWAP_V4_DEPLOYMENT.stateViewAddress,
-      expectedStateViewCodeHash: UNISWAP_V4_DEPLOYMENT.stateViewCodeHash,
-      endpointAddress: UNISWAP_V4_DEPLOYMENT.quoterAddress,
-      expectedCodeHash: UNISWAP_V4_DEPLOYMENT.quoterCodeHash,
-    });
-    expect(getUniswapV4Deployment("base")).toBeNull();
+  it("collects pinned shadow cohorts without admitting them to scoring", () => {
+    const targets = [
+      ...["bsc", "base", "arbitrum", "polygon"].map((chain) => ({
+        adapterProfileId: UNISWAP_V4_DEPLOYMENT.adapterProfileId, chain, poolId: `${chain}:0x${"ab".repeat(32)}`,
+      })),
+      ...["base", "xlayer"].map((chain) => ({
+        adapterProfileId: "uniswap-v3-quoter-v2", chain, poolId: `${chain}:0x${"ab".repeat(20)}`,
+      })),
+      ...CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS.map((deployment) => ({
+        adapterProfileId: deployment.adapterProfileId, chain: deployment.chain,
+        poolId: `${deployment.chain}:${deployment.poolAddress}`,
+      })),
+    ] as DexMeasuredExecutionTarget[];
+    for (const target of targets) {
+      expect(resolveTargetDeployment(target)).not.toBeNull();
+      expect(isDexMeasuredExecutionTargetScoreEligible(target)).toBe(false);
+      const deployment = getUniswapV4Deployment(target.chain);
+      if (target.adapterProfileId === UNISWAP_V4_DEPLOYMENT.adapterProfileId) {
+        expect(deployment).toMatchObject({ mode: "shadow", scoreEligible: false });
+        expect(deployment?.expectedCodeHash).toMatch(/^0x[0-9a-f]{64}$/);
+        expect(deployment?.poolManagerAddress).toMatch(/^0x[0-9a-f]{40}$/);
+        expect(deployment?.stateViewAddress).toMatch(/^0x[0-9a-f]{40}$/);
+      } else if (target.adapterProfileId === "uniswap-v3-quoter-v2") {
+        const quoter = getDexMeasuredExecutionDeployment(target.adapterProfileId, target.chain);
+        expect(quoter?.factoryAddress).toMatch(/^0x[0-9a-f]{40}$/);
+        expect(quoter?.expectedCodeHash).toMatch(/^0x[0-9a-f]{64}$/);
+      } else {
+        const curve = getCurveStableSwapNgPolicy(target.chain, target.poolId.split(":")[1]!);
+        expect(curve).toMatchObject({ mode: "shadow", scoreEligible: false });
+        expect(curve?.factoryAddress).toMatch(/^0x[0-9a-f]{40}$/);
+        expect(curve?.expectedPoolCodeHash).toMatch(/^0x[0-9a-f]{64}$/);
+      }
+    }
+    expect(getUniswapV4Deployment("ethereum")).toMatchObject({ mode: "active", scoreEligible: true });
+    expect(getUniswapV4Deployment("unsupported-chain")).toBeNull();
+    expect(getCurveStableSwapNgPolicy("etherlink", "0x" + "ab".repeat(20))).toBeNull();
   });
 
   it("reuses the shared Curve factory and 3pool identities in composite policies", () => {

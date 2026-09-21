@@ -336,6 +336,7 @@ function buildRoute(
       }),
       kind: args.review.output?.kind ?? "unknown",
       ...(args.review.output?.sameNotionalEligible === false ? { sameNotionalEligible: false as const } : {}),
+      ...(args.review.output?.unboundedDeliveryCap !== undefined ? { unboundedDeliveryCap: args.review.output.unboundedDeliveryCap } : {}),
       assetKeys: args.review.output?.assetKeys ?? [],
       basketWeights: args.review.output?.basketWeights ?? [],
       valuation: null,
@@ -368,6 +369,7 @@ function buildRoute(
       }),
       kind: reviewOutput.kind,
       ...(reviewOutput.sameNotionalEligible === false ? { sameNotionalEligible: false as const } : {}),
+      ...(reviewOutput.unboundedDeliveryCap !== undefined ? { unboundedDeliveryCap: reviewOutput.unboundedDeliveryCap } : {}),
       assetKeys: reviewOutput.assetKeys,
       basketWeights: reviewOutput.basketWeights,
       valuation: {

@@ -71,6 +71,7 @@ export interface NativeShadowQuote {
   inputPriceUsd: number;
   inputDecimals: number;
   modelVersion: string;
+  profileId: "orca-whirlpool-exact-v1" | "raydium-clmm-exact-v1";
 }
 
 /** Deliberately isolated from V1 target/quote generations and all score readers. */
@@ -78,14 +79,14 @@ export async function persistNativeShadowQuote(db: D1Database, quote: NativeShad
   if (quote.amountIn <= 0n || quote.amountOut <= 0n || !Number.isSafeInteger(quote.slot) || quote.slot <= 0) {
     throw new Error("Invalid native shadow quote");
   }
-  await db.prepare(`INSERT INTO dex_native_shadow_quotes
+  await db.prepare(`INSERT INTO dex_native_shadow_quotes_v2
     (pool_id, stablecoin_id, slot, quoted_at, notional_usd, token_mint_in, token_mint_out,
      amount_in, amount_out, input_price_usd, input_decimals, model_version, profile_id, capability_id, score_eligible)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'orca-whirlpool-exact-v1', 'measured-adapter-shadow', 0)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'measured-adapter-shadow', 0)
     ON CONFLICT(pool_id, stablecoin_id, slot, notional_usd, model_version) DO NOTHING`)
     .bind(quote.poolId, quote.stablecoinId, quote.slot, quote.quotedAt, quote.notionalUsd,
       quote.tokenMintIn, quote.tokenMintOut, quote.amountIn.toString(), quote.amountOut.toString(),
-      quote.inputPriceUsd, quote.inputDecimals, quote.modelVersion).run();
+      quote.inputPriceUsd, quote.inputDecimals, quote.modelVersion, quote.profileId).run();
 }
 
 export interface PublishedDexMeasuredTargets {

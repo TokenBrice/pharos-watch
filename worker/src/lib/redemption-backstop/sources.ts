@@ -13,7 +13,7 @@ import {
   isStrongLiveDirectRoute,
   REDEMPTION_ACCESS_SCORES,
   REDEMPTION_EXECUTION_SCORES,
-  REDEMPTION_OUTPUT_ASSET_SCORES,
+  computeRedemptionOutputAssetQuality,
   REDEMPTION_SETTLEMENT_SCORES,
 } from "@shared/lib/redemption-backstop-scoring";
 import {
@@ -109,7 +109,10 @@ function resolveStaticFields(
   const accessScore = REDEMPTION_ACCESS_SCORES[config.accessModel];
   const settlementScore = REDEMPTION_SETTLEMENT_SCORES[settlementModel];
   const executionCertaintyScore = REDEMPTION_EXECUTION_SCORES[config.executionModel];
-  const outputAssetQualityScore = REDEMPTION_OUTPUT_ASSET_SCORES[config.outputAssetType];
+  const outputAssetQualityScore = computeRedemptionOutputAssetQuality(
+    config.outputAssetType,
+    config.physicalCommodityDelivery?.deliveryTermsUnbounded,
+  );
   return resolveRedemptionStaticFields(
     stablecoinId,
     { ...config, settlementModel },

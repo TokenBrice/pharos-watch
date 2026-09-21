@@ -3,7 +3,6 @@ import {
   documentedBoundSupplyFull,
   documentedVariableFee,
   undisclosedReviewedFee,
-  expandIds,
   fixedFee,
   issuerBase,
   commodityIssuerBase,
@@ -20,9 +19,19 @@ import {
 } from "./shared";
 
 export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig> = {
-  ...expandIds(["kau-kinesis", "kag-kinesis"], {
+  ...Object.fromEntries(([["kau-kinesis", "XAU", 1 / 31.1034768, 100], ["kag-kinesis", "XAG", 1, 200]] as const).map(
+    ([id, commodity, deliverableOuncesPerToken, minimumDeliveryTokens]) => [id, {
     ...commodityIssuerBase,
     ...reviewedDirectRedemptionSupplyFull,
+    reviewedAt: "2026-09-21",
+    outputAssetType: "physical-commodity-delivery",
+    physicalCommodityDelivery: {
+      commodity,
+      deliverableOuncesPerToken,
+      minimumDeliveryTokens,
+      deliveryTermsUnbounded: true,
+      feeModel: { bps: 45, flatUsd: 100, deliveryUsd: 0 }, sameNotionalEligible: false,
+    },
     costModel: {
       ...documentedVariableFee("KAU: 0.45% + $100 + delivery fee; KAG: 0.45% + $100 + delivery fee"),
       feeBpsMax: 45,
@@ -35,12 +44,21 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
         ["route", "capacity", "access", "settlement"],
       ),
     ],
-  }),
+  } satisfies RedemptionBackstopConfig])),
   "cgo-comtech": {
     ...commodityIssuerBase,
     ...documentedBoundSupplyFull(REVIEWED_REMEDIATION_AT),
-    costModel: documentedVariableFee("Physical gold coins via ComTech Gold app; minimum 10 grams in 1-gram multiples"),
+    reviewedAt: "2026-09-21",
+    outputAssetType: "physical-commodity-delivery",
+    physicalCommodityDelivery: {
+      commodity: "XAU", deliverableOuncesPerToken: 1 / 31.1034768, minimumDeliveryTokens: 1000,
+      deliveryTermsUnbounded: true,
+      feeModel: { bps: 0, flatUsd: 0, deliveryUsd: 0 }, sameNotionalEligible: false,
+    },
+    costModel: documentedVariableFee("Contractual 1,000 CGO minimum is used conservatively over the FAQ's 10 CGO; making, delivery and applicable storage remain unpriced"),
     docs: [
+      sourceRef("CGO FAQ: 10 CGO minimum", "https://comtechgold.com/assets/pdf/ComTech_Gold_FAQ_Final.pdf", ["route", "access", "fees"]),
+      sourceRef("CGO contractual terms: 1,000 CGO minimum", "https://comtechgold.com/assets/pdf/Terms_and_Conditions.pdf", ["route", "access", "fees"]),
       sourceRefRouteCapacityFees("ComTech Gold digital gold", "https://comtechgold.com/Digitalgold"),
       sourceRefRouteCapacityAccess("ComTech Gold terms", "https://comtechgold.com/Termsandconditions"),
     ],
@@ -48,6 +66,13 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
   "dgld-gold-token-sa": {
     ...commodityIssuerBase,
     ...documentedBoundSupplyFull(REVIEWED_REMEDIATION_AT),
+    reviewedAt: "2026-09-21",
+    outputAssetType: "physical-commodity-delivery",
+    physicalCommodityDelivery: {
+      commodity: "XAU", deliverableOuncesPerToken: 1, minimumDeliveryTokens: 1 / 31.1034768,
+      deliveryTermsUnbounded: true,
+      feeModel: { bps: 0, flatUsd: 0, deliveryUsd: 0 }, sameNotionalEligible: false,
+    },
     costModel: fixedFee(0, "No custody or transfer fees per Gold Token SA; minimum 1 gram"),
     docs: [
       sourceRefRouteCapacity("DGLD homepage", "https://dgld.ch/"),
@@ -120,11 +145,20 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
   "pgold-pleasing": {
     ...commodityIssuerBase,
     ...reviewedDirectRedemptionSupplyFull,
+    reviewedAt: "2026-09-21",
+    outputAssetType: "physical-commodity-delivery",
+    physicalCommodityDelivery: {
+      commodity: "XAU", deliverableOuncesPerToken: 1, minimumDeliveryTokens: 32.15,
+      deliveryTermsUnbounded: true,
+      feeModel: { bps: 50, flatUsd: 0, deliveryUsd: 0 }, sameNotionalEligible: false,
+    },
     executionModel: "opaque",
     costModel: documentedVariableFee(
       "Physical gold redemption requires KYC and compliance checks, with additional fees, minimums, and logistics that vary by jurisdiction and program terms",
     ),
     docs: [
+      sourceRef("PGOLD physical redemption minimum and fee", "https://pleasing.gitbook.io/docs/user-guide/redeem-physical-gold", ["route", "fees", "access"]),
+      sourceRef("PGOLD additional handling, insurance and delivery terms", "https://pleasing.gitbook.io/docs/legal/terms-of-sale-and-service", ["route", "fees"]),
       sourceRef("PGOLD token features", "https://pleasing.gitbook.io/docs/pleasing-gold-pgold/token-features", [
         "route",
         "capacity",

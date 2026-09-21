@@ -14,6 +14,9 @@ import {
   CURVE_STABLESWAP_NG_DEPLOYMENTS,
   CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT,
   UNISWAP_V4_DEPLOYMENT,
+  UNISWAP_V4_SHADOW_DEPLOYMENTS,
+  CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS,
+  CURVE_STABLESWAP_NG_ETHERLINK_FACTORY,
 } from "./measured-execution-deployment-policies";
 import {
   CURVE_STABLESWAP_ADAPTER_PROFILE_ID,
@@ -33,7 +36,7 @@ const CURVE_3POOL_LP_TOKEN = CURVE_STABLESWAP_DEPLOYMENT.lpTokenAddress;
 const CURVE_3POOL_TOKEN_ADDRESSES = CURVE_STABLESWAP_DEPLOYMENT.poolTokens.map((token) => token.address);
 
 interface CurveStableSwapNgReviewedPolicy {
-  chain: "ethereum";
+  chain: "ethereum" | "etherlink";
   stablecoinId: string;
   poolAddress: string;
   poolCodeHash: string;
@@ -46,7 +49,7 @@ interface CurveStableSwapNgReviewedPolicy {
 }
 
 const CURVE_STABLESWAP_NG_REVIEWED_POLICIES: readonly CurveStableSwapNgReviewedPolicy[] =
-  CURVE_STABLESWAP_NG_DEPLOYMENTS.map((deployment) => ({
+  [...CURVE_STABLESWAP_NG_DEPLOYMENTS, ...CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS].map((deployment) => ({
     chain: deployment.chain,
     stablecoinId: deployment.stablecoinId,
     poolAddress: deployment.poolAddress,
@@ -54,8 +57,8 @@ const CURVE_STABLESWAP_NG_REVIEWED_POLICIES: readonly CurveStableSwapNgReviewedP
     poolTokenAddresses: deployment.poolTokens.map((token) => token.address),
     tokenInAddress: deployment.poolTokens[deployment.inputIndex].address,
     tokenOutAddress: deployment.poolTokens[deployment.outputIndex].address,
-    factoryAddress: CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT.address,
-    factoryCodeHash: CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT.codeHash,
+    factoryAddress: deployment.chain === "etherlink" ? CURVE_STABLESWAP_NG_ETHERLINK_FACTORY.address : CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT.address,
+    factoryCodeHash: deployment.chain === "etherlink" ? CURVE_STABLESWAP_NG_ETHERLINK_FACTORY.codeHash : CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT.codeHash,
     factoryPoolIndex: deployment.factoryPoolIndex,
   }));
 
@@ -113,8 +116,11 @@ export function validateMeasuredExecutionProfile(
   if (isUniswapV4MeasuredExecutionAdapter(profile.adapterProfileId)) {
     const evmProfile = profile as DexMeasuredExecutionPublicProfile;
     const provenance = evmProfile.uniswapV4PoolProvenance;
+    const deployment = evmProfile.chain === "ethereum"
+      ? UNISWAP_V4_DEPLOYMENT
+      : UNISWAP_V4_SHADOW_DEPLOYMENTS.find((entry) => entry.chain === evmProfile.chain);
     if (
-      canonicalExitRouteChain(evmProfile.chain) !== "ethereum" ||
+      !deployment ||
       evmProfile.protocol !== "uniswap-v4" ||
       evmProfile.hookAddress !== UNISWAP_V4_DEPLOYMENT.hookFreeAddress ||
       evmProfile.tickSpacing == null ||
@@ -124,14 +130,14 @@ export function validateMeasuredExecutionProfile(
       !evmProfile.poolTokenAddresses.includes(evmProfile.tokenOut.address) ||
       evmProfile.tokenIn.address === evmProfile.tokenOut.address ||
       provenance == null ||
-      evmProfile.poolId !== canonicalExitRouteAssetKey("ethereum", provenance.poolId) ||
+      evmProfile.poolId !== canonicalExitRouteAssetKey(evmProfile.chain, provenance.poolId) ||
       provenance.blockNumber !== evmProfile.blockNumber ||
-      provenance.poolManagerAddress !== UNISWAP_V4_DEPLOYMENT.poolManagerAddress ||
-      provenance.poolManagerCodeHash !== UNISWAP_V4_DEPLOYMENT.poolManagerCodeHash ||
-      provenance.stateViewAddress !== UNISWAP_V4_DEPLOYMENT.stateViewAddress ||
-      provenance.stateViewCodeHash !== UNISWAP_V4_DEPLOYMENT.stateViewCodeHash ||
-      evmProfile.executionEndpoint.address !== UNISWAP_V4_DEPLOYMENT.quoterAddress ||
-      evmProfile.executionEndpoint.codeHash !== UNISWAP_V4_DEPLOYMENT.quoterCodeHash
+      provenance.poolManagerAddress !== deployment.poolManagerAddress ||
+      provenance.poolManagerCodeHash !== deployment.poolManagerCodeHash ||
+      provenance.stateViewAddress !== deployment.stateViewAddress ||
+      provenance.stateViewCodeHash !== deployment.stateViewCodeHash ||
+      evmProfile.executionEndpoint.address !== deployment.quoterAddress ||
+      evmProfile.executionEndpoint.codeHash !== deployment.quoterCodeHash
     ) issues.push("invalid-uniswap-v4-identity");
   } else if (profile.adapterProfileId === CURVE_STABLESWAP_ADAPTER_PROFILE_ID) {
     const evmProfile = profile as DexMeasuredExecutionPublicProfile;

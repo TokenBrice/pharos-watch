@@ -79,6 +79,7 @@ import {
 import { enrichEvmV2ExecutionModels } from "./constant-product-v2";
 import { enrichCurveStableswapFactoryExecutionModels } from "./curve-stableswap-factory";
 import { enrichCurveStableswapRateInputExecutionModels } from "./curve-stableswap-rates";
+import { attachPinnedShadowExecutionTargets } from "./execution-targets/pinned-shadow";
 import {
   loadDexLiquidityScoringStage,
   loadDexLiquidityScoringStageWhenReady,
@@ -878,6 +879,12 @@ async function buildDexLiquidityPoolState(
     stablecoinPriceById: sourceState.stablecoinPriceById,
     chainRpcs: ctx.chainRpcs,
     signal: ctx.signal,
+  });
+  attachPinnedShadowExecutionTargets({
+    metrics,
+    chainAddressToId: sourceState.lookups.chainAddressToId,
+    stablecoinPriceById: sourceState.stablecoinPriceById,
+    capturedAt: ctx.syncStartSec,
   });
   sourceState.lookups.chainAddressToId = new Map();
   sourceState.lookups.contractMetaByChainAddress = new Map();

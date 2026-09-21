@@ -46,7 +46,7 @@ export async function fetchSolanaAccounts(addresses: string[], signal: AbortSign
 
 /** Quote batches need one atomic bank context, not an additional block-time RPC. */
 export async function fetchSolanaAccountBatch(addresses: string[], signal: AbortSignal, ctx?: AdapterContext, minContextSlot?: number) {
-  if (addresses.length > 7) throw new Error("Solana quote batch exceeds seven accounts");
+  if (addresses.length > 8) throw new Error("Solana quote batch exceeds eight accounts");
   const census = await fetchSolanaAccountCensus(addresses, signal, ctx, minContextSlot, false, 100_000);
   return { accounts: census.accounts, slot: census.observedBlock.number };
 }

@@ -489,7 +489,20 @@ describe("getRedemptionBackstopConfig", () => {
 
   it.each([
     ["thbill-theo", { settlementModel: "same-day", costModel: { kind: "dynamic-or-unclear" } }],
-    ["xaum-matrixdock", { settlementModel: "days", costModel: { kind: "fee-bps", feeBps: 25 } }],
+    ["xaum-matrixdock", {
+      settlementModel: "days",
+      costModel: { kind: "fee-bps", feeBps: 25 },
+      reviewedAt: "2026-09-21",
+      outputAssetType: "physical-commodity-delivery",
+      physicalCommodityDelivery: {
+        commodity: "XAU",
+        deliverableOuncesPerToken: 1,
+        minimumDeliveryTokens: 32.148,
+        deliveryTermsUnbounded: true,
+        feeModel: { bps: 25, flatUsd: 0, deliveryUsd: 0 },
+        sameNotionalEligible: false,
+      },
+    }],
     ["usdgo-osl", { costModel: { kind: "fee-bps", feeBps: 0 } }],
     ["usat-tether", { costModel: { kind: "dynamic-or-unclear" } }],
   ] as const)("retains documented issuer constraints for %s", (id, constraints) => {
@@ -626,10 +639,18 @@ describe("getRedemptionBackstopConfig", () => {
       routeFamily: "offchain-issuer",
       settlementModel: "days",
       executionModel: "opaque",
-      outputAssetType: "bluechip-collateral",
+      outputAssetType: "physical-commodity-delivery",
+      physicalCommodityDelivery: {
+        commodity: "XAU",
+        deliverableOuncesPerToken: 1,
+        minimumDeliveryTokens: 32.15,
+        deliveryTermsUnbounded: true,
+        feeModel: { bps: 50, flatUsd: 0, deliveryUsd: 0 },
+        sameNotionalEligible: false,
+      },
       capacityModel: { kind: "supply-full", confidence: "documented-bound" },
       costModel: { kind: "dynamic-or-unclear" },
-      reviewedAt: "2026-03-23",
+      reviewedAt: "2026-09-21",
     });
 
     expect(getRedemptionBackstopConfig("apxusd-apyx")).toMatchObject({

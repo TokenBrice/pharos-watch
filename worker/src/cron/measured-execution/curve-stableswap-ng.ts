@@ -16,6 +16,8 @@ import {
 import {
   CURVE_STABLESWAP_NG_DEPLOYMENTS,
   CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT,
+  CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS,
+  CURVE_STABLESWAP_NG_ETHERLINK_FACTORY,
 } from "@shared/lib/measured-execution-deployment-policies";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import {
@@ -60,7 +62,7 @@ export const CURVE_STABLESWAP_NG_MIN_COMPLETE_CYCLES = 3;
 export const CURVE_STABLESWAP_NG_MIN_SUCCESSFUL_OBSERVATIONS = 3;
 
 export interface CurveStableSwapNgPoolPolicy {
-  chain: "ethereum";
+  chain: "ethereum" | "etherlink";
   stablecoinId: string;
   poolAddress: `0x${string}`;
   expectedPoolCodeHash: `0x${string}`;
@@ -73,8 +75,8 @@ export interface CurveStableSwapNgPoolPolicy {
   ];
   inputIndex: 0 | 1;
   outputIndex: 0 | 1;
-  mode: "active";
-  scoreEligible: true;
+  mode: "active" | "shadow";
+  scoreEligible: boolean;
 }
 
 /** Projects one reviewed deployment identity, plus its factory binding, into the producer policy shape. */
@@ -108,6 +110,20 @@ export const CURVE_DUSD_USDC_STABLESWAP_NG_POLICY: CurveStableSwapNgPoolPolicy =
 const CURVE_STABLESWAP_NG_POLICIES: readonly CurveStableSwapNgPoolPolicy[] = [
   CURVE_USDG_USDC_STABLESWAP_NG_POLICY,
   CURVE_DUSD_USDC_STABLESWAP_NG_POLICY,
+  ...CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS.map((deployment): CurveStableSwapNgPoolPolicy => ({
+    chain: deployment.chain,
+    stablecoinId: deployment.stablecoinId,
+    poolAddress: deployment.poolAddress,
+    expectedPoolCodeHash: deployment.poolCodeHash,
+    factoryAddress: CURVE_STABLESWAP_NG_ETHERLINK_FACTORY.address,
+    expectedFactoryCodeHash: CURVE_STABLESWAP_NG_ETHERLINK_FACTORY.codeHash,
+    factoryPoolIndex: deployment.factoryPoolIndex,
+    poolTokens: deployment.poolTokens,
+    inputIndex: deployment.inputIndex,
+    outputIndex: deployment.outputIndex,
+    mode: "shadow",
+    scoreEligible: false,
+  })),
 ];
 
 export interface CurveStableSwapNgRuntimeEvidence {

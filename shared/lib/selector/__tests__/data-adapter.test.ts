@@ -5,6 +5,9 @@ import { selectYieldSource } from "../yield-source";
 import { makeInput } from "./fixture";
 import type * as ClientRegistry from "../../stablecoins/client-registry";
 
+// Non-isolated suites may have loaded the adapter before this registry mock.
+vi.hoisted(() => vi.resetModules());
+
 vi.mock("../../stablecoins/client-registry", async (importOriginal) => {
   const actual = await importOriginal<typeof ClientRegistry>();
   const base = actual.CLIENT_ACTIVE_META_BY_ID.get("usdc-circle")!;

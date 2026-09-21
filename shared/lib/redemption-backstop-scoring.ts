@@ -103,6 +103,16 @@ export const REDEMPTION_EXECUTION_SCORES: Record<RedemptionExecutionModel, numbe
 export const REDEMPTION_OUTPUT_ASSET_SCORES: Record<RedemptionOutputAssetType, number> =
   EXIT_ROUTE_SCORING_TABLES.outputAssetScores;
 
+export function computeRedemptionOutputAssetQuality(
+  outputAssetType: RedemptionOutputAssetType,
+  deliveryTermsUnbounded = false,
+): number {
+  const score = REDEMPTION_OUTPUT_ASSET_SCORES[outputAssetType];
+  return outputAssetType === "physical-commodity-delivery" && deliveryTermsUnbounded
+    ? Math.min(score, EXIT_ROUTE_SCORING_TABLES.unboundedDeliveryCap)
+    : score;
+}
+
 const COVERAGE_RATIO_BREAKPOINTS = EXIT_ROUTE_SCORING_TABLES.coverageRatioBreakpoints;
 
 const ABSOLUTE_CAPACITY_BREAKPOINTS = EXIT_ROUTE_SCORING_TABLES.absoluteCapacityBreakpoints;

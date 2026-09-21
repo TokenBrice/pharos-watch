@@ -228,7 +228,15 @@ describe("Safety Score v9 production-shaped archetype fixtures", () => {
     expect(REDEMPTION_BACKSTOP_CONFIGS["xaut-tether"]).toMatchObject({
       routeFamily: "offchain-issuer",
       settlementModel: "days",
-      outputAssetType: "bluechip-collateral",
+      outputAssetType: "physical-commodity-delivery",
+      physicalCommodityDelivery: {
+        commodity: "XAU",
+        deliverableOuncesPerToken: 1,
+        minimumDeliveryTokens: 430,
+        deliveryTermsUnbounded: true,
+        feeModel: { bps: 25, flatUsd: 0, deliveryUsd: 0 },
+        sameNotionalEligible: false,
+      },
     });
     expect(REDEMPTION_BACKSTOP_CONFIGS["fpi-frax"]).toMatchObject({
       routeFamily: "collateral-redeem",

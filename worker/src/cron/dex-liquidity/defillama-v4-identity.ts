@@ -15,7 +15,7 @@ export function attachDefiLlamaV4PoolIdentities(pools: LlamaPool[], payload: unk
   if (!payload || typeof payload !== "object" || !("data" in payload)) return 0;
   const rows = payload.data;
   if (!Array.isArray(rows) || rows.length > 2_000) return 0;
-  const byUuid = new Map<string, { poolId: string; tokens: string } | null>();
+  const byUuid = new Map<string, { poolId: string; tokens: string; chain: string } | null>();
   for (const row of rows) {
     if (!row || typeof row !== "object" || typeof row.pool !== "string") continue;
     if (byUuid.has(row.pool)) {
@@ -24,19 +24,20 @@ export function attachDefiLlamaV4PoolIdentities(pools: LlamaPool[], payload: unk
     }
     const tokens = tokenSet(row.underlyingTokens);
     const match = typeof row.pool_old === "string"
-      ? /^(0x[0-9a-f]{64})-ethereum-uniswap-v4$/i.exec(row.pool_old)
+      ? /^(0x[0-9a-f]{64})-(ethereum|bsc|base|arbitrum|polygon)-uniswap-v4$/i.exec(row.pool_old)
       : null;
     byUuid.set(row.pool,
-      row.project === "uniswap-v4" && row.chain === "Ethereum" && match && tokens
-        ? { poolId: match[1]!.toLowerCase(), tokens }
+      row.project === "uniswap-v4" && typeof row.chain === "string" && match &&
+        row.chain.toLowerCase() === match[2]!.toLowerCase() && tokens
+        ? { poolId: match[1]!.toLowerCase(), tokens, chain: row.chain.toLowerCase() }
         : null,
     );
   }
   let attached = 0;
   for (const pool of pools) {
-    if (pool.project !== "uniswap-v4" || pool.chain.toLowerCase() !== "ethereum") continue;
+    if (pool.project !== "uniswap-v4") continue;
     const identity = byUuid.get(pool.pool);
-    if (!identity || identity.tokens !== tokenSet(pool.underlyingTokens)) continue;
+    if (!identity || identity.chain !== pool.chain.toLowerCase() || identity.tokens !== tokenSet(pool.underlyingTokens)) continue;
     pool.pool = identity.poolId;
     attached++;
   }

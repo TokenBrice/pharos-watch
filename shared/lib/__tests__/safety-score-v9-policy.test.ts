@@ -48,13 +48,12 @@ describe("Safety Score v9 methodology policy", () => {
     // 335 assets. The full 62-row scope (22 owner-gate rows plus 40 beyond it,
     // including the 28 USDT bridge-control rows) was explicitly acknowledged:
     // pathKinds is per-reason-code, so the rows cannot be admitted separately.
-    // 9.7 adds the physical-commodity-delivery output tier at 65. The 9.6
-    // transfer attribution contract adds no semantic policy field; releaseVersion
-    // is metadata and deliberately excluded from the digest.
+    // 9.8 adds the explicit unbounded delivery cap below the bounded physical
+    // tier; releaseVersion remains metadata excluded from the digest.
     // Rotate only with reviewed semantic changes; release history lives in
     // shared/data/methodology-changelogs/safety-score/v9-activation.ts.
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "c8786225c71ec9ded8141f3b8c1167a320c19c62cf4f2bcec962bbe639d81466",
+      "271b4d2559d9463a3bba6b98923f81ff486d94923f0e3ed7dd92a64bb6cd75f2",
     );
     expect(V9_CANDIDATE_POLICY_V1.policy.semantic.formula.withhold).toEqual({
       maxScoreExclusive: 55,
@@ -82,6 +81,17 @@ describe("Safety Score v9 methodology policy", () => {
     });
     expect(Object.isFrozen(V9_CANDIDATE_POLICY_V1.policy.semantic.formula)).toBe(true);
     expect(Object.isFrozen(V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry)).toBe(true);
+  });
+  it("enforces unbounded delivery below bounded physical and bounded physical at most fiat par", () => {
+    const equal = candidateClone();
+    equal.semantic.exit.unboundedDeliveryCap = equal.semantic.exit.outputAssetScores["physical-commodity-delivery"];
+    expect(() => loadV9MethodologyPolicy(equal)).toThrow();
+    const inverted = candidateClone();
+    inverted.semantic.exit.outputAssetScores["physical-commodity-delivery"] = inverted.semantic.exit.outputAssetScores["stable-single"] + 1;
+    expect(() => loadV9MethodologyPolicy(inverted)).toThrow();
+    const valid = candidateClone();
+    valid.semantic.exit.unboundedDeliveryCap = 54;
+    expect(loadV9MethodologyPolicy(valid).policy.semantic.exit.unboundedDeliveryCap).toBe(54);
   });
   it("pins public validation mirrors to parsed policy values", () => {
     const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.formula;

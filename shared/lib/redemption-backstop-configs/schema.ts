@@ -154,6 +154,9 @@ export const PhysicalCommodityDeliveryTermsSchema = z.strictObject({
   commodity: z.enum(["XAU", "XAG"]),
   deliverableOuncesPerToken: PositiveNumberSchema,
   minimumDeliveryTokens: PositiveNumberSchema,
+  deliveryTermsUnbounded: z.boolean(),
+  // Published deductions only. With unbounded terms, zero is no published USD
+  // deduction, not a claim of free delivery; the output carries the policy cap.
   feeModel: z.strictObject({
     bps: z.number().finite().min(0).lt(10_000),
     flatUsd: NonNegativeNumberSchema,
@@ -242,7 +245,7 @@ export const RedemptionBackstopConfigSchema = z
   })
   .superRefine((config, ctx) => {
     if ((config.outputAssetType === "physical-commodity-delivery") !== (config.physicalCommodityDelivery !== undefined)) {
-      ctx.addIssue({ code: "custom", path: ["physicalCommodityDelivery"], message: "Physical delivery requires explicit commodity, quantity, minimum and bounded fees" });
+      ctx.addIssue({ code: "custom", path: ["physicalCommodityDelivery"], message: "Physical delivery requires explicit commodity, quantity, minimum and published fees" });
     }
     if (config.physicalCommodityDelivery && (!config.reviewedAt || !config.docs?.length)) {
       ctx.addIssue({ code: "custom", path: ["physicalCommodityDelivery"], message: "Physical delivery terms require dated primary-source review" });

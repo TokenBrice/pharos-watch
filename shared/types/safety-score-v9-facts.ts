@@ -477,6 +477,7 @@ const V9RouteOutputV2Schema = z
     status: V9FactStatusV2Schema,
     kind: z.union([V9RouteOutputKindSchema, z.literal("unknown")]),
     sameNotionalEligible: z.literal(false).optional(),
+    unboundedDeliveryCap: z.number().finite().min(0).max(100).optional(),
     assetKeys: CanonicalStringArraySchema,
     basketWeights: canonicalArrayBy(
       z.object({ assetKey: CanonicalTextSchema, weight: PositiveFractionSchema }).strict(),

@@ -23,7 +23,6 @@ export interface DexExecutionTargetFactoryInput {
 
 export type DexExecutionTargetFactoryOutput = Partial<PoolExecutionCapability>;
 
-const disabledTargetFactory = (_input: DexExecutionTargetFactoryInput): null => null;
 
 /**
  * Frozen target-factory slots. The paths are leaf ownership boundaries, not a
@@ -63,8 +62,8 @@ export const DEX_EXECUTION_TARGET_FACTORY_REGISTRY: readonly DexExecutionTargetF
     platform: "solana",
     lifecycle: "shadow",
     profileIds: ["raydium-clmm-exact-v1"],
-    implementationModule: "./execution-target-registry",
-    build: disabledTargetFactory,
+    implementationModule: "./execution-targets/raydium-clmm",
+    build: buildRaydiumClmmRegisteredExecutionTarget,
   },
   {
     slotId: "evm-v2",
@@ -105,3 +104,4 @@ import { buildQuoterV2RegisteredExecutionTarget } from "./execution-targets/quot
 import { buildUniswapV4RegisteredExecutionTarget } from "./execution-targets/uniswap-v4";
 import { buildEvmV2RegisteredExecutionTarget } from "./execution-targets/evm-v2";
 import { buildOrcaWhirlpoolRegisteredExecutionTarget } from "./execution-targets/orca-whirlpool";
+import { buildRaydiumClmmRegisteredExecutionTarget } from "./execution-targets/raydium-clmm";
