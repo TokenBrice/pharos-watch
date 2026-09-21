@@ -681,7 +681,7 @@ describe("computeAndStoreDEWS", () => {
   });
 
 
-  it("does not publish the DEWS freshness sentinel for degraded runs", async () => {
+  it("withholds the publication pointer and freshness sentinel for degraded runs", async () => {
     const sqlSeen: string[] = [];
     const db = makeDb(sqlSeen, { failDexLiquidity: true });
 
@@ -692,8 +692,16 @@ describe("computeAndStoreDEWS", () => {
     expect(writeFreshnessSentinel).not.toHaveBeenCalled();
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       freshnessSentinelPublished: boolean;
+      publicationPointerWritten: boolean;
+      publishedGeneration: number | null;
+      degradedSources: string[];
     };
     expect(metadata.freshnessSentinelPublished).toBe(false);
+    expect(metadata.publicationPointerWritten).toBe(false);
+    expect(metadata.publishedGeneration).toBeNull();
+    expect(metadata.degradedSources).toEqual(["dex-liquidity"]);
+    expect(sqlSeen.some((sql) => sql.includes("pharos:dews:publication-row-insert"))).toBe(false);
+    expect(sqlSeen.some((sql) => sql.includes("pharos:dews:publication-generation-withheld"))).toBe(true);
     expect(JSON.parse(result.metadata ?? "{}").sourceFailures).toContainEqual(
       expect.objectContaining({ source: "dex-liquidity" }),
     );

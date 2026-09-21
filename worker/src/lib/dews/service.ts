@@ -181,6 +181,10 @@ export async function computeAndStoreDEWS(
   const hardFailures = sourceFailures.filter((failure) => !failure.bootstrapAllowed);
   const degradedByMalformedInputs = malformedCoreInputRows > 0;
   const degraded = hardFailures.length > 0 || degradedByMalformedInputs;
+  const degradedSources = [
+    ...hardFailures.map((failure) => failure.source),
+    ...(degradedByMalformedInputs ? ["malformed-persisted-inputs"] : []),
+  ];
   const freshnessSentinelPublished = results.length > 0 && !degraded;
 
   await reportDewsProgress(reportProgress, "persistence", { rowsComputed: results.length, validationFailures });
@@ -197,7 +201,7 @@ export async function computeAndStoreDEWS(
     results,
     eligibleIds,
     noCurrentSupplyIds,
-    publishFreshnessSentinel: freshnessSentinelPublished,
+    degradedSources,
     nowSec,
     signal,
   });
@@ -222,7 +226,11 @@ export async function computeAndStoreDEWS(
     ...(degraded ? { status: "degraded" as const } : {}),
     productivity: {
       productive: publicationPointerWritten && publishedGeneration != null,
-      reason: publicationPointerWritten ? "dews-generation-published" : "dews-generation-not-published",
+      reason: publicationPointerWritten
+        ? "dews-generation-published"
+        : degraded
+          ? "dews-generation-withheld-degraded"
+          : "dews-generation-not-published",
       publications: publicationPointerWritten && publishedGeneration != null
         ? [{
             surface: "dews" as const,
@@ -243,6 +251,7 @@ export async function computeAndStoreDEWS(
       rowsDropped,
       freshnessSentinelPublished,
       publicationPointerWritten,
+      degradedSources,
       publishedGeneration,
       currentGenerationRows,
       latestGenerationRows,

@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const DEPEG_DEWS_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.24",
+    title: "Degraded DEWS runs withhold the published generation",
+    date: "2026-09-21",
+    effectiveAt: 1790024016,
+    summary:
+      "A cycle whose weighted inputs failed no longer becomes the served generation. The publication pointer stays on the last clean generation, so a lost input can no longer move a coin's published score or band.",
+    impact: [
+      "When any non-bootstrap source fails or a core persisted input row is malformed, the run computes and stores rows but does not advance `dews:published-generation`; `/api/stress-signals`, the `/depeg` panel, PSI and Telegram keep serving the previous proven generation and its scores",
+      "Renormalisation over the surviving signals is unchanged; it simply no longer reaches the published surface, so an outage in the 0.35-weight liquidity block cannot publish a lower score as a calmer market",
+      "The withheld cycle is ledgered on `surface_publication_generations` as `rejected` with its degraded sources, and the freshness sentinel keeps its existing healthy-run-only gate, so publication recency and input quality now agree",
+      "The score formula, weights, amplifiers and band ladder are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.23",
     title: "Unavailable DEWS evidence no longer scores as measured calm",
     date: "2026-09-21",

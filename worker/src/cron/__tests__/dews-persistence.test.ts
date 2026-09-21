@@ -14,10 +14,10 @@ import { handleStressSignals } from "../../api/stress-signals";
 import { loadPublicationHealth } from "../../lib/publication-contract";
 import { StressSignalsAllResponseSchema } from "@shared/types/market";
 
-function buildDewsRow(stablecoinId: string): DewsComputedRow {
+function buildDewsRow(stablecoinId: string, score = 12): DewsComputedRow {
   return {
     stablecoinId,
-    score: 12,
+    score,
     band: "CALM",
     signals: { supply: { value: 10, available: true, weight: 1 } },
     amplifiers: { psi: 1, contagion: 1 },
@@ -97,6 +97,7 @@ async function observeDewsPublication(sqlite: DatabaseSync, db: D1Database, nowS
     current: readDewsRows(sqlite, "stress_signals"),
     latest: readDewsRows(sqlite, "stress_signals_latest"),
     api: { status: apiResponse.status, updatedAt: response.updatedAt, stablecoinIds: Object.keys(response.signals).sort() },
+    servedScores: Object.fromEntries(Object.entries(response.signals).map(([id, signal]) => [id, signal.score])),
     ledger,
     health: health && {
       published: health.lastPublishedGeneration?.generationId,
@@ -116,7 +117,7 @@ describe("persistDewsResults", () => {
           db,
           results: [buildDewsRow("usdt-tether")],
           eligibleIds: new Set(["usdt-tether"]),
-          publishFreshnessSentinel: true,
+          degradedSources: [],
           nowSec: Math.floor(Date.now() / 1000),
         }),
       ).rejects.toThrow("no such table: stress_signals_latest");
@@ -190,22 +191,22 @@ describe("persistDewsResults", () => {
     }
   });
 
-  it("publishes complete generations, retains prior freshness on degradation, and rolls back an interrupted publication", async () => {
+  it("publishes complete generations, withholds a degraded generation, and rolls back an interrupted publication", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
     const nowSec = Math.floor(Date.now() / 1000);
     const [baseline, degraded, retry] = [nowSec - 180, nowSec - 120, nowSec - 60];
     const digest = buildDewsStablecoinIdsDigest(["usdt-tether"]);
-    const persist = (computedAt: number, publishFreshnessSentinel: boolean) =>
+    const persist = (computedAt: number, degradedSources: readonly string[] = []) =>
       persistDewsResults({
         db,
         results: [buildDewsRow("usdt-tether")],
         eligibleIds: new Set(["usdt-tether"]),
-        publishFreshnessSentinel,
+        degradedSources,
         nowSec: computedAt,
       });
 
     try {
-      await expect(persist(baseline, true)).resolves.toMatchObject({
+      await expect(persist(baseline)).resolves.toMatchObject({
         currentGenerationRows: 1,
         latestGenerationRows: 1,
         publishedGeneration: baseline,
@@ -227,11 +228,14 @@ describe("persistDewsResults", () => {
       expect(first.health).toEqual({ published: `dews:${baseline}`, attempted: `dews:${baseline}` });
       expect(first.freshnessAt).toBe(baseline);
 
-      await expect(persist(degraded, false)).resolves.toMatchObject({ publishedGeneration: degraded });
+      await expect(persist(degraded, ["dex-liquidity-freshness"])).resolves.toMatchObject({
+        publicationPointerWritten: false,
+        publishedGeneration: null,
+      });
       const second = await observeDewsPublication(sqlite, db, nowSec);
-      expect(second.pointer).toMatchObject({ status: "ok", computedAt: degraded, stablecoinIdsDigest: digest });
-      expect(second.api).toEqual({ status: 200, updatedAt: degraded, stablecoinIds: ["usdt-tether"] });
-      expect(second.health).toEqual({ published: `dews:${degraded}`, attempted: `dews:${degraded}` });
+      expect(second.pointer).toMatchObject({ status: "ok", computedAt: baseline, stablecoinIdsDigest: digest });
+      expect(second.api).toEqual({ status: 200, updatedAt: baseline, stablecoinIds: ["usdt-tether"] });
+      expect(second.health).toEqual({ published: `dews:${baseline}`, attempted: `dews:${degraded}` });
       expect(second.freshnessAt).toBe(baseline);
 
       sqlite.exec(`
@@ -243,18 +247,18 @@ describe("persistDewsResults", () => {
            WHERE stablecoin_id = NEW.stablecoin_id AND computed_at = NEW.computed_at;
         END;
       `);
-      await expect(persist(retry, true)).rejects.toThrow("DEWS publication incomplete");
+      await expect(persist(retry)).rejects.toThrow("DEWS publication incomplete");
       const interrupted = await observeDewsPublication(sqlite, db, nowSec);
       expect(readDewsRows(sqlite, "stress_signals", retry)).toEqual([]);
       expect(interrupted.latest).toEqual([{ stablecoinId: "usdt-tether", computedAt: retry, score: 12 }]);
-      expect(interrupted.pointer).toMatchObject({ status: "ok", computedAt: degraded });
+      expect(interrupted.pointer).toMatchObject({ status: "ok", computedAt: baseline });
       expect(interrupted.ledger.map((row) => row.generationId)).toEqual([`dews:${baseline}`, `dews:${degraded}`]);
-      expect(interrupted.api).toEqual({ status: 200, updatedAt: degraded, stablecoinIds: ["usdt-tether"] });
-      expect(interrupted.health).toEqual({ published: `dews:${degraded}`, attempted: `dews:${degraded}` });
+      expect(interrupted.api).toEqual({ status: 200, updatedAt: baseline, stablecoinIds: ["usdt-tether"] });
+      expect(interrupted.health).toEqual({ published: `dews:${baseline}`, attempted: `dews:${degraded}` });
       expect(interrupted.freshnessAt).toBe(baseline);
 
       sqlite.exec("DROP TRIGGER drop_dews_publication_candidate");
-      await expect(persist(retry, true)).resolves.toMatchObject({ publishedGeneration: retry });
+      await expect(persist(retry)).resolves.toMatchObject({ publishedGeneration: retry });
       const recovered = await observeDewsPublication(sqlite, db, nowSec);
       expect(recovered.pointer).toMatchObject({ status: "ok", computedAt: retry, stablecoinIdsDigest: digest });
       expect(recovered.published).toMatchObject({ status: "ok", computedAt: retry, exactCoverageVerified: true });
@@ -273,6 +277,41 @@ describe("persistDewsResults", () => {
     }
   });
 
+  it("keeps serving the previous generation and its score when a weighted source is degraded", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const [published, withheld] = [nowSec - 120, nowSec - 60];
+    try {
+      await persistDewsResults({
+        db,
+        results: [buildDewsRow("usdt-tether", 27)],
+        eligibleIds: new Set(["usdt-tether"]),
+        degradedSources: [],
+        nowSec: published,
+      });
+      await expect(persistDewsResults({
+        db,
+        results: [buildDewsRow("usdt-tether", 11)],
+        eligibleIds: new Set(["usdt-tether"]),
+        degradedSources: ["dex-liquidity-freshness"],
+        nowSec: withheld,
+      })).resolves.toMatchObject({ publicationPointerWritten: false, publishedGeneration: null });
+
+      const observed = await observeDewsPublication(sqlite, db, nowSec);
+      expect(observed.pointer).toMatchObject({ status: "ok", computedAt: published });
+      expect(observed.api).toEqual({ status: 200, updatedAt: published, stablecoinIds: ["usdt-tether"] });
+      expect(observed.servedScores).toEqual({ "usdt-tether": 27 });
+      expect(observed.health).toEqual({ published: `dews:${published}`, attempted: `dews:${withheld}` });
+      expect(
+        sqlite.prepare(
+          "SELECT state, failure_reason FROM surface_publication_generations WHERE generation_id = ?",
+        ).get(`dews:${withheld}`),
+      ).toEqual({ state: "rejected", failure_reason: "degraded-sources:dex-liquidity-freshness" });
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("skips the publication pointer and freshness sentinel when no DEWS rows were written", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
     try {
@@ -280,7 +319,7 @@ describe("persistDewsResults", () => {
         db,
         results: [],
         eligibleIds: new Set(["usdt-tether"]),
-        publishFreshnessSentinel: true,
+        degradedSources: [],
         nowSec: Math.floor(Date.now() / 1000),
       });
       expect(

@@ -296,12 +296,41 @@ async function countStressSignalRowsForGeneration(
   return row?.cnt ?? 0;
 }
 
+/**
+ * Ledger a generation that was computed but deliberately not published, so the
+ * withheld cycle and the sources that caused it stay visible to publication
+ * health instead of disappearing behind an unchanged pointer.
+ */
+async function recordWithheldDewsGeneration(
+  db: D1Database,
+  nowSec: number,
+  candidateRows: number,
+  degradedSources: readonly string[],
+  signal?: AbortSignal,
+): Promise<void> {
+  await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `/* pharos:dews:publication-generation-withheld */
+         INSERT INTO surface_publication_generations
+           (surface, generation_id, started_at, state, candidate_rows, expected_rows, failure_reason)
+         VALUES ('dews', ?, ?, 'rejected', ?, ?, ?)
+         ON CONFLICT(surface, generation_id) DO NOTHING`,
+      )
+      .bind(`dews:${nowSec}`, nowSec, candidateRows, candidateRows, `degraded-sources:${degradedSources.join(",")}`)
+      .run(),
+    3,
+    signal,
+  );
+  throwIfAborted(signal);
+}
+
 export async function persistDewsResults(params: {
   db: D1Database;
   results: DewsComputedRow[];
   eligibleIds: Set<string>;
   noCurrentSupplyIds?: string[];
-  publishFreshnessSentinel: boolean;
+  degradedSources: readonly string[];
   nowSec: number;
   signal?: AbortSignal;
 }): Promise<{
@@ -312,6 +341,7 @@ export async function persistDewsResults(params: {
   publicationPointerWritten: boolean;
   publishedGeneration: number | null;
 }> {
+  const publicationWithheld = params.degradedSources.length > 0;
   throwIfAborted(params.signal);
   if (params.results.length > 0) {
     const stmts = params.results.map((result) =>
@@ -351,7 +381,9 @@ export async function persistDewsResults(params: {
     );
     await batchExecute(params.db, stmts, { signal: params.signal });
     throwIfAborted(params.signal);
-    await writeDewsGenerationRows(params.db, "publication", params.results, params.nowSec, params.signal);
+    if (!publicationWithheld) {
+      await writeDewsGenerationRows(params.db, "publication", params.results, params.nowSec, params.signal);
+    }
     await writeDewsGenerationRows(params.db, "latest", params.results, params.nowSec, params.signal);
   }
   const computedIds = new Set(params.results.map((result) => result.stablecoinId));
@@ -417,7 +449,15 @@ export async function persistDewsResults(params: {
   let latestGenerationRows: number | null = null;
   let publicationPointerWritten = false;
   let publishedGeneration: number | null = null;
-  if (params.results.length > 0) {
+  if (params.results.length > 0 && publicationWithheld) {
+    await recordWithheldDewsGeneration(
+      params.db,
+      params.nowSec,
+      params.results.length,
+      params.degradedSources,
+      params.signal,
+    );
+  } else if (params.results.length > 0) {
     currentGenerationRows = await countStressSignalRowsForGeneration(
       params.db,
       "stress_signal_publication_rows",
@@ -472,7 +512,7 @@ export async function persistDewsResults(params: {
     }
   }
 
-  if (params.publishFreshnessSentinel && params.results.length > 0) {
+  if (!publicationWithheld && params.results.length > 0) {
     throwIfAborted(params.signal);
     await writeFreshnessSentinel(params.db, "dews", params.nowSec, params.signal);
   }

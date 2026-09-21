@@ -6,7 +6,7 @@ Per-coin, forward-looking stress score (0-100) for depeg stress. It is not a cal
 
 DEWS shares its methodology versioning with the Depeg Tracker pipeline. Both are tracked together in `shared/lib/methodology-versions/depeg-dews.ts`.
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-dews -->`v6.23`<!-- GENERATED-END: methodology-version-depeg-dews -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-dews -->`v6.24`<!-- GENERATED-END: methodology-version-depeg-dews -->
 - **Public changelog page:** `/methodology/depeg-changelog/`
 - **Canonical source:** `shared/lib/methodology-versions/depeg-dews.ts`
 
@@ -197,13 +197,15 @@ Age-based pruning and orphan deletes both skip stablecoin IDs in `FROZEN_IDS`, s
 
 `cache["dews:published-generation"]` is the completed-publication pointer for current DEWS readers. The cron writes it only after the exact publication buffer and latest rows have been written and both generation row counts match the computed result count. The two-generation buffer keeps the last proven generation readable if a later run is interrupted. The pointer and its `surface_publication_generations` row commit in one D1 batch, so downstream consumers cannot observe a pointer without durable publication proof or ledger a generation whose pointer lost the race to a newer run. Migration `0182` bootstraps the pre-existing pointer, and the Tape projector reconciles the current validated pointer again at runtime to cover the migration-to-deploy window. `cache["freshness:dews"]` remains the healthy-run freshness sentinel and only advances for non-degraded publications.
 
+A degraded run does not advance that pointer. When any non-bootstrap source fails or a core persisted input row is malformed, the cycle still writes its sparse history and latest rows, but it writes no `stress_signal_publication_rows` candidate, leaves `dews:published-generation` on the last clean generation, and ledgers the withheld generation on `surface_publication_generations` as `rejected` with a `degraded-sources:<names>` failure reason. Current readers keep serving the previous proven generation and its scores, so losing a weighted input — the 0.35 pool + liquidity block above all — cannot renormalise a coin's published score downward. Publication content and the freshness sentinel are gated on the same condition.
+
 ### Cron Schedule
 
 **Trigger:** `26,56 * * * *` — DB-only DEWS/PSI lane. It runs after the hourly `10 * * * *` DEX source stage and `16,46 * * * *` scoring consumer, but it is a separate scheduled invocation so a DEX invocation overrun cannot prevent DEWS publication.
 
 **Cron name:** `compute-dews`
 
-**Run health semantics:** DEWS records upstream read problems as structured cron metadata (`sourceFailures`, `sourceCoverage`, `validationFailures`). The cron returns `status: "degraded"` when non-bootstrap source dependencies fail (`fallbackMode: "degraded-inputs"`) or when a core persisted input row is malformed (`malformedCoreInputRows > 0`, `fallbackMode: "malformed-persisted-inputs"`). Bootstrap grace is now a one-time state transition, tracked by the `dews:bootstrap-complete` cache sentinel written on the first cron run that reaches persistence — even if that run is degraded by other source failures or wrote no rows. Before that first run, only explicitly optional missing tables are tagged `bootstrapAllowed=true`; once the sentinel exists, those same failures degrade the run normally. Stale `dex_liquidity` and stale `mint_burn_hourly` freshness are recorded in metadata, but rows that meet signal-coverage requirements are still persisted. The same metadata includes `dependencies.dexLiquidity` diagnostics from `dex_liquidity_publication_generations` so operators can distinguish stale DEWS inputs caused by a failed/latest DEX publication from normal downstream catch-up.
+**Run health semantics:** DEWS records upstream read problems as structured cron metadata (`sourceFailures`, `degradedSources`, `sourceCoverage`, `validationFailures`). The cron returns `status: "degraded"` when non-bootstrap source dependencies fail (`fallbackMode: "degraded-inputs"`) or when a core persisted input row is malformed (`malformedCoreInputRows > 0`, `fallbackMode: "malformed-persisted-inputs"`). Bootstrap grace is now a one-time state transition, tracked by the `dews:bootstrap-complete` cache sentinel written on the first cron run that reaches persistence — even if that run is degraded by other source failures or wrote no rows. Before that first run, only explicitly optional missing tables are tagged `bootstrapAllowed=true`; once the sentinel exists, those same failures degrade the run normally. Stale `dex_liquidity` and stale `mint_burn_hourly` freshness are recorded in metadata; rows that meet signal-coverage requirements are still persisted to `stress_signals` and `stress_signals_latest`, but a degraded cycle publishes no generation (`publicationPointerWritten: false`). The same metadata includes `dependencies.dexLiquidity` diagnostics from `dex_liquidity_publication_generations` so operators can distinguish stale DEWS inputs caused by a failed/latest DEX publication from normal downstream catch-up.
 A stale `yield-rankings` cache past the `sync-yield-data` producer interval is recorded as the `yield-rankings-freshness` source failure; stale evidence is still consumed, because blanking it would silently zero every structured yield contribution.
 
 **Off-chain confirmation resilience:** The CoinGecko confirmation fetch used by the pending-depeg pipeline (and the Binance CEX price fetch beside it) is wrapped in a circuit breaker. A sustained provider outage trips the breaker and short-circuits subsequent confirmation lookups until it resets, so a single upstream failure no longer hammers the endpoint for 45 minutes per pending row.
@@ -217,12 +219,12 @@ A stale `yield-rankings` cache past the `sync-yield-data` producer interval is r
 5. Read `mint_burn_hourly` aggregates, separating 30d baseline coverage from latest-row freshness
 6. Read `yield_data.warning_signals` and structured `sourceRisk` / `rankChangeAttribution` evidence from the published `yield-rankings` cache
 7. Compute DEWS per PSI-eligible coin
-8. Write sparse history to `stress_signals`, exact candidate rows to `stress_signal_publication_rows`, and full latest state to `stress_signals_latest` (only for coins where `computeDEWS()` returned a score)
+8. Write sparse history to `stress_signals`, exact candidate rows to `stress_signal_publication_rows` (healthy runs only), and full latest state to `stress_signals_latest` (only for coins where `computeDEWS()` returned a score)
 9. Retire current rows for PSI-eligible assets that are explicitly present in the stablecoins cache with zero current circulating supply. "Explicitly" is enforced: a cache row carrying no circulating peg buckets at all is skipped for the cycle (no write, no retire), because the retire path hard-deletes the coin's current **and** 7-day rolling rows and they are never resurrected
 10. Seal the producer-owned daily `stress_signal_history` rows to the exact computed stablecoin ID set in one atomic replacement; frozen historical rows remain outside that ownership boundary
 11. Purge rows for IDs no longer in the current PSI-eligible universe (chunked ID deletes, 90 IDs/chunk, to stay under D1 bind-variable limits)
 12. Prune old data
-13. Validate exact publication-buffer and latest row counts, atomically advance `dews:published-generation` and its durable ledger row, retain the newest two exact generations, and advance `freshness:dews` for healthy runs
+13. For a healthy run: validate exact publication-buffer and latest row counts, atomically advance `dews:published-generation` and its durable ledger row, retain the newest two exact generations, and advance `freshness:dews`. For a degraded run: ledger the withheld generation as `rejected` with its `degradedSources` and leave the pointer, retention and sentinel untouched
 
 ---
 
