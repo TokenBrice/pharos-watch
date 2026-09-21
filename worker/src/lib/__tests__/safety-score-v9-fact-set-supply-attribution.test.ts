@@ -266,7 +266,8 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     expect(bridgeControls[0]).toMatchObject({
       status: {
         applicability: { state: "required" },
-        observationState: "bounded-unknown",
+        observationState: "known",
+        gapIds: [],
       },
       deploymentKey:
         "representation-group:xaut-tether:xaut0-omnichain",

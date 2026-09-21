@@ -90,13 +90,12 @@ export function buildControls(context: AssetBuildContext): {
     controls: review.controls.map((control) => {
       const controlStatus = controlCanCarryKnownStatus(control)
         ? createV9FactStatus({
-            applicability:
-              control.economicLossScope === "access-only"
-                ? notApplicableV9Fact(
-                    "v9.control.review",
-                    "This control cannot impair the protocol claim.",
-                  )
-                : requiredV9Applicability("v9.control.review"),
+            applicability: controlNeedsNonApplicableStatus(control)
+              ? notApplicableV9Fact(
+                  "v9.control.review",
+                  "This resolved control does not bind the control pillar.",
+                )
+              : requiredV9Applicability("v9.control.review"),
             observationState: "known",
             evidenceRefIds: evidenceIds,
           })
@@ -110,12 +109,31 @@ export function buildControls(context: AssetBuildContext): {
   };
 }
 
-export function controlCanCarryKnownStatus(control: ExtensionControlOverlay): boolean {
+function controlIsNonBinding(control: ExtensionControlOverlay): boolean {
   return (
     control.economicLossScope === "access-only" ||
     (control.economicLossScope === "deployment" &&
       control.materialSupplyShare !== null &&
-      control.materialSupplyShare < DEPLOYMENT_MATERIAL_SHARE_THRESHOLD) ||
+      control.materialSupplyShare < DEPLOYMENT_MATERIAL_SHARE_THRESHOLD)
+  );
+}
+
+function controlNeedsNonApplicableStatus(control: ExtensionControlOverlay): boolean {
+  return (
+    control.economicLossScope === "access-only" ||
+    (control.economicLossScope === "deployment" &&
+      control.materialSupplyShare !== null &&
+      control.materialSupplyShare < DEPLOYMENT_MATERIAL_SHARE_THRESHOLD &&
+      (control.capSemantics.kind === "unknown" ||
+        control.claimImpairment === "unknown" ||
+        control.authority === null ||
+        control.failureDomains.length === 0))
+  );
+}
+
+export function controlCanCarryKnownStatus(control: ExtensionControlOverlay): boolean {
+  return (
+    controlIsNonBinding(control) ||
     (control.capSemantics.kind !== "unknown" &&
       control.claimImpairment !== "unknown" &&
       control.economicLossScope !== "unknown" &&
