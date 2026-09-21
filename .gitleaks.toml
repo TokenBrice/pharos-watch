@@ -85,8 +85,8 @@ paths = ['''(?:^|/)worker/src/cron/reserve-adapters/__tests__/kerne-signed-por\.
 # Issuers publish attestation and audit PDFs through GitBook, whose public
 # download links carry an `?alt=media&token=<uuid>` CDN parameter. Curated
 # `sources` arrays cite those links verbatim, so the token rides along in coin
-# JSON and mechanism overlays. It grants read access to an already-public
-# document and is not a credential.
+# JSON, mechanism overlays, and the reviewed missing-data ledger. It grants
+# read access to an already-public document and is not a credential.
 #
 # Match only the reviewed public CDN token values, never an arbitrary UUID
 # or a whole URL-bearing source line. New public tokens require review.
@@ -101,6 +101,7 @@ regexes = [
 paths = [
   '''(?:^|/)shared/data/(?:stablecoins|safety-score-v9)/.*\.json$''',
   '''(?:^|/)data/ai-summaries\.json$''',
+  '''(?:^|/)\.github/workflows/artifacts/safety-score-missing-data-reviewed-ledger\.json$''',
 ]
 
 # Falcon publishes asset labels such as `ARIA_B71VABWJ_T8GB`. Artifact V2
