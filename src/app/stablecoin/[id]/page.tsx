@@ -212,7 +212,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
   if (coin.status === "pre-launch") {
     return (
       <>
-        <PreLaunchDetail coin={coin} logoSrc={getLogoSrc(logosById, coin.id)} summary={summary} logos={logosById} />
+        <PreLaunchDetail coin={coin} logoSrc={getLogoSrc(logosById, coin.id)} summary={summary} />
         <BreadcrumbJsonLd
           items={[
             { name: "Home", url: "/" },

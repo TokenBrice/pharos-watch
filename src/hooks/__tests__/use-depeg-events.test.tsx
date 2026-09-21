@@ -18,6 +18,7 @@ vi.mock("@/lib/api", () => ({
   apiFetchWithMeta: apiFetchWithMetaMock,
 }));
 
+import { DEFAULT_MAX_AUTO_PAGES } from "../use-auto-load-infinite-pages";
 import { useActiveDepegEvents, useInfiniteDepegEvents } from "../use-depeg-events";
 import { latestInfiniteQueryOptions, makeInfiniteQueryResult } from "./infinite-event-hooks.test-support";
 import type { CursorPageFixture } from "./infinite-event-hooks.test-support";
@@ -148,6 +149,34 @@ describe("useInfiniteDepegEvents", () => {
 
     expect(result.current.loadedCount).toBe(2);
     expect(result.current.isFullyLoaded).toBe(false);
+  });
+
+  it("stops auto-loading at the page ceiling and reports the history partial", async () => {
+    const fetchNextPage = vi.fn(async () => undefined);
+    const cappedPages = Array.from({ length: DEFAULT_MAX_AUTO_PAGES }, (_, index) => ({
+      data: {
+        events: [{ id: index + 1 }],
+        total: 5_000,
+        totalExact: true,
+        nextCursor: `cursor-${index + 2}`,
+        pending: [],
+      },
+      meta: null,
+    }));
+    useInfiniteQueryMock.mockReturnValue(
+      makeInfiniteQueryResult(cappedPages, { fetchNextPage, hasNextPage: true }),
+    );
+
+    const { result, rerender } = renderHook(() => useInfiniteDepegEvents({
+      stablecoinId: "usdc-circle",
+      autoLoadAll: true,
+    }));
+
+    rerender();
+    await waitFor(() => expect(result.current.isAutoLoadCapped).toBe(true));
+    expect(fetchNextPage).not.toHaveBeenCalled();
+    expect(result.current.isFullyLoaded).toBe(false);
+    expect(result.current.loadedCount).toBe(DEFAULT_MAX_AUTO_PAGES);
   });
 
   it("keeps derived data references stable when query pages are unchanged", () => {

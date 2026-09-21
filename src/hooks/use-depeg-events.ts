@@ -7,7 +7,7 @@ import type { DepegEventsResponse } from "@shared/types";
 import { DepegEventsResponseSchema } from "@shared/types/market";
 import { CRON_15MIN } from "@/lib/cron-intervals";
 import { createApiInfinitePollingQueryOptions, useCursorPages } from "./use-api-query";
-import { useAutoLoadInfinitePages } from "@/hooks/use-auto-load-infinite-pages";
+import { DEFAULT_MAX_AUTO_PAGES, useAutoLoadInfinitePages } from "@/hooks/use-auto-load-infinite-pages";
 
 const DEPEG_EVENTS_PAGE_SIZE = 100;
 
@@ -80,6 +80,7 @@ export function useInfiniteDepegEvents({
     enabled,
   });
   const { error, fetchNextPage, hasNextPage, isFetchingNextPage } = query;
+  const pageCount = query.data?.pages.length;
   useAutoLoadInfinitePages({
     enabled,
     autoLoadAll,
@@ -87,7 +88,12 @@ export function useInfiniteDepegEvents({
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    pageCount,
   });
+  // The cursor is unbounded from the client's side, so a coin past the ceiling keeps the
+  // remaining incidents behind manual pagination instead of being fetched and retained.
+  const isAutoLoadCapped =
+    autoLoadAll && (pageCount ?? 0) >= DEFAULT_MAX_AUTO_PAGES && hasNextPage === true;
 
   // Keep page-derived values stable across unrelated rerenders while retaining
   // the depeg-specific total and pending semantics below.
@@ -109,6 +115,7 @@ export function useInfiniteDepegEvents({
     data,
     loadedCount: events.length,
     isFullyLoaded: nextCursor == null && (!totalExact || total === 0 || events.length >= total),
+    isAutoLoadCapped,
     meta,
   };
 }

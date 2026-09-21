@@ -1,24 +1,22 @@
-"use client";
-
 import Link from "next/link";
 import Image from "next/image";
-import { Suspense, useMemo, useSyncExternalStore } from "react";
+import { Suspense } from "react";
 import { ExternalLink, Globe, Calendar, Shield, ArrowLeft, FileText, BookOpen, Play, Bell } from "lucide-react";
 import { CLIENT_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { CopyButton } from "@/components/copy-button";
 import { PreLaunchTweetEmbed } from "@/components/pre-launch-tweet-embed";
+import { PreLaunchTimelineBar } from "@/components/pre-launch-timeline-bar";
 import { LaunchDriftBadge, LaunchMilestoneBadge, LaunchPhaseBadge } from "@/components/pre-launch-badge";
 import { TermText } from "@/components/term-text";
 import { getRelatedStablecoins } from "@/lib/related-stablecoins";
+import { getLogoSrc, logosById } from "@/lib/logos";
 import { buildStablecoinUrl } from "@shared/lib/urls";
-import { clampScore } from "@shared/lib/math";
 import { TELEGRAM_BOT_URL } from "@shared/lib/telegram-bot-registration";
 import {
   getDriftStatus,
   formatFuzzyDate,
-  parseFuzzyDate,
   dateScore,
 } from "@/lib/pre-launch";
 import type { StablecoinMeta, LaunchMilestone, FeaturedContent } from "@shared/types";
@@ -68,69 +66,9 @@ function formatSummaryUpdatedAt(updatedAt: string): string {
   return formatLongDate(new Date(`${updatedAt}T00:00:00Z`), { utc: true });
 }
 
-const subscribeToHydration = () => () => {};
-const getClientHydrationSnapshot = () => true;
-const getServerHydrationSnapshot = () => false;
-
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
-
-function TimelineBar({ announcedDate, expectedLaunchDate }: { announcedDate: string; expectedLaunchDate: string }) {
-  const start = parseFuzzyDate(announcedDate);
-  const end = parseFuzzyDate(expectedLaunchDate);
-  const isHydrated = useSyncExternalStore(
-    subscribeToHydration,
-    getClientHydrationSnapshot,
-    getServerHydrationSnapshot,
-  );
-  const now = useMemo(() => (isHydrated ? new Date() : null), [isHydrated]);
-
-  if (!start || !end || end <= start) return null;
-
-  if (!now) {
-    return (
-      <div className="min-h-[54px] space-y-2">
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>{formatFuzzyDate(announcedDate)}</span>
-          <span>Expected: {formatFuzzyDate(expectedLaunchDate)}</span>
-        </div>
-        <div className="h-2 w-full rounded-full bg-muted/40" aria-hidden="true" />
-      </div>
-    );
-  }
-
-  const totalMs = end.getTime() - start.getTime();
-  const elapsedMs = now.getTime() - start.getTime();
-  const pct = clampScore((elapsedMs / totalMs) * 100);
-
-  return (
-    <div className="min-h-[54px] space-y-2">
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>{formatFuzzyDate(announcedDate)}</span>
-        <span>Expected: {formatFuzzyDate(expectedLaunchDate)}</span>
-      </div>
-      <div
-        className="relative h-2 w-full overflow-hidden rounded-full bg-muted/40"
-        role="progressbar"
-        aria-valuenow={Math.round(pct)}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-label="Launch timeline progress"
-      >
-        <div className="absolute inset-y-0 left-0 rounded-full bg-indigo-500/60" style={{ width: `${pct}%` }} />
-        {pct > 2 && pct < 98 && (
-          <div
-            className="absolute top-1/2 h-3 w-0.5 -translate-y-1/2 rounded-full bg-foreground"
-            style={{ left: `${pct}%` }}
-            title="Today"
-          />
-        )}
-      </div>
-      {pct > 2 && pct < 98 && <div className="text-center text-xs text-muted-foreground">Today</div>}
-    </div>
-  );
-}
 
 function InfoGridItem({ label, value }: { label: string; value: string }) {
   return (
@@ -197,14 +135,13 @@ interface PreLaunchDetailProps {
   coin: StablecoinMeta;
   logoSrc: string | undefined;
   summary: { title: string; text: string; updatedAt: string } | null;
-  logos: Record<string, string>;
 }
 
 // ---------------------------------------------------------------------------
 // Main component (server component — no "use client")
 // ---------------------------------------------------------------------------
 
-export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDetailProps) {
+export function PreLaunchDetail({ coin, logoSrc, summary }: PreLaunchDetailProps) {
   const related = getRelatedStablecoins(coin, { candidates: CLIENT_ACTIVE_STABLECOINS });
   const chains = coin.contracts?.map((c) => c.chain) ?? [];
   const uniqueChains = [...new Set(chains)];
@@ -359,7 +296,7 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
                 <h3 className="text-lg font-semibold tracking-tight">Launch Timeline</h3>
                 {driftBadge}
               </div>
-              <TimelineBar announcedDate={coin.announcedDate} expectedLaunchDate={coin.expectedLaunchDate} />
+              <PreLaunchTimelineBar announcedDate={coin.announcedDate} expectedLaunchDate={coin.expectedLaunchDate} />
               {dateTrail}
             </section>
           );
@@ -543,7 +480,7 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
                 href={buildStablecoinUrl(rel.id)}
                 className="pharos-focus-ring inline-flex min-h-11 items-center gap-2 rounded-full border border-border/60 bg-background/50 px-3 py-2 text-sm text-foreground transition-colors hover:border-foreground/20 hover:bg-accent"
               >
-                <StablecoinLogo src={logos[rel.id]} name={rel.name} size={20} />
+                <StablecoinLogo src={getLogoSrc(logosById, rel.id)} name={rel.name} size={20} />
                 <span className="font-mono tabular-nums text-xs font-medium">{rel.symbol}</span>
               </Link>
             ))}

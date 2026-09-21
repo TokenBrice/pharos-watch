@@ -5,7 +5,6 @@ import { FeaturePageShell } from "@/components/feature-page-shell";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
-import { BluechipActiveList } from "./active-list";
 import {
   BLUECHIP_GATES,
   BLUECHIP_LEDE,
@@ -196,11 +195,14 @@ export default function AboutBluechipPage() {
 
         <BluechipSection eyebrow="Section 5" title="Active Bluechip stablecoins">
           <p className="text-sm leading-relaxed text-foreground/88 sm:text-[0.95rem]">
-            The coins below are the live intersection of external Bluechip A-tier ratings and
-            Pharos A-tier report cards. The roster is current-state, not historical: a coin that
-            falls below either floor leaves the list in the next refresh.
+            The roster is suspended while the V9 grade floor is under review. The rule it
+            resumes under is unchanged: the live intersection of external Bluechip A-tier
+            ratings and Pharos A-tier report cards, current-state rather than historical, so a
+            coin that falls below either floor leaves the list in the next refresh.
           </p>
-          <BluechipActiveList />
+          <p className="font-mono text-xs uppercase tracking-[0.08em] text-muted-foreground">
+            Roster suspended pending the V9 grade-floor review.
+          </p>
         </BluechipSection>
 
         <aside className="border-t border-border/60 pt-5 text-xs leading-relaxed text-muted-foreground">

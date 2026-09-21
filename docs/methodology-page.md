@@ -109,7 +109,7 @@ Runtime source: `worker/src/cron/sync-blacklist.ts`, `worker/src/lib/blacklist-c
 
 ### Bluechip rating {#bluechip}
 
-Bluechip has two surfaces: the external Bluechip rating sync documented in [bluechip-ratings.md](bluechip-ratings.md), and the Pharos `/about/bluechip` editorial roster. The active roster's rule admits mapped assets whose synced external Bluechip grade is A-tier and whose Pharos report-card overall grade is A-tier (`A-`, `A`, or `A+`). It is an intersection of two current feeds, not a separate hidden floor model over safety/liquidity/resilience. The rule is stated in the page copy (`src/app/about/bluechip/content.tsx`), but `BluechipActiveList` (`src/app/about/bluechip/active-list.tsx`) currently short-circuits to a "temporarily unavailable while the V9 grade floor is under review" placeholder, so no assets are listed while that hold stands.
+Bluechip has two surfaces: the external Bluechip rating sync documented in [bluechip-ratings.md](bluechip-ratings.md), and the Pharos `/about/bluechip` editorial roster. The active roster's rule admits mapped assets whose synced external Bluechip grade is A-tier and whose Pharos report-card overall grade is A-tier (`A-`, `A`, or `A+`). It is an intersection of two current feeds, not a separate hidden floor model over safety/liquidity/resilience. The rule is stated in the page copy (`src/app/about/bluechip/content.tsx` and Section 5 of `src/app/about/bluechip/page.tsx`), and the roster itself is suspended pending the V9 grade-floor review: the page says so statically and fetches neither feed while that hold stands.
 
 ### Proof of Reserves
 
