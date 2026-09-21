@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { PEG_CURRENCY_VALUES } from "@shared/types/core";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 
 const fetchWithRetryMock = vi.fn();
 
@@ -40,9 +39,9 @@ describe("native-peg-quotes", () => {
     expect(getNativePegQueryCurrencies("XOF")).toEqual([]);
   });
 
-  it("covers every registry fiat selected for direct native quotes", () => {
+  it("keeps every active non-USD peg covered by a native-peg mapping or exception", () => {
+    // CoinGecko does not expose native vs-currency quotes for these registry labels.
     const intentionallyUnsupported: Record<string, true> = {
-      CLP: true,
       COP: true,
       GHS: true,
       GOLD: true,
@@ -54,45 +53,56 @@ describe("native-peg-quotes", () => {
       VAR: true,
       XOF: true,
     };
-    const registryCurrencies = new Set(
-      TRACKED_STABLECOINS
-        .map((coin) => coin.flags.pegCurrency)
-        .filter((currency) => currency !== "USD" && !intentionallyUnsupported[currency]),
-    );
-    // CNY is the provider alias paired with the registry's CNH label.
-    registryCurrencies.add("CNY");
 
-    const supportedCurrencies = PEG_CURRENCY_VALUES.filter(
-      (currency) => normalizeSupportedPegCurrency(currency) != null,
-    );
-    expect([...supportedCurrencies].sort()).toEqual([...registryCurrencies].sort());
+    for (const coin of ACTIVE_STABLECOINS) {
+      const currency = coin.flags.pegCurrency;
+      if (currency === "USD" || intentionallyUnsupported[currency]) continue;
+      expect(getNativePegQueryCurrencies(currency), `${coin.id} (${currency})`).not.toHaveLength(0);
+    }
   });
 
   it("fetches direct native quotes for supported non-USD fiat pegs", async () => {
-    fetchWithRetryMock.mockResolvedValueOnce(makeJsonResponse({
-      "euro-coin": {
-        eur: 1.0012,
-        last_updated_at: 1_699_999_940,
-      },
-      "brz": {
-        eur: 0.17,
-        last_updated_at: 1_699_999_940,
-      },
-    }));
+    fetchWithRetryMock
+      .mockResolvedValueOnce(makeJsonResponse({
+        "euro-coin": {
+          eur: 1.0012,
+          last_updated_at: 1_699_999_940,
+        },
+        "brz": {
+          eur: 0.17,
+          last_updated_at: 1_699_999_940,
+        },
+      }))
+      .mockResolvedValueOnce(makeJsonResponse({
+        "chilean-peso": {
+          clp: 1.0001,
+          last_updated_at: 1_699_999_940,
+        },
+      }));
 
     const quotes = await fetchCurrentNativePegQuotes([
       { stablecoinId: "eurc-circle", geckoId: "euro-coin", pegCurrency: "EUR" },
+      { stablecoinId: "wclp-ripio", geckoId: "chilean-peso", pegCurrency: "CLP" },
       { stablecoinId: "usdt-tether", geckoId: "tether", pegCurrency: "USD" },
     ]);
 
-    expect(fetchWithRetryMock).toHaveBeenCalledTimes(1);
+    expect(fetchWithRetryMock).toHaveBeenCalledTimes(2);
     expect(fetchWithRetryMock.mock.calls[0]?.[0]).toContain("vs_currencies=eur");
+    expect(fetchWithRetryMock.mock.calls[1]?.[0]).toContain("vs_currencies=clp");
     expect(quotes.get("eurc-circle")).toMatchObject({
       stablecoinId: "eurc-circle",
       geckoId: "euro-coin",
       pegCurrency: "EUR",
       vsCurrency: "eur",
       price: 1.0012,
+      updatedAt: 1_699_999_940,
+    });
+    expect(quotes.get("wclp-ripio")).toMatchObject({
+      stablecoinId: "wclp-ripio",
+      geckoId: "chilean-peso",
+      pegCurrency: "CLP",
+      vsCurrency: "clp",
+      price: 1.0001,
       updatedAt: 1_699_999_940,
     });
     expect(quotes.has("usdt-tether")).toBe(false);

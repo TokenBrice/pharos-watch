@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.24",
+    title: "CoinGecko CLP native-peg coverage",
+    date: "2026-09-21",
+    effectiveAt: 1789948800,
+    summary:
+      "The active non-USD peg registry is now guarded against drift in the CoinGecko native-peg currency map, adding direct CLP coverage for Ripio wCLP.",
+    impact: [
+      "`wclp-ripio` can receive a direct CoinGecko `clp` native quote during live price corroboration and native-peg backfill",
+      "The native-peg map is checked against every active non-USD registry peg, with explicitly documented exceptions for currencies CoinGecko does not serve",
+      "The native-peg deviation threshold is unchanged; `wclp-ripio`'s published deviation may legitimately change basis once the native quote is available",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.23",
     title: "Fail-closed DEX corroboration and liquidity evidence",
     date: "2026-09-17",

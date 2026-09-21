@@ -29,16 +29,14 @@ async function readNativePegResponseSnippet(response: Response, signal?: AbortSi
 }
 
 /**
- * Maps each supported non-USD pegCurrency (uppercase ISO code matching
+ * Maps each supported non-USD fiat pegCurrency (uppercase ISO code matching
  * stablecoin registry `pegCurrency` values) to the CoinGecko `vs_currencies`
- * query strings to try in order.  CNY and CNH share both codes because
- * CoinGecko merges the two into a single `cny` feed while some providers
- * use `cnh`; trying both ensures a hit for either registry label.
+ * query strings to try in order.  CNY and CNH share `cny` first because
+ * CoinGecko merges the two into a single feed; the legacy `cnh` fallback is
+ * retained for compatibility with existing provider response shapes.
  *
- * When adding a new FX stablecoin to the registry with a non-USD pegCurrency,
- * add a corresponding entry here so the native-peg quote pipeline covers it.
- * This map intentionally mirrors the set of non-USD pegCurrency values in
- * shared/data/stablecoins/coins/*.json — keep them in sync.
+ * The map covers only CoinGecko `vs_currencies` values. Peg currencies that
+ * CoinGecko does not serve are documented in the registry-coverage test.
  */
 const SUPPORTED_COINGECKO_NATIVE_PEG_CURRENCIES = new Map<string, string[]>([
   ["AUD", ["aud"]],
@@ -46,6 +44,7 @@ const SUPPORTED_COINGECKO_NATIVE_PEG_CURRENCIES = new Map<string, string[]>([
   ["BRL", ["brl"]],
   ["CAD", ["cad"]],
   ["CHF", ["chf"]],
+  ["CLP", ["clp"]],
   ["CNY", ["cny", "cnh"]],
   ["CNH", ["cny", "cnh"]],
   ["EUR", ["eur"]],
