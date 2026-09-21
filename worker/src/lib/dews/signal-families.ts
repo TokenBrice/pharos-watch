@@ -10,6 +10,7 @@
  */
 
 import { clamp } from "@shared/lib/math";
+import { hasOwn } from "@shared/lib/has-own";
 import type { YieldRankChangeAttribution, YieldSourceRisk } from "@shared/types/yield";
 import type { DEWSInput, SignalResult } from "./types";
 import { piecewiseLinear } from "./compatibility";
@@ -26,12 +27,33 @@ const CONFIDENCE_SCORES: Record<string, number> = {
   fallback: 80,
 };
 
-const YIELD_WARNING_SCORES: Record<string, number> = {
+/**
+ * An absent, blank or unrecognised price-confidence tier is unvalidated
+ * evidence, not a high-confidence reading: score it as the worst known tier
+ * (R1) so a missing label can never publish as measured calm.
+ */
+const UNMAPPED_CONFIDENCE_SCORE = Math.max(...Object.values(CONFIDENCE_SCORES));
+
+function confidenceScore(confidence: string | null | undefined): number {
+  const tier = confidence?.trim() ?? "";
+  return hasOwn(CONFIDENCE_SCORES, tier) ? CONFIDENCE_SCORES[tier]! : UNMAPPED_CONFIDENCE_SCORE;
+}
+
+/**
+ * Scores for the yield-warning vocabulary `detectWarningSignals()` emits.
+ * `YIELD_WARNING_SIGNAL_KEYS` is the producer-side authority and
+ * `signal-families.test.ts` pins that this table covers it (R5).
+ * `zero-yield` is an APY-collapse editorial flag rather than a depeg-stress
+ * driver, so it is recognised and scored zero — a row carrying only unscored
+ * keys publishes no verdict at all instead of a measured zero.
+ */
+export const YIELD_WARNING_SCORES: Record<string, number> = {
   "yield-spike": 30,
   "yield-divergence": 25,
   "tvl-outflow": 35,
   "negative-trend": 15,
   "reward-heavy": 20,
+  "zero-yield": 0,
 };
 
 // ---------------------------------------------------------------------------
@@ -142,8 +164,10 @@ export function computePoolSignal(input: DEWSInput): SignalResult {
     100,
   );
 
-  // Smooth with previous reading if available
-  if (input.prevPoolValue !== undefined) {
+  // Smooth only against a previous reading that was itself an observation: a
+  // persisted unavailable signal is `{value: 0, available: false}`, and
+  // averaging it in would publish absent evidence as measured calm.
+  if (input.prevPoolValue !== undefined && input.prevPoolAvailable === true) {
     value = (value + input.prevPoolValue) / 2;
   }
 
@@ -237,22 +261,24 @@ export function computePriceSignal(input: DEWSInput): SignalResult {
     return { value: 100, available: true, confidence: null };
   }
 
-  let value = CONFIDENCE_SCORES[priceConfidence ?? ""] ?? 0;
+  const currScore = confidenceScore(priceConfidence);
+  let value = currScore;
 
   // Degradation transition bonus — suppress for the high→single-source
   // reclassification caused by the consensus honesty fix (not a real degradation)
   if (prevPriceConfidence) {
-    const prevScore = CONFIDENCE_SCORES[prevPriceConfidence] ?? 0;
-    const currScore = CONFIDENCE_SCORES[priceConfidence ?? ""] ?? 0;
+    const prevScore = confidenceScore(prevPriceConfidence);
     if (currScore > prevScore && !(prevPriceConfidence === "high" && (priceConfidence ?? "") === "single-source")) {
       value = Math.min(100, value + 15);
     }
   }
 
+  const unmappedTier = !hasOwn(CONFIDENCE_SCORES, priceConfidence?.trim() ?? "");
   return {
     value,
     available: true,
     confidence: priceConfidence,
+    ...(unmappedTier ? { warnings: ["price-confidence-unmapped"] } : {}),
   };
 }
 
@@ -319,8 +345,8 @@ export function computeDivergSignal(input: DEWSInput): SignalResult {
     value *= 0.7;
   }
 
-  // Smooth with previous reading if available
-  if (input.prevDivergValue !== undefined) {
+  // Smooth only against an available previous reading (see computePoolSignal).
+  if (input.prevDivergValue !== undefined && input.prevDivergAvailable === true) {
     value = (value + input.prevDivergValue) / 2;
   }
 
@@ -532,12 +558,23 @@ export function computeYieldSignal(input: DEWSInput): SignalResult {
     return { value: 0, available: false };
   }
 
-  const warningSum = input.yieldWarnings.reduce((acc, w) => acc + (YIELD_WARNING_SCORES[w] ?? 0), 0);
+  const warningSum = input.yieldWarnings.reduce(
+    (acc, w) => acc + (hasOwn(YIELD_WARNING_SCORES, w) ? YIELD_WARNING_SCORES[w]! : 0),
+    0,
+  );
   const value = clamp(warningSum + (structuredSignal?.value ?? 0), 0, 100);
+  const warnings = [...input.yieldWarnings, ...(structuredSignal?.warnings ?? [])];
+
+  // Warnings that carry no scored stress (an unrecognised key, or a recognised
+  // non-stress flag such as `zero-yield`) are not a measured clean reading:
+  // publish no verdict rather than a zero that renormalisation reads as calm.
+  if (value === 0) {
+    return { value, available: false, unavailableReason: "yield-warnings-unscored", warnings };
+  }
 
   return {
     value,
     available: true,
-    warnings: [...input.yieldWarnings, ...(structuredSignal?.warnings ?? [])],
+    warnings,
   };
 }

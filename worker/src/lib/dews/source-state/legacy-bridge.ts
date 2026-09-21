@@ -58,8 +58,8 @@ export type LegacyDecodeResult<T> =
 export function decodeLegacyStressSignals(
   signalsJson: string | null,
   computedAt: number,
-): LegacyDecodeResult<Record<string, { value: number }>> {
-  const decoded = decodeJsonString<Record<string, { value: number }>, PersistedJsonDecodeReason>(signalsJson, {
+): LegacyDecodeResult<Record<string, { value: number; available?: boolean }>> {
+  const decoded = decodeJsonString<Record<string, { value: number; available?: boolean }>, PersistedJsonDecodeReason>(signalsJson, {
     updatedAt: computedAt,
     missingReason: "missing",
     parseErrorReason: "json-parse-failed",
@@ -68,11 +68,12 @@ export function decodeLegacyStressSignals(
       if (unwrapped == null) {
         return { ok: false, reason: "invalid-shape" as const };
       }
-      const signals: Record<string, { value: number }> = {};
+      const signals: Record<string, { value: number; available?: boolean }> = {};
       for (const [key, signal] of Object.entries(unwrapped.signals)) {
         const row = getObject(signal);
         if (row != null && typeof row.value === "number" && Number.isFinite(row.value)) {
-          signals[key] = { ...row, value: row.value };
+          const available = getBoolean(row.available);
+          signals[key] = { ...row, value: row.value, ...(available === null ? {} : { available }) };
         }
       }
       return { ok: true, payload: signals };

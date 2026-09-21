@@ -37,6 +37,22 @@ export const YIELD_BENCHMARK_KEY_VALUES = [
 export type YieldBenchmarkKey = (typeof YIELD_BENCHMARK_KEY_VALUES)[number];
 
 /**
+ * Closed vocabulary of per-source yield warning keys. `detectWarningSignals()`
+ * in `worker/src/cron/yield-helpers.ts` is typed to this list and DEWS pins its
+ * `YIELD_WARNING_SCORES` table against it, so a new key cannot reach the stress
+ * score without a reviewed weight (R5).
+ */
+export const YIELD_WARNING_SIGNAL_KEYS = [
+  "yield-spike",
+  "yield-divergence",
+  "negative-trend",
+  "reward-heavy",
+  "tvl-outflow",
+  "zero-yield",
+] as const;
+export type YieldWarningSignalKey = (typeof YIELD_WARNING_SIGNAL_KEYS)[number];
+
+/**
  * Currency each benchmark key is quoted in. Every key names its own currency
  * except `USD_EFFR`, an alternative USD curve: the yield v8.43 hurdle re-base is
  * skipped when the row's benchmark currency is already USD (B24), so callers

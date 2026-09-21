@@ -17,7 +17,8 @@ function hasAnyBucket(obj: PegBucketRecord): boolean {
   return Object.values(obj).some((v) => isFiniteNumber(v));
 }
 
-function sumPegBucketsOrNull(obj: PegBucketRecord): number | null {
+/** Sum peg buckets, returning `null` when the record carries no explicit bucket at all — the absent/zero discriminant. */
+export function sumPegBucketsOrNull(obj: PegBucketRecord): number | null {
   const val = sumPegBuckets(obj);
   return val === 0 && !hasAnyBucket(obj) ? null : val;
 }

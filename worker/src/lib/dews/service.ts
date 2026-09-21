@@ -229,8 +229,8 @@ export async function computeAndStoreDEWS(
             generationId: `dews:${publishedGeneration}`,
             publishedAt: publishedGeneration,
             candidateRows: results.length,
-            publishedRows: latestGenerationRows,
-            expectedRows: currentGenerationRows,
+            publishedRows: currentGenerationRows,
+            expectedRows: latestGenerationRows,
             artifactCacheKey: "dews",
           }]
         : [],

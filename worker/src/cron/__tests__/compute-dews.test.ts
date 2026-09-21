@@ -1408,4 +1408,52 @@ describe("computeAndStoreDEWS", () => {
     expect(metadata.sourceCoverage.coinsSkippedNoCurrentSupply).toBe(1);
   });
 
+  it("does not retire stress rows for an asset whose circulating buckets are absent", async () => {
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "dews:bootstrap-complete") return null;
+      return {
+        value: JSON.stringify({
+          peggedAssets: [
+            {
+              id: "usdt-tether",
+              symbol: "USDT",
+              pegType: "peggedUSD",
+              price: 1,
+              priceConfidence: "high",
+              circulating: { peggedUSD: 100_000_000 },
+              circulatingPrevDay: { peggedUSD: 99_000_000 },
+              circulatingPrevWeek: { peggedUSD: 98_000_000 },
+            },
+            {
+              id: "pyusd-paypal",
+              symbol: "PYUSD",
+              pegType: "peggedUSD",
+              price: 1,
+              priceConfidence: "high",
+              circulatingPrevDay: { peggedUSD: 0 },
+              circulatingPrevWeek: { peggedUSD: 0 },
+            },
+          ],
+        }),
+        updatedAt: Math.floor(Date.now() / 1000),
+      } as never;
+    });
+    const { db, sqlite } = seededStressDb(["usdt-tether", "pyusd-paypal"]);
+    const actualDb = await vi.importActual<typeof import("../../lib/db")>("../../lib/db");
+    vi.mocked(batchExecute).mockImplementation(actualDb.batchExecute);
+
+    const result = await computeAndStoreDEWS(db);
+
+    // "No buckets at all" is not "redeemed to zero": the coin is skipped, and
+    // its current row survives instead of being permanently deleted.
+    expect(sqlite.prepare("SELECT DISTINCT stablecoin_id FROM stress_signals ORDER BY stablecoin_id").all())
+      .toEqual([{ stablecoin_id: "pyusd-paypal" }, { stablecoin_id: "usdt-tether" }]);
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      rowsRetiredCurrent: number;
+      rowsSkippedNoCurrentSupply: number;
+    };
+    expect(metadata.rowsRetiredCurrent).toBe(0);
+    expect(metadata.rowsSkippedNoCurrentSupply).toBe(0);
+  });
+
 });

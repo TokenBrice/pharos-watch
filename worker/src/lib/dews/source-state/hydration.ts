@@ -409,7 +409,7 @@ export async function hydrateBlacklistEvents(ctx: HydrationContext): Promise<Bla
 }
 
 export interface PreviousStressSignalsHydration {
-  prevSignals: Map<string, { signals: Record<string, { value: number }>; computedAt: number; ageSec: number }>;
+  prevSignals: Map<string, { signals: Record<string, { value: number; available?: boolean }>; computedAt: number; ageSec: number }>;
   prevSignalStaleIds: Set<string>;
   rowsRead: number;
 }
@@ -417,7 +417,7 @@ export interface PreviousStressSignalsHydration {
 export async function hydratePreviousStressSignals(ctx: HydrationContext): Promise<PreviousStressSignalsHydration> {
   const prevSignals = new Map<
     string,
-    { signals: Record<string, { value: number }>; computedAt: number; ageSec: number }
+    { signals: Record<string, { value: number; available?: boolean }>; computedAt: number; ageSec: number }
   >();
   const prevSignalStaleIds = new Set<string>();
   let prevSignalRowsRead = 0;

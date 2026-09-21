@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const DEPEG_DEWS_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.23",
+    title: "Unavailable DEWS evidence no longer scores as measured calm",
+    date: "2026-09-21",
+    effectiveAt: 1789948800,
+    summary:
+      "Four places where DEWS read absent evidence as an optimistic observation now fail closed: unavailable previous readings are no longer smoothed in, a missing price-confidence tier scores as the worst known tier, warnings that carry no scored stress publish no yield verdict, and a coin with no circulating buckets is skipped instead of having its stress rows retired.",
+    impact: [
+      "Pool and divergence smoothing now requires the previous generation's signal to have been available; after a cycle without pool or DEX-price evidence the next fresh reading is published un-dampened instead of halved",
+      "An absent, blank or unrecognised `priceConfidence` scores as the worst known tier (80) rather than the best (0), and the signal carries a `price-confidence-unmapped` marker",
+      "Yield warnings that sum to no scored stress — an unrecognised key, or the recognised non-stress `zero-yield` flag — mark the yield signal unavailable instead of publishing a clean zero",
+      "A tracked coin whose cache row carries no circulating buckets at all is skipped for the cycle; only an explicitly present zero supply retires its current and 7-day stress rows",
+      "Signal weights and the CALM/WATCH/WARNING/DANGER band ladder are unchanged; every effect moves scores in the conservative direction or removes a signal from the weighted average",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.22",
     title: "Public-event eligibility for blacklist stress",
     date: "2026-09-06",

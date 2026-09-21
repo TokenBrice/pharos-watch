@@ -6,7 +6,7 @@ Per-coin, forward-looking stress score (0-100) for depeg stress. It is not a cal
 
 DEWS shares its methodology versioning with the Depeg Tracker pipeline. Both are tracked together in `shared/lib/methodology-versions/depeg-dews.ts`.
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-dews -->`v6.22`<!-- GENERATED-END: methodology-version-depeg-dews -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-dews -->`v6.23`<!-- GENERATED-END: methodology-version-depeg-dews -->
 - **Public changelog page:** `/methodology/depeg-changelog/`
 - **Canonical source:** `shared/lib/methodology-versions/depeg-dews.ts`
 
@@ -86,7 +86,7 @@ DEX pool imbalances from `dex_liquidity`. Blends:
 - 35% pool stress score (avg_pool_stress)
 - 25% worst single pool imbalance (from `top_pools_json`, counting only pools with at least $100k TVL)
 
-Smoothed with previous reading when available.
+Smoothed (averaged) with the previous cycle's reading only when that reading was itself available. The persisted previous generation keeps an unavailable signal as `{value: 0, available: false}`, so smoothing requires the recorded `available` flag, not just the stored value — otherwise one evidence-less cycle would halve the next fresh reading and decay it over the following three.
 
 ### S_liq — Liquidity Erosion
 
@@ -100,6 +100,7 @@ Smoothed with previous reading when available.
 ### S_price — Price Confidence Degradation
 
 Maps `priceConfidence` field: high=0, single-source=25, low=60, fallback=80, null price=100.
+A missing, blank or unrecognised `priceConfidence` is unvalidated evidence, not a high-confidence reading: it scores as the worst known tier (80) and the signal carries a `price-confidence-unmapped` warning.
 +15 transition bonus when confidence degrades from previous reading, capped at 100. The `high` → `single-source` reclassification is exempt: it is treated as a labelling change from the consensus honesty fix, not a real degradation, and adds no bonus.
 
 ### S_diverg — Cross-Source Price Divergence
@@ -141,8 +142,11 @@ Available for yield-bearing coins with warning signals in `yield_data` or popula
 | `tvl-outflow`      | 35     |
 | `negative-trend`   | 15     |
 | `reward-heavy`     | 20     |
+| `zero-yield`       | 0      |
 
-Score = `min(100, sum of active signal points)`.
+`YIELD_WARNING_SIGNAL_KEYS` in `shared/types/yield.ts` is the single authority for this vocabulary: `detectWarningSignals()` is typed to it and a test pins that every key it can emit has a reviewed score here. `zero-yield` is an APY-collapse editorial flag rather than a depeg-stress driver, so it is recognised and scored zero.
+
+Score = `min(100, sum of active signal points)`. When the active warnings sum to no scored stress — an unrecognised key, or `zero-yield` alone — the sub-signal is marked **unavailable** (`yield-warnings-unscored`) and its weight is redistributed, rather than publishing a zero that reads as a measured clean yield.
 
 Structured Yield Intelligence source-risk and rank-attribution evidence adds these stress points inside the same Yield Anomaly sub-signal:
 
@@ -214,7 +218,7 @@ A stale `yield-rankings` cache past the `sync-yield-data` producer interval is r
 6. Read `yield_data.warning_signals` and structured `sourceRisk` / `rankChangeAttribution` evidence from the published `yield-rankings` cache
 7. Compute DEWS per PSI-eligible coin
 8. Write sparse history to `stress_signals`, exact candidate rows to `stress_signal_publication_rows`, and full latest state to `stress_signals_latest` (only for coins where `computeDEWS()` returned a score)
-9. Retire current rows for PSI-eligible assets that are explicitly present in the stablecoins cache with zero current circulating supply
+9. Retire current rows for PSI-eligible assets that are explicitly present in the stablecoins cache with zero current circulating supply. "Explicitly" is enforced: a cache row carrying no circulating peg buckets at all is skipped for the cycle (no write, no retire), because the retire path hard-deletes the coin's current **and** 7-day rolling rows and they are never resurrected
 10. Seal the producer-owned daily `stress_signal_history` rows to the exact computed stablecoin ID set in one atomic replacement; frozen historical rows remain outside that ownership boundary
 11. Purge rows for IDs no longer in the current PSI-eligible universe (chunked ID deletes, 90 IDs/chunk, to stay under D1 bind-variable limits)
 12. Prune old data

@@ -43,6 +43,7 @@ export {
   resolvePysSourceRiskPenalty,
 } from "@shared/lib/yield-scoring";
 import { normalizeChainId } from "@shared/lib/chains";
+import type { YieldWarningSignalKey } from "@shared/types/yield";
 import { normalizeDexSymbol } from "../lib/dex-cron-constants";
 import { normalizeTokenAddress } from "./dex-liquidity/token-resolution";
 
@@ -127,8 +128,13 @@ interface WarningInput {
   prevTvlUsd: number | null;
 }
 
-export function detectWarningSignals(input: WarningInput): string[] {
-  const signals: string[] = [];
+/**
+ * The emitted vocabulary is `YIELD_WARNING_SIGNAL_KEYS` (`@shared/types/yield`),
+ * the single authority DEWS pins its `YIELD_WARNING_SCORES` table against: the
+ * return type below makes the compiler reject any key outside it (R5).
+ */
+export function detectWarningSignals(input: WarningInput): YieldWarningSignalKey[] {
+  const signals: YieldWarningSignalKey[] = [];
   if (input.apy30d > 0 && input.currentApy > YIELD_SPIKE_MIN_APY && input.currentApy / input.apy30d > YIELD_SPIKE_THRESHOLD) signals.push("yield-spike");
   if (input.medianApy > 0 && input.currentApy > input.medianApy * YIELD_DIVERGENCE_THRESHOLD) signals.push("yield-divergence");
   if (input.apy30d > NEGATIVE_TREND_MIN_APY && input.currentApy < input.apy30d * NEGATIVE_TREND_THRESHOLD) signals.push("negative-trend");
