@@ -12,6 +12,7 @@ import {
   fetchSupplementalPriceData,
   resolveCuratedAggregateSupplementalSupply,
   resolveSupplementalCoinGeckoMcap,
+  toPositiveFiniteNumber,
   type CoinGeckoMcapData,
 } from "./shared";
 
@@ -63,12 +64,15 @@ export async function fetchGoldTokens(
               return;
             }
 
-            const data = JSON.parse(result.body) as { mcap?: number };
-            protocolFetchSuccesses += 1;
-            if (data.mcap) {
-              mcapMap[token.id] = data.mcap;
-              mcapSourceById[token.id] = "defillama";
+            const data = JSON.parse(result.body) as { mcap?: unknown };
+            const protocolMcap = toPositiveFiniteNumber(data.mcap);
+            if (protocolMcap == null) {
+              logWorkerEventArgs("handler", "warn", `[sync-stablecoins] Protocol mcap was malformed for ${token.protocolSlug}`);
+              return;
             }
+            protocolFetchSuccesses += 1;
+            mcapMap[token.id] = protocolMcap;
+            mcapSourceById[token.id] = "defillama";
           } catch (err) {
             if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
             logWorkerEventArgs("handler", "warn", `[sync-stablecoins] Protocol fetch failed for ${token.protocolSlug}:`, err);
@@ -99,6 +103,7 @@ export async function fetchGoldTokens(
         return {
           mcap: aggregate?.mcap ?? mcapMap[meta.id] ?? 0,
           supplySource: aggregate?.supplySource ?? mcapSourceById[meta.id] ?? "coingecko-fallback",
+          supplyObservedAt: aggregate?.supplyObservedAt,
           chainCirculating: aggregate?.chainCirculating,
         };
       },

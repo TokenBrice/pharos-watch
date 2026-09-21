@@ -222,6 +222,7 @@ export function buildSupplementalAsset(input: {
   nowSec?: number;
   mcap: number;
   supplySource: string;
+  supplyObservedAt?: number | null;
   chainCirculating?: PeggedAsset["chainCirculating"];
   circulatingPrevDay?: number | null;
   circulatingPrevWeek?: number | null;
@@ -246,6 +247,7 @@ export function buildSupplementalAsset(input: {
     priceObservedAtMode: priceResolution ? (priceResolution.observedAtMode ?? "local_fetch") : (input.priceObservedAtMode ?? null),
     priceSyncedAt: priceResolution ? nowSec : (input.priceSyncedAt ?? null),
     supplySource: input.supplySource,
+    supplyObservedAt: input.supplyObservedAt ?? null,
     circulating: { [pKey]: input.mcap },
     circulatingPrevDay: input.circulatingPrevDay != null ? { [pKey]: input.circulatingPrevDay } : null,
     circulatingPrevWeek: input.circulatingPrevWeek != null ? { [pKey]: input.circulatingPrevWeek } : null,
@@ -268,7 +270,12 @@ export async function resolveCuratedAggregateSupplementalSupply(
   cgData: CoinGeckoMcapData,
   chainRpcs?: Map<string, ChainRpcConfig>,
   signal?: AbortSignal,
-): Promise<{ mcap: number; supplySource: string; chainCirculating: PeggedAsset["chainCirculating"] } | null> {
+): Promise<{
+  mcap: number;
+  supplySource: string;
+  supplyObservedAt: number | null;
+  chainCirculating: PeggedAsset["chainCirculating"];
+} | null> {
   const priceResolution = resolveSupplementalPrice(priceData, cgData, meta.geckoId);
   if (!priceResolution) return null;
 
@@ -278,6 +285,7 @@ export async function resolveCuratedAggregateSupplementalSupply(
   return {
     mcap: aggregate.mcap,
     supplySource: aggregate.supplySource,
+    supplyObservedAt: aggregate.observedAt ?? null,
     chainCirculating: toPublicChainCirculating(aggregate.chainCirculating),
   };
 }
@@ -289,6 +297,7 @@ function buildPricedSupplementalAsset(
   input: {
     mcap: number;
     supplySource: string;
+    supplyObservedAt?: number | null;
     chainCirculating?: PeggedAsset["chainCirculating"];
     circulatingPrevDay?: number | null;
     circulatingPrevWeek?: number | null;
@@ -304,6 +313,7 @@ function buildPricedSupplementalAsset(
     meta,
     priceResolution,
     mcap: input.mcap,
+    supplyObservedAt: input.supplyObservedAt,
     supplySource: input.supplySource,
     chainCirculating: input.chainCirculating,
     circulatingPrevDay: input.circulatingPrevDay,
@@ -325,6 +335,7 @@ export async function fetchCommodityTokens(
     resolveSupply: (meta: StablecoinMeta) => Promise<{
       mcap: number;
       supplySource: string;
+      supplyObservedAt?: number | null;
       chainCirculating?: PeggedAsset["chainCirculating"];
     }>;
   },

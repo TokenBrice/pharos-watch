@@ -295,7 +295,11 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
       return 0n;
     });
 
-    await expect(fetchCuratedAggregateOnChainMcap(makeSkyMeta(), 1)).resolves.toEqual({
+    const observedBefore = Math.floor(Date.now() / 1000);
+    const result = await fetchCuratedAggregateOnChainMcap(makeSkyMeta(), 1);
+    const observedAfter = Math.floor(Date.now() / 1000);
+
+    expect(result).toMatchObject({
       mcap: 1_000,
       supplySource: "onchain-total-supply",
       chainCirculating: {
@@ -305,6 +309,8 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
         Arbitrum: { current: 25, chainId: "arbitrum" },
       },
     });
+    expect(result?.observedAt).toBeGreaterThanOrEqual(observedBefore);
+    expect(result?.observedAt).toBeLessThanOrEqual(observedAfter);
   });
 
   it("fails closed when representation supply is not smaller than canonical supply", async () => {

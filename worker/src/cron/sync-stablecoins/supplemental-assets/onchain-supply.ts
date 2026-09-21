@@ -54,6 +54,7 @@ export interface OnChainMcapChainRow {
 export interface OnChainMcapResult {
   mcap: number;
   supplySource: SupplementalOnChainSupplySource;
+  observedAt?: number | null;
   /** Display-label keys are retained for public compatibility. */
   chainCirculating?: Record<string, OnChainMcapChainRow>;
 }
@@ -246,6 +247,7 @@ async function fetchOnChainSupplyForContract(input: {
 }): Promise<{
   mcap: number;
   supplySource: SupplementalOnChainSupplySource;
+  observedAt: number;
   chain: string;
   chainLabel: string;
 } | null> {
@@ -261,6 +263,7 @@ async function fetchOnChainSupplyForContract(input: {
   const supplySignal = input.signal ?? AbortSignal.timeout(10_000);
   const chainRpc = input.chainRpcs?.get(input.supplyContract.chain);
   const allowZeroSupply = input.curated?.allowZeroSupply === true;
+  const observedAt = Math.floor(Date.now() / 1000);
 
   try {
     const rpcUrl = input.curated?.rpcUrl ?? chainRpc?.rpcUrl;
@@ -316,7 +319,7 @@ async function fetchOnChainSupplyForContract(input: {
           `[fiat-cg] ${chainLabel} supply fallback for ${input.meta.symbol}: ${supply.toFixed(2)} units -> $${mcap.toFixed(2)} mcap`,
         );
       }
-      return { mcap, supplySource, chain: input.supplyContract.chain, chainLabel };
+      return { mcap, supplySource, observedAt, chain: input.supplyContract.chain, chainLabel };
     }
   } catch (err) {
     logWorkerEventArgs("handler", "warn",
@@ -407,6 +410,7 @@ export async function fetchOnChainMcap(
     ? {
         mcap: result.mcap,
         supplySource: result.supplySource,
+        observedAt: result.observedAt,
         chain: result.chain,
         chainLabel: result.chainLabel,
         chainCirculating: { [result.chainLabel]: { current: result.mcap, chainId: result.chain } },
@@ -424,6 +428,7 @@ export async function fetchCuratedAggregateOnChainMcap(
   if (!selectedContracts) {
     return null;
   }
+  const observedAt = Math.floor(Date.now() / 1000);
 
   let totalMcap = 0;
   const chainCirculating: Record<string, OnChainMcapChainRow> = {};
@@ -507,6 +512,7 @@ export async function fetchCuratedAggregateOnChainMcap(
   return {
     mcap: totalMcap,
     supplySource: "onchain-total-supply",
+    observedAt,
     chainCirculating,
   };
 }

@@ -20,6 +20,7 @@ export interface ZephyrZsdStats {
   supply: number;
   mcap: number;
   mcapPrice: number;
+  observedAt?: number | null;
   priceReported?: boolean;
 }
 
@@ -35,6 +36,19 @@ export interface ZephyrZsdPriceResolution {
   source: string;
   observedAt: number | null;
   observedAtMode: PriceObservedAtMode | null;
+}
+
+// Zephyr Scanner stamps protocol observations with `captured_at` (ISO) on reserve
+// snapshots and `block_timestamp`/`timestamp` (unix seconds) on stats records. Live
+// stats may omit all of them; absence stays absent rather than becoming fetch time.
+function normalizeZephyrObservedAt(value: unknown): number | null {
+  const numeric = toPositiveFiniteNumber(value);
+  if (numeric != null) return Math.floor(numeric > 10_000_000_000 ? numeric / 1000 : numeric);
+  if (typeof value === "string") {
+    const parsed = Date.parse(value);
+    if (Number.isFinite(parsed) && parsed > 0) return Math.floor(parsed / 1000);
+  }
+  return null;
 }
 
 function parseZephyrAssetStats(
@@ -57,11 +71,14 @@ function parseZephyrAssetStats(
     : undefined;
   const mcapPrice = reportedPrice ?? fallbackPrice;
   if (mcapPrice == null) return null;
-
+  const observedAt = normalizeZephyrObservedAt(
+    record.captured_at ?? record.block_timestamp ?? record.timestamp,
+  );
   return {
     supply,
     mcapPrice,
     mcap: supply * mcapPrice,
+    observedAt,
     priceReported: reportedPrice != null,
   };
 }
@@ -101,8 +118,8 @@ function resolveZephyrPrice(
       price: priceResolution.price,
       source: priceResolution.source,
       confidence: priceResolution.source === "coingecko-low-volume" ? "fallback" : "single-source",
-      observedAt: priceResolution.observedAt ?? nowSec,
-      observedAtMode: priceResolution.observedAtMode ?? "local_fetch",
+      observedAt: priceResolution.observedAt,
+      observedAtMode: priceResolution.observedAtMode,
       syncedAt: nowSec,
     };
   }
@@ -112,8 +129,8 @@ function resolveZephyrPrice(
       price: stats.mcapPrice,
       source: ZEPHYR_SUPPLY_SOURCE,
       confidence: "single-source",
-      observedAt: nowSec,
-      observedAtMode: "local_fetch",
+      observedAt: stats.observedAt ?? null,
+      observedAtMode: stats.observedAt != null ? "upstream" : null,
       syncedAt: nowSec,
     };
   }
@@ -165,6 +182,7 @@ function buildZephyrPeggedAsset(
     priceObservedAtMode: resolvedPrice.observedAtMode,
     priceSyncedAt: resolvedPrice.syncedAt,
     supplySource: ZEPHYR_SUPPLY_SOURCE,
+    supplyObservedAt: stats.observedAt ?? null,
     circulating: { [pKey]: circulatingMcap },
     circulatingPrevDay: null,
     circulatingPrevWeek: null,

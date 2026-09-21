@@ -53,7 +53,7 @@ export const STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS: StructuralSupplementalChartC
     });
 
 function addBucketValue(target: Record<string, number>, pegType: string, value: number): void {
-  if (!Number.isFinite(value) || value === 0) return;
+  if (!Number.isFinite(value) || value < 0) return;
   const normalized = normalizeLegacyPegType(pegType);
   target[normalized] = (target[normalized] ?? 0) + value;
 }
@@ -72,7 +72,13 @@ export function mergeStructuralSupplementalHistoryIntoCharts(
 
   for (const row of rows) {
     const config = configById.get(row.stablecoin_id);
-    if (!config || !Number.isFinite(row.circulating_usd) || row.circulating_usd <= 0) continue;
+    if (
+      !config ||
+      !Number.isFinite(row.snapshot_date) ||
+      row.snapshot_date <= 0 ||
+      !Number.isFinite(row.circulating_usd) ||
+      row.circulating_usd < 0
+    ) continue;
     const series = rowsById.get(row.stablecoin_id) ?? [];
     series.push({ date: row.snapshot_date, circulatingUsd: row.circulating_usd });
     rowsById.set(row.stablecoin_id, series);
