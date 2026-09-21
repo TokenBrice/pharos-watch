@@ -448,6 +448,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
     () => deriveSourceSwitchEvents(historyQuery.data?.history ?? []),
     [historyQuery.data],
   );
+  const historyWarning = historyQuery.meta?.warning ?? null;
 
   const apyChangeAttribution = useMemo(
     () =>
@@ -584,8 +585,18 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
           <DetailSectionTitle>Warning signals timeline</DetailSectionTitle>
         </CardHeader>
         <CardContent>
+          {historyWarning ? (
+            <div className="mb-3 rounded-lg border border-amber-500/25 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+              {historyWarning}
+            </div>
+          ) : null}
           {historyQuery.isLoading ? (
             <Skeleton className="h-[160px] w-full rounded-xl" />
+          ) : historyQuery.error ? (
+            <QueryErrorNotice
+              error={historyQuery.error instanceof Error ? historyQuery.error : null}
+              hasData={false}
+            />
           ) : warningEvents.length === 0 ? (
             currentWarningSignals.length === 0 ? (
               <p className="text-sm text-muted-foreground">
@@ -653,8 +664,18 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
           <DetailSectionTitle>Source-switch history</DetailSectionTitle>
         </CardHeader>
         <CardContent className="space-y-3">
+          {historyWarning ? (
+            <div className="rounded-lg border border-amber-500/25 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+              {historyWarning}
+            </div>
+          ) : null}
           {historyQuery.isLoading ? (
             <Skeleton className="h-[120px] w-full rounded-xl" />
+          ) : historyQuery.error ? (
+            <QueryErrorNotice
+              error={historyQuery.error instanceof Error ? historyQuery.error : null}
+              hasData={false}
+            />
           ) : sourceSwitchEvents.length === 0 ? (
             <div className="space-y-2 text-sm text-muted-foreground">
               <p>

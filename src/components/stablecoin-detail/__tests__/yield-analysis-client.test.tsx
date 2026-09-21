@@ -130,11 +130,12 @@ function makeHistoryPoint(
   };
 }
 
-function setHistoryQuery(history: YieldHistoryPoint[] = []) {
+function setHistoryQuery(history: YieldHistoryPoint[] = [], overrides: Record<string, unknown> = {}) {
   useYieldHistoryMock.mockReturnValue({
     data: { current: null, history, methodology: { version: "v8.14" } },
     error: null,
     isLoading: false,
+    ...overrides,
   });
 }
 
@@ -344,6 +345,49 @@ describe("YieldAnalysisClient", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]!.textContent).toContain("Primary Source → Alt Source");
     expect(rows[0]!.textContent).toContain("APY at switch: 0.06%");
+  });
+
+  it("renders the history error notice in both timeline cards instead of a false all-clear", () => {
+    setRankingsQuery({ data: makeResponse([makeRanking()]) });
+    setHistoryQuery([], {
+      data: undefined,
+      meta: null,
+      error: new Error("yield history failed"),
+    });
+
+    render(
+      <YieldAnalysisClient
+        id="usdn-smardex"
+        staticCoin={staticCoin("usdn-smardex", "SMARDEX USDN", "USDN", true)}
+      />,
+    );
+
+    expect(document.getElementById("warning-signals")!.querySelectorAll('[role="status"]')).toHaveLength(1);
+    expect(document.getElementById("source-switches")!.querySelectorAll('[role="status"]')).toHaveLength(1);
+    expect(screen.getAllByText("yield history failed")).toHaveLength(2);
+    expect(screen.queryByText(/No warning signals recorded/)).toBeNull();
+    expect(screen.queryByText(/No source switches recorded/)).toBeNull();
+  });
+
+  it("forwards a meta warning into both timeline cards while keeping the success empty copy", () => {
+    setRankingsQuery({ data: makeResponse([makeRanking()]) });
+    setHistoryQuery([], {
+      meta: { status: "degraded", warning: "Yield history freshness lookup failed; falling back to cache metadata." },
+    });
+
+    render(
+      <YieldAnalysisClient
+        id="usdn-smardex"
+        staticCoin={staticCoin("usdn-smardex", "SMARDEX USDN", "USDN", true)}
+      />,
+    );
+
+    expect(
+      screen.getAllByText("Yield history freshness lookup failed; falling back to cache metadata."),
+    ).toHaveLength(2);
+    expect(screen.getByText(/No warning signals recorded/)).toBeTruthy();
+    expect(screen.getByText(/No source switches recorded/)).toBeTruthy();
+    expect(screen.queryByRole("status")).toBeNull();
   });
 
   it("keeps the ready workbench mounted when a refetch errors over cached rankings", () => {
