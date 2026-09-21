@@ -18,6 +18,22 @@ describe("DEX liquidity verdict bands", () => {
     },
   );
 
+  it("pins the reviewed HHI band thresholds at their boundaries (liquidity methodology v6.6)", () => {
+    expect(getHhiBand(1)).toMatchObject({ key: "crowded", concentrationLabel: "High" });
+    expect(getHhiBand(0.35)).toMatchObject({ key: "crowded", concentrationLabel: "High" });
+    expect(getHhiBand(0.3499)).toMatchObject({ key: "visible", concentrationLabel: "Medium" });
+    expect(getHhiBand(0.3)).toMatchObject({ key: "visible", concentrationLabel: "Medium" });
+    expect(getHhiBand(0.18)).toMatchObject({ key: "visible", concentrationLabel: "Medium" });
+    expect(getHhiBand(0.2)).toMatchObject({ key: "visible", concentrationLabel: "Medium" });
+    expect(getHhiBand(0.1799)).toMatchObject({ key: "broad", concentrationLabel: "Low" });
+    expect(getHhiBand(0)).toMatchObject({ key: "broad", concentrationLabel: "Low" });
+  });
+
+  it("returns the broadest band for a non-finite HHI instead of throwing", () => {
+    expect(getHhiBand(Number.NaN)).toMatchObject({ key: "broad", concentrationLabel: "Low" });
+    expect(getConcentrationLabel(Number.NaN).label).toBe("Low");
+  });
+
   it("uses the canonical organic tiers for thresholds and mature low-organic pools", () => {
     expect(getOrganicFractionTier(0.7)).toMatchObject({ label: "Organic" });
     expect(getOrganicFractionTier(0.3)).toMatchObject({ label: "Mixed" });

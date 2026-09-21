@@ -7,9 +7,16 @@ type PoolBalanceDetails = NonNullable<NonNullable<DexLiquidityPool["extra"]>["ba
 // Pure helpers
 // ---------------------------------------------------------------------------
 
+// Reviewed concentration-band thresholds (liquidity methodology v6.6, effective 2026-09-21).
+// The 2026-09 card/exit-route consolidation re-based the card's pre-dedup table (High >= 0.5,
+// Medium >= 0.25) onto these boundaries; v6.6 records the re-based values as intended. This is
+// the only band table in the repo — consumers import, never re-type.
+const HHI_CROWDED_MIN = 0.35;
+const HHI_VISIBLE_MIN = 0.18;
+
 const HHI_BANDS = [
   {
-    min: 0.35,
+    min: HHI_CROWDED_MIN,
     key: "crowded",
     concentrationLabel: "High",
     color: "text-red-700 dark:text-red-400",
@@ -17,7 +24,7 @@ const HHI_BANDS = [
     interpretation: "Exit depth is crowded into a small set of venues.",
   },
   {
-    min: 0.18,
+    min: HHI_VISIBLE_MIN,
     key: "visible",
     concentrationLabel: "Medium",
     color: "text-amber-700 dark:text-amber-400",
@@ -37,7 +44,9 @@ const HHI_BANDS = [
 export type HhiBand = (typeof HHI_BANDS)[number];
 
 export function getHhiBand(hhi: number): HhiBand {
-  return HHI_BANDS.find((band) => hhi >= band.min)!;
+  // Total: NaN fails every `>=` comparison, so a non-finite HHI degrades to the
+  // broadest band instead of throwing at the card that renders it.
+  return HHI_BANDS.find((band) => hhi >= band.min) ?? HHI_BANDS[HHI_BANDS.length - 1];
 }
 
 export function getConcentrationLabel(hhi: number): { label: string; color: string } {
