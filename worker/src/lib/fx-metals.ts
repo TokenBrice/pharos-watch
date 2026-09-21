@@ -119,13 +119,17 @@ export async function resolveMetalReferenceRates(
     return {
       rate,
       source: "commodity-peer-median",
-      updatedAt: commodityPeerMedian.updatedAt ?? syncStartSec,
+      updatedAt: commodityPeerMedian.updatedAt,
     };
   };
 
   const resolveCached = (pegKey: MetalPegKey): ResolvedMetalRate | null => {
     const rate = prevRates[pegKey];
-    if (typeof rate !== "number" || rate <= 0) {
+    if (
+      typeof rate !== "number"
+      || rate <= 0
+      || !validateRate(pegKey, rate, undefined)
+    ) {
       return null;
     }
     return { rate, source: "cached", updatedAt: null };
@@ -147,7 +151,7 @@ export async function resolveMetalReferenceRates(
       return {
         rate: candidateRate,
         source: "gold-api.com",
-        updatedAt: syncStartSec,
+        updatedAt: null,
       };
     }
     return peerMedian ?? resolveCached(pegKey);

@@ -227,21 +227,24 @@ async function runFxRatePublication(
         });
       }
       const cachedRateCount = Object.keys(syncState.prevRates).length;
-      const appliedLiveFallback = await syncState.tryLiveFullSetFallback("error", {
+      const liveFallback = await syncState.tryLiveFullSetFallback("error", {
         loadSecondaryCurrencyCandidate: loadSecondaryForFallback,
         loadExchangeRateApiPayload: () => loadExchangeRateApiPayload(signal),
         primaryMappings,
         secondaryMappings,
       });
       recordFallbackSecondarySuccess();
-      if (!appliedLiveFallback && cachedRateCount > 0) {
+      if (liveFallback === "partial") {
+        syncState.degrade("partial-live-fallback-coverage");
+      }
+      if (liveFallback !== "full" && cachedRateCount > 0) {
         logWorkerEventArgs("handler", "warn",
           `[sync-fx-rates] Frankfurter API unavailable (${frankfurterResult.statusCode ?? "no response"}), using ${cachedRateCount} cached rates`,
         );
         syncState.enterCachedFallback("error");
       }
-      if (syncState.mode !== "cached-fallback" && Object.keys(syncState.usableRates).length === 0) {
-        throw new Error(`Frankfurter API returned ${frankfurterResult.statusCode ?? "no response"}`);
+      if (liveFallback !== "full" && syncState.mode !== "cached-fallback") {
+        throw new Error(`Frankfurter API returned ${frankfurterResult.statusCode ?? "no response"} without complete fallback coverage`);
       }
     }
     if (syncState.mode !== "cached-fallback") {
@@ -292,16 +295,19 @@ async function runFxRatePublication(
         }
       } else if (frankfurterResult.kind === "invalid-payload") {
         const cachedRateCount = Object.keys(syncState.prevRates).length;
-        const appliedLiveFallback = await syncState.tryLiveFullSetFallback("invalid-payload", {
+        const liveFallback = await syncState.tryLiveFullSetFallback("invalid-payload", {
           loadSecondaryCurrencyCandidate: loadSecondaryForFallback,
           loadExchangeRateApiPayload: () => loadExchangeRateApiPayload(signal),
           primaryMappings,
           secondaryMappings,
         });
         recordFallbackSecondarySuccess();
-        if (appliedLiveFallback) {
+        if (liveFallback === "full") {
           logWorkerEventArgs("handler", "warn", "[sync-fx-rates] Invalid Frankfurter payload, using live FX fallback");
         } else if (cachedRateCount > 0) {
+          if (liveFallback === "partial") {
+            syncState.degrade("partial-live-fallback-coverage");
+          }
           logWorkerEventArgs("handler", "warn", `[sync-fx-rates] Invalid frankfurter payload, using ${cachedRateCount} cached rates`);
           syncState.enterCachedFallback("invalid-payload");
         } else {

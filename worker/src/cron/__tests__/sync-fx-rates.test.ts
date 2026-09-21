@@ -37,6 +37,7 @@ function resetFetchRetryMocks(): void {
 }
 
 import { syncFxRates } from "../sync-fx-rates";
+import { getFxReferenceTypeFromState, hydrateFxRateState } from "../../lib/fx-rate-state";
 describe("syncFxRates", () => {
   const fixtures = createLatestSchemaFixtureTracker();
   beforeEach(() => {
@@ -190,10 +191,10 @@ describe("syncFxRates", () => {
 
     const metaWrite = findCacheWrite(db, "fx-rates-meta");
     const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
-      sourceUpdatedAtByPeg: Record<string, number>;
+      sourceUpdatedAtByPeg: Record<string, number | null>;
     };
     expect(cachedMeta.sourceUpdatedAtByPeg.peggedGOLD).toBe(stablecoinsUpdatedAt);
-    expect(cachedMeta.sourceUpdatedAtByPeg.peggedSILVER).toBe(Math.floor(Date.now() / 1000));
+    expect(cachedMeta.sourceUpdatedAtByPeg.peggedSILVER).toBeNull();
   });
 
   it("falls back to cached rates when frankfurter.dev is unavailable", async () => {
@@ -302,6 +303,45 @@ describe("syncFxRates", () => {
     expect(cachedMeta.sourceLastSuccessAtBySource["secondary:pages.dev"]).toBeGreaterThan(0);
     expect(cachedMeta.sourceLastSuccessAtBySource["secondary:jsdelivr-versioned"]).toBeGreaterThan(0);
   });
+  it("preserves complete cached FX coverage and degrades when a live fallback is partial", async () => {
+    const previousRates = makeCompleteFxRates();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const partialUsd: Record<string, number> = {
+      eur: 0.925, gbp: 0.79, chf: 0.88, brl: 5.0, jpy: 149.5, idr: 15800, sgd: 1.35, try: 36,
+      aud: 1.55, zar: 18.3, cad: 1.37, cny: 7.25, php: 56, mxn: 17.2, cnh: 7.28, rub: 90,
+      uah: 41, ars: 1400, kgs: 87, ngn: 1370, xof: 560, myr: 4.5, krw: 1380, hkd: 7.81,
+      inr: 85.5, vnd: 25000, kes: 129, ghs: 11.6, cop: 3200, clp: 950, pen: 3.4,
+    };
+    delete partialUsd.eur;
+    mockFetch(fxMirrors({
+      frankfurter: "unavailable",
+      secondary: "omit",
+      cdn: { body: { date: "2025-06-15", usd: partialUsd } },
+      pages: "unavailable",
+      exchangeRate: "unavailable",
+      gold: "omit",
+      silver: "omit",
+    }));
+    const db = makeFxRatesDb({
+      previousRates: makeCacheRow(previousRates, nowSec - 60),
+      previousMeta: makeCacheRow(makeFxRatesMeta(previousRates, {
+        usableSyncAt: nowSec - 60,
+        updatedAt: nowSec - 60,
+      }), nowSec - 60),
+    });
+
+    const result = await syncFxRates(db);
+
+    expect(result.status).toBe("degraded");
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata.reason).toBe("partial-live-fallback-coverage");
+    expect(metadata.sources.fawazahmed0).toBe("partial");
+    const write = findCacheWrite(db, "fx-rates");
+    const cachedRates = JSON.parse(String(write?.binds[1] ?? "{}")) as Record<string, number>;
+    expect(cachedRates).toMatchObject(previousRates);
+    expect(cachedRates.peggedEUR).toBe(previousRates.peggedEUR);
+  });
+
 
   it("uses ExchangeRate-API as a live full-set fallback when frankfurter and the secondary mirrors are unavailable", async () => {
     const exchangeRateUpdatedAt = Math.floor(Date.parse("2025-06-15T00:02:31Z") / 1000);
@@ -350,6 +390,48 @@ describe("syncFxRates", () => {
     expect(cachedMeta.sourceCadenceByPeg.peggedEUR).toBe("calendar-daily");
     expect(cachedMeta.sourceDateByPeg.peggedEUR).toBe("2025-06-15");
   });
+  it("keeps timestamp-less live fallback values non-fresh", async () => {
+    mockFetch(fxMirrors({
+      frankfurter: "unavailable",
+      secondary: "omit",
+      datedCdn: "unavailable",
+      cdn: "unavailable",
+      pages: "unavailable",
+      exchangeRate: {
+        body: {
+          result: "success",
+          rates: {
+            EUR: 0.925, GBP: 0.79, CHF: 0.88, BRL: 5.0, JPY: 149.5, IDR: 15800, SGD: 1.35, TRY: 36,
+            AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, PHP: 56, MXN: 17.2, CNH: 7.28, RUB: 90,
+            UAH: 41, ARS: 1400, KGS: 87, NGN: 1370, XOF: 560, MYR: 4.5, KRW: 1380, HKD: 7.81,
+            INR: 85.5, VND: 25000, KES: 129, GHS: 11.6, COP: 3200, CLP: 950, PEN: 3.4,
+          },
+        },
+      },
+    }));
+    const db = makeFxRatesDb();
+
+    const result = await syncFxRates(db);
+
+    expect(result.status).toBeUndefined();
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata.sources.exchangeRateApi).toBe("partial");
+    const ratesWrite = findCacheWrite(db, "fx-rates");
+    const metaWrite = findCacheWrite(db, "fx-rates-meta");
+    const state = hydrateFxRateState(
+      { value: String(ratesWrite?.binds[1] ?? "{}"), updatedAt: Math.floor(Date.now() / 1000) },
+      { value: String(metaWrite?.binds[1] ?? "{}"), updatedAt: Math.floor(Date.now() / 1000) },
+    );
+    expect(state?.sourceModeByPeg.peggedEUR).toBe("live");
+    expect(state?.sourceUpdatedAtByPeg.peggedEUR).toBeNull();
+    expect(getFxReferenceTypeFromState(
+      state,
+      "peggedEUR",
+      6 * 3600,
+      Math.floor(Date.now() / 1000),
+    )).toBe("none");
+  });
+
 
   it("treats cadence-valid carry-forward rates as a live run when live FX fetches fail", async () => {
     mockFetch(fxMirrors({
@@ -507,7 +589,7 @@ describe("syncFxRates", () => {
     expect(cachedMeta.sourceDateByPeg.peggedEUR).toBe("2025-06-15");
   });
 
-  it("validates an older Chainlink silver quote without replacing a fresher resolved metal source", async () => {
+  it("uses an older validated Chainlink timestamp when the metal source has no provenance", async () => {
     const decimalsHex = "0x0000000000000000000000000000000000000000000000000000000000000008";
     const nowSec = Math.floor(Date.now() / 1000);
     const olderUpdatedAt = nowSec - (11 * 3600);
@@ -548,13 +630,13 @@ describe("syncFxRates", () => {
 
     const metaWrite = findCacheWrite(db, "fx-rates-meta");
     const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
-      sourceUpdatedAtByPeg: Record<string, number>;
+      sourceUpdatedAtByPeg: Record<string, number | null>;
       sourceCadenceByPeg: Record<string, string>;
     };
-    expect(cachedMeta.sourceUpdatedAtByPeg.peggedSILVER).toBe(nowSec);
+    expect(cachedMeta.sourceUpdatedAtByPeg.peggedSILVER).toBe(olderUpdatedAt);
     expect(cachedMeta.sourceCadenceByPeg.peggedSILVER).toBe("intraday");
 
-    expect(findCacheWrite(db, "cron:event:sync-fx-rates:chainlink-older-metal-quote-validated")).toBeDefined();
+    expect(findCacheWrite(db, "cron:event:sync-fx-rates:chainlink-older-metal-quote-validated")).toBeUndefined();
   });
 
   it("checks older Chainlink metal quotes for divergence before skipping them", async () => {
@@ -598,9 +680,9 @@ describe("syncFxRates", () => {
 
     const metaWrite = findCacheWrite(db, "fx-rates-meta");
     const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
-      sourceUpdatedAtByPeg: Record<string, number>;
+      sourceUpdatedAtByPeg: Record<string, number | null>;
     };
-    expect(cachedMeta.sourceUpdatedAtByPeg.peggedSILVER).toBe(nowSec);
+    expect(cachedMeta.sourceUpdatedAtByPeg.peggedSILVER).toBeNull();
     expect(findCacheWrite(db, "cron:event:sync-fx-rates:chainlink-rate-diverged")).toBeDefined();
   });
 

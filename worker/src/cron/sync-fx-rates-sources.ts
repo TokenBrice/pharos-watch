@@ -20,13 +20,13 @@ const FrankfurterResponseSchema = z.object({
 });
 
 const SecondaryCurrencyResponseSchema = z.object({
-  date: z.string().optional(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   usd: z.record(z.string(), z.number()),
 });
 
 const ExchangeRateApiResponseSchema = z.object({
   result: z.string().optional(),
-  time_last_update_unix: z.number().optional(),
+  time_last_update_unix: z.number().int().positive().optional(),
   time_last_update_utc: z.string().optional(),
   rates: z.record(z.string(), z.number()),
 });
