@@ -61,11 +61,22 @@ export function buildUserPrompt(
   pushMomentumLines(lines, data);
   pushDigestIntelligenceLines(lines, data);
 
+  // The 7-day percentage is measured against the coins that actually have a
+  // prior-week baseline; without one there is no denominator to divide by.
+  const mcap7dBaseline = (data.mcap7dDeltaCoverage?.coveredMcapUsd ?? data.totalMcapUsd) - data.mcap7dDelta;
+  const mcap7dPct =
+    Number.isFinite(mcap7dBaseline) && mcap7dBaseline > 0
+      ? `${((data.mcap7dDelta / mcap7dBaseline) * 100).toFixed(2)}%`
+      : "n/a (no 7d baseline)";
+  const mcap7dCoverage =
+    data.mcap7dDeltaCoverage != null && data.mcap7dDeltaCoverage.coveredCoins < data.mcap7dDeltaCoverage.totalCoins
+      ? ` [baseline covers ${data.mcap7dDeltaCoverage.coveredCoins} of ${data.mcap7dDeltaCoverage.totalCoins} core coins]`
+      : "";
   lines.push(
     "",
     "Supporting evidence:",
     `Total stablecoin market cap: ${formatCurrency(data.totalMcapUsd)}`,
-    `7-day market cap change: ${data.mcap7dDelta >= 0 ? "+" : ""}${formatCurrency(data.mcap7dDelta)} (${((data.mcap7dDelta / (data.totalMcapUsd - data.mcap7dDelta)) * 100).toFixed(2)}%)`,
+    `7-day market cap change: ${data.mcap7dDelta >= 0 ? "+" : ""}${formatCurrency(data.mcap7dDelta)} (${mcap7dPct})${mcap7dCoverage}`,
     `Currently active depegs (ongoing, not yet resolved): ${data.activeDepegCount}`,
     `Depegs resolved in last 24h: ${data.resolvedDepegs?.length ?? 0}`,
   );
@@ -179,12 +190,15 @@ export function buildUserPrompt(
 
   if (data.blacklistActivity) {
     const { eventCount, totalAmountUsd, topEvents } = data.blacklistActivity;
-    lines.push(
-      "",
-      `Blacklist activity (rolling last 24h): ${eventCount} events, ${formatCurrency(totalAmountUsd)} affected`,
-    );
+    const unpricedEventCount = data.blacklistActivity.unpricedEventCount ?? 0;
+    const affected =
+      unpricedEventCount > 0
+        ? `at least ${formatCurrency(totalAmountUsd)} affected (${unpricedEventCount} event(s) with unknown amount)`
+        : `${formatCurrency(totalAmountUsd)} affected`;
+    lines.push("", `Blacklist activity (rolling last 24h): ${eventCount} events, ${affected}`);
     for (const event of topEvents) {
-      lines.push(`  ${event.symbol} on ${event.chain}: ${event.type} (${formatCurrency(event.amountUsd)})`);
+      const amount = event.amountUsd == null ? "amount unknown" : formatCurrency(event.amountUsd);
+      lines.push(`  ${event.symbol} on ${event.chain}: ${event.type} (${amount})`);
     }
   }
 
@@ -230,8 +244,12 @@ export function buildUserPrompt(
   if (data.dewsStress) {
     const { bandCounts, yesterdayBandCounts, bandChanges, elevatedCoins } = data.dewsStress;
     lines.push("", "DEWS Stress Signals:");
+    const versusYesterday =
+      yesterdayBandCounts == null
+        ? "unavailable"
+        : `${yesterdayBandCounts.calm}/${yesterdayBandCounts.watch}/${yesterdayBandCounts.alert}/${yesterdayBandCounts.warning}/${yesterdayBandCounts.danger}`;
     lines.push(
-      `  Band distribution: ${bandCounts.calm} CALM, ${bandCounts.watch} WATCH, ${bandCounts.alert} ALERT, ${bandCounts.warning} WARNING, ${bandCounts.danger} DANGER (vs yesterday: ${yesterdayBandCounts.calm}/${yesterdayBandCounts.watch}/${yesterdayBandCounts.alert}/${yesterdayBandCounts.warning}/${yesterdayBandCounts.danger})`,
+      `  Band distribution: ${bandCounts.calm} CALM, ${bandCounts.watch} WATCH, ${bandCounts.alert} ALERT, ${bandCounts.warning} WARNING, ${bandCounts.danger} DANGER (vs yesterday: ${versusYesterday})`,
     );
     if (bandChanges.length > 0) {
       lines.push("  Band changes (last 24h):");

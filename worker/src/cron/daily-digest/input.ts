@@ -8,7 +8,7 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { isRecord } from "@shared/lib/type-guards";
 import { round1 } from "@shared/lib/math";
 import type { StablecoinData } from "@shared/types/market";
-import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
+import { getCirculatingRaw, getPrevWeekRawOrNull } from "@shared/lib/supply";
 import { getDisplayedPsi } from "@shared/lib/psi-view-model";
 import { CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-registry";
 import { CORE_STABLECOIN_AGGREGATE_UNIVERSE } from "@shared/lib/stablecoins/aggregate-universe";
@@ -41,7 +41,7 @@ import type {
   CollectorContext,
   CollectorResult,
 } from "./collectors-shared";
-import { collectorDegraded } from "./collectors-shared";
+import { collectorDegraded, collectorResult } from "./collectors-shared";
 import type { DepegLifecycleFlag } from "../../lib/depeg-lifecycle";
 import { buildRecentDigestMeta, type RecentDigestMetaEntry } from "./runtime-helpers";
 import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "../../lib/digest-sql-filters";
@@ -208,15 +208,25 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
 
   let totalMcapUsd = 0;
   let totalPrevWeek = 0;
+  let baselineMcapUsd = 0;
+  let coreCoinCount = 0;
+  let baselineCoinCount = 0;
   let biggestSupplyChange: DigestInputData["biggestSupplyChange"] = null;
   const supplyChanges7d: NonNullable<DigestInputData["supplyChanges7d"]> = [];
   let biggestAbsChange = 0;
 
   for (const coin of coreAggregateStablecoinAssets) {
     const mcap = getCirculatingRaw(coin);
-    const prevWeek = getPrevWeekRaw(coin);
+    const prevWeek = getPrevWeekRawOrNull(coin);
     if (mcap <= 0) continue;
     totalMcapUsd += mcap;
+    coreCoinCount += 1;
+    // A coin with no prior-week bucket has no measurable 7-day change. Counting
+    // its whole market cap as growth publishes a fabricated delta, so it leaves
+    // both sides of the aggregate and cannot become the week's biggest mover.
+    if (prevWeek == null) continue;
+    baselineCoinCount += 1;
+    baselineMcapUsd += mcap;
     totalPrevWeek += prevWeek;
 
     if (mcap > 1_000_000) {
@@ -263,6 +273,9 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
   const collectorResults: CollectorResult<unknown>[] = [];
   if (!ctx.stablecoinsCacheIsFresh) {
     collectorResults.push(collectorDegraded(undefined, "stablecoins-cache-stale"));
+  }
+  if (baselineCoinCount < coreCoinCount) {
+    collectorResults.push(collectorResult(undefined, [], ["supply-prev-week-baseline"]));
   }
 
   const activeDepegsResult = await collectActiveDepegs(ctx);
@@ -397,7 +410,12 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     digestVersion: 2,
     aggregateUniverse: CORE_STABLECOIN_AGGREGATE_UNIVERSE,
     totalMcapUsd,
-    mcap7dDelta: totalMcapUsd - totalPrevWeek,
+    mcap7dDelta: baselineMcapUsd - totalPrevWeek,
+    mcap7dDeltaCoverage: {
+      coveredCoins: baselineCoinCount,
+      totalCoins: coreCoinCount,
+      coveredMcapUsd: baselineMcapUsd,
+    },
     totalMcapAth,
     dataQuality: {
       generatedAt: nowSec,

@@ -220,7 +220,7 @@ export async function collectBlacklistActivity(
               symbol: event.symbol,
               chain: event.chain_name,
               type: event.event_type as "blacklist" | "destroy",
-              amountUsd: event.amount_usd_at_event ?? 0,
+              amountUsd: event.amount_usd_at_event,
             })),
         });
       }
@@ -307,16 +307,26 @@ export async function collectResolvedDepegs(
   ctx: CollectorContext,
 ): Promise<CollectorResult<DigestInputData["resolvedDepegs"]>> {
   try {
-    const cutoff48h = ctx.nowSec - SECONDS.TWO_DAYS;
+    // The published claim is "resolved in the last 24h", so the evidence window
+    // is the same 24h. Every publishability predicate runs inside the query:
+    // applied after ORDER BY/LIMIT they let twenty ineligible large-peak rows
+    // crowd out a qualifying tracked resolution.
+    const cutoff24h = ctx.nowSec - SECONDS.ONE_DAY;
+    const eligibleIds = [...ctx.mcapById.entries()]
+      .filter(([, mcapUsd]) => mcapUsd > 20_000_000)
+      .map(([stablecoinId]) => stablecoinId);
+    if (eligibleIds.length === 0) return collectorOk(undefined);
     const resolvedRows = await ctx.db
       .prepare(
         `SELECT symbol, direction, peak_deviation_bps, started_at, ended_at, stablecoin_id
          FROM depeg_events
          WHERE ended_at IS NOT NULL AND ended_at >= ?
+           AND ABS(peak_deviation_bps) > 100
+           AND stablecoin_id IN (SELECT value FROM json_each(?))
          ORDER BY ABS(peak_deviation_bps) DESC
          LIMIT 20`,
       )
-      .bind(cutoff48h)
+      .bind(cutoff24h, JSON.stringify(eligibleIds))
       .all<{
         symbol: string;
         direction: "above" | "below";
@@ -341,7 +351,6 @@ export async function collectResolvedDepegs(
           impactScore: getDepegMarketImpactScore(row.peak_deviation_bps, mcapUsd),
         };
       })
-      .filter((row) => row.peakBps > 100 && row.mcapUsd > 20_000_000)
       .sort((a, b) => b.impactScore - a.impactScore)
       .slice(0, 5);
 

@@ -78,7 +78,7 @@ describe("weekly recap canonical candidate aggregation", () => {
       evaluationBuildDigest: "a".repeat(64), baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
       publicationGenerationId: "report-cards:v8:test",
     };
-    const rows = Array.from({ length: 5 }, (_, index) => row(index));
+    const rows = Array.from({ length: 7 }, (_, index) => row(index));
     const input = JSON.parse(rows[2]!.input_data);
     input.gradeTransitions = [
       { mcapUsd: 1_000_000 },

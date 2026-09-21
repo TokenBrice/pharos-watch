@@ -192,15 +192,17 @@ export async function collectDewsStress(
       const yesterdayMap = new Map(yesterdayRows.map((row) => [row.stablecoin_id, row]));
       const initCounts = () => ({ calm: 0, watch: 0, alert: 0, warning: 0, danger: 0 });
       const bandCounts = initCounts();
-      const yesterdayBandCounts = initCounts();
+      // An absent prior generation is unavailable, not a day on which every
+      // tracked coin was CALM: publish null rather than a zeroed distribution.
+      const yesterdayBandCounts = yesterdayRows.length > 0 ? initCounts() : null;
 
       for (const row of todayRows) {
         const key = row.band.toLowerCase() as keyof typeof bandCounts;
         if (key in bandCounts) bandCounts[key]++;
       }
       for (const row of yesterdayRows) {
-        const key = row.band.toLowerCase() as keyof typeof yesterdayBandCounts;
-        if (key in yesterdayBandCounts) yesterdayBandCounts[key]++;
+        const key = row.band.toLowerCase() as keyof typeof bandCounts;
+        if (yesterdayBandCounts && key in yesterdayBandCounts) yesterdayBandCounts[key]++;
       }
 
       const bandChanges: NonNullable<DigestInputData["dewsStress"]>["bandChanges"] = [];

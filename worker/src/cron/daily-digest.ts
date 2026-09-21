@@ -31,6 +31,7 @@ import {
   buildDigestTwitterPublication,
   deliverDigestEdition,
   publishDigestEdition,
+  resolveDailyDigestEditionNumber,
   type DigestCredentialDiagnostics,
 } from "./digest/publish";
 import {
@@ -417,11 +418,8 @@ export async function resumeDailyDigestDelivery(
     .first<{ generated_at: number; digest_text: string; digest_title: string | null; digest_extended: string | null; digest_meta: string | null; input_data: string | null }>();
   throwIfAborted(signal);
   if (!row) return { kind: "no-publishable-digest" };
-  const countResult = await db
-    .prepare(`SELECT COUNT(*) as cnt FROM daily_digest WHERE (${NON_WEEKLY_DIGEST_SQL_FILTER}) AND (${NON_BLOCKED_DIGEST_SQL_FILTER})`)
-    .all<{ cnt: number }>();
+  const editionNumber = await resolveDailyDigestEditionNumber(db);
   throwIfAborted(signal);
-  const editionNumber = countResult.results?.[0]?.cnt ?? null;
   // Self-produced round trip: input_data was serialized from DigestInputData
   // by insertDigestRecord in this module; delivery tolerates absent fields.
   const storedInput = row.input_data

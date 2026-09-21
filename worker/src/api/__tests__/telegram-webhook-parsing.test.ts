@@ -138,6 +138,20 @@ describe("parseSetCommand", () => {
       error: "Safety values: off, all, downgrade-only, upgrade-only",
     });
   });
+
+  it("turns depeg alerts off for `depeg-step off` instead of on", () => {
+    expect(parseSetCommand("USDC depeg-step off")).toEqual({
+      ticker: "USDC",
+      setting: "depeg",
+      enabled: false,
+    });
+    expect(parseSetCommand("USDC depeg-step 250")).toEqual({
+      ticker: "USDC",
+      setting: "depeg-step",
+      enabled: true,
+      step: 250,
+    });
+  });
 });
 
 describe("parseStartPayload", () => {

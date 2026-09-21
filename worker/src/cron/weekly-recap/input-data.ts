@@ -527,7 +527,7 @@ function collectWeeklyTopSignals(parsed: WeeklyParsedRow[]): WeeklyTopSignals {
         amountUsd: event.amountUsd,
         date: d.date,
       })),
-    (row) => row.amountUsd,
+    (row) => row.amountUsd ?? 0,
   );
   const topGradeTransitions = topSignals(
     parsed,

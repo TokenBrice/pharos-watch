@@ -30,8 +30,10 @@ export function buildHomeMessage(
   subscriber: SubscriberRow | null,
   options: { hasCoinControls?: boolean } = {},
 ): string {
+  // The step only exists while the depeg family is on: rendering it beside an
+  // OFF flag advertises a threshold that is not in force.
   const depegSuffix =
-    subscriber?.global_depeg_worsening_bps_step != null
+    subscriberHasGlobal(subscriber, "depeg") && subscriber?.global_depeg_worsening_bps_step != null
       ? ` (+${subscriber.global_depeg_worsening_bps_step}bps)`
       : "";
   const lines = [
@@ -124,7 +126,9 @@ export function buildCoinKeyboard(
 ): { inline_keyboard: SettingsButton[][] } {
   const dewsBand = row?.alert_dews ? row?.dews_min_band ?? "ALERT" : null;
   const safetyMode = row?.alert_safety ? row?.safety_mode ?? "all" : null;
-  const depegStep: number | "off" = row?.alert_depeg ? row?.depeg_worsening_bps_step ?? -1 : "off";
+  const depegStep: number | "off" | "default" = row?.alert_depeg
+    ? row?.depeg_worsening_bps_step ?? "default"
+    : "off";
   const launchOn = Boolean(row?.alert_launch);
   const reserveOn = Boolean(row?.alert_reserve);
   const freezeOn = Boolean(row?.alert_freeze);
@@ -205,7 +209,10 @@ function buildPlainAlertRow(
   ];
 }
 
-function buildDepegRow(coinId: string, depegStep: number | "off"): Array<{ text: string; callback_data: string }> {
+function buildDepegRow(
+  coinId: string,
+  depegStep: number | "off" | "default",
+): Array<{ text: string; callback_data: string }> {
   const row = DEPEG_STEPS.map((step) => ({
     text: `${markIf(depegStep === step)}${step}`,
     callback_data: `settings:c:${coinId}:ds:${step}`,

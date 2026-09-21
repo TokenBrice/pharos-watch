@@ -88,17 +88,25 @@ export function logCollectorParseFailure(
   );
 }
 
+/** Daily editions a full weekly rollup window is expected to observe. */
+export const WEEKLY_ROLLUP_EXPECTED_DAYS = 7;
+
 export interface RollupSummary {
   mcapEnd: number;
   psiMid: number;
   psiDominantBand: string;
-  activeDepegObs: number;
-  uniqueDepegSignals: number;
-  blacklistEvents: number;
-  blacklistUsd: number;
-  gradeTransitions: number;
+  /**
+   * Cross-day sums. Null below full coverage: a total labelled "this week"
+   * must not be the sum of however many editions happened to be readable.
+   */
+  activeDepegObs: number | null;
+  uniqueDepegSignals: number | null;
+  blacklistEvents: number | null;
+  blacklistUsd: number | null;
+  gradeTransitions: number | null;
   gaugeMid: number | null;
   days: number;
+  expectedDays: number;
 }
 
 /**
@@ -132,7 +140,10 @@ function depegSignalKey(
  * inline in `weekly-recap.ts` so prior- and current-week paths share one
  * implementation.
  */
-export function rollupDigestInputs(inputs: DigestInputData[]): RollupSummary {
+export function rollupDigestInputs(
+  inputs: DigestInputData[],
+  expectedDays: number = WEEKLY_ROLLUP_EXPECTED_DAYS,
+): RollupSummary {
   const coreInputs = inputs.filter((input) => input.aggregateUniverse === "core-stablecoins-v1");
   const aggregateInputs = coreInputs.length > 0 ? coreInputs : inputs;
   const psiScores = aggregateInputs.map((d) => d.stabilityIndex?.score).filter((s): s is number => s != null);
@@ -151,16 +162,18 @@ export function rollupDigestInputs(inputs: DigestInputData[]): RollupSummary {
       depegKeys.add(depegSignalKey(depeg, "resolved"));
     }
   }
+  const complete = aggregateInputs.length >= expectedDays;
   return {
     mcapEnd: mcaps[mcaps.length - 1] ?? 0,
     psiMid: psiScores.length > 0 ? psiScores.reduce((s, v) => s + v, 0) / psiScores.length : 0,
     psiDominantBand,
-    activeDepegObs: aggregateInputs.reduce((sum, d) => sum + d.activeDepegCount, 0),
-    uniqueDepegSignals: depegKeys.size,
-    blacklistEvents: aggregateInputs.reduce((s, d) => s + (d.blacklistActivity?.eventCount ?? 0), 0),
-    blacklistUsd: aggregateInputs.reduce((s, d) => s + (d.blacklistActivity?.totalAmountUsd ?? 0), 0),
-    gradeTransitions: aggregateInputs.reduce((s, d) => s + (d.gradeTransitions?.length ?? 0), 0),
+    activeDepegObs: complete ? aggregateInputs.reduce((sum, d) => sum + d.activeDepegCount, 0) : null,
+    uniqueDepegSignals: complete ? depegKeys.size : null,
+    blacklistEvents: complete ? aggregateInputs.reduce((s, d) => s + (d.blacklistActivity?.eventCount ?? 0), 0) : null,
+    blacklistUsd: complete ? aggregateInputs.reduce((s, d) => s + (d.blacklistActivity?.totalAmountUsd ?? 0), 0) : null,
+    gradeTransitions: complete ? aggregateInputs.reduce((s, d) => s + (d.gradeTransitions?.length ?? 0), 0) : null,
     gaugeMid: gauges.length >= 3 ? gauges.reduce((s, v) => s + v, 0) / gauges.length : null,
     days: aggregateInputs.length,
+    expectedDays,
   };
 }

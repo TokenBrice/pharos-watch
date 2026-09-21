@@ -2,6 +2,7 @@ import type { DigestInputData, DigestRiskTapeItem } from "@shared/types/digest";
 import { formatCurrency } from "@shared/lib/format";
 import { isCriticalDepegRisk } from "@shared/lib/digest-risk";
 import { formatScore, signedCurrency } from "./digest-intelligence-utils";
+import { ACTIVE_DEPEGS_DEGRADED_SOURCE } from "./degraded-sources";
 
 export function buildRiskTape(data: DigestInputData): DigestRiskTapeItem[] {
   const items: DigestRiskTapeItem[] = [];
@@ -19,16 +20,28 @@ export function buildRiskTape(data: DigestInputData): DigestRiskTapeItem[] {
 
   const topDepeg = data.topDepegs.find((depeg) => !depeg.suppressReason) ?? data.topDepegs[0];
   const topDepegBps = topDepeg ? topDepeg.currentBps ?? topDepeg.bps : null;
+  // A failed active-depeg query observed nothing because it could not read.
+  // "None active" is a positive claim and must not rest on that failure.
+  const depegsUnavailable = data.degradedSources?.includes(ACTIVE_DEPEGS_DEGRADED_SOURCE) ?? false;
   items.push({
     id: "risk-tape:depegs",
     label: "Depegs",
-    value: topDepeg && topDepegBps != null ? `${topDepeg.symbol} ${Math.abs(topDepegBps)}bps` : "None active",
+    value:
+      topDepeg && topDepegBps != null
+        ? `${topDepeg.symbol} ${Math.abs(topDepegBps)}bps`
+        : depegsUnavailable
+          ? "Unavailable"
+          : "None active",
     tone: topDepeg && topDepegBps != null
       ? (isCriticalDepegRisk({ bps: topDepegBps, mcapUsd: topDepeg.mcapUsd }) ? "critical" : "warning")
-      : "positive",
+      : depegsUnavailable
+        ? "neutral"
+        : "positive",
     detail: topDepeg
       ? `${data.activeDepegCount} active; ${formatCurrency(topDepeg.mcapUsd, 0)} mcap on top signal.`
-      : "No active peg breaks in the digest input.",
+      : depegsUnavailable
+        ? "Active depegs could not be read for this edition."
+        : "No active peg breaks in the digest input.",
   });
 
   if (data.mintBurnFlows) {

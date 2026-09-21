@@ -675,6 +675,44 @@ describe("message builders", () => {
     }
   });
 
+  it("never shows a depeg step that is not in force", () => {
+    const subscriber = {
+      alert_dews: 0,
+      alert_depeg: 0,
+      alert_safety: 0,
+      alert_launch: 0,
+      global_alert_dews: 0,
+      global_alert_depeg: 0,
+      global_depeg_worsening_bps_step: 250,
+      global_alert_safety: 0,
+      global_alert_launch: 0,
+      global_alert_reserve: 0,
+      global_alert_freeze: 0,
+      quiet_hours_enabled: 0,
+      quiet_hours_start_utc: null,
+      quiet_hours_end_utc: null,
+      alert_snooze_until_ts: null,
+    };
+    const message = buildHomeMessage(subscriber);
+    expect(message).toContain("Depeg: OFF\n");
+    expect(message).not.toContain("(+250bps)");
+  });
+
+  it("marks no per-coin step when the depeg family is on without one", () => {
+    const row = { alert_depeg: 1, depeg_worsening_bps_step: null } as unknown as SubscriptionRow;
+    const depegButtons = buildCoinKeyboard("usdc-circle", row)
+      .inline_keyboard.flat()
+      .filter((button) => button.callback_data?.includes(":ds:") ?? false);
+    expect(depegButtons.some((button) => button.text.includes("•"))).toBe(false);
+
+    const offRow = { alert_depeg: 0, depeg_worsening_bps_step: 250 } as unknown as SubscriptionRow;
+    const offButtons = buildCoinKeyboard("usdc-circle", offRow)
+      .inline_keyboard.flat()
+      .filter((button) => button.callback_data?.includes(":ds:") ?? false);
+    expect(offButtons.find((button) => button.callback_data?.endsWith(":ds:0"))?.text).toContain("•");
+    expect(offButtons.find((button) => button.callback_data?.endsWith(":ds:250"))?.text).not.toContain("•");
+  });
+
   it("home message reflects active snooze duration", () => {
     const subscriber = {
       alert_dews: 0,

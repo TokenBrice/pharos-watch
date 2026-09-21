@@ -133,6 +133,8 @@ describe("weekly recap safety identity", () => {
       row(2, [v9Transition(1_785_088_800, otherBuild)]),
       row(3, [v9Transition(1_785_002_400)]),
       row(4),
+      row(5),
+      row(6),
     ];
 
     const weekly = buildWeeklyInputData(rows, [], available(v9Identity));
@@ -159,6 +161,8 @@ describe("weekly recap safety identity", () => {
       row(2),
       row(3),
       row(4),
+      row(5),
+      row(6),
     ];
     const degraded = buildWeeklyInputData(rows, [], unavailable("v9-identity-mismatch"));
     const restored = buildWeeklyInputData(rows, [], available(v8Identity));
@@ -219,6 +223,8 @@ describe("weekly recap safety identity", () => {
       row(2, [], v9Identity),
       row(3, [], v9Identity),
       row(4, [], v9Identity),
+      row(5, [], v9Identity),
+      row(6, [], v9Identity),
     ];
 
     const weekly = buildWeeklyInputData(rows, [], unavailable());
