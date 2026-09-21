@@ -151,7 +151,7 @@ describe("parseStartPayload", () => {
     expect(parseStartPayload("SETUP")).toEqual({ kind: "setup" });
   });
 
-  it("accepts only catalog-issued adoption tokens for the bot setup surface", () => {
+  it("routes a pw1 setup token through the adoption path separately from subscribe payloads", () => {
     expect(parseStartPayload("pw1_landing_hero")).toEqual({
       kind: "adoption",
       token: "pw1_landing_hero",
@@ -206,6 +206,7 @@ describe("parseStartPayload", () => {
 
   it("returns none for unknown prefixes or malformed sub payloads", () => {
     expect(parseStartPayload("foo_bar")).toEqual({ kind: "none" });
+    expect(parseStartPayload("sub_usdc")).toEqual({ kind: "none" });
     expect(parseStartPayload("sub_dews")).toEqual({ kind: "none" });
     expect(parseStartPayload("sub__usd-top25")).toEqual({ kind: "none" });
     expect(parseStartPayload("status_")).toEqual({ kind: "none" });

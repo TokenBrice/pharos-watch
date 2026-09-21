@@ -12,6 +12,12 @@ import { acquireTelegramCommandCooldown, claimTelegramProcessedUpdate } from "..
 import { parseStoredCommandSelectionIntent } from "../telegram-webhook-disambiguation-selection";
 import { clearPendingDisambiguation } from "../telegram-webhook-store";
 import { resumeStoredPendingClearIntent } from "../telegram-webhook-pending-gate";
+import {
+  handleTelegramWebhook,
+  makeWebhookRequest,
+  resetTelegramWebhookTest,
+  sentMessageBody,
+} from "./telegram-webhook.test-support";
 
 const NOW = 1_700_000_000;
 
@@ -38,6 +44,35 @@ describe("TelegramWebhookEffectFence", () => {
   const fixtures: DatabaseSync[] = [];
   afterEach(() => {
     while (fixtures.length > 0) fixtures.pop()?.close();
+  });
+
+  it("persists a subscribe deep link and records its mutating intent before replying", async () => {
+    resetTelegramWebhookTest();
+    const { sqlite, db } = createLatestSchemaSqlite();
+    fixtures.push(sqlite);
+
+    const response = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(42, "/start sub_depeg_usdc-circle", "test-secret", { updateId: 27 }),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(response.status).toBe(200);
+    expect(sqlite.prepare(`
+      SELECT alert_depeg FROM telegram_subscriptions
+       WHERE chat_id = '42' AND stablecoin_id = 'usdc-circle'
+    `).get()).toEqual({ alert_depeg: 1 });
+    expect(sqlite.prepare(`
+      SELECT intent_kind, intent_mutates, mutation_applied_at
+        FROM telegram_processed_updates WHERE update_id = 27
+    `).get()).toMatchObject({
+      intent_kind: "command:subscribe",
+      intent_mutates: 1,
+      mutation_applied_at: expect.any(Number),
+    });
+    expect(sentMessageBody().text).toContain("Updated subscriptions.");
+    expect(sentMessageBody().text).toContain("USDC");
   });
 
   it("atomically commits a domain mutation and its applied marker", async () => {

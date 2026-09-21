@@ -571,11 +571,13 @@ async function createCommandIntent(parsed: ParsedTelegramCommand) {
 }
 
 function commandMutatesLocalState(command: string, args: string): boolean {
+  const startPayloadKind = command === "/start" ? parseStartPayload(args).kind : null;
   return commandRequiresGroupAdmin(command, args)
     || command === "/forget"
     || command === "/cancel"
     || (command === "/recap" && /^(?:on|off|time\s+(?:[0-9]|1[0-9]|2[0-3]))$/i.test(args.trim()))
-    || (command === "/start" && (
-      parseStartPayload(args).kind === "setup" || parseStartPayload(args).kind === "none"
-    ));
+    || startPayloadKind === "setup"
+    || startPayloadKind === "none"
+    || startPayloadKind === "subscribe"
+    || startPayloadKind === "adoption";
 }
