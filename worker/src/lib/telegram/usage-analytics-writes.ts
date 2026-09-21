@@ -151,13 +151,12 @@ function buildChatDeliveryDiagnosticsUpsert(
   db: D1Database,
   input: {
     chatId: string;
-    ok: boolean;
-    errorClass?: string | null;
-    at: number;
+    attemptAt: number;
+    successAt: number | null;
+    failureClass: string | null;
     mode: "reply" | "delivery";
   },
 ): D1PreparedStatement {
-  const failureClass = input.ok ? null : input.errorClass ?? "unknown";
   return db
     .prepare(
       `INSERT INTO telegram_chat_delivery_diagnostics (
@@ -180,11 +179,11 @@ function buildChatDeliveryDiagnosticsUpsert(
     )
     .bind(
       input.chatId,
-      input.mode === "delivery" && input.ok ? input.at : null,
-      input.mode === "reply" && input.ok ? input.at : null,
-      input.at,
-      failureClass,
-      input.at,
+      input.mode === "delivery" ? input.successAt : null,
+      input.mode === "reply" ? input.successAt : null,
+      input.attemptAt,
+      input.failureClass,
+      input.attemptAt,
     );
 }
 
@@ -194,7 +193,13 @@ export async function recordTelegramReplyOutcome(
 ): Promise<void> {
   const nowSec = input.nowSec ?? Math.floor(Date.now() / 1000);
   try {
-    await buildChatDeliveryDiagnosticsUpsert(db, { ...input, at: nowSec, mode: "reply" }).run();
+    await buildChatDeliveryDiagnosticsUpsert(db, {
+      chatId: input.chatId,
+      attemptAt: nowSec,
+      successAt: input.ok ? nowSec : null,
+      failureClass: input.ok ? null : input.errorClass ?? "unknown",
+      mode: "reply",
+    }).run();
   } catch {
     // Diagnostics must not block command replies.
   }
@@ -206,29 +211,43 @@ export async function recordTelegramDeliveryOutcomes(
 ): Promise<void> {
   if (inputs.length === 0) return;
   const nowSec = Math.floor(Date.now() / 1000);
-  const inputsByChat = new Map<string, typeof inputs[number]>();
+  const coalescedByChat = new Map<string, {
+    chatId: string;
+    attemptAt: number;
+    successAt: number | null;
+    failureClass: string | null;
+    mode: "delivery";
+  }>();
   for (const input of inputs) {
-    const existing = inputsByChat.get(input.chatId);
+    const at = input.nowSec ?? nowSec;
+    const failureClass = input.ok ? null : input.errorClass ?? "unknown";
+    const existing = coalescedByChat.get(input.chatId);
     if (!existing) {
-      inputsByChat.set(input.chatId, input);
+      coalescedByChat.set(input.chatId, {
+        chatId: input.chatId,
+        attemptAt: at,
+        successAt: input.ok ? at : null,
+        failureClass,
+        mode: "delivery",
+      });
       continue;
     }
-    inputsByChat.set(input.chatId, {
-      chatId: input.chatId,
-      ok: existing.ok || input.ok,
-      errorClass: existing.ok || input.ok ? null : input.errorClass ?? existing.errorClass ?? null,
-      nowSec: Math.max(existing.nowSec ?? nowSec, input.nowSec ?? nowSec),
-    });
+    // The latest attempt owns the attempt facts: an earlier success must not
+    // clear a later failure's error class, and a later failure must not erase
+    // the success that genuinely happened.
+    if (at > existing.attemptAt) {
+      existing.attemptAt = at;
+      existing.failureClass = failureClass;
+    } else if (at === existing.attemptAt && failureClass != null) {
+      existing.failureClass = failureClass;
+    }
+    if (input.ok) existing.successAt = Math.max(at, existing.successAt ?? at);
   }
-  const coalescedInputs = [...inputsByChat.values()];
+  const coalescedInputs = [...coalescedByChat.values()];
   try {
     for (let offset = 0; offset < coalescedInputs.length; offset += DELIVERY_DIAGNOSTIC_BATCH_SIZE) {
       const chunk = coalescedInputs.slice(offset, offset + DELIVERY_DIAGNOSTIC_BATCH_SIZE);
-      await db.batch(chunk.map((input) => buildChatDeliveryDiagnosticsUpsert(db, {
-        ...input,
-        at: input.nowSec ?? nowSec,
-        mode: "delivery",
-      })));
+      await db.batch(chunk.map((input) => buildChatDeliveryDiagnosticsUpsert(db, input)));
     }
   } catch {
     // Diagnostics must not block alert delivery.

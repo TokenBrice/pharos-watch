@@ -245,7 +245,7 @@ export function parsePendingDisambiguation(
     return { actionType: SETUP_PENDING_ACTION_TYPE };
   }
 
-  const actionType = parsePendingActionType(pending.action_type ?? "subscribe");
+  const actionType = parsePendingActionType(pending.action_type);
   if (!actionType) {
     logWorkerEventArgs("api", "warn",
       `[telegram-webhook] malformed pending action_type value=${String(pending.action_type)}`,

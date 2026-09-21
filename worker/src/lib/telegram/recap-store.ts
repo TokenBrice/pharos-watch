@@ -2,6 +2,7 @@ import { nextIanaLocalHourDueAt } from "@shared/lib/iana-local-time";
 import { executeAtomicBatch } from "../db";
 import {
   TELEGRAM_RECAP_CADENCE,
+  TELEGRAM_RECAP_DEFAULT_DELIVERY_HOUR_LOCAL,
   TELEGRAM_RECAP_DUE_PAGE_SIZE,
   TELEGRAM_RECAP_FORMATTER_VERSION,
   TELEGRAM_RECAP_PENDING_PRIORITY,
@@ -115,19 +116,35 @@ interface TargetRow {
   status: TelegramRecapTargetStatus;
 }
 
+/**
+ * D1 casts are compile-time only: a malformed persisted number must read as
+ * absent (or the policy default) rather than travelling into renderers as
+ * `NaN`.
+ */
+function finiteOrNull(value: unknown): number | null {
+  const numeric = Number(value);
+  return typeof value === "number" && Number.isFinite(numeric) ? numeric : null;
+}
+
 function mapPreference(row: PreferenceRow): TelegramRecapPreference {
+  const deliveryHourLocal = finiteOrNull(row.delivery_hour_local);
   return {
     chatId: row.chat_id,
     chatKind: "private",
     enabled: Number(row.enabled) === 1,
     cadence: TELEGRAM_RECAP_CADENCE,
-    deliveryHourLocal: Number(row.delivery_hour_local),
-    nextDueAt: row.next_due_at == null ? null : Number(row.next_due_at),
-    lastWindowEndAt: row.last_window_end_at == null ? null : Number(row.last_window_end_at),
-    lastDeliveredLocalDate: row.last_delivered_local_date,
-    createdAt: Number(row.created_at),
-    updatedAt: Number(row.updated_at),
-    preferenceGeneration: Number(row.preference_generation ?? 0),
+    deliveryHourLocal: deliveryHourLocal != null
+      && Number.isInteger(deliveryHourLocal)
+      && deliveryHourLocal >= 0
+      && deliveryHourLocal <= 23
+      ? deliveryHourLocal
+      : TELEGRAM_RECAP_DEFAULT_DELIVERY_HOUR_LOCAL,
+    nextDueAt: finiteOrNull(row.next_due_at),
+    lastWindowEndAt: finiteOrNull(row.last_window_end_at),
+    lastDeliveredLocalDate: typeof row.last_delivered_local_date === "string" ? row.last_delivered_local_date : null,
+    createdAt: finiteOrNull(row.created_at) ?? 0,
+    updatedAt: finiteOrNull(row.updated_at) ?? 0,
+    preferenceGeneration: finiteOrNull(row.preference_generation) ?? 0,
   };
 }
 

@@ -867,6 +867,8 @@ describe("handleTelegramWebhook", () => {
     expect(payload.unsubscribeAll).toBe(true);
     const text = sentMessageBody().text.toLowerCase();
     expect(text).toContain("confirm?");
+    expect(text).toContain("preset follows");
+    expect(text).not.toContain(`${TELEGRAM_SUBSCRIBABLE_STABLECOINS.length} coins`);
   });
 
   it("gates /unsubscribe with a >10-coin preset behind a confirmation prompt", async () => {

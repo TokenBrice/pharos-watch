@@ -650,31 +650,39 @@ function lintPriceBpsConsistency(
 
 /**
  * Movement-claim lint: "narrowed/widened from N bps" must trace to a number
- * that actually existed in the previous edition's depeg facts (the Jul 16
- * edition invented "narrowed from 3,650 yesterday" when both days read 3,159).
+ * that actually existed in the previous edition's depeg facts *for the coin
+ * the sentence names* (the Jul 16 edition invented "narrowed from 3,650
+ * yesterday" when both days read 3,159). Pooling every coin's history would
+ * let a second coin's number launder the claim, so a sentence that does not
+ * resolve to exactly one coin with previous facts fails closed.
  */
 function lintMovementClaims(
   copy: string,
   prevFacts: readonly DigestDepegFact[],
 ): DigestValidationIssue[] {
   const issues: DigestValidationIssue[] = [];
-  const knownPrevBps = prevFacts
-    .flatMap((fact) => [fact.currentBps, fact.bps, fact.peakBps])
-    .filter((value): value is number => typeof value === "number")
-    .map((value) => Math.abs(value));
-  for (const match of copy.matchAll(/\b(?:narrowed|widened|worsened|improved|tightened)\b[^.!?]{0,60}?\bfrom\s+([0-9][\d,]*)\s*(?:bps|basis points)/gi)) {
-    const claimedOrigin = Number(match[1].replaceAll(",", ""));
-    if (!Number.isFinite(claimedOrigin)) continue;
-    const supported = knownPrevBps.some((value) => Math.abs(value - claimedOrigin) <= LINT_PRICE_BPS_TOLERANCE);
-    if (!supported) {
-      issues.push({
-        code: "unverifiable-movement-claim",
-        // This is a factual provenance failure, not a style defect. A hard
-        // issue spends one corrective retry rather than publishing an armed
-        // threshold as though it were yesterday's observation.
-        severity: "hard",
-        message: `Copy claims movement "from ${claimedOrigin} bps" but no previous-edition depeg fact is near that value.`,
-      });
+  for (const sentence of copy.split(/(?<=[.!?])\s+/)) {
+    for (const match of sentence.matchAll(/\b(?:narrowed|widened|worsened|improved|tightened)\b[^.!?]{0,60}?\bfrom\s+([0-9][\d,]*)\s*(?:bps|basis points)/gi)) {
+      const claimedOrigin = Number(match[1].replaceAll(",", ""));
+      if (!Number.isFinite(claimedOrigin)) continue;
+      const namedFacts = prevFacts.filter((fact) => sentenceMentionsSymbol(sentence, fact.symbol));
+      const namedSymbols = new Set(namedFacts.map((fact) => fact.symbol.toUpperCase()));
+      const supported = namedSymbols.size === 1 && namedFacts
+        .flatMap((fact) => [fact.currentBps, fact.bps, fact.peakBps])
+        .filter((value): value is number => typeof value === "number")
+        .some((value) => Math.abs(Math.abs(value) - claimedOrigin) <= LINT_PRICE_BPS_TOLERANCE);
+      if (!supported) {
+        issues.push({
+          code: "unverifiable-movement-claim",
+          // This is a factual provenance failure, not a style defect. A hard
+          // issue spends one corrective retry rather than publishing an armed
+          // threshold as though it were yesterday's observation.
+          severity: "hard",
+          message: namedSymbols.size === 1
+            ? `Copy claims ${[...namedSymbols][0]} movement "from ${claimedOrigin} bps" but no previous-edition depeg fact for that coin is near that value.`
+            : `Copy claims movement "from ${claimedOrigin} bps" without naming exactly one coin carrying previous-edition depeg facts.`,
+        });
+      }
     }
   }
   return issues;

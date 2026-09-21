@@ -1499,4 +1499,37 @@ describe("authoritative Telegram target plans on latest SQLite schema", () => {
       countersSource: "authoritative-target-rows",
     });
   });
+
+  it("never labels an all-cancelled job sent", async () => {
+    const { sqlite, db } = setupLatestSchema();
+    sqlite
+      .prepare(
+        `INSERT INTO telegram_alert_jobs (
+         job_id, alert_type, source_event_id, severity, created_at, expires_at, status
+       ) VALUES ('cancelled-job', 'dews', 'cancelled-source', 'risk', ?, ?, 'queued')`,
+      )
+      .run(NOW, NOW + 100);
+    const insert = sqlite.prepare(
+      `INSERT INTO telegram_alert_job_targets (
+         job_id, target_key, chat_id, chunk_index, alert_type, status,
+         pending_dedupe_key, created_at, cancelled_at
+       ) VALUES ('cancelled-job', ?, ?, 0, 'dews', 'queued', ?, ?, ?)`,
+    );
+    for (const key of ["a", "b"]) insert.run(key, key, `pending-${key}`, NOW, NOW);
+    await reconcileTelegramAlertJobCounters(db, ["cancelled-job"], NOW + 1);
+    expect(
+      sqlite
+        .prepare(
+          `SELECT status, cancelled_count, accepted_count, sent_count, enqueued_count
+             FROM telegram_alert_jobs WHERE job_id = 'cancelled-job'`,
+        )
+        .get(),
+    ).toEqual({
+      status: "expired",
+      cancelled_count: 2,
+      accepted_count: 0,
+      sent_count: 0,
+      enqueued_count: 0,
+    });
+  });
 });

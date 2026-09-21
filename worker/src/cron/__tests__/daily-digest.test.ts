@@ -104,6 +104,8 @@ describe("response and editorial contracts", () => {
     expect(facts("USX sits 5,783 bps below peg at $0.42 with no bid in sight.", { depegFacts: [{ symbol: "USX", currentPriceUsd: 0.4217, currentBps: -5783 }] })).not.toContain("price-bps-mismatch");
     expect(facts("APXUSD narrowed from 3,650 bps yesterday.", { prevDepegFacts: [{ symbol: "APXUSD", currentBps: -3159, bps: -3159 }] })).toContain("unverifiable-movement-claim");
     expect(facts("APXUSD widened from 3,159 bps to 3,410 bps overnight.", { prevDepegFacts: [{ symbol: "APXUSD", currentBps: -3159 }] })).not.toContain("unverifiable-movement-claim");
+    expect(facts("APXUSD narrowed from 3,159 bps overnight.", { prevDepegFacts: [{ symbol: "APXUSD", currentBps: -420 }, { symbol: "OTHER", currentBps: -3159 }] })).toContain("unverifiable-movement-claim");
+    expect(issueCodes(fixture({ leadSignalId: "yield:usdc", extended: `USDTB remains 2,950 bps under peg, unchanged. ${DEFAULT_EXTENDED}` }), { kind: "daily", recentMeta: [], leadRequirements: [{ candidateIds: [], severity: "hard" as const, mentionTokens: ["USDT"], reason: "ongoing critical" }] })).toContain("required-lead-missing");
     const titles = [{ meta: null, title: "USX Turns Twenty Days Old" }, { meta: null, title: "USX Passes 450 Hours Broken" }];
     expect(issueCodes({ ...fixture(), digestTitle: "USX Enters Week Four" }, { kind: "daily", recentMeta: titles })).toEqual(expect.arrayContaining(["title-symbol-streak", "title-day-counting"]));
     expect(issueCodes({ ...fixture(), digestTitle: "USDC Touches Its Ceiling" }, { kind: "daily", recentMeta: [], recentTitles: ["USDC Touches Its Ceiling"] })).toContain("repeated-title");

@@ -445,10 +445,10 @@ async function openRecommendedConfirm(
   }
 
   const nextState: SetupWizardState = {
+    ...state,
     step: "confirm-recommended",
     alertTypes: [...RECOMMENDED_ALERT_TYPES],
     target: { kind: "preset", presetId: RECOMMENDED_PRESET_ID },
-    initiatorUserId: state.initiatorUserId,
   };
   await persistSetupTransition(context, "branch-recommended", nextState);
 

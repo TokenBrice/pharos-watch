@@ -131,6 +131,19 @@ describe("telegram usage analytics", () => {
     expect(inserts[1]?.binds).toEqual(["43", null, null, 103, "network", 103]);
   });
 
+  it("keeps a later failure's error class and the earlier success timestamp", async () => {
+    const db = mockD1([{ match: "INSERT INTO telegram_chat_delivery_diagnostics", rows: [] }]);
+
+    await recordTelegramDeliveryOutcomes(db, [
+      { chatId: "42", ok: true, nowSec: 200 },
+      { chatId: "42", ok: false, errorClass: "blocked", nowSec: 201 },
+    ]);
+
+    const inserts = db.getHistory().filter((entry) => entry.sql.includes("INSERT INTO telegram_chat_delivery_diagnostics"));
+    expect(inserts).toHaveLength(1);
+    expect(inserts[0]?.binds).toEqual(["42", 200, null, 201, "blocked", 201]);
+  });
+
   it("merges explicit top-coin follows with the preset-aware shape", async () => {
     const db = mockD1([
       {

@@ -49,4 +49,17 @@ describe("selectDigestRiskSignal", () => {
       date: "2026-06-19",
     });
   });
+
+  it("skips archived entries that cannot be ordered instead of publishing them", () => {
+    const signal = selectDigestRiskSignal({
+      activeDepegCount: 2,
+      topDepegs: [
+        { symbol: "BROKEN", bps: -4000 },
+        { bps: -900, mcapUsd: 2_000_000_000 },
+        { symbol: "WELLFORMED", bps: -50, mcapUsd: 1_000_000_000 },
+      ],
+    });
+
+    expect(signal).toMatchObject({ symbol: "WELLFORMED", bps: -50, mcapUsd: 1_000_000_000 });
+  });
 });

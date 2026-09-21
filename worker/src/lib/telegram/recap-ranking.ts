@@ -58,6 +58,11 @@ function depegMagnitude(fact: TelegramRecapFact): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
+/** Tape order within a group: time first, event id as the deterministic tie-break. */
+function compareChronology(a: TelegramRecapScopedFact, b: TelegramRecapScopedFact): number {
+  return a.ts - b.ts || a.eventId.localeCompare(b.eventId);
+}
+
 /** Collapse repeated facts to their material state before applying stable ordering. */
 export function collapseTelegramRecapFacts(facts: readonly TelegramRecapScopedFact[]): TelegramRecapScopedFact[] {
   const grouped = new Map<string, TelegramRecapScopedFact[]>();
@@ -70,12 +75,17 @@ export function collapseTelegramRecapFacts(facts: readonly TelegramRecapScopedFa
 
   const collapsed: TelegramRecapScopedFact[] = [];
   for (const group of grouped.values()) {
-    const depegResolution = group.filter((fact) => fact.type === "depeg.resolved").sort(compareFacts)[0];
+    const latestResolution = group
+      .filter((fact) => fact.type === "depeg.resolved")
+      .sort((a, b) => compareChronology(b, a))[0];
     const depegOpenOrWorsened = group
       .filter((fact) => fact.type === "depeg.opened" || fact.type === "depeg.peak_worsened")
+      // A resolution only describes the coin's state while nothing reopened
+      // after it; otherwise the recap must report the later depeg.
+      .filter((fact) => !latestResolution || compareChronology(fact, latestResolution) > 0)
       .sort((a, b) => depegMagnitude(b) - depegMagnitude(a) || compareFacts(a, b))[0];
-    if (depegResolution && depegOpenOrWorsened) {
-      collapsed.push(depegResolution);
+    if (latestResolution && !depegOpenOrWorsened) {
+      collapsed.push(latestResolution);
       continue;
     }
     if (depegOpenOrWorsened) {

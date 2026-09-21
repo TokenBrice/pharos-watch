@@ -4,6 +4,7 @@ import {
   isTelegramRecapAvailableToChat,
 } from "@shared/lib/telegram-recap-rollout";
 import { escapeHtml } from "../../lib/telegram";
+import { formatTelegramIsoTimestamp } from "../../lib/telegram/format-age";
 import { recordTelegramUsageEvent } from "../../lib/telegram/usage-analytics";
 import {
   applyRecapPreference,
@@ -43,9 +44,8 @@ function formatRecapStatus(input: {
 }): string {
   const state = input.enabled ? "On" : "Off";
   const timezone = input.timezone == null ? "Not set" : escapeHtml(input.timezone);
-  const next = input.nextDueAt == null
-    ? "Not scheduled"
-    : `<code>${new Date(input.nextDueAt * 1000).toISOString()}</code>`;
+  const nextIso = formatTelegramIsoTimestamp(input.nextDueAt, "");
+  const next = nextIso ? `<code>${nextIso}</code>` : "Not scheduled";
   return [
     "<b>Daily watchlist recap</b>",
     `Status: ${state}`,
