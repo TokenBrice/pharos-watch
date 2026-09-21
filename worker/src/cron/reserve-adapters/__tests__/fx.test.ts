@@ -1,11 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { adaptFx } from "../fx";
 import { runAdapter, type AdapterNetworkSpec } from "./reserve-adapter.test-support";
 
-const FX_API_ENDPOINT = "https://fx.example/tvl";
-const API_PRICE_ENDPOINT =
-  "https://coins.llama.fi/prices/current/ethereum:0x2260fac5e5542a773aa44fbcfedf7c193bc2c599,ethereum:0xae7ab96520de3a18e5e111b5eaab095312d7fe84";
 const ONCHAIN_PRICE_ENDPOINT =
   "https://coins.llama.fi/prices/current/ethereum:0x2260fac5e5542a773aa44fbcfedf7c193bc2c599,ethereum:0xae7ab96520de3a18e5e111b5eaab095312d7fe84";
 const WSTETH_POOL = "0x6Ecfa38FeE8a5277B91eFdA204c235814F0122E8";
@@ -15,43 +11,6 @@ const WBTC_POOL_LOWER = WBTC_POOL.toLowerCase();
 const COLLATERAL_SELECTOR = "0xee65a03c";
 const DEBT_SELECTOR = "0xf9d45fd2";
 const fxCoin = TRACKED_META_BY_ID.get("fxusd-f-x-protocol")!;
-const apiConfig = {
-  ...fxCoin.liveReservesConfig!,
-  inputs: { primary: { kind: "http-json" as const, url: FX_API_ENDPOINT } },
-};
-
-function apiPayload(extra: Record<string, { collateralBalance: string }> = {}) {
-  return {
-    data: {
-      poolInfo: {
-        wstETH: { collateralBalance: "2000000000000000000" },
-        wbtc: { collateralBalance: "100000000" },
-        ...extra,
-      },
-    },
-  };
-}
-
-function apiPrices(nowSec: number, includeWbtc = true) {
-  return {
-    coins: {
-      "ethereum:0xae7ab96520de3a18e5e111b5eaab095312d7fe84": {
-        price: 4_000,
-        timestamp: nowSec,
-        confidence: 1,
-      },
-      ...(includeWbtc
-        ? {
-            "ethereum:0x2260fac5e5542a773aa44fbcfedf7c193bc2c599": {
-              price: 100_000,
-              timestamp: nowSec,
-              confidence: 1,
-            },
-          }
-        : {}),
-    },
-  };
-}
 
 function onchainPrices(nowSec: number, stEthPrice = 2485.83, wbtcPrice = 78966.15) {
   return {
@@ -96,34 +55,7 @@ function onchainNetwork(options: {
   };
 }
 
-describe("adaptFx", () => {
-  it("fails closed at the HTTP consumer for unknown positive collateral", async () => {
-    await expect(runAdapter("fx", fxCoin, {
-      config: apiConfig,
-      network: {
-        json: {
-          [FX_API_ENDPOINT]: apiPayload({ unexpectedAsset: { collateralBalance: "1" } }),
-        },
-      },
-      nowSec: 1_800_000_000,
-      validate: false,
-    })).rejects.toThrow("unmapped positive collateral keys with unquantified exposure: unexpectedAsset");
-  });
-
-  it("rejects a missing price instead of renormalizing the priced balance", async () => {
-    await expect(runAdapter("fx", fxCoin, {
-      config: apiConfig,
-      network: {
-        json: {
-          [FX_API_ENDPOINT]: apiPayload(),
-          [API_PRICE_ENDPOINT]: apiPrices(1_800_000_000, false),
-        },
-      },
-      nowSec: 1_800_000_000,
-      validate: false,
-    })).rejects.toThrow("Missing DefiLlama price for wbtc");
-  });
-
+describe("fx", () => {
   it.each([
     ["0xee65a03c", "collateral"], ["0xf9d45fd2", "debt"],
   ])("rejects an independently unreadable on-chain %s read", async (selector, kind) => {
@@ -132,92 +64,6 @@ describe("adaptFx", () => {
       nowSec: 1_757_000_000,
       validate: false,
     })).rejects.toThrow(`fx on-chain ${kind} read failed for wstETH`);
-  });
-
-  it("values API WBTC at eight decimals rather than the on-chain eighteen", async () => {
-    const { result, network } = await runAdapter("fx", fxCoin, {
-      config: apiConfig,
-      network: {
-        json: {
-          [FX_API_ENDPOINT]: apiPayload(),
-          [API_PRICE_ENDPOINT]: apiPrices(1_800_000_000),
-        },
-      },
-      nowSec: 1_800_000_000,
-    });
-    expect(network.requests.map((request) => request.url)).toContain(API_PRICE_ENDPOINT);
-    expect(result.slices).toEqual([
-      { sourceKey: "fx:wbtc", name: "WBTC", pct: 92.6, risk: "medium" },
-      { sourceKey: "fx:wsteth", name: "wstETH (Lido)", pct: 7.4, risk: "low" },
-    ]);
-  });
-
-  it("extracts non-zero collateral balances from the official fx TVL payload", () => {
-    const result = adaptFx({
-      data: {
-        poolInfo: {
-          wstETH: { collateralBalance: "4420184046004807062590", debtBalance: "1000000000000000000000" },
-          wbtc: { collateralBalance: "21713855211", debtBalance: "2000000000000000000000" },
-        },
-      },
-    });
-
-    expect(result).toEqual({
-      balances: [
-        { key: "wstETH", amountRaw: 4420184046004807062590n, debtRaw: 1000000000000000000000n },
-        { key: "wbtc", amountRaw: 21713855211n, debtRaw: 2000000000000000000000n },
-      ],
-      unknownKeys: [],
-    });
-  });
-
-  it("surfaces unknown positive collateral keys so the fetch path can fail closed", () => {
-    const result = adaptFx({
-      data: {
-        poolInfo: {
-          wstETH: { collateralBalance: "1000000000000000000" },
-          unexpectedAsset: { collateralBalance: "250000000000000000" },
-        },
-      },
-    });
-
-    expect(result).toEqual({
-      balances: [{ key: "wstETH", amountRaw: 1000000000000000000n, debtRaw: 0n }],
-      unknownKeys: ["unexpectedAsset"],
-    });
-  });
-
-  it("treats non-numeric collateralBalance strings as zero (parse-failure path)", () => {
-    const result = adaptFx({
-      data: {
-        poolInfo: {
-          wstETH: { collateralBalance: "not-a-number", debtBalance: "1000" },
-          wbtc: { collateralBalance: "-250", debtBalance: "0" },
-        },
-      },
-    });
-
-    // Both wstETH and wbtc parse to 0 -> filtered out; neither counts as unknown.
-    expect(result.balances).toEqual([]);
-    expect(result.unknownKeys).toEqual([]);
-  });
-
-  it("returns an empty balance list and no unknowns when poolInfo is absent", () => {
-    const result = adaptFx({});
-    expect(result.balances).toEqual([]);
-    expect(result.unknownKeys).toEqual([]);
-  });
-
-  it("skips unknown keys with zero collateralBalance (no false-positive unknown list)", () => {
-    const result = adaptFx({
-      data: {
-        poolInfo: {
-          wstETH: { collateralBalance: "1000000000000000000" },
-          retiredAsset: { collateralBalance: "0" },
-        },
-      },
-    });
-    expect(result.unknownKeys).toEqual([]);
   });
 
   it("values on-chain pool raw collateral in each pool's raw unit (stETH for the wstETH pool)", async () => {

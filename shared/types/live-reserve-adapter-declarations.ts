@@ -39,7 +39,6 @@ import {
   QUARTERLY_ASSURANCE_MAX_AGE_SEC,
   TIMESTAMPED_FEED_VALIDATION,
   TIMESTAMPLESS_WITH_UNKNOWN_CAP_VALIDATION,
-  UNVERIFIED_OR_NOT_APPLICABLE_FRESHNESS,
   VERIFIED_ONLY_FRESHNESS,
   VERIFIED_ONLY_VALIDATION,
   VERIFIED_OR_UNVERIFIED_FRESHNESS,
@@ -2274,20 +2273,6 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: { capacity: "proxy", fee: "none" },
   }),
   "fdusd-independent-assurance": declareAdapter(fdusdAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V2),
-  "fdusd-transparency": declareAdapter(noParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V1, {
-    preferredFreshnessMode: "verified",
-    provenance: {
-      status: "retired",
-      rationale:
-        "Superseded by the compiled AOGB assurance manifest (fdusd-independent-assurance); retain the adapter only for historical review of the pre-compiled signed-report era.",
-      parkedSince: "2026-09-09",
-      nextReview: "2027-03-09",
-    },
-    validation: {
-      maxSourceAgeSec: LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
-      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
-    },
-  }),
   "fidd-independent-assurance": declareAdapter(fiddAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V2),
   "flying-tulip-ftusd": {
     primaryInputKinds: ["http-json"],
@@ -2331,7 +2316,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     validation: DASHBOARD_WITH_UNKNOWN_CAP_VALIDATION,
   },
   fx: {
-    primaryInputKinds: ["http-json", "onchain-evm"],
+    primaryInputKinds: ["onchain-evm"],
     paramsSchema: fxParamsSchema,
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
@@ -2339,10 +2324,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "proxy", fee: "none" },
-    validation: {
-      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
-      allowedFreshnessModes: UNVERIFIED_OR_NOT_APPLICABLE_FRESHNESS,
-    },
+    validation: LATEST_STATE_VALIDATION,
   },
   "gemini-independent-assurance": declareAdapter(noParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V2, {
     // Gemini's /dollar attestation list loads from its public Contentful
@@ -2687,22 +2669,6 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     // bound is defensible.
     redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
     validation: DASHBOARD_WITH_UNKNOWN_CAP_VALIDATION,
-  },
-  "ripple-transparency": {
-    provenance: {
-      status: "retired",
-      rationale: "Superseded by the hash-bound Deloitte report manifest (rlusd-independent-assurance); retained for historical review of the transparency-page adapter.",
-      parkedSince: "2026-09-14",
-      nextReview: "2027-03-14",
-    },
-    primaryInputKinds: ["http-html"],
-    paramsSchema: noParamsSchema,
-    sourceModel: "single-bucket",
-    evidenceClass: "independent",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_ATTESTATION_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
-    validation: MONTHLY_VERIFIED_VALIDATION,
   },
   "rlusd-independent-assurance": declareAdapter(rlusdAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V2),
   "sgforge-coinvertible": {

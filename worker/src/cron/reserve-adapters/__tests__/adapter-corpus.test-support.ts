@@ -61,8 +61,6 @@ export const CORPUS_NOT_REPLAYABLE: Record<string, string> = {
     "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by its adapter test file.",
   "fdusd-independent-assurance":
     "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by fdusd-independent-assurance.test.ts.",
-  "fdusd-transparency":
-    "No bound catalog coin yet (retired, parked, staged or newly declared key), so there is nothing to replay; parser behaviour stays owned by fdusd-transparency.test.ts.",
   "fidd-independent-assurance":
     "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by fidd-independent-assurance.test.ts.",
   "gemini-independent-assurance":
@@ -190,8 +188,6 @@ export const CORPUS_BACKLOG: Record<string, string> = {
     "No committed wire capture yet; the happy path and its failure modes are owned by re-metrics.test.ts.",
   "reserve-protocol-dtf":
     "No committed wire capture yet; the happy path and its failure modes are owned by reserve-protocol-dtf.test.ts.",
-  "ripple-transparency":
-    "No committed wire capture yet; the happy path and its failure modes are owned by ripple-transparency.test.ts.",
   "sgforge-coinvertible":
     "No committed wire capture yet; the happy path and its failure modes are owned by sgforge-coinvertible.test.ts.",
   "saturn-pyusdx":

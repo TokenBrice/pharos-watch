@@ -5,34 +5,17 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   decimalNumberFromBigInt,
   fetchDefiLlamaPrices,
-  fetchJsonWithRetry,
-  isHttpJsonInput,
   makeOnchainCallers,
   notApplicableFreshnessMetadata,
-  requireJsonInput,
   requireOnchainInput,
   slicesFromValues,
-  unverifiedFreshnessMetadata,
   valueUsdFromBigIntPrice,
 } from "./helpers";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 
-interface FxPoolInfo {
-  collateralBalance?: string;
-  debtBalance?: string;
-}
-
-interface FxPayload {
-  data?: {
-    poolInfo?: Record<string, FxPoolInfo>;
-  };
-}
-
 const TOKEN_META = {
   wstETH: {
     chain: "ethereum",
-    address: "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
-    apiDecimals: 18,
     // The pool's `getTotalRawCollaterals()` reports collateral in the pool's *base*
     // token unit: the wstETH pool's base token is stETH (wstETH enters through the
     // pool's rate provider, currently ~1.2436 stETH per wstETH), so the raw amount
@@ -47,8 +30,6 @@ const TOKEN_META = {
   },
   wbtc: {
     chain: "ethereum",
-    address: "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
-    apiDecimals: 8,
     // The WBTC pool's rate provider is identity (rate 1), so its raw collateral is
     // WBTC itself, expressed on the pool's unified 1e18 scale.
     rawUnitAddress: "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599", // WBTC
@@ -64,45 +45,10 @@ const GET_TOTAL_RAW_DEBTS_SELECTOR = "0xf9d45fd2";
 
 type FxBalance = { key: keyof typeof TOKEN_META; amountRaw: bigint; debtRaw: bigint };
 
-export function adaptFx(payload: FxPayload): {
-  balances: FxBalance[];
-  unknownKeys: string[];
-} {
-  const poolInfo = payload.data?.poolInfo ?? {};
-  const unexpectedPositiveKeys = Object.entries(poolInfo)
-    .filter(([key]) => !(key in TOKEN_META))
-    .filter(([, info]) => Number(info?.collateralBalance ?? "0") > 0)
-    .map(([key]) => key);
-
-  return {
-    balances: (Object.keys(TOKEN_META) as Array<keyof typeof TOKEN_META>)
-    .map((key) => {
-      const rawBalance = poolInfo[key]?.collateralBalance ?? "0";
-      const balance = typeof rawBalance === "string" && /^\d+$/.test(rawBalance)
-        ? BigInt(rawBalance)
-        : 0n;
-      const rawDebt = poolInfo[key]?.debtBalance ?? "0";
-      const debt = typeof rawDebt === "string" && /^\d+$/.test(rawDebt)
-        ? BigInt(rawDebt)
-        : 0n;
-      return {
-        key,
-        amountRaw: balance > 0n ? balance : 0n,
-        debtRaw: debt > 0n ? debt : 0n,
-      };
-    })
-    .filter((entry) => entry.amountRaw > 0n),
-    unknownKeys: unexpectedPositiveKeys,
-  };
-}
-
 async function buildFxResult(
   balances: FxBalance[],
   signal: AbortSignal,
   ctx: AdapterContext | undefined,
-  freshnessMetadata: Record<string, unknown>,
-  sourceUrls: string[],
-  valuationByKey: Record<keyof typeof TOKEN_META, { address: string; decimals: number }>,
 ): Promise<AdapterResult> {
   if (balances.length === 0) {
     throw new Error("fx returned no positive collateral balances");
@@ -113,7 +59,7 @@ async function buildFxResult(
     balances.map(({ key }) => ({
       key,
       chain: TOKEN_META[key].chain,
-      address: valuationByKey[key].address,
+      address: TOKEN_META[key].rawUnitAddress,
     })),
     signal,
     ctx,
@@ -127,7 +73,7 @@ async function buildFxResult(
     }
     return {
       sourceKey: `fx:${key.toLowerCase()}`,
-      value: valueUsdFromBigIntPrice(amountRaw, valuationByKey[key].decimals, price),
+      value: valueUsdFromBigIntPrice(amountRaw, TOKEN_META[key].rawUnitDecimals, price),
       name: TOKEN_META[key].name,
       risk: TOKEN_META[key].risk,
     };
@@ -141,7 +87,10 @@ async function buildFxResult(
     slices: slicesFromValues(knownValues),
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
-      ...freshnessMetadata,
+      ...notApplicableFreshnessMetadata({
+        proofKind: "fx-pool-direct-onchain",
+        poolCount: balances.length,
+      }),
       ...(capacityUsd > 0
         ? {
             redemption: {
@@ -152,7 +101,7 @@ async function buildFxResult(
               routeStatusSource: "protocol-api" as const,
               holderEligibility: "any-holder",
               settlementDelaySec: 0,
-              sourceUrls,
+              sourceUrls: ["https://fxprotocol.gitbook.io/fx-docs"],
             },
           }
         : {}),
@@ -160,38 +109,8 @@ async function buildFxResult(
   };
 }
 
-async function fetchFxApiReserves(
-  config: LiveReservesConfig,
-  signal: AbortSignal,
-  ctx?: AdapterContext,
-): Promise<AdapterResult> {
-  const input = requireJsonInput(config.inputs.primary, "fx");
-  const payload = await fetchJsonWithRetry<FxPayload>(input.url, signal, 12_000, ctx);
-  const { balances, unknownKeys } = adaptFx(payload);
-  if (unknownKeys.length > 0) {
-    throw new Error(`fx returned unmapped positive collateral keys with unquantified exposure: ${unknownKeys.join(", ")}`);
-  }
-
-  return buildFxResult(
-    balances,
-    signal,
-    ctx,
-    unverifiedFreshnessMetadata(
-      "protocol-pool-api",
-      "FX protocol pool payload does not expose a trustworthy source timestamp",
-    ),
-    [
-      "https://api.aladdin.club/api1/get_fx_tvl",
-      "https://fxprotocol.gitbook.io/fx-docs",
-    ],
-    {
-      wstETH: { address: TOKEN_META.wstETH.rawUnitAddress, decimals: TOKEN_META.wstETH.apiDecimals },
-      wbtc: { address: TOKEN_META.wbtc.address, decimals: TOKEN_META.wbtc.apiDecimals },
-    },
-  );
-}
-
-async function fetchFxOnchainReserves(
+export async function fetchFxReserves(
+  _coin: StablecoinMeta,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,
@@ -226,29 +145,5 @@ async function fetchFxOnchainReserves(
     balances.filter((entry) => entry.amountRaw > 0n),
     signal,
     ctx,
-    notApplicableFreshnessMetadata({
-      proofKind: "fx-pool-direct-onchain",
-      poolCount: balances.length,
-    }),
-    [
-      "https://fxprotocol.gitbook.io/fx-docs",
-    ],
-    {
-      wstETH: { address: TOKEN_META.wstETH.rawUnitAddress, decimals: TOKEN_META.wstETH.rawUnitDecimals },
-      wbtc: { address: TOKEN_META.wbtc.rawUnitAddress, decimals: TOKEN_META.wbtc.rawUnitDecimals },
-    },
   );
-}
-
-export async function fetchFxReserves(
-  _coin: StablecoinMeta,
-  config: LiveReservesConfig,
-  signal: AbortSignal,
-  ctx?: AdapterContext,
-): Promise<AdapterResult> {
-  if (isHttpJsonInput(config.inputs.primary)) {
-    return fetchFxApiReserves(config, signal, ctx);
-  }
-
-  return fetchFxOnchainReserves(config, signal, ctx);
 }
