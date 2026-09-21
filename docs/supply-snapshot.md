@@ -6,6 +6,8 @@ Shadow assets are part of PSI eligibility, but this cron only reads non-restored
 
 The snapshot does **not** call upstream APIs or on-chain RPCs. DefiLlama remains the primary source for regular assets, but the cached payload can include CoinGecko missing-chain remainder attributions, DefiLlama history gap-fill rows, commodity/CoinGecko supplemental rows, on-chain-total-supply supplemental rows, and configured on-chain-circulating-supply rows assembled by the 15-minute `syncStablecoins()` cron.
 
+The generic single-contract on-chain fallback in `fiat-cg.ts` preserves its successful probe's chain label and canonical chain ID as one public `chainCirculating` row. This repairs a producer mapping omission; ordinary positive CoinGecko aggregates still do not invent chain partitions. Current-only rows omit unobserved historical amounts.
+
 > **Agent navigation** — Grep the heading you need: Cron Schedule · Algorithm · Database Schema · Supply Data Source · API Endpoints · Frontend · Error Handling · Key Constraints · Supply Pipeline · Circuit Breakers · DefiLlama list vs detail API.
 
 When DefiLlama publishes a tracked zero-supply row for an asset that also has positive supplemental coverage, `syncStablecoins()` keeps the positive supplemental row. This prevents a zero-valued primary duplicate from suppressing current CoinGecko or commodity supply before the exact snapshot-coverage check runs.

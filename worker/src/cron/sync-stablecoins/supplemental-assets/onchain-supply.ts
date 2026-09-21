@@ -404,7 +404,13 @@ export async function fetchOnChainMcap(
     signal,
   });
   return result
-    ? { mcap: result.mcap, supplySource: result.supplySource, chain: result.chain, chainLabel: result.chainLabel }
+    ? {
+        mcap: result.mcap,
+        supplySource: result.supplySource,
+        chain: result.chain,
+        chainLabel: result.chainLabel,
+        chainCirculating: { [result.chainLabel]: { current: result.mcap, chainId: result.chain } },
+      }
     : null;
 }
 

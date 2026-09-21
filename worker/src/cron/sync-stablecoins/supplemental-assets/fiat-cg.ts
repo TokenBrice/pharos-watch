@@ -119,6 +119,7 @@ export async function fetchFiatCoinGeckoTokens(
           if (onChainMcap) {
             mcap = onChainMcap.mcap;
             supplySource = onChainMcap.supplySource;
+            chainCirculating = toPublicChainCirculating(onChainMcap.chainCirculating);
           }
         }
 
