@@ -283,7 +283,7 @@ describe("handleTelegramPulse", () => {
       }
     }
 
-    const body = await readJsonResponse(await handleTelegramPulse(db), 200);
+    const body = await readJsonResponse<{ pendingDeliveries: number | null }>(await handleTelegramPulse(db), 200);
 
     expect(body.pendingDeliveries).toBe(5);
   });

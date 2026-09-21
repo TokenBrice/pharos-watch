@@ -352,6 +352,15 @@ describe("syncLiveReserves", () => {
     metadata: string;
   }
 
+  function parseReserveCompositionRow(row: Record<string, unknown>): ReserveCompositionRow {
+    const stablecoinId = row.stablecoin_id;
+    const metadata = row.metadata;
+    if (typeof stablecoinId !== "string" || typeof metadata !== "string") {
+      throw new TypeError("Expected reserve composition row strings");
+    }
+    return { stablecoin_id: stablecoinId, metadata };
+  }
+
   async function runReservoirQueue(order: "canonical" | "reversed") {
     vi.resetModules();
     const shared = await import("../sync-live-reserves-shared");
@@ -397,9 +406,10 @@ describe("syncLiveReserves", () => {
       await syncLiveReserves(db, new AbortController().signal, {});
       // Reading back through the persisted row proves the orchestrator wrote
       // three distinct snapshots rather than one shared result.
-      const rows: ReserveCompositionRow[] = sqlite
+      const rows = sqlite
         .prepare("SELECT stablecoin_id, metadata FROM reserve_composition ORDER BY stablecoin_id")
-        .all();
+        .all()
+        .map(parseReserveCompositionRow);
       const redemptionByCoin: Record<string, unknown> = {};
       for (const row of rows) {
         if (!(RESERVOIR_COIN_IDS as readonly string[]).includes(row.stablecoin_id)) continue;

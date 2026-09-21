@@ -1,6 +1,7 @@
 import {
   DdrRowSchema,
   DdrV2ResponseRowSchema,
+  DDR_PUBLIC_WARNING,
   type DdrResponse,
   type DdrRow,
   type DdrV2ResponseRow,
@@ -27,6 +28,7 @@ export const DDR_TEST_META: DdrResponse["_meta"] = {
   durationModelVersion: "duration-landmark-v1",
   incidentGroupingVersion: "incident-group-v1",
   supportRulesVersion: "support-rules-v1",
+  publicWarning: DDR_PUBLIC_WARNING,
   lineage: null,
 };
 

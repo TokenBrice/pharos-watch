@@ -83,16 +83,19 @@ export interface V9EvaluatedSet {
   evaluatedSetDigest: string;
 }
 
+function isUnknownArray(value: unknown): value is readonly unknown[] {
+  return Array.isArray(value);
+}
+
 function evaluationFieldPath(error: unknown): string | null {
-  if (
-    typeof error !== "object" ||
-    error === null ||
-    !("issues" in error) ||
-    !Array.isArray(error.issues)
-  ) return null;
-  const issue = error.issues[0];
-  if (typeof issue !== "object" || issue === null || !("path" in issue) || !Array.isArray(issue.path)) return null;
-  return issue.path.reduce<string>(
+  if (typeof error !== "object" || error === null || !("issues" in error)) return null;
+  const issues = error.issues;
+  if (!isUnknownArray(issues)) return null;
+  const issue = issues[0];
+  if (typeof issue !== "object" || issue === null || !("path" in issue)) return null;
+  const segments = issue.path;
+  if (!isUnknownArray(segments)) return null;
+  return segments.reduce<string>(
     (path, part) =>
       typeof part === "number"
         ? `${path}[${part}]`
@@ -106,17 +109,18 @@ function evaluationFieldPath(error: unknown): string | null {
 export class V9AssetEvaluationError extends Error {
   readonly assetId: string;
   readonly fieldPath: string | null;
+  readonly cause: unknown;
 
   constructor(assetId: string, cause: unknown) {
     const fieldPath = evaluationFieldPath(cause);
     const detail = cause instanceof Error ? cause.message : String(cause);
     super(
       `Safety Score v9 asset ${assetId} evaluation failed${fieldPath === null ? "" : ` at ${fieldPath}`}: ${detail}`,
-      { cause },
     );
     this.name = "V9AssetEvaluationError";
     this.assetId = assetId;
     this.fieldPath = fieldPath;
+    this.cause = cause;
   }
 }
 

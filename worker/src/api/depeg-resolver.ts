@@ -53,6 +53,7 @@ function degradedResponse(reason: string): DdrResponse {
       degraded: true,
       degradedReason: reason,
       degradedReasonDetail: null,
+      publicWarning: DDR_PUBLIC_WARNING,
       resolutionRubricVersion: DDR_RESOLUTION_RUBRIC_VERSION,
       durationModelVersion: DDR_DURATION_MODEL_VERSION,
       durationBand: DDR_DURATION_BAND_META,

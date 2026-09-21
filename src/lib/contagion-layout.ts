@@ -10,6 +10,7 @@ import {
 } from "d3-force";
 import { percentileLinear } from "@shared/lib/stats";
 import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
+import type { V9Grade } from "@shared/types/safety-score-v9";
 import { v9DependencyEdgeScoreKnown, v9DependencyEdgeWeight } from "@/lib/dependency-hubs-model";
 import { deterministicHash } from "@/lib/layout-utils";
 
