@@ -21,13 +21,9 @@ const phaseFixtures = vi.hoisted(() => {
         uniV3SymbolFees: new Map(),
         uniV3PriceObs: new Map(),
         uniV3ExecutionCandidates: new Map(),
+        failedChains: [],
       },
-      aerodrome: {
-        aerodromePriceObs: new Map(),
-        aerodromeIsStable: new Map(),
-        aerodromeV2ExecutionCandidates: new Map(),
-      },
-      uniswapV4: { uniswapV4ExecutionCandidates: new Map() },
+      uniswapV4: { uniswapV4ExecutionCandidates: new Map(), failedChains: [] },
       primary: {
         pools: [],
         rawPoolCount: 0,
@@ -111,7 +107,6 @@ function deferred<T>() {
 
 vi.mock("../dex-liquidity/subgraph-source-families", () => ({
   fetchUniV3Data: vi.fn(async () => phaseFixtures.current.uniV3),
-  fetchAerodromeData: vi.fn(async () => phaseFixtures.current.aerodrome),
   fetchUniswapV4Data: vi.fn(async () => phaseFixtures.current.uniswapV4),
 }));
 
@@ -266,7 +261,7 @@ import { UNIV3_SUBGRAPHS } from "../dex-liquidity/constants";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { convertToGtNewPools, extractPriceObservations } from "../../lib/dex-api-common";
 import { buildCurveLookups, fetchDataSources, buildKnownPoolAddresses } from "../dex-liquidity/fetch-primary";
-import { fetchAerodromeData, fetchUniV3Data } from "../dex-liquidity/subgraph-source-families";
+import { fetchUniV3Data } from "../dex-liquidity/subgraph-source-families";
 import { fetchFluidPools } from "../dex-liquidity/fetch-fluid";
 import { fetchBalancerPools } from "../dex-liquidity/fetch-balancer";
 import { fetchRaydiumPools } from "../dex-liquidity/fetch-raydium";
@@ -1129,14 +1124,12 @@ describe("dex liquidity scoring stage cycle", () => {
       await entered.promise;
       expect(fetchDataSources).not.toHaveBeenCalled();
       expect(fetchUniV3Data).not.toHaveBeenCalled();
-      expect(fetchAerodromeData).not.toHaveBeenCalled();
     } finally {
       fluidGate.resolve(makeDirectApiResult());
       await syncPromise;
     }
     expect(fetchDataSources).toHaveBeenCalledOnce();
     expect(fetchUniV3Data).toHaveBeenCalledOnce();
-    expect(fetchAerodromeData).toHaveBeenCalledOnce();
   });
 
   it("stages the exact bounded six-chain Uni V3 source family", async () => {

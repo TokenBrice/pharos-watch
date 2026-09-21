@@ -106,8 +106,6 @@ function compositeCapability(
     curvePoolCandidatesByFingerprint: new Map(),
     uniV3ExecutionCandidates: new Map(),
     uniswapV4ExecutionCandidates: new Map(),
-    aerodromeV2ExecutionCandidates: new Map(),
-    uniqueAerodromeV2ExecutionCandidates: new Map(),
   } as unknown as PoolProcessingContext;
   const identity = {
     pool,

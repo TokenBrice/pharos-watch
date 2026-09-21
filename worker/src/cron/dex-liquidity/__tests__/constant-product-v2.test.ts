@@ -6,7 +6,6 @@ import {
   validateAmmExecutionModel,
 } from "@shared/lib/p4-exit-route-amm-simulation";
 import {
-  DexExecutionProfileV2Schema,
   type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
 import {
@@ -19,9 +18,7 @@ import {
   EVM_V2_EXECUTION_DEPLOYMENTS,
   attachEvmV2CandidateToRetainedPool,
   buildEvmV2ExecutionCandidate,
-  buildUniqueEvmV2ExecutionCandidateFingerprintIndex,
   enrichEvmV2ExecutionModels,
-  resolveEvmV2ExecutionCandidate,
 } from "../constant-product-v2";
 import {
   EVM_V2_REPLAY_BLOCK,
@@ -171,7 +168,6 @@ function targetForReplay(replay: EvmV2ReplayCase): DexMeasuredExecutionTarget {
   const output = buildEvmV2RegisteredExecutionTarget({
     context: {
       chainAddressToId,
-      aerodromeIsStable: new Map(),
       stablecoinPriceById: new Map([
         [replay.assetId, 1],
         [replay.counterAssetId, 1],
@@ -392,57 +388,6 @@ describe("constant-product V2 execution", () => {
       }),
     ).toBe(true);
     expect(metric.topPools[0]!.extra?.evmV2ExecutionCandidate).toEqual(candidate);
-  });
-
-  it("resolves exact candidates before a unique fingerprint and fails ambiguous fingerprints closed", () => {
-    const candidate = makeAerodromeCandidate();
-    const exactCandidates = new Map([
-      [canonicalExitRouteAssetKey("base", candidate.poolAddress), candidate],
-    ]);
-    const uniqueCandidates = buildUniqueEvmV2ExecutionCandidateFingerprintIndex(exactCandidates);
-    const resolve = (poolAddressOrId: string) =>
-      resolveEvmV2ExecutionCandidate({
-        chain: "base",
-        protocol: "aerodrome",
-        poolAddressOrId,
-        tokenAddresses: [USDC_BASE, WETH_BASE],
-        exactCandidates,
-        uniqueFingerprintCandidates: uniqueCandidates,
-      });
-
-    expect(resolve("defillama-pool-uuid")).toEqual(candidate);
-
-    const sibling = {
-      ...candidate,
-      poolAddress: "0x1111111111111111111111111111111111111111" as const,
-    };
-    const ambiguousExactCandidates = new Map([
-      [canonicalExitRouteAssetKey("base", candidate.poolAddress), candidate],
-      [canonicalExitRouteAssetKey("base", sibling.poolAddress), sibling],
-    ]);
-    const ambiguousCandidates =
-      buildUniqueEvmV2ExecutionCandidateFingerprintIndex(ambiguousExactCandidates);
-
-    expect(
-      resolveEvmV2ExecutionCandidate({
-        chain: "base",
-        protocol: "aerodrome",
-        poolAddressOrId: "defillama-pool-uuid",
-        tokenAddresses: [USDC_BASE, WETH_BASE],
-        exactCandidates: ambiguousExactCandidates,
-        uniqueFingerprintCandidates: ambiguousCandidates,
-      }),
-    ).toBeUndefined();
-    expect(
-      resolveEvmV2ExecutionCandidate({
-        chain: "base",
-        protocol: "aerodrome",
-        poolAddressOrId: candidate.poolAddress,
-        tokenAddresses: [USDC_BASE, WETH_BASE],
-        exactCandidates: ambiguousExactCandidates,
-        uniqueFingerprintCandidates: ambiguousCandidates,
-      }),
-    ).toEqual(candidate);
   });
 
   it("builds a same-block Pancake V2 model after factory and pair verification", async () => {
@@ -1134,11 +1079,10 @@ describe("constant-product V2 execution", () => {
         point.executableUsd === point.requestedNotionalUsd && point.completionRatio === 1,
       )).toBe(true);
       expect(reviewed.profile.quoteProof).toHaveLength(5);
-      expect(DexExecutionProfileV2Schema.parse(reviewed.profileV2)).toEqual(reviewed.profileV2);
 
       const registration = getDexExecutionCapabilityRegistration("evm-v2-constant-product-v1");
       expect(registration).not.toBeNull();
-      expect(isDexExecutionProfileAdmittedForScoring(reviewed.profileV2, registration!)).toBe(true);
+      expect(isDexExecutionProfileAdmittedForScoring(reviewed.profile, registration!)).toBe(true);
     });
   }
 

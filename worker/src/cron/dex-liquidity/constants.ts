@@ -114,33 +114,6 @@ export const buildUniswapV4PoolQuery = (skip: number): string => `{
   }
 }`;
 
-export const AERODROME_SUBGRAPHS: Record<string, string> = {
-  base: "GENunSHWLBXm59mBSgPzQ8metBEp9YDfdqwFr91Av1UM",
-};
-
-export const AERODROME_PAIR_PAGE_SIZE = 500;
-export const AERODROME_PAIR_MAX_PAGES = 5;
-
-export const buildAerodromePairQuery = (skip: number): string => `{
-  pairs(
-    first: ${AERODROME_PAIR_PAGE_SIZE},
-    skip: ${skip},
-    orderBy: reserveUSD,
-    orderDirection: desc,
-    where: { reserveUSD_gt: "10000" }
-  ) {
-    id
-    token0 { id symbol }
-    token1 { id symbol }
-    reserve0
-    reserve1
-    reserveUSD
-    token0Price
-    token1Price
-    isStable
-  }
-}`;
-
 /** Quality score for non-stablecoin pairing assets */
 export const VOLATILE_PAIR_QUALITY: Record<string, number> = {
   WETH: 0.65,
@@ -185,8 +158,15 @@ export const USD_QUOTE_COIN_IDS = new Set([
   "paxos-standard",
 ]);
 
-/** Per-chain timeout for subgraph queries (UniV3, Aerodrome) */
+/** Per-chain timeout for subgraph queries */
 export const SUBGRAPH_PER_CHAIN_TIMEOUT_MS = 15_000;
+
+/**
+ * Default per-family chain fan-out. Six reviewed sources still fit the
+ * five-connection source-stage budget because the final chain is only
+ * scheduled once a prior response has released its header-wait slot.
+ */
+export const SUBGRAPH_FAMILY_MAX_CONCURRENCY = 5;
 
 /**
  * Confidence weight for DEX price observations by source family.

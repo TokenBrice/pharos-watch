@@ -352,12 +352,6 @@ export interface ScoreResult {
   score: number;
 }
 
-export interface AerodromeLookups {
-  aerodromePriceObs: Map<string, DexPriceObs[]>;
-  aerodromeIsStable: Map<string, boolean>; // "chain:poolAddress" → isStable
-  aerodromeV2ExecutionCandidates: Map<string, EvmV2ExecutionCandidate>;
-}
-
 export interface GtNewPool {
   address: string;
   chain: string;

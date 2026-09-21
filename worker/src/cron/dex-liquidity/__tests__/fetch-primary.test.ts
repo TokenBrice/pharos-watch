@@ -295,7 +295,7 @@ describe("fetchDataSources", () => {
       expect.objectContaining({ pool: "pool-0" }),
     ]));
     if (succeeds) {
-      const known = buildKnownPoolAddresses(result!.pools, new Set(["uniswap-v4"]), new Map(), new Map(), new Map());
+      const known = buildKnownPoolAddresses(result!.pools, new Set(["uniswap-v4"]), new Map(), new Map());
       const incoming = buildPoolIdentity({ chain: "ethereum", protocol: "uniswap-v4",
         poolAddressOrId: physicalId, tokenAddresses: [token0, token1] });
       expect(getIdentityDedupReason(incoming, known, { derived: 2, wildcard: 2 })).toBe("exact");

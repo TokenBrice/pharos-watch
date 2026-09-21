@@ -1,37 +1,30 @@
-import { canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
 import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { isUsdReferenceSymbol, normalizeDexSymbol } from "../../lib/dex-cron-constants";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
 import { mergeDexPriceObservationMap, type SubgraphPriceObservation } from "./subgraph-helpers";
 import type {
-  AerodromeLookups,
   DexPriceObs,
   UniswapV4Lookups,
   UniV3Lookups,
 } from "./types";
 import {
-  AERODROME_PAIR_MAX_PAGES,
-  AERODROME_PAIR_PAGE_SIZE,
-  AERODROME_SUBGRAPHS,
   UNIV3_POOL_MAX_PAGES,
   UNIV3_POOL_PAGE_SIZE,
   UNIV3_SUBGRAPHS,
   UNISWAP_V4_POOL_MAX_PAGES,
   UNISWAP_V4_POOL_PAGE_SIZE,
   UNISWAP_V4_SUBGRAPHS,
-  buildAerodromePairQuery,
   buildUniswapV4PoolQuery,
   buildUniV3PoolQuery,
 } from "./constants";
 import { buildPoolIdentity } from "./pool-identity";
 import { resolveTrackedStablecoinId } from "./token-resolution";
-import { runSubgraphFamily } from "./subgraph-family-runner";
+import { runSubgraphFamily, type SubgraphFamilyResult } from "./subgraph-family-runner";
 import {
   buildUniswapV4ExecutionCandidateKey,
   buildUniV3ExecutionCandidateKey,
 } from "../measured-execution/inventory";
-import { buildEvmV2ExecutionCandidate } from "./constant-product-v2";
 
 type UniV3SubgraphPool = {
   id: string;
@@ -44,18 +37,6 @@ type UniV3SubgraphPool = {
   token1Price: string;
   totalValueLockedToken0: string;
   totalValueLockedToken1: string;
-};
-
-type AerodromeSubgraphPair = {
-  id: string;
-  token0: { id: string; symbol: string };
-  token1: { id: string; symbol: string };
-  reserve0: string;
-  reserve1: string;
-  reserveUSD: string;
-  token0Price: string;
-  token1Price: string;
-  isStable: boolean;
 };
 
 type UniswapV4SubgraphPool = {
@@ -82,7 +63,7 @@ function parseSubgraphInteger(value: string): number {
 
 function mapTrackedSubgraphPriceObservations(config: {
   chain: string;
-  protocol: "uniswap-v3" | "aerodrome";
+  protocol: "uniswap-v3";
   tvl: number;
   tokenEntries: Array<{ symbol: string; address: string; usdPrice: number; tvl?: number }>;
   chainAddressToId: Map<string, string>;
@@ -124,17 +105,13 @@ export async function fetchUniV3Data(
   chainAddressToId: Map<string, string>,
   signal?: AbortSignal,
   references?: PriceValidationReferences,
-): Promise<UniV3Lookups> {
+): Promise<SubgraphFamilyResult<UniV3Lookups>> {
   return runSubgraphFamily<UniV3SubgraphPool, UniV3Lookups>({
     graphApiKey,
     signal,
     subgraphs: UNIV3_SUBGRAPHS,
     missingApiKeyMessage: "[dex-liquidity] No GRAPH_API_KEY, skipping Uni V3 subgraph enrichment",
     familyLabel: "Uni V3 subgraph",
-    // Six reviewed sources fit the existing five-connection source-stage
-    // budget by scheduling the final chain only after one prior response has
-    // released its header-wait slot.
-    maxConcurrency: 5,
     createLookups: () => ({
       uniV3PoolFees: new Map<string, number>(),
       uniV3SymbolFees: new Map<string, number>(),
@@ -255,120 +232,10 @@ export async function fetchUniV3Data(
   });
 }
 
-export async function fetchAerodromeData(
-  graphApiKey: string | null,
-  symbolToChainScopedIds: Map<string, Map<string, string[]>>,
-  chainAddressToId: Map<string, string>,
-  signal?: AbortSignal,
-  references?: PriceValidationReferences,
-): Promise<AerodromeLookups> {
-  return runSubgraphFamily<AerodromeSubgraphPair, AerodromeLookups>({
-    graphApiKey,
-    signal,
-    subgraphs: AERODROME_SUBGRAPHS,
-    familyLabel: "Aerodrome subgraph",
-    createLookups: () => ({
-      aerodromePriceObs: new Map<string, DexPriceObs[]>(),
-      aerodromeIsStable: new Map<string, boolean>(),
-      aerodromeV2ExecutionCandidates: new Map(),
-    }),
-    buildConfig: (chain, subgraphUrl, combinedSignal, lookups) => ({
-      subgraphUrl,
-      sourceLabel: "Aerodrome subgraph",
-      chain,
-      buildQuery: (skip) => buildAerodromePairQuery(skip),
-      pageSize: AERODROME_PAIR_PAGE_SIZE,
-      maxPages: AERODROME_PAIR_MAX_PAGES,
-      signal: combinedSignal,
-      extractEntities: (data) => (data as { pairs?: AerodromeSubgraphPair[] } | undefined)?.pairs,
-      mapEntity: (pair) => {
-        if (!pair.isStable) {
-          const candidate = buildEvmV2ExecutionCandidate({
-            chain,
-            protocol: "aerodrome",
-            poolType: "aerodrome-volatile",
-            poolAddress: pair.id,
-            tokenAddresses: [pair.token0.id, pair.token1.id],
-            tokenSymbols: [pair.token0.symbol, pair.token1.symbol],
-            confirmedStable: pair.isStable,
-          });
-          if (candidate) {
-            lookups.aerodromeV2ExecutionCandidates.set(
-              canonicalExitRouteAssetKey(chain, candidate.poolAddress),
-              candidate,
-            );
-          }
-        }
-
-        const reserveUSD = parseFloat(pair.reserveUSD);
-        if (isNaN(reserveUSD) || reserveUSD < DEX_PRICE_OBSERVATION_MIN_TVL_USD) return [];
-
-        lookups.aerodromeIsStable.set(`${chain}:${pair.id.toLowerCase()}`, pair.isStable);
-
-        const reserve0 = parseFloat(pair.reserve0);
-        const reserve1 = parseFloat(pair.reserve1);
-        const token0Price = parseFloat(pair.token0Price);
-        const token1Price = parseFloat(pair.token1Price);
-        if (isNaN(reserve0) || isNaN(reserve1) || reserve0 <= 0 || reserve1 <= 0) return [];
-        if (isNaN(token0Price) || isNaN(token1Price) || token0Price <= 0 || token1Price <= 0) return [];
-
-        // Aerodrome's Pair schema follows the standard orientation:
-        // token0Price is token1 per token0, so convert reserve0 into
-        // token1 units before deriving each leg's USD price.
-        const denom = reserve0 * token0Price + reserve1;
-        if (denom <= 0) return [];
-        const price1Usd = reserveUSD / denom;
-        const price0Usd = token0Price * price1Usd;
-        const reserve0Usd = reserve0 * price0Usd;
-        const reserve1Usd = reserve1 * price1Usd;
-
-        const minReserve = Math.min(reserve0Usd, reserve1Usd);
-        const maxReserve = Math.max(reserve0Usd, reserve1Usd);
-        const balanceRatio = maxReserve > 0 ? minReserve / maxReserve : 0;
-        if (balanceRatio < 0.3) return [];
-
-        const sym0 = normalizeDexSymbol(pair.token0.symbol);
-        const sym1 = normalizeDexSymbol(pair.token1.symbol);
-        const pricedTokens = [
-          { symbol: sym0, address: pair.token0.id, usdPrice: price0Usd, tvl: reserve0Usd },
-          { symbol: sym1, address: pair.token1.id, usdPrice: price1Usd, tvl: reserve1Usd },
-        ];
-
-        const identity = buildPoolIdentity({
-          chain,
-          protocol: "aerodrome",
-          poolAddressOrId: pair.id,
-          tokenAddresses: [pair.token0.id, pair.token1.id],
-          isStable: pair.isStable,
-        });
-        return mapTrackedSubgraphPriceObservations({
-          chain,
-          protocol: "aerodrome",
-          tvl: reserveUSD,
-          tokenEntries: pricedTokens,
-          chainAddressToId,
-          symbolToChainScopedIds,
-          references,
-          identity,
-        });
-      },
-    }),
-    handleResult: (lookups, _chain, result) => {
-      mergeDexPriceObservationMap(lookups.aerodromePriceObs, result.observations);
-    },
-    buildChainSummary: (chain, result) =>
-      `[dex-liquidity] Indexed ${result.entityCount} Aerodrome pairs from ${chain} subgraph (${result.observationCount} price obs)`,
-    buildFinalSummary: (lookups) =>
-      `[dex-liquidity] Collected ${lookups.aerodromePriceObs.size} coins with Aerodrome price observations, ` +
-      `${lookups.aerodromeIsStable.size} pool stability flags, and ` +
-      `${lookups.aerodromeV2ExecutionCandidates.size} classic volatile execution candidates`,
-  });
-}
-
 export async function fetchUniswapV4Data(
   graphApiKey: string | null,
   signal?: AbortSignal,
-): Promise<UniswapV4Lookups> {
+): Promise<SubgraphFamilyResult<UniswapV4Lookups>> {
   return runSubgraphFamily<UniswapV4SubgraphPool, UniswapV4Lookups>({
     graphApiKey,
     signal,
@@ -376,10 +243,6 @@ export async function fetchUniswapV4Data(
     missingApiKeyMessage:
       "[dex-liquidity] No GRAPH_API_KEY, skipping Uniswap V4 execution enrichment",
     familyLabel: "Uniswap V4 subgraph",
-    // Keep the expanded shadow source family inside the existing five-header
-    // source-lane cohort. RPC quoting remains in measured execution's isolated
-    // trigger and is never opened from this source pass.
-    maxConcurrency: 5,
     createLookups: () => ({
       uniswapV4ExecutionCandidates: new Map(),
     }),

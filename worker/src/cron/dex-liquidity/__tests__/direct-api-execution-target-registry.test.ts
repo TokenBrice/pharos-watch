@@ -108,7 +108,6 @@ describe("direct API execution-target registry hook", () => {
           ],
         }]]]),
         uniswapV4ExecutionCandidates: new Map(),
-        aerodromeIsStable: new Map(),
         measuredTargetCapturedAt: 1_788_274_041,
         contractMetaByChainAddress: new Map(),
       },
@@ -164,7 +163,6 @@ describe("direct API execution-target registry hook", () => {
       executionTargetContext: {
         uniV3ExecutionCandidates: new Map(),
         uniswapV4ExecutionCandidates: new Map(),
-        aerodromeIsStable: new Map(),
         measuredTargetCapturedAt: 1_788_274_041,
         contractMetaByChainAddress: new Map(),
       },

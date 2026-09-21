@@ -693,7 +693,6 @@ export function buildKnownPoolAddresses(
   dexProjects: Set<string>,
   curvePoolMap: Map<string, CurvePoolEntry>,
   uniV3PoolFees: Map<string, number>,
-  aerodromeIsStable: Map<string, boolean>,
 ): KnownPoolIdentityIndex {
   const known = createKnownPoolIdentityIndex();
   let derivedCount = 0;
@@ -744,22 +743,6 @@ export function buildKnownPoolAddresses(
         protocol: "uniswap-v3",
         poolAddressOrId: poolAddress,
         tokenAddresses: [],
-      }),
-    );
-  }
-
-  // Aerodrome pools (keyed as chain:address in the isStable map)
-  for (const [key, isStable] of aerodromeIsStable.entries()) {
-    const [chain, poolAddress] = key.split(":");
-    if (!poolAddress) continue;
-    registerKnownPoolIdentity(
-      known,
-      buildPoolIdentity({
-        chain,
-        protocol: "aerodrome",
-        poolAddressOrId: poolAddress,
-        tokenAddresses: [],
-        isStable,
       }),
     );
   }

@@ -38,6 +38,12 @@ export type FetchSubgraphEntitiesResult = {
   observationCount: number;
   observations: Map<string, DexPriceObs[]>;
   shouldLogIndex: boolean;
+  /**
+   * The source did not answer: an HTTP failure, a GraphQL error that yielded
+   * no entities, or a transport error. A healthy source that legitimately has
+   * nothing to report stays `false`.
+   */
+  failed: boolean;
 };
 
 export async function fetchSubgraphEntities<TEntity>(
@@ -47,9 +53,11 @@ export async function fetchSubgraphEntities<TEntity>(
   let entityCount = 0;
   let observationCount = 0;
   let shouldLogIndex = false;
+  let failed = false;
 
   const pageSize = config.pageSize ?? 0;
-  const maxPages = Math.max(1, config.maxPages ?? 1);
+  // Paging without a page size would refetch offset 0 for every page.
+  const maxPages = pageSize > 0 ? Math.max(1, config.maxPages ?? 1) : 1;
   const warnOnFetchFailure = config.errorHandling?.warnOnFetchFailure ?? true;
   const warnOnGraphQlErrors = config.errorHandling?.warnOnGraphQlErrors ?? true;
 
@@ -70,6 +78,7 @@ export async function fetchSubgraphEntities<TEntity>(
         if (warnOnFetchFailure) {
           logWorkerEventArgs("handler", "warn", `[dex-liquidity] ${config.sourceLabel} failed for ${config.chain}: ${result?.response.status}`);
         }
+        failed = true;
         break;
       }
 
@@ -77,13 +86,16 @@ export async function fetchSubgraphEntities<TEntity>(
       const entities = config.extractEntities(json.data) ?? [];
       shouldLogIndex = true;
 
-      if (json.errors?.length && warnOnGraphQlErrors) {
-        logWorkerEventArgs("handler", "warn",
-          `[dex-liquidity] ${config.sourceLabel} GraphQL errors for ${config.chain}:`,
-          json.errors.map((e) => e.message).join("; "),
-        );
+      if (json.errors?.length) {
+        if (warnOnGraphQlErrors) {
+          logWorkerEventArgs("handler", "warn",
+            `[dex-liquidity] ${config.sourceLabel} GraphQL errors for ${config.chain}:`,
+            json.errors.map((e) => e.message).join("; "),
+          );
+        }
         if (entities.length === 0) {
           shouldLogIndex = false;
+          failed = true;
           break;
         }
       }
@@ -107,7 +119,8 @@ export async function fetchSubgraphEntities<TEntity>(
     if (config.signal?.aborted) throw err;
     logWorkerEventArgs("handler", "warn", `[dex-liquidity] ${config.sourceLabel} error for ${config.chain}:`, err);
     shouldLogIndex = false;
+    failed = true;
   }
 
-  return { entityCount, observationCount, observations, shouldLogIndex };
+  return { entityCount, observationCount, observations, shouldLogIndex, failed };
 }

@@ -54,8 +54,9 @@ import {
 import { fetchSubgraphEnrichmentPhase } from "./orchestrator-phases/subgraph-enrichment";
 import {
   fetchDirectCexOrderbookDepthTelemetry,
-  runFallbackCrawlerPhase,
+  type FallbackCrawlerPhaseResult,
 } from "./orchestrator-phases/fallback";
+import { getFallbackTargets } from "./fetch-fallbacks";
 import { loadTrackedStablecoinMaps } from "./orchestrator-phases/lookups";
 import { mergeDexPriceObservationMap } from "./subgraph-helpers";
 import {
@@ -66,8 +67,8 @@ import {
   getIdentityDedupReason,
   registerKnownPoolIdentity,
 } from "./pool-identity";
+import { analyzeDexLiquidityPostScoring } from "./orchestrator-analysis";
 import {
-  analyzeDexLiquidityPostScoring,
   buildDexLiquidityCronMetadata,
   isDexLiquidityDegraded,
 } from "./orchestrator-metadata";
@@ -395,7 +396,7 @@ type DexLiquidityDataSources = NonNullable<Awaited<ReturnType<typeof fetchDataSo
 type DexLiquidityLookups = ReturnType<typeof buildSymbolLookups>;
 type DexLiquiditySubgraphEnrichment = Awaited<ReturnType<typeof fetchSubgraphEnrichmentPhase>>;
 type DexLiquidityDirectApiPhase = Awaited<ReturnType<typeof runDirectApiFetchPhase>>;
-type DexLiquidityFallbackPhase = Awaited<ReturnType<typeof runFallbackCrawlerPhase>>;
+type DexLiquidityFallbackPhase = FallbackCrawlerPhaseResult;
 type DexLiquidityAnalysis = Awaited<ReturnType<typeof analyzeDexLiquidityPostScoring>>;
 type DexLiquidityPersistence = NonNullable<Awaited<ReturnType<typeof persistScores>>>;
 type DexLiquidityHistoricalSnapshot = NonNullable<Awaited<ReturnType<typeof writeHistoricalSnapshots>>>;
@@ -655,16 +656,21 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
     validationReferences,
   });
   failedSources.push(...subgraphEnrichment.failedSources);
+  const subgraphFamilies = ["univ3-subgraph", "uniswap-v4-subgraph"];
+  const failedSubgraphFamilyCount = subgraphFamilies.filter((family) =>
+    subgraphEnrichment.failedSources.some(
+      (source) => source === family || source.startsWith(`${family}:`),
+    ),
+  ).length;
   await ctx.reportDexProgress("subgraph-enrichment-complete", {
     message: "Completed subgraph enrichment", providerFamily: "subgraph",
-    done: 3 - subgraphEnrichment.failedSources.length, total: 3,
+    done: subgraphFamilies.length - failedSubgraphFamilyCount, total: subgraphFamilies.length,
     metadata: {
-      providerFamilies: ["uniswap-v3", "uniswap-v4", "aerodrome"],
+      providerFamilies: ["uniswap-v3", "uniswap-v4"],
       failedSources: subgraphEnrichment.failedSources,
     },
     counts: {
       uniV3PriceObservations: subgraphEnrichment.uniV3PriceObs.size, uniswapV4ExecutionCandidateKeys: subgraphEnrichment.uniswapV4ExecutionCandidates.size,
-      aerodromePriceObservations: subgraphEnrichment.aerodromePriceObs.size,
     },
   });
 
@@ -674,7 +680,6 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
   fallbackSignals.push(...directApiPhase.fallbackSignals);
 
   mergeDexPriceObservationMap(priceObservations, subgraphEnrichment.uniV3PriceObs);
-  mergeDexPriceObservationMap(priceObservations, subgraphEnrichment.aerodromePriceObs);
   logWorkerEventArgs("handler", "info", `[dex-liquidity] Total: ${priceObservations.size} coins with price observations across all sources`);
 
   return {
@@ -740,7 +745,6 @@ async function buildDexLiquidityPoolState(
     sourceState.dataSources.dexProjects,
     sourceState.curvePoolMap,
     sourceState.subgraphEnrichment.uniV3PoolFees,
-    sourceState.subgraphEnrichment.aerodromeIsStable,
   );
 
   const { metrics, rejections: poolRejections } = processPoolMetrics({
@@ -751,14 +755,11 @@ async function buildDexLiquidityPoolState(
     curvePoolMap: sourceState.curvePoolMap,
     uniV3PoolFees: sourceState.subgraphEnrichment.uniV3PoolFees,
     uniV3SymbolFees: sourceState.subgraphEnrichment.uniV3SymbolFees,
-    aerodromeIsStable: sourceState.subgraphEnrichment.aerodromeIsStable,
     uniV3ExecutionCandidates:
       sourceState.subgraphEnrichment.uniV3ExecutionCandidates,
     stablecoinPriceById: sourceState.stablecoinPriceById,
     measuredTargetCapturedAt: ctx.syncStartSec,
     validationReferences: sourceState.validationReferences,
-    aerodromeV2ExecutionCandidates:
-      sourceState.subgraphEnrichment.aerodromeV2ExecutionCandidates,
     curvePoolCandidatesByFingerprint:
       sourceState.curvePoolCandidatesByFingerprint,
     uniswapV4ExecutionCandidates:
@@ -779,8 +780,6 @@ async function buildDexLiquidityPoolState(
   sourceState.subgraphEnrichment.uniV3PoolFees = new Map();
   sourceState.subgraphEnrichment.uniV3SymbolFees = new Map();
   sourceState.subgraphEnrichment.uniV3PriceObs = new Map();
-  sourceState.subgraphEnrichment.aerodromePriceObs = new Map();
-  sourceState.subgraphEnrichment.aerodromeV2ExecutionCandidates = new Map();
 
   const directApiIntegration = await integrateDirectApiLiquidityPhase({
     db: ctx.db,
@@ -799,7 +798,6 @@ async function buildDexLiquidityPoolState(
         sourceState.subgraphEnrichment.uniV3ExecutionCandidates,
       uniswapV4ExecutionCandidates:
         sourceState.subgraphEnrichment.uniswapV4ExecutionCandidates,
-      aerodromeIsStable: sourceState.subgraphEnrichment.aerodromeIsStable,
       measuredTargetCapturedAt: ctx.syncStartSec,
       contractMetaByChainAddress:
         sourceState.lookups.contractMetaByChainAddress,
@@ -814,7 +812,6 @@ async function buildDexLiquidityPoolState(
   sourceState.directApiPools = [];
   sourceState.subgraphEnrichment.uniV3ExecutionCandidates = new Map();
   sourceState.subgraphEnrichment.uniswapV4ExecutionCandidates = new Map();
-  sourceState.subgraphEnrichment.aerodromeIsStable = new Map();
   sourceState.lookups.symbolToIds = new Map();
   sourceState.lookups.symbolToChainScopedIds = new Map();
   sourceState.lookups.addressToId = new Map();
@@ -904,11 +901,13 @@ async function buildDexLiquidityPoolState(
     },
   });
 
-  const fallback = await runFallbackCrawlerPhase({
-    metrics,
-    priceObservations: sourceState.priceObservations,
+  const fallback: FallbackCrawlerPhaseResult = {
+    weakCoverageCoinsBeforeFallback: new Set(
+      getFallbackTargets(metrics, sourceState.priceObservations, { requireTrackedContracts: true })
+        .map((meta) => meta.id),
+    ).size,
     directCexOrderbookDepth: sourceState.directCexOrderbookDepth,
-  });
+  };
   await ctx.reportDexProgress("pool-processing-complete", {
     message: "Completed pool merge and bounded market telemetry", providerFamily: "dex-liquidity", done: metrics.size,
     counts: {

@@ -1,16 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  fetchAerodromeData,
   fetchUniswapV4Data,
   fetchUniV3Data,
 } from "../subgraph-source-families";
 import {
-  AERODROME_PAIR_PAGE_SIZE,
   UNISWAP_V4_SUBGRAPHS,
   UNISWAP_V4_POOL_PAGE_SIZE,
   UNIV3_POOL_PAGE_SIZE,
   UNIV3_SUBGRAPHS,
-  buildAerodromePairQuery,
   buildUniswapV4PoolQuery,
   buildUniV3PoolQuery,
 } from "../constants";
@@ -45,14 +42,6 @@ describe("subgraph source families", () => {
     expect(result.uniV3PoolFees.size).toBe(0);
     expect(result.uniV3SymbolFees.size).toBe(0);
     expect(result.uniV3PriceObs.size).toBe(0);
-  });
-
-  it("returns empty Aerodrome lookups when Graph API key is missing", async () => {
-    const result = await fetchAerodromeData(null, new Map(), new Map());
-
-    expect(result.aerodromePriceObs.size).toBe(0);
-    expect(result.aerodromeIsStable.size).toBe(0);
-    expect(result.aerodromeV2ExecutionCandidates.size).toBe(0);
   });
 
   it("returns empty Uniswap V4 lookups when Graph API key is missing", async () => {
@@ -158,12 +147,6 @@ describe("subgraph source families", () => {
     ]);
   });
 
-  it("paginates the Aerodrome query by embedding the skip offset and page size", () => {
-    expect(buildAerodromePairQuery(0)).toContain(`first: ${AERODROME_PAIR_PAGE_SIZE}`);
-    expect(buildAerodromePairQuery(0)).toContain("skip: 0");
-    expect(buildAerodromePairQuery(1000)).toContain("skip: 1000");
-  });
-
   it("requests exact V4 PoolKey fields and retains hooked collisions", async () => {
     expect(Object.keys(UNISWAP_V4_SUBGRAPHS)).toEqual([
       "ethereum",
@@ -254,5 +237,19 @@ describe("subgraph source families", () => {
       ]);
     expect(result.uniswapV4ExecutionCandidates.get(key!)?.map((row) => row.activeLiquidity))
       .toEqual(["123456789", "0"]);
+  });
+
+  it("records chains whose subgraph answers with a GraphQL error and no entities", async () => {
+    mockFetch([{
+      match: "gateway.thegraph.com/api/graph-key/subgraphs/id/",
+      respond: async () => ({
+        body: { errors: [{ message: "Type 'Query' has no field 'pools'" }] },
+      }),
+    }], { requireMatch: true });
+
+    const result = await fetchUniV3Data("graph-key", new Map(), new Map());
+
+    expect([...result.failedChains].sort()).toEqual(Object.keys(UNIV3_SUBGRAPHS).sort());
+    expect(result.uniV3PriceObs.size).toBe(0);
   });
 });

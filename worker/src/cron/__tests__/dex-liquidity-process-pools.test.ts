@@ -7,7 +7,6 @@ import { makeStagedPoolRow } from "../dex-liquidity/__tests__/staging-merge.test
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { processPoolMetrics } from "../dex-liquidity/process-pools";
 import { buildPoolFingerprint } from "../dex-liquidity/pool-helpers";
-import { buildEvmV2ExecutionCandidate } from "../dex-liquidity/constant-product-v2";
 import { buildChainAddressToId, buildSymbolToChainScopedIds } from "./dex-liquidity-fixtures";
 import {
   buildUniswapV4ExecutionCandidateKey,
@@ -78,7 +77,7 @@ describe("processPoolMetrics", () => {
       symbolToChainScopedIds: new Map(),
       chainAddressToId: new Map([[`ethereum:${tokens[0]}`, "crvusd-curve"]]),
       curvePoolMap: new Map([[buildPoolFingerprint("ethereum", "curve", tokens)!, native]]),
-      uniV3PoolFees: new Map(), uniV3SymbolFees: new Map(), aerodromeIsStable: new Map(),
+      uniV3PoolFees: new Map(), uniV3SymbolFees: new Map(),
     });
     const staged = makeStagedPoolRow({
       pool_id: `ethereum:${address}`, stablecoin_id: "crvusd-curve", chain: "ethereum",
@@ -121,7 +120,6 @@ describe("processPoolMetrics", () => {
       curvePoolMap: new Map(),
       uniV3PoolFees: new Map(),
       uniV3SymbolFees: new Map(),
-      aerodromeIsStable: new Map(),
     });
 
     expect(result.rejections).toEqual([
@@ -165,7 +163,6 @@ describe("processPoolMetrics", () => {
         curvePoolMap: new Map(),
         uniV3PoolFees: new Map(),
         uniV3SymbolFees: new Map(),
-        aerodromeIsStable: new Map(),
       }),
     ).toThrow(invariant);
   });
@@ -214,7 +211,6 @@ describe("processPoolMetrics", () => {
       curvePoolMap: curvePoolMap,
       uniV3PoolFees: new Map(),
       uniV3SymbolFees: new Map(),
-      aerodromeIsStable: new Map(),
     }).metrics;
 
     const usdt = metrics.get("usdt-tether");
@@ -224,110 +220,6 @@ describe("processPoolMetrics", () => {
     expect(pool?.extra?.registryId).toBeUndefined();
     expect(pool?.extra?.measurement?.balanceMeasured).toBe(false);
     expect(usdt?.totalTvlForBalance).toBe(0);
-  });
-
-  it("attaches classic Aerodrome execution only to the exact volatile census pool", () => {
-    vi.spyOn(console, "log").mockImplementation(() => {});
-    const usdc = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
-    const weth = "0x4200000000000000000000000000000000000006";
-    const volatilePool = "0xcdac0d6c6c59727a65f871236188350531885c43";
-    const stablePool = "0x1111111111111111111111111111111111111111";
-    const candidate = buildEvmV2ExecutionCandidate({
-      chain: "base",
-      protocol: "aerodrome",
-      poolType: "aerodrome-volatile",
-      poolAddress: volatilePool,
-      tokenAddresses: [usdc, weth],
-      tokenSymbols: ["USDC", "WETH"],
-      confirmedStable: false,
-    })!;
-    const symbolToIds = new Map<string, string[]>([["USDC", ["usdc-circle"]]]);
-
-    const metrics = processPoolMetrics({
-      pools: [
-        makePool({
-          pool: volatilePool,
-          chain: "Base",
-          project: "aerodrome",
-          symbol: "USDC-WETH",
-          underlyingTokens: [usdc, weth],
-        }),
-        makePool({
-          pool: stablePool,
-          chain: "Base",
-          project: "aerodrome",
-          symbol: "USDC-WETH",
-          underlyingTokens: [usdc, weth],
-        }),
-      ],
-      dexProjects: new Set(["aerodrome"]),
-      symbolToChainScopedIds: buildSymbolToChainScopedIds(symbolToIds, ["base"]),
-      chainAddressToId: new Map([[`base:${usdc}`, "usdc-circle"]]),
-      curvePoolMap: new Map(),
-      uniV3PoolFees: new Map(),
-      uniV3SymbolFees: new Map(),
-      aerodromeIsStable: new Map([
-        [`base:${volatilePool}`, false],
-        [`base:${stablePool}`, true],
-      ]),
-      uniV3ExecutionCandidates: new Map(),
-      stablecoinPriceById: new Map([["usdc-circle", 1]]),
-      measuredTargetCapturedAt: 1_752_560_000,
-      validationReferences: undefined,
-      aerodromeV2ExecutionCandidates: new Map([[`base:${volatilePool}`, candidate]]),
-    }).metrics;
-
-    const pools = metrics.get("usdc-circle")!.topPools;
-    expect(pools.find((pool) => pool.poolId === `base:${volatilePool}`)?.extra?.evmV2ExecutionCandidate).toEqual(
-      candidate,
-    );
-    expect(pools.find((pool) => pool.poolId === `base:${stablePool}`)?.poolType).toBe("aerodrome-stable");
-    expect(pools.find((pool) => pool.poolId === `base:${stablePool}`)?.extra?.evmV2ExecutionCandidate).toBeUndefined();
-  });
-
-  it("attaches a unique classic Aerodrome candidate to a DeFiLlama UUID row", () => {
-    vi.spyOn(console, "log").mockImplementation(() => {});
-    const usdz = "0x04d5ddf5f3a8939889f11e97f8c4bb48317f1938";
-    const usdc = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
-    const exactPool = "0x6d0b9c9e92a3de30081563c3657b5258b3ffa38b";
-    const candidate = buildEvmV2ExecutionCandidate({
-      chain: "base",
-      protocol: "aerodrome",
-      poolType: "aerodrome-volatile",
-      poolAddress: exactPool,
-      tokenAddresses: [usdz, usdc],
-      tokenSymbols: ["USDz", "USDC"],
-      confirmedStable: false,
-    })!;
-    const symbolToIds = new Map<string, string[]>([["USDZ", ["usdz-anzen"]]]);
-
-    const metrics = processPoolMetrics({
-      pools: [
-        makePool({
-          pool: "b31a754f-7e3e-4c1a-838f-9a5071f2d622",
-          chain: "Base",
-          project: "aerodrome",
-          symbol: "USDz-USDC",
-          underlyingTokens: [usdz, usdc],
-        }),
-      ],
-      dexProjects: new Set(["aerodrome"]),
-      symbolToChainScopedIds: buildSymbolToChainScopedIds(symbolToIds, ["base"]),
-      chainAddressToId: new Map([[`base:${usdz}`, "usdz-anzen"]]),
-      curvePoolMap: new Map(),
-      uniV3PoolFees: new Map(),
-      uniV3SymbolFees: new Map(),
-      aerodromeIsStable: new Map(),
-      uniV3ExecutionCandidates: new Map(),
-      stablecoinPriceById: new Map([["usdz-anzen", 1]]),
-      measuredTargetCapturedAt: 1_752_560_000,
-      validationReferences: undefined,
-      aerodromeV2ExecutionCandidates: new Map([[`base:${exactPool}`, candidate]]),
-    }).metrics;
-
-    const retained = metrics.get("usdz-anzen")?.topPools[0];
-    expect(retained?.poolId).toBe(buildPoolFingerprint("base", "aerodrome", [usdz, usdc]));
-    expect(retained?.extra?.evmV2ExecutionCandidate).toEqual(candidate);
   });
 
   it("matches pools without mutating canonical addresses, protects symbol collisions, and enriches pool extras", () => {
@@ -381,7 +273,6 @@ describe("processPoolMetrics", () => {
     ]);
     const uniV3PoolFees = new Map<string, number>([["ethereum:0xuni1", 100]]);
     const uniV3SymbolFees = new Map<string, number>([["ethereum:USDC:USDE", 3000]]);
-    const aerodromeIsStable = new Map<string, boolean>([["base:0xaero", true]]);
 
     const metrics = processPoolMetrics({
       pools: [
@@ -458,7 +349,6 @@ describe("processPoolMetrics", () => {
       curvePoolMap: curvePoolMap,
       uniV3PoolFees: uniV3PoolFees,
       uniV3SymbolFees: uniV3SymbolFees,
-      aerodromeIsStable: aerodromeIsStable,
     }).metrics;
 
     expect(chainAddressToId.get("ethereum:0xusdc-new")).toBeUndefined();
@@ -536,7 +426,7 @@ describe("processPoolMetrics", () => {
     });
 
     const aerodromePool = usdc?.topPools.find((pool) => pool.poolId === "base:0xaero");
-    expect(aerodromePool?.poolType).toBe("aerodrome-stable");
+    expect(aerodromePool?.poolType).toBe("aerodrome-volatile");
 
     const usde = metrics.get("usde-ethena");
     expect(usde?.poolCount).toBe(1);
@@ -568,7 +458,6 @@ describe("processPoolMetrics", () => {
       curvePoolMap: new Map(),
       uniV3PoolFees: new Map(),
       uniV3SymbolFees: new Map(),
-      aerodromeIsStable: new Map(),
     }).metrics;
 
     expect(chainAddressToId.get("base:0xwabasgho")).toBeUndefined();
@@ -602,7 +491,6 @@ describe("processPoolMetrics", () => {
       curvePoolMap: new Map(),
       uniV3PoolFees: new Map(),
       uniV3SymbolFees: new Map(),
-      aerodromeIsStable: new Map(),
     }).metrics;
 
     expect(warnSpy).toHaveBeenCalledWith(
@@ -643,7 +531,6 @@ describe("processPoolMetrics", () => {
       curvePoolMap: new Map(),
       uniV3PoolFees: new Map(),
       uniV3SymbolFees: new Map(),
-      aerodromeIsStable: new Map(),
     }).metrics;
 
     expect(metrics.size).toBe(0);
@@ -665,7 +552,6 @@ describe("processPoolMetrics", () => {
       curvePoolMap: new Map(),
       uniV3PoolFees: new Map(),
       uniV3SymbolFees: new Map(),
-      aerodromeIsStable: new Map(),
     }).metrics;
     const m = metrics.get("usdt-tether");
     expect(m).toBeDefined();
@@ -689,7 +575,6 @@ describe("processPoolMetrics", () => {
       curvePoolMap: new Map(),
       uniV3PoolFees: new Map(),
       uniV3SymbolFees: new Map(),
-      aerodromeIsStable: new Map(),
     }).metrics;
     const m = metrics.get("usdt-tether");
     expect(m).toBeDefined();
@@ -728,7 +613,6 @@ describe("processPoolMetrics", () => {
       curvePoolMap: new Map(),
       uniV3PoolFees: new Map(),
       uniV3SymbolFees: new Map(),
-      aerodromeIsStable: new Map(),
     }).metrics;
 
     expect(metrics.get("usdc-circle")?.topPools[0]?.project).toBe("orca");
@@ -786,7 +670,6 @@ describe("processPoolMetrics", () => {
       curvePoolMap: curvePoolMap,
       uniV3PoolFees: new Map(),
       uniV3SymbolFees: new Map(),
-      aerodromeIsStable: new Map(),
     }).metrics;
 
     const usdc = metrics.get("usdc-circle");
@@ -848,7 +731,6 @@ describe("processPoolMetrics", () => {
       curvePoolMap: curvePoolMap,
       uniV3PoolFees: new Map(),
       uniV3SymbolFees: new Map(),
-      aerodromeIsStable: new Map(),
     }).metrics;
 
     const usdc = metrics.get("usdc-circle");
@@ -905,7 +787,6 @@ describe("processPoolMetrics", () => {
       curvePoolMap: curvePoolMap,
       uniV3PoolFees: new Map(),
       uniV3SymbolFees: new Map(),
-      aerodromeIsStable: new Map(),
     }).metrics;
 
     expect(metrics.get("usdc-circle")?.topPools[0]?.extra).toMatchObject({
@@ -962,12 +843,10 @@ describe("processPoolMetrics", () => {
         curvePoolMap: new Map([[`ethereum:${ACTIVE_POOL}`, candidate], [`ethereum:${ACTIVE_SIBLING}`, sibling]]),
         uniV3PoolFees: new Map(),
         uniV3SymbolFees: new Map(),
-        aerodromeIsStable: new Map(),
         uniV3ExecutionCandidates: new Map(),
         stablecoinPriceById: new Map([["crvusd-curve", 0.9998]]),
         measuredTargetCapturedAt: 1_752_500_000,
         validationReferences: undefined,
-        aerodromeV2ExecutionCandidates: new Map(),
         curvePoolCandidatesByFingerprint: candidateMap,
       }).metrics.get("crvusd-curve")?.topPools[0];
 
@@ -1048,7 +927,6 @@ describe("processPoolMetrics", () => {
         curvePoolMap: testCase.curvePoolMap,
         uniV3PoolFees: new Map(),
         uniV3SymbolFees: new Map(),
-        aerodromeIsStable: new Map(),
       }).metrics;
       const retainedPools = metrics.get("usdc-circle")?.topPools ?? [];
       expect(retainedPools, testCase.name).toHaveLength(1);
@@ -1140,7 +1018,6 @@ describe("processPoolMetrics", () => {
         curvePoolMap: new Map(),
         uniV3PoolFees: new Map(),
         uniV3SymbolFees: new Map(),
-        aerodromeIsStable: new Map(),
         uniV3ExecutionCandidates: new Map(),
         stablecoinPriceById: new Map([
           ["usdc-circle", 1],
@@ -1148,7 +1025,6 @@ describe("processPoolMetrics", () => {
         ]),
         measuredTargetCapturedAt: 1_785_000_000,
         validationReferences: undefined,
-        aerodromeV2ExecutionCandidates: new Map(),
         curvePoolCandidatesByFingerprint: new Map(),
         uniswapV4ExecutionCandidates: new Map([[key, candidates]]),
       }).metrics.get("usdc-circle")?.topPools[0];

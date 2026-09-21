@@ -36,10 +36,7 @@ import {
   getCurveStableSwapNgPolicy,
 } from "../measured-execution/curve-stableswap-ng";
 import { buildCurveCompositeMeasuredExecutionTarget } from "../measured-execution/curve-composite";
-import {
-  buildEvmV2ExecutionCandidate,
-  resolveEvmV2ExecutionCandidate,
-} from "./constant-product-v2";
+import { buildEvmV2ExecutionCandidate } from "./constant-product-v2";
 import { CURVE_STABLESWAP_FEE_BOUND } from "./curve-stableswap-rates";
 import { parsePoolSymbols } from "./pool-helpers";
 import type {
@@ -57,7 +54,6 @@ import {
 export interface DirectApiExecutionTargetContext {
   uniV3ExecutionCandidates: PoolProcessingContext["uniV3ExecutionCandidates"];
   uniswapV4ExecutionCandidates: PoolProcessingContext["uniswapV4ExecutionCandidates"];
-  aerodromeIsStable: PoolProcessingContext["aerodromeIsStable"];
   measuredTargetCapturedAt: number;
   contractMetaByChainAddress: SymbolLookups["contractMetaByChainAddress"];
 }
@@ -118,13 +114,10 @@ function buildDirectApiFactoryInput(input: {
     curvePoolMap: new Map(),
     uniV3PoolFees: new Map(),
     uniV3SymbolFees: new Map(),
-    aerodromeIsStable: executionTargetContext.aerodromeIsStable,
     uniV3ExecutionCandidates: executionTargetContext.uniV3ExecutionCandidates,
     stablecoinPriceById,
     measuredTargetCapturedAt: executionTargetContext.measuredTargetCapturedAt,
     validationReferences,
-    aerodromeV2ExecutionCandidates: new Map(),
-    uniqueAerodromeV2ExecutionCandidates: new Map(),
     curvePoolCandidatesByFingerprint: new Map(),
     uniswapV4ExecutionCandidates: executionTargetContext.uniswapV4ExecutionCandidates,
     contractMetaByChainAddress: executionTargetContext.contractMetaByChainAddress,
@@ -902,36 +895,14 @@ export function buildPoolExecutionCapability(
     (protocol === "uniswap-v4" && !uniswapV4MeasuredTarget)
       ? { family: "measured-execution", reason: "target-unresolved" }
       : null;
-  const aerodromeV2ExecutionCandidate =
-    protocol === "aerodrome"
-      ? resolveEvmV2ExecutionCandidate({
-          chain: chainNorm,
-          protocol: pool.project,
-          poolAddressOrId: pool.pool,
-          tokenAddresses: pool.underlyingTokens ?? [],
-          exactCandidates: context.aerodromeV2ExecutionCandidates,
-          uniqueFingerprintCandidates:
-            context.uniqueAerodromeV2ExecutionCandidates,
-        })
-      : undefined;
-  const evmV2ExecutionCandidate =
-    (resolvedPoolType === "aerodrome-volatile"
-      ? aerodromeV2ExecutionCandidate
-      : undefined) ??
-    buildEvmV2ExecutionCandidate({
-      chain: chainNorm,
-      protocol: pool.project,
-      poolType: resolvedPoolType,
-      poolAddress: pool.pool,
-      tokenAddresses: pool.underlyingTokens ?? [],
-      tokenSymbols: parsePoolSymbols(pool.symbol),
-      confirmedStable:
-        protocol === "aerodrome"
-          ? context.aerodromeIsStable.get(
-              canonicalExitRouteAssetKey(chainNorm, pool.pool),
-            )
-          : undefined,
-    });
+  const evmV2ExecutionCandidate = buildEvmV2ExecutionCandidate({
+    chain: chainNorm,
+    protocol: pool.project,
+    poolType: resolvedPoolType,
+    poolAddress: pool.pool,
+    tokenAddresses: pool.underlyingTokens ?? [],
+    tokenSymbols: parsePoolSymbols(pool.symbol),
+  });
   const executionCapabilityGate =
     curveExecutionCapability.gate &&
     !curveCryptoSwapMeasuredTarget &&

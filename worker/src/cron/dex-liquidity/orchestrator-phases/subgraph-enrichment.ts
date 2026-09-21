@@ -3,12 +3,10 @@ import { logWorkerEventArgs } from "../../../lib/structured-log";
 import { rethrowIfAborted } from "../../../lib/abort";
 import type { PriceValidationReferences } from "../../../lib/price-validation";
 import {
-  fetchAerodromeData,
   fetchUniswapV4Data,
   fetchUniV3Data,
 } from "../subgraph-source-families";
 import type {
-  AerodromeLookups,
   DexPriceObs,
   SymbolLookups,
   UniswapV4Lookups,
@@ -21,9 +19,6 @@ export interface SubgraphEnrichmentPhaseResult {
   uniV3PriceObs: Map<string, DexPriceObs[]>;
   uniV3ExecutionCandidates: UniV3Lookups["uniV3ExecutionCandidates"];
   uniswapV4ExecutionCandidates: UniswapV4Lookups["uniswapV4ExecutionCandidates"];
-  aerodromePriceObs: Map<string, DexPriceObs[]>;
-  aerodromeIsStable: Map<string, boolean>;
-  aerodromeV2ExecutionCandidates: AerodromeLookups["aerodromeV2ExecutionCandidates"];
 }
 
 export async function fetchSubgraphEnrichmentPhase(params: {
@@ -51,6 +46,9 @@ export async function fetchSubgraphEnrichmentPhase(params: {
     uniV3SymbolFees = uniV3Data.uniV3SymbolFees;
     uniV3PriceObs = uniV3Data.uniV3PriceObs;
     uniV3ExecutionCandidates = uniV3Data.uniV3ExecutionCandidates;
+    failedSources.push(
+      ...uniV3Data.failedChains.map((chain) => `univ3-subgraph:${chain}`),
+    );
   } catch (err) {
     rethrowIfAborted(err, params.signal);
     logWorkerEventArgs("handler", "warn", "[dex-liquidity] UniV3 fetch failed (non-fatal):", err);
@@ -66,6 +64,11 @@ export async function fetchSubgraphEnrichmentPhase(params: {
     );
     uniswapV4ExecutionCandidates =
       uniswapV4Data.uniswapV4ExecutionCandidates;
+    failedSources.push(
+      ...uniswapV4Data.failedChains.map(
+        (chain) => `uniswap-v4-subgraph:${chain}`,
+      ),
+    );
   } catch (err) {
     rethrowIfAborted(err, params.signal);
     logWorkerEventArgs("handler", "warn", JSON.stringify({
@@ -76,35 +79,12 @@ export async function fetchSubgraphEnrichmentPhase(params: {
     failedSources.push("uniswap-v4-subgraph");
   }
 
-  let aerodromePriceObs = new Map<string, DexPriceObs[]>();
-  let aerodromeIsStable = new Map<string, boolean>();
-  let aerodromeV2ExecutionCandidates: AerodromeLookups["aerodromeV2ExecutionCandidates"] = new Map();
-  try {
-    const aeroData = await fetchAerodromeData(
-      params.graphApiKey,
-      params.symbolToChainScopedIds,
-      params.chainAddressToId,
-      params.signal,
-      params.validationReferences,
-    );
-    aerodromePriceObs = aeroData.aerodromePriceObs;
-    aerodromeIsStable = aeroData.aerodromeIsStable;
-    aerodromeV2ExecutionCandidates = aeroData.aerodromeV2ExecutionCandidates;
-  } catch (err) {
-    rethrowIfAborted(err, params.signal);
-    logWorkerEventArgs("handler", "warn", "[dex-liquidity] Aerodrome fetch failed (non-fatal):", err);
-    failedSources.push("aerodrome-subgraph");
-  }
-
   return {
     uniV3PoolFees,
     uniV3SymbolFees,
     uniV3PriceObs,
     uniV3ExecutionCandidates,
     uniswapV4ExecutionCandidates,
-    aerodromePriceObs,
-    aerodromeIsStable,
-    aerodromeV2ExecutionCandidates,
     failedSources,
   };
 }

@@ -82,7 +82,7 @@ export function classifyPoolType(project: string, poolMeta?: string | null): str
   if (proj.includes("curve")) return "curve-stableswap"; // refined later via registryId
   if (proj.includes("fluid")) return "fluid-dex";
   if (proj.includes("meteora")) return "meteora-dlmm";
-  if (proj.includes("aerodrome")) return "aerodrome-volatile"; // refined to aerodrome-stable via subgraph isStable flag
+  if (proj.includes("aerodrome")) return "aerodrome-volatile"; // no sAMM/vAMM label upstream; classic rows stay volatile
   if (proj.includes("balancer") && proj.includes("stable")) return "balancer-stable";
   if (proj.includes("balancer")) return "balancer-weighted";
   // DL lists every Raydium pool under the raydium-amm slug; the CLMM signal

@@ -9,7 +9,6 @@ import type {
   LiquidityFallbackCounters,
   LiquidityMetrics,
 } from "./types";
-import type { UniqueEvmV2ExecutionCandidateFingerprintIndex } from "./constant-product-v2";
 import type {
   UniswapV4ExecutionCandidate,
   UniV3ExecutionCandidate,
@@ -37,12 +36,10 @@ export interface ProcessPoolMetricsInput {
   curvePoolMap: Map<string, CurvePoolEntry>;
   uniV3PoolFees: Map<string, number>;
   uniV3SymbolFees: Map<string, number>;
-  aerodromeIsStable: Map<string, boolean>;
   uniV3ExecutionCandidates?: Map<string, UniV3ExecutionCandidate[]>;
   stablecoinPriceById?: Map<string, number>;
   measuredTargetCapturedAt?: number;
   validationReferences?: PriceValidationReferences;
-  aerodromeV2ExecutionCandidates?: Map<string, EvmV2ExecutionCandidate>;
   curvePoolCandidatesByFingerprint?: ReadonlyMap<string, readonly CurvePoolEntry[]>;
   uniswapV4ExecutionCandidates?: ReadonlyMap<
     string,
@@ -62,15 +59,12 @@ export interface PoolProcessingContext
     ProcessPoolMetricsInput,
     | "uniV3ExecutionCandidates"
     | "measuredTargetCapturedAt"
-    | "aerodromeV2ExecutionCandidates"
     | "curvePoolCandidatesByFingerprint"
     | "uniswapV4ExecutionCandidates"
     | "fallbackCounters"
   > {
   uniV3ExecutionCandidates: Map<string, UniV3ExecutionCandidate[]>;
   measuredTargetCapturedAt: number;
-  aerodromeV2ExecutionCandidates: Map<string, EvmV2ExecutionCandidate>;
-  uniqueAerodromeV2ExecutionCandidates: UniqueEvmV2ExecutionCandidateFingerprintIndex;
   curvePoolCandidatesByFingerprint: ReadonlyMap<string, readonly CurvePoolEntry[]>;
   uniswapV4ExecutionCandidates: ReadonlyMap<
     string,
