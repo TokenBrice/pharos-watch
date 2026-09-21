@@ -20,6 +20,7 @@ import { YieldSourceRiskBar } from "@/components/yield-source-risk-bar";
 import { YieldFreshnessLabel } from "@/components/yield-freshness-label";
 import { YieldWatchlistStar } from "@/components/yield-watchlist-star";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
+import { getLogoSrc } from "@/lib/logos";
 import { useYieldRankings } from "@/hooks/api-hooks";
 import { useSortedPaginatedTable } from "@/hooks/use-sorted-paginated-table";
 import { TABLE_PAGE_SIZE } from "@/lib/constants";
@@ -365,7 +366,7 @@ export function YieldLeaderboard({
                   <YieldMobileCard
                     key={row.id}
                     row={row}
-                    logo={logos[row.id]}
+                    logo={getLogoSrc(logos, row.id)}
                     riskFreeRate={riskFreeRate}
                     medianApy={medianApy}
                     scalingFactor={scalingFactor}
@@ -439,7 +440,7 @@ export function YieldLeaderboard({
       </div>
       <YieldSourceSheet
         ranking={sheetRanking}
-        logo={sheetRankingId ? logos[sheetRankingId] : undefined}
+        logo={sheetRankingId ? getLogoSrc(logos, sheetRankingId) : undefined}
         riskFreeRate={riskFreeRate}
         medianApy={medianApy}
         open={sheetRankingId !== null}

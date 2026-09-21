@@ -214,8 +214,9 @@ const SCREEN_TOKEN_MAP: Record<string, ScreenTokenMapping> = {
         if (op === "eq") return [["safetyGrades", value.toUpperCase()]];
         return [];
       }
-      // `safety>=N` is a shorthand for pegStability min; mirror council brief.
-      if (op === "gte") return [["safetyPegStabilityMin", String(n)]];
+      // `safety>=N` is the published overall Safety Score minimum, the axis the
+      // screener decodes; a key outside `SCREENER_URL_SCHEMA` is dropped silently.
+      if (op === "gte") return [["safetyScoreMin", String(n)]];
       return [];
     },
   },

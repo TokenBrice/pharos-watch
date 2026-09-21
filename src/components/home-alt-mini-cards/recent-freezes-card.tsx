@@ -6,7 +6,7 @@ import { PulseCardHeader } from "@/components/home-alt-mini-cards/pulse-card-hea
 import { QueryStateNotice } from "@/components/query-state-notice";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useBlacklistEventsPage, useBlacklistSummary } from "@/hooks/use-blacklist-events";
-import { logosById } from "@/lib/logos";
+import { getLogoSrc, logosById } from "@/lib/logos";
 import { formatCurrency } from "@shared/lib/format";
 import { formatRelativeDurationSeconds } from "@shared/lib/relative-time";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
@@ -192,7 +192,7 @@ export function RecentFreezesCard(): React.JSX.Element {
           {recent.length > 0 && (
             <ul className="flex flex-col border-t border-border/50 pt-2.5 font-mono text-xs">
               {recent.map((ev) => {
-                const logoSrc = logoMap[ev.stablecoinId];
+                const logoSrc = getLogoSrc(logoMap, ev.stablecoinId);
                 return (
                   <li
                     key={ev.id}

@@ -7,7 +7,7 @@ import { CoinCell } from "@/components/home-alt-mini-cards/coin-cell";
 import { HomeAltTrackerLink } from "@/components/home-alt-tracker-link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useYieldRankingsSummary } from "@/hooks/api-hooks";
-import { logosById } from "@/lib/logos";
+import { getLogoSrc, logosById } from "@/lib/logos";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { formatPercent, formatScore } from "@shared/lib/format";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/classification";
@@ -251,7 +251,7 @@ export function HomeAltYieldOverview(): React.JSX.Element | null {
           </div>
           <ul className="flex flex-col">
             {overview.leaders.map((row, index) => (
-              <LeaderRow key={row.id} row={row} rank={index + 1} logoSrc={logoMap[row.id]} />
+              <LeaderRow key={row.id} row={row} rank={index + 1} logoSrc={getLogoSrc(logoMap, row.id)} />
             ))}
           </ul>
         </div>

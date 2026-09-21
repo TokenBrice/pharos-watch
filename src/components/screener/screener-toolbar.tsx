@@ -226,7 +226,16 @@ export function ScreenerToolbar({
         />
       </div>
 
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+        <ThresholdField
+          label="Safety Score"
+          min={0}
+          max={100}
+          step={1}
+          minValue={filters.safetyScoreMin}
+          onMinChange={(v) => update("safetyScoreMin", v)}
+          defaultMin={SCREENER_FILTER_DEFAULTS.safetyScoreMin}
+        />
         <ThresholdField
           label="Backing"
           min={0}

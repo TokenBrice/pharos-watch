@@ -31,6 +31,7 @@ import { resolveYieldDisplayRebaseReferenceRate, resolveYieldRowBenchmark } from
 import type { YieldTableSortKey } from "@/components/yield-table-logic";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
+import { getLogoSrc } from "@/lib/logos";
 import { clampScore } from "@shared/lib/math";
 
 // ---------------------------------------------------------------------------
@@ -648,7 +649,7 @@ export function YieldInstrumentBoard({
               key={row.id}
               row={row}
               rank={pageStartIndex + index + 1}
-              logo={logos[row.id]}
+              logo={getLogoSrc(logos, row.id)}
               riskFreeRate={riskFreeRate}
               medianApy={medianApy}
               scalingFactor={scalingFactor}

@@ -11,7 +11,7 @@ import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-pub
  * the two.
  */
 
-export type ScoreWaterfallKind = "base" | "multiply" | "subtract" | "cap" | "published";
+export type ScoreWaterfallKind = "base" | "multiply" | "subtract" | "add" | "cap" | "published";
 
 export interface ScoreWaterfallStep {
   key: string;
@@ -75,6 +75,17 @@ export function buildScoreWaterfall(card: WaterfallCard): ScoreWaterfallStep[] {
       operator: `-${deploymentPoints.toFixed(1)}`,
       value: stages.deploymentAdjustedScore,
       detail: "Deployments that share a chain or bridge and can fail together.",
+    });
+  }
+
+  for (const adjustment of card.scoreTrace.scoreAdjustments) {
+    steps.push({
+      key: `adjustment-${adjustment.kind}`,
+      label: adjustment.label,
+      kind: "add",
+      operator: `+${adjustment.appliedPoints.toFixed(1)}`,
+      value: adjustment.scoreAfter,
+      detail: "Published policy adjustment applied after common-mode exposure.",
     });
   }
 

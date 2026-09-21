@@ -14,6 +14,7 @@ import {
   type ScreenerRow,
 } from "@/lib/screener-filters";
 import { decodeState, encodeState } from "@/lib/url-state";
+import { parsePaletteInput } from "@/lib/command-palette-verbs";
 
 function makeRow(overrides: Partial<ScreenerRow> = {}): ScreenerRow {
   return {
@@ -140,6 +141,21 @@ describe("applyFilters", () => {
       filters,
     );
     expect(result.map((r) => r.id)).toEqual(["high-control"]);
+  });
+
+  it("applies the threshold the command palette's `screen safety>=N` deep link carries", () => {
+    const parsed = parsePaletteInput("screen safety>=80");
+    if (parsed.kind !== "screen") throw new Error("expected a screen verb");
+    const filters = decodeState(parsed.href.split("?")[1] ?? "", SCREENER_URL_SCHEMA);
+    const result = applyFilters(
+      [
+        makeRow({ id: "high", safetyScore: 90 }),
+        makeRow({ id: "low", safetyScore: 42 }),
+        makeRow({ id: "unrated", safetyScore: null }),
+      ],
+      filters,
+    );
+    expect(result.map((r) => r.id)).toEqual(["high"]);
   });
 
   it("filters by supply min only when min > 0", () => {

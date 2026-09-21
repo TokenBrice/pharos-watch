@@ -24,32 +24,17 @@ function buildMicaSegments(distribution: ComplianceStatusDistribution["mica"]): 
 }
 
 function buildGeniusSegments(distribution: ComplianceStatusDistribution["genius"]): DistributionSegment[] {
-  const signalSegments = distribution.flatMap(({ status, count }) => {
-    const colorClassName = GENIUS_STATUS_SEGMENT_CLASSES[status];
-    if (colorClassName == null) return [];
-    return [{
-      key: status,
-      label: GENIUS_AUTHORIZATION_STATUS_BADGE_STYLES[status].label,
-      count,
-      href: `/compliance/?regime=genius&status=${status}`,
-      colorClassName,
-    }];
-  });
-  const neutralCount = distribution.reduce(
-    (total, item) => total + (GENIUS_STATUS_SEGMENT_CLASSES[item.status] == null ? item.count : 0),
-    0,
-  );
-  if (neutralCount === 0) return signalSegments;
-  return [
-    ...signalSegments,
-    {
-      key: "no-public-signal",
-      label: "No public signal",
-      count: neutralCount,
-      href: "/compliance/?regime=genius&status=all",
-      colorClassName: MICA_STATUS_SEGMENT_CLASSES["out-of-scope"],
-    },
-  ];
+  // A status without a signal colour is still a distinct published outcome
+  // ("No Public Auth Found", "Not Applicable", "Unknown"); merging them into one
+  // "No public signal" block asserted a verdict none of them carries and linked
+  // back to the unfiltered table.
+  return distribution.map(({ status, count }) => ({
+    key: status,
+    label: GENIUS_AUTHORIZATION_STATUS_BADGE_STYLES[status].label,
+    count,
+    href: `/compliance/?regime=genius&status=${status}`,
+    colorClassName: GENIUS_STATUS_SEGMENT_CLASSES[status] ?? MICA_STATUS_SEGMENT_CLASSES["out-of-scope"],
+  }));
 }
 
 function StatusDistributionBar({

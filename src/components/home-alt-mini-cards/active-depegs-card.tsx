@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { usePegSummary } from "@/hooks/api-hooks";
 import { useActiveDepegEvents } from "@/hooks/use-depeg-events";
 import { useFlashOnChange } from "@/hooks/use-flash-on-change";
-import { logosById } from "@/lib/logos";
+import { getLogoSrc, logosById } from "@/lib/logos";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { ACTIVE_STABLECOIN_ID_SET } from "@/lib/stablecoin-static-data";
@@ -138,7 +138,7 @@ export function ActiveDepegsCard(): React.JSX.Element {
             className="hidden flex-col border-t border-border/50 pt-2.5 font-mono text-xs sm:flex"
           >
             {activeRows.slice(0, 4).map((row, index) => (
-              <DepegRow key={row.id} row={row} logoSrc={logoMap[row.id]} isLead={index === 0} />
+              <DepegRow key={row.id} row={row} logoSrc={getLogoSrc(logoMap, row.id)} isLead={index === 0} />
             ))}
           </ul>
         </>

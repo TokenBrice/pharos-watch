@@ -24,6 +24,7 @@ import {
 import { PEG_SLUGS } from "@/lib/peg-landing";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { CASE_STUDY_CLIENT_BY_COIN_ID } from "@/lib/case-study-client-index";
+import { getLogoSrc } from "@/lib/logos";
 
 interface StaticComparisonEntry {
   href: string;
@@ -177,7 +178,7 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, logos
                   className="pharos-focus-ring inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/50 px-2.5 py-1 text-xs text-foreground transition-colors hover:border-foreground/30 hover:bg-accent"
                   title={peer.name}
                 >
-                  <StablecoinLogo src={logos[peer.id]} name={peer.name} size={16} />
+                  <StablecoinLogo src={getLogoSrc(logos, peer.id)} name={peer.name} size={16} />
                   <span className="font-mono tabular-nums font-medium">{peer.symbol}</span>
                 </Link>
               ))}
@@ -204,7 +205,7 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, logos
                     aria-label={`Open static comparison brief: ${page.shortTitle}`}
                     title={page.counterpartName}
                   >
-                    <StablecoinLogo src={logos[page.counterpartId]} name={page.counterpartName} size={18} />
+                    <StablecoinLogo src={getLogoSrc(logos, page.counterpartId)} name={page.counterpartName} size={18} />
                     <span className="min-w-0 flex-1">
                       <span className="text-muted-foreground">vs </span>
                       <span className="font-mono tabular-nums font-medium">{page.counterpartSymbol}</span>

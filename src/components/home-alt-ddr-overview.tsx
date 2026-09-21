@@ -7,7 +7,7 @@ import { ShieldCheck } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HomeAltTrackerLink } from "@/components/home-alt-tracker-link";
 import { useDepegResolverSurfaces } from "@/hooks/use-depeg-resolver-surfaces";
-import { logosById } from "@/lib/logos";
+import { getLogoSrc, logosById } from "@/lib/logos";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 import { cn } from "@/lib/utils";
@@ -275,7 +275,7 @@ function ForecastZone({
         {columns.map((column, index) => (
           <div key={index} className="-mx-1.5 divide-y divide-border/30">
             {column.map((item) => (
-              <ForecastRow key={item.id} item={item} logoSrc={logoMap[item.id]} />
+              <ForecastRow key={item.id} item={item} logoSrc={getLogoSrc(logoMap, item.id)} />
             ))}
           </div>
         ))}

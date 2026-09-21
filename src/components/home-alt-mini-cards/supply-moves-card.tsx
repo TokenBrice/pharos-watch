@@ -7,7 +7,7 @@ import { CoinCell } from "@/components/home-alt-mini-cards/coin-cell";
 import { PulseCardHeader } from "@/components/home-alt-mini-cards/pulse-card-header";
 import { QueryStateNotice } from "@/components/query-state-notice";
 import { Skeleton } from "@/components/ui/skeleton";
-import { logosById } from "@/lib/logos";
+import { getLogoSrc, logosById } from "@/lib/logos";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { ACTIVE_STABLECOIN_ID_SET } from "@/lib/stablecoin-static-data";
@@ -68,6 +68,7 @@ export function SupplyMovesCard(): React.JSX.Element {
     return Math.abs(top.pctChange) >= Math.abs(bottom.pctChange) ? top : bottom;
   }, [ups, downs]);
   const peakInUps = peak !== null && peak.id === ups[0]?.id;
+  const peakLogoSrc = peak === null ? undefined : getLogoSrc(logoMap, peak.id);
   const upsDisplay = peakInUps ? ups.slice(1, 4) : ups.slice(0, 3);
   const downsDisplay = !peakInUps && peak !== null ? downs.slice(1, 4) : downs.slice(0, 3);
   const state = resolveQueryViewState({
@@ -124,9 +125,9 @@ export function SupplyMovesCard(): React.JSX.Element {
               aria-label={`${peak.symbol} — peak 7-day supply mover: ${formatPct(peak.pctChange)}`}
             >
               <span className="flex min-w-0 items-center gap-2.5">
-                {logoMap[peak.id] && (
+                {peakLogoSrc && (
                   <Image
-                    src={logoMap[peak.id]}
+                    src={peakLogoSrc}
                     alt=""
                     width={28}
                     height={28}
@@ -175,7 +176,7 @@ function MoverList({
       <p className="font-mono text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
       <ul className="flex flex-col font-mono text-xs">
         {rows.map((row) => {
-          const logoSrc = logoMap[row.id];
+          const logoSrc = getLogoSrc(logoMap, row.id);
           return (
             <li key={row.id}>
               <Link

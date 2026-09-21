@@ -6,7 +6,7 @@ import { CoinCell } from "@/components/home-alt-mini-cards/coin-cell";
 import { PulseCardHeader } from "@/components/home-alt-mini-cards/pulse-card-header";
 import { QueryStateNotice } from "@/components/query-state-notice";
 import { Skeleton } from "@/components/ui/skeleton";
-import { logosById } from "@/lib/logos";
+import { getLogoSrc, logosById } from "@/lib/logos";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { formatSignedCompactUsd } from "@shared/lib/format";
 import { buildStablecoinUrl } from "@shared/lib/urls";
@@ -88,7 +88,7 @@ export function MintBurnCard({ embedded = false }: { embedded?: boolean } = {}):
                 <li className="font-mono uppercase tracking-wider text-muted-foreground">No 24h activity</li>
               ) : (
                 topMovers.map((row) => {
-                  const logoSrc = logoMap[row.id];
+                  const logoSrc = getLogoSrc(logoMap, row.id);
                   return (
                     <li key={row.id}>
                       <Link

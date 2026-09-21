@@ -46,7 +46,7 @@ const COMPLIANCE_HERO = (
         <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue sm:text-[2.45rem]">
           {COMPLIANCE_SUMMARY.micaAuthorized.toLocaleString()}
         </p>
-        <p className="pharos-meta">of {COMPLIANCE_SUMMARY.micaAssessed.toLocaleString()} EU-assessed issuers</p>
+        <p className="pharos-meta">of {COMPLIANCE_SUMMARY.micaAssessed.toLocaleString()} EU-assessed stablecoins</p>
       </div>
       <div className="flex flex-wrap items-center gap-3">
         <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/30 px-3 py-1 text-xs font-medium text-muted-foreground">
