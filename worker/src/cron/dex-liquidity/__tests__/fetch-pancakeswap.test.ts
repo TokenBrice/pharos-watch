@@ -103,6 +103,21 @@ describe("fetchPancakeSwapPools", () => {
     expect(result.pools[0]?.tokens[1]?.decimals).toBe(0);
   });
 
+  it("publishes the neutral bucket and no fee rate for a malformed feeTier", async () => {
+    const malformedFeePool = makePool("0xpool");
+    malformedFeePool.feeTier = undefined as unknown as string;
+
+    vi.mocked(fetchTextWithRetry)
+      .mockImplementationOnce(async () => textResult(response({ data: { pools: [malformedFeePool] } })))
+      .mockImplementationOnce(async () => textResult(response({ data: { poolHourDatas: [] } })))
+      .mockImplementation(async () => textResult(response({ data: { pools: [] } })));
+
+    const result = await fetchPancakeSwapPools("graph-key");
+
+    expect(result.pools[0]?.poolType).toBe("pancakeswap-v3-unknown-fee");
+    expect(result.pools[0]?.feeRate).toBeNull();
+  });
+
   it("falls back to 18 decimals for malformed Pancake token metadata", async () => {
     const malformedDecimalPool = makePool("0xpool");
     malformedDecimalPool.token0.decimals = 6 as unknown as string;

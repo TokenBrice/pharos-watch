@@ -536,12 +536,13 @@ export async function fetchSlipstreamPools(
           `[fetch-slipstream] ${protocol} pool ${pool.lp}: unexpected pool_fee ${pool.pool_fee}`,
         );
       }
-      const effectiveFeeBps = feeBps ?? 30;
+      // An undecodable fee stays null: `DexApiPool.feeRate` is nullable, so the
+      // row carries the neutral bucket instead of a fabricated tier.
       pools.push({
         source: protocol,
         chain: config.chain,
         poolAddress: pool.lp,
-        poolType: classifyClPoolType(protocol, effectiveFeeBps),
+        poolType: classifyClPoolType(protocol, feeBps),
         tokens: [
           {
             address: token0.token_address,
@@ -562,7 +563,7 @@ export async function fetchSlipstreamPools(
         // Keep this as unmeasured zero so downstream filters can distinguish
         // "unknown volume" from a measured no-volume pool.
         volume24hUsd: 0,
-        feeRate: normalizeFeeRateFromBps(effectiveFeeBps),
+        feeRate: normalizeFeeRateFromBps(feeBps),
         tickSpacing,
         balances: [reserve0, reserve1],
       });

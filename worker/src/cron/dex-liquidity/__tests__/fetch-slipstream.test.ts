@@ -171,7 +171,7 @@ describe("fetchSlipstreamPools", () => {
     vi.restoreAllMocks();
   });
 
-  it("builds CL pools from sugar contract pages", async () => {
+  function mockSugarPage(poolFee: bigint) {
     vi.mocked(fetchEvmCallHexAtBlock)
       .mockResolvedValueOnce(encodeFunctionResult({
         abi: ABI,
@@ -211,7 +211,7 @@ describe("fetchSlipstreamPools", () => {
           emissions: 0n,
           emissions_token: "0x0000000000000000000000000000000000000000",
           emissions_cap: 0n,
-          pool_fee: 1n,
+          pool_fee: poolFee,
           unstaked_fee: 0n,
           token0_fees: 0n,
           token1_fees: 0n,
@@ -245,8 +245,10 @@ describe("fetchSlipstreamPools", () => {
           },
         ],
       }));
+  }
 
-    const result = await fetchSlipstreamPools(
+  async function fetchBaseSlipstreamPools() {
+    return fetchSlipstreamPools(
       "aerodrome-slipstream",
       new Map([
         ["base:0x00000000000000000000000000000000000000bb", "cadc-cad-coin"],
@@ -255,6 +257,12 @@ describe("fetchSlipstreamPools", () => {
       new Map(),
       new Map([["usdc-circle", 1]]),
     );
+  }
+
+  it("builds CL pools from sugar contract pages", async () => {
+    mockSugarPage(1n);
+
+    const result = await fetchBaseSlipstreamPools();
 
     expect(result.ok).toBe(true);
     expect(result.pools).toHaveLength(1);
@@ -283,6 +291,18 @@ describe("fetchSlipstreamPools", () => {
           priceUsd: 1,
         },
       ],
+    });
+  });
+
+  it("publishes the neutral bucket and no fee rate when pool_fee is out of range", async () => {
+    mockSugarPage(50_000n);
+
+    const result = await fetchBaseSlipstreamPools();
+
+    expect(result.pools).toHaveLength(1);
+    expect(result.pools[0]).toMatchObject({
+      poolType: "aerodrome-slipstream-unknown-fee",
+      feeRate: null,
     });
   });
 
