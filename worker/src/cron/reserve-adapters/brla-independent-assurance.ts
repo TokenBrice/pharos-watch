@@ -20,7 +20,7 @@ import { reserveDegradedWarning } from "./warnings";
 const ADAPTER_KEY = "brla-independent-assurance";
 
 /**
- * Reviewed 2026-09-09: pinned Notion block identity for the July 31, 2026 UHY
+ * Reviewed 2026-09-21: pinned Notion block identity for the August 31, 2026 UHY
  * reasonable-assurance report on the official BRLA transparency page. The
  * runtime re-resolves the signed download URL through loadPageChunk /
  * getSignedFileUrls and fails closed on any page-block drift; the bytes are
@@ -44,11 +44,11 @@ export const BRLA_NOTION_PIN = {
   ],
   yearBlockId: "3047f28f-0ae4-80b4-90cd-dd40ecf60481",
   yearTitle: "2026",
-  reportBlockId: "3c67f28f-0ae4-80fb-bd17-f3ca9b5d3490",
-  attachmentTitle: "Avenia - Transparency Report - 20260731 (Audit Attestation).pdf",
+  reportBlockId: "3dd7f28f-0ae4-80cc-82e6-c77ddef59fbe",
+  attachmentTitle: "Avenia - Transparency Report - 20260831 (Audit Attestation).pdf",
   attachmentSource:
-    "attachment:f7048fe1-2d4c-4bcb-bb66-29f306cac7d0:Avenia_-_Transparency_Report_-_20260731_(Audit_Attestation).pdf",
-  attachmentId: "f7048fe1-2d4c-4bcb-bb66-29f306cac7d0",
+    "attachment:8494e9ac-19af-4dfb-b05c-ba1aba60b30c:Avenia_-_Transparency_Report_-_20260831_(Audit_Attestation).pdf",
+  attachmentId: "8494e9ac-19af-4dfb-b05c-ba1aba60b30c",
 } as const;
 
 const BRLA_REPORT_FILE_PATTERN = /^Avenia - Transparency Report - (\d{8}) \(Audit Attestation\)\.pdf$/;
@@ -117,7 +117,7 @@ async function loadNotionChunk(
 
 /**
  * Verifies the official Notion transparency page still resolves the reviewed
- * July 31, 2026 attachment and returns a fresh signed download URL. Every
+ * August 31, 2026 attachment and returns a fresh signed download URL. Every
  * pinned identity (root page, root child tree, 2026 header, report block,
  * attachment) must match exactly; any drift fails closed.
  */
@@ -186,11 +186,11 @@ export async function verifyBrlaNotionDiscovery(args: {
       latestBlockId = block.id;
     }
   }
-  if (latestReportDate == null || latestReportDate > "20260731") {
+  if (latestReportDate == null || latestReportDate > "20260831") {
     throw new Error(`${ADAPTER_KEY}: ${latestReportDate == null ? "no dated reports" : `newer unreviewed report ${latestReportDate}`} on official index`);
   }
   if (latestBlockId !== BRLA_NOTION_PIN.reportBlockId) {
-    throw new Error(`${ADAPTER_KEY}: reviewed July report is not the latest report on official index`);
+    throw new Error(`${ADAPTER_KEY}: reviewed August report is not the latest report on official index`);
   }
   const reportBlock = parseNotionBlock(yearBlocks[BRLA_NOTION_PIN.reportBlockId]);
   if (!reportBlock || reportBlock.type !== "file" || reportBlock.title !== BRLA_NOTION_PIN.attachmentTitle) {

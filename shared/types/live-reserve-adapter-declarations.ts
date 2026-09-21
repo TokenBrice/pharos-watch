@@ -2236,6 +2236,10 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     europAssuranceParamsSchema,
     HTTP_DISCLOSURE_ATTESTATION_V2,
     {
+      // Schuman's official report discovery source is now its WordPress media API.
+      // Retain the HTML kind for already-generated catalog artifacts during clean
+      // cutover; source entries use JSON and the adapter validates that media index.
+      primaryInputKinds: ["http-html", "http-json"],
       validation: {
         // Schuman's reviewed reports are quarterly; allow 100 days, not the legacy 116-day override.
         maxSourceAgeSec: QUARTERLY_ASSURANCE_MAX_AGE_SEC,

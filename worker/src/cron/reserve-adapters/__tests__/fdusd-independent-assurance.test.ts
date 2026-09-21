@@ -31,7 +31,7 @@ const LIVE_INDEX_FIXTURE = resolve(TEST_DIR, "fixtures", "fdusd-independent-assu
 
 // Webflow CDN cohort: the June signed-image report (no ISAE 3000 marker) and a
 // whitepaper handout carrying an ISAE 3000 label must both stay out of the
-// candidate set; only the reviewed July AOGB report may remain.
+// candidate set; only the reviewed August AOGB report may remain.
 const OFF_COHORT_LINKS = `
   <a href="https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/6a55fa1246d16025bd7f7d87_FDUSD%20Reserve%20accounts%20Report_JUN%202026%20(signed%20by%20Accountant).pdf">June 2026</a>
   <a href="https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/FDUSD-ISAE3000-Whitepaper-July-2026.pdf">Whitepaper</a>
@@ -40,7 +40,7 @@ const OFF_COHORT_LINKS = `
 function indexHtml(extra = ""): string {
   return `
     ${OFF_COHORT_LINKS}
-    <a href="${reviewed.reportUrl}">ISAE 3000 Attestation Report July 2026</a>
+    <a href="${reviewed.reportUrl}">ISAE 3000 Attestation Report August 2026</a>
     ${extra}
   `;
 }
@@ -79,19 +79,19 @@ describe("fdusd-independent-assurance (AOGB ISAE 3000 limited assurance)", () =>
     vi.restoreAllMocks();
   });
 
-  it("reconciles the July 2026 report across every native FDUSD chain", () => {
+  it("reconciles the August 2026 report across every native FDUSD chain", () => {
     expect(reviewed.assuranceTier).toBe("independent-assurance");
     expect(reviewed.attestor).toBe("AOGB CPA Limited");
-    expect(reviewed.reportAsOf).toBe("2026-07-31T21:00:00-04:00");
-    expect(reviewed.reportDate).toBe("2026-07-31");
+    expect(reviewed.reportAsOf).toBe("2026-08-31T21:00:00-04:00");
+    expect(reviewed.reportDate).toBe("2026-08-31");
     const reconciliation = reconcileIndependentAssuranceManifest(reviewed);
     expect(reconciliation).toMatchObject({
-      computedAssetTotal: "351643471.73",
-      liabilityTotal: "350156619.24",
+      computedAssetTotal: "336969677.04",
+      liabilityTotal: "335636418.35",
       reportedAssetDifference: "0",
       reportedLiabilityDifference: "0",
     });
-    expect(reconciliation.collateralizationRatio).toBeCloseTo(351643471.73 / 350156619.24, 12);
+    expect(reconciliation.collateralizationRatio).toBeCloseTo(336969677.04 / 335636418.35, 12);
     for (const chain of ["ethereum", "bsc", "sui", "solana", "arbitrum", "ton"]) {
       expect(
         reviewed.liabilities.some((row) => row.code === chain && Number(row.amount) > 0),
@@ -100,19 +100,19 @@ describe("fdusd-independent-assurance (AOGB ISAE 3000 limited assurance)", () =>
     }
     // The liability chain set sums to the reported total exactly; dropping any
     // chain (here TON) must fail the reconciliation.
-    expect(reconciliation.liabilityTotal).toBe("350156619.24");
+    expect(reconciliation.liabilityTotal).toBe("335636418.35");
     expect(() =>
       reconcileIndependentAssuranceManifest({
         ...reviewed,
         liabilities: reviewed.liabilities.filter((row) => row.code !== "ton"),
       }),
-    ).toThrow("liability total 350155531.59 does not match manifest 350156619.24");
+    ).toThrow("liability total 335635330.7 does not match manifest 335636418.35");
   });
 
   it("measures freshness from the examined instant, 25h past the 00:00Z misdate", () => {
     const timestamp = independentAssuranceSourceTimestamp(reviewed);
-    expect(timestamp).toBe(Date.parse("2026-08-01T01:00:00Z") / 1000);
-    expect(timestamp - Date.parse("2026-07-31T00:00:00Z") / 1000).toBe(25 * 3_600);
+    expect(timestamp).toBe(Date.parse("2026-09-01T01:00:00Z") / 1000);
+    expect(timestamp - Date.parse("2026-08-31T00:00:00Z") / 1000).toBe(25 * 3_600);
   });
 
   it("selects the reviewed report on the Webflow index and reaches the PDF byte gate", async () => {
@@ -126,7 +126,7 @@ describe("fdusd-independent-assurance (AOGB ISAE 3000 limited assurance)", () =>
     // Regression: the live index pairs "(Feb_2026)" and "(Sept_2025)" filenames
     // with "(July 2026)"-style names, and the fence reads an undated candidate as
     // proof the index changed shape, so a missed underscore separator errored the
-    // whole sync instead of publishing the reviewed July report.
+    // whole sync instead of publishing the reviewed August report.
     expect(FDUSD_INDEPENDENT_ASSURANCE_PROFILE.reportDateFromCandidate?.(FEB_2026_HREF, "Download")).toBe(
       "2026-02-28",
     );
@@ -152,7 +152,7 @@ describe("fdusd-independent-assurance (AOGB ISAE 3000 limited assurance)", () =>
 
   it("fails closed when a newer unreviewed ISAE 3000 report appears", async () => {
     installFetch(indexHtml(
-      '<a href="https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/cafe_ISAE3000%20-%20Attestation%20Report%20on%20Reserves%20Account%20August%202026.pdf">August 2026</a>',
+      '<a href="https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/cafe_ISAE3000%20-%20Attestation%20Report%20on%20Reserves%20Account%20September%202026.pdf">September 2026</a>',
     ));
     await expect(verifyIndex()).rejects.toThrow("newer unreviewed report");
   });
@@ -173,12 +173,12 @@ describe("fdusd-independent-assurance (AOGB ISAE 3000 limited assurance)", () =>
     });
     vi.mocked(fetchIndependentAssuranceReserves).mockResolvedValue({
       slices: [{
-        name: "U.S. Treasury Bills (maturities 11-Aug-26 through 22-Sep-26)",
+        name: "United States Treasury Bills (nine maturities, 1-Sep-26 through 20-Oct-26)",
         pct: 75.9,
         risk: "very-low",
         assetClass: "treasury-bill",
       }],
-      metadata: { sourceTimestamp: Date.parse("2026-08-01T01:00:00Z") / 1000, freshnessMode: "verified" },
+      metadata: { sourceTimestamp: Date.parse("2026-09-01T01:00:00Z") / 1000, freshnessMode: "verified" },
     });
     const result = await fetchFdusdIndependentAssuranceReserves(
       coin!, coin!.liveReservesConfig!, new AbortController().signal,
@@ -202,9 +202,9 @@ describe("fdusd-independent-assurance (AOGB ISAE 3000 limited assurance)", () =>
     expect(validateAdapterOutput(
       {
         slices: [{ name: "U.S. Treasury Bills", pct: 100, risk: "very-low" }],
-        metadata: { sourceTimestamp: Date.parse("2026-08-01T01:00:00Z") / 1000, freshnessMode: "verified" },
+        metadata: { sourceTimestamp: Date.parse("2026-09-01T01:00:00Z") / 1000, freshnessMode: "verified" },
       },
-      { adapter: adapter!, now: Date.parse("2026-08-01T01:00:00Z") / 1000 + 3_000_000 },
+      { adapter: adapter!, now: Date.parse("2026-09-01T01:00:00Z") / 1000 + 3_000_000 },
     ).valid).toBe(true);
   });
 });

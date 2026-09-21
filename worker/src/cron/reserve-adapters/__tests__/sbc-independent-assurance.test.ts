@@ -23,6 +23,7 @@ function indexFixture(): string {
     <a href="/assets/reports/SBC-Stable-Coin-Reserve-Attestation-Report-05-2026.pdf">May</a>
     <a href="/assets/reports/SBC-Stable-Coin-Reserve-Attestation-Report-06-2026.pdf">Jun</a>
     <a href="/assets/reports/SBC-Stable-Coin-Reserve-Attestation-Report-07-2026.pdf">Jul</a>
+    <a href="/assets/reports/SBC-Stable-Coin-Reserve-Attestation-Report-08-2026.pdf">Aug</a>
   </body></html>`;
 }
 
@@ -32,24 +33,24 @@ describe("sbc-independent-assurance (MCCPA SBC examination)", () => {
     vi.restoreAllMocks();
   });
 
-  it("reviews the July 31, 2026 MCCPA examination and preserves the examiner limitation", () => {
+  it("reviews the August 31, 2026 MCCPA examination and preserves the examiner limitation", () => {
     const manifest = getIndependentAssuranceManifest("SBC");
     expect(manifest.assuranceTier).toBe("independent-assurance");
     expect(manifest.attestor).toBe("Michael Coglianese, CPA, P.C. (MCCPA)");
     expect(manifest.conclusion).toBe("unmodified");
-    expect(manifest.reportAsOf).toBe("2026-07-31T23:50:00-04:00");
-    expect(manifest.reportIssuedAt).toBe("2026-08-11T23:59:00-05:00");
+    expect(manifest.reportAsOf).toBe("2026-08-31T23:50:00-04:00");
+    expect(manifest.reportIssuedAt).toBe("2026-09-15T23:59:00-05:00");
     expect(manifest.engagement).toContain("independently confirm the authenticity and accuracy");
     expect(manifest.assets).toEqual([
-      { code: "cash-and-cash-equivalents", label: expect.stringContaining("Cash and cash equivalents"), amount: "5972459" },
-      { code: "us-government-backed-debt", label: "U.S. government backed debt", amount: "751220" },
+      { code: "cash-and-cash-equivalents", label: expect.stringContaining("Cash and cash equivalents"), amount: "8141977" },
+      { code: "us-government-backed-debt", label: "U.S. government backed debt", amount: "575265" },
     ]);
     expect(manifest.liabilities).toEqual([
-      { code: "all-supported-blockchains", label: expect.stringContaining("SBC issued across all supported blockchains"), amount: "6723679" },
+      { code: "all-supported-blockchains", label: expect.stringContaining("SBC issued across all supported blockchains"), amount: "8717242" },
     ]);
     expect(reconcileIndependentAssuranceManifest(manifest)).toMatchObject({
-      computedAssetTotal: "6723679",
-      liabilityTotal: "6723679",
+      computedAssetTotal: "8717242",
+      liabilityTotal: "8717242",
       reportedAssetDifference: "0",
       reportedLiabilityDifference: "0",
       collateralizationRatio: 1,
@@ -70,7 +71,7 @@ describe("sbc-independent-assurance (MCCPA SBC examination)", () => {
 
   it("fails closed when a newer unreviewed report appears on the index", async () => {
     const html = indexFixture() +
-      '<a href="/assets/reports/SBC-Stable-Coin-Reserve-Attestation-Report-08-2026.pdf">Aug</a>';
+      '<a href="/assets/reports/SBC-Stable-Coin-Reserve-Attestation-Report-09-2026.pdf">Sep</a>';
     await expect(runSbc(html)).rejects.toThrow("newer unreviewed report");
   });
 

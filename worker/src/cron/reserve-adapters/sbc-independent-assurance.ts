@@ -6,9 +6,9 @@ import { formatValidIsoDate, lastDayOfMonth } from "./report-date";
 import type { AdapterContext, AdapterResult } from "./types";
 
 // Brale publishes MCCPA's monthly SBC reserve attestations on
-// brale.xyz/stablecoins/SBC as direct monthly PDF links (01-2026 … 07-2026).
-// Discovery reads those anchors; the reviewed July 2026 report must remain the
-// latest dated candidate or the adapter fails closed on a newer unreviewed
+// brale.xyz/stablecoins/SBC as direct monthly PDF links (01-2026 … 08-2026).
+// Discovery reads those anchors; the reviewed August 2026 report must remain
+// the latest dated candidate or the adapter fails closed on a newer unreviewed
 // report. The report's examiner limitation — MCCPA did not independently
 // confirm the authenticity of company-provided data — is carried in the
 // manifest engagement, not in this profile.

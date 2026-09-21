@@ -44,8 +44,11 @@ export const FDUSD_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = 
       liquidityHorizon: "immediate",
     },
   },
-  isReportCandidate: (href) =>
-    !/whitepaper/i.test(href) && /ISAE[-_ ]?3000/i.test(decodeURIComponent(href)),
+  isReportCandidate: (href) => {
+    const decodedHref = decodeURIComponent(href);
+    return !/whitepaper/i.test(decodedHref) &&
+      /(?:ISAE[-_ ]?3000|Attestation[ _]+Report[ _]+on[ _]+Reserves[ _]+Account)/i.test(decodedHref);
+  },
   reportDateFromCandidate: fdusdReportDate,
 };
 
