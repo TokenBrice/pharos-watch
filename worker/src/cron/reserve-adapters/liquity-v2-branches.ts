@@ -166,18 +166,17 @@ async function tryAdaptErc4626ShareEntry(
   if (totalAssetsRaw == null || totalSupplyRaw == null || totalSupplyRaw <= 0n) {
     return entry;
   }
-
   const assetBalanceRaw = computeErc4626AssetsFromShares(entry.balanceRaw, totalAssetsRaw, totalSupplyRaw);
   const assetDecimals = decodeUint8Word(decimalsRaw) ?? entry.branch.token.decimals;
   return {
     ...entry,
     balanceRaw: assetBalanceRaw,
+    balanceDecimals: assetDecimals,
     branch: {
       ...entry.branch,
-      token: {
-        ...entry.branch.token,
+      priceToken: entry.branch.priceToken ?? {
+        chain: entry.branch.token.chain,
         address: assetAddress,
-        decimals: assetDecimals,
       },
     },
   };
@@ -381,14 +380,14 @@ async function adaptErc4626ShareEntries(
     return {
       ...entry,
       balanceRaw: computeErc4626AssetsFromShares(entry.balanceRaw, totalAssetsRaw, totalSupplyRaw),
+      balanceDecimals: decodeUint8Word(
+        metadataRawByLabel.get(`branch:asset-decimals:${index}`),
+      ) ?? entry.branch.token.decimals,
       branch: {
         ...entry.branch,
-        token: {
-          ...entry.branch.token,
+        priceToken: entry.branch.priceToken ?? {
+          chain: entry.branch.token.chain,
           address: probed.assetAddress,
-          decimals: decodeUint8Word(
-            metadataRawByLabel.get(`branch:asset-decimals:${index}`),
-          ) ?? entry.branch.token.decimals,
         },
       },
     };
@@ -607,7 +606,7 @@ async function fetchLiquityV2MechanismMetrics(
       const priceUsd = decimalNumberFromBigInt(priceRaw, 18);
       const collateralUsd = valueUsdFromBigIntPrice(
         balance.balanceRaw ?? 0n,
-        balance.branch.token.decimals,
+        balance.balanceDecimals ?? balance.branch.token.decimals,
         priceUsd,
       );
       if (!Number.isFinite(collateralUsd) || collateralUsd < 0) {

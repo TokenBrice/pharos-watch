@@ -131,16 +131,26 @@ describe("adaptBtcfi", () => {
     expect(result.metadata?.unknownExposurePct).toBe(10);
   });
 
-  it("ignores unmatched, stable and zero deposits", () => {
-    const ignored = [
-      { token_handler_id: 99, deposit_value: "999" },
-      { token_handler_id: 1, deposit_value: "999" },
-      { token_handler_id: 0, deposit_value: "0" },
-    ];
+  it("retains unmatched positive deposits as explicitly unknown exposure", () => {
     const handlers = [{ id: 0, symbol: "WBTC", isStable: false }, { id: 1, symbol: "USD", isStable: true }];
-    expect(adaptBtcfi(ignored, handlers)).toEqual({ slices: [] });
-    expect(adaptBtcfi([...ignored, { token_handler_id: 0, deposit_value: "1" }], handlers).slices)
-      .toEqual([{ sourceKey: "btcfi:wbtc", name: "WBTC", pct: 100, risk: "medium" }]);
+    const result = adaptBtcfi(
+      [
+        { token_handler_id: 5, deposit_value: "20" },
+        { token_handler_id: 1, deposit_value: "999" },
+        { token_handler_id: 0, deposit_value: "80" },
+      ],
+      handlers,
+    );
+    expect(result.slices).toEqual([
+      { sourceKey: "btcfi:wbtc", name: "WBTC", pct: 80, risk: "medium" },
+      { sourceKey: "btcfi:unknown", name: "Unmapped BTC variants", pct: 20, risk: "high" },
+    ]);
+    expect(result.metadata?.unknownExposurePct).toBe(20);
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "unknown-handler",
+      message: "btcfi market row references unknown handler id: 5",
+      effect: "degraded",
+    }));
   });
 
   it.each([undefined, "", "NaN", "Infinity", "-1"])("rejects invalid collateral deposit %s", (deposit_value) => {

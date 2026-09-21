@@ -15,7 +15,7 @@ import { parseEvmAddressResult } from "./evm";
 import { decodeStrictBoolWord } from "./abi-decode";
 import { PAUSED_SELECTOR } from "../../lib/evm-selectors";
 import { wrapperAssetMeta } from "./wrapper-assets";
-import { buildBrowserHeaders, NEUTRAL_ADAPTER_HEADERS } from "./request";
+import { NEUTRAL_ADAPTER_HEADERS } from "./request";
 import { rethrowIfAborted } from "../../lib/abort";
 import { toErrorMessage } from "@shared/lib/error-utils";
 
@@ -36,10 +36,15 @@ export interface ReservoirReservesResponse {
 
 type ReservoirBucketKey = "usd1" | "pyusd" | "rlusd" | "ausd" | "gho" | "usdt" | "usdc" | "agua" | "rusd" | "prime" | "usdat";
 
-const RESERVOIR_BROWSER_HEADERS = buildBrowserHeaders(
-  "https://app.reservoir.xyz",
-  "https://app.reservoir.xyz/reserves",
-);
+const RESERVOIR_BROWSER_HEADERS: HeadersInit = {
+  Accept: "application/json, text/plain, */*",
+  Origin: "https://app.reservoir.xyz",
+  Referer: "https://app.reservoir.xyz/reserves",
+  "Accept-Language": "en-US,en;q=0.9",
+  "Sec-Fetch-Dest": "empty",
+  "Sec-Fetch-Mode": "cors",
+  "Sec-Fetch-Site": "same-origin",
+};
 
 // Stable buckets that provide broader balance-sheet liquidity context. This
 // aggregate is diagnostic only: the modeled rUSD PSM exit terminates in USDC,

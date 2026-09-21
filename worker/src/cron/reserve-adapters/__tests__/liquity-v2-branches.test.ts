@@ -621,8 +621,8 @@ describe("fetchLiquityV2BranchReserves Beraborrow branches", () => {
     const spec: AdapterNetworkSpec = {
       block: BLOCK,
       json: {
-        // Price lookups run on the ERC4626-adapted branch tokens, so the
-        // quotes are keyed by the underlying vault assets.
+        // Price lookups use the ERC4626 underlying as the adapted branch's
+        // price token while preserving the configured share token identity.
         [llamaUrl([
           { chain: wberaBranch.token.chain, address: WBERA_VAULT_ASSET },
           { chain: pumpBtcBranch.token.chain, address: PUMP_BTC_VAULT_ASSET },
@@ -748,7 +748,14 @@ describe("fetchLiquityV2BranchReserves Beraborrow branches", () => {
 describe("fetchLiquityV2BranchReserves Enosys branches", () => {
   const enosys = resolveAdapterCoin("liquity-v2-branches", "cdp-enosys");
   const config = enosys.config;
-  const params = config.params as { branches: Array<{ name: string; holder: string }> };
+  const params = config.params as {
+    branches: Array<{
+      name: string;
+      holder: string;
+      token: { chain: string; address: string; decimals: number };
+      risk: "high";
+    }>;
+  };
 
   it("keeps the reviewed Flare branch set and redemption-rate probe", () => {
     expect(config.adapter).toBe("liquity-v2-branches");
@@ -775,6 +782,65 @@ describe("fetchLiquityV2BranchReserves Enosys branches", () => {
       "0xE4Fc0543990128612d8112c90cdECc252165D255",
       "0x6988515B4e69Ab8AfA56E6079A1787F5A0a71Be7",
       "0x8fc9996d9B7c88F84e21fCCf46397cE534A2B17b",
+    ]);
+  });
+
+  it("keeps configured share-token source keys distinct while valuing ERC4626 shares in asset units", async () => {
+    const fxrpBranch = params.branches.find((entry) => entry.name === "FXRP")!;
+    const stXrpBranch = params.branches.find((entry) => entry.name === "stXRP")!;
+    const branches = [fxrpBranch, stXrpBranch];
+    const testConfig: LiveReservesConfig = {
+      ...config,
+      params: {
+        ...config.params,
+        branches,
+      },
+    };
+    const fxrpAddress = fxrpBranch.token.address.toLowerCase();
+    const stXrpAddress = stXrpBranch.token.address.toLowerCase();
+    const balances: Record<string, bigint> = {
+      [fxrpAddress]: 10n * 10n ** 6n,
+      [stXrpAddress]: 5n * 10n ** 6n,
+    };
+    const network = installAdapterNetwork({
+      block: BLOCK,
+      json: {
+        [llamaUrl([{ chain: "flare", address: fxrpAddress }])]: {
+          coins: {
+            [`flare:${fxrpAddress}`]: { price: 1, timestamp: NOW, confidence: 1 },
+          },
+        },
+      },
+      rpc: {
+        "balanceOf(address)": (call) => balances[call.contract] ?? 0n,
+        [DEBT_SELECTOR]: 100n * WAD,
+        [SHUTDOWN_SELECTOR]: false,
+        [REDEMPTION_RATE_SELECTOR]: 50n * 10n ** 14n,
+        "asset()": (call) => (call.contract === stXrpAddress ? fxrpAddress : null),
+        "totalAssets()": 20n * 10n ** 6n,
+        "totalSupply()": 10n * 10n ** 6n,
+        "decimals()": 6,
+      },
+    });
+    const signal = new AbortController().signal;
+    const result = await fetchLiquityV2BranchReserves(
+      { id: "cdp-enosys" } as StablecoinMeta,
+      testConfig,
+      signal,
+      { chainRpcs: network.chainRpcs, requestCache: new Map(), nowSec: NOW, abortSignal: signal },
+    );
+
+    expect(result.slices).toEqual([
+      expect.objectContaining({
+        name: "FXRP",
+        sourceKey: "liquity-v2-branches:flare:0xad552a648c74d49e10027ab8a618a3ad4901c5be",
+        pct: 50,
+      }),
+      expect.objectContaining({
+        name: "stXRP",
+        sourceKey: "liquity-v2-branches:flare:0x4c18ff3c89632c3dd62e796c0afa5c07c4c1b2b3",
+        pct: 50,
+      }),
     ]);
   });
 });
@@ -820,8 +886,8 @@ describe("fetchLiquityV2BranchReserves staged branch reads", () => {
     const network = installAdapterNetwork({
       block: BLOCK,
       json: {
-        // branch-0 is ERC4626-adapted to the underlying before pricing;
-        // branch-1 keeps its own token and falls back to the branch oracle.
+        // branch-0 uses the ERC4626 underlying as its price token;
+        // branch-1 keeps its configured token and falls back to the branch oracle.
         [llamaUrl([
           { chain: "ethereum", address: underlying },
           { chain: "ethereum", address: branches[1]!.token.address },

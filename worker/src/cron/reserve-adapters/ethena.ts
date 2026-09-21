@@ -48,7 +48,7 @@ type EthenaBucket = "stable" | "btc" | "eth" | "other";
 const ETHENA_ETH_ASSETS = new Set(["ETH", "stETH", "WBETH", "mETH", "LsETH"]);
 const ETHENA_BTC_ASSETS = new Set(["BTC"]);
 const ETHENA_STABLE_ASSETS = new Set(["Liquid Cash"]);
-const ETHENA_OTHER_ASSETS = new Set(["SOL", "XRP", "BNB", "HYPE"]);
+const ETHENA_OTHER_ASSETS = new Set(["SOL", "XRP", "BNB", "HYPE", "Gold"]);
 const ETHENA_BROWSER_HEADERS = buildBrowserHeaders(
   "https://app.ethena.fi",
   "https://app.ethena.fi/dashboards/transparency",

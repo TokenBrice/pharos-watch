@@ -51,8 +51,14 @@ export function adaptBtcfi(market: BtcfiMarketRow[], handlers: BtcfiHandlerRow[]
       throw new Error(`btcfi missing or invalid deposit_value for handler ${row.token_handler_id}`);
     }
     if (value === 0) continue;
+    // The market endpoint can lead the supported-handler registry (handler 5
+    // in the September 2026 payload). Keep that positive collateral in both
+    // the denominator and the explicit unknown bucket until the source
+    // publishes a handler identity; dropping it would overstate known shares.
     if (!handler) {
       unknownHandlerIds.add(row.token_handler_id);
+      unknownValue += value;
+      total += value;
       continue;
     }
 
