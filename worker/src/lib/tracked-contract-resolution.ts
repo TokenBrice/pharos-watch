@@ -1,13 +1,13 @@
 import {
   resolveTrackedContractConfigCore,
   type ResolveTrackedContractConfigOptions,
-} from "@shared/lib/tracked-stablecoin-utils";
+} from "@shared/lib/stablecoins/tracked-contract-selection";
 import {
   WORKER_TRACKED_META_BY_ID,
   type WorkerRuntimeStablecoinMeta,
 } from "@shared/lib/stablecoins/worker-runtime-registry";
 
-export type { ResolveTrackedContractConfigOptions } from "@shared/lib/tracked-stablecoin-utils";
+export type { ResolveTrackedContractConfigOptions } from "@shared/lib/stablecoins/tracked-contract-selection";
 
 export interface ResolvedTrackedContractConfig {
   stablecoin: WorkerRuntimeStablecoinMeta;
