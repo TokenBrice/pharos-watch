@@ -67,13 +67,19 @@ export interface DexDeploymentProviderCheck {
   observedPoolCount?: number;
   /** Timeout, 429, or other transport miss — do not persist as a hard provider outage. */
   retryable?: boolean;
+  /**
+   * Run-scoped pagination contiguity claim. Providers registered
+   * `paginated-exhaustive` must report it before the census can certify an
+   * empty scope; a capped or truncated scan reports `false`.
+   */
+  paginationComplete?: boolean;
 }
 
 export function makeDexDeploymentProviderCheck(
   target: Pick<ContractDeployment, "chain" | "address">,
   provider: DexDeploymentProviderCheck["provider"],
   status: DexDeploymentProviderCheck["status"],
-  extras?: Pick<DexDeploymentProviderCheck, "observedPoolCount" | "retryable">,
+  extras?: Pick<DexDeploymentProviderCheck, "observedPoolCount" | "retryable" | "paginationComplete">,
 ): DexDeploymentProviderCheck {
   return {
     chain: target.chain,
@@ -82,6 +88,7 @@ export function makeDexDeploymentProviderCheck(
     status,
     ...(extras?.observedPoolCount !== undefined ? { observedPoolCount: extras.observedPoolCount } : {}),
     ...(extras?.retryable === true ? { retryable: true } : {}),
+    ...(extras?.paginationComplete !== undefined ? { paginationComplete: extras.paginationComplete } : {}),
   };
 }
 

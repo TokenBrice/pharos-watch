@@ -99,7 +99,7 @@ export async function crawlGeckoTerminalPoolsStage({
         0,
         DISCOVERY_STAGE_TIMEOUT_MS.geckoTerminal,
       ),
-    onRequestResult: (token, status) => {
+    onRequestResult: (token, status, pagination) => {
       providerChecks.push({
         chain: token.ourChain,
         address:
@@ -107,6 +107,7 @@ export async function crawlGeckoTerminalPoolsStage({
         provider: "geckoterminal",
         status,
         ...(status === "failure" ? { retryable: true as const } : {}),
+        ...(pagination ? { paginationComplete: pagination.complete } : {}),
       });
     },
     parsePool: parseGtPool,

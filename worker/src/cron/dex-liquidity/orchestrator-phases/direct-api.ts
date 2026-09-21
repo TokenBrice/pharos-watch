@@ -412,11 +412,11 @@ export function buildDexDirectApiFetchers(params: {
       circuitKey: CIRCUIT_SOURCE.METEORA_API,
       normalizedProtocol: "meteora",
       supportedChains: ["solana"],
-      // `dlmm.datapi.meteora.ag/pools` ignores the `limit` query parameter and
-      // answers with its own 10-row pages while advertising `total: 123268`.
-      // The paginated helper stops as soon as a page is shorter than the
-      // requested size, so this provider returns ~10 of ~123k pools and cannot
-      // speak for the pools it never saw.
+      // `dlmm.datapi.meteora.ag/pools` honours `page_size` (the `limit` spelling
+      // it ignores produced 10-row pages) and reports `pages`/`current_page`,
+      // but the inventory is ~126k pools: the fetcher reads a bounded head of
+      // the volume-ordered list, so this provider still cannot speak for the
+      // pools it never saw.
       censusScope: "bounded-sample",
       fn: fetchMeteoraPools,
     },

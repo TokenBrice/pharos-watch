@@ -66,13 +66,30 @@ describe("DEX deployment outcomes", () => {
       stablecoinId: "test",
       deployments: [DEPLOYMENT],
       pools: [],
-      providerChecks: [{ ...DEPLOYMENT, provider: "coingecko", status: "success" }],
+      providerChecks: [
+        { ...DEPLOYMENT, provider: "coingecko", status: "success", paginationComplete: true },
+      ],
       nowSec: 100,
     });
     expect(empty[0]).toMatchObject({
       outcome: "verified_no_pools",
       providers: ["coingecko", "geckoterminal", "dexscreener", "curve"],
       reason: "A provider completed the direct-token query with no eligible pool",
+      observedPoolCount: 0,
+    });
+
+    const cappedEmpty = classifyDexDeploymentOutcomes({
+      stablecoinId: "test",
+      deployments: [DEPLOYMENT],
+      pools: [],
+      providerChecks: [
+        { ...DEPLOYMENT, provider: "coingecko", status: "success", paginationComplete: false },
+      ],
+      nowSec: 100,
+    });
+    expect(cappedEmpty[0]).toMatchObject({
+      outcome: "provider_inaccessible",
+      reason: "Provider census is not exhaustive for this chain",
       observedPoolCount: 0,
     });
 
@@ -272,7 +289,9 @@ describe("DEX deployment outcomes", () => {
       stablecoinId: "test",
       deployments: [solanaDeployment],
       pools: [{ ...poolFor("mintCase"), chain: "solana", poolId: "solana:PoolCase" }],
-      providerChecks: [{ ...solanaDeployment, provider: "coingecko", status: "success" }],
+      providerChecks: [
+        { ...solanaDeployment, provider: "coingecko", status: "success", paginationComplete: true },
+      ],
       nowSec: 100,
     });
     expect(caseDistinct[0]).toMatchObject({ outcome: "verified_no_pools", observedPoolCount: 0 });

@@ -38,8 +38,28 @@ describe("geckoterminal shared helpers", () => {
       strictUrl: true,
     });
 
-    await expect(fetchGtTokenPools(tokenAddress, "injective")).resolves.toEqual([]);
+    await expect(fetchGtTokenPools(tokenAddress, "injective")).resolves.toMatchObject({
+      rows: [],
+      complete: true,
+    });
     expect(fetchMock.getHistory().map((entry) => entry.url)).toEqual([expectedUrl]);
+  });
+
+  it("keeps first-page rows but reports an incomplete scan when a later page fails", async () => {
+    const firstPage = Array.from({ length: 20 }, (_, index) => ({
+      ...GT_POOL_FIXTURE,
+      id: `ethereum_0xpool${index}`,
+    }));
+    mockFetch([
+      { match: "/pools?page=1", body: { data: firstPage } },
+      { match: "/pools?page=2", body: { error: "rate limited" }, status: 429 },
+    ], { requireMatch: true });
+
+    const result = await fetchGtTokenPools("0xtoken", "eth");
+
+    expect(result.rows).toHaveLength(20);
+    expect(result.complete).toBe(false);
+    expect(result.failedAfterRows).toBe(20);
   });
 
   it("normalizes raw GT pools into crawl-helper shape", () => {

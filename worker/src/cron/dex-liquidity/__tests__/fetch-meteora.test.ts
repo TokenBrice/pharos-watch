@@ -63,6 +63,46 @@ describe("fetchMeteoraPools", () => {
     expect(result.pools[0].feeRate).toBeCloseTo(0.00012);
   });
 
+  it("requests the honoured page_size and stops on the provider's own last page", async () => {
+    const fetchMock = mockFetch([{
+      match: "dlmm.datapi.meteora.ag/pools",
+      body: {
+        total: 126_167,
+        pages: 1,
+        current_page: 1,
+        page_size: 500,
+        data: Array.from({ length: 500 }, (_, index) => validMeteoraPool(index)),
+      },
+    }], { requireMatch: true });
+
+    const result = await fetchMeteoraPools();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.getHistory()[0]?.url).toBe("https://dlmm.datapi.meteora.ag/pools?page=1&page_size=500");
+    expect(result.pools).toHaveLength(500);
+    expect(result.degraded).toBe(false);
+  });
+
+  it("marks a bounded head as a warning when more pages remain", async () => {
+    const page = (currentPage: number) => ({
+      body: {
+        pages: 127,
+        current_page: currentPage,
+        data: Array.from({ length: 500 }, (_, index) => validMeteoraPool(currentPage * 1000 + index)),
+      },
+    });
+    mockFetch([{
+      match: "dlmm.datapi.meteora.ag/pools",
+      outcomes: [page(1), page(2), page(3)],
+    }], { requireMatch: true });
+
+    const result = await fetchMeteoraPools();
+
+    expect(result.pools).toHaveLength(1500);
+    expect(result.errors).toEqual([]);
+    expect(result.warnings).toContain("bounded sample: stopped at page 3 with more pages advertised");
+  });
+
   it("returns a degraded result when Meteora returns invalid JSON", async () => {
     mockFetch([{
       match: "api.meteora.ag",

@@ -42,7 +42,14 @@ export interface DexDiscoveryProviderAdapter {
   providerId: DexDiscoveryProvider;
   lifecycle: "active" | "disabled";
   supports(chain: string, address?: string): boolean;
-  scope: "exhaustive" | "supplemental";
+  /**
+   * `exhaustive` — one completed response is the whole scope for this chain.
+   * `paginated-exhaustive` — the census is assembled page by page, so it may
+   * only certify an empty scope for a run that reported a positive
+   * pagination-completeness claim (R6); a capped or truncated scan is bounded.
+   * `supplemental` — never certifies an empty scope.
+   */
+  scope: "exhaustive" | "paginated-exhaustive" | "supplemental";
   requestCostMs: number;
   executionOrder: number;
   timeoutMs: number;
@@ -359,12 +366,13 @@ export function isDexCensusAttemptComplete(
 export const DEX_DISCOVERY_PROVIDER_REGISTRY: readonly DexDiscoveryProviderAdapter[] = [
   {
     providerId: "coingecko", lifecycle: "active", supports: (chain) => Boolean(CG_CHAIN_MAP[chain]),
-    scope: "exhaustive", requestCostMs: 1_450, executionOrder: 10, timeoutMs: 15_000, crawlerLeaf: "coingecko",
+    scope: "paginated-exhaustive", requestCostMs: 1_450, executionOrder: 10, timeoutMs: 15_000,
+    crawlerLeaf: "coingecko",
   },
   {
     providerId: "geckoterminal", lifecycle: "active",
     supports: (chain, address) => getGeckoTerminalDiscoveryNetwork(chain, address) != null,
-    scope: "exhaustive", requestCostMs: 2_800, executionOrder: 20, timeoutMs: 15_000,
+    scope: "paginated-exhaustive", requestCostMs: 2_800, executionOrder: 20, timeoutMs: 15_000,
     crawlerLeaf: "geckoterminal",
   },
   {
@@ -378,7 +386,8 @@ export const DEX_DISCOVERY_PROVIDER_REGISTRY: readonly DexDiscoveryProviderAdapt
   },
   {
     providerId: "horizon", lifecycle: "active", supports: isHorizonDiscoveryDeployment,
-    scope: "exhaustive", requestCostMs: 1_600, executionOrder: 50, timeoutMs: 15_000, crawlerLeaf: "horizon",
+    scope: "paginated-exhaustive", requestCostMs: 1_600, executionOrder: 50, timeoutMs: 15_000,
+    crawlerLeaf: "horizon",
   },
   {
     providerId: "aquarius", lifecycle: "active", supports: isAquariusSorobanDeployment,
@@ -451,9 +460,19 @@ export const DEX_COVERAGE_WAIVERS: readonly DexCoverageWaiver[] = EXCLUSIVE_UNSU
   }),
 );
 
+/** Providers whose single completed response certifies the scope on its own. */
 export const DEX_DISCOVERY_PROVIDER_EXHAUSTIVENESS: Readonly<Record<DexDiscoveryProvider, boolean>> =
   Object.fromEntries(
     DEX_DISCOVERY_PROVIDER_REGISTRY.map((provider) => [provider.providerId, provider.scope === "exhaustive"]),
+  ) as Record<DexDiscoveryProvider, boolean>;
+
+/** Providers that owe a run-scoped `paginationComplete` claim before certifying an empty scope. */
+export const DEX_DISCOVERY_PAGINATED_PROVIDERS: Readonly<Record<DexDiscoveryProvider, boolean>> =
+  Object.fromEntries(
+    DEX_DISCOVERY_PROVIDER_REGISTRY.map((provider) => [
+      provider.providerId,
+      provider.scope === "paginated-exhaustive",
+    ]),
   ) as Record<DexDiscoveryProvider, boolean>;
 
 export function getDexDiscoveryProviders(chain: string, address?: string): DexDiscoveryProvider[] {

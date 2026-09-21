@@ -171,7 +171,7 @@ export async function crawlCoinGeckoPoolsStage({
           { chain, address },
           "coingecko",
           classification.status,
-          { retryable: classification.retryable },
+          { retryable: classification.retryable, paginationComplete: result.complete },
         ),
         ...(classification.error ? { error: classification.error } : {}),
       });

@@ -59,11 +59,15 @@ export interface CgFetchOptions {
 export interface CgTokenPoolsResult {
   transportOk: boolean;
   schemaDegraded: boolean;
+  /** Run-scoped pagination contiguity: a page shorter than the page size was read. */
+  complete: boolean;
   pools: CgPool[];
 }
 
 const CG_ONCHAIN_LOOKUP_MISS_STATUSES = new Set([400, 404]);
 const CG_ONCHAIN_DEFAULT_TIMEOUT_MS = 15_000;
+/** Documented plan boundary: pages past this need a higher CoinGecko tier. */
+const CG_ONCHAIN_PLAN_MAX_PAGE = 10;
 
 function isStringOrNull(value: unknown): value is string | null {
   return typeof value === "string" || value === null;
@@ -144,7 +148,8 @@ export async function onchainRateLimit(requestCount: number, signal?: AbortSigna
 /**
  * Fetch top pools for a token by contract address.
  * GET /onchain/networks/{network}/tokens/{address}/pools
- * Returns up to 20 pools per page (paid plans get pagination beyond page 10).
+ * Returns up to 20 pools per page. `complete` is the run-scoped contiguity
+ * claim; a capped or failed scan never certifies the token's pool set.
  */
 export async function fetchCgTokenPools(
   network: string,
@@ -165,8 +170,11 @@ export async function fetchCgTokenPoolsWithStatus(
 ): Promise<CgTokenPoolsResult> {
   let transportOk = true;
   let schemaDegraded = false;
-  const rawPools = await fetchPagedTokenPools<unknown>({
-    maxPages: CG_ONCHAIN_TOKEN_POOLS_MAX_PAGES,
+  const paged = await fetchPagedTokenPools<unknown>({
+    // The documented plan boundary is page 10, but a live paid key still served
+    // rows on page 11: neither bound is an inventory end, so a scan that
+    // reaches one returns `complete: false`.
+    maxPages: Math.min(CG_ONCHAIN_TOKEN_POOLS_MAX_PAGES, CG_ONCHAIN_PLAN_MAX_PAGE),
     pageSize: CG_ONCHAIN_TOKEN_POOLS_PAGE_SIZE,
     fetchPage: async (page) => {
       const url = cgUrl(
@@ -183,10 +191,10 @@ export async function fetchCgTokenPoolsWithStatus(
       if (!res?.ok) {
         if (res && CG_ONCHAIN_LOOKUP_MISS_STATUSES.has(res.status)) {
           await cancelResponseBodyQuietly(res);
-        } else {
-          transportOk = false;
+          return [];
         }
-        return [];
+        transportOk = false;
+        return { pageFailed: true };
       }
       const json = await readCgOnchainJsonBody<{ data?: unknown }>(
         res,
@@ -195,17 +203,17 @@ export async function fetchCgTokenPoolsWithStatus(
       );
       if (!Array.isArray(json.data)) {
         schemaDegraded = true;
-        return [];
+        return { pageFailed: true };
       }
       return json.data;
     },
   });
-  const pools = rawPools.filter((pool): pool is CgPool => {
+  const pools = paged.rows.filter((pool): pool is CgPool => {
     const valid = isCgPool(pool);
     if (!valid) schemaDegraded = true;
     return valid;
   });
-  return { transportOk, schemaDegraded, pools };
+  return { transportOk, schemaDegraded, complete: paged.complete, pools };
 }
 
 /**

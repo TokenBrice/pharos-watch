@@ -2,7 +2,7 @@ import { canonicalExitRouteScopedId } from "@shared/lib/exit-route-identity";
 import { USER_AGENT } from "../../lib/constants";
 import { GT_API_BASE } from "../../lib/dex-cron-constants";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
-import { fetchPagedTokenPools } from "../../lib/paged-token-pools";
+import { fetchPagedTokenPools, type PagedTokenPoolsResult } from "../../lib/paged-token-pools";
 import type { ParsedPool } from "./crawl-helpers";
 import type { GtPool } from "./types";
 import { GT_TOKEN_POOLS_MAX_PAGES, GT_TOKEN_POOLS_PAGE_SIZE } from "./constants";
@@ -15,7 +15,7 @@ export function fetchGtTokenPools(
   signal?: AbortSignal,
   maxRetries = 0,
   timeoutMs = 15_000,
-): Promise<GtPool[]> {
+): Promise<PagedTokenPoolsResult<GtPool>> {
   return fetchPagedTokenPools({
     maxPages: GT_TOKEN_POOLS_MAX_PAGES,
     pageSize: GT_TOKEN_POOLS_PAGE_SIZE,
@@ -43,9 +43,10 @@ export function fetchGtTokenPools(
         const json = result.body;
         return Array.isArray(json.data) ? (json.data as GtPool[]) : [];
       } catch (error) {
-        // A later-page 429/timeout must not discard a completed page-1 200.
-        // Returning [] stops paging and keeps pools already accumulated.
-        if (page > 1) return [];
+        // A later-page 429/timeout must not discard a completed page-1 200, and
+        // must not read as "no more pages": the rows already read are kept and
+        // the scan is reported incomplete.
+        if (page > 1) return { pageFailed: true };
         throw error;
       }
     },

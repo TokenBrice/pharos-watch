@@ -43,7 +43,7 @@ describe("supplemental GeckoTerminal deployment discovery", () => {
     // The same repo chain id also carries an IBC denom. It must not be sent to
     // MANTRA EVM or admitted as a checked deployment.
     const mantraIbc = target("usdy-ondo-finance", "mantra");
-    const fetchPools = vi.fn<typeof fetchGtTokenPools>(async () => []);
+    const fetchPools = vi.fn<typeof fetchGtTokenPools>(async () => ({ rows: [], complete: true, cappedAtMaxPages: false, failedAfterRows: null }));
 
     const result = await crawlGeckoTerminalPoolsStage({
       coinTargets: [...targets, mantraIbc],
@@ -68,6 +68,7 @@ describe("supplemental GeckoTerminal deployment discovery", () => {
         address: deployment.address,
         provider: "geckoterminal",
         status: "success",
+        paginationComplete: true,
       })),
     );
     expect(result.providerChecks).not.toContainEqual(
@@ -121,7 +122,7 @@ describe("supplemental GeckoTerminal deployment discovery", () => {
   it("queries fixed Hedera and Injective identities while preserving census keys", async () => {
     const hchf = target("hchf-hedera-swiss-franc", "hedera");
     const bnusd = target("bnusd-balanced", "injective");
-    const fetchPools = vi.fn<typeof fetchGtTokenPools>(async () => []);
+    const fetchPools = vi.fn<typeof fetchGtTokenPools>(async () => ({ rows: [], complete: true, cappedAtMaxPages: false, failedAfterRows: null }));
 
     const result = await crawlGeckoTerminalPoolsStage({
       coinTargets: [hchf, bnusd],
@@ -147,6 +148,7 @@ describe("supplemental GeckoTerminal deployment discovery", () => {
         address: deployment.address,
         provider: "geckoterminal",
         status: "success",
+        paginationComplete: true,
       })),
     );
   });
@@ -196,7 +198,7 @@ describe("supplemental GeckoTerminal deployment discovery", () => {
       context: stageContext,
       dependencies: {
         crawlTokenPools,
-        fetchGtTokenPools: vi.fn<typeof fetchGtTokenPools>(async () => [providerPool]),
+        fetchGtTokenPools: vi.fn<typeof fetchGtTokenPools>(async () => ({ rows: [providerPool], complete: true, cappedAtMaxPages: false, failedAfterRows: null })),
         sleepWithSignal: vi.fn<typeof sleepWithSignal>(async () => {}),
       },
     });
@@ -264,7 +266,7 @@ describe("supplemental GeckoTerminal deployment discovery", () => {
         dex: { data: { id: "choice", type: "dex" } },
       },
     };
-    const fetchPools = vi.fn<typeof fetchGtTokenPools>(async () => [providerPool]);
+    const fetchPools = vi.fn<typeof fetchGtTokenPools>(async () => ({ rows: [providerPool], complete: true, cappedAtMaxPages: false, failedAfterRows: null }));
 
     const stage = await crawlGeckoTerminalPoolsStage({
       coinTargets: [deployment],

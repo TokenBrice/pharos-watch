@@ -51,7 +51,7 @@ describe("crawlTokenPools", () => {
       protocolTvlCaps: new Map(),
       newPools,
       priceObs,
-      fetchPools: async () => [{ id: "pool-a", tvlUsd: 100_000, price: 1 }],
+      fetchPools: async () => ({ rows: [{ id: "pool-a", tvlUsd: 100_000, price: 1 }], complete: true, cappedAtMaxPages: false, failedAfterRows: null }),
       parsePool: (pool) => ({
         dexId: "curve",
         poolAddress: pool.id,
@@ -85,7 +85,7 @@ describe("crawlTokenPools", () => {
       protocolTvlCaps: new Map([["curve", 800_000]]),
       newPools,
       priceObs,
-      fetchPools: async () => [{ id: "0xpool", tvlUsd: 900_000, price: 0.9973 }],
+      fetchPools: async () => ({ rows: [{ id: "0xpool", tvlUsd: 900_000, price: 0.9973 }], complete: true, cappedAtMaxPages: false, failedAfterRows: null }),
       parsePool: (pool) => ({
         dexId: "curve-plasma",
         poolAddress: pool.id,
@@ -138,7 +138,7 @@ describe("crawlTokenPools", () => {
       protocolTvlCaps: new Map([["testdex", 50_000]]),
       newPools,
       priceObs,
-      fetchPools: async () => [{ id: "pool-a", tvlUsd: 100_000, price: 1 }],
+      fetchPools: async () => ({ rows: [{ id: "pool-a", tvlUsd: 100_000, price: 1 }], complete: true, cappedAtMaxPages: false, failedAfterRows: null }),
       parsePool: (pool) => ({
         dexId: "testdex",
         poolAddress: pool.id,
@@ -184,7 +184,7 @@ describe("crawlTokenPools", () => {
       protocolTvlCaps: new Map(),
       newPools,
       priceObs,
-      fetchPools: async () => [{ id: "pool-a", tvlUsd: 2_000_000_000, price: 500 }],
+      fetchPools: async () => ({ rows: [{ id: "pool-a", tvlUsd: 2_000_000_000, price: 500 }], complete: true, cappedAtMaxPages: false, failedAfterRows: null }),
       parsePool: (pool) => ({
         dexId: "testdex",
         poolAddress: pool.id,
@@ -231,7 +231,7 @@ describe("crawlTokenPools", () => {
       protocolTvlCaps: new Map(),
       newPools,
       priceObs: new Map(),
-      fetchPools: async () => [{ id: "PoolCase", tvlUsd: 100_000, price: 1 }],
+      fetchPools: async () => ({ rows: [{ id: "PoolCase", tvlUsd: 100_000, price: 1 }], complete: true, cappedAtMaxPages: false, failedAfterRows: null }),
       parsePool: (pool) => ({
         dexId: "testdex",
         poolAddress: pool.id,

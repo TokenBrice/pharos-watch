@@ -7,6 +7,7 @@ import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { throwIfAborted } from "../../lib/abort";
 import type { DsPair, DsTrackedTokenPrice } from "../../lib/dexscreener";
 import type { PriceValidationReferences } from "../../lib/price-validation";
+import type { PagedTokenPoolsResult } from "../../lib/paged-token-pools";
 import type { DexPriceObs, GtNewPool } from "./types";
 import { buildPoolFingerprint, normalizeProtocol } from "./pool-normalization";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
@@ -60,8 +61,20 @@ export type CrawlTokenPoolsConfig<TRawPool, TNewPool extends GtNewPool> = {
     startMs: number;
     signal?: AbortSignal;
   }) => Promise<boolean>;
-  fetchPools: (tokenAddress: string, sourceChain: string, signal?: AbortSignal) => Promise<TRawPool[]>;
-  onRequestResult?: (token: CrawlToken, status: "success" | "failure") => void;
+  fetchPools: (
+    tokenAddress: string,
+    sourceChain: string,
+    signal?: AbortSignal,
+  ) => Promise<PagedTokenPoolsResult<TRawPool>>;
+  /**
+   * A crawl that could not read its provider's pages to a short page is not a
+   * success: the status is derived from the run's own completeness claim.
+   */
+  onRequestResult?: (
+    token: CrawlToken,
+    status: "success" | "degraded" | "failure",
+    pagination?: Pick<PagedTokenPoolsResult<TRawPool>, "complete" | "cappedAtMaxPages" | "failedAfterRows">,
+  ) => void;
   parsePool: (rawPool: TRawPool, chain: string) => ParsedPool | null;
   buildNewPool: (args: BuildNewPoolArgs<TRawPool>) => TNewPool;
 };
@@ -151,9 +164,9 @@ export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(
     requestCount++;
 
     try {
-      const pools = await config.fetchPools(token.address, token.sourceChain, config.signal);
-      config.onRequestResult?.(token, "success");
-      for (const rawPool of pools) {
+      const page = await config.fetchPools(token.address, token.sourceChain, config.signal);
+      config.onRequestResult?.(token, page.complete ? "success" : "degraded", page);
+      for (const rawPool of page.rows) {
         let parsed: ParsedPool | null = null;
         try {
           parsed = config.parsePool(rawPool, token.ourChain);
