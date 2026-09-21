@@ -141,7 +141,10 @@ describe("buildYieldDegradationReasons", () => {
       },
     });
 
-    expect(reasons).toEqual(expect.arrayContaining(["yield-supplemental:family-degraded:morpho-vault"]));
+    expect(reasons).toEqual(expect.arrayContaining([
+      "yield-supplemental:partial-family-cache",
+      "yield-supplemental:family-degraded:morpho-vault",
+    ]));
     // B15/W1d: a failed optional family is not a degraded run on its own (the
     // sync-yield-data rates-history contract); it travels in the run metadata
     // asserted in the `buildYieldSyncMetadata` block below.

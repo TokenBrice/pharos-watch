@@ -1331,7 +1331,18 @@ export async function runYieldCoverageAudit(
     "yield-rankings",
     await getCache(db, "yield-rankings"),
   );
-  const publishedRankingRows = rankingsCache.status === "ok" ? rankingsCache.data.rankings ?? [] : [];
+  if (rankingsCache.status !== "ok") {
+    const reason = `yield-rankings-cache-${rankingsCache.status}`;
+    await reportAuditProgress("complete", "Yield coverage audit deferred pending a readable rankings cache", 6, {
+      reason,
+    });
+    return createCronResult({
+      status: "degraded",
+      itemCount: 0,
+      metadata: { reason },
+    });
+  }
+  const publishedRankingRows = rankingsCache.data.rankings ?? [];
   const publishedYieldIds = new Set(
     publishedRankingRows
       .map((ranking) => ranking.id)

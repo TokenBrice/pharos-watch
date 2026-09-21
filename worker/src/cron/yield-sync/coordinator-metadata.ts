@@ -152,7 +152,9 @@ export function buildYieldDegradationReasons(params: {
   // still degrades the run.
   const supplementalLaneUnprovisioned =
     supplemental.fallbackMode === "missing-cache" && supplemental.sourceCount === 0;
-  if (!supplementalLaneUnprovisioned && (supplemental.mode !== "cache" || supplemental.sourceCount === 0)) {
+  if (supplemental.fallbackMode === "partial-family-cache") {
+    degradationReasons.push("yield-supplemental:partial-family-cache");
+  } else if (!supplementalLaneUnprovisioned && (supplemental.mode !== "cache" || supplemental.sourceCount === 0)) {
     degradationReasons.push(`yield-supplemental:${supplemental.fallbackMode ?? supplemental.mode}`);
   }
   for (const family of supplemental.degradedFamilies) {

@@ -11,7 +11,7 @@ import type {
   YieldSafetySnapshotMeta,
   YieldSourceInputMeta,
 } from "@shared/types/yield";
-import { YIELD_BENCHMARK_KEY_VALUES } from "@shared/types/yield";
+import { YIELD_BENCHMARK_KEY_VALUES, YieldRankingsResponseSchema } from "@shared/types/yield";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/yield-methodology";
 import { logWorkerEventArgs } from "../../lib/structured-log";
@@ -26,6 +26,7 @@ import { getComparisonAnchorStaleThresholdMs, getRankingStaleThresholdMs } from 
 import { buildHistoryKey, type EvaluatedYieldSource } from "./evaluation";
 import { compareCandidates } from "./evaluation-arbitration";
 import {
+  buildPublicDecisionLedger,
   buildSelectionRankBySourceKey,
   deriveRejectionReasonCode,
   deriveYieldSourceRole,
@@ -63,10 +64,40 @@ function finiteBaseValue(value: number | null | undefined, field: string, rowId:
   return null;
 }
 
-/** Required row fields have nowhere to degrade to; name them before they fail. */
-function requiredBaseValue(value: number, field: string, rowId: string): number {
-  if (!Number.isFinite(value)) logNonFiniteBaseValue(field, rowId, "row cannot validate");
-  return value;
+const YieldRankingSchema = YieldRankingsResponseSchema.shape.rankings.element;
+
+function hasFiniteCandidateValues(
+  candidate: EvaluatedYieldSource,
+  selected?: EvaluatedYieldSource,
+): boolean {
+  const rowId = `${candidate.id}:${candidate.sourceKey}`;
+  for (const [field, value] of [
+    ["currentApy", candidate.currentApy],
+    ["apy7d", candidate.apy7d],
+    ["apy30d", candidate.apy30d],
+  ] as const) {
+    if (Number.isFinite(value)) continue;
+    logNonFiniteBaseValue(field, rowId, "candidate rejected");
+    return false;
+  }
+  if (
+    selected &&
+    candidate.sourceKey !== selected.sourceKey &&
+    candidate.sourceTvlUsd != null &&
+    !Number.isFinite(candidate.sourceTvlUsd)
+  ) {
+    logNonFiniteBaseValue("sourceTvlUsd", rowId, "candidate rejected");
+    return false;
+  }
+  if (
+    selected &&
+    candidate.sourceKey !== selected.sourceKey &&
+    !Number.isFinite(candidate.apy30d - selected.apy30d)
+  ) {
+    logNonFiniteBaseValue("apy30dDelta", rowId, "candidate rejected");
+    return false;
+  }
+  return true;
 }
 
 function evaluatedSourceToRanking(
@@ -82,9 +113,9 @@ function evaluatedSourceToRanking(
     id: source.id,
     symbol: source.symbol,
     name: meta?.name ?? source.symbol,
-    currentApy: requiredBaseValue(source.currentApy, "currentApy", source.id),
-    apy7d: requiredBaseValue(source.apy7d, "apy7d", source.id),
-    apy30d: requiredBaseValue(source.apy30d, "apy30d", source.id),
+    currentApy: source.currentApy,
+    apy7d: source.apy7d,
+    apy30d: source.apy30d,
     apyBase: finiteBaseValue(source.apyBase, "apyBase", source.id),
     apyReward: finiteBaseValue(source.apyReward, "apyReward", source.id),
     yieldSource: source.yieldSource,
@@ -307,7 +338,7 @@ interface AttributableRankingRow {
   currentApy: number;
   pharosYieldScore: number | null;
   safetyScore: number | null;
-  rankChangeAttribution: YieldRankChangeAttribution | null | undefined;
+  rankChangeAttribution?: YieldRankChangeAttribution | null;
 }
 
 /**
@@ -411,14 +442,17 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
   // view froze the winning source key when it was built, so rankings cannot
   // mix a different best-source map with the frozen decision evidence.
   const bestRows = input.evaluatedSources
-    .filter((source) => input.publicationViews.get(source.id)?.selected.sourceKey === source.sourceKey)
+    .filter((source) =>
+      input.publicationViews.get(source.id)?.selected.sourceKey === source.sourceKey &&
+      hasFiniteCandidateValues(source)
+    )
     .sort((a, b) =>
       (b.pharosYieldScore ?? Number.NEGATIVE_INFINITY) -
       (a.pharosYieldScore ?? Number.NEGATIVE_INFINITY)
     );
-
   const publicationGenerationId = input.publication?.generationId ?? null;
-  const rankings = bestRows.map((source, index) => {
+  const rankings: YieldRanking[] = [];
+  for (const source of bestRows) {
     const key = buildHistoryKey(source.id, source.sourceKey);
     const provenance = input.rankingProvenanceByKey.get(key) ?? null;
     const view = input.publicationViews.get(source.id);
@@ -427,17 +461,31 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
         `yield-publication view missing for selected source ${source.id}:${source.sourceKey}`,
       );
     }
+    const candidates = view.candidates.filter((candidate) =>
+      hasFiniteCandidateValues(candidate, source)
+    );
+    const previousCandidateRetained =
+      view.previousBestSourceKey == null ||
+      candidates.some((candidate) => candidate.sourceKey === view.previousBestSourceKey);
+    const decisionLedger = buildPublicDecisionLedger({
+      selected: source,
+      candidates,
+      rejectedCount: candidates.filter((candidate) => candidate.rejected).length,
+      previousBestSourceKey: previousCandidateRetained ? view.previousBestSourceKey : null,
+      sourceSwitch: previousCandidateRetained ? view.sourceSwitch : false,
+      apy30dDeltaFromPrevious: previousCandidateRetained ? view.apy30dDeltaFromPrevious : null,
+    });
     const ranking = evaluatedSourceToRanking(
       source,
       provenance,
       publicationGenerationId,
-      index + 1,
-      view.decisionLedger,
+      rankings.length + 1,
+      decisionLedger,
     );
-    const altCandidates = buildUniqueAltCandidates(source, view.candidates);
+    const altCandidates = buildUniqueAltCandidates(source, candidates);
     ranking.altSources = buildAltSourcesForRanking({
       selected: source,
-      candidates: view.candidates,
+      candidates,
       rankingProvenanceByKey: input.rankingProvenanceByKey,
     });
     const alternateSummary = buildAlternateSummary(source, altCandidates);
@@ -461,10 +509,6 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
     const staleSource =
       (updatedAtMs > 0 && updatedAtMs < input.startSec * 1000 - staleThresholdMs) ||
       staleComparisonAnchor;
-    // A1: proxy selection is a documented per-row methodology decision, not a
-    // degraded feed, so only the entry's own meta classifies its freshness.
-    // A2: the entry's own observation age is part of that health — a fresh fetch
-    // carrying an old record must not publish as current market data.
     const benchmarkFreshness =
       source.benchmarkFreshness ??
       classifyYieldBenchmarkFreshness(source.benchmarkMeta, {
@@ -515,8 +559,18 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
       { isSelected: true },
     );
 
-    return ranking;
-  });
+    const validation = YieldRankingSchema.safeParse(ranking);
+    if (!validation.success) {
+      const paths = validation.error.issues.map((issue) => issue.path.join(".")).join(",");
+      logWorkerEventArgs(
+        "handler",
+        "warn",
+        `[sync-yield-data] Rejected invalid ranking ${source.id}:${source.sourceKey}: ${paths}`,
+      );
+      continue;
+    }
+    rankings.push(validation.data);
+  }
   attachRankChangeAttribution(rankings, input.previousPublication);
 
   const benchmarks = publishBenchmarkRecordBounds(input.riskFreeRateRegistry, input.startSec);

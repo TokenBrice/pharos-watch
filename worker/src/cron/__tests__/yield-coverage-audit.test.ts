@@ -148,6 +148,11 @@ describe("runYieldCoverageAudit", () => {
       methodologyVersion: null,
       publishedAt: null,
     } as never);
+    mockGetCache.mockImplementation(async (_db, key) =>
+      key === "yield-rankings"
+        ? { value: JSON.stringify({ rankings: [] }), updatedAt: 1_774_526_300 }
+        : null
+    );
 
     const result = await runYieldCoverageAudit(mockD1());
 
@@ -158,6 +163,36 @@ describe("runYieldCoverageAudit", () => {
     });
     expect(mockComputeSafetyScoresSnapshot).toHaveBeenCalledOnce();
     expect(mockComputeSafetyScoresSnapshot).toHaveBeenCalledWith(expect.anything());
+    expect(mockSetCache).not.toHaveBeenCalled();
+  });
+
+  it("defers when the published rankings cache is malformed", async () => {
+    mockLoadDlStablecoinPools.mockResolvedValue({
+      pools: [makeDlYieldPool({
+        pool: "new-usdc",
+        project: "new-lender",
+        symbol: "USDC",
+        tvlUsd: 12_000_000,
+        apy: 4,
+        apyBase: 4,
+        apyMean30d: 4,
+      })],
+      meta: { mode: "dex-cache", updatedAt: 1_774_526_300, ageSeconds: 100, poolCount: 1, fallbackMode: null },
+    });
+    mockGetCache.mockImplementation(async (_db, key) =>
+      key === "yield-rankings"
+        ? { value: "{", updatedAt: 1_774_526_300 }
+        : null
+    );
+
+    const result = await runYieldCoverageAudit(mockD1());
+
+    expect(result.status).toBe("degraded");
+    expect(result.itemCount).toBe(0);
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: "yield-rankings-cache-malformed",
+    });
+    expect(mockComputeSafetyScoresSnapshot).not.toHaveBeenCalled();
     expect(mockSetCache).not.toHaveBeenCalled();
   });
 
@@ -192,6 +227,11 @@ describe("runYieldCoverageAudit", () => {
       methodologyVersion: null,
       publishedAt: null,
     } as never);
+    mockGetCache.mockImplementation(async (_db, key) =>
+      key === "yield-rankings"
+        ? { value: JSON.stringify({ rankings: [] }), updatedAt: 1_774_526_300 }
+        : null
+    );
 
     const result = await runYieldCoverageAudit(mockD1());
 

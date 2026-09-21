@@ -250,6 +250,25 @@ describe("evaluateYieldSources", () => {
     }
   });
 
+  it("excludes non-finite history APY from trailing averages", () => {
+    const startSec = 1776729600;
+    const source = resolvedYield({ currentApy: 4.5 });
+    const result = evaluateYieldSources(baseEvaluationInput({
+      startSec,
+      sevenDaysAgoSec: startSec - 7 * 86400,
+      resolved: [{ id: "coin-a", symbol: "A", yield: source }],
+      sourceHistory: new Map([
+        [
+          buildHistoryKey("coin-a", source.sourceKey),
+          historyRows(source.sourceKey, 1, startSec, Number.NaN),
+        ],
+      ]),
+    }));
+
+    expect(result.evaluatedSources[0]?.apy7d).toBe(source.currentApy);
+    expect(result.evaluatedSources[0]?.apy30d).toBe(source.currentApy);
+  });
+
   it("explains default and explicitly not-rated safety inputs", () => {
     const missing = evaluateYieldSources(baseEvaluationInput({
       resolved: [{ id: "coin-a", symbol: "A", yield: resolvedYield({}) }],

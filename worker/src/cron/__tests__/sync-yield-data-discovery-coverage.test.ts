@@ -138,9 +138,12 @@ describe("syncYieldData", () => {
     const result = await fixtureSyncYieldData(db);
 
     expect(result.itemCount).toBe(1);
+    expect(result.status).toBe("degraded");
     const metadata = JSON.parse(result.metadata ?? "{}") as {
+      fallbackMode?: string | null;
       sourceCoverage?: { supplementalFallbackMode?: string | null };
     };
+    expect(metadata.fallbackMode).toContain("yield-supplemental:partial-family-cache");
     expect(metadata.sourceCoverage?.supplementalFallbackMode).toBe("partial-family-cache");
     const rows = getPublishedYieldRows(db);
     expect(

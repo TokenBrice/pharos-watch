@@ -388,6 +388,7 @@ function evaluateYieldSourceGroup(
     const samples: number[] = [];
     const apy7dSamples: number[] = [];
     for (const row of historyRowsForStats) {
+      if (!Number.isFinite(row.apy)) continue;
       samples.push(row.apy);
       if (row.recorded_at >= input.sevenDaysAgoSec) {
         apy7dSamples.push(row.apy);
