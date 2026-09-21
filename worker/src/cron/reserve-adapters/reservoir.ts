@@ -458,9 +458,6 @@ export async function fetchReservoirReserves(
             psmUnderlyingBalanceRaw: psm.capacityRaw,
             redemption: {
               capacityUsd: psmCapacityUsd,
-              ...(adapted.supplyUsd != null && adapted.supplyUsd > 0
-                ? { capacityRatioOfSupply: psmCapacityUsd / adapted.supplyUsd }
-                : {}),
               capacityKind: "live-direct" as const,
               freshnessKind: "same-run-onchain" as const,
               routeStatus: psm.paused ? ("paused" as const) : ("open" as const),

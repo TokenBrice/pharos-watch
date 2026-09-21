@@ -71,10 +71,10 @@ export function runReservoir(
   return runAdapter("reservoir", coinId, { network: reservoirNetwork(payload, options) });
 }
 
-export function reservoirSnapshot(result: AdapterResult, now: number) {
+export function reservoirSnapshot(result: AdapterResult, now: number, coinId = "wsrusd-reservoir") {
   if (!result.metadata) throw new Error("Reservoir fixture did not emit metadata");
   return {
-    stablecoinId: "wsrusd-reservoir", fetchedAt: now, source: "reservoir", metadata: result.metadata,
+    stablecoinId: coinId, fetchedAt: now, source: "reservoir", metadata: result.metadata,
     warningCount: 0, warnings: [], sourceModel: "dynamic-mix" as const,
     evidenceClass: "independent" as const, syncStatus: "ok" as const,
   };

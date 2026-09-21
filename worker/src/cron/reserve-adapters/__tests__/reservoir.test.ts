@@ -246,7 +246,6 @@ describe("adaptReservoirReserves", () => {
       psmUnderlyingBalanceRaw: "4000000",
       redemption: {
         capacityUsd: 4,
-        capacityRatioOfSupply: 4 / 95,
         capacityKind: "live-direct",
         freshnessKind: "same-run-onchain",
         routeStatus: "open",
@@ -257,16 +256,22 @@ describe("adaptReservoirReserves", () => {
     });
     expect(result.metadata?.redemption?.routeStatusReason).toContain("underlyingBalance()");
     expect(result.warnings ?? []).not.toContainEqual(expect.objectContaining({ code: "reservoir-psm-unreadable" }));
+    // Reservoir's balance sheet is protocol-wide, so the adapter has no
+    // per-coin supply to divide by; the ratio is derived downstream.
+    expect(result.metadata?.redemption).not.toHaveProperty("capacityRatioOfSupply");
   });
 
-  it("publishes the SavingModule redeemFee() as live fee telemetry without rounding it away", async () => {
-    // 134/1e6 is a 1.34 bps multiplicative exit fee; rounding to an integer bps
-    // at the adapter would understate it by a quarter.
-    const { result } = await runReservoir("srusd-reservoir", SAMPLE_RESPONSE, { redeemFee: 134n });
+  it.each(["srusd-reservoir", "wsrusd-reservoir"])(
+    "publishes the SavingModule redeemFee() as live fee telemetry for %s without rounding it away",
+    async (coinId) => {
+      // 134/1e6 is a 1.34 bps multiplicative exit fee; rounding to an integer bps
+      // at the adapter would understate it by a quarter.
+      const { result } = await runReservoir(coinId, SAMPLE_RESPONSE, { redeemFee: 134n });
 
-    expect(result.metadata).not.toHaveProperty("redemptionFeeBps");
-    expect(result.metadata?.redemption?.feeBps).toBeCloseTo(1.34, 10);
-  });
+      expect(result.metadata).not.toHaveProperty("redemptionFeeBps");
+      expect(result.metadata?.redemption?.feeBps).toBeCloseTo(1.34, 10);
+    },
+  );
 
   it("does not attribute the SavingModule exit fee to rUSD, which redeems straight at the PSM", async () => {
     const { result } = await runReservoir("rusd-reservoir", SAMPLE_RESPONSE, { redeemFee: 134n });
@@ -325,7 +330,7 @@ describe("adaptReservoirReserves", () => {
     expect(liveMetadata.capacityConfidence).toBe("live-direct");
     expect(liveMetadata.routeStatus).toBe("open");
     expect(liveMetadata.immediateRedeemableUsd).toBe(4);
-    expect(liveMetadata.immediateRedeemableRatio).toBe(4 / 95);
+    expect(liveMetadata.immediateRedeemableRatio).toBeNull();
 
     const config = getRedemptionBackstopConfig("wsrusd-reservoir");
     expect(config).toBeDefined();
@@ -352,6 +357,31 @@ describe("adaptReservoirReserves", () => {
     // that previously kept it out of V9's score-eligible set.
     expect(observation?.scoreEligible).toBe(true);
     expect(observation?.feeEvidence).toBeUndefined();
+  });
+
+  // Reservoir's `totalLiabilities` is the protocol-wide book, 150-770x each
+  // coin's own supply, so a ratio computed at the adapter is not that coin's
+  // ratio. Three distinct supplies pin the denominator actually used.
+  it.each([
+    ["rusd-reservoir", 80],
+    ["srusd-reservoir", 40],
+    ["wsrusd-reservoir", 10],
+  ] as const)("derives %s capacity ratio from its own supply", async (coinId, supplyUsd) => {
+    const now = 1_800_000_000;
+    const { result } = await runReservoir(coinId, SAMPLE_RESPONSE);
+
+    const entry = await buildRedemptionBackstopEntry(
+      {} as D1Database,
+      coinId,
+      getRedemptionBackstopConfig(coinId)!,
+      supplyUsd,
+      null,
+      now,
+      { reserveSnapshotMetadata: reservoirSnapshot(result, now, coinId) },
+    );
+
+    expect(entry.immediateCapacityUsd).toBe(4);
+    expect(entry.immediateCapacityRatio).toBe(4 / supplyUsd);
   });
 
   it("leaves the route cost-unbounded and score-ineligible when redeemFee() is unreadable", async () => {

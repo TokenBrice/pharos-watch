@@ -3,6 +3,7 @@ import { CHAIN_META } from "@shared/lib/chains";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { buildChainRpcs } from "../../lib/chain-registry";
+import { unverifiedFreshnessMetadata } from "../reserve-adapters/freshness";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { buildSharedSourceCacheKey, SYNC_ORDERED_CONFIGURED_COINS } from "../sync-live-reserves-shared";
 import {
@@ -335,6 +336,102 @@ describe("syncLiveReserves", () => {
       snapshots.map(() => [{ name: "Mock Farm", pct: 100, risk: "low" }]),
     );
   });
+
+  // Reservoir's fee contract is coin-dependent (only srUSD and wsrUSD exit
+  // through the SavingModule) while the shared-source cache key deliberately
+  // omits the coin id, so sharing one result across the three coins would
+  // publish whichever coin the queue reached first.
+  const RESERVOIR_COIN_IDS = ["rusd-reservoir", "srusd-reservoir", "wsrusd-reservoir"] as const;
+  const RESERVOIR_SAVING_MODULE_EXIT_IDS: Record<string, true> = {
+    "srusd-reservoir": true,
+    "wsrusd-reservoir": true,
+  };
+
+  interface ReserveCompositionRow {
+    stablecoin_id: string;
+    metadata: string;
+  }
+
+  async function runReservoirQueue(order: "canonical" | "reversed") {
+    vi.resetModules();
+    const shared = await import("../sync-live-reserves-shared");
+    const queue = [...shared.SYNC_ORDERED_CONFIGURED_COINS];
+    const slots = queue.flatMap((coin, index) =>
+      (RESERVOIR_COIN_IDS as readonly string[]).includes(coin.id) ? [index] : [],
+    );
+    const reservoirCoins = slots.map((index) => queue[index]!);
+    if (order === "reversed") reservoirCoins.reverse();
+    slots.forEach((index, position) => { queue[index] = reservoirCoins[position]!; });
+    vi.doMock("../sync-live-reserves-shared", () => ({
+      ...shared,
+      SYNC_ORDERED_CONFIGURED_COINS: queue,
+    }));
+
+    const adapterFetch = mockAdapterRegistry(async (coin, config) => {
+      if (config?.adapter !== "reservoir") {
+        return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
+      }
+      return {
+        slices: [{ name: "USDC positions", pct: 100, risk: "low" as const }],
+        metadata: {
+          ...unverifiedFreshnessMetadata("protocol-balance-sheet-api", "fixture balance sheet carries no timestamp"),
+          unknownExposurePct: 0,
+          supplyUsd: 95,
+          redemption: {
+            capacityUsd: 4,
+            capacityKind: "live-direct",
+            freshnessKind: "same-run-onchain",
+            routeStatus: "open",
+            routeStatusSource: "onchain",
+            holderEligibility: "any-holder",
+            settlementDelaySec: 0,
+            ...(RESERVOIR_SAVING_MODULE_EXIT_IDS[coin!.id] ? { feeBps: 1.34 } : {}),
+          },
+        },
+      };
+    });
+
+    try {
+      const { syncLiveReserves } = await import("../sync-live-reserves");
+      const { db, sqlite } = fixtures.open();
+      await syncLiveReserves(db, new AbortController().signal, {});
+      // Reading back through the persisted row proves the orchestrator wrote
+      // three distinct snapshots rather than one shared result.
+      const rows: ReserveCompositionRow[] = sqlite
+        .prepare("SELECT stablecoin_id, metadata FROM reserve_composition ORDER BY stablecoin_id")
+        .all();
+      const redemptionByCoin: Record<string, unknown> = {};
+      for (const row of rows) {
+        if (!(RESERVOIR_COIN_IDS as readonly string[]).includes(row.stablecoin_id)) continue;
+        const metadata: unknown = JSON.parse(row.metadata);
+        redemptionByCoin[row.stablecoin_id] =
+          metadata && typeof metadata === "object" && "redemption" in metadata ? metadata.redemption : undefined;
+      }
+      const reservoirCallCount = adapterFetch.mock.calls.filter(
+        ([, config]) => config?.adapter === "reservoir",
+      ).length;
+      return { redemptionByCoin, reservoirCallCount };
+    } finally {
+      vi.doUnmock("../sync-live-reserves-shared");
+      vi.resetModules();
+    }
+  }
+
+  it.each(["canonical", "reversed"] as const)(
+    "publishes each Reservoir coin's own redemption contract in %s queue order",
+    async (order) => {
+      const { redemptionByCoin, reservoirCallCount } = await runReservoirQueue(order);
+
+      expect(reservoirCallCount).toBe(RESERVOIR_COIN_IDS.length);
+      expect(Object.keys(redemptionByCoin).sort()).toEqual([...RESERVOIR_COIN_IDS]);
+      expect(redemptionByCoin["rusd-reservoir"]).not.toHaveProperty("feeBps");
+      expect(redemptionByCoin["srusd-reservoir"]).toMatchObject({ feeBps: 1.34 });
+      expect(redemptionByCoin["wsrusd-reservoir"]).toMatchObject({ feeBps: 1.34 });
+      for (const redemption of Object.values(redemptionByCoin)) {
+        expect(redemption).not.toHaveProperty("capacityRatioOfSupply");
+      }
+    },
+  );
 
   it("returns ok with warning metadata when the adapter yields warnings (warnings are metadata-only)", async () => {
     mockAdapterRegistry(

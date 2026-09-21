@@ -2660,7 +2660,10 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     freshnessLimitation: "The reserve balance-sheet API publishes no accounting timestamp; same-run PSM reads date redemption liquidity, not the reserve book.",
-    sharedSourceMode: "source-invariant",
+    // Not shareable: the adapter's fee contract is coin-dependent (only srUSD
+    // and wsrUSD exit through the SavingModule), while the shared-source cache
+    // key deliberately omits the coin id.
+    sharedSourceMode: "none",
     configValidation: CONFIG_PROTOCOL_V1,
     // Capacity comes from a same-run read of the terminal USDC PSM balance, not
     // from the balance-sheet payload; the adapter withholds the redemption
