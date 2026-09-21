@@ -188,10 +188,50 @@ export function emptyReserveCompositionOverview(configuredCoins = 0): ReserveCom
   };
 }
 
+const NonNegativeFiniteUsdSchema = z.number().finite().nonnegative();
+const UnitRatioSchema = z.number().finite().min(0).max(1);
+const BoundedFeeBpsSchema = z.number().finite().min(0).max(10_000);
+const NonNegativeFiniteSecondsSchema = z.number().finite().nonnegative();
+
+/**
+ * Numeric policy for redemption telemetry. One home: the response schema and
+ * the D1 row decoder both consume these schemas, matching what the producer
+ * validator enforces before a row is ever written, so a retained or corrupt
+ * row cannot publish a value the producer would have rejected.
+ */
+export const LIVE_RESERVE_REDEMPTION_TELEMETRY_NUMBER_FIELDS = {
+  capacityUsd: NonNegativeFiniteUsdSchema,
+  capacityRatioOfSupply: UnitRatioSchema,
+  sourceTimestamp: z.number().finite(),
+  blockNumber: z.number().finite(),
+  settlementDelaySec: NonNegativeFiniteSecondsSchema,
+  queueDepthUsd: NonNegativeFiniteUsdSchema,
+  dailyLimitUsd: NonNegativeFiniteUsdSchema,
+  minRedeemUsd: NonNegativeFiniteUsdSchema,
+  feeBps: BoundedFeeBpsSchema,
+} as const;
+
+export type LiveReserveRedemptionTelemetryNumberField =
+  keyof typeof LIVE_RESERVE_REDEMPTION_TELEMETRY_NUMBER_FIELDS;
+
+/** Parse one persisted telemetry field against the shared policy, or null when it must be dropped. */
+export function parseLiveReserveRedemptionTelemetryNumber(
+  field: LiveReserveRedemptionTelemetryNumberField,
+  value: unknown,
+): number | null {
+  return LIVE_RESERVE_REDEMPTION_TELEMETRY_NUMBER_FIELDS[field].safeParse(value).success
+    ? (value as number)
+    : null;
+}
+
+export const LIVE_RESERVE_REDEMPTION_TELEMETRY_NUMBER_FIELD_KEYS = Object.keys(
+  LIVE_RESERVE_REDEMPTION_TELEMETRY_NUMBER_FIELDS,
+) as LiveReserveRedemptionTelemetryNumberField[];
+
 export const LiveReserveRedemptionTelemetrySchema = z
   .object({
-    capacityUsd: z.number().finite().optional(),
-    capacityRatioOfSupply: z.number().finite().optional(),
+    capacityUsd: NonNegativeFiniteUsdSchema.optional(),
+    capacityRatioOfSupply: UnitRatioSchema.optional(),
     settlementBoundUnproven: z.literal(true).optional(),
     capacityKind: z.enum(LIVE_RESERVE_REDEMPTION_CAPACITY_KIND_VALUES).optional(),
     freshnessKind: z.enum(LIVE_RESERVE_REDEMPTION_FRESHNESS_KIND_VALUES).optional(),
@@ -202,11 +242,11 @@ export const LiveReserveRedemptionTelemetrySchema = z
     routeStatusReason: z.string().optional(),
     routeStatusReviewedAt: z.string().optional(),
     holderEligibility: RedemptionHolderEligibilitySchema.optional(),
-    settlementDelaySec: z.number().finite().optional(),
-    queueDepthUsd: z.number().finite().optional(),
-    dailyLimitUsd: z.number().finite().optional(),
-    minRedeemUsd: z.number().finite().optional(),
-    feeBps: z.number().finite().optional(),
+    settlementDelaySec: NonNegativeFiniteSecondsSchema.optional(),
+    queueDepthUsd: NonNegativeFiniteUsdSchema.optional(),
+    dailyLimitUsd: NonNegativeFiniteUsdSchema.optional(),
+    minRedeemUsd: NonNegativeFiniteUsdSchema.optional(),
+    feeBps: BoundedFeeBpsSchema.optional(),
     sourceUrls: z.array(HttpUrlSchema).optional(),
     outputValuation: LiveReserveRedemptionOutputValuationSchema.optional(),
   })

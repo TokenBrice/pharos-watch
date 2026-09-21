@@ -883,7 +883,10 @@ const BlacklistSummaryStatsSchema = z.object({
   perCoinFrozenAddressCount: z.record(z.string(), z.number()),
   perCoinFrozenTotal: z.record(z.string(), z.number()),
   perCoinDestroyedTotal: z.record(z.string(), z.number()),
-  perCoinQuarterlyEventTypes: z.record(z.enum(BLACKLIST_STABLECOINS), z.array(BlacklistQuarterlyEventTypePointSchema)),
+  // Key is `z.string()` like the sibling maps above: Zod 4 enum-keyed records
+  // are exhaustive, so a cache snapshot written before the next
+  // BLACKLIST_STABLECOINS addition would fail the whole summary parse.
+  perCoinQuarterlyEventTypes: z.record(z.string(), z.array(BlacklistQuarterlyEventTypePointSchema)),
   // Key is `z.string()` (not the BLACKLIST_STABLECOINS enum) so older cached
   // payloads — which either omit the field entirely or carry a partial record
   // — still parse. Optional with `{}` default covers the missing-field case;

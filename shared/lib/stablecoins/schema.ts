@@ -802,7 +802,7 @@ function refineMintAuthorityCatalog(stablecoins: StablecoinMeta[], ctx: z.Refine
 
     const parentId = inheritedFrom ?? stablecoin.variantOf;
     const parent = parentId != null ? catalogById.get(parentId) : undefined;
-    if (parent?.mintAuthority?.authorityPosture !== "none-resolved") {
+    if (hasCatalogContext && parent?.mintAuthority?.authorityPosture !== "none-resolved") {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "wrapped mintAuthority can use authorityPosture none-resolved only when the parent is none-resolved",

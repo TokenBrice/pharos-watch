@@ -795,6 +795,21 @@ describe("StablecoinMeta schema — mint authority", () => {
     ], "fixture")).toThrow(/parent is none-resolved/);
   });
 
+  it("keeps single-record validation lenient on parent lookups it cannot perform", () => {
+    const parsed = parseStablecoinMetaAssets([
+      makeCoin({
+        id: "fixture-wrapped-single",
+        mintAuthority: makeMintAuthority({
+          mintPath: "wrapped-or-variant-inherited",
+          authorityPosture: "none-resolved",
+          inheritedFrom: "parent-not-in-this-catalog",
+          controls: undefined,
+        }),
+      }),
+    ], "fixture");
+    expect(parsed[0]!.mintAuthority?.authorityPosture).toBe("none-resolved");
+  });
+
   it("accepts the last valid inheritance depth of three links", () => {
     const parsed = parseStablecoinMetaAssets(
       makeInheritanceChain(["depth-0", "depth-1", "depth-2"]), "fixture",

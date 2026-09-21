@@ -419,6 +419,7 @@ function laneExitRouteObservationsSchema(
 export const DexExitRouteObservationsSchema = laneExitRouteObservationsSchema(
   enforceDexExitRouteLane,
   "invalid DEX exit-route observation",
+  MAX_DEX_EXIT_ROUTE_OBSERVATIONS,
 );
 export const RedemptionExitRouteObservationsSchema = laneExitRouteObservationsSchema(
   enforceRedemptionExitRouteLane,

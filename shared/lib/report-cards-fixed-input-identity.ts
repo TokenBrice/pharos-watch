@@ -1,6 +1,6 @@
 import { z } from "zod";
 import {
-  DexExitRouteObservationSchema,
+  DexExitRouteObservationsSchema,
   ExitRouteObservationCoverageSchema,
   type ExitRouteObservation,
 } from "../types/market";
@@ -34,7 +34,7 @@ export const FixedDexLiquidityRowSchema = z
       })
       .nullable()
       .optional(),
-    exitRouteObservations: z.array(DexExitRouteObservationSchema).nullable().optional(),
+    exitRouteObservations: DexExitRouteObservationsSchema.nullable().optional(),
     exitRouteObservationCoverage: ExitRouteObservationCoverageSchema.optional(),
     methodologyVersion: z.string().min(1).optional(),
     updatedAt: z.number().int().nonnegative(),

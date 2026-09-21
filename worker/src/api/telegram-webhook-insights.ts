@@ -247,6 +247,7 @@ export async function buildTopMessage(db: D1Database, view: string): Promise<str
         peggedAssets: stablecoinsResult.payload.peggedAssets,
         safetyScores,
         pegRates,
+        updatedAt: stablecoinsResult.updatedAt,
       }).chains.slice(0, TOP_LIMIT);
       const message = formatTopRows(
         "Top chains by stablecoin supply",

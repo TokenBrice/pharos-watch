@@ -191,6 +191,7 @@ export const handleChains = async (db: D1Database, url?: URL): Promise<Response>
     peggedAssets: activePeggedAssets,
     safetyScores,
     pegRates,
+    updatedAt: stablecoinsResult.updatedAt,
     ...(detailChainId != null ? { detailChainId } : {}),
   });
 
@@ -199,7 +200,6 @@ export const handleChains = async (db: D1Database, url?: URL): Promise<Response>
   return jsonResponseWithHeaders(
     {
       ...response,
-      updatedAt: stablecoinsResult.updatedAt,
       safetyScoreIdentity,
       _meta: freshness.meta,
     },

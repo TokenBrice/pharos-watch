@@ -42,6 +42,12 @@ export interface ChainAggregatorInput {
   safetyScores: Record<string, number>;
   pegRates: Record<string, number>;
   /**
+   * Generation timestamp of the payload being aggregated. The aggregator is
+   * pure: it never stamps wall-clock time it did not observe, so every caller
+   * names the source feed's own timestamp.
+   */
+  updatedAt: number;
+  /**
    * When set, the response also carries `chainDetail` with the full coin rows
    * for that chain (names, per-coin deltas, chain-local shares). Absent input
    * keeps the leaderboard payload byte-identical.
@@ -117,24 +123,6 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
     }
 
     const canonicalChainCirculating = canonicalizeChainCirculating(asset.chainCirculating);
-    const pairedChainCirculating = new Map<string, { current: number; prevMonth: number }>();
-    for (const [rawChainId, data] of Object.entries(asset.chainCirculating ?? {})) {
-      if (!data || typeof data !== "object") continue;
-      const chainId = (typeof data.chainId === "string" ? resolveChainId(data.chainId) : null)
-        ?? resolveChainId(rawChainId);
-      const prevMonth = data.circulatingPrevMonth;
-      if (!chainId || typeof prevMonth !== "number" || !Number.isFinite(prevMonth) || prevMonth < 0) continue;
-      const current = typeof data.current === "number" && Number.isFinite(data.current) && data.current >= 0
-        ? data.current
-        : 0;
-      const existing = pairedChainCirculating.get(chainId);
-      if (existing) {
-        existing.current += current;
-        existing.prevMonth += prevMonth;
-      } else {
-        pairedChainCirculating.set(chainId, { current, prevMonth });
-      }
-    }
 
     for (const [chainId, data] of canonicalChainCirculating) {
       const current = data.current;
@@ -155,10 +143,9 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
         acc.prevWeek += data.circulatingPrevWeek;
         acc.has7dHistory = true;
       }
-      const paired = pairedChainCirculating.get(chainId);
-      if (paired) {
-        acc.pairedCurrent30d += paired.current;
-        acc.pairedPrevMonth += paired.prevMonth;
+      if (data.circulatingPrevMonth != null) {
+        acc.pairedCurrent30d += current;
+        acc.pairedPrevMonth += data.circulatingPrevMonth;
         acc.has30dHistory = true;
       }
 
@@ -353,7 +340,7 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
       ? (relativeChangeRatio(globalPairedCurrent30dUsd, globalPrevMonthUsd) ?? ZERO_RATIO)
       : null,
     ...(chainDetail ? { chainDetail } : {}),
-    updatedAt: Math.floor(Date.now() / 1000),
+    updatedAt: input.updatedAt,
     healthMethodologyVersion: HEALTH_METHODOLOGY_VERSION,
   };
 }

@@ -600,6 +600,20 @@ describe("P4 DEX exit route observations", () => {
     }
   });
 
+  it("quarantines a schema-invalid profile instead of aborting the whole assembly", () => {
+    const observedAt = 1_752_560_000;
+    const profile = makeMeasuredProfile(observedAt) as unknown as MutableMeasuredProfile;
+    const pool = retainedMeasuredPool(profile as never);
+    const context = { stablecoinId: "usdc-circle", observedAt, pool };
+    delete (profile as Record<string, unknown>).tokenIn;
+
+    expect(() => validateMeasuredExecutionProfile(profile as never, context)).not.toThrow();
+    expect(validateMeasuredExecutionProfile(profile as never, context)).toEqual(["invalid-profile-schema"]);
+    const result = buildP4DexExitRouteObservations({ ...context, retainedPools: [pool] });
+    expect(result.observations).toEqual([]);
+    expect(result.coverage.unsupportedReasons["invalidMeasuredExecution:invalid-profile-schema"]).toBe(1);
+  });
+
   it.each([
     ["history-before-selected-quote", (profile: DexMeasuredExecutionPublicProfile) => {
       profile.observationHistory!.observationWindowEndedAt = profile.quotedAt - 1;
@@ -613,7 +627,13 @@ describe("P4 DEX exit route observations", () => {
       point.completionRatio = point.executableUsd / point.requestedNotionalUsd;
     }],
     ["invalid-conservative-history", (profile: DexMeasuredExecutionPublicProfile) => {
-      profile.capacityCurve = profile.capacityCurve.slice(1);
+      // Halve every admitted capacity consistently so the row stays
+      // schema-valid and only the semantic history check can catch it.
+      profile.capacityCurve = profile.capacityCurve.map((point) => ({
+        ...point,
+        executableUsd: point.executableUsd / 2,
+        completionRatio: point.completionRatio / 2,
+      }));
     }],
   ])("rejects adversarial measured history: %s (%#)", (reason, mutate) => {
     const observedAt = 1_752_560_000;
@@ -985,9 +1005,6 @@ describe("P4 DEX exit route observations", () => {
 
     expect(result.observations).toEqual([]);
     expect(result.coverage.unsupportedReasons["invalidMeasuredExecution:invalid-profile-schema"]).toBe(1);
-    expect(
-      result.coverage.unsupportedReasons["invalidMeasuredExecution:physical-pool-provenance-mismatch"],
-    ).toBe(1);
   });
 
   it("admits reviewed DUSD NG get_dy evidence as score-eligible measured exit coverage", () => {
@@ -2459,7 +2476,7 @@ describe("P4 DEX exit route observations", () => {
 
   it.each([
     ["hook", (profile: MutableMeasuredProfile) => { profile.hookAddress = "0x1111111111111111111111111111111111111111"; }],
-    ["token set", (profile: MutableMeasuredProfile) => { profile.poolTokenAddresses = [profile.poolTokenAddresses[0]]; }],
+    ["token set", (profile: MutableMeasuredProfile) => { profile.poolTokenAddresses[1] = profile.poolTokenAddresses[0]!; }],
     ["PoolManager address", (profile: MutableMeasuredProfile) => { profile.uniswapV4PoolProvenance.poolManagerAddress = "0x1111111111111111111111111111111111111111"; }],
     ["PoolManager hash", (profile: MutableMeasuredProfile) => { profile.uniswapV4PoolProvenance.poolManagerCodeHash = `0x${"11".repeat(32)}`; }],
     ["StateView address", (profile: MutableMeasuredProfile) => { profile.uniswapV4PoolProvenance.stateViewAddress = "0x1111111111111111111111111111111111111111"; }],

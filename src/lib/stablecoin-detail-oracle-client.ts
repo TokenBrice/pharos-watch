@@ -172,7 +172,10 @@ export function projectOracleRiskClientSummary(coin: StablecoinMeta): OracleRisk
       note: parameter.note ?? null,
     })),
     liquidationMechanism: branch.liquidationMechanism ?? null,
-    liquidationDelayLabel: formatOracleDurationSec(branch.liquidationDelaySec),
+    liquidationDelayLabel:
+      branch.liquidationState === "uncallable"
+        ? "uncallable (reviewed)"
+        : formatOracleDurationSec(branch.liquidationDelaySec),
     backstop: branch.backstop ?? null,
     fallbackBehavior: branch.fallbackBehavior ?? null,
     shutdownOrBadDebtBehavior: branch.shutdownOrBadDebtBehavior ?? null,

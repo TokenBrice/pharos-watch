@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import {
   DexExitEvidenceKindSchema,
-  DexExitRouteObservationSchema,
+  DexExitRouteObservationsSchema,
   MAX_DEX_EXIT_ROUTE_OBSERVATIONS,
   type DexExitEvidenceKind,
 } from "@shared/types/market";
@@ -79,9 +79,7 @@ function parsePublishedRouteEvidence(row: PublishedRouteRow): RouteEvidence[] {
   }
   const rawObservations = (parsed.value as { exitRouteObservations?: unknown }).exitRouteObservations;
   if (rawObservations == null) return [];
-  const observations = DexExitRouteObservationSchema.array()
-    .max(MAX_DEX_EXIT_ROUTE_OBSERVATIONS)
-    .safeParse(rawObservations);
+  const observations = DexExitRouteObservationsSchema.safeParse(rawObservations);
   if (!observations.success) {
     throw new Error(`Invalid DEX exit-route observations for turnover watchdog (${row.stablecoin_id})`);
   }

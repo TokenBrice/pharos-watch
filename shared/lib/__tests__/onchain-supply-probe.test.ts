@@ -442,6 +442,40 @@ it.each(["mre7yield-midas", "cusdo-openeden", "syzusd-yuzu"])("covers every revi
   }
 });
 
+it("fails a canonical roster closed on an unselected registered deployment unless a residual policy records the remainder", () => {
+  const unselected = { chain: "polygon", address: "0x0000000000000000000000000000000000000001", decimals: 6 };
+  const susds = TRACKED_META_BY_ID.get("susds-sky")!;
+  expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS["susds-sky"]).toBe("ethereum");
+  expect(CURATED_AGGREGATE_ESCROW_RESIDUALS["susds-sky"]).toBeUndefined();
+  expect(selectCuratedAggregateOnchainSupplyProbeContracts({
+    ...susds,
+    contracts: [...susds.contracts!, unselected],
+  })).toBeNull();
+
+  // The explicit unattributed-residual policy is what keeps a canonical roster
+  // with unprobed registered deployments publishable.
+  const susde = TRACKED_META_BY_ID.get("susde-ethena")!;
+  expect(CURATED_AGGREGATE_ESCROW_RESIDUALS["susde-ethena"]).toBeDefined();
+  expect(selectCuratedAggregateOnchainSupplyProbeContracts({
+    ...susde,
+    contracts: [...susde.contracts!, unselected],
+  })).not.toBeNull();
+});
+
+it("keeps every tracked curated roster either complete or explicitly excused across the whole registry", () => {
+  for (const meta of TRACKED_META_BY_ID.values()) {
+    const selected = selectCuratedAggregateOnchainSupplyProbeContracts(meta);
+    if (selected == null) continue;
+    const unselectedCount = meta.contracts?.filter(
+      (contract) => !selected.some((entry) => entry.contract === contract),
+    ).length ?? 0;
+    expect(
+      unselectedCount === 0 || CURATED_AGGREGATE_ESCROW_RESIDUALS[meta.id] != null,
+      `${meta.id} publishes a curated roster with ${unselectedCount} unselected registered deployments and no residual policy`,
+    ).toBe(true);
+  }
+});
+
 it("does not publish cNGN destination float as a global on-chain total without Bantu accounting", () => {
   expect(selectCuratedAggregateOnchainSupplyProbeContracts(TRACKED_META_BY_ID.get("cngn-compliant-naira")!)).toBeNull();
 });

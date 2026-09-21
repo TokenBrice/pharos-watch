@@ -749,7 +749,12 @@ async function handleChainOg(db: D1Database, chainId: string): Promise<Response>
     }
   }
 
-  const aggregated = aggregateChains({ peggedAssets: activePeggedAssets, safetyScores, pegRates });
+  const aggregated = aggregateChains({
+    peggedAssets: activePeggedAssets,
+    safetyScores,
+    pegRates,
+    updatedAt: stablecoinsResult.updatedAt,
+  });
   const chain = aggregated.chains.find((entry) => entry.id === chainId);
 
   // Every CHAIN_META chain page bakes this og:image URL, but aggregateChains()

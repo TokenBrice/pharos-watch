@@ -1,3 +1,4 @@
+import { DAY_SECONDS } from "./time-constants";
 import { bucketUnixSecondsToUtcDay } from "./time-buckets";
 
 export interface PsiComponentsLike {
@@ -47,23 +48,37 @@ function getPsiTodayMidnight(computedAt: number): number {
   return bucketUnixSecondsToUtcDay(computedAt);
 }
 
-function getCompletedPsiHistory<T extends PsiHistoryPointLike>(
+function completedPsiHistoryByDate<T extends PsiHistoryPointLike>(
   history: T[],
   currentComputedAt: number,
-): T[] {
+): Map<number, T> {
   const todayMidnight = getPsiTodayMidnight(currentComputedAt);
-  return history.filter((point) => point.date < todayMidnight);
+  const byDate = new Map<number, T>();
+  for (const point of history) {
+    if (point.date >= todayMidnight || byDate.has(point.date)) continue;
+    byDate.set(point.date, point);
+  }
+  return byDate;
 }
 
+/**
+ * Band streak for the current (in-progress) row plus consecutive completed
+ * calendar days. Counting rows instead of days lets one skipped snapshot
+ * shift "yesterday" onto an older row and inflate the streak across the gap;
+ * resolving each step by its exact UTC date stops at the first missing day.
+ */
 export function getPsiBandStreak<T extends PsiHistoryPointLike>(
   history: T[],
   currentComputedAt: number,
   band: string,
 ): number {
+  const completedByDate = completedPsiHistoryByDate(history, currentComputedAt);
+  const todayMidnight = getPsiTodayMidnight(currentComputedAt);
   let streak = 1;
-  for (const point of getCompletedPsiHistory(history, currentComputedAt)) {
-    if (point.band !== band) break;
-    streak++;
+  for (let daysAgo = 1; ; daysAgo += 1) {
+    const point = completedByDate.get(todayMidnight - daysAgo * DAY_SECONDS);
+    if (!point || point.band !== band) break;
+    streak += 1;
   }
   return streak;
 }
@@ -74,8 +89,8 @@ export function getPsiCompletedDayPoint<T extends PsiHistoryPointLike>(
   daysAgo: number,
 ): T | null {
   if (daysAgo < 1) return null;
-  const completed = getCompletedPsiHistory(history, currentComputedAt);
-  return completed[daysAgo - 1] ?? null;
+  return completedPsiHistoryByDate(history, currentComputedAt)
+    .get(getPsiTodayMidnight(currentComputedAt) - daysAgo * DAY_SECONDS) ?? null;
 }
 
 export function upsertPsiHistoryPoint<T extends PsiHistoryPointLike>(

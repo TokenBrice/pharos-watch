@@ -31,17 +31,23 @@ export interface ResolvedTrackedContractConfig {
   decimals: number;
 }
 
-function findTrackedContract(
-  stablecoinOrId: StablecoinMeta | string,
+/** Minimal deployment shape the selection core needs from either runtime registry. */
+export interface TrackedContractDeploymentLike {
+  chain: string;
+  address: string;
+  decimals: number;
+}
+
+export interface TrackedStablecoinDeploymentsLike<TDeployment extends TrackedContractDeploymentLike> {
+  contracts?: readonly TDeployment[];
+  tradedContracts?: readonly TDeployment[];
+}
+
+function findTrackedContract<TDeployment extends TrackedContractDeploymentLike>(
+  stablecoin: TrackedStablecoinDeploymentsLike<TDeployment>,
   chainId: string,
   options?: FindTrackedContractOptions,
-): ContractDeployment | undefined {
-  const stablecoin =
-    typeof stablecoinOrId === "string"
-      ? TRACKED_META_BY_ID.get(stablecoinOrId)
-      : stablecoinOrId;
-  if (!stablecoin) return undefined;
-
+): TDeployment | undefined {
   const source = options?.source ?? "primary";
   if (source !== "traded") {
     const contract = stablecoin.contracts?.find(
@@ -56,14 +62,17 @@ function findTrackedContract(
   );
 }
 
-export function resolveTrackedContractConfig(
-  stablecoinId: string,
+/**
+ * Selection and decimal resolution shared by both runtimes; only the failure
+ * policy (null vs throw) and the registry differ per caller. Contract address
+ * and decimals drive event-unit interpretation, so the two runtimes must not
+ * drift.
+ */
+export function resolveTrackedContractConfigCore<TDeployment extends TrackedContractDeploymentLike>(
+  stablecoin: TrackedStablecoinDeploymentsLike<TDeployment>,
   chainId: string,
   options?: ResolveTrackedContractConfigOptions,
-): ResolvedTrackedContractConfig | null {
-  const stablecoin = TRACKED_META_BY_ID.get(stablecoinId);
-  if (!stablecoin) return null;
-
+): { contractAddress: string; decimals: number } | null {
   const resolvedContract = options?.addressOverride
     ? {
         address: options.addressOverride,
@@ -80,8 +89,20 @@ export function resolveTrackedContractConfig(
   if (!resolvedContract) return null;
 
   return {
-    stablecoin,
     contractAddress: resolvedContract.address,
     decimals: options?.decimalsOverride ?? resolvedContract.decimals,
   };
 }
+
+export function resolveTrackedContractConfig(
+  stablecoinId: string,
+  chainId: string,
+  options?: ResolveTrackedContractConfigOptions,
+): ResolvedTrackedContractConfig | null {
+  const stablecoin = TRACKED_META_BY_ID.get(stablecoinId);
+  if (!stablecoin) return null;
+
+  const resolved = resolveTrackedContractConfigCore(stablecoin, chainId, options);
+  return resolved ? { stablecoin, ...resolved } : null;
+}
+

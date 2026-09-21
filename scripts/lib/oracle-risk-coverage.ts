@@ -97,6 +97,10 @@ const REQUIRED_BRANCH_EVIDENCE_FIELDS = [
 
 function missingBranchEvidenceFields(branch: NonNullable<OracleRiskProfile["branches"]>[number]): string[] {
   return REQUIRED_BRANCH_EVIDENCE_FIELDS.filter((field) => {
+    // A reviewed-uncallable branch has no delay to report; `liquidationState`
+    // is the evidence for this field, and the schema forbids pairing it with
+    // a `liquidationDelaySec` value.
+    if (field === "liquidationDelaySec" && branch.liquidationState === "uncallable") return false;
     const value = branch[field];
     return value == null || (Array.isArray(value) && value.length === 0);
   });

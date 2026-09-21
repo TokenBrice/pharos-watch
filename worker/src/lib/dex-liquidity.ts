@@ -1,7 +1,6 @@
 import { logWorkerEventArgs } from "./structured-log";
 import {
-  DexExitRouteObservationSchema,
-  MAX_DEX_EXIT_ROUTE_OBSERVATIONS,
+  DexExitRouteObservationsSchema,
   ExitRouteObservationCoverageSchema,
   type DexLiquidityData,
   type LiquidityCoverageClass,
@@ -193,9 +192,7 @@ function parseExitRouteDetails(
   const observations =
     raw.exitRouteObservations === undefined
       ? null
-      : DexExitRouteObservationSchema.array()
-          .max(MAX_DEX_EXIT_ROUTE_OBSERVATIONS)
-          .safeParse(raw.exitRouteObservations);
+      : DexExitRouteObservationsSchema.safeParse(raw.exitRouteObservations);
   const coverage =
     raw.exitRouteObservationCoverage === undefined
       ? null

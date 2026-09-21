@@ -82,8 +82,9 @@ export function validateMeasuredExecutionProfile(
   context: { pool: P4DexRoutePoolInput; stablecoinId: string; observedAt: number },
 ): string[] {
   const issues: string[] = [];
-  const schemaValid = DexMeasuredExecutionPublicProfileSchema.safeParse(profile).success;
-  if (!schemaValid) issues.push("invalid-profile-schema");
+  if (!DexMeasuredExecutionPublicProfileSchema.safeParse(profile).success) {
+    return ["invalid-profile-schema"];
+  }
   if (
     !isQuoterV2MeasuredExecutionAdapter(profile.adapterProfileId) &&
     !isUniswapV4MeasuredExecutionAdapter(profile.adapterProfileId) &&
