@@ -518,6 +518,7 @@ export type CurveCryptoSwapQuoteFailure =
   | "ambiguous-token-index"
   | "token-index-mismatch"
   | "pool-token-order-mismatch"
+  | "rpc-failure"
   | "pool-revert"
   | "malformed-pool-return";
 
@@ -780,7 +781,7 @@ export function createCurveCryptoSwapQuoteExecutor(dependencies: CurveCryptoSwap
       inputUsd: request.inputUsd,
       blockNumber: request.blockNumber,
       eligibility: request.eligibility,
-      failureReason: reason ?? "pool-revert",
+      failureReason: reason ?? "rpc-failure",
     }),
   });
 }

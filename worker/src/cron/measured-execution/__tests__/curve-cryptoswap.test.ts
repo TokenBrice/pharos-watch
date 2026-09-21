@@ -23,6 +23,7 @@ import {
   validateCurveCryptoSwapProfileProof,
   type CurveCryptoSwapPoolPolicy,
 } from "../curve-cryptoswap";
+import { isOperationalDexMeasuredFailure } from "../persistence";
 import { makeMeasuredTarget } from "@shared/test-utils/measured-execution.test-support";
 
 const ETHEREUM_BLOCK = 25_536_894;
@@ -564,11 +565,12 @@ describe("Curve CryptoSwap quote transport", () => {
     expect(sizes).toEqual([4, 2]);
     expect(budget.openChains).toEqual(["ethereum"]);
     expect(outcomes.map((outcome) => outcome.failureReason)).toEqual([
-      "pool-revert",
-      "pool-revert",
-      "pool-revert",
-      "pool-revert",
+      "rpc-failure",
+      "rpc-failure",
+      "rpc-failure",
+      "rpc-failure",
     ]);
+    expect(outcomes.every((outcome) => isOperationalDexMeasuredFailure(outcome.failureReason))).toBe(true);
   });
 
   it("does not relabel a genuine pool revert from an already stopped budget", async () => {
@@ -594,6 +596,7 @@ describe("Curve CryptoSwap quote transport", () => {
     });
 
     expect(outcomes[0]?.failureReason).toBe("pool-revert");
+    expect(isOperationalDexMeasuredFailure(outcomes[0]?.failureReason)).toBe(false);
   });
 
   it("rejects active quotes when provider token order disagrees with on-chain coins", async () => {
