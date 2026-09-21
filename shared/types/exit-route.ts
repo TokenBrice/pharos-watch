@@ -200,6 +200,8 @@ const ExitRouteObservationBaseSchema = z.object({
   executionCostBps: z.number().finite().nonnegative().optional(),
   /** Pinned USD unit value of the received output asset. */
   outputUnitValueUsd: z.number().finite().positive().optional(),
+  /** Expected USD unit value under the output asset's own peg or NAV reference. */
+  outputExpectedUnitValueUsd: z.number().finite().positive().optional(),
   /** Producer source identity for a pinned output valuation. */
   outputUnitValueSourceId: z.string().min(1).optional(),
   /** Source observation time for a pinned output valuation. */
@@ -353,14 +355,15 @@ function enforceRedemptionExitRouteLane(
     });
   }
   if (
-    (observation.outputUnitValueSourceId !== undefined ||
+    (observation.outputExpectedUnitValueUsd !== undefined ||
+      observation.outputUnitValueSourceId !== undefined ||
       observation.outputUnitValueObservedAt !== undefined) &&
     observation.outputUnitValueUsd === undefined
   ) {
     ctx.addIssue({
       code: "custom",
       path: ["outputUnitValueUsd"],
-      message: "Pinned output valuation provenance requires an output unit value",
+      message: "Pinned output valuation provenance or expectation requires an output unit value",
     });
   }
   if (

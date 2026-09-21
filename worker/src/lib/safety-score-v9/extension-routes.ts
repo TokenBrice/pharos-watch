@@ -269,23 +269,29 @@ function buildOutputReview(
   if (assetKeys === null) return null;
   const basketWeights = [...(output.basketWeights ?? [])]
     .flatMap((weight) =>
-      weight.assetId && assetKeys.includes(weight.assetId)
+      weight.assetId && assetKeys.includes(weight.assetId) && weight.weight > 0
         ? [{ assetKey: weight.assetId, weight: weight.weight }]
         : [],
     )
     .sort((left, right) => compareText(left.assetKey, right.assetKey));
+  const capturedWeightAssetKeys = [...(output.basketWeights ?? [])]
+    .flatMap((weight) => (weight.assetId && assetKeys.includes(weight.assetId) ? [weight.assetId] : []));
+  const hasCompleteCapturedWeights =
+    capturedWeightAssetKeys.length === assetKeys.length &&
+    new Set(capturedWeightAssetKeys).size === assetKeys.length &&
+    assetKeys.every((assetKey) => capturedWeightAssetKeys.includes(assetKey)) &&
+    Math.abs((output.basketWeights ?? []).reduce((sum, weight) => sum + weight.weight, 0) - 1) <= 0.000001;
+  const pinnedExpectedUnitValueUsd = observation.outputExpectedUnitValueUsd ?? 1;
   const completePinnedBasket =
-    output.kind === "tracked-stablecoin" &&
+    (output.kind === "tracked-stablecoin" || receiptBasketKeys !== null) &&
     assetKeys.length > 1 &&
-    basketWeights.length === assetKeys.length &&
-    new Set(basketWeights.map((weight) => weight.assetKey)).size === assetKeys.length &&
-    assetKeys.every((assetKey) => basketWeights.some((weight) => weight.assetKey === assetKey)) &&
-    Math.abs(basketWeights.reduce((sum, weight) => sum + weight.weight, 0) - 1) <= 0.000001 &&
+    hasCompleteCapturedWeights &&
     observation.outputUnitValueUsd !== undefined &&
-    observation.outputUnitValueUsd <= 2 &&
+    observation.outputUnitValueUsd / pinnedExpectedUnitValueUsd <= 2 &&
     observation.outputUnitValueSourceId !== undefined &&
     observation.outputUnitValueObservedAt !== undefined &&
     observation.allInCostBps !== undefined &&
+    (output.kind !== "unresolved-basket" || observation.outputExpectedUnitValueUsd !== undefined) &&
     (observation.evidenceKind === "onchain-contract-state" ||
       observation.evidenceKind === "live-reserve-state") &&
     observation.confidence === "high";
@@ -375,7 +381,7 @@ function buildOutputReview(
           basis: "price" as const,
           referenceAssetKey: `basket:${observation.routeId}`,
           unitValueUsd: observation.outputUnitValueUsd!,
-          expectedUnitValueUsd: 1,
+          expectedUnitValueUsd: pinnedExpectedUnitValueUsd,
           sourceId: observation.outputUnitValueSourceId!,
           observedAtSec: Math.min(observation.outputUnitValueObservedAt!, observedAtSec),
           confidence: "high" as const,

@@ -50,12 +50,13 @@ export const LiveReserveRedemptionOutputValuationSchema = z
     sourceId: z.string().trim().min(1),
     observedAt: z.number().int().nonnegative(),
     unitValueUsd: z.number().finite().positive(),
+    expectedUnitValueUsd: z.number().finite().positive().optional(),
     basketWeights: z
       .array(
         z
           .object({
             assetId: z.string().trim().min(1),
-            weight: z.number().finite().positive().max(1),
+            weight: z.number().finite().nonnegative().max(1),
           })
           .strict(),
       )

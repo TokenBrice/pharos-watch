@@ -25,6 +25,17 @@ const BRIDGE_EUR_SELECTOR = "0x7439ae59";
 const BRIDGE_DEURO_SELECTOR = "0xd395d24b";
 const ERC20_DECIMALS_SELECTOR = "0x313ce567";
 const DEURO_IS_MINTER_SELECTOR = "0xaa271e1a";
+const DEURO_OUTPUT_ASSET_KEY_BY_LABEL: Readonly<Record<string, string>> = {
+  EURT: "asset:eurt",
+  EURS: "eurs-stasis",
+  VEUR: "asset:veur",
+  EURC: "eurc-circle",
+  EURR: "eurr-stablr",
+  EUROP: "europ-schuman",
+  EURI: "euri-banking-circle",
+  EURE: "asset:eure-legacy-ethereum",
+  EURA: "asset:eura",
+};
 
 interface PositionDetailsEntry {
   address: string;
@@ -93,6 +104,13 @@ interface BridgeBasketProbe {
   capacityEur: number;
   capacityUsd: number;
   eurUsdReference: number;
+  outputValuation: {
+    sourceId: string;
+    observedAt: number;
+    unitValueUsd: number;
+    expectedUnitValueUsd: number;
+    basketWeights: Array<{ assetId: string; weight: number }>;
+  } | null;
   bridgeInventories: Array<{
     label: string;
     bridgeAddress: string;
@@ -471,7 +489,30 @@ async function fetchBridgeBasketImmediateRedeemableUsd(
 
     const capacityUsd = capacityEur * eurUsdReference;
     if (!Number.isFinite(capacityUsd) || capacityUsd < 0) return null;
-    return { capacityEur, capacityUsd, eurUsdReference, bridgeInventories };
+    const outputValuation =
+      capacityEur > 0
+        ? {
+            sourceId: `collateral-positions-api:deuro-bridge-basket:${basket.eurUsdPriceAddress.toLowerCase()}`,
+            observedAt:
+              prices[basket.eurUsdPriceAddress.toLowerCase()]?.timestamp ??
+              ctx?.observedBlock?.timestamp ??
+              ctx?.nowSec ??
+              Math.floor(Date.now() / 1_000),
+            unitValueUsd: eurUsdReference,
+            expectedUnitValueUsd: eurUsdReference,
+            basketWeights: bridgeInventories.map((inventory) => ({
+              assetId: DEURO_OUTPUT_ASSET_KEY_BY_LABEL[inventory.label]!,
+              weight: inventory.inventoryEur / capacityEur,
+            })),
+          }
+        : null;
+    if (
+      outputValuation &&
+      outputValuation.basketWeights.some((weight) => weight.assetId === undefined)
+    ) {
+      return null;
+    }
+    return { capacityEur, capacityUsd, eurUsdReference, outputValuation, bridgeInventories };
   } catch (error) {
     rethrowIfAborted(error, signal);
     return null;
@@ -550,6 +591,9 @@ export async function fetchCollateralPositionsApiReserves(
             capacityEur: bridgeBasketProbe.capacityEur,
             eurUsdReference: bridgeBasketProbe.eurUsdReference,
             eurUsdReferenceSource: params.redemptionBridgeBasket.eurUsdPriceAddress,
+            ...(bridgeBasketProbe.outputValuation
+              ? { outputValuation: bridgeBasketProbe.outputValuation }
+              : {}),
             bridgeInventories: bridgeBasketProbe.bridgeInventories,
           },
         }

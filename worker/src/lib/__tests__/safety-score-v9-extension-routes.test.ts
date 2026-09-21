@@ -702,6 +702,76 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     expect(review.unresolvedOutputResponsibility).toBe("producer-failed");
   });
 
+  it("admits dEURO's source-bound nine-member EUR output valuation without calling it fiat", () => {
+    const row = makeSupplyFullRedemption({
+      stablecoinId: "deuro-deuro",
+      routeFamily: "collateral-redeem",
+      accessModel: "permissionless-onchain",
+      executionModel: "deterministic-basket",
+      outputAssetType: "stable-basket",
+      feeBps: 0,
+    });
+    const baseObservation = buildSafetyScoreV9RetainedRedemptionRoutes(
+      fixedInputStub(row),
+      row.stablecoinId,
+    )[0]!.observation;
+    const assetKeys = [
+      "asset:eura",
+      "asset:eure-legacy-ethereum",
+      "asset:eurt",
+      "asset:veur",
+      "eurc-circle",
+      "euri-banking-circle",
+      "europ-schuman",
+      "eurr-stablr",
+      "eurs-stasis",
+    ];
+    row.capacityConfidence = "live-direct";
+    row.capacityKind = "live-direct-bounded";
+    row.modelConfidence = "high";
+    row.capacityProfile = {
+      ...row.capacityProfile!,
+      scoringUsd: 500_000,
+      scoringHorizon: "immediate",
+      exitRouteObservations: [{
+        ...baseObservation,
+        output: {
+          kind: "unresolved-basket",
+          assetKeys,
+          basketWeights: assetKeys.map((assetId, index) => ({
+            assetId,
+            weight: index === 4 ? 1 : 0,
+          })),
+        },
+        routeFamily: "protocol-redemption",
+        evidenceKind: "onchain-contract-state",
+        confidence: "high",
+        executionCostBps: 0,
+        outputUnitValueUsd: 1.15,
+        outputExpectedUnitValueUsd: 1.15,
+        outputUnitValueSourceId: "collateral-positions-api:deuro-bridge-basket:test",
+        outputUnitValueObservedAt: NOW,
+        allInCostBps: 0,
+        scoreEligible: true,
+        observedAt: NOW,
+        freshnessSeconds: 0,
+      }],
+    };
+
+    expect(buildSafetyScoreV9RouteReviews(fixedInputStub(row), row.stablecoinId)[0]?.output).toMatchObject({
+      kind: "basket",
+      assetKeys,
+      basketWeights: [{ assetKey: "eurc-circle", weight: 1 }],
+      valuation: {
+        basis: "price",
+        unitValueUsd: 1.15,
+        expectedUnitValueUsd: 1.15,
+        sourceId: "collateral-positions-api:deuro-bridge-basket:test",
+        confidence: "high",
+      },
+    });
+  });
+
   it.each(["srusd-reservoir", "wsrusd-reservoir"] as const)(
     "values the composed %s redemption route through its final USDC output",
     (stablecoinId) => {

@@ -473,6 +473,15 @@ describe("fetchCollateralPositionsApiReserves bridge basket", () => {
           expect.objectContaining({ label: "EURS", inventoryRaw: "51", inventoryEur: 0.51 }),
           expect.objectContaining({ label: "EURC", inventoryRaw: "100250000", inventoryEur: 100.25 }),
         ]),
+        outputValuation: {
+          sourceId: `collateral-positions-api:deuro-bridge-basket:${DEURO}`,
+          unitValueUsd: 1.2,
+          expectedUnitValueUsd: 1.2,
+          basketWeights: expect.arrayContaining([
+            { assetId: "asset:eurt", weight: expect.closeTo(1 / 126.26, 8) },
+            { assetId: "eurc-circle", weight: expect.closeTo(100.25 / 126.26, 8) },
+          ]),
+        },
       },
     });
   });
