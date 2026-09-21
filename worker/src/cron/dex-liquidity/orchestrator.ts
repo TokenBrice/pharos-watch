@@ -644,9 +644,9 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
   dataSources.curvePayloads.length = 0;
 
   await ctx.reportDexProgress("subgraph-enrichment", {
-    message: "Fetching subgraph liquidity enrichment", providerFamily: "subgraph", total: 3,
-    metadata: { providerFamilies: ["uniswap-v3", "uniswap-v4", "aerodrome"] },
-    counts: { subgraphFamilies: 3 },
+    message: "Fetching subgraph liquidity enrichment", providerFamily: "subgraph", total: 2,
+    metadata: { providerFamilies: ["uniswap-v3", "uniswap-v4"] },
+    counts: { subgraphFamilies: 2 },
   });
   const subgraphEnrichment = await fetchSubgraphEnrichmentPhase({
     graphApiKey: ctx.graphApiKey,
