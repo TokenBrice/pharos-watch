@@ -60,12 +60,14 @@ export function getCoverageBadge(coin: MintBurnCoinFlow): { label: string; class
 }
 
 const _compareFlowRows = createTableComparator<FlowTableSortKey, MintBurnCoinFlow>({
-  net24h: (r) => Math.abs(r.netFlow24hUsd),
+  // The net columns render a signed value, so ranking them by magnitude put a
+  // large burn above a smaller mint in descending order.
+  net24h: (r) => r.netFlow24hUsd,
   mint24h: (r) => r.mintVolume24hUsd,
   burn24h: (r) => r.burnVolume24hUsd,
-  net7d: (r) => Math.abs(r.netFlow7dUsd),
-  net30d: (r) => Math.abs(r.netFlow30dUsd),
-  net90d: (r) => Math.abs(r.netFlow90dUsd),
+  net7d: (r) => r.netFlow7dUsd,
+  net30d: (r) => r.netFlow30dUsd,
+  net90d: (r) => r.netFlow90dUsd,
   largest: (r) => r.largestEvent24h?.amountUsd ?? 0,
   pressure: (r) => getPressureScore(r),
 });

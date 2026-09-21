@@ -140,6 +140,31 @@ describe("TelegramBroadcastPanel", () => {
     expect(button("Send live broadcast").disabled).toBe(true);
   });
 
+  it("refuses a live send from the failure banner once the previewed draft was edited", async () => {
+    adminMutationMock.mockResolvedValue(okResult({ targetChatCount: 12, chunkCount: 1 }));
+    render(<TelegramBroadcastPanel />);
+
+    typeMessage("<b>Draft A</b>");
+    fireEvent.change(screen.getByLabelText("Canary chat ID (private chat)"), { target: { value: "123456789" } });
+    fireEvent.click(button("Preview (dry run)"));
+    await waitFor(() => expect(button("Send live broadcast").disabled).toBe(false));
+
+    adminMutationMock.mockRejectedValue(
+      new AdminMutationError("Broadcast rejected", { ...okResult({ enqueued: 0 }), status: 422 }),
+    );
+    fireEvent.click(button("Send live broadcast"));
+    await waitFor(() => expect(adminMutationMock).toHaveBeenCalledTimes(2));
+    await screen.findByText("Action failed");
+
+    // The banner rebuilds the body from current form state, so an edit made
+    // after the failure would otherwise fan an unreviewed draft out live.
+    typeMessage("<b>Draft B</b>");
+    fireEvent.click(button("Start new broadcast intent"));
+
+    await waitFor(() => expect(button("Send live broadcast").disabled).toBe(true));
+    expect(adminMutationMock).toHaveBeenCalledTimes(2);
+  });
+
   it("does not queue a duplicate preview while one is still in flight", async () => {
     const { promise: pendingPreview, resolve: releasePreview } = Promise.withResolvers<unknown>();
     adminMutationMock.mockReturnValue(pendingPreview);

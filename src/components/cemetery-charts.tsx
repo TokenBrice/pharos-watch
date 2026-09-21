@@ -402,7 +402,7 @@ function CumulativeDestroyedChart({ entries }: { entries: CemeteryEntries }) {
     return sorted.reduce<CumulativePoint[]>((acc, c, index) => {
       const cumulative = (acc[acc.length - 1]?.cumulative ?? 0) + c.peakMcap!;
       const [y, m] = c.deathDate.split("-");
-      const date = new Date(Number(y), Number(m || 1) - 1);
+      const date = new Date(Date.UTC(Number(y), Number(m || 1) - 1));
       const label = formatChartDate(date.getTime(), "compact");
       acc.push({ date: label, cumulative, symbol: c.symbol, added: c.peakMcap!, index });
       return acc;

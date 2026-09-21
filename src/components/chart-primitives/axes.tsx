@@ -45,7 +45,9 @@ function formatDateLabel(value: unknown, locale: string, options: Intl.DateTimeF
   if (value == null) return "";
   const timestamp = typeof value === "number" ? value : Number(value);
   if (Number.isNaN(timestamp)) return String(value);
-  return new Date(timestamp).toLocaleDateString(locale, options);
+  // The data contract is UTC: a viewer-local label would move a UTC-midnight
+  // point to the previous day (or month) for most of the world.
+  return new Date(timestamp).toLocaleDateString(locale, { timeZone: "UTC", ...options });
 }
 
 type TimeXAxisProps = ComponentProps<typeof XAxis> & {

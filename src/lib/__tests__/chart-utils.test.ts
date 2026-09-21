@@ -35,79 +35,79 @@ describe("mergeSeriesByTimestamp", () => {
 });
 
 describe("buildAdaptiveMonthlyTicks", () => {
-  const localMonthStart = (year: number, month: number) => new Date(year, month, 1).getTime();
+  // Ticks label a UTC data contract, so the expected boundaries are UTC month
+  // starts in every viewer timezone.
+  const utcMonthStart = (year: number, month: number) => Date.UTC(year, month, 1);
 
   it("uses every month for ranges under a year", () => {
-    const ticks = buildAdaptiveMonthlyTicks(
-      new Date(2026, 0, 15).getTime(),
-      new Date(2026, 3, 20).getTime(),
-    );
+    const ticks = buildAdaptiveMonthlyTicks(Date.UTC(2026, 0, 15), Date.UTC(2026, 3, 20));
     expect(ticks).toEqual([
-      localMonthStart(2026, 0),
-      localMonthStart(2026, 1),
-      localMonthStart(2026, 2),
-      localMonthStart(2026, 3),
+      utcMonthStart(2026, 0),
+      utcMonthStart(2026, 1),
+      utcMonthStart(2026, 2),
+      utcMonthStart(2026, 3),
     ]);
   });
 
   it("still uses every month at exactly one year of span", () => {
-    const ticks = buildAdaptiveMonthlyTicks(
-      new Date(2025, 0, 15).getTime(),
-      new Date(2026, 0, 15).getTime(),
-    );
+    const ticks = buildAdaptiveMonthlyTicks(Date.UTC(2025, 0, 15), Date.UTC(2026, 0, 15));
 
     expect(ticks).toHaveLength(13);
-    expect(ticks[0]).toBe(localMonthStart(2025, 0));
-    expect(ticks[11]).toBe(localMonthStart(2025, 11));
-    expect(ticks[12]).toBe(localMonthStart(2026, 0));
+    expect(ticks[0]).toBe(utcMonthStart(2025, 0));
+    expect(ticks[11]).toBe(utcMonthStart(2025, 11));
+    expect(ticks[12]).toBe(utcMonthStart(2026, 0));
   });
 
   it("steps every other month once the span passes one year", () => {
-    const ticks = buildAdaptiveMonthlyTicks(
-      new Date(2025, 0, 15).getTime(),
-      new Date(2026, 1, 20).getTime(),
-    );
+    const ticks = buildAdaptiveMonthlyTicks(Date.UTC(2025, 0, 15), Date.UTC(2026, 1, 20));
 
     expect(ticks).toEqual([
-      localMonthStart(2025, 0),
-      localMonthStart(2025, 2),
-      localMonthStart(2025, 4),
-      localMonthStart(2025, 6),
-      localMonthStart(2025, 8),
-      localMonthStart(2025, 10),
-      localMonthStart(2026, 0),
+      utcMonthStart(2025, 0),
+      utcMonthStart(2025, 2),
+      utcMonthStart(2025, 4),
+      utcMonthStart(2025, 6),
+      utcMonthStart(2025, 8),
+      utcMonthStart(2025, 10),
+      utcMonthStart(2026, 0),
     ]);
   });
 
   it("steps quarterly and snaps to January once the span passes two years", () => {
-    const ticks = buildAdaptiveMonthlyTicks(
-      new Date(2024, 5, 15).getTime(),
-      new Date(2026, 6, 1).getTime(),
-    );
+    const ticks = buildAdaptiveMonthlyTicks(Date.UTC(2024, 5, 15), Date.UTC(2026, 6, 1));
 
     expect(ticks).toEqual([
-      localMonthStart(2025, 0),
-      localMonthStart(2025, 3),
-      localMonthStart(2025, 6),
-      localMonthStart(2025, 9),
-      localMonthStart(2026, 0),
-      localMonthStart(2026, 3),
-      localMonthStart(2026, 6),
+      utcMonthStart(2025, 0),
+      utcMonthStart(2025, 3),
+      utcMonthStart(2025, 6),
+      utcMonthStart(2025, 9),
+      utcMonthStart(2026, 0),
+      utcMonthStart(2026, 3),
+      utcMonthStart(2026, 6),
     ]);
   });
 
   it("snaps multi-year ranges to January ticks", () => {
-    const ticks = buildAdaptiveMonthlyTicks(
-      new Date(2021, 4, 15).getTime(),
-      new Date(2026, 4, 15).getTime(),
-    );
-    expect(ticks[0]).toBe(localMonthStart(2022, 0));
-    expect(ticks[1]).toBe(localMonthStart(2022, 6));
+    const ticks = buildAdaptiveMonthlyTicks(Date.UTC(2021, 4, 15), Date.UTC(2026, 4, 15));
+    expect(ticks[0]).toBe(utcMonthStart(2022, 0));
+    expect(ticks[1]).toBe(utcMonthStart(2022, 6));
+  });
+
+  it("keeps a January tick in January for a negative-offset viewer", () => {
+    const originalTz = process.env.TZ;
+    process.env.TZ = "America/New_York";
+    try {
+      const ticks = buildAdaptiveMonthlyTicks(Date.UTC(2025, 0, 15), Date.UTC(2026, 1, 20));
+      expect(new Date(ticks[0]!).getUTCMonth()).toBe(0);
+      expect(new Date(ticks[0]!).getUTCFullYear()).toBe(2025);
+    } finally {
+      if (originalTz === undefined) delete process.env.TZ;
+      else process.env.TZ = originalTz;
+    }
   });
 
   it("returns an empty list for invalid ranges", () => {
-    expect(buildAdaptiveMonthlyTicks(new Date(2026, 1, 1).getTime(), new Date(2026, 0, 1).getTime())).toEqual([]);
-    expect(buildAdaptiveMonthlyTicks(Number.NaN, new Date(2026, 0, 1).getTime())).toEqual([]);
-    expect(buildAdaptiveMonthlyTicks(new Date(2026, 0, 1).getTime(), Number.POSITIVE_INFINITY)).toEqual([]);
+    expect(buildAdaptiveMonthlyTicks(Date.UTC(2026, 1, 1), Date.UTC(2026, 0, 1))).toEqual([]);
+    expect(buildAdaptiveMonthlyTicks(Number.NaN, Date.UTC(2026, 0, 1))).toEqual([]);
+    expect(buildAdaptiveMonthlyTicks(Date.UTC(2026, 0, 1), Number.POSITIVE_INFINITY)).toEqual([]);
   });
 });

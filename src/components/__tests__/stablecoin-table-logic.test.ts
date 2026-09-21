@@ -272,14 +272,16 @@ describe("sortStablecoins — price", () => {
     expect(result[1].id).toBe("a");
   });
 
-  it("treats null price as 0", () => {
+  it("keeps an unknown price last in both directions", () => {
     const coins = [makeCoin("a", "A", { price: null }), makeCoin("b", "B", { price: 1.0 })];
-    const result = sortStablecoins({
-      filtered: coins,
-      sort: sortDesc("price"),
-      effectiveSortKey: "price",
-    });
-    expect(result[0].id).toBe("b");
+
+    expect(
+      sortStablecoins({ filtered: coins, sort: sortDesc("price"), effectiveSortKey: "price" })[0].id,
+    ).toBe("b");
+    // Ascending used to rank the unknown row as the cheapest coin on the page.
+    expect(
+      sortStablecoins({ filtered: coins, sort: sortAsc("price"), effectiveSortKey: "price" })[0].id,
+    ).toBe("b");
   });
 
   it("reads the selected sort value once per row", () => {
@@ -624,7 +626,7 @@ describe("sortStablecoins — change7d", () => {
 });
 
 describe("supply-change semantics", () => {
-  it("sorts missing previous supply as neutral and exports it as null", () => {
+  it("sorts a missing previous supply last and exports it as null", () => {
     const missing = makeCoin("missing", "Missing", {
       circulating: { peggedUSD: 1_000_000 },
       circulatingPrevDay: undefined,
@@ -643,7 +645,9 @@ describe("supply-change semantics", () => {
       sort: sortDesc("change24h"),
       effectiveSortKey: "change24h",
     });
-    expect(sorted.map((coin) => coin.id)).toEqual(["grow", "missing", "shrink"]);
+    // A coin with no prior sample used to land between a grower and a shrinker
+    // as if it had been measured at 0%.
+    expect(sorted.map((coin) => coin.id)).toEqual(["grow", "shrink", "missing"]);
 
     downloadCsvMock.mockReset();
     exportStablecoinsCsv([missing]);

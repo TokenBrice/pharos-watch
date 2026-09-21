@@ -37,6 +37,13 @@ describe("UptimeBar", () => {
     expect(container.querySelector('[title="2026-04-13: Degraded"]')).toBeTruthy();
   });
 
+  it("reports an unavailable runway instead of 30 unknown days when history fails", () => {
+    render(<UptimeBar transitions={[]} currentStatus="healthy" lastChangedAt={null} historyUnavailable />);
+
+    expect(screen.getByText("Status history is unavailable, so the last 30 days cannot be shown.")).toBeTruthy();
+    expect(screen.queryByText("1d healthy · 29d no data")).toBeNull();
+  });
+
   it("does not carry a stale segment forward after a coherent recovery transition", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-04-13T12:00:00Z"));

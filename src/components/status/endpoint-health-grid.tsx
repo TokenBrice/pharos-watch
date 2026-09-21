@@ -1,7 +1,12 @@
 import { ENDPOINT_GROUPS } from "@/hooks/use-endpoint-probes";
 import type { EndpointProbeResult } from "@shared/types";
 import { Badge } from "@/components/ui/badge";
-import { getProbeStatusDetail, getProbeStatusLabel, isProbePassing } from "@/lib/status-dashboard-model";
+import {
+  getProbeDisplayStatus,
+  getProbeStatusDetail,
+  getProbeStatusLabel,
+  isProbePassing,
+} from "@/lib/status-dashboard-model";
 import { PublicSignalCard } from "./public-signal-card";
 
 const GROUP_LABELS: Array<{ key: keyof typeof ENDPOINT_GROUPS; label: string }> = [
@@ -39,11 +44,18 @@ export function EndpointHealthGrid({
   }
 
   const probeList = probes ?? [];
-  const passCount = probeList.filter((probe) => isProbePassing(probe)).length;
-  const degradedCount = probeList.filter((probe) => probe.semanticStatus === "degraded").length;
-  const staleCount = probeList.filter(
-    (probe) => probe.semanticStatus === "stale" || probe.status == null || probe.status >= 400,
-  ).length;
+  // One pass over the shared classifier: the three independent filters this
+  // replaces overlapped, so a 4xx that was also semantically degraded was
+  // counted twice and the sentence summed past the sample total.
+  let passCount = 0;
+  let degradedCount = 0;
+  let staleCount = 0;
+  for (const probe of probeList) {
+    const displayStatus = getProbeDisplayStatus(probe);
+    if (displayStatus === "healthy") passCount += 1;
+    else if (displayStatus === "degraded") degradedCount += 1;
+    else staleCount += 1;
+  }
   const isAdminView = groups.includes("admin");
   const summaryText =
     footnote ??
@@ -97,9 +109,10 @@ export function EndpointHealthGrid({
                     );
                   }
 
-                  const isOk = probe ? isProbePassing(probe) : false;
-                  const isSemanticDegraded = probe?.semanticStatus === "degraded";
-                  const isError = probe?.status == null || probe.status >= 400 || probe?.semanticStatus === "stale";
+                  const displayStatus = probe ? getProbeDisplayStatus(probe) : null;
+                  const isOk = displayStatus === "healthy";
+                  const isSemanticDegraded = displayStatus === "degraded";
+                  const isError = displayStatus === "stale";
                   const statusLabel = probe ? getProbeStatusLabel(probe) : "—";
                   const statusDetail = probe ? getProbeStatusDetail(probe) : null;
 
