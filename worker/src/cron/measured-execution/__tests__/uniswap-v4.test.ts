@@ -26,7 +26,6 @@ import {
 import {
   buildDexMeasuredExecutionProfile,
   createDexMeasuredExecutionRpcBudget,
-  projectProfileForAdapter,
 } from "../profiles";
 import {
   UNISWAP_V4_ADAPTER_PROFILE_ID,
@@ -328,13 +327,6 @@ describe("hook-free Uniswap V4 measured execution", () => {
     });
     expect(quotes[0].point.costBps).toBeCloseTo(5, 8);
     expect(validateUniswapV4ProfileProof(profile)).toEqual([]);
-    const v2Profile = projectProfileForAdapter(profile, "evm-uniswap-v4");
-    expect(v2Profile).toMatchObject({
-      adapterId: "evm-uniswap-v4",
-      demandedInputAmountsUsd: DEMANDED_GRID_USD,
-      payload: { platform: "evm", blockNumber: BLOCK },
-    });
-    expect(v2Profile?.payload.platform === "evm" && v2Profile.payload.callProof).toHaveLength(5);
     const measuredExecution = toMaturePublicProfile(profile);
     expect(buildP4DexExitRouteObservations({
       stablecoinId: profile.tokenIn.trackedAssetId!,

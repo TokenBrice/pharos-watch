@@ -12,19 +12,6 @@ import { buildPoolFingerprint, normalizeProtocol } from "./pool-normalization";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
 import { buildChainAddressKey } from "./token-resolution";
 
-export type CrawlStats = {
-  requests: number;
-  poolsSeen: number;
-  poolsNew: number;
-  poolsSkippedCurve: number;
-  poolsSkippedKnown: number;
-  poolsSkippedRatio: number;
-};
-
-export function createCrawlStats(): CrawlStats {
-  return { requests: 0, poolsSeen: 0, poolsNew: 0, poolsSkippedCurve: 0, poolsSkippedKnown: 0, poolsSkippedRatio: 0 };
-}
-
 export type CrawlToken = {
   sourceChain: string;
   ourChain: string;
@@ -63,7 +50,6 @@ export type CrawlTokenPoolsConfig<TRawPool, TNewPool extends GtNewPool> = {
   protocolTvlCaps: Map<string, number>;
   newPools: Map<string, TNewPool[]>;
   priceObs: Map<string, DexPriceObs[]>;
-  stats: CrawlStats;
   signal?: AbortSignal;
   references?: PriceValidationReferences;
   /** Minimum TVL (USD) required to consider a pool. Defaults to 10k. */
@@ -147,13 +133,13 @@ export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(
   const nowSec = Date.now() / 1000;
   const startMs = Date.now();
   const minTvlUsd = config.minTvlUsd ?? 10_000;
-
+  let requestCount = 0;
   for (const token of config.tokens) {
     throwIfAborted(config.signal);
 
     if (config.beforeRequest) {
       const shouldContinue = await config.beforeRequest({
-        requestCount: config.stats.requests,
+        requestCount,
         totalTokens: config.tokens.length,
         startMs,
         signal: config.signal,
@@ -162,7 +148,7 @@ export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(
         return { stoppedEarly: true };
       }
     }
-    config.stats.requests++;
+    requestCount++;
 
     try {
       const pools = await config.fetchPools(token.address, token.sourceChain, config.signal);
@@ -176,12 +162,10 @@ export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(
         }
         if (!parsed) continue;
 
-        config.stats.poolsSeen++;
         if (!parsed.tvlUsd || parsed.tvlUsd < minTvlUsd || parsed.tvlUsd > 1e12) continue;
         if (isBlockedDexId(parsed.dexId)) continue;
 
         if (shouldSkipFallbackCurvePool(token.ourChain, parsed.dexId)) {
-          config.stats.poolsSkippedCurve++;
           continue;
         }
 
@@ -213,12 +197,10 @@ export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(
           parsed.quoteTokenAddress,
         ]);
         if (config.knownPoolAddrs.has(poolKey) || (fpKey != null && config.knownPoolAddrs.has(fpKey))) {
-          config.stats.poolsSkippedKnown++;
           continue;
         }
 
         if (parsed.tvlUsd > 0 && parsed.volume24hUsd / parsed.tvlUsd > 50) {
-          config.stats.poolsSkippedRatio++;
           continue;
         }
 
@@ -240,7 +222,6 @@ export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(
           }),
         );
         config.newPools.set(token.stablecoinId, poolList);
-        config.stats.poolsNew++;
       }
     } catch (err) {
       if (config.signal?.aborted) throw err;

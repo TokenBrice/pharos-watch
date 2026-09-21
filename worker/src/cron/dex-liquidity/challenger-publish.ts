@@ -16,38 +16,20 @@ export interface DexPriceChallengerPoolRow {
   tvlUsd: number;
 }
 
-export interface DexPriceChallengerSnapshotRow {
-  stablecoinId: string;
-  snapshotAt: number;
-  publishedAt: number;
-  hasRows: boolean;
-  sourceCoverageComplete: boolean;
-}
-
 export interface DexPriceChallengerPublicationInput {
   stablecoinId: string;
   snapshotAt: number;
   rows: DexPriceChallengerPoolRow[];
   sourceCoverageComplete: boolean;
-  publishedAt?: number;
 }
-
 export interface DexPriceChallengerPublicationPlan {
   stablecoinId: string;
   snapshotAt: number;
-  publishedAt: number;
   hasRows: boolean;
   sourceCoverageComplete: boolean;
   shouldPublishSnapshot: boolean;
   skipReason: "incomplete-coverage" | null;
   payloadRows: unknown[][];
-  snapshotStatement: DexPriceChallengerSqlStatement | null;
-  cleanupStatements: DexPriceChallengerSqlStatement[];
-}
-
-interface DexPriceChallengerSqlStatement {
-  sql: string;
-  binds: unknown[];
 }
 
 const CHALLENGER_COVERAGE_TARGET = 0.95;
@@ -115,7 +97,6 @@ export function buildDexPriceChallengerPublicationPlan(
 ): DexPriceChallengerPublicationPlan {
   const stablecoinId = toLowerString(input.stablecoinId);
   const snapshotAt = Math.floor(requireFiniteNumber(input.snapshotAt, "dex-price-challengers: snapshotAt"));
-  const publishedAt = Math.floor(input.publishedAt ?? snapshotAt);
   const sourceCoverageComplete = !!input.sourceCoverageComplete;
   const hasRows = input.rows.length > 0;
 
@@ -138,41 +119,14 @@ export function buildDexPriceChallengerPublicationPlan(
     ];
   });
 
-  const snapshotStatement = sourceCoverageComplete
-    ? {
-        sql:
-          `INSERT INTO dex_price_challenger_snapshots
-            (stablecoin_id, snapshot_at, published_at, has_rows, source_coverage_complete)
-           VALUES (?, ?, ?, ?, ?)
-           ON CONFLICT(stablecoin_id) DO UPDATE SET
-             snapshot_at = excluded.snapshot_at,
-             published_at = excluded.published_at,
-             has_rows = excluded.has_rows,
-             source_coverage_complete = excluded.source_coverage_complete`,
-        binds: [stablecoinId, snapshotAt, publishedAt, hasRows ? 1 : 0, 1],
-      }
-    : null;
-
-  const cleanupStatements = [
-    {
-      sql:
-        `DELETE FROM dex_price_challengers
-         WHERE stablecoin_id = ? AND snapshot_at < ?`,
-      binds: [stablecoinId, snapshotAt],
-    } satisfies DexPriceChallengerSqlStatement,
-  ];
-
   return {
     stablecoinId,
     snapshotAt,
-    publishedAt,
     hasRows,
     sourceCoverageComplete,
     shouldPublishSnapshot: sourceCoverageComplete,
     skipReason: sourceCoverageComplete ? null : "incomplete-coverage",
     payloadRows,
-    snapshotStatement,
-    cleanupStatements,
   };
 }
 
@@ -325,9 +279,7 @@ export async function publishDexPriceChallengerSnapshots(
     for (const statement of payloadStatements) {
       await queuePayloadStatement(statement);
     }
-    if (plan.snapshotStatement != null) {
-      publishedStablecoinIds.push(plan.stablecoinId);
-    }
+    publishedStablecoinIds.push(plan.stablecoinId);
   }
 
   if (input.consumeRetainedPools) input.retainedPoolsByStablecoin.clear();
@@ -374,7 +326,7 @@ export async function publishDexPriceChallengerSnapshots(
     }
   }
 
-  const cleanupStatements = chunkRows(publishedStablecoinIds, CHALLENGER_CLEANUP_ID_BATCH_SIZE).map((idChunk) =>
+  const cleanupBatch = chunkRows(publishedStablecoinIds, CHALLENGER_CLEANUP_ID_BATCH_SIZE).map((idChunk) =>
     db
       .prepare(
         `DELETE FROM dex_price_challengers
@@ -383,7 +335,7 @@ export async function publishDexPriceChallengerSnapshots(
       )
       .bind(snapshotAt, ...idChunk)
   );
-  await batchExecute(db, cleanupStatements, {
+  await batchExecute(db, cleanupBatch, {
     chunkSize: DEX_PRICE_CHALLENGER_BATCH_SIZE,
     signal,
   });

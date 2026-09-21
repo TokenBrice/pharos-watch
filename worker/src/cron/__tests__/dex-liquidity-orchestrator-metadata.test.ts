@@ -55,7 +55,7 @@ describe("dex liquidity cron metadata", () => {
     ];
     const metadata = buildDexLiquidityCronMetadata(params);
     expect(metadata).toMatchObject({
-      rowsDropped: 3, validationFailures: 3,
+      rowsDropped: 3,
       poolRejectionMateriality: { rejectedPoolCount: 3, rejectedPoolTvlUsd: 1_000_000, material: true },
     });
   });

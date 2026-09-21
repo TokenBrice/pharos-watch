@@ -4,12 +4,12 @@ import { DexLiquidityCronMetadataSchema } from "../../lib/schemas";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
 import type { DexPriceObs, FullScoreResult, GlobalAgg, LiquidityMetrics } from "./types";
 import type { DirectCexOrderbookDepthSummary } from "../../lib/cex-orderbooks";
+import { round4 } from "@shared/lib/math";
 import {
   DRIFT_WATCHLIST,
   computeDexLiquidityDriftSummary,
   readPreviousDexLiquidityDriftCandidates,
   readPreviousDexLiquiditySummary,
-  round4,
   type DexLiquidityDriftCandidate,
   type DexLiquidityDriftSummary,
   type PreviousDexLiquiditySummary,

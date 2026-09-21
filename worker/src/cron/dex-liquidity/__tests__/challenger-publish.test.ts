@@ -111,7 +111,6 @@ describe("challenger publish", () => {
     const completePlan = buildDexPriceChallengerPublicationPlan({
       stablecoinId: "USDT-TETHER",
       snapshotAt: 1_700_000_000.9,
-      publishedAt: 1_700_000_111.2,
       sourceCoverageComplete: true,
       rows: [
         {
@@ -151,7 +150,6 @@ describe("challenger publish", () => {
     expect(DEX_PRICE_CHALLENGER_PAYLOAD_INSERT_SQL).toContain(
       "INSERT INTO dex_price_challengers",
     );
-    expect(completePlan.snapshotStatement).not.toBeNull();
 
     const incompletePlan = buildDexPriceChallengerPublicationPlan({
       stablecoinId: "usdt-tether",
@@ -172,7 +170,6 @@ describe("challenger publish", () => {
 
     expect(incompletePlan.skipReason).toBe("incomplete-coverage");
     expect(incompletePlan.shouldPublishSnapshot).toBe(false);
-    expect(incompletePlan.snapshotStatement).toBeNull();
     expect(incompletePlan.payloadRows).toHaveLength(1);
   });
 

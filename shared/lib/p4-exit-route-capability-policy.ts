@@ -17,7 +17,6 @@ import {
   DEX_MEASURED_ADAPTER_PROFILE_IDS,
   getDexMeasuredExecutionFreshnessMaxSec,
   type DexExactQuoteAdapterId,
-  type DexExecutionProfileV2,
   type DexMeasuredExecutionObservationHistory,
   type DexMeasuredExecutionPublicProfile,
 } from "../types/measured-execution";
@@ -204,15 +203,14 @@ export function getDexExecutionCapabilityRegistration(
   return DEX_EXECUTION_CAPABILITY_REGISTRY.find((entry) => entry.profileId === profileId) ?? null;
 }
 
-type DexExecutionProfileAdmissionInput = Pick<DexMeasuredExecutionPublicProfile, "adapterProfileId" | "chain"> |
-  Pick<DexExecutionProfileV2, "profileId"> & { identity: Pick<DexExecutionProfileV2["identity"], "chain"> };
+type DexExecutionProfileAdmissionInput = Pick<DexMeasuredExecutionPublicProfile, "adapterProfileId" | "chain">;
 
 export function isDexExecutionProfileAdmittedForScoring(
   profile: DexExecutionProfileAdmissionInput,
   registration: DexExecutionCapabilityRegistration,
 ): boolean {
-  const profileId = "adapterProfileId" in profile ? profile.adapterProfileId : profile.profileId;
-  const chain = ("chain" in profile ? profile.chain : profile.identity.chain).trim().toLowerCase();
+  const profileId = profile.adapterProfileId;
+  const chain = profile.chain.trim().toLowerCase();
   if (profileId !== registration.profileId || registration.lifecycle !== "active") return false;
   if (!registration.eligibleChains.includes(chain)) return false;
   if (!registration.eligibleDeploymentKeys) return true;

@@ -3,7 +3,7 @@ import { canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
 import { getGeckoTerminalDiscoveryTarget } from "@shared/lib/dex-deployment-coverage";
 import { sleepWithSignal } from "../../lib/abort";
 import { RATE_LIMITS } from "../../lib/rate-limit";
-import { crawlTokenPools, createCrawlStats, type CrawlToken } from "../dex-liquidity/crawl-helpers";
+import { crawlTokenPools, type CrawlToken } from "../dex-liquidity/crawl-helpers";
 import { fetchGtTokenPools, getGtPoolType, parseGtPool } from "../dex-liquidity/geckoterminal-shared";
 import type { GtNewPool, GtPool, DexPriceObs } from "../dex-liquidity/types";
 import { getGtDexQuality, normalizeProtocol } from "../dex-liquidity/pool-normalization";
@@ -82,7 +82,6 @@ export async function crawlGeckoTerminalPoolsStage({
     newPools: gtNewPools,
     priceObs: gtPriceObs,
     references: context.references,
-    stats: createCrawlStats(),
     signal: context.signal,
     minTvlUsd: 1_000,
     beforeRequest: async ({ requestCount }) => {

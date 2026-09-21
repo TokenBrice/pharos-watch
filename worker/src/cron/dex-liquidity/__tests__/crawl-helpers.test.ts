@@ -3,7 +3,6 @@ import {
   crawlTokenPools,
   getChainAwareDsTrackedTokenPriceUsd,
   shouldSkipFallbackCurvePool,
-  type CrawlStats,
 } from "../crawl-helpers";
 import type { GtNewPool } from "../types";
 
@@ -11,17 +10,6 @@ interface RawPool {
   id: string;
   tvlUsd: number;
   price: number;
-}
-
-function makeStats(): CrawlStats {
-  return {
-    requests: 0,
-    poolsSeen: 0,
-    poolsNew: 0,
-    poolsSkippedCurve: 0,
-    poolsSkippedKnown: 0,
-    poolsSkippedRatio: 0,
-  };
 }
 
 describe("crawlTokenPools", () => {
@@ -33,7 +21,6 @@ describe("crawlTokenPools", () => {
   });
 
   it("stops before a request when beforeRequest returns false", async () => {
-    const stats = makeStats();
     const result = await crawlTokenPools<RawPool, GtNewPool>({
       sourceLabel: "test",
       tokens: [{ sourceChain: "eth", ourChain: "ethereum", address: "0xabc", stablecoinId: "usdc-circle" }],
@@ -42,7 +29,6 @@ describe("crawlTokenPools", () => {
       protocolTvlCaps: new Map(),
       newPools: new Map(),
       priceObs: new Map(),
-      stats,
       beforeRequest: async () => false,
       fetchPools: async () => {
         throw new Error("should not fetch");
@@ -52,11 +38,9 @@ describe("crawlTokenPools", () => {
     });
 
     expect(result.stoppedEarly).toBe(true);
-    expect(stats.requests).toBe(0);
   });
 
   it("keeps native-covered Curve pools out of secondary discovery", async () => {
-    const stats = makeStats();
     const newPools = new Map<string, GtNewPool[]>();
     const priceObs = new Map();
     const result = await crawlTokenPools<RawPool, GtNewPool>({
@@ -67,7 +51,6 @@ describe("crawlTokenPools", () => {
       protocolTvlCaps: new Map(),
       newPools,
       priceObs,
-      stats,
       fetchPools: async () => [{ id: "pool-a", tvlUsd: 100_000, price: 1 }],
       parsePool: (pool) => ({
         dexId: "curve",
@@ -87,15 +70,11 @@ describe("crawlTokenPools", () => {
     });
 
     expect(result.stoppedEarly).toBe(false);
-    expect(stats.poolsSeen).toBe(1);
-    expect(stats.poolsSkippedCurve).toBe(1);
-    expect(stats.poolsNew).toBe(0);
     expect(newPools.size).toBe(0);
     expect(priceObs.size).toBe(0);
   });
 
   it("accepts fallback Curve pools on chains without native Curve API coverage", async () => {
-    const stats = makeStats();
     const newPools = new Map<string, GtNewPool[]>();
     const priceObs = new Map();
     const result = await crawlTokenPools<RawPool, GtNewPool>({
@@ -106,7 +85,6 @@ describe("crawlTokenPools", () => {
       protocolTvlCaps: new Map([["curve", 800_000]]),
       newPools,
       priceObs,
-      stats,
       fetchPools: async () => [{ id: "0xpool", tvlUsd: 900_000, price: 0.9973 }],
       parsePool: (pool) => ({
         dexId: "curve-plasma",
@@ -138,9 +116,6 @@ describe("crawlTokenPools", () => {
     });
 
     expect(result.stoppedEarly).toBe(false);
-    expect(stats.poolsSeen).toBe(1);
-    expect(stats.poolsSkippedCurve).toBe(0);
-    expect(stats.poolsNew).toBe(1);
     expect(newPools.get("yzusd-yuzu")?.[0]).toMatchObject({
       chain: "plasma",
       dexId: "curve-plasma",
@@ -153,7 +128,6 @@ describe("crawlTokenPools", () => {
   });
 
   it("adds new pools and price observations for matching stablecoin side", async () => {
-    const stats = makeStats();
     const newPools = new Map<string, GtNewPool[]>();
     const priceObs = new Map();
     const result = await crawlTokenPools<RawPool, GtNewPool>({
@@ -164,7 +138,6 @@ describe("crawlTokenPools", () => {
       protocolTvlCaps: new Map([["testdex", 50_000]]),
       newPools,
       priceObs,
-      stats,
       fetchPools: async () => [{ id: "pool-a", tvlUsd: 100_000, price: 1 }],
       parsePool: (pool) => ({
         dexId: "testdex",
@@ -196,14 +169,11 @@ describe("crawlTokenPools", () => {
     });
 
     expect(result.stoppedEarly).toBe(false);
-    expect(stats.poolsSeen).toBe(1);
-    expect(stats.poolsNew).toBe(1);
     expect(newPools.get("usdc-circle")?.[0]?.tvlUsd).toBe(50_000);
     expect(priceObs.get("usdc-circle")).toHaveLength(1);
   });
 
   it("skips secondary-source pools with implausible tracked token prices", async () => {
-    const stats = makeStats();
     const newPools = new Map<string, GtNewPool[]>();
     const priceObs = new Map();
     const result = await crawlTokenPools<RawPool, GtNewPool>({
@@ -214,7 +184,6 @@ describe("crawlTokenPools", () => {
       protocolTvlCaps: new Map(),
       newPools,
       priceObs,
-      stats,
       fetchPools: async () => [{ id: "pool-a", tvlUsd: 2_000_000_000, price: 500 }],
       parsePool: (pool) => ({
         dexId: "testdex",
@@ -233,9 +202,6 @@ describe("crawlTokenPools", () => {
       },
     });
 
-    expect(result.stoppedEarly).toBe(false);
-    expect(stats.poolsSeen).toBe(1);
-    expect(stats.poolsNew).toBe(0);
     expect(newPools.size).toBe(0);
     expect(priceObs.size).toBe(0);
   });
@@ -256,7 +222,6 @@ describe("crawlTokenPools", () => {
       priceUsd: 1,
     });
 
-    const stats = makeStats();
     const newPools = new Map<string, GtNewPool[]>();
     await crawlTokenPools<RawPool, GtNewPool>({
       sourceLabel: "test",
@@ -266,7 +231,6 @@ describe("crawlTokenPools", () => {
       protocolTvlCaps: new Map(),
       newPools,
       priceObs: new Map(),
-      stats,
       fetchPools: async () => [{ id: "PoolCase", tvlUsd: 100_000, price: 1 }],
       parsePool: (pool) => ({
         dexId: "testdex",
@@ -285,7 +249,6 @@ describe("crawlTokenPools", () => {
       },
     });
 
-    expect(stats.poolsNew).toBe(0);
     expect(newPools.size).toBe(0);
   });
 });

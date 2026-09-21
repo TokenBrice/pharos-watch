@@ -1,7 +1,6 @@
 import { getCache, setCache } from "../../lib/db-cache";
 import {
   PENDING_BACKOFF_SCHEDULE_SEC,
-  PENDING_TTL_SEC,
 } from "../../lib/telegram/constants";
 import { logTelegramEvent } from "../../lib/telegram/log";
 
@@ -52,24 +51,3 @@ export async function readTelegramGlobalBackoff(db: D1Database, nowSec: number):
   }
 }
 
-export async function loadChatsInBackoff(
-  db: D1Database,
-  nowSec: number,
-): Promise<Map<string, number>> {
-  const rows = await db
-    .prepare(
-      `SELECT chat_id, MAX(not_before_at) AS not_before_at
-         FROM telegram_pending_alerts
-        WHERE COALESCE(expires_at, created_at + ?) > ?
-          AND not_before_at IS NOT NULL
-          AND not_before_at > ?
-        GROUP BY chat_id`,
-    )
-    .bind(PENDING_TTL_SEC, nowSec, nowSec)
-    .all<{ chat_id: string; not_before_at: number | null }>();
-  return new Map(
-    (rows.results ?? [])
-      .filter((row): row is { chat_id: string; not_before_at: number } => row.not_before_at != null)
-      .map((row) => [row.chat_id, row.not_before_at]),
-  );
-}

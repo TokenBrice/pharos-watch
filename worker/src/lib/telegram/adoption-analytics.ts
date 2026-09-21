@@ -1,7 +1,6 @@
 import { formatIsoDate } from "@shared/lib/format";
 import {
   TELEGRAM_ADOPTION_FEATURES,
-  TELEGRAM_ADOPTION_LOW_COUNT_THRESHOLD,
   telegramAdoptionSource,
   type TelegramAdoptionCampaign,
   type TelegramAdoptionFeature,
@@ -52,29 +51,6 @@ interface RetentionMetricRow {
   retained_direct: number | string | null;
   retained_preset: number | string | null;
   retained_global: number | string | null;
-}
-
-interface AdoptionDailyRow {
-  campaign: string;
-  placement: string;
-  stage: string;
-  feature: string;
-  latency_bucket: string;
-  outcome: string;
-  count: number | string;
-  last_seen_at: number | string;
-  period: "current" | "previous";
-}
-
-interface AdoptionRetentionRow {
-  cohort_day: string;
-  measurement_day: string;
-  window_days: number | string;
-  feature: string;
-  cohort_size: number | string;
-  retained_count: number | string;
-  measured_at: number | string;
-  quality: string;
 }
 
 const FIRST_MUTATION_BUCKET_SECONDS: Readonly<Record<string, number>> = {
@@ -394,150 +370,6 @@ export async function refreshTelegramAdoptionRetention(
     }
   }
   return { written, caughtUp };
-}
-
-function suppressed(value: number): number | null {
-  return value > 0 && value < TELEGRAM_ADOPTION_LOW_COUNT_THRESHOLD ? null : value;
-}
-
-function rate(numerator: number, denominator: number): number | null {
-  if (numerator > 0 && numerator < TELEGRAM_ADOPTION_LOW_COUNT_THRESHOLD) return null;
-  if (denominator < TELEGRAM_ADOPTION_LOW_COUNT_THRESHOLD) return null;
-  return Math.round((numerator / denominator) * 10_000) / 100;
-}
-
-export async function loadTelegramAdoptionWeeklyReport(
-  db: D1Database,
-  nowSec = Math.floor(Date.now() / 1_000),
-): Promise<Record<string, unknown>> {
-  const currentEnd = dayAtOffset(nowSec, -1);
-  const currentStart = dayAtOffset(nowSec, -7);
-  const previousStart = dayAtOffset(nowSec, -14);
-  const daily = await db.prepare(
-    `SELECT campaign, placement, stage, feature, latency_bucket, outcome,
-            SUM(count) AS count, MAX(last_seen_at) AS last_seen_at,
-            CASE WHEN day >= ? THEN 'current' ELSE 'previous' END AS period
-       FROM telegram_adoption_daily
-      WHERE day >= ? AND day <= ?
-      GROUP BY period, campaign, placement, stage, feature, latency_bucket, outcome`,
-  ).bind(currentStart, previousStart, currentEnd).all<AdoptionDailyRow>();
-
-  type PlacementMetrics = {
-    clicks: number;
-    starts: number;
-    setups: number;
-    firstFollows: number;
-    miniAppSessions: number;
-    firstMutations: number;
-  };
-  const emptyMetrics = (): PlacementMetrics => ({
-    clicks: 0,
-    starts: 0,
-    setups: 0,
-    firstFollows: 0,
-    miniAppSessions: 0,
-    firstMutations: 0,
-  });
-  const placementMap = new Map<string, PlacementMetrics>();
-  const placementNames = new Set<string>();
-  const mutationBuckets = new Map<string, number>();
-  let latestEventAt = 0;
-  for (const row of daily.results ?? []) {
-    latestEventAt = Math.max(latestEventAt, count(row.last_seen_at));
-    placementNames.add(row.placement);
-    const key = `${row.period}:${row.placement}`;
-    const placement = placementMap.get(key) ?? emptyMetrics();
-    if (row.stage === "cta_click") placement.clicks += count(row.count);
-    if (row.stage === "bot_start") placement.starts += count(row.count);
-    if (row.stage === "setup_complete") placement.setups += count(row.count);
-    if (row.stage === "first_follow") placement.firstFollows += count(row.count);
-    if (row.stage === "mini_app_session") placement.miniAppSessions += count(row.count);
-    if (row.stage === "first_mutation") placement.firstMutations += count(row.count);
-    placementMap.set(key, placement);
-    if (row.period === "current" && row.stage === "first_mutation") {
-      mutationBuckets.set(row.latency_bucket, (mutationBuckets.get(row.latency_bucket) ?? 0) + count(row.count));
-    }
-  }
-
-  const retention = await db.prepare(
-    `SELECT cohort_day, measurement_day, window_days, feature, cohort_size,
-            retained_count, measured_at, quality
-       FROM telegram_adoption_retention_daily
-      WHERE measurement_day <= ?
-        AND measurement_day >= ?
-      ORDER BY measurement_day DESC, window_days ASC, feature ASC`,
-  ).bind(currentEnd, currentStart).all<AdoptionRetentionRow>();
-  let latestRetentionAt = 0;
-  const latestRetention = new Map<string, AdoptionRetentionRow>();
-  for (const row of retention.results ?? []) {
-    latestRetentionAt = Math.max(latestRetentionAt, count(row.measured_at));
-    const key = `${count(row.window_days)}:${row.feature}`;
-    if (!latestRetention.has(key)) latestRetention.set(key, row);
-  }
-
-  return {
-    generatedAt: nowSec,
-    range: { currentStart, currentEnd, previousStart, previousEnd: dayAtOffset(nowSec, -8) },
-    placements: [...placementNames].sort().map((placement) => {
-      const current = placementMap.get(`current:${placement}`) ?? emptyMetrics();
-      const previous = placementMap.get(`previous:${placement}`) ?? emptyMetrics();
-      const clickOnly = placement === "setup";
-      const miniAppPlacement = placement === "miniapp_setup"
-        || placement === "miniapp_home"
-        || placement === "miniapp_watchlist"
-        || placement === "menu";
-      return {
-        placement,
-        attributionMode: clickOnly ? "click_only" : "aggregate_directional",
-        ctaClicks: suppressed(current.clicks),
-        botStarts: clickOnly || miniAppPlacement ? null : suppressed(current.starts),
-        setupCompletes: clickOnly || miniAppPlacement ? null : suppressed(current.setups),
-        firstFollows: clickOnly ? null : suppressed(current.firstFollows),
-        miniAppSessions: miniAppPlacement ? suppressed(current.miniAppSessions) : null,
-        firstMutations: miniAppPlacement ? suppressed(current.firstMutations) : null,
-        startPerClickPct: clickOnly || miniAppPlacement ? null : rate(current.starts, current.clicks),
-        setupPerStartPct: clickOnly || miniAppPlacement ? null : rate(current.setups, current.starts),
-        previous: {
-          ctaClicks: suppressed(previous.clicks),
-          botStarts: clickOnly || miniAppPlacement ? null : suppressed(previous.starts),
-          setupCompletes: clickOnly || miniAppPlacement ? null : suppressed(previous.setups),
-          firstFollows: clickOnly ? null : suppressed(previous.firstFollows),
-          miniAppSessions: miniAppPlacement ? suppressed(previous.miniAppSessions) : null,
-          firstMutations: miniAppPlacement ? suppressed(previous.firstMutations) : null,
-        },
-      };
-    }),
-    firstMutationLatencyBuckets: [...mutationBuckets.entries()].sort(([a], [b]) => a.localeCompare(b)).map(
-      ([bucket, value]) => ({ bucket, count: suppressed(value) }),
-    ),
-    retention: [...latestRetention.values()].map((row) => {
-      const cohortSize = count(row.cohort_size);
-      const retainedCount = count(row.retained_count);
-      return {
-        cohortDay: row.cohort_day,
-        measurementDay: row.measurement_day,
-        windowDays: count(row.window_days),
-        feature: row.feature,
-        cohortSize: suppressed(cohortSize),
-        retainedCount: suppressed(retainedCount),
-        retentionPct: rate(retainedCount, cohortSize),
-        quality: row.quality,
-      };
-    }),
-    freshness: { latestEventAt: latestEventAt || null, latestRetentionAt: latestRetentionAt || null },
-    quality: {
-      ctaClicks: "best_effort_no_identifier",
-      telegramStages: "idempotent_telegram_milestones",
-      retention: "daily_snapshot_with_bounded_catchup",
-      suppressionThreshold: TELEGRAM_ADOPTION_LOW_COUNT_THRESHOLD,
-      warnings: [
-        "CTA and Telegram stages are aggregate-only and are not joined users.",
-        "Directional start-per-click rates may exceed 100% after retries, shared links, or cross-day activity.",
-        "Catch-up retention uses current operational state and is labeled catchup_current_state.",
-        "First-follow cohorts before 2026-07-11 are unavailable because they predate complete aggregate collection.",
-      ],
-    },
-  };
 }
 
 export const TELEGRAM_ADOPTION_SESSION_CACHE_PREFIX = MINI_APP_SESSION_CACHE_PREFIX;

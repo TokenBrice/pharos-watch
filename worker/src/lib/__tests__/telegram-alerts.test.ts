@@ -14,7 +14,6 @@ import {
   parseDisambiguationReply,
   formatConsolidatedMessage,
   splitMessage,
-  formatListOutput,
   findInvalidDisambiguationToken,
   isDewsAlertable,
   isDewsDeescalation,
@@ -769,27 +768,6 @@ describe("splitMessage", () => {
       expect(chunk.length).toBeLessThanOrEqual(200);
     }
     expect(chunks.join("\n\n")).toBe(long);
-  });
-});
-
-describe("formatListOutput", () => {
-  it("formats active subscriptions", () => {
-    const output = formatListOutput(
-      { dews: true, depeg: true, safety: false, launch: false },
-      [
-        { symbol: "USDC", id: "usdc-circle" },
-        { symbol: "BOLD", id: "bold-liquity" },
-      ],
-    );
-    expect(output).toContain("DEWS, Depeg");
-    expect(output).toContain("Coins (2)");
-    expect(output).toContain("USDC (usdc-circle)");
-  });
-
-  it("shows None when no types or coins", () => {
-    const output = formatListOutput({ dews: false, depeg: false, safety: false, launch: false }, []);
-    expect(output).toContain("Alert types: None");
-    expect(output).toContain("Coins (0):\nNone");
   });
 });
 

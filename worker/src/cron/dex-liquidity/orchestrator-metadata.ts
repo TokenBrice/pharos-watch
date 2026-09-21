@@ -9,9 +9,6 @@ import {
 import type { PoolProcessingRejection } from "./process-pool-types";
 import type { LiquidityFallbackCounters } from "./types";
 
-export type { DexLiquidityPostScoreAnalysis } from "./orchestrator-analysis";
-export { analyzeDexLiquidityPostScoring } from "./orchestrator-analysis";
-
 export function isDexLiquidityDegraded(params: {
   criticalSourceFailures: string[];
   poolRejections?: PoolProcessingRejection[];
@@ -147,6 +144,5 @@ export function buildDexLiquidityCronMetadata(params: {
       historicalSnapshotRowsPruned: params.historicalSnapshot.historyRowsPruned,
       historicalSnapshotRetentionPruneFailed: params.historicalSnapshot.retentionPruneFailed,
     },
-    validationFailures: rejectedPoolCount,
   };
 }

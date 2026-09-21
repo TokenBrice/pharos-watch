@@ -19,14 +19,6 @@ import { projectRecapPendingTerminalOutcome } from "./recap-terminal";
 type ExpiredPendingRow = DeadLetterPendingRow & { expires_at?: number | null };
 export const TELEGRAM_PENDING_SENT_RETENTION_SEC = 24 * 60 * 60;
 
-type PendingAlertAdminFilter = { chatId: string } | { olderThanCutoffSec: number };
-type PendingAlertFilterClause = {
-  whereSql:
-    | "chat_id = ? AND delivery_state = 'pending'"
-    | "created_at < ? AND delivery_state = 'pending'";
-  binds: readonly [string] | readonly [number];
-};
-
 export interface DisabledChatPendingCleanupResult {
   deleted: number;
   failed: boolean;
@@ -150,16 +142,6 @@ export async function archiveAgedExecutionUnknownPendingAlerts(
   return archiveExecutionUnknownPendingRows(db, aged, nowSec);
 }
 
-function pendingAlertFilterClause(filter: PendingAlertAdminFilter): PendingAlertFilterClause {
-  if ("chatId" in filter) {
-    return { whereSql: "chat_id = ? AND delivery_state = 'pending'", binds: [filter.chatId] };
-  }
-  return {
-    whereSql: "created_at < ? AND delivery_state = 'pending'",
-    binds: [filter.olderThanCutoffSec],
-  };
-}
-
 function normalizeFiniteNumber(value: unknown): number | null {
   const parsed = typeof value === "number" ? value : typeof value === "string" ? Number(value) : null;
   return parsed != null && Number.isFinite(parsed) ? parsed : null;
@@ -195,73 +177,6 @@ function logExpiredPendingDeadLetterBypass(rows: readonly ExpiredPendingRow[]): 
     affectedChatCount: new Set(rows.map((row) => row.chat_id)).size,
     dedupeKeyCount: rows.filter((row) => row.dedupe_key).length,
   });
-}
-
-export async function countPendingAlertsForAdmin(
-  db: D1Database,
-  filter: PendingAlertAdminFilter,
-): Promise<number> {
-  const query = pendingAlertFilterClause(filter);
-  const row = await db
-    .prepare(`SELECT COUNT(*) AS count FROM telegram_pending_alerts WHERE ${query.whereSql}`)
-    .bind(...query.binds)
-    .first<{ count: number | string | null }>();
-  const count = Number(row?.count ?? 0);
-  return Number.isFinite(count) && count > 0 ? Math.floor(count) : 0;
-}
-
-export async function clearPendingAlertsForAdmin(
-  db: D1Database,
-  filter: PendingAlertAdminFilter,
-  nowSec: number,
-): Promise<number> {
-  let deleted = 0;
-
-  for (;;) {
-    const query = pendingAlertFilterClause(filter);
-
-    const selected = await db
-      .prepare(
-        `SELECT ${PENDING_ALERT_DEAD_LETTER_COLUMN_SQL}
-           FROM telegram_pending_alerts
-          WHERE ${query.whereSql}
-          ORDER BY id ASC
-          LIMIT ?`,
-      )
-      .bind(...query.binds, PENDING_DELETE_CHUNK_SIZE)
-      .all<DeadLetterPendingRow>();
-    const rows = selected.results ?? [];
-    if (rows.length === 0) break;
-
-    const deadLettered = await deadLetterTerminalPendingRows(db, rows, nowSec, "manual_clear");
-    if (!deadLettered) {
-      throw new Error("Failed to dead-letter Telegram pending alerts before manual clear");
-    }
-    await projectTerminalPendingRows(db, rows, "cancelled", nowSec, "manual_clear");
-
-    await recordTelegramAlertTargetStatuses(
-      db,
-      rows
-        .filter((row) => row.dedupe_key)
-        .map((row) => ({
-          targetKey: row.dedupe_key!,
-          status: "failed" as const,
-          at: nowSec,
-          errorClass: "manual_clear",
-        })),
-    );
-
-    const deletedRows = await deletePendingAlertsByIds(db, rows.map((row) => row.id));
-    deleted += deletedRows;
-    if (deletedRows < rows.length) {
-      throw new Error(
-        `Deleted ${deletedRows} of ${rows.length} selected Telegram pending alerts during manual clear`,
-      );
-    }
-    if (rows.length < PENDING_DELETE_CHUNK_SIZE) break;
-  }
-
-  return deleted;
 }
 
 export async function clearPendingAlertsForDisabledChat(

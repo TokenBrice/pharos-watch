@@ -35,7 +35,6 @@ import {
   buildDexMeasuredExecutionProfile,
   createDexMeasuredExecutionRpcBudget,
   DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
-  projectProfileForAdapter,
 } from "../profiles";
 import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-observation-assembly";
 import { toMaturePublicProfile } from "./profile.test-support";
@@ -306,13 +305,6 @@ describe("QuoterV2 pinned-block replay proofs", () => {
       });
 
       expect(validateQuoterV2ProfileProof(profile)).toEqual([]);
-      const v2Profile = projectProfileForAdapter(profile, "evm-quoter-v2");
-      expect(v2Profile).toMatchObject({
-        adapterId: "evm-quoter-v2",
-        demandedInputAmountsUsd: DEMANDED_GRID_USD,
-        payload: { platform: "evm", blockNumber: fixture.blockNumber },
-      });
-      expect(v2Profile?.payload.platform === "evm" && v2Profile.payload.callProof).toHaveLength(5);
       expect(isDexMeasuredExecutionDeploymentScoreEligible(fixture.adapterProfileId, fixture.chain))
         .toBe(fixture.scoreEligible);
         const measuredExecution = toMaturePublicProfile(profile);

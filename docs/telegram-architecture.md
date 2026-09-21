@@ -227,7 +227,7 @@ Admin recovery paths preserve the same effect and queue boundaries. Broadcast is
 **Owned files.**
 - `worker/src/cron/telegram-pending/index.ts` (compatibility barrel for existing imports)
 - `worker/src/cron/telegram-pending/*` (claim/drain, backoff, cleanup, dead-letter, preference revalidation, recap terminal projection, lifecycle helpers)
-- `worker/src/lib/telegram/pending-queue.ts` (enqueue, dedupe-key construction, priority and upsert SQL, re-exported by `telegram-pending/upsert-sql.ts`) and `worker/src/lib/telegram/pending-capacity.ts` (capacity/watchdog read model)
+- `worker/src/lib/telegram/pending-queue.ts` (enqueue, dedupe-key construction, priority and upsert SQL) and `worker/src/lib/telegram/pending-capacity.ts` (capacity/watchdog read model)
 - `shared/lib/telegram-delivery-policy.ts` owns runtime-neutral queue, batch, TTL, rate-limit, deadline, and load-model policy. `worker/src/lib/telegram/constants.ts` re-exports the established Worker import surface.
 
 **Allowed inbound dependencies.** Dispatch and the personalized recap planner (the only legitimate alert/recap enqueuers), Admin Telegram routes (`admin-telegram-broadcast.ts`), Callback routing only via `SNOOZE_REPLY_MARKUP` re-export (the `lib/telegram/alerts.ts` keyboard).

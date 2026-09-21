@@ -59,10 +59,7 @@ vi.mock("../../lib/telegram/subscriber-lifecycle", () => ({
 const {
   cleanupExpiredPendingAlerts,
   archiveAgedExecutionUnknownPendingAlerts,
-  countPendingAlertsForAdmin,
-  clearPendingAlertsForAdmin,
   disableBlockedSubscriber,
-  loadChatsInBackoff,
   registerSubscriberBlockAndShouldDisable,
   resetSubscriberBlockCount,
   PENDING_TTL_SEC,
@@ -630,34 +627,6 @@ describe("buildDedupeKey", () => {
   });
 });
 
-describe("loadChatsInBackoff", () => {
-  it("aggregates only live future backoffs, including legacy TTL boundaries", async () => {
-    const { sqlite, db } = setupTelegramPendingSqlite();
-    const now = 5_000;
-    try {
-      for (const seed of [
-        { chatId: "live", notBeforeAt: 5_100, expiresAt: 5_001 },
-        { chatId: "live", notBeforeAt: 5_200, expiresAt: 6_000 },
-        { chatId: "live", notBeforeAt: 9_000, expiresAt: 5_000 },
-        { chatId: "expired", notBeforeAt: 9_000, expiresAt: 4_999 },
-        { chatId: "ready", notBeforeAt: 5_000, expiresAt: 6_000 },
-        { chatId: "unset", notBeforeAt: null, expiresAt: 6_000 },
-        { chatId: "legacy-live", notBeforeAt: 5_300, createdAt: now - PENDING_TTL_SEC + 1 },
-        { chatId: "legacy-expired", notBeforeAt: 9_000, createdAt: now - PENDING_TTL_SEC },
-      ]) insertPendingSqlite(sqlite, { html: seed.chatId, createdAt: now - 60, ...seed });
-
-      expect(await loadChatsInBackoff(db, now)).toEqual(new Map([
-        ["legacy-live", 5_300],
-        ["live", 5_200],
-      ]));
-      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts").get()).toEqual({ count: 8 });
-      expect(await loadChatsInBackoff(db, 10_000)).toEqual(new Map());
-    } finally {
-      sqlite.close();
-    }
-  });
-});
-
 describe("cleanupExpiredPendingAlerts", () => {
   it("retries deletion after a committed dead-letter insert without duplicating audit rows", async () => {
     const { sqlite, db } = setupTelegramPendingSqlite();
@@ -700,82 +669,6 @@ describe("cleanupExpiredPendingAlerts", () => {
     await expect(cleanupExpiredPendingAlerts(crashDb, now + 1)).resolves.toBe(1);
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_dead_letters").get()).toEqual({ count: 1 });
     expect(sqlite.prepare("SELECT id FROM telegram_pending_alerts WHERE id = 901").get()).toBeUndefined();
-    sqlite.close();
-  });
-
-  it("keeps repeated manual clear idempotent after delete failure", async () => {
-    const { sqlite, db } = setupTelegramPendingSqlite();
-    const now = Math.floor(Date.now() / 1000);
-    insertPendingSqlite(sqlite, {
-      id: 902,
-      chatId: "manual-clear-crash",
-      html: "<b>Manual</b>",
-      createdAt: now - 60,
-      expiresAt: now + 600,
-      dedupeKey: "manual-clear-crash-key",
-    });
-    let failDelete = true;
-    const crashDb = {
-      ...db,
-      prepare: (sql: string) => {
-        if (sql.includes("DELETE FROM telegram_pending_alerts WHERE id IN")) {
-          const statement = db.prepare(sql);
-          return {
-            bind: (...binds: unknown[]) => {
-              const bound = statement.bind(...binds);
-              return {
-                run: async () => {
-                  if (failDelete) {
-                    failDelete = false;
-                    throw new Error("manual delete failed");
-                  }
-                  return bound.run();
-                },
-              };
-            },
-          } as unknown as D1PreparedStatement;
-        }
-        return db.prepare(sql);
-      },
-    } as D1Database;
-
-    await expect(clearPendingAlertsForAdmin(crashDb, { chatId: "manual-clear-crash" }, now))
-      .rejects.toThrow("manual delete failed");
-    await expect(clearPendingAlertsForAdmin(crashDb, { chatId: "manual-clear-crash" }, now + 1))
-      .resolves.toBe(1);
-    expect(sqlite.prepare(
-      "SELECT COUNT(*) AS count, MIN(reason) AS reason FROM telegram_alert_dead_letters WHERE pending_id = 902",
-    ).get()).toEqual({ count: 1, reason: "manual_clear" });
-    sqlite.close();
-  });
-
-  it("keeps sending and execution-unknown rows out of ordinary admin clear", async () => {
-    const { sqlite, db } = setupTelegramPendingSqlite();
-    const now = Math.floor(Date.now() / 1000);
-    for (const [id, state] of [[910, "pending"], [911, "sending"], [912, "execution_unknown"]] as const) {
-      insertPendingSqlite(sqlite, {
-        id,
-        chatId: "admin-clear-lifecycle",
-        html: `<b>${state}</b>`,
-        createdAt: now - 60,
-        expiresAt: now + 600,
-        dedupeKey: `admin-clear-${state}`,
-      });
-      sqlite.prepare(
-        `UPDATE telegram_pending_alerts
-            SET delivery_state = ?, delivery_owner = ?, delivery_generation = 1
-          WHERE id = ?`,
-      ).run(state, state === "pending" ? null : `${state}-owner`, id);
-    }
-
-    await expect(countPendingAlertsForAdmin(db, { chatId: "admin-clear-lifecycle" })).resolves.toBe(1);
-    await expect(clearPendingAlertsForAdmin(db, { chatId: "admin-clear-lifecycle" }, now)).resolves.toBe(1);
-    expect(sqlite.prepare(
-      "SELECT id, delivery_state FROM telegram_pending_alerts ORDER BY id",
-    ).all()).toEqual([
-      { id: 911, delivery_state: "sending" },
-      { id: 912, delivery_state: "execution_unknown" },
-    ]);
     sqlite.close();
   });
 
