@@ -47,7 +47,8 @@ export interface RedemptionCapacityTelemetry {
     | ExecutableRedemptionObservation["capacitySource"];
   settlementBoundUnproven?: true;
   freshnessKind: "same-run-onchain" | "same-run-api";
-  routeStatusSource: "onchain" | "protocol-api";
+  /** Route-status evidence claim; absent unless this run observed an openness verdict. */
+  routeStatusSource?: "onchain" | "protocol-api";
   idleUnderlyingBalanceRaw?: string;
   underlyingDecimals: number;
   capacityRatioOfSupply?: number;
@@ -234,7 +235,7 @@ function decodeErc20Decimals(raw: bigint | null): number | null {
 
 function routeForSource(source: Erc4626CapacitySource): Erc4626CapacityRoute {
   const api = source === "morpho-vault-v1-liquidity" || source === "morpho-vault-v2-liquidity";
-  return { freshnessKind: api ? "same-run-api" : "same-run-onchain", routeStatusSource: api ? "protocol-api" : "onchain" };
+  return { freshnessKind: api ? "same-run-api" : "same-run-onchain" };
 }
 
 function probeFailure(code: string, message: string): CapacityProbeResult {
@@ -336,7 +337,6 @@ async function fetchYearnV3WithdrawableCapacity(input: OnchainProbeInput & { set
     warnings: [],
     route: {
       freshnessKind: "same-run-onchain",
-      routeStatusSource: "onchain",
       settlementDelaySec,
       ...(settlementDelaySec > 0 ? { capacityKind: "documented-bound" as const } : {}),
     },
@@ -717,23 +717,34 @@ function resolveRouteOpenness(
   capacitySource: Erc4626CapacitySource,
   capacityRaw: bigint,
   pauseProbe: Erc4626CapacityPauseProbe,
-): Pick<RedemptionCapacityTelemetry, "routeStatus" | "routeStatusReason"> {
+): Pick<RedemptionCapacityTelemetry, "routeStatus" | "routeStatusSource" | "routeStatusReason"> {
   if (pauseProbe.paused === true) {
     return {
       routeStatus: "paused",
+      routeStatusSource: "onchain",
       routeStatusReason: "Vault paused() returned true on-chain",
     };
   }
   if (pauseProbe.shutdown === true) {
     return {
       routeStatus: "paused",
+      routeStatusSource: "onchain",
       routeStatusReason: "Yearn vault isShutdown() returned true on-chain",
     };
   }
   if (capacityRaw <= 0n) return {};
+  // A null pause word covers both a vault without the surface and a failed
+  // probe; neither supports an openness verdict, so publish none.
+  if (pauseProbe.paused == null) return {};
   if (capacitySource === "yearn-v3-withdrawable" && pauseProbe.shutdown !== false) return {};
   const routeStatusReason = ROUTE_OPEN_REASON_BY_CAPACITY_SOURCE[capacitySource];
-  return routeStatusReason ? { routeStatus: "open", routeStatusReason } : {};
+  if (!routeStatusReason) return {};
+  const protocolApi = routeForSource(capacitySource).freshnessKind === "same-run-api";
+  return {
+    routeStatus: "open",
+    routeStatusSource: protocolApi ? "protocol-api" : "onchain",
+    routeStatusReason,
+  };
 }
 
 export function buildExecutableRedemptionCapacityTelemetry(
@@ -813,17 +824,19 @@ export function finalizeErc4626RedemptionCapacity(input: {
   const diagnostics = configured.diagnostics as Erc4626CapacityDiagnostics;
   const usesSboldSpWithdrawable = configured.source === "sbold-sp-withdrawable";
   const defaultRouteOpenness = resolveRouteOpenness(capacitySource, capacityRaw, pause);
-  const sboldRouteOpenness =
+  const routeOpenness =
     usesSboldSpWithdrawable && pause.paused !== true
       ? diagnostics.collateralHealthGate === "restricted"
         ? {
             routeStatus: "degraded" as const,
+            routeStatusSource: "onchain" as const,
             routeStatusReason:
               "sBOLD collateral in BOLD exceeds maxCollInBold; _maxWithdraw() and _maxRedeem() return zero",
           }
-        : diagnostics.collateralHealthGate === "open" && capacityRaw > 0n
+        : defaultRouteOpenness.routeStatus === "open" && diagnostics.collateralHealthGate === "open"
           ? {
               routeStatus: "open" as const,
+              routeStatusSource: "onchain" as const,
               routeStatusReason:
                 "sBOLD Stability Pool withdrawable BOLD positive and collateral-health gate open on-chain this run",
             }
@@ -842,11 +855,10 @@ export function finalizeErc4626RedemptionCapacity(input: {
     capacityRaw: capacityRaw.toString(),
     capacitySource,
     freshnessKind: provenance.freshnessKind,
-    routeStatusSource: provenance.routeStatusSource,
     ...(idleCapacityRaw != null ? { idleUnderlyingBalanceRaw: idleCapacityRaw.toString() } : {}),
     underlyingDecimals,
     ...(capacityRatioOfSupply != null ? { capacityRatioOfSupply } : {}),
-    ...sboldRouteOpenness,
+    ...routeOpenness,
     ...(usesSboldSpWithdrawable && route.capacityKind
       ? { capacityKind: route.capacityKind }
       : {}),

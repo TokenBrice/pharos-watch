@@ -403,6 +403,20 @@ export async function fetchErc4626SingleAssetReserves(
     }
   }
 
+  const routeStatus =
+    lockPaused || redemptionCapacity?.routeStatus === "paused"
+      ? "paused" as const
+      : hasDegradingWarnings(warnings)
+        ? "degraded" as const
+        : redemptionCapacity?.routeStatus ?? "unknown" as const;
+  // A degraded reserve run is this run's own verdict, so its route claim keeps
+  // the read family that produced it; every other source claim must come from
+  // an openness verdict observed this run.
+  const routeStatusSource = routeStatus === "degraded"
+    ? redemptionCapacity?.routeStatusSource
+      ?? (redemptionCapacity?.freshnessKind === "same-run-api" ? "protocol-api" as const : "onchain" as const)
+    : redemptionCapacity?.routeStatusSource;
+
   return {
     slices,
     ...(warnings.length > 0 ? { warnings } : {}),
@@ -472,14 +486,9 @@ export async function fetchErc4626SingleAssetReserves(
           : {
               capacityKind: "documented-eventual" as const,
             }),
-        freshnessKind: redemptionCapacity?.freshnessKind ?? "same-run-onchain" as const,
-        routeStatus:
-          lockPaused || redemptionCapacity?.routeStatus === "paused"
-            ? "paused" as const
-            : hasDegradingWarnings(warnings)
-              ? "degraded" as const
-              : redemptionCapacity?.routeStatus ?? "unknown" as const,
-        routeStatusSource: redemptionCapacity?.routeStatusSource ?? "onchain" as const,
+        ...(redemptionCapacity ? { freshnessKind: redemptionCapacity.freshnessKind } : {}),
+        routeStatus,
+        ...(routeStatusSource != null ? { routeStatusSource } : {}),
         ...(configuredCapacity?.v9RouteAttempt
           ? { v9RouteAttempt: configuredCapacity.v9RouteAttempt }
           : {}),
