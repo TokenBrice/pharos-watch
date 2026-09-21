@@ -119,7 +119,6 @@ function makeSummaryPayload() {
       },
       freezeLedger: {
         providerFailedCount: 0,
-        staleSnapshotCount: 0,
         trackedGapCount: 0,
         scopedRows: 0,
         legacyRows: 0,

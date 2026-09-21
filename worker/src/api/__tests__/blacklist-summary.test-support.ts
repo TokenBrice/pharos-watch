@@ -59,7 +59,7 @@ const validSummary: Required<BlacklistSummaryResponse> = {
   dataQuality: {
     status: "ok", warnings: [],
     amountGaps: { totalEvents: 0, recoverable: 0, unrecoverable: 0, recentRecoverable: 0, missingRatio: 0, recentWindowSec: 86400 },
-    freezeLedger: { providerFailedCount: 0, staleSnapshotCount: 0, trackedGapCount: 0, scopedRows: 0, legacyRows: 0 },
+    freezeLedger: { providerFailedCount: 0, trackedGapCount: 0, scopedRows: 0, legacyRows: 0 },
     coverage: { supportedConfigs: 0, unsupportedDeferredConfigs: 0 },
   },
   methodology: { version: "3.1", versionLabel: "v3.1", currentVersion: "3.1", currentVersionLabel: "v3.1",

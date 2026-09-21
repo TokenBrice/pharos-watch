@@ -129,7 +129,6 @@ describe("BlacklistStats", () => {
             },
             freezeLedger: {
               providerFailedCount: 4,
-              staleSnapshotCount: 3,
               trackedGapCount: 2,
               scopedRows: 10,
               legacyRows: 0,
@@ -146,7 +145,6 @@ describe("BlacklistStats", () => {
     expect(screen.getByText("Data Quality")).toBeTruthy();
     expect(screen.getByText("Freeze ledger coverage is stale")).toBeTruthy();
     expect(screen.getByText("4 current-balance provider failures")).toBeTruthy();
-    expect(screen.getByText("3 stale current-balance snapshots")).toBeTruthy();
     expect(screen.getByText("2 tracked ledger gaps")).toBeTruthy();
     expect(screen.getByText(/2 recoverable amount gaps across/)).toBeTruthy();
     expect(screen.queryByText(/deferred coverage configs/)).toBeNull();
@@ -170,7 +168,6 @@ describe("BlacklistStats", () => {
             },
             freezeLedger: {
               providerFailedCount: 0,
-              staleSnapshotCount: 0,
               trackedGapCount: 1,
               scopedRows: 10,
               legacyRows: 0,

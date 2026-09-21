@@ -301,11 +301,8 @@ function buildDataQuality(
     missingRatio: gapMetrics.missingRatio,
     recentMissingAmounts: gapMetrics.recentMissingAmounts,
   });
-  // Resolved freeze-ledger rows are retained historical snapshots by design.
-  // Their age remains visible in freezeLedgerMeta.currentFreshnessDistribution,
-  // but it is not an actionable stale condition unless the provider is failing
-  // or recoverable amount gaps cross the shared gap thresholds.
-  const actionableStaleSnapshotCount = 0;
+  // Retained historical snapshot age stays visible in freezeLedgerMeta.currentFreshnessDistribution;
+  // ledger status degrades on provider failures and recoverable amount gaps, not on snapshot age.
   const status =
     gapStatus === "stale"
       ? "stale"
@@ -329,7 +326,6 @@ function buildDataQuality(
     },
     freezeLedger: {
       providerFailedCount: freezeLedgerMeta.providerFailedCount,
-      staleSnapshotCount: actionableStaleSnapshotCount,
       trackedGapCount: freezeLedgerMeta.gaps.tracked,
       scopedRows: freezeLedgerMeta.scopedRows,
       legacyRows: freezeLedgerMeta.legacyRows,

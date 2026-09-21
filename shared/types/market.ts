@@ -937,7 +937,6 @@ const BlacklistDataQualitySchema = z.object({
   }),
   freezeLedger: z.object({
     providerFailedCount: z.number(),
-    staleSnapshotCount: z.number(),
     trackedGapCount: z.number(),
     scopedRows: z.number(),
     legacyRows: z.number(),

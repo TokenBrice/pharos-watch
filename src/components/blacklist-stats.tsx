@@ -52,9 +52,7 @@ export function BlacklistStats({
     : baseUnfreezableSubtext;
   const hasFreezeLedgerWarnings =
     dataQuality &&
-    (dataQuality.status !== "ok" ||
-      dataQuality.freezeLedger.providerFailedCount > 0 ||
-      dataQuality.freezeLedger.staleSnapshotCount > 0);
+    (dataQuality.status !== "ok" || dataQuality.freezeLedger.providerFailedCount > 0);
   const qualityTone = dataQuality?.status === "stale" ? "stale" : "degraded";
   const qualityTitle =
     dataQuality?.status === "stale" ? "Freeze ledger coverage is stale" : "Freeze ledger coverage is degraded";
@@ -90,9 +88,6 @@ export function BlacklistStats({
             <ul className="grid gap-1 sm:grid-cols-2">
               {dataQuality.freezeLedger.providerFailedCount > 0 ? (
                 <li>{dataQuality.freezeLedger.providerFailedCount} current-balance provider failures</li>
-              ) : null}
-              {dataQuality.freezeLedger.staleSnapshotCount > 0 ? (
-                <li>{dataQuality.freezeLedger.staleSnapshotCount} stale current-balance snapshots</li>
               ) : null}
               {dataQuality.freezeLedger.trackedGapCount > 0 ? (
                 <li>{dataQuality.freezeLedger.trackedGapCount} tracked ledger gaps</li>

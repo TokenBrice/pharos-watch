@@ -782,13 +782,14 @@ describe("handleBlacklistSummary", () => {
       };
       dataQuality: {
         status: string;
-        freezeLedger: { staleSnapshotCount: number };
+        freezeLedger: { providerFailedCount: number };
       };
     };
 
     expect(json.freezeLedgerMeta.freshnessDistribution.stale).toBe(1);
     expect(json.freezeLedgerMeta.currentFreshnessDistribution.stale).toBe(0);
-    expect(json.dataQuality.freezeLedger.staleSnapshotCount).toBe(0);
+    expect(json.dataQuality.freezeLedger).not.toHaveProperty("staleSnapshotCount");
+    expect(json.dataQuality.freezeLedger.providerFailedCount).toBe(0);
     expect(json.dataQuality.status).toBe("ok");
   });
 
@@ -849,7 +850,7 @@ describe("handleBlacklistSummary", () => {
         status: string;
         warnings: string[];
         amountGaps: { unrecoverable: number };
-        freezeLedger: { staleSnapshotCount: number };
+        freezeLedger: { providerFailedCount: number };
         coverage: { unsupportedDeferredConfigs: number };
       };
     };
@@ -857,7 +858,7 @@ describe("handleBlacklistSummary", () => {
     expect(json.freezeLedgerMeta.currentFreshnessDistribution.stale).toBe(1);
     expect(json.dataQuality.amountGaps.unrecoverable).toBe(2);
     expect(json.dataQuality.coverage.unsupportedDeferredConfigs).toBeGreaterThan(0);
-    expect(json.dataQuality.freezeLedger.staleSnapshotCount).toBe(0);
+    expect(json.dataQuality.freezeLedger.providerFailedCount).toBe(0);
     expect(json.dataQuality.status).toBe("ok");
     expect(json.dataQuality.warnings).toEqual([]);
   });
