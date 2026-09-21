@@ -3,27 +3,27 @@
   "reserves": [
     {
       "sourceKey": "erc4626-single-asset:ethereum:0x07fff99e1664d9b116fbc158c0e99785f81ca236",
-      "name": "dLEND dUSD deposits",
+      "name": "dTRINITY Staked dUSD deployed strategy positions",
       "pct": 100,
       "risk": "high",
       "coinId": "dusd-dtrinity",
       "depType": "wrapper",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "dTRINITY dUSD and dLEND",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "dTRINITY dLEND",
       "riskFactors": [
         "credit",
         "liquidity",
-        "custody",
         "smart-contract",
         "market",
-        "counterparty"
+        "counterparty",
+        "concentration"
       ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Slice5)",
     "confidence": "verified",
     "sources": [
       {
@@ -35,8 +35,9 @@
         "url": "https://www.dtrinity.org/"
       }
     ],
-    "rationale": "dTRINITY documents sdUSD as an ERC-4626 receipt token backed by dUSD deposits supplied into dLEND. Staking and unstaking are permissionless and depend on unutilized dLEND liquidity; the structured envelope therefore retains one 100% dUSD dependency without inventing lending-market weights.",
-    "compositionBasis": "dTRINITY sdUSD and dLEND documentation",
+    "rationale": "dTRINITY documents sdUSD as an ERC-4626 receipt whose dUSD is supplied into dLEND. The live deployed-position row is therefore classified as a dLEND protocol position with a tracked dUSD wrapper dependency. Unstaking is permissionless but depends on unutilized dLEND liquidity, so no fixed liquidity horizon is asserted.",
+    "compositionBasis": "Live ERC-4626 deployed-position observation on 2026-09-21 plus dTRINITY sdUSD and dLEND documentation",
+    "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
     "knownUnknownExposure": "The dUSD dependency is identified at 100%, but dLEND market allocation, utilization, and available unstaking liquidity are dynamic.",
     "knownUnknownExposurePct": 0

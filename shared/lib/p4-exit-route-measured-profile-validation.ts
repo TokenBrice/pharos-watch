@@ -186,6 +186,20 @@ export function validateMeasuredExecutionProfile(
         (address, index) => address !== policy.poolTokenAddresses[index],
       )
     ) issues.push("physical-pool-provenance-mismatch");
+  } else if (profile.adapterProfileId === "curve-cryptoswap-get-dy-v1") {
+    // CryptoSwap quotes call get_dy on the physical pool itself, not a CL
+    // quoter resolved through getPool. The producer validates the reviewed
+    // cohort, runtime dependencies and token order before projecting this
+    // profile; its endpoint is therefore the public physical-pool binding.
+    const evmProfile = profile as DexMeasuredExecutionPublicProfile;
+    if (
+      canonicalExitRouteAssetKey(evmProfile.chain, evmProfile.executionEndpoint.address) !==
+        evmProfile.poolId ||
+      evmProfile.poolTokenAddresses?.length !== 2 ||
+      !evmProfile.poolTokenAddresses.includes(evmProfile.tokenIn.address) ||
+      !evmProfile.poolTokenAddresses.includes(evmProfile.tokenOut.address) ||
+      evmProfile.tokenIn.address === evmProfile.tokenOut.address
+    ) issues.push("physical-pool-provenance-mismatch");
   } else {
     const evmProfile = profile as DexMeasuredExecutionPublicProfile;
     if (evmProfile.poolTokenAddresses?.length !== 2) issues.push("invalid-cl-token-count");

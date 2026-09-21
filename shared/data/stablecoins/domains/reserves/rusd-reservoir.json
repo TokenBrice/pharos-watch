@@ -2,44 +2,45 @@
   "id": "rusd-reservoir",
   "reserves": [
     {
-      "sourceKey": "reservoir:prime",
-      "name": "Hastra / Sentora PRIME credit allocations",
-      "pct": 33.9,
-      "risk": "high",
-      "assetClass": "private-credit",
-      "issuerOrObligor": "Hastra PRIME (Figure / Democratized Prime HELOC collateral) via the Morpho Sentora PRIME market",
+      "sourceKey": "reservoir:usd1",
+      "name": "USD1 lending markets",
+      "pct": 19.9,
+      "risk": "medium",
+      "coinId": "usd1-world-liberty-financial",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "World Liberty Financial (USD1) via Dolomite",
       "riskFactors": [
-        "credit",
-        "liquidity",
         "counterparty",
-        "smart-contract",
-        "concentration"
+        "custody",
+        "legal",
+        "liquidity",
+        "smart-contract"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "one-day"
     },
     {
-      "sourceKey": "reservoir:usdat",
-      "name": "Pendle PT USDat tokenized-treasury principal token",
-      "pct": 17.3,
-      "risk": "high",
-      "coinId": "usdat-saturn",
+      "sourceKey": "reservoir:ausd",
+      "name": "AUSD lending markets",
+      "pct": 21.4,
+      "risk": "medium",
+      "coinId": "ausd-agora",
       "depType": "collateral",
-      "assetClass": "tokenized-security",
-      "issuerOrObligor": "Saturn (USDat issuer) via the Pendle PT-USDat-27AUG2026 market",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Agora (AUSD) via Curvance lending markets on Monad",
       "riskFactors": [
-        "smart-contract",
+        "counterparty",
+        "custody",
+        "legal",
         "liquidity",
-        "market",
-        "basis",
-        "counterparty"
+        "smart-contract"
       ],
-      "liquidityHorizon": "over-seven-days",
-      "maturityDaysMax": 31
+      "liquidityHorizon": "one-day"
     },
     {
       "sourceKey": "reservoir:gho",
       "name": "GHO lending markets",
-      "pct": 14.2,
+      "pct": 3.6,
       "risk": "medium",
       "coinId": "gho-aave",
       "depType": "collateral",
@@ -56,12 +57,12 @@
     {
       "sourceKey": "reservoir:usdc",
       "name": "USDC positions",
-      "pct": 31.2,
+      "pct": 50.6,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
       "assetClass": "stablecoin",
-      "issuerOrObligor": "Circle (USDC), incl. the Morpho Steakhouse Prime Instant V2 USDC vault",
+      "issuerOrObligor": "Circle (USDC), including Aave, Curvance, Morpho Steakhouse Prime Instant and Morpho Rockaway positions",
       "riskFactors": [
         "counterparty",
         "custody",
@@ -72,31 +73,29 @@
       "liquidityHorizon": "one-day"
     },
     {
-      "sourceKey": "reservoir:agua",
-      "name": "Agua Global Carry Vault (USDC-denominated ERC-4626)",
-      "pct": 3.4,
+      "sourceKey": "reservoir:prime",
+      "name": "Hastra / Sentora PRIME credit allocations",
+      "pct": 4.5,
       "risk": "high",
-      "coinId": "usdc-circle",
-      "depType": "collateral",
-      "assetClass": "fund-share",
-      "issuerOrObligor": "Agua Global Carry Vault (multi-strategy ERC-4626 vault manager); USDC-denominated share claim on Circle USDC",
+      "assetClass": "private-credit",
+      "issuerOrObligor": "Hastra PRIME (Figure / Democratized Prime HELOC collateral) via the Morpho Sentora PRIME market",
       "riskFactors": [
-        "market",
+        "credit",
         "liquidity",
-        "smart-contract",
         "counterparty",
+        "smart-contract",
         "concentration"
       ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "Kimi Code R14 reserve research",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Resv19)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Reservoir raw reserves API",
+        "label": "Reservoir raw reserves API fetched 2026-09-21",
         "url": "https://app.reservoir.xyz/api/reserves/raw"
       },
       {
@@ -108,25 +107,21 @@
         "url": "https://app.reservoir.xyz/reserves"
       },
       {
-        "label": "Agua Global Carry Vault on Etherscan (ERC-4626 asset() read)",
-        "url": "https://etherscan.io/address/0xa98b4a70e17e55045cde4972b95bc2e8cec22a0f"
-      },
-      {
-        "label": "Sentora PRIME vault launch note (curator-primary: PRIME is Figure-originated HELOC credit)",
+        "label": "Sentora PRIME vault launch note",
         "url": "https://sentora.com/research/articles/sentora-launches-prime-vault-on-morpho"
       }
     ],
-    "rationale": "The Reservoir raw reserves API fetched on 2026-08-08 reported $38,868,120.50 of total assets across 14 rows (totalLiabilities $38,580,274.13, equity $287,846.37). Bucketing rows through the reviewed Reservoir adapter mapping yields: Hastra/Sentora PRIME 33.9% ($419,570.95 Hastra PRIME token + $12,748,082.34 Morpho Sentora PRIME), USDC positions 31.2% ($51,202.42 direct/PSM USDC + $249,139.57 adapter USDC + $41,441.25 USDC on Pharos + $2,003,724.08 and $2,000,349.63 Curvance USDC on Monad + $3,985,201.53 Morpho Steakhouse Prime Instant V2 + $3,807,979.81 Morpho Rockaway USDC on Pharos), Pendle PT-USDat-27AUG2026 17.3% ($6,725,724.28), Aave GHO on Plasma/Monad 14.2% ($4,044,456.35 Plasma + $1,486,579.20 Monad), and the Agua Global Carry Vault 3.4% ($1,303,736.27); rounded slices sum to 100.0%. The PYUSD row ($923.84) rounds to 0.0% and is omitted from the curated scaffold. Since the 2026-07-27 review the USD1 bucket remained at zero, PRIME exposure fell as USDC direct/Morpho positions grew, and the live-reserve adapter was extended with an explicit Agua bucket so the vault is no longer treated as unmapped. The Agua slice maps to its on-chain-verified USDC underlying claim (ERC-4626 asset() = USDC at 0xa98b4a70e17e55045cde4972b95bc2e8cec22a0f) while the vault's undisclosed multi-strategy internals stay captured in its high risk tier and risk factors. Risk-tier judgment calls retained: PRIME stays high because it is Figure-originated HELOC private credit (per curator Sentora's own description) whose exit path is an unpublished Morpho market redemption; PT USDat stays high despite tokenized-treasury collateral because the position is a fixed-maturity Pendle principal token (matures 2026-08-27) carrying AMM-exit basis risk.",
-    "compositionBasis": "Reservoir raw reserves API (app.reservoir.xyz/api/reserves/raw) fetched 2026-08-08; totalBalanceValue rows bucketed through the reviewed Reservoir live-reserve adapter mapping and normalized against totalAssets $38,868,120.50; Agua vault underlying verified on-chain via ERC-4626 asset() = USDC",
-    "compositionAsOf": "2026-08-08",
+    "rationale": "The Reservoir raw reserves API fetched on 2026-09-21 reported $92,879,180.43 of total assets across 13 rows, $92,630,130.74 of liabilities, and $249,049.69 of equity. Bucketing every asset row through the production Reservoir adapter mapping yields USDC positions 50.6% ($47,009,286.90), AUSD lending markets 21.4% ($19,858,768.48), USD1 lending markets 19.9% ($18,469,721.64), Hastra/Sentora PRIME 4.5% ($4,223,700.75), and Aave GHO lending markets 3.6% ($3,317,702.66). The rounded slices sum to 100.0%. The former Pendle PT-USDat and Agua positions are absent from the current full balance sheet. Every current row maps to an adapter-owned sourceKey; no total-assets reconciliation gap or unmapped exposure remains.",
+    "compositionBasis": "Reservoir raw reserves API fetched 2026-09-21; all 13 totalBalanceValue rows bucketed through the production Reservoir live-reserve adapter mapping and normalized against totalAssets $92,879,180.43",
+    "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "All reserve buckets are attributed to named exposures. The Agua Global Carry Vault does not publish its internal multi-strategy allocation; the slice is mapped to its on-chain-verified USDC underlying claim and retains high risk for the undisclosed strategy layer.",
+    "knownUnknownExposure": "All current balance-sheet rows are attributed to named adapter categories. The lending-market and private-credit slices retain the counterparty, smart-contract, liquidity, and credit risks of their identified upstream positions.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
-        "reserveIndex": 0,
+        "reserveIndex": 4,
         "reserveName": "Hastra / Sentora PRIME credit allocations",
-        "pct": 33.9,
+        "pct": 4.5,
         "disposition": "untracked-exogenous-asset",
         "rationale": "PRIME is a Figure-originated HELOC private-credit token issued via Hastra/Democratized Prime and lent through the Morpho Sentora PRIME market, not a tracked stablecoin dependency."
       }

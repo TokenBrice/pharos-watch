@@ -56,7 +56,7 @@ const YEAR_RECORD = {
   },
 };
 
-const SIGNED_URL = `https://file.notion.so/f/f/space/${BRLA_NOTION_PIN.attachmentId}/Avenia_-_Transparency_Report_-_20260731_(Audit_Attestation).pdf?table=block&id=${BRLA_NOTION_PIN.reportBlockId}&spaceId=space&expirationTimestamp=1788998400000&signature=signature`;
+const SIGNED_URL = `https://file.notion.so/f/f/space/${BRLA_NOTION_PIN.attachmentId}/Avenia_-_Transparency_Report_-_20260831_(Audit_Attestation).pdf?table=block&id=${BRLA_NOTION_PIN.reportBlockId}&spaceId=space&expirationTimestamp=1790006400000&signature=signature`;
 
 function installFetch(options: { rootRecord?: unknown; yearRecord?: unknown; signedUrl?: string; indexUrl?: string } = {}) {
   const {
@@ -99,11 +99,11 @@ const discoveryArgs = (overrides: Record<string, unknown> = {}) => ({
 describe("BRLA Notion reviewed discovery", () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it("resolves the reviewed July report through pinned block identity", async () => {
+  it("resolves the reviewed August report through pinned block identity", async () => {
     installFetch();
     const result = await verifyBrlaNotionDiscovery(discoveryArgs());
     expect(result.signedUrl).toBe(SIGNED_URL);
-    expect(result.sourceTimestamp).toBe(Math.floor(Date.parse("2026-07-31T23:59:59+00:00") / 1000));
+    expect(result.sourceTimestamp).toBe(Math.floor(Date.parse("2026-08-31T23:59:59+00:00") / 1000));
   });
 
   it("fails closed when the root page title drifts", async () => {
@@ -152,7 +152,7 @@ describe("BRLA Notion reviewed discovery", () => {
                   type: "file",
                   properties: {
                     title: [[BRLA_NOTION_PIN.attachmentTitle]],
-                    source: [["attachment:drifted:Avenia_-_Transparency_Report_-_20260731_(Audit_Attestation).pdf"]],
+                    source: [["attachment:drifted:Avenia_-_Transparency_Report_-_20260831_(Audit_Attestation).pdf"]],
                   },
                 },
               },
@@ -165,19 +165,19 @@ describe("BRLA Notion reviewed discovery", () => {
   });
 
   it("fails closed when a newer unreviewed report appears in the 2026 tree", async () => {
-    const augustBlockId = "4d77f28f-0ae4-80fb-bd17-f3ca9b5d3490";
+    const septemberBlockId = "4d77f28f-0ae4-80fb-bd17-f3ca9b5d3490";
     installFetch({
       yearRecord: {
         recordMap: {
           block: {
             ...YEAR_RECORD.recordMap.block,
-            [augustBlockId]: {
+            [septemberBlockId]: {
               spaceId: "space",
               value: {
                 value: {
-                  id: augustBlockId,
+                  id: septemberBlockId,
                   type: "file",
-                  properties: { title: [["Avenia - Transparency Report - 20260831 (Audit Attestation).pdf"]] },
+                  properties: { title: [["Avenia - Transparency Report - 20260930 (Audit Attestation).pdf"]] },
                 },
               },
             },
@@ -185,7 +185,7 @@ describe("BRLA Notion reviewed discovery", () => {
         },
       },
     });
-    await expect(verifyBrlaNotionDiscovery(discoveryArgs())).rejects.toThrow("newer unreviewed report 20260831");
+    await expect(verifyBrlaNotionDiscovery(discoveryArgs())).rejects.toThrow("newer unreviewed report 20260930");
   });
 
   it("fails closed when the signed URL identity drifts", async () => {
@@ -201,14 +201,14 @@ describe("BRLA Notion reviewed discovery", () => {
   it("reconciles all four chain liabilities to BRL and rejects an omitted chain", () => {
     const manifest = getIndependentAssuranceManifest("BRLA");
     expect(reconcileIndependentAssuranceManifest(manifest)).toMatchObject({
-      computedAssetTotal: "126110433.68",
-      liabilityTotal: "116923169.82",
+      computedAssetTotal: "163450919.38",
+      liabilityTotal: "132765684.39",
     });
     expect(manifest.liabilities).toContainEqual({ code: "moonbeam", label: "Moonbeam Chain BRLA redeemable tokens", amount: "4294.09" });
     expect(() => reconcileIndependentAssuranceManifest({
       ...manifest,
       liabilities: manifest.liabilities.filter((row) => row.code !== "moonbeam"),
-    })).toThrow("liability total 116918875.73 does not match manifest 116923169.82");
+    })).toThrow("liability total 132761390.3 does not match manifest 132765684.39");
   });
 });
 

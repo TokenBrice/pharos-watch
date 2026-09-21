@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "WCLP has six reviewed native issuer deployments on Ethereum, Base, Worldchain, BSC, Polygon, and Gnosis. Ripio's issuer EOA directly holds MINTER_ROLE and UPGRADER_ROLE on each native token, the 4-of-7 Safe holds DEFAULT_ADMIN_ROLE, and the LimitedMinter contract is an additional bounded-but-raiseable issuer minter on four native deployments. The separate LimitedMinterBridge burn/mint adapter is reviewed only in Bridge Risk.",
+    "summary": "WCLP has seven reviewed native issuer deployments on Ethereum, Base, Worldchain, BSC, Polygon, Gnosis, and HyperEVM. Ripio's issuer EOA directly holds MINTER_ROLE and UPGRADER_ROLE on the first six tokens; HyperEVM's deployment initializer assigns MINTER_ROLE, UPGRADER_ROLE, and every other privileged role to the reviewed 4-of-7 Ripio Safe. The LimitedMinter contract is an additional bounded-but-raiseable issuer minter on four native deployments. The separate LimitedMinterBridge burn/mint adapter is reviewed only in Bridge Risk.",
     "upgradeability": {
       "model": "uups",
       "deploymentRefs": [
@@ -89,7 +89,8 @@
           "worldchain:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
           "bsc:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
           "polygon:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
-          "gnosis:0x61d450a098b6a7f69fc4b98ce68198fe59768651"
+          "gnosis:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+          "hyperevm:0x61d450a098b6a7f69fc4b98ce68198fe59768651"
         ],
         "label": "Ripio WCLP Safe multisig (DEFAULT_ADMIN_ROLE)",
         "role": "minter-admin",
@@ -118,19 +119,23 @@
           "observedAt": "2026-08-16",
           "source": "onchain"
         },
-        "observedAt": "2026-08-16",
-        "observedBlock": 25770539,
+        "observedAt": "2026-09-21",
+        "observedBlock": 35704902,
         "sources": [
           {
             "label": "Ripio WCLP Safe multisig",
             "url": "https://etherscan.io/address/0x2b839174fe62466067c22e2a4c8054071f9d8d68"
           },
           {
-            "label": "Ethereum JSON-RPC fixed reads",
-            "url": "https://ethereum-rpc.publicnode.com"
+            "label": "HyperEVMScan wCLP creation and initializer",
+            "url": "https://hyperevmscan.io/tx/0x8e80d59f9aa78dc61719852641d3e430179a0cf564f8377aa18892f187ca8906"
+          },
+          {
+            "label": "HyperEVMScan exact-match LatamStable implementation",
+            "url": "https://hyperevmscan.io/address/0x8898786f1e1e9ed77def940a2ecb7cf07af8d6ba#code"
           }
         ],
-        "evidence": "At Ethereum block 25770539, the 4-of-7 Safe 0x2b839174fe62466067c22e2a4c8054071f9d8d68 held DEFAULT_ADMIN_ROLE on the native WCLP deployment. The Safe had the seven owners recorded above and no enabled modules; the current guard was not independently decoded in this pass. The Safe can authorize native minter and upgrade-role changes across the six issuer deployments, but the bridge adapter is not counted in this control."
+        "evidence": "The reviewed 4-of-7 Safe 0x2b839174fe62466067c22e2a4c8054071f9d8d68 holds DEFAULT_ADMIN_ROLE on the six previously reviewed WCLP deployments. HyperEVM transaction 0x8e80d59f... created the same-address proxy at block 35704902 and initialized DEFAULT_ADMIN_ROLE, PAUSER_ROLE, MINTER_ROLE, UPGRADER_ROLE, and COMPLIANCE_ROLE directly to this Safe. The exact-match verified LatamStable implementation exposes uncapped minting and UUPS upgrades under those roles, establishing the Safe as HyperEVM's direct mint and upgrade authority."
       },
       {
         "chain": "multichain",
@@ -206,11 +211,19 @@
         {
           "label": "Gnosis JSON-RPC fixed reads",
           "url": "https://rpc.gnosischain.com"
+        },
+        {
+          "label": "HyperEVMScan wCLP creation and initializer",
+          "url": "https://hyperevmscan.io/tx/0x8e80d59f9aa78dc61719852641d3e430179a0cf564f8377aa18892f187ca8906"
+        },
+        {
+          "label": "HyperEVMScan exact-match LatamStable implementation",
+          "url": "https://hyperevmscan.io/address/0x8898786f1e1e9ed77def940a2ecb7cf07af8d6ba#code"
         }
       ],
-      "evidence": "The corrected native scope is six independent WCLP issuer deployments: Ethereum, Base, Worldchain, BSC, Polygon, and Gnosis each expose the same LatamStable implementation, issuer EOA MINTER_ROLE and UPGRADER_ROLE, and current totalSupply at the fixed 2026-08-16 blocks. The issuer EOA can mint without an intrinsic token cap and can replace UUPS mint logic immediately; the 4-of-7 Safe can authorize role changes. The LimitedMinterBridge adapter's bridge burn/mint, rate-limit, admin, and pause machinery is relocated to bridgeRouteRisk and is not used to lower the native posture. Reconciliation remains unknown and no independent prudential supervisor is evidenced.",
-      "reviewer": "Codex mint-bridge-boundary migration FIX2-20",
-      "reviewedAt": "2026-08-16",
+      "evidence": "The corrected native scope is seven independent WCLP issuer deployments. Ethereum, Base, Worldchain, BSC, Polygon, and Gnosis expose the same LatamStable implementation with issuer EOA MINTER_ROLE and UPGRADER_ROLE. HyperEVM's verified creation input initializes the same implementation with all privileged roles assigned to Ripio's reviewed 4-of-7 Safe, giving that Safe direct uncapped mint and UUPS upgrade authority there. The LimitedMinterBridge adapter's bridge burn/mint, rate-limit, admin, and pause machinery remains in bridgeRouteRisk. Reconciliation remains unknown and no independent prudential supervisor is evidenced.",
+      "reviewer": "Claude curation campaign 2026-09-21 (Ctrl6)",
+      "reviewedAt": "2026-09-21",
       "disposition": "scoreable"
     }
   }

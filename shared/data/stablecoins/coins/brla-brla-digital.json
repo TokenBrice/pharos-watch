@@ -23,17 +23,17 @@
     "cadence": "monthly",
     "attestorJurisdiction": "Brazil",
     "latestReport": {
-      "periodEnd": "2026-07-31",
-      "publishedAt": "2026-08-24",
+      "periodEnd": "2026-08-31",
+      "publishedAt": "2026-09-16",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "OpenAI Codex Safety Score V9 stale-audited reserve refresh 2026-08-29",
+      "reviewer": "Claude curation campaign 2026-09-21 (Resv03)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "UHY BRLA Transparency Report - July 31, 2026",
-          "url": "https://brladigital.notion.site/BRLA-Transparency-Page-238ba143aa2f4338902ee91ebe50298a#3c67f28f-0ae4-80fb-bd17-f3ca9b5d3490"
+          "label": "UHY BRLA Transparency Report - August 31, 2026",
+          "url": "https://brladigital.notion.site/BRLA-Transparency-Page-238ba143aa2f4338902ee91ebe50298a#3dd7f28f-0ae4-80cc-82e6-c77ddef59fbe"
         }
       ]
     }

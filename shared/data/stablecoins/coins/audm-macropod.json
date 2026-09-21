@@ -23,21 +23,17 @@
     "cadence": "quarterly",
     "attestorJurisdiction": "Australia",
     "latestReport": {
-      "periodEnd": "2026-08-01",
-      "publishedAt": "2026-08-05",
+      "periodEnd": "2026-09-01",
+      "publishedAt": "2026-09-03",
       "assuranceMethod": "self-verification",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "PoR verification sweep 2026-08 (1 Aug 2026 issuer self-verification PDF read: reserve held 100% at Westpac and reconciled to on-chain AUDM across all four networks)",
+      "reviewer": "Claude curation campaign 2026-09-21 (Resv25)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Macropod AUDM Reserve Verification Report as at 1 August 2026",
-          "url": "https://cdn.prod.website-files.com/69df87da28d300c1b443a0d6/6a72dd226750579d5156b5f6_260801%20Catena%20Digital%20Pty%20Ltd%20Reserve%20Verification%20Report%20as%20at%201st%20August%202026.pdf"
-        },
-        {
-          "label": "Macropod transparency page (monthly self-reports)",
-          "url": "https://www.macropod.com/transparency"
+          "label": "Macropod AUDM Reserve Verification Report as at 1 September 2026",
+          "url": "https://cdn.prod.website-files.com/69df87da28d300c1b443a0d6/6a9929b8226f390a1fcddc38_260901%20Catena%20Digital%20Pty%20Ltd%20Reserve%20Verification%20Report%20as%20at%201st%20September%202026.pdf"
         }
       ]
     }

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { makeStablecoin } from "@shared/test-utils/stablecoin";
 
 const mocks = vi.hoisted(() => ({
   getCache: vi.fn(),
@@ -85,6 +86,48 @@ describe("report-card V9 publication input health", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
+  });
+
+  it.each([
+    { id: "scrvusd-curve", ageSec: 20 * 60 * 60, observedSupplyRatio: 1, unknownChains: [] },
+    { id: "scrvusd-curve", ageSec: 48 * 60 * 60 + 1, observedSupplyRatio: 0, unknownChains: ["ethereum"] },
+    { id: "usdc-circle", ageSec: 72 * 60 * 60, observedSupplyRatio: 1, unknownChains: [] },
+  ])("ages deployment census independently of quotes ($id, $ageSec seconds)", async ({
+    id, ageSec, observedSupplyRatio, unknownChains,
+  }) => {
+    const asset = makeStablecoin({
+      id,
+      contracts: [{ chain: "ethereum", address: "0x111", decimals: 18 }],
+      chainCirculating: {
+        Ethereum: { current: 100, circulatingPrevDay: 100, circulatingPrevWeek: 100, circulatingPrevMonth: 100 },
+      },
+    });
+    mocks.loadDexLiquiditySnapshot.mockResolvedValue({
+      map: { [asset.id]: {} },
+      latestUpdatedAt: NOW_SEC - 4 * 60 * 60 - 1,
+    });
+    const inputs = await loadReportCardsSnapshotInputs(mockD1([{
+      match: "FROM dex_liquidity",
+      rows: [{
+        stablecoin_id: asset.id,
+        chain: "ethereum",
+        contract_address: "0x111",
+        outcome: "observed_pools",
+        outcome_observed_at: NOW_SEC - ageSec,
+        chain_tvl_json: JSON.stringify({ ethereum: 1_000 }),
+      }],
+    }]), {
+      preloadedStablecoinsCache: {
+        ...stablecoinsCache(),
+        payload: { peggedAssets: [asset] },
+      },
+    });
+
+    expect(inputs.dexLiquiditySnapshot.map[asset.id]).toMatchObject({
+      deploymentSupplyCoverage: { observedSupplyRatio, unknownChains },
+    });
+    expect(inputs.liquidityStale).toBe(true);
+    expect(inputs.v9PublicationInputHealth.dex.state).toBe("stale");
   });
 
   it("records a fulfilled but stale DEX scoring snapshot as stale", async () => {

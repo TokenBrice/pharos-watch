@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "Fathom psXDC collateral pool (PrimeStakedXDC, protocol-priced 1:1 as XDC)",
-      "pct": 74.47,
+      "pct": 77.275,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Fathom Protocol psXDC collateral pool and PrimeStakedXDC",
@@ -18,7 +18,7 @@
     },
     {
       "name": "Fathom WXDC collateral pool (Wrapped XDC)",
-      "pct": 25.53,
+      "pct": 22.724,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Fathom Protocol WXDC collateral pool and XDC Network",
@@ -47,41 +47,45 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-30",
-    "reviewer": "Kimi T23 unknown-reduction wave-2 research",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Resv11)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Journaled on-chain mechanism measurement at XDC block 105423347 (2026-07-27): shared/data/safety-score-v9/mechanism-measurements/fxd-fathom/2026-07-27-block-105423347.json",
-        "url": "https://xdcscan.com/block/105423347"
+        "label": "Pinned XDC block 107486464, observed 2026-09-21",
+        "url": "https://xdcscan.com/block/107486464"
       },
       {
-        "label": "Fathom XDC deployment registry (XDC and CGO collateral pool IDs; psXDC pool added later and confirmed by the on-chain LogInitCollateralPoolId scan)",
+        "label": "XDC Network public RPC used for same-block collateral and oracle reads",
+        "url": "https://erpc.xinfin.network"
+      },
+      {
+        "label": "Fathom XDC deployment registry",
         "url": "https://docs.fathom.fi/fxd-stablecoin/deployments/xdc-network"
       },
       {
-        "label": "Fathom CollateralPoolConfig",
-        "url": "https://xdcscan.com/address/0x4F5Ea639600A01931B1370CDe99a7B1e7b6b8f6C"
+        "label": "Pinned Fathom CollateralPoolConfig source",
+        "url": "https://github.com/Fathom-Fi/fathom-stablecoin-smart-contracts/blob/59b41c447903497c0d74985bd18f7ec77e3b5e5e/contracts/main/stablecoin-core/config/CollateralPoolConfig.sol"
       }
     ],
-    "rationale": "The three live debt-bearing pools (WXDC, CGO, psXDC) established by the exhaustive LogInitCollateralPoolId scan now have measured weights: per-pool CollateralTokenAdapter.totalShare read at XDC block 105423347 (2026-07-27, journaled at shared/data/safety-score-v9/mechanism-measurements/fxd-fathom/2026-07-27-block-105423347.json) gives 8,708,677.23 WXDC at the delayed feed's $0.0274276 ($238,858.12), 25,407,276.93 psXDC priced 1:1 as XDC by the protocol ($696,860.63), and 0.069533 CGO at $130.553 ($9.08), totaling $935,727.82 and splitting 74.47/25.53/0.001 percent. Write-time re-open 2026-07-30: the Fathom XDC deployment registry still lists the XDC and CGO collateral pool IDs (the psXDC pool postdates the docs page and is confirmed by the on-chain scan), and the journaled block-105423347 measurement remains the latest reconciled snapshot, so the prior 100% undisclosed-weights basket is replaced by the measured three-slice split.",
-    "compositionBasis": "Journaled on-chain per-pool collateral measurement at XDC block 105423347 (2026-07-27) plus the Fathom XDC deployment registry",
-    "compositionAsOf": "2026-07-27",
+    "rationale": "Same-block reads at XDC block 107486464 (2026-09-21T08:32:46Z) measured 25,407,276.931021 psXDC, 7,471,325.302965 WXDC, and 0.068541 CGO in the three CollateralTokenAdapters. The protocol's XDC/USD aggregator returned $0.0283429 and its CGO/USD aggregator returned $139.619 at the same block. Applying Fathom's one-for-one psXDC-as-XDC valuation produced collateral values of $720,115.91, $211,759.03, and $9.57, or 77.275%, 22.724%, and 0.001% after rounding. An exhaustive LogInitCollateralPoolId follow-up from block 104920354 through 107486464 returned no new pool, so the three previously enumerated pools remain the full composition.",
+    "compositionBasis": "Same-block on-chain CollateralTokenAdapter balances and protocol oracle prices at XDC block 107486464",
+    "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "Pool identities and weights are measured as of XDC block 105423347; weights drift with price moves and position flows after that block, liquidation-buffer levels are not published, and psXDC carries the protocol's 1:1-as-XDC pricing assumption rather than a market exchange-rate feed.",
+    "knownUnknownExposure": "Pool identities, balances, and protocol valuation weights are measured at XDC block 107486464. Weights can change after that block, and psXDC retains Fathom's one-for-one XDC valuation because the protocol has no separate psXDC exchange-rate feed.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Fathom psXDC collateral pool (PrimeStakedXDC, protocol-priced 1:1 as XDC)",
-        "pct": 74.47,
+        "pct": 77.275,
         "disposition": "untracked-exogenous-asset",
         "rationale": "PrimeStakedXDC collateral is an external staking-derivative asset, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 1,
         "reserveName": "Fathom WXDC collateral pool (Wrapped XDC)",
-        "pct": 25.53,
+        "pct": 22.724,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Wrapped XDC collateral is an external cryptoasset, not a tracked stablecoin dependency."
       },

@@ -516,6 +516,36 @@ describe("P4 DEX exit route observations", () => {
     expect(result.observations[0]?.routeId).toContain("3333333333333333333333333333333333333333");
   });
 
+  it("binds direct CryptoSwap quotes to their execution pool rather than a CL factory lookup", () => {
+    const observedAt = 1_752_560_000;
+    const profile = makeMeasuredProfile(observedAt - 60);
+    profile.adapterProfileId = "curve-cryptoswap-get-dy-v1";
+    profile.protocol = "curve";
+    profile.executionEndpoint.address = profile.poolId.split(":")[1]!;
+    delete profile.poolProvenance;
+    const pool = retainedMeasuredPool(profile, { project: "curve", poolType: "curve-cryptoswap" });
+    const result = buildP4DexExitRouteObservations({
+      stablecoinId: "usdc-circle",
+      observedAt,
+      retainedPools: [pool],
+    });
+    expect(result.observations[0]).toMatchObject({
+      scoreEligible: true,
+      evidenceKind: "measured-executable-depth",
+      scope: { contractOrPoolId: profile.poolId },
+    });
+
+    profile.executionEndpoint.address = "0x4444444444444444444444444444444444444444";
+    const mismatched = buildP4DexExitRouteObservations({
+      stablecoinId: "usdc-circle",
+      observedAt,
+      retainedPools: [pool],
+    });
+    expect(mismatched.observations).toEqual([]);
+    expect(mismatched.coverage.unsupportedReasons["invalidMeasuredExecution:physical-pool-provenance-mismatch"])
+      .toBe(1);
+  });
+
   it("uses the pointwise-minimum curve and requires two successful cycles for high confidence", () => {
     const observedAt = 1_752_560_000;
     const profile = withMeasuredObservationHistory(makeMeasuredProfile(observedAt - 60), 2, 750_000);

@@ -41,17 +41,17 @@
     "cadence": "monthly",
     "attestorJurisdiction": "Hong Kong",
     "latestReport": {
-      "periodEnd": "2026-06-30",
-      "publishedAt": "2026-07-10",
+      "periodEnd": "2026-08-31",
+      "publishedAt": "2026-09-11",
       "assuranceMethod": "attestation",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "OpenAI Codex backing review",
+      "reviewer": "Claude curation campaign 2026-09-21 (AssuranceFinish)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "AOGB FDUSD reserves attestation - June 2026",
-          "url": "https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/6a55fa3b263f9436c944049d_ISAE3000%20-%20Attestation%20Report%20on%20Reserves%20Account%20%28June%202026%29.pdf"
+          "label": "AOGB FDUSD reserves attestation - August 2026",
+          "url": "https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/6aa8fb9c867332b394838288_Attestation%20Report%20on%20Reserves%20Account%20August%202026.pdf"
         }
       ]
     }

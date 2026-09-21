@@ -2,10 +2,19 @@
   "id": "xtusd-xt",
   "blacklistabilityReview": {
     "reviewedStatus": false,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: XTUSD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "XSC JSON-RPC runtime-code and storage reads at block 49439522 (2026-09-21)",
+        "url": "https://datarpc1.xsc.pub"
+      },
+      {
+        "label": "xscscan XTUSD token API (accessed 2026-09-21)",
+        "url": "https://api.xscscan.pub/api/tokens/0x1a6131eaf7edd96afa10fc75b0d79dd814d19ed0"
+      }
+    ],
+    "evidence": "Verified 2026-09-21 at XSC block 49439522: XTUSD 0x1a6131eaf7edd96afa10fc75b0d79dd814d19ed0 had runtime code hash 0x302ae7234dc85934bc18e175d5d43ec14feabf53c1fd61cb889a04e800c804fc and a zero EIP-1967 implementation slot. Runtime selector inspection exposed the standard ERC-20 surface plus Maker-style wards/rely/deny, mint/burn, and push/pull/move methods; it exposed no pause, blacklist, freeze, allowlist, seizure, or transfer-hook administration surface, and paused() reverted. The token therefore has no identified direct privileged restriction of holder transfers; ward authority can mint or burn but does not alter ordinary holder transfer eligibility.",
+    "reviewer": "Claude curation campaign 2026-09-21 (Ctrl2)",
+    "reviewedAt": "2026-09-21"
   },
   "oracleRisk": {
     "tier": "opaque-or-unknown",

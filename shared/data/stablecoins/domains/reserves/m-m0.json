@@ -13,8 +13,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-20",
-    "reviewer": "Codex V9 reserve curation",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Resv27)",
     "confidence": "verified",
     "sources": [
       {
@@ -26,9 +26,9 @@
         "url": "https://docs.m0.org/protocol/m-token"
       }
     ],
-    "rationale": "M0's current first-party Protocol API exposes the total collateral snapshot but no longer exposes the former cash-versus-token composition feed. The live adapter therefore publishes the exact protocol-constrained aggregate slice; M0's token documentation identifies approved collateral backing the M token and its MinterGateway supply controls. No tracked reserve asset is named by the current aggregate, so the slice is intentionally non-linked and M0's internal cash/Treasury allocation remains an undisclosed detail of the aggregate.",
-    "compositionBasis": "M0 Protocol API total collateral snapshot and M0 M Token documentation",
-    "compositionAsOf": "2026-08-20",
+    "rationale": "M0's first-party Protocol API returned $186,463,397.081650 of total collateral with a 2026-09-17 16:01:11 UTC source timestamp. The API no longer exposes the former cash-versus-token composition feed, so the live adapter publishes the exact protocol-constrained aggregate slice. M0's token documentation states that each M unit is backed 1:1 by approved collateral. No tracked reserve asset is named by the current aggregate, so the slice remains intentionally non-linked and M0's internal cash/Treasury allocation remains an undisclosed detail of the aggregate.",
+    "compositionBasis": "M0 Protocol API total collateral snapshot observed 2026-09-21 and M0 M Token documentation",
+    "compositionAsOf": "2026-09-17",
     "scope": "full-composition",
     "knownUnknownExposure": "The aggregate slice covers the full M0 eligible-collateral total; the current API does not publish its internal cash/Treasury allocation or minter-level provider shares.",
     "knownUnknownExposurePct": 0,

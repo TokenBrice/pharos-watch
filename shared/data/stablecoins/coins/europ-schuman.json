@@ -17,7 +17,7 @@
   "geckoId": "schuman-europ",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://schuman.io/reserve-audits/",
+    "url": "https://schuman.io/reserve-attestations/",
     "provider": "KPMG",
     "attestorTier": "big4",
     "cadence": "quarterly",
@@ -37,7 +37,7 @@
         },
         {
           "label": "Schuman reserve audits index",
-          "url": "https://schuman.io/reserve-audits/"
+          "url": "https://schuman.io/reserve-attestations/"
         }
       ]
     }
@@ -57,7 +57,7 @@
     },
     {
       "label": "Proof of Reserve",
-      "url": "https://schuman.io/reserve-audits/"
+      "url": "https://schuman.io/reserve-attestations/"
     }
   ],
   "jurisdiction": {
@@ -105,13 +105,13 @@
     "semantics": "attestation-mix",
     "breakerScope": "europ-schuman",
     "display": {
-      "url": "https://schuman.io/reserve-audits/",
-      "label": "Schuman Reserve Audits"
+      "url": "https://schuman.io/reserve-attestations/",
+      "label": "Schuman Reserve Attestations"
     },
     "inputs": {
       "primary": {
-        "kind": "http-html",
-        "url": "https://schuman.io/reserve-audits/"
+        "kind": "http-json",
+        "url": "https://schuman.io/wp-json/wp/v2/media?search=SALVUS_Attestation&per_page=100"
       }
     },
     "params": {

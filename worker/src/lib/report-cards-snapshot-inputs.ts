@@ -19,7 +19,7 @@ import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { DEX_LIQUIDITY_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/cron-cadences";
 import { CHAIN_META, resolveChainId } from "@shared/lib/chains";
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { DexDeploymentSupplyCoverage } from "./report-cards-fixed-input";
 import type { ReserveSlice } from "@shared/types/core";
 import type { StablecoinData } from "@shared/types/market";
@@ -27,6 +27,7 @@ import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type { LiveReserveSnapshotProvenance } from "./live-reserves/store";
 import { parseJsonObject } from "./json-parse";
 import type { V9PublicationInputHealth } from "./safety-score-v9/publication-assessment";
+import { resolveDexDeploymentCensusMaxAgeSec } from "../cron/dex-liquidity/deployment-census-coverage";
 
 export class ReportCardsSnapshotUnavailableError extends Error {
   constructor(message: string) {
@@ -304,11 +305,14 @@ function attachDexDeploymentSupplyCoverage(
   for (const [stablecoinId, dexRow] of Object.entries(map)) {
     const asset = assetsById.get(stablecoinId);
     if (!asset) continue;
+    const meta = ACTIVE_META_BY_ID.get(stablecoinId);
+    // Match the classifier's registry footprint, including traded deployments.
+    const deployments = [...(meta?.contracts ?? []), ...(meta?.tradedContracts ?? [])];
     const coverage = computeDexDeploymentSupplyCoverage(
       asset,
       join.rowsById.get(stablecoinId) ?? [],
       join.chainTvlById.get(stablecoinId) ?? new Map(),
-      { asOfSec, maxOutcomeAgeSec: REPORT_CARD_DEX_LIQUIDITY_FRESHNESS_SEC },
+      { asOfSec, maxOutcomeAgeSec: resolveDexDeploymentCensusMaxAgeSec(deployments) },
     );
     if (coverage) {
       const enriched = { ...dexRow, deploymentSupplyCoverage: coverage } as typeof dexRow & {

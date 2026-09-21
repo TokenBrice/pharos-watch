@@ -10,8 +10,8 @@
   "bridgeRouteRisk": {
     "tier": "opaque-or-unknown",
     "summary": "Ethereum KAU is an issuer/custody-based representation of native Kinesis KAU: KMS Labs issues ERC-20 claims against native-KAU reserves, and redemption is subject to KMS Labs terms and compliance onboarding. The reviewed materials do not identify a trustless bridge, lockbox, escrow, messaging protocol, peer, validator, or route-level conservation mechanism. The Ethereum representation's uncapped minter and role administrator are assessed here and are excluded from native Kinesis Mint Authority.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Codex mint-bridge-boundary migration FIX-03",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Ctrl6)",
     "confidence": "probable",
     "sources": [
       {
@@ -47,7 +47,7 @@
         "reviewDisposition": "reviewed",
         "reviewNote": "Kinesis identifies Ethereum KAU as a 1:1 claim on native KAU held in reserve by KMS Labs, with redemption subject to KMS Labs terms and compliance onboarding. No trustless bridge, reserve lock, redemption burn, escrow, or route-level conservation contract was identified in the reviewed materials.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-14",
+        "observedAt": "2026-09-21",
         "observedBlock": 25530887,
         "sources": [
           {

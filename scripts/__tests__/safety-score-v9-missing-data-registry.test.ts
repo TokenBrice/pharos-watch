@@ -18,6 +18,7 @@ function classify(reasonCode: string, componentKey = "fixture"): V9MissingDataWo
 describe("Safety Score v9 missing-data work routing", () => {
   it.each([
     ["missing-pillar-evidence", "chain-supply", "CHAIN_SUPPLY"],
+    ["missing-pillar-evidence", "asset-compilation", "ASSET_COMPILATION"],
     ["missing-access-review", "access:freeze", "ACCESS_REVIEW"],
     ["missing-archetype", "mechanism-risk-review", "ARCHETYPE_CLASSIFICATION"],
     ["bounded-mechanism-review", "mechanism-review:backstop", "MECHANISM_REVIEW"],

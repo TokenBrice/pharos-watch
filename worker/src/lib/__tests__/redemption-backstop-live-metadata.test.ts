@@ -106,6 +106,43 @@ describe("readRedemptionBackstopLiveMetadata", () => {
     expect(metadata.v9OutputValuation).toEqual(outputValuation);
   });
 
+  it("accepts dEURO's complete reviewed basket including untracked output identities", () => {
+    const outputValuation = {
+      sourceId: "collateral-positions-api:deuro-bridge-basket:test",
+      observedAt: now - 120,
+      unitValueUsd: 1.15,
+      expectedUnitValueUsd: 1.15,
+      basketWeights: [
+        { assetId: "asset:eurt", weight: 0 },
+        { assetId: "eurs-stasis", weight: 0.01 },
+        { assetId: "asset:veur", weight: 0 },
+        { assetId: "eurc-circle", weight: 0.97 },
+        { assetId: "eurr-stablr", weight: 0 },
+        { assetId: "europ-schuman", weight: 0 },
+        { assetId: "euri-banking-circle", weight: 0.01 },
+        { assetId: "asset:eure-legacy-ethereum", weight: 0.01 },
+        { assetId: "asset:eura", weight: 0 },
+      ],
+    };
+    const metadata = readRedemptionBackstopLiveMetadata(
+      "deuro-deuro",
+      snapshot("deuro-deuro", {
+        freshnessMode: "not-applicable",
+        redemption: {
+          capacityUsd: 500_000,
+          capacityKind: "live-direct-bounded",
+          freshnessKind: "same-run-onchain",
+          routeStatus: "open",
+          routeStatusSource: "onchain",
+          outputValuation,
+        },
+      }),
+      now,
+    );
+
+    expect(metadata.v9OutputValuation).toEqual(outputValuation);
+  });
+
   it("preserves DUSD's unproven settlement bound without scoring the minimum finalization delay", () => {
     const metadata = readRedemptionBackstopLiveMetadata(
       "dusd-dialectic",

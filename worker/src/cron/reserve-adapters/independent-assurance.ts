@@ -78,6 +78,41 @@ function europReportDate(href: string): string | null {
   const year = Number(quarter[2]), month = Number(quarter[1]) * 3;
   return formatDate(year, month, lastDayOfMonth(year, month)!);
 }
+
+function verifyEuropMediaIndex(json: string, manifest: IndependentAssuranceManifest): void {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(json);
+  } catch {
+    throw new Error("europ-independent-assurance: official media index is not valid JSON");
+  }
+  if (!Array.isArray(parsed)) {
+    throw new Error("europ-independent-assurance: official media index is not an array");
+  }
+  const candidates = parsed.flatMap((entry): Array<{ url: string; date: string }> => {
+    if (!entry || typeof entry !== "object" || !("source_url" in entry)) return [];
+    const sourceUrl = entry.source_url;
+    if (typeof sourceUrl !== "string" || !/(?:SALVUS.*Attestation.*(?:EUROP|Letter)|Attestation.*(?:number|nombre).*EUROP)/i.test(decodeURIComponent(sourceUrl))) return [];
+    const date = europReportDate(sourceUrl);
+    return date ? [{ url: sourceUrl, date }] : [];
+  });
+  const latestDate = candidates.reduce<string | null>(
+    (latest, candidate) => latest == null || candidate.date > latest ? candidate.date : latest,
+    null,
+  );
+  const reviewedUrl = normalizeUrl(manifest.reportUrl, manifest.officialIndexUrl);
+  const exact = candidates.filter((candidate) => normalizeUrl(candidate.url, manifest.officialIndexUrl) === reviewedUrl);
+  const latest = candidates.filter((candidate) => candidate.date === latestDate);
+  const newer = latestDate != null && latestDate > manifest.reportDate;
+  const duplicateLatest = latestDate === manifest.reportDate &&
+    (latest.length !== 1 || normalizeUrl(latest[0]!.url, manifest.officialIndexUrl) !== reviewedUrl);
+  if (candidates.length === 0 || newer || duplicateLatest || exact.length !== 1) {
+    throw new Error(
+      `independent-assurance: ${newer ? "newer unreviewed report" : "reviewed report URL is missing or duplicated"} on official index`,
+    );
+  }
+}
+
 export const EUROP_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = {
   adapterName: "europ-independent-assurance", product: "EUROP", profile: "europ-v1", requiredAssetCodes: ["cash", "cash-equivalents"],
   classifications: {
@@ -90,6 +125,8 @@ export const EUROP_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = 
   },
   isReportCandidate: (href) => /(?:SALVUS.*Attestation.*(?:EUROP|Letter)|Attestation.*(?:number|nombre).*EUROP)/i.test(decodeURIComponent(href)),
   reportDateFromCandidate: europReportDate,
+  indexHeaders: { Accept: "application/json" },
+  verifyIndexJson: async (json, manifest) => verifyEuropMediaIndex(json, manifest),
 };
 function straitsxReportDate(href: string, text: string): string | null {
   const fileName = decodeURIComponent(new URL(href).pathname.split("/").pop() ?? "");

@@ -4,7 +4,7 @@
     {
       "sourceKey": "erc4626-single-asset:ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       "name": "USDC deposited into Ember Earn's Ethereum vault",
-      "pct": 100,
+      "pct": 0.018665813382,
       "risk": "high",
       "coinId": "usdc-circle",
       "depType": "wrapper",
@@ -18,11 +18,28 @@
         "concentration"
       ],
       "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "erc4626-single-asset:ethereum:0x9be9294722f8aad37b11a9792be2c782182cafa2:deployed",
+      "name": "Ember Earn deployed strategy positions",
+      "pct": 99.981334186618,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Ember Earn vault",
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "counterparty",
+        "custody",
+        "market",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-18",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Slice8)",
     "confidence": "verified",
     "sources": [
       {
@@ -50,12 +67,21 @@
         "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "rationale": "The eEARN proxy still resolves to a single USDC-denominated Ember Earn vault after the 2026-08-18 implementation-pin review. Same-run on-chain reads confirmed asset() returns USDC, the vaultValidator and protocolConfig dependencies remain the configured proxy addresses, operations and protocol pause flags are unpaused, and the withdrawal-fee components are zero. The reviewed sources support retaining the 100% USDC wrapper dependency while pinning the upgraded vault, validator, and protocol-config implementations; they still do not publish a current independent assurance report, strategy allocation, or fixed redemption window. Supply coverage corrected (2026-09-12): coinMetadata.supply remains null, but the Sui vault object 0x0779d2a4e1a6d3412982404cfe5567aac8cea229f17622c7b72d198b22a22e37 exposes its embedded receipt_token_treasury_cap.total_supply through Sui GraphQL. The curated aggregate now requires both native Ethereum and type-bound Sui receipt supplies.",
-    "compositionBasis": "Ember Earn product disclosure, verified current proxy implementations, and live ERC-4626 single-asset observer reads",
-    "compositionAsOf": "2026-08-18",
+    "rationale": "The 2026-09-21 ERC-4626 observer read separates 0.018665813382% idle USDC from 99.981334186618% deployed Ember Earn strategy positions. Ember's product disclosure identifies eEARN as a USDC-denominated, Ember-managed stablecoin-yield vault using lending, fixed-income, liquidity, and rate-carry strategies. The deployed slice is therefore classified as an Ember protocol position rather than misidentified as direct USDC; its changing constituent positions remain unlinked.",
+    "compositionBasis": "Ember Earn product disclosure, verified vault contract identity, and live ERC-4626 idle-versus-deployed observer reads",
+    "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "The direct reserve dependency is identified as USDC. The vault's current strategy holdings, utilization, legal custody terms, and independent reserve reconciliation are not separately disclosed in the reviewed sources.",
-    "knownUnknownExposurePct": 0
+    "knownUnknownExposure": "The observer identifies idle USDC separately from the Ember-managed deployed strategy position. Ember discloses the strategy families but not a current constituent-by-constituent allocation, so the deployed slice remains a reviewed non-link rather than a direct USDC dependency.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 1,
+        "reserveName": "Ember Earn deployed strategy positions",
+        "pct": 99.981334186618,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The deployed balance is an identified Ember-managed multi-strategy protocol position; the reviewed sources do not support attributing it to one tracked stablecoin."
+      }
+    ]
   },
   "custodyProfile": {
     "providers": [

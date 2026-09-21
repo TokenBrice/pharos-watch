@@ -18,28 +18,32 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok wave-8 reserve research",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Resv21)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Gold Token SA DGLD Litepaper 2025",
-        "url": "https://s3.eu-central-1.amazonaws.com/gtsa.s8/dgld/DGLD-LitePaper_2025.docx.pdf"
+        "label": "Gold Token SA live DGLD network reconciliation, observed 2026-09-21",
+        "url": "https://production-gold-mapper-backend.onrender.com/v1/networks"
       },
       {
-        "label": "DGLD official website (physical ownership and bar mapper; retrieved 2026-09-04; no dated composition report)",
-        "url": "https://dgld.ch/"
+        "label": "Gold Token SA live allocated PAMP bar registry, observed 2026-09-21",
+        "url": "https://production-gold-mapper-backend.onrender.com/v1/bars"
       },
       {
-        "label": "DGLD General Terms & Conditions (retrieved 2026-09-04; no publication date or current composition)",
+        "label": "DGLD Gold Mapper Explorer",
+        "url": "https://explorer.dgld.ch/"
+      },
+      {
+        "label": "DGLD current General Terms & Conditions",
         "url": "https://dgld.ch/legal/general-terms-conditions-dgld-2"
       }
     ],
-    "rationale": "Negative search 2026-09-04: the Gold Token SA litepaper is explicitly published November 17, 2025 and states one-for-one allocated LBMA-certified PAMP gold in MKS PAMP Swiss vaults, with numbered-bar mapping and independent-audit language, but it is outside the current composition window. The live dgld.ch site and current General Terms & Conditions restate the allocated-gold and custody model but publish no report period, reserve balance, or dated composition; explorer.dgld.ch remains a JavaScript mapper surface without a static inventory export. No newer dated composition report or attestation was found. The 100% allocated-gold slice is retained as the last observed composition: compositionAsOf 2026-07-28 is 38.345 days before fixed capture clock 1788509806 because full dates are midnight UTC, exceeding the 38-day effective bound by 0.345 day; no date bump is admissible.",
-    "compositionBasis": "Issuer litepaper and official site bar-mapping / allocated-gold architecture",
-    "compositionAsOf": "2026-07-15",
+    "rationale": "Observed 2026-09-21: Gold Token SA's live registry reports Base, Ethereum and Solana in matched reconciliation state. Aggregate token supply is 2,411.954999968 DGLD against 2,411.955 fine troy ounces across six live, serial-numbered PAMP bars. Base and Ethereum report zero gaps; Solana reports a 0.000000032 DGLD rounding gap. The registry therefore supports the full 100% allocation to physical PAMP gold at this checkpoint.",
+    "compositionBasis": "Gold Token SA live bar registry reconciliation of all issued DGLD across Base, Ethereum and Solana to serial-numbered allocated PAMP bars",
+    "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "The mapper provides bar-level verification architecture, but the static record does not reproduce changing individual bar weights or identifiers.",
+    "knownUnknownExposure": "The live registry reconciles every network supply to allocated PAMP bar weight. The only reported difference is a 0.000000032 DGLD Solana base-unit rounding gap, below the composition precision and materiality tolerance.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

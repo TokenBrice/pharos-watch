@@ -47,6 +47,7 @@ export type SafetyScoreV9NullSupplyReviewOutcomeState =
   | "missing-profile"
   | "ambiguous-route-join"
   | "stale-review"
+  | "generation-outcome-missing"
   | "attribution-rpc-rejection";
 
 export interface SafetyScoreV9NullSupplyReviewOutcome {
@@ -119,12 +120,18 @@ export function diagnoseSafetyScoreV9NullSupplyReviewOutcome(input: {
   const expectsRuntimeAttribution =
     safetyScoreV9SupplyAttributionExpectedAssetIds(input.fixedInput).includes(input.assetId) ||
     (SAFETY_SCORE_V9_INDEPENDENT_LIABILITY_SUPPLY_ASSET_IDS.includes(input.assetId) && chainLabels.length === 0);
-  if (attributionRejectionCode !== null || expectsRuntimeAttribution) {
+  if (attributionRejectionCode !== null) {
     return {
       state: "attribution-rpc-rejection",
       responsibility: "producer-failed",
       ...base,
-      attributionRejectionCode: attributionRejectionCode ?? "generation-outcome-missing",
+    };
+  }
+  if (expectsRuntimeAttribution) {
+    return {
+      state: "generation-outcome-missing",
+      responsibility: "producer-failed",
+      ...base,
     };
   }
   return { state: "ambiguous-route-join", responsibility: "integration-missing", ...base };

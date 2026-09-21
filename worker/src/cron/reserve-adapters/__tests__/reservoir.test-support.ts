@@ -29,10 +29,10 @@ export interface ReservoirNetworkOptions {
 }
 
 /**
- * Wire the reservoir balance-sheet endpoint plus the same-run PSM and
+ * Wire the Reservoir balance-sheet endpoint plus the same-run PSM and
  * SavingModule reads. The endpoint responder only answers requests that carry
- * either the exact browser header pair or no `origin` at all, so a request with
- * unexpected headers fails the test instead of being answered.
+ * the complete same-origin browser fetch identity or no `origin` at all, so a
+ * partial or unexpected header set fails the test instead of being answered.
  */
 export function reservoirNetwork(
   payload: ReservoirReservesResponse,
@@ -48,7 +48,11 @@ export function reservoirNetwork(
     json: {
       [RESERVOIR_ENDPOINT]: (request: Request) => {
         const browser = request.headers.get("origin") === "https://app.reservoir.xyz"
-          && request.headers.get("referer") === "https://app.reservoir.xyz/reserves";
+          && request.headers.get("referer") === "https://app.reservoir.xyz/reserves"
+          && request.headers.get("accept") === "application/json, text/plain, */*"
+          && request.headers.get("sec-fetch-dest") === "empty"
+          && request.headers.get("sec-fetch-mode") === "cors"
+          && request.headers.get("sec-fetch-site") === "same-origin";
         if (browser && options.rejectBrowserHeaders) return { status: 403, json: {} };
         if (!browser && request.headers.has("origin")) throw new Error("Unexpected Reservoir origin header");
         return payload;

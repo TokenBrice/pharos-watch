@@ -8,6 +8,7 @@
       "coinId": "cusd-celo",
       "depType": "collateral",
       "assetClass": "stablecoin",
+      "issuerOrObligor": "Mento Protocol and the shared Mento Reserve",
       "riskFactors": [
         "counterparty",
         "smart-contract",
@@ -18,8 +19,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "Codex Safety Score V9 reserve review",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Slice1Finish)",
     "confidence": "verified",
     "sources": [
       {
@@ -37,9 +38,17 @@
       {
         "label": "Mento CHFm on Celo documentation",
         "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      },
+      {
+        "label": "Mento CDP documentation",
+        "url": "https://docs.mento.org/mento-v3/dive-deeper/cdp"
+      },
+      {
+        "label": "Mento deployment registry",
+        "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
       }
     ],
-    "rationale": "Mento's pinned analytics configuration names CHFm as a CDP backed by USDm, and the live reserve endpoint's CHFm trove records USDm as collateral. The static category is exactly one tracked USDm exposure; USDm's underlying basket remains owned by cusd-celo and is not duplicated here.",
+    "rationale": "Mento's pinned analytics configuration and current reserve API identify CHFm as a CDP whose sole direct collateral is the tracked USDm stablecoin. Mento Protocol and the shared Mento Reserve are the direct protocol and upstream reserve failure domains; USDm's underlying basket remains owned by cusd-celo and is not duplicated here.",
     "compositionBasis": "Mento CHFm CDP collateral configuration and live reserve dashboard",
     "compositionAsOf": "2026-07-15",
     "scope": "full-composition",

@@ -506,6 +506,35 @@ describe("derived supply-model route observations", () => {
       kind: "unresolved-basket",
       assetKeys: ["asset:zusd", "doc-money-on-chain"],
     });
+    const deuroBasket = [
+      "asset:eura",
+      "asset:eure-legacy-ethereum",
+      "asset:eurt",
+      "asset:veur",
+      "eurc-circle",
+      "euri-banking-circle",
+      "europ-schuman",
+      "eurr-stablr",
+      "eurs-stasis",
+    ].map((assetId, index) => ({ assetId, weight: index === 4 ? 1 : 0 }));
+    expect(buildConfigured("deuro-deuro", {
+      outputValuation: {
+        sourceId: "collateral-positions-api:deuro-bridge-basket:test",
+        observedAt: Date.UTC(2026, 6, 15, 12) / 1_000,
+        unitValueUsd: 1.15,
+        expectedUnitValueUsd: 1.15,
+        basketWeights: deuroBasket,
+      },
+    })).toMatchObject({
+      output: {
+        kind: "unresolved-basket",
+        basketWeights: deuroBasket,
+      },
+      outputUnitValueUsd: 1.15,
+      outputExpectedUnitValueUsd: 1.15,
+      allInCostBps: 25,
+      scoreEligible: true,
+    });
     expect(buildConfigured("witry-brix")?.output).toEqual({
       kind: "unresolved-asset",
       assetKeys: ["asset:itry"],

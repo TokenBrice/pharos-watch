@@ -2,9 +2,9 @@
   "id": "autousd-auto-finance",
   "reserves": [
     {
-      "sourceKey": "erc4626-single-asset:ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "name": "USDC deployed through the autoUSD Autopool and destination vaults",
-      "pct": 100,
+      "sourceKey": "erc4626-single-asset:ethereum:0xa7569a44f348d3d70d8ad5889e50f78e33d80d35:deployed",
+      "name": "Auto Finance autoUSD deployed strategy positions",
+      "pct": 99.892365055295,
       "risk": "high",
       "coinId": "usdc-circle",
       "depType": "wrapper",

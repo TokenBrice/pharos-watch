@@ -2,26 +2,33 @@
   "id": "steakusdc-steakhouse",
   "reserves": [
     {
-      "sourceKey": "erc4626-single-asset:ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "name": "USDC deposited into Steakhouse-curated Morpho lending markets",
+      "sourceKey": "erc4626-single-asset:ethereum:0xbeef088055857739c12cd3765f20b7679def0f51:deployed",
+      "name": "Steakhouse USDC V2 deployed strategy positions",
       "pct": 100,
-      "risk": "medium",
+      "risk": "high",
       "coinId": "usdc-circle",
       "depType": "wrapper",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Circle USDC and Steakhouse-curated Morpho Blue markets",
-      "riskFactors": ["credit", "counterparty", "liquidity", "smart-contract", "custody", "concentration"],
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "liquidity",
+        "smart-contract",
+        "custody",
+        "concentration"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Slice3)",
     "confidence": "verified",
     "sources": [
       {
         "label": "Morpho Steakhouse Prime USDC vault",
-        "url": "https://app.morpho.org/ethereum/vault/0xbeef088055857739c12cd3765f20b7679def0f51/steakhouse-prime-instant"
+        "url": "https://app.morpho.org/ethereum/vault/0xbeef088055857739c12cd3765f20b7679def0f51/steakhouse-prime-usdc"
       },
       {
         "label": "Morpho Vaults V1 contract reference",
@@ -32,11 +39,11 @@
         "url": "https://www.steakhouse.financial/docs"
       }
     ],
-    "rationale": "The Steakhouse Prime USDC vault is a Morpho ERC-4626 vault whose underlying asset is USDC. Morpho documents that shares are minted only by depositing the vault's underlying token and that vault capital can be allocated among same-asset Morpho markets. The full reserve is therefore the direct linked USDC wrapper position, without estimating changing borrower-market allocations.",
-    "compositionBasis": "Current Morpho vault asset and documented V1 allocation model",
-    "compositionAsOf": "2026-07-14",
+    "rationale": "Morpho identifies the vault at 0xbeef088055857739c12cd3765f20b7679def0f51 as a Steakhouse-curated USDC vault that lends into Morpho Blue markets. The live deployed row therefore represents a USDC-denominated protocol position with borrower-collateral, curator, liquidity, and smart-contract exposure.",
+    "compositionBasis": "Live ERC-4626 deployed balance captured 2026-09-21 and Morpho's current vault identity",
+    "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "The complete direct reserve relationship is USDC. Market allocations, borrower collateral, and withdrawal liquidity vary on-chain, but do not change the vault's underlying reserve token.",
+    "knownUnknownExposure": "The live adapter identifies the deployed vault position but does not split the current balance among individual Morpho markets.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

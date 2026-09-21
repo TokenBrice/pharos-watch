@@ -16,9 +16,9 @@
         "url": "https://sourcify.dev/server/v2/contract/1/0xd8063123bba3b480569244ae66bfe72b6c84b00d"
       }
     ],
-    "evidence": "Re-reviewed 2026-07-22: scrvUSD is an immutable ERC-4626 wrapper whose asset() is crvUSD. The exact-match wrapper has no owner or direct holder-freeze function. The parent crvUSD control and reserve path remains the relevant upstream failure domain, so inherited exposure is retained with the parent identity recorded by mintAuthority.inheritedFrom.",
-    "reviewer": "GPT SOL-CORP-C wave6",
-    "reviewedAt": "2026-07-22"
+    "evidence": "Re-reviewed 2026-09-21 for the sole tracked Ethereum deployment 0x0655977feb2f289a4ab78af67bab0d17aab84367. Etherscan identifies the live proxy and implementation 0xd8063123bba3b480569244ae66bfe72b6c84b00d; the exact-match Yearn V3 vault implementation has no owner-controlled holder blacklist, freeze, seizure, or privileged transfer hook. scrvUSD remains an ERC-4626 wrapper whose asset is crvUSD. Its direct transfer posture is permissionless, while freeze exposure is honestly inherited from the named crvUSD upstream failure domain. This exact chain/address is the complete authored deployment scope.",
+    "reviewer": "Claude curation campaign 2026-09-21 (Ctrl3)",
+    "reviewedAt": "2026-09-21"
   },
   "oracleRisk": {
     "tier": "standard-external",

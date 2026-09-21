@@ -353,12 +353,33 @@ describe("independent-assurance manifest framework", () => {
   });
 
   it.each([
-    ["EUROP", EUROP_INDEPENDENT_ASSURANCE_PROFILE, "europ-independent-assurance.html"],
     ["XSGD", straitsxIndependentAssuranceProfile("XSGD"), "straitsx-independent-assurance-xsgd.html"],
     ["XUSD", straitsxIndependentAssuranceProfile("XUSD"), "straitsx-independent-assurance-xusd.html"],
     ["USDGO", USDGO_INDEPENDENT_ASSURANCE_PROFILE, "usdgo-transparency.html"],
   ] as const)("accepts the trimmed real %s index shape before verifying PDF bytes", async (product, profile, fixture) => {
     await expect(verifyRealIndexFixture(product, profile, fixture)).rejects.toThrow("PDF byte length");
+  });
+
+  it("accepts EUROP's official WordPress media index before verifying PDF bytes", async () => {
+    const reviewed = getIndependentAssuranceManifest("EUROP");
+    const media = JSON.stringify([{ source_url: reviewed.reportUrl }]);
+    await expect(
+      verifyRealIndexFixture("EUROP", EUROP_INDEPENDENT_ASSURANCE_PROFILE, "europ-independent-assurance.html", media),
+    ).rejects.toThrow("PDF byte length");
+  });
+
+  it("fails closed when EUROP's media index publishes a newer report", async () => {
+    const reviewed = getIndependentAssuranceManifest("EUROP");
+    const media = JSON.stringify([
+      { source_url: reviewed.reportUrl },
+      {
+        source_url:
+          "https://schuman.io/wp-content/uploads/2026/10/SALVUS_Attestation_relative_au_nombre_de_jetons_EUROP_30_09_2026.pdf",
+      },
+    ]);
+    await expect(
+      verifyRealIndexFixture("EUROP", EUROP_INDEPENDENT_ASSURANCE_PROFILE, "europ-independent-assurance.html", media),
+    ).rejects.toThrow("newer unreviewed report");
   });
 
   it("ignores an unrelated StraitsX whitepaper but fails closed on a newer XSGD report", async () => {

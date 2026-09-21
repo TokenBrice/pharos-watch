@@ -8,7 +8,7 @@
       "coinId": "susds-sky",
       "depType": "collateral",
       "assetClass": "stablecoin",
-      "issuerOrObligor": "Sky Protocol; underlying reserve allocation is not separately disclosed by Reserve DTF API",
+      "issuerOrObligor": "Sky Protocol / USDS; sUSDS is an ERC-4626 savings wrapper and the underlying allocation is not separately disclosed by Reserve DTF API",
       "riskFactors": [
         "counterparty",
         "liquidity",
@@ -55,23 +55,27 @@
       "name": "Steakhouse USDC strategy",
       "pct": 25,
       "risk": "medium",
-      "coinId": "steakusdc-steakhouse",
+      "coinId": "usdc-circle",
       "depType": "collateral",
       "blacklistable": true,
       "assetClass": "protocol-position",
-      "issuerOrObligor": "Steakhouse and Circle; underlying reserve allocation is not separately disclosed by Reserve DTF API",
+      "issuerOrObligor": "Steakhouse Financial-curated Morpho V1 USDC lending vault and its borrowers; underlying USDC is issued by Circle",
       "riskFactors": [
+        "credit",
         "counterparty",
         "liquidity",
-        "smart-contract"
+        "smart-contract",
+        "custody",
+        "market",
+        "concentration"
       ],
       "liquidityHorizon": "unknown",
       "sourceKey": "reserve-protocol-dtf:0xbeef01735c132ada46aa9aa4c54623caa92a64cb"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "owner-triage",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Slice1Finish)",
     "confidence": "verified",
     "sources": [
       {
@@ -81,12 +85,25 @@
       {
         "label": "Reserve Yield DTF overview",
         "url": "https://docs.reserve.org/core-components/yield-dtfs/yield-dtf-overview"
+      },
+      {
+        "label": "Sky sUSDS documentation",
+        "url": "https://developers.skyeco.com/protocol/tokens/susds/"
+      },
+      {
+        "label": "Morpho legacy Steakhouse USDC V1 vault",
+        "url": "https://app.morpho.org/ethereum/vault/0xBEEF01735c132Ada46AA9aA4c54623cAA92A64CB/steakhouse-usdc"
+      },
+      {
+        "label": "Steakhouse legacy vault registry",
+        "url": "https://www.steakhouse.financial/docs/products/vault-products/legacy-vaults"
       }
     ],
-    "rationale": "USD3's governed basket targets four identified collateral positions at approximately equal weight. The authored 25% slices are a rounded fallback for static display, not a claim that a transient API snapshot remains exact; the existing reserve-protocol-dtf onchain adapter is authoritative for current live weights.",
-    "compositionBasis": "Approximate equal-weight governed basket targets cross-checked against Reserve documentation; live onchain adapter is authoritative",
+    "rationale": "USD3's current Reserve DTF basket contains four identified collateral contracts at approximately equal weight. Savings USDS exactly matches the tracked susds-sky contract. The Steakhouse row is the legacy Morpho V1 USDC vault at 0xbeef01735c132ada46aa9aa4c54623caa92a64cb; it retains the tracked USDC collateral dependency while remaining distinct from the separately tracked steakusdc-steakhouse V2 token.",
+    "compositionBasis": "Current Reserve DTF API basket, Reserve protocol documentation, and exact collateral-contract identity checks",
+    "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "The current collateral token identities and weights are disclosed, but the API does not disclose the underlying custody allocation or protocol-level reserve composition inside the wrapped strategy tokens.",
+    "knownUnknownExposure": "All four collateral contracts and their underlying stablecoin dependencies are identified. The legacy Steakhouse V1 vault is not itself a separately tracked Pharos asset, and wrapped strategy look-through allocations remain dynamic.",
     "knownUnknownExposurePct": 0
   }
 }

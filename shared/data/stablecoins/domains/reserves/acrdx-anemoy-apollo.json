@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-04",
-    "reviewer": "Grok wave8 phase1 reserve re-verify; Kimi R05 bounded-unknown acceptance; Claude ODR-E9 live-granularity join repair",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Resv06)",
     "confidence": "verified",
     "sources": [
       {
@@ -45,19 +45,19 @@
         "url": "https://chroniclelabs.org/blog/chronicle-s-proof-of-asset-unlocks-apollo-s-acrdx-curated-by-steakhouse"
       }
     ],
-    "rationale": "The ACRDX live-reserve producer is the single-asset chronicle-nav adapter: it reads the Chronicle VAO Poked NAV for the token and publishes exactly one exposure, labelled \"Apollo Diversified Credit Fund NAV\", at 100%. Chronicle's 2026-09-04 dashboard shows the feeder-level category split (Apollo Diversified Credit-I Fund shares 98.2021%, cash 1.7946%, unidentified cryptocurrency 0.0033%), so no reviewed row matches the captured exposure by name and the single NAV row remains at producer granularity. The composition matches the shape used for every other single-asset NAV adapter in the registry and for the identical Apollo fund under acred-apollo-securitize. The exposure is a fund share on the Apollo Diversified Credit Fund, held through the Anemoy Capital SPC feeder; the feeder's category split is recorded in knownUnknownExposure, and the fund's obligor-level schedule is not published, so the aggregate row keeps a basket-needs-split disposition rather than asserting a resolved obligor list.",
-    "compositionBasis": "Chronicle Proof of Asset NAV for ACRDX as captured by the production chronicle-nav single-asset adapter (one 100% exposure), interpreted with the Chronicle-verified feeder-fund holdings and $31,322,976.90 total captured on 2026-09-04",
+    "rationale": "The production chronicle-nav adapter reads the Chronicle VAO NAV for ACRDX and emits one keyed exposure, Apollo Diversified Credit Fund NAV, at 100%. Chronicle's September 4, 2026 dashboard record reports $30,759,815 of Apollo Diversified Credit-I Fund shares, $562,125 of cash, and $1,036.90 of cryptocurrency holdings, or $31,322,976.90 in total. The adapter row represents the directly held feeder-fund NAV rather than a look-through basket of separately owned stablecoins. It remains a single fund-share reserve slice so its sourceKey continues to match the live adapter. The fund's unpublished obligor schedule and the unidentified minor cryptocurrency holding remain classification detail and do not make the identity or percentage of the direct reserve asset unknown.",
+    "compositionBasis": "Chronicle Proof of Asset NAV for ACRDX as captured by the production chronicle-nav single-asset adapter, supported by Chronicle's 2026-09-04 feeder-fund record",
     "compositionAsOf": "2026-09-04",
     "scope": "full-composition",
-    "knownUnknownExposure": "The captured exposure is a single unsplit fund NAV. On 2026-09-04, Chronicle reports feeder-level categories of Apollo Diversified Credit-I Fund shares (98.2021%; $30,759,815), cash (1.7946%; $562,125), and unidentified cryptocurrency (0.0033%; $1,036.90), against $31,322,976.90 total. It identifies neither the cryptocurrency token nor the cash counterparties, and the Apollo fund's obligor-level schedule is not published. The whole NAV row is therefore carried as an unsplit basket.",
-    "knownUnknownExposurePct": 100,
+    "knownUnknownExposure": "The direct reserve asset is fully identified as the ACRDX feeder's 100% interest in Apollo Diversified Credit Fund NAV. Chronicle reports the feeder-level gross holdings as 98.2021% Apollo Diversified Credit-I Fund shares, 1.7946% cash, and 0.0033% unidentified cryptocurrency. Cash counterparties, the cryptocurrency token, and the underlying Apollo fund's obligor schedule are not published, so they remain classification limitations rather than unidentified direct reserve exposure.",
+    "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Apollo Diversified Credit Fund NAV",
         "pct": 100,
-        "disposition": "basket-needs-split",
-        "rationale": "The exposure is an identified Apollo fund share rather than a Pharos-tracked stablecoin dependency, but it is captured as one aggregate NAV whose underlying obligor schedule is not published. The Chronicle feeder categories are recorded in knownUnknownExposure; they are not a per-obligor split, so the row stays explicitly unsplit."
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The adapter-derived exposure is an identified feeder-fund accounting position in Apollo Diversified Credit Fund, not a separately owned balance of a Pharos-tracked stablecoin."
       }
     ]
   },

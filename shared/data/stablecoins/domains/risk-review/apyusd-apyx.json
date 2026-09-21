@@ -9,10 +9,10 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "apyUSD is an ERC-4626 wrapper over canonical Ethereum apxUSD. Ethereum is the native Lock/Release home; Base is a Chainlink CCIP Burn/Mint representation whose token-level mint and burn are restricted to pool 0xed23fc184a3fe5d12ca92ca4f5cefa640decf21d and whose 100,000,000-token destination cap is separately governed by the Base AccessManager/Safe. The Chainlink directory also lists BNB Chain and Solana representations, but they are not authored in this coin's contracts[] and therefore remain explicit route-coverage follow-up rather than an assertion that Base is the only representation.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Codex mint/bridge boundary migration",
-    "confidence": "manual-review",
+    "summary": "apyUSD is an ERC-4626 wrapper over canonical Ethereum apxUSD. Ethereum is the native Lock/Release home; Base, BNB Chain, and Solana are Chainlink CCIP Burn/Mint representations. Chainlink's current directory identifies the exact token pool controlling bridge mint and burn on every representation: Base 0xed23fc184a3fe5d12ca92ca4f5cefa640decf21d, BNB Chain 0x363332b186a4afce7a754a49f34d1543aec5e786, and Solana H8om8rLRoDiGgveP6rbdQ2irWgjzdfanSe9tdCr6FYxE.",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Ctrl1)",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "docs",
@@ -132,6 +132,12 @@
         "observedAt": "2026-09-04",
         "sourceChain": "ethereum",
         "canonicalChain": "ethereum",
+        "controllerChain": "bsc",
+        "controllerAddress": "0x363332b186a4afce7a754a49f34d1543aec5e786",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:bsc:0x363332b186a4afce7a754a49f34d1543aec5e786"
+        ],
         "sources": [
           {
             "label": "BNB Chain apyUSD contract",
@@ -159,6 +165,12 @@
         "observedAt": "2026-09-04",
         "sourceChain": "ethereum",
         "canonicalChain": "ethereum",
+        "controllerChain": "solana",
+        "controllerAddress": "H8om8rLRoDiGgveP6rbdQ2irWgjzdfanSe9tdCr6FYxE",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:solana:H8om8rLRoDiGgveP6rbdQ2irWgjzdfanSe9tdCr6FYxE"
+        ],
         "sources": [
           {
             "label": "Solana apyUSD mint",
@@ -271,6 +283,68 @@
           }
         ],
         "evidence": "At Base blocks 50063823 and 50063992, AccessManager 0x8afde6a90d2396a64eb97e8e69e7548289f78a1d mapped setCCIPPool, setCCIPAdmin, and upgradeToAndCall to Safe-held role 25 with a 604800-second delay; setSupplyCap mapped to role 24 with a 259200-second delay; pause used role 21 with no delay; unpause used role 22 with a 14400-second delay. The same Safe returned threshold 3, six owners, version 1.4.1, no enabled modules, and no guard."
+      },
+      {
+        "id": "apyusd-bsc-ccip-pool",
+        "label": "apyUSD BNB Chain CCIP BurnMintTokenPool",
+        "routeRefs": [
+          "bsc:0xa14556f13516c53ff035858ffd21e1625e7eadfd"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0x363332b186a4afce7a754a49f34d1543aec5e786",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:bsc:0x363332b186a4afce7a754a49f34d1543aec5e786"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-09-21",
+        "sources": [
+          {
+            "label": "Chainlink CCIP Directory - apyUSD",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/apyUSD"
+          },
+          {
+            "label": "BNB Chain apyUSD BurnMintTokenPool",
+            "url": "https://bscscan.com/address/0x363332b186a4AFCe7a754A49F34D1543AEC5e786"
+          }
+        ],
+        "evidence": "Observed 2026-09-21: Chainlink's official CCIP directory maps BNB Chain apyUSD 0xa14556f13516c53ff035858ffd21e1625e7eadfd to Burn/Mint token pool 0x363332b186a4afce7a754a49f34d1543aec5e786."
+      },
+      {
+        "id": "apyusd-solana-ccip-pool",
+        "label": "apyUSD Solana CCIP BurnMintTokenPool",
+        "routeRefs": [
+          "solana:Ex8hKasfFCfj3yGuN5TyYRUjHePgVs3uYUJRT8geT7rv"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "H8om8rLRoDiGgveP6rbdQ2irWgjzdfanSe9tdCr6FYxE",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:solana:H8om8rLRoDiGgveP6rbdQ2irWgjzdfanSe9tdCr6FYxE"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-09-21",
+        "sources": [
+          {
+            "label": "Chainlink CCIP Directory - apyUSD",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/apyUSD"
+          },
+          {
+            "label": "Solana apyUSD BurnMintTokenPool",
+            "url": "https://explorer.solana.com/address/H8om8rLRoDiGgveP6rbdQ2irWgjzdfanSe9tdCr6FYxE"
+          }
+        ],
+        "evidence": "Observed 2026-09-21: Chainlink's official CCIP directory maps Solana apyUSD mint Ex8hKasfFCfj3yGuN5TyYRUjHePgVs3uYUJRT8geT7rv to Burn/Mint token pool H8om8rLRoDiGgveP6rbdQ2irWgjzdfanSe9tdCr6FYxE."
       }
     ]
   }

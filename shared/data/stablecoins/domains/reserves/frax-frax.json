@@ -83,6 +83,7 @@
       "pct": 8.3,
       "risk": "low",
       "coinId": "sfrxusd-frax",
+      "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Frax Protocol",
       "riskFactors": [
@@ -326,6 +327,7 @@
       "pct": 0.1,
       "risk": "low",
       "coinId": "usds-sky",
+      "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Sky Protocol",
       "riskFactors": [

@@ -21,14 +21,16 @@
       "pct": 23.6,
       "risk": "low",
       "coinId": "susds-sky",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Sky Protocol",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Sky Savings USDS ERC-4626 vault and USDS",
       "riskFactors": [
         "counterparty",
-        "smart-contract",
-        "liquidity"
+        "custody",
+        "liquidity",
+        "smart-contract"
       ],
-      "liquidityHorizon": "one-day"
+      "liquidityHorizon": "immediate"
     },
     {
       "name": "CELO",

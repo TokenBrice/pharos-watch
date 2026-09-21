@@ -34,17 +34,17 @@
     "attestorJurisdiction": "United States",
     "attestorLicense": "AICPA attestation standards",
     "latestReport": {
-      "periodEnd": "2026-07-31",
-      "publishedAt": "2026-08-11",
+      "periodEnd": "2026-08-31",
+      "publishedAt": "2026-09-15",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "OpenAI Codex Safety Score V9 stale-audited reserve refresh 2026-08-29",
+      "reviewer": "Claude curation campaign 2026-09-21 (Resv20)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "MCCPA SBC Reserve Attestation Report - July 2026",
-          "url": "https://brale.xyz/assets/reports/SBC-Stable-Coin-Reserve-Attestation-Report-07-2026.pdf"
+          "label": "MCCPA SBC Reserve Attestation Report - August 2026",
+          "url": "https://brale.xyz/assets/reports/SBC-Stable-Coin-Reserve-Attestation-Report-08-2026.pdf"
         }
       ]
     }

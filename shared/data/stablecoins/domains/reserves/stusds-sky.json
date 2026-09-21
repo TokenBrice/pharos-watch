@@ -3,13 +3,27 @@
   "reserves": [
     {
       "sourceKey": "erc4626-single-asset:ethereum:0xdc035d45d973e3ec169d2276ddab16f1e407384f",
-      "name": "USDS risk-capital module and SKY-backed loan receivable",
-      "pct": 100,
+      "name": "Staked USDS idle underlying",
+      "pct": 99.999029050975,
       "risk": "high",
       "coinId": "usds-sky",
       "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Sky Protocol / USDS",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "erc4626-single-asset:ethereum:0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9:deployed",
+      "name": "Sky staked-vault deployed strategy positions",
+      "pct": 0.0009709490250031649,
+      "risk": "high",
       "assetClass": "protocol-position",
-      "issuerOrObligor": "Sky stUSDS risk-capital module and SKY-backed borrower",
+      "issuerOrObligor": "Sky stUSDS module and Sky Protocol Vat/Vow accounting (LSEV2-SKY-A risk-capital branch)",
       "riskFactors": [
         "credit",
         "counterparty",
@@ -22,8 +36,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Slice1Finish)",
     "confidence": "verified",
     "sources": [
       {
@@ -43,11 +57,20 @@
         "url": "https://etherscan.io/address/0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9#readContract"
       }
     ],
-    "rationale": "stUSDS participates in Sky's risk-capital module and is economically exposed to the SKY-backed loan receivable rather than holding a simple cash reserve. The exact direct exposure is therefore one protocol position with explicit credit, concentration, market, liquidity, and smart-contract risks.",
-    "compositionBasis": "Exact live single-asset row, pinned stUSDS design, and deployed contract",
-    "compositionAsOf": "2026-07-15",
+    "rationale": "The live ERC-4626 split identifies direct USDS held by the stUSDS vault separately from the tiny totalAssets accounting remainder. The pinned stUSDS implementation shows that the remainder reflects projected rate accrual and Sky Vat/Vow accounting inside the LSEV2-SKY-A risk-capital module, not a separately held tracked stablecoin or external strategy token.",
+    "compositionBasis": "Exact live ERC-4626 idle-underlying and deployed-accounting rows, pinned stUSDS design, and deployed contract",
+    "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "No additional direct stUSDS reserve slice is identified; borrower performance and risk-capital realization remain structured risks of the classified position.",
-    "knownUnknownExposurePct": 0
+    "knownUnknownExposure": "The two live rows cover direct USDS custody and the identified Sky protocol-accounting remainder; dynamic borrower debt and auction state remain risk factors rather than unclassified reserve slices.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 1,
+        "reserveName": "Sky staked-vault deployed strategy positions",
+        "pct": 0.0009709490250031649,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The ERC-4626 remainder is stUSDS totalAssets accounting above the vault's direct USDS balance. The pinned contract identifies this as projected rate accrual and Sky protocol accounting, not a separately held tracked stablecoin or standalone token reserve."
+      }
+    ]
   }
 }

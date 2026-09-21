@@ -1,4 +1,5 @@
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
+import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import {
   getAllowedRedemptionCapacityWarningReason,
   isRedemptionFreshnessAllowedByPolicy,
@@ -499,10 +500,14 @@ export function readRedemptionBackstopLiveMetadata(
     redemptionTelemetry,
     "outputValuation",
   );
+  const configuredOutputKeys = new Set([
+    ...(getRedemptionBackstopConfig(stablecoinId)?.outputAssets ?? []),
+    ...(getRedemptionBackstopConfig(stablecoinId)?.unresolvedOutputAssetKeys ?? []),
+  ]);
   const outputValuationUnknownAsset =
     parsedOutputValuation.success &&
     parsedOutputValuation.data.basketWeights.some(
-      (weight) => !TRACKED_META_BY_ID.has(weight.assetId),
+      (weight) => !TRACKED_META_BY_ID.has(weight.assetId) && !configuredOutputKeys.has(weight.assetId),
     );
   const outputValuationFuture =
     parsedOutputValuation.success &&
@@ -543,7 +548,9 @@ export function readRedemptionBackstopLiveMetadata(
   if (outputValuationPresent && !parsedOutputValuation.success) {
     telemetryWarnings.push("Live redemption output valuation is malformed and was ignored");
   } else if (outputValuationUnknownAsset) {
-    telemetryWarnings.push("Live redemption output valuation contains an untracked basket asset and was ignored");
+    telemetryWarnings.push(
+      "Live redemption output valuation contains an asset outside the reviewed route output set and was ignored",
+    );
   } else if (outputValuationFuture) {
     telemetryWarnings.push("Live redemption output valuation has a future source timestamp and was ignored");
   }

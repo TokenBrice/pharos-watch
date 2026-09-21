@@ -5,6 +5,7 @@ import type { StablecoinSourceEntry } from "./stablecoin-catalog-sources";
 export type WorkType =
   | "ACCESS_REVIEW"
   | "ARCHETYPE_CLASSIFICATION"
+  | "ASSET_COMPILATION"
   | "BRIDGE_MATERIALITY"
   | "BRIDGE_ROUTE_REVIEW"
   | "CHAIN_SUPPLY"
@@ -115,6 +116,25 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
       mechanismRiskReview: asset.mechanismRiskReview,
     }),
     touchpoints: (source) => [base(source)],
+  },
+  ASSET_COMPILATION: {
+    title: "Asset fact compilation quarantine",
+    stream: "PROD",
+    instructions: "Find the quarantine cause in the replay warning log at the safety_score_v9_asset_quarantined event's metadata.message. Repair the responsible producer or adapter, or the curated data identity defect that made compilation fail; never curate around the quarantine.",
+    completionCriteria: "A fresh exact replay compiles current score-bearing facts for the asset, emits no safety_score_v9_asset_quarantined warning for it, and removes the asset-compilation gapId.",
+    recommendedSkill: null,
+    likelyRepoAreas: ["shared/data/stablecoins/", "worker/src/lib/safety-score-v9/"],
+    cautions: ["Never clear or mask the quarantine gap without repairing the compilation failure at its source."],
+    ownerDomain: "evidence",
+    defaultResolutionMode: "producer-runtime",
+    reasonCodes: [],
+    context: (asset) => ({ gaps: asset.gaps }),
+    touchpoints: (source) =>
+      unique([
+        base(source),
+        ...(source.sidecarFiles ?? []),
+        "worker/src/lib/safety-score-v9/fact-set.ts",
+      ]),
   },
   BRIDGE_MATERIALITY: {
     title: "Bridge deployment materiality", stream: "BRDG",
@@ -416,6 +436,7 @@ function contextForPath(path: GapPath): WorkTypeDescriptor["context"] {
   if (path.kind === "peg") return (asset) => asset.peg;
   if (path.kind === "methodology") return V9_MISSING_DATA_WORK_TYPES.ARCHETYPE_CLASSIFICATION.context;
   const componentKey = path.componentKey;
+  if (componentKey === "asset-compilation") return (asset) => ({ gaps: asset.gaps });
   if (componentKey === "chain-supply" || componentKey === "bridge-materiality") return (asset) => asset.supply;
   if (componentKey === "implementation-date") return (asset) => asset.implementation;
   if (componentKey === "mechanism-risk-review" || componentKey.startsWith("mechanism-review:")) return (asset) => mechanismContext(asset, componentKey);
@@ -440,6 +461,7 @@ export function descriptorForReason(reason: string, path?: GapPath): WorkTypeDes
   // reason code alone does not identify a work type.
   if (!descriptor && reason === "missing-pillar-evidence" && path?.kind === "local-component") {
     if (path.componentKey === "chain-supply") descriptor = V9_MISSING_DATA_WORK_TYPES.CHAIN_SUPPLY;
+    if (path.componentKey === "asset-compilation") descriptor = V9_MISSING_DATA_WORK_TYPES.ASSET_COMPILATION;
     if (path.componentKey.startsWith("access:")) descriptor = V9_MISSING_DATA_WORK_TYPES.ACCESS_REVIEW;
   }
   if (!descriptor) throw new Error(`Missing agent work-type definition for ${reason} at ${JSON.stringify(path)}`);

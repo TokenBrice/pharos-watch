@@ -16334,7 +16334,7 @@
     {
       "assetId": "susn-noon",
       "archetype": "rwa-credit-fund",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-09-21",
       "sources": [
         {
           "label": "Noon Accountable real-time proof-of-solvency dashboard",
@@ -16363,9 +16363,13 @@
         {
           "label": "sUSN Ethereum staking vault verified source",
           "url": "https://etherscan.io/address/0xe24a3dc889621612422a64e6388927901608b91d#code"
+        },
+        {
+          "label": "Noon binding sUSN Staking Terms (last updated 2026-07-31; reviewed 2026-09-21): holder staking position, redemption entitlement, proportional reserve-loss allocation, BVI governing law and arbitration",
+          "url": "https://docs.noon.capital/additional-resources/terms-and-policies/asset-terms-susn-staking-terms.md"
         }
       ],
-      "notes": "Wrapper-local review refreshed 2026-08-08. The Accountable API remained live and reported reserves $35,739,933.97, USN supply $35,288,620.46, and sUSN NAV 1.2134498759423485 at its 2026-08-08 snapshot, with most reserves still in Fasanara private credit. The score metrics retain the pinned 2026-07-27 journal values: weightedAverageMaturityDays is unavailable and valuationCadenceDays is 0.0105 from consecutive signed snapshots. Credit quality is limited because category-level exposure is verified but borrower and position detail is not. Seniority is limited because sUSN is a documented residual-yield wrapper without a published reserve-loss waterfall versus USN. Accountable supports adequate valuation cadence. The documented T+5 liquidity commitment, active custody split, and insurance balance support limited maturity/liquidity, custody, and recovery, but underlying agreements and cover terms are undisclosed. The complete official documentation index and the product, transparency, liquidity, and risk surfaces publish no prospectus, holder agreement, trust deed, regulatory filing, or enforceable insolvency/loss-ranking terms for sUSN; legal enforceability is therefore explicitly unavailable.",
+      "notes": "Wrapper-local review refreshed 2026-09-21 by Claude curation campaign 2026-09-21 (Mech5). The Accountable API remained live and reported reserves $35,739,933.97, USN supply $35,288,620.46, and sUSN NAV 1.2134498759423485 at its 2026-08-08 snapshot, with most reserves still in Fasanara private credit. The score metrics retain the pinned 2026-07-27 journal values: weightedAverageMaturityDays is unavailable and valuationCadenceDays is 0.0105 from consecutive signed snapshots. Credit quality is limited because category-level exposure is verified but borrower and position detail is not. Seniority is limited because sUSN is a documented residual-yield wrapper without a published reserve-loss waterfall versus USN. Accountable supports adequate valuation cadence. The documented T+5 liquidity commitment, active custody split, and insurance balance support limited maturity/liquidity, custody, and recovery, but underlying agreements and cover terms are undisclosed. The binding sUSN Staking Terms, last updated 2026-07-31 and reviewed 2026-09-21, now establish a user agreement with Noon Holdco Ltd, identify sUSN as the holder's staked position and entitlement to protocol distributions upon redemption, allocate the exact proportional reserve loss to sUSN principal after a defined Suspension Event, and provide BVI governing law and arbitration. The verified Ethereum staking-vault source anchors the described wrapper on-chain. Legal enforceability is limited rather than adequate because the terms expressly disclaim a direct interest in any fund, entity, or underlying asset and create no fiduciary relationship or reserve-asset priority.",
       "metrics": {
         "weightedAverageMaturityDays": null,
         "valuationCadenceDays": 0.0105
@@ -16385,9 +16389,7 @@
           "quality": "limited"
         },
         "legalEnforceability": {
-          "applicability": "unavailable",
-          "rationale": "The reviewed official Noon documentation index and the USN/sUSN, transparency, liquidity, and risk pages publish no prospectus, holder agreement, trust deed, regulatory filing, or enforceable wrapper and reserve-loss ranking for sUSN holders.",
-          "sourceUrl": "https://docs.noon.capital/llms.txt"
+          "quality": "limited"
         },
         "valuationCadence": {
           "quality": "adequate"

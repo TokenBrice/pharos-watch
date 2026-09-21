@@ -3,23 +3,40 @@
   "reserves": [
     {
       "sourceKey": "erc4626-single-asset:ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7",
-      "name": "USDT (deployed as overcollateralized institutional loans)",
-      "pct": 100,
+      "name": "Maple syrupUSDT idle underlying",
+      "pct": 0.031568391329,
+      "risk": "medium",
+      "coinId": "usdt-tether",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether (USDT issuer)",
+      "riskFactors": [
+        "counterparty",
+        "custody"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "sourceKey": "erc4626-single-asset:ethereum:0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d:deployed",
+      "name": "Maple syrupUSDT deployed strategy positions",
+      "pct": 99.968431608671,
       "risk": "high",
-      "assetClass": "private-credit",
-      "issuerOrObligor": "Maple Direct and governance-approved institutional borrowers",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Maple USDT Segregated Portfolio 1, Maple Direct, and supporting-strategy counterparties",
       "riskFactors": [
         "credit",
         "liquidity",
         "counterparty",
-        "smart-contract"
+        "smart-contract",
+        "basis",
+        "custody"
       ],
       "liquidityHorizon": "over-seven-days"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex reserve curation",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Slice7)",
     "confidence": "probable",
     "sources": [
       {
@@ -31,18 +48,18 @@
         "url": "https://maple.finance/insights/introducing-proof-of-reserves"
       }
     ],
-    "rationale": "Maple describes syrupUSDT as a segregated pool access product built around overcollateralized institutional lending, with supporting strategies also documented. The aggregate slice is retained because Maple does not publish a current percentage split for those strategies on the cited pages.",
-    "compositionBasis": "Maple lender documentation and reserve-program disclosure",
+    "rationale": "Maple documents syrupUSDT as a segregated USDT pool that allocates capital to overcollateralized institutional loans, futures basis trading, and DeFi liquidity provision. The live ERC-4626 adapter separates idle USDT from deployed positions; the reviewed rows preserve those exact adapter identities without estimating the changing allocation within the deployed strategy basket.",
+    "compositionBasis": "Live ERC-4626 idle/deployed split with Maple lender documentation for deployed strategy identity",
     "scope": "full-composition",
-    "knownUnknownExposure": "The current percentage allocation between institutional loans and supporting strategies is not published in the reviewed primary sources; Maple's independent proof-of-reserves reports are announced but no dated report scope was available here.",
-    "knownUnknownExposurePct": 100,
+    "knownUnknownExposure": "The live adapter separates idle USDT from deployed positions, but Maple's public documentation does not provide the current percentage allocation among institutional loans, futures basis trading, and DeFi liquidity provision inside the deployed row.",
+    "knownUnknownExposurePct": 99.968431608671,
     "nonLinkDispositions": [
       {
-        "reserveIndex": 0,
-        "reserveName": "USDT (deployed as overcollateralized institutional loans)",
-        "pct": 100,
-        "disposition": "insufficient-evidence",
-        "rationale": "Maple identifies the loan and strategy families but does not publish their current percentage weights in the reviewed primary sources.",
+        "reserveIndex": 1,
+        "reserveName": "Maple syrupUSDT deployed strategy positions",
+        "pct": 99.968431608671,
+        "disposition": "basket-needs-split",
+        "rationale": "Maple identifies the deployed strategy families, while the live adapter reports them as one position and the reviewed primary sources do not split their current weights.",
         "candidateCoinIds": [
           "usdt-tether"
         ]

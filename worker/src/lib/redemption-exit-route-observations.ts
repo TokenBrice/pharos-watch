@@ -133,19 +133,28 @@ function resolveOutput(
         };
   }
   if (config.outputAssetType === "stable-basket") {
+    const configuredAssetIds = [...(config.outputAssets ?? config.unresolvedOutputAssetKeys ?? [])].sort();
+    const valuationAssetIds = outputValuation?.basketWeights.map((weight) => weight.assetId).sort() ?? [];
+    const valuationMatches =
+      configuredAssetIds.length > 0 &&
+      configuredAssetIds.length === valuationAssetIds.length &&
+      configuredAssetIds.every((assetId, index) => assetId === valuationAssetIds[index]);
     if (!config.outputAssets?.length) {
       return {
         kind: "unresolved-basket",
         ...(config.unresolvedOutputAssetKeys?.length
           ? { assetKeys: [...config.unresolvedOutputAssetKeys] }
           : {}),
+        ...(valuationMatches
+          ? {
+              basketWeights: outputValuation!.basketWeights.map((weight) => ({
+                assetId: weight.assetId,
+                weight: weight.weight,
+              })),
+            }
+          : {}),
       };
     }
-    const configuredAssetIds = [...config.outputAssets].sort();
-    const valuationAssetIds = outputValuation?.basketWeights.map((weight) => weight.assetId).sort() ?? [];
-    const valuationMatches =
-      configuredAssetIds.length === valuationAssetIds.length &&
-      configuredAssetIds.every((assetId, index) => assetId === valuationAssetIds[index]);
     return {
       kind: "tracked-stablecoin",
       trackedAssetIds: [...config.outputAssets],
@@ -235,19 +244,24 @@ export function buildRedemptionExitRouteObservation(
     input.capacityProfile.scoringHorizon === "immediate" &&
     (input.config.settlementModel === "atomic" || input.config.settlementModel === "immediate");
   const mainCostBps = resolveCostBps(input.config, input.resolvedFeeBps, modeledExitSizeUsd);
-  const configuredOutputAssetIds = [...(input.config.outputAssets ?? [])].sort();
+  const configuredOutputAssetIds = [
+    ...(input.config.outputAssets ?? input.config.unresolvedOutputAssetKeys ?? []),
+  ].sort();
   const candidateValuationAssetIds =
     input.outputValuation?.basketWeights.map((weight) => weight.assetId).sort() ?? [];
   const outputValuation =
     input.config.outputAssetType === "stable-basket" &&
     input.outputValuation &&
+    configuredOutputAssetIds.length > 0 &&
     configuredOutputAssetIds.length === candidateValuationAssetIds.length &&
     configuredOutputAssetIds.every((assetId, index) => assetId === candidateValuationAssetIds[index])
       ? input.outputValuation
       : null;
+  const outputExpectedUnitValueUsd = outputValuation?.expectedUnitValueUsd ?? 1;
   const allInCostBps =
     mainCostBps != null && outputValuation
-      ? mainCostBps + Math.max(0, (1 - outputValuation.unitValueUsd) * 10_000)
+      ? mainCostBps +
+        Math.max(0, (1 - outputValuation.unitValueUsd / outputExpectedUnitValueUsd) * 10_000)
       : null;
   // A reviewed route with a documented but unbounded fee still proves that the
   // capacity exists. Preserve that capacity and let V9's explicit
@@ -308,6 +322,7 @@ export function buildRedemptionExitRouteObservation(
       ? {
           executionCostBps: mainCostBps,
           outputUnitValueUsd: outputValuation.unitValueUsd,
+          outputExpectedUnitValueUsd,
           outputUnitValueSourceId: outputValuation.sourceId,
           outputUnitValueObservedAt: outputValuation.observedAt,
           allInCostBps,

@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "ORI030 Indonesian government security",
-      "pct": 31.17,
+      "pct": 30.14,
       "risk": "low",
       "assetClass": "government-security",
       "issuerOrObligor": "Government of the Republic of Indonesia",
@@ -11,17 +11,8 @@
       "liquidityHorizon": "unknown"
     },
     {
-      "name": "IDR bank deposits at PT Bank Central Asia Tbk",
-      "pct": 26.44,
-      "risk": "very-low",
-      "assetClass": "bank-deposit",
-      "issuerOrObligor": "PT Bank Central Asia Tbk",
-      "riskFactors": ["counterparty", "liquidity", "custody", "concentration"],
-      "liquidityHorizon": "immediate"
-    },
-    {
       "name": "IDR bank deposits at PT Bank Ina Perdana Tbk",
-      "pct": 8.73,
+      "pct": 45.13,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "PT Bank Ina Perdana Tbk",
@@ -30,7 +21,7 @@
     },
     {
       "name": "IDR bank deposits at PT Bank Rakyat Indonesia (Persero) Tbk",
-      "pct": 0.92,
+      "pct": 0.1,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "PT Bank Rakyat Indonesia (Persero) Tbk",
@@ -39,7 +30,7 @@
     },
     {
       "name": "IDR balance held at Indodax (PT Indodax Nasional Indonesia)",
-      "pct": 15.57,
+      "pct": 10.51,
       "risk": "low",
       "assetClass": "cash",
       "issuerOrObligor": "PT Indodax Nasional Indonesia",
@@ -48,7 +39,7 @@
     },
     {
       "name": "IDR balance held at Duitku (PT Kharisma Catur Mandala)",
-      "pct": 9.39,
+      "pct": 6.6,
       "risk": "low",
       "assetClass": "cash",
       "issuerOrObligor": "PT Kharisma Catur Mandala",
@@ -57,7 +48,7 @@
     },
     {
       "name": "IDR balance held at PINTU (PT Pintu Kemana Saja)",
-      "pct": 7.78,
+      "pct": 7.52,
       "risk": "low",
       "assetClass": "cash",
       "issuerOrObligor": "PT Pintu Kemana Saja",
@@ -66,72 +57,65 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-01",
-    "reviewer": "Pharos reserve curation review 2026-09-01",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Resv06)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Reserve Transparency Report IDRX July 2026 (KAP Jojo Sunarjo & Rekan agreed-upon procedures, as of 2026-07-28; listed 2026-08-10)",
-        "url": "https://storage.googleapis.com/idrx-uploaded-docs/Reserve%20Transparency%20Report%20IDRX%20July%202026.pdf"
+        "label": "Reserve Transparency Report IDRX August 2026 (KAP Jojo Sunarjo & Rekan agreed-upon procedures, as of 2026-08-28; listed 2026-09-15)",
+        "url": "https://storage.googleapis.com/idrx-uploaded-docs/Reserve%20Transparency%20Report%20IDRX%20August%202026.pdf"
       },
       {
-        "label": "IDRX public document API index (record 16, observed 2026-09-01)",
+        "label": "IDRX public document API index (record 18, observed 2026-09-21)",
         "url": "https://idrx.co/api/documents?page=1&take=100"
       }
     ],
-    "rationale": "Re-reviewed 2026-09-01 against the July 2026 Reserve Transparency Report, report no. 00024/3.0408/AUP/99/1180-14/1/VIII/2026, issued by KAP Jojo Sunarjo & Rekan and signed 2026-08-05. The agreed-upon procedures report is explicitly not an audit, review, opinion, or other assurance engagement. Its July 28, 2026 table reports ORI030 at Rp4,005,850,153, PT Bank Central Asia at Rp3,397,831,673, PT Bank Ina Perdana at Rp1,121,465,194, PT Bank Rakyat Indonesia at Rp117,678,550, Indodax at Rp2,000,491,416, Duitku at Rp1,207,064,492, and PINTU at Rp1,000,320,628, totaling Rp12,850,702,106 against 12,694,960,138 IDRX in circulation, or 101.23% coverage. The image appendices reconcile the table rounding: BCA shows Rp3,397,831,672.63, Bank Ina shows Rp1,112,545,318.61 plus Rp8,919,875.88, BRI shows Rp117,678,550, Indodax highlights an estimated IDR value of Rp2,000,491,416, Duitku shows a balance of Rp1,207,064,492, PINTU highlights total IDR of Rp1,000,320,628, and GHP Consulting's July 27 statement confirms Rp4,005,850,153 in the ORI030 secondary account. The API index exposes record 16, created 2026-08-10, with this PDF URL. The pinned PDF fetched in this review has SHA-256 759e81902267cbac64bc130d3ff0949923ea4617f41de1f52b482fb054a951d. Mapping decision: the old USD deposits held in escrow at GHP Consulting row is retired and replaced by ORI030; the old combined Bank Ina Perdana, Nobu Bank, and Bank Permata row is retired and replaced by separate Bank Central Asia and Bank Ina rows; the BRI, Indodax, Duitku, and PINTU rows retain their institution labels but are replaced with the July balances and percentages. The seven July rows are the full composition.",
-    "compositionBasis": "KAP Jojo Sunarjo & Rekan agreed-upon-procedures Reserve Account Report as of 2026-07-28, using the seven institution or instrument balances in its reserve table; PDF SHA-256 759e81902267cbac64bc130d3ff0949923ea4617f41de1f52b482fb054a951d",
-    "compositionAsOf": "2026-07-28",
+    "rationale": "The August 2026 agreed-upon-procedures report presents the complete reserve account at 12:02 PM Western Indonesian Time on August 28. It reports Rp4,005,850,153 of ORI030, Rp5,999,326,639 at PT Bank Ina Perdana, Rp12,800,105 at PT Bank Rakyat Indonesia, Rp1,397,250,014 at Indodax, Rp877,402,547 at Duitku, and Rp1,000,284,179 at PINTU. The six balances total Rp13,292,913,637 against Rp13,253,263,412 of IDRX in circulation, a Rp39,650,225 surplus. Percentages use the reserve total as denominator and sum to 100% after rounding. The report compares the bank, exchange, wallet, and ORI030 evidence with the reserve account, but explicitly remains an agreed-upon-procedures engagement rather than an audit or assurance opinion.",
+    "compositionBasis": "KAP Jojo Sunarjo & Rekan agreed-upon-procedures Reserve Account Report as of 2026-08-28, using the six institution or instrument balances in its complete reserve table",
+    "compositionAsOf": "2026-08-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "The AUP identifies all seven reserve rows and the report's image appendices show the supporting BCA, Bank Ina, BRI, Indodax, Duitku, PINTU, and ORI030 account evidence. It does not provide an assurance opinion, establish account segregation or bankruptcy remoteness, disclose rehypothecation limits, or identify the underlying depository institution for the ORI030 account confirmed by GHP Consulting.",
+    "knownUnknownExposure": "The report identifies all six reserve rows and includes supporting evidence for Bank Ina, BRI, Indodax, Duitku, PINTU, and the ORI030 secondary account. It does not provide an assurance opinion, establish account segregation or bankruptcy remoteness, disclose rehypothecation limits, or identify the underlying depository institution for the ORI030 account confirmed by GHP Consulting.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "ORI030 Indonesian government security",
-        "pct": 31.17,
+        "pct": 30.14,
         "disposition": "untracked-exogenous-asset",
         "rationale": "ORI030 is an Indonesian government security and an external reserve asset rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 1,
-        "reserveName": "IDR bank deposits at PT Bank Central Asia Tbk",
-        "pct": 26.44,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "IDR bank deposits at PT Bank Central Asia Tbk are external fiat reserve assets rather than a tracked stablecoin dependency."
-      },
-      {
-        "reserveIndex": 2,
         "reserveName": "IDR bank deposits at PT Bank Ina Perdana Tbk",
-        "pct": 8.73,
+        "pct": 45.13,
         "disposition": "untracked-exogenous-asset",
         "rationale": "IDR bank deposits at PT Bank Ina Perdana Tbk are external fiat reserve assets rather than a tracked stablecoin dependency."
       },
       {
-        "reserveIndex": 3,
+        "reserveIndex": 2,
         "reserveName": "IDR bank deposits at PT Bank Rakyat Indonesia (Persero) Tbk",
-        "pct": 0.92,
+        "pct": 0.1,
         "disposition": "untracked-exogenous-asset",
         "rationale": "IDR bank deposits at PT Bank Rakyat Indonesia (Persero) Tbk are external fiat reserve assets rather than a tracked stablecoin dependency."
       },
       {
-        "reserveIndex": 4,
+        "reserveIndex": 3,
         "reserveName": "IDR balance held at Indodax (PT Indodax Nasional Indonesia)",
-        "pct": 15.57,
+        "pct": 10.51,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The IDR balance at Indodax is an external fiat reserve asset rather than a tracked stablecoin dependency."
       },
       {
-        "reserveIndex": 5,
+        "reserveIndex": 4,
         "reserveName": "IDR balance held at Duitku (PT Kharisma Catur Mandala)",
-        "pct": 9.39,
+        "pct": 6.6,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The IDR balance at Duitku is an external fiat reserve asset rather than a tracked stablecoin dependency."
       },
       {
-        "reserveIndex": 6,
+        "reserveIndex": 5,
         "reserveName": "IDR balance held at PINTU (PT Pintu Kemana Saja)",
-        "pct": 7.78,
+        "pct": 7.52,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The IDR balance at PINTU is an external fiat reserve asset rather than a tracked stablecoin dependency."
       }
@@ -142,62 +126,56 @@
       {
         "name": "GHP Consulting Pte. Ltd. (escrow agent)",
         "role": "other",
-        "sharePct": 31.17,
+        "sharePct": 30.14,
         "jurisdiction": "Singapore"
-      },
-      {
-        "name": "PT Bank Central Asia Tbk",
-        "role": "bank",
-        "sharePct": 26.44,
-        "jurisdiction": "Indonesia"
       },
       {
         "name": "PT Bank Ina Perdana Tbk",
         "role": "bank",
-        "sharePct": 8.73,
+        "sharePct": 45.13,
         "jurisdiction": "Indonesia"
       },
       {
         "name": "PT Bank Rakyat Indonesia (Persero) Tbk",
         "role": "bank",
-        "sharePct": 0.92,
+        "sharePct": 0.1,
         "jurisdiction": "Indonesia"
       },
       {
         "name": "PT Indodax Nasional Indonesia",
         "role": "other",
-        "sharePct": 15.57,
+        "sharePct": 10.51,
         "jurisdiction": "Indonesia"
       },
       {
         "name": "PT Kharisma Catur Mandala (Duitku)",
         "role": "other",
-        "sharePct": 9.39,
+        "sharePct": 6.6,
         "jurisdiction": "Indonesia"
       },
       {
         "name": "PT Pintu Kemana Saja (PINTU)",
         "role": "other",
-        "sharePct": 7.78,
+        "sharePct": 7.52,
         "jurisdiction": "Indonesia"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-09-01",
-    "reviewer": "Pharos reserve curation review 2026-09-01",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Resv06)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Reserve Transparency Report IDRX July 2026 (KAP Jojo Sunarjo & Rekan agreed-upon procedures, as of 2026-07-28; listed 2026-08-10)",
-        "url": "https://storage.googleapis.com/idrx-uploaded-docs/Reserve%20Transparency%20Report%20IDRX%20July%202026.pdf"
+        "label": "Reserve Transparency Report IDRX August 2026 (KAP Jojo Sunarjo & Rekan agreed-upon procedures, as of 2026-08-28; listed 2026-09-15)",
+        "url": "https://storage.googleapis.com/idrx-uploaded-docs/Reserve%20Transparency%20Report%20IDRX%20August%202026.pdf"
       },
       {
-        "label": "IDRX public document API index (record 16, observed 2026-09-01)",
+        "label": "IDRX public document API index (record 18, observed 2026-09-21)",
         "url": "https://idrx.co/api/documents?page=1&take=100"
       }
     ],
-    "uncertainty": "The report and image appendices identify ORI030 and six institution-level balances, while GHP Consulting's statement confirms the ORI030 secondary account. The materials do not identify the underlying ORI030 depository or custodian, establish legal account segregation or bankruptcy remoteness, disclose rehypothecation terms, provide bond maturity detail, or state a redemption settlement time."
+    "uncertainty": "The report identifies ORI030 and five institution-level balances, while GHP Consulting's statement confirms the ORI030 secondary account. The materials do not identify the underlying ORI030 depository or custodian, establish legal account segregation or bankruptcy remoteness, disclose rehypothecation terms, provide bond maturity detail, or state a redemption settlement time."
   }
 }

@@ -21,9 +21,9 @@ import {
   type SafetyScoreV9TransferMaterialityGeneration,
   type SafetyScoreV9TransferMaterialityObservation,
 } from "../safety-score-v9/transfer-materiality";
-import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
+import { makeV9FixedInput, v9TestClockSec } from "../../test-helpers/v9-fixed-input";
 
-const CLOCK_SEC = Date.parse("2026-08-17T00:00:00Z") / 1_000;
+const CLOCK_SEC = v9TestClockSec();
 const BASE_INPUT_GENERATION_ID = `report-cards-input:v1:${"a".repeat(64)}`;
 const REGISTRY_FINGERPRINT = "b".repeat(64);
 const AGGREGATE_SUPPLY_USD = 34_668_686.813536435;
@@ -284,7 +284,7 @@ describe("Safety Score V9 transfer-materiality supply partition", () => {
     expect(review("wsrusd-reservoir", generation("wsrusd-reservoir", rows))).toBeNull();
   });
 
-  it("leaves all twenty wsrUSD public materiality reasons and its bridge gap unresolved", () => {
+  it("leaves all twenty-one wsrUSD public materiality reasons and its bridge gap unresolved", () => {
     const assetId = "wsrusd-reservoir";
     const meta = ACTIVE_META_BY_ID.get(assetId)!;
     const replayInput = makeV9FixedInput({
@@ -317,7 +317,9 @@ describe("Safety Score V9 transfer-materiality supply partition", () => {
       .assets[0]!.scoreInput.pillars.control.reasons;
 
     expect(extension.assets[0]!.supplyReview).toBeNull();
-    expect(reasons.filter((reason) => reason.code === "runtime-bridge-materiality-unavailable")).toHaveLength(20);
+    // The reviewed Tempo adapter adds a twentieth route controller; the
+    // aggregate bridge adds one more reason without a complete supply packet.
+    expect(reasons.filter((reason) => reason.code === "runtime-bridge-materiality-unavailable")).toHaveLength(21);
     expect(compiled.gaps.filter((gap) => gap.reasonCode === "missing-bridge-routes")).toHaveLength(1);
     expect(compiled.supply.selectedBridgeRoutes).toEqual([]);
   });

@@ -3,7 +3,7 @@ import { linePattern, type CompilerProfile } from "./shared";
 export const PROFILE: CompilerProfile = {
   product: "EUROP",
   profile: "europ-v1",
-  officialIndexUrl: "https://schuman.io/reserve-audits/",
+  officialIndexUrl: "https://schuman.io/wp-json/wp/v2/media?search=SALVUS_Attestation&per_page=100",
   reportUrl: "https://schuman.io/wp-content/uploads/2026/07/SALVUS_Attestation_relative_au_nombre_de_jetons_EUROP_30_06_2026.pdf",
   reportDate: "2026-06-30",
   reportAsOf: "2026-06-30T08:00:00Z",

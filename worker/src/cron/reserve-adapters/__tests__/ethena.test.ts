@@ -55,11 +55,12 @@ describe("adaptEthenaCollateral", () => {
     const payload: EthenaCollateralResponse = {
       totalBackingAssetsInUsd: 100,
       collateral: [
-        { asset: "Liquid Cash", exchange: "Binance", timestamp: 1, usdAmount: 80 },
+        { asset: "Liquid Cash", exchange: "Binance", timestamp: 1, usdAmount: 75 },
         { asset: "SOL", exchange: "Binance", timestamp: 1, usdAmount: 5 },
         { asset: "XRP", exchange: "Binance", timestamp: 1, usdAmount: 5 },
         { asset: "BNB", exchange: "Binance", timestamp: 1, usdAmount: 5 },
         { asset: "HYPE", exchange: "Binance", timestamp: 1, usdAmount: 5 },
+        { asset: "Gold", exchange: "Binance", timestamp: 1, usdAmount: 5 },
       ],
     };
 

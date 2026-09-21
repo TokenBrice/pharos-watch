@@ -4,7 +4,7 @@
     {
       "sourceKey": "infinifi:fasanara-gdaf",
       "name": "Fasanara mGLOBAL (GDADF)",
-      "pct": 44.052194,
+      "pct": 43.4,
       "risk": "high",
       "blacklistable": true,
       "coinId": "mglobal-midas-fasanara",
@@ -21,7 +21,7 @@
     {
       "sourceKey": "infinifi:cowswap-fxsave",
       "name": "f(x) fxSAVE",
-      "pct": 16.700447,
+      "pct": 16.4,
       "risk": "medium",
       "coinId": "fxsave-f-x-protocol",
       "depType": "collateral",
@@ -38,7 +38,7 @@
     {
       "sourceKey": "infinifi:new-silver-junior",
       "name": "New Silver",
-      "pct": 10.715996,
+      "pct": 10.5,
       "risk": "high",
       "blacklistable": true,
       "assetClass": "private-credit",
@@ -53,7 +53,7 @@
     {
       "sourceKey": "infinifi:spark-susdc-refcode",
       "name": "Spark sUSDC",
-      "pct": 10.533433,
+      "pct": 7.5,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -69,7 +69,7 @@
     {
       "sourceKey": "infinifi:new-silver-senior",
       "name": "New Silver 2 Senior",
-      "pct": 6.267344,
+      "pct": 4.1,
       "risk": "high",
       "assetClass": "private-credit",
       "issuerOrObligor": "New Silver",
@@ -83,7 +83,7 @@
     {
       "sourceKey": "infinifi:fasanara-rwa-farm",
       "name": "Fasanara Genesis Fund",
-      "pct": 5.395478,
+      "pct": 5.3,
       "risk": "high",
       "blacklistable": true,
       "assetClass": "fund-share",
@@ -98,7 +98,7 @@
     {
       "sourceKey": "infinifi:falconx-farm",
       "name": "FalconX Institutional",
-      "pct": 4.190024,
+      "pct": 4.1,
       "risk": "high",
       "blacklistable": true,
       "assetClass": "private-credit",
@@ -115,7 +115,7 @@
     {
       "sourceKey": "infinifi:morpho-steakusdcinfinifi",
       "name": "Morpho infiniFi Ecosystem Vault",
-      "pct": 2.093801,
+      "pct": 1.3,
       "risk": "medium",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -130,63 +130,88 @@
       "liquidityHorizon": "seven-days"
     },
     {
-      "sourceKey": "infinifi:base-outland-farm",
-      "name": "BASE Liquidity Farm",
-      "pct": 0.051283,
-      "risk": "high"
+      "sourceKey": "infinifi:aavev3",
+      "name": "Aave USDC",
+      "pct": 7.3,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Aave v3",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "sourceKey": "infinifi:base-morpho-steakhouse-prime",
+      "name": "Steakhouse Prime USDC",
+      "pct": 0.1,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Steakhouse Financial / Morpho",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-04",
-    "reviewer": "Codex Safety Score V9 reserve refresh 2026-08-20",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Slice8)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "infiniFi real-time protocol data (2026-09-04)",
+        "label": "infiniFi real-time protocol data (2026-09-21)",
         "url": "https://eth-api.infinifi.xyz/api/protocol/data"
+      },
+      {
+        "label": "Morpho Steakhouse Prime USDC vault on Base",
+        "url": "https://app.morpho.org/base/vault/0xBEEFE94c8aD530842bfE7d8B397938fFc1cb83b2/steakhouse-prime-usdc"
       }
     ],
-    "rationale": "The infiniFi real-time protocol data capture on 2026-09-04 reports the full nonzero farm composition: mGLOBAL 44.052194%, fxSAVE 16.700447%, New Silver 10.715996%, Spark sUSDC 10.533433%, New Silver 2 Senior 6.267344%, Genesis 5.395478%, FalconX 4.190024%, Morpho 2.093801%, and BASE Liquidity Farm 0.051283%. Liquid Cap, temporary repo, and 3F are zero-balance and omitted; Redeem Controller is protocol-level dust (~0%) and excluded from adapter reserve slices.",
-    "compositionBasis": "infiniFi protocol /data farm balances captured on 2026-09-04",
-    "compositionAsOf": "2026-09-04",
+    "rationale": "The infiniFi live protocol capture on 2026-09-21 reports ten nonzero farm slices totaling 100.0% after adapter rounding. Morpho's vault page identifies the previously unmapped 0.1% Steakhouse Prime USDC position as a Base Morpho vault curated by Steakhouse Financial with USDC as its underlying asset. The row is classified consistently with the existing Steakhouse-curated Morpho position and linked to USDC collateral.",
+    "compositionBasis": "infiniFi protocol farm balances captured on 2026-09-21, with the Base Steakhouse Prime vault identity verified against Morpho",
+    "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "No unresolved composition gap remains: the live protocol capture identifies all nonzero adapter farm slices; zero-balance Liquid Cap, temporary repo, and 3F are omitted, while Redeem Controller dust is protocol-level and excluded.",
+    "knownUnknownExposure": "All ten nonzero adapter farm slices are identified. Private-credit and fund positions remain explicit non-links; the Aave, Spark, and Morpho positions are linked to their tracked USDC underlying.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 2,
         "reserveName": "New Silver",
-        "pct": 10.715996,
+        "pct": 10.5,
         "disposition": "untracked-exogenous-asset",
         "rationale": "New Silver is a named private-credit position, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 4,
         "reserveName": "New Silver 2 Senior",
-        "pct": 6.267344,
+        "pct": 4.1,
         "disposition": "untracked-exogenous-asset",
         "rationale": "New Silver 2 Senior is a named private-credit position, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 5,
         "reserveName": "Fasanara Genesis Fund",
-        "pct": 5.395478,
+        "pct": 5.3,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Fasanara Genesis is a named fund position, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 6,
         "reserveName": "FalconX Institutional",
-        "pct": 4.190024,
+        "pct": 4.1,
         "disposition": "untracked-exogenous-asset",
         "rationale": "FalconX Institutional is a named lending position, not a tracked stablecoin dependency."
-      },
-      {
-        "reserveIndex": 8,
-        "reserveName": "BASE Liquidity Farm",
-        "pct": 0.051283,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "BASE Liquidity Farm is a named InfiniFi protocol position, not a tracked stablecoin dependency."
       }
     ]
   }

@@ -22,21 +22,21 @@
     "attestorTier": "niche",
     "cadence": "real-time",
     "latestReport": {
-      "periodEnd": "2026-08-20",
-      "publishedAt": "2026-08-20",
+      "periodEnd": "2026-09-21",
+      "publishedAt": "2026-09-21",
       "assuranceMethod": "self-verification",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "partial",
-      "reviewer": "GPT SOL-EVD-A wave6",
+      "reviewer": "Claude curation campaign 2026-09-21 (Resv29)",
       "confidence": "probable",
       "sources": [
         {
-          "label": "OpenEden USDO reserve composition and supply API (snapshot 2026-08-20T08:00:31.209Z)",
-          "url": "https://prod-gw.openeden.com/usdo/sys/reserve-composition-last"
+          "label": "OpenEden USDO transparency dashboard (last update 2026-09-21 08:00 UTC)",
+          "url": "https://openeden.com/usdo/transparency"
         },
         {
-          "label": "OpenEden USDO transparency dashboard (accessed 2026-08-20)",
-          "url": "https://openeden.com/usdo/transparency"
+          "label": "OpenEden USDO reserve composition and supply API (snapshot accessed 2026-09-21T08:26:16Z)",
+          "url": "https://prod-gw.openeden.com/usdo/sys/reserve-composition-last"
         }
       ]
     }

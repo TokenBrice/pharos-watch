@@ -218,39 +218,25 @@
     },
     {
       "sourceKey": "collateral-positions-api:ysybold",
-      "name": "ysyBOLD",
-      "pct": 0.103,
+      "name": "ysyBOLD (Staked yBOLD)",
+      "pct": 0.1,
       "risk": "medium",
-      "coinId": "bold-liquity",
+      "coinId": "ybold-yearn",
       "depType": "collateral",
       "assetClass": "protocol-position",
-      "issuerOrObligor": "Yearn and Liquity BOLD protocol",
+      "issuerOrObligor": "Yearn ysyBOLD and yBOLD vaults; Liquity V2 Stability Pools",
       "riskFactors": [
         "smart-contract",
         "market",
         "liquidity",
         "counterparty"
       ],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "sourceKey": "collateral-positions-api:crv",
-      "name": "CRV",
-      "pct": 0.026,
-      "risk": "very-high",
-      "assetClass": "cryptoasset",
-      "issuerOrObligor": "Curve DAO",
-      "riskFactors": [
-        "market",
-        "liquidity",
-        "smart-contract"
-      ],
       "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-04",
-    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Slice1Finish)",
     "confidence": "verified",
     "sources": [
       {
@@ -268,9 +254,17 @@
       {
         "label": "ServiceHunter AG company and tokenized-share disclosure",
         "url": "https://www.servicehunter.ch/"
+      },
+      {
+        "label": "Yearn yBOLD product documentation",
+        "url": "https://docs.yearn.fi/getting-started/products/yvaults/yBold"
+      },
+      {
+        "label": "Yearn ysyBOLD vault record",
+        "url": "https://ydaemon.yearn.fi/1/vaults/0x23346b04a7f55b8760e5860aa5a77383d63491cd"
       }
     ],
-    "rationale": "Each weight matches the 2026-09-04 live capture of open, non-denied Frankencoin collateral positions valued through the protocol's CHF price mapping. ysyBOLD is linked to bold-liquity; PAXG and XAUt are exact tracked upstreams; CRV and all other rows are explicitly classified exogenous collateral and do not create stablecoin dependency edges.",
+    "rationale": "Each weight matches the 2026-09-04 live capture of open, non-denied Frankencoin collateral positions valued through the protocol's CHF price mapping. The ysyBOLD collateral is the tracked Yearn yBOLD wrapper over Liquity BOLD, so its direct dependency is ybold-yearn; PAXG and XAUt are exact tracked upstreams; CRV and all other rows are explicitly classified exogenous collateral and do not create stablecoin dependency edges.",
     "compositionBasis": "Latest active collateral balances from Frankencoin's positions API valued by its price-mapping API",
     "compositionAsOf": "2026-09-04",
     "scope": "full-composition",
@@ -353,13 +347,6 @@
         "pct": 0.126,
         "disposition": "untracked-exogenous-asset",
         "rationale": "LENDS is tokenized equity collateral, not a stablecoin dependency."
-      },
-      {
-        "reserveIndex": 14,
-        "reserveName": "CRV",
-        "pct": 0.026,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "CRV is governance-token collateral, not a stablecoin dependency."
       }
     ]
   }

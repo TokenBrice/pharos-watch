@@ -2,25 +2,27 @@
   "id": "srusde-strata",
   "reserves": [
     {
-      "sourceKey": "erc4626-single-asset:ethereum:0x4c9edd5852cd905f086c759e8383e09bff1e68b3",
-      "name": "Senior tranche USDe vault shares",
+      "sourceKey": "erc4626-single-asset:ethereum:0x3d7d6fdf07ee548b939a80edbc9b2256d0cdc003:deployed",
+      "name": "Strata Senior USDe deployed strategy positions",
       "pct": 100,
       "risk": "high",
-      "coinId": "usde-ethena",
+      "coinId": "susde-ethena",
       "depType": "wrapper",
       "assetClass": "protocol-position",
+      "issuerOrObligor": "Strata senior-tranche strategy and Ethena sUSDe",
       "riskFactors": [
         "smart-contract",
         "market",
         "liquidity",
-        "counterparty"
+        "counterparty",
+        "basis"
       ],
       "liquidityHorizon": "seven-days"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "SONG-1 Safety Score V9 reserve review",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Slice3)",
     "confidence": "verified",
     "sources": [
       {
@@ -29,18 +31,18 @@
       },
       {
         "label": "Strata Ethena USDe market",
-        "url": "https://docs.strata.markets/markets"
+        "url": "https://docs.strata.markets/markets/ethena-usde"
       },
       {
         "label": "Strata FAQ redemption terms",
         "url": "https://docs.strata.markets/resources/faqs"
       }
     ],
-    "rationale": "The current live reserve capture is a single 100% senior-tranche USDe vault-share exposure. Strata documents srUSDe as an ERC-4626 senior tranche over the Ethena USDe/sUSDe strategy, with USDe withdrawals subject to a seven-day cooldown; the existing tracked dependency preserves the upstream USDe failure domain.",
-    "compositionBasis": "Current Strata live reserve capture and official srUSDe market documentation",
-    "compositionAsOf": "2026-07-14",
+    "rationale": "Strata documents srUSDe as the senior ERC-4626 tranche of its Ethena market, with USDe as base asset and sUSDe as the yield source managed by the strategy. The deployed balance is therefore a protocol position linked to tracked sUSDe and inherits Ethena basis, counterparty, market, and cooldown liquidity risks.",
+    "compositionBasis": "Live ERC-4626 deployed balance captured 2026-09-21 and current Strata market documentation",
+    "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "The reviewed sources establish the wrapper and upstream strategy identity but do not publish a current breakdown of underlying Ethena backing assets inside the srUSDe position.",
+    "knownUnknownExposure": "The direct deployed position is identified as the Strata senior-tranche strategy over sUSDe; changing internal USDe and sUSDe balances are not separately weighted by the live adapter.",
     "knownUnknownExposurePct": 0
   }
 }

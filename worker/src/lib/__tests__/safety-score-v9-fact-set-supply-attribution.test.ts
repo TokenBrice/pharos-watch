@@ -555,7 +555,7 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
       sourceId: "safety-score-v9-supply-review-producer",
       disposition: "rejected",
       rejection: expect.objectContaining({
-        code: "supply-review.attribution-rpc-rejection",
+        code: "supply-review.generation-outcome-missing",
       }),
     }));
     expect(wm.gaps.map((gap) => gap.reasonCode)).toContain(

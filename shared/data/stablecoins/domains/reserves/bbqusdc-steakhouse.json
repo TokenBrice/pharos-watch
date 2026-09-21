@@ -3,8 +3,21 @@
   "reserves": [
     {
       "sourceKey": "erc4626-single-asset:ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "name": "USDC supplied through Smokehouse-curated Morpho lending markets",
-      "pct": 100,
+      "name": "Smokehouse USDC idle underlying",
+      "pct": 3.3386e-8,
+      "risk": "high",
+      "coinId": "usdc-circle",
+      "depType": "wrapper",
+      "blacklistable": true,
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle (USDC issuer)",
+      "riskFactors": ["counterparty", "custody", "smart-contract"],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "sourceKey": "erc4626-single-asset:ethereum:0xbeefff209270748ddd194831b3fa287a5386f5bc:deployed",
+      "name": "Smokehouse USDC deployed strategy positions",
+      "pct": 99.999999966614,
       "risk": "high",
       "coinId": "usdc-circle",
       "depType": "wrapper",
@@ -16,8 +29,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Slice6)",
     "confidence": "verified",
     "sources": [
       {
@@ -29,10 +42,11 @@
         "url": "https://legacy.docs.morpho.org/morpho-vaults/concepts/overview"
       }
     ],
-    "rationale": "The official Morpho vault page identifies USDC as the Smokehouse vault asset and Steakhouse Financial as curator. Morpho documents that a V1 vault has one loan asset and allocates deposits across multiple Morpho markets. The full reserve therefore remains a linked USDC wrapper position, while its high risk reflects the vault's broad collateral set and lending-market loss and liquidity exposure.",
-    "compositionBasis": "Current Morpho Smokehouse USDC vault asset and documented V1 allocation model",
+    "rationale": "Morpho identifies USDC as the Smokehouse vault asset and the vault as a Steakhouse-curated lending product. The current live rows separate idle USDC from deployed Morpho positions; both retain the USDC wrapper dependency, while the deployed row carries borrower-credit, collateral, liquidity, and smart-contract risks.",
+    "compositionBasis": "Current ERC-4626 live rows and Morpho Smokehouse USDC vault identity",
+    "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "The entire reserve relationship is classified as USDC deployed through Morpho; borrower-collateral allocations change onchain but do not change the underlying reserve token relationship.",
+    "knownUnknownExposure": "Both current adapter categories are classified; borrower-market allocations inside the deployed category remain dynamic.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

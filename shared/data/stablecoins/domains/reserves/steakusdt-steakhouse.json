@@ -2,7 +2,7 @@
   "id": "steakusdt-steakhouse",
   "reserves": [
     {
-      "sourceKey": "erc4626-single-asset:ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "sourceKey": "erc4626-single-asset:ethereum:0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9:deployed",
       "name": "USDT deposited into Steakhouse-curated Morpho lending markets",
       "pct": 100,
       "risk": "medium",
@@ -16,8 +16,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Slice7)",
     "confidence": "verified",
     "sources": [
       {

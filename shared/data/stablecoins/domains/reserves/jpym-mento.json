@@ -6,7 +6,9 @@
       "pct": 100,
       "risk": "low",
       "coinId": "cusd-celo",
+      "depType": "collateral",
       "assetClass": "stablecoin",
+      "issuerOrObligor": "Mento USDm CDP collateral",
       "riskFactors": [
         "smart-contract",
         "liquidity",

@@ -16,9 +16,9 @@
         "url": "https://json-rpc.evm.iotaledger.net"
       }
     ],
-    "evidence": "Re-reviewed 2026-07-31. At IOTA checkpoint 172877784 (timestamp 2026-07-30 23:13:50 UTC), the immutable VUSD package 0xd3b63e603a78786facf65ff22e79701f3e824881a12fa3268d62a75530fe904f exposes mint/burn, supply-limit, beneficiary, and module-version administration, but no freeze, blacklist, pause, denylist, or holder-transfer hook in its admin, limited_supply, or vusd module function sets; ordinary Move coin transfers therefore have no issuer-selected holder block surface. The inherited stIOTA/vIOTA collateral pools are separate collateral dependencies, not VUSD holder registries. The IOTA EVM address 0x10740259a1860af3327dd0642ee35d6e8e7143ff was re-read at block 12603860 (name Virtue USD, symbol VUSD, decimals 6); the published ERC20Coin implementation exposes vanilla transfer/approve/allowance/transferFrom and delegates account movement to ISC, with no freeze, blacklist, pause, or seize function. The ISC bridge can control cross-chain representation/issuance, but that is route-level mint/burn authority, not selective censorship of existing VUSD holders.",
-    "reviewer": "Codex Safety Score V9 access review",
-    "reviewedAt": "2026-07-31"
+    "evidence": "Re-reviewed 2026-09-21 across both authored deployments. The immutable IOTA Move coin type 0xd3b63e603a78786facf65ff22e79701f3e824881a12fa3268d62a75530fe904f::vusd::VUSD exposes mint/burn and supply administration but no holder freeze, blacklist, pause, denylist, or transfer hook. The IOTA EVM representation 0x10740259a1860af3327dd0642ee35d6e8e7143ff uses IOTA's published ERC20Coin system implementation, whose transfer and transferFrom delegate ordinary account movement to ISC and expose no issuer-selected holder block surface. The ISC bridge controls representation mint/burn but not selective censorship of existing balances. These two exact chain/address identities are the complete authored deployment scope.",
+    "reviewer": "Claude curation campaign 2026-09-21 (Ctrl3)",
+    "reviewedAt": "2026-09-21"
   },
   "oracleRisk": {
     "tier": "single-source-or-laggy",

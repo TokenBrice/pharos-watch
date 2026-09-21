@@ -3,11 +3,30 @@
   "reserves": [
     {
       "sourceKey": "erc4626-single-asset:base:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
-      "name": "USDC-denominated Yield Optimizer strategies",
-      "pct": 100,
+      "name": "Yield Optimizer USD idle underlying",
+      "pct": 2.784768251879,
       "risk": "high",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial / USDC",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "legal",
+        "liquidity"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "sourceKey": "erc4626-single-asset:base:0x0000000f2eb9f69274678c76222b35eec7588a65:deployed",
+      "name": "Yield Optimizer USD deployed strategy positions",
+      "pct": 97.215231748121,
+      "risk": "high",
+      "coinId": "usdc-circle",
+      "depType": "wrapper",
       "assetClass": "protocol-position",
-      "issuerOrObligor": "YO Protocol and whitelisted cross-chain DeFi venues",
+      "issuerOrObligor": "YO Protocol and whitelisted USDC DeFi markets",
       "riskFactors": [
         "counterparty",
         "smart-contract",
@@ -19,9 +38,9 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "OpenAI Codex backing review",
-    "confidence": "probable",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Slice3)",
+    "confidence": "verified",
     "sources": [
       {
         "label": "YO Protocol FAQ",
@@ -40,21 +59,12 @@
         "url": "https://api.yo.xyz/api/v1/vault/base/0x0000000f2eb9f69274678c76222b35eec7588a65"
       }
     ],
-    "rationale": "YO documents yoUSD as a USDC-denominated ERC-4626 vault that rebalances across whitelisted DeFi pools using risk-adjusted allocation. The first-party API reports current live pools and allocations that materially differ from the former 39/21/4.5/4.5/8/7/6/10 authored split. Because YO recalculates allocations daily, the reserve is represented as one dynamic strategy envelope rather than another unpinned static snapshot.",
-    "compositionBasis": "YO protocol documentation and live yoUSD vault-allocation API",
-    "compositionAsOf": "2026-07-15",
+    "rationale": "YO's live API identifies the Base vault asset as USDC and lists its deployed Morpho USDC lending markets. The live adapter's idle row is direct USDC, while the deployed row is a USDC-denominated protocol position exposed to the selected markets, strategy controls, and withdrawal liquidity.",
+    "compositionBasis": "Live ERC-4626 idle and deployed balances captured 2026-09-21, with vault asset and eligible strategy identities verified against YO's first-party API",
+    "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "YO publishes live pool and allocation data, but the strategy set and weights are recalculated daily and cannot be represented as durable authored percentages. Legal custody safeguards also remain unknown.",
-    "knownUnknownExposurePct": 100,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 0,
-        "reserveName": "USDC-denominated Yield Optimizer strategies",
-        "pct": 100,
-        "disposition": "basket-needs-split",
-        "rationale": "The first-party API exposes current positions, but YO recalculates allocations daily; fixed venue and asset weights require a pinned snapshot or a live composition adapter."
-      }
-    ]
+    "knownUnknownExposure": "The deployed strategy set and weights can change; the live row is classified as the USDC-denominated YO strategy envelope rather than treated as direct idle USDC.",
+    "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
     "providers": [

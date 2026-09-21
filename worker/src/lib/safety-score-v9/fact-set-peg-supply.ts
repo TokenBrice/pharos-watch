@@ -111,6 +111,8 @@ function nullSupplyReviewMessage(outcome: SafetyScoreV9NullSupplyReviewOutcome):
       return "Circulating USD is known, but bridge routes do not form one canonical, unique attribution join.";
     case "stale-review":
       return "Circulating USD is known, but the supply review or its runtime chain input is stale.";
+    case "generation-outcome-missing":
+      return "Circulating USD is known, but no input-bound runtime attribution generation outcome was available.";
     case "attribution-rpc-rejection":
       return "Circulating USD is known, but the runtime attribution packet was rejected or unavailable.";
   }

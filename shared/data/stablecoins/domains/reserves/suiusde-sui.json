@@ -3,8 +3,8 @@
   "reserves": [
     {
       "sourceKey": "ethena-whitelabel:usde",
-      "name": "Ethena USDe backing",
-      "pct": 90.3297403,
+      "name": "USDe (Ethena synthetic dollar)",
+      "pct": 90.565,
       "risk": "high",
       "coinId": "usde-ethena",
       "depType": "collateral",
@@ -20,8 +20,8 @@
     },
     {
       "sourceKey": "ethena-whitelabel:usdc",
-      "name": "Circle USDC backing",
-      "pct": 9.6702597,
+      "name": "USDC cash-equivalent reserves",
+      "pct": 9.413,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -32,11 +32,27 @@
         "custody"
       ],
       "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "ethena-whitelabel:off-chain",
+      "name": "Coinbase Prime custody (off-chain)",
+      "pct": 0.022,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial and Coinbase Prime",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-20",
-    "reviewer": "OpenAI Codex current Ethena Whitelabel transparency review",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Slice7)",
     "confidence": "verified",
     "sources": [
       {
@@ -52,11 +68,11 @@
         "url": "https://blog.sui.io/esui-dollar-suiusde-deepbook-margin/"
       }
     ],
-    "rationale": "Ethena Whitelabel's live suiUSDe transparency API reported $13,108,619.396969 backing at 2026-08-20T00:03:19Z: $11,840,981.860536 USDe and $1,267,637.535433 USDC across the listed Sui and Ethereum custody/mint-redeem wallets. Those amounts normalize to 90.3297403% and 9.6702597%; the listed custodian amounts are $0.001 below totalBacking, an endpoint reconciliation difference rather than an unidentified reserve slice.",
-    "compositionBasis": "Ethena Whitelabel issuer transparency API, with listed custody and mint/redeem wallets grouped by backing token.",
-    "compositionAsOf": "2026-08-20",
+    "rationale": "Ethena Whitelabel's suiUSDe transparency API reported $13,119,710.160318 of backing on 2026-09-21. The API identified $11,881,911.860536 of USDe, $1,234,896.936595 of on-chain USDC, and $2,901.362187 of USDC held through Coinbase Prime. The live adapter preserves the off-chain Coinbase Prime balance as a separate custody row; the listed balances reconcile to within $0.001 of totalBacking.",
+    "compositionBasis": "Ethena Whitelabel issuer transparency API, with backing grouped by token and the Coinbase Prime off-chain custody balance retained separately.",
+    "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "The issuer's live transparency API identifies both backing assets and their aggregate quantities; its listed-custodian sum is $0.001 below totalBacking, an endpoint reconciliation difference rather than an unlinked reserve slice.",
+    "knownUnknownExposure": "The issuer transparency API identifies the backing token, custodian, network, and amount for every row; its listed balances are $0.001 below totalBacking because of endpoint reconciliation.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
