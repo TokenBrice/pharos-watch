@@ -34,6 +34,23 @@ const CURATED_AGGREGATE_SUPPLY_CHAIN_LABELS_BY_ID = new Map(
     ] as const];
   }),
 );
+const SEVERE_STALENESS_REPRESENTATIVE_COMPARED = 50;
+const SEVERE_STALENESS_REPRESENTATIVE_COVERAGE = 0.5;
+
+/**
+ * Severe price staleness blocks publication when nearly every compared price is
+ * identical to the previous cache. The ratio alone is meaningless on a tiny
+ * overlap, so the block also needs a representative comparison: fifty compared
+ * rows stand on their own, and below that the overlap must still cover at least
+ * half of the current payload. Without the coverage floor a payload that
+ * collapsed to a handful of assets would fail open and publish frozen prices.
+ */
+export const SEVERE_PRICE_STALENESS_RATIO = 0.98;
+
+export function isSevereStalenessOverlapRepresentative(compared: number, currentAssetCount: number): boolean {
+  if (compared >= SEVERE_STALENESS_REPRESENTATIVE_COMPARED) return true;
+  return compared > 0 && compared >= Math.ceil(currentAssetCount * SEVERE_STALENESS_REPRESENTATIVE_COVERAGE);
+}
 
 export type StablecoinsPayload = {
   peggedAssets: PeggedAsset[];
@@ -400,6 +417,7 @@ function hasReconciledCuratedAggregateSupplyPacket(
   asset: PeggedAsset,
   expectedChainLabels: readonly string[],
   expectedCirculatingBucket: string,
+  freshAggregateSupply?: number,
 ): boolean {
   if (asset.supplySource !== "onchain-total-supply") return false;
   const aggregateSupply = getCirculatingRaw(asset);
@@ -439,12 +457,24 @@ function hasReconciledCuratedAggregateSupplyPacket(
     const current = row.current as number;
     chainSupply += current;
   }
-  if (!Number.isFinite(chainSupply)) return false;
-  const tolerance = Math.max(0.01, aggregateSupply * 1e-9);
-  return chainSupply > 0 && Math.abs(chainSupply - aggregateSupply) <= tolerance;
+  if (!Number.isFinite(chainSupply) || chainSupply <= 0) return false;
+  if (Math.abs(chainSupply - aggregateSupply) > Math.max(0.01, aggregateSupply * 1e-9)) return false;
+  // A partition carried onto a fresh aggregate must still add up to that
+  // aggregate, otherwise the published breakdown contradicts the published total.
+  return (
+    freshAggregateSupply === undefined ||
+    Math.abs(chainSupply - freshAggregateSupply) <= Math.max(0.01, freshAggregateSupply * 1e-9)
+  );
 }
 
-function restoreCuratedAggregateSupplyPacket(
+/**
+ * A fresh CoinGecko aggregate carries no chain partition of its own. Restore
+ * only the previous curated packet's partition onto it, and only when that
+ * partition still reconciles with today's fresh aggregate. The aggregate, its
+ * source and its observation time stay fresh, so the row is not a restored
+ * supply and does not claim stale provenance.
+ */
+function restoreCuratedAggregateChainPartition(
   current: PeggedAsset,
   previous: PeggedAsset | undefined,
   nowSec: number,
@@ -458,7 +488,12 @@ function restoreCuratedAggregateSupplyPacket(
     Object.keys(current.chainCirculating ?? {}).length > 0 ||
     !previous ||
     normalizeOptionalTimestamp(previous.supplyObservedAt) === null ||
-    !hasReconciledCuratedAggregateSupplyPacket(previous, expectedChainLabels, expectedCirculatingBucket)
+    !hasReconciledCuratedAggregateSupplyPacket(
+      previous,
+      expectedChainLabels,
+      expectedCirculatingBucket,
+      getCirculatingRaw(current),
+    )
   ) {
     return null;
   }
@@ -467,13 +502,9 @@ function restoreCuratedAggregateSupplyPacket(
   return {
     asset: {
       ...current,
-      circulating: { ...(previous.circulating ?? {}) },
       chainCirculating: Object.fromEntries(
         Object.entries(previous.chainCirculating ?? {}).map(([chain, row]) => [chain, { ...row }]),
       ),
-      supplySource: previous.supplySource,
-      supplyObservedAt: previous.supplyObservedAt,
-      supplyRestored: true,
     },
     expired: false,
   };
@@ -498,11 +529,11 @@ export function mergeSupplementalLastKnownGood(
     }
 
     const previous = previousAssetsById.get(id);
-    const curatedAggregateRestore = restoreCuratedAggregateSupplyPacket(asset, previous, nowSec);
-    if (curatedAggregateRestore) {
-      if (curatedAggregateRestore.expired) expiredRestoreIds.push(id);
+    const curatedPartitionRestore = restoreCuratedAggregateChainPartition(asset, previous, nowSec);
+    if (curatedPartitionRestore) {
+      if (curatedPartitionRestore.expired) expiredRestoreIds.push(id);
       else restoredCount++;
-      resolved.set(id, curatedAggregateRestore.asset);
+      resolved.set(id, curatedPartitionRestore.asset);
       continue;
     }
 
