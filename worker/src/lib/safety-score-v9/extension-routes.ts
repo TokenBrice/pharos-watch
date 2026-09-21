@@ -263,6 +263,7 @@ function buildOutputReview(
     return {
       kind: "physical-commodity-delivery",
       sameNotionalEligible: false,
+      ...(value.unboundedDeliveryCap !== undefined ? { unboundedDeliveryCap: value.unboundedDeliveryCap } : {}),
       assetKeys: [`commodity:${terms.commodity.toLowerCase()}`],
       basketWeights: [],
       valuation: {

@@ -32,6 +32,7 @@ const DEFAULT_PARAMETER_PATHS = [
   "semantic.evidence.ceilings.adequate",
   "semantic.evidence.ceilings.limited",
   "semantic.exit.outputAssetScores.physical-commodity-delivery",
+  "semantic.exit.unboundedDeliveryCap",
   // activeDepegCaps[0] and [1] limits sit at the top of their grade bands, so
   // any positive perturbation violates the band-coupling invariant (VER-005);
   // they are not default-runnable paths. Test them explicitly with a negative

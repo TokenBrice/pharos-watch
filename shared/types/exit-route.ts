@@ -74,6 +74,7 @@ export const ExitRouteOutputSchema = z.object({
   kind: ExitRouteOutputKindSchema,
   currency: z.string().min(1).optional(),
   sameNotionalEligible: z.literal(false).optional(),
+  unboundedDeliveryCap: z.number().finite().min(0).max(100).optional(),
   trackedAssetIds: z.array(z.string().min(1)).optional(),
   assetKeys: z.array(z.string().min(1)).min(1).max(16).optional(),
   basketWeights: z

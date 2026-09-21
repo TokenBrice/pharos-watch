@@ -58,6 +58,7 @@ it("values reviewed physical outputs without token-price or fiat substitution", 
   const config = getRedemptionBackstopConfig(id)!;
   const oldType = config.outputAssetType;
   const oldTerms = config.physicalCommodityDelivery;
+  const oldReviewedAt = config.reviewedAt;
   const row = makeSupplyFullRedemption({ stablecoinId: id, routeFamily: "offchain-issuer", settlementModel: "days", outputAssetType: "bluechip-collateral" });
   const fixed = fixedInputStub(row);
   fixed.pegDataById[id] = {
@@ -65,11 +66,13 @@ it("values reviewed physical outputs without token-price or fiat substitution", 
     pegReference: { valueUsd: 10_000, usdPerTroyOunce: 5_000, source: "median", contributorCount: 4, asOf: NOW },
   } as ReportCardsFixedInput["pegDataById"][string];
   try {
+    config.reviewedAt = "2026-07-13";
     expect(buildSafetyScoreV9RouteReviews(fixed, id)[0]?.output).toBeNull();
     config.outputAssetType = "physical-commodity-delivery";
     row.outputAssetType = "physical-commodity-delivery";
     config.physicalCommodityDelivery = {
       commodity: "XAU", deliverableOuncesPerToken: 1, minimumDeliveryTokens: 1,
+      deliveryTermsUnbounded: false,
       feeModel: { bps: 100, flatUsd: 100, deliveryUsd: 100 }, sameNotionalEligible: false,
     };
     const output = buildSafetyScoreV9RouteReviews(fixed, id)[0]?.output;
@@ -78,10 +81,15 @@ it("values reviewed physical outputs without token-price or fiat substitution", 
       valuation: { basis: "commodity-delivery", expectedUnitValueUsd: 5_000 },
     });
     expect(output?.valuation?.unitValueUsd).toBeLessThan(5_000);
+    config.physicalCommodityDelivery.deliveryTermsUnbounded = true;
+    const unbounded = buildSafetyScoreV9RouteReviews(fixed, id)[0]?.output;
+    expect(unbounded).toMatchObject({ unboundedDeliveryCap: 55, sameNotionalEligible: false });
+    expect(unbounded!.valuation!.unitValueUsd).toBeGreaterThan(output!.valuation!.unitValueUsd);
     delete fixed.pegDataById[id]!.pegReference!.usdPerTroyOunce;
     expect(buildSafetyScoreV9RouteReviews(fixed, id)[0]?.output).toBeNull();
   } finally {
     config.outputAssetType = oldType;
+    config.reviewedAt = oldReviewedAt;
     if (oldTerms) config.physicalCommodityDelivery = oldTerms;
     else delete config.physicalCommodityDelivery;
   }

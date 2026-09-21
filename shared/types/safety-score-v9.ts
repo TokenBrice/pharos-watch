@@ -1225,6 +1225,7 @@ const V9ExitPolicySchema = z
     settlementScores: exactEnumScoreMapSchema(RedemptionSettlementModelSchema.options),
     executionScores: exactEnumScoreMapSchema(RedemptionExecutionModelSchema.options),
     outputAssetScores: exactEnumScoreMapSchema(RedemptionOutputAssetTypeSchema.options),
+    unboundedDeliveryCap: ScoreSchema,
     routeFamilyCaps: z.object({ queueRedeem: ScoreSchema, offchainIssuer: ScoreSchema }).strict(),
     coverageRatioBreakpoints: z.array(V9ScoreBreakpointSchema).min(2),
     absoluteCapacityBreakpoints: z.array(V9ScoreBreakpointSchema).min(2),
@@ -1260,6 +1261,13 @@ const V9ExitPolicySchema = z
   })
   .strict()
   .superRefine((exit, ctx) => {
+    if (exit.unboundedDeliveryCap >= exit.outputAssetScores["physical-commodity-delivery"]) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["unboundedDeliveryCap"],
+        message: "Unbounded delivery quality must be below bounded physical delivery quality",
+      });
+    }
     if (exit.outputAssetScores["physical-commodity-delivery"] > exit.outputAssetScores["stable-single"]) {
       ctx.addIssue({
         code: "custom",

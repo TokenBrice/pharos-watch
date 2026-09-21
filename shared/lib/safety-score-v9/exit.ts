@@ -77,6 +77,7 @@ export interface V9ExitEvaluationRoute {
   outputQuality: V9ExitOutputQuality;
   outputResolved: boolean;
   outputValueRetention: number;
+  unboundedDeliveryCap?: number;
   capacityCurve: readonly V9ExitCapacityPoint[];
   routeScoreCap: "queue-redeem" | "offchain-issuer" | null;
   failureDomains: readonly string[];
@@ -661,7 +662,10 @@ function evaluateRoute(
     settlement: policy.settlementScores[route.settlement],
     executionCertainty: policy.executionScores[route.execution],
     capacity,
-    outputAssetQuality: policy.outputAssetScores[route.outputQuality] * route.outputValueRetention,
+    outputAssetQuality: Math.min(
+      policy.outputAssetScores[route.outputQuality],
+      route.unboundedDeliveryCap === undefined ? 100 : policy.unboundedDeliveryCap,
+    ) * route.outputValueRetention,
     // A cost sitting exactly on the request bound is an upper bound, not a
     // measurement: producers report execution inside maxCostBps without the
     // realized marginal cost. Bounded-unknown cost scores at the policy
@@ -870,6 +874,7 @@ export function projectV9ExitEvaluationRoute(route: V9ExitRouteFactV2): V9ExitEv
     outputQuality: mapOutputQuality(route),
     outputResolved: isV9ExitRouteOutputResolved(route.output),
     outputValueRetention: Math.min(1, route.output.valuation?.valueRetentionRatio ?? 0),
+    ...(route.output.unboundedDeliveryCap !== undefined ? { unboundedDeliveryCap: route.output.unboundedDeliveryCap } : {}),
     capacityCurve: route.capacityCurve,
     routeScoreCap:
       route.settlementModel === "queued" ||

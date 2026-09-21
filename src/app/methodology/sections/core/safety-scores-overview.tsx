@@ -119,12 +119,12 @@ export function SafetyScoresOverview() {
         immediately. Freeze and economic-control scope remain independent.
       </p>
       <p>
-        Since methodology v9.7, a reviewed physical gold or silver delivery can have a known output value:
-        USD per troy ounce times deliverable ounces, less explicit percentage, flat and delivery fees.
-        Requests below the documented delivery minimum have zero deliverable value. This uses the existing
-        blue-chip collateral tier of 65, never a fiat or same-notional settlement credit. Missing terms or
-        a missing or stale commodity reference remain unresolved; a token&apos;s market price is not a metal
-        spot reference.
+        Since methodology v9.8, reviewed physical gold or silver delivery is valued at USD per troy ounce
+        times deliverable ounces, less published percentage and flat fees. Bounded delivery fees are
+        deducted as before, with output quality capped at 65. Unpriced delivery or handling is not
+        invented as a fee: it explicitly lowers the output tier to 55. Requests below the documented
+        minimum have zero deliverable value. Physical metal never earns fiat or same-notional credit;
+        a missing or stale raw commodity reference remains unresolved, never replaced by a token price.
       </p>
       <p>
         Since methodology v9.47, a dependent&apos;s exposure to an upstream with an open reserve gap counts once per

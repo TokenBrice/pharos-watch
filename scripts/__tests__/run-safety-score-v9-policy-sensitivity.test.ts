@@ -167,6 +167,15 @@ describe("Safety Score v9 V9 policy sensitivity", { timeout: V9_EVALUATION_TEST_
     ).toThrow("Physical commodity delivery quality must not exceed fiat-par output quality");
   });
 
+  it("perturbs the unbounded delivery cap without permitting the bounded tier", () => {
+    const path = "semantic.exit.unboundedDeliveryCap";
+    const report = generateV9PolicySensitivityReport({ ...minimalCorpus, parameterPaths: [path] });
+    expect(report.cases.map(({ value }) => value)).toEqual([54, 56]);
+    expect(() => generateV9PolicySensitivityReport({
+      ...minimalCorpus, parameterPaths: [path], deltas: [10],
+    })).toThrow("Unbounded delivery quality must be below bounded physical delivery quality");
+  });
+
   it("parses strict repeatable CLI arguments", () => {
     expect(
       parseV9PolicySensitivityArgs(["--parameter", "semantic.formula.pegExponent", "--delta", "-0.05", "--delta=0.05"]),

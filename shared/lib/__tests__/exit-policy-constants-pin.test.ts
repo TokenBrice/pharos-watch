@@ -44,6 +44,7 @@ describe("the V9 exit policy is validated against the single exit-scoring source
     ["settlementScores", EXIT_ROUTE_SCORING_TABLES.settlementScores],
     ["executionScores", EXIT_ROUTE_SCORING_TABLES.executionScores],
     ["outputAssetScores", EXIT_ROUTE_SCORING_TABLES.outputAssetScores],
+    ["unboundedDeliveryCap", EXIT_ROUTE_SCORING_TABLES.unboundedDeliveryCap],
     ["routeFamilyCaps", EXIT_ROUTE_SCORING_TABLES.routeFamilyCaps],
     ["coverageRatioBreakpoints", EXIT_ROUTE_SCORING_TABLES.coverageRatioBreakpoints],
     ["absoluteCapacityBreakpoints", EXIT_ROUTE_SCORING_TABLES.absoluteCapacityBreakpoints],

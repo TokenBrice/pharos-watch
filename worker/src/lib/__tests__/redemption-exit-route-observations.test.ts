@@ -52,6 +52,7 @@ describe("redemption same-notional route observations", () => {
         outputAssetType: "physical-commodity-delivery",
         physicalCommodityDelivery: {
           commodity: "XAU", deliverableOuncesPerToken: 1, minimumDeliveryTokens: 1,
+          deliveryTermsUnbounded: false,
           feeModel: { bps: 0, flatUsd: 0, deliveryUsd: 0 }, sameNotionalEligible: false,
         },
       },

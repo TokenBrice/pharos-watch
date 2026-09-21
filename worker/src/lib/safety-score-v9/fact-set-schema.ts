@@ -221,6 +221,7 @@ export const RouteOutputReviewSchema = z
   .object({
     kind: V9RouteOutputKindSchema,
     sameNotionalEligible: z.literal(false).optional(),
+    unboundedDeliveryCap: z.number().finite().min(0).max(100).optional(),
     assetKeys: canonicalArrayBy(CanonicalTextSchema, (value) => value).refine((values) => values.length > 0, {
       message: "Route output requires at least one asset key",
     }),

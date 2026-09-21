@@ -188,6 +188,7 @@ export const EXIT_ROUTE_SCORING_TABLES = {
     "mixed-collateral": 45,
     nav: 20,
   },
+  unboundedDeliveryCap: 55,
   routeFamilyCaps: {
     queueRedeem: 70,
     offchainIssuer: 65,
@@ -264,6 +265,7 @@ export const EXIT_ROUTE_SCORING_TABLES = {
   settlementScores: Record<ExitSettlementModel, number>;
   executionScores: Record<ExitExecutionModel, number>;
   outputAssetScores: Record<ExitOutputAssetType, number>;
+  unboundedDeliveryCap: number;
   routeFamilyCaps: { queueRedeem: number; offchainIssuer: number };
   coverageRatioBreakpoints: readonly ExitBreakpoint[];
   absoluteCapacityBreakpoints: readonly ExitBreakpoint[];

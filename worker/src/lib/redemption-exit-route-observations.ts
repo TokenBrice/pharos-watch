@@ -1,5 +1,6 @@
 import { REDEMPTION_BACKSTOP_PROVIDER_IDS } from "@shared/lib/redemption-backstop-providers";
 import { SAME_NOTIONAL_EXIT_REQUEST_POLICY } from "@shared/lib/redemption-backstop-scoring";
+import { EXIT_ROUTE_SCORING_TABLES } from "@shared/lib/exit-route-scoring";
 import { getRedemptionBackstopConfig, type RedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { ExitRouteObservation, ExitRouteOutput } from "@shared/types/market";
@@ -110,6 +111,9 @@ function resolveOutput(
       kind: "physical-commodity-delivery",
       assetKeys: [`commodity:${config.physicalCommodityDelivery.commodity.toLowerCase()}`],
       sameNotionalEligible: false,
+      ...(config.physicalCommodityDelivery.deliveryTermsUnbounded
+        ? { unboundedDeliveryCap: EXIT_ROUTE_SCORING_TABLES.unboundedDeliveryCap }
+        : {}),
     };
   }
   if (config.outputAssetType === "physical-commodity-delivery") return { kind: "unresolved-asset" };
