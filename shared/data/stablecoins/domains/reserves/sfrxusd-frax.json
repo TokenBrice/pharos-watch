@@ -3,27 +3,28 @@
   "reserves": [
     {
       "sourceKey": "erc4626-single-asset:ethereum:0xcacd6fd266af91b8aed52accc382b4e165586e29",
-      "name": "frxUSD savings vault shares",
+      "name": "Staked Frax USD deployed strategy positions",
       "pct": 100,
-      "risk": "low",
+      "risk": "high",
       "coinId": "frxusd-frax",
       "depType": "wrapper",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Frax Finance and frxUSD reserve venues",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Frax Benchmark Yield Strategy and governance-approved strategy venues",
       "riskFactors": [
         "credit",
         "liquidity",
         "custody",
         "smart-contract",
         "market",
-        "counterparty"
+        "counterparty",
+        "basis"
       ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Slice2)",
     "confidence": "verified",
     "sources": [
       {
@@ -33,12 +34,16 @@
       {
         "label": "Frax frxUSD product page",
         "url": "https://frax.com/frxUSD"
+      },
+      {
+        "label": "Ethereum sfrxUSD verified proxy",
+        "url": "https://etherscan.io/address/0xcf62f905562626cfcdd2261162a51fd02fc9c5b6#code"
       }
     ],
-    "rationale": "Frax documents sfrxUSD as an ERC-4626-like token fully redeemable for frxUSD at an increasing exchange rate. Its benchmark strategy can rotate among carry trades, AMOs, DeFi venues, and short-dated Treasury-bill strategies; the reserve envelope therefore retains one 100% frxUSD dependency while leaving strategy allocation dynamic.",
+    "rationale": "Frax documents sfrxUSD as an ERC-4626-like token fully redeemable for frxUSD and states that the Benchmark Yield Strategy allocates staked frxUSD among carry-trade, DeFi AMO, and short-dated Treasury venues. The live adapter reports the full balance as deployed strategy positions, so the row retains the frxUSD wrapper dependency while classifying the immediate exposure as a protocol position across Frax-approved venues.",
     "compositionBasis": "Frax sfrxUSD and frxUSD documentation",
     "scope": "full-composition",
-    "knownUnknownExposure": "The frxUSD dependency is identified at 100%, but the current benchmark-yield venue, strategy allocation, and available redemption liquidity are dynamic.",
+    "knownUnknownExposure": "The frxUSD dependency and Benchmark Yield Strategy failure domain are identified at 100%, but the current venue and allocation among carry-trade, DeFi AMO, and Treasury strategies are not published.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

@@ -2,20 +2,21 @@
   "id": "gtusdcp-gauntlet",
   "reserves": [
     {
-      "sourceKey": "erc4626-single-asset:ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "name": "USDC deposited into Gauntlet-curated Morpho lending markets",
+      "sourceKey": "erc4626-single-asset:ethereum:0x8c106eedad96553e64287a5a6839c3cc78afa3d0:deployed",
+      "name": "Gauntlet USDC Prime deployed strategy positions",
       "pct": 100,
-      "risk": "medium",
+      "risk": "high",
       "coinId": "usdc-circle",
       "depType": "wrapper",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Circle Internet Financial, Inc.",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Gauntlet-curated Morpho lending markets and their borrowers",
       "riskFactors": [
         "credit",
         "liquidity",
-        "custody",
+        "counterparty",
         "smart-contract",
-        "market"
+        "market",
+        "concentration"
       ],
       "liquidityHorizon": "unknown"
     }

@@ -22,17 +22,17 @@
     "cadence": "monthly",
     "attestorJurisdiction": "United States",
     "latestReport": {
-      "periodEnd": "2026-06-30",
-      "publishedAt": "2026-07-06",
+      "periodEnd": "2026-08-31",
+      "publishedAt": "2026-09-11",
       "assuranceMethod": "self-verification",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "PoR remediation pass 2026-08 (report PDF read directly: management assertion signed July 6, 2026, no accountant's opinion)",
+      "reviewer": "Claude curation campaign 2026-09-21 (Resv07)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "USDGLO reserve report - June 2026 (Assertion of Brale Management)",
-          "url": "https://brale.xyz/assets/reports/USDGLO-Glo-Dollar-Reserve-Attestation-Report-06-2026.pdf"
+          "label": "USDGLO reserve report - August 2026 (Assertion of Brale Management)",
+          "url": "https://brale.xyz/assets/reports/USDGLO-Glo-Dollar-Reserve-Attestation-Report-08-2026.pdf"
         },
         {
           "label": "Brale USDGLO transparency",

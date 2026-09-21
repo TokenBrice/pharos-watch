@@ -12,18 +12,18 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "Kimi Code R08 reserve research",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Resv29)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "STASIS EURS transparency page",
+        "label": "STASIS EURS transparency page (daily statement accessed 2026-09-21)",
         "url": "https://stasis.net/transparency"
       }
     ],
-    "rationale": "STASIS's live transparency page (updated daily for the previous working day) reports 6,942,132 EURS in circulation backed by 100% EUR liquid balances and allocates the entire reserve to a Lithuanian Central Bank account held via NexPay UAB (€7,147,300.66, 100.00%). This supersedes the historical August 2024 BDO allocation and the partial December 2025 NexPay statement.",
-    "compositionBasis": "STASIS live transparency page, daily updated for the previous working day",
-    "compositionAsOf": "2026-08-07",
+    "rationale": "STASIS's live transparency page states that its daily statement is updated on the current working day for the previous date. The statement accessed 2026-09-21 reports 6,942,132 EURS in circulation, 7,147,300.66 euros in reserve assets, and a 100.00% allocation to a Lithuanian Central Bank account via NexPay UAB. The page identifies the reserve as 100% euro liquid balances in central-bank accounts.",
+    "compositionBasis": "STASIS daily reserve statement and settlement-layer allocation",
+    "compositionAsOf": "2026-09-18",
     "scope": "full-composition",
     "knownUnknownExposure": "No material reserve asset class is unclassified; the public page identifies the reserve as 100% euro cash at Lietuvos bankas via NexPay but does not publish account numbers or detailed legal segregation terms.",
     "knownUnknownExposurePct": 0,

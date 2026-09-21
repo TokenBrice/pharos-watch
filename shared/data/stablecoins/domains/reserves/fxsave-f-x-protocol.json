@@ -3,13 +3,11 @@
   "reserves": [
     {
       "sourceKey": "erc4626-single-asset:ethereum:0x65c9a641afceb9c0e6034e558a319488fa0fa3be",
-      "name": "fxSP stability-pool shares",
+      "name": "f(x) USD Saving deployed strategy positions",
       "pct": 100,
       "risk": "medium",
-      "coinId": "fxusd-f-x-protocol",
-      "depType": "wrapper",
       "assetClass": "protocol-position",
-      "issuerOrObligor": "f(x) Protocol fxSP Stability Pool and fxUSD",
+      "issuerOrObligor": "f(x) Protocol fxSP Stability Pool",
       "riskFactors": [
         "smart-contract",
         "market",
@@ -20,8 +18,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Slice6)",
     "confidence": "verified",
     "sources": [
       {
@@ -37,11 +35,20 @@
         "url": "https://github.com/AladdinDAO/fx-protocol-contracts/blob/59551dba909da826f54d090c552cc8dceaa29bd9/contracts/core/SavingFxUSD.sol"
       }
     ],
-    "rationale": "fxSAVE shares represent an f(x) Stability Pool position funded through fxUSD. The exact direct reserve is one protocol position with explicit market, liquidity, counterparty, and smart-contract risks.",
-    "compositionBasis": "Exact live single-asset row, f(x) Stability Pool documentation, and pinned SavingFxUSD implementation",
-    "compositionAsOf": "2026-07-15",
+    "rationale": "f(x) documents that redeeming fxSAVE first returns fxSP tokens, which can then be redeemed for fxUSD and USDC. The live deployed-strategy row is therefore classified as the aggregate fxSP protocol position rather than as one tracked stablecoin.",
+    "compositionBasis": "Exact live ERC-4626 deployed row and f(x) fxSAVE redemption documentation",
+    "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "No additional direct fxSAVE reserve slice is identified; changing Stability Pool deployment remains an internal attribute of the classified position.",
-    "knownUnknownExposurePct": 0
+    "knownUnknownExposure": "The direct fxSAVE reserve is the fxSP position; its changing fxUSD and USDC mix is internal to that classified protocol position.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "f(x) USD Saving deployed strategy positions",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "fxSP is a protocol position redeemable into a changing mix of fxUSD and USDC, not a single tracked stablecoin slice."
+      }
+    ]
   }
 }

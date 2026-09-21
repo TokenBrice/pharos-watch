@@ -6,6 +6,7 @@
       "pct": 22.02682,
       "risk": "low",
       "coinId": "dai-makerdao",
+      "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Sky Protocol through the Synapse nexus pool",
       "riskFactors": [

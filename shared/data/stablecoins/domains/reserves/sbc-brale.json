@@ -4,7 +4,7 @@
     {
       "sourceKey": "sbc-independent-assurance:sbc:cash-and-cash-equivalents",
       "name": "Cash and cash equivalents",
-      "pct": 88.827248,
+      "pct": 93.400837,
       "risk": "very-low",
       "assetClass": "cash",
       "issuerOrObligor": "Undisclosed Brale reserve institutions",
@@ -19,7 +19,7 @@
     {
       "sourceKey": "sbc-independent-assurance:sbc:us-government-backed-debt",
       "name": "U.S. government-backed debt",
-      "pct": 11.172752,
+      "pct": 6.599163,
       "risk": "very-low",
       "assetClass": "government-security",
       "issuerOrObligor": "United States government",
@@ -32,22 +32,22 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-29",
-    "reviewer": "OpenAI Codex Safety Score V9 stale-audited reserve refresh 2026-08-29",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Resv20)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "MCCPA SBC Reserve Attestation Report - July 2026",
-        "url": "https://brale.xyz/assets/reports/SBC-Stable-Coin-Reserve-Attestation-Report-07-2026.pdf"
+        "label": "MCCPA SBC Reserve Attestation Report - August 2026",
+        "url": "https://brale.xyz/assets/reports/SBC-Stable-Coin-Reserve-Attestation-Report-08-2026.pdf"
       },
       {
         "label": "Brale SBC reserve disclosures",
         "url": "https://brale.xyz/stablecoins/SBC"
       }
     ],
-    "rationale": "MCCPA's independent performance attestation report, dated August 11, 2026, examines Brale's assertion as of July 31, 2026 at 11:50 PM Eastern. It records $5,972,459 of cash and cash equivalents and $751,220 of U.S. government-backed debt, totaling $6,723,679 against 6,723,679 SBC issued; the examiner's opinion states the assertion is fairly stated in all material respects. The report describes an AICPA direct examination and says reserve assets are unencumbered and held in accounts segregated from Brale's other accounts, while also disclosing that MCCPA relied on company-provided data and records without independently confirming their authenticity. The complete two-category composition normalizes to 88.827248% cash and 11.172752% U.S. government-backed debt.",
-    "compositionBasis": "MCCPA independent performance examination of Brale's SBC Reserve Report as of July 31, 2026",
-    "compositionAsOf": "2026-07-31",
+    "rationale": "MCCPA's independent performance attestation report, dated September 15, 2026, examines Brale's assertion as of August 31, 2026 at 11:50 PM Eastern. It records $8,141,977 of cash and cash equivalents and $575,265 of U.S. government-backed debt, totaling $8,717,242 against 8,717,242 SBC issued. The examiner's opinion states the assertion is fairly stated in all material respects. The report describes an AICPA direct examination and says reserve assets are unencumbered and held in accounts segregated from Brale's other accounts, while also disclosing that MCCPA relied on company-provided data and records without independently confirming their authenticity. The complete two-category composition normalizes to 93.400837% cash and 6.599163% U.S. government-backed debt.",
+    "compositionBasis": "MCCPA independent performance examination of Brale's SBC Reserve Report as of August 31, 2026",
+    "compositionAsOf": "2026-08-31",
     "scope": "full-composition",
     "knownUnknownExposure": "The report identifies both reserve categories but does not disclose the banks, security identifiers, maturities, or provider-level allocation.",
     "knownUnknownExposurePct": 0,
@@ -55,14 +55,14 @@
       {
         "reserveIndex": 0,
         "reserveName": "Cash and cash equivalents",
-        "pct": 88.827248,
+        "pct": 93.400837,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Cash and cash equivalents are external reserve assets rather than tracked stablecoin dependencies."
       },
       {
         "reserveIndex": 1,
         "reserveName": "U.S. government-backed debt",
-        "pct": 11.172752,
+        "pct": 6.599163,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Government-backed debt is an external reserve asset rather than a tracked stablecoin dependency."
       }
@@ -79,13 +79,13 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "contractual-only",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
-    "confidence": "probable",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Resv20)",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "MCCPA SBC Reserve Attestation Report - June 2026",
-        "url": "https://brale.xyz/assets/reports/SBC-Stable-Coin-Reserve-Attestation-Report-06-2026.pdf"
+        "label": "MCCPA SBC Reserve Attestation Report - August 2026",
+        "url": "https://brale.xyz/assets/reports/SBC-Stable-Coin-Reserve-Attestation-Report-08-2026.pdf"
       }
     ],
     "uncertainty": "The report states that reserve assets are unencumbered and held in accounts segregated from Brale's other accounts, but it does not name the institutions, disclose provider shares, establish statutory bankruptcy remoteness, or state general rehypothecation terms."

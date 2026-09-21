@@ -73,16 +73,8 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "The Fraxswap V2 FRAX/FPIS LP is an identified protocol position, not an isolable upstream FRAX reserve slice, so no single coinId is representative.",
   ],
   [
-    "yousd-yield-optimizer::USDC-denominated Yield Optimizer strategies::USDC",
-    "The reviewed yoUSD reserve is a dynamic USDC-denominated strategy envelope without a durable fixed USDC reserve slice, so the strategy label does not establish a single representative coinId.",
-  ],
-  [
     "susdt-spark::USDT deposited in Spark Savings vault::USDT",
     "Spark does not publish the current spUSDT-specific split between idle USDT and downstream strategies.",
-  ],
-  [
-    "susdc-spark::USDC deposited in Spark Savings vault::USDC",
-    "Spark does not publish the current spUSDC-specific split between idle USDC and downstream strategies.",
   ],
   [
     "usda-avalon::FBTC-backed CDP positions and USDT/USDC 1:1 mint reserves::USDC",
@@ -103,10 +95,6 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
   [
     "usdu-usdu-finance::USDU constituent of Curve USDU/USDC LP backing::USDC",
     "The named USDU leg is subject self exposure; the separate USDC leg carries the dependency link.",
-  ],
-  [
-    "syrupusdt-maple::USDT (deployed as overcollateralized institutional loans)::USDT",
-    "Maple does not publish the current split between retained USDT and deployed institutional-credit strategies.",
   ],
   [
     "vndc-jade-labs::Issuer-disclosed VNDC 2.0 USDT/USDC collateral pools::USDC",

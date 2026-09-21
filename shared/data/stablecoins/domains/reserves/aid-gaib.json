@@ -2,53 +2,126 @@
   "id": "aid-gaib",
   "reserves": [
     {
-      "name": "AID reserve envelope (U.S. Treasuries and accepted stable assets)",
-      "pct": 100,
+      "name": "USDC held by AID minter, redeemer, and sAID reserve contracts",
+      "pct": 1.142545,
       "risk": "low",
-      "assetClass": "other",
-      "issuerOrObligor": "United States Treasury and GAIB-approved stablecoin issuers",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "USDT held by the BNB Chain AID minter contract",
+      "pct": 0.000029,
+      "risk": "low",
+      "coinId": "usdt-tether",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether Holdings",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "GPU Financing Facility",
+      "pct": 28.547064,
+      "risk": "high",
+      "assetClass": "private-credit",
+      "issuerOrObligor": "GAIB SPV Ltd.",
       "riskFactors": [
         "credit",
-        "duration",
         "liquidity",
-        "custody",
         "counterparty",
+        "legal",
         "concentration"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "over-seven-days"
+    },
+    {
+      "name": "GPU Financing",
+      "pct": 55.50818,
+      "risk": "high",
+      "assetClass": "private-credit",
+      "issuerOrObligor": "GAIB SPV Ltd.",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "counterparty",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "over-seven-days"
+    },
+    {
+      "name": "GPU Refinancing",
+      "pct": 14.802181,
+      "risk": "high",
+      "assetClass": "private-credit",
+      "issuerOrObligor": "GAIB SPV Ltd.",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "counterparty",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "over-seven-days"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok wave-8 reserve research",
-    "confidence": "probable",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Resv13)",
+    "confidence": "verified",
     "sources": [
-      {
-        "label": "GAIB AID product documentation",
-        "url": "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid"
-      },
-      {
-        "label": "GAIB transparency documentation",
-        "url": "https://docs.gaib.ai/products/gaib-products/transparency"
-      },
       {
         "label": "GAIB AID transparency dashboard",
         "url": "https://aid.gaib.ai/transparency"
+      },
+      {
+        "label": "GAIB September 2026 Spiceflow attestation report",
+        "url": "https://drive.google.com/file/d/17Uy4SCY9-D-R3kf-4-atUn_9nR4HeGeC/view"
+      },
+      {
+        "label": "GAIB AID and sAID contract addresses",
+        "url": "https://docs.gaib.ai/products/gaib-products/aid-and-said-contracts"
       }
     ],
-    "rationale": "Write-time re-open 2026-07-28: AID product docs still state AID is a synthetic dollar fully backed by U.S. Treasuries and stable assets and minted 1:1 by depositing USDC, USDT, and other accepted stablecoins. Transparency docs still point to aid.gaib.ai/transparency for real-time capital deployment and reserves status and describe quarterly third-party audits for portfolio disclosures. The public materials do not reproduce a current AID reserve component allocation among Treasuries and stable assets, so the complete envelope remains one unsplit basket with basket-needs-split. No inventing of category weights.",
-    "compositionBasis": "GAIB AID product and transparency disclosures; constituent weights undisclosed",
-    "compositionAsOf": "2026-07-28",
+    "rationale": "Reviewed 2026-09-21 against GAIB's current protocol dashboard and direct public-RPC reads of the dashboard's disclosed contracts. The dashboard identifies three active GAIB SPV Ltd. facilities with principal allocations of $5.4 million, $10.5 million, and $2.8 million and links its latest attestation as September 2026. Reads on 2026-09-21 found $216,125.388053 USDC across the Ethereum redeemer, Ethereum, Arbitrum, and Base minters, and the sAID reserve, plus $5.536064300516316 USDT in the BNB Chain minter. The five amounts total $18,916,130.9241173 and are normalized to 100%. The linked attestation concerns the deployed facilities; the stablecoin balances are independently reproducible on-chain.",
+    "compositionBasis": "GAIB transparency dashboard active-facility amounts and direct on-chain stablecoin balances observed 2026-09-21",
+    "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "The Treasury/stable-asset weights, stablecoin identities, custodians, and public assets-and-liabilities reconciliation are not reproduced in accessible source material.",
-    "knownUnknownExposurePct": 100,
+    "knownUnknownExposure": "The full current allocation is classified. Facility borrower identities, collateral realization terms, and reserve-contract custody controls remain qualitative risks rather than unidentified reserve slices.",
+    "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
-        "reserveIndex": 0,
-        "reserveName": "AID reserve envelope (U.S. Treasuries and accepted stable assets)",
-        "pct": 100,
-        "disposition": "basket-needs-split",
-        "rationale": "GAIB identifies the reserve categories but does not publish a reproducible current split among them."
+        "reserveIndex": 2,
+        "reserveName": "GPU Financing Facility",
+        "pct": 28.547064,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The disclosed GAIB SPV Ltd. private-credit facility is an external reserve asset rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "GPU Financing",
+        "pct": 55.50818,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The disclosed GAIB SPV Ltd. private-credit facility is an external reserve asset rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 4,
+        "reserveName": "GPU Refinancing",
+        "pct": 14.802181,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The disclosed GAIB SPV Ltd. private-credit facility is an external reserve asset rather than a tracked stablecoin dependency."
       }
     ]
   },

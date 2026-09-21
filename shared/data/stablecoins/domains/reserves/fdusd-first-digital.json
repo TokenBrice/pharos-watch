@@ -4,7 +4,7 @@
     {
       "sourceKey": "fdusd-independent-assurance:fdusd:treasury-bills",
       "name": "U.S. Treasury Bills",
-      "pct": 85.3,
+      "pct": 89.38,
       "risk": "very-low",
       "assetClass": "treasury-bill",
       "issuerOrObligor": "United States Treasury",
@@ -13,12 +13,13 @@
         "liquidity",
         "custody"
       ],
-      "liquidityHorizon": "one-day"
+      "liquidityHorizon": "one-day",
+      "maturityDaysMax": 50
     },
     {
       "sourceKey": "fdusd-independent-assurance:fdusd:custody-cash",
       "name": "Cash",
-      "pct": 10.4,
+      "pct": 9.43,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Financial institutions holding FDUSD reserve accounts",
@@ -32,7 +33,7 @@
     {
       "sourceKey": "fdusd-independent-assurance:fdusd:fixed-deposits",
       "name": "Fixed Deposit",
-      "pct": 4.3,
+      "pct": 1.19,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Financial institutions holding FDUSD fixed deposits",
@@ -43,12 +44,13 @@
         "custody",
         "concentration"
       ],
-      "liquidityHorizon": "seven-days"
+      "liquidityHorizon": "seven-days",
+      "maturityDaysMax": 1
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Resv06)",
     "confidence": "verified",
     "sources": [
       {
@@ -56,16 +58,39 @@
         "url": "https://www.firstdigitallabs.com/transparency"
       },
       {
-        "label": "AOGB FDUSD reserves attestation - June 2026",
-        "url": "https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/6a55fa3b263f9436c944049d_ISAE3000%20-%20Attestation%20Report%20on%20Reserves%20Account%20%28June%202026%29.pdf"
+        "label": "AOGB FDUSD reserves limited-assurance attestation: August 2026",
+        "url": "https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/6aa8fb9c867332b394838288_Attestation%20Report%20on%20Reserves%20Account%20August%202026.pdf"
       }
     ],
-    "rationale": "The current First Digital transparency feed reports 85.3% U.S. Treasury Bills, 10.4% Cash, and 4.3% Fixed Deposit after source rounding. AOGB's independent limited-assurance report dated July 10 reconciles FDUSD in circulation to the June 30 reserve accounts and reports the corresponding balances as $300.24 million of Treasury bills, $36.49 million of cash, and $15.00 million of fixed deposits.",
-    "compositionBasis": "AOGB June 30, 2026 FDUSD reserves attestation aligned to the current First Digital transparency feed",
-    "compositionAsOf": "2026-06-30",
+    "rationale": "AOGB's independent limited-assurance report dated September 11 reconciles the August 31 FDUSD supply of $335,636,418.35 with $336,969,677.04 held in reserve accounts. The complete reserve schedule reports $301,190,839.18 of U.S. Treasury bills, $31,778,837.86 of cash in custody accounts, and a $4,000,000 fixed deposit. These balances are 89.38%, 9.43%, and 1.19% of reserve assets after rounding. The Treasury schedule identifies nine bills maturing from September 1 through October 20, 2026, and the fixed deposit matured September 1.",
+    "compositionBasis": "AOGB limited-assurance attestation and management reserve schedule as of 2026-08-31 at 9:00 PM Eastern Time",
+    "compositionAsOf": "2026-08-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "The reserve asset classes are fully classified, but First Digital does not identify the financial institutions or their shares in the cash and fixed-deposit categories.",
-    "knownUnknownExposurePct": 0
+    "knownUnknownExposure": "The report fully classifies reserve assets and lists each Treasury bill by CUSIP and maturity. It does not identify the financial institutions or their shares within the cash and fixed-deposit categories.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "U.S. Treasury Bills",
+        "pct": 89.38,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The identified U.S. Treasury bills are external government securities rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Cash",
+        "pct": 9.43,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Cash held in FDUSD reserve accounts is external fiat backing rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "Fixed Deposit",
+        "pct": 1.19,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The fixed deposit is an external bank asset rather than a tracked stablecoin dependency."
+      }
+    ]
   },
   "custodyProfile": {
     "providers": [
@@ -79,19 +104,19 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "contractual-only",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-17",
-    "reviewer": "Kimi FIAT-CTRL shard-04 custody review",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Resv06)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "AOGB FDUSD reserves attestation - June 2026",
-        "url": "https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/6a55fa3b263f9436c944049d_ISAE3000%20-%20Attestation%20Report%20on%20Reserves%20Account%20%28June%202026%29.pdf"
+        "label": "AOGB FDUSD reserves limited-assurance attestation: August 2026",
+        "url": "https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/6aa8fb9c867332b394838288_Attestation%20Report%20on%20Reserves%20Account%20August%202026.pdf"
       },
       {
         "label": "First Digital Labs transparency",
         "url": "https://www.firstdigitallabs.com/transparency"
       }
     ],
-    "uncertainty": "AOGB's June 2026 attestation (Note 2) states that all FDUSD Reserves Accounts are held and managed by a single related-party custodian, First Digital Trust Limited, a Hong Kong-registered public trust company: the main Custody Account plus distinct accounts at unnamed financial institutions across Hong Kong (including an affiliated trust company), Singapore, Australia, Canada, Luxembourg, the United States, the United Kingdom, Bahrain, and Georgia, held under the Custodian's name for the benefit of FD121 (BVI) Limited and segregated from the Custody Account. First Digital's transparency page states reserve assets are fully segregated from the trust company's own assets to isolate its bankruptcy. No reviewed source names the sub-account institutions or their shares, documents a statutory trust or holder-level bankruptcy-remoteness structure (the documented benefit runs to the issuer, not directly to token holders), or addresses rehypothecation of reserve assets."
+    "uncertainty": "AOGB's August 2026 attestation states that all FDUSD reserve accounts are held and managed by a related-party Hong Kong public trust company acting as custodian. The custody account and distinct accounts at unnamed institutions are held under the custodian's name for FD121 (BVI) Limited. The report identifies institutions in Hong Kong, Singapore, Australia, Bermuda, Canada, Luxembourg, the United States, the United Kingdom, Bahrain, and Georgia, but does not name them, allocate their shares, or disclose rehypothecation terms."
   }
 }

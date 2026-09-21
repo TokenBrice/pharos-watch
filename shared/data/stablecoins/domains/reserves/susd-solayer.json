@@ -21,10 +21,14 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-31",
-    "reviewer": "Codex Safety Score V9 reserve review",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Resv08)",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "Solayer sUSD product page (published 2026-09-21)",
+        "url": "https://solayer.org/product/susd"
+      },
       {
         "label": "Solayer RFQ stakeholders (cUSDO transition and issuer details)",
         "url": "https://docs.solayer.org/susd/decentralized-rfq-protocol/stakeholders"
@@ -38,9 +42,9 @@
         "url": "https://docs.openeden.com/usdo/faq"
       }
     ],
-    "rationale": "Write-time re-open 2026-07-31: Solayer's stakeholder page identifies cUSDO as the exclusive post-2025-11-02 QLP reserve instrument, states that prior Solana TBILL positions were upgraded to cUSDO, and names OpenEden Digital Ltd as issuer with Adam Eve Capital managing Treasury investments. OpenEden's independent launch disclosure states cUSDO on Solana is fully collateralized by tokenized U.S. Treasuries held with qualified custodians; its FAQ documents the regulated segregated-account issuer structure. The exact Treasury-fund mix and QLP balances remain undisclosed, but the reserve asset class and obligor are now known.",
-    "compositionBasis": "Solayer RFQ stakeholder disclosure cross-checked against OpenEden cUSDO reserve and custody disclosures",
-    "compositionAsOf": "2026-07-31",
+    "rationale": "Solayer's sUSD product page published 2026-09-21 states that sUSD is fully collateralized by tokenized U.S. Treasury bills. Solayer's RFQ stakeholder disclosure identifies cUSDO as the exclusive reserve instrument after the 2025-11-02 migration, states that prior Solana TBILL positions were upgraded to cUSDO, and names OpenEden Digital Ltd as issuer with Adam Eve Capital managing the Treasury investments. OpenEden's cUSDO launch disclosure and USDO FAQ support the tokenized-Treasury backing and segregated-account issuer structure. The exact Treasury-fund mix and QLP balances remain undisclosed, but the complete direct reserve asset and obligor are identified.",
+    "compositionBasis": "Solayer sUSD product disclosure published 2026-09-21 and RFQ stakeholder cUSDO transition disclosure, cross-checked against OpenEden cUSDO reserve and custody disclosures",
+    "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
     "knownUnknownExposure": "The precise mix of underlying Treasury funds, maturities, qualified custodians, and QLP balances is not published; the current cUSDO reserve asset and issuer are identified.",
     "knownUnknownExposurePct": 0

@@ -21,24 +21,32 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-20",
-    "reviewer": "Codex Safety Score V9 reserve refresh 2026-08-20",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Resv28)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "SoulPeg official documentation (accessed 2026-08-20)",
-        "url": "https://docs.soulpeg.io/"
+        "label": "SoulPeg SPUSD overview (accessed 2026-09-21)",
+        "url": "https://docs.soulpeg.io/docs/spusd/overview"
       },
       {
-        "label": "SoulPeg security model (accessed 2026-08-20)",
+        "label": "SoulPeg contract design (accessed 2026-09-21)",
+        "url": "https://docs.soulpeg.io/docs/protocol/contract-design"
+      },
+      {
+        "label": "SoulPeg security model (accessed 2026-09-21)",
         "url": "https://docs.soulpeg.io/docs/whitepaper/security-model"
+      },
+      {
+        "label": "BSC PublicNode RPC observation at block 123149651 on 2026-09-21",
+        "url": "https://bsc-rpc.publicnode.com"
       }
     ],
-    "rationale": "SoulPeg's current documentation identifies SPUSD as a tradeable ERC-20 wrapper for 1:1 sUSDC, with every deposited USDC routed into Venus lending markets. The protocol still documents a single-sided USDC strategy and on-chain verifiability; current Venus liquidity and strategy balances remain dynamic but do not introduce another reserve asset. Re-verified against the issuer documentation on 2026-08-20: the mint flow, 1:1 sUSDC backing, and Venus routing are unchanged.",
-    "compositionBasis": "SoulPeg SPUSD and security-model documentation",
-    "compositionAsOf": "2026-08-20",
+    "rationale": "SoulPeg's current SPUSD documentation states that every SPUSD is backed by sUSDC held in the immutable wrapper and that deposited USDC is routed through StrategyRouter and VenusUSDCVault solely into Venus Protocol's USDC lending market. At BSC block 123149651 on 2026-09-21, SPUSD totalSupply was 33,902,686.433321623719581073 and the wrapper held 49,299,263.792618845501586244 sUSDC, independently confirming full coverage at the wrapper layer. The reviewed reserve remains one 100% tracked USDC exposure routed through Venus; no additional reserve asset or strategy is disclosed.",
+    "compositionBasis": "SoulPeg SPUSD and contract-design disclosures, corroborated by an on-chain SPUSD supply and wrapper sUSDC balance observation",
+    "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "The sole tracked USDC dependency is identified, but current Venus market allocation and available redemption liquidity change over time.",
+    "knownUnknownExposure": "The sole tracked USDC dependency and Venus lending route are identified; current Venus liquidity and the protocol's operational ability to redirect strategies remain dynamic.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

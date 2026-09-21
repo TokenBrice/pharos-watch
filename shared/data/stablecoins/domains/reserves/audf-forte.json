@@ -17,32 +17,24 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-29",
-    "reviewer": "Pharos reserve curation review 2026-08-29",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Resv13)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Horizon Nexus (Audit) AUDF Reserves Report - May 2026",
-        "url": "https://vuvuzela-iguana-ecmf.squarespace.com/s/AUDF-Reserves-Report-May-2026.pdf"
+        "label": "Horizon Nexus (Audit) AUDF Reserves Report: August 2026",
+        "url": "https://www.forteaud.com/api/documents/view/audf-reserves-report-august-2026"
       },
       {
-        "label": "Forte AUD reserves reports index",
-        "url": "https://www.forteaud.com/reserves"
-      },
-      {
-        "label": "Forte AUD product site",
-        "url": "https://www.forteaud.com/"
-      },
-      {
-        "label": "Forte AUD Terms of Use January 2026",
-        "url": "https://www.forteaud.com/s/ForteAUDTermsofUseJanuary2026.pdf"
+        "label": "Forte AUD transparency page",
+        "url": "https://www.forteaud.com/transparency"
       }
     ],
-    "rationale": "Re-reviewed 2026-08-29. Forte's current transparency page still states that AUDF is 100% backed by AUD held with regulated financial institutions but publishes no newer dated reserve report. The latest reachable artifact is the AUDF Reserves Report for 31 May 2026, accompanied by Horizon Nexus (Audit) Pty Ltd's independent auditor's report signed in Melbourne on 16 June 2026. Horizon Nexus audits the reported AUD reserve bank-account balance of AUD 5,136,311.71 under Australian Auditing Standards; the report supports one 100% AUD bank-cash slice and states that the reserve is segregated and unencumbered, but it does not identify the bank or provide provider-level allocations. The compositionAsOf therefore remains 2026-05-31 and is outside the 31-day plus seven-day static-composition admission window as of this review; no current composition is asserted.",
-    "compositionBasis": "Horizon Nexus independent audit of the AUDF reserve bank-account cash balance as of 2026-05-31; Forte transparency page re-opened 2026-08-29",
-    "compositionAsOf": "2026-05-31",
+    "rationale": "Reviewed 2026-09-21. Forte's current transparency page states that AUDF is fully backed 1:1 by Australian dollar reserves held with regulated financial institutions. Horizon Nexus (Audit) Pty Ltd audited the complete AUDF reserve bank-account cash balance of AUD 5,142,851.53 as of 31 August 2026 and issued an unmodified opinion dated 7 September 2026 under Australian Auditing Standards. The report supports one 100% AUD bank-deposit slice. It does not identify the bank or reconcile token liabilities inside the audit engagement, so those matters remain custody and assurance limitations rather than unidentified reserve assets.",
+    "compositionBasis": "Horizon Nexus independent audit of the AUDF reserve bank-account cash balance as of 2026-08-31",
+    "compositionAsOf": "2026-08-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "The complete reserve asset class is identified as an AUD bank-account cash balance. The bank identity, provider concentration, and account terms remain undisclosed custody details.",
+    "knownUnknownExposure": "The complete reserve asset class is identified as an AUD reserve bank-account cash balance. The bank identity, provider concentration, account terms, and audit-level token-liability reconciliation remain undisclosed.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
@@ -50,7 +42,7 @@
         "reserveName": "AUD cash in the AUDF reserve bank account",
         "pct": 100,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "The audited AUD bank-account cash balance is an external reserve asset rather than a tracked stablecoin dependency."
+        "rationale": "The audited AUD reserve bank-account cash balance is an external reserve asset rather than a tracked stablecoin dependency."
       }
     ]
   },

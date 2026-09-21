@@ -2,11 +2,11 @@
   "id": "eurau-allunity",
   "reserves": [
     {
-      "name": "EUR cash and permitted HQLA reserve basket at EU CRR credit institutions",
+      "name": "EUR bank reserves at EU CRR credit institutions",
       "pct": 100,
       "risk": "very-low",
       "assetClass": "bank-deposit",
-      "issuerOrObligor": "Undisclosed EU CRR credit institutions and permitted HQLA issuers",
+      "issuerOrObligor": "Undisclosed EU CRR credit institutions",
       "riskFactors": [
         "credit",
         "duration",
@@ -20,29 +20,34 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "Kimi Code R14 reserve research",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Resv18)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "AllUnity trust center",
-        "url": "https://allunity.com/trust-center"
+        "label": "AllUnity Trust Center reserve disclosure published 2026-09-16",
+        "url": "https://allunity.com/trust-center/"
       },
       {
         "label": "EURAU white paper v1.3",
         "url": "https://framerusercontent.com/assets/OfesVRYgYGUO0B0k1xr7EqFHeOQ.pdf"
-      },
-      {
-        "label": "AllUnity redemption policy",
-        "url": "https://allunity.com/redemption-policy"
       }
     ],
-    "rationale": "AllUnity describes EURAU as fully backed by reserves held at EU CRR credit institutions in segregated accounts, with 1:1 redemption. The Trust Center states the reserve audit report is 'coming soon' and does not publish a dated cash/HQLA split, bank identities, or provider shares. Because the disclosed envelope is entirely euro-denominated bank reserves/HQLA at regulated EU institutions, the whole reserve is classified as a single very-low-risk bank-deposit slice rather than left unresolved.",
-    "compositionBasis": "AllUnity EURAU trust-center and white-paper reserve envelope (full euro bank-reserve backing, no published instrument split)",
-    "compositionAsOf": "2026-08-08",
+    "rationale": "AllUnity's Trust Center publication dated 2026-09-16 states that its stablecoins are fully backed by bank reserves held at EU CRR credit institutions and entirely segregated from operational funds. The current page still labels the reserve audit report as coming soon and does not publish bank identities, provider shares, or an instrument split. The disclosed full backing envelope therefore remains one euro bank-reserve category; the missing independent audit does not change the issuer-disclosed composition.",
+    "compositionBasis": "AllUnity Trust Center full bank-reserve disclosure published 2026-09-16, read with the EURAU white paper v1.3 reserve terms",
+    "compositionAsOf": "2026-09-16",
     "scope": "full-composition",
-    "knownUnknownExposure": "No material reserve asset class is unclassified; individual bank identities, provider shares, cash/HQLA split, maturities, and rehypothecation terms are not disclosed.",
-    "knownUnknownExposurePct": 0
+    "knownUnknownExposure": "No material reserve asset class is unclassified. Individual bank identities, provider shares, maturities, and rehypothecation terms are not disclosed, and the independent reserve audit remains unpublished.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "EUR bank reserves at EU CRR credit institutions",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Euro bank reserves and permitted HQLA are external reserve assets rather than tracked stablecoin dependencies."
+      }
+    ]
   },
   "custodyProfile": {
     "providers": [
@@ -55,13 +60,13 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-08-08",
-    "reviewer": "Kimi Code R14 reserve research",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Resv18)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "AllUnity trust center",
-        "url": "https://allunity.com/trust-center"
+        "label": "AllUnity Trust Center reserve and segregation disclosure published 2026-09-16",
+        "url": "https://allunity.com/trust-center/"
       },
       {
         "label": "EURAU white paper v1.3",

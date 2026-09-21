@@ -87,6 +87,22 @@
       ],
       "liquidityHorizon": "immediate",
       "sourceKey": "nest-vault-positions:pusd"
+    },
+    {
+      "name": "Nest pending deposits",
+      "pct": 0.1,
+      "risk": "high",
+      "assetClass": "private-credit",
+      "issuerOrObligor": "BlackOpal LiquidStone II FIDC via Nest pending-settlement flow",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "legal",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown",
+      "sourceKey": "nest-vault-positions:pending-deposits"
     }
   ],
   "reserveReview": {

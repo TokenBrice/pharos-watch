@@ -7,7 +7,7 @@
       "risk": "low",
       "coinId": "dai-makerdao",
       "depType": "mechanism",
-      "assetClass": "stablecoin",
+      "assetClass": "protocol-position",
       "issuerOrObligor": "MakerDAO / Sky Protocol",
       "riskFactors": [
         "counterparty",

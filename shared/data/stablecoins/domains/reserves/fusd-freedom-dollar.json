@@ -2,7 +2,7 @@
   "id": "fusd-freedom-dollar",
   "reserves": [
     {
-      "name": "Zano ecosystem collateral and reserve mechanisms",
+      "name": "Staked ZANO in the Freedom Dollar reserve wallet",
       "pct": 100,
       "risk": "high",
       "assetClass": "cryptoasset",
@@ -17,38 +17,34 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-30",
-    "reviewer": "Kimi T39 Safety Score V9 reserve research",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Resv18)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Freedom Dollar white paper",
-        "url": "https://www.freedomdollar.com/en/white-paper"
+        "label": "Freedom Dollar live reserve disclosure (timestamped 2026-09-21)",
+        "url": "https://www.freedomdollar.com/en"
       },
       {
-        "label": "Freedom Dollar live reserve disclosure",
-        "url": "https://freedomdollar.com/"
-      },
-      {
-        "label": "Zano public daemon RPC (get_asset_info)",
-        "url": "https://node.zano.org/json_rpc"
+        "label": "Freedom Dollar reserve-wallet verification instructions",
+        "url": "https://www.freedomdollar.com/en/verify-reserves"
       }
     ],
-    "rationale": "Fresh write-time re-open 2026-07-30 (prior review rejected; no prior claims reused). The white paper states every fUSD is backed by ZANO staked in a publicly auditable reserve wallet and that new fUSD mints only when additional ZANO is locked. The issuer's live reserve dashboard (page timestamp 2026-07-30 21:34 UTC) discloses 1,254,927.99 ZANO at $8.081 (about $10,141,073) plus 4,000,001 fUSD held in reserves against 7.4M circulating fUSD, a stated 1.37x coverage ratio. The Zano daemon get_asset_info read on 2026-07-30 returns current_supply 11,400,000 fUSD, matching the dashboard's minted figure; 11.4M minted minus 7.4M circulating equals the 4.0M reserve-held fUSD, so that fUSD balance is uncirculated own-token supply, not exogenous collateral. The backing of circulating fUSD therefore resolves to a single 100% ZANO cryptoasset envelope.",
-    "compositionBasis": "Freedom Dollar white paper reserve design plus the dated live issuer reserve disclosure, reconciled to the on-chain Zano asset descriptor",
+    "rationale": "The issuer's live dashboard was opened on 2026-09-21 and carried its own 2026-09-21 08:28:33 timestamp. It disclosed 1,375,148.82 ZANO at $8.185, 5,222,687 fUSD held in the reserve wallet, 7.1M circulating fUSD, 12.3M minted fUSD, $11,255,593.07 of stated public reserves, and a stated 1.59x coverage ratio. The issuer also publishes a view-only tracking seed for direct observation of the ZANO reserve wallet. The reserve-held fUSD is the protocol's own uncirculated supply rather than exogenous collateral, so the backing composition resolves to one ZANO category.",
+    "compositionBasis": "Freedom Dollar issuer dashboard timestamped 2026-09-21 and issuer-published view-only Zano reserve-wallet verification path",
     "scope": "full-composition",
-    "knownUnknownExposure": "The reserve resolves to one exogenous ZANO collateral category; the reserve wallet's 4,000,001 fUSD is uncirculated own-token supply (11.4M minted minus 7.4M circulating), and staking-reward accrual inside the wallet is not separately itemized.",
+    "knownUnknownExposure": "The reserve resolves to one exogenous ZANO collateral category. The dashboard also reports 5,222,687 fUSD held in reserves, which is the protocol's own uncirculated token supply rather than a separate backing asset; staking-reward accrual is not itemized separately.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Zano ecosystem collateral and reserve mechanisms",
+        "reserveName": "Staked ZANO in the Freedom Dollar reserve wallet",
         "pct": 100,
         "disposition": "untracked-exogenous-asset",
         "rationale": "ZANO is an external cryptoasset that is not a tracked stablecoin dependency."
       }
     ],
-    "compositionAsOf": "2026-07-30"
+    "compositionAsOf": "2026-09-21"
   },
   "custodyProfile": {
     "providers": [
@@ -61,17 +57,17 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-30",
-    "reviewer": "Kimi T39 Safety Score V9 reserve research",
-    "confidence": "probable",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Resv18)",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Freedom Dollar white paper",
-        "url": "https://www.freedomdollar.com/en/white-paper"
+        "label": "Freedom Dollar live reserve disclosure (timestamped 2026-09-21)",
+        "url": "https://www.freedomdollar.com/en"
       },
       {
-        "label": "Freedom Dollar live reserve disclosure",
-        "url": "https://freedomdollar.com/"
+        "label": "Freedom Dollar reserve-wallet verification instructions",
+        "url": "https://www.freedomdollar.com/en/verify-reserves"
       }
     ],
     "uncertainty": "Reserves sit in an on-chain ZANO wallet staked on Zano rather than with a legal custodian, and the white paper asserts no corporate entity exists. The reserve wallet's key custody (single operator vs distributed control) is not publicly observable, and no legal segregation, insolvency-remoteness, or rehypothecation terms are published.",

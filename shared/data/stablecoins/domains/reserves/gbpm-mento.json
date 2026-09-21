@@ -14,8 +14,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Slice6)",
     "confidence": "verified",
     "sources": [
       {
@@ -31,9 +31,9 @@
         "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
       }
     ],
-    "rationale": "The current Mento producer identifies GBPm's direct collateral path as USDm through the Mento CDP system. The exact reserve is one tracked stablecoin exposure with the Mento Reserve, custody, liquidity, and smart-contract failure domains retained.",
-    "compositionBasis": "Exact live Mento CDP row and Mento CDP/deployment documentation",
-    "compositionAsOf": "2026-07-15",
+    "rationale": "Mento documents GBPm as debt borrowed against USDm collateral in its FX CDP system, matching the current live Mento row. The reserve is one tracked stablecoin exposure with Mento Reserve, custody, liquidity, and smart-contract failure domains retained.",
+    "compositionBasis": "Current live Mento CDP row and Mento CDP documentation",
+    "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
     "knownUnknownExposure": "No additional direct GBPm reserve slice is identified; the upstream Mento Reserve basket is tracked through the linked USDm asset.",
     "knownUnknownExposurePct": 0

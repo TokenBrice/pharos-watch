@@ -4,7 +4,7 @@
     {
       "sourceKey": "sky-makercore:module:stablecoins",
       "name": "Stablecoins (PSM)",
-      "pct": 40.4,
+      "pct": 38.6,
       "risk": "very-low",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Sky PSM contracts and external stablecoin issuers",
@@ -21,7 +21,7 @@
     {
       "sourceKey": "sky-makercore:module:grove",
       "name": "Grove (RWA)",
-      "pct": 24.1,
+      "pct": 16.7,
       "risk": "low",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Grove Agent and underlying institutional-credit counterparties",
@@ -40,7 +40,7 @@
     {
       "sourceKey": "sky-makercore:module:spark",
       "name": "Spark (lending)",
-      "pct": 22.8,
+      "pct": 34.4,
       "risk": "low",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Spark Agent and its lending, liquidity, CeFi, and RWA counterparties",
@@ -58,7 +58,7 @@
     {
       "sourceKey": "sky-makercore:module:obex",
       "name": "Obex",
-      "pct": 5.7,
+      "pct": 3.8,
       "risk": "medium",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Obex Agent and supported institutional stablecoin projects",
@@ -76,7 +76,7 @@
     {
       "sourceKey": "sky-makercore:module:core",
       "name": "Core (crypto vaults)",
-      "pct": 4.6,
+      "pct": 3.7,
       "risk": "medium",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Sky Core vault collateral pools and underlying crypto protocols",
@@ -108,7 +108,7 @@
     {
       "sourceKey": "sky-makercore:module:legacy-rwa",
       "name": "Legacy RWA",
-      "pct": 0.9,
+      "pct": 0.8,
       "risk": "low",
       "assetClass": "other",
       "issuerOrObligor": "Sky legacy RWA legal structures and underlying obligors",
@@ -121,11 +121,29 @@
         "concentration"
       ],
       "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "sky-makercore:module:osero",
+      "name": "Osero",
+      "pct": 0.5,
+      "risk": "medium",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Osero allocator vault, ALMProxy, and deployed strategy counterparties",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "liquidity",
+        "custody",
+        "smart-contract",
+        "market",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "OpenAI Codex Safety Score V9 curation",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Slice2)",
     "confidence": "verified",
     "sources": [
       {
@@ -161,21 +179,25 @@
         "url": "https://developers.skyeco.com/protocol/vaults/collateral-liquidation/"
       },
       {
+        "label": "Sky governance Osero allocator and ALMProxy configuration",
+        "url": "https://vote.sky.money/executive/template-executive-vote-monthly-settlement-cycle-for-june-2026-lssky-sky-rewards-normalization-complete-rwa001-a-offboarding-add-emergency-spells-to-the-chainlog-whitelist-osero-almproxy-adjust-vault-parameters-update-safe-harbor-agreement-prime-agent-proxy-spells-july-16-2026"
+      },
+      {
         "label": "Sky Staking Engine documentation",
         "url": "https://developers.skyeco.com/protocol/rewards/staking-engine/"
       }
     ],
-    "rationale": "The direct Sky MakerCore feed reports the complete seven-group debt envelope used by the live reserve adapter. Official protocol documentation establishes the PSM, Agent, crypto-vault, and Staking Engine failure domains; aggregate groups are classified conservatively without inventing look-through asset weights or liquidity terms.",
+    "rationale": "The 2026-09-21 Sky MakerCore feed reports the complete eight-group debt envelope used by the live adapter. Sky governance identifies Osero as the ALLOCATOR-PRYSM-A allocator vault with an ALMProxy and governance-controlled debt ceilings. Osero is classified at that allocator and deployed-strategy failure domain without inventing look-through weights.",
     "compositionBasis": "Relative debt reported by the Sky MakerCore group endpoint and mapped through the canonical sky-makercore adapter",
-    "compositionAsOf": "2026-07-15",
+    "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "The PSM group combines external stablecoins without publishing constituent weights in the group feed. The remaining groups are classified at their protocol or obligor failure domain and are not represented as direct tracked-stablecoin dependencies.",
-    "knownUnknownExposurePct": 40.4,
+    "knownUnknownExposure": "The PSM group combines external stablecoins without publishing constituent weights in the group feed. Osero and the other allocator groups are classified at their protocol or obligor failure domain and are not represented as direct tracked-stablecoin dependencies.",
+    "knownUnknownExposurePct": 38.6,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Stablecoins (PSM)",
-        "pct": 40.4,
+        "pct": 38.6,
         "disposition": "basket-needs-split",
         "rationale": "The published group combines several PSM assets without per-asset weights.",
         "candidateCoinIds": [
@@ -187,28 +209,28 @@
       {
         "reserveIndex": 1,
         "reserveName": "Grove (RWA)",
-        "pct": 24.1,
+        "pct": 16.7,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Grove is a Sky Agent allocation into institutional-credit strategies, not a direct wrapper around one tracked stablecoin."
       },
       {
         "reserveIndex": 2,
         "reserveName": "Spark (lending)",
-        "pct": 22.8,
+        "pct": 34.4,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Spark is an allocator and lending-protocol position with multiple deployment counterparties, not a direct wrapper around one tracked stablecoin."
       },
       {
         "reserveIndex": 3,
         "reserveName": "Obex",
-        "pct": 5.7,
+        "pct": 3.8,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Obex is an Agent allocation across supported institutional stablecoin projects rather than one canonical tracked reserve asset."
       },
       {
         "reserveIndex": 4,
         "reserveName": "Core (crypto vaults)",
-        "pct": 4.6,
+        "pct": 3.7,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The Core bucket is a multi-collateral crypto-vault pool, not one canonical tracked reserve asset."
       },
@@ -222,9 +244,16 @@
       {
         "reserveIndex": 6,
         "reserveName": "Legacy RWA",
-        "pct": 0.9,
+        "pct": 0.8,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The legacy RWA bucket represents external legal structures and obligors rather than a direct tracked-stablecoin dependency."
+      },
+      {
+        "reserveIndex": 7,
+        "reserveName": "Osero",
+        "pct": 0.5,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Osero is a Sky allocator position with mutable deployed strategies rather than one direct tracked-stablecoin reserve asset."
       }
     ]
   }

@@ -13,21 +13,34 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "PoR verification sweep 2026-08 (lockstep coherent refresh: report and composition review updated together from the same artefact)",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Resv05)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Matrixdock XAGm",
+        "label": "Matrixdock XAGm reserve dashboard",
         "url": "https://www.matrixdock.com/xagm"
+      },
+      {
+        "label": "Matrixdock XAGm underlying assets dashboard",
+        "url": "https://www.matrixdock.com/transparency/underlying-assets?type=xagm&language=en"
       }
     ],
-    "rationale": "Bureau Veritas July 2026 physical audit (PDF read directly this pass): 100% inventory of 66 Good Delivery silver bars against the Parcel Ownership List dated 30 June 2026, no anomalies. XAGm tokens appear nowhere in the certificate. Composition is a single allocated-silver category; Matrixdock's live disclosure corroborates bar count and weight.",
-    "compositionBasis": "Bureau Veritas physical audit against the Parcel Ownership List dated 30 June 2026",
-    "compositionAsOf": "2026-06-30",
+    "rationale": "Matrixdock's issuer dashboards observed on September 21, 2026 report 73,039.260 XAGm outstanding, 72,927.000 troy ounces of physical silver, 73 silver bars, and a current 0.998463014 troy-ounce entitlement per token after the disclosed custody fee. The dashboards identify physical silver as the full direct reserve asset. The current aggregate disclosure refreshes the composition; it does not replace the separate June 30, 2026 Bureau Veritas audit.",
+    "compositionBasis": "Current Matrixdock issuer dashboards reporting the complete XAGm supply, physical-silver reserve total, bar count, and per-token silver entitlement",
+    "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "The complete direct reserve asset is physical silver; the reviewed page does not provide a vault-by-vault allocation.",
-    "knownUnknownExposurePct": 0
+    "knownUnknownExposure": "The complete direct reserve asset is physical silver. Matrixdock does not publish a current vault-by-vault allocation or named-custodian split.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Physical silver bars (LBMA Good Delivery, Asian vault custody)",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Allocated physical silver is external commodity backing rather than a tracked stablecoin dependency."
+      }
+    ]
   },
   "custodyProfile": {
     "providers": [{"name": "Asian bullion vaults (not publicly named)", "role": "custodian"}],

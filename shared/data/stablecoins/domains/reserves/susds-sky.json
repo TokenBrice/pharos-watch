@@ -11,17 +11,17 @@
       "assetClass": "protocol-position",
       "issuerOrObligor": "Sky Savings USDS vault and USDS",
       "riskFactors": [
+        "counterparty",
         "smart-contract",
         "liquidity",
-        "market",
-        "counterparty"
+        "market"
       ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Slice3)",
     "confidence": "verified",
     "sources": [
       {
@@ -37,11 +37,11 @@
         "url": "https://github.com/sky-ecosystem/usds"
       }
     ],
-    "rationale": "sUSDS is a savings-vault share over USDS. The exact direct reserve is one protocol position; USDS collateral, governance, and redemption risks remain inherited through the tracked wrapper dependency.",
-    "compositionBasis": "Exact live ERC-4626 single-asset row and Sky sUSDS documentation",
-    "compositionAsOf": "2026-07-15",
+    "rationale": "Sky documents sUSDS as an ERC-4626 savings vault whose direct reserve claim is USDS. The reviewed composition therefore remains one parent-linked wrapper row; the negligible totalAssets accounting residual does not establish a separate reserve asset or strategy position.",
+    "compositionBasis": "Sky sUSDS vault and underlying identity verified against protocol documentation and the live ERC-4626 underlying source key",
+    "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "No additional direct sUSDS reserve slice is identified; underlying USDS reserve composition is tracked on the parent asset.",
+    "knownUnknownExposure": "No additional direct sUSDS reserve asset is identified; underlying USDS reserve composition is evaluated on the parent record.",
     "knownUnknownExposurePct": 0
   }
 }

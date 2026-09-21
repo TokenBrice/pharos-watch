@@ -17,16 +17,16 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-23",
-    "reviewer": "OpenAI Codex V9 Tranche 2 reserve curation",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Resv03)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Zephyr reserve snapshots API (re-opened 2026-08-23)",
+        "label": "Zephyr reserve snapshots API (observed 2026-09-21)",
         "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc"
       },
       {
-        "label": "Zephyr Scanner API documentation (re-opened 2026-08-23)",
+        "label": "Zephyr Scanner API documentation (opened 2026-09-21)",
         "url": "https://zephyrprotocol.com/documentation/scanner-api"
       },
       {
@@ -34,9 +34,9 @@
         "url": "https://zephyrprotocol.com/docs/zephyr_whitepaper.pdf"
       }
     ],
-    "rationale": "Re-opened 2026-08-23. The latest Zephyr reserve snapshot returned captured_at 2026-08-23T16:14:22.910Z at reserve_height 847924, with on_chain.zeph_reserve_atoms 4032019919482318247 (=4,032,019.919482318 ZEPH), zsd_circ_atoms 417193378099064118 (=417,193.3780990641 ZSD), and reserve_ratio 3.861059 (386.1059%). The scanner API documentation describes /api/v1/reservesnapshots as daemon snapshots of raw on-chain state and documents the ZEPH reserve and ZSD liability fields. The protocol reserve is therefore authored as a single 100% ZEPH slice; ZEPH market depth and reserve-ratio health are not composition percentages. The slice is named to match the live zephyr-scanner reserve-adapter identity so the reviewed classification overlays the captured exposure.",
-    "compositionBasis": "Zephyr Protocol single-asset reserve design and latest raw on-chain reserve snapshot, captured 2026-08-23",
-    "compositionAsOf": "2026-08-23",
+    "rationale": "The latest Zephyr reserve snapshot returned captured_at 2026-09-21T05:24:56.925Z at reserve_height 868420, with on_chain.zeph_reserve_atoms 4492379341728698509 (=4,492,379.341728698 ZEPH), zsd_circ_atoms 406828622170799408 (=406,828.6221707994 ZSD), and reserve_ratio 4.275322 (427.5322%). The scanner documentation identifies these fields as raw protocol reserve and liability state. The reserve remains a single 100% ZEPH slice; the reserve ratio measures coverage and is not a composition weight. The existing slice name remains aligned with the live zephyr-scanner reserve identity.",
+    "compositionBasis": "Zephyr Protocol single-asset reserve design and raw reserve snapshot captured 2026-09-21 at height 868420",
+    "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
     "knownUnknownExposure": "The current snapshot identifies the entire reserve as ZEPH and the ZSD liabilities; it does not establish a liquidation horizon or legal custody/insolvency protection, which remain outside composition.",
     "knownUnknownExposurePct": 0,

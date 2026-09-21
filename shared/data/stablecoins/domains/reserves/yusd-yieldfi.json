@@ -2,14 +2,12 @@
   "id": "yusd-yieldfi",
   "reserves": [
     {
-      "sourceKey": "erc4626-single-asset:ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "name": "USDC active strategy vaults and private-credit positions",
+      "sourceKey": "erc4626-single-asset:ethereum:0x19ebd191f7a24ece672ba13a302212b5ef7f35cb:deployed",
+      "name": "YieldFi yUSD deployed strategy positions",
       "pct": 100,
       "risk": "high",
-      "coinId": "usdc-circle",
-      "depType": "wrapper",
       "assetClass": "protocol-position",
-      "issuerOrObligor": "YieldFi yUSD vault, strategy managers, and Circle USDC",
+      "issuerOrObligor": "YieldFi yUSD Series, strategy managers, and whitelisted DeFi protocols and hedged venues; current obligor mix undisclosed",
       "riskFactors": [
         "credit",
         "liquidity",
@@ -17,26 +15,46 @@
         "counterparty",
         "smart-contract",
         "market",
-        "legal"
+        "basis",
+        "legal",
+        "concentration",
+        "leverage"
       ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Slice1Finish)",
     "confidence": "probable",
     "sources": [
       {
         "label": "YieldFi yUSD token terms",
         "url": "https://docs.yield.fi/legal-documents/token-terms/yusd"
+      },
+      {
+        "label": "YieldFi Prime transparency and analytics documentation",
+        "url": "https://docs.yield.fi/prime-analytics/transparency-and-analytics"
+      },
+      {
+        "label": "YieldFi yUSD contract",
+        "url": "https://etherscan.io/address/0x19ebd191f7a24ece672ba13a302212b5ef7f35cb#code"
       }
     ],
-    "rationale": "YieldFi identifies yUSD as a USDC-denominated strategy-vault share. The direct reserve envelope is therefore the USDC wrapper exposure, while the manager's active vault, private-credit, and market-neutral deployments remain strategy risk rather than a public current asset allocation.",
-    "compositionBasis": "Exact live single-asset strategy row and YieldFi yUSD token terms",
-    "compositionAsOf": "2026-07-15",
+    "rationale": "The exact live ERC-4626 row measures 100% deployed strategy accounting with zero idle USDC. YieldFi's yUSD terms identify the Series as market-neutral and delta-neutral positions across whitelisted DeFi protocols and hedged venues and permit leverage, while official transparency materials provide no current itemized exposure. The aggregate is classified as a high-risk protocol position without inventing look-through allocation or tracked-coin links.",
+    "compositionBasis": "Exact live ERC-4626 deployed-strategy row and YieldFi yUSD token terms",
+    "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "The terms do not publish current allocations across Pendle, Morpho, Silo, private-credit, or market-neutral strategies, nor the related custodian and counterparty weights.",
-    "knownUnknownExposurePct": 0
+    "knownUnknownExposure": "The live adapter identifies the full 100% as deployed yUSD strategy accounting, but the official yUSD terms and accessible transparency materials disclose no current venue, protocol, counterparty, custodian, or constituent weights.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "YieldFi yUSD deployed strategy positions",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The deployed yUSD strategy envelope is identified, but current look-through weights across protocols, venues, counterparties, and custody arrangements are not published."
+      }
+    ]
   }
 }

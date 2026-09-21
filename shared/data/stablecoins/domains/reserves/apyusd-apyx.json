@@ -4,10 +4,68 @@
     {
       "sourceKey": "erc4626-single-asset:ethereum:0x98a878b1cd98131b271883b390f68d2c90674665",
       "name": "apxUSD yield vault shares",
-      "pct": 100,
+      "pct": 99.984575566495,
       "risk": "high",
       "coinId": "apxusd-apyx",
-      "depType": "wrapper"
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Apyx apxUSD",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract",
+        "market"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "erc4626-single-asset:ethereum:0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a:deployed",
+      "name": "apyUSD deployed strategy positions",
+      "pct": 0.015424433505003776,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Apyx apyUSD vault and its apxUSD strategy accounting",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract",
+        "market"
+      ],
+      "liquidityHorizon": "unknown"
     }
-  ]
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Slice2)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Apyx product documentation and deployment registry",
+        "url": "https://docs.apyx.fi/"
+      },
+      {
+        "label": "Ethereum apyUSD verified proxy and current token holdings",
+        "url": "https://etherscan.io/address/0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a#code"
+      }
+    ],
+    "rationale": "Apyx identifies apyUSD as the yield-bearing wrapper minted by staking apxUSD and publishes the Ethereum apyUSD and apxUSD contracts. The live ERC-4626 adapter reports the direct apxUSD balance separately from the small totalAssets-to-balance difference. That difference is classified conservatively as an Apyx vault protocol position rather than assigned to an undisclosed venue.",
+    "compositionBasis": "Live ERC-4626 totalAssets and apxUSD balance for the published Ethereum apyUSD deployment",
+    "compositionAsOf": "2026-09-21",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The deployed-position venue is not published. Its Apyx vault failure domain and apxUSD strategy-accounting identity are established without assigning a venue.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 1,
+        "reserveName": "apyUSD deployed strategy positions",
+        "pct": 0.015424433505003776,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The adapter-derived deployed amount is a vault accounting position, not a separately identified tracked stablecoin balance."
+      }
+    ]
+  }
 }

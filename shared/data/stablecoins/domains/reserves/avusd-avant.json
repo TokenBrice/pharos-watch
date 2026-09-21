@@ -4,7 +4,7 @@
     {
       "sourceKey": "avant-reserves-api:stablecoin-long",
       "name": "Long stablecoin positions (gross)",
-      "pct": 98.0555,
+      "pct": 98.078,
       "risk": "medium",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Avant Protocol market-neutral strategy contracts across Aave, Morpho, Kamino, Ethena, and other DeFi protocols",
@@ -14,7 +14,7 @@
     {
       "sourceKey": "avant-reserves-api:other-long",
       "name": "Long altcoin, token and derivative positions (gross)",
-      "pct": 1.9445,
+      "pct": 1.922,
       "risk": "high",
       "assetClass": "hedged-crypto",
       "issuerOrObligor": "Avant Protocol market-neutral strategy contracts",
@@ -23,8 +23,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-09",
-    "reviewer": "pharos-live-reserve-upgrade (Avant transparency API gross-position re-review)",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Resv13)",
     "confidence": "verified",
     "sources": [
       {
@@ -32,34 +32,34 @@
         "url": "https://app.avantprotocol.com/api/metrics/avusd"
       },
       {
-        "label": "Avant Protocol docs - The Role of avUSD",
-        "url": "https://docs.avantprotocol.com/overview/core-tokens"
+        "label": "Avant Protocol transparency dashboard",
+        "url": "https://app.avantprotocol.com/transparency"
       },
       {
-        "label": "RWA.xyz avUSD asset page",
-        "url": "https://app.rwa.xyz/assets/avUSD"
+        "label": "Avant Protocol docs: The Role of avUSD",
+        "url": "https://docs.avantprotocol.com/overview/core-tokens"
       }
     ],
-    "rationale": "Re-opened 2026-09-09 against the 2026-09-01T23:59:59Z reserve snapshot (the yield-comparison clock is a separate daily refresh and is not reserve freshness). The leveraged book is expressed gross, never net: gross long positions total $1,024,715,743.45 across Stablecoins ($1,004,786,422.72), Other ($19,921,859.53), ETH/derivatives ($4,780.33), AVAX/derivatives ($2,676.97) and BTC/derivatives ($3.90), while gross debt totals $891,966,994.74 including $19,914,992.49 of perpetual shorts, with net NAV $132,748,763.37 and leverage coverage 114.88%. Percentages below normalize the long categories to the gross-long total; the ETH/AVAX/BTC derivative longs round below slice precision and fold into the altcoin bucket. Netting the $892m debt into 'stablecoins' would hide material leverage, so debt is published as separate disclosure totals and never enters the slices.",
-    "compositionBasis": "Avant Protocol avUSD transparency API gross long positions dated 2026-09-01, normalized to the gross-long total; gross debt and net NAV carried as disclosure totals",
-    "compositionAsOf": "2026-09-01",
+    "rationale": "Reviewed 2026-09-21 against Avant's 2026-09-15T23:59:59Z reserve snapshot. The leveraged book is expressed gross, without netting debt into reserve slices: gross long positions total $1,025,779,722.01, including $1,006,064,509.05 of stablecoin long positions and $19,715,212.96 of altcoin, token, and derivative long positions. Gross debt is $896,527,325.91, including $19,654,153.78 of perpetual shorts, while net NAV is $129,252,410.69 and leverage coverage is 114.42%. Percentages normalize the two adapter-owned gross-long categories to the gross-long total. The API still aggregates the leveraged stablecoin strategy legs under one source key, so that slice remains unresolved for dependency attribution and the review cannot enter curated-composition admission.",
+    "compositionBasis": "Avant Protocol avUSD transparency API gross long positions dated 2026-09-15, normalized to the gross-long total; gross debt and net NAV retained as disclosure totals",
+    "compositionAsOf": "2026-09-15",
     "scope": "full-composition",
-    "knownUnknownExposure": "Gross long legs are strategy positions, not a reconciled holder-exitable allocation by tracked stablecoin; the issuer reports $17,318,101.27 in bridge positions whose venue chains are not itemized and marks some USDC/HYPE positions with an unknown chain. Counterparty, custody and rehypothecation terms remain unresolved.",
-    "knownUnknownExposurePct": 98.0555,
+    "knownUnknownExposure": "The stablecoin gross-long slice spans multiple stablecoins and protocol receipt tokens with matching debt legs. The adapter emits one stablecoin source key and the disclosure does not supply a holder-exitable net allocation by tracked stablecoin. Avant also reports $17,492,375.32 in bridge positions without itemized venue chains.",
+    "knownUnknownExposurePct": 98.078,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Long stablecoin positions (gross)",
-        "pct": 98.0555,
+        "pct": 98.078,
         "disposition": "basket-needs-split",
-        "rationale": "The API reports gross long legs spanning USDe, syrupUSDT, syrupUSDC, USDC, USDT, USDG, PYUSD and other tokens with matching debt legs, but no reconciled holder-exitable allocation by tracked stablecoin; the long legs are strategy positions of a leveraged book."
+        "rationale": "The API reports gross long strategy legs across USDe, syrupUSDT, syrupUSDC, USDC, USDT, and other stable assets under one adapter source key, with matching debt legs but no holder-exitable net allocation by tracked stablecoin."
       },
       {
         "reserveIndex": 1,
         "reserveName": "Long altcoin, token and derivative positions (gross)",
-        "pct": 1.9445,
+        "pct": 1.922,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "Long HYPE, sENA, ENA and other altcoin/token positions plus the ETH/AVAX/BTC derivative longs are strategy legs; they are treated as untracked exogenous hedged-crypto exposure."
+        "rationale": "Long HYPE, sENA, ENA, and other token positions plus ETH, AVAX, and BTC derivative longs are untracked exogenous hedged-crypto strategy exposure."
       }
     ]
   },

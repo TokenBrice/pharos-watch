@@ -2,8 +2,8 @@
   "id": "ybold-yearn",
   "reserves": [
     {
-      "sourceKey": "erc4626-single-asset:ethereum:0x6440f144b7e50d6a8439336510312d2f54beb01d",
-      "name": "BOLD deployed into Liquity V2 Stability Pools",
+      "sourceKey": "erc4626-single-asset:ethereum:0x9f4330700a36b29952869fac9b33f45eedd8a3d8:deployed",
+      "name": "Yearn BOLD deployed strategy positions",
       "pct": 100,
       "risk": "medium",
       "coinId": "bold-liquity",
@@ -16,12 +16,12 @@
         "market",
         "counterparty"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "SONG Safety Score V9 reserve review",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Slice6)",
     "confidence": "verified",
     "sources": [
       {
@@ -33,11 +33,11 @@
         "url": "https://yearn.fi/v3/1/0x9f4330700a36b29952869fac9b33f45eedd8a3d8"
       }
     ],
-    "rationale": "Yearn documents yBOLD as vault shares over BOLD deployed in Liquity V2 Stability Pools and redeemable for BOLD. The named BOLD wrapper relationship is complete; live Stability Pool allocation is dynamic.",
-    "compositionBasis": "Exact live ERC-4626 single-asset row and Yearn yBOLD vault documentation",
-    "compositionAsOf": "2026-07-15",
+    "rationale": "Yearn documents each yBOLD as one BOLD deployed across Liquity V2 Stability Pools and redeemable for BOLD without a waiting period. The live deployed-strategy row therefore retains the tracked BOLD wrapper dependency while carrying the Stability Pool's protocol, market, and counterparty risks.",
+    "compositionBasis": "Exact live ERC-4626 deployed row and current Yearn yBOLD documentation",
+    "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "The linked BOLD backing is disclosed; live Stability Pool allocation is not fixed in static metadata.",
+    "knownUnknownExposure": "The BOLD backing is identified; allocation among Liquity V2 Stability Pools remains dynamic.",
     "knownUnknownExposurePct": 0
   }
 }

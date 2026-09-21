@@ -2,8 +2,8 @@
   "id": "dusd-alto",
   "reserves": [
     {
-      "name": "frxUSD held by the DUSD USM",
-      "pct": 90.39360646,
+      "name": "frxUSD held by the DUSD USM and mint-market collateral",
+      "pct": 91.67106318,
       "risk": "low",
       "coinId": "frxusd-frax",
       "depType": "collateral",
@@ -18,7 +18,7 @@
     },
     {
       "name": "WETH / wstETH / rETH mint-market collateral",
-      "pct": 5.94935962,
+      "pct": 8.32844794,
       "risk": "medium",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Ethereum native asset and liquid staking tokens (WETH, Lido wstETH, Rocket Pool rETH) posted as collateral in Alto DUSD mint markets",
@@ -31,7 +31,7 @@
     },
     {
       "name": "sUSDe mint-market collateral",
-      "pct": 3.61325810,
+      "pct": 0.00024437,
       "risk": "high",
       "coinId": "susde-ethena",
       "depType": "collateral",
@@ -49,7 +49,7 @@
     },
     {
       "name": "Syrup USDC mint-market collateral",
-      "pct": 0.04377582,
+      "pct": 0.00024451,
       "risk": "medium",
       "coinId": "syrupusdc-maple",
       "depType": "collateral",
@@ -64,12 +64,12 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-20",
-    "reviewer": "Codex Safety Score V9 reserve refresh 2026-08-20",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Resv01)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Alto live protocol snapshot API (generated 2026-08-20T14:07:32Z)",
+        "label": "Alto live protocol snapshot API (generated 2026-09-21T08:26:01.517Z)",
         "url": "https://www.altofoundation.org/api/protocol-snapshot"
       },
       {
@@ -77,13 +77,13 @@
         "url": "https://docs.alto.money/alto-protocol/dusd"
       },
       {
-        "label": "DUSD USM on Blockscout (Ethereum block 25796852)",
-        "url": "https://eth.blockscout.com/address/0x1bd08b43d1579881cfad0a35aeea5b547dbe4c91"
+        "label": "Ethereum RPC: frxUSD balanceOf(DUSD USM) at block 26024703 (2026-09-21T08:29:35Z)",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "rationale": "Alto documents that only mint markets create DUSD; borrow markets redistribute lender-supplied DUSD and are not backing sources. The issuer API generated 2026-08-20 reports active mint-market DUSD debt of 32,862.242891 against sUSDe, 3,911.386452 against WETH, 398.561458 against syrupUSDC, 635.108356 against rETH, and 49,620.058653 against wstETH. A same-run Ethereum block 25796852 read found 822,997.840132 frxUSD in the DUSD USM. Combining those values yields 90.39360646% frxUSD, 5.94935962% combined WETH/wstETH/rETH collateral, 3.61325810% sUSDe, and 0.04377582% syrupUSDC; all active mint paths are identified and the V9 scoring fields remain explicit.",
-    "compositionBasis": "Current issuer API mint-market DUSD debt combined with the on-chain USM underlying balance",
-    "compositionAsOf": "2026-08-20",
+    "rationale": "Alto documents that mint markets create DUSD while borrow markets redistribute existing DUSD. The issuer snapshot generated 2026-09-21T08:26:01.517Z identifies six active mint markets: 29,199.244174390580748277 DUSD debt against frxUSD, 45,546.697477714521278426 against wstETH, 21,249.118041602837222592 against WETH, 1,506.646068724443642677 against rETH, 2.004116624530663769 against sUSDe, and 2.005222443075895947 against syrupUSDC. Ethereum block 26024703, timestamp 2026-09-21T08:29:35Z, returned 722,604.611770924639631386 frxUSD from balanceOf(0x1bd08b43d1579881cfad0a35aeea5b547dbe4c91) on frxUSD 0xCAcd6fd266aF91b8AeD52aCCc382b4e165586E29. Normalizing the USM balance plus mint-market debt gives the issuance-path allocation shown here; the frxUSD slice includes both the USM and the new frxUSD mint market. Percentages are rounded to eight decimals, with the rounding residual assigned to the largest slice. These weights describe backing paths, not market-valued collateral coverage or a liability reconciliation; the API and RPC observations are about four minutes apart.",
+    "compositionBasis": "Issuer API active mint-market nominal DUSD debt plus the on-chain USM frxUSD balance observed on 2026-09-21",
+    "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
     "knownUnknownExposure": "All active DUSD issuance paths and their direct backing assets are identified.",
     "knownUnknownExposurePct": 0,
@@ -91,7 +91,7 @@
       {
         "reserveIndex": 1,
         "reserveName": "WETH / wstETH / rETH mint-market collateral",
-        "pct": 5.94935962,
+        "pct": 8.32844794,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The slice contains ETH and liquid-staking collateral rather than a tracked stablecoin dependency."
       }

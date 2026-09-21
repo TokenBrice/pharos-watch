@@ -2,8 +2,23 @@
   "id": "nect-beraborrow",
   "reserves": [
     {
+      "name": "WETH",
+      "pct": 34.5,
+      "risk": "very-low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Ethereum WETH contract and the Beraborrow collateral branch",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "seven-days",
+      "sourceKey": "liquity-v2-branches:berachain:0x42ebe55b64bb6fa169518ab1bf1c7fca874e3004"
+    },
+    {
       "name": "WETH-WBTC Kodiak Island",
-      "pct": 33,
+      "pct": 32.5,
       "risk": "high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Kodiak WETH-WBTC Island and the WETH and WBTC issuers",
@@ -20,23 +35,8 @@
       "sourceKey": "liquity-v2-branches:berachain:0x924d6485583bfe571a03fcb05107e1e6dc44e408"
     },
     {
-      "name": "WETH",
-      "pct": 32.3,
-      "risk": "very-low",
-      "assetClass": "cryptoasset",
-      "issuerOrObligor": "Ethereum WETH contract and the Beraborrow collateral branch",
-      "riskFactors": [
-        "market",
-        "liquidity",
-        "smart-contract",
-        "concentration"
-      ],
-      "liquidityHorizon": "seven-days",
-      "sourceKey": "liquity-v2-branches:berachain:0x42ebe55b64bb6fa169518ab1bf1c7fca874e3004"
-    },
-    {
       "name": "WETH-HONEY Kodiak Island",
-      "pct": 7.8,
+      "pct": 6.4,
       "risk": "high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Kodiak WETH-HONEY Island and the WETH and HONEY protocols",
@@ -52,8 +52,23 @@
       "sourceKey": "liquity-v2-branches:berachain:0xd8a8231f78b25de11119b77ae56d3daa84605a64"
     },
     {
-      "name": "solvBTC",
+      "name": "beraETH",
       "pct": 5.8,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "beraETH liquid-staking protocol and Berachain validators",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown",
+      "sourceKey": "liquity-v2-branches:berachain:0x65af6d1822f162b2b70395428cc24ff5587c0b02"
+    },
+    {
+      "name": "solvBTC",
+      "pct": 5.6,
       "risk": "medium",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Solv Protocol and its Bitcoin custody network",
@@ -68,23 +83,8 @@
       "sourceKey": "liquity-v2-branches:berachain:0x4c0c5ae255a1dcbec206a1cd40a03c60c387dcdd"
     },
     {
-      "name": "beraETH",
-      "pct": 5.2,
-      "risk": "high",
-      "assetClass": "cryptoasset",
-      "issuerOrObligor": "beraETH liquid-staking protocol and Berachain validators",
-      "riskFactors": [
-        "market",
-        "liquidity",
-        "smart-contract",
-        "counterparty"
-      ],
-      "liquidityHorizon": "unknown",
-      "sourceKey": "liquity-v2-branches:berachain:0x65af6d1822f162b2b70395428cc24ff5587c0b02"
-    },
-    {
       "name": "solvBTC.bbn",
-      "pct": 4.3,
+      "pct": 4.2,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Solv Protocol, Babylon, and their Bitcoin custody network",
@@ -100,7 +100,7 @@
     },
     {
       "name": "pumpBTC",
-      "pct": 3.6,
+      "pct": 3.5,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "pumpBTC protocol and its Bitcoin custody network",
@@ -116,7 +116,7 @@
     },
     {
       "name": "WBTC-HONEY Kodiak Island",
-      "pct": 3.4,
+      "pct": 2.9,
       "risk": "high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Kodiak WBTC-HONEY Island and the WBTC and HONEY issuers",
@@ -134,7 +134,7 @@
     },
     {
       "name": "uniBTC",
-      "pct": 1.5,
+      "pct": 1.4,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Bedrock uniBTC protocol and its Bitcoin custody network",
@@ -165,7 +165,7 @@
     },
     {
       "name": "rsETH",
-      "pct": 1,
+      "pct": 1.1,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Kelp DAO rsETH protocol and Ethereum validators",
@@ -209,8 +209,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Resv16)",
     "confidence": "verified",
     "sources": [
       {
@@ -222,77 +222,77 @@
         "url": "https://beraborrow.gitbook.io/docs"
       },
       {
-        "label": "Berachain public RPC",
+        "label": "Berachain public RPC observation at block 26483059",
         "url": "https://rpc.berachain.com"
       }
     ],
-    "rationale": "The independent Liquity-v2 branch producer read all configured positive Beraborrow collateral branches in one current Berachain capture and normalized thirteen exact positions. Direct wrapped assets and liquid-staking tokens retain their market, custody, counterparty, liquidity, and smart-contract risks; Kodiak Islands remain protocol positions with LP basis and concentration risks.",
-    "compositionBasis": "All configured positive Beraborrow branch balances captured on 2026-07-15",
-    "compositionAsOf": "2026-07-15",
+    "rationale": "A direct Berachain read at block 26483059 valued all thirteen configured positive Beraborrow collateral-vault balances and normalized them to 100%. The read used the exact token and DenManager addresses in Beraborrow's contract registry and the source keys emitted by the live liquity-v2-branches adapter. Six legacy branches report shutdown or sunset status, but their positive collateral balances remain part of the full outstanding reserve composition. The pumpBTC DefiLlama quote was unavailable, so the same-block branch oracle price was used; the other branch balances and prices were read through the configured on-chain and DefiLlama paths.",
+    "compositionBasis": "All configured positive Beraborrow collateral-vault balances observed on Berachain block 26483059 on 2026-09-21",
+    "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "All configured positive branches are identified; wrapper custody, validator, LP unwind, and liquidation-liquidity details remain structured risks within the thirteen classified exposures.",
+    "knownUnknownExposure": "All configured positive branches are identified and weighted. Wrapper custody, validator, LP unwind, oracle, and liquidation-liquidity risks remain explicit structured risk factors rather than unclassified exposure.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "WETH-WBTC Kodiak Island",
-        "pct": 33,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "This Kodiak Island is an identified LP position rather than a tracked stablecoin dependency."
-      },
-      {
-        "reserveIndex": 1,
         "reserveName": "WETH",
-        "pct": 32.3,
+        "pct": 34.5,
         "disposition": "untracked-exogenous-asset",
         "rationale": "WETH is crypto collateral rather than a tracked stablecoin dependency."
       },
       {
+        "reserveIndex": 1,
+        "reserveName": "WETH-WBTC Kodiak Island",
+        "pct": 32.5,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "This Kodiak Island is an identified LP position rather than a tracked stablecoin dependency."
+      },
+      {
         "reserveIndex": 2,
         "reserveName": "WETH-HONEY Kodiak Island",
-        "pct": 7.8,
+        "pct": 6.4,
         "disposition": "untracked-exogenous-asset",
         "rationale": "This Kodiak Island is an identified LP position rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 3,
-        "reserveName": "solvBTC",
+        "reserveName": "beraETH",
         "pct": 5.8,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "beraETH is liquid-staking or liquid-restaking collateral rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 4,
+        "reserveName": "solvBTC",
+        "pct": 5.6,
         "disposition": "untracked-exogenous-asset",
         "rationale": "solvBTC is wrapped Bitcoin collateral rather than a tracked stablecoin dependency."
       },
       {
-        "reserveIndex": 4,
-        "reserveName": "beraETH",
-        "pct": 5.2,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "beraETH is liquid-staking collateral rather than a tracked stablecoin dependency."
-      },
-      {
         "reserveIndex": 5,
         "reserveName": "solvBTC.bbn",
-        "pct": 4.3,
+        "pct": 4.2,
         "disposition": "untracked-exogenous-asset",
         "rationale": "solvBTC.bbn is wrapped Bitcoin collateral rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 6,
         "reserveName": "pumpBTC",
-        "pct": 3.6,
+        "pct": 3.5,
         "disposition": "untracked-exogenous-asset",
         "rationale": "pumpBTC is wrapped Bitcoin collateral rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 7,
         "reserveName": "WBTC-HONEY Kodiak Island",
-        "pct": 3.4,
+        "pct": 2.9,
         "disposition": "untracked-exogenous-asset",
         "rationale": "This Kodiak Island is an identified LP position rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 8,
         "reserveName": "uniBTC",
-        "pct": 1.5,
+        "pct": 1.4,
         "disposition": "untracked-exogenous-asset",
         "rationale": "uniBTC is wrapped Bitcoin collateral rather than a tracked stablecoin dependency."
       },
@@ -301,21 +301,21 @@
         "reserveName": "ylstETH",
         "pct": 1.2,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "ylstETH is liquid-staking collateral rather than a tracked stablecoin dependency."
+        "rationale": "ylstETH is liquid-staking or liquid-restaking collateral rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 10,
         "reserveName": "rsETH",
-        "pct": 1,
+        "pct": 1.1,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "rsETH is liquid-restaking collateral rather than a tracked stablecoin dependency."
+        "rationale": "rsETH is liquid-staking or liquid-restaking collateral rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 11,
         "reserveName": "Stakestone ETH",
         "pct": 0.5,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "StakeStone ETH is liquid-staking collateral rather than a tracked stablecoin dependency."
+        "rationale": "Stakestone ETH is liquid-staking or liquid-restaking collateral rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 12,

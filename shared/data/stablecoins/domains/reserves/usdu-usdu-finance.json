@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "Morpho USDU Core vault shares",
-      "pct": 60.63,
+      "pct": 60.634,
       "risk": "medium",
       "assetClass": "protocol-position",
       "issuerOrObligor": "USDU Finance Morpho USDU Core vault and underlying borrowers",
@@ -17,7 +17,7 @@
     },
     {
       "name": "USDU constituent of Curve USDU/USDC LP backing",
-      "pct": 15.11,
+      "pct": 15.1126,
       "risk": "medium",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Curve USDU/USDC pool",
@@ -31,7 +31,7 @@
     },
     {
       "name": "USDC constituent of Curve USDU/USDC LP backing",
-      "pct": 24.26,
+      "pct": 24.2534,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -47,8 +47,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-20",
-    "reviewer": "OpenAI Codex reserve refresh",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Resv04Finish)",
     "confidence": "verified",
     "sources": [
       {
@@ -62,11 +62,15 @@
       {
         "label": "Curve USDC/USDU pool",
         "url": "https://etherscan.io/address/0x6c5ff8dce52be77b4ece6b51996018f0c1713ba9"
+      },
+      {
+        "label": "Ethereum mainnet RPC: Curve coins and balances at block 26024768",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "rationale": "The issuer API currently reports 34,938.93380119589 USDU-equivalent in the Morpho adapter and 22,684.14844672596 in the Curve adapter, with only 5.12e-10 in TermMax. At the current Ethereum block, the Curve pool held 30,867.799174 USDC and 19,228.491520291005 USDU. Splitting the API-valued Curve position by those constituent balances and normalizing to total backing yields 60.63% Morpho USDU self-exposure, 15.11% Curve USDU self-exposure, and 24.26% external USDC collateral. The live API remains the source of adapter totals; the pool split is an on-chain constituent classification rather than a supply override.",
-    "compositionBasis": "Current USDU issuer backing API with an on-chain constituent split of the Curve LP position",
-    "compositionAsOf": "2026-08-20",
+    "rationale": "The issuer live backing API read on 2026-09-21 reports 34,939.61267289634 USDU-equivalent in Morpho and 22,684.148785465073 in Curve, with 5.1206765e-10 in TermMax, totaling 57,623.76145836193. Ethereum block 26024768 (0x18d1b40, hash 0x3ecb59e5896b8506b3a32d29e5cbaaf201a45aa4ec315628ca02d283b9980766, timestamp 2026-09-21T08:42:35Z) identifies Curve coins(0) as USDC and coins(1) as USDU; balances(0) and balances(1) return 30,864.253806 USDC and 19,232.031274025132 USDU. Splitting the API-valued Curve position by those constituent balances and normalizing total backing yields 60.6340% Morpho self-exposure, 15.1126% Curve USDU self-exposure, and 24.2534% external USDC collateral after rounding the residual. The issuer API does not expose its own block number; these are same-day observations rather than a claimed atomic reconciliation. No circulating-supply value is overridden.",
+    "compositionBasis": "Issuer live backing API observed 2026-09-21, with Curve LP constituents read on Ethereum at block 26024768",
+    "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
     "knownUnknownExposure": "All material adapter backing is classified; the 5.12e-10 TermMax residual is below display precision and does not create a material unresolved exposure. USDU-denominated vault and LP positions are retained as self-reserve rather than false upstream dependencies.",
     "knownUnknownExposurePct": 0,
@@ -74,14 +78,14 @@
       {
         "reserveIndex": 0,
         "reserveName": "Morpho USDU Core vault shares",
-        "pct": 60.63,
+        "pct": 60.634,
         "disposition": "self-reserve",
         "rationale": "The Morpho vault represents lending positions denominated in the subject USDU asset and cannot create a dependency edge to itself."
       },
       {
         "reserveIndex": 1,
         "reserveName": "USDU constituent of Curve USDU/USDC LP backing",
-        "pct": 15.11,
+        "pct": 15.1126,
         "disposition": "self-reserve",
         "rationale": "The subject-token leg of the Curve LP is self exposure rather than an upstream stablecoin dependency."
       }

@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "OpenEden TBILL tokens (tokenized U.S. T-bills)",
-      "pct": 79.59395322,
+      "pct": 79.31833137,
       "risk": "very-low",
       "assetClass": "tokenized-security",
       "issuerOrObligor": "OpenEden Digital and United States Treasury",
@@ -12,7 +12,7 @@
     },
     {
       "name": "BlackRock BUIDL (tokenized money market fund)",
-      "pct": 9.10102580,
+      "pct": 8.53870643,
       "risk": "low",
       "coinId": "buidl-blackrock",
       "assetClass": "fund-share",
@@ -22,7 +22,7 @@
     },
     {
       "name": "Ripple USD (RLUSD) cash-equivalent buffer",
-      "pct": 8.76905178,
+      "pct": 8.39469836,
       "risk": "low",
       "coinId": "rlusd-ripple",
       "depType": "collateral",
@@ -33,7 +33,7 @@
     },
     {
       "name": "VanEck VBILL (tokenized U.S. T-bill fund)",
-      "pct": 2.24300761,
+      "pct": 3.47193640,
       "risk": "low",
       "coinId": "vbill-vaneck",
       "assetClass": "tokenized-security",
@@ -43,7 +43,7 @@
     },
     {
       "name": "USDC redemption buffer",
-      "pct": 0.29296159,
+      "pct": 0.27632745,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -54,25 +54,38 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-20",
-    "reviewer": "Codex Safety Score V9 reserve refresh 2026-08-20",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Resv29)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "OpenEden USDO reserve composition API (snapshot 2026-08-20T08:00:31.209Z)",
+        "label": "OpenEden USDO reserve composition API (snapshot accessed 2026-09-21T08:26:16Z)",
         "url": "https://prod-gw.openeden.com/usdo/sys/reserve-composition-last"
       },
       {
-        "label": "OpenEden USDO reserve assets (accessed 2026-08-20)",
+        "label": "OpenEden USDO transparency dashboard (last update 2026-09-21 08:00 UTC)",
+        "url": "https://openeden.com/usdo/transparency"
+      },
+      {
+        "label": "OpenEden USDO reserve asset inventory (accessed 2026-09-21)",
         "url": "https://docs.openeden.com/usdo/usdo-token/reserve-assets"
       }
     ],
-    "rationale": "The issuer-operated reserve API snapshot at 2026-08-20T08:00:31.209Z reported $27,026,388.493331388 in reserve assets against 26,764,038.980539195 USDO (100.9802% reserve ratio). Its positive constituent values normalize to the current full-composition weights recorded here: OpenEden TBILL 79.59395322%, BUIDL 9.10102580%, RLUSD 8.76905178%, VBILL 2.24300761%, and USDC 0.29296159%. Zero-balance USYC, BENJI, and pending-USDC fields do not create slices. The TBILL slice remains intentionally unlinked because tbill-openeden is outside the active report-card set; its economic description is unchanged.",
+    "rationale": "The issuer transparency dashboard marks the reserve disclosure last updated 2026-09-21 at 08:00 UTC and reports $17.51 million of reserves against $15.29 million USDO, with a 114.52% reserve ratio. The matching issuer API snapshot accessed 2026-09-21T08:26:16Z reported exact values of $17,510,551.76526474 and 15,290,464.16598848 USDO. Positive constituent values normalize to OpenEden TBILL 79.31833137%, BUIDL 8.53870643%, RLUSD 8.39469836%, VBILL 3.47193640%, and USDC 0.27632745%. Zero-balance USYC, BENJI, and pending-USDC fields do not create slices.",
     "compositionBasis": "OpenEden issuer reserve API asset values normalized by total reserve assets",
-    "compositionAsOf": "2026-08-20",
+    "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
     "knownUnknownExposure": "All positive reserve components reported by the issuer API are identified.",
-    "knownUnknownExposurePct": 0
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "OpenEden TBILL tokens (tokenized U.S. T-bills)",
+        "pct": 79.31833137,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The TBILL reserve token is identified by issuer documentation but is outside the active tracked stablecoin set."
+      }
+    ]
   },
   "custodyProfile": {
     "providers": [

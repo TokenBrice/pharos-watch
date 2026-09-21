@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "AUSD (Agora Dollar)",
-      "pct": 27.2,
+      "pct": 24.2,
       "risk": "low",
       "coinId": "ausd-agora",
       "depType": "collateral",
@@ -18,7 +18,7 @@
     },
     {
       "name": "sUSDS (Sky savings USDS)",
-      "pct": 24.4,
+      "pct": 22.8,
       "risk": "low",
       "coinId": "susds-sky",
       "depType": "collateral",
@@ -32,7 +32,7 @@
     },
     {
       "name": "CELO",
-      "pct": 17.7,
+      "pct": 22.8,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Celo network native asset held by Mento Reserve governance",
@@ -45,7 +45,7 @@
     },
     {
       "name": "USDT",
-      "pct": 12.3,
+      "pct": 11.1,
       "risk": "low",
       "coinId": "usdt-tether",
       "depType": "collateral",
@@ -59,8 +59,22 @@
       "liquidityHorizon": "immediate"
     },
     {
+      "name": "EUROP (Schuman euro stablecoin)",
+      "pct": 5.6,
+      "risk": "low",
+      "coinId": "europ-schuman",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Schuman Financial (EURØP issuer)",
+      "riskFactors": [
+        "counterparty",
+        "custody"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
       "name": "EURC (Circle euro stablecoin)",
-      "pct": 12,
+      "pct": 5.2,
       "risk": "low",
       "coinId": "eurc-circle",
       "depType": "collateral",
@@ -88,7 +102,7 @@
     },
     {
       "name": "stETH (Lido staked ETH)",
-      "pct": 2.5,
+      "pct": 3.3,
       "risk": "low",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Lido (stETH liquid staking issuer)",
@@ -101,7 +115,7 @@
     },
     {
       "name": "ETH",
-      "pct": 0.001,
+      "pct": 1.1,
       "risk": "very-low",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Ethereum network native asset held in Mento Reserve operations",
@@ -113,8 +127,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice)",
+    "reviewedAt": "2026-09-21",
+    "reviewer": "Claude curation campaign 2026-09-21 (Slice7)",
     "confidence": "verified",
     "sources": [
       {
@@ -128,11 +142,15 @@
       {
         "label": "Pinned Mento stablecoin backing config",
         "url": "https://github.com/mento-protocol/mento-analytics-api/blob/36441a61f7ad339fe4998596f6bbed1005342ba8/src/api/v2/config/stablecoin-backing.config.ts"
+      },
+      {
+        "label": "Schuman Financial EURØP issuer and backing disclosure",
+        "url": "https://schuman.io/europ/"
       }
     ],
-    "rationale": "AUDm is minted through Mento V3 CDPs collateralized in USDm, and USDm is backed by the shared Mento Reserve; the live mento adapter (breakerScope mento-reserve-audm) captures that shared reserve's constituent rows for AUDm, so the prior 100% USDm slice could not classify the captured CELO and stETH exposures. The envelope is restated at the constituent level on the adapter's exact identities and 2026-07-20 captured weights from the issuer-run reserve analytics API ($19.12M total, grouped across chains and custodians); the USDm CDP leg is described in the collateral field and is not duplicated as a second layer. Each stablecoin constituent links to its tracked asset, and CELO, stETH, and the residual ETH dust now carry explicit classification and failure-domain identity. The live adapter refreshes weights at runtime.",
-    "compositionBasis": "Mento reserve analytics API constituent identities and weights captured 2026-07-20; AUDm CDP collateral is USDm, whose backing is this shared reserve mix",
-    "compositionAsOf": "2026-07-20",
+    "rationale": "AUDm is minted through Mento V3 CDPs collateralized in USDm, and USDm is backed by the shared Mento Reserve. The live Mento adapter captures that reserve's constituents. The 2026-09-21 capture adds EURØP, which the Mento analytics API identifies as one million EUROP held in the Ethereum Reserve Safe; Schuman Financial identifies EURØP as its euro-backed stablecoin. Every captured constituent is linked to a tracked stablecoin or explicitly classified.",
+    "compositionBasis": "Mento reserve analytics API constituent identities and live adapter weights captured 2026-09-21; AUDm CDP collateral is USDm, whose backing is this shared reserve mix",
+    "compositionAsOf": "2026-09-21",
     "scope": "full-composition",
     "knownUnknownExposure": "Every constituent of the shared Mento Reserve captured by the live adapter is identified and either linked to a tracked stablecoin or explicitly classified. Constituent weights drift and are refreshed by the live adapter.",
     "knownUnknownExposurePct": 0,
@@ -140,23 +158,23 @@
       {
         "reserveIndex": 2,
         "reserveName": "CELO",
-        "pct": 17.7,
+        "pct": 22.8,
         "disposition": "untracked-exogenous-asset",
         "rationale": "CELO is the Celo network native asset held as external reserve collateral, not a tracked stablecoin dependency."
       },
       {
-        "reserveIndex": 6,
+        "reserveIndex": 7,
         "reserveName": "stETH (Lido staked ETH)",
-        "pct": 2.5,
+        "pct": 3.3,
         "disposition": "untracked-exogenous-asset",
         "rationale": "stETH is external liquid-staking collateral, not a tracked stablecoin dependency."
       },
       {
-        "reserveIndex": 7,
+        "reserveIndex": 8,
         "reserveName": "ETH",
-        "pct": 0.001,
+        "pct": 1.1,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "The residual WETH dust grouped by the adapter is external cryptoasset collateral, not a tracked stablecoin dependency."
+        "rationale": "The residual WETH grouped by the adapter is external cryptoasset collateral, not a tracked stablecoin dependency."
       }
     ]
   },
