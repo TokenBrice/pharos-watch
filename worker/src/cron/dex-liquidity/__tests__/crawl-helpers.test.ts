@@ -176,7 +176,7 @@ describe("crawlTokenPools", () => {
   it("skips secondary-source pools with implausible tracked token prices", async () => {
     const newPools = new Map<string, GtNewPool[]>();
     const priceObs = new Map();
-    const result = await crawlTokenPools<RawPool, GtNewPool>({
+    await crawlTokenPools<RawPool, GtNewPool>({
       sourceLabel: "test",
       tokens: [{ sourceChain: "eth", ourChain: "ethereum", address: "0xstable", stablecoinId: "usdc-circle" }],
       chainAddressToId: new Map([["ethereum:0xstable", "usdc-circle"]]),

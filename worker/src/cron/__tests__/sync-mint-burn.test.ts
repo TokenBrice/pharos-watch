@@ -957,7 +957,7 @@ describe("syncMintBurn", () => {
   it("keeps the published aggregate gauge cache row when the extended lane invalidates", async () => {
     const db = makeDb();
 
-    const result = await syncMintBurn(db, "alchemy-key", { lane: "extended", jobName: "sync-mint-burn-extended" });
+    await syncMintBurn(db, "alchemy-key", { lane: "extended", jobName: "sync-mint-burn-extended" });
 
     const history = (db as MockD1Database).getHistory();
     const cacheDeletes = history.filter(({ sql }) => sql.includes("DELETE FROM cache"));
