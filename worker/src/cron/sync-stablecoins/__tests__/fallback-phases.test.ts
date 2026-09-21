@@ -159,10 +159,15 @@ describe("CoinGecko fallback phases", () => {
     for (const entry of [
       { usd: 1, usd_market_cap: 5_000_000, last_updated_at: NOW_SEC - 901 },
       { usd: 1, usd_market_cap: 5_000_000 },
-      { usd: 1, usd_market_cap: 5_000_000, last_updated_at: NOW_SEC + 1 },
     ]) {
       expect(resolveFreshCoinGeckoFallbackEntry(entry, NOW_SEC)).toBeNull();
     }
+
+    // A small future skew is tolerated (SUPPLY-MCAP-08): a zero-skew gate rejected the freshest
+    // CoinGecko observations, so an entry stamped marginally ahead of the sync clock is accepted.
+    expect(
+      resolveFreshCoinGeckoFallbackEntry({ usd: 1, usd_market_cap: 5_000_000, last_updated_at: NOW_SEC + 1 }, NOW_SEC),
+    ).toMatchObject({ price: 1, mcap: 5_000_000 });
   });
 
   it("uses the canonical peggedREAL type for BRL fallback assets", () => {
