@@ -44,6 +44,26 @@ describe("CacheFreshnessTable", () => {
     ).toBeTruthy();
   });
 
+  it("uses the yield-data override for its band and threshold labels", () => {
+    const yieldCache: CacheStatus = {
+      ageSeconds: 10_800,
+      maxAge: 3_600,
+      healthy: false,
+      producerJob: "sync-yield-data",
+      availabilityMaxAge: 3_600,
+    };
+
+    render(<CacheFreshnessTable caches={{ "yield-data": yieldCache }} />);
+
+    expect(screen.getByTestId("cache-freshness-unhealthy-table")).toBeTruthy();
+    const row = screen.getByText("yield-data").closest("tr");
+    expect(row).not.toBeNull();
+    expect(within(row as HTMLTableRowElement).getByText("degraded (>2.00x)")).toBeTruthy();
+    expect(
+      within(row as HTMLTableRowElement).getByText("degraded >2.00x · stale >4.00x"),
+    ).toBeTruthy();
+  });
+
   it("keeps headers on the collapsed healthy table when unhealthy rows are visible", async () => {
     const degradedCache: CacheStatus = {
       ageSeconds: 9_000,
