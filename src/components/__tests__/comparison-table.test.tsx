@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { ComparisonTable } from "@/components/comparison-table";
 import type { StablecoinData } from "@shared/types";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
+import { makeUnreportedBluechipRating } from "@shared/test-utils/bluechip.test-support";
 import type { ComparisonCoinEntry } from "@/lib/compare-derive";
 
 vi.mock("next/link", async () => {
@@ -147,22 +148,7 @@ describe("ComparisonTable", () => {
   });
   it("marks missing Bluechip audit data as not reported", () => {
     const coin = makeCoin("usdt", "USDT");
-    coin.bluechipRating = {
-      grade: "A",
-      slug: "tether",
-      collateralization: null,
-      smartContractAudit: null,
-      dateOfRating: null,
-      dateLastChange: null,
-      smidge: {
-        stability: null,
-        management: null,
-        implementation: null,
-        decentralization: null,
-        governance: null,
-        externals: null,
-      },
-    };
+    coin.bluechipRating = makeUnreportedBluechipRating();
     const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={PEG_RATES} logos={{}} />);
 
     expect(html).toContain("A · audit not reported");

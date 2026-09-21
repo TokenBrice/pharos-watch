@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createMockD1Preset, findD1HistoryEntry, type MockD1Database } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
+import { makeUnreportedBluechipRating } from "@shared/test-utils/bluechip.test-support";
 import { mockFetchRetry } from "../../test-helpers/cron";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import {
@@ -63,22 +64,7 @@ describe("syncBluechip", () => {
     expect(getCacheJsonParseFailureCountersForTests()["sync-bluechip:existing-cache"]?.count).toBe(1);
   });
   it("retains valid cached ratings when one record is invalid", () => {
-    const valid = {
-      grade: "A",
-      slug: "tether",
-      collateralization: null,
-      smartContractAudit: null,
-      dateOfRating: null,
-      dateLastChange: null,
-      smidge: {
-        stability: null,
-        management: null,
-        implementation: null,
-        decentralization: null,
-        governance: null,
-        externals: null,
-      },
-    };
+    const valid = makeUnreportedBluechipRating();
     expect(parseBluechipRatingsCache(JSON.stringify({ valid, invalid: null }), "sync-bluechip:test-cache")).toEqual({ valid });
   });
 
