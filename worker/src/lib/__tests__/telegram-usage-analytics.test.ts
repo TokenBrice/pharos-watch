@@ -36,6 +36,25 @@ describe("telegram usage analytics", () => {
     });
   });
 
+  it("counts only pending delivery rows in lifecycle snapshots", async () => {
+    const { sqlite, db } = fixtures.open();
+    const insert = sqlite.prepare(
+      "INSERT INTO telegram_pending_alerts (chat_id, message_html, created_at, delivery_state) VALUES (?, 'test', ?, ?)",
+    );
+    for (let index = 0; index < 3; index += 1) {
+      insert.run(`pending-${index}`, 1_771_833_600, "pending");
+    }
+    for (const state of ["sending", "sent", "execution_unknown"] as const) {
+      for (let index = 0; index < 4; index += 1) {
+        insert.run(`${state}-${index}`, 1_771_833_600, state);
+      }
+    }
+
+    const snapshot = await computeTelegramCurrentLifecycleSnapshot(db, 1_771_833_600);
+
+    expect(snapshot.pendingDeliveries).toBe(3);
+  });
+
   it("classifies deep-link payloads without storing raw payloads", () => {
     expect(classifyTelegramStartSource("")).toBe("none");
     expect(classifyTelegramStartSource("setup")).toBe("setup");

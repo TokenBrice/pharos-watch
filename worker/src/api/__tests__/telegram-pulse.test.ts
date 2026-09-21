@@ -268,6 +268,26 @@ describe("handleTelegramPulse", () => {
     });
   });
 
+  it("publishes only pending delivery rows in pendingDeliveries", async () => {
+    const { db, sqlite } = fixtures.open();
+    const now = Math.floor(Date.now() / 1000);
+    const insert = sqlite.prepare(
+      "INSERT INTO telegram_pending_alerts (chat_id, message_html, created_at, delivery_state) VALUES (?, 'test', ?, ?)",
+    );
+    for (let index = 0; index < 5; index += 1) {
+      insert.run(`pending-${index}`, now, "pending");
+    }
+    for (const state of ["sending", "sent", "execution_unknown"] as const) {
+      for (let index = 0; index < 4; index += 1) {
+        insert.run(`${state}-${index}`, now, state);
+      }
+    }
+
+    const body = await readJsonResponse(await handleTelegramPulse(db), 200);
+
+    expect(body.pendingDeliveries).toBe(5);
+  });
+
   it("suppresses low-cardinality Mini App usage counts but exposes abuse-health counts", async () => {
     const db = mockD1([
       {

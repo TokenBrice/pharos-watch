@@ -1,4 +1,5 @@
 import { logWorkerEventArgs } from "../structured-log";
+import { PENDING_DELIVERY_STATES } from "../../cron/telegram-pending/types";
 import type { TelegramAlertTypeChats, TelegramWatcherHistoryPoint } from "@shared/types/status";
 import { TELEGRAM_LIFECYCLE_SNAPSHOT_REFRESH_SECONDS } from "@shared/lib/status-thresholds";
 import { formatIsoDate } from "@shared/lib/format";
@@ -108,6 +109,7 @@ export interface TelegramChatHealthDiagnostics {
 }
 
 const SNAPSHOT_REFRESH_INTERVAL_SEC = TELEGRAM_LIFECYCLE_SNAPSHOT_REFRESH_SECONDS;
+const PENDING_DELIVERY_STATE_PLACEHOLDERS = PENDING_DELIVERY_STATES.map(() => "?").join(", ");
 
 const ACTIVE_EXPLICIT_SUBS_BY_CHAT_SQL = `SELECT chat_id,
         SUM(CASE WHEN ${ACTIVE_SUBSCRIPTION_FLAGS_SQL} THEN 1 ELSE 0 END) AS active_sub_count,
@@ -207,7 +209,12 @@ async function loadPendingDeliveryCount(
 ): Promise<{ count: number; unavailableFields: string[] }> {
   try {
     const row = await db
-      .prepare("SELECT COUNT(*) AS pending_count FROM telegram_pending_alerts")
+      .prepare(
+        `SELECT COUNT(*) AS pending_count
+           FROM telegram_pending_alerts
+          WHERE delivery_state IN (${PENDING_DELIVERY_STATE_PLACEHOLDERS})`,
+      )
+      .bind(...PENDING_DELIVERY_STATES)
       .first<PendingCountRow>();
     return { count: coerceCount(row?.pending_count), unavailableFields: [] };
   } catch (err) {
