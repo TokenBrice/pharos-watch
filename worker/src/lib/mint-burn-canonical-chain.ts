@@ -9,6 +9,7 @@
 // full MINT_BURN_CONFIGS list live in mint-burn-mcap-weighting.ts instead.
 
 const NON_ETHEREUM_CANONICAL_CHAIN_BY_STABLECOIN = new Map<string, string>([
+  ["bd-basedollar", "base"],
   ["usdai-usd-ai", "arbitrum"],
 ]);
 

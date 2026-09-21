@@ -89,6 +89,12 @@ scheduling choices, not safe/risky classifications. USDT is the notable custom-e
 contract's Issue/Redeem events (adapter kind `custom-events`) because `issue()`/`redeem()` emit no zero-address
 `Transfer` logs. Other special decoding and bridge rules remain source-owned.
 
+DEWS and digest aggregation default configured coins to Ethereum and keep non-Ethereum canonical-chain overrides in
+`worker/src/lib/mint-burn-canonical-chain.ts`; current overrides route USDai to Arbitrum and Base Dollar to Base. A
+registry-iterating test requires every coin configured only outside Ethereum to have an override or a documented
+exception, while coins with an Ethereum contract retain the Ethereum default. This keeps the hot path lightweight
+without letting the side map drift silently from `MINT_BURN_CONFIG_SPECS`.
+
 Public `/api/mint-burn-flows` and the daily digest collector use the same canonical V9 flight-to-quality classification. `B-` or better is `safe`; `C+`, `C`, and `C-` are neutral; grades below `C-` are `risky`. Classification requires a complete current `safety-score-v9-publication` identity and becomes unavailable when the accepted publication is missing, held, stale, malformed, or identity-mismatched instead of falling back to a hardcoded safe-haven list.
 
 Per-config adapter provenance is now surfaced through coin `coverage` metadata:

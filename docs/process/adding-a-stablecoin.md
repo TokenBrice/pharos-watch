@@ -602,6 +602,10 @@ Two authoring paths:
 - **Shortcut** - for plain Transfer-to-zero-address mint/burn on Ethereum, add an entry to `EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS` with `stablecoinId`, `dustThreshold`, and (optionally) `bridgeDetection`. The array expands into full specs automatically.
 - **Full spec** - for custom events (USDT `Issue`/`Redeem`, reUSD deposits, etc.) or non-Ethereum chains, add a `MintBurnContractConfigSpec` to `MINT_BURN_CONFIG_SPECS`.
 
+For a coin configured only outside Ethereum, also add its canonical chain to
+`worker/src/lib/mint-burn-canonical-chain.ts`. The registry-coverage test requires each such coin to have a mapping or
+a documented exception; coins with any Ethereum config continue to use Ethereum by default.
+
 Current practice:
 
 - token identity should come from shared metadata where possible; use `contractSource: "primary" | "traded"` (default `"primary"`) to pick from the coin's `contracts[]` vs `tradedContracts[]`.
