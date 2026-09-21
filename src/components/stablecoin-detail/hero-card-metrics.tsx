@@ -51,6 +51,47 @@ export interface HeroSignalRailItem {
   href: string;
   colorClass: string;
 }
+export type HeroMarketCapFields = Pick<
+  HeroCardViewModel["market"],
+  "mcap" | "safePrevDay" | "prevDayTrendClass"
+>;
+
+export type HeroSupplyFields = Pick<
+  HeroCardViewModel["market"],
+  "supply" | "hasPrevMonth"
+> & {
+  safePrevWeek: number | null;
+  prevWeekTrendClass: string;
+  safePrevMonth: number | null;
+  prevMonthTrendClass: string;
+};
+
+export interface HeroMarketFields {
+  marketCap: HeroMarketCapFields;
+  supply: HeroSupplyFields;
+}
+
+export function getHeroMarketFields(market: HeroCardViewModel["market"]): HeroMarketFields {
+  return {
+    marketCap: {
+      mcap: market.mcap,
+      safePrevDay: market.safePrevDay,
+      prevDayTrendClass: market.prevDayTrendClass,
+    },
+    supply: {
+      supply: market.supply,
+      safePrevWeek: null,
+      prevWeekTrendClass: "text-muted-foreground",
+      hasPrevMonth: market.hasPrevMonth,
+      safePrevMonth: null,
+      prevMonthTrendClass: "text-muted-foreground",
+    },
+  };
+}
+
+function formatSupplyTrendPercent(current: number | null, previous: number | null): string {
+  return current == null || previous == null ? "—" : formatTrendPercent(current, previous);
+}
 
 function formatTrendPercent(current: number, previous: number | null): string {
   return previous == null ? "—" : formatPercentChange(current, previous);
@@ -182,33 +223,23 @@ export function HeroCompactMarketCapCell({
 export function HeroCompactSupplyCell({
   supply,
   coinSymbol,
-  mcap,
   safePrevWeek,
   prevWeekTrendClass,
   hasPrevMonth,
   safePrevMonth,
   prevMonthTrendClass,
-}: {
-  supply: number | null;
-  coinSymbol: string;
-  mcap: number;
-  safePrevWeek: number | null;
-  prevWeekTrendClass: string;
-  hasPrevMonth: boolean;
-  safePrevMonth: number | null;
-  prevMonthTrendClass: string;
-}) {
+}: HeroSupplyFields & { coinSymbol: string }) {
   return (
     <CompactMetricCell
       label="Supply"
       subline={
         <span className="pharos-numeric">
-          <span className={prevWeekTrendClass}>{formatTrendPercent(mcap, safePrevWeek)}</span>
+          <span className={prevWeekTrendClass}>{formatSupplyTrendPercent(supply, safePrevWeek)}</span>
           <span className="text-muted-foreground"> 7D</span>
           {hasPrevMonth ? (
             <>
               <span className="text-muted-foreground"> · </span>
-              <span className={prevMonthTrendClass}>{formatTrendPercent(mcap, safePrevMonth)}</span>
+              <span className={prevMonthTrendClass}>{formatSupplyTrendPercent(supply, safePrevMonth)}</span>
               <span className="text-muted-foreground"> 30D</span>
             </>
           ) : null}
@@ -398,22 +429,12 @@ export function HeroMarketCapCard({
 export function HeroSupplyCard({
   supply,
   coinSymbol,
-  mcap,
   safePrevWeek,
   prevWeekTrendClass,
   hasPrevMonth,
   safePrevMonth,
   prevMonthTrendClass,
-}: {
-  supply: number | null;
-  coinSymbol: string;
-  mcap: number;
-  safePrevWeek: number | null;
-  prevWeekTrendClass: string;
-  hasPrevMonth: boolean;
-  safePrevMonth: number | null;
-  prevMonthTrendClass: string;
-}) {
+}: HeroSupplyFields & { coinSymbol: string }) {
   return (
     <div className="mt-3 rounded-lg border border-border/40 bg-background/30 px-3 py-2">
       <div className="flex items-center justify-between">
@@ -426,11 +447,11 @@ export function HeroSupplyCard({
         </div>
         <div className="text-right">
           <p className={`text-xs pharos-numeric ${prevWeekTrendClass}`}>
-            {formatTrendPercent(mcap, safePrevWeek)} <span className="text-muted-foreground">7d</span>
+            {formatSupplyTrendPercent(supply, safePrevWeek)} <span className="text-muted-foreground">7d</span>
           </p>
           {hasPrevMonth && (
             <p className={`text-xs pharos-numeric ${prevMonthTrendClass}`}>
-              {formatTrendPercent(mcap, safePrevMonth)} <span className="text-muted-foreground">30d</span>
+              {formatSupplyTrendPercent(supply, safePrevMonth)} <span className="text-muted-foreground">30d</span>
             </p>
           )}
         </div>

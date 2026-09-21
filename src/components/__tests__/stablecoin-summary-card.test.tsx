@@ -8,7 +8,6 @@ describe("stablecoin summary card", () => {
       <HeroCompactSupplyCell
         supply={1_000}
         coinSymbol="USDT"
-        mcap={1_000}
         safePrevWeek={null}
         prevWeekTrendClass="text-muted-foreground"
         hasPrevMonth

@@ -497,6 +497,28 @@ describe("HeroCard", () => {
     expect(html).toContain("Below $1.00M live-event floor. Deviation is shown, but event history may stay empty.");
   });
 
+  it("does not use USD market-cap history for Supply trends", () => {
+    const html = renderHero({
+      coin: { flags: { pegCurrency: "CHF" } },
+      coinData: {
+        price: 1.2,
+        circulating: { peggedCHF: 1_200_000 },
+        circulatingPrevWeek: { peggedCHF: 1_000_000 },
+        circulatingPrevMonth: { peggedCHF: 1_000_000 },
+      },
+      mcap: 1_200_000,
+      supply: 1_000_000,
+      prevDay: 1_100_000,
+      prevWeek: 1_000_000,
+      prevMonth: 1_000_000,
+      pegRef: 1.2,
+      reportCard: null,
+    });
+
+    expect(html).not.toContain("+20.00%");
+    expect(html).toContain("1.00M");
+  });
+
   // Infrastructure membership is the only axis these cases vary: everything
   // else stays on the shared hero baseline, so nothing but the badge row can
   // move the assertions.
