@@ -94,11 +94,43 @@ export function hasRepresentativeOnchainRatioSample(trackedCoins: number): boole
 // driven entirely by coin-counting noise. New values 0.18/0.45 gave roughly 5 coins
 // of slack above normal; the elevated band 0.15-0.18 is surfaced as an
 // info-severity cause for observability without driving status.
+//
+// Duration dimension added 2026-09-21 (holistic review LV01-05). The ratio bands
+// answer "how much of the active set is unpriceable", so a handful of
+// permanently unpriceable assets never trips them: nine of 335 active assets
+// (2.7%) sat below `ratioElevated`, one of them with no accepted price for 5,957
+// consecutive generations (~62 days) while its market cap kept publishing.
+// `generations*` therefore count consecutive missing `sync-stablecoins`
+// generations and escalate independently of the ratio. `generationsElevated` is
+// one day at the current cadence, where a gap stops looking like a fetch hiccup;
+// `generationsCritical` is a week, where re-pricing an asset is a catalog
+// decision rather than a fetch gap to wait out.
+/** One day of consecutive missing active-price generations at the live `sync-stablecoins` cadence (96 at 15 minutes). */
+const MISSING_PRICE_GENERATIONS_PER_DAY = Math.round((24 * 3600) / CRON_INTERVALS["sync-stablecoins"]);
+
 export const STATUS_MISSING_PRICE_THRESHOLDS = {
   ratioElevated: 0.15,
   ratioDegraded: 0.18,
   ratioStale: 0.45,
+  generationsElevated: MISSING_PRICE_GENERATIONS_PER_DAY,
+  generationsCritical: 7 * MISSING_PRICE_GENERATIONS_PER_DAY,
 } as const;
+
+/**
+ * Gap *duration* for a single missing active price, in consecutive missing
+ * generations. Deliberately independent of `missingPriceRatio`: coverage breadth
+ * and gap persistence are different questions, and a small number of permanent
+ * gaps never moves the ratio.
+ */
+export function getMissingPriceDurationStatus(consecutiveMissingGenerations: number): StatusHealthValue {
+  if (consecutiveMissingGenerations >= STATUS_MISSING_PRICE_THRESHOLDS.generationsCritical) {
+    return "stale";
+  }
+  if (consecutiveMissingGenerations >= STATUS_MISSING_PRICE_THRESHOLDS.generationsElevated) {
+    return "degraded";
+  }
+  return "healthy";
+}
 
 // --- Cache ratio thresholds (availability status) ---
 /** Age/interval ratio bands for cached endpoint availability. Distinct from FRESHNESS_RATIOS: applied at the endpoint-availability layer, not the per-record freshness layer. */

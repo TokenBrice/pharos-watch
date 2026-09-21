@@ -284,7 +284,7 @@ Computed from missing prices + blacklist gaps + on-chain supply monitor, with be
 
 - `stale` if any of:
   - stablecoins cache is unavailable/corrupt (`dataQuality.stablecoinsCacheStatus === "error"`)
-  - exact active-price coverage is stale (`activePriceCoverageImpactStatus === "stale"`)
+  - exact active-price coverage is stale (`activePriceCoverageImpactStatus === "stale"`, reached when an alert-eligible gap passes `generationsCritical` = 672 consecutive missing generations — one week at the 15-minute cadence)
   - `missingPriceRatio > 0.45`
   - `blacklistMissingRatio >= 0.02` (2%)
   - `blacklistRecentMissingAmounts >= <!-- GENERATED-START: status-blacklist-recent-stale-threshold -->25<!-- GENERATED-END: status-blacklist-recent-stale-threshold -->` (last 24h)
@@ -296,7 +296,7 @@ Computed from missing prices + blacklist gaps + on-chain supply monitor, with be
 - `degraded` if any of:
   - stablecoins cache is degraded but still usable (`dataQuality.stablecoinsCacheStatus === "degraded"`, currently legacy-array payloads only)
   - exact stablecoin publication coverage is not complete (`dataQuality.stablecoinPublication.status !== "complete"`, i.e. `incomplete` or `unknown`)
-  - exact active-price coverage is unreadable (`activePriceCoverageImpactStatus === "degraded"` from `active_price_coverage_unknown`; incomplete coverage is warning-only)
+  - exact active-price coverage is unreadable or has a day-old gap (`activePriceCoverageImpactStatus === "degraded"` from `active_price_coverage_unknown`, or from an alert-eligible gap at `generationsElevated` = 96 consecutive missing generations — one day at the 15-minute cadence; shorter gaps stay warning-only)
   - `missingPriceRatio > 0.18`
   - `blacklistRecentMissingAmounts >= <!-- GENERATED-START: status-blacklist-recent-degraded-threshold -->5<!-- GENERATED-END: status-blacklist-recent-degraded-threshold -->` (last 24h)
   - `blacklistMissingRatio >= 0.01` (1%)
@@ -316,6 +316,17 @@ The `missingPriceRatio` thresholds were raised on 2026-04-13 to eliminate bounda
 | stale    | > 45% | `missing_prices_stale`    | critical | yes → `stale`    |
 
 The `missing_prices_elevated` info cause exists to preserve operator observability in the 15-18% band without forcing a visible status transition.
+
+#### Active-price gap duration bands (2026-09-21)
+
+`missingPriceRatio` counts assets; it says nothing about how long a gap has lasted. Nine of 335 active assets (2.7%) sat below the 15% elevated band while `aznd-mu-digital` published a $16.3 M market cap with no accepted price for 5,957 consecutive 15-minute generations (~62 days). The duration dimension therefore escalates independently of the ratio, from the per-asset `consecutiveMissingGenerations` in the coverage payload and only for alert-eligible gaps:
+
+| Band | Enter (consecutive missing generations) | `activePriceCoverageImpactStatus` |
+| ---- | --------------------------------------- | --------------------------------- |
+| elevated | ≥ 96 — one day at the current `sync-stablecoins` cadence | `degraded` |
+| critical | ≥ 672 — one week | `stale` |
+
+Both bands live in `STATUS_MISSING_PRICE_THRESHOLDS` as `generationsElevated` / `generationsCritical`; the ratio bands above are unchanged and still drive the `missing_prices_*` causes. The `/api/health` warning slug is also unchanged (`active-price-coverage-incomplete:<ids>`), so an escalated gap is named there alongside every other alert-eligible id. A gap past the critical band is a catalog decision — re-source the price or retire the asset — rather than a fetch gap to wait out; see [Adding a Stablecoin](./process/adding-a-stablecoin.md).
 
 `dataQuality.sourceFailures` still records failed data-quality subqueries, but those failures now emit info-level causes and increment `summary.diagnosticIssueCount` instead of degrading `dataQualityStatus` on their own. Only the stablecoins cache remains a hard dependency in this path.
 

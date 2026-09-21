@@ -4,9 +4,11 @@ import {
   getBlacklistGapStatus,
   getCacheHealthyMaxRatio,
   getCacheRatioThresholds,
+  getMissingPriceDurationStatus,
   isReserveDriftThresholdExceeded,
   STATUS_CACHE_RATIO_OVERRIDES,
   STATUS_CACHE_RATIO_THRESHOLDS,
+  STATUS_MISSING_PRICE_THRESHOLDS,
   STATUS_ONCHAIN_FRESH_WINDOW_SEC,
   STATUS_RESERVE_DRIFT_THRESHOLD_POINTS,
 } from "../status-thresholds";
@@ -15,6 +17,32 @@ import { CRON_INTERVALS } from "../cron-jobs";
 it("keeps on-chain supply freshness at two Kinesis producer cycles", () => {
   expect(STATUS_ONCHAIN_FRESH_WINDOW_SEC).toBe(8 * 3600);
   expect(STATUS_ONCHAIN_FRESH_WINDOW_SEC).toBe(2 * CRON_INTERVALS["sync-kinesis-supply"]);
+});
+
+describe("missing-price duration bands", () => {
+  it("escalates after one day of consecutive missing generations at the sync cadence", () => {
+    expect(STATUS_MISSING_PRICE_THRESHOLDS.generationsElevated).toBe(96);
+    expect(STATUS_MISSING_PRICE_THRESHOLDS.generationsElevated).toBe(
+      (24 * 3600) / CRON_INTERVALS["sync-stablecoins"],
+    );
+    expect(STATUS_MISSING_PRICE_THRESHOLDS.generationsCritical).toBe(
+      7 * STATUS_MISSING_PRICE_THRESHOLDS.generationsElevated,
+    );
+  });
+
+  it("classifies a single gap by duration at each band boundary", () => {
+    const { generationsElevated, generationsCritical } = STATUS_MISSING_PRICE_THRESHOLDS;
+    expect(getMissingPriceDurationStatus(generationsElevated - 1)).toBe("healthy");
+    expect(getMissingPriceDurationStatus(generationsElevated)).toBe("degraded");
+    expect(getMissingPriceDurationStatus(generationsCritical - 1)).toBe("degraded");
+    expect(getMissingPriceDurationStatus(generationsCritical)).toBe("stale");
+  });
+
+  it("leaves the ratio bands that drive the missing-price rules untouched", () => {
+    expect(STATUS_MISSING_PRICE_THRESHOLDS.ratioElevated).toBe(0.15);
+    expect(STATUS_MISSING_PRICE_THRESHOLDS.ratioDegraded).toBe(0.18);
+    expect(STATUS_MISSING_PRICE_THRESHOLDS.ratioStale).toBe(0.45);
+  });
 });
 
 describe("getBlacklistGapStatus", () => {

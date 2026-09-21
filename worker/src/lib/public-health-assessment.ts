@@ -1,4 +1,4 @@
-import { getBlacklistGapStatus } from "@shared/lib/status-thresholds";
+import { getBlacklistGapStatus, getMissingPriceDurationStatus } from "@shared/lib/status-thresholds";
 import { getD1CapacityImpactStatus } from "@shared/lib/d1-capacity";
 import {
   countPublicImpactOpenCircuits,
@@ -630,13 +630,22 @@ export async function assessPublicHealth(
 
   // Missing active prices are public warnings, not availability incidents. The
   // JSON `activePriceCoverage` payload still reports exact counts/ids/status for
-  // observability, and alert-eligible misses still emit warnings for operator
-  // triage. Only missing coverage evidence itself fails closed.
+  // observability, alert-eligible misses still emit warnings for operator triage,
+  // and the warning below names every alert-eligible id. Only missing coverage
+  // evidence itself fails closed — plus a gap that has outlived the duration
+  // bands, which the ratio bands cannot see: a handful of permanently unpriceable
+  // assets stays far below `ratioElevated` however long it stays unpriced.
   const activePriceCoverageAlertEligible = activePriceCoverage.alertEligibleCount > 0;
+  const activePriceCoverageDurationStatus = getMissingPriceDurationStatus(
+    activePriceCoverage.missingActiveAssets.reduce(
+      (worst, asset) => (asset.alertEligible ? Math.max(worst, asset.consecutiveMissingGenerations) : worst),
+      0,
+    ),
+  );
   const activePriceCoverageImpactStatus =
     activePriceCoverage.status === "unknown"
       ? "degraded"
-      : "healthy";
+      : activePriceCoverageDurationStatus;
   if (activePriceCoverage.status === "unknown") {
     warnings.push("active-price-coverage-unknown");
   } else if (activePriceCoverageAlertEligible) {

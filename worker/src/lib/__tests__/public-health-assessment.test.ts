@@ -4,6 +4,7 @@ import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { STATUS_MISSING_PRICE_THRESHOLDS } from "@shared/lib/status-thresholds";
 import { makePriceCoverageMetadata } from "./public-health.test-support";
 
 const fixtures = createLatestSchemaFixtureTracker();
@@ -313,6 +314,54 @@ describe("assessPublicHealth upstream provider enrichment", () => {
     });
     expect(result.activePriceCoverageImpactStatus).toBe("healthy");
     expect(result.overallStatus).toBe("healthy");
+    expect(result.warnings).toContain(`active-price-coverage-incomplete:${missingId}`);
+  });
+
+  it("escalates once an alert-eligible price gap outlives the elevated duration band", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const activeIds = [...ACTIVE_IDS];
+    const missingId = activeIds[0]!;
+    const baseline = await assessPublicHealth(makeMintBurnAssessmentDb(nowSec, {
+      publicationMetadata: makePriceCoverageMetadata(nowSec, null),
+    }), nowSec, { logPrefix: "test" });
+    expect(baseline.overallStatus).toBe("healthy");
+    // One gap in a full active set is far below `missingPriceRatio` bands; only
+    // its persistence escalates.
+    const db = makeMintBurnAssessmentDb(nowSec, {
+      publicationMetadata: makePriceCoverageMetadata(
+        nowSec,
+        missingId,
+        STATUS_MISSING_PRICE_THRESHOLDS.generationsElevated,
+      ),
+    });
+
+    const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
+
+    expect(result.activePriceCoverageImpactStatus).toBe("degraded");
+    expect(result.overallStatus).toBe("degraded");
+    expect(result.warnings).toContain(`active-price-coverage-incomplete:${missingId}`);
+  });
+
+  it("escalates to stale once an alert-eligible price gap outlives the critical duration band", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const activeIds = [...ACTIVE_IDS];
+    const missingId = activeIds[0]!;
+    const baseline = await assessPublicHealth(makeMintBurnAssessmentDb(nowSec, {
+      publicationMetadata: makePriceCoverageMetadata(nowSec, null),
+    }), nowSec, { logPrefix: "test" });
+    expect(baseline.overallStatus).toBe("healthy");
+    const db = makeMintBurnAssessmentDb(nowSec, {
+      publicationMetadata: makePriceCoverageMetadata(
+        nowSec,
+        missingId,
+        STATUS_MISSING_PRICE_THRESHOLDS.generationsCritical,
+      ),
+    });
+
+    const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
+
+    expect(result.activePriceCoverageImpactStatus).toBe("stale");
+    expect(result.overallStatus).toBe("stale");
     expect(result.warnings).toContain(`active-price-coverage-incomplete:${missingId}`);
   });
 
