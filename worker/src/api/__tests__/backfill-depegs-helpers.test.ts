@@ -75,9 +75,45 @@ describe("historical FX configuration", () => {
       applyBackfillEvents,
     });
 
-    expect(outcome).toEqual({ status: "skipped", eventCount: 0 });
+    expect(outcome).toEqual({
+      status: "skipped",
+      eventCount: 0,
+      reason: "missing-fx-reference",
+    });
     expect(applyBackfillEvents).not.toHaveBeenCalled();
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("missing-fx-reference"));
+  });
+
+  it("skips a commodity coin without a spot series or current reference and performs no writes", async () => {
+    const meta = ACTIVE_STABLECOINS.find((coin) => coin.id === "xaut-tether");
+    expect(meta).toBeDefined();
+    if (!meta) throw new Error("missing XAUT fixture");
+    const applyBackfillEvents = vi.fn();
+
+    const outcome = await executeBackfillForCoin({
+      db: mockD1(),
+      prepared: {
+        meta,
+        geckoId: "unused-because-missing-commodity-reference-skips-first",
+        supplyByDate: [],
+        currentSupplyUsd: null,
+      },
+      pegRates: { peggedUSD: 1 },
+      fxRates: undefined,
+      fxSeries: {},
+      commoditySeries: {},
+      replayWindow: null,
+      coingeckoApiKey: null,
+      dryRun: false,
+      applyBackfillEvents,
+    });
+
+    expect(outcome).toEqual({
+      status: "skipped",
+      eventCount: 0,
+      reason: "missing-fx-reference",
+    });
+    expect(applyBackfillEvents).not.toHaveBeenCalled();
   });
 });
 

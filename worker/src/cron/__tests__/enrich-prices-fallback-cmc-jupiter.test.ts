@@ -29,7 +29,7 @@ describe("enrichMissingPrices", () => {
       { match: "solana-rpc.publicnode.com", body: solanaSlotResponse(currentSlot) },
       { match: "api.jup.ag/price/v3", body: {
         "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH": {
-          usdPrice: 1.0002, decimals: 6, blockId: currentSlot - 20,
+          usdPrice: 1.0002, decimals: 6, blockId: currentSlot - 20, liquidity: 100_000,
         },
       } },
     ]);
@@ -46,7 +46,7 @@ describe("enrichMissingPrices", () => {
     expect(JSON.stringify(result.diagnostics)).not.toContain("test-alchemy-secret");
     expect(JSON.stringify(result.diagnostics)).not.toContain("test-drpc-secret");
   });
-  it("fills missing Solana prices from documented Jupiter V3 payloads without liquidity", async () => {
+  it("skips Jupiter V3 quotes without reported liquidity", async () => {
     const currentSlot = 418_913_760;
     const assets: PeggedAsset[] = [
       makePeggedAsset({ id: "usdg-paxos", name: "USDG", symbol: "USDG", price: 0 }),
@@ -70,10 +70,10 @@ describe("enrichMissingPrices", () => {
 
     const stats = await fixtureEnrichMissingPrices(assets);
 
-    expect(stats.passJupiter).toBe(1);
-    expect(assets[0].price).toBe(1.0002);
-    expect(assets[0].priceSource).toBe("jupiter");
-    expect(stats.finalMissing).toBe(0);
+    expect(stats.passJupiter).toBe(0);
+    expect(assets[0].price).toBe(0);
+    expect(assets[0].priceSource).not.toBe("jupiter");
+    expect(stats.finalMissing).toBe(1);
   });
 
   it("falls back to the next bounded Solana RPC when the primary slot endpoint returns 403", async () => {
@@ -92,6 +92,7 @@ describe("enrichMissingPrices", () => {
             usdPrice: 1.0002,
             decimals: 6,
             blockId: currentSlot - 20,
+            liquidity: 100_000,
           },
         },
       },
@@ -136,6 +137,7 @@ describe("enrichMissingPrices", () => {
             usdPrice: 1.0002,
             decimals: 6,
             blockId: currentSlot - 20,
+            liquidity: 100_000,
           },
         },
       },
@@ -172,6 +174,7 @@ describe("enrichMissingPrices", () => {
             usdPrice: 1.0002,
             decimals: 6,
             blockId: currentSlot - 20,
+            liquidity: 100_000,
           },
         },
       },
@@ -318,6 +321,7 @@ describe("enrichMissingPrices", () => {
             usdPrice: 1.0002,
             decimals: 6,
             blockId: currentSlot - 3_000,
+            liquidity: 100_000,
             priceChange24h: 0.01,
           },
         },

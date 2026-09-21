@@ -37,6 +37,7 @@ type Spec = {
   reason?: string;
   outcome?: string;
   peg?: number;
+  threshold?: number;
   primarySources?: string[];
   opposingSources?: string;
 };
@@ -65,6 +66,7 @@ const PLAN_CASES: Spec[] = [
   { label: "retains native-origin state while waiting for independent confirmation", row: { id: 9, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", first_seen_bps: -242, first_price: 0.18, peg_reference: 1, reason: "large-cap+native-origin" }, asset: { ...brz, price: 0.18, priceSource: "pyth", priceConfidence: "single-source", priceObservedAt: NOW_SEC - 30, priceUpdatedAt: NOW_SEC - 30, priceSyncedAt: NOW_SEC - 30, consensusSources: ["pyth"], agreeSources: ["pyth"] }, meta: brlMeta, rates: { peggedREAL: 0.18765951 }, rateSources: { peggedREAL: "median" }, rateCounts: { peggedREAL: 2 }, kind: "ready", peg: 1 },
   { label: "credits a fresh independent primary source when a native-origin move persists", row: { id: 11, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", first_seen_bps: -940, first_price: 0.17, last_seen_bps: -940, last_price: 0.17, peak_seen_bps: -940, peak_price: 0.17, peg_reference: 1, reason: "large-cap+native-origin" }, asset: nativeBrz(0.17), meta: brlMeta, rates: { peggedREAL: 0.18765951 }, rateSources: { peggedREAL: "fx" }, rateCounts: { peggedREAL: 1 }, kind: "ready", peg: 1, primarySources: ["primary:oracle:pyth"] },
   { label: "records a fresh independent primary source when a native-origin move recovers", row: { id: 12, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", first_seen_bps: -940, first_price: 0.17, peg_reference: 1, reason: "large-cap+native-origin" }, asset: nativeBrz(0.18765951), meta: brlMeta, rates: { peggedREAL: 0.18765951 }, rateSources: { peggedREAL: "fx" }, rateCounts: { peggedREAL: 1 }, kind: "mutate", outcome: "recovered", reason: "authoritative-primary-recovered", opposingSources: "primary:oracle:pyth+primary:authoritative" },
+  { label: "uses the refreshed registry peg type for the confirmation threshold", row: { id: 13, peg_type: "peggedREAL" }, asset: { pegType: "peggedUSD" }, kind: "ready", peg: 1, threshold: 100 },
   { label: "returns a ready plan for an aged pending row", row: { id: 10 }, kind: "ready", peg: 1 },
 ];
 
@@ -104,6 +106,7 @@ describe("buildConfirmationPlan", () => {
     if (plan.kind !== "ready") throw new Error(`unexpected plan kind: ${plan.kind}`);
     expect(plan.pegReference).toBe(spec.peg);
     expect(plan.outcomeState.pegReference).toBe(spec.peg);
+    if (spec.threshold != null) expect(plan.threshold).toBe(spec.threshold);
     expect(plan.age).toBeGreaterThanOrEqual(DEPEG_PENDING_MIN_AGE_SEC);
     if (spec.primarySources) expect(plan.primaryConfirmationSources).toEqual(spec.primarySources);
     if (input.row.reason?.includes("native-origin")) expect(plan.nativeSourceKey).toBe("native:brl");

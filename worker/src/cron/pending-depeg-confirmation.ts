@@ -376,7 +376,7 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
     };
   }
 
-  const threshold = getDepegThresholdBps(row.peg_type);
+  const threshold = getDepegThresholdBps(pegType ?? row.peg_type);
   const primaryTrust = asset ? classifyPrimaryDepegTrust(asset, now) : "unusable";
   const nativeSignal = nativePegQuote ? deriveDepegSignal(nativePegQuote.price, 1) : null;
   const nativeStatus = classifyDirectionalSignal(nativeSignal, threshold, pendingState.direction);

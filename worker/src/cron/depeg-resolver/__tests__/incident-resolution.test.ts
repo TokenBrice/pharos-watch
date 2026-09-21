@@ -185,6 +185,25 @@ describe("deriveMintSurge", () => {
     ).toEqual({ mintSurge: null, mintSurgeCoverage: "unavailable" });
   });
 
+  it("marks mint-burn coverage unavailable without valid event-window observations", () => {
+    expect(deriveMintSurge(snapshots, startedAt, 90, [], true)).toEqual({
+      mintSurge: null,
+      mintSurgeCoverage: "unavailable",
+    });
+    expect(
+      deriveMintSurge(
+        snapshots,
+        startedAt,
+        90,
+        [{ hourTs: startedAt - DAY, netFlowUsd: Number.NaN }],
+        true,
+      ),
+    ).toEqual({
+      mintSurge: null,
+      mintSurgeCoverage: "unavailable",
+    });
+  });
+
   it("marks the change-7d fallback explicitly when mint-burn coverage is absent", () => {
     expect(deriveMintSurge(snapshots, startedAt, 25, [], false)).toEqual({
       mintSurge: true,

@@ -42,6 +42,7 @@ export type ApplyBackfillEventsFn = (
 export interface CoinExecutionOutcome {
   status: "applied" | "preview" | "skipped" | "error";
   eventCount: number;
+  reason?: "missing-fx-reference";
   preview?: BackfillReplayPreview;
   errorMessage?: string;
 }
@@ -87,7 +88,32 @@ export async function executeBackfillForCoin(opts: {
   } else if (isCommodityPeg(peg)) {
     // Commodity peg (gold/silver): use historical spot price series
     const series = commoditySeries[peg] ?? [];
-    const fallback = currentPegRef != null && currentPegRef > 0 ? currentPegRef : 1;
+    const currentReference =
+      currentPegRef != null && Number.isFinite(currentPegRef) && currentPegRef > 0
+        ? currentPegRef
+        : null;
+    const seriesAnchor = series.length > 0 ? series[0]?.rate : undefined;
+    const fallback =
+      currentReference ??
+      (typeof seriesAnchor === "number" && Number.isFinite(seriesAnchor) && seriesAnchor > 0
+        ? seriesAnchor
+        : null);
+    if (fallback == null) {
+      logWorkerEvent({
+        scope: "api",
+        level: "warn",
+        event: "backfill-depegs-coin-skipped",
+        status: "skipped",
+        message: `[backfill-depegs] Skipping ${meta.symbol}: no commodity reference is available`,
+        metadata: {
+          stablecoinId: meta.id,
+          symbol: meta.symbol,
+          pegCurrency: peg,
+          reason: "missing-fx-reference",
+        },
+      });
+      return { status: "skipped", eventCount: 0, reason: "missing-fx-reference" };
+    }
     const spotLookup = buildFxLookup(series, fallback);
     if (meta.commodityOunces && meta.commodityOunces > 0) {
       const oz = meta.commodityOunces;
@@ -125,7 +151,7 @@ export async function executeBackfillForCoin(opts: {
           reason: "missing-fx-reference",
         },
       });
-      return { status: "skipped", eventCount: 0 };
+      return { status: "skipped", eventCount: 0, reason: "missing-fx-reference" };
     }
     getPegRef = buildFxLookup(series, resolvedFallback);
   }

@@ -386,45 +386,53 @@ export function buildPrimarySourceCandidates(
   const hasHardCorroborator = sources.some(
     (source) => isHardPricingTrustTier(getPricingSourceRegistryEntry(source.source)?.trustTier),
   );
-  const hasDexCorroboration =
-    promotedDexProtocolCandidates.length > 1 ||
-    (hasHardCorroborator &&
-      promotedDexProtocolCandidates.some((dexSource) =>
-        sources.some(
-          (source) =>
-            isHardPricingTrustTier(getPricingSourceRegistryEntry(source.source)?.trustTier) &&
-            pricesAgreeWithinBps(dexSource.price, source.price, divergenceThresholdBps),
-        ),
-      ));
-  const acceptedPromotedDexProtocolSources =
-    hasPromotedDexProtocolSource && hasDexCorroboration ? promotedDexProtocolCandidates : [];
+  const acceptedPromotedDexProtocolSources = promotedDexProtocolCandidates.filter((dexSource) => {
+    const agreesWithHardSource =
+      hasHardCorroborator &&
+      sources.some(
+        (source) =>
+          isHardPricingTrustTier(getPricingSourceRegistryEntry(source.source)?.trustTier) &&
+          pricesAgreeWithinBps(dexSource.price, source.price, divergenceThresholdBps),
+      );
+    const dexSourceFamily = getPricingSourceRegistryEntry(dexSource.source)?.depegSourceFamily;
+    const agreesWithIndependentDexSource = promotedDexProtocolCandidates.some((otherDexSource) => {
+      if (otherDexSource === dexSource) return false;
+      const otherDexSourceFamily =
+        getPricingSourceRegistryEntry(otherDexSource.source)?.depegSourceFamily;
+      return (
+        otherDexSourceFamily !== dexSourceFamily &&
+        pricesAgreeWithinBps(dexSource.price, otherDexSource.price, divergenceThresholdBps)
+      );
+    });
+    return agreesWithHardSource || agreesWithIndependentDexSource;
+  });
 
   if (acceptedPromotedDexProtocolSources.length > 0) {
     sources.push(...acceptedPromotedDexProtocolSources);
-    for (const source of acceptedPromotedDexProtocolSources) {
-      const sourceProtocol = source.source.replace(/-dex$/, "");
-      const matchingInput = (collected.protocolSources ?? []).find((entry) => entry.protocol === sourceProtocol);
-      dexCandidateTelemetry.push(
-        buildPromotedDexCandidateTelemetry(asset, source, matchingInput, { status: "accepted" }),
-      );
-    }
-  } else if (hasPromotedDexProtocolSource) {
-    for (const source of promotedDexProtocolCandidates) {
-      const sourceProtocol = source.source.replace(/-dex$/, "");
-      const matchingInput = (collected.protocolSources ?? []).find((entry) => entry.protocol === sourceProtocol);
-      dexCandidateTelemetry.push(
-        buildPromotedDexCandidateTelemetry(asset, source, matchingInput, {
-          status: "excluded",
-          reason: "lacked_corroboration",
-          divergenceThresholdBps,
-        }),
-      );
-    }
+  }
+  for (const source of promotedDexProtocolCandidates) {
+    const sourceProtocol = source.source.replace(/-dex$/, "");
+    const matchingInput = (collected.protocolSources ?? []).find((entry) => entry.protocol === sourceProtocol);
+    const accepted = acceptedPromotedDexProtocolSources.includes(source);
+    dexCandidateTelemetry.push(
+      buildPromotedDexCandidateTelemetry(
+        asset,
+        source,
+        matchingInput,
+        accepted
+          ? { status: "accepted" }
+          : {
+              status: "excluded",
+              reason: "lacked_corroboration",
+              divergenceThresholdBps,
+            },
+      ),
+    );
   }
 
   if (
     collected.dexAggregateQuote &&
-    !hasPromotedDexProtocolSource &&
+    acceptedPromotedDexProtocolSources.length === 0 &&
     !hasBinanceDexBridgeOverlap(collected)
   ) {
     const dexAggregateSource = buildSourcePrice({

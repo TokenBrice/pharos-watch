@@ -164,7 +164,7 @@ export async function runJupiterPass(
       const liquidity = payload?.liquidity;
       if (usdPrice == null || !Number.isFinite(usdPrice) || usdPrice <= 0) continue;
       if (blockId == null || !isFreshJupiterBlock(blockId, currentSlot)) continue;
-      if (liquidity != null && (!Number.isFinite(liquidity) || liquidity < JUPITER_MIN_LIQUIDITY_USD)) continue;
+      if (liquidity == null || !Number.isFinite(liquidity) || liquidity < JUPITER_MIN_LIQUIDITY_USD) continue;
 
       if (!isUsableFallbackPrice(entry.asset, usdPrice, fxRates)) {
         continue;

@@ -46,9 +46,13 @@ export function deriveMintSurge(
     if (onset == null || !Number.isFinite(onset) || onset <= 0) {
       return { mintSurge: null, mintSurgeCoverage: "unavailable" };
     }
-    const netInflowUsd = hourlyRows
-      .filter((row) => row.hourTs >= startedAt - MINT_SURGE_WINDOW_SEC && row.hourTs <= startedAt)
-      .reduce((sum, row) => sum + (Number.isFinite(row.netFlowUsd) ? row.netFlowUsd : 0), 0);
+    const windowedRows = hourlyRows.filter(
+      (row) => row.hourTs >= startedAt - MINT_SURGE_WINDOW_SEC && row.hourTs <= startedAt,
+    );
+    if (windowedRows.length === 0 || windowedRows.some((row) => !Number.isFinite(row.netFlowUsd))) {
+      return { mintSurge: null, mintSurgeCoverage: "unavailable" };
+    }
+    const netInflowUsd = windowedRows.reduce((sum, row) => sum + row.netFlowUsd, 0);
     return {
       mintSurge: (netInflowUsd / onset) * 100 > MINT_SURGE_NET_INFLOW_PCT,
       mintSurgeCoverage: "mint-burn-hourly",
