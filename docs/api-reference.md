@@ -703,8 +703,8 @@ Returns the current Pharos Stability Index and optional component detail.
 
 ```json
 {
-  "currentVersion": "3.61",
-  "methodologyVersion": "3.61"
+  "currentVersion": "3.62",
+  "methodologyVersion": "3.62"
 }
 ```
 
@@ -731,8 +731,8 @@ Returns the currently published Safety Score V9 report-card set.
 
 ```json
 {
-  "version": "9.8",
-  "methodologyVersion": "9.8"
+  "version": "9.91",
+  "methodologyVersion": "9.91"
 }
 ```
 
@@ -762,10 +762,10 @@ Returns reviewed redemption paths and backstop evidence.
 {
   "coins": {},
   "methodology": {
-    "version": "4.42",
-    "versionLabel": "v4.42",
-    "currentVersion": "4.42",
-    "currentVersionLabel": "v4.42",
+    "version": "4.43",
+    "versionLabel": "v4.43",
+    "currentVersion": "4.43",
+    "currentVersionLabel": "v4.43",
     "changelogPath": "/methodology/redemption-backstop-changelog/",
     "asOf": 0,
     "isCurrent": true,
@@ -824,7 +824,7 @@ Returns current Yield Intelligence rankings and risk-adjusted fields.
 ```json
 {
   "currentVersion": "8.43",
-  "methodologyVersion": "9.8"
+  "methodologyVersion": "9.91"
 }
 ```
 
