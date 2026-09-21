@@ -120,14 +120,11 @@ function controlIsNonBinding(control: ExtensionControlOverlay): boolean {
 
 function controlNeedsNonApplicableStatus(control: ExtensionControlOverlay): boolean {
   return (
-    control.economicLossScope === "access-only" ||
-    (control.economicLossScope === "deployment" &&
-      control.materialSupplyShare !== null &&
-      control.materialSupplyShare < DEPLOYMENT_MATERIAL_SHARE_THRESHOLD &&
-      (control.capSemantics.kind === "unknown" ||
-        control.claimImpairment === "unknown" ||
-        control.authority === null ||
-        control.failureDomains.length === 0))
+    controlIsNonBinding(control) &&
+    (control.capSemantics.kind === "unknown" ||
+      control.claimImpairment === "unknown" ||
+      control.authority === null ||
+      control.failureDomains.length === 0)
   );
 }
 
