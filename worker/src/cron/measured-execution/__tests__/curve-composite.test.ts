@@ -562,7 +562,7 @@ function compositeProfile(
 }
 
 describe("reviewed Curve rate-bearing and metapool targets", () => {
-  it("admits exactly the ten owner-ratified metapools as active underlying routes", () => {
+  it("collects exactly the ten owner-ratified metapools as shadow display-only routes", () => {
     expect(CURVE_R3_METAPOOL_POLICIES).toHaveLength(10);
     expect(new Set(CURVE_R3_METAPOOL_POLICIES.map((policy) => policy.stablecoinId))).toEqual(
       new Set([
@@ -585,8 +585,8 @@ describe("reviewed Curve rate-bearing and metapool targets", () => {
       expect(policy).toMatchObject({
         adapterProfileId: CURVE_METAPOOL_ADAPTER_PROFILE_ID,
         quoteFunction: "get_dy_underlying",
-        mode: "active",
-        scoreEligible: true,
+        mode: "shadow",
+        scoreEligible: false,
       });
       const decoded = decodeFunctionData({
         abi: POOL_ABI,
@@ -617,7 +617,7 @@ describe("reviewed Curve rate-bearing and metapool targets", () => {
     }
   });
 
-  it("fails every active metapool target closed on registry, base, order, or decimals drift", () => {
+  it("fails every reviewed metapool target closed on registry, base, order, or decimals drift", () => {
     for (const policy of CURVE_R3_METAPOOL_POLICIES) {
       const valid = {
         poolAddress: policy.poolAddress,

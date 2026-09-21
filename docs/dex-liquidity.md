@@ -4,7 +4,8 @@
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-liquidity-score -->`v6.5`<!-- GENERATED-END: methodology-version-liquidity-score -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-liquidity-score -->`v6.6`<!-- GENERATED-END: methodology-version-liquidity-score -->
+- **v6.6 (2026-09-21):** The DEX-liquidity card's "Concentration" verdict and the exit-route crowding bands now share one recorded threshold table — High at HHI >= 0.35, Medium at HHI >= 0.18, Low below — and v6.6 records the re-basing the 2026-09-16 card/exit-route consolidation shipped without a methodology entry (the pre-consolidation card table put High at >= 0.5 and Medium at >= 0.25, so `[0.35, 0.5)` moved Medium -> High and `[0.18, 0.25)` moved Low -> Medium). A non-finite HHI now resolves to the broadest band instead of throwing at render time; the HHI computation itself is unchanged.
 - **v6.5 (2026-09-18):** Staged pool memory moves from a single row per pool per coin carrying one source to `dex_pool_registry` keyed by (stablecoin, pool, source); every lane records its own observation and the merge resolves one view per pool — value from the highest-trust observation refreshed within 24 hours (else the freshest), family from the value's source, price from the highest-trust priced observation refreshed within 24 hours, and token-pair identity from any observation within the 14-day horizon.
 - **v6.4 (2026-09-10):** Staged pool memory extended from a 24-hour horizon (rows deleted after 30 hours) to 14 days — confidence 1.0 through the first 24 hours, then linear to 0 at 336 hours, rows deleted after 15 days — with staged price observations still pinned to rows refreshed within 24 hours.
 - **Runtime/version source:** `shared/lib/methodology-versions/liquidity-score.ts`
@@ -167,6 +168,8 @@ See the [Discovery Cron](#discovery-cron) section below for the full discovery p
 | Velodrome Slipstream 30bp+ | 0.4x       | protocol contains `velodrome-slipstream` + fee tier > 5 bp  |
 | Generic AMM                | 0.3x       | fallback                                                    |
 | Orderbook                  | 0.6x       | CoinGecko tickers fallback (centralized exchange, no AMM)   |
+
+Direct concentrated-liquidity fetchers (PancakeSwap V3, Aerodrome/Velodrome Slipstream) derive their `-1bp`/`-5bp`/`-25bp`/`-30bp`/`-100bp` bucket from the fee the source actually decoded. When the upstream fee is absent or out of range — a missing or malformed subgraph `feeTier`, a Sugar `pool_fee` outside `[1, 10000]` bps — the row keeps `feeRate: null` and publishes the neutral `<protocol>-unknown-fee` bucket (`CL_UNKNOWN_FEE_BUCKET` in `worker/src/cron/dex-liquidity/direct-source-helpers.ts`) instead of a fabricated tier, so the bucket never contradicts the row's own null fee. That bucket carries no tier multiplier and falls through to the generic 0.3x weight; pool-shape family and measured-execution targeting are unchanged.
 
 ### Pool Quality Adjustments
 
@@ -488,7 +491,7 @@ discovery. A semantic hash, unproven or mismatched identity, order, decimal, or
 quote failure cannot fall back through a retained measured profile; only an
 operational transport failure may use a still-fresh last-known-good profile.
 
-Reviewed legacy Curve metapools use the active
+Reviewed Curve metapools use the shadow
 `curve-stableswap-ng-metapool-underlying-v1` profile only for explicitly pinned
 physical deployments. The LUSD/3Crv route pins Ethereum pool
 `0xed279fdd11ca84beef15af5d39bb4d4bee23f0ca`, legacy factory
@@ -496,8 +499,13 @@ physical deployments. The LUSD/3Crv route pins Ethereum pool
 relationship, direct and underlying token order, decimals, and runtime code
 hashes before quoting LUSD to USDC through `get_dy_underlying`. The adapter
 measures executable capacity at the common stress requests; it does not infer
-capacity from the pool's reported TVL. Identity, base-pool, price, freshness,
-or quote failure retains the capability gate rather than falling back to a
+capacity from the pool's reported TVL. The ten reviewed metapool routes (alUSD,
+DOLA-FRAXBP, eUSD, GUSD, LUSD, MAI, MUSD, msUSD, OUSD, TUSD) publish
+display-only measured depth behind the `activation-pending` capability gate:
+the shared execution-capability registry keeps the profile `shadow`, and the
+worker policies declare the same lifecycle — an admission contract test fails
+while the two disagree. Identity, base-pool, price, freshness, or quote
+failure retains the capability gate rather than falling back to a
 reserve simulation. Curve may expose that one physical address through both
 `main` and `factory` registry views. v6.3 collapses those same-address aliases
 before fingerprint ambiguity is evaluated and keeps the address-key winner;
@@ -693,6 +701,8 @@ The liquidity overview's `Protocol TVL Breakdown` legend is capped at 10 entries
 - **TVL Trends**: 24h and 7d percentage changes computed from daily history snapshots, but only when a baseline exists within a tolerance window (`12h` for 24h, `36h` for 7d) and that snapshot has `coverage_confidence >= 0.5`. Otherwise the API returns `null`.
 - **Depth Stability / Volume Consistency inputs**: durability history uses only snapshots with `coverage_confidence >= 0.75`; fewer than 7 confident rows fall back to neutral durability defaults.
 - **Daily Snapshots**: One snapshot per active stablecoin per day in `dex_liquidity_history` (migration 0010, confidence fields added in 0061). A run reuses today's snapshot only when its active-ID set is exact, has no duplicate identities, and its scored-ID set covers the incoming active scored IDs. If coverage expands or the active universe changes, the writer preserves richer same-day scored rows, overlays new observations, and replaces the UTC date through one bounded atomic D1 batch (`DELETE` plus multi-row inserts), so a failed replacement leaves the prior date state intact. Successful DEX liquidity persistence also prunes history to the public 365-day window.
+
+The published "Concentration" verdict on the DEX-liquidity card and the exit-route crowding bands share one recorded threshold table (methodology v6.6, effective 2026-09-21): HHI >= 0.35 renders High ("Crowded exits"), 0.18 <= HHI < 0.35 renders Medium ("Visible route concentration"), and HHI < 0.18 renders Low ("Broad route diversity"). A non-finite HHI renders the broadest band rather than throwing. The canonical table lives in `src/components/dex-liquidity-card-model.ts`; consumers import it, never re-type it. v6.6 records the re-basing the 2026-09-16 card/exit-route consolidation shipped (the pre-consolidation card table put High at >= 0.5 and Medium at >= 0.25).
 
 ---
 

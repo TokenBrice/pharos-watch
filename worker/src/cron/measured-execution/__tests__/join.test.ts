@@ -247,7 +247,7 @@ describe("measured execution join activation", () => {
     expect(diagnostics).toMatchObject({ targetCount: 1, measuredCount: 1, gatedCount: 0 });
   });
 
-  it("makes all ten reviewed metapool quotes score eligible without an activation gate", () => {
+  it("keeps all ten reviewed metapool quotes display-only behind the activation gate", () => {
     for (const policy of CURVE_R3_METAPOOL_POLICIES) {
       const { measuredTarget, profile } = curveCompositeRoute(policy);
       const pool: PoolEntry = {
@@ -288,9 +288,14 @@ describe("measured execution join activation", () => {
         targetId: measuredTarget.targetId,
         adapterProfileId: policy.adapterProfileId,
       });
-      expect(pool.extra?.executionCapabilityGate).toBeUndefined();
-      expect(pool.extra?.measuredExecutionDiagnostic?.detail).not.toBe("activation-pending");
-      expect(diagnostics).toMatchObject({ targetCount: 1, measuredCount: 1, gatedCount: 0 });
+      expect(pool.extra?.executionCapabilityGate).toEqual({
+        family: "measured-execution",
+        reason: "activation-pending",
+      });
+      expect(pool.extra?.measuredExecutionDiagnostic?.detail).toContain(
+        "shadow-score-ineligible",
+      );
+      expect(diagnostics).toMatchObject({ targetCount: 1, measuredCount: 1, gatedCount: 1 });
     }
   });
 

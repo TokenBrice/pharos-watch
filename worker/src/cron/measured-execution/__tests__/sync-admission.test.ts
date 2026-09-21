@@ -23,11 +23,31 @@ import {
   UNISWAP_V4_ADAPTER_PROFILE_ID,
   UNISWAP_V4_HOOK_FREE_ADDRESS,
   computeUniswapV4PoolId,
+  getUniswapV4Deployment,
 } from "../uniswap-v4";
 import {
   CURVE_DOLA_SUSDE_RATE_BEARING_POLICY,
   CURVE_NXUSD_METAPOOL_POLICY,
+  CURVE_R3_METAPOOL_POLICIES,
+  CURVE_USD1_METAPOOL_POLICY,
 } from "../curve-composite";
+import {
+  CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID,
+  CURVE_CRYPTOSWAP_SHADOW_COHORT,
+} from "../curve-cryptoswap";
+import {
+  CURVE_3POOL_STABLESWAP_POLICY,
+  CURVE_STABLESWAP_ADAPTER_PROFILE_ID,
+} from "../curve-stableswap";
+import {
+  CURVE_DUSD_USDC_STABLESWAP_NG_POLICY,
+  CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID,
+  CURVE_USDG_USDC_STABLESWAP_NG_POLICY,
+} from "../curve-stableswap-ng";
+import {
+  CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS,
+  UNISWAP_V4_SHADOW_DEPLOYMENTS,
+} from "@shared/lib/measured-execution-deployment-policies";
 
 function target(
   stablecoinId: string,
@@ -784,5 +804,73 @@ describe("measured execution runtime budget completion", () => {
         stopped: true,
       }),
     ).toBe(true);
+  });
+});
+
+describe("measured profile score-eligibility contract", () => {
+  it("scores a measured profile only when the shared capability registry and the worker policy agree", () => {
+    const workerDeclaredProfiles: readonly {
+      adapterProfileId: string;
+      chain: string;
+      poolId: string;
+      scoreEligible: boolean;
+    }[] = [
+      ...[
+        CURVE_DOLA_SUSDE_RATE_BEARING_POLICY,
+        CURVE_USD1_METAPOOL_POLICY,
+        CURVE_NXUSD_METAPOOL_POLICY,
+        ...CURVE_R3_METAPOOL_POLICIES,
+      ].map((policy) => ({
+        adapterProfileId: policy.adapterProfileId,
+        chain: policy.chain,
+        poolId: `${policy.chain}:${policy.poolAddress}`,
+        scoreEligible: policy.scoreEligible,
+      })),
+      ...CURVE_CRYPTOSWAP_SHADOW_COHORT.map((policy) => ({
+        adapterProfileId: CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID,
+        chain: policy.chain,
+        poolId: `${policy.chain}:${policy.poolAddress}`,
+        scoreEligible: policy.scoreEligible,
+      })),
+      {
+        adapterProfileId: CURVE_STABLESWAP_ADAPTER_PROFILE_ID,
+        chain: CURVE_3POOL_STABLESWAP_POLICY.chain,
+        poolId: `${CURVE_3POOL_STABLESWAP_POLICY.chain}:${CURVE_3POOL_STABLESWAP_POLICY.poolAddress}`,
+        scoreEligible: CURVE_3POOL_STABLESWAP_POLICY.scoreEligible,
+      },
+      ...[
+        CURVE_USDG_USDC_STABLESWAP_NG_POLICY,
+        CURVE_DUSD_USDC_STABLESWAP_NG_POLICY,
+      ].map((policy) => ({
+        adapterProfileId: CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID,
+        chain: policy.chain,
+        poolId: `${policy.chain}:${policy.poolAddress}`,
+        scoreEligible: policy.scoreEligible,
+      })),
+      ...CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS.map((deployment) => ({
+        adapterProfileId: deployment.adapterProfileId,
+        chain: deployment.chain,
+        poolId: `${deployment.chain}:${deployment.poolAddress}`,
+        scoreEligible: false,
+      })),
+      ...["ethereum", ...UNISWAP_V4_SHADOW_DEPLOYMENTS.map((deployment) => deployment.chain)].map(
+        (chain) => {
+          const deployment = getUniswapV4Deployment(chain);
+          if (!deployment) throw new Error(`missing Uniswap V4 deployment for ${chain}`);
+          return {
+            adapterProfileId: UNISWAP_V4_ADAPTER_PROFILE_ID,
+            chain,
+            poolId: `${chain}:0x${"ab".repeat(32)}`,
+            scoreEligible: deployment.scoreEligible,
+          };
+        },
+      ),
+    ];
+
+    for (const { scoreEligible, ...target } of workerDeclaredProfiles) {
+      expect(
+        isDexMeasuredExecutionTargetScoreEligible(target as DexMeasuredExecutionTarget),
+      ).toBe(scoreEligible);
+    }
   });
 });
