@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { z } from "zod";
+import mechanismReviewOverlays from "@shared/data/safety-score-v9/mechanism-review-overlays-v1.json";
 import { buildV9EvidenceGapQueue } from "@shared/lib/safety-score-v9/evidence-gap-queue";
 import { readCompiledV9FactSetForEvaluation } from "@shared/lib/safety-score-v9/facts";
 import { loadV9MethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
@@ -311,6 +312,18 @@ function countBy<T>(values: readonly T[], keyOf: (value: T) => string): Array<{ 
     .sort((left, right) => right.count - left.count || left.key.localeCompare(right.key));
 }
 
+export function mechanismOverlayCaptureDayWarnings(captureClockSec: number): string[] {
+  const captureDay = new Date(captureClockSec * 1_000).toISOString().slice(0, 10);
+  const assetIds = mechanismReviewOverlays.overlays
+    .filter((overlay) => overlay.reviewedAt === captureDay)
+    .map((overlay) => overlay.assetId)
+    .sort((left, right) => left.localeCompare(right));
+  if (assetIds.length === 0) return [];
+  return [
+    `mechanism review dated ${captureDay} is inadmissible until the next UTC day at this capture clock; assets: ${assetIds.join(", ")}`,
+  ];
+}
+
 function cardScoreProjection(card: SafetyScoreV9Card) {
   return {
     grade: card.grade,
@@ -434,9 +447,9 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
       };
     });
     const projections = scoreProjectionReasons(card);
-    const factStreams = new Set(factItems.map((item) => WORK_TYPES[item.workType].stream));
+    const compiledWorkTypes = new Set(factItems.map((item) => item.workType));
     const supplementalItems = projections
-      .filter((reason) => !factStreams.has(WORK_TYPES[reason.workType].stream))
+      .filter((reason) => !compiledWorkTypes.has(reason.workType))
       .map((reason) => {
         const workType = reason.workType;
         const descriptor = WORK_TYPES[workType];
@@ -567,6 +580,7 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
   const taskIds = registryItems.map((item) => item.taskId);
   if (new Set(taskIds).size !== taskIds.length) throw new Error("Generated missing-data task IDs are not unique");
   const claimGroupCount = new Set(allItems.map((item) => item.claimGroupId)).size;
+  const warnings = mechanismOverlayCaptureDayWarnings(candidate.asOfSec);
   return {
     schemaVersion: 1,
     title: "Safety Score v9 missing-data registry",
@@ -594,7 +608,7 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
       knownRiskWarning:
         "Known centralization, weak controls, poor exit capacity, reserve risk, dependencies, short history, and peg behavior continue to reduce the score after missing data is filled.",
       taskCompleteness:
-        "Every compiled fact gap is represented exactly once. Every score-visible missing or bounded reason is listed under scoreProjectionGaps; a supplemental task is added when no compiled fact task covers its workstream.",
+        "Every compiled fact gap is represented exactly once. Every score-visible missing or bounded reason is listed under scoreProjectionGaps; a supplemental task is added when no compiled fact task covers its work type.",
       policyBindingWarning:
         "Policy-binding issues are queue-contract defects, not substitutes for evidence work. Each affected item preserves the defect and supplies a separate evidence action.",
       responsibilityWarning:
@@ -635,6 +649,7 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
       resolutionModeCounts: countBy(allItems, (item) => item.resolutionMode),
       ownerDomainCounts: countBy(registryItems, (entry) => entry.ownerDomain),
       taskSourceCounts: countBy(allItems, (item) => item.taskSource),
+      warnings,
     },
     workTypeDefinitions: WORK_TYPE_DEFINITIONS,
     stablecoins,
@@ -645,11 +660,13 @@ interface RegistryIo {
   readJson(path: string): unknown;
   writeText(path: string, contents: string): void;
   stdout: { write(text: string): unknown };
+  stderr: { write(text: string): unknown };
 }
 
 const DEFAULT_IO: RegistryIo = {
   readJson: (path) => JSON.parse(readFileSync(path, "utf8")) as unknown,
   writeText: writeJsonOutput,
+  stderr: process.stderr,
   stdout: process.stdout,
 };
 
@@ -671,6 +688,7 @@ export function runV9MissingDataRegistryCli(argv: readonly string[], io: Registr
     policy: io.readJson(policyPath),
     catalogEntries: loadPerCoinStablecoinEntries(),
   });
+  for (const warning of registry.summary.warnings) io.stderr.write(`Warning: ${warning}\n`);
   io.writeText(outputPath, `${JSON.stringify(registry, null, 2)}\n`);
   io.stdout.write(
     `Wrote ${registry.summary.openItemCount} missing-data items for ${registry.summary.stablecoinCount} stablecoins to ${outputPath}\n`,
