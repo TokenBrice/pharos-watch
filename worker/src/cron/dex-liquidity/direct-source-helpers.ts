@@ -8,7 +8,7 @@ import type { DexApiPool } from "../../lib/dex-api-common";
  * `feeRate: null` published beside it, and it falls through to the generic
  * quality multiplier instead of a fabricated tier.
  */
-export const CL_UNKNOWN_FEE_BUCKET = "unknown-fee";
+const CL_UNKNOWN_FEE_BUCKET = "unknown-fee";
 
 export function normalizeFeeRateFromBps(feeBps: number | null | undefined): number | null {
   if (feeBps == null || !Number.isFinite(feeBps) || feeBps <= 0) return null;

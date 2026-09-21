@@ -10,7 +10,7 @@ export { REDEMPTION_BACKSTOP_CONFIGS };
  * The config registry is the authority for this namespace; consumers must not
  * infer a tracked stablecoin id from an `asset:<symbol>` key.
  */
-export const REVIEWED_REDEMPTION_COLLATERAL_ASSET_KEYS: ReadonlySet<string> = new Set(
+const REVIEWED_REDEMPTION_COLLATERAL_ASSET_KEYS: ReadonlySet<string> = new Set(
   Object.values(REDEMPTION_BACKSTOP_CONFIGS).flatMap((config) =>
     (config.outputAssetType === "bluechip-collateral" || config.outputAssetType === "mixed-collateral"
       ? config.outputAssets ?? []
