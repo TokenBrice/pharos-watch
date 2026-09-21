@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mockD1 } from "@shared/test-utils/mock-d1";
+import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 const ZERO_TOPIC = "0x0000000000000000000000000000000000000000000000000000000000000000";
@@ -952,6 +952,25 @@ describe("syncMintBurn", () => {
         && entry.binds[1] === "mint-burn-flows:v3:\uffff",
     );
     expect(invalidation).toBeDefined();
+  });
+
+  it("keeps the published aggregate gauge cache row when the extended lane invalidates", async () => {
+    const db = makeDb();
+
+    const result = await syncMintBurn(db, "alchemy-key", { lane: "extended", jobName: "sync-mint-burn-extended" });
+
+    const history = (db as MockD1Database).getHistory();
+    const cacheDeletes = history.filter(({ sql }) => sql.includes("DELETE FROM cache"));
+    expect(
+      cacheDeletes.some(
+        (entry) => entry.binds[0] === "mint-burn-flows:v3:coin:" && entry.binds[1] === "mint-burn-flows:v3:coin:\uffff",
+      ),
+    ).toBe(true);
+    expect(
+      cacheDeletes.some(
+        (entry) => entry.binds[0] === "mint-burn-flows:v3:" || entry.binds[0] === "mint-burn-flows:v3:aggregate:",
+      ),
+    ).toBe(false);
   });
 
   it("emits nullPriceBacklog and roundtripsBacklogSaturated in metadata", async () => {

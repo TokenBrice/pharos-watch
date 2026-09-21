@@ -366,11 +366,11 @@ export async function collectMintBurnFlows(
     // from `mint_burn_hourly` over a different universe and mcap basis.
     const published = await readPublishedMintBurnGauge(ctx.db, ctx.nowSec);
     if (published.kind !== "ok") {
-      // A never-published gauge is the old "no flow rows yet" case and stays
-      // silent; a malformed or expired publication means the producer broke.
-      if (published.reason !== "missing") {
-        degradedReasons.push(`mint-burn-gauge-${published.reason}`);
-      }
+      // Every non-ok gauge outcome carries a machine-readable reason. An
+      // absent publication is attributable too: the critical lane publishes
+      // every 30 minutes, so a missing row means the producer stopped or the
+      // cache was dropped, not that the section is silently optional.
+      degradedReasons.push(`mint-burn-gauge-${published.reason}`);
       return collectorResult(undefined, degradedReasons);
     }
     const { gauge } = published;

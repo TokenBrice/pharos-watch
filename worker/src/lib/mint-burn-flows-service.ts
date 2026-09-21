@@ -647,19 +647,29 @@ export async function readCachedFlow(db: D1Database, key: string): Promise<{ val
 }
 
 /**
- * Purge all cached mint-burn-flows API responses. Called from the cron at end
+ * Purge cached mint-burn-flows API responses. Called from the cron at end
  * of a successful run so the next API call recomputes against fresh events.
  *
  * Range predicate (not LIKE) because the `cache` table's PRIMARY KEY on `key`
  * supports guaranteed index-range scans; LIKE 'prefix%' falls back to a full
  * scan on SQLite in some configurations.
  */
-export async function invalidateMintBurnFlowCaches(db: D1Database): Promise<void> {
+export async function invalidateMintBurnFlowCaches(
+  db: D1Database,
+  options: { includeAggregate?: boolean } = {},
+): Promise<void> {
   // Prefix matches every key FLOW_CACHE_PREFIX writes
   // (`lib/mint-burn-flow-cache-keys.ts`); `\uffff`
   // is the largest UTF-16 code unit and safely bounds any future suffix.
+  // `includeAggregate: false` narrows the purge to per-coin keys: the
+  // aggregate rows carry the published Bank Run Gauge, which only the
+  // critical lane's post-run sidecar republishes, so a lane without that
+  // sidecar must leave the publication in place.
+  const scope = options.includeAggregate === false
+    ? `${FLOW_CACHE_PREFIX}:coin:`
+    : `${FLOW_CACHE_PREFIX}:`;
   await db
     .prepare("DELETE FROM cache WHERE key >= ? AND key < ?")
-    .bind(`${FLOW_CACHE_PREFIX}:`, `${FLOW_CACHE_PREFIX}:\uffff`)
+    .bind(scope, `${scope}\uffff`)
     .run();
 }

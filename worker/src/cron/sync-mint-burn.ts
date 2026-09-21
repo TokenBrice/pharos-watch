@@ -336,7 +336,11 @@ export async function syncMintBurn(
 
   if (status === "ok" || status === "degraded") {
     try {
-      await invalidateMintBurnFlowCaches(db);
+      // Only the critical lane's scheduled sidecar republishes the aggregate
+      // (Bank Run Gauge) cache rows after this purge; the extended lane has
+      // no such sidecar and must leave the publication in place so the gauge
+      // stays available between critical-lane runs.
+      await invalidateMintBurnFlowCaches(db, { includeAggregate: lane !== "extended" });
     } catch (e) {
       logWorkerEventArgs("handler", "warn", "[sync-mint-burn] cache invalidation failed:", e);
     }
