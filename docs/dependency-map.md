@@ -63,9 +63,9 @@ V9 dependency edges are serial or basket, and each carries a four-value `materia
 | `basket` | Collateral | solid slate | Weighted share of backing; risk inherited in proportion |
 | `serial` | Wrapper | dotted violet | Full pass-through claim; inherits the upstream's risk in full |
 
-Whether the upstream score resolved is **deliberately discarded here**. It is a data-quality fact, and the detail modules that exist to report it already do. Encoding it in the legend split two relationships into four categories and made the map harder to read for no structural gain — the map's job is showing the relationships.
+Whether the upstream score resolved is **deliberately kept out of the legend**. It is a data-quality fact, and the detail modules that exist to report it already do. Encoding it in the legend split two relationships into four categories and made the map harder to read for no structural gain — the map's job is showing the relationships. The flag itself is not lost: `buildGraphData` stamps every link with `scoreKnown` (from `v9DependencyEdgeScoreKnown`), so downstream annotation can mark an unrateable upstream without splitting the drawn vocabulary.
 
-For reference, that discarded distinction comes from one condition in `resolveV9DependencyInputs` — `cycleBlocked || unavailableDimensions.length > 0` — so an unscored edge means either a circular dependency or an upstream that is itself unrated. Both `blocked` (serial) and `boundedUnknown` (basket) are that same flag.
+For reference, that distinction comes from one condition in `resolveV9DependencyInputs` — `cycleBlocked || unavailableDimensions.length > 0` — so an unscored edge means either a circular dependency or an upstream that is itself unrated. Both `blocked` (serial) and `boundedUnknown` (basket) are that same flag.
 
 Only `collateral` sets `showWeight`, so only a weighted backing share renders a percentage. A wrapper is a full claim by definition, so a "100%" on one would be noise.
 
@@ -74,10 +74,12 @@ Only `collateral` sets `showWeight`, so only a weighted backing share renders a 
 `contagionEdgeWeight()` derives the dimensionless exposure magnitude used for stroke weight, link force, and hub scoring, matching `buildDependencyHubsModel`:
 
 - a serial dependency (blocked or not) is full pass-through, weight `1`
-- a weighted basket dependency carries its published weight
-- a bounded-unknown basket dependency contributes `0`
+- a basket dependency carries its published weight — including when the upstream score is unrateable (`basket-bounded-unknown`): losing the upstream score does not erase a known exposure
+- a basket edge whose weight itself is absent (`weight: null`) contributes no magnitude and exerts no link force
 
-Because a bounded-unknown edge models to `0`, `contagion-graph-svg.tsx` floors stroke geometry at `MIN_EDGE_DISPLAY_WEIGHT` so the relationship still reads as a drawn edge, and the tooltip omits the percentage rather than showing a misleading `0%`.
+Two different unknowns must not be conflated here. An unknown **weight** means the exposure share was never established, so the edge contributes no magnitude anywhere. An unrateable upstream **score** (`serial-blocked`, `basket-bounded-unknown` in `materiality`) means the upstream could not be scored; the exposure weight is whatever was published, and the simulation keeps it. `v9DependencyEdgeWeight()` returns `null` only for the first case and `v9DependencyEdgeScoreKnown()` reads `materiality` — never the weight — for the second.
+
+Because an edge with no weight models to no magnitude, `contagion-graph-svg.tsx` floors stroke geometry at `MIN_EDGE_DISPLAY_WEIGHT` so the relationship still reads as a drawn edge, and the tooltip omits the percentage rather than showing a misleading `0%`.
 
 ## Graph Construction
 

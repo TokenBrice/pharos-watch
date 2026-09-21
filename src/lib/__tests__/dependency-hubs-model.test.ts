@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 import type { DependencyGraphEdge } from "@shared/lib/dependency-graph";
 import type { ReportCardsV9Response } from "@shared/types/report-cards-v9";
 import type { DependencyHubCard } from "@/lib/dependency-hubs-model";
-import { buildDependencyHubsModel } from "@/lib/dependency-hubs-model";
+import {
+  buildDependencyHubsModel,
+  v9DependencyEdgeScoreKnown,
+  v9DependencyEdgeWeight,
+} from "@/lib/dependency-hubs-model";
 
 const CARDS: readonly DependencyHubCard[] = [
   { id: "usdc-circle", name: "USD Coin", symbol: "USDC", isDefunct: false },
@@ -89,7 +93,7 @@ describe("buildDependencyHubsModel", () => {
           to: "usdp-paxos",
           kind: "basket",
           materiality: "basket-bounded-unknown",
-          weight: null,
+          weight: 0.4,
           upstreamScore: null,
         },
       ] satisfies readonly V9Edge[],
@@ -98,14 +102,49 @@ describe("buildDependencyHubsModel", () => {
 
     const hub = model.hubs[0];
     expect(hub?.dependentCount).toBe(3);
-    // serial edges count as a full dependency, weighted baskets use their
-    // weight, and a bounded-unknown basket without a weight contributes zero.
-    expect(hub?.summedDirectDependencyWeight).toBeCloseTo(1.4);
-    expect(model.summedDirectDependencyWeight).toBeCloseTo(1.4);
+    // Serial edges count as a full dependency, weighted baskets use their
+    // weight, and a bounded-unknown basket keeps its known weight — losing
+    // the upstream score does not erase known exposure.
+    expect(hub?.summedDirectDependencyWeight).toBeCloseTo(1.8);
+    expect(model.summedDirectDependencyWeight).toBeCloseTo(1.8);
     expect(hub?.edgeTypeBreakdown).toEqual([
-      { type: "basket-bounded-unknown", edgeCount: 1, summedDirectDependencyWeight: 0 },
+      { type: "basket-bounded-unknown", edgeCount: 1, summedDirectDependencyWeight: 0.4 },
       { type: "basket-weighted", edgeCount: 1, summedDirectDependencyWeight: 0.4 },
       { type: "serial", edgeCount: 1, summedDirectDependencyWeight: 1 },
+    ]);
+  });
+
+  it("counts an absent-weight edge while excluding it from the summed magnitudes", () => {
+    const model = buildDependencyHubsModel({
+      cards: V9_CARDS,
+      edges: [
+        {
+          from: "usdc-circle",
+          to: "dai-maker",
+          kind: "basket",
+          materiality: "basket-weighted",
+          weight: 0.6,
+          upstreamScore: 70,
+        },
+        {
+          from: "usdc-circle",
+          to: "frax-france",
+          kind: "basket",
+          materiality: "basket-bounded-unknown",
+          weight: null,
+          upstreamScore: null,
+        },
+      ] satisfies readonly V9Edge[],
+      mcapMap: new Map([["usdc-circle", 100]]),
+    });
+
+    const hub = model.hubs[0];
+    expect(hub?.dependentCount).toBe(2);
+    expect(hub?.summedDirectDependencyWeight).toBeCloseTo(0.6);
+    expect(model.summedDirectDependencyWeight).toBeCloseTo(0.6);
+    expect(hub?.edgeTypeBreakdown).toEqual([
+      { type: "basket-bounded-unknown", edgeCount: 1, summedDirectDependencyWeight: 0 },
+      { type: "basket-weighted", edgeCount: 1, summedDirectDependencyWeight: 0.6 },
     ]);
   });
 
@@ -202,5 +241,37 @@ describe("buildDependencyHubsModel", () => {
     });
 
     expect(model.hubs.map((hub) => hub.id)).toEqual(["hub-z", "hub-y", "hub-x"]);
+  });
+});
+
+function v9Edge(
+  kind: V9Edge["kind"],
+  materiality: V9Edge["materiality"],
+  weight: number | null,
+): V9Edge {
+  return { from: "up", to: "down", kind, materiality, weight, upstreamScore: null };
+}
+
+describe("v9DependencyEdgeWeight", () => {
+  it("treats serial claims as full pass-through and carries a basket's published weight", () => {
+    expect(v9DependencyEdgeWeight(v9Edge("serial", "serial", null))).toBe(1);
+    expect(v9DependencyEdgeWeight(v9Edge("serial", "serial-blocked", null))).toBe(1);
+    expect(v9DependencyEdgeWeight(v9Edge("basket", "basket-weighted", 0.4))).toBe(0.4);
+    expect(v9DependencyEdgeWeight(v9Edge("basket", "basket-bounded-unknown", 0.4))).toBe(0.4);
+  });
+
+  it("returns null only when the basket weight itself is absent", () => {
+    expect(v9DependencyEdgeWeight(v9Edge("basket", "basket-bounded-unknown", null))).toBe(null);
+    expect(v9DependencyEdgeWeight(v9Edge("basket", "basket-weighted", 0))).toBe(0);
+  });
+});
+
+describe("v9DependencyEdgeScoreKnown", () => {
+  it("reads materiality, never the weight", () => {
+    expect(v9DependencyEdgeScoreKnown(v9Edge("basket", "basket-bounded-unknown", 0.4))).toBe(false);
+    expect(v9DependencyEdgeScoreKnown(v9Edge("serial", "serial-blocked", null))).toBe(false);
+    expect(v9DependencyEdgeScoreKnown(v9Edge("basket", "basket-weighted", 0.4))).toBe(true);
+    expect(v9DependencyEdgeScoreKnown(v9Edge("basket", "basket-weighted", null))).toBe(true);
+    expect(v9DependencyEdgeScoreKnown(v9Edge("serial", "serial", null))).toBe(true);
   });
 });

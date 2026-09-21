@@ -30,12 +30,19 @@ function mockCard(id: string, symbol: string, grade: V9Grade = "B", isDefunct = 
   return { id, symbol, grade, isDefunct };
 }
 
-function basketEdge(from: string, to: string, weight: number | null): ReportCardsV9DependencyEdge {
+function basketEdge(
+  from: string,
+  to: string,
+  weight: number | null,
+  materiality: ReportCardsV9DependencyEdge["materiality"] = weight === null
+    ? "basket-bounded-unknown"
+    : "basket-weighted",
+): ReportCardsV9DependencyEdge {
   return {
     from,
     to,
     kind: "basket",
-    materiality: weight === null ? "basket-bounded-unknown" : "basket-weighted",
+    materiality,
     weight,
     upstreamScore: null,
   };
@@ -107,9 +114,13 @@ describe("contagionEdgeWeight", () => {
     expect(contagionEdgeWeight(serialEdge("a", "b", true))).toBe(1);
   });
 
-  it("carries the published basket weight and floors bounded-unknown baskets at zero", () => {
-    expect(contagionEdgeWeight(basketEdge("a", "b", 0.35))).toBe(0.35);
+  it("keeps a bounded-unknown basket's published weight instead of zeroing known exposure", () => {
+    expect(contagionEdgeWeight(basketEdge("a", "b", 0.35, "basket-bounded-unknown"))).toBe(0.35);
+  });
+
+  it("contributes no magnitude only when the basket weight itself is absent", () => {
     expect(contagionEdgeWeight(basketEdge("a", "b", null))).toBe(0);
+    expect(contagionEdgeWeight(basketEdge("a", "b", 0.35))).toBe(0.35);
   });
 });
 
@@ -216,6 +227,43 @@ describe("buildGraphData", () => {
     ]);
 
     expect(result.links.map((link) => link.type).sort()).toEqual(["collateral", "wrapper"]);
+  });
+
+  it("keeps an unrateable upstream's known exposure in the simulation and marks the link score-unknown", () => {
+    const cards = [mockCard("a", "A"), mockCard("b", "B"), mockCard("c", "C")];
+    const mcapMap = new Map<string, number>([["a", 3], ["b", 2], ["c", 1]]);
+
+    const result = buildGraphData(cards, mcapMap, [
+      basketEdge("a", "b", 0.4, "basket-bounded-unknown"),
+      basketEdge("a", "c", null),
+      serialEdge("b", "c"),
+    ]);
+
+    // An unrateable upstream keeps its known 0.4 magnitude (link force is
+    // weight * 0.4); an absent weight keeps magnitude 0, exerting no force.
+    expect(result.links).toEqual([
+      expect.objectContaining({
+        source: "b",
+        target: "a",
+        weight: 0.4,
+        scoreKnown: false,
+        type: "collateral",
+      }),
+      expect.objectContaining({
+        source: "c",
+        target: "a",
+        weight: 0,
+        scoreKnown: false,
+        type: "collateral",
+      }),
+      expect.objectContaining({
+        source: "c",
+        target: "b",
+        weight: 1,
+        scoreKnown: true,
+        type: "wrapper",
+      }),
+    ]);
   });
 
   it("does not include defunct stablecoins", () => {

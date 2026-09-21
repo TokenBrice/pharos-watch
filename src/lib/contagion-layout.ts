@@ -10,7 +10,7 @@ import {
 } from "d3-force";
 import { percentileLinear } from "@shared/lib/stats";
 import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
-import type { V9Grade } from "@shared/types/safety-score-v9";
+import { v9DependencyEdgeScoreKnown, v9DependencyEdgeWeight } from "@/lib/dependency-hubs-model";
 import { deterministicHash } from "@/lib/layout-utils";
 
 // ---------------------------------------------------------------------------
@@ -19,9 +19,9 @@ import { deterministicHash } from "@/lib/layout-utils";
 
 /**
  * The relationship an edge draws. V9 carries a four-value `materiality` that
- * also encodes whether the upstream score resolved, but that is a data-quality
- * fact the detail modules report — the map's job is showing the relationships,
- * so it collapses materiality onto the two structural kinds.
+ * also encodes whether the upstream score resolved; the drawn relationship
+ * collapses onto the two structural kinds while the score axis rides on each
+ * link as `scoreKnown` for downstream annotation.
  */
 export type ContagionEdgeRelationship = "collateral" | "wrapper";
 
@@ -43,6 +43,8 @@ export interface GraphNode extends SimulationNodeDatum {
 
 export interface GraphLink extends SimulationLinkDatum<GraphNode> {
   weight: number;
+  /** Whether the upstream score resolved; set by `buildGraphData`, optional on hand-built links. */
+  scoreKnown?: boolean;
   type: ContagionEdgeRelationship;
 }
 
@@ -50,6 +52,8 @@ export interface RawGraphLink {
   source: string;
   target: string;
   weight: number;
+  /** Whether the upstream score resolved; set by `buildGraphData`, optional on hand-built links. */
+  scoreKnown?: boolean;
   type: ContagionEdgeRelationship;
 }
 
@@ -217,19 +221,20 @@ function pushTargetsOutOfLane(
 
 /**
  * Dimensionless exposure magnitude for one V9 edge, matching
- * `buildDependencyHubsModel`: a serial dependency is full pass-through, a
- * basket dependency carries its published weight, and a bounded-unknown
- * basket weight contributes nothing to the modeled magnitude.
+ * `buildDependencyHubsModel`: a serial dependency is full pass-through and a
+ * basket dependency carries its published weight — including when the upstream
+ * score is unrateable, since losing the score does not erase a known exposure.
+ * Only an absent basket weight contributes no magnitude.
  */
 export function contagionEdgeWeight(edge: ReportCardsV9DependencyEdge): number {
-  return edge.kind === "serial" ? 1 : edge.weight ?? 0;
+  return v9DependencyEdgeWeight(edge) ?? 0;
 }
 
 /**
  * Collapses V9 `materiality` onto the drawn relationship. The disposition also
  * records whether the upstream score resolved (`serial-blocked`,
- * `basket-bounded-unknown`), which the map deliberately discards — see
- * `ContagionEdgeRelationship`.
+ * `basket-bounded-unknown`); the drawing keeps two strokes and the link
+ * carries the flag as `scoreKnown` — see `ContagionEdgeRelationship`.
  */
 function contagionEdgeRelationship(edge: ReportCardsV9DependencyEdge): ContagionEdgeRelationship {
   return edge.kind === "serial" ? "wrapper" : "collateral";
@@ -257,6 +262,7 @@ export function buildGraphData(
       source: edge.to,
       target: edge.from,
       weight: contagionEdgeWeight(edge),
+      scoreKnown: v9DependencyEdgeScoreKnown(edge),
       type: contagionEdgeRelationship(edge),
     });
   }
