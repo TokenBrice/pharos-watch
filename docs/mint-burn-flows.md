@@ -168,6 +168,7 @@ The operator view reads cached evidence only, displays each latest audited range
    - Classify bridge transfers after all parsed rows for the config chunk are assembled so bridge-related mints and burns can be tagged together while still sharing the same transaction-context budget.
    - Timestamp and bridge-classification phases receive the cron lane deadline; when the 9-minute self-budget is reached they stop adding remote work and surface ordinary partial-frontier diagnostics instead of relying on the outer 10-minute cron timeout.
    - If a bridge-enabled config cannot resolve required transaction and receipt context for a parsed transaction, rows from that transaction are withheld from persistence for that run while resolved rows in the same window can still publish. These shortfalls remain in `bridgeClassification` diagnostics and keep the sync cursor at the safe retry frontier instead of counting unresolved rows as economic flow.
+   - Malformed transaction, receipt, or explorer-log payloads are quarantined at the provider boundary. They contribute a named classification shortfall while valid peers in the same batch continue.
    - Detect atomic roundtrips after all event definitions for the config are parsed: group rows by `(tx_hash, stablecoin_id, chain_id)` and flip the whole group to `flow_type='atomic_roundtrip'` when both mint and burn directions appear in the same transaction and their totals match within `ROUNDTRIP_AMOUNT_TOLERANCE` (0.5%). Rows with an empty `tx_hash` are defensively skipped.
    - Filter out dust events (amount < `dustThreshold`).
    - Batch `INSERT OR IGNORE` into `mint_burn_events`, track parsed vs inserted counts from D1 `meta.changes`. Cron callers pass the wrapper `AbortSignal` into insert/classification batches so timeout or lease-loss cancellation stops before large D1 persistence chunks continue.
@@ -181,6 +182,7 @@ The operator view reads cached evidence only, displays each latest audited range
    - Recalc runs inside a `finally` block so it still fires after partial-run failures. If the recalc itself throws, the critical lane downgrades `status=ok` to `status=degraded` and surfaces `recalcFailed: true` plus `recalcError: <message>` in cron metadata (previously failures were only logged silently). The cron abort signal is also passed into this recalc path and into post-run null-price healing / roundtrip sweep recalcs.
 8. **Auto-heal recent NULL prices** — on non-error runs, query up to 500 events with `amount_usd IS NULL` in the last 48 hours, resolve the event-day price from `supply_history` first (`price_source=supply-history-heal`) and fall back to a replay-safe `price_cache` row (`price_source=price_cache_heal`), update `amount_usd/price_*`, and re-aggregate only newly affected hourly buckets.
    - Cron metadata now includes both `nullPricesHealed` and `nullPriceBacklog` (`recent`, `historical`) so operators can distinguish live healable gaps from older debt.
+   - If the backlog metadata read remains unavailable after D1 overload retries, the completed ingestion run continues with an explicit unavailable marker and warning; it never fabricates a zero backlog.
 9. **Emit active progress** — long runs call the shared cron `reportProgress(...)` hook so `/api/status` can surface the active stage, queue position, and budget heartbeat while the lease is still live.
 10. **Escalate degraded runs** — the critical lane emits `status=degraded|error` when sustained coverage/API thresholds are breached, with streak tracking in `mint_burn_run_state`. The extended lane keeps the same observability metadata but does not escalate long-tail backlog pressure to `error`.
 11. **Sweep cross-run roundtrips** — on non-error runs, query up to 200 `(tx_hash, stablecoin_id, chain_id)` groups within the last 7 days where both mint and burn directions exist but `flow_type = 'standard'`. Reclassify to `atomic_roundtrip` and re-aggregate affected hourly buckets. This catches roundtrips where the mint and burn were ingested in separate cron runs. The HAVING clause mirrors `ROUNDTRIP_AMOUNT_TOLERANCE` from the in-memory detector so partial same-tx groups (e.g. mint 100 / burn 50) are not mis-tagged as atomic roundtrips.
@@ -231,6 +233,7 @@ Key behavior changes forward-going:
 - **No more `bridge-signal-with-unknown-pool` review path.** Rows that touch a recognized bridge-signal topic/emitter but not a tracked pool address now tag as `bridge_transfer` instead of flowing to a review queue. Policy: if a transaction carries a bridge signal, treat every mint/burn in it as bridge noise.
 - **Fail-closed bridge-detection config validation.** `validateMintBurnBridgeDetection` runs against every `bridgeDetection` config at module load. Address fields must match `ADDRESS_RE`, topics must match `TOPIC_RE`, and selectors must match `SELECTOR_RE`. Any malformed bridge config now aborts module load instead of logging and continuing, so bridge filtering cannot silently disable itself for one coin. Healthy mint/burn runs publish `bridgeValidationErrors: 0` in cron metadata for status diagnostics.
 - **Bridge tx-context shortfall guard.** For bridge-enabled configs, both transaction and receipt context must resolve before parsed rows can count as standard economic flow. If context is unavailable under budget pressure or RPC failure, every parsed row from that transaction is withheld from persistence for that run and the config advances only to the safe retry frontier below the earliest deferred row, so those blocks are rescanned on a later slot. Run metadata surfaces `bridgeClassification.txContextShortfalls` and `bridgeClassification.deferredRows`; these diagnostics do not increment provider `apiErrors`.
+- **Provider-shape isolation.** Transaction and receipt bodies must pass the runtime shape boundary before classification, and Etherscan topics/data must pass strict word decoding. A malformed peer is dropped and counted without aborting classification of valid peers.
 
 ### Atomic Roundtrip Detection
 
@@ -389,6 +392,8 @@ The endpoint serves an aggregate market gauge or one tracked stablecoin's chain 
 
 Parameters, response fields, cache/freshness behavior, and errors are canonical in [API Reference: `GET /api/mint-burn-flows`](./api-reference.md#get-apimint-burn-flows).
 
+Aggregate mode constrains configured `(stablecoin_id, chain_id)` pairs in SQL and selects the deterministic largest 24-hour event per coin there; the Worker does not materialize the full event day to compute that field.
+
 ### GET /api/mint-burn-events
 
 The event feed exposes the recent classified, valuation-aware ledger for one stablecoin. Safely settled, aggregated, and Tape-projected rows remain available for at least 8 days; the separate hourly aggregate keeps 90 days of public flow history. The detail-page history deliberately uses the counted view so bridge transfers, review-required burns, and atomic roundtrips do not appear as ordinary economic flow.
@@ -438,6 +443,7 @@ Auth/idempotency, scope parameters, batch progression, counters, and errors are 
 | `nullPriceBacklogRecent` | number | Count of `amount_usd IS NULL` rows inside the 48h auto-heal window still awaiting price resolution |
 | `nullPriceBacklogHistorical` | number | Count of `amount_usd IS NULL` rows older than the auto-heal window (debt that `backfill-mint-burn-prices` must address) |
 | `roundtripsBacklogSaturated` | boolean | `true` when the cross-run roundtrip sweep hit its per-run limit and more candidate groups likely remain in the 7-day lookback window |
+| `nullPriceBacklogUnavailable` | boolean | `true` when the retried backlog metadata read failed; backlog counts are unavailable rather than zero |
 | `budgetUsed` | number | Alchemy subrequests consumed by this run (emitted via `withBudgetMetadata`) |
 | `budgetLimit` | number | Global subrequest budget for the run (default 200) |
 
@@ -453,7 +459,7 @@ Auth/idempotency, scope parameters, batch progression, counters, and errors are 
 Four sections, followed by a Timeline link:
 1. **Hero Overview** — net-direction hero with the baseline-relative Bank Run Gauge, a literal 24h Minting Pressure gauge, and flight-to-quality badge. Headline copy is derived from aggregate `Net Flow 24h` direction plus the Bank Run Gauge pressure state; it does not imply cross-asset breadth unless a separate breadth signal is added.
 2. **Per-Coin Flows** — sortable table with `Pressure vs 30D`, net 24h/7d, mint/burn volumes, and largest USD-valued event
-3. **Aggregate Flows** — Recharts composed chart (mint area, burn area, net flow line) with 24h/7d/30d toggle
+3. **Aggregate Flows** — Recharts composed chart with 24h/7d/30d toggle; missing buckets render as gaps, remain unavailable in its accessible table, and are excluded from rolling averages
 4. **Flow Interpretation + Mint/Burn Flow FAQ** — explanatory guidance and the mint/burn FAQ
 
 The page then links to the Timeline for all mint/burn events.
@@ -476,11 +482,11 @@ All hooks use Zod schema validation for aggregate and per-coin responses (`MintB
 |-----------|------|-------------|
 | `FlowBrrrOverview` | `src/components/flow-brrr-overview.tsx` | Overview shell used by `/flows`; renders the printer/shredder scene, Bank Run Gauge band, literal 24h minting-pressure gauge, and a `FlowReceiptBand` below a dashed tear-line carrying the 24h/7d mint/burn/net receipt tiles plus scope, top minter/burner, and coverage summary. |
 | `FlowReceiptBand` | `src/components/flow-receipt-band.tsx` | Receipt-styled sub-component rendered inside `FlowBrrrOverview`. Shows 24h/7d printed/shredded/net tiles, with the full `/flows` mode including scope caveat, top minter/burner, coverage pills, and any sync warning. |
-| `FlowChart` | `src/components/flow-chart.tsx` | Recharts composed chart: mint (green area), burn (red area), net flow (blue line), hourly tooltip |
-| `FlowTable` | `src/components/flow-table.tsx` | Sortable per-coin table. Sort keys: net24h, mint24h, burn24h, net7d, net30d, net90d, largest USD-valued event, pressure (net30d/net90d columns hidden below lg/xl). Responsive column hiding; `Pressure vs 30D` header uses the shared methodology-hint trigger |
+| `FlowChart` | `src/components/flow-chart.tsx` | Recharts composed chart: net-mint/net-burn bars, cumulative line, rolling-net band, and hourly tooltip. Missing hourly or daily buckets break the plotted series and render as `—` in the accessible table instead of becoming measured zeroes. |
+| `FlowTable` | `src/components/flow-table.tsx` | Sortable per-coin table. Sort keys: net24h, mint24h, burn24h, net7d, net30d, net90d, largest USD-valued event, pressure (net30d/net90d columns hidden below lg/xl). Responsive column hiding; incomplete 30d/90d windows are marked `partial` because their values cover only the observed portion; `Pressure vs 30D` header uses the shared methodology-hint trigger. |
 | `FlowEventFeed` | `src/components/flow-event-feed.tsx` | Paginated event table: time, direction badge, amount USD, chain, tx link |
 | `MintingPressureGauge` | `src/components/minting-pressure-gauge.tsx` | Shared literal 24h mint-vs-burn gauge used by both the aggregate overview and stablecoin detail summary cards |
-| `FlowSummaryCard` | `src/components/flow-summary-card.tsx` | Summary card for stablecoin detail pages: explicit `Net 24h`, `Pressure Shift vs 30D`, and a literal `Minting Pressure (24h)` gauge, plus contextual methodology hints / footer links for the flow model |
+| `FlowSummaryCard` | `src/components/flow-summary-card.tsx` | Summary card for stablecoin detail pages: explicit net windows, `Pressure Shift vs 30D`, and a literal `Minting Pressure (24h)` gauge, plus contextual methodology hints / footer links for the flow model. Its 30d/90d cells use the API coverage flags and mark incomplete windows `partial`, matching the per-coin table. |
 
 ### Dashboard Integration
 
