@@ -54,7 +54,7 @@ export function ActiveDepegsCard(): React.JSX.Element {
     [data, pegSummaryById],
   );
 
-  const rows = useMemo<ActiveRow[]>(() => {
+  const activeRows = useMemo<ActiveRow[]>(() => {
     // eslint-disable-next-line react-hooks/purity -- Date.now() used as a transient fallback before TanStack Query reports dataUpdatedAt; visible result bounded by refetchInterval.
     const nowSec = Math.floor(Date.now() / 1000);
     return activeEvents
@@ -65,12 +65,11 @@ export function ActiveDepegsCard(): React.JSX.Element {
         ageSec: Math.max(0, nowSec - ev.startedAt),
         direction: ev.currentDeviationBps >= 0 ? ("above" as const) : ("below" as const),
       }))
-      .sort((a, b) => Math.abs(b.bps) - Math.abs(a.bps))
-      .slice(0, 4);
+      .sort((a, b) => Math.abs(b.bps) - Math.abs(a.bps));
   }, [activeEvents]);
 
   // Flash only the lead count when the number of active depegs changes (skips mount).
-  const flashClass = useFlashOnChange(rows.length);
+  const flashClass = useFlashOnChange(activeRows.length);
   const error = activeQuery.error ?? pegSummaryQuery.error;
   const hasActiveData = activeQuery.loadedCount > 0 || (!isLoading && !activeQuery.error);
   const hasData = hasActiveData && pegSummaryData !== undefined;
@@ -78,7 +77,7 @@ export function ActiveDepegsCard(): React.JSX.Element {
     hasData,
     isLoading: isLoading || isPegSummaryLoading,
     error,
-    isEmpty: rows.length === 0,
+    isEmpty: activeRows.length === 0,
   });
   const retry = () => {
     void activeQuery.refetch();
@@ -96,7 +95,7 @@ export function ActiveDepegsCard(): React.JSX.Element {
           <Skeleton className="h-12 w-28" />
           <Skeleton className="h-20 w-full" />
         </>
-      ) : state === "unavailable" || (state === "stale-with-data" && rows.length === 0) ? (
+      ) : state === "unavailable" || (state === "stale-with-data" && activeRows.length === 0) ? (
         <QueryStateNotice
           state={state}
           label="Active depeg monitoring"
@@ -104,7 +103,7 @@ export function ActiveDepegsCard(): React.JSX.Element {
           onRetry={retry}
           compact
         />
-      ) : rows.length === 0 ? (
+      ) : activeRows.length === 0 ? (
         <div className="flex flex-1 items-center justify-center">
           <span className="font-mono text-sm uppercase tracking-wider text-green-700 dark:text-green-400">
             All on peg
@@ -122,14 +121,23 @@ export function ActiveDepegsCard(): React.JSX.Element {
             />
           ) : null}
           <div className="flex items-baseline gap-2 pharos-numeric font-bold tracking-tight">
-            <span className={`rounded-md text-4xl text-frost-blue ${flashClass}`}>{rows.length}</span>
-            <span aria-hidden="true" className="text-3xl text-muted-foreground/40">
-              /
-            </span>
-            <span className="text-4xl text-muted-foreground">{activeEvents.length}</span>
+            <span className={`rounded-md text-4xl text-frost-blue ${flashClass}`}>{activeRows.length}</span>
+            <span className="font-mono text-xs uppercase tracking-wider text-muted-foreground">active</span>
           </div>
-          <ul className="hidden flex-col border-t border-border/50 pt-2.5 font-mono text-xs sm:flex">
-            {rows.map((row, index) => (
+          {activeRows.length > 4 ? (
+            <p className="hidden font-mono text-[10px] uppercase tracking-wider text-muted-foreground sm:block">
+              Top 4 by deviation
+            </p>
+          ) : null}
+          <ul
+            aria-label={
+              activeRows.length > 4
+                ? `Top 4 of ${activeRows.length} active depegs by deviation`
+                : "Active depegs by deviation"
+            }
+            className="hidden flex-col border-t border-border/50 pt-2.5 font-mono text-xs sm:flex"
+          >
+            {activeRows.slice(0, 4).map((row, index) => (
               <DepegRow key={row.id} row={row} logoSrc={logoMap[row.id]} isLead={index === 0} />
             ))}
           </ul>
