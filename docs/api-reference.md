@@ -458,7 +458,7 @@ Returns detected depeg incidents with filters for asset, state, and review statu
 
 ```json
 {
-  "currentVersion": "6.22"
+  "currentVersion": "6.24"
 }
 ```
 
@@ -496,7 +496,7 @@ Returns the current cross-market peg-monitoring summary.
 
 ```json
 {
-  "currentVersion": "6.22"
+  "currentVersion": "6.24"
 }
 ```
 
@@ -901,8 +901,8 @@ Freshness threshold: 1800 s.
 
 ```json
 {
-  "currentVersion": "6.22",
-  "methodologyVersion": "6.22"
+  "currentVersion": "6.24",
+  "methodologyVersion": "6.24"
 }
 ```
 
