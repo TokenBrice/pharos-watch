@@ -18,6 +18,7 @@ import {
   assertV9ValidatedPolicyEnvelope,
   resolveV9ReasonPolicy,
 } from "./policy";
+import { v9StructuralSignalSharePct } from "./backing";
 import { isV9UncanonicalizedChainPoolRoute } from "./facts";
 import { canonicalDomains, compareText, domainKey, uniqueSorted } from "./primitives";
 
@@ -856,7 +857,14 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
         severity: "critical",
         binding,
         reason: "A reviewed economic control has an active compromise incident.",
-        materialSharePct: control.materialSupplyShare === null ? null : control.materialSupplyShare * 100,
+        materialSharePct:
+          control.materialSupplyShare === null
+            ? null
+            : v9StructuralSignalSharePct(
+                args.facts.assetId,
+                "structuralSignals[*].materialSharePct",
+                control.materialSupplyShare,
+              ),
         controlKeys: [control.controlKey],
         failureDomains: control.failureDomains,
       });
@@ -1096,7 +1104,13 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
                 ? "Economically effective minting is unbounded or compromised."
                 : "Minting is economically unbounded but supply is reconciled against reserves.",
           materialSharePct:
-            mintControl?.materialSupplyShare == null ? null : mintControl.materialSupplyShare * 100,
+            mintControl?.materialSupplyShare == null
+              ? null
+              : v9StructuralSignalSharePct(
+                  args.facts.assetId,
+                  "structuralSignals[*].materialSharePct",
+                  mintControl.materialSupplyShare,
+                ),
           controlKeys: mintControlKeys,
           failureDomains: mintFailureDomains,
         });
@@ -1111,7 +1125,13 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
             ? "Minting is collateral-gated behind a privileged administrator surface."
             : "Minting depends on one concentrated administrator path.",
         materialSharePct:
-          mintControl?.materialSupplyShare == null ? null : mintControl.materialSupplyShare * 100,
+          mintControl?.materialSupplyShare == null
+            ? null
+            : v9StructuralSignalSharePct(
+                args.facts.assetId,
+                "structuralSignals[*].materialSharePct",
+                mintControl.materialSupplyShare,
+              ),
         controlKeys: mintControlKeys,
         failureDomains: mintFailureDomains,
       });
@@ -1125,7 +1145,13 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
         binding: upgradeBinding,
         reason: "Mint-critical upgrade authority is not fully reviewed.",
         materialSharePct:
-          upgradeControl?.materialSupplyShare == null ? null : upgradeControl.materialSupplyShare * 100,
+          upgradeControl?.materialSupplyShare == null
+            ? null
+            : v9StructuralSignalSharePct(
+                args.facts.assetId,
+                "structuralSignals[*].materialSharePct",
+                upgradeControl.materialSupplyShare,
+              ),
         controlKeys: upgradeControlKeys,
         failureDomains: upgradeFailureDomains,
       });
@@ -1369,7 +1395,14 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
           ),
           binding,
           reason: `Bridge control topology is ${route.tier}.`,
-          materialSharePct: control.materialSupplyShare === null ? null : control.materialSupplyShare * 100,
+          materialSharePct:
+            control.materialSupplyShare === null
+              ? null
+              : v9StructuralSignalSharePct(
+                  args.facts.assetId,
+                  "structuralSignals[*].materialSharePct",
+                  control.materialSupplyShare,
+                ),
           controlKeys: [control.controlKey],
           failureDomains: control.failureDomains,
         });

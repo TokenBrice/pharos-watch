@@ -71,7 +71,8 @@ export { deriveSafetyScoreV9PegScore } from "./fact-set-peg-supply";
 
 export type V9AssetQuarantineCode =
   | "fact-build-failed"
-  | "fact-validation-failed";
+  | "fact-validation-failed"
+  | "evaluation-failed";
 export interface V9AssetQuarantine {
   assetId: string;
   code: V9AssetQuarantineCode;
@@ -374,6 +375,40 @@ function buildQuarantinedAssetFacts(
   });
 }
 
+function evaluationQuarantineOutcome(
+  fixedInput: SafetyScoreV9CompilerInput,
+  extension: SafetyScoreV9FactSetExtensionV2,
+  asset: AssetExtension,
+  researchPayloadSha256: string,
+  message: string,
+): { facts: V9AssetFactsV3; quarantine: V9AssetQuarantine } {
+  const context = createAssetBuildContext(
+    fixedInput,
+    extension,
+    asset,
+    researchPayloadSha256,
+  );
+  const dependencies = V9EffectiveDependenciesV3Schema.parse(
+    buildDependencies(context),
+  );
+  const boundedMessage = message.slice(0, 500);
+  logWorkerEvent({
+    scope: "lib",
+    level: "warn",
+    event: "safety_score_v9_asset_quarantined",
+    message: `Safety Score v9 asset ${asset.assetId} quarantined during evaluation: ${boundedMessage}`,
+    metadata: { assetId: asset.assetId, stage: "evaluation", message: boundedMessage },
+  });
+  return {
+    facts: buildQuarantinedAssetFacts(context, dependencies),
+    quarantine: {
+      assetId: asset.assetId,
+      code: "evaluation-failed",
+      message: boundedMessage,
+    },
+  };
+}
+
 function compileAssetOutcome(
   fixedInput: SafetyScoreV9CompilerInput,
   extension: SafetyScoreV9FactSetExtensionV2,
@@ -494,6 +529,7 @@ export function compileSafetyScoreV9FactSetFromValidatedExtension(
 export function compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   extension: SafetyScoreV9FactSetExtensionV2,
+  evaluationFailures: ReadonlyMap<string, string> = new Map(),
 ): Readonly<SafetyScoreV9FactCompilationResult> {
   if (!materializedExtensions.has(extension)) {
     throw new Error("Trusted Safety Score v9 compilation requires an in-process materialized extension");
@@ -526,14 +562,23 @@ export function compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
     (latest, entry) => Math.max(latest, entry.cdpStressCoverage.source?.block.timestampUnix ?? 0),
     0,
   );
-  const outcomes = extension.assets.map((asset) =>
-    compileAssetOutcome(
-      fixedInput,
-      extension,
-      asset,
-      researchPayloadSha256,
-    ),
-  );
+  const outcomes = extension.assets.map((asset) => {
+    const evaluationFailure = evaluationFailures.get(asset.assetId);
+    return evaluationFailure === undefined
+      ? compileAssetOutcome(
+          fixedInput,
+          extension,
+          asset,
+          researchPayloadSha256,
+        )
+      : evaluationQuarantineOutcome(
+          fixedInput,
+          extension,
+          asset,
+          researchPayloadSha256,
+          evaluationFailure,
+        );
+  });
   const factSet = compileV9FactSetV3({
     schemaVersion: 3,
     baseInputGenerationId: fixedInput.baseInputGenerationId,

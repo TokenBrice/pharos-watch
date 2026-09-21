@@ -1,10 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   assertV9BackingPolicy,
   createUnavailableV9BackingResult,
   evaluateV9ArchetypeBacking,
   evaluateV9ReserveExposures,
   type V9BackingAssetInput,
+  v9StructuralSignalSharePct,
 } from "../safety-score-v9/backing";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import type {
@@ -42,6 +43,34 @@ describe("Safety Score v9 backing exposure primitives", () => {
   it("validates the explicit candidate policy", () => {
     expect(() => assertV9BackingPolicy(V9_CANDIDATE_POLICY_V1)).not.toThrow();
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toMatch(/^[a-f0-9]{64}$/);
+  });
+
+  it("clamps only percentage-scale floating noise and names the asset and field", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const share = 1.0000000000308;
+
+    expect(
+      v9StructuralSignalSharePct(
+        "onyc-onre",
+        "structuralSignals[0].materialSharePct",
+        share,
+      ),
+    ).toBe(100);
+    expect(warn).toHaveBeenCalledWith(
+      "safety_score_v9_structural_signal_percentage_clamped",
+      {
+        assetId: "onyc-onre",
+        fieldPath: "structuralSignals[0].materialSharePct",
+        rawValue: share * 100,
+        arithmetic: `${share} * 100`,
+      },
+    );
+
+    warn.mockClear();
+    expect(v9StructuralSignalSharePct("alpha", "structuralSignals[0].materialSharePct", 0.731)).toBe(73.1);
+    expect(v9StructuralSignalSharePct("alpha", "structuralSignals[0].materialSharePct", 1.01)).toBe(101);
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
   });
 
   it("weights an ordinary weak slice proportionally without making it a global minimum", () => {

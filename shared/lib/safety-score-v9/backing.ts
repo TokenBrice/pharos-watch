@@ -202,6 +202,26 @@ export interface V9ArchetypeBackingInput {
 
 const SCORE_EPSILON = 0.000001;
 
+const STRUCTURAL_SIGNAL_PERCENT_ROUNDING_EPSILON = 0.0001;
+
+export function v9StructuralSignalSharePct(
+  assetId: string,
+  fieldPath: string,
+  share: number,
+): number {
+  const rawValue = share * 100;
+  if (rawValue > 100 && rawValue <= 100 + STRUCTURAL_SIGNAL_PERCENT_ROUNDING_EPSILON) {
+    console.warn("safety_score_v9_structural_signal_percentage_clamped", {
+      assetId,
+      fieldPath,
+      rawValue,
+      arithmetic: `${share} * 100`,
+    });
+    return 100;
+  }
+  return rawValue;
+}
+
 /**
  * The single materiality predicate shared by projection (evaluate-set) and
  * backing: a share is material once it reaches the threshold within float

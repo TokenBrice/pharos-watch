@@ -16,7 +16,7 @@ import { resolveChainId } from "../chains";
 import { clampShare } from "../math";
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
-import { isV9MaterialShare } from "./backing";
+import { isV9MaterialShare, v9StructuralSignalSharePct } from "./backing";
 import { assertV9FactSetCompiledInProcess } from "./compile";
 import {
   buildV9DependencyEvaluationPlan,
@@ -81,6 +81,43 @@ export interface V9EvaluatedSet {
   assets: readonly V9EvaluatedAsset[];
   scoreResultDigest: string;
   evaluatedSetDigest: string;
+}
+
+function evaluationFieldPath(error: unknown): string | null {
+  if (
+    typeof error !== "object" ||
+    error === null ||
+    !("issues" in error) ||
+    !Array.isArray(error.issues)
+  ) return null;
+  const issue = error.issues[0];
+  if (typeof issue !== "object" || issue === null || !("path" in issue) || !Array.isArray(issue.path)) return null;
+  return issue.path.reduce<string>(
+    (path, part) =>
+      typeof part === "number"
+        ? `${path}[${part}]`
+        : path === ""
+          ? String(part)
+          : `${path}.${String(part)}`,
+    "",
+  );
+}
+
+export class V9AssetEvaluationError extends Error {
+  readonly assetId: string;
+  readonly fieldPath: string | null;
+
+  constructor(assetId: string, cause: unknown) {
+    const fieldPath = evaluationFieldPath(cause);
+    const detail = cause instanceof Error ? cause.message : String(cause);
+    super(
+      `Safety Score v9 asset ${assetId} evaluation failed${fieldPath === null ? "" : ` at ${fieldPath}`}: ${detail}`,
+      { cause },
+    );
+    this.name = "V9AssetEvaluationError";
+    this.assetId = assetId;
+    this.fieldPath = fieldPath;
+  }
 }
 
 function marketRankByAsset(
@@ -1015,7 +1052,13 @@ function commonModeSignalsByAsset(
         reason,
         ...(shareInfo?.share === null || shareInfo === null
           ? {}
-          : { materialSharePct: shareInfo.share * 100 }),
+          : {
+              materialSharePct: v9StructuralSignalSharePct(
+                assetId,
+                "structuralSignals[*].materialSharePct",
+                shareInfo.share,
+              ),
+            }),
         economicLossScope,
         ...(economicLossScope === "deployment"
           ? {
@@ -1110,6 +1153,7 @@ function evaluateV9FactSetRead(
   for (const assetId of dependencyPlan.topologicalOrder) {
     const asset = assetsById.get(assetId);
     if (!asset) throw new Error(`Safety Score v9 dependency plan references missing asset ${assetId}`);
+    try {
     const unresolved = resolveV9DependencyInput(dependencyResolutionContext, assetId, upstreamResultsById);
     const resolved: V9ResolvedDependencyInputs = {
       ...unresolved,
@@ -1141,6 +1185,11 @@ function evaluateV9FactSetRead(
       oracleNavScore: upstreamOracleNavScore(evaluatedAsset, envelope),
     });
     unavailabilityRootsById.set(assetId, unavailabilityRoots);
+    } catch (error) {
+      throw error instanceof V9AssetEvaluationError
+        ? error
+        : new V9AssetEvaluationError(assetId, error);
+    }
   }
 
   const assets = [...evaluatedById.values()].sort((left, right) => compareText(left.assetId, right.assetId));

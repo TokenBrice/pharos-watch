@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { V9DeploymentControlFactV2, V9FactStatusV2 } from "../../types/safety-score-v9-facts";
 import {
   evaluateV9EconomicControl,
@@ -300,6 +300,32 @@ describe("Safety Score v9 economic control", () => {
     expect(() =>
       projectV9EconomicControlEvaluation(asset, { ...review, assetId: "different-asset" }, V9_CANDIDATE_POLICY_V1),
     ).toThrow(/does not match asset/);
+  });
+
+  it("bounds a control signal rounding tail without changing in-range or defective shares", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const rounded = control("mint:rounding", "mint", {
+      incidentState: "active",
+      materialSupplyShare: 1.0000000000000002,
+    });
+    const result = evaluateV9EconomicControl(
+      args({ facts: facts([rounded]), mint: noMint() }),
+    );
+
+    expect(
+      result.structuralFailures.find(
+        (failure) => failure.kind === "active-control-incident",
+      )?.materialSharePct,
+    ).toBe(100);
+    expect(warn).toHaveBeenCalledWith(
+      "safety_score_v9_structural_signal_percentage_clamped",
+      expect.objectContaining({
+        assetId: "fixture-asset",
+        fieldPath: "structuralSignals[*].materialSharePct",
+        rawValue: rounded.materialSupplyShare! * 100,
+      }),
+    );
+    warn.mockRestore();
   });
 
   it("distinguishes bounded, raiseable, and unknown mint-cap semantics", () => {

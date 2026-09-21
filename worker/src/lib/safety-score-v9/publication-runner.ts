@@ -1,4 +1,5 @@
 import { toErrorMessage } from "@shared/lib/error-utils";
+import { V9AssetEvaluationError } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_MINIMUM_RATEABLE_ASSETS } from "@shared/types/safety-score-v9-coverage";
 import type {
   V9PublicationHealth,
@@ -154,9 +155,15 @@ function safeFailure(
   stage: SafetyScoreV9PublicationFailureStage,
 ): { code: string; message: string } {
   const name = error instanceof Error && error.name ? error.name : "Error";
+  const assetAndField =
+    error instanceof V9AssetEvaluationError
+      ? `-${error.assetId}-${error.fieldPath ?? "unknown-field"}`
+      : "";
   const rawMessage = toErrorMessage(error);
   return {
-    code: `safety-score-v9-publication-${stage}-${name}`.slice(0, 160),
+    code: `safety-score-v9-publication-${stage}-${name}${assetAndField}`
+      .replace(/[^A-Za-z0-9._:-]/gu, "-")
+      .slice(0, 160),
     message: (
       rawMessage.trim() || "Safety Score v9 publication attempt failed"
     ).slice(0, 500),
