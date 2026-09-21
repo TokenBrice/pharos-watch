@@ -346,8 +346,9 @@ export interface V9CreditableNonAtomicRedemptionInput {
 export function isV9ExitRouteOutputResolved(output: {
   status: { observationState: V9FactStatusV2["observationState"] };
   valuation: unknown | null;
+  sameNotionalEligible?: false;
 }): boolean {
-  return output.status.observationState === "known" && output.valuation !== null;
+  return output.status.observationState === "known" && output.valuation !== null && output.sameNotionalEligible !== false;
 }
 
 export function isV9CreditableNonAtomicRedemption(
@@ -821,6 +822,7 @@ function mapSettlement(route: V9ExitRouteFactV2): V9ExitSettlement {
 
 function mapOutputQuality(route: V9ExitRouteFactV2): V9ExitOutputQuality {
   if (route.output.valuation?.basis === "nav") return "nav";
+  if (route.output.kind === "physical-commodity-delivery") return "physical-commodity-delivery";
   if (route.output.kind === "fiat") return "stable-single";
   if (route.output.kind === "tracked-stablecoin") {
     return route.output.assetKeys.length === 1 ? "stable-single" : "stable-basket";

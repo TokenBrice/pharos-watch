@@ -8,6 +8,7 @@ import { evaluateV9Exit, projectV9ExitEvaluationRoute } from "@shared/lib/safety
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { buildSafetyScoreV9BaselineExtension, type V9ExtensionRegistryMeta } from "../safety-score-v9/extension";
 import { buildSafetyScoreV9RetainedRedemptionRoutes, buildSafetyScoreV9RouteReviews } from "../safety-score-v9/extension-routes";
+import { safetyScoreV9TransferDeploymentKey } from "../safety-score-v9/extension-transfer";
 import { getSafetyScoreV9OperationalResilienceOverlay } from "../safety-score-v9/extension-operational-resilience";
 import { selectSafetyScoreV9CdpShockMeasurement } from "../safety-score-v9/extension-shock";
 import { compileSafetyScoreV9FactSetFromFixedInput, compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension, materializeSafetyScoreV9FactSetExtension } from "../safety-score-v9/fact-set";
@@ -400,6 +401,68 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
     expect(compileSafetyScoreV9FactSetFromFixedInput(fixed, build(true, wrong)).assets[0]!.accessReview.transfer.status.observationState).toBe("bounded-unknown");
     const stale = exactFixedInput({ clockSec: V9_ACCESS_EVIDENCE_MAX_AGE_SEC + 1 });
     expect(compileSafetyScoreV9FactSetFromFixedInput(stale, build(true, transferFact("permissionless"), stale, { blacklistReviewedAt: "1971-01-01" })).assets[0]!.accessReview.transfer.status.observationState).toBe("stale");
+  });
+
+  it("attributes a current single-deployment transfer review from aggregate supply", () => {
+    const fixed = exactFixedInput({
+      chainSupplyByChain: {},
+      aggregateCirculating: { peggedUSD: 1_000_000 },
+    });
+    const transfer = transferFact("permissionless");
+    transfer.transferScopeAttestation = {
+      kind: "single-deployment-attribution",
+      version: 1,
+      reviewedAt: "1970-01-01",
+      expiresAt: "1970-01-02",
+      reviewer: "Fixture reviewer",
+      deploymentKey: safetyScoreV9TransferDeploymentKey("ethereum", "0xalpha"),
+      exhaustiveLiability: true,
+      sources: [{ label: "Reviewed liability inventory", url: "https://example.com/liability-inventory" }],
+    };
+    const extension = buildTransferBaseline(fixed, true, transfer, {
+      contracts: [{ chain: "ethereum", address: "0xalpha", decimals: 18 }],
+    });
+    const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets[0]!;
+    const attributionEvidence = asset.evidence.find(
+      (evidence) => evidence.sourceId === "safety-score-v9.single-deployment-attribution.v1",
+    );
+
+    expect(asset.accessReview.transfer).toMatchObject({
+      posture: "permissionless",
+      scopeBasis: "attributed",
+      status: { observationState: "known" },
+    });
+    expect(attributionEvidence).toBeDefined();
+    expect(asset.accessReview.transfer.status.evidenceRefIds).toContain(attributionEvidence!.evidenceId);
+  });
+
+  it("keeps an expired single-deployment transfer attestation bounded unknown", () => {
+    const fixed = exactFixedInput({
+      clockSec: Date.parse("1970-01-03T00:00:00Z") / 1_000,
+      chainSupplyByChain: {},
+      aggregateCirculating: { peggedUSD: 1_000_000 },
+    });
+    const transfer = transferFact("permissionless");
+    transfer.transferScopeAttestation = {
+      kind: "single-deployment-attribution",
+      version: 1,
+      reviewedAt: "1970-01-01",
+      expiresAt: "1970-01-02",
+      reviewer: "Fixture reviewer",
+      deploymentKey: safetyScoreV9TransferDeploymentKey("ethereum", "0xalpha"),
+      exhaustiveLiability: true,
+      sources: [{ label: "Reviewed liability inventory", url: "https://example.com/liability-inventory" }],
+    };
+    const extension = buildTransferBaseline(fixed, true, transfer, {
+      contracts: [{ chain: "ethereum", address: "0xalpha", decimals: 18 }],
+    });
+    const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets[0]!;
+
+    expect(asset.accessReview.transfer.status.observationState).toBe("bounded-unknown");
+    expect(asset.accessReview.transfer).not.toHaveProperty("scopeBasis");
+    expect(asset.evidence).not.toContainEqual(expect.objectContaining({
+      sourceId: "safety-score-v9.single-deployment-attribution.v1",
+    }));
   });
 
   it("derives research, route, measured-adapter, and CDP shock freshness windows", () => {

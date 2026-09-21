@@ -86,8 +86,8 @@ export const V9RouteExecutionModelSchema = z.enum([
 export const V9RouteExecutionCertaintySchema = z.enum(["guaranteed", "bounded", "conditional", "discretionary", "unknown"]);
 export const V9RouteCoverageClassSchema = z.enum(["exact-complete", "exact-lower-bound", "diagnostic"]);
 export const V9RouteSettlementModelSchema = z.enum(["atomic", "same-day", "bounded-delay", "queued", "eventual", "unknown"]);
-export const V9RouteOutputKindSchema = z.enum(["tracked-stablecoin", "fiat", "collateral", "basket"]);
-export const V9RouteValuationBasisSchema = z.enum(["price", "nav", "fx", "reviewed-par"]);
+export const V9RouteOutputKindSchema = z.enum(["tracked-stablecoin", "fiat", "collateral", "basket", "physical-commodity-delivery"]);
+export const V9RouteValuationBasisSchema = z.enum(["price", "nav", "fx", "reviewed-par", "commodity-delivery"]);
 export const V9RouteValuationConfidenceSchema = z.enum(["high", "medium", "low", "unknown"]);
 
 export const V9MechanismQualitySchema = z.enum(["strong", "adequate", "limited", "weak", "failed"]);

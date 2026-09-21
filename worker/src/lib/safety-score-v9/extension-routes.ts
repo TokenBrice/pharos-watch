@@ -1,3 +1,4 @@
+import { valuePhysicalCommodityDelivery } from "@shared/lib/physical-commodity-delivery";
 import { resolvedExitRouteOutputAssetKeys } from "@shared/lib/exit-route-output";
 import { isDexExitRouteCoverageComplete } from "@shared/lib/p4-exit-route-capacity";
 import {
@@ -242,8 +243,43 @@ function buildOutputReview(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   observation: ExitRouteObservation,
   sourceGenerationId: string,
+  assetId: string,
 ): RouteOutputReview | null {
   const output = observation.output;
+  if (output.kind === "physical-commodity-delivery") {
+    const config = getRedemptionBackstopConfig(assetId);
+    const terms = config?.physicalCommodityDelivery;
+    const peg = fixedInput.pegDataById[assetId];
+    const reference = peg?.pegReference;
+    const expectedCurrency = terms?.commodity === "XAU" ? "GOLD" : "SILVER";
+    const reviewedAtSec = config?.reviewedAt ? Date.parse(`${config.reviewedAt}T00:00:00Z`) / 1000 : NaN;
+    if (!Number.isFinite(reviewedAtSec) || reviewedAtSec > fixedInput.clockSec ||
+        fixedInput.clockSec - reviewedAtSec > V9_REVIEW_EVIDENCE_MAX_AGE_SEC || !config?.docs?.length) return null;
+    if (!terms || output.sameNotionalEligible !== false || peg?.pegCurrency !== expectedCurrency ||
+        !reference?.usdPerTroyOunce || reference.asOf > fixedInput.clockSec ||
+        fixedInput.clockSec - reference.asOf > 86_400) return null;
+    const value = valuePhysicalCommodityDelivery(terms, reference.usdPerTroyOunce, observation.requestedNotionalUsd);
+    if (!value) return null;
+    return {
+      kind: "physical-commodity-delivery",
+      sameNotionalEligible: false,
+      assetKeys: [`commodity:${terms.commodity.toLowerCase()}`],
+      basketWeights: [],
+      valuation: {
+        basis: "commodity-delivery",
+        referenceAssetKey: `commodity:${terms.commodity.toLowerCase()}`,
+        unitValueUsd: value.unitValueUsd,
+        expectedUnitValueUsd: value.expectedUnitValueUsd,
+        confidence: "medium",
+        observedAtSec: reference.asOf,
+        sourceId: `commodity-usd-per-troy-ounce:${reference.source}`,
+        sourceGenerationId,
+        maxAgeSec: 86_400,
+        url: config?.docs?.[0]?.url ?? null,
+        contentSha256: null,
+      },
+    };
+  }
   // An unresolved basket is reviewable as a basket output once every
   // enumerated identity has a reviewed valuation path. It keeps the untracked
   // identities it was captured with, so the reviewed output stays the
@@ -478,7 +514,7 @@ function buildDexRouteReview(
         : []),
     ],
     executionCosts: canonicalExecutionCosts(observation, () => null),
-    output: buildOutputReview(fixedInput, observation, fixedInput.dexGenerationId),
+    output: buildOutputReview(fixedInput, observation, fixedInput.dexGenerationId, assetId),
     failureDomains: composedExit
       ? [
           {
@@ -747,7 +783,7 @@ function buildRedemptionRouteReview(
     minRedeemUsd: reviewedTerms.minRedeemUsd,
     physicalResourceKeys,
     executionCosts: redemptionExecutionCosts(entry, observation),
-    output: buildOutputReview(fixedInput, observation, fixedInput.redemptionGenerationId),
+    output: buildOutputReview(fixedInput, observation, fixedInput.redemptionGenerationId, entry.stablecoinId),
     ...(unresolvedOutputResponsibility === null ? {} : { unresolvedOutputResponsibility }),
     failureDomains: [],
   };

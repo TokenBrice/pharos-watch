@@ -145,6 +145,10 @@ const priority = (supply) => (supply >= 1e9 ? "P0" : supply >= 1e8 ? "P1" : supp
 const lines = [];
 lines.push("# V9 evidence-curation worklist (generated — do not hand-edit rows)");
 lines.push("");
+for (const warning of registry.summary.warnings) {
+  lines.push(`> **Warning:** ${warning}`);
+}
+if (registry.summary.warnings.length > 0) lines.push("");
 lines.push(`Generated from \`${replayPath.split("/").pop()}\` (${cards.length} cards, ` +
   `${cards.filter((card) => card.grade !== "NR").length} rateable). ` +
   "Regenerate after every merged batch:");

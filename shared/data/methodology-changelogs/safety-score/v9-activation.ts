@@ -2,6 +2,38 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const SAFETY_SCORE_V9: readonly MethodologyChangelogEntry[] = [
   {
+    version: "9.7",
+    title: "Explicit physical commodity delivery outputs",
+    date: "2026-09-21",
+    effectiveAt: 1789976815,
+    summary:
+      "A separately reviewed physical-delivery contract values XAU or XAG at the unscaled USD-per-troy-ounce reference, with explicit token weight, delivery minimum and bounded percentage, flat and delivery fees. Physical metal never receives fiat or same-notional settlement credit.",
+    impact: [
+      "The physical-commodity-delivery output class reuses the blue-chip collateral policy tier of 65; minimum-lot and fee haircuts lower retained value instead of granting a new premium.",
+      "Below the delivery minimum the requested lot has zero deliverable value. Missing structured terms or an absent, future or older-than-one-day commodity reference retains the unresolved output gap.",
+      "DGLD remains excluded from the commodity peer median. The evaluator never substitutes token pegReference.valueUsd for a USD/oz reference.",
+      "Historical captures without the explicit USD/oz field cannot acquire physical valuations retrospectively; producer refresh and equivalence evidence are required before any coverage claim.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
+    version: "9.6",
+    title: "Reviewed single-deployment transfer scope attribution",
+    date: "2026-09-21",
+    effectiveAt: 1789976815,
+    summary:
+      "A current exhaustive-liability attestation can complete transfer review scope for one exact active deployment with positive admitted aggregate supply and no bridge or wrapper representations. This is attributed scope, never observed chain supply.",
+    impact: [
+      "Singletons and savings-passthrough, risk-absorption, and strategy-vault share tokens qualify structurally; pure-wrapper, bond-maturity, and unspecified variant kinds do not. No asset allowlist grants admission.",
+      "The attestation uses the existing 365-day reviewed-research window with an explicit expiry. Registry structure is rechecked every capture: a second deployment, unresolved identity, or bridge/wrapper representation immediately invalidates attribution.",
+      "Exact observed transfer materiality retains precedence. This transfer-only lane creates no per-chain numbers and does not complete freeze, bridge materiality, settlement concentration, or economic-control scope.",
+      "VUSD has two deployments; xDAI's WXDAI wrapped representation is not its native liability. Neither qualifies. The separate fiat CoinGecko fallback mapping repair preserves chain identity already returned by a successful on-chain probe.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "9.5",
     title: "Exit materiality uses measured executable notional",
     date: "2026-09-19",

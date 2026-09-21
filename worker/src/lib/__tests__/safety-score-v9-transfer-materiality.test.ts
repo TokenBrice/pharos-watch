@@ -13,6 +13,7 @@ import {
   serializeSafetyScoreV9TransferMaterialityGeneration,
   SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS,
   transferMaterialScopeFromOnchainGeneration,
+  transferMaterialScopeFromSingleDeploymentAttribution,
   type SafetyScoreV9TransferMaterialityObservation,
 } from "../safety-score-v9/transfer-materiality";
 import {
@@ -31,6 +32,74 @@ const BASE_SCOPE: SafetyScoreV9TransferMaterialScope = {
   materialDeploymentScopeComplete: false,
   deploymentModel: "contract-addressable",
 };
+
+describe("single-deployment transfer attribution", () => {
+  function fixture() {
+    const review = structuredClone(SAFETY_SCORE_V9_REVIEWED_TRANSFER_FACTS.get(ASSET_ID)!);
+    review.transferScopeAttestation = {
+      kind: "single-deployment-attribution", version: 1,
+      reviewedAt: "2026-07-31", expiresAt: "2027-07-31",
+      reviewer: "Test reviewer", deploymentKey: DEPLOYMENT_KEY,
+      exhaustiveLiability: true,
+      sources: [{ label: "Contract", url: "https://etherscan.io/address/0xc26a6fa2c37b38e549a4a1807543801db684f99c" }],
+    };
+    return {
+      meta: structuredClone(ACTIVE_META_BY_ID.get(ASSET_ID)!),
+      review, aggregateCirculating: { circulating: { peggedUSD: 100 } },
+      baseScope: BASE_SCOPE, clockSec: CLOCK_SEC,
+    };
+  }
+
+  it("completes only attributed scope for a reviewed singleton share liability", () => {
+    const input = fixture();
+    const scope = transferMaterialScopeFromSingleDeploymentAttribution(input);
+    expect(scope.scopeBasis).toBe("attributed");
+    expect(scope.materialDeploymentKeys).toEqual([DEPLOYMENT_KEY]);
+    expect(resolveSafetyScoreV9ReviewedTransferFact(input.review, CLOCK_SEC, scope).observationState).toBe("known");
+    expect(input.aggregateCirculating).toEqual({ circulating: { peggedUSD: 100 } });
+  });
+
+  it("rejects a second deployment", () => {
+    const input = fixture();
+    input.meta.contracts!.push({ ...input.meta.contracts![0]!, chain: "base" });
+    expect(transferMaterialScopeFromSingleDeploymentAttribution(input)).toBe(BASE_SCOPE);
+  });
+
+  it("rejects a wrapper liability", () => {
+    const input = fixture();
+    input.meta.variantKind = "pure-wrapper";
+    expect(transferMaterialScopeFromSingleDeploymentAttribution(input)).toBe(BASE_SCOPE);
+  });
+
+  it("rejects a bridge representation route", () => {
+    const input = fixture();
+    input.meta.bridgeRouteRisk = structuredClone(ACTIVE_META_BY_ID.get("xdai-gnosis")!.bridgeRouteRisk);
+    expect(transferMaterialScopeFromSingleDeploymentAttribution(input)).toBe(BASE_SCOPE);
+  });
+
+  it("rejects missing, expired, mismatched and future attestations", () => {
+    const missing = fixture();
+    delete missing.review.transferScopeAttestation;
+    expect(transferMaterialScopeFromSingleDeploymentAttribution(missing)).toBe(BASE_SCOPE);
+    const expired = fixture();
+    expired.review.transferScopeAttestation!.expiresAt = "2026-08-01";
+    expect(transferMaterialScopeFromSingleDeploymentAttribution(expired)).toBe(BASE_SCOPE);
+    const mismatch = fixture();
+    mismatch.review.transferScopeAttestation!.deploymentKey = "base:0x123";
+    expect(transferMaterialScopeFromSingleDeploymentAttribution(mismatch)).toBe(BASE_SCOPE);
+    const future = fixture();
+    future.review.transferScopeAttestation!.reviewedAt = "2026-08-02";
+    expect(transferMaterialScopeFromSingleDeploymentAttribution(future)).toBe(BASE_SCOPE);
+  });
+
+  it("rejects absent admitted aggregate and preserves observed scope", () => {
+    const input = fixture();
+    input.aggregateCirculating.circulating.peggedUSD = 0;
+    expect(transferMaterialScopeFromSingleDeploymentAttribution(input)).toBe(BASE_SCOPE);
+    const observed = { ...BASE_SCOPE, materialDeploymentKeys: [DEPLOYMENT_KEY], materialDeploymentScopeComplete: true };
+    expect(transferMaterialScopeFromSingleDeploymentAttribution({ ...fixture(), baseScope: observed })).toBe(observed);
+  });
+});
 
 function observation(overrides: Partial<SafetyScoreV9TransferMaterialityObservation> = {}): SafetyScoreV9TransferMaterialityObservation {
   return {

@@ -28,6 +28,7 @@
 | 0239     | `0239_live_reserve_config_fingerprint.sql`                 | Add nullable configuration fingerprints to reserve composition and attempt state; old Workers remain compatible and new admission rejects unreviewed retained configurations. |
 | 0240     | `0240_yield_retention_indexes.sql`                         | Add the recorded-at alternatives-retention index for deterministic bounded drains. |
 | 0241     | `0241_dex_pool_registry.sql`                              | Add the per-source DEX pool registry and backfill existing staged observations while retaining staging for Worker rollback. |
+| 0242     | `0242_orca_whirlpool_shadow_quotes.sql`                    | Add isolated native Orca shadow quotes with enforced score ineligibility; no V1 scoring publication. |
 
 ## Squashed Individual Migrations (absorbed into the 0000 baseline on 2026-07-30)
 

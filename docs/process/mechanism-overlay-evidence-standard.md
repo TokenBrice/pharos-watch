@@ -105,6 +105,7 @@ Wave-6 packet research produced the canonical negative examples; they remain the
 - Date-only overlay claims become score-bearing only after the reviewed UTC day has elapsed.
   During that day the admission gap is method-owned; clocks before the review date receive
   neither the future overlay nor its disposition.
+  Curate with the evidence date, never the capture date: a same-day promotion starts with the next capture and temporarily re-attributes the component `method-unsupported` (the elapsed-UTC-day guard in `worker/src/lib/safety-score-v9/extension-mechanism.ts`).
 - Curated overlay claims expire. An overlay stops being score-bearing 365 days after its
   `reviewedAt` date (`evidenceExpiry.mechanismOverlayMaxAgeSec`); its components re-bound to
   the conservative compiler path until the evidence is re-pinned.

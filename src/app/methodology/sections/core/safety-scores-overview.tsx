@@ -110,6 +110,23 @@ export function SafetyScoresOverview() {
         evidence-retention changes: pillar weights, score math, and grade thresholds are unchanged.
       </p>
       <p>
+        Since methodology v9.6, an exhaustive-liability attestation can complete transfer scope for one exact
+        active contract with positive admitted aggregate supply and no bridge or wrapper representations.
+        Singleton assets and savings-passthrough, risk-absorption, and strategy-vault share tokens qualify;
+        pure wrappers, bond-maturity variants, and unspecified variant kinds do not. Scope is explicitly
+        attributed, not observed, and no chain amounts are invented. Attestations expire within 365 days;
+        every capture rechecks structure, so a second contract or representation route invalidates attribution
+        immediately. Freeze and economic-control scope remain independent.
+      </p>
+      <p>
+        Since methodology v9.7, a reviewed physical gold or silver delivery can have a known output value:
+        USD per troy ounce times deliverable ounces, less explicit percentage, flat and delivery fees.
+        Requests below the documented delivery minimum have zero deliverable value. This uses the existing
+        blue-chip collateral tier of 65, never a fiat or same-notional settlement credit. Missing terms or
+        a missing or stale commodity reference remain unresolved; a token&apos;s market price is not a metal
+        spot reference.
+      </p>
+      <p>
         Since methodology v9.47, a dependent&apos;s exposure to an upstream with an open reserve gap counts once per
         upstream cause. The backing projection folds the slice-level reasons an upstream raises into one reason per
         projected code, source code, and owner on each dependent exposure, and the slice paths survive in the causal

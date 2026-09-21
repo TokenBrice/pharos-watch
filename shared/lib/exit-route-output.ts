@@ -7,7 +7,7 @@ import { compareText } from "../types/safety-score-v9-fact-primitives";
  * are execution provenance for the same asset, not additional basket legs.
  */
 export function resolvedExitRouteOutputAssetKeys(output: ExitRouteOutput): string[] | null {
-  if (output.kind !== "tracked-stablecoin" && output.kind !== "fiat" && output.kind !== "collateral") {
+  if (output.kind !== "tracked-stablecoin" && output.kind !== "fiat" && output.kind !== "collateral" && output.kind !== "physical-commodity-delivery") {
     return null;
   }
 

@@ -1258,7 +1258,16 @@ const V9ExitPolicySchema = z
     // scored contribution is capped below what a cost-bounded route can earn.
     undisclosedFeeRouteScoreCeiling: ScoreSchema,
   })
-  .strict();
+  .strict()
+  .superRefine((exit, ctx) => {
+    if (exit.outputAssetScores["physical-commodity-delivery"] > exit.outputAssetScores["stable-single"]) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["outputAssetScores", "physical-commodity-delivery"],
+        message: "Physical commodity delivery quality must not exceed fiat-par output quality",
+      });
+    }
+  });
 
 const V9MaterialityPolicySchema = z
   .object({

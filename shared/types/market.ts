@@ -611,6 +611,8 @@ export const PegSummaryCoinSchema = z.object({
   pegReference: z
     .object({
       valueUsd: z.number().positive(),
+      /** Unscaled commodity reference; never the per-token peg value. */
+      usdPerTroyOunce: z.number().finite().positive().optional(),
       source: z.enum(["median", "fx", "fallback"]),
       contributorCount: z.number().int().nonnegative(),
       asOf: z.number().int().positive(),

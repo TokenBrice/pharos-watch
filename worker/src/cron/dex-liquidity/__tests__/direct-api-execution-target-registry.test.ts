@@ -61,7 +61,12 @@ describe("direct API execution-target registry hook", () => {
     })).toBe(true);
   });
 
-  it("attaches the exact registered V3 target to a preferred direct pool", async () => {
+  it.each([
+    { label: "normalizes DL delimiters and token order", symbol: "USDT-USDC", project: "uniswap-v3", attached: true },
+    { label: "ignores a provider display fee annotation", symbol: "USDC / USDT 0.01%", project: "uniswap-v3", attached: true },
+    { label: "rejects different token constituents", symbol: "DAI-USDC", project: "uniswap-v3", attached: false },
+    { label: "rejects a conflicting protocol", symbol: "USDT-USDC", project: "pancakeswap", attached: false },
+  ])("$label when attaching an exact registered target", async ({ symbol, project, attached }) => {
     const pool = exactV3DirectPool();
     const params = baseParams(pool);
     const key = buildUniV3ExecutionCandidateKey("ethereum", [TOKEN0, TOKEN1], 100)!;
@@ -71,10 +76,10 @@ describe("direct API execution-target registry hook", () => {
     metric.poolCount = 1;
     metric.topPools.push({
       poolId: `ethereum:${V3_POOL}`,
-      project: "uniswap-v3",
+      project,
       chain: "Ethereum",
       tvlUsd: pool.tvlUsd,
-      symbol: "USDC / USDT",
+      symbol,
       volumeUsd1d: pool.volume24hUsd,
       poolType: "cg-concentrated",
       source: "dl",
@@ -111,6 +116,11 @@ describe("direct API execution-target registry hook", () => {
 
     expect(metric.totalTvlUsd).toBe(pool.tvlUsd);
     expect(metric.poolCount).toBe(1);
+    if (!attached) {
+      expect(metric.topPools[0]?.extra?.measuredExecutionTarget).toBeUndefined();
+      expect(metric.topPools[0]?.extra?.executionCapabilityGate?.reason).toBe("target-unresolved");
+      return;
+    }
     expect(metric.topPools[0]?.extra?.executionCapabilityGate).toBeUndefined();
     expect(metric.topPools[0]?.extra?.measuredExecutionTarget).toMatchObject({
       adapterProfileId: "uniswap-v3-quoter-v2",

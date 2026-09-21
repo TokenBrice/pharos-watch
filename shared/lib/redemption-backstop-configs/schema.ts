@@ -150,6 +150,18 @@ const RedemptionCostModelSchema = z.discriminatedUnion("kind", [
 
 export type RedemptionCostModel = z.infer<typeof RedemptionCostModelSchema>;
 
+export const PhysicalCommodityDeliveryTermsSchema = z.strictObject({
+  commodity: z.enum(["XAU", "XAG"]),
+  deliverableOuncesPerToken: PositiveNumberSchema,
+  minimumDeliveryTokens: PositiveNumberSchema,
+  feeModel: z.strictObject({
+    bps: z.number().finite().min(0).lt(10_000),
+    flatUsd: NonNegativeNumberSchema,
+    deliveryUsd: NonNegativeNumberSchema,
+  }),
+  sameNotionalEligible: z.literal(false),
+});
+
 export const RedemptionBackstopConfigSchema = z
   .strictObject({
     routeFamily: RedemptionRouteFamilySchema,
@@ -157,6 +169,7 @@ export const RedemptionBackstopConfigSchema = z
     settlementModel: RedemptionSettlementModelSchema,
     executionModel: RedemptionExecutionModelSchema,
     outputAssetType: RedemptionOutputAssetTypeSchema,
+    physicalCommodityDelivery: PhysicalCommodityDeliveryTermsSchema.optional(),
     capacityModel: RedemptionCapacityModelSchema,
     costModel: RedemptionCostModelSchema,
     /**
@@ -228,6 +241,12 @@ export const RedemptionBackstopConfigSchema = z
     notes: z.array(z.string()).optional(),
   })
   .superRefine((config, ctx) => {
+    if ((config.outputAssetType === "physical-commodity-delivery") !== (config.physicalCommodityDelivery !== undefined)) {
+      ctx.addIssue({ code: "custom", path: ["physicalCommodityDelivery"], message: "Physical delivery requires explicit commodity, quantity, minimum and bounded fees" });
+    }
+    if (config.physicalCommodityDelivery && (!config.reviewedAt || !config.docs?.length)) {
+      ctx.addIssue({ code: "custom", path: ["physicalCommodityDelivery"], message: "Physical delivery terms require dated primary-source review" });
+    }
     if (
       config.capacityModel.kind === "reserve-sync-metadata" &&
       config.capacityModel.eventualCapacityModel === "supply-full" &&

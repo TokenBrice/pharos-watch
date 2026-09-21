@@ -193,6 +193,7 @@ describe("fetchFiatCoinGeckoTokens", () => {
       id: "susds-sky",
       price: null,
       circulating: { peggedUSD: 3_120_000 },
+      chainCirculating: { Ethereum: { current: 3_120_000, chainId: "ethereum" } },
     });
     expect(susds?.priceSource).toBeUndefined();
   });

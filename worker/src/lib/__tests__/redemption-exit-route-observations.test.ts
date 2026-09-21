@@ -44,6 +44,24 @@ function build(overrides: Partial<Parameters<typeof buildRedemptionExitRouteObse
 }
 
 describe("redemption same-notional route observations", () => {
+  it("keeps physical metal non-fiat and non-score-eligible even on an atomic-shaped route", () => {
+    const observation = build({
+      config: {
+        ...config,
+        settlementModel: "atomic",
+        outputAssetType: "physical-commodity-delivery",
+        physicalCommodityDelivery: {
+          commodity: "XAU", deliverableOuncesPerToken: 1, minimumDeliveryTokens: 1,
+          feeModel: { bps: 0, flatUsd: 0, deliveryUsd: 0 }, sameNotionalEligible: false,
+        },
+      },
+    });
+    expect(observation).toMatchObject({
+      scoreEligible: false,
+      output: { kind: "physical-commodity-delivery", assetKeys: ["commodity:xau"], sameNotionalEligible: false },
+    });
+  });
+
   it("publishes a reviewed immediate route at the common request", () => {
     const observation = build();
     expect(observation).toMatchObject({

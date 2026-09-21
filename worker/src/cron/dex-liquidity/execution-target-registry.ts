@@ -55,8 +55,8 @@ export const DEX_EXECUTION_TARGET_FACTORY_REGISTRY: readonly DexExecutionTargetF
     platform: "solana",
     lifecycle: "shadow",
     profileIds: ["orca-whirlpool-exact-v1"],
-    implementationModule: "./execution-target-registry",
-    build: disabledTargetFactory,
+    implementationModule: "./execution-targets/orca-whirlpool",
+    build: buildOrcaWhirlpoolRegisteredExecutionTarget,
   },
   {
     slotId: "raydium-clmm",
@@ -104,3 +104,4 @@ import type {
 import { buildQuoterV2RegisteredExecutionTarget } from "./execution-targets/quoter-v2";
 import { buildUniswapV4RegisteredExecutionTarget } from "./execution-targets/uniswap-v4";
 import { buildEvmV2RegisteredExecutionTarget } from "./execution-targets/evm-v2";
+import { buildOrcaWhirlpoolRegisteredExecutionTarget } from "./execution-targets/orca-whirlpool";

@@ -371,6 +371,7 @@ export const REDEMPTION_OUTPUT_ASSET_LABELS: Record<RedemptionOutputAssetType, s
   "stable-single": "Stable output",
   "stable-basket": "Stable basket",
   "bluechip-collateral": "Blue-chip collateral",
+  "physical-commodity-delivery": "Physical commodity delivery",
   "mixed-collateral": "Mixed collateral",
   nav: "NAV / non-cash",
 };

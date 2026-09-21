@@ -28,18 +28,6 @@ describe("Wave 0 registration fan-out", () => {
     expect(DEX_EXECUTION_TARGET_FACTORY_REGISTRY.every((entry) => entry.implementationModule.length > 0)).toBe(true);
   });
 
-  it("retains U2's shadow metadata and null target factories", () => {
-    const slots = DEX_EXECUTION_TARGET_FACTORY_REGISTRY.filter((entry) => entry.platform === "solana");
-    expect(slots.map(({ slotId, lifecycle, profileIds, implementationModule }) => ({
-      slotId, lifecycle, profileIds, implementationModule,
-    }))).toEqual([
-      { slotId: "orca-whirlpool", lifecycle: "shadow", profileIds: ["orca-whirlpool-exact-v1"], implementationModule: "./execution-target-registry" },
-      { slotId: "raydium-clmm", lifecycle: "shadow", profileIds: ["raydium-clmm-exact-v1"], implementationModule: "./execution-target-registry" },
-    ]);
-    expect(slots.map((entry) => entry.build({} as never))).toEqual([null, null]);
-    expect(DEX_EXACT_QUOTE_ADAPTER_REGISTRY.find((entry) => entry.adapterId === "solana-clmm"))
-      .toMatchObject({ platform: "solana", implementationModule: "../dex-liquidity/execution-target-registry" });
-  });
 
   it("predeclares pool/source leaves needed by the fan-out", () => {
     const slots = DEX_POOL_SOURCE_REGISTRY.map((entry) => entry.slotId);

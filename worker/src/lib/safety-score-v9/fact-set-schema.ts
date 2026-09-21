@@ -202,7 +202,7 @@ export const RouteValuationSchema = z
   .object({
     basis: V9RouteValuationBasisSchema,
     referenceAssetKey: CanonicalTextSchema,
-    unitValueUsd: z.number().finite().positive(),
+    unitValueUsd: z.number().finite().nonnegative(),
     expectedUnitValueUsd: z.number().finite().positive(),
     sourceId: CanonicalTextSchema,
     sourceGenerationId: CanonicalTextSchema,
@@ -212,11 +212,15 @@ export const RouteValuationSchema = z
     url: z.string().url().nullable(),
     contentSha256: Sha256Schema.nullable(),
   })
-  .strict();
+  .strict()
+  .refine((valuation) => valuation.unitValueUsd > 0 || valuation.basis === "commodity-delivery", {
+    message: "Only physical delivery can have zero deliverable value",
+  });
 
 export const RouteOutputReviewSchema = z
   .object({
     kind: V9RouteOutputKindSchema,
+    sameNotionalEligible: z.literal(false).optional(),
     assetKeys: canonicalArrayBy(CanonicalTextSchema, (value) => value).refine((values) => values.length > 0, {
       message: "Route output requires at least one asset key",
     }),
