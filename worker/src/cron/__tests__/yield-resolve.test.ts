@@ -14,7 +14,11 @@ import {
   resetSyncYieldDataTest,
   cleanupSyncYieldDataTest,
 } from "./sync-yield-data.test-support";
-import { cacheRow, installYieldCacheReader } from "./yield-cache.test-support";
+import {
+  cacheRow,
+  healthyRiskFreeRateCacheRow,
+  installYieldCacheReader,
+} from "./yield-cache.test-support";
 import { makeDlYieldPool } from "./yield-resolve.test-support";
 import { buildDlStablecoinPoolsCache } from "../yield-sync/cache";
 import {
@@ -39,7 +43,7 @@ describe("syncYieldData publication sentinels", () => {
       "yield-rankings": null,
       // Scoring evidence: the curated row is only publishable while the USD
       // benchmark entry it scores against is fresh.
-      risk_free_rate: cacheRow("5.0", nowSec),
+      risk_free_rate: healthyRiskFreeRateCacheRow(5, nowSec),
       "dl-stablecoin-pools": cacheRow(buildDlStablecoinPoolsCache([
         makeDlYieldPool({ apy: 6.5, apyBase: 6.5, apyMean30d: 6.3 }),
       ], nowSec), nowSec),
@@ -81,7 +85,7 @@ describe("syncYieldData publication sentinels", () => {
       const db = makeDb();
       installYieldCacheReader(vi.mocked(fixtureGetCache), {
         "yield-rankings": null,
-        risk_free_rate: cacheRow("5.0", nowSec),
+        risk_free_rate: healthyRiskFreeRateCacheRow(5, nowSec),
         "dl-stablecoin-pools": cacheRow(buildDlStablecoinPoolsCache([
           makeDlYieldPool({ apy: 4.5, apyBase: 4.5, apyMean30d: 4.5 }),
         ], nowSec), nowSec),
@@ -294,6 +298,7 @@ describe("auto-lending safety availability", () => {
         safetyScores: new Map(),
         safetySnapshotAvailable: false,
         stablecoinSupplyById: new Map(),
+        stablecoinSupplyMapState: "ok",
       });
 
       expect(resolved).toEqual([
@@ -322,6 +327,7 @@ describe("auto-lending safety availability", () => {
       safetyScores: new Map([["usdc-circle", { score: 49, grade: "D" }]]),
       safetySnapshotAvailable: true,
       stablecoinSupplyById: new Map(),
+      stablecoinSupplyMapState: "ok",
     });
 
     expect(resolved).toHaveLength(0);
@@ -376,6 +382,7 @@ describe("appendOptionalYieldCandidate", () => {
         : input.supply === null
           ? new Map()
           : new Map([[stablecoinId, input.supply]]),
+      stablecoinSupplyMapState: "ok",
     };
   }
 

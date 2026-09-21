@@ -210,7 +210,11 @@ import * as yieldHelpersModule from "../yield-helpers";
 import * as publicationModule from "../yield-sync/publication";
 import * as evmRpcModule from "../../lib/evm-rpc";
 import { YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY } from "../../lib/yield-history-cleanup";
-import { cacheRow, installYieldCacheReader } from "./yield-cache.test-support";
+import {
+  healthyRiskFreeRateCacheRow,
+  installYieldCacheReader,
+  stablecoinsCacheRow,
+} from "./yield-cache.test-support";
 
 const mutableActiveStablecoins = ACTIVE_STABLECOINS as typeof ACTIVE_STABLECOINS extends readonly (infer T)[]
   ? T[]
@@ -507,14 +511,7 @@ function mockHealthyRiskFreeRateCache() {
   const nowSec = Math.floor(Date.now() / 1000);
   installYieldCacheReader(vi.mocked(getCache), {}, {
     fallback: (key) => key === "risk_free_rate"
-      ? cacheRow({
-          rate: 4.0,
-          source: "fred",
-          fetchedAt: nowSec - 3600,
-          recordDate: "2025-06-15",
-          isFallback: false,
-          fallbackMode: null,
-        }, nowSec - 3600)
+      ? healthyRiskFreeRateCacheRow(4, nowSec - 3600)
       : null,
   });
 }
@@ -529,7 +526,9 @@ function resetSyncYieldDataTest() {
     yieldConfigModule.EXPLICIT_YIELD_SOURCE_POOL_MAP as typeof yieldConfigModule.EXPLICIT_YIELD_SOURCE_POOL_MAP;
   for (const key of Object.keys(explicitPoolMap)) delete explicitPoolMap[key];
   // Reset mocks to factory defaults
-  vi.mocked(getCache).mockReset().mockResolvedValue(null);
+  vi.mocked(getCache).mockReset().mockImplementation(async (_db, key) =>
+    key === "stablecoins" ? stablecoinsCacheRow() : null
+  );
   vi.mocked(getCaches)
     .mockReset()
     .mockImplementation(async (db, keys) => {

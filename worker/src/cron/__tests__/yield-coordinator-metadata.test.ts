@@ -96,6 +96,7 @@ describe("buildYieldDegradationReasons", () => {
       fallbackMode: null,
       degradedFamilies: [] as string[],
     },
+    stablecoinSupplyMapState: "ok" as const,
     allDeterministicFailed: false,
     maskedAllDeterministicFailure: false,
     onChainSkippedDueToCooldown: false,
@@ -125,6 +126,14 @@ describe("buildYieldDegradationReasons", () => {
         },
       }),
     ).toContain("yield-supplemental:stale-cache");
+  });
+
+  it.each(["missing", "malformed"] as const)("reports the %s bulk stablecoin supply map", (state) => {
+    expect(buildYieldDegradationReasons({
+      ...baseParams,
+      defaultBenchmarkMeta: buildHardcodedUsdBenchmark("test"),
+      stablecoinSupplyMapState: state,
+    })).toContain(`yield-supply-map:${state}`);
   });
 
   it("reports retained degraded families by name and keeps optional-source failures out of the reasons", () => {
@@ -236,6 +245,7 @@ describe("buildYieldSyncMetadata", () => {
           fallbackMode: null,
           degradedFamilies: [],
         },
+        stablecoinSupplyMapState: "ok",
         optionalSourceFailures: [
           { label: "Midas mMEV NAV oracle source", outcome: "timeout" },
           { label: "Yearn yBOLD source", outcome: "failed" },
@@ -289,6 +299,7 @@ describe("buildYieldSyncMetadata", () => {
         previousTvlRowsTruncated: boolean;
         optionalSourceFailures: Array<{ label: string; outcome: string }>;
         optionalSourceFailureCount: number;
+        stablecoinSupplyMapState: string;
         safetySnapshot: {
           source: string;
           publicationGenerationId: string;
@@ -311,6 +322,7 @@ describe("buildYieldSyncMetadata", () => {
       { label: "Yearn yBOLD source", outcome: "failed" },
     ]);
     expect(metadata.sourceCoverage.optionalSourceFailureCount).toBe(2);
+    expect(metadata.sourceCoverage.stablecoinSupplyMapState).toBe("ok");
     expect(metadata.publicationStats).toEqual({
       cacheValueChars: 812_345,
       yieldDataRowsChars: 120_000,

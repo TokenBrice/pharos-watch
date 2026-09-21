@@ -367,6 +367,28 @@ describe("fetchVaultsFyiSources", () => {
     });
   });
 
+  it("fails closed before any provider call when enabled without D1", async () => {
+    const fetchSpy = mockYieldSourceRoutes([], { requireMatch: true });
+    const logSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const result = await fetchVaultsFyiSources({
+      config: enabledConfig(),
+      startSec: 1_781_267_400,
+    });
+
+    expect(result).toMatchObject({
+      candidates: [],
+      telemetry: {
+        status: "failed",
+        skipReason: "invalid-config",
+        requestCount: 0,
+        monthlyLedgerState: "unavailable",
+      },
+    });
+    expect(fetchSpy).not.toHaveBeenCalled();
+    logSpy.mockRestore();
+  });
+
   it("runs a cheap audit-only inventory probe when enabled without rankable vaults", async () => {
     mockYieldSourceRoutes([{ match: () => true, respond: (request) => {
       const url = request.url;
@@ -381,6 +403,7 @@ describe("fetchVaultsFyiSources", () => {
     } }]);
 
     const result = await fetchVaultsFyiSources({
+      db: creditLedgerDb(null).db,
       config: enabledConfig(),
       startSec: 1_781_267_400,
     });
@@ -409,6 +432,7 @@ describe("fetchVaultsFyiSources", () => {
     mockYieldSourceRoutes([{ match: () => true, respond: () => response({ data: rows }) }]);
 
     const result = await fetchVaultsFyiSources({
+      db: creditLedgerDb(null).db,
       config: enabledConfig(),
       startSec: 1_781_267_400,
     });
@@ -451,6 +475,7 @@ describe("fetchVaultsFyiSources", () => {
     } }]);
 
     const result = await fetchVaultsFyiSources({
+      db: creditLedgerDb(null).db,
       config: enabledConfig({
         maxCreditsPerRun: 100,
         rankableVaults: ["mainnet/0x1111111111111111111111111111111111111111", "mainnet/vault-b"],
@@ -494,6 +519,7 @@ describe("fetchVaultsFyiSources", () => {
     const fetchSpy = mockYieldSourceRoutes([], { requireMatch: true });
 
     const result = await fetchVaultsFyiSources({
+      db: creditLedgerDb(null).db,
       config: enabledConfig({
         rankableVaults: ["mainnet:vault-a"],
         maxCreditsPerRun: 2,
@@ -518,6 +544,7 @@ describe("fetchVaultsFyiSources", () => {
     const fetchSpy = mockYieldSourceRoutes([], { requireMatch: true });
 
     const result = await fetchVaultsFyiSources({
+      db: creditLedgerDb(null).db,
       config: enabledConfig({ rankableVaults: ["not-a-vault-entry"] }),
       startSec: 1_781_267_400,
     });
@@ -526,10 +553,12 @@ describe("fetchVaultsFyiSources", () => {
     expect(result).toMatchObject({
       candidates: [],
       telemetry: {
-        status: "skipped",
+        status: "failed",
         skipReason: "invalid-config",
         requestCount: 0,
         creditsEstimated: 0,
+        malformedDropCount: 1,
+        dropExamples: ["malformed:not-a-vault-entry"],
       },
     });
   });
@@ -538,6 +567,7 @@ describe("fetchVaultsFyiSources", () => {
     mockYieldSourceRoutes([{ match: () => true, respond: () => response({ error: "quota" }, status) }]);
 
     const result = await fetchVaultsFyiSources({
+      db: creditLedgerDb(null).db,
       config: enabledConfig({ rankableVaults: ["mainnet:vault-a"] }),
       startSec: 1_781_267_400,
     });

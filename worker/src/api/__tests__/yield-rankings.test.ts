@@ -557,12 +557,12 @@ describe("handleYieldRankings", () => {
     });
     expect(body.provenance?.liveSafetyHydration).toMatchObject({
       kind: "degraded",
-      reason: "safety-snapshot-unavailable",
+      reason: "safety-hydration-error",
       fallback: "publish-time-snapshot",
     });
     expect(body.warnings?.[0]).toMatchObject({
       code: "yield-safety-hydration-stale",
-      reasons: ["safety-snapshot-unavailable"],
+      reasons: ["safety-hydration-error"],
     });
   });
 
@@ -1649,6 +1649,7 @@ describe("handleYieldRankings", () => {
 
   it("re-bases a non-USD row on the payload's own reference evidence, not the raw rate (A3)", async () => {
     const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    const currentRecordDate = new Date(updatedAt * 1000).toISOString().slice(0, 10);
     // Published while the USD reference was degraded: the write path scored the
     // row with re-base 0 and said so.
     const publishedScore = computePYS({
@@ -1699,9 +1700,22 @@ describe("handleYieldRankings", () => {
         scoreQualification: "estimated",
       }),
     });
-    const serve = async (usd: NonNullable<YieldRankingsResponse["benchmarks"]>) => {
+    const serve = async (benchmarks: NonNullable<YieldRankingsResponse["benchmarks"]>) => {
       const db = makeCacheDb(
-        { ...v748RankingsPayload, rankings: [eurRow], benchmarks: usd, updatedAt },
+        {
+          ...v748RankingsPayload,
+          rankings: [eurRow],
+          benchmarks: {
+            ...benchmarks,
+            USD: {
+              ...benchmarks.USD,
+              recordDate: currentRecordDate,
+              fetchedAt: updatedAt,
+              ageSeconds: 30,
+            },
+          },
+          updatedAt,
+        },
         updatedAt,
       );
       const res = await handleYieldRankings(db);
@@ -1752,6 +1766,7 @@ describe("handleYieldRankings", () => {
 
   it("leaves an unmeasurable safety contribution null and names the benchmark for a rebased move (B7)", async () => {
     const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    const currentRecordDate = new Date(updatedAt * 1000).toISOString().slice(0, 10);
     const anchor = makeYieldRanking({
       id: "rated-coin",
       symbol: "RATE",
@@ -1833,7 +1848,19 @@ describe("handleYieldRankings", () => {
       publishedAt: updatedAt,
     }));
     const run = async (row: YieldRanking) => {
-      const db = makeCacheDb({ ...v748RankingsPayload, rankings: [row, anchor], updatedAt }, updatedAt);
+      const db = makeCacheDb({
+        ...v748RankingsPayload,
+        rankings: [row, anchor],
+        benchmarks: {
+          USD: {
+            ...v748RankingsPayload.benchmarks.USD,
+            recordDate: currentRecordDate,
+            fetchedAt: updatedAt,
+            ageSeconds: 30,
+          },
+        },
+        updatedAt,
+      }, updatedAt);
       const res = await handleYieldRankings(db);
       const body = (await res.json()) as YieldRankingsResponse;
       return body.rankings.find((entry) => entry.id === row.id);

@@ -1,4 +1,5 @@
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { PYS_APY_SANITY_MAX } from "@shared/lib/yield-scoring";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { mapWithConcurrency } from "../../lib/concurrency";
 import type { VaultsFyiRuntimeConfig } from "../../lib/env";
@@ -25,6 +26,9 @@ import type { SupplementalSourceFamilyKey } from "./supplemental-source-family-k
 import { resolveYieldSourceKeyRoute } from "./yield-source-key-routing";
 
 const AAVE_SUPPORTED_CHAINS = new Set(["ethereum", "arbitrum", "base"]);
+const AAVE_TARGETS_PER_RUN = 6;
+const AAVE_TARGET_ROTATION_INTERVAL_SEC = 4 * 60 * 60;
+const AAVE_ORDINARY_MISS_RATIO_LIMIT = 0.5;
 
 const EMPTY_OPTIONAL_RPC_TELEMETRY: OptionalRpcFamilyTelemetry = {
   targetCount: 0,
@@ -89,6 +93,7 @@ export interface SupplementalSourceAccounting {
     concurrencyLimit: number;
   };
   malformedSourceDrops: SupplementalDropBucket;
+  apyEnvelopeDrops: SupplementalDropBucket;
   sizeGatedDrops: SupplementalDropBucket;
 }
 
@@ -159,8 +164,7 @@ function shouldPublishVaultsFyiFamilyCache(
     return telemetry.skipReason === "credit-cap" && candidateCount > 0;
   }
   return telemetry.skipReason === "disabled"
-    || telemetry.skipReason === "no-key"
-    || telemetry.skipReason === "invalid-config";
+    || telemetry.skipReason === "no-key";
 }
 
 export function getSupplementalCandidateFamily(
@@ -262,12 +266,21 @@ function recordDropExample(
 function filterMalformedSupplementalCandidates(
   result: SupplementalSourceFamilyResult,
   malformedSourceDrops: SupplementalDropBucket,
+  apyEnvelopeDrops: SupplementalDropBucket,
 ): SupplementalSourceFamilyResult {
   const candidates: ResolvedYieldCandidate[] = [];
   for (const candidate of result.candidates) {
     if (!isStructurallyValidSupplementalCandidate(candidate)) {
       recordDropExample(
         malformedSourceDrops,
+        result.key,
+        getSupplementalCandidateSourceKey(candidate),
+      );
+      continue;
+    }
+    if (candidate.yield.currentApy > PYS_APY_SANITY_MAX) {
+      recordDropExample(
+        apyEnvelopeDrops,
         result.key,
         getSupplementalCandidateSourceKey(candidate),
       );
@@ -297,11 +310,8 @@ function buildOptionalRpcSummary(telemetry: OptionalRpcFamilyTelemetry): Supplem
 }
 
 /**
- * SRC-SUPP-2: the RPC families fetch target-by-target, so a run where some
- * targets failed resolves with a partial list and an `ok` status. Publishing it
- * would replace the previous full snapshot with the partial one, so a fetch
- * that attempted targets and missed any of them is degraded exactly like an
- * HTTP family that ended early, and the writer retains instead (B1).
+ * Compound probes a fixed, small inventory. Any missing target makes that
+ * family incomplete, so the writer retains its prior snapshot.
  */
 function rpcFamilyFetchEndedDegraded(
   status: SupplementalSourceFamilyStatus,
@@ -309,6 +319,23 @@ function rpcFamilyFetchEndedDegraded(
 ): boolean {
   return status === "failed"
     || (telemetry != null && telemetry.attemptedCount > 0 && telemetry.missingTargetCount > 0);
+}
+
+/**
+ * Aave probes a bounded rotating target window. An ordinary isolated miss can
+ * replace the family cache when a strict majority of probes resolved, while
+ * budget exhaustion, a wholly unresolved RPC run, or a miss ratio of 50% or
+ * more retains the previous snapshot.
+ */
+function aaveFamilyFetchEndedDegraded(
+  status: SupplementalSourceFamilyStatus,
+  telemetry: OptionalRpcFamilyTelemetry | undefined,
+): boolean {
+  if (status === "failed" || !telemetry) return status === "failed";
+  if (telemetry.budgetExhausted) return true;
+  if (telemetry.targetCount > 0 && telemetry.resolvedTargetCount === 0) return true;
+  return telemetry.targetCount > 0
+    && telemetry.missingTargetCount / telemetry.targetCount >= AAVE_ORDINARY_MISS_RATIO_LIMIT;
 }
 
 function buildSourceFamilySummaries(
@@ -354,7 +381,7 @@ function getTrackedContractAddress(stablecoinId: string, chain: string): string 
   return contract?.address ?? null;
 }
 
-function buildAaveTargets(): AaveV3RateTarget[] {
+function buildAaveTargets(startSec: number): AaveV3RateTarget[] {
   const targets: AaveV3RateTarget[] = [];
 
   for (const meta of ACTIVE_STABLECOINS) {
@@ -375,7 +402,13 @@ function buildAaveTargets(): AaveV3RateTarget[] {
     }
   }
 
-  return targets;
+  if (targets.length <= AAVE_TARGETS_PER_RUN) return targets;
+  const rotation = Math.floor(startSec / AAVE_TARGET_ROTATION_INTERVAL_SEC);
+  const start = (rotation * AAVE_TARGETS_PER_RUN) % targets.length;
+  return Array.from(
+    { length: AAVE_TARGETS_PER_RUN },
+    (_, index) => targets[(start + index) % targets.length]!,
+  );
 }
 
 function buildAaveSourceKey(stablecoinId: string, chain: string, assetAddress: string | null): string {
@@ -523,7 +556,7 @@ async function runCompoundFamily(
 async function runAaveFamily(
   context: SupplementalSourceFamilyContext,
 ): Promise<SupplementalSourceFamilyResult> {
-  const targets = buildAaveTargets();
+  const targets = buildAaveTargets(context.startSec);
   if (targets.length === 0) {
     return {
       key: "aaveV3",
@@ -576,7 +609,7 @@ async function runAaveFamily(
     candidates,
     sourceFamilyCount: results.length,
     status,
-    degraded: rpcFamilyFetchEndedDegraded(status, telemetry),
+    degraded: aaveFamilyFetchEndedDegraded(status, telemetry),
     telemetry,
   };
 }
@@ -639,8 +672,9 @@ export async function loadSupplementalSourceFamilies(
 }> {
   const rawFamilyResults = await runSupplementalFamiliesWithConcurrency(context);
   const malformedSourceDrops = buildDropBucket();
+  const apyEnvelopeDrops = buildDropBucket();
   const familyResults = rawFamilyResults.map((result) =>
-    filterMalformedSupplementalCandidates(result, malformedSourceDrops),
+    filterMalformedSupplementalCandidates(result, malformedSourceDrops, apyEnvelopeDrops),
   );
   const sourceFamilyCounts = buildSourceFamilyCountRecord();
   const sourceFamilyInventoryCounts = buildSourceFamilyCountRecord();
@@ -661,6 +695,7 @@ export async function loadSupplementalSourceFamilies(
         concurrencyLimit: SUPPLEMENTAL_SOURCE_FAMILY_CONCURRENCY,
       },
       malformedSourceDrops,
+      apyEnvelopeDrops,
       sizeGatedDrops: buildDropBucket(),
     },
     sourceFamilySummaries: buildSourceFamilySummaries(familyResults, malformedSourceDrops),

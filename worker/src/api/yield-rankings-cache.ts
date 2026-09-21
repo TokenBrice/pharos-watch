@@ -553,7 +553,7 @@ function canServePublishTimeSafety(
 
 function markYieldRankingsSafetyStale(
   payload: YieldRankingsResponse,
-  reason: "safety-snapshot-unavailable" | "safety-identity-missing" | "safety-identity-mismatch",
+  reason: "safety-snapshot-unavailable" | "safety-hydration-error" | "safety-identity-missing" | "safety-identity-mismatch",
   source: LiveSafetyHydrationSource,
 ): YieldRankingsResponse {
   const { coveredCount, trackedCount, coverageRatio } = countRowSafetyCoverage(payload.rankings);
@@ -592,14 +592,16 @@ function markYieldRankingsSafetyStale(
 
 function degradeYieldRankingsSafety(
   payload: YieldRankingsResponse,
-  reason: "safety-snapshot-unavailable" | "safety-identity-missing" | "safety-identity-mismatch",
+  reason: "safety-snapshot-unavailable" | "safety-hydration-error" | "safety-identity-missing" | "safety-identity-mismatch",
   source: LiveSafetyHydrationSource,
 ): YieldRankingsResponse {
+  const safetyReason: YieldSafetyReason =
+    reason === "safety-hydration-error" ? "safety-snapshot-unavailable" : reason;
   const rankings = payload.rankings.map((row) => ({
     ...row,
     safetyScore: null,
     safetyGrade: "NR" as const,
-    safetyReason: reason,
+    safetyReason,
     pharosYieldScore: null,
     // B37: the row's own reason survived the safety loss (source-stale,
     // benchmark-stale, apy-non-positive, ...) — rewriting it to `safety-unrated`
@@ -626,7 +628,7 @@ function degradeYieldRankingsSafety(
           sourceFreshness: resolveHydratedSourceFreshness(row),
           usedDefaultSafety: true,
           safetyProvenance: "safety-snapshot-unavailable" as const,
-          safetyReason: reason,
+          safetyReason,
           safetyScoreIdentity: source.safetyScoreIdentity,
           scoreQualification: "NR" as const,
           scoreQualified: false,
@@ -752,12 +754,12 @@ function createYieldRankingsCacheHandler(
           publicationGenerationId: null,
           methodologyVersion: null,
           publishedAt: null,
-          degradationReasons: ["safety-snapshot-unavailable"],
+          degradationReasons: ["safety-hydration-error"],
         };
         const fallbackPayload = canServePublishTimeSafety(validatedPayload, cached)
-          ? markYieldRankingsSafetyStale(validatedPayload, "safety-snapshot-unavailable", hydrationSource)
-          : degradeYieldRankingsSafety(validatedPayload, "safety-snapshot-unavailable", hydrationSource);
-        return buildYieldRankingsResponse(project(fallbackPayload), cached, ["safety-snapshot-unavailable"]);
+          ? markYieldRankingsSafetyStale(validatedPayload, "safety-hydration-error", hydrationSource)
+          : degradeYieldRankingsSafety(validatedPayload, "safety-hydration-error", hydrationSource);
+        return buildYieldRankingsResponse(project(fallbackPayload), cached, ["safety-hydration-error"]);
       }
     },
   });

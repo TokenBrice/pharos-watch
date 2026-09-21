@@ -349,6 +349,10 @@ describe("parseBcbSelicSeries", () => {
       recordDate: "2026-06-18",
     });
   });
+  it("returns null for a single-row zero daily SELIC placeholder", () => {
+    const payload = JSON.stringify([{ data: "18/06/2026", valor: "0.00" }]);
+    expect(parseBcbSelicSeries(payload)).toBeNull();
+  });
 
   it("skips implausible annualized SELIC observations", () => {
     const payload = JSON.stringify([

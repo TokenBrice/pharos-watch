@@ -112,6 +112,7 @@ export async function runYieldCoordinatorHealthTelemetryStage(
     ),
     dlPoolsMeta: fetched.dlPoolsMeta,
     supplementalMeta: fetched.supplementalMeta,
+    stablecoinSupplyMapState: fetched.stablecoinSupplyMapState,
     allDeterministicFailed: fetched.allDeterministicFailed,
     maskedAllDeterministicFailure: onChainHealth.maskedAllDeterministicFailure,
     onChainSkippedDueToCooldown: fetched.onChainSkippedDueToCooldown,

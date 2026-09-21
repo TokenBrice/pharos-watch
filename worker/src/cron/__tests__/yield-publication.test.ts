@@ -558,7 +558,8 @@ describe("publishYieldCoordinatorResults", () => {
       /^(best-by-confidence-and-apy|deterministic-preferred|curated-over-discovered|tier-preference|tvl-floor|freshness-tiebreaker|fallback|no-alternatives)$/,
     );
     expect(previewLedger?.alternatives.length).toBeLessThanOrEqual(2);
-    expect(previewLedger?.sourceSwitch).toBe(true);
+    // A missing incumbent is not evidence of a measured source switch.
+    expect(previewLedger?.sourceSwitch).toBe(false);
 
     const result = await publishYieldCoordinatorResults(
       makePublishParams({

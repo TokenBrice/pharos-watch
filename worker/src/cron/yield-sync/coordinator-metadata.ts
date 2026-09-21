@@ -3,6 +3,7 @@ import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-
 import type { EvaluatedYieldSource } from "./evaluation-types";
 import { classifyYieldBenchmarkFreshness } from "./benchmarks";
 import type { YieldEnvelopeRejection } from "./types";
+import type { StablecoinSupplyMapState } from "./supply-map";
 import type { YieldSupplementalCacheMeta } from "./state-loading";
 import type { YieldOptionalSourceOutcome } from "./optional-source-runtime";
 import type { YieldRowsWriteStats } from "./publication-atomic-batch";
@@ -100,6 +101,7 @@ export function buildYieldDegradationReasons(params: {
   selectedSources: readonly EvaluatedYieldSource[];
   dlPoolsMeta: YieldSourceInputMeta;
   supplementalMeta: YieldSupplementalCacheMeta;
+  stablecoinSupplyMapState: StablecoinSupplyMapState;
   allDeterministicFailed: boolean;
   maskedAllDeterministicFailure: boolean;
   onChainSkippedDueToCooldown: boolean;
@@ -140,6 +142,9 @@ export function buildYieldDegradationReasons(params: {
   }
   if (params.dlPoolsMeta.mode === "unavailable" || params.dlPoolsMeta.fallbackMode === "cache-parse-failed") {
     degradationReasons.push(`dl-pools:${params.dlPoolsMeta.fallbackMode ?? params.dlPoolsMeta.mode}`);
+  }
+  if (params.stablecoinSupplyMapState !== "ok") {
+    degradationReasons.push(`yield-supply-map:${params.stablecoinSupplyMapState}`);
   }
   // The aggregate coverage floor (60%) cannot see the supplemental lane's share
   // of published rows, so its own cache state and retained-degraded families are
@@ -231,6 +236,7 @@ export function buildYieldSyncMetadata(input: {
   /** SRC-SUPP-3: DL pool rows dropped by the APY envelope during this run's load. */
   dlApyEnvelopeRejectedCount: number;
   supplementalMeta: YieldSupplementalCacheMeta;
+  stablecoinSupplyMapState: StablecoinSupplyMapState;
   /** B15 optional-family failures: reported here, never as a degradation reason. */
   optionalSourceFailures: readonly YieldOptionalSourceOutcome[];
   onChain: YieldOnChainSyncMeta;
@@ -275,6 +281,7 @@ export function buildYieldSyncMetadata(input: {
       supplementalSourceAgeSeconds: input.supplementalMeta.ageSeconds,
       supplementalSourceCount: input.supplementalMeta.sourceCount,
       supplementalFallbackMode: input.supplementalMeta.fallbackMode,
+      stablecoinSupplyMapState: input.stablecoinSupplyMapState,
       optionalSourceFailures: input.optionalSourceFailures,
       optionalSourceFailureCount: input.optionalSourceFailures.length,
       onChainRatesResolved: onChain.ratesResolved,

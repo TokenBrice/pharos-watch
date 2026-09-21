@@ -19,10 +19,16 @@ import {
   fixtureEvmRpcModule,
   fixtureYieldHelpersModule,
 } from "./sync-yield-data.test-support";
-import { cacheRow, dlPoolsCacheRow, installYieldCacheReader } from "./yield-cache.test-support";
+import {
+  dlPoolsCacheRow,
+  healthyRiskFreeRateCacheRow,
+  installYieldCacheReader,
+} from "./yield-cache.test-support";
 import { makeDlYieldPool } from "./yield-resolve.test-support";
 import type * as YieldHelpers from "../yield-helpers";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { getPublishableNonOnchainCoverageIds } from "../yield-sync/coordinator-health";
+import type { EvaluatedYieldSource } from "../yield-sync/evaluation";
 
 const sqliteFixtures = createLatestSchemaFixtureTracker();
 afterEach(() => sqliteFixtures.closeAll());
@@ -40,6 +46,20 @@ function fixtureMockD1(tables: Parameters<typeof createFixtureMockD1>[0] = []) {
 function makeDb() {
   return makeYieldHistoryDb([], { createDb: fixtureMockD1 });
 }
+
+describe("deterministic on-chain alternative coverage", () => {
+  it("does not let a rejected non-on-chain row mask a total deterministic failure", () => {
+    const evaluatedSources = [
+      { id: "100", dataSource: "protocol-api", rejected: true },
+      { id: "usdc-circle", dataSource: "defillama", rejected: false },
+      { id: "u-united-stables", dataSource: "onchain", rejected: false },
+    ] as EvaluatedYieldSource[];
+
+    const publishableAlternativeIds = getPublishableNonOnchainCoverageIds(evaluatedSources);
+    expect(publishableAlternativeIds).toEqual(new Set(["usdc-circle"]));
+    expect(["100"].filter((id) => !publishableAlternativeIds.has(id))).toEqual(["100"]);
+  });
+});
 
 describe("syncYieldData", () => {
   beforeEach(resetSyncYieldDataTest);
@@ -78,10 +98,9 @@ describe("syncYieldData", () => {
               apyMean30d: 0,
             }),
       ], Math.floor(Date.now() / 1000)),
-      // Scoring evidence: without the benchmark registry the USD entry falls back
-      // to the hardcoded constant (ageSeconds null) and both rows publish
-      // stale-benchmark NR, which B13 no longer publishes.
-      risk_free_rate: cacheRow("4.0", nowSec),
+      // Scoring evidence: bounded USD benchmark freshness requires both a
+      // current fetch timestamp and a parseable observation date.
+      risk_free_rate: healthyRiskFreeRateCacheRow(4, nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     fixtureMockFetch([]);
@@ -130,10 +149,9 @@ describe("syncYieldData", () => {
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
       "dl-stablecoin-pools": dlPoolsCacheRow([], nowSec),
-      // Scoring evidence: without the benchmark registry the USD entry falls back
-      // to the hardcoded constant (ageSeconds null) and every row is a
-      // stale-benchmark NR row that B13 no longer publishes.
-      risk_free_rate: cacheRow("4.0", nowSec),
+      // Scoring evidence: bounded USD benchmark freshness requires both a
+      // current fetch timestamp and a parseable observation date.
+      risk_free_rate: healthyRiskFreeRateCacheRow(4, nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     fixtureMockFetch([]);
@@ -238,7 +256,7 @@ describe("syncYieldData", () => {
     ], { createDb: fixtureMockD1 });
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      risk_free_rate: cacheRow("4.0", nowSec),
+      risk_free_rate: healthyRiskFreeRateCacheRow(4, nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     fixtureMockFetch([]);
@@ -263,7 +281,7 @@ describe("syncYieldData", () => {
 
     // Return a risk_free_rate of 4.0% from cache
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      risk_free_rate: cacheRow("4.0", Math.floor(Date.now() / 1000)),
+      risk_free_rate: healthyRiskFreeRateCacheRow(4, Math.floor(Date.now() / 1000)),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     fixtureMockFetch([]);
@@ -294,7 +312,7 @@ describe("syncYieldData", () => {
     const db = makeYieldHistoryDb([], { createDb: fixtureMockD1 });
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      risk_free_rate: cacheRow("4.25", Math.floor(Date.now() / 1000)),
+      risk_free_rate: healthyRiskFreeRateCacheRow(4.25, Math.floor(Date.now() / 1000)),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     fixtureMockFetch([]);
@@ -338,7 +356,7 @@ describe("syncYieldData", () => {
     ], { createDb: fixtureMockD1 });
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      risk_free_rate: cacheRow("4.0", Math.floor(Date.now() / 1000)),
+      risk_free_rate: healthyRiskFreeRateCacheRow(4, Math.floor(Date.now() / 1000)),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
 
@@ -493,7 +511,7 @@ describe("syncYieldData", () => {
     ], { createDb: fixtureMockD1 });
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      risk_free_rate: cacheRow("4.0", nowSec),
+      risk_free_rate: healthyRiskFreeRateCacheRow(4, nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     const testChainRpcs = makeEthereumRpcMap({
@@ -560,7 +578,7 @@ describe("syncYieldData", () => {
     ], { createDb: fixtureMockD1 });
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      risk_free_rate: cacheRow("4.0", nowSec),
+      risk_free_rate: healthyRiskFreeRateCacheRow(4, nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     const testChainRpcs = makeEthereumRpcMap({
@@ -635,7 +653,7 @@ describe("syncYieldData", () => {
     ], { createDb: fixtureMockD1 });
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      risk_free_rate: cacheRow("4.0", nowSec),
+      risk_free_rate: healthyRiskFreeRateCacheRow(4, nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     const testChainRpcs = makeEthereumRpcMap({
@@ -696,7 +714,7 @@ describe("syncYieldData", () => {
     ], { createDb: fixtureMockD1 });
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      risk_free_rate: cacheRow("4.0", nowSec),
+      risk_free_rate: healthyRiskFreeRateCacheRow(4, nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     const testChainRpcs = makeEthereumRpcMap();
@@ -742,7 +760,7 @@ describe("syncYieldData", () => {
     ], { createDb: fixtureMockD1 });
 
     installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      risk_free_rate: cacheRow("4.0", nowSec),
+      risk_free_rate: healthyRiskFreeRateCacheRow(4, nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     const testChainRpcs = makeEthereumRpcMap();
@@ -831,7 +849,7 @@ describe("syncYieldData", () => {
           apyMean30d: 5.1,
         }),
       ], nowSec - 60),
-      risk_free_rate: cacheRow("4.0", nowSec),
+      risk_free_rate: healthyRiskFreeRateCacheRow(4, nowSec),
     });
     vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
     const testChainRpcs = makeEthereumRpcMap();

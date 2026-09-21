@@ -166,6 +166,7 @@ export async function runYieldCoordinatorPersistStage(
       dlPoolsMeta: fetched.dlPoolsMeta,
       dlApyEnvelopeRejectedCount: fetched.dlApyEnvelopeRejectedCount,
       supplementalMeta: fetched.supplementalMeta,
+      stablecoinSupplyMapState: fetched.stablecoinSupplyMapState,
       optionalSourceFailures: normalized.optionalSourceFailures,
       onChain: {
         ratesResolved: fetched.onChainRates.size,

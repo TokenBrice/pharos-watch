@@ -39,6 +39,19 @@ describe("computeRoycoDawnTrancheSafetyScore", () => {
     expect(result?.penalty).toBe(6);
   });
 
+  it("applies the missing-TVL penalty when tranche TVL is unavailable", () => {
+    const result = computeRoycoDawnTrancheSafetyScore({
+      underlyingSafetyScore: 82,
+      sourceRisk: {
+        ...baseRisk,
+        trancheSide: "senior",
+        trancheTvlUsd: null,
+      },
+    });
+
+    expect(result).toEqual({ score: 71, penalty: 11 });
+  });
+
   it("materially penalizes junior tranche safety when utilization is high", () => {
     const result = computeRoycoDawnTrancheSafetyScore({
       underlyingSafetyScore: 82,

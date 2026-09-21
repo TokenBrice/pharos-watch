@@ -724,6 +724,63 @@ describe("syncYieldData", () => {
     expect(result.itemCount).toBe(0);
   });
 
+  it.each([
+    ["missing", null],
+    ["malformed", cacheRow({ unexpected: [] }, Math.floor(Date.now() / 1000))],
+  ] as const)("degrades and blocks auto-lending when the stablecoin supply map is %s", async (state, stablecoins) => {
+    const db = makeDb();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const poolMap = fixtureYieldConfigModule.YIELD_POOL_MAP as Record<string, string>;
+    poolMap["100"] = "pool-sdai-native";
+
+    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      "dl-stablecoin-pools": dlPoolsCacheRow([
+        makeDlYieldPool({
+          pool: "pool-sdai-native",
+          symbol: "sDAI",
+          tvlUsd: 10_000_000,
+          apy: 4,
+          apyBase: 4,
+        }),
+        makeDlYieldPool({
+          pool: "pool-u-venus",
+          chain: "BSC",
+          project: "venus-core-pool",
+          symbol: "U",
+          tvlUsd: 1_000_000,
+          apy: 2.4,
+          apyBase: 2.4,
+        }),
+      ], nowSec),
+      risk_free_rate: cacheRow({
+        rate: 4,
+        source: "fred",
+        fetchedAt: nowSec - 3600,
+        recordDate: "2025-06-15",
+        isFallback: false,
+        fallbackMode: null,
+      }, nowSec - 3600),
+      stablecoins,
+    });
+    vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
+    fixtureMockFetch([]);
+
+    try {
+      const result = await fixtureSyncYieldData(db);
+      const metadata = JSON.parse(result.metadata ?? "{}") as {
+        fallbackMode: string | null;
+        sourceCoverage: { stablecoinSupplyMapState: string };
+      };
+
+      expect(result.status).toBe("degraded");
+      expect(metadata.fallbackMode).toContain(`yield-supply-map:${state}`);
+      expect(metadata.sourceCoverage.stablecoinSupplyMapState).toBe(state);
+      expect(findPublishedYieldRow(db, "u-united-stables", (row) => row.source_key === "pool-u-venus")).toBeUndefined();
+    } finally {
+      delete poolMap["100"];
+    }
+  });
+
   it("adds conservative B.Protocol LQTY-only APR for LUSD and keeps lending as an alternative source", async () => {
     const db = makeDb();
     mockHealthyRiskFreeRateCache();

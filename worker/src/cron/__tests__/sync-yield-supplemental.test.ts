@@ -329,9 +329,9 @@ describe("syncYieldSupplemental", () => {
     });
   });
 
-  it("retains the previous RPC-family snapshot when some targets fail", async () => {
-    // A per-target RPC failure resolves with a partial list under an `ok`
-    // status; publishing it would replace the previous full snapshot (SRC-SUPP-2).
+  it("retains the previous Aave snapshot when the miss ratio reaches the family threshold", async () => {
+    // Two misses out of three targets do not meet the strict-majority success
+    // policy, so the previous complete family snapshot survives.
     vi.mocked(fetchAaveV3SupplyRates).mockResolvedValue({
       results: [
         {
@@ -367,6 +367,52 @@ describe("syncYieldSupplemental", () => {
     };
     expect(metadata.familyCacheResults?.aaveV3).toBe("retained-previous");
     expect(metadata.degradedFamilies).toContain("aaveV3");
+  });
+
+  it("publishes Aave successes when one ordinary target misses below the family threshold", async () => {
+    vi.mocked(fetchAaveV3SupplyRates).mockResolvedValue({
+      results: [
+        {
+          stablecoinId: "usdc-circle",
+          symbol: "USDC",
+          chain: "ethereum",
+          assetAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          apy: 4.25,
+          sourceTvlUsd: 100_000_000,
+        },
+        {
+          stablecoinId: "usdt-tether",
+          symbol: "USDT",
+          chain: "ethereum",
+          assetAddress: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+          apy: 3.75,
+          sourceTvlUsd: 80_000_000,
+        },
+      ],
+      telemetry: {
+        ...emptyRpcTelemetry(),
+        targetCount: 3,
+        attemptedCount: 3,
+        resolvedTargetCount: 2,
+        emittedCount: 2,
+        missingTargetCount: 1,
+        missingByChain: { ethereum: 1 },
+        missingReasonCounts: { "reserve-data-unavailable": 1 },
+      },
+    });
+
+    const result = await syncYieldSupplemental({} as D1Database, undefined, new Map());
+
+    expect(result.status).toBeUndefined();
+    expect(
+      vi.mocked(setCacheIfNewer).mock.calls.some((call) => call[1] === "yield:supplemental-sources:v1:aaveV3"),
+    ).toBe(true);
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      familyCacheResults?: Record<string, string>;
+      degradedFamilies?: string[];
+    };
+    expect(metadata.familyCacheResults?.aaveV3).toBe("published");
+    expect(metadata.degradedFamilies).not.toContain("aaveV3");
   });
 
   it("retains the previous Royco snapshot when pagination ends early", async () => {
@@ -682,6 +728,42 @@ describe("syncYieldSupplemental", () => {
     });
   });
 
+  it("retains the vaults.fyi snapshot for malformed allowlist telemetry", async () => {
+    vi.mocked(fetchVaultsFyiSources).mockResolvedValue({
+      candidates: [],
+      telemetry: {
+        ...emptyVaultsFyiResult({
+          enabled: true,
+          hasKey: true,
+          malformedDropCount: 1,
+          dropExamples: ["malformed:not-a-vault-entry"],
+        }).telemetry,
+        status: "failed",
+        skipReason: "invalid-config",
+      },
+    });
+
+    const result = await syncYieldSupplemental({} as D1Database, undefined, new Map());
+
+    expect(result.status).toBe("degraded");
+    expect(
+      vi.mocked(setCacheIfNewer).mock.calls.some((call) => call[1] === "yield:supplemental-sources:v1:vaultsFyi"),
+    ).toBe(false);
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      familyCacheResults?: Record<string, string>;
+      sourceCoverage?: {
+        sourceFamilySummaries?: {
+          vaultsFyi?: { provider?: { vaultsFyi?: { malformedDropCount?: number; dropExamples?: string[] } } };
+        };
+      };
+    };
+    expect(metadata.familyCacheResults?.vaultsFyi).toBe("retained-previous");
+    expect(metadata.sourceCoverage?.sourceFamilySummaries?.vaultsFyi?.provider?.vaultsFyi).toMatchObject({
+      malformedDropCount: 1,
+      dropExamples: ["malformed:not-a-vault-entry"],
+    });
+  });
+
   it("bounds optional RPC missing-target examples in source family summaries", async () => {
     const missingTargets = Array.from({ length: 30 }, (_, index) => `ethereum:T${index}`);
     vi.mocked(fetchAaveV3SupplyRates).mockResolvedValue({
@@ -711,7 +793,11 @@ describe("syncYieldSupplemental", () => {
     });
 
     const result = await syncYieldSupplemental({} as D1Database, undefined, new Map());
+    expect(
+      vi.mocked(setCacheIfNewer).mock.calls.some((call) => call[1] === "yield:supplemental-sources:v1:aaveV3"),
+    ).toBe(false);
     const metadata = JSON.parse(result.metadata ?? "{}") as {
+      familyCacheResults?: Record<string, string>;
       sourceCoverage?: {
         sourceFamilySummaries?: {
           aaveV3?: {
@@ -726,6 +812,7 @@ describe("syncYieldSupplemental", () => {
       };
     };
 
+    expect(metadata.familyCacheResults?.aaveV3).toBe("retained-previous");
     expect(metadata.sourceCoverage?.sourceFamilySummaries?.aaveV3?.optionalRpc).toMatchObject({
       missingTargetCount: 29,
       budgetExhausted: true,
@@ -962,6 +1049,25 @@ describe("syncYieldSupplemental", () => {
           comparisonAnchorObservedAt: null,
         },
       },
+      {
+        symbol: "USDC",
+        chain: "ethereum",
+        address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        yield: {
+          currentApy: 5000,
+          apyBase: 5000,
+          apyReward: null,
+          sourcePool: "vault-over-envelope",
+          sourceTvlUsd: 1_000_000,
+          dataSource: "protocol-api",
+          exchangeRate: null,
+          sourceKey: "protocol-api:beefy:ethereum:vault-over-envelope",
+          yieldSource: "Beefy: vault-over-envelope",
+          yieldType: "lending-vault",
+          sourceObservedAt: 1_774_526_400,
+          comparisonAnchorObservedAt: null,
+        },
+      },
     ]));
 
     const result = await syncYieldSupplemental({} as D1Database, undefined, new Map());
@@ -987,18 +1093,29 @@ describe("syncYieldSupplemental", () => {
             bySourceFamily?: { beefy?: number };
             exampleSourceKeysBySourceFamily?: { beefy?: string[] };
           };
+          apyEnvelopeDrops?: {
+            total?: number;
+            bySourceFamily?: { beefy?: number };
+            exampleSourceKeysBySourceFamily?: { beefy?: string[] };
+          };
           sizeGatedDrops?: { total?: number };
         };
       };
     };
 
-    expect(metadata.sourceCoverage?.sourceFamilyCounts?.beefy).toBe(2);
+    expect(metadata.sourceCoverage?.sourceFamilyCounts?.beefy).toBe(3);
     expect(metadata.sourceCoverage?.supplementalSourceAccounting?.malformedSourceDrops?.total).toBe(1);
     expect(metadata.sourceCoverage?.supplementalSourceAccounting?.malformedSourceDrops?.bySourceFamily?.beefy).toBe(1);
     expect(
       metadata.sourceCoverage?.supplementalSourceAccounting?.malformedSourceDrops?.exampleSourceKeysBySourceFamily
         ?.beefy,
     ).toEqual(["(missing-source-key)"]);
+    expect(metadata.sourceCoverage?.supplementalSourceAccounting?.apyEnvelopeDrops?.total).toBe(1);
+    expect(metadata.sourceCoverage?.supplementalSourceAccounting?.apyEnvelopeDrops?.bySourceFamily?.beefy).toBe(1);
+    expect(
+      metadata.sourceCoverage?.supplementalSourceAccounting?.apyEnvelopeDrops?.exampleSourceKeysBySourceFamily
+        ?.beefy,
+    ).toEqual(["protocol-api:beefy:ethereum:vault-over-envelope"]);
     expect(metadata.sourceCoverage?.supplementalSourceAccounting?.sizeGatedDrops?.total).toBe(0);
   });
 

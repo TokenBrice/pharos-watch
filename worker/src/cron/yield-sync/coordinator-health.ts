@@ -35,6 +35,16 @@ export function logYieldApyDivergences(evaluatedSources: EvaluatedYieldSource[])
   }
 }
 
+export function getPublishableNonOnchainCoverageIds(
+  evaluatedSources: readonly EvaluatedYieldSource[],
+): Set<string> {
+  return new Set(
+    evaluatedSources
+      .filter((source) => source.dataSource !== "onchain" && !source.rejected)
+      .map((source) => source.id),
+  );
+}
+
 export async function computeDeterministicOnChainHealth(params: {
   db: D1Database;
   startSec: number;
@@ -54,11 +64,7 @@ export async function computeDeterministicOnChainHealth(params: {
   const deterministicSourceIds = Array.from(
     new Set(ON_CHAIN_RATE_CONFIGS.map((config) => config.stablecoinId)),
   );
-  const nonOnchainEvaluatedIds = new Set(
-    params.evaluatedSources
-      .filter((source) => source.dataSource !== "onchain")
-      .map((source) => source.id),
-  );
+  const nonOnchainEvaluatedIds = getPublishableNonOnchainCoverageIds(params.evaluatedSources);
   const onChainAlternativeCoverageMissingIds = deterministicSourceIds.filter(
     (id) => !nonOnchainEvaluatedIds.has(id),
   );

@@ -28,6 +28,13 @@ describe("parseRiskFreeRateCache", () => {
     expect(result!.lastMarketSource).toBe("fred");
   });
 
+  it("does not turn a future fetchedAt into age zero", () => {
+    const payload = serializeRiskFreeRateCache(
+      buildRiskFreeRateCachePayload({ rate: 4.25, source: "fred", fetchedAt: nowSec + 86400 }),
+    );
+    expect(parseRiskFreeRateCache(payload, nowSec, nowSec)?.ageSeconds).toBe(-86400);
+  });
+
   it("returns null for malformed JSON", () => {
     expect(parseRiskFreeRateCache("{bad json", nowSec, nowSec)).toBeNull();
   });
@@ -212,12 +219,12 @@ describe("parseYieldSupplementalSourcesCache", () => {
     expect(result?.candidates).toHaveLength(1);
   });
 
-  it("drops supplemental candidates with future observations or non-finite APY", () => {
+  it("drops supplemental candidates with future observations, non-finite APY, or APY above 300%", () => {
     const raw = JSON.stringify({
       version: 1,
       updatedAt: nowSec,
       source: "sync-yield-supplemental",
-      sourceCount: 3,
+      sourceCount: 4,
       data: [
         {
           symbol: "sDAI",
@@ -256,13 +263,28 @@ describe("parseYieldSupplementalSourcesCache", () => {
             comparisonAnchorObservedAt: null,
           },
         },
+        {
+          symbol: "sDAI",
+          yield: {
+            currentApy: 5000,
+            apyBase: 5000,
+            apyReward: null,
+            sourcePool: null,
+            sourceTvlUsd: null,
+            dataSource: "protocol-api",
+            exchangeRate: null,
+            sourceKey: "over-envelope",
+            sourceObservedAt: nowSec,
+            comparisonAnchorObservedAt: null,
+          },
+        },
       ],
     });
 
     const result = parseYieldSupplementalSourcesCache(raw, nowSec, nowSec);
 
     expect(result?.candidates.map((candidate) => candidate.yield.sourceKey)).toEqual(["valid"]);
-    expect(result?.sourceCount).toBe(3);
+    expect(result?.sourceCount).toBe(4);
   });
 
   it("rejects supplemental cache payloads with future updatedAt", () => {

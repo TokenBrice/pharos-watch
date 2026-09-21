@@ -45,6 +45,7 @@ export async function runYieldCoordinatorNormalizeStage(params: YieldCoordinator
     coingeckoApiKey: params.coingeckoApiKey,
     supplementalCandidates: fetched.supplementalCandidates,
     stablecoinSupplyById: fetched.stablecoinSupplyById,
+    stablecoinSupplyMapState: fetched.stablecoinSupplyMapState,
     onOptionalSourceOutcome: (outcome) => {
       optionalSourceFailures.push(outcome);
     },

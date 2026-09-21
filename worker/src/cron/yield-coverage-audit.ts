@@ -333,6 +333,7 @@ const AUTO_LENDING_AUDIT_REASON: Record<AutoLendingEligibilityReasonCode, string
   "protocol-allowlist": "project-not-allowlisted",
   "apy-floor": "below-apy-floor",
   "tvl-floor": "below-tvl-floor",
+  "supply-map-unavailable": "supply-map-unavailable",
   "source-blocked": "blocked-source",
 };
 
@@ -1143,6 +1144,7 @@ export function identifyStaleAutoLendingOverrides(
       safetyScore: safetyScores?.get(stablecoinId)?.score,
       safetySnapshotAvailable: safetyScores != null,
       stablecoinSupplyById,
+      stablecoinSupplyMapState: "ok",
     });
     if (verdict.eligible) continue;
     const reasons = verdict.reasonCodes.map((reason) => AUTO_LENDING_AUDIT_REASON[reason]);
