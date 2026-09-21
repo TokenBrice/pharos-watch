@@ -134,8 +134,9 @@ export function buildYieldDegradationReasons(params: {
         : `risk-free-rate:${key}:${reason}`,
     );
   }
-  if (params.selectedSources.some((source) => source.sourceFreshness === "stale")) {
-    degradationReasons.push("yield-source:expired-selected");
+  const staleSelectedSource = params.selectedSources.find((source) => source.sourceFreshness === "stale");
+  if (staleSelectedSource) {
+    degradationReasons.push(`yield-source:expired-selected:${staleSelectedSource.sourceKey}`);
   }
   if (params.dlPoolsMeta.mode === "unavailable" || params.dlPoolsMeta.fallbackMode === "cache-parse-failed") {
     degradationReasons.push(`dl-pools:${params.dlPoolsMeta.fallbackMode ?? params.dlPoolsMeta.mode}`);

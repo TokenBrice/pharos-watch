@@ -148,6 +148,23 @@ describe("buildYieldDegradationReasons", () => {
     expect(reasons.filter((reason) => reason.startsWith("yield-source:family-failed:"))).toEqual([]);
   });
 
+  it("names the stale selected source in the degradation reason", () => {
+    const reasons = buildYieldDegradationReasons({
+      ...baseParams,
+      defaultBenchmarkMeta: buildHardcodedUsdBenchmark("test"),
+      selectedSources: [
+        makeEvaluatedSource({
+          sourceKey: "defillama:expired-pool",
+          sourceFreshness: "stale",
+          benchmarkKey: "USD",
+          benchmarkFreshness: "healthy",
+        }),
+      ],
+    });
+
+    expect(reasons).toContain("yield-source:expired-selected:defillama:expired-pool");
+  });
+
   it("stays quiet for a healthy supplemental cache with no optional-source failures", () => {
     expect(
       buildYieldDegradationReasons({

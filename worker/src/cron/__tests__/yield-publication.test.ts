@@ -442,6 +442,20 @@ describe("publishYieldCoordinatorResults", () => {
     expect(history.some((entry) => entry.sql.includes("pharos:yield-sync:history-retention-delete"))).toBe(false);
   });
 
+  it("publishes expired-source rankings as degraded without advancing their freshness sentinel", async () => {
+    const db = makePublicationDb(1);
+    const degradationReasons = ["yield-source:expired-selected:defillama:test-source"];
+
+    const result = await publishYieldCoordinatorResults(
+      makePublishParams({ db, degradationReasons }),
+    );
+
+    expect(result).toMatchObject({ ok: true, degradationReasons });
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_data"))).toBe(true);
+    expect(history.some((entry) => entry.binds[0] === "freshness:yield-data")).toBe(false);
+  });
+
   it("runs ownership handoff cleanup only after successful non-degraded publication cleanup", async () => {
     const db = makePublicationDb(1);
     const result = await publishYieldCoordinatorResults(makePublishParams({ db }));
