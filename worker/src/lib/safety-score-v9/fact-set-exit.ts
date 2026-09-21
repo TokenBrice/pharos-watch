@@ -128,11 +128,11 @@ function outputValuationEvidence(
 }
 
 function resolvedBaseRouteOutput(observation: ExitRouteObservation): {
-  kind: "tracked-stablecoin" | "fiat" | "collateral";
+  kind: "tracked-stablecoin" | "fiat" | "collateral" | "physical-commodity-delivery";
   assetKeys: string[];
 } | null {
   const output = observation.output;
-  if (output.kind !== "tracked-stablecoin" && output.kind !== "fiat" && output.kind !== "collateral") return null;
+  if (output.kind !== "tracked-stablecoin" && output.kind !== "fiat" && output.kind !== "collateral" && output.kind !== "physical-commodity-delivery") return null;
   const assetKeys = resolvedExitRouteOutputAssetKeys(output);
   return assetKeys ? { kind: output.kind, assetKeys } : null;
 }
@@ -335,6 +335,7 @@ function buildRoute(
         gapIds: [gapId],
       }),
       kind: args.review.output?.kind ?? "unknown",
+      ...(args.review.output?.sameNotionalEligible === false ? { sameNotionalEligible: false as const } : {}),
       assetKeys: args.review.output?.assetKeys ?? [],
       basketWeights: args.review.output?.basketWeights ?? [],
       valuation: null,
@@ -366,6 +367,7 @@ function buildRoute(
         gapIds: outputGapId ? [outputGapId] : [],
       }),
       kind: reviewOutput.kind,
+      ...(reviewOutput.sameNotionalEligible === false ? { sameNotionalEligible: false as const } : {}),
       assetKeys: reviewOutput.assetKeys,
       basketWeights: reviewOutput.basketWeights,
       valuation: {

@@ -81,6 +81,9 @@ export function deriveCurrentPegObservationMap(options: {
         if (pegRef != null && Number.isFinite(pegRef) && pegRef > 0 && pegRateSource) {
           pegReference = {
             valueUsd: pegRef,
+            ...((pegType === "peggedGOLD" || pegType === "peggedSILVER")
+              ? { usdPerTroyOunce: pegRates[pegType] }
+              : {}),
             source: pegRateSource,
             contributorCount: pegType ? pegRateCounts[pegType] ?? 0 : 0,
             asOf: options.asOf,

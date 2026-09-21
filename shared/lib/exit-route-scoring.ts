@@ -33,6 +33,7 @@ export type ExitOutputAssetType =
   | "stable-single"
   | "stable-basket"
   | "bluechip-collateral"
+  | "physical-commodity-delivery"
   | "mixed-collateral"
   | "nav";
 export type ExitHolderEligibility =
@@ -183,6 +184,7 @@ export const EXIT_ROUTE_SCORING_TABLES = {
     "stable-single": 100,
     "stable-basket": 80,
     "bluechip-collateral": 65,
+    "physical-commodity-delivery": 65,
     "mixed-collateral": 45,
     nav: 20,
   },

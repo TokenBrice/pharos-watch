@@ -66,6 +66,7 @@ import {
 import { SAME_NOTIONAL_EXIT_OBSERVATION_FRESHNESS_POLICY } from "@shared/lib/redemption-backstop-scoring";
 import {
   transferMaterialScopeFromOnchainGeneration,
+  transferMaterialScopeFromSingleDeploymentAttribution,
   type SafetyScoreV9TransferMaterialityGeneration,
 } from "./transfer-materiality";
 import {
@@ -783,6 +784,7 @@ function transferMaterialScope(
   assetId: string,
   meta: V9ExtensionRegistryMeta,
   generation: SafetyScoreV9TransferMaterialityGeneration | null,
+  review: SafetyScoreV9ReviewedTransferFact | undefined,
 ): SafetyScoreV9TransferMaterialScope {
   const rows = safetyScoreV9ChainRows(fixedInput, assetId);
   const totalSupplyUsd = Object.values(rows).reduce((sum, row) => sum + row.current, 0);
@@ -808,13 +810,22 @@ function transferMaterialScope(
       // make this asset addressable by the contract-scope machinery.
       deploymentModel: authoritativeDeploymentKeys.length > 0 ? "contract-addressable" : "non-contract-native",
     };
-    return transferMaterialScopeFromOnchainGeneration({
+    const observedScope = transferMaterialScopeFromOnchainGeneration({
       assetId,
       meta,
       baseScope,
       generation,
       registryFingerprint: fixedInput.registryFingerprint,
       baseInputGenerationId: fixedInput.baseInputGenerationId,
+      clockSec: fixedInput.clockSec,
+    });
+    // Even an observed zero is evidence: never replace it with attribution.
+    if (observedScope !== baseScope || Object.keys(rows).length > 0) return observedScope;
+    return transferMaterialScopeFromSingleDeploymentAttribution({
+      meta,
+      review,
+      aggregateCirculating: fixedInput.aggregateCirculatingById[assetId] ?? {},
+      baseScope: observedScope,
       clockSec: fixedInput.clockSec,
     });
   }
@@ -930,6 +941,18 @@ function adaptAccessReview(
         maxAgeSec: V9_ACCESS_EVIDENCE_MAX_AGE_SEC,
       })
     : [];
+  if (materialScope.scopeAttestation && transferResolution?.observationState === "known") {
+    const attestation = materialScope.scopeAttestation;
+    transferEvidenceKeys.push(...evidence.add({
+      componentKeys: ["access:transfer"],
+      sourceId: "safety-score-v9.single-deployment-attribution.v1",
+      reviewedAt: attestation.reviewedAt,
+      confidence: "manual-review",
+      sources: attestation.sources,
+      payload: attestation,
+      maxAgeSec: (Date.parse(attestation.expiresAt) - Date.parse(attestation.reviewedAt)) / 1_000,
+    }));
+  }
 
   const blacklistFreshness = review ? accessEvidenceObservationState(review.reviewedAt, clockSec) : null;
   const blacklistEvidenceKeys = review
@@ -1029,6 +1052,8 @@ function adaptAccessReview(
         transferReview ? transferEvidenceKeys : legacyTransferState === "missing" ? [] : blacklistEvidenceKeys,
       ),
       posture: transferPosture,
+      ...(transferState === "known" && materialScope.scopeBasis === "attributed"
+        ? { scopeBasis: "attributed" as const } : {}),
       // Owner ruling 2026-08-10: the applicability basis for a transfer fact
       // that is known from the curated review alone because the asset has no
       // contract deployment scope to complete (see `reviewIsOutsideContractScope`).
@@ -1645,6 +1670,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
           assetId,
           meta,
           options.transferMaterialityGeneration ?? null,
+          reviewedTransferFacts.get(assetId),
         ),
         clockSec,
       );

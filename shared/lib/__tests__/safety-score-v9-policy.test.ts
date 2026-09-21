@@ -48,10 +48,13 @@ describe("Safety Score v9 methodology policy", () => {
     // 335 assets. The full 62-row scope (22 owner-gate rows plus 40 beyond it,
     // including the 28 USDT bridge-control rows) was explicitly acknowledged:
     // pathKinds is per-reason-code, so the rows cannot be admitted separately.
+    // 9.7 adds the physical-commodity-delivery output tier at 65. The 9.6
+    // transfer attribution contract adds no semantic policy field; releaseVersion
+    // is metadata and deliberately excluded from the digest.
     // Rotate only with reviewed semantic changes; release history lives in
     // shared/data/methodology-changelogs/safety-score/v9-activation.ts.
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "fa4af0387d3be293f6d6f3882900f0b5a567ed80bd4afa0a7e80563e8a11b455",
+      "c8786225c71ec9ded8141f3b8c1167a320c19c62cf4f2bcec962bbe639d81466",
     );
     expect(V9_CANDIDATE_POLICY_V1.policy.semantic.formula.withhold).toEqual({
       maxScoreExclusive: 55,

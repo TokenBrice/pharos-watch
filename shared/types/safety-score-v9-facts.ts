@@ -450,7 +450,7 @@ const V9RouteOutputValuationV2Schema = z
   .object({
     basis: V9RouteValuationBasisSchema,
     referenceAssetKey: CanonicalTextSchema,
-    unitValueUsd: z.number().finite().positive(),
+    unitValueUsd: z.number().finite().nonnegative(),
     expectedUnitValueUsd: z.number().finite().positive(),
     valueRetentionRatio: z.number().finite().nonnegative().max(2),
     sourceId: CanonicalTextSchema,
@@ -463,6 +463,9 @@ const V9RouteOutputValuationV2Schema = z
   })
   .strict()
   .superRefine((valuation, ctx) => {
+    if (valuation.unitValueUsd === 0 && valuation.basis !== "commodity-delivery") {
+      ctx.addIssue({ code: "custom", path: ["unitValueUsd"], message: "Only physical delivery can have zero deliverable value" });
+    }
     const expectedRatio = valuation.unitValueUsd / valuation.expectedUnitValueUsd;
     if (Math.abs(valuation.valueRetentionRatio - expectedRatio) > 0.000001) {
       ctx.addIssue({ code: "custom", path: ["valueRetentionRatio"], message: "Value retention is inconsistent" });
@@ -473,6 +476,7 @@ const V9RouteOutputV2Schema = z
   .object({
     status: V9FactStatusV2Schema,
     kind: z.union([V9RouteOutputKindSchema, z.literal("unknown")]),
+    sameNotionalEligible: z.literal(false).optional(),
     assetKeys: CanonicalStringArraySchema,
     basketWeights: canonicalArrayBy(
       z.object({ assetKey: CanonicalTextSchema, weight: PositiveFractionSchema }).strict(),
@@ -482,6 +486,10 @@ const V9RouteOutputV2Schema = z
   })
   .strict()
   .superRefine((output, ctx) => {
+    if (output.kind === "physical-commodity-delivery" &&
+        (output.sameNotionalEligible !== false || (output.valuation !== null && output.valuation.basis !== "commodity-delivery"))) {
+      ctx.addIssue({ code: "custom", message: "Physical delivery is non-same-notional and requires commodity valuation" });
+    }
     if (output.basketWeights.length > 0) {
       const total = output.basketWeights.reduce((sum, entry) => sum + entry.weight, 0);
       if (Math.abs(total - 1) > 0.000001) {
@@ -939,6 +947,7 @@ const V9TransferAccessReviewV2Schema = z
   .object({
     status: V9FactStatusV2Schema,
     posture: z.enum(["permissionless", "restrictable", "permissioned"]).nullable(),
+    scopeBasis: z.literal("attributed").optional(),
     /**
      * Owner ruling 2026-08-10 (same shape as the freeze `structuralDisposition`
      * below): the reviewed-deployment scope machinery is contract-addressed, so
@@ -969,6 +978,9 @@ const V9TransferAccessReviewV2Schema = z
         path: ["structuralDisposition"],
         message: "Structural transfer disposition requires a known reviewed fact",
       });
+    }
+    if (review.scopeBasis === "attributed" && review.status.observationState !== "known") {
+      ctx.addIssue({ code: "custom", path: ["scopeBasis"], message: "Attributed transfer scope requires a known fact" });
     }
   });
 

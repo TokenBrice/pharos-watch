@@ -36,6 +36,7 @@ export const RedemptionOutputAssetTypeSchema = z.enum([
   "stable-single",
   "stable-basket",
   "bluechip-collateral",
+  "physical-commodity-delivery",
   "mixed-collateral",
   "nav",
 ]);

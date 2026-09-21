@@ -123,6 +123,7 @@ describe("Safety Score v9 V9 policy sensitivity", { timeout: V9_EVALUATION_TEST_
 
     expect(paths).toEqual(parameterPaths);
     expect(paths).toContain("semantic.formula.compensabilityHeadroom");
+    expect(paths).toContain("semantic.exit.outputAssetScores.physical-commodity-delivery");
     expect(paths).not.toContain("semantic.formula.pillarWeights.backing");
     expect(paths).not.toContain("semantic.exit.componentWeights.access");
     expect(paths).not.toContain("semantic.exit.stressRequest.referenceNotionalUsd");
@@ -147,6 +148,23 @@ describe("Safety Score v9 V9 policy sensitivity", { timeout: V9_EVALUATION_TEST_
     expect(report.selection).toEqual({ parameterPaths, explicitDeltas: null });
     expect(report.cases).toHaveLength(parameterPaths.length * 2);
     expect(new Set(report.cases.map((item) => item.parameterPath))).toEqual(new Set(parameterPaths));
+  });
+
+  it("perturbs physical delivery independently while preserving its fiat-par ceiling", () => {
+    const report = generateV9PolicySensitivityReport(minimalCorpus);
+    const physicalCases = report.cases.filter(
+      ({ parameterPath }) => parameterPath === "semantic.exit.outputAssetScores.physical-commodity-delivery",
+    );
+
+    expect(physicalCases.map(({ value }) => value)).toEqual([64, 66]);
+    expect(physicalCases.every(({ policyDigest }) => policyDigest !== report.baseline.semanticDigest)).toBe(true);
+    expect(() =>
+      generateV9PolicySensitivityReport({
+        ...minimalCorpus,
+        parameterPaths: ["semantic.exit.outputAssetScores.stable-single"],
+        deltas: [-36],
+      }),
+    ).toThrow("Physical commodity delivery quality must not exceed fiat-par output quality");
   });
 
   it("parses strict repeatable CLI arguments", () => {

@@ -100,11 +100,19 @@ function resolveOutput(
   stablecoinId: string,
   config: Pick<
     RedemptionBackstopConfig,
-    "routeFamily" | "outputAssetType" | "outputAssets" | "unresolvedOutputAssetKeys"
+    "routeFamily" | "outputAssetType" | "outputAssets" | "unresolvedOutputAssetKeys" | "physicalCommodityDelivery"
   >,
   outputValuation?: LiveReserveRedemptionOutputValuation | null,
 ): ExitRouteOutput {
   const meta = TRACKED_META_BY_ID.get(stablecoinId);
+  if (config.outputAssetType === "physical-commodity-delivery" && config.physicalCommodityDelivery) {
+    return {
+      kind: "physical-commodity-delivery",
+      assetKeys: [`commodity:${config.physicalCommodityDelivery.commodity.toLowerCase()}`],
+      sameNotionalEligible: false,
+    };
+  }
+  if (config.outputAssetType === "physical-commodity-delivery") return { kind: "unresolved-asset" };
   // Commodity issuer routes deliver physical metal, not fiat. Keeping them on
   // the offchain fiat branch would let buildOutputReview assign an implied
   // $1 par valuation to GOLD/SILVER even though no USD output valuation was
@@ -272,6 +280,7 @@ export function buildRedemptionExitRouteObservation(
     evidence.supportsScoring &&
     input.config.costModel.kind === "dynamic-or-unclear";
   const scoreEligible =
+    input.config.outputAssetType !== "physical-commodity-delivery" &&
     !input.settlementBoundUnproven &&
     input.resolutionState === "resolved" &&
     input.routeStatus === "open" &&
@@ -448,13 +457,14 @@ export function deriveSupplyModelExitRouteObservation(
       routeFamily: entry.routeFamily,
       outputAssetType: entry.outputAssetType,
       outputAssets: getRedemptionBackstopConfig(entry.stablecoinId)?.outputAssets,
+      physicalCommodityDelivery: staticConfig?.physicalCommodityDelivery,
       unresolvedOutputAssetKeys:
         getRedemptionBackstopConfig(entry.stablecoinId)?.unresolvedOutputAssetKeys,
     }),
     evidenceKind: "documented-terms",
     ...(boundedUnknownFee ? { feeEvidence: "undisclosed-reviewed" as const } : {}),
     confidence: "medium",
-    scoreEligible: routeFamily !== "eventual-redemption" && withinCost,
+    scoreEligible: entry.outputAssetType !== "physical-commodity-delivery" && routeFamily !== "eventual-redemption" && withinCost,
     observedAt: reviewTimestamp,
     freshnessSeconds: Math.max(0, (floorTimestampSec(now) ?? 0) - reviewTimestamp),
     commonModeKeys,

@@ -42,12 +42,29 @@ const SafetyScoreV9ReviewedTransferDeploymentSchema = z
   })
   .strict();
 
+const SingleDeploymentAttributionSchema = z.object({
+  kind: z.literal("single-deployment-attribution"),
+  version: z.literal(1),
+  reviewedAt: StrictIsoDateSchema,
+  expiresAt: StrictIsoDateSchema,
+  reviewer: CanonicalTextSchema,
+  deploymentKey: CanonicalTextSchema,
+  exhaustiveLiability: z.literal(true),
+  sources: z.array(SafetyScoreV9TransferSourceSchema).min(1),
+}).strict().superRefine((row, ctx) => {
+  const duration = Date.parse(row.expiresAt) - Date.parse(row.reviewedAt);
+  if (duration <= 0 || duration > 365 * 86_400_000) {
+    ctx.addIssue({ code: "custom", path: ["expiresAt"], message: "Attribution expiry must be within 365 days of review" });
+  }
+});
+
 const SafetyScoreV9ReviewedTransferFactSchema = z
   .object({
     assetId: CanonicalTextSchema,
     reviewedAt: StrictIsoDateSchema,
     reviewer: CanonicalTextSchema,
     deployments: z.array(SafetyScoreV9ReviewedTransferDeploymentSchema).min(1),
+    transferScopeAttestation: SingleDeploymentAttributionSchema.optional(),
   })
   .strict()
   .superRefine((review, ctx) => {

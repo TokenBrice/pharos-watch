@@ -1,7 +1,9 @@
 import { resolveChainId } from "@shared/lib/chains";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
+import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import type { ContractDeployment } from "@shared/types/core";
-import { safetyScoreV9TransferDeploymentKey } from "@shared/types/safety-score-v9-transfer-overlays";
+import { safetyScoreV9TransferDeploymentKey, type SafetyScoreV9ReviewedTransferFact } from "@shared/types/safety-score-v9-transfer-overlays";
+import { getCirculatingRaw } from "@shared/lib/supply";
 import { z } from "zod";
 import { createCanonicalGenerationCodec } from "../canonical-generation-codec";
 import type { V9ExtensionRegistryMeta } from "./extension-shared";
@@ -174,5 +176,42 @@ export function transferMaterialScopeFromOnchainGeneration(input: {
     materialDeploymentKeys,
     materialDeploymentScopeComplete: materialDeploymentKeys.length > 0,
     deploymentModel: "contract-addressable",
+  };
+}
+
+/** Transfer-only reviewed attribution; never produces chain supply numbers. */
+export function transferMaterialScopeFromSingleDeploymentAttribution(input: {
+  meta: V9ExtensionRegistryMeta;
+  review: SafetyScoreV9ReviewedTransferFact | undefined;
+  aggregateCirculating: Parameters<typeof getCirculatingRaw>[0];
+  baseScope: SafetyScoreV9TransferMaterialScope;
+  clockSec: number;
+}): SafetyScoreV9TransferMaterialScope {
+  const attestation = input.review?.transferScopeAttestation;
+  if (input.baseScope.materialDeploymentScopeComplete || !attestation ||
+    input.review?.assetId !== input.meta.id ||
+    (input.meta.status !== undefined && input.meta.status !== "active") ||
+    input.meta.variantKind === "pure-wrapper" ||
+    (input.meta.bridgeRouteRisk !== undefined && input.meta.bridgeRouteRisk.tier !== "single-chain-or-native" &&
+      !input.meta.bridgeRouteRisk.routes?.length) ||
+    (input.meta.variantOf != null && input.meta.variantKind !== "savings-passthrough" &&
+      input.meta.variantKind !== "risk-absorption" && input.meta.variantKind !== "strategy-vault") ||
+    input.meta.bridgeRouteRisk?.routes?.some((route) =>
+      route.routeClass !== "native" && route.issuanceModel !== "native-issuance")) return input.baseScope;
+  const deployments = authoritativeDeployments(input.meta);
+  if (deployments?.length !== 1 || deployments[0]!.key !== attestation.deploymentKey) return input.baseScope;
+  const reviewedAtSec = Date.parse(`${attestation.reviewedAt}T00:00:00Z`) / 1_000;
+  const expiresAtSec = Date.parse(`${attestation.expiresAt}T00:00:00Z`) / 1_000;
+  const aggregate = getCirculatingRaw(input.aggregateCirculating);
+  if (!Number.isFinite(aggregate) || aggregate <= 0 ||
+    reviewedAtSec > input.clockSec || input.clockSec >= expiresAtSec ||
+    input.clockSec - reviewedAtSec > V9_REVIEW_EVIDENCE_MAX_AGE_SEC) return input.baseScope;
+  return {
+    authoritativeDeploymentKeys: [attestation.deploymentKey],
+    materialDeploymentKeys: [attestation.deploymentKey],
+    materialDeploymentScopeComplete: true,
+    deploymentModel: "contract-addressable",
+    scopeBasis: "attributed",
+    scopeAttestation: attestation,
   };
 }

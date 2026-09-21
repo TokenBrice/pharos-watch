@@ -48,6 +48,8 @@ export interface SafetyScoreV9TransferMaterialScope {
   deploymentModel: SafetyScoreV9TransferDeploymentModel;
   unresolvedMaterialChainIds?: readonly string[];
   unresolvedDeclaredDeploymentKeys?: readonly string[];
+  scopeBasis?: "attributed";
+  scopeAttestation?: NonNullable<SafetyScoreV9ReviewedTransferFact["transferScopeAttestation"]>;
 }
 
 export interface SafetyScoreV9ResolvedTransferReview {

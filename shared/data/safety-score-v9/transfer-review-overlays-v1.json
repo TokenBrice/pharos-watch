@@ -1881,6 +1881,25 @@
     },
     {
       "assetId": "sbold-k3-capital",
+      "transferScopeAttestation": {
+        "kind": "single-deployment-attribution",
+        "version": 1,
+        "reviewedAt": "2026-09-21",
+        "expiresAt": "2027-09-21",
+        "reviewer": "Claude curation campaign 2026-09-21 (ChainSupplyAttribution)",
+        "deploymentKey": "ethereum:0x50bd66d59911f5e086ec87ae43c811e0d059dd11",
+        "exhaustiveLiability": true,
+        "sources": [
+          {
+            "label": "Pinned contract code, totalSupply and decimals at block 26025950 (0x802cead23edbf6891cc98d260b56b35c3d7164a5b0e390a0807a67a56cb495ce); reviewed sole registry liability deployment, no representation routes",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Exact deployed liability token",
+            "url": "https://etherscan.io/address/0x50bd66d59911f5e086ec87ae43c811e0d059dd11"
+          }
+        ]
+      },
       "reviewedAt": "2026-07-20",
       "reviewer": "Claude ACCESS acc-A",
       "deployments": [
@@ -1905,6 +1924,25 @@
     },
     {
       "assetId": "bbqusdc-steakhouse",
+      "transferScopeAttestation": {
+        "kind": "single-deployment-attribution",
+        "version": 1,
+        "reviewedAt": "2026-09-21",
+        "expiresAt": "2027-09-21",
+        "reviewer": "Claude curation campaign 2026-09-21 (ChainSupplyAttribution)",
+        "deploymentKey": "ethereum:0xbeefff209270748ddd194831b3fa287a5386f5bc",
+        "exhaustiveLiability": true,
+        "sources": [
+          {
+            "label": "Pinned contract code, totalSupply and decimals at block 26025950 (0x802cead23edbf6891cc98d260b56b35c3d7164a5b0e390a0807a67a56cb495ce); reviewed sole registry liability deployment, no representation routes",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Exact deployed liability token",
+            "url": "https://etherscan.io/address/0xbeefff209270748ddd194831b3fa287a5386f5bc"
+          }
+        ]
+      },
       "reviewedAt": "2026-07-30",
       "reviewer": "Grok T55 ACCESS",
       "deployments": [
@@ -1982,6 +2020,25 @@
     },
     {
       "assetId": "luausd-lumi-finance",
+      "transferScopeAttestation": {
+        "kind": "single-deployment-attribution",
+        "version": 1,
+        "reviewedAt": "2026-09-21",
+        "expiresAt": "2027-09-21",
+        "reviewer": "Claude curation campaign 2026-09-21 (ChainSupplyAttribution)",
+        "deploymentKey": "arbitrum:0x1dd6b5f9281c6b4f043c02a83a46c2772024636c",
+        "exhaustiveLiability": true,
+        "sources": [
+          {
+            "label": "Pinned contract code, totalSupply and decimals at block 507444869 (0xf6c7e4bbb3be4d25de6fa52be867f67769f94a6f93f81c657b526ca78cd6698c); reviewed sole registry liability deployment, no representation routes",
+            "url": "https://arbitrum-one-rpc.publicnode.com"
+          },
+          {
+            "label": "Exact deployed liability token",
+            "url": "https://arbiscan.io/address/0x1dd6b5f9281c6b4f043c02a83a46c2772024636c"
+          }
+        ]
+      },
       "reviewedAt": "2026-07-20",
       "reviewer": "Claude ACCESS acc-A",
       "deployments": [
@@ -2006,6 +2063,25 @@
     },
     {
       "assetId": "ybold-yearn",
+      "transferScopeAttestation": {
+        "kind": "single-deployment-attribution",
+        "version": 1,
+        "reviewedAt": "2026-09-21",
+        "expiresAt": "2027-09-21",
+        "reviewer": "Claude curation campaign 2026-09-21 (ChainSupplyAttribution)",
+        "deploymentKey": "ethereum:0x9f4330700a36b29952869fac9b33f45eedd8a3d8",
+        "exhaustiveLiability": true,
+        "sources": [
+          {
+            "label": "Pinned contract code, totalSupply and decimals at block 26025950 (0x802cead23edbf6891cc98d260b56b35c3d7164a5b0e390a0807a67a56cb495ce); reviewed sole registry liability deployment, no representation routes",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Exact deployed liability token",
+            "url": "https://etherscan.io/address/0x9f4330700a36b29952869fac9b33f45eedd8a3d8"
+          }
+        ]
+      },
       "reviewedAt": "2026-08-08",
       "reviewer": "OpenAI Codex C06 access review",
       "deployments": [
@@ -2552,6 +2628,25 @@
     },
     {
       "assetId": "stusds-sky",
+      "transferScopeAttestation": {
+        "kind": "single-deployment-attribution",
+        "version": 1,
+        "reviewedAt": "2026-09-21",
+        "expiresAt": "2027-09-21",
+        "reviewer": "Claude curation campaign 2026-09-21 (ChainSupplyAttribution)",
+        "deploymentKey": "ethereum:0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9",
+        "exhaustiveLiability": true,
+        "sources": [
+          {
+            "label": "Pinned contract code, totalSupply and decimals at block 26025950 (0x802cead23edbf6891cc98d260b56b35c3d7164a5b0e390a0807a67a56cb495ce); reviewed sole registry liability deployment, no representation routes",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Exact deployed liability token",
+            "url": "https://etherscan.io/address/0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9"
+          }
+        ]
+      },
       "reviewedAt": "2026-08-08",
       "reviewer": "OpenAI Codex C02 control review",
       "deployments": [
@@ -2576,6 +2671,25 @@
     },
     {
       "assetId": "sgho-aave",
+      "transferScopeAttestation": {
+        "kind": "single-deployment-attribution",
+        "version": 1,
+        "reviewedAt": "2026-09-21",
+        "expiresAt": "2027-09-21",
+        "reviewer": "Claude curation campaign 2026-09-21 (ChainSupplyAttribution)",
+        "deploymentKey": "ethereum:0xe1753f2e00940cc31213dd92013cf019dfe4ca1d",
+        "exhaustiveLiability": true,
+        "sources": [
+          {
+            "label": "Pinned contract code, totalSupply and decimals at block 26025950 (0x802cead23edbf6891cc98d260b56b35c3d7164a5b0e390a0807a67a56cb495ce); reviewed sole registry liability deployment, no representation routes",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Exact deployed liability token",
+            "url": "https://etherscan.io/address/0xe1753f2e00940cc31213dd92013cf019dfe4ca1d"
+          }
+        ]
+      },
       "reviewedAt": "2026-08-08",
       "reviewer": "OpenAI Codex C03 control review",
       "deployments": [
@@ -2600,6 +2714,25 @@
     },
     {
       "assetId": "stkgho-umbrella-aave",
+      "transferScopeAttestation": {
+        "kind": "single-deployment-attribution",
+        "version": 1,
+        "reviewedAt": "2026-09-21",
+        "expiresAt": "2027-09-21",
+        "reviewer": "Claude curation campaign 2026-09-21 (ChainSupplyAttribution)",
+        "deploymentKey": "ethereum:0x4f827a63755855cdf3e8f3bcd20265c833f15033",
+        "exhaustiveLiability": true,
+        "sources": [
+          {
+            "label": "Pinned contract code, totalSupply and decimals at block 26025950 (0x802cead23edbf6891cc98d260b56b35c3d7164a5b0e390a0807a67a56cb495ce); reviewed sole registry liability deployment, no representation routes",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Exact deployed liability token",
+            "url": "https://etherscan.io/address/0x4f827a63755855cdf3e8f3bcd20265c833f15033"
+          }
+        ]
+      },
       "reviewedAt": "2026-07-30",
       "reviewer": "Grok T55 ACCESS",
       "deployments": [
@@ -2628,6 +2761,25 @@
     },
     {
       "assetId": "fxsave-f-x-protocol",
+      "transferScopeAttestation": {
+        "kind": "single-deployment-attribution",
+        "version": 1,
+        "reviewedAt": "2026-09-21",
+        "expiresAt": "2027-09-21",
+        "reviewer": "Claude curation campaign 2026-09-21 (ChainSupplyAttribution)",
+        "deploymentKey": "ethereum:0x7743e50f534a7f9f1791dde7dcd89f7783eefc39",
+        "exhaustiveLiability": true,
+        "sources": [
+          {
+            "label": "Pinned contract code, totalSupply and decimals at block 26025950 (0x802cead23edbf6891cc98d260b56b35c3d7164a5b0e390a0807a67a56cb495ce); reviewed sole registry liability deployment, no representation routes",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Exact deployed liability token",
+            "url": "https://etherscan.io/address/0x7743e50f534a7f9f1791dde7dcd89f7783eefc39"
+          }
+        ]
+      },
       "reviewedAt": "2026-07-20",
       "reviewer": "Claude ACCESS acc-A",
       "deployments": [
@@ -2652,6 +2804,25 @@
     },
     {
       "assetId": "srusde-strata",
+      "transferScopeAttestation": {
+        "kind": "single-deployment-attribution",
+        "version": 1,
+        "reviewedAt": "2026-09-21",
+        "expiresAt": "2027-09-21",
+        "reviewer": "Claude curation campaign 2026-09-21 (ChainSupplyAttribution)",
+        "deploymentKey": "ethereum:0x3d7d6fdf07ee548b939a80edbc9b2256d0cdc003",
+        "exhaustiveLiability": true,
+        "sources": [
+          {
+            "label": "Pinned contract code, totalSupply and decimals at block 26025950 (0x802cead23edbf6891cc98d260b56b35c3d7164a5b0e390a0807a67a56cb495ce); reviewed sole registry liability deployment, no representation routes",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Exact deployed liability token",
+            "url": "https://etherscan.io/address/0x3d7d6fdf07ee548b939a80edbc9b2256d0cdc003"
+          }
+        ]
+      },
       "reviewedAt": "2026-07-20",
       "reviewer": "Claude ACCESS acc-A",
       "deployments": [
@@ -2809,6 +2980,25 @@
     },
     {
       "assetId": "kgst-kyrgyz-som",
+      "transferScopeAttestation": {
+        "kind": "single-deployment-attribution",
+        "version": 1,
+        "reviewedAt": "2026-09-21",
+        "expiresAt": "2027-09-21",
+        "reviewer": "Claude curation campaign 2026-09-21 (ChainSupplyAttribution)",
+        "deploymentKey": "bsc:0x94be0bba8e1e303fe998c9360b57b826f1a4f828",
+        "exhaustiveLiability": true,
+        "sources": [
+          {
+            "label": "Pinned contract code, totalSupply and decimals at block 123182997 (0xb520fcf3f617ba3023f7f15c6b9cd30435e3b7945b993eb07866cf3e3496a1ac); reviewed sole registry liability deployment, no representation routes",
+            "url": "https://bsc-rpc.publicnode.com"
+          },
+          {
+            "label": "Exact deployed liability token",
+            "url": "https://bscscan.com/address/0x94be0bba8e1e303fe998c9360b57b826f1a4f828"
+          }
+        ]
+      },
       "reviewedAt": "2026-07-30",
       "reviewer": "Grok T28 safety-v9 unknown-reduction w2",
       "deployments": [
@@ -2899,6 +3089,25 @@
     },
     {
       "assetId": "aa-falconx-mev-capital",
+      "transferScopeAttestation": {
+        "kind": "single-deployment-attribution",
+        "version": 1,
+        "reviewedAt": "2026-09-21",
+        "expiresAt": "2027-09-21",
+        "reviewer": "Claude curation campaign 2026-09-21 (ChainSupplyAttribution)",
+        "deploymentKey": "ethereum:0xc26a6fa2c37b38e549a4a1807543801db684f99c",
+        "exhaustiveLiability": true,
+        "sources": [
+          {
+            "label": "Pinned contract code, totalSupply and decimals at block 26025950 (0x802cead23edbf6891cc98d260b56b35c3d7164a5b0e390a0807a67a56cb495ce); reviewed sole registry liability deployment, no representation routes",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Exact deployed liability token",
+            "url": "https://etherscan.io/address/0xc26a6fa2c37b38e549a4a1807543801db684f99c"
+          }
+        ]
+      },
       "reviewedAt": "2026-07-20",
       "reviewer": "Claude ACCESS acc-A",
       "deployments": [
@@ -2968,6 +3177,25 @@
     },
     {
       "assetId": "asusdf-astherus",
+      "transferScopeAttestation": {
+        "kind": "single-deployment-attribution",
+        "version": 1,
+        "reviewedAt": "2026-09-21",
+        "expiresAt": "2027-09-21",
+        "reviewer": "Claude curation campaign 2026-09-21 (ChainSupplyAttribution)",
+        "deploymentKey": "bsc:0x917af46b3c3c6e1bb7286b9f59637fb7c65851fb",
+        "exhaustiveLiability": true,
+        "sources": [
+          {
+            "label": "Pinned contract code, totalSupply and decimals at block 123182997 (0xb520fcf3f617ba3023f7f15c6b9cd30435e3b7945b993eb07866cf3e3496a1ac); reviewed sole registry liability deployment, no representation routes",
+            "url": "https://bsc-rpc.publicnode.com"
+          },
+          {
+            "label": "Exact deployed liability token",
+            "url": "https://bscscan.com/address/0x917af46b3c3c6e1bb7286b9f59637fb7c65851fb"
+          }
+        ]
+      },
       "reviewedAt": "2026-07-20",
       "reviewer": "Claude ACC-B TRANSFER-FACT",
       "deployments": [
@@ -3175,6 +3403,25 @@
     },
     {
       "assetId": "gtusdc-gauntlet",
+      "transferScopeAttestation": {
+        "kind": "single-deployment-attribution",
+        "version": 1,
+        "reviewedAt": "2026-09-21",
+        "expiresAt": "2027-09-21",
+        "reviewer": "Claude curation campaign 2026-09-21 (ChainSupplyAttribution)",
+        "deploymentKey": "ethereum:0xdd0f28e19c1780eb6396170735d45153d261490d",
+        "exhaustiveLiability": true,
+        "sources": [
+          {
+            "label": "Pinned contract code, totalSupply and decimals at block 26025950 (0x802cead23edbf6891cc98d260b56b35c3d7164a5b0e390a0807a67a56cb495ce); reviewed sole registry liability deployment, no representation routes",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Exact deployed liability token",
+            "url": "https://etherscan.io/address/0xdd0f28e19c1780eb6396170735d45153d261490d"
+          }
+        ]
+      },
       "reviewedAt": "2026-07-30",
       "reviewer": "Kimi T53 transfer-fact",
       "deployments": [
@@ -3342,6 +3589,25 @@
     },
     {
       "assetId": "scrvusd-curve",
+      "transferScopeAttestation": {
+        "kind": "single-deployment-attribution",
+        "version": 1,
+        "reviewedAt": "2026-09-21",
+        "expiresAt": "2027-09-21",
+        "reviewer": "Claude curation campaign 2026-09-21 (ChainSupplyAttribution)",
+        "deploymentKey": "ethereum:0x0655977feb2f289a4ab78af67bab0d17aab84367",
+        "exhaustiveLiability": true,
+        "sources": [
+          {
+            "label": "Pinned contract code, totalSupply and decimals at block 26025950 (0x802cead23edbf6891cc98d260b56b35c3d7164a5b0e390a0807a67a56cb495ce); reviewed sole registry liability deployment, no representation routes",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Exact deployed liability token",
+            "url": "https://etherscan.io/address/0x0655977feb2f289a4ab78af67bab0d17aab84367"
+          }
+        ]
+      },
       "reviewedAt": "2026-07-20",
       "reviewer": "Claude ACC-B TRANSFER-FACT",
       "deployments": [
@@ -3431,6 +3697,25 @@
     },
     {
       "assetId": "stcusd-cap",
+      "transferScopeAttestation": {
+        "kind": "single-deployment-attribution",
+        "version": 1,
+        "reviewedAt": "2026-09-21",
+        "expiresAt": "2027-09-21",
+        "reviewer": "Claude curation campaign 2026-09-21 (ChainSupplyAttribution)",
+        "deploymentKey": "ethereum:0x88887be419578051ff9f4eb6c858a951921d8888",
+        "exhaustiveLiability": true,
+        "sources": [
+          {
+            "label": "Pinned contract code, totalSupply and decimals at block 26025950 (0x802cead23edbf6891cc98d260b56b35c3d7164a5b0e390a0807a67a56cb495ce); reviewed sole registry liability deployment, no representation routes",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Exact deployed liability token",
+            "url": "https://etherscan.io/address/0x88887be419578051ff9f4eb6c858a951921d8888"
+          }
+        ]
+      },
       "reviewedAt": "2026-07-20",
       "reviewer": "Claude ACC-B TRANSFER-FACT",
       "deployments": [
@@ -3455,6 +3740,25 @@
     },
     {
       "assetId": "stusd-stoneyield",
+      "transferScopeAttestation": {
+        "kind": "single-deployment-attribution",
+        "version": 1,
+        "reviewedAt": "2026-09-21",
+        "expiresAt": "2027-09-21",
+        "reviewer": "Claude curation campaign 2026-09-21 (ChainSupplyAttribution)",
+        "deploymentKey": "bsc:0x806dd21af6de051fb811760a5768d04a99160eb9",
+        "exhaustiveLiability": true,
+        "sources": [
+          {
+            "label": "Pinned contract code, totalSupply and decimals at block 123182997 (0xb520fcf3f617ba3023f7f15c6b9cd30435e3b7945b993eb07866cf3e3496a1ac); reviewed sole registry liability deployment, no representation routes",
+            "url": "https://bsc-rpc.publicnode.com"
+          },
+          {
+            "label": "Exact deployed liability token",
+            "url": "https://bscscan.com/address/0x806dd21af6de051fb811760a5768d04a99160eb9"
+          }
+        ]
+      },
       "reviewedAt": "2026-07-30",
       "reviewer": "Kimi T12 safety-v9 unknown-reduction w2",
       "deployments": [
@@ -3639,6 +3943,25 @@
 },
     {
       "assetId": "vcred-vcred",
+      "transferScopeAttestation": {
+        "kind": "single-deployment-attribution",
+        "version": 1,
+        "reviewedAt": "2026-09-21",
+        "expiresAt": "2027-09-21",
+        "reviewer": "Claude curation campaign 2026-09-21 (ChainSupplyAttribution)",
+        "deploymentKey": "hemi:0x71881974e96152643c74a8e0214b877cfb2a0aa1",
+        "exhaustiveLiability": true,
+        "sources": [
+          {
+            "label": "Pinned contract code, totalSupply and decimals at block 5343983 (0x2f69750f587b3c2190fce209d794ed131f79e7f398270aa55424c9710cb55bf7); reviewed sole registry liability deployment, no representation routes",
+            "url": "https://rpc.hemi.network/rpc"
+          },
+          {
+            "label": "Exact deployed liability token",
+            "url": "https://explorer.hemi.xyz/address/0x71881974e96152643c74a8e0214b877cfb2a0aa1"
+          }
+        ]
+      },
       "reviewedAt": "2026-07-30",
       "reviewer": "Grok T55 ACCESS",
       "deployments": [

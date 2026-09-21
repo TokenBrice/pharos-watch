@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "policyId": "safety-score-v9",
   "lifecycle": "active",
-  "releaseVersion": "9.5",
+  "releaseVersion": "9.7",
   "semantic": {
     "formula": {
       "pillarWeights": {
@@ -748,6 +748,7 @@
         "stable-single": 100,
         "stable-basket": 80,
         "bluechip-collateral": 65,
+        "physical-commodity-delivery": 65,
         "mixed-collateral": 45,
         "nav": 20
       },
