@@ -3,7 +3,9 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { BlacklistMetricCardSkeletonGrid } from "@/components/blacklist-metric-card-skeleton-grid";
 import { InteractiveMetricStatCard, MetricStatCard } from "@/components/metric-stat-card";
+import { QueryStateNotice } from "@/components/query-state-notice";
 import { cn } from "@/lib/utils";
+import { resolveQueryViewState } from "@/lib/query-view-state";
 import type { BlacklistStatusBucket } from "@/lib/blacklist-status-buckets";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import type { BlacklistSummaryResponse } from "@shared/types";
@@ -11,8 +13,11 @@ import type { BlacklistSummaryResponse } from "@shared/types";
 interface BlacklistStatsProps {
   summary: BlacklistSummaryResponse | undefined;
   isLoading: boolean;
+  error?: unknown;
   blacklistStatusBuckets: BlacklistStatusBucket[] | null;
   supportDataLoading: boolean;
+  supportError?: unknown;
+  onRetry?: () => void;
   onUnfreezableSelect?: () => void;
 }
 
@@ -25,28 +30,42 @@ function formatMarketSharePercentage(value: number): string {
 export function BlacklistStats({
   summary,
   isLoading,
+  error,
   blacklistStatusBuckets,
   supportDataLoading,
+  supportError,
+  onRetry,
   onUnfreezableSelect,
 }: BlacklistStatsProps) {
+  const summaryState = resolveQueryViewState({ hasData: summary !== undefined, isLoading, error });
+  const supportState = resolveQueryViewState({
+    hasData: blacklistStatusBuckets !== null,
+    isLoading: supportDataLoading,
+    error: supportError,
+  });
+  const summaryUnavailable = summaryState === "unavailable";
+  const supportUnavailable = supportState === "unavailable";
   const stats = summary?.stats;
   const dataQuality = summary?.dataQuality;
-  const trackedFrozenTotal = stats?.trackedFrozenTotal ?? stats?.activeFrozenTotal ?? 0;
+  const trackedFrozenTotal = stats ? (stats.trackedFrozenTotal ?? stats.activeFrozenTotal ?? 0) : null;
   const totalTrackedMarketCap = (blacklistStatusBuckets ?? []).reduce((sum, bucket) => sum + bucket.marketCap, 0);
   const unfreezableBucket = blacklistStatusBuckets?.find((bucket) => bucket.key === "no") ?? null;
   const unfreezableMarketSharePct =
     unfreezableBucket && totalTrackedMarketCap > 0 ? (unfreezableBucket.marketCap / totalTrackedMarketCap) * 100 : 0;
   const isUnfreezableShareLoading = supportDataLoading;
-  const unfreezableMarketShareValue = isUnfreezableShareLoading
-    ? "—"
-    : formatMarketSharePercentage(unfreezableMarketSharePct);
+  const unfreezableMarketShareValue =
+    isUnfreezableShareLoading || supportUnavailable ? "—" : formatMarketSharePercentage(unfreezableMarketSharePct);
   const unfreezableCount = isUnfreezableShareLoading ? "syncing" : `${unfreezableBucket?.count ?? 0} stablecoins`;
-  const baseUnfreezableSubtext =
-    unfreezableBucket && totalTrackedMarketCap > 0
+  const baseUnfreezableSubtext = supportUnavailable
+    ? "Freeze status data unavailable"
+    : unfreezableBucket && totalTrackedMarketCap > 0
       ? `${unfreezableCount} · ${formatCurrency(unfreezableBucket.marketCap)} of ${formatCurrency(totalTrackedMarketCap)} total`
       : "Freezable: No / total market cap";
   const canDrillIntoUnfreezable =
-    typeof onUnfreezableSelect === "function" && !isUnfreezableShareLoading && (unfreezableBucket?.count ?? 0) > 0;
+    typeof onUnfreezableSelect === "function" &&
+    !isUnfreezableShareLoading &&
+    !supportUnavailable &&
+    (unfreezableBucket?.count ?? 0) > 0;
   const unfreezableMarketShareSubtext = canDrillIntoUnfreezable
     ? `${baseUnfreezableSubtext} · View list →`
     : baseUnfreezableSubtext;
@@ -68,6 +87,11 @@ export function BlacklistStats({
 
   return (
     <div className="grid grid-cols-1 gap-3 animate-in fade-in duration-300 sm:grid-cols-2 sm:gap-5">
+      {summaryUnavailable ? (
+        <div className="sm:col-span-2">
+          <QueryStateNotice state="unavailable" label="Freeze ledger data" onRetry={onRetry} />
+        </div>
+      ) : null}
       {hasFreezeLedgerWarnings ? (
         <Card
           className={cn(
@@ -121,14 +145,14 @@ export function BlacklistStats({
       )}
       <MetricStatCard
         title="Tracked Frozen Total"
-        value={formatCurrency(trackedFrozenTotal)}
+        value={trackedFrozenTotal === null ? "—" : formatCurrency(trackedFrozenTotal)}
         subtext="last-known freeze snapshots"
         valueClassName="pharos-numeric text-3xl font-semibold"
         subtextClassName="text-sm text-muted-foreground"
       />
       <MetricStatCard
         title="Total Wiped Value"
-        value={stats ? formatCurrency(stats.destroyedTotal) : "$0"}
+        value={stats ? formatCurrency(stats.destroyedTotal) : "—"}
         subtext="destroyed or confiscated value"
         valueClassName="pharos-numeric text-3xl font-semibold"
         subtextClassName="text-sm text-muted-foreground"

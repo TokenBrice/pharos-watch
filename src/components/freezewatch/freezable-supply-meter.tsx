@@ -2,6 +2,7 @@
 
 import type { CSSProperties, ReactNode } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { QueryStateNotice } from "@/components/query-state-notice";
 import { cn } from "@/lib/utils";
 import {
   BLACKLIST_STATUS_BUCKET_COLORS,
@@ -18,6 +19,9 @@ const FREEZABLE_BUCKETS = new Set<BlacklistStatusBucketKey>(["yes", "upstream", 
 interface FreezableSupplyMeterProps {
   buckets: BlacklistStatusBucket[] | null | undefined;
   isLoading: boolean;
+  /** The support-query read failed with no retained buckets — no share claim is possible. */
+  isUnavailable?: boolean;
+  onRetry?: () => void;
   selectedBucket?: BlacklistStatusBucketKey | null;
   onBucketSelect?: (bucket: BlacklistStatusBucketKey) => void;
 }
@@ -50,9 +54,19 @@ export function computeFreezableSummary(buckets: BlacklistStatusBucket[] | null 
 export function FreezableSupplyMeter({
   buckets,
   isLoading,
+  isUnavailable = false,
+  onRetry,
   selectedBucket = null,
   onBucketSelect,
 }: FreezableSupplyMeterProps) {
+  if (isUnavailable) {
+    return (
+      <div className="p-5 sm:p-6">
+        <QueryStateNotice state="unavailable" label="Freezable supply data" onRetry={onRetry} />
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="p-5 sm:p-6">

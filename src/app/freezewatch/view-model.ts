@@ -86,8 +86,18 @@ export function useFreezeWatchPageController() {
     refetch: refetchSummary,
     meta: summaryMeta,
   } = useBlacklistSummary();
-  const { data: stablecoinData, isLoading: supportStablecoinsLoading } = useStablecoins();
-  const { data: reportCardsData, isLoading: supportReportCardsLoading } = useReportCardsV9();
+  const {
+    data: stablecoinData,
+    isLoading: supportStablecoinsLoading,
+    error: supportStablecoinsError,
+    refetch: refetchStablecoins,
+  } = useStablecoins();
+  const {
+    data: reportCardsData,
+    isLoading: supportReportCardsLoading,
+    error: supportReportCardsError,
+    refetch: refetchReportCards,
+  } = useReportCardsV9();
   const { searchParams, replaceParams } = useUrlFilters();
   const parsedFilters = useMemo(() => parseFreezeWatchPageFilters(searchParams.toString()), [searchParams]);
   const reportCardMap = useMemo(
@@ -147,7 +157,7 @@ export function useFreezeWatchPageController() {
     includeTotal: true,
   });
   const events = pageData?.events ?? [];
-  const error = summaryError ?? pageError;
+  const error = summaryError ?? pageError ?? supportStablecoinsError ?? supportReportCardsError;
   const dataUpdatedAt = Math.max(summaryUpdatedAt, pageUpdatedAt);
   const freshnessMeta = summaryMeta ?? pageMeta;
 
@@ -270,20 +280,28 @@ export function useFreezeWatchPageController() {
     updateFilters({ page: nextPage });
   }, [clampedPage, totalPages, updateFilters]);
 
+  const refetchSupport = useCallback(() => {
+    void refetchStablecoins();
+    void refetchReportCards();
+  }, [refetchReportCards, refetchStablecoins]);
+
   return {
     summary,
     summaryLoading,
+    summaryError,
     error,
     dataUpdatedAt,
     freshnessMeta,
     stablecoins: stablecoinData?.peggedAssets as StablecoinData[] | undefined,
     stablecoinFxFallbackRates: stablecoinData?.fxFallbackRates,
+    stablecoinsError: supportStablecoinsError,
     reportCardMap,
     reportCardsResponse: reportCardsData,
     blacklistStatusBuckets,
     supportDataLoading: supportStablecoinsLoading || supportReportCardsLoading,
     refetchSummary,
     refetchPage,
+    refetchSupport,
     statusBucket,
     stablecoinFilter,
     chainFilter,

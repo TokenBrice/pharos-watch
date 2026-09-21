@@ -24,6 +24,7 @@ import {
 import { InterventionSeismograph } from "@/components/freezewatch/intervention-seismograph";
 import { SovereigntyLattice } from "@/components/freezewatch/sovereignty-lattice";
 import { coinIdBySymbol } from "@/lib/coin-id-by-symbol";
+import { resolveQueryViewState } from "@/lib/query-view-state";
 import { formatCurrency } from "@shared/lib/format";
 import {
   BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
@@ -71,6 +72,7 @@ export default function FreezeWatchClient() {
   const {
     summary,
     summaryLoading,
+    summaryError,
     error,
     dataUpdatedAt,
     freshnessMeta,
@@ -80,8 +82,10 @@ export default function FreezeWatchClient() {
     reportCardsResponse,
     blacklistStatusBuckets,
     supportDataLoading,
+    stablecoinsError,
     refetchSummary,
     refetchPage,
+    refetchSupport,
     statusBucket,
     stablecoinFilter,
     chainFilter,
@@ -117,6 +121,12 @@ export default function FreezeWatchClient() {
     focusedCoin?.id ??
     (stablecoinFilter !== "all" ? coinIdBySymbol(stablecoinFilter) : null);
 
+  const heroState = resolveQueryViewState({
+    hasData: blacklistStatusBuckets !== null,
+    isLoading: supportDataLoading,
+    error: stablecoinsError,
+  });
+  const heroUnavailable = heroState === "unavailable";
   const heroLoading = summaryLoading || supportDataLoading;
   const { freezableMarketCap, freezableCount, freezableShare } =
     computeFreezableSummary(blacklistStatusBuckets);
@@ -147,6 +157,7 @@ export default function FreezeWatchClient() {
         onRetry={() => {
           void refetchSummary();
           void refetchPage();
+          refetchSupport();
         }}
         queries={[
           { preset: "blacklist", dataUpdatedAt, error, hasData: !!summary || events.length > 0, meta: freshnessMeta },
@@ -161,11 +172,11 @@ export default function FreezeWatchClient() {
         <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4 border-b border-border/50 p-5 sm:p-6">
           <div className="min-w-0 space-y-1.5">
             <p className="text-sm font-medium text-muted-foreground">Freezable share of tracked supply</p>
-            {heroLoading ? (
+            {heroLoading && !heroUnavailable ? (
               <Skeleton className="h-10 w-32" />
             ) : (
               <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue sm:text-[2.45rem]">
-                {formatShare(freezableShare)}
+                {heroUnavailable ? "—" : formatShare(freezableShare)}
               </p>
             )}
             <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
@@ -173,13 +184,23 @@ export default function FreezeWatchClient() {
             </p>
           </div>
           <dl className="flex flex-wrap items-end gap-x-8 gap-y-3">
-            <HeroStat label="Freezable value" value={formatCurrency(freezableMarketCap, 0)} loading={heroLoading} />
-            <HeroStat label="Freezable coins" value={String(freezableCount)} loading={heroLoading} />
+            <HeroStat
+              label="Freezable value"
+              value={heroUnavailable ? "—" : formatCurrency(freezableMarketCap, 0)}
+              loading={heroLoading && !heroUnavailable}
+            />
+            <HeroStat
+              label="Freezable coins"
+              value={heroUnavailable ? "—" : String(freezableCount)}
+              loading={heroLoading && !heroUnavailable}
+            />
           </dl>
         </div>
         <FreezableSupplyMeter
           buckets={blacklistStatusBuckets}
           isLoading={heroLoading}
+          isUnavailable={heroUnavailable}
+          onRetry={refetchSupport}
           selectedBucket={statusBucket}
           onBucketSelect={handleStatusBucketChange}
         />
@@ -188,8 +209,11 @@ export default function FreezeWatchClient() {
       <BlacklistStats
         summary={summary}
         isLoading={summaryLoading}
+        error={summaryError}
         blacklistStatusBuckets={blacklistStatusBuckets}
         supportDataLoading={supportDataLoading}
+        supportError={stablecoinsError}
+        onRetry={() => void refetchSummary()}
         onUnfreezableSelect={() => handleStatusBucketChange("no")}
       />
 
@@ -200,12 +224,20 @@ export default function FreezeWatchClient() {
             stablecoins={stablecoins}
             fxFallbackRates={stablecoinFxFallbackRates}
             reportCards={reportCardMap}
+            error={stablecoinsError}
+            isLoading={supportDataLoading}
+            onRetry={refetchSupport}
             onClear={handleStatusBucketClear}
           />
         </div>
       ) : null}
 
-      <BlacklistChart chart={summary?.chart} isLoading={summaryLoading} />
+      <BlacklistChart
+        chart={summary?.chart}
+        isLoading={summaryLoading}
+        error={summaryError}
+        onRetry={() => void refetchSummary()}
+      />
 
       <FreezeWatchSection
         eyebrow="Event ledger"

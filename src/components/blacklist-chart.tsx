@@ -3,7 +3,9 @@
 import { useMemo } from "react";
 import { Line } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
+import { QueryStateNotice } from "@/components/query-state-notice";
 import { formatCurrency } from "@shared/lib/format";
+import { resolveQueryViewState } from "@/lib/query-view-state";
 import { BLACKLIST_CHART_COLORS } from "@shared/lib/classification";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
 import { ChartLegendChip } from "@/components/chart-primitives/axes";
@@ -19,6 +21,8 @@ const CHART_HEIGHT = "h-[220px] sm:h-[280px]";
 interface BlacklistChartProps {
   chart: BlacklistSummaryResponse["chart"] | undefined;
   isLoading: boolean;
+  error?: unknown;
+  onRetry?: () => void;
 }
 
 type BlacklistTooltipEntry = {
@@ -40,8 +44,11 @@ export function getBlacklistChartCoins(
   return BLACKLIST_STABLECOINS.filter((coin) => chartData.some((point) => (point[coin] ?? 0) > 0));
 }
 
-export function BlacklistChart({ chart, isLoading }: BlacklistChartProps) {
+export function BlacklistChart({ chart, isLoading, error, onRetry }: BlacklistChartProps) {
   const chartData = useMemo(() => chart ?? [], [chart]);
+  // A failed summary read must not render the successful-empty-ledger copy.
+  const unavailable =
+    resolveQueryViewState({ hasData: chart != null, isLoading, error }) === "unavailable";
 
   const peakQuarters = useMemo(() => {
     return [...chartData]
@@ -101,7 +108,9 @@ export function BlacklistChart({ chart, isLoading }: BlacklistChartProps) {
         </p>
       </div>
       <div className="p-5 sm:p-6">
-        {chartData.length > 0 ? (
+        {unavailable ? (
+          <QueryStateNotice state="unavailable" label="Freeze ledger chart" onRetry={onRetry} />
+        ) : chartData.length > 0 ? (
           <>
             <div className="mb-3 flex flex-wrap gap-2">
               {chartCoins.map((coin) => (

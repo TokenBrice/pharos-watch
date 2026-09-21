@@ -15,6 +15,7 @@ const {
   trackEventMock,
   trackSearchMock,
   useReportCardsV9Mock,
+  useStablecoinsMock,
 } = vi.hoisted(() => ({
   useBlacklistSummaryMock: vi.fn(),
   useBlacklistEventsPageMock: vi.fn(),
@@ -22,6 +23,7 @@ const {
   trackEventMock: vi.fn(),
   trackSearchMock: vi.fn(),
   useReportCardsV9Mock: vi.fn(),
+  useStablecoinsMock: vi.fn(),
 }));
 
 let currentSearch = "";
@@ -44,10 +46,7 @@ vi.mock("@/lib/analytics", () => ({
 }));
 
 vi.mock("@/hooks/use-stablecoins", () => ({
-  useStablecoins: () => ({
-    data: { peggedAssets: [] },
-    isLoading: false,
-  }),
+  useStablecoins: useStablecoinsMock,
 }));
 
 vi.mock("@/hooks/api-hooks", () => ({
@@ -106,6 +105,15 @@ describe("useFreezeWatchPageController", () => {
     useReportCardsV9Mock.mockReturnValue({
       data: { cards: [] },
       isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    useStablecoinsMock.mockReset();
+    useStablecoinsMock.mockReturnValue({
+      data: { peggedAssets: [] },
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
     });
     useBlacklistSummaryMock.mockReturnValue({
       data: {
@@ -290,6 +298,50 @@ describe("useFreezeWatchPageController", () => {
     expect(row?.pillars.control.score).toBe(90);
     expect(row?.weakestPillar).toEqual({ pillar: "backing", score: 86 });
     expect(row?.bindingCapReason).toBe("Mint control evidence caps the published score.");
+  });
+
+  it("threads support-query failures into the page error and exposes the support retry", () => {
+    const stablecoinsError = new Error("stablecoin list unavailable");
+    const refetchStablecoins = vi.fn();
+    const refetchReportCards = vi.fn();
+    useStablecoinsMock.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: stablecoinsError,
+      refetch: refetchStablecoins,
+    });
+    useReportCardsV9Mock.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: new Error("report cards unavailable"),
+      refetch: refetchReportCards,
+    });
+
+    const { result } = renderHook(() => useFreezeWatchPageController());
+
+    expect(result.current.error).toBe(stablecoinsError);
+    expect(result.current.stablecoinsError).toBe(stablecoinsError);
+    expect(result.current.blacklistStatusBuckets).toBeNull();
+
+    result.current.refetchSupport();
+
+    expect(refetchStablecoins).toHaveBeenCalledOnce();
+    expect(refetchReportCards).toHaveBeenCalledOnce();
+  });
+
+  it("surfaces a report-card support failure even when the stablecoin list resolves", () => {
+    const reportCardsError = new Error("report cards unavailable");
+    useReportCardsV9Mock.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: reportCardsError,
+      refetch: vi.fn(),
+    });
+
+    const { result } = renderHook(() => useFreezeWatchPageController());
+
+    expect(result.current.error).toBe(reportCardsError);
+    expect(result.current.stablecoinsError).toBeNull();
   });
 
   it("removes stale chainId alias when updating the chain filter", () => {
