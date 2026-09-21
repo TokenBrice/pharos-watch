@@ -169,6 +169,50 @@ describe("handleEvents", () => {
       event: "tape_event_row_dropped",
       level: "warn",
       route: "/api/events",
+      metadata: expect.objectContaining({
+        reason: "wire-schema-invalid",
+        invalidFields: ["payload.safetyScore.identityStatus"],
+      }),
+    }));
+  });
+
+  it("quarantines unreadable and schema-invalid rows by name and serves the remainder", async () => {
+    const db = eventDb([
+      makeRow({ id: 4, event_id: "kept", source_row_id: "4" }),
+      makeRow({ id: 3, event_id: "corrupt-json", source_row_id: "3", payload_json: "{not-json" }),
+      makeRow({ id: 2, event_id: "bad-transition", source_row_id: "2", transition: "bogus" }),
+      makeRow({ id: 1, event_id: "bad-timestamp", source_row_id: "1", ts: "not-a-number" }),
+    ]);
+
+    const res = await handleEvents(db, new URL("https://x/api/events"));
+    const body = TapeEventsResponseSchema.parse(await readJsonResponse(res, 200));
+
+    expect(res.status).toBe(200);
+    expect(body.events.map((event) => event.id)).toEqual(["kept"]);
+    expect(body.droppedRows).toBe(3);
+    expect(logWorkerEventMock).toHaveBeenCalledWith(expect.objectContaining({
+      event: "tape_event_row_dropped",
+      metadata: expect.objectContaining({
+        eventId: "corrupt-json",
+        reason: "payload-json-invalid",
+        invalidFields: [],
+      }),
+    }));
+    expect(logWorkerEventMock).toHaveBeenCalledWith(expect.objectContaining({
+      event: "tape_event_row_dropped",
+      metadata: expect.objectContaining({
+        eventId: "bad-transition",
+        reason: "wire-schema-invalid",
+        invalidFields: ["transition"],
+      }),
+    }));
+    expect(logWorkerEventMock).toHaveBeenCalledWith(expect.objectContaining({
+      event: "tape_event_row_dropped",
+      metadata: expect.objectContaining({
+        eventId: "bad-timestamp",
+        reason: "wire-schema-invalid",
+        invalidFields: ["ts"],
+      }),
     }));
   });
 

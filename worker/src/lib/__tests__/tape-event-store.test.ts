@@ -4,7 +4,9 @@ import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import {
   filterUnprojectedTapeEvents,
   insertTapeEvents,
+  queryTapeEvents,
 } from "../tape-event-store";
+import { mapTapeEventRow } from "../tape-event-helpers";
 import type { TapeEventInsert } from "../tape-event-types";
 
 const databases: DatabaseSync[] = [];
@@ -92,5 +94,28 @@ describe("Tape event store static-catalog probes", () => {
     expect(reads.every((sql) => sql.includes("INDEXED BY idx_tape_source_key"))).toBe(true);
     expect(reads.every((sql) => sql.includes("LIMIT 1"))).toBe(true);
     expect(reads.every((sql) => !sql.includes("WHERE type ="))).toBe(true);
+  });
+});
+
+describe("Tape event read boundary", () => {
+  it("serves a projector insert through the full wire schema", async () => {
+    const { db } = createTapeDatabase();
+    const inserted = event("round-trip");
+    await insertTapeEvents(db, [inserted]);
+
+    const { rows } = await queryTapeEvents(db, { filters: {}, limit: 10, cursor: null, includeTotal: false });
+    const mapping = mapTapeEventRow(rows[0]!);
+
+    expect(mapping.quarantine).toBeNull();
+    expect(mapping.event).toMatchObject({
+      id: inserted.eventId,
+      type: inserted.type,
+      severity: inserted.severity,
+      ts: inserted.ts,
+      payload: inserted.payload,
+      sourceTable: inserted.sourceTable,
+      sourceRowId: inserted.sourceRowId,
+      transition: inserted.transition,
+    });
   });
 });

@@ -9,7 +9,7 @@ import { errorResponse, jsonFreshResponse } from "../lib/api-response";
 import { getLatestSuccessfulCronTimestamp, buildFreshnessMeta } from "../lib/api-freshness";
 import { CACHE_PROFILES } from "../lib/constants";
 import { queryTapeEvents, type TapeEventQueryFilters } from "../lib/tape-event-store";
-import { rowToTapeEvent } from "../lib/tape-event-helpers";
+import { mapTapeEventRow } from "../lib/tape-event-helpers";
 import { logWorkerEvent } from "../lib/structured-log";
 import {
   SEVERITY_RANK,
@@ -185,7 +185,7 @@ export const handleEvents = async (db: D1Database, url: URL): Promise<Response> 
   const events: TapeEvent[] = [];
   let droppedRows = 0;
   for (const row of rows) {
-    const event = rowToTapeEvent(row);
+    const { event, quarantine } = mapTapeEventRow(row);
     if (event == null) {
       droppedRows++;
       logWorkerEvent({
@@ -199,6 +199,8 @@ export const handleEvents = async (db: D1Database, url: URL): Promise<Response> 
           type: row.type,
           sourceTable: row.source_table,
           sourceRowId: row.source_row_id,
+          reason: quarantine.reason,
+          invalidFields: quarantine.fields,
         },
       });
       continue;

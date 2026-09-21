@@ -82,6 +82,7 @@ The route is a thin client over `GET /api/events` (handler `worker/src/api/event
 - **Severity floor expansion:** server expands `severityFloor=<level>` into the inclusive set at or above that rank using `SEVERITY_RANK` from `@shared/types/tape-event`.
 - **Type filters:** `type=foo` matches exactly; `type=foo.*` matches all subtypes; `class=foo` is a shortcut for `type=foo.*`. Both can be passed multiple times.
 - **Freshness:** the response Cache-Control is the `realtime` profile (`public, s-maxage=60, max-age=10`); the freshness budget (`FRESHNESS_MAX_AGE_SEC = 600`, 10 minutes) instead drives `_meta` `{updatedAt, ageSeconds, status}`. The `project-tape` cron lane runs every 30 minutes, so `Warning: 110` fires after roughly 80 minutes absent.
+- **Read boundary:** every queried row is mapped and then validated against the complete `TapeEventSchema` (in `worker/src/lib/tape-event-helpers.ts`) before it is emitted. A row whose stored `payload_json` is not a JSON object, or whose mapped event fails the schema, is quarantined with a named reason in the Worker log (`payload-json-invalid` / `wire-schema-invalid`, plus the failing field paths) and counted in `droppedRows`; it is never published as an event, and the remaining rows are still served. Corrupt JSON is not coerced into an empty payload.
 - **Hook:** `useEvents()` in `src/hooks/use-events.ts` wraps the infinite-query path; `useLatestEvents()` wraps the single-page latest-N path used by the homepage tape marquee and the permalink buffer.
 
 `/api/events` is allowlisted on the same-origin site-data lane, so the page reads it through `/_site-data/events` from the browser.
@@ -165,6 +166,7 @@ Update this doc when any of these contracts change:
 - the projector roster in `TAPE_PROJECTOR_JOBS`
 - the `tape_events` schema, the event-id format, or the cursor encoding
 - the `GET /api/events` query params, freshness budget, or pagination cap
+- the read-boundary wire validation or its quarantine reason codes (`payload-json-invalid`, `wire-schema-invalid`)
 - the summary band, quiet-day collapse, infinite-scroll digestion, or `?event=` permalink resolution path (buffer size, scroll behavior)
 - the JSON-LD shape emitted by `src/app/timeline/page.tsx`
 
