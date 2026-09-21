@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const TelegramTelemetryQualitySchema = z.object({
+export const TelegramTelemetryQualitySchema = z.object({
   status: z.enum(["complete", "partial"]),
   unavailableFields: z.array(z.string()),
   errors: z.record(z.string(), z.string()).optional(),
@@ -250,12 +250,13 @@ export const TelegramBotStatsSchema = z.object({
 export type TelegramBotStats = z.output<typeof TelegramBotStatsSchema>;
 
 
-const TelegramPulsePrivacySchema = z.object({
+export const TelegramPulsePrivacySchema = z.object({
   exactActiveWatchers: z.boolean(),
   lowCardinalityThreshold: z.number(),
   suppressedFields: z.array(z.string()),
 });
-const TelegramWatcherHistoryPointSchema = z.object({
+export type TelegramPulsePrivacy = z.infer<typeof TelegramPulsePrivacySchema>;
+export const TelegramWatcherHistoryPointSchema = z.object({
   date: z.string(),
   timestamp: z.number(),
   snapshotAt: z.number().nullable().optional(),
@@ -302,6 +303,19 @@ export const TelegramPulseSchema = TelegramPulseBaseSchema.transform((pulse) => 
   privacy: pulse.privacy ?? { exactActiveWatchers: true, lowCardinalityThreshold: 5, suppressedFields: [] },
 }));
 export type TelegramPulse = z.infer<typeof TelegramPulseSchema>;
+
+/**
+ * What the route serves after the transform above applies its defaults. The artifact
+ * registry registers this directly, so adding a field to the base is documented without a
+ * second edit; only the defaulted fields are restated here.
+ */
+export const TelegramPulseOutputSchema = TelegramPulseBaseSchema.extend({
+  currentSnapshotAt: z.number(),
+  lifecycleHistoryUpdatedAt: z.number().nullable(),
+  lifecycleHistoryEverySeconds: z.number(),
+  quality: TelegramTelemetryQualitySchema,
+  privacy: TelegramPulsePrivacySchema,
+});
 
 interface TelegramDispatchEventsDetected {
   dews: number;

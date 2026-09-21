@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useStabilityIndex } from "@/hooks/api-hooks";
-import { PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/psi-colors";
+import { PSI_HEX_COLORS, PSI_UNKNOWN_BAND_HEX, isConditionBand } from "@shared/lib/psi-colors";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { getDisplayedPsi, getDisplayedPsiBasis, getPsiBandStreak } from "@shared/lib/psi-view-model";
 import { cn } from "@/lib/utils";
@@ -42,9 +42,10 @@ export function RegimeBar() {
 
   const displayedPsi = getDisplayedPsi(current);
   const displayBasis = getDisplayedPsiBasis(current);
-  const band = displayedPsi.band as ConditionBand;
+  const band = displayedPsi.band;
   const score = displayedPsi.score;
-  const color = PSI_HEX_COLORS[band];
+  // Legacy rows and unvalidated caches can carry a band outside the closed vocabulary.
+  const color = isConditionBand(band) ? PSI_HEX_COLORS[band] : PSI_UNKNOWN_BAND_HEX;
   const isElevated = band === "FRACTURE" || band === "CRISIS" || band === "MELTDOWN";
   const components = current.components;
 
@@ -103,7 +104,9 @@ export function RegimeBar() {
               aria-label="Last 30 days of PSI band classifications"
             >
               {bandStripCells.map((cell, i) => {
-                const fill = cell ? PSI_HEX_COLORS[cell.band as ConditionBand] : null;
+                const fill = cell
+                  ? (isConditionBand(cell.band) ? PSI_HEX_COLORS[cell.band] : PSI_UNKNOWN_BAND_HEX)
+                  : null;
                 const title = cell
                   ? `${new Date(cell.date * 1000).toISOString().slice(0, 10)} · ${cell.band}`
                   : "no data";
