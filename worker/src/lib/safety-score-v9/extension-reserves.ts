@@ -300,17 +300,26 @@ function hasDirectIndependentReserveAssurance(meta: V9ExtensionRegistryMeta): bo
   );
 }
 
+interface IndependentlyAttestedCompositionAdmission {
+  normalizedRows: ReserveSlice[];
+  sourceRows: ReserveSlice[];
+  review: NonNullable<V9ExtensionRegistryMeta["reserveReview"]>;
+  proof: NonNullable<V9ExtensionRegistryMeta["proofOfReserves"]>;
+  report: NonNullable<NonNullable<V9ExtensionRegistryMeta["proofOfReserves"]>["latestReport"]>;
+  freshness: "fresh" | "expired";
+}
+
 /**
- * Shared admission predicate for an independently attested full composition.
+ * Shared admission result for an independently attested full composition.
  * Supervision is deliberately not part of it: an independent audit is evidence
  * about the *reserves*, prudential supervision is evidence about the *issuer*,
- * and the two decide different things. Admission is decided here; the rung the
- * composition enters at is decided by each caller below.
+ * and the two decide different things. This policy controls both current
+ * admission and expired-evidence emission; callers decide which rung applies.
  */
 function independentlyAttestedComposition(
   meta: V9ExtensionRegistryMeta,
   clockSec: number,
-): ReserveSlice[] | null {
+): IndependentlyAttestedCompositionAdmission | null {
   const rows = meta.reserves ?? [];
   const review = meta.reserveReview;
   const proof = meta.proofOfReserves;
@@ -328,6 +337,7 @@ function independentlyAttestedComposition(
     review.sources.length === 0 ||
     reviewAtSec === null ||
     compositionAtSec === null ||
+    reviewAtSec < compositionAtSec ||
     !validateReserveCompositionTotal(rows, "full") ||
     // Audit-grade admission is fail-closed: AUP and independent attestation
     // types remain outside this path.
@@ -341,12 +351,21 @@ function independentlyAttestedComposition(
     periodEndSec === null ||
     compositionAtSec !== periodEndSec ||
     reportAtSec < periodEndSec ||
-    clockSec - compositionAtSec > ISSUER_ATTESTED_RESERVE_MAX_AGE_SEC ||
     !CORROBORATING_ASSURANCE_METHODS.has(report.assuranceMethod)
   ) {
     return null;
   }
-  return normalizeReviewedStaticReserveRows(rows);
+  return {
+    normalizedRows: normalizeReviewedStaticReserveRows(rows),
+    sourceRows: rows,
+    review,
+    proof,
+    report,
+    freshness:
+      clockSec - compositionAtSec > ISSUER_ATTESTED_RESERVE_MAX_AGE_SEC
+        ? "expired"
+        : "fresh",
+  };
 }
 
 /**
@@ -360,10 +379,10 @@ export function buildSafetyScoreV9ReviewedStaticReserveRows(
   clockSec: number,
 ): ReviewedStaticReserveRows | null {
   if (meta.mintAuthority?.supervision !== "prudential") return null;
-  const rows = independentlyAttestedComposition(meta, clockSec);
-  if (rows === null) return null;
+  const admission = independentlyAttestedComposition(meta, clockSec);
+  if (admission?.freshness !== "fresh") return null;
   return {
-    rows,
+    rows: admission.normalizedRows,
     evidenceClass: hasDirectIndependentReserveAssurance(meta) ? "independent" : "issuer-attested",
     provenance: "curated",
   };
@@ -389,9 +408,9 @@ export function buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(
   clockSec: number,
 ): ReviewedStaticReserveRows | null {
   if (meta.mintAuthority?.supervision === "prudential") return null;
-  const rows = independentlyAttestedComposition(meta, clockSec);
-  if (rows === null) return null;
-  return { rows, evidenceClass: "static-validated", provenance: "audited-fallback" };
+  const admission = independentlyAttestedComposition(meta, clockSec);
+  if (admission?.freshness !== "fresh") return null;
+  return { rows: admission.normalizedRows, evidenceClass: "static-validated", provenance: "audited-fallback" };
 }
 
 /**
@@ -463,55 +482,29 @@ export function addReviewedStaticReserveEvidence(
   if (!review) return;
   const report = meta.proofOfReserves?.latestReport;
   if (!admitted) {
-    const rows = meta.reserves ?? [];
-    const proof = meta.proofOfReserves;
-    const attestorIndependent =
-      proof?.attestorTier === "big4" || proof?.attestorTier === "regional" || proof?.attestorTier === "niche";
-    const reviewAtSec = conservativeDateEndSec(review.reviewedAt, clockSec);
-    const compositionAtSec = conservativeDateEndSec(review.compositionAsOf, clockSec);
-    const reportAtSec = report ? conservativeDateEndSec(report.publishedAt, clockSec) : null;
-    const periodEndSec = report ? conservativeDateEndSec(report.periodEnd, clockSec) : null;
-    // Mirrors the admission gate above minus its age bound, so a composition
-    // that would otherwise have been admitted is still reported as published
-    // evidence that expired. Supervision is deliberately absent from both:
-    // it sets the rung, not whether the issuer published at all.
-    const expiredButOtherwiseAdmissible =
-      rows.length > 0 &&
-      review.scope === "full-composition" &&
-      review.confidence !== "unknown" &&
-      review.sources.length > 0 &&
-      reviewAtSec !== null &&
-      compositionAtSec !== null &&
-      validateReserveCompositionTotal(rows, "full") &&
-      // Keep AUP and independent attestation out of expired audit evidence.
-      proof?.type === "independent-audit" &&
-      attestorIndependent &&
-      Boolean(proof?.provider?.trim()) &&
-      report !== undefined &&
-      report.confidence !== "unknown" &&
-      report.sources.length > 0 &&
-      reportAtSec !== null &&
-      periodEndSec !== null &&
-      compositionAtSec === periodEndSec &&
-      reportAtSec >= periodEndSec &&
-      clockSec - compositionAtSec > ISSUER_ATTESTED_RESERVE_MAX_AGE_SEC &&
-      CORROBORATING_ASSURANCE_METHODS.has(report.assuranceMethod);
-    if (!expiredButOtherwiseAdmissible || !report) return;
-    const sources = [...review.sources, ...report.sources].filter(
+    const admission = independentlyAttestedComposition(meta, clockSec);
+    if (admission?.freshness !== "expired") return;
+    const {
+      proof,
+      report: expiredReport,
+      review: expiredReview,
+      sourceRows,
+    } = admission;
+    const sources = [...expiredReview.sources, ...expiredReport.sources].filter(
       (source, index, all) => all.findIndex((candidate) => candidate.url === source.url) === index,
     );
     evidence.add({
       componentKeys: ["reserve-composition-history"],
       sourceId: "stablecoin-meta.expired-reviewed-static-reserves",
-      reviewedAt: review.reviewedAt,
-      observedAt: report.periodEnd,
-      publishedAt: report.publishedAt,
+      reviewedAt: expiredReview.reviewedAt,
+      observedAt: expiredReport.periodEnd,
+      publishedAt: expiredReport.publishedAt,
       publishedBy: "issuer",
-      confidence: confidenceForResearch(report.confidence),
+      confidence: confidenceForResearch(expiredReport.confidence),
       sources,
       payload: {
-        reserveReview: review,
-        reserves: rows,
+        reserveReview: expiredReview,
+        reserves: sourceRows,
         proofOfReserves: proof,
       },
       maxAgeSec: ISSUER_ATTESTED_RESERVE_MAX_AGE_SEC,

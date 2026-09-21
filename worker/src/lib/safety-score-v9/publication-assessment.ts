@@ -81,7 +81,7 @@ export const V9PublicationInputHealthSchema = z
     liveReserves: z
       .object({
         state: z.enum(["available", "unavailable"]),
-        coverageRatio: z.number().finite().min(0).max(1).nullable().default(null),
+        coverageRatio: z.number().finite().min(0).nullable().default(null),
       })
       .strict(),
   })

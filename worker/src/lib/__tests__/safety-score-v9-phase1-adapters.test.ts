@@ -294,6 +294,26 @@ describe("Phase 1 D6 issuer-attested reserve admission", () => {
     expect(admitted?.rows).toHaveLength(2);
   });
 
+  it("rejects an independent audit reviewed before its composition date", () => {
+    const base = eligibleReserveMeta();
+    const metadata = eligibleReserveMeta({
+      reserveReview: {
+        ...base.reserveReview!,
+        reviewedAt: "2026-06-29",
+      },
+    });
+
+    const admitted = buildSafetyScoreV9ReviewedStaticReserveRows(metadata, CLOCK_SEC);
+    expect(admitted).toBeNull();
+
+    const expiredClockSec = Date.UTC(2027, 7, 1) / 1_000;
+    const evidence = new ReviewEvidenceBuilder(metadata.id, expiredClockSec);
+    addReviewedStaticReserveEvidence(metadata, admitted, evidence, expiredClockSec);
+    expect(evidence.finish().componentEvidence).not.toContainEqual(
+      expect.objectContaining({ componentKey: "reserve-composition-history" }),
+    );
+  });
+
   it("admits an unsupervised issuer's audited composition one rung down, never at independent strength", () => {
     // Tether's shape: an independently attested full composition from an issuer
     // with no prudential supervision. Discarding it entirely reported the asset

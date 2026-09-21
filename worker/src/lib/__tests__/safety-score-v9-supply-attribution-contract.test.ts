@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { WM_SUPPLY_ATTRIBUTION_MAX_POST_CLOCK_SEC } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import {
   corruptWmDeploymentObservation,
   corruptXautObservation,
@@ -186,6 +187,35 @@ describe("reviewed deployment supply attribution contract", () => {
       blockTimeSec: CLOCK_SEC + index + 1,
     }));
     expect(derive(allFuture)).toBeNull();
+
+    const beyondJournalBound = observations().map((row) =>
+      row.chainId === "solana"
+        ? {
+            ...row,
+            blockTimeSec:
+              CLOCK_SEC + WM_SUPPLY_ATTRIBUTION_MAX_POST_CLOCK_SEC + 1,
+          }
+        : row,
+    );
+    expect(
+      reviewedDeploymentObservationTimingIssue({
+        clockSec: CLOCK_SEC,
+        captureStartedAtSec: Math.min(
+          ...beyondJournalBound.map((row) => row.blockTimeSec),
+        ),
+        captureEndedAtSec: Math.max(
+          ...beyondJournalBound.map((row) => row.blockTimeSec),
+        ),
+        observedAtSec: Math.max(
+          ...beyondJournalBound.map((row) => row.blockTimeSec),
+        ),
+        deployments: beyondJournalBound,
+      }),
+    ).toEqual({
+      code: "future-clock",
+      failedRouteId:
+        "solana:mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp",
+    });
   });
 
   it("rejects stale and cross-chain-skewed observations", () => {

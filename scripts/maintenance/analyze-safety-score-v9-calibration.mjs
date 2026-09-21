@@ -11,6 +11,7 @@ import { stableJsonStringifyV1 as stableStringify } from "@shared/lib/stable-jso
 import { computeV9ResultDigest, projectCompactV9ScoreTrace } from "@shared/lib/safety-score-v9/trace.ts";
 import { SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST } from "@shared/data/safety-score-v9/evaluation-build-manifest-v1.ts";
 import { buildSafetyScoreV9ReplayArtifact } from "../../worker/scripts/replay-safety-score-v9.ts";
+import { sumKnownSupplyUsdOrNull } from "../../shared/lib/safety-score-v9/supply-weighting.mjs";
 
 const trustedReplayCache = new Map();
 const CALIBRATION_BASELINE = JSON.parse(
@@ -1138,9 +1139,8 @@ function distributionGateMetrics(replay, rated, scoreQuartiles) {
   // D3 — under-evidenced F.
   const fCards = rated.filter((card) => card.grade === "F");
   const unattributedF = fCards.filter((card) => !isMeasuredAdverseF(card));
-  const unattributedFSupply = unattributedF.reduce(
-    (sum, card) => sum + (knownSupplyUsd(factsById.get(card.id)) ?? 0),
-    0,
+  const unattributedFSupply = sumKnownSupplyUsdOrNull(
+    unattributedF.map((card) => knownSupplyUsd(factsById.get(card.id))),
   );
 
   // D4 — discrimination among assets policy leaves free to float.
@@ -1176,7 +1176,10 @@ function distributionGateMetrics(replay, rated, scoreQuartiles) {
       supplyObservationCoverage: rated.length > 0 ? round(observed.length / rated.length) : null,
       maxNrSupplyUsd,
       unattributedFCount: unattributedF.length,
-      unattributedFSupplyShare: observedSupply > 0 ? round(unattributedFSupply / observedSupply) : null,
+      unattributedFSupplyShare:
+        unattributedFSupply !== null && observedSupply > 0
+          ? round(unattributedFSupply / observedSupply)
+          : null,
       freeFloatingLargestBucketShare: freeFloatingShare(freeFloatingBuckets),
       freeFloatingLargestTupleShare: freeFloatingShare(freeFloatingTuples),
       materialCohortCMinusOrBetterShare: materialCohort.length > 0 ? round(atOrAbove("C-") / materialCohort.length) : null,
@@ -1219,7 +1222,7 @@ function distributionGateMetrics(replay, rated, scoreQuartiles) {
  * is deliberately left in place here — retiring it is outside this lane's scope
  * and needs the owner ruling that reconciles `coverage` as a whole.
  */
-function distributionGates(metrics) {
+export function distributionGates(metrics) {
   const atLeast = (value, minimum) => value !== null && value >= minimum;
   const atMost = (value, maximum) => value !== null && value <= maximum;
   return {
