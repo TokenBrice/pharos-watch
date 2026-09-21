@@ -629,6 +629,8 @@ export const DepegPendingIncidentSchema = z
     }
   });
 
+export type DepegPendingIncident = z.infer<typeof DepegPendingIncidentSchema>;
+
 export const DepegEventsResponseSchema = z.object({
   events: z.array(DepegEventSchema),
   total: z.number(),
