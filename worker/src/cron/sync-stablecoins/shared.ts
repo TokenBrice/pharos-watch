@@ -4,7 +4,7 @@ import type { PriceSourceHealth } from "@shared/types/status";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { CHAIN_META } from "@shared/lib/chains";
 import { CURATED_AGGREGATE_ESCROW_RESIDUALS, selectCuratedAggregateOnchainSupplyProbeContracts, selectSupplementalOnchainSupplyProbeContract } from "@shared/lib/onchain-supply-probe";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRaw, getCirculatingRawOrNull } from "@shared/lib/supply";
 import { setCacheIfNewer, getCache, getPriceCache, type PriceCacheEntry } from "../../lib/db-cache";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { CronResult } from "../../lib/cron-logger";
@@ -359,6 +359,13 @@ export async function loadReplayPriceCacheForTrustedContinuity(db: D1Database): 
 export const SUPPLEMENTAL_RESTORE_MAX_AGE_SEC = 7 * 86400;
 export const SUPPLEMENTAL_RESTORE_MAX_FUTURE_SKEW_SEC = 60;
 
+/**
+ * Fill a primary coverage gap from a supplemental row. Only an absent or
+ * wholly invalid primary bucket is a gap: an explicit finite zero is an
+ * observed redemption and is published as read, never swapped for a positive
+ * supplemental amount. A row that is swapped carries `supplyRestored`, so the
+ * published supply never claims to be the primary lane's own reading.
+ */
 export function replaceZeroSupplyPrimaryAssets(
   primaryAssets: readonly PeggedAsset[],
   supplementalAssets: readonly PeggedAsset[],
@@ -370,11 +377,12 @@ export function replaceZeroSupplyPrimaryAssets(
   );
   const replacedIds: string[] = [];
   const assets = primaryAssets.map((asset) => {
-    if (getCirculatingRaw(asset) > 0) return asset;
+    const primarySupply = getCirculatingRawOrNull(asset);
+    if (primarySupply != null && primarySupply >= 0) return asset;
     const replacement = positiveSupplementalById.get(String(asset.id));
     if (!replacement) return asset;
     replacedIds.push(String(asset.id));
-    return replacement;
+    return markRestoredSupply(replacement);
   });
 
   return { assets, replacedIds: [...new Set(replacedIds)].sort() };

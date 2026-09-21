@@ -284,8 +284,32 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
 });
 
 describe("replaceZeroSupplyPrimaryAssets", () => {
-  it("prefers positive supplemental coverage over a zero primary duplicate", () => {
+  it("fills an unreadable primary bucket from supplemental coverage and marks the swap", () => {
     const primary = asset({
+      id: "eurq-quantoz",
+      symbol: "EURQ",
+      supplySource: "defillama",
+    });
+    const supplemental = asset({
+      id: "eurq-quantoz",
+      symbol: "EURQ",
+      circulating: { peggedEUR: 5_200_000 },
+      supplySource: "coingecko-fallback",
+      supplyObservedAt: NOW_SEC,
+    });
+
+    const result = replaceZeroSupplyPrimaryAssets([primary], [supplemental]);
+
+    expect(result.replacedIds).toEqual(["eurq-quantoz"]);
+    expect(result.assets[0]).toMatchObject({
+      circulating: { peggedEUR: 5_200_000 },
+      supplyObservedAt: NOW_SEC,
+      supplyRestored: true,
+    });
+  });
+
+  it("publishes an observed zero rather than a positive supplemental substitute", () => {
+    const redeemedPrimary = asset({
       id: "eurq-quantoz",
       symbol: "EURQ",
       circulating: { peggedEUR: 0 },
@@ -295,13 +319,12 @@ describe("replaceZeroSupplyPrimaryAssets", () => {
       id: "eurq-quantoz",
       symbol: "EURQ",
       circulating: { peggedEUR: 5_200_000 },
-      supplySource: "coingecko-fallback",
     });
 
-    const result = replaceZeroSupplyPrimaryAssets([primary], [supplemental]);
+    const result = replaceZeroSupplyPrimaryAssets([redeemedPrimary], [supplemental]);
 
-    expect(result.replacedIds).toEqual(["eurq-quantoz"]);
-    expect(result.assets[0]).toBe(supplemental);
+    expect(result.replacedIds).toEqual([]);
+    expect(result.assets[0]).toBe(redeemedPrimary);
   });
 
   it("does not replace positive primary supply or substitute zero supplemental supply", () => {

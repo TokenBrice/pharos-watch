@@ -7,6 +7,7 @@ const SELECTOR_PROFILE_LABELS: Readonly<Record<SelectorProfile, string>> = {
 };
 
 const SELECTOR_EXCLUSION_REASON_LABELS: Readonly<Record<ExclusionReason, string>> = {
+  "supply-unavailable": "supply data",
   "below-supply-floor": "supply floor",
   "active-depeg": "active depeg",
   "safety-grade-floor": "safety grade",

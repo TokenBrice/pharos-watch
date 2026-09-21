@@ -57,8 +57,14 @@ function selectorGradeRank(grade: ReportCardGrade | null | undefined): number {
 }
 
 function compareScoredTieBreakers(a: ScoredEntry, b: ScoredEntry): number {
-  if (b.row.supplyUsd !== a.row.supplyUsd) {
-    return b.row.supplyUsd - a.row.supplyUsd;
+  const aSupply = a.row.supplyUsd;
+  const bSupply = b.row.supplyUsd;
+  if (aSupply !== bSupply) {
+    // Ranked rows always carry supply (`supply-unavailable` excludes the rest);
+    // an unavailable reading sorts last rather than tying with a $0 row.
+    if (aSupply == null) return 1;
+    if (bSupply == null) return -1;
+    return bSupply - aSupply;
   }
   const aGrade = selectorGradeRank(a.row.safetyGrade);
   const bGrade = selectorGradeRank(b.row.safetyGrade);

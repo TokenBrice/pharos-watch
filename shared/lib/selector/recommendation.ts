@@ -173,6 +173,11 @@ export function buildRecommendation(
   if (lowest == null) {
     return null;
   }
+  // The universal `supply-unavailable` exclusion keeps unavailable rows out of
+  // the shortlist; the published headline never carries a stand-in supply.
+  if (entry.row.supplyUsd == null) {
+    return null;
+  }
   const safetyGrade: ReportCardGrade = entry.row.safetyGrade ?? "NR";
   const contextKeys = Array.from(new Set([...lowest.contextKeys, ...extraContextKeys]));
   const lowestWithContext = {

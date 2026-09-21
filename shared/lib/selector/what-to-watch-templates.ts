@@ -259,6 +259,7 @@ export function renderWatchText(
 }
 
 const LOWER_REASON_LABELS: Readonly<Record<string, string>> = {
+  "supply-unavailable": "a usable current-supply reading",
   "active-depeg": "the current peg-deviation gate",
   "peg-score-floor": "the PegScore floor",
   "safety-resilience-floor": "the Backing floor",

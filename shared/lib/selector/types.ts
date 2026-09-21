@@ -365,6 +365,7 @@ export type SelectorRecommendation =
 // ---------------------------------------------------------------------------
 
 export const EXCLUSION_REASONS = [
+  "supply-unavailable",
   "below-supply-floor",
   "active-depeg",
   "safety-grade-floor",
@@ -582,7 +583,8 @@ export interface MergedRow {
   canBeBlacklisted: boolean | "possible" | "inherited" | null;
   mechanismArchetype: string | null;
 
-  supplyUsd: number;
+  /** `null` when the run had no usable current-supply reading for the coin — never a stand-in zero. */
+  supplyUsd: number | null;
 
   /** Peg domain's published PegScore. Every peg weight slot reads this one field. */
   pegScore: number | null;

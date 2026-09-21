@@ -140,6 +140,11 @@ export function applyUniversalExclusions(
   if (row.pegCurrency !== input.pegCurrency) {
     return fail(row.id, "peg-currency-mismatch");
   }
+  // Unavailable supply is not a $0 supply: a coin missing from the upstream
+  // payload must not be published under the supply-floor reason.
+  if (row.supplyUsd == null) {
+    return fail(row.id, "supply-unavailable", "hard", "Current supply unavailable this run");
+  }
   if (row.supplyUsd < 5_000_000) {
     return fail(row.id, "below-supply-floor");
   }

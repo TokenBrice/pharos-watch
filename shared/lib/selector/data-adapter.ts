@@ -1,6 +1,6 @@
 import { CLIENT_ACTIVE_META_BY_ID, CLIENT_TRACKED_STABLECOINS } from "../stablecoins/client-registry";
 import { resolveMechanismArchetype } from "../classification";
-import { getCirculatingRaw } from "../supply";
+import { getCirculatingRawOrNull } from "../supply";
 import { canonicalizeForDatasetHash } from "./canonicalize";
 import type { MergedRow, SelectorInput, SelectorOutput } from "./types";
 import { SELECTOR_VERSION } from "./version";
@@ -50,9 +50,11 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
   const reportById = new Map((args.reportData?.cards ?? []).map((card) => [card.id, card] as const));
   const yieldById = new Map((args.yieldData?.rankings ?? []).map((ranking) => [ranking.id, ranking] as const));
 
-  const supplyById = new Map<string, number>();
+  // `null` covers both shapes of unavailability: absent from the payload, and
+  // present with no finite circulating bucket. Neither is a $0 supply fact.
+  const supplyById = new Map<string, number | null>();
   for (const asset of args.stablecoinsData?.peggedAssets ?? []) {
-    supplyById.set(asset.id, getCirculatingRaw(asset));
+    supplyById.set(asset.id, getCirculatingRawOrNull(asset));
   }
 
   for (const meta of CLIENT_TRACKED_STABLECOINS) {
@@ -100,7 +102,7 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
       canBeBlacklisted: meta.blacklistStatus ?? null,
       mechanismArchetype: resolveMechanismArchetype(meta, CLIENT_ACTIVE_META_BY_ID),
 
-      supplyUsd: supplyById.get(id) ?? 0,
+      supplyUsd: supplyById.get(id) ?? null,
 
       pegScore: peg?.pegScore ?? null,
       activeDepeg: peg?.activeDepeg ?? false,
