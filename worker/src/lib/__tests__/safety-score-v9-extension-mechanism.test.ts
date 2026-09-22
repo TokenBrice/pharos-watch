@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import mechanismReviewOverlaysAsset from "@shared/data/safety-score-v9/mechanism-review-overlays-v1.json";
 import xdaiMetaSource from "@shared/data/stablecoins/coins/xdai-gnosis.json";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
-import type { StablecoinMeta } from "@shared/types/core";
+import type { ProofOfReservesLatestReport, StablecoinMeta } from "@shared/types/core";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import {
   buildSafetyScoreV9MechanismReview,
@@ -33,16 +33,28 @@ function fixedInputStub(
 
 const BARE_META: MechanismMeta = { id: "alpha" } as MechanismMeta;
 
+// P1-32: assurance fixtures carry the schema's required date-only report fields.
+const ASSURANCE_REPORT_FIXTURE = {
+  periodEnd: "2026-07-15",
+  publishedAt: "2026-07-15",
+  liabilityReconciliation: "full",
+  reviewer: "Fixture assurance reviewer",
+  confidence: "verified",
+  sources: [{ label: "Fixture assurance report", url: "https://example.com/assurance-report" }],
+} satisfies Omit<ProofOfReservesLatestReport, "assuranceMethod" | "scope">;
+
 const ATTESTED_META = {
   id: "alpha",
   proofOfReserves: {
+    type: "attestation",
+    url: "https://example.com/proof-of-reserves",
     latestReport: {
+      ...ASSURANCE_REPORT_FIXTURE,
       assuranceMethod: "attestation",
       scope: "assets-and-liabilities",
-      confidence: "high",
     },
   },
-} as unknown as MechanismMeta;
+} satisfies MechanismMeta;
 
 describe("buildSafetyScoreV9MechanismReview", () => {
   it("returns no review without any reserve, custody, or assurance evidence", () => {
@@ -65,7 +77,14 @@ describe("buildSafetyScoreV9MechanismReview", () => {
     const qualityFor = (report: Record<string, unknown>): string | null => {
       const review = buildSafetyScoreV9MechanismReview(
         fixedInputStub({ alpha: [{}] }),
-        { id: "alpha", proofOfReserves: { latestReport: report } } as unknown as MechanismMeta,
+        {
+          id: "alpha",
+          proofOfReserves: {
+            type: "attestation",
+            url: "https://example.com/proof-of-reserves",
+            latestReport: { ...ASSURANCE_REPORT_FIXTURE, ...report },
+          },
+        } as unknown as MechanismMeta,
         "fiat-cash",
       );
       if (review?.archetype !== "fiat-cash") throw new Error("expected a fiat-cash review");
@@ -77,23 +96,23 @@ describe("buildSafetyScoreV9MechanismReview", () => {
       qualityFor({ assuranceMethod: "audit", scope: "assets-and-liabilities", confidence: "unknown" }),
     ).toBe("limited");
     expect(
-      qualityFor({ assuranceMethod: "audit", scope: "assets-and-liabilities", confidence: "high" }),
+      qualityFor({ assuranceMethod: "audit", scope: "assets-and-liabilities", confidence: "verified" }),
     ).toBe("strong");
     expect(
-      qualityFor({ assuranceMethod: "examination", scope: "reserve-addresses", confidence: "high" }),
+      qualityFor({ assuranceMethod: "examination", scope: "reserve-addresses", confidence: "verified" }),
     ).toBe("adequate");
     expect(
-      qualityFor({ assuranceMethod: "attestation", scope: "reserve-addresses", confidence: "high" }),
+      qualityFor({ assuranceMethod: "attestation", scope: "reserve-addresses", confidence: "verified" }),
     ).toBe("limited");
     expect(
-      qualityFor({ assuranceMethod: "agreed-upon-procedures", scope: "assets-and-liabilities", confidence: "high" }),
+      qualityFor({ assuranceMethod: "agreed-upon-procedures", scope: "assets-and-liabilities", confidence: "verified" }),
     ).toBe("adequate");
     expect(
-      qualityFor({ assuranceMethod: "onchain-proof", scope: "assets-and-liabilities", confidence: "high" }),
+      qualityFor({ assuranceMethod: "onchain-proof", scope: "assets-and-liabilities", confidence: "verified" }),
     ).toBe("adequate");
     // An unrecognized assurance method cannot buy any quality claim.
     expect(
-      qualityFor({ assuranceMethod: "self-attested", scope: "assets-and-liabilities", confidence: "high" }),
+      qualityFor({ assuranceMethod: "self-attested", scope: "assets-and-liabilities", confidence: "verified" }),
     ).toBe("weak");
   });
 
@@ -279,7 +298,11 @@ describe("buildSafetyScoreV9MechanismReview", () => {
     expect(reviewAt(expires - 1)).toMatchObject({
       claimAndSegregation: { quality: "strong", status: { observationState: "known" } },
     });
-    expect(reviewAt(expires)).toMatchObject(fallback);
+    // P1-16: the year-old assurance report is stale when the independently timed overlay expires.
+    expect(reviewAt(expires)).toMatchObject({
+      ...fallback,
+      assuranceAndReconciliation: { quality: null, status: { observationState: "stale" } },
+    });
   });
 
   it("admits unavailable adjudications next day and removes every component at exact expiry", () => {
