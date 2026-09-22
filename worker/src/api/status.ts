@@ -11,6 +11,9 @@ import {
   type StatusPersistenceIssue,
 } from "../lib/status-reliability";
 import { computeRawStatus } from "../lib/status-evaluation";
+import { loadCronHealth } from "../lib/status/cron-health";
+import { applyCronHealthSectionErrors } from "../lib/status/evaluation-context";
+import { buildStatusSummary } from "../lib/status/summary";
 import {
   loadStatusRawSnapshot,
   type StatusRawSnapshotLoadResult,
@@ -134,8 +137,24 @@ async function resolveRawStatusForResponse(
 
   const snapshot = await loadStatusRawSnapshot(db, now);
   if (snapshot.kind === "fresh") {
+    // Five-minute jobs must not inherit the fifteen-minute assessment's run history.
+    const cronHealth = await loadCronHealth(db, now);
+    const sectionErrors = { ...snapshot.raw.sectionErrors };
+    delete sectionErrors.scheduledSlots;
+    applyCronHealthSectionErrors(sectionErrors, cronHealth);
     return {
-      raw: snapshot.raw,
+      raw: {
+        ...snapshot.raw,
+        crons: cronHealth.crons,
+        sectionErrors,
+        summary: buildStatusSummary({
+          cronHealth,
+          budgetOnlySurfaces: snapshot.raw.budgetOnlySurfaces,
+          diagnosticIssueCount: snapshot.raw.summary.diagnosticIssueCount,
+          worstCacheRatio: snapshot.raw.summary.worstCacheRatio,
+          transitionsLast24h: snapshot.raw.summary.transitionsLast24h,
+        }),
+      },
       supplements: snapshot.supplements,
       snapshotFallbackReason: null,
     };
