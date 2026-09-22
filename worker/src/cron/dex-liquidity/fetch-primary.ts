@@ -27,6 +27,7 @@ import { normalizeProtocol, classifyPoolType, isCryptoSwap, buildPoolFingerprint
 import { isPlausibleDexObservationPrice } from "./price-sanity";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import {
+  buildDexPriceObservationIdentity,
   buildPoolIdentity,
   createKnownPoolIdentityIndex,
   registerKnownPoolIdentity,
@@ -650,13 +651,7 @@ export async function buildCurveLookups(
               tvl: metapoolAdjustedTvl,
               chain,
               protocol: "curve",
-              poolKey: identity.exactPoolKey ?? undefined,
-              derivedMatchKey: identity.derivedMatchKey ?? undefined,
-              identityConfidence: identity.exactPoolKey
-                ? "exact"
-                : identity.derivedMatchKey
-                  ? "derived_unique"
-                  : "none",
+              ...buildDexPriceObservationIdentity(identity),
               sourceFamily: "dl",
             });
             priceObservations.set(resolved.stablecoinId, obs);

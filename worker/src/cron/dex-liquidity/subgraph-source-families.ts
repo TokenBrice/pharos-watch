@@ -18,7 +18,7 @@ import {
   buildUniswapV4PoolQuery,
   buildUniV3PoolQuery,
 } from "./constants";
-import { buildPoolIdentity } from "./pool-identity";
+import { buildDexPriceObservationIdentity, buildPoolIdentity } from "./pool-identity";
 import { resolveTrackedStablecoinId } from "./token-resolution";
 import { runSubgraphFamily, type SubgraphFamilyResult } from "./subgraph-family-runner";
 import {
@@ -88,9 +88,7 @@ function mapTrackedSubgraphPriceObservations(config: {
         tvl: observationTvl ?? tvl,
         chain,
         protocol,
-        poolKey: identity.exactPoolKey ?? undefined,
-        derivedMatchKey: identity.derivedMatchKey ?? undefined,
-        identityConfidence: identity.exactPoolKey ? "exact" : identity.derivedMatchKey ? "derived_unique" : "none",
+        ...buildDexPriceObservationIdentity(identity),
         sourceFamily: "dl",
       },
     });

@@ -9,6 +9,7 @@ import {
   stagedPoolMaturityDays,
 } from "../../dex-discovery/types";
 import { mergeStagedPools } from "../staging-merge";
+import { applyRebuiltMetrics, rebuildMetricsFromPools } from "../scoring-helpers";
 import type { AuthoritativeStagedPoolConfirmationIndex } from "../orchestrator-phases/authoritative";
 import {
   buildPoolIdentity,
@@ -636,6 +637,7 @@ describe("mergeStagedPools", () => {
 
     const result = await mergeStagedPools(mockDb, metrics as never, makeKnownPoolIndex(), now);
     const metric = metrics.get("usdt-tether");
+    applyRebuiltMetrics(metric, rebuildMetricsFromPools(metric.topPools));
 
     expect(result.mergedCount).toBe(1);
     expect(result.skippedCount).toBe(0);
@@ -649,7 +651,7 @@ describe("mergeStagedPools", () => {
     expect(metric.totalVolume24hUsd).toBeCloseTo(50000 * decay, 6);
     expect(metric.poolCount).toBe(1);
     // pancakeswap-v3 carries GT dex quality 0.5 on top of the age decay.
-    expect(metric.qualityAdjustedTvl).toBeCloseTo(100000 * decay * 0.5, 6);
+    expect(metric.qualityAdjustedTvl).toBe(Math.round(100000 * decay * 0.5));
     expect(metric.protocolTvl.pancakeswap).toBeCloseTo(100000 * decay, 6);
     expect(metric.topPools).toHaveLength(1);
     expect(metric.topPools[0]?.source).toBe("gecko_terminal");
@@ -666,7 +668,9 @@ describe("mergeStagedPools", () => {
         makeKnownPoolIndex(),
         now,
       );
-      return { result, metric: metrics.get("usdt-tether") };
+      const metric = metrics.get("usdt-tether");
+      applyRebuiltMetrics(metric, rebuildMetricsFromPools(metric.topPools));
+      return { result, metric };
     };
 
     const fresh = await mergeAtAge(STAGED_POOL_PRICE_MAX_AGE_HOURS - 1);
@@ -702,6 +706,7 @@ describe("mergeStagedPools", () => {
 
     const result = await mergeStagedPools(mockDb, metrics as never, makeKnownPoolIndex(), now);
     const metric = metrics.get("usdt-tether");
+    applyRebuiltMetrics(metric, rebuildMetricsFromPools(metric.topPools));
 
     expect(result.mergedCount).toBe(1);
     expect(result.skippedCount).toBe(1);
@@ -1140,10 +1145,12 @@ describe("mergeStagedPools", () => {
     const metrics = new Map();
 
     const result = await mergeStagedPools(mockDb, metrics as never, makeKnownPoolIndex(), now);
+    const metric = metrics.get("usdai-usd-ai");
+    applyRebuiltMetrics(metric, rebuildMetricsFromPools(metric.topPools));
 
     expect(result.mergedCount).toBe(1);
     expect(result.skippedByAuthoritativeProtocolCount).toBe(0);
-    expect(metrics.get("usdai-usd-ai")?.protocolTvl.balancer).toBe(547760);
+    expect(metric.protocolTvl.balancer).toBe(547760);
   });
 
   // ODR-B1b `pools-lost-before-scoring`. Every direct-API census drops pools
@@ -1346,6 +1353,7 @@ describe("mergeStagedPools", () => {
 
     const result = await mergeStagedPools(mockDb, metrics as never, makeKnownPoolIndex(), now);
     const metric = metrics.get("usdt-tether");
+    applyRebuiltMetrics(metric, rebuildMetricsFromPools(metric.topPools));
 
     expect(result.mergedCount).toBe(1);
     expect(result.skippedCount).toBe(0);

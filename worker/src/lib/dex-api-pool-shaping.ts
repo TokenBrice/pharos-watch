@@ -1,7 +1,10 @@
 import type { DexPriceObs, GtNewPool, LiquidityFallbackCounters } from "../cron/dex-liquidity/types";
 import type { SymbolLookups } from "../cron/dex-liquidity/types";
 import { QUALITY_MULTIPLIERS, normalizeDexSymbol } from "./dex-cron-constants";
-import { buildPoolIdentity } from "../cron/dex-liquidity/pool-identity";
+import {
+  buildDexPriceObservationIdentity,
+  buildPoolIdentity,
+} from "../cron/dex-liquidity/pool-identity";
 import { isPlausibleDexObservationPrice } from "../cron/dex-liquidity/price-sanity";
 import type { PriceValidationReferences } from "./price-validation";
 import type {
@@ -753,9 +756,7 @@ export function extractPriceObservations(
         tvl: pool.tvlUsd,
         chain: pool.chain,
         protocol: pool.source,
-        poolKey: identity.exactPoolKey ?? undefined,
-        derivedMatchKey: identity.derivedMatchKey ?? undefined,
-        identityConfidence: identity.exactPoolKey ? "exact" : identity.derivedMatchKey ? "derived_ambiguous" : "none",
+        ...buildDexPriceObservationIdentity(identity),
         sourceFamily: "direct_api",
       };
 
