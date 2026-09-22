@@ -101,6 +101,7 @@ export async function fetchFiatCoinGeckoTokens(
         const preferOnChainMcap = prefersOnChainSupplyMcap(meta);
         let mcap = preferOnChainMcap ? undefined : mcapMap[meta.id];
         let supplySource: string = "coingecko-fallback";
+        let supplyObservedAt = mcap && meta.geckoId ? cgData[meta.geckoId]?.last_updated_at ?? null : null;
         let chainCirculating: PeggedAsset["chainCirculating"] = {};
 
         // Fallback: on-chain totalSupply × market/peg-reference price when CG has no market cap.
@@ -110,6 +111,7 @@ export async function fetchFiatCoinGeckoTokens(
           if (aggregateOnChainMcap) {
             mcap = aggregateOnChainMcap.mcap;
             supplySource = aggregateOnChainMcap.supplySource;
+            supplyObservedAt = aggregateOnChainMcap.observedAt ?? null;
             chainCirculating = toPublicChainCirculating(aggregateOnChainMcap.chainCirculating);
           }
         }
@@ -119,6 +121,7 @@ export async function fetchFiatCoinGeckoTokens(
           if (onChainMcap) {
             mcap = onChainMcap.mcap;
             supplySource = onChainMcap.supplySource;
+            supplyObservedAt = onChainMcap.observedAt ?? null;
             chainCirculating = toPublicChainCirculating(onChainMcap.chainCirculating);
           }
         }
@@ -140,6 +143,7 @@ export async function fetchFiatCoinGeckoTokens(
           nowSec,
           mcap,
           supplySource,
+          supplyObservedAt,
           circulatingPrevDay: null,
           circulatingPrevWeek: null,
           circulatingPrevMonth: null,

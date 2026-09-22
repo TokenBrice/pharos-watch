@@ -177,6 +177,22 @@ describe("buildYieldDegradationReasons", () => {
     expect(reasons).toContain("yield-source:expired-selected:defillama:expired-pool");
   });
 
+  it("excludes rejected diagnostic winners from served source and benchmark health", () => {
+    const reasons = buildYieldDegradationReasons({
+      ...baseParams,
+      defaultBenchmarkMeta: buildHardcodedUsdBenchmark("test"),
+      selectedSources: [makeEvaluatedSource({
+        sourceKey: "price-derived",
+        rejected: true,
+        sourceFreshness: "stale",
+        benchmarkKey: "EUR",
+        benchmarkFreshness: "stale",
+      })],
+    });
+    expect(reasons.some((reason) => reason.startsWith("yield-source:expired-selected:"))).toBe(false);
+    expect(reasons.some((reason) => reason.startsWith("risk-free-rate:EUR:"))).toBe(false);
+  });
+
   it("stays quiet for a healthy supplemental cache with no optional-source failures", () => {
     expect(
       buildYieldDegradationReasons({

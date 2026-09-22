@@ -65,4 +65,26 @@ describe("resolveMetalReferenceRates", () => {
       updatedAt: null,
     });
   });
+
+  it.each([
+    ["2026-09-22T16:41:36Z", 1_790_095_296],
+    ["2026-09-21T16:41:36Z", 1_790_008_896],
+    ["invalid", null],
+    ["2027-01-01T00:00:00Z", null],
+  ])("preserves actual provider time without refreshing it: %s", async (updatedAt, expected) => {
+    vi.mocked(fetchJsonWithRetry).mockResolvedValue({
+      response: new Response(null, { status: 200 }),
+      body: { price: 2_900, updatedAt },
+    });
+    const result = await resolveMetalReferenceRates({
+      prevRates: {},
+      commodityPeerMedian: { rates: {}, updatedAt: null },
+      syncStartSec: 1_790_095_300,
+      validateRate: validateMetalRate,
+    });
+    expect(result.resolvedByPeg.peggedGOLD).toMatchObject({
+      source: "gold-api.com",
+      updatedAt: expected,
+    });
+  });
 });

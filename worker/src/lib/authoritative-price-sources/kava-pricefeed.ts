@@ -190,7 +190,8 @@ export const kavaUsdxPricefeedProvider: PriceSourceProvider = {
   source: KAVA_PRICEFEED_SOURCE,
   liveCircuitSource: CIRCUIT_SOURCE.KAVA_PRICEFEED,
   livePriority: 1,
-  liveTimeoutMs: 3_000,
+  // Four serial body-consumed reads must fit inside the candidate deadline.
+  liveTimeoutMs: 6_000,
   recordNullLiveResultAsCircuitFailure: true,
   matches(stablecoinId: string): boolean {
     return stablecoinId === KAVA_USDX_ID;
