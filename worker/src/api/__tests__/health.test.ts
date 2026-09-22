@@ -128,6 +128,24 @@ function makeHealthyHealthDb(now: number, options: HealthDbOptions = {}) {
         { key: "usds-status", updated_at: now - 60, value: "{}" },
         { key: "fx-rates", updated_at: now - 60, value: JSON.stringify({ peggedEUR: 1.08 }) },
         { key: "bluechip-ratings", updated_at: now - 60, value: "{}" },
+        // Sentinel-backed lanes attest their own published generation; without
+        // one the reader can only fall back and must publish a degraded quality
+        // verdict, so the steady-state fixture carries them.
+        {
+          key: "freshness:dex-liquidity",
+          updated_at: now - dexAge,
+          value: JSON.stringify({ updatedAt: now - dexAge, source: "sync-dex-liquidity", publishStatus: "ok" }),
+        },
+        {
+          key: "freshness:yield-data",
+          updated_at: now - 60,
+          value: JSON.stringify({ updatedAt: now - 60, source: "sync-yield-data", publishStatus: "ok" }),
+        },
+        {
+          key: "freshness:dews",
+          updated_at: now - 60,
+          value: JSON.stringify({ updatedAt: now - 60, source: "compute-dews", publishStatus: "ok" }),
+        },
         ...extraCacheRows,
       ],
     },
@@ -223,6 +241,26 @@ describe("handleHealth", () => {
     const db = healthD1([
       completePublicationEntry(now),
       dewsPublicationEntry(now),
+      {
+        match: "cache WHERE key IN",
+        rows: [
+          {
+            key: "freshness:dex-liquidity",
+            updated_at: now - 60,
+            value: JSON.stringify({ updatedAt: now - 60, source: "sync-dex-liquidity", publishStatus: "ok" }),
+          },
+          {
+            key: "freshness:yield-data",
+            updated_at: now - 60,
+            value: JSON.stringify({ updatedAt: now - 60, source: "sync-yield-data", publishStatus: "ok" }),
+          },
+          {
+            key: "freshness:dews",
+            updated_at: now - 60,
+            value: JSON.stringify({ updatedAt: now - 60, source: "compute-dews", publishStatus: "ok" }),
+          },
+        ],
+      },
       { match: "cache", rows: [] },
       { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
       { match: "mint_burn_hourly", rows: [], first: { total: 1234 } },

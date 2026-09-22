@@ -225,7 +225,7 @@ const STATUS_RUNNING_SLOT_STALE_CANDIDATE_SEC = 10 * 60;
 async function fetchCronHistoryRows(
   db: D1Database,
   cronJobs: string[],
-): Promise<{ rows: CronHistoryRow[]; failed: boolean }> {
+): Promise<{ value: CronHistoryRow[] | null; error: string | null }> {
   try {
     // Each batch is an independent SELECT, so fire all batches concurrently
     // rather than awaiting them in sequence; D1's HTTP/2 connection is
@@ -243,7 +243,7 @@ async function fetchCronHistoryRows(
     );
     const rows = batchResults.flat();
     rows.sort((a, b) => b.started_at - a.started_at);
-    return { rows, failed: false };
+    return { value: rows, error: null };
   } catch (err) {
     logWorkerEvent({
       scope: "status",
@@ -254,7 +254,7 @@ async function fetchCronHistoryRows(
       message: "Failed to query cron history",
       error: err,
     });
-    return { rows: [], failed: true };
+    return { value: null, error: "cron-history-query-failed" };
   }
 }
 
@@ -420,8 +420,9 @@ export async function loadCronHealth(
   const scheduledSlotEventMarkerQueryFailed = slotEventResult.failed;
   const scheduledSlots = summarizeRunningCronSlots(runningSlotResult.rows, now, runningSlotResult.failed);
 
-  const cronRows: { results?: CronHistoryRow[] } = { results: historyResult.rows };
-  const cronHistoryQueryFailed = historyResult.failed;
+  const cronRows: { results?: CronHistoryRow[] } = { results: historyResult.value ?? [] };
+  const cronHistoryQueryError = historyResult.error;
+  const cronHistoryQueryFailed = cronHistoryQueryError != null;
 
   const cronLeaseQueryFailed = leaseResult.failed;
   const cronLeaseRows = leaseResult.rows;
@@ -613,10 +614,12 @@ export async function loadCronHealth(
       requiredRuns.length === 0 &&
       runs.length <= 1 &&
       statusImpact === "watch";
+    // A failed history read proves nothing about the job (rule R2): publish an
+    // explicit unknown with its reason rather than a positive claim.
     const healthy = telemetryUnknown
-      ? true
+      ? null
       : inFlightFresh || availabilityHealthyFromLastRun || watchBootstrap;
-    const availabilityUnhealthy = !healthy && !telemetryUnknown;
+    const availabilityUnhealthy = healthy === false;
 
     if (availabilityUnhealthy) {
       unhealthyCrons++;
@@ -662,6 +665,7 @@ export async function loadCronHealth(
       expectedIntervalSec: interval,
       healthy,
       telemetryUnknown,
+      ...(cronHistoryQueryError ? { telemetryUnknownReason: cronHistoryQueryError } : {}),
       inFlight: (() => {
         if (!inFlight) return null;
         return {

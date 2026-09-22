@@ -96,6 +96,8 @@ export interface PublicHealthAssessment {
   warnings: string[];
   caches: HealthResponse["caches"];
   cacheImpactStatus: HealthResponse["status"];
+  /** Input-quality verdict for sentinel-backed caches, independent of age (rule R3). */
+  cacheQualityImpactStatus: HealthResponse["status"];
   worstCacheRatio: number;
   cacheFailures: CacheStatusFailure[];
   cacheDiagnostics: CacheFreshnessDiagnostic[];
@@ -235,9 +237,36 @@ function readDailySentinelDiagnostics(row: MintBurnGrowthDiagnosticRow | null): 
 
 type MintBurnSubqueryName = keyof NonNullable<HealthResponse["mintBurn"]["queryErrors"]>;
 
-type MintBurnSubqueryResult<T> =
+/**
+ * Canonical typed partial-failure boundary for the public-health subqueries
+ * (rule R2). A rejected read resolves to `{ok: false, value: null, error}` so
+ * the caller degrades explicitly; it never inherits a positive default and it
+ * never escapes the aggregator.
+ */
+export type PublicHealthReadResult<T> =
   | { ok: true; value: T; error: null }
   | { ok: false; value: null; error: string };
+
+export async function capturePublicHealthRead<T>(
+  descriptor: { event: string; source: string; message: string; job?: string },
+  run: () => Promise<T>,
+): Promise<PublicHealthReadResult<T>> {
+  try {
+    return { ok: true, value: await run(), error: null };
+  } catch (err) {
+    logWorkerEvent({
+      scope: "status",
+      level: "error",
+      event: descriptor.event,
+      route: "health",
+      ...(descriptor.job ? { job: descriptor.job } : {}),
+      source: descriptor.source,
+      message: descriptor.message,
+      error: err,
+    });
+    return { ok: false, value: null, error: descriptor.message };
+  }
+}
 
 function mintBurnSubqueryErrorMessage(name: MintBurnSubqueryName): string {
   switch (name) {
@@ -248,25 +277,19 @@ function mintBurnSubqueryErrorMessage(name: MintBurnSubqueryName): string {
   }
 }
 
-async function captureMintBurnSubquery<T>(
+function captureMintBurnSubquery<T>(
   name: MintBurnSubqueryName,
   run: () => Promise<T>,
-): Promise<MintBurnSubqueryResult<T>> {
-  try {
-    return { ok: true, value: await run(), error: null };
-  } catch (err) {
-    logWorkerEvent({
-      scope: "status",
-      level: "error",
+): Promise<PublicHealthReadResult<T>> {
+  return capturePublicHealthRead(
+    {
       event: "mint_burn_health_subquery_failed",
-      route: "health",
-      job: MINT_BURN_CRON_JOB,
       source: name,
+      job: MINT_BURN_CRON_JOB,
       message: mintBurnSubqueryErrorMessage(name),
-      error: err,
-    });
-    return { ok: false, value: null, error: mintBurnSubqueryErrorMessage(name) };
-  }
+    },
+    run,
+  );
 }
 
 async function loadMintBurnHealth(
@@ -440,7 +463,8 @@ async function assessYieldSafetyAvailability(
       message: "Failed to assess yield safety availability",
       error: err,
     });
-    return { impactStatus: "healthy", warning: null };
+    // An unreadable check cannot prove the yield surface is rated (rule R2).
+    return { impactStatus: "degraded", warning: "yield-safety-availability-unknown" };
   }
 }
 
@@ -463,6 +487,7 @@ export async function assessPublicHealth(
       warnings,
       caches: {},
       cacheImpactStatus: "stale",
+      cacheQualityImpactStatus: "stale",
       worstCacheRatio: 0,
       cacheFailures: [],
       cacheDiagnostics: [],
@@ -504,7 +529,7 @@ export async function assessPublicHealth(
     mintBurnResult,
     circuitResult,
     d1CapacityResult,
-    stablecoinCoverageHealth,
+    stablecoinCoverageResult,
     yieldSafetyAvailability,
   ] = await Promise.all([
     buildCacheStatuses(db, now),
@@ -555,10 +580,25 @@ export async function assessPublicHealth(
         });
         return { assessment: null, error: "D1 capacity assessment unavailable." };
       }),
-    loadStablecoinCoverageHealth(db, now),
+    capturePublicHealthRead(
+      {
+        event: "stablecoin_coverage_health_query_failed",
+        source: "stablecoin-coverage",
+        message: "Stablecoin publication coverage unavailable.",
+      },
+      () => loadStablecoinCoverageHealth(db, now),
+    ),
     assessYieldSafetyAvailability(db, now, logPrefix),
   ]);
-  const { publication: stablecoinPublication, activePriceCoverage } = stablecoinCoverageHealth;
+  const { publication: stablecoinPublication, activePriceCoverage } = stablecoinCoverageResult.ok
+    ? stablecoinCoverageResult.value
+    : {
+        publication: unknownStablecoinPublicationHealth(),
+        activePriceCoverage: unknownActivePriceCoverageHealth(),
+      };
+  if (stablecoinCoverageResult.error) {
+    warnings.push("stablecoin-coverage-query-failed");
+  }
 
   const cachesWithProvider: Record<string, CacheStatus> = {};
   for (const [key, cache] of Object.entries(cacheAssessment.caches)) {
@@ -568,7 +608,18 @@ export async function assessPublicHealth(
     };
   }
 
+  // Freshness and input quality are separate verdicts (rule R3): availability
+  // keeps answering "is the served generation inside its budget", while the
+  // quality verdict answers "were that generation's inputs clean".
   const cacheImpactStatus = getOverallCacheImpactStatus(cachesWithProvider);
+  const degradedQualityCaches = Object.entries(cachesWithProvider)
+    .filter(([, cache]) => cache.degraded === true)
+    .map(([key, cache]) => `${key}:${cache.degradedReason ?? "unknown"}`);
+  const cacheQualityImpactStatus: HealthResponse["status"] =
+    degradedQualityCaches.length > 0 ? "degraded" : "healthy";
+  if (degradedQualityCaches.length > 0) {
+    warnings.push(`cache-quality-degraded: ${degradedQualityCaches.join(", ")}`);
+  }
   if (cacheAssessment.failures.length > 0) {
     warnings.push(
       `cache-freshness-query-failed: ${cacheAssessment.failures.map((failure) => failure.key).join(", ")}`,
@@ -669,6 +720,7 @@ export async function assessPublicHealth(
 
   const overallStatus = maxPublicStatus(
     cacheImpactStatus,
+    cacheQualityImpactStatus,
     mintBurnResult.mintBurnImpactStatus,
     circuitImpactStatus,
     blacklistImpactStatus,
@@ -685,6 +737,7 @@ export async function assessPublicHealth(
     warnings,
     caches: cachesWithProvider,
     cacheImpactStatus,
+    cacheQualityImpactStatus,
     worstCacheRatio: Number.isFinite(cacheAssessment.worstRatio) ? cacheAssessment.worstRatio : 99,
     cacheFailures: cacheAssessment.failures,
     cacheDiagnostics: cacheAssessment.diagnostics,

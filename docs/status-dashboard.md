@@ -236,7 +236,7 @@ exclusion list. A cron is healthy when:
 - Last run status is `degraded` (warning-only fallback mode), or
 - Last run status is `skipped_neutral` (expected no-op) **and** the latest non-neutral required run in recent history is a fresh `ok` or `degraded`, or
 - Last run status is `skipped_locked` **and** there is a fresh `ok` run in the same freshness window, or
-- The cron-history query itself failed, in which case every job is reported healthy with `crons[*].telemetryUnknown = true` and excluded from unhealthy/error counters rather than reported falsely unhealthy, or
+- The job is **not** reported healthy when the cron-history query itself failed: `crons[*].healthy` is `null` with `crons[*].telemetryUnknown = true` and `crons[*].telemetryUnknownReason` naming the failed read, and the job is excluded from unhealthy/error counters rather than reported falsely unhealthy or falsely healthy, or
 - The job is a watch-tier bootstrap (`crons[*].bootstrap = true`): no required non-neutral attempt yet and at most one recorded run. Critical-tier jobs always require real availability evidence
 
 Otherwise the job is unhealthy, including stale history, non-fresh errors, or a neutral skip whose latest required run errored. A required degraded run remains counted in degraded diagnostics even though later neutral skips inherit its availability.
@@ -552,6 +552,19 @@ The cron metadata now includes:
 - `freshnessDiagnostics` when raw status had to fall back from a freshness sentinel to table or cron evidence
 - `latencySummary` (`minMs`, `medianMs`, `p95Ms`, `maxMs`)
 - `slowestProbes` (top slow endpoints for the run)
+
+A freshness sentinel records **which generation is served**, never whether that
+generation's inputs were clean. Input quality travels beside it, on every
+sentinel-backed cache status: `degraded`, `degradedReason`
+(`freshness-sentinel-missing` / `freshness-sentinel-unreadable` /
+`freshness-sentinel-invalid:<reason>` / `producer-degraded-since-last-clean-run`)
+and `streakDegradedRuns` (`null` when the producer-history read failed — an
+unreadable streak is never published as `0`). A cache is `healthy` only when it
+is inside its band **and** its quality verdict is clean, so a table fallback that
+is age-fresh, or a good sentinel whose producer has degraded since, both publish
+an unhealthy lane. `/api/health` folds the quality verdict into its own `status`
+and names it in `warnings` as `cache-quality-degraded: <key>:<reason>`;
+`/api/status` availability keeps measuring freshness alone.
 
 `GET /api/status` returns the latest persisted aggregate in `probe`. New rows include optional `probe.internal`, `probe.external`, and `probe.internalExternalDiscrepancy` fields read from `status_probe_runs.details_json`; legacy rows omit those optional fields.
 

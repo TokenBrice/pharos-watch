@@ -8,6 +8,14 @@ export const CacheStatusSchema = z.object({
   healthy: z.boolean(),
   freshnessSource: z.enum(["freshness-sentinel", "table-fallback", "cron-fallback"]).optional(),
   sentinelValidationReason: z.string().nullable().optional(),
+  /**
+   * Input quality for the generation the freshness verdict describes (rule R3).
+   * `degraded` is the producer-run quality, independent of age; `null` where the
+   * evidence could not be read. Only sentinel-backed caches publish these.
+   */
+  degraded: z.boolean().nullable().optional(),
+  degradedReason: z.string().nullable().optional(),
+  streakDegradedRuns: z.number().nullable().optional(),
   producerJob: z.string().nullable().optional(),
   producerIntervalSec: z.number().nullable().optional(),
   endpointMaxAge: z.number().nullable().optional(),

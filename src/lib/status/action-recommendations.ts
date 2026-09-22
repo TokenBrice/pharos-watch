@@ -94,7 +94,7 @@ export function deriveStatusActionRecommendations(
   }
 
   for (const [job, cron] of Object.entries(status.crons)) {
-    if (cron.healthy) continue;
+    if (cron.healthy !== false) continue;
     if (getCronJobMeta(job)?.statusImpact !== "critical") continue;
 
     const actions = CRON_ACTION_PATHS[job] ?? [];

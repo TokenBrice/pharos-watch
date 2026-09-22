@@ -48,6 +48,19 @@ export interface CacheFreshnessDiagnostic {
   sentinelValidationReason?: FreshnessSentinelValidationReason;
 }
 
+/**
+ * Input quality for the generation a freshness verdict describes (rule R3). A
+ * sentinel records *which* generation is served; this records whether the run
+ * that produced it had clean inputs, so a fresh timestamp can no longer imply
+ * a clean publication.
+ */
+export interface CacheQualityVerdict {
+  degraded: boolean;
+  reason: string | null;
+  /** Producer runs that degraded/errored since its last clean run; `null` when unreadable (rule R1). */
+  streakDegradedRuns: number | null;
+}
+
 export type FreshnessMeta = Pick<ApiMeta, "updatedAt" | "ageSeconds" | "status">;
 
 export type CronTimestampLookupStatus = "ok" | "missing" | "lookup_failed";
@@ -63,10 +76,21 @@ interface CacheRow {
   value?: string | null;
 }
 
+interface ProducerCronObservation {
+  lastOkStartedAt: number | null;
+  degradedRunsSinceOk: number | null;
+}
+
+interface ProducerCronHistoryRead {
+  value: Map<FreshnessSentinelBackedCacheKey, ProducerCronObservation> | null;
+  error: string | null;
+}
+
 interface SentinelBackedFreshnessResult {
   ageSeconds: number | null;
   freshnessSource: CacheFreshnessDiagnostic["freshnessSource"] | null;
   sentinelValidationReason?: FreshnessSentinelValidationReason;
+  quality: CacheQualityVerdict;
   diagnostics: CacheFreshnessDiagnostic[];
   failures: CacheStatusFailure[];
   warnings: string[];
@@ -124,53 +148,85 @@ function buildSentinelValidationWarning(
   return `${key}: freshness sentinel invalid (${reason}); using ${source}`;
 }
 
-async function loadProducerCronFallbacks(
+/**
+ * Single per-request producer-history read behind a typed `{value, error}`
+ * boundary (rule R2): it carries both the cron fallback timestamp and the
+ * consecutive-degraded-run streak used as the lane's quality input. A failed
+ * read yields `value: null` so callers publish "unknown", never zero.
+ */
+async function readProducerCronHistory(
   db: D1Database,
   sentinelBackedCacheKeys: readonly FreshnessSentinelBackedCacheKey[],
-): Promise<{
-  timestampsByKey: Map<FreshnessSentinelBackedCacheKey, number>;
-  errorMessage: string | null;
-}> {
+): Promise<ProducerCronHistoryRead> {
   const producerJobs = [...new Set(sentinelBackedCacheKeys.map((key) => getFreshnessSentinelProducerJob(key)))];
   if (producerJobs.length === 0) {
-    return {
-      timestampsByKey: new Map(),
-      errorMessage: null,
-    };
+    return { value: new Map(), error: null };
   }
 
   try {
     const inClause = buildInClause(producerJobs);
     const rows = await db
       .prepare(
-        `SELECT job, MAX(started_at) as started_at
+        `SELECT job,
+                MAX(CASE WHEN status = 'ok' THEN started_at END) as started_at,
+                SUM(CASE
+                      WHEN status IN ('degraded', 'error')
+                        AND started_at > COALESCE((
+                          SELECT MAX(clean_run.started_at) FROM cron_runs clean_run
+                          WHERE clean_run.job = cron_runs.job AND clean_run.status = 'ok'), 0)
+                      THEN 1 ELSE 0 END) as degraded_runs_since_ok
          FROM cron_runs
-         WHERE status = 'ok' AND job IN (${inClause.sql})
+         WHERE job IN (${inClause.sql})
          GROUP BY job`,
       )
       .bind(...inClause.binds)
-      .all<{ job: string; started_at: number | null }>();
+      .all<{ job: string; started_at: number | null; degraded_runs_since_ok: number | null }>();
     const keyByJob = new Map(
       sentinelBackedCacheKeys.map((key) => [getFreshnessSentinelProducerJob(key), key]),
     );
-    const timestampsByKey = new Map<FreshnessSentinelBackedCacheKey, number>();
+    const value = new Map<FreshnessSentinelBackedCacheKey, ProducerCronObservation>();
     for (const row of rows.results ?? []) {
       const key = keyByJob.get(row.job);
-      if (key && row.started_at != null) {
-        timestampsByKey.set(key, row.started_at);
-      }
+      if (!key) continue;
+      value.set(key, {
+        lastOkStartedAt: row.started_at ?? null,
+        degradedRunsSinceOk: row.degraded_runs_since_ok ?? null,
+      });
     }
-    return {
-      timestampsByKey,
-      errorMessage: null,
-    };
+    return { value, error: null };
   } catch (error) {
     logWorkerEventArgs("lib", "warn", "[api-freshness] Failed to read producer cron fallbacks", error);
+    return { value: null, error: toErrorMessage(error) };
+  }
+}
+
+function buildCacheQuality(params: {
+  freshnessSource: CacheFreshnessDiagnostic["freshnessSource"] | null;
+  sentinelValidationReason: FreshnessSentinelValidationReason | undefined;
+  cacheLookupFailed: boolean;
+  observation: ProducerCronObservation | undefined;
+  historyReadFailed: boolean;
+}): CacheQualityVerdict {
+  const streakDegradedRuns = params.historyReadFailed
+    ? null
+    : params.observation?.degradedRunsSinceOk ?? null;
+  if (params.freshnessSource !== "freshness-sentinel") {
+    // Table and cron fallbacks measure row writes and run clocks, not the
+    // generation that was published, so they cannot attest input quality.
     return {
-      timestampsByKey: new Map(),
-      errorMessage: toErrorMessage(error),
+      degraded: true,
+      reason: params.sentinelValidationReason
+        ? `freshness-sentinel-invalid:${params.sentinelValidationReason}`
+        : params.cacheLookupFailed
+          ? "freshness-sentinel-unreadable"
+          : "freshness-sentinel-missing",
+      streakDegradedRuns,
     };
   }
+  if (streakDegradedRuns != null && streakDegradedRuns > 0) {
+    return { degraded: true, reason: "producer-degraded-since-last-clean-run", streakDegradedRuns };
+  }
+  return { degraded: false, reason: null, streakDegradedRuns };
 }
 
 async function resolveSentinelBackedFreshness(params: {
@@ -179,8 +235,7 @@ async function resolveSentinelBackedFreshness(params: {
   now: number;
   cacheLookupFailed: boolean;
   cacheRowsByKey: Map<string, CacheRow>;
-  cronFallbacks: Map<FreshnessSentinelBackedCacheKey, number>;
-  cronFallbackError: string | null;
+  cronHistory: ProducerCronHistoryRead;
 }): Promise<SentinelBackedFreshnessResult> {
   const diagnostics: CacheFreshnessDiagnostic[] = [];
   const failures: CacheStatusFailure[] = [];
@@ -196,17 +251,54 @@ async function resolveSentinelBackedFreshness(params: {
         now: params.now,
       })
     : null;
+
+  const freshnessOutcome = (
+    ageSeconds: number | null,
+    freshnessSource: CacheFreshnessDiagnostic["freshnessSource"] | null,
+  ): SentinelBackedFreshnessResult => ({
+    ageSeconds,
+    freshnessSource,
+    ...(sentinelValidation?.reason ? { sentinelValidationReason: sentinelValidation.reason } : {}),
+    quality: buildCacheQuality({
+      freshnessSource,
+      sentinelValidationReason: sentinelValidation?.reason,
+      cacheLookupFailed: params.cacheLookupFailed,
+      observation: params.cronHistory.value?.get(params.key),
+      historyReadFailed: params.cronHistory.value == null,
+    }),
+    diagnostics,
+    failures,
+    warnings,
+  });
+
+  const recordFreshnessOutcome = (
+    source: NonNullable<CacheFreshnessDiagnostic["freshnessSource"]>,
+    failureSource: CacheStatusFailure["source"] | undefined,
+    validation: FreshnessSentinelValidationReason | undefined,
+  ): void => {
+    const warning = validation
+      ? buildSentinelValidationWarning(params.key, source, validation)
+      : failureSource
+        ? buildFallbackWarning(params.key, source, failureSource)
+        : undefined;
+    if (warning) {
+      warnings.push(warning);
+      logWorkerEventArgs("lib", "info", `[api-freshness] ${warning}`);
+    }
+    diagnostics.push({
+      key: params.key,
+      freshnessSource: source,
+      ...(warning ? { warning } : {}),
+      ...(failureSource ? { failureSource } : {}),
+      ...(validation ? { sentinelValidationReason: validation } : {}),
+    });
+  };
+
   if (sentinelValidation?.ok && sentinelValidation.payload) {
-    return {
-      ageSeconds: Math.max(0, params.now - sentinelValidation.payload.updatedAt),
-      freshnessSource: "freshness-sentinel",
-      diagnostics,
-      failures,
-      warnings,
-    };
+    return freshnessOutcome(Math.max(0, params.now - sentinelValidation.payload.updatedAt), "freshness-sentinel");
   }
 
-  const sentinelFailureSource: CacheStatusFailure["source"] | null = params.cacheLookupFailed ? "cache-table" : null;
+  const sentinelFailureSource = params.cacheLookupFailed ? "cache-table" as const : undefined;
 
   try {
     let tableAge: number | null;
@@ -231,35 +323,8 @@ async function resolveSentinelBackedFreshness(params: {
       tableAge = row?.age != null ? Math.max(0, row.age) : null;
     }
     if (tableAge != null) {
-      const warning = sentinelValidation?.reason
-        ? buildSentinelValidationWarning(params.key, "table-fallback", sentinelValidation.reason)
-        : sentinelFailureSource
-          ? buildFallbackWarning(params.key, "table-fallback", sentinelFailureSource)
-          : undefined;
-      if (warning) {
-        warnings.push(warning);
-        diagnostics.push({
-          key: params.key,
-          freshnessSource: "table-fallback",
-          warning,
-          ...(sentinelFailureSource ? { failureSource: sentinelFailureSource } : {}),
-          ...(sentinelValidation?.reason ? { sentinelValidationReason: sentinelValidation.reason } : {}),
-        });
-        logWorkerEventArgs("lib", "info", `[api-freshness] ${warning}`);
-      } else {
-        diagnostics.push({
-          key: params.key,
-          freshnessSource: "table-fallback",
-        });
-      }
-      return {
-        ageSeconds: tableAge,
-        freshnessSource: "table-fallback",
-        ...(sentinelValidation?.reason ? { sentinelValidationReason: sentinelValidation.reason } : {}),
-        diagnostics,
-        failures,
-        warnings,
-      };
+      recordFreshnessOutcome("table-fallback", sentinelFailureSource, sentinelValidation?.reason);
+      return freshnessOutcome(tableAge, "table-fallback");
     }
   } catch (error) {
     failures.push({
@@ -268,62 +333,29 @@ async function resolveSentinelBackedFreshness(params: {
       message: toErrorMessage(error),
     });
     if (params.key === "dews") {
-      return {
-        ageSeconds: null,
-        freshnessSource: null,
-        ...(sentinelValidation?.reason ? { sentinelValidationReason: sentinelValidation.reason } : {}),
-        diagnostics,
-        failures,
-        warnings,
-      };
+      return freshnessOutcome(null, null);
     }
   }
 
-  const cronFallbackTimestamp = params.cronFallbacks.get(params.key) ?? null;
+  const cronFallbackTimestamp = params.cronHistory.value?.get(params.key)?.lastOkStartedAt ?? null;
   if (cronFallbackTimestamp != null) {
-    const failureSource = failures[0]?.source ?? sentinelFailureSource ?? undefined;
-    const warning = sentinelValidation?.reason
-      ? buildSentinelValidationWarning(params.key, "cron-fallback", sentinelValidation.reason)
-      : failureSource
-        ? buildFallbackWarning(params.key, "cron-fallback", failureSource)
-        : undefined;
-    if (warning) {
-      warnings.push(warning);
-      logWorkerEventArgs("lib", "info", `[api-freshness] ${warning}`);
-    }
-    diagnostics.push({
-      key: params.key,
-      freshnessSource: "cron-fallback",
-      ...(warning ? { warning } : {}),
-      ...(failureSource ? { failureSource } : {}),
-      ...(sentinelValidation?.reason ? { sentinelValidationReason: sentinelValidation.reason } : {}),
-    });
-    return {
-      ageSeconds: Math.max(0, params.now - cronFallbackTimestamp),
-      freshnessSource: "cron-fallback",
-      ...(sentinelValidation?.reason ? { sentinelValidationReason: sentinelValidation.reason } : {}),
-      diagnostics,
-      failures,
-      warnings,
-    };
+    recordFreshnessOutcome(
+      "cron-fallback",
+      failures[0]?.source ?? sentinelFailureSource,
+      sentinelValidation?.reason,
+    );
+    return freshnessOutcome(Math.max(0, params.now - cronFallbackTimestamp), "cron-fallback");
   }
 
-  if (params.cronFallbackError) {
+  if (params.cronHistory.error) {
     failures.push({
       key: params.key,
       source: "cron-fallback",
-      message: params.cronFallbackError,
+      message: params.cronHistory.error,
     });
   }
 
-  return {
-    ageSeconds: null,
-    freshnessSource: null,
-    ...(sentinelValidation?.reason ? { sentinelValidationReason: sentinelValidation.reason } : {}),
-    diagnostics,
-    failures,
-    warnings,
-  };
+  return freshnessOutcome(null, null);
 }
 
 export async function buildCacheStatuses(
@@ -381,6 +413,7 @@ export async function buildCacheStatuses(
   const diagnostics: CacheFreshnessDiagnostic[] = [];
   const freshnessSourceByKey = new Map<string, CacheFreshnessDiagnostic["freshnessSource"]>();
   const sentinelValidationReasonByKey = new Map<string, FreshnessSentinelValidationReason>();
+  const qualityByKey = new Map<string, CacheQualityVerdict>();
   const fxState = cacheOnlyKeys.includes("fx-rates")
     ? hydrateFxRateState(
         (() => {
@@ -393,7 +426,7 @@ export async function buildCacheStatuses(
         })(),
       )
     : null;
-  const cronFallbackLookup = await loadProducerCronFallbacks(db, sentinelBackedCacheKeys);
+  const cronHistory = await readProducerCronHistory(db, sentinelBackedCacheKeys);
 
   for (const [key, maxAge] of Object.entries(CACHE_FRESHNESS_THRESHOLDS)) {
     let ageSeconds: number | null;
@@ -415,8 +448,7 @@ export async function buildCacheStatuses(
         now,
         cacheLookupFailed,
         cacheRowsByKey,
-        cronFallbacks: cronFallbackLookup.timestampsByKey,
-        cronFallbackError: cronFallbackLookup.errorMessage,
+        cronHistory,
       });
       ageSeconds = freshness.ageSeconds;
       if (freshness.freshnessSource) {
@@ -425,6 +457,7 @@ export async function buildCacheStatuses(
       if (freshness.sentinelValidationReason) {
         sentinelValidationReasonByKey.set(key, freshness.sentinelValidationReason);
       }
+      qualityByKey.set(key, freshness.quality);
       failures.push(...freshness.failures);
       warnings.push(...freshness.warnings);
       diagnostics.push(...freshness.diagnostics);
@@ -454,7 +487,14 @@ export async function buildCacheStatuses(
         maxAge,
         healthyMaxRatio,
         healthyMaxAge: maxAge * healthyMaxRatio,
-        healthy: ratio <= healthyMaxRatio,
+        healthy: ratio <= healthyMaxRatio && qualityByKey.get(key)?.degraded !== true,
+        ...(qualityByKey.has(key)
+          ? {
+              degraded: qualityByKey.get(key)?.degraded,
+              degradedReason: qualityByKey.get(key)?.reason,
+              streakDegradedRuns: qualityByKey.get(key)?.streakDegradedRuns,
+            }
+          : {}),
         ...(freshnessSourceByKey.has(key) ? { freshnessSource: freshnessSourceByKey.get(key) } : {}),
         ...(sentinelValidationReasonByKey.has(key)
           ? { sentinelValidationReason: sentinelValidationReasonByKey.get(key) }

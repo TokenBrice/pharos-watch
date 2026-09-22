@@ -48,6 +48,7 @@ export function makePublicHealth(
     warnings: [],
     caches: {},
     cacheImpactStatus: overallStatus,
+    cacheQualityImpactStatus: "healthy",
     worstCacheRatio: 0,
     cacheFailures: [],
     cacheDiagnostics: [],
