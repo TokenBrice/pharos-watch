@@ -94,6 +94,7 @@ vi.mock("@/hooks/use-hydrated", () => ({
 vi.mock("@/hooks/api-hooks", () => makePickerQueryData());
 
 vi.mock("@/lib/logos", () => ({
+  getLogoSrc: () => undefined,
   logosById: {},
 }));
 

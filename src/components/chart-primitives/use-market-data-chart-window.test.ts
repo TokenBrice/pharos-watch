@@ -29,11 +29,12 @@ describe("useMarketDataChartWindow", () => {
       }),
     );
 
+    // P1-31 FRONTEND-26: monthly chart ticks follow the UTC data contract.
     expect(result.current.xTicks).toEqual([
-      new Date(2026, 4, 1).getTime(),
-      new Date(2026, 5, 1).getTime(),
-      new Date(2026, 6, 1).getTime(),
-      new Date(2026, 7, 1).getTime(),
+      Date.UTC(2026, 4, 1),
+      Date.UTC(2026, 5, 1),
+      Date.UTC(2026, 6, 1),
+      Date.UTC(2026, 7, 1),
     ]);
   });
 
