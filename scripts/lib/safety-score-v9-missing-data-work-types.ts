@@ -32,6 +32,12 @@ export type ResolutionMode =
   | "mixed-curation-and-runtime"
   | "producer-runtime";
 
+export type CurationStream = "ARCH" | "BRDG" | "CTRL" | "DEP" | "EXIT" | "ORCL" | "PEG" | "RESV";
+
+export type CurationDisposition =
+  | { disposition: "routed"; stream: CurationStream }
+  | { disposition: "non-curation" };
+
 export interface WorkTypeDefinition {
   title: string;
   stream: string;
@@ -48,8 +54,48 @@ export interface WorkTypeDescriptor extends WorkTypeDefinition {
   ownerDomain: string;
   defaultResolutionMode: ResolutionMode;
   reasonCodes: readonly string[];
+  reasonDispositions: Readonly<Record<string, CurationDisposition>>;
   context(asset: V9AssetFactsV3): unknown;
   touchpoints(source: Source, context: unknown): readonly string[];
+}
+
+function workReasons(
+  groups: Partial<Record<CurationStream | "non-curation", readonly string[]>>,
+): Pick<WorkTypeDescriptor, "reasonCodes" | "reasonDispositions"> {
+  const reasonDispositions: Record<string, CurationDisposition> = {};
+  for (const [group, reasonCodes] of Object.entries(groups)) {
+    for (const reasonCode of reasonCodes ?? []) {
+      if (reasonDispositions[reasonCode]) throw new Error(`Duplicate curation disposition for ${reasonCode}`);
+      reasonDispositions[reasonCode] =
+        group === "non-curation"
+          ? { disposition: "non-curation" }
+          : { disposition: "routed", stream: group as CurationStream };
+    }
+  }
+  return { reasonCodes: Object.keys(reasonDispositions), reasonDispositions };
+}
+
+export const PRIORITY_BANDS = ["P0", "P1", "P2", "P3"] as const;
+export type PriorityBand = (typeof PRIORITY_BANDS)[number];
+
+export function priorityBand(critical: boolean, supplyUsd: number | null): PriorityBand {
+  if (critical || (supplyUsd ?? 0) >= 1_000_000_000) return "P0";
+  if ((supplyUsd ?? 0) >= 100_000_000) return "P1";
+  if ((supplyUsd ?? 0) >= 10_000_000) return "P2";
+  return "P3";
+}
+
+export const RESOLUTION_MODE_ACTIONS: Readonly<
+  Record<Exclude<ResolutionMode, "agent-curation">, string>
+> = {
+  "producer-runtime": "implement-or-refresh-producer-capability",
+  "mixed-curation-and-runtime": "reconcile-metadata-then-refresh-producer",
+  "methodology-capability": "define-reviewed-methodology-capability",
+  "issuer-or-onchain-evidence": "obtain-measured-source-evidence-then-curate",
+};
+
+export function resolutionModeAction(mode: ResolutionMode, agentCurationAction: string): string {
+  return mode === "agent-curation" ? agentCurationAction : RESOLUTION_MODE_ACTIONS[mode];
 }
 
 function routeSummary(route: V9AssetFactsV3["exitRoutes"][number]) {
@@ -91,11 +137,11 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     recommendedSkill: "stablecoin-addition-orchestrator", likelyRepoAreas: ["shared/data/stablecoins/domains/risk-review/", "shared/data/stablecoins/coins/"],
     cautions: ["Review every material deployment and inherited wrapper exposure; a token-level boolean alone is insufficient."],
     ownerDomain: "control", defaultResolutionMode: "agent-curation",
-    reasonCodes: [
+    ...workReasons({ "non-curation": [
       "missing-access-review",
       "inherited-access-exposure",
       "reviewed-possible-access",
-    ],
+    ] }),
     context: (asset) => asset.accessReview,
     touchpoints: (source) => unique([risk(source)]),
   },
@@ -106,11 +152,10 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     recommendedSkill: "resilience-classify", likelyRepoAreas: ["shared/data/stablecoins/coins/"], cautions: ["Classification clears NR eligibility but does not assert that the mechanism is safe."],
     ownerDomain: "methodology",
     defaultResolutionMode: "agent-curation",
-    reasonCodes: [
-      "missing-archetype",
-      "insufficient-evidence",
-      "missing-pillar",
-    ],
+    ...workReasons({
+      ARCH: ["missing-archetype"],
+      "non-curation": ["insufficient-evidence", "missing-pillar"],
+    }),
     context: (asset) => ({
       archetype: asset.archetype,
       mechanismRiskReview: asset.mechanismRiskReview,
@@ -127,7 +172,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     cautions: ["Never clear or mask the quarantine gap without repairing the compilation failure at its source."],
     ownerDomain: "evidence",
     defaultResolutionMode: "producer-runtime",
-    reasonCodes: [],
+    ...workReasons({}),
     context: (asset) => ({ gaps: asset.gaps }),
     touchpoints: (source) =>
       unique([
@@ -142,11 +187,10 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     completionCriteria: "A fresh exact replay has current bridge supply shares and removes the runtime-bridge-materiality-unavailable gapId.", recommendedSkill: "stablecoin-identity-contracts",
     likelyRepoAreas: ["shared/data/stablecoins/domains/risk-review/", "shared/data/stablecoins/coins/", "worker/src/lib/safety-score-v9/extension-supply.ts", "worker/src/cron/snapshot-chain-supply.ts"],
     cautions: ["Do not add a manual supply override or multiply DefiLlama list-endpoint circulating USD by price."], ownerDomain: "control", defaultResolutionMode: "mixed-curation-and-runtime",
-    reasonCodes: [
-      "runtime-bridge-materiality-unavailable",
-      "material-bridge-supply-unmatched",
-      "nonmaterial-bridge-supply-unmatched",
-    ],
+    ...workReasons({
+      BRDG: ["runtime-bridge-materiality-unavailable", "material-bridge-supply-unmatched"],
+      "non-curation": ["nonmaterial-bridge-supply-unmatched"],
+    }),
     context: (asset) => ({
       supply: asset.supply,
       bridge: asset.economicControlReview.bridge,
@@ -162,13 +206,15 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     likelyRepoAreas: ["shared/data/stablecoins/domains/risk-review/", "shared/data/stablecoins/coins/"], cautions: ["Only reviewed, runtime-selected material routes should influence the score."],
     ownerDomain: "control",
     defaultResolutionMode: "agent-curation",
-    reasonCodes: [
-      "missing-bridge-routes",
-      "missing-bridge-route-rows",
-      "missing-bridge-route",
-      "selected-bridge-route-missing",
-      "selected-bridge-route-unresolved",
-    ],
+    ...workReasons({
+      BRDG: [
+        "missing-bridge-routes",
+        "missing-bridge-route-rows",
+        "selected-bridge-route-missing",
+        "selected-bridge-route-unresolved",
+      ],
+      "non-curation": ["missing-bridge-route"],
+    }),
     context: (asset) => ({
       bridge: asset.economicControlReview.bridge,
       controls: asset.controls,
@@ -183,7 +229,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     cautions: ["Use getCirculatingRaw(); DefiLlama list circulating values are already USD-denominated.", "Do not add manual, on-chain, CMC, DEX, or other supply overrides."],
     ownerDomain: "evidence",
     defaultResolutionMode: "mixed-curation-and-runtime",
-    reasonCodes: [],
+    ...workReasons({}),
     context: (asset) => asset.supply,
     touchpoints: (source) =>
       unique([
@@ -199,11 +245,10 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     likelyRepoAreas: ["shared/data/stablecoins/domains/reserves/", "shared/data/stablecoins/coins/"], cautions: ["Do not create a dependency merely because two assets share an issuer, chain, custodian, or trading pair."],
     ownerDomain: "dependency",
     defaultResolutionMode: "agent-curation",
-    reasonCodes: [
-      "unreviewed-dependency-relationships",
-      "material-dependency-unavailable",
-      "nonmaterial-dependency-unavailable",
-    ],
+    ...workReasons({
+      DEP: ["unreviewed-dependency-relationships", "material-dependency-unavailable"],
+      "non-curation": ["nonmaterial-dependency-unavailable"],
+    }),
     context: (asset) => asset.dependencies,
     touchpoints: (source) => unique([reserve(source), base(source)]),
   },
@@ -214,14 +259,16 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     likelyRepoAreas: ["shared/data/stablecoins/domains/mint-authority/", "shared/data/stablecoins/domains/risk-review/", "shared/data/stablecoins/coins/"], cautions: ["Multichain assets require the authority graph for every material deployment."],
     ownerDomain: "control",
     defaultResolutionMode: "agent-curation",
-    reasonCodes: [
-      "missing-upgradeability-review",
-      "scoped-control-question",
-      "unresolved-control-identity",
-      "missing-upgrade-control",
-      "unknown-control-cap-authority",
-      "unknown-upgrade-authority",
-    ],
+    ...workReasons({
+      CTRL: [
+        "missing-upgradeability-review",
+        "unresolved-control-identity",
+        "missing-upgrade-control",
+        "unknown-control-cap-authority",
+        "unknown-upgrade-authority",
+      ],
+      "non-curation": ["scoped-control-question"],
+    }),
     context: (asset) => ({
       controlStatus: asset.controlStatus,
       controls: asset.controls,
@@ -236,10 +283,10 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     likelyRepoAreas: ["worker/src/cron/dex-liquidity/", "worker/src/lib/dex-liquidity.ts", "worker/src/lib/safety-score-v9/extension.ts", "shared/lib/dex-liquidity-evidence.ts"], cautions: ["Do not substitute TVL, generic liquidity, or a manually estimated capacity curve for exact executable depth."],
     ownerDomain: "exit",
     defaultResolutionMode: "producer-runtime",
-    reasonCodes: [
+    ...workReasons({ EXIT: [
       "incomplete-dex-route-coverage",
       "unsupported-same-notional-route",
-    ],
+    ] }),
     context: exitContext,
     touchpoints: () => ["worker/src/cron/dex-liquidity/", "worker/src/lib/safety-score-v9/extension.ts"],
   },
@@ -250,7 +297,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     likelyRepoAreas: ["shared/lib/redemption-backstop-configs/", "worker/src/lib/safety-score-v9/extension.ts"], cautions: ["Only name an output that the route documentation or on-chain execution actually establishes."],
     ownerDomain: "exit",
     defaultResolutionMode: "agent-curation",
-    reasonCodes: ["unresolved-exit-output"],
+    ...workReasons({ EXIT: ["unresolved-exit-output"] }),
     context: exitContext,
     touchpoints: (_source, context) =>
       typeof context === "object" && context !== null && "lane" in context && context.lane === "dex"
@@ -264,11 +311,14 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     likelyRepoAreas: ["worker/src/cron/dex-liquidity/", "worker/src/cron/sync-redemption-backstops.ts", "worker/src/lib/redemption-exit-route-observations.ts", "worker/src/lib/safety-score-v9/extension.ts"], cautions: ["A source-only metadata edit is not complete until a fresh producer capture embeds the observation."],
     ownerDomain: "exit",
     defaultResolutionMode: "producer-runtime",
-    reasonCodes: [
-      "missing-runtime-route-evidence",
-      "incomparable-route-requests",
-      "missing-same-notional-route",
-    ],
+    ...workReasons({
+      EXIT: [
+        "missing-runtime-route-evidence",
+        "incomparable-route-requests",
+        "missing-same-notional-route",
+      ],
+      "non-curation": ["correlated-exit-routes"],
+    }),
     context: exitContext,
     touchpoints: () => ["worker/src/cron/dex-liquidity/", "worker/src/cron/sync-redemption-backstops.ts", "worker/src/lib/safety-score-v9/extension.ts"],
   },
@@ -280,7 +330,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     cautions: ["A measured-adverse pause is a different fact from an unproven bound; do not conflate the two or invent a bound the rail does not document."],
     ownerDomain: "exit",
     defaultResolutionMode: "agent-curation",
-    reasonCodes: ["unproven-settlement-bound"],
+    ...workReasons({ EXIT: ["unproven-settlement-bound"] }),
     context: exitContext,
     touchpoints: () => ["shared/lib/redemption-backstop-configs/"],
   },
@@ -290,7 +340,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     completionCriteria: "The compiled launchedAtSec is known and a fresh exact replay removes the missing-implementation-date gapId.", recommendedSkill: "stablecoin-addition-orchestrator", likelyRepoAreas: ["shared/data/stablecoins/coins/"], cautions: ["Do not use an earlier predecessor launch if the current mechanism was materially replaced."],
     ownerDomain: "evidence",
     defaultResolutionMode: "agent-curation",
-    reasonCodes: ["missing-implementation-date"],
+    ...workReasons({ "non-curation": ["missing-implementation-date"] }),
     context: (asset) => asset.implementation,
     touchpoints: (source) => [base(source)],
   },
@@ -301,7 +351,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     likelyRepoAreas: ["shared/data/safety-score-v9/mechanism-review-overlays-v1.json", "shared/data/stablecoins/domains/reserves/", "shared/data/stablecoins/coins/", "worker/src/lib/safety-score-v9/extension-mechanism.ts"], cautions: ["Do not fabricate measured ratios or convert governance limits into committed liquidation capacity.", "Record an evidence blocker when the issuer or chain does not expose the required metric.", "Curate with the evidence date, never the capture date: date-only reviews are admitted only after their UTC day has elapsed (`worker/src/lib/safety-score-v9/extension-mechanism.ts:369-414`), so a same-day promotion starts with the next capture and temporarily re-attributes the component method-unsupported.", "Before curating fiat-cash assuranceAndReconciliation, commodity-claim assuranceAndReconciliation, or tbill lossRecoveryDesign as unavailable, check the asset's proofOfReserves.latestReport: when it is set, the compiler already grades that component known and a curated unavailable row silently overrides it to bounded-unknown. shared/types/__tests__/safety-score-v9-overlays.test.ts fails the build if this happens."],
     ownerDomain: "backing",
     defaultResolutionMode: "issuer-or-onchain-evidence",
-    reasonCodes: ["bounded-mechanism-review"],
+    ...workReasons({ "non-curation": ["bounded-mechanism-review"] }),
     context: (asset) => asset.mechanismRiskReview,
     touchpoints: (source) => ["shared/data/safety-score-v9/mechanism-review-overlays-v1.json", base(source)],
   },
@@ -311,12 +361,12 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     completionCriteria: "The mint economic-control review is known and a fresh exact replay removes the missing-mint-authority gapId.", recommendedSkill: null, likelyRepoAreas: ["shared/data/stablecoins/domains/mint-authority/", "shared/data/stablecoins/coins/"], cautions: ["Explorer/RPC structural reads should be pinned to a reviewed block or slot where practical."],
     ownerDomain: "control",
     defaultResolutionMode: "agent-curation",
-    reasonCodes: [
+    ...workReasons({ CTRL: [
       "missing-mint-authority",
       "mint-control-question",
       "unknown-control-mint-ability",
       "unresolved-mint-authority",
-    ],
+    ] }),
     context: (asset) => ({
       mint: asset.economicControlReview.mint,
       controls: asset.controls.filter((control) => control.capabilities.includes("mint")),
@@ -329,11 +379,11 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     completionCriteria: "The named branch compiles as known or reviewed not-applicable and its gapId is absent from a fresh exact replay.", recommendedSkill: null, likelyRepoAreas: ["shared/data/stablecoins/domains/risk-review/", "shared/data/stablecoins/coins/"], cautions: ["Do not mark a branch not applicable merely because public documentation is incomplete."],
     ownerDomain: "control",
     defaultResolutionMode: "agent-curation",
-    reasonCodes: [
+    ...workReasons({ ORCL: [
       "incomplete-oracle-liquidation-branch",
       "missing-required-oracle-branches",
       "unresolved-oracle-branch-applicability",
-    ],
+    ] }),
     context: (asset) => asset.economicControlReview.oracle,
     touchpoints: (source) => unique([risk(source)]),
   },
@@ -343,7 +393,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     completionCriteria: "The oracle economic-control review compiles as known or reviewed not-applicable and the profile gapId is absent.", recommendedSkill: null, likelyRepoAreas: ["shared/data/stablecoins/domains/risk-review/", "shared/data/stablecoins/coins/"], cautions: ["Use the live stabilization path, not only the token contract, to determine oracle applicability."],
     ownerDomain: "control",
     defaultResolutionMode: "agent-curation",
-    reasonCodes: ["missing-oracle-profile", "unreviewed-oracle-profile"],
+    ...workReasons({ ORCL: ["missing-oracle-profile", "unreviewed-oracle-profile"] }),
     context: (asset) => asset.economicControlReview.oracle,
     touchpoints: (source) => unique([risk(source)]),
   },
@@ -355,7 +405,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     cautions: ["Do not fabricate or bypass a parent score; work the parent's own missing-data items instead of editing this asset."],
     ownerDomain: "methodology",
     defaultResolutionMode: "agent-curation",
-    reasonCodes: ["missing-parent-score"],
+    ...workReasons({ "non-curation": ["missing-parent-score"] }),
     context: (asset) => asset.dependencies,
     touchpoints: (source) => [base(source)],
   },
@@ -365,12 +415,10 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     completionCriteria: "The exact fixed input contains a complete current peg row and a fresh replay removes the missing-peg-input gapId.", recommendedSkill: "stablecoin-addition-orchestrator", likelyRepoAreas: ["shared/data/stablecoins/coins/", "worker/src/api/peg-summary.ts", "worker/src/lib/safety-score-v9/extension.ts", "shared/lib/peg-score.ts"], cautions: ["Do not invent a USD peg for an OTHER, index, commodity, or NAV reference."],
     ownerDomain: "peg",
     defaultResolutionMode: "mixed-curation-and-runtime",
-    reasonCodes: [
-      "missing-peg-input",
-      "peg-price-unavailable-adverse-history",
-      "peg-supply-floor-withheld",
-      "missing-applicable-peg",
-    ],
+    ...workReasons({
+      PEG: ["missing-peg-input", "missing-applicable-peg"],
+      "non-curation": ["peg-price-unavailable-adverse-history", "peg-supply-floor-withheld"],
+    }),
     context: (asset) => asset.peg,
     touchpoints: (source) => unique([base(source), "worker/src/lib/safety-score-v9/extension.ts"]),
   },
@@ -380,7 +428,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     completionCriteria: "A fresh exact capture contains a reviewed reserve composition and removes the missing-reserve-composition gapId, or, for stale-audited-reserve-composition, refreshes reserves[] and compositionAsOf from the newest independent attestation; if the issuer has not published a newer composition, record the blocker and accept the audited-fallback adequate ceiling rather than restating expired evidence.", recommendedSkill: "reserve-research", likelyRepoAreas: ["shared/data/stablecoins/domains/reserves/", "shared/data/stablecoins/coins/"], cautions: ["Preserve documented unknown residuals instead of forcing an unsupported 100% allocation."],
     ownerDomain: "backing",
     defaultResolutionMode: "agent-curation",
-    reasonCodes: [
+    ...workReasons({ RESV: [
       "material-unknown-reserve-exposure",
       "missing-custody-profile",
       "missing-latest-assurance-report",
@@ -388,7 +436,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
       "partial-reserve-review",
       "stale-audited-reserve-composition",
       "unreviewed-reserve-envelope",
-    ],
+    ] }),
     context: (asset) => ({
       reserveStatus: asset.reserveStatus,
       reserveExposures: asset.reserveExposures,
@@ -401,7 +449,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
     completionCriteria: "The exact exposure compiles as known and its material-reserve-slice-unstructured gapId is absent from a fresh replay.", recommendedSkill: "reserve-research", likelyRepoAreas: ["shared/data/stablecoins/domains/reserves/", "shared/data/stablecoins/coins/"], cautions: ["Match live exposure keys and current weights; do not reuse stale or unrelated portfolio composition."],
     ownerDomain: "backing",
     defaultResolutionMode: "agent-curation",
-    reasonCodes: ["material-reserve-slice-unstructured"],
+    ...workReasons({ RESV: ["material-reserve-slice-unstructured"] }),
     context: (asset) => ({
       reserveStatus: asset.reserveStatus,
       reserveExposures: asset.reserveExposures,
@@ -414,6 +462,14 @@ type GapPath = V9EvidenceGapQueueEntryV2["path"];
 
 function descriptorByReason(reason: string): WorkTypeDescriptor | undefined {
   return Object.values(V9_MISSING_DATA_WORK_TYPES).find((descriptor) => descriptor.reasonCodes.includes(reason));
+}
+
+export function curationDispositionForReason(reason: string): CurationDisposition | null {
+  const descriptor = descriptorByReason(reason);
+  if (!descriptor) return null;
+  const disposition = descriptor.reasonDispositions[reason];
+  if (!disposition) throw new Error(`Missing curation disposition for ${reason}`);
+  return disposition;
 }
 
 function normalizeComponentKey(value: string): string {
