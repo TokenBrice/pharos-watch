@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { RedemptionBackstopEntry, RedemptionBackstopMap } from "@shared/types/redemption";
-import {
-  REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG_PATH,
-  getRedemptionBackstopVersionAt,
-} from "@shared/lib/methodology-versions/redemption-backstop";
+import { REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG_PATH } from "@shared/lib/methodology-versions/constants";
+import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
 import {
   assertAllD1MatchesUsed,
@@ -834,12 +832,12 @@ describe("resolveSnapshotMethodologyVersion", () => {
     expect(result.versionLabel).toBe(toMethodologyVersionLabel("3.97"));
   });
 
-  it("falls back to getRedemptionBackstopVersionAt when no entry matches the updatedAt", () => {
+  it("falls back to the keyed methodology resolver when no entry matches the updatedAt", () => {
     const coins: RedemptionBackstopMap = {
       "a-coin": makeMapEntry(1_700_000_000, "1.1"),
     };
     const queryAt = 1_500_000_000;
-    const expectedVersion = getRedemptionBackstopVersionAt(queryAt);
+    const expectedVersion = getMethodologyVersionAt("redemption-backstop", queryAt);
 
     const result = resolveSnapshotMethodologyVersion(coins, queryAt);
 
@@ -847,11 +845,11 @@ describe("resolveSnapshotMethodologyVersion", () => {
     expect(result.versionLabel).toBe(toMethodologyVersionLabel(expectedVersion));
   });
 
-  it("falls back to getRedemptionBackstopVersionAt when updatedAt is zero", () => {
+  it("falls back to the keyed methodology resolver when updatedAt is zero", () => {
     const coins: RedemptionBackstopMap = {
       "a-coin": makeMapEntry(1_700_000_000, "1.1"),
     };
-    const expectedVersion = getRedemptionBackstopVersionAt(0);
+    const expectedVersion = getMethodologyVersionAt("redemption-backstop", 0);
 
     const result = resolveSnapshotMethodologyVersion(coins, 0);
 

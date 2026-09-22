@@ -1,4 +1,4 @@
-import { getPsiMethodologyVersionAt } from "@shared/lib/methodology-versions/stability-index";
+import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { computeStabilityIndex } from "../../lib/stability-index";
 import {
@@ -71,7 +71,7 @@ export async function buildRecomputeStabilityStatements(
       continue;
     }
 
-    const methodologyVersion = getPsiMethodologyVersionAt(day);
+    const methodologyVersion = getMethodologyVersionAt("stability-index", day);
     // stability_index has no UNIQUE constraint on `computed_at` (the table is
     // keyed by a surrogate `id`), so an ON CONFLICT(computed_at) upsert has no
     // conflict target and SQLite rejects it outright. The caller runs these

@@ -2,7 +2,7 @@ import { errorResponse, jsonResponse } from "../lib/api-response";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { batchExecute } from "../lib/db";
-import { getPsiMethodologyVersionAt } from "@shared/lib/methodology-versions/stability-index";
+import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { buildSupplySnapshotMap, type PsiDepegEventRow, type PsiSupplyRow } from "../lib/psi-recompute";
 import {
   buildHistoricalDewsMap,
@@ -212,7 +212,7 @@ export async function handleBackfillStabilityIndex({
 
       for (let day = startDay; day <= endDay; day += DAY_SECONDS) {
         daysEvaluated++;
-        const methodologyVersion = getPsiMethodologyVersionAt(day);
+        const methodologyVersion = getMethodologyVersionAt("stability-index", day);
         const replay = replayHistoricalPsiForDay({
           day,
           now,
@@ -238,7 +238,7 @@ export async function handleBackfillStabilityIndex({
                   existing.band,
                   existing.components ?? JSON.stringify({}),
                   existing.input_snapshot ?? JSON.stringify({}),
-                  existing.methodology_version ?? getPsiMethodologyVersionAt(existing.computed_at),
+                  existing.methodology_version ?? getMethodologyVersionAt("stability-index", existing.computed_at),
                 ),
             );
           }

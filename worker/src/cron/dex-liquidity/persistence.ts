@@ -1,6 +1,6 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_IDS, ACTIVE_STABLECOINS, TRACKED_IDS } from "@shared/lib/stablecoins/registry";
-import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/liquidity-score";
+import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import type { ContractDeployment } from "@shared/types/core";

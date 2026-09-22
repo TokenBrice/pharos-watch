@@ -20,12 +20,14 @@ import { getCache, setCache } from "../../lib/db-cache";
 import { computeSafetyScoresSnapshot } from "../../lib/safety-scores";
 import type { CronProgressUpdate } from "../../lib/cron-logger";
 import {
-  buildProtocolCategoryLookupFromCachePayload,
   buildCoverageAuditOperatorQueue,
+  buildProtocolCategoryLookupFromCachePayload,
   identifyCoverageGaps,
   identifyDeadCuratedPins,
   identifyStaleAutoLendingOverrides,
   isHighConfidenceProtocolCategory,
+} from "../yield-coverage-audit/detectors";
+import {
   runYieldCoverageAudit,
   summarizeAdapterLifecycle,
 } from "../yield-coverage-audit";
@@ -37,7 +39,7 @@ import {
 } from "../../lib/yield-config/yield-config";
 import { probeQuarantinedDeterministicAdapters } from "../yield-coverage-audit-quarantine";
 import { loadDlStablecoinPools } from "../yield-sync/sources";
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import type { YieldAdapterLifecycleEntry } from "../../lib/yield-config/yield-config-registry";
 import type { DlPool } from "../yield-sync/types";
 import { buildYieldCoverageEvidenceFingerprint } from "../yield-coverage-review-dispositions";

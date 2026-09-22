@@ -5,7 +5,7 @@ import { safeJsonParse } from "../lib/api-cache-read";
 import { buildMethodologyEnvelope } from "../lib/api-methodology";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import { CACHE_PROFILES } from "../lib/constants";
+import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import {
   loadStressSignalCurrentRowForCoin,
   loadStressSignalCurrentRows,
@@ -14,8 +14,8 @@ import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
   DEPEG_DEWS_METHODOLOGY_VERSION,
   DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
-  getDepegDewsMethodologyVersionAt,
-} from "@shared/lib/methodology-versions/depeg-dews";
+} from "@shared/lib/methodology-versions/constants";
+import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
 import { ACTIVE_IDS, READABLE_IDS } from "@shared/lib/stablecoins/registry";
 import { unwrapStressSignalsEnvelope } from "@shared/lib/stress-signals-envelope";
@@ -175,7 +175,7 @@ export const handleStressSignals = async (db: D1Database, url: URL): Promise<Res
           band: r.band,
           signals: unwrapped.signals,
           amplifiers: unwrapped.amplifiers,
-          methodologyVersion: getDepegDewsMethodologyVersionAt(r.snapshot_date),
+          methodologyVersion: getMethodologyVersionAt("depeg-dews", r.snapshot_date),
         };
       }).filter((row): row is NonNullable<typeof row> => row !== null);
 
@@ -183,7 +183,7 @@ export const handleStressSignals = async (db: D1Database, url: URL): Promise<Res
       const latestHistoryRow = historyRows.length > 0 ? historyRows[historyRows.length - 1] : null;
       const methodologyAsOf = currentComputedAt ?? latestHistoryRow?.date ?? 0;
       const methodologyVersion = methodologyAsOf > 0
-        ? getDepegDewsMethodologyVersionAt(methodologyAsOf)
+        ? getMethodologyVersionAt("depeg-dews", methodologyAsOf)
         : DEPEG_DEWS_METHODOLOGY_VERSION;
       const responseHeaders = currentComputedAt != null
         ? addFreshnessHeaders({
@@ -199,7 +199,7 @@ export const handleStressSignals = async (db: D1Database, url: URL): Promise<Res
               signals: currentUnwrapped.signals,
               amplifiers: currentUnwrapped.amplifiers,
               computedAt: latest.computed_at,
-              methodologyVersion: getDepegDewsMethodologyVersionAt(latest.computed_at),
+              methodologyVersion: getMethodologyVersionAt("depeg-dews", latest.computed_at),
               ageClassification: classifyStressSignalAge(latest.computed_at, nowSec),
             }
           : null,
@@ -252,7 +252,7 @@ export const handleStressSignals = async (db: D1Database, url: URL): Promise<Res
         malformedRows++;
         continue;
       }
-      const methodologyVersion = getDepegDewsMethodologyVersionAt(row.computed_at);
+      const methodologyVersion = getMethodologyVersionAt("depeg-dews", row.computed_at);
       validRows.push({
         stablecoinId: row.stablecoin_id,
         score: row.score,
@@ -294,7 +294,7 @@ export const handleStressSignals = async (db: D1Database, url: URL): Promise<Res
 
     const asOf = updatedAt > 0 ? updatedAt : 0;
     const methodologyVersion = updatedAt > 0
-      ? getDepegDewsMethodologyVersionAt(updatedAt)
+      ? getMethodologyVersionAt("depeg-dews", updatedAt)
       : DEPEG_DEWS_METHODOLOGY_VERSION;
     const responseHeaders = updatedAt > 0
       ? addFreshnessHeaders({

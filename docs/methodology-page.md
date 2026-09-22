@@ -22,7 +22,7 @@
 - **Public changelog routes:** pricing pipeline, stability index, scoring, liquidity score, redemption backstop, mint/burn flow, yield, depeg, depeg resolver, blacklist tracker, and chain health are all served by the dynamic route `src/app/methodology/[slug]/page.tsx`, whose slugs derive from every `METHODOLOGY_CHANGELOG_REGISTRY` entry's `publicPath`. Retired Mint Authority is the one structured lane without a standalone route; its history remains at `/methodology/#mint-authority-score`.
 - **Changelog wrappers:** `src/app/methodology/[slug]/page.tsx` holds each lane's display config; the shared shell is `src/components/methodology-changelog-page.tsx`, which renders an overview block linking back to the current methodology and public docs archive before the version cards
 - **Changelog sitemap policy:** `METHODOLOGY_CHANGELOG_SITEMAP_PATHS` (`shared/lib/methodology-versions/registry.ts`) is derived from every `METHODOLOGY_CHANGELOG_REGISTRY` entry's `publicPath`, and `src/app/sitemap.ts` re-exports and spreads it, so registering a changelog lane automatically promotes its route. Register a lane only when its route has enough standalone context for external readers, normally through the shared overview block plus a useful latest-version summary.
-- **Scoring changelog special case:** the `scoring-changelog` slug renders custom authored content sections: `src/app/methodology/changelog-content/scoring/content.tsx` renders the machine-readable changelog order with authored detail maps from `content-v8.tsx`, the `content-v7-*.tsx` modules, `content-v6.tsx`, `content-v5.tsx`, `content-legacy.tsx`, and `content-summary.tsx` in the same directory (with `content-v6.tsx` merging `content-v6-9.tsx` and `content-v6-91-to-v6-99.tsx`)
+- **Scoring changelog special case:** the `scoring-changelog` slug renders every version card from its structured changelog record — `src/app/methodology/changelog-content/scoring/content.tsx` walks the machine-readable changelog and hands each entry to `StructuredChangelogDetail` in `content-shared.tsx`, which renders the entry's optional ordered `detail` body (headings, paragraphs, lists, formulas, weight rows, and tables) or its `summary` plus `impact`. `content-summary.tsx` adds the standalone quick-reference tables after the cards.
 - **Cross-app methodology links:** `src/lib/methodology-context.ts` hard-codes methodology anchors and imports shared version/changelog constants from `shared/lib/methodology-versions/constants.ts`; `src/components/methodology-hint.tsx` renders those resolved links for cards/tooltips across the app
 
 ---
@@ -31,19 +31,19 @@
 
 | Methodology Section   | Primary Runtime Source(s)                                                                                                                                                                                                            |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Pricing Pipeline      | `worker/src/lib/price-consensus.ts`, `worker/src/cron/sync-stablecoins/enrich-prices.ts`, `worker/src/lib/authoritative-price-sources/`, `worker/src/lib/price-validation.ts`, `shared/lib/methodology-versions/pricing-pipeline.ts`                              |
-| Stability Index       | `worker/src/lib/stability-index.ts`, `shared/lib/methodology-versions/stability-index.ts`                                                                                                                                                         |
-| Safety Scores         | `shared/lib/safety-score-v9/`, `shared/lib/safety-score-v9/policy.ts`, `worker/src/cron/compute-safety-score-v9.ts`, `shared/lib/methodology-versions/safety-score.ts`                                                   |
+| Pricing Pipeline      | `worker/src/lib/price-consensus.ts`, `worker/src/cron/sync-stablecoins/enrich-prices.ts`, `worker/src/lib/authoritative-price-sources/`, `worker/src/lib/price-validation.ts`, `shared/lib/methodology-versions/registry.ts`                              |
+| Stability Index       | `worker/src/lib/stability-index.ts`, `shared/lib/methodology-versions/registry.ts`                                                                                                                                                         |
+| Safety Scores         | `shared/lib/safety-score-v9/`, `shared/lib/safety-score-v9/policy.ts`, `worker/src/cron/compute-safety-score-v9.ts`, `shared/lib/methodology-versions/registry.ts`                                                   |
 | Mint Authority / V9 mint component | `shared/lib/safety-score-v9/control.ts`, `shared/lib/safety-score-v9/mint-posture.ts`, `src/lib/mint-authority-display.ts`, `shared/lib/methodology-versions/mint-authority.ts`, `shared/data/stablecoins/domains/mint-authority/*.json` |
-| Liquidity Score       | `worker/src/cron/dex-liquidity/orchestrator.ts`, `worker/src/cron/dex-liquidity/pool-helpers.ts`, `worker/src/cron/dex-discovery/orchestrator.ts`, `shared/lib/liquidity-score-weights.ts`, `shared/lib/methodology-versions/liquidity-score.ts` |
-| Redemption Backstop Route Score | `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/exit-route-scoring.ts`, `shared/lib/redemption-backstop-configs/`, `worker/src/lib/redemption-backstop/sources.ts`, `shared/lib/methodology-versions/redemption-backstop.ts` |
+| Liquidity Score       | `worker/src/cron/dex-liquidity/orchestrator.ts`, `worker/src/cron/dex-liquidity/pool-helpers.ts`, `worker/src/cron/dex-discovery/orchestrator.ts`, `shared/lib/liquidity-score-weights.ts`, `shared/lib/methodology-versions/registry.ts` |
+| Redemption Backstop Route Score | `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/exit-route-scoring.ts`, `shared/lib/redemption-backstop-configs/`, `worker/src/lib/redemption-backstop/sources.ts`, `shared/lib/methodology-versions/registry.ts` |
 | Infrastructure Tagging | `shared/types/core.ts`, `shared/lib/filter-tags.ts`, `src/lib/stablecoin-taxonomy.ts`, `shared/data/stablecoins/coins/*.json`                                                                                                             |
-| Mint/Burn Flow        | `worker/src/lib/mint-burn-scoring.ts`, `shared/lib/mint-burn-signals.ts`, `shared/lib/methodology-versions/mint-burn-flow.ts`                                                                                                                     |
-| Yield Intelligence    | `worker/src/cron/sync-yield-data.ts`, helper modules under `worker/src/cron/yield-sync/`, `shared/lib/yield-scoring.ts` (PYS formula), `shared/lib/methodology-versions/yield-methodology.ts` |
-| PegScore + DEWS       | `shared/lib/peg-score.ts`, `worker/src/lib/dews.ts`, `shared/lib/methodology-versions/depeg-dews.ts`                                                                                                                                              |
+| Mint/Burn Flow        | `worker/src/lib/mint-burn-scoring.ts`, `shared/lib/mint-burn-signals.ts`, `shared/lib/methodology-versions/registry.ts`                                                                                                                     |
+| Yield Intelligence    | `worker/src/cron/sync-yield-data.ts`, helper modules under `worker/src/cron/yield-sync/`, `shared/lib/yield-scoring.ts` (PYS formula), `shared/lib/methodology-versions/registry.ts` |
+| PegScore + DEWS       | `shared/lib/peg-score.ts`, `worker/src/lib/dews.ts`, `shared/lib/methodology-versions/registry.ts`                                                                                                                                              |
 | Depeg Duration Resolver | `shared/lib/depeg-resolver/` (DDR/DDRR resolver), `shared/lib/methodology-versions/depeg-resolver.ts`                                                                                                                                          |
-| Blacklist Tracker     | `worker/src/cron/sync-blacklist.ts`, `worker/src/lib/blacklist-contracts.ts`, `shared/lib/methodology-versions/blacklist-tracker.ts`                                                                                                              |
-| Chain Health Score    | `shared/lib/chains/health.ts`, `shared/lib/chains/index.ts`, `shared/lib/chains/l2beat-risk.ts`, `shared/lib/methodology-versions/chain-health.ts` — formula, factors, not-rated gate, and bands are owned by [chain-health.md](./chain-health.md) |
+| Blacklist Tracker     | `worker/src/cron/sync-blacklist.ts`, `worker/src/lib/blacklist-contracts.ts`, `shared/lib/methodology-versions/registry.ts`                                                                                                              |
+| Chain Health Score    | `shared/lib/chains/health.ts`, `shared/lib/chains/index.ts`, `shared/lib/chains/l2beat-risk.ts`, `shared/lib/methodology-versions/registry.ts` — formula, factors, not-rated gate, and bands are owned by [chain-health.md](./chain-health.md) |
 
 ---
 
@@ -88,8 +88,8 @@ If the pricing pipeline's source roster or live-price selection semantics change
 
 For the safety-score changelog specifically, update both:
 
-1. `shared/data/methodology-changelogs/safety-score/`, `shared/lib/methodology-versions/current-version.json`, and `shared/lib/methodology-versions/safety-score.ts` for the machine-readable changelog and current version.
-2. `src/app/methodology/changelog-content/scoring/content.tsx` plus the split `content-v8.tsx`, `content-v7-*.tsx`, `content-v6.tsx`, `content-v5.tsx`, `content-legacy.tsx`, and `content-summary.tsx` modules for the authored long-form detail maps and reference tables (with `content-v6.tsx` merging `content-v6-9.tsx` and `content-v6-91-to-v6-99.tsx`).
+1. `shared/data/methodology-changelogs/safety-score/`, `shared/lib/methodology-versions/current-version.json`, and `shared/lib/methodology-versions/registry.ts` for the machine-readable changelog and current version.
+2. `src/app/methodology/changelog-content/scoring/content-shared.tsx` only when a version needs a body block kind the `detail` schema in `shared/lib/methodology-versions/base.ts` does not yet have; `content-summary.tsx` for the global quick-reference tables. Version prose itself is data — never a JSX module.
 
 ---
 
@@ -105,7 +105,7 @@ Per-coin record of issuer-led freeze, release, and destroy events drawn from on-
 
 The detail page retains its per-coin blacklist module. The unmounted recent-activity banner and its hook have been removed; the retained `NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER` configuration flag has no render site (see [process/feature-flags.md](process/feature-flags.md)). The summary API still exposes its trailing seven-day per-coin event counts.
 
-Runtime source: `worker/src/cron/sync-blacklist.ts`, `worker/src/lib/blacklist-contracts.ts`, plus `shared/lib/methodology-versions/blacklist-tracker.ts` for the versioned methodology snapshot.
+Runtime source: `worker/src/cron/sync-blacklist.ts`, `worker/src/lib/blacklist-contracts.ts`, plus `shared/lib/methodology-versions/registry.ts` for the versioned methodology snapshot.
 
 ### Bluechip rating {#bluechip}
 

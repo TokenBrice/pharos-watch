@@ -4,7 +4,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { buildBlacklistContractBalanceKey } from "@shared/lib/blacklist";
 import { parseRetryAfterSeconds } from "@shared/lib/retry-after";
-import { getBlacklistTrackerMethodologyVersionAt } from "@shared/lib/methodology-versions/blacklist-tracker";
+import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { runCliEntrypoint, writeCliHelpIfRequested } from "../../scripts/lib/cli-args.mjs";
 import { tronBase58ToHex } from "../src/lib/tron-address";
 import { chunkArray } from "../src/lib/collections";
@@ -664,7 +664,7 @@ function eventUpsertStatement(
 ): string {
   const amountNative = event.amountRaw ? amountRawToNative(event.amountRaw) : null;
   const timestamp = Math.floor(event.blockTimestampMs / 1000);
-  const methodologyVersion = getBlacklistTrackerMethodologyVersionAt(timestamp);
+  const methodologyVersion = getMethodologyVersionAt("blacklist-tracker", timestamp);
   const amountSource = amountNative == null ? "unavailable" : "event";
   const amountStatus = amountNative == null ? "recoverable_pending" : "resolved";
   return `INSERT INTO blacklist_events

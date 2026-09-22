@@ -1,10 +1,11 @@
 import { evaluateV9FactSet, type V9EvaluatedAsset } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import type { V9AssetFactsV3 } from "@shared/types/safety-score-v9-facts";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { beforeAll, describe, expect, it } from "vitest";
-import { createReportCardsFixedInput, normalizeFixedInput } from "../report-cards-fixed-input";
+import { normalizeFixedInput } from "../report-cards-fixed-input";
+import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9/fact-set";
 

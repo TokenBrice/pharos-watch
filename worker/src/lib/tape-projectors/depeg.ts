@@ -29,7 +29,7 @@ import {
   type ProjectorResult,
 } from "./types";
 import { formatDuration, formatPrice } from "@shared/lib/format";
-import { getDepegDewsMethodologyVersionAt } from "@shared/lib/methodology-versions/depeg-dews";
+import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { classifyDepegClosure } from "@shared/lib/depeg-closure";
 
 const PEAK_WORSENED_CACHE_KEY = "tape-projector:peak-worsened-seen";
@@ -160,7 +160,7 @@ async function projectDepegByVariant(
       sourceRowId,
       transition,
       sourceUrl: coinSourceUrl(row.stablecoin_id),
-      methodologyVersion: getDepegDewsMethodologyVersionAt(tsSec),
+      methodologyVersion: getMethodologyVersionAt("depeg-dews", tsSec),
     });
   }
 
@@ -301,7 +301,7 @@ export async function projectDepegPeakWorsened(
         sourceRowId,
         transition,
         sourceUrl: coinSourceUrl(row.stablecoin_id),
-        methodologyVersion: getDepegDewsMethodologyVersionAt(row.started_at),
+        methodologyVersion: getMethodologyVersionAt("depeg-dews", row.started_at),
       });
     }
 

@@ -2,7 +2,7 @@ import { logWorkerEventArgs } from "../lib/structured-log";
 import { getCirculatingRaw, getPrevWeekRawOrNull } from "@shared/lib/supply";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { CORE_PSI_ELIGIBLE_IDS } from "@shared/lib/psi-eligible";
-import { PSI_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/stability-index";
+import { PSI_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { round1 } from "@shared/lib/math";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import type { CronResult } from "../lib/cron-logger";

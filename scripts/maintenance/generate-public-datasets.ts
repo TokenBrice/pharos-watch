@@ -40,10 +40,10 @@ import { PUBLIC_DATASET_TOPICS, type PublicDatasetTopic } from "@shared/lib/api-
 import type { DepegEvent } from "@shared/types/market";
 import { getMechanismArchetypeLabel } from "@shared/lib/classification/mechanism-archetypes";
 import { formatUtcDateOnly } from "@shared/lib/format";
-import { DEPEG_DEWS_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/depeg-dews";
-import { LIQUIDITY_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/liquidity-score";
+import { DEPEG_DEWS_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
+import { LIQUIDITY_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
-import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/safety-score";
+import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/stablecoin-taxonomy";

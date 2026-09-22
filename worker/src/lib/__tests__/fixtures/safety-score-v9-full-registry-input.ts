@@ -1,7 +1,7 @@
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { v9TestClockSec } from "../../../test-helpers/v9-fixed-input";
-import { createReportCardsFixedInput } from "../../report-cards-fixed-input";
+import { createReportCardsFixedInput } from "../../../test-helpers/report-cards-fixed-input";
 import {
   computeNativeDexLiquidityPayloadFingerprint,
   normalizeNativeV9Input,

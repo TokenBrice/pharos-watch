@@ -2,14 +2,14 @@ import { errorResponse } from "../lib/api-response";
 import { parseEnumParam, parseOptionalEnumParam } from "../lib/api-params";
 import { buildMethodologyEnvelope } from "../lib/api-methodology";
 import { buildPaginatedEventResponse } from "../lib/api-pagination";
-import { CACHE_PROFILES } from "../lib/constants";
+import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { CHAIN_META } from "@shared/lib/chains";
 import {
   BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
   BLACKLIST_TRACKER_METHODOLOGY_VERSION,
   BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
-  getBlacklistTrackerMethodologyVersionAt,
-} from "@shared/lib/methodology-versions/blacklist-tracker";
+} from "@shared/lib/methodology-versions/constants";
+import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { getSupportedBlacklistChainIds, getSupportedBlacklistChainNames } from "../lib/blacklist-coverage-manifest";
@@ -180,7 +180,7 @@ export const handleBlacklist = async (db: D1Database, url: URL): Promise<Respons
         (latest, event) => (latest == null || event.timestamp > latest.timestamp ? event : latest),
         null,
       );
-      const methodologyVersion = latestEvent?.methodologyVersion ?? getBlacklistTrackerMethodologyVersionAt(latestTs);
+      const methodologyVersion = latestEvent?.methodologyVersion ?? getMethodologyVersionAt("blacklist-tracker", latestTs);
       const methodologyVersionLabel = toMethodologyVersionLabel(methodologyVersion);
 
       return {

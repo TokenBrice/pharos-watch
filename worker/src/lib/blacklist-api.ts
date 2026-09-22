@@ -1,4 +1,4 @@
-import { getBlacklistTrackerMethodologyVersionAt } from "@shared/lib/methodology-versions/blacklist-tracker";
+import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import type { BlacklistEvent } from "@shared/types/market";
 import type { BlacklistPersistedRow } from "./blacklist/shared";
 
@@ -16,7 +16,7 @@ export type BlacklistEventRow = Omit<BlacklistPersistedRow,
 
 export function mapBlacklistEventRow(row: BlacklistEventRow): BlacklistEvent {
   return {
-    methodologyVersion: row.methodology_version ?? getBlacklistTrackerMethodologyVersionAt(row.timestamp),
+    methodologyVersion: row.methodology_version ?? getMethodologyVersionAt("blacklist-tracker", row.timestamp),
     id: row.id,
     stablecoin: row.stablecoin,
     chainId: row.chain_id,

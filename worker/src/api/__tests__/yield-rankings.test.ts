@@ -2,7 +2,7 @@ import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { YieldRankingsResponseSchema, type YieldRanking, type YieldRankingsResponse } from "@shared/types/yield";
-import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/yield-methodology";
+import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
 import { computePYS, yieldStabilityToApyVarianceScore } from "@shared/lib/yield-scoring";
 import { makeYieldRanking, makeYieldProvenance } from "@shared/test-utils/yield-ranking-fixtures";
@@ -873,6 +873,15 @@ describe("handleYieldRankings", () => {
         cutoffAt: updatedAt,
         schemaVersion: 1,
         status: "published" as const,
+      },
+      methodology: {
+        version: YIELD_METHODOLOGY_VERSION,
+        versionLabel: `v${YIELD_METHODOLOGY_VERSION}`,
+        currentVersion: YIELD_METHODOLOGY_VERSION,
+        currentVersionLabel: `v${YIELD_METHODOLOGY_VERSION}`,
+        changelogPath: "/methodology/yield-intelligence",
+        asOf: updatedAt,
+        isCurrent: true,
       },
       rankings: [
         {

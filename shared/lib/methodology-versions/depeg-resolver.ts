@@ -25,6 +25,8 @@ export {
 /** Reconstructed changelog data. */
 export const DDR_METHODOLOGY_CHANGELOG = ddr.changelog;
 
+export const getDepegResolverMethodologyVersionAt = ddr.getVersionAt;
+
 /** Sub-component versions surfaced in the API _meta for reproducibility. */
 export const DDR_RESOLUTION_RUBRIC_VERSION = "resolution-rubric-v3";
 export const DDR_DURATION_MODEL_VERSION = "duration-landmark-v2";

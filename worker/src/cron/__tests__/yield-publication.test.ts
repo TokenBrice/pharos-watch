@@ -22,7 +22,7 @@ import {
   materializeYieldHistoryDaily,
   pruneYieldTables,
 } from "../yield-sync/publication";
-import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/yield-methodology";
+import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { buildPreviewYieldRankingsArtifacts } from "../yield-sync/coordinator-persist";
 import type { PreviousYieldPublicationSnapshot } from "../yield-sync/publication";
 import { publishYieldCoordinatorResults } from "../yield-sync/coordinator-persist";

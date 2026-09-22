@@ -62,10 +62,9 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
  * file, add its score-bearing transitive sources here too.
  *
  * `shared/lib/math.ts` (clampScore, roundScore, bandFromThresholds) and the
- * `shared/lib/methodology-versions/` subtree reached through the two version
- * re-export shims were closure holes: a rounding rule or a published methodology
- * version could change with no movement in the build identity. Both are listed
- * now.
+ * methodology constants reached by score-bearing producers were closure holes:
+ * a rounding rule or a published methodology version could change with no
+ * movement in the build identity. Both authorities are listed now.
  *
  * Deliberately still open: the *literal* transitive closure of the listed
  * producers is ~131 further modules, almost all worker I/O infrastructure
@@ -96,8 +95,6 @@ export const V9_FACT_PRODUCER_SOURCE_PATHS = [
   "shared/lib/methodology-versions/base.ts",
   "shared/lib/methodology-versions/constants.ts",
   "shared/lib/methodology-versions/current-version.json",
-  "shared/lib/methodology-versions/liquidity-score.ts",
-  "shared/lib/methodology-versions/redemption-backstop.ts",
   "shared/lib/p4-exit-route-amm-simulation.ts",
   "shared/lib/p4-exit-route-capability-policy.ts",
   "shared/lib/p4-exit-route-capacity.ts",

@@ -1,3 +1,4 @@
+import { DEPEG_EVENT_MIN_SUPPLY_USD } from "@shared/lib/depeg-config";
 import { TRACKED_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
   computePegScore,
@@ -7,10 +8,10 @@ import {
   PEG_SCORE_LOOKBACK_SEC,
 } from "@shared/lib/peg-score";
 import { derivePegRates, getPegReference, normalizePegType } from "@shared/lib/peg-rates";
-import { getDepegDewsMethodologyVersionAt } from "@shared/lib/methodology-versions/depeg-dews";
+import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import type { DepegEvent, PegSummaryCoin, StablecoinData } from "@shared/types/market";
-import { DEPEG_EVENT_MIN_SUPPLY_USD } from "./constants";
+
 import { isAuthoritativeDepegPegReference } from "@shared/lib/peg-reference-trust";
 import { type DepegRow } from "./depeg-helpers";
 import {
@@ -210,7 +211,7 @@ export async function derivePegAnalyticsSnapshot(
     fxFallbackRates: options.fxFallbackRates,
     asOf: options.methodologyAsOf,
   });
-  const methodologyVersion = getDepegDewsMethodologyVersionAt(options.methodologyAsOf);
+  const methodologyVersion = getMethodologyVersionAt("depeg-dews", options.methodologyAsOf);
   const trackingFallbackStart = nowSec - PEG_SCORE_LOOKBACK_SEC;
 
   const pegDataById = new Map<string, PegSummaryCoin>();

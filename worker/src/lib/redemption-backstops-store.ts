@@ -38,8 +38,8 @@ import {
   REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG_PATH,
   REDEMPTION_BACKSTOP_METHODOLOGY_VERSION,
   REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL,
-  getRedemptionBackstopVersionAt,
-} from "@shared/lib/methodology-versions/redemption-backstop";
+} from "@shared/lib/methodology-versions/constants";
+import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
 import {
   REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS,
@@ -386,7 +386,7 @@ export function resolveSnapshotMethodologyVersion(
     }
   }
 
-  const version = getRedemptionBackstopVersionAt(updatedAt);
+  const version = getMethodologyVersionAt("redemption-backstop", updatedAt);
   return {
     version,
     versionLabel: toMethodologyVersionLabel(version),

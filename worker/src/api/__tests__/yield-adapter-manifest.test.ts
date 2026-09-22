@@ -2,11 +2,9 @@ import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { describe, expect, it } from "vitest";
 import { handleYieldAdapterManifest } from "../yield-adapter-manifest";
 import { getRouteMatch } from "../../routes/registry";
-import { CACHE_PROFILES } from "../../lib/constants";
-import {
-  YIELD_METHODOLOGY_CHANGELOG,
-  YIELD_METHODOLOGY_VERSION,
-} from "@shared/lib/methodology-versions/yield-methodology";
+import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
+import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
+import { YIELD_METHODOLOGY_CHANGELOG } from "@shared/lib/methodology-versions/registry";
 import { YIELD_ADAPTER_MANIFEST } from "../../lib/yield-config/yield-config";
 import {
   RATE_DERIVED_CONFIGS,

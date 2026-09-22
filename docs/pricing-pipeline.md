@@ -34,7 +34,7 @@ Every published main and CoinGecko-supply-fallback `sync-stablecoins` run writes
 ## Versioning
 
 - **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.25`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
-- **Canonical version module:** `shared/lib/methodology-versions/pricing-pipeline.ts`
+- **Canonical version module:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
 
@@ -513,7 +513,7 @@ When changing live pricing behavior, update all relevant surfaces in the same ch
 2. this document for canonical pricing behavior
 3. [Supply Snapshot](./supply-snapshot.md#supply-pipeline), [Depeg Detection](./depeg-detection.md#stage-2----confirmation), [Pharos Stability Index](./stability-index.md#cron--storage), or [Blacklist Tracker](./blacklist-tracker.md#blacklist-sync-state-semantics) when the corresponding pipeline semantics changed
 4. `/methodology` pricing copy in `src/app/methodology/sections/core-sections-pricing.tsx`
-5. `shared/lib/methodology-versions/pricing-pipeline.ts` and the matching entry under `shared/data/methodology-changelogs/pricing-pipeline/` if methodology semantics changed
+5. `shared/lib/methodology-versions/registry.ts` and the matching entry under `shared/data/methodology-changelogs/pricing-pipeline/` if methodology semantics changed
 6. [about-page.md](./about-page.md) and `src/lib/about-content.ts` when externally visible data sources change
 
 ## Data Integrity Guardrails

@@ -6,7 +6,7 @@ import type {
 } from "@shared/types/market";
 import { computeBlacklistAmountUsdAtEvent } from "@shared/lib/blacklist";
 import { buildExplorerUrl } from "@shared/lib/explorer";
-import { getBlacklistTrackerMethodologyVersionAt } from "@shared/lib/methodology-versions/blacklist-tracker";
+import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import type { ChainConfig } from "../blacklist-contracts";
 
 export const BLACKLIST_PUBLIC_EVENT_SQL = "suppression_reason IS NULL";
@@ -116,7 +116,7 @@ export function buildBlacklistRow({
     tx_hash: txHash,
     block_number: blockNumber,
     timestamp,
-    methodology_version: getBlacklistTrackerMethodologyVersionAt(timestamp),
+    methodology_version: getMethodologyVersionAt("blacklist-tracker", timestamp),
     contract_address: contractAddress,
     config_key: configKey,
     event_signature: eventSignature,

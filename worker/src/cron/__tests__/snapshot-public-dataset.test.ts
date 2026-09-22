@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { findD1HistoryEntry } from "@shared/test-utils/mock-d1";
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import {
   makePublicDatasetDb,

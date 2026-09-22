@@ -72,8 +72,8 @@ vi.mock("@shared/lib/peg-rates", () => ({
   ),
 }));
 
-vi.mock("@shared/lib/methodology-versions/depeg-dews", () => ({
-  getDepegDewsMethodologyVersionAt: vi.fn(() => "test-methodology"),
+vi.mock("@shared/lib/methodology-versions/registry", () => ({
+  getMethodologyVersionAt: vi.fn(() => "test-methodology"),
 }));
 
 vi.mock("../db", async (importOriginal) => {

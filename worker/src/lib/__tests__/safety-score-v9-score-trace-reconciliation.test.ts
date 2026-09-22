@@ -1,6 +1,6 @@
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { describe, expect, it } from "vitest";
-import { createReportCardsFixedInput } from "../report-cards-fixed-input";
+import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import { buildSafetyScoreV9Candidate } from "../safety-score-v9/candidate";
 import { v9TestClockSec } from "../../test-helpers/v9-fixed-input";
 

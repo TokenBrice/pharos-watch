@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { computeRedemptionPayloadFingerprint } from "@shared/lib/report-cards-fixed-input-identity";
 import { buildSafetyScoreV9InputIdentity } from "@shared/lib/safety-score-v9-input-identity";
@@ -18,11 +18,11 @@ import {
   parseSafetyScoreV9InputCacheValue,
   type NativeSafetyScoreV9Input,
 } from "../safety-score-v9/native-input";
+import { parseReportCardsFixedInputCacheValue } from "../report-cards-fixed-input";
 import {
-  createReportCardsFixedInput,
-  parseReportCardsFixedInputCacheValue,
   buildReportCardsFixedInputCacheEntry,
-} from "../report-cards-fixed-input";
+  createReportCardsFixedInput,
+} from "../../test-helpers/report-cards-fixed-input";
 
 const CLOCK_SEC = 1_783_891_200;
 const DEX_UPDATED_AT = 1_783_891_100;
@@ -207,6 +207,15 @@ describe("native Safety Score V9 input", () => {
     ]) {
       expect(() => normalizeNativeV9Input(nativeDraft(dropped))).toThrow(/Malformed native V9 input/);
     }
+  });
+
+  it("requires the native chain circulating map", () => {
+    const draft = nativeDraft();
+    delete draft.chainCirculatingById;
+
+    expect(() => normalizeNativeV9Input(draft)).toThrow(
+      /Malformed native V9 input/,
+    );
   });
 
   it("rejects a chain circulating bucket field outside `current`", () => {

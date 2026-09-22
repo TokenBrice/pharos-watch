@@ -1,3 +1,4 @@
+import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
@@ -11,7 +12,7 @@ import { getCirculatingRaw } from "@shared/lib/supply";
 import { addFreshnessHeaders } from "../lib/api-freshness";
 import { errorResponse, jsonResponse } from "../lib/api-response";
 import { buildMethodologyEnvelope } from "../lib/api-methodology";
-import { CACHE_PROFILES, getDepegThresholdBps } from "../lib/constants";
+import { getDepegThresholdBps } from "../lib/constants";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { derivePegAnalyticsSnapshot } from "../lib/peg-analytics";
 import { loadPegAnalyticsCache } from "../lib/peg-analytics-cache";
@@ -21,8 +22,8 @@ import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
   DEPEG_DEWS_METHODOLOGY_VERSION,
   DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
-  getDepegDewsMethodologyVersionAt,
-} from "@shared/lib/methodology-versions/depeg-dews";
+} from "@shared/lib/methodology-versions/constants";
+import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
 import { DEPEG_EVENT_MIN_SUPPLY_USD } from "@shared/lib/depeg-config";
 
@@ -154,7 +155,7 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
   // 3. Build lookup maps
   const priceById = new Map(peggedAssets.map((a) => [a.id, a]));
   const { rates: pegRates, sources: pegRateSources } = derivePegRates(peggedAssets, TRACKED_META_BY_ID, fxFallbackRates);
-  const methodologyVersion = getDepegDewsMethodologyVersionAt(stablecoinsCache.updatedAt);
+  const methodologyVersion = getMethodologyVersionAt("depeg-dews", stablecoinsCache.updatedAt);
 
   // 4. Compute per-coin data
   const coins: PegSummaryCoin[] = [];

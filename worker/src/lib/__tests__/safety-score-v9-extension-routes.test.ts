@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { DEX_MEASURED_ADAPTER_PROFILE_IDS } from "@shared/types/measured-execution";
 import {
   getRedemptionBackstopConfig,
@@ -8,7 +8,8 @@ import {
 } from "@shared/lib/redemption-backstops";
 import type { ExitRouteObservation } from "@shared/types/exit-route";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
-import { createReportCardsFixedInput, type ReportCardsFixedInput } from "../report-cards-fixed-input";
+import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
+import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9/extension";
 import {
   buildSafetyScoreV9RetainedRedemptionRoutes,
@@ -613,6 +614,49 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     };
     expect(buildSafetyScoreV9RouteReviews(fixedInput, "dai-makerdao")[0]!.output?.valuation).toBeNull();
   });
+
+  it("compares non-USD basket components by value-to-expectation ratio", () => {
+    const row = makeSupplyFullRedemption({ stablecoinId: "dai-makerdao" });
+    const derived = buildSafetyScoreV9RetainedRedemptionRoutes(
+      fixedInputStub(row),
+      row.stablecoinId,
+    )[0]!;
+    row.capacityProfile = {
+      ...row.capacityProfile!,
+      exitRouteObservations: [
+        {
+          ...derived.observation,
+          output: {
+            kind: "tracked-stablecoin",
+            trackedAssetIds: ["thbill-theo", "usdt-tether"],
+          },
+        },
+      ],
+    };
+    const fixedInput = fixedInputStub(row);
+    const mutableFixedInput: { pegDataById: Record<string, unknown> } = fixedInput;
+    mutableFixedInput.pegDataById = {
+      "usdt-tether": { currentDeviationBps: -14, priceObservedAt: NOW },
+    };
+    fixedInput.navPriceById = {
+      "thbill-theo": {
+        priceUsd: 0.8,
+        sourceId: "non-usd-nav-fixture",
+        observedAtSec: NOW,
+        confidence: "high",
+      },
+    };
+
+    expect(
+      buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]?.output
+        ?.valuation,
+    ).toMatchObject({
+      referenceAssetKey: "usdt-tether",
+      unitValueUsd: 1 - 14 / 10_000,
+      expectedUnitValueUsd: 1,
+    });
+  });
+
   it("preserves USD0 mixed-collateral identities through the reviewed route output", () => {
     const row = makeSupplyFullRedemption({
       stablecoinId: "usd0-usual",

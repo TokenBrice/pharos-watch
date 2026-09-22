@@ -3,7 +3,7 @@ import * as conservationModule from "../../mint-burn-conservation";
 import { MINT_BURN_CONFIGS } from "../../mint-burn-contracts";
 import { MintBurnConservationRecordSchema, MintBurnReconciliationSummarySchema } from "@shared/types/status";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { getDatasetFreshness, getMintBurnReconciliation } from "../derived-data";
 

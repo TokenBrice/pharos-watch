@@ -1,5 +1,5 @@
 import { GOLDEN_SCENARIOS, PAIRWISE_CONSTRAINTS } from "@shared/data/safety-score-v9/golden-scenarios-v1";
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import {
   scoreV9GoldenScenario,
   type V9GoldenScenario,

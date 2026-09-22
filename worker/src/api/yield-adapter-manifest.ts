@@ -1,12 +1,10 @@
 import { jsonResponse } from "../lib/api-response";
 import { addFreshnessHeaders } from "../lib/api-freshness-headers";
-import { CACHE_PROFILES } from "../lib/constants";
+import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { YIELD_ADAPTER_MANIFEST } from "../lib/yield-config/yield-config";
 import { YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
-import {
-  YIELD_METHODOLOGY_CHANGELOG,
-  YIELD_METHODOLOGY_VERSION,
-} from "@shared/lib/methodology-versions/yield-methodology";
+import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
+import { YIELD_METHODOLOGY_CHANGELOG } from "@shared/lib/methodology-versions/registry";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type {
   YieldAdapterManifestFamily,

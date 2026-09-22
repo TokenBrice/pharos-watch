@@ -3,7 +3,7 @@ import { getConfiguredRedemptionBackstopIds, getRedemptionBackstopConfig } from 
 import { REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS } from "@shared/lib/report-card-active-depeg";
 import { DEX_LIQUIDITY_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/cron-cadences";
 import { resolveCapacityConfidence } from "@shared/lib/redemption-backstop-confidence";
-import { REDEMPTION_BACKSTOP_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/redemption-backstop";
+import { REDEMPTION_BACKSTOP_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import {
   REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS,

@@ -13,7 +13,8 @@ import type {
 } from "@shared/types/yield";
 import { YIELD_BENCHMARK_KEY_VALUES, YieldRankingsResponseSchema } from "@shared/types/yield";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/yield-methodology";
+import { EVIDENCE_FIELD_COUNT } from "@shared/lib/yield-evidence";
+import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import {
   buildYieldRankBaseline,
@@ -39,7 +40,6 @@ import { buildYieldMethodology } from "./publication-methodology";
 import { buildYieldSourceRisk } from "./source-risk";
 import {
   benchmarkRecordAgeSeconds,
-  classifyYieldBenchmarkFreshness,
   YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
 } from "./benchmarks";
 
@@ -306,14 +306,6 @@ function buildAlternateSummary(
   };
 }
 
-/**
- * B23: the evidence-completeness denominator the scoring pass used
- * (`EVIDENCE_FIELD_COUNT` in `@shared/lib/yield-evidence`, consumed through
- * `assessYieldEvidence`). That constant is module-private today, so the
- * publish-time re-derivation names its own copy rather than re-typing a bare
- * `/ 7`; exporting the shared one collapses the pair.
- */
-const YIELD_EVIDENCE_FIELD_COUNT = 7;
 
 /** Previous publication rows, loose because they are read back off the cache. */
 export interface PreviousPublicationForAttribution {
@@ -512,12 +504,7 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
     const staleSource =
       (updatedAtMs > 0 && updatedAtMs < input.startSec * 1000 - staleThresholdMs) ||
       staleComparisonAnchor;
-    const benchmarkFreshness =
-      source.benchmarkFreshness ??
-      classifyYieldBenchmarkFreshness(source.benchmarkMeta, {
-        recordDate: source.benchmarkMeta.recordDate,
-        maxRecordAgeSec: YIELD_BENCHMARK_RECORD_MAX_AGE_SEC[source.benchmarkKey],
-      });
+    const benchmarkFreshness = source.benchmarkFreshness;
     if (staleSource) {
       if (!ranking.warningSignals.includes("data-stale")) {
         ranking.warningSignals = [...ranking.warningSignals, "data-stale"];
@@ -550,7 +537,7 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
         evidenceCompleteness: Math.max(
           0,
           Number(
-            (source.evidenceCompleteness - newlyMissingEvidenceFields / YIELD_EVIDENCE_FIELD_COUNT).toFixed(4),
+            (source.evidenceCompleteness - newlyMissingEvidenceFields / EVIDENCE_FIELD_COUNT).toFixed(4),
           ),
         ),
         scoreQualification: qualificationInvalidated ? "NR" : source.scoreQualification,

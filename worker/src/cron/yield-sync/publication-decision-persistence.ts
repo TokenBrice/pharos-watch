@@ -3,7 +3,7 @@ import {
   YIELD_PYS_INPUTS_AT_PUBLISH_SCHEMA_VERSION,
   YieldRankingsResponseSchema,
 } from "@shared/types/yield";
-import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/yield-methodology";
+import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { getCache } from "../../lib/db-cache";
 import { readCachedJson } from "../../lib/api-cache-read";
 import { validatePayloadWithSchema } from "../../lib/api-schema";
