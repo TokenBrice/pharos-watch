@@ -61,6 +61,7 @@ Start with [Agent Start Here](./process/agent-start-here.md), then open only the
 | [Worker Import Boundary Waivers](./process/boundary-waivers.md) | policy | none | none; review and document the waiver | `npx vitest run scripts/__tests__/eslint-import-boundaries.test.ts` |
 | [Cron Trigger Budget Policy](./process/cron-trigger-policy.md) | policy | none | `npm run check:cron-connections` | `npm run check:cron-sync` |
 | [D1 Baseline Squash Policy](./process/d1-baseline-squash-plan.md) | runbook | none | rehearse against two fresh D1 databases | `npm run check:migrations` |
+| [D1 Migration Authoring](./process/d1-migrations.md) | policy | `d1-migration-rollout` | add migration SQL and manifest evidence | `npm run check:migrations` |
 | [DDRR Calibration](./process/ddrr-calibration.md) | methodology | none | `npm run calibrate:ddrr -- --prod --report agents/ddrr-calibration-report.md` | semantic review; no pass/fail gate |
 | [Feature Flags](./process/feature-flags.md) | policy | none | `NEXT_PUBLIC_PHAROS_<NAME>=true npm run dev` | `npm run check:stale-flags` |
 | [Font Assets](./process/font-assets.md) | runbook | none | `npm run subset:fonts` | `npm run subset:fonts -- --check` |

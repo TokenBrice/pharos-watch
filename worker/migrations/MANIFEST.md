@@ -243,6 +243,14 @@ Current owner rulings for append-only operational/product tables that are intent
 | `report_card_evidence_journal` | Bounded diagnostic provenance - 45 days and 32 rows per asset | The reserve evidence-attempt store prunes by age and per-asset count; exact V9 fixed inputs retain at most the latest two rows per asset and never score from them. |
 | `safety_score_v9_supply_attribution_journal` | Bounded diagnostic provenance - 45 days and 32 rows per asset | Reviewed-deployment attribution attempts retain bounded admission and fallback evidence; private V9 fixed inputs receive at most the latest two rows per asset, and neither V8 nor scoring reads them. |
 
+## Reviewed Data Migrations
+
+Destructive DML is not permitted under the rollout-safety header alone. A new migration containing `DELETE FROM`, `UPDATE`, or `INSERT OR REPLACE` must also declare `-- data-migration: reviewed`, have a row below, and pass the seeded pre-migration fixture replay. Migration 0236 predates this annotation and is grandfathered only through its explicit review row.
+
+| Sequence | Filename | Predicate | Old-Worker compatibility | Rollback / bookmark | Expected row bounds |
+| --- | --- | --- | --- | --- | --- |
+| 0236 | `0236_dex_deployment_attempt_attribution.sql` | All existing `dex_deployment_outcomes` rows; `last_attempt_at` becomes the greater of that row's `observed_at` and its coin's legacy `last_crawl_at`. | The old Worker ignores the new nullable column and continues reading and writing the legacy coin fence during migration. | Capture the pre-deploy Time Travel bookmark; Worker rollback keeps the additive column, while unexpected data mutation restores from that bookmark. | At most the pre-migration `dex_deployment_outcomes` row count; no rows inserted or deleted. |
+
 ## Known Anomalies
 
 Duplicate numeric prefixes 0056 and 0061 existed in the squashed range (0001–0071); recorded here for historical reference.
@@ -252,9 +260,10 @@ Duplicate numeric prefixes 0056 and 0061 existed in the squashed range (0001–0
 - Rollout-safety enforcement starts at: `0071`
 - Required rollout-safety header: `-- rollout-safety: backward-compatible`
 - Standard production deploy applies D1 migrations before the new Worker is live, so every new migration from `0071` onward must keep the previous production Worker running until deploy completes.
-- `npm run check:migrations` verifies this manifest's active and retired migration rows against `worker/migrations/*.sql` and can emit a deterministic schema fingerprint after replay for release-summary drift triage.
+- `npm run check:migrations` verifies this manifest's active and retired migration rows against `worker/migrations/*.sql`.
 - `npm run check:migrations` also replays the complete fresh schema and compares object names by type with `EXPECTED_SCHEMA.txt`; regenerate that checked-in manifest after an accepted schema change with `npm run check:migrations -- --write-schema-manifest`.
 - `backward-compatible` means additive or compatibility-preserving changes only. Do not drop or rename tables/columns in the default deploy path, do not drop indexes (`DROP INDEX` is grandfathered only through migration `0230` and otherwise requires the coordinated cleanup rollout), and do not add `NOT NULL` columns without a `DEFAULT` because the still-live Worker may still issue inserts before deployment completes.
+- A migration containing `DELETE FROM`, `UPDATE`, or `INSERT OR REPLACE` is rejected under plain `backward-compatible`. New reviewed DML also requires `-- data-migration: reviewed` and a Reviewed Data Migrations row naming its predicate, old-Worker compatibility, rollback bookmark plan, and expected row bounds. The gate replays it against seeded existing rows immediately before that migration; each new target table must add a representative fixture.
 - The deploy workflow reruns `npm run check:migrations`, applies remote D1 migrations, deploys once with `wrangler deploy --strict`, and verifies that the SHA-tagged deployment owns 100% of production traffic.
 - Destructive cleanup must be scheduled as a separate, coordinated rollout after the old Worker code is no longer serving traffic. Do not merge those cleanup migrations into the normal deploy path without an explicit runbook/workflow change.
 - Worker rollback is an explicit operator action. It restores Worker code traffic but does not undo D1 schema or data changes.
