@@ -25,6 +25,7 @@ import { stableJsonStringifyV1 } from "../stable-json";
 import type {
   V9AssetFactsV2,
   V9AssetFactsV3,
+  V9FactGapV2,
 } from "../../types/safety-score-v9-facts";
 import type { DependencyType, V9DependencyEconomicRole } from "../../types/dependency-types";
 
@@ -206,7 +207,7 @@ export function minimalAsset(assetId: string) {
     assetId,
     archetype: "algorithmic",
     evidence: [base],
-    gaps: [],
+    gaps: [] as V9FactGapV2[],
     implementation: { status: knownStatus(), launchedAtSec: 100 },
     mechanismRiskReview: mechanismReview("algorithmic"),
     dependencies: {
