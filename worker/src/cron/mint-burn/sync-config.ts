@@ -1,5 +1,5 @@
 import type { MintBurnConservationRecord } from "@shared/types/status";
-import { auditMintBurnConservation, getMintBurnConservationEligibility, persistMintBurnConservation, validateMintBurnParsedConservation, verifyPersistedMintBurnConservation } from "../../lib/mint-burn-conservation";
+import { completeMintBurnConservationAudit, getMintBurnConservationEligibility, persistMintBurnConservation, validateMintBurnParsedConservation, verifyPersistedMintBurnConservation, type ConservationBoundaryEvidence } from "../../lib/mint-burn-conservation";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { AlchemyLogEntry, AlchemyTopicFilter } from "../../lib/alchemy-logs";
 import { fetchAlchemyLogs, resolveBlockTimestamps } from "../../lib/alchemy-logs";
@@ -93,6 +93,7 @@ export interface SyncMintBurnConfigInput {
   affectedHours: Map<string, MintBurnAffectedHour>;
   safetyMarginBlocks: number;
   deadlineMs?: number;
+  conservationBoundary?: ConservationBoundaryEvidence;
 }
 
 export interface SyncMintBurnConfigResult {
@@ -440,9 +441,9 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
   let parserFailure = false;
   let conservationAudit: MintBurnConservationRecord | null = null;
   if (getMintBurnConservationEligibility(config).supported) {
-    const audit = await auditMintBurnConservation({
+    const audit = completeMintBurnConservationAudit({
       config, logs: allConfigLogs, fromBlock, toBlock: scanTo, checkedAt: Math.floor(Date.now() / 1000),
-      complete: fullEventCoverage, rpcUrl: alchemyUrl, budget: configBudget, signal, deadlineMs,
+      complete: fullEventCoverage, boundary: input.conservationBoundary,
     });
     conservationFence = audit.status === "mismatch" || [
       "invalid-rpc-quantity", "unsafe-rpc-quantity", "invalid-raw-log", "inconsistent-log-block-hash",

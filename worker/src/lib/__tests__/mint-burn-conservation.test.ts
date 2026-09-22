@@ -2,8 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { MINT_BURN_CONFIGS } from "../mint-burn-contracts";
 import { fetchEvmRpcBatchDetailed } from "../evm-rpc";
-import { auditMintBurnConservation, getMintBurnConservationEligibility, mintBurnConservationCacheKey,
-  persistMintBurnConservation, readMintBurnConservationRecords, validateMintBurnParsedConservation, verifyPersistedMintBurnConservation } from "../mint-burn-conservation";
+import { completeMintBurnConservationAudit, fetchConservationBoundaries, getMintBurnConservationEligibility, mintBurnConservationCacheKey,
+  persistMintBurnConservation, readMintBurnConservationRecords, validateMintBurnParsedConservation, verifyPersistedMintBurnConservation,
+  type ConservationBoundaryEvidence, type ConservationBoundaryRequest } from "../mint-burn-conservation";
 import type { AlchemyLogEntry } from "../alchemy-logs";
 import type { MintBurnRow } from "../mint-burn-pipeline/types";
 vi.mock("../evm-rpc", () => ({ fetchEvmRpcBatchDetailed: vi.fn() }));
@@ -23,13 +24,207 @@ function log(direction: "mint" | "burn", amount: bigint, index = 0): AlchemyLogE
 function input(logs = [log("mint", 2n), log("burn", 1n, 1)]) {
   return { config, logs: config.events.map((eventDef) => ({ eventDef,
     logs: logs.filter((item) => item.topics[eventDef.direction === "mint" ? 1 : 2] === word(0n)) })),
-  fromBlock: 101, toBlock: 102, checkedAt: 1100, complete: true, rpcUrl: "https://rpc.example", budget: { count: 0, limit: 3 } };
+  fromBlock: 101, toBlock: 102, checkedAt: 1100, complete: true, boundary: ready() };
+}
+function ready(delta = 1n): ConservationBoundaryEvidence {
+  return { status: "ready", fromBlockHash: headers[0].hash, toBlockHash: headers[1].hash,
+    fromTimestamp: 1000, toTimestamp: 1024, fromSupplyRaw: "100", toSupplyRaw: (100n + delta).toString() };
+}
+function boundaryInput(requests: ConservationBoundaryRequest[] = [{ key: "one", config, fromBlock: 101, toBlock: 102 }]) {
+  return { requests, rpcUrlByChain: new Map([["ethereum", "https://rpc.example"]]),
+    budget: { count: 0, limit: 100 }, checkedAt: 1100 };
+}
+async function auditWithBoundaries() {
+  const boundaries = await fetchConservationBoundaries(boundaryInput());
+  return completeMintBurnConservationAudit({ ...input(), boundary: boundaries.get("one") });
 }
 function rpc(delta = 1n) {
   vi.mocked(fetchEvmRpcBatchDetailed).mockResolvedValueOnce({ results: headers, errors: [] })
     .mockResolvedValueOnce({ results: [word(100n), word(100n + delta)], errors: [] })
     .mockResolvedValueOnce({ results: headers, errors: [] });
 }
+
+const disjointRequests: ConservationBoundaryRequest[] = [
+  { key: "one", config, fromBlock: 101, toBlock: 102 },
+  { key: "two", config, fromBlock: 105, toBlock: 106 },
+];
+function generatedHeader(block: number) {
+  return { number: `0x${block.toString(16)}`, hash: word(BigInt(block)), timestamp: `0x${(900 + block).toString(16)}` };
+}
+function pooledRpc() {
+  vi.mocked(fetchEvmRpcBatchDetailed).mockImplementation(async (_chain, calls) => ({
+    results: calls.map((call) => call.method === "eth_call" ? word(100n) : generatedHeader(Number(call.params[0]))),
+    errors: [],
+  }));
+}
+
+describe("pooled conservation boundaries", () => {
+  it("chunks N+1 calls into two POSTs in each of the three phases", async () => {
+    pooledRpc();
+    const args = { ...boundaryInput(disjointRequests), maxBatchCalls: 3 };
+    const result = await fetchConservationBoundaries(args);
+    expect([...result.values()].map((item) => item.status)).toEqual(["ready", "ready"]);
+    expect(vi.mocked(fetchEvmRpcBatchDetailed).mock.calls.map((call) => call[1].length)).toEqual([3, 1, 3, 1, 3, 1]);
+    expect(args.budget.count).toBe(6);
+    expect(vi.mocked(fetchEvmRpcBatchDetailed).mock.calls[0][2]).toMatchObject({
+      extraRpcUrls: ["https://rpc.example"], maxRetries: 0, timeoutMs: 15_000,
+    });
+  });
+  it("deduplicates shared headers but keeps per-request supply reads", async () => {
+    pooledRpc();
+    const result = await fetchConservationBoundaries(boundaryInput([
+      disjointRequests[0], { ...disjointRequests[0], key: "two" },
+    ]));
+    expect(result.get("one")?.status).toBe("ready");
+    expect(result.get("two")?.status).toBe("ready");
+    expect(vi.mocked(fetchEvmRpcBatchDetailed).mock.calls.map((call) => call[1].length)).toEqual([2, 4, 2]);
+  });
+  it.each(["header", "supply", "recheck"])("isolates a per-call %s error to its dependents", async (phase) => {
+    pooledRpc();
+    const normal = vi.mocked(fetchEvmRpcBatchDetailed).getMockImplementation()!;
+    let pass = 0;
+    vi.mocked(fetchEvmRpcBatchDetailed).mockImplementation(async (...args) => {
+      const result = (await normal(...args))!;
+      if (pass++ === ["header", "supply", "recheck"].indexOf(phase)) {
+        result.results[0] = undefined;
+        result.errors.push({ index: 0, code: -32000 });
+      }
+      return result;
+    });
+    const result = await fetchConservationBoundaries(boundaryInput(disjointRequests));
+    expect(result.get("one")).toEqual({ status: "unavailable", reason: "audit-rpc-unavailable" });
+    expect(result.get("two")?.status).toBe("ready");
+  });
+  it.each(["null", "throw"])("isolates a failed chunk (%s) without losing later chunks", async (kind) => {
+    pooledRpc();
+    if (kind === "null") vi.mocked(fetchEvmRpcBatchDetailed).mockResolvedValueOnce(null);
+    else vi.mocked(fetchEvmRpcBatchDetailed).mockRejectedValueOnce(new Error("timeout"));
+    const result = await fetchConservationBoundaries({ ...boundaryInput(disjointRequests), maxBatchCalls: 2 });
+    expect(result.get("one")).toEqual({ status: "unavailable", reason: "audit-rpc-unavailable" });
+    expect(result.get("two")?.status).toBe("ready");
+  });
+  it.each(["hash", "number", "timestamp", "malformed"])("isolates recheck %s changes", async (field) => {
+    pooledRpc();
+    const normal = vi.mocked(fetchEvmRpcBatchDetailed).getMockImplementation()!;
+    let pass = 0;
+    vi.mocked(fetchEvmRpcBatchDetailed).mockImplementation(async (...args) => {
+      const result = (await normal(...args))!;
+      if (pass++ === 2) {
+        result.results[0] = { ...generatedHeader(100),
+          ...(field === "hash" ? { hash: word(999n) } : field === "number" ? { number: "0x99" }
+            : field === "timestamp" ? { timestamp: "0x999" } : { timestamp: "not-hex" }) };
+      }
+      return result;
+    });
+    const result = await fetchConservationBoundaries(boundaryInput(disjointRequests));
+    expect(result.get("one")).toEqual({ status: "unavailable", reason: "boundary-reorg" });
+    expect(result.get("two")?.status).toBe("ready");
+  });
+  it("marks every dependent of a shared failed block, not unrelated ranges", async () => {
+    pooledRpc();
+    vi.mocked(fetchEvmRpcBatchDetailed).mockResolvedValueOnce({
+      results: [generatedHeader(100), undefined, generatedHeader(104), generatedHeader(106)],
+      errors: [{ index: 1 }],
+    });
+    const result = await fetchConservationBoundaries(boundaryInput([
+      disjointRequests[0], { key: "two", config, fromBlock: 103, toBlock: 104 },
+      { key: "three", config, fromBlock: 105, toBlock: 106 },
+    ]));
+    expect(result.get("one")?.status).toBe("unavailable");
+    expect(result.get("two")?.status).toBe("unavailable");
+    expect(result.get("three")?.status).toBe("ready");
+  });
+  it("preserves finished rechecks when the budget exhausts mid-prepass", async () => {
+    pooledRpc();
+    const args = { ...boundaryInput(disjointRequests), maxBatchCalls: 2, budget: { count: 0, limit: 5 } };
+    const result = await fetchConservationBoundaries(args);
+    expect(result.get("one")?.status).toBe("ready");
+    expect(result.get("two")).toEqual({ status: "unavailable", reason: "audit-budget-or-deadline" });
+    expect(args.budget.count).toBe(5);
+  });
+  it("caps POST timeouts to the deadline and stops subsequent phases", async () => {
+    const clock = vi.spyOn(Date, "now").mockReturnValue(1000);
+    try {
+      pooledRpc();
+      const normal = vi.mocked(fetchEvmRpcBatchDetailed).getMockImplementation()!;
+      vi.mocked(fetchEvmRpcBatchDetailed).mockImplementation(async (...args) => {
+        clock.mockReturnValue(1100);
+        return normal(...args);
+      });
+      const result = await fetchConservationBoundaries({ ...boundaryInput(), deadlineMs: 1100 });
+      expect(vi.mocked(fetchEvmRpcBatchDetailed).mock.calls[0][2]?.timeoutMs).toBe(100);
+      expect(result.get("one")).toEqual({ status: "unavailable", reason: "audit-budget-or-deadline" });
+      expect(fetchEvmRpcBatchDetailed).toHaveBeenCalledTimes(1);
+    } finally { clock.mockRestore(); }
+  });
+  it.each(["resolved", "rejected"])("propagates an in-flight abort after a %s RPC", async (kind) => {
+    const controller = new AbortController();
+    vi.mocked(fetchEvmRpcBatchDetailed).mockImplementation(async () => {
+      controller.abort(new Error("cancelled"));
+      if (kind === "rejected") throw new Error("transport aborted");
+      return null;
+    });
+    await expect(fetchConservationBoundaries({ ...boundaryInput(), signal: controller.signal })).rejects.toThrow("cancelled");
+  });
+  it.each([
+    [null, "invalid-boundary-header"],
+    [{ ...generatedHeader(100), number: "0x99" }, "invalid-boundary-header"],
+    [{ ...generatedHeader(100), hash: word(0n) }, "invalid-boundary-header"],
+    [{ ...generatedHeader(100), number: "wrong" }, "invalid-rpc-quantity"],
+    [{ ...generatedHeader(100), number: "0x20000000000000" }, "unsafe-rpc-quantity"],
+    [{ ...generatedHeader(100), timestamp: "0x0" }, "invalid-boundary-time"],
+    [{ ...generatedHeader(100), timestamp: "0x999" }, "invalid-boundary-time"],
+    [{ ...generatedHeader(100), hash: word(102n) }, "invalid-boundary-time"],
+  ])("rejects invalid initial header %j", async (header, reason) => {
+    pooledRpc();
+    vi.mocked(fetchEvmRpcBatchDetailed).mockResolvedValueOnce({ results: [header, generatedHeader(102)], errors: [] });
+    expect((await fetchConservationBoundaries(boundaryInput())).get("one")).toEqual({ status: "unavailable", reason });
+  });
+  it("rejects future boundary time and invalid supply words", async () => {
+    pooledRpc();
+    expect((await fetchConservationBoundaries({ ...boundaryInput(), checkedAt: 1001 })).get("one"))
+      .toEqual({ status: "unavailable", reason: "invalid-boundary-time" });
+    vi.mocked(fetchEvmRpcBatchDetailed).mockResolvedValueOnce({ results: headers, errors: [] })
+      .mockResolvedValueOnce({ results: ["0x1", word(100n)], errors: [] });
+    expect((await fetchConservationBoundaries(boundaryInput())).get("one"))
+      .toEqual({ status: "unavailable", reason: "invalid-total-supply-word" });
+  });
+  it("skips unsupported identities and rejects invalid ranges or missing URLs without RPC", async () => {
+    const requests = [
+      { ...disjointRequests[0], key: "unsupported", config: { ...config, decimals: 99 } },
+      { ...disjointRequests[0], key: "invalid", fromBlock: 0 },
+      disjointRequests[0],
+    ];
+    const result = await fetchConservationBoundaries({ ...boundaryInput(requests), rpcUrlByChain: new Map() });
+    expect(result.has("unsupported")).toBe(false);
+    expect(result.get("invalid")).toEqual({ status: "unavailable", reason: "invalid-audit-range" });
+    expect(result.get("one")).toEqual({ status: "unavailable", reason: "audit-rpc-unavailable" });
+    expect(fetchEvmRpcBatchDetailed).not.toHaveBeenCalled();
+    await expect(fetchConservationBoundaries({ ...boundaryInput(), maxBatchCalls: 0 })).rejects.toThrow("invalid-conservation-batch-size");
+  });
+  it("uses the default 100-call cap for larger batches", async () => {
+    pooledRpc();
+    const requests = Array.from({ length: 51 }, (_, index) => ({
+      key: String(index), config, fromBlock: 101 + index * 2, toBlock: 102 + index * 2,
+    }));
+    const result = await fetchConservationBoundaries({ ...boundaryInput(requests), checkedAt: 2000 });
+    expect([...result.values()].every((item) => item.status === "ready")).toBe(true);
+    // 52 distinct headers (adjacent ranges share a boundary), 102 supply calls.
+    expect(vi.mocked(fetchEvmRpcBatchDetailed).mock.calls.map((call) => call[1].length)).toEqual([52, 100, 2, 52]);
+  });
+  it("does not spend another POST on a request whose opening header already failed", async () => {
+    vi.mocked(fetchEvmRpcBatchDetailed).mockResolvedValueOnce(null);
+    const args = { ...boundaryInput(), maxBatchCalls: 1 };
+    const result = await fetchConservationBoundaries(args);
+    expect(result.get("one")).toEqual({ status: "unavailable", reason: "audit-rpc-unavailable" });
+    expect(args.budget.count).toBe(1);
+  });
+  it("returns unavailable without any request after the pre-pass deadline", async () => {
+    const result = await fetchConservationBoundaries({ ...boundaryInput(), deadlineMs: 0 });
+    expect(result.get("one")).toEqual({ status: "unavailable", reason: "audit-budget-or-deadline" });
+    expect(fetchEvmRpcBatchDetailed).not.toHaveBeenCalled();
+  });
+});
 describe("raw token conservation", () => {
   it("admits exactly fifteen reviewed identities and rejects changed decimals/events", () => {
     expect(MINT_BURN_CONFIGS.filter((item) => getMintBurnConservationEligibility(item).supported)).toHaveLength(15);
@@ -39,21 +234,20 @@ describe("raw token conservation", () => {
   });
   it("includes dust and atomic/bridge legs in exact BigInt arithmetic using canonical hash calls", async () => {
     rpc();
-    const args = input();
-    const result = await auditMintBurnConservation(args);
+    const args = boundaryInput();
+    const boundaries = await fetchConservationBoundaries(args);
+    const result = completeMintBurnConservationAudit({ ...input(), boundary: boundaries.get("one") });
     expect(result).toMatchObject({ status: "ok", mintRaw: "2", burnRaw: "1", supplyDeltaRaw: "1", residualRaw: "0", fromBlock: 100 });
     expect(args.budget.count).toBe(3);
     expect(vi.mocked(fetchEvmRpcBatchDetailed).mock.calls[1][1]).toEqual(headers.map((header) => ({ method: "eth_call",
       params: [{ to: config.contractAddress, data: "0x18160ddd" }, { blockHash: header.hash, requireCanonical: true }] })));
   });
   it("retains signed exact residuals rather than floating-point tolerance", async () => {
-    rpc(3n);
-    expect(await auditMintBurnConservation(input())).toMatchObject({ status: "mismatch", residualRaw: "-2" });
+    expect(completeMintBurnConservationAudit({ ...input(), boundary: ready(3n) })).toMatchObject({ status: "mismatch", residualRaw: "-2" });
   });
   it("deduplicates identical provider logs", async () => {
-    rpc(2n);
     const one = log("mint", 2n);
-    expect(await auditMintBurnConservation(input([one, one]))).toMatchObject({ status: "ok", mintRaw: "2", logCount: 1 });
+    expect(completeMintBurnConservationAudit({ ...input([one, one]), boundary: ready(2n) })).toMatchObject({ status: "ok", mintRaw: "2", logCount: 1 });
   });
   it.each(["removed", "hash", "word", "range", "topic", "duplicate"])("rejects %s raw-log corruption", async (kind) => {
     const one = log("mint", 2n);
@@ -64,28 +258,50 @@ describe("raw token conservation", () => {
     if (kind === "range") one.blockNumber = "0x64";
     if (kind === "topic") one.topics[0] = word(7n);
     if (kind === "duplicate") rows.push({ ...one, data: word(3n) });
-    expect((await auditMintBurnConservation(input(rows))).status).toBe("unavailable");
+    expect(completeMintBurnConservationAudit(input(rows)).status).toBe("unavailable");
     expect(fetchEvmRpcBatchDetailed).not.toHaveBeenCalled();
   });
   it("does no RPC on partial coverage or exhausted budget", async () => {
-    expect((await auditMintBurnConservation({ ...input(), complete: false })).reason).toBe("incomplete-log-range");
-    expect((await auditMintBurnConservation({ ...input(), budget: { count: 3, limit: 3 } })).reason).toBe("audit-budget-or-deadline");
+    expect(completeMintBurnConservationAudit({ ...input(), complete: false }).reason).toBe("incomplete-log-range");
+    expect((await fetchConservationBoundaries({ ...boundaryInput(), budget: { count: 3, limit: 3 } })).get("one"))
+      .toEqual({ status: "unavailable", reason: "audit-budget-or-deadline" });
     expect(fetchEvmRpcBatchDetailed).not.toHaveBeenCalled();
   });
   it("never falls back to latest when hash calls fail and rejects post-call reorg", async () => {
     vi.mocked(fetchEvmRpcBatchDetailed).mockResolvedValueOnce({ results: headers, errors: [] }).mockResolvedValueOnce(null);
-    expect((await auditMintBurnConservation(input())).reason).toBe("audit-rpc-unavailable");
+    expect((await auditWithBoundaries()).reason).toBe("audit-rpc-unavailable");
     expect(fetchEvmRpcBatchDetailed).toHaveBeenCalledTimes(2);
     vi.resetAllMocks();
     rpc();
     vi.mocked(fetchEvmRpcBatchDetailed).mockReset().mockResolvedValueOnce({ results: headers, errors: [] })
       .mockResolvedValueOnce({ results: [word(100n), word(101n)], errors: [] })
       .mockResolvedValueOnce({ results: [headers[0], { ...headers[1], hash: word(99n) }], errors: [] });
-    expect((await auditMintBurnConservation(input())).reason).toBe("boundary-reorg");
+    expect((await auditWithBoundaries()).reason).toBe("boundary-reorg");
   });
   it("propagates aborts", async () => {
     const controller = new AbortController(); controller.abort();
-    await expect(auditMintBurnConservation({ ...input(), signal: controller.signal })).rejects.toThrow();
+    await expect(fetchConservationBoundaries({ ...boundaryInput(), signal: controller.signal })).rejects.toThrow();
+  });
+  it("requires boundary evidence, preserves unsupported status, and rejects incomplete or invalid ranges", () => {
+    expect(completeMintBurnConservationAudit({ ...input(), boundary: undefined }).reason).toBe("boundary-evidence-missing");
+    expect(completeMintBurnConservationAudit({ ...input(), fromBlock: 0 }).reason).toBe("invalid-audit-range");
+    expect(completeMintBurnConservationAudit({ ...input(), config: { ...config, decimals: 99 } }))
+      .toMatchObject({ status: "unsupported", reason: "unreviewed-contract-or-event-semantics" });
+    expect(completeMintBurnConservationAudit({ ...input(), boundary: { status: "unavailable", reason: "audit-rpc-unavailable" } }).reason)
+      .toBe("audit-rpc-unavailable");
+  });
+  it("rejects closing-log hash mismatch and ambiguous zero transfers", () => {
+    expect(completeMintBurnConservationAudit(input([{ ...log("mint", 2n), blockHash: word(99n) }])).reason)
+      .toBe("closing-log-hash-mismatch");
+    const ambiguous = log("mint", 1n);
+    ambiguous.topics[2] = word(0n);
+    expect(completeMintBurnConservationAudit(input([ambiguous])).reason).toBe("ambiguous-zero-transfer");
+  });
+  it("rejects inconsistent log block hashes and ignores zero-value logs", () => {
+    expect(completeMintBurnConservationAudit(input([log("mint", 2n), { ...log("burn", 1n, 1), blockHash: word(99n) }])).reason)
+      .toBe("inconsistent-log-block-hash");
+    expect(completeMintBurnConservationAudit({ ...input([log("mint", 0n)]), boundary: ready(0n) }))
+      .toMatchObject({ status: "ok", logCount: 0, mintRaw: "0", burnRaw: "0" });
   });
   it("detects eligible parser omissions and amount errors even with balanced raw net", () => {
     const args = input([log("mint", 1_000_000n)]);
@@ -95,8 +311,8 @@ describe("raw token conservation", () => {
     expect(() => validateMintBurnParsedConservation(config, args.logs, 101, 102, [{ ...row, amount: 1 }])).toThrow("amount-or-identity");
   });
   it("atomically retains a mismatch through unavailable/older attempts until verified pass", async () => {
-    const { db } = fixtures.open(); rpc(3n);
-    const mismatch = await auditMintBurnConservation(input());
+    const { db } = fixtures.open();
+    const mismatch = completeMintBurnConservationAudit({ ...input(), boundary: ready(3n) });
     await persistMintBurnConservation(db, mismatch);
     await persistMintBurnConservation(db, { ...mismatch, status: "unavailable", checkedAt: 1200 });
     const read = async () => (await readMintBurnConservationRecords(db, [config])).get(mintBurnConservationCacheKey(config));
@@ -114,8 +330,8 @@ describe("raw token conservation", () => {
     expect(await read()).toEqual(pass);
   });
   it.each(["broken", "{}", '{"status":"mismatch"}'])("repairs invalid cached JSON %s", async (value) => {
-    const { db, sqlite } = fixtures.open(); rpc();
-    const pass = await auditMintBurnConservation(input());
+    const { db, sqlite } = fixtures.open();
+    const pass = completeMintBurnConservationAudit(input());
     sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(pass.key, value, 1000);
     await persistMintBurnConservation(db, pass);
     expect((await readMintBurnConservationRecords(db, [config])).get(pass.key)).toEqual(pass);

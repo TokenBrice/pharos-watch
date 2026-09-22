@@ -79,7 +79,7 @@ function quantity(value: unknown): number {
   return parsed;
 }
 
-function rawEvents(config: MintBurnContractConfig, batches: ConfigLogs, fromBlock: number, toBlock: number) {
+export function collectConservationRawEvents(config: MintBurnContractConfig, batches: ConfigLogs, fromBlock: number, toBlock: number) {
   const seen = new Map<string, string>();
   const blockHashes = new Map<number, string>();
   const events: Array<{ log: AlchemyLogEntry; direction: "mint" | "burn"; raw: bigint }> = [];
@@ -116,7 +116,7 @@ function rawEvents(config: MintBurnContractConfig, batches: ConfigLogs, fromBloc
 
 export function validateMintBurnParsedConservation(config: MintBurnContractConfig, batches: ConfigLogs,
   fromBlock: number, toBlock: number, rows: MintBurnRow[]): void {
-  const expected = rawEvents(config, batches, fromBlock - 1, toBlock).events
+  const expected = collectConservationRawEvents(config, batches, fromBlock - 1, toBlock).events
     .filter(({ raw }) => decimalNumberFromBigInt(raw, config.decimals) >= config.dustThreshold);
   if (rows.length !== expected.length) throw new Error("parsed-event-count-mismatch");
   const actual = new Map(rows.map((row) => [row.id, row]));
@@ -129,11 +129,189 @@ export function validateMintBurnParsedConservation(config: MintBurnContractConfi
   }
 }
 
-export async function auditMintBurnConservation(input: {
+export const MINT_BURN_CONSERVATION_RPC_BATCH_MAX = 100;
+export const MINT_BURN_CONSERVATION_CHUNK_TIMEOUT_MS = 15_000;
+export const MINT_BURN_CONSERVATION_PREPASS_MAX_MS = 45_000;
+
+export interface ConservationBoundaryRequest {
+  key: string;
+  config: MintBurnContractConfig;
+  fromBlock: number;
+  toBlock: number;
+}
+
+export type ConservationBoundaryEvidence =
+  | { status: "ready"; fromBlockHash: string; toBlockHash: string; fromTimestamp: number; toTimestamp: number;
+      fromSupplyRaw: string; toSupplyRaw: string }
+  | { status: "unavailable"; reason: string };
+
+const AUDIT_REASONS: Readonly<Record<string, true>> = {
+  "invalid-rpc-quantity": true, "unsafe-rpc-quantity": true, "invalid-raw-log": true, "inconsistent-log-block-hash": true,
+  "conflicting-duplicate-log": true, "ambiguous-zero-transfer": true, "audit-budget-or-deadline": true, "audit-rpc-unavailable": true,
+  "incomplete-log-range": true, "invalid-audit-range": true, "invalid-boundary-header": true, "invalid-boundary-time": true,
+  "closing-log-hash-mismatch": true, "invalid-total-supply-word": true, "boundary-reorg": true, "boundary-evidence-missing": true,
+};
+
+function auditReason(error: unknown): string {
+  return error instanceof Error && AUDIT_REASONS[error.message] === true ? error.message : "audit-unavailable";
+}
+
+function validAuditRange(fromBlock: number, toBlock: number): boolean {
+  return Number.isSafeInteger(fromBlock) && fromBlock >= 1 && Number.isSafeInteger(toBlock) && toBlock >= fromBlock;
+}
+
+export async function fetchConservationBoundaries(input: {
+  requests: ConservationBoundaryRequest[];
+  rpcUrlByChain: ReadonlyMap<string, string>;
+  budget: SubrequestBudget;
+  checkedAt: number;
+  signal?: AbortSignal;
+  deadlineMs?: number;
+  maxBatchCalls?: number;
+}): Promise<Map<string, ConservationBoundaryEvidence>> {
+  const { budget, signal, deadlineMs } = input;
+  const maxBatchCalls = input.maxBatchCalls ?? MINT_BURN_CONSERVATION_RPC_BATCH_MAX;
+  if (!Number.isSafeInteger(maxBatchCalls) || maxBatchCalls < 1) throw new Error("invalid-conservation-batch-size");
+  throwIfAborted(signal);
+  const evidence = new Map<string, ConservationBoundaryEvidence>();
+  const groups = new Map<string, ConservationBoundaryRequest[]>();
+  for (const request of input.requests) {
+    if (!getMintBurnConservationEligibility(request.config).supported) continue;
+    if (!validAuditRange(request.fromBlock, request.toBlock)) {
+      evidence.set(request.key, { status: "unavailable", reason: "invalid-audit-range" });
+      continue;
+    }
+    const chainId = request.config.chain.chainId;
+    const group = groups.get(chainId);
+    if (group) group.push(request);
+    else groups.set(chainId, [request]);
+  }
+
+  type BoundaryCall = { call: EvmRpcBatchCall; keys: string[]; accept: (value: unknown) => void };
+  const fail = (keys: string[], reason: string) => {
+    for (const key of keys) {
+      if (!evidence.has(key)) evidence.set(key, { status: "unavailable", reason });
+    }
+  };
+  async function phase(rpcUrl: string, calls: BoundaryCall[]): Promise<void> {
+    const pending = calls.filter(({ keys }) => keys.some((key) => !evidence.has(key)));
+    for (let offset = 0; offset < pending.length; offset += maxBatchCalls) {
+      throwIfAborted(signal);
+      const chunk = pending.slice(offset, offset + maxBatchCalls)
+        .filter(({ keys }) => keys.some((key) => !evidence.has(key)));
+      if (chunk.length === 0) continue;
+      const now = Date.now();
+      if (budget.count >= budget.limit || (deadlineMs != null && now >= deadlineMs)) {
+        for (const { keys } of chunk) fail(keys, "audit-budget-or-deadline");
+        continue;
+      }
+      budget.count++;
+      let result;
+      try {
+        result = await fetchEvmRpcBatchDetailed(undefined, chunk.map(({ call }) => call), {
+          extraRpcUrls: [rpcUrl], signal, maxRetries: 0,
+          timeoutMs: Math.max(1, Math.min(MINT_BURN_CONSERVATION_CHUNK_TIMEOUT_MS, (deadlineMs ?? Infinity) - now)),
+        });
+      } catch {
+        throwIfAborted(signal);
+        result = null;
+      }
+      throwIfAborted(signal);
+      const errors = new Set(result?.errors.map(({ index }) => index));
+      for (let index = 0; index < chunk.length; index++) {
+        const { keys, accept } = chunk[index];
+        if (!result || errors.has(index)) {
+          fail(keys, "audit-rpc-unavailable");
+          continue;
+        }
+        try { accept(result.results[index]); } catch (error) { fail(keys, auditReason(error)); }
+      }
+    }
+  }
+
+  for (const [chainId, requests] of groups) {
+    throwIfAborted(signal);
+    const rpcUrl = input.rpcUrlByChain.get(chainId);
+    if (!rpcUrl) {
+      fail(requests.map(({ key }) => key), "audit-rpc-unavailable");
+      continue;
+    }
+    const dependents = new Map<number, string[]>();
+    for (const request of requests) {
+      for (const block of [request.fromBlock - 1, request.toBlock]) {
+        const keys = dependents.get(block);
+        if (keys) keys.push(request.key);
+        else dependents.set(block, [request.key]);
+      }
+    }
+    const headers = new Map<number, { hash: string; timestamp: number }>();
+    const headerCalls = [...dependents].map(([block, keys]) => ({
+      block,
+      call: { method: "eth_getBlockByNumber", params: [`0x${block.toString(16)}`, false] },
+      keys,
+      accept(value: unknown) {
+        const header = value as { number?: unknown; hash?: unknown; timestamp?: unknown } | null;
+        if (!header || quantity(header.number) !== block || typeof header.hash !== "string" ||
+          !WORD.test(header.hash) || header.hash === ZERO) throw new Error("invalid-boundary-header");
+        headers.set(block, { hash: header.hash.toLowerCase(), timestamp: quantity(header.timestamp) });
+      },
+    }));
+    await phase(rpcUrl, headerCalls);
+    const supplies = new Map<string, string[]>();
+    const supplyCalls: BoundaryCall[] = [];
+    for (const request of requests) {
+      if (evidence.has(request.key)) continue;
+      const from = headers.get(request.fromBlock - 1)!;
+      const to = headers.get(request.toBlock)!;
+      if (from.hash === to.hash || from.timestamp <= 0 || from.timestamp > to.timestamp || to.timestamp > input.checkedAt) {
+        fail([request.key], "invalid-boundary-time");
+        continue;
+      }
+      const values: string[] = [];
+      supplies.set(request.key, values);
+      for (const [index, header] of [from, to].entries()) {
+        supplyCalls.push({
+          call: { method: "eth_call", params: [
+            { to: request.config.contractAddress, data: "0x18160ddd" },
+            { blockHash: header.hash, requireCanonical: true },
+          ] },
+          keys: [request.key],
+          accept(value) {
+            if (typeof value !== "string" || !WORD.test(value)) throw new Error("invalid-total-supply-word");
+            values[index] = BigInt(value).toString();
+          },
+        });
+      }
+    }
+    await phase(rpcUrl, supplyCalls);
+    await phase(rpcUrl, headerCalls.map(({ block, call, keys }) => ({
+      call, keys,
+      accept(value) {
+        const original = headers.get(block)!;
+        const header = value as { hash?: string; number?: unknown; timestamp?: unknown } | null;
+        try {
+          if (!header || header.hash?.toLowerCase() !== original.hash || quantity(header.number) !== block ||
+            quantity(header.timestamp) !== original.timestamp) throw new Error("boundary-reorg");
+        } catch { throw new Error("boundary-reorg"); }
+      },
+    })));
+    for (const request of requests) {
+      if (evidence.has(request.key)) continue;
+      const from = headers.get(request.fromBlock - 1)!;
+      const to = headers.get(request.toBlock)!;
+      const values = supplies.get(request.key)!;
+      evidence.set(request.key, { status: "ready", fromBlockHash: from.hash, toBlockHash: to.hash,
+        fromTimestamp: from.timestamp, toTimestamp: to.timestamp, fromSupplyRaw: values[0], toSupplyRaw: values[1] });
+    }
+  }
+  return evidence;
+}
+
+export function completeMintBurnConservationAudit(input: {
   config: MintBurnContractConfig; logs: ConfigLogs; fromBlock: number; toBlock: number; checkedAt: number;
-  complete: boolean; rpcUrl: string; budget: SubrequestBudget; signal?: AbortSignal; deadlineMs?: number;
-}): Promise<MintBurnConservationRecord> {
-  const { config, fromBlock, toBlock, checkedAt, budget, signal, deadlineMs } = input;
+  complete: boolean; boundary: ConservationBoundaryEvidence | undefined;
+}): MintBurnConservationRecord {
+  const { config, fromBlock, toBlock, checkedAt, boundary } = input;
   const eligibility = getMintBurnConservationEligibility(config);
   const record: MintBurnConservationRecord = {
     version: 1, key: mintBurnConservationCacheKey(config), configFingerprint: mintBurnConservationFingerprint(config),
@@ -142,58 +320,24 @@ export async function auditMintBurnConservation(input: {
     fromBlock: fromBlock - 1, toBlock,
   };
   if (!eligibility.supported) return { ...record, reason: eligibility.reason };
-  async function batch(calls: EvmRpcBatchCall[]) {
-    throwIfAborted(signal);
-    if (budget.count >= budget.limit || (deadlineMs != null && Date.now() >= deadlineMs)) throw new Error("audit-budget-or-deadline");
-    budget.count++;
-    const result = await fetchEvmRpcBatchDetailed(undefined, calls, { extraRpcUrls: [input.rpcUrl], signal,
-      maxRetries: 0, timeoutMs: Math.max(1, Math.min(10_000, (deadlineMs ?? Infinity) - Date.now())) });
-    throwIfAborted(signal);
-    if (!result || result.errors.length > 0) throw new Error("audit-rpc-unavailable");
-    return result.results;
-  }
   try {
     if (!input.complete) throw new Error("incomplete-log-range");
-    if (!Number.isSafeInteger(fromBlock) || fromBlock < 1 || !Number.isSafeInteger(toBlock) || toBlock < fromBlock) throw new Error("invalid-audit-range");
-    const raw = rawEvents(config, input.logs, fromBlock - 1, toBlock);
-    const headerCalls = [fromBlock - 1, toBlock].map((block) => ({ method: "eth_getBlockByNumber", params: [`0x${block.toString(16)}`, false] }));
-    const headers = await batch(headerCalls);
-    const parsed = headers.map((value, index) => {
-      const header = value as { number?: unknown; hash?: unknown; timestamp?: unknown } | null;
-      if (!header || quantity(header.number) !== (index === 0 ? fromBlock - 1 : toBlock) ||
-        typeof header.hash !== "string" || !WORD.test(header.hash) || header.hash === ZERO) throw new Error("invalid-boundary-header");
-      return { hash: header.hash.toLowerCase(), timestamp: quantity(header.timestamp) };
-    });
-    if (parsed[0].hash === parsed[1].hash || parsed[0].timestamp <= 0 || parsed[0].timestamp > parsed[1].timestamp || parsed[1].timestamp > checkedAt) throw new Error("invalid-boundary-time");
-    if (raw.blockHashes.has(toBlock) && raw.blockHashes.get(toBlock) !== parsed[1].hash) throw new Error("closing-log-hash-mismatch");
-    const supplies = await batch(parsed.map(({ hash }) => ({ method: "eth_call",
-      params: [{ to: config.contractAddress, data: "0x18160ddd" }, { blockHash: hash, requireCanonical: true }] })));
-    if (!supplies.every((value) => typeof value === "string" && WORD.test(value))) throw new Error("invalid-total-supply-word");
-    const rechecked = await batch(headerCalls);
-    if (rechecked.some((value, index) => {
-      const header = value as { hash?: string; number?: unknown; timestamp?: unknown } | null;
-      return !header || header.hash?.toLowerCase() !== parsed[index].hash ||
-        quantity(header.number) !== (index === 0 ? fromBlock - 1 : toBlock) || quantity(header.timestamp) !== parsed[index].timestamp;
-    })) throw new Error("boundary-reorg");
+    if (!validAuditRange(fromBlock, toBlock)) throw new Error("invalid-audit-range");
+    if (!boundary) throw new Error("boundary-evidence-missing");
+    if (boundary.status === "unavailable") return { ...record, reason: boundary.reason };
+    const raw = collectConservationRawEvents(config, input.logs, fromBlock - 1, toBlock);
+    if (raw.blockHashes.has(toBlock) && raw.blockHashes.get(toBlock) !== boundary.toBlockHash) throw new Error("closing-log-hash-mismatch");
     let mint = 0n;
     let burn = 0n;
     for (const event of raw.events) { if (event.direction === "mint") mint += event.raw; else burn += event.raw; }
-    const delta = BigInt(supplies[1] as string) - BigInt(supplies[0] as string);
+    const delta = BigInt(boundary.toSupplyRaw) - BigInt(boundary.fromSupplyRaw);
     const residual = mint - burn - delta;
-    return { ...record, status: residual === 0n ? "ok" : "mismatch", fromBlockHash: parsed[0].hash,
-      toBlockHash: parsed[1].hash, fromTimestamp: parsed[0].timestamp, toTimestamp: parsed[1].timestamp,
+    return { ...record, status: residual === 0n ? "ok" : "mismatch", fromBlockHash: boundary.fromBlockHash,
+      toBlockHash: boundary.toBlockHash, fromTimestamp: boundary.fromTimestamp, toTimestamp: boundary.toTimestamp,
       mintRaw: mint.toString(), burnRaw: burn.toString(), supplyDeltaRaw: delta.toString(), residualRaw: residual.toString(),
       logCount: raw.events.length, ...(residual !== 0n ? { reason: "raw-transfer-supply-mismatch" } : {}) };
   } catch (error) {
-    throwIfAborted(signal);
-    const knownReasons = new Set([
-      "invalid-rpc-quantity", "unsafe-rpc-quantity", "invalid-raw-log", "inconsistent-log-block-hash",
-      "conflicting-duplicate-log", "ambiguous-zero-transfer", "audit-budget-or-deadline", "audit-rpc-unavailable",
-      "incomplete-log-range", "invalid-audit-range", "invalid-boundary-header", "invalid-boundary-time",
-      "closing-log-hash-mismatch", "invalid-total-supply-word", "boundary-reorg",
-    ]);
-    const reason = error instanceof Error && knownReasons.has(error.message) ? error.message : "audit-unavailable";
-    return { ...record, reason };
+    return { ...record, reason: auditReason(error) };
   }
 }
 

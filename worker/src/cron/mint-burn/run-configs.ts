@@ -8,6 +8,10 @@ import type { MintBurnContractConfig, MintBurnTier } from "../../lib/mint-burn-c
 import { deferConfig, loadActiveConfigDeferrals, shouldDeferConfig } from "./run-state";
 import { createMintBurnConfigSummary, syncMintBurnConfig, type MintBurnConfigSummary } from "./sync-config";
 import type { MintBurnChainContext } from "./chain-context";
+import {
+  fetchConservationBoundaries, getMintBurnConservationEligibility, MINT_BURN_CONSERVATION_PREPASS_MAX_MS,
+  type ConservationBoundaryRequest,
+} from "../../lib/mint-burn-conservation";
 
 const MINT_BURN_RUNTIME_BUDGET_MS = 9 * 60_000;
 const MINT_BURN_MIN_CONFIG_WINDOW_MS = 60_000;
@@ -24,6 +28,11 @@ export function configKey(config: MintBurnContractConfig): string {
 
 export function configTier(config: MintBurnContractConfig): MintBurnTier {
   return config.tier ?? "critical";
+}
+
+function configScanRange(config: MintBurnContractConfig, lastBlock: number | undefined, chainHead: number, maxScanRange: number) {
+  const fromBlock = (lastBlock ?? (config.startBlock - 1)) + 1;
+  return { fromBlock, scanTo: Math.min(fromBlock + maxScanRange - 1, chainHead) };
 }
 
 export interface MintBurnRunConfigPhaseResult {
@@ -97,6 +106,22 @@ export async function runMintBurnConfigPhase(input: {
   const nowSec = Math.floor(Date.now() / 1000);
   const activeProviderDeferrals = await loadActiveConfigDeferrals(input.db, nowSec);
   const deferredKeys = new Set(activeProviderDeferrals.keys());
+  const boundaryRequests = new Map<string, ConservationBoundaryRequest>();
+  for (const config of input.configs) {
+    const key = configKey(config);
+    const chainContext = input.chainContexts.get(config.chain.chainId);
+    if (deferredKeys.has(key) || !chainContext || !getMintBurnConservationEligibility(config).supported) continue;
+    const { fromBlock, scanTo } = configScanRange(config, input.lastBlocksAfterRun.get(key), chainContext.chainHead, input.maxScanRange);
+    if (fromBlock <= chainContext.chainHead) boundaryRequests.set(key, { key, config, fromBlock, toBlock: scanTo });
+  }
+  const conservationBoundaries = await fetchConservationBoundaries({
+    requests: [...boundaryRequests.values()],
+    rpcUrlByChain: new Map([...input.chainContexts].map(([chainId, context]) => [chainId, context.alchemyUrl])),
+    budget: input.budget,
+    checkedAt: nowSec,
+    signal: input.signal,
+    deadlineMs: Math.min(deadlineMs, Date.now() + MINT_BURN_CONSERVATION_PREPASS_MAX_MS),
+  });
 
   for (let i = 0; i < input.configs.length; i++) {
     if (input.signal?.aborted) {
@@ -187,7 +212,7 @@ export async function runMintBurnConfigPhase(input: {
       continue;
     }
 
-    const fromBlock = (input.lastBlocksAfterRun.get(key) ?? (config.startBlock - 1)) + 1;
+    const { fromBlock, scanTo } = configScanRange(config, input.lastBlocksAfterRun.get(key), chainContext.chainHead, input.maxScanRange);
     if (fromBlock > chainContext.chainHead) {
       summary.skippedReason = "up-to-date";
       contractsSkipped++;
@@ -197,7 +222,6 @@ export async function runMintBurnConfigPhase(input: {
 
     summary.attempted = true;
     contractsProcessed++;
-    const scanTo = Math.min(fromBlock + input.maxScanRange - 1, chainContext.chainHead);
     const tierBudgetLimit =
       tier === "critical" && config.bridgeDetection
         ? input.criticalBridgeConfigBudgetLimit ?? input.criticalConfigBudgetLimit
@@ -211,6 +235,7 @@ export async function runMintBurnConfigPhase(input: {
         tierBudgetLimit,
       ),
     );
+    const boundaryRequest = boundaryRequests.get(key);
     const result = await syncMintBurnConfig({
       db: input.db,
       config,
@@ -229,6 +254,9 @@ export async function runMintBurnConfigPhase(input: {
       affectedHours,
       safetyMarginBlocks: input.evmSafetyMarginBlocks,
       deadlineMs,
+      conservationBoundary: boundaryRequest && (boundaryRequest.fromBlock !== fromBlock || boundaryRequest.toBlock !== scanTo)
+        ? { status: "unavailable", reason: "incomplete-log-range" }
+        : conservationBoundaries.get(key),
     });
     Object.assign(summary, result.summary);
 
