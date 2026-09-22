@@ -4,7 +4,7 @@ export type V9AggregationPillars = Readonly<Record<V9QualityPillar, number>>;
 export type V9AggregationWeights = Readonly<Record<V9QualityPillar, number>>;
 
 export interface V9WeakestPathAggregationTrace {
-  method: "smooth-bounded-headroom";
+  method: "smooth-bounded-headroom" | "generalized-mean";
   score: number;
   weightedQuality: number;
   weakestPillar: V9QualityPillar;
@@ -71,6 +71,31 @@ export function aggregateV9SmoothBoundedHeadroom(
   const score = context.weakestScore + headroom * Math.tanh(distanceFromWeakest / headroom);
   return {
     method: "smooth-bounded-headroom",
+    score,
+    ...context,
+  };
+}
+
+/**
+ * Counterfactual soft-min candidate. Negative exponents increasingly weight
+ * weak pillars without introducing a hard minimum or cap boundary.
+ */
+export function aggregateV9GeneralizedMean(
+  pillars: V9AggregationPillars,
+  weights: V9AggregationWeights,
+  exponent: number,
+): V9WeakestPathAggregationTrace {
+  if (!Number.isFinite(exponent) || exponent >= 0) {
+    throw new Error("Safety Score v9 generalized-mean exponent must be negative");
+  }
+  const context = aggregationContext(pillars, weights);
+  const hasZero = PILLARS.some((pillar) => pillars[pillar] === 0);
+  const score = hasZero
+    ? 0
+    : PILLARS.reduce((sum, pillar) => sum + weights[pillar] * pillars[pillar] ** exponent, 0) **
+      (1 / exponent);
+  return {
+    method: "generalized-mean",
     score,
     ...context,
   };
