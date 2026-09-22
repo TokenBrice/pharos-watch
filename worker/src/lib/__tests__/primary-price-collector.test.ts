@@ -25,7 +25,7 @@ function makeCollected(overrides: Partial<PrimaryCollectedQuotes> = {}): Primary
 }
 
 describe("buildPrimarySourceCandidates", () => {
-  it("retains aggregate DEX promotion when a single protocol candidate lacks hard corroboration", () => {
+  it("withholds the aggregate DEX promotion when the only protocol candidate lacks hard corroboration", () => {
     const collected = makeCollected({
       cgPrice: 1.0,
       cgObservedAt: 1_700_000_000,
@@ -49,9 +49,11 @@ describe("buildPrimarySourceCandidates", () => {
     const { sources, hasPromotedDexProtocolSource, dexCandidateTelemetry, priceSourceConfidenceProfile } =
       buildPrimarySourceCandidates({ id: "dusd-test", symbol: "DUSD" }, collected, { nowSec: 1_700_000_030 });
 
+    // P1-13 (PRICE-05) admits DEX lanes per candidate; it does not re-admit the aggregate once every lane
+    // is rejected. CoinGecko alone is a soft aggregator and cannot corroborate the lone Balancer lane.
     expect(hasPromotedDexProtocolSource).toBe(true);
     expect(sources.some((s) => s.source.endsWith("-dex"))).toBe(false);
-    expect(sources.map((s) => s.source)).toEqual(["coingecko", "dex-promoted"]);
+    expect(sources.map((s) => s.source)).toEqual(["coingecko"]);
     expect(dexCandidateTelemetry).toMatchObject([
       {
         stablecoinId: "dusd-test",
@@ -60,11 +62,7 @@ describe("buildPrimarySourceCandidates", () => {
         reason: "lacked_corroboration",
       },
     ]);
-    expect(priceSourceConfidenceProfile).toEqual({
-      activeDexLanes: 0,
-      freshestDexLaneAgeSec: 30,
-      aggregateLaneOnly: true,
-    });
+    expect(priceSourceConfidenceProfile).toBeNull();
   });
 
   it("rejects a lone promoted DEX protocol when no validated source can corroborate it", () => {
