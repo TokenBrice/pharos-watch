@@ -1,6 +1,6 @@
 # Dated source age caps
 
-This runbook covers reserve sources whose scoring or publication eligibility changes at a known age boundary. The reserve evidence maintainer owns every entry below. Treat each time as a UTC operational deadline, not as an estimate of when an issuer will publish.
+This runbook covers reserve sources and retained-data windows whose publication behavior changes at a known boundary. The named owner in each row is accountable for its observation. Treat calendar times as UTC operational deadlines and count thresholds as observation triggers, not as estimates of when an issuer or pipeline will change.
 
 ## Scheduled boundaries
 
@@ -8,6 +8,7 @@ This runbook covers reserve sources whose scoring or publication eligibility cha
 | --- | --- | --- | --- | --- | --- |
 | 2026-10-02T00:00:00Z | EURQ (`eurq-quantoz`) | 33-day live-reserve source-age cap | The Quantoz snapshot becomes stale; confirm `freshnessMode` and scoring eligibility within 24 hours. | Re-read the official transparency table, verify its `UPDATED` timestamp and every EURQ reserve row, update the reviewed source only when the table has advanced, then confirm the published snapshot's freshness verdict. | Reserve evidence maintainer |
 | 2026-10-08T08:00:00Z | EUROP (`europ-schuman`) | 100-day assurance-report age cap | The Q2 SALVUS report becomes stale for Safety Score V9. A newer discovered report causes a fail-closed throw; the fetched snapshot also expires after its two-day grace. | Check the official report index for the expected Q3 SALVUS report. Verify the exact report URL, SHA-256, byte length, report date, report-as-of instant, and complete asset and liability rows; update the reviewed manifest and deploy before the prior snapshot's grace expires. | Reserve evidence maintainer |
+| Non-blocked digest count reaches 360 (projected January 2027) | Digest archive | 365-row public response limit | The archive is approaching its first window eviction; edition labels must remain stable when older rows leave the response. | Count all non-blocked `daily_digest` rows during the crossing month, compare shared edition labels before and after the first eviction, and confirm the oldest returned daily and weekly editions retain their full-history numbers. | Digest pipeline maintainer |
 
 ## Expected publication windows
 
