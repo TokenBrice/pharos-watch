@@ -126,7 +126,7 @@ describe("yield-source-risk-registry (shared/lib structural integrity)", () => {
     expect(resolveDependencyConcentration(null)).toBeNull();
   });
 
-  it("flags exactly the strictly-older-than-90d controlled entries, most-stale first", () => {
+  it("flags entries strictly older than the quarterly 90-day bound, most-stale first", () => {
     const baseMs = Date.parse("2026-01-01T00:00:00Z");
     const reviewedAt = (daysOld: number) =>
       new Date(baseMs - daysOld * 86_400_000).toISOString().slice(0, 10);
@@ -160,18 +160,51 @@ describe("yield-source-risk-registry (shared/lib structural integrity)", () => {
     expect(stale.map((entry) => entry.protocol)).toEqual(["controlled-91d"]);
   });
 
-  it("scans every enrolled protocol with parseable reviewedAt by default", () => {
+  it("scans every reviewed venue and dependency-concentration entry by default", () => {
     for (const protocol of YIELD_RISK_CONFIG_PROTOCOLS) {
       expect(
         Number.isFinite(Date.parse(`${YIELD_RISK_CONFIG[protocol].reviewedAt}T00:00:00Z`)),
         protocol,
       ).toBe(true);
     }
-    // Far-future clock ages every enrolled entry past the default threshold, so
-    // the default scan must surface the full registry (no entry lost to parsing).
     const stale = findStaleVenueRiskScores(Date.parse("2100-01-01T00:00:00Z"));
-    expect(stale.map((entry) => entry.protocol).sort()).toEqual(
-      [...YIELD_RISK_CONFIG_PROTOCOLS].sort(),
+    expect(stale).toHaveLength(69);
+    expect(stale.map((entry) => entry.protocol)).toEqual(
+      expect.arrayContaining([
+        ...YIELD_RISK_CONFIG_PROTOCOLS,
+        "yvusdc-yearn",
+        "gtusdc-gauntlet",
+        "gtusdcp-gauntlet",
+        "steakusdc-steakhouse",
+        "bbqusdc-steakhouse",
+        "steakusdt-steakhouse",
+        "syrupusdc-maple",
+        "syrupusdt-maple",
+      ]),
     );
+  });
+
+  it("queues the six dependency-concentration reviews past the quarterly bound", () => {
+    const concentrationIds: Record<string, true> = {
+      "yvusdc-yearn": true,
+      "gtusdc-gauntlet": true,
+      "gtusdcp-gauntlet": true,
+      "steakusdc-steakhouse": true,
+      "bbqusdc-steakhouse": true,
+      "steakusdt-steakhouse": true,
+      "syrupusdc-maple": true,
+      "syrupusdt-maple": true,
+    };
+    const stale = findStaleVenueRiskScores(Date.parse("2026-09-21T00:00:00Z"))
+      .filter((entry) => concentrationIds[entry.protocol]);
+
+    expect(stale.map((entry) => [entry.protocol, entry.ageDays])).toEqual([
+      ["yvusdc-yearn", 98],
+      ["gtusdc-gauntlet", 98],
+      ["gtusdcp-gauntlet", 98],
+      ["steakusdc-steakhouse", 98],
+      ["steakusdt-steakhouse", 98],
+      ["bbqusdc-steakhouse", 93],
+    ]);
   });
 });

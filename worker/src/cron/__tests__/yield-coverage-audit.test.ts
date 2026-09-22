@@ -90,6 +90,7 @@ afterEach(() => {
   mockGetCache.mockReset();
   mockSetCache.mockReset();
   mockComputeSafetyScoresSnapshot.mockReset();
+  vi.useRealTimers();
 });
 
 function inferExpectedProtocolLabel(project: string): string {
@@ -229,6 +230,8 @@ describe("runYieldCoverageAudit", () => {
   });
 
   it("reports bounded progress stages through cache publication", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-21T00:00:00Z"));
     const dlPools: DlPool[] = [lendingPool({
       pool: "new-usdc", project: "new-lender", symbol: "USDC", tvlUsd: 12_000_000,
     })];
@@ -310,6 +313,7 @@ describe("runYieldCoverageAudit", () => {
       expect.stringContaining('"reportedAt"'),
     );
     const cachedReport = JSON.parse(String(mockSetCache.mock.calls[0]?.[2])) as {
+      staleVenueRiskScoreCount: number;
       operatorQueue: {
         persistence: string;
         promotionMode: string;
@@ -327,6 +331,7 @@ describe("runYieldCoverageAudit", () => {
       expect.objectContaining({ id: "lending-allowlist:new-lender" }),
     );
     expect(cachedReport.operatorReviewSummary.suppressedItemCount).toBe(1);
+    expect(cachedReport.staleVenueRiskScoreCount).toBe(58);
     expect(progressUpdates.map((update) => update.stage)).toEqual(
       expect.arrayContaining([
         "pool-load",

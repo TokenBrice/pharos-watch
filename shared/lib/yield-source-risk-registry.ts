@@ -651,10 +651,10 @@ export function resolveDependencyConcentration(
   return YIELD_DEPENDENCY_CONCENTRATION[stablecoinId] ?? null;
 }
 
-/** Venue-risk scores older than this are flagged for re-review (yield v8.292). */
+/** Quarterly review bound for venue-risk and dependency-concentration evidence (yield v8.292). */
 const VENUE_RISK_SCORE_MAX_AGE_DAYS = 90;
 
-export interface StaleVenueRiskScore<K extends string = YieldRiskConfigProtocol> {
+export interface StaleVenueRiskScore<K extends string = string> {
   protocol: K;
   reviewedAt: string;
   ageDays: number;
@@ -692,13 +692,17 @@ export function findStaleVenueRiskScoresByEntries<K extends string>(
 }
 
 /**
- * Venue-risk scores encode point-in-time facts (audit counts, governance events,
- * TVL) and rot. Returns entries whose `reviewedAt` is older than `maxAgeDays` so
- * the monthly yield-coverage audit can queue them for re-verification.
+ * Venue-risk and dependency-concentration scores encode point-in-time facts
+ * (audit counts, governance events, TVL) and rot. Returns entries whose
+ * `reviewedAt` is older than `maxAgeDays` so the monthly yield-coverage audit
+ * can queue them for quarterly re-verification.
  */
 export function findStaleVenueRiskScores(
   nowMs: number,
   maxAgeDays: number = VENUE_RISK_SCORE_MAX_AGE_DAYS,
 ): StaleVenueRiskScore[] {
-  return findStaleVenueRiskScoresByEntries(YIELD_RISK_CONFIG, nowMs, maxAgeDays);
+  return [
+    ...findStaleVenueRiskScoresByEntries(YIELD_RISK_CONFIG, nowMs, maxAgeDays),
+    ...findStaleVenueRiskScoresByEntries(YIELD_DEPENDENCY_CONCENTRATION, nowMs, maxAgeDays),
+  ].sort((a, b) => b.ageDays - a.ageDays);
 }
