@@ -7,6 +7,8 @@ import * as progress from "../enrich-prices-progress";
 import * as dex from "../enrich-prices-dexscreener-pass";
 import * as lifecycle from "../../../lib/pricing-provider-lifecycle";
 import { getCache, setCacheIfNewer } from "../../../lib/db-cache";
+import { CIRCUIT_SOURCE } from "../../../lib/constants";
+import * as dexscreener from "../../../lib/dexscreener";
 import { DEX_REFRESH_CACHE_KEY, PRICE_CORROBORATION_OBSERVATIONS_KEY, loadPriceCorroborationObservations } from "../price-corroboration-observations";
 import { planDexRefresh, runPriceDexRefresh } from "../price-dex-refresh";
 import { makePeggedAsset } from "./_fixtures";
@@ -16,6 +18,8 @@ const target = { id, chain: "ethereum", target: "0x9cf12ccd6020b6888e4d4c4e4c7ac
 const now = 1_800_000_540;
 const observation = (observedAt: number, price = 0.99) => ({ ...target, source: "dexscreener-exact", price, observedAt, observedAtMode: "local_fetch" });
 const published = () => makePeggedAsset({ id, symbol: "USDaf", price: null });
+const allUnpriced = () =>
+  new Map([...ACTIVE_META_BY_ID.values()].map((meta) => [meta.id, makePeggedAsset({ id: meta.id, symbol: meta.symbol, price: null })]))
 let sql: DatabaseSync;
 let db: D1Database;
 beforeEach(() => {
@@ -97,6 +101,32 @@ describe("DEX refresh continuity", () => {
     await runPriceDexRefresh({ db, syncStartSec: now });
     expect(progress.loadFxRatesForPriceBounds).toHaveBeenCalledWith(db);
     expect(fetch.mock.calls[0][1]).toBe(fxRates);
+  });
+
+  it("paces consecutive batches within the lane budget", async () => {
+    const fetch = prepareRefresh();
+    vi.spyOn(dexscreener, "dsRateLimit").mockResolvedValue(undefined);
+    vi.mocked(shared.loadPreviousStablecoinsById).mockResolvedValue({ previousAssetsById: allUnpriced(), cacheState: { state: "ok" } });
+    fetch.mockResolvedValue({ resolved: 0, failures: [], diagnostics: [{ source: "dexscreener-exact", stage: "fallback", endpoint: "test", status: 200, ok: true, success: true }] });
+    await runPriceDexRefresh({ db, syncStartSec: now });
+    expect(fetch.mock.calls.length).toBeGreaterThan(1);
+    expect(dexscreener.dsRateLimit).toHaveBeenCalledTimes(fetch.mock.calls.length - 1);
+  });
+
+  it("stops issuing batches after a rate-limited refusal and defers the rest", async () => {
+    const fetch = prepareRefresh();
+    vi.mocked(shared.loadPreviousStablecoinsById).mockResolvedValue({ previousAssetsById: allUnpriced(), cacheState: { state: "ok" } });
+    fetch.mockResolvedValue({ resolved: 0, failures: [], diagnostics: [{ source: "dexscreener-exact", stage: "fallback", endpoint: "test", status: 429, ok: false, success: false, errorClass: "rate-limited" }] });
+    const summary = await runPriceDexRefresh({ db, syncStartSec: now });
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(summary).toMatchObject({ attemptedBatches: 1, timedOut: false, errorClasses: ["rate-limited"] });
+    expect(summary.deferredBatches).toBeGreaterThanOrEqual(9);
+    expect(lifecycle.isProviderCircuitAllowed).toHaveBeenCalledWith(expect.objectContaining({
+      circuitSource: CIRCUIT_SOURCE.DEXSCREENER_PRICES_REFRESH,
+    }));
+    expect(lifecycle.recordProviderOutcomeSafe).toHaveBeenCalledWith(expect.objectContaining({
+      circuitSource: CIRCUIT_SOURCE.DEXSCREENER_PRICES_REFRESH,
+    }));
   });
 
   it("persists only newly fetched observations and retains routing hints after a failed refresh", async () => {
