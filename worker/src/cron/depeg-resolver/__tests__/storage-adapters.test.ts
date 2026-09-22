@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { DdrFirstPublicationMembership, DdrSealedPublicPrediction } from "../../depeg-resolver-v2-contracts";
+import { computeDdrPublicRowHash } from "@shared/lib/depeg-resolver/public-contract";
+import type {
+  DdrFirstPublicationMembership,
+  DdrSealedPublicPrediction,
+  DdrSealInput,
+} from "../../depeg-resolver-v2-contracts";
+import { makeDdrResolverRow } from "../../__tests__/depeg-public-projection.test-support";
 
 const stores = vi.hoisted(() => ({
   closeRecoveredPreLockIncidents: vi.fn(),
@@ -98,6 +104,105 @@ const STORE_MANIFEST = {
   publicPredictionIds: [77],
 };
 
+function sealInput(tier: "recovery_likely" | "insufficient_signal"): DdrSealInput {
+  const row = tier === "insufficient_signal"
+    ? makeDdrResolverRow({
+        resolution: {
+          tier: "insufficient_signal",
+          factors: [],
+          insufficientReasons: ["missing live price"],
+        },
+        duration: {
+          suppressed: true,
+          suppressedReason: "insufficient_signal",
+          stratum: null,
+          medianSec: null,
+          iqrSec: null,
+          ageStatus: null,
+          horizons: [],
+        },
+      })
+    : makeDdrResolverRow();
+  const lockedAt = 1_700_086_500;
+  const prediction = {
+    incidentKey: "ddr:usdc:below",
+    eligibleAt: 1_700_086_400,
+    lockedAt,
+    eventAgeAtLockSec: 86_500,
+    lockTiming: "on_time",
+    lockTrigger: "forecast_readiness",
+    policyDelaySec: 86_400,
+    predictionPolicyVersion: "ddr-policy-v1",
+    predictionMethodologyVersion: "v4.0",
+    predictionMethodologyVersionLabel: "v4.0",
+    resolutionRubricVersion: "resolution-rubric-v2",
+    durationModelVersion: "duration-landmark-v2",
+    incidentGroupingVersion: "incident-group-v2",
+    supportRulesVersion: "support-rules-v2",
+  };
+  const basePayload = {
+    eventId: 42,
+    incidentKey: "ddr:usdc:below",
+    stablecoinId: "usdc-circle",
+    symbol: row.symbol,
+    name: row.name,
+    pegCurrency: "USD",
+    governance: row.governance,
+    status: row.status,
+    direction: "below",
+    startedAt: 1_700_000_000,
+    prediction,
+  };
+  const sealedPayload = tier === "insufficient_signal"
+    ? {
+        ...basePayload,
+        kind: "no_call",
+        noCall: {
+          lockedAt,
+          eventAgeAtLockSec: 86_500,
+          missingReasons: row.resolution.insufficientReasons,
+          relatedContext: row.relatedContext,
+        },
+        frozen: null,
+      }
+    : {
+        ...basePayload,
+        kind: "prediction",
+        frozen: {
+          resolution: row.resolution,
+          duration: row.duration,
+          relatedContext: row.relatedContext,
+          sourceRow: row,
+        },
+      };
+  return {
+    incidentKey: "ddr:usdc:below",
+    eventId: 42,
+    identity: {
+      stablecoinId: "usdc-circle",
+      pegCurrency: "USD",
+      direction: "below",
+      startedAt: 1_700_000_000,
+    },
+    runId: "run-1",
+    lockedAt,
+    eligibleAt: 1_700_086_400,
+    eventAgeAtLockSec: 86_500,
+    lockTiming: "on_time",
+    predictionPolicyVersion: "ddr-policy-v1",
+    policyDelaySec: 86_400,
+    lockTrigger: "forecast_readiness",
+    methodologyVersion: "v4.0",
+    methodologyVersionLabel: "v4.0",
+    resolutionRubricVersion: "resolution-rubric-v2",
+    durationModelVersion: "duration-landmark-v2",
+    incidentGroupingVersion: "incident-group-v2",
+    supportRulesVersion: "support-rules-v2",
+    row,
+    sealedPayload,
+  };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   stores.closeRecoveredPreLockIncidents.mockResolvedValue(2);
@@ -185,6 +290,84 @@ describe("DDR storage adapters", () => {
     expect(stores.recordLockDeferral).toHaveBeenCalledOnce();
     expect(stores.recordLockOpportunity).toHaveBeenCalledOnce();
     expect(stores.recordLockOpportunity.mock.calls[0]?.[1]).toMatchObject({ action: "published", createdAt: 100 });
+  });
+
+  it("seals predictions and no-calls with mapped inputs and canonical row hashes", async () => {
+    const predictionInput = sealInput("recovery_likely");
+    const predictionHash = computeDdrPublicRowHash(predictionInput.sealedPayload);
+    const predictionPayload = {
+      ...predictionInput.sealedPayload,
+      prediction: {
+        ...(predictionInput.sealedPayload.prediction as Record<string, unknown>),
+        rowHash: predictionHash,
+      },
+    };
+    stores.sealPublicPrediction.mockResolvedValueOnce({
+      ...STORE_SEALED,
+      rowHash: predictionHash,
+      sealedPayload: predictionPayload,
+      sealedPayloadJson: JSON.stringify(predictionPayload),
+    });
+
+    await expect(
+      DEFAULT_DDR_V2_STORE_CONTRACTS.sealPublicPrediction(db, predictionInput),
+    ).resolves.toEqual(expect.objectContaining({
+      id: 77,
+      publicPredictionId: 77,
+      outcomeKind: "prediction",
+      rowHash: predictionHash,
+      sealedPayload: predictionPayload,
+    }));
+    expect(stores.sealPublicPrediction).toHaveBeenCalledWith(db, expect.objectContaining({
+      incidentKey: predictionInput.incidentKey,
+      eventId: predictionInput.eventId,
+      stablecoinId: predictionInput.identity.stablecoinId,
+      pegCurrency: predictionInput.identity.pegCurrency,
+      direction: predictionInput.identity.direction,
+      startedAt: predictionInput.identity.startedAt,
+      symbol: predictionInput.row.symbol,
+      name: predictionInput.row.name,
+      governance: predictionInput.row.governance,
+      resolutionTier: predictionInput.row.resolution.tier,
+      durationSuppressed: predictionInput.row.duration.suppressed,
+      horizons: predictionInput.row.duration.horizons,
+      factors: predictionInput.row.resolution.factors,
+      sealedPayload: predictionPayload,
+      rowHash: predictionHash,
+      runId: predictionInput.runId,
+    }));
+
+    const noCallInput = sealInput("insufficient_signal");
+    const noCallHash = computeDdrPublicRowHash(noCallInput.sealedPayload);
+    const noCallPayload = {
+      ...noCallInput.sealedPayload,
+      prediction: {
+        ...(noCallInput.sealedPayload.prediction as Record<string, unknown>),
+        rowHash: noCallHash,
+      },
+    };
+    stores.sealPublicNoCall.mockResolvedValueOnce({
+      ...STORE_SEALED,
+      outcomeKind: "no_call",
+      rowHash: noCallHash,
+      sealedPayload: noCallPayload,
+      sealedPayloadJson: JSON.stringify(noCallPayload),
+    });
+
+    await expect(
+      DEFAULT_DDR_V2_STORE_CONTRACTS.sealPublicNoCall(db, noCallInput),
+    ).resolves.toEqual(expect.objectContaining({
+      id: 77,
+      publicPredictionId: 77,
+      outcomeKind: "no_call",
+      rowHash: noCallHash,
+      sealedPayload: noCallPayload,
+    }));
+    expect(stores.sealPublicNoCall).toHaveBeenCalledWith(db, expect.objectContaining({
+      resolutionTier: "insufficient_signal",
+      sealedPayload: noCallPayload,
+      rowHash: computeDdrPublicRowHash(noCallInput.sealedPayload),
+    }));
   });
 
   it("maps publication, membership, manifest, and errata reads", async () => {
