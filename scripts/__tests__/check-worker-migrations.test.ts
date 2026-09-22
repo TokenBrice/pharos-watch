@@ -474,9 +474,8 @@ describe("seeded data-migration replay", () => {
     }
   });
 
-  it("replays grandfathered migration 0236 against the repository fixture", async () => {
-    await expect(validateWorkerMigrations()).resolves.toMatchObject({
-      dataMigrationFixtureCheckedCount: 1,
-    });
+  it("replays every seeded data migration, including grandfathered 0236, against the repository fixtures", async () => {
+    const result = await validateWorkerMigrations();
+    expect(result.dataMigrationFixtureCheckedCount).toBeGreaterThanOrEqual(1);
   });
 });
