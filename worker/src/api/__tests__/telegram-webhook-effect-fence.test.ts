@@ -168,6 +168,17 @@ describe("TelegramWebhookEffectFence", () => {
     await fence.plan(createTelegramWebhookIntent("command:/help", { command: "/help" }));
     await fence.beforeIrreversibleEffect("command-reply");
 
+    const freshDuplicate = await claimTelegramProcessedUpdate(db, {
+      updateId: 4,
+      nowSec: NOW + 1,
+      updateType: "message",
+      chatId: "42",
+      processingStaleSec: 300,
+    });
+    expect(freshDuplicate.status).toBe("in_flight");
+    expect(sqlite.prepare("SELECT effect_state FROM telegram_processed_updates WHERE update_id = 4").get())
+      .toEqual({ effect_state: "started" });
+
     const duplicate = await claimTelegramProcessedUpdate(db, {
       updateId: 4,
       nowSec: NOW + 600,

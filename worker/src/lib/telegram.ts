@@ -183,24 +183,17 @@ async function sendTelegramPayload(
   callerSignal?: AbortSignal,
 ): Promise<SendToChatResult> {
   try {
-    const signal = callerSignal
-      ? AbortSignal.any([callerSignal, AbortSignal.timeout(10_000)])
-      : AbortSignal.timeout(10_000);
-    const res = await postTelegramBotApi(botToken, method, payload, {
-      signal,
-      timeoutMs: 10_000,
-    });
+    // `postTelegramBotApi` owns the request timeout (its own default when none
+    // is supplied); composing a second timeout here would race two independent
+    // deadlines against the same fetch.
+    const res = await postTelegramBotApi(botToken, method, payload, { signal: callerSignal });
 
     if (!res.ok) {
-      const retryAfterRaw = res.headers.get("Retry-After");
-      const parsedRetryAfterSec = parseRetryAfterSeconds(retryAfterRaw, {
+      const retryAfterSec = parseRetryAfterSeconds(res.headers.get("Retry-After"), {
         allowNumericPrefix: true,
         numericRounding: "floor",
       });
-      const legacyRetryAfterSec = retryAfterRaw ? parseInt(retryAfterRaw, 10) : null;
-      const retryAfterSec = parsedRetryAfterSec
-        ?? (Number.isFinite(legacyRetryAfterSec) ? legacyRetryAfterSec : null);
-      const body = await readResponseTextBoundedWithSignal(res, 16_384, signal).catch(() => "");
+      const body = await readResponseTextBoundedWithSignal(res, 16_384, callerSignal).catch(() => "");
       const failure = classifyTelegramResponseFailure(
         res.status,
         body,
@@ -597,8 +590,9 @@ function isNotModifiedDescription(description: unknown): boolean {
  * Edit a previously sent message in place. Used by inline-keyboard flows
  * (e.g. /settings) so a tap mutates the visible message rather than appending
  * a fresh reply. Returns `true` on success, `false` on any Telegram error so
- * the caller can fall back to `sendToChat`. The body is drained so response
- * bytes and transport cleanup stay bounded.
+ * the caller can fall back to `sendToChat`. The response body is read through a
+ * bounded reader so an oversized edit response is truncated instead of buffered
+ * in full.
  */
 export async function editMessage(
   chatId: string,
@@ -616,7 +610,7 @@ export async function editMessage(
       ...(opts?.disableWebPagePreview && { disable_web_page_preview: true }),
       ...(opts?.replyMarkup != null && { reply_markup: opts.replyMarkup }),
     });
-    const responseText = await res.text();
+    const responseText = await readResponseTextBoundedWithSignal(res, 16_384);
     if (res.ok) return true;
     try {
       const parsed = JSON.parse(responseText) as { description?: unknown };

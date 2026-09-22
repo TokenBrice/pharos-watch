@@ -14,7 +14,40 @@ import {
   resetDispatchTelegramAlertsTest,
   telegramDeliveryTranscript,
   type CronProgressUpdate,
+  type DispatchHarness,
 } from "./dispatch-telegram-alerts.test-support";
+import {
+  createTelegramPlanningDatabase,
+  type TelegramPlanningWriteCounters,
+} from "../dispatch-telegram-alerts";
+
+function seedFreezeTapeObservation(harness: DispatchHarness, now: number): void {
+  // A fresh project-tape run plus a cursor behind one parseable freeze row makes
+  // the dedicated outbox observe exactly one event without queueing anything
+  // (the fixture has no freeze audience).
+  harness.sqlite
+    .prepare("INSERT INTO cron_runs (job, started_at, duration_ms, status) VALUES ('project-tape', ?, 1, 'ok')")
+    .run(now - 5);
+  harness.cache("alert:freeze-tape-cursor", "0", now);
+  harness.sqlite
+    .prepare(
+      `INSERT INTO tape_events (
+         event_id, type, severity, ts, title, summary, payload_json,
+         source_table, source_row_id, transition, created_at
+       ) VALUES ('freeze-observed', 'freeze.blocked', 'warning', ?, 'x', 'x', ?,
+         'blacklist_events', 'blacklist-observed', 'opened', ?)`,
+    )
+    .run(
+      now * 1000,
+      JSON.stringify({
+        stablecoin: "USDC",
+        stablecoinId: "usdc-circle",
+        chainName: "Ethereum",
+        sourceEventId: "blacklist-observed",
+      }),
+      now,
+    );
+}
 
 function healthySources(
   harness: ReturnType<typeof createDispatchHarness>,
@@ -39,8 +72,12 @@ describe("dispatchTelegramAlerts", () => {
     mockShouldAttemptFetch.mockResolvedValue(false);
     const { db } = createDispatchHarness();
     const result = await dispatchTelegramAlerts(db, "bot-token");
+    const metadata = JSON.parse(result.metadata);
 
-    expect(JSON.parse(result.metadata)).toHaveProperty("skipped", "circuit-open");
+    expect(metadata).toHaveProperty("skipped", "circuit-open");
+    expect(metadata.noWorkRun).toBe(true);
+    // The freeze outbox runs behind the circuit gate, so this zero is measured.
+    expect(metadata.eventsDetected.freeze).toBe(0);
     expect(result.itemCount).toBe(0);
     expect(telegramDeliveryTranscript).toEqual([]);
     expect(mockRecordOutcome).not.toHaveBeenCalled();
@@ -50,7 +87,36 @@ describe("dispatchTelegramAlerts", () => {
     mockShouldAttemptFetch.mockResolvedValue(false);
     const now = Math.floor(Date.now() / 1000);
     const harness = createDispatchHarness();
-    harness.seed({ pending: [{ id: 1, chatId: "100", html: "<b>Queued alert</b>", createdAt: now - 120 }] });
+    // A pending row carrying the production job-target identity, so the drain's
+    // terminal status write lands on a planning table. The target row requires a
+    // materializable source event (schema generation guard).
+    harness.seed({
+      pending: [{
+        id: 1,
+        chatId: "100",
+        html: "<b>Queued alert</b>",
+        createdAt: now - 120,
+        dedupeKey: "pending-key-1",
+      }],
+      sourceEvents: [{
+        sourceEventId: "source-1",
+        status: "planned",
+        expiresAt: now + 600,
+        eventPayload: "{}",
+        baselinePayload: "{}",
+        targetPlanState: "planning",
+        targetPlanGeneration: 1,
+      }],
+      targets: [{
+        sourceEventId: "source-1",
+        chatId: "100",
+        alertType: "dews",
+        targetKey: "target-1",
+        pendingDedupeKey: "pending-key-1",
+        planGeneration: 1,
+        status: "queued",
+      }],
+    });
     const result = await dispatchTelegramAlerts(harness.db, "bot-token");
     const metadata = JSON.parse(result.metadata);
 
@@ -59,13 +125,39 @@ describe("dispatchTelegramAlerts", () => {
       pendingAttempted: 1,
       pendingDrained: 1,
       messagesSent: 1,
+      noWorkRun: false,
+      eventsDetected: { freeze: 0 },
     });
+    // The circuit-open drain writes through the counting handle, so the run
+    // reports the writes it performed instead of a measured-looking zero.
+    expect(metadata.planningRowsWritten).toBeGreaterThan(0);
+    expect(metadata.d1RowsWritten).toBeGreaterThan(0);
+    expect(metadata.planningRowsWritten).toBeLessThanOrEqual(metadata.d1RowsWritten);
     expect(result.itemCount).toBe(1);
     expect(telegramDeliveryTranscript).toEqual([
       expect.objectContaining({ chatId: "100", html: "<b>Queued alert</b>" }),
     ]);
-    expect(mockRecordOutcome).toHaveBeenCalledWith(harness.db, "telegram-api", true);
+    expect(mockRecordOutcome).toHaveBeenCalledWith(expect.anything(), "telegram-api", true);
     expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts").get()).toEqual({ count: 0 });
+  });
+
+  it("carries the freeze-outbox observation into the seed-path result", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const harness = createDispatchHarness();
+    seedFreezeTapeObservation(harness, now);
+    const progressUpdates: CronProgressUpdate[] = [];
+    const reportProgress = vi.fn(async (update: CronProgressUpdate) => {
+      progressUpdates.push(update);
+    });
+    const result = await dispatchTelegramAlerts(harness.db, "bot-token", undefined, undefined, reportProgress);
+    const metadata = JSON.parse(result.metadata);
+
+    expect(metadata.snapshotSeeded).toBe(true);
+    expect(metadata.eventsDetected.freeze).toBe(1);
+    expect(metadata.noWorkRun).toBe(false);
+    expect(progressUpdates.find((update) => update.stage === "source-loaded")).toMatchObject({
+      metadata: { countTotals: { freezeObserved: 1 } },
+    });
   });
 
   it("does not record a Telegram API circuit failure when dispatch is aborted before delivery", async () => {
@@ -309,6 +401,7 @@ describe("dispatchTelegramAlerts", () => {
       ],
       targets: scenario.targets ? [{ sourceEventId, chatId: "planned-target", planGeneration: 1 }] : [],
     });
+    seedFreezeTapeObservation(harness, now);
     const result = await dispatchTelegramAlerts(harness.db, "bot-token");
     const metadata = JSON.parse(result.metadata);
 
@@ -318,6 +411,7 @@ describe("dispatchTelegramAlerts", () => {
       pendingDrained: 1,
       messagesSent: 1,
       subscribersNotified: 1,
+      eventsDetected: { freeze: 1 },
       planningRowsWritten: expect.any(Number),
       d1RowsWritten: expect.any(Number),
       noWorkRun: false,
@@ -327,5 +421,58 @@ describe("dispatchTelegramAlerts", () => {
     expect(result.itemCount).toBe(1);
     expect(telegramDeliveryTranscript).toEqual([expect.objectContaining({ chatId: `pending-${scenario.label}` })]);
     expect(mockRecordOutcome).toHaveBeenCalledWith(expect.anything(), "telegram-api", true);
+  });
+});
+
+describe("createTelegramPlanningDatabase", () => {
+  it("forwards D1 prototype methods and still measures planning writes", async () => {
+    const calls: string[] = [];
+    class PrototypeD1 {
+      bindAndPrepare(sql: string): D1PreparedStatement {
+        return {
+          bind: () => this.bindAndPrepare(sql),
+          first: async () => null,
+          all: async () => ({ results: [] }),
+          run: async () => ({ meta: { rows_written: sql.includes("telegram_alert_jobs") ? 3 : 1 } }),
+          raw: async () => [],
+        } as unknown as D1PreparedStatement;
+      }
+      prepare(sql: string): D1PreparedStatement {
+        return this.bindAndPrepare(sql);
+      }
+      batch(): Promise<never[]> {
+        return Promise.resolve([]);
+      }
+      exec(sql: string): Promise<{ count: number; duration: number }> {
+        calls.push(`exec:${sql}:${this instanceof PrototypeD1 ? "bound" : "loose"}`);
+        return Promise.resolve({ count: 0, duration: 0 });
+      }
+      withSession(): { session: boolean } {
+        calls.push("withSession");
+        return { session: true };
+      }
+      dump(): Promise<ArrayBuffer> {
+        calls.push("dump");
+        return Promise.resolve(new ArrayBuffer(0));
+      }
+    }
+    const target = new PrototypeD1() as unknown as D1Database;
+    const counters: TelegramPlanningWriteCounters = {
+      planningRowsWritten: 0,
+      d1RowsWritten: 0,
+      planningRowsWrittenAvailable: true,
+      d1RowsWrittenAvailable: true,
+    };
+    const planningDb = createTelegramPlanningDatabase(target, counters);
+
+    expect(await planningDb.exec("SELECT 1")).toEqual({ count: 0, duration: 0 });
+    expect(planningDb.withSession()).toEqual({ session: true });
+    expect((await planningDb.dump()).byteLength).toBe(0);
+    expect(calls).toEqual(["exec:SELECT 1:bound", "withSession", "dump"]);
+
+    await planningDb.prepare("INSERT INTO telegram_alert_jobs (job_id) VALUES (?)").bind("job:1").run();
+    await planningDb.prepare("INSERT INTO cache (key) VALUES (?)").bind("k").run();
+    expect(counters.planningRowsWritten).toBe(3);
+    expect(counters.d1RowsWritten).toBe(4);
   });
 });

@@ -131,6 +131,7 @@ const CHAT_CACHE_EXACT_KEY_BUILDERS = [
   (chatId: string) => `telegram:chat-admins:${chatId}`,
   (chatId: string) => `telegram:group-welcome:${chatId}`,
   (chatId: string) => `telegram:adoption-mini-app-session:${chatId}`,
+  (chatId: string) => `telegram:mini-app-mutation-burst:${chatId}`,
 ] as const;
 
 const CHAT_CACHE_PREFIX_BUILDERS = [

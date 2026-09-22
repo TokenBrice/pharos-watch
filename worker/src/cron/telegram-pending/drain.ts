@@ -28,8 +28,9 @@ import {
   setTelegramGlobalBackoff,
 } from "./backoff";
 import {
+  claimedDeleteByDeliveryClaims,
+  claimedDeleteByIds,
   deadLetterTerminalPendingRows,
-  deletePendingAlertsByIds,
   PENDING_DELETE_CHUNK_SIZE,
 } from "./dead-letter";
 import {
@@ -248,6 +249,7 @@ async function claimPendingRowsByIds(
                 processing_expires_at = ?,
                 updated_at = ?
           WHERE id IN (${inClause.sql})
+            AND delivery_state = 'pending'
             AND (
               processing_owner IS NULL
               OR processing_expires_at IS NULL
@@ -278,6 +280,7 @@ async function loadClaimedPendingRows(
          FROM telegram_pending_alerts p
          LEFT JOIN telegram_subscribers u ON u.chat_id = p.chat_id
         WHERE p.processing_owner = ?
+          AND p.delivery_state = 'pending'
         ORDER BY COALESCE(p.priority, ?) ASC,
                  COALESCE(p.not_before_at, p.created_at) ASC,
                  p.created_at ASC,
@@ -463,18 +466,18 @@ async function recordPendingDrainTelemetry(
 
 async function deleteSentPendingAlerts(
   db: D1Database,
-  sentIdsToDelete: readonly number[],
+  sentClaimsToDelete: readonly PendingDeliveryClaim[],
 ): Promise<void> {
-  if (sentIdsToDelete.length === 0) return;
+  if (sentClaimsToDelete.length === 0) return;
   try {
-    await deletePendingAlertsByIds(db, sentIdsToDelete);
+    await claimedDeleteByDeliveryClaims(db, sentClaimsToDelete);
   } catch {
     logTelegramEvent({
       level: "warn",
       message: "Failed to delete sent pending alerts",
       action: "delete-sent-pending",
       module: "telegram-pending-drain",
-      rowCount: sentIdsToDelete.length,
+      rowCount: sentClaimsToDelete.length,
     });
   }
 }
@@ -483,6 +486,7 @@ async function deadLetterAndDeleteTerminalPendingGroups(
   db: D1Database,
   groups: Array<{ rows: DeadLetterPendingRow[]; reason: PendingDeadLetterReason }>,
   nowSec: number,
+  processingOwner: string,
 ): Promise<void> {
   for (const group of groups) {
     if (group.rows.length === 0) continue;
@@ -527,7 +531,18 @@ async function deadLetterAndDeleteTerminalPendingGroups(
         throw new Error(`Telegram terminal pending ownership changed (${deleted}/${fencedRows.length})`);
       }
     }
-    await deletePendingAlertsByIds(db, unfencedRows.map((row) => row.id));
+    const unfencedDeleted = await claimedDeleteByIds(
+      db,
+      unfencedRows.map((row) => row.id),
+      "pending",
+      processingOwner,
+      nowSec,
+    );
+    if (unfencedDeleted !== unfencedRows.length) {
+      throw new Error(
+        `Telegram terminal pending ownership changed (${unfencedDeleted}/${unfencedRows.length})`,
+      );
+    }
   }
 }
 
@@ -576,7 +591,16 @@ async function claimDuePendingRows(
   if (ids.length === 0) return [];
 
   await claimPendingRowsByIds(db, ids, owner, nowSec, claimExpiresAt);
-  return loadClaimedPendingRows(db, owner, limit);
+  const rows = await loadClaimedPendingRows(db, owner, limit);
+  // The claim and loader are fenced on delivery_state, so an id can lose its
+  // freshly attached lease to a concurrent terminal transition before it is
+  // read back; release those stragglers instead of leaving stale leases.
+  const loadedIds = new Set(rows.map((row) => row.id));
+  const lostClaimIds = ids.filter((id) => !loadedIds.has(id));
+  if (lostClaimIds.length > 0) {
+    await releasePendingClaimsByIds(db, lostClaimIds, owner, nowSec);
+  }
+  return rows;
 }
 
 /** The Telegram send result enriched with the originating pending row's id/chat/attempts. */
@@ -668,6 +692,7 @@ async function checkpointAttemptedPendingWave(
   db: D1Database,
   outcomes: readonly PendingOutcomeProjection[],
   completedAt: number,
+  processingOwner: string,
 ): Promise<void> {
   const sentOutcomes: Array<{ claim: PendingDeliveryClaim; row: PendingAlertRow }> = [];
   const executionUnknownOutcomes: Array<{
@@ -680,6 +705,7 @@ async function checkpointAttemptedPendingWave(
   const permanentRows: DeadLetterPendingRow[] = [];
   const maxAttemptRows: DeadLetterPendingRow[] = [];
   let globalBackoffAt: number | null = null;
+  const globalDeferNotBeforeAtByRow = new Map<number, number>();
 
   for (const outcome of outcomes) {
     if (outcome.kind === "sent") sentOutcomes.push({ claim: outcome.claim!, row: outcome.row });
@@ -697,16 +723,28 @@ async function checkpointAttemptedPendingWave(
     }
     if (outcome.rateLimit?.scope === "global") {
       globalBackoffAt = Math.max(globalBackoffAt ?? 0, outcome.rateLimit.notBeforeAt);
+      globalDeferNotBeforeAtByRow.set(outcome.row.id, outcome.rateLimit.notBeforeAt);
     }
   }
 
   await persistPendingTerminalOutcomes(db, { outcomes: sentOutcomes, state: "sent", nowSec: completedAt });
   await persistPendingTerminalOutcomes(db, { outcomes: executionUnknownOutcomes, state: "execution_unknown", nowSec: completedAt });
+  // Land the durable global gate before the retry rows are written: when the
+  // cache write cannot land, the per-row fallback below must carry the defer.
+  let globalBackoffDurable = true;
+  if (globalBackoffAt != null) {
+    globalBackoffDurable = await setTelegramGlobalBackoff(db, globalBackoffAt);
+  }
   if (retryUpdates.length > 0) {
     const changed = await batchExecute(db, retryUpdates.map((update) =>
       preparePendingSendingTransition(db, update, {
         to: "pending",
-        notBeforeAt: update.notBeforeAt,
+        // A bot-wide rate limit normally defers through the durable global
+        // gate alone; without it the row itself must hold not_before_at so
+        // the next drain still cannot send early.
+        notBeforeAt: update.notBeforeAt == null && !globalBackoffDurable
+          ? globalDeferNotBeforeAtByRow.get(update.id) ?? null
+          : update.notBeforeAt,
         errorClass: update.errorClass,
         retryAfterSec: update.retryAfterSec,
       }, { updatedAtSec: completedAt }),
@@ -715,7 +753,6 @@ async function checkpointAttemptedPendingWave(
       throw new Error(`Telegram pending retry ownership changed (${changed}/${retryUpdates.length})`);
     }
   }
-  if (globalBackoffAt != null) await setTelegramGlobalBackoff(db, globalBackoffAt);
   await deadLetterAndDeleteTerminalPendingGroups(
     db,
     [
@@ -724,6 +761,7 @@ async function checkpointAttemptedPendingWave(
       { rows: maxAttemptRows, reason: "max_attempts" },
     ],
     completedAt,
+    processingOwner,
   );
 }
 
@@ -984,7 +1022,7 @@ export async function drainPendingQueue(
           };
           waveOutcomes.push(reducePendingOutcome(result, row, claim, completedAt));
         }
-        await checkpointAttemptedPendingWave(db, waveOutcomes, completedAt);
+        await checkpointAttemptedPendingWave(db, waveOutcomes, completedAt, claimOwner);
         for (const outcome of waveOutcomes) {
           checkpointedAttemptedOutcomes.set(outcome.row.id, outcome);
         }
@@ -1119,8 +1157,8 @@ export async function drainPendingQueue(
     { rows: permanentRowsToDelete, reason: "permanent_failure" },
     { rows: preferenceRowsToDelete, reason: "preference_changed" },
   ];
-  await deleteSentPendingAlerts(db, sentClaimsToDelete.map(({ claim }) => claim.id));
-  await deadLetterAndDeleteTerminalPendingGroups(db, terminalDeleteGroups, nowSec);
+  await deleteSentPendingAlerts(db, sentClaimsToDelete.map(({ claim }) => claim));
+  await deadLetterAndDeleteTerminalPendingGroups(db, terminalDeleteGroups, nowSec, claimOwner);
   await persistPendingDeferrals(db, deferUpdates, claimOwner, nowSec);
   for (const [oldChatId, newChatId] of migratedChatIds) {
     await migrateTelegramChatId(db, oldChatId, newChatId);

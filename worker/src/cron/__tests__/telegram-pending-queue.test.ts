@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import type { MockInstance } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import { mockD1 as createMockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import {
@@ -68,6 +69,7 @@ const {
   TELEGRAM_PENDING_PRIORITY,
   SEND_BATCH_SIZE,
   EXPIRED_PENDING_CLEANUP_BATCH_LIMIT,
+  clearPendingAlertsForDisabledChat,
 } = await import("../telegram-pending");
 const { enqueuePendingAlerts, buildDedupeKey } = await import("../../lib/telegram/pending-queue");
 const {
@@ -767,7 +769,9 @@ describe("cleanupExpiredPendingAlerts", () => {
       e.sql.includes("DELETE FROM telegram_pending_alerts") && !e.sql.includes("delivery_state = 'sent'")
     );
     expect(deleteCall).toBeDefined();
-    expect(deleteCall!.binds).toEqual([1, 2, 3]);
+    expect(deleteCall!.sql).toContain("AND delivery_state = ?");
+    expect(deleteCall!.sql).toContain("processing_expires_at <= ?");
+    expect(deleteCall!.binds).toEqual([1, 2, 3, "pending", nowSec]);
   });
 
   it("caps expired cleanup work to one batch per run", async () => {
@@ -1006,5 +1010,118 @@ describe("cleanupExpiredPendingAlerts", () => {
         dedupeKeyCount: 1,
       }),
     );
+  });
+});
+
+describe("pending cleanup delivery_state fencing (TELEGRAM-DIGEST-13)", () => {
+  let warnSpy: MockInstance;
+
+  beforeEach(() => {
+    warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+  afterEach(() => warnSpy.mockRestore());
+
+  it("keeps an expired row that a competing drain re-claimed after the SELECT", async () => {
+    const { sqlite, db } = setupTelegramPendingSqlite();
+    try {
+      const now = Math.floor(Date.now() / 1000);
+      insertPendingSqlite(sqlite, {
+        id: 950,
+        chatId: "reclaimed-expired",
+        html: "<b>Reclaimed</b>",
+        createdAt: now - PENDING_TTL_SEC - 10,
+        dedupeKey: "reclaimed-expired-key",
+      });
+      let reclaimed = false;
+      const racingDb = {
+        ...db,
+        prepare: (sql: string) => {
+          const statement = db.prepare(sql);
+          if (!reclaimed && sql.includes("COALESCE(expires_at, created_at + ?)") && sql.includes("SELECT")) {
+            return {
+              bind: (...binds: unknown[]) => {
+                const bound = statement.bind(...binds);
+                return {
+                  all: async () => {
+                    const result = await bound.all();
+                    reclaimed = true;
+                    sqlite.prepare(
+                      `UPDATE telegram_pending_alerts
+                          SET processing_owner = 'competing-drain',
+                              processing_started_at = ?,
+                              processing_expires_at = ?
+                        WHERE id = 950`,
+                    ).run(now, now + 600);
+                    return result;
+                  },
+                };
+              },
+            } as unknown as D1PreparedStatement;
+          }
+          return statement;
+        },
+      } as D1Database;
+
+      await expect(cleanupExpiredPendingAlerts(racingDb, now)).resolves.toBe(0);
+      expect(sqlite.prepare(
+        "SELECT delivery_state, processing_owner FROM telegram_pending_alerts WHERE id = 950",
+      ).get()).toEqual({ delivery_state: "pending", processing_owner: "competing-drain" });
+      expect(parseLogRecords(warnSpy).some((record) =>
+        record.action === "cleanup-expired-pending-delete-fenced" && record.rowCount === 1
+      )).toBe(true);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("keeps a disabled-chat row that a competing drain re-claimed after the SELECT", async () => {
+    const { sqlite, db } = setupTelegramPendingSqlite();
+    try {
+      const now = Math.floor(Date.now() / 1000);
+      insertPendingSqlite(sqlite, {
+        id: 951,
+        chatId: "reclaimed-disabled",
+        html: "<b>Reclaimed sibling</b>",
+        createdAt: now - 60,
+        dedupeKey: "reclaimed-disabled-key",
+      });
+      let reclaimed = false;
+      const racingDb = {
+        ...db,
+        prepare: (sql: string) => {
+          const statement = db.prepare(sql);
+          if (!reclaimed && sql.includes("FROM telegram_pending_alerts") && sql.includes("WHERE chat_id = ?")) {
+            return {
+              bind: (...binds: unknown[]) => {
+                const bound = statement.bind(...binds);
+                return {
+                  all: async () => {
+                    const result = await bound.all();
+                    reclaimed = true;
+                    sqlite.prepare(
+                      `UPDATE telegram_pending_alerts
+                          SET processing_owner = 'competing-drain',
+                              processing_started_at = ?,
+                              processing_expires_at = ?
+                        WHERE id = 951`,
+                    ).run(now, now + 600);
+                    return result;
+                  },
+                };
+              },
+            } as unknown as D1PreparedStatement;
+          }
+          return statement;
+        },
+      } as D1Database;
+
+      await expect(clearPendingAlertsForDisabledChat(racingDb, "reclaimed-disabled", now))
+        .resolves.toEqual({ deleted: 0, failed: true });
+      expect(sqlite.prepare(
+        "SELECT delivery_state, processing_owner FROM telegram_pending_alerts WHERE id = 951",
+      ).get()).toEqual({ delivery_state: "pending", processing_owner: "competing-drain" });
+    } finally {
+      sqlite.close();
+    }
   });
 });

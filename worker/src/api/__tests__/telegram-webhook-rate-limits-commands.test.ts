@@ -245,7 +245,7 @@ describe("handleTelegramWebhook", () => {
     nowSpy.mockRestore();
   });
 
-  it("fails open when the chat flood counter store errors", async () => {
+  it("fails closed when the chat flood counter store errors", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const db = makeTelegramWebhookDb([
       { match: "telegram_pending_disambiguation", rows: [] },
@@ -259,9 +259,8 @@ describe("handleTelegramWebhook", () => {
     const res = await handleTelegramWebhook(db, makeWebhookRequest(123, "/help"), "test-secret", "bot-token");
 
     expect(res.status).toBe(200);
-    // /help still replied despite the flood-store failure.
-    expect(sentMessageBody().text).toContain("/subscribe");
-    expect(sentMessageBody().text).toContain("/status");
+    expect(sentMessageBody().text).toContain("Command traffic is busy");
+    expect(sentMessageBody().text).not.toContain("/subscribe");
     warn.mockRestore();
   });
 

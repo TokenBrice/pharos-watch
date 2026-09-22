@@ -4,6 +4,7 @@ import type { CronProgressReporter } from "../lib/cron-logger";
 import { reportCronProgress } from "../lib/cron-progress";
 import {
   buildDispatchResult,
+  pendingCountTotals,
   pendingTailState,
   type DispatchResult,
 } from "./dispatch-telegram-result";
@@ -16,25 +17,13 @@ import {
 import { writeSnapshots } from "./telegram-alert-snapshots";
 import { runPendingQueueLifecycle } from "./dispatch-telegram-pending-lifecycle";
 import { readTelegramPendingCapacitySnapshot } from "../lib/telegram/pending-capacity";
-import {
-  type PendingDrainResult,
-  type PendingCapacitySnapshot,
-} from "./telegram-pending";
+import { type PendingCapacitySnapshot } from "./telegram-pending";
 
 /**
  * Dispatch paths that run without a fresh fanout: they keep the pending-outbox
  * lifecycle moving (due-row drain, execution-unknown archival, TTL expiry) and,
  * on eventless runs, advance the stored baseline snapshots.
  */
-
-function pendingCountTotals(drainResult: PendingDrainResult) {
-  return {
-    pendingAttempted: drainResult.attempted,
-    pendingSent: drainResult.sent,
-    pendingDeferred: drainResult.deferred,
-    pendingDropped: drainResult.dropped,
-  };
-}
 
 export interface EventlessFastPathContext {
   db: D1Database;
@@ -120,7 +109,7 @@ export async function executeCircuitOpenQueuePath({
     itemsTotal: Math.max(pendingCapacityBefore.due, drainResult.attempted, 1),
     metadata: {
       skipped: "circuit-open",
-      countTotals: pendingCountTotals(drainResult),
+      countTotals: pendingCountTotals(result),
       deferredTail: pendingTailState(pendingCapacityAfter),
     },
   });
@@ -197,7 +186,7 @@ export async function executeEventlessFastPath({
     itemsTotal: Math.max(pendingCapacityBefore.due, drainResult.attempted, 1),
     metadata: {
       eventlessFastPath: true,
-      countTotals: pendingCountTotals(drainResult),
+      countTotals: pendingCountTotals(result),
       deferredTail: pendingTailState(pendingCapacityAfter),
     },
   });

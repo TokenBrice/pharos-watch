@@ -47,6 +47,20 @@ export type TelegramDigestOutboxState =
   | "execution_unknown"
   | "failed_permanent";
 
+/**
+ * Retry budget for a retryable digest failure. An edition that keeps failing
+ * retryably is terminalized as `failed_permanent` once it exhausts either
+ * bound: the attempt bound counts claims, so a daily edition observes 12
+ * retryable outcomes before the 13th terminalizes it, and the age bound is
+ * measured from `digest_generated_at` so an edition that stopped being useful
+ * cannot hold one of the four drain slots and its transport permits
+ * indefinitely. Ambiguous (`execution_unknown`) editions never enter this path.
+ */
+const TELEGRAM_DIGEST_RETRY_BUDGET: Record<TelegramDigestKind, { maxAttempts: number; maxAgeSec: number }> = {
+  daily: { maxAttempts: 12, maxAgeSec: 24 * 60 * 60 },
+  weekly: { maxAttempts: 12, maxAgeSec: 24 * 60 * 60 },
+};
+
 interface TelegramDigestOutboxRow {
   edition_key: string;
   digest_kind: TelegramDigestKind;
@@ -508,6 +522,16 @@ async function bestEffortMarkExecutionUnknown(
   }
 }
 
+interface PendingRetryResolution {
+  state: "pending" | "failed_permanent";
+  errorClass: string;
+}
+
+/**
+ * Return a claim to `pending`, unless the edition has exhausted its attempt or
+ * age retry budget — then terminalize it as `failed_permanent` with an explicit
+ * reason class instead of deferring it forever.
+ */
 async function returnToPending(
   db: D1Database,
   claim: TelegramDigestOutboxClaim,
@@ -515,15 +539,26 @@ async function returnToPending(
   errorClass: string,
   statusCode: number | null,
   retryAfterSec: number | null,
-): Promise<void> {
+): Promise<PendingRetryResolution> {
+  const budget = TELEGRAM_DIGEST_RETRY_BUDGET[claim.row.digest_kind];
+  const exhaustedClass = claim.row.attempts > budget.maxAttempts
+    ? `retry_budget_exhausted:${errorClass}`
+    : nowSec - claim.row.digest_generated_at >= budget.maxAgeSec
+      ? `edition_age_exceeded:${errorClass}`
+      : null;
+  if (exhaustedClass != null) {
+    await markPermanentFailure(db, claim, nowSec, exhaustedClass, statusCode);
+    return { state: "failed_permanent", errorClass: exhaustedClass };
+  }
   const delaySec = retryDelaySec(claim.row.attempts, retryAfterSec);
-  return transitionClaimedDigestEdition(
+  await transitionClaimedDigestEdition(
     db,
     claim,
     { state: "pending", transitionAt: nowSec + delaySec, updatedAt: nowSec, confirmation: "retry" },
     errorClass,
     statusCode,
   );
+  return { state: "pending", errorClass };
 }
 
 async function markPermanentFailure(
@@ -743,23 +778,25 @@ async function transitionFailedDigestSend(
   chunksSent: number,
   nextChunkIndex: number,
 ): Promise<TelegramDigestDeliveryResult> {
-  const errorClass = result.errorClass ?? "unknown";
+  const transportErrorClass = result.errorClass ?? "unknown";
   let state: "execution_unknown" | "pending" | "failed_permanent";
+  let errorClass: string = transportErrorClass;
   if (result.statusCode == null) {
-    await markExecutionUnknown(db, claim, completedAt, errorClass, null);
+    await markExecutionUnknown(db, claim, completedAt, transportErrorClass, null);
     state = "execution_unknown";
   } else if (result.retryable) {
-    await returnToPending(
+    const retry = await returnToPending(
       db,
       claim,
       completedAt,
-      errorClass,
+      transportErrorClass,
       result.statusCode,
       result.retryAfterSec,
     );
-    state = "pending";
+    state = retry.state;
+    errorClass = retry.errorClass;
   } else {
-    await markPermanentFailure(db, claim, completedAt, errorClass, result.statusCode);
+    await markPermanentFailure(db, claim, completedAt, transportErrorClass, result.statusCode);
     state = "failed_permanent";
   }
   return buildDeliveryResult(claim, state, state, {
@@ -831,7 +868,7 @@ export async function deliverTelegramDigestEdition(
       });
     }
     if (safetyCheck.kind === "unavailable") {
-      await returnToPending(
+      const retry = await returnToPending(
         db,
         claim,
         nowSec,
@@ -839,19 +876,25 @@ export async function deliverTelegramDigestEdition(
         null,
         null,
       );
-      return buildDeliveryResult(claim, "pending", "pending", {
+      return buildDeliveryResult(claim, retry.state, retry.state, {
         chunksSent: 0,
         nextChunkIndex: claim.row.next_chunk_index,
-        errorClass: `safety_identity_unavailable:${safetyCheck.reason}`,
+        errorClass: retry.errorClass,
       });
     }
   } catch (error) {
-    const errorClass = `safety_identity_check_failed:${toErrorMessage(error).slice(0, 120)}`;
-    await returnToPending(db, claim, nowSec, errorClass, null, null);
-    return buildDeliveryResult(claim, "pending", "pending", {
+    const retry = await returnToPending(
+      db,
+      claim,
+      nowSec,
+      `safety_identity_check_failed:${toErrorMessage(error).slice(0, 120)}`,
+      null,
+      null,
+    );
+    return buildDeliveryResult(claim, retry.state, retry.state, {
       chunksSent: 0,
       nextChunkIndex: claim.row.next_chunk_index,
-      errorClass,
+      errorClass: retry.errorClass,
     });
   }
 

@@ -11,6 +11,7 @@ import {
   resetTelegramWebhookTest,
   makeTelegramWebhookDb,
 } from "./telegram-webhook.test-support";
+import { handleMyChatMember } from "../telegram-webhook-group-welcome";
 
 
 const makeLifecycleDb = (
@@ -62,6 +63,31 @@ describe("handleTelegramWebhook", () => {
     expect(warn).not.toHaveBeenCalledWith(
       "[telegram-webhook] auth validation failed — returning 200 to prevent retry storm",
     );
+  });
+
+  it("rate-limits a loud warning when the bot token is missing while acknowledging updates", async () => {
+    const db = makeLifecycleDb([]);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const first = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(123, "/start"),
+      "test-secret",
+    );
+    const second = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(123, "/help"),
+      "test-secret",
+    );
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    const missingTokenWarnings = warn.mock.calls
+      .map(([record]) => JSON.parse(String(record)) as { action?: string })
+      .filter((record) => record.action === "webhook-missing-bot-token");
+    expect(missingTokenWarnings).toHaveLength(1);
+    warn.mockRestore();
   });
 
   it("acknowledges malformed authenticated update bodies without creating an effect fence", async () => {
@@ -182,13 +208,13 @@ describe("handleTelegramWebhook", () => {
     const replyMarkup = body.reply_markup as { inline_keyboard?: Array<Array<{ url?: string }>> };
     expect(replyMarkup.inline_keyboard?.flat().some((button) => button.url?.includes("/pharoswatchbot/"))).toBe(true);
 
-    const cacheWrite = db.getHistory().find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
+    const cacheWrite = db.getHistory().find((entry) => entry.sql.includes("ON CONFLICT(key) DO NOTHING"));
     expect(cacheWrite).toBeDefined();
     expect(cacheWrite!.binds[0]).toBe("telegram:group-welcome:-123");
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM telegram_chat_delivery_diagnostics"))).toBe(false);
   });
 
-  it("does not cache group welcome idempotency when Telegram send fails", async () => {
+  it("deletes the claimed group welcome marker when Telegram send fails", async () => {
     fetchSpy.mockResolvedValueOnce(new Response("blocked", { status: 403 }));
     const db = makeLifecycleDb([
       {
@@ -207,7 +233,12 @@ describe("handleTelegramWebhook", () => {
 
     expect(res.status).toBe(200);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
-    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"))).toBe(false);
+    expect(db.getHistory().some((entry) => entry.sql.includes("ON CONFLICT(key) DO NOTHING"))).toBe(true);
+    expect(db.getHistory().some(
+      (entry) =>
+        entry.sql.includes("DELETE FROM cache WHERE key = ?") &&
+        entry.binds[0] === "telegram:group-welcome:-123",
+    )).toBe(true);
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM telegram_chat_delivery_diagnostics"))).toBe(false);
   });
 
@@ -228,6 +259,29 @@ describe("handleTelegramWebhook", () => {
 
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"))).toBe(false);
+  });
+
+  it("atomically claims a group welcome before concurrent sends", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const payload = {
+        chat: { id: -123, type: "supergroup" },
+        from: { id: 999, username: "alice" },
+        old_chat_member: { status: "left" },
+        new_chat_member: { status: "member" },
+      };
+
+      await Promise.all([
+        handleMyChatMember(db, "bot-token", payload),
+        handleMyChatMember(db, "bot-token", payload),
+      ]);
+
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expect(sqlite.prepare("SELECT key FROM cache WHERE key = ?").get("telegram:group-welcome:-123"))
+        .toEqual({ key: "telegram:group-welcome:-123" });
+    } finally {
+      sqlite.close();
+    }
   });
 
   it("returns ok when a my_chat_member welcome cache read fails", async () => {

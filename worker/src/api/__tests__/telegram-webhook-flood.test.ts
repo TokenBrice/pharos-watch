@@ -55,4 +55,30 @@ describe("telegram webhook per-chat flood cap", () => {
     nowSpy.mockRestore();
     warn.mockRestore();
   });
+
+  it("fails closed with the busy reply when no flood scope can be evaluated", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    sendAuditedTelegramReplyMock.mockResolvedValue(undefined);
+    const db = mockD1([
+      { match: "telegram_pending_disambiguation", rows: [] },
+      {
+        match: "RETURNING value",
+        rows: [],
+        throwError: new Error("d1 flood unavailable"),
+      },
+    ]);
+
+    const res = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(123, "/help"),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(res.status).toBe(200);
+    expect(sendAuditedTelegramReplyMock).toHaveBeenCalledTimes(1);
+    expect(String(sendAuditedTelegramReplyMock.mock.calls[0]?.[2])).toContain("Command traffic is busy");
+    expect(warn).toHaveBeenCalledTimes(1);
+    warn.mockRestore();
+  });
 });

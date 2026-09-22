@@ -5,8 +5,8 @@ import {
 } from "../../lib/telegram/constants";
 import { logTelegramEvent } from "../../lib/telegram/log";
 import {
+  claimedDeleteByIds,
   deadLetterTerminalPendingRows,
-  deletePendingAlertsByIds,
   PENDING_DELETE_CHUNK_SIZE,
 } from "./dead-letter";
 import type { DeadLetterPendingRow } from "./types";
@@ -16,7 +16,8 @@ import {
 } from "../telegram-alert-job-target-outcomes";
 import { projectRecapPendingTerminalOutcome } from "./recap-terminal";
 
-type ExpiredPendingRow = DeadLetterPendingRow & { expires_at?: number | null };
+type SelectablePendingRow = DeadLetterPendingRow & { processing_owner?: string | null };
+type ExpiredPendingRow = SelectablePendingRow & { expires_at?: number | null };
 export const TELEGRAM_PENDING_SENT_RETENTION_SEC = 24 * 60 * 60;
 
 export interface DisabledChatPendingCleanupResult {
@@ -49,6 +50,35 @@ const PENDING_ALERT_DEAD_LETTER_COLUMNS = [
 ] as const;
 const PENDING_ALERT_DEAD_LETTER_COLUMN_SQL = PENDING_ALERT_DEAD_LETTER_COLUMNS.join(", ");
 export const EXPIRED_PENDING_CLEANUP_BATCH_LIMIT = PENDING_DELETE_CHUNK_SIZE;
+
+/**
+ * Fenced delete for selected still-pending rows: each row is deleted only
+ * while it kept the delivery_state and processing lease it carried at SELECT
+ * time. Rows a competing drain claimed after the SELECT survive here and are
+ * picked up by a later pass once that lease lapses.
+ */
+async function deleteSelectedPendingRows(
+  db: D1Database,
+  rows: readonly SelectablePendingRow[],
+  nowSec: number,
+): Promise<number> {
+  const idsByOwner = new Map<string, number[]>();
+  const unleasedIds: number[] = [];
+  for (const row of rows) {
+    if (row.processing_owner == null) {
+      unleasedIds.push(row.id);
+      continue;
+    }
+    const ids = idsByOwner.get(row.processing_owner);
+    if (ids) ids.push(row.id);
+    else idsByOwner.set(row.processing_owner, [row.id]);
+  }
+  let deleted = await claimedDeleteByIds(db, unleasedIds, "pending", null, nowSec);
+  for (const [owner, ids] of idsByOwner) {
+    deleted += await claimedDeleteByIds(db, ids, "pending", owner, nowSec);
+  }
+  return deleted;
+}
 
 async function projectTerminalPendingRows(
   db: D1Database,
@@ -193,7 +223,7 @@ export async function clearPendingAlertsForDisabledChat(
     for (;;) {
       const selected = await db
         .prepare(
-          `SELECT ${PENDING_ALERT_DEAD_LETTER_COLUMN_SQL}
+          `SELECT ${PENDING_ALERT_DEAD_LETTER_COLUMN_SQL}, processing_owner
              FROM telegram_pending_alerts
             WHERE chat_id = ?
               AND id > ?
@@ -202,7 +232,7 @@ export async function clearPendingAlertsForDisabledChat(
             LIMIT ?`,
         )
         .bind(chatId, cursorId, PENDING_DELETE_CHUNK_SIZE)
-        .all<DeadLetterPendingRow>();
+        .all<SelectablePendingRow>();
       const rows = selected.results ?? [];
       if (rows.length === 0) break;
 
@@ -214,7 +244,7 @@ export async function clearPendingAlertsForDisabledChat(
           throw new Error("Failed to dead-letter disabled-chat pending alerts");
         }
         await projectTerminalPendingRows(db, rowsToDelete, "failed", nowSec, "blocked_disabled");
-        const deletedRows = await deletePendingAlertsByIds(db, rowsToDelete.map((row) => row.id));
+        const deletedRows = await deleteSelectedPendingRows(db, rowsToDelete, nowSec);
         deleted += deletedRows;
         if (deletedRows < rowsToDelete.length) {
           throw new Error(
@@ -264,7 +294,7 @@ export async function cleanupExpiredPendingAlerts(
   const sentRowsDeleted = await cleanupAgedSentPendingAlerts(db, nowSec);
   const expiredRows = await db
     .prepare(
-      `SELECT ${PENDING_ALERT_DEAD_LETTER_COLUMN_SQL}, expires_at
+      `SELECT ${PENDING_ALERT_DEAD_LETTER_COLUMN_SQL}, expires_at, processing_owner
          FROM telegram_pending_alerts
         WHERE delivery_state = 'pending'
           AND COALESCE(expires_at, created_at + ?) <= ?
@@ -295,8 +325,21 @@ export async function cleanupExpiredPendingAlerts(
           errorClass: "ttl_expired",
         })),
     );
-    await deletePendingAlertsByIds(db, rows.map((row) => row.id));
-    logExpiredPendingCleanupRows(rows, nowSec);
+    const deleted = await deleteSelectedPendingRows(db, rows, nowSec);
+    if (deleted < rows.length) {
+      // Rows whose lease changed after the SELECT stay queued; the owner's
+      // checkpoint (or a later pass once the lease lapses) settles them.
+      logTelegramEvent({
+        level: "warn",
+        message: "Skipped deleting expired pending Telegram alerts whose processing lease changed",
+        action: "cleanup-expired-pending-delete-fenced",
+        module: "telegram-pending-cleanup",
+        reason: "ttl_expired",
+        rowCount: rows.length - deleted,
+      });
+    } else {
+      logExpiredPendingCleanupRows(rows, nowSec);
+    }
     if (rows.length >= EXPIRED_PENDING_CLEANUP_BATCH_LIMIT) {
       logTelegramEvent({
         level: "info",
@@ -307,7 +350,7 @@ export async function cleanupExpiredPendingAlerts(
         cappedAtLimit: EXPIRED_PENDING_CLEANUP_BATCH_LIMIT,
       });
     }
-    return sentRowsDeleted + rows.length;
+    return sentRowsDeleted + deleted;
   }
 
   return sentRowsDeleted;

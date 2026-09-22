@@ -37,6 +37,66 @@ export type TelegramPendingCapacityReadResult =
   | { status: "available"; value: TelegramPendingCapacitySnapshot }
   | { status: "unknown"; errorClass: "query_failed" };
 
+/**
+ * Flattened capacity projection published in dispatch run metadata. It is the
+ * single snapshot → fields mapping: a new snapshot field is threaded through
+ * here once instead of in every dispatch projection that consumes it.
+ */
+export interface TelegramPendingCapacityProgressFields {
+  pendingTotal: number;
+  pendingDue: number;
+  pendingDeferredCount: number;
+  pendingExpiredCount: number;
+  pendingNearTtlCount: number;
+  oldestPendingAgeSec: number | null;
+  oldestDuePendingAgeSec: number | null;
+  estimatedDrainTimeSec: number;
+  pendingDrainBudgetPerRun: number;
+}
+
+export function pendingCapacityProgressFields(
+  capacity: TelegramPendingCapacitySnapshot,
+): TelegramPendingCapacityProgressFields {
+  return {
+    pendingTotal: capacity.active,
+    pendingDue: capacity.due,
+    pendingDeferredCount: capacity.deferred,
+    pendingExpiredCount: capacity.expired,
+    pendingNearTtlCount: capacity.nearTtl,
+    oldestPendingAgeSec: capacity.oldestPendingAgeSec,
+    oldestDuePendingAgeSec: capacity.oldestDuePendingAgeSec,
+    estimatedDrainTimeSec: capacity.estimatedDrainTimeSec,
+    pendingDrainBudgetPerRun: capacity.drainBudgetPerRun,
+  };
+}
+
+/** Zeroed capacity snapshot for dispatch results that never read the queue. */
+export function emptyPendingCapacitySnapshot(): TelegramPendingCapacitySnapshot {
+  return {
+    total: 0,
+    active: 0,
+    due: 0,
+    deferred: 0,
+    expired: 0,
+    nearTtl: 0,
+    sending: 0,
+    pendingSending: 0,
+    freshSending: 0,
+    pendingExecutionUnknown: 0,
+    freshExecutionUnknown: 0,
+    executionUnknown: 0,
+    sentCleanup: 0,
+    oldestExecutionUnknownAgeSec: null,
+    executionUnknownSampleLimit: TELEGRAM_EXECUTION_UNKNOWN_SAMPLE_LIMIT,
+    executionUnknownLowerBound: false,
+    oldestPendingAgeSec: null,
+    oldestDuePendingAgeSec: null,
+    estimatedDrainTimeSec: 0,
+    drainBudgetPerRun: TELEGRAM_PENDING_DRAIN_BUDGET,
+    dispatchIntervalSec: TELEGRAM_DISPATCH_INTERVAL_SEC,
+  };
+}
+
 interface TelegramPendingCapacityRow {
   total: number | string | null;
   expired: number | string | null;

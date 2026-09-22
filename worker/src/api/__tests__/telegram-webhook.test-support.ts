@@ -205,7 +205,11 @@ export function makeTelegramWebhookDb(
   profile: "command" | "lifecycle" = "command",
 ): MockD1Database {
   const defaults = profile === "lifecycle" ? LIFECYCLE_DB_EXTRA_TABLES : COMMAND_DB_EXTRA_TABLES;
-  return mockTelegramD1(tables, { ...options, fallbackTables: defaults });
+  const hasFloodOverride = tables.some((table) => table.match.includes("RETURNING value"));
+  const floodDefault: MockTableConfig[] = hasFloodOverride
+    ? []
+    : [{ match: "RETURNING value", rows: [{ value: "1" }], allowUnused: true }];
+  return mockTelegramD1([...floodDefault, ...tables], { ...options, fallbackTables: defaults });
 }
 
 export {

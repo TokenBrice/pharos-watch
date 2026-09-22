@@ -1,7 +1,12 @@
 import { batchExecute, buildInClause, chunkArray, D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "../../lib/db";
 import { TELEGRAM_PENDING_PRIORITY } from "../../lib/telegram/constants";
 import { logTelegramEvent } from "../../lib/telegram/log";
-import type { DeadLetterPendingRow, PendingDeadLetterReason } from "./types";
+import type {
+  DeadLetterPendingRow,
+  PendingDeadLetterReason,
+  PendingDeliveryClaim,
+  PendingDeliveryState,
+} from "./types";
 
 export const PENDING_DELETE_CHUNK_SIZE = D1_SAFE_IN_CLAUSE_BIND_LIMIT;
 
@@ -17,16 +22,70 @@ export function pendingDeadLetterKey(row: Pick<DeadLetterPendingRow, "id" | "del
   return key;
 }
 
-export async function deletePendingAlertsByIds(db: D1Database, ids: readonly number[]): Promise<number> {
+/**
+ * Delete pending-queue rows that never entered a delivery claim, fenced on
+ * the state observed when they were selected: each row must still be in that
+ * `delivery_state` and still carry the processing lease observed then — no
+ * live lease, or the same owner. A row that a competing drain re-claimed, or
+ * that moved terminal, in the SELECT→DELETE gap therefore survives.
+ */
+export async function claimedDeleteByIds(
+  db: D1Database,
+  ids: readonly number[],
+  deliveryState: PendingDeliveryState,
+  processingOwner: string | null,
+  nowSec: number,
+): Promise<number> {
   if (ids.length === 0) return 0;
   let deleted = 0;
   for (const idChunk of chunkArray(ids, PENDING_DELETE_CHUNK_SIZE)) {
     const inClause = buildInClause(idChunk);
+    const leaseFenceSql = processingOwner != null
+      ? "processing_owner IS ?"
+      : "(processing_owner IS NULL OR processing_expires_at IS NULL OR processing_expires_at <= ?)";
     const result = await db
-      .prepare(`DELETE FROM telegram_pending_alerts WHERE id IN (${inClause.sql})`)
-      .bind(...inClause.binds)
+      .prepare(
+        `DELETE FROM telegram_pending_alerts WHERE id IN (${inClause.sql}) AND delivery_state = ? AND ${leaseFenceSql}`,
+      )
+      .bind(...inClause.binds, deliveryState, ...(processingOwner != null ? [processingOwner] : [nowSec]))
       .run();
     deleted += Number(result.meta?.changes ?? 0);
+  }
+  return deleted;
+}
+
+/**
+ * Delete rows whose delivery claims the caller observed, fenced on owner and
+ * generation. Rows are grouped to retain chunked `IN` deletes without
+ * weakening the per-generation fence.
+ */
+export async function claimedDeleteByDeliveryClaims(
+  db: D1Database,
+  claims: readonly PendingDeliveryClaim[],
+): Promise<number> {
+  if (claims.length === 0) return 0;
+  const claimsByOwner = new Map<string, Map<number, number[]>>();
+  for (const claim of claims) {
+    const claimsByGeneration = claimsByOwner.get(claim.owner) ?? new Map<number, number[]>();
+    const ids = claimsByGeneration.get(claim.generation);
+    if (ids) ids.push(claim.id);
+    else claimsByGeneration.set(claim.generation, [claim.id]);
+    claimsByOwner.set(claim.owner, claimsByGeneration);
+  }
+  let deleted = 0;
+  for (const [owner, claimsByGeneration] of claimsByOwner) {
+    for (const [generation, ids] of claimsByGeneration) {
+      for (const idChunk of chunkArray(ids, PENDING_DELETE_CHUNK_SIZE)) {
+        const inClause = buildInClause(idChunk);
+        const result = await db
+          .prepare(
+            `DELETE FROM telegram_pending_alerts WHERE id IN (${inClause.sql}) AND delivery_state IN ('sending', 'sent') AND delivery_owner IS ? AND delivery_generation = ?`,
+          )
+          .bind(...inClause.binds, owner, generation)
+          .run();
+        deleted += Number(result.meta?.changes ?? 0);
+      }
+    }
   }
   return deleted;
 }

@@ -46,6 +46,8 @@ const {
   drainPendingQueue,
   cleanupExpiredPendingAlerts,
   pendingBackoffSec,
+  readTelegramGlobalBackoff,
+  setTelegramGlobalBackoff,
   PENDING_TTL_SEC,
   PENDING_MAX_ATTEMPTS,
   PENDING_BACKOFF_SCHEDULE_SEC,
@@ -198,11 +200,12 @@ describe("drainPendingQueue contract cases", () => {
       calls++;
       return Promise.resolve(calls === (scope === "global" ? 4 : 4) ? makeTelegramRateLimitedResult({ rateLimitScope: scope, retryAfterSec: 30 }) : makeTelegramSentResult());
     });
-    const db = queueDb(rows, [{ match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] }, { match: "UPDATE telegram_pending_alerts SET attempts", rows: [] }, ...(scope === "global" ? [{ match: "INSERT OR REPLACE INTO cache", rows: [] }] : [])]);
+    const globalBackoffUpsert = "ON CONFLICT(key) DO UPDATE SET";
+    const db = queueDb(rows, [{ match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] }, { match: "UPDATE telegram_pending_alerts SET attempts", rows: [] }, ...(scope === "global" ? [{ match: globalBackoffUpsert, rows: [] }] : [])]);
     const result = await drainPendingQueue(db, "bot-token", 20);
     expect(result).toMatchObject({ attempted: expectedCalls, sent: expectedSent, retryQueued: 1, rateLimited: true, retryAfterSec: 30 });
-    if (scope === "global") expect(history(db, "INSERT OR REPLACE INTO cache")[0]?.binds).toEqual([TELEGRAM_GLOBAL_BACKOFF_CACHE_KEY, String(Math.floor(Date.now() / 1000) + 30), Math.floor(Date.now() / 1000)]);
-    else expect(history(db, "INSERT OR REPLACE INTO cache")).toHaveLength(0);
+    if (scope === "global") expect(history(db, globalBackoffUpsert)[0]?.binds).toEqual([TELEGRAM_GLOBAL_BACKOFF_CACHE_KEY, String(Math.floor(Date.now() / 1000) + 30), Math.floor(Date.now() / 1000)]);
+    else expect(history(db, globalBackoffUpsert)).toHaveLength(0);
   });
 
   it("defers later same-chat chunks after a chat limit while other chats continue", async () => {
@@ -257,7 +260,7 @@ describe("drainPendingQueue contract cases", () => {
   it("handles permanent predecessor failure and chat migration as terminal cases", async () => {
     mockSendToChat.mockResolvedValue(makeTelegramPermanentResult());
     const rows = Array.from({ length: 4 }, (_, i) => row(1300 + i, { chat_id: "same", message_html: `chunk-${i}`, chunk_index: i, dedupe_key: `same:${i}` }));
-    const db = queueDb(rows, [{ match: "INSERT INTO telegram_alert_dead_letters", rows: [] }, { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] }]);
+    const db = queueDb(rows, [{ match: "INSERT INTO telegram_alert_dead_letters", rows: [] }, { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [], runMeta: { changes: 3 } }]);
     await expect(drainPendingQueue(db, "bot-token", rows.length)).resolves.toMatchObject({ attempted: 1, dropped: 4, droppedPermanentFailure: 4 });
     expect(mockSendToChat).toHaveBeenCalledTimes(1);
 
@@ -402,7 +405,7 @@ describe("drainPendingQueue contract cases", () => {
     const rows = Array.from({ length: 101 }, (_, i) => row(i + 1, { chat_id: `chat-${i}`, message_html: `msg-${i}`, dedupe_key: `key-${i}` }));
     const db = queueDb(rows, [{ match: "UPDATE telegram_subscribers", rows: [] }, { match: "UPDATE telegram_alert_job_targets", rows: [] }, { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] }]);
     expect((await drainPendingQueue(db, "bot-token", 101)).sent).toBe(101);
-    expect(history(db, "DELETE FROM telegram_pending_alerts WHERE id IN").map((entry) => entry.binds.length)).toEqual([90, 11]);
+    expect(history(db, "DELETE FROM telegram_pending_alerts WHERE id IN").map((entry) => entry.binds.length)).toEqual([92, 13]);
 
     const budgetNow = Math.floor(Date.now() / 1000);
     const budget = await withPendingQueueScenario({ now: budgetNow, pending: [1, 2, 3].map((id) => ({ id, chatId: `budget-${id}`, html: `msg-${id}`, createdAt: budgetNow - id, expiresAt: budgetNow + 600 })) }, async ({ sqlite, db: sqliteDb }) => ({ result: await drainPendingQueue(sqliteDb, "bot-token", 2), count: sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts").get() }));
@@ -491,5 +494,124 @@ describe("drainPendingQueue contract cases", () => {
     await enqueuePendingAlerts(db, [{ chatId: "sending-collision", html: "Original", disableNotification: false }], now, { sourceType: "legacy" });
     expect(sqlite.prepare("SELECT * FROM telegram_pending_alerts WHERE id = 705").get()).toEqual(before);
     sqlite.close();
+  });
+
+  it("does not lease or load a row moved terminal between selection and claim", async () => {
+    const { sqlite } = createLatestSchemaSqlite();
+    try {
+      const now = Math.floor(Date.now() / 1000);
+      insertPendingSqlite(sqlite, {
+        id: 952,
+        chatId: "terminal-before-claim",
+        html: "Already terminal",
+        createdAt: now - 60,
+        expiresAt: now + 600,
+      });
+      let movedTerminal = false;
+      const db = createSqliteD1(sqlite, {
+        onAll: (sql) => {
+          if (!movedTerminal && sql.includes("SELECT p.id") && sql.includes("processing_owner IS NULL")) {
+            movedTerminal = true;
+            sqlite.prepare(
+              `UPDATE telegram_pending_alerts
+                  SET delivery_state = 'sent',
+                      delivery_completed_at = ?
+                WHERE id = 952`,
+            ).run(now);
+          }
+        },
+      });
+
+      await expect(drainPendingQueue(db, "bot-token", 1)).resolves.toMatchObject({
+        attempted: 0,
+        sent: 0,
+      });
+      expect(movedTerminal).toBe(true);
+      expect(mockSendToChat).not.toHaveBeenCalled();
+      expect(sqlite.prepare(
+        "SELECT delivery_state, processing_owner, processing_expires_at FROM telegram_pending_alerts WHERE id = 952",
+      ).get()).toEqual({
+        delivery_state: "sent",
+        processing_owner: null,
+        processing_expires_at: null,
+      });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("keeps the larger global backoff under overlapping writers", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const now = Math.floor(Date.now() / 1000);
+      const [longWrite, shortWrite] = await Promise.all([
+        setTelegramGlobalBackoff(db, now + 60),
+        setTelegramGlobalBackoff(db, now + 30),
+      ]);
+
+      expect(longWrite).toBe(true);
+      expect(shortWrite).toBe(true);
+      expect(await readTelegramGlobalBackoff(db, now)).toBe(now + 60);
+      expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(
+        TELEGRAM_GLOBAL_BACKOFF_CACHE_KEY,
+      )).toEqual({ value: String(now + 60) });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("persists a per-row defer when the global backoff write fails", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const now = Math.floor(Date.now() / 1000);
+      insertPendingSqlite(sqlite, {
+        id: 953,
+        chatId: "global-backoff-fallback",
+        html: "Rate limited",
+        createdAt: now - 60,
+        expiresAt: now + 600,
+      });
+      mockSendToChat.mockResolvedValue(
+        makeTelegramRateLimitedResult({ rateLimitScope: "global", retryAfterSec: 30 }),
+      );
+      const failingDb = {
+        ...db,
+        prepare: (sql: string) => {
+          if (sql.includes("CAST(MAX(CAST(cache.value AS INTEGER)")) {
+            return {
+              bind: () => ({
+                run: async () => {
+                  throw new Error("cache write unavailable");
+                },
+              }),
+            } as unknown as D1PreparedStatement;
+          }
+          return db.prepare(sql);
+        },
+      } as D1Database;
+
+      await expect(drainPendingQueue(failingDb, "bot-token", 1)).resolves.toMatchObject({
+        attempted: 1,
+        retryQueued: 1,
+        rateLimited: true,
+      });
+      expect(sqlite.prepare(
+        "SELECT delivery_state, attempts, not_before_at FROM telegram_pending_alerts WHERE id = 953",
+      ).get()).toEqual({
+        delivery_state: "pending",
+        attempts: 1,
+        not_before_at: now + 30,
+      });
+      expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(
+        TELEGRAM_GLOBAL_BACKOFF_CACHE_KEY,
+      )).toBeUndefined();
+
+      await expect(drainPendingQueue(db, "bot-token", 1)).resolves.toMatchObject({ attempted: 0 });
+      expect(mockSendToChat).toHaveBeenCalledTimes(1);
+    } finally {
+      warnSpy.mockRestore();
+      sqlite.close();
+    }
   });
 });
