@@ -25,16 +25,16 @@
 
 - [Methodology Hub](https://pharos.watch/methodology/): Full scoring model for safety, peg, liquidity, yield, contagion.
 - [Safety Scores Changelog](https://pharos.watch/methodology/scoring-changelog/): Every weight change since v1.0.
-- [Depeg + DEWS Changelog](https://pharos.watch/methodology/depeg-changelog/)
-- [Depeg Duration Resolver Changelog](https://pharos.watch/methodology/depeg-resolver-changelog/)
-- [Liquidity Score Changelog](https://pharos.watch/methodology/liquidity-score-changelog/)
+- [Depeg + DEWS Changelog](https://pharos.watch/methodology/depeg-changelog/): Peg-deviation detection and early-warning stress methodology history.
+- [Depeg Duration Resolver Changelog](https://pharos.watch/methodology/depeg-resolver-changelog/): Forecasting, resolution, and review methodology history for confirmed depeg incidents.
+- [Liquidity Score Changelog](https://pharos.watch/methodology/liquidity-score-changelog/): DEX market-depth, confidence, and coverage methodology history.
 - [Redemption Backstop Changelog](https://pharos.watch/methodology/redemption-backstop-changelog/): Standalone redemption-route scoring history and V9 Exit evidence evolution.
-- [Stability Index Changelog](https://pharos.watch/methodology/stability-index-changelog/)
-- [Chain Health Changelog](https://pharos.watch/methodology/chain-health-changelog/)
-- [Yield Intelligence Changelog](https://pharos.watch/methodology/yield-changelog/)
-- [Blacklist Tracker Changelog](https://pharos.watch/methodology/blacklist-tracker-changelog/)
-- [Mint/Burn Flow Changelog](https://pharos.watch/methodology/mint-burn-flow-changelog/)
-- [Pricing Pipeline Changelog](https://pharos.watch/methodology/pricing-pipeline-changelog/)
+- [Stability Index Changelog](https://pharos.watch/methodology/stability-index-changelog/): System-wide stablecoin stability index methodology history.
+- [Chain Health Changelog](https://pharos.watch/methodology/chain-health-changelog/): Chain Health factor, evidence, and rating methodology history.
+- [Yield Intelligence Changelog](https://pharos.watch/methodology/yield-changelog/): Yield sourcing, risk, scoring, and publication methodology history.
+- [Blacklist Tracker Changelog](https://pharos.watch/methodology/blacklist-tracker-changelog/): Address monitoring, event normalization, and coverage methodology history.
+- [Mint/Burn Flow Changelog](https://pharos.watch/methodology/mint-burn-flow-changelog/): Issuance-flow detection, scoring, and publication methodology history.
+- [Pricing Pipeline Changelog](https://pharos.watch/methodology/pricing-pipeline-changelog/): Price-source selection, consensus, validation, and fallback methodology history.
 
 ## Learn
 
