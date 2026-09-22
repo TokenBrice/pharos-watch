@@ -108,6 +108,21 @@ describe("runQuarterHourlySlot", () => {
     expect(skippedJobs).toEqual(["snapshot-supply", "snapshot-chain-supply"]);
   });
 
+  it("records a failed due-check read as the job's error instead of treating the day as missing", async () => {
+    mocks.syncStablecoins.mockResolvedValue({ status: "ok", itemCount: 1, metadata: JSON.stringify({ downstreamSafe: true, capabilities: { stablecoinsCache: true } }) });
+    const order: string[] = [];
+    const failingDb = {
+      prepare: () => ({ bind: () => ({ first: async () => { throw new Error("D1 unavailable"); } }) }),
+    } as unknown as D1Database;
+
+    const summary = await runQuarterHourlySlot({ ...runtime(order), db: failingDb });
+
+    expect(order).toEqual(["sync-fx-rates", "sync-stablecoins", "snapshot-supply", "snapshot-chain-supply", "snapshot-psi", "snapshot-public-dataset"]);
+    expect(mocks.snapshotPsiDaily).not.toHaveBeenCalled();
+    expect(mocks.snapshotPublicDataset).not.toHaveBeenCalled();
+    expect(summary.jobsErrored).toBe(2);
+  });
+
   it("runs snapshot jobs when sync-stablecoins writes a safe cache with depeg failures", async () => {
     mocks.syncStablecoins.mockResolvedValue({
       status: "degraded",

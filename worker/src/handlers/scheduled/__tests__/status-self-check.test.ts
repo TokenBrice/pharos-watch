@@ -94,9 +94,16 @@ describe("hourly corroboration before the next publication", () => {
 
   it("reports ok when a successful round-trip resolves only unsupported and pool-less cohort rows", async () => {
     mocks.runPriceDexRefresh.mockResolvedValueOnce({ cohortSize: 10, resolved: 0, attemptedBatches: 3, deferredBatches: 0,
-      unsupportedAssets: 3, missingQuotes: 6, timedOut: false, cacheWritten: true, errorClasses: [] });
+      unsupportedAssets: 3, missingQuotes: 6, hintedAttempted: 0, hintedResolved: 0, timedOut: false, cacheWritten: true, errorClasses: [] });
     await runStatusSelfCheckSlot(runtime([], 24));
     expect(mocks.recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ outcome: "ok" }));
+  });
+
+  it("degrades when previously resolvable routes answer without any quote", async () => {
+    mocks.runPriceDexRefresh.mockResolvedValueOnce({ cohortSize: 10, resolved: 0, attemptedBatches: 3, deferredBatches: 0,
+      unsupportedAssets: 3, missingQuotes: 7, hintedAttempted: 1, hintedResolved: 0, timedOut: false, cacheWritten: true, errorClasses: [] });
+    await runStatusSelfCheckSlot(runtime([], 24));
+    expect(mocks.recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ outcome: "degraded" }));
   });
 
   it("keeps budget-exhaustion deferrals degraded without error classes", async () => {

@@ -70,10 +70,10 @@ describe("DEX refresh continuity", () => {
   it("bounds batches and advances fairly under overflow", () => {
     const assets = [...ACTIVE_META_BY_ID.values()].map((meta) => makePeggedAsset({ id: meta.id, symbol: meta.symbol, price: null }));
     const first = planDexRefresh(assets, [], 0);
-    expect(first.allBatchCount).toBeGreaterThan(9);
-    expect(first.batches).toHaveLength(9);
+    expect(first.allBatchCount).toBeGreaterThan(7);
+    expect(first.batches).toHaveLength(7);
     expect(first.batches.every((batch) => batch.length <= 30)).toBe(true);
-    const next = planDexRefresh(assets, [], 9);
+    const next = planDexRefresh(assets, [], 7);
     expect(next.batches[0][0].entry.asset.id).not.toBe(first.batches[0][0].entry.asset.id);
     expect(new Set([...first.batches, ...next.batches].flat().map((item) => item.entry.asset.id)).size)
       .toBeGreaterThan(new Set(first.batches.flat().map((item) => item.entry.asset.id)).size);
@@ -137,11 +137,12 @@ describe("DEX refresh continuity", () => {
       return { resolved: 1, failures: [], diagnostics: [{ source: "dexscreener-exact", stage: "fallback", endpoint: "test", status: 200, ok: true, success: true,
         assetAttempts: [{ assetId: id, adapter: "dexscreener-exact", source: "dexscreener-exact", replaySafe: false, chain: target.chain, target: target.target, state: "attempted", result: "resolved", candidateAt: now }] }] };
     });
-    expect(await runPriceDexRefresh({ db, syncStartSec: now })).toMatchObject({ resolved: 1, cacheWritten: true });
+    expect(await runPriceDexRefresh({ db, syncStartSec: now })).toMatchObject({ resolved: 1, cacheWritten: true, hintedAttempted: 0 });
     let state = JSON.parse((await getCache(db, DEX_REFRESH_CACHE_KEY))!.value);
     expect(state.observations[0].observedAt).toBe(now);
     fetch.mockResolvedValue({ resolved: 0, failures: [], diagnostics: [{ source: "dexscreener-exact", stage: "fallback", endpoint: "test", status: 200, ok: false, success: false, errorClass: "timeout" }] });
-    expect(await runPriceDexRefresh({ db, syncStartSec: now + 900 })).toMatchObject({ resolved: 0, missingQuotes: 1, errorClasses: ["timeout"] });
+    expect(await runPriceDexRefresh({ db, syncStartSec: now + 900 })).toMatchObject({ resolved: 0, missingQuotes: 1, errorClasses: ["timeout"],
+      hintedAttempted: 1, hintedResolved: 0 });
     state = JSON.parse((await getCache(db, DEX_REFRESH_CACHE_KEY))!.value);
     expect(state.observations).toEqual([]);
     expect(state.targets).toEqual([{ ...target, observedAt: now }]);

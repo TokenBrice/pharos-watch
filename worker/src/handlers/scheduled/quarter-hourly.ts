@@ -115,9 +115,20 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext) {
     notDue?: () => Promise<CronResult | null>,
   ): Promise<void> => {
     if (notDue) {
-      const neutral = await notDue().catch(() => null);
-      if (neutral) {
-        outcomes.push((await runBestEffortScheduledJobWithOutcome(runtime, "quarter-hour slot", job, async () => neutral)).summary);
+      // A failed due-check read proves nothing about the period: record it as
+      // this job's error outcome instead of assuming the output is missing.
+      let neutral: CronResult | null = null;
+      let checkError: unknown = null;
+      try {
+        neutral = await notDue();
+      } catch (error) {
+        checkError = error;
+      }
+      if (neutral || checkError) {
+        outcomes.push((await runBestEffortScheduledJobWithOutcome(runtime, "quarter-hour slot", job, async () => {
+          if (checkError) throw checkError;
+          return neutral!;
+        })).summary);
         return;
       }
     }

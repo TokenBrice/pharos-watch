@@ -241,6 +241,9 @@ function compareRouteSnapshots(previous: RouteSnapshot, current: RouteSnapshot):
 }
 
 function meetsAlertCriteria(evaluation: TurnoverEvaluation): boolean {
+  // Losing every published route is the strongest turnover signal regardless
+  // of how few routes the coin had; it still needs the sustain window.
+  if (evaluation.previousRouteCount > 0 && evaluation.currentRouteCount === 0) return true;
   return evaluation.jaccardDistance >= DEX_EXIT_ROUTE_TURNOVER_ALERT_THRESHOLD
     && evaluation.removedRouteCount + evaluation.addedRouteCount >= DEX_EXIT_ROUTE_TURNOVER_MIN_CHANGED_ROUTES;
 }

@@ -343,7 +343,7 @@ describe("DEX exit-route turnover watchdog", () => {
     expect(JSON.parse(lastSnapshotWrite(thirdDb) ?? "{}").pendingAlert).toBeUndefined();
   });
 
-  it("does not alert on single-route flaps of tiny route sets", async () => {
+  it("does not alert on single-route flaps of tiny route sets, even a lone route briefly vanishing", async () => {
     const flapDb = watchdogDb(
       [
         publishedRow("coin-a", routes("route-a", "route-b")),
@@ -363,7 +363,7 @@ describe("DEX exit-route turnover watchdog", () => {
       changedCoinCount: 2,
       highestObservedTurnover: 1,
       alertingCoinCount: 0,
-      candidateCoinCount: 0,
+      candidateCoinCount: 1,
     });
 
     const backDb = watchdogDb(
@@ -383,10 +383,10 @@ describe("DEX exit-route turnover watchdog", () => {
     });
   });
 
-  it("treats a coin disappearing entirely as complete turnover only when sustained", async () => {
+  it.each([[["route-a"]], [["route-a", "route-b"]]])("treats a coin losing all %j routes as complete turnover only when sustained", async (lost) => {
     const firstDb = watchdogDb(
       [],
-      previousSnapshot([{ stablecoinId: "coin-a", routes: routes("route-a", "route-b") }]),
+      previousSnapshot([{ stablecoinId: "coin-a", routes: routes(...lost) }]),
       CURRENT_GENERATION,
     );
     const first = await runDexExitRouteTurnoverWatchdog(firstDb);
@@ -404,10 +404,10 @@ describe("DEX exit-route turnover watchdog", () => {
     expect(second.status).toBe("degraded");
     expect(metadata.worstOffenders[0]).toMatchObject({
       stablecoinId: "coin-a",
-      previousRouteCount: 2,
+      previousRouteCount: lost.length,
       currentRouteCount: 0,
       jaccardDistance: 1,
-      removedRouteCount: 2,
+      removedRouteCount: lost.length,
     });
   });
 
