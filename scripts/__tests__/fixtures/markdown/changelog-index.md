@@ -6,6 +6,19 @@ description: "Weekly release notes for Pharos."
 
 # Changelog
 
+## 2026-09-21 to 2026-09-22
+
+A 225-commit holistic review makes unavailable data fail closed repo-wide, and Safety Score 9.9 moves USDT to 73/B.
+
+- **Fail-closed data contracts**: The P0 and P1 waves replaced optimistic defaults across supply, DEWS, yield, freeze, blacklist and route-status producers: an unavailable observation publishes null and a reason, never zero, healthy or open.
+- **Safety Score 9.91**: Five versions since 9.5: chain maturity became a clock-bound, citation-backed admission and assurance reports expire 100 days after their period end, moving USDT 87/A+ to 73/B on the frozen review capture.
+- **Pricing 6.24 and 6.25**: A promoted DEX protocol lane enters primary consensus only when that individual lane is corroborated, and wclp-ripio gains a direct CoinGecko CLP quote behind a registry-guarded native-peg map.
+- **DEWS 6.23 and 6.24**: Absent evidence no longer scores as measured calm: an unmapped price-confidence tier takes the worst value and smoothing needs a prior reading, and a degraded run no longer advances the published generation.
+- **Liquidity, backstop and PSI**: Liquidity 6.6 records the concentration bands September's card consolidation shipped without an entry, backstop 4.43 requires same-run route evidence for a live status, and PSI 3.62 replays supply as-of the day.
+- **Cron and retention bounds**: Every retention delete and unbounded read is bounded, slot fencing stops one slow head abandoning its chain, each degraded run names a machine-readable reason, and four additive migrations land first.
+- **Telegram and digest delivery**: Delivery gains fencing, backoff and ingress guards, the risk-alert SLO is enforced at the 1,000-watcher tier the planner actually meets, and digest edition numbers derive from the full non-blocked history.
+- **Deduplication and test lanes**: Shared contracts got single owners and the oversized V9, Telegram and yield modules split leafward, taking the clone ratchet from 7,568 to 3,073 duplicated lines; nine test lanes replaced pins with outcomes.
+
 ## 2026-09-14 to 2026-09-20
 
 A 128-commit codebase review hardens every Worker boundary, and Safety Score 9.5 rates PAXG on executable notional.
