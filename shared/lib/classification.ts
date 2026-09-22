@@ -9,6 +9,7 @@ export * from "./classification/domain";
 export * from "./classification/pegs";
 export * from "./classification/badges";
 export * from "./classification/risk";
+export * from "./classification/liquidity-concentration";
 export * from "./classification/control-posture";
 export * from "./classification/grades";
 export * from "./classification/mechanism-archetypes";

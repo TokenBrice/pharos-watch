@@ -9,7 +9,7 @@ import {
 import type { DexLiquidityData } from "@shared/types";
 import { DEX_GLOBAL_KEY } from "@shared/types/market";
 import type { LiquidityStatsData } from "@/components/liquidity-stats-types";
-import { getHhiBand } from "@/components/dex-liquidity-card-model";
+import { getHhiBand } from "@shared/lib/classification";
 
 const MAX_EXIT_ROUTE_ITEMS = 5;
 const ROUTE_SCALE_DOMAIN_PCT = 75;

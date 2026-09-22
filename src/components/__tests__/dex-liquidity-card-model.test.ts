@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { getHhiBand } from "@shared/lib/classification";
 import {
   getConcentrationLabel,
-  getHhiBand,
   getOrganicFractionTier,
 } from "@/components/dex-liquidity-card-model";
 import { crowdingBand, throatLabelForCrowding } from "@/components/exit-route-model";

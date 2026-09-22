@@ -17,7 +17,7 @@ export const LIQUIDITY_SCORE_V6: readonly MethodologyChangelogEntry[] = [
       "The DEX-liquidity card's `Concentration` verdict and the exit-route crowding bands now share one recorded threshold table: High at HHI >= 0.35, Medium at HHI >= 0.18, Low below. A non-finite HHI resolves to the broadest band instead of throwing at render time. The HHI computation itself is unchanged.",
     impact: [
       "Documents the re-basing the 2026-09-16 card/exit-route consolidation shipped without a methodology record: the pre-consolidation card table put High at HHI >= 0.5 and Medium at HHI >= 0.25, so `[0.35, 0.5)` moved Medium -> High and `[0.18, 0.25)` moved Low -> Medium. The post-consolidation thresholds (0.35 / 0.18) are reviewed and recorded as intended, effective 2026-09-21",
-      "One canonical band table in `src/components/dex-liquidity-card-model.ts` feeds both the card's `Concentration` label and the exit-route crowding bands, with boundary tests pinning the thresholds so a future consolidation cannot move them silently",
+      "One canonical band table in `shared/lib/classification.ts` feeds both the card's `Concentration` label and the exit-route crowding bands, with boundary tests pinning the thresholds so a future consolidation cannot move them silently",
       "A non-finite `concentration_hhi` (for example NaN from a malformed payload) now renders as the broadest (Low) band instead of throwing inside the liquidity card",
     ],
     commits: [],
