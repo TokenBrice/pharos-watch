@@ -109,6 +109,7 @@ describe("redemption backstop config helpers", () => {
     expect(() => defineBackstopRegistry(entries)).toThrow();
   });
 
+
   it("finalizes entries and their registry without mutating source configs", () => {
     const entries = defineBatch(["alpha", "beta"], createBaseConfig(), { sourceFilePath: "shared/base.ts" });
     const finalized = finalizeBackstopRegistry(entries, [

@@ -68,6 +68,33 @@ describe("getRedemptionBackstopConfig", () => {
     expect(usds?.capacityModel).toEqual(dai?.capacityModel);
   });
 
+  it("publishes reviewed fee-free issuer routes as numeric fixed fees", () => {
+    const feeFreeIds = [
+      "mf-one-midas",
+      "eutbl-spiko",
+      "eursafo-spiko",
+      "ustbl-spiko",
+      "safo-spiko-usd",
+      "gbpsafo-spiko",
+      "uktbl-spiko",
+      "eurspkcc-spiko",
+      "spkcc-spiko",
+      "jtrsy-anemoy",
+      "ylds-figure",
+      "europ-schuman",
+      "eusd-electronic-usd",
+      "usd3-reserve-protocol",
+    ];
+
+    for (const id of feeFreeIds) {
+      expect(getRedemptionBackstopConfig(id)?.costModel, id).toMatchObject({
+        kind: "fee-bps",
+        feeBps: 0,
+        confidence: "fixed",
+      });
+    }
+  });
+
   it("captures candidate-specific fee and output details", () => {
     expect(getRedemptionBackstopConfig("usdt-tether")).toMatchObject({
       costModel: {
