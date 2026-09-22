@@ -16,6 +16,7 @@ const ORACLE = "0xefb84935239dacdecf7c5ba76d8de40b077b7b33";
 const BREAKER = "0x303ed1df62fa067659b586ebee8de0ece824ab39";
 const UNIT = 10n ** 18n;
 const ROUTES: Record<string, { token: string; exchange: string; feed: string; depth: bigint }> = {
+  "audm-mento": { token: "0x7175504c455076f15c04a2f90a8e352281f492f9", exchange: "0xd580d237231109e6a96d67d82450611c610a805a26660c90281bdc0cd04a95c7", feed: "0x646bd504c3864ea5b8a6b6d25743721f61864a07", depth: 1_000n * UNIT },
   "cadm-mento": { token: "0xff4ab19391af240c311c54200a492233052b6325", exchange: "0x517ccc3bcab9f35e2e24143a0c1809068efc649f740846cfb6a1c5703735c1ee", feed: "0x20869cf54ead821c45dfb2ab0c23d2e10fbb65a4", depth: 1_000n * UNIT },
   "copm-mento": { token: "0x8a567e2ae79ca692bd748ab832081c45de4041ea", exchange: "0x1c9378bd0973ff313a599d3effc654ba759f8ccca655ab6d6ce5bd39a212943b", feed: "0x0196d1f4fda21fa442e53eaf18bf31282f6139f1", depth: 1_000_000n * UNIT },
 };
