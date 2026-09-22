@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mockD1 } from "@shared/test-utils/mock-d1";
+import { mockD1Strict } from "@shared/test-utils/mock-d1";
 import { expectWarningEffect, runAdapter } from "./reserve-adapter.test-support";
 
 // ---------------------------------------------------------------------------
@@ -109,7 +109,7 @@ function runDjed(overrides: DjedNetworkOverrides = {}) {
 
 /** Stablecoins-cache D1 fixture carrying the DefiLlama list circulating for DJED. */
 function djedCacheDb(circulating: number) {
-  return mockD1([{
+  return mockD1Strict([{
     match: "SELECT value, updated_at FROM cache WHERE key = ?",
     matchBinds: ["stablecoins"],
     rows: [{

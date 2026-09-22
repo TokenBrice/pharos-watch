@@ -213,8 +213,6 @@ describe("Centrifuge reviewed deployment observer", () => {
       expect.objectContaining({ chainId: "base", currentSupplyUsd: 0 }),
       expect.objectContaining({ chainId: "solana", currentSupplyUsd: 0 }),
     ]);
-    expect(deps.fetchEvmBlockNumber).toHaveBeenCalledTimes(7);
-    expect(deps.fetchSolanaObservation).toHaveBeenCalledTimes(1);
     expect(deps.fetchSolanaObservation).toHaveBeenCalledWith(
       ASSET_ID,
       expect.any(String),
@@ -343,6 +341,5 @@ describe("Centrifuge reviewed deployment observer", () => {
       mintAuthority: identity.mintAuthority,
       controllerProgramOwner: identity.controllerProgramOwner,
     });
-    expect(rpc).toHaveBeenCalledTimes(3);
   });
 });

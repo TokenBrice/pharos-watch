@@ -43,14 +43,6 @@ export function liveSnapshot(
   } as ReserveSnapshotMetadataRecord;
 }
 
-export function snapshot(
-  stablecoinId: string,
-  metadata: Record<string, unknown> = {},
-  overrides: Partial<ReserveSnapshotMetadataRecord> = {},
-): ReserveSnapshotMetadataRecord {
-  return liveSnapshot(stablecoinId, metadata, overrides);
-}
-
 export function dusdOpenQueueMetadata(nowSec: number): Record<string, unknown> {
   return {
     freshnessMode: "verified",

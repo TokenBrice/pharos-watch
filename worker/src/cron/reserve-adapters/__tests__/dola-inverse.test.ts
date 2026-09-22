@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { mockD1 } from "@shared/test-utils/mock-d1";
+import { mockD1Strict } from "@shared/test-utils/mock-d1";
 import {
   resolveBaseSymbol,
   bucketForAsset,
@@ -78,7 +78,7 @@ async function runDola(options: Parameters<typeof dolaNetwork>[0] = {}, db?: D1D
 
 /** Stablecoins-cache D1 fixture keyed the way the registry publishes DOLA. */
 function dolaCacheDb(circulating: number) {
-  return mockD1([{
+  return mockD1Strict([{
     match: "SELECT value, updated_at FROM cache WHERE key = ?",
     matchBinds: ["stablecoins"],
     rows: [{

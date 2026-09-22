@@ -6,16 +6,13 @@ import { dusdOpenQueueMetadata, fpiControllerState, liveSnapshot } from "./redem
 
 const now = 1_780_000_000;
 
-const snapshot = (
+const readMetadata = (
   stablecoinId: string,
   metadata: Record<string, unknown>,
   evidenceClass: "independent" | "static-validated" | "weak-live-probe" = "independent",
-) => liveSnapshot(stablecoinId, metadata, {
-  fetchedAt: now - 60,
-  source: "unit-test",
-  sourceModel: "single-bucket",
-  evidenceClass,
-});
+) => readRedemptionBackstopLiveMetadata(stablecoinId, liveSnapshot(stablecoinId, metadata, {
+  fetchedAt: now - 60, source: "unit-test", sourceModel: "single-bucket", evidenceClass,
+}), now);
 
 function decodedRowMetadata(metadata: Record<string, unknown>): Record<string, unknown> {
   const decoded = parseReserveCompositionRow(
@@ -76,6 +73,44 @@ function decodedLegacyRecoveredRowMetadata(metadata: Record<string, unknown>): R
 }
 
 describe("readRedemptionBackstopLiveMetadata", () => {
+  const payload = (redemption: Record<string, unknown>, metadata: Record<string, unknown> = {}) => ({
+    freshnessMode: "not-applicable", ...metadata,
+    redemption: {
+      capacityUsd: 1_000_000, capacityKind: "live-direct-bounded",
+      freshnessKind: "same-run-onchain", ...redemption,
+    },
+  });
+  const payloadCases = [
+    ["deduplicates valid sourceUrls and drops invalid or unsupported URLs",
+      payload({ sourceUrls: [
+        "https://example.com/redeem", "https://example.com/redeem", "not-a-url",
+        "ftp://example.com/redeem", "http://example.com/status",
+      ] }),
+      { sourceUrls: ["https://example.com/redeem", "http://example.com/status"] }],
+    ["drops negative optional redemption constraints",
+      payload({ dailyLimitUsd: -1, minRedeemUsd: "-2", settlementDelaySec: -3, queueDepthUsd: "-4" }),
+      { dailyLimitUsd: null, minRedeemUsd: null, settlementDelaySec: null, queueDepthUsd: null }],
+    ["treats display-only capacityKind as unusable for scoring capacity",
+      payload({ capacityKind: "documented-eventual" }),
+      { capacityKind: "documented-eventual", immediateRedeemableUsd: 1_000_000,
+        canUseCapacity: false,
+        capacityReason: "Live redemption capacity kind documented-eventual is display-only for scoring" }],
+    ["rejects malformed numeric telemetry instead of coercing it",
+      payload(
+        { capacityUsd: "1000000", capacityRatioOfSupply: 1.2, feeBps: 20_000 },
+        { immediateRedeemableUsd: 500_000, redemptionFeeBps: 50 },
+      ),
+      { immediateRedeemableUsd: null, immediateRedeemableRatio: null,
+        redemptionFeeBps: null, canUseCapacity: false, canUseFee: false,
+        capacityReason: "Live redemption capacity telemetry is malformed; fresh valid metadata required",
+        feeReason: "Live redemption fee telemetry is malformed; using reviewed fee model instead",
+        capacityNotes: expect.arrayContaining([
+          "Live redemption capacity USD is malformed and was ignored",
+          "Live redemption capacity ratio is above 1 and was ignored",
+          "Live redemption fee bps is above 10000 and was ignored",
+        ]) }],
+  ] as const;
+
   it("accepts a complete source-bound Cap output basket with current direct capacity", () => {
     const outputValuation = {
       sourceId: "cap-vault:chainlink-nav:0xd13cb763c43b5c058e7ec40176962c5030f4eb49",
@@ -86,21 +121,17 @@ describe("readRedemptionBackstopLiveMetadata", () => {
         { assetId: "wtgxx-wisdomtree", weight: 0.07 },
       ],
     };
-    const metadata = readRedemptionBackstopLiveMetadata(
-      "cusd-cap",
-      snapshot("cusd-cap", {
-        freshnessMode: "not-applicable",
-        redemption: {
-          capacityUsd: 30_000_000,
-          capacityKind: "live-direct-bounded",
-          freshnessKind: "same-run-onchain",
-          routeStatus: "open",
-          routeStatusSource: "onchain",
-          outputValuation,
-        },
-      }),
-      now,
-    );
+    const metadata = readMetadata("cusd-cap", {
+      freshnessMode: "not-applicable",
+      redemption: {
+        capacityUsd: 30_000_000,
+        capacityKind: "live-direct-bounded",
+        freshnessKind: "same-run-onchain",
+        routeStatus: "open",
+        routeStatusSource: "onchain",
+        outputValuation,
+      },
+    });
 
     expect(metadata.canUseCapacity).toBe(true);
     expect(metadata.v9OutputValuation).toEqual(outputValuation);
@@ -124,31 +155,23 @@ describe("readRedemptionBackstopLiveMetadata", () => {
         { assetId: "asset:eura", weight: 0 },
       ],
     };
-    const metadata = readRedemptionBackstopLiveMetadata(
-      "deuro-deuro",
-      snapshot("deuro-deuro", {
-        freshnessMode: "not-applicable",
-        redemption: {
-          capacityUsd: 500_000,
-          capacityKind: "live-direct-bounded",
-          freshnessKind: "same-run-onchain",
-          routeStatus: "open",
-          routeStatusSource: "onchain",
-          outputValuation,
-        },
-      }),
-      now,
-    );
+    const metadata = readMetadata("deuro-deuro", {
+      freshnessMode: "not-applicable",
+      redemption: {
+        capacityUsd: 500_000,
+        capacityKind: "live-direct-bounded",
+        freshnessKind: "same-run-onchain",
+        routeStatus: "open",
+        routeStatusSource: "onchain",
+        outputValuation,
+      },
+    });
 
     expect(metadata.v9OutputValuation).toEqual(outputValuation);
   });
 
   it("preserves DUSD's unproven settlement bound without scoring the minimum finalization delay", () => {
-    const metadata = readRedemptionBackstopLiveMetadata(
-      "dusd-dialectic",
-      snapshot("dusd-dialectic", dusdOpenQueueMetadata(now + 60)),
-      now,
-    );
+    const metadata = readMetadata("dusd-dialectic", dusdOpenQueueMetadata(now + 60));
 
     expect(metadata.canUseCapacity).toBe(true);
     expect(metadata.capacityConfidence).toBe("live-proxy");
@@ -163,21 +186,17 @@ describe("readRedemptionBackstopLiveMetadata", () => {
   });
 
   it("preserves an unproven settlement bound alongside the observed zero", () => {
-    const metadata = readRedemptionBackstopLiveMetadata(
-      "eearn-ember",
-      snapshot("eearn-ember", decodedRowMetadata({
-        freshnessMode: "not-applicable",
-        redemption: {
-          capacityUsd: 0,
-          capacityKind: "live-direct-bounded",
-          freshnessKind: "same-run-onchain",
-          settlementBoundUnproven: true,
-          routeStatus: "open",
-          routeStatusSource: "onchain",
-        },
-      })),
-      now,
-    );
+    const metadata = readMetadata("eearn-ember", decodedRowMetadata({
+      freshnessMode: "not-applicable",
+      redemption: {
+        capacityUsd: 0,
+        capacityKind: "live-direct-bounded",
+        freshnessKind: "same-run-onchain",
+        settlementBoundUnproven: true,
+        routeStatus: "open",
+        routeStatusSource: "onchain",
+      },
+    }));
 
     expect(metadata.settlementBoundUnproven).toBe(true);
     expect(metadata.immediateRedeemableUsd).toBe(0);
@@ -185,27 +204,23 @@ describe("readRedemptionBackstopLiveMetadata", () => {
   });
 
   it("drops malformed Cap output weights without discarding valid capacity", () => {
-    const metadata = readRedemptionBackstopLiveMetadata(
-      "cusd-cap",
-      snapshot("cusd-cap", {
-        freshnessMode: "not-applicable",
-        redemption: {
-          capacityUsd: 30_000_000,
-          capacityKind: "live-direct-bounded",
-          freshnessKind: "same-run-onchain",
-          outputValuation: {
-            sourceId: "cap-vault:chainlink-nav:test",
-            observedAt: now - 120,
-            unitValueUsd: 1,
-            basketWeights: [
-              { assetId: "usdc-circle", weight: 0.9 },
-              { assetId: "wtgxx-wisdomtree", weight: 0.2 },
-            ],
-          },
+    const metadata = readMetadata("cusd-cap", {
+      freshnessMode: "not-applicable",
+      redemption: {
+        capacityUsd: 30_000_000,
+        capacityKind: "live-direct-bounded",
+        freshnessKind: "same-run-onchain",
+        outputValuation: {
+          sourceId: "cap-vault:chainlink-nav:test",
+          observedAt: now - 120,
+          unitValueUsd: 1,
+          basketWeights: [
+            { assetId: "usdc-circle", weight: 0.9 },
+            { assetId: "wtgxx-wisdomtree", weight: 0.2 },
+          ],
         },
-      }),
-      now,
-    );
+      },
+    });
 
     expect(metadata.canUseCapacity).toBe(true);
     expect(metadata.v9OutputValuation).toBeNull();
@@ -215,21 +230,17 @@ describe("readRedemptionBackstopLiveMetadata", () => {
   it.each(["2026-02-30", "2026-13-01", "20260512", "May 12, 2026"])(
     "drops invalid routeStatusReviewedAt value %s",
     (routeStatusReviewedAt) => {
-      const metadata = readRedemptionBackstopLiveMetadata(
-        "lusd-liquity",
-        snapshot("lusd-liquity", {
-          freshnessMode: "not-applicable",
-          redemption: {
-            capacityUsd: 1_000_000,
-            capacityKind: "live-direct-bounded",
-            freshnessKind: "same-run-onchain",
-            routeStatus: "open",
-            routeStatusSource: "onchain",
-            routeStatusReviewedAt,
-          },
-        }),
-        now,
-      );
+      const metadata = readMetadata("lusd-liquity", {
+        freshnessMode: "not-applicable",
+        redemption: {
+          capacityUsd: 1_000_000,
+          capacityKind: "live-direct-bounded",
+          freshnessKind: "same-run-onchain",
+          routeStatus: "open",
+          routeStatusSource: "onchain",
+          routeStatusReviewedAt,
+        },
+      });
 
       expect(metadata.routeStatus).toBe("open");
       expect(metadata.routeStatusSource).toBe("onchain");
@@ -237,111 +248,8 @@ describe("readRedemptionBackstopLiveMetadata", () => {
     },
   );
 
-  it("deduplicates valid sourceUrls and drops invalid or unsupported URLs", () => {
-    const metadata = readRedemptionBackstopLiveMetadata(
-      "lusd-liquity",
-      snapshot("lusd-liquity", {
-        freshnessMode: "not-applicable",
-        redemption: {
-          capacityUsd: 1_000_000,
-          capacityKind: "live-direct-bounded",
-          freshnessKind: "same-run-onchain",
-          sourceUrls: [
-            "https://example.com/redeem",
-            "https://example.com/redeem",
-            "not-a-url",
-            "ftp://example.com/redeem",
-            "http://example.com/status",
-          ],
-        },
-      }),
-      now,
-    );
-
-    expect(metadata.sourceUrls).toEqual([
-      "https://example.com/redeem",
-      "http://example.com/status",
-    ]);
-  });
-
-  it("drops negative optional redemption constraints", () => {
-    const metadata = readRedemptionBackstopLiveMetadata(
-      "lusd-liquity",
-      snapshot("lusd-liquity", {
-        freshnessMode: "not-applicable",
-        redemption: {
-          capacityUsd: 1_000_000,
-          capacityKind: "live-direct-bounded",
-          freshnessKind: "same-run-onchain",
-          dailyLimitUsd: -1,
-          minRedeemUsd: "-2",
-          settlementDelaySec: -3,
-          queueDepthUsd: "-4",
-        },
-      }),
-      now,
-    );
-
-    expect(metadata.dailyLimitUsd).toBeNull();
-    expect(metadata.minRedeemUsd).toBeNull();
-    expect(metadata.settlementDelaySec).toBeNull();
-    expect(metadata.queueDepthUsd).toBeNull();
-  });
-
-  it("treats display-only capacityKind as unusable for scoring capacity", () => {
-    const metadata = readRedemptionBackstopLiveMetadata(
-      "lusd-liquity",
-      snapshot("lusd-liquity", {
-        freshnessMode: "not-applicable",
-        redemption: {
-          capacityUsd: 1_000_000,
-          capacityKind: "documented-eventual",
-          freshnessKind: "same-run-onchain",
-        },
-      }),
-      now,
-    );
-
-    expect(metadata.capacityKind).toBe("documented-eventual");
-    expect(metadata.immediateRedeemableUsd).toBe(1_000_000);
-    expect(metadata.canUseCapacity).toBe(false);
-    expect(metadata.capacityReason).toBe(
-      "Live redemption capacity kind documented-eventual is display-only for scoring",
-    );
-  });
-
-  it("rejects malformed numeric telemetry instead of coercing it", () => {
-    const metadata = readRedemptionBackstopLiveMetadata(
-      "lusd-liquity",
-      snapshot("lusd-liquity", {
-        freshnessMode: "not-applicable",
-        immediateRedeemableUsd: 500_000,
-        redemptionFeeBps: 50,
-        redemption: {
-          capacityUsd: "1000000",
-          capacityRatioOfSupply: 1.2,
-          feeBps: 20_000,
-          capacityKind: "live-direct-bounded",
-          freshnessKind: "same-run-onchain",
-        },
-      }),
-      now,
-    );
-
-    expect(metadata.immediateRedeemableUsd).toBeNull();
-    expect(metadata.immediateRedeemableRatio).toBeNull();
-    expect(metadata.redemptionFeeBps).toBeNull();
-    expect(metadata.canUseCapacity).toBe(false);
-    expect(metadata.canUseFee).toBe(false);
-    expect(metadata.capacityReason).toBe("Live redemption capacity telemetry is malformed; fresh valid metadata required");
-    expect(metadata.feeReason).toBe("Live redemption fee telemetry is malformed; using reviewed fee model instead");
-    expect(metadata.capacityNotes).toEqual(
-      expect.arrayContaining([
-        "Live redemption capacity USD is malformed and was ignored",
-        "Live redemption capacity ratio is above 1 and was ignored",
-        "Live redemption fee bps is above 10000 and was ignored",
-      ]),
-    );
+  it.each(payloadCases)("%s", (_description, input, expected) => {
+    expect(readMetadata("lusd-liquity", input)).toMatchObject(expected);
   });
 
   it.each([
@@ -349,16 +257,12 @@ describe("readRedemptionBackstopLiveMetadata", () => {
     ["null", null],
     ["array", []],
   ])("fails closed on malformed %s nested redemption telemetry instead of falling back to legacy fields", (_label, redemption) => {
-    const metadata = readRedemptionBackstopLiveMetadata(
-      "lusd-liquity",
-      snapshot("lusd-liquity", {
-        freshnessMode: "not-applicable",
-        immediateRedeemableUsd: 500_000,
-        redemptionFeeBps: 50,
-        redemption,
-      }),
-      now,
-    );
+    const metadata = readMetadata("lusd-liquity", {
+      freshnessMode: "not-applicable",
+      immediateRedeemableUsd: 500_000,
+      redemptionFeeBps: 50,
+      redemption,
+    });
 
     expect(metadata.immediateRedeemableUsd).toBeNull();
     expect(metadata.redemptionFeeBps).toBeNull();
@@ -382,11 +286,7 @@ describe("readRedemptionBackstopLiveMetadata", () => {
       redemptionFeeBps: 50,
       redemption,
     });
-    const metadata = readRedemptionBackstopLiveMetadata(
-      "lusd-liquity",
-      snapshot("lusd-liquity", decodedMetadata),
-      now,
-    );
+    const metadata = readMetadata("lusd-liquity", decodedMetadata);
 
     expect(metadata.immediateRedeemableUsd).toBeNull();
     expect(metadata.redemptionFeeBps).toBeNull();
@@ -409,11 +309,7 @@ describe("readRedemptionBackstopLiveMetadata", () => {
         feeBps: null,
       },
     });
-    const metadata = readRedemptionBackstopLiveMetadata(
-      "lusd-liquity",
-      snapshot("lusd-liquity", decodedMetadata),
-      now,
-    );
+    const metadata = readMetadata("lusd-liquity", decodedMetadata);
 
     expect(metadata.immediateRedeemableUsd).toBeNull();
     expect(metadata.redemptionFeeBps).toBeNull();
@@ -432,11 +328,7 @@ describe("readRedemptionBackstopLiveMetadata", () => {
       immediateRedeemableUsd: 500_000,
       redemptionFeeBps: 50,
     });
-    const metadata = readRedemptionBackstopLiveMetadata(
-      "lusd-liquity",
-      snapshot("lusd-liquity", decodedMetadata),
-      now,
-    );
+    const metadata = readMetadata("lusd-liquity", decodedMetadata);
 
     expect(metadata.immediateRedeemableUsd).toBe(500_000);
     expect(metadata.redemptionFeeBps).toBe(50);
@@ -446,23 +338,19 @@ describe("readRedemptionBackstopLiveMetadata", () => {
   });
 
   it("lets valid nested redemption telemetry override malformed legacy fallback fields", () => {
-    const metadata = readRedemptionBackstopLiveMetadata(
-      "lusd-liquity",
-      snapshot("lusd-liquity", {
-        freshnessMode: "not-applicable",
-        immediateRedeemableUsd: "legacy-bad",
-        immediateRedeemableRatio: -0.5,
-        redemptionFeeBps: "legacy-fee-bad",
-        redemption: {
-          capacityUsd: 750_000,
-          capacityRatioOfSupply: 0.25,
-          feeBps: 42,
-          capacityKind: "live-direct-bounded",
-          freshnessKind: "same-run-onchain",
-        },
-      }),
-      now,
-    );
+    const metadata = readMetadata("lusd-liquity", {
+      freshnessMode: "not-applicable",
+      immediateRedeemableUsd: "legacy-bad",
+      immediateRedeemableRatio: -0.5,
+      redemptionFeeBps: "legacy-fee-bad",
+      redemption: {
+        capacityUsd: 750_000,
+        capacityRatioOfSupply: 0.25,
+        feeBps: 42,
+        capacityKind: "live-direct-bounded",
+        freshnessKind: "same-run-onchain",
+      },
+    });
 
     expect(metadata.immediateRedeemableUsd).toBe(750_000);
     expect(metadata.immediateRedeemableRatio).toBe(0.25);
@@ -475,18 +363,14 @@ describe("readRedemptionBackstopLiveMetadata", () => {
   });
 
   it("still fails closed on malformed legacy telemetry when nested fields are absent", () => {
-    const metadata = readRedemptionBackstopLiveMetadata(
-      "lusd-liquity",
-      snapshot("lusd-liquity", {
-        freshnessMode: "not-applicable",
-        redemption: {
-          capacityUsd: Number.NaN,
-          capacityRatioOfSupply: -0.1,
-          feeBps: -1,
-        },
-      }),
-      now,
-    );
+    const metadata = readMetadata("lusd-liquity", {
+      freshnessMode: "not-applicable",
+      redemption: {
+        capacityUsd: Number.NaN,
+        capacityRatioOfSupply: -0.1,
+        feeBps: -1,
+      },
+    });
 
     expect(metadata.immediateRedeemableUsd).toBeNull();
     expect(metadata.immediateRedeemableRatio).toBeNull();
@@ -503,19 +387,15 @@ describe("readRedemptionBackstopLiveMetadata", () => {
   });
 
   it("ignores live route status that omits source attribution", () => {
-    const metadata = readRedemptionBackstopLiveMetadata(
-      "lusd-liquity",
-      snapshot("lusd-liquity", {
-        freshnessMode: "not-applicable",
-        redemption: {
-          capacityUsd: 1_000_000,
-          capacityKind: "live-direct-bounded",
-          freshnessKind: "same-run-onchain",
-          routeStatus: "open",
-        },
-      }),
-      now,
-    );
+    const metadata = readMetadata("lusd-liquity", {
+      freshnessMode: "not-applicable",
+      redemption: {
+        capacityUsd: 1_000_000,
+        capacityKind: "live-direct-bounded",
+        freshnessKind: "same-run-onchain",
+        routeStatus: "open",
+      },
+    });
 
     expect(metadata.routeStatus).toBeNull();
     expect(metadata.routeStatusSource).toBeNull();
@@ -523,19 +403,15 @@ describe("readRedemptionBackstopLiveMetadata", () => {
   });
 
   it("preserves unknown live route status without source so downstream static open cannot win", () => {
-    const metadata = readRedemptionBackstopLiveMetadata(
-      "lusd-liquity",
-      snapshot("lusd-liquity", {
-        freshnessMode: "not-applicable",
-        redemption: {
-          capacityUsd: 1_000_000,
-          capacityKind: "live-direct-bounded",
-          freshnessKind: "same-run-onchain",
-          routeStatus: "unknown",
-        },
-      }),
-      now,
-    );
+    const metadata = readMetadata("lusd-liquity", {
+      freshnessMode: "not-applicable",
+      redemption: {
+        capacityUsd: 1_000_000,
+        capacityKind: "live-direct-bounded",
+        freshnessKind: "same-run-onchain",
+        routeStatus: "unknown",
+      },
+    });
 
     expect(metadata.routeStatus).toBe("unknown");
     expect(metadata.routeStatusSource).toBeNull();
@@ -544,22 +420,18 @@ describe("readRedemptionBackstopLiveMetadata", () => {
   });
 
   it("drops orphaned route status source and details when the status is invalid", () => {
-    const metadata = readRedemptionBackstopLiveMetadata(
-      "lusd-liquity",
-      snapshot("lusd-liquity", {
-        freshnessMode: "not-applicable",
-        redemption: {
-          capacityUsd: 1_000_000,
-          capacityKind: "live-direct-bounded",
-          freshnessKind: "same-run-onchain",
-          routeStatus: "closed",
-          routeStatusSource: "onchain",
-          routeStatusReason: "Adapter emitted a non-schema status.",
-          routeStatusReviewedAt: "2026-05-17",
-        },
-      }),
-      now,
-    );
+    const metadata = readMetadata("lusd-liquity", {
+      freshnessMode: "not-applicable",
+      redemption: {
+        capacityUsd: 1_000_000,
+        capacityKind: "live-direct-bounded",
+        freshnessKind: "same-run-onchain",
+        routeStatus: "closed",
+        routeStatusSource: "onchain",
+        routeStatusReason: "Adapter emitted a non-schema status.",
+        routeStatusReviewedAt: "2026-05-17",
+      },
+    });
 
     expect(metadata.routeStatus).toBeNull();
     expect(metadata.routeStatusSource).toBeNull();
@@ -570,19 +442,16 @@ describe("readRedemptionBackstopLiveMetadata", () => {
   it("keeps sourced route status visible even when stale capacity cannot score", () => {
     const metadata = readRedemptionBackstopLiveMetadata(
       "lusd-liquity",
-      {
-        ...snapshot("lusd-liquity", {
-          freshnessMode: "not-applicable",
-          redemption: {
-            capacityUsd: 1_000_000,
-            capacityKind: "live-direct-bounded",
-            freshnessKind: "same-run-onchain",
-            routeStatus: "open",
-            routeStatusSource: "onchain",
-          },
-        }),
-        fetchedAt: now - 3 * 86_400,
-      },
+      liveSnapshot("lusd-liquity", {
+        freshnessMode: "not-applicable",
+        redemption: {
+          capacityUsd: 1_000_000, capacityKind: "live-direct-bounded",
+          freshnessKind: "same-run-onchain", routeStatus: "open", routeStatusSource: "onchain",
+        },
+      }, {
+        fetchedAt: now - 3 * 86_400, source: "unit-test", sourceModel: "single-bucket",
+        evidenceClass: "independent",
+      }),
       now,
     );
 
@@ -623,15 +492,11 @@ describe("readRedemptionBackstopLiveMetadata", () => {
         redemption.sourceTimestamp = redemptionSourceTimestamp;
       }
 
-      const metadata = readRedemptionBackstopLiveMetadata(
-        "lusd-liquity",
-        snapshot("lusd-liquity", {
-          freshnessMode: "verified",
-          sourceTimestamp: now - 120,
-          redemption,
-        }),
-        now,
-      );
+      const metadata = readMetadata("lusd-liquity", {
+        freshnessMode: "verified",
+        sourceTimestamp: now - 120,
+        redemption,
+      });
 
       expect(metadata.hasScoringEligibleFreshness).toBe(true);
       expect(metadata.freshnessKind).toBe("verified-source-timestamp");
@@ -642,48 +507,23 @@ describe("readRedemptionBackstopLiveMetadata", () => {
     },
   );
 
-  it("allows unverified freshness for route-approved stablecoins", () => {
-    const metadata = readRedemptionBackstopLiveMetadata(
-      "frxusd-frax",
-      snapshot("frxusd-frax", {
-        freshnessMode: "unverified",
-        redemption: {
-          capacityUsd: 1_000_000,
-          capacityKind: "live-proxy-validated",
-          freshnessKind: "unverified",
-        },
-      }),
-      now,
-    );
-
-    expect(metadata.freshnessKind).toBe("unverified");
-    expect(metadata.hasScoringEligibleFreshness).toBe(false);
-    expect(metadata.capacityConfidence).toBe("live-proxy");
-    expect(metadata.canUseCapacity).toBe(true);
-    expect(metadata.capacityReason).toBeNull();
-  });
-
-  it("denies unverified freshness when the route lacks explicit approval", () => {
-    const metadata = readRedemptionBackstopLiveMetadata(
-      "lusd-liquity",
-      snapshot("lusd-liquity", {
-        freshnessMode: "unverified",
-        redemption: {
-          capacityUsd: 1_000_000,
-          capacityKind: "live-direct-bounded",
-          freshnessKind: "unverified",
-        },
-      }),
-      now,
-    );
-
-    expect(metadata.freshnessKind).toBe("unverified");
-    expect(metadata.hasScoringEligibleFreshness).toBe(false);
-    expect(metadata.capacityConfidence).toBe("live-direct");
-    expect(metadata.canUseCapacity).toBe(false);
-    expect(metadata.capacityReason).toBe(
-      "Live redemption capacity has unverified freshness; route-specific approval required",
-    );
+  it.each([
+    ["allows unverified freshness for route-approved stablecoins",
+      "frxusd-frax", "live-proxy-validated", "live-proxy", true, null],
+    ["denies unverified freshness when the route lacks explicit approval",
+      "lusd-liquity", "live-direct-bounded", "live-direct", false,
+      "Live redemption capacity has unverified freshness; route-specific approval required"],
+  ] as const)("%s", (
+    _description, stablecoinId, capacityKind, capacityConfidence, canUseCapacity, capacityReason,
+  ) => {
+    const metadata = readMetadata(stablecoinId, {
+      freshnessMode: "unverified",
+      redemption: { capacityUsd: 1_000_000, capacityKind, freshnessKind: "unverified" },
+    });
+    expect(metadata).toMatchObject({
+      freshnessKind: "unverified", hasScoringEligibleFreshness: false,
+      capacityConfidence, canUseCapacity, capacityReason,
+    });
   });
 
   it("parses only accepted FPI controller attempts without changing legacy telemetry", () => {
@@ -697,35 +537,27 @@ describe("readRedemptionBackstopLiveMetadata", () => {
       feeBps: 17,
     };
     const state = fpiControllerState(now, 30);
-    const accepted = readRedemptionBackstopLiveMetadata(
-      "fpi-frax",
-      snapshot("fpi-frax", {
-        freshnessMode: "verified",
-        sourceTimestamp: now - 60,
-        redemption: {
-          ...legacyRedemption,
-          v9RouteAttempt: { status: "accepted", attemptedAtSec: now, state },
+    const accepted = readMetadata("fpi-frax", {
+      freshnessMode: "verified",
+      sourceTimestamp: now - 60,
+      redemption: {
+        ...legacyRedemption,
+        v9RouteAttempt: { status: "accepted", attemptedAtSec: now, state },
+      },
+    });
+    const rejected = readMetadata("fpi-frax", {
+      freshnessMode: "verified",
+      sourceTimestamp: now - 60,
+      redemption: {
+        ...legacyRedemption,
+        v9RouteAttempt: {
+          status: "rejected",
+          attemptedAtSec: now,
+          rejectionCode: "calculation-mismatch",
+          blockNumber: 25_600_682,
         },
-      }),
-      now,
-    );
-    const rejected = readRedemptionBackstopLiveMetadata(
-      "fpi-frax",
-      snapshot("fpi-frax", {
-        freshnessMode: "verified",
-        sourceTimestamp: now - 60,
-        redemption: {
-          ...legacyRedemption,
-          v9RouteAttempt: {
-            status: "rejected",
-            attemptedAtSec: now,
-            rejectionCode: "calculation-mismatch",
-            blockNumber: 25_600_682,
-          },
-        },
-      }),
-      now,
-    );
+      },
+    });
 
     expect(accepted.v9FpiControllerRouteState).toEqual(state);
     expect(rejected.v9FpiControllerRouteState).toBeNull();
@@ -745,22 +577,14 @@ describe("readRedemptionBackstopLiveMetadata", () => {
   });
 
   it("uses scoreable nested redemption telemetry even when the snapshot evidence class is weak", () => {
-    const metadata = readRedemptionBackstopLiveMetadata(
-      "usdz-anzen",
-      snapshot(
-        "usdz-anzen",
-        {
-          freshnessMode: "not-applicable",
-          redemption: {
-            capacityUsd: 0.006695,
-            capacityKind: "live-direct",
-            freshnessKind: "same-run-onchain",
-          },
-        },
-        "weak-live-probe",
-      ),
-      now,
-    );
+    const metadata = readMetadata("usdz-anzen", {
+      freshnessMode: "not-applicable",
+      redemption: {
+        capacityUsd: 0.006695,
+        capacityKind: "live-direct",
+        freshnessKind: "same-run-onchain",
+      },
+    }, "weak-live-probe");
 
     expect(metadata.canUseCapacity).toBe(true);
     expect(metadata.immediateRedeemableUsd).toBe(0.006695);
@@ -769,18 +593,10 @@ describe("readRedemptionBackstopLiveMetadata", () => {
   });
 
   it("still rejects weak-probe snapshots that only carry legacy capacity fields", () => {
-    const metadata = readRedemptionBackstopLiveMetadata(
-      "satusd-river",
-      snapshot(
-        "satusd-river",
-        {
-          freshnessMode: "not-applicable",
-          immediateRedeemableUsd: 9_100_000,
-        },
-        "weak-live-probe",
-      ),
-      now,
-    );
+    const metadata = readMetadata("satusd-river", {
+      freshnessMode: "not-applicable",
+      immediateRedeemableUsd: 9_100_000,
+    }, "weak-live-probe");
 
     expect(metadata.canUseCapacity).toBe(false);
     expect(metadata.capacityReason).toBe(

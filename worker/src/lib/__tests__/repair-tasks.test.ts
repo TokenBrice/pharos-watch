@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { mockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
-import { makeSqliteD1, type SqliteD1 } from "./repair-tasks.test-support";
+import {
+  makeSqliteD1,
+  mockRepairD1,
+  type SqliteD1,
+} from "./repair-tasks.test-support";
 import {
   buildDdrRepairTaskId,
   DDR_REPAIR_RUNNER_BACKOFF_SEC_V1,
@@ -13,22 +16,6 @@ import {
 } from "../repair-tasks";
 
 const NOW = 1_775_900_000;
-
-const REPAIR_TASK_RUNNER_TABLES: MockTableConfig[] = [
-  { match: "INSERT INTO worker_repair_tasks", rows: [] },
-  { match: "UPDATE worker_repair_tasks", rows: [], runMeta: { changes: 1 } },
-  { match: "SELECT state FROM worker_repair_tasks", rows: [], first: { state: "closed" } },
-  { match: "FROM worker_repair_tasks", rows: [] },
-  { match: "INSERT INTO depeg_resolver_event_repair_authorization_consumptions", rows: [] },
-  { match: "INSERT INTO depeg_resolver_incident_event_links", rows: [] },
-  { match: "INSERT INTO depeg_resolver_incident_revisions", rows: [] },
-  { match: "UPDATE depeg_resolver_incidents", rows: [] },
-];
-
-function mockRepairD1(tables: MockTableConfig[] = []): MockD1Database {
-  return mockD1([...tables, ...REPAIR_TASK_RUNNER_TABLES]);
-}
-
 
 function seedNaturalPredecessorFixture(
   db: SqliteD1,
@@ -293,48 +280,73 @@ describe("repair tasks", () => {
     });
   });
 
-  it("projects bounded DDR repair details from active task rows", async () => {
+  it.each([
+    {
+      name: "projects bounded DDR repair details from active task rows",
+      payload: [
+        {
+          subject_id: "43",
+          payload_json: JSON.stringify({
+            eventId: 43,
+            reason: "failed-repair",
+          }),
+          updated_at: NOW - 120,
+          total_count: 3,
+          latest_updated_at: NOW - 60,
+        },
+        {
+          subject_id: "42",
+          payload_json: JSON.stringify({
+            eventId: 42,
+            reason: "incident-conflict",
+          }),
+          updated_at: NOW - 60,
+          total_count: 3,
+          latest_updated_at: NOW - 60,
+        },
+        {
+          subject_id: "44",
+          payload_json: JSON.stringify({
+            eventId: 44,
+            reason: "deferred-repair",
+          }),
+          updated_at: NOW - 180,
+          total_count: 3,
+          latest_updated_at: NOW - 60,
+        },
+      ],
+      expectedDetails: {
+        checkedAt: NOW - 60,
+        count: 3,
+        events: [
+          { eventId: 42, reason: "incident-conflict" },
+          { eventId: 43, reason: "failed-repair" },
+          { eventId: 44, reason: "deferred-repair" },
+        ],
+        eventsTruncated: false,
+      },
+    },
+    {
+      name: "returns an empty DDR detail projection when no active task rows exist",
+      payload: [],
+      expectedDetails: {
+        checkedAt: null,
+        count: 0,
+        events: [],
+        eventsTruncated: false,
+      },
+    },
+  ])("$name", async ({ payload, expectedDetails }) => {
     const db = mockRepairD1([
       {
         match: "COUNT(*) OVER ()",
-        rows: [
-          {
-            subject_id: "43",
-            payload_json: JSON.stringify({ eventId: 43, reason: "failed-repair" }),
-            updated_at: NOW - 120,
-            total_count: 3,
-            latest_updated_at: NOW - 60,
-          },
-          {
-            subject_id: "42",
-            payload_json: JSON.stringify({ eventId: 42, reason: "incident-conflict" }),
-            updated_at: NOW - 60,
-            total_count: 3,
-            latest_updated_at: NOW - 60,
-          },
-          {
-            subject_id: "44",
-            payload_json: JSON.stringify({ eventId: 44, reason: "deferred-repair" }),
-            updated_at: NOW - 180,
-            total_count: 3,
-            latest_updated_at: NOW - 60,
-          },
-        ],
+        rows: payload,
       },
     ]);
 
-    const details = await loadDdrRepairDebtDetails(db);
-
-    expect(details).toEqual({
-      checkedAt: NOW - 60,
-      count: 3,
-      events: [
-        { eventId: 42, reason: "incident-conflict" },
-        { eventId: 43, reason: "failed-repair" },
-        { eventId: 44, reason: "deferred-repair" },
-      ],
-      eventsTruncated: false,
-    });
+    await expect(loadDdrRepairDebtDetails(db)).resolves.toEqual(
+      expectedDetails,
+    );
     expect(db.getHistory()[0]?.binds).toEqual([
       "ddr-repair-required-event",
     ]);
@@ -375,22 +387,6 @@ describe("repair tasks", () => {
     } finally {
       db.close();
     }
-  });
-
-  it("returns an empty DDR detail projection when no active task rows exist", async () => {
-    const db = mockRepairD1([
-      {
-        match: "COUNT(*) OVER ()",
-        rows: [],
-      },
-    ]);
-
-    await expect(loadDdrRepairDebtDetails(db)).resolves.toEqual({
-      checkedAt: null,
-      count: 0,
-      events: [],
-      eventsTruncated: false,
-    });
   });
 
   it("reports an empty execution run without claiming rows", async () => {

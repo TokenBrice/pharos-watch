@@ -40,195 +40,69 @@ export interface AdapterCorpusCase {
   drift: AdapterCorpusDrift;
 }
 
-export const CORPUS_NOT_REPLAYABLE: Record<string, string> = {
-  "abracadabra":
-    "No bound catalog coin yet (retired, parked, staged or newly declared key), so there is nothing to replay; parser behaviour stays owned by abracadabra.test.ts.",
-  "anchorage-independent-assurance":
-    "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by anchorage-independent-assurance.test.ts.",
-  "agora-independent-assurance":
-    "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by agora-independent-assurance.test.ts.",
-  "attestation-pdf-index":
-    "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by attestation-pdf-index.test.ts.",
-  "audd-independent-assurance":
-    "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by audd-independent-assurance.test.ts.",
-  "audx-independent-assurance":
-    "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by its adapter test file.",
-  "brla-independent-assurance":
-    "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by brla-independent-assurance.test.ts.",
-  "cadd-independent-assurance":
-    "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by cadd-independent-assurance.test.ts.",
-  "europ-independent-assurance":
-    "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by its adapter test file.",
-  "fdusd-independent-assurance":
-    "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by fdusd-independent-assurance.test.ts.",
-  "fidd-independent-assurance":
-    "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by fidd-independent-assurance.test.ts.",
-  "gemini-independent-assurance":
-    "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by gemini-independent-assurance.test.ts.",
-  "issuer-attested-report":
-    "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by issuer-attested-report.test.ts.",
-  "openeden-usdo":
-    "No bound catalog coin yet (retired, parked, staged or newly declared key), so there is nothing to replay; parser behaviour stays owned by its adapter test file.",
-  "rlusd-independent-assurance":
-    "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by rlusd-independent-assurance.test.ts.",
-  "sbc-independent-assurance":
-    "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by sbc-independent-assurance.test.ts.",
-  "straitsx-independent-assurance":
-    "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by independent-assurance.test.ts.",
-  "stoneyield-router-pool":
-    "No bound catalog coin yet (retired, parked, staged or newly declared key), so there is nothing to replay; parser behaviour stays owned by stoneyield-router-pool.test.ts.",
-  "paxos-independent-assurance":
-    "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by paxos-independent-assurance.test.ts.",
-  "usdh-native-markets":
-    "No bound catalog coin yet (retired, parked, staged or newly declared key), so there is nothing to replay; parser behaviour stays owned by usdh-native-markets.test.ts.",
-  "usdy-holdings-report":
-    "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by usdy-holdings-report.test.ts.",
-};
+function reasonsFromNames(
+  names: readonly string[],
+  reasonFor: (name: string) => string,
+  overrides: Readonly<Record<string, string>> = {},
+): Record<string, string> {
+  return Object.fromEntries(names.map((name) => [name, overrides[name] ?? reasonFor(name)]));
+}
 
-export const CORPUS_BACKLOG: Record<string, string> = {
-  "money-llamma":
-    "On-chain LLAMMA census; the adapter test mocks fetchOnchainMulticall3/fetchDefiLlamaPrices/pinnedBlockPlan directly and no wire capture is committed yet (owner: P4HedgecoreMoneySpusd).",
-  "hylo-solana":
-    "Bound to hyusd-hylo but no committed wire capture yet; the happy path and its failure modes are owned by hylo-solana.test.ts.",
-  "3jane-usd3":
-    "No committed wire capture yet; the happy path and its failure modes are owned by 3jane-usd3.test.ts.",
-  "accountable":
-    "No committed wire capture yet; the happy path and its failure modes are owned by accountable.test.ts.",
-  "anzen-usdz":
-    "No committed wire capture yet; the happy path and its failure modes are owned by anzen-usdz.test.ts.",
-  "moc-doc":
-    "No committed wire capture yet; the happy path and its failure modes are owned by moc-doc.test.ts.",
-  "moc-v3-buckets":
-    "No committed wire capture yet; the happy path and its failure modes are owned by its adapter test file.",
-  "astherus-earn-wrapper":
-    "No committed wire capture yet; the happy path and its failure modes are owned by astherus-earn-wrapper.test.ts.",
-  "blast-usdb-yield-manager":
-    "No committed wire capture yet; the happy path and its failure modes are owned by blast-usdb-yield-manager.test.ts.",
-  "bridge-transparency":
-    "No committed wire capture yet; the happy path and its failure modes are owned by bridge-transparency.test.ts.",
-  "cap-vault":
-    "No committed wire capture yet; the happy path and its failure modes are owned by cap-vault.test.ts.",
-  "chainlink-nav":
-    "No committed wire capture yet; the happy path and its failure modes are owned by chainlink-nav.test.ts.",
-  "chronicle-nav":
-    "No committed wire capture yet; the happy path and its failure modes are owned by chronicle-nav.test.ts.",
-  "chainlink-por":
-    "No committed wire capture yet; the happy path and its failure modes are owned by chainlink-por.test.ts.",
-  "circle-transparency":
-    "No committed wire capture yet; the happy path and its failure modes are owned by circle-transparency.test.ts.",
-  "collateral-positions-api":
-    "No committed wire capture yet; the happy path and its failure modes are owned by collateral-positions-api.test.ts.",
-  "crvusd":
-    "No committed wire capture yet; the happy path and its failure modes are owned by crvusd.test.ts.",
-  "curated-validated":
-    "No committed wire capture yet; the happy path and its failure modes are owned by curated-validated.test.ts.",
-  "usdai-hub":
-    "No committed wire capture yet; the happy path and its failure modes are owned by usdai-hub.test.ts.",
-  "dola-inverse":
-    "No committed wire capture yet; the happy path and its failure modes are owned by dola-inverse.test.ts.",
-  "erc4626-single-asset":
-    "No committed wire capture yet; the happy path and its failure modes are owned by erc4626-single-asset.test.ts.",
-  "escrow-balance":
-    "No committed wire capture yet; the happy path and its failure modes are owned by escrow-balance.test.ts.",
-  "evm-branch-balances":
-    "No committed wire capture yet; the happy path and its failure modes are owned by evm-branch-balances.test.ts.",
-  "parallelizer-balances":
-    "No committed wire capture yet; the happy path and its failure modes are owned by parallelizer-balances.test.ts.",
-  "xdai-bridge":
-    "No committed wire capture yet; the happy path and its failure modes are owned by xdai-bridge.test.ts.",
-  "xpr-account-balances":
-    "No committed wire capture yet; the happy path and its failure modes are owned by xpr-account-balances.test.ts.",
-  "flying-tulip-ftusd":
-    "No committed wire capture yet; the happy path and its failure modes are owned by flying-tulip-ftusd.test.ts.",
-  "frax-balance-sheet":
-    "No committed wire capture yet; the happy path and its failure modes are owned by its adapter test file.",
-  "frax-fpi-collateral":
-    "No committed wire capture yet; the happy path and its failure modes are owned by its adapter test file.",
-  "fx":
-    "No committed wire capture yet; the happy path and its failure modes are owned by fx.test.ts.",
-  "sodax-sonic":
-    "No committed wire capture yet; the happy path and its failure modes are owned by its adapter test file.",
-  "gho":
-    "No committed wire capture yet; the happy path and its failure modes are owned by gho.test.ts.",
-  "hive-hbd-protocol":
-    "No committed wire capture yet; the happy path and its failure modes are owned by hive-hbd-protocol.test.ts.",
-  "idle-cdo-epoch-variant":
-    "No committed wire capture yet; the happy path and its failure modes are owned by idle-cdo-epoch-variant.test.ts.",
-  "infinifi":
-    "No committed wire capture yet; the happy path and its failure modes are owned by infinifi.test.ts.",
-  "initia-wrapper-vault":
-    "No committed wire capture yet; the happy path and its failure modes are owned by initia-wrapper-vault.test.ts.",
-  "kava-cdp":
-    "No committed wire capture yet; the happy path and its failure modes are owned by kava-cdp.test.ts.",
-  "hliquity-hedera":
-    "No committed wire capture yet; the happy path and its failure modes are owned by hliquity-hedera.test.ts.",
-  "krwq-custodian":
-    "No committed wire capture yet; the happy path and its failure modes are owned by krwq-custodian.test.ts.",
-  "liquity-v1":
-    "No committed wire capture yet; the happy path and its failure modes are owned by liquity-v1.test.ts.",
-  "liquity-native-active-pool":
-    "No committed wire capture yet; the happy path and its failure modes are owned by liquity-native-active-pool.test.ts.",
-  "liquity-v2-branches":
-    "No committed wire capture yet; the happy path and its failure modes are owned by liquity-v2-branches.test.ts.",
-  "m0":
-    "No committed wire capture yet; the happy path and its failure modes are owned by m0.test.ts.",
-  "m0-wrapper-underlying":
-    "No committed wire capture yet; the happy path and its failure modes are owned by m0-wrapper-underlying.test.ts.",
-  "megausd-custody":
-    "No committed wire capture yet; the happy path and its failure modes are owned by megausd-custody.test.ts.",
-  "mento":
-    "No committed wire capture yet; the happy path and its failure modes are owned by mento.test.ts.",
-  "nest-vault-positions":
-    "No committed wire capture yet; the happy path and its failure modes are owned by nest-vault-positions.test.ts.",
-  "origin-vault-balances":
-    "No committed wire capture yet; the happy path and its failure modes are owned by origin-vault-balances.test.ts.",
-  "quantoz-transparency":
-    "No committed wire capture yet; the happy path and its failure modes are owned by quantoz-transparency.test.ts.",
-  "re-metrics":
-    "No committed wire capture yet; the happy path and its failure modes are owned by re-metrics.test.ts.",
-  "reserve-protocol-dtf":
-    "No committed wire capture yet; the happy path and its failure modes are owned by reserve-protocol-dtf.test.ts.",
-  "sgforge-coinvertible":
-    "No committed wire capture yet; the happy path and its failure modes are owned by sgforge-coinvertible.test.ts.",
-  "saturn-pyusdx":
-    "No committed wire capture yet; the happy path and its failure modes are owned by saturn-pyusdx.test.ts.",
-  "solstice-attestation":
-    "No committed wire capture yet; the happy path and its failure modes are owned by solstice-attestation.test.ts.",
-  "solomon-protocol":
-    "No committed wire capture yet; the happy path and its failure modes are owned by solomon-protocol.test.ts.",
-  "superstate-liquidity":
-    "No committed wire capture yet; the happy path and its failure modes are owned by superstate-liquidity.test.ts.",
-  "united-por":
-    "No committed wire capture yet; the happy path and its failure modes are owned by united-por.test.ts.",
-  "usdgo-transparency":
-    "No committed wire capture yet; the happy path and its failure modes are owned by usdgo-transparency.test.ts.",
-  "usdai-proof-of-reserves":
-    "No committed wire capture yet; the happy path and its failure modes are owned by usdai-proof-of-reserves.test.ts.",
-  "usd1-bundle-oracle":
-    "No committed wire capture yet; the happy path and its failure modes are owned by usd1-bundle-oracle.test.ts.",
-  "yamato":
-    "No committed wire capture yet; the happy path and its failure modes are owned by yamato.test.ts.",
-  "youves-tezos":
-    "No committed wire capture yet; the happy path and its failure modes are owned by youves-tezos.test.ts.",
-  "zephyr-scanner":
-    "No committed wire capture yet; the happy path and its failure modes are owned by zephyr-scanner.test.ts.",
-  "djed-cardano":
-    "No committed wire capture yet; the happy path and its failure modes are owned by its adapter test file.",
-  "dgld-gold-mapper":
-    "No committed wire capture yet; the happy path and its failure modes are owned by dgld-gold-mapper.test.ts.",
-  "matrixdock-frs":
-    "No committed wire capture yet; the happy path and its failure modes are owned by matrixdock-frs.test.ts.",
-  "icp-gldt":
-    "On-chain ICP canister reads; the committed capture covers the swap canister's get_swap_configs candid reply only, and the balance/ledger-supply reads are owned by icp-gldt.test.ts (owner: P4GldtFinish).",
-  "onre-holdings-csv":
-    "No committed wire capture yet; the happy path and its failure modes are owned by its adapter test file.",
-  "avant-reserves-api":
-    "No committed wire capture yet; the happy path and its failure modes are owned by its adapter test file.",
-  "afi-proof":
-    "No committed wire capture yet; the happy path and its failure modes are owned by its adapter test file.",
-  "kerne-signed-por":
-    "Pre-launch kUSD adapter; the signed payload is synthetic test data rather than a committed wire capture, so replay remains owned by kerne-signed-por.test.ts.",
+const CORPUS_NOT_REPLAYABLE_NAMES = [
+  "abracadabra", "anchorage-independent-assurance", "agora-independent-assurance", "attestation-pdf-index",
+  "audd-independent-assurance", "audx-independent-assurance", "brla-independent-assurance", "cadd-independent-assurance",
+  "europ-independent-assurance", "fdusd-independent-assurance", "fidd-independent-assurance", "gemini-independent-assurance",
+  "issuer-attested-report", "openeden-usdo", "rlusd-independent-assurance", "sbc-independent-assurance",
+  "straitsx-independent-assurance", "stoneyield-router-pool", "paxos-independent-assurance", "usdh-native-markets",
+  "usdy-holdings-report",
+] as const;
+const UNBOUND_CORPUS_NAMES: Record<string, true> = {
+  abracadabra: true, "openeden-usdo": true, "stoneyield-router-pool": true, "usdh-native-markets": true,
 };
+export const CORPUS_NOT_REPLAYABLE = reasonsFromNames(
+  CORPUS_NOT_REPLAYABLE_NAMES,
+  (name) => UNBOUND_CORPUS_NAMES[name]
+    ? `No bound catalog coin yet (retired, parked, staged or newly declared key), so there is nothing to replay; parser behaviour stays owned by ${name}.test.ts.`
+    : `Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by ${name}.test.ts.`,
+  {
+    "audx-independent-assurance": "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by independent-assurance.test.ts.",
+    "europ-independent-assurance": "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by its adapter test file.",
+    "openeden-usdo": "No bound catalog coin yet (retired, parked, staged or newly declared key), so there is nothing to replay; parser behaviour stays owned by its adapter test file.",
+    "straitsx-independent-assurance": "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by independent-assurance.test.ts.",
+  },
+);
+
+const CORPUS_BACKLOG_NAMES = [
+  "money-llamma", "hylo-solana", "3jane-usd3", "accountable", "anzen-usdz", "moc-doc", "moc-v3-buckets",
+  "astherus-earn-wrapper", "blast-usdb-yield-manager", "bridge-transparency", "cap-vault", "chainlink-nav",
+  "chronicle-nav", "chainlink-por", "circle-transparency", "collateral-positions-api", "crvusd", "curated-validated",
+  "usdai-hub", "dola-inverse", "erc4626-single-asset", "escrow-balance", "evm-branch-balances", "parallelizer-balances",
+  "xdai-bridge", "xpr-account-balances", "flying-tulip-ftusd", "frax-balance-sheet", "frax-fpi-collateral", "fx",
+  "sodax-sonic", "gho", "hive-hbd-protocol", "idle-cdo-epoch-variant", "infinifi", "initia-wrapper-vault",
+  "kava-cdp", "hliquity-hedera", "krwq-custodian", "liquity-v1", "liquity-native-active-pool", "liquity-v2-branches",
+  "m0", "m0-wrapper-underlying", "megausd-custody", "mento", "nest-vault-positions", "origin-vault-balances",
+  "quantoz-transparency", "re-metrics", "reserve-protocol-dtf", "sgforge-coinvertible", "saturn-pyusdx",
+  "solstice-attestation", "solomon-protocol", "superstate-liquidity", "united-por", "usdgo-transparency",
+  "usdai-proof-of-reserves", "usd1-bundle-oracle", "yamato", "youves-tezos", "zephyr-scanner", "djed-cardano",
+  "dgld-gold-mapper", "matrixdock-frs", "icp-gldt", "onre-holdings-csv", "avant-reserves-api", "afi-proof",
+  "kerne-signed-por",
+] as const;
+const GENERIC_BACKLOG_OWNERS: Record<string, true> = {
+  "moc-v3-buckets": true, "frax-balance-sheet": true, "frax-fpi-collateral": true, "sodax-sonic": true,
+  "djed-cardano": true, "onre-holdings-csv": true, "avant-reserves-api": true, "afi-proof": true,
+};
+export const CORPUS_BACKLOG = reasonsFromNames(
+  CORPUS_BACKLOG_NAMES,
+  (name) => GENERIC_BACKLOG_OWNERS[name]
+    ? "No committed wire capture yet; the happy path and its failure modes are owned by its adapter test file."
+    : `No committed wire capture yet; the happy path and its failure modes are owned by ${name}.test.ts.`,
+  {
+    "money-llamma": "On-chain LLAMMA census; the adapter test mocks fetchOnchainMulticall3/fetchDefiLlamaPrices/pinnedBlockPlan directly and no wire capture is committed yet (owner: P4HedgecoreMoneySpusd).",
+    "hylo-solana": "Bound to hyusd-hylo but no committed wire capture yet; the happy path and its failure modes are owned by hylo-solana.test.ts.",
+    "icp-gldt": "On-chain ICP canister reads; the committed capture covers the swap canister's get_swap_configs candid reply only, and the balance/ledger-supply reads are owned by icp-gldt.test.ts (owner: P4GldtFinish).",
+    "kerne-signed-por": "Pre-launch kUSD adapter; the signed payload is synthetic test data rather than a committed wire capture, so replay remains owned by kerne-signed-por.test.ts.",
+  },
+);
 
 const TETHER_ENDPOINT = "https://app.tether.to/transparency.json";
 // Captured 2026-07-09 from GET https://app.tether.to/transparency.json, trimmed

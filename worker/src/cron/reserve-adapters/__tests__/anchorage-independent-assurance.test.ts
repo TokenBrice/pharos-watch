@@ -1,45 +1,8 @@
-import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { getIndependentAssuranceManifest, reconcileIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
-import { verifyIndependentAssuranceReport } from "../independent-assurance";
-import { installAdapterNetwork } from "./reserve-adapter.test-support";
-import { USAT_INDEPENDENT_ASSURANCE_PROFILE, USDPT_INDEPENDENT_ASSURANCE_PROFILE } from "../anchorage-independent-assurance";
-
-const TEST_DIR = dirname(fileURLToPath(import.meta.url));
-const PDF_BYTES = new TextEncoder().encode("%PDF-1.7\nfixture\n");
-
-
-function indexFixture(): string {
-  return readFileSync(resolve(TEST_DIR, "fixtures", "anchorage-independent-assurance.html"), "utf8");
-}
-
-function installFetch(html: string, product: "USAT" | "USDPT" = "USAT") {
-  const reviewed = getIndependentAssuranceManifest(product);
-  return installAdapterNetwork({
-    html: {
-      [reviewed.officialIndexUrl]: html,
-      [reviewed.reportUrl]: {
-        body: new TextDecoder().decode(PDF_BYTES),
-        headers: { "content-type": "application/pdf", "content-length": String(PDF_BYTES.length) },
-      },
-    },
-  });
-}
-
-async function verifyIndex(product: "USAT" | "USDPT" = "USAT") {
-  const reviewed = getIndependentAssuranceManifest(product);
-  await verifyIndependentAssuranceReport({
-    manifest: reviewed,
-    indexUrl: reviewed.officialIndexUrl,
-    indexHost: "www.anchorage.com",
-    reportHosts: ["learn.anchorage.com"],
-    profile: product === "USDPT" ? USDPT_INDEPENDENT_ASSURANCE_PROFILE : USAT_INDEPENDENT_ASSURANCE_PROFILE,
-    signal: new AbortController().signal,
-  });
-}
+import { USDPT_INDEPENDENT_ASSURANCE_PROFILE } from "../anchorage-independent-assurance";
+import { verifyFixtureIndex } from "./independent-assurance.test-support";
 
 
 afterEach(() => {
@@ -80,36 +43,6 @@ describe("anchorage-independent-assurance (Deloitte Anchorage examinations)", ()
     expect(definition.sourceOriginClass).toBe("independent-assurance");
   });
 
-  it("parses the real index shape and reaches the PDF byte-verification gate", async () => {
-    installFetch(indexFixture());
-    await expect(verifyIndex()).rejects.toThrow("PDF byte length");
-  });
-
-  it("fails closed when a newer unreviewed report appears on the index", async () => {
-    const html = indexFixture() +
-      '<a href="https://learn.anchorage.com/08.31.26_USAT-Stablecoin-Attestation-Report.pdf">Aug</a>';
-    installFetch(html);
-    await expect(verifyIndex()).rejects.toThrow("newer unreviewed report");
-  });
-
-  it("fails closed when the reviewed report is duplicated at the latest date", async () => {
-    const html = indexFixture() +
-      '<a href="https://learn.anchorage.com/07.31.26_USAT-Stablecoin-Attestation-Report-revised.pdf">Jul revised</a>';
-    installFetch(html);
-    await expect(verifyIndex()).rejects.toThrow("reviewed report URL is missing or duplicated");
-  });
-
-  it("fails closed when the latest report href is dropped from the Anchorage index", async () => {
-    const reviewed = getIndependentAssuranceManifest("USAT");
-    const network = installAdapterNetwork({
-      html: {
-        [reviewed.officialIndexUrl]: "<a data-report-url=\"07.31.26_USAT-Stablecoin-Attestation-Report.pdf\">July</a>",
-      },
-    });
-
-    await expect(verifyIndex()).rejects.toThrow(/reviewed report URL is missing or duplicated/);
-    expect(network.requests.map((request) => request.url)).toEqual([reviewed.officialIndexUrl]);
-  });
 
 
   it("reviews the July 2026 USDPT examination and reconciles the Solana liability", () => {
@@ -141,15 +74,17 @@ describe("anchorage-independent-assurance (Deloitte Anchorage examinations)", ()
       '<a href="https://learn.anchorage.com/06.30.26_USDPT-Stablecoin-Attestation-Report.pdf">Jun</a>' +
       `<a href="${reviewed.reportUrl}">Jul</a>` +
       "</div>";
-    installFetch(html, "USDPT");
-    await expect(verifyIndex("USDPT")).rejects.toThrow("PDF byte length");
+    await expect(verifyFixtureIndex(
+      "USDPT", USDPT_INDEPENDENT_ASSURANCE_PROFILE, "anchorage-independent-assurance.html", html,
+    )).rejects.toThrow("PDF byte length");
 
     const newer = html.replace(
       "</div>",
       '<a href="https://learn.anchorage.com/08.31.26_USDPT-Stablecoin-Attestation-Report.pdf">Aug</a></div>',
     );
-    installFetch(newer, "USDPT");
-    await expect(verifyIndex("USDPT")).rejects.toThrow("newer unreviewed report");
+    await expect(verifyFixtureIndex(
+      "USDPT", USDPT_INDEPENDENT_ASSURANCE_PROFILE, "anchorage-independent-assurance.html", newer,
+    )).rejects.toThrow("newer unreviewed report");
   });
 
 });

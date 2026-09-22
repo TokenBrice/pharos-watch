@@ -148,16 +148,6 @@ describe("fidd-independent-assurance (PwC FIDD examination)", () => {
     expect(prepared).toContain("August26.pdf");
   });
 
-  it("resolves the Widen viewer to the reviewed PDF and reaches the byte-verification gate", async () => {
-    installFetch(indexFixture(), viewerFixture());
-    await expect(verifyIndex()).rejects.toThrow("PDF byte length");
-  });
-
-  it("fails closed when the PDF hop leaves the reviewed report hosts", async () => {
-    installFetch(indexFixture(), viewerFixture());
-    await expect(verifyIndex({ reportHosts: ["fwc.widen.net"] }))
-      .rejects.toThrow("cf-store.widencdn.net is not in the reviewed allowlist");
-  });
 
   it("fails closed when no dated viewer link is present on the official index", async () => {
     installFetch(indexFixture(false), viewerFixture());

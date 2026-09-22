@@ -1,5 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 } from "@shared/test-utils/mock-d1";
+import { mockD1Strict } from "@shared/test-utils/mock-d1";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
@@ -8,7 +8,7 @@ import {
   fpiControllerState,
   route,
   severeMarketEvidence,
-  snapshot,
+  liveSnapshot,
 } from "./redemption-backstop-sources.test-support";
 
 const getReserveSyncStateMock = vi.fn();
@@ -29,14 +29,52 @@ describe("buildRedemptionBackstopEntry", () => {
   let buildFailedRedemptionBackstopEntry: typeof import("../redemption-backstop/sources").buildFailedRedemptionBackstopEntry;
   const now = 1_700_000_000;
   const fixedFeeCases = [
-    { feeBps: 0, expectedScore: 100 },
-    { feeBps: 25, expectedScore: 80 },
-    { feeBps: 75, expectedScore: 60 },
-    { feeBps: 200, expectedScore: 40 },
+    { feeBps: 0, expectedScore: 100 }, { feeBps: 25, expectedScore: 80 },
+    { feeBps: 75, expectedScore: 60 }, { feeBps: 200, expectedScore: 40 },
   ] as const;
 
   type RedemptionConfig = Parameters<typeof buildRedemptionBackstopEntry>[2];
   type BuildOptions = Parameters<typeof buildRedemptionBackstopEntry>[6];
+  const liveDirectCoinCases = [
+    { description: "LUSD Liquity v1 system debt", stablecoinId: "lusd-liquity",
+      supplyUsd: 100_000_000, dexScore: null,
+      metadata: { freshnessMode: "not-applicable", redemption: {
+        capacityUsd: 84_000_000, capacityKind: "live-direct-bounded",
+        freshnessKind: "same-run-onchain", feeBps: 50,
+      } },
+      overrides: { fetchedAt: now - 120, source: "liquity-v1", sourceModel: "single-bucket" },
+      expected: { sourceMode: "dynamic", capacitySemantics: "immediate-bounded",
+        immediateCapacityUsd: 84_000_000, immediateCapacityRatio: 0.84,
+        capacityBasis: "live-direct-telemetry", feeBps: 50 } },
+    { description: "fxSAVE ERC-4626 idle fxSP", stablecoinId: "fxsave-f-x-protocol",
+      supplyUsd: 10_000_000, dexScore: 20,
+      metadata: { freshnessMode: "not-applicable",
+        assetAddress: "0x65c9a641afceb9c0e6034e558a319488fa0fa3be", redemption: {
+          capacityUsd: 2_000_000, capacityRatioOfSupply: 0.2, capacityKind: "live-direct",
+          freshnessKind: "same-run-onchain", routeStatus: "unknown", routeStatusSource: "onchain",
+        } },
+      overrides: { fetchedAt: now - 120, source: "erc4626-single-asset", sourceModel: "single-bucket" },
+      expected: { sourceMode: "dynamic", capacityBasis: "live-direct-telemetry",
+        capacitySemantics: "immediate-bounded", immediateCapacityUsd: 2_000_000,
+        immediateCapacityRatio: 0.2 } },
+    { description: "BOLD Liquity v2 branch debt", stablecoinId: "bold-liquity",
+      supplyUsd: 40_000_000, dexScore: null,
+      metadata: { freshnessMode: "not-applicable", redemption: {
+        capacityUsd: 32_000_000, capacityKind: "live-direct-bounded",
+        freshnessKind: "same-run-onchain", routeStatus: "open",
+        routeStatusSource: "onchain", feeBps: 52,
+      } },
+      overrides: { fetchedAt: now - 120, source: "liquity-v2-branches" },
+      expected: { sourceMode: "dynamic", capacitySemantics: "immediate-bounded",
+        immediateCapacityUsd: 32_000_000, immediateCapacityRatio: 0.8,
+        capacityBasis: "live-direct-telemetry", feeBps: 52 } },
+    { description: "ZCHF CHFAU StablecoinBridge route", stablecoinId: "zchf-frankencoin",
+      supplyUsd: 27_682_881.200551473, dexScore: 35,
+      metadata: { redemption: { capacityUsd: 362_655.25 }, freshnessMode: "unverified" },
+      overrides: { fetchedAt: now - 300, source: "collateral-positions-api" },
+      expected: { routeFamily: "stablecoin-redeem", immediateCapacityUsd: 362_655.25,
+        feeBps: 0, feeConfidence: "fixed" } },
+  ] as const;
 
   const buildEntry = (
     stablecoinId: string,
@@ -45,7 +83,7 @@ describe("buildRedemptionBackstopEntry", () => {
     dexScore: number | null,
     options?: BuildOptions,
   ) => buildEntryFixture(buildRedemptionBackstopEntry, {
-    db: mockD1(),
+    db: mockD1Strict([]),
     stablecoinId,
     route: config,
     supplyUsd,
@@ -286,7 +324,7 @@ describe("buildRedemptionBackstopEntry", () => {
       100_000_000,
       null,
       {
-        reserveSnapshotMetadata: snapshot("bold-liquity", {
+        reserveSnapshotMetadata: liveSnapshot("bold-liquity", {
           redemption: { feeBps: 50 },
           freshnessMode: "not-applicable",
         }, {
@@ -338,7 +376,7 @@ describe("buildRedemptionBackstopEntry", () => {
       50_000_000,
       null,
       {
-        reserveSnapshotMetadata: snapshot("lusd-liquity", {
+        reserveSnapshotMetadata: liveSnapshot("lusd-liquity", {
           redemption: {
             capacityUsd: 7_500_000,
             capacityRatioOfSupply: 0.15,
@@ -371,7 +409,7 @@ describe("buildRedemptionBackstopEntry", () => {
       20_000_000,
       null,
       {
-        reserveSnapshotMetadata: snapshot("lusd-liquity", {
+        reserveSnapshotMetadata: liveSnapshot("lusd-liquity", {
           freshnessMode: "not-applicable",
           redemption: {
             capacityUsd: 0,
@@ -406,7 +444,7 @@ describe("buildRedemptionBackstopEntry", () => {
       20_000_000,
       null,
       {
-        reserveSnapshotMetadata: snapshot("lusd-liquity", {
+        reserveSnapshotMetadata: liveSnapshot("lusd-liquity", {
           freshnessMode: "not-applicable",
           redemption: {
             capacityUsd: 0,
@@ -452,7 +490,7 @@ describe("buildRedemptionBackstopEntry", () => {
       20_000_000,
       null,
       {
-        reserveSnapshotMetadata: snapshot("lusd-liquity", {
+        reserveSnapshotMetadata: liveSnapshot("lusd-liquity", {
           freshnessMode: "not-applicable",
           redemption: {
             capacityUsd: 0,
@@ -490,7 +528,7 @@ describe("buildRedemptionBackstopEntry", () => {
       50_000_000,
       null,
       {
-        reserveSnapshotMetadata: snapshot("usdo-openeden", {
+        reserveSnapshotMetadata: liveSnapshot("usdo-openeden", {
           redemption: {
             capacityUsd: 1,
             feeBps: 99,
@@ -553,7 +591,7 @@ describe("buildRedemptionBackstopEntry", () => {
       100_000_000,
       null,
       {
-        reserveSnapshotMetadata: snapshot("usde-ethena", {
+        reserveSnapshotMetadata: liveSnapshot("usde-ethena", {
           freshnessMode: "verified",
           sourceTimestamp: now - 120,
           redemption: {
@@ -597,7 +635,7 @@ describe("buildRedemptionBackstopEntry", () => {
       5_800_000,
       null,
       {
-        reserveSnapshotMetadata: snapshot(
+        reserveSnapshotMetadata: liveSnapshot(
           "dusd-dialectic",
           dusdOpenQueueMetadata(now),
           { fetchedAt: now - 120, source: "makina-strategy" },
@@ -637,7 +675,7 @@ describe("buildRedemptionBackstopEntry", () => {
       5_800_000,
       null,
       {
-        reserveSnapshotMetadata: snapshot("dusd-dialectic", {
+        reserveSnapshotMetadata: liveSnapshot("dusd-dialectic", {
           freshnessMode: "verified",
           sourceTimestamp: now - 120,
           redemption: {
@@ -672,7 +710,7 @@ describe("buildRedemptionBackstopEntry", () => {
       100_000_000,
       null,
       {
-        reserveSnapshotMetadata: snapshot("cusd-cap", {
+        reserveSnapshotMetadata: liveSnapshot("cusd-cap", {
           freshnessMode: "not-applicable",
           redemption: {
             capacityUsd: 10_000_000,
@@ -710,7 +748,7 @@ describe("buildRedemptionBackstopEntry", () => {
       100_000_000,
       null,
       {
-        reserveSnapshotMetadata: snapshot("cusd-cap", {
+        reserveSnapshotMetadata: liveSnapshot("cusd-cap", {
           freshnessMode: "not-applicable",
           redemption: {
             capacityUsd: 10_000_000,
@@ -746,7 +784,7 @@ describe("buildRedemptionBackstopEntry", () => {
       100_000_000,
       null,
       {
-        reserveSnapshotMetadata: snapshot("cusd-cap", {
+        reserveSnapshotMetadata: liveSnapshot("cusd-cap", {
           freshnessMode: "not-applicable",
           redemption: {
             capacityUsd: 10_000_000,
@@ -778,7 +816,7 @@ describe("buildRedemptionBackstopEntry", () => {
       100_000_000,
       null,
       {
-        reserveSnapshotMetadata: snapshot("test-coin", {
+        reserveSnapshotMetadata: liveSnapshot("test-coin", {
           freshnessMode: "not-applicable",
           redemption: {
             capacityUsd: 10_000_000,
@@ -800,126 +838,20 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.notes).toContain("Live redemption route status is unknown without source attribution");
   });
 
-  it("uses LUSD Liquity v1 system debt as live direct redemption capacity", async () => {
-    const config = getRedemptionBackstopConfig("lusd-liquity");
-    expect(config).not.toBeNull();
-
-    const entry = await buildEntry("lusd-liquity", config!, 100_000_000, null, {
-      reserveSnapshotMetadata: snapshot("lusd-liquity", {
-        freshnessMode: "not-applicable",
-        redemption: {
-          capacityUsd: 84_000_000,
-          capacityKind: "live-direct-bounded",
-          freshnessKind: "same-run-onchain",
-          feeBps: 50,
-        },
-      }, { fetchedAt: now - 120, source: "liquity-v1", sourceModel: "single-bucket" }),
-    });
-
-    expect(entry.provider).toBe("reserve-sync-metadata");
-    expect(entry.sourceMode).toBe("dynamic");
-    expect(entry.resolutionState).toBe("resolved");
-    expect(entry.capacityConfidence).toBe("live-direct");
-    expect(entry.capacitySemantics).toBe("immediate-bounded");
-    expect(entry.immediateCapacityUsd).toBe(84_000_000);
-    expect(entry.immediateCapacityRatio).toBe(0.84);
-    expect(entry.capacityBasis).toBe("live-direct-telemetry");
-    expect(entry.feeBps).toBe(50);
-    expect(entry.modelConfidence).toBe("high");
-  });
-
-  it("uses fxSAVE ERC-4626 idle fxSP as Safety-eligible live direct redemption capacity", async () => {
-    const config = getRedemptionBackstopConfig("fxsave-f-x-protocol");
-    expect(config).not.toBeNull();
-
-    const entry = await buildEntry(
-      "fxsave-f-x-protocol",
-      config!,
-      10_000_000,
-      20,
-      {
-        reserveSnapshotMetadata: snapshot("fxsave-f-x-protocol", {
-          freshnessMode: "not-applicable",
-          assetAddress: "0x65c9a641afceb9c0e6034e558a319488fa0fa3be",
-          redemption: {
-            capacityUsd: 2_000_000,
-            capacityRatioOfSupply: 0.2,
-            capacityKind: "live-direct",
-            freshnessKind: "same-run-onchain",
-            routeStatus: "unknown",
-            routeStatusSource: "onchain",
-          },
-        }, { fetchedAt: now - 120, source: "erc4626-single-asset", sourceModel: "single-bucket" }),
-      },
-    );
-
-    expect(entry.provider).toBe("reserve-sync-metadata");
-    expect(entry.sourceMode).toBe("dynamic");
-    expect(entry.resolutionState).toBe("resolved");
-    expect(entry.capacityConfidence).toBe("live-direct");
-    expect(entry.capacityBasis).toBe("live-direct-telemetry");
-    expect(entry.capacitySemantics).toBe("immediate-bounded");
-    expect(entry.immediateCapacityUsd).toBe(2_000_000);
-    expect(entry.immediateCapacityRatio).toBe(0.2);
-    expect(entry.modelConfidence).toBe("high");
-  });
-
-  it("uses BOLD Liquity v2 branch debt as live direct redemption capacity", async () => {
-    const config = getRedemptionBackstopConfig("bold-liquity");
-    expect(config).not.toBeNull();
-
-    const entry = await buildEntry("bold-liquity", config!, 40_000_000, null, {
-      reserveSnapshotMetadata: snapshot("bold-liquity", {
-        freshnessMode: "not-applicable",
-        redemption: {
-          capacityUsd: 32_000_000,
-          capacityKind: "live-direct-bounded",
-          freshnessKind: "same-run-onchain",
-          routeStatus: "open",
-          routeStatusSource: "onchain",
-          feeBps: 52,
-        },
-      }, { fetchedAt: now - 120, source: "liquity-v2-branches" }),
-    });
-
-    expect(entry.provider).toBe("reserve-sync-metadata");
-    expect(entry.sourceMode).toBe("dynamic");
-    expect(entry.resolutionState).toBe("resolved");
-    expect(entry.capacityConfidence).toBe("live-direct");
-    expect(entry.capacitySemantics).toBe("immediate-bounded");
-    expect(entry.immediateCapacityUsd).toBe(32_000_000);
-    expect(entry.immediateCapacityRatio).toBe(0.8);
-    expect(entry.capacityBasis).toBe("live-direct-telemetry");
-    expect(entry.feeBps).toBe(52);
-    expect(entry.modelConfidence).toBe("high");
-  });
-
-  it("models the ZCHF CHFAU StablecoinBridge route with live bridge capacity and zero fee", async () => {
-    const config = getRedemptionBackstopConfig("zchf-frankencoin");
-    expect(config).not.toBeNull();
-
-    const entry = await buildEntry(
-      "zchf-frankencoin",
-      config!,
-      27_682_881.200551473,
-      35,
-      {
-        reserveSnapshotMetadata: snapshot("zchf-frankencoin", {
-          redemption: { capacityUsd: 362_655.25 },
-          freshnessMode: "unverified",
-        }, { fetchedAt: now - 300, source: "collateral-positions-api" }),
-      },
-    );
-
-    expect(entry.routeFamily).toBe("stablecoin-redeem");
-    expect(entry.resolutionState).toBe("resolved");
-    expect(entry.provider).toBe("reserve-sync-metadata");
-    expect(entry.capacityConfidence).toBe("live-direct");
-    expect(entry.immediateCapacityUsd).toBe(362_655.25);
-    expect(entry.feeBps).toBe(0);
-    expect(entry.feeConfidence).toBe("fixed");
-    expect(entry.modelConfidence).toBe("high");
-  });
+  it.each(liveDirectCoinCases)(
+    "uses $description as live direct redemption capacity",
+    async ({ stablecoinId, supplyUsd, dexScore, metadata, overrides, expected }) => {
+      const config = getRedemptionBackstopConfig(stablecoinId);
+      expect(config).not.toBeNull();
+      const entry = await buildEntry(stablecoinId, config!, supplyUsd, dexScore, {
+        reserveSnapshotMetadata: liveSnapshot(stablecoinId, metadata, overrides),
+      });
+      expect(entry).toMatchObject({
+        provider: "reserve-sync-metadata", resolutionState: "resolved",
+        capacityConfidence: "live-direct", modelConfidence: "high", ...expected,
+      });
+    },
+  );
 
   it("falls back to ratio when reserve-sync has no immediate capacity data", async () => {
     const entry = await buildEntry(
@@ -999,7 +931,7 @@ describe("buildRedemptionBackstopEntry", () => {
       50_000_000,
       null,
       {
-        reserveSnapshotMetadata: snapshot("zchf-frankencoin", {
+        reserveSnapshotMetadata: liveSnapshot("zchf-frankencoin", {
           freshnessMode: "unverified",
           details: {
             freshnessSource: "position-and-price-apis",
@@ -1145,7 +1077,7 @@ describe("buildRedemptionBackstopEntry", () => {
       50_000_000,
       33,
       {
-        reserveSnapshotMetadata: snapshot("zchf-frankencoin", {
+        reserveSnapshotMetadata: liveSnapshot("zchf-frankencoin", {
           sourceTimestamp: now - 120,
           redemption: {
             capacityUsd: 5_000_000,
@@ -1177,7 +1109,7 @@ describe("buildRedemptionBackstopEntry", () => {
       50_000_000,
       33,
       {
-        reserveSnapshotMetadata: snapshot("zchf-frankencoin", {
+        reserveSnapshotMetadata: liveSnapshot("zchf-frankencoin", {
           sourceTimestamp: now - 120,
           redemption: {
             capacityUsd: 5_000_000,
@@ -1221,7 +1153,7 @@ describe("buildRedemptionBackstopEntry", () => {
       50_000_000,
       33,
       {
-        reserveSnapshotMetadata: snapshot("zchf-frankencoin", {
+        reserveSnapshotMetadata: liveSnapshot("zchf-frankencoin", {
           sourceTimestamp: now - 7_200,
           redemption: {
             capacityUsd: 5_000_000,
@@ -1269,7 +1201,7 @@ describe("buildRedemptionBackstopEntry", () => {
       50_000_000,
       null,
       {
-        reserveSnapshotMetadata: snapshot("lusd-liquity", {
+        reserveSnapshotMetadata: liveSnapshot("lusd-liquity", {
           redemption: {
             capacityUsd: 5_000_000,
             capacityRatioOfSupply: 0.1,
@@ -1318,7 +1250,7 @@ describe("buildRedemptionBackstopEntry", () => {
       50_000_000,
       null,
       {
-        reserveSnapshotMetadata: snapshot("test-coin", {
+        reserveSnapshotMetadata: liveSnapshot("test-coin", {
           redemption: {
             capacityUsd: 10_000_000,
             capacityRatioOfSupply: 0.2,
@@ -1343,7 +1275,7 @@ describe("buildRedemptionBackstopEntry", () => {
       584_000_000,
       null,
       {
-        reserveSnapshotMetadata: snapshot("gho-aave", {
+        reserveSnapshotMetadata: liveSnapshot("gho-aave", {
           redemption: {
             capacityUsd: 212_370_000,
             capacityRatioOfSupply: 212_370_000 / 584_000_000,
@@ -1387,7 +1319,7 @@ describe("buildRedemptionBackstopEntry", () => {
       584_000_000,
       null,
       {
-        reserveSnapshotMetadata: snapshot("gho-aave", {
+        reserveSnapshotMetadata: liveSnapshot("gho-aave", {
           redemption: {
             capacityUsd: 212_370_000,
             capacityRatioOfSupply: 212_370_000 / 584_000_000,
@@ -1435,7 +1367,7 @@ describe("buildRedemptionBackstopEntry", () => {
       50_000_000,
       null,
       {
-        reserveSnapshotMetadata: snapshot("gho-aave", {
+        reserveSnapshotMetadata: liveSnapshot("gho-aave", {
           redemption: { feeBps: 7 },
           sourceTimestamp: now - 120,
         }, { fetchedAt: now - 120 }),

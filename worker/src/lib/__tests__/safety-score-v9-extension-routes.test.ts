@@ -54,6 +54,57 @@ function fixedInputStub(
   } as unknown as ReportCardsFixedInput;
 }
 
+function setPegData(fixedInput: ReportCardsFixedInput, pegDataById: Record<string, unknown>): void {
+  const mutableFixedInput = fixedInput as unknown as { pegDataById: Record<string, unknown> };
+  mutableFixedInput.pegDataById = pegDataById;
+}
+
+function redemptionPegFixture({
+  rowOverrides,
+  output,
+  pegDataById,
+  clockSec = NOW,
+  observationClockSec,
+}: {
+  rowOverrides: Partial<RedemptionBackstopEntry>;
+  output?: ExitRouteObservation["output"];
+  pegDataById?: Record<string, unknown>;
+  clockSec?: number;
+  observationClockSec?: number;
+}) {
+  const row = makeSupplyFullRedemption(rowOverrides);
+  const observationInput = fixedInputStub(row, observationClockSec ?? clockSec);
+  const observation = buildSafetyScoreV9RetainedRedemptionRoutes(
+    observationInput,
+    row.stablecoinId,
+  )[0]!.observation;
+  row.capacityProfile = {
+    ...row.capacityProfile!,
+    exitRouteObservations: [{ ...observation, ...(output ? { output } : {}) }],
+  };
+  const fixedInput = fixedInputStub(row, clockSec);
+  setPegData(fixedInput, pegDataById ?? {});
+  return { fixedInput, row };
+}
+
+function dexPegFixture({
+  assetId,
+  routeOverrides,
+  pegDataById = {},
+}: {
+  assetId: string;
+  routeOverrides: Pick<ExitRouteObservation, "routeId" | "output"> & Partial<ExitRouteObservation>;
+  pegDataById?: Record<string, unknown>;
+}) {
+  const fixedInput = fixedInputStub(undefined);
+  const route = dexRouteObservation(NOW, routeOverrides);
+  (fixedInput as { dexLiqMap: Record<string, unknown> }).dexLiqMap = {
+    [assetId]: singleObservationDexLiquidity(route),
+  };
+  setPegData(fixedInput, pegDataById);
+  return { fixedInput, route };
+}
+
 it("values reviewed physical outputs without token-price or fiat substitution", () => {
   const id = "dgld-gold-token-sa";
   const config = getRedemptionBackstopConfig(id)!;
@@ -378,56 +429,41 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     });
   });
 
-  it("projects an evidence-backed faster settlement into the scored SLA", () => {
-    const row = makeSupplyFullRedemption({
-      stablecoinId: "msusd-main-street",
-      settlementModel: "days",
-      settlementDelaySec: undefined,
-    });
-
-    withV9RouteReviewTerms(row.stablecoinId, FASTER_REVIEWED_SETTLEMENT, () => {
-      expect(buildSafetyScoreV9RouteReviews(fixedInputStub(row), row.stablecoinId)[0]).toMatchObject({
-        settlementModel: "bounded-delay",
-        settlementSlaSec: 2 * 86_400,
+  it.each([
+    {
+      scenario: "current review",
+      clockSec: NOW,
+      expectedReview: { settlementModel: "bounded-delay", settlementSlaSec: 2 * 86_400 },
+      retainedHorizonSec: 14 * 86_400,
+    },
+    {
+      scenario: "expired review",
+      clockSec: Date.UTC(2027, 6, 2) / 1_000,
+      expectedReview: {
+        settlementModel: "bounded-delay", settlementSlaSec: null, settlementHorizonSec: 14 * 86_400,
+      },
+      retainedHorizonSec: null,
+    },
+  ] as const)(
+    "projects $scenario settlement terms without widening captured bounds",
+    ({ clockSec, expectedReview, retainedHorizonSec }) => {
+      const row = makeSupplyFullRedemption({
+        stablecoinId: "msusd-main-street", settlementModel: "days", settlementDelaySec: undefined,
       });
-    });
-  });
-
-  it("does not re-widen an evidence-backed faster settlement horizon", () => {
-    const row = makeSupplyFullRedemption({
-      stablecoinId: "msusd-main-street",
-      settlementModel: "days",
-      settlementDelaySec: undefined,
-    });
-    const fixedInput = fixedInputStub(row);
-
-    withV9RouteReviewTerms(row.stablecoinId, FASTER_REVIEWED_SETTLEMENT, () => {
-      expect(
-        buildSafetyScoreV9RetainedRedemptionRoutes(fixedInput, row.stablecoinId)[0]?.observation
-          .settlementHorizonSec,
-      ).toBe(14 * 86_400);
-      expect(buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]?.settlementHorizonSec).toBe(
-        2 * 86_400,
-      );
-    });
-  });
-
-  it("expires a faster reviewed settlement back to the conservative captured horizon", () => {
-    const row = makeSupplyFullRedemption({
-      stablecoinId: "msusd-main-street",
-      settlementModel: "days",
-      settlementDelaySec: undefined,
-    });
-    const staleClock = Date.UTC(2027, 6, 2) / 1_000;
-
-    withV9RouteReviewTerms(row.stablecoinId, FASTER_REVIEWED_SETTLEMENT, () => {
-      expect(buildSafetyScoreV9RouteReviews(fixedInputStub(row, staleClock), row.stablecoinId)[0]).toMatchObject({
-        settlementModel: "bounded-delay",
-        settlementSlaSec: null,
-        settlementHorizonSec: 14 * 86_400,
+      const fixedInput = fixedInputStub(row, clockSec);
+      withV9RouteReviewTerms(row.stablecoinId, FASTER_REVIEWED_SETTLEMENT, () => {
+        expect(buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]).toMatchObject(expectedReview);
+        if (retainedHorizonSec !== null) {
+          expect(buildSafetyScoreV9RetainedRedemptionRoutes(
+            fixedInput, row.stablecoinId,
+          )[0]?.observation.settlementHorizonSec).toBe(retainedHorizonSec);
+          expect(buildSafetyScoreV9RouteReviews(
+            fixedInput, row.stablecoinId,
+          )[0]?.settlementHorizonSec).toBe(2 * 86_400);
+        }
       });
-    });
-  });
+    },
+  );
 
   it("expires a favorable settlement after the producer persisted its current reviewed model", () => {
     const stablecoinId = "usdy-ondo-finance";
@@ -506,14 +542,20 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     });
   });
 
-  it.each(["onchain", "protocol-api"] as const)("keeps %s-sourced live-direct evidence scoreable", (source) => {
-    const row = liveDirectRow(source);
-    expect(buildSafetyScoreV9RouteReviews(fixedInputStub(row), row.stablecoinId)[0]).toMatchObject({
-      lane: "redemption",
-      coverageClass: "exact-lower-bound",
-      modelConfidence: "high",
-    });
-  });
+  it.each([
+    { routeStatusSource: "onchain" },
+    { routeStatusSource: "protocol-api" },
+  ] as const)(
+    "keeps $routeStatusSource-sourced live-direct evidence scoreable",
+    ({ routeStatusSource }) => {
+      const row = liveDirectRow(routeStatusSource);
+      expect(buildSafetyScoreV9RouteReviews(fixedInputStub(row), row.stablecoinId)[0]).toMatchObject({
+        lane: "redemption",
+        coverageClass: "exact-lower-bound",
+        modelConfidence: "high",
+      });
+    },
+  );
 
   it("carries a live 30-day queue and its capacity constraints into the v9 route review", () => {
     const row = liveDirectRow("protocol-api");
@@ -580,77 +622,52 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
   });
 
   it("values a resolved stable-basket output at the weakest component's price", () => {
-    const row = makeSupplyFullRedemption({ stablecoinId: "dai-makerdao" });
-    const derived = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInputStub(row), "dai-makerdao")[0]!;
-    row.capacityProfile = {
-      ...row.capacityProfile!,
-      exitRouteObservations: [
-        {
-          ...derived.observation,
-          output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdc-circle", "usdt-tether"] },
-        },
-      ],
-    };
-    const fixedInput = fixedInputStub(row);
-    (fixedInput as { pegDataById: Record<string, unknown> }).pegDataById = {
-      "usdc-circle": { currentDeviationBps: 2, priceObservedAt: NOW },
-      "usdt-tether": { currentDeviationBps: -14, priceObservedAt: NOW },
-    };
-    const review = buildSafetyScoreV9RouteReviews(fixedInput, "dai-makerdao")[0]!;
-    expect(review.output).toMatchObject({
+    const { fixedInput, row } = redemptionPegFixture({
+      rowOverrides: { stablecoinId: "dai-makerdao" },
+      output: {
+        kind: "tracked-stablecoin",
+        trackedAssetIds: ["usdc-circle", "usdt-tether"],
+      },
+      pegDataById: {
+        "usdc-circle": { currentDeviationBps: 2, priceObservedAt: NOW },
+        "usdt-tether": { currentDeviationBps: -14, priceObservedAt: NOW },
+      },
+    });
+    expect(buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]!.output).toMatchObject({
       kind: "tracked-stablecoin",
       assetKeys: ["usdc-circle", "usdt-tether"],
       valuation: {
-        basis: "price",
-        referenceAssetKey: "usdt-tether",
-        unitValueUsd: 1 - 14 / 10_000,
-        confidence: "medium",
+        basis: "price", referenceAssetKey: "usdt-tether",
+        unitValueUsd: 1 - 14 / 10_000, confidence: "medium",
       },
     });
-
-    // A partially-priced basket stays unresolved instead of guessing.
-    (fixedInput as { pegDataById: Record<string, unknown> }).pegDataById = {
+    setPegData(fixedInput, {
       "usdc-circle": { currentDeviationBps: 2, priceObservedAt: NOW },
-    };
-    expect(buildSafetyScoreV9RouteReviews(fixedInput, "dai-makerdao")[0]!.output?.valuation).toBeNull();
+    });
+    expect(buildSafetyScoreV9RouteReviews(
+      fixedInput, row.stablecoinId,
+    )[0]!.output?.valuation).toBeNull();
   });
 
   it("compares non-USD basket components by value-to-expectation ratio", () => {
-    const row = makeSupplyFullRedemption({ stablecoinId: "dai-makerdao" });
-    const derived = buildSafetyScoreV9RetainedRedemptionRoutes(
-      fixedInputStub(row),
-      row.stablecoinId,
-    )[0]!;
-    row.capacityProfile = {
-      ...row.capacityProfile!,
-      exitRouteObservations: [
-        {
-          ...derived.observation,
-          output: {
-            kind: "tracked-stablecoin",
-            trackedAssetIds: ["thbill-theo", "usdt-tether"],
-          },
-        },
-      ],
-    };
-    const fixedInput = fixedInputStub(row);
-    const mutableFixedInput: { pegDataById: Record<string, unknown> } = fixedInput;
-    mutableFixedInput.pegDataById = {
-      "usdt-tether": { currentDeviationBps: -14, priceObservedAt: NOW },
-    };
+    const { fixedInput, row } = redemptionPegFixture({
+      rowOverrides: { stablecoinId: "dai-makerdao" },
+      output: {
+        kind: "tracked-stablecoin",
+        trackedAssetIds: ["thbill-theo", "usdt-tether"],
+      },
+      pegDataById: {
+        "usdt-tether": { currentDeviationBps: -14, priceObservedAt: NOW },
+      },
+    });
     fixedInput.navPriceById = {
       "thbill-theo": {
-        priceUsd: 0.8,
-        sourceId: "non-usd-nav-fixture",
-        observedAtSec: NOW,
-        confidence: "high",
+        priceUsd: 0.8, sourceId: "non-usd-nav-fixture", observedAtSec: NOW, confidence: "high",
       },
     };
-
-    expect(
-      buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]?.output
-        ?.valuation,
-    ).toMatchObject({
+    expect(buildSafetyScoreV9RouteReviews(
+      fixedInput, row.stablecoinId,
+    )[0]?.output?.valuation).toMatchObject({
       referenceAssetKey: "usdt-tether",
       unitValueUsd: 1 - 14 / 10_000,
       expectedUnitValueUsd: 1,
@@ -683,81 +700,51 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
   });
 
 
-  it("admits reviewed unresolved-output ownership only after the review date", () => {
-    const row = makeSupplyFullRedemption({
-      stablecoinId: "dusd-dtrinity",
-      routeFamily: "stablecoin-redeem",
-      accessModel: "permissionless-onchain",
-      executionModel: "deterministic-basket",
-      outputAssetType: "stable-basket",
-    });
-    const historicalInput = fixedInputStub(
-      row,
-      Date.UTC(2026, 6, 13, 12) / 1_000,
-    );
-    const observation = buildSafetyScoreV9RetainedRedemptionRoutes(
-      historicalInput,
-      row.stablecoinId,
-    )[0]!.observation;
-    row.capacityProfile = {
-      ...row.capacityProfile!,
-      exitRouteObservations: [observation],
-    };
-
-    expect(
-      buildSafetyScoreV9RouteReviews(historicalInput, row.stablecoinId)[0]
-        ?.unresolvedOutputResponsibility,
-    ).toBeUndefined();
-    expect(
-      buildSafetyScoreV9RouteReviews(
-        fixedInputStub(row, Date.UTC(2026, 6, 27, 12) / 1_000),
-        row.stablecoinId,
-      )[0]?.unresolvedOutputResponsibility,
-    ).toBeUndefined();
-    expect(
-      buildSafetyScoreV9RouteReviews(
-        fixedInputStub(row, Date.UTC(2026, 6, 28, 0, 0, 1) / 1_000),
-        row.stablecoinId,
-      )[0]?.unresolvedOutputResponsibility,
-    ).toBe("producer-failed");
-  });
+  it.each([
+    { clockSec: Date.UTC(2026, 6, 13, 12) / 1_000, expectedResponsibility: undefined },
+    { clockSec: Date.UTC(2026, 6, 27, 12) / 1_000, expectedResponsibility: undefined },
+    { clockSec: Date.UTC(2026, 6, 28, 0, 0, 1) / 1_000, expectedResponsibility: "producer-failed" },
+  ] as const)(
+    "projects unresolved-output ownership at $clockSec",
+    ({ clockSec, expectedResponsibility }) => {
+      const { fixedInput, row } = redemptionPegFixture({
+        rowOverrides: {
+          stablecoinId: "dusd-dtrinity",
+          routeFamily: "stablecoin-redeem",
+          accessModel: "permissionless-onchain",
+          executionModel: "deterministic-basket",
+          outputAssetType: "stable-basket",
+        },
+        clockSec,
+        observationClockSec: Date.UTC(2026, 6, 13, 12) / 1_000,
+      });
+      expect(buildSafetyScoreV9RouteReviews(
+        fixedInput, row.stablecoinId,
+      )[0]?.unresolvedOutputResponsibility).toBe(expectedResponsibility);
+    },
+  );
 
   it("prices the dTRINITY vault-bridge receipt basket through each receipt's underlying", () => {
-    const row = makeSupplyFullRedemption({
-      stablecoinId: "dusd-dtrinity",
-      routeFamily: "stablecoin-redeem",
-      accessModel: "permissionless-onchain",
-      executionModel: "deterministic-basket",
-      outputAssetType: "stable-basket",
-    });
-    row.capacityProfile = {
-      ...row.capacityProfile!,
-      exitRouteObservations: [
-        buildSafetyScoreV9RetainedRedemptionRoutes(fixedInputStub(row), row.stablecoinId)[0]!.observation,
-      ],
-    };
-    const fixedInput = fixedInputStub(row);
-    (fixedInput as { pegDataById: Record<string, unknown> }).pegDataById = Object.fromEntries(
-      (
-        [
-          ["usdc-circle", 3],
-          ["usdt-tether", -21],
-          ["usds-sky", 1],
-          ["susds-sky", 4],
-          ["frxusd-frax", -2],
-          ["sfrxusd-frax", 5],
-          ["dai-makerdao", -4],
-          ["sdai-sky", 6],
-          ["ausd-agora", -1],
-        ] as const
-      ).map(([assetId, deviationBps]) => [
-        assetId,
-        { currentDeviationBps: deviationBps, priceObservedAt: NOW },
+    const pegDataById = Object.fromEntries(
+      ([
+        ["usdc-circle", 3], ["usdt-tether", -21], ["usds-sky", 1],
+        ["susds-sky", 4], ["frxusd-frax", -2], ["sfrxusd-frax", 5],
+        ["dai-makerdao", -4], ["sdai-sky", 6], ["ausd-agora", -1],
+      ] as const).map(([assetId, currentDeviationBps]) => [
+        assetId, { currentDeviationBps, priceObservedAt: NOW },
       ]),
     );
+    const { fixedInput, row } = redemptionPegFixture({
+      rowOverrides: {
+        stablecoinId: "dusd-dtrinity",
+        routeFamily: "stablecoin-redeem",
+        accessModel: "permissionless-onchain",
+        executionModel: "deterministic-basket",
+        outputAssetType: "stable-basket",
+      },
+      pegDataById,
+    });
 
-    // vbUSDC/vbUSDT keep their captured untracked identities; only their value
-    // comes from the reviewed one-for-one vault-bridge conversion.
     expect(buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]!.output).toMatchObject({
       kind: "basket",
       assetKeys: [
@@ -783,31 +770,25 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
       },
     });
 
-    // Dropping the receipts' underlying leaves the basket unresolved rather
-    // than valuing it from the remaining legs.
     const { "usdt-tether": _dropped, ...withoutUnderlying } = fixedInput.pegDataById;
-    (fixedInput as { pegDataById: Record<string, unknown> }).pegDataById = withoutUnderlying;
+    setPegData(fixedInput, withoutUnderlying);
     expect(buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]!.output).toBeNull();
   });
 
   it("leaves an unresolved basket unresolved when a leg has no reviewed conversion", () => {
-    const row = makeSupplyFullRedemption({
-      stablecoinId: "dllr-sovryn",
-      routeFamily: "stablecoin-redeem",
-      accessModel: "permissionless-onchain",
-      executionModel: "deterministic-basket",
-      outputAssetType: "stable-basket",
+    const { fixedInput, row } = redemptionPegFixture({
+      rowOverrides: {
+        stablecoinId: "dllr-sovryn",
+        routeFamily: "stablecoin-redeem",
+        accessModel: "permissionless-onchain",
+        executionModel: "deterministic-basket",
+        outputAssetType: "stable-basket",
+      },
+      pegDataById: {
+        "doc-money-on-chain": { currentDeviationBps: -5, priceObservedAt: NOW },
+      },
+      clockSec: Date.UTC(2026, 6, 28, 0, 0, 1) / 1_000,
     });
-    row.capacityProfile = {
-      ...row.capacityProfile!,
-      exitRouteObservations: [
-        buildSafetyScoreV9RetainedRedemptionRoutes(fixedInputStub(row), row.stablecoinId)[0]!.observation,
-      ],
-    };
-    const fixedInput = fixedInputStub(row, Date.UTC(2026, 6, 28, 0, 0, 1) / 1_000);
-    (fixedInput as { pegDataById: Record<string, unknown> }).pegDataById = {
-      "doc-money-on-chain": { currentDeviationBps: -5, priceObservedAt: NOW },
-    };
     const review = buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]!;
     expect(review.output).toBeNull();
     expect(review.unresolvedOutputResponsibility).toBe("producer-failed");
@@ -815,27 +796,16 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
 
   it("admits dEURO's source-bound nine-member EUR output valuation without calling it fiat", () => {
     const row = makeSupplyFullRedemption({
-      stablecoinId: "deuro-deuro",
-      routeFamily: "collateral-redeem",
-      accessModel: "permissionless-onchain",
-      executionModel: "deterministic-basket",
-      outputAssetType: "stable-basket",
-      feeBps: 0,
+      stablecoinId: "deuro-deuro", routeFamily: "collateral-redeem",
+      accessModel: "permissionless-onchain", executionModel: "deterministic-basket",
+      outputAssetType: "stable-basket", feeBps: 0,
     });
     const baseObservation = buildSafetyScoreV9RetainedRedemptionRoutes(
-      fixedInputStub(row),
-      row.stablecoinId,
+      fixedInputStub(row), row.stablecoinId,
     )[0]!.observation;
     const assetKeys = [
-      "asset:eura",
-      "asset:eure-legacy-ethereum",
-      "asset:eurt",
-      "asset:veur",
-      "eurc-circle",
-      "euri-banking-circle",
-      "europ-schuman",
-      "eurr-stablr",
-      "eurs-stasis",
+      "asset:eura", "asset:eure-legacy-ethereum", "asset:eurt", "asset:veur",
+      "eurc-circle", "euri-banking-circle", "europ-schuman", "eurr-stablr", "eurs-stasis",
     ];
     row.capacityConfidence = "live-direct";
     row.capacityKind = "live-direct-bounded";
@@ -849,10 +819,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
         output: {
           kind: "unresolved-basket",
           assetKeys,
-          basketWeights: assetKeys.map((assetId, index) => ({
-            assetId,
-            weight: index === 4 ? 1 : 0,
-          })),
+          basketWeights: assetKeys.map((assetId, index) => ({ assetId, weight: index === 4 ? 1 : 0 })),
         },
         routeFamily: "protocol-redemption",
         evidenceKind: "onchain-contract-state",
@@ -868,101 +835,70 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
         freshnessSeconds: 0,
       }],
     };
-
-    expect(buildSafetyScoreV9RouteReviews(fixedInputStub(row), row.stablecoinId)[0]?.output).toMatchObject({
+    expect(buildSafetyScoreV9RouteReviews(
+      fixedInputStub(row), row.stablecoinId,
+    )[0]?.output).toMatchObject({
       kind: "basket",
       assetKeys,
       basketWeights: [{ assetKey: "eurc-circle", weight: 1 }],
       valuation: {
-        basis: "price",
-        unitValueUsd: 1.15,
-        expectedUnitValueUsd: 1.15,
-        sourceId: "collateral-positions-api:deuro-bridge-basket:test",
-        confidence: "high",
+        basis: "price", unitValueUsd: 1.15, expectedUnitValueUsd: 1.15,
+        sourceId: "collateral-positions-api:deuro-bridge-basket:test", confidence: "high",
       },
     });
   });
 
-  it.each(["srusd-reservoir", "wsrusd-reservoir"] as const)(
-    "values the composed %s redemption route through its final USDC output",
-    (stablecoinId) => {
-      const row = makeSupplyFullRedemption({
-        stablecoinId,
-        routeFamily: "stablecoin-redeem",
-        accessModel: "permissionless-onchain",
-        holderEligibility: "any-holder",
+  it.each([
+    {
+      stablecoinId: "srusd-reservoir",
+      outputAssetId: "usdc-circle",
+      rowOverrides: {},
+      pegDataById: { "usdc-circle": { currentDeviationBps: -3, priceObservedAt: NOW } },
+      expectedUnitValueUsd: 0.9997,
+    },
+    {
+      stablecoinId: "wsrusd-reservoir",
+      outputAssetId: "usdc-circle",
+      rowOverrides: {},
+      pegDataById: { "usdc-circle": { currentDeviationBps: -3, priceObservedAt: NOW } },
+      expectedUnitValueUsd: 0.9997,
+    },
+    {
+      stablecoinId: "zys-zephyr-protocol",
+      outputAssetId: "zsd-zephyr-protocol",
+      rowOverrides: { outputAssetType: "stable-single" as const },
+      pegDataById: {
+        "zsd-zephyr-protocol": {
+          currentDeviationBps: null, pegScore: 100, activeDepeg: false,
+          eventCount: 0, worstDeviationBps: null,
+        },
+      },
+      expectedUnitValueUsd: 1,
+    },
+  ] as const)(
+    "values $stablecoinId through its tracked $outputAssetId output",
+    ({ stablecoinId, outputAssetId, rowOverrides, pegDataById, expectedUnitValueUsd }) => {
+      const { fixedInput } = redemptionPegFixture({
+        rowOverrides: {
+          stablecoinId, routeFamily: "stablecoin-redeem",
+          accessModel: "permissionless-onchain", holderEligibility: "any-holder", ...rowOverrides,
+        },
+        output: { kind: "tracked-stablecoin", trackedAssetIds: [outputAssetId] },
+        pegDataById,
       });
-      const fixedInput = fixedInputStub(row);
-      const observation = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInput, stablecoinId)[0]!.observation;
-      row.capacityProfile = {
-        ...row.capacityProfile!,
-        exitRouteObservations: [observation],
-      };
-      (fixedInput as { pegDataById: Record<string, unknown> }).pegDataById = {
-        "usdc-circle": { currentDeviationBps: -3, priceObservedAt: NOW },
-      };
-
       expect(buildSafetyScoreV9RouteReviews(fixedInput, stablecoinId)[0]?.output).toMatchObject({
         kind: "tracked-stablecoin",
-        assetKeys: ["usdc-circle"],
+        assetKeys: [outputAssetId],
         valuation: {
           basis: "price",
-          referenceAssetKey: "usdc-circle",
-          unitValueUsd: 0.9997,
+          referenceAssetKey: outputAssetId,
+          unitValueUsd: expectedUnitValueUsd,
           expectedUnitValueUsd: 1,
           sourceId: "report-cards-peg-summary",
         },
       });
     },
   );
-
-  it("values a quiet scored tracked-stablecoin output at par", () => {
-    const row = makeSupplyFullRedemption({
-      stablecoinId: "zys-zephyr-protocol",
-      routeFamily: "stablecoin-redeem",
-      accessModel: "permissionless-onchain",
-      holderEligibility: "any-holder",
-      outputAssetType: "stable-single",
-    });
-    const fixedInput = fixedInputStub(row);
-    const observation = buildSafetyScoreV9RetainedRedemptionRoutes(
-      fixedInput,
-      row.stablecoinId,
-    )[0]!.observation;
-    row.capacityProfile = {
-      ...row.capacityProfile!,
-      exitRouteObservations: [
-        {
-          ...observation,
-          output: {
-            kind: "tracked-stablecoin",
-            trackedAssetIds: ["zsd-zephyr-protocol"],
-          },
-        },
-      ],
-    };
-    (fixedInput as { pegDataById: Record<string, unknown> }).pegDataById = {
-      "zsd-zephyr-protocol": {
-        currentDeviationBps: null,
-        pegScore: 100,
-        activeDepeg: false,
-        eventCount: 0,
-        worstDeviationBps: null,
-      },
-    };
-
-    expect(buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]?.output).toMatchObject({
-      kind: "tracked-stablecoin",
-      assetKeys: ["zsd-zephyr-protocol"],
-      valuation: {
-        basis: "price",
-        referenceAssetKey: "zsd-zephyr-protocol",
-        unitValueUsd: 1,
-        expectedUnitValueUsd: 1,
-        sourceId: "report-cards-peg-summary",
-      },
-    });
-  });
 
   it("uses a complete source-bound producer valuation for CUSD when WTGXX has no peg row", () => {
     const reviewedRow = makeSupplyFullRedemption({
@@ -1036,8 +972,6 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
       },
     });
 
-    // A known component trading below the pinned aggregate remains the
-    // conservative floor even though the other component has no peg row.
     (fixedInput as { pegDataById: Record<string, unknown> }).pegDataById = {
       "usdc-circle": { currentDeviationBps: -5, priceObservedAt: NOW },
     };
@@ -1050,32 +984,26 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
   });
 
   it("values production-shaped tracked DEX output aliases by canonical stablecoin id", () => {
-    const fixedInput = fixedInputStub(undefined);
-    const route = dexRouteObservation(NOW, {
-      routeId:
-        "dex:asset-input:dl:ethereum%3Afp%3Aethereum%3Acurve%3Apool:ethereum%3A0xfa2b947eec368f42195f24f36d2af29f7c24cec2",
-      output: {
-        kind: "tracked-stablecoin",
-        trackedAssetIds: ["usdf-falcon"],
-        assetKeys: ["ethereum:0xfa2b947eec368f42195f24f36d2af29f7c24cec2"],
+    const { fixedInput, route } = dexPegFixture({
+      assetId: "asset-input",
+      routeOverrides: {
+        routeId: "dex:asset-input:dl:ethereum%3Afp%3Aethereum%3Acurve%3Apool:ethereum%3A0xfa2b947eec368f42195f24f36d2af29f7c24cec2",
+        output: {
+          kind: "tracked-stablecoin",
+          trackedAssetIds: ["usdf-falcon"],
+          assetKeys: ["ethereum:0xfa2b947eec368f42195f24f36d2af29f7c24cec2"],
+        },
+        outputUnitValueUsd: 0.95,
+        outputUnitValueSourceId: "dex-amm-output-reference:curve:tracked-market",
+        outputUnitValueObservedAt: NOW,
       },
-      outputUnitValueUsd: 0.95,
-      outputUnitValueSourceId: "dex-amm-output-reference:curve:tracked-market",
-      outputUnitValueObservedAt: NOW,
+      pegDataById: {
+        "usdf-falcon": { pegCurrency: "USD", currentDeviationBps: -12, priceObservedAt: NOW },
+      },
     });
-    (fixedInput as { dexLiqMap: Record<string, unknown> }).dexLiqMap = {
-      "asset-input": singleObservationDexLiquidity(route),
-    };
-    (fixedInput as { pegDataById: Record<string, unknown> }).pegDataById = {
-      "usdf-falcon": { pegCurrency: "USD", currentDeviationBps: -12, priceObservedAt: NOW },
-    };
-
     expect(buildSafetyScoreV9RouteReviews(fixedInput, "asset-input")).toEqual([
       expect.objectContaining({
-        lane: "dex",
-        routeId: route.routeId,
-        modelConfidence: "medium",
-        coverageClass: "exact-complete",
+        lane: "dex", routeId: route.routeId, modelConfidence: "medium", coverageClass: "exact-complete",
         output: expect.objectContaining({
           kind: "tracked-stablecoin",
           assetKeys: ["usdf-falcon"],
@@ -1091,31 +1019,27 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
   });
 
   it("uses a source-bound exact DEX output reference when peg and NAV valuation are unavailable", () => {
-    const fixedInput = fixedInputStub(undefined);
-    const route = dexRouteObservation(NOW, {
-      routeId: "dex:scrvusd-curve:dl:ethereum%3Ausdaf-output",
-      executableUsd: 31_206.39,
-      completionRatio: 0.03120639,
-      output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdaf-asymmetry"] },
-      outputUnitValueUsd: 0.9975,
-      outputUnitValueSourceId: "dex-amm-output-reference:curve:tracked-market",
-      outputUnitValueObservedAt: NOW - 30,
-    });
-    (fixedInput as { dexLiqMap: Record<string, unknown> }).dexLiqMap = {
-      "scrvusd-curve": singleObservationDexLiquidity(route),
-    };
-    (fixedInput as { pegDataById: Record<string, unknown> }).pegDataById = {
-      "usdaf-asymmetry": {
-        pegCurrency: "USD",
-        currentDeviationBps: null,
-        pegScore: 75,
-        activeDepeg: false,
-        eventCount: 103,
-        worstDeviationBps: -223,
+    const { fixedInput, route } = dexPegFixture({
+      assetId: "scrvusd-curve",
+      routeOverrides: {
+        routeId: "dex:scrvusd-curve:dl:ethereum%3Ausdaf-output",
+        executableUsd: 31_206.39,
+        completionRatio: 0.03120639,
+        output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdaf-asymmetry"] },
+        outputUnitValueUsd: 0.9975,
+        outputUnitValueSourceId: "dex-amm-output-reference:curve:tracked-market",
+        outputUnitValueObservedAt: NOW - 30,
       },
-    };
-
-    expect(buildSafetyScoreV9RouteReviews(fixedInput, "scrvusd-curve")[0]?.output?.valuation).toMatchObject({
+      pegDataById: {
+        "usdaf-asymmetry": {
+          pegCurrency: "USD", currentDeviationBps: null, pegScore: 75,
+          activeDepeg: false, eventCount: 103, worstDeviationBps: -223,
+        },
+      },
+    });
+    const outputValuation = () =>
+      buildSafetyScoreV9RouteReviews(fixedInput, "scrvusd-curve")[0]?.output?.valuation;
+    expect(outputValuation()).toMatchObject({
       basis: "price",
       referenceAssetKey: "usdaf-asymmetry",
       unitValueUsd: 0.9975,
@@ -1124,76 +1048,69 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
       observedAtSec: NOW - 30,
       confidence: "high",
     });
-
-    (route as { outputUnitValueObservedAt: number }).outputUnitValueObservedAt = NOW + 61;
-    expect(buildSafetyScoreV9RouteReviews(fixedInput, "scrvusd-curve")[0]?.output?.valuation).toBeNull();
-    (route as { outputUnitValueObservedAt: number }).outputUnitValueObservedAt = NOW - 30;
-
-    // The raw DEX price alone cannot establish the expected value of a non-USD
-    // peg. Without an authoritative reference the output remains unvalued.
-    (fixedInput as { pegDataById: Record<string, unknown> }).pegDataById = {
+    route.outputUnitValueObservedAt = NOW + 61;
+    expect(outputValuation()).toBeNull();
+    route.outputUnitValueObservedAt = NOW - 30;
+    setPegData(fixedInput, {
+      "usdaf-asymmetry": { pegCurrency: "EUR", currentDeviationBps: null, pegReference: null },
+    });
+    expect(outputValuation()).toBeNull();
+    route.outputUnitValueUsd = 1.1583;
+    setPegData(fixedInput, {
       "usdaf-asymmetry": {
         pegCurrency: "EUR",
         currentDeviationBps: null,
-        pegReference: null,
+        pegReference: { valueUsd: 1.17, source: "fx", contributorCount: 1, asOf: NOW - 60 },
       },
-    };
-    expect(buildSafetyScoreV9RouteReviews(fixedInput, "scrvusd-curve")[0]?.output?.valuation).toBeNull();
-
-    (route as { outputUnitValueUsd: number }).outputUnitValueUsd = 1.1583;
-    (fixedInput as { pegDataById: Record<string, unknown> }).pegDataById = {
-      "usdaf-asymmetry": {
-        pegCurrency: "EUR",
-        currentDeviationBps: null,
-        pegReference: {
-          valueUsd: 1.17,
-          source: "fx",
-          contributorCount: 1,
-          asOf: NOW - 60,
-        },
-      },
-    };
-    expect(buildSafetyScoreV9RouteReviews(fixedInput, "scrvusd-curve")[0]?.output?.valuation).toMatchObject({
+    });
+    expect(outputValuation()).toMatchObject({
       unitValueUsd: 1.1583,
       expectedUnitValueUsd: 1.17,
       sourceId: "dex-amm-output-reference:curve:tracked-market",
     });
   });
 
-  it.each(["source-token-usd", "peg-reference", "pool-implied"])("rejects persisted %s DEX output pins without independent valuation", (source) => {
-    const fixedInput = fixedInputStub(undefined);
-    const route = dexRouteObservation(NOW, {
-      routeId: "dex:asset-input:dl:ethereum%3Apool:ethereum%3Aoutput",
-      output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdt-tether"] },
-      outputUnitValueUsd: 1,
-      outputUnitValueSourceId: `dex-amm-output-reference:curve:${source}`,
-      outputUnitValueObservedAt: NOW,
-    });
-    (fixedInput as { dexLiqMap: Record<string, unknown> }).dexLiqMap = { "asset-input": singleObservationDexLiquidity(route) };
-    (fixedInput as { pegDataById: Record<string, unknown> }).pegDataById = { "usdt-tether": { pegCurrency: "USD", currentDeviationBps: null } };
-    expect(buildSafetyScoreV9RouteReviews(fixedInput, "asset-input")[0]?.output?.valuation).toBeNull();
-    (route as { outputUnitValueSourceId: string }).outputUnitValueSourceId = "dex-amm-output-reference:curve:tracked-market";
-    expect(buildSafetyScoreV9RouteReviews(fixedInput, "asset-input")[0]?.output?.valuation).toMatchObject({ unitValueUsd: 1 });
-  });
+  it.each([
+    { outputPinSource: "source-token-usd" },
+    { outputPinSource: "peg-reference" },
+    { outputPinSource: "pool-implied" },
+  ] as const)(
+    "rejects persisted $outputPinSource DEX output pins without independent valuation",
+    ({ outputPinSource }) => {
+      const { fixedInput, route } = dexPegFixture({
+        assetId: "asset-input",
+        routeOverrides: {
+          routeId: "dex:asset-input:dl:ethereum%3Apool:ethereum%3Aoutput",
+          output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdt-tether"] },
+          outputUnitValueUsd: 1,
+          outputUnitValueSourceId: `dex-amm-output-reference:curve:${outputPinSource}`,
+          outputUnitValueObservedAt: NOW,
+        },
+        pegDataById: { "usdt-tether": { pegCurrency: "USD", currentDeviationBps: null } },
+      });
+      expect(buildSafetyScoreV9RouteReviews(
+        fixedInput, "asset-input",
+      )[0]?.output?.valuation).toBeNull();
+      route.outputUnitValueSourceId = "dex-amm-output-reference:curve:tracked-market";
+      expect(buildSafetyScoreV9RouteReviews(
+        fixedInput, "asset-input",
+      )[0]?.output?.valuation).toMatchObject({ unitValueUsd: 1 });
+    },
+  );
 
   it("values a NAV output from the captured NAV price without creating a peg valuation", () => {
-    const fixedInput = fixedInputStub(undefined);
-    const route = dexRouteObservation(NOW, {
-      routeId: "dex:asset-input:dl:ethereum%3Apool:ethereum%3Anav-output",
-      output: { kind: "tracked-stablecoin", trackedAssetIds: ["thbill-theo"] },
+    const { fixedInput } = dexPegFixture({
+      assetId: "asset-input",
+      routeOverrides: {
+        routeId: "dex:asset-input:dl:ethereum%3Apool:ethereum%3Anav-output",
+        output: { kind: "tracked-stablecoin", trackedAssetIds: ["thbill-theo"] },
+      },
     });
-    (fixedInput as { dexLiqMap: Record<string, unknown> }).dexLiqMap = {
-      "asset-input": singleObservationDexLiquidity(route),
-    };
-    (fixedInput as { navPriceById: Record<string, unknown> }).navPriceById = {
+    fixedInput.navPriceById = {
       "thbill-theo": {
-        priceUsd: 1.0188,
-        sourceId: "defillama-contract",
-        observedAtSec: NOW,
-        confidence: "high",
+        priceUsd: 1.0188, sourceId: "defillama-contract", observedAtSec: NOW, confidence: "high",
       },
     };
-
     expect(buildSafetyScoreV9RouteReviews(fixedInput, "asset-input")[0]?.output?.valuation).toMatchObject({
       basis: "nav",
       referenceAssetKey: "thbill-theo",
@@ -1459,12 +1376,12 @@ describe("buildDexRouteReview model-confidence derivation", () => {
   });
 
   it.each([
-    "reserve-based-amm-simulation",
-    "direct-orderbook-depth",
-    "generic-tvl-proxy",
-    "synthetic-or-fallback",
-    "unobserved",
-  ] as const)("keeps %s evidence at medium model confidence", (evidenceKind) => {
+    { evidenceKind: "reserve-based-amm-simulation" },
+    { evidenceKind: "direct-orderbook-depth" },
+    { evidenceKind: "generic-tvl-proxy" },
+    { evidenceKind: "synthetic-or-fallback" },
+    { evidenceKind: "unobserved" },
+  ] as const)("keeps $evidenceKind evidence at medium model confidence", ({ evidenceKind }) => {
     expect(dexReviewFor(evidenceKind)).toMatchObject({
       lane: "dex",
       executionCertainty: "bounded",

@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { parseAbi, toFunctionSelector } from "viem/utils";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import { mockD1 } from "@shared/test-utils/mock-d1";
+import { mockD1Strict } from "@shared/test-utils/mock-d1";
 import {
   runAdapter,
   installAdapterNetwork,
@@ -928,7 +928,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
       (contract) => contract.chain === "ethereum",
     )!.address;
     const now = NOW_SEC;
-    const db = mockD1([
+    const db = mockD1Strict([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
         matchBinds: ["stablecoins"],

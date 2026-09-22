@@ -178,7 +178,6 @@ describe("buildSafetyScoreV9SupplyReview", () => {
     } as unknown as ReportCardsFixedInput;
 
     const review = buildSafetyScoreV9SupplyReview(fixedInput, "wm-m0", profile);
-    expect(review).not.toBeNull();
     expect(review!.selectedBridgeRoutes).toHaveLength(5);
     expect(review!.selectedRouteSupplyShare).toBe(1);
     expect(review!.unknownRouteSupplyShare).toBe(0);
@@ -331,7 +330,6 @@ describe("buildSafetyScoreV9SupplyReview", () => {
         // base has no route row -> unknown bucket
       ]),
     );
-    expect(review).not.toBeNull();
     expect(review!.selectedBridgeRoutes.map((route) => route.deploymentRouteKey)).toEqual([
       "ethereum:native",
       "tron:bridge",
@@ -391,7 +389,6 @@ describe("buildSafetyScoreV9SupplyReview", () => {
       ]),
     );
 
-    expect(review).not.toBeNull();
     expect(review!.selectedBridgeRoutes.map((route) => route.deploymentRouteKey)).toEqual([
       "arbitrum:0xddb46999f8891663a8f2828d25298f70416d7610",
       "base:0x5875eee11cf8398102fdad704c9e96607675467a",
@@ -543,7 +540,6 @@ describe("buildSafetyScoreV9SupplyReview", () => {
       xautRiskReview.bridgeRouteRisk as BridgeRouteRiskProfile,
     );
 
-    expect(review).not.toBeNull();
     expect(review!.selectedBridgeRoutes).toHaveLength(2);
     expect(review!.selectedBridgeRoutes).toContainEqual(
       expect.objectContaining({
@@ -624,7 +620,6 @@ describe("buildSafetyScoreV9SupplyReview", () => {
       profile,
     );
 
-    expect(review).not.toBeNull();
     expect(
       review!.selectedBridgeRoutes.find((route) =>
         route.deploymentRouteKey.startsWith(
@@ -665,7 +660,6 @@ describe("curated native single-route supply attribution", () => {
   it("attributes the published aggregate to the single reviewed xdai-gnosis route", () => {
     const review = buildSafetyScoreV9SupplyReview(xdaiFixedInput(), "xdai-gnosis", XDAI_PROFILE);
 
-    expect(review).not.toBeNull();
     expect(review!.selectedBridgeRoutes).toEqual([
       {
         deploymentRouteKey: XDAI_ROUTE_ID,
@@ -723,7 +717,6 @@ describe("curated native single-route supply attribution", () => {
       XDAI_PROFILE,
     );
 
-    expect(review).not.toBeNull();
     expect(review!.selectedBridgeRoutes).toHaveLength(1);
     expect(review!.selectedBridgeRoutes[0]).toMatchObject({
       deploymentRouteKey: XDAI_ROUTE_ID,

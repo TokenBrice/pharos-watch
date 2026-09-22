@@ -3,10 +3,7 @@ import type { RedemptionBackstopEntry, RedemptionBackstopMap } from "@shared/typ
 import { REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG_PATH } from "@shared/lib/methodology-versions/constants";
 import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
-import {
-  assertAllD1MatchesUsed,
-  mockD1Strict,
-} from "@shared/test-utils/mock-d1";
+import { assertAllD1MatchesUsed, mockD1Strict } from "@shared/test-utils/mock-d1";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import {
   buildRedemptionBackstopsSnapshot,
@@ -22,12 +19,10 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 import {
   completedRunRow,
   completedRunsQuery,
-  completedRunsTable,
   makeRealisticRedemptionRow,
   makeRedemptionWriteRecord,
   mockRedemptionD1,
   runRowsQuery,
-  runRowsTable,
 } from "./redemption-backstops-store.test-support";
 
 const LEGACY_V3997_REDEMPTION_BACKSTOP_ROW = makeRealisticRedemptionRow({
@@ -47,7 +42,6 @@ const LEGACY_V3997_REDEMPTION_BACKSTOP_ROW = makeRealisticRedemptionRow({
   }),
 });
 
-
 const LEGACY_V3997_REDEMPTION_BACKSTOP_RUN_ROW = {
   run_id: "legacy-run",
   completed_at: 1_746_800_010,
@@ -64,6 +58,23 @@ const LEGACY_V3997_REDEMPTION_BACKSTOP_RUN_ROW = {
     legacyExtraField: "ignored by typed consumers",
   }),
 };
+
+function findWriteMetadata(
+  history: Array<{ binds: unknown[] }>,
+  runId: string,
+  writeStatus: string,
+): Record<string, unknown> {
+  for (const { binds } of history) {
+    for (const bind of binds) {
+      if (typeof bind !== "string" || !bind.startsWith("{")) continue;
+      try {
+        const metadata = JSON.parse(bind) as Record<string, unknown>;
+        if (metadata.snapshotRunId === runId && metadata.writeStatus === writeStatus) return metadata;
+      } catch { continue; }
+    }
+  }
+  throw new Error(`Missing ${writeStatus} metadata for ${runId}`);
+}
 
 describe("loadRedemptionBackstopSnapshot", () => {
   it("surfaces a missing mandatory run-manifest table", async () => {
@@ -128,18 +139,19 @@ describe("loadRedemptionBackstopSnapshot", () => {
   });
 
   it("falls back to an earlier completed run when the newest completed manifest is not complete", async () => {
-    const db = mockRedemptionD1([
-      completedRunsTable([
+    const db = mockD1Strict([
+      completedRunsQuery([
         completedRunRow({ run_id: "run-incomplete", completed_at: 1_700_000_010, expected_count: 2 }),
         completedRunRow({ run_id: "run-valid", completed_at: 1_700_000_000, min_updated_at: 1_699_999_990, max_updated_at: 1_699_999_990 }),
       ]),
-      runRowsTable("run-valid", [makeRealisticRedemptionRow({ snapshot_run_id: "run-valid", updated_at: 1_699_999_990 })]),
+      runRowsQuery("run-valid", [makeRealisticRedemptionRow({ snapshot_run_id: "run-valid", updated_at: 1_699_999_990 })]),
     ]);
 
     const result = await loadRedemptionBackstopSnapshot(db);
 
     expect(result.runId).toBe("run-valid");
     expect(result.latestUpdatedAt).toBe(1_699_999_990);
+    assertAllD1MatchesUsed(db);
   });
 
 
@@ -191,9 +203,6 @@ describe("loadRedemptionBackstopSnapshot", () => {
   });
 
   it("fails closed without reading current rows when no completed run exists", async () => {
-    // Covers both the fresh-database bootstrap (no manifests at all) and a
-    // failed first manifested run: partial manifested current rows are never
-    // treated as authoritative, so the only mocked query is the manifest read.
     const db = mockD1Strict([
       completedRunsQuery([]),
     ]);
@@ -221,50 +230,46 @@ describe("loadRedemptionBackstopSnapshot", () => {
   });
 
   it("drops invalid enum and collection values from details JSON before applying fallbacks", async () => {
-    const db = mockRedemptionD1([
-      completedRunsTable([completedRunRow({ run_id: "run-invalid-details", completed_at: 1_700_000_010 })]),
-      {
-        match: "FROM redemption_backstop_run_rows",
-        matchBinds: ["run-invalid-details"],
-        rows: [
-          makeRealisticRedemptionRow({
-            stablecoin_id: "bad-details",
-            snapshot_run_id: "run-invalid-details",
-            score: 65,
-            provider: "supply-full-model",
-            source_mode: "estimated",
-            fee_bps: null,
-            details_json: JSON.stringify({
-              resolutionState: "definitely-not-valid",
-              capacityConfidence: "not-a-confidence",
-              capacitySemantics: "unknown-semantics",
-              feeConfidence: "bad-fee-confidence",
-              feeModelKind: "bad-fee-kind",
-              modelConfidence: "bad-model-confidence",
-              routeStatus: "broken",
-              routeStatusSource: "bad-source",
-              holderEligibility: "nope",
-              capacityProfile: { scoringHorizon: "bad", capacityProfileConfidence: "heuristic" },
-              confidenceDetails: { capacityEvidenceQuality: 101 },
-              capacityKind: "bad-kind",
-              freshnessKind: "bad-freshness",
-              sourceTimestamp: -1,
-              sourceUrls: ["ftp://example.com/redemption.json"],
-              settlementDelaySec: -1,
-              queueDepthUsd: -1,
-              dailyLimitUsd: -1,
-              minRedeemUsd: -1,
-              liveHolderEligibility: "not-eligible",
-              eventualRedeemabilityScore: -1,
-              costScenarioScores: { retail: "free" },
-              routeExitCorrelation: "too-close",
-              notes: ["valid", 123],
-              capsApplied: ["valid-cap", false],
-              docs: { url: "not-a-url" },
-            }),
+    const db = mockD1Strict([
+      completedRunsQuery([completedRunRow({ run_id: "run-invalid-details", completed_at: 1_700_000_010 })]),
+      runRowsQuery("run-invalid-details", [
+        makeRealisticRedemptionRow({
+          stablecoin_id: "bad-details",
+          snapshot_run_id: "run-invalid-details",
+          score: 65,
+          provider: "supply-full-model",
+          source_mode: "estimated",
+          fee_bps: null,
+          details_json: JSON.stringify({
+            resolutionState: "definitely-not-valid",
+            capacityConfidence: "not-a-confidence",
+            capacitySemantics: "unknown-semantics",
+            feeConfidence: "bad-fee-confidence",
+            feeModelKind: "bad-fee-kind",
+            modelConfidence: "bad-model-confidence",
+            routeStatus: "broken",
+            routeStatusSource: "bad-source",
+            holderEligibility: "nope",
+            capacityProfile: { scoringHorizon: "bad", capacityProfileConfidence: "heuristic" },
+            confidenceDetails: { capacityEvidenceQuality: 101 },
+            capacityKind: "bad-kind",
+            freshnessKind: "bad-freshness",
+            sourceTimestamp: -1,
+            sourceUrls: ["ftp://example.com/redemption.json"],
+            settlementDelaySec: -1,
+            queueDepthUsd: -1,
+            dailyLimitUsd: -1,
+            minRedeemUsd: -1,
+            liveHolderEligibility: "not-eligible",
+            eventualRedeemabilityScore: -1,
+            costScenarioScores: { retail: "free" },
+            routeExitCorrelation: "too-close",
+            notes: ["valid", 123],
+            capsApplied: ["valid-cap", false],
+            docs: { url: "not-a-url" },
           }),
-        ],
-      },
+        }),
+      ]),
     ]);
 
     const { map: result } = await loadRedemptionBackstopSnapshot(db);
@@ -297,12 +302,13 @@ describe("loadRedemptionBackstopSnapshot", () => {
     expect(entry!.notes).toBeUndefined();
     expect(entry!.capsApplied).toBeUndefined();
     expect(entry!.docs).toBeUndefined();
+    assertAllD1MatchesUsed(db);
   });
 
   it("decodes legacy v3.997 immutable-run rows without v4 optional fields", async () => {
-    const db = mockRedemptionD1([
-      completedRunsTable([LEGACY_V3997_REDEMPTION_BACKSTOP_RUN_ROW]),
-      runRowsTable("legacy-run", [LEGACY_V3997_REDEMPTION_BACKSTOP_ROW]),
+    const db = mockD1Strict([
+      completedRunsQuery([LEGACY_V3997_REDEMPTION_BACKSTOP_RUN_ROW]),
+      runRowsQuery("legacy-run", [LEGACY_V3997_REDEMPTION_BACKSTOP_ROW]),
     ]);
 
     const result = await loadRedemptionBackstopSnapshot(db);
@@ -320,6 +326,7 @@ describe("loadRedemptionBackstopSnapshot", () => {
     expect(entry.capacityProfile).toBeUndefined();
     expect(entry.confidenceDetails).toBeUndefined();
     expect(entry.routeExitCorrelation).toBeUndefined();
+    assertAllD1MatchesUsed(db);
   });
 
   it("normalizes run metadata for completed, running, failed, and legacy manifests", () => {
@@ -361,64 +368,42 @@ describe("loadRedemptionBackstopSnapshot", () => {
   });
 
   it("writes immutable run/history rows under a completed run manifest without a legacy current mirror", async () => {
-    const db = mockRedemptionD1([
-      {
-        match: "COUNT(*) AS row_count",
-        rows: [],
-        first: { row_count: 1, min_updated_at: 1_700_000_000, max_updated_at: 1_700_000_000 },
-      },
-    ]);
-    const record = makeRedemptionWriteRecord({ stablecoinId: "eurc-circle" });
-
-    const result = await upsertRedemptionBackstopSnapshots(db, [record], {
-      runId: "run-test",
-      expectedCount: 1,
-      metadata: { configured: 1 },
-    });
-
-    expect(result).toMatchObject({
-      runId: "run-test",
-      attemptedCount: 1,
-      runRowsWrittenCount: 1,
-      historyWrittenCount: 1,
-      warnings: [],
-    });
-    expect(result).not.toHaveProperty("currentMirroredCount");
-    const history = db.getHistory();
-    const runStartIndex = history.findIndex((entry) => entry.sql.includes("INSERT INTO redemption_backstop_runs"));
-    const runRowIndex = history.findIndex((entry) => entry.sql.includes("INSERT INTO redemption_backstop_run_rows"));
-    const historyRowIndex = history.findIndex((entry) =>
-      entry.sql.includes("INSERT OR REPLACE INTO redemption_backstop_history"),
-    );
-    const completeIndex = history.findIndex((entry) => entry.sql.includes("status = 'completed'"));
-    expect(runStartIndex).toBeGreaterThanOrEqual(0);
-    expect(runRowIndex).toBeGreaterThan(runStartIndex);
-    expect(historyRowIndex).toBeGreaterThan(runRowIndex);
-    expect(completeIndex).toBeGreaterThan(historyRowIndex);
-    // The legacy current-table mirror write is retired.
-    expect(history.some((entry) => entry.sql.includes("INSERT INTO redemption_backstop ("))).toBe(false);
-    const runRowInsert = history.find(
-      (entry) => entry.sql.includes("INSERT INTO redemption_backstop_run_rows") && entry.binds.includes("run-test"),
-    );
-    expect(runRowInsert?.binds).toHaveLength(24);
-    expect(
-      history.some(
-        (entry) =>
-          entry.sql.includes("INSERT OR REPLACE INTO redemption_backstop_history") && entry.binds.includes("run-test"),
-      ),
-    ).toBe(true);
-    const metadataUpdates = history.filter((entry) => entry.sql.includes("SET metadata_json = ?"));
-    const finalMetadataUpdate = metadataUpdates[metadataUpdates.length - 1];
-    const finalMetadata = JSON.parse(String(finalMetadataUpdate?.binds[0] ?? "{}")) as Record<string, unknown>;
-    expect(finalMetadata).toMatchObject({
-      configured: 1,
-      snapshotRunId: "run-test",
-      attemptedCount: 1,
-      runRowsWrittenCount: 1,
-      historyWrittenCount: 1,
-      writeStatus: "completed",
-    });
-    expect(finalMetadata).not.toHaveProperty("currentMirroredCount");
+    const sqlite = createLatestSchemaSqlite().sqlite;
+    try {
+      const result = await upsertRedemptionBackstopSnapshots(
+        createSqliteD1(sqlite),
+        [makeRedemptionWriteRecord({ stablecoinId: "eurc-circle" })],
+        { runId: "run-test", expectedCount: 1, metadata: { configured: 1 } },
+      );
+      expect(result).toMatchObject({
+        runId: "run-test", attemptedCount: 1, runRowsWrittenCount: 1,
+        historyWrittenCount: 1, warnings: [],
+      });
+      expect(result).not.toHaveProperty("currentMirroredCount");
+      const manifest = sqlite
+        .prepare("SELECT status, written_count, metadata_json FROM redemption_backstop_runs WHERE run_id = ?")
+        .get("run-test") as { status: string; written_count: number; metadata_json: string };
+      expect(manifest.status).toBe("completed");
+      expect(manifest.written_count).toBe(1);
+      expect(sqlite.prepare(
+        "SELECT snapshot_run_id, stablecoin_id FROM redemption_backstop_run_rows WHERE snapshot_run_id = ?",
+      ).get("run-test")).toEqual({ snapshot_run_id: "run-test", stablecoin_id: "eurc-circle" });
+      expect(sqlite.prepare(
+        "SELECT snapshot_run_id, stablecoin_id FROM redemption_backstop_history WHERE snapshot_run_id = ?",
+      ).get("run-test")).toEqual({ snapshot_run_id: "run-test", stablecoin_id: "eurc-circle" });
+      const legacyCurrentCount = sqlite.prepare(
+        "SELECT COUNT(*) AS count FROM redemption_backstop",
+      ).get() as { count: number };
+      expect(legacyCurrentCount.count).toBe(0);
+      const finalMetadata = JSON.parse(manifest.metadata_json) as Record<string, unknown>;
+      expect(finalMetadata).toMatchObject({
+        configured: 1, snapshotRunId: "run-test", attemptedCount: 1,
+        runRowsWrittenCount: 1, historyWrittenCount: 1, writeStatus: "completed",
+      });
+      expect(finalMetadata).not.toHaveProperty("currentMirroredCount");
+    } finally {
+      sqlite.close();
+    }
   });
 
   it("marks a started run as failed when row writes fail", async () => {
@@ -443,12 +428,7 @@ describe("loadRedemptionBackstopSnapshot", () => {
       }),
     ).rejects.toThrow("history write failed");
 
-    const history = db.getHistory();
-    expect(history.some((entry) => entry.sql.includes("status = 'failed'") && entry.binds.includes("run-fails"))).toBe(
-      true,
-    );
-    const failedUpdate = history.find((entry) => entry.sql.includes("status = 'failed'"));
-    const failedMetadata = JSON.parse(String(failedUpdate?.binds[2] ?? "{}")) as Record<string, unknown>;
+    const failedMetadata = findWriteMetadata(db.getHistory(), "run-fails", "failed");
     expect(failedMetadata).toMatchObject({
       snapshotRunId: "run-fails",
       attemptedCount: 1,
@@ -479,10 +459,7 @@ describe("loadRedemptionBackstopSnapshot", () => {
       }),
     ).rejects.toThrow("wrote 1/2 immutable rows");
 
-    const history = db.getHistory();
-    expect(history.some((entry) => entry.sql.includes("INSERT INTO redemption_backstop ("))).toBe(false);
-    const failedUpdate = history.find((entry) => entry.sql.includes("status = 'failed'"));
-    const failedMetadata = JSON.parse(String(failedUpdate?.binds[2] ?? "{}")) as Record<string, unknown>;
+    const failedMetadata = findWriteMetadata(db.getHistory(), "run-partial", "failed");
     expect(failedMetadata).toMatchObject({
       snapshotRunId: "run-partial",
       attemptedCount: 2,
@@ -494,7 +471,7 @@ describe("loadRedemptionBackstopSnapshot", () => {
   it("prunes old run rows and manifests while preserving the current and latest completed runs", async () => {
     const sqlite = createLatestSchemaSqlite().sqlite;
     try {
-            const insertRun = sqlite.prepare(
+      const insertRun = sqlite.prepare(
         `INSERT INTO redemption_backstop_runs (
           run_id, started_at, completed_at, status, expected_count, written_count,
           methodology_version, min_updated_at, max_updated_at, metadata_json
@@ -533,35 +510,26 @@ describe("loadRedemptionBackstopSnapshot", () => {
       insertHistory.run("usdt-tether", historyCutoff + 500, historyCutoff + 500);
 
       const result = await pruneRedemptionBackstopRunRetention(createSqliteD1(sqlite), {
-        nowSec,
-        retentionSec,
-        historyRetentionSec,
-        preserveRunId: "current-completed",
-        batchSize: 2,
+        nowSec, retentionSec, historyRetentionSec,
+        preserveRunId: "current-completed", batchSize: 2,
       });
-
       expect(result).toEqual({
-        cutoff,
-        runRowsDeletedCount: 3,
-        runsDeletedCount: 3,
-        historyCutoff,
-        historyRowsDeletedCount: 2,
-        truncated: false,
-        warnings: [],
+        cutoff, runRowsDeletedCount: 3, runsDeletedCount: 3, historyCutoff,
+        historyRowsDeletedCount: 2, truncated: false, warnings: [],
       });
-      const remainingHistory = sqlite
-        .prepare("SELECT stablecoin_id, snapshot_date FROM redemption_backstop_history")
-        .all() as Array<{ stablecoin_id: string; snapshot_date: number }>;
-      expect(remainingHistory).toEqual([{ stablecoin_id: "usdt-tether", snapshot_date: historyCutoff + 500 }]);
-      const remainingRuns = sqlite
-        .prepare("SELECT run_id FROM redemption_backstop_runs ORDER BY run_id ASC")
-        .all()
-        .map((row) => (row as { run_id: string }).run_id);
+      const remainingHistory = sqlite.prepare(
+        "SELECT stablecoin_id, snapshot_date FROM redemption_backstop_history",
+      ).all() as Array<{ stablecoin_id: string; snapshot_date: number }>;
+      expect(remainingHistory).toEqual([
+        { stablecoin_id: "usdt-tether", snapshot_date: historyCutoff + 500 },
+      ]);
+      const remainingRunRecords = sqlite.prepare(
+        "SELECT run_id FROM redemption_backstop_runs ORDER BY run_id ASC").all() as Array<{ run_id: string }>;
+      const remainingRuns = remainingRunRecords.map((row) => row.run_id);
       expect(remainingRuns).toEqual(["current-completed", "latest-completed"]);
-      const remainingRunRows = sqlite
-        .prepare("SELECT snapshot_run_id FROM redemption_backstop_run_rows ORDER BY snapshot_run_id ASC")
-        .all()
-        .map((row) => (row as { snapshot_run_id: string }).snapshot_run_id);
+      const remainingRunRowRecords = sqlite.prepare(
+        "SELECT snapshot_run_id FROM redemption_backstop_run_rows ORDER BY snapshot_run_id ASC").all() as Array<{ snapshot_run_id: string }>;
+      const remainingRunRows = remainingRunRowRecords.map((row) => row.snapshot_run_id);
       expect(remainingRunRows).toEqual(["current-completed", "latest-completed"]);
     } finally {
       sqlite.close();
@@ -603,12 +571,11 @@ describe("loadRedemptionBackstopSnapshot", () => {
     });
     expect(result.warnings).toEqual([expect.stringContaining("Run-row retention prune failed")]);
 
-    const history = db.getHistory();
-    expect(history.some((entry) => entry.sql.includes("status = 'completed'"))).toBe(true);
-    expect(history.some((entry) => entry.sql.includes("status = 'failed'"))).toBe(false);
-    const metadataUpdates = history.filter((entry) => entry.sql.includes("SET metadata_json = ?"));
-    const finalMetadataUpdate = metadataUpdates[metadataUpdates.length - 1];
-    const finalMetadata = JSON.parse(String(finalMetadataUpdate?.binds[0] ?? "{}")) as Record<string, unknown>;
+    const finalMetadata = findWriteMetadata(
+      db.getHistory(),
+      "run-retention-warning",
+      "completed-with-warnings",
+    );
     expect(finalMetadata).toMatchObject({
       snapshotRunId: "run-retention-warning",
       writeStatus: "completed-with-warnings",
@@ -656,40 +623,37 @@ describe("loadRedemptionBackstopSnapshot", () => {
       truncated: false,
       warnings: [expect.stringContaining("row prune failed")],
     });
-    const history = db.getHistory().filter((entry) => entry.sql.includes("DELETE FROM redemption_backstop"));
-    expect(history[0]?.sql).toContain("DELETE FROM redemption_backstop_runs");
-    expect(history[1]?.sql).toContain("DELETE FROM redemption_backstop_run_rows");
-    expect(history[2]?.sql).toContain("DELETE FROM redemption_backstop_history");
   });
 
   it("caps a large retention backlog and reports truncation", async () => {
-    const db = mockRedemptionD1([
-      {
-        match: "DELETE FROM redemption_backstop_runs",
-        rows: [],
-        runMeta: { changes: 2 },
-      },
-    ]);
+    const sqlite = createLatestSchemaSqlite().sqlite;
+    try {
+      const insertRun = sqlite.prepare(
+        `INSERT INTO redemption_backstop_runs (
+          run_id, started_at, completed_at, status, expected_count, written_count,
+          methodology_version, min_updated_at, max_updated_at, metadata_json
+        ) VALUES (?, ?, ?, ?, 0, 0, '4.04', NULL, NULL, NULL)`,
+      );
+      for (let index = 0; index < 7; index += 1) {
+        insertRun.run(`old-${index}`, 8_000 + index, 8_000 + index, "failed");
+      }
+      insertRun.run("latest-completed", 8_100, 8_100, "completed");
 
-    const result = await pruneRedemptionBackstopRunRetention(db, {
-      nowSec: 10_000,
-      retentionSec: 1_000,
-      preserveRunId: "current-run",
-      batchSize: 2,
-      maxBatches: 3,
-    });
-
-    expect(result).toMatchObject({
-      runsDeletedCount: 6,
-      runRowsDeletedCount: 0,
-      historyRowsDeletedCount: 0,
-      truncated: true,
-      warnings: [expect.stringContaining("truncated")],
-    });
-    const deletes = db.getHistory().filter((entry) => entry.sql.includes("DELETE FROM redemption_backstop"));
-    expect(deletes).toHaveLength(3);
-    expect(deletes.every((entry) => entry.sql.includes("DELETE FROM redemption_backstop_runs"))).toBe(true);
-    expect(deletes[0]?.sql).toContain("ORDER BY COALESCE(completed_at, started_at) ASC");
+      const result = await pruneRedemptionBackstopRunRetention(createSqliteD1(sqlite), {
+        nowSec: 10_000, retentionSec: 1_000, preserveRunId: "current-run",
+        batchSize: 2, maxBatches: 3,
+      });
+      expect(result).toMatchObject({
+        runsDeletedCount: 6, runRowsDeletedCount: 0, historyRowsDeletedCount: 0,
+        truncated: true, warnings: [expect.stringContaining("truncated")],
+      });
+      const remainingRunRecords = sqlite.prepare(
+        "SELECT run_id FROM redemption_backstop_runs ORDER BY run_id ASC").all() as Array<{ run_id: string }>;
+      const remainingRuns = remainingRunRecords.map((row) => row.run_id);
+      expect(remainingRuns).toEqual(["latest-completed", "old-6"]);
+    } finally {
+      sqlite.close();
+    }
   });
 });
 

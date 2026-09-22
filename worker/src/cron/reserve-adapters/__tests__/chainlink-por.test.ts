@@ -5,9 +5,11 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import {
   adaptBackedCirculationResponse,
   adaptChainlinkPorResponse,
+  parseBackedRawUnits,
   type ChainlinkPorIssuerCirculationProbe,
   type ChainlinkPorParams,
 } from "../chainlink-por";
+import { encodeBalanceOfCallData } from "../../../lib/evm-selectors";
 import { expectWarnings, expectWarningEffect, runAdapter, type AdapterNetworkSpec, type AdapterRpcValue } from "./reserve-adapter.test-support";
 import { makePorCoin, makePorSupply } from "./chainlink-por.test-support";
 const POR_FEED_ENDPOINT = "https://api.backed.fi/graphql";
@@ -859,5 +861,94 @@ describe("fetchChainlinkPorReserves", () => {
     expect(result.warnings?.find((w) => w.code === "por-reserve-over-supply")).toBeUndefined();
     expect(result.warnings).toContainEqual(expect.objectContaining({ code: "por-circulation-freshness-unverified", effect: "degraded" }));
     expect(result.warnings?.some((w) => w.code === "por-reserve-under-supply")).not.toBe(true);
+  });
+});
+
+const BACKED_NOW = 1_789_440_000;
+const BACKED_TOKEN = "0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7";
+const BACKED_FEED = "0x648e0ff6a36d58f6fce5927cb77601b73cadc2af";
+const BACKED_OWNERS = ["0x5f7a4c11bde4f218f0025ef444c369d838ffa2ad", "0x43624c744a4af40754ab19b00b6f681ca56f1e5b"];
+const BACKED_CHAINS = ["ethereum", "polygon", "gnosis", "bsc", "avalanche", "fantom", "base", "arbitrum"];
+const BACKED_CHAIN_IDS = [1, 137, 100, 56, 43114, 250, 8453, 42161];
+
+function backedFixture() {
+  const word = (n: bigint) => n.toString(16).padStart(64, "0");
+  const coin = makePorCoin({
+    id: "bc3m-backed", symbol: "bC3M",
+    contracts: BACKED_CHAINS.map((chain) => ({ chain, address: BACKED_TOKEN, decimals: 18 })),
+    liveReservesConfig: {
+      adapter: "chainlink-por", version: 1, semantics: "attestation-mix",
+      inputs: { primary: { kind: "onchain-evm", chain: "polygon", rpcMode: "public-rpc" } },
+      params: { porFeedAddress: BACKED_FEED, assetLabel: "Fund shares", assetRisk: "very-low", reserveUnit: "SHARES",
+        issuerCirculationProbe: { kind: "backed-graphql", url: POR_FEED_ENDPOINT, reserveSymbol: "C3M.MI" } },
+    },
+  });
+  const deployments = BACKED_CHAIN_IDS.map((chainId, index) => ({ chainId: String(chainId), address: BACKED_TOKEN,
+    totalSupply: index === 0 ? "6e+22" : "0", circulatingSupply: index === 0 ? "700000000002299947" : "0" }));
+  const payload = { data: { assetReserves: [{ symbol: "C3M.MI", token: [{ symbol: "bC3M", deployments }] }] } };
+  const network: AdapterNetworkSpec = { block: { number: 123456, timestamp: BACKED_NOW - 10 },
+    json: { [POR_FEED_ENDPOINT]: payload }, rpc: {
+      [`${BACKED_FEED}:0x313ce567`]: 18n,
+      [`${BACKED_FEED}:0xfeaf968c`]: `0x${word(1n)}${word(700000000000000000n)}${word(0n)}${word(BigInt(BACKED_NOW - 60))}${word(1n)}`,
+      "0x18160ddd": (call) => call.chain === "ethereum" ? 60000n * 10n ** 18n : 0n,
+      [encodeBalanceOfCallData(BACKED_OWNERS[0])]: (call) => call.chain === "ethereum" ? 50000n * 10n ** 18n : 0n,
+      [encodeBalanceOfCallData(BACKED_OWNERS[1])]: (call) => call.chain === "ethereum" ? 10000n * 10n ** 18n - 700000000002299947n : 0n,
+    } };
+  return { coin, network, payload, deployments };
+}
+
+describe("reviewed Backed inventory circulation", () => {
+  it("compares exact current net units, retaining gross supply and the older oracle timestamp", async () => {
+    const fixture = backedFixture();
+    const { result } = await runAdapter("chainlink-por", fixture.coin, { network: fixture.network, nowSec: BACKED_NOW });
+    expect(result.metadata).toMatchObject({
+      liabilityBasis: "onchain-verified-issuer-circulation", supplyTokens: 60000,
+      sourceTimestamp: BACKED_NOW - 60, circulationVerifiedAt: BACKED_NOW - 10,
+    });
+    expect(result.metadata?.circulatingSupplyTokens).toBeCloseTo(0.700000000002299947);
+    expect(result.metadata?.collateralizationRatio).toBeCloseTo(1);
+    expect(result.warnings?.some((warning) => warning.code === "por-circulation-freshness-unverified")).not.toBe(true);
+  });
+
+  for (const scenario of ["one-wei-net", "one-wei-gross", "missing-funded", "duplicate", "wrong-address", "extra-zero", "wrong-token", "missing-chain", "stale-block", "inventory-overflow", "partial-read", "wrong-reserve-unit", "wrong-feed", "wrong-feed-chain"] as const) {
+    it(`withholds coverage for ${scenario}`, async () => {
+      const fixture = backedFixture();
+      if (scenario === "one-wei-net") fixture.deployments[0].circulatingSupply = "700000000002299948";
+      if (scenario === "one-wei-gross") fixture.deployments[0].totalSupply = "60000000000000000000001";
+      if (scenario === "missing-funded") fixture.deployments.shift();
+      if (scenario === "duplicate") fixture.deployments.push({ ...fixture.deployments[0] });
+      if (scenario === "wrong-address") fixture.deployments[1].address = "0x0000000000000000000000000000000000000001";
+      if (scenario === "extra-zero") fixture.deployments.push({ chainId: "10", address: BACKED_TOKEN, totalSupply: "0", circulatingSupply: "0" });
+      if (scenario === "wrong-token") fixture.payload.data.assetReserves[0].token[0].symbol = "bIB01";
+      if (scenario === "missing-chain") fixture.coin.contracts!.pop();
+      if (scenario === "stale-block") fixture.network.block!.timestamp = BACKED_NOW - 301;
+      if (scenario === "inventory-overflow") fixture.network.rpc![encodeBalanceOfCallData(BACKED_OWNERS[0])] = 60001n * 10n ** 18n;
+      if (scenario === "partial-read") fixture.network.rpc![encodeBalanceOfCallData(BACKED_OWNERS[0])] = (call) => call.chain === "fantom" ? null : call.chain === "ethereum" ? 50000n * 10n ** 18n : 0n;
+      if (scenario === "wrong-reserve-unit") fixture.coin.liveReservesConfig!.params!.reserveUnit = "USD";
+      if (scenario === "wrong-feed-chain") fixture.coin.liveReservesConfig!.inputs!.primary = { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" };
+      if (scenario === "wrong-feed") {
+        const wrongFeed = "0x0000000000000000000000000000000000000001";
+        fixture.coin.liveReservesConfig!.params!.porFeedAddress = wrongFeed;
+        fixture.network.rpc![`${wrongFeed}:0x313ce567`] = fixture.network.rpc![`${BACKED_FEED}:0x313ce567`];
+        fixture.network.rpc![`${wrongFeed}:0xfeaf968c`] = fixture.network.rpc![`${BACKED_FEED}:0xfeaf968c`];
+      }
+      const { result } = await runAdapter("chainlink-por", fixture.coin, { network: fixture.network, nowSec: BACKED_NOW });
+      expect(result.metadata?.collateralizationRatio).toBeUndefined();
+      expect(result.metadata?.liabilityBasis).toBeUndefined();
+      if (scenario === "one-wei-net") {
+        expect(result.metadata).toMatchObject({ supplyTokens: 60000, supplyReadComplete: true });
+      }
+      expect(result.warnings?.some((warning) => warning.code === "por-circulation-probe-failed")).toBe(true);
+    });
+  }
+});
+
+describe("Backed exact raw quantity parsing", () => {
+  it.each([["6e+22", 60000000000000000000000n], ["4.442000000000002098529e+21", 4442000000000002098529n],
+    ["700000000002299947", 700000000002299947n], ["1.000", 1n], [0, 0n]])("reads %s exactly", (value, expected) => {
+    expect(parseBackedRawUnits(value)).toBe(expected);
+  });
+  it.each(["1.01", "-1", "1e999", "NaN", 9007199254740992, (2n ** 256n).toString(), null])("rejects %s", (value) => {
+    expect(parseBackedRawUnits(value)).toBeNull();
   });
 });
