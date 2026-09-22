@@ -415,6 +415,20 @@ describe("status dashboard model", () => {
     );
   });
 
+  it("explains yield degradation without attributing it to healthy mint/burn or zero blacklist gaps", () => {
+    const healthData = {
+      ...BASE_HEALTH,
+      status: "degraded" as const,
+      warnings: ["cache-quality-degraded: yield-data:producer-degraded-since-last-clean-run"],
+      mintBurn: { ...BASE_HEALTH.mintBurn, sync: { ...BASE_HEALTH.mintBurn.sync, lastSuccessfulSyncAt: BASE_STATUS.timestamp - 1020 } },
+    };
+    const notice = buildModel(BASE_STATUS, { healthData }).notices.find((row) => row.id === "public-health");
+    expect(notice).toMatchObject({ title: "Public /api/health reports degraded", tone: "warning" });
+    expect(notice?.detail).toContain("A recent yield update reported incomplete or degraded inputs.");
+    expect(notice?.detail).not.toContain("Last successful mint/burn sync");
+    expect(notice?.detail).not.toContain("Blacklist gaps");
+  });
+
   it("keeps healthy dashboard output byte-identical when failure metadata is absent or empty", () => {
     const healthy = makeHealthyStatusResponse();
     const healthyWithEmptyFailureMetadata = {

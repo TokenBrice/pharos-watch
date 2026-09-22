@@ -51,6 +51,7 @@ describe("public status helpers", () => {
           consecutiveMissingGenerations: 700,
           alertEligible: true,
         }),
+        makeMissingActiveAsset({ stablecoinId: "usdaf-asymmetry", symbol: "USDaf", consecutiveMissingGenerations: 1, alertEligible: false }),
       ]),
     };
 
@@ -58,6 +59,16 @@ describe("public status helpers", () => {
       title: "Long-running price gaps",
       detail:
         "1 active asset: NXUSD has had no accepted live price for more than a week. Market caps keep publishing; each is under catalog review to re-source the price or retire the listing.",
+    });
+  });
+
+  it("explains degraded yield production while retaining unknown warning evidence", () => {
+    expect(getPublicHealthWarningPresentation("cache-quality-degraded: yield-data:producer-degraded-since-last-clean-run", BASE_HEALTH)).toEqual({
+      title: "Yield data quality",
+      detail: "A recent yield update reported incomplete or degraded inputs. Yield data remains degraded until a clean update succeeds.",
+    });
+    expect(getPublicHealthWarningPresentation("unknown-health-reason", BASE_HEALTH)).toEqual({
+      title: "Health warning", detail: "unknown-health-reason",
     });
   });
 
