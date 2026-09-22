@@ -430,6 +430,44 @@ describe("stablecoin publication health", () => {
     );
   });
 
+  it("applies the writer sanitizer to missing-price details", async () => {
+    const { sqlite, db } = fixtures.open();
+    const trackedId = activeIds[0]!;
+    insertRun(sqlite, "sync-stablecoins", 100, {
+      activePublicationCoverage: publicationCoverage(),
+      activePriceCoverage: priceCoverage({
+        complete: false,
+        missingActiveIds: [trackedId],
+        missingPriceCount: 1,
+        missingActiveAssets: [{
+          stablecoinId: trackedId,
+          symbol: "   ",
+          currentSource: "",
+          currentConfidence: "  ",
+          currentObservedAt: 9_000_000_000_000_000,
+          lastAcceptedPrice: -1,
+          lastAcceptedSource: "\t",
+          lastAcceptedObservedAt: -9_000_000_000_000_000,
+          rejectionReason: " ",
+          consecutiveMissingGenerations: 1,
+        }],
+      }),
+    });
+
+    const price = (await loadStablecoinCoverageHealth(db, 1_000)).activePriceCoverage;
+    expect(price.missingActiveAssets).toEqual([expect.objectContaining({
+      stablecoinId: trackedId,
+      symbol: trackedId,
+      currentSource: null,
+      currentConfidence: null,
+      currentObservedAt: null,
+      lastAcceptedPrice: null,
+      lastAcceptedSource: null,
+      lastAcceptedObservedAt: null,
+      rejectionReason: "no-accepted-price",
+    })]);
+  });
+
   it("marks price coverage incomplete unless every completeness check passes", async () => {
     const { sqlite, db } = fixtures.open();
     const mutations: Array<Record<string, unknown>> = [
