@@ -407,8 +407,8 @@ export async function loadStatusSupplements(
   }
 
   let priceSourceHealth: PriceSourceHealth | null = null;
-  const syncStablecoinsCron = crons["sync-stablecoins"];
-  const priceSourceHealthMetadata = syncStablecoinsCron?.lastRun?.metadata?.priceSourceHealth;
+  // The self-check probe path calls this before any cron map exists; absence is not an error.
+  const priceSourceHealthMetadata: unknown = crons?.["sync-stablecoins"]?.lastRun?.metadata?.priceSourceHealth;
   if (priceSourceHealthMetadata != null) {
     const parsedPriceSourceHealth = PriceSourceHealthSchema.safeParse(priceSourceHealthMetadata);
     if (!parsedPriceSourceHealth.success) {

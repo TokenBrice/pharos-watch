@@ -676,7 +676,8 @@ describe("runScheduledSlotWithFence", () => {
         abandonedJobs: [],
       }),
     ]);
-    expect(db.getRuns()).toHaveLength(4);
+    // P2-10 reconciles every registered chain member; P2-03 makes this quarter-hourly fixture six jobs.
+    expect(db.getRuns()).toHaveLength(6);
     expect(db.getRuns().every((run) => run.slot_started_at === staleSlotStartedAt)).toBe(true);
     expect(db.getProgress("daily-digest")).toBeDefined();
     expect(db.getLease("daily-digest")).toBeDefined();
