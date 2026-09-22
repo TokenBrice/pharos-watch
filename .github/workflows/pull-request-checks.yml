@@ -42,7 +42,7 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      - name: Scan the PR merge tree with the trusted scanner and policy
+      - name: Scan the PR merge-resolution lines with the trusted scanner and policy
         run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ci/run-gitleaks.ts --tree
       - name: Run manifest preflight
         id: classify

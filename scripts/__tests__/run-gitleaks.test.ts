@@ -3,7 +3,13 @@ import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ensurePinnedGitleaks, GITLEAKS_VERSION, resolveGitleaksPin, runGitleaks } from "../ci/run-gitleaks";
+import {
+  buildGitleaksMergeResolutionInput,
+  ensurePinnedGitleaks,
+  GITLEAKS_VERSION,
+  resolveGitleaksPin,
+  runGitleaks,
+} from "../ci/run-gitleaks";
 
 describe("run-gitleaks", () => {
   afterEach(() => vi.restoreAllMocks());
@@ -75,23 +81,44 @@ describe("run-gitleaks", () => {
     }
   });
 
-  it("scans the checked-out tree as its own lane and fails closed on its findings", async () => {
+  it("scans only the bytes a merge resolution introduced and fails closed on them", async () => {
+    const resolution = Buffer.from("api_key = \"introduced-by-resolution\"\n");
     const runBinary = vi.fn((_binary: string, args: string[], _options: Record<string, unknown>): { status: number } => ({
       status: args.includes("--config=.gitleaks.toml") ? 1 : runBinary.mock.calls.length % 2 === 1 ? 0 : 1,
     }));
     const buildWorktreeInput = vi.fn(() => Buffer.from("unused\n"));
+    const buildMergeResolutionInput = vi.fn(() => resolution);
 
     await expect(runGitleaks({
       argv: ["--tree"], env: { NODE_ENV: "test" }, platformKey: "linux-x64",
-      ensureBinary: async () => "/fake/gitleaks", runBinary, buildWorktreeInput,
+      ensureBinary: async () => "/fake/gitleaks", runBinary, buildWorktreeInput, buildMergeResolutionInput,
     })).resolves.toEqual({ status: 1 });
 
     const scan = runBinary.mock.calls.at(-1)!;
-    expect(scan[1][0]).toBe("dir");
-    expect(scan[1].at(-1)).toBe(".");
+    expect(scan[1][0]).toBe("stdin");
     expect(scan[1].some((arg) => arg.startsWith("--log-opts"))).toBe(false);
-    expect(scan[2]).not.toHaveProperty("input");
+    expect(scan[2]).toMatchObject({ input: resolution });
     expect(buildWorktreeInput).not.toHaveBeenCalled();
+  });
+
+  it("extracts combined-diff lines present in neither parent and nothing for a non-merge HEAD", () => {
+    const combined = [
+      "diff --cc config.ts",
+      "--- a/config.ts",
+      "+++ b/config.ts",
+      "@@@ -1,2 -1,2 +1,3 @@@",
+      "  shared line",
+      "+ from parent two only",
+      " +from parent one only",
+      "++token = \"resolution-only\"",
+    ].join("\n");
+    const execFile = vi.fn((_file: string, args: string[]) =>
+      args[0] === "rev-list" ? "merge parent1 parent2\n" : combined);
+    expect(buildGitleaksMergeResolutionInput({ execFile }).toString()).toBe("token = \"resolution-only\"\n");
+
+    const single = vi.fn((_file: string, args: string[]) => (args[0] === "rev-list" ? "head parent1\n" : combined));
+    expect(buildGitleaksMergeResolutionInput({ execFile: single }).toString()).toBe("\n");
+    expect(single).toHaveBeenCalledTimes(1);
   });
 
   it("rejects untrusted downloads and never extracts them", async () => {
