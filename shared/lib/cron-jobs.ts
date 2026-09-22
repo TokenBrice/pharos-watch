@@ -217,6 +217,8 @@ export const SHARED_SCHEDULED_JOB_IDENTITIES = {
   "daily-digest": ["digestTriggerPoll", "daily0805Utc"],
   "weekly-recap": ["digestTriggerPoll", "daily0810Utc"],
   "snapshot-supply": ["quarterHourly", "daily0800Utc"],
+  "snapshot-psi": ["quarterHourly", "daily0800Utc"],
+  "snapshot-public-dataset": ["quarterHourly", "daily0800Utc"],
   "sync-cl-exit-depth": ["halfHourlyMeasuredExecution", "daily0810Utc"],
   "sync-yield-supplemental": ["hourlyYieldSync", "fourHourlyYieldSupplemental"],
   "fetch-tbill-rate": ["hourlyYieldSync", "daily0800Utc"],

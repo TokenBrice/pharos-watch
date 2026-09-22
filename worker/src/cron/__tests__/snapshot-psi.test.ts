@@ -47,10 +47,14 @@ describe("snapshotPsiDaily", () => {
       methodologyRows: [{ methodology_version: "psi-v3", cnt: 96 }],
     });
 
-    const result = await snapshotPsiDaily(db);
+    const result = await snapshotPsiDaily(db, undefined, { completionReason: "same_day_catch_up" });
 
-    expect(result.metadata).toContain("avg=87.4");
-    expect(result.metadata).toContain("samples=96");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: "same_day_catch_up",
+      avgScore: 87.4,
+      band: "STEADY",
+      sampleCount: 96,
+    });
 
     const binds = getInsertBinds(db as MockD1Database);
     const expectedComputedAt = yesterdayMidnightFrom(Date.now());

@@ -109,6 +109,7 @@ interface SnapshotPublicDatasetOptions {
   freshnessGateLabel?: string;
   stablecoinsCacheRetryAttempts?: number;
   stablecoinsCacheRetryDelayMs?: number;
+  completionReason?: string;
 }
 
 const DEFAULT_STABLECOINS_CACHE_RETRY_ATTEMPTS = 0;
@@ -543,6 +544,7 @@ export async function snapshotPublicDataset(
   return createCronResult({
     itemCount: 1,
     metadata: {
+      ...(options.completionReason ? { reason: options.completionReason } : {}),
       snapshotDate,
       contentHash,
       byteSize,

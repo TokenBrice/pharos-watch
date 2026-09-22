@@ -30,6 +30,8 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
       "sync-stablecoins",
       "snapshot-supply",
       "snapshot-chain-supply",
+      "snapshot-psi",
+      "snapshot-public-dataset",
     ]],
   },
   v9SupplyAttributionOffset: {

@@ -288,9 +288,13 @@ describe("snapshotPublicDataset", () => {
     vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
       .mockResolvedValue(source);
     const db = buildDb();
-    const result = await snapshotPublicDataset(db);
+    const result = await snapshotPublicDataset(db, undefined, { completionReason: "same_day_catch_up" });
 
     expect(result.itemCount).toBe(1);
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: "same_day_catch_up",
+      snapshotDate: ISO_DATE,
+    });
 
     const binds = getInsertBinds(db);
     expect(binds).toBeDefined();

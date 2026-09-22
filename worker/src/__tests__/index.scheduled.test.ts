@@ -486,6 +486,8 @@ describe("worker.scheduled", () => {
     const db = mockD1([
       { match: "FROM cron_runs", rows: [] },
       { match: "FROM cron_slot_executions", rows: [] },
+      { match: "FROM stability_index WHERE computed_at", rows: [{ present: 1 }], first: { present: 1 } },
+      { match: "FROM public_snapshots WHERE snapshot_date", rows: [{ present: 1 }], first: { present: 1 } },
     ], { requireMatch: true });
     const env = createWorkerEnv({
       DB: db,
@@ -559,6 +561,10 @@ describe("worker.scheduled", () => {
     const { ctx, waits } = makeExecutionContext();
     const env = makeScheduledEnv({
       TELEGRAM_BOT_TOKEN: "bot-token",
+      DB: mockD1([
+        { match: "FROM stability_index WHERE computed_at", rows: [{ present: 1 }], first: { present: 1 } },
+        { match: "FROM public_snapshots WHERE snapshot_date", rows: [{ present: 1 }], first: { present: 1 } },
+      ]),
     });
     const scheduledTime = Date.parse("2026-03-23T00:15:00Z");
     const expectedSlotStartedAt = Math.floor(scheduledTime / 1000);
