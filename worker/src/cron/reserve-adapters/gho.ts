@@ -5,7 +5,6 @@ import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters
 import { TOTAL_SUPPLY_SELECTOR, encodeAddress, encodeUint256 } from "../../lib/evm-selectors";
 import { mapWithConcurrency } from "../../lib/concurrency";
 import type { AdapterContext, AdapterResult } from "./types";
-import { parseEvmAddressResult } from "./evm";
 import {
   decimalNumberFromBigInt,
   makeOnchainCallers,
@@ -15,7 +14,7 @@ import {
   requireOnchainInput,
   slicesFromValues,
 } from "./helpers";
-import { decodeAddressArrayWord, decodeBoolWord } from "./abi-decode";
+import { decodeAddressArrayWord, decodeStrictAddressWord, decodeStrictBoolWord } from "./abi-decode";
 
 const GHO_TOKEN = "0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f";
 const GET_FACILITATORS_LIST_SELECTOR = "0x1ec90f2e";
@@ -303,8 +302,8 @@ async function loadTrackedModule(
     return { module: null, warnings };
   }
 
-  const isFrozen = decodeBoolWord(isFrozenRaw);
-  const isSeized = decodeBoolWord(isSeizedRaw);
+  const isFrozen = decodeStrictBoolWord(isFrozenRaw);
+  const isSeized = decodeStrictBoolWord(isSeizedRaw);
   if (isFrozen == null || isSeized == null) {
     warnings.push(reserveDegradedWarning(
       "tracked-gsm-status-unavailable",
@@ -321,7 +320,7 @@ async function loadTrackedModule(
 
   let buyFeeBps: number | null = null;
   const feeStrategyAddress =
-    feeStrategyRaw && feeStrategyRaw !== "0x" ? parseEvmAddressResult(feeStrategyRaw as `0x${string}`) : null;
+    feeStrategyRaw && feeStrategyRaw !== "0x" ? decodeStrictAddressWord(feeStrategyRaw as `0x${string}`) : null;
   if (feeStrategyAddress && feeStrategyAddress !== ZERO_ADDRESS) {
     const buyFee = await onchain.uint256(feeStrategyAddress, GET_BUY_FEE_SELECTOR + encodeUint256(ONE_GHO));
     if (buyFee != null) {

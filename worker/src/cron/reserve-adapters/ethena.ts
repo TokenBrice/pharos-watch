@@ -11,7 +11,7 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   decodeAbiWordAt,
   decodeAddressWord,
-  decodeBoolWord,
+  decodeStrictBoolWord,
   decodeUint256Word,
   decodeUint8Word,
 } from "./abi-decode";
@@ -261,7 +261,7 @@ export function buildEthenaRedemptionTelemetry(
     // tokenConfig(address) -> (uint8 tokenType, bool isActive, uint128 maxMintPerBlock, uint128 maxRedeemPerBlock)
     const tokenConfig = reads[ethenaTokenConfigLabel(asset.label)] ?? null;
     const tokenType = decodeUint8Word(decodeAbiWordAt(tokenConfig, 0));
-    const isActive = decodeBoolWord(decodeAbiWordAt(tokenConfig, 1));
+    const isActive = decodeStrictBoolWord(decodeAbiWordAt(tokenConfig, 1));
     const maxRedeemPerBlockRaw = decodeUint256Word(decodeAbiWordAt(tokenConfig, 3));
     const balanceRaw = decodeUint256Word(reads[ethenaBalanceLabel(asset.label)] ?? null);
     if (tokenType == null || isActive == null || maxRedeemPerBlockRaw == null || balanceRaw == null) return null;

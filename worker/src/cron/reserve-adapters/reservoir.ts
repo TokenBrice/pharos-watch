@@ -11,13 +11,11 @@ import {
   requireJsonInputFromConfig,
 } from "./helpers";
 import { classifyBucketedValues, type ValueBucketRule } from "./classification";
-import { parseEvmAddressResult } from "./evm";
-import { decodeStrictBoolWord } from "./abi-decode";
+import { decodeStrictAddressWord, decodeStrictBoolWord } from "./abi-decode";
 import { PAUSED_SELECTOR } from "../../lib/evm-selectors";
 import { wrapperAssetMeta } from "./wrapper-assets";
-import { NEUTRAL_ADAPTER_HEADERS } from "./request";
+import { fetchWithBrowserFallback } from "./request";
 import { rethrowIfAborted } from "../../lib/abort";
-import { toErrorMessage } from "@shared/lib/error-utils";
 
 interface ReservoirBalanceItem {
   label: string;
@@ -36,15 +34,6 @@ export interface ReservoirReservesResponse {
 
 type ReservoirBucketKey = "usd1" | "pyusd" | "rlusd" | "ausd" | "gho" | "usdt" | "usdc" | "agua" | "rusd" | "prime" | "usdat";
 
-const RESERVOIR_BROWSER_HEADERS: HeadersInit = {
-  Accept: "application/json, text/plain, */*",
-  Origin: "https://app.reservoir.xyz",
-  Referer: "https://app.reservoir.xyz/reserves",
-  "Accept-Language": "en-US,en;q=0.9",
-  "Sec-Fetch-Dest": "empty",
-  "Sec-Fetch-Mode": "cors",
-  "Sec-Fetch-Site": "same-origin",
-};
 
 // Stable buckets that provide broader balance-sheet liquidity context. This
 // aggregate is diagnostic only: the modeled rUSD PSM exit terminates in USDC,
@@ -237,7 +226,7 @@ async function probeReservoirUsdcPsm(signal: AbortSignal, ctx?: AdapterContext):
       onchain.raw(RESERVOIR_USDC_PSM_ADDRESS, PAUSED_SELECTOR),
     ]);
 
-    const underlying = underlyingHex ? parseEvmAddressResult(underlyingHex as `0x${string}`) : null;
+    const underlying = underlyingHex ? decodeStrictAddressWord(underlyingHex as `0x${string}`) : null;
     if (underlying !== RESERVOIR_PSM_UNDERLYING_ADDRESS) return null;
 
     const paused = decodeStrictBoolWord(pausedHex);
@@ -334,23 +323,21 @@ async function fetchReservoirPayload(
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<ReservoirReservesResponse> {
-  try {
-    return await fetchJsonWithRetry<ReservoirReservesResponse>(url, signal, 20_000, ctx, {
-      headers: RESERVOIR_BROWSER_HEADERS,
-    });
-  } catch (primaryError) {
-    if (signal.aborted) throw primaryError;
-    try {
-      return await fetchJsonWithRetry<ReservoirReservesResponse>(url, signal, 20_000, ctx, {
-        headers: NEUTRAL_ADAPTER_HEADERS,
+  return fetchWithBrowserFallback(
+    "https://app.reservoir.xyz",
+    "https://app.reservoir.xyz/reserves",
+    (headers) => {
+      const requestHeaders = new Headers(headers);
+      requestHeaders.set("Accept", "application/json, text/plain, */*");
+      requestHeaders.set("Sec-Fetch-Dest", "empty");
+      requestHeaders.set("Sec-Fetch-Mode", "cors");
+      requestHeaders.set("Sec-Fetch-Site", "same-origin");
+      return fetchJsonWithRetry<ReservoirReservesResponse>(url, signal, 20_000, ctx, {
+        headers: requestHeaders,
       });
-    } catch (fallbackError) {
-      if (signal.aborted) throw fallbackError;
-      throw new Error(
-        `browser fetch failed: ${toErrorMessage(primaryError)}; neutral fetch failed: ${toErrorMessage(fallbackError)}`,
-      );
-    }
-  }
+    },
+    signal,
+  );
 }
 
 export async function fetchReservoirReserves(

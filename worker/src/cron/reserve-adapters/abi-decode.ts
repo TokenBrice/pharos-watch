@@ -38,10 +38,6 @@ export function decodeUint256Word(raw: string | null | undefined): bigint | null
   }
 }
 
-export function decodeBoolWord(raw: string | null | undefined): boolean | null {
-  const value = decodeUint256Word(raw);
-  return value == null ? null : value !== 0n;
-}
 
 /**
  * Strict single-word boolean: exactly one ABI word of value 0 or 1. Route

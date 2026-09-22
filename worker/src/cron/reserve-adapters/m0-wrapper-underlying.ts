@@ -12,7 +12,7 @@ import {
   encodeAddress,
   encodeBalanceOfCallData,
 } from "../../lib/evm-selectors";
-import { decodeAddressWord, decodeBoolWord, decodeUint8Word } from "./abi-decode";
+import { decodeAddressWord, decodeStrictBoolWord, decodeUint8Word } from "./abi-decode";
 import { normalizeEvmAddress, resolveCoinContractAddress } from "./evm";
 import {
   makeOnchainCallers,
@@ -241,8 +241,8 @@ export async function fetchM0WrapperUnderlyingReserves(
           )
         : Promise.resolve(null),
     ]);
-    swapFacilityPaused = decodeBoolWord(pausedRaw);
-    swapperCanRedeem = decodeBoolWord(canSwapRaw);
+    swapFacilityPaused = decodeStrictBoolWord(pausedRaw);
+    swapperCanRedeem = decodeStrictBoolWord(canSwapRaw);
     if (swapFacilityPaused === true) {
       routeStatus = "paused";
       routeStatusReason = "M0 SwapFacility is paused for this extension route";

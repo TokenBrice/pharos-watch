@@ -42,7 +42,7 @@ import {
 } from "./branch-balances";
 import {
   decodeAddressWord,
-  decodeBoolWord,
+  decodeStrictBoolWord,
   decodeUint8Word,
   decodeUint256Word,
 } from "./abi-decode";
@@ -242,7 +242,7 @@ async function fetchLiquityV2BranchState(
     const debts = balances.map((entry, index) => ({
       entry,
       debtRaw: decodeUint256Word(rawByLabel.get(`branch:debt:${index}`)),
-      shutDown: decodeBoolWord(rawByLabel.get(`branch:shutdown:${index}`)),
+      shutDown: decodeStrictBoolWord(rawByLabel.get(`branch:shutdown:${index}`)),
       redemptionFeeBps: params.redemptionRateProbe
         ? null
         : rateBpsFromRaw(
@@ -297,7 +297,7 @@ async function fetchLiquityV2BranchState(
     return {
       entry,
       debtRaw,
-      shutDown: decodeBoolWord(shutDownRaw),
+      shutDown: decodeStrictBoolWord(shutDownRaw),
       redemptionFeeBps: branchRedemptionFeeBps,
     };
   }));

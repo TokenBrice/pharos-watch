@@ -21,7 +21,7 @@ import {
   reserveDegradedWarning,
   slicesFromValues,
 } from "./helpers";
-import { decodeAddressWord, decodeBoolWord, decodeUint256Word } from "./abi-decode";
+import { decodeAddressWord, decodeStrictBoolWord, decodeUint256Word } from "./abi-decode";
 import { normalizeEvmAddress } from "./evm";
 import { validateDecimals } from "./slice-math";
 import { pinnedBlockPlan } from "./evm-observation-plan";
@@ -92,7 +92,7 @@ function decodeDecimals(raw: bigint | null, context: string): number {
 }
 
 function decodeBoolResult(raw: string | null): boolean | null {
-  return decodeBoolWord(raw);
+  return decodeStrictBoolWord(raw);
 }
 
 function buildRedemptionTelemetry(
