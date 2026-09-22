@@ -10,41 +10,196 @@ import { getCaches } from "./db-cache";
 import { buildInClause, D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "./d1-primitives";
 import { throwIfAborted } from "./abort";
 import { runWithOverloadRetry } from "./d1-overload-retry";
+import reviewedConservationSidecar from "./mint-burn-conservation-reviewed.json";
 
 const TRANSFER = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 const ZERO = `0x${"0".repeat(64)}`;
 const WORD = /^0x[0-9a-fA-F]{64}$/;
 const ADDRESS_WORD = /^0x0{24}[0-9a-fA-F]{40}$/;
 const QUANTITY = /^0x(?:0|[1-9a-fA-F][0-9a-fA-F]*)$/;
-// Reviewed non-rebasing Ethereum Transfer/totalSupply identities. Expansion requires a raw-log audit.
-const REVIEWED: ReadonlyArray<readonly [string, string, number]> = [
-  ["usds-sky", "0xdc035d45d973e3ec169d2276ddab16f1e407384f", 18],
-  ["usde-ethena", "0x4c9edd5852cd905f086c759e8383e09bff1e68b3", 18],
-  ["usd1-world-liberty-financial", "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d", 18],
-  ["usdg-paxos", "0xe343167631d89b6ffc58b88d6b7fb0228795491d", 6],
-  ["usdat-saturn", "0x23238f20b894f29041f48d88ee91131c395aaa71", 6],
-  ["musd-metamask", "0xaca92e438df0b2401ff60da7e4337b687a2435da", 6],
-  ["gusd-gemini", "0x056fd409e1d7a124bd7017459dfea2f387b6d5cd", 2],
-  ["eure-monerium", "0x39b8b6385416f4ca36a20319f70d28621895279d", 18],
-  ["bold-liquity", "0x6440f144b7e50d6a8439336510312d2f54beb01d", 18],
-  ["ftusd-flying-tulip", "0xf7d85ec4e7710f71992752eac2111312e73e9c9c", 6],
-  ["lusd-liquity", "0x5f98805a4e8be255a32880fdec7f6728c6568ba0", 18],
-  ["dusd-alto", "0x63d74d22e689c715a04f2c13962b1f77f443d35b", 18],
-  ["usdaf-asymmetry", "0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8", 18],
-  ["buidl-blackrock", "0x7712c34205737192402172409a8f7ccef8aa2aec", 6],
-  ["buidl-blackrock", "0x6a9da2d710bb9b700acde7cb81f10f1ff8c89041", 6],
+// Reviewed-identity evidence sidecar: worker/src/lib/mint-burn-conservation-reviewed.json.
+// One entry per config identity (chain, stablecoin id, lowercase address, decimals) with the
+// reviewer's identity evidence and audited windows. Structural rules are enforced by tests and
+// by the admission CLI; this module only derives eligibility from it.
+export interface ReviewedConservationWindow {
+  fromBlock: number;
+  fromBlockHash: string;
+  fromTimestamp: number;
+  toBlock: number;
+  toBlockHash: string;
+  toTimestamp: number;
+  mintRaw: string;
+  burnRaw: string;
+  supplyDeltaRaw: string;
+  residualRaw: string;
+  logCount: number;
+  journalSha256: string;
+}
+
+export interface ReviewedConservationExternalMatch {
+  source: string;
+  value: string;
+  [field: string]: unknown;
+}
+
+export interface ReviewedConservationIdentity {
+  sourceVerified: boolean;
+  externalMatches?: ReviewedConservationExternalMatch[];
+  onChain?: { decimals?: number; [field: string]: unknown };
+  proxy?: { implementationSourceVerified?: boolean; [field: string]: unknown };
+  [field: string]: unknown;
+}
+
+export interface ReviewedConservationEntry {
+  chainId: string;
+  stablecoinId: string;
+  address: string;
+  decimals: number;
+  disposition: "admitted" | "unsupported";
+  unsupportedReason?: string | null;
+  eventSet?: "transfer" | "config-events";
+  invariant?: string;
+  identity?: ReviewedConservationIdentity;
+  supplyPaths?: unknown[];
+  unpairedPaths?: unknown[];
+  totalSupplyView?: { isStoredSum?: boolean; [field: string]: unknown };
+  zeroRecipientTransferReverts?: boolean | null;
+  zeroRecipientTransferBurns?: boolean | null;
+  identityIssue?: string | null;
+  notes?: string | null;
+  windows?: ReviewedConservationWindow[];
+  reviewedAt?: string;
+  reviewer?: string;
+}
+
+export interface MintBurnConservationEligibility {
+  supported: boolean;
+  reason?: string;
+}
+
+export type MintBurnConservationEligibilityResolver =
+  (config: MintBurnContractConfig) => MintBurnConservationEligibility;
+
+const UNREVIEWED_REASON = "unreviewed-contract-or-event-semantics";
+const UNSUPPORTED_REASON_LITERALS: Readonly<Record<string, true>> = {
+  "rebasing-supply-without-events": true,
+  "total-supply-override": true,
+  "deprecated-upgrade-forwarding": true,
+  "unverified-implementation-source": true,
+};
+const UNSUPPORTED_REASON_PREFIXES: readonly string[] = [
+  "unpaired-supply-path:",
+  "zero-address-transfer-without-supply-change:",
 ];
 
-export function getMintBurnConservationEligibility(config: MintBurnContractConfig): { supported: boolean; reason?: string } {
-  const identity = config.chain.chainId === "ethereum" && REVIEWED.some(([id, address, decimals]) =>
-    id === config.stablecoinId && address === config.contractAddress.toLowerCase() && decimals === config.decimals);
-  const events = config.events.length === 2 && ["mint", "burn"].every((direction) =>
+export function isMintBurnConservationUnsupportedReason(reason: unknown): reason is string {
+  return typeof reason === "string" && (UNSUPPORTED_REASON_LITERALS[reason] === true ||
+    UNSUPPORTED_REASON_PREFIXES.some((prefix) => reason.startsWith(prefix)));
+}
+
+export function reviewedConservationIdentityKey(chainId: string, stablecoinId: string, address: string, decimals: number): string {
+  return `${chainId}\u0000${stablecoinId}\u0000${address.toLowerCase()}\u0000${decimals}`;
+}
+
+function buildReviewedConservationIndex(entries: readonly ReviewedConservationEntry[]): ReadonlyMap<string, ReviewedConservationEntry> {
+  const index = new Map<string, ReviewedConservationEntry>();
+  for (const entry of entries) {
+    index.set(reviewedConservationIdentityKey(entry.chainId, entry.stablecoinId, entry.address, entry.decimals), entry);
+  }
+  return index;
+}
+
+// One lookup map built at import; no structural validation happens at load time. The JSON
+// module's inferred literal type is intentionally narrowed once here (tests and the admission
+// CLI own structural validation).
+const REVIEWED_CONSERVATION_ENTRIES =
+  reviewedConservationSidecar.entries as unknown as readonly ReviewedConservationEntry[];
+const REVIEWED_CONSERVATION_INDEX: ReadonlyMap<string, ReviewedConservationEntry> =
+  buildReviewedConservationIndex(REVIEWED_CONSERVATION_ENTRIES);
+
+function canonicalTransferPairSupported(config: MintBurnContractConfig): boolean {
+  return config.events.length === 2 && ["mint", "burn"].every((direction) =>
     config.events.filter((event) => event.direction === direction &&
       event.signature === "Transfer(address,address,uint256)" && event.topicHash.toLowerCase() === TRANSFER &&
       event.amountEncoding === "transfer-value" && event.dataSlot == null && event.counterpartyEncoding == null &&
       event.filterTopic?.index === (direction === "mint" ? 1 : 2) && event.filterTopic.value.toLowerCase() === ZERO).length === 1);
-  return identity && events && config.adapterKind === "transfer-zero-address"
-    ? { supported: true } : { supported: false, reason: "unreviewed-contract-or-event-semantics" };
+}
+
+/**
+ * Eligibility for one config against one reviewed entry (or no entry). `admitted` still
+ * requires the canonical zero-address Transfer pair and the `transfer-zero-address` adapter;
+ * `unsupported` returns the entry's specific reviewed reason.
+ */
+export function resolveMintBurnConservationEligibility(entry: ReviewedConservationEntry | undefined,
+  config: MintBurnContractConfig): MintBurnConservationEligibility {
+  if (!entry) return { supported: false, reason: UNREVIEWED_REASON };
+  if (entry.disposition === "unsupported") {
+    return { supported: false, reason: entry.unsupportedReason ?? UNREVIEWED_REASON };
+  }
+  return entry.eventSet === "transfer" && canonicalTransferPairSupported(config) && config.adapterKind === "transfer-zero-address"
+    ? { supported: true } : { supported: false, reason: UNREVIEWED_REASON };
+}
+
+export function getMintBurnConservationEligibility(config: MintBurnContractConfig): MintBurnConservationEligibility {
+  return resolveMintBurnConservationEligibility(REVIEWED_CONSERVATION_INDEX.get(
+    reviewedConservationIdentityKey(config.chain.chainId, config.stablecoinId, config.contractAddress, config.decimals)), config);
+}
+
+function isPassingReviewedConservationWindow(window: unknown): boolean {
+  if (typeof window !== "object" || window === null) return false;
+  if (!("residualRaw" in window) || !("mintRaw" in window) || !("burnRaw" in window) ||
+    !("supplyDeltaRaw" in window) || !("fromBlockHash" in window) || !("toBlockHash" in window)) return false;
+  const { residualRaw, mintRaw, burnRaw, supplyDeltaRaw, fromBlockHash, toBlockHash } =
+    window as Record<"residualRaw" | "mintRaw" | "burnRaw" | "supplyDeltaRaw" | "fromBlockHash" | "toBlockHash", unknown>;
+  if (residualRaw !== "0" || typeof mintRaw !== "string" || typeof burnRaw !== "string" ||
+    typeof supplyDeltaRaw !== "string" || typeof fromBlockHash !== "string" ||
+    typeof toBlockHash !== "string" || fromBlockHash === toBlockHash) return false;
+  try {
+    return BigInt(mintRaw) - BigInt(burnRaw) === BigInt(supplyDeltaRaw);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Section-3 structural rules for one reviewed sidecar entry. Returns one message per
+ * violated rule; an empty array means the entry is structurally valid.
+ */
+export function validateReviewedConservationEntry(entry: ReviewedConservationEntry): string[] {
+  const label = `${entry.chainId}/${entry.stablecoinId}/${entry.address}/${entry.decimals}`;
+  if (entry.disposition !== "admitted" && entry.disposition !== "unsupported") {
+    return [`${label}: disposition must be "admitted" or "unsupported"`];
+  }
+  if (!/^0x[0-9a-f]{40}$/.test(entry.address)) return [`${label}: address must be a lowercase 0x-hex value`];
+  if (!Number.isSafeInteger(entry.decimals) || entry.decimals < 0) return [`${label}: decimals must be a non-negative integer`];
+  if (entry.disposition === "unsupported") {
+    return isMintBurnConservationUnsupportedReason(entry.unsupportedReason)
+      ? [] : [`${label}: unsupported requires a reason from the fixed vocabulary`];
+  }
+  const problems: string[] = [];
+  const notes = typeof entry.notes === "string" ? entry.notes : "";
+  if (entry.identity?.sourceVerified !== true && !notes.startsWith("source-exception:")) {
+    problems.push(`${label}: admitted requires identity.sourceVerified or a notes exception starting "source-exception:"`);
+  }
+  const externalMatch = Array.isArray(entry.identity?.externalMatches) && entry.identity.externalMatches.some((match) =>
+    typeof match?.value === "string" && match.value.toLowerCase() === entry.address);
+  const identityIssue = typeof entry.identityIssue === "string" ? entry.identityIssue : "";
+  if (!externalMatch && !identityIssue.startsWith("no-external-match:")) {
+    problems.push(`${label}: admitted requires an externalMatches value equal to the address or an identityIssue starting "no-external-match:"`);
+  }
+  if (entry.identity?.onChain?.decimals !== entry.decimals) problems.push(`${label}: identity.onChain.decimals must equal the entry decimals`);
+  if (!Array.isArray(entry.unpairedPaths) || entry.unpairedPaths.length > 0) {
+    problems.push(`${label}: admitted requires unpairedPaths to be empty`);
+  }
+  if (entry.totalSupplyView?.isStoredSum !== true) problems.push(`${label}: admitted requires totalSupplyView.isStoredSum to be true`);
+  if (entry.zeroRecipientTransferReverts === false && entry.zeroRecipientTransferBurns !== true) {
+    problems.push(`${label}: admitted requires zeroRecipientTransferReverts !== false or zeroRecipientTransferBurns true`);
+  }
+  if (entry.eventSet !== "transfer") problems.push(`${label}: admitted currently requires eventSet "transfer"`);
+  if (!Array.isArray(entry.windows) || !entry.windows.some(isPassingReviewedConservationWindow)) {
+    problems.push(`${label}: admitted requires at least one window with residualRaw "0", mintRaw - burnRaw === supplyDeltaRaw and distinct boundary hashes`);
+  }
+  return problems;
 }
 
 export function mintBurnConservationCacheKey(config: MintBurnContractConfig): string {
@@ -168,15 +323,18 @@ export async function fetchConservationBoundaries(input: {
   signal?: AbortSignal;
   deadlineMs?: number;
   maxBatchCalls?: number;
+  /** Overrides the committed-sidecar eligibility gate; production callers omit it. */
+  eligibility?: MintBurnConservationEligibilityResolver;
 }): Promise<Map<string, ConservationBoundaryEvidence>> {
   const { budget, signal, deadlineMs } = input;
+  const eligibility = input.eligibility ?? getMintBurnConservationEligibility;
   const maxBatchCalls = input.maxBatchCalls ?? MINT_BURN_CONSERVATION_RPC_BATCH_MAX;
   if (!Number.isSafeInteger(maxBatchCalls) || maxBatchCalls < 1) throw new Error("invalid-conservation-batch-size");
   throwIfAborted(signal);
   const evidence = new Map<string, ConservationBoundaryEvidence>();
   const groups = new Map<string, ConservationBoundaryRequest[]>();
   for (const request of input.requests) {
-    if (!getMintBurnConservationEligibility(request.config).supported) continue;
+    if (!eligibility(request.config).supported) continue;
     if (!validAuditRange(request.fromBlock, request.toBlock)) {
       evidence.set(request.key, { status: "unavailable", reason: "invalid-audit-range" });
       continue;
@@ -310,9 +468,11 @@ export async function fetchConservationBoundaries(input: {
 export function completeMintBurnConservationAudit(input: {
   config: MintBurnContractConfig; logs: ConfigLogs; fromBlock: number; toBlock: number; checkedAt: number;
   complete: boolean; boundary: ConservationBoundaryEvidence | undefined;
+  /** Overrides the committed-sidecar eligibility gate; production callers omit it. */
+  eligibility?: MintBurnConservationEligibilityResolver;
 }): MintBurnConservationRecord {
   const { config, fromBlock, toBlock, checkedAt, boundary } = input;
-  const eligibility = getMintBurnConservationEligibility(config);
+  const eligibility = (input.eligibility ?? getMintBurnConservationEligibility)(config);
   const record: MintBurnConservationRecord = {
     version: 1, key: mintBurnConservationCacheKey(config), configFingerprint: mintBurnConservationFingerprint(config),
     stablecoinId: config.stablecoinId, chainId: config.chain.chainId, address: config.contractAddress.toLowerCase(),

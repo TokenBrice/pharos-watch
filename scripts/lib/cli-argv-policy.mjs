@@ -48,7 +48,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     strict("scripts/maintenance/sync-agent-skills.mjs"),
     strict("scripts/maintenance/sync-depeg-events.ts"),
     strict("scripts/maintenance/sync-digests.ts"),
-    strict("scripts/maintenance/wait-pages-release-marker.ts"),
+    strict("worker/scripts/audit-mint-burn-conservation-admission.ts"),
     strict("worker/scripts/capture-report-cards-fixed-input.ts"),
     strict("worker/scripts/check-safety-score-v9-anchor-gate.ts"),
     strict("worker/scripts/check-safety-score-v9-live-withheld.ts"),

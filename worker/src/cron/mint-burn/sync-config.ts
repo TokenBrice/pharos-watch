@@ -200,6 +200,17 @@ async function shouldQuarantineDecodeFailure(
     return { quarantined: false, attempts: 0 };
   }
 }
+/**
+ * Topic filters for one event def's eth_getLogs call. Shared by the config scan and the
+ * conservation admission CLI so both build identical production filters.
+ */
+export function eventDefTopicFilters(eventDef: MintBurnEventDef): AlchemyTopicFilter[] {
+  const topics: AlchemyTopicFilter[] = [{ index: 0, value: eventDef.topicHash }];
+  if (eventDef.filterTopic) {
+    topics.push({ index: eventDef.filterTopic.index, value: eventDef.filterTopic.value });
+  }
+  return topics;
+}
 
 export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promise<SyncMintBurnConfigResult> {
   const {
@@ -249,10 +260,7 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
       continue;
     }
 
-    const topics: AlchemyTopicFilter[] = [{ index: 0, value: eventDef.topicHash }];
-    if (eventDef.filterTopic) {
-      topics.push({ index: eventDef.filterTopic.index, value: eventDef.filterTopic.value });
-    }
+    const topics = eventDefTopicFilters(eventDef);
 
     const fetched = await fetchAlchemyLogs(
       alchemyUrl,
