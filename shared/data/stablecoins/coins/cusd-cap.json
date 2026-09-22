@@ -13,7 +13,6 @@
   "llamaId": "296",
   "detailProvider": "defillama",
   "geckoId": "cap-usd",
-  "cmcSlug": "cap-cusd",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://cap.app/vault/reserves/cUSD",
