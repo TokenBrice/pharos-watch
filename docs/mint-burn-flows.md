@@ -164,6 +164,7 @@ The operator view reads cached evidence only, displays each latest audited range
    - Enforce the per-config request cap while fetching logs, resolving timestamps, and classifying bridge activity so a single config cannot monopolize the lane.
    - Resolve block timestamps — batch `eth_getBlockByNumber` for unique blocks that contain non-dust candidate logs, using local + persistent (`block_timestamp_cache`) caches. Dust-only blocks are dropped before timestamp resolution so they cannot pin the sync frontier.
    - Parse logs per event definition: decode amount (respecting decimals), derive counterparty address, compute `amount_usd = amount * price` (null if no price), and initialize `flow_type='standard'`.
+   - An undecodable amount is retried across at most three scheduled observations using a per-log cache identity. The first two failures hold the cursor at the safe frontier. A third identical failure writes a quarantine record with reason `amount-decode-retry-exhausted`, excludes only that row, and lets valid peers and the cursor advance; amount decoding and dust rules are unchanged.
    - Event-day pricing contract: a `supply_history` snapshot is used only when it is dated the event's UTC day or the day before **and** passes the same `historical_backfill` peg-plausibility validation the historical price-repair scanner applies. An older or implausible snapshot is never used; the row falls through to the current `price_cache` price, and to NULL when that is missing too.
    - Resolve transaction-context receipts for candidate bridge rows in chunks of 20 transaction hashes with the local `mapWithConcurrency` helper (`TX_CONTEXT_BATCH_CONCURRENCY = 3`) instead of one HTTP request per transaction. Each HTTP request carries both transaction and receipt JSON-RPC calls for its chunk, so high-volume USDC-style bridge-aware windows consume a handful of Worker subrequests instead of hundreds.
    - Classify bridge transfers after all parsed rows for the config chunk are assembled so bridge-related mints and burns can be tagged together while still sharing the same transaction-context budget.
@@ -177,8 +178,8 @@ The operator view reads cached evidence only, displays each latest audited range
      - If every event definition completed and timestamps are fully resolved:
        - If events found: advance to `maxBlockSeen`.
        - If no events: advance to `chainHead - safetyMarginBlocks` (avoids skipping not-yet-indexed events).
-     - If any event definition was partial or any block timestamps were unresolved: advance only to the shared safe coverage frontier (`min(scannedToBlock, earliestMissingTimestamp-1)`).
-     - If no safe frontier exists for the config in that run: do not advance.
+     - If event, timestamp, bridge-context, or still-retryable decode coverage is partial: advance only to the shared safe coverage frontier (`min(scannedToBlock, earliestMissingTimestamp-1, earliestDeferredRow-1, earliestDecodeFailure-1)`).
+     - If no safe frontier exists for the config in that run: do not advance. A decode row that reaches its bounded retry limit is quarantined per row and no longer holds this frontier.
 7. **Recalculate affected hourly buckets** — for each unique `(stablecoinId, chainId, hourTs)` touched, `INSERT OR REPLACE` into `mint_burn_hourly` by re-aggregating from `mint_burn_events`, counting only `flow_type='standard'` rows so bridge transfers and atomic roundtrips do not leak into flow statistics.
    - Recalc runs inside a `finally` block so it still fires after partial-run failures. If the recalc itself throws, the critical lane downgrades `status=ok` to `status=degraded` and surfaces `recalcFailed: true` plus `recalcError: <message>` in cron metadata (previously failures were only logged silently). The cron abort signal is also passed into this recalc path and into post-run null-price healing / roundtrip sweep recalcs.
 8. **Auto-heal recent NULL prices** — on non-error runs, query up to 500 events with `amount_usd IS NULL` in the last 48 hours, resolve the event-day price from `supply_history` first (`price_source=supply-history-heal`) and fall back to a replay-safe `price_cache` row (`price_source=price_cache_heal`), update `amount_usd/price_*`, and re-aggregate only newly affected hourly buckets.
@@ -507,6 +508,7 @@ All hooks use Zod schema validation for aggregate and per-coin responses (`MintB
 | All coins have null pressure shift | Gauge score returns `null`; frontend shows "Calibrating" state |
 | Alchemy API error for a config | `apiErrors` incremented; sync state NOT advanced (retried next cycle) |
 | Incomplete timestamp resolution | `apiErrors`/`errors` incremented; sync state advances only to the safe coverage frontier (`earliestMissingTimestamp - 1`), or not at all when no safe frontier exists |
+| Undecodable event amount | Hold at the safe frontier for two retries; on the third observation quarantine only that log as `amount-decode-retry-exhausted` and advance past it |
 | Subrequest budget exhausted | Remaining configs skipped; picked up in next cron cycle |
 | Block explorer indexing lag | 75-block safety margin prevents advancing past un-indexed blocks |
 | Duplicate events | `INSERT OR IGNORE` on deterministic `id` key prevents duplicates |

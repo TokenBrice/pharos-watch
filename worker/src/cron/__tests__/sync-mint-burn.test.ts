@@ -464,6 +464,64 @@ describe("syncMintBurn", () => {
     expect(result.newLastBlock).toBe(failedBlock - 1);
   });
 
+  it("advances past an undecodable log after its bounded retry quarantine", async () => {
+    const config = MINT_BURN_CONFIGS[0]!;
+    const failedBlock = 21_910_000;
+    const failedLog = makeMintLog({ blockNumber: failedBlock });
+    const retryKey = `mint-burn:decode-retry:${USDT_CONFIG_KEY}:${failedLog.blockNumber}:${failedLog.transactionHash}:${failedLog.logIndex}`;
+    const db = makeDb({
+      cacheRows: [{
+        key: retryKey,
+        value: JSON.stringify({ attempts: 2, quarantined: false, reason: "amount-decode-retry" }),
+        updated_at: 1_718_650_000,
+      }],
+    });
+    vi.mocked(decodeUint256AtSlotOrNull).mockReturnValue(null);
+    vi.mocked(fetchAlchemyLogs)
+      .mockResolvedValueOnce({
+        logs: [failedLog],
+        complete: true,
+        scannedToBlock: 21_960_000,
+        calls: 1,
+        maxDepth: 0,
+      })
+      .mockResolvedValueOnce({
+        logs: [],
+        complete: true,
+        scannedToBlock: 21_960_000,
+        calls: 1,
+        maxDepth: 0,
+      });
+
+    const result = await syncMintBurnConfig({
+      db,
+      config,
+      key: USDT_CONFIG_KEY,
+      tier: "critical",
+      fromBlock: failedBlock,
+      scanTo: 21_960_000,
+      chainHead: 22_000_000,
+      alchemyUrl: "https://eth-mainnet.g.alchemy.com/v2/",
+      configBudgetLimit: 200,
+      runTimestamp: 1_718_650_752,
+      priceContext: { prices: new Map([["usdt-tether", 1]]), priceHistory: new Map() },
+      chainTimestampCache: new Map(),
+      txContextCache: new Map(),
+      affectedHours: new Map(),
+      safetyMarginBlocks: 10_000,
+    });
+
+    expect(result.newLastBlock).toBe(21_960_000);
+    expect(result.summary.rowsDroppedDecode).toBe(1);
+    expect(result.summary.rowsQuarantinedDecode).toBe(1);
+    expect(result.summary.decodeQuarantines).toEqual([expect.objectContaining({
+      blockNumber: failedBlock,
+      reason: "amount-decode-retry-exhausted",
+      attempts: 3,
+    })]);
+    expect(result.summary.advanceReason).toBe("full-success-empty");
+  });
+
   it("resumes from canonical sync-state progress", async () => {
     const db = makeDb({
       syncRows: [{

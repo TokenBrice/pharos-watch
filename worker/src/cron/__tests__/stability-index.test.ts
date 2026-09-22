@@ -571,7 +571,7 @@ describe("computeAndStoreStabilityIndex", () => {
     expect(contributors[0]?.bps).toBe(-8800);
   });
 
-  it("returns degraded without publishing when an open depeg has no usable price", async () => {
+  it("publishes with an explicit degraded component when an open depeg has no usable price", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
       kind: "ok",
@@ -601,20 +601,20 @@ describe("computeAndStoreStabilityIndex", () => {
     });
 
     const result = await computeAndStoreStabilityIndex(db);
+    const snapshot = readInsertedInputSnapshot(db);
     const metadata = JSON.parse(result.metadata ?? "{}") as {
-      fallbackMode: string;
       openDepegsWithoutPrice: number;
-      preservedCurrentSample: boolean;
+      degradedComponents: string[];
     };
 
-    expect(result.status).toBe("degraded");
-    expect(result.itemCount).toBe(0);
-    expect(metadata.fallbackMode).toBe("open-depeg-price-unavailable");
+    expect(result.status).toBeUndefined();
+    expect(result.itemCount).toBe(1);
     expect(metadata.openDepegsWithoutPrice).toBe(1);
-    expect(metadata.preservedCurrentSample).toBe(true);
+    expect(metadata.degradedComponents).toEqual(["open-depeg-no-price"]);
+    expect(snapshot.degradedComponents).toEqual(["open-depeg-no-price"]);
     expect(
       db.runHistory.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO stability_index_samples")),
-    ).toBe(false);
+    ).toBe(true);
   });
 
   afterEach(() => {
