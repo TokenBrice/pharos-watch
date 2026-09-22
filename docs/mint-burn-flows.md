@@ -234,7 +234,7 @@ Key behavior changes forward-going:
 - **Mint-side tagging for CCIP/CCTP.** The classifier now tags bridge *mints* (not just burns) as `flow_type='bridge_transfer'`. Affects USDO, USD1, avUSD, ZCHF (CCIP) and USDC, EURC (CCTP). Previously only the burn side was filtered, so counted flow aggregates double-counted cross-chain hops.
 - **LayerZero endpoint-only signal.** The OFT/OAdapter path now accepts a third fingerprint (`fingerprintC`) that fires when the transaction context contains both a known LayerZero endpoint topic and an expected emitter address, even without the classic pool-address match (`hasSignalTopic && hasExpectedEmitter && signalEmitterSet.size > 0`). This catches LayerZero-Executor-only mints that previously slipped through. Tradeoff: known risk of shared-endpoint false positives is accepted to eliminate the prior false-negative backlog.
 - **No more `bridge-signal-with-unknown-pool` review path.** Rows that touch a recognized bridge-signal topic/emitter but not a tracked pool address now tag as `bridge_transfer` instead of flowing to a review queue. Policy: if a transaction carries a bridge signal, treat every mint/burn in it as bridge noise.
-- **Fail-closed bridge-detection config validation.** `validateMintBurnBridgeDetection` runs against every `bridgeDetection` config at module load. Address fields must match `ADDRESS_RE`, topics must match `TOPIC_RE`, and selectors must match `SELECTOR_RE`. Any malformed bridge config now aborts module load instead of logging and continuing, so bridge filtering cannot silently disable itself for one coin. Healthy mint/burn runs publish `bridgeValidationErrors: 0` in cron metadata for status diagnostics.
+- **Fail-closed bridge-detection config validation.** `validateMintBurnBridgeDetection` runs against every `bridgeDetection` config at module load. Address fields must match `ADDRESS_RE`, topics must match `TOPIC_RE`, and selectors must match `SELECTOR_RE`. Any malformed bridge config aborts module load instead of logging and continuing, so bridge filtering cannot silently disable itself for one coin.
 - **Bridge tx-context shortfall guard.** For bridge-enabled configs, both transaction and receipt context must resolve before parsed rows can count as standard economic flow. If context is unavailable under budget pressure or RPC failure, every parsed row from that transaction is withheld from persistence for that run and the config advances only to the safe retry frontier below the earliest deferred row, so those blocks are rescanned on a later slot. Run metadata surfaces `bridgeClassification.txContextShortfalls` and `bridgeClassification.deferredRows`; these diagnostics do not increment provider `apiErrors`.
 - **Provider-shape isolation.** Transaction and receipt bodies must pass the runtime shape boundary before classification, and Etherscan topics/data must pass strict word decoding. A malformed peer is dropped and counted without aborting classification of valid peers.
 
@@ -397,6 +397,8 @@ Parameters, response fields, cache/freshness behavior, and errors are canonical 
 
 Aggregate mode constrains configured `(stablecoin_id, chain_id)` pairs in SQL and selects the deterministic largest 24-hour event per coin there; the Worker does not materialize the full event day to compute that field.
 
+Each aggregate coin row publishes `pressureShiftScore` as the sole baseline-relative score field. The former `flowIntensity` alias duplicated the same value and is no longer part of the response contract.
+
 ### GET /api/mint-burn-events
 
 The event feed exposes the recent classified, valuation-aware ledger for one stablecoin. Safely settled, aggregated, and Tape-projected rows remain available for at least 8 days; the separate hourly aggregate keeps 90 days of public flow history. The detail-page history deliberately uses the counted view so bridge transfers, review-required burns, and atomic roundtrips do not appear as ordinary economic flow.
@@ -435,7 +437,7 @@ Auth/idempotency, scope parameters, batch progression, counters, and errors are 
 | `rowsRead`, `rowsParsed`, `rowsInserted`, `rowsIgnored`, `rowsDropped` | number | Ingestion throughput counters |
 | `sourceCoverage` | object | `contractsProcessed`, `contractsSkipped`, `contractsEnabled`, `contractsDisabled`, `contractsTotal` |
 | `configSamples[]`, `configBreakdownSummary`, `laggingConfigs[]` | mixed | Per-config diagnostics; the full breakdown is persisted separately under `runDrilldownCacheKey` |
-| `apiErrors`, `fallbackMode`, `validationFailures` | mixed | Provider-error observability |
+| `apiErrors` | number | Provider errors observed while collecting configured contracts |
 | `atomicRoundtripsDetected` | number | Rows tagged in-memory this run |
 | `bridgeClassification.txContextShortfalls` | number | Transaction/receipt context lookup shortfalls for bridge-enabled configs |
 | `bridgeClassification.deferredRows` | number | Parsed rows excluded from economic flow because bridge classification context was unavailable |

@@ -109,7 +109,7 @@ describe("completeMintBurnRun", () => {
     expect(result.metadata.apiErrors).toBe(0);
   });
 
-  it("keeps apiErrors separate from validationFailures metadata", async () => {
+  it("keeps provider errors in the canonical apiErrors metadata field", async () => {
     vi.mocked(setMintBurnRunState).mockResolvedValue(true);
     vi.mocked(getNullPriceBacklog).mockResolvedValue({ recent: 0, historical: 0 });
     vi.mocked(healNullPrices).mockResolvedValue({ healed: 0, affectedHours: new Map() });
@@ -118,7 +118,6 @@ describe("completeMintBurnRun", () => {
     const result = await completeMintBurnRun(buildRunInput({ apiErrors: 4 }));
 
     expect(result.metadata.apiErrors).toBe(4);
-    expect(result.metadata.validationFailures).toBe(0);
     expect(setMintBurnRunState).toHaveBeenCalledWith(expect.anything(), "sync-mint-burn", 1, null);
   });
 

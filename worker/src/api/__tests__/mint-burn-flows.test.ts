@@ -544,7 +544,6 @@ describe("handleMintBurnFlows contract tests", () => {
         stablecoinId,
         symbol: "TEST",
         netFlow24hUsd: invalid ? null : netFlow24hUsd,
-        flowIntensity: null,
         pressureShiftScore: null,
         pressureShiftState: "nr",
         netFlowDirection24h: "flat",

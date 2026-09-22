@@ -2,6 +2,7 @@ import { D1_BATCH_SIZE } from "./constants";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 
 export const D1_MAX_BOUND_PARAMETERS = 100;
+export const D1_SAFE_IN_CLAUSE_BIND_LIMIT = 90;
 export interface BatchExecuteOptions { chunkSize?: number; signal?: AbortSignal }
 
 /** Execute D1 prepared statements in chunks to stay within the batch limit */

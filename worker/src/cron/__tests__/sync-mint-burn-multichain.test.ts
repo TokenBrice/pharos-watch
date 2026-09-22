@@ -6,7 +6,6 @@ import { mockD1 } from "@shared/test-utils/mock-d1";
 vi.mock("../../lib/mint-burn-contracts", async () => {
   const { makeMintBurnConfig } = await import("../../test-helpers/__shared/mint-burn");
   return {
-    MINT_BURN_BRIDGE_VALIDATION_ERROR_COUNT: 0,
     MINT_BURN_CONFIGS: [
       makeMintBurnConfig({
         asset: {

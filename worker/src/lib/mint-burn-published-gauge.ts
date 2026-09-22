@@ -77,12 +77,11 @@ function parseCoins(value: unknown): PublishedGaugeCoin[] | null {
     if (typeof stablecoinId !== "string" || typeof symbol !== "string") return null;
     const net24hUsd = finiteNumber(entry.netFlow24hUsd);
     if (net24hUsd === null) return null;
-    const rawIntensity = entry.pressureShiftScore ?? entry.flowIntensity;
-    const intensity = rawIntensity === null || rawIntensity === undefined
+    const intensity = entry.pressureShiftScore === null || entry.pressureShiftScore === undefined
       ? null
-      : finiteNumber(rawIntensity);
+      : finiteNumber(entry.pressureShiftScore);
     // A present-but-unparseable intensity is a contract break, not an NR.
-    if (rawIntensity !== null && rawIntensity !== undefined && intensity === null) return null;
+    if (entry.pressureShiftScore !== null && entry.pressureShiftScore !== undefined && intensity === null) return null;
     coins.push({ id: stablecoinId, symbol, intensity, net24hUsd });
   }
   return coins;

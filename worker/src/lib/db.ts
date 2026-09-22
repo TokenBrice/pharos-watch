@@ -128,20 +128,6 @@ export async function runChunkedInRead<T, Row>(
   return rows;
 }
 
-export async function insertReturningMapped<Row, Mapped>(
-  db: D1Database,
-  sql: string,
-  binds: readonly unknown[],
-  map: (row: Row) => Mapped,
-  label: string,
-): Promise<Mapped> {
-  const row = await db
-    .prepare(sql)
-    .bind(...binds)
-    .first<Row>();
-  if (!row) throw new Error(`${label} insert could not be reloaded`);
-  return map(row);
-}
 
 export function normalizeBlacklistSyncStateKey(configKey: string): string {
   if (configKey.startsWith("tron-")) return configKey;
@@ -150,42 +136,6 @@ export function normalizeBlacklistSyncStateKey(configKey: string): string {
   return `${configKey.slice(0, separator)}-${configKey.slice(separator + 1).toLowerCase()}`;
 }
 
-export async function getLastBlock(db: D1Database, configKey: string, signal?: AbortSignal): Promise<number> {
-  const normalizedKey = normalizeBlacklistSyncStateKey(configKey);
-  const keyCandidates = [...new Set([configKey, normalizedKey])];
-  const keyInClause = buildInClause(keyCandidates);
-  const rows = await runWithOverloadRetry(() =>
-    db
-      .prepare(
-        `SELECT config_key, last_block
-         FROM blacklist_sync_state
-         WHERE config_key IN (${keyInClause.sql})`,
-      )
-      .bind(...keyInClause.binds)
-      .all<{ config_key: string; last_block: number }>(),
-    3,
-    signal,
-  );
-
-  return Math.max(0, ...(rows.results ?? []).map((row) => row.last_block));
-}
-
-export async function setLastBlock(
-  db: D1Database,
-  configKey: string,
-  block: number,
-  signal?: AbortSignal,
-): Promise<void> {
-  const normalizedKey = normalizeBlacklistSyncStateKey(configKey);
-  await runWithOverloadRetry(() =>
-    db
-      .prepare("INSERT OR REPLACE INTO blacklist_sync_state (config_key, last_block) VALUES (?, ?)")
-      .bind(normalizedKey, block)
-      .run(),
-    3,
-    signal,
-  );
-}
 
 // --- Coin first-seen dates (for peg score tracking window) ---
 
@@ -231,7 +181,6 @@ const FIRST_SEEN_CACHE_POLICY: CachePolicy<Map<string, number>> = {
   storage: "d1-kv",
   schemaId: "supply-history:first-seen:v1",
   ttlSec: FIRST_SEEN_CACHE_MAX_AGE_SEC,
-  maxEntries: 1,
   stale: "fallback-only",
   invalid: "retain",
   decode: parseFirstSeenCache,

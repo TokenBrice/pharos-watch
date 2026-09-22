@@ -53,7 +53,6 @@ function makeFlowCoin(
   return {
     stablecoinId,
     symbol: stablecoinId.toUpperCase(),
-    flowIntensity: null,
     pressureShiftScore: null,
     pressureShiftState: "stable",
     netFlowDirection24h: "minting",

@@ -26,7 +26,6 @@ function makeCoin(overrides: Partial<MintBurnCoinFlow>): MintBurnCoinFlow {
   return {
     stablecoinId: overrides.stablecoinId ?? "usdc-circle",
     symbol: overrides.symbol ?? "USDC",
-    flowIntensity: overrides.flowIntensity ?? 0,
     pressureShiftScore: overrides.pressureShiftScore ?? null,
     pressureShiftState: overrides.pressureShiftState ?? "nr",
     netFlowDirection24h: overrides.netFlowDirection24h ?? "inactive",

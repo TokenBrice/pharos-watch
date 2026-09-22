@@ -274,8 +274,6 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
     apiErrors: phase.apiErrors,
     conservationFailures,
     conservationUnavailable,
-    validationFailures: 0,
-    fallbackMode: null,
     burnClassification: {
       effectiveBurns: phase.effectiveBurns,
       bridgeBurns: phase.bridgeBurns,

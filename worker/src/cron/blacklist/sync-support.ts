@@ -58,10 +58,9 @@ export async function loadBlacklistConfigStates(
 ): Promise<{ configStates: BlacklistConfigState[]; zeroCursorConfigs: string[] }> {
   const eligibleConfigs = includeActiveTrackedIds(CONTRACT_CONFIGS, (c) => c.stablecoinId);
 
-  // Single bulk fetch instead of one getLastBlock D1 round-trip per config.
-  // The per-config key-normalization that getLastBlock applies is replicated
-  // in-memory below: each config's last_block is the max over rows matching
-  // either its raw config_key or its normalized form, defaulting to 0.
+  // Single bulk fetch replaces per-config cursor round trips. Each config's
+  // last_block is the max over rows matching either its raw config_key or its
+  // normalized form, defaulting to 0.
   const rows = await runWithOverloadRetry(
     () =>
       db

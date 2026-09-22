@@ -5,10 +5,8 @@ import {
   chunkArray,
   executeAtomicBatch,
   getFirstSeenDates,
-  getLastBlock,
   normalizeBlacklistSyncStateKey,
   prepareMultiRowInsertStatements,
-  setLastBlock,
 } from "../db";
 import {
   getCache,
@@ -315,63 +313,10 @@ describe("db utility helpers", () => {
     expect(calls).toEqual([]);
   });
 
-  it("returns last synced block or 0 when absent", async () => {
-    const withRow = makeDb({ lastBlocks: new Map([["eth", 12345]]) });
-    await expect(getLastBlock(withRow.db, "eth")).resolves.toBe(12345);
-
-    const withoutRow = makeDb();
-    await expect(getLastBlock(withoutRow.db, "eth")).resolves.toBe(0);
-  });
-
-  it("merges blacklist cursor variants by choosing the highest matching block", async () => {
-    const { db } = makeDb({
-      lastBlocks: new Map([
-        ["ethereum-0xabc", 100],
-        ["ethereum-0xAbC", 75],
-      ]),
-    });
-
-    await expect(getLastBlock(db, "ethereum-0xAbC")).resolves.toBe(100);
-  });
-
-  it("retries blacklist cursor helpers after transient D1 overload", async () => {
-    const { db } = makeDb({
-      lastBlocks: new Map([["ethereum-0xabc", 100]]),
-      transientFailures: {
-        "SELECT config_key, last_block": 1,
-        "INSERT OR REPLACE INTO blacklist_sync_state": 1,
-      },
-    });
-
-    const read = getLastBlock(db, "ethereum-0xAbC");
-    await vi.advanceTimersByTimeAsync(1_000);
-    await expect(read).resolves.toBe(100);
-
-    const write = setLastBlock(db, "ethereum-0xAbC", 101);
-    await vi.advanceTimersByTimeAsync(1_000);
-    await expect(write).resolves.toBeUndefined();
-  });
-
-  it("honors abort signals before blacklist cursor retries start", async () => {
-    const { db, calls } = makeDb();
-    const controller = new AbortController();
-    controller.abort(new Error("cursor aborted"));
-
-    await expect(getLastBlock(db, "ethereum-0xAbC", controller.signal)).rejects.toThrow("cursor aborted");
-    await expect(setLastBlock(db, "ethereum-0xAbC", 101, controller.signal)).rejects.toThrow("cursor aborted");
-    expect(calls).toEqual([]);
-  });
-
-  it("normalizes EVM blacklist cursor keys on write but preserves Tron keys", async () => {
-    const { db, calls } = makeDb();
-
-    await setLastBlock(db, "ethereum-0xAbCDEF", 123);
-    await setLastBlock(db, "tron-TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t", 456);
-
-    const writes = calls.filter((call) => call.sql.includes("INSERT OR REPLACE INTO blacklist_sync_state"));
-    expect(writes[0]?.args).toEqual(["ethereum-0xabcdef", 123]);
-    expect(writes[1]?.args).toEqual(["tron-TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t", 456]);
+  it("normalizes EVM blacklist cursor keys but preserves Tron keys", () => {
     expect(normalizeBlacklistSyncStateKey("ethereum-0xAbCDEF")).toBe("ethereum-0xabcdef");
+    expect(normalizeBlacklistSyncStateKey("tron-TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"))
+      .toBe("tron-TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t");
   });
 
   it("returns price cache map and supports empty save fast-path", async () => {

@@ -19,7 +19,7 @@ export function inferHas24hActivity(coin: MintBurnCoinFlow): boolean {
 }
 
 export function resolvePressureScore(coin: MintBurnCoinFlow): number | null {
-  return coin.pressureShiftScore ?? coin.flowIntensity;
+  return coin.pressureShiftScore;
 }
 
 export function resolvePressureState(coin: MintBurnCoinFlow): PressureShiftState {

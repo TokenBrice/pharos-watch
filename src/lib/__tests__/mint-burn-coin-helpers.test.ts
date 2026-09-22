@@ -19,7 +19,7 @@ function stubCoin(overrides: Partial<MintBurnCoinFlow> = {}): MintBurnCoinFlow {
     netFlow7dUsd: 0,
     netFlow30dUsd: 0,
     netFlow90dUsd: 0,
-    flowIntensity: null,
+    pressureShiftScore: null,
     ...overrides,
   } as MintBurnCoinFlow;
 }
@@ -38,15 +38,11 @@ describe("inferHas24hActivity", () => {
 });
 
 describe("resolvePressureScore", () => {
-  it("prefers pressureShiftScore over flowIntensity", () => {
-    expect(resolvePressureScore(stubCoin({ pressureShiftScore: 42, flowIntensity: 10 }))).toBe(42);
+  it("returns the canonical pressure shift score", () => {
+    expect(resolvePressureScore(stubCoin({ pressureShiftScore: 42 }))).toBe(42);
   });
 
-  it("falls back to flowIntensity", () => {
-    expect(resolvePressureScore(stubCoin({ flowIntensity: 10 }))).toBe(10);
-  });
-
-  it("returns null when both absent", () => {
+  it("returns null when the score is unavailable", () => {
     expect(resolvePressureScore(stubCoin())).toBeNull();
   });
 });

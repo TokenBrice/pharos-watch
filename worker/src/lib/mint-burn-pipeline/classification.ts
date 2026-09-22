@@ -10,6 +10,7 @@ import {
   type AlchemyTransactionContextBatch,
 } from "../alchemy-logs";
 import { mapWithConcurrency } from "../concurrency";
+import { chunkArray } from "../collections";
 import {
   classifyBridgeAwareBurnRows,
   type MintBurnTxContext,
@@ -128,11 +129,7 @@ async function resolveTxContextBatch(
 }
 
 function chunkTxHashes(txHashes: string[]): string[][] {
-  const chunks: string[][] = [];
-  for (let i = 0; i < txHashes.length; i += TX_CONTEXT_BATCH_SIZE) {
-    chunks.push(txHashes.slice(i, i + TX_CONTEXT_BATCH_SIZE));
-  }
-  return chunks;
+  return chunkArray(txHashes, TX_CONTEXT_BATCH_SIZE);
 }
 
 export async function classifyBridgeBurnRows(

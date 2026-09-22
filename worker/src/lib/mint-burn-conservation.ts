@@ -7,7 +7,7 @@ import { mintBurnConfigKey } from "./mint-burn-pipeline/sync-state";
 import { decimalNumberFromBigInt } from "./bigint";
 import { fetchEvmRpcBatchDetailed, type EvmRpcBatchCall } from "./evm-rpc";
 import { getCaches } from "./db-cache";
-import { buildInClause } from "./d1-primitives";
+import { buildInClause, D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "./d1-primitives";
 import { throwIfAborted } from "./abort";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 
@@ -62,8 +62,8 @@ export function mintBurnConservationFingerprint(config: MintBurnContractConfig):
 export async function readMintBurnConservationRecords(db: D1Database, configs: MintBurnContractConfig[]): Promise<Map<string, unknown>> {
   const values = new Map<string, unknown>();
   const keys = [...new Set(configs.map(mintBurnConservationCacheKey))];
-  for (let offset = 0; offset < keys.length; offset += 90) {
-    const rows = await getCaches(db, keys.slice(offset, offset + 90));
+  for (let offset = 0; offset < keys.length; offset += D1_SAFE_IN_CLAUSE_BIND_LIMIT) {
+    const rows = await getCaches(db, keys.slice(offset, offset + D1_SAFE_IN_CLAUSE_BIND_LIMIT));
     for (const [key, row] of rows) {
       try { values.set(key, JSON.parse(row.value)); } catch { /* Invalid records remain unverified. */ }
     }
@@ -200,10 +200,10 @@ export async function auditMintBurnConservation(input: {
 export async function verifyPersistedMintBurnConservation(db: D1Database, rows: MintBurnRow[],
   signal?: AbortSignal, deadlineMs?: number): Promise<"ok" | "deadline" | "mismatch"> {
   const fields = ["id", "stablecoin_id", "chain_id", "direction", "amount", "block_number", "timestamp"] as const;
-  for (let offset = 0; offset < rows.length; offset += 90) {
+  for (let offset = 0; offset < rows.length; offset += D1_SAFE_IN_CLAUSE_BIND_LIMIT) {
     throwIfAborted(signal);
     if (deadlineMs != null && Date.now() >= deadlineMs) return "deadline";
-    const expected = rows.slice(offset, offset + 90);
+    const expected = rows.slice(offset, offset + D1_SAFE_IN_CLAUSE_BIND_LIMIT);
     const clause = buildInClause(expected.map((row) => row.id));
     const result = await db.prepare(`SELECT id, stablecoin_id, chain_id, direction, amount, block_number, timestamp
       FROM mint_burn_events WHERE id IN (${clause.sql})`).bind(...clause.binds).all<MintBurnRow>();

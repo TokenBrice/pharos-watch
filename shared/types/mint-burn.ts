@@ -71,7 +71,6 @@ export type MintBurnCoinCoverage = z.infer<typeof MintBurnCoinCoverageSchema>;
 const MintBurnCoinFlowSchema = z.object({
   stablecoinId: z.string(),
   symbol: z.string(),
-  flowIntensity: SignedFlowIntensitySchema.nullable(),
   pressureShiftScore: SignedFlowIntensitySchema.nullable(),
   pressureShiftState: PressureShiftStateSchema,
   netFlowDirection24h: NetFlowDirection24hSchema,

@@ -485,11 +485,11 @@ export const ENDPOINT_ASSERTIONS = {
       assert(body.gauge.score >= -100 && body.gauge.score <= 100, "/api/mint-burn-flows gauge.score out of range");
     }
     for (const coin of body.coins) {
-      if (coin.flowIntensity === null) continue;
-      assert(isFiniteNumber(coin.flowIntensity), "/api/mint-burn-flows coin.flowIntensity is not finite");
+      if (coin.pressureShiftScore === null) continue;
+      assert(isFiniteNumber(coin.pressureShiftScore), "/api/mint-burn-flows coin.pressureShiftScore is not finite");
       assert(
-        coin.flowIntensity >= -100 && coin.flowIntensity <= 100,
-        "/api/mint-burn-flows coin.flowIntensity out of range",
+        coin.pressureShiftScore >= -100 && coin.pressureShiftScore <= 100,
+        "/api/mint-burn-flows coin.pressureShiftScore out of range",
       );
     }
     return `${body.coins.length} tracked flow coins`;

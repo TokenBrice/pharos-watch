@@ -225,9 +225,9 @@ export function publishedGaugeTable(
       value: options.value ?? JSON.stringify({
         gauge: { score: PUBLISHED_GAUGE_SCORE, band: "HEALTHY", flightToQuality: false, flightIntensity: 0, classificationSource: "safety-score-v9-publication" },
         coins: [
-          { stablecoinId: "usdt-tether", symbol: "USDT", flowIntensity: 100, pressureShiftScore: 100, netFlow24hUsd: 200_000_000 },
-          { stablecoinId: "usdc-circle", symbol: "USDC", flowIntensity: -83.33, pressureShiftScore: -83.33, netFlow24hUsd: -50_000_000 },
-          { stablecoinId: "paxg-paxos", symbol: "PAXG", flowIntensity: null, pressureShiftScore: null, netFlow24hUsd: -3_000_000 },
+          { stablecoinId: "usdt-tether", symbol: "USDT", pressureShiftScore: 100, netFlow24hUsd: 200_000_000 },
+          { stablecoinId: "usdc-circle", symbol: "USDC", pressureShiftScore: -83.33, netFlow24hUsd: -50_000_000 },
+          { stablecoinId: "paxg-paxos", symbol: "PAXG", pressureShiftScore: null, netFlow24hUsd: -3_000_000 },
         ],
         chains: [{ chainId: "ethereum", netFlow24hUsd: 150_000_000 }, { chainId: "arbitrum", netFlow24hUsd: -3_000_000 }],
       }),

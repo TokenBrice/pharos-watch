@@ -13,7 +13,6 @@ vi.mock("../../lib/mint-burn-contracts", async () => {
       chainIds: [...new Set(configs.map((config) => config.chain.chainId))],
       label: "Ethereum",
     })),
-    MINT_BURN_BRIDGE_VALIDATION_ERROR_COUNT: 0,
     getMintBurnConfigsForStablecoin: vi.fn((stablecoinId: string) =>
       stablecoinId === "usdt-tether"
         ? [makeMintBurnConfig({
@@ -820,7 +819,6 @@ describe("syncMintBurn", () => {
     expect(meta.burnClassification.bridgeBurns).toBe(1);
     expect(meta.burnClassification.effectiveBurns).toBe(1);
     expect(meta.burnClassification.reviewBurns).toBe(0);
-    expect(meta.bridgeValidationErrors).toBe(0);
   });
 
   it("withholds tx-context shortfall rows and keeps the frontier retryable", async () => {

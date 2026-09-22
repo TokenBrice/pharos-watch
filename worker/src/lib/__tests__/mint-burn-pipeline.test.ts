@@ -57,7 +57,6 @@ import {
   insertMintBurnRows,
   persistMintBurnRows,
   recalcAffectedHours,
-  rebuildHourlyForStablecoinIds,
   updateEventClassifications,
 } from "../mint-burn-pipeline/persistence";
 import {
@@ -374,57 +373,6 @@ describe("mint-burn shared pipeline modules", () => {
     expect(vi.mocked(batchExecute).mock.calls[0]?.[1]).toHaveLength(4);
   });
 
-  it("rebuilds hourly buckets for whole coins after valuation repair", async () => {
-    const { db, sqlite } = fixtures.open();
-    vi.mocked(batchExecute).mockImplementation(realDb.batchExecute);
-
-    const rows = [
-      makeRow({
-        id: "mint-1",
-        stablecoin_id: "usdt-tether",
-        chain_id: "ethereum",
-        direction: "mint",
-        amount_usd: 100,
-        timestamp: 3_605,
-        tx_hash: "0xmint-1",
-      }),
-      makeRow({
-        id: "burn-1",
-        stablecoin_id: "usdt-tether",
-        chain_id: "ethereum",
-        direction: "burn",
-        burn_type: "effective_burn",
-        amount_usd: 20,
-        timestamp: 3_610,
-        tx_hash: "0xburn-1",
-      }),
-      makeRow({
-        id: "mint-2",
-        stablecoin_id: "usdc-circle",
-        symbol: "USDC",
-        chain_id: "ethereum",
-        direction: "mint",
-        amount_usd: 55,
-        timestamp: 7_205,
-        tx_hash: "0xmint-2",
-      }),
-    ];
-
-    await insertMintBurnRows(db, rows);
-    await rebuildHourlyForStablecoinIds(db, ["usdt-tether", "usdc-circle"]);
-
-    const usdtHourTs = Math.floor(rows[0]!.timestamp / 3600) * 3600;
-    const usdcHourTs = Math.floor(rows[2]!.timestamp / 3600) * 3600;
-    const usdtHour = sqlite.prepare("SELECT * FROM mint_burn_hourly WHERE stablecoin_id = ? AND hour_ts = ?").get("usdt-tether", usdtHourTs);
-    expect(usdtHour?.mint_count).toBe(1);
-    expect(usdtHour?.burn_count).toBe(1);
-    expect(usdtHour?.net_flow_usd).toBe(80);
-
-    const usdcHour = sqlite.prepare("SELECT * FROM mint_burn_hourly WHERE stablecoin_id = ? AND hour_ts = ?").get("usdc-circle", usdcHourTs);
-    expect(usdcHour?.mint_count).toBe(1);
-    expect(usdcHour?.burn_count).toBe(0);
-    expect(usdcHour?.net_flow_usd).toBe(55);
-  });
 
   it("excludes atomic roundtrip rows from hourly aggregation", async () => {
     const { db, sqlite } = fixtures.open();
@@ -559,7 +507,7 @@ describe("mint-burn shared pipeline modules", () => {
     const mint = makeRow({ id: "mint", timestamp: 3605 });
     const burn = makeRow({ id: "burn", direction: "burn", burn_type: null, timestamp: 3610 });
     expect(await insertMintBurnRows(db, [mint, burn, mint])).toEqual({ inserted: 2, ignored: 1 });
-    await rebuildHourlyForStablecoinIds(db, ["usdt-tether"]);
+    await recalcAffectedHours(db, collectAffectedHours([mint, burn]));
     expect(sqlite.prepare("SELECT mint_count, burn_count, net_flow_usd FROM mint_burn_hourly").get())
       .toEqual({ mint_count: 1, burn_count: 0, net_flow_usd: 100 });
     await updateEventClassifications(db, [{ ...burn, burn_type: "bridge_burn", burn_review_reason: "reviewed", flow_type: "bridge_transfer" }]);

@@ -5,6 +5,7 @@ import {
   getAlchemyBlockNumber,
   resolveBlockTimestamps,
   type AlchemyLogEntry,
+  type AlchemyLogsFetchResult,
 } from "../../lib/alchemy-logs";
 import { throwIfAborted } from "../../lib/abort";
 import {
@@ -340,6 +341,33 @@ export async function fetchEvmEventsIncremental(
     rpcTargetPromise ??= resolveRpcLogTarget(config.chain.chainId, runBudget, signal, chainRpcs);
     return rpcTargetPromise;
   };
+  const fetchRpcWindow = async (
+    target: RpcLogTarget,
+    topics: string[],
+  ): Promise<{
+    safeHead: number;
+    scanToBlock: number;
+    logs: AlchemyLogsFetchResult | null;
+  }> => {
+    const targetSafeHead = getEvmSafeHead(evmChainId, target.chainHead);
+    const scanToBlock = target.scanWindowBlocks != null
+      ? Math.min(targetSafeHead, fromBlock + target.scanWindowBlocks - 1)
+      : targetSafeHead;
+    const logs = fromBlock > scanToBlock
+      ? { logs: [], complete: true, scannedToBlock: scanToBlock, calls: 0, maxDepth: 0 }
+      : await fetchAlchemyLogs(
+          target.rpcUrl,
+          config.contractAddress,
+          [{ index: 0, value: topics.length === 1 ? topics[0]! : topics }],
+          fromBlock,
+          scanToBlock,
+          runBudget.subrequestBudget,
+          signal,
+          { deadlineMs: runBudget.deadlineMs },
+        );
+    return { safeHead: targetSafeHead, scanToBlock, logs };
+  };
+
 
   const topicHashes = getBlacklistTopicHashes(config);
   const preferRpcLogs = shouldPreferRpcLogScan(config.chain.chainId);
@@ -429,26 +457,11 @@ export async function fetchEvmEventsIncremental(
       let rpcTarget = await getRpcTarget();
       if (rpcTarget) {
         chainHead = rpcTarget.chainHead;
-        safeHead = getEvmSafeHead(evmChainId, rpcTarget.chainHead);
         usedRpcLogs = true;
-        const scanToBlock =
-          rpcTarget.scanWindowBlocks != null
-            ? Math.min(safeHead, fromBlock + rpcTarget.scanWindowBlocks - 1)
-            : safeHead;
-
-        let fetchedLogs =
-          fromBlock > scanToBlock
-            ? { logs: [], complete: true, scannedToBlock: scanToBlock, calls: 0, maxDepth: 0 }
-            : await fetchAlchemyLogs(
-                rpcTarget.rpcUrl,
-                config.contractAddress,
-                [{ index: 0, value: rpcTopicHashes.length === 1 ? topicHash : rpcTopicHashes }],
-                fromBlock,
-                scanToBlock,
-                runBudget.subrequestBudget,
-                signal,
-                { deadlineMs: runBudget.deadlineMs },
-              );
+        let rpcWindow = await fetchRpcWindow(rpcTarget, rpcTopicHashes);
+        safeHead = rpcWindow.safeHead;
+        let scanToBlock = rpcWindow.scanToBlock;
+        let fetchedLogs = rpcWindow.logs;
 
         if (
           fetchedLogs
@@ -468,28 +481,15 @@ export async function fetchEvmEventsIncremental(
             if (failureSamples.length < 4) {
               failureSamples.push(`primary-failover:${primaryFailureReason}`.slice(0, 120));
             }
-            const fallbackSafeHead = getEvmSafeHead(evmChainId, fallbackTarget.chainHead);
-            const fallbackScanToBlock = fallbackTarget.scanWindowBlocks != null
-              ? Math.min(fallbackSafeHead, fromBlock + fallbackTarget.scanWindowBlocks - 1)
-              : fallbackSafeHead;
-            const fallbackLogs = fromBlock > fallbackScanToBlock
-              ? { logs: [], complete: true, scannedToBlock: fallbackScanToBlock, calls: 0, maxDepth: 0 }
-              : await fetchAlchemyLogs(
-                  fallbackTarget.rpcUrl,
-                  config.contractAddress,
-                  [{ index: 0, value: rpcTopicHashes.length === 1 ? topicHash : rpcTopicHashes }],
-                  fromBlock,
-                  fallbackScanToBlock,
-                  runBudget.subrequestBudget,
-                  signal,
-                  { deadlineMs: runBudget.deadlineMs },
-                );
+            const fallbackWindow = await fetchRpcWindow(fallbackTarget, rpcTopicHashes);
+            const fallbackLogs = fallbackWindow.logs;
             if (fallbackLogs && fallbackLogs.scannedToBlock > fetchedLogs.scannedToBlock) {
               providerCalls += fetchedLogs.calls;
               maxSplitDepth = Math.max(maxSplitDepth, fetchedLogs.maxDepth);
               rpcTarget = fallbackTarget;
               chainHead = fallbackTarget.chainHead;
-              safeHead = fallbackSafeHead;
+              safeHead = fallbackWindow.safeHead;
+              scanToBlock = fallbackWindow.scanToBlock;
               fetchedLogs = fallbackLogs;
             } else if (fallbackLogs) {
               providerCalls += fallbackLogs.calls;

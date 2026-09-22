@@ -42,7 +42,6 @@ export const TRACKED_IDS = new Set(ACTIVE_MINT_BURN_CONFIGS.map((config) => conf
 export interface CoinFlowSummary {
   stablecoinId: string;
   symbol: string;
-  flowIntensity: number | null;
   pressureShiftScore: number | null;
   pressureShiftState: "improving" | "stable" | "worsening" | "nr";
   netFlowDirection24h: "minting" | "burning" | "flat" | "inactive";
@@ -366,7 +365,7 @@ export function buildCoinSummaries(
       || (agg?.burnCount ?? 0) > 0
       || (agg?.mintVolume ?? 0) > 0
       || (agg?.burnVolume ?? 0) > 0;
-    const intensity = has24hActivity && baseline
+    const pressureShiftScore = has24hActivity && baseline
       ? computeFlowIntensity({
           currentDailyNet: netFlow24h,
           baselineDailyNet: baseline.avgNet,
@@ -375,9 +374,8 @@ export function buildCoinSummaries(
           currentDailyAbs: (agg?.mintVolume ?? 0) + (agg?.burnVolume ?? 0),
         })
       : null;
-    const pressureShiftScore = intensity;
 
-    gaugeInputs.push({ intensity, mcap });
+    gaugeInputs.push({ intensity: pressureShiftScore, mcap });
 
     if (gradeClassification) {
       if (gradeClassification.safeIds.has(id)) {
@@ -402,7 +400,6 @@ export function buildCoinSummaries(
     coins.push({
       stablecoinId: id,
       symbol: config.symbol,
-      flowIntensity: intensity,
       pressureShiftScore,
       pressureShiftState: getPressureShiftState(pressureShiftScore),
       netFlowDirection24h: getNetFlowDirection24h({ netFlow24hUsd: netFlow24h, has24hActivity }),

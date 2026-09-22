@@ -1,11 +1,11 @@
 import type { MintBurnPriceContext } from "./types";
 import { buildInClause } from "../db";
 import { chunkArray } from "../collections";
+import { D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "../d1-primitives";
 import { buildPriceValidationContext, validatePriceCandidate } from "../price-validation";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 
-const DEFAULT_SQL_IN_CHUNK_SIZE = 90;
 const MAX_EVENT_DAY_LOOKBACK_SEC = DAY_SECONDS;
 
 export interface MintBurnHistoricalPriceResolution {
@@ -58,7 +58,7 @@ export function findMintBurnHistoricalPrice(
 export async function loadMintBurnPriceHistoryBatch(
   db: D1Database,
   stablecoinIds: string[],
-  sqlInChunkSize = DEFAULT_SQL_IN_CHUNK_SIZE,
+  sqlInChunkSize = D1_SAFE_IN_CLAUSE_BIND_LIMIT,
 ): Promise<Map<string, { snapshotDate: number; price: number }[]>> {
   const uniqueIds = [...new Set(stablecoinIds)];
   const priceHistory = new Map<string, { snapshotDate: number; price: number }[]>();
@@ -90,7 +90,7 @@ export async function loadMintBurnPriceHistoryBatch(
 export async function loadMintBurnPriceContextBatch(
   db: D1Database,
   stablecoinIds: string[],
-  sqlInChunkSize = DEFAULT_SQL_IN_CHUNK_SIZE,
+  sqlInChunkSize = D1_SAFE_IN_CLAUSE_BIND_LIMIT,
 ): Promise<MintBurnPriceContext> {
   const uniqueIds = [...new Set(stablecoinIds)];
   const prices = new Map<string, number>();

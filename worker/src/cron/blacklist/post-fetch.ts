@@ -2,7 +2,7 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
 import { getBlacklistPriceAssetId } from "@shared/lib/blacklist";
 import { CONTRACT_CONFIGS } from "../../lib/blacklist-contracts";
 import { D1_BATCH_SIZE } from "../../lib/constants";
-import { buildInClause } from "../../lib/db";
+import { buildInClause, D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "../../lib/db";
 import { type RateLimitedFetch } from "../../lib/evm-logs";
 import { type ChainRpcConfig } from "../../lib/chain-registry";
 import {
@@ -22,8 +22,6 @@ import {
 } from "../../lib/blacklist/row-preparation";
 
 type BlacklistConfig = (typeof CONTRACT_CONFIGS)[number];
-// D1's practical SQL-variable ceiling can be lower than the nominal 100.
-const EXISTING_BLACKLIST_ID_QUERY_CHUNK = 90;
 
 export interface BlacklistPostFetchCounters {
   attempted: number;
@@ -55,9 +53,9 @@ async function filterNewBlacklistRows(
   if (rows.length === 0) return rows;
 
   const existingIds = new Set<string>();
-  for (let i = 0; i < rows.length; i += EXISTING_BLACKLIST_ID_QUERY_CHUNK) {
+  for (let i = 0; i < rows.length; i += D1_SAFE_IN_CLAUSE_BIND_LIMIT) {
     throwIfAborted(signal);
-    const ids = rows.slice(i, i + EXISTING_BLACKLIST_ID_QUERY_CHUNK).map((row) => row.id);
+    const ids = rows.slice(i, i + D1_SAFE_IN_CLAUSE_BIND_LIMIT).map((row) => row.id);
     const { sql, binds } = buildInClause(ids);
     const result = await runWithOverloadRetry(() => db
         .prepare(`/* blacklist-post-fetch-existing-id-filter */ SELECT id FROM blacklist_events WHERE id IN (${sql})`)
