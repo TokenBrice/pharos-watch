@@ -29,10 +29,10 @@ const PAXOS_PRODUCTS: Partial<Record<PaxosProduct, { pin: PaxosDiscoveryPin; pro
   PAXG: {
     // Reviewed 2026-09-07: official route and July 31 KPMG report selection.
     pin: {
-      mainUrl: "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/script_main.CXW2wDXa.mjs",
-      mainSha256: "3b0ed09794dceccc094783e5260bb13bac72b3ed58db9e387691694b960ed5ec",
-      pageUrl: "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/9XsTDCj88fcSkvOKlIugorJnpRlJ-sQBU3zcghHZAGU.BTmB18d8.mjs",
-      pageSha256: "7fca4b31fc2bb007bfb875f68e9fd96f8030d718c4999e68e1cd68c880bc3fe9",
+      mainUrl: "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/script_main.C4JWkZrF.mjs",
+      mainSha256: "f4402618007ce4a444f44f01b8b77053dd6e8f974124ca19ec5b05ea7b73d4ab",
+      pageUrl: "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/9XsTDCj88fcSkvOKlIugorJnpRlJ-sQBU3zcghHZAGU.DZyEt9KU.mjs",
+      pageSha256: "d925fff8bef147f8b1c1a9c19c539a19719d3cd934c899d8137f068f5d4edcbb",
     },
     profile: {
       adapterName: "paxos-independent-assurance",
@@ -56,10 +56,10 @@ const PAXOS_PRODUCTS: Partial<Record<PaxosProduct, { pin: PaxosDiscoveryPin; pro
   PYUSD: {
     // Reviewed July 2026 year-specific open variants on 2026-09-09.
     pin: {
-      mainUrl: "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/script_main.CXW2wDXa.mjs",
-      mainSha256: "3b0ed09794dceccc094783e5260bb13bac72b3ed58db9e387691694b960ed5ec",
-      pageUrl: "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/gaXXeRLPJVU8xNh11dsVtC1bnIYsH9HFFZN3Q7yy4xM.CG1xwpmM.mjs",
-      pageSha256: "1d527e1e816f4fbbe12a57adedd30a730193b17e1099e4451fd41becc9d3e6e3",
+      mainUrl: "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/script_main.C4JWkZrF.mjs",
+      mainSha256: "f4402618007ce4a444f44f01b8b77053dd6e8f974124ca19ec5b05ea7b73d4ab",
+      pageUrl: "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/gaXXeRLPJVU8xNh11dsVtC1bnIYsH9HFFZN3Q7yy4xM.IfH84ZmG.mjs",
+      pageSha256: "44d14ce9b5c16fdc3232f6d1923e627022062d5f96adde9307feb3235f354daf",
     },
     profile: {
       adapterName: "paxos-independent-assurance", product: "PYUSD", profile: "pyusd-v1",
@@ -77,10 +77,10 @@ const PAXOS_PRODUCTS: Partial<Record<PaxosProduct, { pin: PaxosDiscoveryPin; pro
     // Reviewed 2026-09-09: July 2026 y397A2bek / MyKpGtOFv / LghKhDIKj
     // override selects IJR7..., not the base July U6Cd... report.
     pin: {
-      mainUrl: "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/script_main.CXW2wDXa.mjs",
-      mainSha256: "3b0ed09794dceccc094783e5260bb13bac72b3ed58db9e387691694b960ed5ec",
-      pageUrl: "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/Dpx7vvLtZ0_GXJdsd7UXSGLBYctWInqJeDbtf1NUTGo.COf6XUdK.mjs",
-      pageSha256: "6cf05047c9fac8d4a8e4171e8b2474a50a4b0d018b09efb24822f1544528ddbd",
+      mainUrl: "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/script_main.C4JWkZrF.mjs",
+      mainSha256: "f4402618007ce4a444f44f01b8b77053dd6e8f974124ca19ec5b05ea7b73d4ab",
+      pageUrl: "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/Dpx7vvLtZ0_GXJdsd7UXSGLBYctWInqJeDbtf1NUTGo.C0bhEwZo.mjs",
+      pageSha256: "a6246bd82da7e0f879685de1b19736c7b7f54f5cf664f5f7de8f343b9622ed4e",
     },
     profile: {
       adapterName: "paxos-independent-assurance", product: "USDG", profile: "usdg-v1",
@@ -97,10 +97,10 @@ const PAXOS_PRODUCTS: Partial<Record<PaxosProduct, { pin: PaxosDiscoveryPin; pro
   USDP: {
     // Reviewed July 2026 year-specific open variants on 2026-09-09.
     pin: {
-      mainUrl: "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/script_main.CXW2wDXa.mjs",
-      mainSha256: "3b0ed09794dceccc094783e5260bb13bac72b3ed58db9e387691694b960ed5ec",
-      pageUrl: "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/T6xLeGdnaKeagfQVSfjAmjg0_UAsdgPLW9gmBy9jinM.BuaRdNj7.mjs",
-      pageSha256: "b88cb1c91493fc7011a417c75388ad1580d0b9e14d2502af57ca3435ddf1bfc3",
+      mainUrl: "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/script_main.C4JWkZrF.mjs",
+      mainSha256: "f4402618007ce4a444f44f01b8b77053dd6e8f974124ca19ec5b05ea7b73d4ab",
+      pageUrl: "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/T6xLeGdnaKeagfQVSfjAmjg0_UAsdgPLW9gmBy9jinM.D8kbxxWZ.mjs",
+      pageSha256: "ecdec99301d4656684d0ce651596d854567022c32006ac5b13ad48fb52a42a03",
     },
     profile: {
       adapterName: "paxos-independent-assurance", product: "USDP", profile: "usdp-v1",
