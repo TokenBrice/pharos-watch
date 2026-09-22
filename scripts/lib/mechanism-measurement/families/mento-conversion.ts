@@ -17,6 +17,7 @@ import {
 } from "../core";
 import type { MentoConversionMeasurementEvidence } from "../schema";
 import type { MentoConversionMeasurementTarget } from "../targets";
+import { buildMeasurementCompleteness, buildNotApplicableMetrics } from "../evidence-envelope";
 
 const CR_NA =
   "This token is a reserve/conversion product without an independently collateralized per-token vault system.";
@@ -155,15 +156,11 @@ export async function measureMentoConversion(
     rpcUrl,
     block,
     calls: caller.calls,
-    metrics: {
-      collateralizationRatio: null,
-      liquidationCapacityRatio: null,
-      applicability: {
-        collateralizationRatio: { state: "not-applicable", rationale: CR_NA },
-        liquidationCapacityRatio: { state: "not-applicable", rationale: LIQUIDATION_NA },
-      },
-    },
-    completeness: { complete: true, blockers: [] },
+    metrics: buildNotApplicableMetrics({
+      collateralizationRationale: CR_NA,
+      liquidationCapacityRationale: LIQUIDATION_NA,
+    }),
+    completeness: buildMeasurementCompleteness(),
     derived,
     analogousMetrics: {
       conversionCapacityCounterUnits: ratioToRounded(conversionCapacityRaw, 10n ** 18n, 8),

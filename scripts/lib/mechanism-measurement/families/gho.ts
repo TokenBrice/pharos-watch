@@ -12,6 +12,7 @@ import {
 } from "../core";
 import type { GhoMeasurementEvidence } from "../schema";
 import type { GhoMeasurementTarget } from "../targets";
+import { buildMeasurementCompleteness, buildNotApplicableMetrics } from "../evidence-envelope";
 
 const ZERO_ADDRESS = `0x${"0".repeat(40)}`;
 const CR_NA =
@@ -202,15 +203,11 @@ export async function measureGho(
     rpcUrl,
     block,
     calls: caller.calls,
-    metrics: {
-      collateralizationRatio: null,
-      liquidationCapacityRatio: null,
-      applicability: {
-        collateralizationRatio: { state: "not-applicable", rationale: CR_NA },
-        liquidationCapacityRatio: { state: "not-applicable", rationale: LIQUIDATION_NA },
-      },
-    },
-    completeness: { complete: true, blockers: [] },
+    metrics: buildNotApplicableMetrics({
+      collateralizationRationale: CR_NA,
+      liquidationCapacityRationale: LIQUIDATION_NA,
+    }),
+    completeness: buildMeasurementCompleteness(),
     warnings: [
       "The two tracked GSM contracts are a direct swappable-capacity lower bound, not exhaustive coverage of every module represented by the aggregate GSM facilitator level.",
     ],

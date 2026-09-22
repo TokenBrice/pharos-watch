@@ -196,6 +196,35 @@ export const LIMIT_PARAM = {
   description: "Maximum number of records to return.",
 } as const satisfies PublicApiArtifactParameter;
 
+const OFFSET_QUERY_PARAM = {
+  name: "offset",
+  in: "query",
+  schema: { type: "integer", minimum: 0 },
+  description: "Pagination offset. Defaults to 0.",
+} as const satisfies PublicApiArtifactParameter;
+
+const INCLUDE_TOTAL_QUERY_PARAM = {
+  name: "includeTotal",
+  in: "query",
+  schema: { type: "boolean" },
+  description: "When false, skips the exact total count.",
+} as const satisfies PublicApiArtifactParameter;
+
+const CURSOR_QUERY_PARAM = {
+  name: "cursor",
+  in: "query",
+  schema: { type: "string" },
+  description: "Opaque keyset cursor returned as nextCursor.",
+} as const satisfies PublicApiArtifactParameter;
+
+const DATE_PATH_PARAM = {
+  name: "date",
+  in: "path",
+  required: true,
+  schema: { type: "string" },
+  description: "ISO 8601 date (YYYY-MM-DD) matching a row in the snapshot index.",
+} as const satisfies PublicApiArtifactParameter;
+
 const PUBLIC_API_ARTIFACT_INPUTS = [
   {
     key: "health",
@@ -273,24 +302,14 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
         schema: { type: "integer", minimum: 0 },
         description: "Pagination offset.",
       },
-      {
-        name: "cursor",
-        in: "query",
-        schema: { type: "string" },
-        description: "Opaque keyset cursor returned as nextCursor.",
-      },
+      CURSOR_QUERY_PARAM,
       {
         name: "active",
         in: "query",
         schema: { type: "boolean" },
         description: "When true, returns active depeg events only.",
       },
-      {
-        name: "includeTotal",
-        in: "query",
-        schema: { type: "boolean" },
-        description: "When false, skips the exact total count.",
-      },
+      INCLUDE_TOTAL_QUERY_PARAM,
       {
         name: "includePending",
         in: "query",
@@ -364,12 +383,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
         schema: { type: "integer" },
         description: "Upper bound on ts (epoch ms, inclusive).",
       },
-      {
-        name: "cursor",
-        in: "query",
-        schema: { type: "string" },
-        description: "Opaque keyset cursor returned as nextCursor.",
-      },
+      CURSOR_QUERY_PARAM,
       {
         name: "limit",
         in: "query",
@@ -543,18 +557,8 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
         schema: { type: "integer", minimum: 0, maximum: 1000 },
         description: "Maximum number of events to return. Defaults to 1000; `0` maps to the default.",
       },
-      {
-        name: "offset",
-        in: "query",
-        schema: { type: "integer", minimum: 0 },
-        description: "Pagination offset. Defaults to 0.",
-      },
-      {
-        name: "includeTotal",
-        in: "query",
-        schema: { type: "boolean" },
-        description: "When false, skips the exact total count.",
-      },
+      OFFSET_QUERY_PARAM,
+      INCLUDE_TOTAL_QUERY_PARAM,
     ],
     postman: {
       query: {
@@ -633,24 +637,14 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
         schema: { type: "integer", minimum: 1, maximum: 500 },
         description: "Maximum number of records to return. Defaults to 50.",
       },
-      {
-        name: "offset",
-        in: "query",
-        schema: { type: "integer", minimum: 0 },
-        description: "Pagination offset. Defaults to 0.",
-      },
+      OFFSET_QUERY_PARAM,
       {
         name: "cursor",
         in: "query",
         schema: { type: "string" },
         description: "Opaque keyset cursor returned as nextCursor; cannot be combined with a non-zero offset.",
       },
-      {
-        name: "includeTotal",
-        in: "query",
-        schema: { type: "boolean" },
-        description: "When false, skips the exact total count.",
-      },
+      INCLUDE_TOTAL_QUERY_PARAM,
     ],
     postman: {
       query: {
@@ -846,13 +840,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
       "Full per-day public dataset snapshot (camelCase). Immutable artifact keyed by YYYY-MM-DD; served with public, immutable, max-age=1y cache headers.",
     tags: ["Digest", "History"],
     parameters: [
-      {
-        name: "date",
-        in: "path",
-        required: true,
-        schema: { type: "string" },
-        description: "ISO 8601 date (YYYY-MM-DD) matching a row in the snapshot index.",
-      },
+      DATE_PATH_PARAM,
     ],
     postman: {
       order: 9,
@@ -867,13 +855,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
       "Per-coin slice of a daily snapshot (camelCase). Immutable artifact keyed by YYYY-MM-DD + stablecoin id; served with public, immutable, max-age=1y cache headers.",
     tags: ["Digest", "Stablecoins", "History"],
     parameters: [
-      {
-        name: "date",
-        in: "path",
-        required: true,
-        schema: { type: "string" },
-        description: "ISO 8601 date (YYYY-MM-DD) matching a row in the snapshot index.",
-      },
+      DATE_PATH_PARAM,
       {
         name: "stablecoinId",
         in: "path",

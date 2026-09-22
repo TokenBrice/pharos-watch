@@ -1,6 +1,6 @@
 # Methodology Page Contract
 
-`/methodology` (`src/app/methodology/page.tsx`) is the canonical long-form explainer page for Pharos scoring systems. The route shell still owns metadata, breadcrumb/FAQ/Article structured data, and the reader-guide hero chrome, while `src/app/methodology/sections/index.tsx` composes the authored long-form section bodies from `src/app/methodology/sections/core/*.tsx` and `src/app/methodology/sections/monitoring/*.tsx`.
+`/methodology` (`src/app/methodology/page.tsx`) is the canonical long-form explainer page for Pharos scoring systems. The route shell still owns metadata, breadcrumb/FAQ/Article structured data, and the reader-guide hero chrome, while `src/app/methodology/sections/methodology-sections.tsx` composes the authored long-form section bodies from `src/app/methodology/sections/core/*.tsx` and `src/app/methodology/sections/monitoring/*.tsx`.
 
 ---
 
@@ -8,7 +8,7 @@
 
 - **Route shell:** `src/app/methodology/page.tsx` (metadata, breadcrumb JSON-LD, Article JSON-LD, hero/reader-guide shell, and the visible `FaqSection` that emits the FAQ JSON-LD)
 - **Shared helpers + section metadata:** `src/app/methodology/methodology-shared.tsx`
-- **Section composition module:** `src/app/methodology/sections/index.tsx` (single ordered `MethodologySections` list)
+- **Section composition module:** `src/app/methodology/sections/methodology-sections.tsx` (single ordered `MethodologySections` list)
 - **Composite section body:** `src/app/methodology/sections/core-sections-pricing.tsx`
 - **Shared section summary/markdown registry:** `src/lib/methodology-content.ts` (non-React section ids, titles, and markdown-export summaries)
 - **Per-section body modules:** `src/app/methodology/sections/core/*.tsx` and `src/app/methodology/sections/monitoring/*.tsx`
@@ -53,7 +53,7 @@ When changing any methodology surface, update the runtime implementation, the de
 
 1. Runtime implementation (source file above).
 2. Detailed methodology doc (`docs/*.md` for that system).
-3. `/methodology` page copy and worked examples in the relevant section body module under `src/app/methodology/sections/core/` or `src/app/methodology/sections/monitoring/`. If the markdown export summary should also change, update the matching entry in `src/lib/methodology-content.ts`. Use `src/app/methodology/sections/index.tsx` only when changing section composition or order.
+3. `/methodology` page copy and worked examples in the relevant section body module under `src/app/methodology/sections/core/` or `src/app/methodology/sections/monitoring/`. If the markdown export summary should also change, update the matching entry in `src/lib/methodology-content.ts`. Use `src/app/methodology/sections/methodology-sections.tsx` only when changing section composition or order.
 
 If a versioned methodology changes, add the entry under `shared/data/methodology-changelogs/`, update the corresponding domain module under `shared/lib/methodology-versions/`, and bump the shared constant when applicable so badges and changelog links stay consistent.
 

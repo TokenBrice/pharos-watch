@@ -11,6 +11,7 @@ import {
 } from "../core";
 import type { EnumeratedLiquityV2MeasurementEvidence } from "../schema";
 import type { EnumeratedLiquityV2MeasurementTarget } from "../targets";
+import { buildMeasuredMetrics, buildMeasurementCompleteness } from "../evidence-envelope";
 import { LIQUITY_V2_CALLS, readLiquityV2Branch } from "./liquity-v2";
 
 const WAD = 10n ** 18n;
@@ -258,15 +259,11 @@ export async function measureEnumeratedLiquityV2(
     rpcUrl,
     block,
     calls: caller.calls,
-    metrics: {
+    metrics: buildMeasuredMetrics({
       collateralizationRatio,
       liquidationCapacityRatio,
-      applicability: {
-        collateralizationRatio: { state: "measured" },
-        liquidationCapacityRatio: { state: "measured" },
-      },
-    },
-    completeness: { complete: true, blockers: [] },
+    }),
+    completeness: buildMeasurementCompleteness(),
     ...(healthWarnings.length > 0 ? { warnings: healthWarnings } : {}),
     derived: {
       registry,

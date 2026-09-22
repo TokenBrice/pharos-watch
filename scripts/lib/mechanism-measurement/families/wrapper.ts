@@ -11,6 +11,7 @@ import {
 } from "../core";
 import type { WrapperMechanismMeasurementEvidence } from "../schema";
 import type { WrapperMechanismMeasurementTarget } from "../targets";
+import { buildMeasurementCompleteness, buildNotApplicableMetrics } from "../evidence-envelope";
 
 const CR_NA = "The wrapper has no independent CDP collateralization system; solvency inherits from its parent asset.";
 const LIQUIDATION_NA =
@@ -86,15 +87,11 @@ export async function measureWrapperMechanism(
     rpcUrl,
     block,
     calls: caller.calls,
-    metrics: {
-      collateralizationRatio: null,
-      liquidationCapacityRatio: null,
-      applicability: {
-        collateralizationRatio: { state: "not-applicable", rationale: CR_NA },
-        liquidationCapacityRatio: { state: "not-applicable", rationale: LIQUIDATION_NA },
-      },
-    },
-    completeness: { complete: blockers.length === 0, blockers },
+    metrics: buildNotApplicableMetrics({
+      collateralizationRationale: CR_NA,
+      liquidationCapacityRationale: LIQUIDATION_NA,
+    }),
+    completeness: buildMeasurementCompleteness(blockers),
     ...(blockers.length > 0 ? { warnings: blockers } : {}),
     derived: {
       wrapper,

@@ -10,7 +10,7 @@ import {
   type IndependentAssuranceProduct,
 } from "@shared/lib/independent-assurance";
 import { MANIFEST_SOURCES } from "../../shared/data/live-reserves/independent-assurance";
-import { COMPILER_PROFILES } from "../lib/independent-assurance-profiles";
+import { COMPILER_PROFILES } from "../lib/independent-assurance-profiles/registry";
 import type { CompilerProfile } from "../lib/independent-assurance-profiles/shared";
 
 const MANIFEST_DIR = resolve("shared/data/live-reserves/independent-assurance");
