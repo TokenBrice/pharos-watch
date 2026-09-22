@@ -75,7 +75,7 @@ export async function loadCommodityPeerMedianReference(
     if (Object.keys(deriveCommodityPeerMedianRates([asset])).length === 0) return false;
     const freshness = validateCompositePricingSourceFreshness({
       source: asset.priceSource ?? "",
-      observedAt: asset.priceObservedAt ?? asset.priceUpdatedAt,
+      observedAt: asset.priceObservedAt === undefined ? asset.priceUpdatedAt : asset.priceObservedAt,
       observedAtMode: asset.priceObservedAtMode,
       nowSec: syncStartSec,
       requireObservedAt: true,

@@ -162,8 +162,8 @@ describe("syncFxRates", () => {
       sourceCadenceByPeg: Record<string, string>;
       sourceDateByPeg: Record<string, string | null>;
     };
-    expect(cachedMeta.sourceUpdatedAtByPeg.peggedGOLD).toBe(stablecoinsUpdatedAt);
-    expect(cachedMeta.sourceUpdatedAtByPeg.peggedSILVER).toBe(stablecoinsUpdatedAt);
+    expect(cachedMeta.sourceUpdatedAtByPeg.peggedGOLD).toBe(stablecoinsUpdatedAt - 30);
+    expect(cachedMeta.sourceUpdatedAtByPeg.peggedSILVER).toBe(stablecoinsUpdatedAt - 30);
     expect(cachedMeta.sourceCadenceByPeg.peggedGOLD).toBe("intraday");
     expect(cachedMeta.sourceCadenceByPeg.peggedSILVER).toBe("intraday");
     expect(cachedMeta.sourceDateByPeg.peggedGOLD).toBeNull();
@@ -193,7 +193,7 @@ describe("syncFxRates", () => {
     const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
       sourceUpdatedAtByPeg: Record<string, number | null>;
     };
-    expect(cachedMeta.sourceUpdatedAtByPeg.peggedGOLD).toBe(stablecoinsUpdatedAt);
+    expect(cachedMeta.sourceUpdatedAtByPeg.peggedGOLD).toBe(stablecoinsUpdatedAt - 30);
     expect(cachedMeta.sourceUpdatedAtByPeg.peggedSILVER).toBeNull();
   });
 

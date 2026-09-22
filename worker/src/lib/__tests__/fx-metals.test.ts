@@ -96,7 +96,7 @@ describe("commodity peer observation provenance", () => {
     const now = 1_800_000_000;
     const asset = {
       id: "paxg-paxos", name: "Pax Gold", symbol: "PAXG", pegType: "peggedGOLD",
-      price: 2900, priceSource: "coingecko", priceObservedAt: observedAt, priceUpdatedAt: observedAt,
+      price: 2900, priceSource: "coingecko", priceObservedAt: observedAt, priceUpdatedAt: now,
       priceObservedAtMode: "upstream", circulating: { peggedGOLD: 10_000_000 },
     };
     const db = mockD1([{ match: "cache", rows: [], first: {
