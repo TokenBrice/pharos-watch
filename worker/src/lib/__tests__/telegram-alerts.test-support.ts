@@ -1,4 +1,4 @@
-import type { ConsolidatedAlerts } from "../telegram/alerts";
+import type { ConsolidatedAlerts } from "../telegram/alerts-formatting";
 
 export function emptyConsolidatedAlerts(overrides: Partial<ConsolidatedAlerts> = {}): ConsolidatedAlerts {
   return {

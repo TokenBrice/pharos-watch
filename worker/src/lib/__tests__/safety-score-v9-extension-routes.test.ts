@@ -17,7 +17,7 @@ import {
   buildSafetyScoreV9RouteReviews,
 } from "../safety-score-v9/extension-routes";
 import { makeSupplyFullRedemption } from "./redemption-backstops-store.test-support";
-import { dexRouteObservation } from "./safety-score-v9-extension-routes.test-support";
+import { dexRouteObservation, withRedemptionBackstopConfig } from "./safety-score-v9-extension-routes.test-support";
 
 const NOW = Date.UTC(2026, 6, 13) / 1_000;
 const V9_FIXTURE_CLOCK = Date.UTC(2027, 0, 1) / 1_000;
@@ -105,46 +105,46 @@ function dexPegFixture({
   return { fixedInput, route };
 }
 
-it("values reviewed physical outputs without token-price or fiat substitution", () => {
-  const id = "dgld-gold-token-sa";
-  const config = getRedemptionBackstopConfig(id)!;
-  const oldType = config.outputAssetType;
-  const oldTerms = config.physicalCommodityDelivery;
-  const oldReviewedAt = config.reviewedAt;
-  const row = makeSupplyFullRedemption({ stablecoinId: id, routeFamily: "offchain-issuer", settlementModel: "days", outputAssetType: "bluechip-collateral" });
-  const fixed = fixedInputStub(row);
-  fixed.pegDataById[id] = {
-    pegCurrency: "GOLD",
-    pegReference: { valueUsd: 10_000, usdPerTroyOunce: 5_000, source: "median", contributorCount: 4, asOf: NOW },
-  } as ReportCardsFixedInput["pegDataById"][string];
-  try {
-    config.reviewedAt = "2026-07-13";
-    expect(buildSafetyScoreV9RouteReviews(fixed, id)[0]?.output).toBeNull();
-    config.outputAssetType = "physical-commodity-delivery";
-    row.outputAssetType = "physical-commodity-delivery";
-    config.physicalCommodityDelivery = {
-      commodity: "XAU", deliverableOuncesPerToken: 1, minimumDeliveryTokens: 1,
-      deliveryTermsUnbounded: false,
-      feeModel: { bps: 100, flatUsd: 100, deliveryUsd: 100 }, sameNotionalEligible: false,
-    };
-    const output = buildSafetyScoreV9RouteReviews(fixed, id)[0]?.output;
-    expect(output).toMatchObject({
-      kind: "physical-commodity-delivery", sameNotionalEligible: false,
-      valuation: { basis: "commodity-delivery", expectedUnitValueUsd: 5_000 },
+describe("buildSafetyScoreV9RouteReviews physical-commodity outputs", () => {
+  it("values reviewed physical outputs without token-price or fiat substitution", () => {
+    const id = "dgld-gold-token-sa";
+    const row = makeSupplyFullRedemption({ stablecoinId: id, routeFamily: "offchain-issuer", settlementModel: "days", outputAssetType: "bluechip-collateral" });
+    const fixed = fixedInputStub(row);
+    fixed.pegDataById[id] = {
+      pegCurrency: "GOLD",
+      pegReference: { valueUsd: 10_000, usdPerTroyOunce: 5_000, source: "median", contributorCount: 4, asOf: NOW },
+    } as ReportCardsFixedInput["pegDataById"][string];
+
+    withRedemptionBackstopConfig(id, { reviewedAt: "2026-07-13" }, () => {
+      expect(buildSafetyScoreV9RouteReviews(fixed, id)[0]?.output).toBeNull();
     });
-    expect(output?.valuation?.unitValueUsd).toBeLessThan(5_000);
-    config.physicalCommodityDelivery.deliveryTermsUnbounded = true;
-    const unbounded = buildSafetyScoreV9RouteReviews(fixed, id)[0]?.output;
-    expect(unbounded).toMatchObject({ unboundedDeliveryCap: 55, sameNotionalEligible: false });
-    expect(unbounded!.valuation!.unitValueUsd).toBeGreaterThan(output!.valuation!.unitValueUsd);
-    delete fixed.pegDataById[id]!.pegReference!.usdPerTroyOunce;
-    expect(buildSafetyScoreV9RouteReviews(fixed, id)[0]?.output).toBeNull();
-  } finally {
-    config.outputAssetType = oldType;
-    config.reviewedAt = oldReviewedAt;
-    if (oldTerms) config.physicalCommodityDelivery = oldTerms;
-    else delete config.physicalCommodityDelivery;
-  }
+
+    withRedemptionBackstopConfig(id, {
+      reviewedAt: "2026-07-13",
+      outputAssetType: "physical-commodity-delivery",
+      physicalCommodityDelivery: {
+        commodity: "XAU", deliverableOuncesPerToken: 1, minimumDeliveryTokens: 1,
+        deliveryTermsUnbounded: false,
+        feeModel: { bps: 100, flatUsd: 100, deliveryUsd: 100 }, sameNotionalEligible: false,
+      },
+    }, (config) => {
+      row.outputAssetType = "physical-commodity-delivery";
+      const output = buildSafetyScoreV9RouteReviews(fixed, id)[0]?.output;
+      expect(output).toMatchObject({
+        kind: "physical-commodity-delivery", sameNotionalEligible: false,
+        valuation: { basis: "commodity-delivery", expectedUnitValueUsd: 5_000 },
+      });
+      expect(output?.valuation?.unitValueUsd).toBeLessThan(5_000);
+
+      config.physicalCommodityDelivery!.deliveryTermsUnbounded = true;
+      const unbounded = buildSafetyScoreV9RouteReviews(fixed, id)[0]?.output;
+      expect(unbounded).toMatchObject({ unboundedDeliveryCap: 55, sameNotionalEligible: false });
+      expect(unbounded!.valuation!.unitValueUsd).toBeGreaterThan(output!.valuation!.unitValueUsd);
+
+      delete fixed.pegDataById[id]!.pegReference!.usdPerTroyOunce;
+      expect(buildSafetyScoreV9RouteReviews(fixed, id)[0]?.output).toBeNull();
+    });
+  });
 });
 
 function withV9RouteReviewTerms<T>(
@@ -152,16 +152,7 @@ function withV9RouteReviewTerms<T>(
   terms: NonNullable<RedemptionBackstopConfig["v9RouteReviewTerms"]>,
   run: () => T,
 ): T {
-  const config = getRedemptionBackstopConfig(stablecoinId);
-  if (!config) throw new Error(`Missing redemption config fixture for ${stablecoinId}`);
-  const previous = config.v9RouteReviewTerms;
-  config.v9RouteReviewTerms = terms;
-  try {
-    return run();
-  } finally {
-    if (previous === undefined) delete config.v9RouteReviewTerms;
-    else config.v9RouteReviewTerms = previous;
-  }
+  return withRedemptionBackstopConfig(stablecoinId, { v9RouteReviewTerms: terms }, run);
 }
 
 const FASTER_REVIEWED_SETTLEMENT = {

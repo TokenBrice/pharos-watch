@@ -3,9 +3,14 @@ import type { V9AssetFactsBase, V9FactStatusV2 } from "../../types/safety-score-
 import {
   assessV9ControlDomainScope,
   deploymentControlDomainSeverity,
+  isV9ControllerOwnedCommonModeMember,
+  isV9ParentControlledCommonModeMember,
+  resolveV9MintControlGroupSeverity,
+  v9ControlAssetDomainId,
+  type V9MintControlGroupIssuerFacts,
   type V9SupplyChainExposure,
 } from "../safety-score-v9/evaluate-set";
-import type { V9CommonModeMember } from "../safety-score-v9/dependencies";
+import type { V9CommonModeMember, V9DependencyPathPlan } from "../safety-score-v9/dependencies";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 
 const DOMAIN = { kind: "upgrade-control" as const, key: "program:shared" };
@@ -151,5 +156,111 @@ describe("Safety Score v9 local control-domain scope", () => {
 
     expect(assessment.economicLossScope).toBe("global-claim");
     expect(assessment.materialShare).toBeNull();
+  });
+});
+
+// Own-issuer controller reuse is diagnostic; crossed or unresolved issuer joins fail closed.
+describe("D2 ruled issuer-scoped mint-control grouping", () => {
+  const sameIssuerGroup = (size: 2 | 4): V9MintControlGroupIssuerFacts => ({
+    controllerIssuerKey: "issuer:circle",
+    members: Array.from({ length: size }, (_, index) => ({
+      assetId: `circle-product-${index}`,
+      pathKey: `mint:path-${index}`,
+      assetIssuerKey: "issuer:circle",
+    })),
+  });
+
+  it("grades a same-issuer controller group diagnostic (low)", () => {
+    expect(resolveV9MintControlGroupSeverity(sameIssuerGroup(4))).toBe("low");
+  });
+
+  it("keeps a cross-issuer shared controller capping (high)", () => {
+    expect(resolveV9MintControlGroupSeverity({
+      controllerIssuerKey: "issuer:circle",
+      members: [
+        { assetId: "usdc-circle", pathKey: "mint:a", assetIssuerKey: "issuer:circle" },
+        { assetId: "foreign-wrapper", pathKey: "mint:b", assetIssuerKey: "issuer:other" },
+      ],
+    })).toBe("high");
+  });
+
+  it("fails closed (high) when the controller issuer is unresolved", () => {
+    expect(resolveV9MintControlGroupSeverity({ ...sameIssuerGroup(2), controllerIssuerKey: null })).toBe("high");
+  });
+
+  it("fails closed (high) when any member asset issuer is unresolved", () => {
+    expect(resolveV9MintControlGroupSeverity({
+      controllerIssuerKey: "issuer:circle",
+      members: [
+        { assetId: "usdc-circle", pathKey: "mint:a", assetIssuerKey: "issuer:circle" },
+        { assetId: "unknown-product", pathKey: "mint:b", assetIssuerKey: null },
+      ],
+    })).toBe("high");
+  });
+
+  it("fails closed (high) when a resolved controller has no members", () => {
+    expect(resolveV9MintControlGroupSeverity({ controllerIssuerKey: "issuer:circle", members: [] })).toBe("high");
+  });
+
+  it("preserves diagnostic severity under a disjoint split of the same members", () => {
+    const merged = sameIssuerGroup(4);
+    const split = [merged.members.slice(0, 2), merged.members.slice(2)].map((members) => ({
+      controllerIssuerKey: merged.controllerIssuerKey,
+      members,
+    }));
+    expect(resolveV9MintControlGroupSeverity(merged)).toBe("low");
+    expect(split.map((group) => resolveV9MintControlGroupSeverity(group))).toEqual(["low", "low"]);
+  });
+});
+
+describe("Reshape-v2 D2 — parent-controlled common-mode dedup", () => {
+  const serialPaths = [
+    {
+      assetId: "steakusdt-steakhouse",
+      upstreamAssetId: "usdt-tether",
+      edgeKey: "wrap",
+      exposureKey: "wrap:exposure",
+      riskEventKey: "wrap:risk",
+      evidenceRefIds: [],
+      dependencyType: "wrapper" as const,
+      role: "serial-claim" as const,
+      weight: 1,
+      failureDomains: [],
+    },
+    {
+      assetId: "basket-holder",
+      upstreamAssetId: "usdt-tether",
+      edgeKey: "basket",
+      exposureKey: "basket:exposure",
+      riskEventKey: "basket:risk",
+      evidenceRefIds: [],
+      dependencyType: "collateral" as const,
+      role: "basket-exposure" as const,
+      weight: 0.4,
+      failureDomains: [],
+    },
+  ] satisfies V9DependencyPathPlan[];
+
+  it("extracts the controller asset id only from asset-keyed control domains", () => {
+    expect(v9ControlAssetDomainId({ kind: "mint-control", key: "asset:usdt-tether" })).toBe("usdt-tether");
+    expect(v9ControlAssetDomainId({ kind: "upgrade-control", key: "asset:usdc-circle" })).toBe("usdc-circle");
+    expect(v9ControlAssetDomainId({ kind: "mint-control", key: "safe:ethereum:0x0a0e" })).toBeNull();
+    expect(v9ControlAssetDomainId({ kind: "bridge-route", key: "asset:usdt-tether" })).toBeNull();
+  });
+
+  it("defers to the parent cap only for serial-claim children of the domain asset", () => {
+    expect(isV9ParentControlledCommonModeMember("steakusdt-steakhouse", "usdt-tether", serialPaths)).toBe(true);
+    // Basket exposure is not a required-parent relationship: the shared-controller risk stays priced.
+    expect(isV9ParentControlledCommonModeMember("basket-holder", "usdt-tether", serialPaths)).toBe(false);
+    // A different upstream never matches, and a null domain id never dedups.
+    expect(isV9ParentControlledCommonModeMember("steakusdt-steakhouse", "usdc-circle", serialPaths)).toBe(false);
+    expect(isV9ParentControlledCommonModeMember("steakusdt-steakhouse", null, serialPaths)).toBe(false);
+  });
+
+  it("does not create a reverse dependency from downstream controller reuse", () => {
+    expect(isV9ControllerOwnedCommonModeMember("usdt-tether", "usdt-tether", serialPaths)).toBe(true);
+    expect(isV9ControllerOwnedCommonModeMember("steakusdt-steakhouse", "usdt-tether", serialPaths)).toBe(true);
+    expect(isV9ControllerOwnedCommonModeMember("basket-holder", "usdt-tether", serialPaths)).toBe(false);
+    expect(isV9ControllerOwnedCommonModeMember("foreign-product", "usdt-tether", serialPaths)).toBe(false);
   });
 });

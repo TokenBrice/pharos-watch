@@ -291,6 +291,10 @@ A cron unit has one test home: tests for `worker/src/cron/<lane>/<module>.ts` li
 
 A shared guard or mechanism is asserted where it is implemented, not at every route that imports it: `functions/lib/__tests__/site-data-origin.test.ts` owns the origin matrix and `functions/__tests__/upstream-proxy.test.ts` owns the response byte cap and deadline, so a proxy route suite keeps only its own wiring case.
 
+**One unit, one home.** A production module has exactly one test file that owns its contract. Suites named after a ticket, ruling, or review wave (`R3`, `D2`, `VER-010`) are not units: fold their cases into the module's name-matched suite and delete the satellite, keeping every distinct assertion. A satellite that exercises a *different* module reachable from the same fixture belongs to that module's owner, not to whichever suite happened to build the fixture.
+
+Plan the target tree before moving a file. `assertExecutableTestFiles` in `scripts/lib/critical-ownership.mts` requires each selected test file to exist and to be selected by exactly one Vitest project, and `scripts/lib/critical-coverage.mjs` derives ownership from the surviving file's import specifiers. A `worker/` → `shared/` move therefore changes both the selecting project and the ownership edge, and can fail `npm run check:critical-coverage-completeness` even when every assertion was preserved. Merge within a tree, and run the gate after each merge.
+
 ### Frontend Test Setup Helpers (`src/test-utils/frontend.ts`)
 
 Frontend jsdom tests should use `installMatchMediaMock()`, `cleanupFrontendTest()`, `resetBrowserStorage()`, and `createNextLinkMock()` from `src/test-utils/frontend.ts` instead of hand-rolling `matchMedia`, browser-storage cleanup, or `next/link` mocks. Keep test-local mocks only when the test needs behavior that differs from the shared helper.
