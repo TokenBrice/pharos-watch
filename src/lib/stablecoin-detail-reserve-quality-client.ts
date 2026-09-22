@@ -10,6 +10,7 @@ import type {
 } from "@shared/types";
 import { RESERVE_RISK_PRESENTATION } from "@shared/lib/classification/reserve-risk";
 import { RESEARCH_REVIEW_CONFIDENCE_LABELS } from "@shared/lib/classification";
+import { round1 } from "@shared/lib/math";
 
 /**
  * Client-safe projection of the curated reserve slices' quality attributes
@@ -186,10 +187,6 @@ const CHIP_TONES = {
 /** Rounds to at most 1 decimal and trims trailing zeros, e.g. 12.56 -> "12.6%", 71 -> "71%". */
 export function formatReserveQualityPct(value: number): string {
   return `${Number(value.toFixed(1))}%`;
-}
-
-function round1(value: number): number {
-  return Number(value.toFixed(1));
 }
 
 interface ChipVerdict {

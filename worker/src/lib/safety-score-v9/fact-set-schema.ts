@@ -9,15 +9,11 @@ import {
 import {
   V9AccessReviewV2Schema,
   V9DependencyRejectionReasonsSchema,
-  V9ControlAuthoritySchema,
+  V9DeploymentControlFactBaseSchema,
   V9EconomicControlReviewV2Schema,
-  V9IncidentStateSchema,
-  V9KeyCustodySchema,
-  V9ModulesOrGuardsSchema,
+  V9ExitRouteFactBaseSchema,
   V9ReserveAssetClassSchema,
   V9ResolvedMechanismArchetypeSchema,
-  V9RouteSettlementSlaSecSchema,
-  V9RouteSettlementUsdAmountSchema,
   V9VariantKindSchema,
 } from "@shared/types/safety-score-v9-facts";
 import { canonicalV9ExecutionCostKey } from "@shared/types/safety-score-v9-fact-primitives";
@@ -42,24 +38,13 @@ import {
   FractionSchema,
   Sha256Schema,
   UnixSecondsSchema,
-  V9ClaimImpairmentSchema,
-  V9ControlCapabilitySchema,
-  V9ControlCapSemanticsSchema,
-  V9ControlKindSchema,
-  V9ControlScopeSchema,
-  V9EconomicLossScopeSchema,
   V9MechanismExitDispositionSchema,
   V9MechanismExitFactKeySchema,
   V9MechanismQualitySchema,
 } from "@shared/types/safety-score-v9-fact-input-primitives";
 import {
-  V9RouteCoverageClassSchema,
-  V9RouteExecutionCertaintySchema,
-  V9RouteExecutionModelSchema,
-  V9RouteHolderAccessSchema,
   V9RouteLaneSchema,
   V9RouteOutputKindSchema,
-  V9RouteSettlementModelSchema,
   V9RouteValuationBasisSchema,
   V9RouteValuationConfidenceSchema,
 } from "@shared/types/safety-score-v9-fact-input-primitives";
@@ -233,25 +218,12 @@ export const RouteOutputReviewSchema = z
   })
   .strict();
 
-export const RouteReviewSchema = z
-  .object({
-    lane: V9RouteLaneSchema,
-    routeId: CanonicalTextSchema,
-    holderAccess: V9RouteHolderAccessSchema,
-    executionModel: V9RouteExecutionModelSchema,
-    executionCertainty: V9RouteExecutionCertaintySchema,
-    // Retained schema-v2 route reviews predate this field. Normalize them to
-    // the conservative modeled-confidence floor at the compiler boundary.
-    modelConfidence: z.enum(["high", "medium", "low"]).default("low"),
-    coverageClass: V9RouteCoverageClassSchema,
-    capacityScoringHorizon: z.enum(["immediate", "daily", "queued", "eventual", "unknown"]).optional(),
-    settlementModel: V9RouteSettlementModelSchema,
-    settlementSlaSec: V9RouteSettlementSlaSecSchema,
+export const RouteReviewSchema = V9ExitRouteFactBaseSchema
+  .extend({
+    // Producer-only overlay: the review-side settlement horizon and measured
+    // execution costs have no compiled-fact counterpart, and the review output
+    // shape is the producer's own projection (`RouteOutputReviewSchema`).
     settlementHorizonSec: z.number().int().nonnegative().optional(),
-    queueDepthUsd: V9RouteSettlementUsdAmountSchema,
-    dailyLimitUsd: V9RouteSettlementUsdAmountSchema,
-    minRedeemUsd: V9RouteSettlementUsdAmountSchema,
-    physicalResourceKeys: canonicalArrayBy(CanonicalTextSchema, (value) => value),
     executionCosts: canonicalArrayBy(
       RouteExecutionCostSchema,
       canonicalV9ExecutionCostKey,
@@ -263,7 +235,6 @@ export const RouteReviewSchema = z
     unresolvedOutputResponsibility: z
       .enum(["integration-missing", "issuer-undisclosed", "producer-failed"])
       .optional(),
-    failureDomains: CanonicalFailureDomainsSchema,
   })
   .strict();
 
@@ -290,29 +261,9 @@ const RetainedRouteSchema = z
     }
   });
 
-const ControlOverlaySchema = z
-  .object({
-    controlKey: CanonicalTextSchema,
-    deploymentKey: CanonicalTextSchema,
-    controllerAssetId: CanonicalTextSchema.nullable().optional(),
-    controlKind: V9ControlKindSchema,
-    scope: V9ControlScopeSchema,
-    capabilities: canonicalArrayBy(V9ControlCapabilitySchema, (value) => value),
-    capSemantics: V9ControlCapSemanticsSchema,
-    claimImpairment: V9ClaimImpairmentSchema,
-    economicLossScope: V9EconomicLossScopeSchema,
-    authority: V9ControlAuthoritySchema,
-    delaySec: z.number().int().nonnegative().nullable(),
-    materialSupplyShare: FractionSchema.nullable(),
-    // A reviewer authored a fresh scoped open question naming this control;
-    // mirrors the compiled control fact (`V9DeploymentControlFactV2`).
-    scopedQuestionFresh: z.boolean().optional(),
-    keyCustody: V9KeyCustodySchema,
-    modulesOrGuards: V9ModulesOrGuardsSchema,
-    incidentState: V9IncidentStateSchema,
-    failureDomains: CanonicalFailureDomainsSchema,
-  })
-  .strict();
+// Producer-side control inventory overlay: the compiled control fact's
+// reviewed shape, minus the compiled-only `sourceGenerationId`/`status`.
+const ControlOverlaySchema = V9DeploymentControlFactBaseSchema;
 
 const ControlReviewSchema = z.discriminatedUnion("state", [
   z

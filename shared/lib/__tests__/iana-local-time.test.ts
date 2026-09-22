@@ -5,6 +5,72 @@ import {
   nextIanaLocalHourDueAt,
 } from "../iana-local-time";
 
+const REFERENCE_FORMATTER_OPTIONS: Intl.DateTimeFormatOptions = {
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hourCycle: "h23",
+};
+
+const referenceFormatters = new Map<string, Intl.DateTimeFormat>();
+
+/** Wall-clock fields rendered onto a synthetic UTC timeline, so ordering is plain numeric. */
+function referenceWallClockMs(atMs: number, timezone: string): number {
+  let formatter = referenceFormatters.get(timezone);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat("en-US", { ...REFERENCE_FORMATTER_OPTIONS, timeZone: timezone });
+    referenceFormatters.set(timezone, formatter);
+  }
+  const parts = formatter.formatToParts(new Date(atMs));
+  const fields: Partial<Record<Intl.DateTimeFormatPartTypes, number>> = {};
+  for (const part of parts) fields[part.type] = Number(part.value);
+  return Date.UTC(fields.year!, fields.month! - 1, fields.day!, fields.hour!, fields.minute!, fields.second!);
+}
+
+/** Exhaustive minute-scan reference for the documented "first instant at or after date hour:00" rule. */
+function referenceNextDueAt(nowMs: number, timezone: string, hour: number): number | null {
+  const crossing = (dateStartMs: number): number | null => {
+    const target = dateStartMs + hour * 3_600_000;
+    for (let atMs = target - 14 * 3_600_000; atMs <= target + 36 * 3_600_000; atMs += 60_000) {
+      if (referenceWallClockMs(atMs, timezone) >= target) return atMs;
+    }
+    return null;
+  };
+  const nowWallMs = referenceWallClockMs(nowMs, timezone);
+  const todayStartMs = Math.floor(nowWallMs / 86_400_000) * 86_400_000;
+  const todayCrossing = crossing(todayStartMs);
+  if (todayCrossing != null && todayCrossing > nowMs) return todayCrossing;
+  return crossing(todayStartMs + 86_400_000);
+}
+
+const DUE_SCAN_ZONES = [
+  "UTC",
+  "America/New_York",
+  "Europe/Dublin",
+  "Australia/Lord_Howe",
+  "Asia/Kathmandu",
+  "Pacific/Chatham",
+];
+const DUE_SCAN_HOURS = [0, 1, 2, 3, 9, 23];
+const DUE_SCAN_ANCHORS = [
+  "2026-03-08T06:30:00Z", // before the New York spring-forward gap
+  "2026-03-08T07:00:00Z", // inside that gap
+  "2026-11-01T04:30:00Z", // before the New York fall-back fold
+  "2026-11-01T05:30:00Z", // inside that repeated hour
+  "2026-03-28T23:30:00Z", // before the European spring-forward gap
+  "2026-10-25T00:30:00Z", // inside the European fall-back fold
+  "2026-04-04T15:00:00Z", // Lord Howe 30-minute fall-back fold
+  "2026-10-03T15:30:00Z", // Lord Howe 30-minute spring-forward gap
+  "2026-04-04T13:45:00Z", // Chatham 45-minute fall-back fold
+  "2026-09-26T14:00:00Z", // Chatham 45-minute spring-forward gap
+  "2026-01-15T08:00:00Z",
+  "2026-07-15T20:00:00Z",
+  "1880-06-15T08:00:00Z", // Kathmandu local mean time, an offset that is not a whole 15-minute step
+];
+
 describe("IANA local time helpers", () => {
   it("validates zones and derives a stable local date", () => {
     expect(isValidIanaTimezone("UTC")).toBe(true);
@@ -67,6 +133,24 @@ describe("IANA local time helpers", () => {
     ] as const) {
       expect(nextIanaLocalHourDueAt(now, zone, hour)).toBeNull();
     }
+  });
+
+  it("matches the exhaustive minute scan through gaps, folds, and fractional offsets", () => {
+    const cases = DUE_SCAN_ZONES.flatMap((zone) =>
+      DUE_SCAN_HOURS.flatMap((hour) => DUE_SCAN_ANCHORS.map((anchor) => ({ zone, hour, anchor }))));
+    const observed = cases.map(({ zone, hour, anchor }) => ({
+      zone,
+      hour,
+      anchor,
+      due: nextIanaLocalHourDueAt(Date.parse(anchor), zone, hour),
+    }));
+    const expected = cases.map(({ zone, hour, anchor }) => ({
+      zone,
+      hour,
+      anchor,
+      due: referenceNextDueAt(Date.parse(anchor), zone, hour),
+    }));
+    expect(observed).toEqual(expected);
   });
 });
 

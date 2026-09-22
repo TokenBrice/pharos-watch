@@ -1,3 +1,5 @@
+import { isValidIsoDateOnly } from "./date-primitives";
+
 // shared/types must stay dependency-free of shared/lib (check:shared-types-imports), so the
 // record guard is local here rather than imported from @shared/lib/type-guards.
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -72,16 +74,13 @@ function isNonNegativeInteger(value: unknown): value is number {
 }
 
 export function parseDigestSafetyMapUtcDateMs(value: unknown): number | null {
-  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  if (!isValidIsoDateOnly(value)) return null;
   const parsed = new Date(`${value}T00:00:00Z`);
-  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value
-    ? parsed.getTime()
-    : null;
+  return Number.isFinite(parsed.getTime()) ? parsed.getTime() : null;
 }
 
-export function isDigestSafetyMapUtcDate(value: unknown): value is string {
-  return parseDigestSafetyMapUtcDateMs(value) !== null;
-}
+/** Safety Map dates are UTC `YYYY-MM-DD` calendar days; that rule has one definition. */
+export const isDigestSafetyMapUtcDate = isValidIsoDateOnly;
 
 export function getDigestSafetyMapSummaryIssues(
   summary: Pick<DigestSafetyMapSummary, "gradedCount" | "totalMcapUsd" | "tiers">,

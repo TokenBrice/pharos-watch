@@ -9,7 +9,7 @@ export const VERIFIED_OR_UNVERIFIED_FRESHNESS = [
 export const VERIFIED_ONLY_FRESHNESS = [
   "verified",
 ] satisfies LiveReserveAdapterValidationPolicy["allowedFreshnessModes"];
-export const NOT_APPLICABLE_ONLY_FRESHNESS = [
+const NOT_APPLICABLE_ONLY_FRESHNESS = [
   "not-applicable",
 ] satisfies LiveReserveAdapterValidationPolicy["allowedFreshnessModes"];
 export const UNVERIFIED_OR_NOT_APPLICABLE_FRESHNESS = [
@@ -36,7 +36,6 @@ export const LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC = 4_000_000;
  *  46-day cap degraded ~16 days of every healthy cycle. 75 days = observed
  *  worst case plus publication grace. Decision 2026-09-11. */
 export const LAGGED_MONTHLY_EXAMINATION_SOURCE_MAX_AGE_SEC = 75 * DAY_SECONDS;
-export const QUARTERLY_DISCLOSURE_SOURCE_MAX_AGE_SEC = 10_000_000;
 export const QUARTERLY_ASSURANCE_MAX_AGE_SEC = 100 * DAY_SECONDS;
 export const BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC = 5 * DAY_SECONDS;
 

@@ -9,7 +9,6 @@ import type {
 import { findDynamicEndpointDescriptor } from "./dynamic";
 import { ENDPOINT_DEFINITIONS, getEndpointDefinition } from "./definitions";
 import { API_PATHS } from "./paths";
-export { getProbePaths } from "./selectors";
 
 const GET_ONLY_METHODS = ["GET"] as const satisfies readonly EndpointMethod[];
 const POST_ONLY_METHODS = ["POST"] as const satisfies readonly EndpointMethod[];

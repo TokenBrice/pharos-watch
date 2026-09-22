@@ -129,7 +129,7 @@ describe("computeQualityScore", () => {
       { safetyScore: 80, supplyUsd: 600_000 },
       { safetyScore: 40, supplyUsd: 200_000 },
       { safetyScore: null, supplyUsd: 200_000 },
-    ], 0.5)).toBe(70);
+    ])).toBe(70);
   });
 
   it("returns null when coverage is below threshold", () => {
@@ -137,7 +137,7 @@ describe("computeQualityScore", () => {
       { safetyScore: null as number | null, supplyUsd: 600_000 },
       { safetyScore: 80, supplyUsd: 400_000 },
     ];
-    expect(computeQualityScore(coins, 0.5)).toBeNull();
+    expect(computeQualityScore(coins)).toBeNull();
   });
 
   it("excludes unrated supply and renormalizes over rated supply", () => {
@@ -145,7 +145,7 @@ describe("computeQualityScore", () => {
       { safetyScore: 80, supplyUsd: 800_000 },
       { safetyScore: null as number | null, supplyUsd: 200_000 },
     ];
-    const score = computeQualityScore(coins, 0.5);
+    const score = computeQualityScore(coins);
     // Unrated supply is dropped from numerator and denominator => 80, not an imputed blend.
     expect(score).toBe(80);
   });
@@ -155,7 +155,7 @@ describe("computeQualityScore", () => {
       { safetyScore: 90, supplyUsd: 499_000 },
       { safetyScore: null as number | null, supplyUsd: 501_000 },
     ];
-    expect(computeQualityScore(coins, 0.5)).toBeNull();
+    expect(computeQualityScore(coins)).toBeNull();
   });
   it("accepts exactly 50% rated supply and leaves empty or zero supply unrated", () => {
     expect(computeQualityScore([

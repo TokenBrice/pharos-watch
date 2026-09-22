@@ -1,11 +1,9 @@
+import { escapeRegExp } from "./escape-regexp";
+
 export interface SymbolPatternOptions {
   prefixPattern?: string;
   suffixPattern?: string;
   flags?: string;
-}
-
-function escapeRegExp(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function buildDelimitedSymbolPattern(

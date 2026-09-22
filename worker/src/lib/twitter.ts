@@ -1,3 +1,4 @@
+import { bytesToBase64 } from "@shared/lib/base64";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { logWorkerEventArgs } from "./structured-log";
 import { drainResponseBody, readResponseTextBoundedWithSignal } from "./response-body";
@@ -65,7 +66,7 @@ async function buildOAuthHeader(method: string, url: string, creds: TwitterCreds
     ["sign"],
   );
   const sigBytes = await crypto.subtle.sign("HMAC", cryptoKey, new TextEncoder().encode(baseString));
-  oauthParams.oauth_signature = btoa(String.fromCharCode(...new Uint8Array(sigBytes)));
+  oauthParams.oauth_signature = bytesToBase64(new Uint8Array(sigBytes));
 
   return (
     "OAuth " +

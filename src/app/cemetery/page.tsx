@@ -10,8 +10,8 @@ import { buildCollectionItemListJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { CEMETERY_ENTRIES as DEAD_STABLECOINS } from "@shared/lib/cemetery-merged";
+import { sortCemeteryCoins } from "@shared/lib/cemetery";
 import type { FaqItem } from "@/lib/faq";
-import { sortCemeteryCoins } from "@/lib/cemetery";
 
 const cemeteryMetadataDescription = `${DEAD_STABLECOINS.length} failed and defunct stablecoins documented by Pharos, with collapse dates, causes, obituaries, archived data, and lessons from TerraUSD to HUSD.`;
 

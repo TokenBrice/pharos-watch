@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { LIVE_RESERVE_ADAPTER_KEYS, type LiveReserveAdapterKey } from "./live-reserve-adapter-keys";
+import { LIVE_RESERVE_ADAPTER_KEYS, type LiveReserveAdapterKey } from "./live-reserve-adapter-declarations";
 import type {
   LiveReserveInput,
   LiveReserveSemantics,

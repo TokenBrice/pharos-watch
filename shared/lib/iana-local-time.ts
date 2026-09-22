@@ -19,8 +19,8 @@ const LOCAL_DATE_FORMATTER_OPTIONS: Intl.DateTimeFormatOptions = {
 const localFormatterCache = new Map<string, Intl.DateTimeFormat>();
 
 /**
- * Up to 256 formatters, with case-insensitive timezone keys. The minute-by-minute due-time scan below asks for
- * local parts ~1,100 times per scheduling call, and constructing a formatter is
+ * Up to 256 formatters, with case-insensitive timezone keys. The due-time scan below asks for
+ * local parts a few hundred times per scheduling call, and constructing a formatter is
  * about ten times the cost of formatting with an existing one, so a fresh
  * formatter per candidate dominated the whole helper. Throws for a timezone the
  * runtime does not recognize, exactly as direct construction does, and only
@@ -98,11 +98,42 @@ export function localDateInIanaTimezone(atMs: number, timezone: string): string 
   return `${String(parts.year).padStart(4, "0")}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`;
 }
 
+/** Minute stride of the refinement pass and of the pre-optimization scan. */
+const LOCAL_HOUR_SCAN_MINUTE_MS = 60_000;
+/** Coarse stride: current IANA offsets and daylight shifts are whole 15-minute steps. */
+const LOCAL_HOUR_SCAN_COARSE_MS = 15 * 60_000;
+
+/**
+ * First instant in `[fromMs, toMs]` on a `stepMs` stride whose local time is at
+ * or after `target`.
+ */
+function firstLocalAtOrAfter(
+  fromMs: number,
+  toMs: number,
+  stepMs: number,
+  target: IanaLocalDate & { hour: number; minute: number; second: number },
+  timezone: string,
+): number | null {
+  for (let atMs = fromMs; atMs <= toMs; atMs += stepMs) {
+    const local = localParts(atMs, timezone);
+    if (local && compareLocalParts(local, target) >= 0) return atMs;
+  }
+  return null;
+}
+
 /**
  * Return the first UTC instant whose local time is at or after `date hour:00`.
  * An absent spring-forward hour therefore resolves to the first valid instant
  * after it. The forward scan also selects the first occurrence of a fall-back
  * hour, while target uniqueness enforces one recap per local date.
+ *
+ * The scan runs in two passes: a 15-minute stride finds the straddling cell,
+ * then a minute stride restores the exact first instant inside it. Every offset
+ * and daylight shift in current IANA data is a whole number of 15-minute steps,
+ * so the crossing instant - whose local time is exactly `hour:00` - is itself a
+ * coarse grid point and the refinement is the same instant. The refinement
+ * keeps a non-grid offset from drifting, since the crossing can only sit in the
+ * last coarse cell.
  */
 function localHourOnOrAfter(date: IanaLocalDate, hour: number, timezone: string): number | null {
   const target = { ...date, hour, minute: 0, second: 0 };
@@ -110,11 +141,16 @@ function localHourOnOrAfter(date: IanaLocalDate, hour: number, timezone: string)
   const start = nominalUtc - 14 * 60 * 60 * 1000;
   const end = nominalUtc + 36 * 60 * 60 * 1000;
 
-  for (let atMs = start; atMs <= end; atMs += 60_000) {
-    const local = localParts(atMs, timezone);
-    if (local && compareLocalParts(local, target) >= 0) return atMs;
-  }
-  return null;
+  const coarse = firstLocalAtOrAfter(start, end, LOCAL_HOUR_SCAN_COARSE_MS, target, timezone);
+  if (coarse == null) return null;
+  // The coarse instant satisfies the target, so this pass always resolves.
+  return firstLocalAtOrAfter(
+    Math.max(start, coarse - (LOCAL_HOUR_SCAN_COARSE_MS - LOCAL_HOUR_SCAN_MINUTE_MS)),
+    coarse,
+    LOCAL_HOUR_SCAN_MINUTE_MS,
+    target,
+    timezone,
+  );
 }
 
 /**

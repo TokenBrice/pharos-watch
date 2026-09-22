@@ -80,7 +80,7 @@ import {
   GovernanceQualitySchema,
   OracleRiskTierSchema,
 } from "./core";
-import { validateMintAuthorityProfile } from "./stablecoin-meta-mint-authority-refinements";
+import { hasSourceLinks, hasText, validateMintAuthorityProfile } from "./stablecoin-meta-mint-authority-refinements";
 import { HttpUrlSchema } from "./validators";
 import { StrictIsoDateSchema } from "./safety-schema-primitives";
 
@@ -128,14 +128,6 @@ const LocalPathOrHttpUrlSchema = z.union([
   HttpUrlSchema,
   z.string().regex(/^\/[A-Za-z0-9][A-Za-z0-9/_\-.]*$/, "Expected a local absolute asset path"),
 ]);
-
-function hasSourceLinks(sources: readonly StablecoinLink[] | undefined): boolean {
-  return (sources?.length ?? 0) > 0;
-}
-
-function hasText(value: string | null | undefined): boolean {
-  return value != null && value.trim().length > 0;
-}
 
 /**
  * Source coin files omit the four modal members below; the schema supplies them.

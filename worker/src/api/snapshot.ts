@@ -17,7 +17,7 @@ import {
   SNAPSHOT_DATE_PATTERN,
 } from "@shared/lib/api-endpoints";
 import { errorResponse, jsonResponse } from "../lib/api-response";
-import { CACHE_PROFILES } from "../lib/constants";
+import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { tryParseJson } from "../lib/json-parse";
 import {
   SafetyScorePublicationIdentitySchema,
@@ -101,10 +101,6 @@ const TRANSITIONAL_IDENTITY_DATES: ReadonlySet<string> = new Set([
 ]);
 /** Last snapshot date that may legitimately carry no safety-score identity. */
 const IDENTITY_CUTOVER_DATE = "2026-07-15";
-
-function hasOwn(value: Record<string, unknown>, key: string): boolean {
-  return Object.prototype.hasOwnProperty.call(value, key);
-}
 
 function isValidScoreEntry(value: unknown): boolean {
   return (
@@ -248,9 +244,9 @@ function validateStoredSafetyPublication(
     return { kind: "error", reason: "snapshot-envelope-invalid" };
   }
 
-  const metadataHasIdentity = hasOwn(metadataRecord, "safetyScoreIdentity");
-  const envelopeHasIdentity = hasOwn(envelope as unknown as Record<string, unknown>, "safetyScoreIdentity");
-  const reportCardsHasIdentity = hasOwn(reportCards, "safetyScoreIdentity");
+  const metadataHasIdentity = Object.prototype.hasOwnProperty.call(metadataRecord, "safetyScoreIdentity");
+  const envelopeHasIdentity = Object.prototype.hasOwnProperty.call(envelope, "safetyScoreIdentity");
+  const reportCardsHasIdentity = Object.prototype.hasOwnProperty.call(reportCards, "safetyScoreIdentity");
   const identityValues = [
     ...(metadataHasIdentity ? [metadataRecord.safetyScoreIdentity] : []),
     ...(envelopeHasIdentity ? [envelope.safetyScoreIdentity] : []),

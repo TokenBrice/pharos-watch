@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { StatusHealthValue } from "./core";
-import { StatusHealthValueSchema } from "./core";
+import { StablecoinPublicationHealthSchema, StatusHealthValueSchema } from "./core";
+import { AlertBrokerHealthSummarySchema } from "./operational";
 import { CacheStatusSchema } from "./schema-primitives";
 import {
   RESERVE_ALERT_SOURCE_STATE_VALUES,
@@ -102,16 +103,7 @@ export const HealthResponseSchema = z.object({
     }),
   }),
   circuits: z.record(z.string(), CircuitRecordSchema),
-  stablecoinPublication: z.object({
-    status: z.enum(["complete", "incomplete", "unknown"]),
-    expectedActiveCount: z.number(),
-    presentActiveCount: z.number(),
-    waivedActiveCount: z.number(),
-    missingActiveIds: z.array(z.string()),
-    waivedActiveIds: z.array(z.string()),
-    expiredWaiverIds: z.array(z.string()),
-    observedAt: z.number().nullable(),
-  }).optional(),
+  stablecoinPublication: StablecoinPublicationHealthSchema.optional(),
   activePriceCoverage: z.object({
     status: z.enum(["complete", "incomplete", "unknown"]),
     expectedActiveCount: z.number(),
@@ -141,16 +133,7 @@ export const HealthResponseSchema = z.object({
     maxConsecutiveMissingGenerations: z.number().default(0),
     observedAt: z.number().nullable(),
   }).optional(),
-  alertBroker: z.object({
-    activeCount: z.number(),
-    pendingCount: z.number(),
-    criticalActiveCount: z.number(),
-    failedDeliveryCount: z.number(),
-    missingTargetCount: z.number(),
-    oldestActiveAt: z.number().nullable(),
-    activeConditionKeys: z.array(z.string()),
-    queryFailed: z.boolean(),
-  }).optional(),
+  alertBroker: AlertBrokerHealthSummarySchema.optional(),
   telegramSummary: TelegramHealthSummarySchema.nullable().optional(),
 });
 export type HealthResponse = z.output<typeof HealthResponseSchema>;

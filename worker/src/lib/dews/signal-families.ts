@@ -10,7 +10,6 @@
  */
 
 import { clamp } from "@shared/lib/math";
-import { hasOwn } from "@shared/lib/has-own";
 import type { YieldRankChangeAttribution, YieldSourceRisk } from "@shared/types/yield";
 import type { DEWSInput, SignalResult } from "./types";
 import { piecewiseLinear } from "./compatibility";
@@ -36,7 +35,7 @@ const UNMAPPED_CONFIDENCE_SCORE = Math.max(...Object.values(CONFIDENCE_SCORES));
 
 function confidenceScore(confidence: string | null | undefined): number {
   const tier = confidence?.trim() ?? "";
-  return hasOwn(CONFIDENCE_SCORES, tier) ? CONFIDENCE_SCORES[tier]! : UNMAPPED_CONFIDENCE_SCORE;
+  return Object.prototype.hasOwnProperty.call(CONFIDENCE_SCORES, tier) ? CONFIDENCE_SCORES[tier]! : UNMAPPED_CONFIDENCE_SCORE;
 }
 
 /**
@@ -273,7 +272,7 @@ export function computePriceSignal(input: DEWSInput): SignalResult {
     }
   }
 
-  const unmappedTier = !hasOwn(CONFIDENCE_SCORES, priceConfidence?.trim() ?? "");
+  const unmappedTier = !Object.prototype.hasOwnProperty.call(CONFIDENCE_SCORES, priceConfidence?.trim() ?? "");
   return {
     value,
     available: true,
@@ -559,7 +558,7 @@ export function computeYieldSignal(input: DEWSInput): SignalResult {
   }
 
   const warningSum = input.yieldWarnings.reduce(
-    (acc, w) => acc + (hasOwn(YIELD_WARNING_SCORES, w) ? YIELD_WARNING_SCORES[w]! : 0),
+    (acc, w) => acc + (Object.prototype.hasOwnProperty.call(YIELD_WARNING_SCORES, w) ? YIELD_WARNING_SCORES[w]! : 0),
     0,
   );
   const value = clamp(warningSum + (structuredSignal?.value ?? 0), 0, 100);

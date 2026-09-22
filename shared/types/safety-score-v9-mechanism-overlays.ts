@@ -4,17 +4,10 @@ import {
   V9MechanismProfileReviewSchema,
   safetyScoreV9MechanismProfileArchetype,
 } from "./safety-score-v9-mechanism-profile";
+import { MECHANISM_ARCHETYPE_VALUES } from "./stablecoin-taxonomy";
 import { StrictIsoDateSchema, uniqueKeyedCollectionSchema } from "./safety-schema-primitives";
 
-const SafetyScoreV9MechanismArchetypeSchema = z.enum([
-  "cdp",
-  "synthetic-delta-neutral",
-  "algorithmic",
-  "rwa-credit-fund",
-  "fiat-cash",
-  "tbill",
-  "commodity-claim",
-]);
+const SafetyScoreV9MechanismArchetypeSchema = z.enum(MECHANISM_ARCHETYPE_VALUES);
 
 const SafetyScoreV9MechanismOverlayComponentSchema = z.union([
   z.object({ quality: V9MechanismQualitySchema }).strict(),

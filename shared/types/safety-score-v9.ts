@@ -3,6 +3,7 @@ import { ReportCardGradeSchema, type ReportCardGrade } from "./report-card-grade
 import { MECHANISM_ARCHETYPE_VALUES } from "./stablecoin-taxonomy";
 import { V9EvidenceResponsibilitySchema } from "./safety-score-v9-fact-primitives";
 import { BRIDGE_ROUTE_RISK_TIER_VALUES, ORACLE_RISK_TIER_VALUES } from "./core";
+import { ScoreSchema } from "./safety-schema-primitives";
 import {
   RedemptionAccessModelSchema,
   RedemptionExecutionModelSchema,
@@ -87,7 +88,6 @@ export const V9ReasonCodeSchema = z.enum(V9_REASON_CODES);
 export type V9ReasonCode = z.infer<typeof V9ReasonCodeSchema>;
 
 const IsoTimestampSchema = z.string().datetime({ offset: true });
-const ScoreSchema = z.number().finite().min(0).max(100);
 
 function exactEnumScoreMapSchema<const Value extends string>(values: readonly Value[]) {
   return z

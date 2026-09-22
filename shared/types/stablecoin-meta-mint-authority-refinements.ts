@@ -27,11 +27,13 @@ interface MintAuthorityRefinementState {
   profileHasSourceLinks: boolean;
 }
 
-function hasSourceLinks(sources: readonly { url: string }[] | undefined): boolean {
+/** Shared across the meta schemas: any authored link proves the field is sourced. */
+export function hasSourceLinks(sources: readonly { url: string }[] | undefined): boolean {
   return (sources?.length ?? 0) > 0;
 }
 
-function hasText(value: string | null | undefined): boolean {
+/** Shared across the meta schemas: a review field counts as authored only with real text. */
+export function hasText(value: string | null | undefined): boolean {
   return value != null && value.trim().length > 0;
 }
 

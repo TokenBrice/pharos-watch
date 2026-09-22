@@ -12,7 +12,8 @@ export type ApiKeySelfServeStatus = z.infer<typeof ApiKeySelfServeStatusSchema>;
 export const ApiKeySelfServeClaimStatusSchema = z.enum(["pending_verification", "issued", "released"]);
 export type ApiKeySelfServeClaimStatus = z.infer<typeof ApiKeySelfServeClaimStatusSchema>;
 
-const API_KEY_SELF_SERVE_CADENCE_VALUES = [
+/** The one cadence vocabulary: the Worker request schema and the request form both derive from this tuple. */
+export const API_KEY_SELF_SERVE_CADENCE_VALUES = [
   "hourly",
   "every_5_min",
   "every_1_min",

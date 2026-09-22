@@ -684,6 +684,7 @@ export const ENV_BINDINGS = [
     key: "WORKER_V9_WORKFLOW_MODE",
     valueType: "string",
     description: "Safety Score V9 Workflow pilot mode: `off` keeps the cron-only path; `shadow` creates a replay-safe shadow instance after the authoritative cron publication settles.",
+    example: { section: "workerOptional", value: "" },
     runtimes: {
       worker: { status: "optional" },
     },

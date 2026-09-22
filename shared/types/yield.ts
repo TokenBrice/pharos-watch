@@ -263,10 +263,6 @@ const YieldSourceRiskFieldSchemas = YieldSourceRiskSchema.shape;
 type YieldSourceRiskField = keyof typeof YieldSourceRiskFieldSchemas;
 const YIELD_SOURCE_RISK_FIELDS = Object.keys(YieldSourceRiskFieldSchemas) as YieldSourceRiskField[];
 
-function hasOwn(value: Record<string, unknown>, key: string): boolean {
-  return Object.prototype.hasOwnProperty.call(value, key);
-}
-
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
   return value != null && typeof value === "object" && !Array.isArray(value);
 }
@@ -276,7 +272,7 @@ export function normalizeYieldSourceRisk(value: unknown): YieldSourceRisk | null
 
   const normalized: Record<string, unknown> = {};
   for (const field of YIELD_SOURCE_RISK_FIELDS) {
-    if (!hasOwn(value, field)) continue;
+    if (!Object.prototype.hasOwnProperty.call(value, field)) continue;
     const parsed = YieldSourceRiskFieldSchemas[field].safeParse(value[field]);
     if (parsed.success && parsed.data !== undefined) {
       normalized[field] = parsed.data;
@@ -400,7 +396,7 @@ export function normalizeYieldRankChangeAttribution(value: unknown): YieldRankCh
 
   const normalized: Record<string, unknown> = {};
   for (const field of YIELD_RANK_CHANGE_ATTRIBUTION_FIELDS) {
-    if (!hasOwn(value, field)) continue;
+    if (!Object.prototype.hasOwnProperty.call(value, field)) continue;
     const parsed = YieldRankChangeAttributionFieldSchemas[field].safeParse(value[field]);
     if (parsed.success && parsed.data !== undefined) {
       normalized[field] = parsed.data;

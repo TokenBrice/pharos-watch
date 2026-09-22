@@ -13,8 +13,8 @@ import { V9AccessPrimaryExitSchema, V9AccessTransferSchema } from "./safety-scor
 import { V9_GRADE_THRESHOLDS } from "./safety-score-v9-grade";
 
 // Canonical ordering is a determinism-digest input; it has one definition.
-export { BaseInputGenerationIdSchema, Sha256Schema } from "./safety-schema-primitives";
-export const ScoreSchema = z.number().finite().min(0).max(100);
+import { BaseInputGenerationIdSchema, ScoreSchema, Sha256Schema } from "./safety-schema-primitives";
+export { BaseInputGenerationIdSchema, ScoreSchema, Sha256Schema };
 export const V9PolicyVersionSchema = z.string().regex(/^\d+\.\d+$/);
 export const RESPONSIBILITIES = V9_PUBLIC_EVIDENCE_RESPONSIBILITIES;
 export const SCORE_TOLERANCE = 0.0002;

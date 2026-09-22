@@ -7,6 +7,8 @@ import {
   ACTIVE_PRESET_FLAGS_SQL,
   ACTIVE_SUBSCRIPTION_FLAGS_SQL,
   ACTIVE_WATCHER_SQL_CONDITION,
+  buildActivePresetAggregateSql,
+  buildActiveSubscriptionAggregateSql,
 } from "@shared/lib/telegram-alert-families";
 import {
   resolveTelegramPresetTargets,
@@ -121,25 +123,16 @@ const SNAPSHOT_REFRESH_INTERVAL_SEC = TELEGRAM_LIFECYCLE_SNAPSHOT_REFRESH_SECOND
 const LIFECYCLE_HISTORY_DAYS = 90;
 const PENDING_DELIVERY_STATE_PLACEHOLDERS = PENDING_DELIVERY_STATES.map(() => "?").join(", ");
 
-const ACTIVE_EXPLICIT_SUBS_BY_CHAT_SQL = `SELECT chat_id,
-        SUM(CASE WHEN ${ACTIVE_SUBSCRIPTION_FLAGS_SQL} THEN 1 ELSE 0 END) AS active_sub_count,
-        MAX(CASE WHEN alert_dews = 1 THEN 1 ELSE 0 END) AS dews_enabled,
-        MAX(CASE WHEN alert_depeg = 1 THEN 1 ELSE 0 END) AS depeg_enabled,
-        MAX(CASE WHEN alert_safety = 1 THEN 1 ELSE 0 END) AS safety_enabled,
-        MAX(CASE WHEN alert_launch = 1 THEN 1 ELSE 0 END) AS launch_enabled,
-        MAX(CASE WHEN alert_reserve = 1 THEN 1 ELSE 0 END) AS reserve_enabled,
-        MAX(CASE WHEN alert_freeze = 1 THEN 1 ELSE 0 END) AS freeze_enabled
-   FROM telegram_subscriptions
-  GROUP BY chat_id`;
+// Both per-chat rollups come from the canonical family manifest (TGB-028), so the
+// pulse aggregate cannot drift from the status/bot aggregates or the plan checks.
+const ACTIVE_EXPLICIT_SUBS_BY_CHAT_SQL = buildActiveSubscriptionAggregateSql({
+  includeFamilyFlags: true,
+});
 
-const ACTIVE_PRESETS_BY_CHAT_SQL = `SELECT chat_id,
-        COUNT(*) AS active_preset_count,
-        MAX(CASE WHEN alert_dews = 1 THEN 1 ELSE 0 END) AS dews_enabled,
-        MAX(CASE WHEN alert_depeg = 1 THEN 1 ELSE 0 END) AS depeg_enabled,
-        MAX(CASE WHEN alert_safety = 1 THEN 1 ELSE 0 END) AS safety_enabled
-   FROM telegram_preset_subscriptions
-  WHERE ${ACTIVE_PRESET_FLAGS_SQL}
-  GROUP BY chat_id`;
+const ACTIVE_PRESETS_BY_CHAT_SQL = buildActivePresetAggregateSql({
+  activeRowsOnly: true,
+  includeFamilyFlags: true,
+});
 
 export function coerceCount(value: unknown): number {
   const parsed = typeof value === "number" ? value : Number(value ?? 0);

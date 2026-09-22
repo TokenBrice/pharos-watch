@@ -324,6 +324,40 @@ describe("telegram personalized recap planner", () => {
     ]);
   });
 
+  it("keeps schedules independent for recipients that share a timezone, hour, or local date", async () => {
+    const { sqlite, db } = setup();
+    const recipients = [
+      { chatId: "belgrade-nine", timezone: "Europe/Belgrade", hour: 9 },
+      { chatId: "belgrade-fifteen", timezone: "Europe/Belgrade", hour: 15 },
+      { chatId: "kathmandu-nine", timezone: "Asia/Kathmandu", hour: 9 },
+      { chatId: "newyork-nine", timezone: "America/New_York", hour: 9 },
+      { chatId: "pago-nine", timezone: "Pacific/Pago_Pago", hour: 9 },
+    ];
+    for (const recipient of recipients) {
+      insertSubscriber(sqlite, recipient.chatId);
+      sqlite.prepare("UPDATE telegram_subscribers SET timezone = ? WHERE chat_id = ?")
+        .run(recipient.timezone, recipient.chatId);
+      sqlite.prepare("UPDATE telegram_recap_preferences SET delivery_hour_local = ? WHERE chat_id = ?")
+        .run(recipient.hour, recipient.chatId);
+    }
+    markTapeFresh(sqlite);
+
+    const result = await planTelegramPersonalizedRecaps(db, undefined, { nowSec: NOW });
+
+    expect(JSON.parse(result.metadata)).toMatchObject({ noChanges: 5, queued: 0, invalidTimezone: 0 });
+    // NOW is 08:00 UTC on 2027-01-15: Belgrade sits exactly on its local
+    // delivery hour, New York is before it, Kathmandu is past it, and Pago Pago
+    // is still on the prior local date, so a wrong or missing memo key would
+    // surface here as another recipient's next_due_at.
+    expect(sqlite.prepare("SELECT chat_id, next_due_at FROM telegram_recap_preferences ORDER BY chat_id").all()).toEqual([
+      { chat_id: "belgrade-fifteen", next_due_at: Math.floor(Date.parse("2027-01-16T14:00:00Z") / 1_000) },
+      { chat_id: "belgrade-nine", next_due_at: Math.floor(Date.parse("2027-01-16T08:00:00Z") / 1_000) },
+      { chat_id: "kathmandu-nine", next_due_at: Math.floor(Date.parse("2027-01-16T03:15:00Z") / 1_000) },
+      { chat_id: "newyork-nine", next_due_at: Math.floor(Date.parse("2027-01-16T14:00:00Z") / 1_000) },
+      { chat_id: "pago-nine", next_due_at: Math.floor(Date.parse("2027-01-15T20:00:00Z") / 1_000) },
+    ]);
+  });
+
   it("stops cooperatively at its soft deadline without advancing due work", async () => {
     const { sqlite, db } = setup();
     insertSubscriber(sqlite, "direct");

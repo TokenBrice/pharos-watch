@@ -7,6 +7,7 @@ import {
   SELF_SERVE_API_KEY_EXPIRY_DAYS,
   buildPublicApiCurlCommand,
 } from "@shared/lib/public-api-contract";
+import { API_KEY_SELF_SERVE_CADENCE_VALUES } from "@shared/types/api-key-requests";
 import type {
   ApiKeySelfServeCadence,
   ApiKeySelfServeIssueResponse,
@@ -20,13 +21,17 @@ export const ORGANIZATION_MAX_LENGTH = 120;
 export const PROJECT_URL_MAX_LENGTH = 300;
 export const EXPECTED_VOLUME_MAX_LENGTH = 300;
 
-export const API_KEY_REQUEST_CADENCE_OPTIONS: readonly { value: ApiKeySelfServeCadence; label: string }[] = [
-  { value: "hourly", label: "Hourly" },
-  { value: "every_5_min", label: "Every 5 minutes" },
-  { value: "every_1_min", label: "Every minute" },
-  { value: "manual", label: "Manual or ad hoc" },
-  { value: "other", label: "Other" },
-];
+/** Cadence copy for the request form; total over the shared vocabulary, so a new cadence fails to compile unlabeled. */
+const API_KEY_REQUEST_CADENCE_LABELS: Record<ApiKeySelfServeCadence, string> = {
+  hourly: "Hourly",
+  every_5_min: "Every 5 minutes",
+  every_1_min: "Every minute",
+  manual: "Manual or ad hoc",
+  other: "Other",
+};
+
+export const API_KEY_REQUEST_CADENCE_OPTIONS: readonly { value: ApiKeySelfServeCadence; label: string }[] =
+  API_KEY_SELF_SERVE_CADENCE_VALUES.map((value) => ({ value, label: API_KEY_REQUEST_CADENCE_LABELS[value] }));
 
 export const API_KEY_REQUEST_EXPIRY_DAYS = SELF_SERVE_API_KEY_EXPIRY_DAYS;
 export const API_KEY_REQUEST_SAMPLE_PATH = "/api/stablecoins";

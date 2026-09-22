@@ -10,6 +10,7 @@ import {
   type YieldSourceRiskDriver,
 } from "@/lib/yield-source-risk";
 import { YIELD_TYPE_LABELS } from "@shared/lib/classification";
+import { median } from "@shared/lib/stats";
 import {
   getYieldAlternateSourceCount,
   getYieldBenchmarkSelectionMode,
@@ -170,14 +171,12 @@ function addCount(map: Map<string, number>, key: string) {
 
 function summarizeApy(values: readonly number[]): YieldSourceBoardApySummary | null {
   const finite = values.filter(Number.isFinite).sort((a, b) => a - b);
-  if (finite.length === 0) return null;
-
-  const mid = Math.floor(finite.length / 2);
-  const median = finite.length % 2 === 0 ? (finite[mid - 1] + finite[mid]) / 2 : finite[mid];
+  const medianApy = median(finite);
+  if (medianApy == null) return null;
 
   return {
     min: finite[0],
-    median,
+    median: medianApy,
     max: finite[finite.length - 1],
   };
 }

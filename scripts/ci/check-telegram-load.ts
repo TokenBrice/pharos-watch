@@ -52,6 +52,8 @@ import {
   ACTIVE_PRESET_FLAGS_SQL,
   ACTIVE_SUBSCRIPTION_FLAGS_SQL,
   ACTIVE_WATCHER_SQL_CONDITION,
+  buildActivePresetAggregateSql,
+  buildActiveSubscriptionAggregateSql,
 } from "@shared/lib/telegram-alert-families";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { getWorkerMigrationFiles } from "../lib/worker-migration-files.mts";
@@ -226,6 +228,269 @@ const TELEGRAM_PENDING_DRAIN_SOURCE_PATH = resolve(
   process.cwd(),
   "worker/src/cron/telegram-pending/drain.ts",
 );
+const TELEGRAM_SUBSCRIBERS_SOURCE_PATH = resolve(
+  process.cwd(),
+  "worker/src/cron/dispatch-telegram-subscribers.ts",
+);
+const TELEGRAM_FANOUT_FAMILIES_SOURCE_PATH = resolve(
+  process.cwd(),
+  "worker/src/cron/dispatch-telegram-alerts-fanout.ts",
+);
+const TELEGRAM_GLOBAL_COLUMNS_SOURCE_PATH = resolve(
+  process.cwd(),
+  "worker/src/lib/telegram/broadcast-targets.ts",
+);
+
+export interface ProductionSubscriberFanoutSql {
+  direct: string;
+  global: string;
+  perCoinSnooze: string;
+}
+
+interface SubscriberSqlTemplates {
+  direct: ts.TemplateLiteral;
+  global: ts.TemplateLiteral;
+  perCoinSnooze: ts.TemplateLiteral;
+}
+
+export interface ProductionFanoutColumns {
+  directColumn: string;
+  globalColumn: string;
+}
+
+function findPrepareTemplate(
+  sourceFile: ts.SourceFile,
+  functionName: string,
+): ts.TemplateLiteral {
+  const matches: ts.TemplateLiteral[] = [];
+
+  function visit(node: ts.Node, insideTargetFunction = false): void {
+    const isTargetFunction = ts.isFunctionDeclaration(node) && node.name?.text === functionName;
+    const inTarget = insideTargetFunction || isTargetFunction;
+    if (
+      inTarget
+      && ts.isCallExpression(node)
+      && ts.isPropertyAccessExpression(node.expression)
+      && node.expression.name.text === "prepare"
+      && node.arguments.length === 1
+    ) {
+      const [argument] = node.arguments;
+      if (ts.isNoSubstitutionTemplateLiteral(argument) || ts.isTemplateExpression(argument)) {
+        matches.push(argument);
+      }
+    }
+    ts.forEachChild(node, (child) => visit(child, inTarget));
+  }
+
+  visit(sourceFile);
+  if (matches.length !== 1) {
+    throw new Error(
+      `Expected exactly one SQL prepare() template in ${functionName}(), found ${matches.length}.`,
+    );
+  }
+  return matches[0]!;
+}
+
+function subscriberSqlTemplates(sourceFile: ts.SourceFile): SubscriberSqlTemplates {
+  return {
+    direct: findPrepareTemplate(sourceFile, "loadSubscriberRowsBatch"),
+    global: findPrepareTemplate(sourceFile, "loadGlobalSubscriberRows"),
+    perCoinSnooze: findPrepareTemplate(sourceFile, "loadPerCoinSnoozeMap"),
+  };
+}
+
+function renderSubscriberSqlTemplate(
+  sourceFile: ts.SourceFile,
+  template: ts.TemplateLiteral,
+  alertColumn: string | null,
+): string {
+  if (ts.isNoSubstitutionTemplateLiteral(template)) return template.text;
+
+  let sql = template.head.text;
+  for (const span of template.templateSpans) {
+    const expression = span.expression;
+    let replacement: string;
+    if (ts.isIdentifier(expression) && expression.text === "alertColumn" && alertColumn != null) {
+      replacement = alertColumn;
+    } else if (
+      ts.isPropertyAccessExpression(expression)
+      && ts.isIdentifier(expression.expression)
+      && expression.expression.text === "inClause"
+      && expression.name.text === "sql"
+    ) {
+      replacement = "?, ?, ?";
+    } else if (
+      ts.isConditionalExpression(expression)
+      && ts.isIdentifier(expression.condition)
+      && expression.condition.text === "chatClause"
+    ) {
+      replacement = "";
+    } else {
+      throw new Error(
+        `Unsupported dynamic SQL expression in production subscriber query: ${expression.getText(sourceFile)}`,
+      );
+    }
+    sql += replacement + span.literal.text;
+  }
+  return sql;
+}
+
+export function extractProductionSubscriberFanoutSql(
+  sourceText: string,
+  columns: ProductionFanoutColumns,
+): ProductionSubscriberFanoutSql {
+  const sourceFile = ts.createSourceFile(
+    TELEGRAM_SUBSCRIBERS_SOURCE_PATH,
+    sourceText,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const templates = subscriberSqlTemplates(sourceFile);
+  return {
+    direct: renderSubscriberSqlTemplate(sourceFile, templates.direct, columns.directColumn),
+    global: renderSubscriberSqlTemplate(sourceFile, templates.global, columns.globalColumn),
+    perCoinSnooze: renderSubscriberSqlTemplate(sourceFile, templates.perCoinSnooze, null),
+  };
+}
+
+function unwrapExpression(expression: ts.Expression): ts.Expression {
+  if (
+    ts.isAsExpression(expression)
+    || ts.isSatisfiesExpression(expression)
+    || ts.isParenthesizedExpression(expression)
+  ) {
+    return unwrapExpression(expression.expression);
+  }
+  return expression;
+}
+
+function findVariableInitializer(
+  sourceFile: ts.SourceFile,
+  variableName: string,
+): ts.Expression {
+  for (const statement of sourceFile.statements) {
+    if (!ts.isVariableStatement(statement)) continue;
+    for (const declaration of statement.declarationList.declarations) {
+      if (
+        ts.isIdentifier(declaration.name)
+        && declaration.name.text === variableName
+        && declaration.initializer
+      ) {
+        return unwrapExpression(declaration.initializer);
+      }
+    }
+  }
+  throw new Error(`Could not find production metadata variable ${variableName}.`);
+}
+
+function objectProperty(object: ts.ObjectLiteralExpression, name: string): ts.Expression {
+  for (const property of object.properties) {
+    if (
+      ts.isPropertyAssignment(property)
+      && ((ts.isIdentifier(property.name) && property.name.text === name)
+        || (ts.isStringLiteral(property.name) && property.name.text === name))
+    ) {
+      return unwrapExpression(property.initializer);
+    }
+  }
+  throw new Error(`Could not find production metadata property ${name}.`);
+}
+
+function extractStringMap(
+  sourceText: string,
+  sourcePath: string,
+  variableName: string,
+): Map<string, string> {
+  const sourceFile = ts.createSourceFile(
+    sourcePath,
+    sourceText,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const initializer = findVariableInitializer(sourceFile, variableName);
+  if (!ts.isObjectLiteralExpression(initializer)) {
+    throw new Error(`Expected ${variableName} to be an object literal.`);
+  }
+  const values = new Map<string, string>();
+  for (const property of initializer.properties) {
+    if (!ts.isPropertyAssignment(property) || !ts.isStringLiteral(property.initializer)) continue;
+    const key = ts.isIdentifier(property.name) || ts.isStringLiteral(property.name)
+      ? property.name.text
+      : null;
+    if (key != null) values.set(key, property.initializer.text);
+  }
+  return values;
+}
+
+function loadFanoutColumns(): Map<string, ProductionFanoutColumns> {
+  const globalColumns = extractStringMap(
+    readFileSync(TELEGRAM_GLOBAL_COLUMNS_SOURCE_PATH, "utf8"),
+    TELEGRAM_GLOBAL_COLUMNS_SOURCE_PATH,
+    "GLOBAL_ALERT_COLUMN_BY_TYPE",
+  );
+  const sourceText = readFileSync(TELEGRAM_FANOUT_FAMILIES_SOURCE_PATH, "utf8");
+  const sourceFile = ts.createSourceFile(
+    TELEGRAM_FANOUT_FAMILIES_SOURCE_PATH,
+    sourceText,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const initializer = findVariableInitializer(sourceFile, "TELEGRAM_FANOUT_FAMILIES");
+  if (!ts.isArrayLiteralExpression(initializer)) {
+    throw new Error("Expected TELEGRAM_FANOUT_FAMILIES to be an array literal.");
+  }
+
+  const columns = new Map<string, ProductionFanoutColumns>();
+  for (const element of initializer.elements) {
+    const spec = unwrapExpression(element);
+    if (!ts.isObjectLiteralExpression(spec)) continue;
+    const family = objectProperty(spec, "family");
+    const directColumn = objectProperty(spec, "directColumn");
+    const globalColumn = objectProperty(spec, "globalColumn");
+    if (
+      !ts.isStringLiteral(family)
+      || !ts.isStringLiteral(directColumn)
+      || !ts.isPropertyAccessExpression(globalColumn)
+    ) {
+      throw new Error("Expected static Telegram fan-out family column metadata.");
+    }
+    const resolvedGlobalColumn = globalColumns.get(globalColumn.name.text);
+    if (resolvedGlobalColumn == null) {
+      throw new Error(`Missing global alert column metadata for ${family.text}.`);
+    }
+    columns.set(family.text, {
+      directColumn: directColumn.text,
+      globalColumn: resolvedGlobalColumn,
+    });
+  }
+  return columns;
+}
+
+function loadProductionSubscriberFanoutSql(): Map<string, ProductionSubscriberFanoutSql> {
+  const sourceText = readFileSync(TELEGRAM_SUBSCRIBERS_SOURCE_PATH, "utf8");
+  const sourceFile = ts.createSourceFile(
+    TELEGRAM_SUBSCRIBERS_SOURCE_PATH,
+    sourceText,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const templates = subscriberSqlTemplates(sourceFile);
+  const snoozeSql = renderSubscriberSqlTemplate(sourceFile, templates.perCoinSnooze, null);
+  return new Map(
+    [...loadFanoutColumns()].map(([family, columns]) => [
+      family,
+      {
+        direct: renderSubscriberSqlTemplate(sourceFile, templates.direct, columns.directColumn),
+        global: renderSubscriberSqlTemplate(sourceFile, templates.global, columns.globalColumn),
+        perCoinSnooze: snoozeSql,
+      },
+    ]),
+  );
+}
 
 export function extractProductionPendingClaimSql(sourceText: string): string {
   const sourceFile = ts.createSourceFile(
@@ -274,62 +539,43 @@ export function loadProductionPendingClaimSql(): string {
 }
 
 export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
-  const activeSubscriptionCountsSql = `SELECT chat_id,
-        SUM(CASE WHEN ${ACTIVE_SUBSCRIPTION_FLAGS_SQL} THEN 1 ELSE 0 END) AS active_sub_count
-   FROM telegram_subscriptions
-  GROUP BY chat_id`;
-  const activePresetCountsSql = `SELECT chat_id,
-        SUM(CASE WHEN ${ACTIVE_PRESET_FLAGS_SQL} THEN 1 ELSE 0 END) AS active_preset_count
-   FROM telegram_preset_subscriptions
-  GROUP BY chat_id`;
+  const activeSubscriptionCountsSql = buildActiveSubscriptionAggregateSql();
+  const activePresetCountsSql = buildActivePresetAggregateSql();
+  const productionFanoutSql = loadProductionSubscriberFanoutSql();
+  const depegFanoutSql = productionFanoutSql.get("depeg");
+  const dewsFanoutSql = productionFanoutSql.get("dews");
+  const safetyFanoutSql = productionFanoutSql.get("safety");
+  const reserveFanoutSql = productionFanoutSql.get("reserve");
+  if (!depegFanoutSql || !dewsFanoutSql || !safetyFanoutSql || !reserveFanoutSql) {
+    throw new Error("Production Telegram fan-out metadata is missing a reviewed query-plan family.");
+  }
 
   return [
     {
       id: "fanout-direct-depeg",
       category: "fan-out",
-      sql: `SELECT sub.stablecoin_id, sub.chat_id, u.last_active_at
-         FROM telegram_subscriptions sub
-         JOIN telegram_subscribers u ON u.chat_id = sub.chat_id
-        WHERE sub.stablecoin_id IN (?, ?, ?)
-          AND sub.alert_depeg = 1
-          AND (u.alert_snooze_until_ts IS NULL OR u.alert_snooze_until_ts <= ?)
-          AND (sub.alert_snooze_until_ts IS NULL OR sub.alert_snooze_until_ts <= ?)`,
+      sql: depegFanoutSql.direct,
       binds: ["usdc-circle", "usdt-tether", "dai-makerdao", 1_800_000_000, 1_800_000_000],
       requiredDetails: ["idx_tg_sub_depeg_coin_chat", "sqlite_autoindex_telegram_subscribers_1"],
     },
     {
       id: "fanout-direct-dews",
       category: "fan-out",
-      sql: `SELECT sub.stablecoin_id, sub.chat_id, u.last_active_at
-         FROM telegram_subscriptions sub
-         JOIN telegram_subscribers u ON u.chat_id = sub.chat_id
-        WHERE sub.stablecoin_id IN (?, ?, ?)
-          AND sub.alert_dews = 1
-          AND (u.alert_snooze_until_ts IS NULL OR u.alert_snooze_until_ts <= ?)
-          AND (sub.alert_snooze_until_ts IS NULL OR sub.alert_snooze_until_ts <= ?)`,
+      sql: dewsFanoutSql.direct,
       binds: ["usdc-circle", "usdt-tether", "dai-makerdao", 1_800_000_000, 1_800_000_000],
       requiredDetails: ["idx_tg_sub_dews_coin_chat", "sqlite_autoindex_telegram_subscribers_1"],
     },
     {
       id: "fanout-direct-safety",
       category: "fan-out",
-      sql: `SELECT sub.stablecoin_id, sub.chat_id, u.last_active_at
-         FROM telegram_subscriptions sub
-         JOIN telegram_subscribers u ON u.chat_id = sub.chat_id
-        WHERE sub.stablecoin_id IN (?, ?, ?)
-          AND sub.alert_safety = 1
-          AND (u.alert_snooze_until_ts IS NULL OR u.alert_snooze_until_ts <= ?)
-          AND (sub.alert_snooze_until_ts IS NULL OR sub.alert_snooze_until_ts <= ?)`,
+      sql: safetyFanoutSql.direct,
       binds: ["usdc-circle", "usdt-tether", "dai-makerdao", 1_800_000_000, 1_800_000_000],
       requiredDetails: ["idx_tg_sub_safety_coin_chat", "sqlite_autoindex_telegram_subscribers_1"],
     },
     {
       id: "fanout-global-depeg",
       category: "fan-out",
-      sql: `SELECT chat_id, last_active_at
-         FROM telegram_subscribers
-        WHERE global_alert_depeg = 1
-          AND (alert_snooze_until_ts IS NULL OR alert_snooze_until_ts <= ?)`,
+      sql: depegFanoutSql.global,
       binds: [1_800_000_000],
       requiredDetails: ["idx_telegram_subscribers_global_alert_depeg"],
     },
@@ -349,34 +595,21 @@ export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
     {
       id: "fanout-per-coin-snooze",
       category: "fan-out",
-      sql: `SELECT stablecoin_id, chat_id
-         FROM telegram_subscriptions
-        WHERE stablecoin_id IN (?, ?, ?)
-          AND alert_snooze_until_ts IS NOT NULL
-          AND alert_snooze_until_ts > ?`,
+      sql: depegFanoutSql.perCoinSnooze,
       binds: ["usdc-circle", "usdt-tether", "dai-makerdao", 1_800_000_000],
       requiredDetails: ["idx_tg_sub_coin"],
     },
     {
       id: "fanout-direct-reserve",
       category: "fan-out",
-      sql: `SELECT sub.stablecoin_id, sub.chat_id, u.last_active_at
-         FROM telegram_subscriptions sub
-         JOIN telegram_subscribers u ON u.chat_id = sub.chat_id
-        WHERE sub.stablecoin_id IN (?, ?, ?)
-          AND sub.alert_reserve = 1
-          AND (u.alert_snooze_until_ts IS NULL OR u.alert_snooze_until_ts <= ?)
-          AND (sub.alert_snooze_until_ts IS NULL OR sub.alert_snooze_until_ts <= ?)`,
+      sql: reserveFanoutSql.direct,
       binds: ["usdc-circle", "usdt-tether", "dai-makerdao", 1_800_000_000, 1_800_000_000],
       requiredDetails: ["idx_tg_sub_coin", "sqlite_autoindex_telegram_subscribers_1"],
     },
     {
       id: "fanout-global-reserve",
       category: "fan-out",
-      sql: `SELECT chat_id, last_active_at
-         FROM telegram_subscribers
-        WHERE global_alert_reserve = 1
-          AND (alert_snooze_until_ts IS NULL OR alert_snooze_until_ts <= ?)`,
+      sql: reserveFanoutSql.global,
       binds: [1_800_000_000],
       requiredDetails: ["idx_telegram_subscribers_global_alert_reserve"],
     },
@@ -443,8 +676,7 @@ export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
       sql: `SELECT chat_id, stablecoin_id, alert_snooze_until_ts
         FROM telegram_subscriptions
        WHERE chat_id IN (?, ?, ?)
-         AND (alert_dews = 1 OR alert_depeg = 1 OR alert_safety = 1
-           OR alert_launch = 1 OR alert_reserve = 1 OR alert_freeze = 1)`,
+         AND (${ACTIVE_SUBSCRIPTION_FLAGS_SQL})`,
       binds: ["recap-1", "recap-2", "recap-3"],
       requiredDetails: ["sqlite_autoindex_telegram_subscriptions_1"],
       note: "Mirrors the planner's bounded direct-watchlist membership read by due chat ids.",
@@ -455,7 +687,7 @@ export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
       sql: `SELECT chat_id, preset_id
         FROM telegram_preset_subscriptions
        WHERE chat_id IN (?, ?, ?)
-         AND (alert_dews = 1 OR alert_depeg = 1 OR alert_safety = 1)`,
+         AND (${ACTIVE_PRESET_FLAGS_SQL})`,
       binds: ["recap-1", "recap-2", "recap-3"],
       requiredDetails: ["sqlite_autoindex_telegram_preset_subscriptions_1"],
       note: "Mirrors the planner's bounded preset membership read by due chat ids.",
@@ -494,21 +726,10 @@ export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
       id: "pulse-aggregate",
       category: "pulse-status",
       sql: `SELECT
-             SUM(CASE WHEN s.global_alert_dews = 1
-                   OR s.global_alert_depeg = 1
-                   OR s.global_alert_safety = 1
-                   OR s.global_alert_launch = 1
-                   OR s.global_alert_reserve = 1
-                   OR s.global_alert_freeze = 1
-                   OR COALESCE(sub.active_sub_count, 0) > 0
-                   OR COALESCE(preset.active_preset_count, 0) > 0
-                 THEN 1 ELSE 0 END) AS active_watchers
+             SUM(CASE WHEN ${ACTIVE_WATCHER_SQL_CONDITION} THEN 1 ELSE 0 END) AS active_watchers
            FROM telegram_subscribers s
            LEFT JOIN (
-             SELECT chat_id,
-                    SUM(CASE WHEN alert_dews = 1 OR alert_depeg = 1 OR alert_safety = 1 OR alert_launch = 1 OR alert_reserve = 1 OR alert_freeze = 1 THEN 1 ELSE 0 END) AS active_sub_count
-               FROM telegram_subscriptions
-              GROUP BY chat_id
+             ${activeSubscriptionCountsSql}
            ) sub ON sub.chat_id = s.chat_id
            LEFT JOIN (
              ${activePresetCountsSql}
@@ -527,19 +748,12 @@ export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
       category: "pulse-status",
       sql: `SELECT stablecoin_id AS source_id, COUNT(DISTINCT chat_id) AS subscribers
         FROM telegram_subscriptions
-       WHERE alert_dews = 1
-          OR alert_depeg = 1
-          OR alert_safety = 1
-          OR alert_launch = 1
-          OR alert_reserve = 1
-          OR alert_freeze = 1
+       WHERE ${ACTIVE_SUBSCRIPTION_FLAGS_SQL}
        GROUP BY stablecoin_id
        UNION ALL
       SELECT preset_id AS source_id, COUNT(DISTINCT chat_id) AS subscribers
         FROM telegram_preset_subscriptions
-       WHERE alert_dews = 1
-          OR alert_depeg = 1
-          OR alert_safety = 1
+       WHERE ${ACTIVE_PRESET_FLAGS_SQL}
        GROUP BY preset_id`,
       binds: [],
       allowedFullScanTables: ["telegram_subscriptions", "telegram_preset_subscriptions"],

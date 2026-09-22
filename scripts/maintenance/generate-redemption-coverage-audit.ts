@@ -225,74 +225,113 @@ type ReviewedDispositionValidationInput = {
   configuredIds: ReadonlySet<string>;
 };
 
-function collectReviewedRedemptionDispositionValidation(input: ReviewedDispositionValidationInput): {
+/**
+ * A reviewed row that no longer describes the corpus (`rowErrors`) is a
+ * different finding from an active unconfigured asset that has no reviewed row
+ * at all (`missingIds`): the first means the register lies about a coin the
+ * corpus moved under it, the second is the coverage backlog this audit owns and
+ * ranks. Callers that need the audit's single verdict join them with
+ * {@link reviewedRedemptionDispositionErrors}.
+ */
+export interface ReviewedRedemptionDispositionValidation {
   byId: ReadonlyMap<string, ReviewedRedemptionCoverageDisposition>;
-  errors: string[];
-} {
+  rowErrors: string[];
+  missingIds: string[];
+}
+
+function collectReviewedRedemptionDispositionValidation(
+  input: ReviewedDispositionValidationInput,
+): ReviewedRedemptionDispositionValidation {
   const trackedIds = new Set(input.trackedCoins.map((coin) => coin.id));
   const activeIds = new Set(input.activeCoins.map((coin) => coin.id));
   const expectedIds = new Set(
     input.activeCoins.filter((coin) => !input.configuredIds.has(coin.id)).map((coin) => coin.id),
   );
   const byId = new Map<string, ReviewedRedemptionCoverageDisposition>();
-  const errors: string[] = [];
+  const rowErrors: string[] = [];
 
   for (const row of input.reviewedDispositions) {
     if (byId.has(row.id)) {
-      errors.push(`Duplicate reviewed redemption disposition: ${row.id}`);
+      rowErrors.push(`Duplicate reviewed redemption disposition: ${row.id}`);
       continue;
     }
     byId.set(row.id, row);
     if (!trackedIds.has(row.id)) {
-      errors.push(`Reviewed redemption disposition references unknown stablecoin: ${row.id}`);
+      rowErrors.push(`Reviewed redemption disposition references unknown stablecoin: ${row.id}`);
     }
     if (!activeIds.has(row.id)) {
-      errors.push(`Reviewed redemption disposition is stale because the stablecoin is not active: ${row.id}`);
+      rowErrors.push(`Reviewed redemption disposition is stale because the stablecoin is not active: ${row.id}`);
     }
     if (input.configuredIds.has(row.id)) {
-      errors.push(`Reviewed redemption disposition is stale because a route is now configured: ${row.id}`);
+      rowErrors.push(`Reviewed redemption disposition is stale because a route is now configured: ${row.id}`);
     }
     if (!REDEMPTION_COVERAGE_DISPOSITIONS.includes(row.disposition)) {
-      errors.push(`Reviewed redemption disposition has invalid disposition for ${row.id}`);
+      rowErrors.push(`Reviewed redemption disposition has invalid disposition for ${row.id}`);
     }
     if (!REDEMPTION_COVERAGE_REASON_CODES.includes(row.reasonCode)) {
-      errors.push(`Reviewed redemption disposition has invalid reasonCode for ${row.id}`);
+      rowErrors.push(`Reviewed redemption disposition has invalid reasonCode for ${row.id}`);
     }
     if (!row.blocker.trim() || !row.rationale.trim() || !row.evidenceNeeded.trim() || !row.reviewer.trim()) {
-      errors.push(`Reviewed redemption disposition has incomplete review fields for ${row.id}`);
+      rowErrors.push(`Reviewed redemption disposition has incomplete review fields for ${row.id}`);
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(row.reviewedDate) || Number.isNaN(Date.parse(`${row.reviewedDate}T00:00:00Z`))) {
-      errors.push(`Reviewed redemption disposition has invalid reviewedDate for ${row.id}`);
+      rowErrors.push(`Reviewed redemption disposition has invalid reviewedDate for ${row.id}`);
     }
     if (row.evidenceUrls.length === 0 || row.evidenceUrls.some((url) => !isHttpUrl(url))) {
-      errors.push(`Reviewed redemption disposition has invalid evidenceUrls for ${row.id}`);
+      rowErrors.push(`Reviewed redemption disposition has invalid evidenceUrls for ${row.id}`);
     }
     if (new Set(row.evidenceUrls).size !== row.evidenceUrls.length) {
-      errors.push(`Reviewed redemption disposition has duplicate evidenceUrls for ${row.id}`);
+      rowErrors.push(`Reviewed redemption disposition has duplicate evidenceUrls for ${row.id}`);
     }
     if (row.allowedRouteFamilyIfProven !== null && !ROUTE_FAMILIES.has(row.allowedRouteFamilyIfProven)) {
-      errors.push(`Reviewed redemption disposition has invalid route family for ${row.id}`);
+      rowErrors.push(`Reviewed redemption disposition has invalid route family for ${row.id}`);
     }
     if (row.disposition === "add" && row.allowedRouteFamilyIfProven === null) {
-      errors.push(`Reviewed redemption add disposition lacks a route family for ${row.id}`);
+      rowErrors.push(`Reviewed redemption add disposition lacks a route family for ${row.id}`);
     }
     if (row.disposition === "hard-reject" && row.allowedRouteFamilyIfProven !== null) {
-      errors.push(`Reviewed redemption hard reject must not retain a route family for ${row.id}`);
+      rowErrors.push(`Reviewed redemption hard reject must not retain a route family for ${row.id}`);
     }
   }
 
   const missingIds = [...expectedIds].filter((id) => !byId.has(id)).sort();
-  if (missingIds.length > 0) {
-    errors.push(`Missing reviewed redemption dispositions for active unconfigured stablecoins: ${missingIds.join(", ")}`);
-  }
-  return { byId, errors };
+  return { byId, rowErrors, missingIds };
+}
+
+/** The audit's single verdict: every row defect plus the backlog it ranks. */
+function reviewedRedemptionDispositionErrors(
+  validation: ReviewedRedemptionDispositionValidation,
+): string[] {
+  return validation.missingIds.length > 0
+    ? [
+        ...validation.rowErrors,
+        `Missing reviewed redemption dispositions for active unconfigured stablecoins: ${validation.missingIds.join(", ")}`,
+      ]
+    : [...validation.rowErrors];
+}
+
+/**
+ * Review-row verdict for the static-data gate: the register validated against
+ * the canonical coin sources without building the rendered audit. Defaults are
+ * the same canonical sources `generateRedemptionCoverageAudit` uses.
+ */
+export function validateReviewedRedemptionDispositionRows(
+  input: Partial<ReviewedDispositionValidationInput> = {},
+): ReviewedRedemptionDispositionValidation {
+  return collectReviewedRedemptionDispositionValidation({
+    reviewedDispositions: input.reviewedDispositions ?? REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS,
+    trackedCoins: input.trackedCoins ?? TRACKED_STABLECOINS,
+    activeCoins: input.activeCoins ?? ACTIVE_STABLECOINS,
+    configuredIds: input.configuredIds ?? new Set(Object.keys(REDEMPTION_BACKSTOP_CONFIGS)),
+  });
 }
 
 export function validateReviewedRedemptionDispositions(
   input: ReviewedDispositionValidationInput,
 ): ReadonlyMap<string, ReviewedRedemptionCoverageDisposition> {
   const validation = collectReviewedRedemptionDispositionValidation(input);
-  if (validation.errors.length > 0) throw new Error(validation.errors.join("\n"));
+  const errors = reviewedRedemptionDispositionErrors(validation);
+  if (errors.length > 0) throw new Error(errors.join("\n"));
   return validation.byId;
 }
 
@@ -327,6 +366,7 @@ export function generateRedemptionCoverageAudit(
     configuredIds,
   });
   const reviewedById = validation.byId;
+  const validationErrors = reviewedRedemptionDispositionErrors(validation);
 
   const activeUnconfigured = activeCoins
     .filter((coin) => !configuredIds.has(coin.id))
@@ -420,7 +460,7 @@ export function generateRedemptionCoverageAudit(
 
   return {
     generatedAt: input.generatedAt ?? new Date().toISOString(),
-    validationErrors: validation.errors,
+    validationErrors,
     summary: {
       trackedCoins: trackedCoins.length,
       configuredRoutes: configuredIds.size,
@@ -434,7 +474,7 @@ export function generateRedemptionCoverageAudit(
       activeDefaultClassified: activeUnconfigured.filter((row) => row.classificationSource !== "reviewed-registry")
         .length,
       heuristicConfiguredRoutes: heuristicConfiguredRoutes.length,
-      validationErrors: validation.errors.length,
+      validationErrors: validationErrors.length,
     },
     dispositionCounts,
     activeUnconfigured,

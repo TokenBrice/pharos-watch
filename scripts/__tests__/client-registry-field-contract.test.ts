@@ -23,7 +23,7 @@ import { expectedWorkerRuntimeCoin } from "@shared/lib/__tests__/worker-runtime-
 import {
   GENIUS_CLIENT_PROFILE_FIELDS,
   GENIUS_COMPLIANCE_PROFILE_FIELDS,
-  STABLECOIN_CLIENT_META_FIELDS,
+  STABLECOIN_CLIENT_LIST_FIELDS,
 } from "@shared/types/stablecoin-client-meta";
 import type { StablecoinClientDetailMeta, StablecoinClientListMeta } from "@shared/types/stablecoin-client-meta";
 
@@ -106,7 +106,7 @@ describe("client registry field contract", () => {
   });
 
   it("reads the canonical ordered field list from the shared TypeScript contract", () => {
-    expect(readCanonicalClientFields()).toEqual([...STABLECOIN_CLIENT_META_FIELDS]);
+    expect(readCanonicalClientFields()).toEqual([...STABLECOIN_CLIENT_LIST_FIELDS]);
   });
 
   it("reads the GENIUS client field list from the shared TypeScript contract", () => {
@@ -174,7 +174,7 @@ describe("client registry field contract", () => {
       custodyModel: "institutional-top",
     };
 
-    expect(Object.keys(projectCoin(coin, readCanonicalClientFields()))).toEqual([...STABLECOIN_CLIENT_META_FIELDS]);
+    expect(Object.keys(projectCoin(coin, readCanonicalClientFields()))).toEqual([...STABLECOIN_CLIENT_LIST_FIELDS]);
   });
 
   it("projects only the mint-authority coverage summary and excludes detail evidence", () => {

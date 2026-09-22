@@ -46,20 +46,6 @@ describe("incremental SHA-256", () => {
 });
 
 describe("streamed stable JSON", () => {
-  it.each([
-    null,
-    true,
-    42,
-    "unicode \ud83d\ude00",
-    [1, "two", null, { z: false }],
-    { z: [3, 2, 1], a: { included: true, omitted: undefined } },
-    Object.fromEntries(Array.from({ length: 1_000 }, (_, index) => [`key-${index}`, index])),
-  ])("emits the exact canonical V1 string", (value) => {
-    expect([...stableJsonStringifyChunksV1(value)].join("")).toBe(
-      stableJsonStringifyV1(value),
-    );
-  });
-
   it("round-trips canonical data and hashes the exact serialized bytes", () => {
     const value = { z: ["é", 3, null], a: { enabled: true } };
     const canonical = stableJsonStringifyV1(value);

@@ -4,7 +4,7 @@ import { memo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ExternalLink, ChevronRight } from "lucide-react";
-import { CAUSE_META } from "@shared/lib/dead-stablecoins";
+import { CAUSE_META } from "@shared/lib/cause-of-death";
 import { CASE_STUDY_CLIENT_BY_CEMETERY_ID } from "@/lib/case-study-client-index";
 import type { CemeteryEntry } from "@shared/lib/cemetery-merged";
 import { CHAIN_META } from "@shared/lib/chains";

@@ -2,7 +2,7 @@
 
 import { memo, useState, useEffect, useCallback, useMemo, useRef, type CSSProperties } from "react";
 import Image from "next/image";
-import { CAUSE_META, CAUSE_HEX } from "@shared/lib/dead-stablecoins";
+import { CAUSE_META, CAUSE_HEX } from "@shared/lib/cause-of-death";
 import type { CemeteryEntry } from "@shared/lib/cemetery-merged";
 import { formatCurrency, formatDeathDate, formatYearMonth } from "@shared/lib/format";
 import type { CauseOfDeath } from "@shared/types";

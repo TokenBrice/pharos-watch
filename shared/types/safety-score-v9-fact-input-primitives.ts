@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   BaseInputGenerationIdSchema,
+  CanonicalChainIdSchema,
   CanonicalTextSchema,
   FractionSchema,
   Sha256Schema,
@@ -10,6 +11,7 @@ import { canonicalArrayBy, V9FailureDomainRefSchema } from "./safety-score-v9-fa
 
 export {
   BaseInputGenerationIdSchema,
+  CanonicalChainIdSchema,
   CanonicalTextSchema,
   FractionSchema,
   Sha256Schema,
@@ -18,10 +20,6 @@ export {
 
 export const PositiveFractionSchema = z.number().finite().positive().max(1);
 export const NonNegativeUsdSchema = z.number().finite().nonnegative();
-export const CanonicalChainIdSchema = CanonicalTextSchema.refine(
-  (value) => /^[a-z0-9][a-z0-9._:-]*$/.test(value),
-  "Chain ID must be a canonical lowercase identifier",
-);
 export const CanonicalStringArraySchema = canonicalArrayBy(CanonicalTextSchema, (value) => value);
 export const CanonicalFailureDomainsSchema = canonicalArrayBy(
   V9FailureDomainRefSchema,

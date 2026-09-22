@@ -149,7 +149,8 @@ export type { LiveReserveAdapterDefinitionMap } from "./live-reserve-adapter-des
 export function getLiveReserveAdapterDefinition(
   adapterKey: string,
 ): (typeof LIVE_RESERVE_ADAPTER_DEFINITIONS)[LiveReserveAdapterKey] | null {
-  return LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey as LiveReserveAdapterKey] ?? null;
+  if (!Object.prototype.hasOwnProperty.call(LIVE_RESERVE_ADAPTER_DEFINITIONS, adapterKey)) return null;
+  return LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey as LiveReserveAdapterKey];
 }
 
 /**

@@ -4,7 +4,7 @@ import { L2BEAT_CHAIN_RISK_SNAPSHOT_META, getL2BeatChainEnvironmentAssessment } 
 import { bandFromThresholds, hhiToDiversityScore } from "../math";
 import { deriveDepegSignal } from "../depeg-signals";
 
-export { CHAIN_HEALTH_METHODOLOGY_VERSION as HEALTH_METHODOLOGY_VERSION } from "../methodology-versions/chain-health";
+export { CHAIN_HEALTH_METHODOLOGY_VERSION as HEALTH_METHODOLOGY_VERSION } from "../methodology-versions/constants";
 
 export const QUALITY_WEIGHT = 0.30;
 export const CHAIN_ENVIRONMENT_WEIGHT = 0.20;
@@ -98,7 +98,6 @@ interface QualityCoin {
  */
 export function computeQualityScore(
   coins: QualityCoin[],
-  coverageThreshold = QUALITY_COVERAGE_THRESHOLD,
 ): number | null {
   let totalSupply = 0;
   let ratedSupply = 0;
@@ -110,8 +109,7 @@ export function computeQualityScore(
     weightedSum += coin.safetyScore * coin.supplyUsd;
   }
   if (totalSupply === 0) return null;
-  if (ratedSupply / totalSupply < coverageThreshold) return null;
-  if (ratedSupply === 0) return null;
+  if (ratedSupply / totalSupply < QUALITY_COVERAGE_THRESHOLD) return null;
 
   return Math.round(weightedSum / ratedSupply);
 }

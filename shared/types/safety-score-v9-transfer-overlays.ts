@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { CanonicalTextSchema, StrictIsoDateSchema, uniqueKeyedCollectionSchema } from "./safety-schema-primitives";
+import {
+  CanonicalChainIdSchema,
+  CanonicalTextSchema,
+  StrictIsoDateSchema,
+  uniqueKeyedCollectionSchema,
+} from "./safety-schema-primitives";
 
 const SafetyScoreV9TransferPostureSchema = z.enum([
   "permissionless",
@@ -12,11 +17,6 @@ const SafetyScoreV9TransferScopeSchema = z.enum([
   "material-bridge",
   "additional",
 ]);
-
-const CanonicalChainIdSchema = CanonicalTextSchema.refine(
-  (value) => /^[a-z0-9][a-z0-9._:-]*$/.test(value),
-  "Chain ID must be a canonical lowercase identifier",
-);
 
 export function safetyScoreV9TransferDeploymentKey(
   chainId: string,

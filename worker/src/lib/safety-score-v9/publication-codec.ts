@@ -1,4 +1,4 @@
-import { bytesToBase64 } from "@shared/lib/base64";
+import { base64ToBytes, bytesToBase64 } from "@shared/lib/base64";
 import { compareMethodologyVersions } from "@shared/lib/methodology-versions/base";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import {
@@ -94,16 +94,12 @@ function utf8ByteLength(value: string): number {
   return new TextEncoder().encode(value).byteLength;
 }
 
-function base64ToBytes(value: string, label: string): Uint8Array {
-  let binary: string;
+function decodeCanonicalBase64(value: string, label: string): Uint8Array {
+  let bytes: Uint8Array;
   try {
-    binary = atob(value);
+    bytes = base64ToBytes(value);
   } catch {
     throw new Error(`Malformed ${label} base64 payload`);
-  }
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index);
   }
   if (bytesToBase64(bytes) !== value) {
     throw new Error(`${label} base64 payload is not canonical`);
@@ -314,7 +310,7 @@ export async function parseSafetyScoreV9Publication(
       `Safety Score v9 publication exceeds ${SAFETY_SCORE_V9_PUBLICATION_MAX_COMPRESSED_BYTES} compressed bytes`,
     );
   }
-  const compressed = base64ToBytes(
+  const compressed = decodeCanonicalBase64(
     storage.payload,
     "Safety Score v9 publication",
   );

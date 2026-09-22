@@ -1,3 +1,5 @@
+import { escapeRegExp } from "@shared/lib/escape-regexp";
+
 export function htmlLayoutChangedError(adapterName: string, detail: string): Error {
   return new Error(`${adapterName}: layout-changed: ${detail}`);
 }
@@ -7,10 +9,10 @@ export function htmlParseError(adapterName: string, detail: string): Error {
 }
 
 /** Escape regex metacharacters so a user-controlled or layout-driven string
- *  can be safely interpolated into a constructed regex. */
-export function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
+ *  can be safely interpolated into a constructed regex. Re-exported because the
+ *  adapter helpers are the public entry to this module and their callers import
+ *  the escape from here. */
+export { escapeRegExp };
 
 /** Named HTML entities encountered in disclosure pages. Numeric (`&#123;` /
  *  `&#xAB;`) entities are decoded directly by {@link decodeHtmlEntities}. */

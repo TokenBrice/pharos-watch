@@ -21,7 +21,7 @@ import { CategoricalXAxis, ChartAreaGradient, ChartLegendChip, useSvgId } from "
 import { ChartScaleToggle } from "@/components/chart-primitives/scale-toggle";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useHydrated } from "@/hooks/use-hydrated";
-import { CAUSE_META, CAUSE_HEX } from "@shared/lib/dead-stablecoins";
+import { CAUSE_META, CAUSE_HEX } from "@shared/lib/cause-of-death";
 import type { CemeteryEntry } from "@shared/lib/cemetery-merged";
 import { CHART_RED, CHART_BLUE, CHART_SLATE, CHART_HEIGHT } from "@/lib/chart-colors";
 import { PharosChartTooltip } from "@/components/pharos-chart-tooltip";
