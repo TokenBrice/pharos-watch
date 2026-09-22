@@ -33,6 +33,7 @@
 | 0244     | `0244_ddr_publication_payload_dedup.sql`                   | Add the DDR publication payload content-identity column and the append-only payload reference table so an unchanged publication stores no second BLOB. |
 | 0245     | `0245_cron_runs_degraded_reason.sql`                       | Add the nullable projected non-ok cron-run reason so status aggregates and operator paging need no per-job metadata JSON paths. |
 | 0246     | `0246_telegram_watcher_lifecycle_events.sql`              | Add privacy-preserving daily watcher transition counters and atomic active-state tracking for real subscribe, unsubscribe, and reactivate analytics. |
+| 0247     | `0247_scheduled_checkpoint_retention_index.sql`           | Add the terminal-state/update-time covering index used by bounded scheduled-checkpoint retention drains. |
 
 ## Squashed Individual Migrations (absorbed into the 0000 baseline on 2026-07-30)
 
@@ -346,6 +347,7 @@ Duplicate numeric prefixes 0056 and 0061 existed in the squashed range (0001–0
 - `0243_native_shadow_quote_families.sql`: apply before Worker activation. Both native collectors write the new `dex_native_shadow_quotes_v2` table; the old Orca-only table remains untouched for prior-Worker rollback. Four old diagnostic rows are intentionally not migrated; fresh native evidence repopulates on subsequent cycles. Capture the pre-migration D1 bookmark and deployed Worker version; Worker rollback does not undo either table. No scoring table or publication pointer changes.
 - `0245_cron_runs_degraded_reason.sql`: apply before Worker activation — the new Worker binds `degraded_reason` on every `cron_runs` insert. Worker rollback ignores the nullable column and resumes writing rows without it; retained values stay valid history. Dropping the column requires a separate coordinated cleanup rollout.
 - `0246_telegram_watcher_lifecycle_events.sql`: apply before the Worker release that reads lifecycle-event counters. Existing subscriber state is initialized without creating historical events; compatibility triggers then record transitions from both old and new Worker writes. Worker rollback ignores the additive columns/table while trigger capture continues. Removing the capture requires a separate coordinated cleanup rollout.
+- `0247_scheduled_checkpoint_retention_index.sql`: roll back by restoring the prior Worker; keep the additive partial index because it is inert to older Workers and prevents terminal-checkpoint retention scans. Drop it only in a later measured cleanup migration.
 
 ## Rollback Procedure
 
