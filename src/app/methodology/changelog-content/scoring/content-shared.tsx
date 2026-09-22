@@ -2,7 +2,9 @@ import type { ReactNode } from "react";
 import {
   formatMethodologyDisplayDate,
   toMethodologyVersionLabel,
+  type MethodologyChangelogDetailBlock,
   type MethodologyChangelogEntry,
+  type MethodologyChangelogRichText,
 } from "@shared/lib/methodology-versions/base";
 import { slugifyId } from "@shared/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -63,8 +65,8 @@ export function ChangelogDataTable({
   rows,
   ...tableProps
 }: {
-  columns: ChangelogDataTableColumn[];
-  rows: ChangelogDataTableRow[];
+  columns: readonly ChangelogDataTableColumn[];
+  rows: readonly ChangelogDataTableRow[];
   ariaLabel?: string;
   tableId?: string;
   testId?: string;
@@ -97,13 +99,99 @@ export function ChangelogDataTable({
   );
 }
 
+function ChangelogRichText({ text }: { text: MethodologyChangelogRichText }) {
+  const segments = typeof text === "string" ? [text] : text;
+  return (
+    <>
+      {segments.map((segment, index) => {
+        if (typeof segment === "string") return segment;
+        if ("code" in segment) {
+          return (
+            <code key={index} className="text-xs bg-muted px-1 py-0.5 rounded">
+              {segment.code}
+            </code>
+          );
+        }
+        if ("emphasis" in segment) {
+          return (
+            <span key={index} className="text-foreground font-medium">
+              {segment.emphasis}
+            </span>
+          );
+        }
+        return (
+          <span key={index} className="pharos-numeric">
+            {segment.numeric}
+          </span>
+        );
+      })}
+    </>
+  );
+}
+
+function ChangelogDetailBlocks({ blocks }: { blocks: readonly MethodologyChangelogDetailBlock[] }) {
+  return (
+    <>
+      {blocks.map((block, index) => {
+        switch (block.kind) {
+          case "paragraph":
+            return (
+              <p key={index}>
+                <ChangelogRichText text={block.text} />
+              </p>
+            );
+          case "list":
+            return (
+              <ul key={index} className="list-disc list-inside space-y-1">
+                {block.items.map((item, itemIndex) => (
+                  <li key={itemIndex}>
+                    <ChangelogRichText text={item} />
+                  </li>
+                ))}
+              </ul>
+            );
+          case "formula":
+            return (
+              <div key={index} className="rounded-lg border p-3 pharos-numeric text-xs bg-muted">
+                {block.text}
+              </div>
+            );
+          case "weights":
+            return <WeightRow key={index} values={block.values} />;
+          case "table":
+            return (
+              <ChangelogDataTable
+                key={index}
+                ariaLabel={block.ariaLabel}
+                tableId={block.tableId}
+                testId={block.testId}
+                columns={block.columns}
+                rows={block.rows}
+              />
+            );
+          case "section":
+            return (
+              <div key={index} className="space-y-2">
+                <h3 className="text-foreground font-medium">{block.heading}</h3>
+                <ChangelogDetailBlocks blocks={block.blocks} />
+              </div>
+            );
+        }
+      })}
+    </>
+  );
+}
+
 /**
  * Renders a changelog entry straight from its structured
- * `shared/data/methodology-changelogs/` record. Every V9-era entry uses this;
- * only pre-V9 versions still carry hand-authored prose (they predate the
- * structured `summary`/`impact` fields carrying the whole story).
+ * `shared/data/methodology-changelogs/` record: the ordered `detail` body when
+ * the published card carries headings, tables or formulas, and `summary` plus
+ * `impact` otherwise.
  */
 export function StructuredChangelogDetail({ entry }: { entry: MethodologyChangelogEntry }) {
+  if (entry.detail) {
+    return <ChangelogDetailBlocks blocks={entry.detail} />;
+  }
   return (
     <>
       <p>{entry.summary}</p>
@@ -145,7 +233,7 @@ export function VersionCard({
   );
 }
 
-export function WeightRow({ values }: { values: [string, string, string, string, string, string] }) {
+function WeightRow({ values }: { values: readonly [string, string, string, string, string, string] }) {
   const headers = ["Peg", "Liquidity", "Safety", "Resilience", "Decentralization", "Dep Risk"];
   return (
     <ChangelogDataTable
