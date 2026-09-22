@@ -247,7 +247,7 @@ export type PublicHealthReadResult<T> =
   | { ok: true; value: T; error: null }
   | { ok: false; value: null; error: string };
 
-export async function capturePublicHealthRead<T>(
+async function capturePublicHealthRead<T>(
   descriptor: { event: string; source: string; message: string; job?: string },
   run: () => Promise<T>,
 ): Promise<PublicHealthReadResult<T>> {
