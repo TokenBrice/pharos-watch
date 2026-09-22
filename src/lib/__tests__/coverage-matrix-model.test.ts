@@ -52,7 +52,7 @@ function makeMatrixInput({ activeStablecoins, errors, ...payloads }: MatrixInput
         },
       ];
     }),
-  ) as CoverageMatrixModelInput;
+  ) as unknown as CoverageMatrixModelInput;
   return activeStablecoins ? { ...resources, activeStablecoins } : resources;
 }
 
@@ -272,7 +272,7 @@ describe("buildCoverageMatrixModel", () => {
           summary: {},
           coins: [
             { id: "usdc-circle", consensusSources: ["CoinGecko", "DefiLlama", "Pyth"], priceConfidence: "high" },
-            { id: "dai-makerdao", consensusSources: ["CoinGecko"], priceConfidence: "medium" },
+            { id: "dai-makerdao", consensusSources: ["CoinGecko"], priceConfidence: "low" },
           ],
         },
         dexLiquidity: { "usdc-circle": { coverageClass: "primary" } },
@@ -323,7 +323,7 @@ describe("buildCoverageMatrixModel", () => {
             { id: "usdc-circle", name: "USD Coin", symbol: "USDC", circulating: { peggedUSD: 1_000 } },
           ],
         },
-        reportCards: { cards: [], dependencyGraph: { nodes: [], edges: [] } },
+        reportCards: { cards: [], dependencyGraph: { edges: [] } },
         errors: { redemptionBackstops: error },
         activeStablecoins: [trackedMeta("usdc-circle")],
       }),
@@ -366,7 +366,7 @@ describe("buildCoverageMatrixModel", () => {
             },
           },
         },
-        reportCards: { cards: [], dependencyGraph: { nodes: [], edges: [] } },
+        reportCards: { cards: [], dependencyGraph: { edges: [] } },
         activeStablecoins: [trackedMeta("usdc-circle")],
       }),
     );

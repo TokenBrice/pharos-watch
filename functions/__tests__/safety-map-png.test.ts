@@ -51,7 +51,7 @@ describe("GET /safety-scores/map.png", () => {
     );
   });
 
-  it.each([
+  it.each<{ label: string; seed: Record<string, Uint8Array>; query: string }>([
     { label: "the latest object is missing, so the kill switch trips the digest", seed: {}, query: "" },
     { label: "a dated archive was never published", seed: { "safety-map:latest.png": PNG_MAGIC }, query: "?date=2020-01-01" },
     { label: "the object is zero-byte rather than an empty image", seed: { "safety-map:latest.png": new Uint8Array(0) }, query: "" },
