@@ -32,7 +32,7 @@ export const DEX_EXIT_ROUTE_TURNOVER_ALERT_THRESHOLD = 0.5;
  * trivially crosses 0.5 Jaccard distance without being real exit-route
  * turnover, so those flaps stay metadata-only.
  */
-export const DEX_EXIT_ROUTE_TURNOVER_MIN_CHANGED_ROUTES = 2;
+const DEX_EXIT_ROUTE_TURNOVER_MIN_CHANGED_ROUTES = 2;
 
 const MAX_WORST_OFFENDERS = 10;
 const MAX_ROUTE_ID_SAMPLES = 8;
