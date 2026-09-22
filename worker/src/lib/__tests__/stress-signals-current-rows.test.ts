@@ -117,6 +117,57 @@ describe("stress-signal current-row helpers", () => {
     expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
+  it("keeps the stale bounded latest rows when the canonical history read rejects", async () => {
+    const staleLatest = row("usdt-tether", nowSec - 1_000, 20);
+    const onReadError = vi.fn();
+    const db = mockD1([
+      { match: "FROM cache WHERE key = ?", matchBinds: ["dews:published-generation"], rows: [], first: null },
+      { match: "pharos:stress-signals:latest-all", rows: [staleLatest] },
+      { match: "pharos:stress-signals:legacy-latest-all", rows: [], throwError: new Error("D1 unavailable") },
+    ], { requireMatch: true });
+
+    const loaded = await loadStressSignalCurrentRows(db, nowSec, { staleAfterSec: 300, onReadError });
+
+    expect(loaded.results).toEqual([staleLatest]);
+    expect(onReadError).toHaveBeenCalledTimes(1);
+    expect(() => db.assertAllMatchesUsed()).not.toThrow();
+  });
+
+  it("keeps the single-coin latest row when the exact published read rejects", async () => {
+    const completedAt = nowSec - 60;
+    const older = { score: 25, band: "WATCH", signals_json: signalsJson, computed_at: completedAt - 60 };
+    const pointer = publishedPointer(completedAt, ["usdt-tether", "usdc-circle"]);
+    const onReadError = vi.fn();
+    const db = mockD1([
+      { match: "FROM cache WHERE key = ?", matchBinds: ["dews:published-generation"], rows: [pointer], first: pointer },
+      { match: "pharos:stress-signals:latest-one", matchBinds: ["usdt-tether", completedAt], rows: [older], first: older },
+      { match: "pharos:stress-signals:published-exact-one", matchBinds: ["usdt-tether", completedAt], rows: [], throwError: new Error("D1 exhausted") },
+    ], { requireMatch: true });
+
+    const loaded = await loadStressSignalCurrentRowForCoin(db, "usdt-tether", nowSec, { staleAfterSec: 300, onReadError });
+
+    expect(loaded).toEqual(older);
+    expect(onReadError).toHaveBeenCalledTimes(1);
+    expect(db.getHistory().some((entry) => entry.sql.includes("legacy-latest-one"))).toBe(false);
+    expect(() => db.assertAllMatchesUsed()).not.toThrow();
+  });
+
+  it("keeps a stale single-coin latest row when the legacy history read rejects", async () => {
+    const staleLatest = { score: 25, band: "WATCH", signals_json: signalsJson, computed_at: nowSec - 1_000 };
+    const onReadError = vi.fn();
+    const db = mockD1([
+      { match: "FROM cache WHERE key = ?", matchBinds: ["dews:published-generation"], rows: [], first: null },
+      { match: "pharos:stress-signals:latest-one", matchBinds: ["usdt-tether"], rows: [staleLatest], first: staleLatest },
+      { match: "pharos:stress-signals:legacy-latest-one", rows: [], throwError: new Error("D1 unavailable") },
+    ], { requireMatch: true });
+
+    const loaded = await loadStressSignalCurrentRowForCoin(db, "usdt-tether", nowSec, { staleAfterSec: 300, onReadError });
+
+    expect(loaded).toEqual(staleLatest);
+    expect(onReadError).toHaveBeenCalledTimes(1);
+    expect(() => db.assertAllMatchesUsed()).not.toThrow();
+  });
+
   it("skips canonical history when the scoped latest generation is complete and fresh", async () => {
     const completedAt = nowSec - 60;
     const latestRows = [
