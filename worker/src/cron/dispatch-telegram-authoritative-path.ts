@@ -28,9 +28,9 @@ import {
   completeTelegramAlertSourceEvent,
   expireTelegramAlertSourceEvent,
   markTelegramAlertSourceEventPlanned,
-  resolveTelegramAlertSourcePresetPages,
   type TelegramAlertSourceEvent,
 } from "./telegram-alert-source-events";
+import { resolveTelegramAlertSourcePresetPages } from "./telegram-alert-source-memberships";
 import {
   loadTelegramTargetPlanProgress,
   runTelegramTargetPlanCoordinator,

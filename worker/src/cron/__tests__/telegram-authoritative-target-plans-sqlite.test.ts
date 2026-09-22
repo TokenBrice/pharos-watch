@@ -29,8 +29,8 @@ import {
 import {
   expireTelegramAlertSourceEvent,
   loadTelegramAlertSourceEvent,
-  resolveTelegramAlertSourcePresetPages,
 } from "../telegram-alert-source-events";
+import { resolveTelegramAlertSourcePresetPages } from "../telegram-alert-source-memberships";
 import { PENDING_TTL_SEC } from "@shared/lib/telegram-delivery-policy";
 import { resolveTelegramTargetExpiresAt } from "../telegram-alert-target-plans/materialization";
 import { insertTelegramSubscriber } from "./telegram-subscriber.test-support";

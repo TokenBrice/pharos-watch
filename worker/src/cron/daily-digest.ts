@@ -44,9 +44,8 @@ import {
   reportDigestLlmAttempt,
   reportDigestMissingApiKey,
   reportDigestRefusal,
-  requestDigestCopy,
-  resolveDigestLlmConfig,
 } from "./digest/platform";
+import { requestDigestCopy, resolveDigestLlmConfig } from "./digest/llm-request";
 import { DAILY_DIGEST_LLM_CONFIG, type DigestLlmConfig } from "../lib/constants";
 import { resolveDigestStyleGateMode } from "../lib/digest-style-gate";
 

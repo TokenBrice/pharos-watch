@@ -2,7 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { mergeSubscriberMaps } from "../../../cron/dispatch-telegram-subscribers";
-import { loadTelegramSourcePresetSubscribersForChats } from "../../../cron/telegram-alert-source-events";
+import { loadTelegramSourcePresetSubscribersForChats } from "../../../cron/telegram-alert-source-memberships";
 import type { SubscriberRow } from "../../../cron/dispatch-telegram-routing";
 import { applySubscribeIntent, applyUnsubscribeIntent } from "../presets";
 

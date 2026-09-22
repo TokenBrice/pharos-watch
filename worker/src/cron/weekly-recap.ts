@@ -22,9 +22,8 @@ import {
   reportDigestLlmAttempt,
   reportDigestMissingApiKey,
   reportDigestRefusal,
-  requestDigestCopy,
-  resolveDigestLlmConfig,
 } from "./digest/platform";
+import { requestDigestCopy, resolveDigestLlmConfig } from "./digest/llm-request";
 import { reportCronProgress } from "../lib/cron-progress";
 import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "../lib/digest-sql-filters";
 import { buildRecentDigestMeta } from "./daily-digest/runtime-helpers";

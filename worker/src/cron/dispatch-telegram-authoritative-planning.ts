@@ -17,7 +17,7 @@ import {
   loadPerCoinSnoozeMap,
   loadSubscriberRowsBatch,
 } from "./dispatch-telegram-subscribers";
-import { loadTelegramSourcePresetSubscribersForChats } from "./telegram-alert-source-events";
+import { loadTelegramSourcePresetSubscribersForChats } from "./telegram-alert-source-memberships";
 import type {
   TelegramPlanningDecision,
   TelegramPlanningSubscriber,

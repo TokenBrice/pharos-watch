@@ -5,10 +5,9 @@ import {
   didDigestChannelDeliver,
   insertDigestRecord,
   markDigestMetaBlocked,
-  requestDigestCopy,
-  resolveDigestLlmConfig,
   runDigestChannelDelivery,
 } from "../platform";
+import { requestDigestCopy, resolveDigestLlmConfig } from "../llm-request";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { makeNoopD1, makeRunCountingNoopD1 } from "../../../test-helpers/noop-d1";
 import {
