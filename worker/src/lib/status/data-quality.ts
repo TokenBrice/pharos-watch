@@ -13,7 +13,7 @@ import {
 } from "@shared/lib/status-thresholds";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
-import type { DataQuality, StatusResponse } from "@shared/types/status";
+import type { DataQuality, StablecoinPublicationHealth, StatusResponse } from "@shared/types/status";
 import { logWorkerEvent } from "../structured-log";
 import { getSourceFailureMessage } from "./section-errors";
 import { loadDdrRepairDebtDetails, loadRepairDebtSummary } from "../repair-tasks";
@@ -99,6 +99,7 @@ export async function getDataQuality(
   now: number,
   options?: {
     blacklistMetrics?: BlacklistGapMetrics | null;
+    stablecoinPublication?: StablecoinPublicationHealth;
   },
 ): Promise<DataQuality> {
   const stablecoinsCacheResult = await loadStablecoinsCache(db, { mode: "lenient" });
@@ -135,19 +136,21 @@ export async function getDataQuality(
   // DefiLlama residuals and pre-launch canonical coins should not drive the
   // active canonical missing-price ratio.
   const activeCanonicalAssets = stablecoinAssets.filter((asset) => ACTIVE_IDS.has(asset.id));
-  let stablecoinPublication = unknownStablecoinPublicationHealth();
-  try {
-    stablecoinPublication = await loadStablecoinPublicationHealth(db);
-  } catch (error) {
-    logWorkerEvent({
-      scope: "status",
-      level: "warn",
-      event: "stablecoin_publication_health_query_failed",
-      route: "status",
-      source: "sync-stablecoins",
-      message: "Stablecoin publication coverage metadata unavailable",
-      error,
-    });
+  let stablecoinPublication = options?.stablecoinPublication ?? unknownStablecoinPublicationHealth();
+  if (options?.stablecoinPublication == null) {
+    try {
+      stablecoinPublication = await loadStablecoinPublicationHealth(db, now);
+    } catch (error) {
+      logWorkerEvent({
+        scope: "status",
+        level: "warn",
+        event: "stablecoin_publication_health_query_failed",
+        route: "status",
+        source: "sync-stablecoins",
+        message: "Stablecoin publication coverage metadata unavailable",
+        error,
+      });
+    }
   }
   const hasExactPublicationEvidence = stablecoinPublication.status !== "unknown";
   const totalStablecoins = hasExactPublicationEvidence

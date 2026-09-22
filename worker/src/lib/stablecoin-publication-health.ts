@@ -221,6 +221,7 @@ export interface StablecoinCoverageHealthSnapshot {
 
 export async function loadStablecoinCoverageHealth(
   db: D1Database,
+  now = Math.floor(Date.now() / 1000),
 ): Promise<StablecoinCoverageHealthSnapshot> {
   // Synthetic abandoned/no-write rows still carry wrapper metadata. Keep them
   // visible to cron health without letting them erase the last publication's
@@ -233,9 +234,11 @@ export async function loadStablecoinCoverageHealth(
           AND metadata IS NOT NULL
           AND metadata LIKE '%"activePublicationCoverage"%'
           AND metadata LIKE '%"activePriceCoverage"%'
+          AND started_at >= ?
         ORDER BY started_at DESC, id DESC
         LIMIT 1`,
     )
+    .bind(now - 7 * 24 * 60 * 60)
     .first<{ started_at: number; metadata: string }>();
   return row?.metadata
     ? {
@@ -250,6 +253,7 @@ export async function loadStablecoinCoverageHealth(
 
 export async function loadStablecoinPublicationHealth(
   db: D1Database,
+  now?: number,
 ): Promise<StablecoinPublicationHealth> {
-  return (await loadStablecoinCoverageHealth(db)).publication;
+  return (await loadStablecoinCoverageHealth(db, now)).publication;
 }

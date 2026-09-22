@@ -712,7 +712,7 @@ describe("worker data invariant canaries", () => {
   it("prunes canary run rows older than the 14-day retention cutoff", async () => {
     const db = mockD1([
       {
-        match: "DELETE FROM worker_canary_runs WHERE observed_at < ?",
+        match: "DELETE FROM worker_canary_runs",
         rows: [],
         runMeta: { changes: 4 },
       },
@@ -720,11 +720,14 @@ describe("worker data invariant canaries", () => {
     const cutoff = NOW - WORKER_CANARY_RUN_RETENTION_SEC;
 
     expect(WORKER_CANARY_RUN_RETENTION_SEC).toBe(14 * 24 * 3600);
-    await expect(pruneWorkerCanaryRuns(db, cutoff)).resolves.toBe(4);
+    await expect(pruneWorkerCanaryRuns(db, cutoff)).resolves.toEqual({
+      deleted: 4,
+      truncated: false,
+    });
     expect(db.getHistory()).toEqual([
       expect.objectContaining({
-        sql: expect.stringContaining("DELETE FROM worker_canary_runs WHERE observed_at < ?"),
-        binds: [cutoff],
+        sql: expect.stringContaining("DELETE FROM worker_canary_runs"),
+        binds: [cutoff, 5_000],
       }),
     ]);
   });

@@ -210,13 +210,51 @@ describe("repair tasks", () => {
           ('repair:ddr-repair-required-event:old-failed', 'ddr-repair-required-event', 'old-failed', 'failed', ${NOW}, ${NOW - 200});
       `);
 
-      await expect(pruneRepairTasks(db, NOW - 100)).resolves.toBe(1);
+      await expect(pruneRepairTasks(db, NOW - 100)).resolves.toEqual({
+        deleted: 1,
+        truncated: false,
+      });
       expect(db.sqlite.prepare(
         "SELECT subject_id, state FROM worker_repair_tasks ORDER BY subject_id",
       ).all()).toEqual([
         { subject_id: "new-closed", state: "closed" },
         { subject_id: "old-failed", state: "failed" },
       ]);
+    } finally {
+      db.close();
+    }
+  });
+
+  it("caps a 50k terminal-row backlog and reports truncation", async () => {
+    const db = makeSqliteD1();
+    try {
+      db.sqlite.exec(`
+        WITH RECURSIVE rows(n) AS (
+          SELECT 1
+          UNION ALL
+          SELECT n + 1 FROM rows WHERE n < 50000
+        )
+        INSERT INTO worker_repair_tasks
+          (task_id, kind, subject_id, state, created_at, updated_at)
+        SELECT
+          'repair:test:' || n,
+          'test',
+          CAST(n AS TEXT),
+          'closed',
+          ${NOW - 1000},
+          ${NOW - 1000}
+        FROM rows;
+      `);
+
+      const result = await pruneRepairTasks(db, NOW - 100, undefined, {
+        batchLimit: 5_000,
+        runLimit: 20_000,
+      });
+
+      expect(result).toEqual({ deleted: 20_000, truncated: true });
+      expect(db.sqlite.prepare("SELECT COUNT(*) AS count FROM worker_repair_tasks").get()).toEqual({
+        count: 30_000,
+      });
     } finally {
       db.close();
     }

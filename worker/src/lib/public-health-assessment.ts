@@ -555,7 +555,7 @@ export async function assessPublicHealth(
         });
         return { assessment: null, error: "D1 capacity assessment unavailable." };
       }),
-    loadStablecoinCoverageHealth(db),
+    loadStablecoinCoverageHealth(db, now),
     assessYieldSafetyAvailability(db, now, logPrefix),
   ]);
   const { publication: stablecoinPublication, activePriceCoverage } = stablecoinCoverageHealth;

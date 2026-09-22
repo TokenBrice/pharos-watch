@@ -138,6 +138,7 @@ export interface LiveReserveHistoryPruneResult {
   cutoff: number;
   compositionHistoryDeleted: number;
   attemptHistoryDeleted: number;
+  truncated: boolean;
 }
 
 export interface AuthoritativeReserveSnapshot {

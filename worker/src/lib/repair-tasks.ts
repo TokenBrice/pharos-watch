@@ -387,24 +387,49 @@ export async function loadDdrRepairDebtDetails(db: D1Database): Promise<DdrRepai
   };
 }
 
+export interface RepairTaskPruneResult {
+  deleted: number;
+  truncated: boolean;
+}
+
+const REPAIR_TASK_PRUNE_BATCH_LIMIT = 5_000;
+const REPAIR_TASK_PRUNE_RUN_LIMIT = 20_000;
+
 export async function pruneRepairTasks(
   db: D1Database,
   cutoffSec: number,
   signal?: AbortSignal,
-): Promise<number> {
-  const result = await runWithOverloadRetry(() =>
-    db
-      .prepare(
-        `DELETE FROM worker_repair_tasks
-         WHERE updated_at < ?
-           AND ${DDR_REPAIR_TASK_TERMINAL_STATE_SQL}`,
-      )
-      .bind(cutoffSec)
-      .run(),
-    3,
-    signal,
-  );
-  return result.meta.changes ?? 0;
+  limits: { batchLimit?: number; runLimit?: number } = {},
+): Promise<RepairTaskPruneResult> {
+  const batchLimit = limits.batchLimit ?? REPAIR_TASK_PRUNE_BATCH_LIMIT;
+  const runLimit = limits.runLimit ?? REPAIR_TASK_PRUNE_RUN_LIMIT;
+  let deleted = 0;
+  while (deleted < runLimit) {
+    throwIfAborted(signal);
+    const limit = Math.min(batchLimit, runLimit - deleted);
+    const result = await runWithOverloadRetry(() =>
+      db
+        .prepare(
+          `DELETE FROM worker_repair_tasks
+           WHERE rowid IN (
+             SELECT rowid
+             FROM worker_repair_tasks
+             WHERE updated_at < ?
+               AND ${DDR_REPAIR_TASK_TERMINAL_STATE_SQL}
+             ORDER BY updated_at ASC
+             LIMIT ?
+           )`,
+        )
+        .bind(cutoffSec, limit)
+        .run(),
+      3,
+      signal,
+    );
+    const batchDeleted = result.meta.changes ?? 0;
+    deleted += batchDeleted;
+    if (batchDeleted < limit) break;
+  }
+  return { deleted, truncated: deleted >= runLimit };
 }
 
 async function inspectRepairRunnerBacklog(

@@ -185,6 +185,45 @@ describe("handleSnapshotsIndex", () => {
     expect(body.snapshots[0]?.safetyScoreIdentity).toBeNull();
   });
 
+  it("paginates the archive with a descending date cursor", async () => {
+    const db = mockD1([{
+      match: "FROM public_snapshots",
+      rows: [
+        {
+          snapshot_date: "2026-05-15",
+          methodology_versions: "{}",
+          content_hash: "hash2",
+          byte_size: 12000,
+          created_at: 1779019200,
+        },
+        {
+          snapshot_date: "2026-05-14",
+          methodology_versions: "{}",
+          content_hash: "hash3",
+          byte_size: 11000,
+          created_at: 1778932800,
+        },
+      ],
+    }]);
+
+    const response = await handleSnapshotsIndex(
+      db,
+      new URL("https://api.pharos.watch/api/snapshots/index?cursor=2026-05-16&limit=1"),
+    );
+    const body = await readJsonResponse(response, 200) as {
+      snapshots: Array<{ snapshotDate: string }>;
+      pagination: { limit: number; hasMore: boolean; nextCursor: string | null };
+    };
+
+    expect(body).toMatchObject({
+      snapshots: [{ snapshotDate: "2026-05-15" }],
+      pagination: { limit: 1, hasMore: true, nextCursor: "2026-05-15" },
+    });
+    expect(db.getHistory()[0]).toMatchObject({
+      binds: ["2026-05-16", 2],
+    });
+  });
+
   it("exposes the immutable snapshot safety identity from publication metadata", async () => {
     const row = await buildSnapshotRow();
     const db = mockD1([{ match: "FROM public_snapshots", rows: [row] }]);

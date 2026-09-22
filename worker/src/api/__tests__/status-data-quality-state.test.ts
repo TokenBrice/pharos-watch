@@ -73,6 +73,11 @@ describe("handleStatus", () => {
     // Info-level cause is emitted when monitor is unavailable (does not affect health status)
     expect(body.causes.dataQuality.some((cause) => cause.code === "onchain_monitor_unavailable")).toBe(true);
     expect(body.causes.overall.some((cause) => cause.code === "onchain_monitor_unavailable")).toBe(true);
+    const coverageReads = db.getHistory().filter((entry) =>
+      entry.sql.includes('metadata LIKE \'%"activePublicationCoverage"%\'')
+      && entry.sql.includes('metadata LIKE \'%"activePriceCoverage"%\'')
+    );
+    expect(coverageReads).toHaveLength(1);
   });
 
   it("counts distinct active coins and their latest chain observation at the window boundaries", async () => {

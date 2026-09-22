@@ -7,6 +7,7 @@ import { createCronResult } from "../lib/cron-result";
 import { pruneRepairTasks } from "../lib/repair-tasks";
 import { WORKER_CANARY_RUN_RETENTION_SEC, pruneWorkerCanaryRuns } from "../lib/canary-prune";
 import { pruneLiveReserveRecoveryCheckpoints } from "../lib/scheduled-recovery-prune";
+import { pruneOldApiKeyRequestRateLimits } from "../api/api-key-requests/rate-limit";
 import { pruneProducerHistory } from "../lib/producer-history";
 import { REQUEST_ATTRIBUTION_RETENTION_DAYS } from "@shared/lib/request-attribution";
 import { deleteCapped } from "./shared/capped-delete";
@@ -20,6 +21,7 @@ const SELECTOR_SNAPSHOT_DAILY_QUOTA_RETENTION_SEC = 2 * SECONDS.ONE_DAY;
 const REQUEST_TELEMETRY_RETENTION_SEC = REQUEST_ATTRIBUTION_RETENTION_DAYS * SECONDS.ONE_DAY;
 const REQUEST_TELEMETRY_DELETE_BATCH_LIMIT = 10_000;
 const REQUEST_TELEMETRY_DELETE_RUN_LIMIT = 100_000;
+const SELF_SERVE_RATE_LIMIT_RETENTION_SEC = 2 * SECONDS.ONE_DAY;
 
 function toUtcDateString(timestampSec: number): string {
   return new Date(timestampSec * 1000).toISOString().slice(0, 10);
@@ -99,14 +101,19 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
 
   const producerHistoryDeleted = await pruneProducerHistory(db, now, signal);
   throwIfAborted(signal);
-  const repairTasksDeleted = await pruneRepairTasks(db, now - SECONDS.ONE_WEEK, signal);
+  const repairTasks = await pruneRepairTasks(db, now - SECONDS.ONE_WEEK, signal);
   throwIfAborted(signal);
-  const canaryRunsDeleted = await pruneWorkerCanaryRuns(db, now - WORKER_CANARY_RUN_RETENTION_SEC, signal);
+  const canaryRuns = await pruneWorkerCanaryRuns(db, now - WORKER_CANARY_RUN_RETENTION_SEC, signal);
   throwIfAborted(signal);
-  const recoveryCheckpointsDeleted = await pruneLiveReserveRecoveryCheckpoints(
+  const recoveryCheckpoints = await pruneLiveReserveRecoveryCheckpoints(
     db,
     now - SLOT_EXECUTION_RETENTION_SEC,
     signal,
+  );
+  throwIfAborted(signal);
+  const selfServeRateLimits = await pruneOldApiKeyRequestRateLimits(
+    db,
+    now - SELF_SERVE_RATE_LIMIT_RETENTION_SEC,
   );
   throwIfAborted(signal);
 
@@ -146,9 +153,10 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
     itemCount:
       cronRunsDeleted +
       producerHistoryDeleted +
-      repairTasksDeleted +
-      canaryRunsDeleted +
-      recoveryCheckpointsDeleted +
+      repairTasks.deleted +
+      canaryRuns.deleted +
+      recoveryCheckpoints.deleted +
+      selfServeRateLimits.deleted +
       selectorSnapshotDailyQuotaDeleted +
       blockTimestampCacheDeleted +
       slotExecutionsDeleted +
@@ -158,9 +166,16 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
     metadata: {
       cronRunsDeleted,
       producerHistoryDeleted,
-      repairTasksDeleted,
-      canaryRunsDeleted,
-      recoveryCheckpointsDeleted,
+      repairTasksDeleted: repairTasks.deleted,
+      canaryRunsDeleted: canaryRuns.deleted,
+      recoveryCheckpointsDeleted: recoveryCheckpoints.deleted,
+      selfServeRateLimitsDeleted: selfServeRateLimits.deleted,
+      retentionTruncated: {
+        repairTasks: repairTasks.truncated,
+        canaryRuns: canaryRuns.truncated,
+        recoveryCheckpoints: recoveryCheckpoints.truncated,
+        selfServeRateLimits: selfServeRateLimits.truncated,
+      },
       selectorSnapshotDailyQuotaDeleted,
       blockTimestampCacheDeleted,
       slotExecutionsDeleted,
@@ -176,6 +191,7 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
       cutoffRepairTasksSec: now - SECONDS.ONE_WEEK,
       cutoffCanaryRunsSec: now - WORKER_CANARY_RUN_RETENTION_SEC,
       cutoffRecoveryCheckpointsSec: now - SLOT_EXECUTION_RETENTION_SEC,
+      cutoffSelfServeRateLimitsSec: now - SELF_SERVE_RATE_LIMIT_RETENTION_SEC,
       cutoffSelectorSnapshotDailyQuotaDate: selectorSnapshotDailyQuotaCutoffDate,
       cutoffBlockTimestampCacheSec: now - BLOCK_TIMESTAMP_CACHE_RETENTION_SEC,
       cutoffSlotExecutionsSec: now - SLOT_EXECUTION_RETENTION_SEC,

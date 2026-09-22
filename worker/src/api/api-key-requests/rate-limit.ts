@@ -126,11 +126,25 @@ export async function checkApiKeyRequestRateLimit(
 export async function pruneOldApiKeyRequestRateLimits(
   db: RateLimitDb,
   olderThanSec: number,
-): Promise<void> {
-  await db.prepare("DELETE FROM api_key_request_rate_limit_v2 WHERE bucket_start < ?")
-    .bind(olderThanSec)
-    .run();
-  await db.prepare("DELETE FROM api_key_self_serve_issuance_limits WHERE bucket_start < ?")
-    .bind(olderThanSec)
-    .run();
+  limit = 5_000,
+): Promise<{ deleted: number; truncated: boolean }> {
+  let deleted = 0;
+  let truncated = false;
+  for (const table of BUCKETED_LIMIT_TABLE_NAMES) {
+    const result = await db.prepare(
+      `DELETE FROM ${table}
+       WHERE rowid IN (
+         SELECT rowid FROM ${table}
+         WHERE bucket_start < ?
+         ORDER BY bucket_start ASC
+         LIMIT ?
+       )`,
+    )
+      .bind(olderThanSec, limit)
+      .run();
+    const tableDeleted = result.meta?.changes ?? 0;
+    deleted += tableDeleted;
+    truncated ||= tableDeleted >= limit;
+  }
+  return { deleted, truncated };
 }

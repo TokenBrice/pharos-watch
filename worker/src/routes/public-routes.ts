@@ -23,7 +23,7 @@ export const PUBLIC_STATIC_ROUTES = [
   defineLazyDbRoute("daily-digest", () => import("../api/daily-digest").then(({ handleDailyDigest }) => handleDailyDigest)),
   defineLazyDbRoute("digest-archive", () => import("../api/digest-archive").then(({ handleDigestArchive }) => handleDigestArchive)),
   defineLazyDbUrlRoute("digest-snapshot", () => import("../api/digest-snapshot").then(({ handleDigestSnapshot }) => handleDigestSnapshot)),
-  defineLazyDbRoute("snapshots-index", () => import("../api/snapshot").then(({ handleSnapshotsIndex }) => handleSnapshotsIndex)),
+  defineLazyDbUrlRoute("snapshots-index", () => import("../api/snapshot").then(({ handleSnapshotsIndex }) => handleSnapshotsIndex)),
   defineLazyDbUrlRoute("stability-index", () => import("../api/stability-index").then(({ handleStabilityIndex }) => handleStabilityIndex)),
   defineLazyDbRoute("report-cards-v9", () => import("../api/report-cards-v9").then(({ handleReportCardsV9 }) => handleReportCardsV9)),
   defineLazyDbRoute("safety-grades", () => import("../api/safety-grades").then(({ handleSafetyGrades }) => handleSafetyGrades)),

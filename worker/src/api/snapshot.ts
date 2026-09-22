@@ -33,6 +33,8 @@ import {
 } from "@shared/types/public-snapshot";
 
 const IMMUTABLE_CACHE_CONTROL = "public, s-maxage=31536000, max-age=31536000, immutable";
+const SNAPSHOT_INDEX_DEFAULT_LIMIT = 100;
+const SNAPSHOT_INDEX_MAX_LIMIT = 500;
 
 interface PublicSnapshotIndexRow {
   snapshot_date: string;
@@ -371,14 +373,32 @@ async function loadSnapshotBytes(
   return { row, bytes };
 }
 
-export const handleSnapshotsIndex = async (db: D1Database): Promise<Response> => {
-  const result = await db
-    .prepare(
-      "SELECT snapshot_date, methodology_versions, content_hash, byte_size, created_at FROM public_snapshots ORDER BY snapshot_date DESC",
-    )
-    .all<PublicSnapshotIndexRow>();
+export const handleSnapshotsIndex = async (
+  db: D1Database,
+  url = new URL("https://api.pharos.watch/api/snapshots/index"),
+): Promise<Response> => {
+  const cursor = url.searchParams.get("cursor");
+  if (cursor != null && !SNAPSHOT_DATE_PATTERN.test(cursor)) {
+    return errorResponse(400, "Invalid cursor — expected YYYY-MM-DD");
+  }
+  const rawLimit = url.searchParams.get("limit");
+  const limit = rawLimit == null ? SNAPSHOT_INDEX_DEFAULT_LIMIT : Number(rawLimit);
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > SNAPSHOT_INDEX_MAX_LIMIT) {
+    return errorResponse(400, `Invalid limit — expected an integer from 1 to ${SNAPSHOT_INDEX_MAX_LIMIT}`);
+  }
 
-  const snapshots = (result.results ?? []).map((row) => ({
+  const statement = cursor == null
+    ? db.prepare(
+        "SELECT snapshot_date, methodology_versions, content_hash, byte_size, created_at FROM public_snapshots ORDER BY snapshot_date DESC LIMIT ?",
+      ).bind(limit + 1)
+    : db.prepare(
+        "SELECT snapshot_date, methodology_versions, content_hash, byte_size, created_at FROM public_snapshots WHERE snapshot_date < ? ORDER BY snapshot_date DESC LIMIT ?",
+      ).bind(cursor, limit + 1);
+  const result = await statement.all<PublicSnapshotIndexRow>();
+  const rows = result.results ?? [];
+  const hasMore = rows.length > limit;
+  const pageRows = rows.slice(0, limit);
+  const snapshots = pageRows.map((row) => ({
     snapshotDate: row.snapshot_date,
     methodologyVersions: safeParseMethodology(row.methodology_versions),
     safetyScoreIdentity: safeParseSafetyScoreIdentity(row.methodology_versions),
@@ -387,7 +407,14 @@ export const handleSnapshotsIndex = async (db: D1Database): Promise<Response> =>
     createdAt: row.created_at,
   }));
 
-  return jsonResponse({ snapshots }, { headers: { "Cache-Control": CACHE_PROFILES.archive } });
+  return jsonResponse({
+    snapshots,
+    pagination: {
+      limit,
+      hasMore,
+      nextCursor: hasMore ? pageRows[pageRows.length - 1]?.snapshot_date ?? null : null,
+    },
+  }, { headers: { "Cache-Control": CACHE_PROFILES.archive } });
 };
 
 export const handleSnapshotDay = async (

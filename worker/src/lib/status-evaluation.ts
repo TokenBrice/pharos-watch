@@ -118,7 +118,10 @@ export async function computeRawStatus(db: D1Database, now: number) {
   const [cronHealth, budgetOnlySurfaceResult, dataQuality, supplements, transitionsLast24h] = await Promise.all([
     loadCronHealth(db, now),
     loadBudgetOnlySurfaceStatuses(db, now),
-    getDataQuality(db, now, { blacklistMetrics: publicHealth.blacklistMetrics }),
+    getDataQuality(db, now, {
+      blacklistMetrics: publicHealth.blacklistMetrics,
+      stablecoinPublication: publicHealth.stablecoinPublication,
+    }),
     loadSupplementalStatusSections(db, now),
     countRecentStatusTransitions(db, now),
   ]);

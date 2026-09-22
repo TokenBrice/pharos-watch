@@ -110,5 +110,10 @@ describe("challenger legacy fallback", () => {
     expect(result.diagnostics.mode).toBe("absent");
     expect(result.challengersByStablecoin.size).toBe(0);
     db.assertAllMatchesUsed();
+    const history = db.getHistory();
+    const topPoolRead = history.find((entry) => entry.sql.includes("SELECT stablecoin_id, top_pools_json"));
+    const priceSourceRead = history.find((entry) => entry.sql.includes("SELECT stablecoin_id, price_sources_json"));
+    expect(topPoolRead?.binds).toEqual([-880]);
+    expect(priceSourceRead?.binds).toEqual([-880]);
   });
 });

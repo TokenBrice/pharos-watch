@@ -329,8 +329,17 @@ async function handleHistoricalBacktest(db: D1Database): Promise<Response> {
     return errorResponse(404, "No completed depeg events found");
   }
 
+  const eventDays = events.results.map((event) => bucketUnixSecondsToUtcDay(event.started_at));
+  const historyStartDay = Math.min(...eventDays) - 14 * DAY_SECONDS;
+  const historyEndDay = Math.max(...eventDays) + 2 * DAY_SECONDS;
   const supplyRows = await db
-    .prepare("SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history ORDER BY snapshot_date ASC")
+    .prepare(
+      `SELECT stablecoin_id, snapshot_date, circulating_usd
+       FROM supply_history
+       WHERE snapshot_date BETWEEN ? AND ?
+       ORDER BY snapshot_date ASC`,
+    )
+    .bind(historyStartDay, historyEndDay)
     .all<{ stablecoin_id: string; snapshot_date: number; circulating_usd: number }>();
 
   const supplyIndex = new Map<string, Map<number, number>>();
@@ -341,8 +350,12 @@ async function handleHistoricalBacktest(db: D1Database): Promise<Response> {
 
   const liqRows = await db
     .prepare(
-      "SELECT stablecoin_id, snapshot_date, liquidity_score, total_tvl_usd FROM dex_liquidity_history ORDER BY snapshot_date ASC",
+      `SELECT stablecoin_id, snapshot_date, liquidity_score, total_tvl_usd
+       FROM dex_liquidity_history
+       WHERE snapshot_date BETWEEN ? AND ?
+       ORDER BY snapshot_date ASC`,
     )
+    .bind(historyStartDay, historyEndDay)
     .all<{
       stablecoin_id: string;
       snapshot_date: number;

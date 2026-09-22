@@ -13,7 +13,7 @@ import { getNowSec, recordApiKeyAudit } from "../../lib/api-key-core";
 import { errorResponse, jsonResponse } from "../../lib/api-response";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { sendVerificationEmail } from "./email";
-import { checkApiKeyRequestRateLimit, pruneOldApiKeyRequestRateLimits } from "./rate-limit";
+import { checkApiKeyRequestRateLimit } from "./rate-limit";
 import {
   buildVerificationUrl,
   createRequestId,
@@ -103,7 +103,6 @@ export async function handleApiKeyRequest(
       );
     }
 
-    execCtx?.waitUntil(pruneOldApiKeyRequestRateLimits(db, nowSec - 2 * 24 * 60 * 60));
     execCtx?.waitUntil(
       releaseOrphanPendingClaims(db, nowSec).catch((error) => {
         logWorkerEvent({
@@ -357,7 +356,6 @@ export async function handleApiKeyRequestVerify(
     if (!allowedByToken.allowed) {
       return selfServeError(429, "Too many verification attempts. Please wait before trying again.", allowedByToken.retryAfterSec);
     }
-    execCtx?.waitUntil(pruneOldApiKeyRequestRateLimits(db, nowSec - 2 * 24 * 60 * 60));
 
     const row = await selectPendingRequestByTokenHash(db, tokenHash);
     if (!row || row.status !== "pending_verification" || !row.verification_token_hash) {

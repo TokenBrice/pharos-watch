@@ -115,7 +115,7 @@ function makeDb(options?: {
         return { results: filtered as T[], success: true, meta: {} };
       }
       if (sql.includes("FROM supply_history")) {
-        const filtered = sql.includes("WHERE snapshot_date >= ? AND snapshot_date <= ?")
+        const filtered = sql.includes("WHERE snapshot_date BETWEEN ? AND ?")
           ? supplyRows.filter(
               (row) => row.snapshot_date >= Number(boundArgs[0]) && row.snapshot_date <= Number(boundArgs[1]),
             )

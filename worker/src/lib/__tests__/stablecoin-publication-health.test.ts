@@ -78,14 +78,14 @@ describe("stablecoin publication health", () => {
     insertRun(sqlite, "sync-stablecoins", 800, {});
     insertRun(sqlite, "sync-stablecoins", 900, "not json at all");
 
-    const result = await loadStablecoinCoverageHealth(db);
+    const result = await loadStablecoinCoverageHealth(db, 1_000);
     expect(result.publication).toMatchObject({ status: "complete", observedAt: 200 });
     expect(result.activePriceCoverage).toMatchObject({ status: "complete", observedAt: 200 });
   });
 
   it("reports unknown health when no run carries publication or price evidence", async () => {
     const { db } = fixtures.open();
-    const result = await loadStablecoinCoverageHealth(db);
+    const result = await loadStablecoinCoverageHealth(db, 1_000);
     expect(result.publication).toEqual({
       status: "unknown",
       expectedActiveCount: activeIds.length,
@@ -144,7 +144,7 @@ describe("stablecoin publication health", () => {
   it("falls back to unknown health per evidence kind when payloads are missing or not records", async () => {
     const { sqlite, db } = fixtures.open();
     insertRun(sqlite, "sync-stablecoins", 100, '["activePublicationCoverage","activePriceCoverage"]');
-    let result = await loadStablecoinCoverageHealth(db);
+    let result = await loadStablecoinCoverageHealth(db, 1_000);
     expect(result.publication).toMatchObject({ status: "unknown", observedAt: 100 });
     expect(result.activePriceCoverage).toMatchObject({ status: "unknown", observedAt: 100 });
 
@@ -152,7 +152,7 @@ describe("stablecoin publication health", () => {
       activePublicationCoverage: "nope",
       activePriceCoverage: priceCoverage(),
     });
-    result = await loadStablecoinCoverageHealth(db);
+    result = await loadStablecoinCoverageHealth(db, 1_000);
     expect(result.publication).toMatchObject({ status: "unknown", observedAt: 200 });
     expect(result.activePriceCoverage).toMatchObject({ status: "complete", observedAt: 200 });
 
@@ -160,12 +160,12 @@ describe("stablecoin publication health", () => {
       activePublicationCoverage: publicationCoverage(),
       activePriceCoverage: null,
     });
-    result = await loadStablecoinCoverageHealth(db);
+    result = await loadStablecoinCoverageHealth(db, 1_000);
     expect(result.publication).toMatchObject({ status: "complete", observedAt: 300 });
     expect(result.activePriceCoverage).toMatchObject({ status: "unknown", observedAt: 300 });
 
     insertRun(sqlite, "sync-stablecoins", 400, '{"activePublicationCoverage":oops,"activePriceCoverage":2}');
-    result = await loadStablecoinCoverageHealth(db);
+    result = await loadStablecoinCoverageHealth(db, 1_000);
     expect(result.publication).toMatchObject({ status: "unknown", observedAt: 400 });
     expect(result.activePriceCoverage).toMatchObject({ status: "unknown", observedAt: 400 });
   });
@@ -181,7 +181,7 @@ describe("stablecoin publication health", () => {
       },
       activePriceCoverage: priceCoverage(),
     });
-    const result = await loadStablecoinCoverageHealth(db);
+    const result = await loadStablecoinCoverageHealth(db, 1_000);
     expect(result.publication).toEqual({
       status: "incomplete",
       expectedActiveCount: 0,
@@ -207,7 +207,7 @@ describe("stablecoin publication health", () => {
         activePublicationCoverage: publicationCoverage(override),
         activePriceCoverage: priceCoverage(),
       });
-      const { publication } = await loadStablecoinCoverageHealth(db);
+      const { publication } = await loadStablecoinCoverageHealth(db, 1_000);
       expect(publication.status, `override ${JSON.stringify(override)}`).toBe("incomplete");
       startedAt += 100;
     }
@@ -215,7 +215,7 @@ describe("stablecoin publication health", () => {
       activePublicationCoverage: publicationCoverage(),
       activePriceCoverage: priceCoverage(),
     });
-    expect((await loadStablecoinCoverageHealth(db)).publication.status).toBe("complete");
+    expect((await loadStablecoinCoverageHealth(db, 1_000)).publication.status).toBe("complete");
   });
 
   it("parses missing price state and asset details with fallbacks and asset precedence", async () => {
@@ -275,7 +275,7 @@ describe("stablecoin publication health", () => {
       }),
     });
 
-    const price = (await loadStablecoinCoverageHealth(db)).activePriceCoverage;
+    const price = (await loadStablecoinCoverageHealth(db, 1_000)).activePriceCoverage;
     expect(price.status).toBe("incomplete");
     expect(price.pricedActiveCount).toBe(activeIds.length - 2);
     expect(price.pricedActiveIds).toEqual(activeIds.slice(2));
@@ -363,7 +363,7 @@ describe("stablecoin publication health", () => {
       }),
     });
 
-    const price = (await loadStablecoinCoverageHealth(db)).activePriceCoverage;
+    const price = (await loadStablecoinCoverageHealth(db, 1_000)).activePriceCoverage;
     expect(price.status).toBe("incomplete");
     expect(price.missingActiveIds).toEqual([activeIds[1], "never-parsed"]);
     expect(price.missingActiveAssets).toEqual([
@@ -399,7 +399,7 @@ describe("stablecoin publication health", () => {
       }),
     });
 
-    const price = (await loadStablecoinCoverageHealth(db)).activePriceCoverage;
+    const price = (await loadStablecoinCoverageHealth(db, 1_000)).activePriceCoverage;
     expect(price.status).toBe("incomplete");
     expect(price.missingActiveAssets).toEqual([]);
     expect(price.alertEligibleIds).toEqual([]);
@@ -422,7 +422,7 @@ describe("stablecoin publication health", () => {
       activePriceCoverage: priceCoverage({ complete: false, missingActiveState: state }),
     });
 
-    const price = (await loadStablecoinCoverageHealth(db)).activePriceCoverage;
+    const price = (await loadStablecoinCoverageHealth(db, 1_000)).activePriceCoverage;
     expect(price.missingActiveAssets).toHaveLength(activeIds.length);
     expect(price.missingActiveAssets[0]?.stablecoinId).toBe("overflow-0");
     expect(price.missingActiveAssets[price.missingActiveAssets.length - 1]?.stablecoinId).toBe(
@@ -449,7 +449,7 @@ describe("stablecoin publication health", () => {
         activePublicationCoverage: publicationCoverage(),
         activePriceCoverage: priceCoverage(override),
       });
-      const { activePriceCoverage } = await loadStablecoinCoverageHealth(db);
+      const { activePriceCoverage } = await loadStablecoinCoverageHealth(db, 1_000);
       expect(activePriceCoverage.status, `override ${JSON.stringify(override)}`).toBe("incomplete");
       startedAt += 100;
     }
@@ -457,7 +457,7 @@ describe("stablecoin publication health", () => {
       activePublicationCoverage: publicationCoverage(),
       activePriceCoverage: priceCoverage(),
     });
-    expect((await loadStablecoinCoverageHealth(db)).activePriceCoverage.status).toBe("complete");
+    expect((await loadStablecoinCoverageHealth(db, 1_000)).activePriceCoverage.status).toBe("complete");
   });
 
   it("exposes the publication slice through loadStablecoinPublicationHealth", async () => {
@@ -466,7 +466,7 @@ describe("stablecoin publication health", () => {
       activePublicationCoverage: publicationCoverage(),
       activePriceCoverage: priceCoverage(),
     });
-    expect(await loadStablecoinPublicationHealth(db)).toMatchObject({
+    expect(await loadStablecoinPublicationHealth(db, 1_000)).toMatchObject({
       status: "complete",
       observedAt: 100,
     });
