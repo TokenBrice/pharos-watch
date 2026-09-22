@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  REPORT_CARDS_BASE_INPUT_GENERATION_ID_PREFIX,
   computeReportCardsBaseInputGenerationId,
   deriveReportCardsBaseInputGenerationId,
+  projectReportCardsBaseInputIdentity,
   projectReportCardsBaseInputIdentityV1,
   type ReportCardsBaseInputSourceV1,
 } from "@shared/lib/report-cards-base-input-identity";
+import type { ReportCardsBaseInputIdentityV1 } from "@shared/types/report-cards-base-input";
 
 const A = "a".repeat(64);
 const B = "b".repeat(64);
@@ -45,6 +48,32 @@ function source(): ReportCardsBaseInputSourceV1 {
     inputFreshness: {
       dexLiquidity: { updatedAt: 1_799_999_800, ageSeconds: 200, stale: false },
       redemptionBackstops: { updatedAt: 1_799_999_700, ageSeconds: 300, stale: false },
+    },
+  };
+}
+
+function projectedInput(): ReportCardsBaseInputIdentityV1 {
+  return {
+    schemaVersion: 1 as const,
+    captureKind: "exact-publication-inputs" as const,
+    publicationClockSec: 1_800_000_000,
+    sourceUpdatedAtSec: 1_799_999_900,
+    registry: {
+      activeAssetIds: ["usdt-tether", "usdc-circle", "usdc-circle"],
+      fingerprintSha256: A,
+    },
+    producers: {
+      dex: { generationId: "dex-liquidity-1800000000", payloadSha256: B },
+      redemption: { generationId: "redemption-1800000000", payloadSha256: C },
+    },
+    producerMethodologyVersions: {
+      dexLiquidity: ["4.2", "4.1", "4.2"],
+      pegScore: ["7.25"],
+      redemptionBackstop: ["3.0", "2.9"],
+    },
+    normalizedSnapshotDigests: {
+      scoreBearingFactsSha256: "d".repeat(64),
+      scoreBearingFreshnessSha256: "e".repeat(64),
     },
   };
 }
@@ -146,5 +175,56 @@ describe("report-card base-input identity", () => {
   it("computes the same generation from an already projected identity", () => {
     const projected = projectReportCardsBaseInputIdentityV1(source());
     expect(computeReportCardsBaseInputGenerationId(projected)).toBe(deriveReportCardsBaseInputGenerationId(source()));
+  });
+
+  it("canonicalizes projected set-like arrays and pins their generation identity", () => {
+    const projected = projectReportCardsBaseInputIdentity(projectedInput());
+    expect(projected.registry.activeAssetIds).toEqual(["usdc-circle", "usdt-tether"]);
+    expect(projected.producerMethodologyVersions).toEqual({
+      dexLiquidity: ["4.1", "4.2"],
+      pegScore: ["7.25"],
+      redemptionBackstop: ["2.9", "3.0"],
+    });
+
+    const generationId = computeReportCardsBaseInputGenerationId(projectedInput());
+    expect(generationId.startsWith(REPORT_CARDS_BASE_INPUT_GENERATION_ID_PREFIX)).toBe(true);
+    expect(generationId).toBe(
+      "report-cards-input:v1:f755e130eaac7816dfeffb7a18893d903308d166b1e22336f37f3a563b48cecd",
+    );
+  });
+
+  it("rejects projected source clocks later than the publication clock", () => {
+    const input = projectedInput();
+    input.sourceUpdatedAtSec = input.publicationClockSec + 1;
+    expect(() => projectReportCardsBaseInputIdentity(input)).toThrow(/publication clock/);
+  });
+
+  it.each(["dexLiquidity", "pegScore", "redemptionBackstop"] as const)(
+    "rejects an empty %s methodology version set",
+    (field) => {
+      const input = projectedInput();
+      input.producerMethodologyVersions[field] = [];
+      expect(() => projectReportCardsBaseInputIdentity(input)).toThrow(/At least one producer methodology version/);
+    },
+  );
+
+  it.each([
+    ["safety methodology", { methodologyVersion: "8.17" }],
+    ["V9 policy", { v9PolicyDigest: A }],
+    ["publication generation", { publicationGenerationId: "report-cards:8.17:1800000000" }],
+    ["operator capture time", { capturedAt: "2027-01-15T08:00:00.000Z" }],
+    ["operator revision", { registryRevision: "deadbeef" }],
+  ])("rejects excluded %s metadata at the projected-input fence", (_label, extra) => {
+    expect(() => projectReportCardsBaseInputIdentity({ ...projectedInput(), ...extra })).toThrow();
+  });
+
+  it("rejects a safety-score methodology key in the producer version object", () => {
+    const input = projectedInput() as ReportCardsBaseInputIdentityV1 & {
+      producerMethodologyVersions: ReportCardsBaseInputIdentityV1["producerMethodologyVersions"] & {
+        safetyScore: string[];
+      };
+    };
+    input.producerMethodologyVersions.safetyScore = ["8.17"];
+    expect(() => projectReportCardsBaseInputIdentity(input)).toThrow();
   });
 });

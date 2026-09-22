@@ -278,6 +278,8 @@ Helpers used across test families live in the shared homes instead:
 - `scripts/__tests__/helpers/` — script-suite helpers
 - `functions/__tests__/helpers/` — Pages Functions helpers (`mock-kv`, Pages context)
 
+A cron unit has one test home: tests for `worker/src/cron/<lane>/<module>.ts` live in that lane's own `__tests__/` directory, not in the flat `worker/src/cron/__tests__/` tree. Behaviour asserted through an adapter that is really owned by a shared executor (for example the adaptive multicall split) belongs to the shared unit's suite, with each adapter keeping only the wiring case that is adapter-specific.
+
 ### Frontend Test Setup Helpers (`src/test-utils/frontend.ts`)
 
 Frontend jsdom tests should use `installMatchMediaMock()`, `cleanupFrontendTest()`, `resetBrowserStorage()`, and `createNextLinkMock()` from `src/test-utils/frontend.ts` instead of hand-rolling `matchMedia`, browser-storage cleanup, or `next/link` mocks. Keep test-local mocks only when the test needs behavior that differs from the shared helper.
@@ -343,6 +345,8 @@ expectWarnings(result, ["quarantined-balance"]);
   - `code`: `eth_getCode` answers for code-identity checks; `chains`: extra or overriding chain endpoints.
 - `expectWarnings(result, codes)` asserts the emitted warning **codes**, never message wording; `expectWarningEffect(result, code, effect)` pins one code's effect. Message text is not a contract and copy edits must not fail a suite.
 - Pure `adapt*` unit tests keep calling the parser directly — the harness is for fetch-level and adapter-level cases.
+
+Independent-assurance adapters share their redirect, allowed-host, reviewed-report, and newer-report fence through `__tests__/independent-assurance.test-support.ts`. Issuer suites keep only issuer-specific discovery and rewrite behavior; add each live product to the table in `independent-assurance.test.ts` so a registry-row drift still fails the common fence.
 
 #### Corpus replay gate (`__tests__/adapter-corpus.test.ts`)
 
@@ -568,12 +572,15 @@ No gate threshold, waiver, or enumerated path is relaxed to accommodate a deleti
 - Use `makeStablecoin()` / `makeStablecoinMeta()` from `shared/test-utils/stablecoin.ts` (see `shared/lib/__tests__/supply.test.ts`) for partial `StablecoinData` mocks — avoids `as any` casts.
 - Use shared fixtures from `worker/src/test-helpers/__shared/fixtures.ts` for DB row mocks.
 - Keep tests focused: one assertion per `it` block when possible.
+- Keep one canonical test home per unit concern. Split very large suites only along cohesive `describe` seams; do not create ticket-named satellite suites or fixture-only alias layers.
 
 ### Test evidence rules
 
 The 2026 test audit enforced these rules across the suite; apply them to new and edited tests:
 
 - **Assert consumer-observable behavior.** A test earns its place by failing when something a consumer observes regresses — a return value, rendered output, or persisted state — not when an internal detail changes.
+- **Assert database outcomes, not statement shape.** SQL text, placeholder order, bind indexes, and prepared-call counts are implementation details. Seed the latest-schema SQLite fixture, run the unit, and select the persisted row by semantic column; use marker-matched strict D1 doubles only when the test does not depend on SQL semantics. Query-plan assertions are reserved for cases where index choice is itself the contract.
+- **Prefer registry invariants to registry transcriptions.** Assert that every entry is retrievable by its own key and satisfies cross-row or cross-module constraints; do not copy authored keys, ordering, or row fields into expected-value tables.
 - **No source-text, class-token, or prose pins.** Unit tests do not pin source strings, CSS class tokens, or editorial prose; such assertions churn on harmless edits while missing real regressions. Styling and layout claims belong in browser coverage, and source-structure scanning stays in its syntax-aware owner.
 - **`test.fails` only with an `// audit:` comment.** An `it.fails`/`test.fails` marker must carry an adjacent `// audit: <finding> — <explanation>` comment recording the disputed or policy-deferred production defect it reproduces; it pins known-wrong current behavior and is never a way to leave a broken assertion green.
 - **Deletions name a surviving owner.** A deleted test or fixture is removed only against a named surviving owner that defends the same behavior; consolidation never weakens coverage, and mere fixture relocation is not a deletion.

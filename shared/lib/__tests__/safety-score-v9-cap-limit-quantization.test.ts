@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import { scoreV9Input } from "../safety-score-v9/formula";
 import type { V9ScoringInput } from "../../types/safety-score-v9";
+import { makeV9ScoringInput } from "./safety-score-v9-score.test-support";
 
 /**
  * A cap limit is a PUBLISHED ceiling, so it must live in the published score
@@ -11,20 +12,12 @@ import type { V9ScoringInput } from "../../types/safety-score-v9";
  * a 49.55 parent limit against a D/C- boundary at 50.
  */
 function input(overrides: Partial<V9ScoringInput> = {}): V9ScoringInput {
-  return {
+  return makeV9ScoringInput({
     assetId: "quantization-probe",
     pillars: { backing: 80, exit: 80, control: 80 },
-    pegApplicable: true,
-    pegScore: 100,
-    evidenceLevel: "strong",
     trackRecordMonths: 120,
-    activeDepegBps: null,
-    parentRequired: false,
-    parentScore: null,
-    structuralSignals: [],
-    unresolved: [],
     ...overrides,
-  } as V9ScoringInput;
+  });
 }
 
 describe("V9 cap limits are quantized into the published score space", () => {

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import { scoreV9Input } from "../safety-score-v9/formula";
 import type { V9ScoringInput, V9StructuralSignal } from "../../types/safety-score-v9";
+import { makeV9ScoringInput, makeV9Signal } from "./safety-score-v9-score.test-support";
 
 /**
  * A signal already priced inside a pillar has its causal account there. Letting
@@ -10,32 +11,22 @@ import type { V9ScoringInput, V9StructuralSignal } from "../../types/safety-scor
  * residual the pillar cannot express.
  */
 function signal(overrides: Partial<V9StructuralSignal> = {}): V9StructuralSignal {
-  return {
+  return makeV9Signal({
     kind: "centralized-mint",
-    severity: "high",
     reason: "Economically effective minting is unbounded or compromised.",
     economicLossScope: "global-claim",
-    responsibility: "measured-adverse",
     failureDomainKeys: ["mint-control:asset:probe"],
-    evidence: [],
     ...overrides,
-  };
+  });
 }
 
 function input(signals: readonly V9StructuralSignal[]): V9ScoringInput {
-  return {
+  return makeV9ScoringInput({
     assetId: "hard-cap-risk-probe",
     pillars: { backing: 90, exit: 90, control: 55 },
-    pegApplicable: true,
-    pegScore: 100,
-    evidenceLevel: "strong",
     trackRecordMonths: 120,
-    activeDepegBps: null,
-    parentRequired: false,
-    parentScore: null,
     structuralSignals: [...signals],
-    unresolved: [],
-  };
+  });
 }
 
 const MARKER = {

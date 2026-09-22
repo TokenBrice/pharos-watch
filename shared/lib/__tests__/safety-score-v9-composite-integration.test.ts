@@ -1,43 +1,17 @@
 import { describe, expect, it } from "vitest";
-import type { V9ScoringInput, V9StructuralSignal } from "../../types/safety-score-v9";
+import type { V9ScoringInput } from "../../types/safety-score-v9";
 import { scoreV9Input, type V9AggregationStrategy } from "../safety-score-v9/formula";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
+import { makeV9ScoringInput, makeV9Signal } from "./safety-score-v9-score.test-support";
 
-function signal(overrides: Partial<V9StructuralSignal> = {}): V9StructuralSignal {
-  return {
-    kind: "critical-dependency",
-    severity: "high",
-    reason: "A reviewed deployment has bounded local exposure.",
-    materialSharePct: 50,
-    economicLossScope: "deployment",
-    exposureKey: "deployment:bounded",
-    riskEventKey: "event:bounded",
-    recoveryPath: "deployment-migration",
-    expectedRecoverySec: null,
-    lossAbsorptionPct: 0,
-    evidenceConfidence: "high",
-    responsibility: "measured-adverse",
-    failureDomainKeys: ["chain:bounded"],
-    evidence: [],
-    ...overrides,
-  };
-}
+const signal = makeV9Signal;
 
 function input(overrides: Partial<V9ScoringInput> = {}): V9ScoringInput {
-  return {
+  return makeV9ScoringInput({
     assetId: "composite-integration",
     pillars: { backing: 80, exit: 80, control: 80 },
-    pegScore: 100,
-    pegApplicable: true,
-    evidenceLevel: "strong",
-    trackRecordMonths: 48,
-    activeDepegBps: null,
-    parentRequired: false,
-    parentScore: null,
-    structuralSignals: [],
-    unresolved: [],
     ...overrides,
-  };
+  });
 }
 
 describe("Safety Score v9 continuous composite and scoped risk integration", () => {

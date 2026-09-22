@@ -16,7 +16,10 @@ import { V9_LEGACY_RESPONSIBILITY_BY_REASON } from "../safety-score-v9/facts";
 import { V9_CANDIDATE_POLICY_V1, resolveV9ReasonPolicy } from "../safety-score-v9/policy";
 import { scoreV9GoldenScenario } from "../safety-score-v9/scenario-evaluator";
 import { scoreCompiledAssetSet } from "../safety-score-v9-research";
-import { makeCompiledV9AssetInput } from "./safety-score-v9-score.test-support";
+import {
+  makeCompiledV9AssetInput,
+  makeV9ScoringInput,
+} from "./safety-score-v9-score.test-support";
 import { compileNativeV3FactSet, coreFixture, evaluateV9FactSet } from "./safety-score-v9-facts.fixture-support";
 
 /**
@@ -37,20 +40,11 @@ import { compileNativeV3FactSet, coreFixture, evaluateV9FactSet } from "./safety
  */
 
 function scoringInput(overrides: Partial<V9ScoringInput> = {}): V9ScoringInput {
-  return {
+  return makeV9ScoringInput({
     assetId: "invariant-fixture",
     pillars: { backing: 90, exit: 90, control: 90 },
-    pegScore: 100,
-    pegApplicable: true,
-    evidenceLevel: "strong",
-    trackRecordMonths: 48,
-    activeDepegBps: null,
-    parentRequired: false,
-    parentScore: null,
-    structuralSignals: [],
-    unresolved: [],
     ...overrides,
-  };
+  });
 }
 
 function boundedCeilingFact(code: string): V9UnresolvedFact {

@@ -7,6 +7,7 @@ import { RedemptionBackstopConfigSchema } from "@shared/lib/redemption-backstop-
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   REDEMPTION_BACKSTOP_CONFIGS,
+  getRedemptionBackstopConfig,
   resolveReviewedRedemptionSettlement,
 } from "@shared/lib/redemption-backstops";
 import type {
@@ -31,6 +32,12 @@ describe("redemption backstop config consistency", () => {
     });
 
     expect(violations).toEqual([]);
+  });
+
+  it("retrieves every config by its own registry key", () => {
+    for (const [id, config] of entries) {
+      expect(getRedemptionBackstopConfig(id), id).toBe(config);
+    }
   });
 
   it("uses every reviewed settlement override as the canonical public model", () => {
@@ -163,6 +170,18 @@ describe("redemption backstop config consistency", () => {
           c.capacityModel.confidence === "documented-bound" && (!c.reviewedAt || !c.docs || c.docs.length === 0),
       )
       .map(([id, c]) => `${id}: reviewedAt=${c.reviewedAt ?? "missing"} docs=${c.docs?.length ?? 0}`);
+    expect(violations).toEqual([]);
+  });
+
+  it("uses labeled HTTPS evidence", () => {
+    const violations = entries.flatMap(([id, config]) =>
+      (config.docs ?? []).flatMap((doc) => {
+        const issues: string[] = [];
+        if (doc.label.trim() === "") issues.push(`${id}: empty label`);
+        if (new URL(doc.url).protocol !== "https:") issues.push(`${id}: non-HTTPS URL`);
+        return issues;
+      }),
+    );
     expect(violations).toEqual([]);
   });
 
