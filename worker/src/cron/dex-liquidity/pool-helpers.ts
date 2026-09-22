@@ -9,7 +9,6 @@ import {
 import {
   canonicalExitRouteAssetKey,
   canonicalExitRouteChain,
-  canonicalExitRouteScopedId,
 } from "@shared/lib/exit-route-identity";
 import type { ContractDeployment, StablecoinMeta } from "@shared/types/core";
 import {

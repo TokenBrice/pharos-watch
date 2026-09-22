@@ -1,7 +1,6 @@
 import {
   decodeFunctionData,
   decodeFunctionResult,
-  encodeFunctionData,
   parseAbi,
 } from "viem/utils";
 
@@ -18,7 +17,6 @@ import {
   CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS,
   CURVE_STABLESWAP_NG_ETHERLINK_FACTORY,
 } from "@shared/lib/measured-execution-deployment-policies";
-import type { ChainRpcConfig } from "../../lib/chain-registry";
 import {
   fetchEvmBlockHeader,
   fetchEvmCallHexAtBlock,
@@ -27,7 +25,6 @@ import {
 } from "../../lib/evm-rpc";
 import type {
   DexMeasuredExecutionBudgetStopReason,
-  DexMeasuredExecutionRpcBudget,
 } from "./profiles";
 import {
   canonicalEvmAddress,

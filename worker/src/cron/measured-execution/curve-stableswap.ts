@@ -1,7 +1,6 @@
 import {
   decodeFunctionData,
   decodeFunctionResult,
-  encodeFunctionData,
   parseAbi,
 } from "viem/utils";
 

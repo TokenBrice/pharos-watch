@@ -4,7 +4,6 @@ import { ArrowUpRight } from "lucide-react";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { MECHANISM_ARCHETYPE_LABELS } from "@shared/lib/classification";
 import { buildPageMetadata } from "@/lib/page-metadata";
-import { cn } from "@/lib/utils";
 import { SectionHeading, SectionKicker } from "../_shared/section-primitives";
 import { LearnHero } from "../_shared/learn-hero";
 import { CASE_STUDY_LIST, CASE_STUDY_OUTCOME_COUNTS } from "@/lib/case-studies";

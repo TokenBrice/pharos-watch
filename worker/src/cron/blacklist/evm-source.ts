@@ -458,7 +458,7 @@ export async function fetchEvmEventsIncremental(
       if (rpcTarget) {
         chainHead = rpcTarget.chainHead;
         usedRpcLogs = true;
-        let rpcWindow = await fetchRpcWindow(rpcTarget, rpcTopicHashes);
+        const rpcWindow = await fetchRpcWindow(rpcTarget, rpcTopicHashes);
         safeHead = rpcWindow.safeHead;
         let scanToBlock = rpcWindow.scanToBlock;
         let fetchedLogs = rpcWindow.logs;

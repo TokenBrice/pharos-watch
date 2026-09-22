@@ -3,7 +3,6 @@ import {
   schedulePerChatBatches,
   sendToChat,
   type BatchMessage,
-  type BatchResult,
   type PreSendBatchResult,
 } from "../../lib/telegram";
 import { SNOOZE_REPLY_MARKUP } from "../../lib/telegram/alerts";

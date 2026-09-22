@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
 import { AdminActionExecutionDialog } from "@/components/status/admin-action-execution-dialog";
 import type {
   AdminActionDialogRequest,
@@ -77,17 +77,14 @@ export function AdminActionExecutionProvider({
     setDialogRequest({ ...request, dialogId: nextDialogIdRef.current });
   }, []);
 
-  const value = useMemo<AdminActionExecutionContextValue>(
-    () => ({
-      current: controller.current,
-      executions: controller.executions,
-      execute: controller.runCurrentOrCreate,
-      retry: controller.retrySame,
-      startNew: controller.startNew,
-      openDialog,
-    }),
-    [controller, openDialog],
-  );
+  const value: AdminActionExecutionContextValue = {
+    current: controller.current,
+    executions: controller.executions,
+    execute: controller.runCurrentOrCreate,
+    retry: controller.retrySame,
+    startNew: controller.startNew,
+    openDialog,
+  };
 
   return (
     <AdminActionExecutionContext.Provider value={value}>

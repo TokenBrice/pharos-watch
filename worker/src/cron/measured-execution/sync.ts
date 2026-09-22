@@ -1,5 +1,4 @@
 import {
-  DEX_MEASURED_ADAPTER_PROFILE_IDS,
   getDexMeasuredExecutionProbeNotionals,
   validateDexMeasuredExecutionProfile,
   type DexMeasuredExecutionPoolBindingProof,

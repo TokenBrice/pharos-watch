@@ -13,7 +13,7 @@ import { buildTelegramActionContext, makeActionRunner } from "./action-runner";
 import { createTelegramWebhookIntent } from "../telegram-webhook-effect-fence";
 
 export const handleSet: WebhookCommandHandler = async (ctx, args) => {
-  const { db, chatId, username, actorUserId } = ctx;
+  const { db, chatId, username } = ctx;
   const parsed = parseSetCommand(args);
   if ("error" in parsed) {
     await ctx.replyToChat(escapeHtml(parsed.error));

@@ -18,7 +18,6 @@ import type { ChainRpcConfig } from "../../lib/chain-registry";
 import {
   fetchEvmCodeAtBlock,
   fetchEvmMulticall3Aggregate3AtBlock,
-  type EvmMulticall3Call,
   type EvmMulticall3Result,
 } from "../../lib/evm-rpc";
 import {

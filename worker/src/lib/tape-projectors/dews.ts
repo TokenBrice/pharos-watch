@@ -35,7 +35,6 @@ import {
   DEFAULT_BATCH_LIMIT,
   fetchRowsWithTieExpansion,
   finalizeProjectorBatch,
-  resolveProjectorOptions,
   type ProjectorOptions,
   type ProjectorResult,
 } from "./types";

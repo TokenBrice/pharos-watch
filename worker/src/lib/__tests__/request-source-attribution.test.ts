@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   REQUEST_ATTRIBUTION_PRUNE_INTERVAL_SEC,
-  REQUEST_ATTRIBUTION_RETENTION_DAYS,
   classifyBrowserRequestConsumer,
   isEnvFlagEnabled,
   resolveApiRequestRouteMetric,

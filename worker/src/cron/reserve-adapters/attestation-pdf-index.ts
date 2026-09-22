@@ -45,7 +45,6 @@ function buildNeutralHtmlHeaders(): HeadersInit {
 }
 
 async function fetchAttestationIndexHtml(
-  config: LiveReservesConfig,
   inputUrl: string,
   signal: AbortSignal,
   ctx?: AdapterContext,
@@ -390,7 +389,7 @@ export async function fetchAttestationPdfIndexReserves(
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireHtmlInput(config.inputs.primary, ADAPTER_NAME);
-  const html = await fetchAttestationIndexHtml(config, input.url, signal, ctx);
+  const html = await fetchAttestationIndexHtml(input.url, signal, ctx);
   return adaptAttestationPdfIndex(
     html,
     parseLiveReserveAdapterParams("attestation-pdf-index", config.params),

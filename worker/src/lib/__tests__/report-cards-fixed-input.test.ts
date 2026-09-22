@@ -4,7 +4,6 @@ import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import {
   computeDexLiquidityPayloadFingerprint,
   computeRedemptionPayloadFingerprint,
-  computeReportCardsRegistryFingerprint,
   normalizeFixedRedemptionBackstopMap,
   normalizeReportCardsFixedInputMethodologyVersions,
   projectReportCardsFixedInputMethodologyVersions,

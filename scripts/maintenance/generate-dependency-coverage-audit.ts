@@ -35,14 +35,12 @@ import {
   formatUsd,
   isRecord,
   loadCoverageAuditSiteDataInputs,
-  numberValue,
   parseCoverageAuditCliArgs,
   readJsonFile,
   readRequiredJsonFile,
   resolveGeneratedAt,
   runCoverageAuditCli,
   sortByMarketCapOrRank,
-  stringValue,
 } from "../lib/coverage-audit-cli";
 import { runDirectCli } from "../lib/cli-args.mjs";
 import { renderMarkdownRows, type MarkdownAlignment } from "../lib/markdown-report";
