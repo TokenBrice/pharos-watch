@@ -21,7 +21,11 @@ import {
   pruneOldDexLiquidityGenerations,
   writeHistoricalSnapshots,
 } from "../dex-liquidity/persistence";
-import { makeFullScoreResult } from "./dex-liquidity-persistence.test-support";
+import {
+  makeDexRouteObservation,
+  makeDexRouteObservationCoverage,
+  makeFullScoreResult,
+} from "./dex-liquidity-persistence.test-support";
 import type { DexDeploymentCensusRow } from "../dex-liquidity/deployment-census-coverage";
 import type { FullScoreResult } from "../dex-liquidity/types";
 
@@ -631,49 +635,23 @@ describe("dex-liquidity persistence", () => {
 
   it("uses a held route set for both current and daily history rows", async () => {
     const nowSec = 1_800_000_000;
-    const coverage = {
-      status: "populated" as const,
-      capabilityMatrixVersion: "p4a.9",
-      retainedPoolCount: 1,
-      observationCount: 1,
-      scoreEligibleObservationCount: 1,
-      scoreEligiblePoolCount: 1,
-      scoreEligibleCapabilityPoolCount: 1,
-      unsupportedPoolCount: 0,
-      evidenceCounts: { "reserve-based-amm-simulation": 1 },
-      unsupportedReasons: {},
-    };
-    const observation = (routeId: string, executableUsd: number, observedAt: number) => ({
-      routeId,
-      routeFamily: "dex-amm" as const,
-      scope: {
-        kind: "chain-contract" as const,
+    const coverage = makeDexRouteObservationCoverage();
+    const previousObservation = makeDexRouteObservation(
+      "dex:usdt:curve:deep",
+      24_000_000,
+      nowSec - 60,
+      {
         chain: "ethereum",
-        contractOrPoolId: routeId,
-        protocol: "curve",
+        commonModeKeys: ["pool:dex:usdt:curve:deep"],
       },
-      requestedNotionalUsd: 25_000_000,
-      settlementHorizonSec: 300,
-      maxCostBps: 200,
-      executableUsd,
-      completionRatio: executableUsd / 25_000_000,
-      output: { kind: "tracked-stablecoin" as const, trackedAssetIds: ["usdc-circle"] },
-      evidenceKind: "reserve-based-amm-simulation" as const,
-      confidence: "high" as const,
-      scoreEligible: true,
-      observedAt,
-      freshnessSeconds: 0,
-      commonModeKeys: [`pool:${routeId}`],
-      capacityCurve: [{
-        requestedNotionalUsd: 25_000_000,
-        maxCostBps: 200,
-        executableUsd,
-        completionRatio: executableUsd / 25_000_000,
-      }],
-    });
-    const previousObservation = observation("dex:usdt:curve:deep", 24_000_000, nowSec - 60);
+    );
     const candidate = Object.assign(makeFullScoreResult(), {
-      exitRouteObservations: [observation("dex:usdt:curve:thin", 1_000, nowSec)],
+      exitRouteObservations: [
+        makeDexRouteObservation("dex:usdt:curve:thin", 1_000, nowSec, {
+          chain: "ethereum",
+          commonModeKeys: ["pool:dex:usdt:curve:thin"],
+        }),
+      ],
       exitRouteObservationCoverage: coverage,
     });
     const scoreMap = new Map([["usdt-tether", candidate]]);

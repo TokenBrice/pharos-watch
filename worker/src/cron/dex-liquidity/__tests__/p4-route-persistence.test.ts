@@ -3,38 +3,14 @@ import {
   buildDexScoreDetailsJson,
   selectStillFreshDexRouteSetHold,
 } from "../persistence";
-import type { FullScoreResult } from "../types";
-
-function scoreResult(): FullScoreResult {
-  return {
-    tvl: 1_000_000,
-    effectiveTvl: 900_000,
-    vol24h: 100_000,
-    score: 42,
-    hhi: 1,
-    durability: 50,
-    components: {
-      tvlDepth: 10,
-      volumeActivity: 20,
-      poolQuality: 30,
-      durability: 40,
-      pairDiversity: 50,
-    },
-    weightedBalanceRatio: null,
-    organicFrac: null,
-    avgStress: null,
-    lockedLiqPct: null,
-    coverageClass: "primary",
-    coverageConfidence: 0.8,
-    sourceMix: { cg_tickers: { poolCount: 1, tvlUsd: 1_000_000 } },
-    balanceMeasuredTvlUsd: 0,
-    organicMeasuredTvlUsd: 0,
-  };
-}
+import {
+  makeDexRouteHoldFixture,
+  makeP4ScoreResult,
+} from "../../__tests__/dex-liquidity-persistence.test-support";
 
 describe("P4 route observation persistence envelope", () => {
   it("preserves the legacy score-component object when route fields are absent", () => {
-    expect(JSON.parse(buildDexScoreDetailsJson(scoreResult()))).toEqual({
+    expect(JSON.parse(buildDexScoreDetailsJson(makeP4ScoreResult()))).toEqual({
       tvlDepth: 10,
       volumeActivity: 20,
       poolQuality: 30,
@@ -44,7 +20,7 @@ describe("P4 route observation persistence envelope", () => {
   });
 
   it("adds observations without replacing legacy score component keys", () => {
-    const result = Object.assign(scoreResult(), {
+    const result = Object.assign(makeP4ScoreResult(), {
       exitRouteObservations: [
         {
           routeId: "dex:usdc:cg-tickers:coinbase",
@@ -95,72 +71,9 @@ describe("P4 route observation persistence envelope", () => {
     });
   });
 
-  function routeHoldFixture() {
-    const observation = (
-      routeId: string,
-      executableUsd: number,
-      observedAt: number,
-    ) => ({
-      routeId,
-      routeFamily: "dex-amm" as const,
-      scope: {
-        kind: "chain-contract" as const,
-        chain: "Ethereum",
-        contractOrPoolId: routeId,
-        protocol: "curve",
-      },
-      requestedNotionalUsd: 25_000_000,
-      settlementHorizonSec: 300,
-      maxCostBps: 200,
-      executableUsd,
-      completionRatio: executableUsd / 25_000_000,
-      output: { kind: "tracked-stablecoin" as const, trackedAssetIds: ["usdc-circle"] },
-      evidenceKind: "reserve-based-amm-simulation" as const,
-      confidence: "high" as const,
-      scoreEligible: true,
-      observedAt,
-      freshnessSeconds: 0,
-      commonModeKeys: [`pool:${routeId}`, "chain:ethereum", "protocol:curve"],
-      capacityCurve: [{
-        requestedNotionalUsd: 25_000_000,
-        maxCostBps: 200,
-        executableUsd,
-        completionRatio: executableUsd / 25_000_000,
-      }],
-    });
-    const coverage = {
-      status: "populated" as const,
-      capabilityMatrixVersion: "p4a.9",
-      retainedPoolCount: 1,
-      observationCount: 1,
-      scoreEligibleObservationCount: 1,
-      scoreEligiblePoolCount: 1,
-      scoreEligibleCapabilityPoolCount: 1,
-      unsupportedPoolCount: 0,
-      evidenceCounts: { "reserve-based-amm-simulation": 1 },
-      unsupportedReasons: {},
-    };
-    const nowSec = 1_800_000_000;
-    const previousObservation = observation(
-      "dex:usdt:curve:deep",
-      24_600_000,
-      nowSec - 1_800,
-    );
-    const candidate = Object.assign(scoreResult(), {
-      exitRouteObservations: [
-        observation("dex:usdt:sunswap:thin", 1_000, nowSec),
-      ],
-      exitRouteObservationCoverage: coverage,
-    });
-    const previousRaw = JSON.stringify({
-      exitRouteObservations: [previousObservation],
-      exitRouteObservationCoverage: coverage,
-    });
-    return { observation, coverage, nowSec, previousObservation, candidate, previousRaw };
-  }
 
   it("preserves a still-fresh route set for one asset after unconfirmed capacity churn", () => {
-    const { candidate, previousRaw, nowSec, previousObservation, coverage } = routeHoldFixture();
+    const { candidate, previousRaw, nowSec, previousObservation, coverage } = makeDexRouteHoldFixture();
 
     expect(
       selectStillFreshDexRouteSetHold(candidate, previousRaw, nowSec),
@@ -185,13 +98,13 @@ describe("P4 route observation persistence envelope", () => {
   });
 
   it("does not retain falling capacity when route identities are unchanged", () => {
-    const { candidate, previousObservation, previousRaw, nowSec } = routeHoldFixture();
+    const { candidate, previousObservation, previousRaw, nowSec } = makeDexRouteHoldFixture();
     candidate.exitRouteObservations[0].routeId = previousObservation.routeId;
     expect(selectStillFreshDexRouteSetHold(candidate, previousRaw, nowSec)).toBeNull();
   });
 
   it("fails closed for unavailable or invalid previous sets and empty candidates", () => {
-    const { candidate, previousRaw, nowSec } = routeHoldFixture();
+    const { candidate, previousRaw, nowSec } = makeDexRouteHoldFixture();
     for (const raw of [null, "{", "[]", JSON.stringify({
       ...JSON.parse(previousRaw), exitRouteObservations: [{ routeId: "invalid" }],
     }), JSON.stringify({ ...JSON.parse(previousRaw), exitRouteObservations: [] })]) {
@@ -202,7 +115,7 @@ describe("P4 route observation persistence envelope", () => {
   });
 
   it("admits the exact freshness boundary but rejects expired or future observations", () => {
-    const { candidate, previousObservation, coverage, nowSec } = routeHoldFixture();
+    const { candidate, previousObservation, coverage, nowSec } = makeDexRouteHoldFixture();
     for (const [age, held] of [[3_600, true], [3_601, false], [-1, false]] as const) {
       const raw = JSON.stringify({
         exitRouteObservations: [{ ...previousObservation, observedAt: nowSec - age }],
@@ -213,7 +126,7 @@ describe("P4 route observation persistence envelope", () => {
   });
 
   it("requires minimum prior capacity and includes exactly half candidate capacity", () => {
-    const { observation, candidate, coverage, nowSec } = routeHoldFixture();
+    const { observation, candidate, coverage, nowSec } = makeDexRouteHoldFixture();
     for (const [prior, next, held] of [
       [99_999, 1_000, false], [100_000, 50_000, true], [100_000, 50_001, false],
     ] as const) {
@@ -227,7 +140,7 @@ describe("P4 route observation persistence envelope", () => {
   });
 
   it("uses only the 25M/200bps curve point rather than headline capacity", () => {
-    const { candidate, previousObservation, coverage, nowSec } = routeHoldFixture();
+    const { candidate, previousObservation, coverage, nowSec } = makeDexRouteHoldFixture();
     previousObservation.executableUsd = 1;
     candidate.exitRouteObservations[0].executableUsd = 25_000_000;
     const raw = () => JSON.stringify({
