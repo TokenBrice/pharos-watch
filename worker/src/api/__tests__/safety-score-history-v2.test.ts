@@ -161,6 +161,17 @@ describe("handleSafetyScoreHistoryV2", () => {
     });
   });
 
+  it("does not disguise an unrelated read failure as the all-malformed 503", async () => {
+    const db = mockD1([
+      { match: "FROM safety_score_history_v2", rows: [], throwError: new Error("D1_ERROR: internal error") },
+    ]);
+
+    await expect(handleSafetyScoreHistoryV2(
+      db,
+      new URL("https://x/api/safety-score-history-v2?stablecoin=usdc-circle"),
+    )).rejects.toThrow("D1_ERROR");
+  });
+
   it("returns an empty history with a current freshness fallback", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-07-15T12:00:00Z"));
