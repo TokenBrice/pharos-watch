@@ -129,7 +129,6 @@ export const CLI_ARGV_POLICY = Object.freeze({
     exempt("scripts/maintenance/build-safety-score-map.ts", "build"),
     exempt("scripts/maintenance/build-world-map-svg.ts", "build"),
     exempt("scripts/maintenance/capture-d1-insights.mjs", "build"),
-    exempt("scripts/maintenance/check-safety-score-v9-composite-ceiling.ts", "read-only"),
     exempt("scripts/maintenance/generate-agents-doc.ts", "build"),
     exempt("scripts/maintenance/generate-api-reference.ts", "build"),
     exempt("scripts/maintenance/generate-bridge-route-coverage-audit.ts", "build"),

@@ -28,7 +28,7 @@ V9 evaluates three pillars:
 | Exit | <!-- GENERATED-START: report-cards-exit-pillar-weight -->35%<!-- GENERATED-END: report-cards-exit-pillar-weight --> | Same-notional executable capacity, cost, settlement, confidence, independent backup credit, and stress horizon |
 | Economic Control | <!-- GENERATED-START: report-cards-control-pillar-weight -->25%<!-- GENERATED-END: report-cards-control-pillar-weight --> | Mint, upgrade, oracle, bridge, and other binding control paths |
 
-The weights allocate bounded headroom; they are not an unrestricted weighted average. The evaluator applies evidence ceilings, peg behavior, track record, dependencies, wrapper-local risk, structural caps, and causally attributed danger after pillar evaluation.
+The weights allocate bounded headroom; they are not an unrestricted weighted average. The evaluator applies evidence ceilings, peg behavior, track record, dependencies, wrapper-local risk, structural caps, and causally attributed danger after pillar evaluation. No separate composite ceiling is applied today.
 
 Missing evidence is classified by reason and ownership. A bounded documentation or integration gap can remain rateable under an explicit ceiling. An unbounded required fact returns NR. F is reserved for causally attributed measured danger rather than ordinary uncertainty.
 
@@ -120,7 +120,7 @@ Serial dependencies remain binding because the child cannot diversify away the p
 
 Wrapper allocation reviews are fixed-block, expiry-bounded facts rather than live compilation reads. The curated row records the allocation calls and factual posture (fully on-chain custody, local leverage band, and capital-use class); the fact producer maps those fields onto the existing wrapper ladder. Fully on-chain allocators have no applicable off-chain custody/escrow fact, while their lending, strategy reuse, or loss-absorption exposure remains independently assessed. Direct serial wrappers keep parent custody and reuse in the parent dependency instead of duplicating it locally.
 
-Wrapper-local leverage signals shared by distinct reserve slices are emitted once per finding, while the assessment still considers every observed leverage factor and retains the worst risk.
+Wrapper-local leverage signals shared by distinct reserve slices are emitted once per finding. The closed reserve-risk vocabulary recognizes the `leverage` keyword and maps it to the existing high assessment; leverage bands from reviewed allocation facts remain unchanged.
 
 Reviewed incidents use a domain-routed contract rather than a generic penalty. Control, wrapper-local, operational, and peg incidents enter the existing component that owns the risk; root-claim, deployment, integration-only, and holder-exit scopes prevent an event from being charged beyond the liabilities it affected. Active, mitigated, and resolved states require dated remediation evidence, and repeated evidence cannot charge the same domain fact twice. Incidents therefore remain part of the three-pillar model rather than becoming a fourth scoring dimension.
 
