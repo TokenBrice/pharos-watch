@@ -1,9 +1,7 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 
-import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
-import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
-import { toErrorMessage } from "@shared/lib/error-utils";
-import { deleteCapped } from "../shared/capped-delete";
+import { throwIfAborted } from "../../lib/abort";
+import { runCappedPruneFamily } from "../shared/capped-delete";
 import { tapeProjectorCursorKey } from "../../lib/tape-event-store";
 
 export const MINT_BURN_EVENT_RETENTION_SEC = 8 * DAY_SECONDS;
@@ -37,6 +35,65 @@ const MINT_BURN_TAPE_ELIGIBLE_EVENT_SQL = `event.timestamp < ?
       FROM cache
      WHERE key = ?
   ), 0)`;
+
+/**
+ * Repair-eligible event: retention-eligible, its hour carries no aggregate row,
+ * and every sibling event in that hour already has a final price. Bind order:
+ * cutoff, MINT_BURN_TAPE_CURSOR_KEY. Shared by the repair statement and the
+ * oldest-repairable probe so the two can never disagree about eligibility.
+ */
+const MINT_BURN_REPAIRABLE_EVENT_SQL = `${MINT_BURN_TAPE_ELIGIBLE_EVENT_SQL}
+  AND NOT EXISTS (
+    SELECT 1
+      FROM mint_burn_hourly hourly
+     WHERE hourly.stablecoin_id = event.stablecoin_id
+       AND hourly.chain_id = event.chain_id
+       AND hourly.hour_ts = (event.timestamp / 3600) * 3600
+  )
+  AND NOT EXISTS (
+    SELECT 1
+      FROM mint_burn_events sibling
+     WHERE sibling.stablecoin_id = event.stablecoin_id
+       AND sibling.chain_id = event.chain_id
+       AND sibling.timestamp >= (event.timestamp / 3600) * 3600
+       AND sibling.timestamp < ((event.timestamp / 3600) * 3600) + 3600
+       AND (
+         (
+           sibling.amount_usd IS NULL
+           AND COALESCE(sibling.price_repair_status, '') NOT IN ('recovered', 'irreducible')
+         )
+         OR sibling.price_repair_status = 'pending_aggregate'
+       )
+  )`;
+
+/**
+ * Deletable event: retention-eligible and its hour is already aggregated. Bind
+ * order: cutoff, MINT_BURN_TAPE_CURSOR_KEY. Shared by the delete and the
+ * oldest-eligible backlog probe.
+ */
+const MINT_BURN_AGGREGATED_EVENT_SQL = `${MINT_BURN_TAPE_ELIGIBLE_EVENT_SQL}
+  AND EXISTS (
+    SELECT 1
+      FROM mint_burn_hourly hourly
+     WHERE hourly.stablecoin_id = event.stablecoin_id
+       AND hourly.chain_id = event.chain_id
+       AND hourly.hour_ts = (event.timestamp / 3600) * 3600
+  )`;
+
+/**
+ * Deletable hourly row: past its own retention window with no surviving source
+ * event in the hour. Bind order: cutoff. Shared by the delete and the
+ * oldest-eligible backlog probe.
+ */
+const MINT_BURN_DRAINED_HOURLY_SQL = `hourly.hour_ts < ?
+  AND NOT EXISTS (
+    SELECT 1
+      FROM mint_burn_events event
+     WHERE event.stablecoin_id = hourly.stablecoin_id
+       AND event.chain_id = hourly.chain_id
+       AND event.timestamp >= hourly.hour_ts
+       AND event.timestamp < hourly.hour_ts + 3600
+  )`;
 
 export interface MintBurnRetentionFamilyResult {
   cutoff: number;
@@ -85,23 +142,13 @@ async function repairMissingHourlyRows(
   runLimit: number,
   signal?: AbortSignal,
 ): Promise<MintBurnAggregationRepairResult> {
-  const startedAtMs = Date.now();
   const cutoff = nowSec - MINT_BURN_EVENT_RETENTION_SEC;
-  const result: MintBurnAggregationRepairResult = {
-    cutoff,
-    repairedRows: 0,
-    oldestRepairableAt: null,
-    cappedAtLimit: false,
-    durationMs: 0,
-    error: null,
-  };
-
-  try {
-    throwIfAborted(signal);
-    const repaired = await runWithOverloadRetry(
-      () => db
-        .prepare(
-          `/* pharos:mint-burn:aggregation-evidence-repair */
+  const family = await runCappedPruneFamily({
+    db,
+    signal,
+    statements: {
+      repair: {
+        sql: `/* pharos:mint-burn:aggregation-evidence-repair */
            WITH oldest_candidates AS MATERIALIZED (
              SELECT
                event.stablecoin_id,
@@ -109,29 +156,7 @@ async function repairMissingHourlyRows(
                (event.timestamp / 3600) * 3600 AS hour_ts,
                event.timestamp
              FROM mint_burn_events event INDEXED BY idx_mbe2_ts
-             WHERE ${MINT_BURN_TAPE_ELIGIBLE_EVENT_SQL}
-               AND NOT EXISTS (
-                 SELECT 1
-                   FROM mint_burn_hourly hourly
-                  WHERE hourly.stablecoin_id = event.stablecoin_id
-                    AND hourly.chain_id = event.chain_id
-                    AND hourly.hour_ts = (event.timestamp / 3600) * 3600
-               )
-               AND NOT EXISTS (
-                 SELECT 1
-                   FROM mint_burn_events sibling
-                  WHERE sibling.stablecoin_id = event.stablecoin_id
-                    AND sibling.chain_id = event.chain_id
-                    AND sibling.timestamp >= (event.timestamp / 3600) * 3600
-                    AND sibling.timestamp < ((event.timestamp / 3600) * 3600) + 3600
-                    AND (
-                      (
-                        sibling.amount_usd IS NULL
-                        AND COALESCE(sibling.price_repair_status, '') NOT IN ('recovered', 'irreducible')
-                      )
-                      OR sibling.price_repair_status = 'pending_aggregate'
-                    )
-               )
+             WHERE ${MINT_BURN_REPAIRABLE_EVENT_SQL}
              ORDER BY event.timestamp ASC
              LIMIT ?
            ), candidate_hours AS MATERIALIZED (
@@ -164,60 +189,33 @@ async function repairMissingHourlyRows(
               AND event.timestamp >= candidate.hour_ts
               AND event.timestamp < candidate.hour_ts + 3600
             GROUP BY event.stablecoin_id, event.chain_id, candidate.hour_ts`,
-        )
-        .bind(cutoff, MINT_BURN_TAPE_CURSOR_KEY, candidateEventLimit, runLimit)
-        .run(),
-      3,
-      signal,
-    );
-    result.repairedRows = Number(repaired.meta?.changes ?? 0);
-
-    const oldestRepairable = await runWithOverloadRetry(
-      () => db
-        .prepare(
-          `/* pharos:mint-burn:aggregation-evidence-oldest-repairable */
+        bindsForLimit: (limit) => [cutoff, MINT_BURN_TAPE_CURSOR_KEY, candidateEventLimit, limit],
+        batchLimit: runLimit,
+        runLimit,
+      },
+    },
+    probes: {
+      oldestRepairable: {
+        sql: `/* pharos:mint-burn:aggregation-evidence-oldest-repairable */
            SELECT event.timestamp AS oldest_repairable_at
              FROM mint_burn_events event INDEXED BY idx_mbe2_ts
-            WHERE ${MINT_BURN_TAPE_ELIGIBLE_EVENT_SQL}
-              AND NOT EXISTS (
-                SELECT 1
-                  FROM mint_burn_hourly hourly
-                 WHERE hourly.stablecoin_id = event.stablecoin_id
-                   AND hourly.chain_id = event.chain_id
-                   AND hourly.hour_ts = (event.timestamp / 3600) * 3600
-              )
-              AND NOT EXISTS (
-                SELECT 1
-                  FROM mint_burn_events sibling
-                 WHERE sibling.stablecoin_id = event.stablecoin_id
-                   AND sibling.chain_id = event.chain_id
-                   AND sibling.timestamp >= (event.timestamp / 3600) * 3600
-                   AND sibling.timestamp < ((event.timestamp / 3600) * 3600) + 3600
-                   AND (
-                     (
-                       sibling.amount_usd IS NULL
-                       AND COALESCE(sibling.price_repair_status, '') NOT IN ('recovered', 'irreducible')
-                     )
-                     OR sibling.price_repair_status = 'pending_aggregate'
-                   )
-              )
+            WHERE ${MINT_BURN_REPAIRABLE_EVENT_SQL}
             ORDER BY event.timestamp ASC
             LIMIT 1`,
-        )
-        .bind(cutoff, MINT_BURN_TAPE_CURSOR_KEY)
-        .first<{ oldest_repairable_at: number | null }>(),
-      3,
-      signal,
-    );
-    result.oldestRepairableAt = oldestRepairable?.oldest_repairable_at ?? null;
-    result.cappedAtLimit = result.oldestRepairableAt !== null;
-  } catch (error) {
-    rethrowIfAborted(error, signal);
-    result.error = toErrorMessage(error).slice(0, 500);
-  }
-
-  result.durationMs = Math.max(0, Date.now() - startedAtMs);
-  return result;
+        binds: [cutoff, MINT_BURN_TAPE_CURSOR_KEY],
+      },
+    },
+  });
+  const oldestRepairableAt = family.probes.oldestRepairable.oldest_repairable_at ?? null;
+  return {
+    cutoff,
+    repairedRows: family.changedRows,
+    oldestRepairableAt,
+    // A remaining repairable event means this run stopped at its own budget.
+    cappedAtLimit: oldestRepairableAt !== null,
+    durationMs: family.durationMs,
+    error: family.error,
+  };
 }
 
 async function pruneEventRows(
@@ -227,84 +225,48 @@ async function pruneEventRows(
   runLimit: number,
   signal?: AbortSignal,
 ): Promise<MintBurnRetentionFamilyResult> {
-  const startedAtMs = Date.now();
   const cutoff = nowSec - MINT_BURN_EVENT_RETENTION_SEC;
-  const result: MintBurnRetentionFamilyResult = {
-    cutoff,
-    deletedRows: 0,
-    oldestRemainingAt: null,
-    oldestEligibleAt: null,
-    cappedAtLimit: false,
-    durationMs: 0,
-    error: null,
-  };
-
-  try {
-    const deleted = await deleteCapped(
-      db,
-      `/* pharos:mint-burn:event-retention-delete */
+  const family = await runCappedPruneFamily({
+    db,
+    signal,
+    statements: {
+      events: {
+        sql: `/* pharos:mint-burn:event-retention-delete */
        DELETE FROM mint_burn_events
         WHERE id IN (
           SELECT event.id
             FROM mint_burn_events event
-           WHERE ${MINT_BURN_TAPE_ELIGIBLE_EVENT_SQL}
-             AND EXISTS (
-               SELECT 1
-                 FROM mint_burn_hourly hourly
-                WHERE hourly.stablecoin_id = event.stablecoin_id
-                  AND hourly.chain_id = event.chain_id
-                  AND hourly.hour_ts = (event.timestamp / 3600) * 3600
-             )
+           WHERE ${MINT_BURN_AGGREGATED_EVENT_SQL}
            ORDER BY event.timestamp ASC
            LIMIT ?
         )`,
-      (limit) => [cutoff, MINT_BURN_TAPE_CURSOR_KEY, limit],
-      batchLimit,
-      runLimit,
-      signal,
-    );
-    result.deletedRows = deleted.pruned;
-    result.cappedAtLimit = deleted.cappedAtLimit;
-
-    const oldest = await runWithOverloadRetry(
-      () => db
-        .prepare("SELECT MIN(timestamp) AS oldest_remaining_at FROM mint_burn_events")
-        .first<{ oldest_remaining_at: number | null }>(),
-      3,
-      signal,
-    );
-    result.oldestRemainingAt = oldest?.oldest_remaining_at ?? null;
-
-    const oldestEligible = await runWithOverloadRetry(
-      () => db
-        .prepare(
-          `/* pharos:mint-burn:event-retention-oldest-eligible */
+        bindsForLimit: (limit) => [cutoff, MINT_BURN_TAPE_CURSOR_KEY, limit],
+        batchLimit,
+        runLimit,
+      },
+    },
+    probes: {
+      oldestRemaining: { sql: "SELECT MIN(timestamp) AS oldest_remaining_at FROM mint_burn_events" },
+      oldestEligible: {
+        sql: `/* pharos:mint-burn:event-retention-oldest-eligible */
            SELECT event.timestamp AS oldest_eligible_at
              FROM mint_burn_events event
-            WHERE ${MINT_BURN_TAPE_ELIGIBLE_EVENT_SQL}
-              AND EXISTS (
-                SELECT 1
-                  FROM mint_burn_hourly hourly
-                 WHERE hourly.stablecoin_id = event.stablecoin_id
-                   AND hourly.chain_id = event.chain_id
-                   AND hourly.hour_ts = (event.timestamp / 3600) * 3600
-              )
+            WHERE ${MINT_BURN_AGGREGATED_EVENT_SQL}
             ORDER BY event.timestamp ASC
             LIMIT 1`,
-        )
-        .bind(cutoff, MINT_BURN_TAPE_CURSOR_KEY)
-        .first<{ oldest_eligible_at: number | null }>(),
-      3,
-      signal,
-    );
-    result.oldestEligibleAt = oldestEligible?.oldest_eligible_at ?? null;
-  } catch (error) {
-    rethrowIfAborted(error, signal);
-    result.error = toErrorMessage(error).slice(0, 500);
-  }
-
-  result.durationMs = Math.max(0, Date.now() - startedAtMs);
-  return result;
+        binds: [cutoff, MINT_BURN_TAPE_CURSOR_KEY],
+      },
+    },
+  });
+  return {
+    cutoff,
+    deletedRows: family.changedRows,
+    oldestRemainingAt: family.probes.oldestRemaining.oldest_remaining_at ?? null,
+    oldestEligibleAt: family.probes.oldestEligible.oldest_eligible_at ?? null,
+    cappedAtLimit: family.cappedAtLimit,
+    durationMs: family.durationMs,
+    error: family.error,
+  };
 }
 
 async function pruneHourlyRows(
@@ -314,85 +276,47 @@ async function pruneHourlyRows(
   runLimit: number,
   signal?: AbortSignal,
 ): Promise<MintBurnRetentionFamilyResult> {
-  const startedAtMs = Date.now();
   const cutoff = nowSec - MINT_BURN_HOURLY_RETENTION_SEC;
-  const result: MintBurnRetentionFamilyResult = {
-    cutoff,
-    deletedRows: 0,
-    oldestRemainingAt: null,
-    oldestEligibleAt: null,
-    cappedAtLimit: false,
-    durationMs: 0,
-    error: null,
-  };
-
-  try {
-    const deleted = await deleteCapped(
-      db,
-      `/* pharos:mint-burn:hourly-retention-delete */
+  const family = await runCappedPruneFamily({
+    db,
+    signal,
+    statements: {
+      hourly: {
+        sql: `/* pharos:mint-burn:hourly-retention-delete */
        DELETE FROM mint_burn_hourly
         WHERE rowid IN (
           SELECT hourly.rowid
             FROM mint_burn_hourly hourly
-           WHERE hourly.hour_ts < ?
-             AND NOT EXISTS (
-               SELECT 1
-                 FROM mint_burn_events event
-                WHERE event.stablecoin_id = hourly.stablecoin_id
-                  AND event.chain_id = hourly.chain_id
-                  AND event.timestamp >= hourly.hour_ts
-                  AND event.timestamp < hourly.hour_ts + 3600
-             )
+           WHERE ${MINT_BURN_DRAINED_HOURLY_SQL}
            ORDER BY hourly.hour_ts ASC
            LIMIT ?
         )`,
-      (limit) => [cutoff, limit],
-      batchLimit,
-      runLimit,
-      signal,
-    );
-    result.deletedRows = deleted.pruned;
-    result.cappedAtLimit = deleted.cappedAtLimit;
-
-    const oldest = await runWithOverloadRetry(
-      () => db
-        .prepare("SELECT MIN(hour_ts) AS oldest_remaining_at FROM mint_burn_hourly")
-        .first<{ oldest_remaining_at: number | null }>(),
-      3,
-      signal,
-    );
-    result.oldestRemainingAt = oldest?.oldest_remaining_at ?? null;
-
-    const oldestEligible = await runWithOverloadRetry(
-      () => db
-        .prepare(
-          `SELECT hourly.hour_ts AS oldest_eligible_at
+        bindsForLimit: (limit) => [cutoff, limit],
+        batchLimit,
+        runLimit,
+      },
+    },
+    probes: {
+      oldestRemaining: { sql: "SELECT MIN(hour_ts) AS oldest_remaining_at FROM mint_burn_hourly" },
+      oldestEligible: {
+        sql: `SELECT hourly.hour_ts AS oldest_eligible_at
              FROM mint_burn_hourly hourly
-            WHERE hourly.hour_ts < ?
-              AND NOT EXISTS (
-                SELECT 1
-                  FROM mint_burn_events event
-                 WHERE event.stablecoin_id = hourly.stablecoin_id
-                   AND event.chain_id = hourly.chain_id
-                   AND event.timestamp >= hourly.hour_ts
-                   AND event.timestamp < hourly.hour_ts + 3600
-              )
+            WHERE ${MINT_BURN_DRAINED_HOURLY_SQL}
             ORDER BY hourly.hour_ts ASC
             LIMIT 1`,
-        )
-        .bind(cutoff)
-        .first<{ oldest_eligible_at: number | null }>(),
-      3,
-      signal,
-    );
-    result.oldestEligibleAt = oldestEligible?.oldest_eligible_at ?? null;
-  } catch (error) {
-    rethrowIfAborted(error, signal);
-    result.error = toErrorMessage(error).slice(0, 500);
-  }
-
-  result.durationMs = Math.max(0, Date.now() - startedAtMs);
-  return result;
+        binds: [cutoff],
+      },
+    },
+  });
+  return {
+    cutoff,
+    deletedRows: family.changedRows,
+    oldestRemainingAt: family.probes.oldestRemaining.oldest_remaining_at ?? null,
+    oldestEligibleAt: family.probes.oldestEligible.oldest_eligible_at ?? null,
+    cappedAtLimit: family.cappedAtLimit,
+    durationMs: family.durationMs,
+    error: family.error,
+  };
 }
 
 /** @internal Exported for focused retention tests. */

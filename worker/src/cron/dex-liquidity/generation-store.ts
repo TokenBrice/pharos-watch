@@ -1,6 +1,7 @@
-import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
+import { rethrowIfAborted } from "../../lib/abort";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { toErrorMessage } from "@shared/lib/error-utils";
+import { runCappedPruneFamily } from "../shared/capped-delete";
 
 export interface DexGenerationStoreSpec<ChildRowsKey extends string = "deletedChildRows", ManifestRowsKey extends string = "deletedManifestRows"> {
   manifestTable: string;
@@ -89,92 +90,81 @@ export function createDexGenerationStore<ChildRowsKey extends string = "deletedC
     db: D1Database,
     input: { protectedGenerationId?: string; nowSec: number; signal?: AbortSignal },
   ): Promise<DexGenerationPruneResult<ChildRowsKey, ManifestRowsKey>> => {
-    const startedAtMs = Date.now();
     const cutoff = input.nowSec - spec.retentionSeconds;
     const childRowsKey = spec.resultKeys?.child ?? "deletedChildRows" as ChildRowsKey;
     const manifestRowsKey = spec.resultKeys?.manifest ?? "deletedManifestRows" as ManifestRowsKey;
-    let deletedChildRows = 0;
-    let deletedManifestRows = 0;
-    let oldestRemainingAt: number | null = null;
-    let pruneError: string | null = null;
-    try {
-      throwIfAborted(input.signal);
-      const protectedBinds = spec.prune.protectGenerationId
-        ? [input.protectedGenerationId]
-        : [];
-      if (spec.prune.protectGenerationId && input.protectedGenerationId == null) {
+    // Resolved per statement so a missing protected id is reported through the
+    // prune envelope like any other statement failure.
+    const protectedBinds = (): unknown[] => {
+      if (!spec.prune.protectGenerationId) return [];
+      if (input.protectedGenerationId == null) {
         throw new Error("DEX generation retention requires a protected generation id");
       }
-      const cutoffBinds = [cutoff];
-      const childCandidates = `
+      return [input.protectedGenerationId];
+    };
+    const childCandidates = `
     SELECT ${spec.columns.generationId}
      FROM ${spec.manifestTable}
      WHERE ${candidateWhere("", spec.prune.childExtraWhere)}
      ORDER BY ${spec.prune.childOrderBy} LIMIT ?`;
-      // SAFETY: spec.childTable/manifestTable/columns are closed literal unions from
-      // DexGenerationStoreSpec; callers cannot supply arbitrary SQL identifiers.
-      const childRows = await runWithOverloadRetry(
-        () => db.prepare(
-          `DELETE FROM ${spec.childTable}
-            WHERE ${spec.columns.generationId} IN (${childCandidates})`,
-        ).bind(...protectedBinds, ...cutoffBinds, spec.maxGenerationsPerRun).run(),
-        3,
-        input.signal,
-      );
-      deletedChildRows = Number(childRows.meta?.changes ?? 0);
-
-      // SAFETY: spec table/column fragments are closed literal unions and candidateWhere is internally constructed.
-      const manifestCandidates = `
+    // SAFETY: every identifier interpolated into these candidate subqueries comes from
+    // DexGenerationStoreSpec's closed literal unions; candidateWhere is internal.
+    const manifestCandidates = `
     SELECT candidate.rowid
       FROM ${spec.manifestTable} candidate
      WHERE ${candidateWhere("candidate", spec.prune.manifestExtraWhere?.("candidate"))}
      ORDER BY ${spec.prune.manifestOrderBy}
      LIMIT ?`;
-      // SAFETY: spec.manifestTable and column names are closed literal unions from
-      // DexGenerationStoreSpec; callers cannot supply arbitrary SQL identifiers.
-      const manifestRows = await runWithOverloadRetry(
-        () => db.prepare(
-          `DELETE FROM ${spec.manifestTable}
-            WHERE rowid IN (${manifestCandidates})`,
-        ).bind(...protectedBinds, ...cutoffBinds, spec.maxGenerationsPerRun).run(),
-        3,
-        input.signal,
-      );
-      deletedManifestRows = Number(manifestRows.meta?.changes ?? 0);
-
-      const oldestAlias = spec.prune.oldestRequiresChildRows ? "generation" : "";
-      const oldestTable = oldestAlias.length === 0
-        ? spec.manifestTable
-        : `${spec.manifestTable} ${oldestAlias}`;
-      const oldestColumn = qualifiedColumn(oldestAlias, spec.columns.createdAt);
-      const oldestWhere = spec.prune.oldestRequiresChildRows
-        ? ` WHERE EXISTS (
+    const oldestAlias = spec.prune.oldestRequiresChildRows ? "generation" : "";
+    const oldestTable = oldestAlias.length === 0
+      ? spec.manifestTable
+      : `${spec.manifestTable} ${oldestAlias}`;
+    const oldestColumn = qualifiedColumn(oldestAlias, spec.columns.createdAt);
+    const oldestWhere = spec.prune.oldestRequiresChildRows
+      ? ` WHERE EXISTS (
               SELECT 1 FROM ${spec.childTable} row
                WHERE row.${spec.columns.generationId} = ${qualifiedColumn(oldestAlias, spec.columns.generationId)}
             )`
-        : "";
-      // SAFETY: oldestTable/oldestColumn derive solely from DexGenerationStoreSpec's
-      // closed literal-union identifiers and a fixed alias; no caller-supplied SQL.
-      const oldest = await runWithOverloadRetry(
-        () => db
-          .prepare(`SELECT MIN(${oldestColumn}) AS oldest_remaining_at FROM ${oldestTable}${oldestWhere}`)
-          .first<{ oldest_remaining_at: number | null }>(),
-        3,
-        input.signal,
-      );
-      oldestRemainingAt = oldest?.oldest_remaining_at ?? null;
-    } catch (error) {
-      rethrowIfAborted(error, input.signal);
-      pruneError = toErrorMessage(error).slice(0, 500);
-    }
+      : "";
+    const family = await runCappedPruneFamily({
+      db,
+      signal: input.signal,
+      statements: {
+        // SAFETY: spec.childTable/manifestTable/columns are closed literal unions from
+        // DexGenerationStoreSpec; callers cannot supply arbitrary SQL identifiers.
+        child: {
+          sql: `DELETE FROM ${spec.childTable}
+            WHERE ${spec.columns.generationId} IN (${childCandidates})`,
+          bindsForLimit: (limit) => [...protectedBinds(), cutoff, limit],
+          batchLimit: spec.maxGenerationsPerRun,
+          runLimit: spec.maxGenerationsPerRun,
+        },
+        // SAFETY: spec.manifestTable and column names are closed literal unions from
+        // DexGenerationStoreSpec, and candidateWhere is internally constructed.
+        manifest: {
+          sql: `DELETE FROM ${spec.manifestTable}
+            WHERE rowid IN (${manifestCandidates})`,
+          bindsForLimit: (limit) => [...protectedBinds(), cutoff, limit],
+          batchLimit: spec.maxGenerationsPerRun,
+          runLimit: spec.maxGenerationsPerRun,
+        },
+      },
+      probes: {
+        // SAFETY: oldestTable/oldestColumn derive solely from DexGenerationStoreSpec's
+        // closed literal-union identifiers and a fixed alias; no caller-supplied SQL.
+        oldest: {
+          sql: `SELECT MIN(${oldestColumn}) AS oldest_remaining_at FROM ${oldestTable}${oldestWhere}`,
+        },
+      },
+    });
     return {
       cutoff,
-      deletedRows: deletedChildRows + deletedManifestRows,
-      [childRowsKey]: deletedChildRows,
-      [manifestRowsKey]: deletedManifestRows,
-      oldestRemainingAt,
-      durationMs: Math.max(0, Date.now() - startedAtMs),
-      error: pruneError,
+      deletedRows: family.changedRows,
+      [childRowsKey]: family.changed.child,
+      [manifestRowsKey]: family.changed.manifest,
+      oldestRemainingAt: family.probes.oldest.oldest_remaining_at ?? null,
+      durationMs: family.durationMs,
+      error: family.error,
     } as DexGenerationPruneResult<ChildRowsKey, ManifestRowsKey>;
   };
 

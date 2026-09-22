@@ -1,10 +1,10 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { batchExecute } from "../../lib/db";
-import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
+import { throwIfAborted } from "../../lib/abort";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
+import { runCappedPruneFamily } from "../shared/capped-delete";
 import { CG_CHAIN_MAP, DS_CHAIN_MAP, GT_CHAIN_MAP } from "@shared/lib/chains";
 import { CURVE_NATIVE_DISCOVERY_CHAINS } from "@shared/lib/dex-deployment-coverage";
-import { toErrorMessage } from "@shared/lib/error-utils";
 import { canonicalExitRouteScopedId } from "@shared/lib/exit-route-identity";
 import type { ContractDeployment } from "@shared/types/core";
 import { tryParseJson } from "../../lib/json-parse";
@@ -353,22 +353,14 @@ export async function cleanupStaging(
   nowSec: number,
   signal?: AbortSignal,
 ): Promise<DexPoolStagingRetentionResult> {
-  const startedAtMs = Date.now();
-  const result: DexPoolStagingRetentionResult = {
-    rowCutoff: nowSec - STAGING_DELETE_TTL_SEC,
-    rawJsonCutoff: nowSec - STAGING_RAW_JSON_TTL_SEC,
-    deletedRows: 0,
-    rawJsonClearedRows: 0,
-    oldestRemainingAt: null,
-    oldestRawJsonRemainingAt: null,
-    durationMs: 0,
-    error: null,
-  };
-  try {
-    const deleted = await runWithOverloadRetry(
-      () => db
-        .prepare(
-          `DELETE FROM dex_pool_registry
+  const rowCutoff = nowSec - STAGING_DELETE_TTL_SEC;
+  const rawJsonCutoff = nowSec - STAGING_RAW_JSON_TTL_SEC;
+  const family = await runCappedPruneFamily({
+    db,
+    signal,
+    statements: {
+      rows: {
+        sql: `DELETE FROM dex_pool_registry
             WHERE rowid IN (
               SELECT rowid
                 FROM dex_pool_registry
@@ -376,17 +368,12 @@ export async function cleanupStaging(
                ORDER BY refreshed_at ASC, rowid ASC
                LIMIT ?
             )`,
-        )
-        .bind(result.rowCutoff, STAGING_CLEANUP_MAX_ROWS_PER_RUN)
-        .run(),
-      3,
-      signal,
-    );
-    result.deletedRows = Number(deleted.meta?.changes ?? 0);
-    const rawJson = await runWithOverloadRetry(
-      () => db
-        .prepare(
-          `UPDATE dex_pool_registry
+        bindsForLimit: (limit) => [rowCutoff, limit],
+        batchLimit: STAGING_CLEANUP_MAX_ROWS_PER_RUN,
+        runLimit: STAGING_CLEANUP_MAX_ROWS_PER_RUN,
+      },
+      rawJson: {
+        sql: `UPDATE dex_pool_registry
               SET raw_json = NULL
             WHERE rowid IN (
               SELECT rowid
@@ -396,35 +383,29 @@ export async function cleanupStaging(
                ORDER BY refreshed_at ASC, rowid ASC
                LIMIT ?
             )`,
-        )
-        .bind(result.rawJsonCutoff, STAGING_CLEANUP_MAX_ROWS_PER_RUN)
-        .run(),
-      3,
-      signal,
-    );
-    result.rawJsonClearedRows = Number(rawJson.meta?.changes ?? 0);
-    const oldest = await runWithOverloadRetry(
-      () => db
-        .prepare(
-          `SELECT MIN(refreshed_at) AS oldest_remaining_at,
+        bindsForLimit: (limit) => [rawJsonCutoff, limit],
+        batchLimit: STAGING_CLEANUP_MAX_ROWS_PER_RUN,
+        runLimit: STAGING_CLEANUP_MAX_ROWS_PER_RUN,
+      },
+    },
+    probes: {
+      oldest: {
+        sql: `SELECT MIN(refreshed_at) AS oldest_remaining_at,
                   MIN(CASE WHEN raw_json IS NOT NULL THEN refreshed_at END) AS oldest_raw_json_remaining_at
              FROM dex_pool_registry`,
-        )
-        .first<{
-          oldest_remaining_at: number | null;
-          oldest_raw_json_remaining_at: number | null;
-        }>(),
-      3,
-      signal,
-    );
-    result.oldestRemainingAt = oldest?.oldest_remaining_at ?? null;
-    result.oldestRawJsonRemainingAt = oldest?.oldest_raw_json_remaining_at ?? null;
-  } catch (error) {
-    rethrowIfAborted(error, signal);
-    result.error = toErrorMessage(error).slice(0, 500);
-  }
-  result.durationMs = Math.max(0, Date.now() - startedAtMs);
-  return result;
+      },
+    },
+  });
+  return {
+    rowCutoff,
+    rawJsonCutoff,
+    deletedRows: family.changed.rows,
+    rawJsonClearedRows: family.changed.rawJson,
+    oldestRemainingAt: family.probes.oldest.oldest_remaining_at ?? null,
+    oldestRawJsonRemainingAt: family.probes.oldest.oldest_raw_json_remaining_at ?? null,
+    durationMs: family.durationMs,
+    error: family.error,
+  };
 }
 
 /**

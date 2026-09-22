@@ -4,10 +4,9 @@ import {
   type DexMeasuredExecutionProfile,
   type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
-import { rethrowIfAborted } from "../../lib/abort";
 import { batchExecute, prepareMultiRowInsertStatements } from "../../lib/db";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
-import { toErrorMessage } from "@shared/lib/error-utils";
+import { runCappedPruneFamily } from "../shared/capped-delete";
 import {
   DEX_MEASURED_QUOTE_SURFACE, DEX_MEASURED_TARGET_SURFACE, DEX_SHADOW_MEASURED_QUOTE_SURFACE,
   DEX_SHADOW_MEASURED_TARGET_SURFACE, hashMeasuredTargetIds, latestPublishedGeneration, markGenerationFailed,
@@ -511,68 +510,44 @@ export async function pruneDexMeasuredExecutionGenerations(
   nowSec: number,
   signal?: AbortSignal,
 ): Promise<DexMeasuredExecutionRetentionResult> {
-  const startedAtMs = Date.now();
   const cutoff = nowSec - GENERATION_RETENTION_SEC;
-  const result: DexMeasuredExecutionRetentionResult = {
-    cutoff,
-    deletedRows: 0,
-    deletedQuoteRows: 0,
-    deletedTargetRows: 0,
-    deletedGenerationRows: 0,
-    oldestRemainingAt: null,
-    durationMs: 0,
-    error: null,
-  };
-  try {
-    const quotes = await runWithOverloadRetry(
-      () => db
-        .prepare(
-          `DELETE FROM dex_measured_execution_quotes
-       WHERE generation_id IN (
+  const retiredGenerationCandidates = `
          SELECT generation_id FROM surface_publication_generations
          WHERE surface IN (?, ?) AND state IN ('failed', 'rejected', 'superseded') AND started_at < ?
-         ORDER BY started_at ASC LIMIT ?
+         ORDER BY started_at ASC LIMIT ?`;
+  const family = await runCappedPruneFamily({
+    db,
+    signal,
+    statements: {
+      quotes: {
+        sql: `DELETE FROM dex_measured_execution_quotes
+       WHERE generation_id IN (${retiredGenerationCandidates}
        )`,
-        )
-        .bind(
+        bindsForLimit: (limit) => [
           DEX_MEASURED_QUOTE_SURFACE,
           DEX_SHADOW_MEASURED_QUOTE_SURFACE,
           cutoff,
-          GENERATION_PRUNE_MAX_PER_RUN,
-        )
-        .run(),
-      3,
-      signal,
-    );
-    result.deletedQuoteRows = Number(quotes.meta?.changes ?? 0);
-
-    const targets = await runWithOverloadRetry(
-      () => db
-        .prepare(
-          `DELETE FROM dex_measured_execution_targets
-       WHERE generation_id IN (
-         SELECT generation_id FROM surface_publication_generations
-         WHERE surface IN (?, ?) AND state IN ('failed', 'rejected', 'superseded') AND started_at < ?
-         ORDER BY started_at ASC LIMIT ?
+          limit,
+        ],
+        batchLimit: GENERATION_PRUNE_MAX_PER_RUN,
+        runLimit: GENERATION_PRUNE_MAX_PER_RUN,
+      },
+      targets: {
+        sql: `DELETE FROM dex_measured_execution_targets
+       WHERE generation_id IN (${retiredGenerationCandidates}
        )
        AND generation_id NOT IN (SELECT DISTINCT target_generation_id FROM dex_measured_execution_quotes)`,
-        )
-        .bind(
+        bindsForLimit: (limit) => [
           DEX_MEASURED_TARGET_SURFACE,
           DEX_SHADOW_MEASURED_TARGET_SURFACE,
           cutoff,
-          GENERATION_PRUNE_MAX_PER_RUN,
-        )
-        .run(),
-      3,
-      signal,
-    );
-    result.deletedTargetRows = Number(targets.meta?.changes ?? 0);
-
-    const generations = await runWithOverloadRetry(
-      () => db
-        .prepare(
-          `DELETE FROM surface_publication_generations
+          limit,
+        ],
+        batchLimit: GENERATION_PRUNE_MAX_PER_RUN,
+        runLimit: GENERATION_PRUNE_MAX_PER_RUN,
+      },
+      generations: {
+        sql: `DELETE FROM surface_publication_generations
        WHERE rowid IN (
          SELECT candidate.rowid
            FROM surface_publication_generations candidate
@@ -591,25 +566,21 @@ export async function pruneDexMeasuredExecutionGenerations(
           ORDER BY candidate.started_at ASC, candidate.generation_id ASC
           LIMIT ?
        )`,
-        )
-        .bind(
+        bindsForLimit: (limit) => [
           DEX_MEASURED_TARGET_SURFACE,
           DEX_MEASURED_QUOTE_SURFACE,
           DEX_SHADOW_MEASURED_TARGET_SURFACE,
           DEX_SHADOW_MEASURED_QUOTE_SURFACE,
           cutoff,
-          GENERATION_PRUNE_MAX_PER_RUN,
-        )
-        .run(),
-      3,
-      signal,
-    );
-    result.deletedGenerationRows = Number(generations.meta?.changes ?? 0);
-
-    const oldest = await runWithOverloadRetry(
-      () => db
-        .prepare(
-          `SELECT MIN(candidate.started_at) AS oldest_remaining_at
+          limit,
+        ],
+        batchLimit: GENERATION_PRUNE_MAX_PER_RUN,
+        runLimit: GENERATION_PRUNE_MAX_PER_RUN,
+      },
+    },
+    probes: {
+      oldestRemaining: {
+        sql: `SELECT MIN(candidate.started_at) AS oldest_remaining_at
              FROM surface_publication_generations candidate
             WHERE candidate.surface IN (?, ?, ?, ?)
               AND (
@@ -623,24 +594,23 @@ export async function pruneDexMeasuredExecutionGenerations(
                    WHERE t.generation_id = candidate.generation_id
                 )
               )`,
-        )
-        .bind(
+        binds: [
           DEX_MEASURED_TARGET_SURFACE,
           DEX_MEASURED_QUOTE_SURFACE,
           DEX_SHADOW_MEASURED_TARGET_SURFACE,
           DEX_SHADOW_MEASURED_QUOTE_SURFACE,
-        )
-        .first<{ oldest_remaining_at: number | null }>(),
-      3,
-      signal,
-    );
-    result.oldestRemainingAt = oldest?.oldest_remaining_at ?? null;
-  } catch (error) {
-    rethrowIfAborted(error, signal);
-    result.error = toErrorMessage(error).slice(0, 500);
-  }
-  result.deletedRows =
-    result.deletedQuoteRows + result.deletedTargetRows + result.deletedGenerationRows;
-  result.durationMs = Math.max(0, Date.now() - startedAtMs);
-  return result;
+        ],
+      },
+    },
+  });
+  return {
+    cutoff,
+    deletedRows: family.changedRows,
+    deletedQuoteRows: family.changed.quotes,
+    deletedTargetRows: family.changed.targets,
+    deletedGenerationRows: family.changed.generations,
+    oldestRemainingAt: family.probes.oldestRemaining.oldest_remaining_at ?? null,
+    durationMs: family.durationMs,
+    error: family.error,
+  };
 }
