@@ -1,16 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ScheduledRuntimeContext } from "../context";
+import type { CronProgressReporter } from "../../../lib/cron-logger";
 import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
 
 const mocks = vi.hoisted(() => ({
-  runSingleScheduledJob: vi.fn(),
+  runScheduledSlotGroups: vi.fn(),
   runV9AfterCoreWithinWindow: vi.fn(),
   computeSafetyScoreV9: vi.fn(),
   logWorkerEvent: vi.fn(),
 }));
 
-vi.mock("../slot-groups", () => ({
-  runSingleScheduledJob: mocks.runSingleScheduledJob,
+vi.mock("../slot-groups", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../slot-groups")>(),
+  runScheduledSlotGroups: mocks.runScheduledSlotGroups,
 }));
 vi.mock("../../../lib/v9-slot-window", () => ({
   runV9AfterCoreWithinWindow: mocks.runV9AfterCoreWithinWindow,
@@ -59,17 +61,17 @@ describe("V9 publication scheduling", () => {
       status: "skipped_neutral",
       itemCount: 0,
     });
-    mocks.runSingleScheduledJob.mockImplementation(async (
+    mocks.runScheduledSlotGroups.mockImplementation(async (
       _scheduledRuntime: ScheduledRuntimeContext,
       _label: string,
-      task: {
+      groups: Array<{ tasks: Array<{
         run: (
           signal: AbortSignal,
-          reportProgress: ReturnType<typeof vi.fn>,
+          reportProgress: CronProgressReporter,
         ) => Promise<unknown>;
-      },
+      }> }>,
     ) => {
-      await task.run(new AbortController().signal, vi.fn());
+      await groups[0]?.tasks[0]?.run(new AbortController().signal, vi.fn());
       return published;
     });
   });

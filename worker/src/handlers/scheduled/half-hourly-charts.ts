@@ -24,7 +24,7 @@ import { syncStablecoinCharts } from "../../cron/sync-stablecoin-charts";
 import type { CronResult } from "../../lib/cron-logger";
 import { tryParseJson } from "../../lib/json-parse";
 import type { ScheduledRuntimeContext } from "./context";
-import { runScheduledSlotGroups } from "./slot-groups";
+import { bindScheduledSlotPlan, runScheduledSlotGroups } from "./slot-groups";
 
 const DEX_SCORING_STAGE_READY_WAIT_MS = 90_000;
 
@@ -74,130 +74,118 @@ function readDexPublication(result: CronResult): DexPublication {
   };
 }
 
-export async function runHalfHourlyChartsSlot(runtime: ScheduledRuntimeContext) {
+export function buildHalfHourlyChartsSlotGroups(runtime: ScheduledRuntimeContext) {
   let dexPublication: DexPublication | null = null;
-  return runScheduledSlotGroups(runtime, "half-hour scoring and charts slot", [
-    {
-      mode: "serial",
-      label: "dex-scoring-v9-input",
-      tasks: [
-        {
-          job: "sync-dex-liquidity",
-          run: async (signal, reportProgress) => {
-            let result: CronResult;
-            try {
-              result = !isHourlyDexPriceSlot(runtime.slotStartedAt)
-                ? await reuseCurrentDexLiquidityScoringGeneration(runtime.db, signal)
-                : await consumeDexLiquidityScoringStage(
-                    runtime.db,
-                    signal,
-                    reportProgress,
-                    runtime.slotStartedAt,
-                    {
-                      publishLiquidity: isDexLiquidityPublicationSlot(runtime.slotStartedAt),
-                      publishShadowTargets: isDailyDexShadowTargetPublicationSlot(runtime.slotStartedAt),
-                      stageReadyDeadlineMs:
-                        (runtime.scheduledTimeMs ?? runtime.slotStartedAt * 1_000)
-                        + DEX_SCORING_STAGE_READY_WAIT_MS,
-                    },
-                  );
-            } catch (error) {
-              dexPublication = {
-                status: "error",
-                generationId: null,
-                skipped: false,
-                skippedReason: null,
-              };
-              throw error;
-            }
-            dexPublication = readDexPublication(result);
-            return result;
-          },
-        },
-        {
-          job: "cron-sentinel",
-          run: (signal) => {
-            if (!isDexLiquidityPublicationSlot(runtime.slotStartedAt)) {
-              return Promise.resolve({
-                status: "skipped_neutral" as const,
-                itemCount: 0,
-                metadata: JSON.stringify({ reason: "not-liquidity-publication-slot" }),
-              });
-            }
-            const publication = dexPublication;
-            if (
-              publication == null
-              || publication.status === "error"
-              || publication.status === "skipped_locked"
-              || publication.status === "skipped_neutral"
-              || publication.skipped
-              || publication.generationId === null
-            ) {
-              return Promise.resolve({
-                status: "skipped_neutral" as const,
-                itemCount: 0,
-                metadata: JSON.stringify({
-                  reason: "upstream-dex-publication-unavailable",
-                  upstreamJob: "sync-dex-liquidity",
-                  upstreamStatus: publication?.status ?? "not-started",
-                  upstreamSkippedReason: publication?.skippedReason ?? null,
-                }),
-              });
-            }
-            return runCronSentinel(runtime.db, { mode: "turnover", signal });
-          },
-        },
-        {
-          job: "prepare-safety-score-v9-input",
-          run: (signal) => {
-            const publication = dexPublication;
-            const isExactCadenceReuse =
-              publication?.status === "skipped_neutral"
-              && publication.generationId !== null
-              && publication.skipped === false
-              && publication.skippedReason === "liquidity-cadence-reuse";
-            if (
-              publication == null
-              || publication.status === "error"
-              || publication.status === "skipped_locked"
-              || (publication.status === "skipped_neutral" && !isExactCadenceReuse)
-              || publication.skipped
-            ) {
-              return Promise.resolve({
-                status: "skipped_neutral" as const,
-                itemCount: 0,
-                metadata: JSON.stringify({
-                  reason: "upstream-dex-publication-unavailable",
-                  upstreamJob: "sync-dex-liquidity",
-                  upstreamStatus: publication?.status ?? "not-started",
-                  upstreamSkippedReason: publication?.skippedReason ?? null,
-                  childDisposition: "not_started",
-                }),
-              });
-            }
-            if (publication.generationId === null) {
-              throw new Error("DEX publication result omitted its exact generation id");
-            }
-            return prepareSafetyScoreV9Input(
-              runtime.db,
-              signal,
-              publication.generationId,
-              runtime.chainRpcs,
-            );
-          },
-        },
-      ],
+  return bindScheduledSlotPlan("halfHourlyChartsOffset", {
+    mode: "serial",
+    label: "dex-scoring-v9-input-and-charts",
+    implementations: {
+      "sync-dex-liquidity": async (signal, reportProgress) => {
+        let result: CronResult;
+        try {
+          result = !isHourlyDexPriceSlot(runtime.slotStartedAt)
+            ? await reuseCurrentDexLiquidityScoringGeneration(runtime.db, signal)
+            : await consumeDexLiquidityScoringStage(
+                runtime.db,
+                signal,
+                reportProgress,
+                runtime.slotStartedAt,
+                {
+                  publishLiquidity: isDexLiquidityPublicationSlot(runtime.slotStartedAt),
+                  publishShadowTargets: isDailyDexShadowTargetPublicationSlot(runtime.slotStartedAt),
+                  stageReadyDeadlineMs:
+                    (runtime.scheduledTimeMs ?? runtime.slotStartedAt * 1_000)
+                    + DEX_SCORING_STAGE_READY_WAIT_MS,
+                },
+              );
+        } catch (error) {
+          dexPublication = {
+            status: "error",
+            generationId: null,
+            skipped: false,
+            skippedReason: null,
+          };
+          throw error;
+        }
+        dexPublication = readDexPublication(result);
+        return result;
+      },
+      "cron-sentinel": (signal) => {
+        if (!isDexLiquidityPublicationSlot(runtime.slotStartedAt)) {
+          return Promise.resolve({
+            status: "skipped_neutral" as const,
+            itemCount: 0,
+            metadata: JSON.stringify({ reason: "not-liquidity-publication-slot" }),
+          });
+        }
+        const publication = dexPublication;
+        if (
+          publication == null
+          || publication.status === "error"
+          || publication.status === "skipped_locked"
+          || publication.status === "skipped_neutral"
+          || publication.skipped
+          || publication.generationId === null
+        ) {
+          return Promise.resolve({
+            status: "skipped_neutral" as const,
+            itemCount: 0,
+            metadata: JSON.stringify({
+              reason: "upstream-dex-publication-unavailable",
+              upstreamJob: "sync-dex-liquidity",
+              upstreamStatus: publication?.status ?? "not-started",
+              upstreamSkippedReason: publication?.skippedReason ?? null,
+            }),
+          });
+        }
+        return runCronSentinel(runtime.db, { mode: "turnover", signal });
+      },
+      "prepare-safety-score-v9-input": (signal) => {
+        const publication = dexPublication;
+        const isExactCadenceReuse =
+          publication?.status === "skipped_neutral"
+          && publication.generationId !== null
+          && publication.skipped === false
+          && publication.skippedReason === "liquidity-cadence-reuse";
+        if (
+          publication == null
+          || publication.status === "error"
+          || publication.status === "skipped_locked"
+          || (publication.status === "skipped_neutral" && !isExactCadenceReuse)
+          || publication.skipped
+        ) {
+          return Promise.resolve({
+            status: "skipped_neutral" as const,
+            itemCount: 0,
+            metadata: JSON.stringify({
+              reason: "upstream-dex-publication-unavailable",
+              upstreamJob: "sync-dex-liquidity",
+              upstreamStatus: publication?.status ?? "not-started",
+              upstreamSkippedReason: publication?.skippedReason ?? null,
+              childDisposition: "not_started",
+            }),
+          });
+        }
+        if (publication.generationId === null) {
+          throw new Error("DEX publication result omitted its exact generation id");
+        }
+        return prepareSafetyScoreV9Input(
+          runtime.db,
+          signal,
+          publication.generationId,
+          runtime.chainRpcs,
+        );
+      },
+      "sync-stablecoin-charts": (signal) =>
+        syncStablecoinCharts(runtime.db, signal, { scheduledAtSec: runtime.slotStartedAt }),
     },
-    {
-      mode: "serial",
-      label: "stablecoin-charts",
-      tasks: [
-        {
-          job: "sync-stablecoin-charts",
-          run: (signal) =>
-            syncStablecoinCharts(runtime.db, signal, { scheduledAtSec: runtime.slotStartedAt }),
-        },
-      ],
-    },
-  ]);
+  });
+}
+
+export async function runHalfHourlyChartsSlot(runtime: ScheduledRuntimeContext) {
+  return runScheduledSlotGroups(
+    runtime,
+    "half-hour scoring and charts slot",
+    buildHalfHourlyChartsSlotGroups(runtime),
+  );
 }

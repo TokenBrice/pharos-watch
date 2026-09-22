@@ -13,8 +13,12 @@ import {
 } from "@shared/lib/scheduled-runner-registry";
 import { flattenScheduledSlotGroupTasks } from "../slot-groups";
 import { buildDaily0810SlotGroups } from "../daily-0810";
+import { buildDepegResolverSlotGroups } from "../depeg-resolver";
 import { buildDewsPsiSlotGroups } from "../dews-psi";
+import { buildHalfHourlyChartsSlotGroups } from "../half-hourly-charts";
 import { buildStatusSelfCheckSlotGroups } from "../status-self-check";
+import { buildV9PublicationSlotGroups } from "../v9-publication";
+import { buildV9SupplyAttributionSlotGroups } from "../v9-supply-attribution";
 import { CRON_TIMEOUT_MS } from "../../../lib/cron-timeouts";
 import {
   PUBLIC_DATASET_CRON_TIMEOUT_MS,
@@ -80,12 +84,15 @@ describe("scheduled runner contract", () => {
       "daily0800Utc",
       "daily0805Utc",
       "hourlyYieldSync",
-      "halfHourlyChartsOffset",
     ];
     const builders: Partial<Record<CronScheduleKey, (runtime: never) => unknown>> = {
+      depegResolverOffset: buildDepegResolverSlotGroups,
+      halfHourlyChartsOffset: buildHalfHourlyChartsSlotGroups,
       daily0810Utc: buildDaily0810SlotGroups,
       dewsPsiOffset: buildDewsPsiSlotGroups,
       statusSelfCheckOffset: buildStatusSelfCheckSlotGroups,
+      v9PublicationOffset: buildV9PublicationSlotGroups,
+      v9SupplyAttributionOffset: buildV9SupplyAttributionSlotGroups,
     };
     const runtime = { db: {}, env: {}, slotStartedAt: 0 } as never;
 

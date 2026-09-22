@@ -1,6 +1,6 @@
 import type { ScheduledRuntimeContext } from "./context";
 import { parseStablecoinsCapabilities } from "./context";
-import { runScheduledSlotGroups } from "./slot-groups";
+import { bindScheduledSlotPlan, runScheduledSlotGroups } from "./slot-groups";
 import { runV9AfterCoreWithinWindow } from "../../lib/v9-slot-window";
 
 const DDR_WINDOW_MS = 2 * 60_000;
@@ -40,49 +40,52 @@ async function loadLatestStablecoinsCapabilities(
   };
 }
 
+export function buildDepegResolverSlotGroups(runtime: ScheduledRuntimeContext) {
+  return bindScheduledSlotPlan("depegResolverOffset", {
+    mode: "serial",
+    label: "depeg-resolver",
+    implementations: {
+      "compute-depeg-resolver": (signal) =>
+        runV9AfterCoreWithinWindow(
+          {
+            db: runtime.db,
+            scheduledTimeMs: runtime.scheduledTimeMs,
+            slotStartedAt: runtime.slotStartedAt,
+            workerVersion: runtime.workerVersion ?? null,
+            signal,
+            deadlineOffsetMs: DDR_WINDOW_MS,
+            minimumRemainingMs: DDR_MINIMUM_REMAINING_MS,
+            lane: "compute-depeg-resolver",
+            currentSlotKey: runtime.scheduleKey,
+          },
+          async (windowSignal) => {
+            const capabilities = await loadLatestStablecoinsCapabilities(
+              runtime.db,
+              runtime.slotStartedAt,
+            );
+            const { computeDepegResolver } = await import(
+              "../../cron/compute-depeg-resolver"
+            );
+            return computeDepegResolver({
+              db: runtime.db,
+              signal: windowSignal,
+              slot: "scheduled-quarter-hour",
+              stablecoinsCacheSafe: capabilities.stablecoinsCacheSafe,
+              depegPipelineHealthy: capabilities.depegPipelineHealthy,
+              syncCapabilities: capabilities.syncCapabilities,
+            });
+          },
+        ),
+    },
+  });
+}
+
 export async function runDepegResolverSlot(
   runtime: ScheduledRuntimeContext,
 ) {
-  return runScheduledSlotGroups(runtime, "fenced depeg resolver slot", [
-    {
-      mode: "serial",
-      label: "depeg-resolver",
-      tasks: [
-        {
-          job: "compute-depeg-resolver",
-          run: (signal) =>
-            runV9AfterCoreWithinWindow(
-              {
-                db: runtime.db,
-                scheduledTimeMs: runtime.scheduledTimeMs,
-                slotStartedAt: runtime.slotStartedAt,
-                workerVersion: runtime.workerVersion ?? null,
-                signal,
-                deadlineOffsetMs: DDR_WINDOW_MS,
-                minimumRemainingMs: DDR_MINIMUM_REMAINING_MS,
-                lane: "compute-depeg-resolver",
-                currentSlotKey: runtime.scheduleKey,
-              },
-              async (windowSignal) => {
-                const capabilities = await loadLatestStablecoinsCapabilities(
-                  runtime.db,
-                  runtime.slotStartedAt,
-                );
-                const { computeDepegResolver } = await import(
-                  "../../cron/compute-depeg-resolver"
-                );
-                return computeDepegResolver({
-                  db: runtime.db,
-                  signal: windowSignal,
-                  slot: "scheduled-quarter-hour",
-                  stablecoinsCacheSafe: capabilities.stablecoinsCacheSafe,
-                  depegPipelineHealthy: capabilities.depegPipelineHealthy,
-                  syncCapabilities: capabilities.syncCapabilities,
-                });
-              },
-            ),
-        },
-      ],
-    },
-  ]);
+  return runScheduledSlotGroups(
+    runtime,
+    "fenced depeg resolver slot",
+    buildDepegResolverSlotGroups(runtime),
+  );
 }
