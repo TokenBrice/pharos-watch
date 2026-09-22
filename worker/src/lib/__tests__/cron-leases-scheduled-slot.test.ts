@@ -664,8 +664,8 @@ describe("runScheduledSlotWithFence", () => {
     expect(summary).toMatchObject({
       candidateSlots: 1,
       slotsReconciled: 1,
-      syntheticCronRuns: 4,
-      notStartedCronRuns: 4,
+      syntheticCronRuns: 6,
+      notStartedCronRuns: 6,
       progressRowsCleared: 0,
       leasesCleared: 0,
     });

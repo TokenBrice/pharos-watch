@@ -1,5 +1,9 @@
 import { unixNowSec as nowSec } from "@shared/lib/time-constants";
-import { flattenScheduledSlotPlanJobs, SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
+import {
+  flattenScheduledSlotPlanJobs,
+  getScheduledSlotPlanChainPrerequisites,
+  SCHEDULED_SLOT_PLANS,
+} from "@shared/lib/scheduled-runner-registry";
 import {
   LIVE_RESERVE_QUEUE_HASH,
   SYNC_ORDERED_CONFIGURED_COINS,
@@ -170,12 +174,11 @@ const LIVE_RESERVE_CHECKPOINT_JOB = "sync-live-reserves";
 export const LIVE_RESERVE_SLOT_JOBS = flattenScheduledSlotPlanJobs(
   SCHEDULED_SLOT_PLANS.fourHourlyReserveSync,
 );
-const LIVE_RESERVE_CHILD_PREREQUISITES = {
-  "sync-live-reserves": [],
-  "sync-redemption-backstops": ["sync-live-reserves"],
-  "sync-kinesis-supply": [],
-  "cron-sentinel": ["sync-live-reserves"],
-} as const;
+// Derived from the slot plan: a hand-kept copy of the chain silently diverges
+// from the registry the moment a chain is re-ordered.
+const LIVE_RESERVE_CHILD_PREREQUISITES = getScheduledSlotPlanChainPrerequisites(
+  SCHEDULED_SLOT_PLANS.fourHourlyReserveSync,
+);
 const PLATFORM_ABANDONED_ERROR = "scheduled invocation ended before terminal checkpoint";
 
 export class ScheduledCheckpointOwnershipLostError extends Error {
@@ -433,17 +436,20 @@ export async function setLiveReserveCheckpointChildDisposition(
   if (!checkpoint || checkpoint.executionGeneration !== identity.executionGeneration || checkpoint.invocationId !== identity.invocationId) {
     throw new ScheduledCheckpointOwnershipLostError(identity);
   }
-  const childDispositions = { ...checkpoint.childDispositions, [childJob]: disposition };
+  // Chains in this slot run concurrently, so a read-modify-write of the whole
+  // map would let one chain's disposition erase another's. Patch the single
+  // child key inside the UPDATE instead.
   await requireChanged(
     runWithOverloadRetry(() =>
       db
         .prepare(
           `UPDATE worker_scheduled_checkpoints
-              SET child_dispositions_json = ?, updated_at = ?
+              SET child_dispositions_json = json_set(child_dispositions_json, '$."' || ? || '"', ?),
+                  updated_at = ?
             WHERE ${identityWhereSql()}
               AND state IN ('running', 'recovering')`,
         )
-        .bind(JSON.stringify(childDispositions), timestamp, ...identityBinds(identity))
+        .bind(childJob, disposition, timestamp, ...identityBinds(identity))
         .run(),
     ),
     identity,
@@ -584,14 +590,15 @@ async function prepareCheckpointAttemptForRecovery(
   const recoveryChildDispositions = { ...checkpoint.childDispositions };
   const queueExhausted = checkpoint.nextItemKey === null && checkpoint.itemsDone === checkpoint.itemsTotal;
   const preservedCompletedJobs = new Set<string>();
-  const prerequisitesByJob = LIVE_RESERVE_CHILD_PREREQUISITES as Readonly<
-    Record<string, readonly string[]>
-  >;
   for (const childJob of LIVE_RESERVE_SLOT_JOBS) {
+    const prerequisites = LIVE_RESERVE_CHILD_PREREQUISITES[childJob];
+    if (!prerequisites) {
+      throw new Error(`Reserve slot job ${childJob} has no derived chain prerequisites`);
+    }
     const childCompleted =
       completedJobs.has(childJob)
       || checkpoint.childDispositions[childJob] === "completed";
-    const prerequisitesCompleted = (prerequisitesByJob[childJob] ?? [])
+    const prerequisitesCompleted = prerequisites
       .every((prerequisite) => preservedCompletedJobs.has(prerequisite));
     const durableFrontierCompleted = childJob !== checkpoint.job || queueExhausted;
     if (prerequisitesCompleted && durableFrontierCompleted && childCompleted) {

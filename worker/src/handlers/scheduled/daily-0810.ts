@@ -8,29 +8,26 @@
  */
 import { syncDexShadowMeasuredExecution } from "../../cron/measured-execution/sync";
 import type { ScheduledRuntimeContext } from "./context";
-import { runScheduledSlotGroups } from "./slot-groups";
+import { bindScheduledSlotPlan, runScheduledSlotGroups } from "./slot-groups";
 import { settleMeasuredExecutionLane } from "./half-hourly-measured-execution";
 import { runWeeklyRecapForRuntime } from "./weekly-recap-invocation";
 
-export async function runDaily0810Slot(runtime: ScheduledRuntimeContext) {
-  return runScheduledSlotGroups(runtime, "daily 08:10 slot", [
-    {
-      mode: "parallel",
-      label: "weekly-jobs",
-      tasks: [
-        {
-          job: "weekly-recap",
-          run: (signal, reportProgress) => runWeeklyRecapForRuntime(runtime, signal, reportProgress),
-        },
-        {
-          job: "sync-cl-exit-depth",
-          run: (signal, reportProgress) =>
-            settleMeasuredExecutionLane(
-              "evm-shadow",
-              syncDexShadowMeasuredExecution(runtime.db, runtime.chainRpcs, signal, reportProgress),
-            ),
-        },
-      ],
+export function buildDaily0810SlotGroups(runtime: ScheduledRuntimeContext) {
+  return bindScheduledSlotPlan("daily0810Utc", {
+    mode: "parallel-serial",
+    label: "weekly-jobs",
+    chainLabels: ["weekly-recap", "measured-execution-shadow"],
+    implementations: {
+      "weekly-recap": (signal, reportProgress) => runWeeklyRecapForRuntime(runtime, signal, reportProgress),
+      "sync-cl-exit-depth": (signal, reportProgress) =>
+        settleMeasuredExecutionLane(
+          "evm-shadow",
+          syncDexShadowMeasuredExecution(runtime.db, runtime.chainRpcs, signal, reportProgress),
+        ),
     },
-  ]);
+  });
+}
+
+export async function runDaily0810Slot(runtime: ScheduledRuntimeContext) {
+  return runScheduledSlotGroups(runtime, "daily 08:10 slot", buildDaily0810SlotGroups(runtime));
 }

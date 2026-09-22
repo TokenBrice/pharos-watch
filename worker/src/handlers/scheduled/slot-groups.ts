@@ -1,5 +1,8 @@
 import type { ScheduledRuntimeContext } from "./context";
-import { SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
+import {
+  flattenScheduledSlotPlanJobs,
+  SCHEDULED_SLOT_PLANS,
+} from "@shared/lib/scheduled-runner-registry";
 import type { CronScheduleKey } from "@shared/lib/cron-jobs";
 import {
   runBestEffortScheduledJobWithOutcome,
@@ -88,11 +91,22 @@ export function bindScheduledSlotPlan(
   throw new Error(`Unsupported scheduled slot mode for ${scheduleKey}`);
 }
 
+/**
+ * Runs a slot whose plan is a single one-job chain. The plan check is the
+ * single-job counterpart of `bindScheduledSlotPlan`: without it, adding a job
+ * to such a chain compiles and silently never runs.
+ */
 export async function runSingleScheduledJob(
   runtime: ScheduledRuntimeContext,
   slotLabel: string,
   task: ScheduledSlotTask,
 ): Promise<ScheduledSlotSummary> {
+  const plannedJobs = flattenScheduledSlotPlanJobs(SCHEDULED_SLOT_PLANS[runtime.scheduleKey]);
+  if (plannedJobs.length !== 1 || plannedJobs[0] !== task.job) {
+    throw new Error(
+      `Scheduled slot ${runtime.scheduleKey} plans [${plannedJobs.join(", ")}] but runs only ${task.job}`,
+    );
+  }
   const outcome = await runSingleScheduledJobWithOutcome(runtime, slotLabel, task);
   return buildScheduledSlotSummary([outcome.summary]);
 }

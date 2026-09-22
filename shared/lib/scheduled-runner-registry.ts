@@ -7,6 +7,7 @@ import {
   type CronScheduleExpression,
   type CronScheduleKey,
 } from "./cron-jobs";
+import { isDexLiquidityPublicationSlot } from "./cron-cadences";
 
 export type ScheduledRunnerKey = CronScheduleKey;
 export type ScheduledSlotJobChain = readonly string[];
@@ -81,7 +82,17 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
     jobChains: [["compute-dews", "stability-index", "project-tape"]],
   },
   fourHourlyReserveSync: {
-    jobChains: [["sync-live-reserves", "sync-redemption-backstops", "sync-kinesis-supply", "cron-sentinel"]],
+    // Three independent chains, not one queue. sync-live-reserves is the
+    // slot's measured head (p95 458s); when it stalls, the slot fence
+    // abandons everything still queued behind it. Only the backstop
+    // computation actually consumes its output, so kinesis supply and the
+    // reserve watchdog run beside it: a watchdog must never be abandoned by
+    // the thing it watches. Declared peak 2 + 1 + 1 = 4/6.
+    jobChains: [
+      ["sync-live-reserves", "sync-redemption-backstops"],
+      ["sync-kinesis-supply"],
+      ["cron-sentinel"],
+    ],
   },
   hourlyYieldSync: {
     // Serially ordered on purpose: the opportunistic supplemental catch-up and
@@ -161,13 +172,45 @@ export const SCHEDULED_SLOT_PLANS: Readonly<Record<CronScheduleKey, ScheduledSlo
   ) as Record<CronScheduleKey, ScheduledSlotPlan>,
 );
 
+/**
+ * One trigger expression dispatches exactly one slot plan. Two plans claiming
+ * the same expression used to collapse silently into whichever one was
+ * enumerated first, so half the topology stopped running with no gate failing.
+ */
+export function indexScheduledSlotPlansByTriggerSchedule(
+  plans: Readonly<Record<string, ScheduledSlotPlan>>,
+): Record<string, ScheduledSlotPlan> {
+  const byTriggerSchedule: Record<string, ScheduledSlotPlan> = {};
+  for (const plan of Object.values(plans)) {
+    for (const triggerSchedule of plan.triggerSchedules) {
+      const claimed = byTriggerSchedule[triggerSchedule];
+      if (claimed) {
+        throw new Error(
+          `Duplicate scheduled trigger "${triggerSchedule}" claimed by ${claimed.scheduleKey} and ${plan.scheduleKey}`,
+        );
+      }
+      byTriggerSchedule[triggerSchedule] = plan;
+    }
+  }
+  return byTriggerSchedule;
+}
+
 export const SCHEDULED_SLOT_PLANS_BY_SCHEDULE: Readonly<Record<string, ScheduledSlotPlan>> = Object.freeze(
-  Object.fromEntries(
-    Object.values(SCHEDULED_SLOT_PLANS).flatMap((plan) =>
-      plan.triggerSchedules.map((triggerSchedule) => [triggerSchedule, plan]),
-    ),
-  ),
+  indexScheduledSlotPlansByTriggerSchedule(SCHEDULED_SLOT_PLANS),
 );
+
+/**
+ * Producers that carry a cron identity and cadence but are not members of a
+ * slot chain: the scheduled slot only triggers them and a separate execution
+ * surface writes their `cron_runs` row. Declaring them here keeps chain
+ * coverage enforceable instead of letting an unimplemented chain member hide
+ * among genuinely off-slot work.
+ */
+export const OFF_SLOT_SCHEDULED_PRODUCERS = {
+  // Dispatched by the V9 publication slot; the Cloudflare Workflow instance
+  // executes it and logs its own run.
+  "compute-safety-score-v9-workflow": "v9PublicationOffset",
+} as const satisfies Record<string, CronScheduleKey>;
 
 export { SHARED_SCHEDULED_JOB_IDENTITIES };
 
@@ -195,6 +238,41 @@ export interface ScheduledTaskDescriptor {
 
 function descriptorKey(scheduleKey: CronScheduleKey, job: string): string {
   return `${scheduleKey}\u0000${job}`;
+}
+
+/**
+ * Slot members whose occurrence is gated by a cadence inside the slot. A
+ * member that was never due on this occurrence was not "abandoned before
+ * start", so stale-slot reconciliation must not invent an error row for it
+ * (rule R4). Unlisted members are unconditionally due.
+ */
+const SCHEDULED_TASK_DUE_PREDICATES: Readonly<
+  Record<string, (slotStartedAtSec: number) => boolean>
+> = {
+  // Turnover evidence only exists on the hourly DEX publication slot.
+  [descriptorKey("halfHourlyChartsOffset", "cron-sentinel")]: isDexLiquidityPublicationSlot,
+  // Weekly generation is Monday-only; `generateWeeklyRecap` re-checks the same
+  // UTC day from the same slot clock.
+  [descriptorKey("daily0810Utc", "weekly-recap")]: (slotStartedAtSec) =>
+    new Date(slotStartedAtSec * 1_000).getUTCDay() === 1,
+  // The five-minute poll runs a digest edition only when a stored request or
+  // a missed-edition resume asks for one; no occurrence is due by the clock.
+  [descriptorKey("digestTriggerPoll", "daily-digest")]: () => false,
+  [descriptorKey("digestTriggerPoll", "weekly-recap")]: () => false,
+};
+
+/**
+ * Whether a slot member was due to run on the given occurrence. Unknown
+ * slot/job pairs are treated as due so an unregistered member is never
+ * silently excused.
+ */
+export function isScheduledTaskDueAt(
+  scheduleKey: CronScheduleKey,
+  job: string,
+  slotStartedAtSec: number,
+): boolean {
+  const isDue = SCHEDULED_TASK_DUE_PREDICATES[descriptorKey(scheduleKey, job)];
+  return isDue ? isDue(slotStartedAtSec) : true;
 }
 
 function buildScheduledTaskDescriptors(): ScheduledTaskDescriptor[] {
@@ -287,6 +365,23 @@ export function getScheduledTaskDescriptor(
 
 export function flattenScheduledSlotPlanJobs(plan: ScheduledSlotPlan): string[] {
   return plan.jobChains.flatMap((chain) => chain);
+}
+
+/**
+ * Jobs that must have completed before each member of a slot may run, derived
+ * from the chain each member sits in. Members of different chains have no
+ * ordering relationship by construction.
+ */
+export function getScheduledSlotPlanChainPrerequisites(
+  plan: ScheduledSlotPlan,
+): Readonly<Record<string, readonly string[]>> {
+  const prerequisites: Record<string, readonly string[]> = {};
+  for (const chain of plan.jobChains) {
+    for (let index = 0; index < chain.length; index += 1) {
+      prerequisites[chain[index]!] = chain.slice(0, index);
+    }
+  }
+  return prerequisites;
 }
 
 export function getScheduledSlotPlanBudgetEntries(plan: ScheduledSlotPlan): string[] {

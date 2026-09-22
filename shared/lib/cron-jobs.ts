@@ -744,7 +744,9 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     scheduleKey: "fourHourlyReserveSync",
     triggerMode: "shared",
     maxConnections: 1, // 2 sequential Kinesis Horizon fetches (KAU + KAG)
-    connectionGroup: "reserve-sync-chain",
+    // Runs beside the reserve-adapter chain, not behind it, so its peak adds
+    // to the trigger total instead of folding into max().
+    connectionGroup: "reserve-kinesis-chain",
   },
   {
     job: "sync-bluechip",
