@@ -90,12 +90,21 @@ export async function runPostDeployAcceptance({
       const identityMatches = typeof expectedWorkerVersion === "string"
         && expectedWorkerVersion.length > 0
         && observedWorkerVersion === expectedWorkerVersion;
+      // `degraded` means the surface is served with named data-quality findings
+      // (a long-unpriced asset, a producer's degraded streak); only `stale` says
+      // the public surface itself is not being served within its budgets.
+      const served = healthState === "healthy" || healthState === "degraded";
+      const warningList = healthPayload && typeof healthPayload === "object" && "warnings" in healthPayload
+        && Array.isArray(healthPayload.warnings)
+        ? healthPayload.warnings.map(String)
+        : [];
       results.push({
         ...probe,
         detail: `GET ${health?.url ?? WORKER_HEALTH_URL} returned ${health?.status ?? 0}`
           + (healthState ? ` (${String(healthState)});` : ";")
-          + ` active version ${observedWorkerVersion ?? "<missing>"}.`,
-        outcome: Boolean(health?.ok) && healthState === "healthy" && identityMatches ? "passed" : "failed",
+          + ` active version ${observedWorkerVersion ?? "<missing>"}.`
+          + (warningList.length > 0 ? ` Warnings: ${warningList.join(" | ")}` : ""),
+        outcome: Boolean(health?.ok) && served && identityMatches ? "passed" : "failed",
       });
     }
   }

@@ -318,7 +318,7 @@ Computed from missing prices + blacklist gaps + on-chain supply monitor, with be
 - `degraded` if any of:
   - stablecoins cache is degraded but still usable (`dataQuality.stablecoinsCacheStatus === "degraded"`, currently legacy-array payloads only)
   - exact stablecoin publication coverage is not complete (`dataQuality.stablecoinPublication.status !== "complete"`, i.e. `incomplete` or `unknown`)
-  - exact active-price coverage is unreadable or has a day-old gap (`activePriceCoverageImpactStatus === "degraded"` from `active_price_coverage_unknown`, or from an alert-eligible gap at `generationsElevated` = 96 consecutive missing generations — one day at the 15-minute cadence; shorter gaps stay warning-only)
+  - exact active-price coverage is unreadable or has a day-old gap (`activePriceCoverageImpactStatus === "degraded"` from `active_price_coverage_unknown`, or from an alert-eligible gap at `generationsElevated` = 96 consecutive missing generations — one day at the 15-minute cadence, including gaps past `generationsCritical`; shorter gaps stay warning-only)
   - `missingPriceRatio > 0.18`
   - `blacklistRecentMissingAmounts >= <!-- GENERATED-START: status-blacklist-recent-degraded-threshold -->5<!-- GENERATED-END: status-blacklist-recent-degraded-threshold -->` (last 24h)
   - `blacklistMissingRatio >= 0.01` (1%)
