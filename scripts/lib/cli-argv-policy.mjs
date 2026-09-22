@@ -87,6 +87,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     exempt("scripts/ci/check-seo-live-smoke.mjs", "test"),
     exempt("scripts/ci/check-seo-static.mjs", "test"),
     exempt("scripts/ci/check-shared-types-imports.ts", "read-only"),
+    exempt("scripts/ci/check-shock-coverage-freshness.ts", "read-only"),
     exempt("scripts/ci/check-site-csp-sync.ts", "build"),
     exempt("scripts/ci/check-sql-interpolation-safety.ts", "read-only"),
     exempt("scripts/ci/check-stablecoin-data.ts", "read-only"),
