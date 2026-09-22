@@ -35,7 +35,6 @@ const HIGH_STAKES_COVERAGE_CANDIDATE_FILES = new Set([
   "worker/src/cron/pending-depeg-confirmation-evidence.ts",
   "worker/src/cron/compute-depeg-resolver.ts",
   "worker/src/cron/compute-depeg-resolver-review.ts",
-  "worker/src/cron/compute-dews.ts",
   "worker/src/cron/reserve-adapters/cap-vault.ts",
   "worker/src/cron/sync-live-reserves.ts",
   "worker/src/lib/stress-signals-current-rows.ts",
@@ -59,7 +58,6 @@ export const CRITICAL_COVERAGE_WAIVERS = {
   // These scheduled-path facades and extracted compatibility surfaces are
   // intentionally excluded from the generated enrollment set; their owning
   // implementation modules remain covered by direct import contracts.
-  "worker/src/cron/compute-dews.ts": "2026-12-15",
   "worker/src/lib/safety-score-v9/transfer-materiality-observer.ts": "2026-12-15",
   "worker/src/lib/safety-score-v9/transfer-materiality.ts": "2026-12-15",
   "worker/src/cron/sync-live-reserves-config.ts": "2026-12-15",

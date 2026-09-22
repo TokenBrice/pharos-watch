@@ -89,9 +89,6 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
       classification =
         buildFlightToQualityClassificationFromV9Snapshot(
           active.snapshot,
-          {
-            expectedIdentity: active.snapshot.safetyScoreIdentity,
-          },
         );
     } else {
       classification = {
@@ -236,10 +233,6 @@ async function reconcileCachedAggregateSafetyResponse(
           const current =
             buildFlightToQualityClassificationFromV9Snapshot(
               active.snapshot,
-              {
-                expectedIdentity:
-                  active.snapshot.safetyScoreIdentity,
-              },
             );
           reason =
             current.kind !== "ok"
@@ -279,7 +272,7 @@ async function reconcileCachedAggregateSafetyResponse(
             }
           }
       } else {
-        reason = active.kind === "error" ? active.reason : "identity-mismatch";
+        reason = active.reason;
       }
     } catch (error) {
       logWorkerEvent({

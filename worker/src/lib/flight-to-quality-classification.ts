@@ -23,36 +23,16 @@ export type FlightToQualityClassificationResult =
   | {
       kind: "unavailable";
       reason:
-        | "identity-mismatch"
         | "lifecycle-not-approved"
         | "publication-held"
         | "source-stale"
         | "source-contract-invalid";
     };
 
-function identitiesMatch(left: SafetyScorePublicationIdentity, right: SafetyScorePublicationIdentity): boolean {
-  if (
-    left.model !== right.model ||
-    left.schemaVersion !== right.schemaVersion ||
-    left.methodologyVersion !== right.methodologyVersion ||
-    left.evaluationBuildDigest !== right.evaluationBuildDigest ||
-    left.baseInputGenerationId !== right.baseInputGenerationId ||
-    left.publicationGenerationId !== right.publicationGenerationId
-  ) {
-    return false;
-  }
-  return (
-    left.model === "v9" &&
-    right.model === "v9" &&
-    left.policyId === right.policyId &&
-    left.policyDigest === right.policyDigest
-  );
-}
 
 /** Builds FTQ cohorts from the canonical current V9 publication. */
 export function buildFlightToQualityClassificationFromV9Snapshot(
   snapshot: ReportCardsV9CurrentResponse,
-  options: { expectedIdentity?: SafetyScorePublicationIdentity | null },
 ): FlightToQualityClassificationResult {
   if (snapshot.lifecycle !== "active") {
     return { kind: "unavailable", reason: "lifecycle-not-approved" };
@@ -69,10 +49,6 @@ export function buildFlightToQualityClassificationFromV9Snapshot(
   const identity = SafetyScorePublicationIdentitySchema.parse(
     source.safetyScoreIdentity,
   );
-  const expectedIdentity = options.expectedIdentity ?? identity;
-  if (!identitiesMatch(identity, expectedIdentity)) {
-    return { kind: "unavailable", reason: "identity-mismatch" };
-  }
 
   const safeIds = new Set<string>();
   const riskyIds = new Set<string>();

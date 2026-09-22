@@ -5,7 +5,6 @@ import { batchExecute } from "./db";
 import { parseJson } from "./json-parse";
 
 const MAX_BATCH_RECORDS = 48;
-const MAX_BATCH_BYTES = 64 * 1_024;
 const MAX_RECORD_BYTES = 1_280;
 const D1_BIND_CHUNK_SIZE = 80;
 const BOUNDED_JOURNAL_TABLES = new Set(["report_card_evidence_journal", "safety_score_v9_supply_attribution_journal"]);
@@ -107,9 +106,6 @@ function canonicalRecords<TRecord extends JournalRecord, TProjection>(
       throw new Error(`${label} batch duplicates attempt ${attemptKey}`);
     }
     attemptKeys.add(attemptKey);
-  }
-  if (canonical.reduce((sum, entry) => sum + entry.payloadBytes, 0) > MAX_BATCH_BYTES) {
-    throw new Error(`${label} batch exceeds ${MAX_BATCH_BYTES} bytes`);
   }
   return canonical;
 }

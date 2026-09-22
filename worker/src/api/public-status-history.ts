@@ -1,7 +1,7 @@
 import { parseEnumParam, parseQueryParams } from "../lib/api-params";
 import { jsonResponse } from "../lib/api-response";
 import { listRecentStatusTransitions } from "../lib/status-reliability";
-import { CACHE_PROFILES } from "../lib/constants";
+import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { assessPublicHealth } from "../lib/public-health-assessment";
 import { transitionHasPublicImpact } from "@shared/lib/status-public-impact";
 import {

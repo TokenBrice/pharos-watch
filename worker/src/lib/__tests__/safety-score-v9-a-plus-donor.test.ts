@@ -2,12 +2,14 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { describe, expect, it } from "vitest";
 import donorCapture from "./fixtures/safety-score-v9-a-plus-donor-capture.json";
+import { computeReportCardsRegistryFingerprint } from "@shared/lib/report-cards-fixed-input-identity";
 import {
-  computeReportCardsRegistryFingerprint,
-  createReportCardsFixedInput,
   normalizeFixedInput,
-  type ReportCardsFixedInputDraft,
 } from "../report-cards-fixed-input";
+import {
+  createReportCardsFixedInput,
+  type ReportCardsFixedInputDraft,
+} from "../../test-helpers/report-cards-fixed-input";
 import { buildSafetyScoreV9Candidate, computeSafetyScoreV9CandidateId } from "../safety-score-v9/candidate";
 import {
   SafetyScoreV9FactSetExtensionV2Schema,

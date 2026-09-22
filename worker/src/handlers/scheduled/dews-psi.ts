@@ -8,7 +8,7 @@
  * degradation. The tape projector piggy-backs on the same lane because it is
  * purely D1-bound (zero outbound connections).
  */
-import { computeAndStoreDEWS } from "../../cron/compute-dews";
+import { computeAndStoreDEWS } from "../../lib/dews/service";
 import { computeAndStoreStabilityIndex } from "../../cron/stability-index";
 import { projectTape } from "../../cron/project-tape";
 import type { ScheduledRuntimeContext } from "./context";

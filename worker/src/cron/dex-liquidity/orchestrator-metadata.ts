@@ -74,7 +74,6 @@ export function buildDexLiquidityCronMetadata(params: {
   challengerPublication: {
     publishedStablecoins: number;
     skippedStablecoins: number;
-    missingTables: boolean;
   };
   dexPriceDiagnostics: DexPricePersistenceDiagnostics;
   failedSources: string[];
@@ -120,7 +119,6 @@ export function buildDexLiquidityCronMetadata(params: {
       ...params.sourceCoverage,
       challengerSnapshotsPublished: params.challengerPublication.publishedStablecoins,
       challengerSnapshotsSkipped: params.challengerPublication.skippedStablecoins,
-      challengerSnapshotTablesMissing: params.challengerPublication.missingTables,
     },
     failedSources: [...new Set(params.failedSources)],
     degradedSources: [...new Set(params.degradedSources ?? [])],

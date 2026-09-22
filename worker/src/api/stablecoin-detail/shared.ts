@@ -1,8 +1,8 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { setCache } from "../../lib/db-cache";
-import { buildPerCoinCacheControl, PER_COIN_CACHE_TTL_SECONDS } from "@shared/lib/api-cache-profiles";
+import { buildPerCoinCacheControl, PER_COIN_CACHE_TTL_SECONDS, API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { CACHE_PROFILES, DETAIL_WRITE_FAILURE_KEY_PREFIX } from "../../lib/constants";
+import { DETAIL_WRITE_FAILURE_KEY_PREFIX } from "../../lib/constants";
 import { binarySearchNearest } from "../../lib/binary-search";
 import { errorResponse } from "../../lib/api-response";
 import { claimDetailCacheGeneration, publishDetailCacheGeneration } from "../../lib/detail-cache-generation";

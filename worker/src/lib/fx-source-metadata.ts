@@ -11,13 +11,9 @@ function formatIsoDateFromTimestamp(updatedAt: number | null | undefined): strin
 function normalizeFiatCarryForwardMetadata(
   pegKey: string,
   updatedAt: number | null | undefined,
-  mode: FxRateSourceMode | undefined,
   cadence: FxSourceCadence | undefined,
   sourceDate: string | null | undefined,
 ): { cadence: FxSourceCadence; sourceDate: string | null } {
-  if (mode === "hardcoded") {
-    return { cadence: cadence ?? "intraday", sourceDate: null };
-  }
 
   const naturalCadence = getNaturalFxCadence(pegKey);
   if (!naturalCadence) {
@@ -43,7 +39,6 @@ export function inheritFxSourceMetadata(
   const normalized = normalizeFiatCarryForwardMetadata(
     pegKey,
     previousUpdatedAt,
-    previousMode,
     prevState?.sourceCadenceByPeg[pegKey],
     prevState?.sourceDateByPeg[pegKey] ?? null,
   );
@@ -71,7 +66,6 @@ export function canCarryForwardFxRates(
     const normalized = normalizeFiatCarryForwardMetadata(
       pegKey,
       prevState.sourceUpdatedAtByPeg[pegKey] ?? null,
-      prevState.sourceModeByPeg[pegKey],
       prevState.sourceCadenceByPeg[pegKey],
       prevState.sourceDateByPeg[pegKey] ?? null,
     );
@@ -96,7 +90,6 @@ function shouldPreserveDailyOverlayProvenance(
   const normalized = normalizeFiatCarryForwardMetadata(
     pegKey,
     sourceUpdatedAtByPeg[pegKey] ?? null,
-    sourceModeByPeg[pegKey],
     sourceCadenceByPeg[pegKey],
     sourceDateByPeg[pegKey] ?? null,
   );

@@ -5,7 +5,7 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { addFreshnessHeaders } from "../lib/api-freshness";
 import { jsonResponseWithHeaders } from "../lib/api-response";
 import { parseQueryParams } from "../lib/api-params";
-import { CACHE_PROFILES } from "../lib/constants";
+import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { getCompletedSupplySnapshot } from "../lib/supply-snapshot-completion";
 
 const DEFAULT_DAYS = 5000;

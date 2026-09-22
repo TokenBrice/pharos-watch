@@ -19,7 +19,6 @@ export interface DexPriceChallengerLoadRow {
 
 export interface DexPriceChallengerLoadDiagnostics {
   mode: "published" | "legacy" | "mixed" | "absent";
-  missingTables: boolean;
   emptyPublishedCoins: string[];
   incompletePublishedCoins: string[];
   legacyFallbackCoins: string[];

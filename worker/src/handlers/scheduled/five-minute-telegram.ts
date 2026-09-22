@@ -13,6 +13,7 @@ import { classifyTelegramLogError, logTelegramEvent } from "../../lib/telegram/l
 // so their module graphs never sit on the heap of isolates that only run the
 // heavy data lanes. Only types may be imported statically from them.
 import type { TelegramDispatchSharedState } from "../../cron/dispatch-telegram-alerts";
+import type * as TelegramRegistrationModule from "../../lib/telegram/webhook-registration";
 import type { TelegramRecapRolloutCleanupResult } from "../../lib/telegram/recap-store";
 import { resolveTelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 import {
@@ -39,12 +40,73 @@ import {
   summarizeSkippedScheduledJob,
 } from "./slot-summary";
 
-const TELEGRAM_REGISTRATION_ACTIONS = [
-  "reconcile-commands",
-  "reconcile-profile",
-  "reconcile-menu",
-  "reconcile-webhook",
+type TelegramRegistrationModuleType = typeof TelegramRegistrationModule;
+interface TelegramRegistration {
+  action: string;
+  run: (
+    registration: TelegramRegistrationModuleType,
+    runtime: ScheduledRuntimeContext,
+    botToken: string,
+    signal?: AbortSignal,
+  ) => Promise<{ attempted: boolean }>;
+}
+
+const TELEGRAM_REGISTRATIONS: readonly TelegramRegistration[] = [
+  {
+    action: "reconcile-commands",
+    run: (
+      registration: TelegramRegistrationModuleType,
+      runtime: ScheduledRuntimeContext,
+      botToken: string,
+      signal?: AbortSignal,
+    ) => registration.reconcileTelegramCommandRegistration(runtime.db, {
+      botToken,
+      includeRecap: resolveTelegramRecapRolloutPolicy(runtime.env).mode === "public",
+      signal,
+    }),
+  },
+  {
+    action: "reconcile-profile",
+    run: (
+      registration: TelegramRegistrationModuleType,
+      runtime: ScheduledRuntimeContext,
+      botToken: string,
+      signal?: AbortSignal,
+    ) => registration.reconcileTelegramProfileRegistration(runtime.db, {
+      botToken,
+      signal,
+    }),
+  },
+  {
+    action: "reconcile-menu",
+    run: (
+      registration: TelegramRegistrationModuleType,
+      runtime: ScheduledRuntimeContext,
+      botToken: string,
+      signal?: AbortSignal,
+    ) => registration.reconcileTelegramMenuButton(runtime.db, {
+      botToken,
+      signal,
+    }),
+  },
+  {
+    action: "reconcile-webhook",
+    run: (
+      registration: TelegramRegistrationModuleType,
+      runtime: ScheduledRuntimeContext,
+      botToken: string,
+      signal?: AbortSignal,
+    ) => registration.reconcileTelegramWebhookRegistration(runtime.db, {
+      botToken,
+      webhookSecret: runtime.env.TELEGRAM_WEBHOOK_SECRET,
+      selfUrl: runtime.env.SELF_URL,
+      signal,
+    }),
+  },
 ] as const;
+
+const TELEGRAM_REGISTRATION_ACTIONS =
+  TELEGRAM_REGISTRATIONS.map(({ action }) => action);
 
 function logReconciliationSuccess(action: string): void {
   logTelegramEvent({
@@ -369,39 +431,18 @@ export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext
     runtime,
     "telegram-registration-reconciliation",
     async (signal) => {
-      const {
-        reconcileTelegramCommandRegistration,
-        reconcileTelegramMenuButton,
-        reconcileTelegramProfileRegistration,
-        reconcileTelegramWebhookRegistration,
-      } = await import("../../lib/telegram/webhook-registration");
-      const registrations: Array<{
-        action: string;
-        run: (signal?: AbortSignal) => Promise<{ attempted: boolean; skipped?: boolean; reason?: string }>;
-      }> = [
-        { action: "reconcile-commands", run: (signal) => reconcileTelegramCommandRegistration(runtime.db, {
-          botToken: runtime.env.TELEGRAM_BOT_TOKEN,
-          includeRecap: resolveTelegramRecapRolloutPolicy(runtime.env).mode === "public",
-          signal,
-        }) },
-        { action: "reconcile-profile", run: (signal) => reconcileTelegramProfileRegistration(runtime.db, {
-          botToken: runtime.env.TELEGRAM_BOT_TOKEN,
-          signal,
-        }) },
-        { action: "reconcile-menu", run: (signal) => reconcileTelegramMenuButton(runtime.db, {
-          botToken: runtime.env.TELEGRAM_BOT_TOKEN,
-          signal,
-        }) },
-        { action: "reconcile-webhook", run: (signal) => reconcileTelegramWebhookRegistration(runtime.db, {
-          botToken: runtime.env.TELEGRAM_BOT_TOKEN,
-          webhookSecret: runtime.env.TELEGRAM_WEBHOOK_SECRET,
-          selfUrl: runtime.env.SELF_URL,
-          signal,
-        }) },
-      ];
+      const registration = await import("../../lib/telegram/webhook-registration");
       const results: TelegramReconciliationTelemetry[] = [];
-      for (const registration of registrations) {
-        results.push(await runTelegramReconciliation(registration.action, () => registration.run(signal)));
+      for (const entry of TELEGRAM_REGISTRATIONS) {
+        results.push(await runTelegramReconciliation(
+          entry.action,
+          () => entry.run(
+            registration,
+            runtime,
+            runtime.env.TELEGRAM_BOT_TOKEN!,
+            signal,
+          ),
+        ));
       }
       return results;
     },

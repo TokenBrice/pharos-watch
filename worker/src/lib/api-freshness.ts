@@ -1,6 +1,5 @@
 import { logWorkerEventArgs } from "./structured-log";
 import { buildInClause } from "./db";
-import { CACHE_FRESHNESS_THRESHOLDS } from "./constants";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "./dex-liquidity";
 import {
   STATUS_CACHE_RATIO_OVERRIDES,
@@ -9,7 +8,10 @@ import {
   getCacheHealthyMaxRatio,
   type FreshnessStatus,
 } from "@shared/lib/status-thresholds";
-import { getCacheFreshnessLane } from "@shared/lib/api-freshness";
+import {
+  CACHE_AVAILABILITY_MAX_AGE_SEC as CACHE_FRESHNESS_THRESHOLDS,
+  getCacheFreshnessLane,
+} from "@shared/lib/api-freshness";
 import type { ApiMeta } from "@shared/types/api-meta";
 import type { CacheStatus } from "@shared/types/status";
 import { buildFxCacheStatus, getFxRatesMetaKey, hydrateFxRateState } from "./fx-rate-state";

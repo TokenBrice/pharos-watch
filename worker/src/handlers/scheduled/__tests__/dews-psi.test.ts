@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   projectTape: vi.fn(),
 }));
 
-vi.mock("../../../cron/compute-dews", () => ({ computeAndStoreDEWS: mocks.computeAndStoreDEWS }));
+vi.mock("../../../lib/dews/service", () => ({ computeAndStoreDEWS: mocks.computeAndStoreDEWS }));
 vi.mock("../../../cron/stability-index", () => ({ computeAndStoreStabilityIndex: mocks.computeAndStoreStabilityIndex }));
 vi.mock("../../../cron/project-tape", () => ({ projectTape: mocks.projectTape }));
 

@@ -1,7 +1,7 @@
 import { jsonResponse } from "../lib/api-response";
 import type { HealthResponse } from "@shared/types/status";
 import { assessPublicHealth, buildPublicHealthResponse } from "../lib/public-health-assessment";
-import { CACHE_PROFILES } from "../lib/constants";
+import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { loadStatusRawSnapshot } from "../lib/status/raw-snapshot";
 
 export const handleHealth = async (db: D1Database): Promise<Response> => {

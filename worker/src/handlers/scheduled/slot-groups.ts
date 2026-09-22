@@ -161,15 +161,6 @@ async function runSerialScheduledJobs(
   return outcomes;
 }
 
-export function flattenScheduledSlotGroupTasks(
-  groups: readonly ScheduledSlotGroupDefinition[],
-): ScheduledSlotTask[] {
-  return groups.flatMap((group) => (
-    group.mode === "parallel-serial"
-      ? group.chains.flatMap((chain) => [...chain.tasks])
-      : [...group.tasks]
-  ));
-}
 
 export async function runScheduledSlotGroups(
   runtime: ScheduledRuntimeContext,

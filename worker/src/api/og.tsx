@@ -805,10 +805,8 @@ const CHAIN_OG_PATTERN = /^\/api\/og\/chain\/([a-z0-9-]+)$/;
 
 interface OgRoute {
   pattern: RegExp;
-  /** Decode/normalize the captured segment; a Response short-circuits both GET and HEAD. */
+  /** Decode/normalize the captured segment; a Response short-circuits routing. */
   resolveCapture?: (capture: string) => string | Response;
-  /** HEAD-only existence check. GET surfaces the same 404 from its renderer. */
-  headCheck?: (capture: string) => Response | null;
   render: (db: D1Database, capture: string) => Promise<Response>;
 }
 
@@ -822,13 +820,10 @@ const OG_ROUTES: readonly OgRoute[] = [
         return ogErrorResponse("Malformed URI", 400);
       }
     },
-    headCheck: (coinId) =>
-      resolveOrReject(coinId) instanceof Response ? ogErrorResponse("Unknown stablecoin", 404) : null,
     render: (db, coinId) => handleStablecoinOg(db, coinId),
   },
   {
     pattern: CHAIN_OG_PATTERN,
-    headCheck: (chainId) => (CHAIN_META[chainId] ? null : ogErrorResponse("Unknown chain", 404)),
     render: (db, chainId) => handleChainOg(db, chainId),
   },
   { pattern: /^\/api\/og\/safety-scores$/, render: (db) => handleSafetyScoresOg(db) },
@@ -836,17 +831,13 @@ const OG_ROUTES: readonly OgRoute[] = [
   { pattern: /^\/api\/og\/stability-index$/, render: (db) => handleStabilityIndexOg(db) },
 ];
 
-export async function handleOg(db: D1Database, path: string, method = "GET"): Promise<Response | null> {
+export async function handleOg(db: D1Database, path: string, _method = "GET"): Promise<Response | null> {
   const route = OG_ROUTES.find((candidate) => candidate.pattern.test(path));
   if (!route) return null;
 
   const rawCapture = path.match(route.pattern)?.[1] ?? "";
   const capture = route.resolveCapture ? route.resolveCapture(rawCapture) : rawCapture;
   if (capture instanceof Response) return capture;
-
-  if (method === "HEAD") {
-    return route.headCheck?.(capture) ?? new Response(null, { headers: CACHE_HEADERS });
-  }
 
   try {
     return await route.render(db, capture);

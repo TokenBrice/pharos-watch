@@ -3,7 +3,7 @@ import { getCache, setCacheIfNewer } from "./db-cache";
 import { addFreshnessHeaders } from "./api-freshness";
 import { jsonResponseWithHeaders } from "./api-response";
 import { readCachedJsonOr503 } from "./api-cache-read";
-import { CACHE_PROFILES } from "./constants";
+import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC } from "./mint-burn-health-config";
 import { MINT_BURN_CONFIGS } from "./mint-burn-contracts";
 import { decodeJsonString } from "./cache-json";

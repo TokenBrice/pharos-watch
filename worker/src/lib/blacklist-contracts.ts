@@ -3,11 +3,26 @@ import {
   type BlacklistStablecoin,
   type BlacklistEventType,
 } from "@shared/types/market";
+import { CHAIN_META, type ChainMeta } from "@shared/lib/chains";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
-import { chainConfig, type ChainConfig } from "./chain-config";
 import { resolveRequiredTrackedContractConfig } from "./tracked-contract-resolution";
 
-export { chainConfig, type ChainConfig };
+export interface ChainConfig extends Pick<ChainMeta, "evmChainId" | "explorerUrl" | "type"> {
+  chainId: string;
+  chainName: string;
+}
+
+function requireChainConfig(chainId: string): ChainConfig {
+  const meta = CHAIN_META[chainId];
+  if (!meta) throw new Error(`Unknown chain: ${chainId}`);
+  return {
+    chainId,
+    chainName: meta.name,
+    evmChainId: meta.evmChainId,
+    explorerUrl: meta.explorerUrl,
+    type: meta.type,
+  };
+}
 
 export interface ContractEventConfig {
   configKey: string;
@@ -53,15 +68,15 @@ interface ContractEventConfigSpec {
   events: readonly BlacklistEventDef[];
 }
 
-const ETHEREUM  = chainConfig("ethereum");
-const ARBITRUM  = chainConfig("arbitrum");
-const BASE      = chainConfig("base");
-const OPTIMISM  = chainConfig("optimism");
-const POLYGON   = chainConfig("polygon");
-const AVALANCHE = chainConfig("avalanche");
-const BSC       = chainConfig("bsc");
-const GNOSIS    = chainConfig("gnosis");
-const TRON      = chainConfig("tron");
+const ETHEREUM  = requireChainConfig("ethereum");
+const ARBITRUM  = requireChainConfig("arbitrum");
+const BASE      = requireChainConfig("base");
+const OPTIMISM  = requireChainConfig("optimism");
+const POLYGON   = requireChainConfig("polygon");
+const AVALANCHE = requireChainConfig("avalanche");
+const BSC       = requireChainConfig("bsc");
+const GNOSIS    = requireChainConfig("gnosis");
+const TRON      = requireChainConfig("tron");
 
 // --- Event topic hashes (Keccak256) ---
 

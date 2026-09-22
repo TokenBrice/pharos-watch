@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { ScheduledRuntimeContext } from "../context";
 import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
-import { flattenScheduledSlotGroupTasks, runScheduledSlotGroups } from "../slot-groups";
+import { runScheduledSlotGroups } from "../slot-groups";
 
 function buildRuntime(
   runLeasedCron: ScheduledRuntimeContext["runLeasedCron"],
@@ -221,23 +221,4 @@ describe("scheduled slot groups", () => {
     ]);
   });
 
-  it("flattens mixed group shapes for preflight accounting", () => {
-    const tasks = flattenScheduledSlotGroupTasks([
-      {
-        mode: "serial",
-        label: "serial",
-        tasks: [{ job: "a", run: async () => undefined }],
-      },
-      {
-        mode: "parallel-serial",
-        label: "chains",
-        chains: [
-          { label: "left", tasks: [{ job: "b", run: async () => undefined }] },
-          { label: "right", tasks: [{ job: "c", run: async () => undefined }] },
-        ],
-      },
-    ]);
-
-    expect(tasks.map((task) => task.job)).toEqual(["a", "b", "c"]);
-  });
 });

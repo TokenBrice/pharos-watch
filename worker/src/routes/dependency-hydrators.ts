@@ -6,7 +6,7 @@ import { resolveMintBurnFreshnessConfig } from "../lib/mint-burn-health-config";
 import { buildTelegramCreds } from "../lib/runtime-credentials";
 import { resolveTelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 import type { FullRouteContext } from "./shared";
-import { normalizeWorkerCanaryMode } from "../lib/worker-canary-mode";
+import { normalizeWorkerCanaryMode } from "../lib/canary-checks";
 
 type RouteDependencyHydrator = (routeCtx: FullRouteContext, env: Env) => void;
 

@@ -13,7 +13,6 @@ import {
 import {
   CONTRACT_CONFIGS,
   PYUSD_EVENT_FAMILY,
-  chainConfig,
   getBlacklistConfigsForSymbolAndChain,
   getBlacklistEventBySignature,
   getBlacklistEventByTopic,
@@ -223,10 +222,6 @@ describe("blacklist-contracts shared metadata alignment", () => {
       "RemovedBlackList(address)",
     ]);
     expect(getBlacklistEventBySignature(config!, "DestroyedBlackFunds")).toBeUndefined();
-  });
-
-  it("throws when chainConfig is called with an unknown chainId", () => {
-    expect(() => chainConfig("nonexistent-chain")).toThrow();
   });
 
   it("returns undefined for an unknown topic hash", () => {

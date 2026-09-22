@@ -1,3 +1,4 @@
+import { DEPEG_PENDING_MIN_AGE_SEC } from "@shared/lib/depeg-config";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
@@ -8,7 +9,7 @@ import {
   openLatestSchemaFixture,
 } from "../../test-helpers/pending-depeg-fixtures";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
-import { DEPEG_PENDING_MIN_AGE_SEC } from "../../lib/constants";
+
 import { normalizePendingDepegRow, type PendingDepegRow } from "../../lib/depeg-pending";
 import { buildConfirmationPlan, type ConfirmationPlanInput } from "../pending-depeg-confirmation";
 

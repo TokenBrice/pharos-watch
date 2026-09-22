@@ -1,4 +1,5 @@
 import type { TelegramAlertType } from "@shared/types/status";
+import { mergeTelegramDepegWorseningSteps } from "@shared/lib/telegram-delivery-policy";
 import { buildInClause, chunkArray, D1_MAX_BOUND_PARAMETERS } from "../lib/db";
 import { GLOBAL_ALERT_COLUMN_BY_TYPE } from "../lib/telegram/broadcast-targets";
 import type { SubscriberRow } from "./dispatch-telegram-routing";
@@ -38,6 +39,47 @@ function normalizedChatIds(options: TelegramSubscriberLoadOptions): string[] | n
   return options.chatIds ? [...new Set(options.chatIds)] : null;
 }
 
+interface SubscriberQueryPage {
+  stablecoinIds: string[];
+  chatIds: string[];
+}
+
+function* subscriberQueryPages(
+  stablecoinIds: readonly string[] | null,
+  options: TelegramSubscriberLoadOptions,
+  fixedBindCount: number,
+): Generator<SubscriberQueryPage> {
+  const chatIds = normalizedChatIds(options);
+  if (chatIds?.length === 0) return;
+  const uniqueStablecoinIds = stablecoinIds == null
+    ? null
+    : Array.from(new Set(stablecoinIds));
+  if (uniqueStablecoinIds?.length === 0) return;
+  const chatChunks = chatIds
+    ? chunkArray(chatIds, uniqueStablecoinIds == null ? D1_MAX_BOUND_PARAMETERS - fixedBindCount : 45)
+    : [[]];
+  for (const chatChunk of chatChunks) {
+    if (uniqueStablecoinIds == null) {
+      yield { stablecoinIds: [], chatIds: chatChunk };
+      continue;
+    }
+    const stablecoinChunkSize = D1_MAX_BOUND_PARAMETERS - fixedBindCount - chatChunk.length;
+    for (const stablecoinChunk of chunkArray(uniqueStablecoinIds, stablecoinChunkSize)) {
+      yield { stablecoinIds: stablecoinChunk, chatIds: chatChunk };
+    }
+  }
+}
+async function forEachSubscriptionPage(
+  stablecoinIds: readonly string[] | null,
+  options: TelegramSubscriberLoadOptions,
+  fixedBindCount: number,
+  visit: (page: SubscriberQueryPage) => Promise<void>,
+): Promise<void> {
+  for (const page of subscriberQueryPages(stablecoinIds, options, fixedBindCount)) {
+    await visit(page);
+  }
+}
+
 export async function loadSubscriberRowsBatch(
   db: D1Database,
   stablecoinIds: string[],
@@ -52,12 +94,10 @@ export async function loadSubscriberRowsBatch(
   }
   const map = new Map<string, SubscriberRow[]>();
   const seen = new Set<string>();
-  const chatIds = normalizedChatIds(options);
-  if (chatIds?.length === 0) return map;
-  const chatChunks = chatIds ? chunkArray(chatIds, 45) : [[]];
-  for (const chatChunk of chatChunks) {
-    const stablecoinChunkSize = D1_MAX_BOUND_PARAMETERS - 2 - chatChunk.length;
-    for (const idChunk of chunkArray(Array.from(new Set(stablecoinIds)), stablecoinChunkSize)) {
+  await forEachSubscriptionPage(stablecoinIds, options, 2, async ({
+    stablecoinIds: idChunk,
+    chatIds: chatChunk,
+  }) => {
       const inClause = buildInClause(idChunk);
       const chatClause = chatChunk.length > 0 ? buildInClause(chatChunk) : null;
       const result = await db
@@ -107,8 +147,7 @@ export async function loadSubscriberRowsBatch(
         });
         map.set(row.stablecoin_id, existing);
       }
-    }
-  }
+  });
   return map;
 }
 
@@ -122,10 +161,8 @@ export async function loadGlobalSubscriberRows(
   if (!VALID_GLOBAL_ALERT_COLUMNS.has(alertColumn)) {
     throw new Error(`Invalid global alert subscription column for ${type}`);
   }
-  const chatIds = normalizedChatIds(options);
-  if (chatIds?.length === 0) return [];
   const loaded: SubscriberRow[] = [];
-  for (const chatChunk of chatIds ? chunkArray(chatIds, D1_MAX_BOUND_PARAMETERS - 1) : [[]]) {
+  await forEachSubscriptionPage(null, options, 1, async ({ chatIds: chatChunk }) => {
     const chatClause = chatChunk.length > 0 ? buildInClause(chatChunk) : null;
     const result = await db.prepare(
       // SAFETY: alertColumn comes from GLOBAL_ALERT_COLUMN_BY_TYPE and is
@@ -146,7 +183,7 @@ export async function loadGlobalSubscriberRows(
       .bind(...(chatClause?.binds ?? []), nowSec)
       .all<SubscriberRow>();
     loaded.push(...(result.results ?? []));
-  }
+  });
 
   return loaded.map((row) => ({
     chat_id: row.chat_id,
@@ -177,12 +214,11 @@ export async function loadPerCoinSnoozeMap(
   options: TelegramSubscriberLoadOptions = {},
 ): Promise<Map<string, Set<string>>> {
   const map = new Map<string, Set<string>>();
-  const unique = Array.from(new Set(stablecoinIds));
-  if (unique.length === 0) return map;
-  const chatIds = normalizedChatIds(options);
-  if (chatIds?.length === 0) return map;
-  for (const chatChunk of chatIds ? chunkArray(chatIds, 45) : [[]]) {
-    for (const idChunk of chunkArray(unique, D1_MAX_BOUND_PARAMETERS - 1 - chatChunk.length)) {
+  if (stablecoinIds.length === 0) return map;
+  await forEachSubscriptionPage(stablecoinIds, options, 1, async ({
+    stablecoinIds: idChunk,
+    chatIds: chatChunk,
+  }) => {
       const inClause = buildInClause(idChunk);
       const chatClause = chatChunk.length > 0 ? buildInClause(chatChunk) : null;
       const result = await db
@@ -201,8 +237,7 @@ export async function loadPerCoinSnoozeMap(
         existing.add(row.chat_id);
         map.set(row.stablecoin_id, existing);
       }
-    }
-  }
+  });
   return map;
 }
 
@@ -221,17 +256,16 @@ export async function loadPerCoinExplicitlyOffMap(
   options: TelegramSubscriberLoadOptions = {},
 ): Promise<Map<string, Set<string>>> {
   const map = new Map<string, Set<string>>();
-  const unique = Array.from(new Set(stablecoinIds));
-  if (unique.length === 0) return map;
+  if (stablecoinIds.length === 0) return map;
   const alertColumn = ALERT_COLUMN_BY_TYPE[type];
   const overrideColumn = ALERT_OVERRIDE_COLUMN_BY_TYPE[type];
   if (!VALID_ALERT_COLUMNS.has(alertColumn) || !VALID_ALERT_OVERRIDE_COLUMNS.has(overrideColumn)) {
     throw new Error(`Invalid alert subscription column for ${type}`);
   }
-  const chatIds = normalizedChatIds(options);
-  if (chatIds?.length === 0) return map;
-  for (const chatChunk of chatIds ? chunkArray(chatIds, 45) : [[]]) {
-    for (const idChunk of chunkArray(unique, D1_MAX_BOUND_PARAMETERS - chatChunk.length)) {
+  await forEachSubscriptionPage(stablecoinIds, options, 0, async ({
+    stablecoinIds: idChunk,
+    chatIds: chatChunk,
+  }) => {
       const inClause = buildInClause(idChunk);
       const chatClause = chatChunk.length > 0 ? buildInClause(chatChunk) : null;
       const result = await db
@@ -252,26 +286,17 @@ export async function loadPerCoinExplicitlyOffMap(
         existing.add(row.chat_id);
         map.set(row.stablecoin_id, existing);
       }
-    }
-  }
+  });
   return map;
 }
 
-function mergeDepegWorseningStep(
-  existing: number | null,
-  additional: number | null,
-): number | null {
-  if (existing == null) return additional;
-  if (additional == null) return existing;
-  return Math.min(existing, additional);
-}
 
 function mergeSubscriberRows(existing: SubscriberRow, additional: SubscriberRow): SubscriberRow {
   if (existing.hasLocalOverride) return existing;
   if (additional.hasLocalOverride) return additional;
   return {
     ...existing,
-    depeg_worsening_bps_step: mergeDepegWorseningStep(
+    depeg_worsening_bps_step: mergeTelegramDepegWorseningSteps(
       existing.depeg_worsening_bps_step,
       additional.depeg_worsening_bps_step,
     ),

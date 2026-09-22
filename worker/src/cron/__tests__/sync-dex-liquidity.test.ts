@@ -77,7 +77,7 @@ const phaseFixtures = vi.hoisted(() => {
         maxDepthDown2PctUsdBySymbol: { USDT: 1_000_000, USDC: 500_000 },
         maxDepthUp2PctUsdBySymbol: { USDT: 900_000, USDC: 450_000 },
       },
-      challenger: { publishedStablecoins: 0, skippedStablecoins: 0, missingTables: false },
+      challenger: { publishedStablecoins: 0, skippedStablecoins: 0 },
       ...overrides,
     };
   }

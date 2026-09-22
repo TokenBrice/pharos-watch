@@ -1,5 +1,5 @@
 import { round4 } from "@shared/lib/math";
-import { DexLiquidityCronMetadataSchema } from "../../lib/schemas";
+import type { DexLiquidityCronMetadata } from "../../lib/schemas";
 import type { DexPriceObs, FullScoreResult } from "./types";
 
 export const DRIFT_WATCHLIST = ["usdc-circle", "usdt-tether", "dai-makerdao", "usds-sky", "usde-ethena"] as const;
@@ -36,7 +36,6 @@ export interface DexLiquidityDriftCandidate {
   observedValue: number;
 }
 
-type DexLiquidityCronMetadata = ReturnType<typeof DexLiquidityCronMetadataSchema.parse>;
 
 function pctDelta(current: number, previous: number): number | null {
   if (!Number.isFinite(current) || !Number.isFinite(previous) || previous === 0) return null;

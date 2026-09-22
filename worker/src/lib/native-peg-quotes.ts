@@ -1,6 +1,7 @@
+import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
 import { logWorkerEventArgs } from "./structured-log";
 import { isRecord } from "@shared/lib/type-guards";
-import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC, USER_AGENT } from "./constants";
+import { USER_AGENT } from "./constants";
 import { cgHeaders, cgSimplePricePath, cgUrl } from "./coingecko";
 import { fetchWithRetry } from "./fetch-retry";
 import {

@@ -15,7 +15,6 @@ const options: VersionedSnapshotCacheOptions<Payload, Reason> = {
     storage: "d1-kv",
     schemaId: "snapshot:test:v1",
     ttlSec: null,
-    maxEntries: 1,
     stale: "accept",
     invalid: "retain",
   },

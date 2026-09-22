@@ -1,16 +1,13 @@
 import { TelegramSendOriginatedError } from "../lib/telegram/transport-errors";
 import type { TelegramDispatchCronResult } from "@shared/types";
-import { TELEGRAM_PENDING_DRAIN_BUDGET } from "./telegram-pending";
+import type { PendingCapacitySnapshot, PendingDrainResult } from "./telegram-pending";
 import { emptyPerAlertTypeDelivery } from "./dispatch-telegram-routing";
 import type { TelegramAlertType } from "@shared/types/status";
 import {
   emptyPendingCapacitySnapshot,
   pendingCapacityProgressFields,
 } from "../lib/telegram/pending-capacity";
-import type {
-  PendingCapacitySnapshot,
-  PendingDrainResult,
-} from "./telegram-pending";
+
 import type { AlertSafetySourceAssessment } from "../lib/alert-safety-source-cache";
 import type { AlertReserveSourceAssessment } from "../lib/alert-reserve-source-cache";
 
@@ -218,6 +215,7 @@ export function buildPerAlertTypeTargets(
 }
 
 function emptyResult(snapshotSeeded: boolean, chatsWithActiveSnooze = 0): DispatchResult {
+  const emptyCapacity = emptyPendingCapacitySnapshot();
   return {
     eventsDetected: {
       dews: 0,
@@ -250,17 +248,9 @@ function emptyResult(snapshotSeeded: boolean, chatsWithActiveSnooze = 0): Dispat
     pendingEnqueued: 0,
     pendingExpired: 0,
     pendingSent: 0,
-    pendingTotal: 0,
-    pendingDue: 0,
-    pendingDeferredCount: 0,
-    pendingExpiredCount: 0,
-    pendingNearTtlCount: 0,
-    oldestPendingAgeSec: null,
-    oldestDuePendingAgeSec: null,
-    estimatedDrainTimeSec: 0,
-    pendingDrainBudgetPerRun: TELEGRAM_PENDING_DRAIN_BUDGET,
-    pendingCapacityBefore: emptyPendingCapacitySnapshot(),
-    pendingCapacityAfter: emptyPendingCapacitySnapshot(),
+    ...pendingCapacityProgressFields(emptyCapacity),
+    pendingCapacityBefore: emptyCapacity,
+    pendingCapacityAfter: emptyCapacity,
     freshAttempted: 0,
     freshSent: 0,
     freshRetryQueued: 0,

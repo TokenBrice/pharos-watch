@@ -281,3 +281,5 @@ export const DexLiquidityCronMetadataSchema = z.object({
     .passthrough()
     .optional(),
 });
+
+export type DexLiquidityCronMetadata = z.infer<typeof DexLiquidityCronMetadataSchema>;

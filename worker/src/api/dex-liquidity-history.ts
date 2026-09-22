@@ -1,5 +1,5 @@
 import { handleStablecoinHistoryRequest } from "../lib/api-history";
-import { CACHE_PROFILES } from "../lib/constants";
+import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { normalizeDexLiquidityEvidence, type DexLiquidityRow } from "../lib/dex-liquidity";
 import { safeJsonParse } from "../lib/api-cache-read";
 import {

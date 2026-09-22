@@ -1,10 +1,5 @@
-import {
-  CIRCUIT_SOURCE,
-  DEPEG_DEX_PROTOCOL_CORROBORATION_MIN,
-  POOL_CHALLENGE_CONFIRM_MIN,
-  POOL_CHALLENGE_HIGH_TVL_USD,
-  USER_AGENT,
-} from "../lib/constants";
+import { DEPEG_DEX_PROTOCOL_CORROBORATION_MIN } from "@shared/lib/depeg-config";
+import { CIRCUIT_SOURCE, POOL_CHALLENGE_CONFIRM_MIN, POOL_CHALLENGE_HIGH_TVL_USD, USER_AGENT } from "../lib/constants";
 import { cgHeaders, cgSimplePricePath, cgUrl } from "../lib/coingecko";
 import { recordOutcomeSafe } from "../lib/circuit-breaker";
 import {

@@ -10,7 +10,7 @@ import { runStatusSelfCheck } from "../../cron/status-self-check";
 import { runCronSentinel } from "../../cron/cron-sentinel";
 import { buildTelegramOperatorCreds } from "../../lib/runtime-credentials";
 import { resolveCloudflareD1StatusConfig } from "../../lib/env";
-import { normalizeWorkerCanaryMode } from "../../lib/worker-canary-mode";
+import { normalizeWorkerCanaryMode } from "../../lib/canary-checks";
 import { runRuntimeBudgetOnlyTask, type ScheduledRuntimeContext } from "./context";
 import { bindScheduledSlotPlan, runScheduledSlotGroups } from "./slot-groups";
 

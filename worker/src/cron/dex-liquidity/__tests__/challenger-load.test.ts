@@ -248,7 +248,6 @@ describe("challenger load", () => {
     const result = await loadPublishedDexPoolChallengers(db, 20_000, 1_000, 120);
 
     expect(result.diagnostics.mode).toBe("mixed");
-    expect(result.diagnostics.missingTables).toBe(false);
     expect(result.diagnostics.emptyPublishedCoins).toEqual(["coin-b"]);
     expect(result.diagnostics.incompletePublishedCoins).toEqual(["coin-c"]);
     expect(new Set(result.diagnostics.legacyFallbackCoins)).toEqual(new Set(["coin-c", "coin-d", "coin-e"]));

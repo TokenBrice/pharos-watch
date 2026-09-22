@@ -1,9 +1,10 @@
+import { DEPEG_PENDING_MIN_AGE_SEC, DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { assertAllFetchRoutesUsed, mockFetch, type MockFetchSpy } from "@shared/test-utils/mock-fetch";
 import { assertAllD1MatchesUsed, mockD1Strict, type MockD1Database } from "@shared/test-utils/mock-d1";
 import type { StablecoinMeta } from "@shared/types/core";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
-import { DEPEG_PENDING_MIN_AGE_SEC, DEX_FRESHNESS_SEC } from "../../lib/constants";
+
 import { normalizePendingDepegRow, type PendingDepegRow } from "../../lib/depeg-pending";
 import { deriveDepegSignal } from "../../lib/depeg-signals";
 import type { CollectedConfirmationEvidence, ConfirmationEvidenceInput, DexPoolChallengersByCoin, DexPriceRowsByCoin, DexPriceSourcesByCoin } from "../pending-depeg-confirmation";

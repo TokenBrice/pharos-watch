@@ -176,8 +176,6 @@ export async function loadPriceValidationReferences(
         globalType = "stale";
       } else if (globalType !== "stale" && type === "fresh") {
         globalType = "fresh";
-      } else if (globalType === "none" && type === "static") {
-        globalType = "static";
       }
     }
 

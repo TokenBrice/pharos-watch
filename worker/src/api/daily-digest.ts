@@ -1,7 +1,7 @@
 import { addFreshnessHeaders } from "../lib/api-freshness";
 import { jsonResponse } from "../lib/api-response";
 import { safeJsonParse } from "../lib/api-cache-read";
-import { CACHE_PROFILES } from "../lib/constants";
+import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_INTERNAL_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "../lib/digest-sql-filters";
 import { selectDigestRiskSignal } from "./digest-risk-summary";

@@ -1,13 +1,9 @@
+import { DEPEG_PENDING_EXPIRY_SEC, DEPEG_PENDING_MIN_AGE_SEC, DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
 import { logWorkerEventArgs } from "../lib/structured-log";
 import type { PegAssetBase } from "@shared/types/core";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getPegReference, normalizePegType, type PegRateSource } from "@shared/lib/peg-rates";
-import {
-  DEPEG_PENDING_EXPIRY_SEC,
-  DEPEG_PENDING_MIN_AGE_SEC,
-  DEPEG_PRIMARY_PRICE_MAX_AGE_SEC,
-  getDepegThresholdBps,
-} from "../lib/constants";
+import { getDepegThresholdBps } from "../lib/constants";
 import {
   dexPoolIndependentGroupKey,
   isNativeOriginPending,

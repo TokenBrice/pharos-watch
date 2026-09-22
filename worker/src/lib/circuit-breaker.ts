@@ -36,7 +36,6 @@ const CIRCUIT_RECORD_MEMO_POLICY = {
   storage: "isolate-memory",
   schemaId: "circuit-record:memo:v1",
   ttlSec: 5,
-  maxEntries: null,
   stale: "reject",
   invalid: "delete",
 } satisfies CacheRetentionPolicy;
@@ -83,7 +82,6 @@ function circuitRecordPolicy(source: string): CachePolicy<CircuitRecord> {
     storage: "d1-kv",
     schemaId: "circuit-record:v1",
     ttlSec: null,
-    maxEntries: null,
     stale: "accept",
     invalid: "retain",
     decode: (value) => {

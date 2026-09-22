@@ -2,8 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ENDPOINT_DEFINITIONS } from "@shared/lib/api-endpoints";
 import { STRICT_CONTRACT_PATHS_LIST } from "@shared/lib/api-endpoints";
 import { isMutatingAdminGetAllowed } from "@shared/lib/api-endpoints/validation";
-import { route, resolveRoute, ROUTER_STATIC_PATHS } from "../../router";
-import { getRouteMatch } from "../../routes/registry";
+import { route, resolveRoute } from "../../router";
+import { getRouteMatch, ROUTER_STATIC_PATHS } from "../../routes/registry";
 import type { FullRouteContext } from "../../routes/shared";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 
@@ -215,8 +215,6 @@ describe("router contract: strict frontend paths are routable", () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
     vi.resetModules();
     vi.doMock("../../routes/registry", () => ({
-      ROUTER_STATIC_PATHS: [],
-      getRouteDependencies: () => [],
       getRouteMatch: () => ({
         dependencies: [],
         methods: ["GET"],

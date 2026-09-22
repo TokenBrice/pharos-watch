@@ -1,18 +1,9 @@
+import { DEPEG_CONFIRMATION_SUPPLY_THRESHOLD, DEPEG_DEX_PROTOCOL_CORROBORATION_MIN, DEPEG_EVENT_MIN_SUPPLY_USD, DEPEG_EXTREME_MOVE_BPS, DEPEG_PENDING_MIN_AGE_SEC } from "@shared/lib/depeg-config";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC } from "@shared/lib/depeg-closure";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import { getCirculatingRaw } from "@shared/lib/supply";
-import {
-  DEPEG_CONFIRMATION_SUPPLY_THRESHOLD,
-  DEPEG_DEX_PROTOCOL_CORROBORATION_MIN,
-  DEPEG_EVENT_MIN_SUPPLY_USD,
-  DEPEG_EXTREME_MOVE_BPS,
-  DEPEG_PENDING_MIN_AGE_SEC,
-  getDepegRecoveryThresholdBps,
-  getDepegThresholdBps,
-  POOL_CHALLENGE_CONFIRM_MIN,
-  POOL_CHALLENGE_HIGH_TVL_USD,
-} from "../../lib/constants";
+import { getDepegRecoveryThresholdBps, getDepegThresholdBps, POOL_CHALLENGE_CONFIRM_MIN, POOL_CHALLENGE_HIGH_TVL_USD } from "../../lib/constants";
 import {
   buildPendingReason,
   countDexProtocolCorroborations,

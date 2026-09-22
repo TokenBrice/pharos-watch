@@ -10,7 +10,6 @@ import { findDynamicEndpointDescriptor } from "@shared/lib/api-endpoints";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
 import {
-  API_REQUEST_SOURCE_STATS_RETENTION_DAYS,
   buildApiRequestAttributionKeyedPublicApiSummary,
   buildApiRequestAttributionSplit,
   isApiKeyRequestAttributionDisabled,
@@ -224,7 +223,6 @@ describe("request-source-attribution", () => {
       },
     ]);
 
-    expect(API_REQUEST_SOURCE_STATS_RETENTION_DAYS).toBe(REQUEST_ATTRIBUTION_RETENTION_DAYS);
   });
 
   it("preserves the shared environment flag truth table", () => {

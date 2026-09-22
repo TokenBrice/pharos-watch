@@ -21,8 +21,7 @@ import type {
 
 export { isRequestSourceAttributionDisabled } from "@shared/lib/request-attribution";
 
-export const API_REQUEST_SOURCE_STATS_RETENTION_DAYS = REQUEST_ATTRIBUTION_RETENTION_DAYS;
-const API_REQUEST_SOURCE_STATS_RETENTION_SEC = API_REQUEST_SOURCE_STATS_RETENTION_DAYS * 24 * 60 * 60;
+const API_REQUEST_SOURCE_STATS_RETENTION_SEC = REQUEST_ATTRIBUTION_RETENTION_DAYS * 24 * 60 * 60;
 const REQUEST_ATTRIBUTION_FLUSH_DELAY_MS = 10;
 const REQUEST_ATTRIBUTION_BATCH_SIZE = 50;
 const API_KEY_REQUEST_ATTRIBUTION_DISABLED_ENV = "API_KEY_REQUEST_ATTRIBUTION_DISABLED";
@@ -315,7 +314,7 @@ export function buildApiRequestAttributionResponse(config: {
       bucketSizeSec: config.bucketSizeSec,
       routeLimit: config.routeLimit,
       apiKeyLimit: config.apiKeyLimit,
-      retentionDays: API_REQUEST_SOURCE_STATS_RETENTION_DAYS,
+      retentionDays: REQUEST_ATTRIBUTION_RETENTION_DAYS,
     },
     totals: buildApiRequestAttributionSplit(config.totals.siteRequests, config.totals.externalRequests),
     siteDelivery: buildSiteDelivery(config.siteDelivery),

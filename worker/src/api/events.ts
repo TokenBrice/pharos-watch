@@ -7,7 +7,7 @@ import {
 } from "../lib/api-params";
 import { errorResponse, jsonFreshResponse } from "../lib/api-response";
 import { getLatestSuccessfulCronTimestamp, buildFreshnessMeta } from "../lib/api-freshness";
-import { CACHE_PROFILES } from "../lib/constants";
+import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { queryTapeEvents, type TapeEventQueryFilters } from "../lib/tape-event-store";
 import { mapTapeEventRow } from "../lib/tape-event-helpers";
 import { logWorkerEvent } from "../lib/structured-log";

@@ -1,6 +1,6 @@
 import { handleStablecoinHistoryRequest } from "../lib/api-history";
 import { errorResponse } from "../lib/api-response";
-import { CACHE_PROFILES } from "../lib/constants";
+import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { STABLECOIN_HISTORY_QUERY_CONTRACTS } from "@shared/lib/api-query-history";
 import {
   SafetyScoreHistoryV2ResponseSchema,

@@ -155,7 +155,7 @@ describe("getPriceCache", () => {
 describe("readCacheWithPolicy", () => {
   const policy: CachePolicy<{ count: number }> = {
     key: "policy-test", storage: "d1-kv", schemaId: "count:v1", ttlSec: 30,
-    maxEntries: 1, stale: "reject", invalid: "retain",
+    stale: "reject", invalid: "retain",
     decode: JSON.parse, encode: JSON.stringify,
   };
 
@@ -209,7 +209,6 @@ describe("readCacheWithPolicy", () => {
       storage: "d1-kv",
       schemaId: "test:count:v1",
       ttlSec: 30,
-      maxEntries: 1,
       stale: "fallback-only",
       invalid: "retain",
       decode: (value) => JSON.parse(value) as { count: number },

@@ -7,7 +7,7 @@ import {
 } from "../lib/api-params";
 import { buildPaginatedEventResponse } from "../lib/api-pagination";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import { CACHE_PROFILES } from "../lib/constants";
+import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { getMintBurnConfigsForStablecoin } from "../lib/mint-burn-contracts";
 import { buildInClause } from "../lib/db";
 

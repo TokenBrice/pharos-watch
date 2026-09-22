@@ -1,3 +1,4 @@
+import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
 import { formatIsoDate } from "@shared/lib/format";
 import { REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS } from "@shared/lib/report-card-active-depeg";
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -5,7 +6,7 @@ import { getRedemptionBackstopConfig, type RedemptionBackstopConfig } from "@sha
 import type { StablecoinMeta } from "@shared/types";
 import type { StablecoinData } from "@shared/types/market";
 import type { RedemptionRouteStatus, RedemptionRouteStatusSource } from "@shared/types/redemption";
-import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "../constants";
+
 import { classifyPrimaryDepegTrust } from "../depeg-trust-policy";
 import { deriveCurrentPegObservationMap } from "../peg-analytics";
 

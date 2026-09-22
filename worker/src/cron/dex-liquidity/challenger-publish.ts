@@ -220,7 +220,6 @@ export async function publishDexPriceChallengerSnapshots(
 ): Promise<{
   publishedStablecoins: number;
   skippedStablecoins: number;
-  missingTables: boolean;
 }> {
   const snapshotAt = Math.floor(requireFiniteNumber(input.snapshotAt, "dex-price-challengers: snapshotAt"));
 
@@ -343,6 +342,5 @@ export async function publishDexPriceChallengerSnapshots(
   return {
     publishedStablecoins,
     skippedStablecoins,
-    missingTables: false,
   };
 }

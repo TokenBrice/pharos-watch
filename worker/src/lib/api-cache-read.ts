@@ -213,7 +213,7 @@ export function createCacheHandler(
       },
     ) => Promise<unknown> | unknown;
     injectMeta?: "auto" | "never";
-    responseReadyCache?: "json-object" | "raw-json";
+    responseReadyCache?: "json-object";
     responseReadySchemaId?: string;
     malformedMessage?: string;
   },
@@ -230,7 +230,6 @@ export function createCacheHandler(
             ? decodeResponseReadyCacheBody(cacheKey, responseReady, options.responseReadySchemaId)
             : null;
           const responseReadyBody = trustedBody != null
-            && options.responseReadyCache === "json-object"
             && options.injectMeta !== "never"
             ? injectMetaIntoJsonObject(trustedBody, canonicalUpdatedAt, maxAgeSec)
             : trustedBody;

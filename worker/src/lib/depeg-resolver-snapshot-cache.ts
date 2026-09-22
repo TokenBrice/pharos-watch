@@ -29,7 +29,6 @@ const DDR_SNAPSHOT_CACHE_OPTIONS: VersionedSnapshotCacheOptions<DdrResponse, Ddr
     storage: "d1-kv",
     schemaId: "depeg-resolver:snapshot-envelope",
     ttlSec: null,
-    maxEntries: 1,
     stale: "accept",
     invalid: "retain",
   },

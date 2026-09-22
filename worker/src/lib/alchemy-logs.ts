@@ -664,7 +664,6 @@ const ALCHEMY_BLOCK_TIMESTAMP_CACHE_POLICY = {
   storage: "domain-table",
   schemaId: "alchemy:block-timestamp:v1",
   ttlSec: DEFAULT_TIMESTAMP_CACHE_MAX_AGE_SEC,
-  maxEntries: null,
   stale: "reject",
   invalid: "retain",
 } satisfies CacheRetentionPolicy;

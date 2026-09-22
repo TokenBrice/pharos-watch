@@ -35,7 +35,6 @@ const DDRR_SNAPSHOT_CACHE_OPTIONS: VersionedSnapshotCacheOptions<DdrrResponse, D
     storage: "d1-kv",
     schemaId: "depeg-resolver-review:snapshot-envelope",
     ttlSec: null,
-    maxEntries: 1,
     stale: "accept",
     invalid: "retain",
   },

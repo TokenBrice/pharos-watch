@@ -11,7 +11,7 @@ import {
   SCHEDULED_SLOT_PLANS,
   OFF_SLOT_SCHEDULED_PRODUCERS,
 } from "@shared/lib/scheduled-runner-registry";
-import { flattenScheduledSlotGroupTasks } from "../slot-groups";
+import type { ScheduledSlotGroupDefinition } from "../slot-groups";
 import { buildDaily0810SlotGroups } from "../daily-0810";
 import { buildDepegResolverSlotGroups } from "../depeg-resolver";
 import { buildDewsPsiSlotGroups } from "../dews-psi";
@@ -100,9 +100,12 @@ describe("scheduled runner contract", () => {
       const plannedJobs = flattenScheduledSlotPlanJobs(plan);
       const builder = builders[plan.scheduleKey];
       if (builder) {
-        const boundJobs = flattenScheduledSlotGroupTasks(
-          builder(runtime) as Parameters<typeof flattenScheduledSlotGroupTasks>[0],
-        ).map((task) => task.job);
+        const groups = builder(runtime) as readonly ScheduledSlotGroupDefinition[];
+        const boundJobs = groups.flatMap((group) => (
+          group.mode === "parallel-serial"
+            ? group.chains.flatMap((chain) => chain.tasks.map((task) => task.job))
+            : group.tasks.map((task) => task.job)
+        ));
         expect(sorted(boundJobs), `${plan.scheduleKey} must bind every planned job`).toEqual(sorted(plannedJobs));
         continue;
       }

@@ -12,9 +12,7 @@ import { RATE_LIMITS } from "../rate-limit";
 import { sleepWithSignal } from "../abort";
 import { fetchWithRetry } from "../fetch-retry";
 import {
-  fetchCgTokenPools,
   fetchCgTokenPoolsWithStatus,
-  isOnchainAvailable,
   onchainRateLimit,
   parseCgPoolVolume,
 } from "../coingecko-onchain";
@@ -44,10 +42,7 @@ describe("coingecko-onchain", () => {
     vi.clearAllMocks();
   });
 
-  it("tracks API-key availability and rate-limit only after the first request", async () => {
-    expect(isOnchainAvailable("cg-key")).toBe(true);
-    expect(isOnchainAvailable(null)).toBe(false);
-
+  it("rate-limits only after the first request", async () => {
     const signal = new AbortController().signal;
     await onchainRateLimit(0, signal);
     expect(sleepWithSignal).not.toHaveBeenCalled();
@@ -58,24 +53,6 @@ describe("coingecko-onchain", () => {
 
   it("keeps valid pool members when a sibling is missing attributes", async () => {
     const { attributes: _attributes, ...missingAttributes } = validPool;
-    vi.mocked(fetchWithRetry).mockResolvedValueOnce(
-      new Response(JSON.stringify({ data: [validPool, missingAttributes] }), { status: 200 }),
-    );
-
-    const pools = await fetchCgTokenPools("eth", "0xabc");
-    expect(pools).toEqual([validPool]);
-    expect(fetchWithRetry).toHaveBeenCalledWith(
-      expect.stringContaining("/onchain/networks/eth/tokens/0xabc/pools?include=base_token,quote_token&page=1"),
-      expect.objectContaining({
-        headers: expect.objectContaining({
-          Accept: "application/json",
-          "User-Agent": "Pharos/1.0 (stablecoin analytics)",
-        }),
-      }),
-      1,
-      expect.objectContaining({ timeoutMs: undefined }),
-    );
-
     vi.mocked(fetchWithRetry).mockResolvedValueOnce(
       new Response(JSON.stringify({ data: [validPool, missingAttributes] }), { status: 200 }),
     );

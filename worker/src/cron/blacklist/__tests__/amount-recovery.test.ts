@@ -17,7 +17,7 @@ import {
   type MockTableConfig,
 } from "@shared/test-utils/mock-d1";
 import type { BlacklistRow } from "../../../lib/blacklist/shared";
-import { chainConfig, type ContractEventConfig } from "../../../lib/blacklist-contracts";
+import { CONTRACT_CONFIGS, type ContractEventConfig } from "../../../lib/blacklist-contracts";
 import type { BlacklistRunBudget } from "../../../lib/blacklist/run-budget";
 
 const DEFAULT_BLACKLIST_AMOUNT_D1_TABLES: MockTableConfig[] = [
@@ -32,11 +32,17 @@ function mockD1(tables: MockTableConfig[] = [], options: MockD1Options = {}) {
   return createMockD1([...tables, ...DEFAULT_BLACKLIST_AMOUNT_D1_TABLES], options);
 }
 
+function configChain(chainId: string) {
+  const config = CONTRACT_CONFIGS.find((candidate) => candidate.chain.chainId === chainId);
+  if (!config) throw new Error(`Missing test chain config: ${chainId}`);
+  return config.chain;
+}
+
 function makeConfig(): ContractEventConfig {
   return {
     stablecoin: "USDC",
     stablecoinId: "usdc-circle",
-    chain: chainConfig("ethereum"),
+    chain: configChain("ethereum"),
     contractAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
     decimals: 6,
     events: [{ signature: "Blacklisted(address)", eventType: "blacklist", topicHash: "0x00", hasAmount: false, addressTopicIndex: 1 }],
@@ -133,7 +139,7 @@ describe("enrichRowBalances", () => {
       ...makeConfig(),
       stablecoin: "USDT",
       stablecoinId: "usdt-tether",
-      chain: chainConfig("tron"),
+      chain: configChain("tron"),
       contractAddress: "TRONCONTRACT",
       configKey: "USDT:tron",
     };

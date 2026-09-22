@@ -1073,7 +1073,6 @@ async function persistDexLiquidityScoreState(
       challengerPublication: {
         publishedStablecoins: 0,
         skippedStablecoins: scoreState.retainedPoolsByStablecoin.size,
-        missingTables: false,
       },
       dexPriceDiagnostics: {
         rejectedObservationCount: 0,

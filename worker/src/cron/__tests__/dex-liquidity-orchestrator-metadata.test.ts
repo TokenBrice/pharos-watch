@@ -25,7 +25,7 @@ function metadataParams(): Parameters<typeof buildDexLiquidityCronMetadata>[0] {
       pagination: [],
     },
     sourceCoverage: {} as DexLiquidityPostScoreAnalysis["sourceCoverage"],
-    challengerPublication: { publishedStablecoins: 0, skippedStablecoins: 0, missingTables: false },
+    challengerPublication: { publishedStablecoins: 0, skippedStablecoins: 0 },
     dexPriceDiagnostics: {} as DexPricePersistenceDiagnostics,
     failedSources: [],
     fallbackSignals: [],

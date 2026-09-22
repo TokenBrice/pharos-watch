@@ -106,7 +106,6 @@ export interface AbandonedCheckpointPreparation {
 export type ScheduledRecoveryBlocker =
   | "active-child-lease"
   | "active-recovery-lease"
-  | "queue-hash-drift"
   | "slot-heartbeat-active"
   | "slot-missing"
   | "slot-not-abandoned";
@@ -621,9 +620,6 @@ async function prepareCheckpointAttemptForRecovery(
     recoveryAttemptNo,
   ].join(":");
   const recoveryNextItem = checkpoint.currentItemKey ?? checkpoint.nextItemKey;
-  const recoveryItemsDone = checkpoint.currentItemKey
-    ? Math.max(0, checkpoint.itemsDone)
-    : checkpoint.itemsDone;
 
   const checkpointAbandonedExistsSql = `EXISTS (
     SELECT 1
@@ -677,7 +673,7 @@ async function prepareCheckpointAttemptForRecovery(
       recoveryGeneration,
       recoveryInvocationId,
       recoveryNextItem,
-      recoveryItemsDone,
+      checkpoint.itemsDone,
       JSON.stringify(recoveryChildDispositions),
       timestamp,
       timestamp,
@@ -781,7 +777,6 @@ export async function inspectLiveReserveCheckpointRecoveryEligibility(
   for (const row of rows.results ?? []) {
     const checkpoint = mapCheckpointRow(row);
     const blockers: ScheduledRecoveryBlocker[] = [];
-    if (checkpoint.queueHash !== LIVE_RESERVE_QUEUE_HASH) blockers.push("queue-hash-drift");
     if (checkpoint.state === "recovering" && (checkpoint.recoveryLeaseUntil ?? 0) >= timestamp) {
       blockers.push("active-recovery-lease");
     }

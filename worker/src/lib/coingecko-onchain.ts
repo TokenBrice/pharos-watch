@@ -15,11 +15,6 @@ import { sleepWithSignal } from "./abort";
 import { cancelResponseBodyQuietly, readResponseTextWithSignal } from "./response-body";
 import { CG_ONCHAIN_TOKEN_POOLS_MAX_PAGES, CG_ONCHAIN_TOKEN_POOLS_PAGE_SIZE } from "../cron/dex-liquidity/constants";
 
-/** Check if CoinGecko onchain API is available (API key configured) */
-export function isOnchainAvailable(apiKey: string | null): boolean {
-  return !!apiKey;
-}
-
 // ---------------------------------------------------------------------------
 // Response types (matching CoinGecko /onchain response shapes)
 // ---------------------------------------------------------------------------
@@ -151,16 +146,6 @@ export async function onchainRateLimit(requestCount: number, signal?: AbortSigna
  * Returns up to 20 pools per page. `complete` is the run-scoped contiguity
  * claim; a capped or failed scan never certifies the token's pool set.
  */
-export async function fetchCgTokenPools(
-  network: string,
-  address: string,
-  signal?: AbortSignal,
-  apiKey: string | null = null,
-  options?: CgFetchOptions,
-): Promise<CgPool[]> {
-  return (await fetchCgTokenPoolsWithStatus(network, address, signal, apiKey, options)).pools;
-}
-
 export async function fetchCgTokenPoolsWithStatus(
   network: string,
   address: string,
