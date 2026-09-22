@@ -655,6 +655,16 @@ function seedPreMigrationFixture(executor: MigrationExecutor, targets: readonly 
       `);
       continue;
     }
+    if (target === "telegram_subscribers") {
+      executor.execute(`
+        INSERT INTO telegram_subscribers (
+          chat_id, username, created_at, last_active_at, global_alert_dews
+        ) VALUES (
+          'migration-gate-fixture', 'migration_gate_fixture', 1, 1, 1
+        );
+      `);
+      continue;
+    }
     throw new Error(
       `No seeded pre-migration fixture is defined for data-migration target "${target}". Add a representative existing row before approving the migration.`,
     );
