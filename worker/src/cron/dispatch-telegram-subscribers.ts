@@ -104,6 +104,10 @@ export async function loadSubscriberRowsBatch(
       .prepare(
         // SAFETY: alertColumn comes from ALERT_COLUMN_BY_TYPE and is validated
         // against the hardcoded allowlist above before interpolation.
+        // The membership sub-select keeps the family flag on the primary-key
+        // projection so SQLite resolves candidates through the per-family
+        // partial covering index (idx_tg_sub_<family>_coin_chat) instead of
+        // reading every row of a coin through idx_tg_sub_coin.
         `SELECT sub.stablecoin_id,
                 sub.chat_id,
                 u.last_active_at,
@@ -117,9 +121,13 @@ export async function loadSubscriberRowsBatch(
                 u.preference_generation
            FROM telegram_subscriptions sub
           JOIN telegram_subscribers u ON u.chat_id = sub.chat_id
-          WHERE sub.stablecoin_id IN (${inClause.sql})
-            ${chatClause ? `AND sub.chat_id IN (${chatClause.sql})` : ""}
-            AND sub.${alertColumn} = 1
+          WHERE (sub.stablecoin_id, sub.chat_id) IN (
+                  SELECT stablecoin_id, chat_id
+                    FROM telegram_subscriptions
+                   WHERE stablecoin_id IN (${inClause.sql})
+                     ${chatClause ? `AND chat_id IN (${chatClause.sql})` : ""}
+                     AND ${alertColumn} = 1
+                )
             AND (u.alert_snooze_until_ts IS NULL OR u.alert_snooze_until_ts <= ?)
             AND (sub.alert_snooze_until_ts IS NULL OR sub.alert_snooze_until_ts <= ?)`,
       )
