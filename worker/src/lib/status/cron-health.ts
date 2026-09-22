@@ -38,6 +38,7 @@ export interface ScheduledSlotHealthSummary {
 }
 
 const CRON_HISTORY_ROWS_PER_JOB = 10;
+const NEUTRAL_CRON_RUN_STATUS = "skipped_neutral";
 // D1's compound SELECT term limit is lower than upstream SQLite's default.
 // Each per-job branch here contributes two SELECT terms because it wraps a
 // latest-N subquery, so keep batches to five jobs or fewer.
@@ -142,7 +143,7 @@ function isFreshCronRun(run: CronRun | null | undefined, now: number, interval: 
   ).state === "fresh";
 }
 
-function buildCronHistoryQuery(jobCount: number): string {
+function buildCronHistoryQuery(jobCount: number, requiredOnly = false): string {
   if (jobCount <= 0) {
     throw new Error("buildCronHistoryQuery: jobCount must be positive");
   }
@@ -153,8 +154,9 @@ function buildCronHistoryQuery(jobCount: number): string {
            FROM cron_runs
           WHERE job = ?
             AND ${LEGACY_IDLE_DIGEST_RECONCILIATION_SQL_FILTER}
+            ${requiredOnly ? `AND status != '${NEUTRAL_CRON_RUN_STATUS}'` : ""}
           ORDER BY started_at DESC
-          LIMIT ${CRON_HISTORY_ROWS_PER_JOB}
+          LIMIT ${requiredOnly ? 1 : CRON_HISTORY_ROWS_PER_JOB}
        )`
   ));
 
@@ -242,6 +244,23 @@ async function fetchCronHistoryRows(
       }),
     );
     const rows = batchResults.flat();
+    const jobsWithRequiredRun = new Set(rows
+      .filter((row) => parseCronRunStatus(row.status) !== NEUTRAL_CRON_RUN_STATUS)
+      .map((row) => row.job));
+    const historyCounts = new Map<string, number>();
+    for (const row of rows) historyCounts.set(row.job, (historyCounts.get(row.job) ?? 0) + 1);
+    const jobsMissingRequiredRun = cronJobs.filter((job) => !jobsWithRequiredRun.has(job)
+      && (historyCounts.get(job) ?? 0) >= CRON_HISTORY_ROWS_PER_JOB);
+    // A daily producer's hourly admission skips can fill its display window.
+    // Only those jobs need one older required attempt; preserve the same indexed
+    // per-job LIMIT and compound-query batch bound as the display-history read.
+    const requiredBatches = await Promise.all(chunkCronJobs(jobsMissingRequiredRun).map(async (jobBatch) => {
+      const jobSet = new Set(jobBatch);
+      const result = await db.prepare(buildCronHistoryQuery(jobBatch.length, true)).bind(...jobBatch).all<CronHistoryRow>();
+      return (result.results ?? []).filter((row) => jobSet.has(row.job)
+        && parseCronRunStatus(row.status) !== NEUTRAL_CRON_RUN_STATUS);
+    }));
+    rows.push(...requiredBatches.flat());
     rows.sort((a, b) => b.started_at - a.started_at);
     return { value: rows, error: null };
   } catch (err) {
@@ -549,8 +568,9 @@ export async function loadCronHealth(
       continue;
     }
     const runs = cronByJob.get(row.job) ?? [];
-    if (runs.length < 10) {
-      const parsedStatus = parseCronRunStatus(row.status);
+    const parsedStatus = parseCronRunStatus(row.status);
+    if (runs.length < CRON_HISTORY_ROWS_PER_JOB
+      || (parsedStatus !== NEUTRAL_CRON_RUN_STATUS && runs.every((run) => run.status === NEUTRAL_CRON_RUN_STATUS))) {
       runs.push({
         startedAt: row.started_at,
         durationMs: row.duration_ms,
@@ -584,7 +604,7 @@ export async function loadCronHealth(
     const telemetryUnknown = cronHistoryQueryFailed;
     const inFlightFresh = inFlight != null && now - inFlight.updatedAt <= Math.max(300, interval);
     const isFresh = isFreshCronRun(lastRun, now, interval);
-    const requiredRuns = runs.filter((run) => run.status !== "skipped_neutral");
+    const requiredRuns = runs.filter((run) => run.status !== NEUTRAL_CRON_RUN_STATUS);
     const latestRequiredRun = requiredRuns[0] ?? null;
     const latestRequiredRunFresh = isFreshCronRun(latestRequiredRun, now, interval);
     const hasFreshOk = runs.some((run) => run.status === "ok" && now - run.startedAt <= interval * 2);
@@ -596,7 +616,7 @@ export async function loadCronHealth(
       lastRun != null &&
       (lastRun.status === "ok" ||
         lastRun.status === "degraded" ||
-        (lastRun.status === "skipped_neutral" && hasFreshRequiredAvailability) ||
+        (lastRun.status === NEUTRAL_CRON_RUN_STATUS && hasFreshRequiredAvailability) ||
         (lastRun.status === "skipped_locked" && hasFreshOk));
     const statusImpact = getCronStatusImpact(job);
     const metadataDegraded =
@@ -632,14 +652,14 @@ export async function loadCronHealth(
     if (
       !telemetryUnknown
       && (((lastRun?.status === "degraded" && isFresh)
-        || (lastRun?.status === "skipped_neutral" && latestRequiredRun?.status === "degraded" && latestRequiredRunFresh))
+        || (lastRun?.status === NEUTRAL_CRON_RUN_STATUS && latestRequiredRun?.status === "degraded" && latestRequiredRunFresh))
         || metadataDegraded)
     ) {
       degradedCronRuns++;
     }
     const latestErrorRunFresh =
       (lastRun?.status === "error" && isFresh)
-      || (lastRun?.status === "skipped_neutral" && latestRequiredRun?.status === "error" && latestRequiredRunFresh);
+      || (lastRun?.status === NEUTRAL_CRON_RUN_STATUS && latestRequiredRun?.status === "error" && latestRequiredRunFresh);
     if (!telemetryUnknown && latestErrorRunFresh && !inFlightFresh) {
       cronErrorCount++;
       if (statusImpact === "critical") {
@@ -661,7 +681,7 @@ export async function loadCronHealth(
 
     crons[job] = {
       lastRun,
-      recentRuns: runs,
+      recentRuns: runs.slice(0, CRON_HISTORY_ROWS_PER_JOB),
       expectedIntervalSec: interval,
       healthy,
       telemetryUnknown,
