@@ -27,6 +27,11 @@ const DEFAULT_YIELD_PUBLICATION_D1_TABLES: MockTableConfig[] = [
   { match: "INSERT OR REPLACE INTO yield_source_decision_alternatives", rows: [] },
   { match: "INSERT OR REPLACE INTO yield_publication_generations", rows: [] },
   { match: "UPDATE yield_publication_generations", rows: [] },
+  { match: "UPDATE yield_data SET publication_state", rows: [] },
+  { match: "UPDATE yield_history SET publication_state", rows: [] },
+  { match: "DELETE FROM yield_history", rows: [] },
+  { match: "DELETE FROM yield_source_decisions", rows: [] },
+  { match: "DELETE FROM yield_source_decision_alternatives", rows: [] },
 ];
 
 export function makePublicationViews(

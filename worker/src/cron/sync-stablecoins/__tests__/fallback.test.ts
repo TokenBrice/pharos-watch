@@ -8,11 +8,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import {
-  buildFallbackAssetsFromCoinGecko,
-  buildInsufficientFallbackResult,
-  runFallbackIntakePhase,
-} from "../fallback-intake";
+import { buildFallbackAssetsFromCoinGecko } from "../fallback-intake";
 import type { PeggedAsset } from "../enrich-prices";
 import type { PreviousStablecoinsLoadResult } from "../shared";
 
@@ -287,46 +283,6 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
       },
     });
     expect(assets.map((asset) => asset.id)).toEqual(["valid"]);
-  });
-
-  // -----------------------------------------------------------------------
-  // (e) buildInsufficientFallbackResult sets the expected metadata shape
-  // -----------------------------------------------------------------------
-  it("(e) buildInsufficientFallbackResult marks no-write and downstreamSafe=false", () => {
-    const result = buildInsufficientFallbackResult(5);
-    const meta = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
-
-    expect(result.itemCount).toBeUndefined();
-    expect(meta.rowsWritten).toBe(0);
-    expect(meta.downstreamSafe).toBe(false);
-    expect((meta.capabilities as { stablecoinsCache: boolean }).stablecoinsCache).toBe(false);
-  });
-
-  // -----------------------------------------------------------------------
-  // (f) runFallbackIntakePhase short-circuits with insufficient result
-  //     when fewer than MIN_VALID_ASSET_COUNT assets come back
-  // -----------------------------------------------------------------------
-  it("(f) runFallbackIntakePhase short-circuits on too-few assets", async () => {
-    const result = await runFallbackIntakePhase({
-      syncStartSec: NOW_SEC,
-      cgData: { "some-coin": { usd: 1, usd_market_cap: 100, last_updated_at: NOW_SEC } },
-      stablecoins: [
-        {
-          id: "some-coin",
-          name: "Some Coin",
-          symbol: "SOME",
-          geckoId: "some-coin",
-          flags: { pegCurrency: "USD", backing: "fiat-backed" },
-        },
-      ],
-    });
-
-    // Should return a CronResult (has metadata), not an { assets } output
-    expect("metadata" in result).toBe(true);
-    if ("metadata" in result) {
-      const meta = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
-      expect(meta.rowsWritten).toBe(0);
-    }
   });
 
   // -----------------------------------------------------------------------

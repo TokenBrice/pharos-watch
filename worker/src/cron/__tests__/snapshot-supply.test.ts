@@ -20,15 +20,6 @@ vi.mock("@shared/lib/shadow-stablecoins", () => ({
   SHADOW_IDS: new Set(["eurt-test"]),
 }));
 
-// Stub supply helper
-vi.mock("@shared/lib/supply", () => ({
-  getCirculatingRaw: (asset: { circulating?: Record<string, number> }) => {
-    const c = asset.circulating;
-    if (!c) return 0;
-    return Object.values(c).reduce((a, b) => a + b, 0);
-  },
-}));
-
 import { snapshotSupply } from "../snapshot-supply";
 import type { StablecoinPublicationWaiver } from "../../lib/stablecoin-publication-coverage";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";

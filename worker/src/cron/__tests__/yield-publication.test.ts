@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import { YIELD_HISTORY_MAX_DAYS, YIELD_HISTORY_RAW_DAYS } from "@shared/lib/yield-history-policy";
@@ -10,7 +10,6 @@ import {
   type YieldPysInputsAtPublish,
 } from "@shared/types/yield";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { D1_MAX_BOUND_PARAMETERS } from "../../lib/db";
 
@@ -39,14 +38,8 @@ import {
   mockD1,
 } from "./yield-publication.test-support";
 
-const MIGRATIONS_DIR = path.resolve(__dirname, "../../test-helpers/migration-fixtures");
-const FIXTURES_DIR = path.resolve(__dirname, "../../test-helpers/migration-fixtures");
-
 // Migrations absorbed by the 2026-07-30 baseline squash live on as frozen test fixtures.
-function resolveMigrationPath(file: string): string {
-  const fixture = path.join(FIXTURES_DIR, file);
-  return existsSync(fixture) ? fixture : path.join(MIGRATIONS_DIR, file);
-}
+const MIGRATION_FIXTURES_DIR = path.resolve(__dirname, "../../test-helpers/migration-fixtures");
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -62,16 +55,13 @@ describe("publishYieldCoordinatorResults", () => {
     return JSON.parse(String(entry?.binds[index] ?? "[]")) as T;
   }
 
-  function makePublicationDb(
-    cacheWriteChanges: number,
-    options?: { cacheWriteError?: Error; finalizeError?: Error },
-  ) {
+  function makePublicationDb(options?: { cacheWriteError?: Error; finalizeError?: Error }) {
     return mockD1([
       { match: "FROM cache WHERE key = ?", matchBinds: ["yield-rankings"], rows: [], first: null },
       {
         match: "INSERT INTO cache (key, value, updated_at)",
         rows: [],
-        runMeta: { changes: cacheWriteChanges },
+        runMeta: { changes: 1 },
         throwError: options?.cacheWriteError,
       },
       {
@@ -79,12 +69,6 @@ describe("publishYieldCoordinatorResults", () => {
         rows: [],
         throwError: options?.finalizeError,
       },
-      { match: "UPDATE yield_data SET publication_state", rows: [] },
-      { match: "UPDATE yield_history SET publication_state", rows: [] },
-      { match: "DELETE FROM yield_history", rows: [] },
-      { match: "DELETE FROM yield_source_decisions", rows: [] },
-      { match: "DELETE FROM yield_source_decision_alternatives", rows: [] },
-      { match: "INSERT INTO cache", rows: [], runMeta: { changes: cacheWriteChanges } },
     ]);
   }
 
@@ -125,7 +109,7 @@ describe("publishYieldCoordinatorResults", () => {
   }
 
   it("stages then fails a generation when cache payload validation fails before row publication", async () => {
-    const db = makePublicationDb(1);
+    const db = makePublicationDb();
     const payload = buildPayloadWithObservedAt(Math.floor(FIXED_NOW.getTime() / 1000));
     payload.rankings = [
       payload.rankings[0]!,
@@ -265,7 +249,7 @@ describe("publishYieldCoordinatorResults", () => {
   });
 
   it("returns degraded when the atomic publication transaction throws", async () => {
-    const db = makePublicationDb(1, { cacheWriteError: new Error("D1 queue overloaded") });
+    const db = makePublicationDb({ cacheWriteError: new Error("D1 queue overloaded") });
 
     const result = await publishYieldCoordinatorResults(makePublishParams({ db }));
 
@@ -288,7 +272,7 @@ describe("publishYieldCoordinatorResults", () => {
   });
 
   it("returns degraded when atomic publication finalization fails", async () => {
-    const db = makePublicationDb(1, { finalizeError: new Error("database locked") });
+    const db = makePublicationDb({ finalizeError: new Error("database locked") });
 
     const result = await publishYieldCoordinatorResults(makePublishParams({ db }));
 
@@ -305,7 +289,7 @@ describe("publishYieldCoordinatorResults", () => {
   });
 
   it("writes bounded selected-source decision evidence with rejected-source reasons", async () => {
-    const db = makePublicationDb(1);
+    const db = makePublicationDb();
     const best = makeEvaluatedSource({
       sourceKey: "defillama:best",
       currentApy: 5,
@@ -358,7 +342,7 @@ describe("publishYieldCoordinatorResults", () => {
   });
 
   it("publishes generation metadata to cache and current/history rows on a successful generation", async () => {
-    const db = makePublicationDb(1);
+    const db = makePublicationDb();
 
     const result = await publishYieldCoordinatorResults(makePublishParams({ db }));
 
@@ -405,7 +389,7 @@ describe("publishYieldCoordinatorResults", () => {
   });
 
   it("does not publish the freshness sentinel when the cron signal aborts after row publication", async () => {
-    const db = makePublicationDb(1);
+    const db = makePublicationDb();
     const controller = new AbortController();
     const entered = deferred<void>();
     const release = deferred<void>();
@@ -443,7 +427,7 @@ describe("publishYieldCoordinatorResults", () => {
   });
 
   it("publishes expired-source rankings as degraded without advancing their freshness sentinel", async () => {
-    const db = makePublicationDb(1);
+    const db = makePublicationDb();
     const degradationReasons = ["yield-source:expired-selected:defillama:test-source"];
 
     const result = await publishYieldCoordinatorResults(
@@ -457,7 +441,7 @@ describe("publishYieldCoordinatorResults", () => {
   });
 
   it("runs ownership handoff cleanup only after successful non-degraded publication cleanup", async () => {
-    const db = makePublicationDb(1);
+    const db = makePublicationDb();
     const result = await publishYieldCoordinatorResults(makePublishParams({ db }));
     expect(result).toMatchObject({ ok: true, degradationReasons: [] });
 
@@ -486,7 +470,7 @@ describe("publishYieldCoordinatorResults", () => {
     );
     expect(handoffCleanupIndex).toBeGreaterThan(historyRetentionIndex);
 
-    const degradedDb = makePublicationDb(1);
+    const degradedDb = makePublicationDb();
     const degradedResult = await publishYieldCoordinatorResults(
       makePublishParams({
         db: degradedDb,
@@ -500,7 +484,7 @@ describe("publishYieldCoordinatorResults", () => {
   });
 
   it("emits a bounded public decisionLedger on the published rankings payload and persists alternatives + retention reason", async () => {
-    const db = makePublicationDb(1);
+    const db = makePublicationDb();
     const best = makeEvaluatedSource({
       sourceKey: "defillama:best",
       currentApy: 5,
@@ -606,7 +590,7 @@ describe("publishYieldCoordinatorResults", () => {
   });
 
   it("persists exactly reproducible PYS inputs on yield_history rows", async () => {
-    const db = makePublicationDb(1);
+    const db = makePublicationDb();
     const result = await publishYieldCoordinatorResults(makePublishParams({ db }));
     expect(result).toMatchObject({ ok: true });
 
@@ -671,7 +655,7 @@ describe("publishYieldCoordinatorResults", () => {
       apy30d: 38.13,
       pharosYieldScore: 44,
     });
-    const db = makePublicationDb(1);
+    const db = makePublicationDb();
     const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
     const result = await publishYieldCoordinatorResults(
       makePublishParams({
@@ -710,7 +694,7 @@ describe("publishYieldCoordinatorResults", () => {
   });
 
   it("classifies retention_reason as 'audit' when no switch, no anomalies, and no rejected higher-confidence source", async () => {
-    const db = makePublicationDb(1);
+    const db = makePublicationDb();
     const result = await publishYieldCoordinatorResults(makePublishParams({ db }));
     expect(result).toMatchObject({ ok: true });
 
@@ -722,7 +706,7 @@ describe("publishYieldCoordinatorResults", () => {
   });
 
   it("classifies anomaly evidence as an episode candidate with a stable fingerprint", async () => {
-    const db = makePublicationDb(1);
+    const db = makePublicationDb();
     const best = makeEvaluatedSource({
       sourceKey: "defillama:best",
       currentApy: 5,
@@ -762,6 +746,9 @@ describe("publishYieldCoordinatorResults", () => {
   });
 });
 
+// Retention window and false-linked reclassification semantics are owned by
+// yield-history-snapshots.test.ts; this suite keeps the lock-retry and
+// mandatory-schema fail-closed cases.
 describe("pruneYieldTables", () => {
   it("retries transient retention overload without dropping cleanup", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
@@ -844,57 +831,6 @@ describe("pruneYieldTables", () => {
           )
           .get(),
       ).toEqual({ snapshot_date: snapshotDate, recorded_at: snapshotDate + 3_600, apy: 4.4 });
-    } finally {
-      sqlite.close();
-    }
-  });
-
-  it("reclassifies false linked switches only after two clean published generations", async () => {
-    const { DatabaseSync } = await import("node:sqlite");
-    const sqlite = new DatabaseSync(":memory:");
-    try {
-      sqlite.exec(`
-        CREATE TABLE yield_publication_generations (
-          generation_id TEXT PRIMARY KEY,
-          state TEXT NOT NULL
-        );
-        CREATE TABLE yield_source_decisions (
-          generation_id TEXT NOT NULL,
-          stablecoin_id TEXT NOT NULL,
-          selected_source_key TEXT NOT NULL,
-          previous_best_source_key TEXT,
-          source_switch INTEGER NOT NULL,
-          created_at INTEGER NOT NULL,
-          retention_reason TEXT
-        );
-      `);
-      const generation = sqlite.prepare(
-        "INSERT INTO yield_publication_generations (generation_id, state) VALUES (?, 'published')",
-      );
-      const decision = sqlite.prepare(`
-        INSERT INTO yield_source_decisions (
-          generation_id, stablecoin_id, selected_source_key, previous_best_source_key,
-          source_switch, created_at, retention_reason
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
-      `);
-      const linkedKey = "linked-variant:child:onchain:child";
-      generation.run("old-false");
-      generation.run("clean-1");
-      decision.run("old-false", "verified-parent", linkedKey, "onchain:verified-parent", 1, 100, "trend");
-      decision.run("clean-1", "verified-parent", linkedKey, linkedKey, 0, 200, "audit");
-
-      expect(await cleanupFalseLinkedVariantSourceSwitches(createSqliteD1(sqlite))).toBe(0);
-
-      generation.run("clean-2");
-      decision.run("clean-2", "verified-parent", linkedKey, linkedKey, 0, 300, "audit");
-      expect(await cleanupFalseLinkedVariantSourceSwitches(createSqliteD1(sqlite))).toBe(1);
-      expect(
-        sqlite
-          .prepare(
-            "SELECT source_switch, retention_reason FROM yield_source_decisions WHERE generation_id = 'old-false'",
-          )
-          .get(),
-      ).toEqual({ source_switch: 0, retention_reason: "audit" });
     } finally {
       sqlite.close();
     }
@@ -1141,8 +1077,8 @@ describe("yield publication migration compatibility", () => {
     const { DatabaseSync } = await import("node:sqlite");
     const sqlite = new DatabaseSync(":memory:");
     try {
-      sqlite.exec(readFileSync(resolveMigrationPath("0000_baseline.sql"), "utf8"));
-      sqlite.exec(readFileSync(resolveMigrationPath("0125_yield_publication_generations.sql"), "utf8"));
+      sqlite.exec(readFileSync(path.join(MIGRATION_FIXTURES_DIR, "0000_baseline.sql"), "utf8"));
+      sqlite.exec(readFileSync(path.join(MIGRATION_FIXTURES_DIR, "0125_yield_publication_generations.sql"), "utf8"));
 
       sqlite
         .prepare(

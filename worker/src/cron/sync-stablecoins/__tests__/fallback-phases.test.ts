@@ -5,6 +5,7 @@ import {
   buildInsufficientFallbackResult,
   overlayFallbackCuratedAggregateSupply,
   resolveFreshCoinGeckoFallbackEntry,
+  runFallbackIntakePhase,
 } from "../fallback-intake";
 import { restoreFallbackCacheState } from "../fallback";
 import { loadPreviousStablecoinsById } from "../shared";
@@ -207,6 +208,28 @@ describe("CoinGecko fallback phases", () => {
         stablecoinsCache: false,
         depegPipeline: false,
       },
+    });
+  });
+
+  it("short-circuits the intake phase to a no-write result when too few assets survive", async () => {
+    const result = await runFallbackIntakePhase({
+      syncStartSec: NOW_SEC,
+      cgData: { "some-coin": { usd: 1, usd_market_cap: 100, last_updated_at: NOW_SEC } },
+      stablecoins: [
+        {
+          id: "some-coin",
+          name: "Some Coin",
+          symbol: "SOME",
+          geckoId: "some-coin",
+          flags: { pegCurrency: "USD", backing: "fiat-backed" },
+        },
+      ],
+    });
+
+    expect("metadata" in result).toBe(true);
+    expect(JSON.parse(("metadata" in result ? result.metadata : null) ?? "{}")).toMatchObject({
+      rowsWritten: 0,
+      cacheWriteMode: "no-write",
     });
   });
 

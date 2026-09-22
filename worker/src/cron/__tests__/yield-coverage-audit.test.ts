@@ -70,10 +70,16 @@ function successfulSafetySnapshot(): PublishedSafetyScoresResultMap {
   };
 }
 
+// A live lending pool: the coverage gates key off a flat, non-null APY triple, so
+// every candidate fixture carries the same 4% base unless a case varies it.
+function lendingPool(overrides: Partial<DlPool> & { pool: string; project: string }): DlPool {
+  return makeDlYieldPool({ apy: 4, apyBase: 4, apyMean30d: 4, ...overrides });
+}
+
 function protocolBasket(project: string, thirdSymbol: string, thirdTvlUsd: number, firstPool = 1): DlPool[] {
   return [
-    makeDlYieldPool({ pool: `p${firstPool}`, project, symbol: "USDC", tvlUsd: 4_000_000, apy: 4, apyBase: 4, apyMean30d: 4 }),
-    makeDlYieldPool({ pool: `p${firstPool + 1}`, project, symbol: "USDT", tvlUsd: 4_000_000, apy: 3.5, apyBase: 3.5, apyMean30d: 3.5 }),
+    lendingPool({ pool: `p${firstPool}`, project, symbol: "USDC", tvlUsd: 4_000_000 }),
+    lendingPool({ pool: `p${firstPool + 1}`, project, symbol: "USDT", tvlUsd: 4_000_000, apy: 3.5, apyBase: 3.5, apyMean30d: 3.5 }),
     makeDlYieldPool({ pool: `p${firstPool + 2}`, project, chain: "Arbitrum", symbol: thirdSymbol, tvlUsd: thirdTvlUsd }),
   ];
 }
@@ -125,15 +131,7 @@ describe("buildProtocolCategoryLookupFromCachePayload", () => {
 describe("runYieldCoverageAudit", () => {
   it("defers when the compact safety snapshot is not complete and never requests computed V8 scores", async () => {
     mockLoadDlStablecoinPools.mockResolvedValue({
-      pools: [makeDlYieldPool({
-        pool: "new-usdc",
-        project: "new-lender",
-        symbol: "USDC",
-        tvlUsd: 12_000_000,
-        apy: 4,
-        apyBase: 4,
-        apyMean30d: 4,
-      })],
+      pools: [lendingPool({ pool: "new-usdc", project: "new-lender", symbol: "USDC", tvlUsd: 12_000_000 })],
       meta: { mode: "dex-cache", updatedAt: 1_774_526_300, ageSeconds: 100, poolCount: 1, fallbackMode: null },
     });
     mockComputeSafetyScoresSnapshot.mockResolvedValue({
@@ -170,15 +168,7 @@ describe("runYieldCoverageAudit", () => {
 
   it("defers when the published rankings cache is malformed", async () => {
     mockLoadDlStablecoinPools.mockResolvedValue({
-      pools: [makeDlYieldPool({
-        pool: "new-usdc",
-        project: "new-lender",
-        symbol: "USDC",
-        tvlUsd: 12_000_000,
-        apy: 4,
-        apyBase: 4,
-        apyMean30d: 4,
-      })],
+      pools: [lendingPool({ pool: "new-usdc", project: "new-lender", symbol: "USDC", tvlUsd: 12_000_000 })],
       meta: { mode: "dex-cache", updatedAt: 1_774_526_300, ageSeconds: 100, poolCount: 1, fallbackMode: null },
     });
     mockGetCache.mockImplementation(async (_db, key) =>
@@ -204,15 +194,7 @@ describe("runYieldCoverageAudit", () => {
     ["mismatched V9 identity", "active-safety-score:v9-identity-mismatch"],
   ])("defers with explicit V9 provenance for %s", async (_label, reason) => {
     mockLoadDlStablecoinPools.mockResolvedValue({
-      pools: [makeDlYieldPool({
-        pool: "new-usdc",
-        project: "new-lender",
-        symbol: "USDC",
-        tvlUsd: 12_000_000,
-        apy: 4,
-        apyBase: 4,
-        apyMean30d: 4,
-      })],
+      pools: [lendingPool({ pool: "new-usdc", project: "new-lender", symbol: "USDC", tvlUsd: 12_000_000 })],
       meta: { mode: "dex-cache", updatedAt: 1_774_526_300, ageSeconds: 100, poolCount: 1, fallbackMode: null },
     });
     mockComputeSafetyScoresSnapshot.mockResolvedValue({
@@ -247,14 +229,8 @@ describe("runYieldCoverageAudit", () => {
   });
 
   it("reports bounded progress stages through cache publication", async () => {
-    const dlPools: DlPool[] = [makeDlYieldPool({
-      pool: "new-usdc",
-      project: "new-lender",
-      symbol: "USDC",
-      tvlUsd: 12_000_000,
-      apy: 4,
-      apyBase: 4,
-      apyMean30d: 4,
+    const dlPools: DlPool[] = [lendingPool({
+      pool: "new-usdc", project: "new-lender", symbol: "USDC", tvlUsd: 12_000_000,
     })];
     mockLoadDlStablecoinPools.mockResolvedValue({
       pools: dlPools,
@@ -417,15 +393,7 @@ describe("runYieldCoverageAudit", () => {
 
   it("returns degraded when protocol-category cache is unavailable", async () => {
     mockLoadDlStablecoinPools.mockResolvedValue({
-      pools: [makeDlYieldPool({
-        pool: "new-usdc",
-        project: "new-lender",
-        symbol: "USDC",
-        tvlUsd: 12_000_000,
-        apy: 4,
-        apyBase: 4,
-        apyMean30d: 4,
-      })],
+      pools: [lendingPool({ pool: "new-usdc", project: "new-lender", symbol: "USDC", tvlUsd: 12_000_000 })],
       meta: {
         mode: "dex-cache",
         updatedAt: 1_774_526_300,
@@ -461,15 +429,7 @@ describe("runYieldCoverageAudit", () => {
 
   it("publishes queue totals that account for every candidate item", async () => {
     const dlPools: DlPool[] = [
-      makeDlYieldPool({
-        pool: "new-usdc",
-        project: "new-lender",
-        symbol: "USDC",
-        tvlUsd: 12_000_000,
-        apy: 4,
-        apyBase: 4,
-        apyMean30d: 4,
-      }),
+      lendingPool({ pool: "new-usdc", project: "new-lender", symbol: "USDC", tvlUsd: 12_000_000 }),
       makeDlYieldPool({
         pool: "dex-usdt",
         project: "new-dex",
@@ -574,25 +534,8 @@ describe("identifyCoverageGaps", () => {
 
   it("routes a known non-lending protocol to one representative missing-protocol row", () => {
     const dlPools: DlPool[] = [
-      makeDlYieldPool({
-        pool: "dex-usdc",
-        project: "brand-new-dex",
-        symbol: "USDC",
-        tvlUsd: 10_000_000,
-        apy: 4,
-        apyBase: 4,
-        apyMean30d: 4,
-      }),
-      makeDlYieldPool({
-        pool: "dex-usdt",
-        chain: "Base",
-        project: "brand-new-dex",
-        symbol: "USDT",
-        tvlUsd: 25_000_000,
-        apy: 4,
-        apyBase: 4,
-        apyMean30d: 4,
-      }),
+      lendingPool({ pool: "dex-usdc", project: "brand-new-dex", symbol: "USDC", tvlUsd: 10_000_000 }),
+      lendingPool({ pool: "dex-usdt", chain: "Base", project: "brand-new-dex", symbol: "USDT", tvlUsd: 25_000_000 }),
     ];
 
     const gaps = identifyCoverageGaps(
@@ -607,15 +550,7 @@ describe("identifyCoverageGaps", () => {
   });
 
   it("drops sub-threshold pools from the protocol bucket", () => {
-    const dlPools: DlPool[] = [makeDlYieldPool({
-      pool: "dust-usdc",
-      project: "dust-dex",
-      symbol: "USDC",
-      tvlUsd: 900_000,
-      apy: 4,
-      apyBase: 4,
-      apyMean30d: 4,
-    })];
+    const dlPools: DlPool[] = [lendingPool({ pool: "dust-usdc", project: "dust-dex", symbol: "USDC", tvlUsd: 900_000 })];
 
     const gaps = identifyCoverageGaps(dlPools, new Set(), undefined, new Map([["dust-dex", "Dexs"]]));
 
@@ -857,24 +792,8 @@ describe("identifyCoverageGaps", () => {
 
   it("splits source-family adapter and lending allowlist recommendations", () => {
     const dlPools: DlPool[] = [
-      makeDlYieldPool({
-        pool: "morpho-usdc",
-        project: "morpho-blue",
-        symbol: "USDC",
-        tvlUsd: 12_000_000,
-        apy: 4,
-        apyBase: 4,
-        apyMean30d: 4,
-      }),
-      makeDlYieldPool({
-        pool: "new-usdc",
-        project: "new-lender",
-        symbol: "USDC",
-        tvlUsd: 12_000_000,
-        apy: 4,
-        apyBase: 4,
-        apyMean30d: 4,
-      }),
+      lendingPool({ pool: "morpho-usdc", project: "morpho-blue", symbol: "USDC", tvlUsd: 12_000_000 }),
+      lendingPool({ pool: "new-usdc", project: "new-lender", symbol: "USDC", tvlUsd: 12_000_000 }),
     ];
 
     const gaps = identifyCoverageGaps(
@@ -965,15 +884,7 @@ describe("identifyCoverageGaps", () => {
   it("escapes provider slugs in suggested lending allowlist snippets", () => {
     const maliciousProject = 'evil"\n  __pwned__: (() => { throw new Error("injected"); })(),\n  "tail';
     const dlPools: DlPool[] = [
-      makeDlYieldPool({
-        pool: "evil-usdc",
-        project: maliciousProject,
-        symbol: "USDC",
-        tvlUsd: 12_000_000,
-        apy: 4,
-        apyBase: 4,
-        apyMean30d: 4,
-      }),
+      lendingPool({ pool: "evil-usdc", project: maliciousProject, symbol: "USDC", tvlUsd: 12_000_000 }),
     ];
 
     const gaps = identifyCoverageGaps(
@@ -998,61 +909,17 @@ describe("identifyCoverageGaps", () => {
 
   it("drives lending allowlist recommendations from the high-TVL queue and category gate", () => {
     const dlPools: DlPool[] = [
-      makeDlYieldPool({
-        pool: "queued-usdc",
-        project: "queued-lender",
-        symbol: "USDC",
-        tvlUsd: 6_000_000,
-        apy: 4,
-        apyBase: 4,
-        apyMean30d: 4,
+      lendingPool({ pool: "queued-usdc", project: "queued-lender", symbol: "USDC", tvlUsd: 6_000_000 }),
+      lendingPool({ pool: "aggregate-a", project: "aggregate-only-lender", symbol: "USDC", tvlUsd: 2_000_000 }),
+      lendingPool({
+        pool: "aggregate-b", chain: "Base", project: "aggregate-only-lender", symbol: "USDC", tvlUsd: 2_000_000,
       }),
-      makeDlYieldPool({
-        pool: "aggregate-a",
-        project: "aggregate-only-lender",
-        symbol: "USDC",
-        tvlUsd: 2_000_000,
-        apy: 4,
-        apyBase: 4,
-        apyMean30d: 4,
+      lendingPool({
+        pool: "aggregate-c", chain: "Arbitrum", project: "aggregate-only-lender", symbol: "USDT", tvlUsd: 2_000_000,
       }),
-      makeDlYieldPool({
-        pool: "aggregate-b",
-        chain: "Base",
-        project: "aggregate-only-lender",
-        symbol: "USDC",
-        tvlUsd: 2_000_000,
-        apy: 4,
-        apyBase: 4,
-        apyMean30d: 4,
-      }),
-      makeDlYieldPool({
-        pool: "aggregate-c",
-        chain: "Arbitrum",
-        project: "aggregate-only-lender",
-        symbol: "USDT",
-        tvlUsd: 2_000_000,
-        apy: 4,
-        apyBase: 4,
-        apyMean30d: 4,
-      }),
-      makeDlYieldPool({
-        pool: "aggregator-usdc",
-        project: "yield-aggregator",
-        symbol: "USDC",
-        tvlUsd: 20_000_000,
-        apy: 4,
-        apyBase: 4,
-        apyMean30d: 4,
-      }),
-      makeDlYieldPool({
-        pool: "missing-category-usdc",
-        project: "missing-category-lender",
-        symbol: "USDC",
-        tvlUsd: 20_000_000,
-        apy: 4,
-        apyBase: 4,
-        apyMean30d: 4,
+      lendingPool({ pool: "aggregator-usdc", project: "yield-aggregator", symbol: "USDC", tvlUsd: 20_000_000 }),
+      lendingPool({
+        pool: "missing-category-usdc", project: "missing-category-lender", symbol: "USDC", tvlUsd: 20_000_000,
       }),
     ];
 
@@ -1287,33 +1154,9 @@ describe("identifyCoverageGaps", () => {
         symbol: "sUSDe",
         tvlUsd: 50_000_000,
       }),
-      makeDlYieldPool({
-        pool: "morpho-usdc",
-        project: "morpho-blue",
-        symbol: "USDC",
-        tvlUsd: 12_000_000,
-        apy: 4,
-        apyBase: 4,
-        apyMean30d: 4,
-      }),
-      makeDlYieldPool({
-        pool: "new-usdc",
-        project: "new-lender",
-        symbol: "USDC",
-        tvlUsd: 12_000_000,
-        apy: 4,
-        apyBase: 4,
-        apyMean30d: 4,
-      }),
-      makeDlYieldPool({
-        pool: "renamed-usdc",
-        project: "renamed-aave-v3",
-        symbol: "USDC",
-        tvlUsd: 12_000_000,
-        apy: 4,
-        apyBase: 4,
-        apyMean30d: 4,
-      }),
+      lendingPool({ pool: "morpho-usdc", project: "morpho-blue", symbol: "USDC", tvlUsd: 12_000_000 }),
+      lendingPool({ pool: "new-usdc", project: "new-lender", symbol: "USDC", tvlUsd: 12_000_000 }),
+      lendingPool({ pool: "renamed-usdc", project: "renamed-aave-v3", symbol: "USDC", tvlUsd: 12_000_000 }),
     ];
     const gaps = identifyCoverageGaps(
       dlPools,
