@@ -71,7 +71,7 @@ export function resolveTargetDeployment(target: DexMeasuredExecutionTarget): Tar
     if (!target.poolId.toLowerCase().startsWith(prefix)) return null;
     const endpointAddress = target.poolId.slice(prefix.length).toLowerCase();
     const policy = getCurveCryptoSwapShadowPolicy(target.chain, endpointAddress);
-    return policy?.scoreEligible && policy.mode === "active"
+    return policy
       ? { kind: "curve-cryptoswap", config: { ...policy, endpointAddress: policy.poolAddress } }
       : null;
   }
@@ -117,6 +117,7 @@ export function isDexMeasuredExecutionTargetScoreEligible(target: DexMeasuredExe
   const deployment = resolveTargetDeployment(target);
   switch (deployment?.kind) {
     case "curve-cryptoswap":
+      return true;
     case "curve-stableswap":
     case "curve-stableswap-ng":
       return deployment.config.mode === "active" && deployment.config.scoreEligible === true;

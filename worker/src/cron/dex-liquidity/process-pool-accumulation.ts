@@ -66,31 +66,6 @@ export function accumulatePoolMetrics(
     pairQuality,
   );
 
-  metric.totalTvlUsd += rawContribTvl;
-  metric.totalVolume24hUsd += volumeUsd1d;
-  metric.totalVolume7dUsd += volumeUsd7d ?? 0;
-  if (volumeUsd7d == null) {
-    metric.totalVolume7dMeasured = false;
-  }
-  metric.poolCount++;
-  metric.chains.add(chainNorm);
-  metric.pairs.add(pool.symbol);
-  metric.qualityAdjustedTvl += poolQualityAdjustedTvl;
-  metric.effectiveTvl += poolEffectiveTvl;
-  if (curveData) {
-    metric.balanceRatioWeightedSum += pool.tvlUsd * balanceRatio;
-    metric.totalTvlForBalance += pool.tvlUsd;
-  }
-  if (hasMeasuredOrganicFraction) {
-    metric.organicTvlWeightedSum += pool.tvlUsd * organicFraction;
-    metric.totalTvlForOrganic += pool.tvlUsd;
-  }
-  metric.stressWeightedSum += pool.tvlUsd * stressIndex;
-  metric.oldestPoolDays = Math.max(metric.oldestPoolDays, poolMaturityDays);
-  metric.protocolTvl[protocol] =
-    (metric.protocolTvl[protocol] ?? 0) + rawContribTvl;
-  metric.chainTvl[chainNorm] =
-    (metric.chainTvl[chainNorm] ?? 0) + rawContribTvl;
 
   const poolPrice = curveData?.tokenPrices[meta.symbol.toUpperCase()];
   // Preserve the native physical identity after a proven address/unique-token join.

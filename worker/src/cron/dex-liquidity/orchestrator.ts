@@ -65,7 +65,7 @@ import {
   clearKnownPoolIdentityIndex,
   countPoolIdentityKeys,
   createKnownPoolIdentityIndex,
-  getIdentityDedupReason,
+  partitionByKnownIdentity,
   registerKnownPoolIdentity,
 } from "./pool-identity";
 import { analyzeDexLiquidityPostScoring } from "./orchestrator-analysis";
@@ -132,41 +132,21 @@ export function filterPrimaryPoolsPreferDirectApi(
   });
   const primaryIdentityCounts = countPoolIdentityKeys(primaryIdentities);
 
-  const filteredPools: LlamaPool[] = [];
   let skippedByExactIdentity = 0;
   let skippedByUniqueDerivedIdentity = 0;
   let skippedByOptionalWildcardIdentity = 0;
-
-  for (let index = 0; index < pools.length; index++) {
-    const pool = pools[index]!;
-    const identity = primaryIdentities[index]!;
-    const dedupReason = getIdentityDedupReason(
-      identity,
-      directApiKnown,
-      {
-        derived: identity.derivedMatchKey ? (primaryIdentityCounts.derived.get(identity.derivedMatchKey) ?? 0) : 0,
-        wildcard: identity.optionalWildcardKey
-          ? (primaryIdentityCounts.wildcard.get(identity.optionalWildcardKey) ?? 0)
-          : 0,
-      },
-      { allowOptionalWildcard: true },
-    );
-
-    if (dedupReason === "exact") {
-      skippedByExactIdentity++;
-      continue;
-    }
-    if (dedupReason === "derived_unique") {
-      skippedByUniqueDerivedIdentity++;
-      continue;
-    }
-    if (dedupReason === "derived_optional_wildcard") {
-      skippedByOptionalWildcardIdentity++;
-      continue;
-    }
-
-    filteredPools.push(pool);
-  }
+  const filteredPools = partitionByKnownIdentity(
+    pools,
+    (_pool, index) => primaryIdentities[index]!,
+    directApiKnown,
+    primaryIdentityCounts,
+    {
+      exact: () => { skippedByExactIdentity++; },
+      derived_unique: () => { skippedByUniqueDerivedIdentity++; },
+      derived_optional_wildcard: () => { skippedByOptionalWildcardIdentity++; },
+    },
+    { allowOptionalWildcard: true },
+  );
 
   clearKnownPoolIdentityIndex(directApiKnown);
   primaryIdentities.length = 0;
@@ -287,7 +267,6 @@ export async function consumeDexLiquidityScoringStage(
   reportProgress?: CronProgressReporter,
   consumerSlotStartedAt?: number,
   options: {
-    publishLiquidity?: boolean;
     publishShadowTargets?: boolean;
     stageReadyDeadlineMs?: number;
   } = {},
@@ -322,13 +301,8 @@ export async function consumeDexLiquidityScoringStage(
     }),
     syncStartSec: staged.syncStartSec,
   };
-  const currentGenerationId = await loadCurrentDexScoringGenerationId(db, signal);
-  const publishLiquidity = options.publishLiquidity !== false || currentGenerationId === null;
-  const measuredTargetPublicationMode: MeasuredTargetPublicationMode = publishLiquidity
-    ? options.publishShadowTargets === true
-      ? "active-and-shadow"
-      : "active"
-    : "none";
+  const measuredTargetPublicationMode: MeasuredTargetPublicationMode =
+    options.publishShadowTargets === true ? "active-and-shadow" : "active";
   const scoreState = await scoreDexLiquidityPoolState(
     ctx,
     staged.sourceState,
@@ -340,7 +314,6 @@ export async function consumeDexLiquidityScoringStage(
     staged.sourceState,
     staged.poolState,
     scoreState,
-    { publishLiquidity, currentGenerationId },
   );
   const result = buildDexLiquidityCronResult(
     staged.sourceState,
@@ -816,7 +789,6 @@ async function buildDexLiquidityPoolState(
   sourceState.subgraphEnrichment.uniswapV4ExecutionCandidates = new Map();
   sourceState.lookups.symbolToIds = new Map();
   sourceState.lookups.symbolToChainScopedIds = new Map();
-  sourceState.lookups.addressToId = new Map();
 
   await ctx.reportDexProgress("pool-processing-core-complete", {
     message: "Completed primary and direct pool integration", providerFamily: "dex-liquidity", done: metrics.size,
@@ -1049,7 +1021,6 @@ async function persistDexLiquidityScoreState(
   sourceState: DexLiquidityScoringSourceState,
   poolState: DexLiquidityPoolState,
   scoreState: DexLiquidityScoreState,
-  options: { publishLiquidity: boolean; currentGenerationId: string | null },
 ): Promise<DexLiquidityPersistenceState> {
   const skippedReason = getPersistenceSkipReason(sourceState.criticalSourceFailures);
   if (skippedReason) {
@@ -1089,61 +1060,47 @@ async function persistDexLiquidityScoreState(
     };
   }
 
-  await ctx.reportDexProgress(options.publishLiquidity ? "persistence" : "price-persistence", {
-    message: options.publishLiquidity ? "Publishing DEX liquidity generation" : "Reusing current DEX liquidity generation for hourly prices",
+  await ctx.reportDexProgress("persistence", {
+    message: "Publishing DEX liquidity generation",
     providerFamily: "d1", total: scoreState.scoreResults.size, counts: { candidateRows: scoreState.scoreResults.size },
   });
-  const persistence: DexLiquidityPersistence = options.publishLiquidity
-    ? (await runWithOverloadRetry(
-        () =>
-          persistScores(
-            ctx.db,
-            poolState.metrics,
-            scoreState.scoreResults,
-            scoreState.globalAgg,
-            ctx.syncStartSec,
-            ctx.signal,
-          ),
-        3,
-        ctx.signal,
-      )) ?? {
-        placeholderCount: 0,
-        inactiveMetricRowsSkipped: 0,
-        inactiveMetricIdsSkipped: [],
-        orphanRowsDeleted: 0,
-        orphanCleanupFailed: false,
-      }
-    : {
-        generationId: options.currentGenerationId,
-        placeholderCount: 0,
-        inactiveMetricRowsSkipped: 0,
-        inactiveMetricIdsSkipped: [],
-        orphanRowsDeleted: 0,
-        orphanCleanupFailed: false,
-        skippedReason: "liquidity-cadence-reuse",
-      };
+  const persistence: DexLiquidityPersistence =
+    (await runWithOverloadRetry(
+      () =>
+        persistScores(
+          ctx.db,
+          poolState.metrics,
+          scoreState.scoreResults,
+          scoreState.globalAgg,
+          ctx.syncStartSec,
+          ctx.signal,
+        ),
+      3,
+      ctx.signal,
+    )) ?? {
+      placeholderCount: 0,
+      inactiveMetricRowsSkipped: 0,
+      inactiveMetricIdsSkipped: [],
+      orphanRowsDeleted: 0,
+      orphanCleanupFailed: false,
+    };
   const publicationGenerationId = persistence.generationId;
   if (!publicationGenerationId) {
     throw new Error("DEX liquidity persistence completed without a publication generation id");
   }
   poolState.metrics.clear();
-  if (options.publishLiquidity) {
-    await publishStablecoinScoreTargets(
-      ctx.db,
-      scoreState.measuredTargetInventory,
-      scoreState.diagnostics,
-      ctx.syncStartSec,
-      ctx.signal,
-    );
-  }
-  await ctx.reportDexProgress(
-    options.publishLiquidity ? "persistence-generation-complete" : "persistence-generation-reused",
-    {
-      message: options.publishLiquidity ? "Published bounded DEX liquidity generation batches" : "Reused exact current DEX liquidity generation",
-      providerFamily: "d1", done: persistence.candidateRowsWritten ?? 0, total: persistence.expectedRowCount ?? scoreState.scoreResults.size,
-      metadata: { generationId: persistence.generationId },
-    },
+  await publishStablecoinScoreTargets(
+    ctx.db,
+    scoreState.measuredTargetInventory,
+    scoreState.diagnostics,
+    ctx.syncStartSec,
+    ctx.signal,
   );
+  await ctx.reportDexProgress("persistence-generation-complete", {
+    message: "Published bounded DEX liquidity generation batches",
+    providerFamily: "d1", done: persistence.candidateRowsWritten ?? 0, total: persistence.expectedRowCount ?? scoreState.scoreResults.size,
+    metadata: { generationId: persistence.generationId },
+  });
   const dexPriceDiagnostics = await computeDexPrices(
     ctx.db,
     scoreState.retainedPoolsByStablecoin,
@@ -1192,33 +1149,24 @@ async function persistDexLiquidityScoreState(
     message: "Published bounded DEX challenger batches", providerFamily: "d1", done: challengerPublication.publishedStablecoins,
   });
 
-  const historicalSnapshot = options.publishLiquidity
-    ? (await writeHistoricalSnapshots(
-        ctx.db,
-        scoreState.scoreResults,
-        ctx.signal,
-        ctx.syncStartSec,
-      )) ?? {
-        snapshotRowsWritten: 0,
-        skipped: false,
-        writeFailed: false,
-        historyRowsPruned: 0,
-        retentionPruneFailed: false,
-      }
-    : {
-        snapshotRowsWritten: 0,
-        skipped: true,
-        writeFailed: false,
-        historyRowsPruned: 0,
-        retentionPruneFailed: false,
-      };
+  const historicalSnapshot =
+    (await writeHistoricalSnapshots(
+      ctx.db,
+      scoreState.scoreResults,
+      ctx.signal,
+      ctx.syncStartSec,
+    )) ?? {
+      snapshotRowsWritten: 0,
+      skipped: false,
+      writeFailed: false,
+      historyRowsPruned: 0,
+      retentionPruneFailed: false,
+    };
   await ctx.reportDexProgress("persistence-history-complete", {
     message: "Reconciled DEX liquidity history", providerFamily: "d1", done: historicalSnapshot.snapshotRowsWritten,
   });
 
-  if (options.publishLiquidity) {
-    await computeDepthStability(ctx.db, scoreState.tvlStabilityMap, publicationGenerationId, ctx.signal);
-  }
+  await computeDepthStability(ctx.db, scoreState.tvlStabilityMap, publicationGenerationId, ctx.signal);
   scoreState.tvlStabilityMap.clear();
   await ctx.reportDexProgress("persistence-depth-complete", {
     message: "Atomically published staged DEX depth stability", providerFamily: "d1",

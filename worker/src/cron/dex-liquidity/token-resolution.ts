@@ -14,10 +14,6 @@ export interface TokenResolutionResult {
   matchType?: "chain-address" | "unique-chain-symbol";
 }
 
-export interface TokenResolutionOptions {
-  allowSymbolFallback?: boolean;
-  allowSymbolFallbackWhenAddressPresent?: boolean;
-}
 
 export function normalizeTokenAddress(address: string): string {
   // Preserve legacy lowercasing for non-EVM identifiers; valid EVM values use strict canonicalization.
@@ -32,7 +28,6 @@ export function resolveStablecoinToken(
   chain: string,
   token: Pick<DexApiPoolToken, "address" | "symbol">,
   lookups: Pick<SymbolLookups, "chainAddressToId" | "symbolToChainScopedIds">,
-  options?: TokenResolutionOptions,
 ): TokenResolutionResult {
   const normalizedAddress = canonicalExitRouteScopedId(chain, token.address ?? "");
   if (normalizedAddress) {
@@ -45,12 +40,8 @@ export function resolveStablecoinToken(
       };
     }
 
-    if (options?.allowSymbolFallbackWhenAddressPresent !== true) {
-      return { status: "unresolved" };
-    }
+    return { status: "unresolved" };
   }
-
-  if (options?.allowSymbolFallback === false) return { status: "unresolved" };
 
   const symbol = normalizeDexSymbol(token.symbol);
   if (!symbol) return { status: "unresolved" };
@@ -73,7 +64,6 @@ export function resolveStablecoinToken(
 export function resolveTrackedStablecoinId(
   input: { chain: string; address?: string | null; symbol?: string | null },
   lookups: Pick<SymbolLookups, "chainAddressToId" | "symbolToChainScopedIds">,
-  options?: TokenResolutionOptions,
 ): TokenResolutionResult {
   return resolveStablecoinToken(
     input.chain,
@@ -82,7 +72,6 @@ export function resolveTrackedStablecoinId(
       symbol: input.symbol ?? "",
     },
     lookups,
-    options,
   );
 }
 

@@ -6,8 +6,12 @@
  * detail. Last weight change 2026-04-05, last reviewed 2026-08-19
  * (Liquidity v6 Phase 2).
  */
+export const LIQUIDITY_TVL_DEPTH_SLOPE = 35;
+export const LIQUIDITY_TVL_DEPTH_ANCHOR_RATIO = 0.0007;
+export const LIQUIDITY_TVL_DEPTH_WEIGHT = 0.30;
+
 export const LIQUIDITY_SCORE_WEIGHTS = [
-  { key: "tvlDepth" as const, label: "TVL Depth", weight: 0.30, displayWeight: "30%", tooltip: "Effective TVL relative to market cap (log-scale depth ratio)" },
+  { key: "tvlDepth" as const, label: "TVL Depth", weight: LIQUIDITY_TVL_DEPTH_WEIGHT, displayWeight: "30%", tooltip: "Effective TVL relative to market cap (log-scale depth ratio)" },
   { key: "volumeActivity" as const, label: "Volume", weight: 0.20, displayWeight: "20%", tooltip: "Log-scale volume/TVL ratio" },
   { key: "poolQuality" as const, label: "Pool Quality", weight: 0.20, displayWeight: "20%", tooltip: "Venue quality retention: mechanism multiplier × balance health" },
   { key: "durability" as const, label: "Durability", weight: 0.20, displayWeight: "20%", tooltip: "TVL stability, volume consistency, maturity, organic fees" },

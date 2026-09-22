@@ -4,8 +4,8 @@
  *   → prepare-safety-score-v9-input (3)
  *   sync-stablecoin-charts (1), failure-independent and serial
  *
- * :16 consumes the hourly source generation (prices hourly, score every two
- * hours); :46 reuses the exact current score generation for V9 preparation.
+ * :16 consumes and publishes the hourly source generation; :46 reuses the
+ * exact current score generation for V9 preparation.
  * The charts writer uses the same lightweight trigger.
  * Scheduled deliveries share one retryable publication bucket per hour.
  */
@@ -91,7 +91,6 @@ export function buildHalfHourlyChartsSlotGroups(runtime: ScheduledRuntimeContext
                 reportProgress,
                 runtime.slotStartedAt,
                 {
-                  publishLiquidity: isDexLiquidityPublicationSlot(runtime.slotStartedAt),
                   publishShadowTargets: isDailyDexShadowTargetPublicationSlot(runtime.slotStartedAt),
                   stageReadyDeadlineMs:
                     (runtime.scheduledTimeMs ?? runtime.slotStartedAt * 1_000)

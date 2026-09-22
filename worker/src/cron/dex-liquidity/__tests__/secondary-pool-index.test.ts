@@ -71,7 +71,6 @@ describe("secondary DEX pool merges", () => {
     await mergeGtPools(metrics, new Map([["usdc-circle", [{ ...basePool, ammExecutionModel: executionModel }]]]));
 
     const result = metrics.get("usdc-circle");
-    expect(result?.poolCount).toBe(1);
     expect(result?.topPools).toHaveLength(1);
     expect(result?.topPools[0]?.extra?.ammExecutionModel).toEqual(executionModel);
   });

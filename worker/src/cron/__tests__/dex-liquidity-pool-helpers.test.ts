@@ -230,12 +230,10 @@ describe("dex-liquidity pool helpers", () => {
   it("builds symbol and address lookups and reports collisions", () => {
     const logSpy = vi.spyOn(console, "info").mockImplementation(() => {});
 
-    const { symbolToIds, addressToId, chainAddressToId } = buildSymbolLookups();
+    const { symbolToIds, chainAddressToId } = buildSymbolLookups();
 
     expect(symbolToIds.get("USDT")).toEqual(["usdt-tether"]);
     expect(symbolToIds.get("CUSD")).toEqual(["cusd-cap"]);
-    expect(addressToId.get("0xdac17f958d2ee523a2206206994597c13d831ec7")).toBe("usdt-tether");
-    expect(addressToId.get("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48")).toBe("usdc-circle");
     expect(chainAddressToId.get("ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7")).toBe("usdt-tether");
     expect(chainAddressToId.get("solana:HQMYCZTDq9g3oZejDRUeQsFtLKgyfvBpD3yHaTnain3L")).toBe("eusd-telcoin");
     expect(chainAddressToId.get("solana:hqmycztdq9g3ozejdrueqsftlkgyfvbpd3yhatnain3l")).toBeUndefined();

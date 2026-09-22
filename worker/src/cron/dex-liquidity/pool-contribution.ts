@@ -85,32 +85,6 @@ export function addSecondaryPoolContribution(
         : undefined
       : pool.feeTierBps;
 
-  m.totalTvlUsd += pool.tvlUsd;
-  m.totalVolume24hUsd += pool.volume24hUsd;
-  m.totalVolume7dUsd += pool.volume7dUsd ?? 0;
-  if (pool.volume7dUsd == null) {
-    m.totalVolume7dMeasured = false;
-  }
-  m.poolCount++;
-  m.chains.add(chain);
-  m.pairs.add(pool.symbol);
-  m.qualityAdjustedTvl += qualityAdjustedTvl;
-  m.effectiveTvl += effectiveTvl;
-  m.stressWeightedSum += pool.tvlUsd * stressIndex;
-  m.oldestPoolDays = Math.max(m.oldestPoolDays, pool.maturityDays);
-
-  if (hasMeasuredBalance) {
-    m.balanceRatioWeightedSum += pool.tvlUsd * balanceRatio;
-    m.totalTvlForBalance += pool.tvlUsd;
-  }
-
-  if (lockedLiquidityPct != null && lockedLiquidityPct > 0) {
-    m.lockedLiqWeightedSum += pool.tvlUsd * (lockedLiquidityPct / 100);
-    m.totalTvlForLocked += pool.tvlUsd;
-  }
-
-  m.protocolTvl[protocol] = (m.protocolTvl[protocol] ?? 0) + pool.tvlUsd;
-  m.chainTvl[chain] = (m.chainTvl[chain] ?? 0) + pool.tvlUsd;
 
   const poolEntry: PoolEntry = {
     poolId: incomingPoolId,

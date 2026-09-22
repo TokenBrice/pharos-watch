@@ -41,7 +41,7 @@ const CURVE_MULTICALL_GAS = "0x1c9c380";
 
 export const CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID = "curve-cryptoswap-get-dy-v1" as const;
 
-export type CurveCryptoSwapGeneration = "legacy-cryptoswap" | "twocrypto-ng" | "tricrypto-ng" | "special-tridbr";
+export type CurveCryptoSwapGeneration = "twocrypto-ng";
 
 /**
  * How a policy proves it is quoting the pool it claims.
@@ -61,9 +61,7 @@ export interface CurveCryptoSwapPoolPolicy {
   chain: "ethereum" | "arbitrum" | "base" | "polygon";
   poolAddress: `0x${string}`;
   generation: CurveCryptoSwapGeneration;
-  mode: "active";
   identityAnchor: CurveCryptoSwapIdentityAnchor;
-  scoreEligible: true;
   expectedPoolCodeHash?: `0x${string}`;
   expectedFactoryAddress?: `0x${string}`;
   expectedFactoryCodeHash?: `0x${string}`;
@@ -143,9 +141,7 @@ function activeEthereumTwocryptoPolicy(
     chain: "ethereum",
     poolAddress,
     generation: "twocrypto-ng",
-    mode: "active",
     identityAnchor: "pinned-pool-code",
-    scoreEligible: true,
     expectedPoolCodeHash,
     expectedFactoryAddress: ETHEREUM_TWOCRYPTO_FACTORY,
     expectedFactoryCodeHash: ETHEREUM_TWOCRYPTO_FACTORY_CODE_HASH,
@@ -169,15 +165,12 @@ function activeEthereumTwocryptoPolicy(
 function familyVerifiedPolicy(
   chain: CurveCryptoSwapPoolPolicy["chain"],
   poolAddress: `0x${string}`,
-  generation: CurveCryptoSwapGeneration,
 ): CurveCryptoSwapPoolPolicy {
   return {
     chain,
     poolAddress,
-    generation,
-    mode: "active",
+    generation: "twocrypto-ng",
     identityAnchor: "reviewed-deployment-family",
-    scoreEligible: true,
     transferSemanticsReviewed: true,
   };
 }
@@ -214,11 +207,11 @@ export const CURVE_CRYPTOSWAP_SHADOW_COHORT: readonly CurveCryptoSwapPoolPolicy[
     "0xbfddf58cb6ef84e115ff47c10e49a80b2653ea13",
     "0x8d9625bc2747c3d3471e2cd9dd3a3dd3855271b6a4c711b6b7c2e576163211f2",
   ),
-  familyVerifiedPolicy("ethereum", "0xe79fb88c7937b39b3e1cabd44faefa5258578b2d", "twocrypto-ng"),
-  familyVerifiedPolicy("ethereum", "0x384ca8992f955009bdd94849488e580559590157", "twocrypto-ng"),
-  familyVerifiedPolicy("ethereum", "0x4fdccb810f22578ad6700fc10a8c9b6c1df61852", "twocrypto-ng"),
-  familyVerifiedPolicy("ethereum", "0xca546ae6c3b2bb9fba2b6e5eeb0881097cece5b0", "twocrypto-ng"),
-  familyVerifiedPolicy("ethereum", "0x592878b920101946fb5915ab97961bc546f211cc", "twocrypto-ng"),
+  familyVerifiedPolicy("ethereum", "0xe79fb88c7937b39b3e1cabd44faefa5258578b2d"),
+  familyVerifiedPolicy("ethereum", "0x384ca8992f955009bdd94849488e580559590157"),
+  familyVerifiedPolicy("ethereum", "0x4fdccb810f22578ad6700fc10a8c9b6c1df61852"),
+  familyVerifiedPolicy("ethereum", "0xca546ae6c3b2bb9fba2b6e5eeb0881097cece5b0"),
+  familyVerifiedPolicy("ethereum", "0x592878b920101946fb5915ab97961bc546f211cc"),
   activeEthereumTwocryptoPolicy(
     "0xf1f435b05d255a5dbde37333c0f61da6f69c6127",
     "0xd0b9195b91086bd9cafaa5e1ab8a6eab1a0d473fadb6c1a3ca69e31f687100e9",
@@ -237,12 +230,12 @@ export const CURVE_CRYPTOSWAP_SHADOW_COHORT: readonly CurveCryptoSwapPoolPolicy[
     "0x79839c2d74531a8222c0f555865aac1834e82e51",
     "0xe97fd5e910f41e3c85fd62c320b19b05e505422366e8c2cad63af015338b38d7",
   ),
-  familyVerifiedPolicy("ethereum", "0xec977f46467a3021785cff88894886e617abd65b", "twocrypto-ng"),
-  familyVerifiedPolicy("ethereum", "0x26d85588b9ed20aba4fa8fb9b3c8977c4aad133c", "twocrypto-ng"),
-  familyVerifiedPolicy("ethereum", "0x57129759d0e23116c1e7402dbc084e53d2e209a2", "twocrypto-ng"),
-  familyVerifiedPolicy("ethereum", "0x43b98eea5c689f0036918f590a4b55f22d853734", "twocrypto-ng"),
-  familyVerifiedPolicy("ethereum", "0x51a57b0a36ef63828929683609fa1fc12c72a776", "twocrypto-ng"),
-  familyVerifiedPolicy("ethereum", "0x027b40f5917fcd0eac57d7015e120096a5f92ca9", "twocrypto-ng"),
+  familyVerifiedPolicy("ethereum", "0xec977f46467a3021785cff88894886e617abd65b"),
+  familyVerifiedPolicy("ethereum", "0x26d85588b9ed20aba4fa8fb9b3c8977c4aad133c"),
+  familyVerifiedPolicy("ethereum", "0x57129759d0e23116c1e7402dbc084e53d2e209a2"),
+  familyVerifiedPolicy("ethereum", "0x43b98eea5c689f0036918f590a4b55f22d853734"),
+  familyVerifiedPolicy("ethereum", "0x51a57b0a36ef63828929683609fa1fc12c72a776"),
+  familyVerifiedPolicy("ethereum", "0x027b40f5917fcd0eac57d7015e120096a5f92ca9"),
 ] as const;
 
 export interface CurveCryptoSwapRuntimeEvidence {
@@ -254,7 +247,6 @@ export interface CurveCryptoSwapRuntimeEvidence {
   viewsCodeHash?: `0x${string}`;
   mathAddress?: `0x${string}`;
   mathCodeHash?: `0x${string}`;
-  legacyIsKilled?: boolean;
   ngKillMethodUnavailable?: boolean;
   transferSemanticsReviewed?: boolean;
   onChainPoolTokenAddresses?: readonly `0x${string}`[];
@@ -264,8 +256,6 @@ export type CurveCryptoSwapEligibilityFailure =
   | "pool-not-in-shadow-cohort"
   | "execution-endpoint-mismatch"
   | "api-broken-or-unknown"
-  | "legacy-kill-state-unavailable"
-  | "legacy-pool-killed"
   | "ng-kill-method-not-proven-absent"
   | "runtime-allowlist-incomplete"
   | "runtime-code-unavailable"
@@ -275,7 +265,6 @@ export type CurveCryptoSwapEligibilityFailure =
   | "dependency-code-hash-mismatch"
   | "transfer-semantics-unreviewed"
   | "pool-token-order-unverified"
-  | "shadow-score-ineligible";
 
 export type CurveCryptoSwapEligibility = { ok: true } | { ok: false; reason: CurveCryptoSwapEligibilityFailure };
 
@@ -313,10 +302,7 @@ export function evaluateCurveCryptoSwapEligibility(input: {
   const evidence = input.evidence;
   if (evidence?.apiIsBroken !== false) return { ok: false, reason: "api-broken-or-unknown" };
 
-  if (policy.generation === "legacy-cryptoswap") {
-    if (evidence.legacyIsKilled == null) return { ok: false, reason: "legacy-kill-state-unavailable" };
-    if (evidence.legacyIsKilled) return { ok: false, reason: "legacy-pool-killed" };
-  } else if (evidence.ngKillMethodUnavailable !== true) {
+  if (evidence.ngKillMethodUnavailable !== true) {
     return { ok: false, reason: "ng-kill-method-not-proven-absent" };
   }
 
@@ -349,10 +335,10 @@ export function evaluateCurveCryptoSwapEligibility(input: {
     if (!policy.transferSemanticsReviewed || evidence.transferSemanticsReviewed !== true) {
       return { ok: false, reason: "transfer-semantics-unreviewed" };
     }
-    if (policy.scoreEligible && (evidence.onChainPoolTokenAddresses?.length ?? 0) < 2) {
+    if ((evidence.onChainPoolTokenAddresses?.length ?? 0) < 2) {
       return { ok: false, reason: "pool-token-order-unverified" };
     }
-    return policy.scoreEligible ? { ok: true } : { ok: false, reason: "shadow-score-ineligible" };
+    return { ok: true };
   }
 
   const expectedHashes = [
@@ -393,10 +379,9 @@ export function evaluateCurveCryptoSwapEligibility(input: {
   if (!policy.transferSemanticsReviewed || evidence.transferSemanticsReviewed !== true) {
     return { ok: false, reason: "transfer-semantics-unreviewed" };
   }
-  if (policy.scoreEligible && (evidence.onChainPoolTokenAddresses?.length ?? 0) < 2) {
+  if ((evidence.onChainPoolTokenAddresses?.length ?? 0) < 2) {
     return { ok: false, reason: "pool-token-order-unverified" };
   }
-  if (!policy.scoreEligible) return { ok: false, reason: "shadow-score-ineligible" };
   return { ok: true };
 }
 
@@ -727,7 +712,7 @@ export function decodeCurveCryptoSwapQuotePoint(
       inputIndex: request.inputIndex,
       outputIndex: request.outputIndex,
       generation: request.policy.generation,
-      shadow: true,
+      shadow: false,
     },
     failureReasons: {
       poolRevert: "pool-revert",

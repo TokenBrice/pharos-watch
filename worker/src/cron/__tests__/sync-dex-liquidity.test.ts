@@ -312,7 +312,7 @@ async function runDexLiquidityScoringCycle(
   coingeckoApiKey?: string | null,
   chainRpcs?: Map<string, ChainRpcConfig>,
   reportProgress?: CronProgressReporter,
-  options?: { publishLiquidity?: boolean; publishShadowTargets?: boolean },
+  options?: { publishShadowTargets?: boolean },
 ): Promise<CronResult> {
   await stageDexLiquidityScoring(database, graphApiKey, signal, coingeckoApiKey, chainRpcs, reportProgress);
   return await consumeDexLiquidityScoringStage(database, signal, reportProgress, undefined, options);
@@ -655,57 +655,6 @@ describe("dex liquidity scoring stage cycle", () => {
   });
 
 
-  it("reuses the current generation for hourly prices without liquidity writes", async () => {
-    vi.mocked(loadCurrentDexScoringGenerationId).mockResolvedValueOnce("dex-liquidity-current");
-
-    const result = await runDexLiquidityScoringCycle(
-      db,
-      "graph-key",
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      { publishLiquidity: false, publishShadowTargets: false },
-    );
-
-    const metadata = JSON.parse(result.metadata ?? "{}") as {
-      rowsWritten?: number;
-      persistence?: { generationId?: string; skippedReason?: string | null };
-    };
-    expect(result.status).toBe("ok");
-    expect(metadata.rowsWritten).toBe(0);
-    expect(metadata.persistence).toMatchObject({
-      generationId: "dex-liquidity-current",
-      skippedReason: "liquidity-cadence-reuse",
-    });
-    const scoreCalls = vi.mocked(computeStablecoinScores).mock.calls;
-    expect(scoreCalls[scoreCalls.length - 1]?.[8]).toBe("none");
-    expect(persistScores).not.toHaveBeenCalled();
-    expect(publishStablecoinScoreTargets).not.toHaveBeenCalled();
-    expect(writeHistoricalSnapshots).not.toHaveBeenCalled();
-    expect(computeDepthStability).not.toHaveBeenCalled();
-    expect(computeDexPrices).toHaveBeenCalledOnce();
-  });
-
-  it("bootstraps full liquidity publication when the current generation is missing", async () => {
-    const result = await runDexLiquidityScoringCycle(
-      db,
-      "graph-key",
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      { publishLiquidity: false, publishShadowTargets: false },
-    );
-
-    expect(result.status).toBe("ok");
-    const scoreCalls = vi.mocked(computeStablecoinScores).mock.calls;
-    expect(scoreCalls[scoreCalls.length - 1]?.[8]).toBe("active");
-    expect(persistScores).toHaveBeenCalledOnce();
-    expect(writeHistoricalSnapshots).toHaveBeenCalledOnce();
-    expect(computeDepthStability).toHaveBeenCalledOnce();
-  });
-
   it("publishes active and shadow measured targets during the daily inventory cycle", async () => {
     await runDexLiquidityScoringCycle(
       db,
@@ -714,7 +663,7 @@ describe("dex liquidity scoring stage cycle", () => {
       undefined,
       undefined,
       undefined,
-      { publishLiquidity: true, publishShadowTargets: true },
+      { publishShadowTargets: true },
     );
 
     const scoreCalls = vi.mocked(computeStablecoinScores).mock.calls;

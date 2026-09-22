@@ -72,7 +72,7 @@ describe("P4 direct AMM execution model retention", () => {
     addSecondaryPoolContribution(metrics, "usdc-circle", "USDC", basePool);
     addSecondaryPoolContribution(metrics, "usdc-circle", "USDC", { ...basePool, address: "poolCase" });
 
-    expect(metrics.get("usdc-circle")?.poolCount).toBe(2);
+    expect(metrics.get("usdc-circle")?.topPools).toHaveLength(2);
     expect(metrics.get("usdc-circle")?.topPools.map((pool) => pool.poolId)).toEqual([
       "solana:PoolCase",
       "solana:poolCase",

@@ -13,7 +13,10 @@
 // an inadmissible pair produces no editorial signal at all rather than a
 // hedged one, because the prompt renders raw TVL evidence the model can quote.
 import { isTrendworthyLiquiditySnapshot } from "./dex-liquidity-evidence";
-import { LIQUIDITY_SCORE_WEIGHTS } from "./liquidity-score-weights";
+import {
+  LIQUIDITY_TVL_DEPTH_SLOPE,
+  LIQUIDITY_TVL_DEPTH_WEIGHT,
+} from "./liquidity-score-weights";
 
 const ONE_DAY_SEC = 86_400;
 
@@ -36,9 +39,6 @@ const ONE_DAY_SEC = 86_400;
 export const UNCORROBORATED_TVL_DROP_RATIO = 0.4;
 
 /** TVL Depth is a log-scale component; see docs/dex-liquidity.md. */
-const TVL_DEPTH_LOG_COEFFICIENT = 35;
-const TVL_DEPTH_WEIGHT =
-  LIQUIDITY_SCORE_WEIGHTS.find((component) => component.key === "tvlDepth")?.weight ?? 0.3;
 
 /**
  * Reasons a history pair is not a comparable measurement of the same thing on
@@ -79,7 +79,7 @@ export interface LiquidityShiftAdmission {
 
 function expectedScoreDeltaFromTvl(previousTvl: number, currentTvl: number): number | null {
   if (previousTvl <= 0 || currentTvl <= 0 || previousTvl === currentTvl) return null;
-  return TVL_DEPTH_WEIGHT * TVL_DEPTH_LOG_COEFFICIENT * Math.log10(currentTvl / previousTvl);
+  return LIQUIDITY_TVL_DEPTH_WEIGHT * LIQUIDITY_TVL_DEPTH_SLOPE * Math.log10(currentTvl / previousTvl);
 }
 
 /**

@@ -646,25 +646,18 @@ export function joinDexMeasuredExecutionEvidence(input: {
         quote.resolution === "last-known-good"
           ? `last-known-good-after:${quote.latestFailureReason ?? "quote-missing"}`
           : undefined;
-      const curvePolicy =
-        profile.adapterProfileId === CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID
-          ? getCurveCryptoSwapShadowPolicy(profile.chain, profile.executionEndpoint.address)
-          : null;
       const curveCompositePolicy = isCurveCompositeAdapterProfileId(profile.adapterProfileId)
         ? getCurveCompositePolicy(profile.chain, profile.executionEndpoint.address)
         : null;
       const activationPending =
-        profile.adapterProfileId === UNISWAP_V4_ADAPTER_PROFILE_ID
+        profile.adapterProfileId === UNISWAP_V4_ADAPTER_PROFILE_ID ||
+        profile.adapterProfileId === CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID ||
+        profile.adapterProfileId === CURVE_STABLESWAP_ADAPTER_PROFILE_ID ||
+        profile.adapterProfileId === CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID
           ? false
-          : profile.adapterProfileId === CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID
-            ? !curvePolicy?.scoreEligible
-            : profile.adapterProfileId === CURVE_STABLESWAP_ADAPTER_PROFILE_ID
-              ? false
-              : profile.adapterProfileId === CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID
-                ? false
-                : isCurveCompositeAdapterProfileId(profile.adapterProfileId)
-                  ? !curveCompositePolicy?.scoreEligible
-                  : !isDexMeasuredExecutionDeploymentScoreEligible(profile.adapterProfileId, profile.chain);
+          : isCurveCompositeAdapterProfileId(profile.adapterProfileId)
+            ? !curveCompositePolicy?.scoreEligible
+            : !isDexMeasuredExecutionDeploymentScoreEligible(profile.adapterProfileId, profile.chain);
       if (activationPending) {
         pool.extra.executionCapabilityGate = gate("activation-pending");
         pool.extra.measuredExecutionDiagnostic = {
