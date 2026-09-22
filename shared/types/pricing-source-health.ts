@@ -35,6 +35,7 @@ export const PRICE_SOURCE_HEALTH_BUCKET_KEYS = [
   "aerodrome-exact",
   "velodrome-dex",
   "jupiter",
+  "jupiter-exact",
   "coinmarketcap",
   "dexscreener-exact",
   "dexscreener-address",

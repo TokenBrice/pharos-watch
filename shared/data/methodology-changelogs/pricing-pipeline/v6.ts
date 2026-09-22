@@ -2,6 +2,20 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.27",
+    title: "Verified legacy USDv direct-route recovery",
+    date: "2026-09-22",
+    effectiveAt: 1790102400,
+    summary: "Legacy USDv can recover a missing price from a reviewed Jupiter direct sell quote backed by independently verified Meteora pool state.",
+    impact: [
+      "Only the exact tracked legacy mint, USDC mint and reviewed Meteora pool are eligible; pool identity, enabled state, legacy SPL vaults and active-bin inventory must validate",
+      "Small and depth sell quotes must agree with each other and on-chain bin price, while Solana slot timestamps and the trusted USDC parent must all remain fresh",
+      "The quote stays fallback-confidence, non-replay-safe and non-depeg-authoritative in the Meteora source family, with no exemption from soft-source severe-downside guards",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.26",
     title: "Guarded live price recovery routes",
     date: "2026-09-22",

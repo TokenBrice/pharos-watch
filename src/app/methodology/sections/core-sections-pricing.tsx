@@ -90,6 +90,9 @@ export function PricingPipelineMethodologySection() {
           BD can similarly recover a missing price from its reviewed Aerodrome BD/USDC stable pool, multiplied by a
           fresh trusted USDC price. Reviewed runtime code, exact pool identity, current transferable inventory and
           bounded sell-quote impact must all pass; the older block or parent timestamp governs its five-minute lifetime.
+          Legacy USDv can recover through its reviewed Meteora USDv/USDC route: Jupiter sell quotes must match independently
+          verified live Solana pool state, active-bin inventory and fresh chain timestamps. Its source retains fallback
+          confidence and the same weak-source publication safeguards.
         </p>
 
         <p>

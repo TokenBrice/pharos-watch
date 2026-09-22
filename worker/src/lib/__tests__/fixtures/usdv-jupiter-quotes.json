@@ -1,0 +1,86 @@
+[
+  {
+    "inputMint": "Ex5DaKYMCN6QWFA4n67TmMwsH8MJV68RX6YXTmVM532C",
+    "inAmount": "1000000000",
+    "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "outAmount": "998882",
+    "otherAmountThreshold": "993888",
+    "swapMode": "ExactIn",
+    "slippageBps": 50,
+    "platformFee": null,
+    "priceImpactPct": "0.0009551214671083601409284776",
+    "routePlan": [
+      {
+        "swapInfo": {
+          "ammKey": "DmXXwEcK2c7fuVoW6TBzF5UDByhuQBHZS1qHnwprvHFH",
+          "label": "Meteora DLMM",
+          "inputMint": "Ex5DaKYMCN6QWFA4n67TmMwsH8MJV68RX6YXTmVM532C",
+          "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+          "inAmount": "1000000000",
+          "outAmount": "998882",
+          "updateContextSlot": "449460061"
+        },
+        "percent": 100,
+        "bps": null
+      }
+    ],
+    "contextSlot": 449460173,
+    "timeTaken": 6.0648e-05,
+    "swapUsdValue": "0.998816197129843478508",
+    "mostReliableAmmsQuoteReport": {
+      "info": {
+        "DmXXwEcK2c7fuVoW6TBzF5UDByhuQBHZS1qHnwprvHFH": "998882",
+        "BZtgQEyS6eXUXicYPHecYQ7PybqodXQMvkjUbP4R8mUU": "Not used RG: FullLiquidIntermediate, contains ALT: true"
+      }
+    },
+    "longtailMarketQuoteReport": null,
+    "useIncurredSlippageForQuoting": null,
+    "useRewards": null,
+    "otherRoutePlans": null,
+    "loadedLongtailToken": false,
+    "instructionVersion": null,
+    "transactionVersion": 0
+  },
+  {
+    "inputMint": "Ex5DaKYMCN6QWFA4n67TmMwsH8MJV68RX6YXTmVM532C",
+    "inAmount": "1000000000000",
+    "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "outAmount": "998882947",
+    "otherAmountThreshold": "993888533",
+    "swapMode": "ExactIn",
+    "slippageBps": 50,
+    "platformFee": null,
+    "priceImpactPct": "0.0009541743126897494858331344",
+    "routePlan": [
+      {
+        "swapInfo": {
+          "ammKey": "DmXXwEcK2c7fuVoW6TBzF5UDByhuQBHZS1qHnwprvHFH",
+          "label": "Meteora DLMM",
+          "inputMint": "Ex5DaKYMCN6QWFA4n67TmMwsH8MJV68RX6YXTmVM532C",
+          "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+          "inAmount": "1000000000000",
+          "outAmount": "998882947",
+          "updateContextSlot": "449460061"
+        },
+        "percent": 100,
+        "bps": null
+      }
+    ],
+    "contextSlot": 449460173,
+    "timeTaken": 7.4902e-05,
+    "swapUsdValue": "998.817144067458413967618",
+    "mostReliableAmmsQuoteReport": {
+      "info": {
+        "DmXXwEcK2c7fuVoW6TBzF5UDByhuQBHZS1qHnwprvHFH": "998882947",
+        "BZtgQEyS6eXUXicYPHecYQ7PybqodXQMvkjUbP4R8mUU": "Not used RG: FullLiquidIntermediate, contains ALT: true"
+      }
+    },
+    "longtailMarketQuoteReport": null,
+    "useIncurredSlippageForQuoting": null,
+    "useRewards": null,
+    "otherRoutePlans": null,
+    "loadedLongtailToken": false,
+    "instructionVersion": null,
+    "transactionVersion": 0
+  }
+]

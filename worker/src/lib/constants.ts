@@ -162,6 +162,7 @@ export const CIRCUIT_SOURCE = {
   MENTO_FPMM: "mento-fpmm",
   MENTO_BROKER: "mento-broker",
   BD_AERODROME: "bd-aerodrome",
+  USDV_JUPITER: "usdv-jupiter",
   PROTOCOL_REDEEM: "protocol-redeem",
   CURVE_ONCHAIN: "curve-onchain",
   CURVE_ORACLE: "curve-oracle",
