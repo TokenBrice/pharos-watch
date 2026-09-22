@@ -83,7 +83,6 @@ export const CRITICAL_OWNERSHIP_WAIVERS: Readonly<Record<string, CriticalOwnersh
   "worker/src/cron/depeg-resolver/persistence.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
   "worker/src/lib/authoritative-price-sources/cap-cusd.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
   "worker/src/lib/authoritative-price-sources/idle-cdo-tranche.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
-  "worker/src/lib/authoritative-price-sources/index.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
   "worker/src/lib/authoritative-price-sources/infinifi-iusd.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
   "worker/src/lib/authoritative-price-sources/inherited-tracked.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },
   "worker/src/lib/authoritative-price-sources/protocol-par.ts": { reason: "no importing test at 2026-09-03 cutover", reviewAfter: "2026-12-15" },

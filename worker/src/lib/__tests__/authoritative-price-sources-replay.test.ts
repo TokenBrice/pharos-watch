@@ -17,7 +17,10 @@ vi.mock("../../api/backfill-price-sources", () => ({
   fetchMarketBackfillPriceSeries: (...args: unknown[]) => fetchMarketBackfillPriceSeriesMock(...args),
 }));
 
-import { fetchAuthoritativeHistoricalPriceSeries } from "../authoritative-price-sources";
+// Import the defining module, not the one-line re-export barrel: critical
+// ownership resolves import specifiers to files and does not follow
+// re-exports, so this is what keeps the suite in the coverage owner set.
+import { fetchAuthoritativeHistoricalPriceSeries } from "../authoritative-price-sources/index";
 
 const QUOTE_HEX =
   "0x000000000000000000000000000000000000000000000000000000e8d435370b0000000000000000000000000000000000000000000000000000000000000000";
