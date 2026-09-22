@@ -491,6 +491,22 @@ describe("authoritative-price-sources", () => {
     });
   });
 
+  it("allows the serial Kava quote to finish beyond the old three-second deadline", async () => {
+    vi.useFakeTimers();
+    try {
+      kavaFetchLivePriceMock.mockImplementation(async (_asset, _context, signal: AbortSignal) => {
+        await new Promise((resolve) => setTimeout(resolve, 4_000));
+        signal.throwIfAborted();
+        return { price: 0.66, source: "kava-pricefeed", confidence: "high", observedAt: Math.floor(Date.now() / 1000) };
+      });
+      const pending = fetchLiveOverrides([unpricedChild("usdx-kava")]);
+      await vi.advanceTimersByTimeAsync(4_001);
+      expect((await pending).get("usdx-kava")?.price).toBe(0.66);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("records parent-derived live RPC nulls as grouped protocol-redeem failures", async () => {
     fetchEvmCallHexAtBlockMock.mockResolvedValue(null);
     const db = mockD1([

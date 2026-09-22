@@ -36,6 +36,7 @@ const METAL_CROSS_CHECK_MAX_DIVERGENCE = 0.05;
 
 const MetalPriceSchema = z.object({
   price: z.number(),
+  updatedAt: z.string().optional(),
 });
 
 function relativeDivergence(candidate: number, reference: number): number {
@@ -95,6 +96,7 @@ export async function resolveMetalReferenceRates(
   {
     prevRates,
     commodityPeerMedian,
+    syncStartSec,
     signal,
     validateRate,
   }: {
@@ -134,7 +136,8 @@ export async function resolveMetalReferenceRates(
     return { rate, source: "cached", updatedAt: null };
   };
 
-  const resolveMetal = (pegKey: MetalPegKey, candidateRate: number | undefined): ResolvedMetalRate | null => {
+  const resolveMetal = (pegKey: MetalPegKey, candidate: z.infer<typeof MetalPriceSchema> | undefined): ResolvedMetalRate | null => {
+    const candidateRate = candidate?.price;
     const peerMedian = resolvePeerMedian(pegKey);
     if (typeof candidateRate === "number" && candidateRate > 0 && validateRate(pegKey, candidateRate, prevRates[pegKey])) {
       if (peerMedian) {
@@ -147,10 +150,11 @@ export async function resolveMetalReferenceRates(
           return peerMedian;
         }
       }
+      const updatedAt = candidate?.updatedAt ? Math.floor(Date.parse(candidate.updatedAt) / 1000) : NaN;
       return {
         rate: candidateRate,
         source: "gold-api.com",
-        updatedAt: null,
+        updatedAt: Number.isFinite(updatedAt) && updatedAt > 0 && updatedAt <= syncStartSec + 60 ? updatedAt : null,
       };
     }
     return peerMedian ?? resolveCached(pegKey);
@@ -177,8 +181,8 @@ export async function resolveMetalReferenceRates(
       logWorkerEventArgs("lib", "warn", `[sync-fx-rates] Silver payload invalid: ${silverValidation.issues}`);
     }
 
-    resolvedByPeg.peggedGOLD = resolveMetal("peggedGOLD", goldValidation.ok ? goldValidation.data.price : undefined) ?? undefined;
-    resolvedByPeg.peggedSILVER = resolveMetal("peggedSILVER", silverValidation.ok ? silverValidation.data.price : undefined) ?? undefined;
+    resolvedByPeg.peggedGOLD = resolveMetal("peggedGOLD", goldValidation.ok ? goldValidation.data : undefined) ?? undefined;
+    resolvedByPeg.peggedSILVER = resolveMetal("peggedSILVER", silverValidation.ok ? silverValidation.data : undefined) ?? undefined;
   } catch (err) {
     logWorkerEventArgs("lib", "warn", "[sync-fx-rates] Gold/silver API failed, falling back to peer median or cached values:", err);
     resolvedByPeg.peggedGOLD = resolvePeerMedian("peggedGOLD") ?? resolveCached("peggedGOLD") ?? undefined;

@@ -383,6 +383,22 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
     });
   });
 
+  it("conserves savUSD canonical supply with unprobed CCIP destinations and rejects insufficient escrow", async () => {
+    const meta = TRACKED_META_BY_ID.get("savusd-avant")!;
+    probeTrackedTokenSupplyMock.mockImplementation(async (_meta, input) =>
+      input.chain === "avalanche" ? 1_000n * 10n ** 18n : 10n * 10n ** 18n,
+    );
+    fetchErc20TotalSupplyMock.mockResolvedValue(10n * 10n ** 18n);
+    fetchOnchainUint256Mock.mockResolvedValue(300n * 10n ** 18n);
+    const result = await fetchCuratedAggregateOnChainMcap(meta, 1);
+    expect(result?.mcap).toBe(1_000);
+    expect(result?.chainCirculating?.Avalanche?.current).toBe(700);
+    expect(result?.chainCirculating?.["savUSD unattributed CCIP escrow"]?.current).toBe(210);
+    expect(Object.values(result!.chainCirculating!).reduce((sum, row) => sum + row.current, 0)).toBe(1_000);
+    fetchOnchainUint256Mock.mockResolvedValue(80n * 10n ** 18n);
+    await expect(fetchCuratedAggregateOnChainMcap(meta, 1)).resolves.toBeNull();
+  });
+
   it("fails sUSDe closed when the escrow balance cannot be read or is inconsistent", async () => {
     mockSusdeLegs();
     fetchOnchainUint256Mock.mockResolvedValue(null);

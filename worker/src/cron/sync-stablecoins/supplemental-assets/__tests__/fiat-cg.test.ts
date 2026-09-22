@@ -93,6 +93,7 @@ describe("fetchFiatCoinGeckoTokens", () => {
     expect(result[0]).toMatchObject({
       id: "ftusd-flying-tulip",
       supplySource: "coingecko-fallback",
+      supplyObservedAt: nowSec,
       circulating: { peggedUSD: 868_459.9588768134 },
       chainCirculating: {},
     });
@@ -126,6 +127,7 @@ describe("fetchFiatCoinGeckoTokens", () => {
     expect(result[0]).toMatchObject({
       id: "ftusd-flying-tulip",
       supplySource: "onchain-total-supply",
+      supplyObservedAt: expect.any(Number),
       circulating: { peggedUSD: 1_922_317.826195 },
       chainCirculating: {
         Ethereum: {
@@ -196,6 +198,7 @@ describe("fetchFiatCoinGeckoTokens", () => {
       chainCirculating: { Ethereum: { current: 3_120_000, chainId: "ethereum" } },
     });
     expect(susds?.priceSource).toBeUndefined();
+    expect(susds?.supplyObservedAt).toBeGreaterThan(Math.floor(Date.now() / 1000) - 10);
   });
 
   it("keeps the NAV token out when the supply fallback resolves nothing", async () => {

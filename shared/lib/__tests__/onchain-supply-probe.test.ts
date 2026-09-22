@@ -115,6 +115,14 @@ describe("selectSingleOnchainSupplyProbeContract", () => {
 });
 
 describe("curated on-chain supply paths", () => {
+  it("admits savUSD's full registry only with its explicit CCIP residual policy", () => {
+    const selected = selectCuratedAggregateOnchainSupplyProbeContracts(TRACKED_META_BY_ID.get("savusd-avant")!);
+    expect(selected).toHaveLength(10);
+    expect(CURATED_AGGREGATE_ESCROW_RESIDUALS["savusd-avant"]?.escrowAddress)
+      .toBe("0x8fcc42c414e29e8e3dbfa1628cf45e8ed80c999d");
+    expect(resolveChainId(CURATED_AGGREGATE_ESCROW_RESIDUALS["savusd-avant"]!.unattributedChainLabel)).toBeNull();
+  });
+
   it("resolves configured aggregate chains only when every chain is present and supported", () => {
     const ethereumContract = { chain: "ethereum", address: "0x0000000000000000000000000000000000000001", decimals: 6 };
     const sonicContract = { chain: "sonic", address: "0x0000000000000000000000000000000000000002", decimals: 6 };

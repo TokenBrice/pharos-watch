@@ -771,6 +771,13 @@ export interface CuratedAggregateEscrowResidualConfig {
 export const CURATED_AGGREGATE_ESCROW_RESIDUALS: Readonly<
   Record<string, CuratedAggregateEscrowResidualConfig>
 > = {
+  // Avalanche CCIP LockRelease custody includes the Base, Arbitrum and Movement
+  // representations absent from the probe roster. Keep their residual separate
+  // from Avalanche free float; pool getToken() reverified 2026-09-22.
+  "savusd-avant": {
+    escrowAddress: "0x8fcc42c414e29e8e3dbfa1628cf45e8ed80c999d",
+    unattributedChainLabel: "savUSD unattributed CCIP escrow",
+  },
   // The Ethereum OFT Adapter escrows every sUSDe representation, including the
   // TON jetton and Aptos fungible asset that have no supply probe. Verified
   // 2026-07-29 against canonical Ethereum totalSupply 1,240,195,620.187629:
