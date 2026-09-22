@@ -10,7 +10,7 @@ Safety Score V9 is the sole active stablecoin safety model. It publishes evidenc
 - **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v9.91`<!-- GENERATED-END: methodology-version-safety-score -->
 - Public response schema: report v5 with score trace v3
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`, parsed and digested by `shared/lib/safety-score-v9/policy.ts`
-- **Evaluation build:** `0bd76e7e2d30e63d54b4c452b8c184cb79b57900a46f90cf45edad040604c511` (`SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST`), generated from the evaluator and fact-producer source manifest. The manifest's evaluator closure includes the policy's reviewed chain-maturity registry, so score-bearing source edits rotate the identity used by replay and publication comparability.
+- **Evaluation build:** `474ced11fd05835a0f953c1041e73de92c709d1320423e7c1146d0f08f39fcc1` (`SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST`), generated from the evaluator and fact-producer source manifest. The manifest's evaluator closure includes the policy's reviewed chain-maturity registry, so score-bearing source edits rotate the identity used by replay and publication comparability.
 - Implementation: `shared/lib/safety-score-v9/`
 - Structured changelog: `shared/data/methodology-changelogs/safety-score/`
 - Public methodology: `/methodology/#safety-scores-methodology`
@@ -31,6 +31,8 @@ V9 evaluates three pillars:
 The weights allocate bounded headroom; they are not an unrestricted weighted average. The evaluator applies evidence ceilings, peg behavior, track record, dependencies, wrapper-local risk, structural caps, and causally attributed danger after pillar evaluation. No separate composite ceiling is applied today.
 
 Missing evidence is classified by reason and ownership. A bounded documentation or integration gap can remain rateable under an explicit ceiling. An unbounded required fact returns NR. F is reserved for causally attributed measured danger rather than ordinary uncertainty.
+
+Configured open live-only redemption routes whose producer reports missing capacity remain explicit producer-failed diagnostic facts. The existing missing-same-notional bounded-uncertainty treatment applies even when a small DEX route is observed; failed telemetry cannot certify that no viable redemption path exists. No stale capacity is credited, and absent, paused, or degraded redemption routes retain their existing treatment.
 
 Live reserve percentages are scoring weights, not slice identities. An adapter may attach a namespace-qualified stable `sourceKey` to a reserve category and the reviewed reserve sidecar carries the same key. A keyed live row joins one-to-one and fails closed when its reviewed key is missing or duplicated; the key remains stable across display-label edits and rebalancing. Historical unkeyed captures use a unique normalized-name compatibility join. Neither path compares the reviewed percentage with the live percentage, and both Backing classification and dependency compilation consume the same match set.
 

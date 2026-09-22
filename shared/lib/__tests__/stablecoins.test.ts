@@ -909,7 +909,7 @@ describe("tracked stablecoin metadata", () => {
       params: {
         hubAddress: "0x0A1a1A107E45b7Ced86833863f482BC5f4ed82EF",
         baseTokenAddress: "0x46850aD61C2B7d64d08c9C754F45254596696984",
-        implementationAddress: "0x0ab74df531c0d8f1c46643e404b3d14723bbc212",
+        implementationAddress: "0xe6ee2cd3e4f2b3844689aa1be176e4dff744a6f9",
         redemptionCapacity: {
           holderEligibility: "whitelisted-primary",
         },
