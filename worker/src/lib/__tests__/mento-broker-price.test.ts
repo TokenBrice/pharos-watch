@@ -37,6 +37,73 @@ function fixture(overrides: Record<string, `0x${string}`> = {}, spread = 0n, id 
 describe("Mento V2 Broker guarded prices", () => {
   afterEach(() => vi.restoreAllMocks());
   beforeEach(() => { vi.clearAllMocks(); vi.spyOn(Date, "now").mockReturnValue(1_789_480_000_000); blockNumber.mockResolvedValue(100); blockHeader.mockReset().mockResolvedValue({ number: 100, timestamp: Math.floor(Date.now() / 1000) - 2, hash: `0x${"ab".repeat(32)}` }); fixture(); });
+  it("reuses only the validated opening head while preserving each route's complete quote", async () => {
+    const shared = context();
+    fixture({}, 0n, "copm-mento");
+    const copm = await fetchMentoBrokerPrice("copm-mento", shared);
+    fixture({}, 0n, "audm-mento");
+    const audm = await fetchMentoBrokerPrice("audm-mento", shared);
+    expect(blockNumber).toHaveBeenCalledTimes(1);
+    expect(blockHeader).toHaveBeenCalledTimes(3); // opening + independent closing check for each route
+    expect(multicall).toHaveBeenCalledTimes(2);
+    expect(multicall.mock.calls.map((call) => call[2])).toEqual([100, 100]);
+    expect(multicall.mock.calls.map((call) => call[1].length)).toEqual([26, 26]);
+    expect(audm).toEqual(await fetchMentoBrokerPrice("audm-mento", context()));
+    fixture({}, 0n, "copm-mento");
+    expect(copm).toEqual(await fetchMentoBrokerPrice("copm-mento", context()));
+    expect(blockNumber).toHaveBeenCalledTimes(3); // separate stages never share their head
+  });
+  it.each([
+    ["breaker", { mode: uint(1n) }],
+    ["implementation", { brokerImplementation: address(USDM) }],
+    ["oracle", { oracleTime: uint(1n) }],
+    ["limits", { inputLimits: config(999) }],
+  ])("still validates second-route %s after sharing the head", async (_name, overrides) => {
+    const shared = context();
+    expect(await fetchMentoBrokerPrice("cadm-mento", shared)).not.toBeNull();
+    fixture(overrides, 0n, "audm-mento");
+    expect(await fetchMentoBrokerPrice("audm-mento", shared)).toBeNull();
+    expect(blockNumber).toHaveBeenCalledTimes(1);
+    expect(multicall).toHaveBeenCalledTimes(2);
+  });
+  it("rejects a second-route reorg and discards the shared head", async () => {
+    const shared = context();
+    expect(await fetchMentoBrokerPrice("cadm-mento", shared)).not.toBeNull();
+    fixture({}, 0n, "audm-mento");
+    blockHeader.mockResolvedValueOnce({ number: 100, timestamp: Math.floor(Date.now() / 1000) - 2, hash: "0xbb" });
+    expect(await fetchMentoBrokerPrice("audm-mento", shared)).toBeNull();
+    expect(await fetchMentoBrokerPrice("audm-mento", shared)).not.toBeNull();
+    expect(blockNumber).toHaveBeenCalledTimes(2);
+  });
+  it("refreshes a shared head at the unchanged five-minute boundary", async () => {
+    const shared = context();
+    expect(await fetchMentoBrokerPrice("cadm-mento", shared)).not.toBeNull();
+    const later = Date.now() + 298_000;
+    vi.spyOn(Date, "now").mockReturnValue(later);
+    shared.assetsById.get("cusd-celo")!.priceObservedAt = Math.floor(later / 1000) - 20;
+    blockHeader.mockResolvedValue({ number: 100, timestamp: Math.floor(later / 1000) - 2, hash: `0x${"ab".repeat(32)}` });
+    fixture({}, 0n, "audm-mento");
+    expect(await fetchMentoBrokerPrice("audm-mento", shared)).not.toBeNull();
+    expect(blockNumber).toHaveBeenCalledTimes(2);
+    expect(blockHeader).toHaveBeenCalledTimes(4);
+  });
+  it("does not share a head from an unsuccessful first route", async () => {
+    const shared = context();
+    fixture({ mode: uint(1n) });
+    expect(await fetchMentoBrokerPrice("cadm-mento", shared)).toBeNull();
+    fixture({}, 0n, "audm-mento");
+    expect(await fetchMentoBrokerPrice("audm-mento", shared)).not.toBeNull();
+    expect(blockNumber).toHaveBeenCalledTimes(2);
+  });
+  it("rechecks the current parent and abort signal before reusing a head", async () => {
+    const shared = context();
+    expect(await fetchMentoBrokerPrice("cadm-mento", shared)).not.toBeNull();
+    shared.assetsById.get("cusd-celo")!.priceObservedAt = Math.floor(Date.now() / 1000) - 300;
+    expect(await fetchMentoBrokerPrice("audm-mento", shared)).toBeNull();
+    shared.assetsById.get("cusd-celo")!.priceObservedAt = Math.floor(Date.now() / 1000);
+    await expect(fetchMentoBrokerPrice("audm-mento", shared, AbortSignal.abort())).rejects.toThrow();
+    expect(multicall).toHaveBeenCalledTimes(1);
+  });
   it("uses reviewed global-limit execution and oldest oracle dependency with fresh USDm price", async () => {
     expect(await fetchMentoBrokerPrice("cadm-mento", context())).toMatchObject({ price: 0.7272, source: "mento-broker", confidence: "fallback", observedAt: Math.floor(Date.now() / 1000) - 60 });
     expect(multicall).toHaveBeenCalledTimes(1);

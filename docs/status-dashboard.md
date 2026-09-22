@@ -189,6 +189,8 @@ Shared raw-status evaluator: `worker/src/lib/status-evaluation.ts`
 
 Shared public-health floor: `worker/src/lib/public-health-assessment.ts`, backed by the pure helpers in `shared/lib/cache-health.ts` and `shared/lib/public-health.ts`
 
+Public and operator warning copy uses the health endpoint's actual warning evidence. The operator health callout shows those reasons rather than presenting a healthy mint/burn sync age and zero blacklist gaps as an explanation for degradation. Long-running price-gap counts and labels come only from the IDs in the critical-duration warning; other currently missing prices remain in the separate coverage warning. Degraded yield-producer evidence has readable copy, while unknown warning codes remain visible. These presentation rules do not change health thresholds, warning eligibility or recovery requirements.
+
 Related extracted loaders:
 
 - `worker/src/lib/status/derived-data.ts`

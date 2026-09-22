@@ -36,20 +36,20 @@ const DEXSCREENER_PASS_TIMEOUT_ERROR = new DOMException(
   "TimeoutError",
 );
 
-interface DexScreenerTarget {
+export interface DexScreenerTarget {
   chain: string;
   address: string;
   expectedSymbol?: string;
 }
 
-interface RankedDexScreenerCandidate {
+export interface RankedDexScreenerCandidate {
   asset: PeggedAsset;
   index: number;
   exactTargets: DexScreenerTarget[];
   missingGenerations: number;
 }
 
-interface DexScreenerBatchTarget {
+export interface DexScreenerBatchTarget {
   entry: RankedDexScreenerCandidate;
   target: DexScreenerTarget;
 }
@@ -85,7 +85,7 @@ function resolveDexTargetChain(rawChain: string): string | null {
   return resolveChainId(ADDRESS_CHAIN_ALIASES[normalized] ?? normalized);
 }
 
-function buildDexScreenerTargets(asset: PeggedAsset): DexScreenerTarget[] {
+export function buildDexScreenerTargets(asset: PeggedAsset): DexScreenerTarget[] {
   const rawAddress = asset.address?.trim();
 
   const targets: DexScreenerTarget[] = [];
@@ -246,6 +246,7 @@ export async function runDexScreenerPass(
    */
   nowMs?: number,
   originalMissingPriceIds?: ReadonlySet<string>,
+  exactBatch?: DexScreenerBatchTarget[],
 ): Promise<EnrichPassResult> {
   let resolved = 0;
   const diagnostics: PricingProviderAttemptDiagnostic[] = [];
@@ -331,14 +332,14 @@ export async function runDexScreenerPass(
       parentSignal: signal,
     });
     const dexBudgetDeadlineMs = Date.now() + DEXSCREENER_PASS_BUDGET_MS;
-    const batch = selectDexScreenerBatch(dexCandidates, rotationCycle, originalMissingPriceIds);
+    const batch = exactBatch ?? selectDexScreenerBatch(dexCandidates, rotationCycle, originalMissingPriceIds);
 
     try {
       throwIfAborted(passTimeout.signal);
       const exactRemainingBudgetMs = dexBudgetDeadlineMs - Date.now();
       if (batch.length > 0 && exactRemainingBudgetMs > 0) {
         const batchChain = batch[0].target.chain;
-        const batchAddressPath = batch.map(({ target }) => target.address).join(",");
+        const batchAddressPath = [...new Set(batch.map(({ target }) => target.address))].join(",");
         dexExactAttempts = 1;
         let lookupFailureRecorded = false;
         const pushExactFailure = (errorClass: string, errorMessage: string, status: number | null = null) => {
@@ -426,6 +427,7 @@ export async function runDexScreenerPass(
 
         if (ok) {
           const resolvedAssetIds = new Set<string>();
+          const assetAttempts: NonNullable<PricingProviderAttemptDiagnostic["assetAttempts"]> = [];
           for (const { entry, target } of batch) {
             if (resolvedAssetIds.has(entry.asset.id)) continue;
             const exactPrice = resolveDexScreenerAddressPrice(entry.asset, target, pairs, fxRates);
@@ -434,11 +436,15 @@ export async function runDexScreenerPass(
             applyResolvedPrice(assets[entry.index], exactPrice, "dexscreener-exact", "fallback");
             resolved += 1;
             resolvedAssetIds.add(entry.asset.id);
+            assetAttempts.push({ assetId: entry.asset.id, adapter: "dexscreener-exact", source: "dexscreener-exact",
+              chain: target.chain, target: target.address, state: "attempted", result: "resolved",
+              candidateAt: Math.floor(Date.now() / 1000), observedAt: assets[entry.index].priceObservedAt ?? undefined,
+              replaySafe: false });
           }
           diagnostics.push({ source: "dexscreener-exact", stage: "fallback",
             endpoint: endpointLabel(`https://api.dexscreener.com/tokens/v1/${batchChain}/${batchAddressPath}`),
             status: lookupResult.status ?? null, ok: true, success: true,
-            candidateCount: batch.length, responseRowCount: pairs.length, resolvedCount: resolvedAssetIds.size });
+            candidateCount: batch.length, responseRowCount: pairs.length, resolvedCount: resolvedAssetIds.size, assetAttempts });
         }
       } else if (batch.length > 0) {
         logWorkerEvent({

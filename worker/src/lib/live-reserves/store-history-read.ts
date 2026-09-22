@@ -20,7 +20,7 @@ export interface ReserveSyncAttemptTimelineEntry {
   failureCategory: string | null;
   warningCodes: string[];
   lastError: string | null;
-  /** Adapter/cron wall-clock instrumentation, only present once adapters emit it under `metadata.diag`. */
+  /** Adapter/cron wall-clock instrumentation, read from current top-level metadata with legacy `metadata.diag` fallback. */
   durationMs: number | null;
 }
 
@@ -47,12 +47,14 @@ interface ReliabilityRow {
 
 
 function parseDiagDurationMs(metadata: Record<string, unknown>): number | null {
+  const current = metadata.durationMs;
+  if (typeof current === "number" && Number.isFinite(current) && current >= 0) return current;
   const diag = metadata.diag;
   if (diag == null || typeof diag !== "object" || Array.isArray(diag) || !("durationMs" in diag)) {
     return null;
   }
   const durationMs = diag.durationMs;
-  return typeof durationMs === "number" && Number.isFinite(durationMs) ? durationMs : null;
+  return typeof durationMs === "number" && Number.isFinite(durationMs) && durationMs >= 0 ? durationMs : null;
 }
 
 function parseWarningCodes(value: string | null | undefined): string[] {
