@@ -13,7 +13,7 @@
   "llamaId": "11",
   "detailProvider": "defillama",
   "geckoId": "paxos-standard",
-  "cmcSlug": "pax-dollar",
+  "cmcSlug": "paxos-standard",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.paxos.com/usdp-transparency",
