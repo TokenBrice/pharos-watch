@@ -244,10 +244,12 @@ exclusion list. A cron is healthy when:
 - Last run exists within `2 * expectedIntervalSec`
 - Last run status is `ok`, or
 - Last run status is `degraded` (warning-only fallback mode), or
-- Last run status is `skipped_neutral` (expected no-op) **and** the latest non-neutral required run in recent history is a fresh `ok` or `degraded`, or
+- Last run status is `skipped_neutral` (expected no-op) **and** the latest non-neutral required run is a fresh `ok` or `degraded`, or
 - Last run status is `skipped_locked` **and** there is a fresh `ok` run in the same freshness window, or
 - The job is **not** reported healthy when the cron-history query itself failed: `crons[*].healthy` is `null` with `crons[*].telemetryUnknown = true` and `crons[*].telemetryUnknownReason` naming the failed read, and the job is excluded from unhealthy/error counters rather than reported falsely unhealthy or falsely healthy, or
 - The job is a watch-tier bootstrap (`crons[*].bootstrap = true`): no required non-neutral attempt yet and at most one recorded run. Critical-tier jobs always require real availability evidence
+
+The display retains the latest ten runs. When all ten entries in that window are neutral skips, the loader performs a bounded per-job lookup for the latest non-neutral run so admission skips cannot evict valid producer evidence. Jobs whose display window already contains a required attempt need no extra lookup. This does not extend freshness budgets or treat skipped work as successful.
 
 Otherwise the job is unhealthy, including stale history, non-fresh errors, or a neutral skip whose latest required run errored. A required degraded run remains counted in degraded diagnostics even though later neutral skips inherit its availability.
 

@@ -300,6 +300,48 @@ describe("enrichMissingPrices", () => {
     ]));
   });
 
+  it.each([
+    ["named requested slug", "Invalid value for 'slug': 'cap-cusd'", false, 1, 3],
+    ["unrequested slug", "Invalid value for 'slug': 'not-requested'", false, 0, 2],
+    ["unknown error", "Invalid query", false, 0, 2],
+    ["second invalid slug", "Invalid value for 'slug': 'cap-cusd'", true, 0, 3],
+  ] as const)("isolates one invalid CMC slug without broadening retries: %s", async (_label, message, retryFails, resolved, requests) => {
+    const assets = [makePeggedAsset({ id: "usdn-smardex", symbol: "USDN", price: 0,
+      cmcSlug: "smardex-usdn", contracts: [{chain: "ethereum", address: "0xde17a000ba631c5d7c2bd9fb692efea52d90dee2", decimals: 18}] }),
+      makePeggedAsset({id: "cusd-cap", symbol: "CUSD", price: 0, cmcSlug: "cap-cusd"})];
+    const fetchSpy = mockFetch([
+      {match: "/v1/cryptocurrency/category", body: cmcCategory([], 313)},
+      {match: "/v3/cryptocurrency/quotes/latest", outcomes: [
+        {status: 400, body: {status: {error_code: "400", error_message: message}}},
+        ...(requests === 3 ? [retryFails
+          ? {status: 400, body: {status: {error_message: "Invalid value for 'slug': 'smardex-usdn'"}}}
+          : {body: {data: [{id: 35672, slug: "smardex-usdn", symbol: "USDN", is_active: 1,
+            platform: {slug: "ethereum", token_address: "0xde17a000ba631c5d7c2bd9fb692efea52d90dee2"},
+            quote: [{symbol: "USD", ...cmcUsdQuote(1.0027), volume_24h: 3352.55}]}]}}] : []),
+      ]},
+    ]);
+    const result = await runCmcPass(assets, "test-cmc-key", undefined, undefined);
+    expect(result.resolved).toBe(resolved);
+    expect(assets[0].price).toBe(resolved ? 1.0027 : 0);
+    expect(assets[1].price).toBe(0);
+    expect(fetchSpy.getHistory()).toHaveLength(requests);
+    if (requests === 3) expect(fetchSpy.getHistory()[2].url).toContain("?slug=smardex-usdn&");
+    if (resolved) expect(result.diagnostics?.flatMap((d) => d.assetAttempts ?? [])).toEqual(expect.arrayContaining([
+      expect.objectContaining({assetId: "cusd-cap", result: "rejected", rejectionClass: "unsupported-quote"}),
+    ]));
+  });
+
+  it("does not retry malformed CMC 400 response bodies", async () => {
+    const assets = [makePeggedAsset({id: "usdn-smardex", symbol: "USDN", price: 0, cmcSlug: "smardex-usdn"}),
+      makePeggedAsset({id: "cusd-cap", symbol: "CUSD", price: 0, cmcSlug: "cap-cusd"})];
+    const fetchSpy = mockFetch([
+      {match: "/v1/cryptocurrency/category", body: cmcCategory([], 313)},
+      {match: "/v3/cryptocurrency/quotes/latest", outcomes: [{response: new Response("not-json", {status: 400})}]},
+    ]);
+    expect((await runCmcPass(assets, "test-cmc-key", undefined, undefined)).resolved).toBe(0);
+    expect(fetchSpy.getHistory()).toHaveLength(2);
+  });
+
   it("does not let truncated category rows bypass targeted CMC quote validation", async () => {
     const assets: PeggedAsset[] = [makePeggedAsset({
       id: "mnee-mnee",

@@ -9,6 +9,8 @@ export async function runYieldSupplementalSlot(runtime: ScheduledRuntimeContext)
     job: "sync-yield-supplemental",
     errorMessage: "[cron] sync-yield-supplemental failed in multi-hour yield slot:",
     run: (signal, reportProgress) =>
-      syncYieldSupplemental(runtime.db, signal, runtime.chainRpcs, reportProgress, vaultsFyi),
+      syncYieldSupplemental(runtime.db, signal, runtime.chainRpcs, reportProgress, vaultsFyi, {
+        pendleApiKey: runtime.env.PENDLE_API_KEY,
+      }),
   });
 }

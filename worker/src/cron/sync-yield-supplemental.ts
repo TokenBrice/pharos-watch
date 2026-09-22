@@ -23,6 +23,7 @@ import type { ResolvedYieldCandidate } from "./yield-sync/types";
 const SUPPLEMENTAL_DEDUPE_DISCARDED_VALUE_LIMIT = 5;
 
 export interface SyncYieldSupplementalOptions {
+  pendleApiKey?: string;
   /**
    * C16 hourly catch-up gate: when set, the run is skipped unless the newest
    * family cache marker is at least this old, so the hourly slot only refetches
@@ -194,6 +195,7 @@ export async function syncYieldSupplemental(
       signal,
       chainRpcs,
       vaultsFyi,
+      pendleApiKey: options?.pendleApiKey,
     });
   await reportSupplementalProgress("source-family-fetch-complete", "Completed supplemental yield source fetches", {
     itemsDone: familyResults.length,

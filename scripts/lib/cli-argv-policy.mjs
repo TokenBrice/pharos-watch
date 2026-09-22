@@ -65,6 +65,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
       "worker/scripts/lib/destructive-operation-guard.ts",
     ),
     strict("worker/scripts/reconcile-night-watch-blacklist.ts", "worker/scripts/lib/destructive-operation-guard.ts"),
+    strict("worker/scripts/repair-tron-blacklist-amounts.ts", "worker/scripts/lib/destructive-operation-guard.ts"),
     strict("worker/scripts/replay-safety-score-v9.ts"),
     strict("worker/scripts/yield-history-cleanup.ts", "worker/scripts/lib/destructive-operation-guard.ts"),
   ]),

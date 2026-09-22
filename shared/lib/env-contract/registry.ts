@@ -284,6 +284,15 @@ export const ENV_BINDINGS = [
     },
   },
   {
+    key: "PENDLE_API_KEY",
+    valueType: "string",
+    description: "Optional Pendle API bearer credential for supplemental yield discovery; unset uses the public IP quota.",
+    example: { section: "workerOptional", value: "" },
+    runtimes: {
+      worker: { status: "optional" },
+    },
+  },
+  {
     key: "VAULTS_FYI_API_KEY",
     valueType: "string",
     description: "Optional vaults.fyi credential for the disabled-by-default supplemental yield integration.",

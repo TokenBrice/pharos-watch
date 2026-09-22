@@ -156,6 +156,30 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
     expect(snapshot.degradedCronRuns).toBe(1);
   });
 
+  it.each([
+    { status: "ok", ageSec: 12 * 3600, healthy: true },
+    { status: "error", ageSec: 12 * 3600, healthy: false },
+    { status: "ok", ageSec: 3 * 86400, healthy: false },
+  ])("retains latest required evidence beyond ten neutral skips: %s", async ({ status, ageSec, healthy }) => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const insert = sqlite.prepare("INSERT INTO cron_runs(job,started_at,duration_ms,status) VALUES ('fetch-tbill-rate',?,100,?)");
+      insert.run(NOW - ageSec, status);
+      for (let hour = 0; hour < 11; hour++) insert.run(NOW - 30 - hour * 3600, "skipped_neutral");
+      const snapshot = await loadCronHealth(db, NOW);
+      expect(snapshot.crons["fetch-tbill-rate"].healthy).toBe(healthy);
+      expect(snapshot.crons["fetch-tbill-rate"].lastRun?.status).toBe("skipped_neutral");
+      expect(snapshot.crons["fetch-tbill-rate"].recentRuns).toHaveLength(10);
+      expect(snapshot.crons["fetch-tbill-rate"].recentRuns.every((run) => run.status === "skipped_neutral")).toBe(true);
+    } finally { sqlite.close(); }
+  });
+
+  it("does not add required-history lookups when all recent windows contain required evidence", async () => {
+    const db = makeDb(NOW, seedWithOverrides(NOW, []));
+    await loadCronHealth(db, NOW);
+    expect(db.getHistory().some((entry) => entry.sql.includes("AND status !="))).toBe(false);
+  });
+
   it("chunks cron history queries below D1's compound SELECT term limit", async () => {
     const rows = seedWithOverrides(NOW, []);
     const db = makeDb(NOW, rows);

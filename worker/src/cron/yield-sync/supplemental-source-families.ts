@@ -38,6 +38,7 @@ interface SupplementalSourceFamilyContext {
   signal?: AbortSignal;
   chainRpcs?: Map<string, ChainRpcConfig>;
   vaultsFyi?: VaultsFyiRuntimeConfig;
+  pendleApiKey?: string;
 }
 
 export interface SupplementalSourceFamilyResult {
@@ -449,7 +450,9 @@ async function runSimpleSupplementalFamily(
   const { value, status } = await runOptionalSupplementalFamily(
     family.label,
     context.signal,
-    () => family.fetch(context.signal),
+    () => family.key === "pendle"
+      ? fetchPendleMarketSources(context.signal, context.pendleApiKey)
+      : family.fetch(context.signal),
     { candidates: [], degraded: false },
   );
   return {

@@ -294,8 +294,8 @@ async function fetchTargetedCmcQuotes(params: {
   const url = `https://${CMC_QUOTES_ENDPOINT}?slug=${encodeURIComponent(slugs.join(","))}&convert=USD&skip_invalid=true`;
   const timeout = AbortSignal.timeout(CMC_REQUEST_TIMEOUT_MS);
   const requestSignal = params.signal ? AbortSignal.any([params.signal, timeout]) : timeout;
-  const result = await fetchTextWithRetry(
-    url,
+  const fetchQuotes = (requestSlugs: readonly string[]) => fetchTextWithRetry(
+    `https://${CMC_QUOTES_ENDPOINT}?slug=${encodeURIComponent(requestSlugs.join(","))}&convert=USD&skip_invalid=true`,
     {
       headers: {
         "X-CMC_PRO_API_KEY": params.cmcApiKey,
@@ -311,6 +311,18 @@ async function fetchTargetedCmcQuotes(params: {
       returnFinalResponse: true,
     },
   );
+  let result = await fetchQuotes(slugs);
+  let excludedSlug: string | undefined;
+  if (result?.response.status === 400) {
+    const errorBody = tryParseJson(result.body, { onFailure: () => undefined }) as
+      { status?: { error_message?: unknown } } | null;
+    // CMC v3 still rejects unknown slugs with skip_invalid=true. Isolate only
+    // an exact requested slug named by its documented error, and retry once
+    // within the original request deadline; unknown errors remain fail-closed.
+    excludedSlug = slugs.find((slug) => errorBody?.status?.error_message === `Invalid value for 'slug': '${slug}'`);
+    const remaining = slugs.filter((slug) => slug !== excludedSlug);
+    if (excludedSlug && remaining.length > 0) result = await fetchQuotes(remaining);
+  }
   const diagnostic = buildPricingProviderDiagnostic({
     source: "coinmarketcap",
     stage: "fallback",
@@ -406,6 +418,11 @@ async function fetchTargetedCmcQuotes(params: {
   for (const candidate of params.candidates) {
     const expectedSlug = candidate.asset.cmcSlug!.toLowerCase();
     const quote = quotesBySlug.get(expectedSlug);
+    if (expectedSlug === excludedSlug) {
+      reject("unsupported-quote");
+      updateAttempt(candidate.asset.id, "rejected", "unsupported-quote");
+      continue;
+    }
     if (!quote) {
       reject("missing-quote");
       updateAttempt(candidate.asset.id, "rejected", "missing-quote");
