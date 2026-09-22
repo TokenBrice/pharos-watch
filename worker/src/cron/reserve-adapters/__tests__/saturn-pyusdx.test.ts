@@ -157,7 +157,8 @@ describe("saturn-pyusdx adapter", () => {
 
     expect(output.metadata?.redemption).toMatchObject({
       routeStatus: "unknown",
-      routeStatusSource: "onchain",
+      // P1-01: an unreadable probe falls back instead of claiming live on-chain provenance.
+      routeStatusSource: "static-config",
       routeStatusReason: "Could not verify Saturn USDat MultiMint paused() route status",
     });
     expect(output.warnings).toEqual(expect.arrayContaining([

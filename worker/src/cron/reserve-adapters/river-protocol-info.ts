@@ -311,34 +311,38 @@ function buildRiverRedemptionMetadata(
   probe: RiverRedemptionProbe,
 ): NonNullable<AdapterResult["metadata"]> {
   const probedChains = probe.chains.map((entry) => entry.chain);
+  // Bounded twice over: per chain it is total trove debt rather than the
+  // debt of troves currently above MCR, and it covers only the chains with
+  // a pinned Satoshi app and a public RPC.
+  const redemptionMetadata =
+    probe.capacityUsd > 0
+      ? buildRedemptionSnapshotMetadata({
+          capacityUsd: probe.capacityUsd,
+          capacityKind: "live-direct-bounded",
+          freshnessKind: "same-run-onchain",
+          holderEligibility: "any-holder",
+          routeStatus: "open",
+          routeStatusSource: "onchain",
+          routeObserved: true,
+          routeStatusReason:
+            `Satoshi Protocol redemption read in the same run on ${probedChains.join(", ")}: ` +
+            probe.chains
+              .map((entry) => `${entry.chain} debtToken() is the tracked satUSD with ` +
+                `getGlobalSystemBalances() debt ${entry.totalDebtRaw} across ${entry.troveManagerCount} branches`)
+              .join("; "),
+          ...(probe.feeBps != null ? { feeBps: probe.feeBps } : {}),
+          sourceUrls: [RIVER_REDEMPTION_DOC_URL, RIVER_DEPLOYED_CONTRACTS_DOC_URL],
+        })
+      : buildRedemptionSnapshotMetadata({
+          capacityUsd: probe.capacityUsd,
+          capacityKind: "live-direct-bounded",
+          freshnessKind: "same-run-onchain",
+          holderEligibility: "any-holder",
+          ...(probe.feeBps != null ? { feeBps: probe.feeBps } : {}),
+          sourceUrls: [RIVER_REDEMPTION_DOC_URL, RIVER_DEPLOYED_CONTRACTS_DOC_URL],
+        });
   return {
-    ...buildRedemptionSnapshotMetadata({
-      capacityUsd: probe.capacityUsd,
-      // Bounded twice over: per chain it is total trove debt rather than the
-      // debt of troves currently above MCR, and it covers only the chains with
-      // a pinned Satoshi app and a public RPC.
-      capacityKind: "live-direct-bounded",
-      freshnessKind: "same-run-onchain",
-      holderEligibility: "any-holder",
-      ...(probe.capacityUsd > 0
-        ? {
-            routeStatus: "open" as const,
-            routeStatusSource: "onchain" as const,
-            routeObserved: true as const,
-            routeStatusReason:
-              `Satoshi Protocol redemption read in the same run on ${probedChains.join(", ")}: ` +
-              probe.chains
-                .map((entry) => `${entry.chain} debtToken() is the tracked satUSD with ` +
-                  `getGlobalSystemBalances() debt ${entry.totalDebtRaw} across ${entry.troveManagerCount} branches`)
-                .join("; "),
-          }
-        : {
-            routeStatus: "unknown" as const,
-            routeStatusSource: "static-config" as const,
-          }),
-      ...(probe.feeBps != null ? { feeBps: probe.feeBps } : {}),
-      sourceUrls: [RIVER_REDEMPTION_DOC_URL, RIVER_DEPLOYED_CONTRACTS_DOC_URL],
-    }),
+    ...redemptionMetadata,
     details: {
       redeemRoute: {
         proofKind: "satoshi-protocol-branch-trove-debt",
