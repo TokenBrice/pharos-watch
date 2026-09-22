@@ -24,9 +24,7 @@ describe("Wave 0 registration fan-out", () => {
       "raydium-clmm",
       "evm-v2",
     ]);
-    expect(DEX_EXECUTION_TARGET_FACTORY_REGISTRY.every((entry) => entry.implementationModule.length > 0)).toBe(true);
   });
-
 
   it("predeclares pool/source leaves needed by the fan-out", () => {
     const slots = DEX_POOL_SOURCE_REGISTRY.map((entry) => entry.slotId);

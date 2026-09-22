@@ -239,10 +239,6 @@ export function computeEffectiveTier(
   return cadenceEligible(tier, runSeq, stablecoinId) ? tier : "skip";
 }
 
-export function isEligibleThisRun(tier: EffectiveTier): boolean {
-  return tier !== "skip";
-}
-
 export function compareDiscoveryMeta(
   a: Pick<DiscoveryMeta, "lastCrawlAt"> | undefined,
   b: Pick<DiscoveryMeta, "lastCrawlAt"> | undefined,

@@ -379,16 +379,6 @@ export function buildCurveStableswapExecutionCapability(
   };
 }
 
-/** @internal Exported for focused Curve StableSwap model tests. */
-export function buildCurveStableswapExecutionModel(
-  curveData: CurvePoolEntry | undefined,
-  chainNorm: string,
-  stablecoinId: string,
-  chainAddressToId: Map<string, string>,
-): DexAmmExecutionModel | null {
-  return buildCurveStableswapExecutionCapability(curveData, chainNorm, stablecoinId, chainAddressToId).executionModel;
-}
-
 /** @internal Exported for focused execution-target validation. */
 export function buildCurveCryptoSwapMeasuredExecutionTarget(input: {
   curveData: CurvePoolEntry | undefined;

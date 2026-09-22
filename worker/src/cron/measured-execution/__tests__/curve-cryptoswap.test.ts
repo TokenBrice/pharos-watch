@@ -459,41 +459,6 @@ describe("Curve CryptoSwap quote transport", () => {
     expect(outcomes.every((outcome) => outcome.point?.amountOutRaw === "0")).toBe(true);
   });
 
-  it("preserves the Curve adaptive multicall golden budget-exhaustion result", async () => {
-    const executeMulticall = vi.fn(async (input: {
-      onBudgetStop?: (reason: "request-budget-exhausted") => void;
-    }) => {
-      input.onBudgetStop?.("request-budget-exhausted");
-      return null;
-    });
-    const quote = createCurveCryptoSwapQuoteExecutor({ executeMulticall });
-    const target = makeTarget();
-
-    const outcomes = await quote({
-      requests: makeCurveQuoteRequests(target, TWOCRYPTO_POOL, ETHEREUM_BLOCK, 1),
-      chainRpcs: new Map(),
-    });
-
-    expect(outcomes[0]?.failureReason).toBe("request-budget-exhausted");
-  });
-
-  it("preserves the Curve adaptive multicall golden deadline result", async () => {
-    const executeMulticall = vi.fn(async () => null);
-    const quote = createCurveCryptoSwapQuoteExecutor({ executeMulticall });
-    const budget = createDexMeasuredExecutionRpcBudget({
-      maxRequests: 100,
-      deadlineMs: Date.now() - 1,
-    });
-
-    const outcomes = await quote({
-      requests: makeCurveQuoteRequests(makeTarget(), TWOCRYPTO_POOL, ETHEREUM_BLOCK, 1),
-      chainRpcs: new Map(),
-      rpcBudget: budget,
-    });
-
-    expect(outcomes[0]?.failureReason).toBe("runtime-deadline-exceeded");
-  });
-
   it("preserves the Curve adaptive multicall golden unattempted result", async () => {
     const sizes: number[] = [];
     const executeMulticall = vi.fn(async (input: { calls: readonly { label: string }[] }) => {

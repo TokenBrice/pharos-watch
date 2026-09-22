@@ -546,6 +546,8 @@ Use `vi.mock()` to stub external modules (stablecoin list, peg-rates, supply hel
 - `npm run audit:coverage -- --domain=redemption-backstops` validates the redemption-backstop registry split across `shared/lib/redemption-backstop-configs/*`, catches duplicate IDs across modules, enforces allowed route-family membership per module, and keeps the headline counts in `docs/redemption-backstops.md` synced to the real registry.
 - `npm run audit:coverage -- --domain=redemption-coverage --check` requires every active unconfigured asset to have a source-reviewed row in `shared/data/coverage-dispositions/redemption-coverage-dispositions.ts`. It rejects missing, duplicate, unknown, inactive, configured-stale, and malformed reviews and ranks the queue by canonical market-cap order. The backlog counts are no longer ratcheted: a growing gap list is curation work, not a merge failure.
 - `worker/src/lib/__tests__/redemption-backstops-store.test.ts` now covers completed-run snapshot manifests for `redemption_backstop_runs`, including generation-filtered reads and current/history rows written with `snapshot_run_id`.
+- Telegram callback suites are grouped by concern, not by ticket: `telegram-webhook-callbacks-settings.test.ts` owns settings, coin snooze and timezone callbacks; `telegram-webhook-callbacks-usage-analytics.test.ts` owns usage analytics and discoverability; `telegram-webhook-callbacks.test.ts` owns disambiguation and forget confirmations. Mocked pending-confirmation reads use `pendingDisambiguationTable(row)` from `worker/src/api/__tests__/telegram-rows.test-support.ts` rather than a hand-written table literal.
+- The Telegram cron suites assert persisted rows, not statement text. `telegram-pending-queue.test.ts` owns enqueue/handoff collision semantics against real SQLite, and the pending-queue drain cases read `telegram_pending_alerts`, `telegram_subscribers` and `telegram_alert_dead_letters` back instead of pinning SQL fragments or bind indexes. `worker/src/cron/__tests__/` holds no snapshot artifact; retention-cleanup metadata is asserted with explicit counters.
 
 ### Test-lane gate protocol
 
@@ -573,6 +575,8 @@ No gate threshold, waiver, or enumerated path is relaxed to accommodate a deleti
 - Use shared fixtures from `worker/src/test-helpers/__shared/fixtures.ts` for DB row mocks.
 - Keep tests focused: one assertion per `it` block when possible.
 - Keep one canonical test home per unit concern. Split very large suites only along cohesive `describe` seams; do not create ticket-named satellite suites or fixture-only alias layers.
+- Drive repeated scenario scaffolding from one `it.each` table instead of copying the setup per `it`; keep every distinct assertion as a row field.
+- Mock lazily loaded frontend sections by module (`vi.mock("./detail-lazy-sections", …)` with one stub per exported section name), never by `next/dynamic` loader source text or `dynamic()` call order — an ordering-keyed mock silently mis-assigns stubs when a section is added or reordered.
 
 ### Test evidence rules
 
