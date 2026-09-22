@@ -135,14 +135,26 @@ describe("report-build-size", () => {
     expect(result.stderr).toContain("compiled CSS is missing the desktop search width utility");
   });
 
-  it("marks an exceeded reference budget in the job summary without failing the release", () => {
+  it("blocks an exceeded named payload byte ceiling and identifies its asset", () => {
     const result = runReport(syntheticBuild(), { budgets: { PHAROS_SIZE_BUDGET_LARGEST_JS_BYTES: "100" } });
 
-    expect(result.status).toBe(0);
-    expect(result.stdout).toContain("OVER largest JS chunk: 500 B / 100 B (+400 B (+400.0%))");
-    expect(result.stepSummary).toContain("| largest JS chunk | 500 B | 100 B | +400 B (+400.0%) | ⚠️ |");
-    expect(result.stepSummary).toContain(`| largest HTML file | ${SHELL_HTML.length} B | 2.64 MiB |`);
-    expect(result.stepSummary).not.toContain("| largest HTML file | 102 B | 2.64 MiB | -2.64 MiB (-100.0%) | ⚠️ |");
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("OVER largest JS chunk: 500 B / 100 B (+400 B (+400.0%); blocking)");
+    expect(result.stderr).toContain(
+      `largest JS chunk exceeds its byte ceiling (500 B / 100 B); responsible: ${ZOD_CHUNK}`,
+    );
+    expect(result.stepSummary).toContain(
+      "| largest JS chunk | 500 B | 100 B | +400 B (+400.0%) | blocking | ⚠️ |",
+    );
+    expect(result.stepSummary).toContain(
+      `| largest HTML file | ${SHELL_HTML.length} B | 2.64 MiB |`,
+    );
+    expect(result.stepSummary).toContain(
+      "File headroom and classic-Zod reach are advisory diagnostics.",
+    );
+    expect(result.stepSummary).toContain(
+      "| classic Zod HTML references | 50.0% | 75.0% | -25.0% (-33.3%) | advisory |  |",
+    );
   });
 
   it("blocks a --check run with no build and stays advisory without it", () => {

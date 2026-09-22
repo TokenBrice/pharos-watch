@@ -44,4 +44,32 @@ describe("check-cron-connection-budget", () => {
     expect(logs.join("\n")).toContain("2/3 connections is full for new fetch-heavy work");
     expect(logs.join("\n")).toContain("slot-a: 2/3");
   });
+
+  it("rejects a budget entry whose job moved to a different schedule identity", () => {
+    const report = evaluateCronConnectionBudget({
+      entries: [
+        {
+          job: "job-a",
+          maxConnections: 1,
+          scheduleKey: "stale-slot",
+          statusTracked: true,
+        },
+      ],
+      schedules: {
+        "current-slot": "* * * * *",
+      },
+      slotPlans: {
+        "current-slot": {
+          jobChains: [["job-a"]],
+        },
+      },
+    });
+
+    expect(report.failed).toBe(true);
+    expect(report.missingBudgetJobs).toEqual([]);
+    expect(report.mismatchedBudgetJobs).toEqual([
+      "current-slot:job-a (budget entry uses stale-slot)",
+    ]);
+    expect(report.triggerReports[0].jobs).toEqual([]);
+  });
 });

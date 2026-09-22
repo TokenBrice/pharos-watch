@@ -44,6 +44,7 @@ export interface CronConnectionBudgetReport {
   growthPolicy: CronGrowthHeadroomPolicyForCheck;
   headroomFullTriggerLimitExceeded: boolean;
   headroomFullTriggers: CronConnectionTriggerReport[];
+  mismatchedBudgetJobs: string[];
   missingBudgetJobs: string[];
   missingBudgetScheduleKeys: string[];
   triggerReports: CronConnectionTriggerReport[];
@@ -88,6 +89,7 @@ export function evaluateCronConnectionBudget(input: {
   }
 
   const missingBudgetJobs: string[] = [];
+  const mismatchedBudgetJobs: string[] = [];
   const missingBudgetScheduleKeys = Object.keys(schedules).filter((scheduleKey) => !slotPlans[scheduleKey]);
   const triggerReports: CronConnectionTriggerReport[] = [];
   const headroomFullTriggers: CronConnectionTriggerReport[] = [];
@@ -105,11 +107,7 @@ export function evaluateCronConnectionBudget(input: {
       return sameSchedule;
     }
 
-    if (matches.length === 1) {
-      return matches[0];
-    }
-
-    missingBudgetJobs.push(`${scheduleKey}:${job} (ambiguous budget entry)`);
+    mismatchedBudgetJobs.push(`${scheduleKey}:${job} (budget entry uses ${matches.map((entry) => entry.scheduleKey).join(", ")})`);
     return null;
   }
 
@@ -182,11 +180,12 @@ export function evaluateCronConnectionBudget(input: {
     budgetOnlyCount: entries.filter((entry) => !entry.statusTracked).length,
     fetchCapableEntryCount,
     fetchCapableEntryLimitExceeded,
-    failed: failed || missingBudgetJobs.length > 0 || fetchCapableEntryLimitExceeded || headroomFullTriggerLimitExceeded,
+    failed: failed || missingBudgetJobs.length > 0 || mismatchedBudgetJobs.length > 0 || fetchCapableEntryLimitExceeded || headroomFullTriggerLimitExceeded,
     growthPolicy,
     headroomFullTriggerLimitExceeded,
     headroomFullTriggers,
     missingBudgetJobs,
+    mismatchedBudgetJobs,
     missingBudgetScheduleKeys,
     triggerReports,
   };
@@ -203,6 +202,12 @@ export function printReport(report: CronConnectionBudgetReport): void {
   if (report.missingBudgetJobs.length > 0) {
     console.error(
       `FAIL: ${pluralize(report.missingBudgetJobs.length, "scheduled job")} missing from CRON_CONNECTION_BUDGET_ENTRIES: ${report.missingBudgetJobs.join(", ")}`,
+    );
+  }
+
+  if (report.mismatchedBudgetJobs.length > 0) {
+    console.error(
+      `FAIL: Stale CRON_CONNECTION_BUDGET_ENTRIES schedule identities for ${pluralize(report.mismatchedBudgetJobs.length, "scheduled job")}: ${report.mismatchedBudgetJobs.join(", ")}`,
     );
   }
 
