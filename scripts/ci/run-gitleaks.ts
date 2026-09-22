@@ -230,7 +230,22 @@ export function runGitleaksConfigSelfTest(
     rmSync(fixturePath);
     const solanaMint = ["Cfuy5T6osdazUeLego5LF", "ycBQebm9PP3H7VNdCndXXEN"].join("");
     const gitbookUuid = ["54e9714e-c65f-4b0c", "-8bcf-c7869956dd20"].join("");
+    const tronUsdt = ["TR7NHqjeKQxGTCi8q8", "ZY4pL8otSzgjLj6t"].join("");
+    const tronUsdtHex = ["a614f803b6fd780986a42", "c78ec9c7f77e6ded13c"].join("");
+    const legacyUsdvPool = ["DmXXwEcK2c7fuVoW6TBzF5", "UDByhuQBHZS1qHnwprvHFH"].join("");
     const publicControls = [
+      {
+        path: "worker/scripts/repair-tron-blacklist-amounts.ts",
+        value: { token: tronUsdt, tokenHex: tronUsdtHex },
+      },
+      {
+        path: "worker/scripts/__tests__/repair-tron-blacklist-amounts.test.ts",
+        value: { token: tronUsdt },
+      },
+      {
+        path: "worker/src/lib/__tests__/fixtures/usdv-jupiter-quotes.json",
+        value: { ammKey: legacyUsdvPool },
+      },
       {
         path: "shared/data/stablecoins/domains/risk-review/usdh-hubble.json",
         value: { key: `kamino-ktoken:${solanaMint}` },
@@ -248,6 +263,8 @@ export function runGitleaksConfigSelfTest(
       if (scan().status !== 0) throw new Error(`Public identifier control failed: ${control.path}`);
       writeFileSync(path, `${JSON.stringify({ ...control.value, aws_access_key_id: awsKey })}\n`);
       if (scan().status !== 1) throw new Error(`Mixed-line credential was hidden: ${control.path}`);
+      writeFileSync(path, `${JSON.stringify({ ...control.value, api_key: credential })}\n`);
+      if (scan().status !== 1) throw new Error(`Mixed-line generic credential was hidden: ${control.path}`);
       rmSync(path);
     }
   } finally {

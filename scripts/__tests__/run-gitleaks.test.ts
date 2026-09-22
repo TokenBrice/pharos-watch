@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -10,6 +10,14 @@ import {
   resolveGitleaksPin,
   runGitleaks,
 } from "../ci/run-gitleaks";
+
+// Model the self-test's public-only and mixed-credential fixture contents, not scan order.
+function selfTestScanStatus(args: string[]): number {
+  return readdirSync(args.at(-1)!, { recursive: true, withFileTypes: true })
+    .filter((entry) => entry.isFile())
+    .some((entry) => /"(?:api_key|aws_access_key_id)"\s*:/.test(readFileSync(join(entry.parentPath, entry.name), "utf8")))
+    ? 1 : 0;
+}
 
 describe("run-gitleaks", () => {
   afterEach(() => vi.restoreAllMocks());
@@ -49,7 +57,7 @@ describe("run-gitleaks", () => {
     for (const mode of ["range", "full", "worktree"]) {
       const bytes = Buffer.from("new worktree bytes\n");
       const runBinary = vi.fn((_binary: string, args: string[], _options: Record<string, unknown>): { status: number } => ({
-        status: args[0] === "dir" ? (runBinary.mock.calls.length % 2 === 1 ? 0 : 1) : 0,
+        status: args[0] === "dir" ? selfTestScanStatus(args) : 0,
       }));
       const buildWorktreeInput = vi.fn(() => bytes);
       expect(await runGitleaks({
@@ -73,7 +81,7 @@ describe("run-gitleaks", () => {
   it("fails closed for nonzero scans, spawn errors, and signal termination", async () => {
     for (const [scanResult, status] of [[{ status: 9 }, 9], [{ error: new Error("spawn failed") }, 1], [{ status: null }, 1]] as const) {
       const runBinary = vi.fn((_binary: string, args: string[]): { status?: number | null; error?: unknown } =>
-        args[0] === "dir" ? { status: runBinary.mock.calls.length % 2 === 1 ? 0 : 1 } : scanResult);
+        args[0] === "dir" ? { status: selfTestScanStatus(args) } : scanResult);
       await expect(runGitleaks({
         argv: ["--range"], env: { NODE_ENV: "test" }, platformKey: "linux-x64",
         ensureBinary: async () => "/fake/gitleaks", runBinary,
@@ -84,7 +92,7 @@ describe("run-gitleaks", () => {
   it("scans only the bytes a merge resolution introduced and fails closed on them", async () => {
     const resolution = Buffer.from("api_key = \"introduced-by-resolution\"\n");
     const runBinary = vi.fn((_binary: string, args: string[], _options: Record<string, unknown>): { status: number } => ({
-      status: args.includes("--config=.gitleaks.toml") ? 1 : runBinary.mock.calls.length % 2 === 1 ? 0 : 1,
+      status: args[0] === "dir" ? selfTestScanStatus(args) : 1,
     }));
     const buildWorktreeInput = vi.fn(() => Buffer.from("unused\n"));
     const buildMergeResolutionInput = vi.fn(() => resolution);

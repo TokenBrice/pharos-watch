@@ -249,3 +249,31 @@ condition = "AND"
 regexTarget = "match"
 regexes = ['''^sourceKey: "(?:balancer|curve|uniswap-v[234]|unknown-protocol)-dex"$''']
 paths = ['''(?:^|/)worker/src/lib/__tests__/primary-price-collector\.test\.ts$''']
+
+# Reviewed public on-chain identities only; other values in these files stay scanned.
+[[allowlists]]
+description = "Reviewed public Tron USDT contract in the bounded blacklist repair and its test"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t$''']
+paths = [
+  '''(?:^|/)worker/scripts/repair-tron-blacklist-amounts\.ts$''',
+  '''(?:^|/)worker/scripts/__tests__/repair-tron-blacklist-amounts\.test\.ts$''',
+]
+
+[[allowlists]]
+description = "Reviewed public Tron USDT contract raw hex in the bounded blacklist repair"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^a614f803b6fd780986a42c78ec9c7f77e6ded13c$''']
+paths = ['''(?:^|/)worker/scripts/repair-tron-blacklist-amounts\.ts$''']
+
+[[allowlists]]
+description = "Reviewed public legacy USDv Meteora pool identity in its recorded Jupiter quotes"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^DmXXwEcK2c7fuVoW6TBzF5UDByhuQBHZS1qHnwprvHFH$''']
+paths = ['''(?:^|/)worker/src/lib/__tests__/fixtures/usdv-jupiter-quotes\.json$''']
