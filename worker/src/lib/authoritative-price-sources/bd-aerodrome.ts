@@ -37,7 +37,7 @@ export async function fetchBdAerodromePrice(context: LivePriceContext, signal?: 
   })), options);
   throwIfAborted(signal);
   if (!codes || codes.length !== REVIEWED_RUNTIME.length || codes.some((code, i) =>
-    typeof code !== "string" || !/^0x(?:[0-9a-fA-F]{2})+$/.test(code)
+    typeof code !== "string" || code.length % 2 !== 0 || !/^0x[0-9a-fA-F]+$/.test(code)
     || keccak256(code as `0x${string}`) !== REVIEWED_RUNTIME[i][1])) return reject("runtime-code");
   const call = (label: string, target: string, signature: string, args: readonly unknown[] = []) => ({ label, target,
     callData: encodeFunctionData({ abi: parseAbi([signature]) as ParseAbi<readonly string[]>, functionName: signature.match(/function (\w+)/)![1], args }) });
