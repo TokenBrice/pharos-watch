@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
-  CRON_JOB_DEFINITIONS,
+  CRON_CONNECTION_BUDGET_ENTRIES,
   CRON_GROWTH_HEADROOM_POLICY,
+  CRON_INTERVALS,
+  CRON_JOB_DEFINITIONS,
   CRON_SCHEDULES,
   CRON_TRIGGER_SCHEDULES,
   SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC,
@@ -27,6 +29,28 @@ describe("cron job schedule metadata", () => {
   it("declares the bounded nested Curve discovery fan-out", () => {
     expect(CRON_JOB_DEFINITIONS.find((definition) => definition.job === "sync-dex-discovery")).toMatchObject({
       maxConnections: 2,
+    });
+  });
+
+  it("registers the V9 shadow workflow with its real cadence and connection pressure", () => {
+    expect(
+      CRON_JOB_DEFINITIONS.find(
+        (definition) =>
+          definition.job === "compute-safety-score-v9-workflow",
+      ),
+    ).toMatchObject({
+      intervalSec: 30 * 60,
+      statusImpact: "watch",
+      maxConnections: 0,
+    });
+    expect(CRON_INTERVALS["compute-safety-score-v9-workflow"]).toBe(30 * 60);
+    expect(
+      CRON_CONNECTION_BUDGET_ENTRIES.find(
+        (entry) => entry.job === "compute-safety-score-v9-workflow",
+      ),
+    ).toMatchObject({
+      maxConnections: 0,
+      statusTracked: true,
     });
   });
 

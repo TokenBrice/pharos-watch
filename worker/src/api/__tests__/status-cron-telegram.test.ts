@@ -72,6 +72,7 @@ describe("handleStatus", () => {
     expect(body.crons["sync-yield-data"]?.expectedIntervalSec).toBe(3600);
     expect(body.crons["sync-yield-supplemental"]?.expectedIntervalSec).toBe(4 * 3600);
     expect(body.crons["prune-status-probe-runs"]?.expectedIntervalSec).toBe(86400);
+    expect(body.crons["compute-safety-score-v9-workflow"]?.expectedIntervalSec).toBe(30 * 60);
   });
 
   it("includes budget-only scheduled surface telemetry in status", async () => {

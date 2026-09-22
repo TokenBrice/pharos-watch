@@ -618,6 +618,17 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     connectionGroup: "v9-publication-chain",
   },
   {
+    job: "compute-safety-score-v9-workflow",
+    label: "V9 shadow Workflow compiler",
+    group: "quarter-hourly",
+    intervalSec: SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC,
+    scheduleKey: "v9PublicationOffset",
+    triggerMode: "isolated",
+    statusImpact: "watch",
+    maxConnections: 0, // Reuses the D1-only publication compiler against a write-capturing facade.
+    connectionGroup: "v9-publication-chain",
+  },
+  {
     job: "prepare-safety-score-v9-input",
     label: "V9 compiler input",
     group: "half-hourly",
