@@ -92,6 +92,7 @@ describe("check-cron-connection-budget", () => {
       growthPolicy: {
         maxFetchCapableEntriesBeforeRebalance: 1,
         maxHeadroomFullTriggersBeforeRebalance: 0,
+        queuesOrWorkflowsReview: { p95DurationMs: 600_000, fanoutPerRun: 1_000, connectionPressureAt: 5 },
       },
       schedules: {
         "slot-a": "1 * * * *",

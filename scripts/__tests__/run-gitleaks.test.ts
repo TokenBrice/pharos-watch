@@ -76,7 +76,7 @@ describe("run-gitleaks", () => {
   });
 
   it("scans the checked-out tree as its own lane and fails closed on its findings", async () => {
-    const runBinary = vi.fn((_binary: string, args: string[]): { status: number } => ({
+    const runBinary = vi.fn((_binary: string, args: string[], _options: Record<string, unknown>): { status: number } => ({
       status: args.includes("--config=.gitleaks.toml") ? 1 : runBinary.mock.calls.length % 2 === 1 ? 0 : 1,
     }));
     const buildWorktreeInput = vi.fn(() => Buffer.from("unused\n"));
