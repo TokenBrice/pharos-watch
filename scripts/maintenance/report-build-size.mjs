@@ -76,17 +76,16 @@ const DEFAULT_BUDGETS = {
   // bytes. Retain about 10 KB of headroom so the next public schema expansion
   // still has to re-ratchet deliberately.
   largestTxtBytes: 1_401_000,
-  // Production Pages builds hydrate mirrors from live API data. USDC's detail
-  // page now carries richer SEO JSON-LD plus the inline critical-CSS block
-  // (~68 KB raw) that replaced the render-blocking global stylesheet, so the
-  // ceiling sits above the ~253 KB optimized payload.
-  representativeDetailHtmlBytes: 270_000,
-  // Safety Score V9 fact/provenance surfaces raised the production USDT route
-  // to 93,408 bytes, and the wave-1 curation release (block-pinned control
-  // reviews, mechanism overlay evidence) lifts it to ~95,030. Keep the ceiling
-  // intentionally narrow while leaving enough headroom for the representative
-  // detail payloads to remain useful.
-  representativeDetailPageTxtBytes: 97_500,
+  // Production Pages builds hydrate mirrors from live API data. These two
+  // references were written when they were non-blocking (P2-16 part 4 made
+  // every named ceiling block) and had drifted far below reality: the live
+  // production route measured 652,874 bytes and the 2026-09-22 release build
+  // 635-646 KiB HTML / 103-115 KiB page TXT across the five representative
+  // coins (Mint Authority and Explore-and-reference sections now render
+  // server-side). Ratcheted to the measured payload with ~3% headroom so the
+  // next growth still has to be re-ratcheted deliberately.
+  representativeDetailHtmlBytes: 680_000,
+  representativeDetailPageTxtBytes: 122_000,
   // Sum of gzip sizes of every script chunk referenced by a representative
   // detail page's HTML — the eager first-load JS budget per route (Mythos
   // #50). Ratcheted from 810 KB after the chart-section deferral (P1-6/P1-5)
