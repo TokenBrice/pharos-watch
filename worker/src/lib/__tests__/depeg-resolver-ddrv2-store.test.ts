@@ -408,7 +408,7 @@ describe("DDRv2 storage contract cases", () => {
       db.sqlite.prepare("DELETE FROM depeg_resolver_publication_snapshots_v2").run();
       expect(await loadLatestPublicationManifest(db)).toMatchObject({ snapshotToken: "ddrpub:test:legacy" });
     });
-    const db = mockD1([{ match: "INSERT INTO depeg_resolver_publication_snapshots", rows: [], throwError: new Error("D1_ERROR: manifest batch failed") }], { requireMatch: true });
+    const db = mockD1([{ match: "INSERT INTO depeg_resolver_publication_snapshots", rows: [], throwError: new Error("D1_ERROR: manifest batch failed") }, { match: "SELECT snapshot_token, base_payload_content_hash", rows: [] }], { requireMatch: true });
     await expect(writePublicationManifest(db, { snapshotToken: "ddrpub:test:empty", snapshotGeneration: 2, publishedAt: 200000, validatorVersion: "vitest", basePayload: { _meta: { publicPredictionIds: [], publicPredictionRowHashes: {} }, rows: [] } })).rejects.toThrow("D1_ERROR: manifest batch failed");
   });
 

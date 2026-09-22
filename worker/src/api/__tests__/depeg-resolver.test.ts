@@ -252,6 +252,7 @@ function cacheRows(payload: DdrResponse) {
       ],
     },
     { match: "FROM depeg_resolver_publication_snapshots", rows: [] },
+    { match: "FROM depeg_resolver_publication_snapshot_refs", rows: [] },
     { match: "FROM depeg_resolver_prediction_errata", rows: [] },
     { match: "FROM depeg_resolver_prediction_lock_state", rows: [] },
     { match: "FROM depeg_events WHERE id IN", rows: [] },
@@ -517,6 +518,7 @@ describe("handleDepegResolver", () => {
     latest._meta.basePayloadHash = computeDdrManifestBasePayloadHash(latest);
     const db = mockD1([
       { match: "FROM depeg_resolver_publication_snapshots", rows: [manifestRow(latest, 2)] },
+      { match: "FROM depeg_resolver_publication_snapshot_refs", rows: [] },
       ...cacheRows(cached),
     ]);
 
@@ -575,6 +577,7 @@ describe("handleDepegResolver", () => {
       },
       { match: "FROM cache WHERE key = ?", rows: [], first: null },
       { match: "FROM depeg_resolver_publication_snapshots", rows: [] },
+      { match: "FROM depeg_resolver_publication_snapshot_refs", rows: [] },
       { match: "FROM depeg_resolver_prediction_errata", rows: [] },
       { match: "FROM depeg_events WHERE id IN", rows: [] },
     ]);
