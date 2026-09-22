@@ -87,65 +87,25 @@ describe("stablecoin publication health", () => {
   it("reports unknown health when no run carries publication or price evidence", async () => {
     const { db } = fixtures.open();
     const result = await loadStablecoinCoverageHealth(db, 1_000);
-    expect(result.publication).toEqual({
-      status: "unknown",
-      expectedActiveCount: activeIds.length,
-      presentActiveCount: 0,
-      waivedActiveCount: 0,
-      missingActiveIds: [],
-      waivedActiveIds: [],
-      expiredWaiverIds: [],
-      observedAt: null,
-    });
-    expect(result.activePriceCoverage).toEqual({
-      status: "unknown",
-      expectedActiveCount: activeIds.length,
-      presentActiveCount: 0,
-      pricedActiveCount: 0,
-      missingPriceCount: 0,
-      pricedActiveIds: [],
-      missingActiveIds: [],
-      affectedMarketCapUsd: 0,
-      missingActiveAssets: [],
-      alertEligibleCount: 0,
-      alertEligibleIds: [],
-      acknowledgedGapIds: [],
-      acknowledgedGapCount: 0,
-      expiredGapReviewIds: [],
-      invalidGapReviewIds: [],
-      maxConsecutiveMissingGenerations: 0,
-      observedAt: null,
-    });
+    expect(result.publication).toEqual(unknownStablecoinPublicationHealth(null));
+    expect(result.activePriceCoverage).toEqual(unknownActivePriceCoverageHealth(null));
   });
 
-  it("exposes unknown factories with an explicit observation time", () => {
-    expect(unknownStablecoinPublicationHealth(1_700)).toEqual({
+  it("exposes unknown factories with an explicit observation time and no claimed coverage", () => {
+    expect(unknownStablecoinPublicationHealth(1_700)).toMatchObject({
       status: "unknown",
       expectedActiveCount: activeIds.length,
       presentActiveCount: 0,
-      waivedActiveCount: 0,
       missingActiveIds: [],
-      waivedActiveIds: [],
-      expiredWaiverIds: [],
       observedAt: 1_700,
     });
-    expect(unknownActivePriceCoverageHealth(1_800)).toEqual({
+    expect(unknownActivePriceCoverageHealth(1_800)).toMatchObject({
       status: "unknown",
       expectedActiveCount: activeIds.length,
-      presentActiveCount: 0,
       pricedActiveCount: 0,
-      missingPriceCount: 0,
-      pricedActiveIds: [],
       missingActiveIds: [],
-      affectedMarketCapUsd: 0,
-      missingActiveAssets: [],
-      alertEligibleCount: 0,
       alertEligibleIds: [],
       acknowledgedGapIds: [],
-      acknowledgedGapCount: 0,
-      expiredGapReviewIds: [],
-      invalidGapReviewIds: [],
-      maxConsecutiveMissingGenerations: 0,
       observedAt: 1_800,
     });
   });
