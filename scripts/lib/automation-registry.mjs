@@ -227,6 +227,18 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     sourcePaths: ["scripts/data/m49-to-iso2.ts", "scripts/data/world-countries-110m.json"],
   }),
   generatedArtifact({
+    id: "mint-burn-conservation-runtime",
+    buildLifecycle: "compile-input",
+    autoStage: true,
+    checkCommand: "tsx scripts/maintenance/generate-mint-burn-conservation-runtime.ts --check",
+    command: "tsx scripts/maintenance/generate-mint-burn-conservation-runtime.ts",
+    outputPaths: ["worker/src/lib/mint-burn-conservation-runtime.generated.json"],
+    phase: 0,
+    reproducibility: "deterministic",
+    script: "scripts/maintenance/generate-mint-burn-conservation-runtime.ts",
+    sourcePaths: ["worker/src/lib/mint-burn-conservation-reviewed.json"],
+  }),
+  generatedArtifact({
     id: "safety-score-v9-shock-coverage-registry",
     buildLifecycle: "maintenance-only",
     autoStage: true,

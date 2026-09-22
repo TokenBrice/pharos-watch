@@ -1,0 +1,140 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "bold-liquity",
+      "address": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
+      "decimals": 18,
+      "disposition": "admitted",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "buidl-blackrock",
+      "address": "0x6a9da2d710bb9b700acde7cb81f10f1ff8c89041",
+      "decimals": 6,
+      "disposition": "admitted",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "buidl-blackrock",
+      "address": "0x7712c34205737192402172409a8f7ccef8aa2aec",
+      "decimals": 6,
+      "disposition": "admitted",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "dusd-alto",
+      "address": "0x63d74d22e689c715a04f2c13962b1f77f443d35b",
+      "decimals": 18,
+      "disposition": "admitted",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "eure-monerium",
+      "address": "0x39b8b6385416f4ca36a20319f70d28621895279d",
+      "decimals": 18,
+      "disposition": "admitted",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "ftusd-flying-tulip",
+      "address": "0xf7d85ec4e7710f71992752eac2111312e73e9c9c",
+      "decimals": 6,
+      "disposition": "admitted",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "gusd-gemini",
+      "address": "0x056fd409e1d7a124bd7017459dfea2f387b6d5cd",
+      "decimals": 2,
+      "disposition": "admitted",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "lusd-liquity",
+      "address": "0x5f98805a4e8be255a32880fdec7f6728c6568ba0",
+      "decimals": 18,
+      "disposition": "admitted",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "musd-metamask",
+      "address": "0xaca92e438df0b2401ff60da7e4337b687a2435da",
+      "decimals": 6,
+      "disposition": "admitted",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "usd1-world-liberty-financial",
+      "address": "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d",
+      "decimals": 18,
+      "disposition": "admitted",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "usdaf-asymmetry",
+      "address": "0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8",
+      "decimals": 18,
+      "disposition": "admitted",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "usdat-saturn",
+      "address": "0x23238f20b894f29041f48d88ee91131c395aaa71",
+      "decimals": 6,
+      "disposition": "admitted",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "usde-ethena",
+      "address": "0x4c9edd5852cd905f086c759e8383e09bff1e68b3",
+      "decimals": 18,
+      "disposition": "admitted",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "usdg-paxos",
+      "address": "0xe343167631d89b6ffc58b88d6b7fb0228795491d",
+      "decimals": 6,
+      "disposition": "admitted",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "usds-sky",
+      "address": "0xdc035d45d973e3ec169d2276ddab16f1e407384f",
+      "decimals": 18,
+      "disposition": "admitted",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply"
+    }
+  ]
+}

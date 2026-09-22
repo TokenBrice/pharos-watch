@@ -1,14 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { MINT_BURN_CONFIGS } from "../mint-burn-contracts";
 import { fetchEvmRpcBatchDetailed } from "../evm-rpc";
-import { completeMintBurnConservationAudit, fetchConservationBoundaries, getMintBurnConservationEligibility, mintBurnConservationCacheKey,
+import { completeMintBurnConservationAudit, fetchConservationBoundaries, getMintBurnConservationEligibility,
+  isMintBurnConservationUnsupportedReason, mintBurnConservationCacheKey, resolveMintBurnConservationEligibility,
+  reviewedConservationIdentityKey, validateReviewedConservationEntry,
   persistMintBurnConservation, readMintBurnConservationRecords, validateMintBurnParsedConservation, verifyPersistedMintBurnConservation,
-  type ConservationBoundaryEvidence, type ConservationBoundaryRequest } from "../mint-burn-conservation";
+  type ConservationBoundaryEvidence, type ConservationBoundaryRequest, type ReviewedConservationEntry } from "../mint-burn-conservation";
+import { renderMintBurnConservationRuntime } from "../../../../scripts/maintenance/generate-mint-burn-conservation-runtime";
+import reviewedConservationSidecar from "../mint-burn-conservation-reviewed.json";
 import type { AlchemyLogEntry } from "../alchemy-logs";
 import type { MintBurnRow } from "../mint-burn-pipeline/types";
 vi.mock("../evm-rpc", () => ({ fetchEvmRpcBatchDetailed: vi.fn() }));
 const config = MINT_BURN_CONFIGS.find((item) => item.stablecoinId === "gusd-gemini")!;
+const sidecarEntries = reviewedConservationSidecar.entries as unknown as ReviewedConservationEntry[];
 const word = (value: bigint) => `0x${value.toString(16).padStart(64, "0")}`;
 const headers = [{ number: "0x64", timestamp: "0x3e8", hash: word(10n) },
   { number: "0x66", timestamp: "0x400", hash: word(12n) }];
@@ -226,8 +233,52 @@ describe("pooled conservation boundaries", () => {
   });
 });
 describe("raw token conservation", () => {
-  it("admits exactly fifteen reviewed identities and rejects changed decimals/events", () => {
-    expect(MINT_BURN_CONFIGS.filter((item) => getMintBurnConservationEligibility(item).supported)).toHaveLength(15);
+  it("holds only structurally valid reviewed sidecar entries", () => {
+    expect(sidecarEntries.flatMap((entry) => validateReviewedConservationEntry(entry))).toEqual([]);
+    const admitted = sidecarEntries.find((entry) => entry.stablecoinId === "gusd-gemini")!;
+    expect(validateReviewedConservationEntry({ ...admitted, zeroRecipientTransferReverts: false })).toHaveLength(1);
+    // OZ v5 `_update` burns on transfer-to-zero: reverts=false is admissible when the burn is paired.
+    expect(validateReviewedConservationEntry({ ...admitted, zeroRecipientTransferReverts: false, zeroRecipientTransferBurns: true })).toEqual([]);
+  });
+  it("commits the runtime lookup as the byte-exact projection of the evidence sidecar", () => {
+    expect(readFileSync(resolve(import.meta.dirname, "../mint-burn-conservation-runtime.generated.json"), "utf8"))
+      .toBe(renderMintBurnConservationRuntime(reviewedConservationSidecar));
+  });
+  it("maps every sidecar entry to exactly one config, without duplicates or orphans", () => {
+    const seen = new Map<string, number>();
+    for (const entry of sidecarEntries) {
+      const key = reviewedConservationIdentityKey(entry.chainId, entry.stablecoinId, entry.address, entry.decimals);
+      seen.set(key, (seen.get(key) ?? 0) + 1);
+      const matches = MINT_BURN_CONFIGS.filter((item) =>
+        reviewedConservationIdentityKey(item.chain.chainId, item.stablecoinId, item.contractAddress, item.decimals) === key);
+      expect(matches, key).toHaveLength(1);
+      expect(matches[0]!.decimals, key).toBe(entry.decimals);
+    }
+    for (const [key, count] of seen) expect(count, key).toBe(1);
+  });
+  it("admits exactly the sidecar's admitted entries", () => {
+    const admitted = new Set(sidecarEntries.filter((entry) => entry.disposition === "admitted")
+      .map((entry) => reviewedConservationIdentityKey(entry.chainId, entry.stablecoinId, entry.address, entry.decimals)));
+    const eligible = new Set(MINT_BURN_CONFIGS.filter((item) => getMintBurnConservationEligibility(item).supported)
+      .map((item) => reviewedConservationIdentityKey(item.chain.chainId, item.stablecoinId, item.contractAddress, item.decimals)));
+    expect([...eligible].sort()).toEqual([...admitted].sort());
+  });
+  it("returns an unsupported entry's specific reason and rejects off-vocabulary reasons", () => {
+    const reason = "unpaired-supply-path:mintForBridge";
+    const base: ReviewedConservationEntry = { chainId: config.chain.chainId, stablecoinId: config.stablecoinId,
+      address: config.contractAddress.toLowerCase(), decimals: config.decimals, disposition: "unsupported" };
+    expect(resolveMintBurnConservationEligibility({ ...base, unsupportedReason: reason }, config))
+      .toEqual({ supported: false, reason });
+    expect(resolveMintBurnConservationEligibility({ ...base, unsupportedReason: null }, config))
+      .toEqual({ supported: false, reason: "unreviewed-contract-or-event-semantics" });
+    expect(resolveMintBurnConservationEligibility(undefined, config))
+      .toEqual({ supported: false, reason: "unreviewed-contract-or-event-semantics" });
+    expect(validateReviewedConservationEntry({ ...base, disposition: "unsupported", unsupportedReason: "made-up-reason" }))
+      .toHaveLength(1);
+    expect(isMintBurnConservationUnsupportedReason("zero-address-transfer-without-supply-change:transferToSelf")).toBe(true);
+    expect(isMintBurnConservationUnsupportedReason("unverified-implementation-source")).toBe(true);
+  });
+  it("rejects changed decimals, adapters and single-event configs", () => {
     expect(getMintBurnConservationEligibility({ ...config, decimals: 18 }).supported).toBe(false);
     expect(getMintBurnConservationEligibility({ ...config, adapterKind: "mixed" }).supported).toBe(false);
     expect(getMintBurnConservationEligibility({ ...config, events: [config.events[0]] }).supported).toBe(false);
