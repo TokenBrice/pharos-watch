@@ -174,13 +174,18 @@ export async function getCircuitRecordsForSources(
 /**
  * Returns true if a fetch should be attempted for this source.
  * Transitions open -> half-open when the probe interval has elapsed.
+ *
+ * Half-open is probe-gated: the transition is persisted before the probe runs,
+ * so a caller that aborts before `recordOutcome()` would otherwise leave the
+ * breaker in a state that admits every request. A half-open record with no
+ * recorded outcome for two probe intervals reverts to open.
  */
 export async function shouldAttemptFetch(db: D1Database, source: string): Promise<boolean> {
   const record = await getCircuitRecord(db, source);
   if (record.state === "closed") return true;
+  const now = Math.floor(Date.now() / 1000);
 
   if (record.state === "open" && record.openedAt != null) {
-    const now = Math.floor(Date.now() / 1000);
     if (now - record.openedAt >= CIRCUIT_PROBE_INTERVAL_SEC) {
       // Transition to half-open — allow one probe request
       record.state = "half-open";
@@ -191,8 +196,19 @@ export async function shouldAttemptFetch(db: D1Database, source: string): Promis
     return false;
   }
 
+  if (record.state !== "half-open") return false;
+  const probeReferenceAt = record.lastFailureAt ?? record.openedAt ?? 0;
+  if (now - probeReferenceAt >= CIRCUIT_PROBE_INTERVAL_SEC * 2) {
+    // The admitted probe never recorded an outcome (aborted caller): restore
+    // protection instead of admitting every request from here on.
+    record.state = "open";
+    record.openedAt = now;
+    await setCircuitRecord(db, source, record);
+    logWorkerEvent({ scope: "lib", level: "warn", event: "circuit_probe_unresolved", message: "Circuit reverted from half-open to open after an unresolved probe", provider: source, metadata: { state: "open" } });
+    return false;
+  }
   // half-open: allow one probe
-  return record.state === "half-open";
+  return true;
 }
 
 /**

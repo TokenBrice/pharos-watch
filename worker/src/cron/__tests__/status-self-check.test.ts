@@ -497,13 +497,31 @@ describe("runStatusSelfCheck", () => {
   });
 
   it("treats missing cache 503s as bootstrap misses only before the producer cron has ever run", async () => {
-    const freshDb = mockD1([{ match: "COUNT(*) AS cnt FROM cron_runs WHERE job =", rows: [], first: { cnt: 0 } }]);
+    const freshDb = mockD1([
+      { match: "FROM cache WHERE key = ?", rows: [], first: null },
+      { match: "COUNT(*) AS cnt FROM cron_runs WHERE job =", rows: [], first: { cnt: 0 } },
+      { match: "INSERT INTO cache", rows: [] },
+    ]);
     const establishedDb = mockD1([
+      { match: "FROM cache WHERE key = ?", rows: [], first: null },
       { match: "COUNT(*) AS cnt FROM cron_runs WHERE job =", rows: [], first: { cnt: 2 } },
+      { match: "INSERT INTO cache", rows: [] },
+    ]);
+    // `cron_runs` retention is one week, so a dead producer's rows are pruned
+    // and its count is zero again. The persistent marker keeps the escape
+    // hatch closed for a producer that has already been observed running.
+    const deadProducerDb = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        rows: [],
+        first: { key: "status-self-check:bootstrap-observed:sync-usds-status", value: "{}", updated_at: 1 },
+      },
+      { match: "COUNT(*) AS cnt FROM cron_runs WHERE job =", rows: [], first: { cnt: 0 } },
     ]);
 
     await expect(isBootstrapCacheMiss(freshDb, "/api/usds-status", 503)).resolves.toBe(true);
     await expect(isBootstrapCacheMiss(establishedDb, "/api/usds-status", 503)).resolves.toBe(false);
+    await expect(isBootstrapCacheMiss(deadProducerDb, "/api/usds-status", 503)).resolves.toBe(false);
     await expect(isBootstrapCacheMiss(freshDb, "/api/peg-summary", 500)).resolves.toBe(false);
   });
 });

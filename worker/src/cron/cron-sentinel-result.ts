@@ -1,11 +1,18 @@
 import { toErrorMessage } from "@shared/lib/error-utils";
+import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 import { getCaches, setCacheIfNewer } from "../lib/db-cache";
 import { rethrowIfAborted, throwIfAborted } from "../lib/abort";
 import { stripSensitive } from "../lib/safe-error-message";
 import { sanitizeBoundedMetadata } from "../lib/sensitive-metadata";
 import type { CronResult } from "../lib/cron-logger";
-import { CRON_SENTINEL_RULES, type CronSentinelRuleSource } from "./cron-sentinel-rules";
-import type { CronSentinelMode } from "./cron-sentinel";
+import { CRON_SENTINEL_RULE_IDS, type CronSentinelRuleSource } from "./cron-sentinel-rules";
+
+/**
+ * Run labels published as `metadata.mode`. `daily` is produced only by
+ * `runDailyCronSentinel`; every mode still reconciles the retained state of
+ * every source, so the full label set lives here beside `SOURCES_BY_MODE`.
+ */
+export type CronSentinelMode = "status" | "daily" | "turnover" | "reserve-post-sync";
 
 export interface CronSentinelSourceResult {
   source: CronSentinelRuleSource;
@@ -20,13 +27,18 @@ const SOURCES_BY_MODE: Record<CronSentinelMode, readonly CronSentinelRuleSource[
   "reserve-post-sync": ["reserve-post-sync"],
 };
 
+// `isDexLiquidityPublicationSlot` admits one of the two half-hourly chart
+// slots, so the turnover watchdog publishes hourly even though its host slot
+// is half-hourly. Retained state must outlive one real publication interval.
+const TURNOVER_INTERVAL_SEC = CRON_SCHEDULE_CADENCES.halfHourlyChartsOffset.intervalSec * 2;
+
 const SOURCE_INTERVAL_SEC: Record<CronSentinelRuleSource, number> = {
   freshness: 15 * 60,
   "digest-publication": 15 * 60,
   growth: 24 * 60 * 60,
   duration: 24 * 60 * 60,
   "repair-debt": 24 * 60 * 60,
-  turnover: 30 * 60,
+  turnover: TURNOVER_INTERVAL_SEC,
   "reserve-post-sync": 4 * 60 * 60,
 };
 const SOURCE_STATE_MAX_AGE_SEC = 48 * 60 * 60;
@@ -67,13 +79,25 @@ function buildCronSentinelResult(
   sourceResults: readonly CronSentinelSourceResult[],
 ): CronResult {
   const results = sourceResults.map(({ result }) => result);
-  const activeSources = sourceResults.map(({ source }) => source);
+  const status = worstStatus(results);
+  const sourceStatuses = Object.fromEntries(
+    sourceResults.map(({ source, result }) => [source, result.status ?? "ok"]),
+  );
+  // One job id multiplexes four watchdog sets, so the row names the mode and
+  // the source that produced the worst status instead of collapsing them.
+  const attributedSource = status === "ok" || status === undefined
+    ? null
+    : sourceResults.find(({ result }) => (result.status ?? "ok") === status)?.source ?? null;
   return {
-    status: worstStatus(results),
+    status,
     itemCount: results.reduce((sum, result) => sum + (result.itemCount ?? 0), 0),
     metadata: JSON.stringify({
       mode,
-      rules: CRON_SENTINEL_RULES.filter((rule) => activeSources.includes(rule.source)),
+      sourceStatuses,
+      ...(attributedSource ? { reason: `${mode}:${attributedSource}:${status}` } : {}),
+      ruleIds: Object.fromEntries(
+        sourceResults.map(({ source }) => [source, CRON_SENTINEL_RULE_IDS[source]]),
+      ),
       sources: Object.fromEntries(sourceResults.map(({ source, result, observedAt }) => [source, {
         ...(observedAt !== undefined ? { observedAt } : {}),
         status: result.status ?? "ok",

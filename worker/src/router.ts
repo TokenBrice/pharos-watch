@@ -102,6 +102,7 @@ async function handleRouteWithErrorBoundary(
     endpoint: routeMatch.endpoint,
     request: routeCtx.request,
     response: responseWithHeaders,
+    internalProbe: routeCtx.internalProbe,
   });
   const finalResponse = audited ? responseWithHeaders : auditPersistenceFailureResponse(responseWithHeaders);
   return stripHeadBody(routeCtx.request, finalResponse);

@@ -47,6 +47,12 @@ const DIGEST_TRIGGER_POLL_SURFACE = "digest-trigger-poll";
 const TELEGRAM_DIGEST_OUTBOX_DRAIN_SURFACE = "telegram-digest-outbox-drain";
 export const MAX_ATTEMPTS = 3;
 export const DIGEST_TRIGGER_POLL_INTERVAL_SECONDS = 5 * 60;
+/**
+ * A `running` state is only reclaimable after one `daily-digest` lease TTL: an
+ * isolate kill between the `running` write and the post-run handler leaves
+ * `attempts` untouched, so without a deadline every poll restarts the run.
+ */
+const DIGEST_FORCE_RUN_RUNNING_DEADLINE_SEC = 15 * 60;
 
 async function runTelegramDigestOutboxDrain(runtime: ScheduledRuntimeContext): Promise<void> {
   const startedMs = Date.now();
@@ -438,7 +444,11 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
         await setCache(
           runtime.db,
           DIGEST_FORCE_RUN_CACHE_KEY,
-          JSON.stringify({ ...payload, state: "running" }),
+          JSON.stringify({
+            ...payload,
+            state: "running",
+            nextAttemptAt: Math.floor(Date.now() / 1_000) + DIGEST_FORCE_RUN_RUNNING_DEADLINE_SEC,
+          }),
         );
       } catch (err) {
         logWorkerEvent({ scope: "handler", level: "warn", event: "digest_force_run_running_state_persistence_failed", message: "Failed to persist running digest force-run state", job: DIGEST_TRIGGER_POLL_SURFACE, error: err, metadata: { requestId: payload.requestId } });

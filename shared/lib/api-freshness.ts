@@ -40,17 +40,17 @@ export function getCacheFreshnessLane(cacheKey: string): CacheFreshnessLaneConfi
 export const API_FRESHNESS_MAX_AGE_SEC = {
   stablecoins: DATA_SURFACE_DESCRIPTORS.stablecoins.endpointMaxAgeSec,
   stablecoinCharts: CACHE_FRESHNESS_LANES.stablecoinCharts.endpointMaxAgeSec,
-  // 2x `sync-stablecoins` (900 s): /api/chains aggregates the stablecoins cache that job writes.
-  chains: 1800,
+  // 2x `sync-stablecoins`: /api/chains aggregates the stablecoins cache that job writes.
+  chains: CRON_INTERVALS["sync-stablecoins"] * 2,
   // `sync-stablecoins` interval: peg summary is derived from the same cache generation.
-  pegSummary: 900,
+  pegSummary: CRON_INTERVALS["sync-stablecoins"],
   // `sync-stablecoins` interval: depeg detection runs inside that job (cron/sync-stablecoins/post-enrichment.ts).
-  depegEvents: 900,
+  depegEvents: CRON_INTERVALS["sync-stablecoins"],
   stressSignals: DATA_SURFACE_DESCRIPTORS.stressSignals.endpointMaxAgeSec,
   reportCards: DATA_SURFACE_DESCRIPTORS.reportCards.endpointMaxAgeSec,
   // `compute-depeg-resolver` interval (fenced, memory-isolated D1-only lane).
-  depegResolver: 900,
-  depegResolverReview: 900,
+  depegResolver: CRON_INTERVALS["compute-depeg-resolver"],
+  depegResolverReview: CRON_INTERVALS["compute-depeg-resolver"],
   redemptionBackstops: CRON_INTERVALS["sync-redemption-backstops"] * 2,
   // `snapshot-supply` writes one row per day (explicit `intervalSec: DAY_SECONDS`).
   supplyHistory: DAY_SECONDS,

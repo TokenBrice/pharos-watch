@@ -209,6 +209,39 @@ describe("stress-signal current-row helpers", () => {
     expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
+  it("degrades to the bounded latest rows when the exact generation read rejects", async () => {
+    const completedAt = nowSec - 60;
+    const publishedIds = ["usdt-tether", "usdc-circle"];
+    const pointer = publishedPointer(completedAt, publishedIds);
+    const latestSubset = row("usdc-circle", completedAt);
+    const onReadError = vi.fn();
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["dews:published-generation"],
+        rows: [pointer],
+        first: pointer,
+      },
+      {
+        match: "pharos:stress-signals:latest-all",
+        matchBinds: [completedAt],
+        rows: [{ ...latestSubset }],
+      },
+      {
+        match: "pharos:stress-signals:published-exact-all",
+        matchBinds: [completedAt],
+        rows: [],
+        throwError: new Error("D1 unavailable"),
+      },
+    ], { requireMatch: true });
+
+    const loaded = await loadStressSignalCurrentRows(db, nowSec, { staleAfterSec: 300, onReadError });
+
+    expect(loaded.results).toEqual([latestSubset]);
+    expect(onReadError).toHaveBeenCalledTimes(1);
+    expect(() => db.assertAllMatchesUsed()).not.toThrow();
+  });
+
   it("keeps the canonical merge for legacy pointers without exact-set proof", async () => {
     const completedAt = nowSec - 60;
     const pointer = publishedPointer(completedAt);
@@ -391,7 +424,7 @@ describe("stress-signal current-row helpers", () => {
       signals_json: signalsJson,
       computed_at: nowSec - 120,
     };
-    const onLatestReadError = vi.fn();
+    const onReadError = vi.fn();
     const db = mockD1([
       {
         match: "FROM cache WHERE key = ?",
@@ -417,12 +450,12 @@ describe("stress-signal current-row helpers", () => {
       db,
       "usdt-tether",
       nowSec,
-      { staleAfterSec: 300, onLatestReadError },
+      { staleAfterSec: 300, onReadError },
     );
 
     expect(loaded).toEqual(canonical);
-    expect(onLatestReadError).toHaveBeenCalledTimes(1);
-    expect(String(onLatestReadError.mock.calls[0]?.[0])).toContain("D1 unavailable");
+    expect(onReadError).toHaveBeenCalledTimes(1);
+    expect(String(onReadError.mock.calls[0]?.[0])).toContain("D1 unavailable");
     expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 

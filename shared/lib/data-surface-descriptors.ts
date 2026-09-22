@@ -255,8 +255,8 @@ export const DATA_SURFACE_DESCRIPTORS = {
     key: "publicHealth",
     apiPath: API_PATHS.health(),
     queryKey: ["health"],
-    // The status self-check publishes this projection every 15 minutes.
-    producerIntervalSec: 900,
+    // The status self-check publishes this projection on its own cadence.
+    producerIntervalSec: CRON_INTERVALS["status-self-check"],
     frontendQueryBaseKey: "health",
   },
 } as const satisfies Record<DataSurfaceDescriptorKey, DataSurfaceDescriptor>;

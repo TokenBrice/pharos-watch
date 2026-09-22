@@ -78,6 +78,8 @@ export function deriveCronFreshnessProducers(
 // an unvisited coin), so the write failure itself is the staleness signal.
 const DETAIL_WRITE_FAILURE_FRESH_SEC = 24 * 3600;
 const DETAIL_WRITE_FAILURE_RETENTION_SEC = 7 * 24 * 3600;
+/** Per-invocation delete budget for expired markers (hourly sentinel lane). */
+const DETAIL_WRITE_FAILURE_PRUNE_BUDGET = 500;
 
 export interface DetailWriteFailureObservation {
   stablecoinId: string;
@@ -91,10 +93,20 @@ export async function loadDetailWriteFailures(
   nowSec: number,
 ): Promise<DetailWriteFailureObservation[]> {
   // Prune markers past retention so resolved incidents age out of the table.
+  // Bounded per invocation: an unbounded DELETE over the marker family made
+  // this watchdog the heaviest writer in the sentinel lane.
   await runWithOverloadRetry(() =>
     db
-      .prepare("DELETE FROM cache WHERE key LIKE ? AND updated_at < ?")
-      .bind(`${DETAIL_WRITE_FAILURE_KEY_PREFIX}%`, nowSec - DETAIL_WRITE_FAILURE_RETENTION_SEC)
+      .prepare(
+        `DELETE FROM cache WHERE rowid IN (
+           SELECT rowid FROM cache WHERE key LIKE ? AND updated_at < ? LIMIT ?
+         )`,
+      )
+      .bind(
+        `${DETAIL_WRITE_FAILURE_KEY_PREFIX}%`,
+        nowSec - DETAIL_WRITE_FAILURE_RETENTION_SEC,
+        DETAIL_WRITE_FAILURE_PRUNE_BUDGET,
+      )
       .run(),
   );
 

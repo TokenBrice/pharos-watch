@@ -33,7 +33,7 @@ export interface PreviousStressSignalCurrentRow {
 
 interface CurrentRowsOptions {
   staleAfterSec: number;
-  onLatestReadError?: (error: unknown) => void;
+  onReadError?: (error: unknown) => void;
 }
 
 interface AllRowsQueries {
@@ -388,11 +388,11 @@ async function loadCurrentRows<Row extends { stablecoin_id: string; computed_at:
       queries.latestBounded,
       completedAt,
     );
-    const rows = await latestStmt.all<Row>();
+    const rows = await runWithOverloadRetry(() => latestStmt.all<Row>());
     latestRows = rows.results ?? [];
   } catch (error) {
     latestRows = [];
-    options.onLatestReadError?.(error);
+    options.onReadError?.(error);
   }
 
   // A current publication pointer proves the completed row count and ID set.
@@ -406,24 +406,36 @@ async function loadCurrentRows<Row extends { stablecoin_id: string; computed_at:
   }
 
   if (completedAt != null && expectedRowCount != null && stablecoinIdsDigest != null) {
-    const exactRows = await db.prepare(queries.exact).bind(completedAt).all<Row>();
-    const exactResults = exactRows.results ?? [];
-    return isCompleteLatestGeneration(
-      exactResults,
-      completedAt,
-      expectedRowCount,
-      stablecoinIdsDigest,
-    ) ? exactResults : [];
+    try {
+      const exactStmt = db.prepare(queries.exact).bind(completedAt);
+      const exactRows = await runWithOverloadRetry(() => exactStmt.all<Row>());
+      const exactResults = exactRows.results ?? [];
+      return isCompleteLatestGeneration(
+        exactResults,
+        completedAt,
+        expectedRowCount,
+        stablecoinIdsDigest,
+      ) ? exactResults : [];
+    } catch (error) {
+      options.onReadError?.(error);
+      return latestRows;
+    }
   }
 
-  const legacyStmt = prepareCompletedAtScoped(
-    db,
-    queries.legacy,
-    queries.legacyBounded,
-    completedAt,
-  );
-  const legacyRows = await legacyStmt.all<Row>();
-  const legacyResults = legacyRows.results ?? [];
+  let legacyResults: Row[];
+  try {
+    const legacyStmt = prepareCompletedAtScoped(
+      db,
+      queries.legacy,
+      queries.legacyBounded,
+      completedAt,
+    );
+    const legacyRows = await runWithOverloadRetry(() => legacyStmt.all<Row>());
+    legacyResults = legacyRows.results ?? [];
+  } catch (error) {
+    options.onReadError?.(error);
+    return latestRows;
+  }
   if (legacyResults.length === 0) return latestRows;
   if (areStressSignalRowsStale(latestRows, nowSec, options.staleAfterSec)) return legacyResults;
   return mergeNewestStressSignalRows(legacyResults, latestRows);
@@ -453,7 +465,7 @@ async function loadCurrentRowForCoin<Row extends { computed_at: number }>(
       completedAt,
       stablecoinId,
     );
-    latest = await latestStmt.first<Row>();
+    latest = await runWithOverloadRetry(() => latestStmt.first<Row>());
     if (
       latest
       && (!hasExactCoverage || latest.computed_at === completedAt)
@@ -463,20 +475,31 @@ async function loadCurrentRowForCoin<Row extends { computed_at: number }>(
     }
   } catch (error) {
     latest = null;
-    options.onLatestReadError?.(error);
+    options.onReadError?.(error);
   }
   if (completedAt != null && hasExactCoverage) {
-    return await db.prepare(queries.exact).bind(stablecoinId, completedAt).first<Row>();
+    try {
+      const exactStmt = db.prepare(queries.exact).bind(stablecoinId, completedAt);
+      return await runWithOverloadRetry(() => exactStmt.first<Row>());
+    } catch (error) {
+      options.onReadError?.(error);
+      return latest;
+    }
   }
 
-  const legacyStmt = prepareCompletedAtScoped(
-    db,
-    queries.legacy,
-    queries.legacyBounded,
-    completedAt,
-    stablecoinId,
-  );
-  return await legacyStmt.first<Row>() ?? latest;
+  try {
+    const legacyStmt = prepareCompletedAtScoped(
+      db,
+      queries.legacy,
+      queries.legacyBounded,
+      completedAt,
+      stablecoinId,
+    );
+    return await runWithOverloadRetry(() => legacyStmt.first<Row>()) ?? latest;
+  } catch (error) {
+    options.onReadError?.(error);
+    return latest;
+  }
 }
 
 export async function loadStressSignalCurrentRows(

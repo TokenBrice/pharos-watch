@@ -101,7 +101,7 @@ function isFreshAt(updatedAt: number | null | undefined, nowSec: number, maxAgeS
 async function loadPreviousStressSignalRows(ctx: HydrationContext): Promise<PreviousStressSignalRow[]> {
   return loadPreviousStressSignalCurrentRows(ctx.db, ctx.nowSec, {
     staleAfterSec: DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC,
-    onLatestReadError: (error) => {
+    onReadError: (error) => {
       ctx.registerSourceFailure("stress-signals-latest", error);
     },
   });

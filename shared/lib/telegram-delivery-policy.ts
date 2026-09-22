@@ -6,6 +6,8 @@
  * capacity model cannot silently drift from production delivery behavior.
  */
 
+import { CRON_INTERVALS } from "./cron-jobs";
+
 /** Default source/queue TTL leaves 20% headroom after bounded planning and drain. */
 export const PENDING_TTL_SEC = 2 * 60 * 60;
 
@@ -22,8 +24,11 @@ export const TELEGRAM_ALERT_TTL_SEC = {
 /** Defaults retained only for rows written before alert-family attribution was explicit. */
 export const TELEGRAM_HISTORICAL_SOURCE_TTL_SEC = PENDING_TTL_SEC;
 
-/** The dedicated Telegram alert dispatcher runs every five minutes. */
-export const TELEGRAM_DISPATCH_INTERVAL_SEC = 5 * 60;
+/**
+ * The dedicated Telegram alert dispatcher's cadence. `cron-jobs.ts` is the
+ * only cadence authority; capacity, drain and timeout models derive from it.
+ */
+export const TELEGRAM_DISPATCH_INTERVAL_SEC = CRON_INTERVALS["dispatch-telegram-alerts"];
 
 /**
  * Hard application timeout for the Telegram dispatch job.
