@@ -1,6 +1,6 @@
 # Testing & Linting
 
-> **Agent navigation** — Grep the heading you need instead of reading wholesale: Overview · Commands · [Smallest adequate check per area](#smallest-adequate-check-per-area) · [Generated-artifact failure playbook](#generated-artifact-failure-playbook) · Source Formatting Policy · CI Pipeline · Vitest Runtime Profiling · Test Setup · Test Infrastructure · Test Inventory · Conventions · Coverage · Adding a New Test · ESLint Configuration.
+> **Agent navigation** — Grep the heading you need instead of reading wholesale: Overview · Commands · [Smallest adequate check per area](#smallest-adequate-check-per-area) · [Generated-artifact failure playbook](#generated-artifact-failure-playbook) · Source Formatting Policy · CI Pipeline · Vitest Runtime Profiling · Test Setup · Test Infrastructure · Test Inventory · Conventions · [Test-lane gate protocol](#test-lane-gate-protocol) · Coverage · Adding a New Test · ESLint Configuration.
 
 ## Overview
 
@@ -540,6 +540,24 @@ Use `vi.mock()` to stub external modules (stablecoin list, peg-rates, supply hel
 - `npm run audit:coverage -- --domain=redemption-backstops` validates the redemption-backstop registry split across `shared/lib/redemption-backstop-configs/*`, catches duplicate IDs across modules, enforces allowed route-family membership per module, and keeps the headline counts in `docs/redemption-backstops.md` synced to the real registry.
 - `npm run audit:coverage -- --domain=redemption-coverage --check` requires every active unconfigured asset to have a source-reviewed row in `shared/data/coverage-dispositions/redemption-coverage-dispositions.ts`. It rejects missing, duplicate, unknown, inactive, configured-stale, and malformed reviews and ranks the queue by canonical market-cap order. The backlog counts are no longer ratcheted: a growing gap list is curation work, not a merge failure.
 - `worker/src/lib/__tests__/redemption-backstops-store.test.ts` now covers completed-run snapshot manifests for `redemption_backstop_runs`, including generation-filtered reads and current/history rows written with `snapshot_run_id`.
+
+### Test-lane gate protocol
+
+A commit that deletes, renames, or merges test files carries the gate artifacts those files appear in, in the same commit:
+
+- **Clone ratchet** — `scripts/lib/clone-ratchet-baseline.json` holds a per-file duplicated-line count. Deleting or merging files moves the counts of files the commit never touched.
+- **Provider resilience** — `scripts/lib/provider-resilience-registry.mjs` lists exact `tests` paths per surface; a renamed or deleted path fails `npm run check:provider-resilience` with `missing-test-file`.
+- **Critical ownership** — `scripts/lib/critical-ownership.mts` derives source-to-test ownership from each test's import specifiers, so a merge that removes the last importing test for an enrolled source silently drops ownership. Run `npm run check:critical-coverage-completeness` and confirm every source the deleted tests imported still has an importing test; do not close the gap with a waiver.
+- **Executable test selection** — `assertExecutableTestFiles` requires every selected path to exist and to belong to exactly one Vitest project, so a deleted or moved entry of `CRITICAL_CONTRACT_TEST_FILES` / `ALWAYS_RUN_TEST_FILES` in `scripts/lib/critical-test-files.mts` fails selection before any suite runs. A cross-tree merge (for example `worker/` into `shared/`) can trip this even when coverage is preserved; move the entry with the file.
+
+Baseline regeneration is serialized. The ratchet is cross-file (a window counts only when it occurs in at least two distinct files), whole-tree (regeneration rewrites the entire map from the working tree), and fails only when a file's count *increases*:
+
+- Each lane rebases onto the merge target immediately before regenerating, and a single integration owner regenerates and reviews `scripts/lib/clone-ratchet-baseline.json` after the last lane merges. A concurrently-cut branch otherwise re-raises its siblings' counts, and because the gate only fails on an increase, the last merge permanently loses ratchet protection for those files.
+- While parallel lanes are in flight, no lane regenerates: run `npm run check:clone-ratchet` read-only and record the decreases in the pull request, leaving one regeneration to the integration owner.
+- A new file starts at baseline `0` and fails on its first shared window. The commit that creates shared scaffolding adds that single key with the count the read-only run reported, rather than rewriting the whole map.
+- Deleting a baselined file leaves a stale key that the comparison never reads, because it walks current files only. `npm run check:clone-ratchet` reports those keys as `staleBaseline` without failing the deleting commit; the list must be empty after the integration owner's regeneration.
+
+No gate threshold, waiver, or enumerated path is relaxed to accommodate a deletion.
 
 ### Test style
 

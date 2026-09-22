@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
-import { relative } from "node:path";
-import { runCountRatchet } from "../lib/count-ratchet.mts";
+import { existsSync, readFileSync } from "node:fs";
+import { relative, resolve } from "node:path";
+import { readCountRatchetBaseline, runCountRatchet } from "../lib/count-ratchet.mts";
 import { collectSourceFilesUnderRoot } from "../lib/source-files.mts";
 import { runDirectCli } from "../lib/cli-args.mjs";
 
@@ -161,6 +161,25 @@ export function collectDuplicatedLineCounts(
   return counts;
 }
 
+/**
+ * Baseline keys whose file no longer exists. The comparison walks the current
+ * tree, so a deleted file's entry is never read and stale keys accumulate
+ * invisibly until someone regenerates the whole map.
+ */
+export function collectStaleBaselineEntries(baselinePath = BASELINE_PATH, cwd = process.cwd()): string[] {
+  let baseline: Record<string, unknown> | null;
+  try {
+    baseline = readCountRatchetBaseline(baselinePath, cwd);
+  } catch {
+    // An unreadable baseline is reported by the ratchet run itself.
+    return [];
+  }
+  if (!baseline) return [];
+  return Object.keys(baseline)
+    .filter((rel) => !existsSync(resolve(cwd, rel)))
+    .sort();
+}
+
 export function checkCloneRatchet({
   roots = DEFAULT_CLONE_ROOTS,
   baselinePath = BASELINE_PATH,
@@ -176,6 +195,15 @@ export function checkCloneRatchet({
   stdout?: { write(chunk: string): unknown };
   stderr?: { write(chunk: string): unknown };
 } = {}): number {
+  if (!updateBaseline) {
+    const stale = collectStaleBaselineEntries(baselinePath, cwd);
+    if (stale.length > 0) {
+      stderr.write(`[clone-ratchet] staleBaseline: ${stale.length} baseline path(s) no longer in the tree:\n`);
+      for (const rel of stale) stderr.write(`  ${rel}\n`);
+      stderr.write("Regenerate the baseline in the commit that deleted them (docs/testing.md#test-lane-gate-protocol).\n\n");
+    }
+  }
+
   return runCountRatchet({
     collectCounts: () => collectDuplicatedLineCounts(roots, cwd),
     baselinePath,
