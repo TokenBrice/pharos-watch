@@ -32,6 +32,7 @@ export const PRICE_SOURCE_HEALTH_BUCKET_KEYS = [
   "meteora-dex",
   "pancakeswap-dex",
   "aerodrome-dex",
+  "aerodrome-exact",
   "velodrome-dex",
   "jupiter",
   "coinmarketcap",

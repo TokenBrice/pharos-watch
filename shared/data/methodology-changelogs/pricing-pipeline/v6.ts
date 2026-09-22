@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.26",
+    title: "Guarded live price recovery routes",
+    date: "2026-09-22",
+    effectiveAt: 1790102100,
+    summary:
+      "BD can recover missing prices through a verified Aerodrome sell route, and AUDm joins the reviewed Mento Broker routes.",
+    impact: [
+      "The BD route verifies reviewed runtime code, exact pool and token identity, canonical block state, transferable reserves, bounded fees and sell-quote depth before multiplying by a fresh trusted USDC price",
+      "AUDm uses the existing Mento Broker implementation and its unchanged oracle, breaker, permission, trading-limit and depth checks",
+      "These routes publish short-lived fallback confidence with the older parent or chain observation timestamp and never overwrite a usable current price",
+      "No peg-price substitution, source-authority elevation, severe-downside exemption, or liquidity threshold relaxation is introduced",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.25",
     title: "Candidate-scoped promoted DEX corroboration",
     date: "2026-09-22",

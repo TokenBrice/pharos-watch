@@ -15,6 +15,7 @@ import {
   type PricingAssetAttemptRecord,
 } from "../pricing-provider-diagnostics";
 import type { PriceValidationReferences } from "../price-validation";
+import { bdAerodromeProvider } from "./bd-aerodrome";
 import { azndCurvePoolProvider } from "./aznd-curve-pool";
 import { mentoFpmmProvider } from "./mento-fpmm";
 import { mentoBrokerProvider } from "./mento-broker";
@@ -54,6 +55,7 @@ const AUTHORITATIVE_PRICE_PROVIDERS: PriceSourceProvider[] = [
   inheritedTrackedPriceProvider,
   protocolParProvider,
   azndCurvePoolProvider,
+  bdAerodromeProvider,
   mentoFpmmProvider,
   mentoBrokerProvider,
   kavaUsdxPricefeedProvider,

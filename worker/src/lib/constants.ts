@@ -161,6 +161,7 @@ export const CIRCUIT_SOURCE = {
   AZND_CURVE_POOL: "aznd-curve-pool",
   MENTO_FPMM: "mento-fpmm",
   MENTO_BROKER: "mento-broker",
+  BD_AERODROME: "bd-aerodrome",
   PROTOCOL_REDEEM: "protocol-redeem",
   CURVE_ONCHAIN: "curve-onchain",
   CURVE_ORACLE: "curve-oracle",

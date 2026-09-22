@@ -3,6 +3,18 @@ import { definePricingSource, PRICING_SOURCE_PRESETS } from "./pricing-source-re
 
 export const PRICING_SOURCE_REGISTRY_DEX_SEARCH = [
   definePricingSource(PRICING_SOURCE_PRESETS.softDex, {
+    key: "aerodrome-exact",
+    label: "Aerodrome exact-pool quote",
+    shortLabel: "Aerodrome exact",
+    depegSourceFamily: "dex:aerodrome",
+    maxTrustedAgeSec: 5 * 60,
+    defaultWeight: 1,
+    isReplaySafe: false,
+    freshnessKind: "upstream",
+    supportsUpstreamObservedAt: true,
+    defaultObservedAtMode: "upstream",
+  }),
+  definePricingSource(PRICING_SOURCE_PRESETS.softDex, {
     key: "dex-promoted",
     label: "DEX prices",
     shortLabel: "DEX",
