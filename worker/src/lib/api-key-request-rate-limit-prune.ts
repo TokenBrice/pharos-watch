@@ -24,6 +24,7 @@ export async function pruneOldApiKeyRequestRateLimits(
   let deleted = 0;
   let truncated = false;
   for (const table of API_KEY_REQUEST_BUCKETED_LIMIT_TABLE_NAMES) {
+    // SAFETY: table iterates the closed API_KEY_REQUEST_BUCKETED_LIMIT_TABLE_NAMES allowlist above; no caller input reaches the SQL.
     const result = await db.prepare(
       `DELETE FROM ${table}
        WHERE rowid IN (

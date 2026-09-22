@@ -996,6 +996,7 @@ function firstPublicationsStatement(
   snapshotTable: "depeg_resolver_publication_snapshots_v2" | "depeg_resolver_publication_snapshot_refs",
 ): D1PreparedStatement {
   return db
+    // SAFETY: snapshotTable is a closed two-member string-literal union enforced by the compiler; no caller-supplied text reaches the SQL.
     .prepare(
       `INSERT OR IGNORE INTO depeg_resolver_first_publications_v2
        (public_prediction_id, incident_key, snapshot_token, snapshot_sequence,
