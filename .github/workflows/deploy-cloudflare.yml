@@ -83,6 +83,8 @@ jobs:
     if: ${{ needs.plan.outputs.worker_required == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    outputs:
+      worker_version: ${{ steps.verify-worker-deployment.outputs.worker_version }}
     environment:
       name: production
       url: https://api.pharos.watch
@@ -204,11 +206,26 @@ jobs:
         with:
           node-version: "24.16.0"
           cache-npm: "false"
-          install-deps: "false"
           bootstrap-generated: "false"
+      - id: verify-worker-identity
+        name: Re-verify active Worker release identity
+        if: ${{ needs.deploy-worker.result == 'success' }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          DEPLOYMENT_STATUS_FILE: ${{ runner.temp }}/acceptance-worker-deployment-status.json
+          DEPLOYMENTS_FILE: ${{ runner.temp }}/acceptance-worker-deployments.json
+          DEPLOYMENT_HISTORY_AVAILABLE: "true"
+        run: |
+          (cd worker && npx --no-install wrangler deployments status --json) > "${DEPLOYMENT_STATUS_FILE}"
+          (cd worker && npx --no-install wrangler deployments list --json) > "${DEPLOYMENTS_FILE}"
+          node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ci/verify-worker-deployment.ts
       - id: acceptance
         name: Record read-only operational acceptance
         env:
           PAGES_DEPLOYED: ${{ needs.pages-release.result == 'success' }}
           WORKER_DEPLOYED: ${{ needs.deploy-worker.result == 'success' }}
+          EXPECTED_PAGES_COMMIT: ${{ github.sha }}
+          EXPECTED_WORKER_VERSION: ${{ needs.deploy-worker.outputs.worker_version }}
+          OBSERVED_WORKER_VERSION: ${{ steps.verify-worker-identity.outputs.worker_version }}
         run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ci/run-post-deploy-acceptance.ts

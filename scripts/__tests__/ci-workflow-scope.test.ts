@@ -99,7 +99,7 @@ describe("CI workflow scope", () => {
         needs?: string[];
         outputs?: Record<string, string>;
         permissions?: Record<string, string>;
-        steps?: Array<{ id?: string; name?: string; run?: string }>;
+        steps?: Array<{ env?: Record<string, string>; id?: string; name?: string; run?: string }>;
       }>;
     };
     const job = workflow.jobs["post-deploy-acceptance"];
@@ -110,6 +110,16 @@ describe("CI workflow scope", () => {
     expect(job.permissions).toEqual({ contents: "read" });
     expect(job.outputs).toEqual({ outcome: "${{ steps.acceptance.outputs.outcome }}" });
     expect(acceptance?.run).toContain("scripts/ci/run-post-deploy-acceptance.ts");
+    expect(workflow.jobs["deploy-worker"].outputs).toEqual({
+      worker_version: "${{ steps.verify-worker-deployment.outputs.worker_version }}",
+    });
+    expect(job.steps?.find((step) => step.id === "verify-worker-identity")?.run)
+      .toContain("wrangler deployments status --json");
+    expect(acceptance?.env).toMatchObject({
+      EXPECTED_PAGES_COMMIT: "${{ github.sha }}",
+      EXPECTED_WORKER_VERSION: "${{ needs.deploy-worker.outputs.worker_version }}",
+      OBSERVED_WORKER_VERSION: "${{ steps.verify-worker-identity.outputs.worker_version }}",
+    });
   });
 
   it("installs each nightly Node 24 lane independently and keeps the Node 26 probe separate", () => {

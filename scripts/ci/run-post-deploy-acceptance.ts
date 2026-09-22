@@ -14,7 +14,6 @@ import { collectWorkerHttpProbes, fetchJsonProbe } from "../lib/worker-http-prob
 export const PAGES_SHELL_URL = "https://stablecoin-dashboard.pages.dev";
 export const WORKER_API_URL = "https://api.pharos.watch";
 const WORKER_HEALTH_URL = `${WORKER_API_URL}/api/health`;
-const HTML_DOCUMENT = /<html[\s>]/i;
 
 export interface PostDeployProbeReport extends PostDeployProbe {
   detail: string;
@@ -43,33 +42,60 @@ export async function runPostDeployAcceptance({
   fetchJson = fetchJsonProbe,
   pagesDeployed = false,
   workerDeployed = false,
+  expectedPagesCommit,
+  expectedWorkerVersion,
+  observedWorkerVersion,
 }: PostDeployAcceptanceDependencies & {
   pagesDeployed?: boolean;
   workerDeployed?: boolean;
+  expectedPagesCommit?: string;
+  expectedWorkerVersion?: string;
+  observedWorkerVersion?: string;
 } = {}): Promise<PostDeployAcceptanceRun> {
   const probes = selectPostDeployProbes({ pagesDeployed, workerDeployed });
   const results: PostDeployProbeReport[] = [];
 
   for (const probe of probes) {
     if (probe.id === "pages-shell") {
-      const response = await fetchJson({ apiUrl: PAGES_SHELL_URL }, "/");
-      const shell = typeof response.payload === "string" ? response.payload : "";
+      const response = await fetchJson({ apiUrl: PAGES_SHELL_URL }, "/__pharos_release.json");
+      let releaseCommit: unknown;
+      if (
+        response.payload
+        && typeof response.payload === "object"
+        && !Array.isArray(response.payload)
+        && "commit" in response.payload
+      ) {
+        releaseCommit = response.payload.commit;
+      }
+      const identityMatches = typeof expectedPagesCommit === "string"
+        && expectedPagesCommit.length > 0
+        && releaseCommit === expectedPagesCommit;
       results.push({
         ...probe,
-        detail: `GET ${response.url} returned ${response.status}.`,
-        outcome: response.ok && HTML_DOCUMENT.test(shell) ? "passed" : "failed",
+        detail: `GET ${response.url} returned ${response.status}; release commit ${String(releaseCommit ?? "<missing>")}.`,
+        outcome: response.ok && identityMatches ? "passed" : "failed",
       });
       continue;
     }
 
     if (probe.id === "worker-health") {
       const { health } = await collectWorkerProbes({ apiUrl: WORKER_API_URL }, { includeHealth: true });
-      const healthState = (health?.payload as { status?: unknown } | null | undefined)?.status;
+      const healthPayload = health?.payload;
+      const healthState = healthPayload
+        && typeof healthPayload === "object"
+        && !Array.isArray(healthPayload)
+        && "status" in healthPayload
+        ? healthPayload.status
+        : undefined;
+      const identityMatches = typeof expectedWorkerVersion === "string"
+        && expectedWorkerVersion.length > 0
+        && observedWorkerVersion === expectedWorkerVersion;
       results.push({
         ...probe,
         detail: `GET ${health?.url ?? WORKER_HEALTH_URL} returned ${health?.status ?? 0}`
-          + (healthState ? ` (${String(healthState)}).` : "."),
-        outcome: Boolean(health?.ok) && healthState === "healthy" ? "passed" : "failed",
+          + (healthState ? ` (${String(healthState)});` : ";")
+          + ` active version ${observedWorkerVersion ?? "<missing>"}.`,
+        outcome: Boolean(health?.ok) && healthState === "healthy" && identityMatches ? "passed" : "failed",
       });
     }
   }
@@ -104,6 +130,9 @@ export async function runPostDeployAcceptanceCli(
     ...dependencies,
     pagesDeployed: env.PAGES_DEPLOYED === "true",
     workerDeployed: env.WORKER_DEPLOYED === "true",
+    expectedPagesCommit: env.EXPECTED_PAGES_COMMIT,
+    expectedWorkerVersion: env.EXPECTED_WORKER_VERSION,
+    observedWorkerVersion: env.OBSERVED_WORKER_VERSION,
   });
 
   console.log(JSON.stringify({ probes: run.probes, acceptance: run.acceptance }, null, 2));

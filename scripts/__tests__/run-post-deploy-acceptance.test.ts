@@ -20,9 +20,10 @@ interface ProbeResponse {
   url: string;
 }
 
-const SHELL_URL = `${PAGES_SHELL_URL}/`;
+const RELEASE_URL = `${PAGES_SHELL_URL}/__pharos_release.json`;
 const HEALTH_URL = `${WORKER_API_URL}/api/health`;
-const HTML_SHELL = "<!doctype html><html lang=\"en\"><body>Pharos</body></html>";
+const RELEASE_COMMIT = "abc123";
+const WORKER_VERSION = "worker-version-2";
 const tempDirs: string[] = [];
 
 afterEach(() => {
@@ -30,8 +31,8 @@ afterEach(() => {
   for (const path of tempDirs.splice(0)) rmSync(path, { recursive: true, force: true });
 });
 
-function pagesShell({ ok = true, payload = HTML_SHELL as unknown, status = 200 } = {}): ProbeResponse {
-  return { latencyMs: 12, ok, payload, status, url: SHELL_URL };
+function pagesRelease({ ok = true, payload = { commit: RELEASE_COMMIT } as unknown, status = 200 } = {}): ProbeResponse {
+  return { latencyMs: 12, ok, payload, status, url: RELEASE_URL };
 }
 
 function workerHealth({
@@ -43,7 +44,7 @@ function workerHealth({
 }
 
 function dependencies({
-  shell = pagesShell(),
+  shell = pagesRelease(),
   health = workerHealth() as ProbeResponse | null,
 } = {}) {
   const probes: Record<string, ProbeResponse> = health ? { health } : {};
@@ -61,7 +62,14 @@ function summaryDir(): string {
 
 describe("runPostDeployAcceptance", () => {
   it("passes when both deployed surfaces answer their read-only probes", async () => {
-    const run = await runPostDeployAcceptance({ ...dependencies(), pagesDeployed: true, workerDeployed: true });
+    const run = await runPostDeployAcceptance({
+      ...dependencies(),
+      pagesDeployed: true,
+      workerDeployed: true,
+      expectedPagesCommit: RELEASE_COMMIT,
+      expectedWorkerVersion: WORKER_VERSION,
+      observedWorkerVersion: WORKER_VERSION,
+    });
 
     expect(run.acceptance.outcome).toBe("passed");
     expect(run.exitCode).toBe(0);
@@ -69,15 +77,19 @@ describe("runPostDeployAcceptance", () => {
       ["pages-shell", "pages", "passed"],
       ["worker-health", "worker", "passed"],
     ]);
-    expect(run.summary).toContain(`| pages-shell | pages | passed | GET ${SHELL_URL} returned 200. |`);
-    expect(run.summary).toContain(`| worker-health | worker | passed | GET ${HEALTH_URL} returned 200 (healthy). |`);
+    expect(run.summary).toContain(`| pages-shell | pages | passed | GET ${RELEASE_URL} returned 200; release commit ${RELEASE_COMMIT}. |`);
+    expect(run.summary).toContain(`| worker-health | worker | passed | GET ${HEALTH_URL} returned 200 (healthy); active version ${WORKER_VERSION}. |`);
   });
 
   it("probes only the Pages shell for a Pages-only release", async () => {
     const deps = dependencies();
-    const run = await runPostDeployAcceptance({ ...deps, pagesDeployed: true });
+    const run = await runPostDeployAcceptance({
+      ...deps,
+      pagesDeployed: true,
+      expectedPagesCommit: RELEASE_COMMIT,
+    });
 
-    expect(deps.fetchJson).toHaveBeenCalledWith({ apiUrl: PAGES_SHELL_URL }, "/");
+    expect(deps.fetchJson).toHaveBeenCalledWith({ apiUrl: PAGES_SHELL_URL }, "/__pharos_release.json");
     expect(deps.collectWorkerProbes).not.toHaveBeenCalled();
     expect(run.probes.map((probe) => probe.id)).toEqual(["pages-shell"]);
     expect(run.acceptance.outcome).toBe("passed");
@@ -85,11 +97,28 @@ describe("runPostDeployAcceptance", () => {
 
   it("probes only the public Worker health endpoint for a Worker-only release", async () => {
     const deps = dependencies();
-    const run = await runPostDeployAcceptance({ ...deps, workerDeployed: true });
+    const run = await runPostDeployAcceptance({
+      ...deps,
+      workerDeployed: true,
+      expectedWorkerVersion: WORKER_VERSION,
+      observedWorkerVersion: WORKER_VERSION,
+    });
 
     expect(deps.collectWorkerProbes).toHaveBeenCalledWith({ apiUrl: WORKER_API_URL }, { includeHealth: true });
     expect(deps.fetchJson).not.toHaveBeenCalled();
     expect(run.probes.map((probe) => probe.id)).toEqual(["worker-health"]);
+  });
+
+  it("fails a healthy Worker when the active deployment version is stale", async () => {
+    const run = await runPostDeployAcceptance({
+      ...dependencies(),
+      workerDeployed: true,
+      expectedWorkerVersion: WORKER_VERSION,
+      observedWorkerVersion: "worker-version-1",
+    });
+
+    expect(run.probes[0]).toMatchObject({ outcome: "failed" });
+    expect(run.exitCode).toBe(1);
   });
 
   it("reports pending without probing when no surface completed deployment", async () => {
@@ -107,28 +136,28 @@ describe("runPostDeployAcceptance", () => {
     expect(deps.collectWorkerProbes).not.toHaveBeenCalled();
   });
 
-  it("fails the acceptance job when a served shell is not an HTML document", async () => {
+  it("fails the acceptance job when Pages serves a stale release marker", async () => {
     const run = await runPostDeployAcceptance({
-      ...dependencies({ shell: pagesShell({ payload: { error: "not found" } }) }),
+      ...dependencies({ shell: pagesRelease({ payload: { commit: "prior-release" } }) }),
       pagesDeployed: true,
-      workerDeployed: true,
+      expectedPagesCommit: RELEASE_COMMIT,
     });
 
     expect(run.probes.map((probe) => [probe.id, probe.outcome])).toEqual([
       ["pages-shell", "failed"],
-      ["worker-health", "passed"],
     ]);
     expect(run.acceptance.outcome).toBe("failed");
     expect(run.exitCode).toBe(1);
   });
 
-  it("fails when the Pages shell responds with an error status", async () => {
+  it("fails when the Pages release marker responds with an error status", async () => {
     const run = await runPostDeployAcceptance({
-      ...dependencies({ shell: pagesShell({ ok: false, payload: HTML_SHELL, status: 503 }) }),
+      ...dependencies({ shell: pagesRelease({ ok: false, status: 503 }) }),
       pagesDeployed: true,
+      expectedPagesCommit: RELEASE_COMMIT,
     });
 
-    expect(run.probes[0]).toMatchObject({ detail: `GET ${SHELL_URL} returned 503.`, outcome: "failed" });
+    expect(run.probes[0]).toMatchObject({ detail: `GET ${RELEASE_URL} returned 503; release commit ${RELEASE_COMMIT}.`, outcome: "failed" });
     expect(run.exitCode).toBe(1);
   });
 
@@ -136,10 +165,12 @@ describe("runPostDeployAcceptance", () => {
     const run = await runPostDeployAcceptance({
       ...dependencies({ health: workerHealth({ payload: { status: "degraded" } }) }),
       workerDeployed: true,
+      expectedWorkerVersion: WORKER_VERSION,
+      observedWorkerVersion: WORKER_VERSION,
     });
 
     expect(run.probes[0]).toMatchObject({
-      detail: `GET ${HEALTH_URL} returned 200 (degraded).`,
+      detail: `GET ${HEALTH_URL} returned 200 (degraded); active version ${WORKER_VERSION}.`,
       outcome: "failed",
     });
     expect(run.acceptance.reason).toBe("At least one completed read-only smoke probe failed.");
@@ -150,9 +181,14 @@ describe("runPostDeployAcceptance", () => {
     const run = await runPostDeployAcceptance({
       ...dependencies({ health: null }),
       workerDeployed: true,
+      expectedWorkerVersion: WORKER_VERSION,
+      observedWorkerVersion: WORKER_VERSION,
     });
 
-    expect(run.probes[0]).toMatchObject({ detail: `GET ${HEALTH_URL} returned 0.`, outcome: "failed" });
+    expect(run.probes[0]).toMatchObject({
+      detail: `GET ${HEALTH_URL} returned 0; active version ${WORKER_VERSION}.`,
+      outcome: "failed",
+    });
     expect(run.exitCode).toBe(1);
   });
 });
@@ -169,6 +205,7 @@ describe("run-post-deploy-acceptance CLI", () => {
         GITHUB_OUTPUT: outputPath,
         GITHUB_STEP_SUMMARY: summaryPath,
         NODE_ENV: "test",
+        EXPECTED_PAGES_COMMIT: RELEASE_COMMIT,
         PAGES_DEPLOYED: "true",
         WORKER_DEPLOYED: "false",
       },
@@ -182,7 +219,7 @@ describe("run-post-deploy-acceptance CLI", () => {
     expect(summary).toContain(
       "- Scope: read-only GET probes only; no production mutation or automatic rollback.",
     );
-    expect(summary).toContain(`| pages-shell | pages | passed | GET ${SHELL_URL} returned 200. |`);
+    expect(summary).toContain(`| pages-shell | pages | passed | GET ${RELEASE_URL} returned 200; release commit ${RELEASE_COMMIT}. |`);
   });
 
   it("returns a failing exit code and records the failed outcome for a failed probe", async () => {
@@ -191,7 +228,8 @@ describe("run-post-deploy-acceptance CLI", () => {
     const outputPath = join(workDir, "github-output.txt");
 
     const exitCode = await runPostDeployAcceptanceCli(
-      { GITHUB_OUTPUT: outputPath, NODE_ENV: "test", PAGES_DEPLOYED: "false", WORKER_DEPLOYED: "true" },
+      { GITHUB_OUTPUT: outputPath, NODE_ENV: "test", PAGES_DEPLOYED: "false", WORKER_DEPLOYED: "true",
+        EXPECTED_WORKER_VERSION: WORKER_VERSION, OBSERVED_WORKER_VERSION: WORKER_VERSION },
       dependencies({ health: workerHealth({ ok: false, payload: null, status: 502 }) }),
     );
 

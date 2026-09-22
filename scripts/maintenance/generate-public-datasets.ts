@@ -52,7 +52,7 @@ import {
   type PublicSnapshotEnvelope,
   type PublicSnapshotEnvelopeV2,
 } from "@shared/types/public-snapshot";
-import { readDepegEventSnapshot } from "../../src/lib/depeg-event-snapshot";
+import { DEPEG_EVENT_DATA_DIR, readDepegEventSnapshot } from "../../src/lib/depeg-event-snapshot";
 import { isDirectRun, parseCheckMode } from "../lib/smoke-runtime.mjs";
 import { buildPublicDatasetArtifacts, type DatasetColumn } from "../lib/public-dataset-artifacts";
 import {
@@ -78,22 +78,9 @@ const REQUIRE_API_SOURCE = process.env.PUBLIC_DATASETS_REQUIRE_API === "1";
 const MAX_CURRENT_DATASET_AGE_DAYS = 2;
 const ROW_FLOORS: Readonly<Record<PublicDatasetTopic, number>> = {
   "top-stablecoins": 493,
-  // A fixed live-generation floor is invalid for this rolling window because
-  // legitimate event volume can decline. Live generation separately proves that
-  // the fetched source crosses the retention boundary before accepting the
-  // projection. Checked artifacts keep a legacy floor below to reject obviously
-  // truncated mirrors when raw source coverage is unavailable in the artifact.
-  "depeg-history": 1,
+  "depeg-history": 60,
   "scores-latest": 493,
   "peg-mechanism-distribution": 99,
-};
-const CHECK_ROW_FLOORS: Readonly<Record<PublicDatasetTopic, number>> = {
-  ...ROW_FLOORS,
-  // Calibrated against the observed 90-day event rate. The July 2026 value of
-  // 300 reflected the spring depeg storm (~1,200 events/month); since June the
-  // rate is ~30-40/month, so a healthy window holds ~100 rows. Keep the floor
-  // well below that to reject truncation without rejecting calm markets.
-  "depeg-history": 60,
 };
 
 type SnapshotEnvelope = Pick<PublicSnapshotEnvelopeV2, "snapshotDate" | "generatedAt" | "stablecoins"> & {
@@ -684,7 +671,7 @@ function checkTopic(
   }
   const jsonPath = resolved.get("json")!;
   const jsonMetadata = readJsonArtifactMetadata(jsonPath, topic);
-  const floor = CHECK_ROW_FLOORS[topic];
+  const floor = ROW_FLOORS[topic];
   if (jsonMetadata == null) {
     return { ok: false, reason: `${jsonPath} missing numeric _meta.rowCount` };
   }
@@ -753,6 +740,16 @@ function validateDepegHistoryCoverage(events: readonly DepegEvent[], snapshotDat
   }
 }
 
+function validateDepegHistorySourceShard(snapshotDate: string): void {
+  const snapshotYear = snapshotDate.slice(0, 4);
+  if (!/^\d{4}$/.test(snapshotYear) || !existsSync(join(DEPEG_EVENT_DATA_DIR, `${snapshotYear}.json`))) {
+    throw new Error(
+      `Depeg event source has no ${snapshotYear || "requested-year"} shard for snapshot ${snapshotDate}; `
+      + "refusing a potentially stale public dataset.",
+    );
+  }
+}
+
 function asOfIsoFromEnvelope(envelope: SnapshotEnvelope, snapshotDate: string): string {
   return envelope.generatedAt > 0
     ? new Date(envelope.generatedAt * 1000).toISOString()
@@ -799,8 +796,8 @@ export async function loadPublicDatasetLiveInputs(
   const asOfISO = asOfIsoFromEnvelope(envelope, effectiveSnapshotDate);
 
   const depegEvents = readDepegEventsFromShards();
+  validateDepegHistorySourceShard(effectiveSnapshotDate);
   validateDepegHistoryCoverage(depegEvents, effectiveSnapshotDate);
-
   return { envelope, depegEvents, effectiveSnapshotDate, asOfISO };
 }
 
@@ -875,6 +872,7 @@ export const testExports = {
   projectPegMechanismDistribution,
   snapshotEndSecForDate,
   validateDepegHistoryCoverage,
+  validateDepegHistorySourceShard,
   validateTopicRowFloor,
 };
 
