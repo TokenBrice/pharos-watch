@@ -32,6 +32,7 @@ interface NestYieldAsset {
 
 interface NestPositionsPayload {
   data?: {
+    errors?: unknown;
     positions?: {
       liquidAssets?: unknown;
       yieldAssets?: unknown;
@@ -313,18 +314,50 @@ export async function fetchNestVaultPositionsReserves(
   const pendingWithdrawalUsd = pendingTransactions
     .filter((transaction) => transaction.type === "PendingWithdrawal")
     .reduce((sum, transaction) => sum + transaction.valueUsd, 0);
-  if (reconcilePending && pendingWithdrawalUsd > 0) {
-    throw new Error(`nest-vault-positions cannot reconcile positive ${coin.symbol} pending withdrawals`);
+  let grossNavUsd: number | null = null;
+  let calculatedNavUsd: number | null = null;
+  let claimableFeesUsd: number | null = null;
+  if (pendingWithdrawalUsd > 0) {
+    if (coin.id !== "nbasis-nest" || pendingTransactions.some((transaction) =>
+      transaction.type === "PendingWithdrawal" && transaction.valueUsd > 0
+      && (transaction.positionKind !== "yield" || transaction.assetSlug !== "superstate-uscc"
+        || transaction.symbol !== "USCC"))) {
+      throw new Error(`nest-vault-positions cannot reconcile positive ${coin.symbol} pending withdrawals`);
+    }
+    const calculated = await fetchJsonWithRetry<{ data?: {
+      grossCalculatedNav?: unknown; calculatedNav?: unknown; claimableFees?: unknown;
+      claimableFeesAdjusted?: unknown; errors?: unknown;
+    } }>(new URL("calculated-price", params.priceUrl).href, signal, 12_000, ctx);
+    const data = calculated.data;
+    grossNavUsd = parsePositiveNumericLike(data?.grossCalculatedNav);
+    calculatedNavUsd = parsePositiveNumericLike(data?.calculatedNav);
+    claimableFeesUsd = parseFiniteNumber(data?.claimableFees, { label: "Nest reconciliation claimable fees", min: 0 });
+    const hasErrors = [positions.data?.errors, data?.errors]
+      .some((errors) => errors !== undefined && (!Array.isArray(errors) || errors.length > 0));
+    if (hasErrors || grossNavUsd == null || calculatedNavUsd == null
+      || claimableFeesUsd == null || claimableFeesUsd < 0 || data?.claimableFeesAdjusted !== true
+      || Math.abs(grossNavUsd - settledPositionUsd - pendingDepositUsd - pendingWithdrawalUsd) > 0.01
+      || Math.abs(grossNavUsd - claimableFeesUsd - calculatedNavUsd) > 0.01) {
+      throw new Error("nest-vault-positions pending withdrawal NAV reconciliation failed");
+    }
   }
-  const settledCoverageUsd = settledPositionUsd + pendingDepositUsd;
+  const settledCoverageUsd = settledPositionUsd + pendingDepositUsd + pendingWithdrawalUsd;
   const navReconciliationResidualUsd =
-    navUsd != null && navUsd > 0 && settledCoverageUsd < navUsd
+    grossNavUsd == null && navUsd != null && navUsd > 0 && settledCoverageUsd < navUsd
       ? navUsd - settledCoverageUsd
       : null;
   const unknownValue = settledValues.reduce((sum, value) => sum + (value.unknown ? value.value : 0), 0)
-    + pendingDepositUsd + (navReconciliationResidualUsd ?? 0);
+    + pendingDepositUsd + pendingWithdrawalUsd + (navReconciliationResidualUsd ?? 0);
   const values = mergeSliceValues([
     ...settledValues,
+    ...(pendingWithdrawalUsd > 0
+      ? [{
+          sourceKey: "nest-vault-positions:pending-withdrawals",
+          value: pendingWithdrawalUsd,
+          name: "Nest pending USCC redemption receivables",
+          risk: "high" as const,
+        }]
+      : []),
     ...(pendingDepositUsd > 0
       ? [{
           sourceKey: "nest-vault-positions:pending-deposits",
@@ -342,11 +375,12 @@ export async function fetchNestVaultPositionsReserves(
         }]
       : []),
   ]);
-  const totalReserveUsd = navUsd != null && navUsd > 0 ? navUsd : settledPositionUsd;
+  const totalReserveUsd = grossNavUsd ?? (navUsd != null && navUsd > 0 ? navUsd : settledPositionUsd);
   const unknownExposurePct = unknownValue / Math.max(totalReserveUsd, settledCoverageUsd) * 100;
   const navCoverageRatio = navUsd && navUsd > 0 ? settledPositionUsd / navUsd : null;
   const reconciledNavCoverageRatio =
-    navUsd && navUsd > 0 ? settledCoverageUsd / navUsd : navCoverageRatio;
+    grossNavUsd != null ? settledCoverageUsd / grossNavUsd
+      : navUsd && navUsd > 0 ? settledCoverageUsd / navUsd : navCoverageRatio;
   const warnings = buildCoverageShortfallWarnings({
     code: "nest-nav-coverage-gap",
     message: (pct) => reconcilePending
@@ -365,7 +399,9 @@ export async function fetchNestVaultPositionsReserves(
         proofKind: "nest-vault-positions-api",
         ...(reconcilePending
           ? {
-              reconciliationKind: coin.id === "nbasis-nest"
+              reconciliationKind: grossNavUsd != null
+                ? "settled-plus-pending-equals-gross-nav-less-fees-equals-net-nav"
+                : coin.id === "nbasis-nest"
                 ? "settled-plus-pending-deposits-compared-with-nav"
                 : "settled-plus-pending-deposits-plus-residual-equals-nav",
               pendingTransactions,
@@ -374,6 +410,7 @@ export async function fetchNestVaultPositionsReserves(
       },
       totalReserveUsd,
       settledPositionUsd,
+      ...(grossNavUsd != null ? { grossNavUsd, calculatedNavUsd, claimableFeesUsd } : {}),
       ...(reconcilePending ? { pendingDepositUsd, pendingWithdrawalUsd } : {}),
       ...(navReconciliationResidualUsd != null ? { navReconciliationResidualUsd } : {}),
       unknownExposurePct,
