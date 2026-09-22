@@ -33,8 +33,11 @@ import {
 } from "@shared/types/public-snapshot";
 
 const IMMUTABLE_CACHE_CONTROL = "public, s-maxage=31536000, max-age=31536000, immutable";
-const SNAPSHOT_INDEX_DEFAULT_LIMIT = 100;
+// The archive holds ~130 daily rows (2026-09); a default equal to the bound keeps
+// parameterless key-holder calls returning the full index until the archive
+// outgrows it, at which point `pagination.hasMore` tells them to page.
 const SNAPSHOT_INDEX_MAX_LIMIT = 500;
+const SNAPSHOT_INDEX_DEFAULT_LIMIT = SNAPSHOT_INDEX_MAX_LIMIT;
 
 interface PublicSnapshotIndexRow {
   snapshot_date: string;

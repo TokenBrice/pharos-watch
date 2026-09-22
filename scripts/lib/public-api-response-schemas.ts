@@ -109,6 +109,11 @@ const SnapshotIndexEntrySchema = z.object({
 
 export const SnapshotsIndexResponseSchema = z.object({
   snapshots: z.array(SnapshotIndexEntrySchema),
+  pagination: z.object({
+    limit: z.number(),
+    hasMore: z.boolean(),
+    nextCursor: z.string().nullable(),
+  }),
 });
 
 const SnapshotCoinScoreRowSchema = z

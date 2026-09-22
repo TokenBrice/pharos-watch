@@ -303,7 +303,7 @@ Generated from `public/openapi.json` (`Pharos API` v1.0.0). Total OpenAPI operat
 | GET | `/api/daily-digest` | Daily digest | Digest | `X-API-Key` required | — | 200, 400, 401, 429, 503 |
 | GET | `/api/digest-archive` | Digest archive | Digest | `X-API-Key` required | — | 200, 400, 401, 429, 503 |
 | GET | `/api/digest-snapshot` | Digest snapshot | Digest | `X-API-Key` required | `date` (query, required, string) | 200, 400, 401, 429, 503 |
-| GET | `/api/snapshots/index` | Public snapshot index | Digest | `X-API-Key` required | — | 200, 400, 401, 429, 503 |
+| GET | `/api/snapshots/index` | Public snapshot index | Digest | `X-API-Key` required | `limit` (query, optional, integer); `cursor` (query, optional, string) | 200, 400, 401, 429, 503 |
 | GET | `/api/snapshots/{date}.json` | Public snapshot for a single day | Digest, History | `X-API-Key` required | `date` (path, required, string) | 200, 400, 401, 429, 503 |
 | GET | `/api/snapshot/{date}/stablecoin/{stablecoinId}` | Public snapshot projection for a single coin | Digest, Stablecoins, History | `X-API-Key` required | `date` (path, required, string); `stablecoinId` (path, required, string) | 200, 400, 401, 429, 503 |
 | GET | `/api/health` | Health check | Health | exempt | — | 200, 400, 503 |
@@ -587,7 +587,7 @@ Returns the dates available in the public daily snapshot archive.
 
 - **Operation ID:** `snapshotsIndex`
 - **Path:** `/api/snapshots/index`
-- **Parameters:** None.
+- **Parameters:** `limit` (query, optional, integer); `cursor` (query, optional, string)
 - **Success response schema:** [`SnapshotsIndexResponse`](https://pharos.watch/openapi.json#/components/schemas/SnapshotsIndexResponse)
 - **Policy:** authentication `X-API-Key` required; shared endpoint caching allowed (`cacheBypass: false`).
 

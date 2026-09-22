@@ -126,6 +126,7 @@ describe("public API response schemas", () => {
         byteSize: 12345,
         createdAt: 1_779_105_600,
       }],
+      pagination: { limit: 500, hasMore: false, nextCursor: null },
     };
     expect(SnapshotsIndexResponseSchema.safeParse(payload).success).toBe(true);
     const invalid = SnapshotsIndexResponseSchema.safeParse({ ...payload, snapshots: [{ ...payload.snapshots[0], byteSize: "invalid" }]});

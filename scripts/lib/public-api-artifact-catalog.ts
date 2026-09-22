@@ -829,8 +829,23 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     key: "snapshots-index",
     responseSchema: "SnapshotsIndexResponse",
     summary: "Public snapshot index",
-    description: "Listing of available daily public snapshots with content hashes and methodology versions.",
+    description:
+      "Listing of available daily public snapshots with content hashes and methodology versions, newest first. Keyset-paginated: pass `pagination.nextCursor` as `cursor` while `pagination.hasMore` is true.",
     tags: ["Digest"],
+    parameters: [
+      {
+        name: "limit",
+        in: "query",
+        schema: { type: "integer", minimum: 1, maximum: 500 },
+        description: "Maximum number of snapshot dates to return. Defaults to 500.",
+      },
+      {
+        name: "cursor",
+        in: "query",
+        schema: { type: "string" },
+        description: "Exclusive upper bound `YYYY-MM-DD` returned as `pagination.nextCursor`; pages older dates.",
+      },
+    ],
     postman: { order: 8 },
   },
   {
