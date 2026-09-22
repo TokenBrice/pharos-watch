@@ -1,3 +1,4 @@
+import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { buildUniswapV4RegisteredExecutionTarget } from "./execution-targets/uniswap-v4";
 import {
   canonicalExitRouteAssetKey,
@@ -248,15 +249,15 @@ function buildCurveStableswapRateInputExecutionCandidate(
   curveData: CurvePoolEntry,
 ): CurveStableswapRateInputExecutionCandidate | null {
   if (curveData.registryId.trim().toLowerCase() !== "factory-stable-ng") return null;
-  const poolAddress = curveData.poolAddress?.trim().toLowerCase();
+  const poolAddress = canonicalEvmAddress(curveData.poolAddress);
   const coins = curveData.executionCoins;
-  if (!poolAddress || !/^0x[a-f0-9]{40}$/.test(poolAddress) || !coins || coins.length < 2 || coins.length > 8) {
+  if (!poolAddress || !coins || coins.length < 2 || coins.length > 8) {
     return null;
   }
   const candidateCoins = coins.map((coin) => {
-    const address = coin.address.trim().toLowerCase();
+    const address = canonicalEvmAddress(coin.address);
     if (
-      !/^0x[a-f0-9]{40}$/.test(address) ||
+      !address ||
       !coin.symbol.trim() ||
       !Number.isInteger(coin.decimals) ||
       coin.decimals < 0 ||
@@ -267,7 +268,7 @@ function buildCurveStableswapRateInputExecutionCandidate(
       return null;
     }
     return {
-      address: address as `0x${string}`,
+      address,
       symbol: coin.symbol,
       decimals: coin.decimals,
       referencePriceUsd: coin.usdPrice,
@@ -276,7 +277,7 @@ function buildCurveStableswapRateInputExecutionCandidate(
   if (candidateCoins.some((coin) => coin == null)) return null;
   const exactCoins = candidateCoins as NonNullable<typeof candidateCoins[number]>[];
   if (new Set(exactCoins.map((coin) => coin.address)).size !== exactCoins.length) return null;
-  return { poolAddress: poolAddress as `0x${string}`, coins: exactCoins };
+  return { poolAddress, coins: exactCoins };
 }
 
 export function buildCurveStableswapExecutionCapability(
@@ -405,10 +406,10 @@ export function buildCurveCryptoSwapMeasuredExecutionTarget(input: {
   if (!policy) return null;
   const executionCoins = curveData.executionCoins;
   if (!executionCoins || executionCoins.length !== 2) return null;
-  const poolAddress = curveData.poolAddress.toLowerCase();
-  if (!/^0x[a-f0-9]{40}$/.test(poolAddress)) return null;
-  const poolTokenAddresses = executionCoins.map((coin) => coin.address.toLowerCase());
-  if (poolTokenAddresses.some((address) => !/^0x[a-f0-9]{40}$/.test(address))) return null;
+  const poolAddress = canonicalEvmAddress(curveData.poolAddress);
+  if (!poolAddress) return null;
+  const poolTokenAddresses = executionCoins.map((coin) => canonicalEvmAddress(coin.address));
+  if (poolTokenAddresses.some((address) => address === null)) return null;
   const inputIndex = executionCoins.findIndex(
     (coin) => input.chainAddressToId.get(canonicalExitRouteAssetKey(input.chain, coin.address)) === input.stablecoinId,
   );

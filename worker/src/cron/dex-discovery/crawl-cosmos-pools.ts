@@ -12,6 +12,7 @@ import { fetchDexDiscoveryJsonEndpoint } from "./fetch-json-endpoint";
 import {
   STAGED_POOL_MAX_TVL_USD,
   makeDexDeploymentProviderCheck,
+  parseDecimalFractionBasisPoints,
   type DexDeploymentProviderCheck,
 } from "./types";
 
@@ -124,20 +125,6 @@ function osmosisPoolType(value: unknown): { poolType: string; isStable: boolean 
   }
 }
 
-function parseSpreadFactorBasisPoints(value: unknown): number | null {
-  if (
-    typeof value !== "string" ||
-    // eslint-disable-next-line security/detect-unsafe-regex -- anchored fixed-shape decimal check; finite quantifiers, no backtracking ambiguity.
-    !/^(?:0|[1-9]\d*)(?:\.\d+)?$/u.test(value)
-  ) {
-    return null;
-  }
-  const fee = Number(value);
-  if (!Number.isFinite(fee) || fee < 0 || fee >= 1) return null;
-  const feeTierBp = Math.round(fee * 10_000);
-  return Number.isSafeInteger(feeTierBp) ? feeTierBp : null;
-}
-
 /**
  * `liquidity_cap` is the sidecar's own USD valuation of the pool. When
  * `liquidity_cap_error` names a leg the indexer cannot price, the cap still
@@ -201,7 +188,7 @@ function parseOsmosisPool(value: unknown): OsmosisPool | null {
     poolId,
     poolType,
     isStable,
-    feeTierBp: parseSpreadFactorBasisPoints(pool.spread_factor),
+    feeTierBp: parseDecimalFractionBasisPoints(pool.spread_factor),
     tvlUsd,
     denoms,
     raw: value,

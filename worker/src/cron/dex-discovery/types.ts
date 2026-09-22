@@ -1,3 +1,4 @@
+import { BPS_PER_UNIT } from "@shared/lib/math";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { DexDiscoveryProvider } from "@shared/lib/dex-deployment-coverage";
 import type { ContractDeployment } from "@shared/types/core";
@@ -90,6 +91,25 @@ export function makeDexDeploymentProviderCheck(
     ...(extras?.retryable === true ? { retryable: true } : {}),
     ...(extras?.paginationComplete !== undefined ? { paginationComplete: extras.paginationComplete } : {}),
   };
+}
+
+/**
+ * Chain modules publish swap fees as a decimal fraction string ("0.0005").
+ * Reject anything that is not a bounded, fixed-shape fraction below 1 rather
+ * than coercing a malformed value into a fee tier.
+ */
+export function parseDecimalFractionBasisPoints(value: unknown): number | null {
+  if (
+    typeof value !== "string" ||
+    // eslint-disable-next-line security/detect-unsafe-regex -- anchored fixed-shape decimal check; finite quantifiers, no backtracking ambiguity.
+    !/^(?:0|[1-9]\d*)(?:\.\d+)?$/u.test(value)
+  ) {
+    return null;
+  }
+  const fee = Number(value);
+  if (!Number.isFinite(fee) || fee < 0 || fee >= 1) return null;
+  const feeTierBp = Math.round(fee * BPS_PER_UNIT);
+  return Number.isSafeInteger(feeTierBp) ? feeTierBp : null;
 }
 
 /**

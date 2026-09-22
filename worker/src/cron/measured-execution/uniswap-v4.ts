@@ -26,6 +26,7 @@ import {
   type DexMeasuredExecutionRpcBudget,
   type DexMeasuredRawQuotePoint,
 } from "./profiles";
+import { decodeAddressResult as decodeEvmAddressResult } from "./evm-codecs";
 import { MAX_UINT128, usdToRawAmount } from "./fixed-point";
 import {
   buildEvmSingleCallQuotePlans,
@@ -203,17 +204,9 @@ function decodeAddressResult(
   abi: typeof UNISWAP_V4_QUOTER_ABI | typeof UNISWAP_V4_STATE_VIEW_ABI,
   data: `0x${string}`,
 ): `0x${string}` | null {
-  try {
-    const result = decodeFunctionResult({
-      abi,
-      functionName: "poolManager",
-      data,
-    });
-    const normalized = String(result).toLowerCase();
-    return /^0x[a-f0-9]{40}$/.test(normalized) ? (normalized as `0x${string}`) : null;
-  } catch {
-    return null;
-  }
+  return decodeEvmAddressResult({
+    decode: () => decodeFunctionResult({ abi, functionName: "poolManager", data }),
+  });
 }
 
 export interface UniswapV4RuntimeEvidence {

@@ -1,3 +1,4 @@
+import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { isUsdReferenceSymbol, normalizeDexSymbol } from "../../lib/dex-cron-constants";
@@ -273,7 +274,7 @@ export async function fetchUniswapV4Data(
         if (
           executionKey &&
           /^0x[a-f0-9]{64}$/.test(poolId) &&
-          /^0x[a-f0-9]{40}$/.test(hookAddress) &&
+          canonicalEvmAddress(hookAddress) !== null &&
           Number.isInteger(tickSpacing) &&
           tickSpacing > 0 &&
           tickSpacing <= 32_767 &&

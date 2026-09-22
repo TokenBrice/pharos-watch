@@ -1,3 +1,4 @@
+import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { canonicalExitRouteScopedId } from "@shared/lib/exit-route-identity";
 import { decodeAbiParameters } from "viem/utils";
 
@@ -140,8 +141,7 @@ export function asEvmCaptureAddress(
   chain: string,
   value: string | null | undefined,
 ): `0x${string}` | null {
-  const normalized = canonicalExitRouteScopedId(chain, value ?? "");
-  return /^0x[a-f0-9]{40}$/.test(normalized) ? (normalized as `0x${string}`) : null;
+  return canonicalEvmAddress(canonicalExitRouteScopedId(chain, value ?? ""));
 }
 
 export function mapEvmCaptureResults(

@@ -1,3 +1,4 @@
+import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import {
   canonicalExitRouteChain,
   canonicalExitRouteScopedId,
@@ -96,7 +97,7 @@ export function isTrustworthyExactPoolId(poolId: string | null | undefined, prot
   if (!trimmed) return false;
   if (trimmed.startsWith("orderbook-") || trimmed.startsWith("orderbook:"))
     return isTrustworthyOrderbookPoolId(trimmed);
-  if (/^0x[a-f0-9]{40}$/i.test(trimmed)) return true;
+  if (canonicalEvmAddress(trimmed)) return true;
   if (isUniswapV4PoolId(trimmed, protocol)) return true;
   return /^[1-9A-HJ-NP-Za-km-z]{32,64}$/.test(trimmed);
 }

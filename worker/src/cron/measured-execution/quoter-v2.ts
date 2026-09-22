@@ -12,6 +12,7 @@ import {
   type DexMeasuredRawQuotePoint,
 } from "./profiles";
 import { getDexMeasuredExecutionDeployment } from "./registry";
+import { canonicalEvmAddress, decodeAddressResult as decodeEvmAddressResult } from "./evm-codecs";
 import { MAX_UINT256, usdToRawAmount } from "./fixed-point";
 import {
   buildEvmSingleCallQuotePlans,
@@ -209,10 +210,10 @@ export async function quoteQuoterV2Requests(input: {
 
 function targetPoolAddress(target: Pick<DexMeasuredExecutionTarget, "chain" | "poolId">): `0x${string}` | null {
   const normalized = target.poolId.trim().toLowerCase();
-  if (/^0x[a-f0-9]{40}$/.test(normalized)) return normalized as `0x${string}`;
+  const direct = canonicalEvmAddress(normalized);
+  if (direct) return direct;
   const prefix = `${target.chain.trim().toLowerCase()}:`;
-  const address = normalized.startsWith(prefix) ? normalized.slice(prefix.length) : "";
-  return /^0x[a-f0-9]{40}$/.test(address) ? (address as `0x${string}`) : null;
+  return normalized.startsWith(prefix) ? canonicalEvmAddress(normalized.slice(prefix.length)) : null;
 }
 
 export function encodeV3FactoryGetPool(target: DexMeasuredExecutionTarget): `0x${string}` {
@@ -233,17 +234,9 @@ export function encodeV3FactoryGetPool(target: DexMeasuredExecutionTarget): `0x$
 }
 
 function decodeV3FactoryGetPool(returnData: `0x${string}`): `0x${string}` | null {
-  try {
-    const value = decodeFunctionResult({
-      abi: V3_FACTORY_ABI,
-      functionName: "getPool",
-      data: returnData,
-    });
-    const normalized = String(value).toLowerCase();
-    return /^0x[a-f0-9]{40}$/.test(normalized) ? (normalized as `0x${string}`) : null;
-  } catch {
-    return null;
-  }
+  return decodeEvmAddressResult({
+    decode: () => decodeFunctionResult({ abi: V3_FACTORY_ABI, functionName: "getPool", data: returnData }),
+  });
 }
 
 export interface QuoterV2PoolBindingOutcome {

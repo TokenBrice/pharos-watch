@@ -1,3 +1,4 @@
+import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { LiveReserveWarning } from "@shared/types/live-reserves";
 import type { LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
@@ -381,12 +382,6 @@ function parseMorphoChainId(value: unknown): number | null {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 }
 
-function parseMorphoAddress(value: unknown): string | null {
-  if (typeof value !== "string") return null;
-  const normalized = value.toLowerCase();
-  return /^0x[0-9a-f]{40}$/.test(normalized) ? normalized : null;
-}
-
 function parseNonNegativeBigIntLike(value: unknown): bigint | null {
   if (typeof value === "bigint") return value >= 0n ? value : null;
   if (typeof value === "number") {
@@ -450,10 +445,10 @@ async function fetchMorphoVaultLiquidity(input: MorphoQueryInput): Promise<Capac
     if (!vault) {
       return morphoFailure(input, "liquidity-unavailable", "liquidity query returned no vault");
     }
-    if (parseMorphoAddress(vault.address) !== input.contractAddress.toLowerCase()) {
+    if (canonicalEvmAddress(vault.address) !== input.contractAddress.toLowerCase()) {
       return morphoFailure(input, "identity-mismatch", "liquidity vault address mismatch");
     }
-    if (parseMorphoAddress(vault.asset?.address) !== input.assetAddress.toLowerCase()) {
+    if (canonicalEvmAddress(vault.asset?.address) !== input.assetAddress.toLowerCase()) {
       return morphoFailure(input, "asset-mismatch", "liquidity asset mismatch");
     }
     if (parseMorphoChainId(vault.chain?.id) !== input.config.chainId) {

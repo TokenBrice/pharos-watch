@@ -6,7 +6,11 @@ import {
 import type { ContractDeployment } from "@shared/types/core";
 import { fetchDexDiscoveryJsonEndpoint } from "./fetch-json-endpoint";
 import { type CrawlStageContext, toStagedPool } from "./staged-pool";
-import { makeDexDeploymentProviderCheck, type DexDeploymentProviderCheck } from "./types";
+import {
+  makeDexDeploymentProviderCheck,
+  parseDecimalFractionBasisPoints,
+  type DexDeploymentProviderCheck,
+} from "./types";
 
 const KAVA_SWAP_API_BASE = "https://api.data.kava.io";
 const KAVA_SWAP_PARAMS_PATH = "/kava/swap/v1beta1/params";
@@ -59,20 +63,6 @@ function parseNonNegativeInteger(value: unknown): string | null {
   return value;
 }
 
-function parseSwapFeeBasisPoints(value: unknown): number | null {
-  if (
-    typeof value !== "string" ||
-    // eslint-disable-next-line security/detect-unsafe-regex -- anchored fixed-shape decimal check; finite quantifiers, no backtracking ambiguity.
-    !/^(?:0|[1-9]\d*)(?:\.\d+)?$/u.test(value)
-  ) {
-    return null;
-  }
-  const fee = Number(value);
-  if (!Number.isFinite(fee) || fee < 0 || fee >= 1) return null;
-  const feeTierBp = Math.round(fee * 10_000);
-  return Number.isSafeInteger(feeTierBp) ? feeTierBp : null;
-}
-
 function pairKey(left: string, right: string): string {
   return left < right ? `${left}\u0000${right}` : `${right}\u0000${left}`;
 }
@@ -94,7 +84,7 @@ function parseKavaSwapParams(body: unknown): KavaSwapParams | null {
   const root = asRecord(body);
   const params = asRecord(root?.params);
   const allowedPairs = parseAllowedPairs(params?.allowed_pools);
-  const feeTierBp = parseSwapFeeBasisPoints(params?.swap_fee);
+  const feeTierBp = parseDecimalFractionBasisPoints(params?.swap_fee);
   if (allowedPairs == null || feeTierBp == null) return null;
   return { allowedPairs, feeTierBp };
 }

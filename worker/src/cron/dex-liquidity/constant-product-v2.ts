@@ -1,3 +1,4 @@
+import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import {
   canonicalExitRouteAssetKey,
   canonicalExitRouteChain,
@@ -227,8 +228,7 @@ function gateReference(reference: CandidateReference, reason: V2GateReason): voi
 }
 
 function decodeAddressResult(result: EvmMulticall3Result | undefined): `0x${string}` | null {
-  const address = decodeEvmCaptureAddress("ethereum", result);
-  return address && !/^0x0{40}$/.test(address) ? address : null;
+  return canonicalEvmAddress(decodeEvmCaptureAddress("ethereum", result), { allowZero: false });
 }
 
 function decodeDecimalsResult(result: EvmMulticall3Result | undefined): number | null {

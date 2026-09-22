@@ -1,3 +1,4 @@
+import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import { CHAIN_META } from "@shared/lib/chains";
 import type { ContractDeployment, ReserveSlice, StablecoinMeta } from "@shared/types/core";
@@ -148,10 +149,7 @@ function parseRawAmount(value: unknown, label: string): bigint {
 function holderAddressFor(payload: KrwqCustodianPayload, key: KrwqLegKey): string | null {
   const leg = payload[key];
   if (!leg || typeof leg !== "object") return null;
-  const address = key === "treasury" ? leg.treasuryAddress : leg.custodianAddress;
-  if (typeof address !== "string") return null;
-  const trimmed = address.trim();
-  return /^0x[0-9a-fA-F]{40}$/.test(trimmed) ? trimmed : null;
+  return canonicalEvmAddress(key === "treasury" ? leg.treasuryAddress : leg.custodianAddress);
 }
 
 function balanceFromMulticallResult(result: EvmMulticall3Result | undefined): bigint | null {
@@ -211,7 +209,7 @@ export function adaptKrwqCustodian(
   }
 
   const warnings: LiveReserveWarning[] = [];
-  if (KRWQ_LEGS.some((leg) => holderAddressFor(payload, leg.key)?.toLowerCase() !== REVIEWED_HOLDERS[leg.key])
+  if (KRWQ_LEGS.some((leg) => holderAddressFor(payload, leg.key) !== REVIEWED_HOLDERS[leg.key])
     || bindings?.usdc !== true || bindings?.frxusd !== true) {
     warnings.push(reserveDegradedWarning(
       "krwq-holder-unverified",
