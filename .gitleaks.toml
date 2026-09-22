@@ -163,3 +163,14 @@ regexes = [
   '''^c48cbb3d5e57ed56e276bc45f99ab39abe94e6cd7ac39fb402da47ad0014df105553444d$''',
 ]
 paths = ['''(?:^|/)shared/data/safety-score-v9/transfer-review-overlays-v1\.json$''']
+
+# DEX price-source registry keys (`<protocol>-dex`) are public pricing-lane identifiers
+# that the primary-price-collector fixtures pair with `sourceKey:`. The rule pins the
+# reviewed key shape to that one test file; any other high-entropy value there fails.
+[[allowlists]]
+description = "DEX source registry keys in primary-price-collector fixtures are not credentials"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "match"
+regexes = ['''^sourceKey: "(?:balancer|curve|uniswap-v[234]|unknown-protocol)-dex"$''']
+paths = ['''(?:^|/)worker/src/lib/__tests__/primary-price-collector\.test\.ts$''']
