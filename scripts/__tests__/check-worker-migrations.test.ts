@@ -1,12 +1,16 @@
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
+  REQUIRED_DATA_MIGRATION_MODE,
   REQUIRED_ROLLOUT_SAFETY_MODE,
   ROLLOUT_SAFETY_ENFORCEMENT_PREFIX,
   UNSAFE_ROLLOUT_ADD_COLUMN_LABEL,
   DROP_INDEX_GRANDFATHER_THROUGH_SEQUENCE,
-  createSchemaFingerprint,
   createSchemaObjectManifest,
+  parseDataMigrationManifestRows,
   parseManifestMigrationRows,
   parseRolloutSafetyPolicy,
   validateManifestMigrationParity,
@@ -15,6 +19,7 @@ import {
   validateRolloutSafetyAnnotation,
   validateRolloutSafetyPolicy,
   validateSchemaObjectManifest,
+  validateWorkerMigrations,
 } from "../ci/check-worker-migrations.ts";
 
 const manifestText = `
@@ -30,6 +35,12 @@ const manifestText = `
 | Sequence | Former Filename | Retirement Note |
 | --- | --- | --- |
 | 0086 | \`0086_treasury_stable_exposure_history.sql\` | Retired |
+
+## Reviewed Data Migrations
+
+| Sequence | Filename | Predicate | Old-Worker compatibility | Rollback / bookmark | Expected row bounds |
+| --- | --- | --- | --- | --- | --- |
+| 0236 | \`0236_dex_deployment_attempt_attribution.sql\` | all outcome rows | legacy readers ignore the nullable column | Time Travel bookmark before deploy | no more than the existing outcome row count |
 
 ## Known Anomalies
 `;
@@ -197,7 +208,10 @@ None. The next migration starts at sequence 0228.
   it("identifies an active migration also listed as retired", () => {
     expect(() => validateManifestMigrationParity(
       ["0000_baseline.sql", "0072_telegram_launch_alerts.sql", "0073_price_cache_provenance.sql"],
-      manifestText.replace("## Known Anomalies", "| 0072 | `0072_telegram_launch_alerts.sql` | Retired |\n\n## Known Anomalies"),
+      manifestText.replace(
+        "## Reviewed Data Migrations",
+        "| 0072 | `0072_telegram_launch_alerts.sql` | Retired |\n\n## Reviewed Data Migrations",
+      ),
     )).toThrow("migration rows listed as both active and retired: 0072_telegram_launch_alerts.sql");
   });
 });
@@ -210,21 +224,18 @@ describe("validateDuplicatePrefixes", () => {
   });
 });
 
-describe("createSchemaFingerprint", () => {
-  it("produces a deterministic digest from normalized schema rows", () => {
-    expect(createSchemaFingerprint(rows)).toEqual(createSchemaFingerprint([...rows].reverse()));
-    expect(createSchemaFingerprint(rows)).toMatchObject({
-      algorithm: "sha256",
-      schemaRowCount: 2,
-    });
-    expect(createSchemaFingerprint(rows.map((row) => ({
-      ...row,
-      sql: row.sql.replace(/\s+/g, "  \n "),
-    })))).toEqual(createSchemaFingerprint(rows));
-    expect(createSchemaFingerprint(rows.map((row) => ({
-      ...row,
-      sql: row.sql.replace("value TEXT", "value INTEGER"),
-    }))).value).not.toBe(createSchemaFingerprint(rows).value);
+describe("parseDataMigrationManifestRows", () => {
+  it("reads every required review field", () => {
+    expect(parseDataMigrationManifestRows(manifestText)).toEqual([
+      {
+        sequence: "0236",
+        filename: "0236_dex_deployment_attempt_attribution.sql",
+        predicate: "all outcome rows",
+        oldWorkerCompatibility: "legacy readers ignore the nullable column",
+        rollbackBookmark: "Time Travel bookmark before deploy",
+        expectedRowBounds: "no more than the existing outcome row count",
+      },
+    ]);
   });
 });
 
@@ -356,6 +367,35 @@ describe("validateRolloutSafetyAnnotation", () => {
     }
   });
 
+  it.each([
+    ["DELETE FROM cron_runs WHERE started_at < 1;", "DELETE FROM"],
+    ["UPDATE cron_runs SET status = 'ok' WHERE id = 1;", "UPDATE"],
+    ["INSERT OR REPLACE INTO cron_runs (id, job, started_at, duration_ms, status) VALUES (1, 'x', 1, 0, 'ok');", "INSERT OR REPLACE"],
+  ])("rejects %s without reviewed data-migration metadata", (statement, operation) => {
+    expect(() =>
+      validateRolloutSafetyAnnotation(
+        "0244_data_change.sql",
+        `-- rollout-safety: ${REQUIRED_ROLLOUT_SAFETY_MODE}\n${statement}`,
+      ),
+    ).toThrow(operation);
+  });
+
+  it("keeps the reviewed 0236 data migration grandfathered", () => {
+    const repositoryManifest = readFileSync(resolve("worker/migrations/MANIFEST.md"), "utf8");
+    const migration = readFileSync(
+      resolve("worker/migrations/0236_dex_deployment_attempt_attribution.sql"),
+      "utf8",
+    );
+    expect(() =>
+      validateRolloutSafetyAnnotation(
+        "0236_dex_deployment_attempt_attribution.sql",
+        migration,
+        ROLLOUT_SAFETY_ENFORCEMENT_PREFIX,
+        parseDataMigrationManifestRows(repositoryManifest),
+      ),
+    ).not.toThrow();
+  });
+
   it("accepts additive migrations with the required rollout-safety header", () => {
     expect(() =>
       validateRolloutSafetyAnnotation(
@@ -369,5 +409,73 @@ describe("validateRolloutSafetyAnnotation", () => {
         ].join("\n"),
       ),
     ).not.toThrow();
+  });
+});
+
+describe("seeded data-migration replay", () => {
+  it("rejects an unannotated DELETE and accepts its reviewed manifest entry against existing rows", async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "pharos-migration-gate-test-"));
+    const migrationsDir = join(tempDir, "migrations");
+    const manifestPath = join(tempDir, "MANIFEST.md");
+    const expectedSchemaPath = join(tempDir, "EXPECTED_SCHEMA.txt");
+    mkdirSync(migrationsDir);
+    writeFileSync(
+      join(migrationsDir, "0000_baseline.sql"),
+      "CREATE TABLE cron_runs (id INTEGER PRIMARY KEY, job TEXT NOT NULL, started_at INTEGER NOT NULL, duration_ms INTEGER NOT NULL, status TEXT NOT NULL);",
+    );
+    writeFileSync(expectedSchemaPath, "table\tcron_runs\n");
+    writeFileSync(
+      manifestPath,
+      `
+## Individual Migrations
+| Sequence | Filename | Description |
+| --- | --- | --- |
+| 0071 | \`0071_delete_cron_runs.sql\` | Reviewed fixture cleanup |
+## Retired Individual Migrations
+| Sequence | Former Filename | Retirement Note |
+| --- | --- | --- |
+| 0086 | \`0086_retired.sql\` | Retired |
+## Reviewed Data Migrations
+| Sequence | Filename | Predicate | Old-Worker compatibility | Rollback / bookmark | Expected row bounds |
+| --- | --- | --- | --- | --- | --- |
+| 0071 | \`0071_delete_cron_runs.sql\` | fixture job only | old Worker does not require fixture rows | capture a Time Travel bookmark | zero or one fixture row |
+## Known Anomalies
+## Rollout Safety
+- Rollout-safety enforcement starts at: \`0071\`
+- Required rollout-safety header: \`-- rollout-safety: backward-compatible\`
+`,
+    );
+    const migrationPath = join(migrationsDir, "0071_delete_cron_runs.sql");
+    const deleteStatement = "DELETE FROM cron_runs WHERE job = 'migration-gate-fixture';";
+
+    try {
+      writeFileSync(
+        migrationPath,
+        `-- rollout-safety: ${REQUIRED_ROLLOUT_SAFETY_MODE}\n${deleteStatement}\n`,
+      );
+      await expect(
+        validateWorkerMigrations({ migrationsDir, manifestPath, expectedSchemaPath }),
+      ).rejects.toThrow(`-- data-migration: ${REQUIRED_DATA_MIGRATION_MODE}`);
+
+      writeFileSync(
+        migrationPath,
+        [
+          `-- rollout-safety: ${REQUIRED_ROLLOUT_SAFETY_MODE}`,
+          `-- data-migration: ${REQUIRED_DATA_MIGRATION_MODE}`,
+          deleteStatement,
+          "",
+        ].join("\n"),
+      );
+      await expect(
+        validateWorkerMigrations({ migrationsDir, manifestPath, expectedSchemaPath }),
+      ).resolves.toMatchObject({ dataMigrationFixtureCheckedCount: 1 });
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it("replays every seeded data migration, including grandfathered 0236, against the repository fixtures", async () => {
+    const result = await validateWorkerMigrations();
+    expect(result.dataMigrationFixtureCheckedCount).toBeGreaterThanOrEqual(1);
   });
 });
