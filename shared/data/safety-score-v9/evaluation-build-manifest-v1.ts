@@ -222,7 +222,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/aggregation.ts",
-      "sha256": "6e0bb974786fb9da72d664481f9467336be0d13ad188fbd14f7ff62c469769ab"
+      "sha256": "ffc702927017ee7b8bf5f57182c3a52bad3749d3ae5314b543854c54a49aa069"
     },
     {
       "path": "shared/lib/safety-score-v9/archetypes/algorithmic.ts",
@@ -639,7 +639,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-09-21-block-26024861-shock-coverage.json.gz"
     }
   ],
-  "digest": "6656b2c2a3cbdc332c2e67c69a9b310a551a1ade39ee63e5a0e5c30919a4dfee"
+  "digest": "0bd76e7e2d30e63d54b4c452b8c184cb79b57900a46f90cf45edad040604c511"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
