@@ -75,6 +75,25 @@ describe("run-gitleaks", () => {
     }
   });
 
+  it("scans the checked-out tree as its own lane and fails closed on its findings", async () => {
+    const runBinary = vi.fn((_binary: string, args: string[]): { status: number } => ({
+      status: args.includes("--config=.gitleaks.toml") ? 1 : runBinary.mock.calls.length % 2 === 1 ? 0 : 1,
+    }));
+    const buildWorktreeInput = vi.fn(() => Buffer.from("unused\n"));
+
+    await expect(runGitleaks({
+      argv: ["--tree"], env: { NODE_ENV: "test" }, platformKey: "linux-x64",
+      ensureBinary: async () => "/fake/gitleaks", runBinary, buildWorktreeInput,
+    })).resolves.toEqual({ status: 1 });
+
+    const scan = runBinary.mock.calls.at(-1)!;
+    expect(scan[1][0]).toBe("dir");
+    expect(scan[1].at(-1)).toBe(".");
+    expect(scan[1].some((arg) => arg.startsWith("--log-opts"))).toBe(false);
+    expect(scan[2]).not.toHaveProperty("input");
+    expect(buildWorktreeInput).not.toHaveBeenCalled();
+  });
+
   it("rejects untrusted downloads and never extracts them", async () => {
     const cacheRoot = mkdtempSync(join(tmpdir(), "gitleaks-checksum-"));
     const execFile = vi.fn();

@@ -80,6 +80,7 @@ type HookRuleId =
   | "deploy"
   | "d1-remote-mutation"
   | "git-destructive"
+  | "malformed-hook-input"
   | "migration-sql"
   | "opaque-shell"
   | "protected-write"
@@ -88,6 +89,7 @@ type HookRuleId =
 interface ShellInvocation {
   name: string;
   tokens: string[];
+  packageSpec?: string;
 }
 
 interface ChangedFileOptions {
@@ -875,6 +877,15 @@ function resolveExecutableIndex(tokens: readonly string[], startIndex: number, d
   return startIndex;
 }
 
+function isPackageRunnerPrefix(tokens: readonly string[], startIndex: number, resolvedIndex: number): boolean {
+  for (let index = startIndex; index < resolvedIndex; index += 1) {
+    const name = shellCommandName(tokens[index]);
+    if (name === "npx" || name === "bunx") return true;
+    if (PACKAGE_MANAGER_EXEC_COMMANDS.has(tokens[index])) return true;
+  }
+  return false;
+}
+
 interface ShellEvalDetails {
   command: string;
 }
@@ -1093,9 +1104,16 @@ function getShellCommandInvocations(command: unknown, depth = 0): ShellInvocatio
         (candidate, candidateIndex) => candidateIndex > resolvedIndex && isShellControlToken(candidate),
       );
       const invocationTokens = tokens.slice(resolvedIndex, endIndex === -1 ? tokens.length : endIndex);
+      // A package-runner specifier keeps its `@<range>` suffix; policies classify the package it resolves to.
+      const packageSpec = isPackageRunnerPrefix(tokens, index, resolvedIndex)
+        ? shellCommandName(tokens[resolvedIndex])
+        : null;
       invocations.push({
-        name: shellCommandName(tokens[resolvedIndex]),
+        name: packageSpec === null
+          ? shellCommandName(tokens[resolvedIndex])
+          : /^([^@][^@]*)@[^@]*$/.exec(packageSpec)?.[1] ?? packageSpec,
         tokens: invocationTokens,
+        ...(packageSpec === null ? {} : { packageSpec }),
       });
 
       if (depth < 3) {
@@ -1155,7 +1173,7 @@ function isGuardedShellInvocation(invocation: ShellInvocation): boolean {
     }
   }
 
-  if (name === "wrangler") {
+  if (invocationIsWrangler(invocation)) {
     if (invocationHasHelpFlag(tokens) || invocationHasDryRunFlag(tokens)) return false;
     const args = stripWranglerGlobalOptions(tokens.slice(1));
     if (
@@ -1193,6 +1211,20 @@ function commandHasUnresolvedShellIndirection(command: unknown): boolean {
 
 function stripWranglerGlobalOptions(tokens: readonly string[]): string[] {
   return tokens.slice(skipLeadingOptions(tokens, 0, WRANGLER_GLOBAL_VALUE_OPTIONS));
+}
+
+function invocationIsWrangler(invocation: ShellInvocation): boolean {
+  if (invocation.name === "wrangler") return true;
+  // An unresolved package specifier (alias, remote or variable-expanded) cannot be proven not to be Wrangler.
+  const spec = invocation.packageSpec;
+  if (spec === undefined || !(/[$`]/.test(spec) || /(?:^|@)(?:npm|git|github|file|https?):/.test(spec))) return false;
+  const args = stripWranglerGlobalOptions(invocation.tokens.slice(1));
+  return (
+    args[0] === "deploy" ||
+    args[0] === "d1" ||
+    (args[0] === "versions" && args[1] === "deploy") ||
+    (args[0] === "pages" && args[1] === "deploy")
+  );
 }
 
 function invocationHasHelpFlag(tokens: readonly string[]): boolean {
@@ -1638,7 +1670,7 @@ function inspectRemoteD1ExecuteSql(tokens: readonly string[], cwd: string | null
 function commandInvokesRemoteD1Mutation(command: unknown, cwd: string): boolean {
   const invocations = getShellCommandInvocations(command);
   return invocations.some((invocation, invocationIndex) => {
-    if (invocation.name !== "wrangler" || invocationHasHelpFlag(invocation.tokens)) return false;
+    if (!invocationIsWrangler(invocation) || invocationHasHelpFlag(invocation.tokens)) return false;
 
     const args = stripWranglerGlobalOptions(invocation.tokens.slice(1));
     if (args[0] !== "d1" || !invocation.tokens.some((token) => token === "--remote" || token.startsWith("--remote="))) {
@@ -1666,13 +1698,13 @@ function commandInvokesRemoteD1Mutation(command: unknown, cwd: string): boolean 
 function commandInvokesRawProductionDeploy(command: unknown): boolean {
   return getShellCommandInvocations(command).some((invocation) => {
     if (invocationHasHelpFlag(invocation.tokens)) return false;
-    if (invocation.name === "wrangler" && invocationHasDryRunFlag(invocation.tokens)) return false;
+    if (invocationIsWrangler(invocation) && invocationHasDryRunFlag(invocation.tokens)) return false;
 
     if (PACKAGE_MANAGER_NAMES.has(invocation.name)) {
       return packageManagerInvokesDeploy(invocation.tokens, invocation.name);
     }
 
-    if (invocation.name !== "wrangler") {
+    if (!invocationIsWrangler(invocation)) {
       return false;
     }
 
@@ -2033,7 +2065,7 @@ function appendHookDiagnostic(
       harness: getHookHarness(hookInput),
       event: hookEventName(hookMode),
       tool: getDiagnosticTool(hookInput),
-      decision: malformed || hookMode === "session-start" ? "none" : violation ? "deny" : "allow",
+      decision: hookMode === "session-start" ? "none" : malformed || violation ? "deny" : "allow",
       rule: violation?.rule ?? null,
       commandDigest: sha256Prefix(command),
       pathsProtected: countProtectedPaths(hookInput),
@@ -2185,11 +2217,28 @@ export function runCli(argv: readonly string[] = process.argv.slice(2)): void {
   const hookMode = normalizeHookMode(options.hook);
 
   if (options.hook && hookRead.malformed) {
+    const malformedViolation: HookViolation = {
+      reason: withHookRule(
+        "malformed-hook-input",
+        "Hook payload was empty or malformed, so no policy could be applied. Enforcement modes deny by default; retry with a well-formed payload.",
+      ),
+      rule: "malformed-hook-input",
+    };
     if (options.diagnostics || process.env.PHAROS_HOOK_DIAGNOSTICS === "1") {
-      appendHookDiagnostic(normalizeHookMode(options.hook) as HookMode, {}, null, true);
+      appendHookDiagnostic(hookMode as HookMode, {}, malformedViolation, true);
     }
-    console.error("pharos-change-contract: empty or malformed hook payload; no policy applied");
-    console.log(JSON.stringify({}));
+    if (hookMode === "session-start") {
+      console.error("pharos-change-contract: empty or malformed hook payload; no policy applied");
+      console.log(JSON.stringify({}));
+      return;
+    }
+    console.error(`pharos-change-contract: ${malformedViolation.reason}`);
+    console.log(JSON.stringify(
+      hookMode === "permission-request"
+        ? buildPermissionRequestDenyOutput(malformedViolation.reason)
+        : buildToolDenyOutput(malformedViolation.reason, "PreToolUse"),
+    ));
+    process.exitCode = 2;
     return;
   }
 

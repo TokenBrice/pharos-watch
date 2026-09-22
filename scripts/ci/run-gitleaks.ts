@@ -55,11 +55,11 @@ interface GitleaksOptions {
   fullHistory: boolean;
   headRef: string;
   lenientPlatform: boolean;
-  mode: "worktree" | "range";
+  mode: "tree" | "worktree" | "range";
 }
 
 function parseOptions(argv: readonly string[], env: NodeJS.ProcessEnv): GitleaksOptions {
-  const mode = argv.includes("--worktree") ? "worktree" : "range";
+  const mode = argv.includes("--worktree") ? "worktree" : argv.includes("--tree") ? "tree" : "range";
   const baseRef = env.GITLEAKS_BASE_REF ?? "origin/main";
   const headRef = env.GITLEAKS_HEAD_REF ?? "HEAD";
   return {
@@ -275,18 +275,31 @@ export async function runGitleaks({
         "--config=.gitleaks.toml",
         "--gitleaks-ignore-path=.gitleaksignore",
       ]
-    : options.fullHistory
-      ? ["git", "--no-banner", "--redact", "--verbose", "--exit-code", "1", "."]
-      : [
-          "git",
+    : options.mode === "tree"
+      ? [
+          // A merge resolution can introduce a credential that exists in neither parent's history, so the
+          // checked-out tree is scanned as its own required lane rather than trusting the range scan.
+          "dir",
           "--no-banner",
           "--redact",
-          "--verbose",
           "--exit-code",
           "1",
-          `--log-opts=--no-merges ${options.baseRef}..${options.headRef}`,
+          "--config=.gitleaks.toml",
+          "--gitleaks-ignore-path=.gitleaksignore",
           ".",
-        ];
+        ]
+      : options.fullHistory
+        ? ["git", "--no-banner", "--redact", "--verbose", "--exit-code", "1", "."]
+        : [
+            "git",
+            "--no-banner",
+            "--redact",
+            "--verbose",
+            "--exit-code",
+            "1",
+            `--log-opts=--no-merges ${options.baseRef}..${options.headRef}`,
+            ".",
+          ];
   const result = runBinary(binaryPath, args, {
     ...(worktreeMode ? { input: buildWorktreeInput() } : {}),
     stdio: worktreeMode ? ["pipe", "inherit", "inherit"] : "inherit",

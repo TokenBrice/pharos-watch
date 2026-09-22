@@ -518,8 +518,11 @@ describe("Codex hook outputs", () => {
     ).toEqual({});
   });
 
-  it("does not throw for empty hook stdin", () => {
-    expect(runHookCli("pre-tool-use")).toEqual({});
+  it("fails closed for empty hook stdin in an enforcement mode", () => {
+    expect(runHookCli("pre-tool-use")).toMatchObject({
+      decision: "block",
+      hookSpecificOutput: { permissionDecision: "deny" },
+    });
   });
 });
 
@@ -987,6 +990,45 @@ describe("W2.7 deploy wrappers and previews", () => {
 
     expect(requireBlockingReason(output)).toContain("Raw production deploy commands");
   });
+
+  const blockedVersionQualifiedDeploys = [
+    "npx wrangler@4 deploy",
+    "npx --yes wrangler@latest pages deploy out",
+    "npx wrangler@^4.0.0 versions deploy 00000000-0000-0000-0000-000000000000@100",
+    "bunx wrangler@4.20.0 deploy",
+    "pnpm dlx wrangler@4 deploy",
+    "pnpm exec wrangler@4 deploy",
+    "npm exec wrangler@4 deploy",
+    "npm x wrangler@4 pages deploy out",
+    "pnpm dlx cf-tools@npm:wrangler deploy",
+  ] as const;
+
+  it.each(blockedVersionQualifiedDeploys)("blocks the version-qualified deploy %s", (command) => {
+    expect(requireBlockingReason(buildPreToolUseHookOutput({ tool_input: { command } }))).toContain(
+      "Raw production deploy commands",
+    );
+  });
+
+  const blockedVersionQualifiedRemoteD1 = [
+    "npx wrangler@4 d1 execute stablecoin-db --remote --command 'delete from cache'",
+    "bunx wrangler@4 d1 migrations apply stablecoin-db --remote",
+    "pnpm dlx cf-tools@npm:wrangler d1 execute stablecoin-db --remote --command 'update prices set value = 1'",
+  ] as const;
+
+  it.each(blockedVersionQualifiedRemoteD1)("blocks the version-qualified remote D1 mutation %s", (command) => {
+    expect(requireBlockingReason(buildPreToolUseHookOutput({ tool_input: { command } }))).toContain(
+      "Remote D1 mutation commands",
+    );
+  });
+
+  it.each([
+    "npx wrangler@4 d1 execute stablecoin-db --remote --command 'select 1'",
+    "npx wrangler@4 deploy --dry-run",
+    "npx wrangler@4 deploy --help",
+    "npx wrangler@4 --version",
+  ] as const)("allows the safe version-qualified invocation %s", (command) => {
+    expect(buildPreToolUseHookOutput({ tool_input: { command } })).toEqual({});
+  });
 });
 
 describe("W2.7 remote D1 SQL policy", () => {
@@ -1158,8 +1200,32 @@ describe("W2.7 malformed hook payloads", () => {
   it("marks malformed JSON as malformed without touching the process stdin", () => {
     expect(readHookInput({ readStdin: () => "{not-json" })).toEqual({ input: {}, malformed: true });
   });
-  it("keeps the malformed payload CLI response contract", () => {
-    const result = runHookCliProcess("pre-tool-use", "{not-json");
+  it.each([
+    ["empty", ""],
+    ["truncated", '{"tool_name": "Bash", "tool_inp'],
+    ["non-object", '"text"'],
+    ["array", "[]"],
+  ])("denies a %s payload in both enforcement modes", (_label, payload) => {
+    const preToolUse = runHookCliProcess("pre-tool-use", payload);
+    expect(preToolUse.status).toBe(2);
+    expect(JSON.parse(preToolUse.stdout)).toMatchObject({
+      decision: "block",
+      hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "deny" },
+    });
+    expect(preToolUse.stderr).toContain("[rule:malformed-hook-input]");
+
+    const permissionRequest = runHookCliProcess("permission-request", payload);
+    expect(permissionRequest.status).toBe(2);
+    expect(JSON.parse(permissionRequest.stdout)).toMatchObject({
+      hookSpecificOutput: {
+        hookEventName: "PermissionRequest",
+        decision: { behavior: "deny" },
+      },
+    });
+  });
+
+  it("keeps a malformed payload nonfatal and diagnostic in SessionStart", () => {
+    const result = runHookCliProcess("session-start", "{not-json");
 
     expect(result.status).toBe(0);
     expect(result.stdout.trim()).toBe("{}");

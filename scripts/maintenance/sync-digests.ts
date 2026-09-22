@@ -19,6 +19,7 @@ import {
   preserveExistingJsonArrayOnFetchFailure,
   resolveApiUrl,
   shouldAllowExistingDataOnFetchFailure,
+  SnapshotIntegrityError,
   syncJson,
 } from "../lib/sync-from-api";
 
@@ -105,7 +106,7 @@ export function assertDigestArchivePreserved(
   const suffix = missing.length > 10 ? ` (+${missing.length - 10} more)` : "";
   const message = `Digest archive lost ${missing.length} published slug(s): ${sample}${suffix}`;
   if (!allowShrink) {
-    throw new Error(`${message}. Pass --allow-archive-shrink only for an explicitly reviewed removal.`);
+    throw new SnapshotIntegrityError(`${message}. Pass --allow-archive-shrink only for an explicitly reviewed removal.`);
   }
   console.warn(`[sync-digests] WARNING: ${message}`);
 }
