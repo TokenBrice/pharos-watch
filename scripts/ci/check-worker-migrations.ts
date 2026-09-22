@@ -1,5 +1,4 @@
 import { spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -15,6 +14,13 @@ interface ManifestMigrationRowOptions {
   sectionHeading?: string;
   nextHeading?: string;
   allowEmpty?: boolean;
+}
+
+interface DataMigrationManifestRow extends ManifestMigrationRow {
+  predicate: string;
+  oldWorkerCompatibility: string;
+  rollbackBookmark: string;
+  expectedRowBounds: string;
 }
 
 interface ManifestParity {
@@ -34,16 +40,11 @@ interface SchemaRow {
   sql: string;
 }
 
-interface SchemaFingerprint {
-  algorithm: "sha256";
-  value: string;
-  schemaRowCount: number;
-}
-
 interface MigrationExecutor {
   backend: "node:sqlite" | "sqlite3";
   close(): void;
   execute(sql: string): void;
+  hasTable(name: string): boolean;
   getSchemaRows(): SchemaRow[];
 }
 
@@ -51,7 +52,6 @@ interface ValidateWorkerMigrationsOptions {
   migrationsDir?: string;
   manifestPath?: string;
   expectedSchemaPath?: string;
-  includeSchemaFingerprint?: boolean;
   writeSchemaManifest?: boolean;
 }
 
@@ -60,13 +60,17 @@ interface WorkerMigrationResult {
   migrationCount: number;
   manifestParity: ManifestParity;
   rolloutSafetyCheckedCount: number;
+  dataMigrationFixtureCheckedCount: number;
   schemaObjectCount: number;
-  schemaFingerprint: SchemaFingerprint | null;
   uniqueDuplicates: string[];
 }
 
 export const ROLLOUT_SAFETY_ENFORCEMENT_PREFIX = "0071";
 export const REQUIRED_ROLLOUT_SAFETY_MODE = "backward-compatible";
+export const REQUIRED_DATA_MIGRATION_MODE = "reviewed";
+export const DATA_MIGRATION_GRANDFATHER_FILES = Object.freeze([
+  "0236_dex_deployment_attempt_attribution.sql",
+]);
 // Migration 0230 was already shipped before DROP INDEX entered the normal-path gate.
 // Keep replay of that existing migration valid; newer migrations must use coordinated cleanup.
 export const DROP_INDEX_GRANDFATHER_THROUGH_SEQUENCE = 230;
@@ -78,6 +82,14 @@ export const UNSAFE_ROLLOUT_SAFETY_PATTERNS = Object.freeze([
   { label: "ALTER TABLE ... DROP COLUMN", pattern: /\bALTER\s+TABLE\b[\s\S]*?\bDROP\s+COLUMN\b/i },
 ]);
 export const UNSAFE_ROLLOUT_ADD_COLUMN_LABEL = "ALTER TABLE ... ADD COLUMN ... NOT NULL without DEFAULT";
+export const DESTRUCTIVE_DATA_MIGRATION_PATTERNS = Object.freeze([
+  { label: "DELETE FROM", pattern: /\bDELETE\s+FROM\b/i },
+  {
+    label: "UPDATE",
+    pattern: /\bUPDATE\s+(?:OR\s+(?:ROLLBACK|ABORT|REPLACE|FAIL|IGNORE)\s+)?["`[]?[A-Za-z_][A-Za-z0-9_]*[\]`"]?\s+SET\b/i,
+  },
+  { label: "INSERT OR REPLACE", pattern: /\bINSERT\s+OR\s+REPLACE\s+INTO\b/i },
+]);
 
 
 export function getMigrationSequenceNumber(file: string): number {
@@ -148,6 +160,36 @@ export function parseManifestMigrationRows(
   return rows;
 }
 
+export function parseDataMigrationManifestRows(manifestText: string): DataMigrationManifestRow[] {
+  const sectionHeading = "## Reviewed Data Migrations";
+  const startIndex = manifestText.indexOf(sectionHeading);
+  if (startIndex === -1) {
+    throw new Error(`worker/migrations/MANIFEST.md is missing the "${sectionHeading}" section.`);
+  }
+
+  const sectionStart = startIndex + sectionHeading.length;
+  const nextHeadingIndex = manifestText.indexOf("\n## ", sectionStart);
+  const sectionText = manifestText.slice(
+    sectionStart,
+    nextHeadingIndex === -1 ? manifestText.length : nextHeadingIndex,
+  );
+  const rows = [...sectionText.matchAll(
+    /^\|\s*(\d{4})\s*\|\s*`([^`]+\.sql)`\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|$/gm,
+  )].map(([, sequence, filename, predicate, oldWorkerCompatibility, rollbackBookmark, expectedRowBounds]) => ({
+    sequence,
+    filename,
+    predicate: predicate.trim(),
+    oldWorkerCompatibility: oldWorkerCompatibility.trim(),
+    rollbackBookmark: rollbackBookmark.trim(),
+    expectedRowBounds: expectedRowBounds.trim(),
+  }));
+
+  if (rows.length === 0) {
+    throw new Error(`worker/migrations/MANIFEST.md section "${sectionHeading}" has no migration rows.`);
+  }
+  return rows;
+}
+
 export function validateManifestMigrationParity(
   migrationFiles: readonly string[],
   manifestText: string,
@@ -171,7 +213,11 @@ export function validateManifestMigrationParity(
     : [];
   const retiredRows = parseManifestMigrationRows(manifestText, {
     sectionHeading: "## Retired Individual Migrations",
-    nextHeading: "## Known Anomalies",
+    nextHeading: manifestText.includes("## Completed Destructive Cleanup Operations")
+      ? "## Completed Destructive Cleanup Operations"
+      : manifestText.includes("## Reviewed Data Migrations")
+        ? "## Reviewed Data Migrations"
+        : "## Known Anomalies",
   });
 
   const activeFiles = migrationFiles.filter((file) => file !== "0000_baseline.sql");
@@ -284,6 +330,10 @@ export function parseRolloutSafetyMode(sql: string): string | null {
   return sql.match(/^\s*--\s*rollout-safety:\s*([a-z-]+)\s*$/im)?.[1].toLowerCase() ?? null;
 }
 
+export function parseDataMigrationMode(sql: string): string | null {
+  return sql.match(/^\s*--\s*data-migration:\s*([a-z-]+)\s*$/im)?.[1].toLowerCase() ?? null;
+}
+
 export function stripSqlComments(sql: string): string {
   return sql.replace(/\/\*[\s\S]*?\*\//g, "").replace(/--.*$/gm, "");
 }
@@ -310,6 +360,49 @@ export function findUnsafeRolloutStatements(sql: string): string[] {
   return [...new Set(unsafeStatements)];
 }
 
+export function findDestructiveDataStatements(sql: string): string[] {
+  const normalizedSql = stripSqlComments(sql);
+  return DESTRUCTIVE_DATA_MIGRATION_PATTERNS
+    .filter(({ pattern }) => pattern.test(normalizedSql))
+    .map(({ label }) => label);
+}
+
+export function findDataMigrationTargets(sql: string): string[] {
+  const normalizedSql = stripSqlComments(sql);
+  const targets = [
+    ...normalizedSql.matchAll(/\bDELETE\s+FROM\s+["`[]?([A-Za-z_][A-Za-z0-9_]*)/gi),
+    ...normalizedSql.matchAll(/\bUPDATE\s+(?:OR\s+(?:ROLLBACK|ABORT|REPLACE|FAIL|IGNORE)\s+)?["`[]?([A-Za-z_][A-Za-z0-9_]*)[\]`"]?\s+SET\b/gi),
+    ...normalizedSql.matchAll(/\bINSERT\s+OR\s+REPLACE\s+INTO\s+["`[]?([A-Za-z_][A-Za-z0-9_]*)/gi),
+  ].map((match) => match[1].toLowerCase());
+  return [...new Set(targets)];
+}
+
+export function validateDataMigrationManifestRows(
+  rows: readonly DataMigrationManifestRow[],
+  migrationFiles: readonly string[],
+  migrationSql: ReadonlyMap<string, string>,
+): void {
+  const duplicateFiles = rows
+    .map((row) => row.filename)
+    .filter((filename, index, filenames) => filenames.indexOf(filename) !== index);
+  if (duplicateFiles.length > 0) {
+    throw new Error(`duplicate reviewed data-migration rows: ${[...new Set(duplicateFiles)].join(", ")}`);
+  }
+
+  for (const row of rows) {
+    if (!migrationFiles.includes(row.filename)) {
+      throw new Error(`reviewed data-migration row has no active migration file: ${row.filename}`);
+    }
+    if (row.sequence !== row.filename.slice(0, 4)) {
+      throw new Error(`reviewed data-migration sequence/filename mismatch: ${row.sequence} -> ${row.filename}`);
+    }
+    const sql = migrationSql.get(row.filename);
+    if (!sql || findDestructiveDataStatements(sql).length === 0) {
+      throw new Error(`reviewed data-migration row does not name a migration with destructive DML: ${row.filename}`);
+    }
+  }
+}
+
 export function validateNoSqliteDotCommands(file: string, sql: string): void {
   const dotCommandLine = sql.split(/\r?\n/).find((line) => /^\s*\./.test(line));
 
@@ -324,6 +417,7 @@ export function validateRolloutSafetyAnnotation(
   file: string,
   sql: string,
   enforcementPrefix = ROLLOUT_SAFETY_ENFORCEMENT_PREFIX,
+  dataMigrationRows: readonly DataMigrationManifestRow[] = [],
 ): { checked: false; mode?: never } | { checked: true; mode: string } {
   if (!requiresRolloutSafetyValidation(file, enforcementPrefix)) {
     return { checked: false };
@@ -357,10 +451,35 @@ export function validateRolloutSafetyAnnotation(
     );
   }
 
+  const destructiveDataStatements = findDestructiveDataStatements(sql);
+  const dataMigrationMode = parseDataMigrationMode(sql);
+  if (destructiveDataStatements.length === 0) {
+    if (dataMigrationMode) {
+      throw new Error(`${file} declares data-migration metadata but contains no reviewed destructive DML.`);
+    }
+    return { checked: true, mode };
+  }
+
+  const manifestRow = dataMigrationRows.find((row) => row.filename === file);
+  if (!manifestRow) {
+    throw new Error(
+      `${file} contains ${destructiveDataStatements.join(", ")} and requires a Reviewed Data Migrations manifest row.`,
+    );
+  }
+
+  if (!DATA_MIGRATION_GRANDFATHER_FILES.includes(file) && dataMigrationMode !== REQUIRED_DATA_MIGRATION_MODE) {
+    throw new Error(
+      `${file} contains ${destructiveDataStatements.join(", ")} and must declare "-- data-migration: ${REQUIRED_DATA_MIGRATION_MODE}".`,
+    );
+  }
+  if (dataMigrationMode && dataMigrationMode !== REQUIRED_DATA_MIGRATION_MODE) {
+    throw new Error(`${file} declares unsupported data-migration mode "${dataMigrationMode}".`);
+  }
+
   return { checked: true, mode };
 }
 
-const SCHEMA_FINGERPRINT_QUERY = `
+const SCHEMA_OBJECT_QUERY = `
 SELECT type, name, tbl_name, sql
 FROM sqlite_schema
 WHERE sql IS NOT NULL
@@ -368,23 +487,6 @@ WHERE sql IS NOT NULL
   AND tbl_name NOT LIKE 'sqlite_%'
 ORDER BY type, name, tbl_name
 `;
-
-function normalizeSchemaSql(sql: string): string {
-  return sql.replace(/\s+/g, " ").trim();
-}
-
-export function createSchemaFingerprint(schemaRows: readonly SchemaRow[]): SchemaFingerprint {
-  const normalizedRows = schemaRows
-    .map((row) => `${row.type}\t${row.name}\t${row.tblName}\t${normalizeSchemaSql(row.sql)}`)
-    .sort();
-  const digest = createHash("sha256").update(normalizedRows.join("\n")).digest("hex");
-
-  return {
-    algorithm: "sha256",
-    value: digest,
-    schemaRowCount: normalizedRows.length,
-  };
-}
 
 export function createSchemaObjectManifest(schemaRows: readonly SchemaRow[]): string {
   return `${schemaRows
@@ -426,9 +528,14 @@ async function createExecutor(dbPath: string): Promise<MigrationExecutor> {
       execute(sql: string) {
         db.exec(sql);
       },
+      hasTable(name: string) {
+        return Boolean(
+          db.prepare("SELECT 1 FROM sqlite_schema WHERE type = 'table' AND name = ?").get(name),
+        );
+      },
       getSchemaRows() {
         return db
-          .prepare(SCHEMA_FINGERPRINT_QUERY)
+          .prepare(SCHEMA_OBJECT_QUERY)
           .all()
           .map((row) => ({
             type: String(row.type),
@@ -463,28 +570,40 @@ async function createExecutor(dbPath: string): Promise<MigrationExecutor> {
             throw new Error(detail || `sqlite3 exited with status ${result.status}`);
           }
         },
+        hasTable(name: string) {
+          const result = spawnSync(
+            "sqlite3",
+            ["-bail", dbPath, `SELECT 1 FROM sqlite_schema WHERE type = 'table' AND name = '${name}';`],
+            { encoding: "utf8" },
+          );
+          if (result.error || result.status !== 0) {
+            const detail = result.error?.message ?? (result.stderr || result.stdout || "").trim();
+            throw new Error(`sqlite3 table fixture query failed: ${detail}`);
+          }
+          return result.stdout.trim() === "1";
+        },
         getSchemaRows() {
-          const result = spawnSync("sqlite3", ["-bail", "-json", dbPath, SCHEMA_FINGERPRINT_QUERY], {
+          const result = spawnSync("sqlite3", ["-bail", "-json", dbPath, SCHEMA_OBJECT_QUERY], {
             encoding: "utf8",
           });
 
           if (result.error) {
-            throw new Error(`sqlite3 CLI schema fingerprint query failed: ${result.error.message}`);
+            throw new Error(`sqlite3 CLI schema object query failed: ${result.error.message}`);
           }
 
           if (result.status !== 0) {
             const detail = (result.stderr || result.stdout || "").trim();
-            throw new Error(detail || `sqlite3 schema fingerprint query exited with status ${result.status}`);
+            throw new Error(detail || `sqlite3 schema object query exited with status ${result.status}`);
           }
 
           const rows: unknown = JSON.parse(result.stdout || "[]");
           if (!Array.isArray(rows)) {
-            throw new Error("sqlite3 schema fingerprint query returned a non-array payload");
+            throw new Error("sqlite3 schema object query returned a non-array payload");
           }
 
           return rows.map((row): SchemaRow => {
             if (!row || typeof row !== "object") {
-              throw new Error("sqlite3 schema fingerprint query returned an invalid row");
+              throw new Error("sqlite3 schema object query returned an invalid row");
             }
             const record = row as Record<string, unknown>;
             return {
@@ -512,11 +631,40 @@ async function createExecutor(dbPath: string): Promise<MigrationExecutor> {
   }
 }
 
+function seedPreMigrationFixture(executor: MigrationExecutor, targets: readonly string[]): void {
+  for (const target of targets) {
+    if (!executor.hasTable(target)) {
+      throw new Error(`seeded pre-migration fixture target does not exist: ${target}`);
+    }
+    if (target === "cron_runs") {
+      executor.execute(
+        "INSERT INTO cron_runs (job, started_at, duration_ms, status) VALUES ('migration-gate-fixture', 1, 0, 'ok');",
+      );
+      continue;
+    }
+    if (target === "dex_deployment_outcomes") {
+      executor.execute(`
+        INSERT INTO dex_discovery_meta (stablecoin_id, last_crawl_at)
+        VALUES ('migration-gate-fixture', 100);
+        INSERT INTO dex_deployment_outcomes (
+          stablecoin_id, chain, contract_address, outcome, reason, observed_at
+        ) VALUES (
+          'migration-gate-fixture', 'ethereum', '0x0000000000000000000000000000000000000001',
+          'verified_no_pools', 'migration-gate-fixture', 90
+        );
+      `);
+      continue;
+    }
+    throw new Error(
+      `No seeded pre-migration fixture is defined for data-migration target "${target}". Add a representative existing row before approving the migration.`,
+    );
+  }
+}
+
 export async function validateWorkerMigrations({
   migrationsDir = resolve("worker/migrations"),
   manifestPath = resolve("worker/migrations/MANIFEST.md"),
   expectedSchemaPath = resolve("worker/migrations/EXPECTED_SCHEMA.txt"),
-  includeSchemaFingerprint = false,
   writeSchemaManifest = false,
 }: ValidateWorkerMigrationsOptions = {}): Promise<WorkerMigrationResult> {
   const migrationFiles = getWorkerMigrationFiles(migrationsDir);
@@ -524,28 +672,39 @@ export async function validateWorkerMigrations({
     throw new Error(`No migration files found in ${migrationsDir}`);
   }
 
+  const migrationSql = new Map(
+    migrationFiles.map((file) => [file, readFileSync(join(migrationsDir, file), "utf8")]),
+  );
   const manifestText = readFileSync(manifestPath, "utf8");
   const rolloutSafetyPolicy = parseRolloutSafetyPolicy(manifestText);
   validateRolloutSafetyPolicy(rolloutSafetyPolicy);
   const manifestParity = validateManifestMigrationParity(migrationFiles, manifestText);
+  const dataMigrationRows = parseDataMigrationManifestRows(manifestText);
+  validateDataMigrationManifestRows(dataMigrationRows, migrationFiles, migrationSql);
   const uniqueDuplicates = validateDuplicatePrefixes(migrationFiles);
+  let rolloutSafetyCheckedCount = 0;
+  for (const file of migrationFiles) {
+    const sql = migrationSql.get(file)!;
+    const rolloutSafety = validateRolloutSafetyAnnotation(
+      file,
+      sql,
+      rolloutSafetyPolicy.enforcementPrefix,
+      dataMigrationRows,
+    );
+    validateNoSqliteDotCommands(file, sql);
+    rolloutSafetyCheckedCount += rolloutSafety.checked ? 1 : 0;
+  }
 
   const tempDir = mkdtempSync(join(tmpdir(), "pharos-worker-migrations-"));
   const dbPath = join(tempDir, "migrations.db");
   const executor = await createExecutor(dbPath);
-  let rolloutSafetyCheckedCount = 0;
-  let schemaFingerprint: SchemaFingerprint | null = null;
+  let dataMigrationFixtureCheckedCount = 0;
   let schemaObjectCount = 0;
 
   try {
     for (const file of migrationFiles) {
-      const sql = readFileSync(join(migrationsDir, file), "utf8");
-      const rolloutSafety = validateRolloutSafetyAnnotation(file, sql, rolloutSafetyPolicy.enforcementPrefix);
-      validateNoSqliteDotCommands(file, sql);
-      rolloutSafetyCheckedCount += rolloutSafety.checked ? 1 : 0;
-
       try {
-        executor.execute(sql);
+        executor.execute(migrationSql.get(file)!);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         throw new Error(`Migration replay failed for ${join(migrationsDir, file)}\n${message}`);
@@ -562,8 +721,23 @@ export async function validateWorkerMigrations({
       validateSchemaObjectManifest(schemaObjectManifest, readFileSync(expectedSchemaPath, "utf8"));
     }
 
-    if (includeSchemaFingerprint) {
-      schemaFingerprint = createSchemaFingerprint(schemaRows);
+    for (const row of dataMigrationRows) {
+      const migrationIndex = migrationFiles.indexOf(row.filename);
+      const fixtureExecutor = await createExecutor(join(tempDir, `fixture-${row.sequence}.db`));
+      try {
+        for (const priorFile of migrationFiles.slice(0, migrationIndex)) {
+          fixtureExecutor.execute(migrationSql.get(priorFile)!);
+        }
+        const sql = migrationSql.get(row.filename)!;
+        seedPreMigrationFixture(fixtureExecutor, findDataMigrationTargets(sql));
+        fixtureExecutor.execute(sql);
+        dataMigrationFixtureCheckedCount += 1;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        throw new Error(`Seeded pre-migration fixture failed for ${row.filename}\n${message}`);
+      } finally {
+        fixtureExecutor.close();
+      }
     }
   } finally {
     executor.close();
@@ -575,86 +749,39 @@ export async function validateWorkerMigrations({
     migrationCount: migrationFiles.length,
     manifestParity,
     rolloutSafetyCheckedCount,
+    dataMigrationFixtureCheckedCount,
     schemaObjectCount,
-    schemaFingerprint,
     uniqueDuplicates,
   };
 }
 
 function parseCliArgs(argv: readonly string[]) {
-  let includeSchemaFingerprint = false;
-  let schemaFingerprintOutput = process.env.PHAROS_MIGRATION_SCHEMA_FINGERPRINT_PATH ?? null;
   let writeSchemaManifest = false;
 
   for (const arg of argv) {
-    if (arg === "--schema-fingerprint") {
-      includeSchemaFingerprint = true;
-      continue;
-    }
-
-    if (arg.startsWith("--schema-fingerprint-output=")) {
-      includeSchemaFingerprint = true;
-      schemaFingerprintOutput = arg.slice("--schema-fingerprint-output=".length);
-      continue;
-    }
-
     if (arg === "--write-schema-manifest") {
       writeSchemaManifest = true;
       continue;
     }
-
     throw new Error(`Unknown argument: ${arg}`);
   }
 
-  if (schemaFingerprintOutput) {
-    includeSchemaFingerprint = true;
-  }
-
-  return { includeSchemaFingerprint, schemaFingerprintOutput, writeSchemaManifest };
-}
-
-function writeSchemaFingerprint(path: string, result: WorkerMigrationResult): void {
-  if (!result.schemaFingerprint) {
-    return;
-  }
-
-  const payload = {
-    generatedAt: new Date().toISOString(),
-    migrations: {
-      count: result.migrationCount,
-      activeManifestCount: result.manifestParity.activeManifestCount,
-      retiredManifestCount: result.manifestParity.retiredManifestCount,
-      rolloutSafetyCheckedCount: result.rolloutSafetyCheckedCount,
-    },
-    schemaFingerprint: result.schemaFingerprint,
-  };
-
-  mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, `${JSON.stringify(payload, null, 2)}\n`);
+  return { writeSchemaManifest };
 }
 
 async function main() {
   try {
     const options = parseCliArgs(process.argv.slice(2));
     const result = await validateWorkerMigrations({
-      includeSchemaFingerprint: options.includeSchemaFingerprint,
       writeSchemaManifest: options.writeSchemaManifest,
     });
     console.log(
-      `Validated ${result.migrationCount} worker migrations with ${result.backend} (manifest rows: ${result.manifestParity.activeManifestCount} active, ${result.manifestParity.retiredManifestCount} retired; rollout safety checked: ${result.rolloutSafetyCheckedCount}).`,
+      `Validated ${result.migrationCount} worker migrations with ${result.backend} (manifest rows: ${result.manifestParity.activeManifestCount} active, ${result.manifestParity.retiredManifestCount} retired; rollout safety checked: ${result.rolloutSafetyCheckedCount}; seeded data migrations checked: ${result.dataMigrationFixtureCheckedCount}).`,
     );
     console.log(
       `${options.writeSchemaManifest ? "Regenerated" : "Validated"} fresh-replay schema manifest (${result.schemaObjectCount} objects).`,
     );
-    if (result.schemaFingerprint) {
-      console.log(
-        `Schema fingerprint (${result.schemaFingerprint.algorithm}): ${result.schemaFingerprint.value} (${result.schemaFingerprint.schemaRowCount} schema rows).`,
-      );
-    }
-    if (options.schemaFingerprintOutput) {
-      writeSchemaFingerprint(options.schemaFingerprintOutput, result);
-      console.log(`Wrote schema fingerprint artifact to ${options.schemaFingerprintOutput}.`);
-    }
+
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(message);
