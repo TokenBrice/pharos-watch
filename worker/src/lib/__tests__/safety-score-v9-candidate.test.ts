@@ -473,7 +473,8 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
         custodyContinuity: { status: { observationState: "known" } },
         assuranceAndReconciliation: { status: { observationState: "known" } },
       },
-      controlReview: { state: "reviewed-controls" },
+      // SAFETY-SCORE-V9-25 L-08 keeps an unattributed bridge share unresolved.
+      controlReview: { state: "partially-reviewed-controls" },
       economicControlReview: {
         mint: {
           status: { observationState: "known" },

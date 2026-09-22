@@ -352,7 +352,7 @@ describe("buildSafetyScoreV9SupplyReview", () => {
     expect(review!.unreviewedRouteSupplyShare).toBeCloseTo(0.25, 6);
     expect(review!.failureDomains).toContainEqual({ kind: "bridge-route", key: "chain:Ethereum" });
     expect(safetyScoreV9RouteSupplyShare(review, "ethereum:native")).toBeCloseTo(0.6, 6);
-    expect(safetyScoreV9RouteSupplyShare(review, "unknown:route")).toBe(0);
+    expect(safetyScoreV9RouteSupplyShare(review, "unknown:route")).toBeNull();
     expect(safetyScoreV9RouteSupplyShare(null, "ethereum:native")).toBeNull();
   });
 

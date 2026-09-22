@@ -315,7 +315,10 @@ export async function runV9AfterCoreWithinWindow(
         coreSlotStartedAt,
       });
     }
-    return laneLease.result!;
+    if (laneLease.result === undefined) {
+      throw new Error(`${options.lane} lease completed without a result`);
+    }
+    return laneLease.result;
   } finally {
     timeout.dispose();
   }

@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { MINT_AUTHORITY_POSTURE_VALUES } from "../../types/core";
+import {
+  MINT_AUTHORITY_POSTURE_VALUES,
+  type MintAuthorityPosture,
+} from "../../types/core";
 import { buildV9CuratedMintPostureQueue } from "../safety-score-v9/mint-posture-annotation";
 import {
   V9_MINT_POSTURE_BAND_ORDER,
   V9_MINT_POSTURE_BANDS,
+  curatedMintPostureBand,
   isFragileMintPosture,
   isNoPrivilegedMintChainPosture,
   isNoPrivilegedMintPosture,
@@ -28,6 +32,10 @@ describe("V9 mint posture bands", () => {
     expect(resolveV9MintPostureBand(null)).toBeNull();
     expect(resolveV9MintPostureBand(undefined)).toBeNull();
     expect(resolveV9MintPostureBand("a-posture-from-a-newer-publication")).toBeNull();
+    for (const prototypeName of ["constructor", "toString", "__proto__"]) {
+      expect(resolveV9MintPostureBand(prototypeName)).toBeNull();
+      expect(curatedMintPostureBand(prototypeName as MintAuthorityPosture)).toBeNull();
+    }
   });
 
   it("keeps the band order and label table in sync", () => {

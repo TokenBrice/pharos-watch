@@ -22,7 +22,7 @@ import {
   deriveSupplyModelExitRouteObservation,
   REDEMPTION_SETTLEMENT_HORIZON_CEILING_SEC,
 } from "../redemption-exit-route-observations";
-import type { SafetyScoreV9FactSetExtensionV2 } from "./fact-set";
+import type { SafetyScoreV9FactSetExtensionV2 } from "./fact-set-schema";
 import type { SafetyScoreV9CompilerInput } from "./native-input";
 
 type ExtensionAsset = SafetyScoreV9FactSetExtensionV2["assets"][number];
@@ -37,7 +37,6 @@ type TrackedStablecoinValuation = Pick<
 type RedemptionSettlementModel = RedemptionBackstopConfig["settlementModel"];
 type ComposedDexExit = NonNullable<RedemptionBackstopConfig["v9ComposedDexExit"]>;
 
-export const canonicalExecutionCostKey = canonicalV9ExecutionCostKey;
 function canonicalExecutionCosts(
   observation: ExitRouteObservation,
   resolveCostBps: (point: {
@@ -63,7 +62,7 @@ function canonicalExecutionCosts(
         point.executionCostBps ?? resolveCostBps(point) ?? point.maxCostBps,
     }))
     .sort((left, right) =>
-      compareText(canonicalExecutionCostKey(left), canonicalExecutionCostKey(right)),
+      compareText(canonicalV9ExecutionCostKey(left), canonicalV9ExecutionCostKey(right)),
     );
 }
 
@@ -399,7 +398,10 @@ function buildOutputReview(
     const weakest =
       pricedComponents.length > 0
         ? pricedComponents.reduce((minimum, component) =>
-        component.tracked!.unitValueUsd < minimum.tracked!.unitValueUsd ? component : minimum,
+            component.tracked.unitValueUsd / component.tracked.expectedUnitValueUsd <
+              minimum.tracked.unitValueUsd / minimum.tracked.expectedUnitValueUsd
+              ? component
+              : minimum,
           )
         : null;
     const weakestKnownValuation = weakest

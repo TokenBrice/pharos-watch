@@ -131,13 +131,16 @@ describe("Safety Score V9 score-trace reconciliation", { timeout: 30_000 }, () =
     }).toEqual({
       score: null,
       grade: "NR",
-      // The unified control predicate removes USDC's false unresolved-control fact.
-      totalFactCount: 4,
+      // SAFETY-SCORE-V9-25 L-08 keeps the missing bridge-supply attribution
+      // explicit instead of treating the route as measured zero.
+      totalFactCount: 7,
       reasonCodes: [
         "insufficient-evidence",
         "missing-peg-input",
         "missing-reserve-composition",
         "missing-same-notional-route",
+        "runtime-bridge-materiality-unavailable",
+        "unresolved-control-identity",
       ],
     });
 

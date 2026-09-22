@@ -69,8 +69,8 @@ const POSTURE_BANDS: Record<V9MintPosture, V9MintPostureBand | null> = {
  * both render as NR rather than being forced into a band.
  */
 export function resolveV9MintPostureBand(posture: string | null | undefined): V9MintPostureBand | null {
-  if (posture == null) return null;
-  return POSTURE_BANDS[posture as V9MintPosture] ?? null;
+  if (posture == null || !Object.prototype.hasOwnProperty.call(POSTURE_BANDS, posture)) return null;
+  return POSTURE_BANDS[posture as V9MintPosture];
 }
 
 /**
@@ -92,7 +92,12 @@ const CURATED_ONLY_POSTURE_BANDS: Partial<Record<MintAuthorityPosture, V9MintPos
  */
 export function curatedMintPostureBand(posture: MintAuthorityPosture | null | undefined): V9MintPostureBand | null {
   if (posture == null || posture === "unknown") return null;
-  return CURATED_ONLY_POSTURE_BANDS[posture] ?? POSTURE_BANDS[posture as V9MintPosture] ?? null;
+  if (Object.prototype.hasOwnProperty.call(CURATED_ONLY_POSTURE_BANDS, posture)) {
+    return CURATED_ONLY_POSTURE_BANDS[posture] ?? null;
+  }
+  return Object.prototype.hasOwnProperty.call(POSTURE_BANDS, posture)
+    ? POSTURE_BANDS[posture as V9MintPosture]
+    : null;
 }
 
 /*
