@@ -298,8 +298,27 @@ describe("telegram authoritative retention", () => {
     const { sqlite, db } = setupLatestSchema();
 
     const result = await runTelegramRetentionCleanup(db);
+    const metadata = JSON.parse(result.metadata!) as Record<string, unknown>;
 
-    expect(JSON.parse(result.metadata!)).toMatchSnapshot();
+    expect(result.status).toBe("ok");
+    expect(Object.entries(metadata).filter(([key, value]) => key.endsWith("Pruned") && value !== 0)).toEqual([]);
+    expect(
+      Object.entries(metadata.cappedAtLimit as Record<string, boolean>).filter(([, capped]) => capped),
+    ).toEqual([]);
+    expect(metadata.runBudgetTruncated).toBe(false);
+    expect(metadata.expiredTargetsReconciled).toBe(0);
+    expect(metadata.processedUpdatesPruned).toBe(0);
+    expect(metadata.processedUpdatesRemainingBacklog).toEqual({ count: 0, exact: true, probeLimit: 5001 });
+    expect(metadata.highGrowthRetention).toMatchObject({
+      error: null,
+      cappedAtLimit: false,
+      legacyTerminalJobsPruned: 0,
+      staleUnresolvedJobsPruned: 0,
+      staleUnresolvedSourcesPruned: 0,
+      oldestUnresolvedSourceRemainingAt: null,
+      terminalCutoff: NOW_SEC - 14 * DAY_SEC,
+      unresolvedCutoff: NOW_SEC - 30 * DAY_SEC,
+    });
     sqlite.close();
   });
 
@@ -381,6 +400,12 @@ describe("telegram authoritative retention", () => {
       targetPlanPagesPruned: 2,
       targetPlanItemsPruned: 2,
       targetExpiryProgressPruned: 2,
+      sourceResolutionPagesPruned: 2,
+      sourceResolutionMembershipsPruned: 2,
+      sourceResolutionTargetsPruned: 2,
+      sourceEventsPruned: 1,
+      jobsPruned: 1,
+      jobTargetsPruned: 1,
       replayJobTargetsPruned: 1,
       targetPlansPruned: 1,
       replayJobsPruned: 1,
@@ -391,7 +416,6 @@ describe("telegram authoritative retention", () => {
         authoritativeReplay: 14,
       },
     });
-    expect(metadata).toMatchSnapshot();
     sqlite.close();
   });
 
@@ -697,7 +721,6 @@ describe("telegram authoritative retention", () => {
         cappedAtLimit: true,
       },
     });
-    expect(metadata).toMatchSnapshot();
     expect(Number(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_jobs").get()?.count)).toBe(2);
     expect(
       Number(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_source_events").get()?.count),
@@ -720,15 +743,13 @@ describe("telegram authoritative retention", () => {
 
     const result = await runTelegramRetentionCleanup(isolatedDb);
     const metadata = JSON.parse(result.metadata!) as {
-      highGrowthRetention: { error: string | null; durationMs: number };
+      highGrowthRetention: { error: string | null };
       usageDailyPruned: number;
     };
 
     expect(result.status).toBe("degraded");
     expect(metadata.highGrowthRetention.error).toContain("injected Telegram high-growth cleanup failure");
-    expect(metadata.highGrowthRetention.durationMs).toBeGreaterThanOrEqual(0);
     expect(metadata.usageDailyPruned).toBe(0);
-    expect(metadata).toMatchSnapshot();
     sqlite.close();
   });
 });

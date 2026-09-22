@@ -113,21 +113,32 @@ describe("drainPendingQueue contract cases", () => {
     expect(sentHtml.indexOf("chunk-1")).toBeLessThan(sentHtml.indexOf("chunk-2"));
     expect(mockSendToChat.mock.calls.find((call) => call[0] === "quiet")?.[3]).toEqual(expect.objectContaining({ disableNotification: true }));
     expect(markStarted).toHaveBeenCalled();
-    expect(history(db, "FROM telegram_pending_alerts p").length).toBeGreaterThanOrEqual(2);
-    expect(history(db, "SELECT p.id").every((entry) => /p\.chunk_index ASC\s+LIMIT/.test(entry.sql))).toBe(true);
   });
 
   it("honors selection boundaries, snooze, max-priority filtering, and soft-deadline release", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const snoozed = queueDb([row(30, { chat_id: "snoozed", alert_snooze_until_ts: now + 900 })], [{ match: "SET not_before_at", rows: [] }]);
-    await expect(drainPendingQueue(snoozed, "bot-token", 10)).resolves.toMatchObject({ attempted: 0, deferred: 1 });
-    expect(history(snoozed, "SET not_before_at")[0]?.binds.slice(0, 4)).toEqual([now + 900, "preference_snoozed", now, 30]);
+    const snoozed = await withPendingQueueScenario({
+      now,
+      subscriber: { chatId: "snoozed", snoozeUntil: now + 900, global: { dews: true } },
+      pending: { id: 30, chatId: "snoozed", html: "snoozed", createdAt: now - 60, expiresAt: now + 600 },
+    }, async ({ sqlite, db }) => ({
+      result: await drainPendingQueue(db, "bot-token", 10),
+      state: sqlite.prepare("SELECT not_before_at, last_error_class, processing_owner FROM telegram_pending_alerts WHERE id = 30").get(),
+    }));
+    expect(snoozed.result).toMatchObject({ attempted: 0, deferred: 1 });
+    expect(snoozed.state).toEqual({ not_before_at: now + 900, last_error_class: "preference_snoozed", processing_owner: null });
+    expect(mockSendToChat).not.toHaveBeenCalled();
 
-    const filtered = queueDb([]);
-    await drainPendingQueue(filtered, "bot-token", 10, undefined, { maxPriority: TELEGRAM_PENDING_PRIORITY.riskAlert });
-    const select = history(filtered, "SELECT p.id")[0];
-    expect(select?.sql).toContain("COALESCE(p.priority");
-    expect(select?.binds).toEqual([PENDING_TTL_SEC, now, now, TELEGRAM_PENDING_PRIORITY.riskAlert, TELEGRAM_PENDING_PRIORITY.legacy, TELEGRAM_PENDING_PRIORITY.riskAlert, now, TELEGRAM_PENDING_PRIORITY.legacy, 10]);
+    mockSendToChat.mockResolvedValue(makeTelegramSentResult());
+    const filtered = await withPendingQueueScenario({
+      now,
+      pending: [
+        { id: 32, chatId: "risk", html: "risk", createdAt: now - 60, expiresAt: now + 600, priority: TELEGRAM_PENDING_PRIORITY.riskAlert, dedupeKey: "risk" },
+        { id: 33, chatId: "broadcast", html: "broadcast", createdAt: now - 60, expiresAt: now + 600, priority: TELEGRAM_PENDING_PRIORITY.adminBroadcast, sourceType: "admin_broadcast", dedupeKey: "broadcast" },
+      ],
+    }, async ({ db }) => drainPendingQueue(db, "bot-token", 10, undefined, { maxPriority: TELEGRAM_PENDING_PRIORITY.riskAlert }));
+    expect(filtered).toMatchObject({ attempted: 1, sent: 1 });
+    expect(mockSendToChat.mock.calls.map((call) => call[0])).toEqual(["risk"]);
 
     const deadline = await withPendingQueueScenario({ now, pending: { id: 31, chatId: "deadline", html: "deadline", createdAt: now - 60, expiresAt: now + 600 } }, async ({ sqlite, db }) => {
       const result = await drainPendingQueue(db, "bot-token", 10, undefined, { softDeadlineAtMs: Date.now() - 1 });
@@ -202,45 +213,85 @@ describe("drainPendingQueue contract cases", () => {
       calls++;
       return Promise.resolve(calls === (scope === "global" ? 4 : 4) ? makeTelegramRateLimitedResult({ rateLimitScope: scope, retryAfterSec: 30 }) : makeTelegramSentResult());
     });
-    const globalBackoffUpsert = "ON CONFLICT(key) DO UPDATE SET";
-    const db = queueDb(rows, [{ match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] }, { match: "UPDATE telegram_pending_alerts SET attempts", rows: [] }, ...(scope === "global" ? [{ match: globalBackoffUpsert, rows: [] }] : [])]);
+    const db = queueDb(rows, [{ match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] }, { match: "UPDATE telegram_pending_alerts SET attempts", rows: [] }, ...(scope === "global" ? [{ match: "ON CONFLICT(key) DO UPDATE SET", rows: [] }] : [])]);
     const result = await drainPendingQueue(db, "bot-token", 20);
     expect(result).toMatchObject({ attempted: expectedCalls, sent: expectedSent, retryQueued: 1, rateLimited: true, retryAfterSec: 30 });
-    if (scope === "global") expect(history(db, globalBackoffUpsert)[0]?.binds).toEqual([TELEGRAM_GLOBAL_BACKOFF_CACHE_KEY, String(Math.floor(Date.now() / 1000) + 30), Math.floor(Date.now() / 1000)]);
-    else expect(history(db, globalBackoffUpsert)).toHaveLength(0);
+  });
+
+  it.each(["global", "chat"] as const)("persists a %s rate limit only at its own scope", async (scope) => {
+    const now = Math.floor(Date.now() / 1000);
+    mockSendToChat
+      .mockResolvedValueOnce(makeTelegramRateLimitedResult({ rateLimitScope: scope, retryAfterSec: 30 }))
+      .mockResolvedValue(makeTelegramSentResult());
+    await withPendingQueueScenario({
+      now,
+      pending: [
+        { id: 60, chatId: "limited-a", html: "a", createdAt: now - 60, expiresAt: now + 600, dedupeKey: "limited-a" },
+        { id: 61, chatId: "limited-b", html: "b", createdAt: now - 60, expiresAt: now + 600, dedupeKey: "limited-b" },
+      ],
+    }, async ({ sqlite, db }) => {
+      const first = await drainPendingQueue(db, "bot-token", 10);
+      expect(first).toMatchObject({ rateLimited: true, retryAfterSec: 30, attempted: 2, sent: 1 });
+      expect(await readTelegramGlobalBackoff(db, now)).toBe(scope === "global" ? now + 30 : null);
+
+      insertPendingSqlite(sqlite, { id: 62, chatId: "limited-c", html: "c", createdAt: now - 60, expiresAt: now + 600, dedupeKey: "limited-c" }, now);
+      mockSendToChat.mockClear();
+      const second = await drainPendingQueue(db, "bot-token", 10);
+      expect(second).toMatchObject({ attempted: scope === "global" ? 0 : 1, sent: scope === "global" ? 0 : 1 });
+    });
   });
 
   it("defers later same-chat chunks after a chat limit while other chats continue", async () => {
+    const now = Math.floor(Date.now() / 1000);
     mockSendToChat.mockResolvedValueOnce(makeTelegramRateLimitedResult({ rateLimitScope: "chat", retryAfterSec: 45 })).mockResolvedValue(makeTelegramSentResult());
-    const db = queueDb([
-      row(1, { chat_id: "chat-a", message_html: "chunk-0", chunk_index: 0 }),
-      row(2, { chat_id: "chat-a", message_html: "chunk-1", chunk_index: 1 }),
-      row(3, { chat_id: "chat-a", message_html: "chunk-2", chunk_index: 2 }),
-      row(4, { chat_id: "chat-a", message_html: "chunk-3", chunk_index: 3 }),
-      row(5, { chat_id: "chat-b", message_html: "other" }),
-    ], [{ match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] }, { match: "UPDATE telegram_pending_alerts SET attempts", rows: [] }]);
-    const result = await drainPendingQueue(db, "bot-token", 20);
-    expect(result).toMatchObject({ attempted: 2, sent: 1, retryQueued: 1, deferred: 3, rateLimited: true, retryAfterSec: 45 });
+    const deferred = await withPendingQueueScenario({
+      now,
+      pending: [
+        ...[0, 1, 2, 3].map((chunk) => ({ id: 70 + chunk, chatId: "chat-a", html: `chunk-${chunk}`, createdAt: now - 60, expiresAt: now + 600, chunkIndex: chunk, dedupeKey: `chat-a-key-${chunk}` })),
+        { id: 75, chatId: "chat-b", html: "other", createdAt: now - 60, expiresAt: now + 600, dedupeKey: "chat-b-key" },
+      ],
+    }, async ({ sqlite, db }) => ({
+      result: await drainPendingQueue(db, "bot-token", 20),
+      rows: sqlite.prepare("SELECT id, not_before_at FROM telegram_pending_alerts ORDER BY id").all(),
+    }));
+    expect(deferred.result).toMatchObject({ attempted: 2, sent: 1, retryQueued: 1, deferred: 3, rateLimited: true, retryAfterSec: 45 });
     expect(mockSendToChat).toHaveBeenCalledTimes(2);
-    expect(history(db, "SET attempts")[0]?.binds[0]).toBe(Math.floor(Date.now() / 1000) + 45);
+    expect(deferred.rows).toEqual([
+      { id: 70, not_before_at: now + 45 },
+      { id: 71, not_before_at: now + 45 },
+      { id: 72, not_before_at: now + 45 },
+      { id: 73, not_before_at: now + 45 },
+    ]);
   });
 
   it.each([
-    { priorStrike: false, strikeCount: 1, cleaned: 0 },
-    { priorStrike: true, strikeCount: 2, cleaned: 1 },
-  ])("handles the $strikeCount chat_not_found strike without double-counting cleanup", async ({ priorStrike, strikeCount, cleaned }) => {
+    { priorStrike: false, strikeCount: 1, disabled: false },
+    { priorStrike: true, strikeCount: 2, disabled: true },
+  ])("handles the $strikeCount chat_not_found strike without double-counting cleanup", async ({ priorStrike, strikeCount, disabled }) => {
     mockSendToChat.mockResolvedValue(makeTelegramBlockedResult({ errorClass: "chat_not_found", statusCode: 400 }));
     const now = Math.floor(Date.now() / 1000);
-    const db = queueDb([row(20 + strikeCount, { chat_id: `blocked-${strikeCount}` })], [
-      { match: "SELECT consecutive_block_count", rows: priorStrike ? [{ consecutive_block_count: 1, consecutive_block_first_at: now - 3600 }] : [] },
-      { match: "UPDATE telegram_subscribers", rows: [] },
-      ...(cleaned ? [{ match: "UPDATE telegram_subscriptions", rows: [] }, { match: "DELETE FROM telegram_preset_subscriptions", rows: [] }] : []),
-    ]);
-    const result = await drainPendingQueue(db, "bot-token", 10);
-    expect(result).toMatchObject({ blocked: 1, blockedCleanedUp: cleaned, sent: 0 });
-    const counter = history(db, "UPDATE telegram_subscribers").find((entry) => entry.sql.includes("consecutive_block_count"));
-    expect(counter?.binds[0]).toBe(strikeCount);
-    expect(history(db, "UPDATE telegram_subscribers").filter((entry) => entry.sql.includes("alert_dews=0"))).toHaveLength(cleaned ? 1 : 0);
+    const chatId = `blocked-${strikeCount}`;
+    const blocked = await withPendingQueueScenario({
+      now,
+      subscriber: {
+        chatId,
+        global: { dews: true, depeg: true },
+        consecutiveBlockCount: priorStrike ? 1 : 0,
+        consecutiveBlockFirstAt: priorStrike ? now - 3600 : null,
+      },
+      pending: { id: 20 + strikeCount, chatId, html: "blocked", createdAt: now - 60, expiresAt: now + 600, dedupeKey: chatId },
+    }, async ({ sqlite, db }) => ({
+      result: await drainPendingQueue(db, "bot-token", 10),
+      subscriber: sqlite
+        .prepare("SELECT consecutive_block_count, global_alert_dews, global_alert_depeg FROM telegram_subscribers WHERE chat_id = ?")
+        .get(chatId),
+    }));
+    expect(blocked.result).toMatchObject({ blocked: 1, blockedCleanedUp: disabled ? 1 : 0, sent: 0 });
+    expect(blocked.subscriber).toEqual({
+      consecutive_block_count: strikeCount,
+      global_alert_dews: disabled ? 0 : 1,
+      global_alert_depeg: disabled ? 0 : 1,
+    });
   });
 
   it("dead-letters all same-chat siblings after disabling a chat and records one cleanup", async () => {
@@ -448,25 +499,66 @@ describe("drainPendingQueue contract cases", () => {
 
   it("cleans expired rows into the SQL dead-letter protocol", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const db = mockD1([
-      { match: "SELECT id, chat_id, message_html", rows: [{ id: 123, chat_id: "expired", message_html: "expired", created_at: now - PENDING_TTL_SEC - 60, attempts: 3, last_error_class: "rate_limit", dedupe_key: "expired-key", chunk_index: 0, priority: TELEGRAM_PENDING_PRIORITY.depeg, source_type: "risk_alert", alert_type: "depeg" }] },
-      { match: "INSERT INTO telegram_alert_dead_letters", rows: [] },
-      { match: "DELETE FROM telegram_pending_alerts WHERE", rows: [], runMeta: { changes: 1 } },
-    ]);
-    expect(await cleanupExpiredPendingAlerts(db, now)).toBe(1);
-    expect(history(db, "INSERT INTO telegram_alert_dead_letters")[0]?.binds).toEqual(["pending:123:delivery:0", 123, "expired", "expired", "risk_alert", "depeg", TELEGRAM_PENDING_PRIORITY.depeg, now - PENDING_TTL_SEC - 60, now, 3, "rate_limit", "ttl_expired", "expired-key", 0, null, null, null, null, "pending", null, 0, null, null, null]);
+    const expired = await withPendingQueueScenario({
+      now,
+      pending: {
+        id: 123, chatId: "expired", html: "expired", createdAt: now - PENDING_TTL_SEC - 60,
+        expiresAt: now - 60, attempts: 3, lastErrorClass: "rate_limit", dedupeKey: "expired-key",
+        chunkIndex: 0, priority: TELEGRAM_PENDING_PRIORITY.depeg, sourceType: "risk_alert", alertType: "depeg",
+      },
+    }, async ({ sqlite, db }) => ({
+      cleaned: await cleanupExpiredPendingAlerts(db, now),
+      deadLetter: sqlite
+        .prepare(`SELECT dead_letter_key, pending_id, chat_id, source_type, alert_type, priority,
+                         attempts, last_error_class, reason, dedupe_key, chunk_index, delivery_state
+                    FROM telegram_alert_dead_letters`)
+        .all(),
+      remaining: sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts").get(),
+    }));
+    expect(expired.cleaned).toBe(1);
+    expect(expired.deadLetter).toEqual([{
+      dead_letter_key: "pending:123:delivery:0", pending_id: 123, chat_id: "expired", source_type: "risk_alert",
+      alert_type: "depeg", priority: TELEGRAM_PENDING_PRIORITY.depeg, attempts: 3, last_error_class: "rate_limit",
+      reason: "ttl_expired", dedupe_key: "expired-key", chunk_index: 0, delivery_state: "pending",
+    }]);
+    expect(expired.remaining).toEqual({ count: 0 });
   });
 
-  it("records the stale-strike boundary and successful reset", async () => {
+  it("restarts the block-strike count after the window lapses and clears it on a successful send", async () => {
     const now = Math.floor(Date.now() / 1000);
     mockSendToChat.mockResolvedValue(makeTelegramBlockedResult({ errorClass: "chat_not_found", statusCode: 400 }));
-    const stale = queueDb([row(22, { chat_id: "stale-strike" })], [{ match: "SELECT consecutive_block_count", rows: [{ consecutive_block_count: 1, consecutive_block_first_at: now - BLOCK_STRIKE_WINDOW_SEC - 1 }] }, { match: "UPDATE telegram_subscribers", rows: [] }]);
-    await drainPendingQueue(stale, "bot-token", 10);
-    expect(history(stale, "UPDATE telegram_subscribers").find((entry) => entry.sql.includes("consecutive_block_count = ?"))?.binds.slice(0, 2)).toEqual([1, now]);
+    const stale = await withPendingQueueScenario({
+      now,
+      subscriber: { chatId: "stale-strike", global: { dews: true }, consecutiveBlockCount: 1, consecutiveBlockFirstAt: now - BLOCK_STRIKE_WINDOW_SEC - 1 },
+      pending: { id: 22, chatId: "stale-strike", html: "blocked", createdAt: now - 60, expiresAt: now + 600, dedupeKey: "stale-strike" },
+    }, async ({ sqlite, db }) => {
+      const result = await drainPendingQueue(db, "bot-token", 10);
+      return {
+        result,
+        subscriber: sqlite
+          .prepare("SELECT consecutive_block_count, consecutive_block_first_at, global_alert_dews FROM telegram_subscribers WHERE chat_id = 'stale-strike'")
+          .get(),
+      };
+    });
+    expect(stale.result).toMatchObject({ blocked: 1, blockedCleanedUp: 0 });
+    expect(stale.subscriber).toEqual({ consecutive_block_count: 1, consecutive_block_first_at: now, global_alert_dews: 1 });
+
     mockSendToChat.mockResolvedValue(makeTelegramSentResult());
-    const recovered = queueDb([row(23, { chat_id: "recovered" })], [{ match: "UPDATE telegram_subscribers", rows: [] }, { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] }]);
-    await drainPendingQueue(recovered, "bot-token", 10);
-    expect(history(recovered, "consecutive_block_count = 0")[0]?.binds).toEqual(["recovered"]);
+    const recovered = await withPendingQueueScenario({
+      now,
+      subscriber: { chatId: "recovered", global: { dews: true }, consecutiveBlockCount: 1, consecutiveBlockFirstAt: now - 60 },
+      pending: { id: 23, chatId: "recovered", html: "ok", createdAt: now - 60, expiresAt: now + 600, dedupeKey: "recovered" },
+    }, async ({ sqlite, db }) => {
+      const result = await drainPendingQueue(db, "bot-token", 10);
+      return {
+        result,
+        subscriber: sqlite
+          .prepare("SELECT consecutive_block_count, consecutive_block_first_at FROM telegram_subscribers WHERE chat_id = 'recovered'")
+          .get(),
+      };
+    });
+    expect(recovered.result).toMatchObject({ sent: 1 });
+    expect(recovered.subscriber).toEqual({ consecutive_block_count: 0, consecutive_block_first_at: null });
   });
 
   it("reports a blocked-chat cleanup failure without losing the delivery outcome", async () => {

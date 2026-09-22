@@ -1,4 +1,4 @@
-import { makeBulkPendingRow } from "./telegram-rows.test-support";
+import { makeBulkPendingRow, pendingDisambiguationTable, pendingRowFromForget } from "./telegram-rows.test-support";
 import { describe, expect, it, beforeEach } from "vitest";
 import { mockTelegramMembership } from "../../test-helpers/__shared/telegram";
 import {
@@ -291,4 +291,64 @@ describe("handleCallbackQuery", () => {
     expect(JSON.parse((ack?.[1] as RequestInit).body as string).text).toMatch(/not recognized/i);
   });
 
+});
+
+describe("handleCallbackQuery forget confirmations", () => {
+  beforeEach(resetCallbackTest);
+
+  const privateForgetTap = (id: string, fromId = 999) =>
+    makeCallbackQuery("confirm:forget", { id, from: { id: fromId, username: "requester" }, message: { chat: { id: 123, type: "private" }, message_id: 1 } });
+
+  it("confirm:forget deletes subscriber-owned Telegram rows and replies", async () => {
+    const db = mockTelegramD1([pendingDisambiguationTable(pendingRowFromForget({ initiator_user_id: "999" }))]);
+    await handleCallbackQuery(db, "fake-token", privateForgetTap("cb-forget-confirm"));
+
+    const history = db.getHistory();
+    for (const table of [
+      "telegram_subscriptions",
+      "telegram_preset_subscriptions",
+      "telegram_pending_alerts",
+      "telegram_alert_job_targets",
+      "telegram_alert_dead_letters",
+      "telegram_subscribers",
+    ]) {
+      expect(history.some((entry) => entry.sql.includes(`DELETE FROM ${table}`)), table).toBe(true);
+    }
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO telegram_chat_delivery_diagnostics"))).toBe(false);
+    expect(lastSentMessageBody().text).toContain("subscriber data has been deleted");
+    expect(lastAckBody().text).toBe("Deleted.");
+  });
+
+  it("cancel:forget clears only the pending confirmation and replies", async () => {
+    const db = mockTelegramD1([pendingDisambiguationTable(pendingRowFromForget({ initiator_user_id: "999" }))]);
+    await handleCallbackQuery(db, "fake-token", makeCallbackQuery("cancel:forget", { id: "cb-forget-cancel", from: { id: 999, username: "requester" }, message: { chat: { id: 123, type: "private" }, message_id: 1 } }));
+
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_subscribers"))).toBe(false);
+    expect(lastSentMessageBody().text).toBe("Cancelled.");
+    expect(lastAckBody().text).toBe("Cancelled.");
+  });
+
+  it("confirm:forget refuses leaked group callbacks before reading D1", async () => {
+    const db = mockTelegramD1([]);
+    await handleCallbackQuery(db, "fake-token", makeCallbackQuery("confirm:forget", { id: "cb-forget-group", from: { id: 999, username: "requester" }, message: { chat: { id: -123, type: "supergroup" }, message_id: 1 } }));
+
+    expect(db.getHistory()).toHaveLength(0);
+    expect(lastAckBody().text).toContain("Open a private chat");
+  });
+
+  it.each([
+    { label: "an expired pending row", row: pendingRowFromForget({ expires_at: Math.floor(Date.now() / 1000) - 1 }), id: "cb-forget-expired", fromId: 999, ack: /expired/i },
+    { label: "a non-initiator tap", row: pendingRowFromForget({ initiator_user_id: "999" }), id: "cb-forget-other", fromId: 7, ack: /only the user who started/i },
+    { label: "an unrelated pending action", row: pendingRowFromForget({ action_type: "confirm-bulk" }), id: "cb-forget-wrong-pending", fromId: 999, ack: /No forget confirmation is pending\./ },
+  ])("confirm:forget with $label deletes nothing", async ({ row, id, fromId, ack }) => {
+    const db = mockTelegramD1([pendingDisambiguationTable(row)]);
+    await handleCallbackQuery(db, "fake-token", privateForgetTap(id, fromId));
+
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(false);
+    expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_subscribers"))).toBe(false);
+    expect(lastAckBody().text).toMatch(ack);
+  });
 });

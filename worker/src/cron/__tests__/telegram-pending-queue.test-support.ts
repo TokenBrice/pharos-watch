@@ -90,17 +90,6 @@ export function makePendingQueryRow(
   };
 }
 
-export function makePendingQueryRows(
-  count: number,
-  overrides: (index: number) => PendingQueryRow = (index) => ({
-    chat_id: `chat-${index}`,
-    message_html: `msg${index}`,
-    id: index + 1,
-  }),
-): PendingQueryRow[] {
-  return Array.from({ length: count }, (_, index) => makePendingQueryRow(index + 1, overrides(index)));
-}
-
 export function insertPendingSqlite(
   sqlite: DatabaseSync,
   row: PendingAlertSeed,
