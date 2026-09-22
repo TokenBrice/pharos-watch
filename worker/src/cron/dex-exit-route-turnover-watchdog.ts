@@ -17,11 +17,22 @@ export const DEX_EXIT_ROUTE_TURNOVER_SNAPSHOT_CACHE_KEY = "dex-exit-route-turnov
 
 /**
  * Alert at 0.5 Jaccard distance: for two equally sized route sets this means
- * at least one third of the published slots were replaced. Smaller changes
- * remain visible in metadata without degrading the cron, while wholesale loss
- * of a coin's routes is 1.0.
+ * at least one third of the published slots were replaced. A coin alerts only
+ * when this distance is reached with enough churn (see
+ * `DEX_EXIT_ROUTE_TURNOVER_MIN_CHANGED_ROUTES`) and is sustained across two
+ * consecutive published generations against the last confirmed baseline;
+ * smaller changes remain visible in metadata without degrading the cron,
+ * while wholesale loss of a coin's routes is 1.0.
  */
 export const DEX_EXIT_ROUTE_TURNOVER_ALERT_THRESHOLD = 0.5;
+
+/**
+ * Minimum route churn (removed + added) that can alert alongside the Jaccard
+ * threshold. A single route appearing or disappearing on a 1-2 route coin
+ * trivially crosses 0.5 Jaccard distance without being real exit-route
+ * turnover, so those flaps stay metadata-only.
+ */
+export const DEX_EXIT_ROUTE_TURNOVER_MIN_CHANGED_ROUTES = 2;
 
 const MAX_WORST_OFFENDERS = 10;
 const MAX_ROUTE_ID_SAMPLES = 8;
@@ -29,6 +40,19 @@ const MAX_ROUTE_ID_SAMPLES = 8;
 const RouteEvidenceSchema = z.object({
   routeId: z.string().min(1),
   evidenceKind: DexExitEvidenceKindSchema,
+}).strict();
+
+/**
+ * A coin that diverged from its held baseline in exactly one published
+ * generation. The next comparison either confirms the divergence into an
+ * alert or clears it, so a candidate never survives its confirming run.
+ */
+const TurnoverCandidateSchema = z.object({
+  stablecoinId: z.string().min(1),
+  generationId: z.string().min(1),
+  jaccardDistance: z.number(),
+  addedRouteCount: z.number().int().min(0),
+  removedRouteCount: z.number().int().min(0),
 }).strict();
 
 const PendingTurnoverAlertSchema = z.object({
@@ -41,14 +65,26 @@ const PendingTurnoverAlertSchema = z.object({
 const RouteSnapshotSchema = z.object({
   schemaVersion: z.literal(1),
   generationId: z.string().min(1),
+  /**
+   * Last confirmed baseline route set per coin. A coin with an open candidate
+   * keeps its pre-divergence baseline here instead of advancing, so the
+   * confirming comparison is measured against the last stable route set.
+   */
   coins: z.array(z.object({
     stablecoinId: z.string().min(1),
     routes: z.array(RouteEvidenceSchema).max(MAX_DEX_EXIT_ROUTE_OBSERVATIONS),
   }).strict()).max(1_024),
   /**
-   * Evidence for an alerting run. The baseline advances in the same run that
-   * alerts, so the alert itself is persisted here and cleared only by a later
-   * run that observes no alerting coin.
+   * Divergent-but-unconfirmed coins. Absent in payloads written before the
+   * sustain window existed; an absent or unknown candidate state means no
+   * candidate.
+   */
+  candidates: z.array(TurnoverCandidateSchema).max(1_024).optional(),
+  /**
+   * Evidence for an alerting run (a divergence sustained across two published
+   * generations). The per-coin baseline advances in the run that alerts, so
+   * the alert itself is persisted here and cleared only by a later run that
+   * observes no alerting coin.
    */
   pendingAlert: PendingTurnoverAlertSchema.optional(),
 }).strict();
@@ -56,6 +92,7 @@ const RouteSnapshotSchema = z.object({
 type RouteEvidence = z.infer<typeof RouteEvidenceSchema>;
 type RouteSnapshot = z.infer<typeof RouteSnapshotSchema>;
 type PendingTurnoverAlert = z.infer<typeof PendingTurnoverAlertSchema>;
+type TurnoverCandidate = z.infer<typeof TurnoverCandidateSchema>;
 
 interface PublishedGenerationRow {
   generation_id: string;
@@ -203,6 +240,11 @@ function compareRouteSnapshots(previous: RouteSnapshot, current: RouteSnapshot):
     );
 }
 
+function meetsAlertCriteria(evaluation: TurnoverEvaluation): boolean {
+  return evaluation.jaccardDistance >= DEX_EXIT_ROUTE_TURNOVER_ALERT_THRESHOLD
+    && evaluation.removedRouteCount + evaluation.addedRouteCount >= DEX_EXIT_ROUTE_TURNOVER_MIN_CHANGED_ROUTES;
+}
+
 export async function runDexExitRouteTurnoverWatchdog(
   db: D1Database,
   signal?: AbortSignal,
@@ -256,7 +298,22 @@ export async function runDexExitRouteTurnoverWatchdog(
   }
   const comparable = previous !== null && !("invalidReason" in previous) ? previous : null;
 
+  // The sustain window counts published generations, not watchdog runs: a
+  // rerun that still sees the last compared generation must not confirm or
+  // clear candidate state against the same observation twice.
+  if (comparable !== null && comparable.generationId === current.generationId) {
+    return createCronResult({
+      status: "skipped_neutral",
+      itemCount: 0,
+      metadata: {
+        reason: "no-new-published-dex-generation",
+        currentGenerationId: current.generationId,
+      },
+    });
+  }
+
   let result: CronResult;
+  let nextSnapshot: RouteSnapshot = current;
   let pendingAlert: PendingTurnoverAlert | undefined;
   if (comparable === null) {
     result = createCronResult({
@@ -269,6 +326,7 @@ export async function runDexExitRouteTurnoverWatchdog(
         comparedCoinCount: 0,
         evidenceKindChangedRouteCount: 0,
         alertingCoinCount: 0,
+        candidateCoinCount: 0,
         turnoverAlertThreshold: DEX_EXIT_ROUTE_TURNOVER_ALERT_THRESHOLD,
         worstOffenders: [],
       },
@@ -278,15 +336,59 @@ export async function runDexExitRouteTurnoverWatchdog(
     const changedCoinCount = evaluations.filter(
       (evaluation) => evaluation.jaccardDistance > 0 || evaluation.evidenceKindChangedCount > 0,
     ).length;
-    const alerting = evaluations.filter(
-      (evaluation) => evaluation.jaccardDistance >= DEX_EXIT_ROUTE_TURNOVER_ALERT_THRESHOLD,
-    );
     const evidenceKindChangedRouteCount = evaluations.reduce(
       (sum, evaluation) => sum + evaluation.evidenceKindChangedCount,
       0,
     );
-    // The baseline advances in this run, so an alert raised here is persisted
-    // with the new snapshot and stays visible until a run sees no alerting coin.
+    const candidateByCoin = new Map(
+      (comparable.candidates ?? []).map((candidate) => [candidate.stablecoinId, candidate]),
+    );
+    const alerting: TurnoverEvaluation[] = [];
+    const heldCandidates: TurnoverCandidate[] = [];
+    const clearedCandidates: TurnoverCandidate[] = [];
+    for (const evaluation of evaluations) {
+      const candidate = candidateByCoin.get(evaluation.stablecoinId) ?? null;
+      if (!meetsAlertCriteria(evaluation)) {
+        // Back at (near) baseline: confirm the current route set and clear
+        // any open candidate without alerting.
+        if (candidate !== null) clearedCandidates.push(candidate);
+        continue;
+      }
+      if (candidate === null) {
+        // First divergent generation against the held baseline: hold the
+        // baseline and open a candidate, so a single-generation source blip
+        // that recovers next generation never alerts.
+        heldCandidates.push({
+          stablecoinId: evaluation.stablecoinId,
+          generationId: current.generationId,
+          jaccardDistance: evaluation.jaccardDistance,
+          addedRouteCount: evaluation.addedRouteCount,
+          removedRouteCount: evaluation.removedRouteCount,
+        });
+      } else {
+        alerting.push(evaluation);
+      }
+    }
+    // The per-coin baseline advances except where a fresh candidate holds it.
+    // A candidate never survives its confirming comparison either way, so it
+    // cannot linger.
+    const heldCoinIds = new Set(heldCandidates.map((candidate) => candidate.stablecoinId));
+    const baselineCoins = [
+      ...comparable.coins
+        .filter((coin) => heldCoinIds.has(coin.stablecoinId))
+        .map((coin) => ({ stablecoinId: coin.stablecoinId, routes: coin.routes })),
+      ...current.coins
+        .filter((coin) => !heldCoinIds.has(coin.stablecoinId))
+        .map((coin) => ({ stablecoinId: coin.stablecoinId, routes: coin.routes })),
+    ].sort((left, right) => left.stablecoinId.localeCompare(right.stablecoinId));
+    nextSnapshot = {
+      schemaVersion: 1,
+      generationId: current.generationId,
+      coins: baselineCoins,
+      ...(heldCandidates.length > 0 ? { candidates: heldCandidates } : {}),
+    };
+    // An alert raised here is persisted with the new snapshot and stays
+    // visible until a run sees no alerting coin.
     const carriedAlert = comparable.pendingAlert ?? null;
     pendingAlert = alerting.length === 0
       ? undefined
@@ -306,7 +408,12 @@ export async function runDexExitRouteTurnoverWatchdog(
       changedCoinCount,
       evidenceKindChangedRouteCount,
       alertingCoinCount: alerting.length,
+      candidateCoinCount: heldCandidates.length,
+      candidates: heldCandidates.slice(0, MAX_WORST_OFFENDERS),
+      clearedCandidateCount: clearedCandidates.length,
+      clearedCandidates: clearedCandidates.slice(0, MAX_WORST_OFFENDERS),
       turnoverAlertThreshold: DEX_EXIT_ROUTE_TURNOVER_ALERT_THRESHOLD,
+      minChangedRouteCount: DEX_EXIT_ROUTE_TURNOVER_MIN_CHANGED_ROUTES,
       highestObservedTurnover: evaluations[0]?.jaccardDistance ?? 0,
       worstOffenders: alerting.slice(0, MAX_WORST_OFFENDERS),
       carriedPendingAlert: carriedAlert,
@@ -323,7 +430,7 @@ export async function runDexExitRouteTurnoverWatchdog(
   await setCache(
     db,
     DEX_EXIT_ROUTE_TURNOVER_SNAPSHOT_CACHE_KEY,
-    JSON.stringify(pendingAlert ? { ...current, pendingAlert } : current),
+    JSON.stringify(pendingAlert ? { ...nextSnapshot, pendingAlert } : nextSnapshot),
     signal,
   );
   throwIfAborted(signal);

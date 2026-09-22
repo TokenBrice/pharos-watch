@@ -1,5 +1,6 @@
 import type { PriceObservationEffectiveness } from "./price-corroboration-observations";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
+import { getCirculatingRaw } from "@shared/lib/supply";
 import { hasMissingPrice, type PeggedAsset } from "./enrich-prices";
 import { buildSyncMetadata, type CronResult, type PriceSourceHealth, type TrackedCoverageRestoreResult } from "./shared";
 import type { CanonicalDeduplicationResult } from "./phase-helpers";
@@ -22,6 +23,7 @@ import {
   compactStablecoinActivePriceCoverage,
   evaluateStablecoinActivePriceCoverage,
   evaluateStablecoinPublicationCoverage,
+  resolveStablecoinPriceGapReviews,
   type PreviousStablecoinActivePriceCoverage,
   type StablecoinPriceCoverageAsset,
   type StablecoinActivePriceCoverage,
@@ -153,6 +155,13 @@ function buildPriceSourceHealth(assets: PeggedAsset[]): PriceSourceHealth {
     low: 0,
     fallback: 0,
   };
+  const confidenceMarketCapUsd: NonNullable<PriceSourceHealth["confidenceMarketCapUsd"]> = {
+    high: 0,
+    "single-source": 0,
+    low: 0,
+    fallback: 0,
+  };
+  let pricedMarketCapUsd = 0;
 
   for (const asset of assets) {
     if (hasMissingPrice(asset)) {
@@ -188,15 +197,23 @@ function buildPriceSourceHealth(assets: PeggedAsset[]): PriceSourceHealth {
       }
     }
 
+    // Every circulating peg bucket is already USD-valued. Missing prices do
+    // not enter this denominator; unclassified priced rows still do.
+    const circulatingUsd = Math.max(0, getCirculatingRaw(asset));
+    pricedMarketCapUsd += circulatingUsd;
+
     const confidence = asset.priceConfidence;
     if (confidence && confidence in confidenceDistribution) {
       confidenceDistribution[confidence as keyof typeof confidenceDistribution]++;
+      confidenceMarketCapUsd[confidence as keyof typeof confidenceMarketCapUsd] += circulatingUsd;
     }
   }
 
   return {
     sourceDistribution,
     confidenceDistribution,
+    confidenceMarketCapUsd,
+    pricedMarketCapUsd,
     totalAssets: assets.length,
     lastSync: Math.floor(Date.now() / 1000),
   };
@@ -300,15 +317,33 @@ export function buildStablecoinsSyncResult(input: {
   activePriceCoverage?: StablecoinActivePriceCoverage;
 }): CronResult {
   const finalMissing = input.assets.filter(hasMissingPrice).length;
+  const nowSec = input.syncStartSec ?? Math.floor(Date.now() / 1000);
   const priceSourceHealth = buildPriceSourceHealth(input.assets);
   const activeAssets = input.assets.filter((asset) => ACTIVE_IDS.has(asset.id));
   const activeHealth = buildPriceSourceHealth(activeAssets);
   // Missing catalog rows are also missing prices, not a smaller denominator.
-  const absentActiveCount = ACTIVE_IDS.size - new Set(activeAssets.map((asset) => asset.id)).size;
+  const presentActiveIds = new Set(activeAssets.map((asset) => asset.id));
+  const absentActiveCount = ACTIVE_IDS.size - presentActiveIds.size;
   activeHealth.sourceDistribution.missing += absentActiveCount;
+  // Acknowledged price gaps stay in the raw missing count but stop driving the
+  // admin Missing tile: only valid, unexpired reviews count, so an expired
+  // review automatically re-alerts on the next sync. Absent catalog rows are
+  // missing prices too and acknowledge the same way.
+  const resolvedGapReviews = resolveStablecoinPriceGapReviews([...ACTIVE_IDS], nowSec);
+  const missingActiveIds = new Set(activeAssets.filter(hasMissingPrice).map((asset) => asset.id));
+  for (const id of ACTIVE_IDS) {
+    if (!presentActiveIds.has(id)) missingActiveIds.add(id);
+  }
+  let acknowledgedMissingCount = 0;
+  for (const id of missingActiveIds) {
+    if (resolvedGapReviews.activeById.has(id)) acknowledgedMissingCount++;
+  }
   priceSourceHealth.active = {
     sourceDistribution: activeHealth.sourceDistribution,
     confidenceDistribution: activeHealth.confidenceDistribution,
+    confidenceMarketCapUsd: activeHealth.confidenceMarketCapUsd,
+    pricedMarketCapUsd: activeHealth.pricedMarketCapUsd,
+    acknowledgedMissingCount,
     totalAssets: ACTIVE_IDS.size,
   };
   const pricingSourceAuditReport = buildPricingSourceAuditReport(input.assets, input.providerDiagnostics ?? []);

@@ -1,5 +1,6 @@
 import type { ClassificationWarning, ReserveDriftEntry, StatusResponse } from "@shared/types";
 import { formatPercentFromRatio } from "@shared/lib/format";
+import { hasReserveScoreInputHold } from "@shared/lib/status-thresholds";
 import { getCoinLabel, STATUS_PANEL_SHELL_CLASS, SummaryBadge } from "@/components/status/page-primitives";
 import { cn } from "@/lib/utils";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
@@ -19,11 +20,7 @@ function getDeltaClass(delta: number): string {
 
 export function ScoreImpactPanel({ reserveComposition, reserveDrift, classificationWarnings }: ScoreImpactPanelProps) {
   const driftRows = [...(reserveDrift ?? [])].sort((a, b) => b.delta - a.delta).slice(0, 6);
-  const reserveInputHold =
-    reserveComposition.status !== "healthy" ||
-    reserveComposition.deferredCoins > 0 ||
-    reserveComposition.runBudgetTruncated ||
-    reserveComposition.writeTimeoutUncertain > 0;
+  const reserveInputHold = hasReserveScoreInputHold(reserveComposition);
 
   return (
     <section className={cn("rounded-xl p-4", STATUS_PANEL_SHELL_CLASS)}>

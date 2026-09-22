@@ -21,6 +21,7 @@ import { snapshotChainSupply } from "../../cron/snapshot-chain-supply";
 import { snapshotPsiDaily } from "../../cron/snapshot-psi";
 import { snapshotPublicDataset } from "../../cron/snapshot-public-dataset";
 import { createNeutralSkippedCronResult } from "../../lib/cron-result";
+import type { CronResult } from "../../lib/cron-logger";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { parseStablecoinsCapabilities, type ScheduledRuntimeContext } from "./context";
@@ -102,10 +103,24 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext) {
     logWorkerEventArgs("handler", "warn", "[cron] sync-stablecoins completed without downstream-safe cache write — skipping cache-dependent jobs");
   }
 
+  type ScheduledJobFn = Parameters<typeof runBestEffortScheduledJobWithOutcome>[3];
+
+  // `notDue` answers whether the job has work this slot (not yet due, or the
+  // period's write-once output already exists). Only a job with work is gated
+  // on the stablecoins cache: recording an unsafe cache as the degraded
+  // outcome of an already-completed period would misreport that period.
   const runIfCacheSafe = async (
     job: string,
-    fn: Parameters<typeof runBestEffortScheduledJobWithOutcome>[3],
+    fn: ScheduledJobFn,
+    notDue?: () => Promise<CronResult | null>,
   ): Promise<void> => {
+    if (notDue) {
+      const neutral = await notDue().catch(() => null);
+      if (neutral) {
+        outcomes.push((await runBestEffortScheduledJobWithOutcome(runtime, "quarter-hour slot", job, async () => neutral)).summary);
+        return;
+      }
+    }
     if (stablecoinsCacheSafe) {
       outcomes.push((await runBestEffortScheduledJobWithOutcome(runtime, "quarter-hour slot", job, fn)).summary);
     } else {
@@ -120,30 +135,38 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext) {
 
   await runIfCacheSafe("snapshot-supply", (signal) => snapshotSupply(runtime.db, signal));
   await runIfCacheSafe("snapshot-chain-supply", (signal) => snapshotChainSupply(runtime.db, signal));
-  await runIfCacheSafe("snapshot-psi", async (signal) => {
-    const { todayMidnight, dailySlotStartedAt } = currentUtcDay(runtime.slotStartedAt);
-    const computedAt = todayMidnight - DAY_SECONDS;
-    if (runtime.slotStartedAt < dailySlotStartedAt) {
-      return createNeutralSkippedCronResult(BEFORE_DAILY_SLOT_REASON, { computedAt, dailySlotStartedAt });
-    }
-    if (await hasPsiDailySnapshot(runtime.db, computedAt)) {
-      return createNeutralSkippedCronResult("same_day_snapshot_exists", { computedAt });
-    }
-    return snapshotPsiDaily(runtime.db, signal, { completionReason: SAME_DAY_CATCH_UP_REASON });
-  });
-  await runIfCacheSafe("snapshot-public-dataset", async (signal) => {
-    const { snapshotDate, dailySlotStartedAt } = currentUtcDay(runtime.slotStartedAt);
-    if (runtime.slotStartedAt < dailySlotStartedAt) {
-      return createNeutralSkippedCronResult(BEFORE_DAILY_SLOT_REASON, { snapshotDate, dailySlotStartedAt });
-    }
-    if (await hasPublicDatasetSnapshot(runtime.db, snapshotDate)) {
-      return createNeutralSkippedCronResult("same_day_snapshot_exists", { snapshotDate });
-    }
-    return snapshotPublicDataset(runtime.db, signal, {
+  await runIfCacheSafe(
+    "snapshot-psi",
+    (signal) => snapshotPsiDaily(runtime.db, signal, { completionReason: SAME_DAY_CATCH_UP_REASON }),
+    async () => {
+      const { todayMidnight, dailySlotStartedAt } = currentUtcDay(runtime.slotStartedAt);
+      const computedAt = todayMidnight - DAY_SECONDS;
+      if (runtime.slotStartedAt < dailySlotStartedAt) {
+        return createNeutralSkippedCronResult(BEFORE_DAILY_SLOT_REASON, { computedAt, dailySlotStartedAt });
+      }
+      if (await hasPsiDailySnapshot(runtime.db, computedAt)) {
+        return createNeutralSkippedCronResult("same_day_snapshot_exists", { computedAt });
+      }
+      return null;
+    },
+  );
+  const { snapshotDate, dailySlotStartedAt } = currentUtcDay(runtime.slotStartedAt);
+  await runIfCacheSafe(
+    "snapshot-public-dataset",
+    (signal) => snapshotPublicDataset(runtime.db, signal, {
       completionReason: SAME_DAY_CATCH_UP_REASON,
       minStablecoinsCacheUpdatedAtSec: dailySlotStartedAt,
       freshnessGateLabel: "daily0800Utc",
-    });
-  });
+    }),
+    async () => {
+      if (runtime.slotStartedAt < dailySlotStartedAt) {
+        return createNeutralSkippedCronResult(BEFORE_DAILY_SLOT_REASON, { snapshotDate, dailySlotStartedAt });
+      }
+      if (await hasPublicDatasetSnapshot(runtime.db, snapshotDate)) {
+        return createNeutralSkippedCronResult("same_day_snapshot_exists", { snapshotDate });
+      }
+      return null;
+    },
+  );
   return buildScheduledSlotSummary(outcomes);
 }
