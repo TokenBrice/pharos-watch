@@ -177,7 +177,7 @@ export function canonicalSafetySource(
   return { kind: "v9", snapshot };
 }
 
-export interface TestDewsRow {
+interface TestDewsRow {
   stablecoin_id: string;
   score: number;
   band: string;
@@ -245,7 +245,7 @@ export function missingPublishedGaugeTable(): MockTableConfig {
   };
 }
 
-export function makeDailyDigestTables(): MockTableConfig[] {
+function makeDailyDigestTables(): MockTableConfig[] {
   const nowSec = Math.floor(Date.now() / 1000);
   const todayTs = nowSec - (nowSec % 86_400);
   const weekAgoTs = todayTs - 7 * 86_400;
@@ -321,7 +321,7 @@ export function makeDailyDigestTables(): MockTableConfig[] {
   ];
 }
 
-export interface DailyDigestDeliveryMocks {
+interface DailyDigestDeliveryMocks {
   twitter: { tweetId: string; mediaAttached: boolean };
   telegramEnqueue: EnqueueTelegramDigestEditionResult;
   telegramDelivery: TelegramDigestDeliveryResult;
@@ -336,7 +336,7 @@ export interface DailyDigestScenario {
   deliveryMocks: DailyDigestDeliveryMocks;
 }
 
-export interface DailyDigestScenarioOptions {
+interface DailyDigestScenarioOptions {
   db?: {
     prependTables?: MockTableConfig[];
     transformTables?: (tables: MockTableConfig[]) => MockTableConfig[];

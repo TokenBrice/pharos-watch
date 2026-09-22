@@ -6,26 +6,24 @@ import {
   getPublishedYieldRows,
   findPublishedYieldRow,
   getYieldRankingsCachePayload,
-  makeBrokenYieldRankingsDb,
+  mockD1WithYieldPruneTables,
+  yieldFallbackTableMatches,
   mockHealthyRiskFreeRateCache,
   resetSyncYieldDataTest,
   cleanupSyncYieldDataTest,
-  fixtureSyncYieldData,
-  fixtureBatchExecute,
-  fixtureGetCache,
-  fixtureGetCaches,
-  fixtureWriteFreshnessSentinel,
-  fixtureShouldAttemptFetch,
-  fixtureRecordOutcome,
-  fixtureGetChainRpc,
-  fixtureMockFetch,
-  fixtureACTIVE_YIELD_BEARING_STABLECOINS,
-  fixtureSafetyScoresModule,
-  fixtureYieldConfigModule,
-  fixturePublicationModule,
   makeEthereumRpcHandler,
   makeEthereumRpcMap,
 } from "./sync-yield-data.test-support";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
+import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
+import { syncYieldData } from "../sync-yield-data";
+import * as publicationModule from "../yield-sync/publication";
+import { batchExecute } from "../../lib/db";
+import { getCache, getCaches, writeFreshnessSentinel } from "../../lib/db-cache";
+import { recordOutcome, shouldAttemptFetch } from "../../lib/circuit-breaker";
+import { getChainRpc } from "../../lib/chain-registry";
+import * as safetyScoresModule from "../../lib/safety-scores";
+import * as yieldConfigModule from "../../lib/yield-config/yield-config";
 import { cacheRow, dlPoolsCacheRow, installYieldCacheReader, supplementalFamilyCacheRow } from "./yield-cache.test-support";
 import { makeDlYieldPool } from "./yield-resolve.test-support";
 import { getYieldSupplementalFamilyCacheKey } from "../yield-sync/cache";
@@ -72,13 +70,13 @@ describe("syncYieldData", () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
-    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+    installYieldCacheReader(vi.mocked(getCache), {
       "yield:supplemental-sources:v1:morpho": supplementalFamilyCacheRow([{ ...supplementalCandidate("protocol-api:morpho-vault:ethereum:0xvault", nowSec, { currentApy: 6.1, apyBase: 6.1, sourcePool: "vault-sdai-morpho", sourceTvlUsd: 50_000_000, yieldSource: "Morpho: sDAI Vault" }), stablecoinId: undefined }], nowSec),
     });
-    vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
-    fixtureMockFetch([]);
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
 
-    const result = await fixtureSyncYieldData(db);
+    const result = await syncYieldData(db);
 
     expect(result.itemCount).toBe(1);
     const supplementalRow = findPublishedYieldRow(
@@ -87,7 +85,7 @@ describe("syncYieldData", () => {
       (row) => row.source_key === "protocol-api:morpho-vault:ethereum:0xvault",
     );
     expect(supplementalRow).toBeDefined();
-    expect(vi.mocked(fixtureGetCaches)).toHaveBeenCalledWith(
+    expect(vi.mocked(getCaches)).toHaveBeenCalledWith(
       db,
       expect.arrayContaining(["yield:supplemental-sources:v1:morpho", "yield:supplemental-sources:v1:beefy"]),
     );
@@ -97,14 +95,14 @@ describe("syncYieldData", () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
-    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+    installYieldCacheReader(vi.mocked(getCache), {
       "yield:supplemental-sources:v1:morpho": supplementalFamilyCacheRow([{ ...supplementalCandidate("protocol-api:morpho-vault:ethereum:0xvault", nowSec, { currentApy: 6.1, apyBase: 6.1, sourcePool: "vault-sdai-morpho", sourceTvlUsd: 50_000_000, yieldSource: "Morpho: sDAI Vault" }), stablecoinId: undefined }], nowSec),
       "yield:supplemental-sources:v1:beefy": cacheRow("{bad json", nowSec),
     });
-    vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
-    fixtureMockFetch([]);
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
 
-    const result = await fixtureSyncYieldData(db);
+    const result = await syncYieldData(db);
 
     expect(result.itemCount).toBe(1);
     const supplementalRow = findPublishedYieldRow(
@@ -119,7 +117,7 @@ describe("syncYieldData", () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
-    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+    installYieldCacheReader(vi.mocked(getCache), {
       "yield:supplemental-sources:v1:morpho": supplementalFamilyCacheRow([{ ...supplementalCandidate("protocol-api:morpho-vault:ethereum:0xvault", nowSec, { currentApy: 6.1, apyBase: 6.1, sourcePool: "vault-sdai-morpho", sourceTvlUsd: 50_000_000, yieldSource: "Morpho: sDAI Vault" }), stablecoinId: undefined }], nowSec),
       "yield:supplemental-sources:v1": cacheRow({
             version: 1,
@@ -132,10 +130,10 @@ describe("syncYieldData", () => {
             ],
           }, nowSec),
     });
-    vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
-    fixtureMockFetch([]);
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
 
-    const result = await fixtureSyncYieldData(db);
+    const result = await syncYieldData(db);
 
     expect(result.itemCount).toBe(1);
     expect(result.status).toBe("degraded");
@@ -155,7 +153,7 @@ describe("syncYieldData", () => {
       rows.some((row) => row.stablecoin_id === "100" && row.source_key === "protocol-api:beefy:ethereum:beefy-sdai"),
     ).toBe(false);
     expect(
-      vi.mocked(fixtureGetCache).mock.calls.some((call) => call[1] === "yield:supplemental-sources:v1"),
+      vi.mocked(getCache).mock.calls.some((call) => call[1] === "yield:supplemental-sources:v1"),
     ).toBe(false);
   });
 
@@ -164,7 +162,7 @@ describe("syncYieldData", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const freshCandidate = supplementalCandidate("protocol-api:morpho:fixture", nowSec);
 
-    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+    installYieldCacheReader(vi.mocked(getCache), {
       [getYieldSupplementalFamilyCacheKey("morpho")]: supplementalFamilyCacheRow([freshCandidate], nowSec),
       [getYieldSupplementalFamilyCacheKey("pendle")]: supplementalFamilyCacheRow([], nowSec),
       [getYieldSupplementalFamilyCacheKey("yearnKong")]: supplementalFamilyCacheRow(
@@ -176,7 +174,7 @@ describe("syncYieldData", () => {
       [getYieldSupplementalFamilyCacheKey("aaveV3")]: supplementalFamilyCacheRow([], nowSec),
       [getYieldSupplementalFamilyCacheKey("roycoDawn")]: supplementalFamilyCacheRow([], nowSec),
     });
-    vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
 
     const state = await loadYieldSyncState({ db, startSec: nowSec, chainRpcs: new Map() });
 
@@ -199,8 +197,8 @@ describe("syncYieldData", () => {
         supplementalFamilyCacheRow([], nowSec),
       ]),
     );
-    installYieldCacheReader(vi.mocked(fixtureGetCache), emptyFamilyCaches);
-    vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
+    installYieldCacheReader(vi.mocked(getCache), emptyFamilyCaches);
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
 
     const state = await loadYieldSyncState({ db, startSec: nowSec, chainRpcs: new Map() });
 
@@ -217,10 +215,10 @@ describe("syncYieldData", () => {
   it("keeps a higher native wrapper APY ahead of a lower supplemental lending source that clears size gates", async () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
-    const poolMap = fixtureYieldConfigModule.YIELD_POOL_MAP as typeof fixtureYieldConfigModule.YIELD_POOL_MAP;
+    const poolMap = yieldConfigModule.YIELD_POOL_MAP as typeof yieldConfigModule.YIELD_POOL_MAP;
     poolMap["100"] = "pool-sdai-native";
 
-    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+    installYieldCacheReader(vi.mocked(getCache), {
       "dl-stablecoin-pools": dlPoolsCacheRow([
             makeDlYieldPool({
               tvlUsd: 84_819_532,
@@ -261,11 +259,11 @@ describe("syncYieldData", () => {
       }], nowSec),
       stablecoins: cacheRow([{ id: "100", circulating: { peggedUSD: 5_000_000_000 } }], nowSec),
     });
-    vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
-    fixtureMockFetch([]);
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
 
     try {
-      const result = await fixtureSyncYieldData(db);
+      const result = await syncYieldData(db);
 
       expect(result.itemCount).toBe(2);
       const nativeRow = findPublishedYieldRow(db, "100", (row) => row.source_key === "pool-sdai-native");
@@ -290,7 +288,7 @@ describe("syncYieldData", () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
-    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+    installYieldCacheReader(vi.mocked(getCache), {
       "yield:supplemental-sources:v1:morpho": cacheRow({
             version: 1,
             updatedAt: nowSec,
@@ -339,10 +337,10 @@ describe("syncYieldData", () => {
       }, nowSec),
       stablecoins: cacheRow([{ id: "usdc-circle", circulating: { peggedUSD: 10_000_000_000 } }], nowSec),
     });
-    vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
-    fixtureMockFetch([]);
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
 
-    await fixtureSyncYieldData(db);
+    await syncYieldData(db);
 
     const blockedRow = findPublishedYieldRow(
       db,
@@ -363,7 +361,7 @@ describe("syncYieldData", () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
-    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+    installYieldCacheReader(vi.mocked(getCache), {
       "yield:supplemental-sources:v1:aaveV3": supplementalFamilyCacheRow([{
         symbol: "USDC",
         chain: "ethereum",
@@ -384,10 +382,10 @@ describe("syncYieldData", () => {
         },
       }], nowSec),
     });
-    vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
-    fixtureMockFetch([]);
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
 
-    await fixtureSyncYieldData(db);
+    await syncYieldData(db);
 
     const droppedRow = findPublishedYieldRow(
       db,
@@ -402,7 +400,7 @@ describe("syncYieldData", () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
-    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+    installYieldCacheReader(vi.mocked(getCache), {
       stablecoins: cacheRow({
             peggedAssets: [
               {
@@ -434,10 +432,10 @@ describe("syncYieldData", () => {
         },
       }], nowSec),
     });
-    vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
-    fixtureMockFetch([]);
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
 
-    await fixtureSyncYieldData(db);
+    await syncYieldData(db);
 
     const droppedRow = findPublishedYieldRow(
       db,
@@ -452,7 +450,7 @@ describe("syncYieldData", () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
     const onChainConfigs =
-      fixtureYieldConfigModule.ON_CHAIN_RATE_CONFIGS as typeof fixtureYieldConfigModule.ON_CHAIN_RATE_CONFIGS;
+      yieldConfigModule.ON_CHAIN_RATE_CONFIGS as typeof yieldConfigModule.ON_CHAIN_RATE_CONFIGS;
     onChainConfigs.push({
       stablecoinId: "100",
       chain: "ethereum",
@@ -461,7 +459,7 @@ describe("syncYieldData", () => {
       scale: 1e18,
     } as never);
 
-    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+    installYieldCacheReader(vi.mocked(getCache), {
       "yield:supplemental-sources:v1:morpho": supplementalFamilyCacheRow([{ ...supplementalCandidate("protocol-api:morpho-vault:ethereum:0xvault", nowSec, { currentApy: 6.1, apyBase: 6.1, sourcePool: "vault-sdai-morpho", sourceTvlUsd: 50_000_000, yieldSource: "Morpho: sDAI Vault" }), stablecoinId: undefined }], nowSec),
       "yield:onchain-health:v1": cacheRow({
             version: 1,
@@ -475,11 +473,11 @@ describe("syncYieldData", () => {
             lastFailureMissingIds: [],
       }, nowSec - 60),
     });
-    vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
-    const fetchSpy = fixtureMockFetch([]);
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    const fetchSpy = mockFetch([]);
 
     try {
-      const result = await fixtureSyncYieldData(db);
+      const result = await syncYieldData(db);
       const metadata = JSON.parse(result.metadata ?? "{}") as {
         sourceCoverage?: {
           onChainSkippedDueToCooldown?: boolean;
@@ -500,7 +498,7 @@ describe("syncYieldData", () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
     const onChainConfigs =
-      fixtureYieldConfigModule.ON_CHAIN_RATE_CONFIGS as typeof fixtureYieldConfigModule.ON_CHAIN_RATE_CONFIGS;
+      yieldConfigModule.ON_CHAIN_RATE_CONFIGS as typeof yieldConfigModule.ON_CHAIN_RATE_CONFIGS;
     onChainConfigs.push({
       stablecoinId: "100",
       chain: "ethereum",
@@ -509,7 +507,7 @@ describe("syncYieldData", () => {
       scale: 1e18,
     } as never);
 
-    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+    installYieldCacheReader(vi.mocked(getCache), {
       "dl-stablecoin-pools": dlPoolsCacheRow([
             makeDlYieldPool({
               pool: "pool-placeholder",
@@ -540,11 +538,11 @@ describe("syncYieldData", () => {
             lastFailureMissingIds: [],
       }, nowSec - 60),
     });
-    vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
-    const fetchSpy = fixtureMockFetch([]);
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    const fetchSpy = mockFetch([]);
 
     try {
-      const result = await fixtureSyncYieldData(db);
+      const result = await syncYieldData(db);
       const metadata = JSON.parse(result.metadata ?? "{}") as {
         fallbackMode?: string | null;
         sourceCoverage?: {
@@ -566,7 +564,7 @@ describe("syncYieldData", () => {
   it("applies deterministic auto-discovery override for U (id 336)", async () => {
     const db = makeDb();
 
-    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+    installYieldCacheReader(vi.mocked(getCache), {
       "dl-stablecoin-pools": dlPoolsCacheRow([
             makeDlYieldPool({
               pool: "pool-u-venus",
@@ -580,10 +578,10 @@ describe("syncYieldData", () => {
             }),
       ], Math.floor(Date.now() / 1000)),
     });
-    vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
-    fixtureMockFetch([]);
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
 
-    const result = await fixtureSyncYieldData(db);
+    const result = await syncYieldData(db);
 
     // sDAI cannot resolve in this fixture; deterministic override should add U.
     expect(result.itemCount).toBe(1);
@@ -608,7 +606,7 @@ describe("syncYieldData", () => {
       contracts: [{ chain: "ethereum", address: "0x68749665ff8d2d112fa859aa293f07a622782f38", decimals: 6 }],
     };
     const explicitPoolMap =
-      fixtureYieldConfigModule.EXPLICIT_YIELD_SOURCE_POOL_MAP as typeof fixtureYieldConfigModule.EXPLICIT_YIELD_SOURCE_POOL_MAP;
+      yieldConfigModule.EXPLICIT_YIELD_SOURCE_POOL_MAP as typeof yieldConfigModule.EXPLICIT_YIELD_SOURCE_POOL_MAP;
 
     mutableActiveStablecoins.push(xautMeta as never);
     mutableTrackedMetaById.set("xaut-tether", xautMeta as never);
@@ -624,7 +622,7 @@ describe("syncYieldData", () => {
       },
     ];
 
-    vi.spyOn(fixtureSafetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValue({
+    vi.spyOn(safetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValue({
       kind: "ok",
       mode: "map",
       coveredCount: 5,
@@ -653,7 +651,7 @@ describe("syncYieldData", () => {
       ]),
     } as never);
 
-    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+    installYieldCacheReader(vi.mocked(getCache), {
       "dl-stablecoin-pools": dlPoolsCacheRow([
             makeDlYieldPool({
               pool: "pool-xaut-yo",
@@ -679,11 +677,11 @@ describe("syncYieldData", () => {
       }, nowSec - 3600),
       stablecoins: cacheRow([{ id: "xaut-tether", circulating: { peggedGOLD: 1_000_000_000 } }], nowSec),
     });
-    vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
-    fixtureMockFetch([]);
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
 
     try {
-      const result = await fixtureSyncYieldData(db);
+      const result = await syncYieldData(db);
       const xautRow = findPublishedYieldRow(db, "xaut-tether", (row) => row.source_key === "pool-xaut-yo");
 
       expect(result.itemCount).toBe(1);
@@ -701,7 +699,7 @@ describe("syncYieldData", () => {
   it("keeps deterministic override quality-gated (min TVL/APY/allowlist still apply)", async () => {
     const db = makeDb();
 
-    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+    installYieldCacheReader(vi.mocked(getCache), {
       "dl-stablecoin-pools": dlPoolsCacheRow([
             makeDlYieldPool({
               pool: "pool-u-venus",
@@ -715,10 +713,10 @@ describe("syncYieldData", () => {
             }),
       ], Math.floor(Date.now() / 1000)),
     });
-    vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
-    fixtureMockFetch([]);
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
 
-    const result = await fixtureSyncYieldData(db);
+    const result = await syncYieldData(db);
 
     // Override pool exists but fails min TVL gate, so nothing should be written.
     expect(result.itemCount).toBe(0);
@@ -730,10 +728,10 @@ describe("syncYieldData", () => {
   ] as const)("degrades and blocks auto-lending when the stablecoin supply map is %s", async (state, stablecoins) => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
-    const poolMap = fixtureYieldConfigModule.YIELD_POOL_MAP as Record<string, string>;
+    const poolMap = yieldConfigModule.YIELD_POOL_MAP as Record<string, string>;
     poolMap["100"] = "pool-sdai-native";
 
-    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+    installYieldCacheReader(vi.mocked(getCache), {
       "dl-stablecoin-pools": dlPoolsCacheRow([
         makeDlYieldPool({
           pool: "pool-sdai-native",
@@ -762,11 +760,11 @@ describe("syncYieldData", () => {
       }, nowSec - 3600),
       stablecoins,
     });
-    vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
-    fixtureMockFetch([]);
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
 
     try {
-      const result = await fixtureSyncYieldData(db);
+      const result = await syncYieldData(db);
       const metadata = JSON.parse(result.metadata ?? "{}") as {
         fallbackMode: string | null;
         sourceCoverage: { stablecoinSupplyMapState: string };
@@ -785,7 +783,7 @@ describe("syncYieldData", () => {
     const db = makeDb();
     mockHealthyRiskFreeRateCache();
 
-    vi.mocked(fixtureGetChainRpc).mockReturnValue({
+    vi.mocked(getChainRpc).mockReturnValue({
       chainId: "ethereum",
       chainName: "Ethereum",
       type: "evm",
@@ -793,7 +791,7 @@ describe("syncYieldData", () => {
       explorerUrl: "https://etherscan.io",
     });
 
-    vi.spyOn(fixtureSafetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValue({
+    vi.spyOn(safetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValue({
       kind: "ok",
       mode: "map",
       coveredCount: 4,
@@ -833,7 +831,7 @@ describe("syncYieldData", () => {
         value: "0x0000000000000000000000000000000000000000001998cb5c5ea77bc8dc9000",
       },
     ]);
-    fixtureMockFetch([
+    mockFetch([
       {
         match: "yields.llama.fi",
         body: {
@@ -870,8 +868,8 @@ describe("syncYieldData", () => {
     ]);
 
     const testChainRpcs = makeEthereumRpcMap();
-    vi.mocked(fixtureGetChainRpc).mockReturnValue(testChainRpcs.get("ethereum"));
-    const result = await fixtureSyncYieldData(db, undefined, testChainRpcs);
+    vi.mocked(getChainRpc).mockReturnValue(testChainRpcs.get("ethereum"));
+    const result = await syncYieldData(db, undefined, testChainRpcs);
 
     expect(result.itemCount).toBe(2);
     expect(maxActiveRpcCalls).toBe(1);
@@ -902,42 +900,42 @@ describe("syncYieldData", () => {
     const db = makeDb();
 
     // No cached pools
-    installYieldCacheReader(vi.mocked(fixtureGetCache), {});
+    installYieldCacheReader(vi.mocked(getCache), {});
 
     // DL yields API returns 500
-    fixtureMockFetch([{ match: "yields.llama.fi", body: { error: "Internal Server Error" }, status: 500 }]);
+    mockFetch([{ match: "yields.llama.fi", body: { error: "Internal Server Error" }, status: 500 }]);
 
-    const result = await fixtureSyncYieldData(db);
+    const result = await syncYieldData(db);
 
     // Should still return a result — just with no yield data resolved for DL-sourced coins
     // The function might resolve 0 if sDAI couldn't be matched (no DL pools available)
     expect(result.itemCount).toBeDefined();
     // recordOutcome should have been called with failure
-    expect(fixtureRecordOutcome).toHaveBeenCalledWith(expect.anything(), "defillama-yields", false);
+    expect(recordOutcome).toHaveBeenCalledWith(expect.anything(), "defillama-yields", false);
   });
 
   it("marks the run degraded when the direct DL yields fetch returns an invalid payload", async () => {
     const db = makeDb();
 
-    installYieldCacheReader(vi.mocked(fixtureGetCache), {});
-    fixtureMockFetch([{ match: "yields.llama.fi", body: { nope: [] }, status: 200 }]);
+    installYieldCacheReader(vi.mocked(getCache), {});
+    mockFetch([{ match: "yields.llama.fi", body: { nope: [] }, status: 200 }]);
 
-    const result = await fixtureSyncYieldData(db);
+    const result = await syncYieldData(db);
 
     expect(result.status).toBe("degraded");
     const metadata = JSON.parse(result.metadata ?? "{}") as { fallbackMode: string | null };
     expect(metadata.fallbackMode ?? "").toContain("dl-pools:direct-fetch-invalid-payload");
-    expect(fixtureRecordOutcome).toHaveBeenCalledWith(expect.anything(), "defillama-yields", false);
+    expect(recordOutcome).toHaveBeenCalledWith(expect.anything(), "defillama-yields", false);
   });
 
   it("skips DL yields fetch when circuit breaker is open", async () => {
     const db = makeDb();
 
-    vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
 
-    const fetchSpy = fixtureMockFetch([]);
+    const fetchSpy = mockFetch([]);
 
-    const result = await fixtureSyncYieldData(db);
+    const result = await syncYieldData(db);
 
     // With no pools and circuit open, yield resolution falls through
     expect(result.itemCount).toBeDefined();
@@ -949,22 +947,22 @@ describe("syncYieldData", () => {
   });
 
   it("returns degraded with itemCount 0 when no yield-bearing coins exist", async () => {
-    const originalYieldCoins = [...fixtureACTIVE_YIELD_BEARING_STABLECOINS];
+    const originalYieldCoins = [...ACTIVE_YIELD_BEARING_STABLECOINS];
     const db = makeDb();
 
-    fixtureACTIVE_YIELD_BEARING_STABLECOINS.splice(0, fixtureACTIVE_YIELD_BEARING_STABLECOINS.length);
+    ACTIVE_YIELD_BEARING_STABLECOINS.splice(0, ACTIVE_YIELD_BEARING_STABLECOINS.length);
 
     try {
-      const result = await fixtureSyncYieldData(db);
+      const result = await syncYieldData(db);
 
       expect(result.itemCount).toBe(0);
       expect(result.status).toBe("degraded");
       expect(result.productivity).toEqual({ productive: false, reason: "no-yield-bearing-coins" });
       expect(JSON.parse(result.metadata ?? "{}")).toEqual({ reason: "no-yield-bearing-coins" });
-      expect(fixtureShouldAttemptFetch).not.toHaveBeenCalled();
-      expect(fixtureBatchExecute).not.toHaveBeenCalled();
+      expect(shouldAttemptFetch).not.toHaveBeenCalled();
+      expect(batchExecute).not.toHaveBeenCalled();
     } finally {
-      fixtureACTIVE_YIELD_BEARING_STABLECOINS.push(...originalYieldCoins);
+      ACTIVE_YIELD_BEARING_STABLECOINS.push(...originalYieldCoins);
     }
   });
 
@@ -972,15 +970,15 @@ describe("syncYieldData", () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
-    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+    installYieldCacheReader(vi.mocked(getCache), {
       "yield-rankings": cacheRow({
         rankings: Array.from({ length: 10 }, () => ({ id: "100" })),
       }, nowSec),
     });
-    vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
-    fixtureMockFetch([]);
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
 
-    const result = await fixtureSyncYieldData(db);
+    const result = await syncYieldData(db);
 
     expect(result.status).toBe("degraded");
     const metadata = JSON.parse(result.metadata ?? "{}") as {
@@ -991,14 +989,14 @@ describe("syncYieldData", () => {
     expect(metadata.reason).toBe("published-yield-coverage-regression");
     expect(metadata.previousPublishedYieldBearingCount).toBe(10);
     expect(metadata.currentPublishedYieldBearingCount).toBe(0);
-    expect(fixtureBatchExecute).not.toHaveBeenCalled();
+    expect(batchExecute).not.toHaveBeenCalled();
   });
 
   it("returns degraded when published lending-opportunity coverage regresses against the previous snapshot", async () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
-    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+    installYieldCacheReader(vi.mocked(getCache), {
       "yield-rankings": cacheRow({
         rankings: [{ id: "100" }, ...Array.from({ length: 10 }, () => ({ id: "usdc-circle" }))],
       }, nowSec),
@@ -1011,7 +1009,7 @@ describe("syncYieldData", () => {
             fallbackMode: null,
       }, nowSec - 3600),
     });
-    fixtureMockFetch([
+    mockFetch([
       {
         match: "yields.llama.fi",
         body: {
@@ -1028,7 +1026,7 @@ describe("syncYieldData", () => {
       },
     ]);
 
-    const result = await fixtureSyncYieldData(db);
+    const result = await syncYieldData(db);
 
     expect(result.status).toBe("degraded");
     const metadata = JSON.parse(result.metadata ?? "{}") as {
@@ -1043,14 +1041,14 @@ describe("syncYieldData", () => {
     expect(metadata.currentPublishedOpportunityCount).toBe(0);
     expect(metadata.previousPublishedRankingCount).toBe(11);
     expect(metadata.currentPublishedRankingCount).toBe(1);
-    expect(fixtureBatchExecute).not.toHaveBeenCalled();
+    expect(batchExecute).not.toHaveBeenCalled();
   });
 
   it("returns degraded when total published ranking count regresses against the previous snapshot", async () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
-    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+    installYieldCacheReader(vi.mocked(getCache), {
       "yield-rankings": cacheRow({
         rankings: Array.from({ length: 10 }, (_, index) => ({ id: `legacy-opportunity-${index}` })),
       }, nowSec),
@@ -1063,7 +1061,7 @@ describe("syncYieldData", () => {
             fallbackMode: null,
       }, nowSec - 3600),
     });
-    fixtureMockFetch([
+    mockFetch([
       {
         match: "yields.llama.fi",
         body: {
@@ -1080,7 +1078,7 @@ describe("syncYieldData", () => {
       },
     ]);
 
-    const result = await fixtureSyncYieldData(db);
+    const result = await syncYieldData(db);
 
     expect(result.status).toBe("degraded");
     const metadata = JSON.parse(result.metadata ?? "{}") as {
@@ -1091,14 +1089,14 @@ describe("syncYieldData", () => {
     expect(metadata.reason).toBe("published-total-coverage-regression");
     expect(metadata.previousPublishedRankingCount).toBe(10);
     expect(metadata.currentPublishedRankingCount).toBe(1);
-    expect(fixtureBatchExecute).not.toHaveBeenCalled();
+    expect(batchExecute).not.toHaveBeenCalled();
   });
 
   it("recovers a malformed previous yield-rankings cache when the new payload passes guards", async () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
-    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+    installYieldCacheReader(vi.mocked(getCache), {
       "yield-rankings": cacheRow("{not-json", nowSec),
       risk_free_rate: cacheRow({
             rate: 4.0,
@@ -1109,7 +1107,7 @@ describe("syncYieldData", () => {
             fallbackMode: null,
       }, nowSec - 3600),
     });
-    fixtureMockFetch([
+    mockFetch([
       {
         match: "yields.llama.fi",
         body: {
@@ -1126,7 +1124,7 @@ describe("syncYieldData", () => {
       },
     ]);
 
-    const result = await fixtureSyncYieldData(db);
+    const result = await syncYieldData(db);
 
     expect(result.itemCount).toBe(1);
     expect(getYieldRankingsCachePayload(db)).toBeDefined();
@@ -1134,10 +1132,10 @@ describe("syncYieldData", () => {
 
   it("returns early when tracked yield coverage regresses below the guard threshold", async () => {
     const db = makeDb();
-    const originalYieldCoins = [...fixtureACTIVE_YIELD_BEARING_STABLECOINS];
+    const originalYieldCoins = [...ACTIVE_YIELD_BEARING_STABLECOINS];
 
     for (let i = 0; i < 10; i++) {
-      fixtureACTIVE_YIELD_BEARING_STABLECOINS.push({
+      ACTIVE_YIELD_BEARING_STABLECOINS.push({
         id: `yield-extra-${i}`,
         name: `Yield Extra ${i}`,
         symbol: `YE${i}`,
@@ -1153,7 +1151,7 @@ describe("syncYieldData", () => {
     }
 
     try {
-      fixtureMockFetch([
+      mockFetch([
         {
           match: "yields.llama.fi",
           body: {
@@ -1170,7 +1168,7 @@ describe("syncYieldData", () => {
         },
       ]);
 
-      const result = await fixtureSyncYieldData(db);
+      const result = await syncYieldData(db);
       const metadata = JSON.parse(result.metadata ?? "{}") as {
         reason?: string | null;
         coverage?: number;
@@ -1183,28 +1181,28 @@ describe("syncYieldData", () => {
       expect(metadata.coverage).toBeCloseTo(1 / 11, 6);
       expect(metadata.resolvedCount).toBe(1);
       expect(metadata.totalCount).toBe(11);
-      expect(fixtureBatchExecute).not.toHaveBeenCalled();
+      expect(batchExecute).not.toHaveBeenCalled();
     } finally {
-      fixtureACTIVE_YIELD_BEARING_STABLECOINS.splice(
+      ACTIVE_YIELD_BEARING_STABLECOINS.splice(
         0,
-        fixtureACTIVE_YIELD_BEARING_STABLECOINS.length,
+        ACTIVE_YIELD_BEARING_STABLECOINS.length,
         ...originalYieldCoins,
       );
     }
   });
 
   it("skips yield-rankings cache write when response payload fails schema validation", async () => {
-    const db = makeBrokenYieldRankingsDb();
-    installYieldCacheReader(vi.mocked(fixtureGetCache), {});
-    vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
-    vi.spyOn(fixturePublicationModule, "validateYieldRankingsPayloadForPublish").mockResolvedValue({
+    const db = mockD1WithYieldPruneTables(yieldFallbackTableMatches());
+    installYieldCacheReader(vi.mocked(getCache), {});
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    vi.spyOn(publicationModule, "validateYieldRankingsPayloadForPublish").mockResolvedValue({
       ok: false,
       validationFailures: 1,
       reason: "schema-validation-failed",
     });
-    fixtureMockFetch([]);
+    mockFetch([]);
 
-    const result = await fixtureSyncYieldData(db);
+    const result = await syncYieldData(db);
 
     expect(result.status).toBe("degraded");
     const metadata = JSON.parse(result.metadata ?? "{}") as {
@@ -1222,7 +1220,7 @@ describe("syncYieldData", () => {
     const { db, sqlite } = sqliteFixtures.open();
     mockHealthyRiskFreeRateCache();
 
-    fixtureMockFetch([
+    mockFetch([
       {
         match: "yields.llama.fi",
         body: {
@@ -1238,7 +1236,7 @@ describe("syncYieldData", () => {
         },
       },
     ]);
-    await fixtureSyncYieldData(db);
+    await syncYieldData(db);
     const previousCache = sqlite.prepare("SELECT * FROM cache WHERE key = 'yield-rankings'").get();
     const previousData = sqlite.prepare("SELECT * FROM yield_data ORDER BY stablecoin_id, source_key").all();
     const previousHistory = sqlite.prepare("SELECT * FROM yield_history ORDER BY stablecoin_id, source_key, recorded_at").all();
@@ -1248,9 +1246,9 @@ describe("syncYieldData", () => {
     sqlite.exec(`CREATE TRIGGER fail_rankings BEFORE UPDATE ON cache WHEN NEW.key = 'yield-rankings'
       BEGIN SELECT RAISE(ABORT, 'cache unavailable'); END`);
     vi.advanceTimersByTime(60_000);
-    vi.mocked(fixtureWriteFreshnessSentinel).mockClear();
+    vi.mocked(writeFreshnessSentinel).mockClear();
 
-    const result = await fixtureSyncYieldData(db);
+    const result = await syncYieldData(db);
 
     expect(result.status).toBe("degraded");
     const metadata = JSON.parse(result.metadata ?? "{}") as {
@@ -1259,7 +1257,7 @@ describe("syncYieldData", () => {
     };
     expect(metadata.reason).toBe("yield-publication-transaction-failed");
     expect(metadata.publishFailure ?? "").toContain("cache unavailable");
-    expect(fixtureWriteFreshnessSentinel).not.toHaveBeenCalled();
+    expect(writeFreshnessSentinel).not.toHaveBeenCalled();
     expect(sqlite.prepare("SELECT * FROM cache WHERE key = 'yield-rankings'").get()).toEqual(previousCache);
     expect(sqlite.prepare("SELECT * FROM yield_data ORDER BY stablecoin_id, source_key").all()).toEqual(previousData);
     expect(sqlite.prepare("SELECT * FROM yield_history ORDER BY stablecoin_id, source_key, recorded_at").all()).toEqual(previousHistory);

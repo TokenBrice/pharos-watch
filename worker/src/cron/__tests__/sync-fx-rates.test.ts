@@ -5,7 +5,7 @@ import { mockFetchRetry } from "../../test-helpers/cron";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import {
   findCacheWrite,
-  makeChainlinkFxRoutes,
+  makeChainlinkFxFeed,
   makeCacheRow,
   makeCompleteFxRates,
   makeCommodityStablecoinsCacheRow,
@@ -543,34 +543,16 @@ describe("syncFxRates", () => {
   });
 
   it("overlays fresh Chainlink reference feeds when they agree with current references", async () => {
-    const decimalsHex = "0x0000000000000000000000000000000000000000000000000000000000000008";
     const nowSec = Math.floor(Date.now() / 1000);
-    const toHexWord = (value: bigint | number) => BigInt(value).toString(16).padStart(64, "0");
-    const latestRoundDataHex =
-      "0x" +
-      toHexWord(1n) +
-      toHexWord(108_101_000n) +
-      toHexWord(0n) +
-      toHexWord(BigInt(nowSec)) +
-      toHexWord(1n);
-
-    mockFetch(makeChainlinkFxRoutes({
-      rpcUrl: "https://rpc.base.test",
+    const { routes, chainRpcs } = makeChainlinkFxFeed({
+      chain: "base",
       feedAddress: "0xc91D87E81faB8f93699ECf7Ee9B44D11e1D53F0F",
-      decimalsHex,
-      latestRoundDataHex,
-    }), { requireMatch: true });
+      answer: 108_101_000n,
+      updatedAt: nowSec,
+    });
+    mockFetch(routes, { requireMatch: true });
 
     const db = makeFxRatesDb();
-    const chainRpcs = new Map([
-      ["base", {
-        chainId: "base",
-        chainName: "Base",
-        type: "evm" as const,
-        rpcUrl: "https://rpc.base.test",
-        explorerUrl: "https://basescan.org",
-      }],
-    ]);
 
     const result = await syncFxRates(db, undefined, undefined, chainRpcs);
     const metadata = JSON.parse(result.metadata ?? "{}");
@@ -590,35 +572,17 @@ describe("syncFxRates", () => {
   });
 
   it("uses an older validated Chainlink timestamp when the metal source has no provenance", async () => {
-    const decimalsHex = "0x0000000000000000000000000000000000000000000000000000000000000008";
     const nowSec = Math.floor(Date.now() / 1000);
     const olderUpdatedAt = nowSec - (11 * 3600);
-    const toHexWord = (value: bigint | number) => BigInt(value).toString(16).padStart(64, "0");
-    const latestRoundDataHex =
-      "0x" +
-      toHexWord(1n) +
-      toHexWord(3_200_000_000n) +
-      toHexWord(0n) +
-      toHexWord(BigInt(olderUpdatedAt)) +
-      toHexWord(1n);
-
-    mockFetch(makeChainlinkFxRoutes({
-      rpcUrl: "https://rpc.ethereum.test",
+    const { routes, chainRpcs } = makeChainlinkFxFeed({
+      chain: "ethereum",
       feedAddress: "0x379589227b15F1a12195D3f2d90bBc9F31f95235",
-      decimalsHex,
-      latestRoundDataHex,
-    }), { requireMatch: true });
+      answer: 3_200_000_000n,
+      updatedAt: olderUpdatedAt,
+    });
+    mockFetch(routes, { requireMatch: true });
 
     const db = makeFxRatesDb();
-    const chainRpcs = new Map([
-      ["ethereum", {
-        chainId: "ethereum",
-        chainName: "Ethereum",
-        type: "evm" as const,
-        rpcUrl: "https://rpc.ethereum.test",
-        explorerUrl: "https://etherscan.io",
-      }],
-    ]);
 
     const result = await syncFxRates(db, undefined, undefined, chainRpcs);
     const metadata = JSON.parse(result.metadata ?? "{}") as { sources?: { chainlink?: string } };
@@ -640,35 +604,17 @@ describe("syncFxRates", () => {
   });
 
   it("checks older Chainlink metal quotes for divergence before skipping them", async () => {
-    const decimalsHex = "0x0000000000000000000000000000000000000000000000000000000000000008";
     const nowSec = Math.floor(Date.now() / 1000);
     const olderUpdatedAt = nowSec - (11 * 3600);
-    const toHexWord = (value: bigint | number) => BigInt(value).toString(16).padStart(64, "0");
-    const latestRoundDataHex =
-      "0x" +
-      toHexWord(1n) +
-      toHexWord(4_200_000_000n) +
-      toHexWord(0n) +
-      toHexWord(BigInt(olderUpdatedAt)) +
-      toHexWord(1n);
-
-    mockFetch(makeChainlinkFxRoutes({
-      rpcUrl: "https://rpc.ethereum.test",
+    const { routes, chainRpcs } = makeChainlinkFxFeed({
+      chain: "ethereum",
       feedAddress: "0x379589227b15F1a12195D3f2d90bBc9F31f95235",
-      decimalsHex,
-      latestRoundDataHex,
-    }), { requireMatch: true });
+      answer: 4_200_000_000n,
+      updatedAt: olderUpdatedAt,
+    });
+    mockFetch(routes, { requireMatch: true });
 
     const db = makeFxRatesDb();
-    const chainRpcs = new Map([
-      ["ethereum", {
-        chainId: "ethereum",
-        chainName: "Ethereum",
-        type: "evm" as const,
-        rpcUrl: "https://rpc.ethereum.test",
-        explorerUrl: "https://etherscan.io",
-      }],
-    ]);
 
     const result = await syncFxRates(db, undefined, undefined, chainRpcs);
     const metadata = JSON.parse(result.metadata ?? "{}") as { sources?: { chainlink?: string } };

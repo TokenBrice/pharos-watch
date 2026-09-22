@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   cleanupSyncYieldDataTest,
-  fixtureGetCache,
-  fixtureShouldAttemptFetch,
   makeDb,
   resetSyncYieldDataTest,
 } from "./sync-yield-data.test-support";
+import { getCache } from "../../lib/db-cache";
+import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 import {
   cacheRow,
   installYieldCacheReader,
@@ -62,7 +62,7 @@ function freshRequiredFamilyRows(nowSec: number): Record<string, YieldCacheFixtu
 describe("supplemental family cache acceptance window", () => {
   beforeEach(() => {
     resetSyncYieldDataTest();
-    vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
   });
 
   afterEach(cleanupSyncYieldDataTest);
@@ -73,7 +73,7 @@ describe("supplemental family cache acceptance window", () => {
     const morphoKey = getYieldSupplementalFamilyCacheKey("morpho");
     const familyAgeSec = 5 * HOUR_SEC + 59 * 60;
 
-    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+    installYieldCacheReader(vi.mocked(getCache), {
       ...freshRequiredFamilyRows(nowSec),
       [morphoKey]: supplementalFamilyCacheRow([morphoCandidate(nowSec - familyAgeSec)], nowSec - familyAgeSec),
     });
@@ -97,7 +97,7 @@ describe("supplemental family cache acceptance window", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const morphoKey = getYieldSupplementalFamilyCacheKey("morpho");
 
-    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+    installYieldCacheReader(vi.mocked(getCache), {
       ...freshRequiredFamilyRows(nowSec),
       [morphoKey]: supplementalFamilyCacheRow([morphoCandidate(nowSec - familyAgeSec)], nowSec - familyAgeSec),
     });
@@ -125,7 +125,7 @@ describe("supplemental family cache acceptance window", () => {
         ]),
     );
 
-    installYieldCacheReader(vi.mocked(fixtureGetCache), staleRows);
+    installYieldCacheReader(vi.mocked(getCache), staleRows);
 
     const state = await loadYieldSyncState({ db, startSec: nowSec, chainRpcs: new Map() });
 
@@ -152,7 +152,7 @@ describe("supplemental family cache acceptance window", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const morphoKey = getYieldSupplementalFamilyCacheKey("morpho");
 
-    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+    installYieldCacheReader(vi.mocked(getCache), {
       ...freshRequiredFamilyRows(nowSec),
       [morphoKey]: cacheRow(
         JSON.stringify({
@@ -184,7 +184,7 @@ describe("supplemental family cache acceptance window", () => {
     ) as Record<SupplementalSourceFamilyKey, SupplementalFamilyCacheResult>;
     familyCacheResults.morpho = "retained-previous";
 
-    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+    installYieldCacheReader(vi.mocked(getCache), {
       ...freshRequiredFamilyRows(nowSec),
       [getYieldSupplementalRunOutcomeCacheKey()]: cacheRow(
         buildYieldSupplementalRunOutcome(familyCacheResults, ["morpho"], nowSec),
@@ -201,7 +201,7 @@ describe("supplemental family cache acceptance window", () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
-    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+    installYieldCacheReader(vi.mocked(getCache), {
       ...freshRequiredFamilyRows(nowSec),
       [getYieldSupplementalRunOutcomeCacheKey()]: cacheRow(
         JSON.stringify({ version: 2, checkedAt: nowSec, degradedFamilies: ["morpho"] }),

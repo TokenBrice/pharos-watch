@@ -330,6 +330,8 @@ const db = mockD1([
 
 `mockTelegramD1()` (`worker/src/test-helpers/__shared/telegram.ts`) layers typed Telegram reads on top of `mockD1` and always accounts its matches. Pass `{ strictWrites: true }` to drop its broad `INSERT/UPDATE/DELETE telegram_*` defaults so a write the scenario did not declare is rejected rather than silently accepted; declare the scenario's own writes through `tables` or `writeResults`.
 
+The cron suites that drive a whole sync entrypoint share one harness per module: `worker/src/cron/__tests__/mint-burn.test-support.ts` (Alchemy/EVM/pipeline mocks, `makeMintBurnDb`, `resetMintBurnMocks`), `live-reserves.test-support.ts` and `sync-yield-data.test-support.ts`. A harness module owns the `vi.mock` declarations; consumers import the mocked symbols from their real modules (`import { fetchAlchemyLogs } from "../../lib/alchemy-logs"`) after the harness import, never through re-exported `fixture*` aliases — re-exporting a mocked binding resolves to `undefined` under Vitest 4. The always-issued reads a sync performs are declared once as `allowUnused` fallbacks (`yieldFallbackTableMatches()`), so `assertMatchesUsed` holds each test to its own fixtures.
+
 Cross-runtime tests outside `worker/src` should use `createRemoteD1Mock()` from `scripts/test-utils/d1.ts` for worker maintenance scripts that accept a `RemoteD1Client` dependency. Pages Functions that need `prepare()`, `batch()`, and `getHistory()` use `makeTestD1Database()` from `@shared/test-utils/mock-d1`.
 
 ### Reserve Adapter Harness (`worker/src/cron/reserve-adapters/__tests__/reserve-adapter.test-support.ts`)
