@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
-import { SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
 
 const mocks = vi.hoisted(() => ({
   runStatusSelfCheck: vi.fn(),
@@ -27,38 +26,6 @@ vi.mock("../../../lib/cron-logger", async (importOriginal) => ({
 vi.mock("../../../lib/budget-surface-telemetry", () => ({ recordBudgetSurfaceTelemetry: mocks.recordBudgetSurfaceTelemetry }));
 
 import { runStatusSelfCheckSlot } from "../status-self-check";
-
-describe("runStatusSelfCheckSlot", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mocks.runStatusSelfCheck.mockResolvedValue({ status: "ok", itemCount: 1 });
-    mocks.runDataInvariantCanary.mockResolvedValue({ status: "ok", itemCount: 1 });
-    mocks.runCronSentinel.mockResolvedValue({ status: "ok", itemCount: 1 });
-  });
-  it("runs status self-check, canary, and sentinel in plan order", async () => {
-    const order: string[] = [];
-    const signal = new AbortController().signal;
-    mocks.runStatusSelfCheck.mockResolvedValue({ status: "ok", itemCount: 1 });
-    mocks.runDataInvariantCanary.mockResolvedValue({ status: "ok", itemCount: 1 });
-    mocks.runCronSentinel.mockResolvedValue({ status: "ok", itemCount: 1 });
-
-    const runtime = makeScheduledRuntime({
-      scheduleKey: "statusSelfCheckOffset",
-      cron: "9 * * * *",
-      runLeasedCron: vi.fn(async (job, fn) => {
-        order.push(job);
-        return fn(signal, vi.fn());
-      }),
-    });
-
-    await runStatusSelfCheckSlot(runtime);
-
-    expect(order).toEqual(SCHEDULED_SLOT_PLANS.statusSelfCheckOffset.jobChains.flat());
-    expect(order[0]).toBe("status-self-check");
-    expect(order[1]).toBe("data-invariant-canary");
-  });
-});
-
 
 describe("hourly corroboration before the next publication", () => {
   beforeEach(() => {

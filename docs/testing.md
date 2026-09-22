@@ -257,6 +257,15 @@ When the checkout itself lives under `/.worktrees/`, Vitest now drops those glob
 
 Recent cron reliability coverage explicitly exercises slot-fencing and no-write guardrails as well: stablecoins stale-publication blocking, PSI fail-closed dependency loss, DEWS bootstrap/freshness degradation, digest Telegram replay safety, bluechip partial-cache merge, and yield deterministic-source outage handling all live in the worker cron suites above.
 
+Scheduled-slot dispatch is asserted once, not per slot: `worker/src/handlers/scheduled/__tests__/slot-registry.test.ts`
+drives every entry of `SCHEDULED_SLOT_PLANS` through `SLOT_RUNNER_LOADER_BY_KEY` against a real-schema SQLite
+fixture and a recording `runLeasedCron` that never invokes a job body, then asserts each chain is leased in plan
+order and that no planned job reports an `error` outcome. Slots whose member set is decided from stored state
+(`fiveMinuteTelegramAlerts`, `digestTriggerPoll`, `fourHourlyReserveSync`) are listed in that suite's
+`RUN_TIME_GATED_SLOTS` with the semantics suite that owns their gating; they still may not lease an unplanned job.
+Per-slot suites are reserved for slot semantics — a suite that only re-asserts `flattenScheduledSlotPlanJobs(plan)`
+is redundant with this table and should not be added.
+
 PSI now also has dedicated replay/regression coverage beyond the pure formula tests:
 
 - `worker/src/lib/__tests__/psi-recompute.test.ts` covers historical input reconstruction, PSI-universe filtering, and replay denominator rules

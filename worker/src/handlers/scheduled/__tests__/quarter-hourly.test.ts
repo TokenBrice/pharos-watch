@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ScheduledRuntimeContext } from "../context";
 import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
-import { flattenScheduledSlotPlanJobs, SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
 
 const mocks = vi.hoisted(() => ({
   syncFxRates: vi.fn(),
@@ -10,7 +9,6 @@ const mocks = vi.hoisted(() => ({
   snapshotChainSupply: vi.fn(),
   snapshotPsiDaily: vi.fn(),
   snapshotPublicDataset: vi.fn(),
-  runPriceCorroboration: vi.fn(),
 }));
 
 vi.mock("../../../cron/sync-fx-rates", () => ({ syncFxRates: mocks.syncFxRates }));
@@ -19,10 +17,6 @@ vi.mock("../../../cron/snapshot-supply", () => ({ snapshotSupply: mocks.snapshot
 vi.mock("../../../cron/snapshot-chain-supply", () => ({ snapshotChainSupply: mocks.snapshotChainSupply }));
 vi.mock("../../../cron/snapshot-psi", () => ({ snapshotPsiDaily: mocks.snapshotPsiDaily }));
 vi.mock("../../../cron/snapshot-public-dataset", () => ({ snapshotPublicDataset: mocks.snapshotPublicDataset }));
-vi.mock("../../../cron/sync-stablecoins/price-corroboration", async (importOriginal) => ({
-  ...await importOriginal<typeof import("../../../cron/sync-stablecoins/price-corroboration")>(),
-  runPriceCorroboration: mocks.runPriceCorroboration,
-}));
 vi.mock("../preflight-skip", () => ({ logSkippedCronRun: vi.fn(async () => undefined) }));
 
 import { runQuarterHourlySlot } from "../quarter-hourly";
@@ -72,26 +66,6 @@ describe("runQuarterHourlySlot", () => {
 
   afterEach(() => vi.restoreAllMocks());
 
-  it("runs fx rates before stablecoins, then the snapshot lanes in plan order", async () => {
-    mocks.syncStablecoins.mockResolvedValue({
-      status: "ok",
-      itemCount: 1,
-      metadata: JSON.stringify({ downstreamSafe: true }),
-    });
-    const order: string[] = [];
-
-    await runQuarterHourlySlot(runtime(order));
-
-    expect(order).toEqual(flattenScheduledSlotPlanJobs(SCHEDULED_SLOT_PLANS.quarterHourly));
-    expect(order[0]).toBe("sync-fx-rates");
-    expect(order[1]).toBe("sync-stablecoins");
-    expect(mocks.snapshotSupply).toHaveBeenCalledOnce();
-    expect(mocks.snapshotChainSupply).toHaveBeenCalledOnce();
-    expect(mocks.runPriceCorroboration).not.toHaveBeenCalled();
-    expect(mocks.snapshotPsiDaily).not.toHaveBeenCalled();
-    expect(mocks.snapshotPublicDataset).not.toHaveBeenCalled();
-  });
-
   it("skips all snapshot jobs when sync-stablecoins reports an unsafe cache", async () => {
     mocks.syncStablecoins.mockResolvedValue({
       status: "degraded",
@@ -125,7 +99,6 @@ describe("runQuarterHourlySlot", () => {
 
     expect(mocks.snapshotSupply).toHaveBeenCalledOnce();
     expect(mocks.snapshotChainSupply).toHaveBeenCalledOnce();
-    expect(mocks.runPriceCorroboration).not.toHaveBeenCalled();
   });
 
   it("fills missing same-day snapshots once and then no-ops", async () => {

@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ScheduledRuntimeContext } from "../context";
 import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
-import { flattenScheduledSlotPlanJobs, SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
 import {
   PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_ATTEMPTS,
   PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_DELAY_MS,
@@ -53,21 +52,11 @@ describe("runDaily0800Slot", () => {
 
   afterEach(() => vi.restoreAllMocks());
 
-  it("dispatches all six jobs, gating snapshots on the cache freshness window", async () => {
-    const order: string[] = [];
-    const rt = runtime(order);
+  it("gates both supply snapshots on the slot's stablecoins-cache freshness window", async () => {
+    const rt = runtime([]);
 
     await runDaily0800Slot(rt);
 
-    expect([...order].sort()).toEqual(
-      [...flattenScheduledSlotPlanJobs(SCHEDULED_SLOT_PLANS.daily0800Utc)].sort(),
-    );
-    expect(mocks.snapshotSafetyGradeHistory.mock.invocationCallOrder[0]).toBeLessThan(
-      mocks.snapshotPsiDaily.mock.invocationCallOrder[0],
-    );
-    expect(mocks.snapshotPsiDaily.mock.invocationCallOrder[0]).toBeLessThan(
-      mocks.snapshotPublicDataset.mock.invocationCallOrder[0],
-    );
     expect(mocks.snapshotSupply).toHaveBeenCalledWith(rt.db, expect.any(AbortSignal), {
       minStablecoinsCacheUpdatedAtSec: SLOT_STARTED_AT,
       freshnessGateLabel: "daily0800Utc",
