@@ -250,6 +250,16 @@ regexTarget = "match"
 regexes = ['''^sourceKey: "(?:balancer|curve|uniswap-v[234]|unknown-protocol)-dex"$''']
 paths = ['''(?:^|/)worker/src/lib/__tests__/primary-price-collector\.test\.ts$''']
 
+# The Uniswap V4 exact-pool pricing-source registry key is a public pricing-lane
+# identifier; pin the exact literal to its owning registry file.
+[[allowlists]]
+description = "Uniswap V4 exact-pool pricing-source registry key is not a credential"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "match"
+regexes = ['''^key: "uniswap-v4-exact"$''']
+paths = ['''(?:^|/)shared/lib/pricing-source-registry-dex-search\.ts$''']
+
 # Reviewed public on-chain identities only; other values in these files stay scanned.
 [[allowlists]]
 description = "Reviewed public Tron USDT contract in the bounded blacklist repair and its test"
