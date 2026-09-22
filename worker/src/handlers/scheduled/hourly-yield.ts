@@ -53,6 +53,7 @@ function buildHourlyYieldSlotGroups(runtime: ScheduledRuntimeContext) {
       "sync-yield-supplemental": async (signal, reportProgress) => {
         const result = await syncYieldSupplemental(runtime.db, signal, runtime.chainRpcs, reportProgress, vaultsFyi, {
           catchUpMinMarkerAgeSec: SUPPLEMENTAL_CATCH_UP_MIN_MARKER_AGE_SEC,
+          pendleApiKey: runtime.env.PENDLE_API_KEY,
         });
         supplementalCatchUpRan = result.status !== "skipped_neutral";
         return result;

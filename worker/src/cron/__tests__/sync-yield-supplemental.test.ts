@@ -159,6 +159,16 @@ describe("syncYieldSupplemental", () => {
     expect(metadata).not.toHaveProperty("cacheKey");
   });
 
+  it("threads the Pendle credential only to its adapter without exposing it in telemetry", async () => {
+    const signal = new AbortController().signal;
+    const result = await syncYieldSupplemental({} as D1Database, signal, new Map(), undefined, undefined, {
+      pendleApiKey: "pendle-test-key",
+    });
+    expect(fetchPendleMarketSources).toHaveBeenCalledWith(signal, "pendle-test-key");
+    expect(fetchMorphoVaultSources).toHaveBeenCalledWith(signal);
+    expect(result.metadata).not.toContain("pendle-test-key");
+  });
+
   it("threads vaults.fyi runtime config into the supplemental source family loader without persisting the key", async () => {
     const signal = new AbortController().signal;
     const vaultsFyi = {

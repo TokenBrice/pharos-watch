@@ -277,7 +277,8 @@ export async function fetchMorphoVaultSources(signal?: AbortSignal): Promise<Sup
   }
 }
 
-export async function fetchPendleMarketSources(signal?: AbortSignal): Promise<SupplementalFamilyFetchResult> {
+export async function fetchPendleMarketSources(signal?: AbortSignal, apiKey?: string): Promise<SupplementalFamilyFetchResult> {
+  const configuredApiKey = apiKey?.trim();
   const results: ResolvedYieldCandidate[] = [];
   const budget = createOptionalSourceBudget("Pendle market sources", OPTIONAL_PROTOCOL_API_BUDGET_MS, signal);
   const nowMs = Date.now();
@@ -295,7 +296,11 @@ export async function fetchPendleMarketSources(signal?: AbortSignal): Promise<Su
           const result = await fetchJsonWithRetry<{ total?: number; results?: PendleMarket[] }>(
             url,
             {
-              headers: { Accept: "application/json", "User-Agent": USER_AGENT },
+              headers: {
+                Accept: "application/json",
+                "User-Agent": USER_AGENT,
+                ...(configuredApiKey ? { Authorization: `Bearer ${configuredApiKey}` } : {}),
+              },
               signal: budget.signal,
             },
             0,

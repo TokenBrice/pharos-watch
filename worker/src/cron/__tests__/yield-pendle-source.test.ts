@@ -8,6 +8,38 @@ import { fetchPendleMarketSources } from "../yield-sync/sources";
 describe("fetchPendleMarketSources", () => {
   afterEach(cleanupYieldSourceTest);
 
+  it.each([undefined, "", "   ", "  pendle-test-key  "])("uses optional bearer authentication without changing request URLs (%s)", async (apiKey) => {
+    const authorization = apiKey?.trim() ? `Bearer ${apiKey.trim()}` : null;
+    const requests: Request[] = [];
+    mockYieldSourceRoutes([1, 42161, 8453].map((chainId) => ({
+      match: `https://api-v2.pendle.finance/core/v1/${chainId}/markets?limit=100&skip=0&is_active=true`,
+      respond: (request: Request) => {
+        requests.push(request);
+        return { body: { results: [] } };
+      },
+    })), { strictUrl: true, requireMatch: true });
+
+    const result = await fetchPendleMarketSources(undefined, apiKey);
+
+    expect(result).toEqual({ candidates: [], degraded: false });
+    expect(requests).toHaveLength(3);
+    for (const request of requests) {
+      expect(request.headers.get("Authorization")).toBe(authorization);
+      expect(request.url).not.toContain("pendle-test-key");
+    }
+  });
+
+  it("keeps authenticated quota failures degraded", async () => {
+    mockYieldSourceRoutes([1, 42161, 8453].map((chainId) => ({
+      match: `/core/v1/${chainId}/markets?`,
+      matchHeaders: { Authorization: "Bearer pendle-test-key" },
+      status: 429,
+      body: { message: "too many requests" },
+    })));
+    expect(await fetchPendleMarketSources(undefined, "pendle-test-key"))
+      .toEqual({ candidates: [], degraded: true });
+  });
+
   it("extracts stablecoin market yields from Pendle REST API", async () => {
     const futureExpiry = new Date(Date.now() + 30 * 86400 * 1000).toISOString();
     mockYieldSourceRoutes([

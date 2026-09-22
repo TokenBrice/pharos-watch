@@ -44,6 +44,7 @@ export interface Env {
   JUPITER_API_KEY?: string;
   M0_API_KEY?: string;
   COINGECKO_API_KEY?: string;
+  PENDLE_API_KEY?: string;
   VAULTS_FYI_API_KEY?: string;
   VAULTS_FYI_ENABLED?: string;
   VAULTS_FYI_RANKABLE_VAULTS?: string;
