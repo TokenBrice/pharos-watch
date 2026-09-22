@@ -1454,7 +1454,7 @@ export function evaluateV9Asset({
     trace,
     unavailabilityRootsById,
   );
-  const stressState = buildV9RetainedStressState(scoreInput, {
+  const stressState = buildV9RetainedStressState({
     circulatingUsd: exitCirculatingUsd,
     portfolioStatus: exitPortfolioStatus,
     routes: projectedExitRoutes,

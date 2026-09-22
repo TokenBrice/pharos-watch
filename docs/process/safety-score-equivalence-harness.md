@@ -327,7 +327,7 @@ mkdir -p agents/v9-captures
 npx tsx -e "
 import { writeFileSync } from 'node:fs';
 import miniCapture from './worker/src/lib/__tests__/fixtures/safety-score-v9-rateable-mini-capture.json';
-import { createReportCardsFixedInput } from './worker/src/lib/report-cards-fixed-input';
+import { createReportCardsFixedInput } from './worker/src/test-helpers/report-cards-fixed-input';
 writeFileSync('agents/v9-captures/selftest-input.json', JSON.stringify(createReportCardsFixedInput(miniCapture.draft as never), null, 2));
 "
 jq -r .clockSec agents/v9-captures/selftest-input.json

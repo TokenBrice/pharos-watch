@@ -8,7 +8,7 @@ import productionCapture from "./fixtures/safety-score-v9-usdt-premium-capture.j
 import {
   createReportCardsFixedInput,
   type ReportCardsFixedInputDraft,
-} from "../report-cards-fixed-input";
+} from "../../test-helpers/report-cards-fixed-input";
 import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9/extension";
 import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9/fact-set";
 

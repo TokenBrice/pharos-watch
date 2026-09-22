@@ -8,10 +8,11 @@ import {
 import type { SafetyScoreV9OperationalResilienceOverlay } from "@shared/types/safety-score-v9-operational-resilience-overlays";
 import {
   addEvidence,
-  isoDateStartSec,
+  assertKnownComponentEvidenceCurrent,
   timestampSec,
   type AssetBuildContext,
 } from "./fact-set-context";
+import { parseBoundedDateSec } from "./extension-shared";
 
 function operationalResilienceConfidence(
   overlay: SafetyScoreV9OperationalResilienceOverlay,
@@ -42,10 +43,11 @@ export function buildOperationalResilienceFact(context: AssetBuildContext): V9Op
   const sourceGenerationId = context.extension.sources.researchOverlays.generationId;
   const evidenceIdBySourceId = new Map(
     overlay.sources.map((source) => {
-      const publishedAtSec = isoDateStartSec(
+      const publishedAtSec = parseBoundedDateSec(
         source.publishedAt,
-        `${overlay.assetId}:${source.sourceId} publication`,
         context.fixedInput.clockSec,
+        `${overlay.assetId}:${source.sourceId} publication`,
+        "date",
       );
       const evidenceId = addEvidence(
         context,
@@ -76,10 +78,14 @@ export function buildOperationalResilienceFact(context: AssetBuildContext): V9Op
       if (!evidenceId) throw new Error(`Unknown operational-resilience source ${overlay.assetId}:${sourceId}`);
       return evidenceId;
     });
-  const claimEvidence = (sourceIds: readonly string[]) => ({
-    evidenceRefIds: evidenceRefIds(sourceIds),
-    confidence: operationalResilienceConfidence(overlay, sourceIds),
-  });
+  const claimEvidence = (sourceIds: readonly string[]) => {
+    const evidenceIds = evidenceRefIds(sourceIds);
+    assertKnownComponentEvidenceCurrent(context, "operational-resilience", evidenceIds);
+    return {
+      evidenceRefIds: evidenceIds,
+      confidence: operationalResilienceConfidence(overlay, sourceIds),
+    };
+  };
 
   const cumulativeRatio = overlay.redemptionThroughput?.cumulativeLifetimeRedeemedSupplyRatio ?? null;
   const cumulativeSourceIds =
@@ -99,10 +105,11 @@ export function buildOperationalResilienceFact(context: AssetBuildContext): V9Op
     expiresAtSec: Math.floor(Date.parse(overlay.expiresAt) / 1_000),
     liveHistoryEligibility: {
       minimumLiveHistoryMonths: overlay.eligibility.liveHistory.minimumLiveHistoryMonths,
-      observedAtSec: isoDateStartSec(
+      observedAtSec: parseBoundedDateSec(
         overlay.eligibility.liveHistory.observedAt,
-        `${overlay.assetId} live-history observation`,
         context.fixedInput.clockSec,
+        `${overlay.assetId} live-history observation`,
+        "date",
       ),
       treatment: "eligibility-only",
       ...claimEvidence(overlay.eligibility.liveHistory.sourceIds),
@@ -120,10 +127,11 @@ export function buildOperationalResilienceFact(context: AssetBuildContext): V9Op
                   },
             stressWindows: overlay.redemptionThroughput.stressWindows.map((window) => ({
               episodeKey: window.episodeKey,
-              observedAtSec: isoDateStartSec(
+              observedAtSec: parseBoundedDateSec(
                 window.observedAt,
-                `${overlay.assetId}:${window.episodeKey} redemption observation`,
                 context.fixedInput.clockSec,
+                `${overlay.assetId}:${window.episodeKey} redemption observation`,
+                "date",
               ),
               maximumWindowDays: window.maximumWindowDays,
               redeemedUsdLowerBound: window.redeemedUsdLowerBound,

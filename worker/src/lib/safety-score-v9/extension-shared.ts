@@ -15,8 +15,7 @@ import type { V9PublishedEvidenceAttribution } from "@shared/lib/safety-score-v9
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import type { MintAuthorityControl, StablecoinLink, StablecoinMeta } from "@shared/types/core";
 import type { V9FactStatusV2 } from "@shared/types/safety-score-v9-facts";
-import type { SafetyScoreV9FactSetExtensionV2 } from "./fact-set";
-import { buildSafetyScoreV9ReserveClassifications } from "./extension-reserves";
+import type { SafetyScoreV9FactSetExtensionV2 } from "./fact-set-schema";
 
 export type V9ExtensionRegistryMeta = Pick<
   StablecoinMeta,
@@ -50,7 +49,7 @@ export type ComponentEvidence = ExtensionAsset["componentEvidence"][number];
 export type ControlOverlay = NonNullable<
   Extract<NonNullable<ExtensionAsset["controlReview"]>, { state: "partially-reviewed-controls" }>
 >["controls"][number];
-export type ReserveClassification = ReturnType<typeof buildSafetyScoreV9ReserveClassifications>[number];
+export type ReserveClassification = ExtensionAsset["reserveClassifications"][number];
 
 export function authorityModelForType(
   authorityType: MintAuthorityControl["authorityType"],
@@ -70,13 +69,25 @@ export const DEPLOYMENT_MATERIAL_SHARE_THRESHOLD =
 // a bounded/diagnostic condition; at or above it the pool stays fail-closed.
 export const COMMON_MODE_MATERIAL_SHARE_THRESHOLD = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.commonModeShareThreshold;
 
-export function isoDateStartSec(value: string, clockSec: number, label: string): number {
+export function parseBoundedDateSec(
+  value: string,
+  clockSec: number,
+  label: string,
+  errorKind: "review-date" | "date" = "review-date",
+): number {
   const timestampMs = Date.parse(`${value}T00:00:00.000Z`);
-  if (!Number.isFinite(timestampMs)) throw new Error(`Safety Score v9 ${label} has an invalid review date`);
+  const review = errorKind === "review-date";
+  if (!Number.isFinite(timestampMs)) {
+    throw new Error(`Safety Score v9 ${label} has an invalid ${review ? "review date" : "date"}`);
+  }
   const timestampSec = Math.floor(timestampMs / 1_000);
-  if (timestampSec > clockSec) throw new Error(`Safety Score v9 ${label} review is later than the scoring clock`);
+  if (timestampSec > clockSec) {
+    throw new Error(`Safety Score v9 ${label}${review ? " review" : ""} is later than the scoring clock`);
+  }
   return timestampSec;
 }
+
+export const isoDateStartSec = parseBoundedDateSec;
 
 export function confidenceForResearch(
   value: "verified" | "probable" | "manual-review" | "limited" | "unknown" | undefined,
@@ -105,14 +116,14 @@ export class ReviewEvidenceBuilder {
     payload: unknown;
     maxAgeSec?: number | null;
   }): string[] {
-    isoDateStartSec(args.reviewedAt, this.clockSec, `${this.assetId}:${args.sourceId}:reviewed`);
-    const observedAtSec = isoDateStartSec(
+    parseBoundedDateSec(args.reviewedAt, this.clockSec, `${this.assetId}:${args.sourceId}:reviewed`);
+    const observedAtSec = parseBoundedDateSec(
       args.observedAt ?? args.reviewedAt,
       this.clockSec,
       `${this.assetId}:${args.sourceId}:observed`,
     );
     const publishedAtSec = args.publishedAt
-      ? isoDateStartSec(args.publishedAt, this.clockSec, `${this.assetId}:${args.sourceId}:published`)
+      ? parseBoundedDateSec(args.publishedAt, this.clockSec, `${this.assetId}:${args.sourceId}:published`)
       : null;
     const sources = args.sources?.length
       ? [...args.sources].sort(
@@ -244,6 +255,6 @@ export function accessEvidenceObservationState(reviewedAt: string, clockSec: num
  * with its evidence still attached (mirroring the access-evidence treatment).
  */
 export function researchReviewObservationState(reviewedAt: string, clockSec: number): "current" | "stale" {
-  const reviewedAtSec = isoDateStartSec(reviewedAt, clockSec, "research review");
+  const reviewedAtSec = parseBoundedDateSec(reviewedAt, clockSec, "research review");
   return clockSec - reviewedAtSec <= V9_REVIEW_EVIDENCE_MAX_AGE_SEC ? "current" : "stale";
 }

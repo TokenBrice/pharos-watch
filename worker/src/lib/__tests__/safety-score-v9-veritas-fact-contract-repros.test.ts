@@ -14,11 +14,13 @@ import type { ReserveSlice } from "@shared/types/reserves";
 import { describe, expect, it } from "vitest";
 import miniCapture from "./fixtures/safety-score-v9-rateable-mini-capture.json";
 import {
-  createReportCardsFixedInput,
   normalizeFixedInput,
   type ReportCardsFixedInput,
-  type ReportCardsFixedInputDraft,
 } from "../report-cards-fixed-input";
+import {
+  createReportCardsFixedInput,
+  type ReportCardsFixedInputDraft,
+} from "../../test-helpers/report-cards-fixed-input";
 import {
   compileSafetyScoreV9FactSetFromNormalizedInput,
   compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension,

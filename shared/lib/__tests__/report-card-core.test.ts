@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
   getReportCardGradeRank,
-  GRADE_THRESHOLDS,
   REPORT_CARD_GRADE_RANK,
   scoreToGrade,
   UNKNOWN_REPORT_CARD_GRADE_RANK,
@@ -15,7 +14,6 @@ describe("scoreToGrade", () => {
       grade,
       min: minScore,
     }));
-    expect(GRADE_THRESHOLDS).toEqual(expected);
     expect(V9_GRADE_THRESHOLDS).toEqual(expected);
   });
 

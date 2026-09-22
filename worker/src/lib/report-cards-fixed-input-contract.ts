@@ -3,7 +3,7 @@ import { Sha256Schema } from "@shared/types/safety-schema-primitives";
 import { PegSummaryCoinSchema } from "@shared/types/market";
 import { RedemptionBackstopMapSchema } from "@shared/types/redemption";
 import { ReserveSliceSchema } from "@shared/types/reserves";
-import { compareCodeUnits } from "@shared/lib/compare";
+import { sortedRecord } from "@shared/lib/compare";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
@@ -165,9 +165,6 @@ export function createFixedInputPayloadFields<
   };
 }
 
-export function sortedRecord<T>(record: Record<string, T>): Record<string, T> {
-  return Object.fromEntries(Object.entries(record).sort(([left], [right]) => compareCodeUnits(left, right)));
-}
 
 export function assertSameIds(actual: readonly string[], expected: readonly string[], label: string): void {
   const actualSorted = [...actual].sort();
@@ -390,19 +387,26 @@ interface CommonNormalizationInput {
   liveToFallbackCoins: string[];
 }
 
-export function normalizeCommonFixedInputRecords(input: CommonNormalizationInput) {
+function sortedInputRecord<T extends Record<string, unknown>>(record: T): T {
+  // Sorting changes insertion order only; keys and values retain the input record's type.
+  return sortedRecord(record) as T;
+}
+
+export function normalizeCommonFixedInputRecords<T extends CommonNormalizationInput>(
+  input: T,
+): Pick<T, keyof CommonNormalizationInput> {
   return {
-    pegDataById: sortedRecord(input.pegDataById),
-    ...(input.navPriceById ? { navPriceById: sortedRecord(input.navPriceById) } : {}),
-    activeDepegPeakBpsById: sortedRecord(input.activeDepegPeakBpsById),
-    ...(input.bluechipMap ? { bluechipMap: sortedRecord(input.bluechipMap) } : {}),
+    pegDataById: sortedInputRecord(input.pegDataById),
+    ...(input.navPriceById ? { navPriceById: sortedInputRecord(input.navPriceById) } : {}),
+    activeDepegPeakBpsById: sortedInputRecord(input.activeDepegPeakBpsById),
+    ...(input.bluechipMap ? { bluechipMap: sortedInputRecord(input.bluechipMap) } : {}),
     ...(input.resolvedBlacklistStatuses
-      ? { resolvedBlacklistStatuses: sortedRecord(input.resolvedBlacklistStatuses) }
+      ? { resolvedBlacklistStatuses: sortedInputRecord(input.resolvedBlacklistStatuses) }
       : {}),
-    liveReserveMap: sortedRecord(input.liveReserveMap),
-    liveReserveProvenanceMap: sortedRecord(input.liveReserveProvenanceMap),
-    chainCirculatingById: sortedRecord(input.chainCirculatingById),
-    aggregateCirculatingById: sortedRecord(input.aggregateCirculatingById),
+    liveReserveMap: sortedInputRecord(input.liveReserveMap),
+    liveReserveProvenanceMap: sortedInputRecord(input.liveReserveProvenanceMap),
+    chainCirculatingById: sortedInputRecord(input.chainCirculatingById),
+    aggregateCirculatingById: sortedInputRecord(input.aggregateCirculatingById),
     safetyScoreV9SupplyAttributionById: sortedRecord(
       Object.fromEntries(
         Object.entries(input.safetyScoreV9SupplyAttributionById).map(([assetId, attribution]) => [
@@ -417,8 +421,8 @@ export function normalizeCommonFixedInputRecords(input: CommonNormalizationInput
     ),
     evidenceJournalById: input.evidenceJournalById,
     supplyAttributionJournalById: input.supplyAttributionJournalById,
-    pegProvenanceById: sortedRecord(input.pegProvenanceById),
-    dexDeploymentSupplyCoverageById: sortedRecord(input.dexDeploymentSupplyCoverageById),
+    pegProvenanceById: sortedInputRecord(input.pegProvenanceById),
+    dexDeploymentSupplyCoverageById: sortedInputRecord(input.dexDeploymentSupplyCoverageById),
     liveToFallbackCoins: [...input.liveToFallbackCoins].sort(),
-  };
+  } as Pick<T, keyof CommonNormalizationInput>;
 }

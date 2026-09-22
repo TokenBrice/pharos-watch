@@ -1,8 +1,7 @@
 import type { V9ExitEvaluationRoute } from "./exit";
-import type { V9ProductionScoreInput } from "./score";
 
 /**
- * Per-asset scoring state retained alongside an evaluated asset.
+ * Per-asset stress state retained alongside an evaluated asset.
  *
  * Diagnostic only: nothing here feeds a score, a cap, or a published field. The
  * replay/calibration/curation CLIs read `exitPortfolio.circulatingUsd` from it
@@ -16,7 +15,6 @@ import type { V9ProductionScoreInput } from "./score";
  */
 export interface V9RetainedStressState {
   schemaVersion: 1;
-  scoreInput: V9ProductionScoreInput;
   exitPortfolio: {
     circulatingUsd: number | null;
     portfolioStatus: "reviewed-complete" | "incomplete";
@@ -25,8 +23,7 @@ export interface V9RetainedStressState {
 }
 
 export function buildV9RetainedStressState(
-  scoreInput: V9ProductionScoreInput,
   exitPortfolio: V9RetainedStressState["exitPortfolio"],
 ): V9RetainedStressState {
-  return { schemaVersion: 1, scoreInput, exitPortfolio };
+  return { schemaVersion: 1, exitPortfolio };
 }

@@ -1,6 +1,6 @@
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { describe, expect, it } from "vitest";
-import { createReportCardsFixedInput } from "../report-cards-fixed-input";
+import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
 import {
   buildSafetyScoreV9BaselineExtension,

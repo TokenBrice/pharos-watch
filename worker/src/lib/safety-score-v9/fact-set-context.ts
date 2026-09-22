@@ -165,6 +165,40 @@ export function evidenceHistoryFor(
     references,
   };
 }
+export interface CanonicalCollateralDependencyEdge {
+  readonly upstreamAssetId: string;
+  readonly weight: number;
+  readonly economicRole: string;
+}
+
+export interface CanonicalCollateralExposure {
+  readonly trackedAssetId: string | null;
+  readonly weight: number;
+}
+
+export function collateralExposureMappingIssues(
+  edges: readonly CanonicalCollateralDependencyEdge[],
+  exposures: readonly CanonicalCollateralExposure[],
+): string[] {
+  const mappedWeightByUpstream = new Map<string, number>();
+  for (const exposure of exposures) {
+    if (exposure.trackedAssetId === null) continue;
+    mappedWeightByUpstream.set(
+      exposure.trackedAssetId,
+      (mappedWeightByUpstream.get(exposure.trackedAssetId) ?? 0) + exposure.weight,
+    );
+  }
+  return edges.flatMap((edge) => {
+    if (edge.economicRole !== "basket-exposure") return [];
+    const mappedWeight = mappedWeightByUpstream.get(edge.upstreamAssetId);
+    if (mappedWeight === undefined) return [`collateral-edge-exposure-unmapped:${edge.upstreamAssetId}`];
+    if (Math.abs(mappedWeight - edge.weight) > 0.000001) {
+      return [`collateral-edge-exposure-weight-mismatch:${edge.upstreamAssetId}`];
+    }
+    return [];
+  });
+}
+
 
 function stalePublishedEvidenceFallback(
   observationState: Exclude<V9FactStatusV2["observationState"], "known">,
@@ -193,13 +227,6 @@ export function researchEvidence(context: AssetBuildContext, componentKey?: stri
   return componentKey ? componentResearchEvidence(context, componentKey)[0]! : fallbackResearchEvidence(context);
 }
 
-export function isoDateStartSec(value: string, label: string, asOfSec: number): number {
-  const timestampMs = Date.parse(`${value}T00:00:00.000Z`);
-  if (!Number.isFinite(timestampMs)) throw new Error(`Safety Score v9 ${label} has an invalid date`);
-  const timestampSec = Math.floor(timestampMs / 1_000);
-  if (timestampSec > asOfSec) throw new Error(`Safety Score v9 ${label} is later than the scoring clock`);
-  return timestampSec;
-}
 
 export function timestampSec(value: string, label: string, asOfSec: number): number {
   const timestampMs = Date.parse(value);

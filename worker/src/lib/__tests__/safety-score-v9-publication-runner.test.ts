@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeWorkerSafetyScoreV9Publication, makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
 import { createSafetyScoreV9FullRegistryInput } from "./fixtures/safety-score-v9-full-registry-input";
-import { createReportCardsFixedInput } from "../report-cards-fixed-input";
+import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import { canonicalV9RouteKey } from "@shared/lib/safety-score-v9/facts";
 import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 import { V9AssetEvaluationError } from "@shared/lib/safety-score-v9/evaluate-set";

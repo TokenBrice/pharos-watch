@@ -14,11 +14,22 @@ import {
   getDexMeasuredExecutionFreshnessMaxSec,
   isDexMeasuredExecutionObservationHistoryMature,
 } from "@shared/types/measured-execution";
-import type { SafetyScoreV9CompilerInput } from "./native-input";
+import type { ExitRouteObservation } from "@shared/types/exit-route";
+
+interface MeasuredExitPublicationInput {
+  clockSec: number;
+  dexGenerationId: string;
+  dexLiqMap: Readonly<
+    Record<
+      string,
+      { exitRouteObservations?: readonly ExitRouteObservation[] | null }
+    >
+  >;
+}
 
 /** Snapshot publication time cannot refresh the measured history embedded in it. */
 export function expiredMeasuredExitAssetIds(
-  fixedInput: Pick<SafetyScoreV9CompilerInput, "clockSec" | "dexGenerationId" | "dexLiqMap">,
+  fixedInput: MeasuredExitPublicationInput,
   candidate: SafetyScoreV9CurrentResponse,
   acceptedPublication: SafetyScoreV9AcceptedPublicationBaseline | null = null,
 ): string[] {

@@ -15,7 +15,7 @@ import {
   dependencyReserveSlices,
 } from "../safety-score-v9/extension-reserves";
 import { buildSafetyScoreV9MechanismReview } from "../safety-score-v9/extension-mechanism";
-import { createReportCardsFixedInput } from "../report-cards-fixed-input";
+import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import { makeV9TwoAssetFixedInput } from "../../test-helpers/v9-fixed-input";
 
 const CLOCK_SEC = Date.UTC(2026, 6, 14) / 1_000;

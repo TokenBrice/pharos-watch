@@ -145,29 +145,6 @@ function isDirectSerialWrapper(
   );
 }
 
-function parseLeverageFactor(factor: string): number | null {
-  // Kept at star height 1 so the pattern is linear on curated risk-factor prose.
-  // Two shapes are deliberately avoided: overlapping `\s*` runs around an
-  // alternation that itself matches `\s`, which lets one whitespace run split
-  // many ways; and a nested numeric quantifier like `(?:\.\d+)?`. The digits are
-  // captured loosely as `[\d.]+` and validated by Number instead, so "1.2.3"
-  // parses to NaN and is rejected below rather than by the pattern.
-  const match = factor.match(
-    /\bleverage[-\s]?(?:factor)?(?:\s*[:=]\s*|\s+)([\d.]+)\s?x?\b/i,
-  );
-  if (!match) return null;
-  const value = Number(match[1]);
-  return Number.isFinite(value) ? value : null;
-}
-
-function leverageFactorAssessment(factor: number): V9WrapperRiskAssessment {
-  if (factor <= 1.000001) return "none";
-  if (factor <= 1.1) return "low";
-  if (factor <= 1.5) return "moderate";
-  if (factor <= 2) return "high";
-  return "critical";
-}
-
 type WrapperAllocationReview = NonNullable<AssetBuildContext["asset"]["wrapperAllocationReview"]>;
 
 function wrapperAllocationLeverageAssessment(
@@ -480,39 +457,21 @@ function buildWrapperStructuralDimensions(
       reviewedFormEvidence,
     );
   } else if (input.reserveStatus.observationState === "known") {
-    const leverageFactorObservations = input.reserveExposures.flatMap((exposure) =>
-      exposure.riskFactors.flatMap((factor) => {
-        const value = parseLeverageFactor(factor);
-        return value === null ? [] : [{ factor, value }];
-      }),
+    const hasLeverage = input.reserveExposures.some((exposure) =>
+      exposure.riskFactors.includes("leverage"),
     );
-    const leverageFactors = input.reserveExposures.flatMap((exposure) =>
-      exposure.riskFactors.filter(
-        (factor) =>
-          parseLeverageFactor(factor) === null &&
-          /\b(leverage|leveraged|borrowing|debt-financed)\b/i.test(factor),
-      ),
-    );
-    leverage =
-      leverageFactorObservations.length > 0
-        ? reviewedWrapperFact(
-            context,
-            worstWrapperRisk(leverageFactorObservations.map(({ value }) => leverageFactorAssessment(value))),
-            [...new Set(leverageFactorObservations.map(({ factor }) => `wrapper-leverage-factor:${factor}`))],
-            reserveEvidenceRefIds,
-          )
-        : leverageFactors.length > 0
-        ? reviewedWrapperFact(
-            context,
-            "high",
-            [...new Set(leverageFactors.map((factor) => `wrapper-leverage-factor:${factor}`))],
-            reserveEvidenceRefIds,
-          )
-        : unavailableWrapperFact(
-            "issuer-undisclosed",
-            "wrapper-leverage-review-does-not-establish-absence",
-            reserveEvidenceRefIds,
-          );
+    leverage = hasLeverage
+      ? reviewedWrapperFact(
+          context,
+          "high",
+          ["wrapper-leverage-factor:leverage"],
+          reserveEvidenceRefIds,
+        )
+      : unavailableWrapperFact(
+          "issuer-undisclosed",
+          "wrapper-leverage-review-does-not-establish-absence",
+          reserveEvidenceRefIds,
+        );
   } else {
     leverage = unavailableWrapperFact(
       wrapperFactDisposition(context, [input.reserveStatus], "issuer-undisclosed"),

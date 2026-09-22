@@ -1,6 +1,6 @@
 ---
 name: resilience-classify
-description: Add explicit resilience overrides (`collateralQuality`, `custodyModel`) where `inferResilienceDefaults()` is too optimistic. Use when adding a stablecoin or auditing Selector rankings and DDR depeg-duration verdicts.
+description: Add explicit resilience overrides (`collateralQuality`, `custodyModel`) where `inferDefaultCustodyModel()` is too optimistic. Use when adding a stablecoin or auditing Selector rankings and DDR depeg-duration verdicts.
 ---
 
 # Resilience Classify
@@ -11,7 +11,7 @@ Use this skill to identify coins whose resilience defaults are wrong and to add 
 
 ## Read First
 
-- Read `inferResilienceDefaults()` in `shared/lib/report-card-policy.ts` for the default inference these overrides correct.
+- Read `inferDefaultCustodyModel()` in `shared/lib/report-card-policy.ts` for the default custody inference these overrides correct.
 - Read `shared/lib/methodology-versions/current-version.json` before describing scores; use the current Safety Score methodology and let that source file win over remembered versions.
 - This skill is only for `collateralQuality` and `custodyModel`. Leave `governanceQuality` alone unless the user explicitly asked for it.
 

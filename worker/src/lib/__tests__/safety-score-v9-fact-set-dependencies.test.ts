@@ -23,7 +23,7 @@ import {
   buildSafetyScoreV9BaselineExtension,
   type V9ExtensionRegistryMeta,
 } from "../safety-score-v9/extension";
-import { createReportCardsFixedInput } from "../report-cards-fixed-input";
+import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import {
   V9_FIXTURE_CLOCK_SEC as AS_OF_SEC,
   V9_FIXTURE_OBSERVED_AT_SEC as OBSERVED_AT_SEC,
@@ -628,7 +628,6 @@ describe("Safety Score v9 exact base fact-set adapter — dependencies, roles an
       freezeExposure: "none-known",
       primaryExit: "permissionless",
     });
-    expect(evaluated.assets[0]!.stressState.scoreInput).toEqual(evaluated.assets[0]!.scoreInput);
 
     const low = compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput({ liquidityScore: 1 }), extension());
     const high = compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput({ liquidityScore: 99 }), extension());

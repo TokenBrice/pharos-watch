@@ -192,8 +192,14 @@ describe("Safety Score v9 missing-data work routing", () => {
     },
   );
 
-  it("does not turn known structural risk into a missing-data task", () => {
+  it("does not turn explicitly non-curation structural risk into a missing-data task", () => {
     expect(classifyV9ScoreProjectionWorkType("correlated-exit-routes")).toBeNull();
+  });
+
+  it("fails closed when a score projection reason has no typed routing metadata", () => {
+    expect(() => classifyV9ScoreProjectionWorkType("unregistered-projection-reason")).toThrow(
+      /Missing agent work-type definition/,
+    );
   });
 
   it.each([

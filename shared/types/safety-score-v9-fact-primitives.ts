@@ -1,10 +1,9 @@
+import { compareCodeUnits } from "../lib/compare";
 import { z } from "zod";
 import { CanonicalTextSchema } from "./safety-schema-primitives";
 import { V9EvidenceResponsibilitySchema } from "./safety-score-v9-vocabulary";
 
-export function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
+export { compareCodeUnits as compareText } from "../lib/compare";
 
 const V9_EXECUTION_COST_KEY_SCALE = 1_000_000;
 
@@ -26,7 +25,7 @@ export function canonicalArrayBy<T>(schema: z.ZodType<T>, keyOf: (value: T) => s
       const duplicate = keys.find((key, index) => keys.indexOf(key) !== index);
       if (duplicate !== undefined) ctx.addIssue({ code: "custom", message: `Duplicate canonical ${duplicateNoun}: ${duplicate}` });
     })
-    .transform((values) => [...values].sort((left, right) => compareText(keyOf(left), keyOf(right))));
+    .transform((values) => [...values].sort((left, right) => compareCodeUnits(keyOf(left), keyOf(right))));
 }
 
 export function canonicalTextArray(minLength = 0, duplicateNoun = "key") {

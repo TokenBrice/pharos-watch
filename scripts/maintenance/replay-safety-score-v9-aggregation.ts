@@ -10,7 +10,6 @@ import {
 } from "../lib/cli-args.mjs";
 import { z } from "zod";
 import {
-  aggregateV9GeneralizedMean,
   aggregateV9SmoothBoundedHeadroom,
   type V9AggregationStrategy,
 } from "@shared/lib/safety-score-v9/aggregation";
@@ -150,14 +149,6 @@ const CANDIDATES: readonly Candidate[] = [
   {
     id: "smooth-bounded-headroom:h60",
     aggregate: (pillars, weights) => aggregateV9SmoothBoundedHeadroom(pillars, weights, 60),
-  },
-  {
-    id: "generalized-mean:p-2",
-    aggregate: (pillars, weights) => aggregateV9GeneralizedMean(pillars, weights, -2),
-  },
-  {
-    id: "generalized-mean:p-4",
-    aggregate: (pillars, weights) => aggregateV9GeneralizedMean(pillars, weights, -4),
   },
 ];
 

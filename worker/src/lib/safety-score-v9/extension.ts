@@ -97,6 +97,7 @@ import {
   buildSafetyScoreV9ReviewedStaticReserveRows,
   dependencyReserveSlices,
 } from "./extension-reserves";
+import { collateralExposureMappingIssues } from "./fact-set-context";
 import {
   ReviewEvidenceBuilder,
   accessEvidenceObservationState,
@@ -104,7 +105,7 @@ import {
   boundedObservedAt,
   confidenceForResearch,
   conservativeDateEndSec,
-  isoDateStartSec,
+  parseBoundedDateSec,
   maximumObservedAt,
   notApplicableStatus,
   requiredStatus,
@@ -527,26 +528,6 @@ function dependencyFailureDomains(
   ];
 }
 
-function collateralExposureMappingIssues(
-  edges: Readonly<NonNullable<SafetyScoreV9FactSetExtensionV2["assets"][number]["dependencies"]>["edges"]>,
-  reserveSlices: readonly ReserveSlice[] | undefined,
-): string[] {
-  const mappedWeightByUpstream = new Map<string, number>();
-  for (const slice of reserveSlices ?? []) {
-    if (!slice.coinId || (slice.depType ?? "collateral") !== "collateral") continue;
-    mappedWeightByUpstream.set(slice.coinId, (mappedWeightByUpstream.get(slice.coinId) ?? 0) + slice.pct / 100);
-  }
-  return edges.flatMap((edge) => {
-    const role = edge.economicRole ?? defaultV9DependencyEconomicRole(edge.dependencyType);
-    if (role !== "basket-exposure") return [];
-    const mappedWeight = mappedWeightByUpstream.get(edge.upstreamAssetId);
-    if (mappedWeight === undefined) return [`collateral-edge-exposure-unmapped:${edge.upstreamAssetId}`];
-    if (Math.abs(mappedWeight - edge.weight) > 0.000001) {
-      return [`collateral-edge-exposure-weight-mismatch:${edge.upstreamAssetId}`];
-    }
-    return [];
-  });
-}
 
 function hasAdmissibleCuratedReserveComposition(
   meta: V9ExtensionRegistryMeta,
@@ -695,7 +676,14 @@ function prepareDependency(
     derived.source === "curated-reserve" && effectiveLiveReserveSlices === undefined
       ? meta.reserves
       : effectiveLiveReserveSlices;
-  issueCodes.push(...collateralExposureMappingIssues(validEdges, reconciliationSlices));
+  issueCodes.push(
+    ...collateralExposureMappingIssues(
+      validEdges,
+      (reconciliationSlices ?? [])
+        .filter((slice) => slice.coinId && (slice.depType ?? "collateral") === "collateral")
+        .map((slice) => ({ trackedAssetId: slice.coinId!, weight: slice.pct / 100 })),
+    ),
+  );
   const dependencyReviewUnresolved = issueCodes.some(
     (code) => code.startsWith("dependency-review-") || code.startsWith("collateral-edge-exposure-"),
   );
@@ -1271,7 +1259,7 @@ function adaptMintReview(
     (profile.review.scopedQuestions ?? [])
       .filter(
         (question) =>
-          clockSec - isoDateStartSec(question.reviewedAt, clockSec, `${meta.id}:scoped-question`) <=
+          clockSec - parseBoundedDateSec(question.reviewedAt, clockSec, `${meta.id}:scoped-question`) <=
           V9_SCOPED_QUESTION_MAX_AGE_SEC,
       )
       .map((question) => question.controlRef.toLowerCase()),
