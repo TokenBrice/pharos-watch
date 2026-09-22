@@ -132,7 +132,9 @@ describe("forgetSubscriber", () => {
   it("covers every chat-owned Telegram table except retained processed updates", async () => {
     const chatTables = discoverTelegramChatIdTablesFromMigrations();
     const retainedOnForget = new Set(["telegram_processed_updates"]);
-    const db = mockD1();
+    // Table-coverage discovery: every chat-owned table must appear in history,
+    // so the write set is observed rather than declared.
+    const db = mockD1([], { strictWrites: false });
 
     await forgetSubscriber(db, "42");
 
@@ -283,7 +285,9 @@ describe("forgetSubscriber", () => {
 
   it("deletes exact and actor-scoped command-flood keys", async () => {
     const chatId = "42";
-    const db = mockD1();
+    // Table-coverage discovery: every chat-owned table must appear in history,
+    // so the write set is observed rather than declared.
+    const db = mockD1([], { strictWrites: false });
 
     await forgetSubscriber(db, chatId);
 
@@ -328,7 +332,9 @@ describe("forgetSubscriber", () => {
 describe("migrateTelegramChatId", () => {
   it("touches every chat-owned Telegram table discovered in migrations", async () => {
     const chatTables = discoverTelegramChatIdTablesFromMigrations();
-    const db = mockD1();
+    // Table-coverage discovery: every chat-owned table must appear in history,
+    // so the write set is observed rather than declared.
+    const db = mockD1([], { strictWrites: false });
 
     await migrateTelegramChatId(db, "-123", "-100123");
 
