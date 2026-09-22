@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canonicalizeForDatasetHash, canonicalizeForSid } from "../canonicalize";
-import { sha256Hex } from "../../sha256";
+import { canonicalizeForSid } from "../canonicalize";
 
 describe("canonicalizeForSid — top-level strip-list", () => {
   it("strips top-level `timestamp`", () => {
@@ -78,22 +77,6 @@ describe("canonicalizeForSid — content preservation", () => {
 
   it("strips undefined keys", () => {
     expect(canonicalizeForSid({ a: 1, b: undefined })).toBe('{"a":1}');
-  });
-});
-
-describe("canonicalizeForDatasetHash", () => {
-  it("uses the same strip rules", () => {
-    const a = canonicalizeForDatasetHash({
-      coins: [{ id: "x", dataUpdatedAt: 1, score: 80 }],
-    });
-    const b = canonicalizeForDatasetHash({
-      coins: [{ id: "x", dataUpdatedAt: 999, score: 80 }],
-    });
-    expect(a).toBe(b);
-  });
-
-  it("pairs with the synchronous SHA-256 helper", () => {
-    expect(sha256Hex("abc")).toBe("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
   });
 });
 

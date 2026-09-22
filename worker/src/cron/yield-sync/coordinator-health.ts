@@ -50,7 +50,6 @@ export async function computeDeterministicOnChainHealth(params: {
   startSec: number;
   evaluatedSources: EvaluatedYieldSource[];
   onChainHealthState: DeterministicOnChainHealthState;
-  onChainCooldownActive: boolean;
   onChainSkippedDueToCooldown: boolean;
   onChainAttemptedCount: number;
   onChainRatesResolved: number;
@@ -84,7 +83,7 @@ export async function computeDeterministicOnChainHealth(params: {
     onChainSkippedDueToCooldown: params.onChainSkippedDueToCooldown,
   });
   const onChainCooldownTriggered =
-    !params.onChainCooldownActive &&
+    !params.onChainSkippedDueToCooldown &&
     nextOnChainHealthState.cooldownUntil != null &&
     nextOnChainHealthState.cooldownUntil > params.startSec;
 

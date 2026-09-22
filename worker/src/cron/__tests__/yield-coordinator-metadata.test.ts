@@ -262,7 +262,6 @@ describe("buildYieldSyncMetadata", () => {
           alternativeCoverageMissingIds: [],
           failures: null,
           skippedDueToCooldown: false,
-          cooldownActive: false,
           cooldownTriggered: false,
           cooldownUntil: null,
           cooldownRemainingSec: 0,

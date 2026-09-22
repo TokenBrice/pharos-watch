@@ -10,7 +10,6 @@
 import type { SelectorProfile, WhyKey } from "./types";
 import { WHY_KEYS } from "./types";
 
-export { WHY_KEYS };
 
 /**
  * Set used by the engine to validate emitted keys against the canonical

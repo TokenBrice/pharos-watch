@@ -130,11 +130,7 @@ export function buildYieldDegradationReasons(params: {
   for (const [key, source] of benchmarkByKey) {
     if (source.benchmarkFreshness === "healthy") continue;
     const reason = source.benchmarkFallbackMode ?? source.benchmarkFreshness;
-    degradationReasons.push(
-      key === "USD"
-        ? `risk-free-rate:${reason}`
-        : `risk-free-rate:${key}:${reason}`,
-    );
+    degradationReasons.push(`risk-free-rate:${key}:${reason}`);
   }
   const staleSelectedSource = params.selectedSources.find((source) => source.sourceFreshness === "stale");
   if (staleSelectedSource) {
@@ -200,7 +196,6 @@ export interface YieldOnChainSyncMeta {
   alternativeCoverageMissingIds: string[];
   failures: Record<string, number> | null;
   skippedDueToCooldown: boolean;
-  cooldownActive: boolean;
   cooldownTriggered: boolean;
   cooldownUntil: number | null;
   cooldownRemainingSec: number;
@@ -297,7 +292,7 @@ export function buildYieldSyncMetadata(input: {
       onChainAlternativeCoverageMissingIds: onChain.alternativeCoverageMissingIds,
       onChainFailures: onChain.failures,
       onChainSkippedDueToCooldown: onChain.skippedDueToCooldown,
-      onChainCooldownActive: onChain.cooldownActive,
+      onChainCooldownActive: onChain.skippedDueToCooldown,
       onChainCooldownTriggered: onChain.cooldownTriggered,
       onChainCooldownUntil: onChain.cooldownUntil,
       onChainCooldownRemainingSec: onChain.cooldownRemainingSec,

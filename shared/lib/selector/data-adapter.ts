@@ -1,7 +1,7 @@
 import { CLIENT_ACTIVE_META_BY_ID, CLIENT_TRACKED_STABLECOINS } from "../stablecoins/client-registry";
 import { resolveMechanismArchetype } from "../classification";
 import { getCirculatingRawOrNull } from "../supply";
-import { canonicalizeForDatasetHash } from "./canonicalize";
+import { canonicalizeForSid } from "./canonicalize";
 import type { MergedRow, SelectorInput, SelectorOutput } from "./types";
 import { SELECTOR_VERSION } from "./version";
 import { sha256Hex } from "../sha256";
@@ -228,7 +228,7 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
         yieldFreshnessAgeSec: row.yieldFreshness?.ageSeconds ?? null,
         effectiveTvlUsd: row.effectiveTvlUsd,
         concentrationHhi: row.concentrationHhi,
-        // No pre-sort: canonicalizeForDatasetHash recursively sorts object
+        // No pre-sort: canonicalizeForSid recursively sorts object
         // keys before hashing. The explicit sorts around this object sort
         // arrays, which are order-bearing in the canonical form.
         chainTvl: row.chainTvl,
@@ -262,7 +262,7 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
   return {
     rows,
     timestamp: args.now,
-    datasetHash: sha256Hex(canonicalizeForDatasetHash(datasetContent)),
+    datasetHash: sha256Hex(canonicalizeForSid(datasetContent)),
     methodologyVersions,
   };
 }

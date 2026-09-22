@@ -34,7 +34,6 @@ describe("weights", () => {
       pegStabilityHistory: 22,
       dewsInverted: 13,
       bluechip: 10,
-      supplyLog: 0,
     });
   });
 

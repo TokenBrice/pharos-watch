@@ -1,3 +1,11 @@
+const { logMalformedJsonPathMock } = vi.hoisted(() => ({
+  logMalformedJsonPathMock: vi.fn(),
+}));
+
+vi.mock("../../lib/json-decode-observability", () => ({
+  logMalformedJsonPath: logMalformedJsonPathMock,
+}));
+
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockD1 as baseMockD1 } from "@shared/test-utils/mock-d1";
@@ -18,7 +26,10 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import { publishedYieldCache } from "./yield-history.test-support";
 
 const fixtures = createLatestSchemaFixtureTracker();
-afterEach(() => fixtures.closeAll());
+afterEach(() => {
+  fixtures.closeAll();
+  logMalformedJsonPathMock.mockClear();
+});
 
 function mockD1(
   tables: Parameters<typeof baseMockD1>[0] = [],
@@ -149,11 +160,38 @@ describe("handleYieldHistory", () => {
     ]);
   });
 
-  it.each(["mode=invalid", "mode=source"])("rejects %s before accessing storage", async (query) => {
+  it.each(["mode=invalid", "mode=invalid&sourceKey=selected", "mode=source"])("rejects %s before accessing storage", async (query) => {
     const db = mockD1();
     const response = await handleYieldHistory(db, new URL(`https://x/api/yield-history?stablecoin=usdt-tether&${query}`));
     expect(response.status).toBe(400);
     expect(db.getHistory()).toEqual([]);
+  });
+
+  it("parses the rankings cache once before extracting history metadata", async () => {
+    const cache = publishedYieldCache(SOURCE_RISK_GOLDEN_UPDATED_AT);
+    const db = mockD1([
+      { match: "FROM cache WHERE key = ?", matchBinds: ["yield-rankings"], rows: [cache] },
+      { match: "yield_history", rows: [] },
+    ]);
+    const parseSpy = vi.spyOn(JSON, "parse");
+
+    try {
+      const response = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+      expect(response.status).toBe(200);
+      expect(parseSpy.mock.calls.filter(([value]) => value === cache.value)).toHaveLength(1);
+    } finally {
+      parseSpy.mockRestore();
+    }
+  });
+
+  it("does not report a cold rankings cache as malformed", async () => {
+    const response = await handleYieldHistory(
+      mockD1([{ match: "yield_history", rows: [] }]),
+      new URL("https://x/api/yield-history?stablecoin=usdt-tether"),
+    );
+
+    expect(response.status).toBe(200);
+    expect(logMalformedJsonPathMock).not.toHaveBeenCalled();
   });
 
   it("returns 200 with history envelope", async () => {
@@ -516,6 +554,7 @@ describe("handleYieldHistory", () => {
 
     const historyQuery = db.getHistory().find((entry) => entry.sql.includes("FROM yield_history h"));
     expect(historyQuery?.binds).toContain(latestSuccessfulCronAt);
+    expect(logMalformedJsonPathMock).toHaveBeenCalledOnce();
   });
 
   it("uses published generation metadata to cap history and expose row generation IDs", async () => {

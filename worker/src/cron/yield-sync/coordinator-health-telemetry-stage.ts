@@ -24,7 +24,6 @@ export async function runYieldCoordinatorHealthTelemetryStage(
     startSec: fetched.startSec,
     evaluatedSources: normalized.evaluatedSources,
     onChainHealthState: fetched.onChainHealthState,
-    onChainCooldownActive: fetched.onChainCooldownActive,
     onChainSkippedDueToCooldown: fetched.onChainSkippedDueToCooldown,
     onChainAttemptedCount: fetched.onChainAttemptedCount,
     onChainRatesResolved: fetched.onChainRates.size,

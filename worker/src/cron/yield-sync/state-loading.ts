@@ -64,7 +64,6 @@ export interface YieldSyncLoadedState {
   supplementalCandidates: ResolvedYieldCandidate[];
   supplementalMeta: YieldSupplementalCacheMeta;
   onChainHealthState: DeterministicOnChainHealthState;
-  onChainCooldownActive: boolean;
   onChainCooldownRemainingSec: number;
   onChainSkippedDueToCooldown: boolean;
   onChainRates: Map<string, { rate: number; sourceTvlUsd?: number | null }>;
@@ -306,15 +305,14 @@ export async function loadYieldSyncState(params: {
   const onChainHealthState = onChainHealthCache
     ? parseDeterministicOnChainHealthState(onChainHealthCache.value, params.startSec)
     : getDefaultDeterministicOnChainHealthState();
-  const onChainCooldownActive =
+  const onChainSkippedDueToCooldown =
     ON_CHAIN_RATE_CONFIGS.length > 0 &&
     onChainHealthState.cooldownUntil != null &&
     onChainHealthState.cooldownUntil > params.startSec;
   const onChainCooldownRemainingSec =
-    onChainCooldownActive && onChainHealthState.cooldownUntil != null
+    onChainSkippedDueToCooldown && onChainHealthState.cooldownUntil != null
       ? Math.max(0, onChainHealthState.cooldownUntil - params.startSec)
       : 0;
-  const onChainSkippedDueToCooldown = onChainCooldownActive;
   const onChainFetchResultPromise = onChainSkippedDueToCooldown
     ? {
         rates: new Map<string, { rate: number; sourceTvlUsd?: number | null }>(),
@@ -355,7 +353,6 @@ export async function loadYieldSyncState(params: {
     supplementalCandidates,
     supplementalMeta,
     onChainHealthState,
-    onChainCooldownActive,
     onChainCooldownRemainingSec,
     onChainSkippedDueToCooldown,
     onChainRates,

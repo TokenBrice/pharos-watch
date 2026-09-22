@@ -137,20 +137,24 @@ describe("syncYieldData publication sentinels", () => {
 // --- Tracked-source query contracts ---
 
 describe("tracked optional source anchors", () => {
-  it("loads deterministic on-chain anchors with one bounded query per candidate", async () => {
+  it("loads deterministic on-chain anchors with one batched query", async () => {
     const sevenDaysAgoSec = 1_747_000_000;
     const db = fixtureMockD1([
       {
         match: "pharos:yield-sync:tier1-previous-rate",
-        matchBinds: ["usde-ethena", sevenDaysAgoSec],
-        rows: [],
-        first: { exchange_rate: 1.07, recorded_at: sevenDaysAgoSec - 3 },
-      },
-      {
-        match: "pharos:yield-sync:tier1-previous-rate",
-        matchBinds: ["100", sevenDaysAgoSec],
-        rows: [],
-        first: { exchange_rate: 1.01, recorded_at: sevenDaysAgoSec - 9 },
+        matchBinds: ["usde-ethena", "100", sevenDaysAgoSec],
+        rows: [
+          {
+            stablecoin_id: "usde-ethena",
+            exchange_rate: 1.07,
+            recorded_at: sevenDaysAgoSec - 3,
+          },
+          {
+            stablecoin_id: "100",
+            exchange_rate: 1.01,
+            recorded_at: sevenDaysAgoSec - 9,
+          },
+        ],
       },
     ], { requireMatch: true });
 
@@ -159,11 +163,8 @@ describe("tracked optional source anchors", () => {
     expect(rows.get("usde-ethena")).toEqual({ exchangeRate: 1.07, recordedAt: sevenDaysAgoSec - 3 });
     expect(rows.get("100")).toEqual({ exchangeRate: 1.01, recordedAt: sevenDaysAgoSec - 9 });
     const queries = db.getHistory().filter((entry) => entry.sql.includes("pharos:yield-sync:tier1-previous-rate"));
-    expect(queries).toHaveLength(2);
-    expect(queries.map((entry) => entry.binds)).toEqual([
-      ["usde-ethena", sevenDaysAgoSec],
-      ["100", sevenDaysAgoSec],
-    ]);
+    expect(queries).toHaveLength(1);
+    expect(queries[0]?.binds).toEqual(["usde-ethena", "100", sevenDaysAgoSec]);
     db.assertAllMatchesUsed();
   });
 

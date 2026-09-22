@@ -40,8 +40,13 @@ vi.mock("../yield-sync/sources", async () => {
   const { emptyRpcTelemetry, emptyVaultsFyiResult, healthyFamilyFetch } = await import(
     "./sync-yield-supplemental.test-support"
   );
+  const createOptionalRpcFamilyTelemetry = (targetCount: number) => ({
+    ...emptyRpcTelemetry(),
+    targetCount,
+  });
   return {
   COMPOUND_V3_COMETS: [],
+  createOptionalRpcFamilyTelemetry,
   fetchMorphoVaultSources: vi.fn(async () => healthyFamilyFetch()),
   fetchPendleMarketSources: vi.fn(async () => healthyFamilyFetch()),
   fetchRoycoDawnSources: vi.fn(async () => ({ candidates: [], degraded: false })),
@@ -1098,7 +1103,6 @@ describe("syncYieldSupplemental", () => {
             bySourceFamily?: { beefy?: number };
             exampleSourceKeysBySourceFamily?: { beefy?: string[] };
           };
-          sizeGatedDrops?: { total?: number };
         };
       };
     };
@@ -1116,7 +1120,6 @@ describe("syncYieldSupplemental", () => {
       metadata.sourceCoverage?.supplementalSourceAccounting?.apyEnvelopeDrops?.exampleSourceKeysBySourceFamily
         ?.beefy,
     ).toEqual(["protocol-api:beefy:ethereum:vault-over-envelope"]);
-    expect(metadata.sourceCoverage?.supplementalSourceAccounting?.sizeGatedDrops?.total).toBe(0);
   });
 
   it("bounds supplemental source family execution concurrency", async () => {

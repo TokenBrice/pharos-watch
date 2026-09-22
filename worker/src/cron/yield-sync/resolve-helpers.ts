@@ -431,15 +431,6 @@ function getResolvedEntryKey(entry: ResolvedYieldEntry): string | null {
   return entry.yield ? `${entry.id}:${entry.yield.sourceKey}` : null;
 }
 
-function getEffectiveYieldSource(entry: ResolvedYieldEntry, fallbackSource: string | undefined): string | undefined {
-  const source = entry.yield?.yieldSource ?? fallbackSource;
-  if (!source) return undefined;
-  return source;
-}
-
-function getEffectiveYieldType(entry: ResolvedYieldEntry, fallbackType: YieldType | undefined): YieldType | undefined {
-  return entry.yield?.yieldType ?? fallbackType;
-}
 
 function inferLinkedVariantDeploymentPlace(
   variantKind: string | undefined,
@@ -520,7 +511,7 @@ export function appendLinkedVariantParentYieldSources(resolved: ResolvedYieldEnt
     const parentMeta = getActiveStablecoinMeta(childMeta.variantOf);
     if (!parentMeta) continue;
 
-    const effectiveYieldType = getEffectiveYieldType(entry, childMeta.yieldConfig?.yieldType);
+    const effectiveYieldType = entry.yield.yieldType ?? childMeta.yieldConfig?.yieldType;
     if (isThirdPartyYieldOpportunityType(effectiveYieldType)) continue;
 
     const sourcePoolKey = entry.yield.sourcePool ? `${parentMeta.id}:${entry.yield.sourcePool}` : null;
@@ -541,7 +532,7 @@ export function appendLinkedVariantParentYieldSources(resolved: ResolvedYieldEnt
       yield: {
         ...entry.yield,
         sourceKey,
-        yieldSource: getEffectiveYieldSource(entry, childMeta.yieldConfig?.yieldSource),
+        yieldSource: entry.yield.yieldSource ?? childMeta.yieldConfig?.yieldSource,
         // Holding the deposit asset does not earn a wrapper's NAV yield. The
         // parent projection therefore represents the action of acquiring the
         // child receipt token, while the original child row remains intrinsic.

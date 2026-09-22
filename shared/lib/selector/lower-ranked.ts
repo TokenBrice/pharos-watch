@@ -174,9 +174,6 @@ export function selectLowerRanked(
     ) {
       continue;
     }
-    if (slotA != null && slotA.record.reason === reasonKey) {
-      continue;
-    }
 
     const entry: SelectorLowerRanked = {
       id: candidate.row.id,

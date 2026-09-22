@@ -35,7 +35,7 @@ export interface OptionalRpcFamilyTelemetry {
   endpointStrategy: "alternating-fallback-primary";
 }
 
-function createOptionalRpcFamilyTelemetry(targetCount: number): OptionalRpcFamilyTelemetry {
+export function createOptionalRpcFamilyTelemetry(targetCount: number): OptionalRpcFamilyTelemetry {
   return {
     targetCount,
     attemptedCount: 0,
@@ -354,16 +354,17 @@ export async function fetchOnChainRates(
     };
   }
 
-  const rateBatchSize = 1;
   const allResults: PromiseSettledResult<OnChainRateFetchResult>[] = [];
-  for (let i = 0; i < ON_CHAIN_RATE_CONFIGS.length; i += rateBatchSize) {
-    const batch = ON_CHAIN_RATE_CONFIGS.slice(i, i + rateBatchSize);
-    const tasks = batch.map(async (config): Promise<OnChainRateFetchResult> => {
+  for (const config of ON_CHAIN_RATE_CONFIGS) {
+    try {
       const rpc = getChainRpc(chainRpcs, config.chain);
-      return fetchSingleOnChainRate(config, rpc, etherscanApiKey, signal);
-    });
-    const batchSettled = await Promise.allSettled(tasks);
-    allResults.push(...batchSettled);
+      allResults.push({
+        status: "fulfilled",
+        value: await fetchSingleOnChainRate(config, rpc, etherscanApiKey, signal),
+      });
+    } catch (reason) {
+      allResults.push({ status: "rejected", reason });
+    }
   }
 
   const rates = new Map<string, OnChainRateValue>();

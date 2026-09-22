@@ -180,7 +180,6 @@ export async function runYieldCoordinatorPersistStage(
         alternativeCoverageMissingIds: health.onChainAlternativeCoverageMissingIds,
         failures: fetched.onChainFailures,
         skippedDueToCooldown: fetched.onChainSkippedDueToCooldown,
-        cooldownActive: fetched.onChainCooldownActive,
         cooldownTriggered: health.onChainCooldownTriggered,
         cooldownUntil: health.nextOnChainHealthState.cooldownUntil,
         cooldownRemainingSec: fetched.onChainCooldownRemainingSec,

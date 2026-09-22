@@ -42,10 +42,8 @@ vi.mock("@shared/lib/selector", async () => {
       divergenceWarnings: [],
     })),
     selectorAnswersToScreenerFilters: vi.fn(() => ({ filters: {}, divergenceWarnings: [] })),
-    computeSnapshotId: vi.fn(async () => "stub-sid"),
     validateSelectorSnapshotResponse,
     getTemplate: vi.fn(() => ({ oneLineExplanation: "Dimension watch line for test." })),
-    canonicalizeForDatasetHash: vi.fn((v: unknown) => JSON.stringify(v)),
     SELECTOR_VERSION: "selector-v1.2",
     ENGINE_VERSION: "selector-v1.2",
   };

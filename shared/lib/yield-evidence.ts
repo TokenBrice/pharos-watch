@@ -33,7 +33,7 @@ export interface YieldEvidenceAssessment {
   scoreQualification: YieldScoreQualification;
 }
 
-const EVIDENCE_FIELD_COUNT = 7;
+export const EVIDENCE_FIELD_COUNT = 7;
 
 export function assessYieldEvidence(input: YieldEvidenceAssessmentInput): YieldEvidenceAssessment {
   const measuredFieldCount = [

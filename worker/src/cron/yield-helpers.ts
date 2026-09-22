@@ -15,7 +15,6 @@ import { logWorkerEventArgs } from "../lib/structured-log";
  * I/O counterparts live in yield-sync/: sources.ts (pool discovery), resolve.ts
  * (APY resolution), cache.ts (KV caching), rankings.ts (DB row mapping).
  */
-export { buildOnChainSourceKey } from "../lib/yield-utils";
 
 export const DETERMINISTIC_APY_SANITY_MAX = 300;
 

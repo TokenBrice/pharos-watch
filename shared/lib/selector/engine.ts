@@ -150,7 +150,7 @@ interface ScoredEntryResult {
  * trading staleness map used to be three passes that each rebuilt the entry,
  * so a new field had to be added in every one of them.
  */
-function buildScoredEntry(row: MergedRow, input: SelectorInput): ScoredEntryResult {
+function toScoredEntry(row: MergedRow, input: SelectorInput): ScoredEntryResult {
   const result = scoreRow(row, input.profile, input);
   if (result == null || result.degenerate) {
     return { entry: null, missingSignal: "every-signal-null" };
@@ -185,7 +185,7 @@ function runScoringPhase(
   const railSkipped: SkippedCoin[] = [];
   const scored: ScoredEntry[] = [];
   for (const row of survivors) {
-    const result = buildScoredEntry(row, input);
+    const result = toScoredEntry(row, input);
     if (result.entry != null) {
       scored.push(result.entry);
       continue;
@@ -254,7 +254,7 @@ function buildRelaxedFallbackEntries(
     if (excludedIds.has(row.id)) continue;
     const reason = relaxedFallbackReason(row, input);
     if (reason == null) continue;
-    const { entry } = buildScoredEntry(row, input);
+    const { entry } = toScoredEntry(row, input);
     if (entry != null) {
       scored.push({
         ...entry,

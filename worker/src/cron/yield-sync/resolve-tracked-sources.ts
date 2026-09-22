@@ -2,7 +2,6 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 import {
-  buildOnChainSourceKey,
   computeApyFromRate,
   isDeterministicApyWithinSanityBounds,
   matchAllDlPools,
@@ -37,6 +36,8 @@ import {
 } from "./tracked-optional-source-registry";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { throwIfAborted } from "../../lib/abort";
+import { buildOnChainSourceKey } from "../../lib/yield-utils";
+import { buildInClause } from "../../lib/db";
 import { buildWeightedYieldPoolGroupSource } from "./weighted-pools";
 
 function buildConfigByStablecoinId<T extends { stablecoinId: string }>(configs: readonly T[]): Map<string, T> {
@@ -76,29 +77,35 @@ export async function loadTier1PrevRateRows(
   sevenDaysAgoSec: number,
 ): Promise<Map<string, { exchangeRate: number | null; recordedAt: number }>> {
   const tier1PrevRateRows = new Map<string, { exchangeRate: number | null; recordedAt: number }>();
-  if (tier1CandidateIds.length === 0) return tier1PrevRateRows;
+  const candidateIds = [...new Set(tier1CandidateIds)];
+  if (candidateIds.length === 0) return tier1PrevRateRows;
 
-  const statement = db.prepare(
-    `SELECT /* pharos:yield-sync:tier1-previous-rate */
-       exchange_rate, recorded_at
-     FROM yield_history
-     WHERE stablecoin_id = ?
-       AND recorded_at <= ?
-       AND exchange_rate > 0
-       AND (publication_generation_id IS NULL OR publication_state = 'published')
-     ORDER BY recorded_at DESC
-     LIMIT 1`,
-  );
-  for (const stablecoinId of new Set(tier1CandidateIds)) {
-    const row = await statement
-      .bind(stablecoinId, sevenDaysAgoSec)
-      .first<{ exchange_rate: number | null; recorded_at: number }>();
-    if (row) {
-      tier1PrevRateRows.set(stablecoinId, {
-        exchangeRate: row.exchange_rate,
-        recordedAt: row.recorded_at,
-      });
-    }
+  const inClause = buildInClause(candidateIds);
+  const result = await db
+    .prepare(
+      `SELECT /* pharos:yield-sync:tier1-previous-rate */
+         stablecoin_id, exchange_rate, recorded_at
+       FROM (
+         SELECT stablecoin_id, exchange_rate, recorded_at,
+                ROW_NUMBER() OVER (
+                  PARTITION BY stablecoin_id
+                  ORDER BY recorded_at DESC, rowid DESC
+                ) AS row_rank
+           FROM yield_history
+          WHERE stablecoin_id IN (${inClause.sql})
+            AND recorded_at <= ?
+            AND exchange_rate > 0
+            AND (publication_generation_id IS NULL OR publication_state = 'published')
+       )
+       WHERE row_rank = 1`,
+    )
+    .bind(...inClause.binds, sevenDaysAgoSec)
+    .all<{ stablecoin_id: string; exchange_rate: number | null; recorded_at: number }>();
+  for (const row of result.results ?? []) {
+    tier1PrevRateRows.set(row.stablecoin_id, {
+      exchangeRate: row.exchange_rate,
+      recordedAt: row.recorded_at,
+    });
   }
   return tier1PrevRateRows;
 }

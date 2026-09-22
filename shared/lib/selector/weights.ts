@@ -44,7 +44,6 @@ const TREASURY_WEIGHTS: WeightVector<"treasury"> = {
   pegStabilityHistory: 22,
   dewsInverted: 13,
   bluechip: 10,
-  supplyLog: 0,
 } as const;
 
 /** Yield weights — sum = 100. */

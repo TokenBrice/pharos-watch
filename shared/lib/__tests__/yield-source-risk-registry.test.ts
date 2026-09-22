@@ -1,8 +1,9 @@
+import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
+import YIELD_RISK_EVIDENCE from "@shared/data/yield-source-risk-evidence.json";
 import {
   YIELD_RISK_CONFIG,
   YIELD_RISK_CONFIG_PROTOCOLS,
-  YIELD_RISK_CONFIG_REVIEW_CADENCE,
   YIELD_VARIANT_CHILD_VENUE_PROTOCOLS,
   findStaleVenueRiskScores,
   findStaleVenueRiskScoresByEntries,
@@ -12,29 +13,53 @@ import {
   venueRiskWeightedOf,
 } from "@shared/lib/yield-source-risk-registry";
 
-// Structural-integrity gate for the canonical shared/lib registry. The worker
-// cron test (worker/src/cron/__tests__/yield-source-risk.test.ts) exercises the
-// same exports through the worker re-export shim, but the registry is also read
-// by the frontend (src/lib/yield-source-risk.ts) via deriveVenueRiskTier /
-// dependencyConcentration; a shared/lib registry that drifts from these
-// invariants should fail here, on the shared side, not only in worker. [Q-254]
+// Structural-integrity gate for the canonical shared/lib registry. Worker
+// publication code and the frontend both consume these reviewed values, so
+// registry shape, evidence coverage, and resolver bytes are pinned here rather
+// than through a worker re-export shim. [Q-254]
 describe("yield-source-risk-registry (shared/lib structural integrity)", () => {
   it("has a config entry for every enrolled protocol with 5 finite 1..5 category scores", () => {
     expect(YIELD_RISK_CONFIG_PROTOCOLS.length).toBeGreaterThan(0);
     for (const protocol of YIELD_RISK_CONFIG_PROTOCOLS) {
       const config = YIELD_RISK_CONFIG[protocol];
       expect(config, protocol).toBeDefined();
-      expect(config.reviewCadence, protocol).toBe(YIELD_RISK_CONFIG_REVIEW_CADENCE);
       for (const category of ["audits", "centralization", "fundsManagement", "liquidity", "operational"] as const) {
         const score = config.scores[category];
         expect(Number.isFinite(score), `${protocol}.${category}`).toBe(true);
         expect(score, `${protocol}.${category}`).toBeGreaterThanOrEqual(1);
         expect(score, `${protocol}.${category}`).toBeLessThanOrEqual(5);
       }
-      // Reviewer provenance lives on the entry itself; every enrolled protocol carries both.
-      expect(config.evidence?.length ?? 0, protocol).toBeGreaterThan(0);
       expect(config.rationale?.length ?? 0, protocol).toBeGreaterThan(0);
+      expect("evidence" in config, protocol).toBe(false);
+      expect("reviewCadence" in config, protocol).toBe(false);
     }
+  });
+
+  it("keeps review evidence in 1:1 key lockstep with the runtime registry", () => {
+    expect(Object.keys(YIELD_RISK_EVIDENCE)).toEqual([...YIELD_RISK_CONFIG_PROTOCOLS]);
+    for (const protocol of YIELD_RISK_CONFIG_PROTOCOLS) {
+      expect(YIELD_RISK_EVIDENCE[protocol].length, protocol).toBeGreaterThan(0);
+    }
+  });
+
+  it("keeps all 61 resolved runtime records byte-identical", () => {
+    const bytes = JSON.stringify(
+      YIELD_RISK_CONFIG_PROTOCOLS.map((protocol) => {
+        const config = resolveReviewedYieldRiskConfig(protocol);
+        expect(config, protocol).not.toBeNull();
+        const runtimeConfig = { ...config! } as Record<string, unknown>;
+        // These explicitly retired, unread fields are excluded from the
+        // pre-split baseline; every remaining resolver byte is pinned.
+        delete runtimeConfig.evidence;
+        delete runtimeConfig.reviewCadence;
+        return [protocol, runtimeConfig];
+      }),
+    );
+
+    expect(YIELD_RISK_CONFIG_PROTOCOLS).toHaveLength(61);
+    expect(createHash("sha256").update(bytes).digest("hex")).toBe(
+      "c2f7b1489df348493fd61f44a553a207f2602f070e3263a919d82b06521c4962",
+    );
   });
 
   it("derives a non-unknown tier with a weighted score in [1,5] for every protocol", () => {
@@ -101,7 +126,7 @@ describe("yield-source-risk-registry (shared/lib structural integrity)", () => {
     expect(resolveDependencyConcentration(null)).toBeNull();
   });
 
-  it("flags exactly the strictly-older-than-90d controlled entries, newest first", () => {
+  it("flags exactly the strictly-older-than-90d controlled entries, most-stale first", () => {
     const baseMs = Date.parse("2026-01-01T00:00:00Z");
     const reviewedAt = (daysOld: number) =>
       new Date(baseMs - daysOld * 86_400_000).toISOString().slice(0, 10);
