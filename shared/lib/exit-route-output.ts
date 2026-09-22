@@ -1,5 +1,5 @@
 import type { ExitRouteOutput } from "../types/exit-route";
-import { compareText } from "../types/safety-score-v9-fact-primitives";
+import { compareCodeUnits as compareText } from "./compare";
 
 /**
  * Resolve the semantic asset identities used to value an exit output.

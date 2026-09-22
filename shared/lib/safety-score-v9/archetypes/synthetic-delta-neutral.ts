@@ -1,5 +1,5 @@
 import type { V9SyntheticDeltaNeutralMechanismRiskReview } from "../../../types/safety-score-v9-backing";
-import { compareText } from "../../../types/safety-score-v9-fact-primitives";
+import { compareText } from "../primitives";
 import { evaluateV9ArchetypeBacking } from "./evaluation";
 import {
   createV9BackingStructuralReason,

@@ -7,7 +7,7 @@ import type {
 } from "@shared/types/safety-score-v9-public";
 import { REPORT_CARD_GRADE_RANK } from "@shared/lib/report-card-core";
 import type { V9Grade } from "@shared/types/safety-score-v9";
-import { compareText } from "@shared/types/safety-score-v9-fact-primitives";
+import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import { z } from "zod";
 import { canonicalV9RouteKey } from "@shared/lib/safety-score-v9/facts";
 import {

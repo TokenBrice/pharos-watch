@@ -3,7 +3,7 @@ import {
   type DependencyType,
   type V9DependencyEconomicRole,
 } from "../../types/dependency-types";
-import { compareText } from "../../types/safety-score-v9-fact-primitives";
+import { compareText } from "./primitives";
 import type { V9FailureDomainRef } from "../../types/safety-score-v9-facts";
 import { resolveChainId } from "../chains";
 import { orderDependencyGraphNodes, type DependencyGraphEdge } from "../dependency-graph";

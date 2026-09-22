@@ -1,9 +1,12 @@
-import { compareCodeUnits } from "../lib/compare";
 import { z } from "zod";
 import { CanonicalTextSchema } from "./safety-schema-primitives";
 import { V9EvidenceResponsibilitySchema } from "./safety-score-v9-vocabulary";
 
-export { compareCodeUnits as compareText } from "../lib/compare";
+/** Locale-independent code-unit ordering; kept local so shared/types never imports shared/lib. */
+function compareCodeUnits(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+export { compareCodeUnits as compareText };
 
 const V9_EXECUTION_COST_KEY_SCALE = 1_000_000;
 
