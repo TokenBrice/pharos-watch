@@ -432,7 +432,7 @@ export function buildPrimarySourceCandidates(
 
   if (
     collected.dexAggregateQuote &&
-    acceptedPromotedDexProtocolSources.length === 0 &&
+    !hasPromotedDexProtocolSource &&
     !hasBinanceDexBridgeOverlap(collected)
   ) {
     const dexAggregateSource = buildSourcePrice({

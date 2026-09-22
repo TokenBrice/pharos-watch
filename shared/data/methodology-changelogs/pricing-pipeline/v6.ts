@@ -11,7 +11,7 @@ export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
     impact: [
       "A corroborated promoted DEX lane no longer admits divergent sibling lanes into the published consensus candidate set",
       "Two promoted DEX lanes must agree within the existing divergence threshold before they corroborate each other",
-      "Rejected lanes retain explicit lacked-corroboration telemetry, and the aggregate DEX candidate remains eligible when no protocol lane is accepted",
+      "Rejected lanes retain explicit lacked-corroboration telemetry, while the overlapping aggregate DEX candidate remains withheld when protocol lanes are present",
     ],
     commits: [],
     reconstructed: false,

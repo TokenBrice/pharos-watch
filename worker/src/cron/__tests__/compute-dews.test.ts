@@ -103,6 +103,10 @@ function publishShapedRankingsPayload() {
           previousBestSourceKey: "defillama:usdt-old",
           usedLegacyHistory: false,
           usedDefaultSafety: false,
+          // P1-10 validates complete per-row provenance before publication.
+          benchmarkRecordDate: source.benchmarkRecordDate,
+          benchmarkIsFallback: source.benchmarkIsFallback,
+          benchmarkFallbackMode: source.benchmarkFallbackMode,
           anomalies: [],
         },
       ],
