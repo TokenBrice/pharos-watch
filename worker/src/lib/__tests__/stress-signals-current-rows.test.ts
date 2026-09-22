@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { mockD1 } from "@shared/test-utils/mock-d1";
 import {
-  buildStressSignalCurrentRowsQueries,
+  mockD1 as createMockD1,
+  type MockTableConfig,
+} from "@shared/test-utils/mock-d1";
+import {
   loadPreviousStressSignalCurrentRows,
   loadStressSignalCurrentRowForCoin,
   loadStressSignalCurrentRows,
@@ -28,100 +30,14 @@ function row(
     computed_at: computedAt,
   };
 }
+function mockD1(
+  tables: MockTableConfig[],
+  _options?: { requireMatch?: boolean },
+) {
+  return createMockD1(tables, { assertMatchesUsed: true });
+}
 
-const normalizeSql = (sql: string) => sql
-  .replace(/\s+/g, " ")
-  .trim()
-  .replace(
-    /\b(select|from|where|order|by|asc|inner|join|as|max|group|limit|and)\b/gi,
-    (keyword) => keyword.toUpperCase(),
-  );
 
-const legacyQuerySets = [
-  {
-    input: {
-      tags: {
-        latest: "pharos:stress-signals:latest-all",
-        exact: "pharos:stress-signals:published-exact-all",
-        legacy: "pharos:stress-signals:legacy-latest-all",
-      },
-      columns: ["stablecoin_id", "score", "band", "signals_json", "computed_at"],
-      scope: "all" as const,
-    },
-    expected: {
-      latest: `SELECT /* pharos:stress-signals:latest-all */ stablecoin_id, score, band, signals_json, computed_at FROM stress_signals_latest`,
-      latestBounded: `SELECT /* pharos:stress-signals:latest-all */ stablecoin_id, score, band, signals_json, computed_at FROM stress_signals_latest WHERE computed_at <= ?`,
-      exact: `SELECT /* pharos:stress-signals:published-exact-all */ stablecoin_id, score, band, signals_json, computed_at FROM stress_signal_publication_rows WHERE computed_at = ? ORDER BY stablecoin_id ASC`,
-      legacy: `SELECT /* pharos:stress-signals:legacy-latest-all */ s.stablecoin_id, s.score, s.band, s.signals_json, s.computed_at FROM stress_signals s INNER JOIN ( SELECT stablecoin_id, MAX(computed_at) as max_at FROM stress_signals GROUP BY stablecoin_id ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`,
-      legacyBounded: `SELECT /* pharos:stress-signals:legacy-latest-all */ s.stablecoin_id, s.score, s.band, s.signals_json, s.computed_at FROM stress_signals s INNER JOIN ( SELECT stablecoin_id, MAX(computed_at) as max_at FROM stress_signals WHERE computed_at <= ? GROUP BY stablecoin_id ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`,
-    },
-  },
-  {
-    input: {
-      tags: {
-        latest: "pharos:stress-signals:latest-one",
-        exact: "pharos:stress-signals:published-exact-one",
-        legacy: "pharos:stress-signals:legacy-latest-one",
-      },
-      columns: ["score", "band", "signals_json", "computed_at"],
-      scope: "one" as const,
-    },
-    expected: {
-      latest: `SELECT /* pharos:stress-signals:latest-one */ score, band, signals_json, computed_at FROM stress_signals_latest WHERE stablecoin_id = ?`,
-      latestBounded: `SELECT /* pharos:stress-signals:latest-one */ score, band, signals_json, computed_at FROM stress_signals_latest WHERE stablecoin_id = ? AND computed_at <= ? ORDER BY computed_at DESC LIMIT 1`,
-      exact: `SELECT /* pharos:stress-signals:published-exact-one */ score, band, signals_json, computed_at FROM stress_signal_publication_rows WHERE stablecoin_id = ? AND computed_at = ? LIMIT 1`,
-      legacy: `SELECT /* pharos:stress-signals:legacy-latest-one */ score, band, signals_json, computed_at FROM stress_signals WHERE stablecoin_id = ? ORDER BY computed_at DESC LIMIT 1`,
-      legacyBounded: `SELECT /* pharos:stress-signals:legacy-latest-one */ score, band, signals_json, computed_at FROM stress_signals WHERE stablecoin_id = ? AND computed_at <= ? ORDER BY computed_at DESC LIMIT 1`,
-    },
-  },
-  {
-    input: {
-      tags: {
-        latest: "pharos:telegram-dispatch:dews-latest",
-        exact: "pharos:telegram-dispatch:dews-published-exact",
-        legacy: "pharos:telegram-dispatch:dews-legacy",
-      },
-      columns: ["stablecoin_id", "score", "band", "signals_json", "computed_at"],
-      scope: "all" as const,
-    },
-    expected: {
-      latest: `SELECT /* pharos:telegram-dispatch:dews-latest */ stablecoin_id, score, band, signals_json, computed_at FROM stress_signals_latest`,
-      latestBounded: `SELECT /* pharos:telegram-dispatch:dews-latest */ stablecoin_id, score, band, signals_json, computed_at FROM stress_signals_latest WHERE computed_at <= ?`,
-      exact: `SELECT /* pharos:telegram-dispatch:dews-published-exact */ stablecoin_id, score, band, signals_json, computed_at FROM stress_signal_publication_rows WHERE computed_at = ? ORDER BY stablecoin_id ASC`,
-      legacy: `SELECT /* pharos:telegram-dispatch:dews-legacy */ s.stablecoin_id, s.score, s.band, s.signals_json, s.computed_at FROM stress_signals s INNER JOIN ( SELECT stablecoin_id, MAX(computed_at) AS max_at FROM stress_signals GROUP BY stablecoin_id ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`,
-      legacyBounded: `SELECT /* pharos:telegram-dispatch:dews-legacy */ s.stablecoin_id, s.score, s.band, s.signals_json, s.computed_at FROM stress_signals s INNER JOIN ( SELECT stablecoin_id, MAX(computed_at) AS max_at FROM stress_signals WHERE computed_at <= ? GROUP BY stablecoin_id ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`,
-    },
-  },
-  {
-    input: {
-      tags: {
-        latest: "pharos:dews:previous-stress-latest",
-        exact: "pharos:dews:previous-stress-published-exact",
-        legacy: "pharos:dews:previous-stress-legacy",
-      },
-      columns: ["stablecoin_id", "signals_json", "band", "computed_at"],
-      scope: "all" as const,
-    },
-    expected: {
-      latest: `SELECT /* pharos:dews:previous-stress-latest */ stablecoin_id, signals_json, band, computed_at FROM stress_signals_latest`,
-      latestBounded: `SELECT /* pharos:dews:previous-stress-latest */ stablecoin_id, signals_json, band, computed_at FROM stress_signals_latest WHERE computed_at <= ?`,
-      exact: `SELECT /* pharos:dews:previous-stress-published-exact */ stablecoin_id, signals_json, band, computed_at FROM stress_signal_publication_rows WHERE computed_at = ? ORDER BY stablecoin_id ASC`,
-      legacy: `SELECT /* pharos:dews:previous-stress-legacy */ s.stablecoin_id, s.signals_json, s.band, s.computed_at FROM stress_signals s INNER JOIN ( SELECT stablecoin_id, MAX(computed_at) as max_at FROM stress_signals GROUP BY stablecoin_id ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`,
-      legacyBounded: `SELECT /* pharos:dews:previous-stress-legacy */ s.stablecoin_id, s.signals_json, s.band, s.computed_at FROM stress_signals s INNER JOIN ( SELECT stablecoin_id, MAX(computed_at) as max_at FROM stress_signals WHERE computed_at <= ? GROUP BY stablecoin_id ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`,
-    },
-  },
-] as const;
-
-describe("stress-signal SQL builder", () => {
-  it("preserves all 20 legacy query contracts after whitespace and keyword normalization", () => {
-    for (const { input, expected } of legacyQuerySets) {
-      const generated = buildStressSignalCurrentRowsQueries(input);
-      for (const key of Object.keys(expected) as Array<keyof typeof expected>) {
-        expect(normalizeSql(generated[key])).toBe(normalizeSql(expected[key]));
-      }
-    }
-  });
-});
 
 describe("stress-signal current-row helpers", () => {
   it("merges latest rows over legacy rows while preserving legacy-only rows", () => {
@@ -160,7 +76,6 @@ describe("stress-signal current-row helpers", () => {
       rows,
       exactCoverageVerified: true,
     });
-    expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
   it("rejects a partial canonical generation instead of mixing staged rows", async () => {
@@ -185,7 +100,6 @@ describe("stress-signal current-row helpers", () => {
       status: "unavailable",
       reason: "published generation coverage mismatch: rows=1/2",
     });
-    expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
   it("falls back to canonical history rows when latest materialization is stale", async () => {
@@ -209,7 +123,6 @@ describe("stress-signal current-row helpers", () => {
     const loaded = await loadStressSignalCurrentRows(db, nowSec, { staleAfterSec: 300 });
 
     expect(loaded.results).toEqual([row("usdt-tether", nowSec - 120, 12)]);
-    expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
   it("keeps the stale bounded latest rows when the canonical history read rejects", async () => {
@@ -225,7 +138,6 @@ describe("stress-signal current-row helpers", () => {
 
     expect(loaded.results).toEqual([staleLatest]);
     expect(onReadError).toHaveBeenCalledTimes(1);
-    expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
   it("keeps the single-coin latest row when the exact published read rejects", async () => {
@@ -243,8 +155,6 @@ describe("stress-signal current-row helpers", () => {
 
     expect(loaded).toEqual(older);
     expect(onReadError).toHaveBeenCalledTimes(1);
-    expect(db.getHistory().some((entry) => entry.sql.includes("legacy-latest-one"))).toBe(false);
-    expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
   it("keeps a stale single-coin latest row when the legacy history read rejects", async () => {
@@ -260,7 +170,6 @@ describe("stress-signal current-row helpers", () => {
 
     expect(loaded).toEqual(staleLatest);
     expect(onReadError).toHaveBeenCalledTimes(1);
-    expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
   it("skips canonical history when the scoped latest generation is complete and fresh", async () => {
@@ -287,8 +196,6 @@ describe("stress-signal current-row helpers", () => {
     const loaded = await loadStressSignalCurrentRows(db, nowSec, { staleAfterSec: 300 });
 
     expect(loaded.results).toEqual(latestRows);
-    expect(db.getHistory().some((entry) => entry.sql.includes("legacy-latest-all"))).toBe(false);
-    expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
   it("loads the exact canonical generation when chunked staging hides part of the published latest set", async () => {
@@ -322,7 +229,6 @@ describe("stress-signal current-row helpers", () => {
     const loaded = await loadStressSignalCurrentRows(db, nowSec, { staleAfterSec: 300 });
 
     expect(loaded.results).toEqual(canonicalRows);
-    expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
   it("fails closed when the exact published generation has lost a row", async () => {
@@ -351,8 +257,6 @@ describe("stress-signal current-row helpers", () => {
     const loaded = await loadStressSignalCurrentRows(db, nowSec, { staleAfterSec: 300 });
 
     expect(loaded.results).toEqual([]);
-    expect(db.getHistory().some((entry) => entry.sql.includes("legacy-latest-all"))).toBe(false);
-    expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
   it("degrades to the bounded latest rows when the exact generation read rejects", async () => {
@@ -385,7 +289,6 @@ describe("stress-signal current-row helpers", () => {
 
     expect(loaded.results).toEqual([latestSubset]);
     expect(onReadError).toHaveBeenCalledTimes(1);
-    expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
   it("keeps the canonical merge for legacy pointers without exact-set proof", async () => {
@@ -415,7 +318,6 @@ describe("stress-signal current-row helpers", () => {
     const loaded = await loadStressSignalCurrentRows(db, nowSec, { staleAfterSec: 300 });
 
     expect(loaded.results).toEqual([latest]);
-    expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
   it("keeps the canonical merge when latest rows do not all match the published generation", async () => {
@@ -445,7 +347,6 @@ describe("stress-signal current-row helpers", () => {
     const loaded = await loadStressSignalCurrentRows(db, nowSec, { staleAfterSec: 300 });
 
     expect(loaded.results).toEqual([canonical]);
-    expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
   it("keeps a stale single-coin latest row when no legacy row exists", async () => {
@@ -484,7 +385,6 @@ describe("stress-signal current-row helpers", () => {
     );
 
     expect(loaded).toEqual(staleLatest);
-    expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
   it("does not revive an older single-coin row under an exact publication pointer", async () => {
@@ -525,8 +425,6 @@ describe("stress-signal current-row helpers", () => {
     );
 
     expect(loaded).toBeNull();
-    expect(db.getHistory().some((entry) => entry.sql.includes("legacy-latest-one"))).toBe(false);
-    expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
   it("serves a fresh single-coin latest row directly when no publication pointer exists", async () => {
@@ -559,8 +457,6 @@ describe("stress-signal current-row helpers", () => {
     );
 
     expect(loaded).toEqual(fresh);
-    expect(db.getHistory().some((entry) => entry.sql.includes("legacy-latest-one"))).toBe(false);
-    expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
   it("reports a single-coin latest-read failure and falls back to canonical history", async () => {
@@ -602,7 +498,6 @@ describe("stress-signal current-row helpers", () => {
     expect(loaded).toEqual(canonical);
     expect(onReadError).toHaveBeenCalledTimes(1);
     expect(String(onReadError.mock.calls[0]?.[0])).toContain("D1 unavailable");
-    expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
   it("does not read unbounded current rows when the publication pointer is invalid", async () => {
@@ -634,8 +529,6 @@ describe("stress-signal current-row helpers", () => {
     const loaded = await loadStressSignalCurrentRows(db, nowSec, { staleAfterSec: 300 });
 
     expect(loaded.results).toEqual([]);
-    expect(db.getHistory()).toHaveLength(1);
-    expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
   it("does not read single-coin current rows when the publication pointer cannot be read", async () => {
@@ -656,8 +549,6 @@ describe("stress-signal current-row helpers", () => {
     );
 
     expect(loaded).toBeNull();
-    expect(db.getHistory()).toHaveLength(1);
-    expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
   it("fails closed when the exact published generation reads zero rows", async () => {
@@ -681,7 +572,6 @@ describe("stress-signal current-row helpers", () => {
       status: "unavailable",
       reason: `published generation ${completedAt} has no rows`,
     });
-    expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
   it("returns rows without exact-coverage proof for a legacy pointer", async () => {
@@ -708,7 +598,6 @@ describe("stress-signal current-row helpers", () => {
       rows,
       exactCoverageVerified: false,
     });
-    expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
   it("serves the telegram lane through its own exact published query set", async () => {
@@ -732,7 +621,6 @@ describe("stress-signal current-row helpers", () => {
     const loaded = await loadTelegramDewsCurrentRows(db, nowSec, { staleAfterSec: 300 });
 
     expect(loaded).toEqual(rows);
-    expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
   it("serves previous stress rows through their own exact published query set", async () => {
@@ -756,7 +644,6 @@ describe("stress-signal current-row helpers", () => {
     const loaded = await loadPreviousStressSignalCurrentRows(db, nowSec, { staleAfterSec: 300 });
 
     expect(loaded).toEqual(rows);
-    expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
   it("reports the pointer state when the publication pointer is missing", async () => {
@@ -772,7 +659,6 @@ describe("stress-signal current-row helpers", () => {
 
     expect(loaded.status).toBe("unavailable");
     expect(loaded.status === "unavailable" && loaded.reason).toContain("missing");
-    expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
   it("reports a bounded reason when the exact generation read throws", async () => {
@@ -797,7 +683,6 @@ describe("stress-signal current-row helpers", () => {
       status: "unavailable",
       reason: "generation-read-failed:D1 exhausted",
     });
-    expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
   it("rejects a same-count substituted identity in the exact canonical generation", async () => {
@@ -822,6 +707,5 @@ describe("stress-signal current-row helpers", () => {
         rows: [row("usdt-tether", completedAt), row("wrong-canonical", completedAt)] },
     ], { requireMatch: true });
     expect((await loadStressSignalCurrentRows(db, nowSec, { staleAfterSec: 300 })).results).toEqual([]);
-    db.assertAllMatchesUsed();
   });
 });

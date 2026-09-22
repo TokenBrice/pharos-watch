@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 } from "@shared/test-utils/mock-d1";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import type { DatabaseSync } from "node:sqlite";
 import type { MintBurnContractConfig } from "../../lib/mint-burn-contracts";
 import {
   createMintBurnConfigSummary,
@@ -34,6 +35,37 @@ import { runMintBurnConfigPhase } from "../mint-burn/run-configs";
 import { syncMintBurnConfig } from "../mint-burn/sync-config";
 
 const NOW_SEC = 1_750_000_000;
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(fixtures.closeAll);
+
+type DeferralRow = {
+  config_key: string;
+  deferred_until: number;
+  reason: string;
+  api_errors: number;
+  coverage: number | null;
+  created_at: number;
+};
+
+function readDeferrals(sqlite: DatabaseSync): DeferralRow[] {
+  return sqlite.prepare(
+    `SELECT config_key, deferred_until, reason, api_errors, coverage, created_at
+     FROM mint_burn_config_deferral
+     ORDER BY config_key`,
+  ).all() as DeferralRow[];
+}
+
+function seedDeferral(
+  sqlite: DatabaseSync,
+  configKey: string,
+  deferredUntil: number,
+): void {
+  sqlite.prepare(
+    `INSERT INTO mint_burn_config_deferral
+       (config_key, deferred_until, reason, api_errors, coverage, created_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+  ).run(configKey, deferredUntil, "seeded", 6, 0.5, NOW_SEC - 60);
+}
 
 describe("shouldDeferConfig", () => {
   it("does not defer when apiErrors is at or below the threshold", () => {
@@ -60,46 +92,20 @@ describe("shouldDeferConfig", () => {
 });
 
 describe("loadDeferredConfigs", () => {
-  it("returns active deferrals (deferred_until > nowSec)", async () => {
-    const db = mockD1([
-      {
-        match: "FROM mint_burn_config_deferral",
-        rows: [
-          { config_key: "ethereum-0xaaa" },
-          { config_key: "polygon-0xbbb" },
-        ],
-      },
-    ]);
+  it("returns only deferrals whose persisted expiry is after now", async () => {
+    const { sqlite, db } = fixtures.open();
+    seedDeferral(sqlite, "ethereum-0xactive", NOW_SEC + 1);
+    seedDeferral(sqlite, "polygon-0xexpired", NOW_SEC);
 
-    const deferred = await loadDeferredConfigs(db, NOW_SEC);
-    expect(deferred).toEqual(new Set(["ethereum-0xaaa", "polygon-0xbbb"]));
-  });
-
-  it("returns an empty set when no rows match", async () => {
-    const db = mockD1([{ match: "FROM mint_burn_config_deferral", rows: [] }]);
-    const deferred = await loadDeferredConfigs(db, NOW_SEC);
-    expect(deferred.size).toBe(0);
-  });
-
-  it("binds nowSec so expired deferrals are filtered by the SQL WHERE clause", async () => {
-    const db = mockD1([{ match: "FROM mint_burn_config_deferral", rows: [] }]);
-    await loadDeferredConfigs(db, NOW_SEC);
-
-    const history = (
-      db as ReturnType<typeof mockD1> & {
-        getHistory(): Array<{ sql: string; binds: unknown[] }>;
-      }
-    ).getHistory();
-    const entry = history.find((e) => e.sql.includes("FROM mint_burn_config_deferral"));
-    expect(entry).toBeDefined();
-    expect(entry!.sql).toMatch(/deferred_until\s*>\s*\?/);
-    expect(entry!.binds).toEqual([NOW_SEC]);
+    await expect(loadDeferredConfigs(db, NOW_SEC)).resolves.toEqual(
+      new Set(["ethereum-0xactive"]),
+    );
   });
 });
 
 describe("deferConfig", () => {
-  it("writes deferred_until = nowSec + 3600 via INSERT OR REPLACE", async () => {
-    const db = mockD1([{ match: "mint_burn_config_deferral", rows: [] }]);
+  it("persists the one-hour deferral outcome by semantic column", async () => {
+    const { sqlite, db } = fixtures.open();
 
     await deferConfig(
       db,
@@ -110,36 +116,26 @@ describe("deferConfig", () => {
       "api-errors-and-low-coverage",
     );
 
-    const history = (
-      db as ReturnType<typeof mockD1> & {
-        getHistory(): Array<{ sql: string; binds: unknown[] }>;
-      }
-    ).getHistory();
-    const writes = history.filter((e) => e.sql.includes("mint_burn_config_deferral"));
-    expect(writes).toHaveLength(1);
-    expect(writes[0]!.sql).toMatch(/INSERT\s+OR\s+REPLACE/i);
-    expect(writes[0]!.binds).toEqual([
-      "ethereum-0xaaa",
-      NOW_SEC + 3600,
-      "api-errors-and-low-coverage",
-      6,
-      0.5,
-      NOW_SEC,
-    ]);
+    expect(readDeferrals(sqlite)).toEqual([{
+      config_key: "ethereum-0xaaa",
+      deferred_until: NOW_SEC + 3600,
+      reason: "api-errors-and-low-coverage",
+      api_errors: 6,
+      coverage: 0.5,
+      created_at: NOW_SEC,
+    }]);
   });
 
-  it("accepts null coverage for unknown-coverage deferrals", async () => {
-    const db = mockD1([{ match: "mint_burn_config_deferral", rows: [] }]);
+  it("persists unknown coverage as null", async () => {
+    const { sqlite, db } = fixtures.open();
 
     await deferConfig(db, "ethereum-0xbbb", NOW_SEC, 7, null, "unknown-coverage");
 
-    const history = (
-      db as ReturnType<typeof mockD1> & {
-        getHistory(): Array<{ sql: string; binds: unknown[] }>;
-      }
-    ).getHistory();
-    const writes = history.filter((e) => e.sql.includes("mint_burn_config_deferral"));
-    expect(writes[0]!.binds[4]).toBeNull();
+    expect(readDeferrals(sqlite)[0]).toMatchObject({
+      config_key: "ethereum-0xbbb",
+      coverage: null,
+      reason: "unknown-coverage",
+    });
   });
 });
 
@@ -230,7 +226,7 @@ describe("runMintBurnConfigPhase deferral integration", () => {
 
   it("records a deferral for a config with apiErrors=6 and coverage=0.5", async () => {
     const config = makeConfig();
-    const db = mockD1([{ match: "FROM mint_burn_config_deferral", rows: [] }]);
+    const { sqlite, db } = fixtures.open();
 
     vi.mocked(syncMintBurnConfig).mockImplementation(async () => ({
       summary: makeSummary({
@@ -249,32 +245,20 @@ describe("runMintBurnConfigPhase deferral integration", () => {
 
     await runMintBurnConfigPhase(makePhaseInput({ db, configs: [config] }));
 
-    const history = (
-      db as ReturnType<typeof mockD1> & {
-        getHistory(): Array<{ sql: string; binds: unknown[] }>;
-      }
-    ).getHistory();
-    const inserts = history.filter((e) =>
-      e.sql.includes("INSERT OR REPLACE INTO mint_burn_config_deferral"),
-    );
-    expect(inserts).toHaveLength(1);
-    const binds = inserts[0]!.binds;
-    expect(binds[0]).toBe("ethereum-0xaaaa");
-    expect(binds[1]).toBe(NOW_SEC + 3600);
-    expect(binds[2]).toBe("api-errors-and-low-coverage");
-    expect(binds[3]).toBe(6);
-    expect(binds[4]).toBe(0.5);
-    expect(binds[5]).toBe(NOW_SEC);
+    expect(readDeferrals(sqlite)).toEqual([{
+      config_key: "ethereum-0xaaaa",
+      deferred_until: NOW_SEC + 3600,
+      reason: "api-errors-and-low-coverage",
+      api_errors: 6,
+      coverage: 0.5,
+      created_at: NOW_SEC,
+    }]);
   });
 
   it("skips a deferred config on the next run without invoking syncMintBurnConfig", async () => {
     const config = makeConfig();
-    const db = mockD1([
-      {
-        match: "FROM mint_burn_config_deferral",
-        rows: [{ config_key: "ethereum-0xaaaa" }],
-      },
-    ]);
+    const { sqlite, db } = fixtures.open();
+    seedDeferral(sqlite, "ethereum-0xaaaa", NOW_SEC + 600);
 
     const result = await runMintBurnConfigPhase(makePhaseInput({ db, configs: [config] }));
 
@@ -286,8 +270,7 @@ describe("runMintBurnConfigPhase deferral integration", () => {
 
   it("runs the config again once the deferral has expired", async () => {
     const config = makeConfig();
-    // loadDeferredConfigs filters by deferred_until > nowSec — mock returns empty.
-    const db = mockD1([{ match: "FROM mint_burn_config_deferral", rows: [] }]);
+    const { sqlite, db } = fixtures.open();
 
     vi.mocked(syncMintBurnConfig).mockResolvedValue({
       summary: makeSummary({
@@ -311,23 +294,12 @@ describe("runMintBurnConfigPhase deferral integration", () => {
     expect(result.contractsProcessed).toBe(1);
     expect(result.contractsSkipped).toBe(0);
 
-    const history = (
-      db as ReturnType<typeof mockD1> & {
-        getHistory(): Array<{ sql: string; binds: unknown[] }>;
-      }
-    ).getHistory();
-    const inserts = history.filter((e) =>
-      e.sql.includes("INSERT OR REPLACE INTO mint_burn_config_deferral"),
-    );
-    expect(inserts).toHaveLength(0);
-
-    const loadQuery = history.find((e) => e.sql.includes("FROM mint_burn_config_deferral"));
-    expect(loadQuery!.binds[0]).toBe(NOW_SEC);
+    expect(readDeferrals(sqlite)).toEqual([]);
   });
 
   it("does not defer a healthy config with apiErrors below threshold", async () => {
     const config = makeConfig();
-    const db = mockD1([{ match: "FROM mint_burn_config_deferral", rows: [] }]);
+    const { sqlite, db } = fixtures.open();
 
     vi.mocked(syncMintBurnConfig).mockResolvedValue({
       summary: makeSummary({
@@ -345,14 +317,6 @@ describe("runMintBurnConfigPhase deferral integration", () => {
 
     await runMintBurnConfigPhase(makePhaseInput({ db, configs: [config] }));
 
-    const history = (
-      db as ReturnType<typeof mockD1> & {
-        getHistory(): Array<{ sql: string; binds: unknown[] }>;
-      }
-    ).getHistory();
-    const inserts = history.filter((e) =>
-      e.sql.includes("INSERT OR REPLACE INTO mint_burn_config_deferral"),
-    );
-    expect(inserts).toHaveLength(0);
+    expect(readDeferrals(sqlite)).toEqual([]);
   });
 });

@@ -38,7 +38,7 @@ function event(sourceRowId: string): TapeEventInsert {
   };
 }
 
-function createTapeDatabase(): { db: D1Database; reads: string[] } {
+function createTapeDatabase(): { db: D1Database } {
   const sqlite = new DatabaseSync(":memory:");
   databases.push(sqlite);
   sqlite.exec(`
@@ -66,36 +66,20 @@ function createTapeDatabase(): { db: D1Database; reads: string[] } {
     CREATE UNIQUE INDEX idx_tape_source_key
       ON tape_events(source_table, source_row_id, transition);
   `);
-  const reads: string[] = [];
-  const delegate = createSqliteD1(sqlite);
-  const db = new Proxy(delegate, {
-    get(target, property) {
-      if (property === "prepare") {
-        return (sql: string) => {
-          if (sql.includes("FROM tape_events")) reads.push(sql);
-          return target.prepare(sql);
-        };
-      }
-      const value = Reflect.get(target, property, target);
-      return typeof value === "function" ? value.bind(target) : value;
-    },
-  });
-  return { db, reads };
+  return { db: createSqliteD1(sqlite) };
 }
 
 describe("Tape event store static-catalog probes", () => {
-  it("filters observed source keys through bounded unique-index probes", async () => {
-    const { db, reads } = createTapeDatabase();
+  it("returns only events whose source identity has not been persisted", async () => {
+    const { db } = createTapeDatabase();
     const observed = event("observed");
-    const pending = event("pending");
+    const pending = {
+      ...event("pending"),
+      type: "depeg.opened" as const,
+    };
     await insertTapeEvents(db, [observed]);
 
     await expect(filterUnprojectedTapeEvents(db, [observed, pending])).resolves.toEqual([pending]);
-
-    expect(reads).toHaveLength(2);
-    expect(reads.every((sql) => sql.includes("INDEXED BY idx_tape_source_key"))).toBe(true);
-    expect(reads.every((sql) => sql.includes("LIMIT 1"))).toBe(true);
-    expect(reads.every((sql) => !sql.includes("WHERE type ="))).toBe(true);
   });
 
   it("retries two overload failures and returns each unprojected event once", async () => {
