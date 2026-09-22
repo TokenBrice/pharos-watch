@@ -27,7 +27,7 @@ import {
   type ApiKeyPublicRow,
 } from "./api-key-core";
 import { errorResponse } from "./api-response";
-import type { MinimalD1Statement } from "./minimal-d1";
+import type { MinimalD1RunResult, MinimalD1Statement } from "./minimal-d1";
 
 function apiKeyPostWriteReadbackFailure(action: "create" | "activate" | "update" | "deactivate" | "rotate"): Response {
   const recovery =
@@ -193,11 +193,27 @@ export async function activateTrustedApiKey(
   id: number,
   keyPrefix: string,
   nowSec = getNowSec(),
+  requireIssuedSelfServeRequestId?: string,
 ): Promise<ApiKeyMutationResponse | Response> {
-  const result = await db
-    .prepare("UPDATE api_keys SET is_active = 1, updated_at = ? WHERE id = ? AND is_active = 0")
-    .bind(nowSec, id)
-    .run();
+  // Activation is the last step of self-serve issuance: it must not revive a key
+  // whose request or email claim was released/blocked while issuance ran.
+  const issuanceGuard = requireIssuedSelfServeRequestId
+    ? ` AND EXISTS (
+           SELECT 1
+             FROM api_key_requests r
+             JOIN api_key_self_serve_email_claims c ON c.request_id = r.request_id
+            WHERE r.request_id = ?
+              AND r.api_key_id = api_keys.id
+              AND r.status = 'issued'
+              AND c.status = 'issued')`
+    : "";
+  const statement = db.prepare(
+    `UPDATE api_keys SET is_active = 1, updated_at = ? WHERE id = ? AND is_active = 0${issuanceGuard}`,
+  );
+  const result = await (requireIssuedSelfServeRequestId
+    ? statement.bind(nowSec, id, requireIssuedSelfServeRequestId)
+    : statement.bind(nowSec, id)
+  ).run();
   if ((result.meta?.changes ?? 0) === 0) {
     return errorResponse(409, "API key could not be activated");
   }
@@ -227,32 +243,45 @@ export async function updateApiKey(
     return parsed;
   }
 
-  await db
-    .prepare(
-      `UPDATE api_keys
-     SET
-      name = ?,
-      owner_email = ?,
-      tier = ?,
-      traffic_class = ?,
-      rate_limit_per_minute = ?,
-      is_active = ?,
-      expires_at = ?,
-      updated_at = ?
-     WHERE id = ?`,
-    )
-    .bind(
-      parsed.name ?? existing.name,
-      Object.prototype.hasOwnProperty.call(parsed, "ownerEmail") ? (parsed.ownerEmail ?? null) : existing.owner_email,
-      parsed.tier ?? existing.tier,
-      existing.traffic_class,
-      parsed.rateLimitPerMinute ?? existing.rate_limit_per_minute,
-      parsed.isActive == null ? existing.is_active : parsed.isActive ? 1 : 0,
-      Object.prototype.hasOwnProperty.call(parsed, "expiresAt") ? (parsed.expiresAt ?? null) : existing.expires_at,
-      nowSec,
-      id,
-    )
+  const assignments: string[] = [];
+  const bindings: unknown[] = [];
+  if (parsed.name !== undefined) {
+    assignments.push("name = ?");
+    bindings.push(parsed.name);
+  }
+  if (Object.prototype.hasOwnProperty.call(parsed, "ownerEmail")) {
+    assignments.push("owner_email = ?");
+    bindings.push(parsed.ownerEmail ?? null);
+  }
+  if (parsed.tier !== undefined) {
+    assignments.push("tier = ?");
+    bindings.push(parsed.tier);
+  }
+  if (parsed.rateLimitPerMinute !== undefined) {
+    assignments.push("rate_limit_per_minute = ?");
+    bindings.push(parsed.rateLimitPerMinute);
+  }
+  if (parsed.isActive !== undefined) {
+    assignments.push("is_active = ?");
+    bindings.push(parsed.isActive ? 1 : 0);
+  }
+  if (Object.prototype.hasOwnProperty.call(parsed, "expiresAt")) {
+    assignments.push("expires_at = ?");
+    bindings.push(parsed.expiresAt ?? null);
+  }
+  assignments.push("updated_at = ?");
+  bindings.push(nowSec);
+
+  // Only the requested columns move, and the prefix predicate fences a
+  // concurrent rotation: a read-modify-write here would silently revive a
+  // credential another request had just deactivated.
+  const result = await db
+    .prepare(`UPDATE api_keys SET ${assignments.join(", ")} WHERE id = ? AND key_prefix = ?`)
+    .bind(...bindings, id, existing.key_prefix)
     .run();
+  if ((result.meta?.changes ?? 0) === 0) {
+    return errorResponse(409, "API key changed concurrently; re-read it before updating");
+  }
 
   clearApiKeyCache(existing.key_prefix);
   getApiKeyRuntimeState().apiKeyLastUsageUpdateById.delete(id);
@@ -289,7 +318,7 @@ export async function deactivateApiKey(
 }
 
 export async function rotateApiKey(
-  db: ApiKeyDb & { batch(statements: MinimalD1Statement[]): Promise<unknown> },
+  db: ApiKeyDb & { batch(statements: MinimalD1Statement[]): Promise<MinimalD1RunResult[]> },
   pepper: string | undefined,
   id: number,
   nowSec = getNowSec(),
@@ -314,15 +343,19 @@ export async function rotateApiKey(
        last_used_at = NULL,
        last_used_route = NULL,
        updated_at = ?
-     WHERE id = ?`,
+     WHERE id = ? AND key_prefix = ?`,
     )
-    .bind(material.keyPrefix, material.secretHash, nowSec, id);
-  // Resolve the current prefix inside the batch so concurrent rotations carry
-  // the donor mapping forward too. Either both writes commit or neither does.
+    .bind(material.keyPrefix, material.secretHash, nowSec, id, existing.key_prefix);
+  // Both writes are fenced on the prefix this request observed, so concurrent
+  // rotations cannot both mint a token and the donor mapping moves with the
+  // credential that actually rotated. Either both writes commit or neither does.
   const claimUpdate = db
-    .prepare("UPDATE api_key_donor_claims SET key_prefix = ? WHERE key_prefix = (SELECT key_prefix FROM api_keys WHERE id = ?)")
-    .bind(material.keyPrefix, id);
-  await db.batch([claimUpdate, keyUpdate]);
+    .prepare("UPDATE api_key_donor_claims SET key_prefix = ? WHERE key_prefix = ?")
+    .bind(material.keyPrefix, existing.key_prefix);
+  const [, keyResult] = await db.batch([claimUpdate, keyUpdate]);
+  if ((keyResult?.meta?.changes ?? 0) === 0) {
+    return errorResponse(409, "API key changed concurrently; re-read it before rotating");
+  }
 
   clearApiKeyCache(existing.key_prefix);
   clearApiKeyCache(material.keyPrefix);

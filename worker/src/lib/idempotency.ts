@@ -29,9 +29,17 @@ export interface IdempotentActionOptions {
   isExecutionOutcomeUnknown?: (response: Response) => boolean;
   /** Identify a retryable response returned before the protected action began. */
   isPreExecutionRetryable?: (response: Response) => boolean;
+  /**
+   * Prove that an abandoned started attempt never committed its effect. Only a
+   * `true` verdict re-opens the reservation; without one the row stays
+   * terminally `execution_unknown` and every replay answers 503.
+   */
+  reconcileAbandonedExecution?: (context: {
+    action: string;
+    key: string;
+    executionStartedAt: number;
+  }) => Promise<boolean>;
 }
-
-export type IdempotentAdminActionOptions = IdempotentActionOptions;
 
 const PENDING_RESPONSE_STATUS = -1;
 const EXECUTION_UNKNOWN_RESPONSE_STATUS = -2;
@@ -157,7 +165,14 @@ async function takeOverAbandonedUnstartedReservation(
     return null;
   }
 }
-async function takeOverAbandonedStartedReservation(
+/**
+ * Terminally records an abandoned started attempt as `execution_unknown`. Once
+ * `execution_started_at` is set, the absence of a terminal response cannot prove
+ * the side effect did not commit, so replays answer 503 forever. A fresh
+ * reservation is handed back only when the action's own reconciliation proves
+ * the original effect never landed.
+ */
+async function recoverAbandonedStartedReservation(
   db: D1Database,
   action: string,
   key: string,
@@ -166,6 +181,7 @@ async function takeOverAbandonedStartedReservation(
   existingGeneration: number,
   executionStartedAt: number,
   now: number,
+  reconcile: IdempotentActionOptions["reconcileAbandonedExecution"],
 ): Promise<ReservationToken | null> {
   const cutoff = now - STARTED_TAKEOVER_AFTER_SECONDS;
   const executionUnknownBody = buildExecutionUnknownBody();
@@ -205,8 +221,26 @@ async function takeOverAbandonedStartedReservation(
       event: "idempotency_stale_started_execution_unknown",
       route: action,
       source: "admin_idempotency_keys",
-      message: "Marked a stale started idempotency attempt as execution_unknown before takeover",
+      message: "Recorded a stale started idempotency attempt as execution_unknown",
     });
+
+    if (!reconcile) return null;
+    let effectProvenAbsent = false;
+    try {
+      effectProvenAbsent = await reconcile({ action, key, executionStartedAt });
+    } catch (error) {
+      logWorkerEvent({
+        scope: "admin",
+        level: "warn",
+        event: "idempotency_abandoned_execution_reconciliation_failed",
+        route: action,
+        source: "admin_idempotency_keys",
+        message: "Abandoned idempotent execution could not be reconciled",
+        error,
+      });
+      return null;
+    }
+    if (!effectProvenAbsent) return null;
 
     const takeoverResult = await db
       .prepare(
@@ -243,10 +277,10 @@ async function takeOverAbandonedStartedReservation(
     logWorkerEvent({
       scope: "admin",
       level: "warn",
-      event: "idempotency_started_takeover_failed",
+      event: "idempotency_abandoned_started_recovery_failed",
       route: action,
       source: "admin_idempotency_keys",
-      message: "Stale started idempotency reservation takeover failed",
+      message: "Abandoned started idempotency reservation recovery failed",
       error,
     });
     return null;
@@ -366,21 +400,21 @@ async function releasePreExecutionReservation(
   }
 }
 
-async function pruneTerminalIdempotencyRecords(db: D1Database, action: string, now: number): Promise<void> {
+/** Table-wide TTL sweep: every terminal row, including `execution_unknown`, ages out together. */
+async function pruneTerminalIdempotencyRecords(db: D1Database, now: number): Promise<void> {
   await db
     .prepare(
       `DELETE FROM admin_idempotency_keys
         WHERE created_at < ?
-          AND response_status NOT IN (?, ?)`,
+          AND response_status <> ?`,
     )
-    .bind(now - 7 * DAY_SECONDS, PENDING_RESPONSE_STATUS, EXECUTION_UNKNOWN_RESPONSE_STATUS)
+    .bind(now - 7 * DAY_SECONDS, PENDING_RESPONSE_STATUS)
     .run()
     .catch((error) => {
       logWorkerEvent({
         scope: "admin",
         level: "warn",
         event: "idempotency_ttl_prune_failed",
-        route: action,
         source: "admin_idempotency_keys",
         message: "Idempotency TTL prune failed",
         error,
@@ -439,7 +473,7 @@ export async function runIdempotentAction(
   }
   let token: ReservationToken | null = insertedReservation ? { owner, generation: 1 } : null;
   if (existing.execution_started_at != null) {
-    token = await takeOverAbandonedStartedReservation(
+    token = await recoverAbandonedStartedReservation(
       db,
       action,
       key,
@@ -448,6 +482,7 @@ export async function runIdempotentAction(
       existing.reservation_generation,
       existing.execution_started_at,
       now,
+      options.reconcileAbandonedExecution,
     );
     if (!token) {
       return withIdempotencyHeaders(buildExecutionUnknownResponse(), key, true);
@@ -576,16 +611,6 @@ export async function runIdempotentAction(
     return withIdempotencyHeaders(buildExecutionUnknownResponse(), key, false);
   }
 
-  await pruneTerminalIdempotencyRecords(db, action, now);
+  await pruneTerminalIdempotencyRecords(db, now);
   return withIdempotencyHeaders(response, key, false);
-}
-
-export function runIdempotentAdminAction(
-  db: D1Database,
-  action: string,
-  request: Request | undefined,
-  execute: () => Promise<Response>,
-  options: IdempotentAdminActionOptions = {},
-): Promise<Response> {
-  return runIdempotentAction(db, action, request, execute, options);
 }

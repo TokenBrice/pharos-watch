@@ -256,6 +256,8 @@ Load-bearing, deliberately-locked decisions and _why_ they exist, so the rationa
 
   Official references: [Workflow limits](https://developers.cloudflare.com/workflows/reference/limits/), [Workflow pricing](https://developers.cloudflare.com/workflows/reference/pricing/), [sleeping and retrying](https://developers.cloudflare.com/workflows/build/sleeping-and-retrying/), [trigger Workflows](https://developers.cloudflare.com/workflows/build/trigger-workflows/), and [Workers API](https://developers.cloudflare.com/workflows/build/workers-api/).
 
+- **ADR-27 — A started idempotent mutation is at-most-once.** (2026-09-22.) Once `admin_idempotency_keys.execution_started_at` is set, no later observation can prove the side effect did not commit: the absence of a terminal response is equally consistent with "the effect committed and the response was lost". Labelling the row `execution_unknown` and then re-reserving it — the 24-hour takeover shipped by the prior campaign — therefore converted an unknown outcome into a second irreversible mutation. A stale started row is now terminally `execution_unknown` and every replay answers `503`; re-execution requires an action-specific `reconcileAbandonedExecution` callback that positively proves the original effect never landed (API-key operations can reconcile durable key/audit state; feedback needs a stored external issue id). The same predicate governs the audit boundary: a 5xx with no `X-Execution-Certainty` header is recorded as `unknown`, not `confirmed`, so the audit row and the idempotency ledger can no longer disagree about the same attempt.
+
 
 ### Superseded Records
 

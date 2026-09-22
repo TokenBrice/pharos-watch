@@ -371,6 +371,23 @@ describe("catalog action canonical audit", () => {
     ]);
   });
 
+  it("records a headerless 5xx as unknown execution certainty", async () => {
+    const sqlite = fixtures.open().sqlite;
+    const db = createSqliteD1(sqlite);
+
+    await auditCatalogActionResponse({
+      db,
+      endpoint: endpoint("backfill-depegs"),
+      request: request("/api/backfill-depegs?dry-run=false", "thrown-intent"),
+      response: Response.json({ error: "InternalError" }, { status: 500 }),
+    });
+
+    expect(JSON.parse(rows(sqlite)[0]?.details_json ?? "null")).toMatchObject({
+      outcome: "failed",
+      executionCertainty: "unknown",
+    });
+  });
+
   it("leaves richer handler-owned auditing to the handler", async () => {
     const sqlite = fixtures.open().sqlite;
     const db = createSqliteD1(sqlite);

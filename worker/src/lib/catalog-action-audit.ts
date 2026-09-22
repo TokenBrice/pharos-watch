@@ -71,7 +71,10 @@ function getOutcome(endpoint: EndpointDefinition, response: Response): CatalogAc
 function getExecutionCertainty(response: Response, outcome: CatalogActionAuditOutcome): string {
   const header = response.headers.get("X-Execution-Certainty")?.trim().toLowerCase() ?? "";
   if (/^[a-z0-9_-]+$/u.test(header) && header.length <= EXECUTION_CERTAINTY_MAX_LENGTH) return header;
-  return outcome === "unknown" ? "unknown" : "confirmed";
+  // A 5xx without a certainty header says nothing about whether the effect
+  // committed; the idempotency ledger records the same attempt as unknown.
+  if (outcome === "unknown" || response.status >= 500) return "unknown";
+  return "confirmed";
 }
 
 export async function auditCatalogActionResponse({

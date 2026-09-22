@@ -323,7 +323,7 @@ describe("POST /api/donor-key-claims", () => {
     });
   });
 
-  it("keeps the donor mapping attached during concurrent rotations", async () => {
+  it("lets only one concurrent rotation win and keeps the donor mapping attached", async () => {
     await claim(claimMessage(donorAccount));
     const { id } = sqlite.prepare("SELECT id FROM api_keys").get() as { id: number };
 
@@ -332,7 +332,9 @@ describe("POST /api/donor-key-claims", () => {
       rotateApiKey(db, PEPPER, id, NOW_SEC + 60),
     ]);
 
-    expect(rotations.every((result) => !(result instanceof Response))).toBe(true);
+    const conflicts = rotations.filter((result) => result instanceof Response);
+    expect(conflicts).toHaveLength(1);
+    expect((conflicts[0] as Response).status).toBe(409);
     expect(sqlite.prepare("SELECT key_prefix FROM api_key_donor_claims").get()).toEqual(
       sqlite.prepare("SELECT key_prefix FROM api_keys WHERE id = ?").get(id),
     );

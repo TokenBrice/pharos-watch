@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const ApiKeySelfServeStatusSchema = z.enum([
+export const ApiKeySelfServeStatusSchema = z.enum([
   "pending_verification",
   "issued",
   "rejected",
@@ -9,7 +9,7 @@ const ApiKeySelfServeStatusSchema = z.enum([
 ]);
 export type ApiKeySelfServeStatus = z.infer<typeof ApiKeySelfServeStatusSchema>;
 
-const ApiKeySelfServeClaimStatusSchema = z.enum(["pending_verification", "issued", "released"]);
+export const ApiKeySelfServeClaimStatusSchema = z.enum(["pending_verification", "issued", "released"]);
 export type ApiKeySelfServeClaimStatus = z.infer<typeof ApiKeySelfServeClaimStatusSchema>;
 
 const API_KEY_SELF_SERVE_CADENCE_VALUES = [

@@ -215,6 +215,35 @@ describe("api key self-serve request handlers", () => {
     expect(sqlite.prepare("SELECT actor FROM api_key_audit_log").get()).toEqual({ actor: "self-serve" });
   });
 
+  it("spends no verification-token attempt once the IP bucket denies", async () => {
+    await handleApiKeyRequest(db, postRequest("/api/api-key-requests", validBody()), env());
+    const token = extractVerificationToken(sentEmails[0]);
+    await handleApiKeyRequestVerify(
+      db,
+      postRequest("/api/api-key-requests/verify", { token: "z".repeat(40) }),
+      env(),
+      "api-key-pepper",
+    );
+    sqlite.exec(
+      `UPDATE api_key_request_rate_limit_v2 SET count = 9999 WHERE scope = 'verification_ip';
+       DELETE FROM api_key_request_rate_limit_v2 WHERE scope = 'verification_token'`,
+    );
+
+    const denied = await handleApiKeyRequestVerify(
+      db,
+      postRequest("/api/api-key-requests/verify", { token }),
+      env(),
+      "api-key-pepper",
+    );
+
+    expect(denied.status).toBe(429);
+    expect(
+      sqlite
+        .prepare("SELECT COUNT(*) AS n FROM api_key_request_rate_limit_v2 WHERE scope = 'verification_token'")
+        .get(),
+    ).toEqual({ n: 0 });
+  });
+
   it("finalizes the self-serve request before activating the returned key", async () => {
     const runSqlLog: string[] = [];
     db = createSqliteD1(sqlite, { onRun: (sql) => runSqlLog.push(sql) });

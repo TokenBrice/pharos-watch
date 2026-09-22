@@ -341,6 +341,11 @@ export async function handleApiKeyRequestVerify(
       SELF_SERVE_VERIFICATION_ATTEMPT_LIMIT_PER_IP_10M,
       nowSec,
     );
+    // A denied IP must not reach the token bucket: writing there would let an
+    // exhausted network keep minting `verification_token` limiter rows.
+    if (!allowedByIp.allowed) {
+      return selfServeError(429, "Too many verification attempts. Please wait before trying again.", allowedByIp.retryAfterSec);
+    }
     const allowedByToken = await checkApiKeyRequestRateLimit(
       db,
       "verification_token",
@@ -349,12 +354,8 @@ export async function handleApiKeyRequestVerify(
       SELF_SERVE_VERIFICATION_ATTEMPT_LIMIT_PER_TOKEN_10M,
       nowSec,
     );
-    if (!allowedByIp.allowed || !allowedByToken.allowed) {
-      return selfServeError(
-        429,
-        "Too many verification attempts. Please wait before trying again.",
-        Math.max(allowedByIp.retryAfterSec, allowedByToken.retryAfterSec),
-      );
+    if (!allowedByToken.allowed) {
+      return selfServeError(429, "Too many verification attempts. Please wait before trying again.", allowedByToken.retryAfterSec);
     }
     execCtx?.waitUntil(pruneOldApiKeyRequestRateLimits(db, nowSec - 2 * 24 * 60 * 60));
 
@@ -510,7 +511,7 @@ export async function handleApiKeyRequestVerify(
       if (!requestIssued) {
         throw new Error("self-serve request was not pending during issuance finalize");
       }
-      const activated = await activateTrustedApiKey(db, created.key.id, created.key.keyPrefix, nowSec);
+      const activated = await activateTrustedApiKey(db, created.key.id, created.key.keyPrefix, nowSec, row.request_id);
       if (activated instanceof Response) {
         throw new Error("self-serve API key activation failed");
       }
