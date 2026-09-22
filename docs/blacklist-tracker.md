@@ -5,7 +5,7 @@ Multi-chain blacklist/freeze event tracker for stablecoins. Every six hours, the
 ## Methodology And Ownership
 
 - **Current methodology version:** <!-- GENERATED-START: methodology-version-blacklist-tracker -->`v4.0`<!-- GENERATED-END: methodology-version-blacklist-tracker -->
-- **Version source:** `shared/lib/methodology-versions/blacklist-tracker.ts`
+- **Version source:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog:** `/methodology/blacklist-tracker-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/blacklist-tracker/`
 
@@ -80,7 +80,7 @@ The tracker has two amount layers:
 
 The snapshot total is not a live balance guarantee and is distinct from the local net-active event-state view.
 
-The producer summary cache is admitted fail-closed against the shared response schema with current-version `coverage`, `freezeLedgerMeta`, `dataQuality`, and `methodology` fields required. Invalid nested values or missing required fields trigger a live rebuild; valid retained snapshots keep their producer freshness and all additive fields rather than being projected through the parser. The producer payload is statically typed to the same response contract. Public response optionality is unchanged.
+The producer summary cache is admitted fail-closed against the shared response schema with current-version `coverage`, `freezeLedgerMeta`, `dataQuality`, and `methodology` fields required. Invalid nested values or missing required fields trigger the canonical producer materializer; concurrent cold misses coordinate through a durable D1 cache claim so only one request rebuilds the snapshot. Valid retained snapshots keep their producer freshness and all additive fields rather than being projected through the parser. The producer payload is statically typed to the same response contract. Public response optionality is unchanged.
 
 ## Schedule And Runtime
 

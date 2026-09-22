@@ -76,4 +76,29 @@ describe("blacklist summary freeze aggregates", () => {
     expect(summary.stats.recentCount24h).toBe(direct.all_events_24h);
     expect(summary.stats.recentCount24h).toBe(summary.stats.recentFreezeCount24h + 1);
   });
+
+  it("coalesces concurrent cold misses into one producer materialization", async () => {
+    const { db } = sqliteFixtures.open();
+    let aggregateBuilds = 0;
+    const countedDb = new Proxy(db, {
+      get(target, property, receiver) {
+        if (property === "prepare") {
+          return (sql: string) => {
+            if (sql.includes("blacklist-summary-public-aggregate")) aggregateBuilds++;
+            return target.prepare(sql);
+          };
+        }
+        const value = Reflect.get(target, property, receiver);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+
+    const [first, second] = await Promise.all([
+      handleBlacklistSummary(countedDb),
+      handleBlacklistSummary(countedDb),
+    ]);
+
+    expect(aggregateBuilds).toBe(1);
+    expect(await first.json()).toEqual(await second.json());
+  });
 });

@@ -1,16 +1,15 @@
 import { addFreshnessHeaders, getLatestSuccessfulCronTimestamp } from "./api-freshness";
 import { buildMethodologyEnvelope } from "./api-methodology";
 import { jsonResponseWithHeaders } from "./api-response";
-import { CACHE_PROFILES } from "./constants";
+import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import {
   BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
   BLACKLIST_TRACKER_METHODOLOGY_VERSION,
   BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
-} from "@shared/lib/methodology-versions/blacklist-tracker";
+} from "@shared/lib/methodology-versions/constants";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import type { BlacklistReconciliationStatus } from "@shared/types/status";
 import { getBlacklistGapStatus, type FreshnessStatus } from "@shared/lib/status-thresholds";
-import { isRecord } from "@shared/lib/type-guards";
 import { CONTRACT_CONFIGS } from "./blacklist-contracts";
 import { getDeferredBlacklistCoverage } from "./blacklist-coverage-manifest";
 import { loadBlacklistCurrentBalanceMap } from "./blacklist-current-balances";
@@ -44,6 +43,7 @@ import {
   BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY,
   BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,
 } from "./blacklist-cache-keys";
+import { claimCadenceBucket, failCadenceBucket } from "./cadence-bucket";
 
 type BlacklistSummaryPayload = BlacklistSummaryResponse &
   Required<Pick<BlacklistSummaryResponse, "coverage" | "freezeLedgerMeta" | "dataQuality" | "methodology">> & {
@@ -70,6 +70,10 @@ interface CachedBlacklistSummarySnapshot {
 }
 
 const BLACKLIST_SUMMARY_CURRENT_BALANCE_MAX_AGE_SEC = API_FRESHNESS_MAX_AGE_SEC.blacklistSummary * 2;
+const BLACKLIST_SUMMARY_REQUEST_CLAIM_KEY = "blacklist-summary:request-materialization-claim";
+const BLACKLIST_SUMMARY_REQUEST_CLAIM_STALE_SEC = 120;
+const BLACKLIST_SUMMARY_REQUEST_WAIT_ATTEMPTS = 100;
+const BLACKLIST_SUMMARY_REQUEST_WAIT_MS = 20;
 
 type BlacklistChartPoint = { quarter: string; total: number } & Record<BlacklistStablecoin, number>;
 
@@ -717,6 +721,37 @@ export async function materializeBlacklistSummarySnapshot(
   });
   return { written: true };
 }
+async function materializeBlacklistSummaryForRequest(
+  db: D1Database,
+  now: number,
+): Promise<CachedBlacklistSummarySnapshot> {
+  for (let claimAttempt = 0; claimAttempt < 2; claimAttempt++) {
+    const claim = await claimCadenceBucket(db, {
+      key: BLACKLIST_SUMMARY_REQUEST_CLAIM_KEY,
+      bucket: 0,
+      nowSec: now,
+      staleClaimAfterSec: BLACKLIST_SUMMARY_REQUEST_CLAIM_STALE_SEC,
+    });
+    if (claim.kind === "claimed") {
+      try {
+        await materializeBlacklistSummarySnapshot(db, now, now);
+        const snapshot = await readBlacklistSummarySnapshot(db);
+        if (!snapshot) throw new Error("Blacklist summary materialization did not publish a snapshot");
+        return snapshot;
+      } finally {
+        await failCadenceBucket(db, claim.claim, now).catch(() => false);
+      }
+    }
+
+    for (let waitAttempt = 0; waitAttempt < BLACKLIST_SUMMARY_REQUEST_WAIT_ATTEMPTS; waitAttempt++) {
+      await new Promise<void>((resolve) => setTimeout(resolve, BLACKLIST_SUMMARY_REQUEST_WAIT_MS));
+      const snapshot = await readBlacklistSummarySnapshot(db);
+      if (snapshot) return snapshot;
+    }
+  }
+  throw new Error("Blacklist summary materialization claim did not publish a snapshot");
+}
+
 
 function blacklistSummaryHeaders(freshnessTs: number): Record<string, string> {
   return addFreshnessHeaders(
@@ -727,29 +762,9 @@ function blacklistSummaryHeaders(freshnessTs: number): Record<string, string> {
 }
 
 export const handleBlacklistSummary = async (db: D1Database): Promise<Response> => {
-    const now = Math.floor(Date.now() / 1000);
-    const snapshot = await readBlacklistSummarySnapshot(db);
-    if (snapshot) {
-      let payload = snapshot.payload;
-      if (!isRecord(payload.reconciliation)) {
-        try {
-          const reconciliation = await loadBlacklistReconciliationStatus(db);
-          if (reconciliation.status !== "not-run") payload = { ...payload, reconciliation };
-        } catch {
-          // The summary cache remains backward-compatible while migration 0181
-          // rolls out. A later producer write includes the durable status.
-        }
-      }
-      return jsonResponseWithHeaders(payload, blacklistSummaryHeaders(snapshot.freshnessTs));
-    }
-
-    const built = await buildBlacklistSummaryPayload(db, now);
-    await writeBlacklistSummarySnapshot(db, {
-      version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,
-      materializedAt: now,
-      freshnessTs: built.freshnessTs,
-      payload: built.payload,
-    });
-    return jsonResponseWithHeaders(built.payload, blacklistSummaryHeaders(built.freshnessTs));
-  };
+  const now = Math.floor(Date.now() / 1000);
+  const snapshot = await readBlacklistSummarySnapshot(db)
+    ?? await materializeBlacklistSummaryForRequest(db, now);
+  return jsonResponseWithHeaders(snapshot.payload, blacklistSummaryHeaders(snapshot.freshnessTs));
+};
 
