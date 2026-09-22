@@ -2,8 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { D1_MAX_BOUND_PARAMETERS } from "../../../lib/d1-primitives";
+import { DDR_LOCK_ON_TIME_GRACE_SEC, DDR_V2_EFFECTIVE_AT } from "@shared/lib/methodology-versions/depeg-resolver";
 import {
   applyConfirmationTimes,
+  computeLockTiming,
   ensureCanonicalIncidentsForEvents,
   loadPendingPromotionConfirmationTimes,
   recordSystemHealthDeferrals,
@@ -143,6 +145,19 @@ describe("loadPendingPromotionConfirmationTimes", () => {
 
     expect(byEventId.size).toBe(0);
     expect(error).toContain("D1_ERROR");
+  });
+});
+
+describe("computeLockTiming", () => {
+  it("labels a post-landmark lock beyond the cron grace window as late_freeze", () => {
+    const incident = makeIncident({
+      startedAt: DDR_V2_EFFECTIVE_AT + 3_600,
+      eligibleAt: DDR_V2_EFFECTIVE_AT + 3_600,
+      rolloutActiveAtEnablement: false,
+    });
+
+    expect(computeLockTiming(incident, incident.eligibleAt + DDR_LOCK_ON_TIME_GRACE_SEC)).toBe("on_time");
+    expect(computeLockTiming(incident, incident.eligibleAt + DDR_LOCK_ON_TIME_GRACE_SEC + 1)).toBe("late_freeze");
   });
 });
 
