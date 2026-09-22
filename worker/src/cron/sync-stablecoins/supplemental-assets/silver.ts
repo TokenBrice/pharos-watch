@@ -25,7 +25,7 @@ async function fetchCoinGeckoCirculatingSupplyMap(
   logPrefix: string,
   signal?: AbortSignal,
   coingeckoApiKey?: string | null,
-): Promise<Map<string, number>> {
+): Promise<Map<string, { supply: number; observedAt: number }>> {
   const cgIds = metas.map((token) => token.geckoId).filter(Boolean).join(",");
   if (!cgIds) return new Map();
 
@@ -56,7 +56,7 @@ async function fetchCoinGeckoCirculatingSupplyMap(
     return new Map();
   }
 
-  const supplyMap = new Map<string, number>();
+  const supplyMap = new Map<string, { supply: number; observedAt: number }>();
   for (const item of cgMarketsRaw as Array<{ id: string; circulating_supply?: number; last_updated?: string }>) {
     const freshness = validatePricingSourceFreshness({
       source: "coingecko",
@@ -64,8 +64,8 @@ async function fetchCoinGeckoCirculatingSupplyMap(
       observedAtMode: "upstream",
       requireObservedAt: true,
     });
-    if (freshness.accepted && item.circulating_supply != null && Number.isFinite(item.circulating_supply) && item.circulating_supply > 0) {
-      supplyMap.set(item.id, item.circulating_supply);
+    if (freshness.accepted && freshness.observedAt != null && item.circulating_supply != null && Number.isFinite(item.circulating_supply) && item.circulating_supply > 0) {
+      supplyMap.set(item.id, { supply: item.circulating_supply, observedAt: freshness.observedAt });
     }
   }
   return supplyMap;
@@ -88,10 +88,12 @@ export async function fetchSilverTokens(
     ]);
 
     const mcapMap: Record<string, number> = {};
+    const observedAtById: Record<string, number | undefined> = {};
     for (const token of SILVER_METAS) {
       if (!token.geckoId) continue;
       const cgMcap = resolveSupplementalCoinGeckoMcap(cgData, token.geckoId);
-      const circulatingSupply = cgSupplyMap.get(token.geckoId);
+      const supplyObservation = cgSupplyMap.get(token.geckoId);
+      const circulatingSupply = supplyObservation?.supply;
       const priceResolution = resolveSupplementalPrice(priceData, cgData, token.geckoId);
       const price = priceResolution?.price ?? 0;
       const mcap = resolveMarketCap(cgMcap ?? undefined, circulatingSupply, price);
@@ -103,6 +105,9 @@ export async function fetchSilverTokens(
           );
         }
         mcapMap[token.id] = mcap;
+        observedAtById[token.id] = mcap === cgMcap
+          ? cgData[token.geckoId]?.last_updated_at
+          : supplyObservation?.observedAt;
       }
     }
 
@@ -115,7 +120,7 @@ export async function fetchSilverTokens(
         return {
           mcap: aggregate?.mcap ?? mcapMap[meta.id] ?? 0,
           supplySource: aggregate?.supplySource ?? "coingecko-fallback",
-          supplyObservedAt: aggregate?.supplyObservedAt,
+          supplyObservedAt: aggregate ? aggregate.supplyObservedAt : observedAtById[meta.id],
           chainCirculating: aggregate?.chainCirculating,
         };
       },

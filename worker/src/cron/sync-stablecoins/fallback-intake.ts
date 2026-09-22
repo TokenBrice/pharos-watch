@@ -86,6 +86,7 @@ export function buildFallbackAssetsFromCoinGecko(
       priceSyncedAt: input.syncStartSec,
       nowSec: input.syncStartSec,
       mcap: entry.mcap,
+      supplyObservedAt: entry.observedAt,
       supplySource: "coingecko-fallback",
       circulatingPrevDay: null,
       circulatingPrevWeek: null,

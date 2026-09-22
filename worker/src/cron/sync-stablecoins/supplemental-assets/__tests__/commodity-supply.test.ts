@@ -76,12 +76,14 @@ const LANES = [
 
 describe.each(LANES)("$lane supplemental market-cap freshness", (lane) => {
   it("publishes the row from a fresh upstream market cap", async () => {
-    lane.stubUpstreams(nowSec());
+    const observedAt = nowSec() - 60;
+    lane.stubUpstreams(observedAt);
 
     const [asset] = await lane.fetchTokens({
-      [lane.geckoId]: { usd: lane.price, usd_market_cap: 78_852_290, last_updated_at: nowSec() },
+      [lane.geckoId]: { usd: lane.price, usd_market_cap: 78_852_290, last_updated_at: observedAt },
     });
 
+    expect(asset?.supplyObservedAt).toBe(observedAt);
     expect(asset?.supplySource).toBe("coingecko-fallback");
     expect(asset?.circulating?.[lane.pegKey]).toBe(78_852_290);
   });
@@ -110,6 +112,7 @@ describe("silver supplemental supply observation", () => {
   it.each([
     { freshSupply: false, freshMcap: false, expected: null },
     { freshSupply: true, freshMcap: false, expected: 3_200 },
+    { freshSupply: true, freshMcap: true, expected: 3_200 },
     { freshSupply: false, freshMcap: true, expected: 1_000 },
   ])(
     "validates supply and market-cap observations independently: $freshSupply/$freshMcap",
@@ -123,13 +126,13 @@ describe("silver supplemental supply observation", () => {
           body: [{
             id: "silver-test",
             circulating_supply: 100,
-            last_updated: new Date((freshSupply ? now : stale) * 1000).toISOString(),
+            last_updated: new Date((freshSupply ? now - 30 : stale) * 1000).toISOString(),
           }],
         },
       ], { requireMatch: true });
 
       const [asset] = await fetchSilverTokens({
-        "silver-test": { usd_market_cap: 1_000, last_updated_at: freshMcap ? now : stale },
+        "silver-test": { usd_market_cap: 1_000, last_updated_at: freshMcap ? now - 60 : stale },
       });
 
       if (expected == null) {
@@ -137,6 +140,7 @@ describe("silver supplemental supply observation", () => {
       } else {
         expect(asset?.circulating?.peggedSILVER).toBe(expected);
         expect(asset?.price).toBe(SILVER_PRICE);
+        expect(asset?.supplyObservedAt).toBe(freshSupply ? now - 30 : now - 60);
       }
     },
   );

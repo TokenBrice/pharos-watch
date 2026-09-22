@@ -6,6 +6,7 @@ import { USER_AGENT } from "./constants";
 import { fetchJsonWithRetry } from "./fetch-retry";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "./stablecoins-cache";
 import { z } from "zod";
+import { validateCompositePricingSourceFreshness } from "./pricing-source-freshness";
 
 export type MetalPegKey = "peggedGOLD" | "peggedSILVER";
 
@@ -68,14 +69,24 @@ export async function loadCommodityPeerMedianReference(
     return { rates: {}, updatedAt: null };
   }
 
-  const updatedAt =
-    typeof stablecoinsCacheResult.updatedAt === "number" && stablecoinsCacheResult.updatedAt > 0
-      ? Math.min(syncStartSec, stablecoinsCacheResult.updatedAt)
-      : null;
-
+  const observedTimes: number[] = [];
+  const peers = stablecoinsCacheResult.payload.peggedAssets.filter((asset) => {
+    // Use the same contributor rules as the median, including supply and exclusions.
+    if (Object.keys(deriveCommodityPeerMedianRates([asset])).length === 0) return false;
+    const freshness = validateCompositePricingSourceFreshness({
+      source: asset.priceSource ?? "",
+      observedAt: asset.priceObservedAt ?? asset.priceUpdatedAt,
+      observedAtMode: asset.priceObservedAtMode,
+      nowSec: syncStartSec,
+      requireObservedAt: true,
+    });
+    if (!freshness.accepted || freshness.observedAt == null) return false;
+    observedTimes.push(freshness.observedAt);
+    return true;
+  });
   return {
-    rates: deriveCommodityPeerMedianRates(stablecoinsCacheResult.payload.peggedAssets),
-    updatedAt,
+    rates: deriveCommodityPeerMedianRates(peers),
+    updatedAt: observedTimes.length > 0 ? Math.min(...observedTimes) : null,
   };
 }
 

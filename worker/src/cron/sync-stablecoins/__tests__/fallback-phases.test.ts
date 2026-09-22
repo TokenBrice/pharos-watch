@@ -144,6 +144,7 @@ describe("CoinGecko fallback phases", () => {
       price: 0.999,
       priceSource: "coingecko",
       priceConfidence: "single-source",
+      supplyObservedAt: NOW_SEC - 60,
       priceUpdatedAt: NOW_SEC - 60,
       priceObservedAt: NOW_SEC - 60,
       priceObservedAtMode: "upstream",
