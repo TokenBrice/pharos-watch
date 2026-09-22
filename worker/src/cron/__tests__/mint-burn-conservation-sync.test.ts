@@ -5,7 +5,7 @@ import { fetchAlchemyLogs, resolveBlockTimestamps } from "../../lib/alchemy-logs
 import { parseMintBurnLogs } from "../../lib/mint-burn-pipeline/parse";
 import { classifyBridgeBurnRows } from "../../lib/mint-burn-pipeline/classification";
 import { persistMintBurnRows } from "../../lib/mint-burn-pipeline/persistence";
-import { auditMintBurnConservation, persistMintBurnConservation, validateMintBurnParsedConservation,
+import { completeMintBurnConservationAudit, persistMintBurnConservation, validateMintBurnParsedConservation,
   verifyPersistedMintBurnConservation } from "../../lib/mint-burn-conservation";
 import type { MintBurnRow } from "../../lib/mint-burn-pipeline/types";
 import type { MintBurnConservationRecord } from "@shared/types/status";
@@ -14,7 +14,7 @@ vi.mock("../../lib/mint-burn-pipeline/parse", () => ({ parseMintBurnLogs: vi.fn(
 vi.mock("../../lib/mint-burn-pipeline/classification", () => ({ classifyBridgeBurnRows: vi.fn() }));
 vi.mock("../../lib/mint-burn-pipeline/persistence", () => ({ persistMintBurnRows: vi.fn() }));
 vi.mock("../../lib/mint-burn-conservation", () => ({ getMintBurnConservationEligibility: () => ({ supported: true }),
-  auditMintBurnConservation: vi.fn(), persistMintBurnConservation: vi.fn(), validateMintBurnParsedConservation: vi.fn(),
+  completeMintBurnConservationAudit: vi.fn(), persistMintBurnConservation: vi.fn(), validateMintBurnParsedConservation: vi.fn(),
   verifyPersistedMintBurnConservation: vi.fn() }));
 const config = MINT_BURN_CONFIGS.find((item) => item.stablecoinId === "gusd-gemini")!;
 const row = { id: "event", tx_hash: "tx", direction: "mint", amount: 10_000, block_number: 102, timestamp: 1100 } as MintBurnRow;
@@ -40,7 +40,7 @@ beforeEach(() => {
   vi.mocked(classifyBridgeBurnRows).mockResolvedValue({ effectiveBurns: 0, bridgeBurns: 0, reviewBurns: 0,
     txContextShortfalls: 0, deferredTxHashes: [] });
   vi.mocked(persistMintBurnRows).mockResolvedValue({ inserted: 1, ignored: 0, roundtripsDetected: 0 } as never);
-  vi.mocked(auditMintBurnConservation).mockResolvedValue({ ...audit });
+  vi.mocked(completeMintBurnConservationAudit).mockReturnValue({ ...audit });
   vi.mocked(verifyPersistedMintBurnConservation).mockResolvedValue("ok");
 });
 describe("conservation producer publication and cursor fences", () => {
@@ -69,7 +69,7 @@ describe("conservation producer publication and cursor fences", () => {
   });
   it.each(["mismatch", "parser", "persisted"])("fences a verified %s failure even if rows were ignored", async (kind) => {
     vi.mocked(persistMintBurnRows).mockResolvedValue({ inserted: 0, ignored: 1, roundtripsDetected: 0 } as never);
-    if (kind === "mismatch") vi.mocked(auditMintBurnConservation).mockResolvedValue({ ...audit, status: "mismatch" });
+    if (kind === "mismatch") vi.mocked(completeMintBurnConservationAudit).mockReturnValue({ ...audit, status: "mismatch" });
     if (kind === "parser") vi.mocked(validateMintBurnParsedConservation).mockImplementation(() => { throw new Error("bad row"); });
     if (kind === "persisted") vi.mocked(verifyPersistedMintBurnConservation).mockResolvedValue("mismatch");
     const result = await run();
@@ -78,12 +78,23 @@ describe("conservation producer publication and cursor fences", () => {
     if (kind === "parser") expect(persistMintBurnRows).toHaveBeenCalledWith(expect.anything(), [], expect.anything(), expect.anything());
   });
   it("preserves normal cursor advancement through diagnostic RPC unavailability", async () => {
-    vi.mocked(auditMintBurnConservation).mockResolvedValue({ ...audit, status: "unavailable", reason: "audit-rpc-unavailable" });
+    vi.mocked(completeMintBurnConservationAudit).mockReturnValue({ ...audit, status: "unavailable", reason: "audit-rpc-unavailable" });
     const result = await run();
     expect(result.newLastBlock).toBe(102);
     expect(result.summary.errors).toBe(0);
     expect(result.apiErrors).toBe(0);
     expect(result.summary.conservationStatus).toBe("unavailable");
+  });
+  it("persists a discrepancy before a row-write failure and fences invalid raw evidence", async () => {
+    vi.mocked(completeMintBurnConservationAudit).mockReturnValue({ ...audit, status: "mismatch" });
+    vi.mocked(persistMintBurnRows).mockRejectedValue(new Error("write failed"));
+    await expect(run()).rejects.toThrow("write failed");
+    expect(persistMintBurnConservation).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(persistMintBurnConservation).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(persistMintBurnRows).mock.invocationCallOrder[0]);
+  });
+  it.each(["invalid-raw-log", "boundary-reorg", "closing-log-hash-mismatch"])("fences %s", async (reason) => {
+    vi.mocked(completeMintBurnConservationAudit).mockReturnValue({ ...audit, status: "unavailable", reason });
+    expect((await run()).newLastBlock).toBeNull();
   });
   it("propagates cache write failure without returning an advanced cursor", async () => {
     vi.mocked(persistMintBurnConservation).mockRejectedValue(new Error("cache write failed"));

@@ -2,6 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import type { DatabaseSync } from "node:sqlite";
 import type { MintBurnContractConfig } from "../../lib/mint-burn-contracts";
+import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
+import { fetchConservationBoundaries } from "../../lib/mint-burn-conservation";
+import { upsertMintBurnSyncState } from "../../lib/mint-burn-pipeline/sync-state";
 import {
   createMintBurnConfigSummary,
   type MintBurnConfigSummary,
@@ -19,6 +22,11 @@ vi.mock("../mint-burn/sync-config", async (importOriginal) => {
     ...actual,
     syncMintBurnConfig: vi.fn(),
   };
+});
+
+vi.mock("../../lib/mint-burn-conservation", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/mint-burn-conservation")>();
+  return { ...actual, fetchConservationBoundaries: vi.fn() };
 });
 
 vi.mock("../../lib/mint-burn-pipeline/sync-state", () => ({
@@ -218,6 +226,8 @@ describe("runMintBurnConfigPhase deferral integration", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(NOW_SEC * 1000));
     vi.mocked(syncMintBurnConfig).mockReset();
+    vi.mocked(fetchConservationBoundaries).mockReset().mockResolvedValue(new Map());
+    vi.mocked(upsertMintBurnSyncState).mockClear();
   });
 
   afterEach(() => {
@@ -318,5 +328,85 @@ describe("runMintBurnConfigPhase deferral integration", () => {
     await runMintBurnConfigPhase(makePhaseInput({ db, configs: [config] }));
 
     expect(readDeferrals(sqlite)).toEqual([]);
+  });
+
+  it("prepares the exact loop ranges and retains completed cursors when a later config aborts", async () => {
+    const { db } = fixtures.open();
+    const configs = ["gusd-gemini", "usds-sky", "usde-ethena"].map((id) => ({
+      ...MINT_BURN_CONFIGS.find((config) => config.stablecoinId === id)!, startBlock: 101,
+    }));
+    const keys = configs.map((config) => `${config.chain.chainId}-${config.contractAddress}`);
+    const args = makePhaseInput({ db, configs });
+    args.lastBlocksAfterRun = new Map([[keys[0], 110], [keys[2], 150]]);
+    args.chainContexts.get("ethereum")!.chainHead = 160;
+    args.maxScanRange = 25;
+    const controller = new AbortController();
+    args.signal = controller.signal;
+    vi.mocked(fetchConservationBoundaries).mockImplementation(async ({ budget }) => {
+      budget.count += 3;
+      return new Map();
+    });
+    let index = 0;
+    vi.mocked(syncMintBurnConfig).mockImplementation(async (input) => {
+      if (index++ === 2) {
+        controller.abort(new Error("stop during third scan"));
+        throw controller.signal.reason;
+      }
+      return { summary: makeSummary({ advanceReason: "full-success-empty", advancedTo: input.scanTo, requestBudgetUsed: 2 }),
+        apiErrors: 0, effectiveBurns: 0, bridgeBurns: 0, reviewBurns: 0, atomicRoundtripsDetected: 0, newLastBlock: input.scanTo };
+    });
+    await expect(runMintBurnConfigPhase(args)).rejects.toThrow("stop during third scan");
+    const expected = [
+      { key: keys[0], fromBlock: 111, toBlock: 135 },
+      { key: keys[1], fromBlock: 101, toBlock: 125 },
+      { key: keys[2], fromBlock: 151, toBlock: 160 },
+    ];
+    expect(vi.mocked(fetchConservationBoundaries).mock.calls[0][0].requests.map(({ key, fromBlock, toBlock }) =>
+      ({ key, fromBlock, toBlock }))).toEqual(expected);
+    expect(vi.mocked(syncMintBurnConfig).mock.calls.map(([input]) =>
+      ({ key: input.key, fromBlock: input.fromBlock, toBlock: input.scanTo }))).toEqual(expected);
+    expect(vi.mocked(fetchConservationBoundaries).mock.calls[0][0].deadlineMs).toBe(NOW_SEC * 1000 + 45_000);
+    expect(upsertMintBurnSyncState).toHaveBeenNthCalledWith(1, db, keys[0], 135, "monotonic-max");
+    expect(upsertMintBurnSyncState).toHaveBeenNthCalledWith(2, db, keys[1], 125, "monotonic-max");
+    expect(upsertMintBurnSyncState).toHaveBeenCalledTimes(2);
+    expect(args.lastBlocksAfterRun).toEqual(new Map([[keys[0], 135], [keys[1], 125], [keys[2], 150]]));
+    expect(args.budget.count).toBe(7);
+  });
+
+  it.each(["deferred", "unsupported", "caught-up", "missing-chain"])("excludes %s configs from the pre-pass", async (kind) => {
+    const { db, sqlite } = fixtures.open();
+    const config = { ...MINT_BURN_CONFIGS.find((item) => item.stablecoinId === "gusd-gemini")!, startBlock: 101 };
+    const key = `ethereum-${config.contractAddress}`;
+    const args = makePhaseInput({ db, configs: [config] });
+    if (kind === "deferred") seedDeferral(sqlite, key, NOW_SEC + 600);
+    if (kind === "unsupported") config.decimals = 99;
+    if (kind === "caught-up") args.chainContexts.get("ethereum")!.chainHead = 100;
+    if (kind === "missing-chain") args.chainContexts.clear();
+    vi.mocked(syncMintBurnConfig).mockResolvedValue({
+      summary: makeSummary(), apiErrors: 0, effectiveBurns: 0, bridgeBurns: 0, reviewBurns: 0,
+      atomicRoundtripsDetected: 0, newLastBlock: null,
+    });
+    await runMintBurnConfigPhase(args);
+    expect(vi.mocked(fetchConservationBoundaries).mock.calls[0][0].requests).toEqual([]);
+    expect(syncMintBurnConfig).toHaveBeenCalledTimes(kind === "unsupported" ? 1 : 0);
+  });
+
+  it("does not pair a changed scan range with the earlier boundary evidence", async () => {
+    const { db } = fixtures.open();
+    const config = { ...MINT_BURN_CONFIGS.find((item) => item.stablecoinId === "gusd-gemini")!, startBlock: 101 };
+    const key = `ethereum-${config.contractAddress}`;
+    const args = makePhaseInput({ db, configs: [config] });
+    args.chainContexts.get("ethereum")!.chainHead = 200;
+    vi.mocked(fetchConservationBoundaries).mockImplementation(async () => {
+      args.lastBlocksAfterRun.set(key, 150);
+      return new Map();
+    });
+    vi.mocked(syncMintBurnConfig).mockImplementation(async (input) => {
+      expect(input.conservationBoundary).toEqual({ status: "unavailable", reason: "incomplete-log-range" });
+      return { summary: makeSummary(), apiErrors: 0, effectiveBurns: 0, bridgeBurns: 0, reviewBurns: 0,
+        atomicRoundtripsDetected: 0, newLastBlock: null };
+    });
+    await runMintBurnConfigPhase(args);
+    expect(vi.mocked(syncMintBurnConfig).mock.calls[0][0].fromBlock).toBe(151);
   });
 });
