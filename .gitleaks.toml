@@ -239,3 +239,13 @@ regexes = [
   '''^(?:mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp|EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v)$''',
 ]
 paths = ['''(?:^|/)worker/src/cron/measured-execution/__tests__/fixtures/raydium-wm-usdc-single-segment-2026-07-27\.json$''']
+# DEX price-source registry keys (`<protocol>-dex`) are public pricing-lane identifiers
+# that the primary-price-collector fixtures pair with `sourceKey:`. The rule pins the
+# reviewed key shape to that one test file; any other high-entropy value there fails.
+[[allowlists]]
+description = "DEX source registry keys in primary-price-collector fixtures are not credentials"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "match"
+regexes = ['''^sourceKey: "(?:balancer|curve|uniswap-v[234]|unknown-protocol)-dex"$''']
+paths = ['''(?:^|/)worker/src/lib/__tests__/primary-price-collector\.test\.ts$''']
