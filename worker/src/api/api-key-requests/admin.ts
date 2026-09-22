@@ -1,11 +1,10 @@
 import { z } from "zod";
-import {
-  ApiKeySelfServeClaimStatusSchema,
-  ApiKeySelfServeStatusSchema,
-  type ApiKeySelfServeAdminMutationResponse,
-  type ApiKeySelfServeClaimStatus,
-  type ApiKeySelfServeRequestAdminSummary,
-  type ApiKeySelfServeStatus,
+import { ApiKeySelfServeClaimStatusSchema, ApiKeySelfServeStatusSchema } from "@shared/types/api-key-requests";
+import type {
+  ApiKeySelfServeAdminMutationResponse,
+  ApiKeySelfServeClaimStatus,
+  ApiKeySelfServeRequestAdminSummary,
+  ApiKeySelfServeStatus,
 } from "@shared/types";
 import {
   clearApiKeyCache,
