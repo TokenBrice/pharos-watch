@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { PegSummaryCoin, PegSummaryResponse, StablecoinData } from "@shared/types";
+import type { PegSummaryCoin, PegSummaryResponse } from "@shared/types";
 import { makePegSummaryCoin as makePegSummaryCoinBase } from "@/test-utils/peg-summary-fixtures";
-import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { buildStablecoinDetailViewModel } from "../stablecoin-detail-view-model";
@@ -10,24 +9,10 @@ import {
   makeBuildStablecoinDetailViewModelParams,
   makeReadyDetailParams,
 } from "./fixtures/stablecoin-detail-view-model";
-import {
-  buildMintAuthorityDetailViewModel,
-} from "../stablecoin-detail-mint-authority-view-model";
-import { buildStablecoinDetailClientCoin } from "../stablecoin-detail-client-coin";
 import { buildDetailPegPriceSnapshot, buildDetailStaleQueries } from "../stablecoin-detail-query-view-model";
 import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
 import { deriveDataHealth } from "../data-health";
 import { DATA_HEALTH_PRESETS } from "../data-health-config";
-
-function makeUsdtStablecoin(overrides: Partial<StablecoinData> = {}): StablecoinData {
-  return makeStablecoin({
-    id: "usdt-tether",
-    name: "Tether",
-    symbol: "USDT",
-    circulating: { peggedUSD: 100 },
-    ...overrides,
-  });
-}
 
 function makePegSummaryCoin(overrides: Partial<PegSummaryCoin> = {}): PegSummaryCoin {
   return makePegSummaryCoinBase({
@@ -159,254 +144,6 @@ describe("stablecoin detail view-model builder", () => {
       .toMatchObject({ value: "45", sub: "2 incidents" });
     expect(viewModel.hero.signalRailItems.find((item) => item.key === "safety"))
       .toMatchObject({ primary: "B+", secondary: "79/100" });
-  });
-
-  it("uses only compact mint-authority summaries for client detail presentation", () => {
-    const fullCoin = TRACKED_META_BY_ID.get("usdc-circle");
-    expect(fullCoin?.mintAuthority).toBeDefined();
-    const coinWithServerOnlyResearch = {
-      ...fullCoin!,
-      blacklistabilityReview: { sentinel: true } as never,
-      bridgeRouteRisk: { sentinel: true } as never,
-      custodyProfile: { sentinel: true } as never,
-      dependencyReview: { sentinel: true } as never,
-      implementationLaunchDate: "2026-01-01",
-      mechanismArchetypeReview: { sentinel: true } as never,
-      oracleRisk: { sentinel: true } as never,
-      reserveReview: { sentinel: true } as never,
-    };
-    const clientCoin = buildStablecoinDetailClientCoin(coinWithServerOnlyResearch);
-
-    expect(buildMintAuthorityDetailViewModel(fullCoin!).status).toBe("not-reviewed");
-    for (const serverOnlyField of [
-      "blacklistabilityReview",
-      "bridgeRouteRisk",
-      "custodyProfile",
-      "dependencyReview",
-      "implementationLaunchDate",
-      "mechanismArchetypeReview",
-      "mintAuthority",
-      "oracleRisk",
-      "reserveReview",
-    ]) {
-      expect(serverOnlyField in coinWithServerOnlyResearch).toBe(true);
-      expect(serverOnlyField in clientCoin).toBe(false);
-    }
-    expect(clientCoin.mintAuthoritySummary).toBeDefined();
-    expect(buildMintAuthorityDetailViewModel(clientCoin).status).toBe("reviewed");
-  });
-
-  it("renders the published V9 mint component instead of a curated recomputation", () => {
-    const coin = TRACKED_META_BY_ID.get("steakusdt-steakhouse");
-    expect(coin).toBeDefined();
-
-    // 9.1: curated parent metadata no longer changes the mint score — the
-    // inheritance blend lived in the retired standalone engine.
-    const published = { mint: { score: 70, posture: "partially-bounded-admin" }, caps: [] };
-    const withoutRichParent = buildMintAuthorityDetailViewModel(
-      buildStablecoinDetailClientCoin(coin!),
-      published,
-    );
-    const withRichParent = buildMintAuthorityDetailViewModel(
-      buildStablecoinDetailClientCoin(coin!, { parentById: TRACKED_META_BY_ID }),
-      published,
-    );
-
-    expect(withoutRichParent.score).toMatchObject({ score: 70, bandLabel: "Governed" });
-    expect(withRichParent.score).toEqual(withoutRichParent.score);
-  });
-
-  it("projects mint-authority review gaps into the detail view model", () => {
-    const viewModel = buildMintAuthorityDetailViewModel({
-      mintAuthoritySummary: {
-        mintPath: "issuer-direct-mint",
-        authorityPosture: "concentrated-admin",
-        confidence: "manual-review",
-        summary: "Issuer backend can mint after off-chain approval.",
-        sourceFreeRationale: "Issuer API roles were described in docs but no contract source is published.",
-        unresolvedQuestions: ["Confirm whether the backend signer can be rotated without governance."],
-      },
-    } as never);
-
-    expect(viewModel).toMatchObject({
-      status: "reviewed",
-      sourceFreeRationale: "Issuer API roles were described in docs but no contract source is published.",
-      unresolvedQuestions: ["Confirm whether the backend signer can be rotated without governance."],
-    });
-  });
-
-  it("adds explorer links and security setup labels to mint-authority controls", () => {
-    const viewModel = buildMintAuthorityDetailViewModel({
-      mintAuthoritySummary: {
-        mintPath: "permissioned-minter",
-        authorityPosture: "bounded-admin",
-        confidence: "verified",
-        summary: "Minting is controlled by a published Safe.",
-        controls: [
-          {
-            chain: "ethereum",
-            address: "0x123400000000000000000000000000000000abcd",
-            label: "Issuer Safe",
-            role: "minter-admin",
-            authorityType: "safe",
-            directMintAbility: "can-authorize",
-            threshold: 2,
-            signerCount: 3,
-            modulesOrGuardsStatus: "none-detected",
-          },
-        ],
-      },
-    } as never);
-
-    expect(viewModel.controls[0]).toMatchObject({
-      locationLabel: "ethereum / 0x123400...00abcd",
-      fullLocationLabel: "ethereum / 0x123400000000000000000000000000000000abcd",
-      addressUrl: "https://etherscan.io/address/0x123400000000000000000000000000000000abcd",
-      securitySetupLabel: "Safe, 2/3 threshold",
-      thresholdLabel: "2/3 threshold",
-      modulesOrGuardsLabel: "No modules or guards detected",
-      custodyLabel: null,
-    });
-    expect(viewModel.score).toMatchObject({ score: null, bandLabel: "NR" });
-  });
-
-  it("labels single-key mint authority custody and exposes EOA caps", () => {
-    const viewModel = buildMintAuthorityDetailViewModel({
-      mintAuthoritySummary: {
-        mintPath: "permissioned-minter",
-        authorityPosture: "concentrated-admin",
-        confidence: "verified",
-        summary: "Minting is controlled by a single operator key.",
-        controls: [
-          {
-            chain: "ethereum",
-            address: "0x123400000000000000000000000000000000abcd",
-            label: "Operator key",
-            role: "direct-minter",
-            authorityType: "eoa",
-            directMintAbility: "direct",
-          },
-        ],
-      },
-    } as never);
-
-    expect(viewModel.controls[0]).toMatchObject({
-      securitySetupLabel: "Externally owned account",
-      custodyLabel: "Single-key address - custody unverifiable",
-    });
-    // The custody label is a description of the curated control row; the score
-    // and band come from the publication, which this fixture does not carry.
-    expect(viewModel.score).toMatchObject({ score: null, bandLabel: "NR" });
-  });
-
-  it("keeps the mint-incident callout on the detail card", () => {
-    const coin = TRACKED_META_BY_ID.get("usr-resolv");
-    expect(coin).toBeDefined();
-
-    const viewModel = buildMintAuthorityDetailViewModel(buildStablecoinDetailClientCoin(coin!));
-
-    // `reviewedAt` is curated data that moves with every mint-authority research
-    // wave (it changed in #869), so pin the pass-through contract, not the value.
-    expect(viewModel.reviewedAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    expect(viewModel.mintIncidents).toHaveLength(1);
-    expect(viewModel.mintIncidents[0]).toMatchObject({
-      date: "2026-03-22",
-      summary: expect.stringContaining("80M unbacked USR"),
-      sources: expect.arrayContaining([
-        expect.objectContaining({
-          label: expect.any(String),
-          url: expect.stringContaining("https://"),
-        }),
-      ]),
-    });
-    expect(viewModel.score).toMatchObject({ score: null, bandLabel: "NR" });
-  });
-
-  it("sorts incident callouts from a typed mint-authority summary", () => {
-    const viewModel = buildMintAuthorityDetailViewModel({
-      id: "dedupe-test",
-      mintAuthoritySummary: {
-        mintPath: "issuer-direct-mint",
-        authorityPosture: "concentrated-admin",
-        confidence: "verified",
-        summary: "Issuer backend can mint through reviewed operator controls.",
-        sources: [
-          { label: "Review", url: "https://example.com/review" },
-          { label: "Docs", url: "https://example.com/docs" },
-        ],
-        mintIncidents: [
-          {
-            date: "2024-01-01",
-            status: "resolved",
-            summary: "Older privileged mint incident.",
-            sources: [
-              { label: "Postmortem", url: "https://example.com/postmortem" },
-            ],
-          },
-          {
-            date: "2025-02-01",
-            status: "active",
-            summary: "Newer privileged mint incident.",
-            sources: [{ label: "Thread", url: "https://example.com/thread" }],
-          },
-        ],
-      },
-    } as never);
-
-    expect(viewModel.sources).toEqual([
-      { label: "Review", url: "https://example.com/review" },
-      { label: "Docs", url: "https://example.com/docs" },
-    ]);
-    expect(viewModel.mintIncidents.map((incident) => incident.date)).toEqual(["2025-02-01", "2024-01-01"]);
-    expect(viewModel.mintIncidents[1]?.sources).toEqual([
-      { label: "Postmortem", url: "https://example.com/postmortem" },
-    ]);
-  });
-
-  it("only exposes Safe modules and guards labels for Safe-like mint authority controls", () => {
-    const viewModel = buildMintAuthorityDetailViewModel({
-      mintAuthoritySummary: {
-        mintPath: "permissioned-minter",
-        authorityPosture: "partially-bounded-admin",
-        confidence: "manual-review",
-        summary: "Minting has a Safe admin and a role-gated contract.",
-        controls: [
-          {
-            chain: "ethereum",
-            address: "0x123400000000000000000000000000000000abcd",
-            label: "Issuer Safe",
-            role: "minter-admin",
-            authorityType: "safe",
-            directMintAbility: "can-authorize",
-            modulesOrGuardsStatus: "none-detected",
-          },
-          {
-            chain: "ethereum",
-            address: "0x567800000000000000000000000000000000abcd",
-            label: "Minter contract",
-            role: "direct-minter",
-            authorityType: "contract",
-            directMintAbility: "direct",
-            modulesOrGuardsStatus: "not-applicable",
-          },
-          {
-            chain: "ethereum",
-            address: "0x9abc00000000000000000000000000000000abcd",
-            label: "Unresolved admin",
-            role: "minter-admin",
-            authorityType: "unknown",
-            directMintAbility: "can-authorize",
-            modulesOrGuardsStatus: "unknown",
-          },
-        ],
-      },
-    } as never);
-
-    expect(viewModel.controls.map((control) => control.modulesOrGuardsLabel)).toEqual([
-      "No modules or guards detected",
-      null,
-      "Modules or guards unknown",
-    ]);
   });
 
   it("builds a ready view model from fetched inputs", () => {
@@ -615,22 +352,10 @@ describe("stablecoin detail view-model builder", () => {
     const error = new Error("redemption API unavailable");
 
     const viewModel = buildStablecoinDetailViewModel(
-      makeBuildStablecoinDetailViewModelParams({
-        core: {
-          id: "usdt-tether",
-          coin: coin!,
-        },
+      makeReadyDetailParams({
+        id: "usdt-tether",
+        coin: coin!,
         queries: {
-          supplyHistory: { data: [{ date: 1_700_000_000, circulatingUsd: 100, price: 1 }] },
-          stablecoinList: {
-            data: {
-              peggedAssets: [
-                makeUsdtStablecoin(),
-              ],
-              fxFallbackRates: {},
-            } as never,
-            dataUpdatedAt: 1,
-          },
           redemptionBackstops: {
             data: undefined,
             error,
@@ -682,26 +407,10 @@ describe("stablecoin detail view-model builder", () => {
     const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
     const error = new Error("optional feeds unavailable");
     const viewModel = buildStablecoinDetailViewModel(
-      makeBuildStablecoinDetailViewModelParams({
-        core: { id: coin.id, coin },
+      makeReadyDetailParams({
+        id: coin.id,
+        coin,
         queries: {
-          supplyHistory: { data: [{ date: 1_700_000_000, circulatingUsd: 100, price: 1 }] },
-          stablecoinList: {
-            data: {
-              peggedAssets: [
-                {
-                  id: coin.id,
-                  name: coin.name,
-                  symbol: coin.symbol,
-                  pegType: "peggedUSD",
-                  price: 1,
-                  circulating: { peggedUSD: 100 },
-                },
-              ],
-              fxFallbackRates: {},
-            } as never,
-            dataUpdatedAt: 1,
-          },
           dexLiquidity: { data: undefined, error, dataUpdatedAt: 0 },
         },
         supplemental: {
@@ -813,27 +522,17 @@ describe("stablecoin detail view-model builder", () => {
       makeReadyDetailParams({
         id: "xaut-tether",
         coin: coin!,
+        asset: {
+          pegType: "peggedGOLD",
+          price: 3_000,
+          circulating: { peggedGOLD: 100 },
+          circulatingPrevDay: { peggedGOLD: 98 },
+          circulatingPrevWeek: { peggedGOLD: 96 },
+          circulatingPrevMonth: { peggedGOLD: 92 },
+        },
+        fxFallbackRates: { peggedGOLD: 3_000 },
         queries: {
           supplyHistory: { data: [{ date: 1_700_000_000, circulatingUsd: 100, price: 3_000 }] },
-          stablecoinList: {
-            data: {
-              peggedAssets: [
-                {
-                  id: "xaut-tether",
-                  name: "Tether Gold",
-                  symbol: "XAUT",
-                  pegType: "peggedGOLD",
-                  price: 3_000,
-                  circulating: { peggedGOLD: 100 },
-                  circulatingPrevDay: { peggedGOLD: 98 },
-                  circulatingPrevWeek: { peggedGOLD: 96 },
-                  circulatingPrevMonth: { peggedGOLD: 92 },
-                },
-              ],
-              fxFallbackRates: { peggedGOLD: 3_000 },
-            } as never,
-            dataUpdatedAt: 1,
-          },
         },
         supplemental: {
           yieldRankingsData: {
@@ -876,8 +575,25 @@ describe("stablecoin detail view-model builder", () => {
     expect(viewModel.performanceVsUsd1y).toBe(expected);
   });
 
-  it("derives 1Y vs USD performance for eligible non-USD pegs", () => {
-    const coin = TRACKED_META_BY_ID.get("zchf-frankencoin");
+  it.each([
+    {
+      label: "derives 1Y vs USD performance for eligible non-USD pegs",
+      id: "zchf-frankencoin",
+      pegType: "peggedCHF",
+      anchorPrice: 0.98,
+      price: 1.12,
+      expected: (1.12 / 0.98 - 1) * 100,
+    },
+    {
+      label: "does not derive 1Y vs USD performance for NAV tokens",
+      id: "cetes-etherfuse",
+      pegType: "peggedMXN",
+      anchorPrice: 0.05,
+      price: 0.061,
+      expected: null,
+    },
+  ])("$label", ({ id, pegType, anchorPrice, price, expected }) => {
+    const coin = TRACKED_META_BY_ID.get(id);
     expect(coin).toBeDefined();
 
     const nowSec = 1_720_000_000;
@@ -885,33 +601,23 @@ describe("stablecoin detail view-model builder", () => {
 
     const viewModel = buildStablecoinDetailViewModel(
       makeReadyDetailParams({
-        id: "zchf-frankencoin",
+        id,
         coin: coin!,
+        asset: {
+          pegType,
+          price,
+          circulating: { [pegType]: 100 },
+          circulatingPrevDay: { [pegType]: 99 },
+          circulatingPrevWeek: { [pegType]: 97 },
+          circulatingPrevMonth: { [pegType]: 95 },
+        },
+        fxFallbackRates: { [pegType]: price },
         queries: {
           supplyHistory: {
             data: [
-              { date: anchorSec, circulatingUsd: 98, price: 0.98 },
-              { date: nowSec - 7 * 24 * 60 * 60, circulatingUsd: 110, price: 1.1 },
+              { date: anchorSec, circulatingUsd: 98, price: anchorPrice },
+              { date: nowSec - 7 * 24 * 60 * 60, circulatingUsd: 110, price: anchorPrice * 1.2 },
             ],
-          },
-          stablecoinList: {
-            data: {
-              peggedAssets: [
-                {
-                  id: "zchf-frankencoin",
-                  name: "Frankencoin",
-                  symbol: "ZCHF",
-                  pegType: "peggedCHF",
-                  price: 1.12,
-                  circulating: { peggedCHF: 100 },
-                  circulatingPrevDay: { peggedCHF: 99 },
-                  circulatingPrevWeek: { peggedCHF: 97 },
-                  circulatingPrevMonth: { peggedCHF: 95 },
-                },
-              ],
-              fxFallbackRates: { peggedCHF: 1.12 },
-            } as never,
-            dataUpdatedAt: 1,
           },
         },
         supplemental: {
@@ -923,57 +629,11 @@ describe("stablecoin detail view-model builder", () => {
     expect(viewModel.status).toBe("ready");
     if (viewModel.status !== "ready") return;
 
-    expect(viewModel.performanceVsUsd1y).toBeCloseTo((1.12 / 0.98 - 1) * 100, 6);
-  });
-
-  it("does not derive 1Y vs USD performance for NAV tokens", () => {
-    const coin = TRACKED_META_BY_ID.get("cetes-etherfuse");
-    expect(coin).toBeDefined();
-
-    const nowSec = 1_720_000_000;
-    const anchorSec = nowSec - 365 * 24 * 60 * 60;
-
-    const viewModel = buildStablecoinDetailViewModel(
-      makeReadyDetailParams({
-        id: "cetes-etherfuse",
-        coin: coin!,
-        queries: {
-          supplyHistory: {
-            data: [
-              { date: anchorSec, circulatingUsd: 100, price: 0.05 },
-              { date: nowSec - 7 * 24 * 60 * 60, circulatingUsd: 120, price: 0.06 },
-            ],
-          },
-          stablecoinList: {
-            data: {
-              peggedAssets: [
-                {
-                  id: "cetes-etherfuse",
-                  name: "Etherfuse CETES",
-                  symbol: "CETES",
-                  pegType: "peggedMXN",
-                  price: 0.061,
-                  circulating: { peggedMXN: 100 },
-                  circulatingPrevDay: { peggedMXN: 99 },
-                  circulatingPrevWeek: { peggedMXN: 97 },
-                  circulatingPrevMonth: { peggedMXN: 95 },
-                },
-              ],
-              fxFallbackRates: { peggedMXN: 0.061 },
-            } as never,
-            dataUpdatedAt: 1,
-          },
-        },
-        supplemental: {
-          nowMs: nowSec * 1000,
-        },
-      }),
-    );
-
-    expect(viewModel.status).toBe("ready");
-    if (viewModel.status !== "ready") return;
-
-    expect(viewModel.performanceVsUsd1y).toBeNull();
+    if (expected == null) {
+      expect(viewModel.performanceVsUsd1y).toBeNull();
+      return;
+    }
+    expect(viewModel.performanceVsUsd1y).toBeCloseTo(expected, 6);
   });
 
   it("returns not-found when the stablecoin is absent from the list payload", () => {

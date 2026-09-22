@@ -114,43 +114,29 @@ describe("Pages legacy redirects", () => {
     }
   });
 
-  it("redirects retired MiCA tracker URLs to the canonical compliance page", () => {
+  it.each([
+    {
+      family: "retired MiCA tracker URLs to the canonical compliance page",
+      expected: ["/mica/* /compliance/:splat 301", "/mica/ /compliance/ 301", "/mica /compliance/ 301"],
+      absent: ["/mica /compliance 301", "/mica/ /compliance 301"],
+    },
+    {
+      family: "retired Tape URLs to the canonical timeline page",
+      expected: ["/tape/* /timeline/:splat 301", "/tape/ /timeline/ 301", "/tape /timeline/ 301"],
+      absent: [],
+    },
+    {
+      family: "retired blacklist URLs to the canonical Freezewatch page",
+      expected: ["/blacklist/* /freezewatch/:splat 301", "/blacklist/ /freezewatch/ 301", "/blacklist /freezewatch/ 301"],
+      absent: [],
+    },
+  ])("redirects $family", ({ expected, absent }) => {
     const lines = activeRedirectLines();
 
-    expect(lines).toEqual(
-      expect.arrayContaining([
-        "/mica/* /compliance/:splat 301",
-        "/mica/ /compliance/ 301",
-        "/mica /compliance/ 301",
-      ]),
-    );
-    for (const line of ["/mica /compliance 301", "/mica/ /compliance 301"]) {
+    expect(lines).toEqual(expect.arrayContaining(expected));
+    for (const line of absent) {
       expect(lines).not.toContain(line);
     }
-  });
-
-  it("redirects retired Tape URLs to the canonical timeline page", () => {
-    const lines = activeRedirectLines();
-
-    expect(lines).toEqual(
-      expect.arrayContaining([
-        "/tape/* /timeline/:splat 301",
-        "/tape/ /timeline/ 301",
-        "/tape /timeline/ 301",
-      ]),
-    );
-  });
-
-  it("redirects retired blacklist URLs to the canonical Freezewatch page", () => {
-    const lines = activeRedirectLines();
-
-    expect(lines).toEqual(
-      expect.arrayContaining([
-        "/blacklist/* /freezewatch/:splat 301",
-        "/blacklist/ /freezewatch/ 301",
-        "/blacklist /freezewatch/ 301",
-      ]),
-    );
   });
 
   it("preserves consolidated depeg incidents and canonical comparison ordering", () => {

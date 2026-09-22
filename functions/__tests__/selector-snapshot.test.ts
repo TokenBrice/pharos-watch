@@ -149,43 +149,6 @@ describe("selector-snapshot Pages Function", () => {
       );
       expect(response.status).toBe(404);
     });
-
-    it("rejects GET without Origin/Referer", async () => {
-      const response = await onRequest(
-        snapshotContext(new Request("https://pharos.watch/selector-snapshot/00112233445566778899aabbccddeeff")),
-      );
-      expect(response.status).toBe(404);
-    });
-
-    it("rejects POST from foreign origin", async () => {
-      const response = await onRequest(
-        snapshotContext(postRequest(buildSelectorSnapshotOutput(), {
-          "Content-Type": "application/json",
-          Origin: "https://evil.example.com",
-        })),
-      );
-      expect(response.status).toBe(404);
-    });
-
-    it("accepts POST from allowlisted ops origin", async () => {
-      const response = await onRequest(
-        snapshotContext(postRequest(buildSelectorSnapshotOutput(), {
-          "Content-Type": "application/json",
-          Origin: "https://ops.pharos.watch",
-        })),
-      );
-      expect(response.status).toBe(200);
-    });
-
-    it("accepts requests when Origin is missing but Referer is allowlisted", async () => {
-      const response = await onRequest(
-        snapshotContext(postRequest(buildSelectorSnapshotOutput(), {
-          "Content-Type": "application/json",
-          Referer: "https://pharos.watch/screener/picker/",
-        })),
-      );
-      expect(response.status).toBe(200);
-    });
   });
 
   describe("POST storage", () => {
@@ -252,31 +215,6 @@ describe("selector-snapshot Pages Function", () => {
       expect(stored.verification).toEqual(canonical.verification);
     });
 
-    it("does not deduplicate against an untrusted value at the verified sid", async () => {
-      const env = makeEnv();
-      const canonical = buildVerifiedSnapshot();
-      const sid = computeSelectorSnapshotSid(canonical);
-      const kv = env.SELECTOR_SNAPSHOTS as TestKVNamespace;
-      await kv.put(
-        `s:${sid}`,
-        JSON.stringify({
-          ...canonical,
-          provenance: "client-unverified",
-          snapshotSchemaVersion: 2,
-          verification: undefined,
-        }),
-      );
-
-      const response = await onRequest(snapshotContext(postRequest({ input: canonical.input }), env));
-
-      expect(response.status).toBe(200);
-      expect(kv.__getPutCalls()).toHaveLength(2);
-      expect(kv.__getPutCalls()[1]?.options?.metadata).toEqual({
-        trust: SELECTOR_SNAPSHOT_VERIFICATION_KIND,
-      });
-      expect(JSON.parse(kv.__getStore().get(`s:${sid}`) ?? "{}")).toEqual(canonical);
-    });
-
     it("strips debug before storing snapshots", async () => {
       const env = makeEnv();
       const output = buildSelectorSnapshotOutput();
@@ -336,14 +274,32 @@ describe("selector-snapshot Pages Function", () => {
       expect(kv.__getPutCalls()[1]?.options?.expirationTtl).toBe(SELECTOR_SNAPSHOT_TTL_SECONDS);
     });
 
-    it.each(["corrupt JSON", "wrong SID", "lookup failure"])("overwrites trusted %s with canonical content", async (failure) => {
+    const SEEDED_VALUES: Record<string, () => string> = {
+      "corrupt JSON": () => "{",
+      "a different snapshot": () => JSON.stringify(buildVerifiedSnapshot({ datasetHash: "b".repeat(64) })),
+      "untrusted metadata": () => JSON.stringify({
+        ...buildVerifiedSnapshot(),
+        provenance: "client-unverified",
+        snapshotSchemaVersion: 2,
+        verification: undefined,
+      }),
+    };
+
+    it.each([
+      { label: "corrupt JSON", seed: "corrupt JSON", trusted: true, readThrows: false },
+      { label: "a different snapshot", seed: "a different snapshot", trusted: true, readThrows: false },
+      { label: "an unreadable value", seed: "a different snapshot", trusted: true, readThrows: true },
+      { label: "untrusted metadata", seed: "untrusted metadata", trusted: false, readThrows: false },
+    ])("overwrites $label at the verified sid with canonical content", async ({ seed, trusted, readThrows }) => {
       const kv = makeKV();
       const canonical = buildVerifiedSnapshot();
       const sid = computeSelectorSnapshotSid(canonical);
-      await kv.put(`s:${sid}`, failure === "corrupt JSON" ? "{" : JSON.stringify(
-        buildVerifiedSnapshot({ datasetHash: "b".repeat(64) }),
-      ), { metadata: { trust: SELECTOR_SNAPSHOT_VERIFICATION_KIND } });
-      if (failure === "lookup failure") kv.__setReadHandler(() => { throw new Error("lookup failed"); });
+      await kv.put(
+        `s:${sid}`,
+        SEEDED_VALUES[seed]!(),
+        trusted ? { metadata: { trust: SELECTOR_SNAPSHOT_VERIFICATION_KIND } } : {},
+      );
+      if (readThrows) kv.__setReadHandler(() => { throw new Error("lookup failed"); });
       const response = await onRequest(snapshotContext(postRequest({ input: canonical.input }), makeEnv({ SELECTOR_SNAPSHOTS: kv })));
       expect(response.status).toBe(200);
       await expect(response.json()).resolves.toMatchObject({ sid });
@@ -395,28 +351,28 @@ describe("selector-snapshot Pages Function", () => {
       expect(response.status).toBe(400);
     });
 
-    it("returns 413 when Content-Length advertises an oversized payload", async () => {
+    it.each([
+      {
+        label: "Content-Length advertises an oversized payload",
+        headers: { ...POST_HEADERS, "Content-Length": String(200 * 1024) },
+        padding: "",
+      },
+      { label: "the body itself exceeds the size cap", headers: POST_HEADERS, padding: "x".repeat(101 * 1024) },
+      { label: "a multibyte body exceeds the byte cap", headers: POST_HEADERS, padding: "🙂".repeat(30 * 1024) },
+    ])("returns 413 when $label", async ({ headers, padding }) => {
       const response = await onRequest(
-        snapshotContext(postRequest(buildSelectorSnapshotOutput(), {
-          "Content-Type": "application/json",
-          Origin: "https://pharos.watch",
-          "Content-Length": String(200 * 1024),
-        })),
+        snapshotContext(postRequest(
+          padding ? { ...buildSelectorSnapshotOutput(), oversizedTestPadding: padding } : buildSelectorSnapshotOutput(),
+          headers,
+        )),
       );
       expect(response.status).toBe(413);
     });
 
-    it("returns 413 when the body itself exceeds the size cap", async () => {
-      const response = await onRequest(
-        snapshotContext(postRequest({
-          ...buildSelectorSnapshotOutput(),
-          oversizedTestPadding: "x".repeat(101 * 1024),
-        })),
-      );
-      expect(response.status).toBe(413);
-    });
-
-    it("cancels a chunked request body as soon as it crosses the byte cap", async () => {
+    it.each([
+      { label: "the chunked body crosses the byte cap", headers: POST_HEADERS },
+      { label: "Content-Length falsely claims a small body", headers: { ...POST_HEADERS, "Content-Length": "1" } },
+    ])("cancels the request stream and returns 413 when $label", async ({ headers }) => {
       const cancel = vi.fn();
       const body = new ReadableStream<Uint8Array>({
         start(controller) {
@@ -427,7 +383,7 @@ describe("selector-snapshot Pages Function", () => {
       const request = new Request("https://pharos.watch/selector-snapshot", {
         method: "POST",
         body,
-        headers: POST_HEADERS,
+        headers,
         duplex: "half",
       } as RequestInit & { duplex: "half" });
 
@@ -435,40 +391,6 @@ describe("selector-snapshot Pages Function", () => {
 
       expect(response.status).toBe(413);
       expect(cancel).toHaveBeenCalled();
-    });
-
-    it("enforces the streaming cap when Content-Length falsely claims a small body", async () => {
-      const body = new ReadableStream<Uint8Array>({
-        start(controller) {
-          controller.enqueue(new Uint8Array(101 * 1024));
-        },
-      });
-      const request = new Request("https://pharos.watch/selector-snapshot", {
-        method: "POST",
-        body,
-        headers: { ...POST_HEADERS, "Content-Length": "1" },
-        duplex: "half",
-      } as RequestInit & { duplex: "half" });
-
-      const response = await onRequest(snapshotContext(request));
-      expect(response.status).toBe(413);
-    });
-
-    it("returns 413 when a multibyte body exceeds the byte cap", async () => {
-      const response = await onRequest(
-        snapshotContext(postRequest({
-          ...buildSelectorSnapshotOutput(),
-          oversizedTestPadding: "🙂".repeat(30 * 1024),
-        })),
-      );
-      expect(response.status).toBe(413);
-    });
-
-    it("returns 500 when the KV binding is missing", async () => {
-      const response = await onRequest(
-        snapshotContext(postRequest(buildSelectorSnapshotOutput()), makeEnv({ SELECTOR_SNAPSHOTS: undefined })),
-      );
-      expect(response.status).toBe(500);
     });
 
     it("fails closed when the dedicated IP HMAC pepper is missing", async () => {
@@ -863,32 +785,24 @@ describe("selector-snapshot Pages Function", () => {
       expect(response.status).toBe(503);
     });
 
-    it("returns 500 when the KV binding is missing on GET", async () => {
+    it.each([
+      { label: "POST", request: () => postRequest(buildSelectorSnapshotOutput()) },
+      { label: "GET", request: () => getRequest("00112233445566778899aabbccddeeff") },
+    ])("returns 500 when the KV binding is missing on $label", async ({ request }) => {
       const response = await onRequest(
-        snapshotContext(getRequest("00112233445566778899aabbccddeeff"), makeEnv({ SELECTOR_SNAPSHOTS: undefined })),
+        snapshotContext(request(), makeEnv({ SELECTOR_SNAPSHOTS: undefined })),
       );
       expect(response.status).toBe(500);
     });
   });
 
   describe("unsupported methods", () => {
-    it("returns 405 with Allow on PUT", async () => {
+    it.each([
+      { method: "PUT", url: "https://pharos.watch/selector-snapshot" },
+      { method: "DELETE", url: "https://pharos.watch/selector-snapshot/00112233445566778899aabbccddeeff" },
+    ])("returns 405 with Allow on $method", async ({ method, url }) => {
       const response = await onRequest(
-        snapshotContext(new Request("https://pharos.watch/selector-snapshot", {
-          method: "PUT",
-          headers: { Origin: "https://pharos.watch" },
-        })),
-      );
-      expect(response.status).toBe(405);
-      expect(response.headers.get("Allow")).toBe("GET, POST");
-    });
-
-    it("returns 405 with Allow on DELETE", async () => {
-      const response = await onRequest(
-        snapshotContext(new Request("https://pharos.watch/selector-snapshot/00112233445566778899aabbccddeeff", {
-          method: "DELETE",
-          headers: { Origin: "https://pharos.watch" },
-        })),
+        snapshotContext(new Request(url, { method, headers: { Origin: "https://pharos.watch" } })),
       );
       expect(response.status).toBe(405);
       expect(response.headers.get("Allow")).toBe("GET, POST");

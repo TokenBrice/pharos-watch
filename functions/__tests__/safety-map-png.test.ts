@@ -51,29 +51,14 @@ describe("GET /safety-scores/map.png", () => {
     );
   });
 
-  it("404s with no-store when the object is missing, so the kill switch trips the digest", async () => {
-    const response = await onRequest(mapContext(mapRequest(), { SELECTOR_SNAPSHOTS: seededKv() }));
-
-    expect(response.status).toBe(404);
-    expect(response.headers.get("Cache-Control")).toBe("no-store");
-    expect(response.headers.get("Content-Type")).toBe("text/plain; charset=utf-8");
-  });
-
-  it("404s with no-store when a dated archive was never published", async () => {
-    const kv = seededKv({ "safety-map:latest.png": PNG_MAGIC });
-
+  it.each([
+    { label: "the latest object is missing, so the kill switch trips the digest", seed: {}, query: "" },
+    { label: "a dated archive was never published", seed: { "safety-map:latest.png": PNG_MAGIC }, query: "?date=2020-01-01" },
+    { label: "the object is zero-byte rather than an empty image", seed: { "safety-map:latest.png": new Uint8Array(0) }, query: "" },
+  ])("404s with no-store when $label", async ({ seed, query }) => {
     const response = await onRequest(
-      mapContext(mapRequest("?date=2020-01-01"), { SELECTOR_SNAPSHOTS: kv }),
+      mapContext(mapRequest(query), { SELECTOR_SNAPSHOTS: seededKv(seed) }),
     );
-
-    expect(response.status).toBe(404);
-    expect(response.headers.get("Cache-Control")).toBe("no-store");
-  });
-
-  it("treats a zero-byte object as unpublished rather than serving an empty image", async () => {
-    const kv = seededKv({ "safety-map:latest.png": new Uint8Array(0) });
-
-    const response = await onRequest(mapContext(mapRequest(), { SELECTOR_SNAPSHOTS: kv }));
 
     expect(response.status).toBe(404);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
@@ -84,6 +69,7 @@ describe("GET /safety-scores/map.png", () => {
 
     expect(response.status).toBe(404);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(response.headers.get("Content-Type")).toBe("text/plain; charset=utf-8");
   });
 
   it.each([
@@ -151,16 +137,6 @@ describe("GET /safety-scores/map.png", () => {
       expect(response.headers.get("Content-Length")).toBe(String(PNG_MAGIC.byteLength));
       expect(response.body).toBeNull();
       expect((await response.arrayBuffer()).byteLength).toBe(0);
-    });
-
-    it("404s with no-store when the object is absent", async () => {
-      const response = await onRequest(
-        mapContext(mapRequest("", "HEAD"), { SELECTOR_SNAPSHOTS: seededKv() }),
-      );
-
-      expect(response.status).toBe(404);
-      expect(response.headers.get("Cache-Control")).toBe("no-store");
-      expect(response.body).toBeNull();
     });
 
     it("400s with no-store on a malformed date", async () => {

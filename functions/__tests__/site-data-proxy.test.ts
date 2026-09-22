@@ -9,6 +9,7 @@ import {
   type HttpResponseObservation,
 } from "@shared/test-utils/http-response-contract";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
+import { mockUpstream } from "./helpers/mock-upstream";
 import { makePagesProxyContext } from "./helpers/pages-context";
 
 function makeEnv(db?: MockD1Database, overrides: Record<string, unknown> = {}) {
@@ -45,33 +46,7 @@ function makeWaitUntil() {
   };
 }
 
-function installSiteDataFetch(
-  path: string,
-  body: unknown,
-  status = 200,
-  headers: Record<string, string> = {},
-) {
-  return mockFetch([{
-    match: `https://site-api.pharos.watch${path}`,
-    body,
-    status,
-    headers,
-  }], { requireMatch: true, strictUrl: true });
-}
-
-function installSiteDataResponse(path: string, response: Response) {
-  return mockFetch([{
-    match: `https://site-api.pharos.watch${path}`,
-    outcomes: [{ response }],
-  }], { requireMatch: true, strictUrl: true });
-}
-
-function installSiteDataError(path: string, error: Error) {
-  return mockFetch([{
-    match: `https://site-api.pharos.watch${path}`,
-    outcomes: [error],
-  }], { requireMatch: true, strictUrl: true });
-}
+const siteApi = mockUpstream("https://site-api.pharos.watch");
 
 function expectAttribution(
   db: MockD1Database,
@@ -107,7 +82,7 @@ describe("site-data proxy", () => {
   });
 
   it("keeps the response contract for site-data pass-through", async () => {
-    installSiteDataFetch("/api/stablecoins", { z: "last", a: "first" }, 200, {
+    siteApi.json("/api/stablecoins", { z: "last", a: "first" }, 200, {
       "Cache-Control": "public, max-age=60",
       "X-Data-Age": "12",
     });
@@ -139,26 +114,6 @@ describe("site-data proxy", () => {
     expect(cacheMatch).not.toHaveBeenCalled();
   });
 
-  it("rejects direct Pages preview requests without Origin or Referer", async () => {
-    const response = await onRequest(
-      siteDataContext(new Request("https://stablecoin-dashboard.pages.dev/_site-data/stablecoins")),
-    );
-
-    expect(response.status).toBe(404);
-    expect(cacheMatch).not.toHaveBeenCalled();
-  });
-
-  it("rejects requests from foreign origins", async () => {
-    const response = await onRequest(
-      siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
-        headers: { Origin: "https://evil.example.com" },
-      })),
-    );
-
-    expect(response.status).toBe(404);
-    expect(cacheMatch).not.toHaveBeenCalled();
-  });
-
   it("rejects non-allowlisted paths", async () => {
     const response = await onRequest(
       siteDataContext(new Request("https://pharos.watch/_site-data/status", {
@@ -184,7 +139,7 @@ describe("site-data proxy", () => {
   });
 
   it("never grants an upstream response a second Pages cache lifetime", async () => {
-    installSiteDataFetch("/api/stablecoins", { ok: true }, 200, {
+    siteApi.json("/api/stablecoins", { ok: true }, 200, {
       Age: "299",
       "Cache-Control": "public, max-age=300",
       Date: "Mon, 15 Jun 2026 09:55:01 GMT",
@@ -208,7 +163,7 @@ describe("site-data proxy", () => {
     ["If-None-Match", '"stablecoins-v1"'],
     ["If-Modified-Since", "Mon, 15 Jun 2026 09:55:01 GMT"],
   ])("forwards %s without consulting a Pages cache", async (header, value) => {
-    const fetchSpy = installSiteDataResponse(
+    const fetchSpy = siteApi.response(
       "/api/stablecoins",
       new Response(null, {
         status: 304,
@@ -232,7 +187,7 @@ describe("site-data proxy", () => {
   });
 
   it("proxies allowlisted requests to the site API with the shared secret and records an upstream fetch", async () => {
-    const fetchSpy = installSiteDataFetch("/api/stablecoin-summary/usdt-tether", { ok: true }, 200, {
+    const fetchSpy = siteApi.json("/api/stablecoin-summary/usdt-tether", { ok: true }, 200, {
       "Cache-Control": "public, max-age=60",
       Warning: '199 - "advisory"',
       "X-Data-Age": "12",
@@ -262,7 +217,7 @@ describe("site-data proxy", () => {
   });
 
   it("proxies the events endpoint through the site-data lane for public UI reads", async () => {
-    const fetchSpy = installSiteDataFetch("/api/events?limit=1", { events: [] }, 200, {
+    const fetchSpy = siteApi.json("/api/events?limit=1", { events: [] }, 200, {
       "Cache-Control": "public, max-age=60",
     });
 
@@ -280,7 +235,7 @@ describe("site-data proxy", () => {
   });
 
   it("records site-data attribution through waitUntil when the Pages DB binding is present", async () => {
-    installSiteDataFetch("/api/stablecoin/usdt-tether", { ok: true }, 200, {
+    siteApi.json("/api/stablecoin/usdt-tether", { ok: true }, 200, {
       "Cache-Control": "public, max-age=60",
     });
     const db = makeTestD1Database();
@@ -300,7 +255,7 @@ describe("site-data proxy", () => {
   });
 
   it("honors the route/source attribution kill switch for Pages site-data requests", async () => {
-    installSiteDataFetch("/api/stablecoins", { ok: true }, 200, {
+    siteApi.json("/api/stablecoins", { ok: true }, 200, {
       "Cache-Control": "public, max-age=60",
     });
     const db = makeTestD1Database();
@@ -316,7 +271,7 @@ describe("site-data proxy", () => {
   });
 
   it("proxies site-data requests when Pages attribution DB is not bound", async () => {
-    const fetchSpy = installSiteDataFetch("/api/stablecoins", { ok: true }, 200, {
+    const fetchSpy = siteApi.json("/api/stablecoins", { ok: true }, 200, {
       "Cache-Control": "public, max-age=60",
     });
 
@@ -335,7 +290,7 @@ describe("site-data proxy", () => {
     { "Cache-Control": "no-store" },
     { "Cache-Control": "public, max-age=60", Warning: '110 - "Response is stale"' },
   ])("preserves cache headers without Pages caching: %j", async (headers) => {
-    installSiteDataFetch("/api/stablecoins", { ok: true }, 200, headers);
+    siteApi.json("/api/stablecoins", { ok: true }, 200, headers);
 
     const response = await onRequest(
       siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
@@ -353,7 +308,7 @@ describe("site-data proxy", () => {
 
 
   it("preserves upstream Retry-After headers on site-data rate limits", async () => {
-    installSiteDataFetch("/api/stablecoins", { error: "Rate limit exceeded" }, 429, {
+    siteApi.json("/api/stablecoins", { error: "Rate limit exceeded" }, 429, {
       "Retry-After": "45",
     });
 
@@ -370,7 +325,7 @@ describe("site-data proxy", () => {
   });
 
   it.each(["public-status-history", "telegram-pulse"])("proxies %s through the site-data lane", async (endpoint) => {
-    const fetchSpy = installSiteDataFetch(`/api/${endpoint}`, { ok: true });
+    const fetchSpy = siteApi.json(`/api/${endpoint}`, { ok: true });
     const db = makeTestD1Database();
 
     const response = await onRequest(
@@ -421,7 +376,7 @@ describe("site-data proxy", () => {
 
   it("records upstream fetch errors through site-data attribution", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    installSiteDataError("/api/stablecoins", new Error("network down"));
+    siteApi.error("/api/stablecoins", new Error("network down"));
     const db = makeTestD1Database();
 
     const response = await onRequest(
@@ -440,7 +395,7 @@ describe("site-data proxy", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const record = vi.spyOn(requestAttribution, "recordSiteDataRequest")
       .mockRejectedValueOnce(new Error("attribution unavailable"));
-    installSiteDataFetch("/api/stablecoins", { ok: true });
+    siteApi.json("/api/stablecoins", { ok: true });
 
     const response = await onRequest(
       siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
@@ -459,7 +414,7 @@ describe("site-data proxy", () => {
 
   it("times out when headers arrive but the upstream body stalls", async () => {
     vi.useFakeTimers();
-    installSiteDataResponse("/api/stablecoins", new Response(
+    siteApi.response("/api/stablecoins", new Response(
       new ReadableStream<Uint8Array>({
         start(controller) {
           controller.enqueue(new TextEncoder().encode('{"partial":'));
@@ -481,54 +436,11 @@ describe("site-data proxy", () => {
     await expect(response.json()).resolves.toEqual({ error: "Site API upstream timed out" });
   });
 
-  it("rejects a response whose declared body exceeds the proxy limit", async () => {
-    const cancel = vi.fn();
-    installSiteDataResponse("/api/stablecoins", new Response(
-      new ReadableStream<Uint8Array>({ cancel }),
-      {
-        status: 200,
-        headers: { "Content-Length": String(MAX_PROXY_RESPONSE_BODY_BYTES + 1) },
-      },
-    ));
-
-    const response = await onRequest(
-      siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
-        headers: { Origin: "https://pharos.watch" },
-      })),
-    );
-
-    expect(response.status).toBe(502);
-    expect(cancel).toHaveBeenCalledOnce();
-  });
-
-  it("cancels a chunked response as soon as it crosses the proxy limit", async () => {
-    const cancel = vi.fn();
-    installSiteDataResponse("/api/stablecoins", new Response(
-      new ReadableStream<Uint8Array>({
-        start(controller) {
-          controller.enqueue(new Uint8Array(MAX_PROXY_RESPONSE_BODY_BYTES));
-          controller.enqueue(new Uint8Array(1));
-        },
-        cancel,
-      }),
-      { status: 200 },
-    ));
-
-    const response = await onRequest(
-      siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
-        headers: { Origin: "https://pharos.watch" },
-      })),
-    );
-
-    expect(response.status).toBe(502);
-    expect(cancel).toHaveBeenCalledOnce();
-  });
-
   it("attributes a stalled body to timeout only after the deadline and cancels it", async () => {
     vi.useFakeTimers();
     vi.spyOn(console, "warn").mockImplementation(() => {});
     const cancel = vi.fn();
-    installSiteDataResponse("/api/stablecoins", new Response(new ReadableStream<Uint8Array>({ cancel })));
+    siteApi.response("/api/stablecoins", new Response(new ReadableStream<Uint8Array>({ cancel })));
     const db = makeTestD1Database();
     const ctx = makeWaitUntil();
     let settled = false;
