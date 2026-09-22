@@ -7,7 +7,7 @@ import { createCronResult } from "../lib/cron-result";
 import { pruneRepairTasks } from "../lib/repair-tasks";
 import { WORKER_CANARY_RUN_RETENTION_SEC, pruneWorkerCanaryRuns } from "../lib/canary-prune";
 import { pruneLiveReserveRecoveryCheckpoints } from "../lib/scheduled-recovery-prune";
-import { pruneOldApiKeyRequestRateLimits } from "../api/api-key-requests/rate-limit";
+import { pruneOldApiKeyRequestRateLimits } from "../lib/api-key-request-rate-limit-prune";
 import { pruneProducerHistory } from "../lib/producer-history";
 import { REQUEST_ATTRIBUTION_RETENTION_DAYS } from "@shared/lib/request-attribution";
 import { deleteCapped } from "./shared/capped-delete";

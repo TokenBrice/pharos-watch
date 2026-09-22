@@ -20,7 +20,7 @@ import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
-import { pruneOldApiKeyRequestRateLimits } from "../api-key-requests/rate-limit";
+import { pruneOldApiKeyRequestRateLimits } from "../../lib/api-key-request-rate-limit-prune";
 
 function setupSqlite(): DatabaseSync {
   return createLatestSchemaSqlite().sqlite;

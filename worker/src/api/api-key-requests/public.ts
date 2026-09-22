@@ -306,7 +306,6 @@ export async function handleApiKeyRequestVerify(
   request: Request,
   env: ApiKeySelfServeEnv,
   apiKeyHashPepper: string | undefined,
-  execCtx?: ExecutionContext,
 ): Promise<Response> {
   const effectiveApiKeyPepper = apiKeyHashPepper?.trim();
   if (!effectiveApiKeyPepper) {

@@ -10,16 +10,11 @@ import { throwIfAborted } from "../lib/abort";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { logWorkerEvent } from "../lib/structured-log";
 import {
-  coerceCount,
   computeTelegramCurrentLifecycleSnapshot,
   loadTelegramLifecycleHistory,
   loadTelegramTopFollowedCoins,
   refreshTelegramLifecycleSnapshotIfStale,
 } from "../lib/telegram/usage-analytics";
-import {
-  ACTIVE_PRESET_FLAGS_SQL,
-  ACTIVE_SUBSCRIPTION_FLAGS_SQL,
-} from "@shared/lib/telegram-alert-families";
 import {
   loadTelegramMiniAppDailyAggregate,
   utcDayFromUnixSeconds,

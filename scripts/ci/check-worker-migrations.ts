@@ -82,12 +82,17 @@ export const UNSAFE_ROLLOUT_SAFETY_PATTERNS = Object.freeze([
   { label: "ALTER TABLE ... DROP COLUMN", pattern: /\bALTER\s+TABLE\b[\s\S]*?\bDROP\s+COLUMN\b/i },
 ]);
 export const UNSAFE_ROLLOUT_ADD_COLUMN_LABEL = "ALTER TABLE ... ADD COLUMN ... NOT NULL without DEFAULT";
+// Repository migration SQL is the only input (trusted, checked in, small). Every
+// adjacent quantifier is over disjoint character classes (`\s` vs identifier
+// chars), so there is exactly one parse and no catastrophic backtracking.
+/* eslint-disable security/detect-unsafe-regex */
+const UPDATE_TARGET_PATTERN_GLOBAL = /\bUPDATE\s+(?:OR\s+(?:ROLLBACK|ABORT|REPLACE|FAIL|IGNORE)\s+)?["`[]?([A-Za-z_][A-Za-z0-9_]*)[\]`"]?\s+SET\b/gi;
+const UPDATE_TARGET_PATTERN = { label: "UPDATE", pattern: /\bUPDATE\s+(?:OR\s+(?:ROLLBACK|ABORT|REPLACE|FAIL|IGNORE)\s+)?["`[]?[A-Za-z_][A-Za-z0-9_]*[\]`"]?\s+SET\b/i };
+/* eslint-enable security/detect-unsafe-regex */
+
 export const DESTRUCTIVE_DATA_MIGRATION_PATTERNS = Object.freeze([
   { label: "DELETE FROM", pattern: /\bDELETE\s+FROM\b/i },
-  {
-    label: "UPDATE",
-    pattern: /\bUPDATE\s+(?:OR\s+(?:ROLLBACK|ABORT|REPLACE|FAIL|IGNORE)\s+)?["`[]?[A-Za-z_][A-Za-z0-9_]*[\]`"]?\s+SET\b/i,
-  },
+  UPDATE_TARGET_PATTERN,
   { label: "INSERT OR REPLACE", pattern: /\bINSERT\s+OR\s+REPLACE\s+INTO\b/i },
 ]);
 
@@ -371,7 +376,7 @@ export function findDataMigrationTargets(sql: string): string[] {
   const normalizedSql = stripSqlComments(sql);
   const targets = [
     ...normalizedSql.matchAll(/\bDELETE\s+FROM\s+["`[]?([A-Za-z_][A-Za-z0-9_]*)/gi),
-    ...normalizedSql.matchAll(/\bUPDATE\s+(?:OR\s+(?:ROLLBACK|ABORT|REPLACE|FAIL|IGNORE)\s+)?["`[]?([A-Za-z_][A-Za-z0-9_]*)[\]`"]?\s+SET\b/gi),
+    ...normalizedSql.matchAll(UPDATE_TARGET_PATTERN_GLOBAL),
     ...normalizedSql.matchAll(/\bINSERT\s+OR\s+REPLACE\s+INTO\s+["`[]?([A-Za-z_][A-Za-z0-9_]*)/gi),
   ].map((match) => match[1].toLowerCase());
   return [...new Set(targets)];
