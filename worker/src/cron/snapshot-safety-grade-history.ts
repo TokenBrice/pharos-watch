@@ -281,6 +281,11 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
     ...(degradedReportCardInputs || suppressedIdentityTransitions > 0 ? { status: "degraded" as const } : {}),
     itemCount: seeded + changed + identityBoundaryBaselines,
     metadata: {
+      ...(degradedReportCardInputs
+        ? { reason: "degraded-report-card-inputs" }
+        : suppressedIdentityTransitions > 0
+          ? { reason: "identity-transitions-suppressed" }
+          : {}),
       snapshotDay,
       methodologyVersion,
       model: identity.model,

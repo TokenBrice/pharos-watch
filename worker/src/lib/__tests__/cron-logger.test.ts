@@ -50,3 +50,59 @@ describe("cron progress cleanup", () => {
     ]);
   });
 });
+
+describe("degraded reason projection", () => {
+  const fixtures = createLatestSchemaFixtureTracker();
+
+  afterEach(() => {
+    fixtures.closeAll();
+    vi.restoreAllMocks();
+  });
+
+  // LV01's operator aggregate: every non-ok row must resolve to a reason.
+  const NON_OK_REASONS = `SELECT job, status,
+       COALESCE(degraded_reason, error, json_extract(metadata, '$.reason'), '(no-reason)') AS reason
+     FROM cron_runs WHERE status <> 'ok' ORDER BY job`;
+
+  it("projects a producer reason, a nested fallback and a terminal throw into degraded_reason", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { sqlite, db } = fixtures.open();
+
+    await logCronRun(db, "named-reason", async () => ({
+      status: "degraded",
+      metadata: JSON.stringify({ reason: "snapshot_write_failed" }),
+    }));
+    await logCronRun(db, "yield-style", async () => ({
+      status: "degraded",
+      metadata: JSON.stringify({ fallbackMode: "yield-source:expired-selected" }),
+    }));
+    await logCronRun(db, "silent-degrade", async () => ({ status: "degraded" }));
+    await logCronRun(db, "neutral-skip", async () => ({ status: "skipped_neutral" }));
+    await expect(logCronRun(db, "thrown", async () => {
+      throw new TypeError("boom");
+    })).rejects.toThrow("boom");
+
+    expect(sqlite.prepare(NON_OK_REASONS).all()).toEqual([
+      { job: "named-reason", status: "degraded", reason: "snapshot_write_failed" },
+      { job: "neutral-skip", status: "skipped_neutral", reason: "skipped_neutral" },
+      { job: "silent-degrade", status: "degraded", reason: "unspecified-degraded" },
+      { job: "thrown", status: "error", reason: "TypeError" },
+      { job: "yield-style", status: "degraded", reason: "yield-source:expired-selected" },
+    ]);
+    expect(console.warn).toHaveBeenCalledWith("[cron:silent-degrade] degraded result carries no metadata.reason");
+  });
+
+  it("leaves an ok run with quality metadata unreasoned", async () => {
+    const { sqlite, db } = fixtures.open();
+
+    await logCronRun(db, "restored-only", async () => ({
+      itemCount: 3,
+      metadata: JSON.stringify({ quality: { reason: "snapshot_written_restored_skipped" } }),
+    }));
+
+    expect(sqlite.prepare("SELECT status, degraded_reason FROM cron_runs").all()).toEqual([
+      { status: "ok", degraded_reason: null },
+    ]);
+    expect(sqlite.prepare(NON_OK_REASONS).all()).toEqual([]);
+  });
+});

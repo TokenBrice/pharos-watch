@@ -10,7 +10,7 @@ import type { DigestSafetyContext } from "@shared/types/digest";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import { fetchWithRetry } from "../../lib/fetch-retry";
-import { readResponseTextBoundedWithSignal } from "../../lib/response-body";
+import { cancelUnsuccessfulResponseBodyQuietly, readResponseTextBoundedWithSignal } from "../../lib/response-body";
 import {
   ANTHROPIC_TIMEOUT_MS,
   CIRCUIT_SOURCE,
@@ -231,15 +231,24 @@ export async function finalizeDigestCronResult(
       missingCredentialNames: options.credentialDiagnostics.telegramMissing ?? [],
     },
   };
+  const degradedReason = options.degradedReasons[0]
+    ?? (options.hasBlockingQualityIssues
+      ? "blocking-quality-issues"
+      : hasNonDeliveringDisposition(options.publication.dispositions)
+        ? "channel-not-delivered"
+        : null);
+  // Editorial quality findings travel beside a delivered edition: only a
+  // pipeline failure, a blocking quality gate or an undelivered channel is
+  // work that did not happen.
+  const quality = options.qualityIssues.map((issue) => `${issue.code}:${issue.severity}`);
   return {
     itemCount: 1,
-    ...(options.degradedReasons.length > 0 || options.hasBlockingQualityIssues ||
-    hasNonDeliveringDisposition(options.publication.dispositions)
-      ? { status: "degraded" as const }
-      : {}),
+    ...(degradedReason ? { status: "degraded" as const } : {}),
     metadata: JSON.stringify({
+      ...(degradedReason ? { reason: degradedReason } : {}),
       summary: `${options.summaryBeforeQuality}${qualityMetadata}${options.summaryAfterQuality ?? ""}`,
       ...options.metadataAfterSummary,
+      ...(quality.length > 0 ? { quality: { issues: quality } } : {}),
       channels,
       llm: buildDigestLlmTelemetry(options.llmConfig, options.digestCopy.llmAttempts),
       editorialStyleGate: options.digestCopy.editorialStyleGate,
@@ -723,8 +732,14 @@ export async function requestDigestCopy(
       );
 
       if (!response || !response.ok) {
+        // A stalled or errored error body must not escape the attempt/circuit
+        // accounting below: cancel it and substitute a bounded diagnostic so
+        // the provider error still reports exactly one attempt and one outcome.
         lastErrorText = response
-          ? await readDigestErrorText(response, outerSignal)
+          ? await readDigestErrorText(response, outerSignal).catch(async (error: unknown) => {
+              await cancelUnsuccessfulResponseBodyQuietly(response);
+              return `error body read failed (${error instanceof Error ? error.name : "unknown"})`;
+            })
           : "no response";
         await recordAttempt(requestKind, httpAttempt, attemptStarted, response);
         // A retry is only free when nothing was produced. A fetch-level timeout

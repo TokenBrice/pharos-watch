@@ -210,6 +210,17 @@ Related extracted loaders:
 
 ### Cron health model
 
+**Terminal status separates "did the work happen" from "were the inputs perfect" (R4).** `degraded` is
+reserved for work that did not happen; an editorial or input-quality finding beside completed work returns
+`ok` and publishes the finding under `metadata.quality`. `snapshot-supply` (restored-only tail),
+`daily-digest` (editorial quality flags on a delivered edition), `sync-redemption-backstops` (capacity
+coverage floor) and `data-invariant-canary` (soft check rows) follow that rule;
+`snapshot-safety-grade-history` stays non-`ok` because it genuinely suppresses published history.
+Every non-`ok` result carries a machine-readable `metadata.reason`, which `logCronRun`
+(`worker/src/lib/cron-logger.ts`) projects into the `cron_runs.degraded_reason` column so operator
+aggregates and `scripts/maintenance/night-watch-worker.mjs` paging need no per-job JSON paths. A non-`ok`
+result with no resolvable reason is persisted as `unspecified-<status>` and warns in the Worker log.
+
 `CRON_INTERVALS` defines expected cadence per job (seconds). Freshness comparisons route through
 `worker/src/lib/status/freshness-oracle.ts`: one fact loader returns each producer's latest run,
 latest successful/degraded run, status, and expected interval, while each consumer supplies its
@@ -250,7 +261,7 @@ For the split DEX pipeline:
 - `status-self-check` records its monitoring, probe, computation, and publication phases. A distinct `route-probe:<path>` stage is persisted before each selected route so abandonment evidence identifies the last entered probe without progress coalescing hiding it; a phase alone does not identify the allocation responsible for a memory termination.
 - `summary.scheduledSlotRunning`, `summary.scheduledSlotStaleCandidates`, and `summary.scheduledSlotOldestRunningAgeSec` expose running scheduled-slot rows; `budgetOnlySurface*` summary counters separately report missing, stale, or error telemetry for budget-only side work.
 - `sync-live-reserves` now emits structured metadata (`synced`, `failed`, `skipped`, `warningCount`, `coinsWithWarnings`, `coinsWithErrors`, `breakerKeys`) summarized in the cron card.
-- `sync-redemption-backstops` keeps market-implied route impairments visible through `availabilityDegraded` metadata and impaired rows, but those expected row-level availability states do not by themselves mark the cron run degraded.
+- `sync-redemption-backstops` keeps market-implied route impairments visible through `availabilityDegraded` metadata and impaired rows, but those expected row-level availability states do not by themselves mark the cron run degraded. The capacity coverage floor (`unresolvedMissingCapacity` above `missingCapacityOkThreshold`) is published the same way, under `metadata.quality.reason = "capacity-coverage-floor"`; only unresolved routes, a stale liquidity feed, no active configured rows or post-write warnings degrade the run.
 
 ### Availability status
 

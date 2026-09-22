@@ -262,11 +262,10 @@ describe("snapshotSupply", () => {
 
     const result = await snapshotSupply(db);
 
-    expect(result.status).toBe("degraded");
+    expect(result.status).toBeUndefined();
     expect(JSON.parse(String(result.metadata))).toMatchObject({
-      reason: "snapshot_written_restored_skipped",
-      restoredOnlyIds: ["usdt-tether"],
       writtenRows: 1,
+      quality: { reason: "snapshot_written_restored_skipped", restoredOnlyIds: ["usdt-tether"] },
     });
     const insertedSql = db.getHistory().filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO supply_history"));
     expect(insertedSql.length).toBeGreaterThan(0);

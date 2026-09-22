@@ -61,14 +61,16 @@ export function normalizeCronMetadataWithLease(
 
   const rowsWrittenDefault = typeof result?.itemCount === "number" ? result.itemCount : null;
 
+  // Defaults are applied AFTER the producer spread: an explicit `null` from a
+  // producer must fall back to the derived default, not defeat it.
   const metadata = {
+    ...parsed,
     rowsRead: parsed.rowsRead ?? null,
     rowsWritten: parsed.rowsWritten ?? rowsWrittenDefault,
     rowsDropped: parsed.rowsDropped ?? 0,
     sourceCoverage: parsed.sourceCoverage ?? null,
     fallbackMode: parsed.fallbackMode ?? null,
     validationFailures: parsed.validationFailures ?? 0,
-    ...parsed,
   };
   reserveAdapterLatencyByteBudget(metadata);
   return JSON.stringify({ ...metadata, ...leaseMeta });

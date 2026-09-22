@@ -49,16 +49,26 @@ export async function runDataInvariantCanary(
     return createCronResult({
       status: mode === "shadow" ? "ok" : mode === "alert" ? "error" : "degraded",
       itemCount: 0,
-      metadata: { mode, observedAt, persistFailed: true, persistError },
+      metadata: {
+        mode,
+        observedAt,
+        persistFailed: true,
+        persistError,
+        ...(mode === "shadow" ? {} : { reason: "canary-persist-failed" }),
+      },
     });
   }
 
+  // The canary ran: a soft (`degraded`) check row is an observation, published
+  // under `quality`, while an error row is work the canary could not complete.
   const observedStatus = summary.errorCount > 0 || summary.degradedCount > 0 ? "degraded" : "ok";
   const operationalStatus = mode === "shadow"
     ? "ok"
     : mode === "alert" && (summary.errorCount > 0 || summary.worstSeverity === "critical")
       ? "error"
-      : observedStatus;
+      : summary.errorCount > 0
+        ? "degraded"
+        : "ok";
 
   return createCronResult({
     status: operationalStatus,
@@ -74,6 +84,17 @@ export async function runDataInvariantCanary(
       skippedCount: summary.skippedCount,
       worstStatus: summary.worstStatus,
       worstSeverity: summary.worstSeverity,
+      ...(operationalStatus === "ok"
+        ? observedStatus === "ok"
+          ? {}
+          : {
+              quality: {
+                reason: `canary-${summary.worstStatus}`,
+                degradedCount: summary.degradedCount,
+                errorCount: summary.errorCount,
+              },
+            }
+        : { reason: `canary-${summary.worstStatus}` }),
       checks: summary.results.map((result) => ({
         checkId: result.checkId,
         status: result.status,

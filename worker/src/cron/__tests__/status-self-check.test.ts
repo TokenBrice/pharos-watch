@@ -288,7 +288,8 @@ describe("runStatusSelfCheck", () => {
     };
 
     // "reported-degraded" is excluded from connectivity failCount but still flows through semanticProbeStatus
-    expect(result.status).toBe("ok"); // probeStatus is "degraded" (not "stale") and consecutiveDivergent < 2
+    expect(result.status).toBe("degraded"); // a degraded probe plane is a degraded monitoring run
+    expect(metadata.reason).toBe("probe-plane-degraded");
     expect(metadata.probeStatus).toBe("degraded");
     expect(metadata.failCount).toBe(0); // reported-* errors are excluded from connectivity fail counts
     expect(latestProbeWrite.status).toBe("degraded");

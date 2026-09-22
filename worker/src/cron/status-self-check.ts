@@ -781,9 +781,12 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
   const discrepancy = buildDiscrepancy(effectiveStatus, probeSummary, now, discrepancyState.consecutiveDivergent);
 
   return {
-    status: probeStatus === "stale" ? "degraded" : "ok",
+    // A degraded probe plane is a degraded monitoring run: the previous
+    // `stale`-only mapping reported `ok` while probes were already failing.
+    status: probeStatus === "healthy" ? "ok" : "degraded",
     itemCount: sampleCount,
     metadata: JSON.stringify({
+      ...(probeStatus === "healthy" ? {} : { reason: `probe-plane-${probeStatus}` }),
       sampleCount,
       passCount,
       failCount,

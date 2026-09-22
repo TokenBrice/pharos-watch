@@ -341,17 +341,31 @@ export async function computeSafetyScoreV9(
     supplyAttributionGenerationState.status === "incompatible" ||
     supplyAttributionGenerationState.status === "unavailable";
 
+  // LV01-08: name the first degradation reason as a bounded top-level key so it
+  // survives the 64 KiB metadata cap and lands in `cron_runs.degraded_reason`.
+  const degradationReasons = [
+    ...(publication.status === "published"
+      ? []
+      : [
+          publication.status === "failed"
+            ? `v9-publication-failed:${publication.code}`
+            : `v9-publication-${publication.status}`,
+        ]),
+    ...(supplyAttributionGenerationDegraded
+      ? [`supply-attribution-generation-${supplyAttributionGenerationState.status}`]
+      : []),
+  ];
+
   return {
-    status:
-      publication.status === "published" &&
-      !supplyAttributionGenerationDegraded
-        ? "ok"
-        : "degraded",
+    status: degradationReasons.length === 0 ? "ok" : "degraded",
     itemCount:
       publication.status === "published"
         ? fixedInput.activeAssetIds.length
         : 0,
     metadata: JSON.stringify({
+      ...(degradationReasons.length > 0
+        ? { reason: degradationReasons[0], degradationReasons }
+        : {}),
       sourceGenerationId: fixedInput.sourceGeneration,
       baseInputGenerationId: fixedInput.baseInputGenerationId,
       pegProvenance: {

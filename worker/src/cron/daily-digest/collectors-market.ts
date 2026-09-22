@@ -527,12 +527,15 @@ export async function collectLiquidityShifts(
 
     // Surface the drop so the prompt's data-quality block and the status page
     // record that a liquidity story was withheld rather than never existed.
-    for (const rejection of rejections) {
-      degradedReasons.push(`liquidity-shift-${rejection}`);
-    }
+    // A deliberately withheld story is soft quality, never a degraded run.
+    const withheldStoryReasons = [...rejections].map((rejection) => `liquidity-shift-${rejection}`);
 
     shifts.sort((a, b) => Math.abs(b.scoreDelta) * b.mcapUsd - Math.abs(a.scoreDelta) * a.mcapUsd);
-    return collectorResult(shifts.length > 0 ? shifts.slice(0, 5) : undefined, degradedReasons);
+    return collectorResult(
+      shifts.length > 0 ? shifts.slice(0, 5) : undefined,
+      degradedReasons,
+      withheldStoryReasons,
+    );
   } catch (error) {
     logWorkerEventArgs("handler", "error", "[daily-digest] Failed to collect liquidity shifts:", error);
     degradedReasons.push("liquidity-shifts-query");

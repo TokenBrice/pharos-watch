@@ -82,9 +82,11 @@ import {
 function expectExactWeeklyFinalMetadata(metadataText: string | undefined): void {
   const metadata = JSON.parse(String(metadataText));
   expect(metadataText).toBe(JSON.stringify({
+    ...(metadata.reason ? { reason: metadata.reason } : {}),
     summary: metadata.summary,
     digestDate: metadata.digestDate,
     scheduledAtSec: metadata.scheduledAtSec,
+    ...(metadata.quality ? { quality: metadata.quality } : {}),
     channels: metadata.channels,
     llm: metadata.llm,
     editorialStyleGate: metadata.editorialStyleGate,

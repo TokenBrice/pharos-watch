@@ -246,8 +246,10 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
   const missingCapacityWithinTolerance = missingCapacityCount <= allowedMissingCapacityCount;
   const hasNoActiveConfiguredRows = configuredIds.length > 0 && activeConfiguredCount === 0;
   const hasBlockingUnresolved = failedIds.length > 0 || criticalUnresolvedCount > 0;
-  const hasDegradedSyncSignal =
-    hasBlockingUnresolved || !missingCapacityWithinTolerance || liquidityStale || hasNoActiveConfiguredRows;
+  // The capacity coverage floor is an input-evidence condition: the sync wrote
+  // every snapshot it could resolve, so it travels as quality, not a degraded run.
+  const capacityCoverageFloorBreached = !missingCapacityWithinTolerance;
+  const hasDegradedSyncSignal = hasBlockingUnresolved || liquidityStale || hasNoActiveConfiguredRows;
   const runMetadata: CronMetadataRecord = {
     synced: snapshots.length,
     failed: failedIds.length,
@@ -296,6 +298,15 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
     ...(missingFromCache.length > 0
       ? { missingFromCache: capStringList(missingFromCache), missingFromCacheTruncated: missingFromCache.length > 25 }
       : {}),
+    ...(capacityCoverageFloorBreached
+      ? {
+          quality: {
+            reason: "capacity-coverage-floor",
+            unresolvedMissingCapacity: missingCapacityCount,
+            missingCapacityOkThreshold: allowedMissingCapacityCount,
+          },
+        }
+      : {}),
   };
 
   const writeResult = await upsertRedemptionBackstopSnapshots(db, snapshots, {
@@ -333,6 +344,16 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
       : hasDegradedSyncSignal || hasPostWriteDegradation
         ? "degraded"
         : "ok";
+
+  if (status !== "ok") {
+    runMetadata.reason = hasBlockingUnresolved
+      ? "unresolved-backstop-routes"
+      : hasNoActiveConfiguredRows
+        ? "no-active-configured-rows"
+        : liquidityStale
+          ? "liquidity-evidence-stale"
+          : "post-write-warnings";
+  }
 
   return createCronResult({
     status,

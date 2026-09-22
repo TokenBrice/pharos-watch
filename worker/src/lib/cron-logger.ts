@@ -293,6 +293,54 @@ function producerOutcomeForError(error: unknown): ProducerOutcome {
   return error instanceof CronJobAbandonedError ? "abandoned" : "error";
 }
 
+const MAX_CRON_DEGRADED_REASON_CHARS = 200;
+
+function firstReasonString(value: unknown): string | null {
+  if (typeof value === "string" && value.trim().length > 0) return value;
+  if (!Array.isArray(value)) return null;
+  for (const entry of value) {
+    const reason = firstReasonString(entry);
+    if (reason) return reason;
+  }
+  return null;
+}
+
+function nestedReasonString(value: unknown, key: string): string | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return firstReasonString((value as Record<string, unknown>)[key]);
+}
+
+/**
+ * R4: every non-`ok` run records a machine-readable reason, projected into
+ * `cron_runs.degraded_reason` so aggregates need no per-job JSON paths.
+ * `metadata.reason` is the contract producers own; the remaining keys are the
+ * historical homes the yield (`fallbackMode`), V9 (`publication.code`) and
+ * watchdog (`degradedReasons`) paths already write. The reason is resolved from
+ * the producer's own metadata, i.e. before the 64 KiB persistence cap can
+ * truncate the diagnostics that explain it.
+ */
+export function resolveCronDegradedReason(
+  job: string,
+  status: NonNullable<CronResult["status"]>,
+  result: CronResult | null | void,
+  metadata: Record<string, unknown> | null,
+): string | null {
+  if (status === "ok") return null;
+  const candidate = firstReasonString(metadata?.reason)
+    ?? firstReasonString(metadata?.degradedReason)
+    ?? firstReasonString(metadata?.degradedReasons)
+    ?? firstReasonString(metadata?.fallbackMode)
+    ?? nestedReasonString(metadata?.publication, "code")
+    ?? nestedReasonString(metadata?.quality, "reason")
+    ?? firstReasonString(result?.error);
+  if (candidate) return stripSensitive(candidate).slice(0, MAX_CRON_DEGRADED_REASON_CHARS);
+  if (status === "degraded" || status === "error") {
+    console.warn(`[cron:${job}] ${status} result carries no metadata.reason`);
+    return `unspecified-${status}`;
+  }
+  return status;
+}
+
 // --- Internal helpers ---
 
 function serializeProgressMetadata(metadata: Record<string, unknown> | null | undefined): string | null {
@@ -508,6 +556,7 @@ export async function logCronRun(
     const publicationCount = productivity.publications?.length ?? 0;
     const persistedMetadata = compactCronMetadataForPersistence(resolvedResult?.metadata, parsedMetadata).metadata;
     const resolvedError = resolvedResult?.error == null ? null : stripSensitive(resolvedResult.error);
+    const degradedReason = resolveCronDegradedReason(job, resultStatus, resolvedResult, parsedMetadata);
     const producer = options?.producer;
     persistingCompletedTelemetry = true;
     if (producer) {
@@ -516,8 +565,8 @@ export async function logCronRun(
           `INSERT INTO cron_runs
              (job, started_at, duration_ms, status, item_count, metadata, slot_started_at, error, idempotency_key,
               schedule_key, producer_path, producer_kind, invocation_id, worker_version,
-              productive, publication_count, calendar_period)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              productive, publication_count, calendar_period, degraded_reason)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT DO NOTHING`,
         ).bind(
           job,
@@ -537,6 +586,7 @@ export async function logCronRun(
           productivity.productive ? 1 : 0,
           publicationCount,
           producer.calendarPeriod ?? null,
+          degradedReason,
         ).run(),
       );
       await recordProducerOutcome(db, {
@@ -556,8 +606,9 @@ export async function logCronRun(
         db
           .prepare(
             `INSERT INTO cron_runs
-               (job, started_at, duration_ms, status, item_count, metadata, slot_started_at, error, idempotency_key)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+               (job, started_at, duration_ms, status, item_count, metadata, slot_started_at, error, idempotency_key,
+                degraded_reason)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
              ON CONFLICT DO NOTHING`,
           )
           .bind(
@@ -570,6 +621,7 @@ export async function logCronRun(
             slotStartedAt,
             resolvedError,
             cronRunIdempotencyKey,
+            degradedReason,
           )
           .run(),
       );
@@ -583,6 +635,7 @@ export async function logCronRun(
     }
     const terminalMetadata = compactCronMetadataForPersistence(serializeTerminalCronMetadata(e)).metadata;
     const classifiedError = classifyError(e);
+    const terminalReason = classifiedError.name.slice(0, MAX_CRON_DEGRADED_REASON_CHARS);
     try {
       const completedAt = Math.floor(Date.now() / 1000);
       const producer = options?.producer;
@@ -592,12 +645,13 @@ export async function logCronRun(
             `INSERT INTO cron_runs
                (job, started_at, duration_ms, status, error, metadata, slot_started_at, idempotency_key,
                 schedule_key, producer_path, producer_kind, invocation_id, worker_version,
-                productive, publication_count, calendar_period)
-             VALUES (?, ?, ?, 'error', ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?)
+                productive, publication_count, calendar_period, degraded_reason)
+             VALUES (?, ?, ?, 'error', ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?)
              ON CONFLICT(idempotency_key) WHERE idempotency_key IS NOT NULL DO UPDATE SET
                status = 'error',
                error = excluded.error,
                metadata = COALESCE(excluded.metadata, cron_runs.metadata),
+               degraded_reason = excluded.degraded_reason,
                productive = 0,
                publication_count = 0`,
           ).bind(
@@ -614,6 +668,7 @@ export async function logCronRun(
             producer.invocationId,
             producer.workerVersion ?? null,
             producer.calendarPeriod ?? null,
+            terminalReason,
           ).run(),
         );
         await recordProducerOutcome(db, {
@@ -633,8 +688,9 @@ export async function logCronRun(
           db
             .prepare(
               `INSERT INTO cron_runs
-                 (job, started_at, duration_ms, status, error, metadata, slot_started_at, idempotency_key)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                 (job, started_at, duration_ms, status, error, metadata, slot_started_at, idempotency_key,
+                  degraded_reason)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                ON CONFLICT DO NOTHING`,
             )
             .bind(
@@ -646,6 +702,7 @@ export async function logCronRun(
               terminalMetadata,
               slotStartedAt,
               cronRunIdempotencyKey,
+              terminalReason,
             )
             .run(),
         );
