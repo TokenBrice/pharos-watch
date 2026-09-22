@@ -597,20 +597,36 @@ function readCanonicalOrder(sourcePath = CANONICAL_ORDER_JSON_ABS) {
 }
 
 function orderSourceCoins(parsed, canonicalOrder) {
-  const sourceById = new Map(parsed.map((coin) => [coin.id, coin]));
-  const ordered = canonicalOrder.map((id) => {
-    const coin = sourceById.get(id);
-    if (!coin) {
-      throw new Error(`[client-registry] ${CANONICAL_ORDER_JSON_REL} references unknown stablecoin ID: ${id}`);
+  if (!Array.isArray(parsed)) {
+    throw new Error(`[client-registry] ${SOURCE_JSON_REL} is not a JSON array`);
+  }
+
+  const sourceById = new Map();
+  for (const coin of parsed) {
+    if (sourceById.has(coin.id)) {
+      throw new Error(`[client-registry] ${SOURCE_JSON_REL} contains duplicate stablecoin ID: ${coin.id}`);
     }
-    return coin;
-  });
-  if (ordered.length !== parsed.length) {
+    sourceById.set(coin.id, coin);
+  }
+
+  const orderIds = new Set();
+  for (const id of canonicalOrder) {
+    if (orderIds.has(id)) {
+      throw new Error(`[client-registry] ${CANONICAL_ORDER_JSON_REL} contains duplicate stablecoin ID: ${id}`);
+    }
+    orderIds.add(id);
+  }
+
+  const missingIds = [...sourceById.keys()].filter((id) => !orderIds.has(id));
+  const unknownIds = [...orderIds].filter((id) => !sourceById.has(id));
+  if (missingIds.length > 0 || unknownIds.length > 0) {
     throw new Error(
-      `[client-registry] ${CANONICAL_ORDER_JSON_REL} covers ${ordered.length}/${parsed.length} stablecoins`,
+      `[client-registry] ${CANONICAL_ORDER_JSON_REL} IDs must exactly match ${SOURCE_JSON_REL} IDs` +
+        ` (missing: ${missingIds.join(", ") || "none"}; unknown: ${unknownIds.join(", ") || "none"})`,
     );
   }
-  return ordered;
+
+  return canonicalOrder.map((id) => sourceById.get(id));
 }
 
 export function validateListProjection(slim, sourceCoin, index, listFields, listingClass, sourceById) {
@@ -831,28 +847,9 @@ export function buildWorkerRuntimeRegistryOutput({
   canonicalOrderJsonPath = CANONICAL_ORDER_JSON_ABS,
 } = {}) {
   const parsed = sourceCoins;
-  const canonicalOrder = JSON.parse(readFileSync(canonicalOrderJsonPath, "utf8"));
-
-  if (!Array.isArray(parsed)) {
-    throw new Error(`[client-registry] ${SOURCE_JSON_REL} is not a JSON array`);
-  }
-  if (!Array.isArray(canonicalOrder) || canonicalOrder.some((id) => typeof id !== "string")) {
-    throw new Error(`[client-registry] ${CANONICAL_ORDER_JSON_REL} is not a string array`);
-  }
-
-  const sourceById = new Map(parsed.map((coin) => [coin.id, coin]));
-  const runtimeCoins = canonicalOrder.map((id, index) => {
-    const coin = sourceById.get(id);
-    if (!coin) {
-      throw new Error(`[client-registry] ${CANONICAL_ORDER_JSON_REL} references unknown stablecoin ID: ${id}`);
-    }
-    return projectWorkerRuntimeCoin(coin, index);
-  });
-  if (runtimeCoins.length !== parsed.length) {
-    throw new Error(
-      `[client-registry] ${CANONICAL_ORDER_JSON_REL} covers ${runtimeCoins.length}/${parsed.length} stablecoins`,
-    );
-  }
+  const canonicalOrder = readCanonicalOrder(canonicalOrderJsonPath);
+  const orderedCoins = orderSourceCoins(parsed, canonicalOrder);
+  const runtimeCoins = orderedCoins.map((coin, index) => projectWorkerRuntimeCoin(coin, index));
   return {
     output: `${JSON.stringify(runtimeCoins, null, 2)}\n`,
     runtimeCoins,

@@ -1,3 +1,7 @@
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -30,7 +34,7 @@ describe("client registry field contract", () => {
 
     expect(runtimeCoins).toEqual(expected);
     expect(
-      runtimeCoins.every((coin) =>
+      runtimeCoins.every((coin: Record<string, unknown>) =>
         Object.keys(coin).every((key) => [
           "id",
           "symbol",
@@ -47,6 +51,37 @@ describe("client registry field contract", () => {
         ].includes(key)),
       ),
     ).toBe(true);
+  });
+
+  it("rejects a length-preserving duplicate canonical ID before projecting either ordered output", ({ onTestFinished }) => {
+    const fixtureDir = mkdtempSync(join(tmpdir(), "pharos-client-registry-order-"));
+    onTestFinished(() => rmSync(fixtureDir, { recursive: true, force: true }));
+    let projectionReads = 0;
+    const sourceCoins = [
+      {
+        id: "kept",
+        get symbol() {
+          projectionReads += 1;
+          return "KEPT";
+        },
+      },
+      {
+        id: "replaced",
+        get symbol() {
+          projectionReads += 1;
+          return "REPLACED";
+        },
+      },
+    ];
+    const canonicalOrderJsonPath = join(fixtureDir, "canonical-order.json");
+    writeFileSync(canonicalOrderJsonPath, JSON.stringify(["kept", "kept"]));
+
+    for (const build of [buildClientRegistryOutput, buildWorkerRuntimeRegistryOutput]) {
+      expect(() => build({ sourceCoins, canonicalOrderJsonPath })).toThrow(
+        "canonical-order.json contains duplicate stablecoin ID",
+      );
+    }
+    expect(projectionReads).toBe(0);
   });
 
   it("projects only the compact listing class from the decision ledger", () => {

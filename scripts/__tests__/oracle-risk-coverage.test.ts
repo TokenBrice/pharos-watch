@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types";
 import { analyzeOracleRiskCoverage } from "../lib/oracle-risk-coverage";
+import { runOracleRiskCoverageCheck } from "../ci/check-oracle-risk-coverage";
 
 function makeCoin(overrides: Partial<StablecoinMeta> = {}): StablecoinMeta {
   return {
@@ -57,6 +58,30 @@ function reviewedMultiBranch(overrides: Partial<OracleRisk> = {}): OracleRisk {
     ...overrides,
   };
 }
+
+function runCoverageCli(coins: readonly StablecoinMeta[], argv: readonly string[] = []) {
+  let stdout = "";
+  let stderr = "";
+  const status = runOracleRiskCoverageCheck(coins, argv, {
+    stdout: { write: (value) => (stdout += value) },
+    stderr: { write: (value) => (stderr += value) },
+    reviewedBranchDispositions: [],
+  });
+  return { status, stdout, stderr };
+}
+
+it("enforces missing profiles by default and exposes advisory backfill mode", () => {
+  const enforced = runCoverageCli([makeCoin()]);
+  expect(enforced.status).toBe(1);
+  expect(enforced.stderr).toBe("");
+  expect(enforced.stdout).toContain("test-cdp (TCDP): missing-profile");
+
+  const advisory = runCoverageCli([makeCoin()], ["--advisory"]);
+  expect(advisory.status).toBe(0);
+  expect(advisory.stderr).toBe("");
+  expect(advisory.stdout).toContain("oracleRisk coverage advisory:");
+  expect(advisory.stdout).toContain("test-cdp (TCDP): missing-profile");
+});
 
 describe("analyzeOracleRiskCoverage", () => {
   it("warns on active crypto-backed CDPs missing oracleRisk", () => {

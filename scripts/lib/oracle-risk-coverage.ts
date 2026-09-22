@@ -21,6 +21,18 @@ export interface OracleRiskCoverageFinding {
   detail: string;
 }
 
+const ADVISORY_FINDING_KINDS: Partial<Record<OracleRiskCoverageFindingKind, true>> = {
+  "stale-review": true,
+  "stale-branch-observation": true,
+  "missing-branch-applicability": true,
+  "branch-applicability-unresolved": true,
+  "reviewed-inoperable-branch-evidence": true,
+};
+
+export function isBlockingOracleRiskCoverageFinding(finding: OracleRiskCoverageFinding): boolean {
+  return ADVISORY_FINDING_KINDS[finding.kind] !== true;
+}
+
 export interface OracleRiskCoverageResult {
   totalCryptoCdp: number;
   withOracleRisk: number;

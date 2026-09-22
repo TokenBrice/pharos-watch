@@ -7,15 +7,14 @@
  * stays a manual curation tool: most of its counters describe a real backlog
  * that moves slowly and ratcheting it only produced bookkeeping commits.
  *
- * Three of its counters are different — they are legitimately zero and a
- * non-zero value means a reviewed record went missing or stale, not that the
- * backlog grew: manual dependency review gaps, stale reserve dispositions,
- * and unavailable target disposition gaps. Adapter mapping registry integrity
- * is also structural, but missing-review coverage requires report-card
- * provenance and is therefore reported as not evaluated by this entrypoint.
- * Those checks plus the zero-tolerance graph invariants (self-edges, duplicate
- * edges, cycles, overweight effective sets, unknown targets,
- * depType-without-coinId) are what this check enforces.
+ * Its zero-tolerance counters are legitimately zero, and a non-zero value
+ * means a reviewed record went missing or stale, a structural disposition is
+ * malformed, or a live-reserve mapping lacks review. Adapter mapping coverage
+ * is derived from the static graph when report cards are absent.
+ *
+ * Those checks plus the graph invariants (self-edges, duplicate edges, cycles,
+ * overweight effective sets, unknown targets, depType-without-coinId) are what
+ * this check enforces.
  *
  * The analysis itself is not duplicated here: this re-bins the audit's own
  * summary rather than re-deriving it.
@@ -27,7 +26,7 @@ import {
 } from "../maintenance/generate-dependency-coverage-audit";
 
 const audit = buildDependencyCoverageAudit({ generatedAt: new Date().toISOString() });
-const failures = evaluateDependencyCoverageStructure(audit);
+const failures = evaluateDependencyCoverageStructure(audit, { requireAdapterMappingCoverage: true });
 
 if (failures.length > 0) {
   process.stderr.write(`Dependency review-gap check failed:\n${failures.map((failure) => `- ${failure}`).join("\n")}\n`);
@@ -38,6 +37,5 @@ if (failures.length > 0) {
 process.stdout.write(
   `Dependency structural checks OK (${audit.summary.activeCount} active assets, ` +
     `${audit.summary.staticEdgeCount} static edges, ` +
-    `${audit.summary.adapterMappingReviewGapCount} adapter registry-integrity gaps). ` +
-    "Adapter-mapping missing-review population NOT EVALUATED (no report cards supplied).\n",
+    `${audit.summary.adapterMappingReviewGapCount} adapter mapping review gaps).\n`,
 );

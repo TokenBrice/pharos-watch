@@ -713,8 +713,33 @@ describe("generate-dependency-coverage-audit", () => {
     });
   });
 
-  it("distinguishes clean, gap, and not-evaluated adapter mapping review coverage", () => {
-    const mapped = coin({ id: "mapped", liveReservesConfig: liveConfig("accountable") });
+  it("fails the structural evaluator for a malformed target disposition", () => {
+    const upstream = coin({ id: "upstream" });
+    const dependent = coin({
+      id: "dependent",
+      reserves: [{ name: "Upstream", pct: 100, risk: "low", coinId: "upstream" }],
+    });
+    const audit = buildDependencyCoverageAudit({
+      activeCoins: [upstream, dependent],
+      trackedCoins: [upstream, dependent],
+      targetDispositions: [targetDisposition("upstream", "active", { reviewer: "" })],
+    });
+
+    expect(audit.targetDispositionValidationIssues).toEqual([
+      expect.objectContaining({ targetId: "upstream", reason: "invalid-provenance" }),
+    ]);
+    expect(evaluateDependencyCoverageStructure(audit)).toEqual([
+      "target disposition validation issue invariant failed with 1 finding",
+    ]);
+  });
+
+  it("fails mapping coverage deterministically for a new unmapped live-reserve adapter", () => {
+    const upstream = coin({ id: "upstream" });
+    const mapped = coin({
+      id: "mapped",
+      reserves: [{ name: "Upstream", pct: 100, risk: "low", coinId: "upstream" }],
+      liveReservesConfig: liveConfig("accountable"),
+    });
     const reportCards = {
       cards: [{
         id: "mapped",
@@ -733,17 +758,17 @@ describe("generate-dependency-coverage-audit", () => {
     };
 
     const evaluatedClean = buildDependencyCoverageAudit({
-      activeCoins: [mapped],
+      activeCoins: [upstream, mapped],
       reportCards,
       adapterMappingReviews: [review],
     });
-    const evaluatedWithGaps = buildDependencyCoverageAudit({
-      activeCoins: [mapped],
+    const reportCardGap = buildDependencyCoverageAudit({
+      activeCoins: [upstream, mapped],
       reportCards,
       adapterMappingReviews: [],
     });
-    const notEvaluated = buildDependencyCoverageAudit({
-      activeCoins: [mapped],
+    const staticGap = buildDependencyCoverageAudit({
+      activeCoins: [upstream, mapped],
       adapterMappingReviews: [],
     });
 
@@ -752,24 +777,23 @@ describe("generate-dependency-coverage-audit", () => {
       adapterMappingReviewCoverageEvaluated: true,
       adapterMappingReviewCoverageStatus: "evaluated-clean",
     });
-    expect(evaluatedWithGaps.summary).toMatchObject({
+    expect(reportCardGap.summary).toMatchObject({
       adapterMappingReviewGapCount: 1,
       adapterMappingReviewCoverageEvaluated: true,
       adapterMappingReviewCoverageStatus: "evaluated-with-gaps",
     });
-    expect(notEvaluated.summary).toMatchObject({
-      adapterMappingReviewGapCount: 0,
-      adapterMappingReviewCoverageEvaluated: false,
-      adapterMappingReviewCoverageStatus: "not-evaluated",
+    expect(staticGap.summary).toMatchObject({
+      adapterMappingReviewGapCount: 1,
+      adapterMappingReviewCoverageEvaluated: true,
+      adapterMappingReviewCoverageStatus: "evaluated-with-gaps",
     });
     expect(evaluateDependencyCoverageStructure(evaluatedClean)).toEqual([]);
-    expect(evaluateDependencyCoverageStructure(evaluatedWithGaps)).toEqual([
+    expect(evaluateDependencyCoverageStructure(reportCardGap)).toEqual([
       "adapter mapping review gap invariant failed with 1 finding",
     ]);
-    expect(evaluateDependencyCoverageStructure(notEvaluated)).toEqual([]);
-    expect(evaluateDependencyCoverageStructure(notEvaluated, {
+    expect(evaluateDependencyCoverageStructure(staticGap, {
       requireAdapterMappingCoverage: true,
-    })).toEqual(["adapter mapping review coverage was not evaluated"]);
+    })).toEqual(["adapter mapping review gap invariant failed with 1 finding"]);
   });
 
   it("reports a retained link missing from the current report even when the static registry still has it", () => {
@@ -809,7 +833,7 @@ describe("generate-dependency-coverage-audit", () => {
     expect(markdown).toContain("## Dependency Edges And Target Status");
     expect(markdown).toContain("## Dependency Provenance");
     expect(markdown).toContain("## Material Stablecoin-Looking Unlinked Reserves");
-    expect(markdown).toContain("- Adapter mapping review coverage: not-evaluated");
+    expect(markdown).toContain("- Adapter mapping review coverage: evaluated-clean");
     expect(markdown).toContain("## Adapter Mapping Review Gaps");
     expect(markdown).toContain("## Highest-Market-Cap Missing Candidates");
     expect(markdown).toContain("LONE (lone-high)");

@@ -1441,15 +1441,17 @@ export function buildDependencyCoverageAudit(input: DependencyCoverageAuditInput
   const overweightEffectiveSets = findOverweightEffectiveSets(activeCoins, cardsById, hasReportCards);
   const dependencyProvenance = extractDependencyProvenance(activeCoins, cardsById, hasReportCards);
   const activeById = new Map(activeCoins.map((coin) => [coin.id, coin]));
-  const requiredAdapterMappings: AdapterMappingRequirement[] | null = hasReportCards
-    ? dependencyProvenance.flatMap((row) => {
-        if (row.baseSource !== "live-reserve") return [];
-        return [{
-          coinId: row.coinId,
-          adapter: activeById.get(row.coinId)?.liveReservesConfig?.adapter ?? "unknown",
-        }];
-      })
-    : null;
+  const requiredAdapterMappings: AdapterMappingRequirement[] = dependencyProvenance.flatMap((row) => {
+    const coin = activeById.get(row.coinId);
+    const requiresMappingReview = hasReportCards
+      ? row.baseSource === "live-reserve"
+      : coin?.liveReservesConfig != null && row.baseSource !== "none";
+    if (!requiresMappingReview) return [];
+    return [{
+      coinId: row.coinId,
+      adapter: coin?.liveReservesConfig?.adapter ?? "unknown",
+    }];
+  });
   const targetDispositionValidationIssues = validateTargetDispositions({
     trackedCoins,
     edges: dependencyEdges,
@@ -1856,12 +1858,11 @@ export function renderDependencyCoverageAuditMarkdown(audit: DependencyCoverageA
 
 /**
  * Zero-tolerance dependency-graph invariants plus the structurally knowable
- * review and registry-integrity counters that must stay at zero. Callers with
- * report-card inputs can additionally require adapter-mapping coverage. This
- * is the gate half of the audit (`npm run check:dependency-review-gaps`, wired
- * into `check:structural`); the backlog counters it deliberately ignores
- * (`reserveSlicesMissingCoinId`, `unresolvedMaterialReserveSlices`,
- * `targetDispositionValidationIssues`) stay visible in the manual report.
+ * review, disposition, and registry-integrity counters that must stay at zero.
+ * This is the gate half of the audit (`npm run check:dependency-review-gaps`,
+ * wired into `check:structural`); the backlog counters it deliberately ignores
+ * (`reserveSlicesMissingCoinId`, `unresolvedMaterialReserveSlices`) stay
+ * visible in the manual report.
  */
 export function evaluateDependencyCoverageStructure(
   audit: DependencyCoverageAudit,
@@ -1887,6 +1888,7 @@ export function evaluateDependencyCoverageStructure(
     ["manual dependency review gap", audit.summary.manualDependencyReviewGapCount],
     ["stale reserve disposition", audit.summary.staleReserveDispositionCount],
     ["unavailable target disposition gap", audit.summary.unavailableTargetDispositionGapCount],
+    ["target disposition validation issue", audit.summary.targetDispositionValidationIssueCount],
     ["adapter mapping review gap", audit.summary.adapterMappingReviewGapCount],
   ];
   for (const [label, count] of zeroTolerance) {
