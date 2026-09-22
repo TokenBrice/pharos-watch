@@ -31,6 +31,7 @@
 | 0242     | `0242_orca_whirlpool_shadow_quotes.sql`                    | Add isolated native Orca shadow quotes with enforced score ineligibility; no V1 scoring publication. |
 | 0243     | `0243_native_shadow_quote_families.sql`                    | Add family-generic native shadow quotes for Orca and Raydium with enforced score ineligibility; retain the Orca-only store for rollback. |
 | 0244     | `0244_ddr_publication_payload_dedup.sql`                   | Add the DDR publication payload content-identity column and the append-only payload reference table so an unchanged publication stores no second BLOB. |
+| 0245     | `0245_cron_runs_degraded_reason.sql`                       | Add the nullable projected non-ok cron-run reason so status aggregates and operator paging need no per-job metadata JSON paths. |
 
 ## Squashed Individual Migrations (absorbed into the 0000 baseline on 2026-07-30)
 
@@ -341,6 +342,7 @@ Duplicate numeric prefixes 0056 and 0061 existed in the squashed range (0001–0
 - `0240_yield_retention_indexes.sql`: roll back by restoring the prior Worker; keep the additive retention index because it is inert to older Workers and avoids the unbounded alternatives-retention scan. Dropping it requires a separate coordinated cleanup rollout.
 - `0241_dex_pool_registry.sql`: retain both tables. Apply before Worker activation; capture the migration timestamp and a pre-migration D1 Time Travel bookmark. After activation, catch up observations written to `dex_pool_staging` after migration with an explicit-column `INSERT OR IGNORE INTO dex_pool_registry (...) SELECT ... FROM dex_pool_staging WHERE refreshed_at > <migration_unix>`. Roll back the Worker within 72 hours; its staging rows stop refreshing at cutover and new registry-only pools are absent until re-crawled. Past 72 hours, first reverse-copy the newest registry observation per `(stablecoin_id, pool_id)` into staging using `INSERT OR REPLACE`, then restore the prior Worker. Worker rollback does not undo D1; dropping staging requires a separate coordinated cleanup rollout after at least 14 days without rollback.
 - `0243_native_shadow_quote_families.sql`: apply before Worker activation. Both native collectors write the new `dex_native_shadow_quotes_v2` table; the old Orca-only table remains untouched for prior-Worker rollback. Four old diagnostic rows are intentionally not migrated; fresh native evidence repopulates on subsequent cycles. Capture the pre-migration D1 bookmark and deployed Worker version; Worker rollback does not undo either table. No scoring table or publication pointer changes.
+- `0245_cron_runs_degraded_reason.sql`: apply before Worker activation — the new Worker binds `degraded_reason` on every `cron_runs` insert. Worker rollback ignores the nullable column and resumes writing rows without it; retained values stay valid history. Dropping the column requires a separate coordinated cleanup rollout.
 
 ## Rollback Procedure
 
