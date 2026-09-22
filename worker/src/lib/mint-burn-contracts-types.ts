@@ -46,6 +46,11 @@ export interface MintBurnEventDef {
     value: string;
   };
   /**
+   * Expected topics.length including topic0. Defaults to the Transfer convention (3) in the
+   * conservation audit; non-indexed custom events (e.g. USDT Issue/Redeem) declare 1.
+   */
+  topicArity?: number;
+  /**
    * Override counterparty extraction. When omitted, defaults to:
    *   mint  → topics[2] (Transfer recipient)
    *   burn  → topics[1] (Transfer sender)

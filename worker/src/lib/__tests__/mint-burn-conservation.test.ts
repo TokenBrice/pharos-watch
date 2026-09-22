@@ -5,10 +5,13 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import { MINT_BURN_CONFIGS } from "../mint-burn-contracts";
 import { fetchEvmRpcBatchDetailed } from "../evm-rpc";
 import { completeMintBurnConservationAudit, fetchConservationBoundaries, getMintBurnConservationEligibility,
-  isMintBurnConservationUnsupportedReason, mintBurnConservationCacheKey, resolveMintBurnConservationEligibility,
+  isMintBurnConservationUnsupportedReason, mintBurnConservationCacheKey, mintBurnConservationFingerprint,
+  resolveMintBurnConservationEligibility,
   reviewedConservationIdentityKey, validateReviewedConservationEntry,
   persistMintBurnConservation, readMintBurnConservationRecords, validateMintBurnParsedConservation, verifyPersistedMintBurnConservation,
-  type ConservationBoundaryEvidence, type ConservationBoundaryRequest, type ReviewedConservationEntry } from "../mint-burn-conservation";
+  type ConservationBoundaryEvidence, type ConservationBoundaryRequest, type ConservationEventDef,
+  type MintBurnConservationRuntimeEntry,
+  type ReviewedConservationEntry } from "../mint-burn-conservation";
 import { renderMintBurnConservationRuntime } from "../../../../scripts/maintenance/generate-mint-burn-conservation-runtime";
 import reviewedConservationSidecar from "../mint-burn-conservation-reviewed.json";
 import type { AlchemyLogEntry } from "../alchemy-logs";
@@ -33,7 +36,8 @@ function input(logs = [log("mint", 2n), log("burn", 1n, 1)]) {
     logs: logs.filter((item) => item.topics[eventDef.direction === "mint" ? 1 : 2] === word(0n)) })),
   fromBlock: 101, toBlock: 102, checkedAt: 1100, complete: true, boundary: ready() };
 }
-function ready(delta = 1n): ConservationBoundaryEvidence {
+type ReadyBoundary = Extract<ConservationBoundaryEvidence, { status: "ready" }>;
+function ready(delta = 1n): ReadyBoundary {
   return { status: "ready", fromBlockHash: headers[0].hash, toBlockHash: headers[1].hash,
     fromTimestamp: 1000, toTimestamp: 1024, fromSupplyRaw: "100", toSupplyRaw: (100n + delta).toString() };
 }
@@ -402,4 +406,299 @@ describe("raw token conservation", () => {
     expect(await verifyPersistedMintBurnConservation(db, [expected], undefined, 0)).toBe("deadline");
   });
 
+});
+
+describe("reviewed alternative conservation laws", () => {
+  const usdtConfig = MINT_BURN_CONFIGS.find((item) => item.stablecoinId === "usdt-tether")!;
+  const ousdConfig = MINT_BURN_CONFIGS.find((item) => item.stablecoinId === "ousd-origin-protocol")!;
+  const usdoConfig = MINT_BURN_CONFIGS.find((item) => item.stablecoinId === "usdo-openeden")!;
+  const VAULT = "0xe75d77b1865ae93c7eaa3040b038d7aa7bc02f70";
+  const USDO_IMPL = BigInt("0x87e3ba929c71c0e28fc1c817d107a888a59c523e");
+  const DBF_TOPIC = "0x61e6e66b0d6339b2980aecc6ccc0039736791f0ccde9ed512e789a7fbdd698c6";
+  const YIELD_TOPIC = "0x09516ecf4a8a86e59780a9befc6dee948bc9e60a36e3be68d31ea817ee8d2c80";
+  const HIGHRES_TOPIC = "0x41645eb819d3011b13f97696a8109d14bfcddfaca7d063ec0564d62a3e257235";
+  const LEGACY_TOPIC = "0x99e56f783b536ffacf422d59183ea321dd80dcd6d23daa13023e8afea38c3df1";
+  const UPGRADED_TOPIC = "0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b";
+  const BONUS_TOPIC = "0x4b7ac0698dfdcfd64b5836a7035abedc13637e97b8be52f30736b0644c669ab0";
+  const UINT128_MAX = (1n << 128n) - 1n;
+
+  function customLog(topic0: string, topics: string[], dataWords: bigint[], options: {
+    address?: string; index?: number; block?: number; transaction?: bigint } = {}): AlchemyLogEntry {
+    return { address: options.address ?? usdtConfig.contractAddress, topics: [topic0, ...topics],
+      data: `0x${dataWords.map((value) => value.toString(16).padStart(64, "0")).join("")}`,
+      blockNumber: `0x${(options.block ?? 102).toString(16)}`, blockHash: word(12n),
+      transactionHash: word(options.transaction ?? 20n), transactionIndex: "0x0",
+      logIndex: `0x${(options.index ?? 0).toString(16)}`, removed: false };
+  }
+  function audit(cfg: typeof config, law: MintBurnConservationRuntimeEntry | undefined,
+    logs: Array<{ eventDef: ConservationEventDef; logs: AlchemyLogEntry[] }>,
+    boundary: ConservationBoundaryEvidence, complete = true) {
+    return completeMintBurnConservationAudit({ config: cfg, logs: logs.filter((batch) =>
+      cfg.events.includes(batch.eventDef as never)) as never, conservationLogs: logs.filter((batch) =>
+      !cfg.events.includes(batch.eventDef as never)),
+      fromBlock: 101, toBlock: 102, checkedAt: 1100, complete, boundary, lawFor: () => law });
+  }
+  const usdtLaw: MintBurnConservationRuntimeEntry = { chainId: "ethereum", stablecoinId: "usdt-tether",
+    address: usdtConfig.contractAddress.toLowerCase(), decimals: 6, disposition: "admitted",
+    eventSet: "config-events", requiresNotDeprecated: true,
+    conservationOnlyEvents: [{ signature: "DestroyedBlackFunds(address,uint256)", topicHash: DBF_TOPIC,
+      direction: "burn", role: "sum", amountEncoding: "nth-data-uint256", dataSlot: 1, topicArity: 1 }] };
+  const ousdLaw: MintBurnConservationRuntimeEntry = { chainId: "ethereum", stablecoinId: "ousd-origin-protocol",
+    address: ousdConfig.contractAddress.toLowerCase(), decimals: 18, disposition: "admitted",
+    eventSet: "transfer", invariant: "transfer-plus-vault-yield",
+    conservationOnlyEvents: [
+      { signature: "YieldDistribution(address,uint256,uint256)", topicHash: YIELD_TOPIC, direction: "mint",
+        role: "sum", amountEncoding: "data-minus-data-uint256", dataSlot: 1, secondDataSlot: 2,
+        topicArity: 1, emitter: VAULT },
+      { signature: "TotalSupplyUpdatedHighres(uint256,uint256,uint256)", topicHash: HIGHRES_TOPIC, role: "guard", topicArity: 1 },
+      { signature: "TotalSupplyUpdated(uint256,uint256,uint256)", topicHash: LEGACY_TOPIC, role: "guard", topicArity: 1 },
+      { signature: "Upgraded(address)", topicHash: UPGRADED_TOPIC, role: "guard", topicArity: 2 },
+      { signature: "Upgraded(address)", topicHash: UPGRADED_TOPIC, role: "guard", topicArity:2, emitter: VAULT },
+    ],
+    invariantParams: { boundaryViews: [
+      { name: "vaultAddress", address: ousdConfig.contractAddress, call: { kind: "eth_call", selector: "0x430bf08a" }, expect: VAULT },
+      { name: "oToken", address: VAULT, call: { kind: "eth_call", selector: "0x1a32aad6" }, expect: ousdConfig.contractAddress },
+    ] } };
+  const usdoLaw: MintBurnConservationRuntimeEntry = { chainId: "ethereum", stablecoinId: "usdo-openeden",
+    address: usdoConfig.contractAddress.toLowerCase(), decimals: 18, disposition: "admitted",
+    eventSet: "transfer", invariant: "usdo-bonus-multiplier-shares",
+    conservationOnlyEvents: [
+      { signature: "BonusMultiplier(uint256)", topicHash: BONUS_TOPIC, role: "guard", topicArity: 2 },
+      { signature: "Upgraded(address)", topicHash: UPGRADED_TOPIC, role: "guard", topicArity: 2 },
+    ],
+    invariantParams: { supplySelector: "0x3a98ef39", boundaryViews: [
+      { name: "bonusMultiplier", address: usdoConfig.contractAddress, call: { kind: "eth_call", selector: "0xa8b973a1" } },
+      { name: "totalSupply", address: usdoConfig.contractAddress, call: { kind: "eth_call", selector: "0x18160ddd" } },
+      { name: "implementation", address: usdoConfig.contractAddress,
+        call: { kind: "eth_getStorageAt", slot: "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc" },
+        expect: `0x${USDO_IMPL.toString(16)}` },
+    ] } };
+
+  it("admits config-events laws only for custom-events adapters with summed mint and burn defs", () => {
+    expect(getMintBurnConservationEligibility(usdtConfig)).toEqual({ supported: true });
+    expect(resolveMintBurnConservationEligibility(usdtLaw, usdtConfig)).toEqual({ supported: true });
+    expect(resolveMintBurnConservationEligibility(usdtLaw, { ...usdtConfig, adapterKind: "mixed" }).supported).toBe(false);
+    expect(resolveMintBurnConservationEligibility({ ...usdtLaw, eventSet: "transfer" }, usdtConfig).supported).toBe(false);
+    // A summed burn may come from the sidecar def; dropping it leaves the law without burn coverage.
+    expect(resolveMintBurnConservationEligibility(usdtLaw, { ...usdtConfig, events: [usdtConfig.events[0]!] }).supported).toBe(true);
+    expect(resolveMintBurnConservationEligibility({ ...usdtLaw, conservationOnlyEvents: [] },
+      { ...usdtConfig, events: [usdtConfig.events[0]!] }).supported).toBe(false);
+    expect(resolveMintBurnConservationEligibility(ousdLaw, ousdConfig)).toEqual({ supported: true });
+    expect(resolveMintBurnConservationEligibility(usdoLaw, usdoConfig)).toEqual({ supported: true });
+    expect(resolveMintBurnConservationEligibility(ousdLaw, { ...ousdConfig, adapterKind: "custom-events" }).supported).toBe(false);
+  });
+
+  it("sums USDT config events plus DestroyedBlackFunds exactly and skips zero amounts", () => {
+    const issue = customLog(usdtConfig.events[0]!.topicHash, [], [5n], { index: 0 });
+    const redeem = customLog(usdtConfig.events[1]!.topicHash, [], [2n], { index: 1 });
+    const destroyed = customLog(DBF_TOPIC, [], [0xdac17f958n, 3n], { index: 2 });
+    const zeroDestroyed = customLog(DBF_TOPIC, [], [0xdac17f958n, 0n], { index: 3 });
+    const boundary: ConservationBoundaryEvidence = { ...ready(0n), deprecated: { from: false, to: false } };
+    const result = audit(usdtConfig, usdtLaw, [
+      { eventDef: usdtConfig.events[0]!, logs: [issue] }, { eventDef: usdtConfig.events[1]!, logs: [redeem] },
+      { eventDef: usdtLaw.conservationOnlyEvents![0]!, logs: [destroyed, zeroDestroyed] },
+    ], boundary);
+    expect(result).toMatchObject({ status: "ok", mintRaw: "5", burnRaw: "5", supplyDeltaRaw: "0", residualRaw: "0", logCount: 3 });
+  });
+
+  it("detects a removed DestroyedBlackFunds event as a mismatch and fails closed on the deprecated guard", () => {
+    const issue = customLog(usdtConfig.events[0]!.topicHash, [], [5n]);
+    const destroyed = customLog(DBF_TOPIC, [], [0xdac17f958n, 3n], { index: 1 });
+    const def = usdtLaw.conservationOnlyEvents![0]!;
+    const boundary: ConservationBoundaryEvidence = { ...ready(2n), deprecated: { from: false, to: false } };
+    const batches = [{ eventDef: usdtConfig.events[0]!, logs: [issue] }, { eventDef: def, logs: [destroyed] }];
+    expect(audit(usdtConfig, usdtLaw, batches, boundary))
+      .toMatchObject({ status: "ok", mintRaw: "5", burnRaw: "3", residualRaw: "0" });
+    // Dropping the DestroyedBlackFunds log leaves its supply decrease unexplained.
+    expect(audit(usdtConfig, usdtLaw, batches.filter((batch) => batch.eventDef !== def), boundary))
+      .toMatchObject({ status: "mismatch", burnRaw: "0", residualRaw: "3" });
+    expect(audit(usdtConfig, usdtLaw, batches, { ...boundary, deprecated: { from: true, to: false } }))
+      .toMatchObject({ status: "unsupported", reason: "deprecated-upgrade-forwarding" });
+    expect(audit(usdtConfig, usdtLaw, batches, ready(2n))).toMatchObject({ reason: "invariant-view-missing" });
+  });
+
+  it("validates custom raw-log shape: arity, exact data words, topic0", () => {
+    const issue = customLog(usdtConfig.events[0]!.topicHash, [], [5n]);
+    const boundary: ConservationBoundaryEvidence = { ...ready(0n), deprecated: { from: false, to: false } };
+    const def = usdtLaw.conservationOnlyEvents![0]!;
+    const cases = [
+      customLog(DBF_TOPIC, [word(1n)], [0n, 3n]),
+      customLog(DBF_TOPIC, [], [3n]),
+      { ...customLog(DBF_TOPIC, [], [0n, 3n]), data: "0x123" },
+      customLog(UPGRADED_TOPIC, [], [0n, 3n]),
+    ];
+    for (const [index, log] of cases.entries()) {
+      expect(audit(usdtConfig, usdtLaw, [{ eventDef: usdtConfig.events[0]!, logs: [issue] },
+        { eventDef: def, logs: [{ ...log, transactionHash: word(BigInt(40 + index)) }] }], boundary).reason)
+        .toBe("invalid-raw-log");
+    }
+  });
+
+  it("adds the vault yield net of fee to the OUSD transfer law and detects omissions", () => {
+    const mint = { ...log("mint", 10n), address: ousdConfig.contractAddress };
+    const burn = { ...log("burn", 1n, 1), address: ousdConfig.contractAddress };
+    const yieldLog = customLog(YIELD_TOPIC, [], [7n, 6n, 2n], { address: VAULT, index: 5, transaction: 30n });
+    const highres = customLog(HIGHRES_TOPIC, [], [15n, 1n, 1n], { address: ousdConfig.contractAddress, index: 6, transaction: 30n });
+    const vaultWord = `0x${BigInt(VAULT).toString(16).padStart(64, "0")}`;
+    const views = { from: { vaultAddress: vaultWord, oToken: word(BigInt(ousdConfig.contractAddress)) },
+      to: { vaultAddress: vaultWord, oToken: word(BigInt(ousdConfig.contractAddress)) } };
+    const boundary: ConservationBoundaryEvidence = { ...ready(13n), views };
+    const batches = [
+      { eventDef: ousdConfig.events[0]!, logs: [mint] }, { eventDef: ousdConfig.events[1]!, logs: [burn] },
+      { eventDef: ousdLaw.conservationOnlyEvents![0]!, logs: [yieldLog] },
+      { eventDef: ousdLaw.conservationOnlyEvents![1]!, logs: [highres] },
+    ];
+    expect(audit(ousdConfig, ousdLaw, batches, boundary))
+      .toMatchObject({ status: "ok", mintRaw: "14", burnRaw: "1", supplyDeltaRaw: "13", residualRaw: "0", logCount: 3 });
+    expect(audit(ousdConfig, ousdLaw, batches.filter((batch) => batch.eventDef !== ousdLaw.conservationOnlyEvents![0]), boundary))
+      .toMatchObject({ status: "mismatch", residualRaw: "-4" });
+  });
+
+  it("fails the OUSD law closed on saturation, pairing, legacy, upgrade and identity guards", () => {
+    const mint = { ...log("mint", 10n), address: ousdConfig.contractAddress };
+    const yieldLog = customLog(YIELD_TOPIC, [], [7n, 6n, 2n], { address: VAULT, index: 5, transaction: 30n });
+    const highres = (newSupply: bigint) => customLog(HIGHRES_TOPIC, [], [newSupply, 1n, 1n], { address: ousdConfig.contractAddress, index: 6, transaction: 30n });
+    const vaultWord = `0x${BigInt(VAULT).toString(16).padStart(64, "0")}`;
+    const views = { from: { vaultAddress: vaultWord, oToken: word(BigInt(ousdConfig.contractAddress)) },
+      to: { vaultAddress: vaultWord, oToken: word(BigInt(ousdConfig.contractAddress)) } };
+    const boundary: ReadyBoundary = { ...ready(14n), views };
+    const batches = (highresLog: bigint, extra: Array<{ eventDef: unknown; logs: AlchemyLogEntry[] }> = []) => ([
+      { eventDef: ousdConfig.events[0]!, logs: [mint] },
+      { eventDef: ousdLaw.conservationOnlyEvents![0]!, logs: [yieldLog] },
+      { eventDef: ousdLaw.conservationOnlyEvents![1]!, logs: [highres(highresLog)] },
+      ...extra,
+    ] as never);
+    expect(audit(ousdConfig, ousdLaw, batches(15n), boundary)).toMatchObject({ status: "ok" });
+    expect(audit(ousdConfig, ousdLaw, batches(UINT128_MAX), boundary)).toMatchObject({ reason: "rebase-supply-saturation" });
+    expect(audit(ousdConfig, ousdLaw, ([
+      { eventDef: ousdConfig.events[0]!, logs: [mint] },
+      { eventDef: ousdLaw.conservationOnlyEvents![0]!, logs: [yieldLog] },
+    ] as never), boundary)).toMatchObject({ reason: "vault-yield-rebase-pairing-failed" });
+    expect(audit(ousdConfig, ousdLaw, batches(15n, [{ eventDef: ousdLaw.conservationOnlyEvents![3]!,
+      logs: [customLog(UPGRADED_TOPIC, [word(1n)], [], { address: ousdConfig.contractAddress, index: 7 })] }]), boundary))
+      .toMatchObject({ reason: "proxy-upgraded-in-range" });
+    expect(audit(ousdConfig, ousdLaw, batches(15n, [{ eventDef: ousdLaw.conservationOnlyEvents![2]!,
+      logs: [customLog(LEGACY_TOPIC, [], [1n, 1n, 1n], { address: ousdConfig.contractAddress, index: 7 })] }]), boundary))
+      .toMatchObject({ reason: "legacy-total-supply-updated-encountered" });
+    expect(audit(ousdConfig, ousdLaw, batches(15n), { ...boundary,
+      views: { from: { ...views.from, vaultAddress: word(1n) }, to: views.to } }))
+      .toMatchObject({ reason: "invariant-view-mismatch" });
+    expect(audit(ousdConfig, ousdLaw, batches(15n), { ...ready(14n) })).toMatchObject({ reason: "invariant-view-missing" });
+    // yield <= fee is malformed for the reviewed vault flow
+    expect(audit(ousdConfig, ousdLaw, ([
+      { eventDef: ousdConfig.events[0]!, logs: [mint] },
+      { eventDef: ousdLaw.conservationOnlyEvents![0]!, logs: [customLog(YIELD_TOPIC, [], [7n, 2n, 2n], { address: VAULT, index: 5, transaction: 30n })] },
+      { eventDef: ousdLaw.conservationOnlyEvents![1]!, logs: [highres(15n)] },
+    ] as never), boundary).reason).toBe("invalid-raw-log");
+  });
+
+  it("replays USDO share conversion through ordered BonusMultiplier events", () => {
+    const scale = 10n ** 18n;
+    const mint = { ...log("mint", 2n * scale), address: usdoConfig.contractAddress };
+    const bonus = customLog(BONUS_TOPIC, [word(2n * scale)], [], { address: usdoConfig.contractAddress, index: 1 });
+    const burn = { ...log("burn", scale, 2), address: usdoConfig.contractAddress };
+    const views = (closingMultiplier: bigint, fromSupply: bigint, toSupply: bigint) => ({
+      from: { bonusMultiplier: word(scale), totalSupply: word(fromSupply), implementation: word(USDO_IMPL) },
+      to: { bonusMultiplier: word(closingMultiplier), totalSupply: word(toSupply), implementation: word(USDO_IMPL) },
+    });
+    // Opening 1000e18 shares at M=1e18, closing 1001.5e18 at M=2e18: +2e18 minted, -0.5e18 burned.
+    const boundary: ReadyBoundary = { ...ready(1n), fromSupplyRaw: (1000n * scale).toString(),
+      toSupplyRaw: (1001n * scale + scale / 2n).toString(), views: views(2n * scale, 1000n * scale, 2003n * scale) };
+    const batches = [
+      { eventDef: usdoConfig.events[0]!, logs: [mint] }, { eventDef: usdoConfig.events[1]!, logs: [burn] },
+      { eventDef: usdoLaw.conservationOnlyEvents![0]!, logs: [bonus] },
+    ];
+    expect(audit(usdoConfig, usdoLaw, batches, boundary)).toMatchObject({ status: "ok",
+      mintRaw: (2n * scale).toString(), burnRaw: (scale / 2n).toString(),
+      supplyDeltaRaw: (scale + scale / 2n).toString(), residualRaw: "0", logCount: 2, units: "raw-shares" });
+    expect(audit(usdoConfig, usdoLaw, batches, { ...boundary,
+      views: views(3n * scale, 1000n * scale, 3003n * scale) }))
+      .toMatchObject({ reason: "multiplier-replay-mismatch" });
+    expect(audit(usdoConfig, usdoLaw, batches.filter((batch) => batch.eventDef !== usdoLaw.conservationOnlyEvents![0]), boundary))
+      .toMatchObject({ reason: "multiplier-replay-mismatch" });
+    expect(audit(usdoConfig, usdoLaw, batches, { ...boundary,
+      views: { from: { ...views(2n * scale, 1000n * scale, 2003n * scale).from, implementation: word(1n) },
+        to: views(2n * scale, 1000n * scale, 2003n * scale).to } }))
+      .toMatchObject({ reason: "invariant-view-mismatch" });
+    expect(audit(usdoConfig, usdoLaw, batches, { ...boundary, views: views(2n * scale, 1000n * scale, 2002n * scale) }))
+      .toMatchObject({ reason: "totalSupply-view-mismatch" });
+    expect(audit(usdoConfig, usdoLaw, batches.filter((batch) => batch.eventDef !== usdoConfig.events[1]!), boundary))
+      .toMatchObject({ status: "mismatch", residualRaw: (scale / 2n).toString() });
+  });
+
+  it("reads law-specific boundary views, supply selectors and the deprecated flag in the pre-pass", async () => {
+    vi.mocked(fetchEvmRpcBatchDetailed).mockImplementation(async (_chain, calls) => ({
+      results: calls.map((call) => {
+        if (call.method === "eth_getBlockByNumber") return generatedHeader(Number(call.params[0]));
+        if (call.method === "eth_getStorageAt") return word(USDO_IMPL);
+        const data = (call.params as Array<{ data?: string }>)[0]?.data ?? "";
+        if (data === "0x0e136b19") return word(0n);
+        if (data === "0x3a98ef39") return word(1000n);
+        if (data === "0xa8b973a1") return word(10n ** 18n);
+        if (data === "0x1a32aad6") return word(BigInt(ousdConfig.contractAddress));
+        return word(100n);
+      }),
+      errors: [],
+    }));
+    const boundaries = await fetchConservationBoundaries({ requests: [
+      { key: "usdt", config: usdtConfig, fromBlock: 101, toBlock: 102 },
+      { key: "ousd", config: ousdConfig, fromBlock: 101, toBlock: 102 },
+      { key: "usdo", config: usdoConfig, fromBlock: 101, toBlock: 102 },
+    ], rpcUrlByChain: new Map([["ethereum", "https://rpc.example"]]), budget: { count: 0, limit: 100 }, checkedAt: 2000 });
+    const pinnedCalls = vi.mocked(fetchEvmRpcBatchDetailed).mock.calls
+      .flatMap(([, calls]) => calls.filter((call) => call.method !== "eth_getBlockByNumber"));
+    expect(pinnedCalls.some((call) => call.method === "eth_call" &&
+      (call.params as Array<{ data?: string }>)[0]?.data === "0x0e136b19")).toBe(true);
+    expect(pinnedCalls.some((call) => call.method === "eth_getStorageAt")).toBe(true);
+    expect(pinnedCalls.filter((call) => (call.params as Array<{ data?: string }>)[0]?.data === "0x3a98ef39")).toHaveLength(2);
+    expect(boundaries.get("usdt")).toMatchObject({ status: "ready", deprecated: { from: false, to: false } });
+    expect(boundaries.get("ousd")).toMatchObject({ status: "ready" });
+    expect(boundaries.get("usdo")).toMatchObject({ status: "ready", fromSupplyRaw: "1000", toSupplyRaw: "1000" });
+  });
+
+  it("keeps the plain Transfer fingerprint byte-identical and extends it only for law entries", () => {
+    expect(JSON.parse(mintBurnConservationFingerprint(config))).toHaveLength(9);
+    const usdt = JSON.parse(mintBurnConservationFingerprint(usdtConfig));
+    expect(usdt).toHaveLength(10);
+    expect(usdt[9]).toEqual([["eventSet", "config-events"], ["requiresNotDeprecated", true],
+      ["conservationOnlyEvents", [["DestroyedBlackFunds(address,uint256)", DBF_TOPIC, "sum", "burn",
+        "nth-data-uint256", 1, null, 1, null, null, null]]]]);
+    expect(JSON.parse(mintBurnConservationFingerprint(ousdConfig))[9].some((part: unknown[]) => part[0] === "invariant")).toBe(true);
+    expect(JSON.parse(mintBurnConservationFingerprint(usdoConfig))[9].some((part: unknown[]) => part[0] === "invariantParams")).toBe(true);
+  });
+
+  it("enforces sidecar structural rules for the law fields", () => {
+    const base: ReviewedConservationEntry = { chainId: "ethereum", stablecoinId: "test-law",
+      address: usdtConfig.contractAddress.toLowerCase(), decimals: 6, disposition: "admitted",
+      unpairedPaths: [], totalSupplyView: { isStoredSum: true },
+      identity: { sourceVerified: true, onChain: { decimals: 6 },
+        externalMatches: [{ source: "coingecko", value: usdtConfig.contractAddress }] },
+      windows: [{ fromBlock: 1, fromBlockHash: word(1n), fromTimestamp: 10, toBlock: 2, toBlockHash: word(2n),
+        toTimestamp: 20, mintRaw: "0", burnRaw: "0", supplyDeltaRaw: "0", residualRaw: "0", logCount: 0, journalSha256: "x" }] };
+    expect(validateReviewedConservationEntry(base)).toEqual([]);
+    expect(validateReviewedConservationEntry({ ...base, eventSet: "config-events", zeroRecipientTransferReverts: false })).toEqual([]);
+    expect(validateReviewedConservationEntry({ ...base, zeroRecipientTransferReverts: false })).toHaveLength(1);
+    expect(validateReviewedConservationEntry({ ...base, invariant: "made-up-invariant" })[0]).toContain("invariant must be");
+    const bonusGuard = [{ signature: "BonusMultiplier(uint256)", topicHash: BONUS_TOPIC, role: "guard" as const, topicArity: 2 }];
+    expect(validateReviewedConservationEntry({ ...base, invariant: "usdo-bonus-multiplier-shares",
+      conservationOnlyEvents: bonusGuard, totalSupplyView: { isStoredSum: false } })).toEqual([]);
+    expect(validateReviewedConservationEntry({ ...base, invariant: "usdo-bonus-multiplier-shares" })[0]).toContain("BonusMultiplier");
+    expect(validateReviewedConservationEntry({ ...base, invariant: "transfer-plus-vault-yield" })[0]).toContain("emitter");
+    const problems = validateReviewedConservationEntry({ ...base, conservationOnlyEvents: [
+      { signature: "A(address,uint256)", topicHash: "0x123", direction: "burn", role: "sum", amountEncoding: "nth-data-uint256", topicArity: 1 },
+      { signature: "B()", topicHash: DBF_TOPIC, direction: "mint", role: "sum", amountEncoding: "first-data-uint256", topicArity: 1 },
+      { signature: "C()", topicHash: LEGACY_TOPIC, role: "guard", topicArity: 5 },
+    ] });
+    expect(problems.some((problem) => problem.includes("topicHash"))).toBe(true);
+    expect(problems.some((problem) => problem.includes("dataSlot"))).toBe(true);
+    expect(problems.some((problem) => problem.includes("topicArity"))).toBe(true);
+    expect(validateReviewedConservationEntry({ ...base, conservationOnlyEvents: [
+      { signature: "A()", topicHash: DBF_TOPIC, role: "guard", topicArity: 1 },
+      { signature: "A2()", topicHash: DBF_TOPIC, role: "guard", topicArity: 1 },
+    ] })[0]).toContain("duplicates");
+    expect(validateReviewedConservationEntry({ ...base, invariantParams: { supplySelector: "0x123" } })[0]).toContain("supplySelector");
+    expect(validateReviewedConservationEntry({ ...base, invariantParams: { boundaryViews: [
+      { name: "x", address: "0xbad", call: { kind: "eth_call", selector: "0x430bf08a" } },
+    ] } })[0]).toContain("address");
+  });
 });

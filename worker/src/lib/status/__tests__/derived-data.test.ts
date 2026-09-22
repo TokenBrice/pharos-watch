@@ -163,7 +163,7 @@ describe("getMintBurnReconciliation verified conservation", () => {
   });
 
   it("rejects positive evidence for a currently unsupported rebasing config", async () => {
-    expect((await reconcile({ id: "ousd-origin-protocol" })).rows[0].status).toBe("insufficient-source");
+    expect((await reconcile({ id: "m-m0" })).rows[0].status).toBe("insufficient-source");
   });
 
   it("does not cancel opposite residuals on separate contracts or intervals", async () => {
