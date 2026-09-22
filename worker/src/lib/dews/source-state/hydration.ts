@@ -10,6 +10,7 @@
 
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { resolveCronTimeoutBudget } from "../../cron-timeouts";
 import { decodeJsonString } from "../../cache-json";
 import { BLACKLIST_PUBLIC_EVENT_SQL, type BlacklistPersistedRow } from "../../blacklist/shared";
 import { toErrorMessage } from "@shared/lib/error-utils";
@@ -47,13 +48,9 @@ import { classifyFreshness } from "../../status/freshness-oracle";
 export const DEWS_STALE_DEX_LIQUIDITY_SEC = 2 * 3600;
 export const DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC = 2 * 3600;
 const DEWS_STALE_MINT_BURN_SEC = DAY_SECONDS;
-/**
- * B32: the rankings cache has one producer and two consumers. The API fails
- * closed at the sync interval; DEWS read whatever was in the row, so a paused
- * or failing yield lane fed stale source-risk evidence into live scores with
- * nothing on the run to say so.
- */
-const DEWS_STALE_YIELD_RANKINGS_SEC = CRON_INTERVALS["sync-yield-data"];
+// DEWS can overlap the next hourly producer while it is still publishing.
+const DEWS_STALE_YIELD_RANKINGS_SEC = CRON_INTERVALS["sync-yield-data"]
+  + resolveCronTimeoutBudget("sync-yield-data").configuredTimeoutMs / 1000;
 const DEWS_DEX_PRICE_TRUST_POLICY = getDexTrustPolicy("depeg");
 
 type PreviousStressSignalRow = PreviousStressSignalCurrentRow;

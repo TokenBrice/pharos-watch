@@ -897,11 +897,14 @@ describe("computeAndStoreDEWS", () => {
     );
   });
 
-  it("reports a stale rankings cache as a source failure", async () => {
+  it.each([
+    [54, false],
+    [601, true],
+  ])("allows producer runtime before declaring rankings stale (%s seconds past cadence)", async (overdueSec, stale) => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = makeDb([], {
       yieldRankingsPayload: { rankings: [{ id: "usdt-tether", sourceRisk: { rewardShare: 0.9 } }] },
-      yieldRankingsUpdatedAt: nowSec - CRON_INTERVALS["sync-yield-data"] - 60,
+      yieldRankingsUpdatedAt: nowSec - CRON_INTERVALS["sync-yield-data"] - overdueSec,
     });
 
     const result = await computeAndStoreDEWS(db);
@@ -909,7 +912,11 @@ describe("computeAndStoreDEWS", () => {
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       sourceFailures: Array<{ source: string; reason: string }>;
     };
-    expect(metadata.sourceFailures.map((failure) => failure.source)).toContain("yield-rankings-freshness");
+    expect(metadata.sourceFailures.some((failure) => failure.source === "yield-rankings-freshness")).toBe(stale);
+    expect(computeDEWS).toHaveBeenCalledWith(expect.objectContaining({
+      stablecoinId: "usdt-tether",
+      yieldSourceRisk: expect.objectContaining({ rewardShare: 0.9 }),
+    }));
   });
 
   it("degrades on a missing mandatory source table", async () => {

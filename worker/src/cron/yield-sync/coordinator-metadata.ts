@@ -109,6 +109,8 @@ export function buildYieldDegradationReasons(params: {
   previousTvlRowsTruncated: boolean;
 }): string[] {
   const degradationReasons: string[] = [];
+  // All-rejected arbitration retains a diagnostic winner, never a public row.
+  const selectedSources = params.selectedSources.filter((source) => !source.rejected);
 
   if (params.safetySnapshotDegraded) {
     degradationReasons.push("safety-snapshot-coverage");
@@ -123,7 +125,7 @@ export function buildYieldDegradationReasons(params: {
     );
   }
   const benchmarkByKey = new Map(
-    params.selectedSources
+    selectedSources
       .filter((source) => source.benchmarkKey !== "USD")
       .map((source) => [source.benchmarkKey, source] as const),
   );
@@ -132,7 +134,7 @@ export function buildYieldDegradationReasons(params: {
     const reason = source.benchmarkFallbackMode ?? source.benchmarkFreshness;
     degradationReasons.push(`risk-free-rate:${key}:${reason}`);
   }
-  const staleSelectedSource = params.selectedSources.find((source) => source.sourceFreshness === "stale");
+  const staleSelectedSource = selectedSources.find((source) => source.sourceFreshness === "stale");
   if (staleSelectedSource) {
     degradationReasons.push(`yield-source:expired-selected:${staleSelectedSource.sourceKey}`);
   }
