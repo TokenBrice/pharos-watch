@@ -68,10 +68,19 @@ describe("remote-d1 helpers", () => {
     expect(execFileSyncMock).not.toHaveBeenCalled();
   });
 
-  it("decodes Wrangler results and propagates malformed JSON", () => {
+  it("decodes every Wrangler query result envelope and propagates malformed JSON", () => {
     const client = createD1Client("stablecoin-db", { target: "local" });
-    execFileSyncMock.mockReturnValueOnce(JSON.stringify([{ success: true, results: [{ id: 1 }, { id: 2 }] }]));
-    expect(client.query("SELECT id FROM assets")).toEqual([{ id: 1 }, { id: 2 }]);
+    const envelopes = [
+      [[{ results: [{ id: 1 }] }, { results: [{ id: 2 }] }], [{ id: 1 }, { id: 2 }]],
+      [{ results: [{ id: 3 }] }, [{ id: 3 }]],
+      [{ result: [{ results: [{ id: 4 }] }] }, [{ id: 4 }]],
+      [{ result: { results: [{ id: 5 }] } }, [{ id: 5 }]],
+    ] as const;
+
+    for (const [envelope, expected] of envelopes) {
+      execFileSyncMock.mockReturnValueOnce(JSON.stringify(envelope));
+      expect(client.query("SELECT id FROM assets")).toEqual(expected);
+    }
     expect(execFileSyncMock.mock.calls[0]![1]).toContain("--local");
     expect(execFileSyncMock.mock.calls[0]![1]).not.toContain("--remote");
     execFileSyncMock.mockReturnValueOnce("[]");

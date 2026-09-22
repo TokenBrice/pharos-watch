@@ -19,7 +19,10 @@ import {
   writeJsonOutput,
 } from "../lib/cli-args.mjs";
 import {
+  curationDispositionForReason,
   descriptorForReason,
+  priorityBand,
+  resolutionModeAction,
   V9_MISSING_DATA_WORK_TYPES,
   workTypeForDescriptor,
   type ResolutionMode,
@@ -52,7 +55,6 @@ export type { WorkTypeDefinition };
 
 const WORK_TYPES = V9_MISSING_DATA_WORK_TYPES;
 
-
 export function workTypeDefinition(workType: V9MissingDataWorkType): Readonly<WorkTypeDefinition> {
   const {
     title,
@@ -77,61 +79,16 @@ export function classifyV9MissingDataWorkType(
 }
 
 export function classifyV9ScoreProjectionWorkType(reasonCode: string): V9MissingDataWorkType | null {
-  try {
-    return workTypeForDescriptor(descriptorForReason(reasonCode));
-  } catch {
-    return null;
-  }
+  const disposition = curationDispositionForReason(reasonCode);
+  if (disposition?.disposition === "non-curation") return null;
+  return workTypeForDescriptor(descriptorForReason(reasonCode));
 }
-
-const V9_CURATION_WORKLIST_REASON_CODES: ReadonlySet<string> = new Set([
-  "unresolved-mint-authority",
-  "missing-mint-authority",
-  "unknown-upgrade-authority",
-  "missing-upgradeability-review",
-  "missing-upgrade-control",
-  "unresolved-control-identity",
-  "unknown-control-cap-authority",
-  "unknown-control-mint-ability",
-  "mint-control-question",
-  "missing-oracle-profile",
-  "unreviewed-oracle-profile",
-  "incomplete-oracle-liquidation-branch",
-  "unresolved-oracle-branch-applicability",
-  "missing-required-oracle-branches",
-  "missing-bridge-routes",
-  "missing-bridge-route-rows",
-  "selected-bridge-route-missing",
-  "selected-bridge-route-unresolved",
-  "runtime-bridge-materiality-unavailable",
-  "material-bridge-supply-unmatched",
-  "missing-reserve-composition",
-  "stale-audited-reserve-composition",
-  "unreviewed-reserve-envelope",
-  "material-unknown-reserve-exposure",
-  "material-reserve-slice-unstructured",
-  "partial-reserve-review",
-  "missing-latest-assurance-report",
-  "missing-custody-profile",
-  "missing-same-notional-route",
-  "unsupported-same-notional-route",
-  "missing-runtime-route-evidence",
-  "incomplete-dex-route-coverage",
-  "unresolved-exit-output",
-  "incomparable-route-requests",
-  "missing-applicable-peg",
-  "missing-peg-input",
-  "unreviewed-dependency-relationships",
-  "material-dependency-unavailable",
-  "missing-archetype",
-]);
 
 /** Sole routing source for the legacy markdown view of the typed registry. */
 export function classifyV9CurationWorklistStream(reasonCode: string): string | null {
-  if (!V9_CURATION_WORKLIST_REASON_CODES.has(reasonCode)) return null;
-  const workType = classifyV9ScoreProjectionWorkType(reasonCode);
-  if (workType === null) throw new Error(`Curation worklist reason ${reasonCode} has no missing-data work type`);
-  return WORK_TYPES[workType].stream;
+  const disposition = curationDispositionForReason(reasonCode);
+  if (!disposition) descriptorForReason(reasonCode);
+  return disposition?.disposition === "routed" ? disposition.stream : null;
 }
 
 /**
@@ -177,14 +134,15 @@ function evidenceAction(entry: V9EvidenceGapQueueEntryV2, mode: V9MissingDataRes
   if (entry.responsibility === "producer-failed") return "repair-or-refresh-producer";
   if (entry.responsibility === "method-unsupported") return "define-reviewed-methodology-capability";
   if (entry.responsibility === "measured-adverse") return "adjudicate-measured-adverse-evidence";
-  if (mode === "producer-runtime") return "implement-or-refresh-producer-capability";
-  if (mode === "mixed-curation-and-runtime") return "reconcile-metadata-then-refresh-producer";
-  if (mode === "methodology-capability") return "define-reviewed-methodology-capability";
-  if (mode === "issuer-or-onchain-evidence") return "obtain-measured-source-evidence-then-curate";
-  if (entry.observationState === "missing") return "collect-and-curate-evidence";
-  if (entry.observationState === "stale") return "refresh-and-curate-evidence";
-  if (entry.observationState === "unsupported") return "implement-supported-evidence-path";
-  return "adjudicate-and-curate-bounded-unknown";
+  const agentCurationAction =
+    entry.observationState === "missing"
+      ? "collect-and-curate-evidence"
+      : entry.observationState === "stale"
+        ? "refresh-and-curate-evidence"
+        : entry.observationState === "unsupported"
+          ? "implement-supported-evidence-path"
+          : "adjudicate-and-curate-bounded-unknown";
+  return resolutionModeAction(mode, agentCurationAction);
 }
 
 export function scoreProjectionResolutionMode(
@@ -200,13 +158,8 @@ export function scoreProjectionResolutionMode(
 }
 
 function scoreProjectionAction(mode: V9MissingDataResolutionMode): string {
-  if (mode === "producer-runtime") return "implement-or-refresh-producer-capability";
-  if (mode === "mixed-curation-and-runtime") return "reconcile-metadata-then-refresh-producer";
-  if (mode === "methodology-capability") return "define-reviewed-methodology-capability";
-  if (mode === "issuer-or-onchain-evidence") return "obtain-measured-source-evidence-then-curate";
-  return "adjudicate-and-curate-score-projection";
+  return resolutionModeAction(mode, "adjudicate-and-curate-score-projection");
 }
-
 
 function collectEvidenceRefIds(value: unknown, output = new Set<string>()): Set<string> {
   if (Array.isArray(value)) {
@@ -286,12 +239,6 @@ function scoreProjectionTaskDigest(assetId: string, reason: ScoreProjectionReaso
     .digest("hex");
 }
 
-function priorityBand(critical: boolean, supplyUsd: number | null): string {
-  if (critical || (supplyUsd ?? 0) >= 1_000_000_000) return "P0";
-  if ((supplyUsd ?? 0) >= 100_000_000) return "P1";
-  if ((supplyUsd ?? 0) >= 10_000_000) return "P2";
-  return "P3";
-}
 
 export function likelyTouchpoints(
   workType: V9MissingDataWorkType,

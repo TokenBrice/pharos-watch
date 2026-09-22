@@ -20,6 +20,22 @@ import {
   type DocReference,
 } from "../lib/doc-ownership-registry.mts";
 import { CliUsageError, parseStrictCliArgs, runDirectCli } from "../lib/cli-args.mjs";
+import {
+  GIT_GLOBAL_FLAG_OPTIONS,
+  GIT_GLOBAL_VALUE_OPTION_PREFIXES,
+  GIT_GLOBAL_VALUE_OPTIONS,
+  PACKAGE_MANAGER_NAMES,
+  WRANGLER_GLOBAL_VALUE_OPTIONS,
+  analyzeShellCommand,
+  commandIsRawPatchPayload,
+  isVariableExpandedExecutable,
+  packageManagerScriptIndex,
+  shellCommandName,
+  shellValue,
+  skipLeadingOptions,
+  type ShellCommandAnalysis,
+  type ShellInvocation,
+} from "../lib/shell-command-analysis.ts";
 
 type UnknownRecord = Record<string, unknown>;
 type GitExec = (
@@ -86,11 +102,6 @@ type HookRuleId =
   | "protected-write"
   | "shell-indirection";
 
-interface ShellInvocation {
-  name: string;
-  tokens: string[];
-  packageSpec?: string;
-}
 
 interface ChangedFileOptions {
   baseRef?: string;
@@ -457,57 +468,9 @@ function extractPatchPaths(patchText: unknown): string[] {
   return [...String(patchText ?? "").matchAll(/^\*\*\* (?:(?:Add|Update|Delete) File|Move to): (.+)$/gm)].map((match) => match[1]);
 }
 
-const SHELL_CONTROL_TOKENS = new Set([";", "&&", "||", "|", "&", "\n", "(", ")"]);
-const SHELL_PREFIX_TOKENS = new Set(["if", "then", "elif", "else", "do", "while", "until", "!", "{", "}"]);
-const SHELL_LITERAL_PREFIX = "\0";
-const shellValue = (value: string) => value.startsWith(SHELL_LITERAL_PREFIX) ? value.slice(1) : value;
-const ENV_VALUE_OPTIONS = new Set(["-C", "--chdir", "-S", "--split-string", "-u", "--unset"]);
-const NPX_VALUE_OPTIONS = new Set(["-c", "--call", "-p", "--package", "--cache", "--shell", "--userconfig"]);
-const PACKAGE_MANAGER_NAMES = new Set(["bun", "npm", "pnpm", "yarn"]);
-const PACKAGE_MANAGER_EXEC_COMMANDS = new Set(["dlx", "exec", "x"]);
-const PACKAGE_MANAGER_GLOBAL_VALUE_OPTIONS = new Set(["-C", "-w", "--prefix", "--workspace"]);
-const PACKAGE_MANAGER_GLOBAL_FLAG_OPTIONS = new Set(["-s", "--silent"]);
-const PACKAGE_MANAGER_WRAPPER_VALUE_OPTIONS = new Set([
-  ...NPX_VALUE_OPTIONS,
-  ...PACKAGE_MANAGER_GLOBAL_VALUE_OPTIONS,
-]);
-const NICE_VALUE_OPTIONS = new Set(["-n", "--adjustment"]);
-const TIME_VALUE_OPTIONS = new Set(["-f", "--format", "-o", "--output"]);
-const SHELL_EVAL_COMMANDS = new Set(["bash", "dash", "fish", "sh", "zsh"]);
-const GIT_GLOBAL_VALUE_OPTIONS = new Set([
-  "-C",
-  "-c",
-  "--config-env",
-  "--exec-path",
-  "--git-dir",
-  "--namespace",
-  "--super-prefix",
-  "--work-tree",
-]);
-const GIT_GLOBAL_VALUE_OPTION_PREFIXES = [...GIT_GLOBAL_VALUE_OPTIONS].map((option) => `${option}=`);
-const GIT_GLOBAL_FLAG_OPTIONS = new Set([
-  "--bare",
-  "--help",
-  "--html-path",
-  "--info-path",
-  "--literal-pathspecs",
-  "--man-path",
-  "--no-optional-locks",
-  "--no-pager",
-  "--no-replace-objects",
-  "--paginate",
-  "--version",
-]);
-const WRANGLER_GLOBAL_VALUE_OPTIONS = new Set(["-c", "--config", "-e", "--env", "--cwd"]);
 const OPAQUE_SHELL_VIOLATION_REASON = "opaque shell construct around a guarded command; run it directly";
 const UNRESOLVED_SHELL_INDIRECTION_VIOLATION_REASON =
   "unresolved shell indirection around a guarded command";
-const OPAQUE_SHELL_CONSTRUCT_RE = [
-  /\$\(/,
-  /`/,
-  /\beval\b/i,
-  /\b(?:sh|bash|zsh)\s+(?:-[^\s;&|]*c[^\s;&|]*|--command)(?=\s|$)/i,
-];
 const GUARDED_SHELL_KEYWORD_RE = [
   /\breset\s+--hard\b/i,
   /\bclean\s+-[^\s;&|]*f[^\s;&|]*\b/i,
@@ -519,620 +482,9 @@ const GUARDED_SHELL_KEYWORD_RE = [
 const D1_EXECUTE_KEYWORD_RE = /\b(?:wrangler\s+)?d1\s+execute\b/i;
 const REMOTE_FLAG_RE = /--remote(?:[=;\s&|]|$)/i;
 
-function commandIsRawPatchPayload(command: unknown): boolean {
-  return String(command ?? "")
-    .trimStart()
-    .startsWith("*** Begin Patch");
-}
-
 function commandLooksLikePatchPayload(command: unknown): boolean {
   const text = String(command ?? "").trimStart();
   return commandIsRawPatchPayload(text) || /^apply_patch(?:\s|$)/.test(text);
-}
-
-interface HereDocScan {
-  bodies: string[];
-  executableText: string;
-}
-
-function scanHereDocs(command: unknown): HereDocScan {
-  const lines = String(command ?? "").split(/\r?\n/g);
-  const bodies: string[] = [];
-  const kept: string[] = [];
-  const pending: Array<{ body: string[] | null; marker: string }> = [];
-
-  for (const line of lines) {
-    const active = pending[0];
-    if (active) {
-      if (line.trim() === active.marker) {
-        if (active.body) bodies.push(active.body.join("\n"));
-        pending.shift();
-      } else if (active.body) {
-        active.body.push(line);
-      }
-      continue;
-    }
-
-    kept.push(line);
-    for (const match of line.matchAll(/<<-?\s*(?:(['"])([A-Za-z0-9_.-]+)\1|([A-Za-z0-9_.-]+))/g)) {
-      pending.push({
-        body: match[1] ? null : [],
-        marker: match[2] ?? match[3],
-      });
-    }
-  }
-  const active = pending[0];
-  if (active?.body) bodies.push(active.body.join("\n"));
-
-  return { bodies, executableText: kept.join("\n") };
-}
-
-function stripHereDocBodies(command: unknown): string {
-  return scanHereDocs(command).executableText;
-}
-
-function getExecutableShellText(command: unknown): string {
-  if (commandIsRawPatchPayload(command)) return "";
-  return stripHereDocBodies(command);
-}
-
-function commandHasBackgroundSeparator(command: unknown): boolean {
-  const tokens = tokenizeShell(getExecutableShellText(command));
-  return tokens.some(
-    (token, index) =>
-      token === "&" && tokens[index - 1] !== ">" && tokens[index - 1] !== ">>" && tokens[index + 1] !== ">",
-  );
-}
-
-function textHasGuardedKeyword(text: string): boolean {
-  const hasRemoteD1Execute = D1_EXECUTE_KEYWORD_RE.test(text) && REMOTE_FLAG_RE.test(text);
-  return (
-    GUARDED_SHELL_KEYWORD_RE.some((keyword) => keyword.test(text)) ||
-    hasRemoteD1Execute ||
-    Boolean(findProtectedLiteralPath(text))
-  );
-}
-
-function commandHasOpaqueGuardedConstruct(command: unknown): boolean {
-  const text = getExecutableShellText(command);
-  const hasOpaqueHereDocBody = scanHereDocs(command).bodies.some(
-    (body) => (body.includes("$(") || body.includes("`")) && textHasGuardedKeyword(body),
-  );
-  const hasOpaqueConstruct =
-    OPAQUE_SHELL_CONSTRUCT_RE.some((construct) => construct.test(text)) ||
-    commandHasPipedShell(command) ||
-    commandHasXargsShell(command) ||
-    commandHasBackgroundSeparator(command);
-
-  return (
-    hasOpaqueHereDocBody ||
-    (hasOpaqueConstruct && getShellCommandInvocations(command).some(isGuardedShellInvocation))
-  );
-}
-
-function tokenizeShell(command: unknown): string[] {
-  const tokens: string[] = [];
-  let token = "";
-  let quote = "";
-  let escaping = false;
-  let literalToken = false;
-  const text = String(command ?? "");
-
-  const pushToken = () => {
-    if (token) {
-      tokens.push(literalToken && (SHELL_PREFIX_TOKENS.has(token) || SHELL_CONTROL_TOKENS.has(token) || token.startsWith(">"))
-        ? SHELL_LITERAL_PREFIX + token : token);
-      token = "";
-      literalToken = false;
-    }
-  };
-
-  for (let i = 0; i < text.length; i += 1) {
-    const char = text[i];
-
-    if (escaping) {
-      token += char;
-      escaping = false;
-      continue;
-    }
-
-    if (char === "\\" && quote !== "'") {
-      literalToken = true;
-      escaping = true;
-      continue;
-    }
-
-    if (quote) {
-      if (char === quote) {
-        quote = "";
-      } else {
-        token += char;
-      }
-      continue;
-    }
-
-    if (char === "'" || char === '"') {
-      quote = char;
-      literalToken = true;
-      continue;
-    }
-
-    if (char === "\n") {
-      pushToken();
-      tokens.push("\n");
-      continue;
-    }
-
-    if (/\s/.test(char)) {
-      pushToken();
-      continue;
-    }
-
-    if ((char === "&" && text[i + 1] === "&") || (char === "|" && text[i + 1] === "|")) {
-      pushToken();
-      tokens.push(`${char}${char}`);
-      i += 1;
-      continue;
-    }
-
-    if (char === "#" && !token) {
-      while (i < text.length && text[i] !== "\n") i += 1;
-      pushToken();
-      tokens.push("\n");
-      continue;
-    }
-
-    if (char === "&" || char === "|" || char === ";" || char === "(" || char === ")") {
-      pushToken();
-      tokens.push(char);
-      continue;
-    }
-
-    if (char === ">") {
-      pushToken();
-      if (text[i + 1] === "|") {
-        tokens.push(">|");
-        i += 1;
-      } else if (text[i + 1] === ">") {
-        tokens.push(">>");
-        i += 1;
-      } else {
-        tokens.push(">");
-      }
-      continue;
-    }
-
-    token += char;
-  }
-
-  pushToken();
-  return tokens;
-}
-
-function commandHasPipedShell(command: unknown): boolean {
-  const tokens = tokenizeShell(getExecutableShellText(command));
-  return tokens.some(
-    (token, index) => token === "|" && ["sh", "bash", "zsh"].includes(shellCommandName(tokens[index + 1])),
-  );
-}
-
-function commandHasXargsShell(command: unknown): boolean {
-  const tokens = tokenizeShell(getExecutableShellText(command));
-  return tokens.some((token, index) => {
-    if (shellCommandName(token) !== "xargs") return false;
-    for (let nextIndex = index + 1; nextIndex < tokens.length; nextIndex += 1) {
-      const nextToken = tokens[nextIndex];
-      if (isShellControlToken(nextToken)) return false;
-      if (["sh", "bash", "zsh"].includes(shellCommandName(nextToken))) return true;
-    }
-    return false;
-  });
-}
-
-
-function shellCommandName(token: unknown): string {
-  return (
-    String(token ?? "")
-      .replace(/\\/g, "/")
-      .split("/")
-      .pop()
-      ?.replace(/\.(?:cmd|exe)$/i, "") ?? ""
-  );
-}
-
-function isShellControlToken(token: unknown): boolean {
-  return typeof token === "string" && SHELL_CONTROL_TOKENS.has(token);
-}
-
-function isEnvAssignment(token: unknown): boolean {
-  return /^[A-Za-z_][A-Za-z0-9_]*=/.test(String(token ?? ""));
-}
-
-function skipLeadingOptions(
-  tokens: readonly string[],
-  startIndex: number,
-  valueOptions: ReadonlySet<string> = new Set<string>(),
-): number {
-  let index = startIndex;
-  while (index < tokens.length && !isShellControlToken(tokens[index]) && tokens[index]?.startsWith("-")) {
-    const option = tokens[index].split("=")[0];
-    index += 1;
-    if (!tokens[index - 1].includes("=") && valueOptions.has(option)) {
-      index += 1;
-    }
-  }
-  return index;
-}
-
-function skipPackageManagerGlobalOptions(tokens: readonly string[], startIndex: number): number {
-  let index = startIndex;
-  while (index < tokens.length && !isShellControlToken(tokens[index])) {
-    const token = tokens[index];
-    if (!token?.startsWith("-")) break;
-    // eslint-disable-next-line security/detect-possible-timing-attacks -- compares a policy delimiter, never a secret
-    if (token === "--") return index + 1;
-
-    const option = token.split("=", 1)[0];
-    const isValueOption = PACKAGE_MANAGER_GLOBAL_VALUE_OPTIONS.has(option);
-    const isFlagOption = PACKAGE_MANAGER_GLOBAL_FLAG_OPTIONS.has(option);
-    if (!isValueOption && !isFlagOption) break;
-
-    index += 1;
-    if (!token.includes("=") && isValueOption) {
-      index += 1;
-    }
-  }
-  return index;
-}
-
-function packageManagerSubcommandIndex(tokens: readonly string[]): number {
-  return skipPackageManagerGlobalOptions(tokens, 1);
-}
-
-function packageManagerScriptIndex(tokens: readonly string[], name: string): number | null {
-  if (!PACKAGE_MANAGER_NAMES.has(name)) return null;
-
-  const commandIndex = packageManagerSubcommandIndex(tokens);
-  const command = tokens[commandIndex];
-  if (!command || isShellControlToken(command)) return null;
-
-  if (command === "run") {
-    return skipLeadingOptions(tokens, commandIndex + 1, PACKAGE_MANAGER_GLOBAL_VALUE_OPTIONS);
-  }
-
-  if (command === "workspace") {
-    let scriptIndex = skipLeadingOptions(tokens, commandIndex + 1, PACKAGE_MANAGER_GLOBAL_VALUE_OPTIONS);
-    if (scriptIndex >= tokens.length || isShellControlToken(tokens[scriptIndex])) return null;
-    scriptIndex += 1;
-    if (tokens[scriptIndex] === "run") {
-      scriptIndex = skipLeadingOptions(tokens, scriptIndex + 1, PACKAGE_MANAGER_GLOBAL_VALUE_OPTIONS);
-    }
-    return scriptIndex;
-  }
-
-  return commandIndex;
-}
-
-function packageManagerWrapperExecutableIndex(tokens: readonly string[]): number | null {
-  const name = shellCommandName(tokens[0]);
-  if (!PACKAGE_MANAGER_NAMES.has(name)) return null;
-
-  const commandIndex = packageManagerSubcommandIndex(tokens);
-  if (!PACKAGE_MANAGER_EXEC_COMMANDS.has(tokens[commandIndex] ?? "")) return null;
-
-  return skipLeadingOptions(tokens, commandIndex + 1, PACKAGE_MANAGER_WRAPPER_VALUE_OPTIONS);
-}
-
-function isVariableExpandedExecutable(token: unknown): boolean {
-  return /\$(?:\{[^}]*\}|[A-Za-z_][A-Za-z0-9_]*|[?@*])/.test(String(token ?? ""));
-}
-
-function resolveExecutableIndex(tokens: readonly string[], startIndex: number, depth = 0): number | null {
-  if (depth > 4 || startIndex >= tokens.length || isShellControlToken(tokens[startIndex])) {
-    return null;
-  }
-
-  const name = shellCommandName(tokens[startIndex]);
-  if (name === "env") {
-    let index = skipLeadingOptions(tokens, startIndex + 1, ENV_VALUE_OPTIONS);
-    while (index < tokens.length && isEnvAssignment(tokens[index])) {
-      index += 1;
-    }
-    return resolveExecutableIndex(tokens, index, depth + 1);
-  }
-
-  if (name === "npx" || name === "bunx") {
-    const index = skipLeadingOptions(tokens, startIndex + 1, NPX_VALUE_OPTIONS);
-    return index < tokens.length && !isShellControlToken(tokens[index]) ? index : startIndex;
-  }
-
-  if (PACKAGE_MANAGER_NAMES.has(name)) {
-    const relativeTokens = tokens.slice(startIndex);
-    const index = packageManagerWrapperExecutableIndex(relativeTokens);
-    if (index === null) return startIndex;
-    const resolvedIndex = startIndex + index;
-    return resolvedIndex < tokens.length && !isShellControlToken(tokens[resolvedIndex]) ? resolvedIndex : startIndex;
-  }
-
-  if (name === "sudo" || name === "command" || name === "exec") {
-    const index = skipLeadingOptions(tokens, startIndex + 1);
-    return resolveExecutableIndex(tokens, index, depth + 1);
-  }
-
-  if (name === "nice") {
-    const index = skipLeadingOptions(tokens, startIndex + 1, NICE_VALUE_OPTIONS);
-    return resolveExecutableIndex(tokens, index, depth + 1);
-  }
-
-  if (name === "nohup") {
-    const index = skipLeadingOptions(tokens, startIndex + 1);
-    return resolveExecutableIndex(tokens, index, depth + 1);
-  }
-
-  if (name === "time") {
-    const index = skipLeadingOptions(tokens, startIndex + 1, TIME_VALUE_OPTIONS);
-    return resolveExecutableIndex(tokens, index, depth + 1);
-  }
-
-  return startIndex;
-}
-
-function isPackageRunnerPrefix(tokens: readonly string[], startIndex: number, resolvedIndex: number): boolean {
-  for (let index = startIndex; index < resolvedIndex; index += 1) {
-    const name = shellCommandName(tokens[index]);
-    if (name === "npx" || name === "bunx") return true;
-    if (PACKAGE_MANAGER_EXEC_COMMANDS.has(tokens[index])) return true;
-  }
-  return false;
-}
-
-interface ShellEvalDetails {
-  command: string;
-}
-
-function getShellEvalDetails(tokens: readonly string[]): ShellEvalDetails | null {
-  if (!SHELL_EVAL_COMMANDS.has(shellCommandName(tokens[0]))) return null;
-
-  for (let index = 1; index < tokens.length; index += 1) {
-    const token = tokens[index];
-    if (token !== "-c" && token !== "--command" && !(/^-[A-Za-z]+$/.test(token) && token.includes("c"))) {
-      continue;
-    }
-
-    const commandIndex = index + 1;
-    const argument0Index = commandIndex + 1;
-    const command = tokens[commandIndex] ?? "";
-    const positionalArguments = tokens.slice(argument0Index + 1);
-    const joinedPositionalArguments = positionalArguments.join(" ");
-    return {
-      command: command
-        .replace(/"\$(?:@|\*)"|"\$\{[@*]\}"/g, joinedPositionalArguments)
-        .replace(/\$(?:@|\*)|\$\{[@*]\}/g, joinedPositionalArguments)
-        .replace(
-          /\$(\d)|\$\{(\d)\}/g,
-          (_match, shortIndex: string | undefined, bracedIndex: string | undefined) => {
-            const position = Number(shortIndex ?? bracedIndex) - 1;
-            return position >= 0 ? tokens[argument0Index + position + 1] ?? "" : "";
-          },
-        ),
-    };
-  }
-
-  return null;
-}
-
-function getShellEvalArgument(tokens: readonly string[]): string {
-  return getShellEvalDetails(tokens)?.command ?? "";
-}
-
-function getNestedShellCommands(command: unknown): string[] {
-  const text = String(command ?? "");
-  const commands: string[] = [];
-  let quote = "";
-  let escaping = false;
-
-  for (let index = 0; index < text.length; index += 1) {
-    const char = text[index];
-
-    if (escaping) {
-      escaping = false;
-      continue;
-    }
-
-    if (char === "\\" && quote !== "'") {
-      escaping = true;
-      continue;
-    }
-
-    if (quote === "'") {
-      if (char === "'") quote = "";
-      continue;
-    }
-
-    if (quote === '"') {
-      if (char === '"') {
-        quote = "";
-      } else if (char === "$" && text[index + 1] === "(") {
-        const nested = readCommandSubstitution(text, index);
-        if (nested) {
-          commands.push(nested.command);
-          index = nested.endIndex;
-        }
-      } else if (char === "`") {
-        const nested = readBacktickCommand(text, index);
-        if (nested) {
-          commands.push(nested.command);
-          index = nested.endIndex;
-        }
-      }
-      continue;
-    }
-
-    if (char === "#" && (index === 0 || /\s/.test(text[index - 1]))) {
-      while (index < text.length && text[index] !== "\n") index += 1;
-      continue;
-    }
-    if (char === "'") {
-      quote = "'";
-      continue;
-    }
-    if (char === '"') {
-      quote = '"';
-      continue;
-    }
-    if (char === "$" && text[index + 1] === "(") {
-      const nested = readCommandSubstitution(text, index);
-      if (nested) {
-        commands.push(nested.command);
-        index = nested.endIndex;
-      }
-      continue;
-    }
-    if (char === "`") {
-      const nested = readBacktickCommand(text, index);
-      if (nested) {
-        commands.push(nested.command);
-        index = nested.endIndex;
-      }
-    }
-  }
-
-  return commands;
-}
-
-function readCommandSubstitution(text: string, startIndex: number): { command: string; endIndex: number } | null {
-  let depth = 1;
-  let quote = "";
-  let escaping = false;
-
-  for (let index = startIndex + 2; index < text.length; index += 1) {
-    const char = text[index];
-
-    if (escaping) {
-      escaping = false;
-      continue;
-    }
-    if (char === "\\" && quote !== "'") {
-      escaping = true;
-      continue;
-    }
-    if (quote) {
-      if (char === quote) quote = "";
-      continue;
-    }
-    if (char === "'" || char === '"') {
-      quote = char;
-      continue;
-    }
-    if (char === "$" && text[index + 1] === "(") {
-      depth += 1;
-      index += 1;
-      continue;
-    }
-    if (char === ")") {
-      depth -= 1;
-      if (depth === 0) {
-        return { command: text.slice(startIndex + 2, index), endIndex: index };
-      }
-    }
-  }
-
-  return null;
-}
-
-function readBacktickCommand(text: string, startIndex: number): { command: string; endIndex: number } | null {
-  let escaping = false;
-  for (let index = startIndex + 1; index < text.length; index += 1) {
-    const char = text[index];
-    if (escaping) {
-      escaping = false;
-      continue;
-    }
-    if (char === "\\") {
-      escaping = true;
-      continue;
-    }
-    if (char === "`") {
-      return { command: text.slice(startIndex + 1, index), endIndex: index };
-    }
-  }
-  return null;
-}
-
-function getInvocationNestedShellCommands(invocation: ShellInvocation): string[] {
-  const nestedCommands: string[] = [];
-  const shellEval = getShellEvalArgument(invocation.tokens);
-  if (shellEval) nestedCommands.push(shellEval);
-
-  if (invocation.name === "eval") {
-    const evalTokens = invocation.tokens.slice(1).filter((token) => token !== "--");
-    if (evalTokens.length > 0) nestedCommands.push(evalTokens.join(" "));
-  }
-
-  if (invocation.name === "xargs") {
-    for (let index = 1; index < invocation.tokens.length; index += 1) {
-      if (!SHELL_EVAL_COMMANDS.has(shellCommandName(invocation.tokens[index]))) continue;
-      const shellTokens = invocation.tokens.slice(index);
-      const shellEval = getShellEvalArgument(shellTokens);
-      if (shellEval) nestedCommands.push(shellEval);
-      break;
-    }
-  }
-
-  return nestedCommands;
-}
-
-function getShellCommandInvocations(command: unknown, depth = 0): ShellInvocation[] {
-  const tokens = tokenizeShell(getExecutableShellText(command));
-  const invocations: ShellInvocation[] = [];
-  let atCommandStart = true;
-
-  for (let index = 0; index < tokens.length; index += 1) {
-    const token = tokens[index];
-    if (isShellControlToken(token)) {
-      atCommandStart = true;
-      continue;
-    }
-
-    if (!atCommandStart) continue;
-    if (isEnvAssignment(token)) continue;
-    if (SHELL_PREFIX_TOKENS.has(token)) continue;
-
-    const resolvedIndex = resolveExecutableIndex(tokens, index);
-    if (resolvedIndex !== null) {
-      const endIndex = tokens.findIndex(
-        (candidate, candidateIndex) => candidateIndex > resolvedIndex && isShellControlToken(candidate),
-      );
-      const invocationTokens = tokens.slice(resolvedIndex, endIndex === -1 ? tokens.length : endIndex);
-      // A package-runner specifier keeps its `@<range>` suffix; policies classify the package it resolves to.
-      const packageSpec = isPackageRunnerPrefix(tokens, index, resolvedIndex)
-        ? shellCommandName(tokens[resolvedIndex])
-        : null;
-      invocations.push({
-        name: packageSpec === null
-          ? shellCommandName(tokens[resolvedIndex])
-          : /^([^@][^@]*)@[^@]*$/.exec(packageSpec)?.[1] ?? packageSpec,
-        tokens: invocationTokens,
-        ...(packageSpec === null ? {} : { packageSpec }),
-      });
-
-      if (depth < 3) {
-        for (const nestedCommand of getInvocationNestedShellCommands(invocations[invocations.length - 1]!)) {
-          invocations.push(...getShellCommandInvocations(nestedCommand, depth + 1));
-        }
-      }
-    }
-
-    atCommandStart = false;
-  }
-
-  if (depth < 3) {
-    for (const nestedCommand of getNestedShellCommands(getExecutableShellText(command))) {
-      invocations.push(...getShellCommandInvocations(nestedCommand, depth + 1));
-    }
-  }
-
-  return invocations;
 }
 
 function packageManagerInvokesDeploy(tokens: readonly string[], name: string): boolean {
@@ -1198,14 +550,34 @@ function isGuardedShellInvocation(invocation: ShellInvocation): boolean {
   return false;
 }
 
-function commandHasGuardedKeyword(command: unknown): boolean {
-  return textHasGuardedKeyword(getExecutableShellText(command));
+function textHasGuardedKeyword(text: string): boolean {
+  const hasRemoteD1Execute = D1_EXECUTE_KEYWORD_RE.test(text) && REMOTE_FLAG_RE.test(text);
+  return (
+    GUARDED_SHELL_KEYWORD_RE.some((keyword) => keyword.test(text)) ||
+    hasRemoteD1Execute ||
+    Boolean(findProtectedLiteralPath(text))
+  );
 }
 
-function commandHasUnresolvedShellIndirection(command: unknown): boolean {
+function commandHasOpaqueGuardedConstruct(analysis: ShellCommandAnalysis): boolean {
+  const hasOpaqueHereDocBody = analysis.hereDocBodies.some(
+    (body) => (body.includes("$(") || body.includes("`")) && textHasGuardedKeyword(body),
+  );
+  return hasOpaqueHereDocBody || (
+    (
+      analysis.hasOpaqueSyntax ||
+      analysis.hasPipedShell ||
+      analysis.hasXargsShell ||
+      analysis.hasBackgroundSeparator
+    ) &&
+    analysis.invocations.some(isGuardedShellInvocation)
+  );
+}
+
+function commandHasUnresolvedShellIndirection(analysis: ShellCommandAnalysis): boolean {
   return (
-    commandHasGuardedKeyword(command) &&
-    getShellCommandInvocations(command).some((invocation) => isVariableExpandedExecutable(invocation.name))
+    textHasGuardedKeyword(analysis.executableText) &&
+    analysis.invocations.some((invocation) => isVariableExpandedExecutable(invocation.name))
   );
 }
 
@@ -1350,28 +722,28 @@ function withHookRule(rule: HookRuleId, reason: string): string {
   return `[rule:${rule}] ${reason}`;
 }
 
-function collectShellWritePaths(command: unknown, cwd: string): { paths: string[]; unresolved: boolean } {
-  const invocations = getShellCommandInvocations(command);
+function collectShellWritePaths(analysis: ShellCommandAnalysis): { paths: string[]; unresolved: boolean } {
   const paths: string[] = [];
   let unresolved = false;
-  invocations.forEach((invocation, index) => {
+  analysis.invocations.forEach((invocation) => {
     const targets = [
       ...extractBashWritePaths(invocation.tokens),
       ...extractCommandWritePaths(invocation),
       ...extractInlineScriptWritePaths(invocation),
-      ...(invocation.name === "apply_patch" ? extractPatchPaths(command) : []),
+      ...(invocation.name === "apply_patch" ? extractPatchPaths(analysis.command) : []),
     ].filter(Boolean);
     if (targets.length === 0) return;
-    const directory = getShellWorkingDirectory(invocations, index, cwd, command);
-    if (directory === null) unresolved = true;
-    else paths.push(...targets.map((path) => resolve(directory, shellValue(path))));
+    if (invocation.cwd === null) unresolved = true;
+    else paths.push(...targets.map((path) => resolve(invocation.cwd!, shellValue(path))));
   });
   return { paths, unresolved };
 }
 
-function collectToolPaths(hookInput: UnknownRecord = {}): string[] {
+function collectToolPaths(
+  hookInput: UnknownRecord,
+  analysis: ShellCommandAnalysis,
+): string[] {
   const toolInput = getToolInput(hookInput);
-  const command = getCommandFromHookInput(hookInput);
   const cwd = getHookWorkingDirectory(hookInput);
   return normalizeChangedFiles(
     [
@@ -1383,8 +755,8 @@ function collectToolPaths(hookInput: UnknownRecord = {}): string[] {
       ...collectArrayPaths(toolInput.edits),
       ...extractPatchPaths(toolInput.patch),
       ...extractPatchPaths(String(toolInput.input ?? "")),
-      ...(commandIsRawPatchPayload(command) ? extractPatchPaths(command) : []),
-      ...collectShellWritePaths(command, cwd).paths,
+      ...(analysis.isRawPatchPayload ? extractPatchPaths(analysis.command) : []),
+      ...collectShellWritePaths(analysis).paths,
     ]
       .filter(Boolean)
       .flatMap((path) => policyPaths(path, cwd)),
@@ -1469,8 +841,11 @@ function gitSubcommandCursor(tokens: readonly string[]): number {
   return cursor;
 }
 
-function* gitSubcommandTokens(command: unknown, subcommand: string): Generator<string[]> {
-  for (const invocation of getShellCommandInvocations(command)) {
+function* gitSubcommandTokens(
+  analysis: ShellCommandAnalysis,
+  subcommand: string,
+): Generator<readonly string[]> {
+  for (const invocation of analysis.invocations) {
     if (invocation.name !== "git") continue;
     const { tokens } = invocation;
     const cursor = gitSubcommandCursor(tokens);
@@ -1479,8 +854,8 @@ function* gitSubcommandTokens(command: unknown, subcommand: string): Generator<s
   }
 }
 
-function commandInvokesGitCleanForceDelete(command: unknown): boolean {
-  for (const optionTokens of gitSubcommandTokens(command, "clean")) {
+function commandInvokesGitCleanForceDelete(analysis: ShellCommandAnalysis): boolean {
+  for (const optionTokens of gitSubcommandTokens(analysis, "clean")) {
     if (
       optionTokens.some((token) => token === "--dry-run" || token === "--help" || token === "-h") ||
       optionTokens.some((token) => /^-[^-]*n/.test(token))
@@ -1492,15 +867,13 @@ function commandInvokesGitCleanForceDelete(command: unknown): boolean {
       .slice(0, 5)
       .filter((token) => token.startsWith("-"))
       .join("");
-    if (optionText.includes("f")) {
-      return true;
-    }
+    if (optionText.includes("f")) return true;
   }
   return false;
 }
 
-function commandInvokesGitResetHard(command: unknown): boolean {
-  for (const optionTokens of gitSubcommandTokens(command, "reset")) {
+function commandInvokesGitResetHard(analysis: ShellCommandAnalysis): boolean {
+  for (const optionTokens of gitSubcommandTokens(analysis, "reset")) {
     if (optionTokens.includes("--help") || optionTokens.includes("-h")) continue;
     if (optionTokens.slice(0, 7).includes("--hard")) {
       return true;
@@ -1635,26 +1008,6 @@ function readReferencedSqlFile(filePath: string, cwd: string): string | null {
   }
 }
 
-function getShellWorkingDirectory(invocations: readonly ShellInvocation[], targetIndex: number, cwd: string, command: unknown): string | null {
-  const tokens = tokenizeShell(getExecutableShellText(command));
-  // ponytail: resolve single-operand cd in all-&& chains only. Other cwd changes
-  // require a direct invocation before inspecting relative write/SQL targets.
-  if ((invocations.slice(0, targetIndex).some((item) => item.name === "cd")
-    && (tokens.some((token) => ["(", ")", "{", "}", ";", "\n", "||", "|", "&", "if", "then", "else", "do"].includes(token))
-      || invocations.some((item) => getInvocationNestedShellCommands(item).length > 0)
-      || getNestedShellCommands(getExecutableShellText(command)).length > 0))
-    || (tokens.some((token) => shellCommandName(token) === "env")
-      && tokens.some((token) => token.startsWith("-C") || token.startsWith("--chdir")))) return null;
-  let workingDirectory = cwd;
-  for (let index = 0; index < targetIndex; index += 1) {
-    const invocation = invocations[index];
-    if (invocation?.name !== "cd") continue;
-    const destination = shellValue(invocation.tokens[1] ?? "");
-    if (invocation.tokens.length !== 2 || !destination || destination.startsWith("-") || /[$~`]/.test(destination)) return null;
-    workingDirectory = resolve(workingDirectory, destination);
-  }
-  return workingDirectory;
-}
 
 function inspectRemoteD1ExecuteSql(tokens: readonly string[], cwd: string | null): boolean {
   const fileOption = findCommandOptionValue(tokens, "--file");
@@ -1667,9 +1020,8 @@ function inspectRemoteD1ExecuteSql(tokens: readonly string[], cwd: string | null
   return !isReadOnlySql(commandOption.value);
 }
 
-function commandInvokesRemoteD1Mutation(command: unknown, cwd: string): boolean {
-  const invocations = getShellCommandInvocations(command);
-  return invocations.some((invocation, invocationIndex) => {
+function commandInvokesRemoteD1Mutation(analysis: ShellCommandAnalysis): boolean {
+  return analysis.invocations.some((invocation) => {
     if (!invocationIsWrangler(invocation) || invocationHasHelpFlag(invocation.tokens)) return false;
 
     const args = stripWranglerGlobalOptions(invocation.tokens.slice(1));
@@ -1685,7 +1037,7 @@ function commandInvokesRemoteD1Mutation(command: unknown, cwd: string): boolean 
       return false;
     }
 
-    let directory = getShellWorkingDirectory(invocations, invocationIndex, cwd, command);
+    let directory = invocation.cwd;
     const wranglerCwd = findCommandOptionValue(invocation.tokens, "--cwd");
     if (wranglerCwd.found) {
       directory = directory && wranglerCwd.value && !/[$~`]/.test(wranglerCwd.value)
@@ -1695,8 +1047,8 @@ function commandInvokesRemoteD1Mutation(command: unknown, cwd: string): boolean 
   });
 }
 
-function commandInvokesRawProductionDeploy(command: unknown): boolean {
-  return getShellCommandInvocations(command).some((invocation) => {
+function commandInvokesRawProductionDeploy(analysis: ShellCommandAnalysis): boolean {
+  return analysis.invocations.some((invocation) => {
     if (invocationHasHelpFlag(invocation.tokens)) return false;
     if (invocationIsWrangler(invocation) && invocationHasDryRunFlag(invocation.tokens)) return false;
 
@@ -1736,28 +1088,28 @@ function findUnsafeMigrationSql(paths: readonly string[], hookInput: UnknownReco
   };
 }
 
-function findCommandViolation(command: unknown, cwd: string): HookViolation | null {
-  if (!command) return null;
+export function findShellCommandViolation(analysis: ShellCommandAnalysis): HookViolation | null {
+  if (!analysis.command) return null;
 
-  if (collectShellWritePaths(command, cwd).unresolved) {
+  if (collectShellWritePaths(analysis).unresolved) {
     return { reason: withHookRule("opaque-shell", "Cannot resolve a shell write directory; use a direct invocation with an explicit working directory."), rule: "opaque-shell" };
   }
 
-  if (commandHasUnresolvedShellIndirection(command)) {
+  if (commandHasUnresolvedShellIndirection(analysis)) {
     return {
       reason: withHookRule("shell-indirection", UNRESOLVED_SHELL_INDIRECTION_VIOLATION_REASON),
       rule: "shell-indirection",
     };
   }
 
-  if (commandHasOpaqueGuardedConstruct(command)) {
+  if (commandHasOpaqueGuardedConstruct(analysis)) {
     return {
       reason: withHookRule("opaque-shell", OPAQUE_SHELL_VIOLATION_REASON),
       rule: "opaque-shell",
     };
   }
 
-  if (commandInvokesGitResetHard(command)) {
+  if (commandInvokesGitResetHard(analysis)) {
     return {
       reason: withHookRule(
         "git-destructive",
@@ -1767,7 +1119,7 @@ function findCommandViolation(command: unknown, cwd: string): HookViolation | nu
     };
   }
 
-  if (commandInvokesGitCleanForceDelete(command)) {
+  if (commandInvokesGitCleanForceDelete(analysis)) {
     return {
       reason: withHookRule(
         "git-destructive",
@@ -1777,7 +1129,7 @@ function findCommandViolation(command: unknown, cwd: string): HookViolation | nu
     };
   }
 
-  if (commandInvokesRawProductionDeploy(command)) {
+  if (commandInvokesRawProductionDeploy(analysis)) {
     return {
       reason: withHookRule(
         "deploy",
@@ -1787,7 +1139,7 @@ function findCommandViolation(command: unknown, cwd: string): HookViolation | nu
     };
   }
 
-  if (commandInvokesRemoteD1Mutation(command, cwd)) {
+  if (commandInvokesRemoteD1Mutation(analysis)) {
     return {
       reason: withHookRule(
         "d1-remote-mutation",
@@ -1800,33 +1152,38 @@ function findCommandViolation(command: unknown, cwd: string): HookViolation | nu
   return null;
 }
 
-export function findPreToolUseViolation(hookInput: UnknownRecord = {}): HookViolation | null {
-  const command = getCommandFromHookInput(hookInput);
-  const commandViolation = findCommandViolation(command, getHookWorkingDirectory(hookInput));
-  if (commandViolation) {
-    return commandViolation;
-  }
 
-  const paths = collectToolPaths(hookInput);
+function findPreToolUseViolationWithAnalysis(
+  hookInput: UnknownRecord,
+  analysis: ShellCommandAnalysis,
+): HookViolation | null {
+  const commandViolation = findShellCommandViolation(analysis);
+  if (commandViolation) return commandViolation;
+
+  const paths = collectToolPaths(hookInput, analysis);
   const protectedWrite = findProtectedWrite(paths);
-  if (protectedWrite) {
-    return protectedWrite;
-  }
+  if (protectedWrite) return protectedWrite;
 
-  const unsafeMigration = findUnsafeMigrationSql(paths, hookInput);
-  if (unsafeMigration) {
-    return unsafeMigration;
-  }
+  return findUnsafeMigrationSql(paths, hookInput);
+}
 
-  return null;
+export function findPreToolUseViolation(hookInput: UnknownRecord = {}): HookViolation | null {
+  const analysis = analyzeShellCommand(
+    getCommandFromHookInput(hookInput),
+    getHookWorkingDirectory(hookInput),
+  );
+  return findPreToolUseViolationWithAnalysis(hookInput, analysis);
 }
 
 export function findPermissionRequestViolation(hookInput: UnknownRecord = {}): HookViolation | null {
-  const violation = findPreToolUseViolation(hookInput);
+  const analysis = analyzeShellCommand(
+    getCommandFromHookInput(hookInput),
+    getHookWorkingDirectory(hookInput),
+  );
+  const violation = findPreToolUseViolationWithAnalysis(hookInput, analysis);
   if (!violation) return null;
 
-  const command = getCommandFromHookInput(hookInput);
-  if (!commandHasOpaqueGuardedConstruct(command) && commandInvokesRawProductionDeploy(command)) {
+  if (!commandHasOpaqueGuardedConstruct(analysis) && commandInvokesRawProductionDeploy(analysis)) {
     return {
       reason: withHookRule(
         "deploy",
@@ -1835,7 +1192,7 @@ export function findPermissionRequestViolation(hookInput: UnknownRecord = {}): H
       rule: "deploy",
     };
   }
-  if (!commandHasOpaqueGuardedConstruct(command) && commandInvokesRemoteD1Mutation(command, getHookWorkingDirectory(hookInput))) {
+  if (!commandHasOpaqueGuardedConstruct(analysis) && commandInvokesRemoteD1Mutation(analysis)) {
     return {
       reason: withHookRule(
         "d1-remote-mutation",
@@ -2044,7 +1401,11 @@ function sha256Prefix(value: string): string {
 }
 
 function countProtectedPaths(hookInput: UnknownRecord): number {
-  return collectToolPaths(hookInput).filter(
+  const analysis = analyzeShellCommand(
+    getCommandFromHookInput(hookInput),
+    getHookWorkingDirectory(hookInput),
+  );
+  return collectToolPaths(hookInput, analysis).filter(
     (path) =>
       PROTECTED_WRITE_RULES.some((rule) => rule.test(path)) || /^worker\/migrations\/.*\.sql$/i.test(path),
   ).length;

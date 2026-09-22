@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import {
@@ -6,6 +9,7 @@ import {
   buildTelegramLoadCheckReport,
   evaluateQueryPlan,
   evaluateStatusPathBudget,
+  extractProductionSubscriberFanoutSql,
   findCpuBudgetBreaches,
   findProductionDispatchBreaches,
   findRecapLoadBreaches,
@@ -261,6 +265,29 @@ describe("Telegram query-plan evaluation", () => {
     binds: [],
     requiredDetails: ["idx_needed"],
   };
+
+  it("derives fan-out predicates from the production subscriber SQL template", () => {
+    const sourcePath = resolve(
+      process.cwd(),
+      "worker/src/cron/dispatch-telegram-subscribers.ts",
+    );
+    const productionSource = readFileSync(sourcePath, "utf8");
+    const columns = {
+      directColumn: "alert_depeg",
+      globalColumn: "global_alert_depeg",
+    };
+    const extracted = extractProductionSubscriberFanoutSql(productionSource, columns);
+    const mutatedSource = productionSource.replace(
+      "AND (sub.alert_snooze_until_ts IS NULL OR sub.alert_snooze_until_ts <= ?)",
+      "AND sub.alert_snooze_until_ts IS NULL",
+    );
+    const mutated = extractProductionSubscriberFanoutSql(mutatedSource, columns);
+    const directCheck = buildQueryPlanChecks().find((candidate) => candidate.id === "fanout-direct-depeg")!;
+
+    expect(directCheck.sql).toBe(extracted.direct);
+    expect(mutated.direct).not.toBe(extracted.direct);
+    expect(mutated.direct).toContain("AND sub.alert_snooze_until_ts IS NULL");
+  });
 
   it("excludes terminal job targets from otherwise eligible pending claims", () => {
     const { sqlite } = databases.open();

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { execFileSync } from "node:child_process";
+import { createD1Client, sqlString } from "../lib/remote-d1.ts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { collectWorkerHttpProbes } from "../lib/worker-http-probes.mts";
 
@@ -99,35 +99,11 @@ export function parseWorkerWatchArgs(argv) {
   return args;
 }
 
-function parseWranglerRows(stdout) {
-  const parsed = JSON.parse(stdout);
-  const candidates = Array.isArray(parsed) ? parsed : [parsed];
-  return candidates.flatMap((entry) => {
-    if (Array.isArray(entry?.results)) return entry.results;
-    if (Array.isArray(entry?.result?.[0]?.results)) return entry.result[0].results;
-    if (Array.isArray(entry?.result?.results)) return entry.result.results;
-    return [];
-  });
-}
-
 function d1Select(args, sql) {
-  const wranglerArgs = [
-    "--no-install",
-    "wrangler",
-    "d1",
-    "execute",
-    args.database,
-    ...(args.remote ? ["--remote"] : []),
-    "--json",
-    "--command",
-    sql,
-  ];
-  const stdout = execFileSync("npx", wranglerArgs, {
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
+  return createD1Client(args.database, {
     maxBuffer: Math.floor(args.maxBufferMb * 1024 * 1024),
-  });
-  return parseWranglerRows(stdout);
+    target: args.remote ? "remote" : "local",
+  }).query(sql);
 }
 
 function errorMessage(error) {
@@ -137,10 +113,6 @@ function errorMessage(error) {
   if (typeof stderr === "string" && stderr.length > 0) return stderr.trim().slice(0, 1000);
   if (error instanceof Error) return error.message.slice(0, 1000);
   return String(error).slice(0, 1000);
-}
-
-function escapeSqlLiteral(value) {
-  return String(value).replaceAll("'", "''");
 }
 
 function isMissingTableMessage(message, table) {
@@ -173,7 +145,7 @@ export function classifyArtifactFailure(descriptor, message) {
 
 function loadExistingTables(args, tables, select = d1Select) {
   if (tables.length === 0) return { tables: new Set(), error: null };
-  const tableList = tables.map((table) => `'${escapeSqlLiteral(table)}'`).join(", ");
+  const tableList = tables.map((table) => sqlString(table)).join(", ");
   try {
     const rows = select(
       args,
@@ -339,25 +311,11 @@ export async function collectWorkerCronSnapshot(args, {
      ORDER BY updated_at DESC
   `);
   const optionalArtifactTables = [
-    "worker_job_attempts",
     "worker_repair_tasks",
     "worker_canary_runs",
     "surface_publication_generations",
   ];
   const existingOptionalTables = loadExistingTables(args, optionalArtifactTables, select);
-  const jobAttempts = optionalD1Select(args, {
-    artifact: "jobAttempts",
-    table: "worker_job_attempts",
-    optionalMissing: true,
-    sql: `
-    SELECT attempt_id, schedule_key, job, slot_started_at, state, status_class, attempt_no, owner, lease_until,
-           queued_at, claimed_at, started_at, last_heartbeat_at, finished_at, updated_at, duration_ms, item_count,
-           error, ${metadataSelect(args, "result_metadata_json")}
-      FROM worker_job_attempts
-     ORDER BY updated_at DESC
-     LIMIT ${Math.min(limit, 80)}
-  `,
-  }, existingOptionalTables, select);
   const repairTasks = optionalD1Select(args, {
     artifact: "repairTasks",
     table: "worker_repair_tasks",
@@ -424,7 +382,6 @@ export async function collectWorkerCronSnapshot(args, {
   }, existingOptionalTables, select);
   const probes = await probeCollector(args);
   const optionalResults = {
-    jobAttempts,
     repairTasks,
     canaryRuns,
     dexPublicationGenerations,
@@ -452,7 +409,6 @@ export async function collectWorkerCronSnapshot(args, {
     slots,
     leases,
     progress,
-    jobAttempts: jobAttempts.rows,
     repairTasks: repairTasks.rows,
     canaryRuns: canaryRuns.rows,
     publicationGenerations: {

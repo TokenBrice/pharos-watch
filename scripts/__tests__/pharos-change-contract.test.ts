@@ -12,11 +12,13 @@ import {
   classifyChangedFiles,
   formatContract,
   getHookHarness,
+  findShellCommandViolation,
   normalizeChangedFiles,
   normalizeExplicitFiles,
   readHookInput,
 } from "../ci/pharos-change-contract.ts";
 import { PATH_FAMILIES } from "../lib/doc-ownership-registry.mts";
+import { analyzeShellCommand } from "../lib/shell-command-analysis.ts";
 
 function requireBlockingReason(output: unknown): string {
   if (typeof output !== "object" || output === null || !("reason" in output) || typeof output.reason !== "string") {
@@ -555,6 +557,23 @@ describe("hook harness classification", () => {
       transcript_path: "/tmp/transcript.jsonl",
       cwd: process.cwd(),
     })).toBe("unknown");
+  });
+});
+
+describe("shell command analysis", () => {
+  it("provides one immutable command view to ordered policies", () => {
+    const analysis = analyzeShellCommand(
+      "git reset --hard HEAD && npx wrangler pages deploy out",
+      process.cwd(),
+    );
+
+    expect(Object.isFrozen(analysis)).toBe(true);
+    expect(Object.isFrozen(analysis.invocations)).toBe(true);
+    expect(analysis.invocations.map((invocation) => invocation.name)).toEqual([
+      "git",
+      "wrangler",
+    ]);
+    expect(findShellCommandViolation(analysis)?.rule).toBe("git-destructive");
   });
 });
 

@@ -2,7 +2,6 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { chunkArray } from "@shared/lib/collections";
 
 const DEFAULT_SQL_BATCH_SIZE = 200;
 const DEFAULT_MAX_BUFFER = 50 * 1024 * 1024;
@@ -27,6 +26,17 @@ export type RemoteD1Client = D1Client;
 export function sqlString(value: string | null): string {
   if (value == null) return "NULL";
   return `'${value.replace(/'/g, "''")}'`;
+}
+
+function decodeD1Rows<T>(stdout: string): T[] {
+  const parsed = JSON.parse(stdout);
+  const envelopes = Array.isArray(parsed) ? parsed : [parsed];
+  return envelopes.flatMap((envelope) => {
+    if (Array.isArray(envelope?.results)) return envelope.results;
+    if (Array.isArray(envelope?.result?.[0]?.results)) return envelope.result[0].results;
+    if (Array.isArray(envelope?.result?.results)) return envelope.result.results;
+    return [];
+  });
 }
 
 function executeWrangler(args: string[], options: Required<Pick<D1ClientOptions, "cwd" | "maxBuffer">>): string {
@@ -72,15 +82,14 @@ export function createD1Client(databaseName: string, options: D1ClientOptions = 
 
   return {
     query<T>(sql: string): T[] {
-      const parsed = JSON.parse(queryRaw(sql));
-      return parsed[0]?.results ?? [];
+      return decodeD1Rows<T>(queryRaw(sql));
     },
     queryRaw,
     executeStatements(statements: string[], prefix: string): void {
-      for (const batch of chunkArray(statements, resolvedOptions.batchSize)) {
+      for (let offset = 0; offset < statements.length; offset += resolvedOptions.batchSize) {
         executeSqlFile(
           databaseName,
-          batch,
+          statements.slice(offset, offset + resolvedOptions.batchSize),
           prefix,
           resolvedOptions,
         );

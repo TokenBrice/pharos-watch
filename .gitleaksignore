@@ -9,11 +9,6 @@
 1589d0a2ec7f1b7b2e97e2e36f8081e696994771:shared/lib/stablecoins/usd-minor.ts:generic-api-key:2421
 1589d0a2ec7f1b7b2e97e2e36f8081e696994771:shared/lib/stablecoins/usd-minor.ts:generic-api-key:2498
 17655461beaeda65fb92395e4f161d1cf56cc25f:worker/src/api/__tests__/telegram-webhook-setup-adoption.test.ts:generic-api-key:9
-1d7549e868b49aabc4aa6b355e8c729e97386670:worker/src/api/__tests__/api-keys.test.ts:generic-api-key:233
-1d7549e868b49aabc4aa6b355e8c729e97386670:worker/src/lib/__tests__/api-keys.test.ts:generic-api-key:135
-1d7549e868b49aabc4aa6b355e8c729e97386670:worker/src/lib/__tests__/api-keys.test.ts:generic-api-key:376
-1d7549e868b49aabc4aa6b355e8c729e97386670:worker/src/lib/__tests__/api-keys.test.ts:generic-api-key:841
-1d7549e868b49aabc4aa6b355e8c729e97386670:worker/src/test-helpers/__shared/fixtures.ts:generic-api-key:197
 2315439438d6679bbf80560ded33a1d481a166cd:shared/lib/__tests__/pricing-source-registry.test.ts:generic-api-key:205
 2315439438d6679bbf80560ded33a1d481a166cd:shared/lib/pricing-source-registry-dex-search.ts:generic-api-key:58
 2439593bc6e905a33967fe8df7342beea3a02788:agents/plans/2026-04-24-tighten-public-api-gate-plan.md:curl-auth-header:1480
@@ -21,12 +16,6 @@
 25e832f563fce12b4552824dc9850178acd778d9:agents/research/2026-04-15-pmusd-custody-recheck.md:generic-api-key:57
 25e832f563fce12b4552824dc9850178acd778d9:agents/research/2026-04-15-pmusd-custody-recheck.md:generic-api-key:58
 25e832f563fce12b4552824dc9850178acd778d9:agents/research/2026-04-15-pmusd-custody-recheck.md:generic-api-key:59
-27f548e69aeb8eb5921f71d53bf7c569ba4fb0e8:worker/src/__tests__/index.fetch.test.ts:generic-api-key:405
-27f548e69aeb8eb5921f71d53bf7c569ba4fb0e8:worker/src/lib/__tests__/api-keys.test.ts:generic-api-key:115
-27f548e69aeb8eb5921f71d53bf7c569ba4fb0e8:worker/src/lib/__tests__/api-keys.test.ts:generic-api-key:156
-27f548e69aeb8eb5921f71d53bf7c569ba4fb0e8:worker/src/lib/__tests__/api-keys.test.ts:generic-api-key:50
-27f548e69aeb8eb5921f71d53bf7c569ba4fb0e8:worker/src/lib/__tests__/api-keys.test.ts:generic-api-key:73
-27f548e69aeb8eb5921f71d53bf7c569ba4fb0e8:worker/src/lib/__tests__/api-keys.test.ts:generic-api-key:89
 293219d1bc41fc6d64111f35afe04ad160b20ab3:src/lib/nav-config.ts:generic-api-key:41
 293219d1bc41fc6d64111f35afe04ad160b20ab3:src/lib/nav-config.ts:generic-api-key:42
 2b3700e23aedb44376804c4e54dd082200b540ef:shared/data/stablecoins/coins.generated.json:generic-api-key:12385
@@ -55,7 +44,6 @@
 2b4956d9f873b2dac9d8c34b45769af83790d2c4:agents/plans/historical/2026-03-14-live-reserve-coverage-expansion.md:generic-api-key:984
 2b4956d9f873b2dac9d8c34b45769af83790d2c4:agents/research/2026-03-14-live-reserve-coverage-expansion.md:generic-api-key:73
 2b4956d9f873b2dac9d8c34b45769af83790d2c4:agents/research/2026-03-14-live-reserve-data-source-survey.md:generic-api-key:483
-2d1ee4167d6d068f3b0cc4f2a1c270c387c3c692:worker/src/api/__tests__/api-keys.test.ts:generic-api-key:208
 3133a963f406d8592a365dcfe7b57691d7767fb2:shared/data/stablecoins/usd-minor.json:generic-api-key:7906
 32c60c0d6f4d3cf7a5a544464284e9e3f76b332c:shared/data/stablecoins/coins.client.generated.json:generic-api-key:10013
 32c60c0d6f4d3cf7a5a544464284e9e3f76b332c:shared/data/stablecoins/coins.client.generated.json:generic-api-key:11003
@@ -79,17 +67,7 @@
 32c60c0d6f4d3cf7a5a544464284e9e3f76b332c:shared/data/stablecoins/coins.client.generated.json:generic-api-key:9802
 36ecf7ca492fbd9bcfb53af939329c08fd4138b8:shared/data/stablecoins/usd-major.json:generic-api-key:1510
 36ecf7ca492fbd9bcfb53af939329c08fd4138b8:shared/data/stablecoins/usd-minor.json:generic-api-key:1908
-3e5efced13d6b59a79d4694f002bf968594cde44:worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts:generic-api-key:295
-3e5efced13d6b59a79d4694f002bf968594cde44:worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts:generic-api-key:296
-3e5efced13d6b59a79d4694f002bf968594cde44:worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts:generic-api-key:339
-3e5efced13d6b59a79d4694f002bf968594cde44:worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts:generic-api-key:340
-46b937d767b61b7dc39d11dcb272c4b80cccfbf6:worker/src/lib/__tests__/api-keys.test.ts:generic-api-key:765
-4b93ee6535f204d3d1bedb74e98f25d3395339ce:shared/data/safety-score-v9/mechanism-measurements/usdf-falcon/2026-08-04T12-03-01.000Z-f8167e8aaa52-protocol-api.json:generic-api-key:1
 4fd14411b571a949c4720c02bb7fb3c509916fdf:worker/src/cron/__tests__/yield-config-registry.test.ts:generic-api-key:100
-4fe97caea285e44f10d0d12c22d982f5ca5db296:shared/lib/cron-jobs.ts:generic-api-key:421
-4fe97caea285e44f10d0d12c22d982f5ca5db296:shared/lib/cron-jobs.ts:generic-api-key:430
-4fe97caea285e44f10d0d12c22d982f5ca5db296:shared/lib/__tests__/cron-jobs.test.ts:generic-api-key:34
-4fe97caea285e44f10d0d12c22d982f5ca5db296:shared/lib/__tests__/cron-jobs.test.ts:generic-api-key:44
 4fe97caea285e44f10d0d12c22d982f5ca5db296:worker/src/lib/__tests__/v9-slot-window.test.ts:generic-api-key:58
 4fe97caea285e44f10d0d12c22d982f5ca5db296:worker/src/lib/__tests__/v9-slot-window.test.ts:generic-api-key:199
 54d2afd8f0b3f26cf916c54fb05d28415c763501:agents/tasks/2026-04-22-yield-history-cleanup-local-artifact.json:generic-api-key:60
@@ -99,7 +77,6 @@
 58102b4c10defb3535078bd63505214332a66918:shared/lib/stablecoins.ts:generic-api-key:3881
 58102b4c10defb3535078bd63505214332a66918:shared/lib/stablecoins.ts:generic-api-key:3926
 58102b4c10defb3535078bd63505214332a66918:shared/lib/stablecoins.ts:generic-api-key:610
-5ad00d4d3a432a96ee3de0df7c271c8cc3142d52:worker/src/__tests__/index.fetch.test.ts:generic-api-key:11
 5f4b19ba8c0aef3bbb5186e9033d3ef8b0e599b8:scripts/lib/mechanism-measurement/targets.ts:generic-api-key:37
 60405393ddd512287ab9e84bd3a2c94247dc5af7:shared/data/safety-score-v9/transfer-review-overlays-v1.json:generic-api-key:1072
 60405393ddd512287ab9e84bd3a2c94247dc5af7:shared/data/safety-score-v9/transfer-review-overlays-v1.json:generic-api-key:1406
@@ -131,12 +108,6 @@ ffc2b80c4a42d1186980eb8214b5231f68ad53c5:agents/safety-score-v9/results/data-cov
 ffc2b80c4a42d1186980eb8214b5231f68ad53c5:agents/safety-score-v9/results/data-coverage-wave8-2026-07-27/mech-packets/apyusd-apyx.json:generic-api-key:75
 ffc2b80c4a42d1186980eb8214b5231f68ad53c5:agents/safety-score-v9/results/data-coverage-wave8-2026-07-27/mech-packets/apyusd-apyx.json:generic-api-key:83
 6b9a7c03571d63fff891f277f55078e00b73f1f2:shared/data/safety-score-v9/transfer-review-overlays-v1.json:generic-api-key:3285
-9a58e417f4032f3674228ba30d47629ab086fb46:worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts:generic-api-key:1177
-9a58e417f4032f3674228ba30d47629ab086fb46:worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts:generic-api-key:1178
-9a58e417f4032f3674228ba30d47629ab086fb46:worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts:generic-api-key:1200
-9a58e417f4032f3674228ba30d47629ab086fb46:worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts:generic-api-key:1201
-9a58e417f4032f3674228ba30d47629ab086fb46:worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts:generic-api-key:1248
-9a58e417f4032f3674228ba30d47629ab086fb46:worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts:generic-api-key:1249
 831812bb0006ec24d09b56d7bca7ae3a721b2e8b:worker/src/lib/mint-burn-contracts-helpers.ts:generic-api-key:42
 870dd2552c52ac369a4e104e09ec4c892cb2be9a:worker/src/cron/reserve-adapters/__tests__/chainlink-nav.test.ts:generic-api-key:20
 8a3a3cd6611be19ee5fbdd3c2b3947361702d0f6:shared/data/stablecoins/coins.generated.json:generic-api-key:14920
@@ -151,15 +122,9 @@ ffc2b80c4a42d1186980eb8214b5231f68ad53c5:agents/safety-score-v9/results/data-cov
 9208ff7993154b6dcc356d0569ca9c3c2fba14fd:shared/data/stablecoins/usd-major.json:generic-api-key:1763
 9208ff7993154b6dcc356d0569ca9c3c2fba14fd:shared/data/stablecoins/usd-minor.json:generic-api-key:6751
 9208ff7993154b6dcc356d0569ca9c3c2fba14fd:shared/data/stablecoins/usd-minor.json:generic-api-key:6951
-94b6659a424717ab2d5a59b9e20cc7785a960100:worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts:generic-api-key:430
-94b6659a424717ab2d5a59b9e20cc7785a960100:worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts:generic-api-key:431
-94b6659a424717ab2d5a59b9e20cc7785a960100:worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts:generic-api-key:476
-94b6659a424717ab2d5a59b9e20cc7785a960100:worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts:generic-api-key:477
 95418f80123f2b99b3069633ff5443e2ce07b487:worker/src/cron/__tests__/sync-blacklist.test.ts:generic-api-key:52
 9dbce267c04249978f3d769b287f8d8501b46757:agents/plans/historical/2026-03-12-coingecko-pipeline-switch.md:generic-api-key:22
 9def4e4c9d939283b04a5601e32e9c3914e4a765:worker/src/api/__tests__/remediate-blacklist-amount-gaps.test.ts:generic-api-key:135
-9f176742f1dbc579b414a3d913582e27e7d73e32:worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts:generic-api-key:257
-9f176742f1dbc579b414a3d913582e27e7d73e32:worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts:generic-api-key:258
 9fb145d27ae4c1c5ceab59c6eaca481e210337d2:shared/data/stablecoins/non-usd.json:generic-api-key:701
 a02550c1fea2e195471278108158ecb417152933:shared/data/stablecoins/coins.generated.json:generic-api-key:30398
 a0980edd1c86e74aff7d15c2d5a0c7306b8d5a53:shared/data/stablecoins/coins.generated.json:generic-api-key:13917
@@ -179,8 +144,6 @@ b07bf78ab73f09c4e932b32f5bbfc2f74b09b1d3:shared/lib/__tests__/blacklist-active-r
 b07bf78ab73f09c4e932b32f5bbfc2f74b09b1d3:shared/lib/__tests__/blacklist-active-records.test.ts:generic-api-key:237
 b07bf78ab73f09c4e932b32f5bbfc2f74b09b1d3:shared/lib/__tests__/blacklist-active-records.test.ts:generic-api-key:247
 b07bf78ab73f09c4e932b32f5bbfc2f74b09b1d3:shared/lib/__tests__/blacklist-active-records.test.ts:generic-api-key:448
-b0c670ada4dc92341a2a0edd1eb9dd3cebb397c0:worker/src/lib/__tests__/api-keys.test.ts:generic-api-key:437
-b568e11b3fde8cf41cc2f154bdfa7ee60d03d04e:worker/src/lib/__tests__/api-keys.test.ts:generic-api-key:489
 b7dbeb79f9a73fa42b2ea3eced626910685c4fc6:docs/api-reference.md:generic-api-key:2614
 b7dbeb79f9a73fa42b2ea3eced626910685c4fc6:docs/api-reference.md:generic-api-key:2615
 ba346703312c2d7d8f206c3bfeb8ef8e8c89e7c8:shared/data/safety-score-v9/mechanism-review-overlays-v1.json:generic-api-key:2897
@@ -189,23 +152,8 @@ c0b0bc25cd6224d5aec1d39771c697583956cc81:worker/src/cron/yield-config-lending-pr
 c0b0bc25cd6224d5aec1d39771c697583956cc81:worker/src/cron/yield-config-lending-protocols.ts:generic-api-key:156
 c1cf1b2ea1a9e2e139e680d99ca16ad64993d99b:worker/src/cron/__tests__/yield-config-registry.test.ts:generic-api-key:159
 c1cf1b2ea1a9e2e139e680d99ca16ad64993d99b:worker/src/cron/yield-config-lending-protocols.ts:generic-api-key:99
-c37d958c0a2760a8538a5dcdbd39e6d87227394e:worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts:generic-api-key:152
-c37d958c0a2760a8538a5dcdbd39e6d87227394e:worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts:generic-api-key:153
-c704c552c55fd92577e16752557470deef00ecd0:worker/src/api/__tests__/api-keys.test.ts:generic-api-key:157
-c704c552c55fd92577e16752557470deef00ecd0:worker/src/api/__tests__/api-keys.test.ts:generic-api-key:183
-c704c552c55fd92577e16752557470deef00ecd0:worker/src/api/__tests__/api-keys.test.ts:generic-api-key:224
-c704c552c55fd92577e16752557470deef00ecd0:worker/src/api/__tests__/api-keys.test.ts:generic-api-key:250
-c704c552c55fd92577e16752557470deef00ecd0:worker/src/api/__tests__/api-keys.test.ts:generic-api-key:294
-c704c552c55fd92577e16752557470deef00ecd0:worker/src/lib/__tests__/api-keys.test.ts:generic-api-key:105
-c704c552c55fd92577e16752557470deef00ecd0:worker/src/lib/__tests__/api-keys.test.ts:generic-api-key:216
-c704c552c55fd92577e16752557470deef00ecd0:worker/src/lib/__tests__/api-keys.test.ts:generic-api-key:242
-c704c552c55fd92577e16752557470deef00ecd0:worker/src/lib/__tests__/api-keys.test.ts:generic-api-key:319
-c704c552c55fd92577e16752557470deef00ecd0:worker/src/lib/__tests__/api-keys.test.ts:generic-api-key:345
 c742745e4432e61cb65db1c95eb0f17e4e0d2cf8:worker/src/cron/blacklist/__tests__/balance-providers.test.ts:generic-api-key:26
 cc7b3372809af32d46377760d312dd8ab753beb0:worker/src/api/__tests__/remediate-blacklist-amount-gaps.test.ts:generic-api-key:79
-d1793cd8f3d34e247e49e41d48536721d86661ca:worker/src/__tests__/index.fetch.test.ts:generic-api-key:724
-d1793cd8f3d34e247e49e41d48536721d86661ca:worker/src/__tests__/index.fetch.test.ts:generic-api-key:792
-d1793cd8f3d34e247e49e41d48536721d86661ca:worker/src/__tests__/index.fetch.test.ts:generic-api-key:862
 d8ae79a7f20cd0cf6f06dfe1604df6e66c02b766:worker/src/lib/__tests__/geckoterminal-price-probe.test.ts:generic-api-key:424
 dbd7f44e0f94cba8a18be31e7b423aa03706ca0b:shared/data/stablecoins/coins.generated.json:generic-api-key:21094
 dc0796818828623e6b483e509ea28a3e93773970:agents/plans/historical/2026-03-25-yield-expansion-phase1-2.md:generic-api-key:1855
@@ -247,9 +195,6 @@ f40fa3bdae23aaf46fc5f1fc4e7e911e79751e51:shared/data/stablecoins/coins/fxd-fatho
 f57a1164d7304722f23cad9e5af2dee1b2bb57d4:agents/research/2026-04-14-pmusd-rwfx-audit.md:generic-api-key:24
 f8117d3717081df80d8f137f4d0e6e587ba16461:shared/data/stablecoins/usd-major.json:generic-api-key:1978
 f87059c301ab363b10339b92f2f20269019f11d2:worker/src/cron/__tests__/yield-aave-onchain-source.test.ts:generic-api-key:47
-adc2c7fb4e9ab377978cc111e2cd2ed57066f16a:shared/data/stablecoins/coins/xagm-matrixdock.json:generic-api-key:22
-adc2c7fb4e9ab377978cc111e2cd2ed57066f16a:shared/data/stablecoins/coins/xagm-matrixdock.json:generic-api-key:39
-ed446b560c9908be9586d0c3a9c9e8f6abd37219:shared/data/stablecoins/coins/xaum-matrixdock.json:generic-api-key:39
 b115cf007e6743925c81f7a57c6085f6aab4d1f1:shared/data/safety-score-v9/mechanism-review-overlays-v1.json:generic-api-key:4047
 fc59649ec551ec54fbbfcd4a06f52dcaca72df20:worker/src/api/__tests__/yield-history.test.ts:generic-api-key:151
 af54646449278a67f151c798373fa06c466cebd4:shared/data/safety-score-v9/transfer-review-overlays-v1.json:generic-api-key:109
@@ -273,17 +218,12 @@ f22fff401e2d5dfeb1efd4e6d988685826e41313:worker/src/cron/measured-execution/sola
 6dbbaea96aa22a5126f59482c95c46372a9e9617:shared/lib/redemption-backstop-configs/offchain-issuer/coverage-and-stablecoin-audit.ts:generic-api-key:60
 6dbbaea96aa22a5126f59482c95c46372a9e9617:shared/lib/redemption-backstop-configs/offchain-issuer/coverage-and-stablecoin-audit.ts:generic-api-key:414
 
-# Falcon public protocol asset labels captured in a mechanism evidence snapshot,
-# not credentials. One fingerprint covers the five labels on the minified line.
-5eb3338c978d5687018e9c354773b74134541862:shared/data/safety-score-v9/mechanism-measurements/usdf-falcon/2026-07-22T09-33-02.000Z-0d20c67470ca-protocol-api.json:generic-api-key:1
-
 # Public BSC bridge contract identifier in the reviewed transfer evidence,
 # not a credential.
 b4189da66d36c27ac7693ba837fe5dd6b333bea5:shared/data/safety-score-v9/transfer-review-overlays-v1.json:generic-api-key:4406
 
 # Public Solana mint identifiers used by the pinned measured-execution profile,
 # not credentials.
-d2961f89365ac611e8a36dcb87313e76fb70a4aa:worker/src/cron/measured-execution/__tests__/fixtures/raydium-wm-usdc-single-segment-2026-07-27.json:generic-api-key:13
 d2961f89365ac611e8a36dcb87313e76fb70a4aa:worker/src/cron/measured-execution/solana-registry.ts:generic-api-key:101
 
 # Wave-1 release stack (PR #801) reviewed public identifiers, not credentials:
@@ -313,16 +253,15 @@ bbdd0cb8933579fb83586d8fd8901acfbf52ba5a:worker/src/cron/dex-discovery/__tests__
 # main does not contain it and needs no entry.
 2fae13ddb881f6713326f1a85a1056986fe42a79:worker/src/lib/__tests__/telegram-watchlist-token.test.ts:generic-api-key:15
 
-# Public on-chain identifiers in Wave-3 census provider test fixtures: Stellar
-# Soroban contract IDs (C... base32) and ICON SCORE hex addresses are chain
-# addresses, not credentials.
-74b21e2c589278d912e7c01bbeb89debed9bcf85:worker/src/cron/dex-discovery/__tests__/crawl-soroban-pools.test.ts:generic-api-key:13
-74b21e2c589278d912e7c01bbeb89debed9bcf85:worker/src/cron/dex-discovery/__tests__/crawl-soroban-pools.test.ts:generic-api-key:14
-74b21e2c589278d912e7c01bbeb89debed9bcf85:worker/src/cron/dex-discovery/__tests__/crawl-soroban-pools.test.ts:generic-api-key:16
-74b21e2c589278d912e7c01bbeb89debed9bcf85:worker/src/cron/dex-discovery/__tests__/crawl-icon-balanced-pools.test.ts:generic-api-key:71
-74b21e2c589278d912e7c01bbeb89debed9bcf85:worker/src/cron/dex-discovery/__tests__/crawl-icon-balanced-pools.test.ts:generic-api-key:211
 5738f03812cba4324cb3ab97ae815e62d7dc9109:worker/src/cron/reserve-adapters/erc4626-redemption-capacity.ts:generic-api-key:632
 5738f03812cba4324cb3ab97ae815e62d7dc9109:worker/src/cron/reserve-adapters/erc4626-redemption-capacity.ts:generic-api-key:634
 63185e73c0aeee25574d9df2a087f48719a404a4:scripts/maintenance/publish-safety-score-map.ts:generic-api-key:38
 936693cd1131bffb85f847bef246e5c26a4280b9:worker/src/lib/safety-score-v9/extension-routes.ts:generic-api-key:38
 042cfe0eb77fa3aac26cd8e9f9ad95d1c1f061ff:worker/src/lib/__tests__/primary-price-collector.test.ts:generic-api-key:261
+70e49d27d6c9881ab025db2ef619e271c6db22b4:shared/data/safety-score-v9/transfer-review-overlays-v1.json:generic-api-key:3285
+11776449fe53a3d087e6b3b7533556f787ab12f8:worker/src/cron/reserve-adapters/erc4626-redemption-capacity.ts:generic-api-key:631
+11776449fe53a3d087e6b3b7533556f787ab12f8:worker/src/cron/reserve-adapters/erc4626-redemption-capacity.ts:generic-api-key:633
+ba51b8fcc37671cedf1a6099021a3dc988653910:worker/src/handlers/scheduled/__tests__/v9-supply-attribution.test.ts:generic-api-key:163
+40b1fe85d3f374d2d0ba37c9ee18ecc60a20cb00:worker/src/cron/reserve-adapters/erc4626-single-asset.ts:generic-api-key:739
+40b1fe85d3f374d2d0ba37c9ee18ecc60a20cb00:worker/src/cron/reserve-adapters/erc4626-single-asset.ts:generic-api-key:741
+5ad00d4d3a432a96ee3de0df7c271c8cc3142d52:worker/src/__tests__/index.fetch.test.ts:generic-api-key:11
