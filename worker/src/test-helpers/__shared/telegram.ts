@@ -1,4 +1,4 @@
-import { onTestFinished, vi, type Mock } from "vitest";
+import { vi, type Mock } from "vitest";
 import {
   mockD1,
   type MockD1Database,
@@ -37,17 +37,8 @@ export interface MockTelegramD1Options extends MockD1Options {
   subscriptions?: TelegramSubscriptionFixture[];
   pendingOperation?: TelegramPendingOperationFixture | null;
   writeResults?: TelegramWriteResultOverrides;
-}
-
-export interface TelegramWriteExpectation {
-  sql: string;
-  binds?: unknown[];
-  exactBinds?: boolean;
-}
-
-export interface TelegramWriteHistoryEntry {
-  sql: string;
-  binds: unknown[];
+  /** Reject any write the scenario did not declare instead of accepting the broad defaults. */
+  strictWrites?: boolean;
 }
 
 const TELEGRAM_WRITE_MATCHES: Record<
@@ -85,8 +76,10 @@ const TELEGRAM_WRITE_DEFAULTS: MockTableConfig[] = [
 ];
 
 /**
- * Strict Telegram D1 fixture with typed core reads and successful write defaults.
- * Explicit table matches win over fixtures, which win over the shared defaults.
+ * Telegram D1 fixture with typed core reads. Explicit table matches win over
+ * fixtures, which win over the suite fallbacks. With `strictWrites`, every write
+ * must be declared by a table match or `writeResults` and an unmatched write is
+ * rejected instead of absorbed by the broad defaults.
  */
 export function mockTelegramD1(
   tables: MockTableConfig[] = [],
@@ -101,6 +94,7 @@ export function mockTelegramD1(
     pendingOperation = null,
     writeResults = {},
     fallbackTables = [],
+    strictWrites = false,
     ...mockOptions
   } = options;
   const configuredMatches: MockTableConfig[] = [...tables];
@@ -145,34 +139,15 @@ export function mockTelegramD1(
     }
   }
 
-  const db = mockD1(
+  return mockD1(
     [
       ...configuredMatches,
       ...fixtureMatches,
       ...fallbackTables.map((table) => ({ ...table, allowUnused: true })),
-      ...TELEGRAM_WRITE_DEFAULTS.map((table) => ({ ...table, allowUnused: true })),
+      ...(strictWrites ? [] : TELEGRAM_WRITE_DEFAULTS.map((table) => ({ ...table, allowUnused: true }))),
     ],
-    mockOptions,
+    { ...mockOptions, assertMatchesUsed: true },
   );
-  onTestFinished(() => db.assertAllMatchesUsed());
-  return db;
-}
-
-export function assertTelegramWrite(
-  db: Pick<MockD1Database, "getHistory">,
-  expected: TelegramWriteExpectation,
-): TelegramWriteHistoryEntry {
-  const entry = db.getHistory().filter((candidate) =>
-    !/^\s*SELECT\b/iu.test(candidate.sql) && candidate.sql.includes(expected.sql),
-  ).find((candidate) => {
-    if (expected.binds == null) return true;
-    if (expected.exactBinds) return JSON.stringify(candidate.binds) === JSON.stringify(expected.binds);
-    return expected.binds.every((value) => candidate.binds.includes(value));
-  });
-  if (!entry) {
-    throw new Error(`Expected Telegram write containing ${expected.sql}`);
-  }
-  return entry;
 }
 
 type FetchSpyLike = {

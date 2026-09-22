@@ -29,7 +29,7 @@ beforeEach(resetCallbackTest);
 describe("handleCallbackQuery", () => {
   describe("tz timezone callback", () => {
     it("tz:<zone> persists a valid IANA zone with timezone in the upsert", async () => {
-      const db = mockTelegramD1([]);
+      const db = mockTelegramD1([{ match: "INSERT INTO telegram_subscribers", rows: [] }]);
       await handleCallbackQuery(db, "fake-token", makeCallbackQuery("tz:Europe/Paris", { id: "cb-tz" }));
 
       const upsert = db

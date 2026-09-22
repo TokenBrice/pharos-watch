@@ -13,7 +13,7 @@ import {
 } from "./telegram-pending-queue.test-support";
 
 function mockD1(tables: MockTableConfig[] = []) {
-  return createMockD1([...tables, ...DEFAULT_TELEGRAM_PENDING_D1_TABLES]);
+  return createMockD1([...tables, ...DEFAULT_TELEGRAM_PENDING_D1_TABLES], { assertMatchesUsed: true });
 }
 
 const mockSendToChat = vi.fn();
@@ -414,7 +414,7 @@ describe("enqueuePendingAlerts", () => {
   });
 
   it("rejects partially populated new-format risk provenance", async () => {
-    const db = mockD1([{ match: "INSERT INTO telegram_pending_alerts", rows: [] }]);
+    const db = mockD1();
     await expect(enqueuePendingAlerts(db, [{
       chatId: "partial-provenance",
       html: "<b>Alert</b>",
@@ -425,7 +425,7 @@ describe("enqueuePendingAlerts", () => {
   });
 
   it("rejects safety alerts without a Safety Score identity", async () => {
-    const db = mockD1([{ match: "INSERT INTO telegram_pending_alerts", rows: [] }]);
+    const db = mockD1();
     await expect(enqueuePendingAlerts(db, [{
       chatId: "missing-safety-identity",
       html: "<b>Safety alert</b>",

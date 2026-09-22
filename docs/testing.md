@@ -297,25 +297,27 @@ The mock renders a plain `<a>` with a forwarded ref and passes every other prop 
 
 ### Mock D1 (`shared/test-utils/mock-d1.ts`)
 
-Lightweight D1 mock. By default it matches on SQL substrings, but critical-path tests should use stricter behavior when the test is meant to lock a query contract rather than only response shape.
+Lightweight D1 mock. It resolves a statement to the first configured table whose `match` is found in the SQL. Prefer a statement marker over a SQL substring so a reworded query fails loudly instead of silently missing its fixture, and opt into match accounting so a fixture the run never selected fails the test.
 
 ```ts
-import { mockD1 } from "@shared/test-utils/mock-d1";
+import { matchMarker, mockD1 } from "@shared/test-utils/mock-d1";
 
 const db = mockD1([
+  matchMarker("stress-signals:latest-all", [row1, row2]),
   { match: "COUNT", rows: [{ total: 5 }] },
-  { match: "blacklist_events", rows: [row1, row2] },
 ]);
 ```
 
-- `match` — substring to look for in the SQL query
+- `match` — substring to look for in the SQL query; `matchMarker(marker, rows, overrides?)` builds one from the statement's `/* pharos:<marker> */` comment (`sqlMarker(marker)` renders the comment alone)
 - `rows` — array of row objects for `.all()` results
 - `first` — explicit `.first()` result, object or `null`; a provided value wins over first-row and cache-key inference, so `{ first: null }` is an explicit empty result, not a request to infer one
 - `batch()` — executes each statement and returns an array of results (SELECT statements use `.all()`; writes use `.run()`, falling back to `.all()`/`.first()`)
 - Unmatched SQL always throws — there is no permissive mode. Add a `{ match, rows }` entry (or `allowUnused: true` on a shared fallback entry you do not expect to fire) instead. The `requireMatch` option is deprecated and no longer changes behavior.
 - `mockD1(tables, { strictSql: true })` — matches normalized SQL exactly instead of substring search
 - `mockD1(tables, { strict: true })` — exact normalized SQL matching (`mockD1Strict(tables)` is the shorthand). Matching is always required, so unlike the deprecated `requireMatch` this only tightens how SQL is compared.
-- `db.assertAllMatchesUsed()` — optional assertion that every configured match was actually selected at least once. Accounting counts selections, not SQL history: a fallback entry shadowed by a `matchBinds` entry stays unused, and `allowUnused: true` entries are exempt.
+- `db.assertAllMatchesUsed()` — asserts that every configured match was actually selected at least once. `mockD1(tables, { assertMatchesUsed: true })` (implied by `mockD1Strict`) registers it as an `onTestFinished` hook, so an unused fixture fails its own test. Accounting counts selections, not SQL history: a fallback entry shadowed by a `matchBinds` entry stays unused. `allowUnused: true` exempts one shared fallback entry. Neither is a licence to blanket-exempt scenario fixtures — an unused scenario match means the test is not exercising the statement it claims to.
+
+`mockTelegramD1()` (`worker/src/test-helpers/__shared/telegram.ts`) layers typed Telegram reads on top of `mockD1` and always accounts its matches. Pass `{ strictWrites: true }` to drop its broad `INSERT/UPDATE/DELETE telegram_*` defaults so a write the scenario did not declare is rejected rather than silently accepted; declare the scenario's own writes through `tables` or `writeResults`.
 
 Cross-runtime tests outside `worker/src` should use `createRemoteD1Mock()` from `scripts/test-utils/d1.ts` for worker maintenance scripts that accept a `RemoteD1Client` dependency. Pages Functions that need `prepare()`, `batch()`, and `getHistory()` use `makeTestD1Database()` from `@shared/test-utils/mock-d1`.
 

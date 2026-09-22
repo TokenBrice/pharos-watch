@@ -30,7 +30,7 @@ describe("handleCallbackQuery", () => {
   describe("coinsnooze (P1-U10)", () => {
     it("coinsnooze:<id>:4h upserts alert_snooze_until_ts on the matching subscription row", async () => {
       const before = Math.floor(Date.now() / 1000);
-      const db = mockTelegramD1([]);
+      const db = mockTelegramD1([{ match: "INSERT INTO telegram_subscriptions", rows: [] }]);
       await handleCallbackQuery(db, "fake-token", makeCallbackQuery("coinsnooze:usdc-circle:4h", { id: "cb-coinsnooze", message: { chat: { id: 42 }, message_id: 999 } }));
 
       const upsert = db

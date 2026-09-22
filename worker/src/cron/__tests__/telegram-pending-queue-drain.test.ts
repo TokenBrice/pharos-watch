@@ -26,7 +26,7 @@ import {
 import { insertTelegramSubscriber } from "./telegram-subscriber.test-support";
 
 function mockD1(tables: MockTableConfig[] = []) {
-  return createMockD1([...tables, ...DEFAULT_TELEGRAM_PENDING_D1_TABLES]);
+  return createMockD1([...tables, ...DEFAULT_TELEGRAM_PENDING_D1_TABLES], { assertMatchesUsed: true });
 }
 
 const mockSendToChat = vi.fn();
@@ -89,8 +89,10 @@ function history(db: { getHistory(): Array<{ sql: string; binds: unknown[] }> },
 
 describe("drainPendingQueue contract cases", () => {
   it("returns the empty result for zero work and for an empty queue", async () => {
-    const zero = await drainPendingQueue(queueDb([]), "bot-token", 0);
+    const idle = mockD1();
+    const zero = await drainPendingQueue(idle, "bot-token", 0);
     expect(zero).toEqual({ attempted: 0, sent: 0, acceptedChats: 0, blocked: 0, blockedCleanedUp: 0, blockedCleanupFailed: 0, retryQueued: 0, executionUnknown: 0, dropped: 0, droppedPermanentFailure: 0, droppedMaxAttemptsFallback: 0, deferred: 0, rateLimited: false, retryAfterSec: null, notBeforeAt: null });
+    expect(idle.getHistory()).toHaveLength(0);
     const empty = await drainPendingQueue(queueDb([]), "bot-token", 10);
     expect(empty).toEqual(zero);
     expect(mockSendToChat).not.toHaveBeenCalled();
@@ -117,7 +119,7 @@ describe("drainPendingQueue contract cases", () => {
 
   it("honors selection boundaries, snooze, max-priority filtering, and soft-deadline release", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const snoozed = queueDb([row(30, { chat_id: "snoozed", alert_snooze_until_ts: now + 900 })], [{ match: "UPDATE telegram_pending_alerts SET not_before_at", rows: [] }]);
+    const snoozed = queueDb([row(30, { chat_id: "snoozed", alert_snooze_until_ts: now + 900 })], [{ match: "SET not_before_at", rows: [] }]);
     await expect(drainPendingQueue(snoozed, "bot-token", 10)).resolves.toMatchObject({ attempted: 0, deferred: 1 });
     expect(history(snoozed, "SET not_before_at")[0]?.binds.slice(0, 4)).toEqual([now + 900, "preference_snoozed", now, 30]);
 
@@ -136,14 +138,14 @@ describe("drainPendingQueue contract cases", () => {
   });
 
   it.each([
-    { label: "success", result: makeTelegramDeliveryResult(), attempts: 0, expected: { sent: 1, attempted: 1 } },
-    { label: "retry below the ceiling", result: makeTelegramRetryableResult({ statusCode: 500, errorClass: "server_error" }), attempts: 0, expected: { retryQueued: 1, dropped: 0 } },
-    { label: "max attempts", result: makeTelegramRetryableResult({ statusCode: 500, errorClass: "server_error" }), attempts: PENDING_MAX_ATTEMPTS, expected: { droppedMaxAttemptsFallback: 1, dropped: 1 } },
-    { label: "permanent failure", result: makeTelegramPermanentResult(), attempts: 0, expected: { droppedPermanentFailure: 1, dropped: 1 } },
-    { label: "execution unknown", result: makeTelegramRetryableResult({ statusCode: null, errorClass: "timeout" }), attempts: 0, expected: { executionUnknown: 1, dropped: 0 } },
-  ] as const)("projects $label once and persists its terminal/retry state", async ({ result, attempts, expected }) => {
+    { label: "success", result: makeTelegramDeliveryResult(), attempts: 0, writes: ["DELETE FROM telegram_pending_alerts WHERE id IN"], expected: { sent: 1, attempted: 1 } },
+    { label: "retry below the ceiling", result: makeTelegramRetryableResult({ statusCode: 500, errorClass: "server_error" }), attempts: 0, writes: ["UPDATE telegram_pending_alerts SET attempts"], expected: { retryQueued: 1, dropped: 0 } },
+    { label: "max attempts", result: makeTelegramRetryableResult({ statusCode: 500, errorClass: "server_error" }), attempts: PENDING_MAX_ATTEMPTS, writes: ["INSERT INTO telegram_alert_dead_letters"], expected: { droppedMaxAttemptsFallback: 1, dropped: 1 } },
+    { label: "permanent failure", result: makeTelegramPermanentResult(), attempts: 0, writes: ["INSERT INTO telegram_alert_dead_letters"], expected: { droppedPermanentFailure: 1, dropped: 1 } },
+    { label: "execution unknown", result: makeTelegramRetryableResult({ statusCode: null, errorClass: "timeout" }), attempts: 0, writes: ["delivery_state = 'execution_unknown'"], expected: { executionUnknown: 1, dropped: 0 } },
+  ] as const)("projects $label once and persists its terminal/retry state", async ({ result, attempts, writes, expected }) => {
     mockSendToChat.mockResolvedValue(result);
-    const db = queueDb([row(40, { attempts, dedupe_key: null })], [{ match: "UPDATE telegram_pending_alerts SET attempts", rows: [] }, { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] }]);
+    const db = queueDb([row(40, { attempts, dedupe_key: null })], writes.map((match) => ({ match, rows: [] })));
     await expect(drainPendingQueue(db, "bot-token", 10)).resolves.toMatchObject(expected);
     expect(mockSendToChat).toHaveBeenCalledTimes(1);
   });
@@ -233,7 +235,6 @@ describe("drainPendingQueue contract cases", () => {
       { match: "SELECT consecutive_block_count", rows: priorStrike ? [{ consecutive_block_count: 1, consecutive_block_first_at: now - 3600 }] : [] },
       { match: "UPDATE telegram_subscribers", rows: [] },
       ...(cleaned ? [{ match: "UPDATE telegram_subscriptions", rows: [] }, { match: "DELETE FROM telegram_preset_subscriptions", rows: [] }] : []),
-      { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] },
     ]);
     const result = await drainPendingQueue(db, "bot-token", 10);
     expect(result).toMatchObject({ blocked: 1, blockedCleanedUp: cleaned, sent: 0 });
@@ -323,7 +324,6 @@ describe("drainPendingQueue contract cases", () => {
   it("releases rows whose optimistic sending claim loses its CAS race", async () => {
     const candidate = row(804, { delivery_state: "pending", delivery_generation: 0 });
     const db = queueDb([candidate], [
-      { match: "FROM telegram_pending_alerts p\n        WHERE p.processing_owner = ?", rows: [candidate] },
       { match: "SET delivery_state = 'sending'", rows: [], runMeta: { changes: 0 } },
     ]);
     const result = await drainPendingQueue(db, "bot-token", 1);
@@ -460,7 +460,7 @@ describe("drainPendingQueue contract cases", () => {
   it("records the stale-strike boundary and successful reset", async () => {
     const now = Math.floor(Date.now() / 1000);
     mockSendToChat.mockResolvedValue(makeTelegramBlockedResult({ errorClass: "chat_not_found", statusCode: 400 }));
-    const stale = queueDb([row(22, { chat_id: "stale-strike" })], [{ match: "SELECT consecutive_block_count", rows: [{ consecutive_block_count: 1, consecutive_block_first_at: now - BLOCK_STRIKE_WINDOW_SEC - 1 }] }, { match: "UPDATE telegram_subscribers", rows: [] }, { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] }]);
+    const stale = queueDb([row(22, { chat_id: "stale-strike" })], [{ match: "SELECT consecutive_block_count", rows: [{ consecutive_block_count: 1, consecutive_block_first_at: now - BLOCK_STRIKE_WINDOW_SEC - 1 }] }, { match: "UPDATE telegram_subscribers", rows: [] }]);
     await drainPendingQueue(stale, "bot-token", 10);
     expect(history(stale, "UPDATE telegram_subscribers").find((entry) => entry.sql.includes("consecutive_block_count = ?"))?.binds.slice(0, 2)).toEqual([1, now]);
     mockSendToChat.mockResolvedValue(makeTelegramSentResult());
@@ -477,9 +477,7 @@ describe("drainPendingQueue contract cases", () => {
       { match: "SELECT consecutive_block_count", rows: [{ consecutive_block_count: 1, consecutive_block_first_at: now - 60 }] },
       { match: "SET alert_dews=0", rows: [], throwError: new Error("D1 cleanup failed") },
       { match: "INSERT INTO telegram_chat_delivery_diagnostics", rows: [] },
-      { match: "UPDATE telegram_alert_job_targets", rows: [] },
       { match: "INSERT INTO telegram_alert_dead_letters", rows: [] },
-      { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] },
     ]);
     await expect(drainPendingQueue(db, "bot-token", 1, controller.signal)).resolves.toMatchObject({ attempted: 1, blocked: 1, blockedCleanedUp: 0, blockedCleanupFailed: 1 });
   });
