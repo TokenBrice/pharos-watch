@@ -177,7 +177,7 @@ export const SCHEDULED_SLOT_PLANS: Readonly<Record<CronScheduleKey, ScheduledSlo
  * the same expression used to collapse silently into whichever one was
  * enumerated first, so half the topology stopped running with no gate failing.
  */
-export function indexScheduledSlotPlansByTriggerSchedule(
+function indexScheduledSlotPlansByTriggerSchedule(
   plans: Readonly<Record<string, ScheduledSlotPlan>>,
 ): Record<string, ScheduledSlotPlan> {
   const byTriggerSchedule: Record<string, ScheduledSlotPlan> = {};
