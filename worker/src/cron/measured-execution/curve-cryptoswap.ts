@@ -9,8 +9,6 @@ import type { ChainRpcConfig } from "../../lib/chain-registry";
 import {
   fetchEvmCallHexAtBlock,
   fetchEvmCodeAtBlock,
-  fetchEvmMulticall3Aggregate3AtBlock,
-  type EvmMulticall3Call,
   type EvmMulticall3Result,
 } from "../../lib/evm-rpc";
 import {
@@ -27,6 +25,11 @@ import {
   makeCurveGetDyPlan,
   type CurveGetDyPlan,
 } from "./curve-get-dy-quote-engine";
+import {
+  CURVE_STABLESWAP_MULTICALL_BATCH_SIZE,
+  executeCurveGetDyMulticall,
+  type CurveGetDyQuoteDependencies,
+} from "./curve-stableswap-execution-pipeline";
 
 const CURVE_CRYPTOSWAP_ABI = parseAbi(["function get_dy(uint256 i,uint256 j,uint256 dx) view returns (uint256)"]);
 const CURVE_CRYPTOSWAP_DEPENDENCY_ABI = parseAbi([
@@ -36,8 +39,6 @@ const CURVE_CRYPTOSWAP_DEPENDENCY_ABI = parseAbi([
   "function is_killed() view returns (bool)",
   "function views_implementation() view returns (address)",
 ]);
-const CURVE_MULTICALL_BATCH_SIZE = 8;
-const CURVE_MULTICALL_GAS = "0x1c9c380";
 
 export const CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID = "curve-cryptoswap-get-dy-v1" as const;
 
@@ -536,18 +537,6 @@ export interface CurveCryptoSwapBatchOutcome {
   failureReason?: CurveCryptoSwapQuoteFailure;
 }
 
-interface CurveCryptoSwapQuoteDependencies {
-  executeMulticall(input: {
-    chain: string;
-    calls: readonly EvmMulticall3Call[];
-    blockNumber: number;
-    chainRpcs: Map<string, ChainRpcConfig>;
-    signal?: AbortSignal;
-    rpcBudget?: DexMeasuredExecutionRpcBudget;
-    onBudgetStop?: (reason: DexMeasuredExecutionBudgetStopReason) => void;
-  }): Promise<EvmMulticall3Result[] | null>;
-}
-
 export function resolveCurveCryptoSwapTokenIndices(
   target: DexMeasuredExecutionTarget | DexMeasuredExecutionProfile,
 ): { ok: true; inputIndex: number; outputIndex: number } | { ok: false; reason: CurveCryptoSwapQuoteFailure } {
@@ -721,7 +710,7 @@ export function decodeCurveCryptoSwapQuotePoint(
   });
 }
 
-export function createCurveCryptoSwapQuoteExecutor(dependencies: CurveCryptoSwapQuoteDependencies) {
+export function createCurveCryptoSwapQuoteExecutor(dependencies: CurveGetDyQuoteDependencies) {
   return createCurveGetDyQuoteAdapter<
     CurveCryptoSwapRequest,
     CurveGetDyPlan<EncodedCurveCryptoSwapRequest>,
@@ -729,7 +718,7 @@ export function createCurveCryptoSwapQuoteExecutor(dependencies: CurveCryptoSwap
     CurveCryptoSwapBatchOutcome,
     CurveCryptoSwapQuoteFailure
   >({
-    batchSize: CURVE_MULTICALL_BATCH_SIZE,
+    batchSize: CURVE_STABLESWAP_MULTICALL_BATCH_SIZE,
     prepare: (request, index) => {
       const prepared = prepareRequest(request, index);
       return {
@@ -772,26 +761,7 @@ export function createCurveCryptoSwapQuoteExecutor(dependencies: CurveCryptoSwap
 }
 
 export const quoteCurveCryptoSwapRequests = createCurveCryptoSwapQuoteExecutor({
-  executeMulticall: async (input) =>
-    fetchEvmMulticall3Aggregate3AtBlock(input.chain, input.calls, input.blockNumber, {
-      chainRpcs: input.chainRpcs,
-      signal: input.signal,
-      timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
-      maxRetries: 1,
-      ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs } : {}),
-      ...(input.rpcBudget
-        ? {
-            beforeRequest: () => {
-              const consumed = input.rpcBudget!.tryConsume();
-              const reason = input.rpcBudget!.stopReason;
-              if (!consumed && reason) input.onBudgetStop?.(reason);
-              return consumed;
-            },
-          }
-        : {}),
-      gas: CURVE_MULTICALL_GAS,
-      multicallBatchSize: Math.min(CURVE_MULTICALL_BATCH_SIZE, input.calls.length),
-    }),
+  executeMulticall: executeCurveGetDyMulticall,
 });
 
 /** Exact ABI-bound validation; score eligibility is checked separately. */

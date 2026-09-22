@@ -13,11 +13,12 @@ import {
 } from "@shared/types/measured-execution";
 import { throwIfAborted } from "../../lib/abort";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import type {
-  EvmCodeAtBlockResult,
-  EvmMulticall3Call,
-  EvmMulticall3Result,
-  EvmRpcOptions,
+import {
+  fetchEvmMulticall3Aggregate3AtBlock,
+  type EvmCodeAtBlockResult,
+  type EvmMulticall3Call,
+  type EvmMulticall3Result,
+  type EvmRpcOptions,
 } from "../../lib/evm-rpc";
 import { decodeCurveMeasuredRawQuotePoint } from "./curve-quote-point";
 import {
@@ -50,7 +51,40 @@ const CURVE_STABLESWAP_ERC20_METADATA_ABI = parseAbi([
   "function decimals() view returns (uint8)",
 ]);
 export const CURVE_STABLESWAP_MULTICALL_BATCH_SIZE = 8;
-export const CURVE_STABLESWAP_MULTICALL_GAS = "0x1c9c380";
+const CURVE_STABLESWAP_MULTICALL_GAS = "0x1c9c380";
+
+/**
+ * The one Multicall3 transport every Curve `get_dy` family uses: one retry,
+ * budget deadline, budget-stop reporting and the family batch/gas limits.
+ */
+export function executeCurveGetDyMulticall(input: {
+  chain: string;
+  calls: readonly EvmMulticall3Call[];
+  blockNumber: number;
+  chainRpcs: Map<string, ChainRpcConfig>;
+  signal?: AbortSignal;
+  rpcBudget?: DexMeasuredExecutionRpcBudget;
+  onBudgetStop?: (reason: DexMeasuredExecutionBudgetStopReason) => void;
+}): Promise<EvmMulticall3Result[] | null> {
+  const { rpcBudget } = input;
+  return fetchEvmMulticall3Aggregate3AtBlock(input.chain, input.calls, input.blockNumber, {
+    chainRpcs: input.chainRpcs,
+    signal: input.signal,
+    timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
+    maxRetries: 1,
+    ...(rpcBudget ? { deadlineMs: rpcBudget.deadlineMs } : {}),
+    ...(rpcBudget ? { beforeRequest: () => {
+      const consumed = rpcBudget.tryConsume();
+      if (!consumed) {
+        const reason = rpcBudget.stopReason;
+        if (reason) input.onBudgetStop?.(reason);
+      }
+      return consumed;
+    } } : {}),
+    gas: CURVE_STABLESWAP_MULTICALL_GAS,
+    multicallBatchSize: Math.min(CURVE_STABLESWAP_MULTICALL_BATCH_SIZE, input.calls.length),
+  });
+}
 
 interface CurveStableSwapTokenPolicy {
   address: `0x${string}`;
@@ -214,7 +248,32 @@ async function verifyCurveStableSwapPoolTokens<Failure extends string>(input: {
   return { ok: true, poolCoinsProof, tokenDecimalsProof };
 }
 
-interface CurveFamilyVerificationDependencies {
+/**
+ * The published token binding every Curve family re-checks at eligibility time:
+ * the pool's coin order, the indexed coin proof and the ERC-20 decimals proof.
+ */
+export function findCurveStableSwapTokenBindingFailure<Failure extends string>(
+  policy: CurveStableSwapExecutionPolicy,
+  proof: CurveStableSwapProofShape & { poolTokenAddresses: readonly string[] },
+  failures: { poolTokenOrder: Failure; tokenDecimals: Failure },
+): Failure | null {
+  if (
+    proof.poolTokenAddresses.length !== policy.poolTokens.length ||
+    proof.poolTokenAddresses.some((address, index) => address !== policy.poolTokens[index]!.address) ||
+    proof.poolCoinsProof.length !== policy.poolTokens.length ||
+    proof.poolCoinsProof.some((entry, index) => entry.index !== index)
+  ) return failures.poolTokenOrder;
+  if (
+    proof.tokenDecimalsProof.length !== policy.poolTokens.length ||
+    proof.tokenDecimalsProof.some((entry, index) =>
+      entry.tokenAddress !== policy.poolTokens[index]!.address ||
+      entry.decimals !== policy.poolTokens[index]!.decimals
+    )
+  ) return failures.tokenDecimals;
+  return null;
+}
+
+export interface CurveFamilyVerificationDependencies {
   fetchCodeStatus(
     chain: string,
     address: string,
@@ -534,7 +593,7 @@ interface EncodedCurveStableSwapExecutionRequest<
   eligibility: Eligibility;
 }
 
-interface CurveStableSwapQuoteDependencies {
+export interface CurveGetDyQuoteDependencies {
   executeMulticall(input: {
     chain: string;
     calls: readonly EvmMulticall3Call[];
@@ -542,6 +601,7 @@ interface CurveStableSwapQuoteDependencies {
     chainRpcs: Map<string, ChainRpcConfig>;
     signal?: AbortSignal;
     rpcBudget?: DexMeasuredExecutionRpcBudget;
+    onBudgetStop?: (reason: DexMeasuredExecutionBudgetStopReason) => void;
   }): Promise<readonly EvmMulticall3Result[] | null>;
 }
 
@@ -577,7 +637,7 @@ export function createCurveStableSwapExecutionPipeline<
   Failure extends string,
 >(
   strategy: CurveStableSwapExecutionStrategy<Policy, Evidence, Eligibility, Failure>,
-  dependencies: CurveStableSwapQuoteDependencies,
+  dependencies: CurveGetDyQuoteDependencies,
 ) {
   type Request = CurveStableSwapExecutionRequest<Evidence>;
   type Encoded = EncodedCurveStableSwapExecutionRequest<Policy, Evidence, Eligibility>;

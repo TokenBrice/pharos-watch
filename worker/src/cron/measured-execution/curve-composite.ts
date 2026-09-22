@@ -2,25 +2,17 @@ import { encodeFunctionData, parseAbi } from "viem/utils";
 
 import { canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
 import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
-import type { ChainRpcConfig } from "../../lib/chain-registry";
-import {
-  fetchEvmMulticall3Aggregate3AtBlock,
-  type EvmMulticall3Call,
-  type EvmMulticall3Result,
-} from "../../lib/evm-rpc";
-import {
-  DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
-  type DexMeasuredExecutionBudgetStopReason,
-  type DexMeasuredExecutionRpcBudget,
-  type DexMeasuredRawQuotePoint,
+import type {
+  DexMeasuredExecutionBudgetStopReason,
+  DexMeasuredRawQuotePoint,
 } from "./profiles";
 import { canonicalEvmAddress } from "./evm-codecs";
 import { getCurveCompositePolicy, type CurveCompositePoolPolicy } from "./curve-composite-policies";
 import { buildMeasuredExecutionTargetValue } from "./inventory";
 import {
-  CURVE_STABLESWAP_MULTICALL_BATCH_SIZE,
-  CURVE_STABLESWAP_MULTICALL_GAS,
   createCurveStableSwapExecutionPipeline,
+  executeCurveGetDyMulticall,
+  type CurveGetDyQuoteDependencies,
 } from "./curve-stableswap-execution-pipeline";
 import {
   decodeCurveCompositeQuote, evaluateCurveCompositeEligibility,
@@ -211,19 +203,7 @@ export function encodeCurveCompositeQuote(input: {
   }).toLowerCase() as `0x${string}`;
 }
 
-
-interface QuoteDependencies {
-  executeMulticall(input: {
-    chain: string;
-    calls: readonly EvmMulticall3Call[];
-    blockNumber: number;
-    chainRpcs: Map<string, ChainRpcConfig>;
-    signal?: AbortSignal;
-    rpcBudget?: DexMeasuredExecutionRpcBudget;
-  }): Promise<EvmMulticall3Result[] | null>;
-}
-
-export function createCurveCompositeQuoteExecutor(dependencies: QuoteDependencies) {
+export function createCurveCompositeQuoteExecutor(dependencies: CurveGetDyQuoteDependencies) {
   return createCurveStableSwapExecutionPipeline<
     CurveCompositePoolPolicy,
     CurveCompositeRuntimeEvidence,
@@ -249,15 +229,5 @@ export function createCurveCompositeQuoteExecutor(dependencies: QuoteDependencie
 }
 
 export const quoteCurveCompositeRequests = createCurveCompositeQuoteExecutor({
-  executeMulticall: async (input) =>
-    fetchEvmMulticall3Aggregate3AtBlock(input.chain, input.calls, input.blockNumber, {
-      chainRpcs: input.chainRpcs,
-      signal: input.signal,
-      timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
-      maxRetries: 1,
-      ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs } : {}),
-      ...(input.rpcBudget ? { beforeRequest: () => input.rpcBudget!.tryConsume() } : {}),
-      gas: CURVE_STABLESWAP_MULTICALL_GAS,
-      multicallBatchSize: Math.min(CURVE_STABLESWAP_MULTICALL_BATCH_SIZE, input.calls.length),
-    }),
+  executeMulticall: executeCurveGetDyMulticall,
 });

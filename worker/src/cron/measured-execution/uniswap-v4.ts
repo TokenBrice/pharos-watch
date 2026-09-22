@@ -27,7 +27,13 @@ import {
   type DexMeasuredRawQuotePoint,
 } from "./profiles";
 import { MAX_UINT128, usdToRawAmount } from "./fixed-point";
-import { executeEvmQuotePlan, materializeEvmQuotePoint } from "./evm-quote-plan";
+import {
+  buildEvmSingleCallQuotePlans,
+  createEvmQuotePlanMulticallExecutor,
+  executeEvmQuotePlan,
+  materializeEvmQuotePoint,
+  materializeRevertedEvmQuotePoint,
+} from "./evm-quote-plan";
 
 export const UNISWAP_V4_ADAPTER_PROFILE_ID = UNISWAP_V4_DEPLOYMENT.adapterProfileId;
 export const UNISWAP_V4_HOOK_FREE_ADDRESS = UNISWAP_V4_DEPLOYMENT.hookFreeAddress;
@@ -47,6 +53,11 @@ const UNISWAP_V4_POOL_KEY_PARAMETERS = parseAbiParameters(
 const UNISWAP_V4_MULTICALL_BATCH_SIZE = 8;
 const UNISWAP_V4_MULTICALL_GAS = "0x1c9c380";
 const UNISWAP_V4_Q192 = 1n << 192n;
+
+const uniswapV4PoolStateMulticallExecutor = createEvmQuotePlanMulticallExecutor({});
+const uniswapV4QuoteMulticallExecutor = createEvmQuotePlanMulticallExecutor({
+  gas: UNISWAP_V4_MULTICALL_GAS,
+});
 
 export interface UniswapV4Deployment {
   adapterProfileId: typeof UNISWAP_V4_ADAPTER_PROFILE_ID;
@@ -496,21 +507,7 @@ export async function resolveUniswapV4PoolBindings(input: {
     rpcBudget: input.rpcBudget,
     spec: {
       batchSize: UNISWAP_V4_MULTICALL_BATCH_SIZE * 2,
-      executeMulticall: ({ chain, calls, blockNumber, chainRpcs, signal, rpcBudget, onBudgetStop }) =>
-        fetchEvmMulticall3Aggregate3AtBlock(chain, calls, blockNumber, {
-          chainRpcs,
-          signal,
-          timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
-          ...(rpcBudget ? { deadlineMs: rpcBudget.deadlineMs } : {}),
-          ...(rpcBudget ? { beforeRequest: () => {
-            const consumed = rpcBudget.tryConsume();
-            const reason = rpcBudget.stopReason;
-            if (!consumed && reason) onBudgetStop?.(reason);
-            return consumed;
-          } } : {}),
-          maxRetries: 0,
-          multicallBatchSize: calls.length,
-        }),
+      executeMulticall: uniswapV4PoolStateMulticallExecutor,
       adaptive: {
         failedAttemptAccounting: "single-call",
         unattemptedResult: "failure-result",
@@ -686,22 +683,6 @@ function decodeQuotePoint(
   }
 }
 
-function buildRevertedPoint(
-  request: EncodedUniswapV4QuoteRequest,
-  result: EvmMulticall3Result,
-): DexMeasuredRawQuotePoint {
-  return materializeEvmQuotePoint({
-    amountInRaw: request.amountInRaw,
-    amountOutRaw: 0n,
-    callData: request.callData,
-    returnData: result.returnData,
-    tokenIn: request.target.tokenIn,
-    tokenOut: request.target.tokenOut,
-    reverted: true,
-    adapterMetadata: { executionReverted: true },
-  })!;
-}
-
 export async function quoteUniswapV4Requests(input: {
   requests: readonly UniswapV4QuoteRequest[];
   blockNumber: number;
@@ -719,17 +700,7 @@ export async function quoteUniswapV4Requests(input: {
         }
       : { targetId: request.target.targetId, inputUsd: request.inputUsd },
   );
-  const plans = encoded.flatMap((request) => request ? [{
-    ...request,
-    chain: request.target.chain,
-    blockNumber: input.blockNumber,
-    call: {
-          label: request.label,
-          target: request.endpointAddress,
-          callData: request.callData,
-          allowFailure: true,
-    },
-  }] : []);
+  const plans = buildEvmSingleCallQuotePlans(encoded, input.blockNumber);
   return executeEvmQuotePlan({
     plans,
     outcomes,
@@ -738,22 +709,7 @@ export async function quoteUniswapV4Requests(input: {
     rpcBudget: input.rpcBudget,
     spec: {
       batchSize: UNISWAP_V4_MULTICALL_BATCH_SIZE,
-      executeMulticall: ({ chain, calls, blockNumber, chainRpcs, signal, rpcBudget, onBudgetStop }) =>
-        fetchEvmMulticall3Aggregate3AtBlock(chain, calls, blockNumber, {
-          chainRpcs,
-          signal,
-          timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
-          ...(rpcBudget ? { deadlineMs: rpcBudget.deadlineMs } : {}),
-          ...(rpcBudget ? { beforeRequest: () => {
-            const consumed = rpcBudget.tryConsume();
-            const reason = rpcBudget.stopReason;
-            if (!consumed && reason) onBudgetStop?.(reason);
-            return consumed;
-          } } : {}),
-          maxRetries: 0,
-          gas: UNISWAP_V4_MULTICALL_GAS,
-          multicallBatchSize: calls.length,
-        }),
+      executeMulticall: uniswapV4QuoteMulticallExecutor,
       adaptive: {
         failedAttemptAccounting: "single-call",
         unattemptedResult: "failure-result",
@@ -774,7 +730,7 @@ export async function quoteUniswapV4Requests(input: {
             : {
                 targetId: request.target.targetId,
                 inputUsd: request.inputUsd,
-                point: buildRevertedPoint(request, result),
+                point: materializeRevertedEvmQuotePoint(request, result),
               };
         }
         const point = decodeQuotePoint(request, result);

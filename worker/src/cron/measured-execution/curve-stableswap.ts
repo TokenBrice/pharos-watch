@@ -18,29 +18,23 @@ import {
   fetchEvmBlockTimestamp,
   fetchEvmCallHexAtBlock,
   fetchEvmCodeStatusAtBlock,
-  fetchEvmMulticall3Aggregate3AtBlock,
-  type EvmCodeAtBlockResult,
-  type EvmMulticall3Call,
-  type EvmMulticall3Result,
 } from "../../lib/evm-rpc";
-import {
-  DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
-  type DexMeasuredExecutionBudgetStopReason,
-  type DexMeasuredExecutionRpcBudget,
-} from "./profiles";
+import type { DexMeasuredExecutionBudgetStopReason, DexMeasuredExecutionRpcBudget } from "./profiles";
 import {
   canonicalEvmAddress,
   canonicalEvmHash,
   decodeAddressResult as decodeEvmAddressResult,
 } from "./evm-codecs";
 import {
-  CURVE_STABLESWAP_MULTICALL_BATCH_SIZE,
-  CURVE_STABLESWAP_MULTICALL_GAS,
   createCurveFamilyDeploymentVerifier,
   createCurveStableSwapExecutionPipeline,
   decodeCurveStableSwapGetDyResult,
   encodeCurveStableSwapGetDyCall,
+  executeCurveGetDyMulticall,
+  findCurveStableSwapTokenBindingFailure,
   validateCurveStableSwapExecutionProfile,
+  type CurveFamilyVerificationDependencies,
+  type CurveGetDyQuoteDependencies,
 } from "./curve-stableswap-execution-pipeline";
 
 const CURVE_MAIN_REGISTRY_ABI = parseAbi([
@@ -165,51 +159,19 @@ export function evaluateCurveStableSwapEligibility(input: {
   if (proof.lpTokenAddress !== policy.lpTokenAddress) {
     return { ok: false, reason: "lp-token-mismatch" };
   }
-  const expectedAddresses = policy.poolTokens.map((token) => token.address);
-  if (
-    proof.poolTokenAddresses.length !== expectedAddresses.length ||
-    proof.poolTokenAddresses.some((address, index) => address !== expectedAddresses[index])
-  ) {
-    return { ok: false, reason: "pool-token-order-mismatch" };
-  }
-  if (
-    proof.poolCoinsProof.length !== policy.poolTokens.length ||
-    proof.poolCoinsProof.some((entry, index) => entry.index !== index)
-  ) {
-    return { ok: false, reason: "pool-token-order-mismatch" };
-  }
-  if (
-    proof.tokenDecimalsProof.length !== policy.poolTokens.length ||
-    proof.tokenDecimalsProof.some((entry, index) =>
-      entry.tokenAddress !== policy.poolTokens[index]!.address ||
-      entry.decimals !== policy.poolTokens[index]!.decimals
-    )
-  ) {
-    return { ok: false, reason: "token-decimals-mismatch" };
-  }
-  return { ok: true };
+  const tokenBindingFailure = findCurveStableSwapTokenBindingFailure(policy, proof, {
+    poolTokenOrder: "pool-token-order-mismatch",
+    tokenDecimals: "token-decimals-mismatch",
+  });
+  return tokenBindingFailure ? { ok: false, reason: tokenBindingFailure } : { ok: true };
 }
 
-interface CurveStableSwapVerificationDependencies {
-  fetchCodeStatus(
-    chain: string,
-    address: string,
-    blockNumber: number,
-    options: Parameters<typeof fetchEvmCodeStatusAtBlock>[3],
-  ): Promise<EvmCodeAtBlockResult>;
-  fetchCall(
-    chain: string,
-    address: string,
-    callData: string,
-    blockNumber: number,
-    options: Parameters<typeof fetchEvmCallHexAtBlock>[4],
-  ): Promise<`0x${string}` | null>;
+interface CurveStableSwapVerificationDependencies extends CurveFamilyVerificationDependencies {
   fetchBlockTimestamp(
     chain: string,
     blockNumber: number,
     options: Parameters<typeof fetchEvmBlockTimestamp>[2],
   ): Promise<number | null>;
-  hashCode?(code: `0x${string}`): `0x${string}`;
 }
 
 export type CurveStableSwapDeploymentVerification =
@@ -411,18 +373,7 @@ export function decodeCurveStableSwapGetDy(returnData: `0x${string}`): bigint | 
   return decodeCurveStableSwapGetDyResult(returnData);
 }
 
-interface CurveStableSwapQuoteDependencies {
-  executeMulticall(input: {
-    chain: string;
-    calls: readonly EvmMulticall3Call[];
-    blockNumber: number;
-    chainRpcs: Map<string, ChainRpcConfig>;
-    signal?: AbortSignal;
-    rpcBudget?: DexMeasuredExecutionRpcBudget;
-  }): Promise<EvmMulticall3Result[] | null>;
-}
-
-export function createCurveStableSwapQuoteExecutor(dependencies: CurveStableSwapQuoteDependencies) {
+export function createCurveStableSwapQuoteExecutor(dependencies: CurveGetDyQuoteDependencies) {
   return createCurveStableSwapExecutionPipeline<
     CurveStableSwapPoolPolicy,
     CurveStableSwapRuntimeEvidence,
@@ -446,17 +397,7 @@ export function createCurveStableSwapQuoteExecutor(dependencies: CurveStableSwap
 }
 
 export const quoteCurveStableSwapRequests = createCurveStableSwapQuoteExecutor({
-  executeMulticall: async (input) =>
-    fetchEvmMulticall3Aggregate3AtBlock(input.chain, input.calls, input.blockNumber, {
-      chainRpcs: input.chainRpcs,
-      signal: input.signal,
-      timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
-      maxRetries: 1,
-      ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs } : {}),
-      ...(input.rpcBudget ? { beforeRequest: () => input.rpcBudget!.tryConsume() } : {}),
-      gas: CURVE_STABLESWAP_MULTICALL_GAS,
-      multicallBatchSize: Math.min(CURVE_STABLESWAP_MULTICALL_BATCH_SIZE, input.calls.length),
-    }),
+  executeMulticall: executeCurveGetDyMulticall,
 });
 
 /** Exact ABI and reviewed registry-binding validation at the consumer boundary. */
