@@ -44,6 +44,7 @@ function fixtureMockD1(
     { match: "JOIN reserve_sync_state", rows: [] },
       ],
       publication: [
+    { match: "WHERE key IN", rows: [] },
     { match: "FROM worker_producer_heads", rows: [] },
     { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
     { match: "SELECT updated_at FROM cache WHERE key = ?", rows: [], first: null },
@@ -103,6 +104,34 @@ describe("handleStatus", () => {
     body: { error: "Unauthorized" },
   });
 
+  it.each([false, true])("refreshes cron evidence independently of cached assessment (read failure: %s)", async (readFails) => {
+    const now = Math.floor(Date.now() / 1000);
+    const job = "reserve-recovery";
+    const db = fixtureMockD1([
+      { match: "FROM cache WHERE key = ?", matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY], rows: [
+        makeRawStatusSnapshotRow(now, 120, {
+          crons: { [job]: { lastRun: { startedAt: now - 1200, status: "ok" }, recentRuns: [],
+            expectedIntervalSec: 300, healthy: false, telemetryUnknown: false } },
+          sectionErrors: { scheduledSlots: { code: "old-slot-error", message: "old snapshot error" } },
+        }),
+      ] },
+      { match: "cron_runs", rows: [{ job, started_at: now - 30, duration_ms: 1000,
+        status: "ok", error: null, item_count: 0, metadata: null }],
+        ...(readFails ? { throwError: "cron history unavailable" } : {}),
+      },
+    ]);
+    const res = await handleStatus({ db, trustedAdmin: true,
+      request: fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" }) });
+    const body = StatusResponseSchema.parse(await readJsonResponse(res, 200));
+    expect(body.crons[job].healthy).toBe(readFails ? null : true);
+    expect(body.crons[job].telemetryUnknown).toBe(readFails);
+    if (!readFails) expect(body.crons[job].lastRun?.startedAt).toBe(now - 30);
+    expect(body.sectionErrors.scheduledSlots).toBeUndefined();
+    expect(body.summary.unhealthyCrons).toBe(Object.values(body.crons)
+      .filter((cron) => cron.healthy === false).length);
+    expect(db.getHistory().some((entry) => entry.sql.includes("blacklist_events"))).toBe(false);
+  });
+
   it("serves raw status fields from a fresh cron snapshot", async () => {
     const now = Math.floor(Date.now() / 1000);
     const db = fixtureMockD1([
@@ -157,7 +186,7 @@ describe("handleStatus", () => {
     const nonCircuitBatchCacheReads = db
       .getHistory()
       .filter((entry) => entry.sql.includes("cache WHERE key IN"))
-      .filter((entry) => !entry.binds.every((bind) => typeof bind === "string" && bind.startsWith("circuit:")));
+      .filter((entry) => !entry.binds.every((bind) => typeof bind === "string" && (bind.startsWith("circuit:") || bind.startsWith("cron:event:"))));
     expect(nonCircuitBatchCacheReads).toEqual([]);
     const sql = db
       .getHistory()
@@ -715,42 +744,16 @@ describe("handleStatus", () => {
   it("coerces malformed liquidity coverage-class metadata to zero", async () => {
     const now = Math.floor(Date.now() / 1000);
     const db = fixtureMockD1([
-      {
-        match: "FROM cache WHERE key = ?",
-        matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY],
-        rows: [
-          makeRawStatusSnapshotRow(now, 60, {
-            crons: {
-              "sync-dex-liquidity": {
-                lastRun: {
-                  status: "ok",
-                  metadata: {
-                    sourceCoverage: {
-                      currentCoverage: 120,
-                      currentCoverageClasses: {
-                        primary: "12",
-                        mixed: "not-a-number",
-                        fallback: "NaN",
-                        legacy: [],
-                      },
-                      previousCoverageClasses: {
-                        primary: "Infinity",
-                        mixed: "-Infinity",
-                        fallback: {},
-                        legacy: "",
-                        unobserved: "7",
-                      },
-                    },
-                  },
-                },
-                recentRuns: [],
-                expectedIntervalSec: 1800,
-                healthy: true,
-              },
-            },
-          }),
-        ],
-      },
+      { match: "FROM cache WHERE key = ?", matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY],
+        rows: [makeRawStatusSnapshotRow(now, 60)] },
+      { match: "cron_runs", rows: [{ job: "sync-dex-liquidity", started_at: now - 30,
+        duration_ms: 1000, status: "ok", error: null, item_count: 120,
+        metadata: JSON.stringify({ sourceCoverage: {
+          currentCoverage: 120,
+          currentCoverageClasses: { primary: "12", mixed: "not-a-number", fallback: "NaN", legacy: [] },
+          previousCoverageClasses: { primary: "Infinity", mixed: "-Infinity", fallback: {}, legacy: "", unobserved: "7" },
+        } }),
+      }] },
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
