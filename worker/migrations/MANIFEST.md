@@ -30,6 +30,7 @@
 | 0241     | `0241_dex_pool_registry.sql`                              | Add the per-source DEX pool registry and backfill existing staged observations while retaining staging for Worker rollback. |
 | 0242     | `0242_orca_whirlpool_shadow_quotes.sql`                    | Add isolated native Orca shadow quotes with enforced score ineligibility; no V1 scoring publication. |
 | 0243     | `0243_native_shadow_quote_families.sql`                    | Add family-generic native shadow quotes for Orca and Raydium with enforced score ineligibility; retain the Orca-only store for rollback. |
+| 0244     | `0244_ddr_publication_payload_dedup.sql`                   | Add the DDR publication payload content-identity column and the append-only payload reference table so an unchanged publication stores no second BLOB. |
 
 ## Squashed Individual Migrations (absorbed into the 0000 baseline on 2026-07-30)
 
@@ -242,6 +243,7 @@ Current owner rulings for append-only operational/product tables that are intent
 | `safety_score_history_v2` | Product archive - keep forever | Version-aware score history preserves methodology boundaries, rollback/restoration provenance, and exact model/input identities; public history and Tape can depend on old rows indefinitely. |
 | `report_card_evidence_journal` | Bounded diagnostic provenance - 45 days and 32 rows per asset | The reserve evidence-attempt store prunes by age and per-asset count; exact V9 fixed inputs retain at most the latest two rows per asset and never score from them. |
 | `safety_score_v9_supply_attribution_journal` | Bounded diagnostic provenance - 45 days and 32 rows per asset | Reviewed-deployment attribution attempts retain bounded admission and fallback evidence; private V9 fixed inputs receive at most the latest two rows per asset, and neither V8 nor scoring reads them. |
+| `depeg_resolver_publication_snapshots_v2`, `depeg_resolver_publication_snapshot_refs` | Publication audit archive - keep forever until the Phase B archive rollout | Every published DDR generation must remain recoverable. Unchanged quarter-hourly publications now write a narrow reference row instead of a payload, so growth follows content changes; the compressed payloads move to R2 under their `base_payload_hash` only through the separate reviewed destructive rollout that replaces `trg_ddr_publication_snapshots_v2_no_delete`. Reference rows are never archived. |
 
 ## Reviewed Data Migrations
 
