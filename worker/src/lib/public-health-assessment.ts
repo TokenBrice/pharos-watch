@@ -683,26 +683,33 @@ export async function assessPublicHealth(
   // JSON `activePriceCoverage` payload still reports exact counts/ids/status for
   // observability, alert-eligible misses still emit warnings for operator triage,
   // and the warning below names every alert-eligible id. Only missing coverage
-  // evidence itself fails closed — plus a gap that has outlived the duration
-  // bands, which the ratio bands cannot see: a handful of permanently unpriceable
-  // assets stays far below `ratioElevated` however long it stays unpriced.
+  // evidence itself fails closed. A gap that has outlived the duration bands,
+  // which the ratio bands cannot see, is a catalog decision (re-source or
+  // retire): it degrades availability and is named on its own, but it never
+  // reports the public surface as stale — the data is served, one price is not.
   const activePriceCoverageAlertEligible = activePriceCoverage.alertEligibleCount > 0;
+  const criticalDurationIds = activePriceCoverage.missingActiveAssets
+    .filter((asset) => asset.alertEligible && getMissingPriceDurationStatus(asset.consecutiveMissingGenerations) === "stale")
+    .map((asset) => asset.stablecoinId);
   const activePriceCoverageDurationStatus = getMissingPriceDurationStatus(
     activePriceCoverage.missingActiveAssets.reduce(
       (worst, asset) => (asset.alertEligible ? Math.max(worst, asset.consecutiveMissingGenerations) : worst),
       0,
     ),
   );
-  const activePriceCoverageImpactStatus =
-    activePriceCoverage.status === "unknown"
+  const activePriceCoverageImpactStatus: HealthResponse["status"] =
+    activePriceCoverage.status === "unknown" || activePriceCoverageDurationStatus !== "healthy"
       ? "degraded"
-      : activePriceCoverageDurationStatus;
+      : "healthy";
   if (activePriceCoverage.status === "unknown") {
     warnings.push("active-price-coverage-unknown");
   } else if (activePriceCoverageAlertEligible) {
     warnings.push(
       `active-price-coverage-incomplete:${activePriceCoverage.alertEligibleIds.join(",") || "count-mismatch"}`,
     );
+    if (criticalDurationIds.length > 0) {
+      warnings.push(`active-price-coverage-critical-duration:${criticalDurationIds.join(",")}`);
+    }
   }
 
   const blacklistImpactStatus = blacklistResult.error

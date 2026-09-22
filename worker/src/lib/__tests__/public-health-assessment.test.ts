@@ -354,7 +354,7 @@ describe("assessPublicHealth upstream provider enrichment", () => {
     expect(result.warnings).toContain(`active-price-coverage-incomplete:${missingId}`);
   });
 
-  it("escalates to stale once an alert-eligible price gap outlives the critical duration band", async () => {
+  it("names an alert-eligible price gap past the critical duration band without reporting the surface stale", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const activeIds = [...ACTIVE_IDS];
     const missingId = activeIds[0]!;
@@ -372,9 +372,10 @@ describe("assessPublicHealth upstream provider enrichment", () => {
 
     const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
 
-    expect(result.activePriceCoverageImpactStatus).toBe("stale");
-    expect(result.overallStatus).toBe("stale");
+    expect(result.activePriceCoverageImpactStatus).toBe("degraded");
+    expect(result.overallStatus).toBe("degraded");
     expect(result.warnings).toContain(`active-price-coverage-incomplete:${missingId}`);
+    expect(result.warnings).toContain(`active-price-coverage-critical-duration:${missingId}`);
   });
 
   it("keeps public health healthy for a transient (non-alert-eligible) price miss while preserving the coverage payload", async () => {
