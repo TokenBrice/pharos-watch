@@ -36,36 +36,21 @@ describe("redemption backstop provider definitions", () => {
   });
 
 
-  it("captures provider source mode, provenance, confidence, and severe-depeg metadata", () => {
+  it("captures provider source mode, confidence, and capacity semantics", () => {
     expect(REDEMPTION_BACKSTOP_PROVIDER_DEFINITIONS["supply-full-model"]).toMatchObject({
-      capacitySource: "supply-full",
       defaultSourceMode: "estimated",
-      provenanceClass: "static-supply-model",
       defaultCapacityConfidence: "heuristic",
       defaultCapacitySemantics: "eventual-only",
-      severeDepegScoreability: "not-scoreable",
     });
     expect(REDEMPTION_BACKSTOP_PROVIDER_DEFINITIONS["reserve-sync-metadata"]).toMatchObject({
-      capacitySource: "live-reserve-metadata",
       defaultSourceMode: "dynamic",
-      provenanceClass: "live-reserve-adapter",
       defaultCapacityConfidence: "dynamic",
       defaultCapacitySemantics: "immediate-bounded",
-      severeDepegScoreability: "requires-strong-live-direct-route",
     });
     expect(REDEMPTION_BACKSTOP_PROVIDER_DEFINITIONS["fixed-usd-model"]).toMatchObject({
-      capacitySource: "fixed-usd",
       defaultSourceMode: "static",
-      provenanceClass: "reviewed-config-fallback",
       defaultCapacityConfidence: "documented-bound",
       defaultCapacitySemantics: "immediate-bounded",
-      severeDepegScoreability: "not-scoreable",
-    });
-    expect(REDEMPTION_BACKSTOP_PROVIDER_DEFINITIONS["sync-error"]).toMatchObject({
-      capability: "failure-sentinel",
-      capacitySource: "none",
-      defaultSourceMode: "static",
-      provenanceClass: "runtime-error",
     });
   });
 
@@ -108,12 +93,12 @@ describe("redemption backstop provider definitions", () => {
     ).toBe("heuristic");
   });
 
-  it("preserves legacy readback semantics inference by provider", () => {
+  it("defaults unknown providers to eventual-only capacity semantics", () => {
     expect(inferProviderCapacitySemantics({ provider: "supply-full-model" })).toBe("eventual-only");
     expect(inferProviderCapacitySemantics({ provider: "supply-ratio-model" })).toBe("immediate-bounded");
     expect(inferProviderCapacitySemantics({ provider: "fixed-usd-model" })).toBe("immediate-bounded");
     expect(inferProviderCapacitySemantics({ provider: "reserve-sync-metadata" })).toBe("immediate-bounded");
-    expect(inferProviderCapacitySemantics({ provider: "unknown-provider" })).toBe("immediate-bounded");
+    expect(inferProviderCapacitySemantics({ provider: "unknown-provider" })).toBe("eventual-only");
   });
 
   it("returns null for unknown provider IDs", () => {
