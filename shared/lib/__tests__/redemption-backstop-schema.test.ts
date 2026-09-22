@@ -177,7 +177,7 @@ describe("redemption backstop schema", () => {
     const base = RedemptionBackstopConfigSchema.parse(settlementReviewConfig("days", undefined));
     const cases = [
       [{ routeFamily: "offchain-issuer", accessModel: "issuer-api" }, { accessModel: "whitelisted-onchain" }, ["accessModel"]],
-      [{ routeFamily: "offchain-issuer", accessModel: "manual" }, { accessModel: "permissionless-onchain" }, ["routeFamily"]],
+      [{ routeFamily: "offchain-issuer", accessModel: "manual" }, { accessModel: "permissionless-onchain" }, ["accessModel"]],
       [{ routeFamily: "offchain-issuer" }, { settlementModel: "atomic" }, ["settlementModel"]],
       [{ routeFamily: "queue-redeem" }, { settlementModel: "immediate" }, ["settlementModel"]],
       [{ routeFamily: "stablecoin-redeem", accessModel: "permissionless-onchain" }, { accessModel: "issuer-api" }, ["accessModel"]],

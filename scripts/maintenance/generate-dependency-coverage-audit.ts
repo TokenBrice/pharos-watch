@@ -27,6 +27,10 @@ import type {
   StablecoinMeta,
 } from "@shared/types";
 import {
+  ReportCardsV9CurrentResponseSchema,
+  type ReportCardsV9Response,
+} from "@shared/types/report-cards-v9";
+import {
   buildMarketCapMapFromStablecoins,
   formatUsd,
   isRecord,
@@ -338,38 +342,18 @@ interface CliOptions {
   generatedAt: string | null;
 }
 
-const DEPENDENCY_SOURCE_VALUES = new Set<DependencyDerivationSource>([
-  "live-reserve",
-  "live-unmapped",
-  "curated-reserve",
-  "manual",
-  "none",
-  "variant",
-]);
-const DEPENDENCY_BASE_SOURCE_VALUES = new Set<DependencyDerivationBaseSource>([
-  "live-reserve",
-  "live-unmapped",
-  "curated-reserve",
-  "manual",
-  "none",
-]);
-const DEPENDENCY_FALLBACK_REASON_VALUES = new Set<DependencyFallbackReason>([
-  "live-unmapped-to-curated-reserve",
-  "live-unmapped-to-manual",
-  "live-cycle-to-curated",
-]);
-
 type ReportCardEdgeKind = "serial" | "basket";
 type ReportCardEdgeMateriality = "serial" | "serial-blocked" | "basket-weighted" | "basket-bounded-unknown";
+type ReportCard = ReportCardsV9Response["cards"][number];
 
 interface ParsedReportCardEdge extends DependencyGraphEdge {
-  reportKind: ReportCardEdgeKind | null;
-  reportMateriality: ReportCardEdgeMateriality | null;
+  reportKind: ReportCardEdgeKind;
+  reportMateriality: ReportCardEdgeMateriality;
   reportedWeight: number | null;
 }
 
 interface ParsedReportCardInput {
-  cardsById: Map<string, Record<string, unknown>>;
+  cardsById: Map<string, ReportCard>;
   edges: ParsedReportCardEdge[];
 }
 
@@ -377,226 +361,37 @@ function malformedReportCard(path: string, expectation: string): never {
   throw new Error(`Report-card input is malformed at ${path}: ${expectation}.`);
 }
 
-function reportCardRecord(value: unknown, path: string): Record<string, unknown> {
-  if (!isRecord(value)) malformedReportCard(path, "expected an object");
-  return value;
-}
-
-function reportCardId(value: unknown, path: string): string {
-  if (typeof value !== "string" || value.length === 0 || value !== value.trim()) {
-    malformedReportCard(path, "expected a nonempty, trimmed string");
-  }
-  return value;
-}
-
-function dependencyTypeValue(value: unknown, path: string, optional = false): DependencyType {
-  if (optional && value === undefined) return "collateral";
-  if (value === "wrapper" || value === "mechanism" || value === "collateral") return value;
-  return malformedReportCard(path, "expected wrapper, mechanism, or collateral");
-}
-
-function dependencyWeightValue(value: unknown, path: string): number {
-  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0 || value > 1) {
-    malformedReportCard(path, "expected a finite number greater than 0 and at most 1");
-  }
-  return value;
-}
-
-function reportCardScoreValue(card: Record<string, unknown>, path: string): number | null {
-  const field = card.score !== undefined ? "score" : "overallScore";
-  const value = card[field];
-  if (value !== null && (typeof value !== "number" || !Number.isFinite(value))) {
-    malformedReportCard(`${path}.${field}`, "expected null or a finite number");
-  }
-  return value as number | null;
-}
-
-function reportCardEdgeKindValue(value: unknown, path: string): ReportCardEdgeKind {
-  if (value === "serial" || value === "basket") return value;
-  return malformedReportCard(path, "expected serial or basket");
-}
-
-function reportCardEdgeMaterialityValue(value: unknown, path: string): ReportCardEdgeMateriality {
-  if (
-    value === "serial"
-    || value === "serial-blocked"
-    || value === "basket-weighted"
-    || value === "basket-bounded-unknown"
-  ) return value;
-  return malformedReportCard(
-    path,
-    "expected serial, serial-blocked, basket-weighted, or basket-bounded-unknown",
-  );
-}
-
-function optionalNonnegativeNumber(value: unknown, path: string): void {
-  if (value === undefined || value === null) return;
-  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
-    malformedReportCard(path, "expected null or a finite nonnegative number");
-  }
-}
-
 function dependencyKey(dependency: Pick<DependencyWeight, "id" | "type">): string {
   return `${dependency.id}::${dependency.type ?? "collateral"}`;
 }
 
-function reportCardsEnvelope(payload: unknown): Record<string, unknown> {
-  const root = reportCardRecord(payload, "root");
-  if (root.payload === undefined) return root;
-  return reportCardRecord(root.payload, "payload");
-}
-
-function dependencyWeightsValue(value: unknown, path: string): DependencyWeight[] {
-  if (value === undefined) return [];
-  if (!Array.isArray(value)) malformedReportCard(path, "expected an array");
-  const seen = new Set<string>();
-  return value.map((candidate, index) => {
-    const dependencyPath = `${path}[${index}]`;
-    const dependency = reportCardRecord(candidate, dependencyPath);
-    const parsed = {
-      id: reportCardId(dependency.id, `${dependencyPath}.id`),
-      weight: dependencyWeightValue(dependency.weight, `${dependencyPath}.weight`),
-      type: dependencyTypeValue(dependency.type, `${dependencyPath}.type`, true),
-    };
-    const key = dependencyKey(parsed);
-    if (seen.has(key)) malformedReportCard(dependencyPath, `duplicate dependency ${key}`);
-    seen.add(key);
-    return parsed;
-  });
-}
-
-function validateReportCardRawInputs(rawInputs: Record<string, unknown>, path: string): void {
-  dependencyWeightsValue(rawInputs.dependencies, `${path}.dependencies`);
-  if (rawInputs.dependencySource !== undefined && !DEPENDENCY_SOURCE_VALUES.has(rawInputs.dependencySource as DependencyDerivationSource)) {
-    malformedReportCard(`${path}.dependencySource`, "expected a known dependency source");
-  }
-  if (
-    rawInputs.dependencyBaseSource !== undefined
-    && !DEPENDENCY_BASE_SOURCE_VALUES.has(rawInputs.dependencyBaseSource as DependencyDerivationBaseSource)
-  ) {
-    malformedReportCard(`${path}.dependencyBaseSource`, "expected a known base dependency source");
-  }
-  if (
-    rawInputs.dependencyFallbackReason !== undefined
-    && rawInputs.dependencyFallbackReason !== null
-    && !DEPENDENCY_FALLBACK_REASON_VALUES.has(rawInputs.dependencyFallbackReason as DependencyFallbackReason)
-  ) {
-    malformedReportCard(`${path}.dependencyFallbackReason`, "expected null or a known fallback reason");
-  }
-  if (rawInputs.dependencyFromLive !== undefined && typeof rawInputs.dependencyFromLive !== "boolean") {
-    malformedReportCard(`${path}.dependencyFromLive`, "expected a boolean");
-  }
-  optionalNonnegativeNumber(rawInputs.mappedLiveReserveWeight, `${path}.mappedLiveReserveWeight`);
-}
-
-function validateReportCardDiagnostics(value: unknown, path: string): void {
-  if (value === undefined) return;
-  const dimensions = reportCardRecord(value, path);
-  if (dimensions.dependencyRisk === undefined) return;
-  const dependencyRisk = reportCardRecord(dimensions.dependencyRisk, `${path}.dependencyRisk`);
-  if (dependencyRisk.dependencyDiagnostics === undefined) return;
-  const diagnostics = reportCardRecord(
-    dependencyRisk.dependencyDiagnostics,
-    `${path}.dependencyRisk.dependencyDiagnostics`,
-  );
-  optionalNonnegativeNumber(
-    diagnostics.availableWeight,
-    `${path}.dependencyRisk.dependencyDiagnostics.availableWeight`,
-  );
-  optionalNonnegativeNumber(
-    diagnostics.unavailableWeight,
-    `${path}.dependencyRisk.dependencyDiagnostics.unavailableWeight`,
-  );
-  if (diagnostics.contributions === undefined) return;
-  if (!Array.isArray(diagnostics.contributions)) {
-    malformedReportCard(`${path}.dependencyRisk.dependencyDiagnostics.contributions`, "expected an array");
-  }
-  const seen = new Set<string>();
-  diagnostics.contributions.forEach((candidate, index) => {
-    const contributionPath = `${path}.dependencyRisk.dependencyDiagnostics.contributions[${index}]`;
-    const contribution = reportCardRecord(candidate, contributionPath);
-    const id = reportCardId(contribution.id, `${contributionPath}.id`);
-    const type = dependencyTypeValue(contribution.type, `${contributionPath}.type`);
-    if (typeof contribution.available !== "boolean") {
-      malformedReportCard(`${contributionPath}.available`, "expected a boolean");
-    }
-    const key = `${id}::${type}`;
-    if (seen.has(key)) malformedReportCard(contributionPath, `duplicate contribution ${key}`);
-    seen.add(key);
-  });
+function reportCardsEnvelope(payload: unknown): unknown {
+  if (!isRecord(payload)) return payload;
+  return payload.payload ?? payload;
 }
 
 function parseReportCardInput(payload: unknown): ParsedReportCardInput {
-  const envelope = reportCardsEnvelope(payload);
-  if (!Array.isArray(envelope.cards)) malformedReportCard("cards", "expected an array");
-  if (envelope.cards.length === 0) malformedReportCard("cards", "expected at least one card");
-  const cardsById = new Map<string, Record<string, unknown>>();
-  envelope.cards.forEach((candidate, index) => {
-    const cardPath = `cards[${index}]`;
-    const card = reportCardRecord(candidate, cardPath);
-    const id = reportCardId(card.id, `${cardPath}.id`);
-    if (cardsById.has(id)) malformedReportCard(`${cardPath}.id`, `duplicate card ID ${id}`);
-    reportCardScoreValue(card, cardPath);
-    if (card.rawInputs !== undefined) {
-      validateReportCardRawInputs(reportCardRecord(card.rawInputs, `${cardPath}.rawInputs`), `${cardPath}.rawInputs`);
-    }
-    validateReportCardDiagnostics(card.dimensions, `${cardPath}.dimensions`);
-    cardsById.set(id, card);
-  });
+  const parsed = ReportCardsV9CurrentResponseSchema.safeParse(reportCardsEnvelope(payload));
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    malformedReportCard(issue?.path.join(".") || "root", issue?.message ?? "expected the current V9 report contract");
+  }
+  if (parsed.data.cards.length === 0) {
+    malformedReportCard("cards", "expected at least one card");
+  }
 
-  const graph = reportCardRecord(envelope.dependencyGraph, "dependencyGraph");
-  if (!Array.isArray(graph.edges)) malformedReportCard("dependencyGraph.edges", "expected an array");
-  const seenEdges = new Set<string>();
-  const edges = graph.edges.map((candidate, index): ParsedReportCardEdge => {
-    const edgePath = `dependencyGraph.edges[${index}]`;
-    const edge = reportCardRecord(candidate, edgePath);
-    const from = reportCardId(edge.from, `${edgePath}.from`);
-    const to = reportCardId(edge.to, `${edgePath}.to`);
-    const isV9Edge = edge.kind !== undefined || edge.materiality !== undefined;
-    let parsed: ParsedReportCardEdge;
-    if (isV9Edge) {
-      const kind = reportCardEdgeKindValue(edge.kind, `${edgePath}.kind`);
-      const materiality = reportCardEdgeMaterialityValue(edge.materiality, `${edgePath}.materiality`);
-      const serialMateriality = materiality === "serial" || materiality === "serial-blocked";
-      if ((kind === "serial") !== serialMateriality) {
-        malformedReportCard(edgePath, "kind and materiality must describe the same dependency lane");
-      }
-      if (kind === "serial" && edge.weight !== null) {
-        malformedReportCard(`${edgePath}.weight`, "expected null for a serial dependency");
-      }
-      const reportedWeight = kind === "serial"
-        ? null
-        : dependencyWeightValue(edge.weight, `${edgePath}.weight`);
-      optionalNonnegativeNumber(edge.upstreamScore, `${edgePath}.upstreamScore`);
-      parsed = {
-        from,
-        to,
-        // The shared topology diagnostics still consume the legacy edge shape.
-        // Serial edges are whole-claim paths; basket edges retain their native weight.
-        weight: reportedWeight ?? 1,
-        type: kind === "serial" ? "wrapper" : "collateral",
-        reportKind: kind,
-        reportMateriality: materiality,
-        reportedWeight,
-      };
-    } else {
-      const weight = dependencyWeightValue(edge.weight, `${edgePath}.weight`);
-      parsed = {
-        from,
-        to,
-        weight,
-        type: dependencyTypeValue(edge.type, `${edgePath}.type`),
-        reportKind: null,
-        reportMateriality: null,
-        reportedWeight: weight,
-      };
-    }
-    const key = `${parsed.from}->${parsed.to}::${parsed.type}`;
-    if (seenEdges.has(key)) malformedReportCard(edgePath, `duplicate dependency edge ${key}`);
-    seenEdges.add(key);
-    return parsed;
-  });
-  return { cardsById, edges };
+  return {
+    cardsById: new Map(parsed.data.cards.map((card) => [card.id, card])),
+    edges: parsed.data.dependencyGraph.edges.map((edge) => ({
+      from: edge.from,
+      to: edge.to,
+      weight: edge.weight ?? 1,
+      type: edge.kind === "serial" ? "wrapper" : "collateral",
+      reportKind: edge.kind,
+      reportMateriality: edge.materiality,
+      reportedWeight: edge.weight,
+    })),
+  };
 }
 
 function lifecycleForMeta(meta: StablecoinMeta | undefined): DependencyTargetLifecycle | "unknown" {
@@ -715,25 +510,18 @@ function findRawAuthoredDuplicates(activeCoins: readonly StablecoinMeta[]): RawA
 
 function findOverweightEffectiveSets(
   activeCoins: readonly StablecoinMeta[],
-  cardsById: ReadonlyMap<string, Record<string, unknown>>,
-  hasReportCards: boolean,
+  _cardsById: ReadonlyMap<string, ReportCard>,
+  _hasReportCards: boolean,
 ): OverweightDependencySetRow[] {
   const rows: OverweightDependencySetRow[] = [];
   for (const coin of activeCoins) {
-    const card = cardsById.get(coin.id);
-    const rawInputs = card && isRecord(card.rawInputs) ? card.rawInputs : null;
-    const reportCardDependencies = rawInputs
-      ? dependencyWeightsValue(rawInputs.dependencies, `card ${coin.id}.rawInputs.dependencies`)
-      : [];
-    const dependencies = hasReportCards && rawInputs && Array.isArray(rawInputs.dependencies)
-      ? reportCardDependencies
-      : deriveEffectiveDependencySet(coin).dependencies;
+    const dependencies = deriveEffectiveDependencySet(coin).dependencies;
     const totalWeight = dependencies.reduce((sum, dependency) => sum + dependency.weight, 0);
     if (totalWeight <= 1 + WEIGHT_EPSILON) continue;
     rows.push({
       coinId: coin.id,
       symbol: coin.symbol,
-      source: hasReportCards && rawInputs && Array.isArray(rawInputs.dependencies) ? "report-card" : "static",
+      source: "static",
       totalWeight,
       dependencies,
     });
@@ -1010,7 +798,7 @@ function findReserveReviewRows(input: {
 
 function extractDependencyProvenance(
   activeCoins: readonly StablecoinMeta[],
-  cardsById: ReadonlyMap<string, Record<string, unknown>>,
+  cardsById: ReadonlyMap<string, ReportCard>,
   hasReportCards: boolean,
 ): DependencySetProvenanceRow[] {
   return activeCoins.map((coin) => {
@@ -1029,60 +817,26 @@ function extractDependencyProvenance(
         unmappedLiveReserveShare: null,
       };
     }
-
-    const card = cardsById.get(coin.id);
-    const rawInputs = card && isRecord(card.rawInputs) ? card.rawInputs : null;
-    const dimensions = card && isRecord(card.dimensions) ? card.dimensions : null;
-    const dependencyRisk = dimensions && isRecord(dimensions.dependencyRisk) ? dimensions.dependencyRisk : null;
-    const diagnostics = dependencyRisk && isRecord(dependencyRisk.dependencyDiagnostics)
-      ? dependencyRisk.dependencyDiagnostics
-      : null;
-    const source = rawInputs ? stringValue(rawInputs.dependencySource) : null;
-    const baseSource = rawInputs ? stringValue(rawInputs.dependencyBaseSource) : null;
-    const fallbackReason = rawInputs ? stringValue(rawInputs.dependencyFallbackReason) : null;
-    const dependencyFromLive = rawInputs && typeof rawInputs.dependencyFromLive === "boolean"
-      ? rawInputs.dependencyFromLive
-      : null;
-    const mappedWeight = rawInputs ? numberValue(rawInputs.mappedLiveReserveWeight) : null;
-
+    const fromLiveReserves = cardsById.get(coin.id)?.backingFromLiveReserves === true;
     return {
       coinId: coin.id,
       symbol: coin.symbol,
-      source: source as DependencyDerivationSource | null,
-      baseSource: baseSource as DependencyDerivationBaseSource | null,
-      fallbackReason: fallbackReason as DependencyFallbackReason | null,
-      dependencyFromLive,
-      availableWeight: diagnostics ? numberValue(diagnostics.availableWeight) : null,
-      unavailableWeight: diagnostics ? numberValue(diagnostics.unavailableWeight) : null,
-      mappedLiveReserveShare: dependencyFromLive === true && mappedWeight != null ? mappedWeight : null,
-      unmappedLiveReserveShare: dependencyFromLive === true && mappedWeight != null
-        ? Math.max(0, 1 - mappedWeight)
-        : null,
+      source: fromLiveReserves ? "live-reserve" : null,
+      baseSource: fromLiveReserves ? "live-reserve" : null,
+      fallbackReason: null,
+      dependencyFromLive: fromLiveReserves || null,
+      availableWeight: null,
+      unavailableWeight: null,
+      mappedLiveReserveShare: null,
+      unmappedLiveReserveShare: null,
     };
   });
 }
 
-function contributionAvailabilityByEdge(cardsById: ReadonlyMap<string, Record<string, unknown>>): Map<string, boolean> {
-  const availability = new Map<string, boolean>();
-  for (const [dependentId, card] of cardsById) {
-    const dimensions = isRecord(card.dimensions) ? card.dimensions : null;
-    const dependencyRisk = dimensions && isRecord(dimensions.dependencyRisk) ? dimensions.dependencyRisk : null;
-    const diagnostics = dependencyRisk && isRecord(dependencyRisk.dependencyDiagnostics)
-      ? dependencyRisk.dependencyDiagnostics
-      : null;
-    if (!diagnostics || !Array.isArray(diagnostics.contributions)) continue;
-    diagnostics.contributions.forEach((candidate, index) => {
-      const path = `card ${dependentId}.dimensions.dependencyRisk.dependencyDiagnostics.contributions[${index}]`;
-      const contribution = reportCardRecord(candidate, path);
-      const id = reportCardId(contribution.id, `${path}.id`);
-      if (typeof contribution.available !== "boolean") malformedReportCard(`${path}.available`, "expected a boolean");
-      availability.set(
-        `${dependentId}::${id}::${dependencyTypeValue(contribution.type, `${path}.type`)}`,
-        contribution.available,
-      );
-    });
-  }
-  return availability;
+function contributionAvailabilityByEdge(
+  _cardsById: ReadonlyMap<string, ReportCard>,
+): Map<string, boolean> {
+  return new Map();
 }
 
 function classifyTargetScoreability(input: {
@@ -1090,7 +844,7 @@ function classifyTargetScoreability(input: {
   dependentId: string;
   type: DependencyType;
   lifecycle: DependencyTargetLifecycle | "unknown";
-  cardsById: ReadonlyMap<string, Record<string, unknown>>;
+  cardsById: ReadonlyMap<string, ReportCard>;
   contributionAvailability: ReadonlyMap<string, boolean>;
   hasReportCards: boolean;
 }): TargetScoreability {
@@ -1106,14 +860,14 @@ function classifyTargetScoreability(input: {
   if (edgeAvailability != null) return edgeAvailability ? "scoreable" : "active-nr";
   const upstreamCard = input.cardsById.get(input.upstreamId);
   if (!upstreamCard) return "not-evaluated";
-  return reportCardScoreValue(upstreamCard, `card ${input.upstreamId}`) != null ? "scoreable" : "active-nr";
+  return upstreamCard.score != null ? "scoreable" : "active-nr";
 }
 
 function buildDependencyEdgeRows(input: {
   edges: readonly DependencyGraphEdge[];
   graphSource: DependencyEdgeCoverageRow["graphSource"];
   trackedCoins: readonly StablecoinMeta[];
-  cardsById: ReadonlyMap<string, Record<string, unknown>>;
+  cardsById: ReadonlyMap<string, ReportCard>;
   hasReportCards: boolean;
   targetDispositions: readonly DependencyTargetDisposition[];
 }): DependencyEdgeCoverageRow[] {
@@ -1394,7 +1148,7 @@ export function buildDependencyCoverageAudit(input: DependencyCoverageAuditInput
   const marketCapById = buildMarketCapMapFromStablecoins(input.stablecoins);
   const parsedReportCards = input.reportCards === undefined ? null : parseReportCardInput(input.reportCards);
   const hasReportCards = parsedReportCards !== null;
-  const cardsById = parsedReportCards?.cardsById ?? new Map<string, Record<string, unknown>>();
+  const cardsById = parsedReportCards?.cardsById ?? new Map<string, ReportCard>();
   const warnings: string[] = [];
   if (input.stablecoins !== undefined && marketCapById?.size === 0) {
     warnings.push("Stablecoin payload did not contain any pegged asset rows.");

@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types";
 import type { LiveReserveAdapterKey, LiveReservesConfig } from "@shared/types/live-reserves";
+import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
+import {
+  makeReportCardsV9Card,
+  makeReportCardsV9Pillars,
+  makeReportCardsV9Response,
+  type ReportCardsV9ResponseFixturePreset,
+} from "@shared/test-utils/report-cards-v9";
 import { makeCoverageCoin as coin } from "./helpers/coverage-coin";
 import { dependencyReview, reserveReview, targetDisposition } from "./generate-dependency-coverage-audit.test-support";
 import {
@@ -18,6 +25,95 @@ function liveConfig(adapter: LiveReserveAdapterKey): LiveReservesConfig {
     semantics: "collateral-mix",
     inputs: { primary: { kind: "http-json", url: `https://example.test/${adapter}.json` } },
   };
+}
+
+const REPORT_CARD_PRESET = {
+  safetyScoreIdentity: {
+    model: "v9",
+    schemaVersion: 1,
+    methodologyVersion: "9.0",
+    policyId: "safety-score-v9",
+    policyDigest: "a".repeat(64),
+    evaluationBuildDigest: "b".repeat(64),
+    baseInputGenerationId: `report-cards-input:v1:${"c".repeat(64)}`,
+    publicationGenerationId: "v9-publication-audit-test",
+  },
+  defaultUpdatedAt: 1_752_534_060,
+  asOfSec: 1_752_534_000,
+  source: {
+    candidateId: "safety-score-v9:v1:audit-test",
+    factSetDigest: "c".repeat(64),
+    resultDigest: "d".repeat(64),
+    sourceGenerations: { reportCards: "source-1" },
+  },
+} satisfies ReportCardsV9ResponseFixturePreset;
+
+interface ReportCardInput {
+  id: string;
+  score?: number | null;
+  overallScore?: number | null;
+  backingFromLiveReserves?: boolean;
+}
+
+interface ReportCardEdgeInput {
+  from: string;
+  to: string;
+  kind?: "serial" | "basket";
+  materiality?: "serial" | "serial-blocked" | "basket-weighted" | "basket-bounded-unknown";
+  weight: number | null;
+  type?: "collateral" | "mechanism";
+}
+
+function reportCardFixture(input: {
+  cards: ReportCardInput[];
+  dependencyGraph: { edges: ReportCardEdgeInput[] };
+}) {
+  const scoreById = new Map(input.cards.map((card) => [card.id, card.score ?? card.overallScore ?? null]));
+  const cards = input.cards
+    .map((inputCard): SafetyScoreV9CurrentCard => {
+      const score = scoreById.get(inputCard.id) ?? null;
+      const serial = input.dependencyGraph.edges
+        .filter((edge) => edge.to === inputCard.id && (edge.kind === "serial" || edge.type === "mechanism"))
+        .map((edge) => ({
+          upstreamAssetId: edge.from,
+          score: scoreById.get(edge.from) ?? null,
+          blocked: edge.materiality === "serial-blocked",
+        }))
+        .sort((left, right) => left.upstreamAssetId.localeCompare(right.upstreamAssetId));
+      const basket = input.dependencyGraph.edges
+        .filter((edge) => edge.to === inputCard.id && edge.kind !== "serial" && edge.type !== "mechanism")
+        .map((edge) => ({
+          upstreamAssetId: edge.from,
+          weight: edge.weight ?? 0,
+          score: scoreById.get(edge.from) ?? null,
+          boundedUnknown: edge.materiality === "basket-bounded-unknown",
+        }))
+        .sort((left, right) => left.upstreamAssetId.localeCompare(right.upstreamAssetId));
+      const unrated = score === null;
+      return makeReportCardsV9Card({
+        id: inputCard.id,
+        score,
+        backingFromLiveReserves: inputCard.backingFromLiveReserves,
+        ...(unrated ? {
+          grade: "NR",
+          qualityScore: null,
+          pegMultiplier: null,
+          pegAdjustedScore: null,
+          pillars: makeReportCardsV9Pillars({ backing: null, exit: null, control: null }),
+          weakestPillar: null,
+          nrReasons: [{
+            code: "missing-pillar",
+            message: "Required pillar evidence is missing.",
+            field: "backing",
+            origin: "asset",
+          }],
+          breakdowns: null,
+        } : {}),
+        dependencies: { serial, basket, cycleBlocked: false, reasonCodes: [] },
+      });
+    })
+    .sort((left, right) => left.id.localeCompare(right.id));
+  return makeReportCardsV9Response(REPORT_CARD_PRESET, () => makeReportCardsV9Card(), { cards });
 }
 
 const activeCoins: StablecoinMeta[] = [
@@ -135,12 +231,12 @@ describe("generate-dependency-coverage-audit", () => {
     const audit = buildDependencyCoverageAudit({
       activeCoins,
       stablecoins: stablecoinsPayload,
-      reportCards: {
+      reportCards: reportCardFixture({
         cards: [{ id: "wrap-usdc", overallScore: 70 }],
         dependencyGraph: {
           edges: [{ from: "usdc-circle", to: "wrap-usdc", weight: 1, type: "collateral" }],
         },
-      },
+      }),
     });
 
     expect(audit.summary).toMatchObject({
@@ -159,15 +255,14 @@ describe("generate-dependency-coverage-audit", () => {
     ]);
   });
 
-  it("accepts the current V9 report-v5 score and native dependency graph shape", () => {
+  it("accepts the current V9 report contract and native dependency lanes", () => {
     const audit = buildDependencyCoverageAudit({
       activeCoins: [
         coin({ id: "serial-upstream", symbol: "SER" }),
         coin({ id: "basket-upstream", symbol: "BSK" }),
         coin({ id: "dependent", symbol: "DEP" }),
       ],
-      reportCards: {
-        schemaVersion: 5,
+      reportCards: reportCardFixture({
         cards: [
           { id: "serial-upstream", score: 80 },
           { id: "basket-upstream", score: null },
@@ -181,7 +276,6 @@ describe("generate-dependency-coverage-audit", () => {
               kind: "serial",
               materiality: "serial",
               weight: null,
-              upstreamScore: 80,
             },
             {
               from: "basket-upstream",
@@ -189,11 +283,10 @@ describe("generate-dependency-coverage-audit", () => {
               kind: "basket",
               materiality: "basket-weighted",
               weight: 0.25,
-              upstreamScore: null,
             },
           ],
         },
-      },
+      }),
     });
 
     expect(audit.summary).toMatchObject({
@@ -219,28 +312,15 @@ describe("generate-dependency-coverage-audit", () => {
     ]);
   });
 
-  it.each([
-    [{ kind: "serial", materiality: "basket-weighted", weight: null }, "same dependency lane"],
-    [{ kind: "serial", materiality: "serial", weight: 1 }, "expected null"],
-  ])("rejects malformed V9 lanes %j", (edge, message) => {
-    expect(() => buildDependencyCoverageAudit({
-      activeCoins: [],
-      reportCards: {
-        cards: [{ id: "dependent", score: 70 }],
-        dependencyGraph: { edges: [{ from: "upstream", to: "dependent", ...edge }] },
-      },
-    })).toThrow(message);
-  });
-
-  it("preserves blocked and bounded lanes, null score precedence, and wrapped payloads", () => {
+  it("preserves blocked and bounded lanes and unwraps site-data payloads", () => {
     const coins = [coin({ id: "upstream" }), coin({ id: "dependent" })];
-    const reportCards = {
-      cards: [{ id: "upstream", score: null, overallScore: 90 }, { id: "dependent", score: 70 }],
+    const reportCards = reportCardFixture({
+      cards: [{ id: "upstream", score: null }, { id: "dependent", score: 70 }],
       dependencyGraph: { edges: [
         { from: "upstream", to: "dependent", kind: "serial", materiality: "serial-blocked", weight: null },
         { from: "upstream", to: "dependent", kind: "basket", materiality: "basket-bounded-unknown", weight: 0.3 },
       ] },
-    };
+    });
     const input = { activeCoins: coins, generatedAt: "2026-09-01T00:00:00.000Z" };
     const audit = buildDependencyCoverageAudit({ ...input, reportCards });
     expect(audit.dependencyEdges).toEqual(expect.arrayContaining([
@@ -250,91 +330,24 @@ describe("generate-dependency-coverage-audit", () => {
     expect(buildDependencyCoverageAudit({ ...input, reportCards: { payload: reportCards } })).toEqual(audit);
   });
 
-  it("rejects malformed or duplicate report-card cards, dependencies, diagnostics, and edges", () => {
-    const validEdge = { from: "upstream", to: "dependent", weight: 0.5, type: "collateral" };
-    const validCard = { id: "dependent", overallScore: 70 };
-    const payload = (cards: unknown, edges: unknown) => ({ cards, dependencyGraph: { edges } });
-    const malformedCases: Array<{ label: string; value: unknown; path: string }> = [
-      { label: "non-array cards", value: payload({}, []), path: "cards" },
-      { label: "non-object card", value: payload([null], []), path: "cards[0]" },
-      {
-        label: "duplicate card IDs",
-        value: payload([validCard, validCard], []),
-        path: "duplicate card ID dependent",
+  it("rejects legacy and malformed report-card inputs through the canonical schema", () => {
+    expect(() => buildDependencyCoverageAudit({
+      activeCoins: [],
+      reportCards: {
+        cards: [{ id: "dependent", overallScore: 70 }],
+        dependencyGraph: { edges: [] },
       },
-      {
-        label: "invalid card score",
-        value: payload([{ ...validCard, overallScore: "70" }], []),
-        path: "cards[0].overallScore",
+    })).toThrow("Report-card input is malformed");
+    expect(() => buildDependencyCoverageAudit({
+      activeCoins: [],
+      reportCards: {
+        ...reportCardFixture({
+          cards: [{ id: "dependent", score: 70 }],
+          dependencyGraph: { edges: [] },
+        }),
+        model: "v8",
       },
-      {
-        label: "invalid dependency type",
-        value: payload([{
-          ...validCard,
-          rawInputs: { dependencies: [{ id: "upstream", weight: 0.5, type: "unknown" }] },
-        }], []),
-        path: "cards[0].rawInputs.dependencies[0].type",
-      },
-      {
-        label: "invalid dependency weight",
-        value: payload([{
-          ...validCard,
-          rawInputs: { dependencies: [{ id: "upstream", weight: 0, type: "collateral" }] },
-        }], []),
-        path: "cards[0].rawInputs.dependencies[0].weight",
-      },
-      {
-        label: "duplicate dependencies",
-        value: payload([{
-          ...validCard,
-          rawInputs: {
-            dependencies: [
-              { id: "upstream", weight: 0.25 },
-              { id: "upstream", weight: 0.5, type: "collateral" },
-            ],
-          },
-        }], []),
-        path: "duplicate dependency upstream::collateral",
-      },
-      {
-        label: "invalid diagnostic contribution",
-        value: payload([{
-          ...validCard,
-          dimensions: {
-            dependencyRisk: {
-              dependencyDiagnostics: {
-                contributions: [{ id: "upstream", type: "collateral", available: "yes" }],
-              },
-            },
-          },
-        }], []),
-        path: "contributions[0].available",
-      },
-      { label: "non-array edges", value: payload([validCard], {}), path: "dependencyGraph.edges" },
-      { label: "non-object edge", value: payload([validCard], [null]), path: "dependencyGraph.edges[0]" },
-      {
-        label: "invalid edge type",
-        value: payload([validCard], [{ ...validEdge, type: "unknown" }]),
-        path: "dependencyGraph.edges[0].type",
-      },
-      {
-        label: "invalid edge weight",
-        value: payload([validCard], [{ ...validEdge, weight: 1.1 }]),
-        path: "dependencyGraph.edges[0].weight",
-      },
-      {
-        label: "duplicate edges",
-        value: payload([validCard], [validEdge, { ...validEdge, weight: 0.25 }]),
-        path: "duplicate dependency edge upstream->dependent::collateral",
-      },
-    ];
-
-    for (const testCase of malformedCases) {
-      expect(
-        () => buildDependencyCoverageAudit({ activeCoins: [], reportCards: testCase.value }),
-        testCase.label,
-      ).toThrow(testCase.path);
-    }
+    })).toThrow("model");
   });
 
   it("finds raw-suppressed self edges, effective duplicates, SCCs, authored repeats, and true overweight sets", () => {
@@ -392,7 +405,7 @@ describe("generate-dependency-coverage-audit", () => {
     expect(audit.overweightEffectiveSets.map((row) => row.coinId)).toEqual(["overweight"]);
   });
 
-  it("reports runtime lifecycle, scoreability, P1b provenance, availability, and adapter review", () => {
+  it("reports runtime lifecycle, scoreability, canonical provenance, availability, and adapter review", () => {
     const runtimeCoins = [
       coin({ id: "scoreable", symbol: "GOOD" }),
       coin({ id: "active-nr", symbol: "NR" }),
@@ -404,38 +417,12 @@ describe("generate-dependency-coverage-audit", () => {
       coin({ id: "prelaunch", symbol: "PRE", status: "pre-launch" }),
       coin({ id: "frozen", symbol: "FRZ", status: "frozen" }),
     ];
-    const reportCards = {
+    const reportCards = reportCardFixture({
       cards: [
-        { id: "scoreable", overallScore: 82 },
-        { id: "active-nr", overallScore: null },
-        {
-          id: "dependent",
-          overallScore: 70,
-          rawInputs: {
-            dependencies: [
-              { id: "scoreable", weight: 0.5, type: "collateral" },
-              { id: "active-nr", weight: 0.2, type: "mechanism" },
-            ],
-            dependencySource: "live-reserve",
-            dependencyBaseSource: "live-reserve",
-            dependencyFromLive: true,
-            mappedLiveReserveWeight: 0.7,
-            dependencyFallbackReason: null,
-          },
-          dimensions: {
-            dependencyRisk: {
-              dependencyDiagnostics: {
-                availableWeight: 0.5,
-                unavailableWeight: 0.2,
-                contributions: [
-                  { id: "scoreable", type: "collateral", available: true },
-                  { id: "active-nr", type: "mechanism", available: false },
-                ],
-              },
-            },
-          },
-        },
-        { id: "legacy", overallScore: 60, rawInputs: {}, dimensions: { dependencyRisk: {} } },
+        { id: "scoreable", score: 82 },
+        { id: "active-nr", score: null },
+        { id: "dependent", score: 70 },
+        { id: "legacy", score: 60 },
       ],
       dependencyGraph: {
         edges: [
@@ -446,7 +433,7 @@ describe("generate-dependency-coverage-audit", () => {
           { from: "missing", to: "dependent", weight: 0.1, type: "collateral" },
         ],
       },
-    };
+    });
     const targetDispositions = [
       targetDisposition("active-nr", "active" as const),
       targetDisposition("prelaunch", "pre-launch" as const),
@@ -475,12 +462,12 @@ describe("generate-dependency-coverage-audit", () => {
       ["scoreable", "active", "scoreable"],
     ]);
     expect(audit.dependencyProvenance.find((row) => row.coinId === "dependent")).toMatchObject({
-      source: "live-reserve",
-      baseSource: "live-reserve",
-      availableWeight: 0.5,
-      unavailableWeight: 0.2,
-      mappedLiveReserveShare: 0.7,
-      unmappedLiveReserveShare: 0.30000000000000004,
+      source: null,
+      baseSource: null,
+      availableWeight: null,
+      unavailableWeight: null,
+      mappedLiveReserveShare: null,
+      unmappedLiveReserveShare: null,
     });
     expect(audit.dependencyProvenance.find((row) => row.coinId === "legacy")).toMatchObject({
       source: null,
@@ -682,20 +669,15 @@ describe("generate-dependency-coverage-audit", () => {
       trackedCoins: [mapped, upstream, orphan],
       targetDispositions: [targetDisposition("upstream", "pre-launch"), targetDisposition("orphan", "pre-launch")],
       adapterMappingReviews: [],
-      reportCards: {
+      reportCards: reportCardFixture({
         cards: [
-          { id: "upstream", overallScore: 80 },
-          {
-            id: "mapped",
-            overallScore: 70,
-            rawInputs: { dependencyBaseSource: "live-reserve" },
-            dimensions: { dependencyRisk: {} },
-          },
+          { id: "upstream", score: 80 },
+          { id: "mapped", score: 70, backingFromLiveReserves: true },
         ],
         dependencyGraph: {
           edges: [{ from: "upstream", to: "mapped", weight: 1, type: "collateral" }],
         },
-      },
+      }),
     });
 
     expect(audit.targetDispositionValidationIssues).toEqual(expect.arrayContaining([
@@ -740,15 +722,10 @@ describe("generate-dependency-coverage-audit", () => {
       reserves: [{ name: "Upstream", pct: 100, risk: "low", coinId: "upstream" }],
       liveReservesConfig: liveConfig("accountable"),
     });
-    const reportCards = {
-      cards: [{
-        id: "mapped",
-        overallScore: 70,
-        rawInputs: { dependencyBaseSource: "live-reserve" },
-        dimensions: { dependencyRisk: {} },
-      }],
+    const reportCards = reportCardFixture({
+      cards: [{ id: "mapped", score: 70, backingFromLiveReserves: true }],
       dependencyGraph: { edges: [] },
-    };
+    });
     const review = {
       adapter: "accountable" as const,
       reviewer: "reviewer",
@@ -806,10 +783,10 @@ describe("generate-dependency-coverage-audit", () => {
     const audit = buildDependencyCoverageAudit({
       activeCoins: [upstream, dependent],
       targetDispositions: [targetDisposition("upstream", "active")],
-      reportCards: {
+      reportCards: reportCardFixture({
         cards: [{ id: "upstream", score: null }, { id: "dependent", score: 70 }],
         dependencyGraph: { edges: [] },
-      },
+      }),
     });
 
     expect(audit.targetDispositionValidationIssues).toContainEqual(expect.objectContaining({
@@ -919,7 +896,7 @@ describe("generate-dependency-coverage-audit", () => {
   it("rejects empty report-card input while preserving static mode", () => {
     expect(() => buildDependencyCoverageAudit({
       activeCoins: [],
-      reportCards: { cards: [], dependencyGraph: { edges: [] } },
+      reportCards: reportCardFixture({ cards: [], dependencyGraph: { edges: [] } }),
     })).toThrow("Report-card input is malformed at cards: expected at least one card.");
     expect(() => buildDependencyCoverageAudit({ activeCoins: [] })).not.toThrow();
   });
@@ -929,7 +906,7 @@ describe("generate-dependency-coverage-audit", () => {
       const href = String(url);
       return new Response(
         JSON.stringify(href.includes("report-cards")
-          ? { cards: [], dependencyGraph: { edges: [] } }
+          ? reportCardFixture({ cards: [], dependencyGraph: { edges: [] } })
           : { peggedAssets: [] }),
         { status: 200 },
       );

@@ -9,7 +9,7 @@ import {
   notApplicableFreshnessMetadata,
   requireOnchainInput,
 } from "./helpers";
-import { decodeStrictAddressWord, decodeStrictBoolWord, decodeUint256Word } from "./abi-decode";
+import { strictAddressDecoder, strictBoolDecoder, strictUint256Decoder } from "./abi-decode";
 import {
   readImplementationSlotAddress,
   requireExpectedAddress,
@@ -28,23 +28,9 @@ const SELECTORS = {
   paused: "0x5c975abb",
 } as const;
 
-function requireUint(raw: string | null, label: string): bigint {
-  const value = decodeUint256Word(raw);
-  if (value == null) throw new Error(`${ADAPTER_KEY}: ${label} returned malformed payload`);
-  return value;
-}
-
-function requireAddress(raw: string | null, label: string): string {
-  const value = decodeStrictAddressWord(raw);
-  if (value == null) throw new Error(`${ADAPTER_KEY}: ${label} returned malformed address payload`);
-  return value.toLowerCase();
-}
-
-function requireBool(raw: string | null, label: string): boolean {
-  const value = decodeStrictBoolWord(raw);
-  if (value == null) throw new Error(`${ADAPTER_KEY}: ${label} returned malformed bool payload`);
-  return value;
-}
+const requireUint = strictUint256Decoder(ADAPTER_KEY);
+const requireAddress = strictAddressDecoder(ADAPTER_KEY);
+const requireBool = strictBoolDecoder(ADAPTER_KEY);
 
 /**
  * Independently measures USDai's complete PYUSD liability on Arbitrum. The

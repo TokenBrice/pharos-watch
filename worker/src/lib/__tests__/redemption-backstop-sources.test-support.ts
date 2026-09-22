@@ -13,6 +13,11 @@ const BASE_REDEMPTION_ROUTE: RedemptionBackstopConfig = {
   outputAssetType: "stable-single",
   capacityModel: { kind: "supply-full" },
   costModel: { kind: "fee-bps", feeBps: 0 },
+  docs: [{
+    label: "Fixture redemption docs",
+    url: "https://example.com/redemption",
+    supports: ["route", "fees", "settlement"],
+  }],
 };
 
 export function route(overrides: Partial<RedemptionBackstopConfig> = {}): RedemptionBackstopConfig {

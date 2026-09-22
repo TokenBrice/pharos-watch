@@ -12,7 +12,14 @@ import {
   parseBoundedDecimals,
   requireOnchainInput,
 } from "./helpers";
-import { decodeAbiWordAt, decodeStrictAddressWord, decodeStrictBoolWord, decodeUint256Word } from "./abi-decode";
+import {
+  decodeAbiWordAt,
+  decodeStrictAddressWord,
+  decodeStrictBoolWord,
+  decodeUint256Word,
+  strictAddressDecoder,
+  strictUint256Decoder,
+} from "./abi-decode";
 import { fetchOnchainMulticall3 } from "./onchain";
 import type { EvmMulticall3Result } from "../../lib/evm-rpc";
 import type { AdapterContext, AdapterResult } from "./types";
@@ -31,6 +38,9 @@ const ROUTER_NAV_DIVERGENCE_TOLERANCE_BPS = 100n;
 type StoneyieldRouterPoolParams = LiveReserveAdapterParamsByKey[typeof ADAPTER_KEY];
 
 type MulticallResult = EvmMulticall3Result[] | null;
+const requireUint256 = strictUint256Decoder(ADAPTER_KEY);
+const requireAddressWord = strictAddressDecoder(ADAPTER_KEY);
+
 
 function indexedCallData(selector: string, index: bigint): `0x${string}` {
   return `${selector}${encodeUint256(index)}` as `0x${string}`;
@@ -47,23 +57,9 @@ function requiredResult(results: MulticallResult, label: string): `0x${string}` 
   return result.returnData;
 }
 
-function requiredSingleWord(raw: string, label: string): `0x${string}` {
-  if (!/^0x[0-9a-fA-F]{64}$/.test(raw)) {
-    throw new Error(`${ADAPTER_KEY} ${label} returned malformed ABI word`);
-  }
-  return raw as `0x${string}`;
-}
-
-function requiredUint256(raw: string, label: string): bigint {
-  const value = decodeUint256Word(requiredSingleWord(raw, label));
-  if (value == null) {
-    throw new Error(`${ADAPTER_KEY} ${label} returned an undecodable uint256`);
-  }
-  return value;
-}
 
 function requiredDecimals(raw: string, label: string): number {
-  const value = requiredUint256(raw, label);
+  const value = requireUint256(raw, label);
   const decimals = parseBoundedDecimals(value);
   if (decimals == null) {
     throw new Error(`${ADAPTER_KEY} ${label} returned invalid decimals`);
@@ -72,11 +68,11 @@ function requiredDecimals(raw: string, label: string): number {
 }
 
 function requiredAddress(raw: string, label: string): string {
-  const address = decodeStrictAddressWord(requiredSingleWord(raw, label));
-  if (!address) {
+  const address = requireAddressWord(raw, label);
+  if (address === `0x${"0".repeat(40)}`) {
     throw new Error(`${ADAPTER_KEY} ${label} returned an invalid address`);
   }
-  return address.toLowerCase();
+  return address;
 }
 
 function ratioFromRaw(numerator: bigint, denominator: bigint, label: string): number {
@@ -178,24 +174,24 @@ export async function fetchStoneyieldRouterPoolReserves(
     timeoutMs: 12_000,
   });
 
-  const stusdSupplyRaw = requiredUint256(requiredResult(results, "stusd-total-supply"), "STUSD totalSupply()");
-  const susdcSupplyRaw = requiredUint256(requiredResult(results, "susdc-total-supply"), "sUSDC totalSupply()");
-  const susdcIdleUsdcRaw = requiredUint256(requiredResult(results, "susdc-idle-usdc"), "USDC.balanceOf(sUSDC)");
+  const stusdSupplyRaw = requireUint256(requiredResult(results, "stusd-total-supply"), "STUSD totalSupply()");
+  const susdcSupplyRaw = requireUint256(requiredResult(results, "susdc-total-supply"), "sUSDC totalSupply()");
+  const susdcIdleUsdcRaw = requireUint256(requiredResult(results, "susdc-idle-usdc"), "USDC.balanceOf(sUSDC)");
   const usdcDecimals = requiredDecimals(requiredResult(results, "usdc-decimals"), "USDC decimals()");
-  const routerIdleUsdcRaw = requiredUint256(requiredResult(results, "router-idle-usdc"), "USDC.balanceOf(router)");
-  const routerTotalManagedAssetsRaw = requiredUint256(
+  const routerIdleUsdcRaw = requireUint256(requiredResult(results, "router-idle-usdc"), "USDC.balanceOf(router)");
+  const routerTotalManagedAssetsRaw = requireUint256(
     requiredResult(results, "router-total-managed-assets"),
     "router.totalManagedAssets()",
   );
   const routerAssetAddress = requiredAddress(requiredResult(results, "router-asset"), "router.asset()");
   const strategy = strategyResult(requiredResult(results, "router-strategy-0"));
-  const strategyCountRaw = requiredUint256(requiredResult(results, "router-strategy-count"), "router.strategyCount()");
+  const strategyCountRaw = requireUint256(requiredResult(results, "router-strategy-count"), "router.strategyCount()");
   const venusVaultAssetAddress = requiredAddress(requiredResult(results, "venus-vault-asset"), "VenusUSDCVault.asset()");
-  const venusVTokenBalanceRaw = requiredUint256(
+  const venusVTokenBalanceRaw = requireUint256(
     requiredResult(results, "venus-vtoken-balance"),
     "vUSDC.balanceOf(VenusUSDCVault)",
   );
-  const venusExchangeRateRaw = requiredUint256(
+  const venusExchangeRateRaw = requireUint256(
     requiredResult(results, "venus-exchange-rate"),
     "vUSDC.exchangeRateStored()",
   );

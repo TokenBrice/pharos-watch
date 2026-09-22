@@ -10,7 +10,7 @@ import {
   requireJsonInputFromConfig,
   slicesFromValues,
 } from "./helpers";
-import { buildBrowserHeaders, NEUTRAL_ADAPTER_HEADERS } from "./request";
+import { fetchWithBrowserFallback } from "./request";
 
 interface OpenEdenReserveCompositionResponse {
   date?: string;
@@ -30,10 +30,6 @@ interface OpenEdenReserveCompositionResponse {
   ratio: number;
 }
 
-const OPENEDEN_BROWSER_HEADERS = buildBrowserHeaders(
-  "https://openeden.com",
-  "https://openeden.com/usdo/transparency",
-);
 
 export function adaptOpenEdenUsdo(payload: OpenEdenReserveCompositionResponse): AdapterResult {
   for (const [field, value] of [
@@ -179,40 +175,32 @@ async function fetchOpenEdenReserveComposition(
 ): Promise<OpenEdenReserveCompositionResponse> {
   const attemptSignal = AbortSignal.any([signal, deadline]);
   try {
-    return await fetchJsonWithRetry<OpenEdenReserveCompositionResponse>(
-      url,
+    return await fetchWithBrowserFallback(
+      "https://openeden.com",
+      "https://openeden.com/usdo/transparency",
+      (headers) => fetchJsonWithRetry<OpenEdenReserveCompositionResponse>(
+        url,
+        attemptSignal,
+        OPENEDEN_PER_ATTEMPT_TIMEOUT_MS,
+        ctx,
+        { headers },
+      ),
       attemptSignal,
-      OPENEDEN_PER_ATTEMPT_TIMEOUT_MS,
-      ctx,
-      { headers: OPENEDEN_BROWSER_HEADERS },
     );
-  } catch (primaryError) {
-    if (signal.aborted || deadline.aborted) throw primaryError;
+  } catch (fallbackError) {
+    if (signal.aborted || deadline.aborted) throw fallbackError;
     try {
       return await fetchJsonWithRetry<OpenEdenReserveCompositionResponse>(
         url,
         attemptSignal,
         OPENEDEN_PER_ATTEMPT_TIMEOUT_MS,
         ctx,
-        { headers: NEUTRAL_ADAPTER_HEADERS },
       );
-    } catch (fallbackError) {
-      if (signal.aborted || deadline.aborted) throw fallbackError;
-      try {
-        return await fetchJsonWithRetry<OpenEdenReserveCompositionResponse>(
-          url,
-          attemptSignal,
-          OPENEDEN_PER_ATTEMPT_TIMEOUT_MS,
-          ctx,
-        );
-      } catch (defaultError) {
-        if (signal.aborted || deadline.aborted) throw defaultError;
-        throw new Error(
-          `browser fetch failed: ${toErrorMessage(primaryError)}; neutral fetch failed: ${
-            toErrorMessage(fallbackError)
-          }; default fetch failed: ${toErrorMessage(defaultError)}`,
-        );
-      }
+    } catch (defaultError) {
+      if (signal.aborted || deadline.aborted) throw defaultError;
+      throw new Error(
+        `${toErrorMessage(fallbackError)}; default fetch failed: ${toErrorMessage(defaultError)}`,
+      );
     }
   }
 }

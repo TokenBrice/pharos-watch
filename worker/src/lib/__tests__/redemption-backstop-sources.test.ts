@@ -1458,6 +1458,7 @@ describe("buildRedemptionBackstopEntry", () => {
       executionModel: "rules-based-nav",
       capacityModel: { kind: "supply-full" },
       costModel: { kind: "fee-bps", feeBps: 0 },
+      docs: [],
     }), 100_000_000, null);
 
     expect(entry.docs).toBeDefined();
@@ -1477,6 +1478,7 @@ describe("buildRedemptionBackstopEntry", () => {
       routeFamily: "psm-swap",
       capacityModel: { kind: "supply-full" },
       costModel: { kind: "fee-bps", feeBps: 0 },
+      docs: [],
     }), 1_000_000_000, null);
 
     expect(entry.docs).toBeDefined();
@@ -1484,19 +1486,18 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.docs!.provenance).toBe("preferred-link");
   });
 
-  it("returns no docs for unknown coins", async () => {
-    const entry = await buildEntry("test-coin", route({
+  it("rejects docs resolution for unknown coins", async () => {
+    await expect(buildEntry("test-coin", route({
       capacityModel: { kind: "supply-full" },
       costModel: { kind: "fee-bps", feeBps: 0 },
-    }), 100_000_000, null);
-
-    expect(entry.docs).toBeUndefined();
+      docs: [],
+    }), 100_000_000, null)).rejects.toThrow(/Unknown tracked stablecoin id "test-coin"/);
   });
 
   it("deduplicates notes both within config and across config + runtime sources", async () => {
     const runtimeNote = "Live reserve metadata unavailable; using configured fallback ratio";
     const entry = await buildEntry(
-      "test-coin",
+      "usds-sky",
       route({
         capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.1 },
         costModel: { kind: "fee-bps", feeBps: 0 },

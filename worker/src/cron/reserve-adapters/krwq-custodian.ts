@@ -4,7 +4,7 @@ import type { ContractDeployment, ReserveSlice, StablecoinMeta } from "@shared/t
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import type { EvmMulticall3Result } from "../../lib/evm-rpc";
 import { encodeBalanceOfCallData } from "../../lib/evm-selectors";
-import { decodeStrictAddressWord } from "./abi-decode";
+import { decodeStrictAddressWord, decodeUint256Word } from "./abi-decode";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   decimalNumberFromBigInt,
@@ -155,12 +155,7 @@ function holderAddressFor(payload: KrwqCustodianPayload, key: KrwqLegKey): strin
 }
 
 function balanceFromMulticallResult(result: EvmMulticall3Result | undefined): bigint | null {
-  if (!result || !result.success) return null;
-  try {
-    return BigInt(result.returnData);
-  } catch {
-    return null;
-  }
+  return result?.success ? decodeUint256Word(result.returnData) : null;
 }
 
 async function aggregateKrwqSupply(

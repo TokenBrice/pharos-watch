@@ -10,6 +10,11 @@ import {
   type EvmRpcBatchCall,
 } from "../../lib/evm-rpc";
 import {
+  strictAddressDecoder,
+  strictBoolDecoder,
+  strictUint256Decoder,
+} from "./abi-decode";
+import {
   EIP1967_IMPLEMENTATION_SLOT,
   implementationAddressFromSlot,
   runtimeCodeHash,
@@ -118,22 +123,14 @@ function requireWords(value: unknown, count: number, label: string): bigint[] {
   return words;
 }
 
-function requireUint(value: unknown, label: string): bigint {
+const requireUint = strictUint256Decoder(ADAPTER_KEY);
+const requireAddress = strictAddressDecoder(ADAPTER_KEY);
+const requireBool = strictBoolDecoder(ADAPTER_KEY);
+
+function requireRpcUint(value: unknown, label: string): bigint {
   const parsed = parseUint256Hex(value);
   if (parsed == null) throw new Error(`${ADAPTER_KEY}: ${label} read failed`);
   return parsed;
-}
-
-function requireAddressWord(value: unknown, label: string): string {
-  const raw = requireUint(value, label);
-  if (raw === 0n || raw >= 1n << 160n) throw new Error(`${ADAPTER_KEY}: ${label} returned an invalid address`);
-  return `0x${raw.toString(16).padStart(40, "0")}`;
-}
-
-function requireBool(value: unknown, label: string): boolean {
-  const raw = requireUint(value, label);
-  if (raw !== 0n && raw !== 1n) throw new Error(`${ADAPTER_KEY}: ${label} returned an invalid boolean`);
-  return raw === 1n;
 }
 
 function requireCodeHash(value: unknown, expected: string, label: string): string {
@@ -157,8 +154,8 @@ function requireImplementation(value: unknown, expected: string, label: string):
 function parseBlockHeader(value: unknown, label: string): { number: number; timestamp: number; hash: string } {
   if (!value || typeof value !== "object") throw new Error(`${ADAPTER_KEY}: ${label} missing`);
   const row = value as { number?: unknown; timestamp?: unknown; hash?: unknown };
-  const number = requireUint(row.number, `${label}.number`);
-  const timestamp = requireUint(row.timestamp, `${label}.timestamp`);
+  const number = requireRpcUint(row.number, `${label}.number`);
+  const timestamp = requireRpcUint(row.timestamp, `${label}.timestamp`);
   if (number > BigInt(Number.MAX_SAFE_INTEGER) || timestamp > BigInt(Number.MAX_SAFE_INTEGER)) {
     throw new Error(`${ADAPTER_KEY}: ${label} exceeds safe integer bounds`);
   }
@@ -260,11 +257,11 @@ function readBucket(
 ): BucketObservation {
   const nACcb = requireUint(values[offset], `${label} nACcb()`);
   const pending = requireUint(values[offset + 1], `${label} qACLockedInPending()`);
-  const collateralAddress = requireAddressWord(values[offset + 2], `${label} acToken()`);
+  const collateralAddress = requireAddress(values[offset + 2], `${label} acToken()`);
   if (collateralAddress.toLowerCase() !== params.collateralToken.toLowerCase()) {
     throw new Error(`${ADAPTER_KEY}: ${label} acToken() identity mismatch`);
   }
-  const tpToken = requireAddressWord(values[offset + 3], `${label} tpTokens(0)`);
+  const tpToken = requireAddress(values[offset + 3], `${label} tpTokens(0)`);
   if (tpToken.toLowerCase() !== canonicalUsdrif.toLowerCase()) {
     throw new Error(`${ADAPTER_KEY}: ${label} tpTokens(0) is not canonical USDRIF`);
   }
@@ -329,7 +326,7 @@ export async function fetchUsdrifRifReserves(
   const options = rpcOptions(params, signal);
   const headValues = await runAdapterIo(ctx, `${ADAPTER_KEY}:head`, () =>
     fetchEvmRpcBatch(undefined, [{ method: "eth_blockNumber", params: [] }], options));
-  const head = requireUint(headValues?.[0], "eth_blockNumber");
+  const head = requireRpcUint(headValues?.[0], "eth_blockNumber");
   if (head > BigInt(Number.MAX_SAFE_INTEGER) || head <= BigInt(params.confirmationDepth)) {
     throw new Error(`${ADAPTER_KEY}: Rootstock head is outside safe confirmation bounds`);
   }

@@ -9,6 +9,7 @@ import { hexToBytes, keccak256, recoverAddress } from "viem/utils";
 import { encodeBalanceOfCallData } from "../../lib/evm-selectors";
 import type { EvmMulticall3Result } from "../../lib/evm-rpc";
 import { sha256Hex } from "../../lib/hash";
+import { decodeUint256Word } from "./abi-decode";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   decimalNumberFromBigInt,
@@ -119,12 +120,7 @@ async function verifySignedAttestation(
 }
 
 function balanceFromMulticallResult(result: EvmMulticall3Result | undefined): bigint | null {
-  if (!result || !result.success) return null;
-  try {
-    return BigInt(result.returnData);
-  } catch {
-    return null;
-  }
+  return result?.success ? decodeUint256Word(result.returnData) : null;
 }
 
 interface AdaptInput {
