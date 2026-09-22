@@ -1,10 +1,7 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
-import {
-  makeBlacklistReconciliationStatusRow,
-  makeBlacklistRow,
-} from "../../test-helpers/__shared/fixtures";
+import { makeBlacklistRow } from "../../test-helpers/__shared/fixtures";
 import { CONTRACT_CONFIGS, type ContractEventConfig } from "../../lib/blacklist-contracts";
 import { handleBlacklistSummary, materializeBlacklistSummarySnapshot } from "../../lib/blacklist-summary-service";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
@@ -19,6 +16,19 @@ afterEach(() => {
 
 function makeBlacklistSummaryFallbackTables() {
   return [
+    // P3-16 item 4 / BMT-23 rider: cold request materialization uses a durable D1 claim.
+    {
+      match: "SELECT value, updated_at FROM cache WHERE key = ?",
+      matchBinds: ["blacklist-summary:request-materialization-claim"],
+      rows: [],
+      first: null,
+    },
+    { match: "INSERT OR IGNORE INTO cache", rows: [], runMeta: { changes: 1 } },
+    {
+      match: "UPDATE cache SET value = ?, updated_at = ? WHERE key = ? AND value = ?",
+      rows: [],
+      runMeta: { changes: 1 },
+    },
     { match: "blacklist-summary-snapshot-read", rows: [], first: null },
     { match: "blacklist-summary-per-coin-event-counts", rows: [] },
     { match: "blacklist-summary-quarterly-event-counts", rows: [] },
@@ -183,7 +193,7 @@ describe("handleBlacklistSummary", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-summary-snapshot-write"))).toBe(false);
   });
 
-  it("hydrates a legacy producer snapshot with durable reconciliation status", async () => {
+  it("serves a legacy producer snapshot without the removed reconciliation compatibility read", async () => {
     const now = Math.floor(Date.now() / 1000);
     const payload = makeValidSummaryPayload();
     delete payload.reconciliation;
@@ -200,20 +210,13 @@ describe("handleBlacklistSummary", () => {
           updated_at: now,
         }],
       },
-      {
-        match: "blacklist-reconciliation-status-latest",
-        rows: [makeBlacklistReconciliationStatusRow()],
-      },
     ]);
 
+    // P3-16 item 4 / BMT-23 rider removed the migration-0181 request-time hydration branch.
     const response = await handleBlacklistSummary(db);
     const body = await response.json() as Record<string, unknown>;
-    expect(body.reconciliation).toMatchObject({
-      status: "verified",
-      expectedEventCount: 86,
-      presentEventCount: 86,
-      unresolvedManifestGapCount: 0,
-    });
+    expect(body.reconciliation).toBeUndefined();
+    expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-reconciliation-status-latest"))).toBe(false);
     expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-summary-public-aggregate"))).toBe(false);
   });
 

@@ -27,7 +27,7 @@ const AGGREGATE_STRESS_SIGNALS_SQL = `
     s.stablecoin_id, s.score, s.band, s.signals_json, s.computed_at
   FROM stress_signals s
   INNER JOIN (
-    SELECT stablecoin_id, MAX(computed_at) as max_at
+    SELECT stablecoin_id, MAX(computed_at) AS max_at
     FROM stress_signals GROUP BY stablecoin_id
   ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at
 `;
@@ -37,7 +37,7 @@ const AGGREGATE_STRESS_SIGNALS_CUTOFF_SQL = `
     s.stablecoin_id, s.score, s.band, s.signals_json, s.computed_at
   FROM stress_signals s
   INNER JOIN (
-    SELECT stablecoin_id, MAX(computed_at) as max_at
+    SELECT stablecoin_id, MAX(computed_at) AS max_at
     FROM stress_signals
     WHERE computed_at <= ?
     GROUP BY stablecoin_id

@@ -706,19 +706,35 @@ async function buildBlacklistSummaryPayload(
   };
 }
 
+async function buildAndWriteBlacklistSummarySnapshot(
+  db: D1Database,
+  now: number,
+  freshnessTs?: number,
+): Promise<CachedBlacklistSummarySnapshot> {
+  const boundedFreshnessTs = freshnessTs == null
+    ? undefined
+    : Math.min(now, Math.max(0, Math.floor(freshnessTs)));
+  const built = await buildBlacklistSummaryPayload(
+    db,
+    now,
+    boundedFreshnessTs == null ? undefined : { freshnessTsOverride: boundedFreshnessTs },
+  );
+  const snapshot: CachedBlacklistSummarySnapshot = {
+    version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,
+    materializedAt: now,
+    freshnessTs: built.freshnessTs,
+    payload: built.payload,
+  };
+  await writeBlacklistSummarySnapshot(db, snapshot);
+  return snapshot;
+}
+
 export async function materializeBlacklistSummarySnapshot(
   db: D1Database,
   now = Math.floor(Date.now() / 1000),
   freshnessTs = now,
 ): Promise<{ written: boolean }> {
-  const boundedFreshnessTs = Math.min(now, Math.max(0, Math.floor(freshnessTs)));
-  const built = await buildBlacklistSummaryPayload(db, now, { freshnessTsOverride: boundedFreshnessTs });
-  await writeBlacklistSummarySnapshot(db, {
-    version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,
-    materializedAt: now,
-    freshnessTs: built.freshnessTs,
-    payload: built.payload,
-  });
+  await buildAndWriteBlacklistSummarySnapshot(db, now, freshnessTs);
   return { written: true };
 }
 async function materializeBlacklistSummaryForRequest(
@@ -734,10 +750,7 @@ async function materializeBlacklistSummaryForRequest(
     });
     if (claim.kind === "claimed") {
       try {
-        await materializeBlacklistSummarySnapshot(db, now, now);
-        const snapshot = await readBlacklistSummarySnapshot(db);
-        if (!snapshot) throw new Error("Blacklist summary materialization did not publish a snapshot");
-        return snapshot;
+        return await buildAndWriteBlacklistSummarySnapshot(db, now);
       } finally {
         await failCadenceBucket(db, claim.claim, now).catch(() => false);
       }
