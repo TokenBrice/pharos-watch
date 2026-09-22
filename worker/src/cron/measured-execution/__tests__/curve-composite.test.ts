@@ -30,6 +30,7 @@ import {
 } from "../curve-composite";
 import { buildDexMeasuredExecutionProfile } from "../profiles";
 import { factoryMembershipProof, poolCoinProof, tokenDecimalsProof } from "./curve-proof.test-support";
+import { makeCurveCompositeReferenceMaps } from "./measured-execution.test-support";
 
 const POOL_ABI = parseAbi([
   "function coins(uint256) view returns (address)",
@@ -67,39 +68,6 @@ const ERC4626_ABI = parseAbi([
 const BLOCK_NUMBER = 25_618_327;
 const BLOCK_TIMESTAMP = 1_784_970_583;
 
-function addressMap(): Map<string, string> {
-  const result = new Map([
-    ["ethereum:0x865377367054516e17014ccded1e7d814edc9ce4", "dola-inverse-finance"],
-    ["ethereum:0x9d39a5de30e57443bff2a8307a4256c8797a3497", "susde-ethena"],
-    ["ethereum:0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d", "usd1-world-liberty-financial"],
-    ["ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc-circle"],
-    ["ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7", "usdt-tether"],
-    ["avalanche:0xf14f4ce569cb3679e99d5059909e23b07bd2f387", "nxusd-nereus"],
-  ]);
-  for (const policy of CURVE_R3_METAPOOL_POLICIES) {
-    for (const token of policy.executionTokens) {
-      if (token.trackedAssetId) {
-        result.set(`${policy.chain}:${token.address}`, token.trackedAssetId);
-      }
-    }
-  }
-  return result;
-}
-
-function priceMap(): Map<string, number> {
-  const result = new Map([
-    ["dola-inverse-finance", 0.996],
-    ["susde-ethena", 1.24],
-    ["usd1-world-liberty-financial", 0.999],
-    ["usdc-circle", 1],
-    ["usdt-tether", 0.999],
-    ["nxusd-nereus", 0.8094],
-  ]);
-  for (const policy of CURVE_R3_METAPOOL_POLICIES) {
-    if (!result.has(policy.stablecoinId)) result.set(policy.stablecoinId, 1);
-  }
-  return result;
-}
 
 function rateTarget() {
   const policy = CURVE_DOLA_SUSDE_RATE_BEARING_POLICY;
@@ -118,8 +86,7 @@ function rateTarget() {
     },
     chain: policy.chain,
     stablecoinId: policy.stablecoinId,
-    chainAddressToId: addressMap(),
-    stablecoinPriceById: priceMap(),
+    ...makeCurveCompositeReferenceMaps(),
     retainedTvlUsd: 39_000_000,
     capturedAt: BLOCK_TIMESTAMP - 60,
   });
@@ -143,8 +110,7 @@ function metapoolTarget(basePoolAddress = CURVE_USD1_METAPOOL_POLICY.metapool.ba
     },
     chain: policy.chain,
     stablecoinId: policy.stablecoinId,
-    chainAddressToId: addressMap(),
-    stablecoinPriceById: priceMap(),
+    ...makeCurveCompositeReferenceMaps(),
     retainedTvlUsd: 6_800_000,
     capturedAt: BLOCK_TIMESTAMP - 60,
   });
@@ -176,8 +142,7 @@ function nxusdTarget(
     },
     chain: policy.chain,
     stablecoinId: policy.stablecoinId,
-    chainAddressToId: addressMap(),
-    stablecoinPriceById: priceMap(),
+    ...makeCurveCompositeReferenceMaps(),
     retainedTvlUsd: 328_267,
     capturedAt: BLOCK_TIMESTAMP - 60,
   });
@@ -206,8 +171,7 @@ function reviewedMetapoolTarget(policy: CurveMetapoolPolicy) {
     },
     chain: policy.chain,
     stablecoinId: policy.stablecoinId,
-    chainAddressToId: addressMap(),
-    stablecoinPriceById: priceMap(),
+    ...makeCurveCompositeReferenceMaps(),
     retainedTvlUsd: 1_000_000,
     capturedAt: BLOCK_TIMESTAMP - 60,
   });
@@ -645,8 +609,7 @@ describe("reviewed Curve rate-bearing and metapool targets", () => {
           curveData,
           chain: policy.chain,
           stablecoinId: policy.stablecoinId,
-          chainAddressToId: addressMap(),
-          stablecoinPriceById: priceMap(),
+          ...makeCurveCompositeReferenceMaps(),
           retainedTvlUsd: 1_000_000,
           capturedAt: BLOCK_TIMESTAMP,
         });
@@ -867,8 +830,7 @@ describe("reviewed Curve rate-bearing and metapool targets", () => {
       },
       chain: "ethereum",
       stablecoinId: policy.stablecoinId,
-      chainAddressToId: addressMap(),
-      stablecoinPriceById: priceMap(),
+      ...makeCurveCompositeReferenceMaps(),
       retainedTvlUsd: 39_000_000,
       capturedAt: BLOCK_TIMESTAMP,
     })).toBeNull();

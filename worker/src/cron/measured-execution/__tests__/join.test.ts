@@ -41,173 +41,21 @@ import {
   CURVE_NXUSD_METAPOOL_POLICY,
   CURVE_R3_METAPOOL_POLICIES,
   CURVE_USD1_METAPOOL_POLICY,
-  encodeCurveCompositeQuote,
-  type CurveMetapoolPolicy,
 } from "../curve-composite";
+import { UNISWAP_V4_ADAPTER_PROFILE_ID } from "../uniswap-v4";
 import {
-  UNISWAP_V4_ADAPTER_PROFILE_ID,
-  UNISWAP_V4_HOOK_FREE_ADDRESS,
-  getUniswapV4Deployment,
-} from "../uniswap-v4";
-import { makeCurve3PoolPacket, makeV3Target } from "./measured-execution.test-support";
+  makeCurve3PoolPacket,
+  makeCurveCompositeRoute,
+  makeUniswapV4Route,
+  makeV3Target,
+} from "./measured-execution.test-support";
 import { makeJoinPoints, makeJoinPool, makeJoinQuote } from "./join.test-support";
 
-function curveCompositeRoute(policy: CurveMetapoolPolicy) {
-  const poolId = `${policy.chain}:${policy.poolAddress}`;
-  const poolTokenAddresses = policy.executionTokens.map((token) => token.address);
-  const tokenInPolicy = policy.executionTokens[policy.inputIndex]!;
-  const tokenOutPolicy = policy.executionTokens[policy.outputIndex]!;
-  const base = {
-    schemaVersion: "dex-measured-target-v1" as const,
-    stablecoinId: policy.stablecoinId,
-    adapterProfileId: policy.adapterProfileId,
-    protocol: "curve",
-    chain: policy.chain,
-    poolId,
-    poolTokenAddresses,
-    tokenIn: {
-      ...tokenInPolicy,
-      trackedAssetId: policy.stablecoinId,
-      referencePriceUsd: 1,
-    },
-    tokenOut: {
-      ...tokenOutPolicy,
-      referencePriceUsd: 1,
-    },
-    retainedTvlUsd: 1_000_000,
-    retainedPoolPriceUsd: 1,
-    capturedAt: 1_000,
-  };
-  const measuredTarget: DexMeasuredExecutionTarget = {
-    ...base,
-    targetId: buildDexMeasuredExecutionTargetId({
-      adapterProfileId: base.adapterProfileId,
-      stablecoinId: base.stablecoinId,
-      chain: base.chain,
-      protocol: base.protocol,
-      poolId: base.poolId,
-      tokenInAddress: base.tokenIn.address,
-      tokenOutAddress: base.tokenOut.address,
-      poolTokenAddresses,
-    }),
-  };
-  const points = [1_000, 100_000, 1_000_000].map((inputUsd) => {
-    const amountInRaw = BigInt(inputUsd) * 10n ** BigInt(tokenInPolicy.decimals);
-    const outputUsd = inputUsd * 0.999;
-    const amountOutRaw = BigInt(Math.round(outputUsd * 10 ** tokenOutPolicy.decimals));
-    return {
-      amountInRaw: amountInRaw.toString(),
-      amountOutRaw: amountOutRaw.toString(),
-      callData: encodeCurveCompositeQuote({
-        policy,
-        inputIndex: policy.inputIndex,
-        outputIndex: policy.outputIndex,
-        amountInRaw,
-      }),
-      returnData: `0x${amountOutRaw.toString(16).padStart(64, "0")}` as `0x${string}`,
-      inputUsd,
-      outputUsd,
-      costBps: 10,
-      passesCostBound: true,
-    };
-  });
-  const profile = buildDexMeasuredExecutionProfile({
-    target: measuredTarget,
-    targetGenerationId: "curve-composite-target-generation",
-    quoteGenerationId: "curve-composite-quote-generation",
-    quotedAt: 1_060,
-    blockNumber: 25_601_359,
-    endpointAddress: policy.poolAddress,
-    endpointCodeHash: policy.expectedPoolCodeHash,
-    points,
-  });
-  return { measuredTarget, profile };
-}
-
-function uniswapV4Route() {
-  const deployment = getUniswapV4Deployment("ethereum");
-  if (!deployment) throw new Error("missing V4 deployment");
-  const poolId = `ethereum:0x${"12".repeat(32)}`;
-  const poolTokenAddresses = [
-    "0x1111111111111111111111111111111111111111",
-    "0x2222222222222222222222222222222222222222",
-  ] as [`0x${string}`, `0x${string}`];
-  const input = {
-    schemaVersion: "dex-measured-target-v1" as const,
-    stablecoinId: "usdc-circle",
-    adapterProfileId: UNISWAP_V4_ADAPTER_PROFILE_ID,
-    protocol: "uniswap-v4",
-    chain: "ethereum",
-    poolId,
-    poolTokenAddresses,
-    tokenIn: {
-      address: poolTokenAddresses[0],
-      symbol: "USDC",
-      decimals: 6,
-      referencePriceUsd: 1,
-      trackedAssetId: "usdc-circle",
-    },
-    tokenOut: {
-      address: poolTokenAddresses[1],
-      symbol: "USDT",
-      decimals: 6,
-      referencePriceUsd: 1,
-      trackedAssetId: "usdt-tether",
-    },
-    feePips: 100,
-    tickSpacing: 1,
-    hookAddress: UNISWAP_V4_HOOK_FREE_ADDRESS,
-    retainedTvlUsd: 2_000_000,
-    retainedPoolPriceUsd: 1,
-    capturedAt: 1_000,
-  };
-  const measuredTarget: DexMeasuredExecutionTarget = {
-    ...input,
-    targetId: buildDexMeasuredExecutionTargetId({
-      adapterProfileId: input.adapterProfileId,
-      stablecoinId: input.stablecoinId,
-      chain: input.chain,
-      protocol: input.protocol,
-      poolId: input.poolId,
-      tokenInAddress: input.tokenIn.address,
-      tokenOutAddress: input.tokenOut.address,
-      poolTokenAddresses,
-      feePips: input.feePips,
-      tickSpacing: input.tickSpacing,
-      hookAddress: input.hookAddress,
-    }),
-  };
-  const points = [1_000, 100_000, 1_000_000].map((inputUsd) => {
-    const amountInRaw = BigInt(inputUsd) * 1_000_000n;
-    const amountOutRaw = BigInt(Math.round(inputUsd * 0.999 * 1_000_000));
-    return {
-      amountInRaw: amountInRaw.toString(),
-      amountOutRaw: amountOutRaw.toString(),
-      callData: "0x12" as const,
-      returnData: "0x12" as const,
-      inputUsd,
-      outputUsd: inputUsd * 0.999,
-      costBps: 10,
-      passesCostBound: true,
-    };
-  });
-  const profile = buildDexMeasuredExecutionProfile({
-    target: measuredTarget,
-    targetGenerationId: "v4-target-generation",
-    quoteGenerationId: "v4-quote-generation",
-    quotedAt: 1_060,
-    blockNumber: 25_601_359,
-    endpointAddress: deployment.endpointAddress,
-    endpointCodeHash: deployment.expectedCodeHash,
-    points,
-  });
-  return { measuredTarget, profile };
-}
 
 
 describe("measured execution join activation", () => {
   it("joins reviewed hook-free Ethereum V4 evidence without an activation gate", () => {
-    const { measuredTarget, profile } = uniswapV4Route();
+    const { measuredTarget, profile } = makeUniswapV4Route();
     const pool: PoolEntry = {
       poolId: measuredTarget.poolId,
       project: "uniswap-v4",
@@ -249,7 +97,7 @@ describe("measured execution join activation", () => {
 
   it("keeps all ten reviewed metapool quotes display-only behind the activation gate", () => {
     for (const policy of CURVE_R3_METAPOOL_POLICIES) {
-      const { measuredTarget, profile } = curveCompositeRoute(policy);
+      const { measuredTarget, profile } = makeCurveCompositeRoute(policy);
       const pool: PoolEntry = {
         poolId: measuredTarget.poolId,
         project: "curve",
@@ -301,7 +149,7 @@ describe("measured execution join activation", () => {
 
   it("keeps the reviewed USD1 and NXUSD metapool adapters shadow-only", () => {
     for (const policy of [CURVE_USD1_METAPOOL_POLICY, CURVE_NXUSD_METAPOOL_POLICY]) {
-      const { measuredTarget, profile } = curveCompositeRoute(policy);
+      const { measuredTarget, profile } = makeCurveCompositeRoute(policy);
       const pool: PoolEntry = {
         poolId: measuredTarget.poolId,
         project: "curve",

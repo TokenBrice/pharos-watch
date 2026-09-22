@@ -25,95 +25,25 @@ vi.mock("../uniswap-v4", async () => {
   return { ...actual, validateUniswapV4ProfileProof: vi.fn(() => []) };
 });
 
-import { buildDexMeasuredExecutionTargetId, type DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
 import type { PoolEntry } from "../../dex-liquidity/types";
 import {
   buildDexMeasuredExecutionRetainedRoutePools,
   joinDexMeasuredExecutionEvidence,
 } from "../join";
-import { buildDexMeasuredExecutionProfile } from "../profiles";
 import {
   CURVE_3POOL_STABLESWAP_POLICY,
 } from "../curve-stableswap";
 import {
   CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID,
   CURVE_USDG_USDC_STABLESWAP_NG_POLICY,
-  encodeCurveStableSwapNgGetDy,
 } from "../curve-stableswap-ng";
 import {
   makeCurve3PoolPacket,
+  makeCurveStableSwapNgRoute,
   makeV3Target,
 } from "./measured-execution.test-support";
 import { makeJoinPool, makeJoinQuote } from "./join.test-support";
 
-function curveStableSwapNgRoute() {
-  const policy = CURVE_USDG_USDC_STABLESWAP_NG_POLICY;
-  const poolId = `ethereum:${policy.poolAddress}`;
-  const poolTokenAddresses = policy.poolTokens.map((token) => token.address);
-  const base = {
-    schemaVersion: "dex-measured-target-v1" as const,
-    stablecoinId: policy.stablecoinId,
-    adapterProfileId: CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID,
-    protocol: "curve",
-    chain: policy.chain,
-    poolId,
-    poolTokenAddresses,
-    tokenIn: {
-      ...policy.poolTokens[policy.inputIndex],
-      referencePriceUsd: 1,
-    },
-    tokenOut: {
-      ...policy.poolTokens[policy.outputIndex],
-      referencePriceUsd: 1,
-    },
-    retainedTvlUsd: 20_501_133,
-    retainedPoolPriceUsd: 1,
-    capturedAt: 1_000,
-  };
-  const measuredTarget: DexMeasuredExecutionTarget = {
-    ...base,
-    targetId: buildDexMeasuredExecutionTargetId({
-      adapterProfileId: base.adapterProfileId,
-      stablecoinId: base.stablecoinId,
-      chain: base.chain,
-      protocol: base.protocol,
-      poolId: base.poolId,
-      tokenInAddress: base.tokenIn.address,
-      tokenOutAddress: base.tokenOut.address,
-      poolTokenAddresses,
-    }),
-  };
-  const points = [1_000, 100_000, 1_000_000, 10_000_000, 25_000_000].map((inputUsd) => {
-    const amountInRaw = BigInt(inputUsd) * 1_000_000n;
-    const outputUsd = Math.min(inputUsd * 0.999, 10_325_100);
-    const amountOutRaw = BigInt(Math.round(outputUsd * 1_000_000));
-    return {
-      amountInRaw: amountInRaw.toString(),
-      amountOutRaw: amountOutRaw.toString(),
-      callData: encodeCurveStableSwapNgGetDy({
-        inputIndex: policy.inputIndex,
-        outputIndex: policy.outputIndex,
-        amountInRaw,
-      }),
-      returnData: `0x${amountOutRaw.toString(16).padStart(64, "0")}` as `0x${string}`,
-      inputUsd,
-      outputUsd,
-      costBps: Math.max(0, (1 - outputUsd / inputUsd) * 10_000),
-      passesCostBound: outputUsd / inputUsd >= 0.98,
-    };
-  });
-  const profile = buildDexMeasuredExecutionProfile({
-    target: measuredTarget,
-    targetGenerationId: "curve-ng-target-generation",
-    quoteGenerationId: "curve-ng-quote-generation",
-    quotedAt: 1_060,
-    blockNumber: 25_601_359,
-    endpointAddress: policy.poolAddress,
-    endpointCodeHash: policy.expectedPoolCodeHash,
-    points,
-  });
-  return { measuredTarget, profile };
-}
 
 describe("measured execution join AMM invariants", () => {
   it("keeps an independent exact AMM fallback available after a quote failure", () => {
@@ -189,7 +119,7 @@ describe("measured execution join AMM invariants", () => {
   });
 
   it("joins USDG NG evidence without displacing reserves before consumer-side 3/3 maturity", () => {
-    const { measuredTarget, profile } = curveStableSwapNgRoute();
+    const { measuredTarget, profile } = makeCurveStableSwapNgRoute();
     const reserveModel = {
       source: "curve" as const,
       invariant: "stableswap" as const,
