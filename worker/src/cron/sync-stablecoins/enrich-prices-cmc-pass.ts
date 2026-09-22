@@ -281,6 +281,7 @@ async function persistVerifiedCmcQuotes(
 async function fetchTargetedCmcQuotes(params: {
   assets: PeggedAsset[];
   candidates: CmcTargetedCandidate[];
+  originalMissingPriceIds?: ReadonlySet<string>;
   cmcApiKey: string;
   fxRates: Record<string, number> | undefined;
   signal?: AbortSignal;
@@ -313,6 +314,7 @@ async function fetchTargetedCmcQuotes(params: {
   );
   let result = await fetchQuotes(slugs);
   let excludedSlug: string | undefined;
+  const deferredSlugs = new Set<string>();
   if (result?.response.status === 400) {
     const errorBody = tryParseJson(result.body, { onFailure: () => undefined }) as
       { status?: { error_message?: unknown } } | null;
@@ -321,7 +323,18 @@ async function fetchTargetedCmcQuotes(params: {
     // within the original request deadline; unknown errors remain fail-closed.
     excludedSlug = slugs.find((slug) => errorBody?.status?.error_message === `Invalid value for 'slug': '${slug}'`);
     const remaining = slugs.filter((slug) => slug !== excludedSlug);
-    if (excludedSlug && remaining.length > 0) result = await fetchQuotes(remaining);
+    if (excludedSlug && remaining.length > 0) {
+      const missingSlugs = params.candidates
+        .filter(({ asset }) => params.originalMissingPriceIds?.has(asset.id))
+        .map(({ asset }) => asset.cmcSlug!.toLowerCase())
+        .filter((slug) => slug !== excludedSlug);
+      // Spend the single retry on actual price gaps before optional corroboration.
+      const retrySlugs = missingSlugs.length > 0 ? missingSlugs : remaining;
+      for (const slug of remaining) {
+        if (!retrySlugs.includes(slug)) deferredSlugs.add(slug);
+      }
+      result = await fetchQuotes(retrySlugs);
+    }
   }
   const diagnostic = buildPricingProviderDiagnostic({
     source: "coinmarketcap",
@@ -336,8 +349,11 @@ async function fetchTargetedCmcQuotes(params: {
         assetId: candidate.asset.id,
         adapter: "coinmarketcap",
         target: `slug:${candidate.asset.cmcSlug}`,
-        state: "attempted",
-        result: "unresolved",
+        ...(deferredSlugs.has(candidate.asset.cmcSlug!.toLowerCase())
+          ? { state: "skipped" as const, skipReason: "request-cap" as const, rejectionClass: "retry-priority-deferred" }
+          : candidate.asset.cmcSlug!.toLowerCase() === excludedSlug
+            ? { state: "attempted" as const, result: "rejected" as const, rejectionClass: "unsupported-quote" }
+            : { state: "attempted" as const, result: "unresolved" as const }),
         candidateAt: Math.floor(Date.now() / 1000),
       })
     )),
@@ -363,11 +379,13 @@ async function fetchTargetedCmcQuotes(params: {
   };
   const failAllAttempts = (value: PricingProviderAttemptDiagnostic): PricingProviderAttemptDiagnostic => ({
     ...value,
-    assetAttempts: value.assetAttempts?.map((attempt) => ({
-      ...attempt,
-      result: "failed",
-      rejectionClass: value.errorClass ?? Object.keys(value.rejectionReasonCounts ?? {})[0] ?? "upstream-error",
-    })),
+    assetAttempts: value.assetAttempts?.map((attempt) => attempt.state === "skipped" || attempt.result === "rejected"
+      ? attempt
+      : {
+          ...attempt,
+          result: "failed",
+          rejectionClass: value.errorClass ?? Object.keys(value.rejectionReasonCounts ?? {})[0] ?? "upstream-error",
+        }),
   });
   if (!result?.response.ok) {
     const nonOkDiagnostic = await applyNonOkProviderDiagnostic(
@@ -417,6 +435,7 @@ async function fetchTargetedCmcQuotes(params: {
   const acceptedQuotes: CmcVerifiedTargetedQuote[] = [];
   for (const candidate of params.candidates) {
     const expectedSlug = candidate.asset.cmcSlug!.toLowerCase();
+    if (deferredSlugs.has(expectedSlug)) continue;
     const quote = quotesBySlug.get(expectedSlug);
     if (expectedSlug === excludedSlug) {
       reject("unsupported-quote");
@@ -714,6 +733,7 @@ export async function runCmcPass(
           const targeted = await fetchTargetedCmcQuotes({
             assets,
             candidates: targetedCandidates,
+            originalMissingPriceIds,
             cmcApiKey,
             fxRates,
             signal,

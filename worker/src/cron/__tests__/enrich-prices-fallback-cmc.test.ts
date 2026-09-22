@@ -331,6 +331,45 @@ describe("enrichMissingPrices", () => {
     ]));
   });
 
+  it.each([
+    ["two invalid optional slugs", ["usdn-smardex"], "pax-dollar", "smardex-usdn", false],
+    ["invalid missing slug", ["usdn-smardex"], "smardex-usdn", "pax-dollar,plume-usd", true],
+    ["no priority group", [], "pax-dollar", "smardex-usdn,plume-usd", true],
+  ] as const)("bounds the invalid-slug retry while prioritizing price gaps: %s", async (_label, missing, invalid, retrySlugs, retryFails) => {
+    const assets = [
+      makePeggedAsset({ id: "usdn-smardex", symbol: "USDN", price: 0, cmcSlug: "smardex-usdn",
+        contracts: [{ chain: "ethereum", address: "0xde17a000ba631c5d7c2bd9fb692efea52d90dee2", decimals: 18 }] }),
+      makePeggedAsset({ id: "usdp-paxos", symbol: "USDP", price: 0, cmcSlug: "pax-dollar" }),
+      makePeggedAsset({ id: "pusd-plume", symbol: "PUSD", price: 0, cmcSlug: "plume-usd" }),
+    ];
+    const fetchSpy = mockFetch([
+      { match: "/v1/cryptocurrency/category", body: cmcCategory([], 313) },
+      { match: "/v3/cryptocurrency/quotes/latest", outcomes: [
+        { status: 400, body: { status: { error_message: `Invalid value for 'slug': '${invalid}'` } } },
+        retryFails
+          ? { status: 400, body: { status: { error_message: "Invalid value for 'slug': 'plume-usd'" } } }
+          : { body: { data: [{ id: 35672, slug: "smardex-usdn", symbol: "USDN", is_active: 1,
+            platform: { slug: "ethereum", token_address: "0xde17a000ba631c5d7c2bd9fb692efea52d90dee2" },
+            quote: [{ symbol: "USD", ...cmcUsdQuote(1.0027), volume_24h: 3352.55 }] }] } },
+      ] },
+    ]);
+    const result = await runCmcPass(assets, "test-cmc-key", undefined, undefined, undefined, new Set(missing));
+    expect(fetchSpy.getHistory()).toHaveLength(3);
+    expect(new URL(fetchSpy.getHistory()[2].url).searchParams.get("slug")).toBe(retrySlugs);
+    expect(result.resolved).toBe(retryFails ? 0 : 1);
+    expect(assets[0].price).toBe(retryFails ? 0 : 1.0027);
+    const attempts = result.diagnostics?.flatMap((d) => d.assetAttempts ?? []);
+    expect(attempts).toEqual(expect.arrayContaining([
+      expect.objectContaining({ target: `slug:${invalid}`, result: "rejected", rejectionClass: "unsupported-quote" }),
+    ]));
+    if (!retryFails) {
+      expect(attempts).toEqual(expect.arrayContaining([
+        expect.objectContaining({ assetId: "pusd-plume", state: "skipped", skipReason: "request-cap", rejectionClass: "retry-priority-deferred" }),
+      ]));
+      expect(result.diagnostics?.flatMap((d) => Object.keys(d.rejectionReasonCounts ?? {}))).not.toContain("missing-quote");
+    }
+  });
+
   it("does not retry malformed CMC 400 response bodies", async () => {
     const assets = [makePeggedAsset({id: "usdn-smardex", symbol: "USDN", price: 0, cmcSlug: "smardex-usdn"}),
       makePeggedAsset({id: "cusd-cap", symbol: "CUSD", price: 0, cmcSlug: "cap-cusd"})];

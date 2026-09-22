@@ -32,7 +32,6 @@
   "llamaId": "339",
   "detailProvider": "defillama",
   "geckoId": "re-protocol-reusd",
-  "cmcSlug": "re-protocol-reusd",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://app.re.xyz/transparency",

@@ -58,7 +58,7 @@ Key fields on `StablecoinMeta` (see `shared/types/core.ts` plus `shared/types/st
 - `archetypeOverride?: boolean` — when `true`, this coin's `mechanismArchetype` is an intentional, sourced departure from its parent variant's archetype. Redundant same-archetype overrides are invalid.
 - `commodityOunces?: number` — troy ounces per token (for gold- and silver-pegged stablecoins)
 - `geckoId?: string` — CoinGecko coin ID for price/mcap lookups (commodity and non-DefiLlama tokens)
-- `cmcSlug?: string` — verified CoinMarketCap slug for fallback price lookups. Omit invalid mappings rather than substituting a same-symbol asset. CAP cUSD's former `cap-cusd` mapping was removed after CMC rejected it; the available CUSD listings belong to Celo and Coin98, not CAP.
+- `cmcSlug?: string` — verified CoinMarketCap slug for fallback price lookups. Omit invalid mappings rather than substituting a same-symbol asset. The September 22 identity review corrected USDP to `paxos-standard` (CMC 3330, exact Ethereum contract) and removed CMC-rejected mappings for CAP cUSD, Plume PUSD and Re Protocol reUSD without verified replacements. The available CUSD listings belong to Celo and Coin98, not CAP.
 - `protocolSlug?: string` — DefiLlama protocol slug for commodity TVL data and, for dedicated single-token gold products, mcap data
 - `proofOfReserves?: ProofOfReserves` — proof configuration plus an optional sourced `latestReport` that distinguishes assurance method, assets-only versus assets-and-liabilities scope, and liability reconciliation
 - `links?: StablecoinLink[]` — external links (website, docs, twitter)
