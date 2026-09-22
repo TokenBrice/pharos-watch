@@ -62,6 +62,14 @@ function reservesWord(reserve0: bigint, reserve1: bigint): `0x${string}` {
   return `0x${reserve0.toString(16).padStart(64, "0")}${reserve1.toString(16).padStart(64, "0")}${"0".repeat(64)}`;
 }
 
+function blockHeader(blockNumber: number) {
+  return {
+    number: blockNumber,
+    timestamp: 1_700_000_000,
+    hash: `0x${"ab".repeat(32)}` as `0x${string}`,
+  };
+}
+
 function makeCandidate() {
   return buildEvmV2ExecutionCandidate({
     chain: "bsc",
@@ -137,6 +145,8 @@ async function runV2PriceLegScenario({
     chainRpcs: captureRpcs("ethereum", "Ethereum"),
     dependencies: {
       fetchBlockNumber: vi.fn(async () => 21_000_000),
+      fetchBlockHeader: vi.fn(async (_chain: string, blockNumber: number | "finalized") =>
+        blockHeader(blockNumber as number)),
       fetchCodeAtBlock: vi.fn(async () => "0x6000" as const),
       fetchMulticall: vi.fn(async (_chain: string, calls: readonly { label: string }[]) =>
         calls.map((call) => ({
@@ -239,6 +249,8 @@ async function runReplay(
     chainRpcs: captureRpcs("bsc", "BSC"),
     dependencies: {
       fetchBlockNumber,
+      fetchBlockHeader: vi.fn(async (_chain: string, blockNumber: number | "finalized") =>
+        blockHeader(blockNumber as number)),
       fetchCodeAtBlock,
       fetchMulticall: fetchMulticall as never,
       hashCode: vi.fn(() => deployment.expectedFactoryCodeHash),
@@ -434,6 +446,8 @@ describe("constant-product V2 execution", () => {
       chainRpcs: captureRpcs("bsc", "BSC"),
       dependencies: {
         fetchBlockNumber: vi.fn(async () => 50_000_000),
+        fetchBlockHeader: vi.fn(async (_chain: string, blockNumber: number | "finalized") =>
+          blockHeader(blockNumber as number)),
         fetchCodeAtBlock: vi.fn(async () => "0x6000" as const),
         fetchMulticall: fetchMulticall as never,
         hashCode: vi.fn(() => deployment.expectedFactoryCodeHash),
@@ -518,6 +532,8 @@ describe("constant-product V2 execution", () => {
         chainRpcs: chainRpcs as never,
         dependencies: {
           fetchBlockNumber: vi.fn(async () => 21_000_000),
+          fetchBlockHeader: vi.fn(async (_chain: string, blockNumber: number | "finalized") =>
+            blockHeader(blockNumber as number)),
           fetchCodeAtBlock: vi.fn(async () => "0x6000" as const),
           fetchMulticall: fetchMulticall as never,
           hashCode: vi.fn(() => deployment.expectedFactoryCodeHash),
@@ -608,6 +624,8 @@ describe("constant-product V2 execution", () => {
       chainRpcs: captureRpcs("bsc", "BSC"),
       dependencies: {
         fetchBlockNumber: vi.fn(async () => 50_000_000),
+        fetchBlockHeader: vi.fn(async (_chain: string, blockNumber: number | "finalized") =>
+          blockHeader(blockNumber as number)),
         fetchCodeAtBlock: vi.fn(async () => "0x6000" as const),
         fetchMulticall: vi.fn(async (_chain: string, calls: readonly { label: string }[]) =>
           calls.map((call) => ({
@@ -781,6 +799,8 @@ describe("constant-product V2 execution", () => {
       ]),
       dependencies: {
         fetchBlockNumber: vi.fn(async () => 50_000_000),
+        fetchBlockHeader: vi.fn(async (_chain: string, blockNumber: number | "finalized") =>
+          blockHeader(blockNumber as number)),
         fetchCodeAtBlock: vi.fn(async () => "0x6000" as const),
         fetchMulticall: fetchMulticall as never,
         hashCode: vi.fn(() => deployment.expectedFactoryCodeHash),
@@ -853,6 +873,8 @@ describe("constant-product V2 execution", () => {
       chainRpcs: captureRpcs("base", "Base"),
       dependencies: {
         fetchBlockNumber: vi.fn(async () => 33_000_000),
+        fetchBlockHeader: vi.fn(async (_chain: string, blockNumber: number | "finalized") =>
+          blockHeader(blockNumber as number)),
         fetchCodeAtBlock: fetchCodeAtBlock as never,
         fetchMulticall: fetchMulticall as never,
         hashCode: vi.fn((code) =>
@@ -916,6 +938,8 @@ describe("constant-product V2 execution", () => {
       chainRpcs: captureRpcs("base", "Base"),
       dependencies: {
         fetchBlockNumber: vi.fn(async () => 33_000_000),
+        fetchBlockHeader: vi.fn(async (_chain: string, blockNumber: number | "finalized") =>
+          blockHeader(blockNumber as number)),
         fetchCodeAtBlock: vi.fn(async (_chain, address) =>
           address === deployment.factoryAddress ? ("0x6000" as const) : ("0x6001" as const),
         ),
@@ -978,6 +1002,8 @@ describe("constant-product V2 execution", () => {
       ]),
       dependencies: {
         fetchBlockNumber: vi.fn(async () => 50_000_000),
+        fetchBlockHeader: vi.fn(async (_chain: string, blockNumber: number | "finalized") =>
+          blockHeader(blockNumber as number)),
         fetchCodeAtBlock: vi.fn(async () => "0x6000" as const),
         fetchMulticall: fetchMulticall as never,
         hashCode: vi.fn(() => `0x${"00".repeat(32)}` as `0x${string}`),

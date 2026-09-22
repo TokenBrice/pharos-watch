@@ -15,7 +15,6 @@ export const DEX_MEASURED_CAPACITY_NOTIONALS_USD = [100_000, 1_000_000, 10_000_0
 // and did not guarantee survival of one missed full publication within 3h.
 // Faster publication admits recovered evidence without extending its validity.
 export const DEX_MEASURED_FRESHNESS_MAX_SEC = 3 * 60 * 60;
-export const DEX_CURVE_STABLESWAP_MEASURED_FRESHNESS_MAX_SEC = 3 * 60 * 60;
 const DEX_MEASURED_MATURE_SUCCESSFUL_CYCLE_COUNT = 2;
 
 const CanonicalEvmAddressSchema = z.string().regex(/^0x[a-f0-9]{40}$/);
@@ -49,14 +48,9 @@ export const DEX_MEASURED_ADAPTER_PROFILE_IDS = {
   curveMetapool: "curve-stableswap-ng-metapool-underlying-v1",
 } as const;
 
-const DEX_CURVE_STABLESWAP_ADAPTER_PROFILE_IDS = new Set<string>(
-  Object.values(DEX_MEASURED_ADAPTER_PROFILE_IDS),
-);
 
-export function getDexMeasuredExecutionFreshnessMaxSec(adapterProfileId: string): number {
-  return DEX_CURVE_STABLESWAP_ADAPTER_PROFILE_IDS.has(adapterProfileId)
-    ? DEX_CURVE_STABLESWAP_MEASURED_FRESHNESS_MAX_SEC
-    : DEX_MEASURED_FRESHNESS_MAX_SEC;
+export function getDexMeasuredExecutionFreshnessMaxSec(_adapterProfileId: string): number {
+  return DEX_MEASURED_FRESHNESS_MAX_SEC;
 }
 
 export const DexMeasuredExecutionObservationHistorySchema = ExitRouteObservationHistorySchema

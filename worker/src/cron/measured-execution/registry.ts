@@ -1,13 +1,8 @@
 import { keccak256 } from "viem/utils";
 import {
-  DEX_EXECUTION_CAPABILITY_REGISTRY,
   getDexExecutionCapabilityRegistration,
   isDexExecutionProfileAdmittedForScoring,
 } from "@shared/lib/p4-exit-route-capability-policy";
-import {
-  DEX_EXACT_QUOTE_ADAPTER_IDS,
-  type DexExactQuoteAdapterId,
-} from "@shared/types/measured-execution";
 
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { fetchEvmCodeAtBlock } from "../../lib/evm-rpc";
@@ -29,35 +24,6 @@ export interface DexMeasuredExecutionDeployment {
   expectedFactoryCodeHash: `0x${string}`;
 }
 
-export interface DexExactQuoteAdapterRegistrationSlot {
-  adapterId: DexExactQuoteAdapterId;
-  platform: "evm" | "solana";
-  profileIds: readonly string[];
-  implementationModule: string;
-}
-
-const ADAPTER_IMPLEMENTATION_MODULES: Readonly<Record<DexExactQuoteAdapterId, string>> = {
-  [DEX_EXACT_QUOTE_ADAPTER_IDS.quoterV2]: "./quoter-v2",
-  [DEX_EXACT_QUOTE_ADAPTER_IDS.uniswapV4]: "./uniswap-v4",
-  [DEX_EXACT_QUOTE_ADAPTER_IDS.curveCryptoSwap]: "./curve-cryptoswap",
-  [DEX_EXACT_QUOTE_ADAPTER_IDS.curveStableSwap]: "./curve-stableswap",
-  [DEX_EXACT_QUOTE_ADAPTER_IDS.curveStableSwapNg]: "./curve-stableswap-ng",
-  [DEX_EXACT_QUOTE_ADAPTER_IDS.curveComposite]: "./curve-composite",
-  [DEX_EXACT_QUOTE_ADAPTER_IDS.evmV2]: "../dex-liquidity/execution-targets/evm-v2",
-  [DEX_EXACT_QUOTE_ADAPTER_IDS.solanaClmm]: "../dex-liquidity/execution-target-registry",
-};
-
-/** One predeclared adapter slot per exact execution family. */
-export const DEX_EXACT_QUOTE_ADAPTER_REGISTRY: readonly DexExactQuoteAdapterRegistrationSlot[] =
-  Object.values(DEX_EXACT_QUOTE_ADAPTER_IDS).map((adapterId) => {
-    const registrations = DEX_EXECUTION_CAPABILITY_REGISTRY.filter((entry) => entry.adapterId === adapterId);
-    return {
-      adapterId,
-      platform: registrations[0]?.platform ?? "evm",
-      profileIds: registrations.map((entry) => entry.profileId),
-      implementationModule: ADAPTER_IMPLEMENTATION_MODULES[adapterId],
-    };
-  });
 
 /**
  * Reviewed against the protocols' official deployment registries. Bytecode
@@ -166,31 +132,6 @@ const DEX_MEASURED_EXECUTION_DEPLOYMENTS: readonly DexMeasuredExecutionDeploymen
   },
 ] as const;
 
-/**
- * Activation is cohort-scoped. The 2026-07-17 owner-ratified cohort is backed
- * by the fork-equivalence, cross-check, drift, and shadow evidence packet at
- * agents/safety-score-v9/results/cl-activation-evidence-2026-07-17/packet.md
- * (120/120 exact provider reproductions; failures confined to producer
- * startup generations). Base Aerodrome Slipstream was admitted to V9
- * route scoring on 2026-07-24 after full target rotation, consumer replay,
- * binding checks, and independent historical-block quote reproduction.
- * The retired Optimism Uniswap V3 lane is no longer scheduled for evidence
- * collection after its 2026-07-27 score-facing consumers exceeded the Worker
- * memory limit and the owner accepted clean retirement. Keys not listed here
- * remain shadow-only fail-closed when a reviewed deployment still exists. The
- * initial cohort was restored 2026-07-20 after the #592 security rollup
- * emptied it as an over-broad artifact. Owner ruling R5 activated Celo as the
- * coupled Graph + QuoterV2 lane reviewed in
- * agents/safety-score-v9-producer-failed-remediation/artifacts/exact-dex-route-coverage/activation-univ3-chains.json
- * after the OOM split-invocation became permanent.
- */
-export const DEX_MEASURED_EXECUTION_SCORE_ELIGIBLE_DEPLOYMENT_KEYS: readonly string[] = [
-  ...new Set(
-    DEX_EXECUTION_CAPABILITY_REGISTRY.flatMap((registration) =>
-      registration.eligibleDeploymentKeys ?? [],
-    ),
-  ),
-];
 
 export function isDexMeasuredExecutionDeploymentScoreEligible(adapterProfileId: string, chain: string): boolean {
   const registration = getDexExecutionCapabilityRegistration(adapterProfileId);

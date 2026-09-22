@@ -8,6 +8,7 @@ import { decodeAbiParameters, keccak256 } from "viem/utils";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import {
+  fetchEvmBlockHeader,
   fetchEvmBlockNumber,
   fetchEvmCodeAtBlock,
   fetchEvmMulticall3Aggregate3AtBlock,
@@ -20,6 +21,8 @@ import {
   decodeEvmCaptureBool,
   decodeEvmCaptureUint256,
   mapEvmCaptureResults,
+  resolveTrackedReferencePrices,
+  runPinnedBlockCapture,
 } from "./evm-capture-helpers";
 import { buildPoolFingerprint, normalizeProtocol } from "./pool-helpers";
 import { resolveUniqueTrackedTokenIndex } from "./scoring-helpers";
@@ -97,6 +100,7 @@ export const EVM_V2_EXECUTION_DEPLOYMENTS: readonly EvmV2Deployment[] = [
 
 interface EvmV2ExecutionDependencies {
   fetchBlockNumber: typeof fetchEvmBlockNumber;
+  fetchBlockHeader: typeof fetchEvmBlockHeader;
   fetchCodeAtBlock: typeof fetchEvmCodeAtBlock;
   fetchMulticall: typeof fetchEvmMulticall3Aggregate3AtBlock;
   hashCode: (code: `0x${string}`) => `0x${string}`;
@@ -104,6 +108,7 @@ interface EvmV2ExecutionDependencies {
 
 const DEFAULT_DEPENDENCIES: EvmV2ExecutionDependencies = {
   fetchBlockNumber: fetchEvmBlockNumber,
+  fetchBlockHeader: fetchEvmBlockHeader,
   fetchCodeAtBlock: fetchEvmCodeAtBlock,
   fetchMulticall: fetchEvmMulticall3Aggregate3AtBlock,
   hashCode: keccak256,
@@ -251,25 +256,25 @@ function parseVerifiedPairState(
   probe: PairProbe,
   index: number,
   results: Map<string, EvmMulticall3Result>,
-): { state: VerifiedPairState | null; reason: V2GateReason } {
+): { ok: true; state: VerifiedPairState } | { ok: false; reason: V2GateReason } {
   const prefix = `v2-${index}`;
   const resolvedPair = decodeAddressResult(results.get(`${prefix}-pair`));
   if (resolvedPair !== probe.candidate.poolAddress) {
-    return { state: null, reason: "exact-pool-join-unresolved" };
+    return { ok: false, reason: "exact-pool-join-unresolved" };
   }
   const token0 = decodeAddressResult(results.get(`${prefix}-token0`));
   const token1 = decodeAddressResult(results.get(`${prefix}-token1`));
   if (!token0 || !token1 || token0 === token1) {
-    return { state: null, reason: "ambiguous-token-identity" };
+    return { ok: false, reason: "ambiguous-token-identity" };
   }
   const expectedTokens = new Set(probe.candidate.tokenAddresses);
   if (!expectedTokens.has(token0) || !expectedTokens.has(token1)) {
-    return { state: null, reason: "ambiguous-token-identity" };
+    return { ok: false, reason: "ambiguous-token-identity" };
   }
   const decimals0 = decodeDecimalsResult(results.get(`${prefix}-decimals0`));
   const decimals1 = decodeDecimalsResult(results.get(`${prefix}-decimals1`));
   if (decimals0 == null || decimals1 == null) {
-    return { state: null, reason: "incomplete-exact-capture" };
+    return { ok: false, reason: "incomplete-exact-capture" };
   }
   const decimalsByAddress = new Map<string, number>([
     [probe.candidate.tokenAddresses[0]!.toLowerCase(), decimals0],
@@ -278,24 +283,24 @@ function parseVerifiedPairState(
   const token0Decimals = decimalsByAddress.get(token0.toLowerCase());
   const token1Decimals = decimalsByAddress.get(token1.toLowerCase());
   if (token0Decimals == null || token1Decimals == null) {
-    return { state: null, reason: "incomplete-exact-capture" };
+    return { ok: false, reason: "incomplete-exact-capture" };
   }
   const reserves = decodeReservesResult(results.get(`${prefix}-reserves`));
   if (!reserves) {
-    return { state: null, reason: "incomplete-exact-capture" };
+    return { ok: false, reason: "incomplete-exact-capture" };
   }
   const balance0 = Number(reserves[0]) / 10 ** token0Decimals;
   const balance1 = Number(reserves[1]) / 10 ** token1Decimals;
   if (!Number.isFinite(balance0) || !Number.isFinite(balance1) || balance0 <= 0 || balance1 <= 0) {
-    return { state: null, reason: "incomplete-exact-capture" };
+    return { ok: false, reason: "incomplete-exact-capture" };
   }
   return {
+    ok: true,
     state: {
       tokenAddresses: [token0, token1],
       decimals: [token0Decimals, token1Decimals],
       balances: [balance0, balance1],
     },
-    reason: "incomplete-exact-capture",
   };
 }
 
@@ -307,71 +312,29 @@ function buildExecutionModel(input: {
   chainAddressToId: SymbolLookups["chainAddressToId"];
   contractMetaByChainAddress: SymbolLookups["contractMetaByChainAddress"];
   stablecoinPriceById: Map<string, number>;
-}): { model: DexAmmExecutionModel | null; reason: V2GateReason } {
+}): { ok: true; model: DexAmmExecutionModel } | { ok: false; reason: V2GateReason } {
   const { reference, state } = input;
   const assetIds = state.tokenAddresses.map((address) =>
     input.chainAddressToId.get(canonicalExitRouteAssetKey(input.deployment.chain, address)),
   );
   const trackedResolution = resolveUniqueTrackedTokenIndex(assetIds, reference.stablecoinId);
-  if (trackedResolution.trackedTokenIndex === null) return { model: null, reason: trackedResolution.reason };
+  if (trackedResolution.trackedTokenIndex === null) return { ok: false, reason: trackedResolution.reason };
   const { trackedTokenIndex } = trackedResolution;
-  const trustedPriceByIndex = assetIds.map((assetId) => {
-    if (!assetId) return null;
-    const price = input.stablecoinPriceById.get(assetId);
-    return Number.isFinite(price) && price! > 0 ? price! : null;
+  const resolvedPrices = resolveTrackedReferencePrices({
+    balances: state.balances,
+    assetIds,
+    trackedTokenIndex,
+    stablecoinPriceById: input.stablecoinPriceById,
+    implyUntrackedPrices: true,
   });
-  let trackedReferencePrice = trustedPriceByIndex[trackedTokenIndex];
-  let trackedReferenceSource: "tracked-market" | "pool-implied" = "tracked-market";
-  // Weak/single-source quotes never enter stablecoinPriceById. A unique
-  // authoritative counter-asset still sizes the tracked input from same-block
-  // reserves, the inverse of the existing untracked-output imply.
-  if (trackedReferencePrice == null) {
-    const pricedOthers = trustedPriceByIndex.flatMap((price, index) =>
-      index !== trackedTokenIndex && price != null ? [{ index, price }] : [],
-    );
-    if (pricedOthers.length !== 1) {
-      return { model: null, reason: "incomplete-exact-capture" };
-    }
-    const other = pricedOthers[0]!;
-    const implied = (state.balances[other.index]! * other.price) / state.balances[trackedTokenIndex]!;
-    if (!Number.isFinite(implied) || implied <= 0) {
-      return { model: null, reason: "incomplete-exact-capture" };
-    }
-    trackedReferencePrice = implied;
-    trackedReferenceSource = "pool-implied";
-  }
+  if (!resolvedPrices.ok) return { ok: false, reason: "incomplete-exact-capture" };
 
   const symbolByAddress = new Map(
     reference.candidate.tokenAddresses.map((address, index) => [address, reference.candidate.tokenSymbols[index]!]),
   );
-  const referencePrices: number[] = [];
-  const referencePriceSources: Array<"tracked-market" | "pool-implied"> = [];
-  for (let index = 0; index < state.tokenAddresses.length; index++) {
-    if (index === trackedTokenIndex) {
-      referencePrices[index] = trackedReferencePrice;
-      referencePriceSources[index] = trackedReferenceSource;
-      continue;
-    }
-    const trustedPrice = trustedPriceByIndex[index];
-    if (trustedPrice != null) {
-      referencePrices[index] = trustedPrice;
-      referencePriceSources[index] = "tracked-market";
-      continue;
-    }
-    if (assetIds[index]) {
-      return { model: null, reason: "incomplete-exact-capture" };
-    }
-    const trackedBalance = state.balances[trackedTokenIndex]!;
-    const balance = state.balances[index]!;
-    const poolImpliedPrice = (trackedBalance * trackedReferencePrice) / balance;
-    if (!Number.isFinite(poolImpliedPrice) || poolImpliedPrice <= 0) {
-      return { model: null, reason: "incomplete-exact-capture" };
-    }
-    referencePrices[index] = poolImpliedPrice;
-    referencePriceSources[index] = "pool-implied";
-  }
-
+  const { prices: referencePrices, sources: referencePriceSources } = resolvedPrices.value;
   return {
+    ok: true,
     model: {
       source: input.deployment.source,
       invariant: "constant-product",
@@ -391,7 +354,6 @@ function buildExecutionModel(input: {
         };
       }),
     },
-    reason: "incomplete-exact-capture",
   };
 }
 
@@ -411,176 +373,183 @@ async function enrichDeployment(input: {
     timeoutMs: 15_000,
     maxRetries: 0,
   };
-  const blockNumber = await input.dependencies.fetchBlockNumber(input.deployment.chain, rpcOptions);
-  if (blockNumber == null) {
+  const gateAll = (reason: V2GateReason) => {
     for (const probe of input.probes)
-      for (const reference of probe.references) gateReference(reference, "incomplete-exact-capture");
-    return;
-  }
-  const factoryCode = await input.dependencies.fetchCodeAtBlock(
-    input.deployment.chain,
-    input.deployment.factoryAddress,
-    blockNumber,
+      for (const reference of probe.references) gateReference(reference, reason);
+  };
+  await runPinnedBlockCapture<Array<() => void>, V2GateReason>({
+    chain: input.deployment.chain,
     rpcOptions,
-  );
-  if (
-    factoryCode == null ||
-    input.dependencies.hashCode(factoryCode).toLowerCase() !== input.deployment.expectedFactoryCodeHash.toLowerCase()
-  ) {
-    for (const probe of input.probes)
-      for (const reference of probe.references) gateReference(reference, "deployment-code-mismatch");
-    return;
-  }
-
-  if (input.deployment.binding === "aerodrome-volatile") {
-    const implementationCode = await input.dependencies.fetchCodeAtBlock(
-      input.deployment.chain,
-      input.deployment.expectedImplementationAddress,
-      blockNumber,
-      rpcOptions,
-    );
-    if (
-      implementationCode == null ||
-      input.dependencies.hashCode(implementationCode).toLowerCase() !==
-        input.deployment.expectedImplementationCodeHash.toLowerCase()
-    ) {
-      for (const probe of input.probes)
-        for (const reference of probe.references) gateReference(reference, "deployment-code-mismatch");
-      return;
-    }
-    const rawDeploymentResults = await input.dependencies.fetchMulticall(
-      input.deployment.chain,
-      [
-        {
-          label: "v2-factory-implementation",
-          target: input.deployment.factoryAddress,
-          callData: AERODROME_IMPLEMENTATION_SELECTOR,
-        },
-        {
-          label: "v2-factory-paused",
-          target: input.deployment.factoryAddress,
-          callData: AERODROME_IS_PAUSED_SELECTOR,
-        },
-      ],
-      blockNumber,
-      rpcOptions,
-    );
-    if (!rawDeploymentResults) {
-      for (const probe of input.probes)
-        for (const reference of probe.references) gateReference(reference, "incomplete-exact-capture");
-      return;
-    }
-    const deploymentResults = mapEvmCaptureResults(rawDeploymentResults);
-    const implementation = decodeAddressResult(deploymentResults.get("v2-factory-implementation"));
-    if (implementation !== input.deployment.expectedImplementationAddress) {
-      for (const probe of input.probes)
-        for (const reference of probe.references) gateReference(reference, "deployment-code-mismatch");
-      return;
-    }
-    const paused = decodeEvmCaptureBool(deploymentResults.get("v2-factory-paused"));
-    if (paused == null || paused) {
-      const reason: V2GateReason = paused ? "paused-or-swap-disabled" : "incomplete-exact-capture";
-      for (const probe of input.probes) for (const reference of probe.references) gateReference(reference, reason);
-      return;
-    }
-  }
-
-  for (let startIndex = 0; startIndex < input.probes.length; startIndex += MAX_PROBES_PER_MULTICALL) {
-    throwIfAborted(input.signal);
-    const probes = input.probes.slice(startIndex, startIndex + MAX_PROBES_PER_MULTICALL);
-    const poolCalls = probes.flatMap((probe, batchIndex) => {
-      const index = startIndex + batchIndex;
-      const prefix = `v2-${index}`;
-      const [token0, token1] = probe.candidate.tokenAddresses;
-      const pairCallData =
-        input.deployment.binding === "aerodrome-volatile"
-          ? `${AERODROME_GET_POOL_SELECTOR}${encodeAddress(token0)}${encodeAddress(token1)}${encodeUint256(0)}`
-          : `${GET_PAIR_SELECTOR}${encodeAddress(token0)}${encodeAddress(token1)}`;
-      return [
-        {
-          label: `${prefix}-pair`,
-          target: input.deployment.factoryAddress,
-          callData: pairCallData,
-        },
-        { label: `${prefix}-token0`, target: probe.candidate.poolAddress, callData: TOKEN_0_SELECTOR },
-        { label: `${prefix}-token1`, target: probe.candidate.poolAddress, callData: TOKEN_1_SELECTOR },
-        { label: `${prefix}-reserves`, target: probe.candidate.poolAddress, callData: GET_RESERVES_SELECTOR },
-        { label: `${prefix}-decimals0`, target: token0, callData: DECIMALS_SELECTOR },
-        { label: `${prefix}-decimals1`, target: token1, callData: DECIMALS_SELECTOR },
-        ...(input.deployment.binding === "aerodrome-volatile"
-          ? [
-            {
-              label: `${prefix}-fee`,
-              target: input.deployment.factoryAddress,
-              callData: `${AERODROME_GET_FEE_SELECTOR}${encodeAddress(probe.candidate.poolAddress)}${encodeUint256(0)}`,
-            },
-            { label: `${prefix}-stable`, target: probe.candidate.poolAddress, callData: AERODROME_STABLE_SELECTOR },
-          ]
-          : []),
-      ];
-    });
-    const rawResults = await input.dependencies.fetchMulticall(
-      input.deployment.chain,
-      poolCalls,
-      blockNumber,
-      rpcOptions,
-    );
-    if (!rawResults) {
-      for (const probe of probes)
-        for (const reference of probe.references) gateReference(reference, "incomplete-exact-capture");
-      continue;
-    }
-    const results = mapEvmCaptureResults(rawResults);
-
-    for (let batchIndex = 0; batchIndex < probes.length; batchIndex++) {
-      const index = startIndex + batchIndex;
-      const probe = probes[batchIndex]!;
-      let feeRate: number;
-      if (input.deployment.binding === "aerodrome-volatile") {
-        const stable = decodeEvmCaptureBool(results.get(`v2-${index}-stable`));
-        if (stable == null || stable) {
-          const reason: V2GateReason = stable ? "unsupported-invariant" : "incomplete-exact-capture";
-          for (const reference of probe.references) gateReference(reference, reason);
-          continue;
-        }
-        const feeBps = decodeEvmCaptureUint256(results.get(`v2-${index}-fee`));
-        if (feeBps == null || feeBps > AERODROME_MAX_FEE_BPS) {
-          for (const reference of probe.references) gateReference(reference, "incomplete-exact-capture");
-          continue;
-        }
-        feeRate = Number(feeBps) / 10_000;
-      } else {
-        feeRate = input.deployment.feeRate;
+    fetchBlockNumber: input.dependencies.fetchBlockNumber,
+    fetchBlockHeader: input.dependencies.fetchBlockHeader,
+    verifyDeployment: async ({ blockNumber }) => {
+      const factoryCode = await input.dependencies.fetchCodeAtBlock(
+        input.deployment.chain,
+        input.deployment.factoryAddress,
+        blockNumber,
+        rpcOptions,
+      );
+      if (
+        factoryCode == null ||
+        input.dependencies.hashCode(factoryCode).toLowerCase() !==
+          input.deployment.expectedFactoryCodeHash.toLowerCase()
+      ) {
+        return { ok: false, reason: "deployment-code-mismatch" };
       }
-      const verified = parseVerifiedPairState(probe, index, results);
-      if (!verified.state) {
-        for (const reference of probe.references) gateReference(reference, verified.reason);
-        continue;
+      if (input.deployment.binding !== "aerodrome-volatile") return { ok: true };
+      const implementationCode = await input.dependencies.fetchCodeAtBlock(
+        input.deployment.chain,
+        input.deployment.expectedImplementationAddress,
+        blockNumber,
+        rpcOptions,
+      );
+      if (
+        implementationCode == null ||
+        input.dependencies.hashCode(implementationCode).toLowerCase() !==
+          input.deployment.expectedImplementationCodeHash.toLowerCase()
+      ) {
+        return { ok: false, reason: "deployment-code-mismatch" };
       }
-      for (const reference of probe.references) {
-        reference.pool.poolId = canonicalExitRouteAssetKey(input.deployment.chain, probe.candidate.poolAddress);
-        const built = buildExecutionModel({
-          reference,
-          deployment: input.deployment,
-          feeRate,
-          state: verified.state,
-          chainAddressToId: input.chainAddressToId,
-          contractMetaByChainAddress: input.contractMetaByChainAddress,
-          stablecoinPriceById: input.stablecoinPriceById,
+      const rawResults = await input.dependencies.fetchMulticall(
+        input.deployment.chain,
+        [
+          {
+            label: "v2-factory-implementation",
+            target: input.deployment.factoryAddress,
+            callData: AERODROME_IMPLEMENTATION_SELECTOR,
+          },
+          {
+            label: "v2-factory-paused",
+            target: input.deployment.factoryAddress,
+            callData: AERODROME_IS_PAUSED_SELECTOR,
+          },
+        ],
+        blockNumber,
+        rpcOptions,
+      );
+      if (!rawResults) return { ok: false, reason: "incomplete-exact-capture" };
+      const results = mapEvmCaptureResults(rawResults);
+      if (
+        decodeAddressResult(results.get("v2-factory-implementation")) !==
+        input.deployment.expectedImplementationAddress
+      ) {
+        return { ok: false, reason: "deployment-code-mismatch" };
+      }
+      const paused = decodeEvmCaptureBool(results.get("v2-factory-paused"));
+      if (paused == null || paused) {
+        return {
+          ok: false,
+          reason: paused ? "paused-or-swap-disabled" : "incomplete-exact-capture",
+        };
+      }
+      return { ok: true };
+    },
+    buildCalls: async ({ blockNumber }) => {
+      const actions: Array<() => void> = [];
+      const gate = (references: readonly CandidateReference[], reason: V2GateReason) => {
+        for (const reference of references) actions.push(() => gateReference(reference, reason));
+      };
+      for (let startIndex = 0; startIndex < input.probes.length; startIndex += MAX_PROBES_PER_MULTICALL) {
+        throwIfAborted(input.signal);
+        const probes = input.probes.slice(startIndex, startIndex + MAX_PROBES_PER_MULTICALL);
+        const poolCalls = probes.flatMap((probe, batchIndex) => {
+          const index = startIndex + batchIndex;
+          const prefix = `v2-${index}`;
+          const [token0, token1] = probe.candidate.tokenAddresses;
+          const pairCallData =
+            input.deployment.binding === "aerodrome-volatile"
+              ? `${AERODROME_GET_POOL_SELECTOR}${encodeAddress(token0)}${encodeAddress(token1)}${encodeUint256(0)}`
+              : `${GET_PAIR_SELECTOR}${encodeAddress(token0)}${encodeAddress(token1)}`;
+          return [
+            { label: `${prefix}-pair`, target: input.deployment.factoryAddress, callData: pairCallData },
+            { label: `${prefix}-token0`, target: probe.candidate.poolAddress, callData: TOKEN_0_SELECTOR },
+            { label: `${prefix}-token1`, target: probe.candidate.poolAddress, callData: TOKEN_1_SELECTOR },
+            { label: `${prefix}-reserves`, target: probe.candidate.poolAddress, callData: GET_RESERVES_SELECTOR },
+            { label: `${prefix}-decimals0`, target: token0, callData: DECIMALS_SELECTOR },
+            { label: `${prefix}-decimals1`, target: token1, callData: DECIMALS_SELECTOR },
+            ...(input.deployment.binding === "aerodrome-volatile"
+              ? [
+                {
+                  label: `${prefix}-fee`,
+                  target: input.deployment.factoryAddress,
+                  callData: `${AERODROME_GET_FEE_SELECTOR}${encodeAddress(probe.candidate.poolAddress)}${encodeUint256(0)}`,
+                },
+                { label: `${prefix}-stable`, target: probe.candidate.poolAddress, callData: AERODROME_STABLE_SELECTOR },
+              ]
+              : []),
+          ];
         });
-        if (!built.model) {
-          gateReference(reference, built.reason);
+        const rawResults = await input.dependencies.fetchMulticall(
+          input.deployment.chain,
+          poolCalls,
+          blockNumber,
+          rpcOptions,
+        );
+        if (!rawResults) {
+          for (const probe of probes) gate(probe.references, "incomplete-exact-capture");
           continue;
         }
-        const extra = { ...(reference.pool.extra ?? {}) };
-        delete extra.executionCapabilityGate;
-        delete extra.evmV2ExecutionCandidate;
-        extra.ammExecutionModel = built.model;
-        extra.measurement = { ...(extra.measurement ?? {}), balanceMeasured: true };
-        reference.pool.extra = extra;
+        const results = mapEvmCaptureResults(rawResults);
+        for (let batchIndex = 0; batchIndex < probes.length; batchIndex++) {
+          const index = startIndex + batchIndex;
+          const probe = probes[batchIndex]!;
+          let feeRate: number;
+          if (input.deployment.binding === "aerodrome-volatile") {
+            const stable = decodeEvmCaptureBool(results.get(`v2-${index}-stable`));
+            if (stable == null || stable) {
+              gate(probe.references, stable ? "unsupported-invariant" : "incomplete-exact-capture");
+              continue;
+            }
+            const feeBps = decodeEvmCaptureUint256(results.get(`v2-${index}-fee`));
+            if (feeBps == null || feeBps > AERODROME_MAX_FEE_BPS) {
+              gate(probe.references, "incomplete-exact-capture");
+              continue;
+            }
+            feeRate = Number(feeBps) / 10_000;
+          } else {
+            feeRate = input.deployment.feeRate;
+          }
+          const verified = parseVerifiedPairState(probe, index, results);
+          if (!verified.ok) {
+            gate(probe.references, verified.reason);
+            continue;
+          }
+          for (const reference of probe.references) {
+            const built = buildExecutionModel({
+              reference,
+              deployment: input.deployment,
+              feeRate,
+              state: verified.state,
+              chainAddressToId: input.chainAddressToId,
+              contractMetaByChainAddress: input.contractMetaByChainAddress,
+              stablecoinPriceById: input.stablecoinPriceById,
+            });
+            if (!built.ok) {
+              actions.push(() => gateReference(reference, built.reason));
+              continue;
+            }
+            actions.push(() => {
+              reference.pool.poolId = canonicalExitRouteAssetKey(
+                input.deployment.chain,
+                probe.candidate.poolAddress,
+              );
+              const extra = { ...(reference.pool.extra ?? {}) };
+              delete extra.executionCapabilityGate;
+              delete extra.evmV2ExecutionCandidate;
+              extra.ammExecutionModel = built.model;
+              extra.measurement = { ...(extra.measurement ?? {}), balanceMeasured: true };
+              reference.pool.extra = extra;
+            });
+          }
+        }
       }
-    }
-  }
+      return { ok: true, value: actions };
+    },
+    onResults: (actions) => {
+      for (const apply of actions) apply();
+    },
+    onFailure: (reason) => gateAll(reason ?? "incomplete-exact-capture"),
+  });
 }
 
 export async function enrichEvmV2ExecutionModels(input: {

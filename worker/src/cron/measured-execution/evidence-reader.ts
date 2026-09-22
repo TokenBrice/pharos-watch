@@ -1,5 +1,4 @@
 import {
-  DEX_CURVE_STABLESWAP_MEASURED_FRESHNESS_MAX_SEC,
   DEX_MEASURED_FRESHNESS_MAX_SEC,
   DexMeasuredExecutionProfileSchema,
   DexMeasuredExecutionTargetSchema,
@@ -16,10 +15,7 @@ import { DEX_MEASURED_QUOTE_SURFACE, DEX_MEASURED_TARGET_SURFACE, hashMeasuredTa
 import { summarizeDexMeasuredExecutionHistory, type DexMeasuredExecutionHistoryCycle } from "./history";
 // This generation-level query must cover the longest adapter-specific freshness
 // window; row admission below still applies the exact per-adapter bound.
-const DEX_MEASURED_HISTORY_LOOKBACK_MAX_SEC = Math.max(
-  DEX_MEASURED_FRESHNESS_MAX_SEC,
-  DEX_CURVE_STABLESWAP_MEASURED_FRESHNESS_MAX_SEC,
-);
+const DEX_MEASURED_HISTORY_LOOKBACK_MAX_SEC = DEX_MEASURED_FRESHNESS_MAX_SEC;
 /** Preserve the full window while keeping proof-heavy history rows below the scoring graph's heap peak. */
 const DEX_MEASURED_HISTORY_TARGET_BATCH_SIZE = 16;
 /** Bound raw target/profile JSON beside the assembled DEX pool graph. */

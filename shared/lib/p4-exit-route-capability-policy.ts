@@ -55,6 +55,13 @@ export interface DexExecutionCapabilityRegistration {
   routeSemanticsVersion: string;
 }
 
+/**
+ * Owner-ratified score cohort. The fork-equivalence, cross-check, drift, and
+ * shadow packet recorded 120/120 exact provider reproductions. Base
+ * Slipstream was admitted after full target rotation and replay; Celo after
+ * the Graph + QuoterV2 lane review. The retired Optimism lane remains absent.
+ * Reviewed deployments not listed here stay shadow-only fail-closed.
+ */
 const ACTIVE_QUOTER_V2_DEPLOYMENT_KEYS = [
   "aerodrome-slipstream-quoter-v2:base",
   "uniswap-v3-quoter-v2:ethereum",

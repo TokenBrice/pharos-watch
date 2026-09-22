@@ -42,6 +42,7 @@ interface QuoterV2Request {
 }
 
 interface EncodedQuoterV2Request extends QuoterV2Request {
+  index: number;
   label: string;
   amountInRaw: bigint;
   callData: `0x${string}`;
@@ -107,6 +108,7 @@ function encodeRequest(request: QuoterV2Request, index: number): EncodedQuoterV2
   try {
     return {
       ...request,
+      index,
       label: `${index}:${request.target.targetId}`,
       amountInRaw,
       callData: encodeQuoterV2ExactInputSingle(request.target, amountInRaw),
@@ -177,7 +179,7 @@ export async function quoteQuoterV2Requests(input: {
     ...request,
     chain: request.target.chain,
     blockNumber: input.blockNumber,
-    index: Number.parseInt(request.label.slice(0, request.label.indexOf(":")), 10),
+    index: request.index,
     call: {
         label: request.label,
         target: request.endpointAddress,

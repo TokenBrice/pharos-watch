@@ -1,9 +1,140 @@
 import { canonicalExitRouteScopedId } from "@shared/lib/exit-route-identity";
 import { decodeAbiParameters } from "viem/utils";
 
-import type { EvmBlockHeader, EvmMulticall3Result } from "../../lib/evm-rpc";
+import {
+  fetchEvmBlockHeader,
+  fetchEvmBlockNumber,
+  type EvmBlockHeader,
+  type EvmMulticall3Result,
+  type EvmRpcOptions,
+} from "../../lib/evm-rpc";
 
 const CURVE_STABLESWAP_FEE_DENOMINATOR = 10n ** 10n;
+export type PinnedCaptureCheck<TFailure> = { ok: true } | { ok: false; reason?: TFailure };
+
+export type PinnedCaptureResult<TResult, TFailure> =
+  | { ok: true; value: TResult }
+  | { ok: false; reason?: TFailure };
+
+interface PinnedBlockCaptureContext {
+  blockNumber: number;
+  header: EvmBlockHeader;
+}
+
+export async function runPinnedBlockCapture<TResult, TFailure = never>(input: {
+  chain: string;
+  rpcOptions: EvmRpcOptions;
+  fetchBlockNumber?: typeof fetchEvmBlockNumber;
+  fetchBlockHeader?: typeof fetchEvmBlockHeader;
+  nowSec?: number;
+  maxAgeSec?: number;
+  verifyDeployment: (
+    context: PinnedBlockCaptureContext,
+  ) => Promise<PinnedCaptureCheck<TFailure>>;
+  buildCalls: (
+    context: PinnedBlockCaptureContext,
+  ) => Promise<PinnedCaptureResult<TResult, TFailure>>;
+  onResults: (results: TResult) => void | Promise<void>;
+  onFailure: (reason?: TFailure) => void | Promise<void>;
+}): Promise<void> {
+  const fetchBlockNumber = input.fetchBlockNumber ?? fetchEvmBlockNumber;
+  const fetchBlockHeader = input.fetchBlockHeader ?? fetchEvmBlockHeader;
+  const blockNumber = await fetchBlockNumber(input.chain, input.rpcOptions);
+  if (blockNumber == null) {
+    await input.onFailure();
+    return;
+  }
+  const header = await fetchBlockHeader(input.chain, blockNumber, input.rpcOptions);
+  if (
+    !header ||
+    header.number !== blockNumber ||
+    (input.nowSec != null &&
+      input.maxAgeSec != null &&
+      !isFreshEvmCaptureHeader(header, input.nowSec, input.maxAgeSec))
+  ) {
+    await input.onFailure();
+    return;
+  }
+  const context = { blockNumber, header };
+  const verified = await input.verifyDeployment(context);
+  if (!verified.ok) {
+    await input.onFailure(verified.reason);
+    return;
+  }
+  const captured = await input.buildCalls(context);
+  if (!captured.ok) {
+    await input.onFailure(captured.reason);
+    return;
+  }
+  const confirmedHeader = await fetchBlockHeader(input.chain, blockNumber, input.rpcOptions);
+  if (
+    !confirmedHeader ||
+    confirmedHeader.number !== header.number ||
+    confirmedHeader.hash.toLowerCase() !== header.hash.toLowerCase() ||
+    (input.nowSec != null &&
+      input.maxAgeSec != null &&
+      !isFreshEvmCaptureHeader(confirmedHeader, input.nowSec, input.maxAgeSec))
+  ) {
+    await input.onFailure();
+    return;
+  }
+  await input.onResults(captured.value);
+}
+
+export function resolveTrackedReferencePrices(input: {
+  balances: readonly number[];
+  assetIds: readonly (string | undefined)[];
+  trackedTokenIndex: number;
+  stablecoinPriceById: ReadonlyMap<string, number>;
+  implyUntrackedPrices: boolean;
+}): PinnedCaptureResult<{
+  prices: number[];
+  sources: Array<"tracked-market" | "pool-implied">;
+}, never> {
+  const trustedPrices = input.assetIds.map((assetId) => {
+    if (!assetId) return null;
+    const price = input.stablecoinPriceById.get(assetId);
+    return Number.isFinite(price) && price! > 0 ? price! : null;
+  });
+  let trackedPrice = trustedPrices[input.trackedTokenIndex];
+  let trackedSource: "tracked-market" | "pool-implied" = "tracked-market";
+  if (trackedPrice == null) {
+    const pricedOthers = trustedPrices.flatMap((price, index) =>
+      index !== input.trackedTokenIndex && price != null ? [{ index, price }] : [],
+    );
+    if (pricedOthers.length !== 1) return { ok: false };
+    const other = pricedOthers[0]!;
+    trackedPrice =
+      (input.balances[other.index]! * other.price) /
+      input.balances[input.trackedTokenIndex]!;
+    if (!Number.isFinite(trackedPrice) || trackedPrice <= 0) return { ok: false };
+    trackedSource = "pool-implied";
+  }
+
+  const prices: number[] = [];
+  const sources: Array<"tracked-market" | "pool-implied"> = [];
+  for (let index = 0; index < input.balances.length; index++) {
+    if (index === input.trackedTokenIndex) {
+      prices[index] = trackedPrice;
+      sources[index] = trackedSource;
+      continue;
+    }
+    const trustedPrice = trustedPrices[index];
+    if (trustedPrice != null) {
+      prices[index] = trustedPrice;
+      sources[index] = "tracked-market";
+      continue;
+    }
+    if (!input.implyUntrackedPrices || input.assetIds[index]) return { ok: false };
+    const implied =
+      (input.balances[input.trackedTokenIndex]! * trackedPrice) /
+      input.balances[index]!;
+    if (!Number.isFinite(implied) || implied <= 0) return { ok: false };
+    prices[index] = implied;
+    sources[index] = "pool-implied";
+  }
+  return { ok: true, value: { prices, sources } };
+}
 
 export function asEvmCaptureAddress(
   chain: string,
@@ -89,7 +220,7 @@ export function decodeEvmCaptureString(result: EvmMulticall3Result | undefined):
   }
 }
 
-export function isFreshEvmCaptureHeader(
+function isFreshEvmCaptureHeader(
   header: EvmBlockHeader,
   nowSec: number,
   maxAgeSec: number,

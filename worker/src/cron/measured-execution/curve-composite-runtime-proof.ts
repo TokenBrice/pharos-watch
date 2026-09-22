@@ -1,7 +1,7 @@
 import { decodeFunctionData, decodeFunctionResult, encodeFunctionData, keccak256, parseAbi } from "viem/utils";
 
 import {
-  DEX_CURVE_STABLESWAP_MEASURED_FRESHNESS_MAX_SEC, type DexMeasuredExecutionCurveCompositeProof,
+  DEX_MEASURED_FRESHNESS_MAX_SEC, type DexMeasuredExecutionCurveCompositeProof,
   type DexMeasuredExecutionProfile, type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
 import { throwIfAborted } from "../../lib/abort";
@@ -158,7 +158,7 @@ export function evaluateCurveCompositeEligibility(input: {
   if (evidence.blockTimestamp > input.nowSec + 60) {
     return { ok: false, reason: "future-pinned-block" };
   }
-  if (input.nowSec - evidence.blockTimestamp > DEX_CURVE_STABLESWAP_MEASURED_FRESHNESS_MAX_SEC) {
+  if (input.nowSec - evidence.blockTimestamp > DEX_MEASURED_FRESHNESS_MAX_SEC) {
     return { ok: false, reason: "stale-pinned-block" };
   }
   const proof = evidence.proof;
@@ -273,7 +273,7 @@ function createCurveCompositeDeploymentVerifier(dependencies: VerificationDepend
     input.rpcBudget?.recordChainResult(policy.chain, header != null);
     if (!header) return { ok: false, reason: "block-header-unavailable" };
     if (header.timestamp > input.nowSec + 60) return { ok: false, reason: "future-pinned-block" };
-    if (input.nowSec - header.timestamp > DEX_CURVE_STABLESWAP_MEASURED_FRESHNESS_MAX_SEC) {
+    if (input.nowSec - header.timestamp > DEX_MEASURED_FRESHNESS_MAX_SEC) {
       return { ok: false, reason: "stale-pinned-block" };
     }
 

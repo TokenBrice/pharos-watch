@@ -376,7 +376,7 @@ describe("Curve StableSwap-NG factory census capture", () => {
     expect(pool.extra?.executionCapabilityGate).toEqual({ family: "curve-stableswap", reason });
   });
 
-  it("withdraws the model when the capture straddles a reorg", async () => {
+  it("keeps the unresolved gate when confirmation detects a reorg", async () => {
     const deps = dependencies({ confirmedHeader: { timestamp: BLOCK_TIMESTAMP, hash: `0x${"9".repeat(64)}` } });
     const pool = poolEntry();
     await run(pool, deps);
