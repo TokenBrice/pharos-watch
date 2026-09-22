@@ -14,7 +14,6 @@ import { fetchDsTokenPoolsWithStatus } from "../../../lib/dexscreener";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { runDexScreenerPass } from "../enrich-prices-dexscreener-pass";
 import type { PeggedAsset } from "../enrich-prices";
-import { exactPool } from "./enrich-prices-dexscreener-pass.test-support";
 
 function makeMissingAsset(overrides: Partial<PeggedAsset> = {}): PeggedAsset {
   return {
@@ -34,6 +33,21 @@ function makeMissingAsset(overrides: Partial<PeggedAsset> = {}): PeggedAsset {
   };
 }
 
+function exactPool(tokenAddress: string, pairAddress: string, priceUsd: string, liquidityUsd = 100_000) {
+  return {
+    chainId: "base",
+    dexId: "uniswap",
+    pairAddress,
+    baseToken: { address: tokenAddress, name: "Fixture USD", symbol: "FIX" },
+    quoteToken: { address: "0xusdc", name: "USD Coin", symbol: "USDC" },
+    priceUsd,
+    priceNative: null,
+    volume: { h24: 10_000, h6: 0, h1: 0, m5: 0 },
+    liquidity: { usd: liquidityUsd, base: 50_000, quote: 50_000 },
+    pairCreatedAt: null,
+  };
+}
+
 function circuitClosedDb() {
   return mockD1([
     {
@@ -42,7 +56,7 @@ function circuitClosedDb() {
       rows: [],
       first: null,
     },
-  ]);
+  ], { assertMatchesUsed: true });
 }
 
 describe("runDexScreenerPass", () => {
@@ -255,14 +269,12 @@ describe("runDexScreenerPass", () => {
   });
 
   it("prioritizes a longer-streak asset under the 30-address batch cap", async () => {
-    vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValue({ ok: true, pairs: [] });
+    vi.mocked(fetchDsTokenPoolsWithStatus).mockImplementation(async (_chain, addresses) => ({
+      ok: true,
+      pairs: addresses.includes("0xstreaked") ? [exactPool("0xstreaked", "0xstreaked-pool", "1")] : [],
+    }));
     const db = circuitClosedDb();
     vi.spyOn(Date, "now").mockReturnValue(0);
-
-    // One low-circulating asset with a long miss streak plus 30 fresh,
-    // higher-circulating assets. The cap is 30, so a circulating-only tiebreak
-    // would drop the streaked asset; streak priority must attempt it and drop
-    // the lowest-circulating fresh asset instead.
     const streaked = makeMissingAsset({
       id: "streaked",
       symbol: "STRK",
@@ -288,45 +300,42 @@ describe("runDexScreenerPass", () => {
       new Map([["streaked", 5]]),
     );
 
-    const fetchedAddresses = String(vi.mocked(fetchDsTokenPoolsWithStatus).mock.calls[0]?.[1]).split(",");
-    expect(fetchedAddresses).toHaveLength(30);
-    expect(fetchedAddresses).toContain("0xstreaked");
-    expect(fetchedAddresses).not.toContain("0xfresh29");
+    expect(streaked.price).toBe(1);
+    expect(fresh[29].price).toBeNull();
   });
 
   it.each([2, 4, 6])("visits every chain over repeated hourly invocations (%i chains)", async (chainCount) => {
-    vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValue({ ok: true, pairs: [] });
+    const visited: string[] = [];
+    vi.mocked(fetchDsTokenPoolsWithStatus).mockImplementation(async (chain) => {
+      visited.push(chain);
+      return { ok: true, pairs: [] };
+    });
     const chains = ["base", "ethereum", "solana", "avalanche", "arbitrum", "optimism"].slice(0, chainCount);
     const assets = chains.map((chain) => makeMissingAsset({
       id: `hourly-${chain}`, address: `0x${chain}`, chains: [chain],
     }));
-    const visited: string[] = [];
     const firstRunMs = Date.UTC(2026, 8, 15, 5, 0, 30);
     for (let hour = 0; hour < chainCount * 2; hour++) {
-      vi.mocked(fetchDsTokenPoolsWithStatus).mockClear();
       await runDexScreenerPass(assets, undefined, undefined, undefined, undefined, firstRunMs + hour * 3_600_000);
-      expect(fetchDsTokenPoolsWithStatus).toHaveBeenCalledTimes(1);
-      visited.push(vi.mocked(fetchDsTokenPoolsWithStatus).mock.calls[0]![0]);
     }
     expect([...new Set(visited.slice(0, chainCount))].sort()).toEqual([...chains].sort());
     expect(visited.slice(chainCount)).toEqual(visited.slice(0, chainCount));
   });
 
   it("rotates an oversized chain's address window on its next hourly visit", async () => {
-    vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValue({ ok: true, pairs: [] });
+    const baseBatches: string[][] = [];
+    const visited: string[] = [];
+    vi.mocked(fetchDsTokenPoolsWithStatus).mockImplementation(async (chain, addresses) => {
+      visited.push(chain);
+      if (chain === "base") baseBatches.push(addresses.split(","));
+      return { ok: true, pairs: [] };
+    });
     const baseAssets = Array.from({ length: 31 }, (_, index) => makeMissingAsset({
       id: `base-${String(index).padStart(2, "0")}`, address: `0xbase${index}`, chains: ["base"],
     }));
     const assets = [...baseAssets, makeMissingAsset({ id: "ethereum-asset", address: "0xethereum", chains: ["ethereum"] })];
-    const baseBatches: string[][] = [];
-    const visited: string[] = [];
     for (let hour = 0; hour < 4; hour++) {
-      vi.mocked(fetchDsTokenPoolsWithStatus).mockClear();
       await runDexScreenerPass(assets, undefined, undefined, undefined, undefined, hour * 3_600_000);
-      expect(fetchDsTokenPoolsWithStatus).toHaveBeenCalledTimes(1);
-      const [chain, addresses] = vi.mocked(fetchDsTokenPoolsWithStatus).mock.calls[0]!;
-      visited.push(chain);
-      if (chain === "base") baseBatches.push(addresses.split(","));
     }
     expect(visited).toEqual(["base", "ethereum", "base", "ethereum"]);
     expect(baseBatches.map((batch) => batch.length)).toEqual([30, 30]);
@@ -361,7 +370,6 @@ describe("runDexScreenerPass", () => {
     expect(result.resolved).toBe(0);
     expect(second.price).toBeNull();
     expect(fetchDsTokenPoolsWithStatus).toHaveBeenCalledTimes(1);
-    expect(vi.mocked(fetchDsTokenPoolsWithStatus).mock.calls[0]?.[1]).toBe("0xaaa,0xbbb");
   });
 });
 

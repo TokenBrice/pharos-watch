@@ -6,14 +6,13 @@ import {
   cmcUsdQuote,
   cmcCategory,
   cleanupEnrichMissingPricesTest,
-  fixtureEnrichMissingPrices,
-  fixtureRunDexScreenerPass,
-  fixtureRunDlContractPasses,
-  makeFixtureMockD1 as fixtureMockD1,
-  fixtureMockFetch,
+  makeEnrichPricesDb,
   installFetch,
-  type PeggedAsset,
 } from "./enrich-prices.test-support";
+import { enrichMissingPrices, type PeggedAsset } from "../sync-stablecoins/enrich-prices";
+import { runDexScreenerPass } from "../sync-stablecoins/enrich-prices-dexscreener-pass";
+import { runDlContractPasses } from "../sync-stablecoins/enrich-prices-defillama-pass";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { makePeggedAsset } from "../sync-stablecoins/__tests__/_fixtures";
 
 describe("enrichMissingPrices", () => {
@@ -25,7 +24,7 @@ describe("enrichMissingPrices", () => {
     ];
     const progress: string[] = [];
 
-    const stats = await fixtureEnrichMissingPrices(
+    const stats = await enrichMissingPrices(
       assets,
       undefined,
       undefined,
@@ -45,10 +44,10 @@ describe("enrichMissingPrices", () => {
   });
 
   it("continues when the FX-rate cache cannot be read", async () => {
-    fixtureMockFetch([]);
+    mockFetch([]);
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const infoSpy = vi.spyOn(console, "info").mockImplementation(() => undefined);
-    const db = fixtureMockD1([
+    const db = makeEnrichPricesDb([
       {
         match: "FROM cache WHERE key = ?",
         matchBinds: ["fx-rates"],
@@ -60,7 +59,7 @@ describe("enrichMissingPrices", () => {
       makePeggedAsset({ id: "missing-usd", name: "Missing USD", symbol: "mUSD", price: 0 }),
     ];
 
-    const stats = await fixtureEnrichMissingPrices(assets, undefined, db);
+    const stats = await enrichMissingPrices(assets, undefined, db);
 
     expect(stats.totalMissing).toBe(1);
     expect(stats.finalMissing).toBe(1);
@@ -82,7 +81,7 @@ describe("enrichMissingPrices", () => {
       }),
     ];
 
-    fixtureMockFetch([
+    mockFetch([
       {
         match: "coins.llama.fi/prices",
         body: {
@@ -93,7 +92,7 @@ describe("enrichMissingPrices", () => {
       },
     ]);
 
-    const stats = await fixtureEnrichMissingPrices(assets);
+    const stats = await enrichMissingPrices(assets);
 
     expect(stats.totalMissing).toBe(1);
     expect(stats.pass1).toBe(1);
@@ -111,7 +110,7 @@ describe("enrichMissingPrices", () => {
       }),
     ];
 
-    fixtureMockFetch([
+    mockFetch([
       {
         match: "coins.llama.fi/prices/current/citrea:0x8d82c4e3c936c7b5724a382a9c5a4e6eb7ab6d5d",
         body: {
@@ -122,7 +121,7 @@ describe("enrichMissingPrices", () => {
       },
     ]);
 
-    const stats = await fixtureEnrichMissingPrices(assets);
+    const stats = await enrichMissingPrices(assets);
 
     expect(stats.pass1).toBe(1);
     expect(assets[0].price).toBe(1.0015);
@@ -140,7 +139,7 @@ describe("enrichMissingPrices", () => {
       }),
     ];
 
-    fixtureMockFetch([
+    mockFetch([
       {
         match: "coins.llama.fi/prices/current/ethereum:0xb1c2db5d6ca03fce73dbd304d320bf76c55ae1b1",
         body: {
@@ -151,7 +150,7 @@ describe("enrichMissingPrices", () => {
       },
     ]);
 
-    const stats = await fixtureEnrichMissingPrices(assets);
+    const stats = await enrichMissingPrices(assets);
 
     expect(stats.pass1).toBe(1);
     expect(assets[0].price).toBe(0.9994);
@@ -170,7 +169,7 @@ describe("enrichMissingPrices", () => {
       }),
     ];
 
-    fixtureMockFetch([
+    mockFetch([
       {
         match: suiAusdCoinId,
         body: {
@@ -181,7 +180,7 @@ describe("enrichMissingPrices", () => {
       },
     ]);
 
-    const result = await fixtureRunDlContractPasses(assets, undefined);
+    const result = await runDlContractPasses(assets, undefined);
 
     expect(result.pass1).toBe(1);
     expect(assets[0].price).toBe(1.0002);
@@ -199,7 +198,7 @@ describe("enrichMissingPrices", () => {
       }),
     ];
 
-    fixtureMockFetch([
+    mockFetch([
       {
         match: suiUsdtCoinId,
         body: {
@@ -210,7 +209,7 @@ describe("enrichMissingPrices", () => {
       },
     ]);
 
-    const result = await fixtureRunDlContractPasses(assets, undefined);
+    const result = await runDlContractPasses(assets, undefined);
 
     expect(result.pass1).toBe(1);
     expect(assets[0].price).toBe(0.9998);
@@ -220,7 +219,7 @@ describe("enrichMissingPrices", () => {
   it("escapes slash-bearing DefiLlama IDs without breaking the rest of the batch", async () => {
     const mAddress = "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b";
     const usdxIbcId = "osmosis:ibc/C78F65E1648A3DFE0BAEB6C4CDA69CC2A75437F1793C0E6386DFDA26393790AE";
-    const fetchSpy = fixtureMockFetch([
+    const fetchSpy = mockFetch([
       {
         match: `coins.llama.fi/prices/current/ethereum:${mAddress},osmosis:ibc%2FC78F65E1648A3DFE0BAEB6C4CDA69CC2A75437F1793C0E6386DFDA26393790AE`,
         body: {
@@ -247,7 +246,7 @@ describe("enrichMissingPrices", () => {
       }),
     ];
 
-    const result = await fixtureRunDlContractPasses(assets, undefined);
+    const result = await runDlContractPasses(assets, undefined);
 
     expect(result).toMatchObject({ pass1: 2, failures: [] });
     expect(assets.map((asset) => asset.price)).toEqual([0.9998, 0.658]);
@@ -255,7 +254,7 @@ describe("enrichMissingPrices", () => {
   });
 
   it("reports a non-OK DefiLlama contract batch as a failed pass", async () => {
-    fixtureMockFetch([
+    mockFetch([
       {
         match: "coins.llama.fi/prices/current/ethereum:0xfailed",
         status: 404,
@@ -272,7 +271,7 @@ describe("enrichMissingPrices", () => {
       }),
     ];
 
-    const result = await fixtureRunDlContractPasses(assets, undefined);
+    const result = await runDlContractPasses(assets, undefined);
 
     expect(result.failures).toEqual(["dl-contracts"]);
     expect(result.resolved).toBe(0);
@@ -291,7 +290,7 @@ describe("enrichMissingPrices", () => {
       }),
     ];
 
-    fixtureMockFetch([
+    mockFetch([
       {
         match: "coins.llama.fi/prices",
         body: {
@@ -306,7 +305,7 @@ describe("enrichMissingPrices", () => {
       },
     ]);
 
-    const stats = await fixtureEnrichMissingPrices(assets, "test-cmc-key");
+    const stats = await enrichMissingPrices(assets, "test-cmc-key");
 
     expect(stats.pass1).toBe(0);
     expect(stats.passCmc).toBe(1);
@@ -326,7 +325,7 @@ describe("enrichMissingPrices", () => {
       }),
     ];
 
-    const fetchSpy = fixtureMockFetch([
+    const fetchSpy = mockFetch([
       { match: "coins.llama.fi", body: { coins: {} } },
       { match: "dexscreener.com", body: { pairs: [] } },
       { match: "pro-api.coinmarketcap.com", body: cmcCategory([
@@ -334,7 +333,7 @@ describe("enrichMissingPrices", () => {
       ]) },
     ]);
 
-    const stats = await fixtureEnrichMissingPrices(assets, "test-cmc-key");
+    const stats = await enrichMissingPrices(assets, "test-cmc-key");
 
     expect(stats.passCmc).toBe(1);
     expect(stats.finalMissing).toBe(0);
@@ -352,12 +351,12 @@ describe("enrichMissingPrices", () => {
     ];
 
     // All APIs return 200 but with no useful price data
-    fixtureMockFetch([
+    mockFetch([
       { match: "coins.llama.fi", body: { coins: {} } },
       { match: "dexscreener.com", body: { pairs: [] } },
     ]);
 
-    const stats = await fixtureEnrichMissingPrices(assets);
+    const stats = await enrichMissingPrices(assets);
 
     // Asset remains unpriced
     expect(stats.totalMissing).toBe(1);
@@ -399,7 +398,7 @@ describe("enrichMissingPrices", () => {
         return new Response("Not found", { status: 404 });
       });
 
-    const stats = await fixtureEnrichMissingPrices(assets);
+    const stats = await enrichMissingPrices(assets);
 
     expect(stats.totalMissing).toBe(1);
     expect(stats.passCgLowVolume).toBe(1);
@@ -447,7 +446,7 @@ describe("enrichMissingPrices", () => {
         return new Response("Not found", { status: 404 });
       });
 
-    const stats = await fixtureEnrichMissingPrices(assets);
+    const stats = await enrichMissingPrices(assets);
 
     expect(stats.passCgLowVolume).toBe(0);
     expect(stats.finalMissing).toBe(1);
@@ -457,7 +456,7 @@ describe("enrichMissingPrices", () => {
 
   it("still uses stale FX cache for DexScreener fallback in enrichment (characterization)", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const db = fixtureMockD1([
+    const db = makeEnrichPricesDb([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
         matchBinds: ["fx-rates"],
@@ -467,7 +466,7 @@ describe("enrichMissingPrices", () => {
           updated_at: nowSec - 8 * 3600,
         },
       },
-      { match: "circuit", rows: [] },
+      { match: "circuit", rows: [], allowUnused: true },
     ]);
 
     const assets: PeggedAsset[] = [
@@ -481,7 +480,7 @@ describe("enrichMissingPrices", () => {
       }),
     ];
 
-    fixtureMockFetch([
+    mockFetch([
       {
         match: "api.dexscreener.com/tokens/v1/ethereum/0x1cfa5641c01406ab8ac350ded7d735ec41298372",
         body: [
@@ -509,7 +508,7 @@ describe("enrichMissingPrices", () => {
       },
     ]);
 
-    const stats = await fixtureEnrichMissingPrices(assets, undefined, db);
+    const stats = await enrichMissingPrices(assets, undefined, db);
 
     expect(stats.passDex).toBe(1);
     expect(assets[0].price).toBe(0.0005);
@@ -553,7 +552,7 @@ describe("enrichMissingPrices", () => {
       return new Response("Not found", { status: 404 });
     });
 
-    const stats = await fixtureEnrichMissingPrices(assets);
+    const stats = await enrichMissingPrices(assets);
 
     expect(stats.passDex).toBe(1);
     expect(assets[0].price).toBe(1.0004);
@@ -594,7 +593,7 @@ describe("enrichMissingPrices", () => {
       return new Response("Not found", { status: 404 });
     });
 
-    const result = await fixtureRunDexScreenerPass(assets, undefined, undefined);
+    const result = await runDexScreenerPass(assets, undefined, undefined);
 
     expect(result.resolved).toBe(1);
     expect(assets[0].price).toBe(0.999);
@@ -642,7 +641,7 @@ describe("enrichMissingPrices", () => {
         return new Response(JSON.stringify([]), { status: 200 });
       });
 
-    const result = await fixtureRunDexScreenerPass(assets, undefined, undefined);
+    const result = await runDexScreenerPass(assets, undefined, undefined);
 
     expect(result.resolved).toBe(0);
     expect(assets[0].price).toBe(0);
@@ -666,7 +665,7 @@ describe("bounded DefiLlama contract batches", () => {
     assets.push({ ...assets[0], id: "duplicate-contract" });
     const urls: string[] = [];
     installFetch((url) => { urls.push(url); return quoteResponse(url); });
-    const result = await fixtureRunDlContractPasses(assets, undefined);
+    const result = await runDlContractPasses(assets, undefined);
     expect(result).toMatchObject({ resolved: 1_001, failures: [] });
     expect(urls.length).toBeGreaterThan(1);
     expect(urls.every((url) => url.length <= 8_000)).toBe(true);
@@ -680,7 +679,7 @@ describe("bounded DefiLlama contract batches", () => {
     let calls = 0;
     installFetch((url) => ++calls === 1 ? quoteResponse(url)
       : failure === "http" ? Response.json({ error: "unavailable" }, { status: 404 }) : Response.json({ coins: [] }));
-    const result = await fixtureRunDlContractPasses(assets, undefined);
+    const result = await runDlContractPasses(assets, undefined);
     expect(result.failures).toEqual(["dl-contracts"]);
     expect(result.resolved).toBeGreaterThan(0);
     expect(result.resolved).toBeLessThan(assets.length);
@@ -691,7 +690,7 @@ describe("bounded DefiLlama contract batches", () => {
   it("bounds the total batch budget and reports unqueried remainder", async () => {
     const urls: string[] = [];
     installFetch((url) => { urls.push(url); return quoteResponse(url); });
-    const result = await fixtureRunDlContractPasses(cohort(2_000), undefined);
+    const result = await runDlContractPasses(cohort(2_000), undefined);
     expect(urls).toHaveLength(8);
     expect(result.failures).toEqual(["dl-contracts"]);
     expect(result.resolved).toBeGreaterThan(0);
@@ -703,7 +702,7 @@ describe("bounded DefiLlama contract batches", () => {
     const outcome = vi.spyOn(circuitBreaker, "recordOutcome");
     try {
       installFetch(quoteResponse);
-      const result = await fixtureRunDlContractPasses(cohort(2_000), undefined, undefined, fixtureMockD1([]));
+      const result = await runDlContractPasses(cohort(2_000), undefined, undefined, makeEnrichPricesDb([]));
       expect(result.failures).toEqual(["dl-contracts"]);
       expect(outcome).toHaveBeenCalledTimes(1);
       expect(outcome.mock.calls[0][2]).toBe(true);
@@ -718,7 +717,7 @@ describe("bounded DefiLlama contract batches", () => {
     assets.push(makePeggedAsset({ id: "oversized", symbol: "USD", price: null, address: `osmosis:${"/".repeat(3_000)}` }));
     const urls: string[] = [];
     installFetch((url) => { urls.push(url); return quoteResponse(url); });
-    const result = await fixtureRunDlContractPasses(assets, undefined);
+    const result = await runDlContractPasses(assets, undefined);
     expect(urls).toHaveLength(1);
     expect(result).toMatchObject({ resolved: 1, failures: ["dl-contracts"] });
     expect(assets[1].price).toBeNull();
@@ -730,7 +729,7 @@ describe("bounded DefiLlama contract batches", () => {
       address: "ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7" }));
     const urls: string[] = [];
     installFetch((url) => { urls.push(url); return quoteResponse(url); });
-    const result = await fixtureRunDlContractPasses(assets, undefined);
+    const result = await runDlContractPasses(assets, undefined);
     expect(urls).toHaveLength(8);
     expect(result).toMatchObject({ resolved: 1_100, pass1b: 0, failures: ["dl-contracts"] });
   });
@@ -739,7 +738,7 @@ describe("bounded DefiLlama contract batches", () => {
     const controller = new AbortController();
     let calls = 0;
     installFetch((url) => { calls++; controller.abort(); return quoteResponse(url); });
-    await expect(fixtureRunDlContractPasses(cohort(500), undefined, controller.signal)).rejects.toThrow();
+    await expect(runDlContractPasses(cohort(500), undefined, controller.signal)).rejects.toThrow();
     expect(calls).toBe(1);
   });
 });

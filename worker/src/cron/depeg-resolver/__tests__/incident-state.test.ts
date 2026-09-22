@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
-import { mockD1 } from "@shared/test-utils/mock-d1";
 import { D1_MAX_BOUND_PARAMETERS } from "../../../lib/d1-primitives";
 import { DDR_LOCK_ON_TIME_GRACE_SEC, DDR_V2_EFFECTIVE_AT } from "@shared/lib/methodology-versions/depeg-resolver";
 import {
@@ -11,7 +10,7 @@ import {
   recordSystemHealthDeferrals,
 } from "../incident-state";
 import { toStructural } from "../utils";
-import { makeEventRow, makeIncident } from "./depeg-resolver.test-support";
+import { makeEventRow, makeIncident, mockResolverD1 } from "./depeg-resolver.test-support";
 import type { DdrCanonicalIncident, DdrV2StoreContracts } from "../../depeg-resolver-v2-contracts";
 
 
@@ -112,7 +111,7 @@ describe("loadPendingPromotionConfirmationTimes", () => {
       symbol: `SYN${index}`,
       pending_reason: "awaiting-confirmation",
     }));
-    const db = mockD1([
+    const db = mockResolverD1([
       {
         match: "FROM depeg_pending_outcomes",
         rows: events.map((event) => ({
@@ -139,7 +138,7 @@ describe("loadPendingPromotionConfirmationTimes", () => {
 
   it("fails closed with an empty map when the promoted-outcome read errors", async () => {
     const events = [makeEventRow({ id: 7, pending_reason: "awaiting-confirmation" })];
-    const db = mockD1([{ match: "FROM depeg_pending_outcomes", rows: [], throwError: new Error("D1_ERROR: internal error") }]);
+    const db = mockResolverD1([{ match: "FROM depeg_pending_outcomes", rows: [], throwError: new Error("D1_ERROR: internal error") }]);
 
     const { byEventId, error } = await loadPendingPromotionConfirmationTimes(db, events);
 

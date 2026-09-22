@@ -14,7 +14,7 @@ describe("loadFxRatesForPriceBounds", () => {
           updated_at: Math.floor(Date.now() / 1000),
         },
       },
-    ]);
+    ], { assertMatchesUsed: true });
 
     await expect(loadFxRatesForPriceBounds(db)).resolves.toBeUndefined();
   });
@@ -30,7 +30,7 @@ describe("loadFxRatesForPriceBounds", () => {
           updated_at: Math.floor(Date.now() / 1000),
         },
       },
-    ]);
+    ], { assertMatchesUsed: true });
 
     await expect(loadFxRatesForPriceBounds(db)).resolves.toEqual({ peggedEUR: 1.08 });
   });

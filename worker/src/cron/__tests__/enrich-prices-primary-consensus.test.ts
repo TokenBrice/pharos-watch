@@ -1,14 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  fixtureFetchPrimaryPrices,
-  fixtureApplyResolvedPrice,
   installPrimaryPriceRoutes,
   makePrimaryPricingDb,
-  type PeggedAsset,
 } from "./enrich-prices.test-support";
+import {
+  applyResolvedPrice,
+  fetchPrimaryPrices,
+  type PeggedAsset,
+} from "../sync-stablecoins/enrich-prices";
 import { makePeggedAsset } from "../sync-stablecoins/__tests__/_fixtures";
 
-const installFetch = installPrimaryPriceRoutes;
 
 // --- fetchPrimaryPrices tests ---
 
@@ -51,7 +52,7 @@ describe("fetchPrimaryPrices", () => {
       geckoId: "resolv-usr",
     })];
 
-    installFetch({ "coingecko.com": { body: { "resolv-usr": { usd: 0.145 } } } });
+    installPrimaryPriceRoutes({ "coingecko.com": { body: { "resolv-usr": { usd: 0.145 } } } });
 
     const nowSec = Math.floor(Date.now() / 1000);
     const db = makeDexBridgeDb({
@@ -77,7 +78,7 @@ describe("fetchPrimaryPrices", () => {
     });
 
     const dlListPrices = makeFreshDlListPrices([["usr-resolv", 0.549146]]);
-    const { results } = await fixtureFetchPrimaryPrices(
+    const { results } = await fetchPrimaryPrices(
       assets,
       db,
       undefined,
@@ -104,7 +105,7 @@ describe("fetchPrimaryPrices", () => {
       geckoId: "usd-coin",
     })];
 
-    installFetch({ "coingecko.com": { body: { "usd-coin": { usd: 1.0001 } } } });
+    installPrimaryPriceRoutes({ "coingecko.com": { body: { "usd-coin": { usd: 1.0001 } } } });
 
     const nowSec = Math.floor(Date.now() / 1000);
     const db = makeDexBridgeDb({
@@ -127,7 +128,7 @@ describe("fetchPrimaryPrices", () => {
       ],
     });
 
-    const { results } = await fixtureFetchPrimaryPrices(assets, db);
+    const { results } = await fetchPrimaryPrices(assets, db);
 
     const result = results.get("usdc-circle");
     expect(result).toBeDefined();
@@ -141,7 +142,7 @@ describe("fetchPrimaryPrices", () => {
   it("withholds dex-promoted aggregate when a corroborated Uniswap protocol lane is accepted", async () => {
     const assets = [makePeggedAsset({ id: "usdt-tether", name: "Tether", symbol: "USDT" })];
 
-    installFetch({ binance: { body: [{ symbol: "USDTUSD", price: "1.0000" }] } });
+    installPrimaryPriceRoutes({ binance: { body: [{ symbol: "USDTUSD", price: "1.0000" }] } });
 
     const nowSec = Math.floor(Date.now() / 1000);
     const db = makeDexBridgeDb({
@@ -166,7 +167,7 @@ describe("fetchPrimaryPrices", () => {
       ],
     });
 
-    const { results } = await fixtureFetchPrimaryPrices(assets, db);
+    const { results } = await fetchPrimaryPrices(assets, db);
 
     const result = results.get("usdt-tether");
     expect(result).toBeDefined();
@@ -181,7 +182,7 @@ describe("fetchPrimaryPrices", () => {
   });
 
   it("admits only fresh retained VUSD aggregate liquidity at the UI floor", async () => {
-    installFetch({});
+    installPrimaryPriceRoutes({});
     const nowSec = Math.floor(Date.now() / 1000);
     const cases = [
       {
@@ -224,7 +225,7 @@ describe("fetchPrimaryPrices", () => {
         ],
       });
 
-      const { results } = await fixtureFetchPrimaryPrices([testCase.asset], db);
+      const { results } = await fetchPrimaryPrices([testCase.asset], db);
       const result = results.get(testCase.asset.id);
       if (testCase.accepted) {
         expect(result).toMatchObject({
@@ -242,11 +243,11 @@ describe("fetchPrimaryPrices", () => {
   it("downgrades CG+DL-only consensus to single-source (DESIGN-4)", async () => {
     const assets = [makePeggedAsset({ id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether" })];
 
-    installFetch({ coingecko: { body: { tether: { usd: 1.0001 } } } });
+    installPrimaryPriceRoutes({ coingecko: { body: { tether: { usd: 1.0001 } } } });
 
     const db = makeTestDb();
     const dlListPrices = makeFreshDlListPrices([["usdt-tether", 1.0002]]);
-    const { results, stats } = await fixtureFetchPrimaryPrices(
+    const { results, stats } = await fetchPrimaryPrices(
       assets,
       db,
       undefined,
@@ -270,10 +271,10 @@ describe("fetchPrimaryPrices", () => {
   it("returns single-source when CG is the only source (no DL list price)", async () => {
     const assets = [makePeggedAsset({ id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether" })];
 
-    installFetch({ coingecko: { body: { tether: { usd: 1.0001 } } } });
+    installPrimaryPriceRoutes({ coingecko: { body: { tether: { usd: 1.0001 } } } });
 
     const db = makeTestDb();
-    const { results, stats } = await fixtureFetchPrimaryPrices(assets, db);
+    const { results, stats } = await fetchPrimaryPrices(assets, db);
 
     expect(results.size).toBe(1);
     const result = results.get("usdt-tether")!;
@@ -292,7 +293,7 @@ describe("fetchPrimaryPrices", () => {
       geckoId: "gyroscope-gyd",
     })];
 
-    const fetchMock = installFetch({
+    const fetchMock = installPrimaryPriceRoutes({
       coingecko: { body: { "gyroscope-gyd": { usd: 0.992463, last_updated_at: nowSec - 86_400 } } },
     });
 
@@ -307,7 +308,7 @@ describe("fetchPrimaryPrices", () => {
         },
       ],
     ]);
-    const { results } = await fixtureFetchPrimaryPrices(
+    const { results } = await fetchPrimaryPrices(
       assets,
       db,
       undefined,
@@ -330,10 +331,10 @@ describe("fetchPrimaryPrices", () => {
     const observedAt = nowSec - 60;
     const assets = [makePeggedAsset({ id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether" })];
 
-    installFetch({ coingecko: { body: { tether: { usd: 1.0001, last_updated_at: observedAt } } } });
+    installPrimaryPriceRoutes({ coingecko: { body: { tether: { usd: 1.0001, last_updated_at: observedAt } } } });
 
     const db = makeTestDb();
-    const { results } = await fixtureFetchPrimaryPrices(assets, db);
+    const { results } = await fetchPrimaryPrices(assets, db);
 
     expect(results.get("usdt-tether")).toMatchObject({
       source: "coingecko",
@@ -346,14 +347,14 @@ describe("fetchPrimaryPrices", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const assets = [makePeggedAsset({ id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether" })];
 
-    installFetch({
+    installPrimaryPriceRoutes({
       coingecko: { body: { tether: { usd: 1.0001 } } },
       "api.kraken.com": { body: { error: [], result: { USDTZUSD: { c: ["1.0000"] } } } },
       "bitstamp.net": { body: [{ pair: "USDT/USD", market: "USDT/USD", last: "1.0002", timestamp: String(nowSec - 60) }] },
     });
 
     const db = makeTestDb();
-    const { results } = await fixtureFetchPrimaryPrices(assets, db);
+    const { results } = await fetchPrimaryPrices(assets, db);
     const result = results.get("usdt-tether");
 
     expect(result).toBeDefined();
@@ -364,11 +365,11 @@ describe("fetchPrimaryPrices", () => {
   it("returns low confidence when CG and DL list prices diverge beyond 50bps", async () => {
     const assets = [makePeggedAsset({ id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether" })];
 
-    installFetch({ coingecko: { body: { tether: { usd: 0.99 } } } });
+    installPrimaryPriceRoutes({ coingecko: { body: { tether: { usd: 0.99 } } } });
 
     const db = makeTestDb();
     const dlListPrices = makeFreshDlListPrices([["usdt-tether", 1.05]]);
-    const { results, stats } = await fixtureFetchPrimaryPrices(
+    const { results, stats } = await fetchPrimaryPrices(
       assets,
       db,
       undefined,
@@ -393,11 +394,11 @@ describe("fetchPrimaryPrices", () => {
       pegType: "peggedEUR",
     })];
 
-    installFetch({ coingecko: { body: { "euro-coin": { usd: 1.08 } } } });
+    installPrimaryPriceRoutes({ coingecko: { body: { "euro-coin": { usd: 1.08 } } } });
 
     const db = makeTestDb();
     const dlListPrices = makeFreshDlListPrices([["eurc-circle", 1.8]]);
-    const { results, stats } = await fixtureFetchPrimaryPrices(
+    const { results, stats } = await fetchPrimaryPrices(
       assets,
       db,
       undefined,
@@ -425,11 +426,11 @@ describe("fetchPrimaryPrices", () => {
       navToken: true,
     })];
 
-    installFetch({ coingecko: { body: { ousg: { usd: 1.01 } } } });
+    installPrimaryPriceRoutes({ coingecko: { body: { ousg: { usd: 1.01 } } } });
 
     const db = makeTestDb();
     const dlListPrices = makeFreshDlListPrices([["ousg-ondo-finance", 110]]);
-    const { results, stats } = await fixtureFetchPrimaryPrices(
+    const { results, stats } = await fetchPrimaryPrices(
       assets,
       db,
       undefined,
@@ -450,11 +451,11 @@ describe("fetchPrimaryPrices", () => {
   it("returns single-source when DL list is the only source", async () => {
     const assets = [makePeggedAsset({ id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether" })];
 
-    installFetch({ coingecko: { body: {} } });
+    installPrimaryPriceRoutes({ coingecko: { body: {} } });
 
     const db = makeTestDb();
     const dlListPrices = makeFreshDlListPrices([["usdt-tether", 1.0]]);
-    const { results, stats } = await fixtureFetchPrimaryPrices(
+    const { results, stats } = await fetchPrimaryPrices(
       assets,
       db,
       undefined,
@@ -474,10 +475,10 @@ describe("fetchPrimaryPrices", () => {
   it("can still evaluate assets without geckoId when other primary-source metadata exists", async () => {
     const assets = [makePeggedAsset({ id: "usdt-tether", name: "NoGecko", symbol: "USDT" })];
 
-    const fetchSpy = installFetch({ binance: { body: [{ symbol: "USDTUSD", price: "1.0004" }] } });
+    const fetchSpy = installPrimaryPriceRoutes({ binance: { body: [{ symbol: "USDTUSD", price: "1.0004" }] } });
 
     const db = makeTestDb();
-    const { results, stats } = await fixtureFetchPrimaryPrices(assets, db);
+    const { results, stats } = await fetchPrimaryPrices(assets, db);
 
     expect(results.get("usdt-tether")).toMatchObject({ price: 1.0004, source: "binance" });
     expect(fetchSpy.mock.calls.map(([url]) => String(url)).filter((url) => url.includes("/simple/price"))).toEqual([]);
@@ -492,10 +493,10 @@ describe("fetchPrimaryPrices", () => {
       geckoId: "wrong",
     })];
 
-    const fetchSpy = installFetch({ binance: { body: [{ symbol: "USDTUSD", price: "1.0004" }] } });
+    const fetchSpy = installPrimaryPriceRoutes({ binance: { body: [{ symbol: "USDTUSD", price: "1.0004" }] } });
 
     const db = makeTestDb();
-    const { results, stats } = await fixtureFetchPrimaryPrices(assets, db);
+    const { results, stats } = await fetchPrimaryPrices(assets, db);
 
     expect(results.get("usdt-tether")).toMatchObject({ price: 1.0004, source: "binance" });
     expect(fetchSpy.mock.calls.map(([url]) => new URL(String(url)).searchParams.get("ids"))
@@ -508,11 +509,11 @@ describe("fetchPrimaryPrices", () => {
       makePeggedAsset({ id: "a", name: "A", symbol: "A", geckoId: "a-id" }),
       makePeggedAsset({ id: "b", name: "B", symbol: "B", geckoId: "b-id" }),
     ];
-    installFetch({
+    installPrimaryPriceRoutes({
       coingecko: { body: { "a-id": { usd: 1.0 }, "b-id": { usd: 1.0 } } },
     });
     const db = makeTestDb();
-    const { stats } = await fixtureFetchPrimaryPrices(assets, db);
+    const { stats } = await fetchPrimaryPrices(assets, db);
     expect(stats.cgOnly).toBe(2);
     expect(stats.singleSource).toBe(2);
   });
@@ -523,7 +524,7 @@ describe("fetchPrimaryPrices", () => {
       makePeggedAsset({ id: "fxusd-f-x-protocol", name: "fxUSD", symbol: "fxUSD", geckoId: "fxusd" }),
     ];
 
-    const fetchMock = installFetch({
+    const fetchMock = installPrimaryPriceRoutes({
       "coins.llama.fi": { body: { coins: {} } },
       coingecko: { body: {} },
       "api.redstone.finance": (url) => url.includes("symbols=USDe%2CfxUSD")
@@ -548,7 +549,7 @@ describe("fetchPrimaryPrices", () => {
     });
 
     const db = makeTestDb();
-    const { results, stats } = await fixtureFetchPrimaryPrices(assets, db);
+    const { results, stats } = await fetchPrimaryPrices(assets, db);
 
     expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("symbols=USDe%2CfxUSD"), expect.any(Object));
     expect(results.get("usde-ethena")?.source).toBe("redstone");
@@ -566,7 +567,7 @@ describe("fetchPrimaryPrices", () => {
       geckoId: "ethena-usde",
     })];
 
-    installFetch({
+    installPrimaryPriceRoutes({
       coingecko: { body: {} },
       "api.redstone.finance": {
         body: { USDe: { value: 1.0003, source: { curve: 1.0003 }, timestamp: Date.now() } },
@@ -574,7 +575,7 @@ describe("fetchPrimaryPrices", () => {
     });
 
     const db = makeTestDb();
-    const { results, stats } = await fixtureFetchPrimaryPrices(assets, db);
+    const { results, stats } = await fetchPrimaryPrices(assets, db);
 
     expect(results.size).toBe(0);
     expect(stats.attempted).toBe(1);
@@ -594,7 +595,7 @@ describe("applyResolvedPrice", () => {
       chains: [],
     };
 
-    fixtureApplyResolvedPrice(asset, 0.9998, "cmc", "fallback", 1000);
+    applyResolvedPrice(asset, 0.9998, "cmc", "fallback", 1000);
 
     expect(asset.price).toBe(0.9998);
     expect(asset.priceSource).toBe("cmc");

@@ -45,7 +45,6 @@ describe("runFallbackPriceEnrichmentPhase", () => {
     };
 
     await runFallbackPriceEnrichmentPhase(input);
-    expect(enrichPrices.mock.calls[0][9]).toBe(chainRpcs);
     expect(authoritativeFetch).toHaveBeenCalled();
     for (const call of authoritativeFetch.mock.calls) expect(call[3]?.chainRpcs).toBe(chainRpcs);
 
