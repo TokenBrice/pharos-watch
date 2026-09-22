@@ -33,7 +33,7 @@ function syncInput(
 const observationEffectiveness: PriceObservationEffectiveness = {
   stagingStatus: "missing", stagingSlotStartedAt: null, stagingAgeSec: null,
   loadedObservationCount: null, eligibleObservationCount: 0,
-  discarded: { sourceIneligible: 0, unknownTime: 0, futureTime: 0, sourceExpired: 0 },
+  discarded: { sourceIneligible: 0, unknownTime: 0, futureTime: 0, sourceExpired: 0, superseded: 0 },
   publication: { alreadyPriced: 0, assetAbsent: 0, policyRejected: 0, selected: 0, notNeededAfterSelection: 0 },
   minimumFreshnessHeadroomSec: null,
 };

@@ -34,7 +34,7 @@ describe("budget-only surface telemetry", () => {
     expect(result.surfaces).toEqual([
       expect.objectContaining({
         job: "price-corroboration",
-        expectedIntervalSec: 3600,
+        expectedIntervalSec: 900,
         telemetryStatus: "missing",
         outcome: "unknown",
       }),
@@ -65,7 +65,7 @@ describe("budget-only surface telemetry", () => {
     ]);
   });
 
-  it.each([[3600, "fresh"], [7201, "stale"]])("uses the hourly collector cadence at age %s", async (age, status) => {
+  it.each([[900, "fresh"], [1801, "stale"]])("uses the quarter-hour collector cadence at age %s", async (age, status) => {
     const now = 1_800_000_000;
     const checkedAt = now - Number(age);
     const db = mockD1([{ match: "FROM cache", rows: [{
@@ -75,7 +75,7 @@ describe("budget-only surface telemetry", () => {
     }] }]);
     const result = await loadBudgetOnlySurfaceStatuses(db, now);
     expect(result.surfaces.find((surface) => surface.job === "price-corroboration")).toEqual(expect.objectContaining({
-      expectedIntervalSec: 3600, maxAgeSec: 7200, telemetryStatus: status, outcome: "ok",
+      expectedIntervalSec: 900, maxAgeSec: 1800, telemetryStatus: status, outcome: "ok",
     }));
   });
 

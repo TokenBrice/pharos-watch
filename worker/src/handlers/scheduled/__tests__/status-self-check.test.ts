@@ -7,9 +7,12 @@ const mocks = vi.hoisted(() => ({
   runDataInvariantCanary: vi.fn(),
   runCronSentinel: vi.fn(),
   runPriceCorroboration: vi.fn(),
+  runPriceDexRefresh: vi.fn(),
   logCronEvent: vi.fn(async () => undefined),
   recordBudgetSurfaceTelemetry: vi.fn(async () => undefined),
 }));
+
+vi.mock("../../../cron/sync-stablecoins/price-dex-refresh", () => ({ runPriceDexRefresh: mocks.runPriceDexRefresh }));
 
 vi.mock("../../../cron/status-self-check", () => ({ runStatusSelfCheck: mocks.runStatusSelfCheck }));
 vi.mock("../../../cron/data-invariant-canary", () => ({ runDataInvariantCanary: mocks.runDataInvariantCanary }));
@@ -30,6 +33,7 @@ import { runStatusSelfCheckSlot } from "../status-self-check";
 describe("hourly corroboration before the next publication", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.runPriceDexRefresh.mockResolvedValue({ cohortSize: 1, resolved: 1, attemptedBatches: 1, deferredBatches: 0, unsupportedAssets: 0, missingQuotes: 0, timedOut: false, cacheWritten: true, errorClasses: [] });
     mocks.runStatusSelfCheck.mockResolvedValue({ status: "ok", itemCount: 1 });
     mocks.runDataInvariantCanary.mockResolvedValue({ status: "ok", itemCount: 1 });
     mocks.runCronSentinel.mockResolvedValue({ status: "ok", itemCount: 1 });
@@ -48,6 +52,10 @@ describe("hourly corroboration before the next publication", () => {
 
   it.each([false, true])("runs after monitors and persists slot/version (provider failed: %s)", async (failed) => {
     const order: string[] = [];
+    mocks.runPriceDexRefresh.mockImplementation(async () => {
+      order.push("dex-refresh");
+      return { cohortSize: 1, resolved: 1, attemptedBatches: 1, deferredBatches: 0, unsupportedAssets: 0, missingQuotes: 0, timedOut: false, cacheWritten: true, errorClasses: [] };
+    });
     mocks.runPriceCorroboration.mockImplementation(async () => {
       order.push("price-corroboration");
       return { cohortSize: 2, cacheEntriesWritten: 1,
@@ -60,7 +68,7 @@ describe("hourly corroboration before the next publication", () => {
     });
     const ctx = runtime(order);
     await runStatusSelfCheckSlot(ctx);
-    expect(order).toEqual(["status-self-check", "data-invariant-canary", "cron-sentinel", "price-corroboration"]);
+    expect(order).toEqual(["status-self-check", "data-invariant-canary", "cron-sentinel", "dex-refresh", "price-corroboration"]);
     expect(mocks.recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(ctx.db, expect.objectContaining({
       surface: "price-corroboration", outcome: failed ? "degraded" : "ok", dueCount: 2, processedCount: 1,
     }));
@@ -73,6 +81,30 @@ describe("hourly corroboration before the next publication", () => {
     }));
   });
 
+  it("keeps a failed DEX refresh degraded when broad collection succeeds", async () => {
+    mocks.runPriceDexRefresh.mockResolvedValueOnce({ cohortSize: 1, resolved: 0, attemptedBatches: 1, deferredBatches: 0,
+      unsupportedAssets: 0, missingQuotes: 1, timedOut: false, cacheWritten: true, errorClasses: ["http-error"] });
+    mocks.runPriceCorroboration.mockResolvedValueOnce({ cohortSize: 2, cacheEntriesWritten: 2,
+      addressProviderCount: 0, providerDiagnosticCount: 0, fallbackStats: { totalMissing: 2, finalMissing: 0,
+        pass1: 2, pass1b: 0, passCmc: 0, passJupiter: 0, passDex: 0, passCgLowVolume: 0,
+        failedPasses: [], providerDiagnostics: [] } });
+    await runStatusSelfCheckSlot(runtime([]));
+    expect(mocks.recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ outcome: "degraded" }));
+  });
+
+  it("continues hourly recovery when the DEX routing cache fails", async () => {
+    mocks.runPriceDexRefresh.mockRejectedValueOnce(new Error("private cache detail"));
+    mocks.runPriceCorroboration.mockResolvedValueOnce({ cohortSize: 2, cacheEntriesWritten: 2,
+      addressProviderCount: 0, providerDiagnosticCount: 0, fallbackStats: { totalMissing: 2, finalMissing: 0,
+        pass1: 2, pass1b: 0, passCmc: 0, passJupiter: 0, passDex: 0, passCgLowVolume: 0,
+        failedPasses: [], providerDiagnostics: [] } });
+    await runStatusSelfCheckSlot(runtime([]));
+    expect(mocks.runPriceCorroboration).toHaveBeenCalledOnce();
+    expect(mocks.recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ outcome: "error",
+      metadata: expect.objectContaining({ phaseErrors: { "dex-refresh": "Error" } }) }));
+    expect(JSON.stringify(mocks.recordBudgetSurfaceTelemetry.mock.calls)).not.toContain("private cache detail");
+  });
+
   it("retains only exception class without changing the monitor result", async () => {
     mocks.runPriceCorroboration.mockRejectedValueOnce(new Error("https://provider/?apikey=secret-token"));
     const summary = await runStatusSelfCheckSlot(runtime([]));
@@ -82,15 +114,19 @@ describe("hourly corroboration before the next publication", () => {
     expect(JSON.stringify(mocks.logCronEvent.mock.calls)).not.toContain("secret-token");
     expect(summary.jobsErrored).toBe(0);
     expect(mocks.recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      metadata: expect.objectContaining({ dexRefresh: expect.objectContaining({ resolved: 1 }), phaseErrors: { hourly: "Error" } }),
+    }));
+    expect(mocks.recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       surface: "price-corroboration", outcome: "error", error: "Error",
     }));
     expect(JSON.stringify(mocks.recordBudgetSurfaceTelemetry.mock.calls)).not.toContain("secret-token");
   });
 
-  it.each([24, 39, 54])("does not collect on minute %s", async (minute) => {
+  it.each([24, 39, 54])("refreshes DEX only on minute %s", async (minute) => {
     await runStatusSelfCheckSlot(runtime([], minute));
     expect(mocks.runPriceCorroboration).not.toHaveBeenCalled();
-    expect(mocks.logCronEvent).not.toHaveBeenCalled();
-    expect(mocks.recordBudgetSurfaceTelemetry).not.toHaveBeenCalled();
+    expect(mocks.runPriceDexRefresh).toHaveBeenCalledOnce();
+    expect(mocks.logCronEvent).toHaveBeenCalledOnce();
+    expect(mocks.recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ outcome: "ok" }));
   });
 });

@@ -142,7 +142,7 @@ describe("runPostEnrichmentPricePipeline", () => {
     }
   });
 
-  it("accounts for every observation without changing selection or already-priced assets", async () => {
+  it("accounts for superseded observations without changing already-priced assets", async () => {
     const now = 1_800_000_000;
     const clock = vi.spyOn(Date, "now").mockReturnValue(now * 1000);
     const sqlite = new DatabaseSync(":memory:");
@@ -155,7 +155,7 @@ describe("runPostEnrichmentPricePipeline", () => {
     });
     try {
       await writePriceCorroborationObservations(db, [
-        observation(missing.id, 0.45), observation(missing.id), observation(missing.id, 1.001),
+        { ...observation(missing.id, 0.45), observedAt: now - 120 }, observation(missing.id), { ...observation(missing.id, 1.001), observedAt: now - 90 },
         observation(priced.id), observation("absent"),
         { ...observation(missing.id), source: "cached" },
         { ...observation(missing.id), observedAt: null },
@@ -172,10 +172,10 @@ describe("runPostEnrichmentPricePipeline", () => {
       expect(priced.priceSource).toBe("coingecko");
       expect(result.cachedFallbackCount).toBe(1);
       expect(result.priceObservationEffectiveness).toEqual({
-        stagingStatus: "ok", stagingSlotStartedAt: now - 30, stagingAgeSec: 30,
-        loadedObservationCount: 9, eligibleObservationCount: 5,
-        discarded: { sourceIneligible: 1, unknownTime: 1, futureTime: 1, sourceExpired: 1 },
-        publication: { alreadyPriced: 1, assetAbsent: 1, policyRejected: 1, selected: 1, notNeededAfterSelection: 1 },
+        stagingStatus: "ok", stagingSlotStartedAt: now - 30, stagingAgeSec: 30, hourlyStagingStatus: "ok", dexStagingStatus: "missing",
+        loadedObservationCount: 9, eligibleObservationCount: 3,
+        discarded: { sourceIneligible: 1, unknownTime: 1, futureTime: 1, sourceExpired: 1, superseded: 2 },
+        publication: { alreadyPriced: 1, assetAbsent: 1, policyRejected: 0, selected: 1, notNeededAfterSelection: 0 },
         minimumFreshnessHeadroomSec: 3540,
       });
       const effectiveness = result.priceObservationEffectiveness!;
@@ -189,7 +189,7 @@ describe("runPostEnrichmentPricePipeline", () => {
       }, "");
       if (isAbortResult(second)) throw new Error("unexpected abort");
       expect(second.priceObservationEffectiveness?.publication).toEqual({
-        alreadyPriced: 1, assetAbsent: 4, policyRejected: 0, selected: 0, notNeededAfterSelection: 0,
+        alreadyPriced: 1, assetAbsent: 2, policyRejected: 0, selected: 0, notNeededAfterSelection: 0,
       });
       expect(second.cachedFallbackCount).toBe(0);
     } finally {
