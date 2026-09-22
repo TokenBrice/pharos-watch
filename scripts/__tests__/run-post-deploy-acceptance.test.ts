@@ -161,16 +161,31 @@ describe("runPostDeployAcceptance", () => {
     expect(run.exitCode).toBe(1);
   });
 
-  it("fails a reachable Worker whose health endpoint reports a non-healthy state", async () => {
+  it("passes a reachable Worker whose health is degraded and records its warnings", async () => {
     const run = await runPostDeployAcceptance({
-      ...dependencies({ health: workerHealth({ payload: { status: "degraded" } }) }),
+      ...dependencies({ health: workerHealth({ payload: { status: "degraded", warnings: ["cache-quality-degraded: yield-data:producer-degraded-since-last-clean-run"] } }) }),
       workerDeployed: true,
       expectedWorkerVersion: WORKER_VERSION,
       observedWorkerVersion: WORKER_VERSION,
     });
 
     expect(run.probes[0]).toMatchObject({
-      detail: `GET ${HEALTH_URL} returned 200 (degraded); active version ${WORKER_VERSION}.`,
+      detail: `GET ${HEALTH_URL} returned 200 (degraded); active version ${WORKER_VERSION}. Warnings: cache-quality-degraded: yield-data:producer-degraded-since-last-clean-run`,
+      outcome: "passed",
+    });
+    expect(run.exitCode).toBe(0);
+  });
+
+  it("fails a reachable Worker whose health endpoint reports the surface stale", async () => {
+    const run = await runPostDeployAcceptance({
+      ...dependencies({ health: workerHealth({ payload: { status: "stale" } }) }),
+      workerDeployed: true,
+      expectedWorkerVersion: WORKER_VERSION,
+      observedWorkerVersion: WORKER_VERSION,
+    });
+
+    expect(run.probes[0]).toMatchObject({
+      detail: `GET ${HEALTH_URL} returned 200 (stale); active version ${WORKER_VERSION}.`,
       outcome: "failed",
     });
     expect(run.acceptance.reason).toBe("At least one completed read-only smoke probe failed.");

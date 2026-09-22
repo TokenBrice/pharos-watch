@@ -38,6 +38,29 @@ describe("public status helpers", () => {
     expect(getImpactedPublicSurfaces(health).some((surface) => surface.id === "active-price-coverage")).toBe(false);
   });
 
+  it("renders long-running price gaps as catalog reviews, never as the raw slug", () => {
+    const health: HealthResponse = {
+      ...BASE_HEALTH,
+      status: "degraded",
+      warnings: ["active-price-coverage-critical-duration:nxusd-nereus"],
+      activePriceCoverage: makeActivePriceCoverage([
+        makeMissingActiveAsset({
+          stablecoinId: "nxusd-nereus",
+          symbol: "NXUSD",
+          marketCapUsd: 1_500_000,
+          consecutiveMissingGenerations: 700,
+          alertEligible: true,
+        }),
+      ]),
+    };
+
+    expect(getPublicHealthWarningPresentation(health.warnings[0]!, health)).toEqual({
+      title: "Long-running price gaps",
+      detail:
+        "1 active asset: NXUSD has had no accepted live price for more than a week. Market caps keep publishing; each is under catalog review to re-source the price or retire the listing.",
+    });
+  });
+
   it("degrades mint/burn status when the critical writer lane is unhealthy despite fresh sync age", () => {
     const sync = {
       ...BASE_HEALTH.mintBurn.sync,

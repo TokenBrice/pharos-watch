@@ -26,7 +26,7 @@ export interface PublicHealthWarningPresentation {
 type ActivePriceCoverage = NonNullable<HealthResponse["activePriceCoverage"]>;
 
 const ACTIVE_PRICE_INCOMPLETE_PREFIX = "active-price-coverage-incomplete:";
-
+const ACTIVE_PRICE_CRITICAL_DURATION_PREFIX = "active-price-coverage-critical-duration:";
 
 
 function getActivePriceAssetLabels(
@@ -86,6 +86,19 @@ export function getPublicHealthWarningPresentation(
       title: "Stablecoin price coverage",
       detail:
         "Exact live-price coverage is unavailable. Stablecoin listings and price-dependent analytics may be incomplete until telemetry recovers.",
+    };
+  }
+
+  if (warning.startsWith(ACTIVE_PRICE_CRITICAL_DURATION_PREFIX)) {
+    const ids = warning
+      .slice(ACTIVE_PRICE_CRITICAL_DURATION_PREFIX.length)
+      .split(",")
+      .map((id) => id.trim())
+      .filter((id) => id.length > 0);
+    const labels = getActivePriceAssetLabels(healthData.activePriceCoverage, ids);
+    return {
+      title: "Long-running price gaps",
+      detail: `${formatAffectedAssets(labels.length, labels)} ${labels.length === 1 ? "has" : "have"} had no accepted live price for more than a week. Market caps keep publishing; each is under catalog review to re-source the price or retire the listing.`,
     };
   }
 
