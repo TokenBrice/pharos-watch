@@ -18,7 +18,7 @@ import {
   slicesFromValues,
   unverifiedFreshnessMetadata,
 } from "./helpers";
-import { buildBrowserHeaders, NEUTRAL_ADAPTER_HEADERS } from "./request";
+import { fetchWithBrowserFallback } from "./request";
 import { requireJsonInput } from "./input-guards";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { extractEscapedJsonValueAfterKey } from "./html";
@@ -218,30 +218,6 @@ const TOKEN_CONFIG: Record<string, TokenConfig> = {
   },
 };
 
-// The Mento analytics API and dashboard intermittently return HTTP 404 to
-// Cloudflare Worker egress while serving 200 to browser-like clients, so both
-// fetches try browser-style headers first and fall back to the neutral
-// Pharos fetch identity (mirrors the reservoir adapter's fallback shape).
-const MENTO_BROWSER_HEADERS = buildBrowserHeaders("https://reserve.mento.org", "https://reserve.mento.org/");
-
-async function fetchMentoWithBrowserFallback<T>(
-  signal: AbortSignal,
-  fetcher: (headers: HeadersInit) => Promise<T>,
-): Promise<T> {
-  try {
-    return await fetcher(MENTO_BROWSER_HEADERS);
-  } catch (primaryError) {
-    if (signal.aborted) throw primaryError;
-    try {
-      return await fetcher(NEUTRAL_ADAPTER_HEADERS);
-    } catch (fallbackError) {
-      if (signal.aborted) throw fallbackError;
-      throw new Error(
-        `browser fetch failed: ${toErrorMessage(primaryError)}; neutral fetch failed: ${toErrorMessage(fallbackError)}`,
-      );
-    }
-  }
-}
 
 const CDP_COLLATERAL_CONFIG: Record<string, TokenConfig & { depType: ReserveSlice["depType"] }> = {
   USDm: {
@@ -684,9 +660,11 @@ async function fetchMentoDashboardSnapshot(
   const url = config.display?.url;
   if (!url) return null;
   try {
-    const html = await fetchMentoWithBrowserFallback(
-      signal,
+    const html = await fetchWithBrowserFallback(
+      "https://reserve.mento.org",
+      "https://reserve.mento.org/",
       (headers) => fetchTextWithRetry(url, signal, 12_000, ctx, { headers }),
+      signal,
     );
     return {
       sourceTimestamp: extractMentoDashboardTimestamp(html),
@@ -712,9 +690,11 @@ export async function fetchMentoReserves(
   const input = requireJsonInput(config.inputs.primary, "mento");
   const dashboardWarnings: LiveReserveWarning[] = [];
   const [payload, dashboard] = await Promise.all([
-    fetchMentoWithBrowserFallback(
-      signal,
+    fetchWithBrowserFallback(
+      "https://reserve.mento.org",
+      "https://reserve.mento.org/",
       (headers) => fetchJsonWithRetry<MentoReserveApiResponse>(input.url, signal, 12_000, ctx, { headers }),
+      signal,
     ),
     fetchMentoDashboardSnapshot(config, signal, dashboardWarnings, ctx),
   ]);

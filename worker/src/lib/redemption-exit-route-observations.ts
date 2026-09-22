@@ -1,5 +1,6 @@
 import { REDEMPTION_BACKSTOP_PROVIDER_IDS } from "@shared/lib/redemption-backstop-providers";
 import { SAME_NOTIONAL_EXIT_REQUEST_POLICY } from "@shared/lib/redemption-backstop-scoring";
+import { resolveV9RedemptionRouteCostBpsAtNotional } from "@shared/lib/redemption-backstop-configs/shared";
 import { EXIT_ROUTE_SCORING_TABLES } from "@shared/lib/exit-route-scoring";
 import { getRedemptionBackstopConfig, type RedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -212,22 +213,6 @@ function resolveScopeAndCommonModes(
   };
 }
 
-function resolveCostBps(
-  config: RedemptionBackstopConfig,
-  resolvedFeeBps: number | null,
-  requestedNotionalUsd: number,
-): number | null {
-  const cost = config.costModel;
-  const variableFeeBps =
-    cost.stressFeeBps ??
-    cost.feeBpsMax ??
-    resolvedFeeBps ??
-    (cost.kind === "fee-bps" ? cost.feeBps : (cost.feeBpsMin ?? null));
-  const fixedCostUsd = (cost.flatFeeUsd ?? 0) + (cost.gasOrBridgeCostUsd ?? 0);
-  if (variableFeeBps == null && fixedCostUsd === 0 && cost.minFeeUsd == null) return null;
-  const variableFeeUsd = Math.max(((variableFeeBps ?? 0) * requestedNotionalUsd) / 10_000, cost.minFeeUsd ?? 0);
-  return ((variableFeeUsd + fixedCostUsd) / requestedNotionalUsd) * 10_000;
-}
 
 /**
  * Projects an existing reviewed redemption capacity into P4's common request.
@@ -255,7 +240,11 @@ export function buildRedemptionExitRouteObservation(
   const routeIsImmediate =
     input.capacityProfile.scoringHorizon === "immediate" &&
     (input.config.settlementModel === "atomic" || input.config.settlementModel === "immediate");
-  const mainCostBps = resolveCostBps(input.config, input.resolvedFeeBps, modeledExitSizeUsd);
+  const mainCostBps = resolveV9RedemptionRouteCostBpsAtNotional(
+    input.config,
+    modeledExitSizeUsd,
+    input.resolvedFeeBps,
+  );
   const configuredOutputAssetIds = [
     ...(input.config.outputAssets ?? input.config.unresolvedOutputAssetKeys ?? []),
   ].sort();
@@ -300,7 +289,11 @@ export function buildRedemptionExitRouteObservation(
     scoringCapacityUsd == null
       ? undefined
       : requests.map((request) => {
-          const costBps = resolveCostBps(input.config, input.resolvedFeeBps, request);
+          const costBps = resolveV9RedemptionRouteCostBpsAtNotional(
+            input.config,
+            request,
+            input.resolvedFeeBps,
+          );
           return buildExitRouteCapacityPoint({
             requestedNotionalUsd: request,
             maxCostBps: SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps,

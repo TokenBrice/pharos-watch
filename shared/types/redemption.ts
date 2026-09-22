@@ -130,7 +130,6 @@ export const RedemptionRouteExitCorrelationSchema = z.enum([
   "unknown",
 ]);
 
-export const RedemptionFeeScenarioSchema = z.enum(["normal", "stress"]);
 
 export const RedemptionDocSourceSupportSchema = z.enum(["route", "capacity", "fees", "access", "settlement"]);
 export type RedemptionDocSourceSupport = z.infer<typeof RedemptionDocSourceSupportSchema>;

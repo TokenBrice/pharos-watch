@@ -212,8 +212,7 @@ describe("redemption backstop config helpers", () => {
     const fixedCosts = {
       kind: "fee-bps" as const,
       feeBps: 0,
-      flatFeeUsd: 25,
-      gasOrBridgeCostUsd: 25,
+      gasOrBridgeCostUsd: 50,
     };
     expect(resolveRedemptionCostBpsAtNotional(fixedCosts, 100_000)).toBe(5);
   });

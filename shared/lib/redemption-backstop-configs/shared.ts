@@ -128,11 +128,8 @@ export function resolveRedemptionCostBpsAtNotional(
     costModel.feeBpsMax ??
     costModel.feeBpsMin ??
     (costModel.kind === "fee-bps" ? costModel.feeBps : null);
-  const variableFeeBps =
-    costModel.feeScenario === "stress" && costModel.stressFeeBps != null
-      ? costModel.stressFeeBps
-      : normalFeeBps;
-  const fixedCostUsd = (costModel.flatFeeUsd ?? 0) + (costModel.gasOrBridgeCostUsd ?? 0);
+  const variableFeeBps = normalFeeBps;
+  const fixedCostUsd = costModel.gasOrBridgeCostUsd ?? 0;
   if (variableFeeBps == null && costModel.minFeeUsd == null && fixedCostUsd === 0) return null;
   if (variableFeeBps != null && costModel.minFeeUsd == null && fixedCostUsd === 0) return variableFeeBps;
   const percentageFeeUsd = ((variableFeeBps ?? 0) * requestedNotionalUsd) / BPS_PER_UNIT;

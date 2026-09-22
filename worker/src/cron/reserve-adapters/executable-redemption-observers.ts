@@ -11,6 +11,7 @@ import {
   fetchEvmMulticall3Aggregate3AtBlock,
   fetchEvmStorageAtBlock,
 } from "../../lib/evm-rpc";
+import type { Abi } from "abitype";
 import { parseAbi } from "viem/utils";
 import type { AdapterContext } from "./types";
 import { runAdapterIo } from "./concurrency";
@@ -253,8 +254,8 @@ function fixedPointFeeBpsCeil(rawFee: bigint, scale: bigint, coinId: string): nu
 }
 
 function verifyExpectedAddress(coinId: string, label: string, expected: string) {
-  return (value: string): null => {
-    const normalized = normalizeEvmAddress(value);
+  return (value: unknown): null => {
+    const normalized = typeof value === "string" ? normalizeEvmAddress(value) : null;
     if (!normalized) fail(coinId, `${label} returned an invalid address`);
     if (normalized !== expected) fail(coinId, "live route dependency identity drift");
     return null;
@@ -492,13 +493,13 @@ async function observeEarn(
 
 type AbiFieldOptions = {
   args?: readonly unknown[];
-  verify?: (value: string) => string | null;
+  verify?: (value: unknown) => string | null;
 };
 
 function abiField(
   label: string,
   contract: string,
-  abi: readonly unknown[],
+  abi: Abi,
   functionName: string,
   options: AbiFieldOptions = {},
 ): AnyEvmObservationField {
@@ -508,7 +509,7 @@ function abiField(
     abi,
     functionName,
     ...options,
-  } as never) as AnyEvmObservationField;
+  });
 }
 
 function strategyFields() {
@@ -692,6 +693,10 @@ async function observeDStake(
   };
 }
 
+export function hasExecutableRedemptionObserver(coinId: string): boolean {
+  return coinId === EARN.coinId || coinId === DSTAKE.coinId;
+}
+
 export async function observeExecutableRedemptionRoute(
   coinId: string,
   contractAddress: string,
@@ -699,7 +704,7 @@ export async function observeExecutableRedemptionRoute(
   ctx?: AdapterContext,
   options: ObserverOptions = {},
 ): Promise<ExecutableRedemptionObservation | null> {
-  if (coinId !== EARN.coinId && coinId !== DSTAKE.coinId) return null;
+  if (!hasExecutableRedemptionObserver(coinId)) return null;
 
   const expectedContractAddress =
     coinId === EARN.coinId ? EARN.vault.address : DSTAKE.token.address;

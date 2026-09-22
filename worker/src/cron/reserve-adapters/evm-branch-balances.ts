@@ -3,6 +3,7 @@ import { createAdapterIoLimiter } from "./concurrency";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
+import type { LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import { encodeAddressCallData, encodeUint256 } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
@@ -48,14 +49,9 @@ const SELECTORS = {
   decimals: "0x313ce567",
 } as const;
 
-interface HoneyFactoryRedemptionCapacityParams {
-  kind: "honey-factory-vaults";
-  factoryAddress: string;
-  expectedHoneyAddress: string;
-  maxAssets: number;
-  stableAssets: Array<{ address: string; decimals: number }>;
-  sourceUrls: string[];
-}
+type HoneyFactoryRedemptionCapacityParams = NonNullable<
+  LiveReserveAdapterParamsByKey["evm-branch-balances"]["redemptionCapacity"]
+>;
 
 interface RedemptionCapacityObservation {
   metadata?: Record<string, unknown>;
@@ -602,9 +598,7 @@ export async function fetchEvmBranchBalancesReserves(
     rpcUrl: params.rpcUrl,
     fallbackRpcUrl: params.fallbackRpcUrl,
   });
-  const redemptionCapacityParams = (
-    params as typeof params & { redemptionCapacity?: HoneyFactoryRedemptionCapacityParams }
-  ).redemptionCapacity;
+  const redemptionCapacityParams = params.redemptionCapacity;
 
   const [balances, redemptionFeeBps, debtRaw, redemptionCapacity] = await Promise.all([
     Promise.all(balanceGroups).then((groups) => groups.flat()),

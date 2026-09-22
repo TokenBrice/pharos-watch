@@ -5,7 +5,6 @@ import {
   RedemptionCapacityConfidenceSchema,
   RedemptionDocSourceSupportSchema,
   RedemptionExecutionModelSchema,
-  RedemptionFeeScenarioSchema,
   RedemptionFeeModelKindSchema,
   RedemptionHolderEligibilitySchema,
   RedemptionOutputAssetTypeSchema,
@@ -99,13 +98,10 @@ const RedemptionCapacityModelSchema = z.discriminatedUnion("kind", [
 export type RedemptionCapacityModel = z.infer<typeof RedemptionCapacityModelSchema>;
 
 const RedemptionCostShapeSchema = {
-  flatFeeUsd: NonNegativeNumberSchema.optional(),
   minFeeUsd: NonNegativeNumberSchema.optional(),
   feeBpsMin: NonNegativeNumberSchema.optional(),
   feeBpsMax: NonNegativeNumberSchema.optional(),
   gasOrBridgeCostUsd: NonNegativeNumberSchema.optional(),
-  stressFeeBps: NonNegativeNumberSchema.optional(),
-  feeScenario: RedemptionFeeScenarioSchema.optional(),
 };
 
 const RedemptionCostTermsSchema = z.strictObject(RedemptionCostShapeSchema);
@@ -414,14 +410,6 @@ export const RedemptionBackstopConfigSchema = z
       });
     }
 
-    if (config.accessModel === "permissionless-onchain" && config.routeFamily === "offchain-issuer") {
-      ctx.addIssue({
-        code: "custom",
-        path: ["routeFamily"],
-        message: "permissionless-onchain access cannot use offchain-issuer routes",
-      });
-    }
-
     if (config.settlementModel === "atomic" && config.routeFamily === "offchain-issuer") {
       ctx.addIssue({
         code: "custom",
@@ -483,35 +471,6 @@ export const RedemptionBackstopConfigSchema = z
       });
     }
 
-    const normalFeeBps =
-      effectiveCostModel.feeBpsMax ??
-      effectiveCostModel.feeBpsMin ??
-      (effectiveCostModel.kind === "fee-bps" ? effectiveCostModel.feeBps : undefined);
-    if (
-      effectiveCostModel.stressFeeBps != null &&
-      normalFeeBps != null &&
-      effectiveCostModel.stressFeeBps < normalFeeBps
-    ) {
-      ctx.addIssue({
-        code: "custom",
-        path: [
-          config.v9RouteCostTerms?.stressFeeBps !== undefined ? "v9RouteCostTerms" : "costModel",
-          "stressFeeBps",
-        ],
-        message: "stressFeeBps must be greater than or equal to the normal fee bound",
-      });
-    }
-
-    if (effectiveCostModel.feeScenario === "stress" && effectiveCostModel.stressFeeBps == null) {
-      ctx.addIssue({
-        code: "custom",
-        path: [
-          config.v9RouteCostTerms?.feeScenario !== undefined ? "v9RouteCostTerms" : "costModel",
-          "stressFeeBps",
-        ],
-        message: "feeScenario=stress requires stressFeeBps",
-      });
-    }
 
     if (config.costModel.kind === "dynamic-or-unclear") {
       if (

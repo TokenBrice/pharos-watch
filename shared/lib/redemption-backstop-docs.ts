@@ -1,13 +1,13 @@
 import { TRACKED_META_BY_ID } from "./stablecoins/registry";
 import type { RedemptionBackstopEntry, RedemptionDocSource, RedemptionDocsProvenance } from "../types/redemption";
+import type { RedemptionBackstopConfig } from "./redemption-backstops";
 
 type RedemptionDocs = NonNullable<RedemptionBackstopEntry["docs"]>;
 type RedemptionDocSources = NonNullable<RedemptionDocs["sources"]>;
-type RedemptionDocsConfig = {
-  reviewedAt?: string;
-  capacityModel: { kind: string };
-  docs?: RedemptionDocSource[];
-};
+type RedemptionDocsConfig = Pick<
+  RedemptionBackstopConfig,
+  "reviewedAt" | "capacityModel" | "docs"
+>;
 
 function buildDocs(
   config: Pick<RedemptionDocsConfig, "reviewedAt">,
@@ -84,7 +84,9 @@ export function resolveRedemptionDocs(
   }
 
   const meta = TRACKED_META_BY_ID.get(stablecoinId);
-  if (!meta) return undefined;
+  if (!meta) {
+    throw new Error(`Unknown tracked stablecoin id "${stablecoinId}" while resolving redemption docs`);
+  }
 
   const includeLiveReserveDisplay =
     config.capacityModel.kind === "reserve-sync-metadata" && Boolean(meta.liveReservesConfig?.display?.url);

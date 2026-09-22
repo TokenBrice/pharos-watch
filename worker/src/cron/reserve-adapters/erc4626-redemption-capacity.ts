@@ -1,7 +1,6 @@
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { LiveReserveWarning } from "@shared/types/live-reserves";
 import type { LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
-import type { EvmMulticall3Result } from "../../lib/evm-rpc";
 import {
   encodeAddress,
 } from "../../lib/evm-selectors";
@@ -18,8 +17,8 @@ import {
   reserveDegradedWarning,
   requireOnchainInput,
 } from "./helpers";
+import { multicallResultOrNull } from "./erc4626";
 import { parseBoundedDecimals, ratioFromRaw } from "./slice-math";
-import { multicallResultByLabel } from "./onchain-identity";
 import { observeSfrxusdCrosschainRedemptionRoute } from "./sfrxusd-crosschain-redemption";
 import type { SfrxusdCrosschainV9RouteAttempt } from "../../lib/sfrxusd-crosschain-redemption-route";
 import type { ExecutableRedemptionObservation } from "./executable-redemption-observers";
@@ -245,12 +244,6 @@ function probeFailure(code: string, message: string): CapacityProbeResult {
   };
 }
 
-function successfulMulticallResult(
-  results: EvmMulticall3Result[] | null,
-  label: string,
-): string | null {
-  return results ? multicallResultByLabel(results, label) : null;
-}
 
 async function fetchYearnV3WithdrawableCapacity(input: OnchainProbeInput & { settlementDelaySec?: number }): Promise<CapacityProbeResult> {
   // Wave 1: the strategy list. Wave 2 depends on the decoded queue, so the
@@ -267,8 +260,8 @@ async function fetchYearnV3WithdrawableCapacity(input: OnchainProbeInput & { set
     fallbackRpcUrl: input.fallbackRpcUrl,
     timeoutMs: input.timeoutMs,
   });
-  const totalIdleResult = successfulMulticallResult(listResults, "yearn-total-idle");
-  const defaultQueueResult = successfulMulticallResult(listResults, "yearn-default-queue");
+  const totalIdleResult = multicallResultOrNull(listResults, "yearn-total-idle");
+  const defaultQueueResult = multicallResultOrNull(listResults, "yearn-default-queue");
   if (!totalIdleResult || !defaultQueueResult) {
     return probeFailure("yearn-v3-withdrawable-unavailable", `Yearn V3 withdrawable-capacity probes failed for ${input.coinId}`);
   }
@@ -312,7 +305,7 @@ async function fetchYearnV3WithdrawableCapacity(input: OnchainProbeInput & { set
   let withdrawableRaw = totalIdleRaw;
   for (const [index, strategyAddress] of defaultQueue.entries()) {
     const currentDebtRaw = decodeUint256Word(decodeAbiWordAt(
-      successfulMulticallResult(strategyResults, `yearn-strategy-${index}-params`),
+      multicallResultOrNull(strategyResults, `yearn-strategy-${index}-params`),
       2,
     ));
     if (currentDebtRaw == null) {
@@ -321,7 +314,7 @@ async function fetchYearnV3WithdrawableCapacity(input: OnchainProbeInput & { set
     if (currentDebtRaw === 0n) continue;
 
     const strategyWithdrawableRaw = decodeUint256Word(
-      successfulMulticallResult(strategyResults, `yearn-strategy-${index}-max-withdraw`),
+      multicallResultOrNull(strategyResults, `yearn-strategy-${index}-max-withdraw`),
     );
     if (strategyWithdrawableRaw == null) {
       return probeFailure("yearn-v3-strategy-max-withdraw-unavailable", `Yearn V3 strategy maxWithdraw() failed for ${input.coinId} strategy ${strategyAddress}`);

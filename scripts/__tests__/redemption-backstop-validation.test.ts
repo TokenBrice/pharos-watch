@@ -367,9 +367,9 @@ describe("validateRedemptionBackstopRegistry", () => {
       path: ["costModel", "feeBpsMin"], code: "custom",
     },
     {
-      name: "stress fee below normal bound",
-      overrides: { costModel: { kind: "dynamic-or-unclear", feeDescription: "Reviewed fees", feeBpsMax: 100, stressFeeBps: 50 } },
-      path: ["costModel", "stressFeeBps"], code: "custom",
+      name: "removed fee scenario",
+      overrides: { costModel: { kind: "dynamic-or-unclear", feeDescription: "Reviewed fees", feeScenario: "stress" } },
+      path: ["costModel"], code: "unrecognized_keys",
     },
     {
       name: "formula confidence with nonformula kind",

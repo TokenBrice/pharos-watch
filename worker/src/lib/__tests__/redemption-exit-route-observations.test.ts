@@ -240,20 +240,24 @@ describe("redemption same-notional route observations", () => {
     });
   });
 
-  it("prioritizes stress then maximum fees and prices minimum plus flat costs at each request", () => {
-    const costModel = { kind: "fee-bps" as const, feeBps: 1, feeBpsMax: 20, minFeeUsd: 1_500, flatFeeUsd: 600 };
+  it("uses canonical live-fee precedence and prices minimum plus fixed network costs at each request", () => {
+    const costModel = {
+      kind: "fee-bps" as const,
+      feeBps: 1,
+      feeBpsMax: 20,
+      minFeeUsd: 1_500,
+      gasOrBridgeCostUsd: 600,
+    };
     const bounded = build({ config: { ...config, costModel }, resolvedFeeBps: 10 });
     expect(bounded).toMatchObject({ executableUsd: 5_000_000, scoreEligible: true });
     expect(bounded?.capacityCurve?.filter((point) => [100_000, 1_000_000].includes(point.requestedNotionalUsd))).toEqual([
       { requestedNotionalUsd: 100_000, maxCostBps: 200, executableUsd: 0, completionRatio: 0 },
       { requestedNotionalUsd: 1_000_000, maxCostBps: 200, executableUsd: 1_000_000, completionRatio: 1 },
     ]);
-    expect(build({ config: { ...config, costModel: { ...costModel, stressFeeBps: 250 } }, resolvedFeeBps: 10 })).toMatchObject({
-      executableUsd: 0, scoreEligible: false,
-    });
-    expect(build({ config: { ...config, costModel: { ...costModel, feeBpsMax: 250 } }, resolvedFeeBps: 10 })).toMatchObject({
-      executableUsd: 0, scoreEligible: false,
-    });
+    expect(build({
+      config: { ...config, costModel: { ...costModel, feeBpsMax: 250 } },
+      resolvedFeeBps: 10,
+    })).toMatchObject({ executableUsd: 5_000_000, scoreEligible: true });
   });
 
   it("normalizes fractional live telemetry timestamps before publishing integer observations", () => {
