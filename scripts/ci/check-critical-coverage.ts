@@ -12,11 +12,13 @@ import {
   normalizePath,
   parseLcov,
   validateCriticalCoverageWaiverMetadata,
+  validateCriticalOwnershipWaiverMetadata,
   validateCriticalCoverageBaseline,
   selectChangedCriticalSources,
 } from "../lib/critical-coverage.mjs";
 import {
   CRITICAL_OWNERSHIP_WAIVERS,
+  type CriticalOwnershipWaiver,
   deriveCriticalOwnership,
   deriveBaseCriticalOwnership,
   type BaseBlobExec,
@@ -50,7 +52,7 @@ interface CompletenessOptions {
   criticalFiles?: string[];
   waivers?: CoverageWaivers;
   ownership?: CriticalOwnership;
-  ownershipWaivers?: Readonly<Record<string, string>>;
+  ownershipWaivers?: Readonly<Record<string, CriticalOwnershipWaiver>>;
   reviewToday?: Date;
   consoleImpl?: CoverageConsole;
   exit?: ExitFunction;
@@ -209,21 +211,33 @@ export function runCriticalCoverageCompletenessGuard({
   consoleImpl = console,
   exit = process.exit,
 }: CompletenessOptions = {}): boolean {
-  const waiverErrors = validateCriticalCoverageWaiverMetadata(waivers, {
-    candidateFiles,
-    criticalFiles,
-  });
-  const staleWaivers = findStaleCriticalCoverageWaivers(candidateFiles, waivers);
+  const waiverErrors = [
+    ...validateCriticalCoverageWaiverMetadata(waivers, {
+      candidateFiles,
+      criticalFiles,
+    }),
+    ...validateCriticalOwnershipWaiverMetadata(ownershipWaivers, {
+      candidateFiles,
+      criticalFiles,
+    }),
+  ];
+  const staleWaivers = [...new Set([
+    ...findStaleCriticalCoverageWaivers(candidateFiles, waivers),
+    ...findStaleCriticalCoverageWaivers(candidateFiles, ownershipWaivers),
+  ])].sort();
   const missingEnrollment = findCriticalCoverageCandidatesMissingEnrollment(candidateFiles, {
     criticalFiles,
     waivers,
     ownershipWaivers,
   });
   const missingOwnership = findCriticalOwnershipGaps(criticalFiles, ownership, ownershipWaivers);
-  const waiverReviewQueue = collectCriticalCoverageWaiverReviewQueue(waivers, {
-    candidateFiles,
-    today: reviewToday,
-  });
+  const waiverReviewQueue = collectCriticalCoverageWaiverReviewQueue(
+    { ...waivers, ...ownershipWaivers },
+    {
+      candidateFiles,
+      today: reviewToday,
+    },
+  );
   const reviewGroups: Array<[string, Array<{ file: string; reviewAfter: string }>]> = [
     ["due or overdue", waiverReviewQueue.due],
     ["due soon", waiverReviewQueue.upcoming],

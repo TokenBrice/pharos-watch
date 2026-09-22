@@ -235,6 +235,7 @@ export function findCriticalCoverageCandidatesMissingEnrollment(
   return candidateFiles.filter((file) => !criticalSet.has(file) && !waiverSet.has(file));
 }
 
+/** @param {string[]} candidateFiles @param {Record<string, unknown>} [waivers] */
 export function findStaleCriticalCoverageWaivers(candidateFiles, waivers = CRITICAL_COVERAGE_WAIVERS) {
   const candidateSet = new Set(candidateFiles);
   return Object.keys(waivers).filter((file) => !candidateSet.has(file));
@@ -269,7 +270,38 @@ export function validateCriticalCoverageWaiverMetadata(
 }
 
 /**
- * @param {Record<string, string>} waivers
+ * @param {Record<string, { reviewAfter?: unknown, reason?: unknown }>} waivers
+ * @param {{ candidateFiles?: string[], criticalFiles?: string[] }} [options]
+ */
+export function validateCriticalOwnershipWaiverMetadata(
+  waivers,
+  {
+    candidateFiles,
+    criticalFiles = CRITICAL_FILES,
+  } = {},
+) {
+  const errors = [];
+  const candidateSet = candidateFiles ? new Set(candidateFiles) : null;
+  const criticalSet = new Set(criticalFiles);
+
+  for (const [file, waiver] of Object.entries(waivers)) {
+    if (candidateSet && !candidateSet.has(file)) continue;
+    if (criticalSet.has(file)) {
+      errors.push(`${file}: already enrolled in critical coverage; remove ownership waiver`);
+    }
+    if (!waiver || typeof waiver !== "object" || !isValidIsoDateOnly(waiver.reviewAfter)) {
+      errors.push(`${file}: missing or invalid ownership waiver reviewAfter`);
+    }
+    if (!waiver || typeof waiver !== "object" || typeof waiver.reason !== "string" || waiver.reason.trim() === "") {
+      errors.push(`${file}: missing ownership waiver reason`);
+    }
+  }
+
+  return errors;
+}
+
+/**
+ * @param {Record<string, string | { reviewAfter?: unknown }>} waivers
  * @param {{ today?: Date, lookaheadDays?: number, candidateFiles?: string[] }} [options]
  */
 export function collectCriticalCoverageWaiverReviewQueue(
@@ -288,8 +320,9 @@ export function collectCriticalCoverageWaiverReviewQueue(
   const due = [];
   const upcoming = [];
 
-  for (const [file, reviewAfter] of Object.entries(waivers)) {
+  for (const [file, waiver] of Object.entries(waivers)) {
     if (candidateSet && !candidateSet.has(file)) continue;
+    const reviewAfter = typeof waiver === "string" ? waiver : waiver?.reviewAfter;
     if (!isValidIsoDateOnly(reviewAfter)) continue;
     const row = { file, reviewAfter };
     if (reviewAfter <= todayString) {
