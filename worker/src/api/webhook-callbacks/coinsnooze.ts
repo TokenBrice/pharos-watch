@@ -29,13 +29,12 @@ export const handleCoinSnoozeCallback: CallbackHandler = async ({
       ) {
         return null;
       }
-      return {
-        id: parsed.arg,
-        duration: durationToken,
-        untilSec: storedIntent?.kind === "callback:coinsnooze"
-          ? Number(storedIntent.payload.untilSec)
-          : unixNow() + SNOOZE_SECONDS[durationToken],
-      };
+      const untilSec = storedIntent?.kind === "callback:coinsnooze"
+        ? Number(storedIntent.payload.untilSec)
+        : unixNow() + SNOOZE_SECONDS[durationToken];
+      return Number.isFinite(untilSec)
+        ? { id: parsed.arg, duration: durationToken, untilSec }
+        : null;
     },
     requireAdmin: true,
     eventType: "snooze_change",

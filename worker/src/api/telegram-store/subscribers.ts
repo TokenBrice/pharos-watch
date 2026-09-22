@@ -6,6 +6,7 @@ import {
   appendTelegramOperationStatements,
   type TelegramOperationBatchOptions,
 } from "../../lib/telegram/operation-batch";
+import { pendingDisambiguationClearStatement } from "./disambiguation";
 
 /** Re-exported under the worker-local name every Telegram store module already imports. */
 export { unixNow };
@@ -397,9 +398,7 @@ export async function upsertGlobalAlertTypes(
     }),
   ];
   if (options.clearPending) {
-    statements.push(
-      db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(chatId),
-    );
+    statements.push(pendingDisambiguationClearStatement(db, chatId));
   }
   await executeAtomicBatch(db, appendTelegramOperationStatements(statements, options));
 }

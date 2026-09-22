@@ -21,6 +21,7 @@ import {
   appendTelegramOperationStatements,
   type TelegramOperationBatchOptions,
 } from "../../lib/telegram/operation-batch";
+import { pendingDisambiguationClearStatement } from "./disambiguation";
 
 export type DewsMinBandValue = "ALERT" | "WARNING" | "DANGER" | null;
 export type SafetyModeValue = "all" | "downgrade-only" | "upgrade-only" | null;
@@ -279,9 +280,7 @@ export function prepareSubscriberAndSubscriptionStatements(
     }),
   ];
   if (options?.clearPending) {
-    statements.push(
-      db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(chatId),
-    );
+    statements.push(pendingDisambiguationClearStatement(db, chatId));
   }
   const depegStepColumn = TELEGRAM_ALERT_PERSISTENCE.depeg.settingsColumn;
   const depegStepUpdate =
@@ -380,9 +379,7 @@ export async function applySettingToSubscriptions(
     }),
   ];
   if (options.clearPending) {
-    statements.push(
-      db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(chatId),
-    );
+    statements.push(pendingDisambiguationClearStatement(db, chatId));
   }
 
   for (const coin of coins) {
@@ -429,7 +426,7 @@ export async function setGlobalDepegWorseningStep(
       .bind(step, now, chatId),
   ];
   if (options.clearPending) {
-    statements.push(db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(chatId));
+    statements.push(pendingDisambiguationClearStatement(db, chatId));
   }
   await executeAtomicBatch(db, appendTelegramOperationStatements(statements, options));
 }
@@ -454,7 +451,7 @@ export async function applyGlobalSetting(
     globalAlertOverrides: { [command.setting]: override },
   })];
   if (options.clearPending) {
-    statements.push(db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(chatId));
+    statements.push(pendingDisambiguationClearStatement(db, chatId));
   }
   await executeAtomicBatch(db, appendTelegramOperationStatements(statements, options));
 }

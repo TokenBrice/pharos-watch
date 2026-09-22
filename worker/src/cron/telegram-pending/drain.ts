@@ -923,7 +923,9 @@ export async function drainPendingQueue(
         chatId: row.chat_id,
         html: row.message_html,
         disableNotification: shouldSilencePendingRow(row, nowSec),
-        replyMarkup: outcome.markupPolicy?.replyMarkup ?? SNOOZE_REPLY_MARKUP,
+        replyMarkup: row.source_type === "admin_replay"
+          ? outcome.markupPolicy?.replyMarkup
+          : outcome.markupPolicy?.replyMarkup ?? SNOOZE_REPLY_MARKUP,
         ...(outcome.markupPolicy?.linkPreviewOptions
           ? { linkPreviewOptions: outcome.markupPolicy.linkPreviewOptions }
           : {}),

@@ -231,9 +231,6 @@ function parseResolvedCoins(value: unknown): ResolvedCoin[] {
   return coins;
 }
 
-// Re-exported from worker/src/lib/telegram/coin-dedupe.ts so existing API-layer
-// importers keep their import path; the store layer imports it from lib directly.
-export { dedupeCoins };
 
 export function parsePendingDisambiguation(
   pending: PendingDisambiguationRow,

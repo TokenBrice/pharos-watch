@@ -58,6 +58,26 @@ export const TELEGRAM_TARGET_PLAN_ENQUEUE_PAGE_SIZE = 45;
 /** Durable target-plan transitions permitted in one dispatch invocation. */
 export const TELEGRAM_TARGET_PLAN_MAX_STEPS_PER_RUN = 32;
 
+export function crossesTelegramDepegWorseningStep(
+  previousDeviationBps: number,
+  currentDeviationBps: number,
+  step: number | null,
+): boolean {
+  return step != null
+    && step > 0
+    && currentDeviationBps > previousDeviationBps
+    && Math.floor(previousDeviationBps / step) < Math.floor(currentDeviationBps / step);
+}
+
+export function mergeTelegramDepegWorseningSteps(
+  existing: number | null,
+  additional: number | null,
+): number | null {
+  if (existing == null) return additional;
+  if (additional == null) return existing;
+  return Math.min(existing, additional);
+}
+
 export function estimateTelegramTargetPlanCoordinatorBound(input: {
   subscriberCount: number;
   targetCount: number;

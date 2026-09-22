@@ -46,6 +46,7 @@ import {
   enforceCommandCooldown,
   enforceIngressFlood,
   isAddressedToPharosBot,
+  isRecapMutationArgs,
   logTelegramWebhookWarning,
   maybeGateNonAdminGroupActor,
   recordCommandUsage,
@@ -383,7 +384,11 @@ export async function handleTelegramMessageUpdate(args: {
 
     if (!parsedCommand) return finishOk();
     if (!effectFence?.storedIntent && !commandMutatesLocalState(parsedCommand.command, parsedCommand.args)) {
-      await effectFence?.plan(await createCommandIntent(parsedCommand));
+      await effectFence?.plan(createTelegramWebhookIntent(`command:${parsedCommand.command}`, {
+        command: parsedCommand.command,
+        argsDigest: await digestWebhookIntentInput(parsedCommand.args),
+        argsLength: parsedCommand.args.length,
+      }, "none"));
     }
     await dispatchParsedTelegramCommand({
       db,
@@ -561,21 +566,13 @@ async function digestWebhookIntentInput(value: string): Promise<string> {
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-async function createCommandIntent(parsed: ParsedTelegramCommand) {
-  const mutation = commandMutatesLocalState(parsed.command, parsed.args) ? "required" : "none";
-  return createTelegramWebhookIntent(`command:${parsed.command}`, {
-    command: parsed.command,
-    argsDigest: await digestWebhookIntentInput(parsed.args),
-    argsLength: parsed.args.length,
-  }, mutation);
-}
 
 function commandMutatesLocalState(command: string, args: string): boolean {
   const startPayloadKind = command === "/start" ? parseStartPayload(args).kind : null;
   return commandRequiresGroupAdmin(command, args)
     || command === "/forget"
     || command === "/cancel"
-    || (command === "/recap" && /^(?:on|off|time\s+(?:[0-9]|1[0-9]|2[0-3]))$/i.test(args.trim()))
+    || (command === "/recap" && isRecapMutationArgs(args))
     || startPayloadKind === "setup"
     || startPayloadKind === "none"
     || startPayloadKind === "subscribe"

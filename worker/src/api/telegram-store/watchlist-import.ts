@@ -18,6 +18,7 @@ import {
 import type { PresetSubscriptionRow, SubscriptionRow } from "../telegram-webhook-shared";
 import { loadPresetSubscriptions } from "./presets";
 import { loadSubscriberByChat, unixNow } from "./subscribers";
+import { pendingDisambiguationClearStatement } from "./disambiguation";
 
 export interface WatchlistImportPreview {
   directAdds: string[];
@@ -413,11 +414,11 @@ export async function applyWatchlistImportV2(
     // Consume this exact preview even when the generation guard is stale. The
     // operation marker commits in the same batch, making stale rejection a
     // terminal, retry-safe outcome while every preference statement remains a no-op.
-    db.prepare(`
-      DELETE FROM telegram_pending_disambiguation
-       WHERE chat_id = ? AND action_type = 'confirm-bulk'
-         AND action_payload = ? AND expires_at = ?
-    `).bind(input.chatId, input.pendingActionPayload, input.pendingExpiresAt),
+    pendingDisambiguationClearStatement(db, input.chatId, {
+      actionType: "confirm-bulk",
+      actionPayload: input.pendingActionPayload,
+      expiresAt: input.pendingExpiresAt,
+    }),
     db.prepare(`
       UPDATE telegram_subscribers
          SET preference_generation = ?

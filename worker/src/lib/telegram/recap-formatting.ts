@@ -1,3 +1,4 @@
+import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { formatCompactUsdShort } from "@shared/lib/format";
 import { TELEGRAM_RECAP_TARGET_BODY_CHARACTERS } from "@shared/lib/telegram-recap-policy";
 import { MINI_APP_PAYLOAD_NAMES } from "@shared/lib/telegram-mini-app-payloads";
@@ -29,7 +30,7 @@ export interface TelegramRecapFormattedMessage {
 }
 
 function recapMiniAppUrl(payload: string): string {
-  return `https://pharos.watch/pharoswatchbot/app/?startapp=${payload}`;
+  return `${SITE_ORIGIN}/pharoswatchbot/app/?startapp=${payload}`;
 }
 
 function textValue(value: unknown): string | null {

@@ -32,6 +32,25 @@ const HIGH_VOLUME_RETENTION_DELETE_LIMIT = 100_000;
 export const TELEGRAM_PROCESSED_UPDATE_PRUNE_BATCH_LIMIT = 1_000;
 const TELEGRAM_PROCESSED_UPDATE_PRUNE_TIME_BUDGET_MS = 2_000;
 
+const RETENTION_DAYS = {
+  alertAudit: ALERT_AUDIT_RETENTION_SEC / DAY_SEC,
+  authoritativeWorkflow: AUTHORITATIVE_WORKFLOW_RETENTION_SEC / DAY_SEC,
+  authoritativeReplay: AUTHORITATIVE_REPLAY_RETENTION_SEC / DAY_SEC,
+  staleUnresolved: STALE_UNRESOLVED_RETENTION_SEC / DAY_SEC,
+  recapTargetsTerminal: 90,
+  usageDaily: USAGE_DAILY_RETENTION_SEC / DAY_SEC,
+  watcherLifecycle: USAGE_DAILY_RETENTION_SEC / DAY_SEC,
+  adoptionDaily: USAGE_DAILY_RETENTION_SEC / DAY_SEC,
+  adoptionRetention: USAGE_DAILY_RETENTION_SEC / DAY_SEC,
+  adoptionIngressQuota: 2,
+  adoptionClientQuota: 2,
+  chatDiagnostics: CHAT_DIAGNOSTICS_RETENTION_SEC / DAY_SEC,
+  shortLivedChatCache: SHORT_LIVED_CHAT_CACHE_RETENTION_SEC / DAY_SEC,
+  miniAppAdoptionSessionCache: TELEGRAM_ADOPTION_SESSION_TTL_SEC / DAY_SEC,
+  reEngagementWarningCache: RE_ENGAGEMENT_WARNING_CACHE_RETENTION_SEC / DAY_SEC,
+  processedUpdates: 7,
+} as const;
+
 const SOURCE_EVENT_CHILD_TABLES = [
   "telegram_alert_target_plan_items",
   "telegram_alert_target_plans",
@@ -839,11 +858,6 @@ ${indentSqlFragment(SOURCE_EVENT_CHILD_ABSENCE_SQL, 13)}
       processedUpdatesPruned: processedUpdates.pruned,
       recapTargetsPruned: recapTargets.deletedTargets,
       highGrowthRetention: { ...highGrowthRetention },
-      legacyTargetItemsPruned: highGrowthRetention.legacyTargetItemsPruned,
-      legacyTargetsPruned: highGrowthRetention.legacyTargetsPruned,
-      legacyTerminalJobsPruned: highGrowthRetention.legacyTerminalJobsPruned,
-      staleUnresolvedJobsPruned: highGrowthRetention.staleUnresolvedJobsPruned,
-      staleUnresolvedSourcesPruned: highGrowthRetention.staleUnresolvedSourcesPruned,
       ...retentionStepReport.pruned,
       expiredTargetsReconciled,
       runBudgetTruncated: processedUpdates.remainingBacklog.count > 0 || recapTargets.cappedAtLimit || retentionDeleteCapped,
@@ -867,24 +881,7 @@ ${indentSqlFragment(SOURCE_EVENT_CHILD_ABSENCE_SQL, 13)}
         highGrowthRetention: highGrowthRetention.cappedAtLimit,
         ...retentionStepReport.cappedAtLimit,
       },
-      retentionDays: {
-        alertAudit: ALERT_AUDIT_RETENTION_SEC / DAY_SEC,
-        authoritativeWorkflow: AUTHORITATIVE_WORKFLOW_RETENTION_SEC / DAY_SEC,
-        authoritativeReplay: AUTHORITATIVE_REPLAY_RETENTION_SEC / DAY_SEC,
-        staleUnresolved: STALE_UNRESOLVED_RETENTION_SEC / DAY_SEC,
-        recapTargetsTerminal: 90,
-        usageDaily: USAGE_DAILY_RETENTION_SEC / DAY_SEC,
-        watcherLifecycle: USAGE_DAILY_RETENTION_SEC / DAY_SEC,
-        adoptionDaily: USAGE_DAILY_RETENTION_SEC / DAY_SEC,
-        adoptionRetention: USAGE_DAILY_RETENTION_SEC / DAY_SEC,
-        adoptionIngressQuota: 2,
-        adoptionClientQuota: 2,
-        chatDiagnostics: CHAT_DIAGNOSTICS_RETENTION_SEC / DAY_SEC,
-        shortLivedChatCache: SHORT_LIVED_CHAT_CACHE_RETENTION_SEC / DAY_SEC,
-        miniAppAdoptionSessionCache: TELEGRAM_ADOPTION_SESSION_TTL_SEC / DAY_SEC,
-        reEngagementWarningCache: RE_ENGAGEMENT_WARNING_CACHE_RETENTION_SEC / DAY_SEC,
-        processedUpdates: 7,
-      },
+      retentionDays: RETENTION_DAYS,
     },
   });
 }

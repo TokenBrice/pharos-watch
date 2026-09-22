@@ -735,6 +735,37 @@ export async function recordTelegramTransportOutcomes(
   return await readTelegramTransportCircuit(db);
 }
 
+export async function runAuditedTelegramMutation(
+  db: D1Database,
+  mutation: D1PreparedStatement,
+  audit?: {
+    createdAt: number;
+    actor: string;
+    action: string;
+    target: string;
+    details: object;
+  },
+): Promise<D1Result<unknown> | undefined> {
+  if (!audit) return mutation.run();
+  const results = await db.batch([
+    mutation,
+    db.prepare(
+      `INSERT INTO admin_action_audit
+         (created_at, actor, action, target, result, http_status, details_json)
+       SELECT ?, ?, ?, ?, 'ok', 200, ?
+        WHERE changes() = 1`,
+    ).bind(
+      audit.createdAt,
+      audit.actor,
+      audit.action,
+      audit.target,
+      JSON.stringify(audit.details),
+    ),
+  ]);
+  return results[0];
+}
+
+
 export async function setTelegramDeliveryPause(
   db: D1Database,
   input: {
@@ -770,30 +801,25 @@ export async function setTelegramDeliveryPause(
       input.expectedGeneration,
       input.expectedGeneration,
     );
-  const results = input.auditAction
-    ? await db.batch([
-        mutation,
-        db.prepare(
-          `INSERT INTO admin_action_audit
-             (created_at, actor, action, target, result, http_status, details_json)
-           SELECT ?, ?, ?, ?, 'ok', 200, ?
-            WHERE changes() = 1`,
-        ).bind(
-          input.nowSec,
-          input.actor,
-          input.auditAction,
-          input.mode,
-          JSON.stringify({
+  const result = await runAuditedTelegramMutation(
+    db,
+    mutation,
+    input.auditAction
+      ? {
+          createdAt: input.nowSec,
+          actor: input.actor,
+          action: input.auditAction,
+          target: input.mode,
+          details: {
             mode: input.mode,
             generation: input.expectedGeneration + 1,
             active: input.expiresAt > input.nowSec,
             expiresAt: input.expiresAt,
             reason: input.reason,
-          }),
-        ),
-      ])
-    : [await mutation.run()];
-  const result = results[0];
+          },
+        }
+      : undefined,
+  );
   if (!result) return null;
   if ((result.meta.changes ?? 0) !== 1) return null;
   return await readTelegramDeliveryPause(db, input.mode, input.nowSec);
@@ -819,29 +845,24 @@ export async function resumeTelegramDelivery(
         WHERE mode = ?
           AND generation = ?`,
     ).bind(input.nowSec, input.actor, input.nowSec, input.mode, input.expectedGeneration);
-  const results = input.auditAction
-    ? await db.batch([
-        mutation,
-        db.prepare(
-          `INSERT INTO admin_action_audit
-             (created_at, actor, action, target, result, http_status, details_json)
-           SELECT ?, ?, ?, ?, 'ok', 200, ?
-            WHERE changes() = 1`,
-        ).bind(
-          input.nowSec,
-          input.actor,
-          input.auditAction,
-          input.mode,
-          JSON.stringify({
+  const result = await runAuditedTelegramMutation(
+    db,
+    mutation,
+    input.auditAction
+      ? {
+          createdAt: input.nowSec,
+          actor: input.actor,
+          action: input.auditAction,
+          target: input.mode,
+          details: {
             mode: input.mode,
             generation: input.expectedGeneration + 1,
             active: false,
             expiresAt: input.nowSec,
-          }),
-        ),
-      ])
-    : [await mutation.run()];
-  const result = results[0];
+          },
+        }
+      : undefined,
+  );
   if (!result) return null;
   if ((result.meta.changes ?? 0) !== 1) return null;
   return await readTelegramDeliveryPause(db, input.mode, input.nowSec);

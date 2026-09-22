@@ -1,3 +1,4 @@
+import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { parseRetryAfterSeconds } from "@shared/lib/retry-after";
 import { TELEGRAM_BOT_URL } from "@shared/lib/telegram-bot-registration";
 import type { TelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
@@ -121,7 +122,7 @@ export function buildTelegramMessage(
     body,
     standing,
     appendixHtml ?? "",
-    `<a href="https://pharos.watch/digest/${date}/">Read on Pharos →</a>`,
+    `<a href="${SITE_ORIGIN}/digest/${date}/">Read on Pharos →</a>`,
     recapCta ?? "",
   ].filter((section) => section.trim().length > 0);
   return sections.join("\n\n");

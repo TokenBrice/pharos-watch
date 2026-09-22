@@ -1,7 +1,7 @@
 import { makeSubscriptionRow } from "./telegram-rows.test-support";
 import { describe, it, expect } from "vitest";
+import { MANAGE_PAGE_SIZE } from "../../lib/telegram/constants";
 import {
-  MANAGE_PAGE_SIZE,
   buildListMessage,
   buildManageEntryKeyboard,
   buildManageWatchlistKeyboard,

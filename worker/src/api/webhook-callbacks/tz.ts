@@ -1,5 +1,5 @@
 import { editMessage, escapeHtml } from "../../lib/telegram";
-import { logTelegramEvent } from "../../lib/telegram/log";
+import { classifyTelegramLogError, logTelegramEvent } from "../../lib/telegram/log";
 import { recordTelegramUsageEvent } from "../../lib/telegram/usage-analytics";
 import { isValidIanaTimezone } from "../../lib/telegram/quiet-hours";
 import { setSubscriberTimezone } from "../telegram-webhook-store";
@@ -57,10 +57,11 @@ export const handleTimezoneCallback: CallbackHandler = async ({
       actionDetail: "quick_pick",
       outcome: "set",
     });
-  } catch {
+  } catch (err) {
     logTelegramEvent({
       message: "timezone write failed",
       action: "tz",
+      errorClass: classifyTelegramLogError(err),
     });
     await answerCallback({
       text: "Could not save timezone. Please try again.",

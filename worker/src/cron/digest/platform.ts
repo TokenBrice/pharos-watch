@@ -400,6 +400,9 @@ function buildDigestLlmTelemetry(
  * closed: a status we do not understand must never look delivered.
  */
 export function classifyDigestChannelStatus(status: string): DigestChannelDisposition {
+  if (/\b(?:execution_unknown|failed_permanent)\b/.test(status)) {
+    return "terminal-unsent";
+  }
   if (status === "ok" || status.startsWith("ok+")) return "delivered";
   if (status === "skipped: already-sent") return "delivered";
 
@@ -427,10 +430,6 @@ export function classifyDigestChannelStatus(status: string): DigestChannelDispos
     || status === "skipped: attempt-limit"
     || status === "skipped: quality-gate"
     || status === "skipped: editorial-style-wrapper"
-    || status === "queued: execution_unknown"
-    || status === "queued: failed_permanent"
-    || status === "outbox-execution_unknown"
-    || status === "outbox-failed_permanent"
   ) {
     return "terminal-unsent";
   }

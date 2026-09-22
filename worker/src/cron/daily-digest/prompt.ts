@@ -8,6 +8,7 @@ import { formatCurrency } from "@shared/lib/format";
 import { computeLeadStreak } from "@shared/lib/digest-lead-policy";
 import { UNCORROBORATED_TVL_DROP_RATIO } from "@shared/lib/digest-liquidity-admission";
 import { round1 } from "@shared/lib/math";
+import { activeDepegEditorialCandidateId } from "./editorial-candidates";
 import { classifyRegime } from "./prompt/regime";
 import {
   formatDigestUsdPrice,
@@ -477,7 +478,7 @@ function pushOngoingStoryLines(
   if (!recentLeadSignalIds || recentLeadSignalIds.length === 0) return;
   const streakEntries: string[] = [];
   for (const depeg of data.topDepegs) {
-    const candidateId = `depeg:${depeg.stablecoinId ?? depeg.symbol}:active`;
+    const candidateId = activeDepegEditorialCandidateId(depeg);
     const streak = computeLeadStreak(recentLeadSignalIds, candidateId);
     if (streak.inWindow === 0) continue;
     const severityBps = depeg.currentBps ?? depeg.bps;

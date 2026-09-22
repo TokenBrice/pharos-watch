@@ -12,6 +12,7 @@ import {
   appendTelegramOperationStatements,
   type TelegramOperationBatchOptions,
 } from "../../lib/telegram/operation-batch";
+import { pendingDisambiguationClearStatement } from "./disambiguation";
 
 export interface SubscribeIntentInput {
   chatId: string;
@@ -149,9 +150,7 @@ function prepareUnsubscribeIntentStatements(
     preparePreferenceGenerationBump(db, input.chatId),
   ];
   if (input.clearPending) {
-    statements.push(
-      db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(input.chatId),
-    );
+    statements.push(pendingDisambiguationClearStatement(db, input.chatId));
   }
   return statements;
 }

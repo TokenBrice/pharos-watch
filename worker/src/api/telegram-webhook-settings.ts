@@ -18,6 +18,10 @@ import { answerCallbackQuery, editMessage } from "../lib/telegram";
 import { recordTelegramUsageEvent } from "../lib/telegram/usage-analytics";
 import { resolveTicker } from "../lib/telegram/alerts";
 import {
+  isKnownStablecoinId,
+  isSubscribableStablecoinId,
+} from "./webhook-callbacks/_shared";
+import {
   buildNotFoundMessage,
   buildStatusAmbiguousMessage,
 } from "./telegram-webhook-messages";
@@ -40,8 +44,6 @@ import {
 } from "./telegram-webhook-settings-mutations";
 import {
   isGlobalAlertType,
-  isKnownStablecoinId,
-  isSubscribableStablecoinId,
   subscriberHasGlobal,
 } from "./telegram-webhook-settings-shared";
 import { sendAuditedTelegramReply } from "./telegram-webhook-replies";

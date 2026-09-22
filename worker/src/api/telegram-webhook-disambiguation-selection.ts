@@ -4,7 +4,7 @@ import type {
   TelegramPendingWriteContext,
 } from "./telegram-webhook-effect-fence";
 import type { TelegramWebhookOperationIntent } from "./telegram-webhook-store";
-import { dedupeCoins } from "./telegram-webhook-parsing";
+import { dedupeCoins } from "../lib/telegram/coin-dedupe";
 import type { ParsedSetCommand, PendingAction } from "./telegram-webhook-shared";
 import { makeActionRunner } from "./webhook-commands/action-runner";
 

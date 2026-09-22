@@ -110,6 +110,67 @@ export const ACTIVE_PRESET_FLAGS_SQL = activeFlagConditions(
   PRESET_ALERT_TYPES.map((alertType) => TELEGRAM_ALERT_PERSISTENCE[alertType].subscriptionColumn),
 );
 
+export interface ActiveFamilyAggregateQueryOptions {
+  /** Extra status-only projections such as total row counts or preference totals. */
+  additionalColumns?: readonly string[];
+  /** Include one `MAX` projection per family for family-specific totals. */
+  includeFamilyFlags?: boolean;
+  /** Filter inactive rows first, allowing the active count to use `COUNT(*)`. */
+  activeRowsOnly?: boolean;
+}
+
+function buildActiveFamilyAggregateQuery(
+  table: string,
+  alertTypes: readonly TelegramAlertType[],
+  activeFlagsSql: string,
+  activeCountAlias: string,
+  options: ActiveFamilyAggregateQueryOptions,
+): string {
+  const activeCount = options.activeRowsOnly
+    ? `COUNT(*) AS ${activeCountAlias}`
+    : `SUM(CASE WHEN ${activeFlagsSql} THEN 1 ELSE 0 END) AS ${activeCountAlias}`;
+  const columns = [
+    ...(options.additionalColumns ?? []),
+    activeCount,
+    ...(options.includeFamilyFlags
+      ? alertTypes.map((alertType) => {
+          const column = TELEGRAM_ALERT_PERSISTENCE[alertType].subscriptionColumn;
+          return `MAX(CASE WHEN ${column} = 1 THEN 1 ELSE 0 END) AS ${alertType}_enabled`;
+        })
+      : []),
+  ];
+  return `SELECT chat_id,
+        ${columns.join(",\n        ")}
+   FROM ${table}${options.activeRowsOnly ? `\n  WHERE ${activeFlagsSql}` : ""}
+  GROUP BY chat_id`;
+}
+
+/** Canonical per-chat active direct-subscription aggregate. */
+export function buildActiveSubscriptionAggregateSql(
+  options: ActiveFamilyAggregateQueryOptions = {},
+): string {
+  return buildActiveFamilyAggregateQuery(
+    "telegram_subscriptions",
+    TELEGRAM_ALERT_TYPES,
+    ACTIVE_SUBSCRIPTION_FLAGS_SQL,
+    "active_sub_count",
+    options,
+  );
+}
+
+/** Canonical per-chat active preset-subscription aggregate. */
+export function buildActivePresetAggregateSql(
+  options: ActiveFamilyAggregateQueryOptions = {},
+): string {
+  return buildActiveFamilyAggregateQuery(
+    "telegram_preset_subscriptions",
+    PRESET_ALERT_TYPES,
+    ACTIVE_PRESET_FLAGS_SQL,
+    "active_preset_count",
+    options,
+  );
+}
+
 /** Requires subscriber alias s and active-count aliases sub and preset. */
 export const ACTIVE_WATCHER_SQL_CONDITION = `${
   activeFlagConditions(

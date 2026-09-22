@@ -448,6 +448,8 @@ Global all-stablecoin follows use the matching `telegram_subscribers` flags:
 - `global_alert_launch`
 - `global_alert_freeze`
 
+The active-subscription and preset-count queries used by dispatch, status, and pulse telemetry derive these family predicates from the shared Telegram alert-family registry. Adding a family therefore updates the query builders as one contract rather than requiring independent SQL projections.
+
 Filtering is subscription-aware:
 
 - DEWS compares `newBand` against the coin's `dews_min_band`

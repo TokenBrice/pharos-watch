@@ -1,5 +1,5 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { logTelegramEvent } from "../../lib/telegram/log";
+import { classifyTelegramLogError, logTelegramEvent } from "../../lib/telegram/log";
 import { recordTelegramUsageEvent } from "../../lib/telegram/usage-analytics";
 import { loadSubscriptionRowsByChat, removeSubscriptions } from "../telegram-webhook-store";
 import { isGroupChatType } from "../telegram-webhook-auth";
@@ -100,6 +100,7 @@ async function handleManageUnsub(
     logTelegramEvent({
       message: "unsub callback write failed",
       action: "unsub",
+      errorClass: classifyTelegramLogError(err),
     });
     await recordTelegramUsageEvent(db, {
       eventType: "unsubscribe",

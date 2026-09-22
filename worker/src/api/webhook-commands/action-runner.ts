@@ -40,7 +40,7 @@ import {
   type SubscribeActionPayload,
   type UnsubscribeActionPayload,
 } from "../telegram-webhook-shared";
-import { dedupeCoins } from "../telegram-webhook-parsing";
+import { dedupeCoins } from "../../lib/telegram/coin-dedupe";
 import { sendAuditedTelegramReply } from "../telegram-webhook-replies";
 import {
   BULK_CONFIRM_COIN_THRESHOLD,

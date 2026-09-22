@@ -4,6 +4,7 @@ import {
   WORKER_TRACKED_META_BY_ID,
 } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { classifyDepegClosure } from "@shared/lib/depeg-closure";
+import { crossesTelegramDepegWorseningStep } from "@shared/lib/telegram-delivery-policy";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import { throwIfAborted } from "../lib/abort";
 import { buildInClause, chunkArray } from "../lib/db";
@@ -200,9 +201,8 @@ export async function buildTelegramDispatchEvents(
       if (!previous || previous.direction !== row.direction || currentDeviationBps <= previous.deviationBps) {
         return [];
       }
-      const crossesSupportedStep = DEPEG_STEP_VALUES.some(
-        (step) =>
-          Math.floor(previous.deviationBps / step) < Math.floor(currentDeviationBps / step),
+      const crossesSupportedStep = DEPEG_STEP_VALUES.some((step) =>
+        crossesTelegramDepegWorseningStep(previous.deviationBps, currentDeviationBps, step)
       );
       if (!crossesSupportedStep) return [];
       return [{
@@ -308,12 +308,11 @@ export async function buildTelegramDispatchEvents(
   const launchIds = launchPromoted.map((e) => e.stablecoinId);
   const reserveIds = reservePromoted.map((e) => e.stablecoinId);
 
-  const contextLines = await buildAlertContextLines(db, [...dewsIds, ...depegIds, ...safetyIds]);
+  const contextLines = await buildAlertContextLines(db, [...dewsIds, ...depegIds]);
   const safetyChanges = addSafetyReasonLines(
     rawSafetyChanges,
     currentSafetySnapshot,
     safeSafetySnapshot,
-    contextLines,
   );
   for (const event of [
     ...dewsChanges,

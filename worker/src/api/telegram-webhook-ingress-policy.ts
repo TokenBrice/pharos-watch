@@ -37,6 +37,10 @@ const COMMAND_COOLDOWNS_SEC: Record<string, number> = {
 };
 const CANONICAL_COMMAND_KEYS: Record<string, string> = { "/market": "/brief" };
 
+export function isRecapMutationArgs(args: string): boolean {
+  return /^(?:on|off|time\s+(?:[0-9]|1[0-9]|2[0-3]))$/i.test(args.trim());
+}
+
 type FloodScope = "actor" | "chat";
 
 export function logTelegramWebhookWarning(message: string, action: string, err: unknown): void {

@@ -135,7 +135,6 @@ function encodeWeeklyDigestMeta(
 function shouldRetryChannel(delivered: boolean | undefined, status: string | undefined): boolean {
   if (delivered === true) return false;
   if (!status) return true;
-  if (/\b(?:execution_unknown|failed_permanent)\b/.test(status)) return false;
   return classifyDigestChannelStatus(status) === "retryable";
 }
 
@@ -396,7 +395,7 @@ export async function generateWeeklyRecap(
   const dailyRows = await db
     .prepare(
       `WITH latest_daily AS (
-         SELECT generated_at, digest_title, digest_text, digest_extended, input_data,
+         SELECT generated_at, digest_title, digest_text, input_data,
                 ROW_NUMBER() OVER (
                   PARTITION BY strftime('%Y-%m-%d', generated_at, 'unixepoch')
                   ORDER BY generated_at DESC
@@ -404,7 +403,7 @@ export async function generateWeeklyRecap(
          FROM daily_digest
          WHERE generated_at >= ? AND (${NON_WEEKLY_DIGEST_SQL_FILTER}) AND (${NON_BLOCKED_DIGEST_SQL_FILTER})
        )
-       SELECT generated_at, digest_title, digest_text, digest_extended, input_data
+       SELECT generated_at, digest_title, digest_text, input_data
        FROM latest_daily
        WHERE row_rank = 1
        ORDER BY generated_at ASC

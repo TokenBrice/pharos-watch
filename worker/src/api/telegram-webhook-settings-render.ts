@@ -13,7 +13,11 @@ import {
   TELEGRAM_ALERT_FAMILY_SHORT_LABELS,
   TELEGRAM_ALERT_PERSISTENCE,
 } from "@shared/lib/telegram-alert-families";
-import { MANAGE_PAGE_SIZE, formatQuietHours } from "./telegram-webhook-messages";
+import {
+  formatQuietHours,
+  paginateChatRows,
+  sortSubscriptions,
+} from "./telegram-webhook-messages";
 import { unixNow } from "./telegram-webhook-store";
 import type { SubscriberRow, SubscriptionRow } from "./telegram-webhook-shared";
 import {
@@ -151,18 +155,16 @@ export function buildCoinKeyboard(
 
 function buildCoinOpenRows(subscriptions: SubscriptionRow[], page: number): SettingsButton[][] {
   if (subscriptions.length === 0) return [];
-  const sorted = [...subscriptions].sort((a, b) => coinLabel(a.stablecoin_id).localeCompare(coinLabel(b.stablecoin_id)));
-  const totalPages = Math.max(1, Math.ceil(sorted.length / MANAGE_PAGE_SIZE));
-  const clampedPage = Math.max(0, Math.min(page, totalPages - 1));
-  const start = clampedPage * MANAGE_PAGE_SIZE;
-  const rows: SettingsButton[][] = sorted.slice(start, start + MANAGE_PAGE_SIZE).map((row) => [
+  const sorted = sortSubscriptions(subscriptions);
+  const pageRows = paginateChatRows(sorted, page);
+  const rows: SettingsButton[][] = pageRows.rows.map((row) => [
     { text: `${coinLabel(row.stablecoin_id)} settings`, callback_data: `settings:o:${row.stablecoin_id}` },
   ]);
 
-  if (totalPages > 1) {
+  if (pageRows.totalPages > 1) {
     const nav: SettingsButton[] = [];
-    if (clampedPage > 0) nav.push({ text: "Prev", callback_data: `settings:home:${clampedPage - 1}` });
-    if (clampedPage < totalPages - 1) nav.push({ text: "Next", callback_data: `settings:home:${clampedPage + 1}` });
+    if (pageRows.page > 0) nav.push({ text: "Prev", callback_data: `settings:home:${pageRows.page - 1}` });
+    if (pageRows.page < pageRows.totalPages - 1) nav.push({ text: "Next", callback_data: `settings:home:${pageRows.page + 1}` });
     if (nav.length > 0) rows.push(nav);
   }
   return rows;

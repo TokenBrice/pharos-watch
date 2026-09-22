@@ -1,4 +1,5 @@
 import type { TelegramAlertType } from "@shared/types/status";
+import { mergeTelegramDepegWorseningSteps } from "@shared/lib/telegram-delivery-policy";
 import {
   SafetyScorePublicationIdentitySchema,
   type SafetyScorePublicationIdentity,
@@ -367,17 +368,13 @@ export async function loadOldestIncompleteTelegramAlertSourceEvent(
 }
 
 function mergePresetSubscriber(existing: SubscriberRow, additional: SubscriberRow): SubscriberRow {
-  const existingStep = existing.depeg_worsening_bps_step;
-  const additionalStep = additional.depeg_worsening_bps_step;
   return {
     ...existing,
     last_active_at: Math.max(existing.last_active_at, additional.last_active_at),
-    depeg_worsening_bps_step:
-      existingStep == null
-        ? additionalStep
-        : additionalStep == null
-          ? existingStep
-          : Math.min(existingStep, additionalStep),
+    depeg_worsening_bps_step: mergeTelegramDepegWorseningSteps(
+      existing.depeg_worsening_bps_step,
+      additional.depeg_worsening_bps_step,
+    ),
   };
 }
 
@@ -895,6 +892,20 @@ export async function markTelegramAlertSourceEventPlanned(
     .run();
 }
 
+function buildBaselineAdvanceStatements(
+  db: D1Database,
+  baseline: TelegramAlertSnapshots,
+  nowSec: number,
+): D1PreparedStatement[] {
+  const cacheStatement = db.prepare(
+    `INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+  );
+  return buildTelegramSnapshotCacheEntries(baseline).map((entry) =>
+    cacheStatement.bind(entry.key, entry.value, nowSec)
+  );
+}
+
 export async function commitTelegramAlertSourceBaseline(
   db: D1Database,
   source: TelegramAlertSourceEvent,
@@ -902,13 +913,7 @@ export async function commitTelegramAlertSourceBaseline(
   signal?: AbortSignal,
 ): Promise<void> {
   if (source.status === "baseline_committed") return;
-  const cacheStatement = db.prepare(
-    `INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
-     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
-  );
-  const statements = buildTelegramSnapshotCacheEntries(source.baseline).map((entry) =>
-    cacheStatement.bind(entry.key, entry.value, nowSec),
-  );
+  const statements = buildBaselineAdvanceStatements(db, source.baseline, nowSec);
   statements.push(
     db
       .prepare(
@@ -934,13 +939,7 @@ export async function expireTelegramAlertSourceEvent(
   nowSec: number,
   signal?: AbortSignal,
 ): Promise<void> {
-  const cacheStatement = db.prepare(
-    `INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
-     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
-  );
-  const statements = buildTelegramSnapshotCacheEntries(source.baseline).map((entry) =>
-    cacheStatement.bind(entry.key, entry.value, nowSec),
-  );
+  const statements = buildBaselineAdvanceStatements(db, source.baseline, nowSec);
   statements.push(
     db
       .prepare(

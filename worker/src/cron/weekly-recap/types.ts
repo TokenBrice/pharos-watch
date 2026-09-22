@@ -113,6 +113,5 @@ export interface DailyDigestSourceRow {
   generated_at: number;
   digest_title: string | null;
   digest_text: string;
-  digest_extended?: string | null;
   input_data: string;
 }

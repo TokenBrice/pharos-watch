@@ -5,6 +5,7 @@ import { RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { pluralizeCount } from "@shared/lib/telegram-metrics";
+import { TELEGRAM_BOT_URL } from "@shared/lib/telegram-bot-registration";
 import type { TelegramAlertType, TelegramMiniAppOperation, TelegramMiniAppState } from "./types";
 import { useTelegramMainButton } from "./use-telegram-main-button";
 import { useTelegramBridge } from "./use-telegram-bridge";
@@ -26,9 +27,8 @@ import {
 import { relaunchPayloadForView, useMiniAppView, type ViewKey } from "./use-mini-app-view";
 
 const SESSION_ENDPOINT = API_PATHS.telegramMiniAppSession();
-const BOT_URL = "https://t.me/PharosWatchBot";
 /** Bot DM deep link that triggers the synthetic `/sample` alert (the Mini App cannot call the Bot API). */
-const BOT_DM_SAMPLE_LINK = "https://t.me/PharosWatchBot?start=sample";
+const BOT_DM_SAMPLE_LINK = `${TELEGRAM_BOT_URL}?start=sample`;
 /** When the tab returns to visible after being hidden longer than this, refetch the session to avoid stale state. */
 const VISIBILITY_REFRESH_THRESHOLD_MS = 10 * 60 * 1000;
 
@@ -230,7 +230,7 @@ export function PharosWatchBotMiniAppClient() {
     const payload = relaunchPayloadForView(view, coinInsightTarget, visibleCoinTarget);
     return () => {
       webApp.HapticFeedback?.impactOccurred?.("light");
-      webApp.openTelegramLink?.(`${BOT_URL}?startapp=${payload}`);
+      webApp.openTelegramLink?.(`${TELEGRAM_BOT_URL}?startapp=${payload}`);
     };
   }, [coinInsightTarget, view, visibleCoinTarget, webApp]);
 

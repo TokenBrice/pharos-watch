@@ -115,7 +115,7 @@ function stripRepeatedTitlePrefix(title: string, text: string): string {
   return text.slice(title.length).replace(/^[\s\n:,\-.]+/, "").trim();
 }
 
-const ALLOWED_LEADS = new Set([
+export const ALLOWED_LEADS = [
   // PSI family
   "psi-streak",
   "psi-regime",
@@ -150,7 +150,7 @@ const ALLOWED_LEADS = new Set([
   "issuer-concentration",
   "regime-divergence",
   "other",
-]);
+] as const;
 
 export const ALLOWED_TONES = [
   "bemused",
@@ -167,14 +167,13 @@ export const ALLOWED_TONES = [
   "other",
 ] as const;
 
-const ALLOWED_TONE_SET = new Set<string>(ALLOWED_TONES);
 
 
-function normalizeToken(value: unknown, allowed: ReadonlySet<string>): string | undefined {
+function normalizeToken(value: unknown, allowed: readonly string[]): string | undefined {
   if (typeof value !== "string") return undefined;
   const normalized = value.trim().toLowerCase().replace(/[_\s]+/g, "-");
   if (!normalized) return undefined;
-  return allowed.has(normalized) ? normalized : "other";
+  return allowed.includes(normalized) ? normalized : "other";
 }
 
 
@@ -192,7 +191,7 @@ function normalizeParsedMeta(meta: Record<string, unknown> | null): Record<strin
   if (leadSignalId) out.leadSignalId = leadSignalId;
   const lead = normalizeToken(meta.lead, ALLOWED_LEADS);
   if (lead) out.lead = lead;
-  const tone = normalizeToken(meta.tone, ALLOWED_TONE_SET);
+  const tone = normalizeToken(meta.tone, ALLOWED_TONES);
   if (tone) out.tone = tone;
   const coins = normalizeCoins(meta.coins);
   if (coins) out.coins = coins;

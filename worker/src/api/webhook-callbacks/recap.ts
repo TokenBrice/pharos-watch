@@ -2,6 +2,7 @@ import {
   TELEGRAM_RECAP_PUBLIC_ROLLOUT_POLICY,
   isTelegramRecapAvailableToChat,
 } from "@shared/lib/telegram-recap-rollout";
+import { classifyTelegramLogError, logTelegramEvent } from "../../lib/telegram/log";
 import { recordTelegramUsageEvent } from "../../lib/telegram/usage-analytics";
 import {
   applyRecapPreference,
@@ -96,7 +97,12 @@ export const handleRecapCallback: CallbackHandler = async ({
       if (operationStatements) confirmAtomicMutationApplied?.();
       else await markMutationApplied();
     }
-  } catch {
+  } catch (err) {
+    logTelegramEvent({
+      message: "recap callback write failed",
+      action: "recap",
+      errorClass: classifyTelegramLogError(err),
+    });
     await answerCallback({ text: "Could not save the daily recap. Please try again." });
     return;
   }

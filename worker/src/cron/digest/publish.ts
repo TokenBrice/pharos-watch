@@ -170,9 +170,6 @@ function resolveDisposition(
   channel: { creds: unknown | null; required?: boolean } | null,
 ): DigestChannelDisposition {
   const classified = classifyDigestChannelStatus(status);
-  if (/\b(?:execution_unknown|failed_permanent)\b/.test(status)) {
-    return "terminal-unsent";
-  }
   return classified === "not-configured" && channel?.required && !channel.creds
     ? "terminal-unsent"
     : classified;

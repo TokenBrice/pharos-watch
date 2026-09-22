@@ -147,6 +147,23 @@ function parseIntent(
       markupPolicy: markup.value,
     };
   }
+  if (row.source_type === "admin_replay") {
+    const markup = parsePendingMarkupPolicy(row.markup_policy_json);
+    if (markup.kind !== "ok") {
+      return {
+        kind: "defer",
+        row,
+        notBeforeAt: nowSec + INVALID_PROVENANCE_RETRY_SEC,
+        reason: markup.kind === "invalid" ? markup.reason : "admin_replay_markup_policy_missing",
+      };
+    }
+    return {
+      kind: "eligible",
+      row,
+      validatedPreferenceGeneration: null,
+      markupPolicy: markup.value,
+    };
+  }
   if (row.source_type !== "risk_alert") {
     return {
       kind: "eligible",
