@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ExitRouteObservationCoverageSchema } from "@shared/types/market";
 import {
-  DEX_MEASURED_CAPACITY_NOTIONALS_USD,
   DEX_MEASURED_ADAPTER_PROFILE_IDS,
-  DEX_MEASURED_MAX_COST_BPS,
   type DexMeasuredExecutionPublicProfile,
 } from "@shared/types/measured-execution";
 import {
@@ -17,7 +15,19 @@ import {
 import { makeMeasuredProfile, withMeasuredObservationHistory } from "@shared/test-utils/measured-execution.test-support";
 import { validateMeasuredExecutionProfile } from "../p4-exit-route-measured-profile-validation";
 
-import { retainedMeasuredPool, twoTokenReserveModel } from "./p4-exit-route-capacity.test-support";
+import {
+  aerodromeMeasuredProfile,
+  curveDusdStableSwapNgMeasuredProfile,
+  curveMeasuredProfile,
+  curveStableSwapMeasuredProfiles,
+  curveStableSwapNgAmmModel,
+  curveStableSwapNgMeasuredProfile,
+  curveThreePoolAmmModel,
+  retainedMeasuredPool,
+  retainedPool,
+  twoTokenReserveModel,
+  uniswapV4MeasuredProfile,
+} from "./p4-exit-route-capacity.test-support";
 
 /** Structural mutation target for deployment-proof drift tests (fields the mutators write). */
 interface MutableMeasuredProfile {
@@ -49,372 +59,6 @@ interface MutableMeasuredProfile {
 }
 
 describe("P4 DEX exit route observations", () => {
-  function aerodromeMeasuredProfile(quotedAt: number): DexMeasuredExecutionPublicProfile {
-    const profile = makeMeasuredProfile(quotedAt);
-    if (!profile.poolProvenance) throw new Error("Measured fixture must retain pool provenance");
-    return makeMeasuredProfile(quotedAt, {
-      adapterProfileId: "aerodrome-slipstream-quoter-v2",
-      protocol: "aerodrome-slipstream",
-      chain: "base",
-      poolId: `base:${profile.poolProvenance.resolvedPoolAddress}`,
-    });
-  }
-
-  function uniswapV4MeasuredProfile(quotedAt: number): DexMeasuredExecutionPublicProfile {
-    const { poolProvenance: _poolProvenance, ...profile } = makeMeasuredProfile(quotedAt);
-    const poolId = `0x${"12".repeat(32)}`;
-    return {
-      ...profile,
-      adapterProfileId: "uniswap-v4-hook-free-quoter-v1",
-      protocol: "uniswap-v4",
-      poolId: `ethereum:${poolId}`,
-      tickSpacing: 1,
-      hookAddress: "0x0000000000000000000000000000000000000000",
-      executionEndpoint: {
-        address: "0x52f0e24d1c21c8a0cb1e5a5dd6198556bd9e1203",
-        codeHash: "0x06de58fa119c5deaa7a667fb92d3894e25d9160e62fb82c8d86d43b47eefe441",
-      },
-      uniswapV4PoolProvenance: {
-        blockNumber: profile.blockNumber,
-        poolId,
-        poolManagerAddress: "0x000000000004444c5dc75cb358380d2e3de08a90",
-        poolManagerCodeHash: "0x785f1014552b7ce7d5fb7d0c970ca60edee94fd00425d7ca21609acac7ce1293",
-        stateViewAddress: "0x7ffe42c4a5deea5b0fec41c94c136cf115597227",
-        stateViewCodeHash: "0xd7947778589cf4aac9a092a4451292a2056380941635ab7006d3c691d8dfd878",
-        sqrtPriceX96: "79228162514264337593543950336",
-        tick: 0,
-        protocolFee: 0,
-        lpFee: 100,
-        liquidity: "1000000",
-      },
-    };
-  }
-
-  function curveMeasuredProfile(quotedAt: number): DexMeasuredExecutionPublicProfile {
-    const poolAddress = "0x313698667d7fdd6789a9bc70821309ff891e729a" as const;
-    const crvUsd = "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e" as const;
-    const wbtc = "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599" as const;
-    return makeMeasuredProfile(quotedAt, {
-      adapterProfileId: "curve-cryptoswap-get-dy-v1",
-      protocol: "curve",
-      poolId: `ethereum:${poolAddress}`,
-      poolTokenAddresses: [crvUsd, wbtc],
-      tokenIn: {
-        address: crvUsd,
-        symbol: "crvUSD",
-        decimals: 18,
-        referencePriceUsd: 1,
-        trackedAssetId: "crvusd-curve",
-      },
-      tokenOut: {
-        address: wbtc,
-        symbol: "WBTC",
-        decimals: 8,
-        referencePriceUsd: 65_000,
-      },
-      feePips: undefined,
-      executionEndpoint: {
-        address: poolAddress,
-        codeHash: `0x${"ab".repeat(32)}`,
-      },
-      poolProvenance: {
-        factoryAddress: "0x5555555555555555555555555555555555555555",
-        factoryCodeHash: `0x${"cd".repeat(32)}`,
-        resolvedPoolAddress: poolAddress,
-      },
-    });
-  }
-
-  function curveStableSwapMeasuredProfiles(
-    quotedAt: number,
-    successfulCycles: number,
-  ): DexMeasuredExecutionPublicProfile[] {
-    const poolAddress = "0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7" as const;
-    const tokens = [
-      {
-        address: "0x6b175474e89094c44da98b954eedeac495271d0f" as const,
-        symbol: "DAI",
-        decimals: 18,
-        trackedAssetId: "dai-makerdao",
-      },
-      {
-        address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" as const,
-        symbol: "USDC",
-        decimals: 6,
-        trackedAssetId: "usdc-circle",
-      },
-      {
-        address: "0xdac17f958d2ee523a2206206994597c13d831ec7" as const,
-        symbol: "USDT",
-        decimals: 6,
-        trackedAssetId: "usdt-tether",
-      },
-    ];
-    return tokens.slice(0, 2).map((outputToken, outputIndex) => {
-      const capacityCurve = DEX_MEASURED_CAPACITY_NOTIONALS_USD.map((requestedNotionalUsd) => ({
-        requestedNotionalUsd,
-        maxCostBps: DEX_MEASURED_MAX_COST_BPS,
-        executableUsd: requestedNotionalUsd,
-        completionRatio: 1,
-        executionCostBps: outputIndex === 0 ? 55 : 46,
-      }));
-      return makeMeasuredProfile(quotedAt, {
-        targetId: `curve-3pool-usdt-${outputToken.symbol.toLowerCase()}`,
-        targetGenerationId: "curve-target-generation",
-        quoteGenerationId: "curve-quote-generation",
-        adapterProfileId: DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwap,
-        protocol: "curve",
-        poolId: `ethereum:${poolAddress}`,
-        poolTokenAddresses: tokens.map((token) => token.address),
-        tokenIn: {
-          address: tokens[2]!.address,
-          symbol: tokens[2]!.symbol,
-          decimals: tokens[2]!.decimals,
-          referencePriceUsd: 0.9992518040104241,
-          trackedAssetId: tokens[2]!.trackedAssetId,
-        },
-        tokenOut: {
-          address: outputToken.address,
-          symbol: outputToken.symbol,
-          decimals: outputToken.decimals,
-          referencePriceUsd: 1,
-          trackedAssetId: outputToken.trackedAssetId,
-        },
-        feePips: undefined,
-        retainedTvlUsdAtQuote: 160_047_206,
-        retainedPoolPriceUsdAtQuote: 0.9992518040104241,
-        blockNumber: 25_601_051,
-        executionEndpoint: {
-          address: poolAddress,
-          codeHash: "0x954a1e212c557c85043985931498ffa3e2fcbe7dfe9cd61513f36eb47d6f4dfc",
-        },
-        poolProvenance: undefined,
-        registryProvenance: {
-          registryAddress: "0x90e00ace148ca3b23ac1bc8c240c2a7dd9c2d7f5",
-          registryCodeHash: "0x13d7cfcf1cef4bf310fa544567a427771c9be2c16bbf2c6be845d3d5f4cc5f22",
-          registeredPoolAddress: poolAddress,
-          lpTokenAddress: "0x6c3f90f043a72fa612cbac8115ee7e52bde6e490",
-          poolTokenAddresses: tokens.map((token) => token.address),
-        },
-        capacityCurve,
-        observationHistory: {
-          completeProducerCycleCount: successfulCycles,
-          successfulObservationCount: successfulCycles,
-          consecutiveSuccessCount: successfulCycles,
-          observationWindowStartedAt: quotedAt - 3_000,
-          observationWindowEndedAt: quotedAt + 10,
-          latestOperationalFailureAt: null,
-          conservativeStatistic: "pointwise-minimum" as const,
-          conservativeCapacityCurve: capacityCurve,
-        },
-      });
-    });
-  }
-
-  function curveThreePoolAmmModel(balances = [28_348_143, 28_486_107, 103_289_773]) {
-    return {
-      source: "curve" as const,
-      invariant: "stableswap" as const,
-      trackedTokenIndex: 2,
-      feeRate: 0.001,
-      amplification: 4_000 / 9,
-      tokens: [
-        {
-          address: "0x6b175474e89094c44da98b954eedeac495271d0f",
-          symbol: "DAI",
-          decimals: 18,
-          balance: balances[0]!,
-          referencePriceUsd: 1,
-          referencePriceSource: "source-token-usd" as const,
-          trackedAssetId: "dai-makerdao",
-        },
-        {
-          address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-          symbol: "USDC",
-          decimals: 6,
-          balance: balances[1]!,
-          referencePriceUsd: 1,
-          referencePriceSource: "source-token-usd" as const,
-          trackedAssetId: "usdc-circle",
-        },
-        {
-          address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
-          symbol: "USDT",
-          decimals: 6,
-          balance: balances[2]!,
-          referencePriceUsd: 0.9992518040104241,
-          referencePriceSource: "source-token-usd" as const,
-          trackedAssetId: "usdt-tether",
-        },
-      ],
-    };
-  }
-
-  function curveStableSwapNgMeasuredProfile(
-    quotedAt: number,
-    completeCycles: number,
-    successfulCycles = completeCycles,
-  ): DexMeasuredExecutionPublicProfile {
-    const poolAddress = "0xc061caa073f3d95f80f8e5428d32d2d76f5e1622" as const;
-    const usdg = "0xe343167631d89b6ffc58b88d6b7fb0228795491d" as const;
-    const usdc = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" as const;
-    const capacityCurve = [
-      { requestedNotionalUsd: 100_000, executableUsd: 100_000, executionCostBps: 1.0633 },
-      { requestedNotionalUsd: 1_000_000, executableUsd: 1_000_000, executionCostBps: 1.362 },
-      { requestedNotionalUsd: 10_000_000, executableUsd: 10_000_000, executionCostBps: 64.2536 },
-      { requestedNotionalUsd: 25_000_000, executableUsd: 10_325_100 },
-    ].map((point) => ({
-      ...point,
-      maxCostBps: DEX_MEASURED_MAX_COST_BPS,
-      completionRatio: point.executableUsd / point.requestedNotionalUsd,
-    }));
-    return makeMeasuredProfile(quotedAt, {
-      targetId: "curve-stableswap-ng-usdg-usdc",
-      targetGenerationId: "curve-ng-target-generation",
-      quoteGenerationId: "curve-ng-quote-generation",
-      adapterProfileId: DEX_MEASURED_ADAPTER_PROFILE_IDS.curveStableSwapNg,
-      protocol: "curve",
-      poolId: `ethereum:${poolAddress}`,
-      poolTokenAddresses: [usdg, usdc],
-      tokenIn: {
-        address: usdg,
-        symbol: "USDG",
-        decimals: 6,
-        referencePriceUsd: 1,
-        trackedAssetId: "usdg-paxos",
-      },
-      tokenOut: {
-        address: usdc,
-        symbol: "USDC",
-        decimals: 6,
-        referencePriceUsd: 1,
-        trackedAssetId: "usdc-circle",
-      },
-      feePips: undefined,
-      retainedTvlUsdAtQuote: 20_501_133,
-      retainedPoolPriceUsdAtQuote: 1,
-      blockNumber: 25_601_359,
-      executionEndpoint: {
-        address: poolAddress,
-        codeHash: "0x1c7b77a94bb42408ab6d5cfd76223f0c794db9b119bb6035db91d8b09da65512",
-      },
-      poolProvenance: undefined,
-      stableSwapNgFactoryProvenance: {
-        blockNumber: 25_601_359,
-        blockHash: `0x${"12".repeat(32)}`,
-        blockCommitment: "finalized",
-        factoryAddress: "0x6a8cbed756804b16e05e741edabd5cb544ae21bf",
-        factoryCodeHash: "0xb78c1b32cd364260f3fa497ccc7e98c73cdc26bdae2d3635e763ee8b59a1d6fd",
-        poolIndex: 563,
-        registeredPoolAddress: poolAddress,
-        poolTokenAddresses: [usdg, usdc],
-      },
-      capacityCurve,
-      observationHistory: {
-        completeProducerCycleCount: completeCycles,
-        successfulObservationCount: successfulCycles,
-        consecutiveSuccessCount: successfulCycles,
-        observationWindowStartedAt: quotedAt - 3_000,
-        observationWindowEndedAt: quotedAt + 10,
-        latestOperationalFailureAt: null,
-        conservativeStatistic: "pointwise-minimum",
-        conservativeCapacityCurve: capacityCurve,
-      },
-    });
-  }
-
-  function curveDusdStableSwapNgMeasuredProfile(
-    quotedAt: number,
-    completeCycles: number,
-    successfulCycles = completeCycles,
-  ): DexMeasuredExecutionPublicProfile {
-    const profile = curveStableSwapNgMeasuredProfile(quotedAt, completeCycles, successfulCycles);
-    const poolAddress = "0x32e616f4f17d43f9a5cd9be0e294727187064cb3" as const;
-    const usdc = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" as const;
-    const dusd = "0x1e33e98af620f1d563fcd3cfd3c75ace841204ef" as const;
-    const capacityCurve = [
-      { requestedNotionalUsd: 100_000, executableUsd: 24_900 },
-      { requestedNotionalUsd: 1_000_000, executableUsd: 24_900 },
-      { requestedNotionalUsd: 10_000_000, executableUsd: 24_900 },
-      { requestedNotionalUsd: 25_000_000, executableUsd: 24_900 },
-    ].map((point) => ({
-      ...point,
-      maxCostBps: DEX_MEASURED_MAX_COST_BPS,
-      completionRatio: point.executableUsd / point.requestedNotionalUsd,
-    }));
-    return {
-      ...profile,
-      targetId: "curve-stableswap-ng-dusd-usdc",
-      poolId: `ethereum:${poolAddress}`,
-      poolTokenAddresses: [usdc, dusd],
-      tokenIn: {
-        address: dusd,
-        symbol: "DUSD",
-        decimals: 18,
-        referencePriceUsd: 1.0331154651675625,
-        trackedAssetId: "dusd-dialectic",
-      },
-      tokenOut: {
-        address: usdc,
-        symbol: "USDC",
-        decimals: 6,
-        referencePriceUsd: 1,
-        trackedAssetId: "usdc-circle",
-      },
-      retainedTvlUsdAtQuote: 27_477.27,
-      retainedPoolPriceUsdAtQuote: 1.0331154651675625,
-      blockNumber: 25_638_735,
-      executionEndpoint: {
-        address: poolAddress,
-        codeHash: "0x1fb319d2b11164fe6584bf44ed640436ce07baa68c65e5b3b2338aa4ad8b6ac7",
-      },
-      stableSwapNgFactoryProvenance: {
-        blockNumber: 25_638_735,
-        blockHash: `0x${"34".repeat(32)}`,
-        blockCommitment: "finalized",
-        factoryAddress: "0x6a8cbed756804b16e05e741edabd5cb544ae21bf",
-        factoryCodeHash: "0xb78c1b32cd364260f3fa497ccc7e98c73cdc26bdae2d3635e763ee8b59a1d6fd",
-        poolIndex: 580,
-        registeredPoolAddress: poolAddress,
-        poolTokenAddresses: [usdc, dusd],
-      },
-      capacityCurve,
-      observationHistory: {
-        ...profile.observationHistory!,
-        conservativeCapacityCurve: capacityCurve,
-      },
-    };
-  }
-
-  function curveStableSwapNgAmmModel() {
-    return {
-      source: "curve" as const,
-      invariant: "stableswap" as const,
-      trackedTokenIndex: 0,
-      feeRate: 0.001,
-      amplification: 1_500,
-      tokens: [
-        {
-          address: "0xe343167631d89b6ffc58b88d6b7fb0228795491d",
-          symbol: "USDG",
-          decimals: 6,
-          balance: 10_297_747.249493,
-          referencePriceUsd: 1,
-          referencePriceSource: "source-token-usd" as const,
-          trackedAssetId: "usdg-paxos",
-        },
-        {
-          address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-          symbol: "USDC",
-          decimals: 6,
-          balance: 10_203_386.233391,
-          referencePriceUsd: 1,
-          referencePriceSource: "source-token-usd" as const,
-          trackedAssetId: "usdc-circle",
-        },
-      ],
-    };
-  }
 
   it("falls back Solana and Tron pools to shaped evidence outside the strict denominator", () => {
     // Liquidity Score v6 Phase 3: the native measured lanes are removed, so
@@ -428,46 +72,13 @@ describe("P4 DEX exit route observations", () => {
       stablecoinId: "usdc-circle",
       observedAt,
       retainedPools: [
-        {
-          poolId: physicalPoolId,
-          project: "uniswap-v3",
-          chain: "ethereum",
-          tvlUsd: 2_000_000,
-          symbol: "USDC-USDT",
-          poolType: "uniswap-v3",
-          source: "dl",
-          extra: {
-            measuredExecution: makeMeasuredProfile(observedAt - 60),
-            measuredExecutionPhysicalPoolId: physicalPoolId,
-          },
-        },
-        {
-          poolId: "solana:Czfq3xZZDmsdGdUyrNLtRhGc47cXcZtLG4crryfu44zE",
-          project: "orca",
-          chain: "Solana",
-          tvlUsd: 2_000_000,
-          symbol: "USDC / USDT",
-          poolType: "orca-whirlpool",
-          source: "direct_api",
-        },
-        {
-          poolId: "solana:raydium-clmm-pool",
-          project: "raydium",
-          chain: "Solana",
-          tvlUsd: 1_500_000,
-          symbol: "USDC / USDT",
-          poolType: "raydium-clmm",
-          source: "direct_api",
-        },
-        {
-          poolId: "tron:TFGDbUyP8xez44C76fin3bn3Ss6jugoUwJ",
-          project: "sunswap-v2",
-          chain: "Tron",
-          tvlUsd: 2_000_000,
-          symbol: "USDT / WTRX",
-          poolType: "sunswap-v2",
-          source: "dl",
-        },
+        retainedPool(physicalPoolId, "uniswap-v3", "ethereum", 2_000_000, "USDC-USDT", "uniswap-v3", "dl", {
+          measuredExecution: makeMeasuredProfile(observedAt - 60),
+          measuredExecutionPhysicalPoolId: physicalPoolId,
+        }),
+        retainedPool("solana:Czfq3xZZDmsdGdUyrNLtRhGc47cXcZtLG4crryfu44zE", "orca", "Solana", 2_000_000, "USDC / USDT", "orca-whirlpool", "direct_api"),
+        retainedPool("solana:raydium-clmm-pool", "raydium", "Solana", 1_500_000, "USDC / USDT", "raydium-clmm", "direct_api"),
+        retainedPool("tron:TFGDbUyP8xez44C76fin3bn3Ss6jugoUwJ", "sunswap-v2", "Tron", 2_000_000, "USDT / WTRX", "sunswap-v2", "dl"),
       ],
     });
 
@@ -706,19 +317,10 @@ describe("P4 DEX exit route observations", () => {
     const result = buildP4DexExitRouteObservations({
       stablecoinId: "usdc-circle",
       observedAt,
-      retainedPools: [{
-        poolId: "defillama-yields-uuid",
-        project: "uniswap-v4",
-        chain: "ethereum",
-        tvlUsd: 2_000_000,
-        symbol: "USDC-USDT",
-        poolType: "uniswap-v4",
-        source: "dl",
-        extra: {
-          measuredExecution: profile,
-          measuredExecutionPhysicalPoolId: profile.poolId,
-        },
-      }],
+      retainedPools: [retainedPool("defillama-yields-uuid", "uniswap-v4", "ethereum", 2_000_000, "USDC-USDT", "uniswap-v4", "dl", {
+        measuredExecution: profile,
+        measuredExecutionPhysicalPoolId: profile.poolId,
+      })],
     });
 
     expect(result.coverage).toMatchObject({
@@ -765,19 +367,10 @@ describe("P4 DEX exit route observations", () => {
     const result = buildP4DexExitRouteObservations({
       stablecoinId: "usdc-circle",
       observedAt,
-      retainedPools: [{
-        poolId: "defillama-yields-uuid",
-        project: "velodrome",
-        chain: "base",
-        tvlUsd: 2_000_000,
-        symbol: "USDC-USDT",
-        poolType: "aerodrome-slipstream",
-        source: "dl",
-        extra: {
-          measuredExecution: profile,
-          measuredExecutionPhysicalPoolId: profile.poolId,
-        },
-      }],
+      retainedPools: [retainedPool("defillama-yields-uuid", "velodrome", "base", 2_000_000, "USDC-USDT", "aerodrome-slipstream", "dl", {
+        measuredExecution: profile,
+        measuredExecutionPhysicalPoolId: profile.poolId,
+      })],
     });
 
     expect(result.observations).toEqual([]);
@@ -793,23 +386,14 @@ describe("P4 DEX exit route observations", () => {
       buildP4DexExitRouteObservations({
         stablecoinId: "usdt-tether",
         observedAt,
-        retainedPools: [{
-          poolId: "25171c4c-1877-449a-9f88-45a9f153ee31",
-          project: "curve",
-          chain: "ethereum",
-          tvlUsd: 160_047_206,
-          symbol: "DAI-USDC-USDT",
-          poolType: "curve-stableswap-high-a",
-          source: "dl",
-          extra: {
-            ammExecutionModel: curveThreePoolAmmModel(),
-            measuredExecutions: curveStableSwapMeasuredProfiles(
-              observedAt - quoteAgeSec,
-              successfulCycles,
-            ),
-            measuredExecutionPhysicalPoolId: physicalPoolId,
-          },
-        }],
+        retainedPools: [retainedPool("25171c4c-1877-449a-9f88-45a9f153ee31", "curve", "ethereum", 160_047_206, "DAI-USDC-USDT", "curve-stableswap-high-a", "dl", {
+          ammExecutionModel: curveThreePoolAmmModel(),
+          measuredExecutions: curveStableSwapMeasuredProfiles(
+            observedAt - quoteAgeSec,
+            successfulCycles,
+          ),
+          measuredExecutionPhysicalPoolId: physicalPoolId,
+        })],
       });
 
     const immature = run(2);
@@ -849,19 +433,10 @@ describe("P4 DEX exit route observations", () => {
     const retainedMature = buildP4DexExitRouteObservations({
       stablecoinId: "usdt-tether",
       observedAt,
-      retainedPools: [{
-        poolId: physicalPoolId,
-        project: "curve",
-        chain: "ethereum",
-        tvlUsd: 160_047_206,
-        symbol: "USDT-DAI/USDC",
-        poolType: "curve-stableswap-measured-retained",
-        source: "dl",
-        extra: {
-          measuredExecutions: curveStableSwapMeasuredProfiles(observedAt - 60, 3),
-          measuredExecutionPhysicalPoolId: physicalPoolId,
-        },
-      }],
+      retainedPools: [retainedPool(physicalPoolId, "curve", "ethereum", 160_047_206, "USDT-DAI/USDC", "curve-stableswap-measured-retained", "dl", {
+        measuredExecutions: curveStableSwapMeasuredProfiles(observedAt - 60, 3),
+        measuredExecutionPhysicalPoolId: physicalPoolId,
+      })],
     });
     expect(retainedMature.observations).toHaveLength(2);
     expect(retainedMature.observations.every(
@@ -882,20 +457,11 @@ describe("P4 DEX exit route observations", () => {
     const mixed = buildP4DexExitRouteObservations({
       stablecoinId: "usdt-tether",
       observedAt,
-      retainedPools: [{
-        poolId: "25171c4c-1877-449a-9f88-45a9f153ee31",
-        project: "curve",
-        chain: "ethereum",
-        tvlUsd: 160_047_206,
-        symbol: "DAI-USDC-USDT",
-        poolType: "curve-stableswap-high-a",
-        source: "dl",
-        extra: {
-          ammExecutionModel: curveThreePoolAmmModel(),
-          measuredExecutions: mixedProfiles,
-          measuredExecutionPhysicalPoolId: physicalPoolId,
-        },
-      }],
+      retainedPools: [retainedPool("25171c4c-1877-449a-9f88-45a9f153ee31", "curve", "ethereum", 160_047_206, "DAI-USDC-USDT", "curve-stableswap-high-a", "dl", {
+        ammExecutionModel: curveThreePoolAmmModel(),
+        measuredExecutions: mixedProfiles,
+        measuredExecutionPhysicalPoolId: physicalPoolId,
+      })],
     });
     expect(mixed.observations.map((observation) => observation.output.trackedAssetIds)).toEqual([
       ["dai-makerdao"],
@@ -917,24 +483,15 @@ describe("P4 DEX exit route observations", () => {
       buildP4DexExitRouteObservations({
         stablecoinId: "usdg-paxos",
         observedAt,
-        retainedPools: [{
-          poolId: "curve-usdg-usdc-defillama-uuid",
-          project: "curve",
-          chain: "ethereum",
-          tvlUsd: 20_501_133,
-          symbol: "USDG-USDC",
-          poolType: "curve-stableswap-high-a",
-          source: "dl",
-          extra: {
-            ...(includeReserveModel ? { ammExecutionModel: curveStableSwapNgAmmModel() } : {}),
-            measuredExecution: curveStableSwapNgMeasuredProfile(
-              observedAt - 60,
-              completeCycles,
-              successfulCycles,
-            ),
-            measuredExecutionPhysicalPoolId: physicalPoolId,
-          },
-        }],
+        retainedPools: [retainedPool("curve-usdg-usdc-defillama-uuid", "curve", "ethereum", 20_501_133, "USDG-USDC", "curve-stableswap-high-a", "dl", {
+          ...(includeReserveModel ? { ammExecutionModel: curveStableSwapNgAmmModel() } : {}),
+          measuredExecution: curveStableSwapNgMeasuredProfile(
+            observedAt - 60,
+            completeCycles,
+            successfulCycles,
+          ),
+          measuredExecutionPhysicalPoolId: physicalPoolId,
+        })],
       });
 
     const incomplete = run(2);
@@ -987,21 +544,12 @@ describe("P4 DEX exit route observations", () => {
     const result = buildP4DexExitRouteObservations({
       stablecoinId: "usdg-paxos",
       observedAt,
-      retainedPools: [{
-        poolId: "curve-usdg-usdc-defillama-uuid",
-        project: "curve",
-        chain: "ethereum",
-        tvlUsd: 20_501_133,
-        symbol: "USDG-USDC",
-        poolType: "curve-stableswap-high-a",
-        source: "dl",
-        extra: {
-          ammExecutionModel: curveStableSwapNgAmmModel(),
-          measuredExecution: profile,
-          measuredExecutionPhysicalPoolId:
-            "ethereum:0xc061caa073f3d95f80f8e5428d32d2d76f5e1622",
-        },
-      }],
+      retainedPools: [retainedPool("curve-usdg-usdc-defillama-uuid", "curve", "ethereum", 20_501_133, "USDG-USDC", "curve-stableswap-high-a", "dl", {
+        ammExecutionModel: curveStableSwapNgAmmModel(),
+        measuredExecution: profile,
+        measuredExecutionPhysicalPoolId:
+          "ethereum:0xc061caa073f3d95f80f8e5428d32d2d76f5e1622",
+      })],
     });
 
     expect(result.observations).toEqual([]);
@@ -1014,19 +562,10 @@ describe("P4 DEX exit route observations", () => {
     const result = buildP4DexExitRouteObservations({
       stablecoinId: "dusd-dialectic",
       observedAt,
-      retainedPools: [{
-        poolId: "curve-dusd-usdc-defillama-uuid",
-        project: "curve",
-        chain: "ethereum",
-        tvlUsd: 27_477.27,
-        symbol: "DUSD-USDC",
-        poolType: "curve-stableswap-high-a",
-        source: "dl",
-        extra: {
-          measuredExecution: curveDusdStableSwapNgMeasuredProfile(observedAt - 60, 3),
-          measuredExecutionPhysicalPoolId: physicalPoolId,
-        },
-      }],
+      retainedPools: [retainedPool("curve-dusd-usdc-defillama-uuid", "curve", "ethereum", 27_477.27, "DUSD-USDC", "curve-stableswap-high-a", "dl", {
+        measuredExecution: curveDusdStableSwapNgMeasuredProfile(observedAt - 60, 3),
+        measuredExecutionPhysicalPoolId: physicalPoolId,
+      })],
     });
 
     expect(result.coverage).toMatchObject({
@@ -1052,20 +591,11 @@ describe("P4 DEX exit route observations", () => {
   it("rejects a partial or provenance-drifted 3pool packet instead of masking it with reserves", () => {
     const observedAt = 1_784_877_551;
     const profiles = curveStableSwapMeasuredProfiles(observedAt - 60, 3);
-    const pool = {
-      poolId: "25171c4c-1877-449a-9f88-45a9f153ee31",
-      project: "curve",
-      chain: "ethereum",
-      tvlUsd: 160_047_206,
-      symbol: "DAI-USDC-USDT",
-      poolType: "curve-stableswap-high-a",
-      source: "dl" as const,
-      extra: {
-        ammExecutionModel: curveThreePoolAmmModel(),
-        measuredExecutions: [profiles[0]!],
-        measuredExecutionPhysicalPoolId: "ethereum:0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7",
-      },
-    };
+    const pool = retainedPool("25171c4c-1877-449a-9f88-45a9f153ee31", "curve", "ethereum", 160_047_206, "DAI-USDC-USDT", "curve-stableswap-high-a", "dl" as const, {
+      ammExecutionModel: curveThreePoolAmmModel(),
+      measuredExecutions: [profiles[0]!],
+      measuredExecutionPhysicalPoolId: "ethereum:0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7",
+    });
     const partial = buildP4DexExitRouteObservations({
       stablecoinId: "usdt-tether",
       observedAt,
@@ -1095,7 +625,7 @@ describe("P4 DEX exit route observations", () => {
         ...pool,
         extra: {
           ammExecutionModel: curveThreePoolAmmModel(),
-          measuredExecutionPhysicalPoolId: pool.extra.measuredExecutionPhysicalPoolId,
+          measuredExecutionPhysicalPoolId: pool.extra!.measuredExecutionPhysicalPoolId,
         },
       }],
     });
@@ -1130,20 +660,11 @@ describe("P4 DEX exit route observations", () => {
         stablecoinId: "usdc-circle",
         observedAt,
         retainedPools: [
-          {
-            poolId: "defillama-yields-uuid",
-            project: "uniswap-v3",
-            chain: "ethereum",
-            tvlUsd: 2_000_000,
-            symbol: "USDC-USDT",
-            poolType: "uniswap-v3",
-            source: "dl",
-            extra: {
-              measuredExecution: testCase.profile,
-              measuredExecutionPhysicalPoolId: "ethereum:0x3333333333333333333333333333333333333333",
-              ...(testCase.extra as object),
-            },
-          },
+          retainedPool("defillama-yields-uuid", "uniswap-v3", "ethereum", 2_000_000, "USDC-USDT", "uniswap-v3", "dl", {
+            measuredExecution: testCase.profile,
+            measuredExecutionPhysicalPoolId: "ethereum:0x3333333333333333333333333333333333333333",
+            ...(testCase.extra as object),
+          }),
         ],
       });
 
@@ -1521,19 +1042,10 @@ describe("P4 DEX exit route observations", () => {
       stablecoinId: "usdc-circle",
       observedAt: 1_720_000_000,
       retainedPools: [
-        {
-          poolId: "orderbook:coinbase:usdc-circle",
-          project: "coinbase",
-          chain: "orderbook",
-          tvlUsd: 4_000_000,
-          symbol: "USDC / ORDERBOOK-USD",
-          poolType: "orderbook",
-          source: "cg_tickers",
-          extra: {
-            orderbookDepthUsd: 750_000,
-            measurement: { synthetic: true },
-          },
-        },
+        retainedPool("orderbook:coinbase:usdc-circle", "coinbase", "orderbook", 4_000_000, "USDC / ORDERBOOK-USD", "orderbook", "cg_tickers", {
+          orderbookDepthUsd: 750_000,
+          measurement: { synthetic: true },
+        }),
       ],
     });
 
@@ -1563,65 +1075,47 @@ describe("P4 DEX exit route observations", () => {
       stablecoinId: "usdc-circle",
       observedAt: 1_720_000_000,
       retainedPools: [
-        {
-          poolId: "ethereum:0x0000000000000000000000000000000000000001",
-          project: "balancer",
-          chain: "ethereum",
-          tvlUsd: 3_000_000,
-          symbol: "USDC / USDT / DAI",
-          poolType: "balancer-weighted",
-          source: "direct_api",
-          extra: {
-            ammExecutionModel: {
-              source: "balancer",
-              invariant: "weighted-constant-mean",
-              trackedTokenIndex: 0,
-              feeRate: 0.001,
-              tokens: [
-                {
-                  address: "0x0000000000000000000000000000000000000011",
-                  symbol: "USDC",
-                  decimals: 6,
-                  balance: 1_000_000,
-                  referencePriceUsd: 1,
-                  referencePriceSource: "tracked-market",
-                  trackedAssetId: "usdc-circle",
-                  weight: 0.34,
-                },
-                {
-                  address: "0x0000000000000000000000000000000000000012",
-                  symbol: "USDT",
-                  decimals: 6,
-                  balance: 1_000_000,
-                  referencePriceUsd: 1,
-                  referencePriceSource: "tracked-market",
-                  trackedAssetId: "usdt-tether",
-                  weight: 0.33,
-                },
-                {
-                  address: "0x0000000000000000000000000000000000000013",
-                  symbol: "DAI",
-                  decimals: 18,
-                  balance: 1_000_000,
-                  referencePriceUsd: 1,
-                  referencePriceSource: "tracked-market",
-                  trackedAssetId: "dai-makerdao",
-                  weight: 0.33,
-                },
-              ],
-            },
+        retainedPool("ethereum:0x0000000000000000000000000000000000000001", "balancer", "ethereum", 3_000_000, "USDC / USDT / DAI", "balancer-weighted", "direct_api", {
+          ammExecutionModel: {
+            source: "balancer",
+            invariant: "weighted-constant-mean",
+            trackedTokenIndex: 0,
+            feeRate: 0.001,
+            tokens: [
+              {
+                address: "0x0000000000000000000000000000000000000011",
+                symbol: "USDC",
+                decimals: 6,
+                balance: 1_000_000,
+                referencePriceUsd: 1,
+                referencePriceSource: "tracked-market",
+                trackedAssetId: "usdc-circle",
+                weight: 0.34,
+              },
+              {
+                address: "0x0000000000000000000000000000000000000012",
+                symbol: "USDT",
+                decimals: 6,
+                balance: 1_000_000,
+                referencePriceUsd: 1,
+                referencePriceSource: "tracked-market",
+                trackedAssetId: "usdt-tether",
+                weight: 0.33,
+              },
+              {
+                address: "0x0000000000000000000000000000000000000013",
+                symbol: "DAI",
+                decimals: 18,
+                balance: 1_000_000,
+                referencePriceUsd: 1,
+                referencePriceSource: "tracked-market",
+                trackedAssetId: "dai-makerdao",
+                weight: 0.33,
+              },
+            ],
           },
-        },
-        {
-          poolId: "orderbook:coinbase:usdc-circle",
-          project: "coinbase",
-          chain: "orderbook",
-          tvlUsd: 1_000_000,
-          symbol: "USDC / USD",
-          poolType: "orderbook",
-          source: "cg_tickers",
-          extra: { orderbookDepthUsd: 500_000 },
-        },
+        }),
+        retainedPool("orderbook:coinbase:usdc-circle", "coinbase", "orderbook", 1_000_000, "USDC / USD", "orderbook", "cg_tickers", { orderbookDepthUsd: 500_000 }),
       ],
     });
 
@@ -1640,44 +1134,35 @@ describe("P4 DEX exit route observations", () => {
       amplification: number,
       balances: [number, number],
       outputReferencePriceSource: "tracked-market" | "peg-reference" | "source-token-usd" = "tracked-market",
-    ) => ({
-      poolId: `ethereum:0x00000000000000000000000000000000000000a${amplification}`,
-      project: "curve",
-      chain: "ethereum",
-      tvlUsd: balances[0] + balances[1],
-      symbol: "USDC / USDT",
-      poolType: "curve-stableswap",
-      source: "direct_api" as const,
-      extra: {
-        ammExecutionModel: {
-          source: "curve" as const,
-          invariant: "stableswap" as const,
-          trackedTokenIndex: 0,
-          feeRate: 0.0004,
-          amplification,
-          tokens: [
-            {
-              address: "0x0000000000000000000000000000000000000021",
-              symbol: "USDC",
-              decimals: 6,
-              balance: balances[0],
-              referencePriceUsd: 1,
-              referencePriceSource: "tracked-market" as const,
-              trackedAssetId: "usdc-circle",
-            },
-            {
-              address: "0x0000000000000000000000000000000000000022",
-              symbol: "USDT",
-              decimals: 6,
-              balance: balances[1],
-              referencePriceUsd: 1,
-              referencePriceSource: outputReferencePriceSource,
-              trackedAssetId: "usdt-tether",
-            },
-          ],
-        },
+    ) => (retainedPool(`ethereum:0x00000000000000000000000000000000000000a${amplification}`, "curve", "ethereum", balances[0] + balances[1], "USDC / USDT", "curve-stableswap", "direct_api" as const, {
+      ammExecutionModel: {
+        source: "curve" as const,
+        invariant: "stableswap" as const,
+        trackedTokenIndex: 0,
+        feeRate: 0.0004,
+        amplification,
+        tokens: [
+          {
+            address: "0x0000000000000000000000000000000000000021",
+            symbol: "USDC",
+            decimals: 6,
+            balance: balances[0],
+            referencePriceUsd: 1,
+            referencePriceSource: "tracked-market" as const,
+            trackedAssetId: "usdc-circle",
+          },
+          {
+            address: "0x0000000000000000000000000000000000000022",
+            symbol: "USDT",
+            decimals: 6,
+            balance: balances[1],
+            referencePriceUsd: 1,
+            referencePriceSource: outputReferencePriceSource,
+            trackedAssetId: "usdt-tether",
+          },
+        ],
       },
-    });
+    }));
 
     const result = buildP4DexExitRouteObservations({
       stablecoinId: "usdc-circle",
@@ -1756,43 +1241,34 @@ describe("P4 DEX exit route observations", () => {
       stablecoinId: "frxusd-frax",
       observedAt: 1_785_178_691,
       retainedPools: [
-        {
-          poolId: "ethereum:0xf292eb6c5dcb693eaaf392d0562a01c3710e5978",
-          project: "curve",
-          chain: "ethereum",
-          tvlUsd: 11_842_920,
-          symbol: "sfrxUSD / frxUSD",
-          poolType: "curve-stableswap",
-          source: "dl",
-          extra: {
-            ammExecutionModel: {
-              source: "curve",
-              invariant: "stableswap",
-              trackedTokenIndex: 1,
-              amplification: 5_000,
-              feeRate: 0.0001,
-              tokens: [
-                {
-                  address: "0xcf62f905562626cfcdd2261162a51fd02fc9c5b6",
-                  symbol: "sfrxUSD",
-                  decimals: 18,
-                  balance: 7_494_946.662615514,
-                  referencePriceUsd: 1.0001571973088703,
-                  referencePriceSource: "source-token-usd",
-                },
-                {
-                  address: "0xcacd6fd266af91b8aed52accc382b4e165586e29",
-                  symbol: "frxUSD",
-                  decimals: 18,
-                  balance: 4_346_120.891108167,
-                  referencePriceUsd: 1.000155068994295,
-                  referencePriceSource: "source-token-usd",
-                  trackedAssetId: "frxusd-frax",
-                },
-              ],
-            },
+        retainedPool("ethereum:0xf292eb6c5dcb693eaaf392d0562a01c3710e5978", "curve", "ethereum", 11_842_920, "sfrxUSD / frxUSD", "curve-stableswap", "dl", {
+          ammExecutionModel: {
+            source: "curve",
+            invariant: "stableswap",
+            trackedTokenIndex: 1,
+            amplification: 5_000,
+            feeRate: 0.0001,
+            tokens: [
+              {
+                address: "0xcf62f905562626cfcdd2261162a51fd02fc9c5b6",
+                symbol: "sfrxUSD",
+                decimals: 18,
+                balance: 7_494_946.662615514,
+                referencePriceUsd: 1.0001571973088703,
+                referencePriceSource: "source-token-usd",
+              },
+              {
+                address: "0xcacd6fd266af91b8aed52accc382b4e165586e29",
+                symbol: "frxUSD",
+                decimals: 18,
+                balance: 4_346_120.891108167,
+                referencePriceUsd: 1.000155068994295,
+                referencePriceSource: "source-token-usd",
+                trackedAssetId: "frxusd-frax",
+              },
+            ],
           },
-        },
+        }),
       ],
     });
 
@@ -1814,20 +1290,11 @@ describe("P4 DEX exit route observations", () => {
       stablecoinId: "usdt-tether",
       observedAt: 1_753_343_891,
       retainedPools: [
-        {
-          poolId: "ethereum:0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7",
-          project: "curve",
-          chain: "ethereum",
-          tvlUsd: 160_047_206,
-          symbol: "DAI / USDC / USDT",
-          poolType: "curve-stableswap",
-          source: "dl",
-          extra: {
-            ammExecutionModel: curveThreePoolAmmModel([
-              28_348_143.889771747, 28_486_107.228271, 103_289_773.79734,
-            ]),
-          },
-        },
+        retainedPool("ethereum:0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7", "curve", "ethereum", 160_047_206, "DAI / USDC / USDT", "curve-stableswap", "dl", {
+          ammExecutionModel: curveThreePoolAmmModel([
+            28_348_143.889771747, 28_486_107.228271, 103_289_773.79734,
+          ]),
+        }),
       ],
     });
 
@@ -1847,43 +1314,34 @@ describe("P4 DEX exit route observations", () => {
   });
 
   it("scores Balancer stableswap models and rejects other stableswap sources", () => {
-    const balancerStableswapPool = (source: "balancer" | "raydium") => ({
-      poolId: "ethereum:0x00000000000000000000000000000000000000b1",
-      project: "balancer",
-      chain: "ethereum",
-      tvlUsd: 10_000_000,
-      symbol: "USDC / wUSDX",
-      poolType: "balancer-stable",
-      source: "direct_api" as const,
-      extra: {
-        ammExecutionModel: {
-          source,
-          invariant: "stableswap" as const,
-          trackedTokenIndex: 0,
-          feeRate: 0.0001,
-          amplification: 125,
-          tokens: [
-            {
-              address: "0x0000000000000000000000000000000000000031",
-              symbol: "USDC",
-              decimals: 6,
-              balance: 5_000_000,
-              referencePriceUsd: 1,
-              referencePriceSource: "source-token-usd" as const,
-              trackedAssetId: "usdc-circle",
-            },
-            {
-              address: "0x0000000000000000000000000000000000000032",
-              symbol: "wUSDX",
-              decimals: 18,
-              balance: 5_100_000,
-              referencePriceUsd: 0.999,
-              referencePriceSource: "source-token-usd" as const,
-            },
-          ],
-        },
+    const balancerStableswapPool = (source: "balancer" | "raydium") => (retainedPool("ethereum:0x00000000000000000000000000000000000000b1", "balancer", "ethereum", 10_000_000, "USDC / wUSDX", "balancer-stable", "direct_api" as const, {
+      ammExecutionModel: {
+        source,
+        invariant: "stableswap" as const,
+        trackedTokenIndex: 0,
+        feeRate: 0.0001,
+        amplification: 125,
+        tokens: [
+          {
+            address: "0x0000000000000000000000000000000000000031",
+            symbol: "USDC",
+            decimals: 6,
+            balance: 5_000_000,
+            referencePriceUsd: 1,
+            referencePriceSource: "source-token-usd" as const,
+            trackedAssetId: "usdc-circle",
+          },
+          {
+            address: "0x0000000000000000000000000000000000000032",
+            symbol: "wUSDX",
+            decimals: 18,
+            balance: 5_100_000,
+            referencePriceUsd: 0.999,
+            referencePriceSource: "source-token-usd" as const,
+          },
+        ],
       },
-    });
+    }));
 
     const result = buildP4DexExitRouteObservations({
       stablecoinId: "usdc-circle",
@@ -1930,24 +1388,15 @@ describe("P4 DEX exit route observations", () => {
       stablecoinId: "usdc-circle",
       observedAt: 1_720_000_000,
       retainedPools: [
-        {
-          poolId: "ethereum:0xcurve",
-          project: "curve",
-          chain: "Ethereum",
-          tvlUsd: 20_000_000,
-          symbol: "USDC / USDT / DAI",
-          poolType: "curve-stableswap",
-          source: "dl",
-          extra: {
-            amplificationCoefficient: 2_000,
-            balanceDetails: [
-              { symbol: "USDC", balancePct: 40, isTracked: true },
-              { symbol: "USDT", balancePct: 30, isTracked: true },
-              { symbol: "DAI", balancePct: 30, isTracked: true },
-            ],
-            measurement: { synthetic: false },
-          },
-        },
+        retainedPool("ethereum:0xcurve", "curve", "Ethereum", 20_000_000, "USDC / USDT / DAI", "curve-stableswap", "dl", {
+          amplificationCoefficient: 2_000,
+          balanceDetails: [
+            { symbol: "USDC", balancePct: 40, isTracked: true },
+            { symbol: "USDT", balancePct: 30, isTracked: true },
+            { symbol: "DAI", balancePct: 30, isTracked: true },
+          ],
+          measurement: { synthetic: false },
+        }),
       ],
     });
 
@@ -1968,60 +1417,17 @@ describe("P4 DEX exit route observations", () => {
       stablecoinId: "usdc-circle",
       observedAt: 1_720_000_000,
       retainedPools: [
-        {
-          poolId: "ethereum:0xcrypto",
-          project: "curve",
-          chain: "ethereum",
-          tvlUsd: 5_000_000,
-          symbol: "USDC / WETH",
-          poolType: "curve-cryptoswap",
-          source: "dl",
-          extra: {
-            executionCapabilityGate: { family: "curve-cryptoswap", reason: "unsupported-invariant" },
-          },
-        },
-        {
-          poolId: "ethereum:0xrate",
-          project: "curve",
-          chain: "ethereum",
-          tvlUsd: 8_000_000,
-          symbol: "USDC / sUSDe",
-          poolType: "curve-stableswap",
-          source: "dl",
-          extra: {
-            executionCapabilityGate: { family: "curve-stableswap", reason: "rate-bearing-inputs" },
-          },
-        },
-        {
-          poolId: "ethereum:0xpaused",
-          project: "balancer",
-          chain: "ethereum",
-          tvlUsd: 3_000_000,
-          symbol: "USDC / USDT",
-          poolType: "balancer-stable",
-          source: "direct_api",
-          extra: {
-            executionCapabilityGate: { family: "balancer-amm", reason: "paused-or-swap-disabled" },
-          },
-        },
-        {
-          poolId: "ethereum:0xgeneric-dl",
-          project: "uniswap-v3",
-          chain: "ethereum",
-          tvlUsd: 7_000_000,
-          symbol: "USDC / USDT",
-          poolType: "uniswap-v3-5bp",
-          source: "dl",
-        },
-        {
-          poolId: "ethereum:0xgeneric-direct",
-          project: "aerodrome",
-          chain: "base",
-          tvlUsd: 4_000_000,
-          symbol: "USDC / USDbC",
-          poolType: "aerodrome-stable",
-          source: "direct_api",
-        },
+        retainedPool("ethereum:0xcrypto", "curve", "ethereum", 5_000_000, "USDC / WETH", "curve-cryptoswap", "dl", {
+          executionCapabilityGate: { family: "curve-cryptoswap", reason: "unsupported-invariant" },
+        }),
+        retainedPool("ethereum:0xrate", "curve", "ethereum", 8_000_000, "USDC / sUSDe", "curve-stableswap", "dl", {
+          executionCapabilityGate: { family: "curve-stableswap", reason: "rate-bearing-inputs" },
+        }),
+        retainedPool("ethereum:0xpaused", "balancer", "ethereum", 3_000_000, "USDC / USDT", "balancer-stable", "direct_api", {
+          executionCapabilityGate: { family: "balancer-amm", reason: "paused-or-swap-disabled" },
+        }),
+        retainedPool("ethereum:0xgeneric-dl", "uniswap-v3", "ethereum", 7_000_000, "USDC / USDT", "uniswap-v3-5bp", "dl"),
+        retainedPool("ethereum:0xgeneric-direct", "aerodrome", "base", 4_000_000, "USDC / USDbC", "aerodrome-stable", "direct_api"),
       ],
     });
 
@@ -2047,20 +1453,11 @@ describe("P4 DEX exit route observations", () => {
       stablecoinId: "usdc-circle",
       observedAt: 1_720_000_000,
       retainedPools: [
-        {
-          poolId: "solana:raydium-pool",
-          project: "raydium",
-          chain: "solana",
-          tvlUsd: 10_000_000,
-          symbol: "USDC / USDT",
-          poolType: "raydium-amm",
-          source: "direct_api",
-          extra: {
-            ammExecutionModel: twoTokenReserveModel(
-              { balance: 5_000_000 }, { balance: 5_000_000 }, { feeRate: 0.003 },
-            ),
-          },
-        },
+        retainedPool("solana:raydium-pool", "raydium", "solana", 10_000_000, "USDC / USDT", "raydium-amm", "direct_api", {
+          ammExecutionModel: twoTokenReserveModel(
+            { balance: 5_000_000 }, { balance: 5_000_000 }, { feeRate: 0.003 },
+          ),
+        }),
       ],
     });
 
@@ -2095,42 +1492,33 @@ describe("P4 DEX exit route observations", () => {
       stablecoinId: "u-united-stables",
       observedAt: 1_720_000_000,
       retainedPools: [
-        {
-          poolId: "bsc:0x108752b2a22c731ede3edac2205c63ae553e221a",
-          project: "pancakeswap",
-          chain: "bsc",
-          tvlUsd: 2_000_000,
-          symbol: "U / WBNB",
-          poolType: "ds-amm",
-          source: "dexscreener",
-          extra: {
-            ammExecutionModel: {
-              source: "pancakeswap-v2",
-              invariant: "constant-product",
-              trackedTokenIndex: 0,
-              feeRate: 0.0025,
-              tokens: [
-                {
-                  address: "0xce24439f2d9c6a2289f741120fe202248b666666",
-                  symbol: "U",
-                  decimals: 18,
-                  balance: 1_000_000,
-                  referencePriceUsd: 1,
-                  referencePriceSource: "tracked-market",
-                  trackedAssetId: "u-united-stables",
-                },
-                {
-                  address: "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c",
-                  symbol: "WBNB",
-                  decimals: 18,
-                  balance: 2_000,
-                  referencePriceUsd: 500,
-                  referencePriceSource: "pool-implied",
-                },
-              ],
-            },
+        retainedPool("bsc:0x108752b2a22c731ede3edac2205c63ae553e221a", "pancakeswap", "bsc", 2_000_000, "U / WBNB", "ds-amm", "dexscreener", {
+          ammExecutionModel: {
+            source: "pancakeswap-v2",
+            invariant: "constant-product",
+            trackedTokenIndex: 0,
+            feeRate: 0.0025,
+            tokens: [
+              {
+                address: "0xce24439f2d9c6a2289f741120fe202248b666666",
+                symbol: "U",
+                decimals: 18,
+                balance: 1_000_000,
+                referencePriceUsd: 1,
+                referencePriceSource: "tracked-market",
+                trackedAssetId: "u-united-stables",
+              },
+              {
+                address: "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c",
+                symbol: "WBNB",
+                decimals: 18,
+                balance: 2_000,
+                referencePriceUsd: 500,
+                referencePriceSource: "pool-implied",
+              },
+            ],
           },
-        },
+        }),
       ],
     });
 
@@ -2152,42 +1540,33 @@ describe("P4 DEX exit route observations", () => {
       stablecoinId: "usdc-circle",
       observedAt: 1_720_000_000,
       retainedPools: [
-        {
-          poolId: "ethereum:0x0000000000000000000000000000000000000001",
-          project: "uniswap-v2",
-          chain: "ethereum",
-          tvlUsd: 1_500_000,
-          symbol: "USDC / TOKEN",
-          poolType: "uniswap-v2",
-          source: "dl",
-          extra: {
-            ammExecutionModel: {
-              source: "uniswap-v2",
-              invariant: "constant-product",
-              trackedTokenIndex: 0,
-              feeRate: 0.003,
-              tokens: [
-                {
-                  address: "0x0000000000000000000000000000000000000011",
-                  symbol: "USDC",
-                  decimals: 6,
-                  balance: 1_000_000,
-                  referencePriceUsd: 1,
-                  referencePriceSource: "tracked-market",
-                  trackedAssetId: "usdc-circle",
-                },
-                {
-                  address: "0x0000000000000000000000000000000000000012",
-                  symbol: "TOKEN",
-                  decimals: 18,
-                  balance: 1_000_000,
-                  referencePriceUsd: 0.5,
-                  referencePriceSource: "tracked-market",
-                },
-              ],
-            },
+        retainedPool("ethereum:0x0000000000000000000000000000000000000001", "uniswap-v2", "ethereum", 1_500_000, "USDC / TOKEN", "uniswap-v2", "dl", {
+          ammExecutionModel: {
+            source: "uniswap-v2",
+            invariant: "constant-product",
+            trackedTokenIndex: 0,
+            feeRate: 0.003,
+            tokens: [
+              {
+                address: "0x0000000000000000000000000000000000000011",
+                symbol: "USDC",
+                decimals: 6,
+                balance: 1_000_000,
+                referencePriceUsd: 1,
+                referencePriceSource: "tracked-market",
+                trackedAssetId: "usdc-circle",
+              },
+              {
+                address: "0x0000000000000000000000000000000000000012",
+                symbol: "TOKEN",
+                decimals: 18,
+                balance: 1_000_000,
+                referencePriceUsd: 0.5,
+                referencePriceSource: "tracked-market",
+              },
+            ],
           },
-        },
+        }),
       ],
     });
 
@@ -2236,45 +1615,36 @@ describe("P4 DEX exit route observations", () => {
       stablecoinId: "usdc-circle",
       observedAt: 1_720_000_000,
       retainedPools: [
-        {
-          poolId: "ethereum:0x0000000000000000000000000000000000000001",
-          project: "balancer",
-          chain: "Ethereum",
-          tvlUsd: 2_000_000,
-          symbol: "USDC / USDC",
-          poolType: "balancer-weighted",
-          source: "direct_api",
-          extra: {
-            ammExecutionModel: {
-              source: "balancer",
-              invariant: "weighted-constant-mean",
-              trackedTokenIndex: 0,
-              feeRate: 0.001,
-              tokens: [
-                {
-                  address: "0xAbCd000000000000000000000000000000000001",
-                  symbol: "USDC",
-                  decimals: 6,
-                  balance: 1_000_000,
-                  referencePriceUsd: 1,
-                  referencePriceSource: "tracked-market",
-                  trackedAssetId: "usdc-circle",
-                  weight: 0.5,
-                },
-                {
-                  address: "0xaBcD000000000000000000000000000000000001",
-                  symbol: "USDC",
-                  decimals: 6,
-                  balance: 1_000_000,
-                  referencePriceUsd: 1,
-                  referencePriceSource: "tracked-market",
-                  trackedAssetId: "usdc-circle",
-                  weight: 0.5,
-                },
-              ],
-            },
+        retainedPool("ethereum:0x0000000000000000000000000000000000000001", "balancer", "Ethereum", 2_000_000, "USDC / USDC", "balancer-weighted", "direct_api", {
+          ammExecutionModel: {
+            source: "balancer",
+            invariant: "weighted-constant-mean",
+            trackedTokenIndex: 0,
+            feeRate: 0.001,
+            tokens: [
+              {
+                address: "0xAbCd000000000000000000000000000000000001",
+                symbol: "USDC",
+                decimals: 6,
+                balance: 1_000_000,
+                referencePriceUsd: 1,
+                referencePriceSource: "tracked-market",
+                trackedAssetId: "usdc-circle",
+                weight: 0.5,
+              },
+              {
+                address: "0xaBcD000000000000000000000000000000000001",
+                symbol: "USDC",
+                decimals: 6,
+                balance: 1_000_000,
+                referencePriceUsd: 1,
+                referencePriceSource: "tracked-market",
+                trackedAssetId: "usdc-circle",
+                weight: 0.5,
+              },
+            ],
           },
-        },
+        }),
       ],
     });
 
@@ -2291,21 +1661,12 @@ describe("P4 DEX exit route observations", () => {
       stablecoinId: "usdc-circle",
       observedAt: 1_720_000_000,
       retainedPools: [
-        {
-          poolId: "solana:TrackedMismatchPool",
-          project: "raydium",
-          chain: "solana",
-          tvlUsd: 4_000_000,
-          symbol: "USDT / USDC",
-          poolType: "raydium-amm",
-          source: "direct_api",
-          extra: {
-            ammExecutionModel: twoTokenReserveModel(
-              { address: "UsdtMint", symbol: "USDT", trackedAssetId: "usdt-tether" },
-              { address: "UsdcMint", symbol: "USDC", trackedAssetId: "usdc-circle" },
-            ),
-          },
-        },
+        retainedPool("solana:TrackedMismatchPool", "raydium", "solana", 4_000_000, "USDT / USDC", "raydium-amm", "direct_api", {
+          ammExecutionModel: twoTokenReserveModel(
+            { address: "UsdtMint", symbol: "USDT", trackedAssetId: "usdt-tether" },
+            { address: "UsdcMint", symbol: "USDC", trackedAssetId: "usdc-circle" },
+          ),
+        }),
       ],
     });
 
@@ -2357,44 +1718,35 @@ describe("P4 DEX exit route observations", () => {
       stablecoinId: "usdc-circle",
       observedAt: 1_720_000_000,
       retainedPools: [
-        {
-          poolId: "ethereum:0x0000000000000000000000000000000000000001",
-          project: "balancer",
-          chain: "ethereum",
-          tvlUsd: 10_000_000,
-          symbol: "USDC / WETH",
-          poolType: "balancer-weighted",
-          source: "direct_api",
-          extra: {
-            ammExecutionModel: {
-              source: "balancer",
-              invariant: "weighted-constant-mean",
-              trackedTokenIndex: 0,
-              feeRate: 0.003,
-              tokens: [
-                {
-                  address: "0x0000000000000000000000000000000000000002",
-                  symbol: "USDC",
-                  decimals: 6,
-                  balance: 8_000_000,
-                  referencePriceUsd: 1,
-                  referencePriceSource: "source-token-usd",
-                  trackedAssetId: "usdc-circle",
-                  weight: 0.8,
-                },
-                {
-                  address: "0x0000000000000000000000000000000000000003",
-                  symbol: "WETH",
-                  decimals: 18,
-                  balance: 2_000,
-                  referencePriceUsd: 1_000,
-                  referencePriceSource: "source-token-usd",
-                  weight: 0.2,
-                },
-              ],
-            },
+        retainedPool("ethereum:0x0000000000000000000000000000000000000001", "balancer", "ethereum", 10_000_000, "USDC / WETH", "balancer-weighted", "direct_api", {
+          ammExecutionModel: {
+            source: "balancer",
+            invariant: "weighted-constant-mean",
+            trackedTokenIndex: 0,
+            feeRate: 0.003,
+            tokens: [
+              {
+                address: "0x0000000000000000000000000000000000000002",
+                symbol: "USDC",
+                decimals: 6,
+                balance: 8_000_000,
+                referencePriceUsd: 1,
+                referencePriceSource: "source-token-usd",
+                trackedAssetId: "usdc-circle",
+                weight: 0.8,
+              },
+              {
+                address: "0x0000000000000000000000000000000000000003",
+                symbol: "WETH",
+                decimals: 18,
+                balance: 2_000,
+                referencePriceUsd: 1_000,
+                referencePriceSource: "source-token-usd",
+                weight: 0.2,
+              },
+            ],
           },
-        },
+        }),
       ],
     });
 
@@ -2417,43 +1769,34 @@ describe("P4 DEX exit route observations", () => {
       stablecoinId: "usdc-circle",
       observedAt: 1_720_000_000,
       retainedPools: [
-        {
-          poolId: "ethereum:0xpool",
-          project: "balancer",
-          chain: "ethereum",
-          tvlUsd: 100_000_000,
-          symbol: "USDC / WETH",
-          poolType: "balancer-weighted",
-          source: "direct_api",
-          extra: {
-            ammExecutionModel: {
-              source: "balancer",
-              invariant: "weighted-constant-mean",
-              trackedTokenIndex: 0,
-              feeRate: 0.003,
-              tokens: [
-                {
-                  address: "0xusdc",
-                  symbol: "USDC",
-                  decimals: 6,
-                  balance: 80_000_000,
-                  referencePriceUsd: 1,
-                  referencePriceSource: "tracked-market",
-                  trackedAssetId: "usdc-circle",
-                  weight: 0.8,
-                },
-                {
-                  address: "0xweth",
-                  symbol: "WETH",
-                  decimals: 18,
-                  balance: 20_000,
-                  referencePriceUsd: 1_000,
-                  referencePriceSource: "source-token-usd",
-                },
-              ],
-            },
+        retainedPool("ethereum:0xpool", "balancer", "ethereum", 100_000_000, "USDC / WETH", "balancer-weighted", "direct_api", {
+          ammExecutionModel: {
+            source: "balancer",
+            invariant: "weighted-constant-mean",
+            trackedTokenIndex: 0,
+            feeRate: 0.003,
+            tokens: [
+              {
+                address: "0xusdc",
+                symbol: "USDC",
+                decimals: 6,
+                balance: 80_000_000,
+                referencePriceUsd: 1,
+                referencePriceSource: "tracked-market",
+                trackedAssetId: "usdc-circle",
+                weight: 0.8,
+              },
+              {
+                address: "0xweth",
+                symbol: "WETH",
+                decimals: 18,
+                balance: 20_000,
+                referencePriceUsd: 1_000,
+                referencePriceSource: "source-token-usd",
+              },
+            ],
           },
-        },
+        }),
       ],
     });
 
@@ -2490,10 +1833,10 @@ describe("P4 DEX exit route observations", () => {
     expect(validateMeasuredExecutionProfile(profile, {
       stablecoinId: "usdc-circle",
       observedAt: 1_752_560_000,
-      pool: {
-        poolId: "retained-v4", project: "uniswap-v4", chain: "ethereum", tvlUsd: 2_000_000,
-        symbol: "USDC-USDT", source: "dl", poolType: "uniswap-v4", extra: { measuredExecutionPhysicalPoolId: profile.poolId },
-      },
+      pool: retainedPool(
+        "retained-v4", "uniswap-v4", "ethereum", 2_000_000, "USDC-USDT", "uniswap-v4", "dl",
+        { measuredExecutionPhysicalPoolId: profile.poolId },
+      ),
     })).toContain("invalid-uniswap-v4-identity");
   });
 
@@ -2511,10 +1854,10 @@ describe("P4 DEX exit route observations", () => {
     const validate = (profile: DexMeasuredExecutionPublicProfile) => validateMeasuredExecutionProfile(profile, {
       stablecoinId: "usdt-tether",
       observedAt: 1_784_877_551,
-      pool: {
-        poolId: "retained-3pool", project: "curve", chain: "ethereum", tvlUsd: 160_047_206,
-        symbol: "DAI-USDC-USDT", source: "dl", poolType: "curve-stableswap-high-a", extra: { measuredExecutionPhysicalPoolId: profile.poolId },
-      },
+      pool: retainedPool(
+        "retained-3pool", "curve", "ethereum", 160_047_206, "DAI-USDC-USDT", "curve-stableswap-high-a", "dl",
+        { measuredExecutionPhysicalPoolId: profile.poolId },
+      ),
     });
     for (const profile of profiles) {
       expect(validate(profile), `${profile.tokenOut.symbol} baseline`).toEqual([]);
@@ -2544,10 +1887,10 @@ describe("P4 DEX exit route observations", () => {
     expect(validateMeasuredExecutionProfile(profile, {
       stablecoinId: "usdg-paxos",
       observedAt: 1_784_879_259,
-      pool: {
-        poolId: "retained-ng", project: "curve", chain: "ethereum", tvlUsd: 20_501_133,
-        symbol: "USDG-USDC", source: "dl", poolType: "curve-stableswap-high-a", extra: { measuredExecutionPhysicalPoolId: profile.poolId },
-      },
+      pool: retainedPool(
+        "retained-ng", "curve", "ethereum", 20_501_133, "USDG-USDC", "curve-stableswap-high-a", "dl",
+        { measuredExecutionPhysicalPoolId: profile.poolId },
+      ),
     })).toEqual(expect.arrayContaining([
       expect.stringMatching(/invalid-curve-stableswap-ng-identity|physical-pool-provenance-mismatch/),
     ]));
