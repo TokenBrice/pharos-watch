@@ -204,6 +204,26 @@ export const CRON_GROWTH_HEADROOM_POLICY = {
   },
 } as const;
 
+/**
+ * Reviewed D1 storage baseline for the cron retention budget. D1 deletes do
+ * not imply that free pages return to `database_size`; measure again after the
+ * first prune before treating deleted rows as reclaimed headroom.
+ */
+export const CRON_D1_SIZE_BUDGET = {
+  maxDatabaseSizeBytes: 10_000_000_000,
+  reviewedBaseline: {
+    observedAt: "2026-09-21",
+    databaseSizeBytes: 2_995_675_136,
+    expectedApplicationTables: 157,
+    totalUserRows: 2_979_885,
+    requestTelemetryRows: {
+      apiRequestConsumerStats: 515_916,
+      siteDataRequestStats: 194_841,
+      apiKeyRequestStats: 176_155,
+    },
+  },
+} as const;
+
 export type CronScheduleKey = keyof typeof CRON_SCHEDULE_DEFINITIONS;
 export type CronScheduleExpression = (typeof CRON_SCHEDULE_DEFINITIONS)[CronScheduleKey]["schedule"];
 
