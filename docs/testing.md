@@ -138,6 +138,7 @@ Selected specialized checks:
   dispatched against. A deletion cites either an independent closure proof or
   a stamped artifact—never a stale one. The unstamped campaign artifact is
   superseded and cannot support a deletion.
+- Secret-scan ignore ratchet: `.gitleaksignore` is an append-only ratchet of commit-pinned fingerprints — `wc -l .gitleaksignore` → 267 lines / `wc -c .gitleaksignore` → 29,149 bytes at `f56ee57ff`, down from 327 lines / 35,609 bytes at the `be1b7e5b2` review pin — so renumbering lines invalidates every fingerprint below the edit; an entry is deleted only after proving `GITLEAKS_FULL_HISTORY=1` coverage for it.
 - Architecture boundaries: `npm run check:architecture-boundaries`, also in `check:structural`, resolves executable TypeScript dependencies using the repository tsconfig (including aliases), static imports, re-exports, literal dynamic imports, CommonJS requires/import-equals, and relative template-import expansions. Erased types and comments do not create edges. Missing modules, unresolved imports, unconstrained dynamic dependencies, and escaped require loaders fail closed. Like runtime reachability, resolved npm packages are terminal public-module boundaries, not a scan of dependency internals; aliases to packages retain canonical package identities. Local dependency chains are reported on failure.
   - `reserve-network`: all nested reserve-adapter modules must reach network transport through the existing `request.ts`, `defillama.ts`, or Worker `evm-rpc.ts` gateways, never bypass them to import `fetch-retry.ts` or acquire network globals. Gateway implementation safety remains owned by provider-resilience and fetch-body-timeout checks.
   - `frontend-routes`: reusable components, hooks, and libraries cannot reach `src/app`; script-consumed case-study/mechanism content stays outside route-owned directories (index re-exports remain allowed).
@@ -499,6 +500,16 @@ rg --files src shared worker/src functions scripts | rg '(^|/)__tests__/|\.(test
 npm run test:critical-contracts
 npm run coverage:critical
 ```
+
+Tracked test volume is measured from the Git index, never from a filesystem walk: on-disk worktrees (`.worktrees/`, `agents/*/worktree/`) are gitignored and each carries a full copy of the test tree, so a walk that admits them doubles the corpus. That is what produced the 2026-09-21 review brief's erroneous "4,336 files / ~990k LOC" premise (~2× reality). Never record a test-volume number without its producing command and commit:
+
+```bash
+git ls-files '*.test.*' | wc -l
+git ls-files '*.test.*' | xargs cat | wc -l                    # includes a *.test.ts.snap artifact when one exists
+git ls-files | awk '/\.test\.[cm]?[jt]sx?$/' | xargs cat | wc -l # source test files only
+```
+
+At the review pin `be1b7e5b2` (2026-09-21) these returned 2,029 files — 2,028 source files plus one 525-line `__snapshots__/*.test.ts.snap` artifact — totaling 486,086 LOC with the artifact and 485,561 source LOC without it. At `f56ee57ff` (2026-09-22, after the Wave-5 test-lane consolidation deleted the snapshot artifact) both pipelines agree: 2,027 files / 486,824 LOC.
 
 Keep this section focused on how the suite is organized and which surfaces are gate-critical. Do not add a full per-file table; stale path tables were a recurring documentation drift source.
 
