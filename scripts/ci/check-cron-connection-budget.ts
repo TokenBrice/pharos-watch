@@ -169,7 +169,9 @@ export function evaluateCronConnectionBudget(input: {
     }
   }
 
-  const fetchCapableEntryCount = entries.filter((entry) => entry.maxConnections > 0).length;
+  const fetchCapableEntryCount = new Set(
+    entries.filter((entry) => entry.maxConnections > 0).map((entry) => entry.job),
+  ).size;
   const fetchCapableEntryLimitExceeded =
     fetchCapableEntryCount > growthPolicy.maxFetchCapableEntriesBeforeRebalance;
   const headroomFullTriggerLimitExceeded =

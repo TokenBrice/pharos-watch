@@ -3,6 +3,7 @@ import {
   CRON_JOB_DEFINITIONS,
   CRON_SCHEDULES,
   CRON_TRIGGER_SCHEDULES,
+  SHARED_SCHEDULED_JOB_IDENTITIES,
   type CronScheduleExpression,
   type CronScheduleKey,
 } from "./cron-jobs";
@@ -166,24 +167,7 @@ export const SCHEDULED_SLOT_PLANS_BY_SCHEDULE: Readonly<Record<string, Scheduled
   ),
 );
 
-/**
- * Jobs that intentionally share one logical `cron_runs.job` identity across
- * more than one scheduled runner slot. Each entry uses one lease/status row on
- * purpose; anything not listed here should have a distinct job name.
- */
-export const SHARED_SCHEDULED_JOB_IDENTITIES = {
-  "cron-sentinel": ["statusSelfCheckOffset", "halfHourlyChartsOffset", "fourHourlyReserveSync", "daily0300Utc"],
-  "daily-digest": ["digestTriggerPoll", "daily0805Utc"],
-  "weekly-recap": ["digestTriggerPoll", "daily0810Utc"],
-  "snapshot-supply": ["quarterHourly", "daily0800Utc"],
-  "sync-cl-exit-depth": ["halfHourlyMeasuredExecution", "daily0810Utc"],
-  // New this wave: the hourly yield lane carries an opportunistic supplemental
-  // catch-up and a benchmark-registry retry ahead of sync-yield-data. Both keep
-  // their canonical definition (fourHourlyYieldSupplemental / daily0800Utc) and
-  // share its lease and status row rather than duplicating a job identity.
-  "sync-yield-supplemental": ["hourlyYieldSync", "fourHourlyYieldSupplemental"],
-  "fetch-tbill-rate": ["hourlyYieldSync", "daily0800Utc"],
-} as const satisfies Record<string, readonly CronScheduleKey[]>;
+export { SHARED_SCHEDULED_JOB_IDENTITIES };
 
 export type ScheduledProducerKind = "scheduled-job" | "budget-only";
 export type ScheduledCalendarIdentity = "utc-month";

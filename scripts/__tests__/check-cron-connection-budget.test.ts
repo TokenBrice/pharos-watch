@@ -72,4 +72,39 @@ describe("check-cron-connection-budget", () => {
     ]);
     expect(report.triggerReports[0].jobs).toEqual([]);
   });
+
+  it("counts a shared job once across exact schedule budget entries", () => {
+    const report = evaluateCronConnectionBudget({
+      entries: [
+        {
+          job: "shared-job",
+          maxConnections: 1,
+          scheduleKey: "slot-a",
+          statusTracked: true,
+        },
+        {
+          job: "shared-job",
+          maxConnections: 1,
+          scheduleKey: "slot-b",
+          statusTracked: true,
+        },
+      ],
+      growthPolicy: {
+        maxFetchCapableEntriesBeforeRebalance: 1,
+        maxHeadroomFullTriggersBeforeRebalance: 0,
+      },
+      schedules: {
+        "slot-a": "1 * * * *",
+        "slot-b": "2 * * * *",
+      },
+      slotPlans: {
+        "slot-a": { jobChains: [["shared-job"]] },
+        "slot-b": { jobChains: [["shared-job"]] },
+      },
+    });
+
+    expect(report.fetchCapableEntryCount).toBe(1);
+    expect(report.fetchCapableEntryLimitExceeded).toBe(false);
+    expect(report.failed).toBe(false);
+  });
 });

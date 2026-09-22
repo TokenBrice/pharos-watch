@@ -206,6 +206,21 @@ export const CRON_GROWTH_HEADROOM_POLICY = {
 
 export type CronScheduleKey = keyof typeof CRON_SCHEDULE_DEFINITIONS;
 export type CronScheduleExpression = (typeof CRON_SCHEDULE_DEFINITIONS)[CronScheduleKey]["schedule"];
+
+/**
+ * Jobs that intentionally share one logical `cron_runs.job` identity across
+ * more than one scheduled runner slot. Each listed slot needs its own exact
+ * connection-budget entry even though status and lease identity stay shared.
+ */
+export const SHARED_SCHEDULED_JOB_IDENTITIES = {
+  "cron-sentinel": ["statusSelfCheckOffset", "halfHourlyChartsOffset", "fourHourlyReserveSync", "daily0300Utc"],
+  "daily-digest": ["digestTriggerPoll", "daily0805Utc"],
+  "weekly-recap": ["digestTriggerPoll", "daily0810Utc"],
+  "snapshot-supply": ["quarterHourly", "daily0800Utc"],
+  "sync-cl-exit-depth": ["halfHourlyMeasuredExecution", "daily0810Utc"],
+  "sync-yield-supplemental": ["hourlyYieldSync", "fourHourlyYieldSupplemental"],
+  "fetch-tbill-rate": ["hourlyYieldSync", "daily0800Utc"],
+} as const satisfies Record<string, readonly CronScheduleKey[]>;
 export type CronTriggerMode = "shared" | "isolated";
 export type CronStatusImpact = "critical" | "watch";
 export type CronFreshnessSurface = "consumer" | "none";
@@ -837,14 +852,19 @@ const CRON_CONNECTION_BUDGET_ONLY_DEFINITIONS: readonly CronConnectionBudgetDefi
 ] as const;
 
 export const CRON_CONNECTION_BUDGET_ENTRIES: readonly CronConnectionBudgetMeta[] = [
-  ...CRON_JOB_DEFINITIONS_BASE.map((definition) => ({
-    job: definition.job,
-    label: definition.label,
-    scheduleKey: definition.scheduleKey,
-    maxConnections: definition.maxConnections ?? 0,
-    connectionGroup: definition.connectionGroup,
-    statusTracked: true,
-  })),
+  ...CRON_JOB_DEFINITIONS_BASE.flatMap((definition) => {
+    const sharedScheduleKeys = (SHARED_SCHEDULED_JOB_IDENTITIES as Partial<
+      Record<string, readonly CronScheduleKey[]>
+    >)[definition.job];
+    return (sharedScheduleKeys ?? [definition.scheduleKey]).map((scheduleKey) => ({
+      job: definition.job,
+      label: definition.label,
+      scheduleKey,
+      maxConnections: definition.maxConnections ?? 0,
+      connectionGroup: definition.connectionGroup,
+      statusTracked: true,
+    }));
+  }),
   ...CRON_CONNECTION_BUDGET_ONLY_DEFINITIONS,
 ].map((definition) => ({
   ...definition,
