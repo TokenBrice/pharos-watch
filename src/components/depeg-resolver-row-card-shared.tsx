@@ -5,17 +5,13 @@ import Link from "next/link";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { formatBps, formatElapsedSeconds } from "@shared/lib/format";
+import type { DdrV2ResponseRow } from "@shared/types/depeg-resolver";
 import {
   compactLockTiming,
   formatDurationSec,
   formatUtcTimestamp,
-  getAgeSec,
-  getCurrentDeviationBps,
   getDuration,
   getLockMetadata,
-  getPeakDeviationBps,
-  type DdrCompatRow,
-  type DdrDisplayRow,
 } from "@/components/depeg-resolver-row-card-model";
 
 export function StageLabel({ children }: { children: ReactNode }) {
@@ -57,7 +53,7 @@ export function CoinLockup({
   logos,
   logoSize = 26,
 }: {
-  row: Pick<DdrDisplayRow, "stablecoinId" | "symbol" | "name">;
+  row: Pick<DdrV2ResponseRow, "stablecoinId" | "symbol" | "name">;
   logos?: Record<string, string>;
   logoSize?: number;
 }) {
@@ -77,18 +73,12 @@ export function CoinLockup({
   );
 }
 
-export function LiveFacts({ row }: { row: DdrDisplayRow }) {
-  const compat = row as DdrCompatRow;
-  const live = compat.live ?? {};
-  const ageSec = live.ageSec ?? getAgeSec(row);
-  const peakDeviationBps = live.peakDeviationBps ?? getPeakDeviationBps(row);
-  const currentDeviationBps =
-    compat.live && "currentDeviationBps" in compat.live
-      ? (compat.live.currentDeviationBps ?? null)
-      : getCurrentDeviationBps(row);
-  const status =
-    live.status ??
-    ("eventState" in live ? live.eventState : live.active === false ? "closed" : live.stale ? "stale" : "active");
+export function LiveFacts({ row }: { row: DdrV2ResponseRow }) {
+  const { live } = row;
+  const ageSec = live.ageSec;
+  const peakDeviationBps = live.peakDeviationBps;
+  const currentDeviationBps = live.currentDeviationBps;
+  const status = live.eventState;
 
   return (
     <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 font-mono text-xs tabular-nums text-muted-foreground">
@@ -118,7 +108,7 @@ export function LockMetadataStrip({
   row,
   showAnchoredDuration = false,
 }: {
-  row: DdrDisplayRow;
+  row: DdrV2ResponseRow;
   showAnchoredDuration?: boolean;
 }) {
   const metadata = getLockMetadata(row);

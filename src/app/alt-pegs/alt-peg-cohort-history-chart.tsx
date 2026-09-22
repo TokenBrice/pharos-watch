@@ -1,17 +1,14 @@
 "use client";
 
-import { useMemo } from "react";
-import { Maximize2, Minimize2 } from "lucide-react";
-import { Area, AreaChart } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useChartShell } from "@/hooks/use-chart-shell";
+import { Fragment, useCallback, useMemo } from "react";
 import { useStablecoinCharts } from "@/hooks/api-hooks";
-import { TimeRangeButtons } from "@/components/time-range-buttons";
-import { TimeRangeOption, useTimeRangeFilter } from "@/hooks/use-time-range-filter";
-import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives/axes";
+import { type TimeRangeOption } from "@/hooks/use-time-range-filter";
+import {
+  FocusedStackedAreaCard,
+  type StackedAreaSeries,
+} from "@/components/chart-primitives/focused-stacked-area-card";
+import type { ChartDataTableColumn } from "@/components/chart-primitives/data-table";
 import { computeChartYDomain } from "@/lib/chart-utils";
-import { CHART_HEIGHT } from "@/lib/chart-colors";
 import { PEG_CHART_COLORS } from "@shared/lib/classification";
 import { formatChartDate, formatCurrency } from "@shared/lib/format";
 import { PharosChartTooltip, TooltipLabel } from "@/components/pharos-chart-tooltip";
@@ -101,8 +98,6 @@ export function AltPegCohortHistoryChart({
   onRangeChange,
 }: AltPegCohortHistoryChartProps = {}) {
   const { data, isLoading } = useStablecoinCharts();
-  const { animProps, handleAnimationEnd, chartContainerRef, isChartReady, width, height } =
-    useChartShell<HTMLDivElement>();
 
   const { chartData, pegKeys, totalNonUsd, pegCount, otherLabels } = useMemo(() => {
     if (!Array.isArray(data) || data.length === 0) {
@@ -164,176 +159,99 @@ export function AltPegCohortHistoryChart({
   }, [data]);
 
   const coverageStartLabel = chartData[0] ? formatChartDate(chartData[0].ts, "long") : null;
-  const chartHeightClass = isFocused ? FOCUSED_CHART_HEIGHT : CHART_HEIGHT;
-
-  const { range, setRange, filteredData, options } = useTimeRangeFilter(chartData, "ts", RANGE_OPTIONS, {
-    initialRange,
-  });
-  const handleRangeChange = (nextRange: TimeRangeOption) => {
-    setRange(nextRange);
-    onRangeChange?.(nextRange);
-  };
-
-  const yDomain = useMemo(
+  const latestPoint = chartData[chartData.length - 1];
+  const legendKeys = latestPoint ? pegKeys.filter((key) => (latestPoint[key] ?? 0) > 0) : pegKeys;
+  const series = useMemo<StackedAreaSeries[]>(
     () =>
+      pegKeys.map((key) => ({
+        dataKey: key,
+        color: pegKeyToHex(key),
+        gradientId: `altPegGrad-${pegKeyToCode(key)}`,
+        stackId: "alt-pegs",
+        handleAnimationEnd: true,
+        legend: legendKeys.includes(key) ? (
+          <Fragment>
+            {pegKeyToLabel(key)}
+            {key === OTHER_KEY && otherLabels.length > 0 ? (
+              <span className="text-muted-foreground/70">({otherLabels.join(", ")})</span>
+            ) : null}
+          </Fragment>
+        ) : undefined,
+      })),
+    [legendKeys, otherLabels, pegKeys],
+  );
+  const tableColumns = useMemo<ChartDataTableColumn<ChartRow>[]>(
+    () => [
+      { id: "date", label: "Date", format: (row) => formatChartDate(row.ts, "short-year") },
+      ...pegKeys.map((key) => ({
+        id: key,
+        label: pegKeyToLabel(key),
+        format: (row: ChartRow) => formatCurrency(row[key] ?? 0),
+      })),
+    ],
+    [pegKeys],
+  );
+  const getYDomain = useCallback(
+    (filteredData: ChartRow[], range: TimeRangeOption) =>
       computeChartYDomain(
         filteredData.map((row) => pegKeys.reduce((sum, key) => sum + (row[key] ?? 0), 0)),
         range === "all",
       ),
-    [filteredData, pegKeys, range],
+    [pegKeys],
   );
 
-  if (isLoading) {
-    return (
-      <Card className="pharos-card-shell">
-        <CardHeader>
-          <CardTitle as="h2" className="pharos-section-title">
-            Alt-Peg Cohort Growth
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Skeleton className={`${CHART_HEIGHT} w-full`} />
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const latestPoint = chartData[chartData.length - 1];
-  const legendKeys = latestPoint ? pegKeys.filter((key) => (latestPoint[key] ?? 0) > 0) : pegKeys;
-
   return (
-    <Card className="pharos-card-shell animate-in fade-in duration-200 motion-reduce:animate-none">
-      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1">
-          <CardTitle as="h2" className="pharos-section-title">
-            Alt-Peg Market Cap By Cohort
-          </CardTitle>
-          <p className="pharos-meta">
-            {legendKeys.length} currently visible cohorts in this feed &middot; current alt-peg market cap:{" "}
-            {formatCurrency(totalNonUsd, 1)}.
+    <FocusedStackedAreaCard
+      data={chartData}
+      tsKey="ts"
+      isLoading={isLoading}
+      title="Alt-Peg Market Cap By Cohort"
+      loadingTitle="Alt-Peg Cohort Growth"
+      titleClassName="pharos-section-title"
+      subtitle={
+        <p className="pharos-meta">
+          {legendKeys.length} currently visible cohorts in this feed &middot; current alt-peg market cap:{" "}
+          {formatCurrency(totalNonUsd, 1)}.
+        </p>
+      }
+      coverageNote={
+        coverageStartLabel ? (
+          <p className="text-xs text-muted-foreground">
+            Coverage starts {coverageStartLabel}. This uses the legacy provider-wide stablecoin-charts cohort feed;
+            its live core-universe tail is withheld during the aggregate-policy transition to avoid a false drop.
+            Cohorts below the current ${OTHER_THRESHOLD.toLocaleString("en-US")} latest-point threshold roll into
+            Other.
           </p>
-          {coverageStartLabel ? (
-            <p className="text-xs text-muted-foreground">
-              Coverage starts {coverageStartLabel}. This uses the legacy provider-wide stablecoin-charts cohort feed;
-              its live core-universe tail is withheld during the aggregate-policy transition to avoid a false drop.
-              Cohorts below the current ${OTHER_THRESHOLD.toLocaleString("en-US")} latest-point threshold roll into
-              Other.
-            </p>
-          ) : null}
-          {isFocused ? (
-            <p className="text-xs text-muted-foreground">
-              Focused view &middot; shareable URL &middot; this chart measures cohort dollar market cap, not share of
-              the total stablecoin market.
-            </p>
-          ) : null}
-        </div>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <TimeRangeButtons options={options} value={range} onChange={handleRangeChange} />
-          {isFocused ? (
-            <button
-              type="button"
-              onClick={onCloseFocus}
-              aria-label="Return cohort chart to overview"
-              className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 rounded-sm py-2 text-xs text-muted-foreground hover:text-foreground sm:min-h-0 sm:py-0"
-            >
-              <Minimize2 className="h-3.5 w-3.5" />
-              Return cohort chart to overview
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => onOpenFocus?.(range)}
-              aria-label="Open large cohort chart"
-              className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 rounded-sm py-2 text-xs text-muted-foreground hover:text-foreground sm:min-h-0 sm:py-0"
-            >
-              <Maximize2 className="h-3.5 w-3.5" />
-              Open large cohort chart
-            </button>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {filteredData.length > 0 ? (
-          <>
-            <div className="pharos-chart-stage">
-              <div
-                ref={chartContainerRef}
-                className={chartHeightClass}
-                role="figure"
-                aria-label={`Alt-peg market-cap-by-cohort chart covering ${pegCount} peg currencies`}
-              >
-                {isChartReady ? (
-                  <AreaChart
-                  width={width}
-                  height={height}
-                  data={filteredData}
-                  margin={{ top: 5, right: 5, bottom: 20, left: 5 }}
-                >
-                  <defs>
-                    {pegKeys.map((key) => {
-                      const hex = pegKeyToHex(key);
-                      return (
-                        <linearGradient
-                          key={key}
-                          id={`altPegGrad-${pegKeyToCode(key)}`}
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
-                        >
-                          <stop offset="5%" stopColor={hex} stopOpacity={0.3} />
-                          <stop offset="95%" stopColor={hex} stopOpacity={0.05} />
-                        </linearGradient>
-                      );
-                    })}
-                  </defs>
-                  <TimeGrid />
-                  <TimeXAxis dataKey="ts" minTickGap={72} />
-                  <MonoYAxis
-                    tickFormatter={(value: number) => formatCurrency(value, 0)}
-                    domain={yDomain}
-                  />
-                  <DateTooltip content={<CohortTooltip pegKeys={pegKeys} />} />
-                  {pegKeys.map((key) => (
-                    <Area
-                      key={key}
-                      type="monotone"
-                      dataKey={key}
-                      stackId="alt-pegs"
-                      stroke={pegKeyToHex(key)}
-                      fill={`url(#altPegGrad-${pegKeyToCode(key)})`}
-                      strokeWidth={1.5}
-                      onAnimationEnd={handleAnimationEnd}
-                      {...animProps}
-                    />
-                  ))}
-                </AreaChart>
-              ) : (
-                <Skeleton className="h-full w-full" />
-              )}
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground">
-              {legendKeys.map((key) => (
-                <span key={key} className="flex items-center gap-1.5">
-                  <span
-                    className="inline-block h-2.5 w-2.5 rounded-full"
-                    style={{ backgroundColor: pegKeyToHex(key) }}
-                  />
-                  {pegKeyToLabel(key)}
-                  {key === OTHER_KEY && otherLabels.length > 0 ? (
-                    <span className="text-muted-foreground/70">({otherLabels.join(", ")})</span>
-                  ) : null}
-                </span>
-              ))}
-            </div>
-          </>
-        ) : (
-          <div className={`flex ${chartHeightClass} items-center justify-center text-muted-foreground`}>
-            No cohort-growth data available
-          </div>
-        )}
-      </CardContent>
-    </Card>
+        ) : null
+      }
+      focusedNote={
+        <p className="text-xs text-muted-foreground">
+          Focused view &middot; shareable URL &middot; this chart measures cohort dollar market cap, not share of
+          the total stablecoin market.
+        </p>
+      }
+      initialRange={initialRange}
+      rangeOptions={RANGE_OPTIONS}
+      isFocused={isFocused}
+      onOpenFocus={onOpenFocus}
+      onCloseFocus={onCloseFocus}
+      onRangeChange={onRangeChange}
+      openFocusLabel="Open large cohort chart"
+      closeFocusLabel="Return cohort chart to overview"
+      focusedHeightClassName={FOCUSED_CHART_HEIGHT}
+      ariaLabel={`Alt-peg market-cap-by-cohort chart covering ${pegCount} peg currencies`}
+      emptyMessage="No cohort-growth data available"
+      series={series}
+      tooltip={<CohortTooltip pegKeys={pegKeys} />}
+      yDomain={getYDomain}
+      yTickFormatter={(value) => formatCurrency(value, 0)}
+      tableColumns={tableColumns}
+      tableCaption={(_rows, truncated, total) =>
+        `Alt-peg market cap by cohort over ${total} points${truncated ? "; showing the latest 90" : ""}.`
+      }
+      cardClassName="pharos-card-shell animate-in fade-in duration-200 motion-reduce:animate-none"
+      contentClassName="space-y-4"
+      legendClassName="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground"
+    />
   );
 }

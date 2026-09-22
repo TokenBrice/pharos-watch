@@ -60,7 +60,7 @@ The active frontend operator mode is now:
 - Decomposed UI components: `src/components/status/*`
 - The shared `OpsShell` owns compact private chrome, route navigation, theme, public-status, and sign-out controls. It does not mount the public event tape, public navigation, feedback control, or public footer.
 - The `/admin/` Triage workspace provides the command-center top fold:
-  - a compact triage header with the three independent verdict axes (`Service`, `Evidence`, and `Intervention`), recovery-hold context, `FreshnessIndicator`, and `RefreshCountdown`
+  - a compact triage header with the three independent verdict axes (`Service`, `Evidence`, and `Intervention`), recovery-hold context, `FreshnessIndicator`, and a direct refresh control
   - blocker, cron-error, public-health, watch, reserve-drift, and classification-warning summary badges
   - deduplicated blockers and a `Needs attention` queue ordered lexicographically by severity, public impact, evidence risk, persistence, count, and stable workspace order; recommended actions stay attached to their causal lane instead of adding a duplicate Actions entry
   - a state-machine / probe / discrepancy diagnostics disclosure whose deep content mounts only while open; it auto-expands only on the first evaluated signal after evidence loads, and later signals surface a `New signal` badge on the collapsed summary instead of forcing the section open (`src/app/admin/use-auto-expand.ts`)

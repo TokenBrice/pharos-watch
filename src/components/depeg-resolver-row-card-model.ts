@@ -2,105 +2,15 @@ import type {
   DdrDuration,
   DdrFactorSeverity,
   DdrHorizon,
-  DdrResponse,
+  DdrPublicPredictionState,
   DdrResolution,
   DdrResolutionTier,
-  DdrRow,
+  DdrV2PredictionRow,
+  DdrV2ResponseRow,
 } from "@shared/types/depeg-resolver";
 import { formatApproxDurationSeconds } from "@shared/lib/relative-time";
 
-export type DdrDisplayRow = DdrResponse["rows"][number] | DdrRow;
-
-export type DdrPublicPredictionState =
-  | "pending_lock"
-  | "lock_deferred"
-  | "publication_retry_pending"
-  | "publication_failed"
-  | "frozen"
-  | "no_call"
-  | "invalidated";
-
-export type DdrCompatPrediction = {
-  state?: string | null;
-  lockedAt?: number | null;
-  predictedAt?: number | null;
-  assessedAt?: number | null;
-  eligibleAt?: number | null;
-  eventAgeAtLockSec?: number | null;
-  lockTiming?: string | null;
-  missingReasons?: string[] | null;
-  deferralReason?: string | null;
-  retryStatus?: string | null;
-  nextRetryAt?: number | null;
-  lockTrigger?: string | null;
-  policyDelaySec?: number | null;
-  readiness?: {
-    score?: number | null;
-    threshold?: number | null;
-    version?: string | null;
-  } | null;
-  backstop?: {
-    backstopAt?: number | null;
-    delaySec?: number | null;
-    reached?: boolean | null;
-    version?: string | null;
-  } | null;
-  publicationSnapshotToken?: string | null;
-  originalOutcomeKind?: string | null;
-  outcomeKind?: string | null;
-  invalidatedAt?: number | null;
-  invalidationReason?: string | null;
-};
-
-export type DdrCompatErratum = {
-  id?: string | number | null;
-  reason?: string | null;
-  summary?: string | null;
-  createdAt?: number | null;
-};
-
-export type DdrCompatRow = DdrDisplayRow & {
-  kind?: string | null;
-  predictionState?: string | null;
-  incidentKey?: string | null;
-  eligibleAt?: number | null;
-  lockedAt?: number | null;
-  lockTiming?: string | null;
-  missingReasons?: string[] | null;
-  prediction?: DdrCompatPrediction | null;
-  frozen?: {
-    resolution?: DdrResolution;
-    duration?: DdrDuration;
-    relatedContext?: DdrRow["relatedContext"];
-    sourceRow?: Partial<DdrRow>;
-  } | null;
-  noCall?: {
-    lockedAt?: number | null;
-    eventAgeAtLockSec?: number | null;
-    missingReasons?: string[] | null;
-    relatedContext?: DdrRow["relatedContext"];
-  } | null;
-  originalOutcome?: {
-    resolution?: DdrResolution;
-    duration?: DdrDuration;
-    relatedContext?: DdrRow["relatedContext"];
-    missingReasons?: string[] | null;
-  } | null;
-  originalKind?: string | null;
-  coverage?: { predictionState?: string | null; coverageState?: string | null } | null;
-  live?: {
-    ageSec?: number | null;
-    currentDeviationBps?: number | null;
-    peakDeviationBps?: number | null;
-    status?: string | null;
-    eventState?: string | null;
-    active?: boolean | null;
-    stale?: boolean | null;
-    degradedReason?: string | null;
-  } | null;
-  latestErratum?: DdrCompatErratum | null;
-  errata?: DdrCompatErratum[] | null;
-};
+type DdrRelatedContext = DdrV2PredictionRow["frozen"]["relatedContext"];
 
 const EMPTY_DURATION: DdrDuration = {
   suppressed: true,
@@ -118,7 +28,7 @@ const EMPTY_RESOLUTION: DdrResolution = {
   insufficientReasons: [],
 };
 
-const EMPTY_CONTEXT: DdrRow["relatedContext"] = {
+const EMPTY_CONTEXT: DdrRelatedContext = {
   dewsBand: null,
   dewsScore: null,
   liquidityScore: null,
@@ -187,16 +97,6 @@ export const SUPPRESSED_REASON_LABELS: Record<string, string> = {
 const HOUR_SECONDS = 3600;
 const DAY_SECONDS = 86_400;
 
-const DDR_V2_STATES = new Set<string>([
-  "pending_lock",
-  "lock_deferred",
-  "publication_retry_pending",
-  "publication_failed",
-  "frozen",
-  "no_call",
-  "invalidated",
-]);
-
 const HORIZON_SECONDS: Record<DdrHorizon, number> = {
   "6h": 6 * HOUR_SECONDS,
   "24h": 24 * HOUR_SECONDS,
@@ -211,81 +111,43 @@ export const FORWARD_STOPS: ReadonlyArray<{ horizon: DdrHorizon; x: number }> = 
   { horizon: "30d", x: 88 },
 ];
 
-export function getResolution(row: DdrDisplayRow): DdrResolution {
-  const compat = row as DdrCompatRow;
-  return (
-    ("resolution" in row ? row.resolution : undefined) ??
-    compat.frozen?.resolution ??
-    compat.originalOutcome?.resolution ??
-    EMPTY_RESOLUTION
-  );
-}
-
-export function getDuration(row: DdrDisplayRow): DdrDuration {
-  const compat = row as DdrCompatRow;
-  return (
-    ("duration" in row ? row.duration : undefined) ??
-    compat.frozen?.duration ??
-    compat.originalOutcome?.duration ??
-    EMPTY_DURATION
-  );
-}
-
-export function getRelatedContext(row: DdrDisplayRow): DdrRow["relatedContext"] {
-  const compat = row as DdrCompatRow;
-  return (
-    ("relatedContext" in row ? row.relatedContext : undefined) ??
-    compat.frozen?.relatedContext ??
-    compat.noCall?.relatedContext ??
-    EMPTY_CONTEXT
-  );
-}
-
-export function getAgeSec(row: DdrDisplayRow): number {
-  const compat = row as DdrCompatRow;
-  return (
-    ("ageSec" in row ? row.ageSec : undefined) ??
-    compat.live?.ageSec ??
-    compat.prediction?.eventAgeAtLockSec ??
-    compat.noCall?.eventAgeAtLockSec ??
-    0
-  );
-}
-
-export function getPeakDeviationBps(row: DdrDisplayRow): number {
-  const compat = row as DdrCompatRow;
-  const lockAnchored = compat.kind === "prediction" || compat.prediction?.state === "frozen";
-  return (
-    ("peakDeviationBps" in row ? row.peakDeviationBps : undefined) ??
-    (lockAnchored ? compat.frozen?.sourceRow?.peakDeviationBps : undefined) ??
-    compat.live?.peakDeviationBps ??
-    compat.frozen?.sourceRow?.peakDeviationBps ??
-    0
-  );
-}
-
-export function getCurrentDeviationBps(row: DdrDisplayRow): number | null {
-  const compat = row as DdrCompatRow;
-  const lockAnchored = compat.kind === "prediction" || compat.prediction?.state === "frozen";
-  return (
-    ("currentDeviationBps" in row ? row.currentDeviationBps : undefined) ??
-    (lockAnchored ? compat.frozen?.sourceRow?.currentDeviationBps : undefined) ??
-    compat.live?.currentDeviationBps ??
-    compat.frozen?.sourceRow?.currentDeviationBps ??
-    null
-  );
-}
-
-export function getLiveCurrentDeviationBps(row: DdrDisplayRow): number | null {
-  const compat = row as DdrCompatRow;
-  if (compat.live && "currentDeviationBps" in compat.live) {
-    return compat.live.currentDeviationBps ?? null;
+export function getResolution(row: DdrV2ResponseRow): DdrResolution {
+  if (row.kind === "prediction") return row.frozen.resolution;
+  if (row.kind === "invalidated_prediction" && row.originalKind === "prediction") {
+    return (row.originalOutcome as DdrV2PredictionRow["frozen"]).resolution;
   }
-  return (
-    ("currentDeviationBps" in row ? row.currentDeviationBps : undefined) ??
-    compat.frozen?.sourceRow?.currentDeviationBps ??
-    null
-  );
+  return EMPTY_RESOLUTION;
+}
+
+export function getDuration(row: DdrV2ResponseRow): DdrDuration {
+  if (row.kind === "prediction") return row.frozen.duration;
+  if (row.kind === "invalidated_prediction" && row.originalKind === "prediction") {
+    return (row.originalOutcome as DdrV2PredictionRow["frozen"]).duration;
+  }
+  return EMPTY_DURATION;
+}
+
+export function getRelatedContext(row: DdrV2ResponseRow): DdrRelatedContext {
+  if (row.kind === "prediction") return row.frozen.relatedContext;
+  if (row.kind === "no_call") return row.noCall.relatedContext;
+  if (row.kind === "invalidated_prediction") return row.originalOutcome.relatedContext;
+  return EMPTY_CONTEXT;
+}
+
+export function getAgeSec(row: DdrV2ResponseRow): number {
+  return row.live.ageSec;
+}
+
+export function getPeakDeviationBps(row: DdrV2ResponseRow): number {
+  return row.kind === "prediction" ? row.frozen.sourceRow.peakDeviationBps : row.live.peakDeviationBps;
+}
+
+export function getCurrentDeviationBps(row: DdrV2ResponseRow): number | null {
+  return row.kind === "prediction" ? row.frozen.sourceRow.currentDeviationBps : row.live.currentDeviationBps;
+}
+
+export function getLiveCurrentDeviationBps(row: DdrV2ResponseRow): number | null {
+  return row.live.currentDeviationBps;
 }
 
 export function formatDurationSec(seconds: number): string {
@@ -302,68 +164,35 @@ export function compactLockTiming(value: string | null | undefined): string | nu
   return value.replaceAll("_", " ");
 }
 
-export function getPredictionState(row: DdrDisplayRow): DdrPublicPredictionState | null {
-  const compat = row as DdrCompatRow;
-  const state =
-    compat.prediction?.state ??
-    compat.predictionState ??
-    compat.coverage?.predictionState ??
-    compat.coverage?.coverageState;
-  if (state && DDR_V2_STATES.has(state)) return state as DdrPublicPredictionState;
-
-  switch (compat.kind) {
-    case "pending":
-      return "pending_lock";
-    case "prediction":
-      return "frozen";
-    case "no_call":
-      return "no_call";
-    case "invalidated_prediction":
-      return "invalidated";
-    default:
-      return null;
-  }
+export function getPredictionState(row: DdrV2ResponseRow): DdrPublicPredictionState {
+  return row.prediction.state;
 }
 
-export function getLockMetadata(row: DdrDisplayRow) {
-  const compat = row as DdrCompatRow;
-  const prediction = compat.prediction ?? {};
-  const lockedAt = prediction.lockedAt ?? prediction.assessedAt ?? compat.lockedAt ?? null;
-  const eligibleAt = prediction.eligibleAt ?? compat.eligibleAt ?? null;
-  const predictedAt = prediction.predictedAt ?? prediction.assessedAt ?? lockedAt;
-  const predictedAgeSec = lockedAt != null ? Math.max(0, lockedAt - row.startedAt) : null;
-
+export function getLockMetadata(row: DdrV2ResponseRow) {
+  const prediction = row.prediction;
+  const lockedAt = prediction.lockedAt;
   return {
     lockedAt,
-    eligibleAt,
-    predictedAt,
-    predictedAgeSec,
-    lockTiming: prediction.lockTiming ?? compat.lockTiming ?? null,
-    lockTrigger: prediction.lockTrigger ?? null,
-    policyDelaySec: prediction.policyDelaySec ?? null,
+    eligibleAt: prediction.eligibleAt,
+    predictedAt: prediction.publishedAt,
+    predictedAgeSec: lockedAt != null ? Math.max(0, lockedAt - row.startedAt) : null,
+    lockTiming: prediction.lockTiming,
+    lockTrigger: prediction.lockTrigger,
+    policyDelaySec: prediction.policyDelaySec,
     readinessScore: prediction.readiness?.score ?? null,
     readinessThreshold: prediction.readiness?.threshold ?? null,
     backstopAt: prediction.backstop?.backstopAt ?? null,
     backstopDelaySec: prediction.backstop?.delaySec ?? null,
-    incidentKey: compat.incidentKey ?? null,
+    incidentKey: row.incidentKey,
   };
 }
 
-export function getMissingReasons(row: DdrDisplayRow): string[] {
-  const compat = row as DdrCompatRow;
-  return (
-    compat.prediction?.missingReasons ??
-    compat.noCall?.missingReasons ??
-    compat.originalOutcome?.missingReasons ??
-    compat.missingReasons ??
-    getResolution(row).insufficientReasons ??
-    []
-  );
-}
-
-export function getLatestErratum(row: DdrDisplayRow): DdrCompatErratum | null {
-  const compat = row as DdrCompatRow;
-  return compat.latestErratum ?? compat.errata?.[0] ?? null;
+export function getMissingReasons(row: DdrV2ResponseRow): string[] {
+  if (row.kind === "no_call") return row.noCall.missingReasons;
+  if (row.kind === "invalidated_prediction" && row.originalKind === "no_call") {
+    return row.noCall?.missingReasons ?? [];
+  }
+  return getResolution(row).insufficientReasons ?? [];
 }
 
 export function timeToForwardX(seconds: number): number {

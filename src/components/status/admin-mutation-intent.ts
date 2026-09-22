@@ -1,10 +1,13 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { AdminMutationError, adminMutation } from "@/lib/admin-access";
+import { useCallback, useRef, useState } from "react";
+import type {
+  AdminMutationExecution,
+  AdminMutationExecutionStatus,
+  AdminMutationRunResult,
+} from "@/components/status/admin-action-execution-types";
 import { classifyAdminMutationFailure } from "@/components/status/admin-mutation-failure";
-
-export type AdminMutationIntentStatus = "running" | "succeeded" | "failed" | "unknown";
+import { AdminMutationError, adminMutation, type AdminMutationResult } from "@/lib/admin-access";
 
 /**
  * `start` opens a fresh intent, `retry` replays the *same* idempotency key (the
@@ -21,209 +24,347 @@ export interface AdminMutationIntentRequest {
   idempotencyKeyPrefix?: string;
 }
 
-export interface AdminMutationIntentExecution {
-  laneKey: string;
-  intentId: string;
-  idempotencyKey: string;
-  request: AdminMutationIntentRequest;
-  status: AdminMutationIntentStatus;
-  requestInFlight: boolean;
-  attempts: number;
-  data: unknown;
-  output: string;
-  error: string | null;
-  httpStatus: number | null;
-  idempotentReplay: boolean | null;
-  responseIdempotencyKey: string | null;
-  executionCertainty: string | null;
-  warning: string | null;
-  createdAt: number;
-  completedAt: number | null;
+export type AdminMutationIntentExecution = AdminMutationExecution<AdminMutationIntentRequest>;
+export type AdminMutationIntentRunResult = AdminMutationRunResult<AdminMutationIntentExecution>;
+
+interface MutationRequest {
+  path: string;
+  method?: string;
+  body?: unknown;
 }
 
-export interface AdminMutationIntentRunResult {
-  execution: AdminMutationIntentExecution;
-  didStart: boolean;
+interface MutationControllerOptions<Request, Execution extends AdminMutationExecution<Request>> {
+  getLaneKey: (request: Request) => string;
+  getMutationRequest: (request: Request) => MutationRequest;
+  decorateExecution?: (execution: AdminMutationExecution<Request>, request: Request) => Execution;
+  getIdempotencyKeyPrefix?: (request: Request) => string | undefined;
+  createIdempotencyKey?: () => string;
 }
 
-function createIdempotencyKey(): string {
+interface MutationControllerSnapshot<Execution> {
+  current: Readonly<Record<string, Execution>>;
+  executions: readonly Execution[];
+}
+
+let fallbackId = 0;
+
+export function createAdminMutationIdempotencyKey(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     return crypto.randomUUID();
   }
-  return `admin-intent:${Date.now()}:${Math.random().toString(36).slice(2)}`;
+  fallbackId += 1;
+  return `admin-intent:${Date.now()}:${fallbackId}`;
 }
 
-function failedExecution(execution: AdminMutationIntentExecution, error: unknown): AdminMutationIntentExecution {
-  const certainty = classifyAdminMutationFailure(error, execution.idempotencyKey);
-  if (error instanceof AdminMutationError) {
-    return {
-      ...execution,
-      status: certainty,
-      requestInFlight: false,
-      data: error.result.data,
-      output: error.result.formattedBody || error.message,
-      error: error.message,
-      httpStatus: error.result.status,
-      idempotentReplay: error.result.idempotentReplay,
-      responseIdempotencyKey: error.result.idempotencyKey,
-      executionCertainty: error.result.executionCertainty ?? certainty,
-      warning: error.result.warning,
-      completedAt: Date.now(),
-    };
+function projectAdminMutationStatus(result: AdminMutationResult<unknown>): AdminMutationExecutionStatus {
+  if (result.executionCertainty?.trim().toLowerCase() === "unknown") return "unknown";
+
+  if (result.data && typeof result.data === "object") {
+    const body = result.data as Record<string, unknown>;
+    const bodyStatus =
+      typeof body.executionStatus === "string"
+        ? body.executionStatus.toLowerCase()
+        : typeof body.status === "string"
+          ? body.status.toLowerCase()
+          : null;
+    if (
+      bodyStatus === "accepted" ||
+      bodyStatus === "queued" ||
+      bodyStatus === "running" ||
+      bodyStatus === "succeeded" ||
+      bodyStatus === "failed" ||
+      bodyStatus === "unknown"
+    ) {
+      return bodyStatus;
+    }
+    if (body.accepted === true) return "accepted";
+    if (body.queued === true) return "queued";
   }
 
-  const message = error instanceof Error ? error.message : "Unknown error";
+  return result.status === 202 ? "accepted" : "succeeded";
+}
+
+function buildSnapshot<Request, Execution extends AdminMutationExecution<Request>>(
+  currentIntentByLane: Map<string, string>,
+  records: Map<string, Execution>,
+): MutationControllerSnapshot<Execution> {
+  const current: Record<string, Execution> = {};
+  for (const [laneKey, intentId] of currentIntentByLane) {
+    const execution = records.get(intentId);
+    if (execution) current[laneKey] = execution;
+  }
   return {
-    ...execution,
-    status: certainty,
-    requestInFlight: false,
-    output: message,
-    error: message,
-    executionCertainty: certainty,
-    completedAt: Date.now(),
+    current,
+    executions: [...records.values()].sort(
+      (a, b) => (b.completedAt ?? b.startedAt ?? b.createdAt) - (a.completedAt ?? a.startedAt ?? a.createdAt),
+    ),
   };
 }
 
-export function useAdminMutationIntents() {
-  const executionsRef = useRef<Record<string, AdminMutationIntentExecution>>({});
-  const inFlightRef = useRef(new Map<string, Promise<AdminMutationIntentExecution>>());
-  const [executions, setExecutions] = useState<Readonly<Record<string, AdminMutationIntentExecution>>>({});
+/**
+ * The single write-safety state machine for every admin mutation lane. It owns
+ * intent identity, same-key retries, new-key starts, in-flight fencing,
+ * attempts, and response-certainty projection. Callers only adapt their
+ * request metadata and presentation model.
+ */
+export function useAdminMutationController<Request, Execution extends AdminMutationExecution<Request>>({
+  getLaneKey,
+  getMutationRequest,
+  decorateExecution,
+  getIdempotencyKeyPrefix,
+  createIdempotencyKey = createAdminMutationIdempotencyKey,
+}: MutationControllerOptions<Request, Execution>) {
+  const currentIntentByLaneRef = useRef(new Map<string, string>());
+  const recordsRef = useRef(new Map<string, Execution>());
+  const inFlightRef = useRef(new Map<string, Promise<Execution>>());
+  const [snapshot, setSnapshot] = useState<MutationControllerSnapshot<Execution>>({
+    current: {},
+    executions: [],
+  });
 
-  function publish(execution: AdminMutationIntentExecution) {
-    executionsRef.current = { ...executionsRef.current, [execution.laneKey]: execution };
-    setExecutions(executionsRef.current);
-  }
+  const publish = useCallback(() => {
+    setSnapshot(buildSnapshot(currentIntentByLaneRef.current, recordsRef.current));
+  }, []);
 
-  function createIntent(request: AdminMutationIntentRequest): AdminMutationIntentExecution {
-    const generatedKey = createIdempotencyKey();
-    const idempotencyKey = request.idempotencyKeyPrefix
-      ? `${request.idempotencyKeyPrefix}:${generatedKey}`
-      : generatedKey;
-    return {
-      laneKey: request.laneKey,
-      intentId: idempotencyKey,
-      idempotencyKey,
-      request: { ...request },
-      status: "running",
-      requestInFlight: true,
-      attempts: 0,
-      data: null,
-      output: "",
-      error: null,
-      httpStatus: null,
-      idempotentReplay: null,
-      responseIdempotencyKey: null,
-      executionCertainty: null,
-      warning: null,
-      createdAt: Date.now(),
-      completedAt: null,
-    };
-  }
-
-  async function perform(execution: AdminMutationIntentExecution): Promise<AdminMutationIntentExecution> {
-    const running: AdminMutationIntentExecution = {
-      ...execution,
-      status: "running",
-      requestInFlight: true,
-      attempts: execution.attempts + 1,
-      completedAt: null,
-      error: null,
-    };
-    publish(running);
-
-    let finished: AdminMutationIntentExecution;
-    try {
-      const result = await adminMutation(running.request.path, {
-        method: running.request.method ?? "POST",
-        body: running.request.body,
-        idempotencyKey: running.idempotencyKey,
-      });
-      finished = {
-        ...running,
-        status: "succeeded",
+  const createIntent = useCallback(
+    (request: Request, shouldPublish: boolean): Execution => {
+      const laneKey = getLaneKey(request);
+      const generatedKey = createIdempotencyKey();
+      const prefix = getIdempotencyKeyPrefix?.(request);
+      const idempotencyKey = prefix ? `${prefix}:${generatedKey}` : generatedKey;
+      const createdAt = Date.now();
+      const base: AdminMutationExecution<Request> = {
+        laneKey,
+        intentId: idempotencyKey,
+        idempotencyKey,
+        request,
+        status: "ready",
         requestInFlight: false,
-        data: result.data,
-        output: result.formattedBody,
+        ok: false,
+        attempts: 0,
+        data: null,
+        output: "",
         error: null,
-        httpStatus: result.status,
-        idempotentReplay: result.idempotentReplay,
-        responseIdempotencyKey: result.idempotencyKey,
-        executionCertainty: result.executionCertainty ?? "confirmed",
-        warning: result.warning,
-        completedAt: Date.now(),
+        httpStatus: null,
+        idempotentReplay: null,
+        responseIdempotencyKey: null,
+        executionCertainty: null,
+        warning: null,
+        createdAt,
+        startedAt: null,
+        completedAt: null,
+        executedAt: null,
       };
-    } catch (error) {
-      finished = failedExecution(running, error);
-    }
-    publish(finished);
-    return finished;
-  }
+      const execution = decorateExecution ? decorateExecution(base, request) : (base as unknown as Execution);
+      recordsRef.current.set(execution.intentId, execution);
+      currentIntentByLaneRef.current.set(laneKey, execution.intentId);
+      if (shouldPublish) publish();
+      return execution;
+    },
+    [createIdempotencyKey, decorateExecution, getIdempotencyKeyPrefix, getLaneKey, publish],
+  );
 
-  function beginRun(execution: AdminMutationIntentExecution, didStart: boolean): Promise<AdminMutationIntentRunResult> {
-    const promise = perform(execution);
-    inFlightRef.current.set(execution.laneKey, promise);
-    return promise
-      .finally(() => {
-        if (inFlightRef.current.get(execution.laneKey) === promise) {
-          inFlightRef.current.delete(execution.laneKey);
+  const perform = useCallback(
+    async (execution: Execution): Promise<Execution> => {
+      const startedAt = Date.now();
+      const running = {
+        ...execution,
+        status: "running",
+        requestInFlight: true,
+        ok: false,
+        attempts: execution.attempts + 1,
+        startedAt: execution.startedAt ?? startedAt,
+        executedAt: execution.executedAt ?? Math.floor(startedAt / 1000),
+        completedAt: null,
+        error: null,
+      } as Execution;
+      recordsRef.current.set(running.intentId, running);
+      publish();
+
+      let finished: Execution;
+      try {
+        const request = getMutationRequest(running.request);
+        const result = await adminMutation(request.path, {
+          method: request.method ?? "POST",
+          body: request.body,
+          idempotencyKey: running.idempotencyKey,
+        });
+        const status = projectAdminMutationStatus(result);
+        finished = {
+          ...running,
+          status,
+          requestInFlight: false,
+          ok: status !== "failed" && status !== "unknown",
+          data: result.data,
+          output: result.formattedBody,
+          error: status === "failed" || status === "unknown" ? result.formattedBody : null,
+          httpStatus: result.status,
+          idempotentReplay: result.idempotentReplay,
+          responseIdempotencyKey: result.idempotencyKey,
+          executionCertainty: result.executionCertainty ?? (status === "unknown" ? "unknown" : "confirmed"),
+          warning: result.warning,
+          completedAt: Date.now(),
+        } as Execution;
+      } catch (error) {
+        const status = classifyAdminMutationFailure(error, running.idempotencyKey);
+        if (error instanceof AdminMutationError) {
+          finished = {
+            ...running,
+            status,
+            requestInFlight: false,
+            ok: false,
+            data: error.result.data,
+            output: error.result.formattedBody || error.message,
+            error: error.message,
+            httpStatus: error.result.status,
+            idempotentReplay: error.result.idempotentReplay,
+            responseIdempotencyKey: error.result.idempotencyKey,
+            executionCertainty: error.result.executionCertainty ?? status,
+            warning: error.result.warning,
+            completedAt: Date.now(),
+          } as Execution;
+        } else {
+          const message = error instanceof Error ? error.message : "Unknown error";
+          finished = {
+            ...running,
+            status,
+            requestInFlight: false,
+            ok: false,
+            data: null,
+            output: message,
+            error: message,
+            executionCertainty: status,
+            completedAt: Date.now(),
+          } as Execution;
         }
-      })
-      .then((finished) => ({ execution: finished, didStart }));
-  }
+      }
+      recordsRef.current.set(finished.intentId, finished);
+      publish();
+      return finished;
+    },
+    [getMutationRequest, publish],
+  );
 
-  function execute(request: AdminMutationIntentRequest): Promise<AdminMutationIntentRunResult> {
-    const inFlight = inFlightRef.current.get(request.laneKey);
-    if (inFlight) return inFlight.then((execution) => ({ execution, didStart: false }));
-    const current = executionsRef.current[request.laneKey];
+  const runPrepared = useCallback(
+    (execution: Execution): Promise<AdminMutationRunResult<Execution>> => {
+      const laneKey = execution.laneKey;
+      const inFlight = inFlightRef.current.get(laneKey);
+      if (inFlight) return inFlight.then((current) => ({ execution: current, didStart: false }));
+
+      const currentIntentId = currentIntentByLaneRef.current.get(laneKey);
+      const current = currentIntentId ? recordsRef.current.get(currentIntentId) : undefined;
+      if (!current || current.intentId !== execution.intentId || current.status !== "ready") {
+        return Promise.resolve({ execution: current ?? execution, didStart: false });
+      }
+
+      const promise = perform(current);
+      inFlightRef.current.set(laneKey, promise);
+      return promise
+        .finally(() => {
+          if (inFlightRef.current.get(laneKey) === promise) inFlightRef.current.delete(laneKey);
+        })
+        .then((finished) => ({ execution: finished, didStart: true }));
+    },
+    [perform],
+  );
+
+  const runCurrentOrCreate = useCallback(
+    (request: Request): Promise<AdminMutationRunResult<Execution>> => {
+      const laneKey = getLaneKey(request);
+      const currentIntentId = currentIntentByLaneRef.current.get(laneKey);
+      const current = currentIntentId ? recordsRef.current.get(currentIntentId) : undefined;
+      return runPrepared(current ?? createIntent(request, false));
+    },
+    [createIntent, getLaneKey, runPrepared],
+  );
+
+  const retrySame = useCallback(
+    (laneKey: string): Promise<AdminMutationRunResult<Execution>> => {
+      const inFlight = inFlightRef.current.get(laneKey);
+      if (inFlight) return inFlight.then((execution) => ({ execution, didStart: false }));
+      const currentIntentId = currentIntentByLaneRef.current.get(laneKey);
+      const current = currentIntentId ? recordsRef.current.get(currentIntentId) : undefined;
+      if (!current || (current.status !== "failed" && current.status !== "unknown")) {
+        if (!current) throw new Error(`No admin mutation intent exists for ${laneKey}`);
+        return Promise.resolve({ execution: current, didStart: false });
+      }
+      const ready = {
+        ...current,
+        status: "ready",
+        requestInFlight: false,
+        ok: false,
+        completedAt: null,
+      } as Execution;
+      recordsRef.current.set(ready.intentId, ready);
+      return runPrepared(ready);
+    },
+    [runPrepared],
+  );
+
+  const startNew = useCallback(
+    (request: Request): Execution => {
+      const laneKey = getLaneKey(request);
+      const currentIntentId = currentIntentByLaneRef.current.get(laneKey);
+      const current = currentIntentId ? recordsRef.current.get(currentIntentId) : undefined;
+      if (current?.requestInFlight) return current;
+      return createIntent(request, true);
+    },
+    [createIntent, getLaneKey],
+  );
+
+  const executeNew = useCallback(
+    (request: Request): Promise<AdminMutationRunResult<Execution>> => {
+      const laneKey = getLaneKey(request);
+      const inFlight = inFlightRef.current.get(laneKey);
+      if (inFlight) return inFlight.then((execution) => ({ execution, didStart: false }));
+      return runPrepared(createIntent(request, false));
+    },
+    [createIntent, getLaneKey, runPrepared],
+  );
+
+  const clear = useCallback(
+    (laneKey: string) => {
+      if (inFlightRef.current.has(laneKey)) return;
+      const intentId = currentIntentByLaneRef.current.get(laneKey);
+      currentIntentByLaneRef.current.delete(laneKey);
+      if (intentId) recordsRef.current.delete(intentId);
+      publish();
+    },
+    [publish],
+  );
+
+  return { ...snapshot, runCurrentOrCreate, retrySame, startNew, executeNew, clear };
+}
+
+const getIntentLaneKey = (request: AdminMutationIntentRequest) => request.laneKey;
+const getIntentMutationRequest = (request: AdminMutationIntentRequest): MutationRequest => ({
+  path: request.path,
+  method: request.method,
+  body: request.body,
+});
+const getIntentIdempotencyKeyPrefix = (request: AdminMutationIntentRequest) => request.idempotencyKeyPrefix;
+
+export function useAdminMutationIntents() {
+  const controller = useAdminMutationController<
+    AdminMutationIntentRequest,
+    AdminMutationIntentExecution
+  >({
+    getLaneKey: getIntentLaneKey,
+    getMutationRequest: getIntentMutationRequest,
+    getIdempotencyKeyPrefix: getIntentIdempotencyKeyPrefix,
+  });
+  const executions = controller.current;
+
+  const execute = (request: AdminMutationIntentRequest): Promise<AdminMutationIntentRunResult> => {
+    const current = controller.current[request.laneKey];
     if (current?.status === "unknown") return Promise.resolve({ execution: current, didStart: false });
-    return beginRun(createIntent(request), true);
-  }
-
-  function retrySame(laneKey: string): Promise<AdminMutationIntentRunResult> {
-    const inFlight = inFlightRef.current.get(laneKey);
-    if (inFlight) return inFlight.then((execution) => ({ execution, didStart: false }));
-    const current = executionsRef.current[laneKey];
-    if (!current || current.status !== "unknown") {
-      if (!current) throw new Error(`No admin mutation intent exists for ${laneKey}`);
-      return Promise.resolve({ execution: current, didStart: false });
-    }
-    return beginRun(current, true);
-  }
-
-  function executeNew(request: AdminMutationIntentRequest): Promise<AdminMutationIntentRunResult> {
-    const inFlight = inFlightRef.current.get(request.laneKey);
-    if (inFlight) return inFlight.then((execution) => ({ execution, didStart: false }));
-    return beginRun(createIntent(request), true);
-  }
-
-  function clear(laneKey: string) {
-    if (inFlightRef.current.has(laneKey)) return;
-    const next = { ...executionsRef.current };
-    delete next[laneKey];
-    executionsRef.current = next;
-    setExecutions(next);
-  }
+    return controller.executeNew(request);
+  };
 
   /**
-   * The one start|retry|new runner (WS8.5). Every admin panel repeated the same
-   * five steps: build the request (or recover the stored one for a retry), mark
-   * the lane busy, dispatch to `execute` / `retrySame` / `executeNew`, always
-   * clear busy, and bail out when the run did not actually start.
-   *
-   * `"start"` always builds a fresh request. `"retry"`/`"new"` replay the
-   * stored request so the re-run keeps the original body verbatim — that is
-   * what makes "Start new intent" mean *the same write under a new key*, and
-   * it is why the request is stored on the execution at all. Panels whose
-   * primary action is `"new"` (a re-runnable preview, say) opt out with
-   * `replayStoredRequest: false` and always send current form state.
-   *
-   * Throwing from `buildRequest` (payload validation) is reported through
-   * `onError` instead of escaping, matching the hand-rolled try/catch blocks
-   * this replaces.
-   *
-   * Returns `null` when nothing ran — a still-in-flight lane, a lane parked in
-   * `unknown` (which must be retried explicitly, never silently re-sent), a
-   * missing stored request, or a rejected payload.
+   * The one start|retry|new runner used by bespoke body mutations. Retry and
+   * new modes replay the stored request body unless the caller explicitly
+   * opts into rebuilding it (used by the guarded broadcast preview lane).
    */
   async function runIntent({
     laneKey,
@@ -235,17 +376,13 @@ export function useAdminMutationIntents() {
   }: {
     laneKey: string;
     mode: AdminMutationIntentMode;
-    /** May throw to reject the payload; see `replayStoredRequest` for when it runs. */
     buildRequest: () => AdminMutationIntentRequest;
     replayStoredRequest?: boolean;
-    /** Busy latch for the owning row/dialog; always released before returning. */
     setBusy?: (busy: boolean) => void;
     onError?: (message: string) => void;
   }): Promise<AdminMutationIntentExecution | null> {
-    const stored = executionsRef.current[laneKey]?.request;
+    const stored = controller.current[laneKey]?.request;
     if (mode === "retry" && !stored) {
-      // `retrySame` replays the stored intent by design; without one there is
-      // nothing to retry, whatever we could build here.
       onError?.(`No admin mutation intent is available to retry for ${laneKey}`);
       return null;
     }
@@ -263,9 +400,9 @@ export function useAdminMutationIntents() {
     try {
       const result =
         mode === "retry"
-          ? await retrySame(laneKey)
+          ? await controller.retrySame(laneKey)
           : mode === "new"
-            ? await executeNew(request)
+            ? await controller.executeNew(request)
             : await execute(request);
       return result.didStart ? result.execution : null;
     } finally {
@@ -273,5 +410,12 @@ export function useAdminMutationIntents() {
     }
   }
 
-  return { executions, execute, retrySame, executeNew, clear, runIntent };
+  return {
+    executions,
+    execute,
+    retrySame: controller.retrySame,
+    executeNew: controller.executeNew,
+    clear: controller.clear,
+    runIntent,
+  };
 }

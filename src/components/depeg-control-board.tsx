@@ -24,7 +24,6 @@ import { GOVERNANCE_FILTER_OPTIONS, PEG_FILTER_OPTIONS } from "@shared/lib/class
 import { formatCurrency, formatElapsedSeconds, formatPercent, formatTrackingSpanDays } from "@shared/lib/format";
 import type { ThreatBand } from "@shared/lib/classification";
 
-export { getDeviationBarWidthPercent } from "@/components/depeg-board-model";
 
 interface DepegControlBoardProps {
   rows: DepegTrackerRow[];

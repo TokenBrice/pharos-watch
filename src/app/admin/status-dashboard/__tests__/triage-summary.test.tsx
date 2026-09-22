@@ -9,9 +9,6 @@ vi.mock("@/components/status/freshness-indicator", () => ({
   FreshnessIndicator: () => <span>freshness</span>,
 }));
 
-vi.mock("@/components/status/refresh-countdown", () => ({
-  RefreshControl: () => <button type="button">Refresh</button>,
-}));
 
 vi.mock("@/components/status/recommended-action-strip", () => ({
   RecommendedActionStrip: () => <div>recommendations</div>,

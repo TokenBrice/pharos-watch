@@ -38,7 +38,7 @@ The case-study detail route is static-exported through `generateStaticParams()` 
 
 ## Case Studies
 
-`CASE_STUDY_LIST` in `src/lib/case-studies/index.ts` is the canonical display, sitemap, and static-param order. The hub first renders a small server-rendered "Start Here" cluster for evergreen studies, then renders the remaining archive rows with an outcome chip (`survived`, `wounded`, `died`) and archetype accent from `ARCHETYPE_VISUALS`. Priority studies are excluded from the archive rows so the hub does not repeat the same article twice.
+`CASE_STUDY_LIST` in `src/lib/case-studies/index.ts` is the canonical display, sitemap, and static-param order. The hub first renders a small server-rendered "Start Here" cluster for evergreen studies, then renders the remaining archive rows with an outcome chip (`survived`, `wounded`, `died`). Priority studies are excluded from the archive rows so the hub does not repeat the same article twice.
 
 `CASE_STUDY_LIST` owns the case-study roster and archetype/outcome coverage. Do not copy its volatile count into this document.
 

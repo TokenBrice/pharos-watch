@@ -38,7 +38,7 @@ interface OverviewData {
 function buildOverview(
   rankings: readonly YieldRankingSummary[],
   snapshot: { coveredCount: number; trackedCount: number } | null,
-): OverviewData {
+): Omit<OverviewData, "medianApy"> {
   const highestRawYield = rankings.reduce<{ symbol: string; apy: number } | null>((best, row) => {
     if (!Number.isFinite(row.apy30d)) return best;
     return best === null || row.apy30d > best.apy ? { symbol: row.symbol, apy: row.apy30d } : best;
@@ -54,7 +54,6 @@ function buildOverview(
     // `rankings.length` reported "157/157 covered" exactly when nothing was.
     coveredCount: snapshot?.coveredCount ?? null,
     trackedCount: snapshot?.trackedCount ?? null,
-    medianApy: 0,
     highestRawYield,
     bestRiskAdjusted: leaders[0] ?? null,
     leaders,

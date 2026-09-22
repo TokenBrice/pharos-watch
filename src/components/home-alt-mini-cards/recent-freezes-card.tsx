@@ -2,8 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { CoinCell } from "@/components/home-alt-mini-cards/coin-cell";
-import { PulseCardHeader } from "@/components/home-alt-mini-cards/pulse-card-header";
-import { QueryStateNotice } from "@/components/query-state-notice";
+import { PulseCard } from "@/components/home-alt-mini-cards/pulse-card-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useBlacklistEventsPage, useBlacklistSummary } from "@/hooks/use-blacklist-events";
 import { getLogoSrc, logosById } from "@/lib/logos";
@@ -123,101 +122,90 @@ export function RecentFreezesCard(): React.JSX.Element {
       : (summaryQuery.data?.stats.recentFreezeCount7d ?? 0);
 
   return (
-    <div className="pharos-card-shell flex h-full flex-col gap-3 overflow-hidden p-4">
-      <PulseCardHeader
-        href="/freezewatch/"
-        expandLabel="Open FreezeWatch"
-        label="Recent Freezes"
-        aside={
-          <div role="group" aria-label="Freeze window" className="inline-flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => setWindowKey("24h")}
-              aria-pressed={windowKey === "24h"}
-              data-state={windowKey === "24h" ? "on" : "off"}
-              className="pharos-toggle-pill pharos-focus-ring h-9 justify-center px-2 py-1 font-mono text-[11px] leading-none"
-            >
-              24h
-            </button>
-            <button
-              type="button"
-              onClick={() => setWindowKey("7d")}
-              aria-pressed={windowKey === "7d"}
-              data-state={windowKey === "7d" ? "on" : "off"}
-              className="pharos-toggle-pill pharos-focus-ring h-9 justify-center px-2 py-1 font-mono text-[11px] leading-none"
-            >
-              7d
-            </button>
-          </div>
-        }
-      />
-
-      {state === "loading" ? (
+    <PulseCard
+      className="pharos-card-shell flex h-full flex-col gap-3 overflow-hidden p-4"
+      href="/freezewatch/"
+      expandLabel="Open FreezeWatch"
+      label="Recent Freezes"
+      aside={
+        <div role="group" aria-label="Freeze window" className="inline-flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setWindowKey("24h")}
+            aria-pressed={windowKey === "24h"}
+            data-state={windowKey === "24h" ? "on" : "off"}
+            className="pharos-toggle-pill pharos-focus-ring h-9 justify-center px-2 py-1 font-mono text-[11px] leading-none"
+          >
+            24h
+          </button>
+          <button
+            type="button"
+            onClick={() => setWindowKey("7d")}
+            aria-pressed={windowKey === "7d"}
+            data-state={windowKey === "7d" ? "on" : "off"}
+            className="pharos-toggle-pill pharos-focus-ring h-9 justify-center px-2 py-1 font-mono text-[11px] leading-none"
+          >
+            7d
+          </button>
+        </div>
+      }
+      state={state}
+      notice={{
+        label: "Recent freeze data",
+        dataUpdatedAt: Math.min(summaryQuery.dataUpdatedAt, eventsQuery.dataUpdatedAt),
+        onRetry: () => void Promise.all([summaryQuery.refetch(), eventsQuery.refetch()]),
+      }}
+      loadingContent={
         <>
           <Skeleton className="h-12 w-28" />
           <Skeleton className="h-20 w-full" />
         </>
-      ) : state === "unavailable" || !summaryQuery.data || !eventsQuery.data ? (
-        <QueryStateNotice
-          state="unavailable"
-          label="Recent freeze data"
-          onRetry={() => void Promise.all([summaryQuery.refetch(), eventsQuery.refetch()])}
-        />
-      ) : (
-        <>
-          {state === "stale-with-data" ? (
-            <QueryStateNotice
-              state={state}
-              label="Recent freeze data"
-              dataUpdatedAt={Math.min(summaryQuery.dataUpdatedAt, eventsQuery.dataUpdatedAt)}
-              onRetry={() => void Promise.all([summaryQuery.refetch(), eventsQuery.refetch()])}
-              compact
-            />
-          ) : null}
-          <div className="flex items-baseline gap-2">
-            <span
-              className={`pharos-numeric text-4xl font-bold tracking-tight ${
-                count > 0 ? "text-red-700 dark:text-red-400" : "text-foreground"
-              }`}
-            >
-              {formatCurrency(amount, 0)}
-            </span>
-            <span aria-hidden="true" className="font-mono text-sm text-muted-foreground/40">
-              ·
-            </span>
-            <span className="pharos-numeric text-[11px] uppercase tracking-wider text-muted-foreground/70">
-              {count.toLocaleString("en-US")}X
-            </span>
-          </div>
-          {recent.length > 0 && (
-            <ul className="flex flex-col border-t border-border/50 pt-2.5 font-mono text-xs">
-              {recent.map((ev) => {
-                const logoSrc = getLogoSrc(logoMap, ev.stablecoinId);
-                return (
-                  <li
-                    key={ev.id}
-                    className="grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-2 py-1 pharos-numeric"
-                  >
-                    <CoinCell logoSrc={logoSrc} />
-                    <span className="truncate uppercase tracking-tight text-foreground">{ev.symbol}</span>
-                    <span className="flex items-baseline gap-1.5">
-                      <span className="font-semibold pharos-numeric text-red-700 dark:text-red-400">
-                        {ev.amountUsdAtEvent && ev.amountUsdAtEvent > 0 ? formatCurrency(ev.amountUsdAtEvent, 0) : "—"}
-                      </span>
-                      <span aria-hidden="true" className="text-muted-foreground/40">
-                        ·
-                      </span>
-                      <span className="uppercase pharos-numeric text-muted-foreground/80">
-                        {formatRelativeDurationSeconds(ev.ageSec, { nowLabel: "now" })}
-                      </span>
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </>
+      }
+      hasRenderableData={summaryQuery.data !== undefined && eventsQuery.data !== undefined}
+      unavailableWhen={!summaryQuery.data || !eventsQuery.data}
+    >
+      <div className="flex items-baseline gap-2">
+        <span
+          className={`pharos-numeric text-4xl font-bold tracking-tight ${
+            count > 0 ? "text-red-700 dark:text-red-400" : "text-foreground"
+          }`}
+        >
+          {formatCurrency(amount, 0)}
+        </span>
+        <span aria-hidden="true" className="font-mono text-sm text-muted-foreground/40">
+          ·
+        </span>
+        <span className="pharos-numeric text-[11px] uppercase tracking-wider text-muted-foreground/70">
+          {count.toLocaleString("en-US")}X
+        </span>
+      </div>
+      {recent.length > 0 && (
+        <ul className="flex flex-col border-t border-border/50 pt-2.5 font-mono text-xs">
+          {recent.map((ev) => {
+            const logoSrc = getLogoSrc(logoMap, ev.stablecoinId);
+            return (
+              <li
+                key={ev.id}
+                className="grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-2 py-1 pharos-numeric"
+              >
+                <CoinCell logoSrc={logoSrc} />
+                <span className="truncate uppercase tracking-tight text-foreground">{ev.symbol}</span>
+                <span className="flex items-baseline gap-1.5">
+                  <span className="font-semibold pharos-numeric text-red-700 dark:text-red-400">
+                    {ev.amountUsdAtEvent && ev.amountUsdAtEvent > 0 ? formatCurrency(ev.amountUsdAtEvent, 0) : "—"}
+                  </span>
+                  <span aria-hidden="true" className="text-muted-foreground/40">
+                    ·
+                  </span>
+                  <span className="uppercase pharos-numeric text-muted-foreground/80">
+                    {formatRelativeDurationSeconds(ev.ageSec, { nowLabel: "now" })}
+                  </span>
+                </span>
+              </li>
+            );
+          })}
+        </ul>
       )}
-    </div>
+    </PulseCard>
   );
 }

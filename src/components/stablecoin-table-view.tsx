@@ -13,12 +13,12 @@ import {
 } from "@/components/table";
 import { TableBackgroundRefreshingBar } from "@/components/data-table-shell";
 import { StablecoinTableEmptyState } from "@/components/stablecoin-table-empty-state";
-import type { StablecoinTableSortKey } from "@/components/stablecoin-table-logic";
 import { StablecoinVirtualRow } from "@/components/stablecoin-table-row";
 import {
   STABLECOIN_FRAME_SHARED,
   STABLECOIN_TABLE_REFRESH_QUERY_KEYS,
   StablecoinTableHeader,
+  type StablecoinTableSortProps,
   type StablecoinTableVisualVariant,
 } from "@/components/stablecoin-table-columns";
 import type { ColumnId } from "@/hooks/use-preferences";
@@ -27,14 +27,6 @@ import type { DexLiquidityMap, FilterTag, PegSummaryCoin, StablecoinData } from 
 import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
 
 const SKELETON_ROW_COUNT = 10;
-
-interface StablecoinTableSortProps {
-  sortKey: StablecoinTableSortKey;
-  sortDirection: "asc" | "desc";
-  toggleSort: (key: StablecoinTableSortKey) => void;
-  getAriaSortValue: (columnKey: string) => "ascending" | "descending" | "none";
-  showHeaderMethodologyHints: boolean;
-}
 
 interface StablecoinTableViewProps {
   isLoading: boolean;

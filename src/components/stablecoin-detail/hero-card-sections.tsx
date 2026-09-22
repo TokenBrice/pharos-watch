@@ -22,17 +22,7 @@ import {
   HERO_CHIP_PEG_LABELS,
   getHeroPegLabel,
 } from "@shared/lib/classification";
-import {
-  getHeroMarketFields,
-  HeroCompactMarketCapCell,
-  HeroCompactPriceCell,
-  HeroCompactSupplyCell,
-  HeroCompactTertiaryCell,
-  HeroMarketCapCard,
-  HeroPriceCard,
-  HeroSupplyCard,
-  HeroTertiaryMetrics,
-} from "./hero-card-metrics";
+import { HeroMarketMetricGrid, HeroTertiaryMetrics } from "./hero-card-metrics";
 import type { HeroSignalRailItem, HeroTertiaryMetricConfig } from "./hero-card-metrics";
 export type { HeroSignalRailItem, HeroTertiaryMetricConfig } from "./hero-card-metrics";
 
@@ -163,7 +153,6 @@ export function HeroCardMobileSection({
 }: HeroSectionBaseProps & {
   tertiaryMetrics: HeroTertiaryMetricConfig[];
 }) {
-  const marketFields = getHeroMarketFields(market);
   return (
     <div className="px-4 py-4 sm:px-5 lg:hidden">
       <div className="flex items-start gap-3">
@@ -184,12 +173,7 @@ export function HeroCardMobileSection({
 
       <HeroVerdict coinId={coin.id} verdict={verdict} />
 
-      <div className="mt-4 grid grid-cols-2 gap-3">
-        <HeroPriceCard coin={coin} coinData={coinData} price={price} />
-        <HeroMarketCapCard coin={coin} coinData={coinData} {...marketFields.marketCap} />
-      </div>
-
-      <HeroSupplyCard coinSymbol={coin.symbol} {...marketFields.supply} />
+      <HeroMarketMetricGrid variant="card" coin={coin} coinData={coinData} price={price} market={market} />
 
       <HeroTertiaryMetrics metrics={tertiaryMetrics} activeDepeg={peg.activeDepeg} />
     </div>
@@ -210,17 +194,19 @@ export function HeroCardDesktopSection({
   // The fourth slot preserves the live 30d excess-vs-T-bill metric even though
   // the visual chrome now matches the compact reference dossier.
   const excessMetric = tertiaryMetrics.find((metric) => metric.key === "excess-yield");
-  const marketFields = getHeroMarketFields(market);
+
 
   return (
     <div className="hidden lg:block">
       <HeroDesktopChipRail coin={coin} verdict={verdict} />
-      <div className={`grid lg:grid-cols-3 ${excessMetric ? "xl:grid-cols-4" : ""}`}>
-        <HeroCompactPriceCell coin={coin} coinData={coinData} price={price} />
-        <HeroCompactMarketCapCell coin={coin} coinData={coinData} {...marketFields.marketCap} />
-        <HeroCompactSupplyCell coinSymbol={coin.symbol} {...marketFields.supply} />
-        {excessMetric ? <HeroCompactTertiaryCell metric={excessMetric} /> : null}
-      </div>
+      <HeroMarketMetricGrid
+        variant="cell"
+        coin={coin}
+        coinData={coinData}
+        price={price}
+        market={market}
+        tertiaryMetric={excessMetric}
+      />
     </div>
   );
 }

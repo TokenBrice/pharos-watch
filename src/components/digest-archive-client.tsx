@@ -377,8 +377,6 @@ export function DigestArchiveClient() {
       <section aria-label="Today's lead digest" className="space-y-4">
         <WireSectionRule label="Today's Lead" />
         <DailyDigest
-          variant="preview"
-          hideMasthead
           detailHref={latestDailySlug ? `/digest/${latestDailySlug}/` : undefined}
         />
       </section>

@@ -199,7 +199,7 @@ function getHeaderClassName(column: StablecoinHeaderDef, variant: StablecoinTabl
   return variant === "figmaOverview" ? OVERVIEW_HEADER_CLASS_NAMES[column.id] ?? column.className : column.className;
 }
 
-interface StablecoinTableHeaderSortProps {
+export interface StablecoinTableSortProps {
   sortKey: StablecoinTableSortKey;
   sortDirection: "asc" | "desc";
   toggleSort: (key: StablecoinTableSortKey) => void;
@@ -216,7 +216,7 @@ export function StablecoinTableHeader({
 }: {
   showPinnedControls: boolean;
   isVisible: (id: ColumnId) => boolean;
-  sort?: StablecoinTableHeaderSortProps;
+  sort?: StablecoinTableSortProps;
   sticky?: boolean;
   variant?: StablecoinTableVisualVariant;
 }) {

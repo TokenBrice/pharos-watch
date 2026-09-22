@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { QueryStateNotice } from "@/components/query-state-notice";
+import type { QueryViewState } from "@/lib/query-view-state";
 
 // Small square button that links a pulse card to its detail route — the
 // "expand" affordance in the top-right corner of every Market Pulse card.
@@ -28,10 +30,70 @@ export function CardExpandButton({
     </Link>
   );
 }
+interface PulseCardNotice {
+  label: string;
+  dataUpdatedAt?: number;
+  onRetry?: () => void;
+  compact?: boolean;
+}
+
+interface PulseCardProps {
+  className: string;
+  label: React.ReactNode;
+  href: string;
+  expandLabel: string;
+  aside?: React.ReactNode;
+  state: QueryViewState;
+  notice: PulseCardNotice;
+  loadingContent?: React.ReactNode;
+  emptyContent?: React.ReactNode;
+  unavailableWhen?: boolean;
+  hasRenderableData?: boolean;
+  children: React.ReactNode;
+}
+
+export function PulseCard({
+  className,
+  label,
+  href,
+  expandLabel,
+  aside,
+  state,
+  notice,
+  loadingContent,
+  emptyContent,
+  unavailableWhen = false,
+  hasRenderableData = true,
+  children,
+}: PulseCardProps): React.JSX.Element {
+  const noticeOnly =
+    state === "unavailable" || unavailableWhen || (state === "stale-with-data" && !hasRenderableData);
+  const content =
+    state === "loading" && loadingContent !== undefined
+      ? loadingContent
+      : noticeOnly
+        ? <QueryStateNotice state={state === "stale-with-data" ? state : "unavailable"} {...notice} />
+        : state === "empty" && emptyContent !== undefined
+          ? emptyContent
+          : (
+              <>
+                {state === "stale-with-data" ? <QueryStateNotice state={state} {...notice} compact /> : null}
+                {children}
+              </>
+            );
+
+  return (
+    <div className={className}>
+      <PulseCardHeader label={label} href={href} expandLabel={expandLabel} aside={aside} />
+      {content}
+    </div>
+  );
+}
+
 
 // Shared header row for Market Pulse cards: sentence-case label top-left, an
 // optional right-aligned meta aside, then the expand button in the corner.
-export function PulseCardHeader({
+function PulseCardHeader({
   label,
   href,
   expandLabel,

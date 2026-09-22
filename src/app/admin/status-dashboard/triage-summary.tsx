@@ -3,7 +3,6 @@ import type { HealthResponse, StatusResponse, StatusTransition } from "@shared/t
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
 import { RecommendedActionStrip } from "@/components/status/recommended-action-strip";
-import { RefreshControl } from "@/components/status/refresh-countdown";
 import { STATUS_PANEL_SHELL_CLASS, SummaryBadge } from "@/components/status/page-primitives";
 import { SystemDiagnostics } from "@/components/status/system-diagnostics";
 import { getTopFoldCopy, isRecoveryHold as isRecoveryHoldState } from "@/components/status/top-fold-copy";
@@ -210,7 +209,9 @@ export function TriageSummary({
               staleAfterMs={STATUS_DASHBOARD_FRESHNESS_POLICY.staleAfterMs}
               labelPrefix="Dashboard fetch"
             />
-            <RefreshControl key={lastUpdated} onRefresh={handleRefresh} />
+            <Button variant="outline" size="sm" className="min-h-11" onClick={handleRefresh}>
+              Refresh now
+            </Button>
             {showSignOut && onSignOut ? (
               <Button variant="outline" size="sm" className="min-h-11" onClick={onSignOut}>
                 Sign out

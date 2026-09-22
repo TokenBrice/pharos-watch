@@ -52,7 +52,7 @@ function formatMilliseconds(value: number | null): string {
   return value == null ? "Unknown" : `${value.toLocaleString()}ms`;
 }
 
-export type PerAlertMetricDescriptor = {
+type PerAlertMetricDescriptor = {
   key: "sent" | "enqueued" | "failed" | "blocked" | "firstSendLatencyMs";
   label: string;
   accessor: (row: CommsPerAlertDeliveryRow) => number | null;

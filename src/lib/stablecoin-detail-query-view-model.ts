@@ -1,10 +1,7 @@
 import type { SupplyHistoryPoint } from "@shared/types";
 import { CRON_24H, CRON_RESERVE_SYNC } from "@/lib/cron-intervals";
 import { resolveQueryViewState } from "@/lib/query-view-state";
-import {
-  deriveGaugeDeviationBps,
-  deriveSupplyFromMarketCap,
-} from "@/lib/stablecoin-detail-derive";
+import { deriveSupplyFromMarketCap } from "@/lib/stablecoin-detail-derive";
 import type {
   DetailQueryResource,
   StablecoinDetailFeatureState,
@@ -49,7 +46,6 @@ export interface DetailMarketSnapshot {
 export interface DetailPegPriceSnapshot {
   pegRef: number | null;
   deviationBps: number | null;
-  gaugeDeviationBps: number;
   pegReferenceUnavailable: boolean;
   pegScoreResult: PegSummaryCoin | null;
   consensusSources: string[];
@@ -134,7 +130,6 @@ export function buildDetailPegPriceSnapshot(
   return {
     pegRef,
     deviationBps,
-    gaugeDeviationBps: deriveGaugeDeviationBps(deviationBps, isNavToken),
     pegReferenceUnavailable: !isNavToken && pegScoreResult?.pegReferenceUnavailable === true,
     pegScoreResult,
     consensusSources: pegScoreResult?.consensusSources ?? [],

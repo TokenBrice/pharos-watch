@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { logosById } from "@/lib/logos";
-import { useDexLiquidity, usePegSummary, useReportCardsV9, useStressSignals } from "@/hooks/api-hooks";
+import { useDexLiquidity, usePegSummary, useReportCardsV9 } from "@/hooks/api-hooks";
 import { usePinnedStablecoins } from "@/hooks/use-pinned-stablecoins";
 import { useHomeAltFilters } from "@/hooks/use-home-alt-filters";
 import {
@@ -68,13 +68,11 @@ export function HomeAltRankingsSection({ titleId }: HomeAltRankingsSectionProps)
   const pegSummaryQuery = usePegSummary();
   const dexLiquidityQuery = useDexLiquidity();
   const reportCardsQuery = useReportCardsV9();
-  const stressSignalsQuery = useStressSignals();
   const { data: stablecoinsData, isLoading } = stablecoinsQuery;
   const logos = logosById;
   const { data: pegSummaryData } = pegSummaryQuery;
   const { data: dexLiquidity } = dexLiquidityQuery;
   const { data: reportCardsData } = reportCardsQuery;
-  const { data: stressData } = stressSignalsQuery;
   const pinned = usePinnedStablecoins();
   const eligibleIds =
     filters.activeUniverse === "core"
@@ -84,8 +82,8 @@ export function HomeAltRankingsSection({ titleId }: HomeAltRankingsSectionProps)
         : CLIENT_ACTIVE_IDS;
 
   const { reportCardMap } = useMemo(
-    () => buildHomepageOptionalViewModel({ reportCardsData, stressData }),
-    [reportCardsData, stressData],
+    () => buildHomepageOptionalViewModel({ reportCardsData }),
+    [reportCardsData],
   );
   const { pegScores, filteredRowCount } = useMemo(
     () =>
@@ -109,7 +107,6 @@ export function HomeAltRankingsSection({ titleId }: HomeAltRankingsSectionProps)
     { label: "peg", query: pegSummaryQuery, hasData: pegSummaryData !== undefined },
     { label: "liquidity", query: dexLiquidityQuery, hasData: dexLiquidity !== undefined },
     { label: "safety", query: reportCardsQuery, hasData: reportCardsData !== undefined },
-    { label: "stress", query: stressSignalsQuery, hasData: stressData !== undefined },
   ].filter((entry) => entry.query.error != null);
   const failureState = failedQueries.some((entry) => !entry.hasData) ? "unavailable" : "stale-with-data";
   const failureLabel =

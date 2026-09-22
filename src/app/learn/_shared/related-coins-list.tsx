@@ -12,7 +12,6 @@ interface RelatedCoin {
 
 interface RelatedCoinsListProps {
   coins: readonly RelatedCoin[];
-  kickerClass: string;
   kicker: string;
   heading: string;
   id?: string;
@@ -20,7 +19,6 @@ interface RelatedCoinsListProps {
 
 export function RelatedCoinsList({
   coins,
-  kickerClass,
   kicker,
   heading,
   id,
@@ -29,7 +27,7 @@ export function RelatedCoinsList({
   return (
     <section id={id} className="space-y-6">
       <div className="space-y-2">
-        <SectionKicker className={kickerClass}>{kicker}</SectionKicker>
+        <SectionKicker>{kicker}</SectionKicker>
         <SectionHeading>{heading}</SectionHeading>
       </div>
       <ul className="divide-y divide-border/40">

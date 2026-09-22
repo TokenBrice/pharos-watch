@@ -19,8 +19,6 @@ const HOME_ALT_CHART_MARGIN = { top: 24, right: 32, bottom: 12, left: 0 } as con
 const HOME_ALT_Y_AXIS_WIDTH = 68;
 const HOME_ALT_X_AXIS_HEIGHT = 30;
 const HOME_ALT_TICK_FONT_SIZE = 12;
-const HOME_ALT_PLACEHOLDER_END = Date.UTC(2026, 0, 1);
-const HOME_ALT_PLACEHOLDER_START = HOME_ALT_PLACEHOLDER_END - 90 * 24 * 60 * 60 * 1000;
 
 const HOME_ALT_DATE_TICK_FORMATTER = new Intl.DateTimeFormat("en-US", {
   month: "short",
@@ -120,8 +118,8 @@ function makeScales({
   bounds: ChartBounds;
   yDomain: [number, number];
 }) {
-  const start = rows.length > 0 ? rows[0]!.ts : HOME_ALT_PLACEHOLDER_START;
-  const end = rows.length > 0 ? rows[rows.length - 1]!.ts : HOME_ALT_PLACEHOLDER_END;
+  const start = rows[0]!.ts;
+  const end = rows[rows.length - 1]!.ts;
   const span = Math.max(1, end - start);
   const ySpan = Math.max(1, yDomain[1] - yDomain[0]);
 
@@ -232,8 +230,8 @@ function HomeAltChartFrame({
     const y0 = HOME_ALT_CHART_MARGIN.top;
     const y1 = Math.max(y0, height - HOME_ALT_CHART_MARGIN.bottom - HOME_ALT_X_AXIS_HEIGHT);
     const bounds = { x0, x1, y0, y1 };
-    const start = rows.length > 0 ? rows[0]!.ts : HOME_ALT_PLACEHOLDER_START;
-    const end = rows.length > 0 ? rows[rows.length - 1]!.ts : HOME_ALT_PLACEHOLDER_END;
+    const start = rows[0]!.ts;
+    const end = rows[rows.length - 1]!.ts;
     const maxFromRows = rows.reduce((max, row) => Math.max(max, row.total), 0);
     const resolvedYDomain: [number, number] = [yDomain[0], typeof yDomain[1] === "number" ? yDomain[1] : maxFromRows];
     const visibleRows = sampleRows(rows);

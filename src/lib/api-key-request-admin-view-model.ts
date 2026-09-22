@@ -117,6 +117,7 @@ function canReleaseRequestClaim(
 ): boolean {
   return request.status !== "pending_verification"
     && !hasActiveUnexpiredLinkedKey(request, generatedAt)
+    && request.claimStatus !== null
     && request.claimStatus !== "released";
 }
 

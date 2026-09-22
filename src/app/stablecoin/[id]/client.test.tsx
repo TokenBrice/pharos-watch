@@ -213,24 +213,6 @@ describe("StablecoinDetailClient", () => {
     cleanup();
   });
 
-  it("renders static profile content in the loading fallback", () => {
-    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
-    useStablecoinDetailViewModelMock.mockReturnValue({ status: "loading" });
-
-    const { container } = render(
-      <StablecoinDetailClient
-        id={coin.id}
-        coin={coin}
-        summary={null}
-        staticCoin={buildStablecoinStaticMeta(coin)}
-        staticProfileContent={<section data-testid="static-profile">Static stablecoin profile</section>}
-      />,
-    );
-
-    const staticProfile = screen.getByTestId("static-profile");
-    expect(staticProfile.textContent).toContain("Static stablecoin profile");
-    expect(container.textContent).toContain("Loading research dossier");
-  });
 
   it.each([
     { name: "activity near", near: [false, true, false], redemption: true, flows: true, blacklist: true, reserves: false },

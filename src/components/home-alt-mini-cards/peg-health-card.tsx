@@ -2,8 +2,7 @@
 
 import { useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PulseCardHeader } from "@/components/home-alt-mini-cards/pulse-card-header";
-import { QueryStateNotice } from "@/components/query-state-notice";
+import { PulseCard } from "@/components/home-alt-mini-cards/pulse-card-header";
 import { usePegSummary } from "@/hooks/api-hooks";
 import { bucketByDeviationBps } from "@/lib/home-alt-aggregates";
 import { resolveQueryViewState } from "@/lib/query-view-state";
@@ -31,27 +30,27 @@ export function PegHealthCard(): React.JSX.Element {
   });
 
   return (
-    <div className="pharos-card-shell flex h-full flex-col gap-4 p-4">
-      <PulseCardHeader href="/screener/" expandLabel="Open Screener" label="Peg Health" />
-      {state === "loading" ? (
+    <PulseCard
+      className="pharos-card-shell flex h-full flex-col gap-4 p-4"
+      href="/screener/"
+      expandLabel="Open Screener"
+      label="Peg Health"
+      state={state}
+      notice={{
+        label: "Peg health data",
+        dataUpdatedAt: query.dataUpdatedAt,
+        onRetry: () => void query.refetch(),
+      }}
+      loadingContent={
         <>
           <Skeleton className="h-9 w-32" />
           <Skeleton className="h-2.5 w-full rounded-full" />
           <Skeleton className="h-24 w-full" />
         </>
-      ) : state === "unavailable" ? (
-        <QueryStateNotice state={state} label="Peg health data" onRetry={() => void query.refetch()} />
-      ) : summary ? (
+      }
+    >
+      {summary ? (
         <div className="flex flex-1 flex-col">
-          {state === "stale-with-data" ? (
-            <QueryStateNotice
-              state={state}
-              label="Peg health data"
-              dataUpdatedAt={query.dataUpdatedAt}
-              onRetry={() => void query.refetch()}
-              compact
-            />
-          ) : null}
           <div>
             <div className="flex items-baseline pharos-numeric text-4xl font-bold tracking-tight">
               <span className="text-foreground">{summary.coinsAtPeg}</span>
@@ -103,6 +102,6 @@ export function PegHealthCard(): React.JSX.Element {
           </div>
         </div>
       ) : null}
-    </div>
+    </PulseCard>
   );
 }

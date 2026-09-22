@@ -46,12 +46,6 @@ const PEG_OPTIONS: readonly SelectorOption<SelectorPeg>[] =
     sublabel: PEG_SUBLABEL[value],
   }));
 
-const YIELD_PEG_SET = new Set<string>(SELECTOR_ELIGIBLE_PEG_CURRENCIES);
-
-/** Yield is limited to pegs with benchmark and source coverage. */
-function pegOptionsForProfile(profile: SelectorProfile): readonly SelectorOption<SelectorPeg>[] {
-  return profile === "yield" ? PEG_OPTIONS.filter((option) => YIELD_PEG_SET.has(option.value)) : PEG_OPTIONS;
-}
 
 export const HORIZON_OPTIONS: readonly SelectorOption<SelectorHorizon>[] = [
   { value: "lt24h", label: "Under 24 hours" },
@@ -163,7 +157,7 @@ export const SELECTOR_QUESTIONS: readonly SelectorQuestionDescriptor[] = [
     legendSubtext: (profile) =>
       profile === "yield" ? "Yield is limited to pegs with benchmark and source coverage." : undefined,
     helper: "Narrows the universe to this reference asset.",
-    options: (profile) => pegOptionsForProfile(profile),
+    options: () => PEG_OPTIONS,
     value: (state) => state.pegCurrency,
     setAction: (value) => ({ type: "set-peg", value: value as SelectorPeg }),
     answerAction: (state) => ({ type: "answer-peg", value: state.pegCurrency }),

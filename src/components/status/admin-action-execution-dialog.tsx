@@ -77,7 +77,7 @@ function setQueryParameter(path: string, name: string, value: string): string {
 }
 
 function StructuredExecutionResult({ execution }: { execution: AdminActionExecution }) {
-  const outcome = extractStructuredActionOutcome(execution.resultData, execution.status);
+  const outcome = extractStructuredActionOutcome(execution.data, execution.status);
   const followUpHref = outcome.followUp ? getSafeActionFollowUpHref(outcome.followUp) : null;
   const resultHeadingRef = useRef<HTMLHeadingElement>(null);
 

@@ -36,19 +36,17 @@ export function NumberedListSection({
   items,
   kicker,
   heading,
-  kickerClass,
   id,
 }: {
   items: readonly ReactNode[];
   kicker: ReactNode;
   heading: ReactNode;
-  kickerClass: string;
   id?: string;
 }) {
   return (
     <section id={id} className="space-y-6">
       <div className="space-y-2">
-        <SectionKicker className={kickerClass}>{kicker}</SectionKicker>
+        <SectionKicker>{kicker}</SectionKicker>
         <SectionHeading>{heading}</SectionHeading>
       </div>
       <ol className="divide-y divide-border/40">
@@ -72,16 +70,14 @@ export function NumberedListSection({
 
 export function CrossLinksFooter({
   links,
-  kickerClass,
   kicker = "Continue reading",
 }: {
   links: readonly CrossLink[];
-  kickerClass: string;
   kicker?: ReactNode;
 }) {
   return (
     <section className="space-y-5 border-t border-border/60 pt-10">
-      <SectionKicker className={kickerClass}>{kicker}</SectionKicker>
+      <SectionKicker>{kicker}</SectionKicker>
       <ul className="grid gap-3 sm:grid-cols-2">
         {links.map((link) => (
           <li key={link.href}>

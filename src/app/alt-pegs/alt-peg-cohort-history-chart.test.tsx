@@ -82,6 +82,9 @@ describe("AltPegCohortHistoryChart", () => {
     expect(screen.getByRole("button", { name: "1Y" }).getAttribute("aria-pressed")).toBe("true");
     expect(screen.getByText(/coverage starts/i)).toBeTruthy();
     expect(screen.getByText(/legacy provider-wide stablecoin-charts cohort feed/i)).toBeTruthy();
+    expect(
+      screen.getByRole("table", { name: /alt-peg market cap by cohort over 1 points/i }),
+    ).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: /open large cohort chart/i }));
     expect(onOpenFocus).toHaveBeenCalledWith("1y");
@@ -127,7 +130,7 @@ describe("AltPegCohortHistoryChart", () => {
     expect(screen.getByRole("figure").getAttribute("aria-label")).toContain("3 peg currencies");
     expect(screen.getByRole("button", { name: "All" }).getAttribute("aria-pressed")).toBe("true");
     expect((await screen.findByText("Total")).nextElementSibling?.textContent).toBe("$9.00M");
-    expect(screen.getAllByText(PEG_CHART_COLORS.EUR.label)).toHaveLength(2);
+    expect(screen.getAllByText(PEG_CHART_COLORS.EUR.label)).toHaveLength(3);
     expect(screen.getByText(`(${PEG_CHART_COLORS.BRL.label}, ${PEG_CHART_COLORS.JPY.label})`)).toBeTruthy();
     expect(screen.queryByText(PEG_LABELS_SHORT.USD)).toBeNull();
   });

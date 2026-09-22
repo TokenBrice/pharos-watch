@@ -409,24 +409,21 @@ Posted to both Twitter/X and Telegram. Twitter/X uses the distinct replay-safe l
 
 ## Frontend
 
-### Broadsheet (shared component)
+### Archive lead preview
 
 **Component:** `src/components/daily-digest.tsx`
 **Hook:** `src/hooks/api-hooks.ts` (`useDailyDigest`) → `GET /api/daily-digest`
 **Cache:** `staleTime: 86400s`, `refetchInterval: 172800s`
 
-The latest digest is presented in a broadsheet newspaper style:
-- **Masthead:** compact uppercase lockup with the full date; the homepage preview uses a slightly sharper mono masthead treatment than the archive broadsheet
-- **Headline:** the homepage preview uses `Newsreader` at a larger newspaper-style display scale, while the full `/digest/` broadsheet keeps the original serif headline treatment
-- **Risk badge + tape:** when `/api/daily-digest` exposes an active depeg `riskSignal`, the API prioritizes critical depegs before market impact and deviation size, and the broadsheet renders the resulting compact depeg badge near the headline so a truncated first paragraph cannot hide the risk state. New rows also render the `riskTape` chips and a compact next-trigger line in preview mode.
-- **Body:** Extended text paragraphs in italic Courier-style monospace (`EDITORIAL_BODY_STYLE`). On the homepage and `/digest/` archive preview, only the first editorial paragraph is shown as a teaser; the paragraph is preserved whole and never character-clamped mid-sentence. Digest detail pages show the full editorial body.
-- **Homepage preview split:** desktop uses an asymmetric two-column layout with a hairline `Executive Summary` label and headline block on the left, then the lead paragraph plus CTA rail on the right
+The `/digest/` archive presents the latest daily edition as a compact broadsheet preview:
+- **Headline:** `Newsreader` provides the newspaper-style display treatment.
+- **Risk badge + tape:** when `/api/daily-digest` exposes an active-depeg `riskSignal`, the API prioritizes critical depegs before market impact and deviation size, and the preview renders the resulting compact badge near the headline. New rows also render the `riskTape` chips and a compact next-trigger line.
+- **Body:** the first `extended` editorial paragraph is shown as a whole-paragraph teaser and is never character-clamped mid-sentence; `text` is the fallback when `extended` is unavailable.
+- **Layout:** desktop uses an asymmetric two-column layout with a hairline `Executive Summary` label and headline block on the left, then the lead paragraph plus CTA rail on the right.
 
 Digest detail metadata trims long headlines at a word boundary to keep the rendered search title within 70 characters, reserving the full edition date and ` | Pharos` suffix. The published headline, article heading, and structured-data headline remain intact.
 
-The `text` field remains the short distribution summary used for metadata and digest detail intros. The shared broadsheet renderer prefers `extended`, and falls back to `text` only if `extended` is unavailable.
-
-Used in three visible modes: the homepage (title + first editorial paragraph + "Read today's full digest" link), the `/digest/` archive page (`variant="preview"` with first paragraph + "Continue reading" link plus a weekly teaser before the wire table), and digest detail pages (full broadsheet body).
+The `text` field remains the short distribution summary used for metadata and digest detail intros. Digest detail pages render their persisted full edition directly in `src/app/digest/[date]/page.tsx`; the shared `DailyDigest` client component is only the archive's latest-edition preview.
 
 ### Archive page
 
@@ -436,7 +433,7 @@ Used in three visible modes: the homepage (title + first editorial paragraph + "
 **Hook:** `src/hooks/api-hooks.ts` (`useDigestArchive`) → `GET /api/digest-archive`
 
 The archive page has two zones:
-1. **Broadsheet** — today's digest in full broadsheet layout (via `DailyDigest`)
+1. **Lead preview** — today's digest teaser via `DailyDigest`, linking to the canonical dated detail page
 2. **Wire table** — all historical digests in a dense, wire-service style list
 
 The wire table shows each digest as a compact row: **date** (monospace, e.g. "27 FEB"), **title**, optional active-depeg **risk badge**, **PSI badge** (pill colored by condition band), and **total market cap**. The archive exposes URL-addressable All/Daily/Weekly, month, and title/body search controls; the selected view is shareable without dropping the server-rendered links. PSI, mcap, and risk data are served from the enriched archive API response (`psiScore`, `psiBand`, `totalMcapUsd`, `riskSignal` — parsed from the stored `input_data` JSON).

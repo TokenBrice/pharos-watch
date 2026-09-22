@@ -5,7 +5,6 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import type { MechanismArchetype } from "@shared/types";
 import { cn } from "@/lib/utils";
-import { ARCHETYPE_VISUALS } from "@/lib/mechanism-explainers/types";
 import type { CaseStudyOutcome } from "@/lib/case-studies/types";
 import {
   CASE_STUDY_OUTCOME_CHIP_BASE,
@@ -146,12 +145,7 @@ export function CaseStudyList({
                 className="pharos-focus-ring group grid gap-3 py-8 xl:grid-cols-[minmax(0,1fr)_auto] xl:gap-12 xl:py-10"
               >
                 <div className="flex flex-col gap-3">
-                  <p
-                    className={cn(
-                      "pharos-kicker",
-                      ARCHETYPE_VISUALS[study.archetype].kickerClass,
-                    )}
-                  >
+                  <p className="pharos-kicker">
                     {study.eyebrow}
                   </p>
                   <h2 className="pharos-display text-2xl font-bold tracking-tight text-foreground transition-colors group-hover:text-frost-blue sm:text-3xl">

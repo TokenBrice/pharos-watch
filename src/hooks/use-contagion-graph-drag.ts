@@ -51,7 +51,6 @@ export function useContagionGraphDrag({
   const [dragState, setDragState] = useState<DragState>({ simulationKey: null, id: null });
   const dragIdRef = useRef<string | null>(null);
   const dragSimulationKeyRef = useRef<string | null>(null);
-  const dragMoved = useRef(false);
   const dragMovedSincePointerDown = useRef(false);
   const dragStart = useRef<{ mx: number; my: number; nx: number; ny: number } | null>(null);
 
@@ -93,7 +92,6 @@ export function useContagionGraphDrag({
     dragIdRef.current = nodeId;
     dragSimulationKeyRef.current = simulationKey;
     setDragState({ simulationKey, id: nodeId });
-    dragMoved.current = false;
     dragMovedSincePointerDown.current = false;
     dragStart.current = {
       mx: svgPoint.x,
@@ -112,7 +110,6 @@ export function useContagionGraphDrag({
     const dx = svgPoint.x - dragStart.current.mx;
     const dy = svgPoint.y - dragStart.current.my;
     if (Math.abs(dx) + Math.abs(dy) > 1) {
-      dragMoved.current = true;
       dragMovedSincePointerDown.current = true;
     }
 

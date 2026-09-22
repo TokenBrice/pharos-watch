@@ -272,24 +272,3 @@ export function DataTableLoadingRows({
   );
 }
 
-export interface DataTableSkeletonShellProps<K extends string>
-  extends Omit<DataTableShellProps<K>, "children"> {
-  rowCount?: number;
-}
-
-export function DataTableSkeletonShell<K extends string>({
-  columns,
-  rowCount = 5,
-  isPending = true,
-  ...shellProps
-}: DataTableSkeletonShellProps<K>) {
-  return (
-    <DataTableShell
-      {...shellProps}
-      columns={columns}
-      isPending={isPending}
-    >
-      <DataTableLoadingRows columns={columns} rowCount={rowCount} />
-    </DataTableShell>
-  );
-}

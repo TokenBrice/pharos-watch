@@ -13,7 +13,6 @@ import { buildPageMetadata } from "@/lib/page-metadata";
 import { cn } from "@/lib/utils";
 import { LearnPageShell } from "./_shared/learn-page-shell";
 import { CrossLinksFooter } from "./_shared/section-primitives";
-import { ARCHETYPE_VISUALS } from "@/lib/mechanism-explainers/types";
 import { CASE_STUDY_LIST, CASE_STUDY_OUTCOME_COUNTS } from "@/lib/case-studies";
 import { content as usdcSvb2023 } from "@/lib/case-studies/usdc-svb-2023";
 import { content as terraUst2022 } from "@/lib/case-studies/terra-ust-2022";
@@ -253,12 +252,7 @@ export default function LearnIndexPage() {
                     ) : null}
                   </div>
                   <div className="min-w-0 space-y-1.5">
-                    <p
-                      className={cn(
-                        "pharos-kicker",
-                        ARCHETYPE_VISUALS[study.archetype].kickerClass,
-                      )}
-                    >
+                    <p className="pharos-kicker">
                       {study.eyebrow}
                     </p>
                     <p className="font-semibold leading-snug text-foreground transition-colors group-hover:text-frost-blue">
@@ -368,7 +362,6 @@ export default function LearnIndexPage() {
 
       <CrossLinksFooter
         kicker="Where to go next"
-        kickerClass=""
         links={[
           { href: "/methodology/", label: "Read the scoring methodology" },
           { href: "/safety-scores/", label: "Compare Safety Scores across every coin" },

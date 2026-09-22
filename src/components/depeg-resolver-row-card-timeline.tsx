@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { formatBps, formatElapsedSeconds } from "@shared/lib/format";
-import type { DdrDuration } from "@shared/types/depeg-resolver";
+import type { DdrDuration, DdrV2ResponseRow } from "@shared/types/depeg-resolver";
 import {
   formatDurationSec,
   FORWARD_STOPS,
@@ -16,10 +16,9 @@ import {
   NOW_DOT_TONE,
   TIER_META,
   timeToForwardX,
-  type DdrDisplayRow,
 } from "@/components/depeg-resolver-row-card-model";
 
-function PastDeviationSpark({ row }: { row: DdrDisplayRow }) {
+function PastDeviationSpark({ row }: { row: DdrV2ResponseRow }) {
   const peak = Math.abs(getPeakDeviationBps(row));
   const currentDeviationBps = getCurrentDeviationBps(row);
   const now = currentDeviationBps != null ? Math.abs(currentDeviationBps) : peak;
@@ -145,7 +144,7 @@ function ForwardCap({ tone, label }: { tone: "terminal" | "muted"; label: string
   );
 }
 
-export function ForecastTimeline({ row }: { row: DdrDisplayRow }) {
+export function ForecastTimeline({ row }: { row: DdrV2ResponseRow }) {
   const resolution = getResolution(row);
   const tier = resolution.tier;
   const duration = getDuration(row);

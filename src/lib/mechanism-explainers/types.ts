@@ -38,9 +38,6 @@ export interface ArchetypeDecommissionedEntry {
 
 export type ArchetypeDecommissioned = ReadonlyArray<ArchetypeDecommissionedEntry>;
 
-export interface ArchetypeVisuals {
-  readonly kickerClass: string;
-}
 
 export interface ArchetypeContent {
   readonly archetype: MechanismArchetype;
@@ -53,19 +50,6 @@ export interface ArchetypeContent {
   readonly variations: readonly ArchetypeVariation[];
   readonly whatToWatch: readonly string[];
   readonly crossLinks: readonly ArchetypeCrossLink[];
-  readonly visuals: ArchetypeVisuals;
   readonly decommissioned?: ArchetypeDecommissioned;
 }
 
-// Owner ruling (2026-07-02): categorical identity hues collapse to neutral —
-// structure, icons, and kicker copy carry archetype identity, not color. The
-// empty kickerClass leaves `.pharos-kicker`'s muted treatment in charge.
-export const ARCHETYPE_VISUALS: Record<MechanismArchetype, ArchetypeVisuals> = {
-  "fiat-cash": { kickerClass: "" },
-  tbill: { kickerClass: "" },
-  cdp: { kickerClass: "" },
-  "synthetic-delta-neutral": { kickerClass: "" },
-  algorithmic: { kickerClass: "" },
-  "rwa-credit-fund": { kickerClass: "" },
-  "commodity-claim": { kickerClass: "" },
-};
