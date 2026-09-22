@@ -3,6 +3,91 @@
   "entries": [
     {
       "chainId": "ethereum",
+      "stablecoinId": "ausd-agora",
+      "address": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+      "decimals": 6,
+      "disposition": "unsupported",
+      "unsupportedReason": "zero-address-transfer-without-supply-change:transfer",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "identity": {
+        "explorerSourceUrl": "https://eth.blockscout.com/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a?tab=contract",
+        "sourceVerified": true,
+        "contractName": "AgoraDollarErc1967Proxy",
+        "proxy": {
+          "isProxy": true,
+          "kind": "eip1967",
+          "implementation": "0xc1e3c7d486d6a92fbe920232e439eec2ceb112da",
+          "implementationSourceVerified": true
+        },
+        "externalMatches": [
+          {
+            "source": "coingecko",
+            "geckoId": "agora-dollar",
+            "value": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+            "matches": true,
+            "decimalPlace": 6
+          }
+        ],
+        "onChain": {
+          "block": 26035730,
+          "blockHash": "0xe20f51dce1d7d906cea78de0cd6a8ba5d5d5c75935e6e1d98b1ce2b542f49ba9",
+          "decimals": 6,
+          "symbol": "AUSD",
+          "totalSupplyRaw": "76515125656960",
+          "hasCode": true
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "mint(address,uint256)",
+          "internal": "Erc20Privileged._mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "Erc20Privileged.sol:62-101; MINTER_ROLE or BRIDGE_MINTER_ROLE; checked uint248 conversion preserves the amount."
+        },
+        {
+          "function": "batchMint((address,uint256)[])",
+          "internal": "Erc20Privileged._mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "Erc20Privileged.sol:43-53; one matching zero-source Transfer per item."
+        },
+        {
+          "function": "burn(address,uint256)",
+          "internal": "Erc20Privileged._burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "Erc20Privileged.sol:137-184; BURNER_ROLE or BRIDGE_BURNER_ROLE; exact supply decrement and zero-destination Transfer."
+        },
+        {
+          "function": "batchBurnFrom((address,uint256)[])",
+          "internal": "Erc20Privileged._burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "Erc20Privileged.sol:120-129; exact per-item decrement."
+        }
+      ],
+      "unpairedPaths": [
+        {
+          "function": "transfer(address,uint256) / transferFrom(address,address,uint256) / Erc20Core._transfer",
+          "reason": "AgoraDollarErc1967Proxy.sol:118-168 routes ordinary transfers to Erc20Core._transfer; Erc20Core.sol:44-82 allows recipient zero, moves balances only, emits Transfer(from,0,value), and does not decrement totalSupply. Implementation Erc20Privileged.sol:182 explicitly documents Transfer spoofing. Authorization transfers use the same primitive. Pinned eth_call transfer(0,1) from funded holder 0x255010dddb73b9e2a16172bf1e39e096e8ad2f4a returns true; isAccountFrozen(0) returns false. Source proves unmatched burn-like events; simulation did not submit a transaction."
+        }
+      ],
+      "totalSupplyView": {
+        "isStoredSum": true,
+        "note": "AgoraDollar.totalSupply() lines 118-119 returns StorageLib.Erc20CoreStorage.totalSupply; the only supply mutations are Erc20Privileged._mint (96) and _burn (179)."
+      },
+      "zeroRecipientTransferReverts": false,
+      "zeroRecipientTransferBurns": null,
+      "identityIssue": null,
+      "notes": "Counterexample journal scratch/SemA12/probe.json. Native transfer proxy dispatch flags are clear at the pinned implementation slot. The mint/burn writes themselves are paired, but the reverse event-to-supply condition is false; Minted/Burned events may support a separately reviewed custom-event invariant. Upgradeable via AgoraDollarErc1967Proxy; normal transfer methods live in the verified proxy as well as inherited code. Sources: Blockscout API v2 smart-contracts/0x00000000efe302beaa2b3e6e1b18d08d69a9012a raw SHA-256 0b6ffe45c4d8e001076eb3be00cca61f14402d3ee1cd7b6de7fb99510d294531; current implementation https://eth.blockscout.com/address/0xc1e3c7d486d6a92fbe920232e439eec2ceb112da?tab=contract (AgoraDollar), raw SHA-256 b1c7ecfb78d180f68bc8990d6b662cfc7b6dc3510913e811a1ee55a5ab6904e1. On-chain reads via Alchemy EIP-1898 blockHash with requireCanonical at block 26035730 / 0xe20f51dce1d7d906cea78de0cd6a8ba5d5d5c75935e6e1d98b1ce2b542f49ba9. CoinGecko Pro coins/agora-dollar HTTP 200 platform ethereum address and decimal_place match. Full raw sources and identity journal: admission/scratch/SemA12/.",
+      "windows": [],
+      "reviewedAt": "2026-09-22",
+      "reviewer": "SemA12"
+    },
+    {
+      "chainId": "ethereum",
       "stablecoinId": "bold-liquity",
       "address": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
       "decimals": 18,
@@ -299,6 +384,171 @@
     },
     {
       "chainId": "ethereum",
+      "stablecoinId": "crvusd-curve",
+      "address": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e",
+      "decimals": 18,
+      "disposition": "admitted",
+      "unsupportedReason": null,
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "identity": {
+        "explorerSourceUrl": "https://eth.blockscout.com/address/0xf939e0a03fb07f59a73314e73794be0e57ac1b4e?tab=contract",
+        "sourceVerified": true,
+        "contractName": "crvUSD Stablecoin",
+        "proxy": {
+          "isProxy": false,
+          "kind": "none",
+          "implementation": null,
+          "implementationSourceVerified": true
+        },
+        "externalMatches": [
+          {
+            "source": "coingecko",
+            "geckoId": "crvusd",
+            "value": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e",
+            "matches": true,
+            "decimalPlace": 18
+          }
+        ],
+        "onChain": {
+          "block": 26035720,
+          "blockHash": "0xb68d70afabb5d7847874e5e2e520bd417f0cf26b1225926e6307682166599053",
+          "decimals": 18,
+          "symbol": "crvUSD",
+          "totalSupplyRaw": "2104809204981834354272443571",
+          "hasCode": true
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "mint(address,uint256)",
+          "internal": "none (direct totalSupply/balanceOf writes)",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "crvusd .vy mint(_to,_value) (minter only, lines 284-299): assert _to not in [self, empty(address)]; balanceOf[_to] += _value; totalSupply += _value; log Transfer(empty(address), _to, _value)"
+        },
+        {
+          "function": "burn(uint256) / burnFrom(address,uint256)",
+          "internal": "_burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": ".vy _burn (lines 90-95) via burn/burnFrom: balanceOf[_from] -= _value; totalSupply -= _value; log Transfer(_from, empty(address), _value)"
+        }
+      ],
+      "unpairedPaths": [],
+      "totalSupplyView": {
+        "isStoredSum": true,
+        "note": "totalSupply is a public storage variable (Vyper HashMap-based storage); writers: mint(), _burn()"
+      },
+      "zeroRecipientTransferReverts": true,
+      "identityIssue": null,
+      "notes": "Vyper 0.3.7, verified directly (no proxy). _transfer asserts _to not in [self, empty(address)] (lines 99-105) so to-zero transfers revert; transferFrom from the zero address is unreachable for value > 0 because allowance[empty][x] can never be set (permit asserts _owner != empty(address), line 191) and would underflow. set_minter only rotates the minter role, no supply effect. No admin wipe path.",
+      "windows": [
+        {
+          "fromBlock": 26028679,
+          "fromBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "fromTimestamp": 1790027531,
+          "toBlock": 26035829,
+          "toBlockHash": "0x4df831986cf42d63dedd9b7a8fc200634d7447a170a79d7286de98c8fbc3df4c",
+          "toTimestamp": 1790113931,
+          "mintRaw": "0",
+          "burnRaw": "0",
+          "supplyDeltaRaw": "0",
+          "residualRaw": "0",
+          "logCount": 0,
+          "journalSha256": "ad0dfa1e077c234d3a4a85edbf7bcd1f69447ccc4aece81bd77a57f121f7269a"
+        },
+        {
+          "fromBlock": 26021533,
+          "fromBlockHash": "0x27c4caf42458c180212f9670de38e6bb407a9c566c4ff10ce88cab9980ede229",
+          "fromTimestamp": 1789941131,
+          "toBlock": 26028679,
+          "toBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "toTimestamp": 1790027531,
+          "mintRaw": "0",
+          "burnRaw": "0",
+          "supplyDeltaRaw": "0",
+          "residualRaw": "0",
+          "logCount": 0,
+          "journalSha256": "ad0dfa1e077c234d3a4a85edbf7bcd1f69447ccc4aece81bd77a57f121f7269a"
+        }
+      ],
+      "reviewedAt": "2026-09-22",
+      "reviewer": "SemA11"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "dai-makerdao",
+      "address": "0x6b175474e89094c44da98b954eedeac495271d0f",
+      "decimals": 18,
+      "disposition": "unsupported",
+      "unsupportedReason": "zero-address-transfer-without-supply-change:transferFrom",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "identity": {
+        "explorerSourceUrl": "https://eth.blockscout.com/address/0x6b175474e89094c44da98b954eedeac495271d0f?tab=contract",
+        "sourceVerified": true,
+        "contractName": "Dai",
+        "proxy": {
+          "isProxy": false,
+          "kind": "none",
+          "implementation": null,
+          "implementationSourceVerified": true
+        },
+        "externalMatches": [
+          {
+            "source": "coingecko",
+            "geckoId": "dai",
+            "value": "0x6b175474e89094c44da98b954eedeac495271d0f",
+            "matches": true,
+            "decimalPlace": 18
+          }
+        ],
+        "onChain": {
+          "block": 26035720,
+          "blockHash": "0xb68d70afabb5d7847874e5e2e520bd417f0cf26b1225926e6307682166599053",
+          "decimals": 18,
+          "symbol": "DAI",
+          "totalSupplyRaw": "4607726014444879929398613862",
+          "hasCode": true
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "mint(address,uint256)",
+          "internal": "none (direct totalSupply/balanceOf writes)",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "Dai.sol:134-138 (auth): balanceOf[usr] += wad; totalSupply += wad; emit Transfer(address(0), usr, wad)"
+        },
+        {
+          "function": "burn(address,uint256)",
+          "internal": "none (direct totalSupply/balanceOf writes)",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "Dai.sol:139-148: balanceOf[usr] -= wad; totalSupply -= wad; emit Transfer(usr, address(0), wad)"
+        }
+      ],
+      "unpairedPaths": [
+        {
+          "function": "transferFrom(address,address,uint256)",
+          "reason": "no zero-recipient guard: transfer/push/pull/move all route to transferFrom (Dai.sol:118-133), which allows dst == address(0): moves balanceOf[src] -> balanceOf[address(0)] and emits Transfer(src, address(0), wad) while totalSupply is unchanged - a burn-shaped event without a supply change, breaking mint-burn conservation for any to-zero transfer in the window"
+        }
+      ],
+      "totalSupplyView": {
+        "isStoredSum": true,
+        "note": "totalSupply is a public storage variable; writers: mint(), burn() only"
+      },
+      "zeroRecipientTransferReverts": false,
+      "zeroRecipientTransferBurns": null,
+      "identityIssue": null,
+      "notes": "dss Dai.sol (verified, pragma 0.5.12). mint()/burn() are perfectly paired, but the ordinary transfer path has no zero-address checks (classic dbrock-style ERC20): transfer(address(0), wad) succeeds and emits Transfer(msg.sender, address(0), wad) with no supply change. transferFrom(src=address(0),...) additionally requires allowance[0][x] which cannot be set (permit reverts on holder == 0, Dai.sol:182), so only the to-zero direction is reachable. Historical to-zero DAI transfers exist on mainnet; any such transfer inside the audited range would produce a false Critical.",
+      "windows": [],
+      "reviewedAt": "2026-09-22",
+      "reviewer": "SemA11"
+    },
+    {
+      "chainId": "ethereum",
       "stablecoinId": "dusd-alto",
       "address": "0x63d74d22e689c715a04f2c13962b1f77f443d35b",
       "decimals": 18,
@@ -390,6 +640,100 @@
       ],
       "reviewedAt": "2026-09-22",
       "reviewer": "SemExisting1"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "eurc-circle",
+      "address": "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c",
+      "decimals": 6,
+      "disposition": "admitted",
+      "unsupportedReason": null,
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "identity": {
+        "explorerSourceUrl": "https://eth.blockscout.com/address/0x1abaea1f7c830bd89acc67ec4af516284b1bc33c?tab=contract",
+        "sourceVerified": true,
+        "contractName": "FiatTokenProxy",
+        "proxy": {
+          "isProxy": true,
+          "kind": "custom",
+          "implementation": "0x43506849d7c04f9138d1a2050bbf3a0c054402dd",
+          "implementationSourceVerified": true
+        },
+        "externalMatches": [
+          {
+            "source": "coingecko",
+            "geckoId": "euro-coin",
+            "value": "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c",
+            "matches": true,
+            "decimalPlace": 6
+          }
+        ],
+        "onChain": {
+          "block": 26035730,
+          "blockHash": "0xe20f51dce1d7d906cea78de0cd6a8ba5d5d5c75935e6e1d98b1ce2b542f49ba9",
+          "decimals": 6,
+          "symbol": "EURC",
+          "totalSupplyRaw": "298633137117092",
+          "hasCode": true
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "mint(address,uint256)",
+          "internal": "FiatTokenV1.mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "FiatTokenV1.sol:121-143 increments totalSupply_ and emits Transfer(0,to,amount)."
+        },
+        {
+          "function": "burn(uint256)",
+          "internal": "FiatTokenV1.burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "FiatTokenV1.sol:360-374 subtracts totalSupply_ and emits Transfer(caller,0,amount)."
+        }
+      ],
+      "unpairedPaths": [],
+      "totalSupplyView": {
+        "isStoredSum": true,
+        "note": "FiatTokenV1.totalSupply() lines 195-196 directly returns totalSupply_. V2/V2_1/V2_2 do not override it or introduce other supply writers."
+      },
+      "zeroRecipientTransferReverts": true,
+      "identityIssue": null,
+      "notes": "FiatTokenV1._transfer (303-318) rejects both zero sender and recipient, including EIP-3009 paths. Blacklisting changes flags, not supply. The explorer calls this eip1967_oz, but verified proxy uses legacy org.zeppelinos.proxy.implementation slot 0x7050c9e0f4ca769c69bd3a8ef740bc37934f8e2c036e5a723fd8ee048ed3f8c3, so kind is custom. That slot was read at the pinned hash and agrees with Blockscout. Sources: Blockscout API v2 smart-contracts/0x1abaea1f7c830bd89acc67ec4af516284b1bc33c raw SHA-256 066c5849a21559d33eda580f6819bf3ea6a81daf9c67c4fd1eccef7bb768d7c0; current implementation https://eth.blockscout.com/address/0x43506849d7c04f9138d1a2050bbf3a0c054402dd?tab=contract (FiatTokenV2_2), raw SHA-256 5894b875424e69e957cb41cfcb1de508cd10bec9507fe4d51a9a6ad5583ee6d0. On-chain reads via Alchemy EIP-1898 blockHash with requireCanonical at block 26035730 / 0xe20f51dce1d7d906cea78de0cd6a8ba5d5d5c75935e6e1d98b1ce2b542f49ba9. CoinGecko Pro coins/euro-coin HTTP 200 platform ethereum address and decimal_place match. Full raw sources and identity journal: admission/scratch/SemA12/.",
+      "windows": [
+        {
+          "fromBlock": 26028679,
+          "fromBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "fromTimestamp": 1790027531,
+          "toBlock": 26035829,
+          "toBlockHash": "0x4df831986cf42d63dedd9b7a8fc200634d7447a170a79d7286de98c8fbc3df4c",
+          "toTimestamp": 1790113931,
+          "mintRaw": "6640179877390",
+          "burnRaw": "4457913887390",
+          "supplyDeltaRaw": "2182265990000",
+          "residualRaw": "0",
+          "logCount": 54,
+          "journalSha256": "ad0dfa1e077c234d3a4a85edbf7bcd1f69447ccc4aece81bd77a57f121f7269a"
+        },
+        {
+          "fromBlock": 26021533,
+          "fromBlockHash": "0x27c4caf42458c180212f9670de38e6bb407a9c566c4ff10ce88cab9980ede229",
+          "fromTimestamp": 1789941131,
+          "toBlock": 26028679,
+          "toBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "toTimestamp": 1790027531,
+          "mintRaw": "6243757787561",
+          "burnRaw": "5585566534820",
+          "supplyDeltaRaw": "658191252741",
+          "residualRaw": "0",
+          "logCount": 40,
+          "journalSha256": "ad0dfa1e077c234d3a4a85edbf7bcd1f69447ccc4aece81bd77a57f121f7269a"
+        }
+      ],
+      "reviewedAt": "2026-09-22",
+      "reviewer": "SemA12"
     },
     {
       "chainId": "ethereum",
@@ -487,6 +831,215 @@
     },
     {
       "chainId": "ethereum",
+      "stablecoinId": "fdusd-first-digital",
+      "address": "0xc5f0f7b66764f6ec8c8dff7ba683102295e16409",
+      "decimals": 18,
+      "disposition": "admitted",
+      "unsupportedReason": null,
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "identity": {
+        "explorerSourceUrl": "https://eth.blockscout.com/address/0xc5f0f7b66764f6ec8c8dff7ba683102295e16409?tab=contract",
+        "sourceVerified": true,
+        "contractName": "TransparentUpgradeabilityProxy",
+        "proxy": {
+          "isProxy": true,
+          "kind": "eip1967",
+          "implementation": "0xa6b2c3d2910246fb0adb02e5f6b39e29026e6d50",
+          "implementationSourceVerified": true
+        },
+        "externalMatches": [
+          {
+            "source": "coingecko",
+            "geckoId": "first-digital-usd",
+            "value": "0xc5f0f7b66764f6ec8c8dff7ba683102295e16409",
+            "matches": true,
+            "decimalPlace": 18
+          }
+        ],
+        "onChain": {
+          "block": 26035720,
+          "blockHash": "0xb68d70afabb5d7847874e5e2e520bd417f0cf26b1225926e6307682166599053",
+          "decimals": 18,
+          "symbol": "FDUSD",
+          "totalSupplyRaw": "214866267100000000000000000",
+          "hasCode": true
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "mint(uint256)",
+          "internal": "_mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "Stablecoin.sol mint() onlyOwner -> OZ _mint(msg.sender, amount) (Stablecoin.sol:40-44)"
+        },
+        {
+          "function": "mint(address,uint256)",
+          "internal": "_mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "StablecoinV2.sol mint(to,amount) onlyOwner notFrozen(to) -> OZ _mint(to, amount) (StablecoinV2.sol:74-78)"
+        },
+        {
+          "function": "burn(uint256)",
+          "internal": "_burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "Stablecoin.sol burn() onlyOwner -> OZ _burn(msg.sender, amount) (Stablecoin.sol:52-56)"
+        }
+      ],
+      "unpairedPaths": [],
+      "totalSupplyView": {
+        "isStoredSum": true,
+        "note": "OZ 4.x ERC20Upgradeable totalSupply() returns _totalSupply; _mint/_burn are the only writers (ERC20Upgradeable.sol:99-101,264-303)"
+      },
+      "zeroRecipientTransferReverts": true,
+      "identityIssue": null,
+      "notes": "OZ v4 ERC20Upgradeable base: _transfer requires from != 0 and to != 0 (ERC20Upgradeable.sol:236-237); _mint/_burn require nonzero account and emit Transfer(0,account,amount)/Transfer(account,0,amount) with exact amount. EIP-7598 transferWithAuthorization/receiveWithAuthorization (StablecoinV2) route through _transfer (zero-safe). freeze/unfreeze only block transfers; no admin wipe/burnFrom path. Proxy: OZ TransparentUpgradeabilityProxy, impl slot verified on-chain at pinned block.",
+      "windows": [
+        {
+          "fromBlock": 26028679,
+          "fromBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "fromTimestamp": 1790027531,
+          "toBlock": 26035829,
+          "toBlockHash": "0x4df831986cf42d63dedd9b7a8fc200634d7447a170a79d7286de98c8fbc3df4c",
+          "toTimestamp": 1790113931,
+          "mintRaw": "0",
+          "burnRaw": "0",
+          "supplyDeltaRaw": "0",
+          "residualRaw": "0",
+          "logCount": 0,
+          "journalSha256": "ad0dfa1e077c234d3a4a85edbf7bcd1f69447ccc4aece81bd77a57f121f7269a"
+        },
+        {
+          "fromBlock": 26021533,
+          "fromBlockHash": "0x27c4caf42458c180212f9670de38e6bb407a9c566c4ff10ce88cab9980ede229",
+          "fromTimestamp": 1789941131,
+          "toBlock": 26028679,
+          "toBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "toTimestamp": 1790027531,
+          "mintRaw": "0",
+          "burnRaw": "0",
+          "supplyDeltaRaw": "0",
+          "residualRaw": "0",
+          "logCount": 0,
+          "journalSha256": "ad0dfa1e077c234d3a4a85edbf7bcd1f69447ccc4aece81bd77a57f121f7269a"
+        }
+      ],
+      "reviewedAt": "2026-09-22",
+      "reviewer": "SemA11"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "frxusd-frax",
+      "address": "0xcacd6fd266af91b8aed52accc382b4e165586e29",
+      "decimals": 18,
+      "disposition": "admitted",
+      "unsupportedReason": null,
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "identity": {
+        "explorerSourceUrl": "https://eth.blockscout.com/address/0xcacd6fd266af91b8aed52accc382b4e165586e29?tab=contract",
+        "sourceVerified": true,
+        "contractName": "TransparentUpgradeabilityProxy",
+        "proxy": {
+          "isProxy": true,
+          "kind": "eip1967",
+          "implementation": "0x0000000048d2c8baf31742f6765383278bada4d5",
+          "implementationSourceVerified": true
+        },
+        "externalMatches": [
+          {
+            "source": "coingecko",
+            "geckoId": "frax-usd",
+            "value": "0xcacd6fd266af91b8aed52accc382b4e165586e29",
+            "matches": true,
+            "decimalPlace": 18
+          }
+        ],
+        "onChain": {
+          "block": 26035720,
+          "blockHash": "0xb68d70afabb5d7847874e5e2e520bd417f0cf26b1225926e6307682166599053",
+          "decimals": 18,
+          "symbol": "frxUSD",
+          "totalSupplyRaw": "93855235610412892667769007",
+          "hasCode": true
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "minter_mint(address,uint256)",
+          "internal": "_mint -> _update",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "FrxUSD2.sol:65-68 onlyMinters -> OZ 5.3.0 _mint -> _update(address(0), to, value): _totalSupply += value; emit Transfer(address(0), to, value) (ERC20.sol:182-210,220-225)"
+        },
+        {
+          "function": "minter_burn_from(address,uint256)",
+          "internal": "_burn -> _update",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "FrxUSD2.sol:57-60 onlyMinters -> ERC20Burnable.burnFrom -> _burn -> _update(from, address(0), value): _totalSupply -= value; emit Transfer(from, address(0), value)"
+        },
+        {
+          "function": "burn(address,uint256) / burnMany(address[],uint256[])",
+          "internal": "_burn -> _update",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "FrxUSD2.sol:152-168 onlyOwner confiscation burns (amount 0 = whole balance) -> OZ _burn, paired with exact amount"
+        },
+        {
+          "function": "burn(uint256) / burnFrom(address,uint256) [ERC20Burnable]",
+          "internal": "_burn -> _update",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "public self-burn paths, paired"
+        }
+      ],
+      "unpairedPaths": [],
+      "totalSupplyView": {
+        "isStoredSum": true,
+        "note": "OZ 5.3.0 ERC20.totalSupply() returns _totalSupply; the only writer is _update via _mint/_burn and zero-side _transfer cases which all carry the paired event"
+      },
+      "zeroRecipientTransferReverts": true,
+      "identityIssue": null,
+      "notes": "Proxy: OZ TransparentUpgradeabilityProxy, EIP-1967 impl slot verified on-chain at pinned block -> FrxUSD (FrxUSD3/FrxUSD2, OZ contracts 5.3.0), verified. OZ 5.3.0 _transfer reverts on both zero sides (ERC20.sol:165-173); _mint/_burn revert on zero account (ERC20.sol:220-238); even a hypothetical zero-side _update would change supply together with the event, so no event-without-supply-change path exists. FrxUSD2._update override only adds pause/freeze gates before super._update. EIP-3009/Permit modules (FrxUSD3) route through ERC20._transfer/_approve.",
+      "windows": [
+        {
+          "fromBlock": 26028679,
+          "fromBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "fromTimestamp": 1790027531,
+          "toBlock": 26035829,
+          "toBlockHash": "0x4df831986cf42d63dedd9b7a8fc200634d7447a170a79d7286de98c8fbc3df4c",
+          "toTimestamp": 1790113931,
+          "mintRaw": "2893802749267000000000000",
+          "burnRaw": "2440607713374946883538554",
+          "supplyDeltaRaw": "453195035892053116461446",
+          "residualRaw": "0",
+          "logCount": 394,
+          "journalSha256": "ad0dfa1e077c234d3a4a85edbf7bcd1f69447ccc4aece81bd77a57f121f7269a"
+        },
+        {
+          "fromBlock": 26021533,
+          "fromBlockHash": "0x27c4caf42458c180212f9670de38e6bb407a9c566c4ff10ce88cab9980ede229",
+          "fromTimestamp": 1789941131,
+          "toBlock": 26028679,
+          "toBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "toTimestamp": 1790027531,
+          "mintRaw": "3608541945021000000000000",
+          "burnRaw": "1885108488250226182151917",
+          "supplyDeltaRaw": "1723433456770773817848083",
+          "residualRaw": "0",
+          "logCount": 432,
+          "journalSha256": "ad0dfa1e077c234d3a4a85edbf7bcd1f69447ccc4aece81bd77a57f121f7269a"
+        }
+      ],
+      "reviewedAt": "2026-09-22",
+      "reviewer": "SemA11"
+    },
+    {
+      "chainId": "ethereum",
       "stablecoinId": "ftusd-flying-tulip",
       "address": "0xf7d85ec4e7710f71992752eac2111312e73e9c9c",
       "decimals": 6,
@@ -578,6 +1131,192 @@
       ],
       "reviewedAt": "2026-09-22",
       "reviewer": "SemExisting2"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "fxusd-f-x-protocol",
+      "address": "0x085780639cc2cacd35e474e71f4d000e2405d8f6",
+      "decimals": 18,
+      "disposition": "admitted",
+      "unsupportedReason": null,
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "identity": {
+        "explorerSourceUrl": "https://eth.blockscout.com/address/0x085780639cc2cacd35e474e71f4d000e2405d8f6?tab=contract",
+        "sourceVerified": true,
+        "contractName": "TransparentUpgradeabilityProxy",
+        "proxy": {
+          "isProxy": true,
+          "kind": "eip1967",
+          "implementation": "0xf729422d68c2cf00574fb5712972454cf402a9b1",
+          "implementationSourceVerified": true
+        },
+        "externalMatches": [
+          {
+            "source": "coingecko",
+            "geckoId": "f-x-protocol-fxusd",
+            "value": "0x085780639cc2cacd35e474e71f4d000e2405d8f6",
+            "matches": true,
+            "decimalPlace": 18
+          }
+        ],
+        "onChain": {
+          "block": 26035720,
+          "blockHash": "0xb68d70afabb5d7847874e5e2e520bd417f0cf26b1225926e6307682166599053",
+          "decimals": 18,
+          "symbol": "fxUSD",
+          "totalSupplyRaw": "85702407683535151867412218",
+          "hasCode": true
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "mint(address,uint256)",
+          "internal": "_mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "FxUSDRegeneracy.sol:392-394 onlyPoolManager -> OZ 4.9.6 _mint(to, amount): _totalSupply += amount; emit Transfer(address(0), account, amount)"
+        },
+        {
+          "function": "burn(address,uint256)",
+          "internal": "_burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "FxUSDRegeneracy.sol:397-399 onlyPoolManager -> OZ _burn(from, amount): _totalSupply -= amount; emit Transfer(account, address(0), amount)"
+        },
+        {
+          "function": "redeem(...)",
+          "internal": "_burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "FxUSDRegeneracy.sol:354 _burn(_msgSender(), _amountIn), paired"
+        },
+        {
+          "function": "buyback(uint256,address,bytes)",
+          "internal": "_burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "FxUSDRegeneracy.sol:434 onlyPegKeeper _burn(address(this), expectedFxUSD), paired"
+        },
+        {
+          "function": "_mintShares(...)/_burnShares(...) [internal helpers]",
+          "internal": "_mint/_burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "FxUSDRegeneracy.sol:481-503 update legacyTotalSupply bookkeeping then call _mint/_burn, paired"
+        }
+      ],
+      "unpairedPaths": [],
+      "totalSupplyView": {
+        "isStoredSum": true,
+        "note": "OZ 4.9.6 ERC20Upgradeable.totalSupply() returns _totalSupply (ERC20Upgradeable.sol:99-101); legacyTotalSupply is separate bookkeeping and not the ERC20 view. Old IFxUSD.mint(address,uint256,address,uint256) reverts 'mint paused' (FxUSDRegeneracy.sol:267-269)"
+      },
+      "zeroRecipientTransferReverts": true,
+      "identityIssue": null,
+      "notes": "Proxy: OZ TransparentUpgradeabilityProxy, EIP-1967 impl slot verified on-chain at pinned block -> FxUSDRegeneracy (OZ contracts-upgradeable 4.9.6), verified; same storage layout as prior FxUSD (upgrade in place, no forwarding). fxUSD is a share-value token (NAV accrues via f(x) markets) but Transfer events and totalSupply are both denominated in shares, so raw-unit conservation holds; stableReserve/managed bookkeeping does not touch ERC20 supply. OZ 4.9.6 _transfer requires from != 0 and to != 0 (ERC20Upgradeable.sol:227-229); _mint/_burn require nonzero account and emit paired events.",
+      "windows": [
+        {
+          "fromBlock": 26028679,
+          "fromBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "fromTimestamp": 1790027531,
+          "toBlock": 26035829,
+          "toBlockHash": "0x4df831986cf42d63dedd9b7a8fc200634d7447a170a79d7286de98c8fbc3df4c",
+          "toTimestamp": 1790113931,
+          "mintRaw": "377747562176168410609818",
+          "burnRaw": "6613842382707602547111",
+          "supplyDeltaRaw": "371133719793460808062707",
+          "residualRaw": "0",
+          "logCount": 38,
+          "journalSha256": "ad0dfa1e077c234d3a4a85edbf7bcd1f69447ccc4aece81bd77a57f121f7269a"
+        },
+        {
+          "fromBlock": 26021533,
+          "fromBlockHash": "0x27c4caf42458c180212f9670de38e6bb407a9c566c4ff10ce88cab9980ede229",
+          "fromTimestamp": 1789941131,
+          "toBlock": 26028679,
+          "toBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "toTimestamp": 1790027531,
+          "mintRaw": "4007149169613251069404077",
+          "burnRaw": "2091028180065513288305440",
+          "supplyDeltaRaw": "1916120989547737781098637",
+          "residualRaw": "0",
+          "logCount": 38,
+          "journalSha256": "ad0dfa1e077c234d3a4a85edbf7bcd1f69447ccc4aece81bd77a57f121f7269a"
+        }
+      ],
+      "reviewedAt": "2026-09-22",
+      "reviewer": "SemA11"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "gho-aave",
+      "address": "0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f",
+      "decimals": 18,
+      "disposition": "unsupported",
+      "unsupportedReason": "zero-address-transfer-without-supply-change:transfer",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "identity": {
+        "explorerSourceUrl": "https://eth.blockscout.com/address/0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f?tab=contract",
+        "sourceVerified": true,
+        "contractName": "GhoToken",
+        "proxy": {
+          "isProxy": false,
+          "kind": "none",
+          "implementation": null,
+          "implementationSourceVerified": true
+        },
+        "externalMatches": [
+          {
+            "source": "coingecko",
+            "geckoId": "gho",
+            "value": "0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f",
+            "matches": true,
+            "decimalPlace": 18
+          }
+        ],
+        "onChain": {
+          "block": 26035720,
+          "blockHash": "0xb68d70afabb5d7847874e5e2e520bd417f0cf26b1225926e6307682166599053",
+          "decimals": 18,
+          "symbol": "GHO",
+          "totalSupplyRaw": "699000000000000000000000000",
+          "hasCode": true
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "mint(address,uint256)",
+          "internal": "_mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "GhoToken.sol:34-46 facilitator mint -> ERC20._mint (gho-core ERC20.sol:162-172): totalSupply += amount; balanceOf[to] += amount; emit Transfer(address(0), to, amount)"
+        },
+        {
+          "function": "burn(uint256)",
+          "internal": "_burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "GhoToken.sol:49-60 facilitator burn -> ERC20._burn (gho-core ERC20.sol:174-184): balanceOf[from] -= amount; totalSupply -= amount; emit Transfer(from, address(0), amount)"
+        }
+      ],
+      "unpairedPaths": [
+        {
+          "function": "transfer(address,uint256)",
+          "reason": "Solmate-derived base ERC20 (gho-core src/contracts/gho/ERC20.sol:71-101) has no zero-address checks: transfer(address(0), amount) executes balance moves only and emits Transfer(msg.sender, address(0), amount) while totalSupply is unchanged; transferFrom(from, address(0), amount) identical - burn-shaped events without supply changes"
+        }
+      ],
+      "totalSupplyView": {
+        "isStoredSum": true,
+        "note": "totalSupply is a public storage variable (gho-core ERC20.sol:27); writers: _mint/_burn only, both paired"
+      },
+      "zeroRecipientTransferReverts": false,
+      "zeroRecipientTransferBurns": null,
+      "identityIssue": null,
+      "notes": "GhoToken verified directly (no proxy; Blockscout proxy_type null). Facilitator bucket bookkeeping (bucketLevel) is orthogonal to supply. The modified-Solmate ERC20 base lacks OZ-style zero guards on transfer/transferFrom, so the reverse pairing fails: a to-zero transfer emits a burn-shaped Transfer without changing totalSupply. permit() does guard recoveredAddress != address(0) (gho-core ERC20.sol:131), so allowance for the zero address cannot be created and the from-zero direction is unreachable (transferFrom would underflow allowance for amount > 0).",
+      "windows": [],
+      "reviewedAt": "2026-09-22",
+      "reviewer": "SemA11"
     },
     {
       "chainId": "ethereum",
@@ -842,6 +1581,330 @@
     },
     {
       "chainId": "ethereum",
+      "stablecoinId": "paxg-paxos",
+      "address": "0x45804880de22913dafe09f4980848ece6ecbaf78",
+      "decimals": 18,
+      "disposition": "admitted",
+      "unsupportedReason": null,
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "identity": {
+        "explorerSourceUrl": "https://eth.blockscout.com/address/0x45804880de22913dafe09f4980848ece6ecbaf78?tab=contract",
+        "sourceVerified": true,
+        "contractName": "AdminUpgradeabilityProxy",
+        "proxy": {
+          "isProxy": true,
+          "kind": "custom",
+          "implementation": "0x7da4c5d9eca180a03765a6d27196f2a0380fa543",
+          "implementationSourceVerified": true
+        },
+        "externalMatches": [
+          {
+            "source": "coingecko",
+            "geckoId": "pax-gold",
+            "value": "0x45804880de22913dafe09f4980848ece6ecbaf78",
+            "matches": true,
+            "decimalPlace": 18
+          }
+        ],
+        "onChain": {
+          "block": 26035730,
+          "blockHash": "0xe20f51dce1d7d906cea78de0cd6a8ba5d5d5c75935e6e1d98b1ce2b542f49ba9",
+          "decimals": 18,
+          "symbol": "PAXG",
+          "totalSupplyRaw": "432377642004000000000000",
+          "hasCode": true
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "increaseSupplyToAddress(uint256,address)",
+          "internal": "PaxosTokenV2.increaseSupplyToAddress",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "PaxosTokenV2.sol:348-356 increments totalSupply_ and emits identical Transfer(0,mintToAddress,value)."
+        },
+        {
+          "function": "increaseSupply(uint256)",
+          "internal": "increaseSupplyToAddress",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "PaxosTokenV2.sol:364-365."
+        },
+        {
+          "function": "mint(address,uint256)",
+          "internal": "increaseSupplyToAddress",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "PaxosTokenV2.sol:373-374."
+        },
+        {
+          "function": "decreaseSupplyFromAddress(uint256,address)",
+          "internal": "PaxosTokenV2.decreaseSupplyFromAddress",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "PaxosTokenV2.sol:384-393 decrements totalSupply_ and emits identical Transfer(burnFromAddress,0,value)."
+        },
+        {
+          "function": "decreaseSupply(uint256)",
+          "internal": "decreaseSupplyFromAddress",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "PaxosTokenV2.sol:401-402."
+        },
+        {
+          "function": "burn(uint256)",
+          "internal": "decreaseSupply",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "PaxosTokenV2.sol:409-410."
+        },
+        {
+          "function": "wipeFrozenAddress(address)",
+          "internal": "PaxosTokenV2.wipeFrozenAddress",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "PaxosTokenV2.sol:289-297 subtracts complete frozen balance and emits Transfer(addr,0,balance)."
+        }
+      ],
+      "unpairedPaths": [],
+      "totalSupplyView": {
+        "isStoredSum": true,
+        "note": "PaxosTokenV2.totalSupply() lines 139-140 returns stored totalSupply_. _initializeV1 (495-499) sets initial zero only when pastVersion<1 and !initializedV1; not a live reset. Current PAXG _migratePAXGStorage modifies legacy administrative slots, not supply slot 2."
+      },
+      "zeroRecipientTransferReverts": true,
+      "identityIssue": null,
+      "notes": "PAXG inherits PaxosTokenV2, NOT PaxosTokenClaimableRewards, TokenAdminFacet, or test MockFacet present in the verified compilation bundle. Current _transfer (455-462) rejects zero recipient and has no transfer fee (legacy fee slots are migrated). privileged-zero-to-zero-mint-possible: PaxosTokenV2.increaseSupplyToAddress, lines 348-355; runtime fails closed via ambiguous-zero-transfer. Confirmed pinned eth_call mint(0,1) succeeds from live controller 0xd09ede557ef195983c9544a5724046fbd6e8a3c6 (void return 0x), two other controllers revert; see scratch/SemA12/probe.json. Per Main ruling, privileged-only zero-to-zero mint is not an admission blocker. Proxy uses legacy org.zeppelinos slot 0x7050c9e0f4ca769c69bd3a8ef740bc37934f8e2c036e5a723fd8ee048ed3f8c3, verified at pinned hash. Sources: Blockscout API v2 smart-contracts/0x45804880de22913dafe09f4980848ece6ecbaf78 raw SHA-256 872863717f76941dba0dc84ae7ea93c1954ed4c9f66ab57c179cd7d7695c488e; current implementation https://eth.blockscout.com/address/0x7da4c5d9eca180a03765a6d27196f2a0380fa543?tab=contract (PAXG), raw SHA-256 1ee6c6d4f56d7ea89509beda31a7e33072b90dd7d895540a1759f3829e40f403. On-chain reads via Alchemy EIP-1898 blockHash with requireCanonical at block 26035730 / 0xe20f51dce1d7d906cea78de0cd6a8ba5d5d5c75935e6e1d98b1ce2b542f49ba9. CoinGecko Pro coins/pax-gold HTTP 200 platform ethereum address and decimal_place match. Full raw sources and identity journal: admission/scratch/SemA12/.",
+      "windows": [
+        {
+          "fromBlock": 26028679,
+          "fromBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "fromTimestamp": 1790027531,
+          "toBlock": 26035829,
+          "toBlockHash": "0x4df831986cf42d63dedd9b7a8fc200634d7447a170a79d7286de98c8fbc3df4c",
+          "toTimestamp": 1790113931,
+          "mintRaw": "405701217000000000000",
+          "burnRaw": "123036000000000000",
+          "supplyDeltaRaw": "405578181000000000000",
+          "residualRaw": "0",
+          "logCount": 8,
+          "journalSha256": "ad0dfa1e077c234d3a4a85edbf7bcd1f69447ccc4aece81bd77a57f121f7269a"
+        },
+        {
+          "fromBlock": 26021533,
+          "fromBlockHash": "0x27c4caf42458c180212f9670de38e6bb407a9c566c4ff10ce88cab9980ede229",
+          "fromTimestamp": 1789941131,
+          "toBlock": 26028679,
+          "toBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "toTimestamp": 1790027531,
+          "mintRaw": "82529083000000000000",
+          "burnRaw": "129514000000000000",
+          "supplyDeltaRaw": "82399569000000000000",
+          "residualRaw": "0",
+          "logCount": 25,
+          "journalSha256": "ad0dfa1e077c234d3a4a85edbf7bcd1f69447ccc4aece81bd77a57f121f7269a"
+        }
+      ],
+      "reviewedAt": "2026-09-22",
+      "reviewer": "SemA12"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "pyusd-paypal",
+      "address": "0x6c3ea9036406852006290770bedfcaba0e23a0e8",
+      "decimals": 6,
+      "disposition": "admitted",
+      "unsupportedReason": null,
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "identity": {
+        "explorerSourceUrl": "https://eth.blockscout.com/address/0x6c3ea9036406852006290770bedfcaba0e23a0e8?tab=contract",
+        "sourceVerified": true,
+        "contractName": "AdminUpgradeabilityProxy",
+        "proxy": {
+          "isProxy": true,
+          "kind": "custom",
+          "implementation": "0x8c35caa5fd5bdc64b6b11344ad57594a3676256a",
+          "implementationSourceVerified": true
+        },
+        "externalMatches": [
+          {
+            "source": "coingecko",
+            "geckoId": "paypal-usd",
+            "value": "0x6c3ea9036406852006290770bedfcaba0e23a0e8",
+            "matches": true,
+            "decimalPlace": 6
+          }
+        ],
+        "onChain": {
+          "block": 26035720,
+          "blockHash": "0xb68d70afabb5d7847874e5e2e520bd417f0cf26b1225926e6307682166599053",
+          "decimals": 6,
+          "symbol": "PYUSD",
+          "totalSupplyRaw": "1706981576867425",
+          "hasCode": true
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "increaseSupplyToAddress(uint256,address)",
+          "internal": "none (direct totalSupply_/balances writes)",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "PaxosTokenV2.sol:337-346: supplyControl.canMintToAddress gate; totalSupply_ += value; balances += value; emit Transfer(address(0), mintToAddress, value). Wrappers increaseSupply(uint256) and mint(address,uint256)"
+        },
+        {
+          "function": "decreaseSupplyFromAddress(uint256,address)",
+          "internal": "none (direct totalSupply_/balances writes)",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "PaxosTokenV2.sol:373-383: balances -= value; totalSupply_ -= value; emit Transfer(burnFromAddress, address(0), value). Wrappers decreaseSupply(uint256) and burn(uint256)"
+        },
+        {
+          "function": "wipeFrozenAddress(address)",
+          "internal": "none (direct totalSupply_/balances writes)",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "PaxosTokenV2.sol:278-286 (ASSET_PROTECTION_ROLE confiscation): balances[addr]=0; totalSupply_ -= balance; emit Transfer(addr, address(0), balance) - paired with exact amount"
+        }
+      ],
+      "unpairedPaths": [],
+      "totalSupplyView": {
+        "isStoredSum": true,
+        "note": "totalSupply() returns totalSupply_ storage (PaxosTokenV2.sol:128-130); writers: increaseSupplyToAddress, decreaseSupplyFromAddress, wipeFrozenAddress, one-time _initializeV1 reinitializer"
+      },
+      "zeroRecipientTransferReverts": true,
+      "identityIssue": null,
+      "notes": "Proxy is zos-lib AdminUpgradeabilityProxy: implementation stored at legacy zeppelin-os slot 0x7050c9e0f4ca769c69bd3a8ef740bc37934f8e2c036e5a723fd8ee048ed3f8c3 (verified on-chain at pinned block; standard EIP-1967 slot is empty), so kind=custom. Impl 0x8c35caa5fd5bdc64b6b11344ad57594a3676256a (PaxosTokenV2, verified). _transfer has isNonZeroAddress(to) modifier (PaxosTokenV2.sol:444); EIP-2612/EIP-3009 and transferFromBatch route through _transfer. reclaimToken moves contract balance to owner with a normal Transfer. privileged-zero-to-zero-mint-possible: increaseSupplyToAddress has no mintToAddress != 0 check (frozen check only), so a supply controller could mint to address(0) emitting Transfer(0,0,value) - runtime fails closed on ambiguous-zero-transfer. SupplyControl contract only gates roles/rate limits, holds no token supply.",
+      "windows": [
+        {
+          "fromBlock": 26028679,
+          "fromBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "fromTimestamp": 1790027531,
+          "toBlock": 26035829,
+          "toBlockHash": "0x4df831986cf42d63dedd9b7a8fc200634d7447a170a79d7286de98c8fbc3df4c",
+          "toTimestamp": 1790113931,
+          "mintRaw": "28488123389716",
+          "burnRaw": "20235257185634",
+          "supplyDeltaRaw": "8252866204082",
+          "residualRaw": "0",
+          "logCount": 113,
+          "journalSha256": "ad0dfa1e077c234d3a4a85edbf7bcd1f69447ccc4aece81bd77a57f121f7269a"
+        },
+        {
+          "fromBlock": 26021533,
+          "fromBlockHash": "0x27c4caf42458c180212f9670de38e6bb407a9c566c4ff10ce88cab9980ede229",
+          "fromTimestamp": 1789941131,
+          "toBlock": 26028679,
+          "toBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "toTimestamp": 1790027531,
+          "mintRaw": "39749030347592",
+          "burnRaw": "30647264686720",
+          "supplyDeltaRaw": "9101765660872",
+          "residualRaw": "0",
+          "logCount": 121,
+          "journalSha256": "ad0dfa1e077c234d3a4a85edbf7bcd1f69447ccc4aece81bd77a57f121f7269a"
+        }
+      ],
+      "reviewedAt": "2026-09-22",
+      "reviewer": "SemA11"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "reusd-re-protocol",
+      "address": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+      "decimals": 18,
+      "disposition": "admitted",
+      "unsupportedReason": null,
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "identity": {
+        "explorerSourceUrl": "https://eth.blockscout.com/address/0x5086bf358635b81d8c47c66d1c8b9e567db70c72?tab=contract",
+        "sourceVerified": true,
+        "contractName": "ERC1967Proxy",
+        "proxy": {
+          "isProxy": true,
+          "kind": "eip1967",
+          "implementation": "0xb5276c436f65913cd5332de745d04fedeb4a21d4",
+          "implementationSourceVerified": true
+        },
+        "externalMatches": [
+          {
+            "source": "coingecko",
+            "geckoId": "re-protocol-reusd",
+            "value": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+            "matches": true,
+            "decimalPlace": 18
+          }
+        ],
+        "onChain": {
+          "block": 26035730,
+          "blockHash": "0xe20f51dce1d7d906cea78de0cd6a8ba5d5d5c75935e6e1d98b1ce2b542f49ba9",
+          "decimals": 18,
+          "symbol": "reUSD",
+          "totalSupplyRaw": "243010563650190300926681370",
+          "hasCode": true
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "mint(address,uint256)",
+          "internal": "ERC20Upgradeable._mint -> _update",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "ShareToken.sol:112-114; role-gated mint, OZ _update lines 211-240 changes supply and emits exact value."
+        },
+        {
+          "function": "burn(address,uint256)",
+          "internal": "ERC20Upgradeable._burn -> _update",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "ShareToken.sol:122-124; role-gated burn, same OZ primitive and raw-share amount."
+        }
+      ],
+      "unpairedPaths": [],
+      "totalSupplyView": {
+        "isStoredSum": true,
+        "note": "Inherited OZ ERC20Upgradeable.totalSupply() lines 110-113 returns ERC20Storage._totalSupply; ShareToken has no supply/balance override or index conversion."
+      },
+      "zeroRecipientTransferReverts": true,
+      "identityIssue": null,
+      "notes": "reUSD is a stored-share ERC20 despite yield-bearing economics; no rebasing raw supply. ERC20Upgradeable._transfer (194-202) rejects zero sender and recipient; the only zero-side _update calls are _mint/_burn. UUPS upgrade authorized by UPGRADER_ROLE through _authorizeUpgrade; EIP-1967 implementation matched pinned storage. Sources: Blockscout API v2 smart-contracts/0x5086bf358635b81d8c47c66d1c8b9e567db70c72 raw SHA-256 c248f7a01b6b99de1f710a862fea009d828fb0dfb94e23a2ec5e13f15d0592cf; current implementation https://eth.blockscout.com/address/0xb5276c436f65913cd5332de745d04fedeb4a21d4?tab=contract (ShareToken), raw SHA-256 45221474580aba906625224a82e9f13dbe2ea1eaf17aad6a8c449c51d85b2fe1. On-chain reads via Alchemy EIP-1898 blockHash with requireCanonical at block 26035730 / 0xe20f51dce1d7d906cea78de0cd6a8ba5d5d5c75935e6e1d98b1ce2b542f49ba9. CoinGecko Pro coins/re-protocol-reusd HTTP 200 platform ethereum address and decimal_place match. Full raw sources and identity journal: admission/scratch/SemA12/.",
+      "windows": [
+        {
+          "fromBlock": 26028679,
+          "fromBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "fromTimestamp": 1790027531,
+          "toBlock": 26035829,
+          "toBlockHash": "0x4df831986cf42d63dedd9b7a8fc200634d7447a170a79d7286de98c8fbc3df4c",
+          "toTimestamp": 1790113931,
+          "mintRaw": "3092556173464030915440465",
+          "burnRaw": "454196163733526428403737",
+          "supplyDeltaRaw": "2638360009730504487036728",
+          "residualRaw": "0",
+          "logCount": 24,
+          "journalSha256": "ad0dfa1e077c234d3a4a85edbf7bcd1f69447ccc4aece81bd77a57f121f7269a"
+        },
+        {
+          "fromBlock": 26021533,
+          "fromBlockHash": "0x27c4caf42458c180212f9670de38e6bb407a9c566c4ff10ce88cab9980ede229",
+          "fromTimestamp": 1789941131,
+          "toBlock": 26028679,
+          "toBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "toTimestamp": 1790027531,
+          "mintRaw": "2448631319399275071433656",
+          "burnRaw": "2319851163256528454310879",
+          "supplyDeltaRaw": "128780156142746617122777",
+          "residualRaw": "0",
+          "logCount": 36,
+          "journalSha256": "ad0dfa1e077c234d3a4a85edbf7bcd1f69447ccc4aece81bd77a57f121f7269a"
+        }
+      ],
+      "reviewedAt": "2026-09-22",
+      "reviewer": "SemA12"
+    },
+    {
+      "chainId": "ethereum",
       "stablecoinId": "usd1-world-liberty-financial",
       "address": "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d",
       "decimals": 18,
@@ -919,6 +1982,79 @@
       ],
       "reviewedAt": "2026-09-22",
       "reviewer": "SemExisting1"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "usd3-3jane",
+      "address": "0x056b269eb1f75477a8666ae8c7fe01b64dd55ecc",
+      "decimals": 6,
+      "disposition": "unsupported",
+      "unsupportedReason": "total-supply-override",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "identity": {
+        "explorerSourceUrl": "https://eth.blockscout.com/address/0x056b269eb1f75477a8666ae8c7fe01b64dd55ecc?tab=contract",
+        "sourceVerified": true,
+        "contractName": "TransparentUpgradeabilityProxy",
+        "proxy": {
+          "isProxy": true,
+          "kind": "eip1967",
+          "implementation": "0xb606fb370eaaad03d71b49ae5e42aa4aec7458d9",
+          "implementationSourceVerified": true
+        },
+        "externalMatches": [
+          {
+            "source": "coingecko",
+            "geckoId": null,
+            "value": null,
+            "matches": false,
+            "decimalPlace": null
+          }
+        ],
+        "onChain": {
+          "block": 26035720,
+          "blockHash": "0xb68d70afabb5d7847874e5e2e520bd417f0cf26b1225926e6307682166599053",
+          "decimals": 6,
+          "symbol": "USD3",
+          "totalSupplyRaw": "67943116400568",
+          "hasCode": true
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "deposit(uint256,address)/mint(uint256,address)",
+          "internal": "_mint (TokenizedStrategy)",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "BaseHooksUpgradeable.deposit/mint delegatecall TokenizedStrategy 0xD377919FA87120584B21279a491F82D5265A139c; _mint(S,receiver,shares): S.totalSupply += amount; emit Transfer(address(0), account, amount) (TokenizedStrategy.sol:1835-1847). Fee mints at report() also paired"
+        },
+        {
+          "function": "redeem(uint256,...)/withdraw(uint256,...)",
+          "internal": "_burn (TokenizedStrategy)",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "_burn(S,owner,shares): S.totalSupply -= amount; emit Transfer(account, address(0), amount) (TokenizedStrategy.sol:1860-1872)"
+        },
+        {
+          "function": "_burnSharesFromSusd3(uint256) [via report() -> _postReportHook, keeper/mgmt]",
+          "internal": "none (direct sstore of balances/totalSupply slots)",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "USD3.sol:682-709 loss absorption: sstore(totalSupplySlot, sub(currentTotalSupply, actualBurn)); sstore(balanceSlot, sub(currentBalance, actualBurn)); emit IERC20.Transfer(sUSD3, address(0), actualBurn) - event amount equals supply delta exactly"
+        }
+      ],
+      "unpairedPaths": [],
+      "totalSupplyView": {
+        "isStoredSum": false,
+        "note": "TokenizedStrategy.totalSupply() returns S.totalSupply - _unlockedShares(S) (TokenizedStrategy.sol:665-667,829-834); _unlockedShares grows linearly with block.timestamp via profitUnlockingRate while no Transfer is emitted (profit unlocking), so the view drifts below the event-tracked stored sum whenever locked profit is unlocking"
+      },
+      "zeroRecipientTransferReverts": true,
+      "zeroRecipientTransferBurns": null,
+      "identityIssue": null,
+      "notes": "Architecture: TUP proxy -> USD3 (Yearn V3 BaseHooksUpgradeable strategy); every ERC20/vault function not defined in USD3 hits BaseStrategyUpgradeable.fallback() and delegatecalls the shared TokenizedStrategy implementation 0xD377919FA87120584B21279a491F82D5265A139c (verified on Blockscout, compiler 0.8.18) in the proxy's storage context, so the proxy address is the ERC20. Every supply WRITE is paired with an exact zero-address Transfer (including USD3's direct-storage sstore loss absorption), but the totalSupply() VIEW subtracts time-dependent _unlockedShares, so sum(mints)-sum(burns) != totalSupply(to)-totalSupply(from) whenever profit is unlocking across the audited window. ERC-4626 share semantics alone would be fine (events and view both in shares); the unlock subtraction is the blocker. External identity: manifest geckoId is null, but CoinGecko id '3jane-usd3' (found via /search) lists platforms.ethereum = 0x056b269eb1f75477a8666ae8c7fe01b64dd55ecc with decimal_place 6 - exact match; on-chain symbol USD3, decimals 6, impl verified. TokenizedStrategy._transfer requires from != 0, to != 0, to != strategy (TokenizedStrategy.sol:1807-1822).",
+      "windows": [],
+      "reviewedAt": "2026-09-22",
+      "reviewer": "SemA11"
     },
     {
       "chainId": "ethereum",
@@ -1086,6 +2222,100 @@
       ],
       "reviewedAt": "2026-09-22",
       "reviewer": "SemExisting1"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "usdc-circle",
+      "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "decimals": 6,
+      "disposition": "admitted",
+      "unsupportedReason": null,
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "identity": {
+        "explorerSourceUrl": "https://eth.blockscout.com/address/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48?tab=contract",
+        "sourceVerified": true,
+        "contractName": "FiatTokenProxy",
+        "proxy": {
+          "isProxy": true,
+          "kind": "custom",
+          "implementation": "0x43506849d7c04f9138d1a2050bbf3a0c054402dd",
+          "implementationSourceVerified": true
+        },
+        "externalMatches": [
+          {
+            "source": "coingecko",
+            "geckoId": "usd-coin",
+            "value": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+            "matches": true,
+            "decimalPlace": 6
+          }
+        ],
+        "onChain": {
+          "block": 26035720,
+          "blockHash": "0xb68d70afabb5d7847874e5e2e520bd417f0cf26b1225926e6307682166599053",
+          "decimals": 6,
+          "symbol": "USDC",
+          "totalSupplyRaw": "49720327195574088",
+          "hasCode": true
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "mint(address,uint256)",
+          "internal": "none (direct totalSupply_/balance writes)",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "FiatTokenV1.sol mint(): onlyMinters, require(_to != address(0)); totalSupply_ = totalSupply_.add(_amount); emit Transfer(address(0), _to, _amount) (FiatTokenV1.sol:121-144)"
+        },
+        {
+          "function": "burn(uint256)",
+          "internal": "none (direct totalSupply_/balance writes)",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "FiatTokenV1.sol burn(): onlyMinters; totalSupply_ = totalSupply_.sub(_amount); emit Transfer(msg.sender, address(0), _amount) (FiatTokenV1.sol:360-374)"
+        }
+      ],
+      "unpairedPaths": [],
+      "totalSupplyView": {
+        "isStoredSum": true,
+        "note": "totalSupply() returns storage totalSupply_ (FiatTokenV1.sol:195-197); only writes are mint()/burn()"
+      },
+      "zeroRecipientTransferReverts": true,
+      "identityIssue": null,
+      "notes": "Proxy is zos-lib AdminUpgradeabilityProxy (v0.4.24, compiler of FiatTokenProxy): implementation stored at legacy zeppelin-os slot 0x7050c9e0f4ca769c69bd3a8ef740bc37934f8e2c036e5a723fd8ee048ed3f8c3 (verified on-chain at pinned block; standard EIP-1967 slot 0x360894...bbc is empty), so kind=custom. Current impl FiatTokenV2_2 0x43506849d7c04f9138d1a2050bbf3a0c054402dd verified on Blockscout; grep across FiatTokenV1/V2/V2_1/V2_2 sources: only totalSupply_ writes are mint()/burn(). V2_2 blacklist packing (_setBalance/_setBlacklistState) preserves balances. _transfer requires from != 0 and to != 0 (FiatTokenV1.sol:303-318); EIP-2612/3009 paths route through _transfer. Minter allowance (masterMinter/configureMinter) does not change supply.",
+      "windows": [
+        {
+          "fromBlock": 26028679,
+          "fromBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "fromTimestamp": 1790027531,
+          "toBlock": 26035829,
+          "toBlockHash": "0x4df831986cf42d63dedd9b7a8fc200634d7447a170a79d7286de98c8fbc3df4c",
+          "toTimestamp": 1790113931,
+          "mintRaw": "1133847769781108",
+          "burnRaw": "890261077794832",
+          "supplyDeltaRaw": "243586691986276",
+          "residualRaw": "0",
+          "logCount": 7318,
+          "journalSha256": "ad0dfa1e077c234d3a4a85edbf7bcd1f69447ccc4aece81bd77a57f121f7269a"
+        },
+        {
+          "fromBlock": 26021533,
+          "fromBlockHash": "0x27c4caf42458c180212f9670de38e6bb407a9c566c4ff10ce88cab9980ede229",
+          "fromTimestamp": 1789941131,
+          "toBlock": 26028679,
+          "toBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "toTimestamp": 1790027531,
+          "mintRaw": "1199156801344627",
+          "burnRaw": "1591109691091310",
+          "supplyDeltaRaw": "-391952889746683",
+          "residualRaw": "0",
+          "logCount": 8066,
+          "journalSha256": "ad0dfa1e077c234d3a4a85edbf7bcd1f69447ccc4aece81bd77a57f121f7269a"
+        }
+      ],
+      "reviewedAt": "2026-09-22",
+      "reviewer": "SemA11"
     },
     {
       "chainId": "ethereum",
@@ -1263,6 +2493,121 @@
     },
     {
       "chainId": "ethereum",
+      "stablecoinId": "usdnr-nerona",
+      "address": "0xd48e565561416de59da1050ed70b8d75e8ef28f9",
+      "decimals": 6,
+      "disposition": "admitted",
+      "unsupportedReason": null,
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "identity": {
+        "explorerSourceUrl": "https://eth.blockscout.com/address/0xd48e565561416de59da1050ed70b8d75e8ef28f9?tab=contract",
+        "sourceVerified": true,
+        "contractName": "TransparentUpgradeableProxy",
+        "proxy": {
+          "isProxy": true,
+          "kind": "eip1967",
+          "implementation": "0x1028a0e146d2915c509c8e019e0e5c66d3d22ae0",
+          "implementationSourceVerified": true
+        },
+        "externalMatches": [
+          {
+            "source": "coingecko",
+            "geckoId": null,
+            "value": null,
+            "matches": false,
+            "decimalPlace": null
+          }
+        ],
+        "onChain": {
+          "block": 26035730,
+          "blockHash": "0xe20f51dce1d7d906cea78de0cd6a8ba5d5d5c75935e6e1d98b1ce2b542f49ba9",
+          "decimals": 6,
+          "symbol": "USDnr",
+          "totalSupplyRaw": "2031755900",
+          "hasCode": true
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "wrap(address,uint256)",
+          "internal": "MExtension._wrap -> MYieldToOne._mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "MExtension.sol:168-187 wraps M; MYieldToOne.sol:226-236 adds exact amount to stored supply and emits Transfer(0,recipient,amount)."
+        },
+        {
+          "function": "wrap(address,address,uint256)",
+          "internal": "JMIExtension._wrap -> MYieldToOne._mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "JMIExtension.sol:162-166,285-313; converted jmiAmount_ is identical minted supply and event amount, while totalAssets is collateral bookkeeping only."
+        },
+        {
+          "function": "unwrap(address,uint256)",
+          "internal": "MExtension._unwrap -> MYieldToOne._burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "MExtension.sol:194-212; MYieldToOne.sol:243-253 subtracts exact amount and emits Transfer(account,0,amount)."
+        },
+        {
+          "function": "claimYield()",
+          "internal": "MYieldToOne._mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "MYieldToOne.sol:114-125; computes yield and explicitly mints with matching Transfer."
+        },
+        {
+          "function": "setYieldRecipient(address)",
+          "internal": "claimYield -> MYieldToOne._mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "MYieldToOne.sol:129-134 claims existing yield with paired mint before setting recipient."
+        }
+      ],
+      "unpairedPaths": [],
+      "totalSupplyView": {
+        "isStoredSum": true,
+        "note": "MYieldToOne.totalSupply() lines 144-146 directly returns MYieldToOneStorageStruct.totalSupply. Only _mint and _burn write it; JMI totalAssets and underlying M index do not alter this view."
+      },
+      "zeroRecipientTransferReverts": true,
+      "identityIssue": "no-external-match: geckoId is null; verified source and pinned name Nerona USD, symbol USDnr, decimals 6 identify the configured asset",
+      "notes": "MExtension._transfer (243-255) calls _revertIfInvalidRecipient (274-275), so ordinary zero-recipient transfers revert. replaceAssetWithM updates backing only; yield is minted only on claim, not silently rebased. JMIExtension verified current implementation is generic, but pinned proxy name Nerona USD, symbol USDnr and decimals 6 match this asset. Null geckoId means no CoinGecko query/address match; semantic-contract rule 6 identity exception applied explicitly. TransparentUpgradeableProxy implementation slot matched explorer. Sources: Blockscout API v2 smart-contracts/0xd48e565561416de59da1050ed70b8d75e8ef28f9 raw SHA-256 ecc541cf46fa43acf35aa800dcd1d5bd4382e37e4083b95c2a6da8ad658e7166; current implementation https://eth.blockscout.com/address/0x1028a0e146d2915c509c8e019e0e5c66d3d22ae0?tab=contract (JMIExtension), raw SHA-256 d250b789468242e827ed7674082dd5feebbf66afc4948c9a95cb84ba86ae159b. On-chain reads via Alchemy EIP-1898 blockHash with requireCanonical at block 26035730 / 0xe20f51dce1d7d906cea78de0cd6a8ba5d5d5c75935e6e1d98b1ce2b542f49ba9. No CoinGecko response was treated as an external match. Full raw sources and identity journal: admission/scratch/SemA12/.",
+      "windows": [
+        {
+          "fromBlock": 26028679,
+          "fromBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "fromTimestamp": 1790027531,
+          "toBlock": 26035829,
+          "toBlockHash": "0x4df831986cf42d63dedd9b7a8fc200634d7447a170a79d7286de98c8fbc3df4c",
+          "toTimestamp": 1790113931,
+          "mintRaw": "18815085471",
+          "burnRaw": "18815085471",
+          "supplyDeltaRaw": "0",
+          "residualRaw": "0",
+          "logCount": 4,
+          "journalSha256": "ad0dfa1e077c234d3a4a85edbf7bcd1f69447ccc4aece81bd77a57f121f7269a"
+        },
+        {
+          "fromBlock": 26021533,
+          "fromBlockHash": "0x27c4caf42458c180212f9670de38e6bb407a9c566c4ff10ce88cab9980ede229",
+          "fromTimestamp": 1789941131,
+          "toBlock": 26028679,
+          "toBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "toTimestamp": 1790027531,
+          "mintRaw": "419223479674",
+          "burnRaw": "419223479674",
+          "supplyDeltaRaw": "0",
+          "residualRaw": "0",
+          "logCount": 8,
+          "journalSha256": "ad0dfa1e077c234d3a4a85edbf7bcd1f69447ccc4aece81bd77a57f121f7269a"
+        }
+      ],
+      "reviewedAt": "2026-09-22",
+      "reviewer": "SemA12"
+    },
+    {
+      "chainId": "ethereum",
       "stablecoinId": "usds-sky",
       "address": "0xdc035d45d973e3ec169d2276ddab16f1e407384f",
       "decimals": 18,
@@ -1340,6 +2685,487 @@
       ],
       "reviewedAt": "2026-09-22",
       "reviewer": "SemExisting1"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "usg-tangent",
+      "address": "0xb1c2db5d6ca03fce73dbd304d320bf76c55ae1b1",
+      "decimals": 18,
+      "disposition": "admitted",
+      "unsupportedReason": null,
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "identity": {
+        "explorerSourceUrl": "https://eth.blockscout.com/address/0xb1c2db5d6ca03fce73dbd304d320bf76c55ae1b1?tab=contract",
+        "sourceVerified": true,
+        "contractName": "USG",
+        "proxy": {
+          "isProxy": false,
+          "kind": "none",
+          "implementation": null,
+          "implementationSourceVerified": false
+        },
+        "externalMatches": [
+          {
+            "source": "coingecko",
+            "geckoId": null,
+            "value": null,
+            "matches": false,
+            "decimalPlace": null
+          }
+        ],
+        "onChain": {
+          "block": 26035730,
+          "blockHash": "0xe20f51dce1d7d906cea78de0cd6a8ba5d5d5c75935e6e1d98b1ce2b542f49ba9",
+          "decimals": 18,
+          "symbol": "USG",
+          "totalSupplyRaw": "44605313187359711788560968",
+          "hasCode": true
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "mintDebt(address,uint256)",
+          "internal": "ERC20._mint -> _update",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "USG.sol:55-58."
+        },
+        {
+          "function": "mintIR(uint256)",
+          "internal": "ERC20._mint -> _update",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "USG.sol:65-68; interest is explicitly minted to controlTower.feeTreasury(), not a supply index/view rebase."
+        },
+        {
+          "function": "mintPegKeeper(address,uint256)",
+          "internal": "ERC20._mint -> _update",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "USG.sol:76-79."
+        },
+        {
+          "function": "burnDebt(address,uint256)",
+          "internal": "ERC20._burn -> _update",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "USG.sol:90-93."
+        },
+        {
+          "function": "burnPegKeeper(address,uint256)",
+          "internal": "ERC20._burn -> _update",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "USG.sol:101-104."
+        },
+        {
+          "function": "burn(uint256)",
+          "internal": "ERC20._burn -> _update",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "USG.sol:111-113."
+        }
+      ],
+      "unpairedPaths": [],
+      "totalSupplyView": {
+        "isStoredSum": true,
+        "note": "Inherited OZ ERC20.totalSupply() lines 85-86 returns _totalSupply. _update (183-211) is the only storage writer and emits Transfer(from,to,value) for the same supply amount."
+      },
+      "zeroRecipientTransferReverts": true,
+      "identityIssue": "no-external-match: geckoId is null; verified source and pinned name Tangent USD, symbol USG, decimals 18 identify the configured asset",
+      "notes": "ERC20._transfer (166-174) rejects both zero addresses; USG does not override _update or totalSupply. Null geckoId means no CoinGecko query/address match possible; verified USG source constructor names Tangent USD / USG, matching successful on-chain name/symbol/18-decimal reads unambiguously. Applied semantic-contract rule 6 exception, not an external match. Sources: Blockscout API v2 smart-contracts/0xb1c2db5d6ca03fce73dbd304d320bf76c55ae1b1 raw SHA-256 2949cdce81d9da13f77cefeca8d7acab06ceaad80f13baa385809bb7575fff9d. On-chain reads via Alchemy EIP-1898 blockHash with requireCanonical at block 26035730 / 0xe20f51dce1d7d906cea78de0cd6a8ba5d5d5c75935e6e1d98b1ce2b542f49ba9. No CoinGecko response was treated as an external match. Full raw sources and identity journal: admission/scratch/SemA12/.",
+      "windows": [
+        {
+          "fromBlock": 26028679,
+          "fromBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "fromTimestamp": 1790027531,
+          "toBlock": 26035829,
+          "toBlockHash": "0x4df831986cf42d63dedd9b7a8fc200634d7447a170a79d7286de98c8fbc3df4c",
+          "toTimestamp": 1790113931,
+          "mintRaw": "188189301453602573517331",
+          "burnRaw": "36088612018756043141375",
+          "supplyDeltaRaw": "152100689434846530375956",
+          "residualRaw": "0",
+          "logCount": 5,
+          "journalSha256": "ad0dfa1e077c234d3a4a85edbf7bcd1f69447ccc4aece81bd77a57f121f7269a"
+        },
+        {
+          "fromBlock": 26021533,
+          "fromBlockHash": "0x27c4caf42458c180212f9670de38e6bb407a9c566c4ff10ce88cab9980ede229",
+          "fromTimestamp": 1789941131,
+          "toBlock": 26028679,
+          "toBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "toTimestamp": 1790027531,
+          "mintRaw": "465176159722795611238",
+          "burnRaw": "0",
+          "supplyDeltaRaw": "465176159722795611238",
+          "residualRaw": "0",
+          "logCount": 1,
+          "journalSha256": "ad0dfa1e077c234d3a4a85edbf7bcd1f69447ccc4aece81bd77a57f121f7269a"
+        }
+      ],
+      "reviewedAt": "2026-09-22",
+      "reviewer": "SemA12"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "wm-m0",
+      "address": "0x437cc33344a0b27a429f795ff6b469c72698b291",
+      "decimals": 6,
+      "disposition": "admitted",
+      "unsupportedReason": null,
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "identity": {
+        "explorerSourceUrl": "https://eth.blockscout.com/address/0x437cc33344a0b27a429f795ff6b469c72698b291?tab=contract",
+        "sourceVerified": true,
+        "contractName": "Proxy",
+        "proxy": {
+          "isProxy": true,
+          "kind": "eip1967",
+          "implementation": "0x6d9db63afccf515f393d5e65be69d38bb3b29d13",
+          "implementationSourceVerified": true
+        },
+        "externalMatches": [
+          {
+            "source": "coingecko",
+            "geckoId": "wrappedm-by-m0",
+            "value": "0x437cc33344a0b27a429f795ff6b469c72698b291",
+            "matches": true,
+            "decimalPlace": 6
+          }
+        ],
+        "onChain": {
+          "block": 26035730,
+          "blockHash": "0xe20f51dce1d7d906cea78de0cd6a8ba5d5d5c75935e6e1d98b1ce2b542f49ba9",
+          "decimals": 6,
+          "symbol": "wM",
+          "totalSupplyRaw": "76712670081689",
+          "hasCode": true
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "wrap(address,uint256)",
+          "internal": "_wrap -> _mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "WrappedMToken.sol:181-184,712-730,431-440; exact amount added to earning/non-earning stored supply and emitted."
+        },
+        {
+          "function": "unwrap(address,uint256)",
+          "internal": "_unwrap -> _burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "WrappedMToken.sol:188-193,737-753,447-455; exact amount removed and emitted."
+        },
+        {
+          "function": "claimFor(address)",
+          "internal": "_claim",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "WrappedMToken.sol:196-201,545-572; totalEarningSupply += yield_ (559) is paired with Transfer(0,account_,yield_) (567), including redirected yield followed by a supply-neutral transfer."
+        },
+        {
+          "function": "claimExcess()",
+          "internal": "_mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "WrappedMToken.sol:204-214; computed excess is explicitly minted with matching event."
+        },
+        {
+          "function": "stopEarningFor(address) / stopEarningFor(address[])",
+          "internal": "_stopEarningFor -> _claim",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "WrappedMToken.sol:257-278,794-814; claims use exact zero-source Transfer, then move same balance between totalEarningSupply and totalNonEarningSupply with net supply delta zero."
+        },
+        {
+          "function": "freeze paths via _beforeFreeze(address)",
+          "internal": "_stopEarningFor -> _claim",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "WrappedMToken.sol:822-826; yield credited to frozen account still emits matching mint Transfer; subsequent forceTransfer only redistributes balances."
+        }
+      ],
+      "unpairedPaths": [],
+      "totalSupplyView": {
+        "isStoredSum": true,
+        "note": "WrappedMToken.totalSupply() lines 384-388 returns stored totalEarningSupply + totalNonEarningSupply, NOT projectedEarningSupply() or principal*currentIndex. balanceOf likewise returns stored account balance (315-317)."
+      },
+      "zeroRecipientTransferReverts": true,
+      "identityIssue": null,
+      "notes": "Special wM determination: no silent totalSupply accrual. Index growth only affects separate accruedYieldOf, balanceWithYieldOf, projectedEarningSupply, totalAccruedYield and excess views until _claim/_mint explicitly update stored supply and emit exact zero-source Transfer. rebaseOrIndex=false describes audited totalSupply, not absence of an auxiliary yield index. _startEarningFor (760-786), _stopEarningFor (794-814), cross-earner _transfer (581-620), and _forceTransfer (836-853) shift equal stored amounts between supply buckets; principal rounding changes projected yield, not stored total supply. _subtractTotalEarningSupply uses min(amount,total) but valid account balance <= stored earning total, so valid withdrawals/earner transitions subtract exact amount. _transfer and _forceTransfer call _revertIfInvalidRecipient (934-936), rejecting zero. Migration is upgrade authority: Migratable._migrate delegatecalls registrar-selected migrator; overload migrate(address) restricted to immutable migrationAdmin. Future migration semantics not certified. Sources: Blockscout API v2 smart-contracts/0x437cc33344a0b27a429f795ff6b469c72698b291 raw SHA-256 7e25a68229e4597f532ec922bda2782f56782401d11816c250eadc8ad0e3a1a1; current implementation https://eth.blockscout.com/address/0x6d9db63afccf515f393d5e65be69d38bb3b29d13?tab=contract (WrappedMToken), raw SHA-256 26510b43440631b4ffc421eec287d9a87a956e819ebec5f986a356bdabbc28b2. On-chain reads via Alchemy EIP-1898 blockHash with requireCanonical at block 26035730 / 0xe20f51dce1d7d906cea78de0cd6a8ba5d5d5c75935e6e1d98b1ce2b542f49ba9. CoinGecko Pro coins/wrappedm-by-m0 HTTP 200 platform ethereum address and decimal_place match. Full raw sources and identity journal: admission/scratch/SemA12/.",
+      "windows": [
+        {
+          "fromBlock": 26028679,
+          "fromBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "fromTimestamp": 1790027531,
+          "toBlock": 26035829,
+          "toBlockHash": "0x4df831986cf42d63dedd9b7a8fc200634d7447a170a79d7286de98c8fbc3df4c",
+          "toTimestamp": 1790113931,
+          "mintRaw": "6324948443318",
+          "burnRaw": "7364361930086",
+          "supplyDeltaRaw": "-1039413486768",
+          "residualRaw": "0",
+          "logCount": 25,
+          "journalSha256": "ad0dfa1e077c234d3a4a85edbf7bcd1f69447ccc4aece81bd77a57f121f7269a"
+        },
+        {
+          "fromBlock": 26021533,
+          "fromBlockHash": "0x27c4caf42458c180212f9670de38e6bb407a9c566c4ff10ce88cab9980ede229",
+          "fromTimestamp": 1789941131,
+          "toBlock": 26028679,
+          "toBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "toTimestamp": 1790027531,
+          "mintRaw": "4715607987436",
+          "burnRaw": "6046491415863",
+          "supplyDeltaRaw": "-1330883428427",
+          "residualRaw": "0",
+          "logCount": 17,
+          "journalSha256": "ad0dfa1e077c234d3a4a85edbf7bcd1f69447ccc4aece81bd77a57f121f7269a"
+        }
+      ],
+      "reviewedAt": "2026-09-22",
+      "reviewer": "SemA12"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "xaut-tether",
+      "address": "0x68749665ff8d2d112fa859aa293f07a622782f38",
+      "decimals": 6,
+      "disposition": "admitted",
+      "unsupportedReason": null,
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "identity": {
+        "explorerSourceUrl": "https://eth.blockscout.com/address/0x68749665ff8d2d112fa859aa293f07a622782f38?tab=contract",
+        "sourceVerified": true,
+        "contractName": "TransparentUpgradeableProxy",
+        "proxy": {
+          "isProxy": true,
+          "kind": "eip1967",
+          "implementation": "0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566",
+          "implementationSourceVerified": true
+        },
+        "externalMatches": [
+          {
+            "source": "coingecko",
+            "geckoId": "tether-gold",
+            "value": "0x68749665ff8d2d112fa859aa293f07a622782f38",
+            "matches": true,
+            "decimalPlace": 6
+          }
+        ],
+        "onChain": {
+          "block": 26035730,
+          "blockHash": "0xe20f51dce1d7d906cea78de0cd6a8ba5d5d5c75935e6e1d98b1ce2b542f49ba9",
+          "decimals": 6,
+          "symbol": "XAUt",
+          "totalSupplyRaw": "707747089000",
+          "hasCode": true
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "mint(address,uint256)",
+          "internal": "ERC20Upgradeable._mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "TetherToken.sol:60-63; _mint lines 256-265 updates _totalSupply and emits matching zero-source Transfer."
+        },
+        {
+          "function": "redeem(uint256)",
+          "internal": "ERC20Upgradeable._burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "TetherToken.sol:65-68 burns owner balance; _burn lines 279-293 decrements supply with exact zero-destination Transfer."
+        },
+        {
+          "function": "destroyBlockedFunds(address)",
+          "internal": "ERC20Upgradeable._burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "TetherToken.sol:70-75 burns entire blocked balance through the same paired _burn."
+        }
+      ],
+      "unpairedPaths": [],
+      "totalSupplyView": {
+        "isStoredSum": true,
+        "note": "ERC20Upgradeable.totalSupply() lines 98-99 returns private _totalSupply, only mutated in _mint and _burn."
+      },
+      "zeroRecipientTransferReverts": true,
+      "identityIssue": null,
+      "notes": "TetherToken here is the verified XAUt Gold implementation, not legacy USDT: no issue/redeem-only unpaired supply mutation and no deprecated forwarding. ERC20Upgradeable._transfer (225-244) rejects both zero sender and recipient; multiTransfer reuses transfer. Blocklist changes do not affect supply. TransparentUpgradeableProxy EIP-1967 implementation confirmed by pinned storage read. Sources: Blockscout API v2 smart-contracts/0x68749665ff8d2d112fa859aa293f07a622782f38 raw SHA-256 8437cae7fd1a9af6dfb1a7994ef0a0dc118c1250c7789b516b245c6f3365a1a4; current implementation https://eth.blockscout.com/address/0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566?tab=contract (TetherToken), raw SHA-256 42138b938367e3404494d8bc69ee9ca481fc683b0a8683205e9aa64c6d083de2. On-chain reads via Alchemy EIP-1898 blockHash with requireCanonical at block 26035730 / 0xe20f51dce1d7d906cea78de0cd6a8ba5d5d5c75935e6e1d98b1ce2b542f49ba9. CoinGecko Pro coins/tether-gold HTTP 200 platform ethereum address and decimal_place match. Full raw sources and identity journal: admission/scratch/SemA12/.",
+      "windows": [
+        {
+          "fromBlock": 26028679,
+          "fromBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "fromTimestamp": 1790027531,
+          "toBlock": 26035829,
+          "toBlockHash": "0x4df831986cf42d63dedd9b7a8fc200634d7447a170a79d7286de98c8fbc3df4c",
+          "toTimestamp": 1790113931,
+          "mintRaw": "0",
+          "burnRaw": "0",
+          "supplyDeltaRaw": "0",
+          "residualRaw": "0",
+          "logCount": 0,
+          "journalSha256": "ad0dfa1e077c234d3a4a85edbf7bcd1f69447ccc4aece81bd77a57f121f7269a"
+        },
+        {
+          "fromBlock": 26021533,
+          "fromBlockHash": "0x27c4caf42458c180212f9670de38e6bb407a9c566c4ff10ce88cab9980ede229",
+          "fromTimestamp": 1789941131,
+          "toBlock": 26028679,
+          "toBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "toTimestamp": 1790027531,
+          "mintRaw": "0",
+          "burnRaw": "0",
+          "supplyDeltaRaw": "0",
+          "residualRaw": "0",
+          "logCount": 0,
+          "journalSha256": "ad0dfa1e077c234d3a4a85edbf7bcd1f69447ccc4aece81bd77a57f121f7269a"
+        }
+      ],
+      "reviewedAt": "2026-09-22",
+      "reviewer": "SemA12"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "zchf-frankencoin",
+      "address": "0xb58e61c3098d85632df34eecfb899a1ed80921cb",
+      "decimals": 18,
+      "disposition": "admitted",
+      "unsupportedReason": null,
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "identity": {
+        "explorerSourceUrl": "https://eth.blockscout.com/address/0xb58e61c3098d85632df34eecfb899a1ed80921cb?tab=contract",
+        "sourceVerified": true,
+        "contractName": "Frankencoin",
+        "proxy": {
+          "isProxy": false,
+          "kind": "none",
+          "implementation": null,
+          "implementationSourceVerified": false
+        },
+        "externalMatches": [
+          {
+            "source": "coingecko",
+            "geckoId": "frankencoin",
+            "value": "0xb58e61c3098d85632df34eecfb899a1ed80921cb",
+            "matches": true,
+            "decimalPlace": 18
+          }
+        ],
+        "onChain": {
+          "block": 26035730,
+          "blockHash": "0xe20f51dce1d7d906cea78de0cd6a8ba5d5d5c75935e6e1d98b1ce2b542f49ba9",
+          "decimals": 18,
+          "symbol": "ZCHF",
+          "totalSupplyRaw": "30752474941975186908595038",
+          "hasCode": true
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "mint(address,uint256)",
+          "internal": "ERC20._mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "Frankencoin.sol:189-190."
+        },
+        {
+          "function": "mintWithReserve(address,uint256,uint32,uint32)",
+          "internal": "ERC20._mint twice",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "Frankencoin.sol:176-186; usableMint and amount-usableMint each emit their exact mint amount, including reserve/fee allocation."
+        },
+        {
+          "function": "coverLoss(address,uint256)",
+          "internal": "ERC20._mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "Frankencoin.sol:317-325; reserve transfer is supply-neutral; only shortfall amount-reserveLeft is minted and emitted."
+        },
+        {
+          "function": "burn(uint256)",
+          "internal": "ERC20._burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "Frankencoin.sol:196-198."
+        },
+        {
+          "function": "burnFrom(address,uint256)",
+          "internal": "ERC20._burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "Frankencoin.sol:203-205."
+        },
+        {
+          "function": "burnWithoutReserve(uint256,uint32)",
+          "internal": "ERC20._burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "Frankencoin.sol:220-229; minterReserveE6 bookkeeping is not token supply."
+        },
+        {
+          "function": "burnWithReserve(uint256,uint32)",
+          "internal": "ERC20._burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "Frankencoin.sol:243-251; freedAmount is both burned and emitted after reserve transfer."
+        },
+        {
+          "function": "burnFromWithReserve(address,uint256,uint32)",
+          "internal": "ERC20._burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "Frankencoin.sol:263-272; targetTotalBurnAmount is both burned and emitted."
+        }
+      ],
+      "unpairedPaths": [],
+      "totalSupplyView": {
+        "isStoredSum": true,
+        "note": "contracts/utils/ERC20.sol:62-64 returns private _totalSupply. Its only writers are _mint (170-178) and _burn (186-192), with identical event amounts."
+      },
+      "zeroRecipientTransferReverts": true,
+      "identityIssue": null,
+      "notes": "ERC20._transfer (151-161) rejects recipient zero. ERC20PermitLight introduces allowances/permit, not supply mutations. Equity.sol is a separate deployed FPS reserve token, not a superclass of Frankencoin; its mint/burn/wipe functions do not write ZCHF supply. Reserve accounting and collectProfits move balances, not totalSupply. Non-upgradeable token; minter authorization is extensible. Sources: Blockscout API v2 smart-contracts/0xb58e61c3098d85632df34eecfb899a1ed80921cb raw SHA-256 e51fcbc310b5f61b7284b68ccac6366ac09045da8c3afbf39894095bdb424f60. On-chain reads via Alchemy EIP-1898 blockHash with requireCanonical at block 26035730 / 0xe20f51dce1d7d906cea78de0cd6a8ba5d5d5c75935e6e1d98b1ce2b542f49ba9. CoinGecko Pro coins/frankencoin HTTP 200 platform ethereum address and decimal_place match. Full raw sources and identity journal: admission/scratch/SemA12/.",
+      "windows": [
+        {
+          "fromBlock": 26028679,
+          "fromBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "fromTimestamp": 1790027531,
+          "toBlock": 26035829,
+          "toBlockHash": "0x4df831986cf42d63dedd9b7a8fc200634d7447a170a79d7286de98c8fbc3df4c",
+          "toTimestamp": 1790113931,
+          "mintRaw": "1033234905206877125484554",
+          "burnRaw": "2226589930808254021222873",
+          "supplyDeltaRaw": "-1193355025601376895738319",
+          "residualRaw": "0",
+          "logCount": 28,
+          "journalSha256": "ad0dfa1e077c234d3a4a85edbf7bcd1f69447ccc4aece81bd77a57f121f7269a"
+        },
+        {
+          "fromBlock": 26021533,
+          "fromBlockHash": "0x27c4caf42458c180212f9670de38e6bb407a9c566c4ff10ce88cab9980ede229",
+          "fromTimestamp": 1789941131,
+          "toBlock": 26028679,
+          "toBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "toTimestamp": 1790027531,
+          "mintRaw": "4122986984739012030276",
+          "burnRaw": "445231588059065692879",
+          "supplyDeltaRaw": "3677755396679946337397",
+          "residualRaw": "0",
+          "logCount": 2,
+          "journalSha256": "ad0dfa1e077c234d3a4a85edbf7bcd1f69447ccc4aece81bd77a57f121f7269a"
+        }
+      ],
+      "reviewedAt": "2026-09-22",
+      "reviewer": "SemA12"
     }
   ]
 }
