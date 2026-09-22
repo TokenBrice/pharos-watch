@@ -2,7 +2,7 @@ import { decodeAbiParameters, encodeFunctionData, parseAbi, parseAbiParameters, 
 import { decodeMentoPoolExchange, MENTO_POOL_SPREAD_FIXIDITY_SCALE } from "@shared/lib/mento-contracts";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { CIRCUIT_SOURCE } from "../constants";
-import { fetchEvmBlockNumber, fetchEvmBlockHeader, fetchEvmMulticall3Aggregate3AtBlock } from "../evm-rpc";
+import { fetchEvmBlockNumber, fetchEvmBlockHeader, fetchEvmMulticall3Aggregate3AtBlock, type EvmBlockHeader } from "../evm-rpc";
 import { throwIfAborted } from "../abort";
 import { hasPublishableCurrentPrice } from "../price-publication-state";
 import { getPublicFallbackRpcUrls } from "../public-rpc-registry";
@@ -22,6 +22,9 @@ const ROUTES: Record<string, { token: string; exchange: string; feed: string; de
 };
 const CONFIG = parseAbiParameters("uint32,uint32,int48,int48,int48,uint8");
 const STATE = parseAbiParameters("uint32,uint32,int48,int48,int48");
+// Context identity confines reuse to one serial override stage. Every route still
+// reads its full state and rechecks this block's canonical hash before publishing.
+const validatedHeads = new WeakMap<LivePriceContext, { block: number; head: EvmBlockHeader }>();
 
 export async function fetchMentoBrokerPrice(id: string, context: LivePriceContext, signal?: AbortSignal): Promise<CurrentPriceOverride | null> {
   const reject = (reason: string): null => { context.lastRejectionReason = `mento-broker:${reason}`; return null; };
@@ -32,9 +35,13 @@ export async function fetchMentoBrokerPrice(id: string, context: LivePriceContex
   const parentAge = Math.floor(Date.now() / 1000) - parent.trustedParent.observedAt;
   if (parentAge < 0 || parentAge >= 300) return reject("parent-age");
   const options = { signal, chainRpcs: context.chainRpcs, extraRpcUrls: getPublicFallbackRpcUrls("celo"), maxRetries: 0 };
-  const block = await fetchEvmBlockNumber("celo", options);
+  throwIfAborted(signal);
+  const cached = validatedHeads.get(context);
+  const cachedAge = cached ? Math.floor(Date.now() / 1000) - cached.head.timestamp : Infinity;
+  const reusable = cached && cachedAge >= 0 && cachedAge < 300 ? cached : undefined;
+  const block = reusable?.block ?? await fetchEvmBlockNumber("celo", options);
   if (block == null) return reject("block-unavailable");
-  const head = await fetchEvmBlockHeader("celo", block, options);
+  const head = reusable?.head ?? await fetchEvmBlockHeader("celo", block, options);
   const now = Math.floor(Date.now() / 1000);
   if (!head || head.timestamp > now || now - head.timestamp >= 300) return reject("block-age");
   const call = (label: string, target: string, signature: string, args: readonly unknown[] = []) => ({ label, target,
@@ -70,7 +77,10 @@ export async function fetchMentoBrokerPrice(id: string, context: LivePriceContex
   if (!rows || rows.length !== calls.length || rows.some((r, i) => !r.success || r.label !== calls[i].label)) return reject("state-unavailable");
   const closing = await fetchEvmBlockHeader("celo", block, options);
   throwIfAborted(signal);
-  if (closing?.hash !== head.hash) return reject("canonical-check");
+  if (closing?.hash !== head.hash) {
+    validatedHeads.delete(context);
+    return reject("canonical-check");
+  }
   const values = new Map(rows.map((r) => [r.label, r.returnData]));
   const raw = (label: string) => values.get(label)!;
   try {
@@ -111,6 +121,7 @@ export async function fetchMentoBrokerPrice(id: string, context: LivePriceContex
     if (age < 0 || age >= 300) return reject("dependency-age");
     const price = Number(small) / Number(UNIT) * parent.trustedParent.price;
     if (!Number.isFinite(price) || price <= 0) return reject("price-invalid");
+    validatedHeads.set(context, { block, head });
     return { price, source: "mento-broker", confidence: "fallback", observedAt, observedAtMode: "upstream" };
   } catch { return reject("state-malformed"); }
 }

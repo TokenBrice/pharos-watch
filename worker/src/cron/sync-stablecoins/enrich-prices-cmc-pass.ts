@@ -527,10 +527,13 @@ async function fetchTargetedCmcQuotes(params: {
   };
 }
 
-async function markCmcFetchCooldown(db: D1Database | undefined, reason: string): Promise<void> {
+async function markCmcFetchCooldown(db: D1Database | undefined, reason: "success" | "targeted 429" | "429"): Promise<void> {
   if (!db) return;
   try {
-    await setCache(db, CMC_LAST_FETCH_CACHE_KEY, "1");
+    await setCache(db, CMC_LAST_FETCH_CACHE_KEY, JSON.stringify({
+      version: 1,
+      kind: reason === "success" ? "success" : "rate-limited",
+    }));
   } catch (error) {
     logWorkerEventArgs("handler", "warn", `[enrich-prices] Failed to update CMC rate-limit timestamp after ${reason}:`, error);
   }
@@ -602,8 +605,18 @@ export async function runCmcPass(
     if (db) {
       try {
         const row = await getCache(db, CMC_LAST_FETCH_CACHE_KEY);
-        if (row && (Math.floor(Date.now() / 1000) - row.updatedAt) < CMC_FETCH_COOLDOWN_SEC) {
-          shouldCall = false;
+        if (row) {
+          const nowSec = Math.floor(Date.now() / 1000);
+          const marker = tryParseJson(row.value, { onFailure: () => undefined });
+          const successful = marker != null && typeof marker === "object" && !Array.isArray(marker)
+            && (marker as Record<string, unknown>).version === 1
+            && (marker as Record<string, unknown>).kind === "success";
+          // Success consumes the current UTC-hour quota, not an hour after
+          // completion; rolling completion time skips jittered hourly slots.
+          // Legacy/unknown markers and 429s retain the full rolling backoff.
+          shouldCall = nowSec >= row.updatedAt && (successful
+            ? Math.floor(nowSec / CMC_FETCH_COOLDOWN_SEC) > Math.floor(row.updatedAt / CMC_FETCH_COOLDOWN_SEC)
+            : nowSec - row.updatedAt >= CMC_FETCH_COOLDOWN_SEC);
         }
       } catch (error) {
         logWorkerEventArgs("handler", "warn", "[enrich-prices] CMC rate-limit check failed, proceeding with call:", error);
@@ -728,6 +741,7 @@ export async function runCmcPass(
         const allTargetedCandidates = collectMissingPriceCandidates(assets)
           .filter((entry) => entry.asset.cmcSlug != null);
         const targetedCandidates = selectRotatedCmcCandidates(allTargetedCandidates, undefined, originalMissingPriceIds);
+        let targetedRateLimited = false;
         if (targetedCandidates.length > 0) {
           providerAttempts += 1;
           const targeted = await fetchTargetedCmcQuotes({
@@ -742,7 +756,8 @@ export async function runCmcPass(
           await persistVerifiedCmcQuotes(db, cachedVerifiedQuotes, targeted.acceptedQuotes);
           diagnostics.push(targeted.diagnostic);
           if (targeted.diagnostic.success) providerSuccesses += 1;
-          if (targeted.rateLimited) await markCmcFetchCooldown(db, "targeted 429");
+          targetedRateLimited = targeted.rateLimited;
+          if (targetedRateLimited) await markCmcFetchCooldown(db, "targeted 429");
         }
         const targetedIds = new Set(targetedCandidates.map((candidate) => candidate.asset.id));
         const cappedTargetedCandidates = allTargetedCandidates.filter(
@@ -763,7 +778,7 @@ export async function runCmcPass(
           }));
         }
 
-        if (providerSuccesses > 0) {
+        if (providerSuccesses > 0 && !targetedRateLimited) {
           await markCmcFetchCooldown(db, "success");
         }
         await recordProviderOutcomeSafe({

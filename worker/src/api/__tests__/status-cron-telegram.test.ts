@@ -122,7 +122,7 @@ describe("handleStatus", () => {
     expect(body.budgetOnlySurfaces).toEqual([
       expect.objectContaining({
         job: "price-corroboration",
-        expectedIntervalSec: 3600,
+        expectedIntervalSec: 900,
         telemetryStatus: "missing",
         outcome: "unknown",
       }),
