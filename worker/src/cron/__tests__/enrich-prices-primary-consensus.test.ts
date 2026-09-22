@@ -246,7 +246,7 @@ describe("fetchPrimaryPrices", () => {
 
     const db = makeTestDb();
     const dlListPrices = makeFreshDlListPrices([["usdt-tether", 1.0002]]);
-    const { results, stats, cgPrices } = await fixtureFetchPrimaryPrices(
+    const { results, stats } = await fixtureFetchPrimaryPrices(
       assets,
       db,
       undefined,
@@ -262,7 +262,6 @@ describe("fetchPrimaryPrices", () => {
     expect(result.confidence).toBe("single-source");
     expect(result.source).toBe("coingecko+defillama-list");
     expect(result.price).toBe(1.00015);
-    expect(cgPrices.get("tether")).toBe(1.0001);
     expect(stats.high).toBe(0);
     expect(stats.singleSource).toBe(1);
     expect(stats.low).toBe(0);
@@ -308,7 +307,7 @@ describe("fetchPrimaryPrices", () => {
         },
       ],
     ]);
-    const { results, cgPrices } = await fixtureFetchPrimaryPrices(
+    const { results } = await fixtureFetchPrimaryPrices(
       assets,
       db,
       undefined,
@@ -319,7 +318,6 @@ describe("fetchPrimaryPrices", () => {
     );
 
     expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("include_last_updated_at=true"), expect.any(Object));
-    expect(cgPrices.has("gyroscope-gyd")).toBe(false);
     expect(results.get("gyd-gyroscope")).toMatchObject({
       source: "defillama-list",
       confidence: "single-source",

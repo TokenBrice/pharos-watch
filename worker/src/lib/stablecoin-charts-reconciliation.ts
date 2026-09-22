@@ -2,18 +2,14 @@ import { logWorkerEventArgs } from "./structured-log";
 import { normalizeLegacyPegType } from "@shared/lib/peg-price-bounds";
 import { pegTypeFromCurrency as canonicalPegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { CORE_AGGREGATE_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/aggregate-registry";
-import {
-  CORE_STABLECOIN_AGGREGATE_UNIVERSE,
-  isCoreAggregateStablecoinId,
-} from "@shared/lib/stablecoins/aggregate-universe";
-import type { StablecoinChartPoint, StablecoinData } from "@shared/types";
+import type { StablecoinChartPoint } from "@shared/types";
 
 interface StructuralSupplementalChartConfig {
   id: string;
   pegType: string;
 }
 
-interface SupplyHistoryChartRow {
+export interface SupplyHistoryChartRow {
   stablecoin_id: string;
   snapshot_date: number;
   circulating_usd: number;
@@ -122,62 +118,3 @@ export function mergeStructuralSupplementalHistoryIntoCharts(
   });
 }
 
-export function buildCurrentStablecoinChartsPoint(
-  assets: StablecoinData[],
-  updatedAtSec: number,
-): StablecoinChartPoint | null {
-  const totals: Record<string, number> = {};
-
-  for (const asset of assets) {
-    if (!isCoreAggregateStablecoinId(asset.id)) continue;
-    const circulating = asset.circulating;
-    if (!circulating || typeof circulating !== "object") continue;
-
-    for (const [pegType, rawValue] of Object.entries(circulating)) {
-      const value = typeof rawValue === "number" && Number.isFinite(rawValue) ? rawValue : 0;
-      addBucketValue(totals, pegType, value);
-    }
-  }
-
-  if (Object.keys(totals).length === 0) return null;
-
-  return {
-    date: updatedAtSec,
-    totalCirculatingUSD: totals,
-    aggregateUniverse: CORE_STABLECOIN_AGGREGATE_UNIVERSE,
-  };
-}
-
-export function appendOrReplaceCurrentStablecoinChartsPoint(
-  points: StablecoinChartPoint[],
-  currentPoint: StablecoinChartPoint | null,
-): StablecoinChartPoint[] {
-  if (!currentPoint) return points;
-  if (points.length === 0) return [currentPoint];
-
-  const next = [...points].sort((left, right) => left.date - right.date);
-  const lastPoint = next[next.length - 1];
-  if (!lastPoint) return [currentPoint];
-
-  // Joining different aggregate universes would render a classification change
-  // as a market-cap move. Keep the existing series intact until its history has
-  // been rebuilt under the same universe as the live point.
-  if (lastPoint.aggregateUniverse !== currentPoint.aggregateUniverse) {
-    return next;
-  }
-
-  if (currentPoint.date === lastPoint.date) {
-    next[next.length - 1] = {
-      ...currentPoint,
-      date: lastPoint.date,
-    };
-    return next;
-  }
-
-  if (currentPoint.date < lastPoint.date) {
-    return next;
-  }
-
-  next.push(currentPoint);
-  return next;
-}

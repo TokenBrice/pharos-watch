@@ -350,6 +350,7 @@ export function buildStablecoinsSyncResult(input: {
     },
     assetCount: input.assets.length,
     enrichment: compactDiagnosticValue(input.enrichStats),
+    enrichmentDisabled: input.enrichStats == null,
     authoritativeOverrides: input.authoritativeOverrideCount ?? 0,
     authoritativeOverrideStats: compactDiagnosticValue(input.authoritativeOverrideStats),
     gtProbe: compactDiagnosticValue(input.gtProbe.stats),

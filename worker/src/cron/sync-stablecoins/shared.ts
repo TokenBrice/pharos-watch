@@ -16,14 +16,6 @@ const INVALID_STABLECOINS_CACHE_KEY = "stablecoins:invalid-last";
 const VALIDATION_ISSUES_MAX_CHARS = 400;
 const FX_REFERENCE_MAX_AGE_SEC = 6 * 3600;
 const MISSING_PRICE_SOURCE = "missing";
-const SUPPLEMENTAL_TRACKED_IDS = new Set(
-  ACTIVE_STABLECOINS.filter(
-    (meta) =>
-      (meta.flags.pegCurrency === "GOLD" && !!meta.geckoId) ||
-      (meta.flags.pegCurrency === "SILVER" && !!meta.geckoId) ||
-      meta.detailProvider === "coingecko",
-  ).map((meta) => meta.id),
-);
 const CURATED_AGGREGATE_SUPPLY_CHAIN_LABELS_BY_ID = new Map(
   ACTIVE_STABLECOINS.flatMap((meta) => {
     const selected = selectCuratedAggregateOnchainSupplyProbeContracts(meta);
@@ -577,17 +569,6 @@ export function mergeSupplementalLastKnownGood(
     resolved.set(id, asset);
   }
 
-  for (const id of SUPPLEMENTAL_TRACKED_IDS) {
-    if (primaryAssetIds.has(id) || resolved.has(id)) continue;
-    const previous = previousAssetsById.get(id);
-    if (!previous || getCirculatingRaw(previous) <= 0) continue;
-    if (!isWithinRestoreCeiling(previous, nowSec)) {
-      expiredRestoreIds.push(id);
-      continue;
-    }
-    resolved.set(id, markRestoredSupply(previous));
-    restoredCount++;
-  }
 
   return {
     assets: [...resolved.values()],
@@ -663,9 +644,9 @@ export async function loadFreshFxRates(
     const type = getFxReferenceTypeFromState(fxState, pegKey, FX_REFERENCE_MAX_AGE_SEC, nowSec);
     typeByPeg[pegKey] = type;
     updatedAtByPeg[pegKey] = fxState.sourceUpdatedAtByPeg[pegKey] ?? null;
-    if (type === "fresh" || type === "static") {
+    if (type === "fresh") {
       freshOrStaticRates[pegKey] = fxState.rates[pegKey];
-      globalType = type === "fresh" ? "fresh" : globalType === "none" ? "static" : globalType;
+      globalType = "fresh";
       if (updatedAtByPeg[pegKey] != null) {
         globalUpdatedAt =
           globalUpdatedAt == null

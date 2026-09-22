@@ -77,10 +77,9 @@ function nativeQuote() {
 function nativePipelineInput(
   asset: PeggedAsset,
   db: D1Database = mockD1(),
-  missingBefore = new Set<string>(),
 ): Parameters<typeof runPostEnrichmentPricePipeline>[0] {
   return {
-    assets: [asset], missingBefore, db, syncStartSec: 1_700_000_050,
+    assets: [asset], db, syncStartSec: 1_700_000_050,
     validationReferences: {
       rates: { peggedEUR: 1.08 }, type: "fresh", updatedAt: 1_700_000_000,
       typeByPeg: { peggedEUR: "fresh" },
@@ -123,7 +122,7 @@ describe("runPostEnrichmentPricePipeline", () => {
         id, source, price, observedAt: now - observationAge, observedAtMode: "upstream",
       }], now - stageAge);
       const result = await runPostEnrichmentPricePipeline({
-        assets: [asset], missingBefore: new Set([id]), db, syncStartSec: now,
+        assets: [asset], db, syncStartSec: now,
         priceCache: new Map(), validationContexts: { get: makeValidationContext },
         validationReferences: { rates: { [pegType]: pegType === "peggedUSD" ? 1 : price }, type: "fresh", updatedAt: now },
         previousTrustedPrices: new Map(), returnIfAborted: () => null,
@@ -335,7 +334,7 @@ describe("runPostEnrichmentPricePipeline", () => {
     ]);
     fetchCurrentNativePegImpliedUsdQuotesMock.mockResolvedValue(nativeQuote());
 
-    const result = await runPostEnrichmentPricePipeline(nativePipelineInput(asset, db, new Set(["eurc-circle"])), "");
+    const result = await runPostEnrichmentPricePipeline(nativePipelineInput(asset, db), "");
 
     expect(isAbortResult(result)).toBe(false);
     if (isAbortResult(result)) {
@@ -370,7 +369,6 @@ describe("runPostEnrichmentPricePipeline", () => {
 
     const result = await runPostEnrichmentPricePipeline({
       assets: [asset],
-      missingBefore: new Set(),
       db,
       syncStartSec: 1_700_000_050,
       validationContexts: { get: makeValidationContext },
@@ -428,7 +426,6 @@ describe("runPostEnrichmentPricePipeline", () => {
 
     const result = await runPostEnrichmentPricePipeline({
       assets: [asset],
-      missingBefore: new Set(["usx-dforce"]),
       db: mockD1(),
       syncStartSec: 1_700_000_050,
       validationContexts: { get: makeValidationContext },

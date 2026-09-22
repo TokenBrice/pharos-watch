@@ -25,7 +25,6 @@ import {
   type AuthoritativeLivePriceOverrideStats,
 } from "../../lib/authoritative-price-sources";
 import {
-  enrichMissingPrices,
   fetchPrimaryPrices,
   hasMissingPrice,
 } from "./enrich-prices";
@@ -168,7 +167,7 @@ export async function runStablecoinsPricingStage(
 ): Promise<
   | CronResult
   | {
-      enrichStats: Awaited<ReturnType<typeof enrichMissingPrices>>;
+      enrichStats: null;
       priceValidationStats: Awaited<ReturnType<typeof fetchPrimaryPrices>>["stats"];
       gtProbe: { stats: ReturnType<typeof createEmptyGtProbeStats> };
       authoritativeOverrideCount: number;
@@ -286,19 +285,7 @@ export async function runStablecoinsPricingStage(
     syncStartSec: options.syncStartSec,
     authoritativeOverrideStats,
   });
-  const missingBefore = new Set(options.assets.filter(hasMissingPrice).map((asset) => asset.id));
-  const enrichStats: Awaited<ReturnType<typeof enrichMissingPrices>> = {
-    totalMissing: missingBefore.size,
-    pass1: 0,
-    pass1b: 0,
-    passCmc: 0,
-    passJupiter: 0,
-    passDex: 0,
-    passCgLowVolume: 0,
-    finalMissing: missingBefore.size,
-    failedPasses: [],
-    providerDiagnostics: [],
-  };
+  const enrichStats = null;
 
   await reportStablecoinsStage(
     options.reportProgress,
@@ -319,7 +306,6 @@ export async function runStablecoinsPricingStage(
   const priceCompletion = await runSharedPriceCompletion({
     chainRpcs: options.chainRpcs,
     assets: options.assets,
-    missingBefore,
     db: options.db,
     syncStartSec: options.syncStartSec,
     signal: options.signal,
@@ -394,7 +380,6 @@ export async function runStablecoinsPricingStage(
     priceCacheEntries,
     providerDiagnostics: [
       ...primaryProviderDiagnostics,
-      ...(enrichStats.providerDiagnostics ?? []),
       ...nativePegProviderDiagnostics,
     ],
   };

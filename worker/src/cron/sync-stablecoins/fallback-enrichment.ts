@@ -98,12 +98,11 @@ export async function runFallbackPriceEnrichmentPhase(
     returnIfAborted: input.returnIfAborted,
   }, "fallback-");
   if (isAbortResult(enrichmentPhase)) return enrichmentPhase;
-  const { missingBefore, enrichStats } = enrichmentPhase;
+  const { enrichStats } = enrichmentPhase;
 
   const priceCompletion = await runSharedPriceCompletion({
     chainRpcs: input.chainRpcs,
     assets: input.assets,
-    missingBefore,
     db: input.db,
     syncStartSec: input.syncStartSec,
     signal: input.signal,

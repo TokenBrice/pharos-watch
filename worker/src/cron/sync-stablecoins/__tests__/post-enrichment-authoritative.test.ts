@@ -64,7 +64,6 @@ describe("runSharedPriceCompletion authoritative repair", () => {
     const result = await runSharedPriceCompletion(
       {
         assets: [asset],
-        missingBefore: new Set([asset.id]),
         db: mockD1([]),
         syncStartSec: 1_800_000_000,
         validationContexts: createValidationContextResolver(),
@@ -103,7 +102,6 @@ describe("runSharedPriceCompletion authoritative repair", () => {
     const result = await runSharedPriceCompletion(
       {
         assets: [asset],
-        missingBefore: new Set([asset.id]),
         db: mockD1([]),
         syncStartSec: 1_800_000_000,
         validationContexts: createValidationContextResolver(),

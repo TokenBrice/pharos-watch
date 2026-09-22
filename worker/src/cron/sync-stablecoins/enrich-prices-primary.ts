@@ -33,7 +33,6 @@ export async function fetchPrimaryPrices(
 ): Promise<{
   results: Map<string, PrimaryPriceResult>;
   stats: PriceValidationStats;
-  cgPrices: Map<string, number>;
   providerDiagnostics?: PricingProviderAttemptDiagnostic[];
 }> {
   throwIfAborted(signal);
@@ -47,7 +46,7 @@ export async function fetchPrimaryPrices(
 
   if (plan.candidates.length === 0) {
     logDexPriceSourceLoadTelemetry(plan.dexPriceSourceTelemetry);
-    return { results, stats, cgPrices: new Map() };
+    return { results, stats };
   }
 
   const { quoteMaps, providerDiagnostics } = await collectPrimaryProviderQuotes({
@@ -96,15 +95,9 @@ export async function fetchPrimaryPrices(
     `[primary-prices] ${stats.attempted} assets: ${stats.high} high, ${stats.singleSource} single-source, ${stats.low} low confidence`,
   );
 
-  const cgPrices = new Map<string, number>();
-  for (const [geckoId, entry] of quoteMaps.cgQuotes) {
-    cgPrices.set(geckoId, entry.price);
-  }
-
   return {
     results,
     stats,
-    cgPrices,
     providerDiagnostics,
   };
 }
