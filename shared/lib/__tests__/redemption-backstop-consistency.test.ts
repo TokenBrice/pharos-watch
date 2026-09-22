@@ -199,6 +199,31 @@ describe("redemption backstop config consistency", () => {
     }
   });
 
+  // Registry-derived invariants cannot catch a curation edit that swaps a coin
+  // onto another family the same module also allows (psm-and-basket permits
+  // both). These reviewed rows pin the published route shape by value.
+  it.each([
+    ["usdc-circle", "offchain-issuer", "supply-ratio", "dynamic-or-unclear"],
+    ["usdcv-societe-generale-forge", "offchain-issuer", "supply-full", "dynamic-or-unclear"],
+    ["chfau-allunity", "offchain-issuer", "supply-full", "dynamic-or-unclear"],
+    ["m-m0", "offchain-issuer", "supply-full", "dynamic-or-unclear"],
+    ["dai-makerdao", "psm-swap", "reserve-sync-metadata", "fee-bps"],
+    ["usds-sky", "psm-swap", "reserve-sync-metadata", "fee-bps"],
+    ["gho-aave", "psm-swap", "reserve-sync-metadata", "fee-bps"],
+    ["lisusd-lista", "psm-swap", "supply-ratio", "fee-bps"],
+    ["usdd-tron-dao-reserve", "psm-swap", "reserve-sync-metadata", "fee-bps"],
+    ["honey-berachain", "basket-redeem", "reserve-sync-metadata", "dynamic-or-unclear"],
+    ["eusd-electronic-usd", "basket-redeem", "reserve-sync-metadata", "fee-bps"],
+    ["usde-ethena", "stablecoin-redeem", "reserve-sync-metadata", "fee-bps"],
+    ["ousd-origin-protocol", "stablecoin-redeem", "reserve-sync-metadata", "fee-bps"],
+    ["frxusd-frax", "stablecoin-redeem", "reserve-sync-metadata", "dynamic-or-unclear"],
+  ] as const)("%s keeps its reviewed route shape (%s / %s / %s)", (id, routeFamily, capacityKind, costKind) => {
+    const config = REDEMPTION_BACKSTOP_CONFIGS[id];
+    expect(config?.routeFamily).toBe(routeFamily);
+    expect(config?.capacityModel.kind).toBe(capacityKind);
+    expect(config?.costModel.kind).toBe(costKind);
+  });
+
   it("non-issuer documented supply-full routes do not force issuer-term capacity basis", () => {
     const violations = entries
       .filter(
