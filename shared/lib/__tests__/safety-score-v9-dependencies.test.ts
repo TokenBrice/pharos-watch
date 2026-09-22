@@ -792,15 +792,21 @@ describe("commonModeSignalSeverity proportional materiality", () => {
   });
 
   it("normalizes DefiLlama display-name chain keys to their canonical slug before matching", () => {
+    // P1-03: hyperliquid, optimism and solana left matureChains once their unreachable and
+    // non-supporting citations put their gates in `pending`, so the display-name resolution is
+    // now proved against the slug-keyed share rather than against mature-chain membership.
     for (const [displayName, slug] of [
-      ["Ethereum", "ethereum"],
       ["Hyperliquid L1", "hyperliquid"],
       ["OP Mainnet", "optimism"],
       ["Solana", "solana"],
     ] as const) {
-      expect(materiality.matureChains).toContain(slug);
-      expect(commonModeSignalSeverity({ kind: "chain", key: displayName }, failClosed, materiality)).toBe("low");
+      expect(materiality.matureChains).not.toContain(slug);
+      expect(
+        commonModeSignalSeverity({ kind: "chain", key: displayName }, context({ [slug]: 0.25 }), materiality),
+      ).toBe("high");
     }
+    expect(materiality.matureChains).toContain("ethereum");
+    expect(commonModeSignalSeverity({ kind: "chain", key: "Ethereum" }, failClosed, materiality)).toBe("low");
   });
 
   it("grades non-mature chain concentration at the 10% and 25% boundaries", () => {

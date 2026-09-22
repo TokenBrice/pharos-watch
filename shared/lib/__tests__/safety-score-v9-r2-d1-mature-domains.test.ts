@@ -71,7 +71,9 @@ describe("R2/D1 threshold boundary semantics — active (D1 2026-07-22 rebanded 
   });
 
   it("keeps mature chains diagnostic at every boundary, including >=10% and unknown share", () => {
-    for (const chainId of ["tron", "hyperliquid", "xrpl"] as const) {
+    // P1-03: tron, hyperliquid and xrpl left matureChains when their unreachable and
+    // non-supporting citations put their gates in `pending`; the chains still admitted are these.
+    for (const chainId of ["base", "ethereum", "hedera"] as const) {
       const domain: V9FailureDomainRef = { kind: "chain", key: chainId };
       for (const { share } of CHAIN_BOUNDARIES) {
         expect(
@@ -126,10 +128,9 @@ describe("R2/D1 threshold boundary semantics — active (D1 2026-07-22 rebanded 
 });
 
 describe("R2/D1/D5 ruled policy membership — live policy", () => {
-  it("lists tron, hyperliquid, and xrpl in semantic.materiality.matureChains", () => {
-    expect(CANDIDATE_MATERIALITY.matureChains).toContain("tron");
-    expect(CANDIDATE_MATERIALITY.matureChains).toContain("hyperliquid");
-    expect(CANDIDATE_MATERIALITY.matureChains).toContain("xrpl");
+  it("lists only the chains whose maturity review still passes in semantic.materiality.matureChains", () => {
+    // P1-03: tron, hyperliquid and xrpl are excluded until batch 3 re-reviews their citations.
+    expect(CANDIDATE_MATERIALITY.matureChains).toEqual(["base", "ethereum", "hedera"]);
   });
 
   it("lists raydium in semantic.materiality.matureVenues", () => {

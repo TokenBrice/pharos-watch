@@ -88,7 +88,7 @@ describe("Safety Score v9 fact digest canonicalization", () => {
     zeroSupply.assets[1]!.supply.chainDistribution.chains[0]!.supplyShare = 0.01;
     expect(() => compileV9FactSetV2(zeroSupply)).toThrow("Chain supply shares must reconcile");
   });
-  it("canonicalizes the retained Hyperliquid alias and applies R2 maturity after collisions", () => {
+  it("canonicalizes the retained Hyperliquid alias and fails closed on an alias collision", () => {
     const configure = (
       input: ReturnType<typeof coreFixture>,
       chains: Array<{ chainId: string; supplyUsd: number; supplyShare: number }>,
@@ -110,7 +110,8 @@ describe("Safety Score v9 fact digest canonicalization", () => {
 
     const alias = coreFixture();
     configure(alias, [{ chainId: "hyperliquid-l1", supplyUsd: 1_000_000, supplyShare: 1 }]);
-    expect(severity(alias)).toBe("low");
+    // P1-03: hyperliquid is no longer a mature chain, so the folded 100% alias share grades high.
+    expect(severity(alias)).toBe("high");
 
     const collision = coreFixture();
     configure(collision, [
@@ -118,7 +119,9 @@ describe("Safety Score v9 fact digest canonicalization", () => {
       { chainId: "hyperliquid", supplyUsd: 24_900, supplyShare: 0.0249 },
       { chainId: "hyperliquid-l1", supplyUsd: 24_900, supplyShare: 0.0249 },
     ]);
-    expect(severity(collision)).toBe("low");
+    // P1-03: with hyperliquid no longer mature, the ambiguous alias pair is visible as the
+    // fail-closed "chain inventory unavailable" verdict instead of being masked by maturity.
+    expect(severity(collision)).toBe("high");
   });
   it("binds semantic facts and source identities but excludes compilation time and all policy fields", () => {
     const first = compileV9FactSetV2(coreFixture());
