@@ -25,6 +25,52 @@ function emptyCmcLastFetchCache() {
 describe("enrichMissingPrices", () => {
   afterEach(cleanupEnrichMissingPricesTest);
   afterEach(() => vi.useRealTimers());
+  it.each([
+    ["next success hour despite completion jitter", { version: 1, kind: "success" }, "2026-09-22T20:10:18Z", "2026-09-22T21:09:30Z", true],
+    ["same success hour", { version: 1, kind: "success" }, "2026-09-22T21:10:18Z", "2026-09-22T21:59:59Z", false],
+    ["429 across an hour boundary", { version: 1, kind: "rate-limited" }, "2026-09-22T20:10:18Z", "2026-09-22T21:09:30Z", false],
+    ["429 after its entire backoff", { version: 1, kind: "rate-limited" }, "2026-09-22T20:10:18Z", "2026-09-22T21:10:18Z", true],
+    ["legacy rolling marker", 1, "2026-09-22T20:10:18Z", "2026-09-22T21:09:30Z", false],
+    ["expired legacy marker", 1, "2026-09-22T20:10:18Z", "2026-09-22T21:10:18Z", true],
+    ["unknown marker", { version: 2, kind: "success" }, "2026-09-22T20:10:18Z", "2026-09-22T21:09:30Z", false],
+    ["future success timestamp", { version: 1, kind: "success" }, "2026-09-22T22:10:18Z", "2026-09-22T21:09:30Z", false],
+  ])("enforces the CMC quota for %s", async (_label, marker, updatedAt, now, admitted) => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(now));
+    const db = makeEnrichPricesDb([
+      { match: "SELECT value, updated_at FROM cache WHERE key = ?", matchBinds: ["cmc_last_fetch"],
+        rows: [{ value: JSON.stringify(marker), updated_at: Date.parse(updatedAt) / 1000 }] },
+      { match: "circuit", rows: [], allowUnused: true },
+    ]);
+    const assets = [makePeggedAsset({ id: "test-dollar", symbol: "TUSD", price: 0, cmcSlug: "test-dollar" })];
+    const fetchSpy = mockFetch([{ match: "pro-api.coinmarketcap.com", body: cmcCategory([
+      { slug: "test-dollar", symbol: "TUSD", quote: { USD: cmcUsdQuote(1) } },
+    ]) }]);
+    const result = await runCmcPass(assets, "test-cmc-key", undefined, db);
+    if (admitted) {
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expect(result.resolved).toBe(1);
+      const write = db.getHistory().find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "cmc_last_fetch");
+      expect(JSON.parse(String(write?.binds[1]))).toEqual({ version: 1, kind: "success" });
+      expect(write?.binds[2]).toBe(Date.parse(now) / 1000); // actual completion time, never bucket time
+    } else {
+      expect(fetchSpy).not.toHaveBeenCalled();
+      expect(result.diagnostics).toEqual(expect.arrayContaining([expect.objectContaining({ errorClass: "cooldown" })]));
+    }
+  });
+  it("keeps targeted 429 backoff when the category request succeeded", async () => {
+    const db = makeEnrichPricesDb([emptyCmcLastFetchCache(), { match: "circuit", rows: [], allowUnused: true }]);
+    const assets = [makePeggedAsset({ id: "test-dollar", symbol: "TUSD", price: 0, cmcSlug: "test-dollar" })];
+    mockFetch([
+      { match: "/v1/cryptocurrency/category", body: cmcCategory([], 301) },
+      { match: "/v3/cryptocurrency/quotes/latest", status: 429, body: { status: { error_message: "rate limited" } } },
+    ]);
+    const result = await runCmcPass(assets, "test-cmc-key", undefined, db);
+    expect(result.resolved).toBe(0);
+    const writes = db.getHistory().filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "cmc_last_fetch");
+    expect(writes).toHaveLength(1);
+    expect(JSON.parse(String(writes[0].binds[1]))).toEqual({ version: 1, kind: "rate-limited" });
+  });
   it("prefers cmcSlug-based matching over symbol for CMC fallback (BUG-1)", async () => {
     // Two coins share symbol "GUSD" — slug-based matching should pick the right price
     const assets: PeggedAsset[] = [
@@ -846,6 +892,6 @@ describe("enrichMissingPrices", () => {
     const cacheWrite = db
       .getHistory()
       .find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "cmc_last_fetch");
-    expect(cacheWrite?.binds[1]).toBe("1");
+    expect(JSON.parse(String(cacheWrite?.binds[1]))).toEqual({ version: 1, kind: "rate-limited" });
   });
 });

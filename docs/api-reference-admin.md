@@ -598,7 +598,7 @@ Admin-only per-coin attempt timeline for the live-reserve sync lane. This is the
 | `coin` | `string`  | —       | Required stablecoin id (e.g. `usdc-circle`)                        |
 | `limit`| `integer` | `50`    | Number of attempts to return (1–200), newest first                  |
 
-**Response shape:** `{ "coin": string, "attempts": Array<{ stablecoinId, attemptedAt, adapterKey, breakerKey, attemptId, status, failureCategory, warningCodes, lastError, durationMs }> }`. `failureCategory` is the cron-classified failure (`network`, `upstream-http`, `parser-drift`, `validation`, `storage-write`, `circuit-open`, …); `warningCodes` are the attempt-scoped warning codes; `durationMs` is `metadata.diag.durationMs` and is `null` until the adapter emits block-scoped instrumentation. A missing `coin` returns `400`.
+**Response shape:** `{ "coin": string, "attempts": Array<{ stablecoinId, attemptedAt, adapterKey, breakerKey, attemptId, status, failureCategory, warningCodes, lastError, durationMs }> }`. `failureCategory` is the cron-classified failure (`network`, `upstream-http`, `parser-drift`, `validation`, `storage-write`, `circuit-open`, …); `warningCodes` are the attempt-scoped warning codes; `durationMs` reads the producer's current `metadata.durationMs`, with backward-compatible fallback to `metadata.diag.durationMs`. Only finite nonnegative numbers are accepted; absent or invalid timing stays `null`. A missing `coin` returns `400`.
 
 ### `GET /api/request-source-stats`
 

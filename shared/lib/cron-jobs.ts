@@ -825,14 +825,14 @@ export const CRON_JOB_DEFINITIONS: readonly CronJobMeta[] = CRON_JOB_DEFINITIONS
 const CRON_CONNECTION_BUDGET_ONLY_DEFINITIONS: readonly CronConnectionBudgetDefinition[] = [
   {
     job: "price-corroboration",
-    label: "Hourly price corroboration",
-    intervalSec: 3600,
+    label: "Price observation collection",
+    intervalSec: 900,
     scheduleKey: "statusSelfCheckOffset",
     maxConnections: 4,
     connectionGroup: "status-self-check-chain",
     statusTracked: false,
     notes:
-      "Once hourly at :09, collects fallback observations serially after the monitors for the next :15 publication.",
+      "Every 15 minutes after monitors, refreshes exact DEX observations serially; broad fallback corroboration remains hourly at :09.",
   },
   {
     job: "telegram-registration-reconciliation",

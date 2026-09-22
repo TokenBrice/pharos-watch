@@ -1,3 +1,5 @@
+import { rethrowIfAborted } from "../../lib/abort";
+import { runPriceDexRefresh } from "../../cron/sync-stablecoins/price-dex-refresh";
 import { recordBudgetSurfaceTelemetry } from "../../lib/budget-surface-telemetry";
 import { logCronEvent } from "../../lib/cron-logger";
 import {
@@ -56,44 +58,57 @@ export function buildStatusSelfCheckSlotGroups(runtime: ScheduledRuntimeContext)
 export async function runStatusSelfCheckSlot(runtime: ScheduledRuntimeContext) {
   const summary = await runScheduledSlotGroups(runtime, "isolated status self-check slot", buildStatusSelfCheckSlotGroups(runtime));
   // Collect after the monitors and before the :15 primary, without delaying publication.
-  if (isPriceCorroborationSlot(runtime.slotStartedAt)) {
+  {
     const startedMs = Date.now();
     try {
       // Declared in the registry as a budget-only entry (maxConnections 4);
       // calling it outside the wrapper spent those fetches unaccounted.
-      const corroboration = await runRuntimeBudgetOnlyTask(
+      const collected = await runRuntimeBudgetOnlyTask(
         runtime,
         "price-corroboration",
-        (signal) => runPriceCorroboration({
-          db: runtime.db,
-          syncStartSec: runtime.slotStartedAt,
-          signal,
-          cmcApiKey: runtime.env.CMC_API_KEY,
-          jupiterApiKey: runtime.env.JUPITER_API_KEY,
-          coingeckoApiKey: runtime.coingeckoApiKey,
-          chainRpcs: runtime.chainRpcs,
-          addressProvider: {
-            enabledProviders: runtime.env.ADDRESS_PRICE_PROVIDERS_ENABLED,
-            cgApiKey: runtime.coingeckoApiKey,
-          },
-        }),
+        async (signal) => {
+          const phaseErrors: Record<string, string> = {};
+          const collect = async <T>(phase: string, run: () => Promise<T>): Promise<T | null> => {
+            try { return await run(); } catch (error) {
+              rethrowIfAborted(error, signal);
+              phaseErrors[phase] = error instanceof Error && ["Error", "TypeError", "RangeError", "TimeoutError", "AbortError"].includes(error.name)
+                ? error.name : "unknown-error";
+              return null;
+            }
+          };
+          const dex = await collect("dex-refresh", () => runPriceDexRefresh({ db: runtime.db, syncStartSec: runtime.slotStartedAt, signal }));
+          const corroboration = isPriceCorroborationSlot(runtime.slotStartedAt)
+            ? await collect("hourly", () => runPriceCorroboration({
+                db: runtime.db, syncStartSec: runtime.slotStartedAt, signal,
+                cmcApiKey: runtime.env.CMC_API_KEY, jupiterApiKey: runtime.env.JUPITER_API_KEY,
+                coingeckoApiKey: runtime.coingeckoApiKey, chainRpcs: runtime.chainRpcs,
+                addressProvider: { enabledProviders: runtime.env.ADDRESS_PRICE_PROVIDERS_ENABLED,
+                  cgApiKey: runtime.coingeckoApiKey },
+              })) : null;
+          return { dex, corroboration, phaseErrors };
+        },
       );
-      const summary = summarizePriceCorroboration(corroboration);
-      const degraded = summary.failedPasses.length > 0 || summary.providerDiagnostics.some((row) => !row.success);
+      const summary = collected.corroboration ? summarizePriceCorroboration(collected.corroboration) : null;
+      const dex = collected.dex;
+      const phaseFailed = Object.keys(collected.phaseErrors).length > 0;
+      const degraded = phaseFailed || !!dex && (dex.errorClasses.length > 0 || dex.deferredBatches > 0 || dex.unsupportedAssets > 0 || dex.missingQuotes > 0)
+        || !!summary && (summary.failedPasses.length > 0 || summary.providerDiagnostics.some((row) => !row.success));
       await recordBudgetSurfaceTelemetry(runtime.db, {
         surface: "price-corroboration", durationMs: Date.now() - startedMs,
-        dueCount: corroboration.cohortSize, processedCount: corroboration.cacheEntriesWritten,
-        outcome: degraded ? "degraded" : "ok",
-        metadata: { slotStartedAt: runtime.slotStartedAt, workerVersion: runtime.workerVersion ?? null },
+        dueCount: collected.corroboration?.cohortSize ?? dex?.cohortSize ?? 0, processedCount: collected.corroboration?.cacheEntriesWritten ?? dex?.resolved ?? 0,
+        outcome: phaseFailed ? "error" : degraded ? "degraded" : "ok",
+        ...(phaseFailed ? { error: Object.values(collected.phaseErrors)[0] } : {}),
+        metadata: { slotStartedAt: runtime.slotStartedAt, workerVersion: runtime.workerVersion ?? null, dexRefresh: dex, phaseErrors: collected.phaseErrors, ...(phaseFailed ? { errorClass: Object.values(collected.phaseErrors)[0] } : {}) },
       });
       await logCronEvent(runtime.db, {
         job: "sync-stablecoins",
         eventType: "price-corroboration",
         severity: degraded ? "warning" : "info",
-        message: `Hourly price corroboration refreshed ${corroboration.cacheEntriesWritten}/${corroboration.cohortSize} cache rows`,
-        metadata: { slotStartedAt: runtime.slotStartedAt, workerVersion: runtime.workerVersion ?? null, ...summary },
+        message: `Price observation collection refreshed ${dex?.resolved ?? 0}/${dex?.cohortSize ?? 0} DEX rows${summary ? " and completed hourly corroboration" : ""}`,
+        metadata: { slotStartedAt: runtime.slotStartedAt, workerVersion: runtime.workerVersion ?? null, ...(summary ?? {}), dexRefresh: dex, phaseErrors: collected.phaseErrors, ...(phaseFailed ? { errorClass: Object.values(collected.phaseErrors)[0] } : {}) },
       });
     } catch (error) {
+      rethrowIfAborted(error, runtime.slotSignal);
       const errorClass = error instanceof Error && ["Error", "TypeError", "RangeError", "TimeoutError", "AbortError"].includes(error.name)
         ? error.name : "unknown-error";
       await recordBudgetSurfaceTelemetry(runtime.db, {
@@ -103,7 +118,7 @@ export async function runStatusSelfCheckSlot(runtime: ScheduledRuntimeContext) {
       });
       await logCronEvent(runtime.db, {
         job: "sync-stablecoins", eventType: "price-corroboration", severity: "warning",
-        message: "Hourly price corroboration failed before the next stablecoin publication",
+        message: "Price observation collection failed before the next stablecoin publication",
         metadata: { slotStartedAt: runtime.slotStartedAt, workerVersion: runtime.workerVersion ?? null,
           errorClass },
       });

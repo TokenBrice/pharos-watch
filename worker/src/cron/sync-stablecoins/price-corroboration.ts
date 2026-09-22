@@ -239,10 +239,16 @@ export async function runPriceCorroboration(params: {
 
   const fallbackProbesById = new Map(fallbackProbes.map((asset) => [asset.id, asset]));
   // Only this run's fetched observations enter the handoff, never published references.
+  const dexTargets = new Map((fallbackStats.providerDiagnostics ?? [])
+    .filter((diagnostic) => diagnostic.source === "dexscreener-exact")
+    .flatMap((diagnostic) => diagnostic.assetAttempts ?? [])
+    .filter((attempt) => attempt.result === "resolved" && attempt.chain && attempt.target)
+    .map((attempt) => [attempt.assetId, { chain: attempt.chain!, target: attempt.target! }]));
   const observations = cohort.flatMap((asset) => {
     const fallback = fallbackObservation(fallbackProbesById.get(asset.id));
     return [...(fallback ? [fallback] : []), ...addressObservations(addressQuotes.get(asset.id))]
-      .map((observation) => ({ ...observation, id: asset.id, observedAtMode: observation.observedAtMode ?? null }));
+      .map((observation) => ({ ...observation, id: asset.id, observedAtMode: observation.observedAtMode ?? null,
+        ...(observation.source === "dexscreener-exact" ? dexTargets.get(asset.id) : {}) }));
   });
   await writePriceCorroborationObservations(params.db, observations, params.syncStartSec, params.signal);
   const entries = buildPriceCorroborationCacheEntries({

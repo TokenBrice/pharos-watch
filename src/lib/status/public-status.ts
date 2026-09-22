@@ -31,12 +31,11 @@ const ACTIVE_PRICE_CRITICAL_DURATION_PREFIX = "active-price-coverage-critical-du
 
 function getActivePriceAssetLabels(
   coverage: ActivePriceCoverage | undefined,
-  fallbackIds: readonly string[],
+  ids: readonly string[],
 ): string[] {
   const symbolById = new Map(
     coverage?.missingActiveAssets.map((asset) => [asset.stablecoinId, asset.symbol] as const) ?? [],
   );
-  const ids = coverage?.missingActiveIds.length ? coverage.missingActiveIds : fallbackIds;
   const labels = ids.map((id) => {
     const symbol = symbolById.get(id);
     return symbol && symbol !== "unknown" ? symbol : id;
@@ -98,7 +97,14 @@ export function getPublicHealthWarningPresentation(
     const labels = getActivePriceAssetLabels(healthData.activePriceCoverage, ids);
     return {
       title: "Long-running price gaps",
-      detail: `${formatAffectedAssets(labels.length, labels)} ${labels.length === 1 ? "has" : "have"} had no accepted live price for more than a week. Market caps keep publishing; each is under catalog review to re-source the price or retire the listing.`,
+      detail: `${formatAffectedAssets(ids.length, labels)} ${ids.length === 1 ? "has" : "have"} had no accepted live price for more than a week. Market caps keep publishing; each is under catalog review to re-source the price or retire the listing.`,
+    };
+  }
+
+  if (warning === "cache-quality-degraded: yield-data:producer-degraded-since-last-clean-run") {
+    return {
+      title: "Yield data quality",
+      detail: "A recent yield update reported incomplete or degraded inputs. Yield data remains degraded until a clean update succeeds.",
     };
   }
 

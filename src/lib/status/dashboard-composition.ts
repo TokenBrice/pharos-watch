@@ -3,6 +3,8 @@ import { formatElapsedSeconds } from "@shared/lib/format";
 import { buildCommsWorkbenchModel, type CommsWorkbenchModel } from "@/lib/comms-workbench-model";
 import { deriveStatusActionRecommendations } from "@/lib/status/action-recommendations";
 import { STATUS_PRIORITY, getStatusTone } from "@/lib/status/dashboard-presentation";
+import { getBlacklistGapStatus } from "@shared/lib/status-thresholds";
+import { getImpactedPublicSurfaces, getPublicHealthWarningPresentation, getPublicMintBurnStatus } from "@/lib/status/public-status";
 import {
   STATUS_DASHBOARD_FRESHNESS_POLICY,
   buildDashboardDecision,
@@ -99,15 +101,21 @@ function buildDashboardNotices({
   if (requestSourceError) notices.push({ id: "request-source-error", title: "API attribution unavailable", detail: requestSourceError.message, tone: "warning" });
   if (publicHealthNeedsCallout && healthData) {
     const divergence = healthDiffersFromStatus ? `Public /api/health differs from /api/status (${status}). ` : "";
-    const mintBurnWarning = healthData.mintBurn.sync.warning != null ? `${healthData.mintBurn.sync.warning} ` : "";
-    const mintBurnSyncAge = healthData.mintBurn.sync.lastSuccessfulSyncAt != null
-      ? `Last successful mint/burn sync ${formatElapsedSeconds(Math.max(0, timestamp - healthData.mintBurn.sync.lastSuccessfulSyncAt))} ago. `
-      : "";
-    const impactedMajors = healthData.mintBurn.majorStaleCount > 0 ? `Impacted majors: ${healthData.mintBurn.staleMajorSymbols.join(", ")}. ` : "";
+    const reasons = healthData.warnings.map((warning) => getPublicHealthWarningPresentation(warning, healthData).detail);
+    const sync = healthData.mintBurn.sync;
+    if (getPublicMintBurnStatus(sync) !== "healthy" || sync.warning != null || healthData.mintBurn.majorStaleCount > 0) {
+      if (sync.warning) reasons.push(sync.warning);
+      if (sync.lastSuccessfulSyncAt != null) reasons.push(`Last successful mint/burn sync ${formatElapsedSeconds(Math.max(0, timestamp - sync.lastSuccessfulSyncAt))} ago.`);
+      if (healthData.mintBurn.majorStaleCount > 0) reasons.push(`Impacted majors: ${healthData.mintBurn.staleMajorSymbols.join(", ")}.`);
+    }
+    if (getBlacklistGapStatus({ missingRatio: healthData.blacklist.missingRatio, recentMissingAmounts: healthData.blacklist.recentMissingAmounts }) !== "healthy") {
+      reasons.push(`Blacklist gaps tracked by /api/health: ${healthData.blacklist.missingAmounts}.`);
+    }
+    if (reasons.length === 0) reasons.push(...getImpactedPublicSurfaces(healthData).map((surface) => surface.detail));
     notices.push({
       id: "public-health",
       title: `Public /api/health reports ${healthData.status}`,
-      detail: `${divergence}${mintBurnWarning}${mintBurnSyncAge}${impactedMajors}Blacklist gaps tracked by /api/health: ${healthData.blacklist.missingAmounts}.`,
+      detail: `${divergence}${[...new Set(reasons)].join(" ") || "The health endpoint did not provide a detailed reason."}`,
       tone: healthData.status === "stale" ? "critical" : healthData.status === "degraded" ? "warning" : "neutral",
     });
   }
