@@ -36,7 +36,10 @@ beforeEach(resetCallbackTest);
 describe("handleCallbackQuery", () => {
   describe("P1.17 mutating callbacks emit usage analytics", () => {
     it("depegstep:<id>:250 success records a subscribe usage event", async () => {
-      const db = mockTelegramD1([]);
+      const db = mockTelegramD1([
+        { match: "INSERT INTO telegram_subscribers", rows: [] },
+        { match: "INSERT INTO telegram_subscriptions", rows: [] },
+      ]);
       await handleCallbackQuery(db, "fake-token", makeCallbackQuery("depegstep:usdc-circle:250", { id: "cb-depegstep-ok", message: { chat: { id: 42, type: "private" }, message_id: 1 } }));
 
       const history = db.getHistory();
@@ -70,7 +73,10 @@ describe("handleCallbackQuery", () => {
     });
 
     it("safetydown:<id> success records a subscribe usage event", async () => {
-      const db = mockTelegramD1([]);
+      const db = mockTelegramD1([
+        { match: "INSERT INTO telegram_subscribers", rows: [] },
+        { match: "INSERT INTO telegram_subscriptions", rows: [] },
+      ]);
       await handleCallbackQuery(db, "fake-token", makeCallbackQuery("safetydown:usdc-circle", { id: "cb-safetydown-ok", message: { chat: { id: 42, type: "private" }, message_id: 1 } }));
 
       const history = db.getHistory();
@@ -221,7 +227,10 @@ describe("handleCallbackQuery discoverability", () => {
   });
 
   it("quicksub:<id> in a group with admin tapping writes the subscription", async () => {
-    const db = mockTelegramD1([], {
+    const db = mockTelegramD1([
+      { match: "INSERT INTO telegram_subscribers", rows: [] },
+      { match: "INSERT INTO telegram_subscriptions", rows: [] },
+    ], {
       fallbackTables: [{ match: "FROM cache WHERE key = ?", rows: [], first: null }],
     });
     mockTelegramMembership(fetchSpy, "administrator", { id: 7, is_bot: false, first_name: "admin" });
@@ -259,7 +268,14 @@ describe("handleCallbackQuery discoverability", () => {
     ["coverage", "Coverage sent."],
     ["quicksub", "Subscribed to DEWS + depeg for USDC."],
   ])("%s:<id> still acks when sendAuditedTelegramReply throws (P1.16)", async (action, acknowledgement) => {
-    const db = mockTelegramD1([]);
+    const db = mockTelegramD1(
+      action === "quicksub"
+        ? [
+            { match: "INSERT INTO telegram_subscribers", rows: [] },
+            { match: "INSERT INTO telegram_subscriptions", rows: [] },
+          ]
+        : [],
+    );
     vi.mocked(sendAuditedTelegramReply).mockRejectedValueOnce(new Error("api fail"));
     await handleCallbackQuery(db, "fake-token", makeCallbackQuery(`${action}:usdc-circle`, {
       id: `cb-${action}-fail`,

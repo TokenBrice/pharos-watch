@@ -98,6 +98,7 @@ describe("handleTelegramWebhook", () => {
         },
         { initiatorUserId: "999" },
       )),
+      { match: "INSERT INTO telegram_pending_disambiguation", rows: [] },
     ]);
 
     await handleTelegramWebhook(db, makeCallbackRequest("setup:type-toggle:launch"), "test-secret", "bot-token");
@@ -131,6 +132,7 @@ describe("handleTelegramWebhook", () => {
         },
         { initiatorUserId: "999" },
       )),
+      { match: "INSERT INTO telegram_pending_disambiguation", rows: [] },
     ]);
 
     await handleTelegramWebhook(db, makeCallbackRequest("setup:target:type"), "test-secret", "bot-token");
@@ -196,6 +198,7 @@ describe("handleTelegramWebhook", () => {
             initiatorUserId: "999",
           },
         )),
+        { match: "INSERT INTO telegram_pending_disambiguation", rows: [] },
       ]);
 
       await handleTelegramWebhook(db, makeWebhookRequest(123, "/start"), "test-secret", "bot-token");
@@ -619,7 +622,7 @@ describe("handleTelegramWebhook", () => {
       const db = makeTelegramWebhookDb([
         { match: "telegram_pending_disambiguation", rows: [] },
         { match: "FROM cache WHERE key = ?", rows: [], first: null },
-        { match: "FROM telegram_subscribers", rows: [], first: null },
+        { match: "INSERT INTO telegram_subscribers", rows: [] },
       ]);
       fetchSpy.mockImplementation(async (url) => {
         if (String(url).includes("getChatMember")) {

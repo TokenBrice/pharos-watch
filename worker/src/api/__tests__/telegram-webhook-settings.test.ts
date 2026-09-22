@@ -181,7 +181,7 @@ describe("handleSettingsCallback — chat-level", () => {
   });
 
   it("settings:gt:dews flips the global flag and re-renders", async () => {
-    const db = mockD1();
+    const db = mockD1([{ match: "INSERT INTO telegram_subscribers", rows: [] }]);
     await handleSettingsCallback(
       db,
       "fake-token",
@@ -264,7 +264,7 @@ describe("handleSettingsCallback — chat-level", () => {
   });
 
   it("settings:q:1 enables quiet hours with the default 22-07 window", async () => {
-    const db = mockD1();
+    const db = mockD1([{ match: "INSERT INTO telegram_subscribers", rows: [] }]);
     await handleSettingsCallback(
       db,
       "fake-token",
@@ -319,7 +319,7 @@ describe("handleSettingsCallback — chat-level", () => {
   });
 
   it("settings:sc clears the snooze timestamp", async () => {
-    const db = mockD1();
+    const db = mockD1([{ match: "INSERT INTO telegram_subscribers", rows: [] }]);
     await handleSettingsCallback(
       db,
       "fake-token",
@@ -364,7 +364,11 @@ describe("handleSettingsCallback — per-coin", () => {
   });
 
   it("settings:c:<id>:db:W sets DEWS min band to WARNING", async () => {
-    const db = mockD1([{ match: "FROM telegram_subscriptions", rows: [] }]);
+    const db = mockD1([
+      { match: "FROM telegram_subscriptions", rows: [] },
+      { match: "INSERT INTO telegram_subscribers", rows: [] },
+      { match: "INSERT INTO telegram_subscriptions", rows: [] },
+    ]);
     await handleSettingsCallback(
       db,
       "fake-token",
@@ -415,7 +419,11 @@ describe("handleSettingsCallback — per-coin", () => {
   });
 
   it("settings:c:<id>:sm:d sets safety mode to downgrade-only", async () => {
-    const db = mockD1([{ match: "FROM telegram_subscriptions", rows: [] }]);
+    const db = mockD1([
+      { match: "FROM telegram_subscriptions", rows: [] },
+      { match: "INSERT INTO telegram_subscribers", rows: [] },
+      { match: "INSERT INTO telegram_subscriptions", rows: [] },
+    ]);
     await handleSettingsCallback(
       db,
       "fake-token",
@@ -436,7 +444,11 @@ describe("handleSettingsCallback — per-coin", () => {
   });
 
   it("settings:c:<id>:ds:250 sets depeg-step to 250 bps", async () => {
-    const db = mockD1([{ match: "FROM telegram_subscriptions", rows: [] }]);
+    const db = mockD1([
+      { match: "FROM telegram_subscriptions", rows: [] },
+      { match: "INSERT INTO telegram_subscribers", rows: [] },
+      { match: "INSERT INTO telegram_subscriptions", rows: [] },
+    ]);
     await handleSettingsCallback(
       db,
       "fake-token",
@@ -458,7 +470,11 @@ describe("handleSettingsCallback — per-coin", () => {
   });
 
   it("settings:c:<id>:ds:0 clears depeg-step and disables depeg for the coin", async () => {
-    const db = mockD1([{ match: "FROM telegram_subscriptions", rows: [] }]);
+    const db = mockD1([
+      { match: "FROM telegram_subscriptions", rows: [] },
+      { match: "INSERT INTO telegram_subscribers", rows: [] },
+      { match: "INSERT INTO telegram_subscriptions", rows: [] },
+    ]);
     await handleSettingsCallback(
       db,
       "fake-token",
@@ -484,7 +500,11 @@ describe("handleSettingsCallback — per-coin", () => {
   });
 
   it("settings:c:<id>:lc:1 enables launch for the coin", async () => {
-    const db = mockD1([{ match: "FROM telegram_subscriptions", rows: [] }]);
+    const db = mockD1([
+      { match: "FROM telegram_subscriptions", rows: [] },
+      { match: "INSERT INTO telegram_subscribers", rows: [] },
+      { match: "INSERT INTO telegram_subscriptions", rows: [] },
+    ]);
     await handleSettingsCallback(
       db,
       "fake-token",

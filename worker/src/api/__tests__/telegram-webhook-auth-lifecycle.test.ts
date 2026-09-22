@@ -14,10 +14,47 @@ import {
 import { handleMyChatMember } from "../telegram-webhook-group-welcome";
 
 
+const LIFECYCLE_MIGRATION_FALLBACKS = [
+  { match: "INSERT INTO telegram_subscriptions", rows: [] },
+  { match: "INSERT INTO telegram_preset_subscriptions", rows: [] },
+  { match: "INSERT OR IGNORE INTO telegram_pending_disambiguation", rows: [] },
+  { match: "UPDATE OR IGNORE telegram_pending_alerts", rows: [] },
+  { match: "UPDATE telegram_pending_alerts", rows: [] },
+  { match: "DELETE FROM telegram_pending_alerts", rows: [] },
+  { match: "DELETE FROM telegram_recap_targets", rows: [] },
+  { match: "DELETE FROM telegram_recap_preferences", rows: [] },
+  { match: "UPDATE OR IGNORE telegram_freeze_alert_targets", rows: [] },
+  { match: "DELETE FROM telegram_freeze_alert_targets", rows: [] },
+  { match: "UPDATE OR IGNORE telegram_alert_source_resolution_targets", rows: [] },
+  { match: "DELETE FROM telegram_alert_source_resolution_targets", rows: [] },
+  { match: "UPDATE telegram_alert_job_targets", rows: [] },
+  { match: "UPDATE OR IGNORE telegram_alert_job_targets", rows: [] },
+  { match: "DELETE FROM telegram_alert_job_targets", rows: [] },
+  { match: "UPDATE OR IGNORE telegram_alert_job_target_items", rows: [] },
+  { match: "DELETE FROM telegram_alert_job_target_items", rows: [] },
+  { match: "UPDATE OR IGNORE telegram_alert_planning_subscribers", rows: [] },
+  { match: "DELETE FROM telegram_alert_planning_subscribers", rows: [] },
+  { match: "UPDATE telegram_alert_target_plans", rows: [] },
+  { match: "DELETE FROM telegram_alert_target_plans", rows: [] },
+  { match: "UPDATE OR IGNORE telegram_transport_failure_observations", rows: [] },
+  { match: "DELETE FROM telegram_transport_failure_observations", rows: [] },
+  { match: "UPDATE telegram_alert_dead_letters", rows: [] },
+  { match: "DELETE FROM telegram_alert_dead_letters", rows: [] },
+  { match: "DELETE FROM telegram_alert_target_plan_items", rows: [] },
+  { match: "DELETE FROM telegram_chat_delivery_diagnostics", rows: [] },
+  { match: "DELETE FROM telegram_subscriptions", rows: [] },
+  { match: "DELETE FROM telegram_preset_subscriptions", rows: [] },
+  { match: "DELETE FROM telegram_pending_disambiguation", rows: [] },
+  { match: "DELETE FROM telegram_subscribers", rows: [] },
+];
+
 const makeLifecycleDb = (
   tables: Parameters<typeof makeTelegramWebhookDb>[0] = [],
   options: Parameters<typeof makeTelegramWebhookDb>[1] = {},
-) => makeTelegramWebhookDb(tables, options, "lifecycle");
+) => makeTelegramWebhookDb(tables, {
+  ...options,
+  fallbackTables: [...(options.fallbackTables ?? []), ...LIFECYCLE_MIGRATION_FALLBACKS],
+}, "lifecycle");
 
 describe("handleTelegramWebhook", () => {
   beforeEach(resetTelegramWebhookTest);
@@ -401,7 +438,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("migrates stored chat state on migrate_to_chat_id service messages", async () => {
-    const db = makeLifecycleDb();
+    const db = makeLifecycleDb([{ match: "INSERT INTO telegram_subscribers", rows: [] }]);
     const info = vi.spyOn(console, "info").mockImplementation(() => {});
 
     const res = await handleTelegramWebhook(
@@ -490,7 +527,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("migrates stored chat state on migrate_from_chat_id service messages", async () => {
-    const db = makeLifecycleDb();
+    const db = makeLifecycleDb([{ match: "INSERT INTO telegram_subscribers", rows: [] }]);
 
     await handleTelegramWebhook(
       db,

@@ -53,6 +53,7 @@ describe("handleCallbackQuery", () => {
     it("setup:branch:recommended writes confirm-state and previews usd-top25", async () => {
       const db = mockTelegramD1([
         pendingDisambiguationTable(pendingRowFromSetup({ step: "branch", alertTypes: [], target: null })),
+        { match: "INSERT INTO telegram_pending_disambiguation", rows: [] },
         {
           match: "FROM cache WHERE key = ?",
           matchBinds: ["stablecoins"],
@@ -80,6 +81,7 @@ describe("handleCallbackQuery", () => {
     it("setup:branch:custom shows the alert-type toggle keyboard", async () => {
       const db = mockTelegramD1([
         pendingDisambiguationTable(pendingRowFromSetup({ step: "branch", alertTypes: [], target: null })),
+        { match: "INSERT INTO telegram_pending_disambiguation", rows: [] },
       ]);
       await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:branch:custom", { id: "cb-custom", from: { id: 999 }, message: { chat: { id: 42 } } }));
 
@@ -124,6 +126,7 @@ describe("handleCallbackQuery", () => {
           alertTypes: ["dews", "depeg"],
           target: null,
         })),
+        { match: "INSERT INTO telegram_pending_disambiguation", rows: [] },
       ]);
       await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:type-toggle:safety", { id: "cb-toggle", from: { id: 999 }, message: { chat: { id: 42 } } }));
 
@@ -151,6 +154,7 @@ describe("handleCallbackQuery", () => {
           alertTypes: ["dews"],
           target: null,
         })),
+        { match: "INSERT INTO telegram_pending_disambiguation", rows: [] },
       ]);
       await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:next", { id: "cb-next", from: { id: 999 }, message: { chat: { id: 42 } } }));
 
@@ -168,6 +172,7 @@ describe("handleCallbackQuery", () => {
           alertTypes: ["dews", "safety"],
           target: null,
         })),
+        { match: "INSERT INTO telegram_pending_disambiguation", rows: [] },
         {
           match: "FROM cache WHERE key = ?",
           matchBinds: ["stablecoins"],
@@ -192,6 +197,8 @@ describe("handleCallbackQuery", () => {
           alertTypes: ["dews", "depeg"],
           target: { kind: "preset", presetId: "usd-top25" },
         })),
+        { match: "INSERT INTO telegram_subscribers", rows: [] },
+        { match: "INSERT INTO telegram_preset_subscriptions", rows: [] },
         {
           match: "FROM cache WHERE key = ?",
           matchBinds: ["stablecoins"],
@@ -217,6 +224,7 @@ describe("handleCallbackQuery", () => {
           alertTypes: ["dews"],
           target: { kind: "all" },
         })),
+        { match: "INSERT INTO telegram_subscribers", rows: [] },
       ]);
       await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:confirm", { id: "cb-confirm-all", from: { id: 999, username: "alice" }, message: { chat: { id: 42 } } }));
 

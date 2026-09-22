@@ -74,6 +74,15 @@ const TELEGRAM_WRITE_DEFAULTS: MockTableConfig[] = [
   { match: "UPDATE cache", rows: [] },
   { match: "DELETE FROM cache", rows: [] },
 ];
+const TELEGRAM_HARNESS_FALLBACKS: MockTableConfig[] = [
+  { match: "INSERT OR IGNORE INTO telegram_processed_updates", rows: [] },
+  { match: "UPDATE telegram_processed_updates", rows: [], runMeta: { changes: 1 } },
+  { match: "DELETE FROM telegram_processed_updates", rows: [], runMeta: { changes: 1 } },
+  { match: "INSERT INTO telegram_webhook_operation_mutations", rows: [] },
+  { match: "INSERT INTO telegram_chat_delivery_diagnostics", rows: [] },
+  { match: "preference_generation = preference_generation + 1", rows: [] },
+];
+
 
 /**
  * Telegram D1 fixture with typed core reads. Explicit table matches win over
@@ -94,7 +103,7 @@ export function mockTelegramD1(
     pendingOperation = null,
     writeResults = {},
     fallbackTables = [],
-    strictWrites = false,
+    strictWrites = true,
     ...mockOptions
   } = options;
   const configuredMatches: MockTableConfig[] = [...tables];
@@ -144,6 +153,7 @@ export function mockTelegramD1(
       ...configuredMatches,
       ...fixtureMatches,
       ...fallbackTables.map((table) => ({ ...table, allowUnused: true })),
+      ...TELEGRAM_HARNESS_FALLBACKS.map((table) => ({ ...table, allowUnused: true })),
       ...(strictWrites ? [] : TELEGRAM_WRITE_DEFAULTS.map((table) => ({ ...table, allowUnused: true }))),
     ],
     { ...mockOptions, assertMatchesUsed: true },

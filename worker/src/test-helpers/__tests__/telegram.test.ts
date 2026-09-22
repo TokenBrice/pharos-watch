@@ -41,7 +41,7 @@ describe("Telegram fixture accounting", () => {
   });
 
   it("rejects a write the scenario did not declare", async () => {
-    const db = mockTelegramD1([], { strictWrites: true });
+    const db = mockTelegramD1();
     await expect(
       db.prepare("UPDATE telegram_subscribers SET alert_depeg = 1 WHERE chat_id = ?").bind("42").run(),
     ).rejects.toThrow(/no match for SQL/);

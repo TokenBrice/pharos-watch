@@ -57,6 +57,8 @@ describe("handleCallbackQuery", () => {
         expires_at: Math.floor(Date.now() / 1000) + 60,
         initiator_user_id: "999",
       }),
+      { match: "INSERT INTO telegram_subscribers", rows: [] },
+      { match: "INSERT INTO telegram_subscriptions", rows: [] },
       {
         match: "FROM telegram_subscriptions",
         matchBinds: ["123", ambiguous.matches[0].id, usdc.matches[0].id],
@@ -215,14 +217,17 @@ describe("handleCallbackQuery", () => {
   });
 
   it("confirm:bulk keeps preset-only follow provenance out of direct coin rows", async () => {
-    const db = mockTelegramD1([pendingDisambiguationTable(makeBulkPendingRow({
-      kind: "subscribe",
-      alertTypes: ["dews"],
-      presetIds: ["usd-top25"],
-      coinIds: [],
-      subscribeAll: false,
-    }, { expires_at: Math.floor(Date.now() / 1000) + 60, initiator_user_id: "999" }))]);
-
+    const db = mockTelegramD1([
+      pendingDisambiguationTable(makeBulkPendingRow({
+        kind: "subscribe",
+        alertTypes: ["dews"],
+        presetIds: ["usd-top25"],
+        coinIds: [],
+        subscribeAll: false,
+      }, { expires_at: Math.floor(Date.now() / 1000) + 60, initiator_user_id: "999" })),
+      { match: "INSERT INTO telegram_subscribers", rows: [] },
+      { match: "INSERT INTO telegram_preset_subscriptions", rows: [] },
+    ]);
     await handleCallbackQuery(db, "fake-token", makeCallbackQuery("confirm:bulk", { id: "cb-preset-follow", from: { id: 999, username: "requester" }, message: { chat: { id: 123, type: "private" }, message_id: 1 } }));
 
     const history = db.getHistory();
@@ -291,7 +296,23 @@ describe("handleCallbackQuery forget confirmations", () => {
     makeCallbackQuery("confirm:forget", { id, from: { id: fromId, username: "requester" }, message: { chat: { id: 123, type: "private" }, message_id: 1 } });
 
   it("confirm:forget deletes subscriber-owned Telegram rows and replies", async () => {
-    const db = mockTelegramD1([pendingDisambiguationTable(pendingRowFromForget({ initiator_user_id: "999" }))]);
+    const db = mockTelegramD1([
+      pendingDisambiguationTable(pendingRowFromForget({ initiator_user_id: "999" })),
+      { match: "DELETE FROM telegram_subscriptions", rows: [] },
+      { match: "DELETE FROM telegram_preset_subscriptions", rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts", rows: [] },
+      { match: "DELETE FROM telegram_alert_source_resolution_targets", rows: [] },
+      { match: "DELETE FROM telegram_alert_target_plan_items", rows: [] },
+      { match: "DELETE FROM telegram_alert_job_targets", rows: [] },
+      { match: "DELETE FROM telegram_alert_job_target_items", rows: [] },
+      { match: "DELETE FROM telegram_alert_target_plans", rows: [] },
+      { match: "DELETE FROM telegram_alert_planning_subscribers", rows: [] },
+      { match: "DELETE FROM telegram_transport_failure_observations", rows: [] },
+      { match: "DELETE FROM telegram_alert_dead_letters", rows: [] },
+      { match: "DELETE FROM telegram_chat_delivery_diagnostics", rows: [] },
+      { match: "DELETE FROM telegram_freeze_alert_targets", rows: [] },
+      { match: "DELETE FROM telegram_subscribers", rows: [] },
+    ]);
     await handleCallbackQuery(db, "fake-token", privateForgetTap("cb-forget-confirm"));
 
     const history = db.getHistory();

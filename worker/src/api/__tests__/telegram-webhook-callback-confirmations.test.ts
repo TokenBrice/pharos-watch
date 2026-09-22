@@ -82,7 +82,10 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("executes private quicksub through the webhook with the expected mutations and Telegram transcript", async () => {
-    const db = makeTelegramWebhookDb();
+    const db = makeTelegramWebhookDb([
+      { match: "INSERT INTO telegram_subscribers", rows: [] },
+      { match: "INSERT INTO telegram_subscriptions", rows: [] },
+    ]);
 
     const res = await handleTelegramWebhook(
       db,
