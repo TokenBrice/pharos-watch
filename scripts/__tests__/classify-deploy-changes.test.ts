@@ -29,6 +29,13 @@ describe("critical owner coverage selection", () => {
       expect(classifyChangedFiles([file]).criticalCoverageChanged).toBe(true);
     }
   });
+
+  it("selects critical coverage for a baseline-only change", () => {
+    expect(classifyChangedFiles([".ci/critical-coverage-baseline.json"])).toMatchObject({
+      changedFiles: [".ci/critical-coverage-baseline.json"],
+      criticalCoverageChanged: true,
+    });
+  });
 });
 
 describe("normalizeChangedFiles", () => {

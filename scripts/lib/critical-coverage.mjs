@@ -192,6 +192,25 @@ export function findCoverageFor(file, map) {
   return null;
 }
 
+/**
+ * @param {Record<string, unknown>} baseline
+ * @param {readonly string[]} criticalFiles
+ * @param {(file: string) => number} thresholdForFile
+ */
+export function validateCriticalCoverageBaseline(baseline, criticalFiles, thresholdForFile) {
+  const errors = [];
+  for (const file of criticalFiles) {
+    const value = baseline[file];
+    const threshold = thresholdForFile(file);
+    if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > 100) {
+      errors.push(`${file}: baseline must be a finite number between 0 and 100`);
+    } else if (value < threshold) {
+      errors.push(`${file}: baseline ${value.toFixed(1)}% is below enforced floor ${threshold.toFixed(1)}%`);
+    }
+  }
+  return errors;
+}
+
 export function collectCriticalCoverageCandidates({
   cwd = process.cwd(),
   sourceFiles = collectCriticalCoverageSourceFiles(cwd),

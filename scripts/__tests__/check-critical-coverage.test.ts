@@ -21,6 +21,7 @@ import {
   collectCriticalCoverageWaiverReviewQueue,
   findCriticalCoverageCandidatesMissingEnrollment,
   validateCriticalCoverageWaiverMetadata,
+  validateCriticalCoverageBaseline,
 } from "../lib/critical-coverage.mjs";
 import { buildCriticalLcov, runCoverageFixture } from "./check-critical-coverage.test-support";
 
@@ -272,6 +273,34 @@ describe("critical coverage changed-file detection", () => {
     ) as { files: Record<string, unknown> };
 
     expect(CRITICAL_FILES.filter((file) => !Number.isFinite(baseline.files[file]))).toEqual([]);
+  });
+
+  it("rejects missing, malformed, out-of-range, and unjustifiably lowered baseline entries", () => {
+    const thresholds: Record<string, number> = {
+      "worker/src/lib/auth.ts": 70,
+      "worker/src/lib/price-consensus.ts": 40,
+    };
+
+    expect(validateCriticalCoverageBaseline(
+      {
+        "worker/src/lib/auth.ts": 69.9,
+        "worker/src/lib/price-consensus.ts": "90",
+      },
+      ["worker/src/lib/auth.ts", "worker/src/lib/price-consensus.ts", "worker/src/lib/evm-rpc.ts"],
+      (file) => thresholds[file] ?? 40,
+    )).toEqual([
+      "worker/src/lib/auth.ts: baseline 69.9% is below enforced floor 70.0%",
+      "worker/src/lib/price-consensus.ts: baseline must be a finite number between 0 and 100",
+      "worker/src/lib/evm-rpc.ts: baseline must be a finite number between 0 and 100",
+    ]);
+
+    expect(validateCriticalCoverageBaseline(
+      { "worker/src/lib/auth.ts": 101 },
+      ["worker/src/lib/auth.ts"],
+      () => 70,
+    )).toEqual([
+      "worker/src/lib/auth.ts: baseline must be a finite number between 0 and 100",
+    ]);
   });
 
   it("ratchets all critical files when CRITICAL_COVERAGE_RATCHET_ALL is enabled", () => {

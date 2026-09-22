@@ -12,6 +12,7 @@ import {
   normalizePath,
   parseLcov,
   validateCriticalCoverageWaiverMetadata,
+  validateCriticalCoverageBaseline,
   selectChangedCriticalSources,
 } from "../lib/critical-coverage.mjs";
 import {
@@ -337,6 +338,21 @@ export function runCriticalCoverageCheck({
   const lcov = fsImpl.readFileSync(LCOV_PATH, "utf8");
   const parsed = parseLcov(lcov);
   const baseline = loadCoverageBaseline(baselinePath, { fsImpl, consoleImpl, exit });
+  if (baseline) {
+    const baselineErrors = validateCriticalCoverageBaseline(
+      baseline,
+      completenessOptions.criticalFiles ?? CRITICAL_FILES,
+      (file) => Number.isFinite(criticalThresholds[file]) ? criticalThresholds[file] : threshold,
+    );
+    if (baselineErrors.length > 0) {
+      consoleImpl.error("[coverage] Invalid critical coverage baseline:");
+      for (const error of baselineErrors) {
+        consoleImpl.error(`  ${error}`);
+      }
+      exit(1);
+      return;
+    }
+  }
   const changedFromEnv = parseChangedFilesFromEnv(env);
   let changedFiles = changedFromEnv;
   if (changedFiles.length === 0) {
