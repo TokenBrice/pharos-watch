@@ -187,6 +187,43 @@ describe("fetchNestVaultPositionsReserves", () => {
       .rejects.toThrow(error);
   });
 
+  it.each([
+    { label: "reconciled", gross: 120, net: 119, fees: 1, errors: [], positionErrors: [], symbol: "USCC", accepted: true },
+    { label: "omitted receivable", gross: 100, net: 99, fees: 1, errors: [], positionErrors: [], symbol: "USCC", accepted: false },
+    { label: "double counted", gross: 140, net: 139, fees: 1, errors: [], positionErrors: [], symbol: "USCC", accepted: false },
+    { label: "wrong fees", gross: 120, net: 120, fees: 1, errors: [], positionErrors: [], symbol: "USCC", accepted: false },
+    { label: "negative fees", gross: 120, net: 121, fees: -1, errors: [], positionErrors: [], symbol: "USCC", accepted: false },
+    { label: "missing gross", gross: null, net: 119, fees: 1, errors: [], positionErrors: [], symbol: "USCC", accepted: false },
+    { label: "calculation error", gross: 120, net: 119, fees: 1, errors: ["timeout"], positionErrors: [], symbol: "USCC", accepted: false },
+    { label: "positions error", gross: 120, net: 119, fees: 1, errors: [], positionErrors: ["timeout"], symbol: "USCC", accepted: false },
+    { label: "unreviewed token", gross: 120, net: 119, fees: 1, errors: [], positionErrors: [], symbol: "USTB", accepted: false },
+  ])("corroborates nBASIS redemption receivables: $label", async (fixture) => {
+    const network = nestNetwork("nbasis-nest", { data: { errors: fixture.positionErrors, positions: {
+      liquidAssets: [], yieldAssets: [{ slug: "superstate-uscc", tokens: [{
+        symbol: fixture.symbol, position: { value: 100 },
+        pendingTransactions: [{ type: "PendingWithdrawal", amount: 2, price: 10, value: 20 }],
+      }] }],
+    } } }, { data: { nav: 119 } }, { data: { lastPriceUpdates: [{ updatedAt: FIXTURE_NOW }] } });
+    network.json!["https://api.nest.credit/v1/vaults/nest-basis-vault/calculated-price"] = { data: {
+      grossCalculatedNav: fixture.gross, calculatedNav: fixture.net, claimableFees: fixture.fees,
+      claimableFeesAdjusted: true, errors: fixture.errors,
+    } };
+    const attempt = runAdapter("nest-vault-positions", "nbasis-nest", {
+      network: installAdapterNetwork(network), nowSec: FIXTURE_NOW,
+    });
+    if (!fixture.accepted) {
+      await expect(attempt).rejects.toThrow(/reconcil/);
+      return;
+    }
+    const { result } = await attempt;
+    expect(result.metadata).toMatchObject({ totalReserveUsd: 120, calculatedNavUsd: 119,
+      claimableFeesUsd: 1, pendingWithdrawalUsd: 20, unknownExposurePct: expect.closeTo(100 / 6, 5) });
+    expect(result.metadata?.navReconciliationResidualUsd).toBeUndefined();
+    expect(result.slices.find((slice) => slice.sourceKey === "nest-vault-positions:pending-withdrawals"))
+      .toMatchObject({ pct: 16.7, risk: "high" });
+    expectWarnings(result, []);
+  });
+
   it("keeps other Nest assets on settled-only accounting without pending transaction arrays", async () => {
     const { result } = await runNest(
       "inalpha-nest",

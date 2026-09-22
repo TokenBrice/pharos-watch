@@ -31,6 +31,7 @@ export async function fetchGoldTokens(
     const priceData = await fetchSupplementalPriceData(GOLD_METAS, "gold", signal, db);
 
     const mcapMap: Record<string, number> = {};
+    const observedAtById: Record<string, number | undefined> = {};
     const mcapSourceById: Record<string, "defillama" | "coingecko-fallback"> = {};
     const tokensWithProtocol = GOLD_METAS.filter((token) =>
       token.protocolSlug && isDedicatedSingleTokenGoldProtocolSlug(token.protocolSlug),
@@ -90,6 +91,7 @@ export async function fetchGoldTokens(
       if (mcap != null) {
         mcapMap[token.id] = mcap;
         mcapSourceById[token.id] = "coingecko-fallback";
+        observedAtById[token.id] = token.geckoId ? cgData[token.geckoId]?.last_updated_at : undefined;
       }
     }
 
@@ -103,7 +105,7 @@ export async function fetchGoldTokens(
         return {
           mcap: aggregate?.mcap ?? mcapMap[meta.id] ?? 0,
           supplySource: aggregate?.supplySource ?? mcapSourceById[meta.id] ?? "coingecko-fallback",
-          supplyObservedAt: aggregate?.supplyObservedAt,
+          supplyObservedAt: aggregate ? aggregate.supplyObservedAt : observedAtById[meta.id],
           chainCirculating: aggregate?.chainCirculating,
         };
       },

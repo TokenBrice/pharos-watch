@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 
 vi.mock("../fetch-retry", () => ({
   fetchJsonWithRetry: vi.fn(),
 }));
 
 import { fetchJsonWithRetry } from "../fetch-retry";
-import { resolveMetalReferenceRates, type MetalPegKey } from "../fx-metals";
+import { loadCommodityPeerMedianReference, resolveMetalReferenceRates, type MetalPegKey } from "../fx-metals";
 
 const validateMetalRate = (pegKey: MetalPegKey, rate: number): boolean =>
   pegKey === "peggedGOLD"
@@ -86,5 +87,34 @@ describe("resolveMetalReferenceRates", () => {
       source: "gold-api.com",
       updatedAt: expected,
     });
+  });
+});
+
+
+describe("commodity peer observation provenance", () => {
+  it.each([null, 1_799_000_000, 1_800_003_600])("rejects missing, stale, or future quotes in a new cache: %s", async (observedAt) => {
+    const now = 1_800_000_000;
+    const asset = {
+      id: "paxg-paxos", name: "Pax Gold", symbol: "PAXG", pegType: "peggedGOLD",
+      price: 2900, priceSource: "coingecko", priceObservedAt: observedAt, priceUpdatedAt: now,
+      priceObservedAtMode: "upstream", circulating: { peggedGOLD: 10_000_000 },
+    };
+    const db = mockD1([{ match: "cache", rows: [], first: {
+      value: JSON.stringify({ peggedAssets: [asset], fxFallbackRates: {} }), updated_at: now,
+    } }]);
+    expect(await loadCommodityPeerMedianReference(db, now)).toEqual({ rates: {}, updatedAt: null });
+  });
+
+  it("preserves the oldest admitted quote time instead of cache publication time", async () => {
+    const now = 1_800_000_000;
+    const peggedAssets = [60, 120].map((age, index) => ({
+      id: index === 0 ? "paxg-paxos" : "xaut-tether", name: "Gold", symbol: "GOLD", pegType: "peggedGOLD",
+      price: 2900, priceSource: "coingecko", priceObservedAt: now - age, priceObservedAtMode: "upstream",
+      circulating: { peggedGOLD: 10_000_000 },
+    }));
+    const db = mockD1([{ match: "cache", rows: [], first: {
+      value: JSON.stringify({ peggedAssets, fxFallbackRates: {} }), updated_at: now,
+    } }]);
+    expect(await loadCommodityPeerMedianReference(db, now)).toEqual({ rates: { peggedGOLD: 2900 }, updatedAt: now - 120 });
   });
 });
