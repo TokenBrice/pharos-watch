@@ -3,7 +3,6 @@ import { makeTestD1Database, type MockD1Database } from "@shared/test-utils/mock
 import { onRequest } from "../_site-data/[[path]].ts";
 import * as requestAttribution from "../lib/request-attribution";
 import { resetSiteDataRequestAttributionStateForTests } from "../lib/request-attribution";
-import { MAX_PROXY_RESPONSE_BODY_BYTES } from "../lib/upstream-proxy";
 import {
   observeHttpResponse,
   type HttpResponseObservation,

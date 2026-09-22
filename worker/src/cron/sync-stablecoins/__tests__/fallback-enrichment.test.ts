@@ -1,5 +1,4 @@
 import * as authoritative from "../../../lib/authoritative-price-sources";
-import * as enrichment from "../enrich-prices";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
@@ -33,7 +32,6 @@ describe("runFallbackPriceEnrichmentPhase", () => {
       return Response.json({ coins: {}, pairs: [] });
     }));
     const chainRpcs = new Map();
-    const enrichPrices = vi.spyOn(enrichment, "enrichMissingPrices");
     const authoritativeFetch = vi.spyOn(authoritative, "fetchAuthoritativeLivePriceOverrides").mockResolvedValue(new Map());
     const { db } = fixtures.open();
     const input = {

@@ -4,7 +4,6 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import {
   makeMintBurnDb as makeDb,
   makeMintBurnMintLog as makeMintLog,
-  mintBurnEventInsertBinds,
   resetMintBurnMocks,
   MINT_BURN_TRANSFER_TOPIC as TRANSFER_TOPIC,
   MINT_BURN_ZERO_TOPIC as ZERO_TOPIC,
@@ -104,11 +103,10 @@ import { syncMintBurnConfig } from "../mint-burn/sync-config";
 import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
 import { batchExecute } from "../../lib/db";
 import { recalcAffectedHours } from "../../lib/mint-burn-pipeline/persistence";
-import { getNullPriceBacklog, healNullPrices } from "../../lib/mint-burn-pipeline/price-heal";
+import { getNullPriceBacklog } from "../../lib/mint-burn-pipeline/price-heal";
 import { sweepRecentRoundtrips } from "../../lib/mint-burn-pipeline/roundtrip-sweep";
 import {
   fetchAlchemyLogs,
-  getAlchemyBlockNumber,
   getAlchemyTransactionContextBatchMany,
   resolveBlockTimestamps,
 } from "../../lib/alchemy-logs";

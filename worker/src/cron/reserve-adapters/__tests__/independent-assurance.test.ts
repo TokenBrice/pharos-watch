@@ -8,7 +8,6 @@ import {
   IndependentAssuranceManifestSchema,
   reconcileIndependentAssuranceManifest,
   type IndependentAssuranceManifest,
-  type IndependentAssuranceProduct,
 } from "@shared/lib/independent-assurance";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { LiveReserveAdapterKey } from "@shared/types/live-reserves";

@@ -9,11 +9,10 @@ vi.mock("../../lib/abort", async (importOriginal) => {
   };
 });
 
-import type { PeggedAsset, PrimaryPriceResult } from "../sync-stablecoins/enrich-prices";
+import type { PrimaryPriceResult } from "../sync-stablecoins/enrich-prices";
 import type { PriceValidationStats } from "../sync-stablecoins/enrich-prices-shared";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
-import type { PriceValidationContext, PriceValidationReferences } from "../../lib/price-validation";
 import type { MockTableConfig } from "@shared/test-utils/mock-d1";
 
 const freshObservedAtSec = () => Math.floor(Date.now() / 1000) - 60;
