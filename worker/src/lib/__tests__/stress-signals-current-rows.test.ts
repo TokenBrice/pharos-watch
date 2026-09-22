@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import {
+  buildStressSignalCurrentRowsQueries,
   loadPreviousStressSignalCurrentRows,
   loadStressSignalCurrentRowForCoin,
   loadStressSignalCurrentRows,
@@ -27,6 +28,100 @@ function row(
     computed_at: computedAt,
   };
 }
+
+const normalizeSql = (sql: string) => sql
+  .replace(/\s+/g, " ")
+  .trim()
+  .replace(
+    /\b(select|from|where|order|by|asc|inner|join|as|max|group|limit|and)\b/gi,
+    (keyword) => keyword.toUpperCase(),
+  );
+
+const legacyQuerySets = [
+  {
+    input: {
+      tags: {
+        latest: "pharos:stress-signals:latest-all",
+        exact: "pharos:stress-signals:published-exact-all",
+        legacy: "pharos:stress-signals:legacy-latest-all",
+      },
+      columns: ["stablecoin_id", "score", "band", "signals_json", "computed_at"],
+      scope: "all" as const,
+    },
+    expected: {
+      latest: `SELECT /* pharos:stress-signals:latest-all */ stablecoin_id, score, band, signals_json, computed_at FROM stress_signals_latest`,
+      latestBounded: `SELECT /* pharos:stress-signals:latest-all */ stablecoin_id, score, band, signals_json, computed_at FROM stress_signals_latest WHERE computed_at <= ?`,
+      exact: `SELECT /* pharos:stress-signals:published-exact-all */ stablecoin_id, score, band, signals_json, computed_at FROM stress_signal_publication_rows WHERE computed_at = ? ORDER BY stablecoin_id ASC`,
+      legacy: `SELECT /* pharos:stress-signals:legacy-latest-all */ s.stablecoin_id, s.score, s.band, s.signals_json, s.computed_at FROM stress_signals s INNER JOIN ( SELECT stablecoin_id, MAX(computed_at) as max_at FROM stress_signals GROUP BY stablecoin_id ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`,
+      legacyBounded: `SELECT /* pharos:stress-signals:legacy-latest-all */ s.stablecoin_id, s.score, s.band, s.signals_json, s.computed_at FROM stress_signals s INNER JOIN ( SELECT stablecoin_id, MAX(computed_at) as max_at FROM stress_signals WHERE computed_at <= ? GROUP BY stablecoin_id ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`,
+    },
+  },
+  {
+    input: {
+      tags: {
+        latest: "pharos:stress-signals:latest-one",
+        exact: "pharos:stress-signals:published-exact-one",
+        legacy: "pharos:stress-signals:legacy-latest-one",
+      },
+      columns: ["score", "band", "signals_json", "computed_at"],
+      scope: "one" as const,
+    },
+    expected: {
+      latest: `SELECT /* pharos:stress-signals:latest-one */ score, band, signals_json, computed_at FROM stress_signals_latest WHERE stablecoin_id = ?`,
+      latestBounded: `SELECT /* pharos:stress-signals:latest-one */ score, band, signals_json, computed_at FROM stress_signals_latest WHERE stablecoin_id = ? AND computed_at <= ? ORDER BY computed_at DESC LIMIT 1`,
+      exact: `SELECT /* pharos:stress-signals:published-exact-one */ score, band, signals_json, computed_at FROM stress_signal_publication_rows WHERE stablecoin_id = ? AND computed_at = ? LIMIT 1`,
+      legacy: `SELECT /* pharos:stress-signals:legacy-latest-one */ score, band, signals_json, computed_at FROM stress_signals WHERE stablecoin_id = ? ORDER BY computed_at DESC LIMIT 1`,
+      legacyBounded: `SELECT /* pharos:stress-signals:legacy-latest-one */ score, band, signals_json, computed_at FROM stress_signals WHERE stablecoin_id = ? AND computed_at <= ? ORDER BY computed_at DESC LIMIT 1`,
+    },
+  },
+  {
+    input: {
+      tags: {
+        latest: "pharos:telegram-dispatch:dews-latest",
+        exact: "pharos:telegram-dispatch:dews-published-exact",
+        legacy: "pharos:telegram-dispatch:dews-legacy",
+      },
+      columns: ["stablecoin_id", "score", "band", "signals_json", "computed_at"],
+      scope: "all" as const,
+    },
+    expected: {
+      latest: `SELECT /* pharos:telegram-dispatch:dews-latest */ stablecoin_id, score, band, signals_json, computed_at FROM stress_signals_latest`,
+      latestBounded: `SELECT /* pharos:telegram-dispatch:dews-latest */ stablecoin_id, score, band, signals_json, computed_at FROM stress_signals_latest WHERE computed_at <= ?`,
+      exact: `SELECT /* pharos:telegram-dispatch:dews-published-exact */ stablecoin_id, score, band, signals_json, computed_at FROM stress_signal_publication_rows WHERE computed_at = ? ORDER BY stablecoin_id ASC`,
+      legacy: `SELECT /* pharos:telegram-dispatch:dews-legacy */ s.stablecoin_id, s.score, s.band, s.signals_json, s.computed_at FROM stress_signals s INNER JOIN ( SELECT stablecoin_id, MAX(computed_at) AS max_at FROM stress_signals GROUP BY stablecoin_id ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`,
+      legacyBounded: `SELECT /* pharos:telegram-dispatch:dews-legacy */ s.stablecoin_id, s.score, s.band, s.signals_json, s.computed_at FROM stress_signals s INNER JOIN ( SELECT stablecoin_id, MAX(computed_at) AS max_at FROM stress_signals WHERE computed_at <= ? GROUP BY stablecoin_id ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`,
+    },
+  },
+  {
+    input: {
+      tags: {
+        latest: "pharos:dews:previous-stress-latest",
+        exact: "pharos:dews:previous-stress-published-exact",
+        legacy: "pharos:dews:previous-stress-legacy",
+      },
+      columns: ["stablecoin_id", "signals_json", "band", "computed_at"],
+      scope: "all" as const,
+    },
+    expected: {
+      latest: `SELECT /* pharos:dews:previous-stress-latest */ stablecoin_id, signals_json, band, computed_at FROM stress_signals_latest`,
+      latestBounded: `SELECT /* pharos:dews:previous-stress-latest */ stablecoin_id, signals_json, band, computed_at FROM stress_signals_latest WHERE computed_at <= ?`,
+      exact: `SELECT /* pharos:dews:previous-stress-published-exact */ stablecoin_id, signals_json, band, computed_at FROM stress_signal_publication_rows WHERE computed_at = ? ORDER BY stablecoin_id ASC`,
+      legacy: `SELECT /* pharos:dews:previous-stress-legacy */ s.stablecoin_id, s.signals_json, s.band, s.computed_at FROM stress_signals s INNER JOIN ( SELECT stablecoin_id, MAX(computed_at) as max_at FROM stress_signals GROUP BY stablecoin_id ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`,
+      legacyBounded: `SELECT /* pharos:dews:previous-stress-legacy */ s.stablecoin_id, s.signals_json, s.band, s.computed_at FROM stress_signals s INNER JOIN ( SELECT stablecoin_id, MAX(computed_at) as max_at FROM stress_signals WHERE computed_at <= ? GROUP BY stablecoin_id ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`,
+    },
+  },
+] as const;
+
+describe("stress-signal SQL builder", () => {
+  it("preserves all 20 legacy query contracts after whitespace and keyword normalization", () => {
+    for (const { input, expected } of legacyQuerySets) {
+      const generated = buildStressSignalCurrentRowsQueries(input);
+      for (const key of Object.keys(expected) as Array<keyof typeof expected>) {
+        expect(normalizeSql(generated[key])).toBe(normalizeSql(expected[key]));
+      }
+    }
+  });
+});
 
 describe("stress-signal current-row helpers", () => {
   it("merges latest rows over legacy rows while preserving legacy-only rows", () => {
