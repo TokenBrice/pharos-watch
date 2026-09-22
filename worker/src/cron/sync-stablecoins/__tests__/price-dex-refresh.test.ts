@@ -23,7 +23,7 @@ beforeEach(() => {
   sql.exec("CREATE TABLE cache (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at INTEGER NOT NULL)");
   db = createSqliteD1(sql);
 });
-afterEach(() => { vi.restoreAllMocks(); sql.close(); });
+afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); sql.close(); });
 
 function prepareRefresh() {
   vi.spyOn(shared, "loadPreviousStablecoinsById").mockResolvedValue({ previousAssetsById: new Map([[id, published()]]), cacheState: { state: "ok" } });
@@ -123,6 +123,80 @@ describe("DEX refresh continuity", () => {
     await expect(runPriceDexRefresh({ db, syncStartSec: now + 900 })).rejects.toThrow("Invalid DEX routing state");
     expect(fetch).not.toHaveBeenCalled();
     expect((await getCache(db, DEX_REFRESH_CACHE_KEY))!.value).toBe("bad-json");
+  });
+
+  it("stops at the actual 45-second deadline without renewing a failed quote", async () => {
+    vi.useFakeTimers();
+    const fetch = prepareRefresh();
+    const oldValue = JSON.stringify({ observations: [observation(now - 900)], targets: [target], cursor: 0 });
+    await setCacheIfNewer(db, DEX_REFRESH_CACHE_KEY, oldValue, now - 900);
+    let started!: () => void;
+    const startedPromise = new Promise<void>((resolve) => { started = resolve; });
+    let requestSignal: AbortSignal | undefined;
+    fetch.mockImplementation((_assets, _fx, _db, signal) => new Promise((_resolve, reject) => {
+      requestSignal = signal;
+      signal!.addEventListener("abort", () => reject(signal!.reason), { once: true });
+      started();
+    }));
+    const pending = runPriceDexRefresh({ db, syncStartSec: now });
+    await startedPromise;
+    await vi.advanceTimersByTimeAsync(44_999);
+    expect(requestSignal?.aborted).toBe(false);
+    expect((await getCache(db, DEX_REFRESH_CACHE_KEY))!.value).toBe(oldValue);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(await pending).toMatchObject({ timedOut: true, attemptedBatches: 1, resolved: 0,
+      missingQuotes: 1, errorClasses: ["timeout"], cacheWritten: true });
+    const cache = (await getCache(db, DEX_REFRESH_CACHE_KEY))!;
+    expect(cache.updatedAt).toBe(now);
+    expect(JSON.parse(cache.value)).toMatchObject({ observations: [], targets: [target] });
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("propagates parent cancellation without writing a refresh or provider outcome", async () => {
+    const fetch = prepareRefresh();
+    const oldValue = JSON.stringify({ observations: [observation(now - 60)], targets: [target], cursor: 0 });
+    await setCacheIfNewer(db, DEX_REFRESH_CACHE_KEY, oldValue, now - 60);
+    let started!: () => void;
+    const startedPromise = new Promise<void>((resolve) => { started = resolve; });
+    fetch.mockImplementation((_assets, _fx, _db, signal) => new Promise((_resolve, reject) => {
+      signal!.addEventListener("abort", () => reject(signal!.reason), { once: true });
+      started();
+    }));
+    const parent = new AbortController();
+    const reason = new Error("slot ownership lost");
+    const pending = runPriceDexRefresh({ db, syncStartSec: now, signal: parent.signal });
+    const rejected = expect(pending).rejects.toBe(reason);
+    await startedPromise;
+    parent.abort(reason);
+    await rejected;
+    expect(await getCache(db, DEX_REFRESH_CACHE_KEY)).toMatchObject({ value: oldValue, updatedAt: now - 60 });
+    expect(lifecycle.recordProviderOutcomeSafe).not.toHaveBeenCalled();
+  });
+
+  it("propagates unexpected executor errors without overwriting existing evidence", async () => {
+    const fetch = prepareRefresh();
+    const oldValue = JSON.stringify({ observations: [observation(now - 60)], targets: [target], cursor: 0 });
+    await setCacheIfNewer(db, DEX_REFRESH_CACHE_KEY, oldValue, now - 60);
+    const failure = new TypeError("unexpected decoder failure");
+    fetch.mockRejectedValueOnce(failure);
+    await expect(runPriceDexRefresh({ db, syncStartSec: now })).rejects.toBe(failure);
+    expect(await getCache(db, DEX_REFRESH_CACHE_KEY)).toMatchObject({ value: oldValue, updatedAt: now - 60 });
+    expect(lifecycle.recordProviderOutcomeSafe).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [DEX_REFRESH_CACHE_KEY, { observations: [], targets: [], cursor: -1 }],
+    [DEX_REFRESH_CACHE_KEY, { observations: [], cursor: 0 }],
+    [DEX_REFRESH_CACHE_KEY, null],
+    [PRICE_CORROBORATION_OBSERVATIONS_KEY, {}],
+  ])("rejects malformed routing payloads in %s before providers or writes", async (key, value) => {
+    const fetch = prepareRefresh();
+    const serialized = JSON.stringify(value);
+    await setCacheIfNewer(db, key as string, serialized, now - 60);
+    await expect(runPriceDexRefresh({ db, syncStartSec: now })).rejects.toThrow("Invalid DEX routing state");
+    expect(fetch).not.toHaveBeenCalled();
+    expect(await getCache(db, key as string)).toMatchObject({ value: serialized, updatedAt: now - 60 });
   });
 
   it("fences a late refresh behind the newer slot", async () => {
