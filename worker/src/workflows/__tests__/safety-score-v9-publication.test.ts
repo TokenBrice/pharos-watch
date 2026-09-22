@@ -45,10 +45,6 @@ import {
   safetyScoreV9WorkflowSlotStartedAt,
   writeSafetyScoreV9ShadowPublication,
 } from "../safety-score-v9-publication";
-import {
-  safetyScoreV9WorkflowInstanceId as scheduledInstanceId,
-} from "../../handlers/scheduled/v9-publication";
-
 
 function d1Result(changes = 0): D1Result {
   return {
@@ -119,9 +115,6 @@ describe("Safety Score V9 publication Workflow", () => {
   it("uses the cron slot as the deterministic Workflow instance id", () => {
     expect(safetyScoreV9WorkflowInstanceId(1788433200)).toBe(
       "v9-publication-1788433200",
-    );
-    expect(scheduledInstanceId(1788433200)).toBe(
-      safetyScoreV9WorkflowInstanceId(1788433200),
     );
     expect(safetyScoreV9WorkflowSlotStartedAt("v9-publication-1788433200")).toBe(1788433200);
     expect(() => safetyScoreV9WorkflowSlotStartedAt("v9-publication:1788433200")).toThrow(
@@ -210,12 +203,15 @@ describe("Safety Score V9 publication Workflow", () => {
 
   it("captures canonical runner cache writes without executing live writes", async () => {
     const baseRun = vi.fn(async () => d1Result(1));
+    const baseAll = vi.fn(async () => d1Result());
+    const baseFirst = vi.fn(async () => null);
+    const baseRaw = vi.fn(async () => []);
     const baseStatement = {
       bind: () => baseStatement,
       run: baseRun,
-      first: async () => null,
-      all: async () => d1Result(),
-      raw: async () => [],
+      first: baseFirst,
+      all: baseAll,
+      raw: baseRaw,
     } as unknown as D1PreparedStatement;
     const baseDb = {
       prepare: () => baseStatement,
@@ -237,6 +233,19 @@ describe("Safety Score V9 publication Workflow", () => {
         .bind("unsafe")
         .run(),
     ).rejects.toThrow("non-cache D1 write");
+    await expect(
+      capture.db.prepare(
+        "INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
+      ).bind("report-cards:v9", "canonical", "invalid").run(),
+    ).rejects.toThrow("unsupported bindings");
+    await expect(
+      capture.db.prepare("DELETE FROM other_table").all(),
+    ).rejects.toThrow("non-cache D1 write");
+    await expect(
+      capture.db.prepare("CREATE TABLE unsafe (value TEXT)").raw(),
+    ).rejects.toThrow("non-cache D1 write");
+    expect(baseAll).not.toHaveBeenCalled();
+    expect(baseRaw).not.toHaveBeenCalled();
   });
 
   it("keeps identical shadow retries durable and rolls back conflicting generations", async () => {
@@ -268,6 +277,46 @@ describe("Safety Score V9 publication Workflow", () => {
       }]);
       expect(sqlite.prepare("SELECT * FROM cron_runs").all()).toEqual(rows);
     }
+  });
+
+  it("retains the newest shadow generation when an older workflow finishes later", async () => {
+    const { db, sqlite } = fixtures.open();
+    const shadow = (generation: number) => ({
+      shadowKey: `${SAFETY_SCORE_V9_SHADOW_CACHE_PREFIX}:report-cards:v9:${generation}`,
+      shadowValue: `shadow-${generation}`,
+      updatedAt: generation,
+      cronStatus: "ok" as const,
+      itemCount: 200,
+      error: null,
+      cronMetadata: `{"sourceGeneration":"report-cards:v9:${generation}"}`,
+    });
+
+    await writeSafetyScoreV9ShadowPublication(
+      db,
+      "newer-instance",
+      1788434100,
+      EVENT.timestamp.getTime(),
+      shadow(1788434100),
+    );
+    await expect(
+      writeSafetyScoreV9ShadowPublication(
+        db,
+        "older-instance",
+        1788433200,
+        EVENT.timestamp.getTime(),
+        shadow(1788433200),
+      ),
+    ).rejects.toThrow("conflicts with an existing value");
+
+    expect(
+      sqlite.prepare(
+        "SELECT key, value, updated_at FROM cache ORDER BY updated_at",
+      ).all(),
+    ).toEqual([{
+      key: `${SAFETY_SCORE_V9_SHADOW_CACHE_PREFIX}:report-cards:v9:1788434100`,
+      value: "shadow-1788434100",
+      updated_at: 1788434100,
+    }]);
   });
 
   it("records terminal errors without shadow publication for missing, newer or advanced inputs", async () => {

@@ -1,3 +1,7 @@
+import {
+  SAFETY_SCORE_V9_WORKFLOW_JOB,
+  safetyScoreV9WorkflowInstanceId,
+} from "../../workflows/safety-score-v9-publication";
 import { runV9AfterCoreWithinWindow } from "../../lib/v9-slot-window";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { parseObjectMetadata } from "../../lib/json-metadata";
@@ -9,12 +13,6 @@ import { bindScheduledSlotPlan, runScheduledSlotGroups } from "./slot-groups";
 // outer memory lane to the next quarter-hour boundary.
 const V9_PUBLICATION_WINDOW_MS = 3 * 60_000;
 const V9_PUBLICATION_MINIMUM_REMAINING_MS = 10_000;
-
-export function safetyScoreV9WorkflowInstanceId(
-  slotStartedAt: number,
-): string {
-  return `v9-publication-${slotStartedAt}`;
-}
 
 async function triggerSafetyScoreV9ShadowWorkflow(
   runtime: ScheduledRuntimeContext,
@@ -42,7 +40,7 @@ async function triggerSafetyScoreV9ShadowWorkflow(
       scope: "handler",
       level: "warn",
       event: "safety_score_v9_shadow_workflow_trigger_failed",
-      job: "compute-safety-score-v9-workflow",
+      job: SAFETY_SCORE_V9_WORKFLOW_JOB,
       message: "Safety Score V9 shadow Workflow could not be created",
       error,
       metadata: {

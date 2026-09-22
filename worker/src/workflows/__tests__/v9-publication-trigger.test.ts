@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ScheduledSlotTask } from "../../handlers/scheduled/slot-groups";
+import type {
+  ScheduledSlotGroupDefinition,
+  ScheduledSlotTask,
+} from "../../handlers/scheduled/slot-groups";
+import type { ScheduledRuntimeContext } from "../../handlers/scheduled/context";
 import type { CronResult } from "../../lib/cron-logger";
 import { buildScheduledSlotSummary, summarizeCronResult } from "../../handlers/scheduled/slot-summary";
 
@@ -9,9 +13,23 @@ const { runSingleScheduledJob, computeSafetyScoreV9, runV9AfterCoreWithinWindow 
   runV9AfterCoreWithinWindow: vi.fn(),
 }));
 
-vi.mock("../../handlers/scheduled/slot-groups", () => ({
-  runSingleScheduledJob,
-}));
+vi.mock("../../handlers/scheduled/slot-groups", async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return {
+    ...actual,
+    runScheduledSlotGroups: async (
+      runtime: ScheduledRuntimeContext,
+      label: string,
+      groups: readonly ScheduledSlotGroupDefinition[],
+    ) => {
+      const group = groups[0];
+      if (group.mode === "parallel-serial") {
+        throw new Error("Unexpected parallel-serial V9 publication group");
+      }
+      return runSingleScheduledJob(runtime, label, group.tasks[0]);
+    },
+  };
+});
 
 vi.mock("../../lib/v9-slot-window", () => ({
   runV9AfterCoreWithinWindow,
@@ -22,7 +40,6 @@ vi.mock("../../cron/compute-safety-score-v9", () => ({
 }));
 
 import { runV9PublicationSlot } from "../../handlers/scheduled/v9-publication";
-import type { ScheduledRuntimeContext } from "../../handlers/scheduled/context";
 
 function runtimeWith(
   mode: string | undefined,

@@ -81,7 +81,9 @@ function emptyD1Result(): D1Result {
 }
 
 function isWriteQuery(query: string): boolean {
-  return /^(?:INSERT|UPDATE|DELETE|REPLACE)\b/iu.test(query.trim());
+  return /^(?:INSERT|UPDATE|DELETE|REPLACE|CREATE|DROP|ALTER|TRUNCATE|PRAGMA)\b/iu.test(
+    query.trim(),
+  );
 }
 
 function captureCacheWrite(
@@ -96,12 +98,16 @@ function captureCacheWrite(
 
   const [key, value, updatedAt] = statement.bindings;
   if (
-    typeof key === "string" &&
-    typeof value === "string" &&
-    typeof updatedAt === "number"
+    statement.bindings.length !== 3 ||
+    typeof key !== "string" ||
+    typeof value !== "string" ||
+    typeof updatedAt !== "number"
   ) {
-    state.cacheWrites.set(key, { value, updatedAt });
+    throw new Error(
+      "Safety Score V9 shadow compiler attempted a cache write with unsupported bindings",
+    );
   }
+  state.cacheWrites.set(key, { value, updatedAt });
   return emptyD1Result();
 }
 
@@ -129,12 +135,24 @@ export function createSafetyScoreV9ShadowCaptureDatabase(
           return (...values: unknown[]) =>
             wrapStatement(target.bind(...values), query, values);
         }
-        if (property === "run" && isWriteQuery(query)) {
-          return async () =>
-            captureCacheWrite(
+        if (
+          isWriteQuery(query) &&
+          (
+            property === "run" ||
+            property === "all" ||
+            property === "first" ||
+            property === "raw"
+          )
+        ) {
+          return async () => {
+            const result = captureCacheWrite(
               { query, bindings, delegate: target },
               state,
             );
+            if (property === "first") return null;
+            if (property === "raw") return [];
+            return result;
+          };
         }
         const value = Reflect.get(target, property, target);
         return typeof value === "function" ? value.bind(target) : value;
@@ -335,7 +353,14 @@ export async function writeSafetyScoreV9ShadowPublication(
 ): Promise<void> {
   await db.batch([
     db.prepare(
-      `INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
+      `INSERT INTO cache (key, value, updated_at)
+       SELECT ?, ?, ?
+        WHERE NOT EXISTS (
+          SELECT 1
+            FROM cache
+           WHERE key LIKE ?
+             AND updated_at > ?
+        )
        ON CONFLICT(key) DO UPDATE SET
          value = CASE
            WHEN cache.value = excluded.value
@@ -349,12 +374,23 @@ export async function writeSafetyScoreV9ShadowPublication(
            THEN cache.updated_at
            ELSE -1
          END`,
-    ).bind(gated.shadowKey, gated.shadowValue, gated.updatedAt),
+    ).bind(
+      gated.shadowKey,
+      gated.shadowValue,
+      gated.updatedAt,
+      `${SAFETY_SCORE_V9_SHADOW_CACHE_PREFIX}:%`,
+      gated.updatedAt,
+    ),
     db.prepare(
       `DELETE FROM cache
         WHERE key LIKE ?
-          AND key <> ?`,
-    ).bind(`${SAFETY_SCORE_V9_SHADOW_CACHE_PREFIX}:%`, gated.shadowKey),
+          AND key <> ?
+          AND updated_at <= ?`,
+    ).bind(
+      `${SAFETY_SCORE_V9_SHADOW_CACHE_PREFIX}:%`,
+      gated.shadowKey,
+      gated.updatedAt,
+    ),
     db.prepare(
       `INSERT INTO cron_runs
          (job, started_at, duration_ms, status, item_count, metadata,
