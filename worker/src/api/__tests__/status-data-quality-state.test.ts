@@ -32,6 +32,56 @@ function fixtureMockD1(overrides: NonNullable<Parameters<typeof buildStatusD1Sce
   });
 }
 
+// P2-13 (CRON-25) single-sources `dataQuality.missingPrices`/`totalStablecoins`
+// on the producer's `activePriceCoverage` evidence and keeps the cache scan as
+// the evidence-absent fallback, so ratio fixtures publish the coverage row.
+function buildPublicationCoverage(): Record<string, unknown> {
+  return {
+    complete: true,
+    expectedActiveCount: fixtureACTIVE_STABLECOINS.length,
+    presentActiveCount: fixtureACTIVE_STABLECOINS.length,
+    waivedActiveCount: 0,
+    missingActiveIds: [],
+    waivedActiveIds: [],
+    expiredWaiverIds: [],
+  };
+}
+
+function buildPriceCoverage(total: number, missingIds: string[]): Record<string, unknown> {
+  const ids = fixtureACTIVE_STABLECOINS.slice(0, total).map((stablecoin) => stablecoin.id);
+  const pricedActiveIds = ids.filter((id) => !missingIds.includes(id));
+  return {
+    complete: missingIds.length === 0,
+    expectedActiveCount: total,
+    presentActiveCount: total,
+    pricedActiveCount: pricedActiveIds.length,
+    pricedActiveIds,
+    missingPriceCount: missingIds.length,
+    missingActiveIds: missingIds,
+    missingActiveAssets: [],
+    alertEligibleCount: 0,
+    alertEligibleIds: [],
+    maxConsecutiveMissingGenerations: 0,
+  };
+}
+
+function buildCoverageRow(
+  now: number,
+  coverage: { publication?: Record<string, unknown>; price?: Record<string, unknown> },
+) {
+  return {
+    match: `metadata LIKE '%\"activePublicationCoverage\"%'`,
+    rows: [],
+    first: {
+      started_at: now - 30,
+      metadata: JSON.stringify({
+        activePublicationCoverage: coverage.publication ?? buildPublicationCoverage(),
+        activePriceCoverage: coverage.price ?? buildPriceCoverage(fixtureACTIVE_STABLECOINS.length, []),
+      }),
+    },
+  };
+}
+
 describe("handleStatus", () => {
   beforeEach(() => {
     vi.spyOn(Date, "now").mockReturnValue(Date.now());
@@ -525,7 +575,9 @@ describe("handleStatus", () => {
       const stablecoinsCache = JSON.stringify({
         peggedAssets: buildPeggedAssets(total, missing),
       });
+      const missingIds = fixtureACTIVE_STABLECOINS.slice(0, missing).map((stablecoin) => stablecoin.id);
       return fixtureMockD1([
+        buildCoverageRow(now, { price: buildPriceCoverage(total, missingIds) }),
         { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
       ]);
     }
@@ -602,6 +654,7 @@ describe("handleStatus", () => {
       residuals: number;
       residualsMissing: number;
       publicationCoverage?: Record<string, unknown>;
+      priceCoverage?: Record<string, unknown>;
     }) {
       const now = Math.floor(Date.now() / 1000);
       const canonicalIds = fixtureACTIVE_STABLECOINS.slice(0, params.canonicalTotal).map((c) => c.id);
@@ -633,30 +686,11 @@ describe("handleStatus", () => {
       }
       const stablecoinsCache = JSON.stringify({ peggedAssets: assets });
       return fixtureMockD1([
-        ...(params.publicationCoverage
-          ? [{
-              match: `metadata LIKE '%\"activePublicationCoverage\"%'`,
-              rows: [],
-              first: {
-                started_at: now - 30,
-                metadata: JSON.stringify({
-                  activePublicationCoverage: params.publicationCoverage,
-                  activePriceCoverage: {
-                    complete: true,
-                    expectedActiveCount: fixtureACTIVE_STABLECOINS.length,
-                    presentActiveCount: fixtureACTIVE_STABLECOINS.length,
-                    pricedActiveCount: fixtureACTIVE_STABLECOINS.length,
-                    pricedActiveIds: fixtureACTIVE_STABLECOINS.map((stablecoin) => stablecoin.id),
-                    missingPriceCount: 0,
-                    missingActiveIds: [],
-                    missingActiveAssets: [],
-                    alertEligibleCount: 0,
-                    alertEligibleIds: [],
-                    maxConsecutiveMissingGenerations: 0,
-                  },
-                }),
-              },
-            }]
+        ...(params.publicationCoverage || params.priceCoverage
+          ? [buildCoverageRow(now, {
+              publication: params.publicationCoverage,
+              price: params.priceCoverage,
+            })]
           : []),
         { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
       ]);
@@ -702,6 +736,10 @@ describe("handleStatus", () => {
         canonicalMissing,
         residuals: 50,
         residualsMissing: 0,
+        priceCoverage: buildPriceCoverage(
+          canonicalTotal,
+          fixtureACTIVE_STABLECOINS.slice(0, canonicalMissing).map((stablecoin) => stablecoin.id),
+        ),
       });
       const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
       const res = await handleStatus({ db, trustedAdmin: true, request });
@@ -730,6 +768,7 @@ describe("handleStatus", () => {
           waivedActiveIds: [],
           expiredWaiverIds: [],
         },
+        priceCoverage: buildPriceCoverage(expectedActiveCount, [missingId]),
       });
       const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
 

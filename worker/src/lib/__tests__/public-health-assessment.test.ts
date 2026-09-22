@@ -20,7 +20,23 @@ function makeMinimalDb(
   d1Capacity?: Record<string, unknown>,
   stablecoinPublicationMetadata?: Record<string, unknown>,
 ): D1Database {
-  const emptyFirst = async <T>() => null as T | null;
+  // P2-08 bound the coverage scan at a seven-day `started_at` fence, so the
+  // snapshot read now arrives through `bind()`.
+  const firstFor = async <T>(sql: string) => {
+    if (d1Capacity && sql.includes("SELECT value, updated_at FROM cache WHERE key = ?")) {
+      return {
+        value: JSON.stringify({ version: 1, assessment: d1Capacity }),
+        updated_at: nowSec,
+      } as T;
+    }
+    if (stablecoinPublicationMetadata && sql.includes("job = 'sync-stablecoins'")) {
+      return {
+        started_at: nowSec - 30,
+        metadata: JSON.stringify(stablecoinPublicationMetadata),
+      } as T;
+    }
+    return null as T | null;
+  };
   return makeNoopD1({
     prepare: (sql: string) => ({
       bind: (..._args: unknown[]) => ({
@@ -34,27 +50,11 @@ function makeMinimalDb(
           }
           return { results: [] as T[], success: true, meta: {} };
         },
-        first: async <T>() => {
-          if (d1Capacity && sql.includes("SELECT value, updated_at FROM cache WHERE key = ?")) {
-            return {
-              value: JSON.stringify({ version: 1, assessment: d1Capacity }),
-              updated_at: nowSec,
-            } as T;
-          }
-          return emptyFirst<T>();
-        },
+        first: async <T>() => firstFor<T>(sql),
         run: async () => ({ success: true, meta: {} }),
       }),
       all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
-      first: async <T>() => {
-        if (stablecoinPublicationMetadata && sql.includes("job = 'sync-stablecoins'")) {
-          return {
-            started_at: nowSec - 30,
-            metadata: JSON.stringify(stablecoinPublicationMetadata),
-          } as T;
-        }
-        return emptyFirst<T>();
-      },
+      first: async <T>() => firstFor<T>(sql),
       run: async () => ({ success: true, meta: {} }),
     }),
     batch: async () => [],

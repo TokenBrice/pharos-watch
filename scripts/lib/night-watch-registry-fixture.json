@@ -29,6 +29,7 @@
     "compute-depeg-resolver",
     "compute-dews",
     "compute-safety-score-v9",
+    "compute-safety-score-v9-workflow",
     "cron-sentinel",
     "daily-digest",
     "data-invariant-canary",
@@ -92,6 +93,8 @@
       "daily0300Utc"
     ],
     "daily-digest": ["digestTriggerPoll", "daily0805Utc"],
+    "snapshot-psi": ["quarterHourly", "daily0800Utc"],
+    "snapshot-public-dataset": ["quarterHourly", "daily0800Utc"],
     "snapshot-supply": ["quarterHourly", "daily0800Utc"],
     "sync-cl-exit-depth": ["halfHourlyMeasuredExecution", "daily0810Utc"],
     "weekly-recap": ["digestTriggerPoll", "daily0810Utc"],
