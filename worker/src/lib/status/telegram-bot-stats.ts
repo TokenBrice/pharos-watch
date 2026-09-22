@@ -464,7 +464,7 @@ export function mapTelegramBotStats(input: {
   }, {});
 
   const explicitCoinSubscriptions = coerceCount(aggregate?.total_subscriptions);
-  const presetImpliedCoinSubscriptions = lifecycleSnapshot?.presetImpliedCoinFollows ?? 0;
+  const presetImpliedCoinSubscriptions = lifecycleSnapshot?.presetImpliedCoinFollows ?? null;
   const activePresetFollowers =
     lifecycleSnapshot?.activePresetFollowers ?? coerceCount(aggregate?.active_preset_followers);
 
@@ -475,7 +475,9 @@ export function mapTelegramBotStats(input: {
     subscribedChats: coerceCount(aggregate?.subscribed_chats),
     emptyAlertChats: coerceCount(aggregate?.empty_alert_chats),
     mutedChatsWithSubscriptions: coerceCount(aggregate?.muted_chats_with_subscriptions),
-    totalSubscriptions: explicitCoinSubscriptions + presetImpliedCoinSubscriptions,
+    totalSubscriptions: presetImpliedCoinSubscriptions == null
+      ? null
+      : explicitCoinSubscriptions + presetImpliedCoinSubscriptions,
     explicitCoinSubscriptions,
     presetImpliedCoinSubscriptions,
     activePresetFollowers,

@@ -86,7 +86,9 @@ function TelegramLine(): React.JSX.Element {
         {TELEGRAM_METRIC_SEMANTICS.activeWatchers.label.toLowerCase()}
       </span>
       <span aria-hidden="true" className="text-muted-foreground/40">·</span>
-      <span className="pharos-numeric shrink-0 text-sm font-semibold">{formatDecimal(pulse.coinSubscriptions, 0, 3)}</span>
+      <span className="pharos-numeric shrink-0 text-sm font-semibold">
+        {pulse.coinSubscriptions == null ? "—" : formatDecimal(pulse.coinSubscriptions, 0, 3)}
+      </span>
       <span className="shrink-0 text-sm text-muted-foreground" title={TELEGRAM_METRIC_SEMANTICS.coinFollows.description}>
         {TELEGRAM_METRIC_SEMANTICS.coinFollows.label.toLowerCase()}
       </span>

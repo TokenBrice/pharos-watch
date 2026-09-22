@@ -24,17 +24,17 @@ export {
   type TelegramUsageEventType,
 } from "./usage-analytics-writes";
 
-export type TelegramLifecycleHistorySource = "snapshot" | "live-fallback";
+export type TelegramLifecycleHistorySource = "snapshot";
 
 export interface TelegramCurrentLifecycleSnapshot {
   day: string;
   snapshotAt: number;
   activeWatchers: number;
-  newWatchers: number;
-  churnedWatchers: number;
-  reactivatedWatchers: number;
+  newWatchers: number | null;
+  churnedWatchers: number | null;
+  reactivatedWatchers: number | null;
   explicitCoinFollows: number;
-  presetImpliedCoinFollows: number;
+  presetImpliedCoinFollows: number | null;
   activePresetFollowers: number;
   alertTypeOptIns: TelegramAlertTypeChats;
   quietHoursEnabledChats: number;
@@ -60,7 +60,6 @@ export interface TelegramLifecycleHistory {
 
 interface CurrentAggregateRow {
   active_watchers: number | string | null;
-  new_watchers: number | string | null;
   explicit_coin_follows: number | string | null;
   active_preset_followers: number | string | null;
   active_dews_opt_ins: number | string | null;
@@ -92,6 +91,16 @@ interface LifecycleSnapshotRow {
   reactivated_watchers: number | string | null;
 }
 
+interface LifecycleEventCountRow {
+  subscribe_events: number | string | null;
+  unsubscribe_events: number | string | null;
+  reactivate_events: number | string | null;
+}
+
+type AnalyticsResult<T> =
+  | { kind: "ok"; value: T }
+  | { kind: "unavailable" };
+
 interface PendingCountRow {
   pending_count: number | string | null;
 }
@@ -109,6 +118,7 @@ export interface TelegramChatHealthDiagnostics {
 }
 
 const SNAPSHOT_REFRESH_INTERVAL_SEC = TELEGRAM_LIFECYCLE_SNAPSHOT_REFRESH_SECONDS;
+const LIFECYCLE_HISTORY_DAYS = 90;
 const PENDING_DELIVERY_STATE_PLACEHOLDERS = PENDING_DELIVERY_STATES.map(() => "?").join(", ");
 
 const ACTIVE_EXPLICIT_SUBS_BY_CHAT_SQL = `SELECT chat_id,
@@ -152,7 +162,7 @@ function dayStartSeconds(day: string): number {
 }
 
 
-async function loadActivePresetFollowerRows(db: D1Database): Promise<PresetFollowerRow[]> {
+async function loadActivePresetFollowerRows(db: D1Database): Promise<AnalyticsResult<PresetFollowerRow[]>> {
   try {
     const result = await db
       .prepare(
@@ -162,34 +172,33 @@ async function loadActivePresetFollowerRows(db: D1Database): Promise<PresetFollo
           GROUP BY preset_id`,
       )
       .all<PresetFollowerRow>();
-    return result.results ?? [];
+    return { kind: "ok", value: result.results ?? [] };
   } catch (err) {
-    // Query failure (e.g. D1 schema drift) would otherwise produce a silently
-    // zeroed lifecycle snapshot; surface it in Cloudflare logs before degrading.
     logWorkerEventArgs("lib", "warn", "[telegram-analytics] loadActivePresetFollowerRows failed:", err);
-    return [];
+    return { kind: "unavailable" };
   }
 }
 
 async function calculatePresetImpliedCoinFollows(
   db: D1Database,
-  rows?: PresetFollowerRow[],
-): Promise<{ total: number; byCoin: Map<string, number> }> {
+  rows?: AnalyticsResult<PresetFollowerRow[]>,
+): Promise<AnalyticsResult<{ total: number; byCoin: Map<string, number> }>> {
   const presetRows = rows ?? await loadActivePresetFollowerRows(db);
-  const presetIds = presetRows
+  if (presetRows.kind === "unavailable") return presetRows;
+  const presetIds = presetRows.value
     .map((row) => row.preset_id)
     .filter((id): id is TelegramPresetId => Boolean(id));
   if (presetIds.length === 0) {
-    return { total: 0, byCoin: new Map() };
+    return { kind: "ok", value: { total: 0, byCoin: new Map() } };
   }
 
   const resolved = await resolveTelegramPresetTargets(db, presetIds);
   if (resolved.kind !== "ok") {
-    return { total: 0, byCoin: new Map() };
+    return { kind: "unavailable" };
   }
 
   const followersByPreset = new Map(
-    presetRows.map((row) => [row.preset_id, coerceCount(row.followers)] as const),
+    presetRows.value.map((row) => [row.preset_id, coerceCount(row.followers)] as const),
   );
   const byCoin = new Map<string, number>();
   let total = 0;
@@ -201,7 +210,7 @@ async function calculatePresetImpliedCoinFollows(
       byCoin.set(stablecoinId, (byCoin.get(stablecoinId) ?? 0) + followers);
     }
   }
-  return { total, byCoin };
+  return { kind: "ok", value: { total, byCoin } };
 }
 
 async function loadPendingDeliveryCount(
@@ -223,24 +232,26 @@ async function loadPendingDeliveryCount(
   }
 }
 
-async function loadPreviousLifecycleSnapshot(
+async function loadLifecycleEventCounts(
   db: D1Database,
   day: string,
-): Promise<LifecycleSnapshotRow | null> {
+): Promise<AnalyticsResult<LifecycleEventCountRow>> {
   try {
-    return await db
+    const row = await db
       .prepare(
-        `SELECT day, snapshot_at, active_watchers, new_watchers, churned_watchers, reactivated_watchers
-           FROM telegram_watcher_lifecycle_daily
-          WHERE day < ?
-          ORDER BY day DESC
-          LIMIT 1`,
+        `SELECT subscribe_events, unsubscribe_events, reactivate_events
+           FROM telegram_watcher_lifecycle_events_daily
+          WHERE day = ?`,
       )
       .bind(day)
-      .first<LifecycleSnapshotRow>();
+      .first<LifecycleEventCountRow>();
+    return {
+      kind: "ok",
+      value: row ?? { subscribe_events: 0, unsubscribe_events: 0, reactivate_events: 0 },
+    };
   } catch (err) {
-    logWorkerEventArgs("lib", "warn", "[telegram-analytics] loadPreviousLifecycleSnapshot failed:", err);
-    return null;
+    logWorkerEventArgs("lib", "warn", "[telegram-analytics] loadLifecycleEventCounts failed:", err);
+    return { kind: "unavailable" };
   }
 }
 
@@ -250,19 +261,11 @@ export async function computeTelegramCurrentLifecycleSnapshot(
   options: TelegramCurrentLifecycleSnapshotOptions = {},
 ): Promise<TelegramCurrentLifecycleSnapshot> {
   const day = dayFromUnixSeconds(nowSec);
-  const start = dayStartSeconds(day);
-  const end = start + 24 * 60 * 60;
-  const [aggregate, presetRows, pendingDeliveries, previousSnapshot] = await Promise.all([
+  const [aggregate, presetRows, pendingDeliveries, lifecycleEvents] = await Promise.all([
     db
       .prepare(
         `SELECT
            SUM(CASE WHEN ${ACTIVE_WATCHER_SQL_CONDITION} THEN 1 ELSE 0 END) AS active_watchers,
-           SUM(
-             CASE
-               WHEN (${ACTIVE_WATCHER_SQL_CONDITION}) AND s.created_at >= ? AND s.created_at < ?
-               THEN 1 ELSE 0
-             END
-           ) AS new_watchers,
            SUM(COALESCE(sub.active_sub_count, 0)) AS explicit_coin_follows,
            SUM(CASE WHEN COALESCE(preset.active_preset_count, 0) > 0 THEN 1 ELSE 0 END) AS active_preset_followers,
            SUM(
@@ -347,38 +350,33 @@ export async function computeTelegramCurrentLifecycleSnapshot(
          LEFT JOIN (${ACTIVE_EXPLICIT_SUBS_BY_CHAT_SQL}) sub ON sub.chat_id = s.chat_id
          LEFT JOIN (${ACTIVE_PRESETS_BY_CHAT_SQL}) preset ON preset.chat_id = s.chat_id`,
       )
-      .bind(start, end)
       .first<CurrentAggregateRow>(),
     loadActivePresetFollowerRows(db),
     options.pendingDeliveryCount == null
       ? loadPendingDeliveryCount(db)
       : Promise.resolve({ count: options.pendingDeliveryCount, unavailableFields: [] }),
-    loadPreviousLifecycleSnapshot(db, day),
+    loadLifecycleEventCounts(db, day),
   ]);
 
   const presetImplied = await calculatePresetImpliedCoinFollows(db, presetRows);
-  const activeWatchers = coerceCount(aggregate?.active_watchers);
-  const newWatchers = coerceCount(aggregate?.new_watchers);
-  const previousActiveWatchers = coerceCount(previousSnapshot?.active_watchers);
-  // With daily aggregate snapshots, churn/reactivation are inferred from the
-  // net active-count movement plus new-watchers. This avoids storing extra
-  // per-user lifecycle state while making historical public points stable.
-  const churnedWatchers = previousSnapshot
-    ? Math.max(0, previousActiveWatchers + newWatchers - activeWatchers)
-    : 0;
-  const reactivatedWatchers = previousSnapshot
-    ? Math.max(0, activeWatchers - previousActiveWatchers - newWatchers)
-    : 0;
+  const unavailableFields = [...pendingDeliveries.unavailableFields];
+  if (presetImplied.kind === "unavailable") {
+    unavailableFields.push("presetImpliedCoinSubscriptions", "topCoins");
+  }
+  if (lifecycleEvents.kind === "unavailable") {
+    unavailableFields.push("newWatchers", "churnedWatchers", "reactivatedWatchers");
+  }
+  const lifecycleCounts = lifecycleEvents.kind === "ok" ? lifecycleEvents.value : null;
 
   return {
     day,
     snapshotAt: nowSec,
-    activeWatchers,
-    newWatchers,
-    churnedWatchers,
-    reactivatedWatchers,
+    activeWatchers: coerceCount(aggregate?.active_watchers),
+    newWatchers: lifecycleCounts == null ? null : coerceCount(lifecycleCounts.subscribe_events),
+    churnedWatchers: lifecycleCounts == null ? null : coerceCount(lifecycleCounts.unsubscribe_events),
+    reactivatedWatchers: lifecycleCounts == null ? null : coerceCount(lifecycleCounts.reactivate_events),
     explicitCoinFollows: coerceCount(aggregate?.explicit_coin_follows),
-    presetImpliedCoinFollows: presetImplied.total,
+    presetImpliedCoinFollows: presetImplied.kind === "ok" ? presetImplied.value.total : null,
     activePresetFollowers: coerceCount(aggregate?.active_preset_followers),
     alertTypeOptIns: {
       dews: coerceCount(aggregate?.active_dews_opt_ins),
@@ -391,7 +389,7 @@ export async function computeTelegramCurrentLifecycleSnapshot(
     },
     quietHoursEnabledChats: coerceCount(aggregate?.quiet_hours_enabled_chats),
     pendingDeliveries: pendingDeliveries.count,
-    unavailableFields: pendingDeliveries.unavailableFields,
+    unavailableFields,
   };
 }
 
@@ -412,6 +410,14 @@ async function upsertTelegramLifecycleSnapshot(
   db: D1Database,
   snapshot: TelegramCurrentLifecycleSnapshot,
 ): Promise<void> {
+  if (
+    snapshot.newWatchers == null
+    || snapshot.churnedWatchers == null
+    || snapshot.reactivatedWatchers == null
+    || snapshot.presetImpliedCoinFollows == null
+  ) {
+    return;
+  }
   // NOTE: reserve and freeze opt-ins are computed live (above) but intentionally not persisted here.
   // The telegram_watcher_lifecycle_daily table has no active_reserve_opt_ins or
   // active_freeze_opt_ins columns (migration 0123). Persisting either family would require a
@@ -491,37 +497,46 @@ export async function refreshTelegramLifecycleSnapshotIfStale(
 
 export async function loadTelegramLifecycleHistory(
   db: D1Database,
+  nowSec = Math.floor(Date.now() / 1000),
 ): Promise<TelegramLifecycleHistory> {
-  try {
-    const result = await db
-      .prepare(
-        `SELECT day, snapshot_at, active_watchers, new_watchers, churned_watchers, reactivated_watchers
-           FROM telegram_watcher_lifecycle_daily
-          ORDER BY day ASC`,
-      )
-      .all<LifecycleSnapshotRow>();
-    const points = (result.results ?? [])
-      .map((row) => {
-        const day = row.day ?? "";
-        const timestamp = dayStartSeconds(day) * 1000;
-        return {
-          date: day,
-          timestamp,
-          snapshotAt: coerceNullableTimestamp(row.snapshot_at),
-          newWatchers: coerceCount(row.new_watchers),
-          activeWatchers: coerceCount(row.active_watchers),
-          churnedWatchers: coerceCount(row.churned_watchers),
-          reactivatedWatchers: coerceCount(row.reactivated_watchers),
-        };
-      })
-      .filter((point) => point.date && Number.isFinite(point.timestamp) && point.timestamp > 0);
-    if (points.length > 0) {
-      return { source: "snapshot", points };
-    }
-  } catch {
-    // Fall through to live fallback in the caller.
-  }
-  return { source: "live-fallback", points: [] };
+  const currentDay = dayFromUnixSeconds(nowSec);
+  const firstDay = dayFromUnixSeconds(nowSec - LIFECYCLE_HISTORY_DAYS * 24 * 60 * 60);
+  const result = await db
+    .prepare(
+      `SELECT day, snapshot_at, active_watchers, new_watchers, churned_watchers, reactivated_watchers
+         FROM (
+           SELECT day, snapshot_at, active_watchers, new_watchers, churned_watchers, reactivated_watchers
+             FROM telegram_watcher_lifecycle_daily
+            WHERE day >= ? AND day < ?
+            ORDER BY day DESC
+            LIMIT ?
+         )
+        ORDER BY day ASC`,
+    )
+    .bind(firstDay, currentDay, LIFECYCLE_HISTORY_DAYS)
+    .all<LifecycleSnapshotRow>();
+  const points = (result.results ?? [])
+    .map((row) => {
+      const day = row.day ?? "";
+      const timestamp = dayStartSeconds(day) * 1000;
+      return {
+        date: day,
+        timestamp,
+        snapshotAt: coerceNullableTimestamp(row.snapshot_at),
+        newWatchers: coerceCount(row.new_watchers),
+        activeWatchers: coerceCount(row.active_watchers),
+        churnedWatchers: coerceCount(row.churned_watchers),
+        reactivatedWatchers: coerceCount(row.reactivated_watchers),
+      };
+    })
+    .filter(
+      (point) =>
+        point.date
+        && point.date < currentDay
+        && Number.isFinite(point.timestamp)
+        && point.timestamp > 0,
+    );
+  return { source: "snapshot", points };
 }
 
 export async function loadTelegramTopFollowedCoins(
@@ -540,6 +555,9 @@ export async function loadTelegramTopFollowedCoins(
     loadActivePresetFollowerRows(db),
   ]);
   const presetImplied = await calculatePresetImpliedCoinFollows(db, presetRows);
+  if (presetImplied.kind === "unavailable") {
+    throw new Error("Telegram preset follow telemetry unavailable");
+  }
   const byCoin = new Map<string, TelegramTopFollowedCoin>();
 
   for (const row of explicitResult.results ?? []) {
@@ -552,7 +570,7 @@ export async function loadTelegramTopFollowedCoins(
     });
   }
 
-  for (const [stablecoinId, presetImpliedSubscribers] of presetImplied.byCoin) {
+  for (const [stablecoinId, presetImpliedSubscribers] of presetImplied.value.byCoin) {
     const existing = byCoin.get(stablecoinId);
     if (existing) {
       existing.presetImpliedSubscribers = presetImpliedSubscribers;

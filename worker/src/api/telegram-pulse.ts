@@ -1,12 +1,11 @@
 import { withErrorHandler, jsonResponse } from "../lib/api-response";
-import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import {
   TelegramPulseSchema,
   type TelegramPulse,
   type TelegramWatcherHistoryPoint,
 } from "@shared/types/status";
-import { getCache, setCache } from "../lib/db-cache";
+import { getCache, setCache, setCacheIfNewer } from "../lib/db-cache";
 import { throwIfAborted } from "../lib/abort";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { logWorkerEvent } from "../lib/structured-log";
@@ -20,7 +19,6 @@ import {
 import {
   ACTIVE_PRESET_FLAGS_SQL,
   ACTIVE_SUBSCRIPTION_FLAGS_SQL,
-  ACTIVE_WATCHER_SQL_CONDITION,
 } from "@shared/lib/telegram-alert-families";
 import {
   loadTelegramMiniAppDailyAggregate,
@@ -55,6 +53,7 @@ export interface TelegramPulsePublicationOutcome {
   heavySectionsRecomputed: boolean;
   heavyMarkerAdvanced: boolean;
   error: string | null;
+  staleWriteSkipped: boolean;
 }
 
 interface CachedTelegramPulse {
@@ -62,15 +61,6 @@ interface CachedTelegramPulse {
   updatedAt: number;
 }
 
-const ACTIVE_SUBSCRIPTION_COUNTS_SQL = `SELECT chat_id,
-        SUM(CASE WHEN ${ACTIVE_SUBSCRIPTION_FLAGS_SQL} THEN 1 ELSE 0 END) AS active_sub_count
-   FROM telegram_subscriptions
-  GROUP BY chat_id`;
-
-const ACTIVE_PRESET_COUNTS_SQL = `SELECT chat_id,
-        SUM(CASE WHEN ${ACTIVE_PRESET_FLAGS_SQL} THEN 1 ELSE 0 END) AS active_preset_count
-   FROM telegram_preset_subscriptions
-  GROUP BY chat_id`;
 
 function shouldSuppressLowCardinality(value: number): boolean {
   return value > 0 && value < PUBLIC_LOW_CARDINALITY_THRESHOLD;
@@ -126,69 +116,6 @@ function latestLifecycleHistoryUpdatedAt(points: TelegramWatcherHistoryPoint[]):
   return latest;
 }
 
-function buildLifecycleHistory(
-  snapshotHistory: TelegramWatcherHistoryPoint[],
-  fallbackHistory: TelegramWatcherHistoryPoint[],
-): { source: TelegramPulse["historySource"]; points: TelegramWatcherHistoryPoint[] } {
-  if (snapshotHistory.length === 0) {
-    return {
-      source: fallbackHistory.length > 0 ? "live-fallback" : "snapshot",
-      points: fallbackHistory,
-    };
-  }
-
-  // Prepend the subscriber-cohort history whenever it reaches back before the
-  // first daily snapshot — not only during the bootstrap window — so the
-  // public chart always shows the full available bot lifecycle.
-  const firstSnapshotTimestamp = snapshotHistory[0]?.timestamp ?? 0;
-  const fallbackPrefix = fallbackHistory.filter(
-    (point) => point.timestamp > 0 && point.timestamp < firstSnapshotTimestamp,
-  );
-
-  if (fallbackPrefix.length === 0) {
-    return { source: "snapshot", points: snapshotHistory };
-  }
-
-  return {
-    source: "live-fallback",
-    points: [...fallbackPrefix, ...snapshotHistory],
-  };
-}
-
-async function loadFallbackWatcherHistory(db: D1Database): Promise<TelegramWatcherHistoryPoint[]> {
-  const historyRows = await runWithOverloadRetry(() => db
-    .prepare(
-      `SELECT
-         date(s.created_at, 'unixepoch') AS day,
-         strftime('%s', date(s.created_at, 'unixepoch')) AS day_ts,
-         COUNT(*) AS new_watchers
-       FROM telegram_subscribers s
-       LEFT JOIN (
-         ${ACTIVE_SUBSCRIPTION_COUNTS_SQL}
-       ) sub ON sub.chat_id = s.chat_id
-       LEFT JOIN (
-         ${ACTIVE_PRESET_COUNTS_SQL}
-       ) preset ON preset.chat_id = s.chat_id
-       WHERE ${ACTIVE_WATCHER_SQL_CONDITION}
-       GROUP BY day
-       ORDER BY day ASC`,
-    )
-    .all<{ day: string | null; day_ts: string | number | null; new_watchers: number | string | null }>());
-
-  let cumulativeWatchers = 0;
-  return (historyRows.results ?? [])
-    .map((row) => {
-      const newWatchers = coerceCount(row.new_watchers);
-      cumulativeWatchers += newWatchers;
-      return {
-        date: row.day ?? "",
-        timestamp: Number(row.day_ts ?? 0) * 1000,
-        newWatchers,
-        activeWatchers: cumulativeWatchers,
-      };
-    })
-    .filter((point) => point.date && Number.isFinite(point.timestamp) && point.timestamp > 0);
-}
 
 function sanitizePublicPulse(pulse: TelegramPulse): TelegramPulse {
   const suppressedFields = new Set(pulse.privacy.suppressedFields);
@@ -304,8 +231,10 @@ async function buildTelegramPulseSnapshot(
   const heavySections = reusablePulse
     ? {
         topCoins: reusablePulse.topCoins,
-        historySource: reusablePulse.historySource ?? "snapshot",
-        watcherHistory: reusablePulse.watcherHistory,
+        historySource: "snapshot" as const,
+        watcherHistory: reusablePulse.watcherHistory.filter(
+          (point) => point.date < utcDayFromUnixSeconds(nowSec),
+        ),
         lifecycleHistoryUpdatedAt: reusablePulse.lifecycleHistoryUpdatedAt,
         miniAppSessionsToday: reusablePulse.miniAppSessionsToday,
         miniAppMutationsToday: reusablePulse.miniAppMutationsToday,
@@ -314,13 +243,17 @@ async function buildTelegramPulseSnapshot(
         miniAppOpenToFirstMutationP50Sec: reusablePulse.miniAppOpenToFirstMutationP50Sec,
       }
     : await (async () => {
-        const [topRows, snapshotHistory, miniAppDailyAggregate, miniAppFirstMutation, fallbackHistory] = await Promise.all([
+        const [topRows, snapshotHistory, miniAppDailyAggregate, miniAppFirstMutation] = await Promise.all([
           loadTelegramTopFollowedCoins(db, 5).catch((error) => {
             logWorkerEvent({ scope: "api", level: "warn", message: "Telegram pulse top followed coin telemetry unavailable", error });
             unavailableFields.add("topCoins");
             return [];
           }),
-          loadTelegramLifecycleHistory(db),
+          loadTelegramLifecycleHistory(db, nowSec).catch((error) => {
+            logWorkerEvent({ scope: "api", level: "warn", message: "Telegram pulse lifecycle history unavailable", error });
+            unavailableFields.add("watcherHistory");
+            return { source: "snapshot" as const, points: [] };
+          }),
           loadTelegramMiniAppDailyAggregate(db, utcDayFromUnixSeconds(nowSec)).catch((error) => {
             logWorkerEvent({ scope: "api", level: "warn", message: "Telegram pulse mini-app daily aggregate unavailable", error });
             unavailableFields.add("miniAppDailyAggregate");
@@ -331,13 +264,8 @@ async function buildTelegramPulseSnapshot(
             unavailableFields.add("miniAppOpenToFirstMutationP50Sec");
             return null;
           }),
-          loadFallbackWatcherHistory(db).catch((error) => {
-            logWorkerEvent({ scope: "api", level: "warn", message: "Telegram pulse fallback watcher history unavailable", error });
-            unavailableFields.add("watcherHistory");
-            return [];
-          }),
         ]);
-        const lifecycleHistory = buildLifecycleHistory(snapshotHistory.points, fallbackHistory);
+        const lifecycleHistory = snapshotHistory;
         if (miniAppFirstMutation && shouldSuppressLowCardinality(miniAppFirstMutation.sampleCount)) {
           suppressedFields.add("miniAppOpenToFirstMutationP50Sec");
         }
@@ -376,17 +304,25 @@ async function buildTelegramPulseSnapshot(
 
   const pulse: TelegramPulse = {
     activeWatchers: currentSnapshot.activeWatchers,
-    coinSubscriptions: currentSnapshot.explicitCoinFollows + currentSnapshot.presetImpliedCoinFollows,
+    coinSubscriptions: currentSnapshot.presetImpliedCoinFollows == null
+      ? null
+      : currentSnapshot.explicitCoinFollows + currentSnapshot.presetImpliedCoinFollows,
     explicitCoinSubscriptions: currentSnapshot.explicitCoinFollows,
     presetImpliedCoinSubscriptions: currentSnapshot.presetImpliedCoinFollows,
     activePresetFollowers: currentSnapshot.activePresetFollowers,
-    newWatchersToday: publicOptionalCount(currentSnapshot.newWatchers, "newWatchersToday", suppressedFields),
-    churnedWatchersToday: publicOptionalCount(currentSnapshot.churnedWatchers, "churnedWatchersToday", suppressedFields),
-    reactivatedWatchersToday: publicOptionalCount(
-      currentSnapshot.reactivatedWatchers,
-      "reactivatedWatchersToday",
-      suppressedFields,
-    ),
+    newWatchersToday: currentSnapshot.newWatchers == null
+      ? null
+      : publicOptionalCount(currentSnapshot.newWatchers, "newWatchersToday", suppressedFields),
+    churnedWatchersToday: currentSnapshot.churnedWatchers == null
+      ? null
+      : publicOptionalCount(currentSnapshot.churnedWatchers, "churnedWatchersToday", suppressedFields),
+    reactivatedWatchersToday: currentSnapshot.reactivatedWatchers == null
+      ? null
+      : publicOptionalCount(
+          currentSnapshot.reactivatedWatchers,
+          "reactivatedWatchersToday",
+          suppressedFields,
+        ),
     historySource: heavySections.historySource,
     topCoins: heavySections.topCoins,
     watcherHistory: heavySections.watcherHistory,
@@ -424,7 +360,25 @@ export async function publishTelegramPulseSnapshotWithOutcome(
   const built = await buildTelegramPulseSnapshot(db, nowSec, options);
   throwIfAborted(options.signal);
   try {
-    await setCache(db, TELEGRAM_PULSE_CACHE_KEY, JSON.stringify(built.pulse), options.signal);
+    const write = await setCacheIfNewer(
+      db,
+      TELEGRAM_PULSE_CACHE_KEY,
+      JSON.stringify(built.pulse),
+      built.pulse.updatedAt,
+      options.signal,
+    );
+    if (!write.written) {
+      const published = await loadCachedTelegramPulseSnapshot(db);
+      return {
+        pulse: published?.pulse ?? built.pulse,
+        status: published?.pulse.quality.status === "partial" ? "degraded" : "ok",
+        snapshotPublished: false,
+        heavySectionsRecomputed: built.heavySectionsRecomputed,
+        heavyMarkerAdvanced: false,
+        staleWriteSkipped: true,
+        error: null,
+      };
+    }
   } catch (error) {
     throwIfAborted(options.signal);
     return {
@@ -433,6 +387,7 @@ export async function publishTelegramPulseSnapshotWithOutcome(
       snapshotPublished: false,
       heavySectionsRecomputed: built.heavySectionsRecomputed,
       heavyMarkerAdvanced: false,
+      staleWriteSkipped: false,
       error: toErrorMessage(error),
     };
   }
@@ -467,6 +422,7 @@ export async function publishTelegramPulseSnapshotWithOutcome(
     snapshotPublished: true,
     heavySectionsRecomputed: built.heavySectionsRecomputed,
     heavyMarkerAdvanced,
+    staleWriteSkipped: false,
     error: markerError,
   };
 }

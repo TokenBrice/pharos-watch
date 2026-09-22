@@ -4,6 +4,7 @@ import {
   bucketTelegramCommandLatency,
   classifyTelegramStartSource,
   computeTelegramCurrentLifecycleSnapshot,
+  loadTelegramLifecycleHistory,
   loadTelegramTopFollowedCoins,
   recordTelegramDeliveryOutcomes,
   recordTelegramUsageEvent,
@@ -53,6 +54,67 @@ describe("telegram usage analytics", () => {
     const snapshot = await computeTelegramCurrentLifecycleSnapshot(db, 1_771_833_600);
 
     expect(snapshot.pendingDeliveries).toBe(3);
+  });
+  it("counts subscribe, unsubscribe, and reactivate transitions independently", async () => {
+    const { sqlite, db } = fixtures.open();
+    const nowSec = Math.floor(Date.now() / 1000);
+    sqlite.prepare(
+      "INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES ('lifecycle', ?, ?)",
+    ).run(nowSec, nowSec);
+    sqlite.exec("UPDATE telegram_subscribers SET global_alert_dews = 1 WHERE chat_id = 'lifecycle'");
+    sqlite.exec("UPDATE telegram_subscribers SET global_alert_dews = 0 WHERE chat_id = 'lifecycle'");
+    sqlite.exec("UPDATE telegram_subscribers SET global_alert_dews = 1 WHERE chat_id = 'lifecycle'");
+
+    const snapshot = await computeTelegramCurrentLifecycleSnapshot(db, nowSec, {
+      pendingDeliveryCount: 0,
+    });
+
+    expect(snapshot.newWatchers).toBe(1);
+    expect(snapshot.churnedWatchers).toBe(1);
+    expect(snapshot.reactivatedWatchers).toBe(1);
+  });
+
+  it("bounds lifecycle history to complete days in the explicit window", async () => {
+    const db = mockD1([{
+      match: "FROM telegram_watcher_lifecycle_daily",
+      rows: [{
+        day: "2026-02-22",
+        snapshot_at: 1_771_747_200,
+        active_watchers: 10,
+        new_watchers: 5,
+        churned_watchers: 2,
+        reactivated_watchers: 1,
+      }],
+    }]);
+
+    const history = await loadTelegramLifecycleHistory(db, 1_771_833_600);
+
+    expect(history.points.map((point) => point.date)).toEqual(["2026-02-22"]);
+    const query = db.getHistory().find((entry) => entry.sql.includes("FROM telegram_watcher_lifecycle_daily"));
+    expect(query?.sql).toContain("WHERE day >= ? AND day < ?");
+    expect(query?.sql).toContain("LIMIT ?");
+    expect(query?.binds[1]).toBe("2026-02-23");
+  });
+  it("publishes preset-implied adoption as unavailable when preset resolution fails", async () => {
+    const { sqlite, db } = fixtures.open();
+    const nowSec = Math.floor(Date.now() / 1000);
+    sqlite.prepare(
+      "INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES ('preset', ?, ?)",
+    ).run(nowSec, nowSec);
+    sqlite.prepare(
+      `INSERT INTO telegram_preset_subscriptions
+         (chat_id, preset_id, alert_dews, created_at, updated_at)
+       VALUES ('preset', 'mcap-ge-1b', 1, ?, ?)`,
+    ).run(nowSec, nowSec);
+
+    const snapshot = await computeTelegramCurrentLifecycleSnapshot(db, nowSec, {
+      pendingDeliveryCount: 0,
+    });
+
+    expect(snapshot.presetImpliedCoinFollows).toBeNull();
+    expect(snapshot.unavailableFields).toEqual(
+      expect.arrayContaining(["presetImpliedCoinSubscriptions", "topCoins"]),
+    );
   });
 
   it("classifies deep-link payloads without storing raw payloads", () => {
