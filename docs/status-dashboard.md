@@ -208,6 +208,15 @@ Related extracted loaders:
 
 `computeRawStatus()` now performs the DB sentinel first and returns an explicit stale fallback snapshot when that sentinel fails, instead of throwing before the dashboard can show operator-visible degraded state.
 
+**Rules this contract carries.** Two repo-wide data-integrity rules are load-bearing here and are recorded as
+ADRs in [`architecture.md`](./architecture.md#architectural-decision-records): **R3** (ADR-30) — a published
+freshness verdict names the budget it used and the generation it describes, with input quality in separate
+fields — and **R4** (ADR-31) — a non-`ok` terminal status carries a machine-readable reason, and terminal
+status separates "did the work happen" from "were the inputs perfect". Their additive publication fields live
+in `CacheStatusSchema` (`shared/types/status/schema-primitives.ts`): `healthyMaxRatio` and `healthyMaxAge` for
+the band, `degraded` / `degradedReason` / `streakDegradedRuns` for the generation's input quality. The
+per-field behaviour is specified under Cron health model, Cron error escalation, and Synthetic self-check below.
+
 ### Cron health model
 
 **Terminal status separates "did the work happen" from "were the inputs perfect" (R4).** `degraded` is
@@ -553,8 +562,8 @@ The cron metadata now includes:
 - `latencySummary` (`minMs`, `medianMs`, `p95Ms`, `maxMs`)
 - `slowestProbes` (top slow endpoints for the run)
 
-A freshness sentinel records **which generation is served**, never whether that
-generation's inputs were clean. Input quality travels beside it, on every
+A freshness sentinel records **which generation is served** (R3), never whether
+that generation's inputs were clean. Input quality travels beside it, on every
 sentinel-backed cache status: `degraded`, `degradedReason`
 (`freshness-sentinel-missing` / `freshness-sentinel-unreadable` /
 `freshness-sentinel-invalid:<reason>` / `producer-degraded-since-last-clean-run`)

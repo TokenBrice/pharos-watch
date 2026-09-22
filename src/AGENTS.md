@@ -15,6 +15,7 @@ Route with `node --import tsx scripts/ci/pharos-change-contract.ts --file <path>
 - `src/lib/public-route-inventory.ts`, `src/app/sitemap.ts`, and `src/app/robots.ts` own the route/SEO triad; check `public/_headers` when crawl or host behavior changes.
 - Do not edit `src/components/ui/` shadcn primitives unless explicitly required.
 - API reads should use shared hooks and `src/lib/api.ts`; runtime-neutral logic belongs in `shared/lib/`.
+- Never publish a display-capped or clamped value as a statistic (rule R7, ADR-34 in `docs/architecture.md`): a headline count, total, or ratio comes from the authoritative set, never from the `.slice()` that renders rows — keep the bound visible instead (`Top N of M`).
 
 ## Generated artifacts
 

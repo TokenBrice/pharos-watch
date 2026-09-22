@@ -790,6 +790,7 @@ Before running commands, confirm the addition-specific artifacts:
 - high-value active additions have either a reviewed `mintAuthority` profile or a documented intentional gap
 - the Phase 4a couplings, Phase 4b test snapshots, and Phase 4c checked-in artifacts all match the new catalog
 - downstream coverage decision notes cover every Phase 5 branch
+- every per-coin or per-chain map this addition touches (native-peg currency, canonical mint/burn chain, Bluechip slug, redemption-backstop config) is derived from the registry or covered by a registry-iterating test that fails on the next unmapped addition — rule R5, ADR-32 in [../architecture.md](../architecture.md#architectural-decision-records); a "keep in sync" comment is not a mechanism
 
 For a normal stablecoin addition, generate the working-tree projections and run focused checks first:
 
