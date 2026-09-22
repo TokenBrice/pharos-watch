@@ -1,14 +1,8 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import {
-  formatUtcTimestamp,
-  getLatestErratum,
-  getMissingReasons,
-  type DdrCompatRow,
-  type DdrDisplayRow,
-  type DdrPublicPredictionState,
-} from "@/components/depeg-resolver-row-card-model";
+import { getMissingReasons } from "@/components/depeg-resolver-row-card-model";
+import type { DdrPublicPredictionState, DdrV2ResponseRow } from "@shared/types/depeg-resolver";
 import { CoinLockup, LiveFacts, LockMetadataStrip, StageLabel } from "@/components/depeg-resolver-row-card-shared";
 
 const STATE_COPY: Record<
@@ -33,12 +27,6 @@ const STATE_COPY: Record<
     body: "A sealed outcome exists operationally but has not entered the first-publication manifest. DDR hides the sealed verdict until publication succeeds.",
     tone: "border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-400",
   },
-  publication_failed: {
-    badge: "Publication failed",
-    title: "Publication failed before public exposure",
-    body: "DDR did not recoverably publish this lock outcome. DDRR counts it as operational coverage debt, not as a prediction users saw.",
-    tone: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400",
-  },
   no_call: {
     badge: "No-call locked",
     title: "No-call at lock",
@@ -58,20 +46,15 @@ export function StateOnlyCard({
   state,
   logos,
 }: {
-  row: DdrDisplayRow;
+  row: DdrV2ResponseRow;
   state: Exclude<DdrPublicPredictionState, "frozen">;
   logos?: Record<string, string>;
 }) {
   const copy = STATE_COPY[state];
-  const compat = row as DdrCompatRow;
-  const retryText =
-    compat.prediction?.nextRetryAt != null
-      ? `Next retry ${formatUtcTimestamp(compat.prediction.nextRetryAt)}`
-      : (compat.prediction?.retryStatus ?? null);
-  const deferralReason = compat.prediction?.deferralReason ?? compat.live?.degradedReason ?? null;
+  const deferralReason = row.prediction.deferralReason ?? row.live.degradedReason;
   const missingReasons = getMissingReasons(row);
-  const erratum = getLatestErratum(row);
-  const originalOutcome = compat.prediction?.originalOutcomeKind ?? compat.prediction?.outcomeKind ?? null;
+  const originalOutcome =
+    row.kind === "invalidated_prediction" && row.originalKind === "no_call" ? "no-call" : "published prediction";
   const dirGlyph = row.direction === "below" ? "▼" : "▲";
 
   return (
@@ -99,17 +82,10 @@ export function StateOnlyCard({
         <LockMetadataStrip row={row} />
         <LiveFacts row={row} />
 
-        {state === "lock_deferred" && (deferralReason || retryText) ? (
+        {state === "lock_deferred" && deferralReason ? (
           <div className="rounded-lg border border-amber-500/25 bg-amber-500/[0.06] px-3 py-2.5 text-xs">
-            {deferralReason ? <p className="text-foreground">Deferral reason: {deferralReason}</p> : null}
-            {retryText ? <p className="mt-1 text-muted-foreground">{retryText}</p> : null}
+            <p className="text-foreground">Deferral reason: {deferralReason}</p>
           </div>
-        ) : null}
-
-        {state === "publication_retry_pending" && retryText ? (
-          <p className="rounded-lg border border-violet-500/25 bg-violet-500/[0.06] px-3 py-2.5 text-xs text-muted-foreground">
-            {retryText}
-          </p>
         ) : null}
 
         {state === "no_call" ? (
@@ -143,18 +119,11 @@ export function StateOnlyCard({
             <div className="mt-2 space-y-1.5 text-xs text-muted-foreground">
               <p>
                 Original lock outcome:{" "}
-                <span className="font-mono uppercase text-foreground">{originalOutcome ?? "published prediction"}</span>
+                <span className="font-mono uppercase text-foreground">{originalOutcome}</span>
               </p>
               <p>
-                Latest erratum:{" "}
-                <span className="text-foreground">
-                  {erratum?.summary ??
-                    erratum?.reason ??
-                    compat.prediction?.invalidationReason ??
-                    "details unavailable"}
-                </span>
+                Latest erratum: <span className="text-foreground">details unavailable</span>
               </p>
-              {erratum?.createdAt ? <p>Recorded {formatUtcTimestamp(erratum.createdAt)}.</p> : null}
             </div>
           </details>
         ) : null}

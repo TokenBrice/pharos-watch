@@ -83,7 +83,7 @@ vi.mock("@/components/homepage-client-view-model", () => ({
     filteredRowCount: stablecoinsData?.peggedAssets?.length ?? 0,
     pegScores: new Map(),
   }),
-  buildHomepageOptionalViewModel: () => ({ dewsRiskLevel: "normal", reportCardMap: {} }),
+  buildHomepageOptionalViewModel: () => ({ reportCardMap: {} }),
 }));
 vi.mock("@/components/peg-distribution-grid", () => ({ PegBrowseStrip: () => <div /> }));
 

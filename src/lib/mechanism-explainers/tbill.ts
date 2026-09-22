@@ -1,4 +1,4 @@
-import { ARCHETYPE_VISUALS, type ArchetypeContent } from "./types";
+import type { ArchetypeContent } from "./types";
 
 export const content: ArchetypeContent = {
   archetype: "tbill",
@@ -114,7 +114,6 @@ export const content: ArchetypeContent = {
       label: "Cemetery: historical tokenized T-Bill fund wind-downs",
     },
   ],
-  visuals: ARCHETYPE_VISUALS.tbill,
   decommissioned: [
     {
       name: "Mountain Protocol USDM",

@@ -1,9 +1,6 @@
 import {
-  PROTOCOL_COLORS,
   PROTOCOL_HEX,
-  EXTRA_COLORS,
   CHAIN_HEX,
-  chainColorClass,
   chainLogo,
   prettifyProtocol,
   normalizeChain,
@@ -62,10 +59,8 @@ export interface LiquidityExitRouteItem {
   isOther: boolean;
   flowIntensity: "low" | "medium" | "high";
   packetCount: number;
-  colorClass: string;
   colorHex: string;
   logoPath?: string;
-  darkInvert?: boolean;
 }
 
 export type ExitRouteSelectionKind = "protocol" | "chain" | "throat";
@@ -306,15 +301,13 @@ function buildExitRouteItems(
   values: Record<string, number>,
   {
     labelForKey,
-    colorForKey,
     colorHexForKey,
     logoForKey,
     denominatorUsd,
   }: {
     labelForKey: (key: string) => string;
-    colorForKey: (key: string, index: number) => string;
     colorHexForKey: (key: string, index: number) => string;
-    logoForKey?: (key: string) => { path: string; darkInvert?: boolean } | null;
+    logoForKey?: (key: string) => { path: string } | null;
     denominatorUsd?: number;
   },
 ): LiquidityExitRouteItem[] {
@@ -339,10 +332,8 @@ function buildExitRouteItems(
       isOther: false,
       flowIntensity: flowIntensityBand(sharePct),
       packetCount: routePacketCount(sharePct),
-      colorClass: colorForKey(key, index),
       colorHex: colorHexForKey(key, index),
       logoPath: logo?.path,
-      darkInvert: logo?.darkInvert,
     };
   });
 
@@ -357,10 +348,8 @@ function buildExitRouteItems(
       isOther: true,
       flowIntensity: flowIntensityBand(sharePct),
       packetCount: routePacketCount(sharePct),
-      colorClass: "bg-muted-foreground",
       colorHex: OTHER_ROUTE_COLOR,
       logoPath: undefined,
-      darkInvert: undefined,
     });
   }
 
@@ -376,14 +365,12 @@ export function buildLiquidityExitRouteModel(
 
   const protocolRoutes = buildExitRouteItems(globalData.protocolTvl ?? {}, {
     labelForKey: prettifyProtocol,
-    colorForKey: (protocol, index) => PROTOCOL_COLORS[protocol] ?? EXTRA_COLORS[index % EXTRA_COLORS.length],
     colorHexForKey: (protocol) => PROTOCOL_HEX[protocol] ?? stableRouteAccentColor(`protocol:${protocol}`),
     logoForKey: protocolLogo,
     denominatorUsd: globalData.totalTvlUsd,
   });
   const chainRoutes = buildExitRouteItems(globalData.chainTvl ?? {}, {
     labelForKey: normalizeChain,
-    colorForKey: chainColorClass,
     colorHexForKey: (chain) => CHAIN_HEX[chain.toLowerCase()] ?? stableRouteAccentColor(`chain:${chain.toLowerCase()}`),
     logoForKey: chainLogo,
     denominatorUsd: globalData.totalTvlUsd,

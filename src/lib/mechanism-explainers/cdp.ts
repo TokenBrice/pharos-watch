@@ -1,4 +1,4 @@
-import { ARCHETYPE_VISUALS, type ArchetypeContent } from "./types";
+import type { ArchetypeContent } from "./types";
 
 export const content: ArchetypeContent = {
   archetype: "cdp",
@@ -129,7 +129,6 @@ export const content: ArchetypeContent = {
       label: "Cemetery: historical CDP failures",
     },
   ],
-  visuals: ARCHETYPE_VISUALS.cdp,
   decommissioned: [
     {
       name: "Kava USDX",

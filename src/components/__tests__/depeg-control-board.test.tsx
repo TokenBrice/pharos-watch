@@ -3,10 +3,8 @@
 import type { ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import {
-  DepegControlBoard,
-  getDeviationBarWidthPercent,
-} from "@/components/depeg-control-board";
+import { DepegControlBoard } from "@/components/depeg-control-board";
+import { getDeviationBarWidthPercent } from "@/components/depeg-board-model";
 import { cleanupFrontendTest } from "@/test-utils/frontend";
 import type { DepegTrackerRow } from "@/lib/depeg-sort";
 import type { PegSummaryCoin, StressSignalEntry } from "@shared/types";

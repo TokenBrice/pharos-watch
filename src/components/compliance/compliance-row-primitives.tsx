@@ -14,6 +14,21 @@ import {
 import type { GeniusAuthorizationStatus, MicaStatus } from "@shared/types";
 import type { ComplianceOverviewRow } from "@/lib/compliance-model";
 
+export function complianceStatusMeta(
+  regime: "mica" | "genius",
+  status: MicaStatus | GeniusAuthorizationStatus,
+) {
+  return regime === "mica"
+    ? {
+        badge: MICA_STATUS_BADGE_STYLES[status as MicaStatus],
+        description: MICA_STATUS_DESCRIPTIONS[status as MicaStatus],
+      }
+    : {
+        badge: GENIUS_AUTHORIZATION_STATUS_BADGE_STYLES[status as GeniusAuthorizationStatus],
+        description: GENIUS_AUTHORIZATION_STATUS_DESCRIPTIONS[status as GeniusAuthorizationStatus],
+      };
+}
+
 export function CoinLink({
   row,
   logo,
@@ -42,12 +57,7 @@ export function ComplianceStatusBadge({
   regime: "mica" | "genius";
   status: MicaStatus | GeniusAuthorizationStatus;
 }) {
-  const badge = regime === "mica"
-    ? MICA_STATUS_BADGE_STYLES[status as MicaStatus]
-    : GENIUS_AUTHORIZATION_STATUS_BADGE_STYLES[status as GeniusAuthorizationStatus];
-  const description = regime === "mica"
-    ? MICA_STATUS_DESCRIPTIONS[status as MicaStatus]
-    : GENIUS_AUTHORIZATION_STATUS_DESCRIPTIONS[status as GeniusAuthorizationStatus];
+  const { badge, description } = complianceStatusMeta(regime, status);
   return (
     <span
       title={description}

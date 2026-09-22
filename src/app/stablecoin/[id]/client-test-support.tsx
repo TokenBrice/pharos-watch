@@ -65,7 +65,7 @@ function makeViewModelBase(coin: StablecoinMeta) {
       chainCirculating: {}, chains: ["ethereum"],
     },
     mcap: 100, supply: 100, prevDay: 99, prevWeek: 98, prevMonth: 97,
-    performanceVsUsd1y: null, pegRef: 1, deviationBps: 0, gaugeDeviationBps: 0,
+    performanceVsUsd1y: null, pegRef: 1, deviationBps: 0,
     isNavToken: false, pegScoreResult: null, consensusSources: [], agreeSources: [],
     dexPriceCheck: null, liquidityData: undefined, yieldRanking: null, hasYieldSection: false,
     stressSignal: null, redemptionBackstop: undefined, hasFlows: false, hasBlacklist: false,

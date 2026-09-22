@@ -1,18 +1,16 @@
 "use client";
 
-import { useMemo } from "react";
-import { Maximize2, Minimize2 } from "lucide-react";
-import { AreaChart, Area } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useChartShell } from "@/hooks/use-chart-shell";
-import { TimeRangeButtons } from "@/components/time-range-buttons";
-import { TimeRangeOption, useTimeRangeFilter } from "@/hooks/use-time-range-filter";
+import { useCallback, useMemo } from "react";
+import { type TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { formatCurrency, formatChartDate, formatPercent } from "@shared/lib/format";
 import { useNonUsdShare } from "@/hooks/api-hooks";
-import { CHART_GREEN, CHART_AMBER, CHART_HEIGHT } from "@/lib/chart-colors";
+import { CHART_GREEN, CHART_AMBER } from "@/lib/chart-colors";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
-import { ChartAreaGradient, DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives/axes";
+import {
+  FocusedStackedAreaCard,
+  type StackedAreaSeries,
+} from "@/components/chart-primitives/focused-stacked-area-card";
+import type { ChartDataTableColumn } from "@/components/chart-primitives/data-table";
 import { computeChartYDomain } from "@/lib/chart-utils";
 
 const COMMODITY_COLOR = CHART_AMBER;
@@ -29,6 +27,36 @@ interface SharePoint {
   fiatNonUsd: number;
   total: number;
 }
+
+const SHARE_SERIES: StackedAreaSeries[] = [
+  {
+    dataKey: "commodityShare",
+    color: COMMODITY_COLOR,
+    gradientId: "commodityShareGrad",
+    stackId: "1",
+    legend: "Commodities (gold, silver)",
+    legendMarkerClassName: "inline-block h-2.5 w-2.5 rounded-full shrink-0",
+    handleAnimationEnd: true,
+  },
+  {
+    dataKey: "fiatNonUsdShare",
+    color: FIAT_COLOR,
+    gradientId: "fiatNonUsdShareGrad",
+    stackId: "1",
+    legend: "Non-commodity non-USD",
+    legendMarkerClassName: "inline-block h-2.5 w-2.5 rounded-full shrink-0",
+  },
+];
+
+const SHARE_TABLE_COLUMNS: ChartDataTableColumn<SharePoint>[] = [
+  { id: "date", label: "Date", format: (row) => formatChartDate(row.ts, "short-year") },
+  { id: "commodities", label: "Commodities", format: (row) => formatPercent(row.commodityShare) },
+  {
+    id: "nonCommodity",
+    label: "Non-commodity non-USD",
+    format: (row) => formatPercent(row.fiatNonUsdShare),
+  },
+];
 
 interface ShareTooltipProps {
   active?: boolean;
@@ -69,7 +97,6 @@ export function NonUsdShareChart({
   onRangeChange,
 }: NonUsdShareChartProps = {}) {
   const { data, isLoading } = useNonUsdShare();
-  const { animProps, handleAnimationEnd, chartContainerRef, isChartReady, width, height } = useChartShell<HTMLDivElement>();
 
   const { chartData, latestShare, latestNonUsd, latestTotal } = useMemo(() => {
     if (!Array.isArray(data) || data.length === 0)
@@ -94,157 +121,65 @@ export function NonUsdShareChart({
   }, [data]);
 
   const coverageStartLabel = chartData[0] ? formatChartDate(chartData[0].ts, "long") : null;
-  const chartHeightClass = isFocused ? FOCUSED_CHART_HEIGHT : CHART_HEIGHT;
-
-  const { range, setRange, filteredData, options } = useTimeRangeFilter(chartData, "ts", RANGE_OPTIONS, {
-    initialRange,
-  });
-
-  const handleRangeChange = (nextRange: TimeRangeOption) => {
-    setRange(nextRange);
-    onRangeChange?.(nextRange);
-  };
-
-  const yDomain = useMemo(
-    () => computeChartYDomain(
-      filteredData.map((d) => d.commodityShare + d.fiatNonUsdShare),
-      range === "all",
-    ),
-    [range, filteredData],
+  const getYDomain = useCallback(
+    (filteredData: SharePoint[], range: TimeRangeOption) =>
+      computeChartYDomain(
+        filteredData.map((point) => point.commodityShare + point.fiatNonUsdShare),
+        range === "all",
+      ),
+    [],
   );
 
-  if (isLoading) {
-    return (
-      <Card className="pharos-card-shell">
-        <CardHeader>
-          <CardTitle as="h2">Non-USD Market Share</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Skeleton className={`${CHART_HEIGHT} w-full`} />
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
-    <Card className="pharos-card-shell animate-in fade-in duration-300">
-      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1">
-          <CardTitle as="h2">Share Of Total Stablecoin Market Outside USD</CardTitle>
-          {latestTotal > 0 && (
-            <p className="text-sm text-muted-foreground">
-              Current share: {formatPercent(latestShare)} of total stablecoin market &middot; current outside-USD
-              segment size: {formatCurrency(latestNonUsd, 1)}
-            </p>
-          )}
-          {coverageStartLabel ? (
-            <p className="text-xs text-muted-foreground">
-              Coverage starts {coverageStartLabel}. Built from supply-history snapshots: daily over the last 90d, then
-              weekly to 2y, then monthly across the loaded history window. The non-commodity bucket includes
-              currency-linked plus other non-commodity pegs.
-            </p>
-          ) : null}
-          {isFocused ? (
-            <p className="text-xs text-muted-foreground">
-              Focused view &middot; shareable URL &middot; this chart measures share, not cohort dollar market cap.
-            </p>
-          ) : null}
-        </div>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <TimeRangeButtons options={options} value={range} onChange={handleRangeChange} />
-          {isFocused ? (
-            <button
-              type="button"
-              onClick={onCloseFocus}
-              aria-label="Return share chart to overview"
-              className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 rounded-sm py-2 text-xs text-muted-foreground hover:text-foreground sm:min-h-0 sm:py-0"
-            >
-              <Minimize2 className="h-3.5 w-3.5" />
-              Return share chart to overview
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => onOpenFocus?.(range)}
-              aria-label="Open large share chart"
-              className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 rounded-sm py-2 text-xs text-muted-foreground hover:text-foreground sm:min-h-0 sm:py-0"
-            >
-              <Maximize2 className="h-3.5 w-3.5" />
-              Open large share chart
-            </button>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent>
-        {filteredData.length > 0 ? (
-          <>
-            <div className="pharos-chart-stage">
-              <div
-                ref={chartContainerRef}
-                className={chartHeightClass}
-                role="figure"
-                aria-label={`Share of total stablecoin market outside USD chart showing ${formatPercent(latestShare)} current share`}
-              >
-                {isChartReady ? (
-                  <AreaChart
-                  width={width}
-                  height={height}
-                  data={filteredData}
-                  margin={{ top: 5, right: 5, bottom: 20, left: 5 }}
-                >
-                  <defs>
-                    <ChartAreaGradient id="commodityShareGrad" color={COMMODITY_COLOR} />
-                    <ChartAreaGradient id="fiatNonUsdShareGrad" color={FIAT_COLOR} />
-                  </defs>
-                  <TimeGrid />
-                  <TimeXAxis dataKey="ts" minTickGap={72} />
-                  <MonoYAxis
-                    tickFormatter={(val: number) => formatPercent(val, 1)}
-                    domain={yDomain}
-                  />
-                  <DateTooltip content={<ShareTooltip />} />
-                  <Area
-                    type="monotone"
-                    dataKey="commodityShare"
-                    stackId="1"
-                    stroke={COMMODITY_COLOR}
-                    fill="url(#commodityShareGrad)"
-                    strokeWidth={1.5}
-                    onAnimationEnd={handleAnimationEnd}
-                    {...animProps}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="fiatNonUsdShare"
-                    stackId="1"
-                    stroke={FIAT_COLOR}
-                    fill="url(#fiatNonUsdShareGrad)"
-                    strokeWidth={1.5}
-                    {...animProps}
-                  />
-                </AreaChart>
-              ) : (
-                <Skeleton className="h-full w-full" />
-              )}
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-3 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1.5">
-                <span className="inline-block h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: COMMODITY_COLOR }} />
-                Commodities (gold, silver)
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="inline-block h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: FIAT_COLOR }} />
-                Non-commodity non-USD
-              </span>
-            </div>
-          </>
-        ) : (
-          <div className={`flex ${chartHeightClass} items-center justify-center text-muted-foreground`}>
-            No market share data available
-          </div>
-        )}
-      </CardContent>
-    </Card>
+    <FocusedStackedAreaCard
+      data={chartData}
+      tsKey="ts"
+      isLoading={isLoading}
+      title="Share Of Total Stablecoin Market Outside USD"
+      loadingTitle="Non-USD Market Share"
+      subtitle={
+        latestTotal > 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Current share: {formatPercent(latestShare)} of total stablecoin market &middot; current outside-USD
+            segment size: {formatCurrency(latestNonUsd, 1)}
+          </p>
+        ) : null
+      }
+      coverageNote={
+        coverageStartLabel ? (
+          <p className="text-xs text-muted-foreground">
+            Coverage starts {coverageStartLabel}. Built from supply-history snapshots: daily over the last 90d, then
+            weekly to 2y, then monthly across the loaded history window. The non-commodity bucket includes
+            currency-linked plus other non-commodity pegs.
+          </p>
+        ) : null
+      }
+      focusedNote={
+        <p className="text-xs text-muted-foreground">
+          Focused view &middot; shareable URL &middot; this chart measures share, not cohort dollar market cap.
+        </p>
+      }
+      initialRange={initialRange}
+      rangeOptions={RANGE_OPTIONS}
+      isFocused={isFocused}
+      onOpenFocus={onOpenFocus}
+      onCloseFocus={onCloseFocus}
+      onRangeChange={onRangeChange}
+      openFocusLabel="Open large share chart"
+      closeFocusLabel="Return share chart to overview"
+      focusedHeightClassName={FOCUSED_CHART_HEIGHT}
+      ariaLabel={`Share of total stablecoin market outside USD chart showing ${formatPercent(latestShare)} current share`}
+      emptyMessage="No market share data available"
+      series={SHARE_SERIES}
+      tooltip={<ShareTooltip />}
+      yDomain={getYDomain}
+      yTickFormatter={(value) => formatPercent(value, 1)}
+      tableColumns={SHARE_TABLE_COLUMNS}
+      tableCaption={(_rows, truncated, total) =>
+        `Share of total stablecoin market outside USD over ${total} points${truncated ? "; showing the latest 90" : ""}.`
+      }
+      cardClassName="pharos-card-shell animate-in fade-in duration-300"
+      legendClassName="flex flex-wrap gap-x-4 gap-y-1.5 mt-3 text-xs text-muted-foreground"
+    />
   );
 }

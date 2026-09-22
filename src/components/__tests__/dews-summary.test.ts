@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   buildDewsSummaryViewModel,
   computeBandCounts,
-  getAggregateFreshnessTimestamp,
   resolveRadarClick,
 } from "@/components/dews-summary-model";
 
@@ -55,18 +54,6 @@ describe("resolveRadarClick", () => {
   });
 });
 
-describe("getAggregateFreshnessTimestamp", () => {
-  it("uses the aggregate publication timestamp even when some rows are retained last-valid values", () => {
-    expect(getAggregateFreshnessTimestamp({
-      updatedAt: 1_775_898_800,
-      oldestComputedAt: 1_775_889_800,
-    })).toBe(1_775_898_800);
-  });
-
-  it("falls back to updatedAt for older API responses", () => {
-    expect(getAggregateFreshnessTimestamp({ updatedAt: 1_775_898_800 })).toBe(1_775_898_800);
-  });
-});
 
 describe("buildDewsSummaryViewModel", () => {
   it("derives radar structures together for a single memoized render path", () => {

@@ -1,4 +1,5 @@
 import type { ChangeEvent, ReactNode } from "react";
+import { CLIENT_ACTIVE_META_BY_ID as ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import {
   getNoticeTone,
   getStatusTone,
@@ -8,6 +9,12 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { DataTableColumn } from "@/components/data-table-shell";
 import { cn } from "@/lib/utils";
+
+export function getCoinLabel(coinId: string): string {
+  const meta = ACTIVE_META_BY_ID.get(coinId);
+  if (!meta) return coinId;
+  return `${meta.symbol} · ${meta.name}`;
+}
 
 export function defineStatusColumns(columns: readonly (readonly [string, string])[]): readonly DataTableColumn[] {
   return columns.map(([id, label]) => ({ id, label, className: "pb-2 font-medium" }));

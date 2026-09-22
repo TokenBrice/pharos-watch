@@ -1,14 +1,8 @@
 import { STATUS_RESERVE_DRIFT_THRESHOLD_POINTS } from "@shared/lib/status-thresholds";
-import { CLIENT_ACTIVE_META_BY_ID as ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type { ClassificationWarning, ReserveDriftEntry, StatusSectionError } from "@shared/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LazyDetails } from "@/components/status/lazy-details";
-
-function getCoinLabel(coinId: string): string {
-  const meta = ACTIVE_META_BY_ID.get(coinId);
-  if (!meta) return coinId;
-  return `${meta.symbol} · ${meta.name}`;
-}
+import { getCoinLabel } from "@/components/status/page-primitives";
 
 const INITIAL_WARNING_COUNT = 6;
 

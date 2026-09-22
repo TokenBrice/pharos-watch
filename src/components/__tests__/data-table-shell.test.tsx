@@ -8,7 +8,6 @@ import {
   DataTableEmptyRow,
   DataTableLoadingRows,
   DataTableShell,
-  DataTableSkeletonShell,
   type DataTableColumn,
 } from "@/components/data-table-shell";
 
@@ -208,20 +207,4 @@ describe("DataTableShell", () => {
     queryClient.clear();
   });
 
-  it("renders a reusable skeleton shell with table semantics", () => {
-    render(
-      <DataTableSkeletonShell
-        columns={columns}
-        rowCount={3}
-        tableId="loading-table"
-        testId="loading-table-shell"
-      />,
-    );
-
-    const shell = screen.getByTestId("loading-table-shell");
-
-    expect(shell.getAttribute("data-table-id")).toBe("loading-table");
-    expect(within(screen.getByRole("table")).getAllByRole("row")).toHaveLength(4);
-    expect(screen.getAllByTestId("loading-table-shell")).toHaveLength(1);
-  });
 });

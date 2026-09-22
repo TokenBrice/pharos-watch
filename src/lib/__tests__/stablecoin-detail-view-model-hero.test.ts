@@ -33,7 +33,6 @@ describe("stablecoin detail hero view-model builder", () => {
       performanceVsUsd1y: 12.34,
       pegRef: 1,
       deviationBps: -300,
-      gaugeDeviationBps: -300,
       pegReferenceUnavailable: false,
       pegScoreResult: makePegSummaryCoin({
         id: "usdc-circle",

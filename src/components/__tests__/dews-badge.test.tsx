@@ -38,23 +38,6 @@ describe("DEWSBadge", () => {
     expect(screen.queryByText("Warning")).toBeNull();
   });
 
-  it("shows upward arrow when score increased from prevScore", () => {
-    render(<DEWSBadge score={70} band="WARNING" prevScore={55} />);
-    const el = screen.getByText(/Warning/);
-    expect(el.textContent).toContain("▲");
-  });
-
-  it("does not show arrow when score equals prevScore", () => {
-    render(<DEWSBadge score={65} band="WARNING" prevScore={65} />);
-    const el = screen.getByText(/Warning/);
-    expect(el.textContent).not.toContain("▲");
-  });
-
-  it("does not show arrow when score is lower than prevScore", () => {
-    render(<DEWSBadge score={50} band="ALERT" prevScore={65} />);
-    const el = screen.getByText(/Alert/);
-    expect(el.textContent).not.toContain("▲");
-  });
 
   it("sets tooltip with score info", () => {
     render(<DEWSBadge score={65} band="WARNING" />);
@@ -93,19 +76,4 @@ describe("DEWSBadge", () => {
     expect(el.getAttribute("title")).toContain("velocity");
   });
 
-  it("uses the collapsed CALM+WATCH span before canonical alert and warning edges", () => {
-    render(<DEWSBadge score={36} band="ALERT" showBandStrip />);
-    const strip = screen.getByRole("img", { name: "DEWS score 36 of 100" });
-    const bands = Array.from(strip.querySelectorAll("rect")).slice(0, 4);
-
-    expect(bands).toHaveLength(4);
-    expect(Number(bands[0]?.getAttribute("x"))).toBe(0);
-    expect(Number(bands[0]?.getAttribute("width"))).toBeCloseTo(21);
-    expect(Number(bands[1]?.getAttribute("x"))).toBeCloseTo(21.6);
-    expect(Number(bands[1]?.getAttribute("width"))).toBeCloseTo(11.4);
-    expect(Number(bands[2]?.getAttribute("x"))).toBeCloseTo(33.6);
-    expect(Number(bands[2]?.getAttribute("width"))).toBeCloseTo(11.4);
-    expect(Number(bands[3]?.getAttribute("x"))).toBeCloseTo(45.6);
-    expect(Number(bands[3]?.getAttribute("width"))).toBeCloseTo(14.4);
-  });
 });

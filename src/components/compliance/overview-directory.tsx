@@ -13,21 +13,13 @@ import {
 import { trackEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 import { PEG_METADATA } from "@shared/lib/classification";
-import {
-  GENIUS_AUTHORIZATION_STATUS_BADGE_STYLES,
-  GENIUS_AUTHORIZATION_STATUS_DESCRIPTIONS,
-} from "@shared/lib/genius";
-import {
-  MICA_STATUS_BADGE_STYLES,
-  MICA_STATUS_DESCRIPTIONS,
-} from "@shared/lib/mica";
 import type { GeniusAuthorizationStatus, MicaStatus } from "@shared/types";
 import {
   GENIUS_STATUS_DISPLAY_ORDER,
   MICA_STATUS_DISPLAY_ORDER,
   type ComplianceOverviewRow,
 } from "@/lib/compliance-model";
-import { CoinLink, EmptyCell } from "./compliance-row-primitives";
+import { CoinLink, EmptyCell, complianceStatusMeta } from "./compliance-row-primitives";
 
 type OverviewSortColumn = "mica" | "genius";
 interface OverviewSort {
@@ -217,12 +209,7 @@ function OverviewStatusButton({
   inWatch?: boolean;
   onClick: (regime: "mica" | "genius", status: MicaStatus | GeniusAuthorizationStatus) => void;
 }) {
-  const badge = regime === "mica"
-    ? MICA_STATUS_BADGE_STYLES[status as MicaStatus]
-    : GENIUS_AUTHORIZATION_STATUS_BADGE_STYLES[status as GeniusAuthorizationStatus];
-  const description = regime === "mica"
-    ? MICA_STATUS_DESCRIPTIONS[status as MicaStatus]
-    : GENIUS_AUTHORIZATION_STATUS_DESCRIPTIONS[status as GeniusAuthorizationStatus];
+  const { badge, description } = complianceStatusMeta(regime, status);
 
   return (
     <button
