@@ -14,15 +14,20 @@ import {
 } from "./yield-cache.test-support";
 import {
   buildYieldSupplementalFamilyCache,
+  buildYieldSupplementalPendleBackoff,
   buildYieldSupplementalRunOutcome,
   getYieldSupplementalFamilyCacheKey,
+  getYieldSupplementalPendleBackoffCacheKey,
   getYieldSupplementalRunOutcomeCacheKey,
   parseYieldSupplementalSourcesCache,
   type SupplementalFamilyCacheResult,
 } from "../yield-sync/cache/supplemental-cache-keys";
 import { loadYieldSyncState } from "../yield-sync/state-loading";
-import { SUPPLEMENTAL_SOURCE_FAMILY_KEYS } from "../yield-sync/supplemental-source-families";
-import type { SupplementalSourceFamilyKey } from "../yield-sync/supplemental-source-family-keys";
+import { getSupplementalFamilyStaleThresholdSec } from "../yield-sync/supplemental-source-families";
+import {
+  SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
+  type SupplementalSourceFamilyKey,
+} from "../yield-sync/supplemental-source-family-keys";
 import type { ResolvedYieldCandidate } from "../yield-sync/types";
 
 const HOUR_SEC = 3600;
@@ -44,6 +49,29 @@ function morphoCandidate(observedAt: number): ResolvedYieldCandidate {
       sourceKey: "protocol-api:morpho-vault:ethereum:0xvault",
       yieldSource: "Morpho: sDAI Vault",
       yieldType: "lending-vault",
+      sourceObservedAt: observedAt,
+      comparisonAnchorObservedAt: null,
+    },
+  };
+}
+
+function pendleCandidate(observedAt: number): ResolvedYieldCandidate {
+  return {
+    stablecoinId: "100",
+    symbol: "USDG",
+    chain: "ethereum",
+    address: null,
+    yield: {
+      currentApy: 5.2,
+      apyBase: 5.2,
+      apyReward: null,
+      sourcePool: "0xpt",
+      sourceTvlUsd: 12_000_000,
+      dataSource: "protocol-api",
+      exchangeRate: null,
+      sourceKey: "protocol-api:pendle:ethereum:0xpt",
+      yieldSource: "Pendle fixed yield: Global Dollar USDG",
+      yieldType: "fixed-yield",
       sourceObservedAt: observedAt,
       comparisonAnchorObservedAt: null,
     },
@@ -115,14 +143,16 @@ describe("supplemental family cache acceptance window", () => {
   it("reports a stale cache when every required family missed its refresh slot", async () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
-    const familyAgeSec = 6 * HOUR_SEC + 60;
     const staleRows = Object.fromEntries(
       SUPPLEMENTAL_SOURCE_FAMILY_KEYS
         .filter((family) => family !== "vaultsFyi")
-        .map((family) => [
-          getYieldSupplementalFamilyCacheKey(family),
-          supplementalFamilyCacheRow([], nowSec - familyAgeSec),
-        ]),
+        .map((family) => {
+          const staleAgeSec = getSupplementalFamilyStaleThresholdSec(family) + 60;
+          return [
+            getYieldSupplementalFamilyCacheKey(family),
+            supplementalFamilyCacheRow([], nowSec - staleAgeSec),
+          ];
+        }),
     );
 
     installYieldCacheReader(vi.mocked(getCache), staleRows);
@@ -212,5 +242,78 @@ describe("supplemental family cache acceptance window", () => {
     const state = await loadYieldSyncState({ db, startSec: nowSec, chainRpcs: new Map() });
 
     expect(state.supplementalMeta.degradedFamilies).toEqual([]);
+  });
+
+  it("accepts a pendle row inside its daily budget and does not degrade the lane", async () => {
+    const db = makeDb();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const pendleAgeSec = 30 * HOUR_SEC;
+
+    installYieldCacheReader(vi.mocked(getCache), {
+      ...freshRequiredFamilyRows(nowSec),
+      [getYieldSupplementalFamilyCacheKey("pendle")]:
+        supplementalFamilyCacheRow([pendleCandidate(nowSec - pendleAgeSec)], nowSec - pendleAgeSec),
+    });
+
+    const state = await loadYieldSyncState({ db, startSec: nowSec, chainRpcs: new Map() });
+
+    expect(state.supplementalCandidates).toEqual([pendleCandidate(nowSec - pendleAgeSec)]);
+    expect(state.supplementalMeta).toMatchObject({
+      mode: "cache",
+      fallbackMode: null,
+      degradedFamilies: [],
+    });
+  });
+
+  it("excludes a pendle row past its 48h budget and reports it as a partial cache", async () => {
+    const db = makeDb();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const pendleAgeSec = 49 * HOUR_SEC;
+
+    installYieldCacheReader(vi.mocked(getCache), {
+      ...freshRequiredFamilyRows(nowSec),
+      [getYieldSupplementalFamilyCacheKey("pendle")]:
+        supplementalFamilyCacheRow([pendleCandidate(nowSec - pendleAgeSec)], nowSec - pendleAgeSec),
+    });
+
+    const state = await loadYieldSyncState({ db, startSec: nowSec, chainRpcs: new Map() });
+
+    expect(state.supplementalCandidates).toEqual([]);
+    expect(state.supplementalMeta).toMatchObject({
+      mode: "cache",
+      fallbackMode: "partial-family-cache",
+      sourceCount: 0,
+    });
+  });
+
+  it.each([
+    ["inside the pendle budget", 30 * HOUR_SEC, null],
+    ["past the pendle budget", 49 * HOUR_SEC, "pendle-rate-limited-backoff"],
+  ])("re-evaluates an active pendle quota backoff %s on the publication clock", async (_label, ageSec, expectedReason) => {
+    const db = makeDb();
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    installYieldCacheReader(vi.mocked(getCache), {
+      ...freshRequiredFamilyRows(nowSec),
+      [getYieldSupplementalFamilyCacheKey("pendle")]:
+        supplementalFamilyCacheRow([pendleCandidate(nowSec - ageSec)], nowSec - ageSec),
+      [getYieldSupplementalPendleBackoffCacheKey()]: cacheRow(
+        buildYieldSupplementalPendleBackoff({
+          backoffUntilSec: nowSec + 3600,
+          source: "x-ratelimit-weekly-reset",
+          recordedAtSec: nowSec,
+        }),
+        nowSec,
+      ),
+    });
+
+    const state = await loadYieldSyncState({ db, startSec: nowSec, chainRpcs: new Map() });
+
+    if (expectedReason == null) {
+      expect(state.supplementalMeta).toMatchObject({ fallbackMode: null, degradedFamilies: [] });
+      return;
+    }
+    expect(state.supplementalMeta.degradedFamilies).toEqual(["pendle"]);
+    expect(state.supplementalMeta.degradedFamilyReasons).toEqual({ pendle: expectedReason });
   });
 });

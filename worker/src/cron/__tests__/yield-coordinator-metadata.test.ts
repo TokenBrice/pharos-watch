@@ -160,6 +160,24 @@ describe("buildYieldDegradationReasons", () => {
     expect(reasons.filter((reason) => reason.startsWith("yield-source:family-failed:"))).toEqual([]);
   });
 
+  it("appends the producer's machine-readable cause to a degraded family reason", () => {
+    const reasons = buildYieldDegradationReasons({
+      ...baseParams,
+      defaultBenchmarkMeta: buildHardcodedUsdBenchmark("test"),
+      supplementalMeta: {
+        mode: "cache",
+        updatedAt: START_SEC,
+        ageSeconds: 0,
+        sourceCount: 40,
+        fallbackMode: null,
+        degradedFamilies: ["pendle"],
+        degradedFamilyReasons: { pendle: "pendle-rate-limited-backoff" },
+      },
+    });
+
+    expect(reasons).toContain("yield-supplemental:family-degraded:pendle:pendle-rate-limited-backoff");
+  });
+
   it("names the stale selected source in the degradation reason", () => {
     const reasons = buildYieldDegradationReasons({
       ...baseParams,

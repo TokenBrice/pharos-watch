@@ -26,6 +26,7 @@ Many router-dispatched mutating admin endpoints also support optional `Idempoten
 - `POST /api/backfill-dews`
 - `POST /api/audit-depeg-history`
 - `POST /api/trigger-digest`
+- `POST /api/trigger-yield-coverage-audit`
 - `POST /api/reset-blacklist-sync`
 - `POST /api/remediate-blacklist-amount-gaps`
 - `POST /api/backfill-blacklist-current-balances`
@@ -505,7 +506,7 @@ Ratio-based on-chain status thresholds apply only when `dataQuality.onchainSuppl
 
 `reserveComposition.runBudgetTruncated`, `deferredCoins`, `deferredAt`, and `nextCursorStablecoinId` expose the latest live-reserve deferred-tail cursor when the internal sync budget stopped the run before the queue tail. `persistentlyStaleIndependentCoins` lists independent feeds whose latest source has been failing beyond the persistent-stale window. `writeTimeoutUncertain` counts coins whose latest attempt hit the D1 write-timeout / finalize-rejection path and could not be proven authoritative by readback.
 
-`crons[*].healthy` reflects availability impact. Fresh cron runs with `status="degraded"` are warning-only and counted in `summary.degradedCrons`, but they do not mark availability unhealthy on their own.
+`crons[*].healthy` reflects availability impact. Fresh cron runs with `status="degraded"` are warning-only and counted in `summary.degradedCrons`, but they do not mark availability unhealthy on their own. Every counted job is derivable from the served records — a fresh degraded `lastRun`, or a neutral `lastRun` whose inherited degraded required run is served in `recentRuns` (as an eleventh entry when the ten-run display window is all neutral).
 
 `availabilityStatus` also inherits the shared public-health floor used by `/api/health`: cache-impact status, the critical mint/burn lane's public warning/staleness contract, and 3+ public-impact open circuit groups can degrade availability even when cron freshness alone is still green. Dynamic per-coin `live-reserves:*` breakers remain visible in `circuits`, but they do not change `availabilityStatus` on their own.
 
@@ -530,7 +531,7 @@ Ratio-based on-chain status thresholds apply only when `dataQuality.onchainSuppl
 
 `sectionErrors` is a machine-readable map of subsection loader failures. When an individual status subsection fails (for example Telegram stats, discovery backlog, CoinGecko price drift, D1 usage telemetry, liquidity health, reserve drift, or mint/burn reconciliation), `/api/status` still returns `200`, keeps the unaffected sections intact, and records the degraded subsection under `sectionErrors` with a stable `code` plus an operator-facing sanitized `message`. Raw exception text, SQL fragments, and table names stay in logs, not in the response body.
 
-`crons["dispatch-telegram-alerts"].lastRun.metadata` now carries a richer delivery breakdown, including fields such as `freshAttempted`, `freshSent`, `freshRetryQueued`, `freshPermanentFailures`, `pendingAttempted`, `pendingDrained`, `pendingRetryQueued`, `pendingDeferred`, `pendingRateLimited`, `pendingRetryAfterSec`, `pendingDropped`, `pendingEnqueued`, and expanded `eventsDetected` counters (`depegTriggered`, `depegResolved`, `depegWorsening`, `launch`, `suppressedMethodologyChanges`).
+`crons["dispatch-telegram-alerts"].lastRun.metadata` now carries a richer delivery breakdown, including fields such as `freshAttempted`, `freshSent`, `freshRetryQueued`, `freshPermanentFailures`, `pendingAttempted`, `pendingDrained`, `pendingRetryQueued`, `pendingDeferred`, `pendingRateLimited`, `pendingRetryAfterSec`, `pendingDropped`, `pendingEnqueued`, and expanded `eventsDetected` counters (`depegTriggered`, `depegResolved`, `depegWorsening`, `launch`, `suppressedMethodologyChanges`). Rows written before this breakdown (and recovery re-writes of them) can lack the fresh-side counters while still carrying the pending-side ones; the admin comms model reads an absent `freshRetryQueued` as `0` only when that dispatch completed `ok` and `pendingRetryQueued` is present, and keeps delivery `Unknown` for any other incomplete shape.
 
 Source-event runs also include `authoritativePlanning`. It identifies `sourceEventId` and `sourceEventFamilies`; splits source-preset resolution, candidate-horizon, fan-out input loaders, preference-generation validation, routing, target materialization, duplicate suppression, queue handoff, and pending-drain duration; and reports capture/planning/handoff pages, fan-out load/cache counts, captured/planned/duplicate-suppressed/enqueued targets, and coordinator steps. Eventless runs return the same object with a null source ID and zero counts/timings so status consumers do not need a second shape.
 
@@ -1138,6 +1139,33 @@ Queues a deferred daily-digest regeneration, bypassing the normal 1-hour dedup c
 The worker no longer uses HTTP `waitUntil()` for this action. It enqueues the intent in D1 and returns immediately so the Access-gated ops proxy does not need to hold the HTTP request open for the full Anthropic generation window. The scheduled poll logs each run against the `daily-digest` cron history and persists a compact `digest:last-trigger-result` cache entry for D1 inspection/future UI surfacing, including retry state, retained dead letters, and manual `skipped_locked` outcomes when another digest run already holds the lease. The current admin panel shows the enqueue result from the browser session; it does not yet render the persisted poll outcome.
 
 Unhandled pre-enqueue failures are wrapped by the shared error handler and return `500` with `{ "error": "Internal Server Error" }`.
+
+### `POST /api/trigger-yield-coverage-audit`
+
+Recomputes the coverage-audit report after reviewed yield configuration is deployed. Uses the same `runYieldCoverageAudit`, `logCronRun`, `runCronWithLease` job identity, timeout policy, and declared connection allocation as the monthly audit. The monthly schedule remains `0 6 1 * *`.
+
+Requires Cloudflare Access authentication and `X-Pharos-Admin: 1`, like `trigger-digest`. An optional `Idempotency-Key` deduplicates retries. No request body is required.
+
+Execution is synchronous: keep the HTTP request open. The route does not launch long-running `waitUntil()` work. The worker applies this job's normal five-minute cron timeout, and the browser ops proxy waits up to 330 seconds so a slow audit still returns its real status. For an audit that runs longer than the client timeout, inspect cron history before retrying and prefer the machine API, which bypasses the browser proxy.
+
+| HTTP status | Meaning |
+| --- | --- |
+| `200` | Audit finished with cron status `ok`. Inspect `/api/status` for the actual queue-budget verdict; completion alone does not mean the queue is healthy. |
+| `409` | Another manual or scheduled audit owns the `yield-coverage-audit` lease. No second audit ran. |
+| `503` | Audit returned a non-healthy result, for example unavailable rankings or safety inputs. The response metadata explains why; a prior report may remain cached. |
+| `500` | The audit threw or persistence failed. Check `crons["yield-coverage-audit"]` before retrying. |
+
+The response contains `ok`, `job`, `status`, `itemCount`, and the cron's JSON-encoded `metadata`. Successful publication replaces only the audit report and review-queue output; this action does not modify hourly yield-source configuration, ranking rows, or history.
+
+```bash
+curl --fail-with-body --max-time 360 -X POST \
+  https://ops-api.pharos.watch/api/trigger-yield-coverage-audit \
+  -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
+  -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
+  -H "X-Pharos-Admin: 1"
+```
+
+See the [yield-health runbook](./runbooks/yield-health.md#recompute-after-a-coverage-drain) for acceptance checks.
 
 ### `POST /api/reset-blacklist-sync`
 
