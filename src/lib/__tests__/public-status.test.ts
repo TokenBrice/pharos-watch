@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { HealthResponse } from "@shared/types";
-import { HealthResponseSchema } from "@shared/types";
+import { HealthResponseSchema } from "@shared/types/status/public-health";
 import { buildPublicHealthStatusCauses } from "@/lib/status/issue-evidence-model";
 import { countPublicImpactOpenCircuits, isPublicImpactCircuitKey } from "@shared/lib/public-health";
 import { makeActivePriceCoverage, makeHealthyHealthResponse, makeMissingActiveAsset } from "@/test-utils/status-fixtures";
