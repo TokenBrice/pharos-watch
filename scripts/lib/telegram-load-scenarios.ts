@@ -136,6 +136,7 @@ export interface ProductionCalibratedDispatchScenario {
 export const {
   watcherTargets: WATCHER_TARGETS,
   requiredTarget: REQUIRED_TARGET,
+  sloEnforcedTarget: SLO_ENFORCED_TARGET,
   exploratoryTarget: EXPLORATORY_TARGET,
   telegramBroadcastMessagesPerSecond: TELEGRAM_BROADCAST_MESSAGES_PER_SECOND,
   telegramP95SendLatencyMs: TELEGRAM_P95_SEND_LATENCY_MS,

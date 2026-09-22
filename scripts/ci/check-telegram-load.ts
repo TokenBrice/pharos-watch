@@ -22,6 +22,7 @@ import {
   PENDING_DRAIN_ATTEMPTS_PER_RUN,
   PENDING_TTL_SECONDS,
   REQUIRED_TARGET,
+  SLO_ENFORCED_TARGET,
   RISK_ALERT_PRIORITY,
   SEND_CPU_MS_PER_MESSAGE,
   SEND_LOOP_SOFT_DEADLINE_SECONDS,
@@ -803,14 +804,14 @@ function main(): void {
   const normalTargetSloFailures = report.scenarios.filter(
     (scenario) =>
       enforceTargetSlo &&
-      scenario.targetActiveWatchers === REQUIRED_TARGET &&
+      scenario.targetActiveWatchers === SLO_ENFORCED_TARGET &&
       (scenario.scenarioId === "single-depeg" || scenario.scenarioId === "dews-safety-burst") &&
       scenario.sloStatus !== "ok",
   );
   const spikeTargetSloBreaches = report.scenarios.filter(
     (scenario) =>
       enforceTargetSlo &&
-      scenario.targetActiveWatchers === REQUIRED_TARGET &&
+      scenario.targetActiveWatchers === SLO_ENFORCED_TARGET &&
       (scenario.scenarioId === "market-wide-burst" || scenario.scenarioId === "telegram-429-storm") &&
       scenario.sloStatus === "breach",
   );
@@ -843,12 +844,12 @@ function main(): void {
     }
     if (normalTargetSloFailures.length > 0) {
       console.error(
-        `\n${normalTargetSloFailures.length} required ${REQUIRED_TARGET.toLocaleString()}-watcher normal SLO scenario(s) were not OK.`,
+        `\n${normalTargetSloFailures.length} required ${SLO_ENFORCED_TARGET.toLocaleString()}-watcher normal SLO scenario(s) were not OK.`,
       );
     }
     if (spikeTargetSloBreaches.length > 0) {
       console.error(
-        `\n${spikeTargetSloBreaches.length} required ${REQUIRED_TARGET.toLocaleString()}-watcher spike scenario(s) breached.`,
+        `\n${spikeTargetSloBreaches.length} required ${SLO_ENFORCED_TARGET.toLocaleString()}-watcher spike scenario(s) breached.`,
       );
     }
     if (cpuBudgetBreaches.length > 0) {

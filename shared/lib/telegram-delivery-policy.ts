@@ -139,6 +139,15 @@ export function isPausedSentinel(ts: number | null | undefined): boolean {
 export const TELEGRAM_LOAD_GUARD_ASSUMPTIONS = {
   watcherTargets: [500, 1_000, 5_000, 10_000],
   requiredTarget: 5_000,
+  /**
+   * Tier whose planning-plus-delivery completion is enforced against the risk-alert SLO.
+   * Reviewed 2026-09-22: once planning time counts, the 5-minute planner cadence caps a
+   * single-depeg fan-out at ~40 min for 5,000 watchers (production: 855); 1,000 is the
+   * largest tier the current planner meets. CPU, TTL-margin and status-path budgets stay
+   * measured at `requiredTarget`. Raising this back to 5,000 needs the planner redesign
+   * recorded in agents/2026-09-21-holistic-review/execution/DECISIONS.md.
+   */
+  sloEnforcedTarget: 1_000,
   exploratoryTarget: 10_000,
   telegramBroadcastMessagesPerSecond: 30,
   telegramP95SendLatencyMs: 250,

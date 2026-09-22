@@ -124,7 +124,7 @@ Broad UI, accessibility, ops, analytics, asset-coherence, and transport checks r
 
 The [generated-artifact registry mechanics](./scripts.md#build-and-generated-artifacts) own lifecycle and automatic-staging facts; the failure playbook above owns checkability and history-input behavior, while the [CI deploy sequence](./deployment-process.md#ci-deploy-sequence) owns build and release ordering.
 
-Telegram load protection is selected into `check:pr:static` by `scripts/lib/telegram-load-guard.mts` and also runs weekly/manual. Its 5,000-watcher readiness scenarios classify the full planning-plus-delivery completion time and compare the higher of planner CPU and pending-drain send CPU against the budget, so pending-only production delivery cannot report zero send cost. `npm run test:critical-contracts` remains a focused local runner; the PR runner always includes those files. It also always includes the real workerd OG-rendering contract so dependency upgrades cannot bypass it through Vitest's import graph.
+Telegram load protection is selected into `check:pr:static` by `scripts/lib/telegram-load-guard.mts` and also runs weekly/manual. Its readiness scenarios classify the full planning-plus-delivery completion time (SLO enforced at the 1,000-watcher tier; CPU, TTL and status-path budgets at 5,000) and compare the higher of planner CPU and pending-drain send CPU against the budget, so pending-only production delivery cannot report zero send cost. `npm run test:critical-contracts` remains a focused local runner; the PR runner always includes those files. It also always includes the real workerd OG-rendering contract so dependency upgrades cannot bypass it through Vitest's import graph.
 
 Selected specialized checks:
 
