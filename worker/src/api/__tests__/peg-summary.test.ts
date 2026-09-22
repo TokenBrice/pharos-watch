@@ -350,7 +350,7 @@ describe("handlePegSummary", () => {
     expect(coin?.dexPriceCheck).toBeUndefined();
   });
 
-  it("falls back to empty DEX prices when the optional DEX table query fails", async () => {
+  it("serves an explicitly degraded no-store response when the DEX price read fails", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
       const asset = makeAsset({ id: "usdt-tether", symbol: "USDT" });
@@ -369,10 +369,14 @@ describe("handlePegSummary", () => {
       const res = await handlePegSummary(db);
       const body = (await readJsonResponse(res, 200)) as {
         coins: Array<{ id: string; dexPriceCheck?: { agrees: boolean } | null }>;
+        degradedReason?: string;
       };
       expect(body.coins.find((c) => c.id === "usdt-tether")?.dexPriceCheck).toBeUndefined();
+      expect(body.degradedReason).toBe("dex-prices-read-failed");
+      expect(res.headers.get("Cache-Control")).toBe("no-store");
+      expect(res.headers.get("Warning")).toContain("DEX price read failed");
       expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining("[peg-summary] DEX price query failed, falling back to empty:"),
+        expect.stringContaining("[peg-summary] DEX price query failed, serving degraded response:"),
       );
     } finally {
       warnSpy.mockRestore();

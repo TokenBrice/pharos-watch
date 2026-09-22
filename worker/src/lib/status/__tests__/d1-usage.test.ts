@@ -262,7 +262,38 @@ describe("getD1UsageSummary", () => {
       "Cloudflare D1 database info fetch failed: invalid JSON response",
     );
   });
+  it.each([
+    ["keeps", 50 * 3_600, true],
+    ["drops", 50 * 3_600 + 1, false],
+  ] as const)("%s a cached table-growth snapshot at the 50-hour age gate", async (_label, ageSec, expected) => {
+    mockFetch([
+      mockSuccessfulDatabaseInfo({ file_size: null }),
+      mockSuccessfulAnalytics([]),
+    ]);
+    const snapshot = {
+      checkedAt: NOW - ageSec,
+      utcDay: Math.floor((NOW - ageSec) / 86_400) * 86_400,
+      previousCheckedAt: null,
+      tables: [],
+      topGrowers: [],
+      failedTables: [],
+    };
+    const db = mockD1([{
+      match: "SELECT value, updated_at FROM cache WHERE key = ?",
+      matchBinds: [D1_TABLE_GROWTH_SNAPSHOT_CACHE_KEY],
+      rows: [{
+        key: D1_TABLE_GROWTH_SNAPSHOT_CACHE_KEY,
+        value: JSON.stringify({ version: 1, snapshot }),
+        updated_at: snapshot.checkedAt,
+      }],
+    }], { requireMatch: true });
+
+    const summary = await getD1UsageSummary(CONFIG, NOW, db);
+
+    expect(summary.tableGrowth).toEqual(expected ? snapshot : null);
+  });
 });
+
 
 describe("refreshD1TableGrowthSnapshot", () => {
   it("records bounded per-table rows, deltas, timestamps, and top growers", async () => {
@@ -348,12 +379,13 @@ describe("refreshD1TableGrowthSnapshot", () => {
         { tableName: "supply_history", rowCount: 120, rowCountDelta: 20 },
         { tableName: "cron_runs", rowCount: 15, rowCountDelta: 5 },
       ],
+      failedTables: [],
     });
     expect(db.getHistory().filter((entry) => entry.sql.includes("FROM \""))).toHaveLength(2);
     expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
-  it("uses the UTC-day marker to avoid rerunning the snapshot", async () => {
+  it("uses the cached UTC-day snapshot to avoid rerunning measurement", async () => {
     const cachedSnapshot = {
       version: 1,
       snapshot: {
@@ -362,6 +394,7 @@ describe("refreshD1TableGrowthSnapshot", () => {
         previousCheckedAt: NOW - 86_400,
         tables: [],
         topGrowers: [],
+        failedTables: [],
       },
     };
     const db = mockD1([
@@ -423,6 +456,7 @@ describe("refreshD1TableGrowthSnapshot", () => {
       checkedAt: NOW,
       tables: [],
       topGrowers: [],
+      failedTables: [],
     });
   });
 });

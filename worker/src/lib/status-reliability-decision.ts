@@ -1,6 +1,7 @@
-import { STATUS_DEGRADED_TO_STALE_THRESHOLD } from "./status-reliability-shared";
-
-type StatusLevel = "healthy" | "degraded" | "stale";
+import {
+  STATUS_DEGRADED_TO_STALE_THRESHOLD,
+  type StatusLevel,
+} from "./status-reliability-shared";
 
 interface StatusHysteresisPolicy {
   escalateToDegraded: number;

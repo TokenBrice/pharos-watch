@@ -227,15 +227,6 @@ export const YieldHealthSummarySchema = z.object({
       }),
     ).optional(),
   }),
-  benchmark: z.object({
-    fetchedAt: z.number().nullable(),
-    ageSec: z.number().nullable(),
-    maxAgeSec: z.number(),
-    source: z.string().nullable(),
-    isFallback: z.boolean().nullable(),
-    fallbackMode: z.string().nullable(),
-    status: StatusHealthOrUnknownSchema,
-  }),
   benchmarkRegistry: YieldBenchmarkRegistryHealthSummarySchema,
   coverageAudit: z.object({
     updatedAt: z.number().nullable(),
@@ -330,7 +321,7 @@ export const MintBurnReconciliationRowSchema = z.object({
   chainSupplyDelta24hUsd: z.number().nullable(),
   absoluteDiffUsd: z.number().nullable(),
   diffRatio: z.number().nullable(),
-  status: z.enum(["ok", "warn", "critical", "insufficient-source"]),
+  status: z.enum(["ok", "critical", "insufficient-source"]),
   coverageStatus: z.union([MintBurnCoverageStatusSchema, z.literal("unknown")]),
   comparisonIssue: z.string().optional(),
   conservation: z.array(MintBurnConservationRecordSchema).optional(),
@@ -342,7 +333,6 @@ export const MintBurnReconciliationSummarySchema = z.object({
   checkedAt: z.number(),
   comparedCoins: z.number(),
   criticalCount: z.number(),
-  warnCount: z.number(),
   insufficientCount: z.number(),
   rows: z.array(MintBurnReconciliationRowSchema),
 });

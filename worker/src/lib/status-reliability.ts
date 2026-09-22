@@ -1,6 +1,5 @@
 export {
   buildFallbackStatusState,
-  clampConfidence,
   STATUS_HYSTERESIS,
   STATUS_SYSTEM_FRESHNESS_SEC,
   summarizeStatusPersistenceIssues,

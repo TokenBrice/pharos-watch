@@ -61,7 +61,7 @@ async function reconcile(options: {
 describe("conservation compatibility schema", () => {
   it("accepts old status payloads without implying conservation evidence", () => {
     const parsed = MintBurnReconciliationSummarySchema.parse({ checkedAt: NOW, comparedCoins: 1,
-      criticalCount: 1, warnCount: 0, insufficientCount: 0, rows: [{ stablecoinId: "usds-sky", symbol: "USDS",
+      criticalCount: 1, insufficientCount: 0, rows: [{ stablecoinId: "usds-sky", symbol: "USDS",
         flowNet24hUsd: 10, chainSupplyDelta24hUsd: 100, absoluteDiffUsd: 90, diffRatio: 0.9,
         status: "critical", coverageStatus: "full" }] });
     expect(parsed.conservationVersion).toBeUndefined();

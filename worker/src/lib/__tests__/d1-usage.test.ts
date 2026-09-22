@@ -10,7 +10,6 @@ const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
 
 const DAY_SEC = 86_400;
-const RUN_MARKER_KEY = "ops:d1-table-growth:last-run:v1";
 
 function cachedSnapshot(checkedAt: number, rowCount: number) {
   const utcDay = Math.floor(checkedAt / DAY_SEC) * DAY_SEC;
@@ -34,10 +33,10 @@ function cachedSnapshot(checkedAt: number, rowCount: number) {
 }
 
 describe("refreshD1TableGrowthSnapshot", () => {
-  it("does not complete the daily claim when a table measurement throws", async () => {
+  it("isolates a table measurement failure in the published snapshot", async () => {
     const observedAt = 1_800_000_000;
-    const { db, sqlite } = fixtures.open();
-    let failNextMeasurement = true;
+    const { db } = fixtures.open();
+    let failMeasurement = true;
     const flakyDb = new Proxy(db, {
       get(target, property, receiver) {
         if (property !== "prepare") return Reflect.get(target, property, receiver);
@@ -50,8 +49,8 @@ describe("refreshD1TableGrowthSnapshot", () => {
                 return Reflect.get(statementTarget, statementProperty, statementReceiver);
               }
               return async () => {
-                if (failNextMeasurement) {
-                  failNextMeasurement = false;
+                if (failMeasurement) {
+                  failMeasurement = false;
                   throw new Error("measurement failed");
                 }
                 return statementTarget.first();
@@ -62,12 +61,11 @@ describe("refreshD1TableGrowthSnapshot", () => {
       },
     }) as D1Database;
 
-    await expect(refreshD1TableGrowthSnapshot(flakyDb, observedAt)).rejects.toThrow("measurement failed");
-    expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(RUN_MARKER_KEY)).toBeUndefined();
-
     const snapshot = await refreshD1TableGrowthSnapshot(flakyDb, observedAt);
+
     expect(snapshot?.checkedAt).toBe(observedAt);
-    expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(RUN_MARKER_KEY)).toBeDefined();
+    expect(snapshot?.failedTables).toEqual(["supply_history"]);
+    expect(snapshot?.tables.some((row) => row.tableName === "supply_history")).toBe(false);
   });
 
   it("nulls deltas and excludes growers when the baseline is three days old", async () => {

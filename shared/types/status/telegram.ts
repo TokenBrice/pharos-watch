@@ -376,14 +376,14 @@ export type ReserveAlertSourceState = (typeof RESERVE_ALERT_SOURCE_STATE_VALUES)
 export interface SafetyAlertFieldsNullable {
   safetyAlertSourceState: SafetyAlertSourceState | null;
   safetyAlertSourceAgeSeconds: number | null;
-  safetyAlertsSuppressed: boolean;
+  safetyAlertsSuppressed: boolean | null;
   safetyAlertSourceGeneration: string | null;
 }
 
 export interface ReserveAlertFieldsNullable {
   reserveAlertSourceState: ReserveAlertSourceState | null;
   reserveAlertSourceAgeSeconds: number | null;
-  reserveAlertsSuppressed: boolean;
+  reserveAlertsSuppressed: boolean | null;
   reserveAlertSourceGeneration: string | null;
 }
 
@@ -449,9 +449,9 @@ export interface TelegramDispatchCronMetadata extends SafetyAlertFieldsNullable,
   messagesSent: number | null;
   blockedUsersCleanedUp: number | null;
   blockedUsersCleanupFailed: number | null;
-  cappedAtLimit: boolean;
-  snapshotSeeded: boolean;
-  eventlessFastPath: boolean;
+  cappedAtLimit: boolean | null;
+  snapshotSeeded: boolean | null;
+  eventlessFastPath: boolean | null;
   skipped: string | null;
   freshAttempted: number | null;
   freshSent: number | null;
@@ -468,14 +468,14 @@ export interface TelegramDispatchCronMetadata extends SafetyAlertFieldsNullable,
   pendingDroppedPermanentFailure: number | null;
   pendingDroppedMaxAttemptsFallback: number | null;
   pendingDeferred: number | null;
-  pendingRateLimited: boolean;
+  pendingRateLimited: boolean | null;
   pendingRetryAfterSec: number | null;
   pendingEnqueued: number | null;
   pendingExpired: number | null;
   chatsWithActiveSnooze: number | null;
   presetQueryFailures: number | null;
   presetResolutionFailures: number | null;
-  presetFailure: boolean;
+  presetFailure: boolean | null;
   suppressedSafetyChangesAtSeed: number | null;
   eventsDetected: ParsedTelegramDispatchEventsDetected | null;
   perAlertType: PerAlertTypeDelivery | null;

@@ -14,13 +14,15 @@ import {
   updateDiscrepancyObservation,
   writeStatusProbeRun,
 } from "../status-reliability";
-import { STATUS_DEGRADED_TO_STALE_THRESHOLD } from "../status-reliability-shared";
+import {
+  STATUS_DEGRADED_TO_STALE_THRESHOLD,
+  type StatusLevel,
+} from "../status-reliability-shared";
 import { decideNextStatus } from "../status-reliability-decision";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
-type StatusLevel = "healthy" | "degraded" | "stale";
 
 interface StatusStateRow {
   scope: string;

@@ -215,6 +215,7 @@ interface RunningCronSlotRow {
   execution_owner: string;
   started_at: number;
   updated_at: number;
+  running_count?: number;
 }
 
 // Stale windows are 5-6 minutes and the global reconciler runs every five, so
@@ -345,7 +346,8 @@ async function fetchRunningCronSlotRows(db: D1Database): Promise<{ rows: Running
   try {
     const runningRows = await db
       .prepare(
-        `SELECT slot_key, slot_started_at, execution_owner, started_at, updated_at
+        `SELECT slot_key, slot_started_at, execution_owner, started_at, updated_at,
+                COUNT(*) OVER () AS running_count
            FROM cron_slot_executions
            WHERE state = 'running'
            ORDER BY updated_at ASC
@@ -384,7 +386,7 @@ function summarizeRunningCronSlots(
     }
   }
   return {
-    runningSlots: rows.length,
+    runningSlots: rows[0]?.running_count ?? rows.length,
     staleCandidateSlots,
     oldestRunningAgeSec,
     oldestStaleAgeSec,
@@ -643,7 +645,7 @@ export async function loadCronHealth(
       // Consecutive-error streak: only counts if the two most-recent runs are
       // both in-error. Neutral skips do not reset the streak because they are
       // not required attempts. A single transient error surfaces as `degraded`
-      // in deriveAvailabilityStatus; only 2+ consecutive escalate to `stale`.
+      // in availability evaluation; only 2+ consecutive escalate to `stale`.
       if (
         statusImpact === "critical"
         && requiredRuns.length >= 2

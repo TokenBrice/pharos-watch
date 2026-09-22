@@ -17,6 +17,7 @@ import { loadTelegramDeliverySliRollup } from "../telegram/delivery-sli";
 import { getCache } from "../db-cache";
 import {
   loadTelegramPendingCapacity,
+  toPendingDeliveryBacklog,
   type TelegramPendingCapacitySnapshot,
 } from "../telegram/pending-capacity";
 
@@ -527,21 +528,7 @@ export function mapTelegramBotStats(input: {
     stats.oldestPendingDeliveryAgeSec = pendingCapacity.oldestPendingAgeSec;
     stats.oldestDuePendingAgeSec = pendingCapacity.oldestDuePendingAgeSec;
     stats.estimatedDrainTimeSec = pendingCapacity.estimatedDrainTimeSec;
-    stats.pendingDeliveryBacklog = {
-      claimable: pendingCapacity.due,
-      due: pendingCapacity.due,
-      deferred: pendingCapacity.deferred,
-      expired: pendingCapacity.expired,
-      nearTtl: pendingCapacity.nearTtl,
-      sending: pendingCapacity.sending,
-      executionUnknown: pendingCapacity.executionUnknown,
-      pendingExecutionUnknown: pendingCapacity.pendingExecutionUnknown,
-      freshExecutionUnknown: pendingCapacity.freshExecutionUnknown,
-      oldestExecutionUnknownAgeSec: pendingCapacity.oldestExecutionUnknownAgeSec,
-      executionUnknownSampleLimit: pendingCapacity.executionUnknownSampleLimit,
-      executionUnknownLowerBound: pendingCapacity.executionUnknownLowerBound,
-      sentCleanup: pendingCapacity.sentCleanup,
-    };
+    stats.pendingDeliveryBacklog = toPendingDeliveryBacklog(pendingCapacity);
   }
   if (webhookEffectUnknown) {
     stats.webhookEffectUnknown = coerceCount(webhookEffectUnknown.pending_count);

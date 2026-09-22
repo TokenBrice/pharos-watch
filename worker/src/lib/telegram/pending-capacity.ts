@@ -1,3 +1,5 @@
+import type { TelegramPendingDeliveryBacklog } from "@shared/types/status";
+
 import {
   PENDING_NEAR_TTL_WINDOW_SEC,
   PENDING_OLD_AGE_ALERT_SEC,
@@ -69,6 +71,28 @@ export function pendingCapacityProgressFields(
     pendingDrainBudgetPerRun: capacity.drainBudgetPerRun,
   };
 }
+export function toPendingDeliveryBacklog(
+  capacity: TelegramPendingCapacitySnapshot,
+): TelegramPendingDeliveryBacklog & { claimable: number } {
+  return {
+    claimable: capacity.due,
+    due: capacity.due,
+    deferred: capacity.deferred,
+    expired: capacity.expired,
+    nearTtl: capacity.nearTtl,
+    sending: capacity.sending,
+    pendingSending: capacity.pendingSending,
+    freshSending: capacity.freshSending,
+    executionUnknown: capacity.executionUnknown,
+    pendingExecutionUnknown: capacity.pendingExecutionUnknown,
+    freshExecutionUnknown: capacity.freshExecutionUnknown,
+    oldestExecutionUnknownAgeSec: capacity.oldestExecutionUnknownAgeSec,
+    executionUnknownSampleLimit: capacity.executionUnknownSampleLimit,
+    executionUnknownLowerBound: capacity.executionUnknownLowerBound,
+    sentCleanup: capacity.sentCleanup,
+  };
+}
+
 
 /** Zeroed capacity snapshot for dispatch results that never read the queue. */
 export function emptyPendingCapacitySnapshot(): TelegramPendingCapacitySnapshot {

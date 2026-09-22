@@ -1,12 +1,7 @@
 import type { StatusResponse } from "@shared/types/status";
-import type { StatusLevel } from "../status-reliability";
-import { clampConfidence } from "../status-reliability";
+import { clampConfidence, type StatusLevel } from "../status-reliability-shared";
 import {
-  evaluateAvailabilityStatus,
-  evaluateDataQualityStatus,
   evaluateReserveCompositionStatus,
-  type AvailabilityStatusInput,
-  type DataQualityStatusInput,
   type ReserveCompositionAssessment,
 } from "./evaluation-rules";
 
@@ -28,13 +23,6 @@ export function deriveReserveCompositionStatus(
   return evaluateReserveCompositionStatus(reserveComposition);
 }
 
-export function deriveAvailabilityStatus(input: AvailabilityStatusInput): StatusResponse["availabilityStatus"] {
-  return evaluateAvailabilityStatus(input).status;
-}
-
-export function deriveDataQualityStatus(input: DataQualityStatusInput): StatusResponse["dataQualityStatus"] {
-  return evaluateDataQualityStatus(input).status;
-}
 
 export function scoreStatusConfidence(input: {
   availabilityStatus: StatusLevel;

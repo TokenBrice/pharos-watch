@@ -13,7 +13,7 @@ import {
 } from "@shared/lib/status-thresholds";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
-import type { DataQuality, StablecoinPublicationHealth, StatusResponse } from "@shared/types/status";
+import type { ActivePriceCoverageHealth, DataQuality, StablecoinPublicationHealth, StatusResponse } from "@shared/types/status";
 import { logWorkerEvent } from "../structured-log";
 import { getSourceFailureMessage } from "./section-errors";
 import { loadDdrRepairDebtDetails, loadRepairDebtSummary } from "../repair-tasks";
@@ -100,6 +100,7 @@ export async function getDataQuality(
   options?: {
     blacklistMetrics?: BlacklistGapMetrics | null;
     stablecoinPublication?: StablecoinPublicationHealth;
+    activePriceCoverage?: ActivePriceCoverageHealth;
   },
 ): Promise<DataQuality> {
   const stablecoinsCacheResult = await loadStablecoinsCache(db, { mode: "lenient" });
@@ -152,21 +153,27 @@ export async function getDataQuality(
       });
     }
   }
-  const hasExactPublicationEvidence = stablecoinPublication.status !== "unknown";
-  const totalStablecoins = hasExactPublicationEvidence
-    ? stablecoinPublication.expectedActiveCount
+  const activePriceCoverage = options?.activePriceCoverage;
+  const hasExactPriceEvidence = activePriceCoverage != null && activePriceCoverage.status !== "unknown";
+  const totalStablecoins = hasExactPriceEvidence
+    ? activePriceCoverage.expectedActiveCount
     : activeCanonicalAssets.length;
-  const missingActiveIds = new Set(
-    activeCanonicalAssets
-      .filter((asset: { price?: number | null }) => asset.price == null || asset.price === 0)
-      .map((asset) => asset.id),
-  );
-  if (stablecoinPublication.status === "incomplete") {
-    for (const id of stablecoinPublication.missingActiveIds) {
-      missingActiveIds.add(id);
+  let missingPrices: number;
+  if (hasExactPriceEvidence) {
+    missingPrices = activePriceCoverage.missingPriceCount;
+  } else {
+    const missingActiveIds = new Set(
+      activeCanonicalAssets
+        .filter((asset: { price?: number | null }) => asset.price == null || asset.price === 0)
+        .map((asset) => asset.id),
+    );
+    if (stablecoinPublication.status === "incomplete") {
+      for (const id of stablecoinPublication.missingActiveIds) {
+        missingActiveIds.add(id);
+      }
     }
+    missingPrices = missingActiveIds.size;
   }
-  const missingPrices = missingActiveIds.size;
 
   let blacklistTotal = 0;
   let blacklistMissingAmounts = 0;

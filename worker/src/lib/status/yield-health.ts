@@ -909,17 +909,6 @@ export async function loadYieldHealthSummary(
 
   const supplemental = buildSupplementalHealth(now, byKey);
 
-  const benchmark = getObject(provenance?.benchmark);
-  const benchmarkFetchedAt = getNumber(benchmark?.fetchedAt);
-  const benchmarkAgeSec = ageSeconds(now, benchmarkFetchedAt) ?? getNumber(benchmark?.ageSeconds);
-  const benchmarkIsFallback = getBoolean(benchmark?.isFallback);
-  const benchmarkStatus: YieldHealthFieldStatus = benchmark == null
-    ? "unknown"
-    : classifyYieldBenchmarkFreshness({
-        ageSeconds: benchmarkAgeSec,
-        isFallback: benchmarkIsFallback === true,
-        fallbackMode: getString(benchmark.fallbackMode),
-      });
   const benchmarkRegistry = buildBenchmarkRegistryHealth({
     now,
     rankings,
@@ -997,15 +986,6 @@ export async function loadYieldHealthSummary(
       reason: getString(safetySnapshot?.reason),
     },
     supplemental,
-    benchmark: {
-      fetchedAt: benchmarkFetchedAt,
-      ageSec: benchmarkAgeSec,
-      maxAgeSec: STATUS_YIELD_HEALTH_THRESHOLDS.benchmarkMaxAgeSec,
-      source: getString(benchmark?.source),
-      isFallback: benchmarkIsFallback,
-      fallbackMode: getString(benchmark?.fallbackMode),
-      status: benchmarkStatus,
-    },
     benchmarkRegistry,
     coverageAudit: {
       updatedAt: coverageAuditUpdatedAt,

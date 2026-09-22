@@ -11,14 +11,14 @@ import {
 const SafetyAlertFieldsNullableSchemaShape = {
   safetyAlertSourceState: z.enum(SAFETY_ALERT_SOURCE_STATE_VALUES).nullable(),
   safetyAlertSourceAgeSeconds: z.number().nullable(),
-  safetyAlertsSuppressed: z.boolean(),
+  safetyAlertsSuppressed: z.boolean().nullable(),
   safetyAlertSourceGeneration: z.string().nullable(),
 } as const;
 
 const ReserveAlertFieldsNullableSchemaShape = {
   reserveAlertSourceState: z.enum(RESERVE_ALERT_SOURCE_STATE_VALUES).nullable().optional(),
   reserveAlertSourceAgeSeconds: z.number().nullable().optional(),
-  reserveAlertsSuppressed: z.boolean().optional(),
+  reserveAlertsSuppressed: z.boolean().nullable().optional(),
   reserveAlertSourceGeneration: z.string().nullable().optional(),
 } as const;
 

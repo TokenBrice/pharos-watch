@@ -14,8 +14,8 @@ import {
 } from "./d1-capacity-store";
 
 export const D1_TABLE_GROWTH_SNAPSHOT_CACHE_KEY = "ops:d1-table-growth:v1";
-const D1_TABLE_GROWTH_RUN_MARKER_CACHE_KEY = "ops:d1-table-growth:last-run:v1";
 const D1_TABLE_GROWTH_SNAPSHOT_INTERVAL_SEC = 24 * 60 * 60;
+const D1_TABLE_GROWTH_CACHE_MAX_AGE_SEC = 50 * 60 * 60;
 const D1_TABLE_GROWTH_SNAPSHOT_VERSION = 1;
 const D1_TABLE_GROWTH_TOP_N = 10;
 
@@ -40,6 +40,7 @@ export interface D1TableGrowthSnapshot {
   previousCheckedAt: number | null;
   tables: D1TableGrowthRow[];
   topGrowers: D1TableGrowthTopGrower[];
+  failedTables: string[];
 }
 
 export type D1UsageSummaryWithTableGrowth = D1UsageSummary & {
@@ -162,6 +163,7 @@ export const D1TableGrowthSnapshotSchema = z.object({
   previousCheckedAt: FiniteNumberSchema.nullable(),
   tables: z.array(D1TableGrowthRowSchema),
   topGrowers: z.array(D1TableGrowthTopGrowerSchema),
+  failedTables: z.array(z.string()).default([]),
 });
 const D1TableGrowthCacheEnvelopeSchema = z.object({
   version: z.literal(D1_TABLE_GROWTH_SNAPSHOT_VERSION),
@@ -375,26 +377,18 @@ async function readD1TableGrowthMeasurement(
     .first<D1TableGrowthMeasurement>();
 }
 
-async function markD1TableGrowthRunComplete(db: D1Database, utcDay: number): Promise<void> {
-  await db
-    .prepare(
-      `INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
-       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
-       WHERE cache.updated_at < excluded.updated_at`,
-    )
-    .bind(
-      D1_TABLE_GROWTH_RUN_MARKER_CACHE_KEY,
-      JSON.stringify({ version: D1_TABLE_GROWTH_SNAPSHOT_VERSION, utcDay }),
-      utcDay,
-    )
-    .run();
-}
 
 async function loadCachedD1TableGrowthSnapshot(
   db: D1Database,
+  observedAt?: number,
 ): Promise<D1TableGrowthSnapshot | null> {
   const cached = await getCache(db, D1_TABLE_GROWTH_SNAPSHOT_CACHE_KEY);
-  return cached ? parseD1TableGrowthSnapshot(cached.value) : null;
+  const snapshot = cached ? parseD1TableGrowthSnapshot(cached.value) : null;
+  if (snapshot == null || observedAt == null) return snapshot;
+  return observedAt >= snapshot.checkedAt
+    && observedAt - snapshot.checkedAt <= D1_TABLE_GROWTH_CACHE_MAX_AGE_SEC
+    ? snapshot
+    : null;
 }
 
 export async function refreshD1TableGrowthSnapshot(
@@ -415,23 +409,28 @@ export async function refreshD1TableGrowthSnapshot(
     .all<D1TableNameRow>();
   const previousByTable = new Map((previous?.tables ?? []).map((row) => [row.tableName, row]));
   const tables: D1TableGrowthRow[] = [];
+  const failedTables: string[] = [];
 
   // Keep these reads serial: the Worker cron lanes share a small D1 connection pool.
   for (const discoveredRow of discovered.results ?? []) {
     const tableName = discoveredRow.name;
     if (typeof tableName !== "string") continue;
-    const measurement = await readD1TableGrowthMeasurement(db, tableName);
-    if (!measurement) continue;
-    const rowCount = Math.max(0, toNumber(measurement.row_count) ?? 0);
-    const previousRow = previousByTable.get(tableName);
-    tables.push({
-      tableName,
-      rowCount,
-      previousRowCount: previousRow?.rowCount ?? null,
-      rowCountDelta: previousRow && baselineIsComparable ? rowCount - previousRow.rowCount : null,
-      oldestTimestamp: toNumber(measurement.oldest_timestamp),
-      newestTimestamp: toNumber(measurement.newest_timestamp),
-    });
+    try {
+      const measurement = await readD1TableGrowthMeasurement(db, tableName);
+      if (!measurement) continue;
+      const rowCount = Math.max(0, toNumber(measurement.row_count) ?? 0);
+      const previousRow = previousByTable.get(tableName);
+      tables.push({
+        tableName,
+        rowCount,
+        previousRowCount: previousRow?.rowCount ?? null,
+        rowCountDelta: previousRow && baselineIsComparable ? rowCount - previousRow.rowCount : null,
+        oldestTimestamp: toNumber(measurement.oldest_timestamp),
+        newestTimestamp: toNumber(measurement.newest_timestamp),
+      });
+    } catch {
+      failedTables.push(tableName);
+    }
   }
 
   const topGrowers = tables
@@ -449,6 +448,7 @@ export async function refreshD1TableGrowthSnapshot(
     previousCheckedAt: previous?.checkedAt ?? null,
     tables,
     topGrowers,
+    failedTables,
   };
   const envelope: D1TableGrowthCacheEnvelope = {
     version: D1_TABLE_GROWTH_SNAPSHOT_VERSION,
@@ -460,7 +460,6 @@ export async function refreshD1TableGrowthSnapshot(
     JSON.stringify(envelope),
     observedAt,
   );
-  await markD1TableGrowthRunComplete(db, utcDay);
   return snapshot;
 }
 
@@ -604,7 +603,7 @@ export async function getD1UsageSummary(
   let tableGrowth: D1TableGrowthSnapshot | null = null;
   if (db) {
     try {
-      tableGrowth = await loadCachedD1TableGrowthSnapshot(db);
+      tableGrowth = await loadCachedD1TableGrowthSnapshot(db, nowSeconds);
     } catch (error) {
       logWorkerEvent({
         scope: "status",

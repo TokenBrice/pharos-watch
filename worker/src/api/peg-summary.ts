@@ -66,6 +66,19 @@ function deriveCurrentDeviationBps(
     : deriveDepegSignal(price, pegReference)?.bps ?? null;
 }
 
+type DexPriceRow = {
+  stablecoin_id: string;
+  dex_price_usd: number;
+  deviation_from_primary_bps: number | null;
+  source_pool_count: number;
+  source_total_tvl: number;
+  updated_at: number;
+};
+
+type DexPriceReadResult =
+  | { kind: "ok"; results: DexPriceRow[] }
+  | { kind: "degraded"; reason: "dex-prices-read-failed"; results: DexPriceRow[] };
+
 export const handlePegSummary = async (db: D1Database): Promise<Response> => {
   // 1. Load stablecoins cache (live prices)
   const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict" });
@@ -83,20 +96,16 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
   // 2. Load DEX prices + shared peg analytics snapshot
   // Narrower column set than dex-liquidity endpoint. Catch pattern mirrors depeg-helpers.ts loadDexPriceRows() (M-3).
   const [dexPriceResult, pegAnalyticsCache] = await Promise.all([
-    db.prepare("SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, updated_at FROM dex_prices").all<{
-      stablecoin_id: string;
-      dex_price_usd: number;
-      deviation_from_primary_bps: number | null;
-      source_pool_count: number;
-      source_total_tvl: number;
-      updated_at: number;
-    }>().catch((err) => {
-      logWorkerEventArgs("api", "warn",
-        "[peg-summary] DEX price query failed, falling back to empty:",
-        err instanceof Error ? err.message : err,
-      );
-      return { results: [] as never[] };
-    }),
+    db.prepare("SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, updated_at FROM dex_prices")
+      .all<DexPriceRow>()
+      .then((result): DexPriceReadResult => ({ kind: "ok", results: result.results ?? [] }))
+      .catch((err): DexPriceReadResult => {
+        logWorkerEventArgs("api", "warn",
+          "[peg-summary] DEX price query failed, serving degraded response:",
+          err instanceof Error ? err.message : err,
+        );
+        return { kind: "degraded", reason: "dex-prices-read-failed", results: [] };
+      }),
     // Producer-published by the quarter-hourly report-cards pass; the direct
     // compute below re-scans ~21K depeg_events rows, so it is fallback-only.
     loadPegAnalyticsCache(db).catch(() => ({ kind: "miss" as const, reason: "missing-cache" as const })),
@@ -136,9 +145,10 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
     }
   }
 
-  // Build DEX price lookup (empty if migration 0011 not yet applied)
+  // Build DEX price lookup. A failed read is represented separately from a
+  // successful empty result so consumers can distinguish absence from outage.
   const dexPrices = new Map(
-    (dexPriceResult.results ?? []).map((r) => [r.stablecoin_id, r])
+    dexPriceResult.results.map((r) => [r.stablecoin_id, r])
   );
 
   // 3. Build lookup maps
@@ -265,6 +275,18 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
     .filter(([, src]) => src === "fx")
     .map(([peg]) => peg);
 
+  const degradedReason = dexPriceResult.kind === "degraded" ? dexPriceResult.reason : undefined;
+  const headers = addFreshnessHeaders(
+    {
+      "Cache-Control": degradedReason ? CACHE_PROFILES.noStore : CACHE_PROFILES.producerBacked,
+    },
+    freshnessAsOf,
+    API_FRESHNESS_MAX_AGE_SEC.pegSummary,
+  );
+  if (degradedReason) {
+    headers.Warning = '199 - "DEX price read failed; cross-checks unavailable"';
+  }
+
   return jsonResponse({
     coins,
     summary: {
@@ -286,11 +308,6 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
       changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
       asOf: freshnessAsOf,
     }),
-  }, {
-    headers: addFreshnessHeaders(
-      { "Cache-Control": CACHE_PROFILES.producerBacked },
-      freshnessAsOf,
-      API_FRESHNESS_MAX_AGE_SEC.pegSummary,
-    ),
-  });
+    ...(degradedReason ? { degradedReason } : {}),
+  }, { headers });
 };

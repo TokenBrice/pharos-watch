@@ -456,7 +456,6 @@ export async function getMintBurnReconciliation(
     .sort((a, b) => {
       const severityOrder: Record<MintBurnReconciliationRow["status"], number> = {
         critical: 0,
-        warn: 1,
         "insufficient-source": 2,
         ok: 3,
       };
@@ -469,7 +468,6 @@ export async function getMintBurnReconciliation(
     checkedAt: now,
     comparedCoins: rows.filter((row) => row.status !== "insufficient-source").length,
     criticalCount: rows.filter((row) => row.status === "critical").length,
-    warnCount: rows.filter((row) => row.status === "warn").length,
     insufficientCount: rows.filter((row) => row.status === "insufficient-source").length,
     rows,
   };

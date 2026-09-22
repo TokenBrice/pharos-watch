@@ -435,15 +435,6 @@ The legacy top-level projections `gtProbe`, `priceProviderDiagnostics`, `cacheBl
       "maxAgeSec": 21600,
       "status": "healthy"
     },
-    "benchmark": {
-      "fetchedAt": 1771849000,
-      "ageSec": 7453,
-      "maxAgeSec": 172800,
-      "source": "risk_free_rates",
-      "isFallback": false,
-      "fallbackMode": null,
-      "status": "healthy"
-    },
     "coverageAudit": {
       "updatedAt": 1769810400,
       "ageSec": 2046053,
@@ -479,7 +470,6 @@ The legacy top-level projections `gtProbe`, `priceProviderDiagnostics`, `cacheBl
     "checkedAt": 1771856453,
     "comparedCoins": 42,
     "criticalCount": 1,
-    "warnCount": 3,
     "insufficientCount": 12,
     "rows": [
       {
@@ -489,7 +479,7 @@ The legacy top-level projections `gtProbe`, `priceProviderDiagnostics`, `cacheBl
         "chainSupplyDelta24hUsd": -220000000,
         "absoluteDiffUsd": 20000000,
         "diffRatio": 0.08,
-        "status": "warn",
+        "status": "critical",
         "coverageStatus": "full"
       }
     ]

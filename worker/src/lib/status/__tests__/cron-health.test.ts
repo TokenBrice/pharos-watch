@@ -525,6 +525,7 @@ describe("loadCronHealth — running scheduled slot telemetry", () => {
             execution_owner: "slot-owner-fresh",
             started_at: NOW - 600,
             updated_at: NOW - 60,
+            running_count: 42,
           },
           {
             slot_key: "halfHourlyOffset",
@@ -540,7 +541,7 @@ describe("loadCronHealth — running scheduled slot telemetry", () => {
     const snapshot = await loadCronHealth(db, NOW);
 
     expect(snapshot.scheduledSlots).toEqual({
-      runningSlots: 2,
+      runningSlots: 42,
       staleCandidateSlots: 1,
       oldestRunningAgeSec: 2_400,
       oldestStaleAgeSec: 2_400,

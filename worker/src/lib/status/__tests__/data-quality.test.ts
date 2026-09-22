@@ -5,6 +5,7 @@ import { mockD1 } from "@shared/test-utils/mock-d1";
 import type { BlacklistGapMetrics } from "../../blacklist-gaps";
 import { makeBlacklistReconciliationStatusRow } from "../../../test-helpers/__shared/fixtures";
 import { getDataQuality } from "../data-quality";
+import { unknownActivePriceCoverageHealth } from "../../stablecoin-publication-health";
 
 const NOW = 1_775_890_000;
 
@@ -126,7 +127,15 @@ describe("getDataQuality repair debt", () => {
       },
     ]);
 
-    const quality = await getDataQuality(db, NOW, { blacklistMetrics: emptyBlacklistMetrics });
+    const quality = await getDataQuality(db, NOW, {
+      blacklistMetrics: emptyBlacklistMetrics,
+      activePriceCoverage: {
+        ...unknownActivePriceCoverageHealth(NOW - 60),
+        status: "incomplete",
+        expectedActiveCount: 400,
+        missingPriceCount: 7,
+      },
+    });
 
     expect(quality.ddrRepairDebtStatus).toBe("present");
     expect(quality.ddrRepairDebtCount).toBe(3);
@@ -163,6 +172,8 @@ describe("getDataQuality repair debt", () => {
     });
     expect(quality.onchainSupplyDivergences).toBe(1);
     expect(quality.onchainDivergenceRatio).toBe(1 / 3);
+    expect(quality.totalStablecoins).toBe(400);
+    expect(quality.missingPrices).toBe(7);
 
     const circulatingFixtures = [
       [{ peggedUSD: 100, peggedEUR: 25 }, 125],
