@@ -177,7 +177,9 @@ the send succeeded.
 - `setup:target:type` — opens a ticker prompt with an inline Cancel button; the next inbound message is resolved via `resolveTicker` and lands on the confirm step. Slash-prefixed single-token replies such as `/USDC` are treated as ticker input while `/cancel` and `/start` remain command escapes.
 - `setup:cancel` — clears the wizard state for the user who started it.
 
-Wizard state is persisted as a row in `telegram_pending_disambiguation` with `action_type = "setup-step"` and an `action_payload` JSON of `{ step, alertTypes, target }`. TTL is 5 min, shared with the disambiguation cleanup cron. When wizard state is active and a fresh slash command arrives outside the awaiting-ticker `/TICKER` case, the wizard row is cleared so the command runs unmodified.
+Wizard state is persisted as a row in `telegram_pending_disambiguation` with `action_type = "setup-step"`, `initiator_user_id`, and an `action_payload` JSON of `{ step, alertTypes, target }` plus `adoptionToken` when the session started from an adoption deep link. TTL is 5 min, shared with the disambiguation cleanup cron. When wizard state is active and a fresh slash command arrives outside the awaiting-ticker `/TICKER` case, the wizard row is cleared so the command runs unmodified.
+
+**Attribution contract (2026-09-21).** Every wizard transition carries the adoption token forward, so `first_setup_complete` and `first_follow` are recorded under the same campaign and placement dimensions as the session's `bot_start` row. A branch that rebuilds the state object without the token would silently reattribute a campaign completion to organic traffic, which is why each transition spreads the previous state rather than re-listing its fields. Only a token whose destination is `setup` is persisted; anything else resolves to `null` and the completion is genuinely organic.
 
 ### Supported Commands
 

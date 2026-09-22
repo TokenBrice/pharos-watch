@@ -36,7 +36,7 @@ Each entry follows `DeadStablecoin` (`shared/types/index.ts`) with fields such a
 - optional `peakMcap`
 - optional `contracts` — array of `{ chain, address }` for block-explorer links in the autopsy view
 
-Cause metadata (labels + colors) is centralized in `CAUSE_META` / `CAUSE_HEX`.
+Cause metadata (labels + colors) is centralized in `CAUSE_META` / `CAUSE_HEX`, exported from `shared/lib/cause-of-death.ts`; the cemetery sort helper (`sortCemeteryCoins`, `CemeterySortMode`) is runtime-neutral in `shared/lib/cemetery.ts`.
 
 ### Public dataset export
 
@@ -169,7 +169,7 @@ Compare includes client-side share/export rendering:
 - issuance activity and yield
 - structure, controls, reserves, and regulatory status
 
-The matrix uses the shared contextual methodology labels for Peg Score, Liquidity Score, and Safety. Missing source coverage renders as a dash rather than zero. Directional fields such as issuance flow, supply change, and yield are not styled as universal winners because their desirability depends on the comparison task.
+The matrix uses the shared contextual methodology labels for Peg Score, Liquidity Score, and Safety. Missing source coverage renders as a dash rather than zero. External Bluechip is the exception, because two different absences would otherwise collapse into one dash: a coin with no rating at all reads "Not rated", a rated coin whose audit flag the source omits reads "audit not reported" beside its grade, and a source that positively reports no audit reads "no audit flag". Directional fields such as issuance flow, supply change, and yield are not styled as universal winners because their desirability depends on the comparison task.
 
 ## Operational notes
 

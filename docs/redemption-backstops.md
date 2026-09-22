@@ -285,7 +285,7 @@ Each row also carries:
 - `feeConfidence`:
   - `fixed` for bounded bps schedules
   - `formula` for disclosed formulas such as Liquity-style base-rate fees
-  - `undisclosed-reviewed` when docs were reviewed but only descriptive fee information is available
+  - `undisclosed-reviewed` when docs were reviewed but only descriptive fee information is available. It asserts that no bounded number is published — never that the fee is zero
 - `feeModelKind`:
   - `fixed-bps`, `formula`, `documented-variable`, or `undisclosed-reviewed`
 - `modelConfidence`:
@@ -297,6 +297,8 @@ Each row also carries:
   - `independent-issuer-rail`, `same-stablecoin-pool-backing`, `same-protocol-liquidity`, `wrapper-to-parent-dependency`, or `unknown`
   - retained as legacy diagnostic/display metadata; it has no current scoring effect
   - V9 Exit derives route independence from disjoint failure domains and physical-resource keys instead of this tag
+
+**Decision (2026-09-21, documented-zero versus undisclosed fees).** A reviewed zero or closed fee schedule is a disclosed number and must be encoded as a fixed `0` bps fee carrying the statement that establishes it, not as `undisclosed-reviewed`. `documentedVariableFee` still defaults `feeConfidence` to `undisclosed-reviewed`, so fourteen shipped offchain-issuer configs currently publish `feeConfidence: "undisclosed-reviewed"` with `feeBps: null` beside `feeModelKind: "documented-variable"` — which also holds their reserve-sync pair below `modelConfidence: "high"`. Separating the two is per-entry source curation, not a mechanical sweep: each of the fourteen needs its reviewed text re-read before its fee is restated. Until that pass lands, the conservative label stands and the published rows understate, never overstate, what the issuer disclosed.
 
 ### Docs / Notes
 

@@ -137,7 +137,7 @@ describe("fetchPancakeSwapPools", () => {
     expect(result.pools[0]?.tokens[1]?.decimals).toBe(18);
   });
 
-  it("maps Pancake's asymmetric token1Price to the token0/token1 pool ratio", async () => {
+  it("maps Pancake's asymmetric token1Price to the token1-per-token0 pool ratio", async () => {
     const wonPool = makePool("0xwon-usdt");
     wonPool.token0 = {
       id: "0x5868a0bc3a64cff82e19a135e17fe18e18e03bc1",

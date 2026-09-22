@@ -36,7 +36,7 @@ export interface DexApiPool {
   poolAddress: string;
   poolType: string;
   tokens: DexApiPoolToken[];
-  /** Raw pool price ratio (token[0] / token[1]). Used for price inversion logic. */
+  /** Raw pool spot price: token[1] received per 1 token[0]. Used for price inversion logic. */
   price: number | null;
   tvlUsd: number;
   volume24hUsd: number;

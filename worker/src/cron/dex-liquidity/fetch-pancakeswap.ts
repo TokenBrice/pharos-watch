@@ -269,7 +269,7 @@ export async function fetchPancakeSwapPools(
           const feeBps = Number.isFinite(feeTier) && feeTier > 0 ? feeTier / 100 : null;
           const reserve0 = parseFloat(pool.totalValueLockedToken0);
           const reserve1 = parseFloat(pool.totalValueLockedToken1);
-          // DexApiPool.price is token0/token1. Pancake names that ratio token1Price.
+          // DexApiPool.price is token1 per token0 — the ratio the subgraph publishes as token1Price.
           const token0PerToken1Price = parseFloat(pool.token1Price);
 
           pools.push({

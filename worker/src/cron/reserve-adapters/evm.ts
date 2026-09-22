@@ -3,8 +3,8 @@ export { normalizeEvmAddress } from "../../lib/evm-selectors";
 
 
 /**
- * Trim, lowercase, and validate an EVM address. Returns `null` for missing or
- * malformed input. Callers needing a throwing variant should wrap this.
+ * Resolve the coin's configured contract address on `chainId`. Returns `null`
+ * when the coin declares no contract for that chain.
  */
 export function resolveCoinContractAddress(
   coin: StablecoinMeta,
