@@ -3,12 +3,13 @@ import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shar
 
 const fetchEvmBlockNumberMock = vi.fn();
 const fetchEvmBlockTimestampMock = vi.fn();
-const fetchEvmCallHexAtBlockMock = vi.fn();
+const fetchEvmRpcBatchMock = vi.fn();
 
-vi.mock("../evm-rpc", () => ({
+vi.mock("../evm-rpc", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../evm-rpc")>(),
   fetchEvmBlockNumber: (...args: unknown[]) => fetchEvmBlockNumberMock(...args),
   fetchEvmBlockTimestamp: (...args: unknown[]) => fetchEvmBlockTimestampMock(...args),
-  fetchEvmCallHexAtBlock: (...args: unknown[]) => fetchEvmCallHexAtBlockMock(...args),
+  fetchEvmRpcBatch: (...args: unknown[]) => fetchEvmRpcBatchMock(...args),
 }));
 
 import {
@@ -37,20 +38,21 @@ function trustedUsdc(): PeggedAsset {
 }
 
 function mockHealthyPool(overrides: { coin0?: string; usdcBalance?: bigint; impactOutput?: bigint } = {}): void {
-  fetchEvmCallHexAtBlockMock
-    .mockResolvedValueOnce(addressWord(overrides.coin0 ?? AZND))
-    .mockResolvedValueOnce(addressWord(USDC))
-    .mockResolvedValueOnce(uintResult(22_000n * 10n ** 18n))
-    .mockResolvedValueOnce(uintResult(overrides.usdcBalance ?? 120n * 10n ** 6n))
-    .mockResolvedValueOnce(uintResult(220_000n))
-    .mockResolvedValueOnce(uintResult(overrides.impactOutput ?? 2_180_000n));
+  fetchEvmRpcBatchMock.mockResolvedValue([
+    addressWord(overrides.coin0 ?? AZND),
+    addressWord(USDC),
+    uintResult(22_000n * 10n ** 18n),
+    uintResult(overrides.usdcBalance ?? 120n * 10n ** 6n),
+    uintResult(220_000n),
+    uintResult(overrides.impactOutput ?? 2_180_000n),
+  ]);
 }
 
 describe("AZND exact Curve pool price", () => {
   beforeEach(() => {
     fetchEvmBlockNumberMock.mockReset().mockResolvedValue(25_543_520);
     fetchEvmBlockTimestampMock.mockReset().mockResolvedValue(Math.floor(Date.now() / 1000) - 12);
-    fetchEvmCallHexAtBlockMock.mockReset();
+    fetchEvmRpcBatchMock.mockReset();
   });
 
   it("accepts a fresh identity-bound executable quote as fallback display evidence", async () => {
@@ -64,6 +66,34 @@ describe("AZND exact Curve pool price", () => {
       confidence: "fallback",
       observedAtMode: "upstream",
     });
+  });
+
+  it("batches six direct calls at the original block with the same abort signal", async () => {
+    mockHealthyPool();
+    const signal = new AbortController().signal;
+    await fetchAzndCurvePoolPrice({ assetsById: new Map([["usdc-circle", trustedUsdc()]]) }, signal);
+    expect(fetchEvmRpcBatchMock).toHaveBeenCalledTimes(1);
+    const [chain, calls, options] = fetchEvmRpcBatchMock.mock.calls[0];
+    expect(chain).toBe("ethereum");
+    expect(options.signal).toBe(signal);
+    expect(calls).toEqual([
+      `0xc6610657${word(0n)}`,
+      `0xc6610657${word(1n)}`,
+      `0x4903b0d1${word(0n)}`,
+      `0x4903b0d1${word(1n)}`,
+      `0x5e0d443f${word(0n)}${word(1n)}${word(10n ** 18n)}`,
+      `0x5e0d443f${word(0n)}${word(1n)}${word(10n * 10n ** 18n)}`,
+    ].map((data) => ({
+      method: "eth_call",
+      params: [{ to: "0x0d381fc68487365e90c32c90323352b325e21d23", data }, `0x${(25_543_520).toString(16)}`],
+    })));
+  });
+
+  it.each([null, [], [null, null, null, null, null, null]])("rejects an unavailable or incomplete batch (%j)", async (result) => {
+    fetchEvmRpcBatchMock.mockResolvedValue(result);
+    await expect(fetchAzndCurvePoolPrice({
+      assetsById: new Map([["usdc-circle", trustedUsdc()]]),
+    })).resolves.toBeNull();
   });
 
   it("rejects token-index reversal", async () => {
@@ -96,7 +126,7 @@ describe("AZND exact Curve pool price", () => {
     await expect(fetchAzndCurvePoolPrice({
       assetsById: new Map([["usdc-circle", trustedUsdc()]]),
     })).resolves.toBeNull();
-    expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
+    expect(fetchEvmRpcBatchMock).not.toHaveBeenCalled();
   });
 
   it("does not replace an existing usable market price with the thin fallback", async () => {

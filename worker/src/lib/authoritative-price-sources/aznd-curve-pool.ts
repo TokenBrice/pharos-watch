@@ -1,6 +1,6 @@
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { CIRCUIT_SOURCE } from "../constants";
-import { fetchEvmBlockNumber, fetchEvmBlockTimestamp, fetchEvmCallHexAtBlock } from "../evm-rpc";
+import { fetchEvmBlockNumber, fetchEvmBlockTimestamp, fetchEvmRpcBatch, isHexResult } from "../evm-rpc";
 import { hasPublishableCurrentPrice } from "../price-publication-state";
 import { getPublicFallbackRpcUrls } from "../public-rpc-registry";
 import {
@@ -84,25 +84,22 @@ export async function fetchAzndCurvePoolPrice(
     return null;
   }
 
-  // Keep exact-pool RPCs serial so this fallback never consumes the cron's
-  // entire six-connection allowance while another producer is still draining.
-  const coin0Raw = await fetchEvmCallHexAtBlock(
-    CHAIN, POOL, encodeIndexedCall(COINS_SELECTOR, AZND_INDEX), blockNumber, rpcOptions,
-  );
-  const coin1Raw = await fetchEvmCallHexAtBlock(
-    CHAIN, POOL, encodeIndexedCall(COINS_SELECTOR, USDC_INDEX), blockNumber, rpcOptions,
-  );
-  const azndBalanceRaw = await fetchEvmCallHexAtBlock(
-    CHAIN, POOL, encodeIndexedCall(BALANCES_SELECTOR, AZND_INDEX), blockNumber, rpcOptions,
-  );
-  const usdcBalanceRaw = await fetchEvmCallHexAtBlock(
-    CHAIN, POOL, encodeIndexedCall(BALANCES_SELECTOR, USDC_INDEX), blockNumber, rpcOptions,
-  );
-  const smallQuoteRaw = await fetchEvmCallHexAtBlock(
-    CHAIN, POOL, encodeGetDy(SMALL_QUOTE_AZND), blockNumber, rpcOptions,
-  );
-  const impactQuoteRaw = await fetchEvmCallHexAtBlock(
-    CHAIN, POOL, encodeGetDy(IMPACT_QUOTE_AZND), blockNumber, rpcOptions,
+  // Batch direct eth_call envelopes to retain caller semantics and one pinned
+  // block while consuming only one connection for the six pool reads.
+  const results = await fetchEvmRpcBatch(CHAIN, [
+    encodeIndexedCall(COINS_SELECTOR, AZND_INDEX),
+    encodeIndexedCall(COINS_SELECTOR, USDC_INDEX),
+    encodeIndexedCall(BALANCES_SELECTOR, AZND_INDEX),
+    encodeIndexedCall(BALANCES_SELECTOR, USDC_INDEX),
+    encodeGetDy(SMALL_QUOTE_AZND),
+    encodeGetDy(IMPACT_QUOTE_AZND),
+  ].map((data) => ({
+    method: "eth_call",
+    params: [{ to: POOL, data }, `0x${blockNumber.toString(16)}`],
+  })), rpcOptions);
+  if (!results || results.length !== 6) return null;
+  const [coin0Raw, coin1Raw, azndBalanceRaw, usdcBalanceRaw, smallQuoteRaw, impactQuoteRaw] = results.map(
+    (value) => typeof value === "string" && isHexResult(value) ? value : null,
   );
 
   if (decodeAddressWord(coin0Raw) !== AZND || decodeAddressWord(coin1Raw) !== USDC) return null;
