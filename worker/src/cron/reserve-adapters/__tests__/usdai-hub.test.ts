@@ -4,7 +4,7 @@ import { runAdapter, type AdapterNetworkSpec } from "./reserve-adapter.test-supp
 const ADDRESSES = {
   hub: "0x0A1a1A107E45b7Ced86833863f482BC5f4ed82EF",
   baseToken: "0x46850aD61C2B7d64d08c9C754F45254596696984",
-  implementation: "0x0ab74df531c0d8f1c46643e404b3d14723bbc212",
+  implementation: "0xe6ee2cd3e4f2b3844689aa1be176e4dff744a6f9",
   otherToken: "0x00000000000000000000000000000000000000ab",
 } as const;
 
