@@ -31,6 +31,7 @@ import type { MintBurnContractConfig, MintBurnEventDef } from "../src/lib/mint-b
 import { buildAlchemyUrl, fetchAlchemyLogs, getAlchemyBlockNumber } from "../src/lib/alchemy-logs";
 import type { AlchemyLogEntry } from "../src/lib/alchemy-logs";
 import { eventDefTopicFilters } from "../src/cron/mint-burn/sync-config";
+import { renderMintBurnConservationRuntime } from "../../scripts/maintenance/generate-mint-burn-conservation-runtime";
 import { fetchEvmRpcBatchDetailed } from "../src/lib/evm-rpc";
 import {
   completeMintBurnConservationAudit,
@@ -67,7 +68,8 @@ Options:
   --emit-sidecar-draft     Write <out>/sidecar-draft.json from semantic files +
                            audited windows (requires --semantic-dir)
   --merge-into-sidecar     Replace same-identity entries in the committed
-                           sidecar with the draft (requires --emit-sidecar-draft)
+                           sidecar with the draft and regenerate the Worker
+                           runtime lookup (requires --emit-sidecar-draft)
   --replay <journal.jsonl> Serve all RPC responses from a journal (no network)
                            and reproduce the original run's records
   -h, --help               Show this help`;
@@ -75,6 +77,7 @@ Options:
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(SCRIPT_DIR, "../..");
 const SIDECAR_PATH = resolve(SCRIPT_DIR, "../src/lib/mint-burn-conservation-reviewed.json");
+const RUNTIME_PATH = resolve(SCRIPT_DIR, "../src/lib/mint-burn-conservation-runtime.generated.json");
 const DEFAULT_WINDOW_SECONDS = 86_400;
 const HEAD_CONFIRMATION_BLOCKS = 64;
 const AUDIT_BUDGET_LIMIT = 4_096;
@@ -309,7 +312,7 @@ function writeSummary(outDir: string, audits: readonly ConfigAudit[]): void {
     : "| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |";
   const seen = new Map<MintBurnContractConfig, number>();
   const rows: string[] = [];
-  for (const { config, window, record } of audits) {
+  for (const { config, record } of audits) {
     const occurrence = seen.get(config) ?? 0;
     seen.set(config, occurrence + 1);
     const label = multiWindow ? `w${occurrence + 1}` : null;
@@ -365,7 +368,10 @@ function mergeEntriesIntoSidecar(entries: readonly ReviewedConservationEntry[]):
     a.chainId < b.chainId ? -1 : a.chainId > b.chainId ? 1 :
       a.stablecoinId < b.stablecoinId ? -1 : a.stablecoinId > b.stablecoinId ? 1 :
         a.address < b.address ? -1 : a.address > b.address ? 1 : 0);
-  writeFileSync(SIDECAR_PATH, `${JSON.stringify({ version: 1, entries: merged }, null, 2)}\n`);
+  const sidecar = { version: 1, entries: merged };
+  writeFileSync(SIDECAR_PATH, `${JSON.stringify(sidecar, null, 2)}\n`);
+  // The Worker runtime lookup is a projection of the sidecar; keep the two from drifting.
+  writeFileSync(RUNTIME_PATH, renderMintBurnConservationRuntime(sidecar));
 }
 
 async function runAdmissionAuditCli(argv: readonly string[]): Promise<void> {
@@ -600,7 +606,8 @@ async function runAdmissionAuditCli(argv: readonly string[]): Promise<void> {
     for (const item of pending) process.stdout.write(`pending: ${item}\n`);
     if (mergeIntoSidecar) {
       mergeEntriesIntoSidecar(entries);
-      process.stdout.write(`merged ${entries.length} entr${entries.length === 1 ? "y" : "ies"} into ${SIDECAR_PATH}\n`);
+      process.stdout.write(`merged ${entries.length} entr${entries.length === 1 ? "y" : "ies"} into ${SIDECAR_PATH}\n`
+        + `regenerated ${RUNTIME_PATH}\n`);
     }
   }
 

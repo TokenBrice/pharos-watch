@@ -150,6 +150,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     exempt("scripts/maintenance/generate-markdown-exports.ts", "build"),
     exempt("scripts/maintenance/generate-mint-authority-review-audit.ts", "build"),
     exempt("scripts/maintenance/generate-mint-bridge-ownership-audit.ts", "build"),
+    exempt("scripts/maintenance/generate-mint-burn-conservation-runtime.ts", "build"),
     exempt("scripts/maintenance/generate-openapi-spec.ts", "build"),
     exempt("scripts/maintenance/generate-postman-collection.ts", "build"),
     exempt("scripts/maintenance/generate-pr-workflow-matrix.ts", "build"),

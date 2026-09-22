@@ -94,6 +94,7 @@ describe("generated artifact lifecycle", () => {
       "postman",
       "openapi",
       "world-map",
+      "mint-burn-conservation-runtime",
       "report-card-registry-fingerprint",
       "legacy-stablecoin-redirects",
       "stablecoin-client-registry",

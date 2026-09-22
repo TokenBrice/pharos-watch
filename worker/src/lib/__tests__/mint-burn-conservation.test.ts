@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { MINT_BURN_CONFIGS } from "../mint-burn-contracts";
 import { fetchEvmRpcBatchDetailed } from "../evm-rpc";
@@ -7,6 +9,7 @@ import { completeMintBurnConservationAudit, fetchConservationBoundaries, getMint
   reviewedConservationIdentityKey, validateReviewedConservationEntry,
   persistMintBurnConservation, readMintBurnConservationRecords, validateMintBurnParsedConservation, verifyPersistedMintBurnConservation,
   type ConservationBoundaryEvidence, type ConservationBoundaryRequest, type ReviewedConservationEntry } from "../mint-burn-conservation";
+import { renderMintBurnConservationRuntime } from "../../../../scripts/maintenance/generate-mint-burn-conservation-runtime";
 import reviewedConservationSidecar from "../mint-burn-conservation-reviewed.json";
 import type { AlchemyLogEntry } from "../alchemy-logs";
 import type { MintBurnRow } from "../mint-burn-pipeline/types";
@@ -236,6 +239,10 @@ describe("raw token conservation", () => {
     expect(validateReviewedConservationEntry({ ...admitted, zeroRecipientTransferReverts: false })).toHaveLength(1);
     // OZ v5 `_update` burns on transfer-to-zero: reverts=false is admissible when the burn is paired.
     expect(validateReviewedConservationEntry({ ...admitted, zeroRecipientTransferReverts: false, zeroRecipientTransferBurns: true })).toEqual([]);
+  });
+  it("commits the runtime lookup as the byte-exact projection of the evidence sidecar", () => {
+    expect(readFileSync(resolve(import.meta.dirname, "../mint-burn-conservation-runtime.generated.json"), "utf8"))
+      .toBe(renderMintBurnConservationRuntime(reviewedConservationSidecar));
   });
   it("maps every sidecar entry to exactly one config, without duplicates or orphans", () => {
     const seen = new Map<string, number>();

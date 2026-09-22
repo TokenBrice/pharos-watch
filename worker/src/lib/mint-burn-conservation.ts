@@ -10,7 +10,7 @@ import { getCaches } from "./db-cache";
 import { buildInClause, D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "./d1-primitives";
 import { throwIfAborted } from "./abort";
 import { runWithOverloadRetry } from "./d1-overload-retry";
-import reviewedConservationSidecar from "./mint-burn-conservation-reviewed.json";
+import conservationRuntimeLookup from "./mint-burn-conservation-runtime.generated.json";
 
 const TRANSFER = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 const ZERO = `0x${"0".repeat(64)}`;
@@ -20,7 +20,9 @@ const QUANTITY = /^0x(?:0|[1-9a-fA-F][0-9a-fA-F]*)$/;
 // Reviewed-identity evidence sidecar: worker/src/lib/mint-burn-conservation-reviewed.json.
 // One entry per config identity (chain, stablecoin id, lowercase address, decimals) with the
 // reviewer's identity evidence and audited windows. Structural rules are enforced by tests and
-// by the admission CLI; this module only derives eligibility from it.
+// by the admission CLI; only they import the sidecar. The Worker runtime imports the small
+// generated lookup mint-burn-conservation-runtime.generated.json (registered generated
+// artifact, projected from the sidecar) so the evidence never reaches the isolate bundle.
 export interface ReviewedConservationWindow {
   fromBlock: number;
   fromBlockHash: string;
@@ -59,6 +61,9 @@ export interface ReviewedConservationEntry {
   unsupportedReason?: string | null;
   eventSet?: "transfer" | "config-events";
   invariant?: string;
+  conservationOnlyEvents?: MintBurnEventDef[];
+  requiresNotDeprecated?: boolean;
+  invariantParams?: Record<string, unknown>;
   identity?: ReviewedConservationIdentity;
   supplyPaths?: unknown[];
   unpairedPaths?: unknown[];
@@ -70,6 +75,31 @@ export interface ReviewedConservationEntry {
   windows?: ReviewedConservationWindow[];
   reviewedAt?: string;
   reviewer?: string;
+}
+
+/**
+ * One entry of the generated runtime lookup (`mint-burn-conservation-runtime.generated.json`):
+ * the sidecar entry reduced to identity, disposition, reason, and runtime params. The Worker
+ * bundles only this shape; `scripts/maintenance/generate-mint-burn-conservation-runtime.ts`
+ * owns the projection and byte format.
+ */
+export interface MintBurnConservationRuntimeEntry {
+  chainId: string;
+  stablecoinId: string;
+  address: string;
+  decimals: number;
+  disposition: "admitted" | "unsupported";
+  unsupportedReason?: string | null;
+  eventSet?: "transfer" | "config-events";
+  invariant?: string;
+  conservationOnlyEvents?: MintBurnEventDef[];
+  requiresNotDeprecated?: boolean;
+  invariantParams?: Record<string, unknown>;
+}
+
+export interface MintBurnConservationRuntimeLookup {
+  version: 1;
+  entries: MintBurnConservationRuntimeEntry[];
 }
 
 export interface MintBurnConservationEligibility {
@@ -101,8 +131,9 @@ export function reviewedConservationIdentityKey(chainId: string, stablecoinId: s
   return `${chainId}\u0000${stablecoinId}\u0000${address.toLowerCase()}\u0000${decimals}`;
 }
 
-function buildReviewedConservationIndex(entries: readonly ReviewedConservationEntry[]): ReadonlyMap<string, ReviewedConservationEntry> {
-  const index = new Map<string, ReviewedConservationEntry>();
+function buildReviewedConservationIndex(entries: readonly MintBurnConservationRuntimeEntry[]):
+  ReadonlyMap<string, MintBurnConservationRuntimeEntry> {
+  const index = new Map<string, MintBurnConservationRuntimeEntry>();
   for (const entry of entries) {
     index.set(reviewedConservationIdentityKey(entry.chainId, entry.stablecoinId, entry.address, entry.decimals), entry);
   }
@@ -111,11 +142,10 @@ function buildReviewedConservationIndex(entries: readonly ReviewedConservationEn
 
 // One lookup map built at import; no structural validation happens at load time. The JSON
 // module's inferred literal type is intentionally narrowed once here (tests and the admission
-// CLI own structural validation).
-const REVIEWED_CONSERVATION_ENTRIES =
-  reviewedConservationSidecar.entries as unknown as readonly ReviewedConservationEntry[];
-const REVIEWED_CONSERVATION_INDEX: ReadonlyMap<string, ReviewedConservationEntry> =
-  buildReviewedConservationIndex(REVIEWED_CONSERVATION_ENTRIES);
+// CLI own structural validation of the evidence sidecar the lookup is projected from).
+const REVIEWED_CONSERVATION_INDEX: ReadonlyMap<string, MintBurnConservationRuntimeEntry> =
+  buildReviewedConservationIndex(
+    conservationRuntimeLookup.entries as unknown as readonly MintBurnConservationRuntimeEntry[]);
 
 function canonicalTransferPairSupported(config: MintBurnContractConfig): boolean {
   return config.events.length === 2 && ["mint", "burn"].every((direction) =>
@@ -130,7 +160,7 @@ function canonicalTransferPairSupported(config: MintBurnContractConfig): boolean
  * requires the canonical zero-address Transfer pair and the `transfer-zero-address` adapter;
  * `unsupported` returns the entry's specific reviewed reason.
  */
-export function resolveMintBurnConservationEligibility(entry: ReviewedConservationEntry | undefined,
+export function resolveMintBurnConservationEligibility(entry: MintBurnConservationRuntimeEntry | undefined,
   config: MintBurnContractConfig): MintBurnConservationEligibility {
   if (!entry) return { supported: false, reason: UNREVIEWED_REASON };
   if (entry.disposition === "unsupported") {
