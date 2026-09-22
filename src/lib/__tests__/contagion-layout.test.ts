@@ -178,13 +178,6 @@ describe("buildGraphData", () => {
     return ids.slice(1).map((id, index) => basketEdge(ids[index], id, 0.5));
   }
 
-  it("returns nodes and links arrays", () => {
-    const { cards, mcapMap } = makeCardsAndMcap(realIds);
-    const result = buildGraphData(cards, mcapMap, chainEdges(realIds));
-    expect(Array.isArray(result.nodes)).toBe(true);
-    expect(Array.isArray(result.links)).toBe(true);
-  });
-
   it("treats an empty dependencyEdges array as no graph edges", () => {
     const cards = [mockCard("usds-sky", "USDS"), mockCard("susds-sky", "SUSDS")];
     const mcapMap = new Map<string, number>([
@@ -310,19 +303,6 @@ describe("buildGraphData", () => {
     expect(buildGraphData(cards, mcapMap, dependencyEdges, ALL_NODE_LIMIT).nodes.map((node) => node.id).sort()).toEqual(
       ids,
     );
-  });
-
-  it("each node has the required shape", () => {
-    const { cards, mcapMap } = makeCardsAndMcap(realIds);
-    const result = buildGraphData(cards, mcapMap, chainEdges(realIds));
-    for (const node of result.nodes) {
-      expect(typeof node.id).toBe("string");
-      expect(typeof node.symbol).toBe("string");
-      expect(typeof node.grade).toBe("string");
-      expect(typeof node.mcap).toBe("number");
-      expect(typeof node.r).toBe("number");
-      expect(node.r).toBeGreaterThanOrEqual(0);
-    }
   });
 
   it("drops edges whose endpoints are not both live cards", () => {

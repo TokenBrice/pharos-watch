@@ -9,55 +9,43 @@ vi.mock("../api-hooks", () => ({
 }));
 
 import { useBlacklistEventsPage } from "../use-blacklist-events";
+import type { FetchBlacklistEventsParams } from "@/lib/blacklist-api";
 
+// The request path is owned by `blacklist-api.test.ts`; what only this hook can
+// lose is cache identity — every filter must reach the query key, or two filter
+// selections share one cached page.
 describe("useBlacklistEventsPage", () => {
   beforeEach(() => {
     useRegisteredApiQueryMock.mockReset();
   });
 
-  it("includes sort fields in the query key", () => {
-    useBlacklistEventsPage({
-      stablecoin: "USDC",
-      chainName: "Ethereum",
-      eventType: "blacklist",
-      query: "0xabc",
-      sortBy: "stablecoin",
-      sortDirection: "asc",
-      limit: 25,
-      offset: 50,
-      includeTotal: true,
-    });
+  it.each([
+    {
+      name: "every filter",
+      params: {
+        stablecoin: "USDC",
+        chainName: "Ethereum",
+        eventType: "blacklist" as const,
+        query: "0xabc",
+        sortBy: "stablecoin" as const,
+        sortDirection: "asc" as const,
+        limit: 25,
+        offset: 50,
+        includeTotal: true,
+      },
+      queryKey: ["blacklist-events", "USDC", "Ethereum", "blacklist", "0xabc", "stablecoin", "asc", 25, 50, "first", true],
+    },
+    {
+      name: "stable defaults",
+      params: {},
+      queryKey: ["blacklist-events", "all", "all", "all", "", "date", "desc", 50, 0, "first", false],
+    },
+  ] as Array<{ name: string; params: FetchBlacklistEventsParams; queryKey: unknown[] }>)(
+    "identifies a page by $name",
+    ({ params, queryKey }) => {
+      useBlacklistEventsPage(params);
 
-    expect(useRegisteredApiQueryMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        queryKey: [
-          "blacklist-events",
-          "USDC",
-          "Ethereum",
-          "blacklist",
-          "0xabc",
-          "stablecoin",
-          "asc",
-          25,
-          50,
-          "first",
-          true,
-        ],
-        path: "/api/blacklist?stablecoin=USDC&chain=Ethereum&eventType=blacklist&q=0xabc&sortBy=stablecoin&sortDirection=asc&limit=25&offset=50&includeTotal=true",
-      }),
-      { retry: 1 },
-    );
-  });
-
-  it("uses stable sort defaults in the query key", () => {
-    useBlacklistEventsPage({});
-
-    expect(useRegisteredApiQueryMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        queryKey: ["blacklist-events", "all", "all", "all", "", "date", "desc", 50, 0, "first", false],
-        path: "/api/blacklist",
-      }),
-      { retry: 1 },
-    );
-  });
+      expect(useRegisteredApiQueryMock).toHaveBeenCalledWith(expect.objectContaining({ queryKey }), { retry: 1 });
+    },
+  );
 });

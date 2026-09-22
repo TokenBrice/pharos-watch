@@ -222,15 +222,192 @@ describe("check-seo-static", () => {
     ).toEqual([]);
   });
 
-  it("fails invalid application/ld+json blocks", async () => {
+  type SeoFixtureCase = {
+    name: string;
+    rootLinks?: string[];
+    overrides?: Record<string, Parameters<typeof writePage>[2]>;
+    extraPages?: Record<string, Parameters<typeof writePage>[2]>;
+    sitemapRoutes?: string[];
+    headers?: string;
+    redirects?: string;
+    errors?: string[];
+    absentErrors?: string[];
+  };
+
+  // One row per gate rule: the fixture that should trip it (or prove it stays quiet).
+  it.each([
+    {
+      name: "fails invalid application/ld+json blocks",
+      overrides: { "/": { extraHead: '<script type="application/ld+json">{"@context":"https://schema.org",}</script>' } },
+      errors: ["/: invalid JSON-LD block #1"],
+    },
+    {
+      name: "fails missing og:type on indexable pages",
+      overrides: { "/": { ogType: null } },
+      errors: ["/: missing og:type"],
+    },
+    {
+      name: "allows noindex pages to omit canonical",
+      extraPages: { "/404/": { h1: "Not Found", robots: ["noindex, follow"], canonical: null } },
+      absentErrors: ["/404/: missing canonical"],
+    },
+    {
+      name: "fails when static X-Robots header rules drift",
+      headers: "/llms.txt\n  X-Robots-Tag: noindex, nofollow\n",
+      errors: [
+        "static headers missing raw .txt payloads rule for /*.txt",
+        "static headers LLM-facing index rule /llms.txt must reset X-Robots-Tag",
+      ],
+    },
+    {
+      name: "fails when document caching can outlive deployment chunks",
+      headers: BASELINE_HEADERS.replace(
+        "Cache-Control: public, max-age=0, must-revalidate",
+        "Cache-Control: public, max-age=0, s-maxage=300, stale-while-revalidate=86400",
+      ),
+      errors: [
+        "missing Cache-Control directive must-revalidate",
+        "must not use Cache-Control directive s-maxage",
+        "must not use Cache-Control directive stale-while-revalidate",
+      ],
+    },
+    {
+      name: "fails indexable pages whose canonical does not match their local route",
+      overrides: { "/stability-index/": { canonical: "https://pharos.watch/" } },
+      errors: [
+        "/stability-index/: canonical does not self-match local route: https://pharos.watch/ (expected https://pharos.watch/stability-index/)",
+      ],
+    },
+    {
+      name: "requires the homepage canonical to include the root slash",
+      overrides: { "/": { canonical: "https://pharos.watch" } },
+      errors: ["/: canonical does not self-match local route: https://pharos.watch (expected https://pharos.watch/)"],
+    },
+    {
+      name: "fails conflicting robots directives across robots tags",
+      overrides: { "/": { robots: ["noindex", "index, follow"] } },
+      errors: ["/: conflicting robots directives (noindex conflicts with index)"],
+    },
+    {
+      name: "fails sitemap pharos.watch URLs without local HTML artifacts",
+      sitemapRoutes: ["/", "/stability-index/", "/missing/"],
+      errors: ["sitemap.xml URL has no local static HTML artifact: https://pharos.watch/missing/ (expected /missing/)"],
+    },
+    {
+      name: "fails duplicate sitemap locations",
+      sitemapRoutes: ["/", "/stability-index/", "/stability-index/"],
+      errors: ["sitemap.xml contains duplicate <loc> entries: https://pharos.watch/stability-index/"],
+    },
+    {
+      name: "fails sitemap URLs that conflict with _redirects sources",
+      redirects: "/redirected /target/ 301\n/wildcard/* /target/:splat 301\n",
+      rootLinks: ["/redirected/"],
+      extraPages: { "/redirected/": { h1: "Redirected" } },
+      sitemapRoutes: ["/", "/stability-index/", "/redirected/"],
+      errors: [
+        "sitemap.xml URL https://pharos.watch/redirected/ conflicts with _redirects source /redirected; drop one of the two signals",
+      ],
+      absentErrors: ["/wildcard/"],
+    },
+    {
+      name: "fails slashless internal anchor hrefs that map to static routes",
+      rootLinks: ["/stability-index", "https://pharos.watch/about#sources"],
+      extraPages: { "/about/": { h1: "About" } },
+      sitemapRoutes: ["/", "/stability-index/", "/about/"],
+      errors: [
+        "/: internal anchor href omits canonical trailing slash: /stability-index (use /stability-index/)",
+        "/: internal anchor href omits canonical trailing slash: https://pharos.watch/about#sources (use /about/#sources)",
+      ],
+    },
+    {
+      name: "fails internal anchor hrefs that point at retired route prefixes",
+      rootLinks: [
+        "/blacklist/usdt-tether?view=issuer#top",
+        "https://pharos.watch/tape?event=depeg",
+        "/mica/",
+        "/telegram/install/",
+        "/stablecoins/protocol/liquity-v2/risks/",
+        "/about/editorial/history/",
+        "/feed/digest/",
+      ],
+      errors: [
+        "/: internal anchor href points to retired route prefix /blacklist: /blacklist/usdt-tether?view=issuer#top (use /freezewatch/)",
+        "/: internal anchor href points to retired route prefix /tape: https://pharos.watch/tape?event=depeg (use /timeline/)",
+        "/: internal anchor href points to retired route prefix /mica: /mica/ (use /compliance/)",
+        "/: internal anchor href points to retired route prefix /telegram: /telegram/install/ (use /pharoswatchbot/)",
+        "/: internal anchor href points to retired route prefix /stablecoins/protocol/liquity-v2: /stablecoins/protocol/liquity-v2/risks/ (use /stablecoins/infrastructure/liquity-v2/)",
+        "/: internal anchor href points to retired route prefix /about/editorial: /about/editorial/history/ (use /about/)",
+        "/: internal anchor href points to retired route prefix /feed/digest: /feed/digest/ (use /feed/digest.xml)",
+      ],
+    },
+    {
+      name: "fails internal redirect chains and non-permanent internal redirects",
+      redirects: "/legacy /middle/ 302\n/middle /final/ 301\n",
+      errors: [
+        "_redirects internal rule must be permanent (301): /legacy /middle/ 302",
+        "_redirects source /legacy targets another redirect source /middle via /middle/; collapse to one hop",
+      ],
+    },
+    {
+      name: "allows direct public-dataset and Sheets 200 rewrites to dated artifacts",
+      redirects: [
+        "/datasets/top-stablecoins/latest.csv /datasets/top-stablecoins/2026-07-08.csv 200",
+        "/datasets/top-stablecoins/latest.json /datasets/top-stablecoins/2026-07-08.json 200",
+        "/datasets/top-stablecoins/latest.ndjson /datasets/top-stablecoins/2026-07-08.ndjson 200",
+        "/sheets/top-stablecoins.csv /datasets/top-stablecoins/2026-07-08.csv 200",
+        "",
+      ].join("\n"),
+      absentErrors: ["_redirects internal rule must be permanent"],
+    },
+    {
+      name: "fails thin representative chain detail static HTML",
+      rootLinks: ["/chains/ethereum/"],
+      extraPages: { "/chains/ethereum/": { h1: "Ethereum Stablecoins", mainText: "" } },
+      sitemapRoutes: ["/", "/stability-index/", "/chains/ethereum/"],
+      errors: ["/chains/ethereum/: chain detail static HTML visible text is too thin"],
+    },
+    {
+      name: "fails thin non-canary stablecoin detail pages",
+      rootLinks: ["/stablecoin/usdt-tether/", "/stablecoin/usdc-circle/", "/stablecoin/thin/"],
+      extraPages: {
+        "/stablecoin/usdt-tether/": { h1: "Tether", mainText: "Useful stablecoin detail text ".repeat(20) },
+        "/stablecoin/usdc-circle/": { h1: "USD Coin", mainText: "Useful stablecoin detail text ".repeat(20) },
+        "/stablecoin/thin/": { h1: "Thin Coin", mainText: "" },
+      },
+      sitemapRoutes: [
+        "/",
+        "/stability-index/",
+        "/stablecoin/usdt-tether/",
+        "/stablecoin/usdc-circle/",
+        "/stablecoin/thin/",
+      ],
+      errors: ["/stablecoin/thin/: stablecoin detail static HTML visible text is too thin"],
+    },
+    {
+      name: "fails representative detail pages dominated by loading shell text",
+      rootLinks: ["/stablecoin/usdt-tether/"],
+      extraPages: {
+        "/stablecoin/usdt-tether/": { h1: "Tether", mainText: `${"Loading ".repeat(20)}${"analytics ".repeat(50)}` },
+      },
+      sitemapRoutes: ["/", "/stability-index/", "/stablecoin/usdt-tether/"],
+      errors: ["/stablecoin/usdt-tether/: stablecoin detail static HTML is dominated by loading shell text"],
+    },
+  ] as SeoFixtureCase[])("$name", async (fixture) => {
     const root = await makeOutDir();
-    await writeBaselinePages(root, [], {
-      "/": { extraHead: '<script type="application/ld+json">{"@context":"https://schema.org",}</script>' },
-    }, ["/", "/stability-index/"]);
+    if (fixture.headers !== undefined) await writeFile(path.join(root, "_headers"), fixture.headers);
+    if (fixture.redirects !== undefined) await writeFile(path.join(root, "_redirects"), fixture.redirects);
+    await writeBaselinePages(root, fixture.rootLinks ?? [], fixture.overrides ?? {});
+    for (const [route, options] of Object.entries(fixture.extraPages ?? {})) await writePage(root, route, options);
+    await writeSitemap(root, fixture.sitemapRoutes ?? ["/", "/stability-index/"]);
 
     const result = collectFixtureSeoResult(root);
 
-    expect(result.errors).toEqual(expect.arrayContaining([expect.stringContaining("/: invalid JSON-LD block #1")]));
+    expect(result.errors).toEqual(
+      expect.arrayContaining((fixture.errors ?? []).map((fragment) => expect.stringContaining(fragment))),
+    );
+    for (const fragment of fixture.absentErrors ?? []) {
+      expect(result.errors.filter((error) => error.includes(fragment))).toEqual([]);
+    }
   });
 
   it("fails site-data URLs inside indexable structured data only", async () => {
@@ -260,15 +437,6 @@ describe("check-seo-static", () => {
       ]),
     );
     expect(result.errors.some((error) => error.startsWith("/compare/: structured data URL"))).toBe(false);
-  });
-
-  it("fails missing og:type on indexable pages", async () => {
-    const root = await makeOutDir();
-    await writeBaselinePages(root, [], { "/": { ogType: null } }, ["/", "/stability-index/"]);
-
-    const result = collectFixtureSeoResult(root);
-
-    expect(result.errors).toEqual(expect.arrayContaining([expect.stringContaining("/: missing og:type")]));
   });
 
   it("fails indexable pages with titles or descriptions outside the search-snippet envelope", async () => {
@@ -419,121 +587,6 @@ describe("check-seo-static", () => {
     expect(result.errors.filter((error) => error.includes("references missing file"))).toEqual(errors);
   });
 
-  it("allows noindex pages to omit canonical", async () => {
-    const root = await makeOutDir();
-    await writeBaselinePages(root);
-    await writePage(root, "/404/", {
-      h1: "Not Found",
-      robots: ["noindex, follow"],
-      canonical: null,
-    });
-    await writeSitemap(root, ["/", "/stability-index/"]);
-
-    const result = collectFixtureSeoResult(root);
-
-    expect(result.errors.some((error) => error.includes("/404/: missing canonical"))).toBe(false);
-  });
-
-  it("fails when static X-Robots header rules drift", async () => {
-    const root = await makeOutDir();
-    await writeFile(path.join(root, "_headers"), `/llms.txt\n  X-Robots-Tag: noindex, nofollow\n`);
-    await writeBaselinePages(root);
-    await writeSitemap(root, ["/", "/stability-index/"]);
-
-    const result = collectFixtureSeoResult(root);
-
-    expect(result.errors).toEqual(
-      expect.arrayContaining([
-        expect.stringContaining("static headers missing raw .txt payloads rule for /*.txt"),
-        expect.stringContaining("static headers LLM-facing index rule /llms.txt must reset X-Robots-Tag"),
-      ]),
-    );
-  });
-
-  it("fails when document caching can outlive deployment chunks", async () => {
-    const root = await makeOutDir();
-    await writeFile(
-      path.join(root, "_headers"),
-      BASELINE_HEADERS.replace(
-        "Cache-Control: public, max-age=0, must-revalidate",
-        "Cache-Control: public, max-age=0, s-maxage=300, stale-while-revalidate=86400",
-      ),
-    );
-    await writeBaselinePages(root);
-    await writeSitemap(root, ["/", "/stability-index/"]);
-
-    const result = collectFixtureSeoResult(root);
-
-    expect(result.errors).toEqual(
-      expect.arrayContaining([
-        expect.stringContaining("missing Cache-Control directive must-revalidate"),
-        expect.stringContaining("must not use Cache-Control directive s-maxage"),
-        expect.stringContaining("must not use Cache-Control directive stale-while-revalidate"),
-      ]),
-    );
-  });
-
-  it("fails indexable pages whose canonical does not match their local route", async () => {
-    const root = await makeOutDir();
-    await writeBaselinePages(root, [], {
-      "/stability-index/": { canonical: "https://pharos.watch/" },
-    }, ["/", "/stability-index/"]);
-
-    const result = collectFixtureSeoResult(root);
-
-    expect(result.errors).toEqual(
-      expect.arrayContaining([
-        expect.stringContaining(
-          "/stability-index/: canonical does not self-match local route: https://pharos.watch/ (expected https://pharos.watch/stability-index/)",
-        ),
-      ]),
-    );
-  });
-
-  it("requires the homepage canonical to include the root slash", async () => {
-    const root = await makeOutDir();
-    await writeBaselinePages(root, [], { "/": { canonical: "https://pharos.watch" } }, ["/", "/stability-index/"]);
-
-    const result = collectFixtureSeoResult(root);
-
-    expect(result.errors).toEqual(
-      expect.arrayContaining([
-        expect.stringContaining(
-          "/: canonical does not self-match local route: https://pharos.watch (expected https://pharos.watch/)",
-        ),
-      ]),
-    );
-  });
-
-  it("fails conflicting robots directives across robots tags", async () => {
-    const root = await makeOutDir();
-    await writeBaselinePages(root, [], { "/": { robots: ["noindex", "index, follow"] } }, ["/", "/stability-index/"]);
-
-    const result = collectFixtureSeoResult(root);
-
-    expect(result.errors).toEqual(
-      expect.arrayContaining([
-        expect.stringContaining("/: conflicting robots directives (noindex conflicts with index)"),
-      ]),
-    );
-  });
-
-  it("fails sitemap pharos.watch URLs without local HTML artifacts", async () => {
-    const root = await makeOutDir();
-    await writeBaselinePages(root);
-    await writeSitemap(root, ["/", "/stability-index/", "/missing/"]);
-
-    const result = collectFixtureSeoResult(root);
-
-    expect(result.errors).toEqual(
-      expect.arrayContaining([
-        expect.stringContaining(
-          "sitemap.xml URL has no local static HTML artifact: https://pharos.watch/missing/ (expected /missing/)",
-        ),
-      ]),
-    );
-  });
-
   it("follows single-quoted internal links when calculating reachability", async () => {
     const root = await makeOutDir();
     await writePage(root, "/", { h1: "Home", links: ["/stability-index/"], quote: "'" });
@@ -574,139 +627,6 @@ describe("check-seo-static", () => {
     ).toBe(false);
   });
 
-  it("fails duplicate sitemap locations", async () => {
-    const root = await makeOutDir();
-    await writeBaselinePages(root);
-    await writeSitemap(root, ["/", "/stability-index/", "/stability-index/"]);
-
-    const result = collectFixtureSeoResult(root);
-
-    expect(result.errors).toContain(
-      "sitemap.xml contains duplicate <loc> entries: https://pharos.watch/stability-index/",
-    );
-  });
-
-  it("fails sitemap URLs that conflict with _redirects sources", async () => {
-    const root = await makeOutDir();
-    await writeFile(path.join(root, "_redirects"), "/redirected /target/ 301\n/wildcard/* /target/:splat 301\n");
-    await writeBaselinePages(root, ["/redirected/"]);
-    await writePage(root, "/redirected/", { h1: "Redirected" });
-    await writeSitemap(root, ["/", "/stability-index/", "/redirected/"]);
-
-    const result = collectFixtureSeoResult(root);
-
-    expect(result.errors).toEqual(
-      expect.arrayContaining([
-        "sitemap.xml URL https://pharos.watch/redirected/ conflicts with _redirects source /redirected; drop one of the two signals",
-      ]),
-    );
-    expect(result.errors.some((error) => error.includes("/wildcard/") && error.includes("_redirects"))).toBe(false);
-  });
-
-  it("fails slashless internal anchor hrefs that map to static routes", async () => {
-    const root = await makeOutDir();
-    await writePage(root, "/", { h1: "Home", links: ["/stability-index", "https://pharos.watch/about#sources"] });
-    await writePage(root, "/stability-index/", { h1: "Stability Index" });
-    await writePage(root, "/about/", { h1: "About" });
-    await writeSitemap(root, ["/", "/stability-index/", "/about/"]);
-
-    const result = collectFixtureSeoResult(root);
-
-    expect(result.errors).toEqual(
-      expect.arrayContaining([
-        expect.stringContaining(
-          "/: internal anchor href omits canonical trailing slash: /stability-index (use /stability-index/)",
-        ),
-        expect.stringContaining(
-          "/: internal anchor href omits canonical trailing slash: https://pharos.watch/about#sources (use /about/#sources)",
-        ),
-      ]),
-    );
-  });
-
-  it("fails internal anchor hrefs that point at retired route prefixes", async () => {
-    const root = await makeOutDir();
-    await writePage(root, "/", {
-      h1: "Home",
-      links: [
-        "/stability-index/",
-        "/blacklist/usdt-tether?view=issuer#top",
-        "https://pharos.watch/tape?event=depeg",
-        "/mica/",
-        "/telegram/install/",
-        "/stablecoins/protocol/liquity-v2/risks/",
-        "/about/editorial/history/",
-        "/feed/digest/",
-      ],
-    });
-    await writePage(root, "/stability-index/", { h1: "Stability Index" });
-    await writeSitemap(root, ["/", "/stability-index/"]);
-
-    const result = collectFixtureSeoResult(root);
-
-    expect(result.errors).toEqual(
-      expect.arrayContaining([
-        expect.stringContaining(
-          "/: internal anchor href points to retired route prefix /blacklist: /blacklist/usdt-tether?view=issuer#top (use /freezewatch/)",
-        ),
-        expect.stringContaining(
-          "/: internal anchor href points to retired route prefix /tape: https://pharos.watch/tape?event=depeg (use /timeline/)",
-        ),
-        expect.stringContaining(
-          "/: internal anchor href points to retired route prefix /mica: /mica/ (use /compliance/)",
-        ),
-        expect.stringContaining(
-          "/: internal anchor href points to retired route prefix /telegram: /telegram/install/ (use /pharoswatchbot/)",
-        ),
-        expect.stringContaining(
-          "/: internal anchor href points to retired route prefix /stablecoins/protocol/liquity-v2: /stablecoins/protocol/liquity-v2/risks/ (use /stablecoins/infrastructure/liquity-v2/)",
-        ),
-        expect.stringContaining(
-          "/: internal anchor href points to retired route prefix /about/editorial: /about/editorial/history/ (use /about/)",
-        ),
-        expect.stringContaining(
-          "/: internal anchor href points to retired route prefix /feed/digest: /feed/digest/ (use /feed/digest.xml)",
-        ),
-      ]),
-    );
-  });
-
-  it("fails internal redirect chains and non-permanent internal redirects", async () => {
-    const root = await makeOutDir();
-    await writeBaselinePages(root);
-    await writeFile(path.join(root, "_redirects"), "/legacy /middle/ 302\n/middle /final/ 301\n");
-    await writeSitemap(root, ["/", "/stability-index/"]);
-
-    const result = collectFixtureSeoResult(root);
-
-    expect(result.errors).toEqual(
-      expect.arrayContaining([
-        "_redirects internal rule must be permanent (301): /legacy /middle/ 302",
-        "_redirects source /legacy targets another redirect source /middle via /middle/; collapse to one hop",
-      ]),
-    );
-  });
-
-  it("allows direct public-dataset and Sheets 200 rewrites to dated artifacts", async () => {
-    const root = await makeOutDir();
-    await writeBaselinePages(root);
-    await writeFile(
-      path.join(root, "_redirects"),
-      [
-        "/datasets/top-stablecoins/latest.csv /datasets/top-stablecoins/2026-07-08.csv 200",
-        "/datasets/top-stablecoins/latest.json /datasets/top-stablecoins/2026-07-08.json 200",
-        "/datasets/top-stablecoins/latest.ndjson /datasets/top-stablecoins/2026-07-08.ndjson 200",
-        "/sheets/top-stablecoins.csv /datasets/top-stablecoins/2026-07-08.csv 200",
-        "",
-      ].join("\n"),
-    );
-    await writeSitemap(root, ["/", "/stability-index/"]);
-
-    const result = collectFixtureSeoResult(root);
-
-    expect(result.errors.filter((error) => error.includes("_redirects internal rule must be permanent"))).toEqual([]);
-  });
-
   it("ignores retired route text, canonical route links, and external retired-route links", async () => {
     const root = await makeOutDir();
     await writePage(root, "/", {
@@ -730,76 +650,6 @@ describe("check-seo-static", () => {
     const result = collectFixtureSeoResult(root);
 
     expect(result.errors.filter((error) => error.includes("retired route prefix"))).toEqual([]);
-  });
-
-  it("fails thin representative chain detail static HTML", async () => {
-    const root = await makeOutDir();
-    await writeBaselinePages(root, ["/chains/ethereum/"]);
-    await writePage(root, "/chains/ethereum/", {
-      h1: "Ethereum Stablecoins",
-      mainText: "",
-    });
-    await writeSitemap(root, ["/", "/stability-index/", "/chains/ethereum/"]);
-
-    const result = collectFixtureSeoResult(root);
-
-    expect(result.errors).toEqual(
-      expect.arrayContaining([
-        expect.stringContaining("/chains/ethereum/: chain detail static HTML visible text is too thin"),
-      ]),
-    );
-  });
-
-  it("fails thin non-canary stablecoin detail pages", async () => {
-    const root = await makeOutDir();
-    await writeBaselinePages(root, ["/stablecoin/usdt-tether/", "/stablecoin/usdc-circle/", "/stablecoin/thin/"]);
-    await writePage(root, "/stablecoin/usdt-tether/", {
-      h1: "Tether",
-      mainText: "Useful stablecoin detail text ".repeat(20),
-    });
-    await writePage(root, "/stablecoin/usdc-circle/", {
-      h1: "USD Coin",
-      mainText: "Useful stablecoin detail text ".repeat(20),
-    });
-    await writePage(root, "/stablecoin/thin/", {
-      h1: "Thin Coin",
-      mainText: "",
-    });
-    await writeSitemap(root, [
-      "/",
-      "/stability-index/",
-      "/stablecoin/usdt-tether/",
-      "/stablecoin/usdc-circle/",
-      "/stablecoin/thin/",
-    ]);
-
-    const result = collectFixtureSeoResult(root);
-
-    expect(result.errors).toEqual(
-      expect.arrayContaining([
-        expect.stringContaining("/stablecoin/thin/: stablecoin detail static HTML visible text is too thin"),
-      ]),
-    );
-  });
-
-  it("fails representative detail pages dominated by loading shell text", async () => {
-    const root = await makeOutDir();
-    await writeBaselinePages(root, ["/stablecoin/usdt-tether/"]);
-    await writePage(root, "/stablecoin/usdt-tether/", {
-      h1: "Tether",
-      mainText: `${"Loading ".repeat(20)}${"analytics ".repeat(50)}`,
-    });
-    await writeSitemap(root, ["/", "/stability-index/", "/stablecoin/usdt-tether/"]);
-
-    const result = collectFixtureSeoResult(root);
-
-    expect(result.errors).toEqual(
-      expect.arrayContaining([
-        expect.stringContaining(
-          "/stablecoin/usdt-tether/: stablecoin detail static HTML is dominated by loading shell text",
-        ),
-      ]),
-    );
   });
 
   it("asserts required structured-data fields for representative routes", async () => {
