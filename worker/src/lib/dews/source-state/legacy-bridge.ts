@@ -24,26 +24,9 @@
 
 import { decodeJsonString } from "../../cache-json";
 import { unwrapStressSignalsEnvelope } from "@shared/lib/stress-signals-envelope";
-import {
-  normalizeYieldRankChangeAttribution,
-  normalizeYieldSourceRisk,
-} from "@shared/types/yield";
+import { booleanValue, readRecord } from "@shared/lib/type-guards";
 import type { PersistedJsonDecodeReason } from "../contracts";
 
-export function getObject(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
-}
-
-export function getString(value: unknown): string | null {
-  return typeof value === "string" && value.length > 0 ? value : null;
-}
-export function getNumber(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
-export function getBoolean(value: unknown): boolean | null {
-  return typeof value === "boolean" ? value : null;
-}
 
 
 export type LegacyDecodeResult<T> =
@@ -70,9 +53,9 @@ export function decodeLegacyStressSignals(
       }
       const signals: Record<string, { value: number; available?: boolean }> = {};
       for (const [key, signal] of Object.entries(unwrapped.signals)) {
-        const row = getObject(signal);
+        const row = readRecord(signal);
         if (row != null && typeof row.value === "number" && Number.isFinite(row.value)) {
-          const available = getBoolean(row.available);
+          const available = booleanValue(row.available);
           signals[key] = { ...row, value: row.value, ...(available === null ? {} : { available }) };
         }
       }
@@ -82,8 +65,3 @@ export function decodeLegacyStressSignals(
   if (!decoded.ok) return { ok: false, reason: decoded.reason };
   return { ok: true, payload: decoded.payload };
 }
-
-export {
-  normalizeYieldRankChangeAttribution,
-  normalizeYieldSourceRisk,
-};

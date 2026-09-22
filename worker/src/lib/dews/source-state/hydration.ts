@@ -30,14 +30,14 @@ import type {
   MintBurnSnapshot,
   PersistedJsonDecodeReason,
 } from "../contracts";
-import type { YieldRankChangeAttribution, YieldSourceRisk } from "@shared/types/yield";
 import {
-  decodeLegacyStressSignals,
-  getObject,
-  getString,
   normalizeYieldRankChangeAttribution,
   normalizeYieldSourceRisk,
-} from "./legacy-bridge";
+  type YieldRankChangeAttribution,
+  type YieldSourceRisk,
+} from "@shared/types/yield";
+import { readRecord as getObject, stringValue as getString } from "@shared/lib/type-guards";
+import { decodeLegacyStressSignals } from "./legacy-bridge";
 import {
   loadPreviousStressSignalCurrentRows,
   type PreviousStressSignalCurrentRow,
@@ -59,7 +59,7 @@ const DEWS_DEX_PRICE_TRUST_POLICY = getDexTrustPolicy("depeg");
 type PreviousStressSignalRow = PreviousStressSignalCurrentRow;
 
 export interface HydrationCallbacks {
-  registerSourceFailure: (source: string, error: unknown, options?: { bootstrapAllowed?: boolean }) => void;
+  registerSourceFailure: (source: string, error: unknown) => void;
   registerMalformedPersistedInput: (options: {
     source: string;
     context: string;
@@ -73,7 +73,6 @@ export interface HydrationCallbacks {
 export interface HydrationContext extends HydrationCallbacks {
   db: D1Database;
   nowSec: number;
-  bootstrapPending: boolean;
 }
 
 function getRowAgeSec(updatedAt: number | null | undefined, nowSec: number): number | null {

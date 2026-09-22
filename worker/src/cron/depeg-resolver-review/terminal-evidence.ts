@@ -2,8 +2,7 @@ import { CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
 import type { DdrrActualEventInput } from "@shared/lib/depeg-resolver-review";
 import { isTerminalStablecoinStatus } from "@shared/lib/stablecoin-lifecycle";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
-import { abortIf } from "../depeg-resolver/utils";
+import { isRecord, numberValue, readRecord, stringValue } from "@shared/lib/type-guards";
 import { buildInClause, chunkArray } from "../../lib/db";
 import { throwIfAborted } from "../../lib/abort";
 import { tryParseJson } from "../../lib/json-parse";
@@ -55,9 +54,6 @@ function payloadStringValue(value: unknown): string | null {
   return stringValue(value, { trim: false });
 }
 
-function recordValue(value: unknown): Record<string, unknown> {
-  return isRecord(value) ? value : {};
-}
 
 function arrayValue(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
@@ -139,7 +135,7 @@ function registryTerminalEvidence(stablecoinId: string): TerminalEvidence | null
 }
 
 function tapeTerminalEvidence(row: TapeTerminalEvidenceRow): TerminalEvidence | null {
-  const payload = recordValue(tryParseJson(row.payload_json));
+  const payload = (readRecord(tryParseJson(row.payload_json)) ?? {});
   if (row.type === "lifecycle.tracked.frozen") {
     return dateIntervalFromSourceDate(payloadStringValue(payload.frozenAt)) ?? exactTerminalEvidenceFromTapeTs(row.ts);
   }
@@ -219,7 +215,7 @@ async function loadTapeTerminalEvidenceToken(
   db: D1Database,
   signal?: AbortSignal,
 ): Promise<TapeTerminalEvidenceCacheToken | null> {
-  abortIf(signal, "compute-depeg-resolver-review");
+  throwIfAborted(signal);
   const row = await db
     .prepare(
       `SELECT COUNT(*) as row_count, MAX(ts) as max_ts, MAX(id) as max_id
@@ -227,7 +223,7 @@ async function loadTapeTerminalEvidenceToken(
          WHERE type IN ('lifecycle.tracked.frozen', 'cemetery.entry.added')`,
     )
     .first<{ row_count: number | null; max_ts: number | null; max_id: number | null }>();
-  abortIf(signal, "compute-depeg-resolver-review");
+  throwIfAborted(signal);
   const rowCount = nullableNonnegativeInteger(row?.row_count);
   if (rowCount == null) return null;
   return {
@@ -242,13 +238,13 @@ async function readTapeTerminalEvidenceCache(
   token: TapeTerminalEvidenceCacheToken,
   signal?: AbortSignal,
 ): Promise<TapeTerminalEvidenceCachePayload | null> {
-  abortIf(signal, "compute-depeg-resolver-review");
+  throwIfAborted(signal);
   try {
     const row = await db
       .prepare("SELECT value FROM cache WHERE key = ?")
       .bind(DDRR_TAPE_TERMINAL_EVIDENCE_CACHE_KEY)
       .first<{ value: string | null }>();
-    abortIf(signal, "compute-depeg-resolver-review");
+    throwIfAborted(signal);
     const payload = tapeTerminalEvidenceCachePayload(tryParseJson(row?.value));
     if (!payload || !sameTapeTerminalEvidenceToken(payload.token, token)) return null;
     return payload;
@@ -273,7 +269,7 @@ async function writeTapeTerminalEvidenceCache(
   evidenceByStablecoinId: Map<string, TerminalEvidence>,
   signal?: AbortSignal,
 ): Promise<void> {
-  abortIf(signal, "compute-depeg-resolver-review");
+  throwIfAborted(signal);
   const payload: TapeTerminalEvidenceCachePayload = {
     version: 1,
     token,
@@ -287,7 +283,7 @@ async function writeTapeTerminalEvidenceCache(
       .prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
       .bind(DDRR_TAPE_TERMINAL_EVIDENCE_CACHE_KEY, JSON.stringify(payload), Math.floor(Date.now() / 1000))
       .run();
-    abortIf(signal, "compute-depeg-resolver-review");
+    throwIfAborted(signal);
   } catch (err) {
     logWorkerEvent({
       scope: "lib",
@@ -324,7 +320,7 @@ async function queryTapeTerminalEvidenceByStablecoinId(
       .bind(...inClause.binds)
       .all<TapeTerminalEvidenceRow>();
 
-    abortIf(signal, "compute-depeg-resolver-review");
+    throwIfAborted(signal);
     for (const row of result.results ?? []) {
       if (!row.coin_id || evidenceByStablecoinId.has(row.coin_id)) continue;
       const evidence = tapeTerminalEvidence(row);
@@ -343,13 +339,13 @@ async function loadTapeTerminalEvidenceByStablecoinId(
   const stablecoinIds = [...new Set(stablecoinIdsInput)];
   if (stablecoinIds.length === 0) return new Map();
 
-  abortIf(signal, "compute-depeg-resolver-review");
+  throwIfAborted(signal);
   const token = await loadTapeTerminalEvidenceToken(db, signal);
-  abortIf(signal, "compute-depeg-resolver-review");
+  throwIfAborted(signal);
   if (!token) return queryTapeTerminalEvidenceByStablecoinId(db, stablecoinIds, signal);
 
   const cached = await readTapeTerminalEvidenceCache(db, token, signal);
-  abortIf(signal, "compute-depeg-resolver-review");
+  throwIfAborted(signal);
   const checkedStablecoinIds = new Set(cached?.checkedStablecoinIds ?? []);
   const evidenceByStablecoinId = new Map<string, TerminalEvidence>(
     cached ? Object.entries(cached.evidenceByStablecoinId) : [],
@@ -363,11 +359,11 @@ async function loadTapeTerminalEvidenceByStablecoinId(
   }
 
   const loadedEvidence = await queryTapeTerminalEvidenceByStablecoinId(db, missingIds, signal);
-  abortIf(signal, "compute-depeg-resolver-review");
+  throwIfAborted(signal);
   for (const stablecoinId of missingIds) checkedStablecoinIds.add(stablecoinId);
   for (const [stablecoinId, evidence] of loadedEvidence) evidenceByStablecoinId.set(stablecoinId, evidence);
   await writeTapeTerminalEvidenceCache(db, token, checkedStablecoinIds, evidenceByStablecoinId, signal);
-  abortIf(signal, "compute-depeg-resolver-review");
+  throwIfAborted(signal);
   return new Map(stablecoinIds.flatMap((stablecoinId) => {
     const evidence = evidenceByStablecoinId.get(stablecoinId);
     return evidence ? [[stablecoinId, evidence] as const] : [];
@@ -403,7 +399,7 @@ export async function loadActualEventsByEventIds(
       .bind(...inClause.binds)
       .all<ActualEventDbRow>();
 
-    abortIf(signal, "compute-depeg-resolver-review");
+    throwIfAborted(signal);
     for (const row of result.results ?? []) {
       sourceRows.push(row);
     }
@@ -416,9 +412,9 @@ export async function loadActualEventsByEventIds(
     if (registryEvidence) registryEvidenceByStablecoinId.set(row.stablecoin_id, registryEvidence);
     else idsNeedingTapeEvidence.push(row.stablecoin_id);
   }
-  abortIf(signal, "compute-depeg-resolver-review");
+  throwIfAborted(signal);
   const tapeEvidenceByStablecoinId = await loadTapeTerminalEvidenceByStablecoinId(db, idsNeedingTapeEvidence, signal);
-  abortIf(signal, "compute-depeg-resolver-review");
+  throwIfAborted(signal);
 
   for (const row of sourceRows) {
     const meta = TRACKED_META_BY_ID.get(row.stablecoin_id);

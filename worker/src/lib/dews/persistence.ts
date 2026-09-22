@@ -138,14 +138,12 @@ function buildStressSignalsEnvelope(result: DewsComputedRow): string {
     amplifiers: result.amplifiers,
     baseScore: result.baseScore,
     finalScore: result.finalScore,
-    availableWeight: result.availableWeight,
     effectiveWeights: result.effectiveWeights,
     evidenceKinds: result.evidenceKinds,
     insufficientEvidenceReason: result.insufficientEvidenceReason,
     dataQualityScore: result.dataQualityScore,
     topContributors: result.topContributors,
     ...(result.sourceAges ? { sourceAges: result.sourceAges } : {}),
-    ...(result.staleFlags ? { staleFlags: result.staleFlags } : {}),
   });
 }
 

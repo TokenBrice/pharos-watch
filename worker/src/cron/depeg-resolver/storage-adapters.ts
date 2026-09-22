@@ -37,7 +37,7 @@ import {
 import {
   loadPredictionErrata as loadPredictionErrataStore,
 } from "../../lib/depeg-resolver-errata-store";
-import { recordValue } from "./utils";
+import { readRecord } from "@shared/lib/type-guards";
 
 export interface DdrStorageJsonDecodeFailure {
   kind: "missing" | "malformed_json" | "non_object";
@@ -80,13 +80,13 @@ function decodeJsonObject(value: string | null | undefined, context: Omit<DdrSto
       message: toErrorMessage(error),
     });
   }
-  const record = recordValue(parsed);
+  const record = readRecord(parsed);
   if (record) return record;
   failStorageDecode({ ...context, kind: "non_object", message: "sealed payload JSON decoded to a non-object value" });
 }
 
 function sealedPayloadFromStore(row: StoreDdrSealedPublicPrediction): Record<string, unknown> {
-  const payload = recordValue(row.sealedPayload);
+  const payload = readRecord(row.sealedPayload);
   if (payload) return payload;
   return decodeJsonObject(row.sealedPayloadJson, {
     field: "sealedPayloadJson",
@@ -110,11 +110,7 @@ export function sealedByIncident(rows: readonly DdrSealedPublicPrediction[]): Ma
 export function firstPublicationByPredictionId(
   rows: readonly DdrFirstPublicationMembership[],
 ): Map<number, DdrFirstPublicationMembership> {
-  const out = new Map<number, DdrFirstPublicationMembership>();
-  for (const row of rows) {
-    if (row.firstPublished) out.set(row.publicPredictionId, row);
-  }
-  return out;
+  return new Map(rows.map((row) => [row.publicPredictionId, row]));
 }
 
 function mapStoreIncident(row: StoreDdrCanonicalIncident): DdrCanonicalIncident {
@@ -170,7 +166,6 @@ function mapStoreFirstPublication(row: StoreDdrFirstPublicationMembership): DdrF
     snapshotToken: row.snapshotToken,
     snapshotGeneration: row.snapshotGeneration,
     publishedAt: row.publishedAt,
-    firstPublished: true,
   };
 }
 
@@ -182,7 +177,6 @@ function mapStorePublicationManifest(row: StoreDdrPublicationManifest): DdrPubli
     publishedAt: row.publishedAt,
     basePayloadHash: row.basePayloadHash,
     publicPredictionIds: row.publicPredictionIds,
-    firstPublishedPublicPredictionIds: row.publicPredictionIds,
   };
 }
 
@@ -350,7 +344,6 @@ export const DEFAULT_DDR_V2_STORE_CONTRACTS: DdrV2StoreContracts = {
       incidentKeys: filters.incidentKeys,
       eventIds: filters.eventIds,
       predictionPolicyVersion: filters.predictionPolicyVersion,
-      includeUnpublished: filters.includeUnpublished,
     });
     return rows.map(mapStoreSealedPublicPrediction);
   },

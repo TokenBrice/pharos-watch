@@ -2,10 +2,8 @@ import type { DdrCoinStructural } from "@shared/lib/depeg-resolver";
 import { getPegTaxonomyByType } from "@shared/lib/peg-taxonomy";
 import { bytesToHex } from "../../lib/hash";
 import { toErrorMessage } from "@shared/lib/error-utils";
-import { throwIfAborted } from "../../lib/abort";
 import {
   DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC,
-  DDR_PREDICTION_POLICY_VERSION,
   DDR_V2_EFFECTIVE_AT,
 } from "@shared/lib/methodology-versions/depeg-resolver";
 import { curatedMintPostureBand, resolveV9MintPostureBand } from "@shared/lib/safety-score-v9/mint-posture";
@@ -15,9 +13,6 @@ import type { StablecoinMeta } from "@shared/types/core";
 import type { DdrCanonicalIncident, DdrCanonicalIncidentInput, DdrDirection } from "../depeg-resolver-v2-contracts";
 import type { DdrEventDbRow } from "./types";
 
-export function abortIf(signal: AbortSignal | undefined, _label: string): void {
-  throwIfAborted(signal);
-}
 
 export interface DdrV9DependencyCard {
   id: string;
@@ -142,23 +137,20 @@ export function allocateDdrRunId(slot: string, runAt: number): string {
   return `ddr:${slot}:${runAt}:${randomHex(6)}`;
 }
 
-export function recordValue(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
-}
 
-export function stringValue(value: unknown, fallback: string): string {
+export function payloadString(value: unknown, fallback: string): string {
   return typeof value === "string" ? value : fallback;
 }
 
-export function nullableStringValue(value: unknown, fallback: string | null): string | null {
+export function payloadNullableString(value: unknown, fallback: string | null): string | null {
   return value == null || typeof value === "string" ? (value ?? fallback) : fallback;
 }
 
-export function numberValue(value: unknown, fallback: number): number {
+export function payloadNumber(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
-export function nullableNumberValue(value: unknown): number | null {
+export function payloadNullableNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
@@ -166,7 +158,7 @@ function toDirection(value: string): DdrDirection {
   return value === "above" ? "above" : "below";
 }
 
-export function eligibleAt(startedAt: number): number {
+function eligibleAt(startedAt: number): number {
   return startedAt + DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC;
 }
 
@@ -195,22 +187,15 @@ export function toCanonicalIncidentInput(row: DdrEventDbRow): DdrCanonicalIncide
   return {
     eventId: row.id,
     stablecoinId: row.stablecoin_id,
-    symbol: row.symbol,
     pegCurrency: getPegTaxonomyByType(row.peg_type)?.currency ?? "USD",
     direction: toDirection(row.direction),
     startedAt: row.started_at,
     endedAt: row.ended_at,
-    recoveryPrice: row.recovery_price,
     peakDeviationBps: row.peak_deviation_bps,
     source: row.source,
     sourceFingerprint: null,
-    rolloutActiveAtEnablement:
-      row.started_at < DDR_V2_EFFECTIVE_AT && (row.ended_at == null || row.ended_at >= DDR_V2_EFFECTIVE_AT),
     publicTrackedAtFirstSeen: meta != null,
     psiShadowAtFirstSeen: meta == null,
-    predictionPolicyVersion: DDR_PREDICTION_POLICY_VERSION,
-    policyDelaySec: DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC,
-    policyEffectiveAt: DDR_V2_EFFECTIVE_AT,
     registrySnapshot: buildRegistrySnapshot(meta),
   };
 }

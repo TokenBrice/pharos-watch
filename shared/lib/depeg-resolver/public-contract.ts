@@ -1,4 +1,5 @@
 import type { DdrResponse, DdrV2ResponseRow, DdrV2Row } from "../../types/depeg-resolver";
+import { readRecord } from "../type-guards";
 import { DDR_HASH_DOMAINS, stableJsonHashV1 } from "./hash";
 
 export type DdrPublicContractValidationResult =
@@ -36,7 +37,7 @@ export function applyDurationStaleness(payload: DdrResponse, nowSec: number): Dd
 
 function stripLive(row: DdrV2ResponseRow): DdrV2Row {
   const { live: _live, ...baseRow } = row;
-  const prediction = recordValue(baseRow.prediction);
+  const prediction = readRecord(baseRow.prediction);
   if (!prediction) return baseRow as DdrV2Row;
   const { lockTrigger: rawLockTrigger, readiness, backstop, ...stablePrediction } = prediction;
   const lockTrigger = hashableLockTrigger(rawLockTrigger);
@@ -68,12 +69,9 @@ function rowHashMap(rows: readonly DdrV2ResponseRow[]): Record<string, string> {
   return Object.fromEntries(pairs);
 }
 
-function recordValue(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
-}
 
 function predictionRecord(row: Record<string, unknown>): Record<string, unknown> {
-  const prediction = recordValue(row.prediction);
+  const prediction = readRecord(row.prediction);
   if (!prediction) throw new Error("DDR public row is missing prediction metadata");
   return prediction;
 }
@@ -120,7 +118,7 @@ function canonicalBaseRowForHash(row: Record<string, unknown>): Record<string, u
 }
 
 export function computeDdrPublicRowHash(row: unknown): string {
-  const rowRecord = recordValue(row);
+  const rowRecord = readRecord(row);
   if (!rowRecord) throw new Error("DDR public row hash payload must be an object");
   const kind = rowRecord.kind;
   if (kind !== "prediction" && kind !== "no_call" && kind !== "invalidated_prediction") {

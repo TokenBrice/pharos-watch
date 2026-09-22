@@ -29,7 +29,7 @@ export function buildStablecoinsCacheFailureResult(reason: string): CronResult {
       rowsWritten: 0,
       rowsDropped: 0,
       sourceCoverage: { stablecoins: 0 },
-      sourceFailures: [{ source: "stablecoins-cache", reason, bootstrapAllowed: false }],
+      sourceFailures: [{ source: "stablecoins-cache", reason }],
       fallbackMode: "stablecoins-cache-unavailable",
       validationFailures: 1,
     }),

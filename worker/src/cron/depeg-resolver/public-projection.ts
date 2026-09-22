@@ -21,6 +21,7 @@ import {
   DDR_SNAPSHOT_CACHE_GENERATION,
   DDR_VERSION_STAMP,
 } from "@shared/lib/methodology-versions/depeg-resolver";
+import { readRecord } from "@shared/lib/type-guards";
 import { buildDdrMethodologyEnvelope } from "../../lib/depeg-resolver-methodology";
 import type {
   DdrCanonicalIncident,
@@ -31,7 +32,7 @@ import type {
 } from "../depeg-resolver-v2-contracts";
 import { DAY, DDR_SNAPSHOT_TTL_SEC } from "./constants";
 import type { DdrDiagnosticResponse, DdrLineage } from "./types";
-import { eligibleAt, nullableNumberValue, nullableStringValue, numberValue, recordValue, stringValue } from "./utils";
+import { payloadNullableNumber, payloadNullableString, payloadNumber, payloadString } from "./utils";
 import { firstPublicationByPredictionId, publicPredictionIdOf, sealedByIncident } from "./storage-adapters";
 
 function buildFrozenDuration(row: DdrRow, lockedAt: number): Record<string, unknown> {
@@ -229,11 +230,11 @@ function buildDdrMeta(input: {
 }
 
 export function normalizeErratumRecord(row: Record<string, unknown>): DdrPredictionErratum | null {
-  const id = nullableNumberValue(row.id);
-  const publicPredictionId = nullableNumberValue(row.publicPredictionId ?? row.public_prediction_id);
-  const eventId = nullableNumberValue(row.eventId ?? row.event_id);
-  const assessmentId = nullableNumberValue(row.assessmentId ?? row.assessment_id);
-  const createdAt = nullableNumberValue(row.createdAt ?? row.created_at);
+  const id = payloadNullableNumber(row.id);
+  const publicPredictionId = payloadNullableNumber(row.publicPredictionId ?? row.public_prediction_id);
+  const eventId = payloadNullableNumber(row.eventId ?? row.event_id);
+  const assessmentId = payloadNullableNumber(row.assessmentId ?? row.assessment_id);
+  const createdAt = payloadNullableNumber(row.createdAt ?? row.created_at);
   const reason = row.reason;
   const incidentKey = row.incidentKey ?? row.incident_key;
   const operatorNote = row.operatorNote ?? row.operator_note;
@@ -268,9 +269,9 @@ export function normalizeErratumRecord(row: Record<string, unknown>): DdrPredict
     reason: reason as DdrPredictionErratum["reason"],
     createdAt,
     operatorNote,
-    rowHashBefore: nullableStringValue(row.rowHashBefore ?? row.row_hash_before, null),
-    replacementAssessmentId: nullableNumberValue(row.replacementAssessmentId ?? row.replacement_assessment_id),
-    replacementRowHash: nullableStringValue(row.replacementRowHash ?? row.replacement_row_hash, null),
+    rowHashBefore: payloadNullableString(row.rowHashBefore ?? row.row_hash_before, null),
+    replacementAssessmentId: payloadNullableNumber(row.replacementAssessmentId ?? row.replacement_assessment_id),
+    replacementRowHash: payloadNullableString(row.replacementRowHash ?? row.replacement_row_hash, null),
     createdBy,
   };
 }
@@ -316,15 +317,15 @@ function buildBasePublicRowFromSealed(
   const fallbackDirection =
     fallback.direction === "above" || fallback.direction === "below" ? fallback.direction : "below";
   return {
-    stablecoinId: stringValue(payload.stablecoinId, stringValue(fallback.stablecoinId, "")),
-    symbol: stringValue(payload.symbol, stringValue(fallback.symbol, "")),
-    name: stringValue(payload.name, stringValue(fallback.name, "")),
-    pegCurrency: stringValue(payload.pegCurrency, stringValue(fallback.pegCurrency, "USD")),
-    governance: stringValue(payload.governance, stringValue(fallback.governance, "unknown")),
-    status: nullableStringValue(payload.status, nullableStringValue(fallback.status, null)),
-    eventId: numberValue(payload.eventId, sealed.eventId),
+    stablecoinId: payloadString(payload.stablecoinId, payloadString(fallback.stablecoinId, "")),
+    symbol: payloadString(payload.symbol, payloadString(fallback.symbol, "")),
+    name: payloadString(payload.name, payloadString(fallback.name, "")),
+    pegCurrency: payloadString(payload.pegCurrency, payloadString(fallback.pegCurrency, "USD")),
+    governance: payloadString(payload.governance, payloadString(fallback.governance, "unknown")),
+    status: payloadNullableString(payload.status, payloadNullableString(fallback.status, null)),
+    eventId: payloadNumber(payload.eventId, sealed.eventId),
     incidentKey: sealed.incidentKey,
-    startedAt: numberValue(payload.startedAt, numberValue(fallback.startedAt, 0)),
+    startedAt: payloadNumber(payload.startedAt, payloadNumber(fallback.startedAt, 0)),
     direction: payload.direction === "above" || payload.direction === "below" ? payload.direction : fallbackDirection,
   };
 }
@@ -345,15 +346,15 @@ function buildPredictionMeta(input: {
   errataHistory?: DdrPredictionErratum[];
 }): Record<string, unknown> {
   const errataHistory = input.errataHistory ?? [];
-  const sealedPrediction = input.sealed ? recordValue(input.sealed.sealedPayload.prediction) : null;
+  const sealedPrediction = input.sealed ? readRecord(input.sealed.sealedPayload.prediction) : null;
   const policyDelaySec =
     input.policyDelaySec ??
-    nullableNumberValue(sealedPrediction?.policyDelaySec) ??
+    payloadNullableNumber(sealedPrediction?.policyDelaySec) ??
     input.sealed?.policyDelaySec ??
     Math.max(0, input.incident.eligibleAt - input.incident.startedAt);
   const eligibleAt =
     input.eligibleAt ??
-    nullableNumberValue(sealedPrediction?.eligibleAt) ??
+    payloadNullableNumber(sealedPrediction?.eligibleAt) ??
     input.sealed?.eligibleAt ??
     input.incident.eligibleAt;
   const lockTrigger =
@@ -361,37 +362,37 @@ function buildPredictionMeta(input: {
     (sealedPrediction?.lockTrigger as DdrLockTrigger | null | undefined) ??
     input.sealed?.lockTrigger ??
     null;
-  const readiness = input.readiness ?? recordValue(sealedPrediction?.readiness) ?? null;
-  const backstop = input.backstop ?? recordValue(sealedPrediction?.backstop) ?? null;
+  const readiness = input.readiness ?? readRecord(sealedPrediction?.readiness) ?? null;
+  const backstop = input.backstop ?? readRecord(sealedPrediction?.backstop) ?? null;
   return {
     state: input.state,
     publicPredictionId: input.publicPredictionId,
     incidentKey: input.incident.incidentKey,
-    predictionPolicyVersion: nullableStringValue(
+    predictionPolicyVersion: payloadNullableString(
       sealedPrediction?.predictionPolicyVersion,
       input.sealed?.predictionPolicyVersion ?? DDR_PREDICTION_POLICY_VERSION,
     ),
-    predictionMethodologyVersion: nullableStringValue(
+    predictionMethodologyVersion: payloadNullableString(
       sealedPrediction?.predictionMethodologyVersion,
       input.sealed?.predictionMethodologyVersion ?? null,
     ),
-    predictionMethodologyVersionLabel: nullableStringValue(
+    predictionMethodologyVersionLabel: payloadNullableString(
       sealedPrediction?.predictionMethodologyVersionLabel,
       input.sealed ? DDR_VERSION_STAMP.methodologyVersionLabel : null,
     ),
-    resolutionRubricVersion: nullableStringValue(
+    resolutionRubricVersion: payloadNullableString(
       sealedPrediction?.resolutionRubricVersion,
       input.sealed ? DDR_VERSION_STAMP.resolutionRubricVersion : null,
     ),
-    durationModelVersion: nullableStringValue(
+    durationModelVersion: payloadNullableString(
       sealedPrediction?.durationModelVersion,
       input.sealed ? DDR_VERSION_STAMP.durationModelVersion : null,
     ),
-    incidentGroupingVersion: nullableStringValue(
+    incidentGroupingVersion: payloadNullableString(
       sealedPrediction?.incidentGroupingVersion,
       input.sealed ? DDR_VERSION_STAMP.incidentGroupingVersion : null,
     ),
-    supportRulesVersion: nullableStringValue(
+    supportRulesVersion: payloadNullableString(
       sealedPrediction?.supportRulesVersion,
       input.sealed ? DDR_VERSION_STAMP.supportRulesVersion : null,
     ),
@@ -402,7 +403,7 @@ function buildPredictionMeta(input: {
     publicationSnapshotToken: input.publication?.snapshotToken ?? null,
     snapshotGeneration: input.publication?.snapshotGeneration ?? null,
     eventAgeAtLockSec: input.sealed?.eventAgeAtLockSec ?? null,
-    lockTiming: nullableStringValue(sealedPrediction?.lockTiming, input.sealed?.lockTiming ?? null),
+    lockTiming: payloadNullableString(sealedPrediction?.lockTiming, input.sealed?.lockTiming ?? null),
     lockTrigger: lockTrigger ?? "scheduled_24h",
     readiness,
     backstop,
@@ -424,23 +425,22 @@ function publicationBySealedId(input: {
   sealed: DdrSealedPublicPrediction[];
 }): Map<number, DdrFirstPublicationMembership> {
   const out = firstPublicationByPredictionId(input.firstPublication);
-  if (input.manifest) {
-    const manifestIds = new Set(input.manifest.publicPredictionIds);
-    for (const sealed of input.sealed) {
-      const publicPredictionId = publicPredictionIdOf(sealed);
-      if (!manifestIds.has(publicPredictionId) || out.has(publicPredictionId)) continue;
-      out.set(publicPredictionId, {
-        publicPredictionId,
-        incidentKey: sealed.incidentKey,
-        snapshotToken: input.manifest.snapshotToken,
-        snapshotGeneration: input.manifest.snapshotGeneration,
-        publishedAt: input.manifest.publishedAt,
-        firstPublished: input.manifest.firstPublishedPublicPredictionIds.includes(publicPredictionId),
-      });
-    }
+  if (!input.manifest) return out;
+  const manifestIds = new Set(input.manifest.publicPredictionIds);
+  for (const sealed of input.sealed) {
+    const publicPredictionId = publicPredictionIdOf(sealed);
+    if (!manifestIds.has(publicPredictionId) || out.has(publicPredictionId)) continue;
+    out.set(publicPredictionId, {
+      publicPredictionId,
+      incidentKey: sealed.incidentKey,
+      snapshotToken: input.manifest.snapshotToken,
+      snapshotGeneration: input.manifest.snapshotGeneration,
+      publishedAt: input.manifest.publishedAt,
+    });
   }
   return out;
 }
+
 
 function buildPublicRows(input: {
   candidateRows: DdrRow[];
@@ -459,19 +459,10 @@ function buildPublicRows(input: {
     sealed: input.sealed,
   });
 
-  return input.candidateRows.map((row) => {
-    const incident = input.incidentsByEventId.get(row.eventId) ?? {
-      incidentKey: `unresolved:${row.eventId}`,
-      eventId: row.eventId,
-      currentEventId: row.eventId,
-      stablecoinId: row.stablecoinId,
-      pegCurrency: row.pegCurrency,
-      direction: row.direction,
-      startedAt: row.startedAt,
-      eligibleAt: eligibleAt(row.startedAt),
-      policyUniverseIncluded: false,
-      lockState: null,
-    };
+  return input.candidateRows
+    .filter((row) => input.incidentsByEventId.has(row.eventId))
+    .map((row) => {
+    const incident = input.incidentsByEventId.get(row.eventId)!;
     const sealed = sealedByKey.get(incident.incidentKey) ?? null;
     const publicPredictionId = sealed ? publicPredictionIdOf(sealed) : null;
     const publication = publicPredictionId == null ? null : (publicationById.get(publicPredictionId) ?? null);
@@ -528,7 +519,7 @@ function buildPublicRows(input: {
     });
 
     if (sealed.outcomeKind === "no_call") {
-      const sealedNoCall = recordValue(sealed.sealedPayload.noCall);
+      const sealedNoCall = readRecord(sealed.sealedPayload.noCall);
       const noCall = sealedNoCall ?? {
         lockedAt: sealed.lockedAt,
         eventAgeAtLockSec: sealed.eventAgeAtLockSec,
@@ -574,15 +565,15 @@ function buildPublicRows(input: {
       };
     }
 
-    const sealedFrozen = recordValue(sealed.sealedPayload.frozen);
+    const sealedFrozen = readRecord(sealed.sealedPayload.frozen);
     const frozen = sealedFrozen ?? {
       resolution: row.resolution,
       duration: buildFrozenDuration(row, sealed.lockedAt),
       relatedContext: row.relatedContext,
       sourceRow: row,
     };
-    const frozenDuration = recordValue(frozen.duration);
-    const frozenMedianResolveAt = nullableNumberValue(frozenDuration?.medianResolveAt);
+    const frozenDuration = readRecord(frozen.duration);
+    const frozenMedianResolveAt = payloadNullableNumber(frozenDuration?.medianResolveAt);
     const frozenLive = buildLiveOverlay(row, input.nowSec, frozenMedianResolveAt);
     if (errataHistory.length > 0) {
       return {

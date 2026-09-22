@@ -49,19 +49,17 @@ describe("unwrapStressSignalsEnvelope", () => {
     expect(result!.amplifiers).toEqual({ psi: 1.2, contagion: 1 });
   });
 
-  it("unwraps v6 explainability metadata while preserving legacy compatibility", () => {
+  it("unwraps persisted explainability metadata while preserving legacy compatibility", () => {
     const result = unwrapStressSignalsEnvelope({
       signals: { diverg: { value: 75, available: true } },
       amplifiers: { psi: 1, contagion: 1 },
       baseScore: 44.5,
       finalScore: 45,
-      availableWeight: 0.55,
       effectiveWeights: { supply: 0.45, diverg: 0.27, bad: "ignored" },
       evidenceKinds: ["market-price"],
       insufficientEvidenceReason: null,
       dataQualityScore: 0,
       sourceAges: { dexLiquidity: 120, previousSignals: null, bad: "ignored" },
-      staleFlags: { dexLiquidity: false, previousSignals: true, bad: 1 },
       topContributors: [
         {
           key: "diverg",
@@ -77,13 +75,11 @@ describe("unwrapStressSignalsEnvelope", () => {
       expect.objectContaining({
         baseScore: 44.5,
         finalScore: 45,
-        availableWeight: 0.55,
         evidenceKinds: ["market-price"],
         insufficientEvidenceReason: null,
         dataQualityScore: 0,
         effectiveWeights: { supply: 0.45, diverg: 0.27 },
         sourceAges: { dexLiquidity: 120, previousSignals: null },
-        staleFlags: { dexLiquidity: false, previousSignals: true },
         topContributors: [expect.objectContaining({ key: "diverg", contribution: 20.25 })],
       }),
     );

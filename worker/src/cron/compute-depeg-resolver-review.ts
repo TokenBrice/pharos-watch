@@ -7,7 +7,7 @@ import {
   DDR_PREDICTION_POLICY_VERSION,
   DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC,
 } from "@shared/lib/methodology-versions/depeg-resolver";
-import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
+import { numberValue, readRecord, stringValue } from "@shared/lib/type-guards";
 import type { DdrOfficialLockOutcome, DdrPredictionErratum } from "@shared/types/depeg-resolver";
 import {
   DdrrAssessmentSchema,
@@ -26,7 +26,7 @@ import type {
 } from "./depeg-resolver-v2-contracts";
 import { normalizeErratumRecord } from "./depeg-resolver/public-projection";
 import { firstPublicationByPredictionId, publicPredictionIdOf } from "./depeg-resolver/storage-adapters";
-import { abortIf } from "./depeg-resolver/utils";
+import { throwIfAborted } from "../lib/abort";
 import {
   baseFieldsForSealedExposure,
   buildEffectiveIncidentByKey,
@@ -116,7 +116,7 @@ async function loadDdrrLineage(
         )
         .bind(JSON.stringify(uniqueIncidentKeys), DDRR_V2_INCIDENT_ROW_CAP),
     ]);
-    abortIf(signal, "compute-depeg-resolver-review");
+    throwIfAborted(signal);
 
     const repairSourcesByIncidentKey = new Map<string, Set<string>>();
     for (const row of (autoRepairResult?.results ?? []) as unknown as DdrrAutoRepairLineageRow[]) {
@@ -143,7 +143,7 @@ async function loadDdrrLineage(
     }
     return { lineageByIncidentKey, degradedReason: null };
   } catch {
-    abortIf(signal, "compute-depeg-resolver-review");
+    throwIfAborted(signal);
     return {
       lineageByIncidentKey: new Map(),
       degradedReason: DDRR_LINEAGE_READ_DEGRADED_REASON,
@@ -155,9 +155,6 @@ function payloadStringValue(value: unknown): string | null {
   return stringValue(value, { trim: false });
 }
 
-function recordValue(value: unknown): Record<string, unknown> {
-  return isRecord(value) ? value : {};
-}
 
 function arrayValue(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
@@ -184,10 +181,10 @@ function assessmentFromPrediction(
   publication: DdrFirstPublicationMembership,
   lineage?: DdrrLineage,
 ): DdrrAssessment | null {
-  const payload = recordValue(sealed.sealedPayload);
-  const frozen = recordValue(payload.frozen);
-  const resolution = recordValue(frozen.resolution);
-  const duration = recordValue(frozen.duration);
+  const payload = (readRecord(sealed.sealedPayload) ?? {});
+  const frozen = (readRecord(payload.frozen) ?? {});
+  const resolution = (readRecord(frozen.resolution) ?? {});
+  const duration = (readRecord(frozen.duration) ?? {});
   const iqr = arrayValue(duration.iqrSec);
   const parsed = DdrrAssessmentSchema.safeParse({
     ...baseFieldsForSealedExposure(sealed, incident, payload),
@@ -221,8 +218,8 @@ function assessmentFromNoCall(
   publication: DdrFirstPublicationMembership,
   lineage?: DdrrLineage,
 ): DdrrAssessment | null {
-  const payload = recordValue(sealed.sealedPayload);
-  const noCall = recordValue(payload.noCall);
+  const payload = (readRecord(sealed.sealedPayload) ?? {});
+  const noCall = (readRecord(payload.noCall) ?? {});
   const missingReasons = arrayValue(noCall.missingReasons).filter((entry): entry is string => typeof entry === "string");
   const parsed = DdrrAssessmentSchema.safeParse({
     ...baseFieldsForSealedExposure(sealed, incident, payload),
@@ -255,7 +252,7 @@ async function buildDurableDdrV2ReviewSnapshot(
   source: DdrrV2ReviewSource,
   signal?: AbortSignal,
 ): Promise<DdrrResponse> {
-  abortIf(signal, "compute-depeg-resolver-review");
+  throwIfAborted(signal);
   const incidentsByKey = new Map(source.incidents.map((incident) => [incident.incidentKey, incident]));
   const effectiveIncidentByKey = buildEffectiveIncidentByKey(source.incidents);
   const firstPublication = firstPublicationByPredictionId(source.firstPublication);
@@ -264,9 +261,9 @@ async function buildDurableDdrV2ReviewSnapshot(
     ...[...effectiveIncidentByKey.values()].map((incident) => incident.currentEventId),
     ...source.sealedPublicPredictions.map((prediction) => prediction.eventId),
   ], signal);
-  abortIf(signal, "compute-depeg-resolver-review");
+  throwIfAborted(signal);
   const lineageLoad = await loadDdrrLineage(db, source.incidents.map((incident) => incident.incidentKey), signal);
-  abortIf(signal, "compute-depeg-resolver-review");
+  throwIfAborted(signal);
 
   const assessments: DdrrAssessment[] = [];
   const noCalls: DdrrAssessment[] = [];
@@ -275,7 +272,7 @@ async function buildDurableDdrV2ReviewSnapshot(
   const sealedIncidentKeys = new Set<string>();
 
   for (const sealed of source.sealedPublicPredictions) {
-    abortIf(signal, "compute-depeg-resolver-review");
+    throwIfAborted(signal);
     const incident = effectiveIncidentByKey.get(sealed.incidentKey) ?? incidentsByKey.get(sealed.incidentKey);
     if (!incident) continue;
     sealedIncidentKeys.add(incident.incidentKey);
@@ -286,12 +283,12 @@ async function buildDurableDdrV2ReviewSnapshot(
     const lineage = lineageLoad.lineageByIncidentKey.get(incident.incidentKey);
 
     if (publication == null) {
-      coverageRows.push(failedPublicationCoverageRow(sealed, incident, actual, recordValue(sealed.sealedPayload), lineage));
+      coverageRows.push(failedPublicationCoverageRow(sealed, incident, actual, (readRecord(sealed.sealedPayload) ?? {}), lineage));
       continue;
     }
 
     if (errata) {
-      const payload = recordValue(sealed.sealedPayload);
+      const payload = (readRecord(sealed.sealedPayload) ?? {});
       const originalOutcome = (sealed.outcomeKind === "no_call" ? payload.noCall : payload.frozen) as DdrOfficialLockOutcome | undefined;
       if (originalOutcome) {
         invalidatedPredictions.push({
@@ -323,7 +320,7 @@ async function buildDurableDdrV2ReviewSnapshot(
       : assessmentFromPrediction(sealed, incident, publication, lineage);
     if (!assessment) {
       coverageRows.push({
-        ...failedPublicationCoverageRow(sealed, incident, actual, recordValue(sealed.sealedPayload), lineage),
+        ...failedPublicationCoverageRow(sealed, incident, actual, (readRecord(sealed.sealedPayload) ?? {}), lineage),
         predictionState: "data_quality_gap",
         coverageCause: "data_quality_gap",
         operationalCoverageCause: null,
@@ -338,7 +335,7 @@ async function buildDurableDdrV2ReviewSnapshot(
   }
 
   for (const incident of source.incidents) {
-    abortIf(signal, "compute-depeg-resolver-review");
+    throwIfAborted(signal);
     if (incident.incidentState === "superseded") continue;
     if (sealedIncidentKeys.has(incident.incidentKey)) continue;
     const effectiveIncident = effectiveIncidentByKey.get(incident.incidentKey) ?? incident;
@@ -384,7 +381,7 @@ async function buildDdrV2ReviewSnapshot(
   const stores = options.storeContracts;
   const builder = options.v2ReviewBuilder;
 
-  abortIf(signal, "compute-depeg-resolver-review");
+  throwIfAborted(signal);
   const loadedIncidents = await stores.loadCanonicalIncidents(db, {
     predictionPolicyVersion: DDR_PREDICTION_POLICY_VERSION,
     policyUniverseIncluded: true,
@@ -392,28 +389,27 @@ async function buildDdrV2ReviewSnapshot(
     policyDelaySec: DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC,
     limit: DDRR_V2_INCIDENT_ROW_CAP + 1,
   });
-  abortIf(signal, "compute-depeg-resolver-review");
+  throwIfAborted(signal);
   const incidentRowsTruncated = loadedIncidents.length > DDRR_V2_INCIDENT_ROW_CAP;
   const incidents = loadedIncidents.slice(0, DDRR_V2_INCIDENT_ROW_CAP);
   const incidentKeys = incidents.map((incident) => incident.incidentKey);
   const sealedPublicPredictions = await stores.loadSealedPublicPredictions(db, {
     incidentKeys,
     predictionPolicyVersion: DDR_PREDICTION_POLICY_VERSION,
-    includeUnpublished: true,
   });
-  abortIf(signal, "compute-depeg-resolver-review");
+  throwIfAborted(signal);
   const firstPublication = await stores.loadFirstPublicationMembership(db, {
     incidentKeys,
     predictionPolicyVersion: DDR_PREDICTION_POLICY_VERSION,
   });
-  abortIf(signal, "compute-depeg-resolver-review");
+  throwIfAborted(signal);
   const errata = stores.loadPredictionErrata
     ? await stores.loadPredictionErrata(db, {
         incidentKeys,
         publicPredictionIds: sealedPublicPredictions.map((prediction) => prediction.publicPredictionId ?? prediction.id),
       })
     : [];
-  abortIf(signal, "compute-depeg-resolver-review");
+  throwIfAborted(signal);
 
   const source: DdrrV2ReviewSource = {
     incidents,
@@ -434,9 +430,9 @@ export async function buildDepegResolverReviewSnapshot(
   signal: AbortSignal | undefined,
   options: ComputeDepegResolverReviewOptions,
 ): Promise<DdrrResponse> {
-  abortIf(signal, "compute-depeg-resolver-review");
+  throwIfAborted(signal);
   const snapshot = await buildDdrV2ReviewSnapshot(db, nowSec, signal, options);
-  abortIf(signal, "compute-depeg-resolver-review");
+  throwIfAborted(signal);
   return snapshot;
 }
 

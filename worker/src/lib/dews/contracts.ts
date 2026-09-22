@@ -6,7 +6,6 @@ import type { DEWSResult } from "../dews";
 export interface SourceFailure {
   source: string;
   reason: string;
-  bootstrapAllowed: boolean;
 }
 
 export type PersistedJsonDecodeReason = "missing" | "json-parse-failed" | "invalid-shape";

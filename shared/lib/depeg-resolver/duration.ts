@@ -204,7 +204,7 @@ export function computeDuration(
     else if (closures === 0) state = "no_comparable_closures";
     else state = "unsupported";
 
-    const displayable = (state === "benchmarked" || state === "thin_support") && closures > 0;
+    const displayable = state === "benchmarked" || state === "thin_support";
     const interval = displayable ? wilson(effectiveClosures, weighted.effectiveN) : null;
     const probability = displayable ? weighted.probability : null;
 

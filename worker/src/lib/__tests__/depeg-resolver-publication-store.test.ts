@@ -139,7 +139,7 @@ describe("DDR publication payload storage", () => {
     const second = await writePublicationManifest(db, { snapshotToken: "ddrpub:test:2", snapshotGeneration: 2, publishedAt: 200900, validatorVersion: "vitest", basePayload });
 
     expect(count(db, "depeg_resolver_publication_snapshots_v2")).toBe(1);
-    expect(second).toMatchObject({ publicPredictionIds: [prediction.id], publicPredictionCount: 1, firstPublishedPublicPredictionIds: [] });
+    expect(second).toMatchObject({ publicPredictionIds: [prediction.id], publicPredictionCount: 1 });
     expect(await loadFirstPublicationMembership(db, { publicPredictionIds: [prediction.id] })).toMatchObject([
       { snapshotToken: "ddrpub:test:1" },
     ]);

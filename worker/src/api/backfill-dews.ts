@@ -76,12 +76,10 @@ async function buildRefreshPreview(db: D1Database): Promise<DewsRefreshPreview |
   const registerSourceFailure = (
     source: string,
     error: unknown,
-    options?: { bootstrapAllowed?: boolean },
   ): void => {
     sourceFailures.push({
       source,
       reason: String(error),
-      bootstrapAllowed: options?.bootstrapAllowed ?? false,
     });
   };
 

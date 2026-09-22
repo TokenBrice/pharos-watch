@@ -46,7 +46,7 @@ describe("fetchBinancePricesDetailed", () => {
     expect(results.has("BTC")).toBe(false);
   });
 
-  it("ignores stable-quoted Binance markets that are no longer configured", async () => {
+  it("ignores unconfigured Binance markets", async () => {
     mockFetch([{
       match: () => true,
       body: [

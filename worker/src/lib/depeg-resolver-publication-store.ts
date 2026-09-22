@@ -1,6 +1,6 @@
 import { DDR_HASH_DOMAINS, stableJsonHashV1, stableJsonStringifyV1 } from "@shared/lib/depeg-resolver/hash";
 import { attachDdrPublicRowHash, computeDdrPublicRowHash } from "@shared/lib/depeg-resolver/public-contract";
-import { isRecord } from "@shared/lib/type-guards";
+import { readRecord } from "@shared/lib/type-guards";
 import { executeAtomicBatch, runChunkedInRead } from "./db";
 import { gunzipTextBounded, gzipCanonicalJson } from "./canonical-json-gzip";
 import {
@@ -112,7 +112,6 @@ export interface LoadSealedPublicPredictionsFilters {
   incidentKeys?: string[];
   eventIds?: number[];
   predictionPolicyVersion?: string;
-  includeUnpublished?: boolean;
 }
 
 export interface WritePublicationManifestInput {
@@ -121,9 +120,6 @@ export interface WritePublicationManifestInput {
   publishedAt: number;
   createdAt?: number;
   validatorVersion?: string;
-  runId?: string;
-  snapshotKind?: string;
-  activeIncidentKeys?: string[];
   basePayload: unknown;
   publicPredictionIds?: number[];
   publicPredictionRowHashes?: Record<string, string> | Record<number, string>;
@@ -140,7 +136,6 @@ export interface DdrPublicationManifest {
   basePayloadHash: string;
   publicPredictionIdsHash: string;
   publicPredictionIds: number[];
-  firstPublishedPublicPredictionIds: number[];
   publicPredictionRowHashes: Record<string, string>;
   basePayloadJson: string;
   baseRowCount: number;
@@ -158,7 +153,6 @@ export interface DdrFirstPublicationMembership {
   snapshotGeneration: number;
   publishedAt: number;
   finalizedAt: number;
-  firstPublished: boolean;
 }
 
 interface SealedPublicPredictionRow {
@@ -322,7 +316,6 @@ function mapPublicationManifest(row: PublicationManifestRow): DdrPublicationMani
     basePayloadHash: row.base_payload_hash,
     publicPredictionIdsHash: row.public_prediction_ids_hash,
     publicPredictionIds: parsePositiveIntegerArrayJson(row.public_prediction_ids_json, "publicPredictionIdsJson"),
-    firstPublishedPublicPredictionIds: [],
     publicPredictionRowHashes: parseStringRecordJson(
       row.public_prediction_row_hashes_json,
       "publicPredictionRowHashesJson",
@@ -374,15 +367,15 @@ function splitPublicationPayloadClock(payload: Record<string, unknown>): {
 } {
   const clock: DdrPublicationPayloadClock = {};
   const content = { ...payload };
-  const methodology = recordValue(content.methodology);
+  const methodology = readRecord(content.methodology);
   if (methodology && typeof methodology.asOf === "number") {
     const { asOf, ...stableMethodology } = methodology;
     clock.methodologyAsOf = asOf;
     content.methodology = stableMethodology;
   }
-  const meta = recordValue(content._meta);
-  const lineage = recordValue(meta?.lineage);
-  const trainingWindow = recordValue(lineage?.trainingWindow);
+  const meta = readRecord(content._meta);
+  const lineage = readRecord(meta?.lineage);
+  const trainingWindow = readRecord(lineage?.trainingWindow);
   if (meta && lineage && typeof trainingWindow?.start === "number" && typeof trainingWindow.end === "number") {
     const { trainingWindow: _trainingWindow, ...stableLineage } = lineage;
     clock.lineageTrainingWindow = { start: trainingWindow.start, end: trainingWindow.end };
@@ -396,12 +389,12 @@ function applyPublicationPayloadClock(
   clock: DdrPublicationPayloadClock,
 ): Record<string, unknown> {
   const payload = { ...content };
-  const methodology = recordValue(payload.methodology);
+  const methodology = readRecord(payload.methodology);
   if (methodology && clock.methodologyAsOf != null) {
     payload.methodology = { ...methodology, asOf: clock.methodologyAsOf };
   }
-  const meta = recordValue(payload._meta);
-  const lineage = recordValue(meta?.lineage);
+  const meta = readRecord(payload._meta);
+  const lineage = readRecord(meta?.lineage);
   if (meta && lineage && clock.lineageTrainingWindow) {
     payload._meta = { ...meta, lineage: { ...lineage, trainingWindow: { ...clock.lineageTrainingWindow } } };
   }
@@ -412,7 +405,7 @@ function parsePublicationPayloadClock(value: string): DdrPublicationPayloadClock
   const parsed = parseJsonObject(value, "basePayloadClockJson");
   const clock: DdrPublicationPayloadClock = {};
   if (typeof parsed.methodologyAsOf === "number") clock.methodologyAsOf = parsed.methodologyAsOf;
-  const trainingWindow = recordValue(parsed.lineageTrainingWindow);
+  const trainingWindow = readRecord(parsed.lineageTrainingWindow);
   if (typeof trainingWindow?.start === "number" && typeof trainingWindow.end === "number") {
     clock.lineageTrainingWindow = { start: trainingWindow.start, end: trainingWindow.end };
   }
@@ -481,13 +474,10 @@ function assertMatchingIdAndHashSets(ids: number[], rowHashes: Record<string, st
   }
 }
 
-function recordValue(value: unknown): Record<string, unknown> | null {
-  return isRecord(value) ? value : null;
-}
 
 function publicPredictionIdFromPayloadRow(row: unknown): number | null {
-  const record = recordValue(row);
-  const prediction = recordValue(record?.prediction);
+  const record = readRecord(row);
+  const prediction = readRecord(record?.prediction);
   const id = prediction?.publicPredictionId;
   if (id == null) return null;
   if (typeof id !== "number") throw new Error("basePayload row prediction.publicPredictionId must be a number");
@@ -497,8 +487,8 @@ function publicPredictionIdFromPayloadRow(row: unknown): number | null {
 }
 
 function publicPredictionRowHashFromPayloadRow(row: unknown): string | null {
-  const record = recordValue(row);
-  const prediction = recordValue(record?.prediction);
+  const record = readRecord(row);
+  const prediction = readRecord(record?.prediction);
   const rowHash = prediction?.rowHash;
   if (rowHash == null) return null;
   if (typeof rowHash !== "string") throw new Error("basePayload row prediction.rowHash must be a string");
@@ -1111,13 +1101,7 @@ export async function writePublicationManifest(
 
   const manifest = await loadPublicationManifestByToken(db, snapshotToken);
   if (!manifest) throw new Error(`Publication manifest ${snapshotToken} was not finalized`);
-  const firstMembership = await loadFirstPublicationMembership(db, { publicPredictionIds: ids });
-  return {
-    ...manifest,
-    firstPublishedPublicPredictionIds: firstMembership
-      .filter((membership) => membership.snapshotToken === snapshotToken)
-      .map((membership) => membership.publicPredictionId),
-  };
+  return manifest;
 }
 
 export async function loadLatestPublicationManifest(db: D1Database): Promise<DdrPublicationManifest | null> {
@@ -1243,7 +1227,6 @@ export async function loadFirstPublicationMembership(
       snapshotGeneration: row.snapshot_generation,
       publishedAt: row.published_at,
       finalizedAt: row.finalized_at,
-      firstPublished: true,
     }));
   };
 

@@ -236,7 +236,6 @@ describe("computeDepegResolver", () => {
         publishedAt: NOW_SEC,
         basePayloadHash: "b".repeat(64),
         publicPredictionIds: [7],
-        firstPublishedPublicPredictionIds: [7],
       })),
     };
     return { sealed, stores };
@@ -527,7 +526,6 @@ describe("computeDepegResolver", () => {
         publishedAt: NOW_SEC,
         basePayloadHash: "b".repeat(64),
         publicPredictionIds: [7],
-        firstPublishedPublicPredictionIds: [7],
       };
     });
     const db = resolverDb([
@@ -623,7 +621,6 @@ describe("computeDepegResolver", () => {
         snapshotToken: "ddr-public-original",
         snapshotGeneration: 2,
         publishedAt: NOW_SEC - 600,
-        firstPublished: true,
       },
     ]);
     stores.loadPredictionErrata = vi.fn(async () => [
@@ -652,7 +649,6 @@ describe("computeDepegResolver", () => {
         publishedAt: NOW_SEC,
         basePayloadHash: "b".repeat(64),
         publicPredictionIds: [7],
-        firstPublishedPublicPredictionIds: [],
       };
     });
     const db = resolverDb([

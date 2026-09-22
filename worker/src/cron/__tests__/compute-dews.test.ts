@@ -59,7 +59,7 @@ vi.mock("../../lib/dews", () => ({
 import { getCache, writeFreshnessSentinel } from "../../lib/db-cache";
 import { computeDEWS } from "../../lib/dews";
 import { derivePegRates } from "@shared/lib/peg-rates";
-import { computeAndStoreDEWS } from "../compute-dews";
+import { computeAndStoreDEWS } from "../../lib/dews/service";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { buildHistoryKey } from "../yield-sync/evaluation";
 import { buildYieldRankingsPayloadFromEvaluatedSources } from "../yield-sync/publication";
@@ -674,11 +674,11 @@ describe("computeAndStoreDEWS", () => {
       }),
     );
     const metadata = JSON.parse(result.metadata ?? "{}") as {
-      sourceFailures: Array<{ source: string; bootstrapAllowed: boolean }>;
+      sourceFailures: Array<{ source: string }>;
       sourceCoverage: Record<string, number>;
     };
     expect(metadata.sourceFailures).toContainEqual(
-      expect.objectContaining({ source: "mint-burn-hourly-freshness", bootstrapAllowed: false }),
+      expect.objectContaining({ source: "mint-burn-hourly-freshness" }),
     );
     expect(metadata.sourceCoverage.mintBurnHourlyStaleRows).toBe(1);
     expect(metadata.sourceCoverage.mintBurnHourlyFreshRows).toBe(0);
@@ -912,7 +912,7 @@ describe("computeAndStoreDEWS", () => {
     expect(metadata.sourceFailures.map((failure) => failure.source)).toContain("yield-rankings-freshness");
   });
 
-  it("degrades on a missing mandatory source table during initial bootstrap", async () => {
+  it("degrades on a missing mandatory source table", async () => {
     vi.mocked(getCache).mockImplementation(async (_db, key) => {
       if (key === "dews:bootstrap-complete") {
         return null;
@@ -942,11 +942,9 @@ describe("computeAndStoreDEWS", () => {
 
     expect(result.status).toBe("degraded");
     const metadata = JSON.parse(result.metadata ?? "{}") as {
-      bootstrapPending: boolean;
-      sourceFailures: Array<{ source: string; bootstrapAllowed: boolean }>;
+      sourceFailures: Array<{ source: string }>;
     };
-    expect(metadata.bootstrapPending).toBe(true);
-    expect(metadata.sourceFailures.find((failure) => failure.source === "dex-prices")?.bootstrapAllowed).toBe(false);
+    expect(metadata.sourceFailures.map((failure) => failure.source)).toContain("dex-prices");
   });
 
   it("ignores stale dex price rows when building the DEWS divergence input", async () => {
@@ -1087,7 +1085,7 @@ describe("computeAndStoreDEWS", () => {
 
     expect(result.status).toBe("degraded");
     const metadata = JSON.parse(result.metadata ?? "{}") as {
-      sourceFailures: Array<{ source: string; bootstrapAllowed: boolean }>;
+      sourceFailures: Array<{ source: string }>;
       sourceCoverage: Record<string, number>;
       dependencies: {
         dexLiquidity?: {
@@ -1098,7 +1096,7 @@ describe("computeAndStoreDEWS", () => {
       };
     };
     expect(metadata.sourceFailures).toContainEqual(
-      expect.objectContaining({ source: "dex-liquidity-freshness", bootstrapAllowed: false }),
+      expect.objectContaining({ source: "dex-liquidity-freshness" }),
     );
     expect(metadata.sourceCoverage.dexLiquidityStaleRows).toBe(1);
     expect(metadata.sourceCoverage.dexLiquidityFreshRows).toBe(0);

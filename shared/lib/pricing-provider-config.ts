@@ -1,7 +1,6 @@
 export const BINANCE_MARKETS: readonly {
   pair: string;
   symbol: string;
-  quoteSymbol?: string;
 }[] = [
   { pair: "USDTUSD", symbol: "USDT" },
   { pair: "USDCUSD", symbol: "USDC" },

@@ -116,7 +116,6 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
     const sourceState = await loadDewsSourceState({
       db,
       nowSec,
-      bootstrapPending: false,
       registerSourceFailure: () => {},
       registerMalformedPersistedInput: () => {},
     });
@@ -148,7 +147,6 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
     const sourceState = await loadDewsSourceState({
       db,
       nowSec,
-      bootstrapPending: false,
       registerSourceFailure: () => {},
       registerMalformedPersistedInput: () => {},
     });
@@ -180,7 +178,6 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
     const sourceState = await loadDewsSourceState({
       db,
       nowSec,
-      bootstrapPending: false,
       registerSourceFailure: () => {},
       registerMalformedPersistedInput: () => {},
     });
@@ -244,7 +241,6 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
     const sourceState = await loadDewsSourceState({
       db,
       nowSec,
-      bootstrapPending: false,
       registerSourceFailure: () => {},
       registerMalformedPersistedInput: () => {},
     });
@@ -282,7 +278,6 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
     const sourceState = await loadDewsSourceState({
       db,
       nowSec,
-      bootstrapPending: false,
       registerSourceFailure: () => {},
       registerMalformedPersistedInput: () => {},
     });
@@ -322,7 +317,6 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
     const sourceState = await loadDewsSourceState({
       db,
       nowSec,
-      bootstrapPending: false,
       registerSourceFailure: () => {},
       registerMalformedPersistedInput: () => {},
     });
@@ -364,7 +358,6 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
     const sourceState = await loadDewsSourceState({
       db,
       nowSec,
-      bootstrapPending: false,
       registerSourceFailure: () => {},
       registerMalformedPersistedInput: () => {},
     });
@@ -432,7 +425,6 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
     const loadPromise = loadDewsSourceState({
       db,
       nowSec,
-      bootstrapPending: false,
       registerSourceFailure: (source) => failures.push(source),
       registerMalformedPersistedInput: () => {},
     }).finally(() => {

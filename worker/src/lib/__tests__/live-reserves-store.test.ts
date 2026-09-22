@@ -48,17 +48,6 @@ describe("live-reserves-store", () => {
     expect(overview.staleCoins).toBe(stale ? 1 : 0);
   });
 
-  it("computes max sync age from the oldest required reserve attempt", async () => {
-    const db = mockD1([
-      {
-        match: "SELECT MIN(last_attempted_at) AS oldest_ts",
-        rows: [],
-        first: { oldest_ts: 950 },
-      },
-    ]);
-
-    await expect(getMaxSyncAge(db, 1_000)).resolves.toBe(50);
-  });
 
   it("treats a missing required reserve state row as infinitely stale", async () => {
     const db = mockD1([

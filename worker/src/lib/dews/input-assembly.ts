@@ -1,12 +1,10 @@
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import { throwIfAborted } from "../abort";
-import { getCache, setCache } from "../db-cache";
 import { loadStablecoinsCache } from "../stablecoins-cache";
 import type { PersistedJsonDecodeReason } from "./contracts";
 import { loadDewsSourceState } from "./source-state";
 
-const DEWS_BOOTSTRAP_SENTINEL_CACHE_KEY = "dews:bootstrap-complete";
 
 export interface DewsInputAssemblyOptions {
   db: D1Database;
@@ -15,7 +13,6 @@ export interface DewsInputAssemblyOptions {
   registerSourceFailure: (
     source: string,
     error: unknown,
-    options?: { bootstrapAllowed?: boolean },
   ) => void;
   registerMalformedPersistedInput: (options: {
     source: string;
@@ -50,8 +47,6 @@ export async function assembleDewsScoringInput(options: DewsInputAssemblyOptions
   await options.onStablecoinsLoaded?.(eligibleAssets.length);
   throwIfAborted(options.signal);
 
-  const bootstrapPending = (await getCache(options.db, DEWS_BOOTSTRAP_SENTINEL_CACHE_KEY)) == null;
-  throwIfAborted(options.signal);
   const {
     rates: pegRates,
     sources: pegRateSources,
@@ -63,7 +58,6 @@ export async function assembleDewsScoringInput(options: DewsInputAssemblyOptions
   const sourceState = await loadDewsSourceState({
     db: options.db,
     nowSec,
-    bootstrapPending,
     registerSourceFailure: options.registerSourceFailure,
     registerMalformedPersistedInput: options.registerMalformedPersistedInput,
   });
@@ -76,14 +70,9 @@ export async function assembleDewsScoringInput(options: DewsInputAssemblyOptions
     assets,
     eligibleAssets,
     assetById,
-    bootstrapPending,
     pegRates,
     pegRateSources,
     pegRateContributorCounts,
     sourceState,
   };
-}
-
-export async function markDewsBootstrapComplete(db: D1Database, nowSec: number): Promise<void> {
-  await setCache(db, DEWS_BOOTSTRAP_SENTINEL_CACHE_KEY, JSON.stringify({ completedAt: nowSec }));
 }

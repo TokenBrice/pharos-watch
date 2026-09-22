@@ -28,21 +28,15 @@ export type DdrLockAction =
 export interface DdrCanonicalIncidentInput {
   eventId: number;
   stablecoinId: string;
-  symbol: string;
   pegCurrency: string;
   direction: DdrDirection;
   startedAt: number;
   endedAt: number | null;
-  recoveryPrice: number | null;
   peakDeviationBps: number;
   source: string | null;
   sourceFingerprint: string | null;
-  rolloutActiveAtEnablement: boolean;
   publicTrackedAtFirstSeen: boolean;
   psiShadowAtFirstSeen: boolean;
-  predictionPolicyVersion: string;
-  policyDelaySec: number;
-  policyEffectiveAt: number;
   registrySnapshot: Record<string, unknown>;
 }
 
@@ -77,12 +71,12 @@ export interface DdrSealIdentity {
 }
 
 export type DdrFirstPublicationMembership = Pick<StoreDdrFirstPublicationMembership,
-  "publicPredictionId" | "incidentKey" | "snapshotToken" | "snapshotGeneration" | "publishedAt" | "firstPublished"
+  "publicPredictionId" | "incidentKey" | "snapshotToken" | "snapshotGeneration" | "publishedAt"
 >;
 
 export type DdrPublicationManifest = Pick<StoreDdrPublicationManifest,
   "snapshotToken" | "snapshotGeneration" | "snapshotSequence" | "publishedAt" | "basePayloadHash"
-  | "publicPredictionIds" | "firstPublishedPublicPredictionIds"
+  | "publicPredictionIds"
 >;
 
 export interface DdrLockOpportunityInput {
@@ -134,13 +128,10 @@ export interface DdrSealInput {
 }
 
 export interface DdrPublicationManifestInput {
-  runId: string;
   snapshotToken?: string;
   publishedAt: number;
-  snapshotKind: typeof DDR_PUBLICATION_SNAPSHOT_KIND;
   snapshotGeneration: number;
   basePayload: Record<string, unknown>;
-  activeIncidentKeys: string[];
   publicPredictionIds: number[];
   publicPredictionRowHashes: Record<string, string>;
 }
@@ -184,7 +175,6 @@ export interface DdrV2StoreContracts {
       incidentKeys?: string[];
       eventIds?: number[];
       predictionPolicyVersion?: string;
-      includeUnpublished?: boolean;
     },
   ): Promise<DdrSealedPublicPrediction[]>;
   loadFirstPublicationMembership(

@@ -38,3 +38,7 @@ export function stringValue(value: unknown, options: { trim?: boolean } = {}): s
 export function numberValue(value: unknown): number | null {
   return isFiniteNumber(value) ? value : null;
 }
+
+export function booleanValue(value: unknown): boolean | null {
+  return typeof value === "boolean" ? value : null;
+}

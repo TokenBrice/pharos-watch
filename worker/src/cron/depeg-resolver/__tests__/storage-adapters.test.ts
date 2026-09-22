@@ -121,8 +121,7 @@ describe("DDR storage adapters", () => {
       { incidentKey: "second", id: 2 },
     ] as DdrSealedPublicPrediction[];
     const memberships = [
-      { publicPredictionId: 1, firstPublished: false },
-      { publicPredictionId: 2, firstPublished: true },
+      { publicPredictionId: 2 },
     ] as DdrFirstPublicationMembership[];
 
     expect(publicPredictionIdOf(legacy)).toBe(5);
@@ -135,21 +134,15 @@ describe("DDR storage adapters", () => {
     const event = {
       eventId: 42,
       stablecoinId: "usdc-circle",
-      symbol: "USDC",
       pegCurrency: "USD",
       direction: "below",
       startedAt: 1_700_000_000,
       endedAt: null,
-      recoveryPrice: null,
       peakDeviationBps: -150,
       source: "live",
       sourceFingerprint: "A".repeat(64),
-      rolloutActiveAtEnablement: false,
       publicTrackedAtFirstSeen: true,
       psiShadowAtFirstSeen: false,
-      predictionPolicyVersion: "ddr-policy-v1",
-      policyDelaySec: 86_400,
-      policyEffectiveAt: 1_600_000_000,
       registrySnapshot: { tracked: true },
     } as const;
     const options = {
@@ -201,7 +194,6 @@ describe("DDR storage adapters", () => {
       snapshotToken: "snapshot-1",
       snapshotGeneration: 4,
       publishedAt: 1_800_000_000,
-      firstPublished: true,
     }]);
     stores.loadPredictionErrata.mockResolvedValue([{
       id: 9,
@@ -222,18 +214,15 @@ describe("DDR storage adapters", () => {
       expect.objectContaining({ id: 77, publicPredictionId: 77, sealedPayload: { kind: "prediction" } }),
     ]);
     await expect(DEFAULT_DDR_V2_STORE_CONTRACTS.loadFirstPublicationMembership(db, {})).resolves.toEqual([
-      expect.objectContaining({ publicPredictionId: 77, firstPublished: true }),
+      expect.objectContaining({ publicPredictionId: 77 }),
     ]);
     await expect(DEFAULT_DDR_V2_STORE_CONTRACTS.writePublicationManifest(db, {
-      runId: "run-1",
       publishedAt: 1_800_000_000,
-      snapshotKind: "ddr_public",
       snapshotGeneration: 4,
       basePayload: { rows: [] },
-      activeIncidentKeys: [],
       publicPredictionIds: [77],
       publicPredictionRowHashes: { 77: "a".repeat(64) },
-    })).resolves.toEqual(expect.objectContaining({ snapshotToken: "snapshot-1", firstPublishedPublicPredictionIds: [77] }));
+    })).resolves.toEqual(expect.objectContaining({ snapshotToken: "snapshot-1", publicPredictionIds: [77] }));
     stores.loadLatestPublicationManifest.mockResolvedValueOnce(STORE_MANIFEST);
     await expect(DEFAULT_DDR_V2_STORE_CONTRACTS.loadLatestPublicationManifest?.(db)).resolves.toEqual(
       expect.objectContaining({ snapshotSequence: 8 }),

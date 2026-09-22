@@ -155,7 +155,6 @@ function firstPublication(overrides: Partial<ReviewFirstPublication> = {}): Revi
     snapshotToken: "ddr-public-55",
     snapshotGeneration: 1,
     publishedAt: ELIGIBLE_AT + 60,
-    firstPublished: true,
     ...overrides,
   };
 }
@@ -268,7 +267,6 @@ describe("buildDepegResolverReviewSnapshot", () => {
           snapshotToken: "ddr-public-1",
           snapshotGeneration: 2,
           publishedAt: ASSESSED_AT,
-          firstPublished: true,
         },
       ]),
     });
@@ -322,7 +320,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
     );
     expect(v2ReviewBuilder).toHaveBeenCalledWith(
       expect.objectContaining({
-        firstPublication: [expect.objectContaining({ publicPredictionId: 9, firstPublished: true })],
+        firstPublication: [expect.objectContaining({ publicPredictionId: 9 })],
         sealedPublicPredictions: [expect.objectContaining({ id: 9 })],
       }),
       undefined,
@@ -1422,7 +1420,6 @@ describe("buildDepegResolverReviewSnapshot", () => {
           snapshotToken: "ddr-public-2",
           snapshotGeneration: 3,
           publishedAt: ELIGIBLE_AT + 60,
-          firstPublished: true,
         },
       ]),
       loadPredictionErrata: vi.fn(async () => [
