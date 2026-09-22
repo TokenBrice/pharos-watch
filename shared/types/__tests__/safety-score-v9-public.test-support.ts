@@ -1,5 +1,6 @@
 import type { z } from "zod";
-import type { SafetyScoreV9CurrentResponseSchema, SafetyScoreV9BreakdownsSchema } from "../safety-score-v9-public";
+import type { SafetyScoreV9CurrentResponseSchema } from "../safety-score-v9-public";
+import type { SafetyScoreV9BreakdownsSchema } from "../safety-score-v9-public-breakdowns";
 
 type CurrentResponse = z.input<typeof SafetyScoreV9CurrentResponseSchema>;
 

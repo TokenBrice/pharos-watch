@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { V9DeploymentControlFactV2 } from "../../types/safety-score-v9-facts";
-import {
-  evaluateV9EconomicControl,
-  type V9MintPosture,
-  type V9MintReconciliation,
-  type V9MintSupervision,
-} from "../safety-score-v9/control";
+import { evaluateV9EconomicControl } from "../safety-score-v9/control";
+import type {
+  V9MintPosture,
+  V9MintReconciliation,
+  V9MintSupervision,
+} from "../safety-score-v9/control-primitives";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import {
   makeDeploymentControl,

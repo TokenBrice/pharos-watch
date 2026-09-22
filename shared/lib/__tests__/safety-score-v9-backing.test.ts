@@ -1,12 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
+import { evaluateV9ReserveExposures } from "../safety-score-v9/backing";
 import {
-  assertV9BackingPolicy,
   createUnavailableV9BackingResult,
   evaluateV9ArchetypeBacking,
-  evaluateV9ReserveExposures,
+} from "../safety-score-v9/archetypes/evaluation";
+import {
+  assertV9BackingPolicy,
   type V9BackingAssetInput,
   v9StructuralSignalSharePct,
-} from "../safety-score-v9/backing";
+} from "../safety-score-v9/backing-primitives";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import type {
   V9AssetFactsV2,

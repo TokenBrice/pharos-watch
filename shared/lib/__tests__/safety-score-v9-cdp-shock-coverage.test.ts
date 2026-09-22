@@ -5,7 +5,7 @@ import {
   type V9CdpMechanismRiskReview,
   type V9CdpStressCoverageFact,
 } from "../../types/safety-score-v9-backing";
-import type { V9BackingAssetInput, V9MechanismFactV1 } from "../safety-score-v9/backing";
+import type { V9BackingAssetInput, V9MechanismFactV1 } from "../safety-score-v9/backing-primitives";
 import { evaluateV9CdpBacking, selectV9CdpLiquidationCapacity } from "../safety-score-v9/archetypes/cdp";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 

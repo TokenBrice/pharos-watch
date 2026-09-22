@@ -9,7 +9,7 @@ import { resolveChainId } from "../chains";
 import { orderDependencyGraphNodes, type DependencyGraphEdge } from "../dependency-graph";
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
-import { isV9MaterialShare } from "./backing";
+import { isV9MaterialShare } from "./backing-primitives";
 import { deepFreeze } from "./primitives";
 
 const V9_DEPENDENCY_PLAN_DIGEST_DOMAIN = "safety-score-v9.dependency-plan.v2";

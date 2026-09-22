@@ -1,13 +1,13 @@
+import { evaluateV9ArchetypeBacking } from "./evaluation";
 import {
   createV9BackingStructuralReason,
-  evaluateV9ArchetypeBacking,
   v9StructuralResponsibilityForStatus,
   type V9BackingAssetInput,
   type V9BackingEvaluationPolicy,
   type V9BackingResult,
   type V9BackingStructuralReason,
   type V9CdpLiquidationCapacitySelection,
-} from "../backing";
+} from "../backing-primitives";
 import type {
   V9CdpMechanismRiskReview,
   V9CdpStressCoverageFact,

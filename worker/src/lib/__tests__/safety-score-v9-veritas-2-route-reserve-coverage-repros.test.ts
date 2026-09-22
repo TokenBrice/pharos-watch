@@ -5,11 +5,11 @@
  * and finding name is preserved verbatim.
  */
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
-import {
-  evaluateV9ReserveExposures,
-  type V9BackingAssetInput,
-  type V9ResolvedUpstreamExposure,
-} from "@shared/lib/safety-score-v9/backing";
+import { evaluateV9ReserveExposures } from "@shared/lib/safety-score-v9/backing";
+import type {
+  V9BackingAssetInput,
+  V9ResolvedUpstreamExposure,
+} from "@shared/lib/safety-score-v9/backing-primitives";
 import { V9_LEGACY_RESPONSIBILITY_BY_REASON } from "@shared/lib/safety-score-v9/facts";
 import { scoreV9Input } from "@shared/lib/safety-score-v9/formula";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";

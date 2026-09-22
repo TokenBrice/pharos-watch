@@ -1,5 +1,5 @@
 import type { MintAuthorityPosture } from "../../types/core";
-import type { V9MintPosture } from "./control";
+import type { V9MintPosture } from "./control-primitives";
 
 /**
  * Public band vocabulary for the published V9 mint component.

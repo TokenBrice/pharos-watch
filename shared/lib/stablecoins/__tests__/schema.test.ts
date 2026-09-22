@@ -5,7 +5,7 @@ import {
   StablecoinMintAuthoritySidecarSchema,
   StablecoinRiskReviewSidecarSchema,
 } from "../schema";
-import { OracleRiskProfileSchema } from "../../../types/stablecoin-meta-schemas";
+import { OracleRiskProfileSchema } from "../../../types/stablecoin-meta-control-schemas";
 import { CANONICAL_STABLECOIN_FLAGS, makeRawStablecoinMeta as makeCoin } from "./test-support";
 import { makeSafeControl } from "./schema.test-support";
 

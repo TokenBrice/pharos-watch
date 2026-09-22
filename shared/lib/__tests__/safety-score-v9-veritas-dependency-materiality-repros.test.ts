@@ -4,11 +4,11 @@
  */
 import { describe, expect, it } from "vitest";
 import type { V9AssetFactsV2, V9FactStatusV2, V9ReserveExposureFactV2 } from "@shared/types/safety-score-v9-facts";
-import {
-  evaluateV9ReserveExposures,
-  type V9BackingAssetInput,
-  type V9ResolvedUpstreamExposure,
-} from "../safety-score-v9/backing";
+import { evaluateV9ReserveExposures } from "../safety-score-v9/backing";
+import type {
+  V9BackingAssetInput,
+  V9ResolvedUpstreamExposure,
+} from "../safety-score-v9/backing-primitives";
 import {
   buildV9DependencyEvaluationPlan,
   resolveV9DependencyInputs,

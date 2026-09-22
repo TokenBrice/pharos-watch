@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { V9FactGapV2 } from "../../types/safety-score-v9-facts";
-import type { V9BackingAssetInput, V9MechanismFactV1 } from "../safety-score-v9/backing";
+import type { V9BackingAssetInput, V9MechanismFactV1 } from "../safety-score-v9/backing-primitives";
 import { V9MechanismRiskReviewSchema } from "../../types/safety-score-v9-backing";
 import { MECHANISM_ARCHETYPE_VALUES } from "../../types/stablecoin-taxonomy";
 import { evaluateV9Backing, type V9MechanismRiskReview } from "../safety-score-v9/archetypes";

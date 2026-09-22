@@ -6,8 +6,8 @@ import {
   type SafetyScoreV9PublicReason,
   type SafetyScoreV9CurrentResponse,
   type SafetyScoreV9CurrentCard,
-  type SafetyScoreV9PillarAdjustment,
 } from "../../types/safety-score-v9-public";
+import type { SafetyScoreV9PillarAdjustment } from "../../types/safety-score-v9-public-breakdowns";
 import type {
   V9EvidenceLevel,
   V9QualityPillar,
@@ -19,8 +19,8 @@ import { V9EvidenceResponsibilitySchema } from "../../types/safety-score-v9-fact
 import { round4 } from "../math";
 import type { V9DependencyEconomicRole } from "../../types/dependency-types";
 import type { V9AccessPostureResult } from "./access-posture";
-import type { V9BackingResult } from "./backing";
-import type { V9EconomicControlResult } from "./control";
+import type { V9BackingResult } from "./backing-primitives";
+import type { V9EconomicControlResult } from "./control-primitives";
 import type { V9ResolvedDependencyInputs } from "./dependencies";
 import type { V9ExitEvaluationResult, V9ExitHolderEligibility } from "./exit";
 import type { V9PillarReason, V9ProductionScoreInput, V9ProductionScoreTrace } from "./score";

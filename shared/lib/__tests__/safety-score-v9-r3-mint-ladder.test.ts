@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { V9DeploymentControlFactV2 } from "../../types/safety-score-v9-facts";
 import type { V9Severity } from "../../types/safety-score-v9";
-import {
-  evaluateV9EconomicControl,
-  type V9MintMechanismReview,
-  type V9MintSupervision,
-} from "../safety-score-v9/control";
+import { evaluateV9EconomicControl } from "../safety-score-v9/control";
+import type {
+  V9MintMechanismReview,
+  V9MintSupervision,
+} from "../safety-score-v9/control-primitives";
 import { scoreV9Input } from "../safety-score-v9/formula";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import {

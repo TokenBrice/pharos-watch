@@ -1,10 +1,9 @@
+import { createUnknownArchetypeV9BackingResult, evaluateV9ArchetypeBacking } from "./evaluation";
 import {
-  createUnknownArchetypeV9BackingResult,
-  evaluateV9ArchetypeBacking,
   type V9BackingAssetInput,
   type V9BackingEvaluationPolicy,
   type V9BackingResult,
-} from "../backing";
+} from "../backing-primitives";
 import {
   type V9MechanismFactV1,
   type V9MechanismRiskReview,

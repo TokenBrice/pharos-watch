@@ -3,7 +3,7 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { MintAuthorityProfile } from "@shared/types/core";
-import { MintAuthorityProfileSchema } from "@shared/types/stablecoin-meta-schemas";
+import { MintAuthorityProfileSchema } from "@shared/types/stablecoin-meta-control-schemas";
 import { describe, expect, it } from "vitest";
 import { normalizeFixedInput } from "../report-cards-fixed-input";
 import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";

@@ -26,7 +26,7 @@ import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
 import { readCompiledV9FactSetForEvaluation } from "./facts";
 import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonPolicy } from "./policy";
-import { evaluateV9SubthresholdUnresolvedBridgeJoins } from "./control";
+import { evaluateV9SubthresholdUnresolvedBridgeJoins } from "./control-bridge-join";
 import { compareText, deepFreeze } from "./primitives";
 
 const V9_EVIDENCE_GAP_QUEUE_DIGEST_DOMAIN_V1 = "safety-score-v9.evidence-gap-queue.v1";

@@ -59,9 +59,9 @@ export interface MicaProfile {
   mica?: MicaProfile;
 ```
 
-### Zod — `shared/types/stablecoin-meta-schemas.ts`
+### Zod — `shared/types/stablecoin-meta-compliance-schemas.ts`
 
-Zod validation lives in `shared/types/stablecoin-meta-schemas.ts` and mirrors the `JurisdictionSchema` pattern, `.strict()`. A cross-field rule enforces sourcing for any non-out-of-scope status:
+Zod validation lives in `shared/types/stablecoin-meta-compliance-schemas.ts` and mirrors the `JurisdictionSchema` pattern, `.strict()`. A cross-field rule enforces sourcing for any non-out-of-scope status:
 
 ```ts
 export const MicaProfileSchema: z.ZodType<MicaProfile> = z.object({

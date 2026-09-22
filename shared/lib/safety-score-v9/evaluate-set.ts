@@ -16,7 +16,7 @@ import { resolveChainId } from "../chains";
 import { clampShare } from "../math";
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
-import { isV9MaterialShare, v9StructuralSignalSharePct } from "./backing";
+import { isV9MaterialShare, v9StructuralSignalSharePct } from "./backing-primitives";
 import { assertV9FactSetCompiledInProcess } from "./compile";
 import {
   buildV9DependencyEvaluationPlan,

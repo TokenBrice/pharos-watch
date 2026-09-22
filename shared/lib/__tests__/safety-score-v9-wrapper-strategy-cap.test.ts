@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { resolveV9WrapperStrategyTier } from "../safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
-import type { V9InheritedStablecoinBacking } from "../safety-score-v9/backing";
+import type { V9InheritedStablecoinBacking } from "../safety-score-v9/backing-primitives";
 import type { V9ResolvedDependencyInputs } from "../safety-score-v9/dependencies";
 import type { V9AssetFactsV2 } from "../../types/safety-score-v9-facts";
 import {

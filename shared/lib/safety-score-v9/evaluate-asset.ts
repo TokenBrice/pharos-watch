@@ -14,16 +14,17 @@ import { isDexMeasuredExecutionObservationHistoryMature } from "../../types/meas
 import { clampShare } from "../math";
 import { V9_NEUTRAL_CONTROL_SCORE } from "../../types/safety-score-v9-public-facts";
 import { evaluateV9AccessPosture, type V9AccessPostureResult } from "./access-posture";
+import { createUnavailableV9BackingResult } from "./archetypes/evaluation";
+import { V9_WRAPPER_INHERITANCE_MIN_PARENT_WEIGHT } from "./backing-inheritance";
 import {
-  createUnavailableV9BackingResult,
-  V9_WRAPPER_INHERITANCE_MIN_PARENT_WEIGHT,
   type V9BackingResult,
   type V9CdpLiquidationCapacitySelection,
   type V9InheritedStablecoinBacking,
-} from "./backing";
+} from "./backing-primitives";
 import { evaluateV9Backing } from "./archetypes";
 import { selectV9CdpLiquidationCapacity } from "./archetypes/cdp";
-import { evaluateV9EconomicControlAssetFacts, type V9EconomicControlResult } from "./control";
+import { evaluateV9EconomicControlAssetFacts } from "./control";
+import type { V9EconomicControlResult } from "./control-primitives";
 import {
   projectV9RoleDependencyPillarLimits,
   type V9DependencyEvaluationPlan,

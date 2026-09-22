@@ -3,16 +3,18 @@ import type { V9DeploymentControlFactV2, V9FactStatusV2 } from "../../types/safe
 import {
   evaluateV9EconomicControl,
   evaluateV9EconomicControlAssetFacts,
-  evaluateV9SubthresholdUnresolvedBridgeJoins,
   projectV9EconomicControlEvaluation,
-  type EvaluateV9EconomicControlArgs,
-  type V9BridgeControlReview,
-  type V9EconomicControlAssetFacts,
-  type V9EconomicControlReviewExtension,
-  type V9MintMechanismReview,
-  type V9MintSupervision,
-  type V9OracleControlReview,
 } from "../safety-score-v9/control";
+import { evaluateV9SubthresholdUnresolvedBridgeJoins } from "../safety-score-v9/control-bridge-join";
+import type {
+  EvaluateV9EconomicControlArgs,
+  V9BridgeControlReview,
+  V9EconomicControlAssetFacts,
+  V9EconomicControlReviewExtension,
+  V9MintMechanismReview,
+  V9MintSupervision,
+  V9OracleControlReview,
+} from "../safety-score-v9/control-primitives";
 import { loadV9MethodologyPolicy, resolveV9ReasonPolicy, V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import { scoreV9EvaluatedAsset } from "@shared/lib/safety-score-v9/score";
 import { compileV9FactSetV3 } from "@shared/lib/safety-score-v9/compile";

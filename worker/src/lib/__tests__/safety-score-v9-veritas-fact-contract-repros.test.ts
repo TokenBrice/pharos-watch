@@ -4,7 +4,8 @@
  * files; every assertion and VER-0xx describe name is preserved verbatim.
  */
 
-import { evaluateV9EconomicControl, type V9EconomicControlAssetFacts } from "@shared/lib/safety-score-v9/control";
+import { evaluateV9EconomicControl } from "@shared/lib/safety-score-v9/control";
+import type { V9EconomicControlAssetFacts } from "@shared/lib/safety-score-v9/control-primitives";
 import { evaluateV9Exit } from "@shared/lib/safety-score-v9/exit";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
