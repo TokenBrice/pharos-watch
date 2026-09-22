@@ -42,7 +42,7 @@ export const SAFETY_SCORE_V9: readonly MethodologyChangelogEntry[] = [
       "Unbounded delivery carries an explicit output-quality cap of 55, strictly below bounded physical delivery at 65 and never above fiat-par quality.",
       "Published percentage and flat fees reduce value; unbounded delivery receives no invented USD deduction. Minimum lots still apply and every physical output remains ineligible for same-notional credit.",
       "Historical captures lacking the raw USD-per-troy-ounce reference remain unresolved; closure requires the next peg producer cycle and refreshed redemption observations.",
-      "Evaluation-build identity: the V9 evaluation-build digest now covers the evaluator's runtime import closure — gap-index, operational-market-depth, unavailability-roots and the reviewed chain-maturity registry enroll alongside the existing inputs — producing evaluationBuildDigest 4bff1ca527724eafe03ca789be2104f3142a30a4dd287ee455ec4b6da3d8c8d0; later edits to those score-bearing sources rotate the identity again without a methodology bump.",
+      "Evaluation-build identity: the V9 evaluation-build digest now covers the evaluator's runtime import closure — gap-index, operational-market-depth, unavailability-roots and the reviewed chain-maturity registry enroll alongside the existing inputs — producing evaluationBuildDigest daa6888e104e38e717fb1cb9f0e60e2406b950213964ffb279c9a0065d6d2d09; later edits to those score-bearing sources rotate the identity again without a methodology bump.",
     ],
     commits: [],
     reconstructed: false,
