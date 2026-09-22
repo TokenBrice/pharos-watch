@@ -296,6 +296,14 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     resetOrTtl: "WeakMap keyed by counted prepared statements; entries live only while a batch holds the statement and reset with the isolate.",
     durableTruth: "D1 meta.rows_written on each executed statement is authoritative; the map only pairs counted wrappers with their originals for batch attribution.",
   },
+  {
+    sourcePath: "worker/src/lib/authoritative-price-sources/mento-broker.ts",
+    stateNames: ["validatedHeads"],
+    owner: "Mento Broker Celo head reuse",
+    kind: "cache",
+    resetOrTtl: "WeakMap keyed by each price stage's LivePriceContext; a head is reused only while under 300 s old and dies with the context or isolate.",
+    durableTruth: "Celo RPC state is authoritative; every route rereads full broker state and rechecks the block's canonical hash before publishing.",
+  },
 ] as const satisfies readonly IsolateLocalStateRegistryEntry[];
 
 export const ISOLATE_LOCAL_STATE_DOC_START = "<!-- ISOLATE-LOCAL-STATE:START -->";

@@ -40,6 +40,7 @@
     "audit:mint-bridge-ownership": "tsx scripts/maintenance/generate-mint-bridge-ownership-audit.ts",
     "audit:bridge-route-coverage": "tsx scripts/maintenance/generate-bridge-route-coverage-audit.ts",
     "audit:coverage": "node --import tsx scripts/maintenance/run-coverage-audit.ts",
+    "audit:mint-burn-conservation-admission": "node --import tsx worker/scripts/audit-mint-burn-conservation-admission.ts",
     "test": "vitest run",
     "test:all": "node --import tsx scripts/maintenance/run-all-tests.ts",
     "test:pr": "node --import tsx scripts/maintenance/run-pr-tests.ts",
