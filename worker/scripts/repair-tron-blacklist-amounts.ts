@@ -115,6 +115,7 @@ export function buildTronReplayRepairSql(repairs: TronReplayRepair[], hash: stri
   const value = `CASE id ${repairs.map((r) => `WHEN ${sqlString(r.event.id)} THEN ${r.amount}`).join(" ")} END`;
   const observedAt = `CASE id ${repairs.map((r) => `WHEN ${sqlString(r.event.id)} THEN ${r.evidenceObservedAt}`).join(" ")} END`;
   // The audit CHECK deliberately aborts the single atomic D1 import if any row changed.
+  // SAFETY: identities/provenance use sqlString; numeric CASE values come from validated raw amounts and integer timestamps.
   return [
     `INSERT INTO admin_action_audit(created_at,actor,action,target,result,details_json,intent_key) SELECT ${nowSec},'operator-cli',${sqlString(SCRIPT)},'tron-USDT',CASE WHEN (SELECT COUNT(*) FROM blacklist_events WHERE ${where})=${repairs.length} THEN 'ok' ELSE 'guard_failed' END,${sqlString(details)},${sqlString(hash)};`,
     `UPDATE blacklist_events SET amount=${value},amount_native=${value},amount_usd_at_event=${value},amount_source='derived',amount_status='resolved',amount_last_error_class=NULL,amount_last_provider='trongrid-transfer-ledger',amount_last_attempted_at=${nowSec},amount_attempt_count=amount_attempt_count+1,provenance_source=${sqlString(`trongrid-transfer-replay:${hash}`)},provenance_observed_at=${observedAt} WHERE ${where};`,
@@ -141,6 +142,7 @@ export async function main(argv: string[]): Promise<void> {
   // Recheck freshness immediately before the atomic import; do not recapture or alter evidence.
   await validateTronReplayEvidence(JSON.parse(bytes));
   db.executeStatements(buildTronReplayRepairSql(repairs, hash, bookmark, Math.floor(Date.now() / 1000)), SCRIPT);
+  // SAFETY: the SHA-256 provenance value is quoted by sqlString, never used as SQL syntax.
   const changed = db.query<{ id: string; amount_native: number }>(`SELECT id,amount_native FROM blacklist_events WHERE provenance_source=${sqlString(`trongrid-transfer-replay:${hash}`)} AND amount_status='resolved'`);
   assert(changed.length === repairs.length && repairs.every((r) => changed.some((c) => c.id === r.event.id && c.amount_native === r.amount)), "Repair readback failed; inspect audit and bookmark");
   console.log(`Verified ${changed.length} repaired event amounts; evidence ${hash}`);
