@@ -52,9 +52,11 @@ function requireBool(raw: string | null, label: string): boolean {
  * already minted on satellite chains, so the sum is the bridge-safe liability
  * against the PYUSD balance held by the canonical hub.
  *
- * Implementation pin reviewed 2026-08-14: source-verified USDai v1.5 at
- * 0x0ab74Df531c0D8f1c46643E404B3d14723bbc212 is a semantics-preserving
- * upgrade for baseToken(), totalSupply(), bridgedSupply(), and pause evidence.
+ * Implementation pin reviewed 2026-09-22: source-verified USDai v1.7 at
+ * 0xe6ee2cd3e4f2b3844689aa1be176e4dff744a6f9 preserves baseToken(),
+ * totalSupply(), bridgedSupply(), and pause evidence. Relative to the prior
+ * v1.6 pin, only the OUSDaiUtility blacklist exemption and version change;
+ * the imported staking interface adds referral-deposit declarations.
  */
 export async function fetchUsdaiHubReserves(
   coin: StablecoinMeta,

@@ -7,6 +7,7 @@ import {
   createV9EvidenceReference,
   createV9FactStatus,
   requiredV9Applicability,
+  unresolvedV9Applicability,
 } from "@shared/lib/safety-score-v9/evidence";
 import {
   createV9FactGapV3,
@@ -569,6 +570,52 @@ export function buildRoutes(context: AssetBuildContext): {
     if (review) consumedReviews.add(reviewKey);
     return buildRoute(context, { ...row, review });
   });
+  // A configured live-only rail with failed capacity telemetry still exists.
+  // Preserve the producer gap so a small observed DEX route cannot turn an
+  // unavailable redemption measurement into known-negative exit evidence.
+  const redemption = context.fixedInput.redemptionBackstopMap[context.asset.assetId];
+  if (
+    redemption?.provider === "reserve-sync-metadata" &&
+    redemption.resolutionState === "missing-capacity" &&
+    redemption.capacityBasis === "live-direct-telemetry" &&
+    redemption.routeStatus === "open" &&
+    !routes.some((route) => route.lane === "redemption")
+  ) {
+    const routeId = `redemption:${context.asset.assetId}:${redemption.routeFamily}`;
+    const generationId = context.fixedInput.redemptionGenerationId;
+    const routeKey = canonicalV9RouteKey("redemption", generationId, routeId);
+    const evidenceId = addEvidence(context, createV9EvidenceReference({
+      evidenceId: `${context.asset.assetId}:redemption-capacity-unavailable`,
+      sourceId: "report-cards-redemption-route-observation",
+      sourceGenerationId: generationId,
+      disposition: "observed",
+      observedAtSec: redemption.updatedAt,
+      contentSha256: domainDigest("safety-score-v9.redemption-capacity-unavailable.v1", redemption),
+      maxAgeSec: context.extension.routeFreshness.redemptionMaxAgeSec,
+    }, context.fixedInput.clockSec));
+    const message = "The configured live-only redemption route has unavailable capacity telemetry.";
+    const gapId = routeGap(context, routeKey, "capacity", "missing",
+      "missing-runtime-route-evidence", "producer-failed", message, [evidenceId]);
+    const status = createV9FactStatus({
+      applicability: unresolvedV9Applicability("v9.exit.same-notional-route", message, gapId),
+      observationState: "missing",
+      evidenceRefIds: [evidenceId],
+      gapIds: [gapId],
+    });
+    routes.push({
+      routeKey, routeId, lane: "redemption", sourceGenerationId: generationId,
+      routeFamily: "protocol-redemption",
+      holderAccess: "unknown", executionModel: "unknown", executionCertainty: "unknown",
+      modelConfidence: "low", observationConfidence: "low", observationHistory: null,
+      evidenceKind: "documented-terms", coverageClass: "diagnostic",
+      capacityScoringHorizon: "unknown", settlementModel: "unknown", settlementSlaSec: null,
+      queueDepthUsd: null, dailyLimitUsd: null, minRedeemUsd: null,
+      settlementEvidenceRefIds: [], physicalResourceKeys: [], status, scoreEligible: false,
+      request: null, capacityCurve: [],
+      output: { status, kind: "unknown", assetKeys: [], basketWeights: [], valuation: null },
+      failureDomains: [{ kind: "redemption-rail", key: context.asset.assetId }],
+    });
+  }
   const unconsumedReviews = [...reviewByKey.keys()].filter((key) => !consumedReviews.has(key));
   if (unconsumedReviews.length > 0) {
     throw new Error(
@@ -706,9 +753,9 @@ export function buildRoutes(context: AssetBuildContext): {
   // selection budget stay out of the denominator per the 2026-07-27 owner
   // ruling. Structurally non-executable shaped rows remain diagnostics.
   // A portfolio holding only diagnostic routes over an incompletely observed
-  // DEX surface stays bounded-unknown. A missing redemption row does not
-  // demote the state: absent redemption evidence can only understate the
-  // score, and the zero-score path still requires an observed portfolio.
+  // DEX surface stays bounded-unknown. Truly absent redemption evidence does
+  // not demote the state. Configured live-only rails with unavailable telemetry
+  // carry an explicit producer gap above.
   const coverage = context.fixedInput.dexLiqMap[context.asset.assetId]?.exitRouteObservationCoverage;
   // "known" upgrades the exit surface and arms the reviewed-complete zero-score
   // path, so it requires populated DEX coverage. An `unknown`/`unsupported`
