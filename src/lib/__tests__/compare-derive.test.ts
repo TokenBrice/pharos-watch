@@ -10,7 +10,7 @@ import {
 import { COMPARE_COLORS } from "@/lib/compare-config";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
-import type { MintBurnCoinFlow, StablecoinData } from "@shared/types";
+import type { MintBurnCoinFlow, MintBurnPerCoinResponse, StablecoinData } from "@shared/types";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { NetFlowDirection24h, PressureShiftState } from "@shared/lib/mint-burn-signals";
 import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
@@ -69,6 +69,45 @@ function makeFlowCoin(
     netFlow30dUsd: 30000,
     netFlow90dUsd: 90000,
     largestEvent24h: null,
+    ...overrides,
+  };
+}
+
+type ComparisonInput = Parameters<typeof deriveComparisonCoins>[0];
+
+function comparisonInput(overrides: Partial<ComparisonInput> = {}): ComparisonInput {
+  return {
+    selectedIds: [],
+    assetMap: new Map(),
+    metaMap: new Map(),
+    pegCoinMap: new Map(),
+    dexData: undefined,
+    cardMap: new Map(),
+    flowCoinMap: new Map(),
+    ...overrides,
+  };
+}
+
+function assetMapFor(...ids: string[]) {
+  return new Map(ids.map((id) => [id, makeAsset(id)]));
+}
+
+function metaMapFor(...ids: string[]) {
+  return new Map(ids.map((id) => [id, makeMeta(id)]));
+}
+
+function makeFlowDetail(overrides: Partial<MintBurnPerCoinResponse> = {}): MintBurnPerCoinResponse {
+  return {
+    stablecoinId: "usdc",
+    symbol: "USDC",
+    mintVolumeUsd: 0,
+    burnVolumeUsd: 0,
+    netFlowUsd: 0,
+    mintCount: 0,
+    burnCount: 0,
+    chains: [],
+    hourly: [],
+    updatedAt: 0,
     ...overrides,
   };
 }
@@ -153,154 +192,66 @@ describe("buildCompareRadarCohortBaseline", () => {
 // ---------------------------------------------------------------------------
 
 describe("deriveComparisonCoins", () => {
-  it("returns empty array when assetMap is empty", () => {
-    const result = deriveComparisonCoins({
-      selectedIds: ["usdc"],
-      assetMap: new Map(),
-      metaMap: new Map([["usdc", makeMeta("usdc")]]),
-      pegCoinMap: new Map(),
-      dexData: undefined,
-      cardMap: new Map(),
-      flowCoinMap: new Map(),
-    });
-    expect(result).toEqual([]);
+  it.each<{ name: string; input: Partial<ComparisonInput>; expectedIds: string[] }>([
+    {
+      name: "returns no coins when assetMap is empty",
+      input: { selectedIds: ["usdc"], metaMap: metaMapFor("usdc") },
+      expectedIds: [],
+    },
+    {
+      name: "returns no coins when selectedIds is empty",
+      input: { selectedIds: [], assetMap: assetMapFor("usdc"), metaMap: metaMapFor("usdc") },
+      expectedIds: [],
+    },
+    {
+      name: "skips coins missing from assetMap",
+      input: { selectedIds: ["usdc", "usdt"], assetMap: assetMapFor("usdc"), metaMap: metaMapFor("usdc", "usdt") },
+      expectedIds: ["usdc"],
+    },
+    {
+      name: "skips coins missing from metaMap",
+      input: { selectedIds: ["usdc", "usdt"], assetMap: assetMapFor("usdc", "usdt"), metaMap: metaMapFor("usdc") },
+      expectedIds: ["usdc"],
+    },
+    {
+      name: "preserves selectedIds order in output",
+      input: {
+        selectedIds: ["dai", "usdt", "usdc"],
+        assetMap: assetMapFor("usdc", "usdt", "dai"),
+        metaMap: metaMapFor("usdc", "usdt", "dai"),
+      },
+      expectedIds: ["dai", "usdt", "usdc"],
+    },
+  ])("$name", ({ input, expectedIds }) => {
+    expect(deriveComparisonCoins(comparisonInput(input)).map((coin) => coin.id)).toEqual(expectedIds);
   });
 
-  it("returns empty array when selectedIds is empty", () => {
-    const assetMap = new Map([["usdc", makeAsset("usdc")]]);
-    const result = deriveComparisonCoins({
-      selectedIds: [],
-      assetMap,
-      metaMap: new Map([["usdc", makeMeta("usdc")]]),
-      pegCoinMap: new Map(),
-      dexData: undefined,
-      cardMap: new Map(),
-      flowCoinMap: new Map(),
-    });
-    expect(result).toEqual([]);
-  });
+  it("maps peg, liquidity and safety sources onto the comparison row", () => {
+    const result = deriveComparisonCoins(
+      comparisonInput({
+        selectedIds: ["usdc"],
+        assetMap: assetMapFor("usdc"),
+        metaMap: metaMapFor("usdc"),
+        pegCoinMap: new Map([["usdc", makePegSummaryCoin({ id: "usdc", pegScore: 92 })]]),
+        dexData: { usdc: makeDexLiquidityData({ liquidityScore: 85 }) },
+        cardMap: new Map([["usdc", makeCard("usdc", "A")]]),
+      }),
+    );
 
-  it("skips coins missing from assetMap", () => {
-    const assetMap = new Map([["usdc", makeAsset("usdc")]]);
-    const metaMap = new Map([
-      ["usdc", makeMeta("usdc")],
-      ["usdt", makeMeta("usdt")],
-    ]);
-    const result = deriveComparisonCoins({
-      selectedIds: ["usdc", "usdt"],
-      assetMap,
-      metaMap,
-      pegCoinMap: new Map(),
-      dexData: undefined,
-      cardMap: new Map(),
-      flowCoinMap: new Map(),
-    });
-    expect(result).toHaveLength(1);
-    expect(result[0].id).toBe("usdc");
-  });
-
-  it("skips coins missing from metaMap", () => {
-    const assetMap = new Map([
-      ["usdc", makeAsset("usdc")],
-      ["usdt", makeAsset("usdt")],
-    ]);
-    const metaMap = new Map([["usdc", makeMeta("usdc")]]);
-    const result = deriveComparisonCoins({
-      selectedIds: ["usdc", "usdt"],
-      assetMap,
-      metaMap,
-      pegCoinMap: new Map(),
-      dexData: undefined,
-      cardMap: new Map(),
-      flowCoinMap: new Map(),
-    });
-    expect(result).toHaveLength(1);
-    expect(result[0].id).toBe("usdc");
-  });
-  it("maps pegDetails from pegCoinMap", () => {
-    const assetMap = new Map([["usdc", makeAsset("usdc")]]);
-    const metaMap = new Map([["usdc", makeMeta("usdc")]]);
-    const pegCoinMap = new Map([["usdc", makePegSummaryCoin({ id: "usdc", pegScore: 92 })]]);
-    const result = deriveComparisonCoins({
-      selectedIds: ["usdc"],
-      assetMap,
-      metaMap,
-      pegCoinMap,
-      dexData: undefined,
-      cardMap: new Map(),
-      flowCoinMap: new Map(),
-    });
     expect(result[0].pegDetails?.pegScore).toBe(92);
-  });
-
-  it("returns null pegDetails when coin is not in pegCoinMap", () => {
-    const assetMap = new Map([["usdc", makeAsset("usdc")]]);
-    const metaMap = new Map([["usdc", makeMeta("usdc")]]);
-    const result = deriveComparisonCoins({
-      selectedIds: ["usdc"],
-      assetMap,
-      metaMap,
-      pegCoinMap: new Map(),
-      dexData: undefined,
-      cardMap: new Map(),
-      flowCoinMap: new Map(),
-    });
-    expect(result[0].pegDetails).toBeNull();
-  });
-
-  it("maps liquidity from dexData", () => {
-    const assetMap = new Map([["usdc", makeAsset("usdc")]]);
-    const metaMap = new Map([["usdc", makeMeta("usdc")]]);
-    const dexData = { usdc: makeDexLiquidityData({ liquidityScore: 85 }) };
-    const result = deriveComparisonCoins({
-      selectedIds: ["usdc"],
-      assetMap,
-      metaMap,
-      pegCoinMap: new Map(),
-      dexData,
-      cardMap: new Map(),
-      flowCoinMap: new Map(),
-    });
     expect(result[0].liquidity?.liquidityScore).toBe(85);
-  });
-
-  it("maps safetyCard from cardMap", () => {
-    const assetMap = new Map([["usdc", makeAsset("usdc")]]);
-    const metaMap = new Map([["usdc", makeMeta("usdc")]]);
-    const cardMap = new Map([["usdc", makeCard("usdc", "A")]]);
-    const result = deriveComparisonCoins({
-      selectedIds: ["usdc"],
-      assetMap,
-      metaMap,
-      pegCoinMap: new Map(),
-      dexData: undefined,
-      cardMap,
-      flowCoinMap: new Map(),
-    });
     expect(result[0].safetyCard?.grade).toBe("A");
   });
 
-  it("preserves selectedIds order in output", () => {
-    const assetMap = new Map([
-      ["usdc", makeAsset("usdc")],
-      ["usdt", makeAsset("usdt")],
-      ["dai", makeAsset("dai")],
-    ]);
-    const metaMap = new Map([
-      ["usdc", makeMeta("usdc")],
-      ["usdt", makeMeta("usdt")],
-      ["dai", makeMeta("dai")],
-    ]);
-    const result = deriveComparisonCoins({
-      selectedIds: ["dai", "usdt", "usdc"],
-      assetMap,
-      metaMap,
-      pegCoinMap: new Map(),
-      dexData: undefined,
-      cardMap: new Map(),
-      flowCoinMap: new Map(),
-    });
-    expect(result.map((c) => c.id)).toEqual(["dai", "usdt", "usdc"]);
+  it("returns null pegDetails when coin is not in pegCoinMap", () => {
+    const result = deriveComparisonCoins(
+      comparisonInput({
+        selectedIds: ["usdc"],
+        assetMap: assetMapFor("usdc"),
+        metaMap: metaMapFor("usdc"),
+      }),
+    );
+    expect(result[0].pegDetails).toBeNull();
   });
 });
 
@@ -374,52 +325,31 @@ describe("deriveSupplySeries", () => {
 // ---------------------------------------------------------------------------
 
 describe("deriveFlowSeries", () => {
-  it("returns empty array when all flow details are undefined", () => {
+  it.each<{ name: string; flowDetails: (MintBurnPerCoinResponse | undefined)[] }>([
+    { name: "returns empty array when all flow details are undefined", flowDetails: [undefined] },
+    { name: "skips entries with empty hourly arrays", flowDetails: [makeFlowDetail()] },
+  ])("$name", ({ flowDetails }) => {
     const result = deriveFlowSeries({
       selectedIds: ["usdc"],
-      flowDetails: [undefined],
-      metaMap: new Map(),
-    });
-    expect(result).toEqual([]);
-  });
-
-  it("skips entries with empty hourly arrays", () => {
-    const detail = {
-      stablecoinId: "usdc",
-      symbol: "USDC",
-      mintVolumeUsd: 0,
-      burnVolumeUsd: 0,
-      netFlowUsd: 0,
-      mintCount: 0,
-      burnCount: 0,
-      chains: [],
-      hourly: [],
-      updatedAt: 0,
-    };
-    const result = deriveFlowSeries({
-      selectedIds: ["usdc"],
-      flowDetails: [detail],
+      flowDetails,
       metaMap: new Map([["usdc", { symbol: "USDC" }]]),
     });
     expect(result).toEqual([]);
   });
 
   it("builds flow series from hourly buckets with correct timestamp conversion", () => {
-    const detail = {
-      stablecoinId: "usdc",
-      symbol: "USDC",
+    const detail = makeFlowDetail({
       mintVolumeUsd: 100,
       burnVolumeUsd: 50,
       netFlowUsd: 50,
       mintCount: 1,
       burnCount: 1,
-      chains: [],
       hourly: [
         { hourTs: 1700000000, netFlowUsd: 50_000, mintVolumeUsd: 100_000, burnVolumeUsd: 50_000 },
         { hourTs: 1700003600, netFlowUsd: -20_000, mintVolumeUsd: 0, burnVolumeUsd: 20_000 },
       ],
       updatedAt: 1700010000,
-    };
+    });
     const result = deriveFlowSeries({
       selectedIds: ["usdc"],
       flowDetails: [detail],
@@ -433,18 +363,9 @@ describe("deriveFlowSeries", () => {
   });
 
   it("uses coin id as symbol fallback", () => {
-    const detail = {
-      stablecoinId: "usdc",
-      symbol: "USDC",
-      mintVolumeUsd: 0,
-      burnVolumeUsd: 0,
-      netFlowUsd: 0,
-      mintCount: 0,
-      burnCount: 0,
-      chains: [],
+    const detail = makeFlowDetail({
       hourly: [{ hourTs: 1700000000, netFlowUsd: 0, mintVolumeUsd: 0, burnVolumeUsd: 0 }],
-      updatedAt: 0,
-    };
+    });
     const result = deriveFlowSeries({
       selectedIds: ["usdc"],
       flowDetails: [detail],
@@ -501,30 +422,19 @@ describe("deriveFlowCardData", () => {
     expect(result[0].pressureShiftState).toBe("worsening");
   });
 
-  it("defaults netFlowDirection24h to 'inactive' when null", () => {
+  it.each<{ field: "netFlowDirection24h" | "pressureShiftState"; expected: string }>([
+    { field: "netFlowDirection24h", expected: "inactive" },
+    { field: "pressureShiftState", expected: "nr" },
+  ])("defaults a null $field to '$expected'", ({ field, expected }) => {
     const coin = makeFlowCoin("usdc", {
-      netFlowDirection24h: null as unknown as NetFlowDirection24h,
+      [field]: null as unknown as NetFlowDirection24h & PressureShiftState,
     });
-    const flowCoinMap = new Map([["usdc", coin]]);
     const result = deriveFlowCardData({
       selectedIds: ["usdc"],
-      flowCoinMap,
+      flowCoinMap: new Map([["usdc", coin]]),
       metaMap: new Map([["usdc", { symbol: "USDC" }]]),
     });
-    expect(result[0].netFlowDirection24h).toBe("inactive");
-  });
-
-  it("defaults pressureShiftState to 'nr' when null", () => {
-    const coin = makeFlowCoin("usdc", {
-      pressureShiftState: null as unknown as PressureShiftState,
-    });
-    const flowCoinMap = new Map([["usdc", coin]]);
-    const result = deriveFlowCardData({
-      selectedIds: ["usdc"],
-      flowCoinMap,
-      metaMap: new Map([["usdc", { symbol: "USDC" }]]),
-    });
-    expect(result[0].pressureShiftState).toBe("nr");
+    expect(result[0][field]).toBe(expected);
   });
 
   it("uses coin id as symbol fallback when meta is missing", () => {

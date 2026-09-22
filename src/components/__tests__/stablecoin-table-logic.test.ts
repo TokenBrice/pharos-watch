@@ -8,8 +8,10 @@ import {
   resolveEffectiveSortKey,
   type StablecoinTableSortKey,
 } from "@/components/stablecoin-table-logic";
-import { buildV9SafetyTableMap } from "@/lib/safety-score-v9-consumers";
+import { buildV9SafetyTableMap, type V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
+import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
+import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
 import {
   COMMODITY_PEG_TAGS,
   NON_USD_NON_COMMODITY_PEG_TAGS,
@@ -17,7 +19,9 @@ import {
   OTHER_PEG_TAGS,
 } from "@shared/lib/filter-tags";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import type { StablecoinData } from "@shared/types";
+import type { PegSummaryCoin, StablecoinData } from "@shared/types";
+import type { DexLiquidityMap } from "@shared/types/market";
+import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import type { ColumnId } from "@/hooks/use-preferences";
 import type { CsvColumn } from "@/lib/exports/csv";
@@ -238,50 +242,196 @@ describe("prioritizePinnedStablecoins", () => {
   });
 });
 
-describe("sortStablecoins — name", () => {
-  it("sorts alphabetically ascending", () => {
-    const coins = [makeCoin("b", "Zebra"), makeCoin("a", "Apple")];
-    const result = sortStablecoins({
-      filtered: coins,
+function safetyTableRows(cards: SafetyScoreV9CurrentCard[]): Record<string, V9SafetyTableRow> {
+  const response = makeReportCardsV9Response({ cards });
+  const projection = buildV9SafetyTableMap(response, response.safetyScoreIdentity);
+  return projection.status === "available" ? projection.value : {};
+}
+
+describe("sortStablecoins", () => {
+  it.each<{
+    name: string;
+    rows: StablecoinData[];
+    sort: { key: StablecoinTableSortKey; direction: "asc" | "desc" };
+    sources?: {
+      pegScores?: Map<string, PegSummaryCoin>;
+      dexLiquidity?: DexLiquidityMap;
+      reportCards?: Record<string, V9SafetyTableRow>;
+    };
+    expected: string[];
+  }>([
+    {
+      name: "sorts names alphabetically ascending",
+      rows: [makeCoin("b", "Zebra"), makeCoin("a", "Apple")],
       sort: sortAsc("name"),
-      effectiveSortKey: "name",
-    });
-    expect(result.map((c) => c.name)).toEqual(["Apple", "Zebra"]);
-  });
-
-  it("sorts alphabetically descending", () => {
-    const coins = [makeCoin("a", "Apple"), makeCoin("b", "Zebra")];
-    const result = sortStablecoins({
-      filtered: coins,
+      expected: ["a", "b"],
+    },
+    {
+      name: "sorts names alphabetically descending",
+      rows: [makeCoin("a", "Apple"), makeCoin("b", "Zebra")],
       sort: sortDesc("name"),
-      effectiveSortKey: "name",
-    });
-    expect(result.map((c) => c.name)).toEqual(["Zebra", "Apple"]);
+      expected: ["b", "a"],
+    },
+    {
+      name: "sorts by price ascending",
+      rows: [makeCoin("a", "A", { price: 1.05 }), makeCoin("b", "B", { price: 0.98 })],
+      sort: sortAsc("price"),
+      expected: ["b", "a"],
+    },
+    {
+      name: "keeps an unknown price last when sorting descending",
+      rows: [makeCoin("a", "A", { price: null }), makeCoin("b", "B", { price: 1.0 })],
+      sort: sortDesc("price"),
+      expected: ["b", "a"],
+    },
+    {
+      // Ascending used to rank the unknown row as the cheapest coin on the page.
+      name: "keeps an unknown price last when sorting ascending",
+      rows: [makeCoin("a", "A", { price: null }), makeCoin("b", "B", { price: 1.0 })],
+      sort: sortAsc("price"),
+      expected: ["b", "a"],
+    },
+    {
+      name: "sorts by the Worker current peg deviation",
+      rows: [makeCoin("higher", "Higher", { price: 1.004949 }), makeCoin("lower", "Lower", { price: 1.004941 })],
+      sort: sortAsc("peg"),
+      sources: {
+        pegScores: new Map([
+          ["higher", makePegSummaryCoin({ id: "higher", currentDeviationBps: 50 })],
+          ["lower", makePegSummaryCoin({ id: "lower", currentDeviationBps: 49 })],
+        ]),
+      },
+      expected: ["lower", "higher"],
+    },
+    {
+      name: "sorts by market cap descending",
+      rows: [
+        makeCoin("small", "Small", { circulating: { peggedUSD: 1_000 } }),
+        makeCoin("large", "Large", { circulating: { peggedUSD: 1_000_000_000 } }),
+      ],
+      sort: sortDesc("mcap"),
+      expected: ["large", "small"],
+    },
+    {
+      name: "sorts by market cap ascending",
+      rows: [
+        makeCoin("large", "Large", { circulating: { peggedUSD: 1_000_000_000 } }),
+        makeCoin("small", "Small", { circulating: { peggedUSD: 1_000 } }),
+      ],
+      sort: sortAsc("mcap"),
+      expected: ["small", "large"],
+    },
+    {
+      name: "sorts by peg score descending",
+      rows: [makeCoin("a", "A"), makeCoin("b", "B")],
+      sort: sortDesc("stability"),
+      sources: {
+        pegScores: new Map([
+          ["a", makePegSummaryCoin({ id: "a", symbol: "A", pegScore: 95 })],
+          ["b", makePegSummaryCoin({ id: "b", symbol: "B", pegScore: 70 })],
+        ]),
+      },
+      expected: ["a", "b"],
+    },
+    {
+      name: "places coins with no peg score after coins with scores",
+      rows: [makeCoin("noScore", "No Score"), makeCoin("hasScore", "Has Score")],
+      sort: sortDesc("stability"),
+      sources: {
+        pegScores: new Map([["hasScore", makePegSummaryCoin({ id: "hasScore", symbol: "H", pegScore: 80 })]]),
+      },
+      expected: ["hasScore", "noScore"],
+    },
+    {
+      name: "sorts by liquidity score descending",
+      rows: [makeCoin("low", "Low"), makeCoin("high", "High")],
+      sort: sortDesc("liquidity"),
+      sources: {
+        dexLiquidity: {
+          low: makeDexLiquidityData({ liquidityScore: 20 }),
+          high: makeDexLiquidityData({ liquidityScore: 90 }),
+        },
+      },
+      expected: ["high", "low"],
+    },
+    {
+      name: "places coins with null liquidity after coins with scores",
+      rows: [makeCoin("noLiq", "No Liq"), makeCoin("hasLiq", "Has Liq")],
+      sort: sortDesc("liquidity"),
+      sources: { dexLiquidity: { hasLiq: makeDexLiquidityData({ liquidityScore: 50 }) } },
+      expected: ["hasLiq", "noLiq"],
+    },
+    {
+      name: "sorts by V9 score descending",
+      rows: [makeCoin("b", "B"), makeCoin("a", "A")],
+      sort: sortDesc("grade"),
+      sources: {
+        reportCards: safetyTableRows([makeV9Card({ id: "a", score: 85 }), makeV9Card({ id: "b", score: 60 })]),
+      },
+      expected: ["a", "b"],
+    },
+    {
+      name: "places coins with a null V9 score after coins with scores",
+      rows: [makeCoin("noGrade", "No Grade"), makeCoin("hasGrade", "Has Grade")],
+      sort: sortDesc("grade"),
+      sources: { reportCards: safetyTableRows([makeV9Card({ id: "hasGrade", score: 70 })]) },
+      expected: ["hasGrade", "noGrade"],
+    },
+    {
+      name: "sorts by 24h supply change descending",
+      rows: [
+        makeCoin("grow", "Growing", {
+          circulating: { peggedUSD: 1_100_000 },
+          circulatingPrevDay: { peggedUSD: 1_000_000 }, // +10%
+        }),
+        makeCoin("shrink", "Shrinking", {
+          circulating: { peggedUSD: 900_000 },
+          circulatingPrevDay: { peggedUSD: 1_000_000 }, // -10%
+        }),
+      ],
+      sort: sortDesc("change24h"),
+      expected: ["grow", "shrink"],
+    },
+    {
+      name: "sorts by 7d supply change ascending",
+      rows: [
+        makeCoin("grow", "Growing", {
+          circulating: { peggedUSD: 1_200_000 },
+          circulatingPrevWeek: { peggedUSD: 1_000_000 }, // +20%
+        }),
+        makeCoin("stable", "Stable", {
+          circulating: { peggedUSD: 1_000_000 },
+          circulatingPrevWeek: { peggedUSD: 1_000_000 }, // 0%
+        }),
+      ],
+      sort: sortAsc("change7d"),
+      expected: ["stable", "grow"],
+    },
+  ])("$name", ({ rows, sort, sources, expected }) => {
+    const result = sortStablecoins({ filtered: rows, sort, effectiveSortKey: sort.key, ...sources });
+    expect(result.map((coin) => coin.id)).toEqual(expected);
   });
-});
 
-describe("sortStablecoins — price", () => {
-  it("sorts by price ascending", () => {
-    const coins = [makeCoin("a", "A", { price: 1.05 }), makeCoin("b", "B", { price: 0.98 })];
+  it("treats missing Worker deviations as absent peg signals", () => {
+    const coins = [
+      makeCoin("missing", "Missing", { price: null }),
+      makeCoin("invalid", "Invalid", { price: Number.NaN }),
+      makeCoin("exact", "Exact", { price: 1 }),
+    ];
+
     const result = sortStablecoins({
       filtered: coins,
-      sort: sortAsc("price"),
-      effectiveSortKey: "price",
+      sort: sortAsc("peg"),
+      effectiveSortKey: "peg",
+      pegScores: new Map([
+        ["missing", makePegSummaryCoin({ id: "missing", currentDeviationBps: null })],
+        ["invalid", makePegSummaryCoin({ id: "invalid", currentDeviationBps: null })],
+        ["exact", makePegSummaryCoin({ id: "exact", currentDeviationBps: 0 })],
+      ]),
     });
-    expect(result[0].id).toBe("b");
-    expect(result[1].id).toBe("a");
-  });
 
-  it("keeps an unknown price last in both directions", () => {
-    const coins = [makeCoin("a", "A", { price: null }), makeCoin("b", "B", { price: 1.0 })];
-
-    expect(
-      sortStablecoins({ filtered: coins, sort: sortDesc("price"), effectiveSortKey: "price" })[0].id,
-    ).toBe("b");
-    // Ascending used to rank the unknown row as the cheapest coin on the page.
-    expect(
-      sortStablecoins({ filtered: coins, sort: sortAsc("price"), effectiveSortKey: "price" })[0].id,
-    ).toBe("b");
+    expect(result[0]?.id).toBe("exact");
+    expect(new Set(result.slice(1).map((coin) => coin.id))).toEqual(new Set(["missing", "invalid"]));
   });
 
   it("reads the selected sort value once per row", () => {
@@ -314,268 +464,29 @@ describe("sortStablecoins — price", () => {
   });
 });
 
-describe("sortStablecoins — peg deviation", () => {
-  it("sorts by the Worker current deviation", () => {
-    const coins = [
-      makeCoin("higher", "Higher", { price: 1.004949 }),
-      makeCoin("lower", "Lower", { price: 1.004941 }),
-    ];
+describe("blacklistable projection", () => {
+  const freezePossible = (id: string) =>
+    makeV9Card({ id, accessPosture: { ...makeV9Card().accessPosture, freezeExposure: "possible" } });
 
-    const result = sortStablecoins({
-      filtered: coins,
-      sort: sortAsc("peg"),
-      effectiveSortKey: "peg",
-      pegScores: new Map([
-        ["higher", { id: "higher", currentDeviationBps: 50 } as never],
-        ["lower", { id: "lower", currentDeviationBps: 49 } as never],
-      ]),
-    });
-
-    expect(result.map((coin) => coin.id)).toEqual(["lower", "higher"]);
-  });
-
-  it("treats missing Worker deviations as absent peg signals", () => {
-    const coins = [
-      makeCoin("missing", "Missing", { price: null }),
-      makeCoin("invalid", "Invalid", { price: Number.NaN }),
-      makeCoin("exact", "Exact", { price: 1 }),
-    ];
-
-    const result = sortStablecoins({
-      filtered: coins,
-      sort: sortAsc("peg"),
-      effectiveSortKey: "peg",
-      pegScores: new Map([
-        ["missing", { id: "missing", currentDeviationBps: null } as never],
-        ["invalid", { id: "invalid", currentDeviationBps: null } as never],
-        ["exact", { id: "exact", currentDeviationBps: 0 } as never],
-      ]),
-    });
-
-    expect(result[0]?.id).toBe("exact");
-    expect(new Set(result.slice(1).map((coin) => coin.id))).toEqual(new Set(["missing", "invalid"]));
-  });
-});
-
-describe("sortStablecoins — mcap", () => {
-  it("sorts by market cap descending", () => {
-    const coins = [
-      makeCoin("small", "Small", { circulating: { peggedUSD: 1_000 } }),
-      makeCoin("large", "Large", { circulating: { peggedUSD: 1_000_000_000 } }),
-    ];
-    const result = sortStablecoins({
-      filtered: coins,
-      sort: sortDesc("mcap"),
-      effectiveSortKey: "mcap",
-    });
-    expect(result[0].id).toBe("large");
-  });
-
-  it("sorts by market cap ascending", () => {
-    const coins = [
-      makeCoin("large", "Large", { circulating: { peggedUSD: 1_000_000_000 } }),
-      makeCoin("small", "Small", { circulating: { peggedUSD: 1_000 } }),
-    ];
-    const result = sortStablecoins({
-      filtered: coins,
-      sort: sortAsc("mcap"),
-      effectiveSortKey: "mcap",
-    });
-    expect(result[0].id).toBe("small");
-  });
-});
-
-describe("sortStablecoins — stability (pegScore)", () => {
-  it("sorts by peg score descending", () => {
-    const coins = [makeCoin("a", "A"), makeCoin("b", "B")];
-    const pegScores = new Map([
-      [
-        "a",
-        { pegScore: 95, id: "a", symbol: "A" } as Parameters<typeof sortStablecoins>[0]["pegScores"] extends Map<
-          string,
-          infer V
-        >
-          ? V
-          : never,
-      ],
-      [
-        "b",
-        { pegScore: 70, id: "b", symbol: "B" } as Parameters<typeof sortStablecoins>[0]["pegScores"] extends Map<
-          string,
-          infer V
-        >
-          ? V
-          : never,
-      ],
-    ]);
-    const result = sortStablecoins({
-      filtered: coins,
-      sort: sortDesc("stability"),
-      effectiveSortKey: "stability",
-      pegScores,
-    });
-    expect(result[0].id).toBe("a");
-  });
-
-  it("places coins with null pegScore after coins with scores", () => {
-    const coins = [makeCoin("noScore", "No Score"), makeCoin("hasScore", "Has Score")];
-    const pegScores = new Map([
-      [
-        "hasScore",
-        { pegScore: 80, id: "hasScore", symbol: "H" } as Parameters<typeof sortStablecoins>[0]["pegScores"] extends Map<
-          string,
-          infer V
-        >
-          ? V
-          : never,
-      ],
-    ]);
-    const result = sortStablecoins({
-      filtered: coins,
-      sort: sortDesc("stability"),
-      effectiveSortKey: "stability",
-      pegScores,
-    });
-    expect(result[0].id).toBe("hasScore");
-    expect(result[1].id).toBe("noScore");
-  });
-});
-
-describe("sortStablecoins — liquidity (dexLiquidity)", () => {
-  it("sorts by liquidity score descending", () => {
-    const coins = [makeCoin("low", "Low"), makeCoin("high", "High")];
-    const dexLiquidity = {
-      low: { liquidityScore: 20 } as Parameters<typeof sortStablecoins>[0]["dexLiquidity"] extends Record<
-        string,
-        infer V
-      >
-        ? V
-        : never,
-      high: { liquidityScore: 90 } as Parameters<typeof sortStablecoins>[0]["dexLiquidity"] extends Record<
-        string,
-        infer V
-      >
-        ? V
-        : never,
-    };
-    const result = sortStablecoins({
-      filtered: coins,
-      sort: sortDesc("liquidity"),
-      effectiveSortKey: "liquidity",
-      dexLiquidity,
-    });
-    expect(result[0].id).toBe("high");
-  });
-
-  it("places coins with null liquidity after coins with scores", () => {
-    const coins = [makeCoin("noLiq", "No Liq"), makeCoin("hasLiq", "Has Liq")];
-    const dexLiquidity = {
-      hasLiq: { liquidityScore: 50 } as Parameters<typeof sortStablecoins>[0]["dexLiquidity"] extends Record<
-        string,
-        infer V
-      >
-        ? V
-        : never,
-    };
-    const result = sortStablecoins({
-      filtered: coins,
-      sort: sortDesc("liquidity"),
-      effectiveSortKey: "liquidity",
-      dexLiquidity,
-    });
-    expect(result[0].id).toBe("hasLiq");
-    expect(result[1].id).toBe("noLiq");
-  });
-});
-
-describe("sortStablecoins — grade (reportCards)", () => {
-  it("sorts by V9 score descending", () => {
-    const coins = [makeCoin("b", "B"), makeCoin("a", "A")];
-    const reportCards = {
-      a: { score: 85 } as Parameters<typeof sortStablecoins>[0]["reportCards"] extends Record<string, infer V>
-        ? V
-        : never,
-      b: { score: 60 } as Parameters<typeof sortStablecoins>[0]["reportCards"] extends Record<string, infer V>
-        ? V
-        : never,
-    };
-    const result = sortStablecoins({
-      filtered: coins,
-      sort: sortDesc("grade"),
-      effectiveSortKey: "grade",
-      reportCards,
-    });
-    expect(result[0].id).toBe("a");
-  });
-
-  it("places coins with a null V9 score after coins with scores", () => {
-    const coins = [makeCoin("noGrade", "No Grade"), makeCoin("hasGrade", "Has Grade")];
-    const reportCards = {
-      hasGrade: { score: 70 } as Parameters<typeof sortStablecoins>[0]["reportCards"] extends Record<
-        string,
-        infer V
-      >
-        ? V
-        : never,
-    };
-    const result = sortStablecoins({
-      filtered: coins,
-      sort: sortDesc("grade"),
-      effectiveSortKey: "grade",
-      reportCards,
-    });
-    expect(result[0].id).toBe("hasGrade");
-    expect(result[1].id).toBe("noGrade");
-  });
-});
-
-describe("sortStablecoins — blacklistable", () => {
-  it("uses reviewed FreezeWatch status before stale V9 freeze exposure", () => {
+  it("sorts reviewed FreezeWatch status before stale V9 freeze exposure", () => {
     const lisusd = makeCoin("lisusd-lista", "Lista USD");
     const runtimePossible = makeCoin("runtime-possible", "Runtime Possible");
-    const response = makeReportCardsV9Response({
-      cards: [
-        makeV9Card({
-          id: "lisusd-lista",
-          accessPosture: { ...makeV9Card().accessPosture, freezeExposure: "possible" },
-        }),
-        makeV9Card({
-          id: "runtime-possible",
-          accessPosture: { ...makeV9Card().accessPosture, freezeExposure: "possible" },
-        }),
-      ],
-    });
-    const projection = buildV9SafetyTableMap(response, response.safetyScoreIdentity);
-    const reportCards = projection.status === "available" ? projection.value : {};
 
     const result = sortStablecoins({
       filtered: [runtimePossible, lisusd],
       sort: sortAsc("blacklistable"),
       effectiveSortKey: "blacklistable",
-      reportCards,
+      reportCards: safetyTableRows([freezePossible("lisusd-lista"), freezePossible("runtime-possible")]),
     });
 
     expect(result.map((row) => row.id)).toEqual(["lisusd-lista", "runtime-possible"]);
   });
-});
 
-describe("exportStablecoinsCsv — blacklistable", () => {
-  it("uses reviewed FreezeWatch status before stale V9 freeze exposure", () => {
+  it("exports reviewed FreezeWatch status before stale V9 freeze exposure", () => {
     downloadCsvMock.mockReset();
-
     const lisusd = makeCoin("lisusd-lista", "Lista USD");
-    const response = makeReportCardsV9Response({
-      cards: [
-        makeV9Card({
-          id: "lisusd-lista",
-          accessPosture: { ...makeV9Card().accessPosture, freezeExposure: "possible" },
-        }),
-      ],
-    });
-    const projection = buildV9SafetyTableMap(response, response.safetyScoreIdentity);
-    const reportCards = projection.status === "available" ? projection.value : {};
 
-    exportStablecoinsCsv([lisusd], undefined, undefined, reportCards);
+    exportStablecoinsCsv([lisusd], undefined, undefined, safetyTableRows([freezePossible("lisusd-lista")]));
 
     const [, columns] = downloadCsvMock.mock.calls[0]! as [
       StablecoinData[],
@@ -584,44 +495,6 @@ describe("exportStablecoinsCsv — blacklistable", () => {
     ];
     const blacklistColumn = columns.find((column) => column.header === "Blacklistable");
     expect(blacklistColumn?.accessor(lisusd, 0)).toBe("No");
-  });
-});
-
-describe("sortStablecoins — change24h", () => {
-  it("sorts by 24h supply change descending", () => {
-    const growing = makeCoin("grow", "Growing", {
-      circulating: { peggedUSD: 1_100_000 },
-      circulatingPrevDay: { peggedUSD: 1_000_000 }, // +10%
-    });
-    const shrinking = makeCoin("shrink", "Shrinking", {
-      circulating: { peggedUSD: 900_000 },
-      circulatingPrevDay: { peggedUSD: 1_000_000 }, // -10%
-    });
-    const result = sortStablecoins({
-      filtered: [growing, shrinking],
-      sort: sortDesc("change24h"),
-      effectiveSortKey: "change24h",
-    });
-    expect(result[0].id).toBe("grow");
-  });
-});
-
-describe("sortStablecoins — change7d", () => {
-  it("sorts by 7d supply change ascending", () => {
-    const stable = makeCoin("stable", "Stable", {
-      circulating: { peggedUSD: 1_000_000 },
-      circulatingPrevWeek: { peggedUSD: 1_000_000 }, // 0%
-    });
-    const growing = makeCoin("grow", "Growing", {
-      circulating: { peggedUSD: 1_200_000 },
-      circulatingPrevWeek: { peggedUSD: 1_000_000 }, // +20%
-    });
-    const result = sortStablecoins({
-      filtered: [growing, stable],
-      sort: sortAsc("change7d"),
-      effectiveSortKey: "change7d",
-    });
-    expect(result[0].id).toBe("stable");
   });
 });
 

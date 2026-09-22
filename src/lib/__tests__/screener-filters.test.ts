@@ -51,96 +51,255 @@ function makeRow(overrides: Partial<ScreenerRow> = {}): ScreenerRow {
   };
 }
 
+const CORE_ROWS: ScreenerRow[] = [
+  makeRow(),
+  makeRow({
+    id: "dai-makerdao",
+    name: "Dai",
+    symbol: "DAI",
+    mechanism: "cdp",
+    pegScore: 88,
+    dewsScore: 35,
+    liquidityScore: 70,
+    safetyScore: 80,
+    safetyGrade: "B+",
+    supplyUsd: 5_000_000_000,
+  }),
+  makeRow({
+    id: "eurs-stasis",
+    name: "STASIS Euro",
+    symbol: "EURS",
+    mechanism: "fiat-cash",
+    peg: "EUR",
+    pegScore: 70,
+    dewsScore: 50,
+    liquidityScore: 40,
+    supplyUsd: 100_000_000,
+    safetyGrade: "C+",
+    safetyScore: 65,
+  }),
+  makeRow({
+    id: "newcoin",
+    name: "Brand New",
+    symbol: "NEW",
+    mechanism: null,
+    pegScore: null,
+    dewsScore: null,
+    liquidityScore: null,
+    supplyUsd: 1_000_000,
+    lifecycle: "pre-launch",
+    safetyGrade: null,
+    safetyScore: null,
+    mintAuthorityScore: null,
+    mintAuthorityScoreBand: "nr",
+    mintAuthorityScoreLabel: "NR",
+    mintAuthorityScoreBandLabel: "NR",
+    mintAuthorityScoreBadgeClassName: "border-border/60 bg-muted/30 text-muted-foreground",
+    mintAuthorityScoreDetail: "Mint Authority Score is not rated.",
+  }),
+];
+
+const BLACKLISTABLE_ROWS: ScreenerRow[] = [
+  makeRow({ id: "yes", blacklistable: "yes" }),
+  makeRow({ id: "no", blacklistable: "no" }),
+  makeRow({ id: "possible", blacklistable: "possible" }),
+  makeRow({ id: "unknown", blacklistable: null }),
+];
+
+const MINT_AUTHORITY_ROWS: ScreenerRow[] = [
+  makeRow({ id: "issuer", mintAuthority: "issuer-or-backend-mint" }),
+  makeRow({ id: "multisig", mintAuthority: "multisig-mint" }),
+  makeRow({ id: "no-priv", mintAuthority: "no-privileged-mint" }),
+  makeRow({ id: "unknown", mintAuthority: "unknown" }),
+];
+
 describe("applyFilters", () => {
-  const rows: ScreenerRow[] = [
-    makeRow(),
-    makeRow({
-      id: "dai-makerdao",
-      name: "Dai",
-      symbol: "DAI",
-      mechanism: "cdp",
-      pegScore: 88,
-      dewsScore: 35,
-      liquidityScore: 70,
-      safetyScore: 80,
-      safetyGrade: "B+",
-      supplyUsd: 5_000_000_000,
-    }),
-    makeRow({
-      id: "eurs-stasis",
-      name: "STASIS Euro",
-      symbol: "EURS",
-      mechanism: "fiat-cash",
-      peg: "EUR",
-      pegScore: 70,
-      dewsScore: 50,
-      liquidityScore: 40,
-      supplyUsd: 100_000_000,
-      safetyGrade: "C+",
-      safetyScore: 65,
-    }),
-    makeRow({
-      id: "newcoin",
-      name: "Brand New",
-      symbol: "NEW",
-      mechanism: null,
-      pegScore: null,
-      dewsScore: null,
-      liquidityScore: null,
-      supplyUsd: 1_000_000,
-      lifecycle: "pre-launch",
-      safetyGrade: null,
-      safetyScore: null,
-      mintAuthorityScore: null,
-      mintAuthorityScoreBand: "nr",
-      mintAuthorityScoreLabel: "NR",
-      mintAuthorityScoreBandLabel: "NR",
-      mintAuthorityScoreBadgeClassName: "border-border/60 bg-muted/30 text-muted-foreground",
-      mintAuthorityScoreDetail: "Mint Authority Score is not rated.",
-    }),
-  ];
-
-  it("returns all rows when no filter is active", () => {
-    expect(applyFilters(rows, SCREENER_FILTER_DEFAULTS)).toHaveLength(rows.length);
-  });
-
-  it("filters by DEWS max, excluding unrated rows", () => {
-    const filters: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, dewsMax: 40 };
-    const result = applyFilters(rows, filters);
-    expect(result.map((r) => r.id).sort()).toEqual(["dai-makerdao", "usdc-circle"]);
-  });
-
-  it("keeps zero scores when only a max DEWS threshold is active", () => {
-    const filters: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, dewsMax: 40 };
-    const result = applyFilters(
-      [
+  it.each<{
+    name: string;
+    rows?: ScreenerRow[];
+    filters: Partial<ScreenerFilters>;
+    expected: string[];
+  }>([
+    {
+      name: "returns all rows when no filter is active",
+      filters: {},
+      expected: ["usdc-circle", "dai-makerdao", "eurs-stasis", "newcoin"],
+    },
+    {
+      name: "filters by DEWS max, excluding unrated rows",
+      filters: { dewsMax: 40 },
+      expected: ["usdc-circle", "dai-makerdao"],
+    },
+    {
+      name: "keeps zero scores when only a max DEWS threshold is active",
+      rows: [
         makeRow({ id: "zero", dewsScore: 0 }),
         makeRow({ id: "inside", dewsScore: 20 }),
         makeRow({ id: "above-max", dewsScore: 41 }),
       ],
-      filters,
-    );
-
-    expect(result.map((r) => r.id)).toEqual(["zero", "inside"]);
-  });
-
-  it("filters by safety grade", () => {
-    const filters: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, safetyGrades: ["A"] };
-    const result = applyFilters(rows, filters);
-    expect(result.map((r) => r.id)).toEqual(["usdc-circle"]);
-  });
-
-  it("filters by V9 safety pillar minimum", () => {
-    const filters: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, safetyControlMin: 90 };
-    const result = applyFilters(
-      [
+      filters: { dewsMax: 40 },
+      expected: ["zero", "inside"],
+    },
+    {
+      name: "includes rows exactly on active DEWS lower thresholds",
+      rows: [
+        makeRow({ id: "below-min", dewsScore: 39 }),
+        makeRow({ id: "at-min", dewsScore: 40 }),
+        makeRow({ id: "inside", dewsScore: 75 }),
+        makeRow({ id: "at-default-max", dewsScore: 100 }),
+        makeRow({ id: "unrated", dewsScore: null }),
+      ],
+      filters: { dewsMin: 40, dewsMax: 100 },
+      expected: ["at-min", "inside", "at-default-max"],
+    },
+    {
+      name: "filters by safety grade",
+      filters: { safetyGrades: ["A"] },
+      expected: ["usdc-circle"],
+    },
+    {
+      name: "filters by V9 safety pillar minimum",
+      rows: [
         makeRow({ id: "low-control", safetyControlScore: 70 }),
         makeRow({ id: "high-control", safetyControlScore: 95 }),
         makeRow({ id: "unrated-control", safetyControlScore: null }),
       ],
-      filters,
-    );
-    expect(result.map((r) => r.id)).toEqual(["high-control"]);
+      filters: { safetyControlMin: 90 },
+      expected: ["high-control"],
+    },
+    {
+      name: "filters by supply min only when min > 0",
+      filters: { supplyMin: 1_000_000_000 },
+      expected: ["usdc-circle", "dai-makerdao"],
+    },
+    {
+      name: "filters by supply max only when max > 0",
+      filters: { supplyMax: 1_000_000_000 },
+      expected: ["eurs-stasis", "newcoin"],
+    },
+    {
+      name: "includes rows exactly on active supply lower thresholds",
+      rows: [
+        makeRow({ id: "below-min", supplyUsd: 99 }),
+        makeRow({ id: "at-min", supplyUsd: 100 }),
+        makeRow({ id: "inside", supplyUsd: 150 }),
+        makeRow({ id: "at-max", supplyUsd: 200 }),
+        makeRow({ id: "above-max", supplyUsd: 201 }),
+      ],
+      filters: { supplyMin: 100, supplyMax: 200 },
+      expected: ["at-min", "inside", "at-max"],
+    },
+    {
+      name: "applies the Picker-compatible score, custody, and evidence filters inclusively",
+      rows: [
+        makeRow({ id: "usdc-circle", pegScore: 80, liquidityScore: 65, custodyModel: "institutional-top", safetyEvidence: "strong" }),
+        makeRow({ id: "dai-makerdao", pegScore: 79, liquidityScore: 65, custodyModel: "onchain", safetyEvidence: "adequate" }),
+      ],
+      filters: {
+        pegScoreMin: 80,
+        liquidityScoreMin: 65,
+        custodyModels: ["institutional-top"],
+        safetyEvidence: ["strong"],
+      },
+      expected: ["usdc-circle"],
+    },
+    {
+      name: "treats coins as exact Picker inspection mode even when broad filters diverge",
+      rows: [
+        makeRow({ id: "usdc-circle", pegScore: 10 }),
+        makeRow({ id: "dai-makerdao", pegScore: 95 }),
+      ],
+      filters: { coins: ["usdc-circle"], pegScoreMin: 80 },
+      expected: ["usdc-circle"],
+    },
+    {
+      name: "filters by mechanism (multi-select)",
+      filters: { mechanisms: ["cdp"] },
+      expected: ["dai-makerdao"],
+    },
+    {
+      name: "excludes rows with null mechanism when mechanism filter is active",
+      filters: { mechanisms: ["cdp", "fiat-cash"] },
+      expected: ["usdc-circle", "dai-makerdao", "eurs-stasis"],
+    },
+    {
+      name: "filters by type (multi-select)",
+      rows: [
+        makeRow({ id: "cefi", type: "centralized" }),
+        makeRow({ id: "cefi-dep", type: "centralized-dependent" }),
+        makeRow({ id: "defi", type: "decentralized" }),
+      ],
+      filters: { types: ["decentralized"] },
+      expected: ["defi"],
+    },
+    {
+      name: "filters by peg currency (multi-select)",
+      filters: { pegs: ["EUR"] },
+      expected: ["eurs-stasis"],
+    },
+    {
+      name: "retains unrated rows when only a non-score filter is active",
+      filters: { pegs: ["USD"] },
+      expected: ["usdc-circle", "dai-makerdao", "newcoin"],
+    },
+    {
+      name: "filters by lifecycle status",
+      filters: { lifecycle: ["pre-launch"] },
+      expected: ["newcoin"],
+    },
+    {
+      name: "filters by Mint Authority Score minimum",
+      rows: [
+        makeRow({ id: "low-mint-score", mintAuthorityScore: 40, mintAuthorityScoreBand: "concentrated" }),
+        makeRow({ id: "high-mint-score", mintAuthorityScore: 85, mintAuthorityScoreBand: "hardened" }),
+        makeRow({ id: "unrated-mint-score", mintAuthorityScore: null, mintAuthorityScoreBand: "nr" }),
+      ],
+      filters: { mintAuthorityScoreMin: 80 },
+      expected: ["high-mint-score"],
+    },
+    {
+      name: "filters by Mint Authority Score band",
+      rows: [
+        makeRow({ id: "governed", mintAuthorityScoreBand: "governed" }),
+        makeRow({ id: "exposed", mintAuthorityScore: 10, mintAuthorityScoreBand: "exposed" }),
+        makeRow({ id: "nr", mintAuthorityScore: null, mintAuthorityScoreBand: "nr" }),
+      ],
+      filters: { mintAuthorityScores: ["exposed", "nr"] },
+      expected: ["exposed", "nr"],
+    },
+    {
+      name: "returns every row when the blacklistable filter is empty",
+      rows: BLACKLISTABLE_ROWS,
+      filters: {},
+      expected: ["yes", "no", "possible", "unknown"],
+    },
+    {
+      name: "keeps only rows whose blacklistable status matches the active filter",
+      rows: BLACKLISTABLE_ROWS,
+      filters: { blacklistable: ["yes", "possible"] },
+      expected: ["yes", "possible"],
+    },
+    {
+      name: "excludes rows with unknown blacklistable status when the filter is active",
+      rows: BLACKLISTABLE_ROWS,
+      filters: { blacklistable: ["yes"] },
+      expected: ["yes"],
+    },
+    {
+      name: "keeps only rows whose mint-authority bucket matches the active filter",
+      rows: MINT_AUTHORITY_ROWS,
+      filters: { mintAuthority: ["issuer-or-backend-mint", "multisig-mint"] },
+      expected: ["issuer", "multisig"],
+    },
+    {
+      name: "can filter for unknown mint-authority review gaps",
+      rows: MINT_AUTHORITY_ROWS,
+      filters: { mintAuthority: ["unknown"] },
+      expected: ["unknown"],
+    },
+  ])("$name", ({ rows = CORE_ROWS, filters, expected }) => {
+    const result = applyFilters(rows, { ...SCREENER_FILTER_DEFAULTS, ...filters });
+    expect(result.map((row) => row.id)).toEqual(expected);
   });
 
   it("applies the threshold the command palette's `screen safety>=N` deep link carries", () => {
@@ -157,161 +316,6 @@ describe("applyFilters", () => {
     );
     expect(result.map((r) => r.id)).toEqual(["high"]);
   });
-
-  it("filters by supply min only when min > 0", () => {
-    const filters: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, supplyMin: 1_000_000_000 };
-    const result = applyFilters(rows, filters);
-    expect(result.map((r) => r.id).sort()).toEqual(["dai-makerdao", "usdc-circle"]);
-  });
-
-  it("filters by supply max only when max > 0", () => {
-    const filters: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, supplyMax: 1_000_000_000 };
-    const result = applyFilters(rows, filters);
-    expect(result.map((r) => r.id).sort()).toEqual(["eurs-stasis", "newcoin"]);
-  });
-
-  it("includes rows exactly on active DEWS lower thresholds", () => {
-    const filters: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, dewsMin: 40, dewsMax: 100 };
-    const result = applyFilters(
-      [
-        makeRow({ id: "below-min", dewsScore: 39 }),
-        makeRow({ id: "at-min", dewsScore: 40 }),
-        makeRow({ id: "inside", dewsScore: 75 }),
-        makeRow({ id: "at-default-max", dewsScore: 100 }),
-        makeRow({ id: "unrated", dewsScore: null }),
-      ],
-      filters,
-    );
-
-    expect(result.map((r) => r.id)).toEqual(["at-min", "inside", "at-default-max"]);
-  });
-
-  it("includes rows exactly on active supply lower thresholds", () => {
-    const filters: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, supplyMin: 100, supplyMax: 200 };
-    const result = applyFilters(
-      [
-        makeRow({ id: "below-min", supplyUsd: 99 }),
-        makeRow({ id: "at-min", supplyUsd: 100 }),
-        makeRow({ id: "inside", supplyUsd: 150 }),
-        makeRow({ id: "at-max", supplyUsd: 200 }),
-        makeRow({ id: "above-max", supplyUsd: 201 }),
-      ],
-      filters,
-    );
-
-    expect(result.map((r) => r.id)).toEqual(["at-min", "inside", "at-max"]);
-  });
-
-  it("applies the Picker-compatible score, custody, and evidence filters inclusively", () => {
-    const result = applyFilters(
-      [
-        makeRow({ id: "usdc-circle", pegScore: 80, liquidityScore: 65, custodyModel: "institutional-top", safetyEvidence: "strong" }),
-        makeRow({ id: "dai-makerdao", pegScore: 79, liquidityScore: 65, custodyModel: "onchain", safetyEvidence: "adequate" }),
-      ],
-      {
-        ...SCREENER_FILTER_DEFAULTS,
-        pegScoreMin: 80,
-        liquidityScoreMin: 65,
-        custodyModels: ["institutional-top"],
-        safetyEvidence: ["strong"],
-      },
-    );
-
-    expect(result.map((row) => row.id)).toEqual(["usdc-circle"]);
-  });
-
-  it("treats coins as exact Picker inspection mode even when broad filters diverge", () => {
-    const result = applyFilters(
-      [
-        makeRow({ id: "usdc-circle", pegScore: 10 }),
-        makeRow({ id: "dai-makerdao", pegScore: 95 }),
-      ],
-      {
-        ...SCREENER_FILTER_DEFAULTS,
-        coins: ["usdc-circle"],
-        pegScoreMin: 80,
-      },
-    );
-    expect(result.map((row) => row.id)).toEqual(["usdc-circle"]);
-  });
-
-  it("filters by mechanism (multi-select)", () => {
-    const filters: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, mechanisms: ["cdp"] };
-    const result = applyFilters(rows, filters);
-    expect(result.map((r) => r.id)).toEqual(["dai-makerdao"]);
-  });
-
-  it("filters by type (multi-select)", () => {
-    const filters: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, types: ["decentralized"] };
-    const result = applyFilters(
-      [
-        makeRow({ id: "cefi", type: "centralized" }),
-        makeRow({ id: "cefi-dep", type: "centralized-dependent" }),
-        makeRow({ id: "defi", type: "decentralized" }),
-      ],
-      filters,
-    );
-    expect(result.map((r) => r.id)).toEqual(["defi"]);
-  });
-
-  it("excludes rows with null mechanism when mechanism filter is active", () => {
-    const filters: ScreenerFilters = {
-      ...SCREENER_FILTER_DEFAULTS,
-      mechanisms: ["cdp", "fiat-cash"],
-    };
-    const result = applyFilters(rows, filters);
-    expect(result.map((r) => r.id).sort()).toEqual(["dai-makerdao", "eurs-stasis", "usdc-circle"]);
-    expect(result.find((r) => r.id === "newcoin")).toBeUndefined();
-  });
-
-  it("filters by peg currency (multi-select)", () => {
-    const filters: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, pegs: ["EUR"] };
-    const result = applyFilters(rows, filters);
-    expect(result.map((r) => r.id)).toEqual(["eurs-stasis"]);
-  });
-
-  it("filters by lifecycle status", () => {
-    const filters: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, lifecycle: ["pre-launch"] };
-    const result = applyFilters(rows, filters);
-    expect(result.map((r) => r.id)).toEqual(["newcoin"]);
-  });
-
-  it("filters by Mint Authority Score minimum", () => {
-    const filters: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, mintAuthorityScoreMin: 80 };
-    const result = applyFilters(
-      [
-        makeRow({ id: "low-mint-score", mintAuthorityScore: 40, mintAuthorityScoreBand: "concentrated" }),
-        makeRow({ id: "high-mint-score", mintAuthorityScore: 85, mintAuthorityScoreBand: "hardened" }),
-        makeRow({ id: "unrated-mint-score", mintAuthorityScore: null, mintAuthorityScoreBand: "nr" }),
-      ],
-      filters,
-    );
-    expect(result.map((r) => r.id)).toEqual(["high-mint-score"]);
-  });
-
-  it("filters by Mint Authority Score band", () => {
-    const filters: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, mintAuthorityScores: ["exposed", "nr"] };
-    const result = applyFilters(
-      [
-        makeRow({ id: "governed", mintAuthorityScoreBand: "governed" }),
-        makeRow({ id: "exposed", mintAuthorityScore: 10, mintAuthorityScoreBand: "exposed" }),
-        makeRow({ id: "nr", mintAuthorityScore: null, mintAuthorityScoreBand: "nr" }),
-      ],
-      filters,
-    );
-    expect(result.map((r) => r.id).sort()).toEqual(["exposed", "nr"]);
-  });
-
-  it("retains unrated rows when score range is at defaults", () => {
-    const filters: ScreenerFilters = {
-      ...SCREENER_FILTER_DEFAULTS,
-      pegs: ["USD"],
-    };
-    const result = applyFilters(rows, filters);
-    // newcoin has no peg/dews/liquidity score but is still USD and active default
-    // so it should pass the peg filter.
-    expect(result.find((r) => r.id === "newcoin")).toBeDefined();
-  });
 });
 
 describe("hasActiveFilters", () => {
@@ -320,18 +324,21 @@ describe("hasActiveFilters", () => {
     expect(countActiveScreenerFilters(SCREENER_FILTER_DEFAULTS)).toBe(0);
   });
 
-  it("reports true when any range or multi-select is narrowed", () => {
-    expect(hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, dewsMin: 50 })).toBe(true);
-    expect(hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, safetyGrades: ["A", "B+"] })).toBe(true);
-    expect(hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, types: ["decentralized"] })).toBe(true);
-    expect(hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, mechanisms: ["cdp"] })).toBe(true);
-    expect(hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, supplyMin: 1 })).toBe(true);
-    expect(hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, mintAuthority: ["multisig-mint"] })).toBe(true);
-    expect(hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, mintAuthorityScoreMin: 80 })).toBe(true);
-    expect(hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, mintAuthorityScores: ["hardened"] })).toBe(true);
-    expect(hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, coins: ["usdc-circle"] })).toBe(true);
-    expect(hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, safetyEvidence: ["limited"] })).toBe(true);
-    expect(hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, custodyModels: ["onchain"] })).toBe(true);
+  it.each<Partial<ScreenerFilters>>([
+    { dewsMin: 50 },
+    { safetyGrades: ["A", "B+"] },
+    { types: ["decentralized"] },
+    { mechanisms: ["cdp"] },
+    { supplyMin: 1 },
+    { mintAuthority: ["multisig-mint"] },
+    { mintAuthorityScoreMin: 80 },
+    { mintAuthorityScores: ["hardened"] },
+    { coins: ["usdc-circle"] },
+    { safetyEvidence: ["limited"] },
+    { custodyModels: ["onchain"] },
+    { blacklistable: ["yes"] },
+  ])("reports true when %o narrows the default set", (patch) => {
+    expect(hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, ...patch })).toBe(true);
   });
 
   it("counts active range groups once and selected pills individually", () => {
@@ -387,80 +394,40 @@ describe("hasLoadingScoreFilterData", () => {
     reportLoading: false,
     reportHasData: true,
   };
-
-  it("keeps deep-linked score filters in loading state until their source data resolves", () => {
-    expect(
-      hasLoadingScoreFilterData(
-        { ...SCREENER_FILTER_DEFAULTS, dewsMin: 80 },
-        { ...loaded, dewsLoading: true, dewsHasData: false },
-      ),
-    ).toBe(true);
-  });
-
-  it("does not block unrelated score filter sources", () => {
-    expect(
-      hasLoadingScoreFilterData(
-        { ...SCREENER_FILTER_DEFAULTS, safetyExitMin: 75 },
-        { ...loaded, dewsLoading: true, dewsHasData: false },
-      ),
-    ).toBe(false);
-  });
-
-  it("keeps safety score filters in loading state until report cards resolve", () => {
-    expect(
-      hasLoadingScoreFilterData(
-        { ...SCREENER_FILTER_DEFAULTS, safetyExitMin: 75 },
-        { ...loaded, reportLoading: true, reportHasData: false },
-      ),
-    ).toBe(true);
-  });
+  const dewsPending = { dewsLoading: true, dewsHasData: false };
+  const reportPending = { reportLoading: true, reportHasData: false };
 
   // Since safety 9.1 the mint score and band are read from the published V9
   // mint component, so both mint filters depend on the report-cards query.
-  it("keeps the mint score threshold in loading state until report cards resolve", () => {
-    expect(
-      hasLoadingScoreFilterData(
-        { ...SCREENER_FILTER_DEFAULTS, mintAuthorityScoreMin: 65 },
-        { ...loaded, reportLoading: true, reportHasData: false },
-      ),
-    ).toBe(true);
-  });
-
-  it("keeps the mint band filter in loading state until report cards resolve", () => {
-    expect(
-      hasLoadingScoreFilterData(
-        { ...SCREENER_FILTER_DEFAULTS, mintAuthorityScores: ["hardened"] },
-        { ...loaded, reportLoading: true, reportHasData: false },
-      ),
-    ).toBe(true);
-  });
-
-  it("does not gate the mint filters on the DEWS query", () => {
-    expect(
-      hasLoadingScoreFilterData(
-        { ...SCREENER_FILTER_DEFAULTS, mintAuthorityScores: ["hardened"] },
-        { ...loaded, dewsLoading: true, dewsHasData: false },
-      ),
-    ).toBe(false);
-  });
-
-  it("releases the mint filters once report cards have data", () => {
-    expect(
-      hasLoadingScoreFilterData(
-        { ...SCREENER_FILTER_DEFAULTS, mintAuthorityScoreMin: 65, mintAuthorityScores: ["hardened"] },
-        { ...loaded, reportLoading: true, reportHasData: true },
-      ),
-    ).toBe(false);
-  });
-
   // The curated route bucket is not re-sourced, so it must not gate on a query.
-  it("does not gate the curated mint route filter on any query", () => {
+  it.each<{
+    name: string;
+    filters: Partial<ScreenerFilters>;
+    state: Partial<typeof loaded>;
+    expected: boolean;
+  }>([
+    { name: "deep-linked DEWS filters wait for the DEWS query", filters: { dewsMin: 80 }, state: dewsPending, expected: true },
+    { name: "safety filters do not wait for the DEWS query", filters: { safetyExitMin: 75 }, state: dewsPending, expected: false },
+    { name: "safety filters wait for report cards", filters: { safetyExitMin: 75 }, state: reportPending, expected: true },
+    { name: "the mint score threshold waits for report cards", filters: { mintAuthorityScoreMin: 65 }, state: reportPending, expected: true },
+    { name: "the mint band filter waits for report cards", filters: { mintAuthorityScores: ["hardened"] }, state: reportPending, expected: true },
+    { name: "the mint band filter does not wait for the DEWS query", filters: { mintAuthorityScores: ["hardened"] }, state: dewsPending, expected: false },
+    {
+      name: "the mint filters release once report cards have data",
+      filters: { mintAuthorityScoreMin: 65, mintAuthorityScores: ["hardened"] },
+      state: { reportLoading: true, reportHasData: true },
+      expected: false,
+    },
+    {
+      name: "the curated mint route filter never waits on a query",
+      filters: { mintAuthority: ["no-privileged-mint"] },
+      state: reportPending,
+      expected: false,
+    },
+  ])("$name", ({ filters, state, expected }) => {
     expect(
-      hasLoadingScoreFilterData(
-        { ...SCREENER_FILTER_DEFAULTS, mintAuthority: ["no-privileged-mint"] },
-        { ...loaded, reportLoading: true, reportHasData: false },
-      ),
-    ).toBe(false);
+      hasLoadingScoreFilterData({ ...SCREENER_FILTER_DEFAULTS, ...filters }, { ...loaded, ...state }),
+    ).toBe(expected);
   });
 });
 
@@ -526,133 +493,44 @@ describe("SCREENER_URL_SCHEMA codec", () => {
     expect(decoded.supplyMin).toBe(SCREENER_FILTER_DEFAULTS.supplyMin);
   });
 
-  it("drops unknown enum values from multi-selects", () => {
-    const decoded = decodeState("mechanisms=cdp,unknown-archetype,fiat-cash", SCREENER_URL_SCHEMA);
-    expect(decoded.mechanisms).toEqual(["cdp", "fiat-cash"]);
+  it.each<{ key: "blacklistable" | "mintAuthority" | "mintAuthorityScores"; values: string[]; encoded: string }>([
+    { key: "blacklistable", values: ["yes", "possible"], encoded: "blacklistable=yes%2Cpossible" },
+    {
+      key: "mintAuthority",
+      values: ["issuer-or-backend-mint", "multisig-mint"],
+      encoded: "mintAuthority=issuer-or-backend-mint%2Cmultisig-mint",
+    },
+    { key: "mintAuthorityScores", values: ["hardened", "nr"], encoded: "mintAuthorityScores=hardened%2Cnr" },
+  ])("round-trips the $key multi-select", ({ key, values, encoded: expectedFragment }) => {
+    const encoded = encodeState(
+      { ...SCREENER_FILTER_DEFAULTS, [key]: values } as ScreenerFilters,
+      SCREENER_URL_SCHEMA,
+    );
+    expect(encoded).toContain(expectedFragment);
+    expect(decodeState(encoded, SCREENER_URL_SCHEMA)[key]).toEqual(values);
+  });
+
+  it.each<{ key: "mechanisms" | "blacklistable" | "mintAuthority"; query: string; expected: string[] }>([
+    { key: "mechanisms", query: "mechanisms=cdp,unknown-archetype,fiat-cash", expected: ["cdp", "fiat-cash"] },
+    { key: "blacklistable", query: "blacklistable=yes,bogus,dilutable", expected: ["yes"] },
+    {
+      key: "mintAuthority",
+      query: "mintAuthority=issuer-or-backend-mint,bogus",
+      expected: ["issuer-or-backend-mint"],
+    },
+  ])("drops unknown enum values from the $key multi-select", ({ key, query, expected }) => {
+    expect(decodeState(query, SCREENER_URL_SCHEMA)[key]).toEqual(expected);
   });
 });
 
 describe("projectBlacklistable", () => {
-  it("maps boolean true to 'yes'", () => {
-    expect(projectBlacklistable(true)).toBe("yes");
-  });
-  it("maps boolean false to 'no'", () => {
-    expect(projectBlacklistable(false)).toBe("no");
-  });
-  it("passes 'possible' through", () => {
-    expect(projectBlacklistable("possible")).toBe("possible");
-  });
-  it("returns null for undefined (unspecified blacklistability)", () => {
-    expect(projectBlacklistable(undefined)).toBeNull();
-  });
-});
-
-describe("applyFilters — blacklistable", () => {
-  const yesRow = makeRow({ id: "yes", blacklistable: "yes" });
-  const noRow = makeRow({ id: "no", blacklistable: "no" });
-  const possibleRow = makeRow({ id: "possible", blacklistable: "possible" });
-  const unknownRow = makeRow({ id: "unknown", blacklistable: null });
-  const allRows = [yesRow, noRow, possibleRow, unknownRow] as const;
-
-  it("returns every row when the blacklistable filter is empty", () => {
-    const filtered = applyFilters(allRows, SCREENER_FILTER_DEFAULTS);
-    expect(filtered.map((r) => r.id)).toEqual(["yes", "no", "possible", "unknown"]);
-  });
-
-  it("keeps only rows whose blacklistable status matches the active filter", () => {
-    const filtered = applyFilters(allRows, {
-      ...SCREENER_FILTER_DEFAULTS,
-      blacklistable: ["yes", "possible"],
-    });
-    expect(filtered.map((r) => r.id).sort()).toEqual(["possible", "yes"]);
-  });
-
-  it("excludes rows with unknown blacklistable status when the filter is active", () => {
-    const filtered = applyFilters(allRows, {
-      ...SCREENER_FILTER_DEFAULTS,
-      blacklistable: ["yes"],
-    });
-    expect(filtered.some((r) => r.id === "unknown")).toBe(false);
-  });
-
-  it("hasActiveFilters returns true when the blacklistable filter is non-empty", () => {
-    expect(hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, blacklistable: ["yes"] })).toBe(true);
-  });
-});
-
-describe("applyFilters — mint authority", () => {
-  const issuerRow = makeRow({ id: "issuer", mintAuthority: "issuer-or-backend-mint" });
-  const multisigRow = makeRow({ id: "multisig", mintAuthority: "multisig-mint" });
-  const noPrivRow = makeRow({ id: "no-priv", mintAuthority: "no-privileged-mint" });
-  const unknownRow = makeRow({ id: "unknown", mintAuthority: "unknown" });
-  const allRows = [issuerRow, multisigRow, noPrivRow, unknownRow] as const;
-
-  it("returns every row when the mint-authority filter is empty", () => {
-    const filtered = applyFilters(allRows, SCREENER_FILTER_DEFAULTS);
-    expect(filtered.map((r) => r.id)).toEqual(["issuer", "multisig", "no-priv", "unknown"]);
-  });
-
-  it("keeps only rows whose mint-authority bucket matches the active filter", () => {
-    const filtered = applyFilters(allRows, {
-      ...SCREENER_FILTER_DEFAULTS,
-      mintAuthority: ["issuer-or-backend-mint", "multisig-mint"],
-    });
-    expect(filtered.map((r) => r.id).sort()).toEqual(["issuer", "multisig"]);
-  });
-
-  it("can filter for unknown mint-authority review gaps", () => {
-    const filtered = applyFilters(allRows, {
-      ...SCREENER_FILTER_DEFAULTS,
-      mintAuthority: ["unknown"],
-    });
-    expect(filtered.map((r) => r.id)).toEqual(["unknown"]);
-  });
-});
-
-describe("SCREENER_URL_SCHEMA — blacklistable round-trip", () => {
-  it("encodes and decodes the blacklistable multi-select", () => {
-    const filters: ScreenerFilters = {
-      ...SCREENER_FILTER_DEFAULTS,
-      blacklistable: ["yes", "possible"],
-    };
-    const encoded = encodeState(filters, SCREENER_URL_SCHEMA);
-    expect(encoded).toContain("blacklistable=yes%2Cpossible");
-    const decoded = decodeState(encoded, SCREENER_URL_SCHEMA);
-    expect(decoded.blacklistable).toEqual(["yes", "possible"]);
-  });
-
-  it("drops unknown values from a blacklistable URL param", () => {
-    const decoded = decodeState("blacklistable=yes,bogus,dilutable", SCREENER_URL_SCHEMA);
-    expect(decoded.blacklistable).toEqual(["yes"]);
-  });
-});
-
-describe("SCREENER_URL_SCHEMA — mint authority round-trip", () => {
-  it("encodes and decodes the mint-authority multi-select", () => {
-    const filters: ScreenerFilters = {
-      ...SCREENER_FILTER_DEFAULTS,
-      mintAuthority: ["issuer-or-backend-mint", "multisig-mint"],
-    };
-    const encoded = encodeState(filters, SCREENER_URL_SCHEMA);
-    expect(encoded).toContain("mintAuthority=issuer-or-backend-mint%2Cmultisig-mint");
-    const decoded = decodeState(encoded, SCREENER_URL_SCHEMA);
-    expect(decoded.mintAuthority).toEqual(["issuer-or-backend-mint", "multisig-mint"]);
-  });
-
-  it("drops unknown mint-authority URL values outside the known bucket list", () => {
-    const decoded = decodeState("mintAuthority=issuer-or-backend-mint,bogus", SCREENER_URL_SCHEMA);
-    expect(decoded.mintAuthority).toEqual(["issuer-or-backend-mint"]);
-  });
-
-  it("encodes and decodes Mint Authority Score bands", () => {
-    const filters: ScreenerFilters = {
-      ...SCREENER_FILTER_DEFAULTS,
-      mintAuthorityScores: ["hardened", "nr"],
-    };
-    const encoded = encodeState(filters, SCREENER_URL_SCHEMA);
-    expect(encoded).toContain("mintAuthorityScores=hardened%2Cnr");
-    const decoded = decodeState(encoded, SCREENER_URL_SCHEMA);
-    expect(decoded.mintAuthorityScores).toEqual(["hardened", "nr"]);
+  it.each<[boolean | "possible" | undefined, string | null]>([
+    [true, "yes"],
+    [false, "no"],
+    ["possible", "possible"],
+    [undefined, null],
+  ])("maps %s to %s", (value, expected) => {
+    expect(projectBlacklistable(value)).toBe(expected);
   });
 });
 
@@ -675,59 +553,69 @@ describe("projectMintAuthority", () => {
 });
 
 describe("normalizeScreenerDeepLinkAliases", () => {
-  it("rewrites `?mechanism=<slug>` to `mechanisms=<slug>` and pins lifecycle=active", () => {
-    const params = new URLSearchParams("mechanism=cdp");
-    const changed = normalizeScreenerDeepLinkAliases(params);
-    expect(changed).toBe(true);
+  it.each<{
+    name: string;
+    query: string;
+    changed: boolean;
+    mechanisms: string | null;
+    lifecycle: string | null;
+  }>([
+    {
+      name: "rewrites `?mechanism=<slug>` to `mechanisms=<slug>` and pins lifecycle=active",
+      query: "mechanism=cdp",
+      changed: true,
+      mechanisms: "cdp",
+      lifecycle: "active",
+    },
+    {
+      name: "supports the rwa-credit-fund archetype alias",
+      query: "mechanism=rwa-credit-fund",
+      changed: true,
+      mechanisms: "rwa-credit-fund",
+      lifecycle: "active",
+    },
+    {
+      name: "respects an explicit lifecycle override",
+      query: "mechanism=cdp&lifecycle=pre-launch",
+      changed: true,
+      mechanisms: "cdp",
+      lifecycle: "pre-launch",
+    },
+    {
+      name: "supports lifecycle=frozen deep-links",
+      query: "mechanism=algorithmic&lifecycle=frozen",
+      changed: true,
+      mechanisms: "algorithmic",
+      lifecycle: "frozen",
+    },
+    {
+      // No mechanism was matched, so lifecycle is still pinned because the
+      // deep-link alias was present (even if unknown).
+      name: "strips an unknown mechanism alias without rewriting the plural key",
+      query: "mechanism=bogus",
+      changed: true,
+      mechanisms: null,
+      lifecycle: "active",
+    },
+    {
+      name: "leaves the canonical plural key alone when no alias is present",
+      query: "mechanisms=cdp,fiat-cash",
+      changed: false,
+      mechanisms: "cdp,fiat-cash",
+      lifecycle: null,
+    },
+    {
+      name: "does not override an existing plural mechanisms param",
+      query: "mechanism=cdp&mechanisms=tbill",
+      changed: true,
+      mechanisms: "tbill",
+      lifecycle: "active",
+    },
+  ])("$name", ({ query, changed, mechanisms, lifecycle }) => {
+    const params = new URLSearchParams(query);
+    expect(normalizeScreenerDeepLinkAliases(params)).toBe(changed);
     expect(params.get("mechanism")).toBeNull();
-    expect(params.get("mechanisms")).toBe("cdp");
-    expect(params.get("lifecycle")).toBe("active");
-  });
-
-  it("supports the rwa-credit-fund archetype alias", () => {
-    const params = new URLSearchParams("mechanism=rwa-credit-fund");
-    normalizeScreenerDeepLinkAliases(params);
-    expect(params.get("mechanisms")).toBe("rwa-credit-fund");
-    expect(params.get("lifecycle")).toBe("active");
-  });
-
-  it("respects an explicit lifecycle override", () => {
-    const params = new URLSearchParams("mechanism=cdp&lifecycle=pre-launch");
-    normalizeScreenerDeepLinkAliases(params);
-    expect(params.get("mechanisms")).toBe("cdp");
-    expect(params.get("lifecycle")).toBe("pre-launch");
-  });
-
-  it("supports lifecycle=frozen deep-links", () => {
-    const params = new URLSearchParams("mechanism=algorithmic&lifecycle=frozen");
-    normalizeScreenerDeepLinkAliases(params);
-    expect(params.get("mechanisms")).toBe("algorithmic");
-    expect(params.get("lifecycle")).toBe("frozen");
-  });
-
-  it("strips an unknown mechanism alias without rewriting the plural key", () => {
-    const params = new URLSearchParams("mechanism=bogus");
-    const changed = normalizeScreenerDeepLinkAliases(params);
-    expect(changed).toBe(true);
-    expect(params.get("mechanism")).toBeNull();
-    expect(params.get("mechanisms")).toBeNull();
-    // No mechanism was matched, so lifecycle should still be pinned because
-    // the deep-link alias was present (even if unknown).
-    expect(params.get("lifecycle")).toBe("active");
-  });
-
-  it("leaves the canonical plural key alone when no alias is present", () => {
-    const params = new URLSearchParams("mechanisms=cdp,fiat-cash");
-    const changed = normalizeScreenerDeepLinkAliases(params);
-    expect(changed).toBe(false);
-    expect(params.get("mechanisms")).toBe("cdp,fiat-cash");
-    expect(params.get("lifecycle")).toBeNull();
-  });
-
-  it("does not override an existing plural mechanisms param", () => {
-    const params = new URLSearchParams("mechanism=cdp&mechanisms=tbill");
-    normalizeScreenerDeepLinkAliases(params);
-    expect(params.get("mechanisms")).toBe("tbill");
-    expect(params.get("mechanism")).toBeNull();
+    expect(params.get("mechanisms")).toBe(mechanisms);
+    expect(params.get("lifecycle")).toBe(lifecycle);
   });
 });

@@ -1,37 +1,74 @@
 import { describe, expect, it } from "vitest";
 import complianceAsset from "@shared/data/stablecoins/coins.compliance.generated.json";
+import type { StablecoinClientMeta } from "@shared/types/stablecoin-client-meta";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
-import { buildCoverageMatrixModel } from "@/lib/coverage-matrix-model";
+import {
+  buildCoverageMatrixModel,
+  type CoverageMatrixModelInput,
+  type CoverageMatrixQueryKey,
+} from "@/lib/coverage-matrix-model";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 
-function resource<T>(
-  data: T | undefined,
-  overrides: Partial<{ dataUpdatedAt: number; error: unknown | null; meta: null }> = {},
-) {
-  return {
-    data,
-    dataUpdatedAt: 7,
-    error: null,
-    meta: null,
-    ...overrides,
-  };
+/**
+ * Field-checked partial: a renamed or reshaped production field fails to
+ * compile here instead of silently arriving as `undefined` (TS10-06).
+ */
+type DeepPartial<T> = T extends readonly (infer U)[]
+  ? DeepPartial<U>[]
+  : T extends object
+    ? { [K in keyof T]?: DeepPartial<T[K]> }
+    : T;
+
+type QueryPayload<K extends CoverageMatrixQueryKey> = NonNullable<CoverageMatrixModelInput[K]["data"]>;
+
+type MatrixInputOverrides = {
+  [K in CoverageMatrixQueryKey]?: DeepPartial<QueryPayload<K>>;
+} & {
+  activeStablecoins?: readonly StablecoinClientMeta[];
+  errors?: Partial<Record<CoverageMatrixQueryKey, unknown>>;
+};
+
+const DEFAULT_PAYLOADS: { [K in CoverageMatrixQueryKey]: DeepPartial<QueryPayload<K>> } = {
+  stablecoins: { peggedAssets: [] },
+  pegSummary: { summary: {}, coins: [] },
+  dexLiquidity: {},
+  redemptionBackstops: { coins: {} },
+  yieldRankings: { rankings: [] },
+  mintBurnFlows: { gauge: {}, hourly: [], coins: [] },
+  reportCards: makeReportCardsV9Response({ cards: [] }),
+};
+
+function makeMatrixInput({ activeStablecoins, errors, ...payloads }: MatrixInputOverrides = {}): CoverageMatrixModelInput {
+  const resources = Object.fromEntries(
+    (Object.keys(DEFAULT_PAYLOADS) as CoverageMatrixQueryKey[]).map((key) => {
+      const error = errors?.[key] ?? null;
+      return [
+        key,
+        {
+          data: error ? undefined : (payloads[key] ?? DEFAULT_PAYLOADS[key]),
+          dataUpdatedAt: 7,
+          error,
+          meta: null,
+        },
+      ];
+    }),
+  ) as CoverageMatrixModelInput;
+  return activeStablecoins ? { ...resources, activeStablecoins } : resources;
+}
+
+function trackedMeta(id: string): StablecoinClientMeta {
+  const meta = CLIENT_TRACKED_META_BY_ID.get(id);
+  if (!meta) throw new Error(`untracked stablecoin fixture: ${id}`);
+  return meta;
 }
 
 describe("buildCoverageMatrixModel", () => {
   it("joins compliance profiles onto compact registry rows and aggregates assessed coverage", () => {
-    const model = buildCoverageMatrixModel({
-      stablecoins: resource({
-        peggedAssets: [
-          { id: "usdc-circle", circulating: { peggedUSD: 1_000 } },
-        ],
-      } as never),
-      pegSummary: resource({ coins: [] } as never),
-      dexLiquidity: resource({} as never),
-      redemptionBackstops: resource({ coins: {} } as never),
-      yieldRankings: resource({ rankings: [] } as never),
-      mintBurnFlows: resource({ coins: [] } as never),
-      reportCards: resource(makeReportCardsV9Response({ cards: [] })),
-    });
+    const model = buildCoverageMatrixModel(
+      makeMatrixInput({
+        stablecoins: { peggedAssets: [{ id: "usdc-circle", circulating: { peggedUSD: 1_000 } }] },
+      }),
+    );
     const profiles = new Map(complianceAsset.map((entry) => [entry.id, entry]));
 
     for (const key of ["mica", "genius"] as const) {
@@ -53,45 +90,34 @@ describe("buildCoverageMatrixModel", () => {
   });
 
   it("builds the pure coverage matrix model from query snapshots", () => {
-    const coin = CLIENT_TRACKED_META_BY_ID.get("usdc-circle");
-    expect(coin).toBeDefined();
-
-    const model = buildCoverageMatrixModel({
-      stablecoins: resource({
-        peggedAssets: [
-          {
-            id: "usdc-circle",
-            name: "USD Coin",
-            symbol: "USDC",
-            circulating: { peggedUSD: 1_000 },
-          },
-        ],
-      } as never),
-      pegSummary: resource({
-        summary: {},
-        coins: [
-          {
-            id: "usdc-circle",
-            consensusSources: ["CoinGecko", "DefiLlama", "Pyth"],
-            priceConfidence: "high",
-          },
-        ],
-      } as never),
-      dexLiquidity: resource({
-        "usdc-circle": { coverageClass: "primary" },
-      } as never),
-      redemptionBackstops: resource({ coins: {} } as never),
-      yieldRankings: resource({ rankings: [{ id: "usdc-circle" }] } as never),
-      mintBurnFlows: resource({
-        gauge: {},
-        hourly: [],
-        coins: [{ stablecoinId: "usdc-circle", coverage: { status: "full" } }],
-      } as never),
-      reportCards: resource(makeReportCardsV9Response({
-        cards: [makeV9Card({ id: "usdc-circle", score: 90 })],
-      })),
-      activeStablecoins: [coin!],
-    });
+    const model = buildCoverageMatrixModel(
+      makeMatrixInput({
+        stablecoins: {
+          peggedAssets: [
+            { id: "usdc-circle", name: "USD Coin", symbol: "USDC", circulating: { peggedUSD: 1_000 } },
+          ],
+        },
+        pegSummary: {
+          summary: {},
+          coins: [
+            {
+              id: "usdc-circle",
+              consensusSources: ["CoinGecko", "DefiLlama", "Pyth"],
+              priceConfidence: "high",
+            },
+          ],
+        },
+        dexLiquidity: { "usdc-circle": { coverageClass: "primary" } },
+        yieldRankings: { rankings: [{ id: "usdc-circle" }] },
+        mintBurnFlows: {
+          gauge: {},
+          hourly: [],
+          coins: [{ stablecoinId: "usdc-circle", coverage: { status: "full" } }],
+        },
+        reportCards: makeReportCardsV9Response({ cards: [makeV9Card({ id: "usdc-circle", score: 90 })] }),
+        activeStablecoins: [trackedMeta("usdc-circle")],
+      }),
+    );
 
     expect(model.rows).toHaveLength(1);
     expect(model.rows[0]).toMatchObject({
@@ -127,55 +153,37 @@ describe("buildCoverageMatrixModel", () => {
   });
 
   it("uses reviewed FreezeWatch status before stale V9 freeze exposure", () => {
-    const coin = CLIENT_TRACKED_META_BY_ID.get("lisusd-lista");
-    expect(coin).toBeDefined();
-
-    const model = buildCoverageMatrixModel({
-      stablecoins: resource({
-        peggedAssets: [
-          {
-            id: "lisusd-lista",
-            name: "Lista USD",
-            symbol: "LISUSD",
-            circulating: { peggedUSD: 1_000 },
-          },
-        ],
-      } as never),
-      pegSummary: resource({ summary: {}, coins: [] } as never),
-      dexLiquidity: resource({} as never),
-      redemptionBackstops: resource({ coins: {} } as never),
-      yieldRankings: resource({ rankings: [] } as never),
-      mintBurnFlows: resource({ gauge: {}, hourly: [], coins: [] } as never),
-      reportCards: resource(makeReportCardsV9Response({
-        cards: [
-          makeV9Card({
-            id: "lisusd-lista",
-            accessPosture: { ...makeV9Card().accessPosture, freezeExposure: "possible" },
-          }),
-        ],
-      })),
-      activeStablecoins: [coin!],
-    });
+    const model = buildCoverageMatrixModel(
+      makeMatrixInput({
+        stablecoins: {
+          peggedAssets: [
+            { id: "lisusd-lista", name: "Lista USD", symbol: "LISUSD", circulating: { peggedUSD: 1_000 } },
+          ],
+        },
+        reportCards: makeReportCardsV9Response({
+          cards: [
+            makeV9Card({
+              id: "lisusd-lista",
+              accessPosture: { ...makeV9Card().accessPosture, freezeExposure: "possible" },
+            }),
+          ],
+        }),
+        activeStablecoins: [trackedMeta("lisusd-lista")],
+      }),
+    );
 
     expect(model.rows[0]?.statuses.blacklist.kind).toBe("no");
   });
 
   it("uses published V9 live-reserve provenance for the reserve headline", () => {
-    const coin = CLIENT_TRACKED_META_BY_ID.get("usdt-tether");
-    expect(coin).toBeDefined();
-
-    const model = buildCoverageMatrixModel({
-      stablecoins: resource({ peggedAssets: [] } as never),
-      pegSummary: resource({ summary: {}, coins: [] } as never),
-      dexLiquidity: resource({} as never),
-      redemptionBackstops: resource({ coins: {} } as never),
-      yieldRankings: resource({ rankings: [] } as never),
-      mintBurnFlows: resource({ gauge: {}, hourly: [], coins: [] } as never),
-      reportCards: resource(makeReportCardsV9Response({
-        cards: [makeV9Card({ id: "usdt-tether", backingFromLiveReserves: true })],
-      })),
-      activeStablecoins: [coin!],
-    });
+    const model = buildCoverageMatrixModel(
+      makeMatrixInput({
+        reportCards: makeReportCardsV9Response({
+          cards: [makeV9Card({ id: "usdt-tether", backingFromLiveReserves: true })],
+        }),
+        activeStablecoins: [trackedMeta("usdt-tether")],
+      }),
+    );
 
     expect(model.rows[0]?.statuses.reserves.kind).toBe("live");
     expect(model.featureSummaries.find((summary) => summary.feature.key === "reserves")).toMatchObject({
@@ -186,47 +194,36 @@ describe("buildCoverageMatrixModel", () => {
   });
 
   it("classifies dependency-map roles from live report-card graph edges", () => {
-    const usdc = CLIENT_TRACKED_META_BY_ID.get("usdc-circle");
-    const dai = CLIENT_TRACKED_META_BY_ID.get("dai-makerdao");
-    const usdt = CLIENT_TRACKED_META_BY_ID.get("usdt-tether");
-    expect(usdc).toBeDefined();
-    expect(dai).toBeDefined();
-    expect(usdt).toBeDefined();
-
-    const model = buildCoverageMatrixModel({
-      stablecoins: resource({ peggedAssets: [] } as never),
-      pegSummary: resource({ summary: {}, coins: [] } as never),
-      dexLiquidity: resource({} as never),
-      redemptionBackstops: resource({ coins: {} } as never),
-      yieldRankings: resource({ rankings: [] } as never),
-      mintBurnFlows: resource({ gauge: {}, hourly: [], coins: [] } as never),
-      reportCards: resource(makeReportCardsV9Response({
-        cards: [
-          makeV9Card({ id: "usdc-circle", score: 90 }),
-          makeV9Card({
-            id: "dai-makerdao",
-            score: 80,
-            dependencies: {
-              serial: [{ upstreamAssetId: "usdc-circle", score: 90, blocked: false }],
-              basket: [],
-              cycleBlocked: false,
-              reasonCodes: [],
-            },
-          }),
-          makeV9Card({
-            id: "usdt-tether",
-            score: 85,
-            dependencies: {
-              serial: [],
-              basket: [{ upstreamAssetId: "untracked", weight: 0.2, score: null, boundedUnknown: true }],
-              cycleBlocked: false,
-              reasonCodes: [],
-            },
-          }),
-        ],
-      })),
-      activeStablecoins: [usdc!, dai!, usdt!],
-    });
+    const model = buildCoverageMatrixModel(
+      makeMatrixInput({
+        reportCards: makeReportCardsV9Response({
+          cards: [
+            makeV9Card({ id: "usdc-circle", score: 90 }),
+            makeV9Card({
+              id: "dai-makerdao",
+              score: 80,
+              dependencies: {
+                serial: [{ upstreamAssetId: "usdc-circle", score: 90, blocked: false }],
+                basket: [],
+                cycleBlocked: false,
+                reasonCodes: [],
+              },
+            }),
+            makeV9Card({
+              id: "usdt-tether",
+              score: 85,
+              dependencies: {
+                serial: [],
+                basket: [{ upstreamAssetId: "untracked", weight: 0.2, score: null, boundedUnknown: true }],
+                cycleBlocked: false,
+                reasonCodes: [],
+              },
+            }),
+          ],
+        }),
+        activeStablecoins: [trackedMeta("usdc-circle"), trackedMeta("dai-makerdao"), trackedMeta("usdt-tether")],
+      }),
+    );
 
     const dependencyKindById = new Map(model.rows.map((row) => [row.id, row.statuses.dependency.kind]));
     expect(dependencyKindById.get("usdc-circle")).toBe("upstream");
@@ -235,37 +232,25 @@ describe("buildCoverageMatrixModel", () => {
   });
 
   it("passes client mint-authority summaries into coverage rows", () => {
-    const coin = CLIENT_TRACKED_META_BY_ID.get("usdc-circle");
-    expect(coin).toBeDefined();
-
-    const model = buildCoverageMatrixModel({
-      stablecoins: resource({
-        peggedAssets: [
+    const model = buildCoverageMatrixModel(
+      makeMatrixInput({
+        stablecoins: {
+          peggedAssets: [
+            { id: "usdc-circle", name: "USD Coin", symbol: "USDC", circulating: { peggedUSD: 1_000 } },
+          ],
+        },
+        activeStablecoins: [
           {
-            id: "usdc-circle",
-            name: "USD Coin",
-            symbol: "USDC",
-            circulating: { peggedUSD: 1_000 },
+            ...trackedMeta("usdc-circle"),
+            mintAuthoritySummary: {
+              mintPath: "issuer-direct-mint",
+              authorityPosture: "concentrated-admin",
+              confidence: "verified",
+            },
           },
         ],
-      } as never),
-      pegSummary: resource({ summary: {}, coins: [] } as never),
-      dexLiquidity: resource({} as never),
-      redemptionBackstops: resource({ coins: {} } as never),
-      yieldRankings: resource({ rankings: [] } as never),
-      mintBurnFlows: resource({ gauge: {}, hourly: [], coins: [] } as never),
-      reportCards: resource(makeReportCardsV9Response({ cards: [] })),
-      activeStablecoins: [
-        {
-          ...coin!,
-          mintAuthoritySummary: {
-            mintPath: "issuer-direct-mint",
-            authorityPosture: "concentrated-admin",
-            confidence: "verified",
-          },
-        },
-      ],
-    });
+      }),
+    );
 
     expect(model.rows[0].statuses.mintAuthority).toMatchObject({
       kind: "issuer-or-backend-mint",
@@ -274,39 +259,33 @@ describe("buildCoverageMatrixModel", () => {
   });
 
   it("selects widest/narrowest/mostConcentrated features consistently with featureSummaries", () => {
-    const usdc = CLIENT_TRACKED_META_BY_ID.get("usdc-circle");
-    const dai = CLIENT_TRACKED_META_BY_ID.get("dai-makerdao");
-    const usdt = CLIENT_TRACKED_META_BY_ID.get("usdt-tether");
-    expect(usdc && dai && usdt).toBeTruthy();
-
-    const model = buildCoverageMatrixModel({
-      stablecoins: resource({
-        peggedAssets: [
-          { id: "usdc-circle", name: "USD Coin", symbol: "USDC", circulating: { peggedUSD: 5_000 } },
-          { id: "dai-makerdao", name: "Dai", symbol: "DAI", circulating: { peggedUSD: 2_000 } },
-          { id: "usdt-tether", name: "Tether", symbol: "USDT", circulating: { peggedUSD: 1_000 } },
-        ],
-      } as never),
-      pegSummary: resource({
-        summary: {},
-        coins: [
-          { id: "usdc-circle", consensusSources: ["CoinGecko", "DefiLlama", "Pyth"], priceConfidence: "high" },
-          { id: "dai-makerdao", consensusSources: ["CoinGecko"], priceConfidence: "medium" },
-        ],
-      } as never),
-      dexLiquidity: resource({ "usdc-circle": { coverageClass: "primary" } } as never),
-      redemptionBackstops: resource({ coins: {} } as never),
-      yieldRankings: resource({ rankings: [{ id: "usdc-circle" }] } as never),
-      mintBurnFlows: resource({
-        gauge: {},
-        hourly: [],
-        coins: [{ stablecoinId: "usdc-circle", coverage: { status: "full" } }],
-      } as never),
-      reportCards: resource(makeReportCardsV9Response({
-        cards: [makeV9Card({ id: "usdc-circle", score: 90 })],
-      })),
-      activeStablecoins: [usdc!, dai!, usdt!],
-    });
+    const model = buildCoverageMatrixModel(
+      makeMatrixInput({
+        stablecoins: {
+          peggedAssets: [
+            { id: "usdc-circle", name: "USD Coin", symbol: "USDC", circulating: { peggedUSD: 5_000 } },
+            { id: "dai-makerdao", name: "Dai", symbol: "DAI", circulating: { peggedUSD: 2_000 } },
+            { id: "usdt-tether", name: "Tether", symbol: "USDT", circulating: { peggedUSD: 1_000 } },
+          ],
+        },
+        pegSummary: {
+          summary: {},
+          coins: [
+            { id: "usdc-circle", consensusSources: ["CoinGecko", "DefiLlama", "Pyth"], priceConfidence: "high" },
+            { id: "dai-makerdao", consensusSources: ["CoinGecko"], priceConfidence: "medium" },
+          ],
+        },
+        dexLiquidity: { "usdc-circle": { coverageClass: "primary" } },
+        yieldRankings: { rankings: [{ id: "usdc-circle" }] },
+        mintBurnFlows: {
+          gauge: {},
+          hourly: [],
+          coins: [{ stablecoinId: "usdc-circle", coverage: { status: "full" } }],
+        },
+        reportCards: makeReportCardsV9Response({ cards: [makeV9Card({ id: "usdc-circle", score: 90 })] }),
+        activeStablecoins: [trackedMeta("usdc-circle"), trackedMeta("dai-makerdao"), trackedMeta("usdt-tether")],
+      }),
+    );
 
     const summaries = model.featureSummaries;
     const knownSummaries = summaries.filter((summary) => summary.coveragePct != null);
@@ -318,22 +297,12 @@ describe("buildCoverageMatrixModel", () => {
   });
 
   it("marks coins absent from the stablecoins payload as market-cap unavailable, not $0", () => {
-    const present = CLIENT_TRACKED_META_BY_ID.get("usdc-circle");
-    const absent = CLIENT_TRACKED_META_BY_ID.get("dai-makerdao");
-    expect(present && absent).toBeTruthy();
-
-    const model = buildCoverageMatrixModel({
-      stablecoins: resource({
-        peggedAssets: [{ id: "usdc-circle", circulating: { peggedUSD: 1_000 } }],
-      } as never),
-      pegSummary: resource({ summary: {}, coins: [] } as never),
-      dexLiquidity: resource({} as never),
-      redemptionBackstops: resource({ coins: {} } as never),
-      yieldRankings: resource({ rankings: [] } as never),
-      mintBurnFlows: resource({ gauge: {}, hourly: [], coins: [] } as never),
-      reportCards: resource(makeReportCardsV9Response({ cards: [] })),
-      activeStablecoins: [present!, absent!],
-    });
+    const model = buildCoverageMatrixModel(
+      makeMatrixInput({
+        stablecoins: { peggedAssets: [{ id: "usdc-circle", circulating: { peggedUSD: 1_000 } }] },
+        activeStablecoins: [trackedMeta("usdc-circle"), trackedMeta("dai-makerdao")],
+      }),
+    );
 
     expect(model.rows.find((row) => row.id === "usdc-circle")).toMatchObject({
       marketCapUsd: 1_000,
@@ -346,29 +315,19 @@ describe("buildCoverageMatrixModel", () => {
   });
 
   it("marks redemption coverage as Data n/a when the redemption feed is unavailable", () => {
-    const coin = CLIENT_TRACKED_META_BY_ID.get("usdc-circle");
-    expect(coin).toBeDefined();
     const error = new Error("redemption feed unavailable");
-
-    const model = buildCoverageMatrixModel({
-      stablecoins: resource({
-        peggedAssets: [
-          {
-            id: "usdc-circle",
-            name: "USD Coin",
-            symbol: "USDC",
-            circulating: { peggedUSD: 1_000 },
-          },
-        ],
-      } as never),
-      pegSummary: resource({ summary: {}, coins: [] } as never),
-      dexLiquidity: resource({} as never),
-      redemptionBackstops: resource<never>(undefined, { error }),
-      yieldRankings: resource({ rankings: [] } as never),
-      mintBurnFlows: resource({ gauge: {}, hourly: [], coins: [] } as never),
-      reportCards: resource({ cards: [], dependencyGraph: { nodes: [], edges: [] } } as never),
-      activeStablecoins: [coin!],
-    });
+    const model = buildCoverageMatrixModel(
+      makeMatrixInput({
+        stablecoins: {
+          peggedAssets: [
+            { id: "usdc-circle", name: "USD Coin", symbol: "USDC", circulating: { peggedUSD: 1_000 } },
+          ],
+        },
+        reportCards: { cards: [], dependencyGraph: { nodes: [], edges: [] } },
+        errors: { redemptionBackstops: error },
+        activeStablecoins: [trackedMeta("usdc-circle")],
+      }),
+    );
 
     expect(model.rows[0].statuses.redemption).toMatchObject({
       kind: "data-unavailable",
@@ -386,41 +345,31 @@ describe("buildCoverageMatrixModel", () => {
   });
 
   it("keeps impaired redemption rows out of strong coverage", () => {
-    const coin = CLIENT_TRACKED_META_BY_ID.get("usdc-circle");
-    expect(coin).toBeDefined();
-
-    const model = buildCoverageMatrixModel({
-      stablecoins: resource({
-        peggedAssets: [
-          {
-            id: "usdc-circle",
-            name: "USD Coin",
-            symbol: "USDC",
-            circulating: { peggedUSD: 1_000 },
-          },
-        ],
-      } as never),
-      pegSummary: resource({ summary: {}, coins: [] } as never),
-      dexLiquidity: resource({} as never),
-      redemptionBackstops: resource({
-        coins: {
-          "usdc-circle": {
-            stablecoinId: "usdc-circle",
-            resolutionState: "resolved",
-            routeStatus: "paused",
-            routeStatusReason: "Issuer paused primary redemption while reserves are reconciled.",
-            routeFamily: "offchain-issuer",
-            modelConfidence: "medium",
-            capacitySemantics: "immediate-bounded",
-            score: 65,
+    const model = buildCoverageMatrixModel(
+      makeMatrixInput({
+        stablecoins: {
+          peggedAssets: [
+            { id: "usdc-circle", name: "USD Coin", symbol: "USDC", circulating: { peggedUSD: 1_000 } },
+          ],
+        },
+        redemptionBackstops: {
+          coins: {
+            "usdc-circle": {
+              stablecoinId: "usdc-circle",
+              resolutionState: "resolved",
+              routeStatus: "paused",
+              routeStatusReason: "Issuer paused primary redemption while reserves are reconciled.",
+              routeFamily: "offchain-issuer",
+              modelConfidence: "medium",
+              capacitySemantics: "immediate-bounded",
+              score: 65,
+            },
           },
         },
-      } as never),
-      yieldRankings: resource({ rankings: [] } as never),
-      mintBurnFlows: resource({ gauge: {}, hourly: [], coins: [] } as never),
-      reportCards: resource({ cards: [], dependencyGraph: { nodes: [], edges: [] } } as never),
-      activeStablecoins: [coin!],
-    });
+        reportCards: { cards: [], dependencyGraph: { nodes: [], edges: [] } },
+        activeStablecoins: [trackedMeta("usdc-circle")],
+      }),
+    );
 
     expect(model.rows[0].statuses.redemption).toMatchObject({
       kind: "impaired",
@@ -438,25 +387,14 @@ describe("buildCoverageMatrixModel", () => {
       count: 1,
     });
   });
-  it("excludes unavailable and NAV-only prices from source-depth denominators", () => {
-    const coin = CLIENT_TRACKED_META_BY_ID.get("usdc-circle");
-    expect(coin).toBeDefined();
-    const common = {
-      stablecoins: resource({
-        peggedAssets: [{ id: coin!.id, circulating: { peggedUSD: 1_000 } }],
-      } as never),
-      dexLiquidity: resource({} as never),
-      redemptionBackstops: resource({ coins: {} } as never),
-      yieldRankings: resource({ rankings: [] } as never),
-      mintBurnFlows: resource({ coins: [] } as never),
-      reportCards: resource(makeReportCardsV9Response({ cards: [] })),
-    };
 
-    const unavailable = buildCoverageMatrixModel({
-      ...common,
-      pegSummary: resource<never>(undefined, { error: new Error("price outage") }),
-      activeStablecoins: [coin!],
-    });
+  it("excludes unavailable and NAV-only prices from source-depth denominators", () => {
+    const coin = trackedMeta("usdc-circle");
+    const stablecoins = { peggedAssets: [{ id: coin.id, circulating: { peggedUSD: 1_000 } }] };
+
+    const unavailable = buildCoverageMatrixModel(
+      makeMatrixInput({ stablecoins, errors: { pegSummary: new Error("price outage") }, activeStablecoins: [coin] }),
+    );
     expect(unavailable.sourceDepthProgress).toMatchObject({
       totalCount: 0,
       atTargetCount: 0,
@@ -465,11 +403,12 @@ describe("buildCoverageMatrixModel", () => {
       atTargetMcapPct: null,
     });
 
-    const navOnly = buildCoverageMatrixModel({
-      ...common,
-      pegSummary: resource({ coins: [] } as never),
-      activeStablecoins: [{ ...coin!, flags: { ...coin!.flags, navToken: true } }],
-    });
+    const navOnly = buildCoverageMatrixModel(
+      makeMatrixInput({
+        stablecoins,
+        activeStablecoins: [{ ...coin, flags: { ...coin.flags, navToken: true } }],
+      }),
+    );
     expect(navOnly.sourceDepthProgress).toMatchObject({
       totalCount: 0,
       belowTargetCount: 0,
@@ -477,5 +416,4 @@ describe("buildCoverageMatrixModel", () => {
       atTargetMcapPct: null,
     });
   });
-
 });

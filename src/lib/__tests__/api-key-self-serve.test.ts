@@ -8,20 +8,17 @@ import {
 import type { ApiKeySelfServeRequest } from "@shared/types";
 import { submitApiKeyRequest, verifyApiKeyRequestToken } from "../api-key-self-serve";
 import { DEFAULT_REQUEST_TIMEOUT_MS } from "../request-lifecycle";
-import { jsonResponse, mockFetch } from "@shared/test-utils/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
+import { captureEnvVar, mockAbortableFetch, mockJsonOnce } from "@/test-utils/api-fetch";
 
 const ApiKeySelfServeIssueResponseSchema = buildApiKeySelfServeIssueResponseSchema(
   SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE,
 );
 
-const ORIGINAL_FORCE_SITE_DATA_PROXY = process.env.NEXT_PUBLIC_FORCE_SITE_DATA_PROXY;
+const restoreForceSiteDataProxy = captureEnvVar("NEXT_PUBLIC_FORCE_SITE_DATA_PROXY");
 
 afterEach(() => {
-  if (ORIGINAL_FORCE_SITE_DATA_PROXY === undefined) {
-    delete process.env.NEXT_PUBLIC_FORCE_SITE_DATA_PROXY;
-  } else {
-    process.env.NEXT_PUBLIC_FORCE_SITE_DATA_PROXY = ORIGINAL_FORCE_SITE_DATA_PROXY;
-  }
+  restoreForceSiteDataProxy();
   vi.useRealTimers();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
@@ -161,33 +158,25 @@ describe("api key self-serve requests", () => {
   });
 
   it("preserves error JSON body messages from failed submissions", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      jsonResponse({ error: "Please use a longer use case." }, 400),
-    );
+    mockJsonOnce({ error: "Please use a longer use case." }, 400);
 
     await expect(submitApiKeyRequest(requestBody())).rejects.toThrow("Please use a longer use case.");
   });
 
   it("preserves message fields from failed verification responses", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      jsonResponse({ message: "Verification link expired." }, 410),
-    );
+    mockJsonOnce({ message: "Verification link expired." }, 410);
 
     await expect(verifyApiKeyRequestToken("akv_expired")).rejects.toThrow("Verification link expired.");
   });
 
   it("falls back to status text when an error JSON body carries a status field", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      jsonResponse({ status: "blocked", error: "Blocked request." }, 403),
-    );
+    mockJsonOnce({ status: "blocked", error: "Blocked request." }, 403);
 
     await expect(submitApiKeyRequest(requestBody())).rejects.toThrow("Request failed with status 403");
   });
 
   it("rejects malformed success bodies with the operator-facing message", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      jsonResponse(issuePayloadWithKey({ rateLimitPerMinute: SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE + 1 })),
-    );
+    mockJsonOnce(issuePayloadWithKey({ rateLimitPerMinute: SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE + 1 }));
 
     // Schema validation rejects the payload; the verify path maps it to the
     // legacy support-facing copy so the form never shows raw schema errors.
@@ -196,14 +185,7 @@ describe("api key self-serve requests", () => {
 
   it("uses the shared request timeout and aborts the POST", async () => {
     vi.useFakeTimers();
-    vi.spyOn(globalThis, "fetch").mockImplementation(
-      (_input, init) =>
-        new Promise<Response>((_resolve, reject) => {
-          init?.signal?.addEventListener("abort", () => {
-            reject(init.signal?.reason ?? new DOMException("timed out", "TimeoutError"));
-          });
-        }),
-    );
+    mockAbortableFetch(new DOMException("timed out", "TimeoutError"));
 
     const requestPromise = submitApiKeyRequest(requestBody());
     const rejection = expect(requestPromise).rejects.toMatchObject({
@@ -217,9 +199,7 @@ describe("api key self-serve requests", () => {
 
   it("keeps the public API Accept marker on self-serve POST requests", async () => {
     vi.stubGlobal("window", { location: { hostname: "pharos.watch" } });
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      jsonResponse({ status: "pending_verification", message: "Check your email." }),
-    );
+    const fetchSpy = mockJsonOnce({ status: "pending_verification", message: "Check your email." });
 
     await submitApiKeyRequest(requestBody());
 
@@ -231,9 +211,7 @@ describe("api key self-serve requests", () => {
   it("keeps POST requests off same-origin site-data paths", async () => {
     process.env.NEXT_PUBLIC_FORCE_SITE_DATA_PROXY = "true";
     vi.stubGlobal("window", { location: { hostname: "127.0.0.1" } });
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      jsonResponse({ status: "pending_verification", message: "Check your email." }),
-    );
+    const fetchSpy = mockJsonOnce({ status: "pending_verification", message: "Check your email." });
 
     await submitApiKeyRequest(requestBody());
 
