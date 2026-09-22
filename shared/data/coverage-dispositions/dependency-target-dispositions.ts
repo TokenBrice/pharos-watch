@@ -50,32 +50,6 @@ export const DEPENDENCY_TARGET_DISPOSITIONS: readonly DependencyTargetDispositio
       "OUSG's September 11 portfolio explicitly holds Franklin OnChain U.S. Government Money Fund (BENJI). Retain that measured collateral dependency while the tracked fund is quarantined; the link does not make BENJI scoreable or remove unavailable-upstream treatment.",
   },
   {
-    targetId: "usr-resolv",
-    expectedLifecycle: "frozen",
-    action: "retain-reviewed-link",
-    reviewer: "Codex dependency review",
-    reviewedAt: "2026-07-23",
-    sources: [
-      { label: "Pharos frozen stablecoin snapshot", url: "https://pharos.watch/stablecoin/usr-resolv" },
-      { label: "Inverse Finance DOLA transparency", url: "https://www.inverse.finance/transparency" },
-    ],
-    rationale:
-      "DOLA's reviewed reserve composition includes USR. USR is frozen after its market failure, so retain the historical reserve dependency without treating the unavailable upstream as scoreable.",
-  },
-  {
-    targetId: "cetes-etherfuse",
-    expectedLifecycle: "quarantined",
-    action: "retain-reviewed-link",
-    reviewer: "Codex Prompt 6b dependency review",
-    reviewedAt: "2026-07-20",
-    sources: [
-      { label: "Etherfuse CETES stablebond page", url: "https://app.etherfuse.com/bonds/cetes" },
-      { label: "Brale MXNe", url: "https://brale.xyz/stablecoins/MXNe" },
-    ],
-    rationale:
-      "MXNe's reviewed 100% reserve slice names tracked Etherfuse CETES. CETES is quarantined while runtime supply coverage is unavailable, so retain the reserve link with unavailable-upstream scoring.",
-  },
-  {
     targetId: "rusd-reservoir",
     expectedLifecycle: "active",
     action: "retain-reviewed-link",
@@ -87,38 +61,6 @@ export const DEPENDENCY_TARGET_DISPOSITIONS: readonly DependencyTargetDispositio
     ],
     rationale:
       "srUSD and wrapped srUSD are direct claims on Reservoir rUSD. rUSD is tracked and active, but its current report card is NR, so the reviewed wrapper link must remain visible with unavailable-upstream scoring.",
-  },
-  {
-    targetId: "tbill-openeden",
-    expectedLifecycle: "quarantined",
-    action: "retain-reviewed-link",
-    reviewer: "Codex Prompt 6b dependency review",
-    reviewedAt: "2026-07-20",
-    sources: [
-      { label: "OpenEden TBILL", url: "https://openeden.com/tbill" },
-      {
-        label: "OpenEden USDO reserve assets",
-        url: "https://docs.openeden.com/usdo/usdo-token/reserve-assets",
-      },
-    ],
-    rationale:
-      "OpenEden's reviewed USDO reserve composition names tracked TBILL. TBILL is quarantined while runtime supply coverage is unavailable, so retain the reserve link with unavailable-upstream scoring.",
-  },
-  {
-    targetId: "wtgxx-wisdomtree",
-    expectedLifecycle: "quarantined",
-    action: "retain-reviewed-link",
-    reviewer: "Codex Prompt 6b dependency review",
-    reviewedAt: "2026-07-20",
-    sources: [
-      {
-        label: "WisdomTree WTGXX",
-        url: "https://www.wisdomtree.com/investments/etfs/digital-funds/wtgxx",
-      },
-      { label: "WisdomTree Connect", url: "https://www.wisdomtree.com/connect" },
-    ],
-    rationale:
-      "WTGXX reserve slices are direct claims on the tracked WisdomTree fund. The fund is quarantined from active publication while runtime supply coverage is remediated, so those reviewed historical links remain correct without contributing an upstream score.",
   },
   {
     targetId: "zsd-zephyr-protocol",
@@ -145,6 +87,7 @@ export const DEPENDENCY_ADAPTER_MAPPING_REVIEWS: readonly DependencyAdapterMappi
   adapterReview("blast-usdb-yield-manager", "worker/src/cron/reserve-adapters/blast-usdb-yield-manager.ts", "Maps balances from the reviewed Blast USDB yield-manager asset roster."),
   adapterReview("cap-vault", "worker/src/cron/reserve-adapters/cap-vault.ts", "Maps Cap vault asset addresses through the config-owned canonical asset roster."),
   adapterReview("collateral-positions-api", "worker/src/cron/reserve-adapters/collateral-positions-api.ts", "Infers canonical upstream IDs from exact collateral symbols using the protocol-specific resolver and fixed symbol mapping, while aggregated minor and unknown collateral remains unlinked.", "2026-09-01"),
+  adapterReview("curated-validated", "worker/src/cron/reserve-adapters/curated-validated.ts", "Republishes the coin's reviewed static reserves array unchanged once probeTrackedTokenSupply reads a positive on-chain totalSupply, so the only upstream IDs it can emit are the authored slice coinId values: alUSD's DAI/USDC/USDT/FRAX yield-token collateral to dai-makerdao, usdc-circle, usdt-tether and frax-frax; spUSD's and HedgeCore sUSD's Venus-routed USDC to usdc-circle; Solayer sUSD's OpenEden reserve to cusdo-openeden. It resolves no label, address or symbol itself, so any authored slice without a coinId stays unlinked. An empty reserves array or a missing, unreadable or zero totalSupply fails the adapter closed.", "2026-09-22"),
   adapterReview("dola-inverse", "worker/src/cron/reserve-adapters/dola-inverse.ts", "Uses the reviewed tracked-stablecoin symbol resolver for exact DOLA reserve assets, including sDOLA-paired Curve/Yearn wrappers mapped to the non-DOLA leg (reUSD → reusd-resupply).", "2026-08-27"),
   adapterReview("erc4626-single-asset", "worker/src/cron/reserve-adapters/erc4626-single-asset.ts", "Maps only measured idle underlying holdings to the configured canonical asset; deployed strategy and unreadable holdings remain unlinked and feed unknownExposurePct. fxSAVE holds untracked fxSP shares, not fxUSD directly.", "2026-09-09"),
   adapterReview("escrow-balance", "worker/src/cron/reserve-adapters/escrow-balance.ts", "Emits the single configured canonical escrowed asset for the pinned escrow contract.", "2026-08-12"),
@@ -159,7 +102,9 @@ export const DEPENDENCY_ADAPTER_MAPPING_REVIEWS: readonly DependencyAdapterMappi
   adapterReview("idle-cdo-epoch-variant", "worker/src/cron/reserve-adapters/idle-cdo-epoch-variant.ts", "Maps only the CDO's unlent underlying balance to its canonical deposit-token dependency; the borrower receivable is deliberately unlinked because a single-obligor credit claim is not a claim on that token.", "2026-09-01"),
   adapterReview("infinifi", "worker/src/cron/reserve-adapters/infinifi.ts", "Maps exact infiniFi reserve assets and leaves mixed unnamed baskets unresolved.", "2026-08-27"),
   adapterReview("jupusd", "worker/src/cron/reserve-adapters/jupusd.ts", "Maps Jupiter reserve assets through its reviewed canonical token roster."),
+  adapterReview("kava-cdp", "worker/src/cron/reserve-adapters/kava-cdp.ts", "Keys each priced CDP collateral denom as kava-cdp:<denom> through the /kava/cdp/v1beta1/params type-to-denom map, so the reviewed kava-cdp:erc20/tether/usdt row is the only tracked link (usdt-tether); hbtc, btcb, xrpb, ukava, bnb and busd remain unlinked exogenous collateral. A collateral type whose spot_market_id has no live pricefeed entry is excluded from the slice set and quantified instead as its share of USDX principal. A missing usdx:usd price, a principal or bank-supply row not denominated in usdx, a duplicate collateral_params row, zero total priced collateral, or a failed block-identity check fails the adapter closed.", "2026-09-22"),
   adapterReview("liquity-v2-branches", "worker/src/cron/reserve-adapters/liquity-v2-branches.ts", "Maps each Liquity branch's reviewed stablecoin collateral identity."),
+  adapterReview("m0", "worker/src/cron/reserve-adapters/m0.ts", "Publishes exactly one aggregate slice keyed m0:eligible-collateral from minterGateway_totalCollateralSnapshots[0].value at six decimals and emits no coinId at all: the shared M0 collateral pool is a T-bill and cash claim of the Minter Gateway, so the m-m0 wrapper link for USDK, USDN and XO stays owned by each coin's reviewed static wrapper row rather than inferred from this common feed. minterGateway_minters rows are reconciliation-only and never become slices. A missing snapshot, a non-numeric or negative snapshot value, a GraphQL errors payload, or an unset M0_API_KEY fails the adapter closed; a minter-sum divergence above 0.5% or snapshot lag beyond 12h degrades instead.", "2026-09-22"),
   adapterReview("m0-wrapper-underlying", "worker/src/cron/reserve-adapters/m0-wrapper-underlying.ts", "Emits the configured canonical M0 underlying for each wrapper."),
   adapterReview("mento", "worker/src/cron/reserve-adapters/mento.ts", "Maps Mento reserve assets using reviewed address and symbol identities shared by the active fiat cohort."),
   adapterReview("megausd-custody", "worker/src/cron/reserve-adapters/megausd-custody.ts", "Maps the reviewed MegaUSD custodian inventory rows (USDC and USDtb) to their canonical tracked-stablecoin IDs and excludes self-held USDm as self-referential.", "2026-09-09"),
@@ -177,6 +122,8 @@ export const DEPENDENCY_ADAPTER_MAPPING_REVIEWS: readonly DependencyAdapterMappi
   adapterReview("usdd-data-platform", "worker/src/cron/reserve-adapters/usdd-data-platform.ts", "Maps exact USDD reserve assets from the reviewed data-platform response."),
   adapterReview("usdtb-transparency", "worker/src/cron/reserve-adapters/usdtb-transparency.ts", "Maps USDtb transparency rows through its reviewed canonical asset-key roster."),
   adapterReview("xdai-bridge", "worker/src/cron/reserve-adapters/xdai-bridge.ts", "Maps the complete measured bridge collateral to fixed canonical sUSDS and USDS dependencies according to their on-chain balances while leaving legacy DAI and sDAI unmapped.", "2026-09-01"),
+  adapterReview("xpr-account-balances", "worker/src/cron/reserve-adapters/xpr-account-balances.ts", "Measures only the configured xtokens symbols held by xmd.treasury (XUSDC and XPYUSD) against the xmd.token XMD currency-stats supply and deliberately emits no coinId: XPR X-tokens are issuer-custodial Metal X bridge wrappers whose 1:1 upstream backing is not independently published, which the adapter records as a bridge-wrapper-unverified info warning. Supply beyond the measured balances becomes the explicit unknown remainder for non-xtokens treasury holdings such as MPD. A configured slice symbol missing from get_currency_balance, a supply-symbol mismatch, a non-array balance response, a non-positive supply, or an unreadable head-block identity fails the adapter closed.", "2026-09-22"),
+  adapterReview("youves-tezos", "worker/src/cron/reserve-adapters/youves-tezos.ts", "Censuses the eight pinned uUSD engine contracts and folds their vault collateral into four fixed keys (youves-tezos:usdt, :xtz, :tzbtc, :sirs), so the reviewed youves-tezos:usdt row for the pinned Tezos USDt token KT1XnTn74bUtxHfDtBmm2bGZAQfhPbvKWR8o is the only tracked link (usdt-tether); XTZ, tzBTC and the XTZ/tzBTC SIRS LP tokens remain unlinked exogenous collateral. A uUSD token_contract other than KT1XRPEPXbZK25r3Htzp2o1x7xdMMmfocKNW, SIRS LP oracle token addresses that do not match the pinned tzBTC and SIRS identities, a missing material collateral price, or a uUSD supply below the engines' summed total_supply fails the census closed.", "2026-09-22"),
   {
     adapter: "astherus-earn-wrapper",
     reviewer: "pharos-live-reserve-upgrade",
