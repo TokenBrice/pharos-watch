@@ -52,6 +52,20 @@ function worseSignal(left: DependencySignal | null, right: DependencySignal | nu
   if (right.updatedAt == null) return left;
   return right.updatedAt >= left.updatedAt ? right : left;
 }
+/**
+ * Reason for a lane whose freshness band is fine but whose input-quality
+ * verdict (R3) is degraded. Names the machine-readable quality reason; an
+ * unreadable streak is omitted rather than published as a number (R1).
+ */
+function cacheQualityReason(cache: CacheStatus): string | null {
+  if (cache.degraded !== true) return null;
+  const reason = cache.degradedReason ?? "unknown";
+  const streak = cache.streakDegradedRuns;
+  return `Cache input quality degraded: ${reason}` +
+    (streak != null ? ` (${streak} degraded run${streak === 1 ? "" : "s"} since the last clean run)` : "") +
+    ".";
+}
+
 
 function cacheSignal(cache: CacheStatus | undefined, now: number, cacheKey: string): DependencySignal {
   if (!cache) {
@@ -104,12 +118,15 @@ function cacheSignal(cache: CacheStatus | undefined, now: number, cacheKey: stri
     };
   }
   if (freshnessStatus === "degraded" || !cache.healthy) {
+    // When the freshness band itself is healthy, an unhealthy lane is the
+    // input-quality verdict — name it instead of a false age sentence.
+    const qualityReason = freshnessStatus === "healthy" ? cacheQualityReason(cache) : null;
     return {
       status: "degraded",
       updatedAt,
       ageSeconds: cache.ageSeconds,
       maxAgeSec,
-      reason: cache.warning ?? `Freshness age ${cache.ageSeconds}s is outside the healthy budget.`,
+      reason: qualityReason ?? cache.warning ?? `Freshness age ${cache.ageSeconds}s is outside the healthy budget.`,
     };
   }
 

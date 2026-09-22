@@ -57,9 +57,28 @@ function formatAffectedAssets(count: number, labels: readonly string[]): string 
 }
 
 export function getActivePriceCoverageImpactDetail(coverage: ActivePriceCoverage): string {
-  const labels = getActivePriceAssetLabels(coverage, coverage.missingActiveIds);
-  const affectedAssets = formatAffectedAssets(coverage.missingPriceCount, labels);
+  const acknowledgedIds = new Set(coverage.acknowledgedGapIds ?? []);
+  for (const asset of coverage.missingActiveAssets) {
+    if (asset.acknowledgedGap) acknowledgedIds.add(asset.stablecoinId);
+  }
+  const ids = coverage.alertEligibleIds.filter((id) => !acknowledgedIds.has(id));
+  const labels = getActivePriceAssetLabels(coverage, ids);
+  const affectedAssets = formatAffectedAssets(ids.length, labels);
   return `Live prices are unavailable for ${affectedAssets}. Stablecoin listings and price-dependent analytics may be incomplete until coverage recovers.`;
+}
+
+/** Informational only: these remain real missing prices, not incidents. Name
+ * the earliest expiry because that is the next review that can re-alert. */
+export function getAcknowledgedPriceGapNotice(coverage: ActivePriceCoverage | undefined): string | null {
+  if (!coverage) return null;
+  const gaps = coverage.missingActiveAssets.filter((asset) => asset.acknowledgedGap);
+  const count = coverage.acknowledgedGapCount ?? gaps.length;
+  if (count === 0) return null;
+  const nextExpiry = Math.min(...gaps.map((asset) => asset.acknowledgedGap!.expiresAt));
+  const deadline = Number.isFinite(nextExpiry)
+    ? `; next review expires ${new Date(nextExpiry * 1000).toISOString().slice(0, 10)} (UTC)`
+    : "";
+  return `${count} acknowledged price gap${count === 1 ? "" : "s"} under review${deadline}. Prices remain unavailable and gaps re-alert when their reviews expire.`;
 }
 
 export function getPublicHealthWarningPresentation(
@@ -93,7 +112,9 @@ export function getPublicHealthWarningPresentation(
       .slice(ACTIVE_PRICE_CRITICAL_DURATION_PREFIX.length)
       .split(",")
       .map((id) => id.trim())
-      .filter((id) => id.length > 0);
+      .filter((id) => id.length > 0
+        && !(healthData.activePriceCoverage?.acknowledgedGapIds ?? []).includes(id)
+        && !(healthData.activePriceCoverage?.missingActiveAssets ?? []).find((asset) => asset.stablecoinId === id)?.acknowledgedGap);
     const labels = getActivePriceAssetLabels(healthData.activePriceCoverage, ids);
     return {
       title: "Long-running price gaps",

@@ -230,6 +230,20 @@ export const DataQualitySchema = z.object({
 });
 export type DataQuality = z.output<typeof DataQualitySchema>;
 
+
+/** Reviewed, expiring acknowledgement of a missing live price for an active
+ * stablecoin. The asset stays listed as missing in coverage payloads; the gap
+ * simply stops being alert-eligible until the review expires, after which it
+ * alerts again until renewed or resolved. Never applies to depegs or to assets
+ * that have a price. */
+export interface ActivePriceCoverageGapAcknowledgement {
+  owner: string;
+  reason: string;
+  sources: string[];
+  reviewedAt: number;
+  expiresAt: number;
+}
+
 export interface ActivePriceCoverageGap {
   stablecoinId: string;
   symbol: string;
@@ -244,6 +258,9 @@ export interface ActivePriceCoverageGap {
   lastAcceptedObservedAt: number | null;
   rejectionReason: string;
   alertEligible: boolean;
+  /** Present only while a valid, unexpired registry review acknowledges this
+   * gap. Older payloads may omit it; treat missing as null. */
+  acknowledgedGap?: ActivePriceCoverageGapAcknowledgement | null;
 }
 
 export interface ActivePriceCoverageHealth {
@@ -258,6 +275,15 @@ export interface ActivePriceCoverageHealth {
   missingActiveAssets: ActivePriceCoverageGap[];
   alertEligibleCount: number;
   alertEligibleIds: string[];
+  /** Missing active IDs currently covered by a valid, unexpired price-gap
+   * review. Optional so older payloads without acknowledgement evidence still
+   * parse; consumers should default to empty. */
+  acknowledgedGapIds?: string[];
+  acknowledgedGapCount?: number;
+  /** Reviews whose expiry has passed — their gaps alert again until each
+   * review is renewed or the asset is frozen or delisted. */
+  expiredGapReviewIds?: string[];
+  invalidGapReviewIds?: string[];
   maxConsecutiveMissingGenerations: number;
   observedAt: number | null;
 }

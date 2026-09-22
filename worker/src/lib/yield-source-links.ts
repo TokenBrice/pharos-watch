@@ -98,8 +98,16 @@ const YIELD_SOURCE_URLS: Record<string, string> = {
   Scallop: "https://app.scallop.io/",
   Tydro: "https://tydro.com/",
   // Wave 3 — 2026-06-11 audit queue follow-up
-  BiFi: "https://bifi.finance/",
+  "BiFi": "https://bifi.finance/",
   "Fraxlend v1": "https://app.frax.finance/fraxlend",
+  // 2026-09-23 coverage-audit drain promotions
+  "Sky Lending": "https://app.sky.money/",
+  "JustLend V1": "https://justlend.org/",
+  "Accountable": "https://accountable.capital/",
+  "Pareto Credit": "https://pareto.credit/",
+  "Inverse Finance FiRM": "https://inverse.finance",
+  "Segment Finance": "https://segment.finance",
+  "Save": "https://www.save.finance/",
   // Explicit-pool labels (parenthetical asset suffix is stripped by the label fallback chain)
   "Hydration Omnipool": "https://hydration.net/",
 };

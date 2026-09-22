@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.28",
+    title: "USDaf guarded Uniswap v4 recovery route",
+    date: "2026-09-23",
+    effectiveAt: 1790118000,
+    summary:
+      "USDaf can recover a missing price from a reviewed Ethereum Uniswap v4 USDaf/USDT sell quote, so a DexScreener transport outage no longer blanks the asset.",
+    impact: [
+      "Only the exact reviewed USDaf/USDT pool `0xcd799508ddaa319e608547d3291a1a512da9a9acdd40599d89019ec82e3cf1e8` — recomputed from the reviewed token addresses, 500 fee units, tick spacing 10 and no hooks — is eligible, and canonical PoolManager, Quoter and ReservesLens runtime code must match reviewed hashes",
+      "Trusted-USDT-normalized TVL from tick-integrated pool principal must clear the unchanged $50,000 DEX observation floor; token decimals and the USDT pause/blacklist state must validate, and fee-inclusive 1- and 1,000-USDaf sell quotes must agree within 5% and fit output reserves",
+      "The pinned block and the trusted USDT parent must both remain newer than five minutes, the closing canonical block hash is rechecked, and provenance uses the older observation time",
+      "`uniswap-v4-exact` stays fallback-confidence, non-replay-safe and non-depeg-authoritative, retains every generic soft-source severe-downside and temporal-jump publication guard, and never replaces a usable price",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.27",
     title: "Verified legacy USDv direct-route recovery",
     date: "2026-09-22",

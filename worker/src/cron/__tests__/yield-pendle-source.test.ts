@@ -1,15 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanupYieldSourceTest, mockYieldSourceFetchRetryModule, mockYieldSourceRoutes } from "./yield-source.test-support";
-
-vi.mock("../../lib/fetch-retry", () => mockYieldSourceFetchRetryModule());
+import { cleanupYieldSourceTest, mockYieldSourceRoutes } from "./yield-source.test-support";
 
 import { fetchPendleMarketSources } from "../yield-sync/sources";
 
 describe("fetchPendleMarketSources", () => {
   afterEach(cleanupYieldSourceTest);
 
-  it.each([undefined, "", "   ", "  pendle-test-key  "])("uses optional bearer authentication without changing request URLs (%s)", async (apiKey) => {
-    const authorization = apiKey?.trim() ? `Bearer ${apiKey.trim()}` : null;
+  it("fetches the three chain pages without authentication", async () => {
     const requests: Request[] = [];
     mockYieldSourceRoutes([1, 42161, 8453].map((chainId) => ({
       match: `https://api-v2.pendle.finance/core/v1/${chainId}/markets?limit=100&skip=0&is_active=true`,
@@ -19,25 +16,41 @@ describe("fetchPendleMarketSources", () => {
       },
     })), { strictUrl: true, requireMatch: true });
 
-    const result = await fetchPendleMarketSources(undefined, apiKey);
-
-    expect(result).toEqual({ candidates: [], degraded: false });
+    expect(await fetchPendleMarketSources()).toEqual({ candidates: [], degraded: false });
     expect(requests).toHaveLength(3);
-    for (const request of requests) {
-      expect(request.headers.get("Authorization")).toBe(authorization);
-      expect(request.url).not.toContain("pendle-test-key");
-    }
+    expect(requests.every((request) => request.headers.get("Authorization") == null)).toBe(true);
   });
 
-  it("keeps authenticated quota failures degraded", async () => {
-    mockYieldSourceRoutes([1, 42161, 8453].map((chainId) => ({
-      match: `/core/v1/${chainId}/markets?`,
-      matchHeaders: { Authorization: "Bearer pendle-test-key" },
-      status: 429,
-      body: { message: "too many requests" },
-    })));
-    expect(await fetchPendleMarketSources(undefined, "pendle-test-key"))
-      .toEqual({ candidates: [], degraded: true });
+  const rateLimitCases: Array<{
+    headers: Record<string, string>;
+    backoffSec: number;
+    source: "retry-after" | "x-ratelimit-weekly-reset" | "x-ratelimit-reset" | "default";
+  }> = [
+    { headers: { "Retry-After": "3600" }, backoffSec: 3600, source: "retry-after" },
+    { headers: { "Retry-After": "Thu, 24 Sep 2026 00:00:00 GMT" }, backoffSec: 86400, source: "retry-after" },
+    { headers: { "x-ratelimit-weekly-reset": "1790208000" }, backoffSec: 86400, source: "x-ratelimit-weekly-reset" },
+    {
+      headers: { "Retry-After": "60", "x-ratelimit-weekly-remaining": "0", "x-ratelimit-weekly-reset": "1790208000" },
+      backoffSec: 86400, source: "x-ratelimit-weekly-reset",
+    },
+    {
+      headers: { "x-ratelimit-weekly-remaining": "100", "x-ratelimit-weekly-reset": "1790208000", "x-ratelimit-reset": "1790121660" },
+      backoffSec: 60, source: "x-ratelimit-reset",
+    },
+    { headers: { "Retry-After": "invalid" }, backoffSec: 86400, source: "default" },
+    { headers: { "Retry-After": "999999999" }, backoffSec: 7 * 86400, source: "retry-after" },
+  ];
+
+  it.each(rateLimitCases)("stops on the first 429 and preserves the retry window ($source, $backoffSec)", async ({ headers, backoffSec, source }) => {
+    vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-09-23T00:00:00Z"));
+    const fetch = mockYieldSourceRoutes([{
+      match: "/core/v1/1/markets?",
+      respond: () => new Response("quota exhausted", { status: 429, headers }),
+    }], { requireMatch: true });
+    expect(await fetchPendleMarketSources()).toEqual({
+      candidates: [], degraded: true, rateLimited: { backoffSec, source },
+    });
+    expect(fetch).toHaveBeenCalledTimes(1);
   });
 
   it("extracts stablecoin market yields from Pendle REST API", async () => {

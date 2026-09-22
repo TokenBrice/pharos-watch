@@ -447,7 +447,7 @@ function evaluateReserveQueryFailure(input: DataQualityEvaluationInput): Partial
 
 function evaluateRepairDiagnostics(input: DataQualityEvaluationInput): Partial<StatusRuleEvaluation> | null {
   const causes: StatusCause[] = [];
-  if (input.repairRunnerAutoRepairCount != null) {
+  if (input.repairRunnerAutoRepairCount != null && input.repairRunnerAutoRepairCount > 0) {
     causes.push(
       makeCause(
         "data-quality",
@@ -540,30 +540,46 @@ const DATA_QUALITY_STATUS_RULES_CORE: readonly StatusRule<DataQualityEvaluationI
       return ruleResult("degraded", [cause]);
   },
   (input) => {
-      const status = input.activePriceCoverageImpactStatus;
-      const cause =
-        input.activePriceCoverage.status === "incomplete"
-            ? (() => {
-                const missing = input.activePriceCoverage.missingActiveIds;
-                const examples = missing.slice(0, 12).join(", ");
-                const alertEligible = input.activePriceCoverage.alertEligibleCount > 0;
-                const baseMessage =
-                  `Live prices are missing for ${input.activePriceCoverage.missingPriceCount} active asset(s)` +
-                  (examples ? `: ${examples}${missing.length > 12 ? ", ..." : ""}.` : ".");
-                return makeCause(
-                  "data-quality",
-                  "active_price_coverage_incomplete",
-                  alertEligible ? "warning" : "info",
-                  alertEligible
-                    ? baseMessage
-                    : `${baseMessage} No gap has reached the alert-eligible persistence threshold; not degrading public status.`,
-                  { metric: "missingActivePrices", value: input.activePriceCoverage.missingPriceCount, threshold: 1 },
-                );
-              })()
-            : input.activePriceCoverage.status === "unknown"
-              ? makeCause("data-quality", "active_price_coverage_unknown", "warning", "Exact active stablecoin live-price coverage evidence is unavailable.")
-              : null;
-      return ruleResult(status, cause ? [cause] : []);
+      const coverage = input.activePriceCoverage;
+      const causes: StatusCause[] = [];
+      if (coverage.status === "incomplete") {
+        const acknowledgedIds = new Set(coverage.acknowledgedGapIds ?? []);
+        const alertIds = coverage.alertEligibleIds.filter((id) => !acknowledgedIds.has(id));
+        const reviewed = coverage.missingActiveAssets.flatMap((asset) => asset.acknowledgedGap
+          ? [`${asset.stablecoinId} until ${new Date(asset.acknowledgedGap.expiresAt * 1000).toISOString().slice(0, 10)}`]
+          : []);
+        const acknowledgement = reviewed.length > 0
+          ? ` ${reviewed.length} acknowledged gap(s) under review: ${reviewed.join("; ")}.`
+          : "";
+        const baseMessage = `Live prices are missing for ${coverage.missingPriceCount} active asset(s).${acknowledgement}`;
+        const notAlerting = reviewed.length > 0
+          ? " Every missing gap is either acknowledged under review or below the alert-eligible persistence threshold"
+          : " No gap has reached the alert-eligible persistence threshold";
+        causes.push(makeCause(
+          "data-quality",
+          "active_price_coverage_incomplete",
+          alertIds.length > 0 ? "warning" : "info",
+          alertIds.length > 0
+            ? `${baseMessage} Alert-eligible (unacknowledged) gaps: ${alertIds.join(", ")}.`
+            : `${baseMessage}${notAlerting}; not degrading public status.`,
+          { metric: "missingActivePrices", value: coverage.missingPriceCount, threshold: 1 },
+        ));
+      } else if (coverage.status === "unknown") {
+        causes.push(makeCause("data-quality", "active_price_coverage_unknown", "warning", "Exact active stablecoin live-price coverage evidence is unavailable."));
+      }
+      for (const [kind, ids] of [
+        ["expired", coverage.expiredGapReviewIds ?? []],
+        ["invalid", coverage.invalidGapReviewIds ?? []],
+      ] as const) {
+        if (ids.length > 0) causes.push(makeCause(
+          "data-quality",
+          `price_gap_reviews_${kind}`,
+          "info",
+          `Ignored ${kind} price-gap review(s): ${ids.join(", ")}. Re-review before renewal; these entries cannot acknowledge a missing price.`,
+          { metric: `${kind}GapReviews`, value: ids.length, threshold: 1 },
+        ));
+      }
+      return ruleResult(input.activePriceCoverageImpactStatus, causes);
   },
   (input) => {
       if (input.missingPriceRatio > STATUS_MISSING_PRICE_THRESHOLDS.ratioStale) {
@@ -685,6 +701,8 @@ const RUNBOOK_BY_CODE: Record<string, string> = {
   stablecoin_publication_unknown: `${RUNBOOK_BASE}/stablecoins-cache.md`,
   active_price_coverage_incomplete: `${RUNBOOK_BASE}/stablecoins-cache.md`,
   active_price_coverage_unknown: `${RUNBOOK_BASE}/stablecoins-cache.md`,
+  price_gap_reviews_expired: `${RUNBOOK_BASE}/stablecoins-cache.md`,
+  price_gap_reviews_invalid: `${RUNBOOK_BASE}/stablecoins-cache.md`,
   blacklist_gaps_degraded: `${RUNBOOK_BASE}/blacklist-sync.md`,
   blacklist_gaps_stale: `${RUNBOOK_BASE}/blacklist-sync.md`,
   onchain_integrity_degraded: `${RUNBOOK_BASE}/mint-burn-integrity.md`,

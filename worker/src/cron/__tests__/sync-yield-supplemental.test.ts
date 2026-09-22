@@ -88,9 +88,17 @@ import {
 import { syncYieldSupplemental } from "../sync-yield-supplemental";
 import {
   loadSupplementalSourceFamilies,
-  SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
   SUPPLEMENTAL_SOURCE_FAMILY_CONCURRENCY,
 } from "../yield-sync/supplemental-source-families";
+import { SUPPLEMENTAL_SOURCE_FAMILY_KEYS } from "../yield-sync/supplemental-source-family-keys";
+import {
+  PENDLE_RATE_LIMIT_BACKOFF_REASON,
+  buildYieldSupplementalFamilyCache,
+  buildYieldSupplementalPendleBackoff,
+  getYieldSupplementalFamilyCacheKey,
+  getYieldSupplementalPendleBackoffCacheKey,
+  getYieldSupplementalRunOutcomeCacheKey,
+} from "../yield-sync/cache/supplemental-cache-keys";
 
 async function flushMicrotasks() {
   for (let i = 0; i < 8; i += 1) {
@@ -159,14 +167,177 @@ describe("syncYieldSupplemental", () => {
     expect(metadata).not.toHaveProperty("cacheKey");
   });
 
-  it("threads the Pendle credential only to its adapter without exposing it in telemetry", async () => {
-    const signal = new AbortController().signal;
-    const result = await syncYieldSupplemental({} as D1Database, signal, new Map(), undefined, undefined, {
-      pendleApiKey: "pendle-test-key",
+  describe("pendle free-quota lane", () => {
+    const START_SEC = Math.floor(Date.parse("2026-03-26T12:00:00.000Z") / 1000);
+    const familyRow = (updatedAtSec: number) => ({
+      value: buildYieldSupplementalFamilyCache([], updatedAtSec),
+      updatedAt: updatedAtSec,
     });
-    expect(fetchPendleMarketSources).toHaveBeenCalledWith(signal, "pendle-test-key");
-    expect(fetchMorphoVaultSources).toHaveBeenCalledWith(signal);
-    expect(result.metadata).not.toContain("pendle-test-key");
+    const activeBackoffUntilSec = START_SEC + 7200;
+
+    it("skips the fetch while the retained row is inside the daily cadence", async () => {
+      vi.mocked(getCaches).mockResolvedValue(new Map([
+        [getYieldSupplementalFamilyCacheKey("pendle"), familyRow(START_SEC - 5 * 3600)],
+      ]));
+      vi.mocked(fetchMorphoVaultSources).mockResolvedValue(healthyFamilyFetch([beefyCandidate()]));
+
+      const result = await syncYieldSupplemental({} as D1Database);
+
+      expect(fetchPendleMarketSources).not.toHaveBeenCalled();
+      const metadata = JSON.parse(result.metadata ?? "{}") as {
+        familyCacheResults?: Record<string, string>;
+        degradedFamilies?: string[];
+      };
+      expect(metadata.familyCacheResults?.pendle).toBe("skipped-not-due");
+      expect(metadata.degradedFamilies).toEqual([]);
+      expect(result.status).toBeUndefined();
+      expect(vi.mocked(setCacheIfNewer).mock.calls.map((call) => call[1]))
+        .not.toContain(getYieldSupplementalFamilyCacheKey("pendle"));
+    });
+
+    it("fetches on the first run after the cadence elapses instead of waiting for a daily boundary", async () => {
+      vi.mocked(getCaches).mockResolvedValue(new Map([
+        [getYieldSupplementalFamilyCacheKey("pendle"), familyRow(START_SEC - 25 * 3600)],
+        [getYieldSupplementalPendleBackoffCacheKey(), {
+          value: buildYieldSupplementalPendleBackoff({
+            backoffUntilSec: START_SEC - 60,
+            source: "x-ratelimit-weekly-reset",
+            recordedAtSec: START_SEC - 3 * 86400,
+          }),
+          updatedAt: START_SEC - 3 * 86400,
+        }],
+      ]));
+
+      const result = await syncYieldSupplemental({} as D1Database);
+
+      expect(fetchPendleMarketSources).toHaveBeenCalledTimes(1);
+      const metadata = JSON.parse(result.metadata ?? "{}") as { familyCacheResults?: Record<string, string> };
+      expect(metadata.familyCacheResults?.pendle).toBe("empty-published");
+    });
+
+    it("records the 429 window and keeps the retained row inside the budget", async () => {
+      vi.mocked(getCaches).mockResolvedValue(new Map([
+        [getYieldSupplementalFamilyCacheKey("pendle"), familyRow(START_SEC - 30 * 3600)],
+      ]));
+      vi.mocked(fetchMorphoVaultSources).mockResolvedValue(healthyFamilyFetch([beefyCandidate()]));
+      vi.mocked(fetchPendleMarketSources).mockResolvedValue({
+        candidates: [], degraded: true, rateLimited: { backoffSec: 7200, source: "retry-after" },
+      });
+
+      const result = await syncYieldSupplemental({} as D1Database);
+
+      const backoffWrite = vi.mocked(setCache).mock.calls
+        .find((call) => call[1] === getYieldSupplementalPendleBackoffCacheKey());
+      expect(backoffWrite).toBeDefined();
+      expect(JSON.parse(backoffWrite?.[2] ?? "{}")).toMatchObject({
+        backoffUntilSec: activeBackoffUntilSec,
+        reason: PENDLE_RATE_LIMIT_BACKOFF_REASON,
+        source: "retry-after",
+      });
+      const metadata = JSON.parse(result.metadata ?? "{}") as {
+        familyCacheResults?: Record<string, string>;
+        degradedFamilies?: string[];
+      };
+      expect(metadata.familyCacheResults?.pendle).toBe("skipped-backoff");
+      expect(metadata.degradedFamilies).toEqual([]);
+      expect(result.status).toBeUndefined();
+    });
+
+    it("does not call pendle again while the recorded backoff is active", async () => {
+      vi.mocked(getCaches).mockResolvedValue(new Map([
+        [getYieldSupplementalFamilyCacheKey("pendle"), familyRow(START_SEC - 30 * 3600)],
+        [getYieldSupplementalPendleBackoffCacheKey(), {
+          value: buildYieldSupplementalPendleBackoff({
+            backoffUntilSec: activeBackoffUntilSec,
+            source: "retry-after",
+            recordedAtSec: START_SEC,
+          }),
+          updatedAt: START_SEC,
+        }],
+      ]));
+      vi.mocked(fetchMorphoVaultSources).mockResolvedValue(healthyFamilyFetch([beefyCandidate()]));
+
+      const result = await syncYieldSupplemental({} as D1Database);
+
+      expect(fetchPendleMarketSources).not.toHaveBeenCalled();
+      const metadata = JSON.parse(result.metadata ?? "{}") as {
+        familyCacheResults?: Record<string, string>;
+        degradedFamilies?: string[];
+      };
+      expect(metadata.familyCacheResults?.pendle).toBe("skipped-backoff");
+      expect(metadata.degradedFamilies).toEqual([]);
+      expect(result.status).toBeUndefined();
+    });
+
+    it("still fetches when the lane-state read fails", async () => {
+      vi.mocked(getCaches).mockRejectedValueOnce(new Error("d1 unavailable"));
+      vi.mocked(fetchMorphoVaultSources).mockResolvedValue(healthyFamilyFetch([beefyCandidate()]));
+
+      const result = await syncYieldSupplemental({} as D1Database);
+
+      expect(fetchPendleMarketSources).toHaveBeenCalledTimes(1);
+      expect(result.status).toBeUndefined();
+    });
+
+    it("degrades with the machine-readable reason while the stale retained row waits out an active backoff", async () => {
+      const retainedAt = START_SEC - 49 * 3600;
+      vi.mocked(getCaches).mockResolvedValue(new Map([
+        [getYieldSupplementalFamilyCacheKey("pendle"), familyRow(retainedAt)],
+        [getYieldSupplementalPendleBackoffCacheKey(), {
+          value: buildYieldSupplementalPendleBackoff({
+            backoffUntilSec: activeBackoffUntilSec,
+            source: "x-ratelimit-weekly-reset",
+            recordedAtSec: START_SEC,
+          }),
+          updatedAt: START_SEC,
+        }],
+      ]));
+      vi.mocked(fetchMorphoVaultSources).mockResolvedValue(healthyFamilyFetch([beefyCandidate()]));
+
+      const result = await syncYieldSupplemental({} as D1Database);
+
+      expect(fetchPendleMarketSources).not.toHaveBeenCalled();
+      expect(result.status).toBe("degraded");
+      const metadata = JSON.parse(result.metadata ?? "{}") as {
+        familyCacheResults?: Record<string, string>;
+        degradedFamilies?: string[];
+        degradedFamilyReasons?: Record<string, string>;
+      };
+      expect(metadata.familyCacheResults?.pendle).toBe("retained-previous");
+      expect(metadata.degradedFamilies).toEqual(["pendle"]);
+      expect(metadata.degradedFamilyReasons?.pendle).toBe(PENDLE_RATE_LIMIT_BACKOFF_REASON);
+      const runOutcomeWrite = vi.mocked(setCache).mock.calls
+        .find((call) => call[1] === getYieldSupplementalRunOutcomeCacheKey());
+      expect(JSON.parse(runOutcomeWrite?.[2] ?? "{}")).toMatchObject({
+        degradedFamilies: ["pendle"],
+        degradedFamilyReasons: { pendle: PENDLE_RATE_LIMIT_BACKOFF_REASON },
+      });
+    });
+
+    it("degrades with the machine-readable reason when a fresh 429 arrives past the retained-row budget", async () => {
+      const retainedAt = START_SEC - 49 * 3600;
+      vi.mocked(getCaches).mockResolvedValue(new Map([
+        [getYieldSupplementalFamilyCacheKey("pendle"), familyRow(retainedAt)],
+      ]));
+      vi.mocked(fetchMorphoVaultSources).mockResolvedValue(healthyFamilyFetch([beefyCandidate()]));
+      vi.mocked(fetchPendleMarketSources).mockResolvedValue({
+        candidates: [], degraded: true, rateLimited: { backoffSec: 7200, source: "retry-after" },
+      });
+
+      const result = await syncYieldSupplemental({} as D1Database);
+
+      const metadata = JSON.parse(result.metadata ?? "{}") as {
+        familyCacheResults?: Record<string, string>;
+        degradedFamilies?: string[];
+        degradedFamilyReasons?: Record<string, string>;
+      };
+      expect(metadata.familyCacheResults?.pendle).toBe("retained-previous");
+      expect(metadata.degradedFamilies).toEqual(["pendle"]);
+      expect(metadata.degradedFamilyReasons?.pendle).toBe(PENDLE_RATE_LIMIT_BACKOFF_REASON);
+      expect(vi.mocked(setCache).mock.calls.map((call) => call[1]))
+        .toContain(getYieldSupplementalPendleBackoffCacheKey());
+      expect(result.status).toBe("degraded");
+    });
   });
 
   it("threads vaults.fyi runtime config into the supplemental source family loader without persisting the key", async () => {

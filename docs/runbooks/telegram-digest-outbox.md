@@ -34,7 +34,7 @@ An expired `sending` claim becomes `execution_unknown`. It is never returned to 
 
 ## Inspect
 
-Check `/api/status` and locate `budgetOnlySurfaces[]` where `job == "telegram-digest-outbox-drain"`. `retainedExecutionUnknown` and `retainedFailedPermanent` represent operator backlog; they degrade that surface but do not repeatedly trip the shared Telegram provider circuit when no send was attempted.
+Check `/api/status` and locate `budgetOnlySurfaces[]` where `job == "telegram-digest-outbox-drain"`. `retainedExecutionUnknown` and `retainedFailedPermanent` count terminal rows whose `updated_at` falls within the 7-day operator-review window; they represent operator backlog, degrade that surface, and do not repeatedly trip the shared Telegram provider circuit when no send was attempted. The `retainedExecutionUnknownTotal` and `retainedFailedPermanentTotal` metadata fields report the all-time retained counts, so forensic rows older than the review window stay visible without degrading the surface.
 
 List unresolved editions:
 
@@ -115,6 +115,13 @@ for audit and generate a newly reviewed edition against the active source.
 contains a Safety Score or grade claim but the edition has no identified
 publication. Treat it like a stale identity: preserve the row and generate a
 reviewed, identity-bound edition instead of resetting it.
+
+Terminal rows preserved for audit stop degrading the `telegram-digest-outbox-drain`
+surface once their `updated_at` is older than the 7-day operator-review window
+(`TELEGRAM_DIGEST_OUTBOX_TERMINAL_REVIEW_SEC` in
+`worker/src/lib/telegram/digest-outbox.ts`); they remain in the table and in the
+drain summary's `retained*Total` counts. The review window bounds status
+classification only — it never deletes, resets, or mutates a row.
 
 Do not modify `payload_chunks_json`, `success_actions_json`,
 `safety_context_json`, or `target_chat_id` in place. A changed edition requires

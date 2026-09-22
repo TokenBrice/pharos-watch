@@ -49,19 +49,23 @@ describe("runHourlyYieldSlot", () => {
     vi.clearAllMocks();
   });
 
-  it.each(["hourly", "four-hourly"])("passes the Pendle credential through the %s supplemental entrypoint", async (slot) => {
+  it("runs the four-hourly supplemental entrypoint without Pendle credential plumbing", async () => {
     const { runtime, signal, reportProgress } = buildRuntime();
-    runtime.env.PENDLE_API_KEY = "pendle-test-key";
-    if (slot === "hourly") {
-      await runHourlyYieldSlot(runtime);
-    } else {
-      runtime.scheduleKey = "fourHourlyYieldSupplemental";
-      await runYieldSupplementalSlot(runtime);
-    }
+    runtime.scheduleKey = "fourHourlyYieldSupplemental";
+    await runYieldSupplementalSlot(runtime);
     expect(mocks.syncYieldSupplemental).toHaveBeenCalledWith(
       runtime.db, signal, runtime.chainRpcs, reportProgress,
       expect.objectContaining({ enabled: false }),
-      expect.objectContaining({ pendleApiKey: "pendle-test-key" }),
+    );
+  });
+
+  it("runs the hourly supplemental catch-up with the marker-age gate only", async () => {
+    const { runtime, signal, reportProgress } = buildRuntime();
+    await runHourlyYieldSlot(runtime);
+    expect(mocks.syncYieldSupplemental).toHaveBeenCalledWith(
+      runtime.db, signal, runtime.chainRpcs, reportProgress,
+      expect.objectContaining({ enabled: false }),
+      { catchUpMinMarkerAgeSec: SUPPLEMENTAL_CATCH_UP_MIN_MARKER_AGE_SEC },
     );
   });
 
@@ -92,7 +96,7 @@ describe("runHourlyYieldSlot", () => {
       runtime.chainRpcs,
       reportProgress,
       expect.objectContaining({ enabled: false }),
-      { catchUpMinMarkerAgeSec: SUPPLEMENTAL_CATCH_UP_MIN_MARKER_AGE_SEC, pendleApiKey: undefined },
+      { catchUpMinMarkerAgeSec: SUPPLEMENTAL_CATCH_UP_MIN_MARKER_AGE_SEC },
     );
     expect(mocks.fetchTbillRate).toHaveBeenCalledWith(runtime.db, signal, runtime.env, {
       minRegistryAgeSec: HOURLY_TBILL_MIN_REGISTRY_AGE_SEC,

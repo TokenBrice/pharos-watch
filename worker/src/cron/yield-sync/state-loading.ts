@@ -18,28 +18,27 @@ import {
 import { DETERMINISTIC_ONCHAIN_COOLDOWN_SEC } from "./cache/normalization";
 import {
   getYieldSupplementalRunOutcomeCacheKey,
-  parseYieldSupplementalRunOutcome,
+  parseYieldSupplementalRunOutcomeDetailed,
+  getYieldSupplementalPendleBackoffCacheKey,
+  parseYieldSupplementalPendleBackoff,
+  PENDLE_RATE_LIMIT_BACKOFF_REASON,
 } from "./cache/supplemental-cache-keys";
-import { SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS } from "../../lib/yield-ranking-helpers";
 import { fetchOnChainRates, loadDlStablecoinPools, loadRiskFreeRateRegistry } from "./sources";
 import {
   loadStablecoinSupplyMapFromCacheValue,
   type StablecoinSupplyMapLoadResult,
   type StablecoinSupplyMapState,
 } from "./supply-map";
+import { getSupplementalFamilyStaleThresholdSec } from "./supplemental-source-families";
 import {
   REQUIRED_SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
   SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
-} from "./supplemental-source-families";
-import type { SupplementalSourceFamilyKey } from "./supplemental-source-family-keys";
+  type SupplementalSourceFamilyKey,
+} from "./supplemental-source-family-keys";
 import type { ResolvedYieldCandidate } from "./types";
 
 const MIN_SAFETY_SCORE_COVERAGE_RATIO = 0.75;
 const DETERMINISTIC_ONCHAIN_HEALTH_CACHE_KEY = "yield:onchain-health:v1";
-// B9: cache acceptance shares the cadence-derived supplemental staleness bound
-// (`CRON_INTERVALS["sync-yield-supplemental"] * 1.5`) with the row-freshness
-// contract and the status panel, instead of the older 12h literal.
-const YIELD_SUPPLEMENTAL_MAX_AGE_SEC = SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS / 1000;
 const DETERMINISTIC_ONCHAIN_COOLDOWN_THRESHOLD = 2;
 
 export interface YieldSupplementalCacheMeta {
@@ -54,6 +53,12 @@ export interface YieldSupplementalCacheMeta {
    * when no run outcome is stored yet.
    */
   degradedFamilies: string[];
+  /**
+   * PENDLE-RL (R4): machine-readable cause per degraded family from the
+   * run-outcome row (e.g. `pendle-rate-limited-backoff`). Rows written before
+   * the field existed parse as no reasons.
+   */
+  degradedFamilyReasons?: Partial<Record<string, string>>;
 }
 
 export interface YieldSyncLoadedState {
@@ -104,10 +109,13 @@ async function loadYieldSupplementalCandidates(
     [
       ...SUPPLEMENTAL_SOURCE_FAMILY_KEYS.map((family) => getYieldSupplementalFamilyCacheKey(family)),
       runOutcomeCacheKey,
+      getYieldSupplementalPendleBackoffCacheKey(),
     ],
   );
   const runOutcomeRow = familyCacheRows.get(runOutcomeCacheKey) ?? null;
-  const degradedFamilies = runOutcomeRow ? parseYieldSupplementalRunOutcome(runOutcomeRow.value) : [];
+  const runOutcome = runOutcomeRow ? parseYieldSupplementalRunOutcomeDetailed(runOutcomeRow.value) : null;
+  const degradedFamilies = runOutcome?.degradedFamilies ?? [];
+  const degradedFamilyReasons = runOutcome?.degradedFamilyReasons ?? {};
   for (const family of SUPPLEMENTAL_SOURCE_FAMILY_KEYS) {
     const cachedFamily = familyCacheRows.get(getYieldSupplementalFamilyCacheKey(family)) ?? null;
     if (!cachedFamily) continue;
@@ -121,7 +129,7 @@ async function loadYieldSupplementalCandidates(
       if (requiredFamily) degradedRequiredFamilyCaches += 1;
       continue;
     }
-    if (parsedFamily.ageSeconds > YIELD_SUPPLEMENTAL_MAX_AGE_SEC) {
+    if (parsedFamily.ageSeconds > getSupplementalFamilyStaleThresholdSec(family)) {
       staleFamilyCacheRows += 1;
       if (requiredFamily) degradedRequiredFamilyCaches += 1;
       continue;
@@ -129,6 +137,16 @@ async function loadYieldSupplementalCandidates(
     validFamilyKeys.add(family);
     familyCandidates.push(...parsedFamily.candidates);
     latestFamilyUpdatedAt = Math.max(latestFamilyUpdatedAt ?? 0, parsedFamily.updatedAt);
+  }
+  // Backoff can outlive a clean producer run. Re-evaluate it hourly as the
+  // retained row crosses its budget, without waiting for another fetch slot.
+  const pendleBackoff = parseYieldSupplementalPendleBackoff(
+    familyCacheRows.get(getYieldSupplementalPendleBackoffCacheKey())?.value,
+    startSec,
+  );
+  if (pendleBackoff && !validFamilyKeys.has("pendle")) {
+    if (!degradedFamilies.includes("pendle")) degradedFamilies.push("pendle");
+    degradedFamilyReasons.pendle = PENDLE_RATE_LIMIT_BACKOFF_REASON;
   }
 
   if (validFamilyKeys.size > 0) {
@@ -149,6 +167,7 @@ async function loadYieldSupplementalCandidates(
         sourceCount: candidates.length,
         fallbackMode,
         degradedFamilies,
+        degradedFamilyReasons,
       },
     };
   }
@@ -167,6 +186,7 @@ async function loadYieldSupplementalCandidates(
             ? "invalid-cache"
             : "stale-cache",
       degradedFamilies,
+      degradedFamilyReasons,
     },
   };
 }

@@ -3,6 +3,7 @@ import {
   COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
   LONG_HORIZON_COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
   PRICE_DERIVED_STALE_THRESHOLD_MS,
+  PENDLE_SUPPLEMENTAL_STALE_THRESHOLD_MS,
   RATE_DERIVED_STALE_THRESHOLD_MS,
   SLOW_NAV_SOURCE_STALE_THRESHOLD_MS,
   STALE_THRESHOLD_MS,
@@ -41,8 +42,14 @@ describe("getRankingStaleThresholdMs", () => {
   });
 
   it("uses the supplemental threshold for protocol-api rows", () => {
-    expect(getRankingStaleThresholdMs("protocol-api", "protocol-api:pendle:ethereum:0xpool")).toBe(
+    expect(getRankingStaleThresholdMs("protocol-api", "protocol-api:morpho-vault:ethereum:0xvault")).toBe(
       SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS,
+    );
+  });
+
+  it("uses the daily pendle budget for pendle rows", () => {
+    expect(getRankingStaleThresholdMs("protocol-api", "protocol-api:pendle:ethereum:0xpool")).toBe(
+      PENDLE_SUPPLEMENTAL_STALE_THRESHOLD_MS,
     );
   });
 

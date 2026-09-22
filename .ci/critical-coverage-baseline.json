@@ -146,6 +146,7 @@
     "worker/src/lib/authoritative-price-sources/protocol-par.ts": 87.1,
     "worker/src/lib/authoritative-price-sources/protocol-redeem-provider.ts": 100,
     "worker/src/lib/authoritative-price-sources/rate-cache.ts": 100,
+    "worker/src/lib/authoritative-price-sources/usdaf-uniswap-v4.ts": 98.3,
     "worker/src/lib/authoritative-price-sources/usdv-jupiter.ts": 97,
     "worker/src/lib/blacklist-contracts.ts": 98,
     "worker/src/lib/blacklist-summary-service.ts": 100,

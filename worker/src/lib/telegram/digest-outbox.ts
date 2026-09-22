@@ -34,6 +34,14 @@ import {
 export const TELEGRAM_DIGEST_OUTBOX_CLAIM_TTL_SEC = 120;
 const TELEGRAM_DIGEST_OUTBOX_DRAIN_LIMIT = 4;
 const TELEGRAM_DIGEST_OUTBOX_SENT_RETENTION_SEC = 90 * 86_400;
+/**
+ * Operator-review window for retained terminal rows. `execution_unknown` /
+ * `failed_permanent` rows updated within this window keep the
+ * `telegram-digest-outbox-drain` surface degraded; older rows stay in the table
+ * for audit (the runbook forbids resetting them) and remain visible through the
+ * drain summary's all-time totals, but no longer degrade the surface.
+ */
+const TELEGRAM_DIGEST_OUTBOX_TERMINAL_REVIEW_SEC = 7 * 86_400;
 const TELEGRAM_DIGEST_OUTBOX_MAX_SUCCESS_ACTIONS = 20;
 const TELEGRAM_DIGEST_OUTBOX_MAX_BACKOFF_SEC = 60 * 60;
 const SAFETY_MAP_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -139,8 +147,12 @@ export interface TelegramDigestOutboxDrainSummary {
   failedPermanent: number;
   skipped: number;
   staleSendingReconciled: number;
+  /** Terminal rows updated within the operator-review window; these degrade the drain surface. */
   retainedExecutionUnknown: number;
   retainedFailedPermanent: number;
+  /** All-time retained terminal rows; audit visibility only, never degrades the drain surface. */
+  retainedExecutionUnknownTotal: number;
+  retainedFailedPermanentTotal: number;
   prunedSent: number;
 }
 
@@ -973,20 +985,34 @@ async function listDueEditionKeys(
   return (result.results ?? []).map((row) => row.edition_key);
 }
 
+interface TelegramDigestOutboxTerminalCounts {
+  execution_unknown_review_count: number;
+  failed_permanent_review_count: number;
+  execution_unknown_total_count: number;
+  failed_permanent_total_count: number;
+}
+
 async function countTerminalRows(
   db: D1Database,
-): Promise<{ execution_unknown_count: number; failed_permanent_count: number }> {
+  nowSec: number,
+): Promise<TelegramDigestOutboxTerminalCounts> {
+  const reviewCutoffSec = nowSec - TELEGRAM_DIGEST_OUTBOX_TERMINAL_REVIEW_SEC;
   return (await db
     .prepare(
       `SELECT
-         SUM(CASE WHEN state = 'execution_unknown' THEN 1 ELSE 0 END) AS execution_unknown_count,
-         SUM(CASE WHEN state = 'failed_permanent' THEN 1 ELSE 0 END) AS failed_permanent_count
+         SUM(CASE WHEN state = 'execution_unknown' AND updated_at >= ? THEN 1 ELSE 0 END) AS execution_unknown_review_count,
+         SUM(CASE WHEN state = 'failed_permanent' AND updated_at >= ? THEN 1 ELSE 0 END) AS failed_permanent_review_count,
+         SUM(CASE WHEN state = 'execution_unknown' THEN 1 ELSE 0 END) AS execution_unknown_total_count,
+         SUM(CASE WHEN state = 'failed_permanent' THEN 1 ELSE 0 END) AS failed_permanent_total_count
        FROM telegram_digest_outbox
        WHERE state IN ('execution_unknown', 'failed_permanent')`,
     )
-    .first<{ execution_unknown_count: number; failed_permanent_count: number }>()) ?? {
-      execution_unknown_count: 0,
-      failed_permanent_count: 0,
+    .bind(reviewCutoffSec, reviewCutoffSec)
+    .first<TelegramDigestOutboxTerminalCounts>()) ?? {
+      execution_unknown_review_count: 0,
+      failed_permanent_review_count: 0,
+      execution_unknown_total_count: 0,
+      failed_permanent_total_count: 0,
     };
 }
 
@@ -1030,6 +1056,8 @@ export async function drainTelegramDigestOutbox(
     staleSendingReconciled,
     retainedExecutionUnknown: 0,
     retainedFailedPermanent: 0,
+    retainedExecutionUnknownTotal: 0,
+    retainedFailedPermanentTotal: 0,
     prunedSent: 0,
   };
   for (const editionKey of editionKeys) {
@@ -1065,9 +1093,11 @@ export async function drainTelegramDigestOutbox(
     else if (result.outcome === "failed_permanent") summary.failedPermanent++;
     else summary.skipped++;
   }
-  const terminal = await countTerminalRows(db);
-  summary.retainedExecutionUnknown = Number(terminal.execution_unknown_count ?? 0);
-  summary.retainedFailedPermanent = Number(terminal.failed_permanent_count ?? 0);
+  const terminal = await countTerminalRows(db, nowSec);
+  summary.retainedExecutionUnknown = Number(terminal.execution_unknown_review_count ?? 0);
+  summary.retainedFailedPermanent = Number(terminal.failed_permanent_review_count ?? 0);
+  summary.retainedExecutionUnknownTotal = Number(terminal.execution_unknown_total_count ?? 0);
+  summary.retainedFailedPermanentTotal = Number(terminal.failed_permanent_total_count ?? 0);
   summary.prunedSent = await pruneSentRows(db, nowSec);
   return summary;
 }
