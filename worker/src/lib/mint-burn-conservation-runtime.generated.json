@@ -478,6 +478,15 @@
     },
     {
       "chainId": "ethereum",
+      "stablecoinId": "mtbill-midas",
+      "address": "0xdd629e5241cbc5919847783e6c96b2de4754e438",
+      "decimals": 18,
+      "disposition": "admitted",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply"
+    },
+    {
+      "chainId": "ethereum",
       "stablecoinId": "musd-metamask",
       "address": "0xaca92e438df0b2401ff60da7e4337b687a2435da",
       "decimals": 6,
@@ -498,6 +507,15 @@
       "chainId": "ethereum",
       "stablecoinId": "nusd-neutrl",
       "address": "0xe556aba6fe6036275ec1f87eda296be72c811bce",
+      "decimals": 18,
+      "disposition": "admitted",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "ousg-ondo-finance",
+      "address": "0x1b19c19393e2d034d8ff31ff34c81252fcbbee92",
       "decimals": 18,
       "disposition": "admitted",
       "eventSet": "transfer",
@@ -616,10 +634,57 @@
     },
     {
       "chainId": "ethereum",
+      "stablecoinId": "sbold-k3-capital",
+      "address": "0x50bd66d59911f5e086ec87ae43c811e0d059dd11",
+      "decimals": 18,
+      "disposition": "admitted",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply"
+    },
+    {
+      "chainId": "ethereum",
       "stablecoinId": "stcusd-cap",
       "address": "0x88887be419578051ff9f4eb6c858a951921d8888",
       "decimals": 18,
       "disposition": "admitted",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "stkgho-umbrella-aave",
+      "address": "0x4f827a63755855cdf3e8f3bcd20265c833f15033",
+      "decimals": 18,
+      "disposition": "admitted",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "stusds-sky",
+      "address": "0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9",
+      "decimals": 18,
+      "disposition": "admitted",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "syrupusdc-maple",
+      "address": "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
+      "decimals": 6,
+      "disposition": "unsupported",
+      "unsupportedReason": "zero-address-transfer-without-supply-change:transfer",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "syrupusdt-maple",
+      "address": "0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d",
+      "decimals": 6,
+      "disposition": "unsupported",
+      "unsupportedReason": "zero-address-transfer-without-supply-change:transfer",
       "eventSet": "transfer",
       "invariant": "transfer-supply"
     },
@@ -637,6 +702,15 @@
       "stablecoinId": "tgbp-tokenised",
       "address": "0x27f6c8289550fce67f6b50bed1f519966afe5287",
       "decimals": 18,
+      "disposition": "admitted",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "thbill-theo",
+      "address": "0x5fa487bca6158c64046b2813623e20755091da0b",
+      "decimals": 6,
       "disposition": "admitted",
       "eventSet": "transfer",
       "invariant": "transfer-supply"
@@ -935,6 +1009,25 @@
     },
     {
       "chainId": "ethereum",
+      "stablecoinId": "ustb-superstate",
+      "address": "0x43415eb6ff9db7e26a15b704e7a3edce97d31c4e",
+      "decimals": 6,
+      "disposition": "admitted",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "usyc-hashnote",
+      "address": "0x136471a34f6ef19fe571effc1ca711fdb8e49f2b",
+      "decimals": 6,
+      "disposition": "unsupported",
+      "unsupportedReason": "zero-address-transfer-without-supply-change:transferFrom",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply"
+    },
+    {
+      "chainId": "ethereum",
       "stablecoinId": "vchf-vnx",
       "address": "0x79d4f0232a66c4c91b89c76362016a1707cfbf4f",
       "decimals": 18,
@@ -947,6 +1040,15 @@
       "stablecoinId": "wm-m0",
       "address": "0x437cc33344a0b27a429f795ff6b469c72698b291",
       "decimals": 6,
+      "disposition": "admitted",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "wsrusd-reservoir",
+      "address": "0xd3fd63209fa2d55b07a0f6db36c2f43900be3094",
+      "decimals": 18,
       "disposition": "admitted",
       "eventSet": "transfer",
       "invariant": "transfer-supply"
@@ -993,6 +1095,16 @@
       "address": "0xc08e7e23c235073c6807c2efe7021304cb7c2815",
       "decimals": 6,
       "disposition": "admitted",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "ybold-yearn",
+      "address": "0x9f4330700a36b29952869fac9b33f45eedd8a3d8",
+      "decimals": 18,
+      "disposition": "unsupported",
+      "unsupportedReason": "total-supply-override",
       "eventSet": "transfer",
       "invariant": "transfer-supply"
     },

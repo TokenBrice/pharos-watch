@@ -5096,6 +5096,100 @@
     },
     {
       "chainId": "ethereum",
+      "stablecoinId": "mtbill-midas",
+      "address": "0xdd629e5241cbc5919847783e6c96b2de4754e438",
+      "decimals": 18,
+      "disposition": "admitted",
+      "unsupportedReason": null,
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "identity": {
+        "explorerSourceUrl": "https://eth.blockscout.com/address/0xdd629e5241cbc5919847783e6c96b2de4754e438?tab=contract",
+        "sourceVerified": true,
+        "contractName": "TransparentUpgradeableProxy",
+        "proxy": {
+          "isProxy": true,
+          "kind": "eip1967",
+          "implementation": "0xd4998cc1ba435298c521f250b81856b1f25c8455",
+          "implementationSourceVerified": true
+        },
+        "externalMatches": [
+          {
+            "source": "coingecko",
+            "geckoId": "midas-mtbill",
+            "value": "0xdd629e5241cbc5919847783e6c96b2de4754e438",
+            "matches": true,
+            "decimalPlace": 18
+          }
+        ],
+        "onChain": {
+          "block": 26035736,
+          "blockHash": "0x5a0260f2b3dc7d05c716870e17bfb5b725961394808f1d18360c1654dddc79d4",
+          "decimals": 18,
+          "symbol": "mTBILL",
+          "totalSupplyRaw": "67518631197209964028845500",
+          "hasCode": true
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "mint(address,uint256)",
+          "internal": "_mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "mTBILL.sol:41-46 M_TBILL_MINT_OPERATOR_ROLE invokes OZ ERC20Upgradeable._mint L256-268; supply increase and Transfer(0,to,amount) are identical."
+        },
+        {
+          "function": "burn(address,uint256)",
+          "internal": "_burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "mTBILL.sol:51-56 M_TBILL_BURN_OPERATOR_ROLE invokes OZ ERC20Upgradeable._burn L282-298; supply decrease and Transfer(from,0,amount) are identical."
+        }
+      ],
+      "unpairedPaths": [],
+      "totalSupplyView": {
+        "isStoredSum": true,
+        "note": "ERC20Upgradeable.sol:99-101 returns stored _totalSupply. No mTBILL override, NAV index, or reserve subtraction."
+      },
+      "zeroRecipientTransferReverts": true,
+      "identityIssue": null,
+      "notes": "Stored NAV-share token; off-token fund NAV affects value, not balances or totalSupply. No treasury fee-share accrual or management-fee inflation routine exists in this token implementation. initialize/initializeV2 L29-36 only initialize metadata/access; they do not reset supply. mTBILL._beforeTokenTransfer L94-104 and ERC20PausableUpgradeable._beforeTokenTransfer only enforce blacklist/pause checks. _transfer L227-244 rejects zero endpoints; all zero-address Transfer emissions occur in paired _mint/_burn. Transparent upgradeable proxy; implementation verified and EIP-1967-slot confirmed. Verified implementation/source: https://eth.blockscout.com/address/0xd4998cc1ba435298c521f250b81856b1f25c8455?tab=contract (mTBILL). Source bundle captured via https://eth.blockscout.com/api/v2/smart-contracts/0xd4998cc1ba435298c521f250b81856b1f25c8455; response SHA-256 9e54d26d7f7bd592cf2a11cad26f0d86ad069f5c409475120e39b2773038c591. Local evidence: admission/research-A42/mtbill-midas/ and bs_0xd4998cc1ba435298c521f250b81856b1f25c8455.json; CoinGecko response cg_mtbill-midas.json. On-chain identity reads were eth_call pinned to blockHash; code was confirmed with eth_getCode at the same hash and block-number header hash rechecked successfully. No claim of historical two-window conservation is made by this semantic-only review.",
+      "windows": [
+        {
+          "fromBlock": 26028679,
+          "fromBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "fromTimestamp": 1790027531,
+          "toBlock": 26035829,
+          "toBlockHash": "0x4df831986cf42d63dedd9b7a8fc200634d7447a170a79d7286de98c8fbc3df4c",
+          "toTimestamp": 1790113931,
+          "mintRaw": "5998330294775123398",
+          "burnRaw": "1655157373973867519699",
+          "supplyDeltaRaw": "-1649159043679092396301",
+          "residualRaw": "0",
+          "logCount": 14,
+          "journalSha256": "9d19142d8aae5f0a1d12dc222d4bc873afe2be5d0e63930bfc0096fd14d48791"
+        },
+        {
+          "fromBlock": 26021533,
+          "fromBlockHash": "0x27c4caf42458c180212f9670de38e6bb407a9c566c4ff10ce88cab9980ede229",
+          "fromTimestamp": 1789941131,
+          "toBlock": 26028679,
+          "toBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "toTimestamp": 1790027531,
+          "mintRaw": "17371813425751668114871",
+          "burnRaw": "194852084379828095524399",
+          "supplyDeltaRaw": "-177480270954076427409528",
+          "residualRaw": "0",
+          "logCount": 4,
+          "journalSha256": "9d19142d8aae5f0a1d12dc222d4bc873afe2be5d0e63930bfc0096fd14d48791"
+        }
+      ],
+      "reviewedAt": "2026-09-22",
+      "reviewer": "SemA42"
+    },
+    {
+      "chainId": "ethereum",
       "stablecoinId": "musd-metamask",
       "address": "0xaca92e438df0b2401ff60da7e4337b687a2435da",
       "decimals": 6,
@@ -5382,6 +5476,114 @@
       ],
       "reviewedAt": "2026-09-22",
       "reviewer": "SemA33"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "ousg-ondo-finance",
+      "address": "0x1b19c19393e2d034d8ff31ff34c81252fcbbee92",
+      "decimals": 18,
+      "disposition": "admitted",
+      "unsupportedReason": null,
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "identity": {
+        "explorerSourceUrl": "https://eth.blockscout.com/address/0x1b19c19393e2d034d8ff31ff34c81252fcbbee92?tab=contract",
+        "sourceVerified": true,
+        "contractName": "TokenProxy",
+        "proxy": {
+          "isProxy": true,
+          "kind": "eip1967",
+          "implementation": "0x1ceb44b6e515abf009e0ccb6ddafd723886cf3ff",
+          "implementationSourceVerified": true
+        },
+        "externalMatches": [
+          {
+            "source": "coingecko",
+            "geckoId": "ousg",
+            "value": "0x1b19c19393e2d034d8ff31ff34c81252fcbbee92",
+            "matches": true,
+            "decimalPlace": 18
+          }
+        ],
+        "onChain": {
+          "block": 26035736,
+          "blockHash": "0x5a0260f2b3dc7d05c716870e17bfb5b725961394808f1d18360c1654dddc79d4",
+          "decimals": 18,
+          "symbol": "OUSG",
+          "totalSupplyRaw": "1063636234993244779260542",
+          "hasCode": true
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "mint(address,uint256)",
+          "internal": "_mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "ERC20PresetMinterPauserUpgradeable.sol:81-87 MINTER_ROLE path; ERC20Upgradeable.sol:306-315 adds amount to _totalSupply and emits Transfer(0,account,amount)."
+        },
+        {
+          "function": "burn(uint256)",
+          "internal": "_burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "ERC20BurnableUpgradeable.sol:29-31; ERC20Upgradeable.sol:329-343 subtracts amount and emits Transfer(account,0,amount)."
+        },
+        {
+          "function": "burnFrom(address,uint256)",
+          "internal": "_burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "ERC20BurnableUpgradeable.sol:44-46 spends allowance then invokes the paired _burn."
+        },
+        {
+          "function": "burn(address,uint256)",
+          "internal": "_burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "CashKYCSenderReceiver.sol:87-89 BURNER_ROLE administrative burn invokes the same paired _burn."
+        }
+      ],
+      "unpairedPaths": [],
+      "totalSupplyView": {
+        "isStoredSum": true,
+        "note": "ERC20Upgradeable.sol:110-112 returns stored _totalSupply; CashKYCSenderReceiver has no override or share-index conversion."
+      },
+      "zeroRecipientTransferReverts": true,
+      "identityIssue": null,
+      "notes": "NAV share token with ordinary stored ERC20 balances, not rOUSG. KYC/pause hooks only constrain transitions; CashKYCSenderReceiver._beforeTokenTransfer L58-85 performs checks and delegates to the pause hook, without supply mutation. No fee-accrual mint, treasury inflation, wipe-without-event, rebasing, or index-adjusted supply path exists in this implementation. ERC20Upgradeable._transfer L275-295 rejects zero sender/recipient; only _mint/_burn emit zero-address Transfers. TokenProxy inherits TransparentUpgradeableProxy; current delegate implementation is verified and matches the pinned EIP-1967 slot. Verified implementation/source: https://eth.blockscout.com/address/0x1ceb44b6e515abf009e0ccb6ddafd723886cf3ff?tab=contract (CashKYCSenderReceiver). Source bundle captured via https://eth.blockscout.com/api/v2/smart-contracts/0x1ceb44b6e515abf009e0ccb6ddafd723886cf3ff; response SHA-256 e49df1e4eda27628d0243b2de7536889794b6df2d1153a38c1796d148aafdf45. Local evidence: admission/research-A42/ousg-ondo-finance/ and bs_0x1ceb44b6e515abf009e0ccb6ddafd723886cf3ff.json; CoinGecko response cg_ousg-ondo-finance.json. On-chain identity reads were eth_call pinned to blockHash; code was confirmed with eth_getCode at the same hash and block-number header hash rechecked successfully. No claim of historical two-window conservation is made by this semantic-only review.",
+      "windows": [
+        {
+          "fromBlock": 26028679,
+          "fromBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "fromTimestamp": 1790027531,
+          "toBlock": 26035829,
+          "toBlockHash": "0x4df831986cf42d63dedd9b7a8fc200634d7447a170a79d7286de98c8fbc3df4c",
+          "toTimestamp": 1790113931,
+          "mintRaw": "0",
+          "burnRaw": "68588000000000000000000",
+          "supplyDeltaRaw": "-68588000000000000000000",
+          "residualRaw": "0",
+          "logCount": 1,
+          "journalSha256": "9d19142d8aae5f0a1d12dc222d4bc873afe2be5d0e63930bfc0096fd14d48791"
+        },
+        {
+          "fromBlock": 26021533,
+          "fromBlockHash": "0x27c4caf42458c180212f9670de38e6bb407a9c566c4ff10ce88cab9980ede229",
+          "fromTimestamp": 1789941131,
+          "toBlock": 26028679,
+          "toBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "toTimestamp": 1790027531,
+          "mintRaw": "38593417495413998955091",
+          "burnRaw": "68651000000000000000000",
+          "supplyDeltaRaw": "-30057582504586001044909",
+          "residualRaw": "0",
+          "logCount": 3,
+          "journalSha256": "9d19142d8aae5f0a1d12dc222d4bc873afe2be5d0e63930bfc0096fd14d48791"
+        }
+      ],
+      "reviewedAt": "2026-09-22",
+      "reviewer": "SemA42"
     },
     {
       "chainId": "ethereum",
@@ -6575,6 +6777,114 @@
     },
     {
       "chainId": "ethereum",
+      "stablecoinId": "sbold-k3-capital",
+      "address": "0x50bd66d59911f5e086ec87ae43c811e0d059dd11",
+      "decimals": 18,
+      "disposition": "admitted",
+      "unsupportedReason": null,
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "identity": {
+        "explorerSourceUrl": "https://eth.blockscout.com/address/0x50bd66d59911f5e086ec87ae43c811e0d059dd11?tab=contract",
+        "sourceVerified": true,
+        "contractName": "sBold",
+        "proxy": {
+          "isProxy": false,
+          "kind": "none",
+          "implementation": null,
+          "implementationSourceVerified": false
+        },
+        "externalMatches": [
+          {
+            "source": "coingecko",
+            "geckoId": "sbold-by-k3-capital",
+            "value": "0x50bd66d59911f5e086ec87ae43c811e0d059dd11",
+            "matches": true,
+            "decimalPlace": 18
+          }
+        ],
+        "onChain": {
+          "block": 26035742,
+          "blockHash": "0xf725c3627c5419a1b02b8bbb64cdd21f60e79aaa43a37946a1c443a608a6008d",
+          "decimals": 18,
+          "symbol": "sBOLD",
+          "totalSupplyRaw": "3982841019283038394018043",
+          "hasCode": true
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "constructor",
+          "internal": "ERC4626.deposit -> _deposit -> ERC20._mint/_update",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "sBold.sol:28-37 seeds dead shares via super.deposit(10**decimals(),address(this)), not a direct supply write."
+        },
+        {
+          "function": "deposit(uint256,address)",
+          "internal": "ERC4626._deposit -> ERC20._mint/_update",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "sBold.sol:47-67 calls _deposit at L60. OZ ERC4626._deposit:239-251 mints shares; ERC20._update:183-211 increases _totalSupply and emits the identical value."
+        },
+        {
+          "function": "mint(uint256,address)",
+          "internal": "ERC4626._deposit -> ERC20._mint/_update",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "sBold.sol:73-93 calls _deposit at L86 with requested shares."
+        },
+        {
+          "function": "redeem(uint256,address,address); withdraw(uint256,address,address)",
+          "internal": "ERC4626._withdraw -> ERC20._burn/_update",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "sBold.sol:100-141 calls inherited _withdraw; ERC4626._withdraw:256-276 burns shares, then transfers underlying; ERC20._update:198-210 subtracts exactly emitted value."
+        }
+      ],
+      "unpairedPaths": [],
+      "totalSupplyView": {
+        "isStoredSum": true,
+        "note": "OZ ERC20.totalSupply:85-87 returns private _totalSupply; sBold/BaseSBold do not override it. All writes are ERC20._update:183-211."
+      },
+      "zeroRecipientTransferReverts": true,
+      "identityIssue": null,
+      "notes": "Source: https://eth.blockscout.com/api/v2/smart-contracts/0x50bd66d59911f5e086ec87ae43c811e0d059dd11; source_code SHA-256 b7b7dd1907096633b3f244aba0308962edf33233fbd4b90fc1b1b8463ce75987. Raw responses and extracted source retained under admission/scratch/SemA41/. All identity calls use EIP-1898 blockHash 0xf725c3627c5419a1b02b8bbb64cdd21f60e79aaa43a37946a1c443a608a6008d at block 26035742. ERC4626 share token, not index-based balances. sBold.deposit/mint collect entry fees as underlying BOLD transferred to vault (L56-64,82-90); swap sends underlying swap fees/rewards (L146-166). Neither fees nor management settings mint silent treasury shares. totalAssets/_calcFragments and _getSBoldRateWithRounding change conversion pricing only. BaseSBold setters change configuration, not supply. ERC20._transfer:166-174 rejects zero sender/recipient. CoinGecko address and decimals exactly match.",
+      "windows": [
+        {
+          "fromBlock": 26028679,
+          "fromBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "fromTimestamp": 1790027531,
+          "toBlock": 26035829,
+          "toBlockHash": "0x4df831986cf42d63dedd9b7a8fc200634d7447a170a79d7286de98c8fbc3df4c",
+          "toTimestamp": 1790113931,
+          "mintRaw": "0",
+          "burnRaw": "13596587962813729589",
+          "supplyDeltaRaw": "-13596587962813729589",
+          "residualRaw": "0",
+          "logCount": 1,
+          "journalSha256": "9d19142d8aae5f0a1d12dc222d4bc873afe2be5d0e63930bfc0096fd14d48791"
+        },
+        {
+          "fromBlock": 26021533,
+          "fromBlockHash": "0x27c4caf42458c180212f9670de38e6bb407a9c566c4ff10ce88cab9980ede229",
+          "fromTimestamp": 1789941131,
+          "toBlock": 26028679,
+          "toBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "toTimestamp": 1790027531,
+          "mintRaw": "67527949788643814271782",
+          "burnRaw": "24061385501865415518695",
+          "supplyDeltaRaw": "43466564286778398753087",
+          "residualRaw": "0",
+          "logCount": 7,
+          "journalSha256": "9d19142d8aae5f0a1d12dc222d4bc873afe2be5d0e63930bfc0096fd14d48791"
+        }
+      ],
+      "reviewedAt": "2026-09-22",
+      "reviewer": "SemA41"
+    },
+    {
+      "chainId": "ethereum",
       "stablecoinId": "stcusd-cap",
       "address": "0x88887be419578051ff9f4eb6c858a951921d8888",
       "decimals": 18,
@@ -6680,6 +6990,379 @@
       ],
       "reviewedAt": "2026-09-22",
       "reviewer": "SemA25"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "stkgho-umbrella-aave",
+      "address": "0x4f827a63755855cdf3e8f3bcd20265c833f15033",
+      "decimals": 18,
+      "disposition": "admitted",
+      "unsupportedReason": null,
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "identity": {
+        "explorerSourceUrl": "https://eth.blockscout.com/address/0x4f827a63755855cdf3e8f3bcd20265c833f15033?tab=contract",
+        "sourceVerified": true,
+        "contractName": "TransparentUpgradeableProxy",
+        "proxy": {
+          "isProxy": true,
+          "kind": "eip1967",
+          "implementation": "0x75e8ac0c063b6966e2a9954adedf39bde9370197",
+          "implementationSourceVerified": true
+        },
+        "externalMatches": [
+          {
+            "source": "coingecko",
+            "geckoId": null,
+            "value": null,
+            "matches": false,
+            "decimalPlace": null
+          }
+        ],
+        "onChain": {
+          "block": 26035742,
+          "blockHash": "0xf725c3627c5419a1b02b8bbb64cdd21f60e79aaa43a37946a1c443a608a6008d",
+          "decimals": 18,
+          "symbol": "stkGHO.v1",
+          "totalSupplyRaw": "2158237993531472555888610",
+          "hasCode": true
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "deposit(uint256,address); depositWithPermit(uint256,address,uint256,SignatureParams)",
+          "internal": "ERC4626StakeTokenUpgradeable._deposit -> ERC4626Upgradeable._deposit -> ERC20Upgradeable._mint/_update",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "StakeToken.depositWithPermit:71-90; ERC4626Upgradeable.deposit:194-204/_deposit:262-275; ERC4626StakeTokenUpgradeable._deposit:185-194 calls super, then adjusts asset accounting. ERC20Upgradeable._update:206-235 adds exactly value and emits Transfer(0,receiver,value)."
+        },
+        {
+          "function": "mint(uint256,address)",
+          "internal": "ERC4626Upgradeable._deposit -> ERC20Upgradeable._mint/_update",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "ERC4626Upgradeable.mint:207-217 -> same share mint path."
+        },
+        {
+          "function": "withdraw(uint256,address,address); redeem(uint256,address,address)",
+          "internal": "ERC4626StakeTokenUpgradeable._withdraw -> ERC4626Upgradeable._withdraw -> ERC20Upgradeable._burn/_update",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "ERC4626Upgradeable:220-242,280-301; _burn:260-265 -> _update subtracts value and emits Transfer(owner,0,value)."
+        }
+      ],
+      "unpairedPaths": [],
+      "totalSupplyView": {
+        "isStoredSum": true,
+        "note": "ERC20Upgradeable.totalSupply:105-107 returns ERC20Storage._totalSupply; no override in UmbrellaStakeToken, StakeToken, or ERC4626StakeTokenUpgradeable."
+      },
+      "zeroRecipientTransferReverts": true,
+      "identityIssue": "no-external-match: config has no CoinGecko geckoId; verified implementation and pinned on-chain name/symbol identify Umbrella Stake Gho Token v1 (stkGHO.v1).",
+      "notes": "Source: https://eth.blockscout.com/api/v2/smart-contracts/0x75e8ac0c063b6966e2a9954adedf39bde9370197; source_code SHA-256 343920131f06169c12f402106f5a72fd5735feb0c5b21a00e4f83fe1ef0328d8. Raw responses and extracted source retained under admission/scratch/SemA41/. All identity calls use EIP-1898 blockHash 0xf725c3627c5419a1b02b8bbb64cdd21f60e79aaa43a37946a1c443a608a6008d at block 26035742. Proxy implementation 0x75e8ac0c063b6966e2a9954adedf39bde9370197 confirmed by the pinned EIP-1967 implementation storage slot. UmbrellaStakeToken inherits StakeToken -> ERC4626StakeTokenUpgradeable and OZ ERC4626Upgradeable/ERC20Upgradeable. StakeToken._update:214-220 and ERC4626StakeTokenUpgradeable._update:233-291 call super with unchanged value; reward controller/cooldown hooks do not rewrite supply. slash/_slash:293-320 reduces _totalAssets and transfers underlying only, preserving share supply. Rewards are separate, not silently minted shares. ERC20Upgradeable._transfer:189-197 rejects zero sender and zero recipient. TransparentUpgradeableProxy is upgradeable; implementation was verified at pinned block.",
+      "windows": [
+        {
+          "fromBlock": 26028679,
+          "fromBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "fromTimestamp": 1790027531,
+          "toBlock": 26035829,
+          "toBlockHash": "0x4df831986cf42d63dedd9b7a8fc200634d7447a170a79d7286de98c8fbc3df4c",
+          "toTimestamp": 1790113931,
+          "mintRaw": "0",
+          "burnRaw": "500000000000000000000",
+          "supplyDeltaRaw": "-500000000000000000000",
+          "residualRaw": "0",
+          "logCount": 1,
+          "journalSha256": "9d19142d8aae5f0a1d12dc222d4bc873afe2be5d0e63930bfc0096fd14d48791"
+        },
+        {
+          "fromBlock": 26021533,
+          "fromBlockHash": "0x27c4caf42458c180212f9670de38e6bb407a9c566c4ff10ce88cab9980ede229",
+          "fromTimestamp": 1789941131,
+          "toBlock": 26028679,
+          "toBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "toTimestamp": 1790027531,
+          "mintRaw": "0",
+          "burnRaw": "177369705556825427702951",
+          "supplyDeltaRaw": "-177369705556825427702951",
+          "residualRaw": "0",
+          "logCount": 3,
+          "journalSha256": "9d19142d8aae5f0a1d12dc222d4bc873afe2be5d0e63930bfc0096fd14d48791"
+        }
+      ],
+      "reviewedAt": "2026-09-22",
+      "reviewer": "SemA41"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "stusds-sky",
+      "address": "0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9",
+      "decimals": 18,
+      "disposition": "admitted",
+      "unsupportedReason": null,
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "identity": {
+        "explorerSourceUrl": "https://eth.blockscout.com/address/0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9?tab=contract",
+        "sourceVerified": true,
+        "contractName": "ERC1967Proxy",
+        "proxy": {
+          "isProxy": true,
+          "kind": "eip1967",
+          "implementation": "0x7a61b7adcfd493f7cf0f86dfcecb94b72c227f22",
+          "implementationSourceVerified": true
+        },
+        "externalMatches": [
+          {
+            "source": "coingecko",
+            "geckoId": null,
+            "value": null,
+            "matches": false,
+            "decimalPlace": null
+          }
+        ],
+        "onChain": {
+          "block": 26035742,
+          "blockHash": "0xf725c3627c5419a1b02b8bbb64cdd21f60e79aaa43a37946a1c443a608a6008d",
+          "decimals": 18,
+          "symbol": "stUSDS",
+          "totalSupplyRaw": "176384863449241656553333905",
+          "hasCode": true
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "deposit(uint256,address); deposit(uint256,address,uint16)",
+          "internal": "StUsds._mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "StUsds.sol:433-440 -> _mint:347-363. Adds shares to totalSupply at L357 and emits Transfer(0,receiver,shares) L362."
+        },
+        {
+          "function": "mint(uint256,address); mint(uint256,address,uint16)",
+          "internal": "StUsds._mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "StUsds.sol:460-468 -> _mint:347-363; same share units, not underlying USDS units."
+        },
+        {
+          "function": "withdraw(uint256,address,address)",
+          "internal": "StUsds._burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "StUsds.sol:488-491 -> _burn:365-395. Subtracts shares at L386, emits Transfer(owner,0,shares) L393."
+        },
+        {
+          "function": "redeem(uint256,address,address)",
+          "internal": "StUsds._burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "StUsds.sol:511-515 -> same _burn."
+        }
+      ],
+      "unpairedPaths": [],
+      "totalSupplyView": {
+        "isStoredSum": true,
+        "note": "StUsds.sol:69 public uint256 totalSupply is the stored share count; only _mint and _burn write it. balanceOf also stores shares."
+      },
+      "zeroRecipientTransferReverts": true,
+      "identityIssue": "no-external-match: config has no CoinGecko geckoId; verified implementation and pinned on-chain name/symbol identify Staked USDS (stUSDS).",
+      "notes": "Source: https://eth.blockscout.com/api/v2/smart-contracts/0x7a61b7adcfd493f7cf0f86dfcecb94b72c227f22; source_code SHA-256 004adbcb70f68d20c54c1dd7917c5b247d51df2b90fff101b9648f2857305bbb. Raw responses and extracted source retained under admission/scratch/SemA41/. All identity calls use EIP-1898 blockHash 0xf725c3627c5419a1b02b8bbb64cdd21f60e79aaa43a37946a1c443a608a6008d at block 26035742. Proxy implementation 0x7a61b7adcfd493f7cf0f86dfcecb94b72c227f22 confirmed by the pinned EIP-1967 implementation storage slot. StUsds._drip (L272-287) grows chi and underlying USDS, not share supply; cut (L250-260) reduces chi/assets, not shares. convertToAssets/convertToShares apply chi only to NAV conversions, so rebaseOrIndex=false refers to token balances/supply, not the asset conversion rate. No fee-share inflation or unpaired treasury mint. transfer L296-308 and transferFrom L311-335 reject zero recipient. UUPS _authorizeUpgrade is ward-authorized (L156); upgradeability is not an admission blocker.",
+      "windows": [
+        {
+          "fromBlock": 26028679,
+          "fromBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "fromTimestamp": 1790027531,
+          "toBlock": 26035829,
+          "toBlockHash": "0x4df831986cf42d63dedd9b7a8fc200634d7447a170a79d7286de98c8fbc3df4c",
+          "toTimestamp": 1790113931,
+          "mintRaw": "85316157959148809094849",
+          "burnRaw": "2062377499874320269698199",
+          "supplyDeltaRaw": "-1977061341915171460603350",
+          "residualRaw": "0",
+          "logCount": 21,
+          "journalSha256": "9d19142d8aae5f0a1d12dc222d4bc873afe2be5d0e63930bfc0096fd14d48791"
+        },
+        {
+          "fromBlock": 26021533,
+          "fromBlockHash": "0x27c4caf42458c180212f9670de38e6bb407a9c566c4ff10ce88cab9980ede229",
+          "fromTimestamp": 1789941131,
+          "toBlock": 26028679,
+          "toBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "toTimestamp": 1790027531,
+          "mintRaw": "1065439166810317402889411",
+          "burnRaw": "2185203483378688988552251",
+          "supplyDeltaRaw": "-1119764316568371585662840",
+          "residualRaw": "0",
+          "logCount": 22,
+          "journalSha256": "9d19142d8aae5f0a1d12dc222d4bc873afe2be5d0e63930bfc0096fd14d48791"
+        }
+      ],
+      "reviewedAt": "2026-09-22",
+      "reviewer": "SemA41"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "syrupusdc-maple",
+      "address": "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
+      "decimals": 6,
+      "disposition": "unsupported",
+      "unsupportedReason": "zero-address-transfer-without-supply-change:transfer",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "identity": {
+        "explorerSourceUrl": "https://eth.blockscout.com/address/0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b?tab=contract",
+        "sourceVerified": true,
+        "contractName": "MaplePool",
+        "proxy": {
+          "isProxy": false,
+          "kind": "none",
+          "implementation": null,
+          "implementationSourceVerified": false
+        },
+        "externalMatches": [
+          {
+            "source": "coingecko",
+            "geckoId": "syrupusdc",
+            "value": "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
+            "matches": true,
+            "decimalPlace": 6
+          }
+        ],
+        "onChain": {
+          "block": 26035742,
+          "blockHash": "0xf725c3627c5419a1b02b8bbb64cdd21f60e79aaa43a37946a1c443a608a6008d",
+          "decimals": 6,
+          "symbol": "syrupUSDC",
+          "totalSupplyRaw": "848946883631231",
+          "hasCode": true
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "constructor",
+          "internal": "ERC20._mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "MaplePool flattened source L953-974 initialSupply mint at L968 -> ERC20._mint L701-708; paired event."
+        },
+        {
+          "function": "deposit; depositWithPermit; mint; mintWithPermit",
+          "internal": "MaplePool._mint -> ERC20._mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "MaplePool L1002-1039 -> _mint L1138-1156 -> ERC20._mint adds amount L702 and emits Transfer(0,recipient,amount) L707. Initial bootstrap branch L1143-1148 can mint to zero (Transfer(0,0,BOOTSTRAP_MINT)); runtime fails closed on ambiguous-zero-transfer."
+        },
+        {
+          "function": "redeem; withdraw",
+          "internal": "MaplePool._burn -> ERC20._burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "MaplePool L1041-1054 -> _burn L1118-1132 -> ERC20._burn L684-691; supply subtraction L688 matches Transfer(owner,0,amount) L690."
+        }
+      ],
+      "unpairedPaths": [
+        {
+          "function": "transfer(address,uint256)",
+          "reason": "MaplePool.transfer L1060-1067 -> ERC20.transfer L649-652 -> _transfer L710-717. Zero recipient permitted: _transfer only moves balances and emits Transfer(owner,recipient,amount), without totalSupply decrement. Pinned positive-amount eth_call transfer(0,1) succeeded."
+        },
+        {
+          "function": "transferFrom(address,address,uint256)",
+          "reason": "MaplePool.transferFrom L1069-1077 -> ERC20.transferFrom L654-658 -> the same _transfer. Given allowance, zero recipient emits apparent burn with no supply change."
+        }
+      ],
+      "totalSupplyView": {
+        "isStoredSum": true,
+        "note": "ERC20 public storage totalSupply L573, only changed in _mint L702 / _burn L688. NAV convertToAssets and totalAssets do not alter share supply; the issue is reverse event pairing."
+      },
+      "zeroRecipientTransferReverts": false,
+      "zeroRecipientTransferBurns": null,
+      "identityIssue": null,
+      "notes": "Source: https://eth.blockscout.com/api/v2/smart-contracts/0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b; source_code SHA-256 9f177bf35f38c6e3cee9d4c3ef23ddbb2708ad4f9b28a11a17c44484eb96d96f. Raw responses and extracted source retained under admission/scratch/SemA41/. All identity calls use EIP-1898 blockHash 0xf725c3627c5419a1b02b8bbb64cdd21f60e79aaa43a37946a1c443a608a6008d at block 26035742. Standalone MaplePool (no token proxy); manager 0x7ad5ffa5fdf509e30186f4609c2f6269f4b6158f is separate and upgradeable, not the share-token implementation. Both Syrup pools have byte-identical verified source. Manager implementation 0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8 MaplePoolManager.canCall L366-419 checks permissions but permits transfer after those checks. Permission manager 0xbe10adce8b6e3e02db384e7fada5395dd113d8b3 implementation 0xc3530358e54bc81efce4a2e12a898e996b091753 MaplePoolPermissionManager._hasPermission L227 onward allows public pools without excluding zero. At pinned block eth_call from funded holder 0xb6dd7ae22c9922afee0642f9ac13e58633f715a2 (balance 342009916625266) to token transfer(address(0),1) returned 0x0000000000000000000000000000000000000000000000000000000000000001. Read-only simulation, not a broadcast transaction. No fee-on-transfer, no silent management-fee share inflation; requestRedeem/requestWithdraw escrow via ordinary transfers. CoinGecko address and decimals match. Constructor destination zero and first-deposit BOOTSTRAP_MINT zero-to-zero cases are noted separately from the definite ordinary-transfer blocker.",
+      "windows": [],
+      "reviewedAt": "2026-09-22",
+      "reviewer": "SemA41"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "syrupusdt-maple",
+      "address": "0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d",
+      "decimals": 6,
+      "disposition": "unsupported",
+      "unsupportedReason": "zero-address-transfer-without-supply-change:transfer",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "identity": {
+        "explorerSourceUrl": "https://eth.blockscout.com/address/0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d?tab=contract",
+        "sourceVerified": true,
+        "contractName": "MaplePool",
+        "proxy": {
+          "isProxy": false,
+          "kind": "none",
+          "implementation": null,
+          "implementationSourceVerified": false
+        },
+        "externalMatches": [
+          {
+            "source": "coingecko",
+            "geckoId": "syrupusdt",
+            "value": "0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d",
+            "matches": true,
+            "decimalPlace": 6
+          }
+        ],
+        "onChain": {
+          "block": 26035742,
+          "blockHash": "0xf725c3627c5419a1b02b8bbb64cdd21f60e79aaa43a37946a1c443a608a6008d",
+          "decimals": 6,
+          "symbol": "syrupUSDT",
+          "totalSupplyRaw": "221678493128064",
+          "hasCode": true
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "constructor",
+          "internal": "ERC20._mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "MaplePool flattened source L953-974 initialSupply mint at L968 -> ERC20._mint L701-708; paired event."
+        },
+        {
+          "function": "deposit; depositWithPermit; mint; mintWithPermit",
+          "internal": "MaplePool._mint -> ERC20._mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "MaplePool L1002-1039 -> _mint L1138-1156 -> ERC20._mint adds amount L702 and emits Transfer(0,recipient,amount) L707. Initial bootstrap branch L1143-1148 can mint to zero (Transfer(0,0,BOOTSTRAP_MINT)); runtime fails closed on ambiguous-zero-transfer."
+        },
+        {
+          "function": "redeem; withdraw",
+          "internal": "MaplePool._burn -> ERC20._burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "MaplePool L1041-1054 -> _burn L1118-1132 -> ERC20._burn L684-691; supply subtraction L688 matches Transfer(owner,0,amount) L690."
+        }
+      ],
+      "unpairedPaths": [
+        {
+          "function": "transfer(address,uint256)",
+          "reason": "MaplePool.transfer L1060-1067 -> ERC20.transfer L649-652 -> _transfer L710-717. Zero recipient permitted: _transfer only moves balances and emits Transfer(owner,recipient,amount), without totalSupply decrement. Pinned positive-amount eth_call transfer(0,1) succeeded."
+        },
+        {
+          "function": "transferFrom(address,address,uint256)",
+          "reason": "MaplePool.transferFrom L1069-1077 -> ERC20.transferFrom L654-658 -> the same _transfer. Given allowance, zero recipient emits apparent burn with no supply change."
+        }
+      ],
+      "totalSupplyView": {
+        "isStoredSum": true,
+        "note": "ERC20 public storage totalSupply L573, only changed in _mint L702 / _burn L688. NAV convertToAssets and totalAssets do not alter share supply; the issue is reverse event pairing."
+      },
+      "zeroRecipientTransferReverts": false,
+      "zeroRecipientTransferBurns": null,
+      "identityIssue": null,
+      "notes": "Source: https://eth.blockscout.com/api/v2/smart-contracts/0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d; source_code SHA-256 9f177bf35f38c6e3cee9d4c3ef23ddbb2708ad4f9b28a11a17c44484eb96d96f. Raw responses and extracted source retained under admission/scratch/SemA41/. All identity calls use EIP-1898 blockHash 0xf725c3627c5419a1b02b8bbb64cdd21f60e79aaa43a37946a1c443a608a6008d at block 26035742. Standalone MaplePool (no token proxy); manager 0x0cda32e08b48bfddbc7ee96b44b09cf286f9e21a is separate and upgradeable, not the share-token implementation. Both Syrup pools have byte-identical verified source. Manager implementation 0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8 MaplePoolManager.canCall L366-419 checks permissions but permits transfer after those checks. Permission manager 0xbe10adce8b6e3e02db384e7fada5395dd113d8b3 implementation 0xc3530358e54bc81efce4a2e12a898e996b091753 MaplePoolPermissionManager._hasPermission L227 onward allows public pools without excluding zero. At pinned block eth_call from funded holder 0x24ab03a9a5bc2c49e5523e8d915a3536ac38b91d (balance 100000000000000) to token transfer(address(0),1) returned 0x0000000000000000000000000000000000000000000000000000000000000001. Read-only simulation, not a broadcast transaction. No fee-on-transfer, no silent management-fee share inflation; requestRedeem/requestWithdraw escrow via ordinary transfers. CoinGecko address and decimals match. Constructor destination zero and first-deposit BOOTSTRAP_MINT zero-to-zero cases are noted separately from the definite ordinary-transfer blocker.",
+      "windows": [],
+      "reviewedAt": "2026-09-22",
+      "reviewer": "SemA41"
     },
     {
       "chainId": "ethereum",
@@ -6910,6 +7593,114 @@
       ],
       "reviewedAt": "2026-09-22",
       "reviewer": "SemA35"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "thbill-theo",
+      "address": "0x5fa487bca6158c64046b2813623e20755091da0b",
+      "decimals": 6,
+      "disposition": "admitted",
+      "unsupportedReason": null,
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "identity": {
+        "explorerSourceUrl": "https://eth.blockscout.com/address/0x5fa487bca6158c64046b2813623e20755091da0b?tab=contract",
+        "sourceVerified": true,
+        "contractName": "ERC1967Proxy",
+        "proxy": {
+          "isProxy": true,
+          "kind": "eip1967",
+          "implementation": "0x325478a069b0dbbdfbee909fa3741f84259ba519",
+          "implementationSourceVerified": true
+        },
+        "externalMatches": [
+          {
+            "source": "coingecko",
+            "geckoId": "theo-short-duration-us-treasury-fund",
+            "value": "0x5fa487bca6158c64046b2813623e20755091da0b",
+            "matches": true,
+            "decimalPlace": 6
+          }
+        ],
+        "onChain": {
+          "block": 26035736,
+          "blockHash": "0x5a0260f2b3dc7d05c716870e17bfb5b725961394808f1d18360c1654dddc79d4",
+          "decimals": 6,
+          "symbol": "thBILL",
+          "totalSupplyRaw": "36344449618164",
+          "hasCode": true
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "deposit(address[],uint256[],address)",
+          "internal": "_deposit -> _mint -> _update",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "IToken.sol:135-147 delegates to ERC4626UpgradeableMultiAsset.deposit L254-270 / _deposit L371-380; calculated shares are minted at L378. OZ ERC20Upgradeable._update L205-233 changes supply and emits the same value."
+        },
+        {
+          "function": "mint(uint256,address)",
+          "internal": "_deposit -> _mint -> _update",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "ERC4626UpgradeableMultiAsset.sol:275-284 uses requested shares through paired _deposit."
+        },
+        {
+          "function": "withdraw(address[],uint256[],address,address)",
+          "internal": "_withdraw -> _burn -> _update",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "IToken.sol:154-168 delegates to multi-asset withdraw L288-315 and _withdraw L386-397; burns calculated shares at L393 before underlying asset transfers."
+        },
+        {
+          "function": "redeem(uint256,address,address)",
+          "internal": "_withdraw -> _burn -> _update",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "ERC4626UpgradeableMultiAsset.sol:319-329 burns requested shares through the same paired _withdraw."
+        }
+      ],
+      "unpairedPaths": [],
+      "totalSupplyView": {
+        "isStoredSum": true,
+        "note": "ERC20Upgradeable.sol:104-107 returns ERC20Storage._totalSupply in share units. totalUnderlyingAssets and _convertToShares/_convertToAssets value the asset basket but do not replace this stored-supply getter."
+      },
+      "zeroRecipientTransferReverts": true,
+      "identityIssue": null,
+      "notes": "IToken is a multi-asset ERC4626-style vault (not a rebasing index-balance token). IToken._update L171-173 only adds whenNotPaused before delegating to OZ. checkMinShares L123-127 reads a local _totalSupply variable; it does not write supply storage. updateDepositAssets/_updateDepositAssets L180-195 and setConfig change asset/configuration data, not share quantity. No management-fee shares, treasury mint, or periodic supply inflation routine exists in this implementation. ERC20Upgradeable._transfer L188-196 rejects both zero endpoints; zero-address emissions arise only from paired _update. UUPS BaseUpgradeable._authorizeUpgrade L33 requires DEFAULT_ADMIN_ROLE; implementation verified and EIP-1967-slot confirmed. Verified implementation/source: https://eth.blockscout.com/address/0x325478a069b0dbbdfbee909fa3741f84259ba519?tab=contract (IToken). Source bundle captured via https://eth.blockscout.com/api/v2/smart-contracts/0x325478a069b0dbbdfbee909fa3741f84259ba519; response SHA-256 c5bfc9a3fdf777b77a6cd166387e4caa5efae89f787a83a3a2890df8a8595e65. Local evidence: admission/research-A42/thbill-theo/ and bs_0x325478a069b0dbbdfbee909fa3741f84259ba519.json; CoinGecko response cg_thbill-theo.json. On-chain identity reads were eth_call pinned to blockHash; code was confirmed with eth_getCode at the same hash and block-number header hash rechecked successfully. No claim of historical two-window conservation is made by this semantic-only review.",
+      "windows": [
+        {
+          "fromBlock": 26028679,
+          "fromBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "fromTimestamp": 1790027531,
+          "toBlock": 26035829,
+          "toBlockHash": "0x4df831986cf42d63dedd9b7a8fc200634d7447a170a79d7286de98c8fbc3df4c",
+          "toTimestamp": 1790113931,
+          "mintRaw": "0",
+          "burnRaw": "0",
+          "supplyDeltaRaw": "0",
+          "residualRaw": "0",
+          "logCount": 0,
+          "journalSha256": "9d19142d8aae5f0a1d12dc222d4bc873afe2be5d0e63930bfc0096fd14d48791"
+        },
+        {
+          "fromBlock": 26021533,
+          "fromBlockHash": "0x27c4caf42458c180212f9670de38e6bb407a9c566c4ff10ce88cab9980ede229",
+          "fromTimestamp": 1789941131,
+          "toBlock": 26028679,
+          "toBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "toTimestamp": 1790027531,
+          "mintRaw": "0",
+          "burnRaw": "0",
+          "supplyDeltaRaw": "0",
+          "residualRaw": "0",
+          "logCount": 0,
+          "journalSha256": "9d19142d8aae5f0a1d12dc222d4bc873afe2be5d0e63930bfc0096fd14d48791"
+        }
+      ],
+      "reviewedAt": "2026-09-22",
+      "reviewer": "SemA42"
     },
     {
       "chainId": "ethereum",
@@ -10117,6 +10908,241 @@
     },
     {
       "chainId": "ethereum",
+      "stablecoinId": "ustb-superstate",
+      "address": "0x43415eb6ff9db7e26a15b704e7a3edce97d31c4e",
+      "decimals": 6,
+      "disposition": "admitted",
+      "unsupportedReason": null,
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "identity": {
+        "explorerSourceUrl": "https://eth.blockscout.com/address/0x43415eb6ff9db7e26a15b704e7a3edce97d31c4e?tab=contract",
+        "sourceVerified": true,
+        "contractName": "TransparentUpgradeableProxy",
+        "proxy": {
+          "isProxy": true,
+          "kind": "eip1967",
+          "implementation": "0xb3ac55dd09aa70e9bfbb12f45cd38a1f1597588c",
+          "implementationSourceVerified": true
+        },
+        "externalMatches": [
+          {
+            "source": "coingecko",
+            "geckoId": "superstate-short-duration-us-government-securities-fund-ustb",
+            "value": "0x43415eb6ff9db7e26a15b704e7a3edce97d31c4e",
+            "matches": true,
+            "decimalPlace": 6
+          }
+        ],
+        "onChain": {
+          "block": 26035736,
+          "blockHash": "0x5a0260f2b3dc7d05c716870e17bfb5b725961394808f1d18360c1654dddc79d4",
+          "decimals": 6,
+          "symbol": "USTB",
+          "totalSupplyRaw": "47862680139612",
+          "hasCode": true
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "mint(address,uint256)",
+          "internal": "_mint -> ERC20Upgradeable._mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "FundTokenV1_3_0.sol:4541-4546 owner mint; overridden _mint L4705-4708 checks allowlist then pairs supply/events in OZ L3160-3173."
+        },
+        {
+          "function": "bulkMint(address[],uint256[])",
+          "internal": "_mint -> ERC20Upgradeable._mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "L4564-4574 invokes paired _mint separately for each destination/amount."
+        },
+        {
+          "function": "subscribe(address,uint256,address)",
+          "internal": "_subscribe -> _mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "L3930-3932 and L3977-4014 mint the NAV-calculated share quantity at L3995, paired by OZ _mint."
+        },
+        {
+          "function": "subscribe(uint256,address)",
+          "internal": "_subscribe -> _mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "L3939-3941 uses caller as recipient; identical paired subscription path."
+        },
+        {
+          "function": "adminBurn(address,uint256)",
+          "internal": "_burn -> ERC20Upgradeable._burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "L4594-4600 administrative correction/redemption subtracts amount through OZ L3186-3202; extra AdminBurn event is not a substitute for Transfer."
+        },
+        {
+          "function": "offchainRedeem(uint256)",
+          "internal": "_burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "Redeemable L1950-1955 calls paired _burn then emits OffchainRedeem."
+        },
+        {
+          "function": "bridge(uint256,address,string,uint256)",
+          "internal": "_burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "Bridgeable L1468-1498 calls paired _burn(msg.sender,amount) L1489 before Bridge event."
+        },
+        {
+          "function": "bridgeToBookEntry(uint256)",
+          "internal": "bridge -> _burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "L1505-1511 invokes bridge with chainId=0 and empty destination; identical paired burn."
+        },
+        {
+          "function": "transfer(address,uint256)",
+          "internal": "_burn when destination is address(this)",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "FundToken L4467-4480 burns via _burn only when destination equals the token contract. Otherwise _transfer rejects zero endpoints and preserves supply."
+        },
+        {
+          "function": "transferFrom(address,address,uint256)",
+          "internal": "_burn when destination is address(this)",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "FundToken L4501-4520 spends allowance and burns when destination equals token contract. Otherwise inherited transferFrom/_transfer rejects zero endpoints."
+        }
+      ],
+      "unpairedPaths": [],
+      "totalSupplyView": {
+        "isStoredSum": true,
+        "note": "Flattened FundTokenV1_3_0.sol ERC20Upgradeable.totalSupply L3003-3005 returns stored _totalSupply (slot 53, documented at L4052). Only OZ _mint L3165 and _burn L3196 write it."
+      },
+      "zeroRecipientTransferReverts": true,
+      "identityIssue": null,
+      "notes": "FundToken VERSION 1.3.0, stored NAV-share quantities. Subscription fees are applied to the incoming stablecoin amount in _calculateSuperstateTokenOut L3895-3921, then the calculated fund shares are minted with matching Transfer; no periodic management-fee inflation or index-based balances exist. The full inAmount is swept in _subscribe L3990-3993; this is not a transfer fee on USTB itself. Transfer-to-token-address redemption is an explicit paired burn. Zero-address transfer recipient instead reaches OZ _transfer L3131-3133 and reverts (or fails allowlisting first). initializeV1_2_0 L4251-4300 migrates ancillary configuration, not supply. Transparent upgradeable proxy; implementation verified and EIP-1967-slot confirmed. Verified implementation/source: https://eth.blockscout.com/address/0xb3ac55dd09aa70e9bfbb12f45cd38a1f1597588c?tab=contract (FundToken). Source bundle captured via https://eth.blockscout.com/api/v2/smart-contracts/0xb3ac55dd09aa70e9bfbb12f45cd38a1f1597588c; response SHA-256 1873506ac00eba3227e051af4c458c4672057910763566988da37eb0d8f72414. Local evidence: admission/research-A42/ustb-superstate/ and bs_0xb3ac55dd09aa70e9bfbb12f45cd38a1f1597588c.json; CoinGecko response cg_ustb-superstate.json. On-chain identity reads were eth_call pinned to blockHash; code was confirmed with eth_getCode at the same hash and block-number header hash rechecked successfully. No claim of historical two-window conservation is made by this semantic-only review.",
+      "windows": [
+        {
+          "fromBlock": 26028679,
+          "fromBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "fromTimestamp": 1790027531,
+          "toBlock": 26035829,
+          "toBlockHash": "0x4df831986cf42d63dedd9b7a8fc200634d7447a170a79d7286de98c8fbc3df4c",
+          "toTimestamp": 1790113931,
+          "mintRaw": "665183569900",
+          "burnRaw": "149885192244",
+          "supplyDeltaRaw": "515298377656",
+          "residualRaw": "0",
+          "logCount": 33,
+          "journalSha256": "9d19142d8aae5f0a1d12dc222d4bc873afe2be5d0e63930bfc0096fd14d48791"
+        },
+        {
+          "fromBlock": 26021533,
+          "fromBlockHash": "0x27c4caf42458c180212f9670de38e6bb407a9c566c4ff10ce88cab9980ede229",
+          "fromTimestamp": 1789941131,
+          "toBlock": 26028679,
+          "toBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "toTimestamp": 1790027531,
+          "mintRaw": "677661709340",
+          "burnRaw": "1457277479167",
+          "supplyDeltaRaw": "-779615769827",
+          "residualRaw": "0",
+          "logCount": 17,
+          "journalSha256": "9d19142d8aae5f0a1d12dc222d4bc873afe2be5d0e63930bfc0096fd14d48791"
+        }
+      ],
+      "reviewedAt": "2026-09-22",
+      "reviewer": "SemA42"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "usyc-hashnote",
+      "address": "0x136471a34f6ef19fe571effc1ca711fdb8e49f2b",
+      "decimals": 6,
+      "disposition": "unsupported",
+      "unsupportedReason": "zero-address-transfer-without-supply-change:transferFrom",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "identity": {
+        "explorerSourceUrl": "https://eth.blockscout.com/address/0x136471a34f6ef19fe571effc1ca711fdb8e49f2b?tab=contract",
+        "sourceVerified": true,
+        "contractName": "ShortDurationYieldCoinProxy",
+        "proxy": {
+          "isProxy": true,
+          "kind": "eip1967",
+          "implementation": "0xbf0f2f3aad6b99893d80c550fbacec915545eb92",
+          "implementationSourceVerified": true
+        },
+        "externalMatches": [
+          {
+            "source": "coingecko",
+            "geckoId": "hashnote-usyc",
+            "value": "0x136471a34f6ef19fe571effc1ca711fdb8e49f2b",
+            "matches": true,
+            "decimalPlace": 6
+          }
+        ],
+        "onChain": {
+          "block": 26035736,
+          "blockHash": "0x5a0260f2b3dc7d05c716870e17bfb5b725961394808f1d18360c1654dddc79d4",
+          "decimals": 6,
+          "symbol": "USYC",
+          "totalSupplyRaw": "37357024638483",
+          "hasCode": true
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "mint(address,uint256)",
+          "internal": "_mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "YieldCoin.sol:149-159 uses minterAllowance and recipient permission checks; custom ERC20.sol:96-106 increases totalSupply by amount and emits Transfer(0,to,amount)."
+        },
+        {
+          "function": "burn(uint256)",
+          "internal": "_burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "YieldCoin.sol:165-169 burns caller; ERC20.sol:108-117 decreases totalSupply by the identical emitted amount."
+        },
+        {
+          "function": "burn(address,uint256)",
+          "internal": "_burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "YieldCoin.sol:177-184 restricts to minters and checks source permission; same paired _burn."
+        },
+        {
+          "function": "burnFor(address,uint256)",
+          "internal": "burn(address,uint256) -> _burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "YieldCoin.sol:192-194 delegates to the minter-authorized burn overload."
+        }
+      ],
+      "unpairedPaths": [
+        {
+          "function": "transferFrom(address,address,uint256)",
+          "reason": "YieldCoin.sol:128-140 fund-admin branch directly subtracts balanceOf[_from], adds balanceOf[_to], then emits Transfer(_from,_to,_amount), with no zero-endpoint checks and no totalSupply change. A fund admin can send a positive holder balance to address(0), generating a false burn; it can also move that zero-address balance out and generate a false mint. Access.sol:58-60 checks only ROLE_FUND_ADMIN for this branch."
+        }
+      ],
+      "totalSupplyView": {
+        "isStoredSum": true,
+        "note": "Custom ERC20.sol:30 public totalSupply storage getter; only _mint L96-106 and _burn L108-117 mutate it. Fund-admin transfers preserve totalSupply, even when the emitted event has a zero endpoint."
+      },
+      "zeroRecipientTransferReverts": false,
+      "zeroRecipientTransferBurns": null,
+      "identityIssue": null,
+      "notes": "YieldCoin is a NAV-priced fund share, not a rebasing balance token. FeeRecipientSet/ManagementFeeSet/FeeProcessed at YieldCoin.sol:51-58 are deprecated event declarations only; the current implementation has no management-fee share inflation routine. All actual supply writes are paired, but the reverse pairing requirement fails on the privileged transferFrom branch. Ordinary transfer and non-admin transferFrom consult external authority permissions; those configurable checks do not repair the admin bypass. Source proves the reachable privileged path; no claim is made that it has historically been exercised. A mint to zero would depend on authority.canCall allowing zero: privileged-zero-to-zero-mint-possible: mint (conditional on authority permission); runtime ambiguous-zero-transfer fail-closed policy covers that separately. UUPS implementation _authorizeUpgrade L274-281 is owner-controlled. Verified implementation/source: https://eth.blockscout.com/address/0xbf0f2f3aad6b99893d80c550fbacec915545eb92?tab=contract (YieldCoin). Source bundle captured via https://eth.blockscout.com/api/v2/smart-contracts/0xbf0f2f3aad6b99893d80c550fbacec915545eb92; response SHA-256 d22e290dd046638a1c193e888e8ed90fb0107867b172e394816c31cef9572bf7. Local evidence: admission/research-A42/usyc-hashnote/ and bs_0xbf0f2f3aad6b99893d80c550fbacec915545eb92.json; CoinGecko response cg_usyc-hashnote.json. On-chain identity reads were eth_call pinned to blockHash; code was confirmed with eth_getCode at the same hash and block-number header hash rechecked successfully. No claim of historical two-window conservation is made by this semantic-only review.",
+      "windows": [],
+      "reviewedAt": "2026-09-22",
+      "reviewer": "SemA42"
+    },
+    {
+      "chainId": "ethereum",
       "stablecoinId": "vchf-vnx",
       "address": "0x79d4f0232a66c4c91b89c76362016a1707cfbf4f",
       "decimals": 18,
@@ -10337,6 +11363,114 @@
       ],
       "reviewedAt": "2026-09-22",
       "reviewer": "SemA12"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "wsrusd-reservoir",
+      "address": "0xd3fd63209fa2d55b07a0f6db36c2f43900be3094",
+      "decimals": 18,
+      "disposition": "admitted",
+      "unsupportedReason": null,
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "identity": {
+        "explorerSourceUrl": "https://eth.blockscout.com/address/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094?tab=contract",
+        "sourceVerified": true,
+        "contractName": "Savingcoin",
+        "proxy": {
+          "isProxy": false,
+          "kind": "none",
+          "implementation": null,
+          "implementationSourceVerified": false
+        },
+        "externalMatches": [
+          {
+            "source": "coingecko",
+            "geckoId": "wrapped-savings-rusd",
+            "value": "0xd3fd63209fa2d55b07a0f6db36c2f43900be3094",
+            "matches": true,
+            "decimalPlace": 18
+          }
+        ],
+        "onChain": {
+          "block": 26035736,
+          "blockHash": "0x5a0260f2b3dc7d05c716870e17bfb5b725961394808f1d18360c1654dddc79d4",
+          "decimals": 18,
+          "symbol": "wsrUSD",
+          "totalSupplyRaw": "98676404461111777885973003",
+          "hasCode": true
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "deposit(uint256,address)",
+          "internal": "_deposit -> _mint -> _update",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "ERC4626.sol:171-180 dispatches to Savingcoin.sol:138-153; burns underlying assets, mints exactly shares at L150. ERC20.sol:183-210 changes share supply and emits identical share amount."
+        },
+        {
+          "function": "mint(uint256,address)",
+          "internal": "_deposit -> _mint -> _update",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "ERC4626.sol:184-193 uses requested shares; Savingcoin._deposit pairs the share-supply increase."
+        },
+        {
+          "function": "withdraw(uint256,address,address)",
+          "internal": "_withdraw -> _burn -> _update",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "ERC4626.sol:197-206; Savingcoin.sol:155-170 burns shares at L166 before minting underlying assets. Underlying events occur at the underlying token, not this address."
+        },
+        {
+          "function": "redeem(uint256,address,address)",
+          "internal": "_withdraw -> _burn -> _update",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "ERC4626.sol:210-219; requested share quantity is burned through the same paired path."
+        }
+      ],
+      "unpairedPaths": [],
+      "totalSupplyView": {
+        "isStoredSum": true,
+        "note": "Inherited ERC20.totalSupply(), ERC20.sol:85-87, returns _totalSupply of wsrUSD shares. Savingcoin.totalAssets() at L172-174, not totalSupply(), applies the compound factor."
+      },
+      "zeroRecipientTransferReverts": true,
+      "identityIssue": null,
+      "notes": "Non-proxy ERC4626 share token. Savingcoin.update(uint256) L186-197 changes compoundFactorAccum/currentRate/lastTimestamp, never share balances or share supply. _convertToShares/_convertToAssets apply a time-dependent NAV conversion only; rebaseOrIndex=false refers to token balances/supply, not asset valuation. No management-fee share inflation or treasury mint path exists. ERC20Burnable is imported but not inherited (Savingcoin is AccessControl, ERC4626), so its burn methods are not exposed. ERC20._transfer L166-174 rejects both zero endpoints; every zero-address Transfer is emitted by the paired _update. No unpaired direct supply writes found. Verified implementation/source: https://eth.blockscout.com/address/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094?tab=contract (Savingcoin). Source bundle captured via https://eth.blockscout.com/api/v2/smart-contracts/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094; response SHA-256 60dba91bf676051106fdf4f01a1eec443d86b6cbf698e6600b03d5c727f16075. Local evidence: admission/research-A42/wsrusd-reservoir/ and bs_0xd3fd63209fa2d55b07a0f6db36c2f43900be3094.json; CoinGecko response cg_wsrusd-reservoir.json. On-chain identity reads were eth_call pinned to blockHash; code was confirmed with eth_getCode at the same hash and block-number header hash rechecked successfully. No claim of historical two-window conservation is made by this semantic-only review.",
+      "windows": [
+        {
+          "fromBlock": 26028679,
+          "fromBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "fromTimestamp": 1790027531,
+          "toBlock": 26035829,
+          "toBlockHash": "0x4df831986cf42d63dedd9b7a8fc200634d7447a170a79d7286de98c8fbc3df4c",
+          "toTimestamp": 1790113931,
+          "mintRaw": "193106175048651237643972",
+          "burnRaw": "984146755124487633832027",
+          "supplyDeltaRaw": "-791040580075836396188055",
+          "residualRaw": "0",
+          "logCount": 22,
+          "journalSha256": "9d19142d8aae5f0a1d12dc222d4bc873afe2be5d0e63930bfc0096fd14d48791"
+        },
+        {
+          "fromBlock": 26021533,
+          "fromBlockHash": "0x27c4caf42458c180212f9670de38e6bb407a9c566c4ff10ce88cab9980ede229",
+          "fromTimestamp": 1789941131,
+          "toBlock": 26028679,
+          "toBlockHash": "0x24efc4f3208829fd5ded31238fb3e71d5e364838e9173872bd330e484dcba931",
+          "toTimestamp": 1790027531,
+          "mintRaw": "16093444641527286963556057",
+          "burnRaw": "104709379068835595497490",
+          "supplyDeltaRaw": "15988735262458451368058567",
+          "residualRaw": "0",
+          "logCount": 24,
+          "journalSha256": "9d19142d8aae5f0a1d12dc222d4bc873afe2be5d0e63930bfc0096fd14d48791"
+        }
+      ],
+      "reviewedAt": "2026-09-22",
+      "reviewer": "SemA42"
     },
     {
       "chainId": "ethereum",
@@ -10857,6 +11991,91 @@
       ],
       "reviewedAt": "2026-09-22",
       "reviewer": "SemA33"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "ybold-yearn",
+      "address": "0x9f4330700a36b29952869fac9b33f45eedd8a3d8",
+      "decimals": 18,
+      "disposition": "unsupported",
+      "unsupportedReason": "total-supply-override",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "identity": {
+        "explorerSourceUrl": "https://eth.blockscout.com/address/0x9f4330700a36b29952869fac9b33f45eedd8a3d8?tab=contract",
+        "sourceVerified": false,
+        "contractName": "EIP-1167 clone of Yearn V3 Vault",
+        "proxy": {
+          "isProxy": true,
+          "kind": "custom",
+          "implementation": "0xd8063123bba3b480569244ae66bfe72b6c84b00d",
+          "implementationSourceVerified": true
+        },
+        "externalMatches": [
+          {
+            "source": "coingecko",
+            "geckoId": null,
+            "value": null,
+            "matches": false,
+            "decimalPlace": null
+          }
+        ],
+        "onChain": {
+          "block": 26035742,
+          "blockHash": "0xf725c3627c5419a1b02b8bbb64cdd21f60e79aaa43a37946a1c443a608a6008d",
+          "decimals": 18,
+          "symbol": "yBOLD",
+          "totalSupplyRaw": "6589375304519094247381872",
+          "hasCode": true
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "deposit; mint",
+          "internal": "_deposit -> _issue_shares",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "Yearn V3 Vault verified Vyper source: _deposit calls _issue_shares L660; _issue_shares L505-509 increments stored total_supply and emits Transfer(0,recipient,shares)."
+        },
+        {
+          "function": "withdraw; redeem",
+          "internal": "_redeem -> _burn_shares",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "Redemption path L901 calls _burn_shares L395-398, subtracting the same shares emitted to zero."
+        },
+        {
+          "function": "process_report(address)",
+          "internal": "_process_report -> _issue_shares/_burn_shares",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "L1220-1236 mints or burns vault-held profit-lock shares through event-paired helpers. L1275-1282 mints accountant/protocol fee shares via _issue_shares, so fee inflation itself is paired."
+        },
+        {
+          "function": "setProfitMaxUnlockTime(uint256)",
+          "internal": "_burn_shares",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "L1488-1519: setting zero burns existing vault shares via _burn_shares at L1511 and clears unlocking state."
+        }
+      ],
+      "unpairedPaths": [
+        {
+          "function": "totalSupply() -> _total_supply() -> _unlocked_shares()",
+          "reason": "L1946-1951 returns _total_supply; L425-427 subtracts _unlocked_shares from stored total_supply. L402-420 computes time-dependent unlocked shares without emitting a Transfer. Thus public supply can change between blocks with no storage mutation or mint/burn event."
+        }
+      ],
+      "totalSupplyView": {
+        "isStoredSum": false,
+        "note": "totalSupply() -> _total_supply() = self.total_supply - self._unlocked_shares(); timestamp-based profit unlocking is not a stored sum, despite _issue_shares/_burn_shares being correctly paired."
+      },
+      "zeroRecipientTransferReverts": true,
+      "zeroRecipientTransferBurns": null,
+      "identityIssue": "no-external-match: config has no CoinGecko geckoId; verified implementation and pinned on-chain name/symbol identify Yearn BOLD (yBOLD).",
+      "notes": "Source: https://eth.blockscout.com/api/v2/smart-contracts/0xd8063123bba3b480569244ae66bfe72b6c84b00d; source_code SHA-256 ed081bf1b1dad10ef25d3e92a5f6f7d8fe92139438869affa2a720b5255c2e22. Raw responses and extracted source retained under admission/scratch/SemA41/. All identity calls use EIP-1898 blockHash 0xf725c3627c5419a1b02b8bbb64cdd21f60e79aaa43a37946a1c443a608a6008d at block 26035742. Proxy implementation 0xd8063123bba3b480569244ae66bfe72b6c84b00d confirmed by canonical EIP-1167 deployed bytecode. Blockscout does not mark the clone source verified (is_verified=null, recorded sourceVerified=false), but deployed runtime is the canonical 45-byte EIP-1167 forwarding code with embedded verified Yearn V3 Vault implementation; no uncertainty about executed implementation. The implementation is immutable in this clone (custom kind means EIP-1167). transfer and transferFrom reject receiver zero/self at L1890 and L1903. At pinned block profitMaxUnlockTime(), fullProfitUnlockDate(), profitUnlockingRate(), unlockedShares() all returned 0, so the override is presently inactive; setProfitMaxUnlockTime L1488-1519 can enable it without a code upgrade. Classification covers available code paths, not just present parameter state. Accountant/protocol fees are minted with Transfer; the blocker is profit unlocking, not fee minting.",
+      "windows": [],
+      "reviewedAt": "2026-09-22",
+      "reviewer": "SemA41"
     },
     {
       "chainId": "ethereum",
