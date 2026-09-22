@@ -15,8 +15,6 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   // YUSD - aegis native, Ethereum, $36M TVL, ~5.7% APY
   "yusd-aegis": "f91b2168-c279-475c-a98a-673220f4fee7",
   // USDB (172) - no native DL pool; Blast native yield is not tracked by DL Yields
-  // AZND -> loAZND - mu-digital native, Monad, $7.4M TVL, ~6.7% APY
-  "aznd-mu-digital": "0a05f2ee-e182-476a-9cdc-2fed86fcd765",
   // OUSD - origin-dollar native, Ethereum, $7M TVL, ~5.4% APY
   "ousd-origin-protocol": "529258ee-9b27-4fcf-a32c-b82abb3fda68",
   // syrupUSDC - maple native USDC pool, Ethereum, $3.2B TVL, ~4.6% APY

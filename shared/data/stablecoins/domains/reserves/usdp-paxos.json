@@ -4,7 +4,7 @@
     {
       "sourceKey": "paxos-independent-assurance:usdp:cash",
       "name": "Cash held for authorized token holders",
-      "pct": 77.64,
+      "pct": 77.98,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Commercial banks; individual institutions not disclosed",
@@ -14,32 +14,32 @@
     {
       "sourceKey": "paxos-independent-assurance:usdp:reverse-repo",
       "name": "Overnight reverse repurchase agreements collateralized by U.S. Treasury obligations",
-      "pct": 22.36,
+      "pct": 22.02,
       "risk": "very-low",
       "assetClass": "repo",
       "issuerOrObligor": "Selected commercial banks and broker-dealers; Treasury obligations as collateral",
       "riskFactors": ["counterparty", "liquidity", "custody"],
       "liquidityHorizon": "one-day",
-      "maturityDaysMax": 1
+      "maturityDaysMax": 3
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-09-23",
+    "reviewer": "Pharos safety-score curation 2026-09-23",
     "confidence": "verified",
     "sources": [
       {
-        "label": "KPMG USDP Redemption Assets Report - May 2026",
-        "url": "https://framerusercontent.com/assets/aEYkxLoItegSVUhVudrg5lQZQEQ.pdf"
+        "label": "KPMG USDP Redemption Assets Report - July 2026 (examination dated August 25, 2026)",
+        "url": "https://framerusercontent.com/assets/Kk04pJ7gWRmVlVJvl5rmYWj25M.pdf"
       },
       {
         "label": "Pax Dollar transparency and attestation index",
         "url": "https://www.paxos.com/usdp-transparency"
       }
     ],
-    "rationale": "The KPMG-examined USDP Redemption Assets Report as of May 29, 2026 reports $24,823,770 of cash and $7,149,000 of repurchase agreements, for total redemption assets of $31,972,770. The report states that the repos mature overnight, are overcollateralized by U.S. Treasury obligations, and may not be sold or repledged. The two reported asset types normalize to 77.64% and 22.36%.",
-    "compositionBasis": "KPMG examination of the USDP Redemption Assets Report as of May 29, 2026",
-    "compositionAsOf": "2026-05-29",
+    "rationale": "Exhibit B of the KPMG-examined USDP report at July 31, 2026 records $24,935,703 cash and $7,040,000 Treasury-collateralized reverse repos, totaling $31,975,703. Rounded weights are 77.98% and 22.02%. The repo matures August 3, three calendar days after the Friday observation, despite being described as overnight; collateral may not be sold or repledged. No government money-market funds or direct Treasury obligations were held.",
+    "compositionBasis": "KPMG examination of the USDP Redemption Assets Report, Exhibit B as of July 31, 2026",
+    "compositionAsOf": "2026-07-31",
     "scope": "full-composition",
     "knownUnknownExposure": "The report identifies the complete asset-type composition. Individual commercial-bank and broker-dealer counterparties are anonymized, but no reserve asset class is unclassified.",
     "knownUnknownExposurePct": 0

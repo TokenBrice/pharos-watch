@@ -3,6 +3,18 @@
   "name": "XTUSD",
   "symbol": "XTUSD",
   "oneLiner": "XTUSD is XT.com/XSC's MakerDAO-style vault dollar, minted against overcollateralized XTDao crypto vaults with limited public on-chain tooling for Pharos.",
+  "status": "frozen",
+  "frozenAt": "2026-09-23",
+  "obituary": {
+    "causeOfDeath": "liquidity-drain",
+    "deathDate": "2026-07-18",
+    "epitaph": "The only market went quiet",
+    "obituary": "XT.com's official xtusd_usdt market stopped updating on July 18, 2026: the exchange ticker froze at that timestamp, the order book emptied, and the pair no longer appears in the exchange's symbol list. CoinGecko ended the feed on July 20 with an implausible tail near $0.04, and CoinMarketCap lists the asset inactive. XTUSD circulates on XSC, which Pharos does not index, so no contracts are configured and no identity-safe DEX route can be expressed. With the last admissible price at 0.93205 on July 20 and roughly $1.25M still circulating, Pharos freezes XTUSD as an archived market-ended asset rather than an active stablecoin.",
+    "peakMcap": 171786044,
+    "sourceUrl": "https://sapi.xt.com/v4/public/ticker?symbol=xtusd_usdt",
+    "sourceLabel": "XT.com public ticker for xtusd_usdt (stale since 2026-07-18)"
+  },
+  "marketAvailability": "legacy-or-wind-down",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized"
