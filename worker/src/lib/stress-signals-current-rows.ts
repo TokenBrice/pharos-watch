@@ -60,7 +60,7 @@ interface StressSignalQueryTags {
   legacy: string;
 }
 
-export function buildStressSignalCurrentRowsQueries(input: {
+function buildStressSignalCurrentRowsQueries(input: {
   tags: StressSignalQueryTags;
   columns: readonly string[];
   scope: "all" | "one";

@@ -12,7 +12,7 @@ export const API_HOSTNAME = new URL(API_ORIGIN).hostname;
 export const SITE_API_HOSTNAME = new URL(SITE_API_ORIGIN).hostname;
 export const OPS_UI_HOSTNAME = new URL(OPS_UI_ORIGIN).hostname;
 export const OPS_API_HOSTNAME = new URL(OPS_API_ORIGIN).hostname;
-export const PAGES_APP_HOSTNAME = new URL(PAGES_APP_ORIGIN).hostname;
+const PAGES_APP_HOSTNAME = new URL(PAGES_APP_ORIGIN).hostname;
 
 /** Normalizes a string to a proper URL origin (protocol + host, no path). */
 export function normalizeOrigin(input: string): string {
