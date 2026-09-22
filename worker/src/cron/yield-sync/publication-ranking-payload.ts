@@ -40,6 +40,7 @@ import { buildYieldMethodology } from "./publication-methodology";
 import { buildYieldSourceRisk } from "./source-risk";
 import {
   benchmarkRecordAgeSeconds,
+  classifyYieldBenchmarkFreshness,
   YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
 } from "./benchmarks";
 
@@ -504,7 +505,12 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
     const staleSource =
       (updatedAtMs > 0 && updatedAtMs < input.startSec * 1000 - staleThresholdMs) ||
       staleComparisonAnchor;
-    const benchmarkFreshness = source.benchmarkFreshness;
+    const benchmarkFreshness =
+      source.benchmarkFreshness ??
+      classifyYieldBenchmarkFreshness(source.benchmarkMeta, {
+        recordDate: source.benchmarkMeta.recordDate,
+        maxRecordAgeSec: YIELD_BENCHMARK_RECORD_MAX_AGE_SEC[source.benchmarkKey],
+      });
     if (staleSource) {
       if (!ranking.warningSignals.includes("data-stale")) {
         ranking.warningSignals = [...ranking.warningSignals, "data-stale"];

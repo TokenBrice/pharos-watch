@@ -102,6 +102,7 @@ export async function loadTier1PrevRateRows(
     .bind(...inClause.binds, sevenDaysAgoSec)
     .all<{ stablecoin_id: string; exchange_rate: number | null; recorded_at: number }>();
   for (const row of result.results ?? []) {
+    if (tier1PrevRateRows.has(row.stablecoin_id)) continue;
     tier1PrevRateRows.set(row.stablecoin_id, {
       exchangeRate: row.exchange_rate,
       recordedAt: row.recorded_at,
