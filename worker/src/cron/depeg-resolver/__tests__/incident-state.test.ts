@@ -134,6 +134,16 @@ describe("loadPendingPromotionConfirmationTimes", () => {
       expect(statement.binds.every((bind) => typeof bind === "string")).toBe(true);
     }
   });
+
+  it("fails closed with an empty map when the promoted-outcome read errors", async () => {
+    const events = [makeEventRow({ id: 7, pending_reason: "awaiting-confirmation" })];
+    const db = mockD1([{ match: "FROM depeg_pending_outcomes", rows: [], throwError: new Error("D1_ERROR: internal error") }]);
+
+    const { byEventId, error } = await loadPendingPromotionConfirmationTimes(db, events);
+
+    expect(byEventId.size).toBe(0);
+    expect(error).toContain("D1_ERROR");
+  });
 });
 
 describe("applyConfirmationTimes", () => {
