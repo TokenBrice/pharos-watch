@@ -17,7 +17,7 @@ vi.mock("@shared/lib/api-endpoints", async (importOriginal) => {
 
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 import { makeApiRequestAttributionResponse } from "@/test-utils/status-fixtures";
-import { useHealth, useStabilityIndex, useTelegramPulse } from "../api-hooks";
+import { useHealth, useSafetyScoreHistory, useStabilityIndex, useTelegramPulse } from "../api-hooks";
 import { useRequestSourceStats, useStatus } from "../admin-api-hooks";
 import { useEndpointProbes, usePublicEndpointProbes } from "../use-endpoint-probes";
 
@@ -67,6 +67,16 @@ describe("query polling policy", () => {
     expect(options.queryKey).toEqual(descriptor.queryKey);
     expect(options.staleTime).toBe(descriptor.producerIntervalMs);
     expect(options.retry).toBe(retry);
+  });
+
+  it.each([
+    { name: "a tracked stablecoin", stablecoinId: "usdt-tether", enabled: true },
+    { name: "no stablecoin", stablecoinId: "", enabled: false },
+  ])("polls safety-score history only for $name", ({ stablecoinId, enabled }) => {
+    useSafetyScoreHistory(stablecoinId);
+    const options = useQueryMock.mock.calls[0][0] as { enabled: boolean };
+
+    expect(options.enabled).toBe(enabled);
   });
 
   it("keeps one admin hook smoke for proxying and abort-signal forwarding", async () => {

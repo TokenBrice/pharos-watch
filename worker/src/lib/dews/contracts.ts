@@ -6,7 +6,6 @@ import type { DEWSResult } from "../dews";
 export interface SourceFailure {
   source: string;
   reason: string;
-  bootstrapAllowed: boolean;
 }
 
 export type PersistedJsonDecodeReason = "missing" | "json-parse-failed" | "invalid-shape";
@@ -93,7 +92,7 @@ export interface DewsSourceState {
   liqHistRowsRead: number;
   blacklistCounts: BlacklistCountByStablecoinId;
   blacklistSourceOk: boolean;
-  prevSignals: Map<string, { signals: Record<string, { value: number }>; computedAt: number; ageSec: number }>;
+  prevSignals: Map<string, { signals: Record<string, { value: number; available?: boolean }>; computedAt: number; ageSec: number }>;
   prevSignalStaleIds: Set<string>;
   mintBurnMap: Map<string, MintBurnSnapshot>;
   mintBurnAgeSecById: Map<string, number>;

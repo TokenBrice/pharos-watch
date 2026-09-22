@@ -3,13 +3,13 @@ import {
   staleObservedAtSec,
   dlQuote,
   cleanupEnrichMissingPricesTest,
-  fixtureRunDexScreenerPass,
-  fixtureRunDlContractPasses,
-  makeFixtureMockD1 as fixtureMockD1,
-  fixtureMockFetch,
-  fixtureCIRCUIT_SOURCE,
-  type PeggedAsset,
+  makeEnrichPricesDb,
 } from "./enrich-prices.test-support";
+import type { PeggedAsset } from "../sync-stablecoins/enrich-prices";
+import { runDexScreenerPass } from "../sync-stablecoins/enrich-prices-dexscreener-pass";
+import { runDlContractPasses } from "../sync-stablecoins/enrich-prices-defillama-pass";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
+import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { makePeggedAsset } from "../sync-stablecoins/__tests__/_fixtures";
 
 import { DEXSCREENER_ROTATION_INTERVAL_MS } from "../sync-stablecoins/enrich-prices-dexscreener-pass";
@@ -22,14 +22,14 @@ describe("enrichMissingPrices", () => {
       id: "test-usd", symbol: "TEST", price: null,
       address: "0x1111111111111111111111111111111111111111", chains: ["Ethereum", "Base"],
     })];
-    const fetchSpy = fixtureMockFetch([{
+    const fetchSpy = mockFetch([{
       match: "coins.llama.fi/prices",
       body: { coins: {
         "ethereum:0x1111111111111111111111111111111111111111": dlQuote(1, "TEST", { timestamp: now - 800 }),
         "base:0x1111111111111111111111111111111111111111": dlQuote(1.01, validSymbol ? "TEST" : "OTHER", { timestamp: now - 30 }),
       } },
     }]);
-    const result = await fixtureRunDlContractPasses(assets, undefined);
+    const result = await runDlContractPasses(assets, undefined);
     expect(result.resolved).toBe(1);
     expect(assets[0]).toMatchObject({
       price: validSymbol ? 1.01 : 1,
@@ -39,12 +39,12 @@ describe("enrichMissingPrices", () => {
   });
   it("closes the stale DexScreener exact circuit when no exact candidates remain", async () => {
     const openedAt = Math.floor(Date.now() / 1000) - 3600;
-    const db = fixtureMockD1([
+    const db = makeEnrichPricesDb([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
         rows: [
           {
-            key: `circuit:${fixtureCIRCUIT_SOURCE.DEXSCREENER_PRICES}`,
+            key: `circuit:${CIRCUIT_SOURCE.DEXSCREENER_PRICES}`,
             value: JSON.stringify({
               state: "open",
               consecutiveFailures: 3,
@@ -66,8 +66,8 @@ describe("enrichMissingPrices", () => {
       }),
     ];
 
-    const fetchSpy = fixtureMockFetch();
-    const result = await fixtureRunDexScreenerPass(assets, undefined, db);
+    const fetchSpy = mockFetch();
+    const result = await runDexScreenerPass(assets, undefined, db);
 
     expect(result.resolved).toBe(0);
     expect(result.diagnostics).toEqual(
@@ -89,7 +89,7 @@ describe("enrichMissingPrices", () => {
       .find(
         (entry) =>
           entry.sql.includes("INSERT OR REPLACE INTO cache") &&
-          entry.binds[0] === `circuit:${fixtureCIRCUIT_SOURCE.DEXSCREENER_PRICES}`,
+          entry.binds[0] === `circuit:${CIRCUIT_SOURCE.DEXSCREENER_PRICES}`,
       );
     expect(JSON.parse(String(exactWrite?.binds[1]))).toMatchObject({
       state: "closed",
@@ -107,9 +107,9 @@ describe("enrichMissingPrices", () => {
       }),
     ];
 
-    const db = fixtureMockD1([], { requireMatch: true });
+    const db = makeEnrichPricesDb([], { requireMatch: true });
 
-    await expect(fixtureRunDexScreenerPass(assets, undefined, db)).resolves.toEqual({
+    await expect(runDexScreenerPass(assets, undefined, db)).resolves.toEqual({
       resolved: 0,
       failures: [],
     });
@@ -123,9 +123,9 @@ describe("enrichMissingPrices", () => {
     const assets = [make("probe-base", "base", 1), make("probe-eth", "ethereum", 2),
       make("missing-eth", "ethereum", 3), make("missing-sol", "solana", 4)];
     const missing = new Set(["missing-eth", "missing-sol"]);
-    const fetchSpy = fixtureMockFetch();
-    await fixtureRunDexScreenerPass(assets, undefined, undefined, undefined, undefined, 0, missing);
-    await fixtureRunDexScreenerPass(assets, undefined, undefined, undefined, undefined,
+    const fetchSpy = mockFetch();
+    await runDexScreenerPass(assets, undefined, undefined, undefined, undefined, 0, missing);
+    await runDexScreenerPass(assets, undefined, undefined, undefined, undefined,
       DEXSCREENER_ROTATION_INTERVAL_MS, missing);
     expect(fetchSpy).toHaveBeenCalledTimes(2);
     const first = String(fetchSpy.mock.calls[0]?.[0]);
@@ -141,9 +141,9 @@ describe("enrichMissingPrices", () => {
       address: `ethereum:0x${index.toString(16).padStart(40, "0")}`,
     }));
     const missing = new Set(assets.map(({ id }) => id));
-    const fetchSpy = fixtureMockFetch();
-    await fixtureRunDexScreenerPass(assets, undefined, undefined, undefined, undefined, 0, missing);
-    await fixtureRunDexScreenerPass(assets, undefined, undefined, undefined, undefined,
+    const fetchSpy = mockFetch();
+    await runDexScreenerPass(assets, undefined, undefined, undefined, undefined, 0, missing);
+    await runDexScreenerPass(assets, undefined, undefined, undefined, undefined,
       DEXSCREENER_ROTATION_INTERVAL_MS, missing);
     const selections = fetchSpy.mock.calls.map(([url]) => new URL(String(url)).pathname.split("/").slice(-1)[0].split(","));
     expect(selections).toHaveLength(2);
@@ -161,21 +161,21 @@ describe("enrichMissingPrices", () => {
       }),
     ];
 
-    const db = fixtureMockD1(
+    const db = makeEnrichPricesDb(
       [
-        { match: "circuit", rows: [] },
+        { match: "circuit", rows: [], allowUnused: true },
         { match: "cache", rows: [] },
       ],
       { requireMatch: true },
     );
 
-    const fetchSpy = fixtureMockFetch([], { requireMatch: true });
+    const fetchSpy = mockFetch([], { requireMatch: true });
 
     // GUSD is registered on ethereum and (since the P-wave) near, and the pass
     // rotates which chain leads each quarter-hour. Pinning the rotation clock
     // makes the pick reproducible: cycle 0 selects the alphabetically first
     // chain group, so the canonical ethereum deployment leads.
-    const result = await fixtureRunDexScreenerPass(assets, undefined, db, undefined, undefined, 0);
+    const result = await runDexScreenerPass(assets, undefined, db, undefined, undefined, 0);
 
     expect(result.resolved).toBe(0);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
@@ -194,20 +194,20 @@ describe("enrichMissingPrices", () => {
       }),
     ];
 
-    const db = fixtureMockD1(
+    const db = makeEnrichPricesDb(
       [
-        { match: "circuit", rows: [] },
+        { match: "circuit", rows: [], allowUnused: true },
         { match: "cache", rows: [] },
       ],
       { requireMatch: true },
     );
 
-    const fetchSpy = fixtureMockFetch([], { requireMatch: true });
+    const fetchSpy = mockFetch([], { requireMatch: true });
 
     // One rotation interval later the bridged NEAR deployment takes its turn.
     // The rotation is the point — a persistent gap on one network must not
     // starve the other — so this pins the behaviour rather than the accident.
-    await fixtureRunDexScreenerPass(assets, undefined, db, undefined, undefined, DEXSCREENER_ROTATION_INTERVAL_MS);
+    await runDexScreenerPass(assets, undefined, db, undefined, undefined, DEXSCREENER_ROTATION_INTERVAL_MS);
 
     expect(fetchSpy.mock.calls[0]?.[0]).toContain(
       "api.dexscreener.com/tokens/v1/near/056fd409e1d7a124bd7017459dfea2f387b6d5cd.factory.bridge.near",
@@ -226,7 +226,7 @@ describe("enrichMissingPrices", () => {
       }),
     ];
 
-    fixtureMockFetch([
+    mockFetch([
       {
         match: "coins.llama.fi/prices",
         body: {
@@ -237,17 +237,17 @@ describe("enrichMissingPrices", () => {
       },
     ]);
 
-    const result = await fixtureRunDlContractPasses(assets, undefined);
+    const result = await runDlContractPasses(assets, undefined);
 
     expect(result.resolved).toBe(0);
     expect(assets[0].price).toBe(0);
   });
 
   it("records a defillama-coins breaker failure when DL /coins OK response is malformed", async () => {
-    const db = fixtureMockD1([
+    const db = makeEnrichPricesDb([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: [`circuit:${fixtureCIRCUIT_SOURCE.DL_COINS}`],
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.DL_COINS}`],
         rows: [],
         first: null,
       },
@@ -259,7 +259,7 @@ describe("enrichMissingPrices", () => {
       }),
     ];
 
-    fixtureMockFetch([
+    mockFetch([
       {
         match: "coins.llama.fi/prices",
         body: {
@@ -270,7 +270,7 @@ describe("enrichMissingPrices", () => {
       },
     ]);
 
-    const result = await fixtureRunDlContractPasses(assets, undefined, undefined, db);
+    const result = await runDlContractPasses(assets, undefined, undefined, db);
 
     expect(result.resolved).toBe(0);
     expect(result.failures).toEqual(["dl-contracts"]);
@@ -279,7 +279,7 @@ describe("enrichMissingPrices", () => {
       .find(
         (entry) =>
           entry.sql.includes("INSERT OR REPLACE INTO cache") &&
-          entry.binds[0] === `circuit:${fixtureCIRCUIT_SOURCE.DL_COINS}`,
+          entry.binds[0] === `circuit:${CIRCUIT_SOURCE.DL_COINS}`,
       );
     expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
       consecutiveFailures: 1,
@@ -288,10 +288,10 @@ describe("enrichMissingPrices", () => {
 
   it("skips DL /coins fetch when the defillama-coins breaker is open", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const db = fixtureMockD1([
+    const db = makeEnrichPricesDb([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: [`circuit:${fixtureCIRCUIT_SOURCE.DL_COINS}`],
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.DL_COINS}`],
         rows: [],
         first: {
           value: JSON.stringify({
@@ -313,19 +313,19 @@ describe("enrichMissingPrices", () => {
       }),
     ];
 
-    const fetchSpy = fixtureMockFetch([], { requireMatch: true });
+    const fetchSpy = mockFetch([], { requireMatch: true });
 
-    const result = await fixtureRunDlContractPasses(assets, undefined, undefined, db);
+    const result = await runDlContractPasses(assets, undefined, undefined, db);
 
     expect(result.resolved).toBe(0);
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it("records a defillama-coins breaker failure when DL /coins returns 500", { timeout: 15_000 }, async () => {
-    const db = fixtureMockD1([
+    const db = makeEnrichPricesDb([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: [`circuit:${fixtureCIRCUIT_SOURCE.DL_COINS}`],
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.DL_COINS}`],
         rows: [],
         first: null,
       },
@@ -338,9 +338,9 @@ describe("enrichMissingPrices", () => {
       }),
     ];
 
-    const fetchSpy = fixtureMockFetch([{ match: () => true, body: "upstream error", status: 500 }]);
+    const fetchSpy = mockFetch([{ match: () => true, body: "upstream error", status: 500 }]);
 
-    const result = await fixtureRunDlContractPasses(assets, undefined, undefined, db);
+    const result = await runDlContractPasses(assets, undefined, undefined, db);
 
     expect(result.resolved).toBe(0);
     expect(fetchSpy).toHaveBeenCalled();
@@ -348,7 +348,7 @@ describe("enrichMissingPrices", () => {
     const circuitWrites = db
       .getHistory()
       .filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"))
-      .filter((entry) => String(entry.binds[0]) === `circuit:${fixtureCIRCUIT_SOURCE.DL_COINS}`);
+      .filter((entry) => String(entry.binds[0]) === `circuit:${CIRCUIT_SOURCE.DL_COINS}`);
 
     expect(circuitWrites.length).toBeGreaterThan(0);
     const lastWrite = circuitWrites[circuitWrites.length - 1];

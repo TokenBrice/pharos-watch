@@ -1,19 +1,10 @@
 "use client";
 
-import { useCountUp } from "@/hooks/use-count-up";
-import { useTelegramPulse } from "@/hooks/api-hooks";
-import { TELEGRAM_PULSE_STATIC } from "@/lib/telegram-pulse-static";
+import { useLiveWatcherCountDisplay } from "./live-watcher-count";
 import { TELEGRAM_METRIC_SEMANTICS } from "@shared/lib/telegram-metrics";
 
-/**
- * The hero's live adoption figure. Live pulse data wins; the baked static
- * snapshot bridges first paint; when neither exists the line stays quiet
- * rather than flashing a skeleton or an invented figure.
- */
 export function NightShiftMetric() {
-  const { data } = useTelegramPulse();
-  const target = data?.activeWatchers ?? TELEGRAM_PULSE_STATIC.activeWatchers;
-  const { display } = useCountUp(target);
+  const display = useLiveWatcherCountDisplay();
 
   if (display == null) return null;
 

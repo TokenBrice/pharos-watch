@@ -82,7 +82,10 @@ export async function probeQuarantinedDeterministicAdapters(params: {
   const probeConfigsById = new Map(
     QUARANTINED_DETERMINISTIC_PROBE_CONFIGS.map((config) => [config.stablecoinId, config] as const),
   );
-  const probeTargets = params.quarantinedAdapters.filter((adapter) => probeConfigsById.has(adapter.stablecoinId));
+  const probeTargets = params.quarantinedAdapters.flatMap((adapter) => {
+    const config = probeConfigsById.get(adapter.stablecoinId);
+    return config ? [{ adapter, config }] : [];
+  });
   const failureCounts: Record<string, number> = {};
 
   if (!params.chainRpcs) {
@@ -101,16 +104,8 @@ export async function probeQuarantinedDeterministicAdapters(params: {
 
   const readyToRestore: QuarantineRestoreCandidate[] = [];
   let attemptedCount = 0;
-  let skippedCount = 0;
 
-  for (const adapter of probeTargets) {
-    const config = probeConfigsById.get(adapter.stablecoinId);
-    if (!config) {
-      skippedCount += 1;
-      incrementCount(failureCounts, "missing-probe-config");
-      continue;
-    }
-
+  for (const { adapter, config } of probeTargets) {
     attemptedCount += 1;
     try {
       const rate = await fetchQuarantineProbeRate({
@@ -147,7 +142,7 @@ export async function probeQuarantinedDeterministicAdapters(params: {
       configuredProbeCount: probeTargets.length,
       attemptedCount,
       readyToRestoreCount: readyToRestore.length,
-      skippedCount,
+      skippedCount: 0,
       failureCounts,
     },
   };

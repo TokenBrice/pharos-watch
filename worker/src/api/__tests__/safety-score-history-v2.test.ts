@@ -120,7 +120,30 @@ describe("handleSafetyScoreHistoryV2", () => {
     ]);
   });
 
-  it("rejects persisted V8 rows that carry a mismatched V9 policy identity", async () => {
+  it("omits a malformed row while returning valid rows and the malformed count", async () => {
+    const db = mockD1([
+      {
+        match: "FROM safety_score_history_v2",
+        rows: [
+          { ...v9BoundaryRow(), history_id: "malformed", recorded_at: 200, model: "v8" as const },
+          v9BoundaryRow(),
+        ],
+      },
+      { match: "cron_runs", rows: [] },
+    ], { requireMatch: true });
+
+    const response = await handleSafetyScoreHistoryV2(
+      db,
+      new URL("https://x/api/safety-score-history-v2?stablecoin=usdc-circle"),
+    );
+    const body = SafetyScoreHistoryV2ResponseSchema.parse(await readJsonResponse(response, 200));
+
+    expect(body.history).toHaveLength(1);
+    expect(body.history[0]?.safetyScoreIdentity.model).toBe("v9");
+    expect(body.malformedRows).toBe(1);
+  });
+
+  it("returns 503 when persisted rows exist but none are valid", async () => {
     const db = mockD1([
       {
         match: "FROM safety_score_history_v2",
@@ -128,11 +151,25 @@ describe("handleSafetyScoreHistoryV2", () => {
       },
     ], { requireMatch: true });
 
-    // Fails closed: the router boundary maps this throw to the JSON 500 pinned by
-    // `router-contract.test.ts`.
-    await expect(
-      handleSafetyScoreHistoryV2(db, new URL("https://x/api/safety-score-history-v2?stablecoin=usdc-circle")),
-    ).rejects.toThrow();
+    const response = await handleSafetyScoreHistoryV2(
+      db,
+      new URL("https://x/api/safety-score-history-v2?stablecoin=usdc-circle"),
+    );
+
+    await expect(readJsonResponse(response, 503)).resolves.toMatchObject({
+      error: "Safety score history is temporarily unavailable",
+    });
+  });
+
+  it("does not disguise an unrelated read failure as the all-malformed 503", async () => {
+    const db = mockD1([
+      { match: "FROM safety_score_history_v2", rows: [], throwError: new Error("D1_ERROR: internal error") },
+    ]);
+
+    await expect(handleSafetyScoreHistoryV2(
+      db,
+      new URL("https://x/api/safety-score-history-v2?stablecoin=usdc-circle"),
+    )).rejects.toThrow("D1_ERROR");
   });
 
   it("returns an empty history with a current freshness fallback", async () => {
@@ -150,7 +187,7 @@ describe("handleSafetyScoreHistoryV2", () => {
     );
 
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({ schemaVersion: 2, history: [] });
+    await expect(response.json()).resolves.toEqual({ schemaVersion: 2, history: [], malformedRows: 0 });
     expect(response.headers.get("X-Data-Age")).toBe("0");
     expect(db.getHistory().find((entry) => entry.sql.includes("FROM safety_score_history_v2"))?.binds).toEqual([
       "usdc-circle",

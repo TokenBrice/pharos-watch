@@ -1,7 +1,7 @@
 import { compareCodeUnits } from "@shared/lib/compare";
 import { logWorkerEventArgs } from "./structured-log";
 import {
-  DEX_LIQUIDITY_PUBLISHED_ROW_FILTER,
+  dexLiquidityPublishedRowFilter,
   loadDexLiquiditySnapshot,
   type DexLiquidityLoadResult,
 } from "./dex-liquidity";
@@ -176,7 +176,7 @@ async function loadDexDeploymentSupplyJoin(db: D1Database): Promise<{
               ddo.observed_at AS outcome_observed_at, dl.chain_tvl_json
        FROM dex_liquidity dl
        LEFT JOIN dex_deployment_outcomes ddo ON ddo.stablecoin_id = dl.stablecoin_id
-       WHERE ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER.replaceAll("publication_generation_id", "dl.publication_generation_id")}`,
+       WHERE ${dexLiquidityPublishedRowFilter("dl")}`,
     )
     .all<DexDeploymentJoinDbRow>();
 

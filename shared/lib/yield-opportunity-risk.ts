@@ -200,10 +200,20 @@ export interface YieldRowSafetyResolution {
 /**
  * Drop every safety-derived field when the published safety snapshot could not
  * be read, so a degraded run never publishes an opportunity score computed from
- * a substituted default.
+ * a substituted default. One definition for the write path's degraded
+ * resolution and the read path's degraded payload.
+ *
+ * Absence passes through: a row that carried no `sourceRisk` keeps carrying
+ * none instead of acquiring a `null` key in the published payload.
  */
-function stripSafetyDerivedSourceRisk(sourceRisk: YieldSourceRisk | null): YieldSourceRisk | null {
-  if (sourceRisk == null) return null;
+export function stripSafetyDerivedSourceRisk(sourceRisk: YieldSourceRisk | null): YieldSourceRisk | null;
+export function stripSafetyDerivedSourceRisk(
+  sourceRisk: YieldSourceRisk | null | undefined,
+): YieldSourceRisk | null | undefined;
+export function stripSafetyDerivedSourceRisk(
+  sourceRisk: YieldSourceRisk | null | undefined,
+): YieldSourceRisk | null | undefined {
+  if (sourceRisk == null) return sourceRisk;
   const { opportunityRisk: _opportunityRisk, ...independentSourceRisk } = sourceRisk;
   return {
     ...independentSourceRisk,

@@ -9,7 +9,13 @@ import { isDexApiRecord } from "./direct-api-json";
 import { runPaginatedDirectApiFetch } from "./direct-api-paginated";
 
 const METEORA_API = "https://dlmm.datapi.meteora.ag/pools";
+// The provider honours `page_size` (an ignored `limit` returned 10-row pages)
+// and reports `pages`/`current_page`, so a short page is no longer the only
+// stop condition. The inventory is ~126k pools ordered by 24h volume: this run
+// keeps a bounded head, which is why the direct-api slot stays
+// `censusScope: "bounded-sample"`.
 const PAGE_SIZE = 500;
+const MAX_PAGES = 3;
 
 interface MeteoraToken {
   address: string;
@@ -34,6 +40,8 @@ interface MeteoraPool {
 
 interface MeteoraResponse {
   data?: unknown;
+  pages?: unknown;
+  current_page?: unknown;
 }
 
 function isMeteoraToken(value: unknown): value is MeteoraToken {
@@ -58,14 +66,19 @@ function isMeteoraPool(value: unknown): value is MeteoraPool {
 
 export async function fetchMeteoraPools(signal?: AbortSignal): Promise<DexApiFetchResult> {
   const malformedRowsByPage = new Map<number, number>();
+  let reportedLastPage = false;
   const result = await runPaginatedDirectApiFetch<DexApiPool>({
     source: "meteora",
-    buildUrl: (page) => `${METEORA_API}?page=${page}&limit=${PAGE_SIZE}`,
+    buildUrl: (page) => `${METEORA_API}?page=${page}&page_size=${PAGE_SIZE}`,
     pageSize: PAGE_SIZE,
+    maxPages: MAX_PAGES,
     signal,
     parsePage: (body, page) => {
-      const json = body as MeteoraResponse;
-      const rows = json.data;
+      const { data: rows, pages, current_page: currentPage } = body as MeteoraResponse;
+      reportedLastPage =
+        typeof pages === "number" && Number.isFinite(pages) &&
+        typeof currentPage === "number" && Number.isFinite(currentPage) &&
+        currentPage >= pages;
       return Array.isArray(rows) ? rows : { error: `page ${page} returned malformed body` };
     },
     mapRow: (rawRow, { page }) => {
@@ -126,6 +139,11 @@ export async function fetchMeteoraPools(signal?: AbortSignal): Promise<DexApiFet
       const malformedRows = malformedRowsByPage.get(page) ?? 0;
       if (malformedRows > 0) {
         warnings.push(`page ${page} skipped ${malformedRows} malformed pool rows`);
+      }
+      if (reportedLastPage) return "stop";
+      if (page >= MAX_PAGES) {
+        warnings.push(`bounded sample: stopped at page ${page} with more pages advertised`);
+        return "stop";
       }
     },
   });

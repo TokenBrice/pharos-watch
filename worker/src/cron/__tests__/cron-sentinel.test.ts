@@ -51,24 +51,7 @@ describe("runCronSentinel", () => {
     expect(mocks.duration).not.toHaveBeenCalled();
   });
 
-  it("runs the daily duration source", async () => {
-    const signal = new AbortController().signal;
-    const result = await runCronSentinel(emptyDb(), {
-      mode: "daily",
-      nowSec: 456,
-      signal,
-    });
-    expect(result.status).toBe("ok");
-    expect(mocks.growth).toHaveBeenCalledTimes(1);
-    expect(mocks.duration).toHaveBeenCalledTimes(1);
-    expect(mocks.repair).toHaveBeenCalledWith(expect.anything(), {
-      nowSec: 456,
-      signal,
-      enabled: undefined,
-    });
-  });
-
-  it("runs the same daily sources through the memory-isolated entrypoint", async () => {
+  it("runs the daily sources through the single daily entrypoint", async () => {
     const signal = new AbortController().signal;
     const result = await runDailyCronSentinel(emptyDb(), {
       nowSec: 789,

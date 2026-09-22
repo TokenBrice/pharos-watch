@@ -53,7 +53,7 @@ describe("Safety Score v9 methodology policy", () => {
     // Rotate only with reviewed semantic changes; release history lives in
     // shared/data/methodology-changelogs/safety-score/v9-activation.ts.
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "271b4d2559d9463a3bba6b98923f81ff486d94923f0e3ed7dd92a64bb6cd75f2",
+      "55217d24772395557c900c403edb62fc7e0d993bf2502f23126d8026c7eeccd3",
     );
     expect(V9_CANDIDATE_POLICY_V1.policy.semantic.formula.withhold).toEqual({
       maxScoreExclusive: 55,
@@ -118,6 +118,7 @@ describe("Safety Score v9 methodology policy", () => {
       accessReviewMaxAgeSec: 365 * 86_400,
       researchOverlayMaxAgeSec: 365 * 86_400,
       mechanismOverlayMaxAgeSec: 365 * 86_400,
+      assuranceReportMaxAgeSec: 100 * 86_400,
       issuerAttestedReserveMaxAgeSec: 365 * 86_400,
       reviewedReserveClassificationMaxAgeSec: 365 * 86_400,
       reviewedReserveCompositionMaxAgeSec: 31 * 86_400,

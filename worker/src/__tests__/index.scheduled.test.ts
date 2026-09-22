@@ -2,10 +2,65 @@ import {
   CRON_TRIGGER_SCHEDULES,
 } from "@shared/lib/cron-jobs";
 import { WorkflowEntrypoint } from "cloudflare:workers";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 
+// 44 of this suite's cron entrypoints are mocked only so the slot stays
+// dispatchable; they share one result shape. Entrypoints whose payload a test
+// reads are spelled out in `cronMocks` below.
+const okCronResults = vi.hoisted(() => <K extends string>(...jobs: K[]) =>
+  Object.fromEntries(
+    jobs.map((job) => [job, vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" }))]),
+  ) as Record<K, Mock>
+);
+
 const cronMocks = vi.hoisted(() => ({
+  ...okCronResults(
+    "syncStablecoinCharts",
+    "syncBlacklist",
+    "syncMintBurn",
+    "syncDexDiscovery",
+    "syncFxRates",
+    "computeAndStoreStabilityIndex",
+    "computeAndStoreDEWS",
+    "projectTape",
+    "dispatchTelegramAlerts",
+    "runTelegramDegradationWatchdog",
+    "cleanExpiredDisambiguations",
+    "runStatusSelfCheck",
+    "runCronStalenessWatchdog",
+    "runDigestPublicationWatchdog",
+    "snapshotSupply",
+    "snapshotChainSupply",
+    "syncSafetyScoreV9SupplyAttribution",
+    "computeSafetyScoreV9",
+    "prepareSafetyScoreV9Input",
+    "computeDepegResolver",
+    "snapshotSafetyGradeHistory",
+    "fetchTbillRate",
+    "snapshotPsiDaily",
+    "snapshotPublicDataset",
+    "syncUsdsStatus",
+    "syncLiveReserves",
+    "syncRedemptionBackstops",
+    "stageDexLiquidityScoring",
+    "runDexExitRouteTurnoverWatchdog",
+    "syncDexMeasuredExecution",
+    "syncDexShadowMeasuredExecution",
+    "syncYieldData",
+    "syncYieldSupplemental",
+    "syncBluechip",
+    "generateDailyDigest",
+    "generateWeeklyRecap",
+    "runPruneStatusProbeRuns",
+    "runPruneCronHistory",
+    "runPruneDetailCache",
+    "runTelegramInactiveCleanup",
+    "runTelegramRetentionCleanup",
+    "runMintBurnGrowthWatchdog",
+    "runCronDurationWatchdog",
+    "runYieldCoverageAudit",
+  ),
   syncStablecoins: vi.fn(async () => ({
     status: "ok",
     itemCount: 1,
@@ -18,21 +73,10 @@ const cronMocks = vi.hoisted(() => ({
       },
     }),
   })),
-  syncStablecoinCharts: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  syncBlacklist: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  syncMintBurn: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  syncDexDiscovery: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  syncFxRates: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  computeAndStoreStabilityIndex: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  computeAndStoreDEWS: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  projectTape: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   cancelQueuedTelegramRecapsForRollout: vi.fn(async () => ({
     targetRowsCancelled: 0,
     pendingRowsDeleted: 0,
   })),
-  dispatchTelegramAlerts: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  runTelegramDegradationWatchdog: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  cleanExpiredDisambiguations: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   publishTelegramPulseSnapshotWithOutcome: vi.fn(async () => ({
     pulse: { quality: { status: "complete", unavailableFields: [] } },
     status: "ok",
@@ -41,24 +85,7 @@ const cronMocks = vi.hoisted(() => ({
     heavyMarkerAdvanced: true,
     error: null,
   })),
-  runStatusSelfCheck: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  runCronStalenessWatchdog: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  runDigestPublicationWatchdog: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  snapshotSupply: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  snapshotChainSupply: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  syncSafetyScoreV9SupplyAttribution: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  computeSafetyScoreV9: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  prepareSafetyScoreV9Input: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  computeDepegResolver: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  snapshotSafetyGradeHistory: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  fetchTbillRate: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  snapshotPsiDaily: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  snapshotPublicDataset: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  syncUsdsStatus: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  syncLiveReserves: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  syncRedemptionBackstops: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   syncKinesisSupply: vi.fn(async () => ({ status: "ok", itemCount: 2, metadata: "{}" })),
-  stageDexLiquidityScoring: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   consumeDexLiquidityScoringStage: vi.fn(async () => ({
     status: "ok",
     itemCount: 1,
@@ -77,23 +104,7 @@ const cronMocks = vi.hoisted(() => ({
       },
     }),
   })),
-  runDexExitRouteTurnoverWatchdog: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  syncDexMeasuredExecution: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  syncDexShadowMeasuredExecution: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  syncYieldData: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  syncYieldSupplemental: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  syncBluechip: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  generateDailyDigest: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  generateWeeklyRecap: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  runPruneStatusProbeRuns: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  runPruneCronHistory: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   runWorkerRepairTaskRunner: vi.fn(async () => ({ status: "ok", itemCount: 0, metadata: "{}" })),
-  runPruneDetailCache: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  runTelegramInactiveCleanup: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  runTelegramRetentionCleanup: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  runMintBurnGrowthWatchdog: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  runCronDurationWatchdog: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  runYieldCoverageAudit: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   refreshAggregateMintBurnFlowCache: vi.fn(async () => new Response("{}")),
   logCronRun: vi.fn(async (
     _db: D1Database,
@@ -182,7 +193,7 @@ vi.mock("../cron/sync-mint-burn", () => ({ syncMintBurn: cronMocks.syncMintBurn 
 vi.mock("../cron/dex-discovery/orchestrator", () => ({ syncDexDiscovery: cronMocks.syncDexDiscovery }));
 vi.mock("../cron/sync-fx-rates", () => ({ syncFxRates: cronMocks.syncFxRates }));
 vi.mock("../cron/stability-index", () => ({ computeAndStoreStabilityIndex: cronMocks.computeAndStoreStabilityIndex }));
-vi.mock("../cron/compute-dews", () => ({ computeAndStoreDEWS: cronMocks.computeAndStoreDEWS }));
+vi.mock("../lib/dews/service", () => ({ computeAndStoreDEWS: cronMocks.computeAndStoreDEWS }));
 vi.mock("../cron/project-tape", () => ({ projectTape: cronMocks.projectTape }));
 vi.mock("../lib/telegram/recap-store", async (importOriginal) => {
   const original = await importOriginal<typeof import("../lib/telegram/recap-store")>();
@@ -486,6 +497,8 @@ describe("worker.scheduled", () => {
     const db = mockD1([
       { match: "FROM cron_runs", rows: [] },
       { match: "FROM cron_slot_executions", rows: [] },
+      { match: "FROM stability_index WHERE computed_at", rows: [{ present: 1 }], first: { present: 1 } },
+      { match: "FROM public_snapshots WHERE snapshot_date", rows: [{ present: 1 }], first: { present: 1 } },
     ], { requireMatch: true });
     const env = createWorkerEnv({
       DB: db,
@@ -559,6 +572,10 @@ describe("worker.scheduled", () => {
     const { ctx, waits } = makeExecutionContext();
     const env = makeScheduledEnv({
       TELEGRAM_BOT_TOKEN: "bot-token",
+      DB: mockD1([
+        { match: "FROM stability_index WHERE computed_at", rows: [{ present: 1 }], first: { present: 1 } },
+        { match: "FROM public_snapshots WHERE snapshot_date", rows: [{ present: 1 }], first: { present: 1 } },
+      ]),
     });
     const scheduledTime = Date.parse("2026-03-23T00:15:00Z");
     const expectedSlotStartedAt = Math.floor(scheduledTime / 1000);

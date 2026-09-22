@@ -97,7 +97,7 @@ Endpoints backed by the cron cache include these additional headers:
 
 Generic freshness status is `fresh` through `8x maxAge`, `degraded` through `12x maxAge`, then `stale`. Generic freshness headers emit `Warning` and downgrade `Cache-Control` to `no-store` after `age > 8x maxAge` so edge/browser caches do not keep serving an old payload after the underlying cron data recovers. Some routes also use `Warning` for dependency or quality advisories even when the age is still inside that runway; clients should treat body `_meta.status` as authoritative when it exists.
 
-DEX liquidity keeps its dataset-wide advisory in `Warning` and also emits a nullable `warning` on each coin row. Coin-specific TVL cliffs or pool-count drops from an otherwise successful run apply only to affected coins and are omitted from the `Warning` header and from the `__global__` row entirely; provider failures, near-guard proximity, and unscoped findings remain global. The advisory comes from the latest liquidity producer outcome, excluding neutral/locked skips and hourly price-only runs that reuse the current liquidity generation. Coin detail consumers use the row advisory while retaining the producer timestamp for independent freshness checks; older responses without the field retain their global warning.
+DEX liquidity keeps its dataset-wide advisory in `Warning` and also emits a nullable `warning` on each coin row. Coin-specific TVL cliffs or pool-count drops from an otherwise successful run apply only to affected coins and are omitted from the `Warning` header and from the `__global__` row entirely; provider failures, near-guard proximity, and unscoped findings remain global. The advisory comes from the latest liquidity producer outcome, excluding neutral or locked skips. Coin detail consumers use the row advisory while retaining the producer timestamp for independent freshness checks; older responses without the field retain their global warning.
 
 ---
 
@@ -255,6 +255,7 @@ JSON API handlers use `{ "error": "message" }` JSON format. `GET /api/og/*` retu
 HTTP method allowance is defined centrally in `shared/lib/api-endpoints/` and enforced by `worker/src/router.ts` via `validateRouteMatchMethod()` and `validateAllowedEndpointMethods()`.
 
 - `GET` is accepted for read endpoints (plus admin debug/status endpoints, `GET /api/backfill-dews`, and dry-run repair previews for `GET /api/backfill-dews?repair=...&dry-run=true`).
+- `HEAD` is not accepted as an implicit `GET`; known routes return `405` with the route's `Allow` methods.
 - `POST` is accepted for mutating admin endpoints, `POST /api/feedback`, `POST /api/api-key-requests`, `POST /api/api-key-requests/verify`, `POST /api/donor-key-claims`, `POST /api/telegram-webhook`, `POST /api/telegram-mini-app/session`, and `POST /api/telegram-mini-app/mutate`.
 - `GET, POST` is accepted on `/api/api-keys` so operators can list keys and create a new key through the same route.
 - `GET` is accepted on `/api/api-keys/lifecycle-summary` for counts-only Triage credential monitoring.
@@ -302,7 +303,7 @@ Generated from `public/openapi.json` (`Pharos API` v1.0.0). Total OpenAPI operat
 | GET | `/api/daily-digest` | Daily digest | Digest | `X-API-Key` required | — | 200, 400, 401, 429, 503 |
 | GET | `/api/digest-archive` | Digest archive | Digest | `X-API-Key` required | — | 200, 400, 401, 429, 503 |
 | GET | `/api/digest-snapshot` | Digest snapshot | Digest | `X-API-Key` required | `date` (query, required, string) | 200, 400, 401, 429, 503 |
-| GET | `/api/snapshots/index` | Public snapshot index | Digest | `X-API-Key` required | — | 200, 400, 401, 429, 503 |
+| GET | `/api/snapshots/index` | Public snapshot index | Digest | `X-API-Key` required | `limit` (query, optional, integer); `cursor` (query, optional, string) | 200, 400, 401, 429, 503 |
 | GET | `/api/snapshots/{date}.json` | Public snapshot for a single day | Digest, History | `X-API-Key` required | `date` (path, required, string) | 200, 400, 401, 429, 503 |
 | GET | `/api/snapshot/{date}/stablecoin/{stablecoinId}` | Public snapshot projection for a single coin | Digest, Stablecoins, History | `X-API-Key` required | `date` (path, required, string); `stablecoinId` (path, required, string) | 200, 400, 401, 429, 503 |
 | GET | `/api/health` | Health check | Health | exempt | — | 200, 400, 503 |
@@ -458,7 +459,7 @@ Returns detected depeg incidents with filters for asset, state, and review statu
 
 ```json
 {
-  "currentVersion": "6.22"
+  "currentVersion": "6.24"
 }
 ```
 
@@ -496,7 +497,7 @@ Returns the current cross-market peg-monitoring summary.
 
 ```json
 {
-  "currentVersion": "6.22"
+  "currentVersion": "6.24"
 }
 ```
 
@@ -586,7 +587,7 @@ Returns the dates available in the public daily snapshot archive.
 
 - **Operation ID:** `snapshotsIndex`
 - **Path:** `/api/snapshots/index`
-- **Parameters:** None.
+- **Parameters:** `limit` (query, optional, integer); `cursor` (query, optional, string)
 - **Success response schema:** [`SnapshotsIndexResponse`](https://pharos.watch/openapi.json#/components/schemas/SnapshotsIndexResponse)
 - **Policy:** authentication `X-API-Key` required; shared endpoint caching allowed (`cacheBypass: false`).
 
@@ -703,8 +704,8 @@ Returns the current Pharos Stability Index and optional component detail.
 
 ```json
 {
-  "currentVersion": "3.61",
-  "methodologyVersion": "3.61"
+  "currentVersion": "3.62",
+  "methodologyVersion": "3.62"
 }
 ```
 
@@ -731,8 +732,8 @@ Returns the currently published Safety Score V9 report-card set.
 
 ```json
 {
-  "version": "9.8",
-  "methodologyVersion": "9.8"
+  "version": "9.91",
+  "methodologyVersion": "9.91"
 }
 ```
 
@@ -762,10 +763,10 @@ Returns reviewed redemption paths and backstop evidence.
 {
   "coins": {},
   "methodology": {
-    "version": "4.42",
-    "versionLabel": "v4.42",
-    "currentVersion": "4.42",
-    "currentVersionLabel": "v4.42",
+    "version": "4.43",
+    "versionLabel": "v4.43",
+    "currentVersion": "4.43",
+    "currentVersionLabel": "v4.43",
     "changelogPath": "/methodology/redemption-backstop-changelog/",
     "asOf": 0,
     "isCurrent": true,
@@ -824,7 +825,7 @@ Returns current Yield Intelligence rankings and risk-adjusted fields.
 ```json
 {
   "currentVersion": "8.43",
-  "methodologyVersion": "9.8"
+  "methodologyVersion": "9.91"
 }
 ```
 
@@ -901,8 +902,8 @@ Freshness threshold: 1800 s.
 
 ```json
 {
-  "currentVersion": "6.22",
-  "methodologyVersion": "6.22"
+  "currentVersion": "6.24",
+  "methodologyVersion": "6.24"
 }
 ```
 

@@ -5,6 +5,7 @@ import {
   buildInsufficientFallbackResult,
   overlayFallbackCuratedAggregateSupply,
   resolveFreshCoinGeckoFallbackEntry,
+  runFallbackIntakePhase,
 } from "../fallback-intake";
 import { restoreFallbackCacheState } from "../fallback";
 import { loadPreviousStablecoinsById } from "../shared";
@@ -159,10 +160,15 @@ describe("CoinGecko fallback phases", () => {
     for (const entry of [
       { usd: 1, usd_market_cap: 5_000_000, last_updated_at: NOW_SEC - 901 },
       { usd: 1, usd_market_cap: 5_000_000 },
-      { usd: 1, usd_market_cap: 5_000_000, last_updated_at: NOW_SEC + 1 },
     ]) {
       expect(resolveFreshCoinGeckoFallbackEntry(entry, NOW_SEC)).toBeNull();
     }
+
+    // A small future skew is tolerated (SUPPLY-MCAP-08): a zero-skew gate rejected the freshest
+    // CoinGecko observations, so an entry stamped marginally ahead of the sync clock is accepted.
+    expect(
+      resolveFreshCoinGeckoFallbackEntry({ usd: 1, usd_market_cap: 5_000_000, last_updated_at: NOW_SEC + 1 }, NOW_SEC),
+    ).toMatchObject({ price: 1, mcap: 5_000_000 });
   });
 
   it("uses the canonical peggedREAL type for BRL fallback assets", () => {
@@ -202,6 +208,28 @@ describe("CoinGecko fallback phases", () => {
         stablecoinsCache: false,
         depegPipeline: false,
       },
+    });
+  });
+
+  it("short-circuits the intake phase to a no-write result when too few assets survive", async () => {
+    const result = await runFallbackIntakePhase({
+      syncStartSec: NOW_SEC,
+      cgData: { "some-coin": { usd: 1, usd_market_cap: 100, last_updated_at: NOW_SEC } },
+      stablecoins: [
+        {
+          id: "some-coin",
+          name: "Some Coin",
+          symbol: "SOME",
+          geckoId: "some-coin",
+          flags: { pegCurrency: "USD", backing: "fiat-backed" },
+        },
+      ],
+    });
+
+    expect("metadata" in result).toBe(true);
+    expect(JSON.parse(("metadata" in result ? result.metadata : null) ?? "{}")).toMatchObject({
+      rowsWritten: 0,
+      cacheWriteMode: "no-write",
     });
   });
 
@@ -300,6 +328,64 @@ describe("CoinGecko fallback phases", () => {
       cacheWriteMode: "no-write",
       cacheWriteSucceeded: false,
       depegPipelineSucceeded: false,
+    });
+  });
+
+  it.each([
+    { label: "blocks a collapsed payload whose identical overlap still represents it", total: 40, overlap: 30, blocked: true },
+    { label: "keeps publishing when the identical overlap covers under half the payload", total: 100, overlap: 40, blocked: false },
+  ])("$label", async ({ total, overlap, blocked }) => {
+    const assets = Array.from({ length: total }, (_, index) =>
+      makeAsset({
+        id: `fixture-${index}`,
+        geckoId: `fixture-${index}`,
+        price: 1,
+      }),
+    );
+    const previousPayload = {
+      peggedAssets: assets.slice(0, overlap).map((asset) => ({
+        id: asset.id,
+        price: asset.price,
+        priceSource: asset.priceSource,
+        priceConfidence: asset.priceConfidence,
+        priceUpdatedAt: asset.priceUpdatedAt,
+        priceObservedAt: asset.priceObservedAt ?? asset.priceUpdatedAt,
+        priceSyncedAt: asset.priceSyncedAt,
+      })),
+    };
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["stablecoins"],
+        rows: [],
+        first: {
+          value: JSON.stringify(previousPayload),
+          updated_at: NOW_SEC - 8 * 3600,
+        },
+      },
+    ]);
+
+    const { previousAssetsById, cacheState: previousCacheState } = await loadPreviousStablecoinsById(db);
+    const result = await evaluateFallbackStalenessFixture({
+      db,
+      assets,
+      previousAssetsById,
+      previousCacheState,
+      syncStartSec: NOW_SEC,
+    });
+
+    if (blocked) {
+      const metadata = JSON.parse(("metadata" in result ? result.metadata : null) ?? "{}") as Record<string, unknown>;
+      expect(metadata).toMatchObject({
+        fallbackMode: "coingecko-supply-fallback-stale-blocked",
+        staleWriteBlocked: true,
+        cacheWriteMode: "no-write",
+      });
+      return;
+    }
+    expect(result).toMatchObject({
+      state: "ok",
+      stalenessSummary: { compared: overlap, identical: overlap, identicalRatio: 1 },
     });
   });
 

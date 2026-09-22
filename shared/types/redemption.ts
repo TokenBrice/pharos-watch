@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { RedemptionExitRouteObservationsSchema } from "./exit-route";
 import { MethodologyEnvelopeSchema } from "./methodology-envelope";
+import { ScoreSchema } from "./safety-schema-primitives";
 import { HttpUrlSchema, NonNegativeNumberSchema, PositiveNumberSchema } from "./validators";
 
 export const RedemptionRouteFamilySchema = z.enum([
@@ -129,7 +130,6 @@ export const RedemptionRouteExitCorrelationSchema = z.enum([
   "unknown",
 ]);
 
-export const RedemptionFeeScenarioSchema = z.enum(["normal", "stress"]);
 
 export const RedemptionDocSourceSupportSchema = z.enum(["route", "capacity", "fees", "access", "settlement"]);
 export type RedemptionDocSourceSupport = z.infer<typeof RedemptionDocSourceSupportSchema>;
@@ -164,7 +164,6 @@ export const RedemptionLiveFreshnessKindValues = [
 export const RedemptionLiveFreshnessKindSchema = z.enum(RedemptionLiveFreshnessKindValues);
 export type RedemptionLiveFreshnessKind = z.infer<typeof RedemptionLiveFreshnessKindSchema>;
 
-const ScoreSchema = z.number().finite().min(0).max(100);
 const RatioSchema = z.number().finite().min(0).max(1);
 
 export const RedemptionDocSourceSchema = z.object({

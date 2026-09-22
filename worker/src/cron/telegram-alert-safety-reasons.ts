@@ -162,7 +162,6 @@ export function addSafetyReasonLines(
   changes: readonly SafetyChange[],
   currentSafetySnapshot: SafetySnapshot | null,
   previousSafetySnapshot: SafetySnapshot | null,
-  _currentContextLines: ReadonlyMap<string, string> = new Map(),
 ): SafetyChangeWithExplain[] {
   return changes.map((change) => {
     const current = currentSafetySnapshot?.[change.stablecoinId];

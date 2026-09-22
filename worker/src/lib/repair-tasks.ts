@@ -1,6 +1,7 @@
 import type { RepairDebtSummary } from "@shared/types/status";
 import { unixNowSec as nowSec } from "@shared/lib/time-constants";
 import { DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC } from "@shared/lib/methodology-versions/depeg-resolver";
+import { runBoundedPrune } from "./bounded-prune";
 import { createCronResult, type StructuredCronResult } from "./cron-result";
 import {
   DDR_FLAP_TOLERANT_MAX_INCIDENT_SPAN_SEC_V1,
@@ -387,24 +388,42 @@ export async function loadDdrRepairDebtDetails(db: D1Database): Promise<DdrRepai
   };
 }
 
+export interface RepairTaskPruneResult {
+  deleted: number;
+  truncated: boolean;
+}
+
+const REPAIR_TASK_PRUNE_BATCH_LIMIT = 5_000;
+const REPAIR_TASK_PRUNE_RUN_LIMIT = 20_000;
+
 export async function pruneRepairTasks(
   db: D1Database,
   cutoffSec: number,
   signal?: AbortSignal,
-): Promise<number> {
-  const result = await runWithOverloadRetry(() =>
-    db
-      .prepare(
-        `DELETE FROM worker_repair_tasks
-         WHERE updated_at < ?
-           AND ${DDR_REPAIR_TASK_TERMINAL_STATE_SQL}`,
-      )
-      .bind(cutoffSec)
-      .run(),
-    3,
+  limits: { batchLimit?: number; runLimit?: number } = {},
+): Promise<RepairTaskPruneResult> {
+  const batchLimit = limits.batchLimit ?? REPAIR_TASK_PRUNE_BATCH_LIMIT;
+  const runLimit = limits.runLimit ?? REPAIR_TASK_PRUNE_RUN_LIMIT;
+  return runBoundedPrune({
+    batchLimit,
+    runLimit,
     signal,
-  );
-  return result.meta.changes ?? 0;
+    deleteBatch: (limit) =>
+      db
+        .prepare(
+          `DELETE FROM worker_repair_tasks
+           WHERE rowid IN (
+             SELECT rowid
+             FROM worker_repair_tasks
+             WHERE updated_at < ?
+               AND ${DDR_REPAIR_TASK_TERMINAL_STATE_SQL}
+             ORDER BY updated_at ASC
+             LIMIT ?
+           )`,
+        )
+        .bind(cutoffSec, limit)
+        .run(),
+  });
 }
 
 async function inspectRepairRunnerBacklog(

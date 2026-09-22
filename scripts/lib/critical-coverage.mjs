@@ -35,7 +35,6 @@ const HIGH_STAKES_COVERAGE_CANDIDATE_FILES = new Set([
   "worker/src/cron/pending-depeg-confirmation-evidence.ts",
   "worker/src/cron/compute-depeg-resolver.ts",
   "worker/src/cron/compute-depeg-resolver-review.ts",
-  "worker/src/cron/compute-dews.ts",
   "worker/src/cron/reserve-adapters/cap-vault.ts",
   "worker/src/cron/sync-live-reserves.ts",
   "worker/src/lib/stress-signals-current-rows.ts",
@@ -59,7 +58,6 @@ export const CRITICAL_COVERAGE_WAIVERS = {
   // These scheduled-path facades and extracted compatibility surfaces are
   // intentionally excluded from the generated enrollment set; their owning
   // implementation modules remain covered by direct import contracts.
-  "worker/src/cron/compute-dews.ts": "2026-12-15",
   "worker/src/lib/safety-score-v9/transfer-materiality-observer.ts": "2026-12-15",
   "worker/src/lib/safety-score-v9/transfer-materiality.ts": "2026-12-15",
   "worker/src/cron/sync-live-reserves-config.ts": "2026-12-15",
@@ -192,6 +190,25 @@ export function findCoverageFor(file, map) {
   return null;
 }
 
+/**
+ * @param {Record<string, unknown>} baseline
+ * @param {readonly string[]} criticalFiles
+ * @param {(file: string) => number} thresholdForFile
+ */
+export function validateCriticalCoverageBaseline(baseline, criticalFiles, thresholdForFile) {
+  const errors = [];
+  for (const file of criticalFiles) {
+    const value = baseline[file];
+    const threshold = thresholdForFile(file);
+    if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > 100) {
+      errors.push(`${file}: baseline must be a finite number between 0 and 100`);
+    } else if (value < threshold) {
+      errors.push(`${file}: baseline ${value.toFixed(1)}% is below enforced floor ${threshold.toFixed(1)}%`);
+    }
+  }
+  return errors;
+}
+
 export function collectCriticalCoverageCandidates({
   cwd = process.cwd(),
   sourceFiles = collectCriticalCoverageSourceFiles(cwd),
@@ -216,6 +233,7 @@ export function findCriticalCoverageCandidatesMissingEnrollment(
   return candidateFiles.filter((file) => !criticalSet.has(file) && !waiverSet.has(file));
 }
 
+/** @param {string[]} candidateFiles @param {Record<string, unknown>} [waivers] */
 export function findStaleCriticalCoverageWaivers(candidateFiles, waivers = CRITICAL_COVERAGE_WAIVERS) {
   const candidateSet = new Set(candidateFiles);
   return Object.keys(waivers).filter((file) => !candidateSet.has(file));
@@ -250,7 +268,38 @@ export function validateCriticalCoverageWaiverMetadata(
 }
 
 /**
- * @param {Record<string, string>} waivers
+ * @param {Record<string, { reviewAfter?: unknown, reason?: unknown }>} waivers
+ * @param {{ candidateFiles?: string[], criticalFiles?: string[] }} [options]
+ */
+export function validateCriticalOwnershipWaiverMetadata(
+  waivers,
+  {
+    candidateFiles,
+    criticalFiles = CRITICAL_FILES,
+  } = {},
+) {
+  const errors = [];
+  const candidateSet = candidateFiles ? new Set(candidateFiles) : null;
+  const criticalSet = new Set(criticalFiles);
+
+  for (const [file, waiver] of Object.entries(waivers)) {
+    if (candidateSet && !candidateSet.has(file)) continue;
+    if (criticalSet.has(file)) {
+      errors.push(`${file}: already enrolled in critical coverage; remove ownership waiver`);
+    }
+    if (!waiver || typeof waiver !== "object" || !isValidIsoDateOnly(waiver.reviewAfter)) {
+      errors.push(`${file}: missing or invalid ownership waiver reviewAfter`);
+    }
+    if (!waiver || typeof waiver !== "object" || typeof waiver.reason !== "string" || waiver.reason.trim() === "") {
+      errors.push(`${file}: missing ownership waiver reason`);
+    }
+  }
+
+  return errors;
+}
+
+/**
+ * @param {Record<string, string | { reviewAfter?: unknown }>} waivers
  * @param {{ today?: Date, lookaheadDays?: number, candidateFiles?: string[] }} [options]
  */
 export function collectCriticalCoverageWaiverReviewQueue(
@@ -269,8 +318,9 @@ export function collectCriticalCoverageWaiverReviewQueue(
   const due = [];
   const upcoming = [];
 
-  for (const [file, reviewAfter] of Object.entries(waivers)) {
+  for (const [file, waiver] of Object.entries(waivers)) {
     if (candidateSet && !candidateSet.has(file)) continue;
+    const reviewAfter = typeof waiver === "string" ? waiver : waiver?.reviewAfter;
     if (!isValidIsoDateOnly(reviewAfter)) continue;
     const row = { file, reviewAfter };
     if (reviewAfter <= todayString) {

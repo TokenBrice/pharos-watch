@@ -316,8 +316,14 @@ export async function claimTelegramProcessedUpdate(
   if (existing.status === "processed") {
     return { status: "duplicate" };
   }
+  if (existing.status === "processing" && existing.received_at > staleBefore) {
+    return {
+      status: "in_flight",
+      retryAfterSec: Math.max(1, existing.received_at + staleSec - input.nowSec),
+    };
+  }
 
-  if (existing.effect_state === "started") {
+  if (existing.effect_state === "started" && existing.received_at <= staleBefore) {
     await db
       .prepare(
         `UPDATE telegram_processed_updates
@@ -334,13 +340,6 @@ export async function claimTelegramProcessedUpdate(
 
   if (existing.effect_state === "execution_unknown") {
     return { status: "effect_unknown" };
-  }
-
-  if (existing.status === "processing" && existing.received_at > staleBefore) {
-    return {
-      status: "in_flight",
-      retryAfterSec: Math.max(1, existing.received_at + staleSec - input.nowSec),
-    };
   }
 
   const storedIntent = existing.effect_state === "planned" ? parseStoredIntent(existing) : undefined;

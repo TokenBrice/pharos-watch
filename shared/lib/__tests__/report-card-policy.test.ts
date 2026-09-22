@@ -1,66 +1,30 @@
 import { describe, it, expect } from "vitest";
-import { inferResilienceDefaults } from "../report-card-policy";
+import { inferDefaultCustodyModel } from "../report-card-policy";
 import { BACKING_TYPE_VALUES, GOVERNANCE_TYPE_VALUES } from "@shared/types/core";
 import {
   type BackingType,
-  type CollateralQuality,
   type CustodyModel,
   type GovernanceType,
 } from "@shared/types";
 
-type ResilienceDefaults = {
-  collateralQuality: CollateralQuality;
-  custodyModel: CustodyModel;
+const EXPECTED: Record<`${BackingType}:${GovernanceType}`, CustodyModel> = {
+  "rwa-backed:centralized": "institutional-regulated",
+  "rwa-backed:centralized-dependent": "institutional-regulated",
+  "rwa-backed:decentralized": "onchain",
+  "crypto-backed:centralized": "onchain",
+  "crypto-backed:centralized-dependent": "onchain",
+  "crypto-backed:decentralized": "onchain",
+  "algorithmic:centralized": "onchain",
+  "algorithmic:centralized-dependent": "onchain",
+  "algorithmic:decentralized": "onchain",
 };
 
-// Expected defaults for every BackingType × GovernanceType combination,
-// transcribed from DEFAULT_RESILIENCE_FACTORS so a silent table change fails
-// here rather than only transitively through resilience-score consumers.
-const EXPECTED: Record<`${BackingType}:${GovernanceType}`, ResilienceDefaults> = {
-  "rwa-backed:centralized": {
-    collateralQuality: "rwa",
-    custodyModel: "institutional-regulated",
-  },
-  "rwa-backed:centralized-dependent": {
-    collateralQuality: "rwa",
-    custodyModel: "institutional-regulated",
-  },
-  "rwa-backed:decentralized": {
-    collateralQuality: "native",
-    custodyModel: "onchain",
-  },
-  "crypto-backed:centralized": {
-    collateralQuality: "native",
-    custodyModel: "onchain",
-  },
-  "crypto-backed:centralized-dependent": {
-    collateralQuality: "eth-lst",
-    custodyModel: "onchain",
-  },
-  "crypto-backed:decentralized": {
-    collateralQuality: "native",
-    custodyModel: "onchain",
-  },
-  "algorithmic:centralized": {
-    collateralQuality: "native",
-    custodyModel: "onchain",
-  },
-  "algorithmic:centralized-dependent": {
-    collateralQuality: "native",
-    custodyModel: "onchain",
-  },
-  "algorithmic:decentralized": {
-    collateralQuality: "native",
-    custodyModel: "onchain",
-  },
-};
-
-describe("inferResilienceDefaults", () => {
+describe("inferDefaultCustodyModel", () => {
   for (const backing of BACKING_TYPE_VALUES) {
     for (const governance of GOVERNANCE_TYPE_VALUES) {
       const key = `${backing}:${governance}` as const;
-      it(`returns the expected defaults for ${key}`, () => {
-        expect(inferResilienceDefaults(backing, governance)).toEqual(EXPECTED[key]);
+      it(`returns the expected default for ${key}`, () => {
+        expect(inferDefaultCustodyModel(backing, governance)).toBe(EXPECTED[key]);
       });
     }
   }

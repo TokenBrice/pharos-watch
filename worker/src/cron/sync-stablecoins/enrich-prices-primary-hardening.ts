@@ -1,3 +1,4 @@
+import { DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
@@ -9,12 +10,7 @@ import {
   isSevereFixedPegDownside,
   validatePriceCandidate,
 } from "../../lib/price-validation";
-import {
-  DEX_FRESHNESS_SEC,
-  POOL_CHALLENGE_HIGH_TVL_USD,
-  POOL_CHALLENGE_MIN_TVL,
-  getDepegThresholdBps,
-} from "../../lib/constants";
+import { POOL_CHALLENGE_HIGH_TVL_USD, POOL_CHALLENGE_MIN_TVL, getDepegThresholdBps } from "../../lib/constants";
 import { loadDexPoolChallengers } from "../../lib/depeg-helpers";
 import { aggregateProtocolPrices, computeWeightedMedianPrice } from "../../lib/dex-price-estimators";
 import { midDivergenceBps } from "../../lib/price-divergence";

@@ -64,6 +64,7 @@ export interface ScreenerFilters {
   supplyMin: number;
   supplyMax: number;
   safetyGrades: readonly ReportCardGrade[];
+  safetyScoreMin: number;
   safetyBackingMin: number;
   safetyExitMin: number;
   safetyControlMin: number;
@@ -89,6 +90,7 @@ export const SCREENER_FILTER_DEFAULTS: ScreenerFilters = {
   supplyMin: 0,
   supplyMax: 0,
   safetyGrades: [],
+  safetyScoreMin: 0,
   safetyBackingMin: 0,
   safetyExitMin: 0,
   safetyControlMin: 0,
@@ -143,6 +145,12 @@ export const SCREENER_URL_SCHEMA: UrlStateSchema<ScreenerFilters> = {
     kind: "enumList",
     defaultValue: SCREENER_FILTER_DEFAULTS.safetyGrades,
     allowedValues: SAFETY_GRADE_VALUES,
+  },
+  safetyScoreMin: {
+    kind: "boundedNumber",
+    defaultValue: SCREENER_FILTER_DEFAULTS.safetyScoreMin,
+    min: 0,
+    max: 100,
   },
   safetyBackingMin: {
     kind: "boundedNumber",
@@ -352,6 +360,7 @@ export function hasLoadingScoreFilterData(
   // affordance at all.
   const reportActive =
     filters.safetyGrades.length > 0 ||
+    filters.safetyScoreMin > 0 ||
     filters.safetyBackingMin > 0 ||
     filters.safetyExitMin > 0 ||
     filters.safetyControlMin > 0 ||
@@ -397,6 +406,7 @@ export function applyFilters(rows: readonly ScreenerRow[], filters: ScreenerFilt
     if (safetyGradeSet) {
       if (!row.safetyGrade || !safetyGradeSet.has(row.safetyGrade)) return false;
     }
+    if (!passesMinimum(row.safetyScore, filters.safetyScoreMin)) return false;
     if (!passesMinimum(row.safetyBackingScore, filters.safetyBackingMin)) return false;
     if (!passesMinimum(row.safetyExitScore, filters.safetyExitMin)) return false;
     if (!passesMinimum(row.safetyControlScore, filters.safetyControlMin)) return false;
@@ -499,6 +509,9 @@ export function countActiveScreenerFilters(filters: ScreenerFilters): number {
     count += 1;
   }
   count += filters.safetyGrades.length;
+  if (filters.safetyScoreMin > 0) {
+    count += 1;
+  }
   if (filters.safetyBackingMin > 0) {
     count += 1;
   }

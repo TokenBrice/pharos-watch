@@ -1,8 +1,8 @@
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import type { ExitRouteObservation } from "@shared/types/exit-route";
 import type { ReserveSlice } from "@shared/types/reserves";
 import type { V9FactStatusV2 } from "@shared/types/safety-score-v9-facts";
-import { createReportCardsFixedInput, type ReportCardsFixedInputDraft } from "../lib/report-cards-fixed-input";
+import { createReportCardsFixedInput, type ReportCardsFixedInputDraft } from "./report-cards-fixed-input";
 import { V9_FIXTURE_CLOCK_SEC, V9_FIXTURE_OBSERVED_AT_SEC } from "./v9-fixed-input-observations";
 
 /** A `required` fact status with placeholder evidence/gap refs. */

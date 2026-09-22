@@ -1,23 +1,26 @@
-import { throwIfAborted } from "./abort";
-import { runWithOverloadRetry } from "./d1-overload-retry";
+import { runBoundedPrune } from "./bounded-prune";
 
 export async function pruneLiveReserveRecoveryCheckpoints(
   db: D1Database,
   cutoffUpdatedAt: number,
   signal?: AbortSignal,
-): Promise<number> {
-  throwIfAborted(signal);
-  const result = await runWithOverloadRetry(() =>
-    db
-      .prepare(
-        `DELETE FROM worker_scheduled_checkpoints
-          WHERE updated_at < ?
-            AND state IN ('completed', 'failed', 'platform_abandoned')`,
-      )
-      .bind(cutoffUpdatedAt)
-      .run(),
-    3,
+  limits: { batchLimit?: number; runLimit?: number } = {},
+): Promise<{ deleted: number; truncated: boolean }> {
+  const deleteSql = `DELETE FROM worker_scheduled_checkpoints
+    WHERE rowid IN (
+      SELECT rowid
+      FROM worker_scheduled_checkpoints
+      WHERE updated_at < ?
+        AND state IN ('completed', 'failed', 'platform_abandoned')
+      ORDER BY updated_at ASC
+      LIMIT ?
+    )`;
+  const batchLimit = limits.batchLimit ?? 5_000;
+  const runLimit = limits.runLimit ?? 20_000;
+  return runBoundedPrune({
+    batchLimit,
+    runLimit,
     signal,
-  );
-  return result.meta?.changes ?? 0;
+    deleteBatch: (limit) => db.prepare(deleteSql).bind(cutoffUpdatedAt, limit).run(),
+  });
 }

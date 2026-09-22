@@ -4,8 +4,6 @@ import { ArrowUpRight } from "lucide-react";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { MECHANISM_ARCHETYPE_LABELS } from "@shared/lib/classification";
 import { buildPageMetadata } from "@/lib/page-metadata";
-import { cn } from "@/lib/utils";
-import { ARCHETYPE_VISUALS } from "@/lib/mechanism-explainers/types";
 import { SectionHeading, SectionKicker } from "../_shared/section-primitives";
 import { LearnHero } from "../_shared/learn-hero";
 import { CASE_STUDY_LIST, CASE_STUDY_OUTCOME_COUNTS } from "@/lib/case-studies";
@@ -118,12 +116,7 @@ export default function CaseStudiesHub() {
               href={`/learn/case-studies/${study.slug}/`}
               className="pharos-card-shell pharos-focus-ring group flex h-full flex-col p-4 transition-colors hover:border-frost-blue/60"
             >
-              <p
-                className={cn(
-                  "pharos-kicker mb-2",
-                  ARCHETYPE_VISUALS[study.archetype].kickerClass,
-                )}
-              >
+              <p className="pharos-kicker mb-2">
                 {study.eyebrow}
               </p>
               <p className="text-sm font-semibold text-foreground transition-colors group-hover:text-frost-blue">

@@ -156,6 +156,7 @@ function buildRedemptionTelemetry(
       freshnessKind: "same-run-onchain",
       routeStatus: permissionlessOpen ? "open" : "cohort-limited",
       routeStatusSource: "onchain",
+      routeObserved: true,
       routeStatusReason,
       holderEligibility: permissionlessOpen ? "any-holder" : "whitelisted-primary",
       settlementDelaySec: 0,

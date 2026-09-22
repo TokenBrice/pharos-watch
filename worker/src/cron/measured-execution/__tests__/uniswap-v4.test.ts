@@ -26,7 +26,6 @@ import {
 import {
   buildDexMeasuredExecutionProfile,
   createDexMeasuredExecutionRpcBudget,
-  projectProfileForAdapter,
 } from "../profiles";
 import {
   UNISWAP_V4_ADAPTER_PROFILE_ID,
@@ -328,13 +327,6 @@ describe("hook-free Uniswap V4 measured execution", () => {
     });
     expect(quotes[0].point.costBps).toBeCloseTo(5, 8);
     expect(validateUniswapV4ProfileProof(profile)).toEqual([]);
-    const v2Profile = projectProfileForAdapter(profile, "evm-uniswap-v4");
-    expect(v2Profile).toMatchObject({
-      adapterId: "evm-uniswap-v4",
-      demandedInputAmountsUsd: DEMANDED_GRID_USD,
-      payload: { platform: "evm", blockNumber: BLOCK },
-    });
-    expect(v2Profile?.payload.platform === "evm" && v2Profile.payload.callProof).toHaveLength(5);
     const measuredExecution = toMaturePublicProfile(profile);
     expect(buildP4DexExitRouteObservations({
       stablecoinId: profile.tokenIn.trackedAssetId!,
@@ -479,6 +471,65 @@ describe("hook-free Uniswap V4 measured execution", () => {
         (call) => call[1].length,
       ),
     ).toEqual([8, 4, 4]);
+  });
+
+  it("fragments a failed V4 binding transport batch without losing sibling proofs", async () => {
+    const measuredTarget = target();
+    const deployment = getUniswapV4Deployment("ethereum");
+    if (!deployment) throw new Error("missing V4 deployment");
+    const slot0ReturnData = encodeAbiParameters(
+      parseAbiParameters("uint160 sqrtPriceX96,int24 tick,uint24 protocolFee,uint24 lpFee"),
+      [2n ** 96n, 0, 0, 100],
+    );
+    const liquidityReturnData = encodeAbiParameters(
+      parseAbiParameters("uint128 liquidity"),
+      [9_000_000_000_000n],
+    );
+    rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockImplementation(
+      async (_chain: string, calls: Array<{ label: string }>) =>
+        calls.length === 16
+          ? null
+          : calls.map((call) => ({
+              label: call.label,
+              success: true,
+              returnData: call.label.endsWith(":slot0")
+                ? slot0ReturnData
+                : liquidityReturnData,
+            })),
+    );
+    const poolManagerCallData = "0x1234" as const;
+    const poolManagerReturnData = "0x5678" as const;
+    const runtimeEvidence = {
+      poolManagerCodeHash: deployment.expectedPoolManagerCodeHash,
+      stateViewCodeHash: deployment.expectedStateViewCodeHash,
+      quoterCodeHash: deployment.expectedCodeHash,
+      quoterPoolManagerCallData: poolManagerCallData,
+      quoterPoolManagerReturnData: poolManagerReturnData,
+      stateViewPoolManagerCallData: poolManagerCallData,
+      stateViewPoolManagerReturnData: poolManagerReturnData,
+    };
+
+    const outcomes = await resolveUniswapV4PoolBindings({
+      requests: Array.from({ length: 8 }, (_, index) => ({
+        target: { ...measuredTarget, targetId: `${measuredTarget.targetId}-${index}` },
+        deployment,
+        runtimeEvidence,
+      })),
+      blockNumber: BLOCK,
+      chainRpcs: new Map(),
+    });
+
+    expect(outcomes).toEqual(Array.from({ length: 8 }, (_, index) =>
+      expect.objectContaining({
+        targetId: `${measuredTarget.targetId}-${index}`,
+        proof: expect.objectContaining({ poolId: POOL_ID }),
+      }),
+    ));
+    expect(
+      rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mock.calls.map(
+        (call) => call[1].length,
+      ),
+    ).toEqual([16, 8, 8]);
   });
 
   it("keeps a terminal V4 transport failure operationally degraded", async () => {

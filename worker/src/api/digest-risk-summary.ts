@@ -17,7 +17,10 @@ function depegSignalBps(depeg: DepegRiskInput): number {
 }
 
 function depegImpactScore(depeg: DepegRiskInput): number {
-  return depeg.impactScore ?? Math.abs(depegSignalBps(depeg)) * depeg.mcapUsd;
+  const { impactScore } = depeg;
+  return impactScore != null && Number.isFinite(impactScore)
+    ? impactScore
+    : Math.abs(depegSignalBps(depeg)) * depeg.mcapUsd;
 }
 
 function compareDepegRisk(a: DepegRiskInput, b: DepegRiskInput): number {
@@ -35,8 +38,16 @@ function compareDigestRiskSignal(a: DigestRiskSignal, b: DigestRiskSignal): numb
 }
 
 function selectTopDepeg(input: DailyDigestLike, date?: string | null): DigestRiskSignal | null {
+  // Archived rows are persisted JSON, not validated input: an absent mcap or
+  // deviation makes every comparison NaN-false and the "top" depeg becomes
+  // whichever entry the sort happened to visit first.
   const top = input.topDepegs
-    .filter((depeg) => Number.isFinite(depeg.bps))
+    .filter((depeg) => (
+      Number.isFinite(depegSignalBps(depeg))
+      && Number.isFinite(depeg.mcapUsd)
+      && typeof depeg.symbol === "string"
+      && depeg.symbol.length > 0
+    ))
     .sort(compareDepegRisk)[0];
   if (!top) return null;
   const signalBps = depegSignalBps(top);
@@ -44,7 +55,7 @@ function selectTopDepeg(input: DailyDigestLike, date?: string | null): DigestRis
     kind: "depeg",
     symbol: top.symbol,
     bps: signalBps,
-    mcapUsd: Number.isFinite(top.mcapUsd) ? top.mcapUsd : null,
+    mcapUsd: top.mcapUsd,
     severity: isCriticalDepegRisk({ bps: signalBps, mcapUsd: top.mcapUsd }) ? "critical" : "watch",
     activeCount: input.activeDepegCount,
     date: date ?? null,

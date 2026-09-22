@@ -1,3 +1,7 @@
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -19,7 +23,7 @@ import { expectedWorkerRuntimeCoin } from "@shared/lib/__tests__/worker-runtime-
 import {
   GENIUS_CLIENT_PROFILE_FIELDS,
   GENIUS_COMPLIANCE_PROFILE_FIELDS,
-  STABLECOIN_CLIENT_META_FIELDS,
+  STABLECOIN_CLIENT_LIST_FIELDS,
 } from "@shared/types/stablecoin-client-meta";
 import type { StablecoinClientDetailMeta, StablecoinClientListMeta } from "@shared/types/stablecoin-client-meta";
 
@@ -30,7 +34,7 @@ describe("client registry field contract", () => {
 
     expect(runtimeCoins).toEqual(expected);
     expect(
-      runtimeCoins.every((coin) =>
+      runtimeCoins.every((coin: Record<string, unknown>) =>
         Object.keys(coin).every((key) => [
           "id",
           "symbol",
@@ -47,6 +51,37 @@ describe("client registry field contract", () => {
         ].includes(key)),
       ),
     ).toBe(true);
+  });
+
+  it("rejects a length-preserving duplicate canonical ID before projecting either ordered output", ({ onTestFinished }) => {
+    const fixtureDir = mkdtempSync(join(tmpdir(), "pharos-client-registry-order-"));
+    onTestFinished(() => rmSync(fixtureDir, { recursive: true, force: true }));
+    let projectionReads = 0;
+    const sourceCoins = [
+      {
+        id: "kept",
+        get symbol() {
+          projectionReads += 1;
+          return "KEPT";
+        },
+      },
+      {
+        id: "replaced",
+        get symbol() {
+          projectionReads += 1;
+          return "REPLACED";
+        },
+      },
+    ];
+    const canonicalOrderJsonPath = join(fixtureDir, "canonical-order.json");
+    writeFileSync(canonicalOrderJsonPath, JSON.stringify(["kept", "kept"]));
+
+    for (const build of [buildClientRegistryOutput, buildWorkerRuntimeRegistryOutput]) {
+      expect(() => build({ sourceCoins, canonicalOrderJsonPath })).toThrow(
+        "canonical-order.json contains duplicate stablecoin ID",
+      );
+    }
+    expect(projectionReads).toBe(0);
   });
 
   it("projects only the compact listing class from the decision ledger", () => {
@@ -71,7 +106,7 @@ describe("client registry field contract", () => {
   });
 
   it("reads the canonical ordered field list from the shared TypeScript contract", () => {
-    expect(readCanonicalClientFields()).toEqual([...STABLECOIN_CLIENT_META_FIELDS]);
+    expect(readCanonicalClientFields()).toEqual([...STABLECOIN_CLIENT_LIST_FIELDS]);
   });
 
   it("reads the GENIUS client field list from the shared TypeScript contract", () => {
@@ -139,7 +174,7 @@ describe("client registry field contract", () => {
       custodyModel: "institutional-top",
     };
 
-    expect(Object.keys(projectCoin(coin, readCanonicalClientFields()))).toEqual([...STABLECOIN_CLIENT_META_FIELDS]);
+    expect(Object.keys(projectCoin(coin, readCanonicalClientFields()))).toEqual([...STABLECOIN_CLIENT_LIST_FIELDS]);
   });
 
   it("projects only the mint-authority coverage summary and excludes detail evidence", () => {

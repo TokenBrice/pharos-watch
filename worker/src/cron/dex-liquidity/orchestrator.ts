@@ -1,4 +1,5 @@
 import { toErrorMessage } from "@shared/lib/error-utils";
+import { DEX_LIQUIDITY_STAGE_LEAD_SEC } from "@shared/lib/cron-jobs";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
 import { createCronResult } from "../../lib/cron-result";
@@ -54,8 +55,9 @@ import {
 import { fetchSubgraphEnrichmentPhase } from "./orchestrator-phases/subgraph-enrichment";
 import {
   fetchDirectCexOrderbookDepthTelemetry,
-  runFallbackCrawlerPhase,
+  type FallbackCrawlerPhaseResult,
 } from "./orchestrator-phases/fallback";
+import { getFallbackTargets } from "./fetch-fallbacks";
 import { loadTrackedStablecoinMaps } from "./orchestrator-phases/lookups";
 import { mergeDexPriceObservationMap } from "./subgraph-helpers";
 import {
@@ -63,11 +65,11 @@ import {
   clearKnownPoolIdentityIndex,
   countPoolIdentityKeys,
   createKnownPoolIdentityIndex,
-  getIdentityDedupReason,
+  partitionByKnownIdentity,
   registerKnownPoolIdentity,
 } from "./pool-identity";
+import { analyzeDexLiquidityPostScoring } from "./orchestrator-analysis";
 import {
-  analyzeDexLiquidityPostScoring,
   buildDexLiquidityCronMetadata,
   isDexLiquidityDegraded,
 } from "./orchestrator-metadata";
@@ -130,41 +132,21 @@ export function filterPrimaryPoolsPreferDirectApi(
   });
   const primaryIdentityCounts = countPoolIdentityKeys(primaryIdentities);
 
-  const filteredPools: LlamaPool[] = [];
   let skippedByExactIdentity = 0;
   let skippedByUniqueDerivedIdentity = 0;
   let skippedByOptionalWildcardIdentity = 0;
-
-  for (let index = 0; index < pools.length; index++) {
-    const pool = pools[index]!;
-    const identity = primaryIdentities[index]!;
-    const dedupReason = getIdentityDedupReason(
-      identity,
-      directApiKnown,
-      {
-        derived: identity.derivedMatchKey ? (primaryIdentityCounts.derived.get(identity.derivedMatchKey) ?? 0) : 0,
-        wildcard: identity.optionalWildcardKey
-          ? (primaryIdentityCounts.wildcard.get(identity.optionalWildcardKey) ?? 0)
-          : 0,
-      },
-      { allowOptionalWildcard: true },
-    );
-
-    if (dedupReason === "exact") {
-      skippedByExactIdentity++;
-      continue;
-    }
-    if (dedupReason === "derived_unique") {
-      skippedByUniqueDerivedIdentity++;
-      continue;
-    }
-    if (dedupReason === "derived_optional_wildcard") {
-      skippedByOptionalWildcardIdentity++;
-      continue;
-    }
-
-    filteredPools.push(pool);
-  }
+  const filteredPools = partitionByKnownIdentity(
+    pools,
+    (_pool, index) => primaryIdentities[index]!,
+    directApiKnown,
+    primaryIdentityCounts,
+    {
+      exact: () => { skippedByExactIdentity++; },
+      derived_unique: () => { skippedByUniqueDerivedIdentity++; },
+      derived_optional_wildcard: () => { skippedByOptionalWildcardIdentity++; },
+    },
+    { allowOptionalWildcard: true },
+  );
 
   clearKnownPoolIdentityIndex(directApiKnown);
   primaryIdentities.length = 0;
@@ -285,13 +267,13 @@ export async function consumeDexLiquidityScoringStage(
   reportProgress?: CronProgressReporter,
   consumerSlotStartedAt?: number,
   options: {
-    publishLiquidity?: boolean;
     publishShadowTargets?: boolean;
     stageReadyDeadlineMs?: number;
   } = {},
 ): Promise<CronResult> {
-  const expectedSourceSlotStartedAt =
-    consumerSlotStartedAt == null ? undefined : consumerSlotStartedAt - 6 * 60;
+  const expectedSourceSlotStartedAt = consumerSlotStartedAt == null
+    ? undefined
+    : consumerSlotStartedAt - DEX_LIQUIDITY_STAGE_LEAD_SEC;
   const staged = expectedSourceSlotStartedAt != null && options.stageReadyDeadlineMs != null
     ? await loadDexLiquidityScoringStageWhenReady(
         db,
@@ -319,13 +301,8 @@ export async function consumeDexLiquidityScoringStage(
     }),
     syncStartSec: staged.syncStartSec,
   };
-  const currentGenerationId = await loadCurrentDexScoringGenerationId(db, signal);
-  const publishLiquidity = options.publishLiquidity !== false || currentGenerationId === null;
-  const measuredTargetPublicationMode: MeasuredTargetPublicationMode = publishLiquidity
-    ? options.publishShadowTargets === true
-      ? "active-and-shadow"
-      : "active"
-    : "none";
+  const measuredTargetPublicationMode: MeasuredTargetPublicationMode =
+    options.publishShadowTargets === true ? "active-and-shadow" : "active";
   const scoreState = await scoreDexLiquidityPoolState(
     ctx,
     staged.sourceState,
@@ -337,7 +314,6 @@ export async function consumeDexLiquidityScoringStage(
     staged.sourceState,
     staged.poolState,
     scoreState,
-    { publishLiquidity, currentGenerationId },
   );
   const result = buildDexLiquidityCronResult(
     staged.sourceState,
@@ -395,7 +371,7 @@ type DexLiquidityDataSources = NonNullable<Awaited<ReturnType<typeof fetchDataSo
 type DexLiquidityLookups = ReturnType<typeof buildSymbolLookups>;
 type DexLiquiditySubgraphEnrichment = Awaited<ReturnType<typeof fetchSubgraphEnrichmentPhase>>;
 type DexLiquidityDirectApiPhase = Awaited<ReturnType<typeof runDirectApiFetchPhase>>;
-type DexLiquidityFallbackPhase = Awaited<ReturnType<typeof runFallbackCrawlerPhase>>;
+type DexLiquidityFallbackPhase = FallbackCrawlerPhaseResult;
 type DexLiquidityAnalysis = Awaited<ReturnType<typeof analyzeDexLiquidityPostScoring>>;
 type DexLiquidityPersistence = NonNullable<Awaited<ReturnType<typeof persistScores>>>;
 type DexLiquidityHistoricalSnapshot = NonNullable<Awaited<ReturnType<typeof writeHistoricalSnapshots>>>;
@@ -643,9 +619,9 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
   dataSources.curvePayloads.length = 0;
 
   await ctx.reportDexProgress("subgraph-enrichment", {
-    message: "Fetching subgraph liquidity enrichment", providerFamily: "subgraph", total: 3,
-    metadata: { providerFamilies: ["uniswap-v3", "uniswap-v4", "aerodrome"] },
-    counts: { subgraphFamilies: 3 },
+    message: "Fetching subgraph liquidity enrichment", providerFamily: "subgraph", total: 2,
+    metadata: { providerFamilies: ["uniswap-v3", "uniswap-v4"] },
+    counts: { subgraphFamilies: 2 },
   });
   const subgraphEnrichment = await fetchSubgraphEnrichmentPhase({
     graphApiKey: ctx.graphApiKey,
@@ -655,16 +631,21 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
     validationReferences,
   });
   failedSources.push(...subgraphEnrichment.failedSources);
+  const subgraphFamilies = ["univ3-subgraph", "uniswap-v4-subgraph"];
+  const failedSubgraphFamilyCount = subgraphFamilies.filter((family) =>
+    subgraphEnrichment.failedSources.some(
+      (source) => source === family || source.startsWith(`${family}:`),
+    ),
+  ).length;
   await ctx.reportDexProgress("subgraph-enrichment-complete", {
     message: "Completed subgraph enrichment", providerFamily: "subgraph",
-    done: 3 - subgraphEnrichment.failedSources.length, total: 3,
+    done: subgraphFamilies.length - failedSubgraphFamilyCount, total: subgraphFamilies.length,
     metadata: {
-      providerFamilies: ["uniswap-v3", "uniswap-v4", "aerodrome"],
+      providerFamilies: ["uniswap-v3", "uniswap-v4"],
       failedSources: subgraphEnrichment.failedSources,
     },
     counts: {
       uniV3PriceObservations: subgraphEnrichment.uniV3PriceObs.size, uniswapV4ExecutionCandidateKeys: subgraphEnrichment.uniswapV4ExecutionCandidates.size,
-      aerodromePriceObservations: subgraphEnrichment.aerodromePriceObs.size,
     },
   });
 
@@ -674,7 +655,6 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
   fallbackSignals.push(...directApiPhase.fallbackSignals);
 
   mergeDexPriceObservationMap(priceObservations, subgraphEnrichment.uniV3PriceObs);
-  mergeDexPriceObservationMap(priceObservations, subgraphEnrichment.aerodromePriceObs);
   logWorkerEventArgs("handler", "info", `[dex-liquidity] Total: ${priceObservations.size} coins with price observations across all sources`);
 
   return {
@@ -740,7 +720,6 @@ async function buildDexLiquidityPoolState(
     sourceState.dataSources.dexProjects,
     sourceState.curvePoolMap,
     sourceState.subgraphEnrichment.uniV3PoolFees,
-    sourceState.subgraphEnrichment.aerodromeIsStable,
   );
 
   const { metrics, rejections: poolRejections } = processPoolMetrics({
@@ -751,14 +730,11 @@ async function buildDexLiquidityPoolState(
     curvePoolMap: sourceState.curvePoolMap,
     uniV3PoolFees: sourceState.subgraphEnrichment.uniV3PoolFees,
     uniV3SymbolFees: sourceState.subgraphEnrichment.uniV3SymbolFees,
-    aerodromeIsStable: sourceState.subgraphEnrichment.aerodromeIsStable,
     uniV3ExecutionCandidates:
       sourceState.subgraphEnrichment.uniV3ExecutionCandidates,
     stablecoinPriceById: sourceState.stablecoinPriceById,
     measuredTargetCapturedAt: ctx.syncStartSec,
     validationReferences: sourceState.validationReferences,
-    aerodromeV2ExecutionCandidates:
-      sourceState.subgraphEnrichment.aerodromeV2ExecutionCandidates,
     curvePoolCandidatesByFingerprint:
       sourceState.curvePoolCandidatesByFingerprint,
     uniswapV4ExecutionCandidates:
@@ -779,8 +755,6 @@ async function buildDexLiquidityPoolState(
   sourceState.subgraphEnrichment.uniV3PoolFees = new Map();
   sourceState.subgraphEnrichment.uniV3SymbolFees = new Map();
   sourceState.subgraphEnrichment.uniV3PriceObs = new Map();
-  sourceState.subgraphEnrichment.aerodromePriceObs = new Map();
-  sourceState.subgraphEnrichment.aerodromeV2ExecutionCandidates = new Map();
 
   const directApiIntegration = await integrateDirectApiLiquidityPhase({
     db: ctx.db,
@@ -799,7 +773,6 @@ async function buildDexLiquidityPoolState(
         sourceState.subgraphEnrichment.uniV3ExecutionCandidates,
       uniswapV4ExecutionCandidates:
         sourceState.subgraphEnrichment.uniswapV4ExecutionCandidates,
-      aerodromeIsStable: sourceState.subgraphEnrichment.aerodromeIsStable,
       measuredTargetCapturedAt: ctx.syncStartSec,
       contractMetaByChainAddress:
         sourceState.lookups.contractMetaByChainAddress,
@@ -814,10 +787,8 @@ async function buildDexLiquidityPoolState(
   sourceState.directApiPools = [];
   sourceState.subgraphEnrichment.uniV3ExecutionCandidates = new Map();
   sourceState.subgraphEnrichment.uniswapV4ExecutionCandidates = new Map();
-  sourceState.subgraphEnrichment.aerodromeIsStable = new Map();
   sourceState.lookups.symbolToIds = new Map();
   sourceState.lookups.symbolToChainScopedIds = new Map();
-  sourceState.lookups.addressToId = new Map();
 
   await ctx.reportDexProgress("pool-processing-core-complete", {
     message: "Completed primary and direct pool integration", providerFamily: "dex-liquidity", done: metrics.size,
@@ -904,11 +875,13 @@ async function buildDexLiquidityPoolState(
     },
   });
 
-  const fallback = await runFallbackCrawlerPhase({
-    metrics,
-    priceObservations: sourceState.priceObservations,
+  const fallback: FallbackCrawlerPhaseResult = {
+    weakCoverageCoinsBeforeFallback: new Set(
+      getFallbackTargets(metrics, sourceState.priceObservations, { requireTrackedContracts: true })
+        .map((meta) => meta.id),
+    ).size,
     directCexOrderbookDepth: sourceState.directCexOrderbookDepth,
-  });
+  };
   await ctx.reportDexProgress("pool-processing-complete", {
     message: "Completed pool merge and bounded market telemetry", providerFamily: "dex-liquidity", done: metrics.size,
     counts: {
@@ -1048,7 +1021,6 @@ async function persistDexLiquidityScoreState(
   sourceState: DexLiquidityScoringSourceState,
   poolState: DexLiquidityPoolState,
   scoreState: DexLiquidityScoreState,
-  options: { publishLiquidity: boolean; currentGenerationId: string | null },
 ): Promise<DexLiquidityPersistenceState> {
   const skippedReason = getPersistenceSkipReason(sourceState.criticalSourceFailures);
   if (skippedReason) {
@@ -1072,7 +1044,6 @@ async function persistDexLiquidityScoreState(
       challengerPublication: {
         publishedStablecoins: 0,
         skippedStablecoins: scoreState.retainedPoolsByStablecoin.size,
-        missingTables: false,
       },
       dexPriceDiagnostics: {
         rejectedObservationCount: 0,
@@ -1089,61 +1060,47 @@ async function persistDexLiquidityScoreState(
     };
   }
 
-  await ctx.reportDexProgress(options.publishLiquidity ? "persistence" : "price-persistence", {
-    message: options.publishLiquidity ? "Publishing DEX liquidity generation" : "Reusing current DEX liquidity generation for hourly prices",
+  await ctx.reportDexProgress("persistence", {
+    message: "Publishing DEX liquidity generation",
     providerFamily: "d1", total: scoreState.scoreResults.size, counts: { candidateRows: scoreState.scoreResults.size },
   });
-  const persistence: DexLiquidityPersistence = options.publishLiquidity
-    ? (await runWithOverloadRetry(
-        () =>
-          persistScores(
-            ctx.db,
-            poolState.metrics,
-            scoreState.scoreResults,
-            scoreState.globalAgg,
-            ctx.syncStartSec,
-            ctx.signal,
-          ),
-        3,
-        ctx.signal,
-      )) ?? {
-        placeholderCount: 0,
-        inactiveMetricRowsSkipped: 0,
-        inactiveMetricIdsSkipped: [],
-        orphanRowsDeleted: 0,
-        orphanCleanupFailed: false,
-      }
-    : {
-        generationId: options.currentGenerationId,
-        placeholderCount: 0,
-        inactiveMetricRowsSkipped: 0,
-        inactiveMetricIdsSkipped: [],
-        orphanRowsDeleted: 0,
-        orphanCleanupFailed: false,
-        skippedReason: "liquidity-cadence-reuse",
-      };
+  const persistence: DexLiquidityPersistence =
+    (await runWithOverloadRetry(
+      () =>
+        persistScores(
+          ctx.db,
+          poolState.metrics,
+          scoreState.scoreResults,
+          scoreState.globalAgg,
+          ctx.syncStartSec,
+          ctx.signal,
+        ),
+      3,
+      ctx.signal,
+    )) ?? {
+      placeholderCount: 0,
+      inactiveMetricRowsSkipped: 0,
+      inactiveMetricIdsSkipped: [],
+      orphanRowsDeleted: 0,
+      orphanCleanupFailed: false,
+    };
   const publicationGenerationId = persistence.generationId;
   if (!publicationGenerationId) {
     throw new Error("DEX liquidity persistence completed without a publication generation id");
   }
   poolState.metrics.clear();
-  if (options.publishLiquidity) {
-    await publishStablecoinScoreTargets(
-      ctx.db,
-      scoreState.measuredTargetInventory,
-      scoreState.diagnostics,
-      ctx.syncStartSec,
-      ctx.signal,
-    );
-  }
-  await ctx.reportDexProgress(
-    options.publishLiquidity ? "persistence-generation-complete" : "persistence-generation-reused",
-    {
-      message: options.publishLiquidity ? "Published bounded DEX liquidity generation batches" : "Reused exact current DEX liquidity generation",
-      providerFamily: "d1", done: persistence.candidateRowsWritten ?? 0, total: persistence.expectedRowCount ?? scoreState.scoreResults.size,
-      metadata: { generationId: persistence.generationId },
-    },
+  await publishStablecoinScoreTargets(
+    ctx.db,
+    scoreState.measuredTargetInventory,
+    scoreState.diagnostics,
+    ctx.syncStartSec,
+    ctx.signal,
   );
+  await ctx.reportDexProgress("persistence-generation-complete", {
+    message: "Published bounded DEX liquidity generation batches",
+    providerFamily: "d1", done: persistence.candidateRowsWritten ?? 0, total: persistence.expectedRowCount ?? scoreState.scoreResults.size,
+    metadata: { generationId: persistence.generationId },
+  });
   const dexPriceDiagnostics = await computeDexPrices(
     ctx.db,
     scoreState.retainedPoolsByStablecoin,
@@ -1192,33 +1149,24 @@ async function persistDexLiquidityScoreState(
     message: "Published bounded DEX challenger batches", providerFamily: "d1", done: challengerPublication.publishedStablecoins,
   });
 
-  const historicalSnapshot = options.publishLiquidity
-    ? (await writeHistoricalSnapshots(
-        ctx.db,
-        scoreState.scoreResults,
-        ctx.signal,
-        ctx.syncStartSec,
-      )) ?? {
-        snapshotRowsWritten: 0,
-        skipped: false,
-        writeFailed: false,
-        historyRowsPruned: 0,
-        retentionPruneFailed: false,
-      }
-    : {
-        snapshotRowsWritten: 0,
-        skipped: true,
-        writeFailed: false,
-        historyRowsPruned: 0,
-        retentionPruneFailed: false,
-      };
+  const historicalSnapshot =
+    (await writeHistoricalSnapshots(
+      ctx.db,
+      scoreState.scoreResults,
+      ctx.signal,
+      ctx.syncStartSec,
+    )) ?? {
+      snapshotRowsWritten: 0,
+      skipped: false,
+      writeFailed: false,
+      historyRowsPruned: 0,
+      retentionPruneFailed: false,
+    };
   await ctx.reportDexProgress("persistence-history-complete", {
     message: "Reconciled DEX liquidity history", providerFamily: "d1", done: historicalSnapshot.snapshotRowsWritten,
   });
 
-  if (options.publishLiquidity) {
-    await computeDepthStability(ctx.db, scoreState.tvlStabilityMap, publicationGenerationId, ctx.signal);
-  }
+  await computeDepthStability(ctx.db, scoreState.tvlStabilityMap, publicationGenerationId, ctx.signal);
   scoreState.tvlStabilityMap.clear();
   await ctx.reportDexProgress("persistence-depth-complete", {
     message: "Atomically published staged DEX depth stability", providerFamily: "d1",
@@ -1298,6 +1246,7 @@ function buildDexLiquidityCronResult(
         challengerPublication: persistenceState.challengerPublication,
         dexPriceDiagnostics: persistenceState.dexPriceDiagnostics,
         failedSources: sourceState.failedSources,
+        degradedSources: sourceState.degradedSources,
         fallbackSignals: sourceState.fallbackSignals,
         fallbackCounters: scoreState.diagnostics.fallbackCounters,
         persistence: persistenceState.persistence,

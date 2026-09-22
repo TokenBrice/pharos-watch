@@ -46,6 +46,21 @@ function rawSseResponse(encoded: string): Response {
   return new Response(stream, { status: 200, headers: { "Content-Type": "text/event-stream" } });
 }
 
+function rawChunkedSseResponse(encoded: string, chunkSize: number): Response {
+  const bytes = new TextEncoder().encode(encoded);
+  const chunks: Uint8Array[] = [];
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    chunks.push(bytes.slice(offset, offset + chunkSize));
+  }
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      for (const chunk of chunks) controller.enqueue(chunk);
+      controller.close();
+    },
+  });
+  return new Response(stream, { status: 200, headers: { "Content-Type": "text/event-stream" } });
+}
+
 function happyPathEvents(textChunks: string[]): SseEvent[] {
   return [
     { event: "message_start", data: { type: "message_start", message: { id: "msg_test", role: "assistant", content: [] } } },
@@ -73,6 +88,31 @@ describe("accumulateAnthropicStream", () => {
     const response = sseResponse(events, { chunkSplitPattern: Array(1000).fill(1) });
     const result = await accumulateAnthropicStream(response);
     expect(result.text).toBe("café 東京");
+  });
+
+  it("parses CRLF and CR framing identically to LF framing", async () => {
+    const events = happyPathEvents(["Hello, ", "world"]);
+    const lf = await accumulateAnthropicStream(sseResponse(events));
+
+    for (const [lineBreak, terminator] of [["\r\n", "\r\n\r\n"], ["\r", "\r\r"]] as const) {
+      const framed = events
+        .map((ev) => `event: ${ev.event}${lineBreak}data: ${JSON.stringify(ev.data)}${terminator}`)
+        .join("");
+      const result = await accumulateAnthropicStream(rawSseResponse(framed));
+      expect(result).toEqual(lf);
+    }
+
+    expect(lf.text).toBe("Hello, world");
+  });
+
+  it("parses CRLF framing split mid-terminator across chunks", async () => {
+    const encoded = happyPathEvents(["Hello, ", "world"])
+      .map((ev) => `event: ${ev.event}\r\ndata: ${JSON.stringify(ev.data)}\r\n\r\n`)
+      .join("");
+
+    const result = await accumulateAnthropicStream(rawChunkedSseResponse(encoded, 5));
+
+    expect(result).toMatchObject({ text: "Hello, world", stopReason: "end_turn" });
   });
 
   it("ignores malformed frames before valid output", async () => {

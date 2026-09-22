@@ -2,6 +2,7 @@ import {
   ReportCardsBaseInputIdentityV1Schema,
   type ReportCardsBaseInputIdentityV1,
 } from "../types/report-cards-base-input";
+import { domainDigest } from "./safety-score-v9/primitives";
 import { sha256Hex } from "./sha256";
 import { stableJsonStringifyV1 } from "./stable-json";
 
@@ -42,10 +43,6 @@ export interface ReportCardsBaseInputSourceV1 {
   liquidityStale: boolean;
   redemptionStale: boolean;
   inputFreshness: unknown;
-}
-
-function domainDigest(domain: string, payload: unknown): string {
-  return sha256Hex(stableJsonStringifyV1({ domain, payload }));
 }
 
 function producerVersionsOrUnavailable(values: readonly string[]): string[] {

@@ -1,4 +1,5 @@
 import {
+  DEX_DISCOVERY_PAGINATED_PROVIDERS,
   DEX_DISCOVERY_PROVIDER_EXHAUSTIVENESS,
   getActiveDexCoverageWaiver,
   getDexDiscoveryProviders,
@@ -93,6 +94,17 @@ function matchesDeployment(pool: StagedPool, deployment: ContractDeployment): bo
   );
 }
 
+/**
+ * A paginated provider certifies a scope only on its own run-scoped
+ * completeness claim; for every other exhaustive provider the completed
+ * response is the claim.
+ */
+function hasExhaustiveCensusAuthority(check: DexDeploymentProviderCheck): boolean {
+  return DEX_DISCOVERY_PAGINATED_PROVIDERS[check.provider]
+    ? check.paginationComplete === true
+    : DEX_DISCOVERY_PROVIDER_EXHAUSTIVENESS[check.provider];
+}
+
 export function classifyDexDeploymentOutcomes(params: {
   stablecoinId: string;
   deployments: ContractDeployment[];
@@ -102,7 +114,7 @@ export function classifyDexDeploymentOutcomes(params: {
 }): DexDeploymentOutcomeWrite[] {
   const exhaustiveSuccessfulChecks = new Set(
     params.providerChecks
-      .filter((check) => check.status === "success" && DEX_DISCOVERY_PROVIDER_EXHAUSTIVENESS[check.provider])
+      .filter((check) => check.status === "success" && hasExhaustiveCensusAuthority(check))
       .map((check) => deploymentKey(check.chain, check.address)),
   );
   const nonExhaustiveSuccessfulEmptyChecks = new Set(
@@ -110,7 +122,7 @@ export function classifyDexDeploymentOutcomes(params: {
       .filter(
         (check) =>
           check.status === "success" &&
-          !DEX_DISCOVERY_PROVIDER_EXHAUSTIVENESS[check.provider] &&
+          !hasExhaustiveCensusAuthority(check) &&
           (check.observedPoolCount ?? 0) === 0,
       )
       .map((check) => deploymentKey(check.chain, check.address)),

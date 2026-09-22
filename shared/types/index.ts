@@ -14,6 +14,7 @@ export * from "./report-cards-v9";
 export * from "./safety-score-history";
 export * from "./safety-score-publication";
 export * from "./safety-score-v9-public";
+export * from "./safety-score-v9-public-breakdowns";
 export * from "./safety-score-v9-coverage";
 export * from "./safety-score-v9-evidence-queue";
 export * from "./stability";

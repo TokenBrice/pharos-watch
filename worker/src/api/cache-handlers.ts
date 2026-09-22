@@ -7,7 +7,7 @@ import {
 } from "@shared/types/market";
 import { createCacheHandler } from "../lib/api-cache-read";
 import { errorResponse } from "../lib/api-response";
-import { CACHE_PROFILES } from "../lib/constants";
+import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { RESPONSE_READY_CACHE_SCHEMA_IDS } from "../lib/response-ready-cache-contracts";
 import { normalizeStablecoinChartPoints } from "../lib/stablecoin-charts-payload";
 

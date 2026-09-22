@@ -532,7 +532,7 @@ async function fetchAllowlistedVaults(params: {
   const candidates: ResolvedYieldCandidate[] = [];
   const rankableVaults = parseRankableVaults(params.config.rankableVaults);
   if (rankableVaults.length === 0) {
-    params.telemetry.status = "skipped";
+    params.telemetry.status = "failed";
     params.telemetry.skipReason = "invalid-config";
     return candidates;
   }
@@ -633,6 +633,37 @@ export async function fetchVaultsFyiSources({
     telemetry.status = "skipped";
     telemetry.skipReason = "no-key";
     telemetry.durationMs = Date.now() - startedAtMs;
+    return { candidates: [], telemetry };
+  }
+
+  if (config.rankableVaults.length > 0) {
+    const parsedRankableVaults = parseRankableVaults(config.rankableVaults);
+    for (const entry of config.rankableVaults) {
+      if (parseRankableVaults([entry]).length === 0) {
+        recordVaultsFyiDrop(telemetry, "malformed", entry);
+      }
+    }
+    if (parsedRankableVaults.length === 0) {
+      telemetry.status = "failed";
+      telemetry.skipReason = "invalid-config";
+      telemetry.durationMs = Date.now() - startedAtMs;
+      return { candidates: [], telemetry };
+    }
+  }
+
+  if (!db) {
+    telemetry.status = "failed";
+    telemetry.skipReason = "invalid-config";
+    telemetry.durationMs = Date.now() - startedAtMs;
+    logWorkerEvent({
+      scope: "lib",
+      level: "error",
+      event: "vaults_fyi_missing_d1_binding",
+      job: "sync-yield-supplemental",
+      provider: "vaults-fyi",
+      source: "configuration",
+      message: "vaults.fyi paid-source fetch blocked because the D1 binding is unavailable",
+    });
     return { candidates: [], telemetry };
   }
 

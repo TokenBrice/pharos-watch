@@ -1,21 +1,26 @@
 // Type-aware ESLint lane (separate from the fast `npm run lint`).
 //
 // The default lint is intentionally NOT type-aware (no parserOptions.project) so
-// it stays fast and cache-friendly. This lane runs the small set of typed rules
-// that require type information — chiefly floating/misused promises, which the
-// audit flagged as an unguarded gap on worker async / D1 / ctx.waitUntil paths.
+// it stays fast and cache-friendly. This lane blocks floating/misused promises
+// across runtime backend code and unsafe `any` propagation at external-data
+// boundaries, including the frontend library and hook surfaces.
 //
-// Scope is the runtime backend surface (worker + Pages Functions +
-// runtime-neutral shared logic), where an unawaited promise is a real
-// correctness/observability hazard. The two tsconfigs are referenced explicitly
-// because the worker is excluded from the root tsconfig (D1 type conflicts) and
-// has its own.
+// The two tsconfigs are referenced explicitly because the worker is excluded
+// from the root tsconfig (D1 type conflicts) and has its own.
 import tseslint from "typescript-eslint";
 import security from "eslint-plugin-security";
 
 const TYPED_RULES = {
   "@typescript-eslint/no-floating-promises": ["error", { ignoreVoid: true, ignoreIIFE: true }],
   "@typescript-eslint/no-misused-promises": ["error", { checksVoidReturn: false }],
+};
+
+const UNSAFE_BOUNDARY_RULES = {
+  "@typescript-eslint/no-unsafe-assignment": "error",
+  "@typescript-eslint/no-unsafe-member-access": "error",
+  "@typescript-eslint/no-unsafe-call": "error",
+  "@typescript-eslint/no-unsafe-argument": "error",
+  "@typescript-eslint/no-unsafe-return": "error",
 };
 
 const IGNORES = [
@@ -46,6 +51,21 @@ export default tseslint.config(
     rules: TYPED_RULES,
   },
   {
+    files: [
+      "worker/src/lib/**/*.ts",
+      "worker/src/lib/**/*.tsx",
+      "worker/src/api/**/*.ts",
+      "worker/src/api/**/*.tsx",
+    ],
+    ignores: IGNORES,
+    languageOptions: {
+      parser: tseslint.parser,
+      parserOptions: { project: "./worker/tsconfig.json", tsconfigRootDir: import.meta.dirname },
+    },
+    plugins: { "@typescript-eslint": tseslint.plugin, security },
+    rules: UNSAFE_BOUNDARY_RULES,
+  },
+  {
     files: ["shared/lib/**/*.ts", "functions/**/*.ts", "functions/**/*.tsx"],
     ignores: IGNORES,
     languageOptions: {
@@ -54,5 +74,23 @@ export default tseslint.config(
     },
     plugins: { "@typescript-eslint": tseslint.plugin, security },
     rules: TYPED_RULES,
+  },
+  {
+    files: [
+      "shared/lib/**/*.ts",
+      "functions/**/*.ts",
+      "functions/**/*.tsx",
+      "src/lib/**/*.ts",
+      "src/lib/**/*.tsx",
+      "src/hooks/**/*.ts",
+      "src/hooks/**/*.tsx",
+    ],
+    ignores: IGNORES,
+    languageOptions: {
+      parser: tseslint.parser,
+      parserOptions: { project: "./tsconfig.typecheck.json", tsconfigRootDir: import.meta.dirname },
+    },
+    plugins: { "@typescript-eslint": tseslint.plugin, security },
+    rules: UNSAFE_BOUNDARY_RULES,
   },
 );

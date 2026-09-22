@@ -6,17 +6,21 @@ import { z } from "zod";
 import {
   CanonicalDecimalSchema,
   canonicalizeDecimal,
+  JSON_NUMBER_TOKEN_KEY,
+  jsonNumberToken,
+} from "@shared/lib/protocol-api-sources/decimal";
+import {
   EthenaCollateralizationStatusSchema,
   EthenaProofOfReservesSchema,
   ETHENA_PROTOCOL_API_URLS,
-  FalconTransparencySchema,
-  FALCON_TRANSPARENCY_URL,
-  JSON_NUMBER_TOKEN_KEY,
-  jsonNumberToken,
   type EthenaCollateralizationStatus,
   type EthenaProofOfReserves,
+} from "@shared/lib/protocol-api-sources/ethena";
+import {
+  FalconTransparencySchema,
+  FALCON_TRANSPARENCY_URL,
   type FalconTransparency,
-} from "@shared/lib/protocol-api-sources";
+} from "@shared/lib/protocol-api-sources/falcon";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 

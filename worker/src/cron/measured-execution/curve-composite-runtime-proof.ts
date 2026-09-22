@@ -1,14 +1,14 @@
 import { decodeFunctionData, decodeFunctionResult, encodeFunctionData, keccak256, parseAbi } from "viem/utils";
 
 import {
-  DEX_CURVE_STABLESWAP_MEASURED_FRESHNESS_MAX_SEC, type DexMeasuredExecutionCurveCompositeProof,
+  DEX_MEASURED_FRESHNESS_MAX_SEC, type DexMeasuredExecutionCurveCompositeProof,
   type DexMeasuredExecutionProfile, type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
 import { throwIfAborted } from "../../lib/abort";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import {
   fetchEvmBlockHeader, fetchEvmCallHexAtBlock, fetchEvmCodeStatusAtBlock,
-  type EvmBlockHeader, type EvmCodeAtBlockResult,
+  type EvmBlockHeader,
 } from "../../lib/evm-rpc";
 import {
   DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS, type DexMeasuredExecutionRpcBudget,
@@ -18,6 +18,7 @@ import {
   CURVE_RATE_BEARING_ADAPTER_PROFILE_ID, getCurveCompositePolicy,
   type CurveCompositePoolPolicy,
 } from "./curve-composite-policies";
+import type { CurveFamilyVerificationDependencies } from "./curve-stableswap-execution-pipeline";
 
 const POOL_ABI = parseAbi([
   "function coins(uint256) view returns (address)",
@@ -158,7 +159,7 @@ export function evaluateCurveCompositeEligibility(input: {
   if (evidence.blockTimestamp > input.nowSec + 60) {
     return { ok: false, reason: "future-pinned-block" };
   }
-  if (input.nowSec - evidence.blockTimestamp > DEX_CURVE_STABLESWAP_MEASURED_FRESHNESS_MAX_SEC) {
+  if (input.nowSec - evidence.blockTimestamp > DEX_MEASURED_FRESHNESS_MAX_SEC) {
     return { ok: false, reason: "stale-pinned-block" };
   }
   const proof = evidence.proof;
@@ -205,26 +206,12 @@ export function evaluateCurveCompositeEligibility(input: {
   return { ok: true };
 }
 
-interface VerificationDependencies {
-  fetchCodeStatus(
-    chain: string,
-    address: string,
-    blockNumber: number,
-    options: Parameters<typeof fetchEvmCodeStatusAtBlock>[3],
-  ): Promise<EvmCodeAtBlockResult>;
-  fetchCall(
-    chain: string,
-    address: string,
-    callData: string,
-    blockNumber: number,
-    options: Parameters<typeof fetchEvmCallHexAtBlock>[4],
-  ): Promise<`0x${string}` | null>;
+interface VerificationDependencies extends CurveFamilyVerificationDependencies {
   fetchBlockHeader(
     chain: string,
     blockNumber: number | "finalized",
     options: Parameters<typeof fetchEvmBlockHeader>[2],
   ): Promise<EvmBlockHeader | null>;
-  hashCode?(code: `0x${string}`): `0x${string}`;
 }
 
 export type CurveCompositeDeploymentVerification =
@@ -273,7 +260,7 @@ function createCurveCompositeDeploymentVerifier(dependencies: VerificationDepend
     input.rpcBudget?.recordChainResult(policy.chain, header != null);
     if (!header) return { ok: false, reason: "block-header-unavailable" };
     if (header.timestamp > input.nowSec + 60) return { ok: false, reason: "future-pinned-block" };
-    if (input.nowSec - header.timestamp > DEX_CURVE_STABLESWAP_MEASURED_FRESHNESS_MAX_SEC) {
+    if (input.nowSec - header.timestamp > DEX_MEASURED_FRESHNESS_MAX_SEC) {
       return { ok: false, reason: "stale-pinned-block" };
     }
 

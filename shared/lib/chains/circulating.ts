@@ -1,5 +1,10 @@
 import { resolveChainId } from "./index";
 
+export interface ChainCirculatingNormalizationDiagnostics {
+  droppedRows: number;
+  droppedChainIds: string[];
+}
+
 export interface ChainCirculatingPoint {
   current: number;
   circulatingPrevDay?: number;
@@ -15,6 +20,15 @@ export type RawChainCirculating = Record<string, {
   circulatingPrevMonth?: number;
 }>;
 
+function recordDroppedRow(
+  diagnostics: ChainCirculatingNormalizationDiagnostics | undefined,
+  rawChainId: string,
+): void {
+  if (!diagnostics) return;
+  diagnostics.droppedRows += 1;
+  if (!diagnostics.droppedChainIds.includes(rawChainId)) diagnostics.droppedChainIds.push(rawChainId);
+}
+
 function sanitizeSupply(value: number | undefined): number | undefined {
   return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined;
 }
@@ -26,20 +40,29 @@ function addSupply(current: number, value: number): number {
 
 export function canonicalizeChainCirculating(
   chainCirculating: RawChainCirculating | null | undefined,
+  diagnostics?: ChainCirculatingNormalizationDiagnostics,
 ): Map<string, ChainCirculatingPoint> {
+
   const canonical = new Map<string, ChainCirculatingPoint>();
   if (!chainCirculating || typeof chainCirculating !== "object") {
     return canonical;
   }
 
   for (const [rawChainId, data] of Object.entries(chainCirculating)) {
-    if (!data || typeof data !== "object") continue;
+    if (!data || typeof data !== "object") {
+      recordDroppedRow(diagnostics, rawChainId);
+      continue;
+    }
+
     // Worker-generated rows retain their display-label key for compatibility,
     // but the explicit canonical id is authoritative when present. Unknown or
     // malformed ids fall back to the legacy label resolver.
     const chainId = (typeof data.chainId === "string" ? resolveChainId(data.chainId) : null)
       ?? resolveChainId(rawChainId);
-    if (!chainId) continue;
+    if (!chainId) {
+      recordDroppedRow(diagnostics, rawChainId);
+      continue;
+    }
 
     const current = sanitizeSupply(data.current) ?? 0;
     const circulatingPrevDay = sanitizeSupply(data.circulatingPrevDay);

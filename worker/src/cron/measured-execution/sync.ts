@@ -1,5 +1,4 @@
 import {
-  DEX_MEASURED_ADAPTER_PROFILE_IDS,
   getDexMeasuredExecutionProbeNotionals,
   validateDexMeasuredExecutionProfile,
   type DexMeasuredExecutionPoolBindingProof,
@@ -35,26 +34,20 @@ import {
   type DexMeasuredExecutionRpcBudget,
 } from "./profiles";
 import { quoteQuoterV2Requests, resolveQuoterV2PoolBindings, validateQuoterV2ProfileProof } from "./quoter-v2";
+import { verifyDexMeasuredExecutionDeployment } from "./registry";
 import {
-  DEX_EXACT_QUOTE_ADAPTER_REGISTRY,
-  verifyDexMeasuredExecutionDeployment,
-} from "./registry";
-import {
-  CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID,
   quoteCurveCryptoSwapRequests,
   validateCurveCryptoSwapProfileProof,
   verifyCurveCryptoSwapDeployment,
   type CurveCryptoSwapRuntimeEvidence,
 } from "./curve-cryptoswap";
 import {
-  CURVE_STABLESWAP_ADAPTER_PROFILE_ID,
   quoteCurveStableSwapRequests,
   validateCurveStableSwapProfileProof,
   verifyCurveStableSwapDeployment,
   type CurveStableSwapRuntimeEvidence,
 } from "./curve-stableswap";
 import {
-  CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID,
   quoteCurveStableSwapNgRequests,
   validateCurveStableSwapNgProfileProof,
   verifyCurveStableSwapNgDeployment,
@@ -153,6 +146,23 @@ interface MeasuredQuoteAdapterContext {
 
 type MeasuredQuoteAdapterRunner = (input: MeasuredQuoteAdapterContext) => Promise<void>;
 
+type DeploymentVerification =
+  | { ok: false; reason: string }
+  | { ok: true; patch: Partial<TargetQuoteState> };
+
+interface MeasuredQuoteAdapter {
+  quote: MeasuredQuoteAdapterRunner;
+  validate: (profile: Parameters<typeof validateQuoterV2ProfileProof>[0]) => string[];
+  verify(input: {
+    deployment: TargetDeployment;
+    blockNumber: number;
+    nowSec: number;
+    chainRpcs: Map<string, ChainRpcConfig>;
+    signal?: AbortSignal;
+    rpcBudget: DexMeasuredExecutionRpcBudget;
+  }): Promise<DeploymentVerification>;
+}
+
 function applyQuoteOutcomes(
   requests: readonly MeasuredQuoteAdapterRequest[],
   outcomes: readonly { point?: DexMeasuredRawQuotePoint; failureReason?: string }[],
@@ -162,137 +172,213 @@ function applyQuoteOutcomes(
   }
 }
 
+function createMeasuredQuoteRunner<TRequest>(
+  buildRequest: (request: MeasuredQuoteAdapterRequest) => TRequest,
+  quote: (
+    input: MeasuredQuoteAdapterContext,
+    requests: readonly TRequest[],
+  ) => Promise<readonly { point?: DexMeasuredRawQuotePoint; failureReason?: string }[]>,
+): MeasuredQuoteAdapterRunner {
+  return async (input) => {
+    const outcomes = await quote(input, input.requests.map(buildRequest));
+    applyQuoteOutcomes(input.requests, outcomes);
+  };
+}
+
 /**
- * The closed measured-execution adapter set. Each entry owns only its
- * request/proof shape; the stage keeps chain lanes and adapter groups
- * serialized exactly as before.
+ * The closed measured-execution adapter set. Per-kind code only translates
+ * request and proof shapes; failure and budget handling stay centralized.
  */
 const DEX_EXACT_QUOTE_V1_COMPATIBILITY_RUNNERS: Readonly<
-  Record<
-    TargetDeployment["kind"],
-    {
-      profileIds: readonly string[];
-      quote: MeasuredQuoteAdapterRunner;
-      validate: (profile: Parameters<typeof validateQuoterV2ProfileProof>[0]) => string[];
-    }
-  >
+  Record<TargetDeployment["kind"], MeasuredQuoteAdapter>
 > = {
   "quoter-v2": {
-    profileIds: DEX_EXACT_QUOTE_ADAPTER_REGISTRY.find((entry) => entry.adapterId === "evm-quoter-v2")!.profileIds,
     validate: validateQuoterV2ProfileProof,
-    quote: async (input) => {
-      const outcomes = await quoteQuoterV2Requests({
-        requests: input.requests.map(({ state, inputUsd }) => ({
-          target: state.target,
-          inputUsd,
-          endpointAddress: state.deployment!.config.endpointAddress,
-        })),
+    quote: createMeasuredQuoteRunner(
+      ({ state, inputUsd }) => ({
+        target: state.target,
+        inputUsd,
+        endpointAddress: state.deployment!.config.endpointAddress,
+      }),
+      (input, requests) => quoteQuoterV2Requests({
+        requests,
         blockNumber: input.requests[0]!.state.blockNumber!,
         chainRpcs: input.chainRpcs,
         signal: input.signal,
         rpcBudget: input.rpcBudget,
+      }),
+    ),
+    verify: async ({ deployment, blockNumber, chainRpcs, signal, rpcBudget }) => {
+      if (deployment.kind !== "quoter-v2") throw new TypeError("QuoterV2 deployment kind mismatch");
+      const verified = await verifyDexMeasuredExecutionDeployment({
+        deployment: deployment.config, blockNumber, chainRpcs, signal, rpcBudget,
       });
-      applyQuoteOutcomes(input.requests, outcomes);
+      return verified.ok
+        ? { ok: true, patch: { endpointCodeHash: verified.codeHash } }
+        : verified;
     },
   },
   "uniswap-v4": {
-    profileIds: DEX_EXACT_QUOTE_ADAPTER_REGISTRY.find((entry) => entry.adapterId === "evm-uniswap-v4")!.profileIds,
     validate: validateUniswapV4ProfileProof,
-    quote: async (input) => {
-      const outcomes = await quoteUniswapV4Requests({
-        requests: input.requests.map(({ state, inputUsd }) => ({
-          target: state.target,
-          inputUsd,
-          endpointAddress: state.deployment!.config.endpointAddress,
-        })),
+    quote: createMeasuredQuoteRunner(
+      ({ state, inputUsd }) => ({
+        target: state.target,
+        inputUsd,
+        endpointAddress: state.deployment!.config.endpointAddress,
+      }),
+      (input, requests) => quoteUniswapV4Requests({
+        requests,
         blockNumber: input.requests[0]!.state.blockNumber!,
         chainRpcs: input.chainRpcs,
         signal: input.signal,
         rpcBudget: input.rpcBudget,
+      }),
+    ),
+    verify: async ({ deployment, blockNumber, chainRpcs, signal, rpcBudget }) => {
+      if (deployment.kind !== "uniswap-v4") throw new TypeError("Uniswap V4 deployment kind mismatch");
+      const verified = await verifyUniswapV4Deployment({
+        deployment: deployment.config, blockNumber, chainRpcs, signal, rpcBudget,
       });
-      applyQuoteOutcomes(input.requests, outcomes);
+      return verified.ok
+        ? {
+            ok: true,
+            patch: {
+              endpointCodeHash: verified.codeHash,
+              uniswapV4RuntimeEvidence: verified.runtimeEvidence,
+            },
+          }
+        : verified;
     },
   },
   "curve-cryptoswap": {
-    profileIds: [CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID],
     validate: validateCurveCryptoSwapProfileProof,
-    quote: async (input) => {
-      const outcomes = await quoteCurveCryptoSwapRequests({
-        requests: input.requests.map(({ state, inputUsd }) => ({
-          target: state.target,
-          inputUsd,
-          blockNumber: state.blockNumber!,
-          endpointAddress: state.deployment!.config.endpointAddress,
-          runtimeEvidence: state.curveRuntimeEvidence ?? undefined,
-        })),
-        chainRpcs: input.chainRpcs,
-        signal: input.signal,
-        rpcBudget: input.rpcBudget,
+    quote: createMeasuredQuoteRunner(
+      ({ state, inputUsd }) => ({
+        target: state.target,
+        inputUsd,
+        blockNumber: state.blockNumber!,
+        endpointAddress: state.deployment!.config.endpointAddress,
+        runtimeEvidence: state.curveRuntimeEvidence ?? undefined,
+      }),
+      (input, requests) => quoteCurveCryptoSwapRequests({
+        requests, chainRpcs: input.chainRpcs, signal: input.signal, rpcBudget: input.rpcBudget,
+      }),
+    ),
+    verify: async ({ deployment, blockNumber, chainRpcs, signal, rpcBudget }) => {
+      if (deployment.kind !== "curve-cryptoswap") throw new TypeError("Curve CryptoSwap deployment kind mismatch");
+      const verified = await verifyCurveCryptoSwapDeployment({
+        policy: deployment.config, blockNumber, chainRpcs, signal, rpcBudget,
       });
-      applyQuoteOutcomes(input.requests, outcomes);
+      return verified.ok
+        ? {
+            ok: true,
+            patch: {
+              endpointCodeHash: verified.codeHash,
+              curveRuntimeEvidence: verified.runtimeEvidence,
+            },
+          }
+        : verified;
     },
   },
   "curve-stableswap": {
-    profileIds: [CURVE_STABLESWAP_ADAPTER_PROFILE_ID],
     validate: validateCurveStableSwapProfileProof,
-    quote: async (input) => {
-      const outcomes = await quoteCurveStableSwapRequests({
-        requests: input.requests.map(({ state, inputUsd }) => ({
-          target: state.target,
-          inputUsd,
-          blockNumber: state.blockNumber!,
-          blockObservedAt: state.blockObservedAt!,
-          endpointAddress: state.deployment!.config.endpointAddress,
-          runtimeEvidence: state.curveStableSwapRuntimeEvidence ?? undefined,
-        })),
-        chainRpcs: input.chainRpcs,
-        signal: input.signal,
-        rpcBudget: input.rpcBudget,
+    quote: createMeasuredQuoteRunner(
+      ({ state, inputUsd }) => ({
+        target: state.target,
+        inputUsd,
+        blockNumber: state.blockNumber!,
+        blockObservedAt: state.blockObservedAt!,
+        endpointAddress: state.deployment!.config.endpointAddress,
+        runtimeEvidence: state.curveStableSwapRuntimeEvidence ?? undefined,
+      }),
+      (input, requests) => quoteCurveStableSwapRequests({
+        requests, chainRpcs: input.chainRpcs, signal: input.signal, rpcBudget: input.rpcBudget,
+      }),
+    ),
+    verify: async ({ deployment, blockNumber, nowSec, chainRpcs, signal, rpcBudget }) => {
+      if (deployment.kind !== "curve-stableswap") throw new TypeError("Curve StableSwap deployment kind mismatch");
+      const verified = await verifyCurveStableSwapDeployment({
+        policy: deployment.config, blockNumber, nowSec, chainRpcs, signal, rpcBudget,
       });
-      applyQuoteOutcomes(input.requests, outcomes);
+      return verified.ok
+        ? {
+            ok: true,
+            patch: {
+              endpointCodeHash: verified.codeHash,
+              blockObservedAt: verified.blockTimestamp,
+              curveStableSwapRuntimeEvidence: verified.runtimeEvidence,
+              registryBindingProof: verified.registryBindingProof,
+            },
+          }
+        : verified;
     },
   },
   "curve-stableswap-ng": {
-    profileIds: [CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID],
     validate: validateCurveStableSwapNgProfileProof,
-    quote: async (input) => {
-      const outcomes = await quoteCurveStableSwapNgRequests({
-        requests: input.requests.map(({ state, inputUsd }) => ({
-          target: state.target,
-          inputUsd,
-          blockNumber: state.blockNumber!,
-          blockObservedAt: state.blockObservedAt!,
-          endpointAddress: state.deployment!.config.endpointAddress,
-          runtimeEvidence: state.curveStableSwapNgRuntimeEvidence ?? undefined,
-        })),
-        chainRpcs: input.chainRpcs,
-        signal: input.signal,
-        rpcBudget: input.rpcBudget,
+    quote: createMeasuredQuoteRunner(
+      ({ state, inputUsd }) => ({
+        target: state.target,
+        inputUsd,
+        blockNumber: state.blockNumber!,
+        blockObservedAt: state.blockObservedAt!,
+        endpointAddress: state.deployment!.config.endpointAddress,
+        runtimeEvidence: state.curveStableSwapNgRuntimeEvidence ?? undefined,
+      }),
+      (input, requests) => quoteCurveStableSwapNgRequests({
+        requests, chainRpcs: input.chainRpcs, signal: input.signal, rpcBudget: input.rpcBudget,
+      }),
+    ),
+    verify: async ({ deployment, nowSec, chainRpcs, signal, rpcBudget }) => {
+      if (deployment.kind !== "curve-stableswap-ng") throw new TypeError("Curve StableSwap-NG deployment kind mismatch");
+      const verified = await verifyCurveStableSwapNgDeployment({
+        policy: deployment.config, nowSec, chainRpcs, signal, rpcBudget,
       });
-      applyQuoteOutcomes(input.requests, outcomes);
+      return verified.ok
+        ? {
+            ok: true,
+            patch: {
+              blockNumber: verified.blockNumber,
+              endpointCodeHash: verified.codeHash,
+              blockObservedAt: verified.blockTimestamp,
+              curveStableSwapNgRuntimeEvidence: verified.runtimeEvidence,
+              stableSwapNgFactoryBindingProof: verified.factoryBindingProof,
+            },
+          }
+        : verified;
     },
   },
   "curve-composite": {
-    profileIds: [
-      DEX_MEASURED_ADAPTER_PROFILE_IDS.curveRateBearing,
-      DEX_MEASURED_ADAPTER_PROFILE_IDS.curveMetapool,
-    ],
     validate: validateCurveCompositeProfileProof,
-    quote: async (input) => {
-      const outcomes = await quoteCurveCompositeRequests({
-        requests: input.requests.map(({ state, inputUsd }) => ({
-          target: state.target,
-          inputUsd,
-          blockNumber: state.blockNumber!,
-          blockObservedAt: state.blockObservedAt!,
-          endpointAddress: state.deployment!.config.endpointAddress,
-          runtimeEvidence: state.curveCompositeRuntimeEvidence ?? undefined,
-        })),
-        chainRpcs: input.chainRpcs,
-        signal: input.signal,
-        rpcBudget: input.rpcBudget,
+    quote: createMeasuredQuoteRunner(
+      ({ state, inputUsd }) => ({
+        target: state.target,
+        inputUsd,
+        blockNumber: state.blockNumber!,
+        blockObservedAt: state.blockObservedAt!,
+        endpointAddress: state.deployment!.config.endpointAddress,
+        runtimeEvidence: state.curveCompositeRuntimeEvidence ?? undefined,
+      }),
+      (input, requests) => quoteCurveCompositeRequests({
+        requests, chainRpcs: input.chainRpcs, signal: input.signal, rpcBudget: input.rpcBudget,
+      }),
+    ),
+    verify: async ({ deployment, nowSec, chainRpcs, signal, rpcBudget }) => {
+      if (deployment.kind !== "curve-composite") throw new TypeError("Curve composite deployment kind mismatch");
+      const verified = await verifyCurveCompositeDeployment({
+        policy: deployment.config, nowSec, chainRpcs, signal, rpcBudget,
       });
-      applyQuoteOutcomes(input.requests, outcomes);
+      return verified.ok
+        ? {
+            ok: true,
+            patch: {
+              blockNumber: verified.blockNumber,
+              endpointCodeHash: verified.codeHash,
+              blockObservedAt: verified.blockTimestamp,
+              curveCompositeRuntimeEvidence: verified.runtimeEvidence,
+              curveCompositeProof: verified.proof,
+            },
+          }
+        : verified;
     },
   },
 };
@@ -460,115 +546,20 @@ async function syncDexMeasuredExecutionLane(
     for (const deploymentRows of deploymentGroups.values()) {
       throwIfAborted(signal);
       const deployment = deploymentRows[0]!.deployment!;
-      if (deployment.kind === "quoter-v2") {
-        const verified = await verifyDexMeasuredExecutionDeployment({
-          deployment: deployment.config,
-          blockNumber,
-          chainRpcs,
-          signal,
-          rpcBudget,
-        });
-        if (!verified.ok) {
-          if (rpcBudget.stopReason) markBudgetStop(deploymentRows, rpcBudget.stopReason);
-          else for (const state of deploymentRows) state.failedReason = verified.reason;
-          continue;
-        }
-        for (const state of deploymentRows) state.endpointCodeHash = verified.codeHash;
-      } else if (deployment.kind === "uniswap-v4") {
-        const verified = await verifyUniswapV4Deployment({
-          deployment: deployment.config,
-          blockNumber,
-          chainRpcs,
-          signal,
-          rpcBudget,
-        });
-        if (!verified.ok) {
-          if (rpcBudget.stopReason) markBudgetStop(deploymentRows, rpcBudget.stopReason);
-          else for (const state of deploymentRows) state.failedReason = verified.reason;
-          continue;
-        }
-        for (const state of deploymentRows) {
-          state.endpointCodeHash = verified.codeHash;
-          state.uniswapV4RuntimeEvidence = verified.runtimeEvidence;
-        }
-      } else if (deployment.kind === "curve-cryptoswap") {
-        const verified = await verifyCurveCryptoSwapDeployment({
-          policy: deployment.config,
-          blockNumber,
-          chainRpcs,
-          signal,
-          rpcBudget,
-        });
-        if (!verified.ok) {
-          if (rpcBudget.stopReason) markBudgetStop(deploymentRows, rpcBudget.stopReason);
-          else for (const state of deploymentRows) state.failedReason = verified.reason;
-          continue;
-        }
-        for (const state of deploymentRows) {
-          state.endpointCodeHash = verified.codeHash;
-          state.curveRuntimeEvidence = verified.runtimeEvidence;
-        }
-      } else if (deployment.kind === "curve-stableswap") {
-        const verified = await verifyCurveStableSwapDeployment({
-          policy: deployment.config,
-          blockNumber,
-          nowSec: startedAt,
-          chainRpcs,
-          signal,
-          rpcBudget,
-        });
-        if (!verified.ok) {
-          if (rpcBudget.stopReason) markBudgetStop(deploymentRows, rpcBudget.stopReason);
-          else for (const state of deploymentRows) state.failedReason = verified.reason;
-          continue;
-        }
-        for (const state of deploymentRows) {
-          state.endpointCodeHash = verified.codeHash;
-          state.blockObservedAt = verified.blockTimestamp;
-          state.curveStableSwapRuntimeEvidence = verified.runtimeEvidence;
-          state.registryBindingProof = verified.registryBindingProof;
-        }
-      } else if (deployment.kind === "curve-stableswap-ng") {
-        const verified = await verifyCurveStableSwapNgDeployment({
-          policy: deployment.config,
-          nowSec: startedAt,
-          chainRpcs,
-          signal,
-          rpcBudget,
-        });
-        if (!verified.ok) {
-          if (rpcBudget.stopReason) markBudgetStop(deploymentRows, rpcBudget.stopReason);
-          else for (const state of deploymentRows) state.failedReason = verified.reason;
-          continue;
-        }
-        for (const state of deploymentRows) {
-          state.blockNumber = verified.blockNumber;
-          state.endpointCodeHash = verified.codeHash;
-          state.blockObservedAt = verified.blockTimestamp;
-          state.curveStableSwapNgRuntimeEvidence = verified.runtimeEvidence;
-          state.stableSwapNgFactoryBindingProof = verified.factoryBindingProof;
-        }
-      } else {
-        const verified = await verifyCurveCompositeDeployment({
-          policy: deployment.config,
-          nowSec: startedAt,
-          chainRpcs,
-          signal,
-          rpcBudget,
-        });
-        if (!verified.ok) {
-          if (rpcBudget.stopReason) markBudgetStop(deploymentRows, rpcBudget.stopReason);
-          else for (const state of deploymentRows) state.failedReason = verified.reason;
-          continue;
-        }
-        for (const state of deploymentRows) {
-          state.blockNumber = verified.blockNumber;
-          state.endpointCodeHash = verified.codeHash;
-          state.blockObservedAt = verified.blockTimestamp;
-          state.curveCompositeRuntimeEvidence = verified.runtimeEvidence;
-          state.curveCompositeProof = verified.proof;
-        }
+      const verified = await DEX_EXACT_QUOTE_V1_COMPATIBILITY_RUNNERS[deployment.kind].verify({
+        deployment,
+        blockNumber,
+        nowSec: startedAt,
+        chainRpcs,
+        signal,
+        rpcBudget,
+      });
+      if (!verified.ok) {
+        if (rpcBudget.stopReason) markBudgetStop(deploymentRows, rpcBudget.stopReason);
+        else for (const state of deploymentRows) state.failedReason = verified.reason;
+        continue;
       }
+      for (const state of deploymentRows) Object.assign(state, verified.patch);
       if (rpcBudget.stopReason) {
         markBudgetStop(deploymentRows, rpcBudget.stopReason);
         break;
@@ -874,11 +865,7 @@ async function syncDexMeasuredExecutionLane(
       diagnostics: [`deferred-targets:${deferred.size}`, `target-generation:${targetGeneration.generationId}`],
       job: "sync-cl-exit-depth",
     });
-    cursorWriteStatus = cursorWrite.written
-      ? "written"
-      : cursorWrite.errorClass === "not-configured"
-        ? "write-failed"
-        : cursorWrite.errorClass;
+    cursorWriteStatus = cursorWrite.written ? "written" : "write-failed";
   }
   const retention = await pruneDexMeasuredExecutionGenerations(db, publishedAt, signal);
   const failureSummary = summarizeMeasuredExecutionQuoteFailures(outcomes, oversized);

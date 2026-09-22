@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import {
   DexExitEvidenceKindSchema,
-  DexExitRouteObservationSchema,
+  DexExitRouteObservationsSchema,
   MAX_DEX_EXIT_ROUTE_OBSERVATIONS,
   type DexExitEvidenceKind,
 } from "@shared/types/market";
@@ -11,6 +11,7 @@ import { getCache, setCache } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
 import { parseJson } from "../lib/json-parse";
+import { logWorkerEvent } from "../lib/structured-log";
 
 export const DEX_EXIT_ROUTE_TURNOVER_SNAPSHOT_CACHE_KEY = "dex-exit-route-turnover-watchdog:snapshot:v1";
 
@@ -30,6 +31,13 @@ const RouteEvidenceSchema = z.object({
   evidenceKind: DexExitEvidenceKindSchema,
 }).strict();
 
+const PendingTurnoverAlertSchema = z.object({
+  generationId: z.string().min(1),
+  threshold: z.number(),
+  worstOffenders: z.array(z.object({ stablecoinId: z.string().min(1), jaccardDistance: z.number() }).strict())
+    .max(MAX_WORST_OFFENDERS),
+}).strict();
+
 const RouteSnapshotSchema = z.object({
   schemaVersion: z.literal(1),
   generationId: z.string().min(1),
@@ -37,10 +45,17 @@ const RouteSnapshotSchema = z.object({
     stablecoinId: z.string().min(1),
     routes: z.array(RouteEvidenceSchema).max(MAX_DEX_EXIT_ROUTE_OBSERVATIONS),
   }).strict()).max(1_024),
+  /**
+   * Evidence for an alerting run. The baseline advances in the same run that
+   * alerts, so the alert itself is persisted here and cleared only by a later
+   * run that observes no alerting coin.
+   */
+  pendingAlert: PendingTurnoverAlertSchema.optional(),
 }).strict();
 
 type RouteEvidence = z.infer<typeof RouteEvidenceSchema>;
 type RouteSnapshot = z.infer<typeof RouteSnapshotSchema>;
+type PendingTurnoverAlert = z.infer<typeof PendingTurnoverAlertSchema>;
 
 interface PublishedGenerationRow {
   generation_id: string;
@@ -79,9 +94,7 @@ function parsePublishedRouteEvidence(row: PublishedRouteRow): RouteEvidence[] {
   }
   const rawObservations = (parsed.value as { exitRouteObservations?: unknown }).exitRouteObservations;
   if (rawObservations == null) return [];
-  const observations = DexExitRouteObservationSchema.array()
-    .max(MAX_DEX_EXIT_ROUTE_OBSERVATIONS)
-    .safeParse(rawObservations);
+  const observations = DexExitRouteObservationsSchema.safeParse(rawObservations);
   if (!observations.success) {
     throw new Error(`Invalid DEX exit-route observations for turnover watchdog (${row.stablecoin_id})`);
   }
@@ -123,11 +136,11 @@ function buildRouteSnapshot(generationId: string, rows: readonly PublishedRouteR
   };
 }
 
-function parsePreviousRouteSnapshot(value: string): RouteSnapshot {
+function parsePreviousRouteSnapshot(value: string): RouteSnapshot | { invalidReason: string } {
   const parsed = parseJson(value);
-  if (!parsed.ok) throw new Error("Invalid persisted DEX exit-route turnover snapshot JSON");
+  if (!parsed.ok) return { invalidReason: "invalid-json" };
   const snapshot = RouteSnapshotSchema.safeParse(parsed.value);
-  if (!snapshot.success) throw new Error("Invalid persisted DEX exit-route turnover snapshot schema");
+  if (!snapshot.success) return { invalidReason: "invalid-schema" };
   return snapshot.data;
 }
 
@@ -228,14 +241,31 @@ export async function runDexExitRouteTurnoverWatchdog(
   const previousCache = await getCache(db, DEX_EXIT_ROUTE_TURNOVER_SNAPSHOT_CACHE_KEY, signal);
   throwIfAborted(signal);
 
+  const previous = previousCache === null
+    ? null
+    : parsePreviousRouteSnapshot(previousCache.value);
+  if (previous !== null && "invalidReason" in previous) {
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "dex_exit_route_turnover_snapshot_recovered",
+      job: "dex-exit-route-turnover-watchdog",
+      message: "Replaced an unreadable DEX exit-route turnover baseline",
+      metadata: { reason: previous.invalidReason, generationId: current.generationId },
+    });
+  }
+  const comparable = previous !== null && !("invalidReason" in previous) ? previous : null;
+
   let result: CronResult;
-  if (previousCache === null) {
+  let pendingAlert: PendingTurnoverAlert | undefined;
+  if (comparable === null) {
     result = createCronResult({
       itemCount: 0,
       metadata: {
         currentGenerationId: current.generationId,
         previousGenerationId: null,
         baselineCreated: true,
+        recoveredFromInvalidBaseline: previous !== null,
         comparedCoinCount: 0,
         evidenceKindChangedRouteCount: 0,
         alertingCoinCount: 0,
@@ -244,8 +274,7 @@ export async function runDexExitRouteTurnoverWatchdog(
       },
     });
   } else {
-    const previous = parsePreviousRouteSnapshot(previousCache.value);
-    const evaluations = compareRouteSnapshots(previous, current);
+    const evaluations = compareRouteSnapshots(comparable, current);
     const changedCoinCount = evaluations.filter(
       (evaluation) => evaluation.jaccardDistance > 0 || evaluation.evidenceKindChangedCount > 0,
     ).length;
@@ -256,9 +285,22 @@ export async function runDexExitRouteTurnoverWatchdog(
       (sum, evaluation) => sum + evaluation.evidenceKindChangedCount,
       0,
     );
+    // The baseline advances in this run, so an alert raised here is persisted
+    // with the new snapshot and stays visible until a run sees no alerting coin.
+    const carriedAlert = comparable.pendingAlert ?? null;
+    pendingAlert = alerting.length === 0
+      ? undefined
+      : {
+          generationId: current.generationId,
+          threshold: DEX_EXIT_ROUTE_TURNOVER_ALERT_THRESHOLD,
+          worstOffenders: alerting.slice(0, MAX_WORST_OFFENDERS).map((evaluation) => ({
+            stablecoinId: evaluation.stablecoinId,
+            jaccardDistance: evaluation.jaccardDistance,
+          })),
+        };
     const metadata = JSON.stringify({
       currentGenerationId: current.generationId,
-      previousGenerationId: previous.generationId,
+      previousGenerationId: comparable.generationId,
       baselineCreated: false,
       comparedCoinCount: evaluations.length,
       changedCoinCount,
@@ -267,13 +309,23 @@ export async function runDexExitRouteTurnoverWatchdog(
       turnoverAlertThreshold: DEX_EXIT_ROUTE_TURNOVER_ALERT_THRESHOLD,
       highestObservedTurnover: evaluations[0]?.jaccardDistance ?? 0,
       worstOffenders: alerting.slice(0, MAX_WORST_OFFENDERS),
+      carriedPendingAlert: carriedAlert,
+      pendingAlertCleared: carriedAlert !== null && alerting.length === 0,
+      reason: alerting.length > 0
+        ? "dex-route-turnover-threshold"
+        : carriedAlert !== null ? "dex-route-turnover-pending-alert" : null,
     });
-    result = alerting.length === 0
+    result = alerting.length === 0 && carriedAlert === null
       ? { itemCount: evaluations.length, metadata }
       : { status: "degraded", itemCount: evaluations.length, metadata };
   }
 
-  await setCache(db, DEX_EXIT_ROUTE_TURNOVER_SNAPSHOT_CACHE_KEY, JSON.stringify(current), signal);
+  await setCache(
+    db,
+    DEX_EXIT_ROUTE_TURNOVER_SNAPSHOT_CACHE_KEY,
+    JSON.stringify(pendingAlert ? { ...current, pendingAlert } : current),
+    signal,
+  );
   throwIfAborted(signal);
   return result;
 }

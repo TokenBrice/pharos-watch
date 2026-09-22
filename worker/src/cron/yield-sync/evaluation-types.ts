@@ -13,7 +13,7 @@ import type { PysSourceRiskPenaltyReason } from "@shared/lib/yield-scoring";
 import type { YieldSourceRisk } from "@shared/types/yield";
 import type { ParsedYieldBenchmarkMeta } from "./benchmarks";
 import type { YieldBenchmarkFreshness } from "./benchmarks";
-import type { YieldSourceFreshness } from "../yield-helpers";
+import type { YieldSourceFreshness } from "../../lib/yield-ranking-helpers";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 
 export type ConfidenceTier = "deterministic" | "curated" | "discovered" | "fallback";

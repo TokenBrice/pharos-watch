@@ -1,5 +1,11 @@
 import { z } from "zod";
-import { CanonicalTextSchema, StrictIsoDateSchema, uniqueKeyedCollectionSchema } from "./safety-schema-primitives";
+import {
+  CanonicalKeySchema,
+  CanonicalTextSchema,
+  NonNegativeFiniteSchema,
+  StrictIsoDateSchema,
+  uniqueKeyedCollectionSchema,
+} from "./safety-schema-primitives";
 import {
   V9OperationalResilienceIncidentSchema,
   V9OperationalResilienceLatestAssuranceSchema,
@@ -10,10 +16,6 @@ import {
   V9OperationalResilienceStressSettlementSchema,
 } from "./safety-score-v9-operational-resilience-primitives";
 
-const CanonicalKeySchema = CanonicalTextSchema.refine(
-  (value) => /^[a-z0-9][a-z0-9._:-]*$/.test(value),
-  "Value must be a canonical lowercase identifier",
-);
 const IsoDateSchema = StrictIsoDateSchema;
 const UtcTimestampSchema = z
   .string()
@@ -23,7 +25,6 @@ const SourceIdsSchema = z
   .array(CanonicalKeySchema)
   .min(1)
   .refine((ids) => new Set(ids).size === ids.length, "Evidence source IDs must be unique");
-const NonNegativeFiniteSchema = z.number().finite().nonnegative();
 
 const OperationalResilienceSourceSchema = z
   .object({

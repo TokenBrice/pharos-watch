@@ -5,6 +5,7 @@ import {
   assessV9Publication,
   buildSafetyScoreV9AcceptedPublicationBaseline,
   expiredMeasuredExitAssetIds,
+  V9PublicationInputHealthSchema,
   type V9PublicationInputHealth,
 } from "../safety-score-v9/publication-assessment";
 import { canonicalV9RouteKey } from "@shared/lib/safety-score-v9/facts";
@@ -289,6 +290,15 @@ describe("Safety Score V9 publication assessment", () => {
       decision: "hold",
       reasons: [{ code: "live-reserves-coverage-below-floor" }],
     });
+  });
+
+  it("accepts raw live-reserve coverage above one when admitted rows exceed the current registry denominator", () => {
+    expect(
+      V9PublicationInputHealthSchema.parse({
+        ...currentInputHealth(),
+        liveReserves: { state: "available", coverageRatio: 1.01 },
+      }).liveReserves.coverageRatio,
+    ).toBe(1.01);
   });
 
   it("does not hold non-applicable redemption or unrelated cron failures", () => {

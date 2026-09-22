@@ -8,16 +8,16 @@ import { serializePendingAlertScope, serializePendingMarkupPolicy } from "../../
 import { insertTelegramSubscriber, type TelegramSubscriberSeed } from "./telegram-subscriber.test-support";
 
 export const DEFAULT_TELEGRAM_PENDING_D1_TABLES: MockTableConfig[] = [
-  { match: "WHERE delivery_state = 'sending'", rows: [] },
-  { match: "WHERE delivery_state = 'sent'", rows: [], runMeta: { changes: 0 } },
-  { match: "delivery_state = 'sent'", rows: [] },
-  { match: "processing_owner = ?", rows: [] },
-  { match: "SET attempts = attempts + 1", rows: [] },
-  { match: "AND delivery_state = 'sending'", rows: [] },
-  { match: "DELETE FROM telegram_preset_subscriptions", rows: [] },
-  { match: "WHERE chat_id = ?", rows: [] },
-  { match: "UPDATE telegram_recap_preferences", rows: [] },
-  { match: "UPDATE telegram_recap_targets", rows: [] },
+  { match: "WHERE delivery_state = 'sending'", rows: [], allowUnused: true },
+  { match: "WHERE delivery_state = 'sent'", rows: [], runMeta: { changes: 0 }, allowUnused: true },
+  { match: "delivery_state = 'sent'", rows: [], allowUnused: true },
+  { match: "processing_owner = ?", rows: [], allowUnused: true },
+  { match: "SET attempts = attempts + 1", rows: [], allowUnused: true },
+  { match: "AND delivery_state = 'sending'", rows: [], allowUnused: true },
+  { match: "DELETE FROM telegram_preset_subscriptions", rows: [], allowUnused: true },
+  { match: "WHERE chat_id = ?", rows: [], allowUnused: true },
+  { match: "UPDATE telegram_recap_preferences", rows: [], allowUnused: true },
+  { match: "UPDATE telegram_recap_targets", rows: [], allowUnused: true },
 ];
 
 export type PendingAlertSeed = {
@@ -88,17 +88,6 @@ export function makePendingQueryRow(
     timezone: null,
     ...overrides,
   };
-}
-
-export function makePendingQueryRows(
-  count: number,
-  overrides: (index: number) => PendingQueryRow = (index) => ({
-    chat_id: `chat-${index}`,
-    message_html: `msg${index}`,
-    id: index + 1,
-  }),
-): PendingQueryRow[] {
-  return Array.from({ length: count }, (_, index) => makePendingQueryRow(index + 1, overrides(index)));
 }
 
 export function insertPendingSqlite(

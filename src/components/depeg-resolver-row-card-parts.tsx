@@ -4,7 +4,7 @@ import Link from "next/link";
 import { LockKeyhole } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatPrice, pegCurrencySymbol } from "@shared/lib/format";
-import type { DdrFactor } from "@shared/types/depeg-resolver";
+import type { DdrFactor, DdrV2ResponseRow } from "@shared/types/depeg-resolver";
 import {
   formatDurationSec,
   getDuration,
@@ -17,7 +17,6 @@ import {
   SEVERITY_WEIGHT,
   SUPPRESSED_REASON_LABELS,
   TIER_META,
-  type DdrDisplayRow,
 } from "@/components/depeg-resolver-row-card-model";
 import { CoinLockup, LiveFacts, LockMetadataStrip, StageLabel } from "@/components/depeg-resolver-row-card-shared";
 import { MethodologyHint } from "@/components/methodology-hint";
@@ -25,7 +24,7 @@ import { StateOnlyCard } from "@/components/depeg-resolver-row-card-state";
 import { ForecastTimeline } from "@/components/depeg-resolver-row-card-timeline";
 
 export interface DepegResolverRowCardProps {
-  row: DdrDisplayRow;
+  row: DdrV2ResponseRow;
   logos?: Record<string, string>;
 }
 
@@ -104,7 +103,7 @@ function DisclosureChevron() {
 
 export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) {
   const predictionState = getPredictionState(row);
-  if (predictionState && predictionState !== "frozen") {
+  if (predictionState !== "frozen") {
     return <StateOnlyCard row={row} state={predictionState} logos={logos} />;
   }
 
@@ -268,7 +267,7 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
   );
 }
 
-function PredictionDetails({ row, frozen }: { row: DdrDisplayRow; frozen: boolean }) {
+function PredictionDetails({ row, frozen }: { row: DdrV2ResponseRow; frozen: boolean }) {
   const c = getRelatedContext(row);
   const items: Array<{ label: string; value: string }> = [];
   if (c.dewsBand) {
@@ -329,7 +328,7 @@ interface StablecoinDepegResolverRowsProps {
           degraded: boolean;
           degradedReason?: string | null;
         };
-        rows: DdrDisplayRow[];
+        rows: DdrV2ResponseRow[];
       }
     | undefined;
   logoSrc?: string;

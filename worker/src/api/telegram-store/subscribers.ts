@@ -6,6 +6,7 @@ import {
   appendTelegramOperationStatements,
   type TelegramOperationBatchOptions,
 } from "../../lib/telegram/operation-batch";
+import { pendingDisambiguationClearStatement } from "./disambiguation";
 
 /** Re-exported under the worker-local name every Telegram store module already imports. */
 export { unixNow };
@@ -43,6 +44,10 @@ export interface UpsertSubscriberInput {
 // Canonical order — indexes here are positionally bound to the alert_*/
 // global_alert_* columns in the upsert SQL below.
 const ALERT_KEYS = TELEGRAM_ALERT_TYPES;
+const SUBSCRIBER_ALERT_COLUMNS = [
+  ...ALERT_KEYS.map((key) => `alert_${key}`),
+  ...ALERT_KEYS.map((key) => `global_alert_${key}`),
+].join(",\n         ");
 
 /**
  * Discriminated normalization of every `telegram_subscribers` upsert. Each
@@ -353,16 +358,7 @@ export async function loadSubscriberByChat(
   return db
     .prepare(
       `SELECT
-         alert_dews,
-         alert_depeg,
-         alert_safety,
-         alert_launch,
-         alert_reserve,
-         global_alert_dews,
-         global_alert_depeg,
-         global_alert_safety,
-         global_alert_launch,
-         global_alert_reserve,
+         ${SUBSCRIBER_ALERT_COLUMNS},
          global_depeg_worsening_bps_step,
          quiet_hours_enabled,
          quiet_hours_start_utc,
@@ -402,9 +398,7 @@ export async function upsertGlobalAlertTypes(
     }),
   ];
   if (options.clearPending) {
-    statements.push(
-      db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(chatId),
-    );
+    statements.push(pendingDisambiguationClearStatement(db, chatId));
   }
   await executeAtomicBatch(db, appendTelegramOperationStatements(statements, options));
 }

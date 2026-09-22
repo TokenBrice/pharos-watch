@@ -120,7 +120,6 @@ describe("depeg-resolver public projection", () => {
       snapshotToken: "ddr-public-original",
       snapshotGeneration: DDR_SNAPSHOT_CACHE_GENERATION,
       publishedAt: NOW_SEC - 120,
-      firstPublished: true,
       ...overrides,
     };
   }
@@ -231,7 +230,6 @@ describe("depeg-resolver public projection", () => {
         publishedAt: NOW_SEC - 60,
         basePayloadHash: hashFor("d"),
         publicPredictionIds: [20, 30],
-        firstPublishedPublicPredictionIds: [30],
       },
       errata: [erratumFor(invalidatedSealed)],
       lineage: LINEAGE,

@@ -146,6 +146,25 @@ describe("fetchAaveV3SupplyRates", () => {
     expect(telemetry.missingReasonCounts["reserve-data-unavailable"]).toBe(1);
   });
 
+  it("accounts same-symbol deployments independently", async () => {
+    mockFetchEvmCallHexAtBlock.mockResolvedValue(null);
+    const bridgedUsdcTarget: AaveV3RateTarget = {
+      ...USDC_TARGET,
+      stablecoinId: "usdc-bridged",
+      assetAddress: "0x1111111111111111111111111111111111111111",
+    };
+
+    const { telemetry } = await fetchAaveV3SupplyRates(
+      [USDC_TARGET, bridgedUsdcTarget],
+      undefined,
+      makeChainRpcs(),
+    );
+
+    expect(telemetry.missingTargetCount).toBe(2);
+    expect(telemetry.missingTargets).toHaveLength(2);
+    expect(new Set(telemetry.missingTargets).size).toBe(2);
+  });
+
   it("returns empty results when hex response is too short to contain currentLiquidityRate", async () => {
     // Only 64 chars = 32 bytes = 1 slot; need at least 3 slots (192 hex chars)
     mockFetchEvmCallHexAtBlock.mockResolvedValue("0x" + "ab".repeat(32) as `0x${string}`);
@@ -301,10 +320,11 @@ describe("fetchAaveV3SupplyRates", () => {
     mockFetchEvmUint256AtBlock.mockResolvedValue(125_000_000_000_000n);
 
     const startSec = Math.floor(Date.now() / 1000);
-    const { candidates } = await loadSupplementalSourceFamilies({
+    const { candidates, familyResults } = await loadSupplementalSourceFamilies({
       startSec,
       chainRpcs: makeChainRpcs(),
     });
+    expect(familyResults.find((family) => family.key === "aaveV3")?.telemetry?.targetCount).toBeLessThanOrEqual(6);
 
     const aaveCandidates = candidates.filter((candidate) =>
       candidate.yield.sourceKey.startsWith("aave-v3-onchain:"),

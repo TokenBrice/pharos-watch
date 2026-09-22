@@ -16,12 +16,12 @@ describe("resolveBoundedFeeScore", () => {
 });
 
 describe("resolveCostScenarioScores", () => {
-  it("makes high flat fees expensive for retail users", () => {
+  it("makes high fixed network costs expensive for retail users", () => {
     const scores = resolveCostScenarioScores(
       {
         kind: "fee-bps",
         feeBps: 0,
-        flatFeeUsd: 25,
+        gasOrBridgeCostUsd: 25,
       },
       0,
     );

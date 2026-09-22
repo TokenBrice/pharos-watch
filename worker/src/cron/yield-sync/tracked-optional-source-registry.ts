@@ -1,5 +1,5 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { buildOnChainSourceKey } from "../yield-helpers";
+import { buildOnChainSourceKey } from "../../lib/yield-utils";
 import {
   BASEDOLLAR_SP_CONFIG,
   LIQUITY_V2_SP_CONFIG,

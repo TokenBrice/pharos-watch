@@ -29,18 +29,18 @@ interface FlowChartProps {
 interface ChartDatum {
   ts: number;
   /** Positive when net flow is positive (mint dominated bucket), else 0. */
-  positiveDelta: number;
+  positiveDelta: number | null;
   /** Negative when net flow is negative (burn dominated bucket), else 0. */
-  negativeDelta: number;
+  negativeDelta: number | null;
   /** Raw mint and burn volumes for the tooltip. */
-  mint: number;
-  burn: number;
+  mint: number | null;
+  burn: number | null;
   /** Net flow for this bucket. */
-  net: number;
+  net: number | null;
   /** Running cumulative of net flow across the visible series. */
-  cumulative: number;
-  /** 7-period trailing mean of net flow. Drives the reference band. */
-  rollingNet: number;
+  cumulative: number | null;
+  /** 7-period trailing mean of observed net flow. Drives the reference band. */
+  rollingNet: number | null;
   isInterpolated: boolean;
 }
 
@@ -49,16 +49,16 @@ const FLOW_TABLE_DATE_FMT = new Intl.DateTimeFormat("en-US", {
   day: "numeric",
   hour: "2-digit",
   minute: "2-digit",
-  hour12: false,
+  hourCycle: "h23",
   timeZone: "UTC",
 });
 
 const FLOW_TABLE_COLUMNS: ChartDataTableColumn<ChartDatum>[] = [
   { id: "time", label: "Time (UTC)", format: (row) => FLOW_TABLE_DATE_FMT.format(new Date(row.ts)) },
-  { id: "mint", label: "Minted (USD)", format: (row) => formatCurrency(row.mint, 0) },
-  { id: "burn", label: "Burned (USD)", format: (row) => formatCurrency(row.burn, 0) },
-  { id: "net", label: "Net flow (USD)", format: (row) => formatCurrency(row.net, 0) },
-  { id: "cumulative", label: "Cumulative (USD)", format: (row) => formatCurrency(row.cumulative, 0) },
+  { id: "mint", label: "Minted (USD)", format: (row) => row.mint == null ? "—" : formatCurrency(row.mint, 0) },
+  { id: "burn", label: "Burned (USD)", format: (row) => row.burn == null ? "—" : formatCurrency(row.burn, 0) },
+  { id: "net", label: "Net flow (USD)", format: (row) => row.net == null ? "—" : formatCurrency(row.net, 0) },
+  { id: "cumulative", label: "Cumulative (USD)", format: (row) => row.cumulative == null ? "—" : formatCurrency(row.cumulative, 0) },
 ];
 
 const DAY_SECONDS = DAY_HOURS * 60 * 60;
@@ -88,34 +88,39 @@ function aggregateBuckets(
   bucketSeconds: number,
 ): Array<{
   ts: number;
-  mint: number;
-  burn: number;
-  net: number;
+  mint: number | null;
+  burn: number | null;
+  net: number | null;
   isInterpolated: boolean;
 }> {
   if (sorted.length === 0) return [];
-  const byBucket = new Map<number, { mint: number; burn: number; net: number; hadData: boolean }>();
+  const byBucket = new Map<number, { mint: number; burn: number; net: number }>();
   for (const b of sorted) {
     const bucketTs = Math.floor(b.hourTs / bucketSeconds) * bucketSeconds;
-    const entry = byBucket.get(bucketTs) ?? { mint: 0, burn: 0, net: 0, hadData: false };
+    const entry = byBucket.get(bucketTs) ?? { mint: 0, burn: 0, net: 0 };
     entry.mint += b.mintVolumeUsd;
     entry.burn += b.burnVolumeUsd;
     entry.net += b.netFlowUsd;
-    entry.hadData = true;
     byBucket.set(bucketTs, entry);
   }
 
   const startBucket = Math.floor(sorted[0].hourTs / bucketSeconds) * bucketSeconds;
   const endBucket = Math.floor(sorted[sorted.length - 1].hourTs / bucketSeconds) * bucketSeconds;
-  const result: Array<{ ts: number; mint: number; burn: number; net: number; isInterpolated: boolean }> = [];
+  const result: Array<{
+    ts: number;
+    mint: number | null;
+    burn: number | null;
+    net: number | null;
+    isInterpolated: boolean;
+  }> = [];
   for (let bucketTs = startBucket; bucketTs <= endBucket; bucketTs += bucketSeconds) {
     const entry = byBucket.get(bucketTs);
     result.push({
       ts: bucketTs * 1000,
-      mint: entry?.mint ?? 0,
-      burn: entry?.burn ?? 0,
-      net: entry?.net ?? 0,
-      isInterpolated: !entry?.hadData,
+      mint: entry?.mint ?? null,
+      burn: entry?.burn ?? null,
+      net: entry?.net ?? null,
+      isInterpolated: entry == null,
     });
   }
   return result;
@@ -157,20 +162,26 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
     const result: ChartDatum[] = [];
     for (let i = 0; i < buckets.length; i += 1) {
       const b = buckets[i];
-      cumulative += b.net;
+      const hasObservation = b.net != null;
+      if (b.net != null) cumulative += b.net;
       const start = Math.max(0, i - (window - 1));
       let rolling = 0;
-      for (let j = start; j <= i; j += 1) rolling += buckets[j].net;
-      const rollingMean = rolling / (i - start + 1);
+      let rollingCount = 0;
+      for (let j = start; j <= i; j += 1) {
+        const value = buckets[j].net;
+        if (value == null) continue;
+        rolling += value;
+        rollingCount += 1;
+      }
       result.push({
         ts: b.ts,
-        positiveDelta: b.net > 0 ? b.net : 0,
-        negativeDelta: b.net < 0 ? b.net : 0,
+        positiveDelta: b.net == null ? null : b.net > 0 ? b.net : 0,
+        negativeDelta: b.net == null ? null : b.net < 0 ? b.net : 0,
         mint: b.mint,
         burn: b.burn,
         net: b.net,
-        cumulative,
-        rollingNet: rollingMean,
+        cumulative: hasObservation ? cumulative : null,
+        rollingNet: hasObservation && rollingCount > 0 ? rolling / rollingCount : null,
         isInterpolated: b.isInterpolated,
       });
     }
@@ -187,6 +198,7 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
     let rMin = Infinity;
     let rMax = -Infinity;
     for (const d of chartData) {
+      if (d.rollingNet == null) continue;
       if (d.rollingNet < rMin) rMin = d.rollingNet;
       if (d.rollingNet > rMax) rMax = d.rollingNet;
     }
@@ -310,12 +322,15 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
               dot={false}
               name="Cumulative"
               isAnimationActive={false}
+              connectNulls={false}
             />
           </ComposedChart>
         )}
       />
       {hasInterpolated && (
-        <p className="mt-1 text-xs text-muted-foreground">Gaps in {useDailyBuckets ? "daily" : "hourly"} data are filled with zero values.</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Gaps in {useDailyBuckets ? "daily" : "hourly"} data are shown as breaks and excluded from rolling averages.
+        </p>
       )}
     </div>
   );
@@ -328,7 +343,7 @@ function FlowTooltip({
   useDailyBuckets,
 }: {
   active?: boolean;
-  payload?: Array<{ dataKey: string; value: number; color: string; name: string; payload?: ChartDatum }>;
+  payload?: Array<{ dataKey: string; value: number | null; color: string; name: string; payload?: ChartDatum }>;
   label?: number;
   useDailyBuckets: boolean;
 }) {
@@ -347,17 +362,19 @@ function FlowTooltip({
       <TooltipLabel>{time}</TooltipLabel>
       {datum ? (
         <>
-          <TooltipRow color={CHART_GREEN} label="Mint" value={formatCurrency(datum.mint)} />
-          <TooltipRow color={CHART_RED} label="Burn" value={formatCurrency(datum.burn)} />
+          <TooltipRow color={CHART_GREEN} label="Mint" value={datum.mint == null ? "—" : formatCurrency(datum.mint)} />
+          <TooltipRow color={CHART_RED} label="Burn" value={datum.burn == null ? "—" : formatCurrency(datum.burn)} />
           <TooltipRow
-            color={datum.net >= 0 ? CHART_GREEN : CHART_RED}
+            color={datum.net == null || datum.net >= 0 ? CHART_GREEN : CHART_RED}
             label="Net"
-            value={`${datum.net >= 0 ? "+" : "-"}${formatCurrency(Math.abs(datum.net))}`}
+            value={datum.net == null ? "—" : `${datum.net >= 0 ? "+" : "-"}${formatCurrency(Math.abs(datum.net))}`}
           />
           <TooltipRow
             color={CHART_BLUE}
             label="Cumulative"
-            value={`${datum.cumulative >= 0 ? "+" : "-"}${formatCurrency(Math.abs(datum.cumulative))}`}
+            value={datum.cumulative == null
+              ? "—"
+              : `${datum.cumulative >= 0 ? "+" : "-"}${formatCurrency(Math.abs(datum.cumulative))}`}
           />
         </>
       ) : null}

@@ -41,7 +41,7 @@ describe("trigger-digest route", () => {
   it("writes the force-run cache key and returns 202 without long-running waitUntil", async () => {
     const request = makeRequest();
     // Idempotency-Key is optional; absent header makes the handler run
-    // directly via runIdempotentAdminAction's no-key shortcut.
+    // directly via runIdempotentAction's no-key shortcut.
 
     const { ctx } = makeExecutionContext();
     const response = await handleTriggerDigest(

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { ChevronRight } from "lucide-react";
 import { useLatestEvents } from "@/hooks/use-events";
-import { logosById } from "@/lib/logos";
+import { getLogoSrc, logosById } from "@/lib/logos";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { collapseForHomepageStrip, eventClassSlug, type CollapsedTapeEntry } from "@/lib/tape-collapse";
 import { formatRelativeTimeMs } from "@shared/lib/relative-time";
@@ -39,7 +39,7 @@ function StackedCoinLogos({ coinIds, logos }: { coinIds: ReadonlyArray<string>; 
     <span className="inline-flex items-center" aria-label={`${coinIds.length} coins`}>
       {visible.map((coinId, idx) => (
         <span key={coinId} className={idx === 0 ? "" : "-ml-2"}>
-          <StablecoinLogo src={logos[coinId]} name={coinId} size={22} />
+          <StablecoinLogo src={getLogoSrc(logos, coinId)} name={coinId} size={22} />
         </span>
       ))}
       {overflow > 0 ? (
@@ -225,7 +225,7 @@ export function HomepageTape({ placement = "inline" }: { placement?: HomepageTap
                   <TapeItem
                     key={`${entry.key}-${idx}`}
                     entry={entry}
-                    logoSrc={logoId ? logos[logoId] : undefined}
+                    logoSrc={logoId ? getLogoSrc(logos, logoId) : undefined}
                     logoName={logoId}
                     logos={logos}
                   />

@@ -45,7 +45,7 @@
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://schuman.io/reserve-audits/",
+    "reserveDisclosureUrl": "https://schuman.io/reserve-attestations/",
     "redemptionPolicyPresent": true,
     "notes": "SALVUS SAS has an official French MiCA/EMT authorization recorded in the MiCA field, but that EU authorization is not a GENIUS approval. Schuman's public GENIUS references discuss the U.S. framework at a general policy level; no token-specific U.S. approval, official application, state qualification, or OCC foreign-issuer registration was found. Because the GENIUS framework remains in proposed-rules phase, the conservative status is no-public-authorization-found.",
     "references": [

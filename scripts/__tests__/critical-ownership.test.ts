@@ -119,16 +119,18 @@ describe("critical ownership derivation", () => {
     expect(ownership.size).toBe(0);
   });
 
-  it("reports an enrolled source without an owner unless it has a cutover waiver", () => {
+  it("reports an enrolled source without an owner and recognises an importing contract test", () => {
     expect(findCriticalOwnershipGaps(
       ["worker/src/lib/new-critical-source.ts"],
       new Map(),
       {},
     )).toEqual(["worker/src/lib/new-critical-source.ts"]);
-    expect(findCriticalOwnershipGaps(
-      ["worker/src/lib/safety-score-v9/capture.ts"],
-      new Map(),
-      CRITICAL_OWNERSHIP_WAIVERS,
-    )).toEqual([]);
+
+    const source = "worker/src/lib/safety-score-v9/capture.ts";
+    const ownership = deriveCriticalOwnership({ sourceFiles: [source] });
+    expect(ownership.get(source)).toEqual([
+      "worker/src/cron/__tests__/prepare-safety-score-v9-input.test.ts",
+    ]);
+    expect(findCriticalOwnershipGaps([source], ownership, CRITICAL_OWNERSHIP_WAIVERS)).toEqual([]);
   });
 });

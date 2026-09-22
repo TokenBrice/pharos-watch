@@ -2,22 +2,17 @@ import { describe, expect, it } from "vitest";
 import type { DexLiquidityData, ExitRouteObservation } from "@shared/types/market";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import {
-  computeDexLiquidityPayloadFingerprint as computeSharedDexLiquidityPayloadFingerprint,
-  computeRedemptionPayloadFingerprint as computeSharedRedemptionPayloadFingerprint,
-  computeReportCardsRegistryFingerprint as computeSharedReportCardsRegistryFingerprint,
+  computeDexLiquidityPayloadFingerprint,
+  computeRedemptionPayloadFingerprint,
   normalizeFixedRedemptionBackstopMap,
   normalizeReportCardsFixedInputMethodologyVersions,
   projectReportCardsFixedInputMethodologyVersions,
 } from "@shared/lib/report-cards-fixed-input-identity";
 import {
-  buildReportCardsFixedInputCacheEntry,
-  computeDexLiquidityPayloadFingerprint,
-  computeRedemptionPayloadFingerprint,
-  computeReportCardsRegistryFingerprint,
   normalizeFixedInput,
-  parseReportCardsFixedInputCacheArtifact,
   parseReportCardsFixedInputCacheValue,
 } from "../report-cards-fixed-input";
+import { buildReportCardsFixedInputCacheEntry } from "../../test-helpers/report-cards-fixed-input";
 import { safetyScoreV9ChainSupplySourceGenerationId } from "../safety-score-v9/supply-attribution";
 import { makeV9RegistryFixedInput } from "../../test-helpers/v9-fixed-input";
 import {
@@ -531,10 +526,7 @@ describe("retained v3 fixed report-card input", () => {
     expect(JSON.stringify(left)).toBe(JSON.stringify(right));
   });
 
-  it("keeps canonical identity exports and digest vectors stable", () => {
-    expect(computeDexLiquidityPayloadFingerprint).toBe(computeSharedDexLiquidityPayloadFingerprint);
-    expect(computeRedemptionPayloadFingerprint).toBe(computeSharedRedemptionPayloadFingerprint);
-    expect(computeReportCardsRegistryFingerprint).toBe(computeSharedReportCardsRegistryFingerprint);
+  it("keeps canonical identity digest vectors stable", () => {
     expect(computeDexLiquidityPayloadFingerprint({}, "dex-test")).toBe(
       "eb15cc883287b8a986bb2aa451706ec9f882059876b78aef35c9c0c0ab071937",
     );
@@ -629,10 +621,9 @@ describe("retained v3 fixed report-card input", () => {
     };
     const entry = await buildReportCardsFixedInputCacheEntry(input, identity);
 
-    await expect(parseReportCardsFixedInputCacheArtifact(entry.value)).resolves.toEqual({
-      input,
-      safetyScoreIdentity: identity,
-    });
+    const envelope = JSON.parse(entry.value) as { safetyScoreIdentity?: unknown };
+    expect(envelope.safetyScoreIdentity).toEqual(identity);
+    await expect(parseReportCardsFixedInputCacheValue(entry.value)).resolves.toEqual(input);
     await expect(
       buildReportCardsFixedInputCacheEntry(input, {
         ...identity,

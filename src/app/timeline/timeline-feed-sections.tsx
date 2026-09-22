@@ -11,6 +11,7 @@ import { formatRelativeTimeMs } from "@shared/lib/relative-time";
 import type { DigestedDay } from "@/lib/tape-digest";
 import type { TapeEvent, TapeEventSeverity } from "@shared/types/tape-event";
 import type { ActiveFilterChip } from "./timeline-controller";
+import { getLogoSrc } from "@/lib/logos";
 import {
   eventDomId,
   formatDayLabel,
@@ -200,7 +201,7 @@ export function OpenIncidentsSection({ incidents, logos, nowMs }: OpenIncidentsS
             </p>
             <EventCard
               event={event}
-              logoSrc={event.coinId ? logos[event.coinId] : undefined}
+              logoSrc={event.coinId ? getLogoSrc(logos, event.coinId) : undefined}
             />
           </div>
         ))}

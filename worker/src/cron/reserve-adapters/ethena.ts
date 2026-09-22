@@ -11,7 +11,7 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   decodeAbiWordAt,
   decodeAddressWord,
-  decodeBoolWord,
+  decodeStrictBoolWord,
   decodeUint256Word,
   decodeUint8Word,
 } from "./abi-decode";
@@ -248,7 +248,7 @@ function ethenaBalanceLabel(asset: string): string {
  */
 export function buildEthenaRedemptionTelemetry(
   reads: EthenaMintRedeemReads,
-): LiveReserveRedemptionTelemetry | null {
+): (LiveReserveRedemptionTelemetry & { routeStatusSource: "onchain"; routeObserved: true }) | null {
   if (decodeAddressWord(reads.usde ?? null)?.toLowerCase() !== ETHENA_USDE_ADDRESS) return null;
 
   // globalConfig() -> (uint128 globalMaxMintPerBlock, uint128 globalMaxRedeemPerBlock)
@@ -261,7 +261,7 @@ export function buildEthenaRedemptionTelemetry(
     // tokenConfig(address) -> (uint8 tokenType, bool isActive, uint128 maxMintPerBlock, uint128 maxRedeemPerBlock)
     const tokenConfig = reads[ethenaTokenConfigLabel(asset.label)] ?? null;
     const tokenType = decodeUint8Word(decodeAbiWordAt(tokenConfig, 0));
-    const isActive = decodeBoolWord(decodeAbiWordAt(tokenConfig, 1));
+    const isActive = decodeStrictBoolWord(decodeAbiWordAt(tokenConfig, 1));
     const maxRedeemPerBlockRaw = decodeUint256Word(decodeAbiWordAt(tokenConfig, 3));
     const balanceRaw = decodeUint256Word(reads[ethenaBalanceLabel(asset.label)] ?? null);
     if (tokenType == null || isActive == null || maxRedeemPerBlockRaw == null || balanceRaw == null) return null;
@@ -296,6 +296,7 @@ export function buildEthenaRedemptionTelemetry(
     freshnessKind: "same-run-onchain",
     routeStatus,
     routeStatusSource: "onchain",
+    routeObserved: true,
     routeStatusReason,
     holderEligibility: "whitelisted-primary",
     sourceUrls: [ETHENA_PEG_ARBITRAGE_DOC_URL, ETHENA_MINTING_CONTRACT_URL],
@@ -311,7 +312,7 @@ export function buildEthenaRedemptionTelemetry(
 async function fetchEthenaRedemptionTelemetry(
   signal: AbortSignal,
   ctx?: AdapterContext,
-): Promise<LiveReserveRedemptionTelemetry | null> {
+): Promise<(LiveReserveRedemptionTelemetry & { routeStatusSource: "onchain"; routeObserved: true }) | null> {
   try {
     const results = await fetchOnchainMulticall3({
       calls: [

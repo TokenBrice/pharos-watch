@@ -21,7 +21,7 @@ import { CategoricalXAxis, ChartAreaGradient, ChartLegendChip, useSvgId } from "
 import { ChartScaleToggle } from "@/components/chart-primitives/scale-toggle";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useHydrated } from "@/hooks/use-hydrated";
-import { CAUSE_META, CAUSE_HEX } from "@shared/lib/dead-stablecoins";
+import { CAUSE_META, CAUSE_HEX } from "@shared/lib/cause-of-death";
 import type { CemeteryEntry } from "@shared/lib/cemetery-merged";
 import { CHART_RED, CHART_BLUE, CHART_SLATE, CHART_HEIGHT } from "@/lib/chart-colors";
 import { PharosChartTooltip } from "@/components/pharos-chart-tooltip";
@@ -402,7 +402,7 @@ function CumulativeDestroyedChart({ entries }: { entries: CemeteryEntries }) {
     return sorted.reduce<CumulativePoint[]>((acc, c, index) => {
       const cumulative = (acc[acc.length - 1]?.cumulative ?? 0) + c.peakMcap!;
       const [y, m] = c.deathDate.split("-");
-      const date = new Date(Number(y), Number(m || 1) - 1);
+      const date = new Date(Date.UTC(Number(y), Number(m || 1) - 1));
       const label = formatChartDate(date.getTime(), "compact");
       acc.push({ date: label, cumulative, symbol: c.symbol, added: c.peakMcap!, index });
       return acc;

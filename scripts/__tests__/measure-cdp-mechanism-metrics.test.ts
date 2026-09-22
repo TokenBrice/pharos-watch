@@ -3,7 +3,7 @@ import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { EthCallJournal, EthCallSpec } from "../lib/mechanism-measurement/core";
-import { encodeWord, ReplayEthCaller } from "../lib/mechanism-measurement/core";
+import { encodeWord, fetchBlockByNumber, ReplayEthCaller } from "../lib/mechanism-measurement/core";
 import { measureConfiguredTarget } from "../lib/mechanism-measurement/measure";
 import { measureLiquityV1 } from "../lib/mechanism-measurement/families/liquity-v1";
 import { measureLiquityV2 } from "../lib/mechanism-measurement/families/liquity-v2";
@@ -102,6 +102,23 @@ describe("redactRpcUrlForEvidence", () => {
     );
     expect(redactRpcUrlForEvidence("https://ethereum-rpc.publicnode.com")).toBe("https://ethereum-rpc.publicnode.com");
     expect(redactRpcUrlForEvidence("not a url")).toBe("[invalid-rpc-url]");
+  });
+});
+
+describe("fetchBlockByNumber", () => {
+  it("rejects an RPC header for a different block before evidence can be recorded", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({
+      jsonrpc: "2.0",
+      id: 1,
+      result: {
+        number: "0x65",
+        hash: `0x${"ab".repeat(32)}`,
+        timestamp: "0x1",
+      },
+    })));
+    await expect(fetchBlockByNumber("https://rpc.example.test", 100)).rejects.toThrow(
+      "RPC response was labelled as block 101",
+    );
   });
 });
 
@@ -404,7 +421,10 @@ describe("CDP replay CLI seam", () => {
 });
 
 
-afterEach(cleanupCaptures);
+afterEach(() => {
+  cleanupCaptures();
+  vi.unstubAllGlobals();
+});
 
 describe("capture resolution", () => {
   it("resolves opaque cached bytes without contacting R2", async () => {

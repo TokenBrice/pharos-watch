@@ -28,6 +28,7 @@ function makeInput(overrides: Partial<ChainAggregatorInput> = {}): ChainAggregat
     ],
     safetyScores: { "usdt-tether": 75, "usdc-circle": 88 },
     pegRates: { peggedUSD: 1 },
+    updatedAt: 1_752_560_000,
     ...overrides,
   };
 }
@@ -71,6 +72,33 @@ describe("aggregateChains", () => {
     expect(result.globalChange30dPct).toBeCloseTo(0.25);
     expect(ethereum.change30d).toBe(10);
     expect(ethereum.change30dPct).toBeCloseTo(0.25);
+  });
+
+  it("publishes the caller's source generation timestamp, never wall-clock time", () => {
+    const result = aggregateChains(makeInput({ updatedAt: 1_234_567 }));
+    expect(result.updatedAt).toBe(1_234_567);
+  });
+
+  it("applies one prev-month rule to chain and per-coin 30d deltas when duplicate labels resolve to one chain", () => {
+    const result = aggregateChains(makeInput({
+      detailChainId: "ethereum",
+      peggedAssets: [
+        {
+          id: "usdt-tether",
+          symbol: "USDT",
+          price: 1,
+          pegType: "peggedUSD",
+          chainCirculating: {
+            ethereum: { current: 100, circulatingPrevMonth: 50 },
+            Ethereum: { current: 20 },
+          },
+        },
+      ],
+    }));
+    const ethereum = result.chains.find((chain) => chain.id === "ethereum")!;
+    expect(ethereum.change30d).toBeNull();
+    expect(ethereum.change30dPct).toBeNull();
+    expect(result.chainDetail?.coins[0]?.change30d).toBeNull();
   });
 
   it("keeps missing history unknown and pairs only known supply, including explicit zero", () => {

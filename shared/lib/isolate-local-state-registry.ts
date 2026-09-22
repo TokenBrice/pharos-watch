@@ -81,11 +81,19 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
   },
   {
     sourcePath: "shared/lib/safety-score-v9/policy.ts",
-    stateNames: ["validatedPolicyEnvelopes"],
-    owner: "Safety Score V9 policy validation",
+    stateNames: ["validatedPolicyEnvelopes", "policyChainMaturityIdentities"],
+    owner: "Safety Score V9 policy validation and chain-maturity identity",
     kind: "cache",
-    resetOrTtl: "Weak object-identity marker; entries are garbage-collectable and disappear on isolate recycle.",
-    durableTruth: "The validated policy envelope and digest are authoritative; the marker only proves local validation.",
+    resetOrTtl: "Weak object-identity markers; entries are garbage-collectable and disappear on isolate recycle.",
+    durableTruth: "The validated policy envelope, digest, and captured chain-maturity resolution identity are authoritative; the weak collections only attest local validation and preserve identity lookup.",
+  },
+  {
+    sourcePath: "worker/src/api/telegram-webhook.ts",
+    stateNames: ["lastMissingBotTokenWarnAtMs"],
+    owner: "Telegram webhook missing-token telemetry",
+    kind: "counter",
+    resetOrTtl: "Suppresses repeat warnings for 60 seconds; resets with the isolate.",
+    durableTruth: "The current TELEGRAM_BOT_TOKEN binding is authoritative; this timestamp only limits duplicate warning logs.",
   },
   {
     sourcePath: "worker/src/api/og.tsx",

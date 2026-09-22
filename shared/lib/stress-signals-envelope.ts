@@ -13,13 +13,11 @@ export interface StressSignalsEnvelope {
   amplifiers: { psi: number; contagion: number };
   baseScore?: number;
   finalScore?: number;
-  availableWeight?: number;
   effectiveWeights?: Record<string, number>;
   evidenceKinds?: string[];
   insufficientEvidenceReason?: string | null;
   dataQualityScore?: number;
   sourceAges?: Record<string, number | null>;
-  staleFlags?: Record<string, boolean>;
   topContributors?: StressSignalTopContributor[];
 }
 
@@ -47,7 +45,6 @@ export function unwrapStressSignalsEnvelope(parsed: unknown): StressSignalsEnvel
 
   if (typeof parsed.baseScore === "number") envelope.baseScore = parsed.baseScore;
   if (typeof parsed.finalScore === "number") envelope.finalScore = parsed.finalScore;
-  if (typeof parsed.availableWeight === "number") envelope.availableWeight = parsed.availableWeight;
   if (typeof parsed.dataQualityScore === "number") envelope.dataQualityScore = parsed.dataQualityScore;
   if (typeof parsed.insufficientEvidenceReason === "string" || parsed.insufficientEvidenceReason === null) {
     envelope.insufficientEvidenceReason = parsed.insufficientEvidenceReason;
@@ -70,12 +67,6 @@ export function unwrapStressSignalsEnvelope(parsed: unknown): StressSignalsEnvel
       ),
     );
     envelope.sourceAges = sourceAges;
-  }
-  if (isRecord(parsed.staleFlags)) {
-    const staleFlags = Object.fromEntries(
-      Object.entries(parsed.staleFlags).filter((entry): entry is [string, boolean] => typeof entry[1] === "boolean"),
-    );
-    envelope.staleFlags = staleFlags;
   }
   if (Array.isArray(parsed.topContributors)) {
     const topContributors = parsed.topContributors.filter((item): item is StressSignalTopContributor => {

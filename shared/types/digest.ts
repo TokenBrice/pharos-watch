@@ -300,6 +300,13 @@ export interface DigestInputData {
   aggregateUniverse?: "core-stablecoins-v1";
   totalMcapUsd: number;
   mcap7dDelta: number;
+  /**
+   * Basis of `mcap7dDelta`: core coins carrying a prior-week supply bucket and
+   * their current market cap. A coin without a baseline is excluded from both
+   * sides of the delta, so `coveredMcapUsd` — not `totalMcapUsd` — is the
+   * denominator of any published 7-day percentage.
+   */
+  mcap7dDeltaCoverage?: { coveredCoins: number; totalCoins: number; coveredMcapUsd: number };
   totalMcapAth?: {
     value: number;
     date: number;
@@ -375,8 +382,11 @@ export interface DigestInputData {
   yesterdayIndex: { score: number; band: string } | null;
   blacklistActivity?: {
     eventCount: number;
+    /** Sum of the known amounts only: a lower bound when `unpricedEventCount > 0`. */
     totalAmountUsd: number;
-    topEvents: { symbol: string; chain: string; type: "blacklist" | "destroy"; amountUsd: number }[];
+    /** Events whose USD amount could not be priced; their `amountUsd` is null. */
+    unpricedEventCount?: number;
+    topEvents: { symbol: string; chain: string; type: "blacklist" | "destroy"; amountUsd: number | null }[];
   };
   supplyVelocity?: {
     coin: string;
@@ -424,7 +434,8 @@ export interface DigestInputData {
   };
   dewsStress?: {
     bandCounts: { calm: number; watch: number; alert: number; warning: number; danger: number };
-    yesterdayBandCounts: { calm: number; watch: number; alert: number; warning: number; danger: number };
+    /** Prior generation's distribution, or null when no prior rows were observed. */
+    yesterdayBandCounts: { calm: number; watch: number; alert: number; warning: number; danger: number } | null;
     bandChanges: {
       symbol: string;
       from: string;

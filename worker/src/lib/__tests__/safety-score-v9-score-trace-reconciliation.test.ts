@@ -1,6 +1,6 @@
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { describe, expect, it } from "vitest";
-import { createReportCardsFixedInput } from "../report-cards-fixed-input";
+import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import { buildSafetyScoreV9Candidate } from "../safety-score-v9/candidate";
 import { v9TestClockSec } from "../../test-helpers/v9-fixed-input";
 
@@ -131,12 +131,16 @@ describe("Safety Score V9 score-trace reconciliation", { timeout: 30_000 }, () =
     }).toEqual({
       score: null,
       grade: "NR",
-      totalFactCount: 5,
+      // SAFETY-SCORE-V9-25 L-08 keeps the missing bridge-supply attribution
+      // explicit instead of treating the route as measured zero.
+      totalFactCount: 7,
       reasonCodes: [
         "insufficient-evidence",
         "missing-peg-input",
         "missing-reserve-composition",
         "missing-same-notional-route",
+        "runtime-bridge-materiality-unavailable",
+        "unresolved-control-identity",
       ],
     });
 

@@ -1,19 +1,23 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { V9DeploymentControlFactV2, V9FactStatusV2 } from "../../types/safety-score-v9-facts";
 import {
   evaluateV9EconomicControl,
   evaluateV9EconomicControlAssetFacts,
-  evaluateV9SubthresholdUnresolvedBridgeJoins,
   projectV9EconomicControlEvaluation,
-  type EvaluateV9EconomicControlArgs,
-  type V9BridgeControlReview,
-  type V9EconomicControlAssetFacts,
-  type V9EconomicControlReviewExtension,
-  type V9MintMechanismReview,
-  type V9MintSupervision,
-  type V9OracleControlReview,
 } from "../safety-score-v9/control";
+import { evaluateV9SubthresholdUnresolvedBridgeJoins } from "../safety-score-v9/control-bridge-join";
+import type {
+  EvaluateV9EconomicControlArgs,
+  V9BridgeControlReview,
+  V9EconomicControlAssetFacts,
+  V9EconomicControlReviewExtension,
+  V9MintMechanismReview,
+  V9MintReconciliation,
+  V9MintSupervision,
+  V9OracleControlReview,
+} from "../safety-score-v9/control-primitives";
 import { loadV9MethodologyPolicy, resolveV9ReasonPolicy, V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
+import { scoreV9Input } from "../safety-score-v9/formula";
 import { scoreV9EvaluatedAsset } from "@shared/lib/safety-score-v9/score";
 import { compileV9FactSetV3 } from "@shared/lib/safety-score-v9/compile";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
@@ -300,6 +304,32 @@ describe("Safety Score v9 economic control", () => {
     expect(() =>
       projectV9EconomicControlEvaluation(asset, { ...review, assetId: "different-asset" }, V9_CANDIDATE_POLICY_V1),
     ).toThrow(/does not match asset/);
+  });
+
+  it("bounds a control signal rounding tail without changing in-range or defective shares", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const rounded = control("mint:rounding", "mint", {
+      incidentState: "active",
+      materialSupplyShare: 1.0000000000000002,
+    });
+    const result = evaluateV9EconomicControl(
+      args({ facts: facts([rounded]), mint: noMint() }),
+    );
+
+    expect(
+      result.structuralFailures.find(
+        (failure) => failure.kind === "active-control-incident",
+      )?.materialSharePct,
+    ).toBe(100);
+    expect(warn).toHaveBeenCalledWith(
+      "safety_score_v9_structural_signal_percentage_clamped",
+      expect.objectContaining({
+        assetId: "fixture-asset",
+        fieldPath: "structuralSignals[*].materialSharePct",
+        rawValue: rounded.materialSupplyShare! * 100,
+      }),
+    );
+    warn.mockRestore();
   });
 
   it("distinguishes bounded, raiseable, and unknown mint-cap semantics", () => {
@@ -891,6 +921,196 @@ describe("Safety Score v9 economic control", () => {
     expect(mintScore(unboundedControl, "unknown", 61)).toMatchObject({
       posture: "unbounded-reconciliation-unknown",
       score: 44,
+    });
+  });
+
+  // Owner rulings R3 (centralized-mint ladder) and R4 (conservative mint
+  // posture fallback), merged here from their per-ruling suites: the engine
+  // under test is the same one the rest of this file owns.
+  describe("R3/R4 unbounded-mint rulings", () => {
+    const SUPERVISIONS = ["prudential", "attestation-only", "none", "unknown"] as const;
+
+    const unboundedMint = (overrides: Partial<V9DeploymentControlFactV2> = {}) =>
+      control("mint:issuer-eoa", "mint", {
+        capSemantics: { kind: "unbounded", bound: null },
+        claimImpairment: "unbounded",
+        economicLossScope: "global-claim",
+        authority: { authorityKey: "authority:issuer", model: "eoa", threshold: null },
+        failureDomains: [{ kind: "mint-control", key: "mint:issuer-eoa" }],
+        ...overrides,
+      });
+
+    const evaluateMint = (
+      mintControl: V9DeploymentControlFactV2,
+      supervision: V9MintSupervision,
+      reconciliation: V9MintReconciliation,
+    ) =>
+      evaluateV9EconomicControl(
+        args({
+          facts: facts([mintControl]),
+          mint: makeReviewedMintInput(mintControl.controlKey, { reconciliation, supervision }),
+        }),
+      );
+
+    const severityOf = (
+      mintControl: V9DeploymentControlFactV2,
+      supervision: V9MintSupervision,
+      reconciliation: V9MintReconciliation,
+    ) =>
+      evaluateMint(mintControl, supervision, reconciliation)
+        .structuralFailures.find((failure) => failure.kind === "centralized-mint")?.severity ?? null;
+
+    const mintComponentOf = (
+      mintControl: V9DeploymentControlFactV2,
+      supervision: V9MintSupervision,
+      reconciliation: V9MintReconciliation,
+    ) => {
+      const component = evaluateMint(mintControl, supervision, reconciliation)
+        .components.find((entry) => entry.kind === "mint");
+      if (!component) throw new Error("mint component missing");
+      return component;
+    };
+
+    // MINT-SOFTEN 2026-07-21: an unbounded mint with no active compromise is a
+    // heavy control-pillar penalty on the high rung, not a critical composite
+    // floor. Prudential supervision clears the cap entirely.
+    it.each(["not-applicable", "unknown"] as const)(
+      "keeps opaque %s-reconciliation unbounded mints on the high rung with no active incident",
+      (reconciliation) => {
+        for (const supervision of ["attestation-only", "none", "unknown"] as const) {
+          expect(severityOf(unboundedMint(), supervision, reconciliation), supervision).toBe("high");
+        }
+        expect(severityOf(unboundedMint(), "prudential", reconciliation)).toBeNull();
+      },
+    );
+
+    it.each(SUPERVISIONS)("keeps a compromised mint critical under %s supervision", (supervision) => {
+      expect(severityOf(unboundedMint({ incidentState: "active" }), supervision, "periodic")).toBe("critical");
+    });
+
+    it("keeps supervision none/unknown + reconciled at the high rung (fail-closed)", () => {
+      expect(severityOf(unboundedMint(), "none", "periodic")).toBe("high");
+      expect(severityOf(unboundedMint(), "unknown", "continuous")).toBe("high");
+    });
+
+    it.each([
+      [null, 95, "A+"],
+      ["low", 83, "A"],
+      ["moderate", 74, "B"],
+      ["high", 59, "C"],
+      ["critical", 39, "F"],
+    ] as const)("scores the %s mint rung independently", (severity, expectedScore, expectedGrade) => {
+      const trace = scoreV9Input(
+        {
+          assetId: "r3-attestation-flagship",
+          pillars: { backing: 95, exit: 95, control: 95 },
+          pegScore: 100,
+          pegApplicable: true,
+          evidenceLevel: "strong",
+          trackRecordMonths: 48,
+          activeDepegBps: null,
+          parentRequired: false,
+          parentScore: null,
+          structuralSignals: severity === null ? [] : [
+            {
+              kind: "centralized-mint",
+              severity,
+              responsibility: "measured-adverse",
+              reason: "Minting is economically unbounded but supply is reconciled against reserves.",
+              failureDomainKeys: ["mint-control:fixture"],
+              evidence: [],
+            },
+          ],
+          unresolved: [],
+        },
+        V9_CANDIDATE_POLICY_V1,
+      );
+      expect(trace.bindingCap).toEqual(severity === null ? null : expect.objectContaining({
+        source: "structural",
+        kind: `signal:centralized-mint:${severity}`,
+        limit: expectedScore,
+      }));
+      expect(trace.finalScore).toBe(expectedScore);
+      expect(trace.finalGrade).toBe(expectedGrade);
+    });
+
+    // R4: an unresolved or unreconciled mint posture must never lift above its
+    // conservative rung. The fixture's mint key is an unattested EOA, so the
+    // merged grader's key-custody penalty applies wherever the rung has room.
+    const mintPostureCases: ReadonlyArray<{
+      name: string;
+      mintControl: V9DeploymentControlFactV2;
+      supervision: V9MintSupervision;
+      reconciliation: V9MintReconciliation;
+      posture: string;
+      score: number;
+    }> = [
+      {
+        name: "unresolved cap semantics stays on the unknown floor (TUSD-shaped facts)",
+        mintControl: unboundedMint({ capSemantics: { kind: "unknown", bound: null } }),
+        supervision: "attestation-only",
+        reconciliation: "periodic",
+        posture: "unknown",
+        score: 45 - UNATTESTED_EOA_PENALTY,
+      },
+      ...(["none", "not-applicable"] as const).flatMap((reconciliation) =>
+        (["none", "unknown", "attestation-only"] as const).map((supervision) => ({
+          name: `confirmed-absent reconciliation (${reconciliation}) under ${supervision} supervision stays on the adverse floor`,
+          mintControl: unboundedMint(),
+          supervision,
+          reconciliation,
+          posture: "unbounded-or-compromised",
+          score: 25,
+        })),
+      ),
+      ...(["none", "unknown", "attestation-only"] as const).map((supervision) => ({
+        name: `unknown reconciliation under ${supervision} supervision takes the exposed rung (9.32)`,
+        mintControl: unboundedMint(),
+        supervision,
+        reconciliation: "unknown" as const,
+        posture: "unbounded-reconciliation-unknown",
+        // The EOA key-custody penalty floors at the adverse rung (25), so 35-3 = 32.
+        score: 35 - UNATTESTED_EOA_PENALTY,
+      })),
+      {
+        name: "prudential supervision counts as reconciled even when cadence is unknown (9.32)",
+        mintControl: unboundedMint(),
+        supervision: "prudential",
+        reconciliation: "unknown",
+        posture: "unbounded-reconciled",
+        score: 55 - UNATTESTED_EOA_PENALTY,
+      },
+      {
+        name: "unresolved supervision with a reconciled mint stays at the flat conservative 55",
+        mintControl: unboundedMint(),
+        supervision: "none",
+        reconciliation: "periodic",
+        posture: "unbounded-reconciled",
+        score: 55 - UNATTESTED_EOA_PENALTY,
+      },
+      {
+        name: "concentrated-admin stays at the flat conservative 55",
+        mintControl: unboundedMint({
+          capSemantics: { kind: "not-applicable", bound: null },
+          claimImpairment: "bounded",
+        }),
+        supervision: "attestation-only",
+        reconciliation: "not-applicable",
+        posture: "concentrated-admin",
+        score: 55 - UNATTESTED_EOA_PENALTY,
+      },
+    ];
+
+    it.each(mintPostureCases)("$name", ({ mintControl, supervision, reconciliation, posture, score }) => {
+      expect(mintComponentOf(mintControl, supervision, reconciliation)).toMatchObject({ posture, score });
+    });
+
+    it("never ranks a weaker supervision class above a stronger one for the same posture", () => {
+      const scoreFor = (supervision: V9MintSupervision) =>
+        mintComponentOf(unboundedMint(), supervision, "periodic").score;
+      expect(scoreFor("prudential")).toBeGreaterThanOrEqual(scoreFor("attestation-only"));
+      expect(scoreFor("attestation-only")).toBeGreaterThanOrEqual(scoreFor("none"));
+      expect(scoreFor("none")).toBe(scoreFor("unknown"));
     });
   });
 

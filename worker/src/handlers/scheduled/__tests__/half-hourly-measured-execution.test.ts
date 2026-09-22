@@ -1,8 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { CronProgressReporter, CronResult } from "../../../lib/cron-logger";
-import { settleMeasuredExecutionLane } from "../half-hourly-measured-execution";
-import { runHalfHourlyMeasuredExecutionSlot } from "../half-hourly-measured-execution";
+import { runHalfHourlyMeasuredExecutionSlot, settleMeasuredExecutionLane } from "../half-hourly-measured-execution";
 import type { ScheduledRuntimeContext } from "../context";
 
 const runners = vi.hoisted(() => ({ evm: vi.fn(), orca: vi.fn(), raydium: vi.fn(), result: null as CronResult | null }));
@@ -33,36 +32,6 @@ it("awaits the EVM lane before collecting isolated shadow evidence and preserves
 });
 
 describe("half-hourly measured execution lane settlement", () => {
-  it("passes a settled lane result through unchanged with flat diagnostics", async () => {
-    const lane: CronResult = {
-      status: "ok",
-      itemCount: 3,
-      metadata: JSON.stringify({
-        measuredCount: 3,
-        rpcRequestCount: 7,
-      }),
-      productivity: { productive: true, reason: "published-measured-execution" },
-    };
-
-    const settled = await settleMeasuredExecutionLane("evm", Promise.resolve(lane));
-
-    expect(settled).toBe(lane);
-    expect(JSON.parse(settled.metadata!)).toEqual({
-      measuredCount: 3,
-      rpcRequestCount: 7,
-    });
-  });
-
-  it("preserves degraded and error lane statuses", async () => {
-    const degraded: CronResult = {
-      status: "degraded",
-      itemCount: 1,
-      metadata: JSON.stringify({ attemptedFailureCount: 2 }),
-      productivity: { productive: true, reason: "published-measured-execution" },
-    };
-    expect((await settleMeasuredExecutionLane("evm", Promise.resolve(degraded))).status).toBe("degraded");
-  });
-
   it("converts a lane invocation rejection into a terminal error result", async () => {
     const settled = await settleMeasuredExecutionLane(
       "evm-shadow",

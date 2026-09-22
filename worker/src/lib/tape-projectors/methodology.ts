@@ -11,16 +11,18 @@
  * The event type slug is `methodology.bumped:<domain>` per the wire grammar
  * in §3.3 of the implementation plan; `<domain>` is a short lowercase tag.
  */
-import { BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG } from "@shared/lib/methodology-versions/blacklist-tracker";
-import { CHAIN_HEALTH_METHODOLOGY_CHANGELOG } from "@shared/lib/methodology-versions/chain-health";
-import { DEPEG_DEWS_METHODOLOGY_CHANGELOG } from "@shared/lib/methodology-versions/depeg-dews";
-import { LIQUIDITY_METHODOLOGY_CHANGELOG } from "@shared/lib/methodology-versions/liquidity-score";
-import { MINT_BURN_FLOW_METHODOLOGY_CHANGELOG } from "@shared/lib/methodology-versions/mint-burn-flow";
-import { PRICING_PIPELINE_METHODOLOGY_CHANGELOG } from "@shared/lib/methodology-versions/pricing-pipeline";
-import { PSI_METHODOLOGY_CHANGELOG } from "@shared/lib/methodology-versions/stability-index";
-import { REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG } from "@shared/lib/methodology-versions/redemption-backstop";
-import { SAFETY_SCORE_METHODOLOGY_CHANGELOG } from "@shared/lib/methodology-versions/safety-score";
-import { YIELD_METHODOLOGY_CHANGELOG } from "@shared/lib/methodology-versions/yield-methodology";
+import {
+  BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG,
+  CHAIN_HEALTH_METHODOLOGY_CHANGELOG,
+  DEPEG_DEWS_METHODOLOGY_CHANGELOG,
+  LIQUIDITY_METHODOLOGY_CHANGELOG,
+  MINT_BURN_FLOW_METHODOLOGY_CHANGELOG,
+  PRICING_PIPELINE_METHODOLOGY_CHANGELOG,
+  PSI_METHODOLOGY_CHANGELOG,
+  REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG,
+  SAFETY_SCORE_METHODOLOGY_CHANGELOG,
+  YIELD_METHODOLOGY_CHANGELOG,
+} from "@shared/lib/methodology-versions/registry";
 import {
   BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
   CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,

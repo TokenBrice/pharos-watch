@@ -1,9 +1,10 @@
+import { DEPEG_SECONDARY_THRESHOLD_RATIO } from "@shared/lib/depeg-config";
 import { isCoinGeckoHistoryAllowed } from "../../lib/solomon-usdv-identity";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { sleep } from "../../lib/abort";
 import { cgHeaders, cgUrl } from "../../lib/coingecko";
 import { mapWithConcurrency } from "../../lib/concurrency";
-import { DEPEG_SECONDARY_THRESHOLD_RATIO, getDepegThresholdBps, USER_AGENT } from "../../lib/constants";
+import { getDepegThresholdBps, USER_AGENT } from "../../lib/constants";
 import type { DepegRow } from "../../lib/depeg-helpers";
 import { deriveDepegSignal } from "../../lib/depeg-signals";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";

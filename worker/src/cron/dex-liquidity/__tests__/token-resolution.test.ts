@@ -52,17 +52,6 @@ describe("DEX token identity resolution", () => {
       .toEqual({ status: "unresolved" });
   });
 
-  it("allows explicit address-present fallback only to the same chain", () => {
-    expect(resolveStablecoinToken("Ethereum", { address: "0xunknown", symbol: "USD" }, fallbackLookups, {
-      allowSymbolFallbackWhenAddressPresent: true,
-    })).toEqual({ status: "matched", stablecoinId: "symbol-owner", matchType: "unique-chain-symbol" });
-  });
-
-  it("keeps disabled symbol fallback unresolved", () => {
-    expect(resolveStablecoinToken("ethereum", { address: "", symbol: "USD" }, fallbackLookups, {
-      allowSymbolFallback: false,
-    })).toEqual({ status: "unresolved" });
-  });
 
   it("rejects ambiguous same-chain symbols without borrowing another chain's unique match", () => {
     expect(resolveStablecoinToken("ethereum", { address: "", symbol: "USD" }, {

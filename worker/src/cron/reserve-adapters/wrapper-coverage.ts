@@ -39,6 +39,7 @@ export function wrapperCoverageResult(args: {
   metadata: Record<string, unknown>;
   redemption: {
     routeStatus: "open" | "paused" | "cohort-limited" | "unknown";
+    routeStatusSource: "onchain" | "static-config";
     routeStatusReason?: string;
     holderEligibility: "any-holder" | "whitelisted-primary";
     sourceUrls?: string[];
@@ -73,7 +74,7 @@ export function wrapperCoverageResult(args: {
         capacityKind: "live-direct" as const,
         freshnessKind: "same-run-onchain" as const,
         routeStatus: args.redemption.routeStatus,
-        routeStatusSource: "onchain" as const,
+        routeStatusSource: args.redemption.routeStatusSource,
         ...(args.redemption.routeStatusReason ? { routeStatusReason: args.redemption.routeStatusReason } : {}),
         holderEligibility: args.redemption.holderEligibility,
         settlementDelaySec: 0,

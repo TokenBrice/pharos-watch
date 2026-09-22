@@ -12,10 +12,9 @@ import type {
 import type { ComputeDepegResolverV2Options, DdrEventDbRow, DdrPendingPromotionOutcomeRow } from "./types";
 import {
   fallbackIncidentForEvent,
-  placeholders,
   toCanonicalIncidentInput,
 } from "./utils";
-import { queryRows } from "./context";
+import { queryRowsChunked } from "./context";
 
 export function computeLockTiming(
   incident: DdrCanonicalIncident,
@@ -51,16 +50,14 @@ export async function loadPendingPromotionConfirmationTimes(
   if (candidates.length === 0) return { byEventId: new Map(), error: null };
 
   const stablecoinIds = [...new Set(candidates.map((row) => row.stablecoin_id))];
-  const firstSeenAtValues = [...new Set(candidates.map((row) => row.started_at))];
-  const result = await queryRows("depeg_pending_outcomes", () => db
+  const result = await queryRowsChunked("depeg_pending_outcomes", stablecoinIds, (inClauseSql, binds) => db
     .prepare(
       `SELECT stablecoin_id, peg_type, direction, first_seen_at, outcome_at
        FROM depeg_pending_outcomes
        WHERE outcome = 'promoted'
-         AND stablecoin_id IN (${placeholders(stablecoinIds.length)})
-         AND first_seen_at IN (${placeholders(firstSeenAtValues.length)})`,
+         AND stablecoin_id IN (${inClauseSql})`,
     )
-    .bind(...stablecoinIds, ...firstSeenAtValues)
+    .bind(...binds)
     .all<DdrPendingPromotionOutcomeRow>());
   if (result.error) return { byEventId: new Map(), error: result.error };
 

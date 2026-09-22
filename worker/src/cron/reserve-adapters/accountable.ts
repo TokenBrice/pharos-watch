@@ -246,17 +246,28 @@ function reconcileCollateralization(
   };
 }
 
+/** The only ratios allowed to populate the canonical `collateralizationRatio` field — and the
+ *  coverage warnings built from it: a gross or reviewed-net basis, recomputable by any reader
+ *  from the published reserve/supply totals. An `unreconciled` headline (matches no derivable
+ *  denominator) and an `underived` one (no totals published at all) have no reproducible basis,
+ *  so they publish `reportedCollateralizationRatio` instead of claiming measured coverage. */
+function canonicalCollateralizationRatio(reconciliation: CollateralizationReconciliation): number | null {
+  switch (reconciliation.basis) {
+    case "gross":
+      return reconciliation.grossRatio!;
+    case "net-of-protocol-owned":
+      return reconciliation.netRatio!;
+    default:
+      return null;
+  }
+}
+
 /** Suffix appended to the undercollateralization warning so the headline percentage can never be
  *  read as gross liability coverage without the denominator it was computed on. */
 function collateralizationBasisSuffix(reconciliation: CollateralizationReconciliation): string {
-  switch (reconciliation.basis) {
-    case "net-of-protocol-owned":
-      return ` net of protocol-owned reserves (gross reserves/supply ${formatPercentFromRatio(reconciliation.grossRatio!)})`;
-    case "unreconciled":
-      return ` on an unreconciled denominator (gross reserves/supply ${formatPercentFromRatio(reconciliation.grossRatio!)})`;
-    default:
-      return "";
-  }
+  return reconciliation.basis === "net-of-protocol-owned"
+    ? ` net of protocol-owned reserves (gross reserves/supply ${formatPercentFromRatio(reconciliation.grossRatio!)})`
+    : "";
 }
 
 function buildCollateralizationReconciliationWarning(
@@ -488,12 +499,15 @@ export function adaptAccountableDashboard(
   const reconciliation = selfIssuedAccounting
     ? { ...derivedReconciliation, basis: "net-of-protocol-owned" as const }
     : derivedReconciliation;
+  const canonicalRatio = canonicalCollateralizationRatio(reconciliation);
   const basisSuffix = collateralizationBasisSuffix(reconciliation);
-  const collateralizationWarnings = buildCoverageShortfallWarnings({
-    code: "reserve-undercollateralized",
-    message: (pct) => `Accountable dashboard reports ${pct}% collateralization${basisSuffix}`,
-    coverageRatio: collateralizationRatio,
-  });
+  const collateralizationWarnings = canonicalRatio == null
+    ? []
+    : buildCoverageShortfallWarnings({
+        code: "reserve-undercollateralized",
+        message: (pct) => `Accountable dashboard reports ${pct}% collateralization${basisSuffix}`,
+        coverageRatio: canonicalRatio,
+      });
   const reconciliationWarning = buildCollateralizationReconciliationWarning(reconciliation);
   const protocolOwnedDenominator = totalReserves ?? totalValue;
   const protocolOwnedPct = protocolOwnedUsd == null
@@ -565,7 +579,9 @@ export function adaptAccountableDashboard(
       ...(unknown.length > 0 ? { unknownBucketNames: unknown.map((entry) => entry.name).sort() } : {}),
       ...(unknownExposurePct > 0 ? { unknownExposurePct } : {}),
       collateralization: payload.data.collateralization,
-      collateralizationRatio,
+      ...(canonicalRatio != null
+        ? { collateralizationRatio: canonicalRatio }
+        : { reportedCollateralizationRatio: collateralizationRatio }),
       collateralizationBasis: reconciliation.basis,
       ...(selfIssuedAccounting ? { selfIssuedAccounting } : {}),
       collateralizationReconciliation: reconciliation,

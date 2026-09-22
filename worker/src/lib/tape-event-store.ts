@@ -1,6 +1,7 @@
 import { batchExecute } from "./db";
 import { D1_BATCH_SIZE } from "./constants";
 import { getCache, setCache } from "./db-cache";
+import { runWithOverloadRetry } from "./d1-overload-retry";
 import type { TapeEventInsert, TapeEventRow } from "./tape-event-types";
 
 const WATERMARK_KEY_PREFIX = "tape-projector:cursor:";
@@ -83,19 +84,23 @@ export async function filterUnprojectedTapeEvents(
   const unprojected: TapeEventInsert[] = [];
   for (let offset = 0; offset < events.length; offset += D1_BATCH_SIZE) {
     const chunk = events.slice(offset, offset + D1_BATCH_SIZE);
-    const observed = await db.batch(
-      chunk.map((event) =>
-        db
-          .prepare(
-            `SELECT 1 AS observed
-               FROM tape_events INDEXED BY idx_tape_source_key
-              WHERE source_table = ?
-                AND source_row_id = ?
-                AND transition = ?
-              LIMIT 1`,
-          )
-          .bind(event.sourceTable, event.sourceRowId, event.transition),
-      ),
+    const observed = await runWithOverloadRetry(
+      () =>
+        db.batch(
+          chunk.map((event) =>
+            db
+              .prepare(
+                `SELECT 1 AS observed
+                   FROM tape_events INDEXED BY idx_tape_source_key
+                  WHERE source_table = ?
+                    AND source_row_id = ?
+                    AND transition = ?
+                  LIMIT 1`,
+              )
+              .bind(event.sourceTable, event.sourceRowId, event.transition),
+          ),
+        ),
+      3,
     );
     for (let index = 0; index < chunk.length; index += 1) {
       if ((observed[index]?.results?.length ?? 0) === 0) {

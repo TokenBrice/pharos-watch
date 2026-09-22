@@ -220,12 +220,12 @@ export async function fetchAstherusEarnWrapperReserves(
       ),
     );
   }
-  const routeStatus = paused == null ? "unknown" : paused ? "paused" : "open";
+  const routeStatus = paused === true ? "paused" : "unknown";
   const routeStatusReason = paused == null
     ? "The optional paused() probe failed"
     : paused
       ? "asUSDFEarn paused() returned true"
-      : "asUSDFEarn paused() returned false";
+      : "asUSDFEarn paused() returned false, but no redemption availability gate was observed";
 
   return {
     slices: [readSlice(params)],
@@ -253,7 +253,11 @@ export async function fetchAstherusEarnWrapperReserves(
       redemption: {
         freshnessKind: "same-run-onchain",
         routeStatus,
-        routeStatusSource: "onchain",
+        ...(paused === true
+          ? { routeStatusSource: "onchain" as const }
+          : paused === false
+            ? { routeStatusSource: "static-config" as const }
+            : {}),
         routeStatusReason,
       },
     },

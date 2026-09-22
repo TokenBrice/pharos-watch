@@ -1,6 +1,6 @@
 import complianceAsset from "@shared/data/stablecoins/coins.compliance.generated.json";
 import { isPricingSourceProtocolOverride } from "@shared/lib/pricing-source-registry";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import {
   CLIENT_ACTIVE_STABLECOINS as ACTIVE_STABLECOINS,
   type StablecoinClientMeta,
@@ -153,10 +153,11 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
     const pegCoin = pegCoinById.get(coin.id);
     const asset = assetById.get(coin.id);
     const reportCard = reportCardById.get(coin.id);
-    const mcap = asset ? getCirculatingRaw(asset) : 0;
+    const mcap = getCirculatingRawOrNull(asset);
     return buildCoverageRow({
       coin: { ...coin, ...COMPLIANCE_BY_ID.get(coin.id) },
-      marketCapUsd: mcap,
+      marketCapUsd: mcap ?? 0,
+      marketCapAvailable: mcap != null,
       hasPegCoverage: pegIds.has(coin.id),
       consensusSources: pegCoin?.consensusSources,
       priceConfidence: pegCoin?.priceConfidence ?? undefined,
@@ -172,9 +173,7 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
       dataAvailability: queryAvailability,
     });
   });
-
-  const totalMcapUsd = rows.reduce((sum, row) => sum + row.marketCapUsd, 0);
-  const featureSummaries = COVERAGE_FEATURES.map((feature) => buildCoverageFeatureSummary(feature, rows, totalMcapUsd));
+  const featureSummaries = COVERAGE_FEATURES.map((feature) => buildCoverageFeatureSummary(feature, rows));
 
   let totalCount = 0;
   let sourceDepthMcapUsd = 0;
@@ -189,16 +188,22 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
     if (priceStatus.kind === "data-unavailable" || priceStatus.kind === "price-only") continue;
 
     totalCount++;
-    sourceDepthMcapUsd += row.marketCapUsd;
     const sourceCount = priceStatus.sourceCount ?? 0;
+    if (row.marketCapAvailable) {
+      sourceDepthMcapUsd += row.marketCapUsd;
+    }
     if (sourceCount >= 3) {
       atTargetCount++;
-      atTargetMcapUsd += row.marketCapUsd;
+      if (row.marketCapAvailable) {
+        atTargetMcapUsd += row.marketCapUsd;
+      }
     } else {
       belowTargetCount++;
       if (sourceCount === 2) {
         exactTwoCount++;
-        exactTwoMcapUsd += row.marketCapUsd;
+        if (row.marketCapAvailable) {
+          exactTwoMcapUsd += row.marketCapUsd;
+        }
       }
     }
   }
@@ -215,32 +220,36 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
 
   const { pricingSources, authoritativeSources } = buildPricingSourceCounts(input.pegSummary.data);
   // Single O(n) pass tracking three extremes; ties resolve to the earliest
-  // element, matching the prior stable-sort-then-[0] behavior.
+  // element, matching the prior stable-sort-then-[0] behavior. A fully
+  // `data-unavailable` feature has no coverage verdict and must not win
+  // "tightest reach" as a fabricated 0%.
   const featureExtremes = featureSummaries.reduce<{
     widest: CoverageFeatureSummary | null;
     narrowest: CoverageFeatureSummary | null;
     mostConcentrated: CoverageFeatureSummary | null;
   }>(
     (acc, summary) => {
+      const coveragePct = summary.coveragePct;
+      if (coveragePct == null) return acc;
       const mcapShare = summary.mcapSharePct ?? 0;
-      const concentration = mcapShare - summary.coveragePct;
+      const concentration = mcapShare - coveragePct;
       if (
         acc.widest === null ||
-        summary.coveragePct > acc.widest.coveragePct ||
-        (summary.coveragePct === acc.widest.coveragePct && mcapShare > (acc.widest.mcapSharePct ?? 0))
+        coveragePct > acc.widest.coveragePct! ||
+        (coveragePct === acc.widest.coveragePct && mcapShare > (acc.widest.mcapSharePct ?? 0))
       ) {
         acc.widest = summary;
       }
       if (
         acc.narrowest === null ||
-        summary.coveragePct < acc.narrowest.coveragePct ||
-        (summary.coveragePct === acc.narrowest.coveragePct && mcapShare < (acc.narrowest.mcapSharePct ?? 0))
+        coveragePct < acc.narrowest.coveragePct! ||
+        (coveragePct === acc.narrowest.coveragePct && mcapShare < (acc.narrowest.mcapSharePct ?? 0))
       ) {
         acc.narrowest = summary;
       }
       if (
         acc.mostConcentrated === null ||
-        concentration > (acc.mostConcentrated.mcapSharePct ?? 0) - acc.mostConcentrated.coveragePct
+        concentration > (acc.mostConcentrated.mcapSharePct ?? 0) - acc.mostConcentrated.coveragePct!
       ) {
         acc.mostConcentrated = summary;
       }

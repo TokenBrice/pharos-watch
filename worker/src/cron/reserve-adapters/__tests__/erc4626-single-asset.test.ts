@@ -78,13 +78,14 @@ const catalogCases = [
 
 // Yearn V3 vault: 5M idle plus two queued strategies (60M debt fully redeemable,
 // 35M debt with 20M redeemable) => 85M withdrawable, with isShutdown() pinned.
-function mockYearnV3Rpc(isShutdownRaw?: bigint | number) {
+function mockYearnV3Rpc(isShutdownRaw?: bigint | number, pausedRaw?: bigint | number) {
   const strategyA = "0x1111111111111111111111111111111111111111";
   const strategyB = "0x2222222222222222222222222222222222222222";
   const vault = "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b";
   installErc4626Network({
     idleBalance: 5_000_000n,
     shutdown: isShutdownRaw,
+    paused: pausedRaw,
     extraHandlers: [({ call }) => {
       if (!call) return undefined;
       const to = call.to?.toLowerCase();
@@ -161,8 +162,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
         capacityRatioOfSupply: 0.25,
         capacityKind: "live-direct",
         freshnessKind: "same-run-onchain",
-        routeStatus: "open",
-        routeStatusReason: expect.stringContaining("Idle underlying redemption liquidity"),
+        routeStatus: "unknown",
       },
     });
     expect(balanceOfCalls).toHaveLength(1);
@@ -198,7 +198,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
       redemption: {
         capacityUsd: 25,
         capacityKind: "live-direct",
-        routeStatus: "open",
+        routeStatus: "unknown",
       },
     });
     expect(result.warnings).toEqual([
@@ -256,11 +256,11 @@ describe("fetchErc4626SingleAssetReserves", () => {
       details: { navConsistencyRatio: 1 },
       redemption: {
         capacityKind: "documented-eventual",
-        freshnessKind: "same-run-onchain",
       },
     });
     expect(result.metadata).not.toHaveProperty("assetAddress");
     expect(result.metadata?.redemption).not.toHaveProperty("capacityUsd");
+    expect(result.metadata?.redemption).not.toHaveProperty("freshnessKind");
   });
 
   it("suppresses redemption capacity when underlying decimals are invalid", async () => {
@@ -272,13 +272,13 @@ describe("fetchErc4626SingleAssetReserves", () => {
       assetAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       redemption: {
         capacityKind: "documented-eventual",
-        freshnessKind: "same-run-onchain",
         routeStatus: "unknown",
       },
     });
     expect(result.metadata).not.toHaveProperty("idleUnderlyingBalanceRaw");
     expect(result.metadata).not.toHaveProperty("underlyingDecimals");
     expect(result.metadata?.redemption).not.toHaveProperty("capacityUsd");
+    expect(result.metadata?.redemption).not.toHaveProperty("routeStatusSource");
   });
 
   it.each(["totalSupply", "convertedAssets", "idleBalance", "decimals"] as const)(
@@ -319,6 +319,25 @@ describe("fetchErc4626SingleAssetReserves", () => {
     });
   });
 
+  it("withholds route openness on positive capacity when the vault pause probe is unreadable", async () => {
+    installErc4626Network();
+
+    const result = await runTrackedVault("syrupusdc-maple");
+
+    expect(result.metadata).toMatchObject({
+      idleUnderlyingBalanceRaw: "25000000",
+      underlyingDecimals: 6,
+      redemption: {
+        capacityUsd: 25,
+        capacityKind: "live-direct",
+        freshnessKind: "same-run-onchain",
+        routeStatus: "unknown",
+      },
+    });
+    expect(result.metadata?.redemption).not.toHaveProperty("routeStatusSource");
+    expect(result.metadata?.redemption).not.toHaveProperty("routeStatusReason");
+  });
+
   it("reports a paused redemption route when the vault paused() returns true", async () => {
     installErc4626Network({ paused: 1 });
 
@@ -331,6 +350,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
         capacityUsd: 25,
         routeStatus: "paused",
         routeStatusReason: "Vault paused() returned true on-chain",
+        routeStatusSource: "onchain",
       },
     });
   });
@@ -350,9 +370,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
         capacityRatioOfSupply: 1,
         capacityKind: "live-direct",
         freshnessKind: "same-run-onchain",
-        routeStatus: "open",
-        routeStatusReason: expect.stringContaining("Reviewer-asserted unconstrained external-savings redemption"),
-        routeStatusSource: "onchain",
+        routeStatus: "unknown",
       },
     });
   });
@@ -375,14 +393,14 @@ describe("fetchErc4626SingleAssetReserves", () => {
         capacityKind: "live-direct",
         freshnessKind: "same-run-onchain",
         routeStatus: "unknown",
-        routeStatusSource: "onchain",
         settlementDelaySec: 0,
       },
     });
+    expect(result.metadata?.redemption).not.toHaveProperty("routeStatusSource");
   });
 
   it("opens the Yearn V3 route when withdrawable capacity is positive and isShutdown() is false", async () => {
-    mockYearnV3Rpc(0);
+    mockYearnV3Rpc(0, 0);
 
     const result = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "yearn-v3-withdrawable", settlementDelaySec: 0 }));
 
@@ -411,13 +429,14 @@ describe("fetchErc4626SingleAssetReserves", () => {
         capacityUsd: 85,
         routeStatus: "paused",
         routeStatusReason: "Yearn vault isShutdown() returned true on-chain",
+        routeStatusSource: "onchain",
       },
     });
   });
 
   it("uses sBOLD Stability-Pool-withdrawable capacity from calcFragments instead of the ~0 idle balance", async () => {
     const calcFragmentsCalls: Array<{ to?: string; data: string }> = [];
-    installErc4626Network({ idleBalance: 1_000_000n, extraHandlers: [({ call }) => {
+    installErc4626Network({ idleBalance: 1_000_000n, paused: 0, extraHandlers: [({ call }) => {
       if (call?.data === "0x160b71df") {
         calcFragmentsCalls.push(call);
         return jsonResponse({ result: calcFragmentsResult(85_000_000n) });
@@ -475,7 +494,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
   });
 
   it("keeps the existing documented-bound sBOLD telemetry when maxCollInBold is unreadable", async () => {
-    installErc4626Network({ idleBalance: 1_000_000n, extraHandlers: [({ call }) => {
+    installErc4626Network({ idleBalance: 1_000_000n, paused: 0, extraHandlers: [({ call }) => {
       if (call?.data === "0x160b71df") return jsonResponse({ result: calcFragmentsResult(85_000_000n) });
       if (call?.data === "0xbf2428e6") return null;
       return undefined;
@@ -493,6 +512,27 @@ describe("fetchErc4626SingleAssetReserves", () => {
       routeStatus: "open",
       routeStatusSource: "onchain",
     });
+  });
+
+  it("withholds sBOLD route openness when the vault pause probe is unreadable", async () => {
+    installErc4626Network({ idleBalance: 1_000_000n, extraHandlers: [({ call }) => {
+      if (call?.data === "0x160b71df") return jsonResponse({ result: calcFragmentsResult(85_000_000n) });
+      if (call?.data === "0xbf2428e6") return jsonResponse({ result: uint256Result(7_500_000n) });
+      return undefined;
+    }] });
+
+    const result = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "sbold-sp-withdrawable" }));
+
+    expect(result.metadata).toMatchObject({
+      redemptionCapacitySource: "sbold-sp-withdrawable",
+      sboldSpWithdrawableRaw: "85000000",
+      redemption: {
+        capacityUsd: 85,
+        routeStatus: "unknown",
+      },
+    });
+    expect(result.metadata?.redemption).not.toHaveProperty("routeStatusSource");
+    expect(result.metadata?.redemption).not.toHaveProperty("routeStatusReason");
   });
 
   it("degrades sBOLD to the idle balance when the calcFragments probe cannot be decoded", async () => {
@@ -571,8 +611,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
         capacityRatioOfSupply: 0.3,
         capacityKind: "live-direct",
         freshnessKind: "same-run-api",
-        routeStatus: "open",
-        routeStatusSource: "protocol-api",
+        routeStatus: "unknown",
       },
     });
     expect(morphoVariables).toEqual([{ address: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b", chainId: 1 }]);
@@ -718,5 +757,51 @@ describe("fetchErc4626SingleAssetReserves", () => {
         assetAddressMatchesExpected: true,
       },
     });
+  });
+});
+
+describe("ERC-4626 held versus deployed exposure", () => {
+  it("does not claim USDC holdings for YieldFi's zero-idle live observation", async () => {
+    installErc4626Network({
+      vault: "0x19ebd191f7a24ece672ba13a302212b5ef7f35cb",
+      totalAssets: 10_696_286_730_934n,
+      convertedAssets: 10_696_286_730_934n,
+      idleBalance: 0n,
+    });
+    const result = await runTrackedVault("yusd-yieldfi");
+    expect(result.slices).toEqual([expect.objectContaining({ pct: 100, risk: "high" })]);
+    expect(result.slices[0]).not.toHaveProperty("coinId");
+    expect(result.metadata?.unknownExposurePct).toBe(100);
+  });
+
+  it("attributes only measured idle USDC while retaining the deployed remainder", async () => {
+    installErc4626Network({ idleBalance: 25_000_000n });
+    const result = await runTrackedVault("syrupusdc-maple", withoutDeployedExposure);
+    expect(result.slices).toEqual([
+      expect.objectContaining({ pct: 25, coinId: "usdc-circle" }),
+      expect.objectContaining({ pct: 75, risk: "high" }),
+    ]);
+    expect(result.slices[1]).not.toHaveProperty("coinId");
+    expect(result.slices[1]).not.toHaveProperty("depType");
+    expect(result.metadata?.unknownExposurePct).toBe(75);
+    expect(result.metadata).not.toHaveProperty("deployedPct");
+  });
+
+  it.each([100_000_000n, 120_000_000n])("keeps a single underlying slice when holdings cover totalAssets (%s)", async (idleBalance) => {
+    installErc4626Network({ idleBalance });
+    const result = await runTrackedVault("syrupusdc-maple", withoutDeployedExposure);
+    expect(result.slices).toEqual([expect.objectContaining({ pct: 100, coinId: "usdc-circle", risk: "medium" })]);
+    expect(result.metadata?.unknownExposurePct).toBe(0);
+  });
+
+  it("does not invent an idle holding when the balance probe is unreadable", async () => {
+    installErc4626Network({ idleBalance: null });
+    const result = await runTrackedVault("syrupusdc-maple");
+    expect(result.slices).toEqual([expect.objectContaining({ pct: 100, risk: "high" })]);
+    expect(result.slices[0]).not.toHaveProperty("coinId");
+    expect(result.metadata?.unknownExposurePct).toBe(100);
+    expect(result.metadata).not.toHaveProperty("deployedPct");
+    expect(result.metadata).not.toHaveProperty("deployedExposureBasis");
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "erc4626-idle-balance-unavailable", effect: "degraded" }));
   });
 });

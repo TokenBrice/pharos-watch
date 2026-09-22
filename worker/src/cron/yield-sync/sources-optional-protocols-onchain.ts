@@ -7,7 +7,7 @@ import { fetchEvmRpcBatch, fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { throwIfAborted } from "../../lib/abort";
 import { logWorkerEvent } from "../../lib/structured-log";
-import { buildOnChainSourceKey } from "../yield-helpers";
+import { buildOnChainSourceKey } from "../../lib/yield-utils";
 import type { ResolvedYield } from "./types";
 
 const LIQUITY_V1_LUSD_ID = "lusd-liquity";

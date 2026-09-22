@@ -55,16 +55,6 @@ describe("parsePublishedMintBurnGauge", () => {
     expect(parsePublishedMintBurnGauge(rest, NOW_SEC, false)?.chains).toEqual([]);
   });
 
-  it("falls back to the deprecated flowIntensity alias", () => {
-    const gauge = parsePublishedMintBurnGauge(
-      payload({
-        coins: [{ stablecoinId: "usdt-tether", symbol: "USDT", flowIntensity: 44, netFlow24hUsd: 10 }],
-      }),
-      NOW_SEC,
-      false,
-    );
-    expect(gauge?.coins[0]?.intensity).toBe(44);
-  });
 
   it.each([
     ["no gauge object", { coins: [] }],

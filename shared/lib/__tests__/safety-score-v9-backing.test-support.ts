@@ -1,5 +1,5 @@
 import type { V9FactGapV2, V9FactStatusV2, V9ReserveExposureFactV2 } from "@shared/types/safety-score-v9-facts";
-import type { V9BackingAssetInput, V9MechanismFactV1 } from "@shared/lib/safety-score-v9/backing";
+import type { V9BackingAssetInput, V9MechanismFactV1 } from "@shared/lib/safety-score-v9/backing-primitives";
 
 export const knownStatus = (evidenceId: string, policyRuleId = "backing.required"): V9FactStatusV2 => ({
   applicability: { state: "required", policyRuleId, rationale: null, gapId: null },

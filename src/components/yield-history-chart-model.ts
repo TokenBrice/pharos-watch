@@ -99,7 +99,7 @@ export interface YieldHistorySourceOption {
 
 export interface YieldHistoryChartProps {
   stablecoinId: string;
-  benchmarkRate: number;
+  benchmarkRate: number | null;
   benchmarkLabel?: string;
   benchmarkIsFallback?: boolean;
   medianApy: number;
@@ -469,8 +469,8 @@ export function useYieldHistoryChartModel({
 
   const yDomain = useMemo(() => {
     if (chartData.length === 0) {
-      const minRef = Math.min(0, benchmarkRate, medianApy > 0 ? medianApy : 0);
-      const maxRef = Math.max(benchmarkRate, medianApy, 1);
+      const minRef = Math.min(0, benchmarkRate ?? 0, medianApy > 0 ? medianApy : 0);
+      const maxRef = Math.max(benchmarkRate ?? 0, medianApy, 1);
       return [minRef - 1, maxRef + 1] as const;
     }
 
@@ -485,7 +485,7 @@ export function useYieldHistoryChartModel({
     const dataMin = Math.min(...values);
     const dataMax = Math.max(...values);
     const nearBand = Math.max((dataMax - dataMin) * 2, 1);
-    if (benchmarkRate >= dataMin - nearBand && benchmarkRate <= dataMax + nearBand) {
+    if (benchmarkRate != null && benchmarkRate >= dataMin - nearBand && benchmarkRate <= dataMax + nearBand) {
       values.push(benchmarkRate);
     }
     if (medianApy > 0 && medianApy >= dataMin - nearBand && medianApy <= dataMax + nearBand) {

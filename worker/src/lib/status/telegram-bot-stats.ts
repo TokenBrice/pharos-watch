@@ -1,4 +1,8 @@
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
+import {
+  buildActivePresetAggregateSql,
+  buildActiveSubscriptionAggregateSql,
+} from "@shared/lib/telegram-alert-families";
 import type {
   TelegramBotStats,
   TelegramDeliverySliRollup,
@@ -17,6 +21,7 @@ import { loadTelegramDeliverySliRollup } from "../telegram/delivery-sli";
 import { getCache } from "../db-cache";
 import {
   loadTelegramPendingCapacity,
+  toPendingDeliveryBacklog,
   type TelegramPendingCapacitySnapshot,
 } from "../telegram/pending-capacity";
 
@@ -99,6 +104,35 @@ const PRESET_QUERY_FAILURE_CACHE_KEY = "telegram:preset-query-failure-count";
 const INACTIVE_CLEANUP_WINDOW_SEC = 7 * 24 * 60 * 60;
 const INACTIVE_CLEANUP_JOB = "telegram-inactive-cleanup";
 const WEBHOOK_EFFECT_SAMPLE_LIMIT = 5_001;
+
+/**
+ * Status-only rollup on the direct watchlist: a row counts as customized when it
+ * turns a preset family off or tunes one of the per-coin tuning columns.
+ */
+const TELEGRAM_CUSTOM_PREFERENCES_COLUMN = `MAX(
+          CASE
+            WHEN alert_dews = 0
+              OR alert_depeg = 0
+              OR alert_safety = 0
+              OR dews_min_band IS NOT NULL
+              OR safety_mode IS NOT NULL
+              OR depeg_worsening_bps_step IS NOT NULL
+            THEN 1 ELSE 0
+          END
+        ) AS custom_preferences`;
+
+// The per-chat rollups below compose the canonical family projections from
+// `shared/lib/telegram-alert-families`; only the status-only totals
+// (`sub_count`/`preset_count`) and the customization rollup are local.
+const TELEGRAM_SUBSCRIPTION_ROLLUP_SQL = buildActiveSubscriptionAggregateSql({
+  additionalColumns: ["COUNT(*) AS sub_count", TELEGRAM_CUSTOM_PREFERENCES_COLUMN],
+  includeFamilyFlags: true,
+});
+
+const TELEGRAM_PRESET_ROLLUP_SQL = buildActivePresetAggregateSql({
+  additionalColumns: ["COUNT(*) AS preset_count"],
+  includeFamilyFlags: true,
+});
 
 const TELEGRAM_BOT_AGGREGATE_SQL = `SELECT
   COUNT(*) AS total_chats,
@@ -187,48 +221,10 @@ const TELEGRAM_BOT_AGGREGATE_SQL = `SELECT
   SUM(CASE WHEN COALESCE(preset.active_preset_count, 0) > 0 THEN 1 ELSE 0 END) AS active_preset_followers
 FROM telegram_subscribers s
 LEFT JOIN (
-  SELECT chat_id,
-         COUNT(*) AS sub_count,
-         SUM(
-           CASE
-             WHEN alert_dews = 1 OR alert_depeg = 1 OR alert_safety = 1 OR alert_launch = 1 OR alert_reserve = 1 OR alert_freeze = 1
-             THEN 1 ELSE 0
-           END
-         ) AS active_sub_count,
-         MAX(CASE WHEN alert_dews = 1 THEN 1 ELSE 0 END) AS dews_enabled,
-         MAX(CASE WHEN alert_depeg = 1 THEN 1 ELSE 0 END) AS depeg_enabled,
-         MAX(CASE WHEN alert_safety = 1 THEN 1 ELSE 0 END) AS safety_enabled,
-         MAX(CASE WHEN alert_launch = 1 THEN 1 ELSE 0 END) AS launch_enabled,
-         MAX(CASE WHEN alert_reserve = 1 THEN 1 ELSE 0 END) AS reserve_enabled,
-         MAX(CASE WHEN alert_freeze = 1 THEN 1 ELSE 0 END) AS freeze_enabled,
-         MAX(
-           CASE
-             WHEN alert_dews = 0
-               OR alert_depeg = 0
-               OR alert_safety = 0
-               OR dews_min_band IS NOT NULL
-               OR safety_mode IS NOT NULL
-               OR depeg_worsening_bps_step IS NOT NULL
-             THEN 1 ELSE 0
-           END
-         ) AS custom_preferences
-    FROM telegram_subscriptions
-   GROUP BY chat_id
+${TELEGRAM_SUBSCRIPTION_ROLLUP_SQL}
 ) sub ON sub.chat_id = s.chat_id
 LEFT JOIN (
-  SELECT chat_id,
-         COUNT(*) AS preset_count,
-         SUM(
-           CASE
-             WHEN alert_dews = 1 OR alert_depeg = 1 OR alert_safety = 1
-             THEN 1 ELSE 0
-           END
-         ) AS active_preset_count,
-         MAX(CASE WHEN alert_dews = 1 THEN 1 ELSE 0 END) AS dews_enabled,
-         MAX(CASE WHEN alert_depeg = 1 THEN 1 ELSE 0 END) AS depeg_enabled,
-         MAX(CASE WHEN alert_safety = 1 THEN 1 ELSE 0 END) AS safety_enabled
-    FROM telegram_preset_subscriptions
-   GROUP BY chat_id
+${TELEGRAM_PRESET_ROLLUP_SQL}
 ) preset ON preset.chat_id = s.chat_id`;
 
 const TELEGRAM_PENDING_DISAMBIGUATION_SQL =
@@ -464,7 +460,7 @@ export function mapTelegramBotStats(input: {
   }, {});
 
   const explicitCoinSubscriptions = coerceCount(aggregate?.total_subscriptions);
-  const presetImpliedCoinSubscriptions = lifecycleSnapshot?.presetImpliedCoinFollows ?? 0;
+  const presetImpliedCoinSubscriptions = lifecycleSnapshot?.presetImpliedCoinFollows ?? null;
   const activePresetFollowers =
     lifecycleSnapshot?.activePresetFollowers ?? coerceCount(aggregate?.active_preset_followers);
 
@@ -475,7 +471,9 @@ export function mapTelegramBotStats(input: {
     subscribedChats: coerceCount(aggregate?.subscribed_chats),
     emptyAlertChats: coerceCount(aggregate?.empty_alert_chats),
     mutedChatsWithSubscriptions: coerceCount(aggregate?.muted_chats_with_subscriptions),
-    totalSubscriptions: explicitCoinSubscriptions + presetImpliedCoinSubscriptions,
+    totalSubscriptions: presetImpliedCoinSubscriptions == null
+      ? null
+      : explicitCoinSubscriptions + presetImpliedCoinSubscriptions,
     explicitCoinSubscriptions,
     presetImpliedCoinSubscriptions,
     activePresetFollowers,
@@ -525,21 +523,7 @@ export function mapTelegramBotStats(input: {
     stats.oldestPendingDeliveryAgeSec = pendingCapacity.oldestPendingAgeSec;
     stats.oldestDuePendingAgeSec = pendingCapacity.oldestDuePendingAgeSec;
     stats.estimatedDrainTimeSec = pendingCapacity.estimatedDrainTimeSec;
-    stats.pendingDeliveryBacklog = {
-      claimable: pendingCapacity.due,
-      due: pendingCapacity.due,
-      deferred: pendingCapacity.deferred,
-      expired: pendingCapacity.expired,
-      nearTtl: pendingCapacity.nearTtl,
-      sending: pendingCapacity.sending,
-      executionUnknown: pendingCapacity.executionUnknown,
-      pendingExecutionUnknown: pendingCapacity.pendingExecutionUnknown,
-      freshExecutionUnknown: pendingCapacity.freshExecutionUnknown,
-      oldestExecutionUnknownAgeSec: pendingCapacity.oldestExecutionUnknownAgeSec,
-      executionUnknownSampleLimit: pendingCapacity.executionUnknownSampleLimit,
-      executionUnknownLowerBound: pendingCapacity.executionUnknownLowerBound,
-      sentCleanup: pendingCapacity.sentCleanup,
-    };
+    stats.pendingDeliveryBacklog = toPendingDeliveryBacklog(pendingCapacity);
   }
   if (webhookEffectUnknown) {
     stats.webhookEffectUnknown = coerceCount(webhookEffectUnknown.pending_count);

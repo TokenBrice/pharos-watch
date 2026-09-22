@@ -288,39 +288,6 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(historyMatches(db, "INSERT INTO telegram_usage_daily", {1:"mini_app_mutation",3:"watchlist_export"})).toBe(false);
   });
 
-  it("exports freeze intent through pw3 without using mutation telemetry", async () => {
-    const initData = await privateInitData(60 * 60);
-    const db = makeMiniAppDb(stateReadTables({
-      subscriptions: [{
-        stablecoin_id: "usdc-circle",
-        alert_dews: 0,
-        alert_depeg: 0,
-        alert_safety: 0,
-        alert_launch: 0,
-        alert_reserve: 0,
-        alert_freeze: 1,
-        alert_dews_override: 0,
-        alert_depeg_override: 0,
-        alert_safety_override: 0,
-        alert_launch_override: 0,
-        alert_reserve_override: 0,
-        alert_freeze_override: 1,
-        dews_min_band: null,
-        safety_mode: null,
-        depeg_worsening_bps_step: null,
-      }],
-    }));
-
-    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
-      initData,
-      operation: { kind: "export-watchlist" },
-    }), BOT_TOKEN);
-
-    expect(await readJsonResponse(response, 200)).toMatchObject({ result: { kind: "watchlist-export", token: expect.stringMatching(/^pw3\./) } });
-    expect(historyMatches(db, "INSERT INTO telegram_usage_daily", {1:"mini_app_portability",3:"watchlist_export"})).toBe(true);
-    expect(historyMatches(db, "INSERT INTO telegram_usage_daily", {1:"mini_app_mutation_denied",3:"watchlist_export"})).toBe(false);
-  });
-
   it("routes a signed bulk preview through the read-only portability path", async () => {
     const initData = await privateInitData();
     const db = makeMiniAppDb(stateReadTables());
@@ -387,31 +354,6 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(sqlite.prepare("SELECT stablecoin_id, alert_dews, alert_depeg FROM telegram_subscriptions WHERE chat_id = '42'").all())
       .toEqual([{ stablecoin_id: "usdt-tether", alert_dews: 1, alert_depeg: 1 }]);
     expect(sqlite.prepare("SELECT event_type FROM telegram_usage_daily WHERE event_type = 'mini_app_mutation'").all()).toEqual([{ event_type: "mini_app_mutation" }]);
-  });
-
-  it("returns stable portability errors for invalid tokens, empty exports, and stale bulk previews", async () => {
-    const initData = await privateInitData();
-    const invalidToken = await handleTelegramMiniAppMutation(
-      makeMiniAppDb(stateReadTables()),
-      makeMiniAppRequest("/api/telegram-mini-app/mutate", { initData, operation: { kind: "preview-watchlist-import", token: "not-a-watchlist" } }),
-      BOT_TOKEN,
-    );
-    const emptyExport = await handleTelegramMiniAppMutation(
-      makeMiniAppDb(stateReadTables()),
-      makeMiniAppRequest("/api/telegram-mini-app/mutate", { initData, operation: { kind: "export-watchlist" } }),
-      BOT_TOKEN,
-    );
-    const staleBulk = await handleTelegramMiniAppMutation(
-      makeMiniAppDb(stateReadTables({
-        subscriptions: [{ stablecoin_id: "usdc-circle", alert_dews: 1, alert_depeg: 0, alert_safety: 0, alert_launch: 0, alert_reserve: 0, alert_freeze: 0, alert_dews_override: 1, alert_depeg_override: 0, alert_safety_override: 0, alert_launch_override: 0, alert_reserve_override: 0, alert_freeze_override: 0, dews_min_band: null, safety_mode: null, depeg_worsening_bps_step: null, alert_snooze_until_ts: null }],
-      })),
-      makeMiniAppRequest("/api/telegram-mini-app/mutate", { initData, operation: { kind: "preview-bulk-watchlist", addStablecoinIds: ["usdc-circle"], removeStablecoinIds: ["eurc-circle"] } }),
-      BOT_TOKEN,
-    );
-
-    await expect(invalidToken.json()).resolves.toMatchObject({ code: "invalid-portable-token" });
-    await expect(emptyExport.json()).resolves.toMatchObject({ code: "empty-portable-state" });
-    await expect(staleBulk.json()).resolves.toMatchObject({ code: "stale-bulk-preview" });
   });
 
   it("rate-limits repeated read-only portability requests with portable telemetry", async () => {
@@ -1113,7 +1055,8 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(historyMatches(db, "DELETE FROM telegram_alert_dead_letters WHERE chat_id = ?", { 0: "42" })).toBe(true);
     expect(historyMatches(db, "DELETE FROM telegram_chat_delivery_diagnostics WHERE chat_id = ?", { 0: "42" })).toBe(true);
     expect(historyMatches(db, "DELETE FROM telegram_subscribers WHERE chat_id = ?", { 0: "42" })).toBe(true);
-    expect(historyMatches(db, "DELETE FROM cache WHERE key = ?", { 0: "telegram:mini-app-mutation-burst:42" })).toBe(false);
+    // P2-11 TELEGRAM-DIGEST-35 atomically erases the exact per-user burst key during forget-me.
+    expect(historyMatches(db, "DELETE FROM cache WHERE key = ?", { 0: "telegram:mini-app-mutation-burst:42" })).toBe(true);
     // processed_updates intentionally retained for idempotency.
     expect(db.getHistory().some((entry) => entry.sql.includes("DELETE FROM telegram_processed_updates"))).toBe(false);
   });

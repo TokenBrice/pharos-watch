@@ -271,6 +271,7 @@ describe("hive-hbd-protocol adapter", () => {
     const network = hiveNetwork({}, async (request, body) => {
       reads += 1;
       if (reads > 6) {
+        request.signal.throwIfAborted();
         return new Promise((_, reject) => {
           request.signal.addEventListener("abort", () => reject(request.signal.reason), { once: true });
         });

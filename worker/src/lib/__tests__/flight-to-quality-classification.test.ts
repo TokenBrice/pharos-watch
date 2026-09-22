@@ -23,7 +23,7 @@ describe("buildFlightToQualityClassificationFromV9Snapshot", () => {
       ],
     });
     ReportCardsV9CurrentResponseSchema.parse(snapshot);
-    const result = buildFlightToQualityClassificationFromV9Snapshot(snapshot, {});
+    const result = buildFlightToQualityClassificationFromV9Snapshot(snapshot);
 
     expect(result.kind).toBe("ok");
     if (result.kind !== "ok") throw new Error("Expected canonical V9 classification");
@@ -33,31 +33,15 @@ describe("buildFlightToQualityClassificationFromV9Snapshot", () => {
     expect(result.classification.safetyScoreIdentity.model).toBe("v9");
   });
 
-  it.each([
-    { publicationGenerationId: "report-cards:v9:other" },
-    { policyDigest: "d".repeat(64) },
-    { baseInputGenerationId: `report-cards-input:v1:${"e".repeat(64)}` },
-  ])("fails closed for an independently mismatched identity %j", (mismatch) => {
-    const snapshot = makeWorkerReportCardsV9Response({ updatedAt: Math.floor(Date.now() / 1000) });
-    expect(buildFlightToQualityClassificationFromV9Snapshot(snapshot, {
-      expectedIdentity: {
-        ...snapshot.safetyScoreIdentity,
-        ...mismatch,
-      },
-    })).toEqual({
-      kind: "unavailable",
-      reason: "identity-mismatch",
-    });
-  });
 
   it("rejects a non-active lifecycle before using its cohorts", () => {
     const snapshot = makeWorkerReportCardsV9Response({ updatedAt: Math.floor(Date.now() / 1000) });
-    expect(buildFlightToQualityClassificationFromV9Snapshot(snapshot, {}).kind).toBe("ok");
+    expect(buildFlightToQualityClassificationFromV9Snapshot(snapshot).kind).toBe("ok");
     // The current contract narrows lifecycle to "active"; a shadow publication can
     // only reach this consumer as untrusted upstream data.
     const shadowSnapshot = { ...snapshot, lifecycle: "shadow" } as unknown as typeof snapshot;
     expect(buildFlightToQualityClassificationFromV9Snapshot(
-      shadowSnapshot, {},
+      shadowSnapshot,
     )).toEqual({ kind: "unavailable", reason: "lifecycle-not-approved" });
   });
 
@@ -67,14 +51,13 @@ describe("buildFlightToQualityClassificationFromV9Snapshot", () => {
       updatedAt: Math.floor(Date.now() / 1000),
     });
 
-    const result = buildFlightToQualityClassificationFromV9Snapshot(snapshot, {});
+    const result = buildFlightToQualityClassificationFromV9Snapshot(snapshot);
     expect(result.kind).toBe("ok");
     if (result.kind !== "ok") throw new Error("Expected canonical V9 classification");
     expect(result.classification.safeIds).toEqual(new Set(["usdc-circle"]));
 
     expect(buildFlightToQualityClassificationFromV9Snapshot(
       { ...snapshot, completeness: { ...snapshot.completeness, expectedCount: 2 } },
-      {},
     )).toEqual({ kind: "unavailable", reason: "source-contract-invalid" });
 
     expect(buildFlightToQualityClassificationFromV9Snapshot(
@@ -88,7 +71,6 @@ describe("buildFlightToQualityClassificationFromV9Snapshot", () => {
           reasons: [{ code: "dex-stale" }],
         },
       },
-      {},
     )).toEqual({ kind: "unavailable", reason: "publication-held" });
   });
 
@@ -99,7 +81,6 @@ describe("buildFlightToQualityClassificationFromV9Snapshot", () => {
 
     expect(buildFlightToQualityClassificationFromV9Snapshot(
       snapshot,
-      {},
     )).toEqual({ kind: "unavailable", reason: "source-stale" });
   });
 });

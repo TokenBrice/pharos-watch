@@ -21,7 +21,7 @@ describe("fetchOndoUsdyOracleSource", () => {
       dataSource: "protocol-api",
       sourceKey: "protocol-api:ondo-usdy-oracle",
     }));
-    expect(result!.currentApy).toBeGreaterThan(0);
+    expect(result!.currentApy).toBeCloseTo(7.4855, 4);
   });
 
   it("returns seed row when no prior price exists", async () => {

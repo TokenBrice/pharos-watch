@@ -20,15 +20,6 @@ vi.mock("@shared/lib/shadow-stablecoins", () => ({
   SHADOW_IDS: new Set(["eurt-test"]),
 }));
 
-// Stub supply helper
-vi.mock("@shared/lib/supply", () => ({
-  getCirculatingRaw: (asset: { circulating?: Record<string, number> }) => {
-    const c = asset.circulating;
-    if (!c) return 0;
-    return Object.values(c).reduce((a, b) => a + b, 0);
-  },
-}));
-
 import { snapshotSupply } from "../snapshot-supply";
 import type { StablecoinPublicationWaiver } from "../../lib/stablecoin-publication-coverage";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
@@ -262,11 +253,10 @@ describe("snapshotSupply", () => {
 
     const result = await snapshotSupply(db);
 
-    expect(result.status).toBe("degraded");
+    expect(result.status).toBeUndefined();
     expect(JSON.parse(String(result.metadata))).toMatchObject({
-      reason: "snapshot_written_restored_skipped",
-      restoredOnlyIds: ["usdt-tether"],
       writtenRows: 1,
+      quality: { reason: "snapshot_written_restored_skipped", restoredOnlyIds: ["usdt-tether"] },
     });
     const insertedSql = db.getHistory().filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO supply_history"));
     expect(insertedSql.length).toBeGreaterThan(0);

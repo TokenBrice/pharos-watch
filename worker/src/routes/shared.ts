@@ -15,6 +15,7 @@ import type { FeedbackEnv } from "../api/feedback";
 import type { ApiKeySelfServeEnv } from "../api/api-key-requests/types";
 import type { TelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 import type { WorkerCanaryMode } from "../lib/canary-checks";
+import type { InternalRouteProbe } from "../lib/catalog-action-audit";
 
 /** Core context available to every route handler. */
 export interface RouteContext {
@@ -23,6 +24,8 @@ export interface RouteContext {
   execCtx: ExecutionContext;
   request: Request;
   trustedAdmin: boolean;
+  /** Set by in-process probers so canonical operator audit is skipped. */
+  internalProbe?: InternalRouteProbe;
 }
 
 export type RouteDependency = EndpointDependency;

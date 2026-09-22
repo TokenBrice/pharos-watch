@@ -4,7 +4,7 @@ import {
   getDexExecutionCapabilityRegistration,
   isDexExecutionProfileAdmittedForScoring,
 } from "@shared/lib/p4-exit-route-capability-policy";
-import { DexExitRouteObservationSchema, MAX_DEX_EXIT_ROUTE_OBSERVATIONS, type DexExitRouteObservation } from "@shared/types/market";
+import { DexExitRouteObservationsSchema, type DexExitRouteObservation } from "@shared/types/market";
 import { canonicalExitRouteAssetKey, canonicalExitRouteChain, canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
@@ -71,7 +71,7 @@ export function resolveTargetDeployment(target: DexMeasuredExecutionTarget): Tar
     if (!target.poolId.toLowerCase().startsWith(prefix)) return null;
     const endpointAddress = target.poolId.slice(prefix.length).toLowerCase();
     const policy = getCurveCryptoSwapShadowPolicy(target.chain, endpointAddress);
-    return policy?.scoreEligible && policy.mode === "active"
+    return policy
       ? { kind: "curve-cryptoswap", config: { ...policy, endpointAddress: policy.poolAddress } }
       : null;
   }
@@ -117,6 +117,7 @@ export function isDexMeasuredExecutionTargetScoreEligible(target: DexMeasuredExe
   const deployment = resolveTargetDeployment(target);
   switch (deployment?.kind) {
     case "curve-cryptoswap":
+      return true;
     case "curve-stableswap":
     case "curve-stableswap-ng":
       return deployment.config.mode === "active" && deployment.config.scoreEligible === true;
@@ -491,9 +492,7 @@ export async function loadPublishedScoreBearingDexRoutes(
     const publishedRoutes: PublishedScoreBearingDexRoute[] = [];
     for (const row of result.results ?? []) {
       const details = parseJsonObject(row.score_components_json);
-      const observations = DexExitRouteObservationSchema.array()
-        .max(MAX_DEX_EXIT_ROUTE_OBSERVATIONS)
-        .safeParse(details?.exitRouteObservations);
+      const observations = DexExitRouteObservationsSchema.safeParse(details?.exitRouteObservations);
       if (!observations.success) continue;
       for (const observation of observations.data) {
         publishedRoutes.push({

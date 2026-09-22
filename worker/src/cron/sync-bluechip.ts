@@ -34,8 +34,8 @@ const BluechipCategorySchema = z.object({
 
 const BluechipCoinSchema = z.object({
   grade: BluechipGradeSchema,
-  collateralization: z.number().optional(),
-  smart_contract_audit: z.boolean().optional(),
+  collateralization: z.number().nullable().optional(),
+  smart_contract_audit: z.boolean().nullable().optional(),
   date_of_rating: z.string().nullable().optional(),
   date_last_change: z.string().nullable().optional(),
   stability: BluechipCategorySchema.optional(),
@@ -47,7 +47,7 @@ const BluechipCoinSchema = z.object({
 });
 
 const BluechipResponseSchema = z.object({
-  data: z.array(BluechipCoinSchema),
+  data: z.array(z.unknown()),
 });
 
 function stripHtml(html: string): string {
@@ -164,7 +164,21 @@ export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promis
           return null;
         }
 
-        const coin = validation.data.data[0];
+        let coin: z.infer<typeof BluechipCoinSchema> | null = null;
+        for (const candidate of validation.data.data) {
+          const coinValidation = BluechipCoinSchema.safeParse(candidate);
+          if (coinValidation.success) {
+            coin = coinValidation.data;
+            break;
+          }
+        }
+        if (!coin) {
+          invalidPayloads++;
+          failedSlugs.push({ slug, reason: "invalid-payload" });
+          logWorkerEventArgs("handler", "warn", `[bluechip] No valid records for ${slug}`);
+          return null;
+        }
+
         const grade = coin.grade;
         if (!grade) {
           failedSlugs.push({ slug, reason: "no-grade" });
@@ -174,9 +188,9 @@ export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promis
         const rating: BluechipRating = {
           grade,
           slug,
-          collateralization: coin.collateralization ?? 0,
-          smartContractAudit: coin.smart_contract_audit ?? false,
-          dateOfRating: coin.date_of_rating ?? "",
+          collateralization: coin.collateralization ?? null,
+          smartContractAudit: coin.smart_contract_audit ?? null,
+          dateOfRating: coin.date_of_rating ?? null,
           dateLastChange: coin.date_last_change ?? null,
           smidge: extractSmidge(coin),
         };

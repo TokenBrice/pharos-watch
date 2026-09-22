@@ -25,7 +25,7 @@ function metadataParams(): Parameters<typeof buildDexLiquidityCronMetadata>[0] {
       pagination: [],
     },
     sourceCoverage: {} as DexLiquidityPostScoreAnalysis["sourceCoverage"],
-    challengerPublication: { publishedStablecoins: 0, skippedStablecoins: 0, missingTables: false },
+    challengerPublication: { publishedStablecoins: 0, skippedStablecoins: 0 },
     dexPriceDiagnostics: {} as DexPricePersistenceDiagnostics,
     failedSources: [],
     fallbackSignals: [],
@@ -55,7 +55,7 @@ describe("dex liquidity cron metadata", () => {
     ];
     const metadata = buildDexLiquidityCronMetadata(params);
     expect(metadata).toMatchObject({
-      rowsDropped: 3, validationFailures: 3,
+      rowsDropped: 3,
       poolRejectionMateriality: { rejectedPoolCount: 3, rejectedPoolTvlUsd: 1_000_000, material: true },
     });
   });

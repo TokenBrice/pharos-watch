@@ -167,7 +167,8 @@ const COMMAND_PALETTE_SECTION_ORDER: readonly CommandPaletteSection[] = [
   "Try a command",
 ] as const;
 
-const NEW_SECTION_RESULT_CAP = 5;
+/** Bounded DOM and keyboard-traversal contract for every palette section. */
+const SECTION_RESULT_CAP = 5;
 
 // ── Static palette content sources ──────────────────────────────────────────
 
@@ -271,6 +272,7 @@ export function buildPopularStablecoinDescriptors(
 ): CommandPaletteResultDescriptor[] {
   const out: CommandPaletteResultDescriptor[] = [];
   for (const id of ids) {
+    if (out.length >= SECTION_RESULT_CAP) break;
     const coin = STABLECOIN_BY_ID.get(id);
     if (!coin) continue;
     const [coinId, name, symbol, status, frozenAt] = coin;
@@ -410,7 +412,7 @@ export function buildCommandPaletteResultDescriptors({
   const items: CommandPaletteResultDescriptor[] = [];
 
   if (!q && history.length > 0) {
-    for (const item of history) {
+    for (const item of history.slice(0, SECTION_RESULT_CAP)) {
       items.push({
         id: `recent-${item.id}`,
         label: item.label,
@@ -495,8 +497,10 @@ export function buildCommandPaletteResultDescriptors({
 
     pageMatches.sort((a, b) => b.score - a.score);
 
+    let stablecoinRowsEmitted = 0;
     let yieldRowsEmitted = 0;
     for (const { coin } of rankCommandPaletteResults(matched)) {
+      if (stablecoinRowsEmitted >= SECTION_RESULT_CAP) break;
       const [id, name, symbol, status, frozenAt] = coin;
       const href = buildStablecoinUrl(id);
       const lifecycleLabel = stablecoinLifecycleLabel(status, frozenAt);
@@ -512,7 +516,13 @@ export function buildCommandPaletteResultDescriptors({
         href,
         history: { id, type: "stablecoin", label: name, sublabel: symbol, href },
       });
-      if (hasYieldIntent && yieldRowsEmitted < 3 && YIELD_WORKBENCH_IDS.has(id)) {
+      stablecoinRowsEmitted += 1;
+      if (
+        hasYieldIntent
+        && yieldRowsEmitted < 3
+        && stablecoinRowsEmitted < SECTION_RESULT_CAP
+        && YIELD_WORKBENCH_IDS.has(id)
+      ) {
         yieldRowsEmitted += 1;
         const yieldHref = buildStablecoinUrl(id, "yield/");
         items.push({
@@ -526,10 +536,11 @@ export function buildCommandPaletteResultDescriptors({
           href: yieldHref,
           history: { id: `coin-yield-${id}`, type: "page", label: name, sublabel: "Yield", href: yieldHref },
         });
+        stablecoinRowsEmitted += 1;
       }
     }
 
-    for (const { page, leadScore } of pageMatches) {
+    for (const { page, leadScore } of pageMatches.slice(0, SECTION_RESULT_CAP)) {
       items.push({
         id: `page-${page.href}`,
         label: page.label,
@@ -553,7 +564,7 @@ export function buildCommandPaletteResultDescriptors({
     // Chains
     const chainMatches: PaletteChain[] = [];
     for (const chain of PALETTE_CHAINS) {
-      if (chainMatches.length >= NEW_SECTION_RESULT_CAP) break;
+      if (chainMatches.length >= SECTION_RESULT_CAP) break;
       if (fuzzyMatch(searchQuery, chain.name) || fuzzyMatch(searchQuery, chain.id)) {
         chainMatches.push(chain);
       }
@@ -585,7 +596,7 @@ export function buildCommandPaletteResultDescriptors({
     // leads (unless a coin matched its exact symbol).
     const pegMatches: (typeof PEG_TAXONOMY_PAGES)[number][] = [];
     for (const peg of PEG_TAXONOMY_PAGES) {
-      if (pegMatches.length >= NEW_SECTION_RESULT_CAP) break;
+      if (pegMatches.length >= SECTION_RESULT_CAP) break;
       if (
         fuzzyMatch(searchQuery, peg.shortLabel) ||
         fuzzyMatch(searchQuery, peg.value) ||
@@ -624,7 +635,7 @@ export function buildCommandPaletteResultDescriptors({
     const hasVsToken = queryTokens.includes("vs") || queryTokens.includes("versus") || queryTokens.includes("vs.");
     const comparisonMatches: PaletteComparison[] = [];
     for (const pair of PALETTE_COMPARISONS) {
-      if (comparisonMatches.length >= NEW_SECTION_RESULT_CAP) break;
+      if (comparisonMatches.length >= SECTION_RESULT_CAP) break;
       const leftHit = queryLower.includes(pair.leftSymbolLower);
       const rightHit = queryLower.includes(pair.rightSymbolLower);
       if ((leftHit && rightHit) || (hasVsToken && (leftHit || rightHit))) {
@@ -652,7 +663,7 @@ export function buildCommandPaletteResultDescriptors({
     // Case studies (generated client index: title, slug words, symbols, keywords)
     const caseStudyMatches: (typeof CASE_STUDY_CLIENT_LIST)[number][] = [];
     for (const study of CASE_STUDY_CLIENT_LIST) {
-      if (caseStudyMatches.length >= NEW_SECTION_RESULT_CAP) break;
+      if (caseStudyMatches.length >= SECTION_RESULT_CAP) break;
       const titleScore = scorePageSearchMatch(searchQuery, { label: study.title, keywords: study.keywords });
       const symbolScore = study.coinSymbols.reduce(
         (best, symbol) => Math.max(best, scoreKeywordTokenMatch(searchQuery, symbol)),
@@ -684,7 +695,7 @@ export function buildCommandPaletteResultDescriptors({
     // Glossary terms, deep-linked to the entry anchor on /learn/glossary/
     const glossaryMatches: (typeof GLOSSARY_ENTRIES)[number][] = [];
     for (const entry of GLOSSARY_ENTRIES) {
-      if (glossaryMatches.length >= NEW_SECTION_RESULT_CAP) break;
+      if (glossaryMatches.length >= SECTION_RESULT_CAP) break;
       // Term exact/prefix/word-prefix via the label tiers; definition hits via
       // the weak description tiers.
       if (scorePageSearchMatch(searchQuery, { label: entry.term, description: entry.definition }) > 0) {
@@ -713,7 +724,7 @@ export function buildCommandPaletteResultDescriptors({
     // Mechanism archetypes
     const mechMatches: PaletteMechanism[] = [];
     for (const mech of PALETTE_MECHANISMS) {
-      if (mechMatches.length >= NEW_SECTION_RESULT_CAP) break;
+      if (mechMatches.length >= SECTION_RESULT_CAP) break;
       if (
         fuzzyMatch(searchQuery, mech.label) ||
         fuzzyMatch(searchQuery, mech.id) ||
@@ -745,7 +756,7 @@ export function buildCommandPaletteResultDescriptors({
     if (depegEventSearchData.length > 0) {
       const depegMatches: Array<(typeof depegEventSearchData)[number]> = [];
       for (const event of depegEventSearchData) {
-        if (depegMatches.length >= NEW_SECTION_RESULT_CAP) break;
+        if (depegMatches.length >= SECTION_RESULT_CAP) break;
         if (
           fuzzyMatch(searchQuery, event.symbol) ||
           fuzzyMatch(searchQuery, event.stablecoinId) ||
@@ -784,7 +795,7 @@ export function buildCommandPaletteResultDescriptors({
     // Public docs (title + summary; the markdown bodies stay out of the bundle)
     const docMatches: (typeof PUBLIC_DOCS)[number][] = [];
     for (const doc of PUBLIC_DOCS) {
-      if (docMatches.length >= NEW_SECTION_RESULT_CAP) break;
+      if (docMatches.length >= SECTION_RESULT_CAP) break;
       if (scorePageSearchMatch(searchQuery, { label: doc.title, description: doc.summary }) > 0) {
         docMatches.push(doc);
       }
@@ -811,7 +822,7 @@ export function buildCommandPaletteResultDescriptors({
     // Blog posts (metadata-only registry: title, description, slug)
     const blogMatches: (typeof BLOG_POSTS)[number][] = [];
     for (const post of BLOG_POSTS) {
-      if (blogMatches.length >= NEW_SECTION_RESULT_CAP) break;
+      if (blogMatches.length >= SECTION_RESULT_CAP) break;
       if (scorePageSearchMatch(searchQuery, { label: post.title, description: post.description }) > 0) {
         blogMatches.push(post);
       }
@@ -836,8 +847,12 @@ export function buildCommandPaletteResultDescriptors({
     }
   }
 
+  let actionRowsEmitted = 0;
   for (const action of buildCommandPaletteActionDefinitions(isDark, { watchlistCount })) {
-    if (!q || fuzzyMatch(q, action.label) || fuzzyMatch(q, action.keywords)) {
+    if (
+      actionRowsEmitted < SECTION_RESULT_CAP
+      && (!q || fuzzyMatch(q, action.label) || fuzzyMatch(q, action.keywords))
+    ) {
       items.push({
         id: action.id,
         label: action.label,
@@ -847,6 +862,7 @@ export function buildCommandPaletteResultDescriptors({
         actionIcon: action.icon,
         actionId: action.actionId,
       });
+      actionRowsEmitted += 1;
     }
   }
 

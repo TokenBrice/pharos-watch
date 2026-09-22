@@ -4,10 +4,6 @@
  * the render builders, and the mutation helpers can each stay narrow.
  */
 
-import {
-  isKnownStablecoinId,
-  isSubscribableStablecoinId,
-} from "./webhook-callbacks/_shared";
 import type { SubscriberRow } from "./telegram-webhook-shared";
 import { isDepegStepValue } from "../lib/telegram/constants";
 import { TELEGRAM_ALERT_PERSISTENCE } from "@shared/lib/telegram-alert-families";
@@ -17,7 +13,6 @@ import {
   type TelegramAlertType,
 } from "@shared/types/status";
 
-export { isKnownStablecoinId, isSubscribableStablecoinId };
 
 /** Default UTC quiet-hours window used when the user toggles quiet hours on
  * without specifying a range. Mirrors the typical late-night window; users who

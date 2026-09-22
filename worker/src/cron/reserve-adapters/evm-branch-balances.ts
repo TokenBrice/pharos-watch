@@ -3,6 +3,7 @@ import { createAdapterIoLimiter } from "./concurrency";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
+import type { LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import { encodeAddressCallData, encodeUint256 } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
@@ -48,14 +49,9 @@ const SELECTORS = {
   decimals: "0x313ce567",
 } as const;
 
-interface HoneyFactoryRedemptionCapacityParams {
-  kind: "honey-factory-vaults";
-  factoryAddress: string;
-  expectedHoneyAddress: string;
-  maxAssets: number;
-  stableAssets: Array<{ address: string; decimals: number }>;
-  sourceUrls: string[];
-}
+type HoneyFactoryRedemptionCapacityParams = NonNullable<
+  LiveReserveAdapterParamsByKey["evm-branch-balances"]["redemptionCapacity"]
+>;
 
 interface RedemptionCapacityObservation {
   metadata?: Record<string, unknown>;
@@ -474,11 +470,12 @@ async function observeHoneyFactoryRedemptionCapacity(
       .filter((observation) => !observation.stableAsset || !observation.isPegged)
       .map((observation) => observation.asset);
     const capGuardBlocked = observations.some((observation) => observation.relativeCap < WAD);
+    let basketBlocked = false;
     let capacityUsd = 0;
     if (!factoryPaused && globalCap >= WAD && !capGuardBlocked) {
       if (basketMode) {
         const funded = observations.filter((observation) => observation.weight > 0n);
-        const basketBlocked = funded.some(
+        basketBlocked = funded.some(
           (observation) => observation.vaultPaused || observation.immediatelyAvailable === 0n,
         );
         if (!basketBlocked && funded.length > 0) {
@@ -512,20 +509,31 @@ async function observeHoneyFactoryRedemptionCapacity(
       const feeBps = Number(WAD - observation.redeemRate) * 10_000 / Number(WAD);
       return Math.max(maximum, feeBps);
     }, 0);
-    const routeOpen = capacityUsd > 0;
+    const routeStatus = factoryPaused
+      ? "paused"
+      : globalCap < WAD || capGuardBlocked || basketBlocked || capacityUsd === 0
+        ? "degraded"
+        : "open";
+    const routeStatusReason = factoryPaused
+      ? "HoneyFactory paused() returned true"
+      : globalCap < WAD
+        ? "HoneyFactory global redemption cap is below 100%"
+        : capGuardBlocked
+          ? "At least one HoneyFactory collateral relative cap is below 100%"
+          : basketBlocked
+            ? "HoneyFactory basket redemption is blocked by a paused or empty funded vault"
+            : capacityUsd === 0
+              ? "HoneyFactory redemption capacity is zero"
+              : `HoneyFactory ${basketMode ? "basket" : "asset-specific"} redemption is unpaused with positive bounded vault liquidity`;
     return {
       metadata: buildRedemptionSnapshotMetadata({
         capacityUsd,
         capacityKind: "live-direct",
         freshnessKind: "same-run-onchain",
-        ...(routeOpen
-          ? {
-              routeStatus: "open" as const,
-              routeStatusSource: "onchain" as const,
-              routeStatusReason:
-                `HoneyFactory ${basketMode ? "basket" : "asset-specific"} redemption is unpaused with positive bounded vault liquidity`,
-            }
-          : {}),
+        routeStatus,
+        routeStatusSource: "onchain",
+        routeObserved: true,
+        routeStatusReason,
         holderEligibility: "any-holder",
         settlementDelaySec: 0,
         sourceUrls: params.sourceUrls,
@@ -590,9 +598,7 @@ export async function fetchEvmBranchBalancesReserves(
     rpcUrl: params.rpcUrl,
     fallbackRpcUrl: params.fallbackRpcUrl,
   });
-  const redemptionCapacityParams = (
-    params as typeof params & { redemptionCapacity?: HoneyFactoryRedemptionCapacityParams }
-  ).redemptionCapacity;
+  const redemptionCapacityParams = params.redemptionCapacity;
 
   const [balances, redemptionFeeBps, debtRaw, redemptionCapacity] = await Promise.all([
     Promise.all(balanceGroups).then((groups) => groups.flat()),

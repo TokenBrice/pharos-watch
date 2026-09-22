@@ -2,6 +2,7 @@ import type { ChainRpcConfig } from "../chain-registry";
 import { logWorkerEventArgs } from "../structured-log";
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { isReplaySafePriceSource } from "@shared/lib/pricing-source-policy";
+import { MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC } from "@shared/lib/rate-series";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { PriceConfidence, PriceObservedAtMode, StablecoinMeta } from "@shared/types/core";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
@@ -614,10 +615,15 @@ export function buildCachedRateLiveOverride(
   };
 }
 
-export function findNearestSupply(snapshots: HistoricalSupplySnapshot[] | undefined, timestamp: number): number | null {
+export function findNearestSupply(
+  snapshots: HistoricalSupplySnapshot[] | undefined,
+  timestamp: number,
+  maxDistanceSec: number = MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC,
+): number | null {
   if (!snapshots || snapshots.length === 0) return null;
   const nearest = binarySearchNearest(snapshots, timestamp, (s) => s.ts);
-  return nearest?.supply ?? null;
+  if (!nearest || Math.abs(nearest.ts - timestamp) > maxDistanceSec) return null;
+  return nearest.supply;
 }
 
 /**

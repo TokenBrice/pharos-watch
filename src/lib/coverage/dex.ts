@@ -93,6 +93,7 @@ export const coverageFeature = definePresetCoverageFeature({
     { key: "primary", label: "primary" },
     { key: "mixed", label: "mixed" },
     { key: "fallback", label: "fallback" },
+    { key: "legacy", label: "legacy" },
     { key: DATA_UNAVAILABLE_KIND, label: "data n/a" },
   ],
   legendItems: DEX_LEGEND,

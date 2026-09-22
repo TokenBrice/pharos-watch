@@ -321,12 +321,9 @@ async function runSupplyAttributionAssetCapture(input: {
     attemptedAtSec,
     Math.floor(Date.now() / 1_000),
   );
-  if (outcome.status === "accepted") {
-    input.attributionById[input.descriptor.assetId] =
-      outcome.attribution;
-  }
-  input.journalRecords.push(
-    buildSupplyAttributionJournalRecord({
+  let journalRecord: SupplyAttributionJournalV1;
+  try {
+    journalRecord = buildSupplyAttributionJournalRecord({
       descriptor: input.descriptor,
       fixedInput: input.fixedInput,
       attemptId,
@@ -334,8 +331,30 @@ async function runSupplyAttributionAssetCapture(input: {
       completedAtSec,
       scoringClockSec,
       outcome,
-    }),
-  );
+    });
+  } catch (error) {
+    rethrowIfAborted(error, input.signal);
+    outcome = {
+      status: "rejected",
+      rejectionCode: "deployment-state-unavailable",
+      failedRouteId: null,
+      rejectedSourceObservedAtSec: null,
+    };
+    journalRecord = buildSupplyAttributionJournalRecord({
+      descriptor: input.descriptor,
+      fixedInput: input.fixedInput,
+      attemptId,
+      attemptedAtSec,
+      completedAtSec,
+      scoringClockSec,
+      outcome,
+    });
+  }
+  if (outcome.status === "accepted") {
+    input.attributionById[input.descriptor.assetId] =
+      outcome.attribution;
+  }
+  input.journalRecords.push(journalRecord);
 }
 
 /**

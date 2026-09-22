@@ -72,7 +72,6 @@ const PRICE_CACHE_TTL = 6 * 60 * 60;
 
 export interface PostEnrichmentInput {
   assets: PeggedAsset[];
-  missingBefore: Set<string>;
   db: D1Database;
   syncStartSec: number;
   signal?: AbortSignal;
@@ -105,9 +104,8 @@ export interface PriceValidationResult {
   providerDiagnostics: PricingProviderAttemptDiagnostic[];
 }
 
-export interface SharedPriceCompletionInput extends Omit<PostEnrichmentInput, "missingBefore"> {
+export interface SharedPriceCompletionInput extends PostEnrichmentInput {
   chainRpcs?: Map<string, ChainRpcConfig>;
-  missingBefore: Set<string>;
   authoritativeOverrides?: Map<string, ProtocolPriceOverride>;
   authoritativeOverrideStats?: AuthoritativeLivePriceOverrideStats;
   previousMissingGenerationsById?: ReadonlyMap<string, number>;
@@ -133,7 +131,6 @@ export interface MissingPriceEnrichmentInput {
 }
 
 export interface MissingPriceEnrichmentResult {
-  missingBefore: Set<string>;
   enrichStats: Awaited<ReturnType<typeof enrichMissingPrices>>;
 }
 
@@ -508,7 +505,6 @@ export async function runSharedPriceCompletion(
     ...input,
     authoritativeOverrides,
     authoritativeOverrideStats,
-    missingBefore: input.missingBefore,
   }, abortStagePrefix);
   if (isAbortResult(priceResult)) return priceResult;
 
@@ -547,7 +543,6 @@ export async function runMissingPriceEnrichmentPhase(
   }
 
   return {
-    missingBefore,
     enrichStats,
   };
 }

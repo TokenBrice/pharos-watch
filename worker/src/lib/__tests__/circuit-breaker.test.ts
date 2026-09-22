@@ -280,8 +280,21 @@ describe("circuit-breaker", () => {
     });
 
     it("allows probe when in half-open state", async () => {
-      const db = mockDbWithCircuit("src", makeRecord({ state: "half-open" }));
+      const now = Math.floor(Date.now() / 1000);
+      const db = mockDbWithCircuit("src", makeRecord({ state: "half-open", lastFailureAt: now - 60 }));
       expect(await shouldAttemptFetch(db, "src")).toBe(true);
+    });
+
+    it("reverts to open when a half-open probe never recorded an outcome", async () => {
+      const now = Math.floor(Date.now() / 1000);
+      const db = mockDbWithCircuit("src", makeRecord({
+        state: "half-open",
+        // Two probe intervals after the failure that opened the circuit: the
+        // admitted probe aborted before recording an outcome.
+        lastFailureAt: now - 3601,
+        openedAt: now - 3601,
+      }));
+      expect(await shouldAttemptFetch(db, "src")).toBe(false);
     });
   });
 

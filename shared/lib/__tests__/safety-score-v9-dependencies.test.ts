@@ -792,15 +792,21 @@ describe("commonModeSignalSeverity proportional materiality", () => {
   });
 
   it("normalizes DefiLlama display-name chain keys to their canonical slug before matching", () => {
+    // P1-03: hyperliquid, optimism and solana left matureChains once their unreachable and
+    // non-supporting citations put their gates in `pending`, so the display-name resolution is
+    // now proved against the slug-keyed share rather than against mature-chain membership.
     for (const [displayName, slug] of [
-      ["Ethereum", "ethereum"],
       ["Hyperliquid L1", "hyperliquid"],
       ["OP Mainnet", "optimism"],
       ["Solana", "solana"],
     ] as const) {
-      expect(materiality.matureChains).toContain(slug);
-      expect(commonModeSignalSeverity({ kind: "chain", key: displayName }, failClosed, materiality)).toBe("low");
+      expect(materiality.matureChains).not.toContain(slug);
+      expect(
+        commonModeSignalSeverity({ kind: "chain", key: displayName }, context({ [slug]: 0.25 }), materiality),
+      ).toBe("high");
     }
+    expect(materiality.matureChains).toContain("ethereum");
+    expect(commonModeSignalSeverity({ kind: "chain", key: "Ethereum" }, failClosed, materiality)).toBe("low");
   });
 
   it("grades non-mature chain concentration at the 10% and 25% boundaries", () => {
@@ -993,5 +999,47 @@ describe("commonModeSignalSeverity proportional materiality", () => {
     expect(limits.moderate).toBe(79); // top of B+ (75-79)
     expect(limits.high).toBe(64);
     expect(materiality.deploymentMaterialSharePct).toBe(10);
+  });
+
+  it("fails closed when unattributed supply share pushes the conservative upper bound to >=25%", () => {
+    expect(
+      commonModeSignalSeverity({ kind: "chain", key: "futurenet" }, context({ futurenet: 0.2 }, 0.05), materiality),
+    ).toBe("high");
+  });
+
+  it("resolves versioned measured-execution protocol keys to their venue family", () => {
+    // 2026-07-18 regression: CL activation registers "uniswap-v3" / "pancakeswap-v3";
+    // maturity is a family property (D14 later ruled pancakeswap mature as well).
+    // An unruled versioned venue stays fail-closed at unknown share.
+    for (const key of ["uniswap-v3", "pancakeswap-v3"]) {
+      const domainKey = `dex-protocol:${key}`;
+      expect(
+        commonModeSignalSeverity({ kind: "dex-protocol", key }, context({}, 0), materiality),
+        `${key} unknown share`,
+      ).toBe("low");
+      expect(
+        commonModeSignalSeverity(
+          { kind: "dex-protocol", key },
+          context({}, 0, { [domainKey]: { lower: 0.25, upper: 0.25 } }),
+          materiality,
+        ),
+        `${key} at the high threshold`,
+      ).toBe("low");
+    }
+    const unruled = { kind: "dex-protocol", key: "futuredex-v2" } as const;
+    expect(commonModeSignalSeverity(unruled, context({}, 0), materiality)).toBe("high");
+    expect(
+      commonModeSignalSeverity(
+        unruled,
+        context({}, 0, { "dex-protocol:futuredex-v2": { lower: 0.15, upper: 0.15 } }),
+        materiality,
+      ),
+    ).toBe("moderate");
+  });
+
+  it("pins the ruled mature-chain membership and the fail-closed common-mode signal", () => {
+    // P1-03: tron, hyperliquid and xrpl are excluded until batch 3 re-reviews their citations.
+    expect(materiality.matureChains).toEqual(["base", "ethereum", "hedera"]);
+    expect(materiality.commonModeSignal).toEqual({ kind: "critical-dependency", severity: "high" });
   });
 });

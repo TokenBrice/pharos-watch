@@ -1,4 +1,4 @@
-import { makeBulkPendingRow } from "./telegram-rows.test-support";
+import { makeBulkPendingRow, pendingDisambiguationTable, pendingRowFromForget } from "./telegram-rows.test-support";
 import { describe, expect, it, beforeEach } from "vitest";
 import { mockTelegramMembership } from "../../test-helpers/__shared/telegram";
 import {
@@ -38,29 +38,27 @@ describe("handleCallbackQuery", () => {
     }
 
     const db = mockTelegramD1([
-      {
-        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        rows: [],
-        first: {
-          action_type: "subscribe",
-          action_payload: JSON.stringify({
-            schemaVersion: 1,
-            alertTypes: ["dews"],
-            presetIds: [],
-            resolvedIds: [],
-            ambiguousTicker: "USDF",
-            candidates: ambiguous.matches,
-            remainingTickers: ["USDC"],
-          }),
-          alert_types: JSON.stringify(["dews"]),
-          resolved_ids: JSON.stringify([]),
-          ambiguous_ticker: "USDF",
-          candidates: JSON.stringify(ambiguous.matches),
-          remaining_tickers: JSON.stringify(["USDC"]),
-          expires_at: Math.floor(Date.now() / 1000) + 60,
-          initiator_user_id: "999",
-        },
-      },
+      pendingDisambiguationTable({
+        action_type: "subscribe",
+        action_payload: JSON.stringify({
+          schemaVersion: 1,
+          alertTypes: ["dews"],
+          presetIds: [],
+          resolvedIds: [],
+          ambiguousTicker: "USDF",
+          candidates: ambiguous.matches,
+          remainingTickers: ["USDC"],
+        }),
+        alert_types: JSON.stringify(["dews"]),
+        resolved_ids: JSON.stringify([]),
+        ambiguous_ticker: "USDF",
+        candidates: JSON.stringify(ambiguous.matches),
+        remaining_tickers: JSON.stringify(["USDC"]),
+        expires_at: Math.floor(Date.now() / 1000) + 60,
+        initiator_user_id: "999",
+      }),
+      { match: "INSERT INTO telegram_subscribers", rows: [] },
+      { match: "INSERT INTO telegram_subscriptions", rows: [] },
       {
         match: "FROM telegram_subscriptions",
         matchBinds: ["123", ambiguous.matches[0].id, usdc.matches[0].id],
@@ -191,43 +189,45 @@ describe("handleCallbackQuery", () => {
 
 
   it("confirm:bulk rejects non-initiator with an alert toast and does not execute", async () => {
-    const db = mockTelegramD1([
-      {
-        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        rows: [],
-        first: makeBulkPendingRow({
-          kind: "subscribe",
-          alertTypes: ["dews"],
-          presetIds: [],
-          coinIds: [],
-          subscribeAll: true,
-        }, { expires_at: Math.floor(Date.now() / 1000) + 60, initiator_user_id: "999" }),
-      },
-    ]);
+    const db = mockTelegramD1([pendingDisambiguationTable(makeBulkPendingRow({
+      kind: "subscribe",
+      alertTypes: ["dews"],
+      presetIds: [],
+      coinIds: [],
+      subscribeAll: true,
+    }, { expires_at: Math.floor(Date.now() / 1000) + 60, initiator_user_id: "999" }))]);
     await handleCallbackQuery(db, "fake-token", makeCallbackQuery("confirm:bulk", { id: "cb-bulk", from: { id: 7, username: "interloper" }, message: { chat: { id: 123, type: "private" }, message_id: 1 } }));
 
     const history = db.getHistory();
     expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(false);
     expect(history.some((entry) => /UPDATE.*global_alert_/.test(entry.sql))).toBe(false);
-    const ackCall = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
-    expect(ackCall).toBeDefined();
-    const body = JSON.parse((ackCall?.[1] as RequestInit).body as string);
-    expect(body.text).toMatch(/only the user who started/i);
+    expect(firstAckBody().text).toMatch(/only the user who started/i);
+  });
+
+  it("confirm:bulk replies with an expiry toast when pending TTL has elapsed", async () => {
+    const db = mockTelegramD1([pendingDisambiguationTable(makeBulkPendingRow({
+      kind: "unsubscribe",
+      presetIds: [],
+      coinIds: [],
+      unsubscribeAll: true,
+    }, { expires_at: Math.floor(Date.now() / 1000) - 1, initiator_user_id: "999" }))]);
+    await handleCallbackQuery(db, "fake-token", makeCallbackQuery("confirm:bulk", { id: "cb-expired", from: { id: 999, username: "requester" }, message: { chat: { id: 123, type: "private" }, message_id: 1 } }));
+
+    expect(firstAckBody().text).toMatch(/expired/i);
   });
 
   it("confirm:bulk keeps preset-only follow provenance out of direct coin rows", async () => {
-    const db = mockTelegramD1([{
-      match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-      rows: [],
-      first: makeBulkPendingRow({
+    const db = mockTelegramD1([
+      pendingDisambiguationTable(makeBulkPendingRow({
         kind: "subscribe",
         alertTypes: ["dews"],
         presetIds: ["usd-top25"],
         coinIds: [],
         subscribeAll: false,
-      }, { expires_at: Math.floor(Date.now() / 1000) + 60, initiator_user_id: "999" }),
-    }]);
-
+      }, { expires_at: Math.floor(Date.now() / 1000) + 60, initiator_user_id: "999" })),
+      { match: "INSERT INTO telegram_subscribers", rows: [] },
+      { match: "INSERT INTO telegram_preset_subscriptions", rows: [] },
+    ]);
     await handleCallbackQuery(db, "fake-token", makeCallbackQuery("confirm:bulk", { id: "cb-preset-follow", from: { id: 999, username: "requester" }, message: { chat: { id: 123, type: "private" }, message_id: 1 } }));
 
     const history = db.getHistory();
@@ -236,16 +236,12 @@ describe("handleCallbackQuery", () => {
   });
 
   it("confirm:bulk preset unfollow preserves direct coin rows", async () => {
-    const db = mockTelegramD1([{
-      match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-      rows: [],
-      first: makeBulkPendingRow({
-        kind: "unsubscribe",
-        presetIds: ["usd-top25"],
-        coinIds: [],
-        unsubscribeAll: false,
-      }, { expires_at: Math.floor(Date.now() / 1000) + 60, initiator_user_id: "999" }),
-    }]);
+    const db = mockTelegramD1([pendingDisambiguationTable(makeBulkPendingRow({
+      kind: "unsubscribe",
+      presetIds: ["usd-top25"],
+      coinIds: [],
+      unsubscribeAll: false,
+    }, { expires_at: Math.floor(Date.now() / 1000) + 60, initiator_user_id: "999" }))]);
 
     await handleCallbackQuery(db, "fake-token", makeCallbackQuery("confirm:bulk", { id: "cb-preset-unfollow", from: { id: 999, username: "requester" }, message: { chat: { id: 123, type: "private" }, message_id: 1 } }));
 
@@ -291,4 +287,80 @@ describe("handleCallbackQuery", () => {
     expect(JSON.parse((ack?.[1] as RequestInit).body as string).text).toMatch(/not recognized/i);
   });
 
+});
+
+describe("handleCallbackQuery forget confirmations", () => {
+  beforeEach(resetCallbackTest);
+
+  const privateForgetTap = (id: string, fromId = 999) =>
+    makeCallbackQuery("confirm:forget", { id, from: { id: fromId, username: "requester" }, message: { chat: { id: 123, type: "private" }, message_id: 1 } });
+
+  it("confirm:forget deletes subscriber-owned Telegram rows and replies", async () => {
+    const db = mockTelegramD1([
+      pendingDisambiguationTable(pendingRowFromForget({ initiator_user_id: "999" })),
+      { match: "DELETE FROM telegram_subscriptions", rows: [] },
+      { match: "DELETE FROM telegram_preset_subscriptions", rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts", rows: [] },
+      { match: "DELETE FROM telegram_alert_source_resolution_targets", rows: [] },
+      { match: "DELETE FROM telegram_alert_target_plan_items", rows: [] },
+      { match: "DELETE FROM telegram_alert_job_targets", rows: [] },
+      { match: "DELETE FROM telegram_alert_job_target_items", rows: [] },
+      { match: "DELETE FROM telegram_alert_target_plans", rows: [] },
+      { match: "DELETE FROM telegram_alert_planning_subscribers", rows: [] },
+      { match: "DELETE FROM telegram_transport_failure_observations", rows: [] },
+      { match: "DELETE FROM telegram_alert_dead_letters", rows: [] },
+      { match: "DELETE FROM telegram_chat_delivery_diagnostics", rows: [] },
+      { match: "DELETE FROM telegram_freeze_alert_targets", rows: [] },
+      { match: "DELETE FROM telegram_subscribers", rows: [] },
+    ]);
+    await handleCallbackQuery(db, "fake-token", privateForgetTap("cb-forget-confirm"));
+
+    const history = db.getHistory();
+    for (const table of [
+      "telegram_subscriptions",
+      "telegram_preset_subscriptions",
+      "telegram_pending_alerts",
+      "telegram_alert_job_targets",
+      "telegram_alert_dead_letters",
+      "telegram_subscribers",
+    ]) {
+      expect(history.some((entry) => entry.sql.includes(`DELETE FROM ${table}`)), table).toBe(true);
+    }
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO telegram_chat_delivery_diagnostics"))).toBe(false);
+    expect(lastSentMessageBody().text).toContain("subscriber data has been deleted");
+    expect(lastAckBody().text).toBe("Deleted.");
+  });
+
+  it("cancel:forget clears only the pending confirmation and replies", async () => {
+    const db = mockTelegramD1([pendingDisambiguationTable(pendingRowFromForget({ initiator_user_id: "999" }))]);
+    await handleCallbackQuery(db, "fake-token", makeCallbackQuery("cancel:forget", { id: "cb-forget-cancel", from: { id: 999, username: "requester" }, message: { chat: { id: 123, type: "private" }, message_id: 1 } }));
+
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_subscribers"))).toBe(false);
+    expect(lastSentMessageBody().text).toBe("Cancelled.");
+    expect(lastAckBody().text).toBe("Cancelled.");
+  });
+
+  it("confirm:forget refuses leaked group callbacks before reading D1", async () => {
+    const db = mockTelegramD1([]);
+    await handleCallbackQuery(db, "fake-token", makeCallbackQuery("confirm:forget", { id: "cb-forget-group", from: { id: 999, username: "requester" }, message: { chat: { id: -123, type: "supergroup" }, message_id: 1 } }));
+
+    expect(db.getHistory()).toHaveLength(0);
+    expect(lastAckBody().text).toContain("Open a private chat");
+  });
+
+  it.each([
+    { label: "an expired pending row", row: pendingRowFromForget({ expires_at: Math.floor(Date.now() / 1000) - 1 }), id: "cb-forget-expired", fromId: 999, ack: /expired/i },
+    { label: "a non-initiator tap", row: pendingRowFromForget({ initiator_user_id: "999" }), id: "cb-forget-other", fromId: 7, ack: /only the user who started/i },
+    { label: "an unrelated pending action", row: pendingRowFromForget({ action_type: "confirm-bulk" }), id: "cb-forget-wrong-pending", fromId: 999, ack: /No forget confirmation is pending\./ },
+  ])("confirm:forget with $label deletes nothing", async ({ row, id, fromId, ack }) => {
+    const db = mockTelegramD1([pendingDisambiguationTable(row)]);
+    await handleCallbackQuery(db, "fake-token", privateForgetTap(id, fromId));
+
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(false);
+    expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_subscribers"))).toBe(false);
+    expect(lastAckBody().text).toMatch(ack);
+  });
 });

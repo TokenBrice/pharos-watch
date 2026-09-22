@@ -30,41 +30,24 @@ const STRIP_TOP_LEVEL: ReadonlySet<string> = new Set([
 const STRIP_NAME_PATTERN = /(ageSeconds|capturedAt|stalenessMs|UpdatedAt|updatedAt|FetchedAt|fetchedAt)$/;
 
 /**
- * Nested paths to strip. Each entry is matched against the dot-joined key
- * path during recursion. (Currently empty — `coverageWarnings.newListingCount`
- * was previously stripped on the assumption it was timestamp-derived; in the
- * implemented engine it is computed from content-level `isRecentListing`
- * flags so it must contribute to `sid` to preserve cross-client agreement.)
- */
-const STRIP_PATHS: ReadonlySet<string> = new Set([]);
-
-function shouldStrip(key: string, path: string): boolean {
-  if (STRIP_TOP_LEVEL.has(key)) return true;
-  if (STRIP_NAME_PATTERN.test(key)) return true;
-  if (STRIP_PATHS.has(path)) return true;
-  return false;
-}
-
-/**
  * Recursively rebuild `value` with object keys sorted lexicographically,
  * stripped fields removed, and strings NFC-normalized. Arrays preserve
  * order. Numbers must be finite.
  */
-function canonicalize(value: unknown, path: string): unknown {
+function canonicalize(value: unknown): unknown {
   if (value === null) return null;
   if (Array.isArray(value)) {
-    return value.map((item, i) => canonicalize(item, `${path}[${i}]`));
+    return value.map((item) => canonicalize(item));
   }
   if (typeof value === "object") {
     const obj = value as Record<string, unknown>;
     const keys = Object.keys(obj).sort();
     const out: Record<string, unknown> = {};
     for (const key of keys) {
-      const childPath = path === "" ? key : `${path}.${key}`;
-      if (shouldStrip(key, childPath)) continue;
+      if (STRIP_TOP_LEVEL.has(key) || STRIP_NAME_PATTERN.test(key)) continue;
       const child = obj[key];
       if (child === undefined) continue;
-      out[key] = canonicalize(child, childPath);
+      out[key] = canonicalize(child);
     }
     return out;
   }
@@ -73,9 +56,7 @@ function canonicalize(value: unknown, path: string): unknown {
   }
   if (typeof value === "number") {
     if (!Number.isFinite(value)) {
-      throw new Error(
-        `[selector/canonicalize] non-finite number at path "${path}"`,
-      );
+      throw new Error("[selector/canonicalize] non-finite number");
     }
     return value;
   }
@@ -92,17 +73,6 @@ function canonicalize(value: unknown, path: string): unknown {
  *   4. `JSON.stringify` the result.
  */
 export function canonicalizeForSid(value: unknown): string {
-  return JSON.stringify(canonicalize(value, ""));
+  return JSON.stringify(canonicalize(value));
 }
 
-/**
- * Content-only canonicalization for `datasetHash`. Same rules as
- * `canonicalizeForSid` plus an extra guard: callers must pass an object
- * containing only the content-level fields per coin (`id`, `safetyGrade`,
- * `overallScore`, `pegScore`, `dewsScore`, `liquidityScore`, sub-dimensions,
- * `pharosYieldScore`, `apy30d`, `bluechipGrade`, `supplyUsd`). The strip
- * pattern handles any straggling freshness keys.
- */
-export function canonicalizeForDatasetHash(content: unknown): string {
-  return canonicalizeForSid(content);
-}

@@ -33,18 +33,10 @@ export interface PreviousStressSignalCurrentRow {
 
 interface CurrentRowsOptions {
   staleAfterSec: number;
-  onLatestReadError?: (error: unknown) => void;
+  onReadError?: (error: unknown) => void;
 }
 
-interface AllRowsQueries {
-  latest: string;
-  latestBounded: string;
-  exact: string;
-  legacy: string;
-  legacyBounded: string;
-}
-
-interface SingleRowQueries {
+interface StressSignalCurrentRowsQueries {
   latest: string;
   latestBounded: string;
   exact: string;
@@ -62,165 +54,103 @@ type CompletedDewsScope =
   | { status: "no-pointer" }
   | { status: "unavailable"; reason: string };
 
-const API_LATEST_ALL_SQL = `SELECT /* pharos:stress-signals:latest-all */
-           stablecoin_id, score, band, signals_json, computed_at
-         FROM stress_signals_latest`;
+interface StressSignalQueryTags {
+  latest: string;
+  exact: string;
+  legacy: string;
+}
 
-const API_LATEST_ALL_BOUNDED_SQL = `SELECT /* pharos:stress-signals:latest-all */
-           stablecoin_id, score, band, signals_json, computed_at
-         FROM stress_signals_latest
-         WHERE computed_at <= ?`;
+function buildStressSignalCurrentRowsQueries(input: {
+  tags: StressSignalQueryTags;
+  columns: readonly string[];
+  scope: "all" | "one";
+}): StressSignalCurrentRowsQueries {
+  const columns = input.columns.join(", ");
+  const legacyColumns = input.columns.map((column) => `s.${column}`).join(", ");
+  const one = input.scope === "one";
+  const latestWhere = one ? "\nWHERE stablecoin_id = ?" : "";
+  const latestBoundedWhere = one
+    ? "\nWHERE stablecoin_id = ? AND computed_at <= ?\nORDER BY computed_at DESC LIMIT 1"
+    : "\nWHERE computed_at <= ?";
+  const exactWhere = one
+    ? "\nWHERE stablecoin_id = ? AND computed_at = ?\nLIMIT 1"
+    : "\nWHERE computed_at = ?\nORDER BY stablecoin_id ASC";
+  const legacy = one
+    ? `SELECT /* ${input.tags.legacy} */ ${columns}
+FROM stress_signals
+WHERE stablecoin_id = ?
+ORDER BY computed_at DESC LIMIT 1`
+    : `SELECT /* ${input.tags.legacy} */ ${legacyColumns}
+FROM stress_signals s
+INNER JOIN (
+  SELECT stablecoin_id, MAX(computed_at) AS max_at
+  FROM stress_signals GROUP BY stablecoin_id
+) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`;
+  const legacyBounded = one
+    ? `SELECT /* ${input.tags.legacy} */ ${columns}
+FROM stress_signals
+WHERE stablecoin_id = ? AND computed_at <= ?
+ORDER BY computed_at DESC LIMIT 1`
+    : `SELECT /* ${input.tags.legacy} */ ${legacyColumns}
+FROM stress_signals s
+INNER JOIN (
+  SELECT stablecoin_id, MAX(computed_at) AS max_at
+  FROM stress_signals
+  WHERE computed_at <= ?
+  GROUP BY stablecoin_id
+) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`;
 
-const API_LEGACY_ALL_SQL = `SELECT /* pharos:stress-signals:legacy-latest-all */
-         s.stablecoin_id, s.score, s.band, s.signals_json, s.computed_at
-       FROM stress_signals s
-       INNER JOIN (
-         SELECT stablecoin_id, MAX(computed_at) as max_at
-         FROM stress_signals GROUP BY stablecoin_id
-       ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`;
+  return {
+    latest: `SELECT /* ${input.tags.latest} */ ${columns}
+FROM stress_signals_latest${latestWhere}`,
+    latestBounded: `SELECT /* ${input.tags.latest} */ ${columns}
+FROM stress_signals_latest${latestBoundedWhere}`,
+    exact: `SELECT /* ${input.tags.exact} */ ${columns}
+FROM stress_signal_publication_rows${exactWhere}`,
+    legacy,
+    legacyBounded,
+  };
+}
 
-const API_LEGACY_ALL_BOUNDED_SQL = `SELECT /* pharos:stress-signals:legacy-latest-all */
-         s.stablecoin_id, s.score, s.band, s.signals_json, s.computed_at
-       FROM stress_signals s
-       INNER JOIN (
-         SELECT stablecoin_id, MAX(computed_at) as max_at
-         FROM stress_signals
-         WHERE computed_at <= ?
-         GROUP BY stablecoin_id
-       ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`;
+const API_ALL_QUERIES = buildStressSignalCurrentRowsQueries({
+  tags: {
+    latest: "pharos:stress-signals:latest-all",
+    exact: "pharos:stress-signals:published-exact-all",
+    legacy: "pharos:stress-signals:legacy-latest-all",
+  },
+  columns: ["stablecoin_id", "score", "band", "signals_json", "computed_at"],
+  scope: "all",
+});
 
-const API_EXACT_ALL_SQL = `SELECT /* pharos:stress-signals:published-exact-all */
-         stablecoin_id, score, band, signals_json, computed_at
-       FROM stress_signal_publication_rows
-       WHERE computed_at = ?
-       ORDER BY stablecoin_id ASC`;
+const API_ONE_QUERIES = buildStressSignalCurrentRowsQueries({
+  tags: {
+    latest: "pharos:stress-signals:latest-one",
+    exact: "pharos:stress-signals:published-exact-one",
+    legacy: "pharos:stress-signals:legacy-latest-one",
+  },
+  columns: ["score", "band", "signals_json", "computed_at"],
+  scope: "one",
+});
 
-const API_LATEST_ONE_SQL = `SELECT /* pharos:stress-signals:latest-one */
-           score, band, signals_json, computed_at
-         FROM stress_signals_latest
-         WHERE stablecoin_id = ?`;
+const TELEGRAM_ALL_QUERIES = buildStressSignalCurrentRowsQueries({
+  tags: {
+    latest: "pharos:telegram-dispatch:dews-latest",
+    exact: "pharos:telegram-dispatch:dews-published-exact",
+    legacy: "pharos:telegram-dispatch:dews-legacy",
+  },
+  columns: ["stablecoin_id", "score", "band", "signals_json", "computed_at"],
+  scope: "all",
+});
 
-const API_LATEST_ONE_BOUNDED_SQL = `SELECT /* pharos:stress-signals:latest-one */
-           score, band, signals_json, computed_at
-         FROM stress_signals_latest
-         WHERE stablecoin_id = ? AND computed_at <= ?
-         ORDER BY computed_at DESC LIMIT 1`;
-
-const API_LEGACY_ONE_SQL = `SELECT /* pharos:stress-signals:legacy-latest-one */
-         score, band, signals_json, computed_at
-       FROM stress_signals
-       WHERE stablecoin_id = ?
-       ORDER BY computed_at DESC LIMIT 1`;
-
-const API_LEGACY_ONE_BOUNDED_SQL = `SELECT /* pharos:stress-signals:legacy-latest-one */
-         score, band, signals_json, computed_at
-       FROM stress_signals
-       WHERE stablecoin_id = ? AND computed_at <= ?
-       ORDER BY computed_at DESC LIMIT 1`;
-
-const API_EXACT_ONE_SQL = `SELECT /* pharos:stress-signals:published-exact-one */
-         score, band, signals_json, computed_at
-       FROM stress_signal_publication_rows
-       WHERE stablecoin_id = ? AND computed_at = ?
-       LIMIT 1`;
-
-const TELEGRAM_LATEST_ALL_SQL = `SELECT /* pharos:telegram-dispatch:dews-latest */
-           stablecoin_id, score, band, signals_json, computed_at
-         FROM stress_signals_latest`;
-
-const TELEGRAM_LATEST_ALL_BOUNDED_SQL = `SELECT /* pharos:telegram-dispatch:dews-latest */
-           stablecoin_id, score, band, signals_json, computed_at
-         FROM stress_signals_latest
-         WHERE computed_at <= ?`;
-
-const TELEGRAM_LEGACY_ALL_SQL = `SELECT /* pharos:telegram-dispatch:dews-legacy */
-         s.stablecoin_id, s.score, s.band, s.signals_json, s.computed_at
-         FROM stress_signals s
-       INNER JOIN (
-         SELECT stablecoin_id, MAX(computed_at) AS max_at
-           FROM stress_signals GROUP BY stablecoin_id
-      ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`;
-
-const TELEGRAM_LEGACY_ALL_BOUNDED_SQL = `SELECT /* pharos:telegram-dispatch:dews-legacy */
-         s.stablecoin_id, s.score, s.band, s.signals_json, s.computed_at
-         FROM stress_signals s
-         INNER JOIN (
-           SELECT stablecoin_id, MAX(computed_at) AS max_at
-             FROM stress_signals
-            WHERE computed_at <= ?
-            GROUP BY stablecoin_id
-      ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`;
-
-const TELEGRAM_EXACT_ALL_SQL = `SELECT /* pharos:telegram-dispatch:dews-published-exact */
-         stablecoin_id, score, band, signals_json, computed_at
-       FROM stress_signal_publication_rows
-       WHERE computed_at = ?
-       ORDER BY stablecoin_id ASC`;
-
-const DEWS_PREVIOUS_LATEST_ALL_SQL = `SELECT /* pharos:dews:previous-stress-latest */
-           stablecoin_id, signals_json, band, computed_at
-         FROM stress_signals_latest`;
-
-const DEWS_PREVIOUS_LATEST_ALL_BOUNDED_SQL = `SELECT /* pharos:dews:previous-stress-latest */
-           stablecoin_id, signals_json, band, computed_at
-         FROM stress_signals_latest
-         WHERE computed_at <= ?`;
-
-const DEWS_PREVIOUS_LEGACY_ALL_SQL = `SELECT /* pharos:dews:previous-stress-legacy */
-         s.stablecoin_id, s.signals_json, s.band, s.computed_at
-       FROM stress_signals s
-       INNER JOIN (
-         SELECT stablecoin_id, MAX(computed_at) as max_at
-         FROM stress_signals GROUP BY stablecoin_id
-       ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`;
-
-const DEWS_PREVIOUS_LEGACY_ALL_BOUNDED_SQL = `SELECT /* pharos:dews:previous-stress-legacy */
-         s.stablecoin_id, s.signals_json, s.band, s.computed_at
-       FROM stress_signals s
-       INNER JOIN (
-         SELECT stablecoin_id, MAX(computed_at) as max_at
-         FROM stress_signals
-         WHERE computed_at <= ?
-         GROUP BY stablecoin_id
-       ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`;
-
-const DEWS_PREVIOUS_EXACT_ALL_SQL = `SELECT /* pharos:dews:previous-stress-published-exact */
-         stablecoin_id, signals_json, band, computed_at
-       FROM stress_signal_publication_rows
-       WHERE computed_at = ?
-       ORDER BY stablecoin_id ASC`;
-
-const API_ALL_QUERIES: AllRowsQueries = {
-  latest: API_LATEST_ALL_SQL,
-  latestBounded: API_LATEST_ALL_BOUNDED_SQL,
-  exact: API_EXACT_ALL_SQL,
-  legacy: API_LEGACY_ALL_SQL,
-  legacyBounded: API_LEGACY_ALL_BOUNDED_SQL,
-};
-
-const API_ONE_QUERIES: SingleRowQueries = {
-  latest: API_LATEST_ONE_SQL,
-  latestBounded: API_LATEST_ONE_BOUNDED_SQL,
-  exact: API_EXACT_ONE_SQL,
-  legacy: API_LEGACY_ONE_SQL,
-  legacyBounded: API_LEGACY_ONE_BOUNDED_SQL,
-};
-
-const TELEGRAM_ALL_QUERIES: AllRowsQueries = {
-  latest: TELEGRAM_LATEST_ALL_SQL,
-  latestBounded: TELEGRAM_LATEST_ALL_BOUNDED_SQL,
-  exact: TELEGRAM_EXACT_ALL_SQL,
-  legacy: TELEGRAM_LEGACY_ALL_SQL,
-  legacyBounded: TELEGRAM_LEGACY_ALL_BOUNDED_SQL,
-};
-
-const DEWS_PREVIOUS_ALL_QUERIES: AllRowsQueries = {
-  latest: DEWS_PREVIOUS_LATEST_ALL_SQL,
-  latestBounded: DEWS_PREVIOUS_LATEST_ALL_BOUNDED_SQL,
-  exact: DEWS_PREVIOUS_EXACT_ALL_SQL,
-  legacy: DEWS_PREVIOUS_LEGACY_ALL_SQL,
-  legacyBounded: DEWS_PREVIOUS_LEGACY_ALL_BOUNDED_SQL,
-};
+const DEWS_PREVIOUS_ALL_QUERIES = buildStressSignalCurrentRowsQueries({
+  tags: {
+    latest: "pharos:dews:previous-stress-latest",
+    exact: "pharos:dews:previous-stress-published-exact",
+    legacy: "pharos:dews:previous-stress-legacy",
+  },
+  columns: ["stablecoin_id", "signals_json", "band", "computed_at"],
+  scope: "all",
+});
 
 function isStressSignalRowStale(
   row: { computed_at: number } | null | undefined,
@@ -370,7 +300,7 @@ function prepareCompletedAtScoped(
 async function loadCurrentRows<Row extends { stablecoin_id: string; computed_at: number }>(
   db: D1Database,
   nowSec: number,
-  queries: AllRowsQueries,
+  queries: StressSignalCurrentRowsQueries,
   options: CurrentRowsOptions,
 ): Promise<Row[]> {
   const completedScope = await loadCompletedDewsScope(db, nowSec);
@@ -388,11 +318,11 @@ async function loadCurrentRows<Row extends { stablecoin_id: string; computed_at:
       queries.latestBounded,
       completedAt,
     );
-    const rows = await latestStmt.all<Row>();
+    const rows = await runWithOverloadRetry(() => latestStmt.all<Row>());
     latestRows = rows.results ?? [];
   } catch (error) {
     latestRows = [];
-    options.onLatestReadError?.(error);
+    options.onReadError?.(error);
   }
 
   // A current publication pointer proves the completed row count and ID set.
@@ -406,24 +336,36 @@ async function loadCurrentRows<Row extends { stablecoin_id: string; computed_at:
   }
 
   if (completedAt != null && expectedRowCount != null && stablecoinIdsDigest != null) {
-    const exactRows = await db.prepare(queries.exact).bind(completedAt).all<Row>();
-    const exactResults = exactRows.results ?? [];
-    return isCompleteLatestGeneration(
-      exactResults,
-      completedAt,
-      expectedRowCount,
-      stablecoinIdsDigest,
-    ) ? exactResults : [];
+    try {
+      const exactStmt = db.prepare(queries.exact).bind(completedAt);
+      const exactRows = await runWithOverloadRetry(() => exactStmt.all<Row>());
+      const exactResults = exactRows.results ?? [];
+      return isCompleteLatestGeneration(
+        exactResults,
+        completedAt,
+        expectedRowCount,
+        stablecoinIdsDigest,
+      ) ? exactResults : [];
+    } catch (error) {
+      options.onReadError?.(error);
+      return latestRows;
+    }
   }
 
-  const legacyStmt = prepareCompletedAtScoped(
-    db,
-    queries.legacy,
-    queries.legacyBounded,
-    completedAt,
-  );
-  const legacyRows = await legacyStmt.all<Row>();
-  const legacyResults = legacyRows.results ?? [];
+  let legacyResults: Row[];
+  try {
+    const legacyStmt = prepareCompletedAtScoped(
+      db,
+      queries.legacy,
+      queries.legacyBounded,
+      completedAt,
+    );
+    const legacyRows = await runWithOverloadRetry(() => legacyStmt.all<Row>());
+    legacyResults = legacyRows.results ?? [];
+  } catch (error) {
+    options.onReadError?.(error);
+    return latestRows;
+  }
   if (legacyResults.length === 0) return latestRows;
   if (areStressSignalRowsStale(latestRows, nowSec, options.staleAfterSec)) return legacyResults;
   return mergeNewestStressSignalRows(legacyResults, latestRows);
@@ -433,7 +375,7 @@ async function loadCurrentRowForCoin<Row extends { computed_at: number }>(
   db: D1Database,
   stablecoinId: string,
   nowSec: number,
-  queries: SingleRowQueries,
+  queries: StressSignalCurrentRowsQueries,
   options: CurrentRowsOptions,
 ): Promise<Row | null> {
   const completedScope = await loadCompletedDewsScope(db, nowSec);
@@ -453,7 +395,7 @@ async function loadCurrentRowForCoin<Row extends { computed_at: number }>(
       completedAt,
       stablecoinId,
     );
-    latest = await latestStmt.first<Row>();
+    latest = await runWithOverloadRetry(() => latestStmt.first<Row>());
     if (
       latest
       && (!hasExactCoverage || latest.computed_at === completedAt)
@@ -463,20 +405,31 @@ async function loadCurrentRowForCoin<Row extends { computed_at: number }>(
     }
   } catch (error) {
     latest = null;
-    options.onLatestReadError?.(error);
+    options.onReadError?.(error);
   }
   if (completedAt != null && hasExactCoverage) {
-    return await db.prepare(queries.exact).bind(stablecoinId, completedAt).first<Row>();
+    try {
+      const exactStmt = db.prepare(queries.exact).bind(stablecoinId, completedAt);
+      return await runWithOverloadRetry(() => exactStmt.first<Row>());
+    } catch (error) {
+      options.onReadError?.(error);
+      return latest;
+    }
   }
 
-  const legacyStmt = prepareCompletedAtScoped(
-    db,
-    queries.legacy,
-    queries.legacyBounded,
-    completedAt,
-    stablecoinId,
-  );
-  return await legacyStmt.first<Row>() ?? latest;
+  try {
+    const legacyStmt = prepareCompletedAtScoped(
+      db,
+      queries.legacy,
+      queries.legacyBounded,
+      completedAt,
+      stablecoinId,
+    );
+    return await runWithOverloadRetry(() => legacyStmt.first<Row>()) ?? latest;
+  } catch (error) {
+    options.onReadError?.(error);
+    return latest;
+  }
 }
 
 export async function loadStressSignalCurrentRows(

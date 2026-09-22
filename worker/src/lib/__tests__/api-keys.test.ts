@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { hmacSha256Hex } from "../../test-helpers/__shared/auth";
 import { makeApiKeyRow } from "../../test-helpers/__shared/fixtures";
 import {
@@ -279,7 +280,7 @@ describe("api key helpers", () => {
     expect(db.getHistory()[0]?.binds[8]).toBeNull();
   });
 
-  it("updates expiry metadata and preserves explicit null on update", async () => {
+  it("updates only the requested columns and preserves explicit null on update", async () => {
     const db = mockD1(
       [
         ...makeApiKeyMutationTables({
@@ -298,10 +299,39 @@ describe("api key helpers", () => {
     );
 
     const updated = await updateApiKey(db, 7, { expiresAt: null }, 2_000);
+    const write = db.getHistory().find((entry) => entry.sql.includes("UPDATE api_keys"));
 
     expect(updated).not.toBeInstanceOf(Response);
     expect((updated as Exclude<typeof updated, Response>).key.expiresAt).toBeNull();
-    expect(db.getHistory().find((entry) => entry.sql.includes("UPDATE api_keys"))?.binds[6]).toBeNull();
+    expect(write?.sql).toContain("expires_at = ?");
+    expect(write?.sql).not.toContain("is_active = ?");
+    expect(write?.binds).toEqual([null, 2_000, 7, "0123456789abcdef"]);
+  });
+
+  it("keeps a key deactivated when a name-only update races the deactivation", async () => {
+    let deactivated = false;
+    const { sqlite, db } = createLatestSchemaSqlite({
+      onRun(sql) {
+        if (!deactivated && sql.startsWith("UPDATE api_keys SET name")) {
+          deactivated = true;
+          sqlite.exec("UPDATE api_keys SET is_active = 0, updated_at = 2500 WHERE id = 1");
+        }
+      },
+    });
+    sqlite.exec(
+      `INSERT INTO api_keys (id, key_prefix, secret_hash, name, owner_email, tier, traffic_class,
+         rate_limit_per_minute, is_active, expires_at, created_at, updated_at)
+       VALUES (1, '0123456789abcdef', 'hash', 'Original', NULL, 'standard', 'external', 60, 1, NULL, 1000, 1000)`,
+    );
+
+    const updated = await updateApiKey(db, 1, { name: "Renamed" }, 3_000);
+
+    expect(updated).not.toBeInstanceOf(Response);
+    expect(sqlite.prepare("SELECT name, is_active FROM api_keys WHERE id = 1").get()).toEqual({
+      name: "Renamed",
+      is_active: 0,
+    });
+    sqlite.close();
   });
 
   it("lists expired keys instead of filtering them out", async () => {

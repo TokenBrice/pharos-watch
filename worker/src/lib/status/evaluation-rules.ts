@@ -9,7 +9,7 @@ import { CACHE_FRESHNESS_LANES } from "@shared/lib/api-freshness";
 import { formatPercentFromRatio } from "@shared/lib/format";
 import type { DataQuality, StatusCause, StatusResponse } from "@shared/types/status";
 import type { PublicHealthAssessment } from "../public-health-assessment";
-import type { StatusLevel } from "../status-reliability";
+import type { StatusLevel } from "../status-reliability-shared";
 import type { OnchainDataQualityAssessment } from "./onchain-data-quality";
 import { getSourceFailureMessage } from "./section-errors";
 
@@ -22,11 +22,15 @@ const STATUS_SEVERITY: Record<StatusLevel, number> = {
 const STATUS_RESERVE_HIGH_DEFERRED_RATIO = 0.25;
 
 // Dataset-level publication budget for the DEX liquidity cache (one missed
-// two-hour scoring runway). This is the cache's endpoint freshness budget from
+// four-hour scoring runway). This is the cache's endpoint freshness budget from
 // the shared lane descriptor — deliberately distinct from the per-row
 // `DEX_FRESHNESS_SEC` admission window that gates individual `dex_prices`
 // rows for depeg logic.
 const DEX_DATASET_ENDPOINT_MAX_AGE_SEC = CACHE_FRESHNESS_LANES.dexLiquidity.endpointMaxAgeSec;
+
+// The DEX→DEWS dependency cause fires once the DEX liquidity cache is more than this many
+// availability budgets behind, with DEWS already outside its own published band.
+const DEWS_DOWNSTREAM_DEX_RATIO_GATE = 2;
 
 export interface ReserveCompositionAssessment {
   bootstrap: boolean;
@@ -108,14 +112,11 @@ function makeCause(
   return withRunbook({ code, layer, severity, message, ...details });
 }
 
-export interface AvailabilityStatusInput {
+export interface AvailabilityEvaluationInput {
   publicHealth: PublicHealthAssessment;
   availabilityImpactingCronErrors: number;
   availabilityImpactingUnhealthyCrons: number;
   availabilityImpactingConsecutiveCronErrors: number;
-}
-
-export interface AvailabilityEvaluationInput extends AvailabilityStatusInput {
   watchUnhealthyCrons: number;
   degradedCronRuns: number;
   cronErrorCount: number;
@@ -124,61 +125,27 @@ export interface AvailabilityEvaluationInput extends AvailabilityStatusInput {
   cronLeaseQueryFailed: boolean;
 }
 
-type AvailabilityRuleInput = AvailabilityStatusInput | AvailabilityEvaluationInput;
-
-interface DataQualityRuleInput {
+export interface DataQualityEvaluationInput {
   dataQuality: DataQuality;
-  repairRunnerAutoRepairCount?: number | null;
-  reserveCompositionQueryFailed?: boolean;
-  missingPriceRatio: number;
-  blacklistMissingRatio: number;
-  blacklistRecentMissing: number;
-  onchainAssessment: OnchainDataQualityAssessment;
-  reserveCompositionStatus: StatusResponse["reserveComposition"]["status"];
-  activePriceCoverageImpactStatus: PublicHealthAssessment["activePriceCoverageImpactStatus"];
-  activePriceCoverage?: PublicHealthAssessment["activePriceCoverage"];
-  onchainAssessmentCauses?: StatusCause[];
-  reserveComposition?: StatusResponse["reserveComposition"];
-}
-
-export type DataQualityStatusInput = DataQualityRuleInput;
-
-export interface DataQualityCauseInput {
-  dataQuality: DataQuality;
-  onchainAssessment?: OnchainDataQualityAssessment;
-  repairRunnerAutoRepairCount?: number | null;
-  activePriceCoverage: PublicHealthAssessment["activePriceCoverage"];
-  missingPriceRatio: number;
-  blacklistMissingRatio: number;
-  blacklistRecentMissing: number;
-  onchainAssessmentCauses: StatusCause[];
+  repairRunnerAutoRepairCount: number | null;
   reserveCompositionQueryFailed: boolean;
-  reserveComposition: StatusResponse["reserveComposition"];
-}
-
-export interface DataQualityEvaluationInput extends DataQualityCauseInput {
+  missingPriceRatio: number;
+  blacklistMissingRatio: number;
+  blacklistRecentMissing: number;
   onchainAssessment: OnchainDataQualityAssessment;
   reserveCompositionStatus: StatusResponse["reserveComposition"]["status"];
   activePriceCoverageImpactStatus: PublicHealthAssessment["activePriceCoverageImpactStatus"];
-}
-
-type FullDataQualityRuleInput = DataQualityRuleInput &
-  Required<Pick<DataQualityRuleInput, "activePriceCoverage" | "onchainAssessmentCauses" | "reserveComposition">>;
-
-function isFullDataQualityRuleInput(input: DataQualityRuleInput): input is FullDataQualityRuleInput {
-  return input.activePriceCoverage != null && input.onchainAssessmentCauses != null && input.reserveComposition != null;
-}
-
-function isAvailabilityEvaluationInput(input: AvailabilityRuleInput): input is AvailabilityEvaluationInput {
-  return "watchUnhealthyCrons" in input;
+  activePriceCoverage: PublicHealthAssessment["activePriceCoverage"];
+  onchainAssessmentCauses: StatusCause[];
+  reserveComposition: StatusResponse["reserveComposition"];
 }
 
 function ruleResult(status: StatusLevel, causes: StatusCause[] = []): Partial<StatusRuleEvaluation> | null {
   return status === "healthy" && causes.length === 0 ? null : { status, causes };
 }
 
-function evaluateCacheDiagnostics(input: AvailabilityRuleInput): Partial<StatusRuleEvaluation> | null {
-  if (!isAvailabilityEvaluationInput(input) || input.publicHealth.cacheFailures.length === 0) return null;
+function evaluateCacheDiagnostics(input: AvailabilityEvaluationInput): Partial<StatusRuleEvaluation> | null {
+  if (input.publicHealth.cacheFailures.length === 0) return null;
   const cacheTargets = input.publicHealth.cacheFailures
     .map((failure) => {
       const diagnostic = input.publicHealth.cacheDiagnostics.find((entry) => entry.key === failure.key);
@@ -190,8 +157,7 @@ function evaluateCacheDiagnostics(input: AvailabilityRuleInput): Partial<StatusR
   ]);
 }
 
-function evaluateFxDiagnostics(input: AvailabilityRuleInput): Partial<StatusRuleEvaluation> | null {
-  if (!isAvailabilityEvaluationInput(input)) return null;
+function evaluateFxDiagnostics(input: AvailabilityEvaluationInput): Partial<StatusRuleEvaluation> | null {
   const fxCache = input.publicHealth.caches["fx-rates"];
   if (!fxCache) return null;
   const causes: StatusCause[] = [];
@@ -231,16 +197,15 @@ function evaluateFxDiagnostics(input: AvailabilityRuleInput): Partial<StatusRule
   return ruleResult("healthy", causes);
 }
 
-function evaluateCacheWarnings(input: AvailabilityRuleInput): Partial<StatusRuleEvaluation> | null {
-  if (!isAvailabilityEvaluationInput(input) || input.publicHealth.cacheWarnings.length === 0) return null;
+function evaluateCacheWarnings(input: AvailabilityEvaluationInput): Partial<StatusRuleEvaluation> | null {
+  if (input.publicHealth.cacheWarnings.length === 0) return null;
   return ruleResult(
     "healthy",
     input.publicHealth.cacheWarnings.map((message) => makeCause("availability", "cache_warning", "info", message)),
   );
 }
 
-function evaluateDexDiagnostics(input: AvailabilityRuleInput): Partial<StatusRuleEvaluation> | null {
-  if (!isAvailabilityEvaluationInput(input)) return null;
+function evaluateDexDiagnostics(input: AvailabilityEvaluationInput): Partial<StatusRuleEvaluation> | null {
   const dexLiquidityCache = input.publicHealth.caches["dex-liquidity"];
   const dewsCache = input.publicHealth.caches.dews;
   const causes: StatusCause[] = [];
@@ -250,74 +215,80 @@ function evaluateDexDiagnostics(input: AvailabilityRuleInput): Partial<StatusRul
         "availability",
         "dex_pricing_bridge_stale",
         "warning",
-        "The published DEX liquidity dataset has exceeded its endpoint freshness budget of one missed two-hour scoring runway. Individual DEX price observations use a separate trust window.",
+        "The published DEX liquidity dataset has exceeded its endpoint freshness budget of one missed four-hour scoring runway. Individual DEX price observations use a separate trust window.",
         { metric: "dexLiquidityAgeSeconds", value: dexLiquidityCache.ageSeconds, threshold: DEX_DATASET_ENDPOINT_MAX_AGE_SEC },
       ),
     );
   }
-  if (dexLiquidityCache && dewsCache && !dexLiquidityCache.healthy && !dewsCache.healthy) {
+  const dexLiquidityRatio = dexLiquidityCache != null ? getCacheFreshnessRatio(dexLiquidityCache) : null;
+  if (
+    dexLiquidityCache &&
+    dewsCache &&
+    !dewsCache.healthy &&
+    dexLiquidityRatio != null &&
+    dexLiquidityRatio > DEWS_DOWNSTREAM_DEX_RATIO_GATE
+  ) {
     causes.push(
       makeCause(
         "availability",
         "dews_downstream_of_dex_liquidity",
-        dexLiquidityCache.ageSeconds != null && dexLiquidityCache.ageSeconds > dexLiquidityCache.maxAge ? "warning" : "info",
-        "DEWS freshness is downstream of DEX liquidity; both lanes are unhealthy, so investigate sync-dex-liquidity first.",
-        { metric: "dexLiquidityAgeSeconds", value: dexLiquidityCache.ageSeconds ?? undefined, threshold: dexLiquidityCache.maxAge },
+        "warning",
+        "DEWS freshness is downstream of DEX liquidity; the DEX liquidity dataset is more than twice its availability budget behind and DEWS is unhealthy, so investigate sync-dex-liquidity first.",
+        {
+          metric: "dexLiquidityAgeSeconds",
+          value: dexLiquidityCache.ageSeconds ?? undefined,
+          threshold: dexLiquidityCache.maxAge * DEWS_DOWNSTREAM_DEX_RATIO_GATE,
+        },
       ),
     );
   }
   return ruleResult("healthy", causes);
 }
 
-function evaluateCircuitStatus(input: AvailabilityRuleInput): Partial<StatusRuleEvaluation> | null {
+function evaluateCircuitStatus(input: AvailabilityEvaluationInput): Partial<StatusRuleEvaluation> | null {
   const status = input.publicHealth.circuitQueryError == null ? input.publicHealth.circuitImpactStatus : "healthy";
   const causes: StatusCause[] = [];
-  if (isAvailabilityEvaluationInput(input)) {
-    if (input.publicHealth.circuitQueryError) {
-      causes.push(makeCause("availability", "circuit_query_failed", "info", "Circuit breaker diagnostics failed; availability details may be incomplete."));
-    } else if (input.publicHealth.openCircuitCount >= 3) {
-      causes.push(
-        makeCause(
-          "availability",
-          "open_circuit_groups",
-          "warning",
-          `${input.publicHealth.openCircuitCount} circuit breaker groups are currently open.`,
-          { metric: "openCircuits", value: input.publicHealth.openCircuitCount, threshold: 3 },
-        ),
-      );
-    }
+  if (input.publicHealth.circuitQueryError) {
+    causes.push(makeCause("availability", "circuit_query_failed", "info", "Circuit breaker diagnostics failed; availability details may be incomplete."));
+  } else if (input.publicHealth.openCircuitCount >= 3) {
+    causes.push(
+      makeCause(
+        "availability",
+        "open_circuit_groups",
+        "warning",
+        `${input.publicHealth.openCircuitCount} circuit breaker groups are currently open.`,
+        { metric: "openCircuits", value: input.publicHealth.openCircuitCount, threshold: 3 },
+      ),
+    );
   }
   return ruleResult(status, causes);
 }
 
-function evaluateD1Status(input: AvailabilityRuleInput): Partial<StatusRuleEvaluation> | null {
+function evaluateD1Status(input: AvailabilityEvaluationInput): Partial<StatusRuleEvaluation> | null {
   const status = input.publicHealth.d1CapacityImpactStatus;
   let cause: StatusCause | null = null;
-  if (isAvailabilityEvaluationInput(input)) {
-    if (input.publicHealth.d1CapacityQueryError) {
-      cause = makeCause("availability", "d1_capacity_query_failed", "info", "D1 capacity diagnostics are temporarily unavailable.");
-    } else {
-      const capacity = input.publicHealth.d1Capacity;
-      if (capacity && capacity.thresholdState !== "normal") {
-        const exhaustion =
-          capacity.daysUntilExhaustion == null
-            ? "Exhaustion forecast is not yet available."
-            : `Projected exhaustion is ${capacity.daysUntilExhaustion} days away.`;
-        cause = makeCause(
-          "availability",
-          `d1_capacity_${capacity.thresholdState}`,
-          capacity.thresholdState === "critical" ? "critical" : "warning",
-          `D1 database utilization is ${capacity.utilizationPercent}% (${capacity.thresholdState}). ${exhaustion}`,
-          { metric: "d1CapacityUtilizationPercent", value: capacity.utilizationPercent, threshold: capacity.crossedThresholdPercent ?? 60 },
-        );
-      }
+  if (input.publicHealth.d1CapacityQueryError) {
+    cause = makeCause("availability", "d1_capacity_query_failed", "info", "D1 capacity diagnostics are temporarily unavailable.");
+  } else {
+    const capacity = input.publicHealth.d1Capacity;
+    if (capacity && capacity.thresholdState !== "normal") {
+      const exhaustion =
+        capacity.daysUntilExhaustion == null
+          ? "Exhaustion forecast is not yet available."
+          : `Projected exhaustion is ${capacity.daysUntilExhaustion} days away.`;
+      cause = makeCause(
+        "availability",
+        `d1_capacity_${capacity.thresholdState}`,
+        capacity.thresholdState === "critical" ? "critical" : "warning",
+        `D1 database utilization is ${capacity.utilizationPercent}% (${capacity.thresholdState}). ${exhaustion}`,
+        { metric: "d1CapacityUtilizationPercent", value: capacity.utilizationPercent, threshold: capacity.crossedThresholdPercent ?? 60 },
+      );
     }
   }
   return ruleResult(status, cause ? [cause] : []);
 }
 
-function evaluateCronDiagnosticQueries(input: AvailabilityRuleInput): Partial<StatusRuleEvaluation> | null {
-  if (!isAvailabilityEvaluationInput(input)) return null;
+function evaluateCronDiagnosticQueries(input: AvailabilityEvaluationInput): Partial<StatusRuleEvaluation> | null {
   const causes: StatusCause[] = [];
   if (input.cronHistoryQueryFailed) causes.push(makeCause("availability", "cron_history_query_failed", "info", "Cron history query failed; cron health is temporarily unknown rather than unhealthy."));
   if (input.cronProgressQueryFailed) causes.push(makeCause("availability", "cron_progress_query_failed", "info", "Cron progress query failed; in-flight cron telemetry is temporarily unavailable."));
@@ -325,16 +296,14 @@ function evaluateCronDiagnosticQueries(input: AvailabilityRuleInput): Partial<St
   return ruleResult("healthy", causes);
 }
 
-function evaluateWatchCronErrors(input: AvailabilityRuleInput): Partial<StatusRuleEvaluation> | null {
-  if (!isAvailabilityEvaluationInput(input)) return null;
+function evaluateWatchCronErrors(input: AvailabilityEvaluationInput): Partial<StatusRuleEvaluation> | null {
   const watchCronErrors = Math.max(0, input.cronErrorCount - input.availabilityImpactingCronErrors);
   return watchCronErrors > 0
     ? ruleResult("healthy", [makeCause("availability", "watch_cron_error_runs", "info", `${watchCronErrors} watch-tier cron job(s) currently have last-run status=error.`, { metric: "watchCronErrors", value: watchCronErrors, threshold: 1 })])
     : null;
 }
 
-function evaluateWatchTailDiagnostics(input: AvailabilityRuleInput): Partial<StatusRuleEvaluation> | null {
-  if (!isAvailabilityEvaluationInput(input)) return null;
+function evaluateWatchTailDiagnostics(input: AvailabilityEvaluationInput): Partial<StatusRuleEvaluation> | null {
   const causes: StatusCause[] = [];
   if (input.watchUnhealthyCrons > 0) {
     causes.push(makeCause("availability", "watch_unhealthy_crons_present", "info", `${input.watchUnhealthyCrons} watch-tier cron job(s) are unavailable/stale.`, { metric: "watchUnhealthyCrons", value: input.watchUnhealthyCrons, threshold: 1 }));
@@ -345,7 +314,7 @@ function evaluateWatchTailDiagnostics(input: AvailabilityRuleInput): Partial<Sta
   return ruleResult("healthy", causes);
 }
 
-const AVAILABILITY_STATUS_RULES: readonly StatusRule<AvailabilityRuleInput>[] = [
+const AVAILABILITY_STATUS_RULES: readonly StatusRule<AvailabilityEvaluationInput>[] = [
   (input) => {
       const status = input.publicHealth.cacheImpactStatus;
       const worstCacheRatio = input.publicHealth.worstCacheRatio;
@@ -356,7 +325,11 @@ const AVAILABILITY_STATUS_RULES: readonly StatusRule<AvailabilityRuleInput>[] = 
         const tier = getCacheFreshnessStatus(cache, key);
         if (tier === "healthy") continue;
         const ratio = getCacheFreshnessRatio(cache) ?? worstCacheRatio;
-        if (worstCacheBreach == null || (tier === "stale" && worstCacheBreach.tier === "degraded")) {
+        if (
+          worstCacheBreach == null
+          || (tier === "stale" && worstCacheBreach.tier === "degraded")
+          || (tier === worstCacheBreach.tier && ratio > worstCacheBreach.ratio)
+        ) {
           worstCacheBreach = { key, ratio, thresholds: getCacheRatioThresholds(key), tier };
         }
       }
@@ -382,24 +355,22 @@ const AVAILABILITY_STATUS_RULES: readonly StatusRule<AvailabilityRuleInput>[] = 
       ? input.publicHealth.mintBurnImpactStatus
       : "healthy";
     let cause: StatusCause | null = null;
-    if (isAvailabilityEvaluationInput(input)) {
-      if (input.publicHealth.mintBurnQueryError) {
-        cause = makeCause(
-          "availability",
-          "mint_burn_health_query_failed",
-          "info",
-          "Mint/burn health query failed; diagnostics are temporarily unavailable. " +
-            `Latest critical cron run status: ${input.publicHealth.mintBurnLastRunStatus ?? "unknown"}.`,
-        );
-      } else if (!input.publicHealth.mintBurnBootstrap && input.publicHealth.mintBurnImpactStatus !== "healthy") {
-        cause = makeCause(
-          "availability",
-          input.publicHealth.mintBurnImpactStatus === "stale" ? "mint_burn_public_stale" : "mint_burn_public_degraded",
-          input.publicHealth.mintBurnImpactStatus === "stale" ? "critical" : "warning",
-          input.publicHealth.mintBurn.sync.warning ??
-            `Mint/burn public freshness is ${input.publicHealth.mintBurnImpactStatus} versus the critical-lane cadence.`,
-        );
-      }
+    if (input.publicHealth.mintBurnQueryError) {
+      cause = makeCause(
+        "availability",
+        "mint_burn_health_query_failed",
+        "info",
+        "Mint/burn health query failed; diagnostics are temporarily unavailable. " +
+          `Latest critical cron run status: ${input.publicHealth.mintBurnLastRunStatus ?? "unknown"}.`,
+      );
+    } else if (!input.publicHealth.mintBurnBootstrap && input.publicHealth.mintBurnImpactStatus !== "healthy") {
+      cause = makeCause(
+        "availability",
+        input.publicHealth.mintBurnImpactStatus === "stale" ? "mint_burn_public_stale" : "mint_burn_public_degraded",
+        input.publicHealth.mintBurnImpactStatus === "stale" ? "critical" : "warning",
+        input.publicHealth.mintBurn.sync.warning ??
+          `Mint/burn public freshness is ${input.publicHealth.mintBurnImpactStatus} versus the critical-lane cadence.`,
+      );
     }
     return ruleResult(status, cause ? [cause] : []);
   },
@@ -411,46 +382,40 @@ const AVAILABILITY_STATUS_RULES: readonly StatusRule<AvailabilityRuleInput>[] = 
       const stale = input.availabilityImpactingConsecutiveCronErrors > 0;
       const degraded = input.availabilityImpactingCronErrors > 0;
       if (!stale && !degraded) return null;
-      const cause =
-        isAvailabilityEvaluationInput(input) && input.availabilityImpactingCronErrors > 0
-          ? makeCause(
-              "availability",
-              "cron_error_runs",
-              stale ? "critical" : "warning",
-              stale
-                ? `${input.availabilityImpactingConsecutiveCronErrors} availability-impacting cron job(s) have 2+ consecutive failed runs.`
-                : `${input.availabilityImpactingCronErrors} availability-impacting cron job(s) had a single transient failed run.`,
-              { metric: "availabilityImpactingCronErrors", value: input.availabilityImpactingCronErrors, threshold: 1 },
-            )
-          : null;
-      return ruleResult(stale ? "stale" : "degraded", cause ? [cause] : []);
+      const cause = makeCause(
+        "availability",
+        "cron_error_runs",
+        stale ? "critical" : "warning",
+        stale
+          ? `${input.availabilityImpactingConsecutiveCronErrors} availability-impacting cron job(s) have 2+ consecutive failed runs.`
+          : `${input.availabilityImpactingCronErrors} availability-impacting cron job(s) had a single transient failed run.`,
+        { metric: "availabilityImpactingCronErrors", value: input.availabilityImpactingCronErrors, threshold: 1 },
+      );
+      return ruleResult(stale ? "stale" : "degraded", [cause]);
   },
   evaluateWatchCronErrors,
   (input) => {
       const status = input.availabilityImpactingUnhealthyCrons >= 2 ? "stale" : input.availabilityImpactingUnhealthyCrons > 0 ? "degraded" : null;
       if (status == null) return null;
-      const cause = isAvailabilityEvaluationInput(input)
-        ? makeCause(
-            "availability",
-            input.availabilityImpactingUnhealthyCrons >= 2 ? "multiple_unhealthy_crons" : "unhealthy_crons_present",
-            input.availabilityImpactingUnhealthyCrons >= 2 ? "critical" : "warning",
-            input.availabilityImpactingUnhealthyCrons >= 2
-              ? `${input.availabilityImpactingUnhealthyCrons} availability-impacting cron jobs are unavailable/stale.`
-              : `${input.availabilityImpactingUnhealthyCrons} availability-impacting cron job(s) are unavailable/stale.`,
-            {
-              metric: "availabilityImpactingUnhealthyCrons",
-              value: input.availabilityImpactingUnhealthyCrons,
-              threshold: input.availabilityImpactingUnhealthyCrons >= 2 ? 2 : 1,
-            },
-          )
-        : null;
+      const cause = makeCause(
+        "availability",
+        input.availabilityImpactingUnhealthyCrons >= 2 ? "multiple_unhealthy_crons" : "unhealthy_crons_present",
+        input.availabilityImpactingUnhealthyCrons >= 2 ? "critical" : "warning",
+        input.availabilityImpactingUnhealthyCrons >= 2
+          ? `${input.availabilityImpactingUnhealthyCrons} availability-impacting cron jobs are unavailable/stale.`
+          : `${input.availabilityImpactingUnhealthyCrons} availability-impacting cron job(s) are unavailable/stale.`,
+        {
+          metric: "availabilityImpactingUnhealthyCrons",
+          value: input.availabilityImpactingUnhealthyCrons,
+          threshold: input.availabilityImpactingUnhealthyCrons >= 2 ? 2 : 1,
+        },
+      );
       return ruleResult(status, cause ? [cause] : []);
   },
   evaluateWatchTailDiagnostics,
 ];
 
-function evaluateDataSourceFailures(input: DataQualityRuleInput): Partial<StatusRuleEvaluation> | null {
-  if (!isFullDataQualityRuleInput(input)) return null;
+function evaluateDataSourceFailures(input: DataQualityEvaluationInput): Partial<StatusRuleEvaluation> | null {
   const causes = input.dataQuality.sourceFailures
     .filter((failure) => failure.source !== "stablecoins-cache")
     .map((failure) =>
@@ -468,8 +433,8 @@ function evaluateDataSourceFailures(input: DataQualityRuleInput): Partial<Status
   return ruleResult("healthy", causes);
 }
 
-function evaluateReserveQueryFailure(input: DataQualityRuleInput): Partial<StatusRuleEvaluation> | null {
-  if (!isFullDataQualityRuleInput(input) || !input.reserveCompositionQueryFailed) return null;
+function evaluateReserveQueryFailure(input: DataQualityEvaluationInput): Partial<StatusRuleEvaluation> | null {
+  if (!input.reserveCompositionQueryFailed) return null;
   return ruleResult("healthy", [
     makeCause(
       "data-quality",
@@ -480,8 +445,7 @@ function evaluateReserveQueryFailure(input: DataQualityRuleInput): Partial<Statu
   ]);
 }
 
-function evaluateRepairDiagnostics(input: DataQualityRuleInput): Partial<StatusRuleEvaluation> | null {
-  if (!isFullDataQualityRuleInput(input)) return null;
+function evaluateRepairDiagnostics(input: DataQualityEvaluationInput): Partial<StatusRuleEvaluation> | null {
   const causes: StatusCause[] = [];
   if (input.repairRunnerAutoRepairCount != null) {
     causes.push(
@@ -510,8 +474,7 @@ function evaluateRepairDiagnostics(input: DataQualityRuleInput): Partial<StatusR
   return ruleResult("healthy", causes);
 }
 
-function evaluateReserveOperationalDiagnostics(input: DataQualityRuleInput): Partial<StatusRuleEvaluation> | null {
-  if (!isFullDataQualityRuleInput(input)) return null;
+function evaluateReserveOperationalDiagnostics(input: DataQualityEvaluationInput): Partial<StatusRuleEvaluation> | null {
   const reserve = input.reserveComposition;
   const causes: StatusCause[] = [];
   if (reserve.writeTimeoutUncertain > 0) {
@@ -545,45 +508,41 @@ function evaluateReserveOperationalDiagnostics(input: DataQualityRuleInput): Par
   return ruleResult("healthy", causes);
 }
 
-const DATA_QUALITY_STATUS_RULES_CORE: readonly StatusRule<DataQualityRuleInput>[] = [
+const DATA_QUALITY_STATUS_RULES_CORE: readonly StatusRule<DataQualityEvaluationInput>[] = [
   (input) => {
       const status = input.dataQuality.stablecoinsCacheStatus === "error" ? "stale" : input.dataQuality.stablecoinsCacheStatus === "degraded" ? "degraded" : "healthy";
       if (status === "healthy") return null;
-      const cause = isFullDataQualityRuleInput(input)
-        ? makeCause(
-            "data-quality",
-            status === "stale" ? "stablecoins_cache_unavailable" : "stablecoins_cache_degraded",
-            status === "stale" ? "critical" : "warning",
-            `Stablecoins cache is ${status === "stale" ? "unavailable" : "degraded"} (${input.dataQuality.stablecoinsCacheReason ?? "unknown"}).`,
-          )
-        : null;
-      return ruleResult(status, cause ? [cause] : []);
+      const cause = makeCause(
+        "data-quality",
+        status === "stale" ? "stablecoins_cache_unavailable" : "stablecoins_cache_degraded",
+        status === "stale" ? "critical" : "warning",
+        `Stablecoins cache is ${status === "stale" ? "unavailable" : "degraded"} (${input.dataQuality.stablecoinsCacheReason ?? "unknown"}).`,
+      );
+      return ruleResult(status, [cause]);
   },
   (input) => {
       const publication = input.dataQuality.stablecoinPublication;
       if (publication == null || publication.status === "complete") return null;
-      const cause = isFullDataQualityRuleInput(input)
-        ? publication.status === "incomplete"
-          ? (() => {
-              const missing = publication.missingActiveIds;
-              const examples = missing.slice(0, 12).join(", ");
-              return makeCause(
-                "data-quality",
-                "stablecoin_publication_incomplete",
-                "warning",
-                `Stablecoin publication is missing ${missing.length} unwaived active ID(s)` +
-                  (examples ? `: ${examples}${missing.length > 12 ? ", ..." : ""}.` : "."),
-                { metric: "missingActiveStablecoins", value: missing.length, threshold: 1 },
-              );
-            })()
-          : makeCause("data-quality", "stablecoin_publication_unknown", "warning", "Exact stablecoin publication coverage evidence is unavailable.")
-        : null;
-      return ruleResult("degraded", cause ? [cause] : []);
+      const cause = publication.status === "incomplete"
+        ? (() => {
+            const missing = publication.missingActiveIds;
+            const examples = missing.slice(0, 12).join(", ");
+            return makeCause(
+              "data-quality",
+              "stablecoin_publication_incomplete",
+              "warning",
+              `Stablecoin publication is missing ${missing.length} unwaived active ID(s)` +
+                (examples ? `: ${examples}${missing.length > 12 ? ", ..." : ""}.` : "."),
+              { metric: "missingActiveStablecoins", value: missing.length, threshold: 1 },
+            );
+          })()
+        : makeCause("data-quality", "stablecoin_publication_unknown", "warning", "Exact stablecoin publication coverage evidence is unavailable.");
+      return ruleResult("degraded", [cause]);
   },
   (input) => {
       const status = input.activePriceCoverageImpactStatus;
       const cause =
-        isFullDataQualityRuleInput(input) && input.activePriceCoverage.status === "incomplete"
+        input.activePriceCoverage.status === "incomplete"
             ? (() => {
                 const missing = input.activePriceCoverage.missingActiveIds;
                 const examples = missing.slice(0, 12).join(", ");
@@ -601,7 +560,7 @@ const DATA_QUALITY_STATUS_RULES_CORE: readonly StatusRule<DataQualityRuleInput>[
                   { metric: "missingActivePrices", value: input.activePriceCoverage.missingPriceCount, threshold: 1 },
                 );
               })()
-            : isFullDataQualityRuleInput(input) && input.activePriceCoverage.status === "unknown"
+            : input.activePriceCoverage.status === "unknown"
               ? makeCause("data-quality", "active_price_coverage_unknown", "warning", "Exact active stablecoin live-price coverage evidence is unavailable.")
               : null;
       return ruleResult(status, cause ? [cause] : []);
@@ -665,12 +624,12 @@ const DATA_QUALITY_STATUS_RULES_CORE: readonly StatusRule<DataQualityRuleInput>[
   },
   (input) => {
       const status = input.onchainAssessment.status;
-      const causes = isFullDataQualityRuleInput(input) ? input.onchainAssessmentCauses.map(withRunbook) : [];
+      const causes = input.onchainAssessmentCauses.map(withRunbook);
       return status === "healthy" && causes.length === 0 ? null : { status, causes };
   },
   (input) => {
-      const status = isFullDataQualityRuleInput(input) ? input.reserveComposition.status : input.reserveCompositionStatus;
-      if (!isFullDataQualityRuleInput(input) || status === "healthy") return ruleResult(status);
+      const status = input.reserveComposition.status;
+      if (status === "healthy") return null;
       const reserve = input.reserveComposition;
       const persistent = reserve.persistentlyStaleIndependentCoins.length > 0
         ? ` ${formatPersistentStaleIndependentFeeds(reserve.persistentlyStaleIndependentCoins)}.`
@@ -690,7 +649,7 @@ const DATA_QUALITY_STATUS_RULES_CORE: readonly StatusRule<DataQualityRuleInput>[
   },
 ];
 
-const DATA_QUALITY_STATUS_RULES: readonly StatusRule<DataQualityRuleInput>[] = [
+const DATA_QUALITY_STATUS_RULES: readonly StatusRule<DataQualityEvaluationInput>[] = [
   DATA_QUALITY_STATUS_RULES_CORE[0],
   DATA_QUALITY_STATUS_RULES_CORE[1],
   DATA_QUALITY_STATUS_RULES_CORE[2],
@@ -717,7 +676,7 @@ function formatPersistentStaleIndependentFeeds(
 
 const RUNBOOK_BASE = "https://github.com/TokenBrice/pharos-watch/blob/main/docs/runbooks";
 
-export const RUNBOOK_BY_CODE: Record<string, string> = {
+const RUNBOOK_BY_CODE: Record<string, string> = {
   db_unhealthy: `${RUNBOOK_BASE}/db-connectivity.md`,
   data_quality_skipped_db_unhealthy: `${RUNBOOK_BASE}/db-connectivity.md`,
   stablecoins_cache_unavailable: `${RUNBOOK_BASE}/stablecoins-cache.md`,
@@ -746,31 +705,10 @@ export function withRunbook(cause: StatusCause): StatusCause {
   return runbookUrl ? { ...cause, runbookUrl } : cause;
 }
 
-export function evaluateAvailabilityStatus(input: AvailabilityEvaluationInput | AvailabilityStatusInput): StatusRuleEvaluation {
+export function evaluateAvailabilityStatus(input: AvailabilityEvaluationInput): StatusRuleEvaluation {
   return evaluateStatusRuleSet(input, AVAILABILITY_STATUS_RULES);
 }
 
-export function evaluateDataQualityStatus(
-  input: DataQualityEvaluationInput | DataQualityStatusInput | DataQualityCauseInput,
-): StatusRuleEvaluation {
-  const statusInput: DataQualityRuleInput = {
-    dataQuality: input.dataQuality,
-    repairRunnerAutoRepairCount: "repairRunnerAutoRepairCount" in input ? input.repairRunnerAutoRepairCount : undefined,
-    reserveCompositionQueryFailed: "reserveCompositionQueryFailed" in input ? input.reserveCompositionQueryFailed : undefined,
-    missingPriceRatio: input.missingPriceRatio,
-    blacklistMissingRatio: input.blacklistMissingRatio,
-    blacklistRecentMissing: input.blacklistRecentMissing,
-    onchainAssessment: input.onchainAssessment ?? { causes: [], representative: false, status: "healthy" },
-    reserveCompositionStatus: "reserveCompositionStatus" in input ? input.reserveCompositionStatus : "healthy",
-    activePriceCoverageImpactStatus:
-      "activePriceCoverageImpactStatus" in input ? input.activePriceCoverageImpactStatus : "healthy",
-    ...(input.activePriceCoverage != null
-      ? {
-          activePriceCoverage: input.activePriceCoverage,
-          onchainAssessmentCauses: input.onchainAssessmentCauses,
-          reserveComposition: input.reserveComposition,
-        }
-      : {}),
-  };
-  return evaluateStatusRuleSet(statusInput, DATA_QUALITY_STATUS_RULES);
+export function evaluateDataQualityStatus(input: DataQualityEvaluationInput): StatusRuleEvaluation {
+  return evaluateStatusRuleSet(input, DATA_QUALITY_STATUS_RULES);
 }

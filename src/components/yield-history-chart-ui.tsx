@@ -11,6 +11,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { formatChartDate } from "@shared/lib/format";
 import { CHART_AMBER, CHART_BLUE } from "@/lib/chart-colors";
 import { toTimestampMs } from "@/lib/time";
 import { formatYieldWarningSignal, formatYieldWarningSignalDescription } from "@/lib/yield-constants";
@@ -353,10 +354,6 @@ export function renderAxisTick(value: number | string | undefined, days: number)
   return formatAxisDate(Number(value ?? 0), days);
 }
 
-function formatSourceStripDate(timestamp: number) {
-  return new Date(timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
 export function SourceStrip({
   segments,
   timeStart,
@@ -391,7 +388,10 @@ export function SourceStrip({
   /* For "other", count distinct original-source contributions to display "other (N)". */
 
   const ariaSummary = segments
-    .map((segment) => `${segment.sourceLabel} from ${formatSourceStripDate(segment.startTs)} to ${formatSourceStripDate(segment.endTs)}`)
+    .map(
+      (segment) =>
+        `${segment.sourceLabel} from ${formatChartDate(segment.startTs, "short")} to ${formatChartDate(segment.endTs, "short")}`,
+    )
     .join(", ");
 
   return (
@@ -412,7 +412,7 @@ export function SourceStrip({
                 index > 0 ? "border-l border-background/80" : null,
               )}
               style={{ width: `${widthPct}%` }}
-              title={`${segment.sourceLabel} — ${formatSourceStripDate(segment.startTs)} to ${formatSourceStripDate(segment.endTs)}`}
+              title={`${segment.sourceLabel} — ${formatChartDate(segment.startTs, "short")} to ${formatChartDate(segment.endTs, "short")}`}
             />
           );
         })}

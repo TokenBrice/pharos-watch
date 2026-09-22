@@ -12,8 +12,6 @@ import { defaultV9DependencyEconomicRole } from "../../types/dependency-types";
 import { validateMintBridgeOwnership } from "./mint-bridge-ownership";
 import {
   CoinNoticeSchema,
-  BlacklistabilityReviewSchema,
-  BridgeRouteRiskProfileSchema,
   ContractDeploymentSchema,
   CustodyProfileSchema,
   DateHistoryEntrySchema,
@@ -21,13 +19,8 @@ import {
   DependencyWeightSchema,
   FeaturedContentSchema,
   FuzzyDateSchema,
-  GeniusProfileSchema,
-  JurisdictionSchema,
   LaunchMilestoneSchema,
   MechanismArchetypeReviewSchema,
-  MintAuthorityProfileSchema,
-  MicaProfileSchema,
-  OracleRiskProfileSchema,
   ProofOfReservesSchema,
   ReserveReviewSchema,
   StablecoinFlagsSchema,
@@ -35,6 +28,17 @@ import {
   StablecoinMetaEnumSchemas,
   YieldConfigSchema,
 } from "../../types/stablecoin-meta-schemas";
+import {
+  BridgeRouteRiskProfileSchema,
+  MintAuthorityProfileSchema,
+  OracleRiskProfileSchema,
+} from "../../types/stablecoin-meta-control-schemas";
+import {
+  BlacklistabilityReviewSchema,
+  GeniusProfileSchema,
+  JurisdictionSchema,
+  MicaProfileSchema,
+} from "../../types/stablecoin-meta-compliance-schemas";
 const CommodityOuncesSchema = z.number().finite().positive();
 const REVIEW_QUANTITATIVE_TOLERANCE = 1e-6;
 const UNRESOLVED_RESERVE_DISPOSITIONS = new Set(["basket-needs-split", "insufficient-evidence"]);
@@ -802,7 +806,7 @@ function refineMintAuthorityCatalog(stablecoins: StablecoinMeta[], ctx: z.Refine
 
     const parentId = inheritedFrom ?? stablecoin.variantOf;
     const parent = parentId != null ? catalogById.get(parentId) : undefined;
-    if (parent?.mintAuthority?.authorityPosture !== "none-resolved") {
+    if (hasCatalogContext && parent?.mintAuthority?.authorityPosture !== "none-resolved") {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "wrapped mintAuthority can use authorityPosture none-resolved only when the parent is none-resolved",

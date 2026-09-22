@@ -75,6 +75,9 @@ const SKY_LITE_PSM_DOC_URL = "https://developers.sky.money/quick-start/guides/li
 const SKY_LITE_PSM_SOURCE_URL = "https://github.com/makerdao/dss-lite-psm";
 const GEM_SELECTOR = "0x7bd2bea7"; // gem()
 const POCKET_SELECTOR = "0xcccef9e2"; // pocket()
+const TIN_SELECTOR = "0x568d4b6f"; // tin()
+const TOUT_SELECTOR = "0xfae036d5"; // tout()
+const HALTED_SWAP_FEE = (1n << 256n) - 1n;
 
 const MODULE_MAP: Record<string, ModuleSpec> = {
   stablecoins: { name: "Stablecoins (PSM)", risk: "very-low" },
@@ -185,6 +188,8 @@ async function fetchSkyLitePsmUsdcCapacity(
 ): Promise<{
   capacityUsd: number;
   capacityRaw: string;
+  routeObserved: boolean;
+  routeStatus: "open" | "paused" | "unknown";
 } | null> {
   try {
     const onchain = makeOnchainCallers(
@@ -201,9 +206,11 @@ async function fetchSkyLitePsmUsdcCapacity(
       },
     );
 
-    const [gemRaw, pocketRaw] = await Promise.all([
+    const [gemRaw, pocketRaw, tin, tout] = await Promise.all([
       onchain.raw(SKY_LITE_PSM_ADDRESS, GEM_SELECTOR),
       onchain.raw(SKY_LITE_PSM_ADDRESS, POCKET_SELECTOR),
+      onchain.uint256(SKY_LITE_PSM_ADDRESS, TIN_SELECTOR),
+      onchain.uint256(SKY_LITE_PSM_ADDRESS, TOUT_SELECTOR),
     ]);
     const gem = decodeAddressResult(gemRaw);
     const pocket = decodeAddressResult(pocketRaw);
@@ -216,9 +223,16 @@ async function fetchSkyLitePsmUsdcCapacity(
       encodeBalanceOfCallData(SKY_LITE_PSM_USDC_POCKET),
     );
     if (balanceRaw == null) return null;
+    const routeObserved = tin != null && tout != null;
     return {
       capacityUsd: decimalNumberFromBigInt(balanceRaw, SKY_LITE_PSM_USDC_DECIMALS),
       capacityRaw: balanceRaw.toString(),
+      routeObserved,
+      routeStatus: !routeObserved
+        ? "unknown"
+        : tin === HALTED_SWAP_FEE || tout === HALTED_SWAP_FEE
+          ? "paused"
+          : "open",
     };
   } catch (error) {
     rethrowIfAborted(error, signal);
@@ -287,9 +301,15 @@ export async function fetchSkyMakercoreReserves(
         capacityUsd: litePsmCapacity.capacityUsd,
         capacityKind: "live-direct" as const,
         freshnessKind: "same-run-onchain" as const,
-        routeStatus: "open",
-        routeStatusSource: "onchain",
-        routeStatusReason: "Sky LitePSM USDC pocket balance is readable on-chain",
+        routeStatus: litePsmCapacity.routeStatus,
+        ...(litePsmCapacity.routeObserved
+          ? { routeStatusSource: "onchain" as const, routeObserved: true as const }
+          : { routeStatusSource: "static-config" as const }),
+        routeStatusReason: !litePsmCapacity.routeObserved
+          ? "Sky LitePSM route fee probes were unavailable"
+          : litePsmCapacity.routeStatus === "paused"
+            ? "Sky LitePSM tin() or tout() reported the halted sentinel"
+            : "Sky LitePSM tin() and tout() were readable and enabled on-chain",
         holderEligibility: "any-holder",
         settlementDelaySec: 0,
         sourceUrls: [SKY_LITE_PSM_DOC_URL, SKY_LITE_PSM_SOURCE_URL],

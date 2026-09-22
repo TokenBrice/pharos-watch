@@ -9,7 +9,6 @@ import {
   shouldIncludeSafetyForSubscriber,
 } from "./dispatch-telegram-predicates";
 import type { SubscriberRow } from "./dispatch-telegram-routing";
-import type { PendingCapacitySnapshot } from "./telegram-pending";
 
 export type LegacyFanoutAlertType = Exclude<TelegramAlertType, "freeze">;
 export type PresetFanoutAlertType = Exclude<LegacyFanoutAlertType, "launch" | "reserve">;
@@ -145,32 +144,6 @@ interface FanoutSubscriptionLoaders {
     type: LegacyFanoutAlertType,
     options?: FanoutSubscriberLoadOptions,
   ) => Promise<Map<string, Set<string>>>;
-}
-
-export interface PendingCapacityFields {
-  pendingTotal: number;
-  pendingDue: number;
-  pendingDeferredCount: number;
-  pendingExpiredCount: number;
-  pendingNearTtlCount: number;
-  oldestPendingAgeSec: number | null;
-  oldestDuePendingAgeSec: number | null;
-  estimatedDrainTimeSec: number;
-  pendingDrainBudgetPerRun: number;
-}
-
-export function pendingCapacityFields(capacity: PendingCapacitySnapshot): PendingCapacityFields {
-  return {
-    pendingTotal: capacity.active,
-    pendingDue: capacity.due,
-    pendingDeferredCount: capacity.deferred,
-    pendingExpiredCount: capacity.expired,
-    pendingNearTtlCount: capacity.nearTtl,
-    oldestPendingAgeSec: capacity.oldestPendingAgeSec,
-    oldestDuePendingAgeSec: capacity.oldestDuePendingAgeSec,
-    estimatedDrainTimeSec: capacity.estimatedDrainTimeSec,
-    pendingDrainBudgetPerRun: capacity.drainBudgetPerRun,
-  };
 }
 
 export async function loadFanoutSubscriptionInputs(

@@ -1,12 +1,8 @@
 import { derivePegRates } from "@shared/lib/peg-rates";
-import { DEX_PROTOCOL_SOURCE_FRESHNESS_SEC } from "@shared/lib/depeg-config";
+import { DEX_PROTOCOL_SOURCE_FRESHNESS_SEC, DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import type { PegAssetBase } from "@shared/types/core";
-import {
-  DEX_FRESHNESS_SEC,
-  MAX_OPEN_DEPEG_EVENTS,
-  POOL_CHALLENGE_MIN_TVL,
-} from "../../lib/constants";
+import { MAX_OPEN_DEPEG_EVENTS, POOL_CHALLENGE_MIN_TVL } from "../../lib/constants";
 import { throwIfAborted } from "../../lib/abort";
 import {
   DEPEG_EVENTS_DEPEGROW_COLUMNS,

@@ -1,3 +1,5 @@
+import { escapeRegExp } from "./escape-regexp";
+
 export type DigestSignalFamily = "liquidity" | "depeg" | "yield" | "flow";
 
 export interface DigestSignalQuarantine {
@@ -56,10 +58,6 @@ export function findDigestSignalQuarantineBySymbol(
 }
 
 const LIQUIDITY_COLLAPSE_PATTERN = /\b(?:collaps(?:e|ed|ing)|drain(?:ed|ing)?|fell|fall(?:ing)?|lost|shed)\b/i;
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
 
 /**
  * Symbol word-boundary matchers, built once at module load. The registry is

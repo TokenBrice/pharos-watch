@@ -333,6 +333,7 @@ export async function fetchParallelizerBalancesReserves(
         freshnessKind: "same-run-onchain",
         routeStatus,
         routeStatusSource: "onchain",
+        routeObserved: true,
         routeStatusReason: pausedDeployments.length > 0
           ? `Parallelizer redemption is paused on ${pausedDeployments.join(", ")}`
           : "All Parallelizer deployment redemption pause checks returned false",

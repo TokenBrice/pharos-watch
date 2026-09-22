@@ -1,7 +1,6 @@
 import { canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { DEX_LIQUIDITY_POOL_MIN_TVL_USD } from "./constants";
-import { buildUniqueEvmV2ExecutionCandidateFingerprintIndex } from "./constant-product-v2";
 import type { LiquidityMetrics } from "./types";
 import { accumulatePoolMetrics } from "./process-pool-accumulation";
 import { admitAndResolvePoolIdentity } from "./process-pool-admission-identity";
@@ -41,18 +40,11 @@ export function hasMaterialPoolRejections(
 function buildProcessingContext(
   input: ProcessPoolMetricsInput,
 ): PoolProcessingContext {
-  const aerodromeV2ExecutionCandidates =
-    input.aerodromeV2ExecutionCandidates ?? new Map();
   return {
     ...input,
     uniV3ExecutionCandidates: input.uniV3ExecutionCandidates ?? new Map(),
     measuredTargetCapturedAt:
       input.measuredTargetCapturedAt ?? Math.floor(Date.now() / 1000),
-    aerodromeV2ExecutionCandidates,
-    uniqueAerodromeV2ExecutionCandidates:
-      buildUniqueEvmV2ExecutionCandidateFingerprintIndex(
-        aerodromeV2ExecutionCandidates,
-      ),
     curvePoolCandidatesByFingerprint:
       input.curvePoolCandidatesByFingerprint ?? new Map(),
     uniswapV4ExecutionCandidates:

@@ -19,7 +19,7 @@ Each configured `mechanismArchetype` gets a dedicated educational page covering 
 - **Body section renderer:** `src/app/learn/mechanisms/explainer-shell.tsx` (`ArchetypeExplainerBody`)
 - **Content registry:** `src/lib/mechanism-explainers/index.ts` (`ARCHETYPE_CONTENT`)
 - **Per-archetype content modules:** `src/lib/mechanism-explainers/{fiat-cash,tbill,cdp,synthetic-delta-neutral,algorithmic,rwa-credit-fund,commodity-claim}.ts`
-- **Content schema:** `src/lib/mechanism-explainers/types.ts` (`ArchetypeContent` interface, `ARCHETYPE_VISUALS` map)
+- **Content schema:** `src/lib/mechanism-explainers/types.ts` (`ArchetypeContent` interface)
 - **Slug helpers (single source of truth):** `shared/lib/classification/mechanism-archetypes.ts`
   - `MECHANISM_ARCHETYPE_LABELS`, `MECHANISM_ARCHETYPE_ONE_LINERS`
   - `getMechanismArchetypeLabel(archetype)`
@@ -40,7 +40,7 @@ Current treatment:
 - **Display title:** the `<h1>` uses `.pharos-page-title`; section/list headings use `.pharos-display` at a smaller fixed scale.
 - **Section dividers:** hairline borders (`border-border/40`, `border-border/60`) between rows in lists and definition lists — no card chrome.
 - **Diagram hero:** the mechanism diagram floats freely against the page background, no wrapping card, no kicker label. The diagram is the single editorial focal point per page.
-- **Per-archetype identity:** `ARCHETYPE_VISUALS` and the mechanism diagrams own any differentiation; the shared page chrome stays neutral.
+- **Per-archetype identity:** the mechanism diagrams own differentiation; the shared page chrome stays neutral.
 
 ---
 
@@ -105,12 +105,11 @@ No footer entry. The hub is the only entry in the header/mobile nav rail; per-ar
 
 1. Add the slug to `MECHANISM_ARCHETYPE_VALUES` in `shared/types/stablecoin-taxonomy.ts` (re-exported through `shared/types/core.ts`, which is what route modules import).
 2. Add entries to `MECHANISM_ARCHETYPE_LABELS`, `MECHANISM_ARCHETYPE_SHORT_LABELS`, `MECHANISM_ARCHETYPE_CTA_NOUNS`, and `MECHANISM_ARCHETYPE_ONE_LINERS` in `shared/lib/classification/mechanism-archetypes.ts`. The typechecker enforces exhaustiveness.
-3. Add the corresponding `ARCHETYPE_VISUALS` entry in `src/lib/mechanism-explainers/types.ts`, preserving the route's neutral shared chrome unless the design contract changes.
-4. Author a new content module under `src/lib/mechanism-explainers/<slug>.ts` and register it in `src/lib/mechanism-explainers/index.ts`.
-5. Add a `MECHANISM_EXPLAINER_TITLES` entry in `src/lib/mechanism-explainer-registry.ts` (which also drives the OG-image roster) and a `DESCRIPTION_BY_ARCHETYPE` entry in `src/app/learn/mechanisms/[archetype]/page.tsx`.
-6. For a flow that fits the three-step pattern, add a `THREE_STEP_ARCHETYPE_CONFIG` entry and a branch in `renderArchetype` in `src/components/stablecoin-detail/mechanism-diagrams/` (reuse `ThreeStepArchetypeDiagram`). Only build a dedicated `<slug>-diagram.tsx` component if the flow needs a custom layout (as `synthetic-delta-neutral` does). A variant that differs by a coin-level flag rather than by archetype adds a second config beside the first and a case in `resolveThreeStepConfig` — never a per-coin entry in `coin-overrides.ts`, which is sized for a handful of flagship coins.
-7. Run `tsx scripts/maintenance/build-og-learn-images.ts`, then follow the manual rasterize-and-review workflow in [`og-images.md`](./og-images.md#3-mechanism-explainer-cards-publicog-learn-png).
-8. Run the mechanism content, exact static-param, and sitemap suites listed in Coverage Invariant; regenerate the OG asset before running `npm run check:generated-artifacts`.
+3. Author a new content module under `src/lib/mechanism-explainers/<slug>.ts` and register it in `src/lib/mechanism-explainers/index.ts`.
+4. Add a `MECHANISM_EXPLAINER_TITLES` entry in `src/lib/mechanism-explainer-registry.ts` (which also drives the OG-image roster) and a `DESCRIPTION_BY_ARCHETYPE` entry in `src/app/learn/mechanisms/[archetype]/page.tsx`.
+5. For a flow that fits the three-step pattern, add a `THREE_STEP_ARCHETYPE_CONFIG` entry and a branch in `renderArchetype` in `src/components/stablecoin-detail/mechanism-diagrams/` (reuse `ThreeStepArchetypeDiagram`). Only build a dedicated `<slug>-diagram.tsx` component if the flow needs a custom layout (as `synthetic-delta-neutral` does). A variant that differs by a coin-level flag rather than by archetype adds a second config beside the first and a case in `resolveThreeStepConfig` — never a per-coin entry in `coin-overrides.ts`, which is sized for a handful of flagship coins.
+6. Run `tsx scripts/maintenance/build-og-learn-images.ts`, then follow the manual rasterize-and-review workflow in [`og-images.md`](./og-images.md#3-mechanism-explainer-cards-publicog-learn-png).
+7. Run the mechanism content, exact static-param, and sitemap suites listed in Coverage Invariant; regenerate the OG asset before running `npm run check:generated-artifacts`.
 
 ---
 

@@ -1,5 +1,5 @@
 import {
-  BluechipRatingsMapSchema,
+  BluechipRatingSchema,
   type BluechipRatingsMap,
 } from "@shared/types/market";
 import { validatePayloadWithSchema } from "./api-schema";
@@ -18,14 +18,20 @@ export function parseBluechipRatingsCache(
       missingReason: "missing-cache",
       parseErrorReason: "json-parse-failed",
       normalize: (parsed) => {
-        const validation = validatePayloadWithSchema(
-          BluechipRatingsMapSchema,
-          parsed,
-          `${context}:bluechip-cache`,
-        );
-        return validation.ok
-          ? { ok: true, payload: validation.data }
-          : { ok: false, reason: "invalid-payload" };
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+          return { ok: false, reason: "invalid-payload" };
+        }
+
+        const ratings: BluechipRatingsMap = {};
+        for (const [pharosId, value] of Object.entries(parsed)) {
+          const validation = validatePayloadWithSchema(
+            BluechipRatingSchema,
+            value,
+            `${context}:bluechip-cache:${pharosId}`,
+          );
+          if (validation.ok) ratings[pharosId] = validation.data;
+        }
+        return { ok: true, payload: ratings };
       },
       onParseFailure: ({ message }) => recordJsonParseFailure(context, message),
     },

@@ -1,5 +1,6 @@
+import { DEPEG_PENDING_MIN_AGE_SEC } from "@shared/lib/depeg-config";
 import { DatabaseSync } from "node:sqlite";
-import { DEPEG_PENDING_MIN_AGE_SEC } from "../lib/constants";
+
 import type { PendingDepegRow } from "../lib/depeg-pending";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 

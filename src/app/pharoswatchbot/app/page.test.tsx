@@ -7,7 +7,7 @@ import {
   TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM,
   telegramMiniAppStateRevision,
 } from "@shared/lib/telegram-mini-app-contract";
-import { isMiniAppErrorCode, miniAppErrorMessage, MINI_APP_ERROR_CODES, MiniAppRequestError } from "./error-messages";
+import { isMiniAppErrorCode, miniAppErrorMessage, MiniAppRequestError } from "./error-messages";
 import PharosWatchBotMiniAppPage, { metadata } from "./page";
 import { baseState } from "./mini-app-test-fixtures";
 import type { TelegramMiniAppOperation, TelegramMiniAppState } from "./types";
@@ -136,7 +136,6 @@ afterEach(() => {
 describe("PharosWatchBotMiniAppPage", () => {
   it("keeps metadata and the Mini App error-code contract", () => {
     expect(metadata.robots).toEqual({ index: false, follow: false });
-    for (const code of MINI_APP_ERROR_CODES) expect(isMiniAppErrorCode(code)).toBe(true);
     expect(isMiniAppErrorCode("empty-alert-types")).toBe(false);
     expect(isMiniAppErrorCode("stale_auth")).toBe(false);
     expect(isMiniAppErrorCode(null)).toBe(false);

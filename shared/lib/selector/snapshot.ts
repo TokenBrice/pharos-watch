@@ -397,8 +397,10 @@ function isRecommendedSourceShape(value: unknown): boolean {
     && isFiniteNumber(value.apy30d)
     && (value.pharosYieldScore === null || isNumberInRange(value.pharosYieldScore, 0, 100))
     && (value.sourceTvlUsd === undefined || value.sourceTvlUsd === null || isNonNegativeNumber(value.sourceTvlUsd))
-    && typeof value.sourceRiskTier === "string"
-    && SOURCE_RISK_TIERS.has(value.sourceRiskTier)
+    && (
+      value.sourceRiskTier === null
+      || (typeof value.sourceRiskTier === "string" && SOURCE_RISK_TIERS.has(value.sourceRiskTier))
+    )
     && (value.selectionReason === undefined || isNullableNonEmptyString(value.selectionReason))
   );
 }

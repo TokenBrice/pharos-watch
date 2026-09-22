@@ -8,33 +8,22 @@
  * degradation. The tape projector piggy-backs on the same lane because it is
  * purely D1-bound (zero outbound connections).
  */
-import { computeAndStoreDEWS } from "../../cron/compute-dews";
+import { computeAndStoreDEWS } from "../../lib/dews/service";
 import { computeAndStoreStabilityIndex } from "../../cron/stability-index";
 import { projectTape } from "../../cron/project-tape";
 import type { ScheduledRuntimeContext } from "./context";
-import { runScheduledSlotGroups, type ScheduledSlotGroup } from "./slot-groups";
+import { bindScheduledSlotPlan, runScheduledSlotGroups } from "./slot-groups";
 
-function buildDewsPsiSlotGroups(runtime: ScheduledRuntimeContext): ScheduledSlotGroup[] {
-  return [
-    {
-      mode: "serial",
-      label: "dews-psi-tape",
-      tasks: [
-        {
-          job: "compute-dews",
-          run: (signal, reportProgress) => computeAndStoreDEWS(runtime.db, signal, reportProgress),
-        },
-        {
-          job: "stability-index",
-          run: (signal) => computeAndStoreStabilityIndex(runtime.db, signal),
-        },
-        {
-          job: "project-tape",
-          run: (signal, reportProgress) => projectTape(runtime.db, signal, reportProgress),
-        },
-      ],
+export function buildDewsPsiSlotGroups(runtime: ScheduledRuntimeContext) {
+  return bindScheduledSlotPlan("dewsPsiOffset", {
+    mode: "serial",
+    label: "dews-psi-tape",
+    implementations: {
+      "compute-dews": (signal, reportProgress) => computeAndStoreDEWS(runtime.db, signal, reportProgress),
+      "stability-index": (signal) => computeAndStoreStabilityIndex(runtime.db, signal),
+      "project-tape": (signal, reportProgress) => projectTape(runtime.db, signal, reportProgress),
     },
-  ];
+  });
 }
 
 export async function runDewsPsiSlot(runtime: ScheduledRuntimeContext) {

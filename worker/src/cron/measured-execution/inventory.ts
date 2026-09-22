@@ -102,6 +102,27 @@ function hasCoherentClSpotPrice(
   const outputValueRatio = outputReferencePriceUsd / (inputReferencePriceUsd * spotInputPerOutput);
   return Number.isFinite(outputValueRatio) && outputValueRatio <= DEX_MEASURED_MAX_FAVORABLE_OUTPUT_RATIO;
 }
+export function buildMeasuredExecutionTargetValue(
+  input: Omit<DexMeasuredExecutionTarget, "schemaVersion" | "targetId">,
+): DexMeasuredExecutionTarget {
+  return {
+    schemaVersion: DEX_MEASURED_TARGET_SCHEMA_VERSION,
+    targetId: buildDexMeasuredExecutionTargetId({
+      adapterProfileId: input.adapterProfileId,
+      stablecoinId: input.stablecoinId,
+      chain: input.chain,
+      protocol: input.protocol,
+      poolId: input.poolId,
+      tokenInAddress: input.tokenIn.address,
+      tokenOutAddress: input.tokenOut.address,
+      ...(input.poolTokenAddresses ? { poolTokenAddresses: input.poolTokenAddresses } : {}),
+      ...(input.feePips != null ? { feePips: input.feePips } : {}),
+      ...(input.tickSpacing != null ? { tickSpacing: input.tickSpacing } : {}),
+      ...(input.hookAddress ? { hookAddress: input.hookAddress } : {}),
+    }),
+    ...input,
+  };
+}
 
 interface TwoTokenTargetBuilderInput {
   pools: readonly DexApiPool[];
@@ -187,20 +208,7 @@ function buildTwoTokenMeasuredExecutionTargets(
       })) continue;
       const outputStablecoinId = input.chainAddressToId.get(buildChainAddressKey(chain, tokenOut.address));
       if (outputStablecoinId === stablecoinId) continue;
-      const targetId = buildDexMeasuredExecutionTargetId({
-        adapterProfileId: materialization.adapterProfileId,
-        stablecoinId,
-        chain,
-        protocol: materialization.protocol,
-        poolId,
-        tokenInAddress: canonicalTokens[inputIndex]!,
-        tokenOutAddress: canonicalTokens[outputIndex]!,
-        poolTokenAddresses: canonicalTokens,
-        ...(materialization.feePips != null ? { feePips: materialization.feePips } : {}),
-      });
-      const target: DexMeasuredExecutionTarget = {
-        schemaVersion: DEX_MEASURED_TARGET_SCHEMA_VERSION,
-        targetId,
+      const target = buildMeasuredExecutionTargetValue({
         stablecoinId,
         adapterProfileId: materialization.adapterProfileId,
         protocol: materialization.protocol,
@@ -225,7 +233,7 @@ function buildTwoTokenMeasuredExecutionTargets(
         retainedTvlUsd: pool.tvlUsd,
         retainedPoolPriceUsd: inputPrice,
         capturedAt: input.capturedAt,
-      };
+      });
       targets.set(buildMeasuredPoolDirectionKey(stablecoinId, poolId), target);
     }
   }
@@ -373,21 +381,7 @@ function buildClMeasuredExecutionTarget(
   }
   const chain = canonicalExitRouteChain(candidate.chain);
   const poolId = canonicalExitRouteAssetKey(chain, poolAddress);
-  const targetId = buildDexMeasuredExecutionTargetId({
-    adapterProfileId: adapter.adapterProfileId,
-    stablecoinId: input.stablecoinId,
-    chain,
-    protocol: adapter.protocol,
-    poolId,
-    tokenInAddress: canonicalTokens[inputIndex]!,
-    tokenOutAddress: canonicalTokens[outputIndex]!,
-    poolTokenAddresses: canonicalTokens,
-    ...(adapter.feePips != null ? { feePips: adapter.feePips } : {}),
-    ...(adapter.tickSpacing != null ? { tickSpacing: adapter.tickSpacing } : {}),
-  });
-  return {
-    schemaVersion: DEX_MEASURED_TARGET_SCHEMA_VERSION,
-    targetId,
+  return buildMeasuredExecutionTargetValue({
     stablecoinId: input.stablecoinId,
     adapterProfileId: adapter.adapterProfileId,
     protocol: adapter.protocol,
@@ -413,7 +407,7 @@ function buildClMeasuredExecutionTarget(
     retainedTvlUsd: input.retainedTvlUsd,
     retainedPoolPriceUsd: inputPrice,
     capturedAt: input.capturedAt,
-  };
+  });
 }
 
 const UNISWAP_V4_TARGET_MAX_TVL_RELATIVE_DRIFT = 0.02;
@@ -526,22 +520,7 @@ export function buildUniswapV4MeasuredExecutionTarget(input: {
   }
 
   const canonicalPoolId = canonicalExitRouteAssetKey(chain, poolId);
-  const targetId = buildDexMeasuredExecutionTargetId({
-    adapterProfileId: UNISWAP_V4_ADAPTER_PROFILE_ID,
-    stablecoinId: input.stablecoinId,
-    chain,
-    protocol: "uniswap-v4",
-    poolId: canonicalPoolId,
-    tokenInAddress: canonicalTokens[inputIndex]!,
-    tokenOutAddress: canonicalTokens[outputIndex]!,
-    poolTokenAddresses: canonicalTokens,
-    feePips: input.candidate.feePips,
-    tickSpacing: input.candidate.tickSpacing,
-    hookAddress: UNISWAP_V4_HOOK_FREE_ADDRESS,
-  });
-  return {
-    schemaVersion: DEX_MEASURED_TARGET_SCHEMA_VERSION,
-    targetId,
+  return buildMeasuredExecutionTargetValue({
     stablecoinId: input.stablecoinId,
     adapterProfileId: UNISWAP_V4_ADAPTER_PROFILE_ID,
     protocol: "uniswap-v4",
@@ -568,7 +547,7 @@ export function buildUniswapV4MeasuredExecutionTarget(input: {
     retainedTvlUsd: input.retainedTvlUsd,
     retainedPoolPriceUsd: inputPrice,
     capturedAt: input.capturedAt,
-  };
+  });
 }
 
 export function buildUniV3MeasuredExecutionTarget(

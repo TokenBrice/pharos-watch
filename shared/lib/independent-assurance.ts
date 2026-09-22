@@ -38,6 +38,7 @@ const ReportAdjustmentSchema = z
     code: z.string().trim().min(1),
     label: z.string().trim().min(1),
     amount: DecimalStringSchema,
+    alreadyNettedIntoAssets: z.literal(true),
     treatment: z.string().trim().min(1),
   })
   .strict();
@@ -262,9 +263,12 @@ export function reconcileIndependentAssuranceManifest(
     : "0";
 
   const reportedAssetDifference = decimalDifference(manifest.reportedAssetTotal, computedAssetTotal);
+  const reportedAssetTotalNumber = decimalToNumber(manifest.reportedAssetTotal, "reported asset total");
+  if (reportedAssetTotalNumber === 0) {
+    throw new Error("independent-assurance: reported asset total must be greater than zero");
+  }
   const reportedAssetDifferencePpm =
-    (decimalToNumber(reportedAssetDifference, "reported asset difference") /
-      decimalToNumber(manifest.reportedAssetTotal, "reported asset total")) *
+    (decimalToNumber(reportedAssetDifference, "reported asset difference") / reportedAssetTotalNumber) *
     1_000_000;
   const tolerance = options?.reportedAssetTotalTolerance;
   if (tolerance) {

@@ -33,6 +33,7 @@ import { computeSafetyScoreV9ReserveExposureKey } from "./fact-set-schema";
 import {
   addEvidence,
   addGap,
+  collateralExposureMappingIssues,
   assertKnownComponentEvidenceCurrent,
   componentResearchEvidence,
   evidenceHistoryFor,
@@ -57,11 +58,13 @@ export function buildImplementation(context: AssetBuildContext): V9AssetFactsV2[
       launchedAtSec: null,
     };
   }
+  const evidenceIds = [researchEvidence(context)];
+  assertKnownComponentEvidenceCurrent(context, "implementation-date", evidenceIds);
   return {
     status: createV9FactStatus({
       applicability: requiredV9Applicability("v9.implementation.launch-date"),
       observationState: "known",
-      evidenceRefIds: [researchEvidence(context)],
+      evidenceRefIds: evidenceIds,
     }),
     launchedAtSec: context.asset.launchedAtSec,
   };
@@ -92,7 +95,6 @@ function normalizeMechanismReview(
   review: V9MechanismRiskReview,
 ): V9MechanismRiskReviewFactV2 {
   const evidenceIds = componentResearchEvidence(context, "mechanism-risk-review");
-  const evidence = context.evidence.get(evidenceIds[0]!)!;
   const normalized = structuredClone(review) as V9MechanismRiskReview;
   const componentGapIds: string[] = [];
   const componentEvidenceIds = new Set<string>();
@@ -116,14 +118,21 @@ function normalizeMechanismReview(
   for (const [componentKey, value] of Object.entries(normalized)) {
     if (value === null || typeof value !== "object" || !("status" in value)) continue;
     const fact = value as { status: V9FactStatusV2 };
+    const specificEvidenceKey = `mechanism-risk-review:${componentKey}`;
+    const factEvidenceIds = context.asset.componentEvidence.some(
+      (binding) => binding.componentKey === specificEvidenceKey,
+    )
+      ? componentResearchEvidence(context, specificEvidenceKey)
+      : evidenceIds;
     const original = fact.status;
     if (original.observationState === "known") {
+      assertKnownComponentEvidenceCurrent(context, specificEvidenceKey, factEvidenceIds);
       fact.status = createV9FactStatus({
         applicability: original.applicability,
         observationState: "known",
-        evidenceRefIds: evidenceIds,
+        evidenceRefIds: factEvidenceIds,
       });
-      for (const evidenceId of evidenceIds) componentEvidenceIds.add(evidenceId);
+      for (const evidenceId of factEvidenceIds) componentEvidenceIds.add(evidenceId);
       continue;
     }
     // A missing non-serial component is bounded like a stale or
@@ -151,8 +160,10 @@ function normalizeMechanismReview(
             : (reviewedUnavailableMessage(context, componentKey, original.observationState) ??
               `The ${componentKey} mechanism review is not a current known fact.`),
         evidenceRefIds:
-          original.observationState === "stale" || original.observationState === "bounded-unknown" ? evidenceIds : [],
-        evidenceHistory: evidenceHistoryFor(context, evidenceIds),
+          original.observationState === "stale" || original.observationState === "bounded-unknown"
+            ? factEvidenceIds
+            : [],
+        evidenceHistory: evidenceHistoryFor(context, factEvidenceIds),
       }),
     );
     const applicability =
@@ -161,12 +172,14 @@ function normalizeMechanismReview(
       applicability,
       observationState: original.observationState,
       evidenceRefIds:
-        original.observationState === "stale" || original.observationState === "bounded-unknown" ? evidenceIds : [],
+        original.observationState === "stale" || original.observationState === "bounded-unknown"
+          ? factEvidenceIds
+          : [],
       gapIds: [gapId],
     });
     if (original.observationState === "stale") {
       hasStale = true;
-      if (evidence.freshness.state !== "stale") {
+      if (!factEvidenceIds.some((evidenceId) => context.evidence.get(evidenceId)?.freshness.state === "stale")) {
         throw new Error(`Mechanism review ${context.asset.assetId}:${componentKey} is stale but its source is current`);
       }
     } else {
@@ -174,16 +187,20 @@ function normalizeMechanismReview(
     }
     componentGapIds.push(gapId);
     if (fact.status.evidenceRefIds.length > 0) {
-      for (const evidenceId of evidenceIds) componentEvidenceIds.add(evidenceId);
+      for (const evidenceId of factEvidenceIds) componentEvidenceIds.add(evidenceId);
     }
   }
 
   const observationState = hasIncomplete ? "bounded-unknown" : hasStale ? "stale" : "known";
+  const normalizedEvidenceIds = [...componentEvidenceIds];
+  if (observationState === "known") {
+    assertKnownComponentEvidenceCurrent(context, "mechanism-risk-review", normalizedEvidenceIds);
+  }
   return {
     status: createV9FactStatus({
       applicability: requiredV9Applicability("v9.backing.mechanism-review"),
       observationState,
-      evidenceRefIds: [...componentEvidenceIds],
+      evidenceRefIds: normalizedEvidenceIds,
       gapIds: componentGapIds,
     }),
     review: normalized,
@@ -437,6 +454,8 @@ export function buildReserves(context: AssetBuildContext): {
     ) {
       throw new Error(`Reserve applicability for ${context.asset.assetId} conflicts with captured reserve rows`);
     }
+    const evidenceIds = [researchEvidence(context)];
+    assertKnownComponentEvidenceCurrent(context, "reserve-composition", evidenceIds);
     return {
       reserveStatus: createV9FactStatus({
         applicability: notApplicableV9Fact(
@@ -444,7 +463,7 @@ export function buildReserves(context: AssetBuildContext): {
           context.asset.reserveApplicability.rationale,
         ),
         observationState: "known",
-        evidenceRefIds: [researchEvidence(context)],
+        evidenceRefIds: evidenceIds,
       }),
       reserveExposures: [],
     };
@@ -593,6 +612,7 @@ export function buildReserves(context: AssetBuildContext): {
         gapIds: [gapId],
       });
     } else {
+      assertKnownComponentEvidenceCurrent(context, `reserve:${exposureKey}`, evidenceIds);
       status = createV9FactStatus({
         applicability: requiredV9Applicability("v9.backing.reserve-classification"),
         observationState: "known",
@@ -630,11 +650,15 @@ export function buildReserves(context: AssetBuildContext): {
       `Reserve classifications do not match captured exposures for ${context.asset.assetId}: ${unconsumed}`,
     );
   }
+  const envelopeEvidenceRefIds = [...new Set(envelopeEvidenceIds)];
+  if (envelopeGapIds.length === 0) {
+    assertKnownComponentEvidenceCurrent(context, "reserve-composition", envelopeEvidenceRefIds);
+  }
   return {
     reserveStatus: createV9FactStatus({
       applicability: requiredV9Applicability("v9.backing.reserve-composition"),
       observationState: envelopeGapIds.length > 0 ? "bounded-unknown" : "known",
-      evidenceRefIds: [...new Set(envelopeEvidenceIds)],
+      evidenceRefIds: envelopeEvidenceRefIds,
       gapIds: envelopeGapIds,
     }),
     reserveExposures: exposures,
@@ -646,23 +670,7 @@ export function reconcileCollateralDependencyMappings(
   dependencies: V9EffectiveDependenciesV3,
   reserveExposures: readonly V9ReserveExposureFactV2[],
 ): V9EffectiveDependenciesV3 {
-  const mappedWeightByUpstream = new Map<string, number>();
-  for (const exposure of reserveExposures) {
-    if (exposure.trackedAssetId === null) continue;
-    mappedWeightByUpstream.set(
-      exposure.trackedAssetId,
-      (mappedWeightByUpstream.get(exposure.trackedAssetId) ?? 0) + exposure.weight,
-    );
-  }
-  const mappingIssues = dependencies.edges.flatMap((edge) => {
-    if (edge.economicRole !== "basket-exposure") return [];
-    const mappedWeight = mappedWeightByUpstream.get(edge.upstreamAssetId);
-    if (mappedWeight === undefined) return [`collateral-edge-exposure-unmapped:${edge.upstreamAssetId}`];
-    if (Math.abs(mappedWeight - edge.weight) > 0.000001) {
-      return [`collateral-edge-exposure-weight-mismatch:${edge.upstreamAssetId}`];
-    }
-    return [];
-  });
+  const mappingIssues = collateralExposureMappingIssues(dependencies.edges, reserveExposures);
   if (mappingIssues.length === 0) return dependencies;
 
   const evidenceRefIds = [

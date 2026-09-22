@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ScheduledRuntimeContext } from "../context";
 import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
 import { createWorkerEnv } from "../../../test-helpers/__shared/worker-env";
-import { flattenScheduledSlotPlanJobs, SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
 
 const mocks = vi.hoisted(() => ({
   syncBluechip: vi.fn(),
@@ -43,16 +42,9 @@ describe("runDaily0805Slot", () => {
 
   afterEach(() => vi.restoreAllMocks());
 
-  it("runs bluechip and daily digest in parallel, passing digest twitter credentials", async () => {
-    const order: string[] = [];
+  it("passes the slot's twitter credentials to daily digest generation", async () => {
+    await runDaily0805Slot(runtime([]));
 
-    await runDaily0805Slot(runtime(order));
-
-    expect([...order].sort()).toEqual(
-      [...flattenScheduledSlotPlanJobs(SCHEDULED_SLOT_PLANS.daily0805Utc)].sort(),
-    );
-    expect(mocks.syncBluechip).toHaveBeenCalledOnce();
-    expect(mocks.generateDailyDigest).toHaveBeenCalledOnce();
     const digestArgs = mocks.generateDailyDigest.mock.calls[0] as unknown[] | undefined;
     expect(digestArgs?.[2]).toEqual({
       apiKey: "tw-key",

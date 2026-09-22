@@ -1,6 +1,7 @@
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { cloneResponse, createJsonResponse } from "@shared/lib/http-response";
 import { addFreshnessHeaders } from "./api-freshness-headers";
-import { CACHE_PROFILES } from "./constants";
+import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { logWorkerEvent } from "./structured-log";
 
 type ApiHandler<T extends unknown[] = unknown[]> = (...args: T) => Promise<Response>;
@@ -112,4 +113,24 @@ export function cacheControlForDegradedPayload(payload: { _meta: { degraded: boo
 
 export function jsonFreshDegradedResponse(payload: { _meta: { degraded: boolean } }, updatedAt: number, maxAgeSec: number): Response {
   return jsonFreshResponse(payload, { cacheControl: cacheControlForDegradedPayload(payload), updatedAt, maxAgeSec });
+}
+
+interface SafetyScoreSnapshotResponseMetadata {
+  publicationHealth: { status: "current" | "held" };
+  updatedAt: number;
+}
+
+export function jsonSafetyScoreSnapshotResponse(
+  snapshot: SafetyScoreSnapshotResponseMetadata,
+  body: unknown = snapshot,
+): Response {
+  const held = snapshot.publicationHealth.status === "held";
+  return jsonFreshResponse(body, {
+    cacheControl: held ? CACHE_PROFILES.noStore : CACHE_PROFILES.standard,
+    updatedAt: snapshot.updatedAt,
+    maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.reportCards,
+    headers: {
+      "X-Safety-Score-Status": held ? "held" : "current",
+    },
+  });
 }

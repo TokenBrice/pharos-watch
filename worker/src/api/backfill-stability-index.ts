@@ -2,7 +2,7 @@ import { errorResponse, jsonResponse } from "../lib/api-response";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { batchExecute } from "../lib/db";
-import { getPsiMethodologyVersionAt } from "@shared/lib/methodology-versions/stability-index";
+import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { buildSupplySnapshotMap, type PsiDepegEventRow, type PsiSupplyRow } from "../lib/psi-recompute";
 import {
   buildHistoricalDewsMap,
@@ -98,47 +98,37 @@ export async function handleBackfillStabilityIndex({
 
     const supplyQueryStartDay = Math.max(0, startDay - 7 * DAY_SECONDS);
 
-    const depegQuery = hasExplicitWindow
-      ? db
-          .prepare(
-            `SELECT stablecoin_id, peak_deviation_bps, peg_reference, started_at, ended_at
-             FROM depeg_events
-             WHERE started_at <= ? AND (ended_at IS NULL OR ended_at > ?)
-             ORDER BY started_at`,
-          )
-          .bind(endDay, startDay)
-      : db.prepare(
-          "SELECT stablecoin_id, peak_deviation_bps, peg_reference, started_at, ended_at FROM depeg_events ORDER BY started_at",
-        );
+    const depegQuery = db
+      .prepare(
+        `SELECT stablecoin_id, peak_deviation_bps, peg_reference, started_at, ended_at
+         FROM depeg_events
+         WHERE started_at <= ? AND (ended_at IS NULL OR ended_at > ?)
+         ORDER BY started_at`,
+      )
+      .bind(endDay, startDay);
 
     const allDepegs = await depegQuery.all<PsiDepegEventRow>();
     const depegEvents = allDepegs.results ?? [];
 
-    const supplyQuery = hasExplicitWindow
-      ? db
-          .prepare(
-            `SELECT stablecoin_id, snapshot_date, circulating_usd, price
-             FROM supply_history
-             WHERE snapshot_date >= ? AND snapshot_date <= ?
-             ORDER BY snapshot_date`,
-          )
-          .bind(supplyQueryStartDay, endDay)
-      : db.prepare(
-          "SELECT stablecoin_id, snapshot_date, circulating_usd, price FROM supply_history ORDER BY snapshot_date",
-        );
+    const supplyQuery = db
+      .prepare(
+        `SELECT stablecoin_id, snapshot_date, circulating_usd, price
+         FROM supply_history
+         WHERE snapshot_date BETWEEN ? AND ?
+         ORDER BY snapshot_date`,
+      )
+      .bind(supplyQueryStartDay, endDay);
     const allSupply = await supplyQuery.all<PsiSupplyRow>();
     const supplyByCoin = buildSupplySnapshotMap(allSupply.results ?? []);
 
-    const dewsQuery = hasExplicitWindow
-      ? db
-          .prepare(
-            `SELECT stablecoin_id, snapshot_date, band
-             FROM stress_signal_history
-             WHERE snapshot_date >= ? AND snapshot_date <= ?
-             ORDER BY snapshot_date`,
-          )
-          .bind(startDay, endDay)
-      : db.prepare("SELECT stablecoin_id, snapshot_date, band FROM stress_signal_history ORDER BY snapshot_date");
+    const dewsQuery = db
+      .prepare(
+        `SELECT stablecoin_id, snapshot_date, band
+         FROM stress_signal_history
+         WHERE snapshot_date BETWEEN ? AND ?
+         ORDER BY snapshot_date`,
+      )
+      .bind(startDay, endDay);
     const allHistoricalDews = await dewsQuery.all<PsiHistoricalDewsRow>();
     const dewsByDay = buildHistoricalDewsMap(allHistoricalDews.results ?? []);
 
@@ -222,7 +212,7 @@ export async function handleBackfillStabilityIndex({
 
       for (let day = startDay; day <= endDay; day += DAY_SECONDS) {
         daysEvaluated++;
-        const methodologyVersion = getPsiMethodologyVersionAt(day);
+        const methodologyVersion = getMethodologyVersionAt("stability-index", day);
         const replay = replayHistoricalPsiForDay({
           day,
           now,
@@ -248,7 +238,7 @@ export async function handleBackfillStabilityIndex({
                   existing.band,
                   existing.components ?? JSON.stringify({}),
                   existing.input_snapshot ?? JSON.stringify({}),
-                  existing.methodology_version ?? getPsiMethodologyVersionAt(existing.computed_at),
+                  existing.methodology_version ?? getMethodologyVersionAt("stability-index", existing.computed_at),
                 ),
             );
           }

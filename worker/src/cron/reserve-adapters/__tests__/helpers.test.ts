@@ -71,6 +71,27 @@ describe("buildRedemptionSnapshotMetadata", () => {
       },
     });
   });
+
+  it("requires an explicit route observation before publishing live route provenance", () => {
+    expect(buildRedemptionSnapshotMetadata({
+      routeStatus: "open",
+      routeStatusSource: "onchain",
+    } as never)).toEqual({
+      redemption: {
+        routeStatus: "open",
+      },
+    });
+    expect(buildRedemptionSnapshotMetadata({
+      routeStatus: "open",
+      routeStatusSource: "onchain",
+      routeObserved: true,
+    })).toEqual({
+      redemption: {
+        routeStatus: "open",
+        routeStatusSource: "onchain",
+      },
+    });
+  });
 });
 
 describe("normalizeSlices", () => {

@@ -444,8 +444,25 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
         },
       ]),
     );
-    const { compiled } = compileFixture(metadata, {
-      clockSec: v9TestClockSec(),
+    const clockSec = v9TestClockSec();
+    const evidenceDate = new Date(clockSec * 1_000).toISOString().slice(0, 10);
+    const currentMetadata = {
+      ...metadata,
+      proofOfReserves: metadata.proofOfReserves?.latestReport
+        ? {
+            ...metadata.proofOfReserves,
+            latestReport: {
+              ...metadata.proofOfReserves.latestReport,
+              periodEnd: evidenceDate,
+              publishedAt: evidenceDate,
+            },
+          }
+        : metadata.proofOfReserves,
+    };
+    // SAFETY-SCORE-V9-25 L-09 checks every evidence reference for staleness;
+    // keep this bridge-scope fixture's unrelated assurance evidence current.
+    const { compiled } = compileFixture(currentMetadata, {
+      clockSec,
       chainSupplyByChain,
     });
     const token2022Upgrade = compiled.assets[0]!.controls.find((control) =>

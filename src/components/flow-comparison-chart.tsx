@@ -64,8 +64,13 @@ export function FlowComparisonChart({
             height={200}
             margin={{ top: 4, right: 8, bottom: 0, left: 0 }}
             xTickFormatter={(timestamp) => hours <= 24
-              ? new Date(timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-              : new Date(timestamp).toLocaleDateString([], { month: "short", day: "numeric" })}
+              ? new Date(timestamp).toLocaleTimeString("en-US", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hourCycle: "h23",
+                  timeZone: "UTC",
+                })
+              : formatChartDate(timestamp, "short")}
             yTickFormatter={(value) => formatCurrency(value, 1)}
             valueFormatter={(value) => `${value >= 0 ? "+" : ""}${formatCurrency(value, 1)}`}
             tooltipLabelFormatter={(timestamp) => formatChartDate(timestamp, hours <= 24 ? "with-time" : "short")}

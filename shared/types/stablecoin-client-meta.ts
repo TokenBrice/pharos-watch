@@ -135,9 +135,6 @@ export const STABLECOIN_CLIENT_DETAIL_FIELDS = [
   "archetypeOverride",
 ] as const satisfies ReadonlyArray<keyof StablecoinMeta>;
 
-/** Backwards-compatible name for the canonical list field contract. */
-export const STABLECOIN_CLIENT_META_FIELDS = STABLECOIN_CLIENT_LIST_FIELDS;
-
 type StablecoinClientSourceField = Exclude<(typeof STABLECOIN_CLIENT_DETAIL_FIELDS)[number], "genius">;
 
 export type ClientMintAuthorityStatus =
@@ -166,9 +163,6 @@ export type StablecoinClientListMeta = Pick<StablecoinMeta, (typeof STABLECOIN_C
 export type StablecoinClientDetailMeta = StablecoinClientListMeta &
   Pick<StablecoinMeta, StablecoinClientSourceField> & {
     genius?: GeniusComplianceProfile;
-    blacklistStatus?: BlacklistClientStatus;
-    mintAuthoritySummary?: MintAuthorityCoverageSummary;
-    liveReserveAdapter?: NonNullable<StablecoinMeta["liveReservesConfig"]>["adapter"];
   };
 
 /**

@@ -6,6 +6,7 @@ import { DdrResponseSchema } from "@shared/types/depeg-resolver";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
 import { DEFAULT_REQUEST_TIMEOUT_MS } from "../request-lifecycle";
 import { jsonResponse, mockFetch } from "@shared/test-utils/mock-fetch";
+import { captureEnvVar, mockAbortableFetch, mockJsonOnce } from "@/test-utils/api-fetch";
 import {
   apiRequest,
   apiFetch,
@@ -17,7 +18,7 @@ import {
   SchemaValidationError,
 } from "../api";
 
-const ORIGINAL_FORCE_SITE_DATA_PROXY = process.env.NEXT_PUBLIC_FORCE_SITE_DATA_PROXY;
+const restoreForceSiteDataProxy = captureEnvVar("NEXT_PUBLIC_FORCE_SITE_DATA_PROXY");
 
 /** Minimal schema-valid live-reserve payload; override only the field under test. */
 function reserveBody(overrides: Record<string, unknown> = {}) {
@@ -37,20 +38,14 @@ function reserveBody(overrides: Record<string, unknown> = {}) {
 
 describe("api contract validation policy", () => {
   afterEach(() => {
-    if (ORIGINAL_FORCE_SITE_DATA_PROXY === undefined) {
-      delete process.env.NEXT_PUBLIC_FORCE_SITE_DATA_PROXY;
-    } else {
-      process.env.NEXT_PUBLIC_FORCE_SITE_DATA_PROXY = ORIGINAL_FORCE_SITE_DATA_PROXY;
-    }
+    restoreForceSiteDataProxy();
     vi.useRealTimers();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
 
   it("throws SchemaValidationError on strict endpoint schema mismatch", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      jsonResponse({ ok: true }),
-    );
+    mockJsonOnce({ ok: true });
 
     await expect(
       apiFetch("/api/stablecoins", z.object({ peggedAssets: z.array(z.object({ id: z.string() })) })),
@@ -82,9 +77,7 @@ describe("api contract validation policy", () => {
 
   it("returns parsed data on strict endpoint when schema matches", async () => {
     const body = { summary: null, coins: [] };
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      jsonResponse(body),
-    );
+    mockJsonOnce(body);
 
     const result = await apiFetch("/api/peg-summary", z.object({ summary: z.null(), coins: z.array(z.unknown()) }));
 
@@ -93,17 +86,13 @@ describe("api contract validation policy", () => {
 
   it("returns raw successful payloads when no schema is provided", async () => {
     const body = { ok: true, count: 2 };
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      jsonResponse(body),
-    );
+    mockJsonOnce(body);
 
     await expect(apiFetch("/api/custom")).resolves.toEqual(body);
   });
 
   it("throws on schema mismatch by default whenever a schema is provided", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      jsonResponse({ something: "unexpected" }),
-    );
+    mockJsonOnce({ something: "unexpected" });
 
     await expect(apiFetch("/api/daily-digest", z.object({ digest: z.string() }))).rejects.toBeInstanceOf(
       SchemaValidationError,
@@ -113,9 +102,7 @@ describe("api contract validation policy", () => {
   it("keeps permissive behavior only when warn mode is explicit", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const raw = { something: "unexpected" };
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      jsonResponse(raw),
-    );
+    mockJsonOnce(raw);
 
     const result = await apiFetch("/api/daily-digest", z.object({ digest: z.string() }), undefined, "warn");
 
@@ -129,9 +116,7 @@ describe("api contract validation policy", () => {
       wrong: true,
     };
 
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      jsonResponse(bodyWithMeta),
-    );
+    mockJsonOnce(bodyWithMeta);
 
     await expect(
       apiFetchWithMeta("/api/stablecoins", z.object({ peggedAssets: z.array(z.unknown()) })),
@@ -158,9 +143,7 @@ describe("api contract validation policy", () => {
       coins: [],
     };
 
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      jsonResponse(bodyWithMeta),
-    );
+    mockJsonOnce(bodyWithMeta);
 
     const result = await apiFetchWithMeta(
       "/api/peg-summary",
@@ -172,20 +155,18 @@ describe("api contract validation policy", () => {
   });
 
   it("drops malformed dependency metadata while preserving valid _meta", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      jsonResponse({
-        _meta: {
-          updatedAt: 200,
-          ageSeconds: 20,
-          status: "fresh",
-          dependencies: {
-            bad: { status: "offline", ageSeconds: 50 },
-            price: { updatedAt: null, ageSeconds: null, status: "unavailable", reason: null },
-          },
+    mockJsonOnce({
+      _meta: {
+        updatedAt: 200,
+        ageSeconds: 20,
+        status: "fresh",
+        dependencies: {
+          bad: { status: "offline", ageSeconds: 50 },
+          price: { updatedAt: null, ageSeconds: null, status: "unavailable", reason: null },
         },
-        ok: true,
-      }),
-    );
+      },
+      ok: true,
+    });
 
     const result = await apiFetchWithMeta("/api/chains", z.object({ ok: z.boolean() }), undefined, "warn");
 
@@ -238,9 +219,7 @@ describe("api contract validation policy", () => {
       },
     };
 
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      jsonResponse(ddrPayload, 200, { "X-Data-Age": "0" }),
-    );
+    mockJsonOnce(ddrPayload, 200, { "X-Data-Age": "0" });
 
     const result = await apiFetchWithMeta("/api/depeg-resolver", DdrResponseSchema);
 
@@ -267,9 +246,7 @@ describe("api contract validation policy", () => {
       },
     };
 
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      jsonResponse(ddrPayload, 200, { "X-Data-Age": "30" }),
-    );
+    mockJsonOnce(ddrPayload, 200, { "X-Data-Age": "30" });
 
     const result = await apiFetchWithMeta("/api/depeg-resolver");
 
@@ -281,9 +258,7 @@ describe("api contract validation policy", () => {
   });
 
   it("preserves strict meta-aware validation failures when no envelope fallback applies", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      jsonResponse({ ok: true }),
-    );
+    mockJsonOnce({ ok: true });
 
     await expect(
       apiFetchWithMeta("/api/custom", z.object({ ok: z.literal(false) })),
@@ -404,9 +379,7 @@ describe("api contract validation policy", () => {
 
   it("adds the Pharos browser Accept marker for browser-side public API requests", async () => {
     vi.stubGlobal("window", { location: { hostname: "pharos.watch" } });
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      jsonResponse({ ok: true }),
-    );
+    const fetchSpy = mockJsonOnce({ ok: true });
 
     await apiFetch("/api/stablecoins", z.object({ ok: z.boolean() }), undefined, "warn");
 
@@ -417,9 +390,7 @@ describe("api contract validation policy", () => {
 
   it("passes request methods into browser URL lane selection", async () => {
     vi.stubGlobal("window", { location: { hostname: "pharos.watch" } });
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      jsonResponse({ ok: true }),
-    );
+    const fetchSpy = mockJsonOnce({ ok: true });
 
     await apiRequest("/api/api-key-requests", { method: "POST" });
 
@@ -429,14 +400,7 @@ describe("api contract validation policy", () => {
   it("propagates caller-provided AbortSignal through the shared request helper", async () => {
     vi.stubGlobal("window", { location: { hostname: "pharos.watch" } });
     vi.useFakeTimers();
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(
-      (_input, init) =>
-        new Promise<Response>((_resolve, reject) => {
-          init?.signal?.addEventListener("abort", () => {
-            reject(init.signal?.reason ?? new DOMException("caller aborted", "AbortError"));
-          });
-        }),
-    );
+    const fetchSpy = mockAbortableFetch(new DOMException("caller aborted", "AbortError"));
     const controller = new AbortController();
 
     const requestPromise = apiRequest("/api/stablecoins", { signal: controller.signal });
@@ -478,14 +442,7 @@ describe("api contract validation policy", () => {
   it("applies the default shared API timeout when callers do not provide one", async () => {
     vi.stubGlobal("window", { location: { hostname: "pharos.watch" } });
     vi.useFakeTimers();
-    vi.spyOn(globalThis, "fetch").mockImplementation(
-      (_input, init) =>
-        new Promise<Response>((_resolve, reject) => {
-          init?.signal?.addEventListener("abort", () => {
-            reject(init.signal?.reason ?? new DOMException("timed out", "TimeoutError"));
-          });
-        }),
-    );
+    mockAbortableFetch(new DOMException("timed out", "TimeoutError"));
 
     const requestPromise = apiRequest("/api/stablecoins");
     const rejection = expect(requestPromise).rejects.toMatchObject({
@@ -500,14 +457,7 @@ describe("api contract validation policy", () => {
   it("allows callers to override the shared timeout through apiFetch options", async () => {
     vi.stubGlobal("window", { location: { hostname: "pharos.watch" } });
     vi.useFakeTimers();
-    vi.spyOn(globalThis, "fetch").mockImplementation(
-      (_input, init) =>
-        new Promise<Response>((_resolve, reject) => {
-          init?.signal?.addEventListener("abort", () => {
-            reject(init.signal?.reason ?? new DOMException("timed out", "TimeoutError"));
-          });
-        }),
-    );
+    mockAbortableFetch(new DOMException("timed out", "TimeoutError"));
 
     const requestPromise = apiFetch("/api/stablecoins", undefined, undefined, undefined, { timeoutMs: 250 });
     const rejection = expect(requestPromise).rejects.toMatchObject({
@@ -539,7 +489,7 @@ describe("api contract validation policy", () => {
   });
 
   it("throws ApiFetchError carrying the status, path, and body text of a non-OK response", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(jsonResponse({ error: "nope" }, 503));
+    mockJsonOnce({ error: "nope" }, 503);
 
     const thrown = await apiFetch("/api/stablecoins").catch((error: unknown) => error);
 
@@ -567,7 +517,7 @@ describe("api contract validation policy", () => {
   });
 
   it("returns schema output rather than the raw payload when a schema transforms it", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(jsonResponse({ count: 2 }));
+    mockJsonOnce({ count: 2 });
 
     const result = await apiFetch(
       "/api/custom",
@@ -645,10 +595,10 @@ describe("api contract validation policy", () => {
   });
 
   it("captures Warning header in apiFetchWithMeta", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(jsonResponse({ ok: true }, 200, {
+    mockJsonOnce({ ok: true }, 200, {
       "X-Data-Age": "11000",
       Warning: '110 - "Response is stale (11000s old, max 900s)"',
-    }));
+    });
 
     const result = await apiFetchWithMeta("/api/daily-digest", z.object({ ok: z.boolean() }), undefined, "warn");
     expect(result.meta?.warning).toContain("Response is stale");
@@ -656,9 +606,7 @@ describe("api contract validation policy", () => {
   });
 
   it("keeps age metadata unknown for a freshness warning when no age source exists", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      jsonResponse({ ok: true }, 200, { Warning: '110 - "Response is degraded"' }),
-    );
+    mockJsonOnce({ ok: true }, 200, { Warning: '110 - "Response is degraded"' });
 
     const result = await apiFetchWithMeta("/api/daily-digest", z.object({ ok: z.boolean() }), undefined, "warn");
 
@@ -672,12 +620,10 @@ describe("api contract validation policy", () => {
 
   it("combines warning-only body metadata with a header-derived producer clock", async () => {
     vi.setSystemTime(new Date("2026-06-23T10:05:00.000Z"));
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      jsonResponse({
-        _meta: { status: "degraded", warning: "dependency unavailable" },
-        ok: true,
-      }, 200, { Age: "120", "X-Data-Age": "30" }),
-    );
+    mockJsonOnce({
+      _meta: { status: "degraded", warning: "dependency unavailable" },
+      ok: true,
+    }, 200, { Age: "120", "X-Data-Age": "30" });
 
     const result = await apiFetchWithMeta("/api/chains", z.object({ ok: z.boolean() }));
 
@@ -690,24 +636,22 @@ describe("api contract validation policy", () => {
   });
 
   it("preserves producer status while attaching a Warning header", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      jsonResponse({
-        _meta: {
-          updatedAt: 200,
-          ageSeconds: 20,
-          status: "fresh",
-          dependencies: {
-            reportCards: {
-              updatedAt: 100,
-              ageSeconds: 120,
-              status: "stale",
-              reason: "stale cache",
-            },
+    mockJsonOnce({
+      _meta: {
+        updatedAt: 200,
+        ageSeconds: 20,
+        status: "fresh",
+        dependencies: {
+          reportCards: {
+            updatedAt: 100,
+            ageSeconds: 120,
+            status: "stale",
+            reason: "stale cache",
           },
         },
-        ok: true,
-      }, 200, { Warning: '110 - "Response is degraded (20s old, max 600s)"' }),
-    );
+      },
+      ok: true,
+    }, 200, { Warning: '110 - "Response is degraded (20s old, max 600s)"' });
 
     const result = await apiFetchWithMeta("/api/chains", z.object({ ok: z.boolean() }), undefined, "warn");
 
@@ -728,12 +672,10 @@ describe("api contract validation policy", () => {
   });
 
   it("keeps fresh _meta fresh for non-freshness advisory warnings", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      jsonResponse({
-        _meta: { updatedAt: 200, ageSeconds: 20, status: "fresh" },
-        ok: true,
-      }, 200, { Warning: '199 - "Latest sync-dex-liquidity run shows medium quality drift"' }),
-    );
+    mockJsonOnce({
+      _meta: { updatedAt: 200, ageSeconds: 20, status: "fresh" },
+      ok: true,
+    }, 200, { Warning: '199 - "Latest sync-dex-liquidity run shows medium quality drift"' });
 
     const result = await apiFetchWithMeta("/api/dex-liquidity", z.object({ ok: z.boolean() }), undefined, "warn");
 
@@ -746,18 +688,16 @@ describe("api contract validation policy", () => {
   });
 
   it("preserves body-level API warnings in meta-aware fetches", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      jsonResponse({
-        current: null,
-        history: [],
-        warning: "Yield history freshness lookup failed; falling back to cache metadata.",
-        methodology: {
-          version: "7.45",
-          currentVersion: "7.45",
-          changelogPath: "/methodology/yield-changelog/",
-        },
-      }, 200, { "X-Data-Age": "60" }),
-    );
+    mockJsonOnce({
+      current: null,
+      history: [],
+      warning: "Yield history freshness lookup failed; falling back to cache metadata.",
+      methodology: {
+        version: "7.45",
+        currentVersion: "7.45",
+        changelogPath: "/methodology/yield-changelog/",
+      },
+    }, 200, { "X-Data-Age": "60" });
 
     const result = await apiFetchWithMeta(
       "/api/yield-history?stablecoin=usdt-tether",
@@ -783,9 +723,7 @@ describe("api contract validation policy", () => {
   });
 
   it("leaves X-Data-Age threshold classification to data health", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      jsonResponse({ ok: true }, 200, { "X-Data-Age": "1122" }),
-    );
+    mockJsonOnce({ ok: true }, 200, { "X-Data-Age": "1122" });
 
     const result = await apiFetchWithMeta("/api/dex-liquidity", z.object({ ok: z.boolean() }), undefined);
     expect(result.meta?.status).toBe("fresh");
@@ -794,9 +732,7 @@ describe("api contract validation policy", () => {
 
   it("accounts for edge Age when X-Data-Age is the only producer clock", async () => {
     vi.setSystemTime(new Date("2026-06-23T10:05:00.000Z"));
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      jsonResponse({ ok: true }, 200, { Age: "120", "X-Data-Age": "30" }),
-    );
+    mockJsonOnce({ ok: true }, 200, { Age: "120", "X-Data-Age": "30" });
 
     const result = await apiFetchWithMeta("/api/dex-liquidity", z.object({ ok: z.boolean() }));
 
@@ -804,12 +740,10 @@ describe("api contract validation policy", () => {
   });
 
   it("does not apply edge Age when body _meta provides updatedAt", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      jsonResponse({
-        _meta: { updatedAt: 200, ageSeconds: 20, status: "fresh" },
-        ok: true,
-      }, 200, { Age: "120", "X-Data-Age": "30" }),
-    );
+    mockJsonOnce({
+      _meta: { updatedAt: 200, ageSeconds: 20, status: "fresh" },
+      ok: true,
+    }, 200, { Age: "120", "X-Data-Age": "30" });
 
     const result = await apiFetchWithMeta("/api/chains", z.object({ ok: z.boolean() }));
 
@@ -818,9 +752,7 @@ describe("api contract validation policy", () => {
 
   it("derives X-Data-Age updatedAt from the server Date header when available", async () => {
     vi.setSystemTime(new Date("2026-06-23T10:05:00.000Z"));
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      jsonResponse({ ok: true }, 200, { Date: "Tue, 23 Jun 2026 10:00:00 GMT", "X-Data-Age": "30" }),
-    );
+    mockJsonOnce({ ok: true }, 200, { Date: "Tue, 23 Jun 2026 10:00:00 GMT", "X-Data-Age": "30" });
 
     const result = await apiFetchWithMeta("/api/dex-liquidity", z.object({ ok: z.boolean() }), undefined);
 

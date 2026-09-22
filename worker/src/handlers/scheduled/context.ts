@@ -53,18 +53,6 @@ const PER_JOB_LEASE_OPTIONS: Record<string, Pick<CronLeaseOptions, "heartbeatSec
   "weekly-recap": LONG_RUNNING_LEASE_OPTIONS,
 };
 
-/**
- * Runtime fetch-concurrency overrides. `shared/lib/cron-jobs.ts` declares the
- * per-job ceiling used by the budget surface; this map exists only where the
- * live lane peaks above that declaration, and each entry names its concurrent
- * caller. `sync-yield-data` peaks at 2 because the Midas mMEV NAV oracle issues
- * both of its probes in one `Promise.all`; every other source in the lane runs
- * serially (DL pools come from cache, on-chain rates are one batch).
- */
-const JOB_MAX_CONNECTIONS_OVERRIDES: Record<string, number> = {
-  "sync-yield-data": 2, // Midas mMEV NAV oracle pair (decimals + latestRoundData)
-};
-
 export interface ScheduledRuntimeContext {
   db: D1Database;
   env: Env;
@@ -101,7 +89,6 @@ export function getRuntimeProducerIdentity(
   runtime: ScheduledRuntimeContext,
   job: string,
 ): ProducerIdentity {
-  if (runtime.getProducerIdentity) return runtime.getProducerIdentity(job);
   const descriptor = getScheduledTaskDescriptor(runtime.scheduleKey, job);
   return {
     scheduleKey: runtime.scheduleKey,
@@ -187,21 +174,6 @@ export function createScheduledRuntimeContext(
   const producerKind = scheduled.producerKind ?? "scheduled-job";
   const fetchBudget = new ScheduledFetchBudget();
   const slotAbortSignal = scheduled.parentSignal;
-  const getProducerIdentity = (job: string): ProducerIdentity => {
-    const descriptor = getScheduledTaskDescriptor(scheduled.scheduleKey, job);
-    return {
-      scheduleKey: scheduled.scheduleKey,
-      job,
-      producerPath: descriptor.producerPath,
-      producerKind: scheduled.producerKind ?? descriptor.producerKind,
-      invocationId,
-      workerVersion,
-      slotStartedAt: scheduled.slotStartedAt,
-      calendarPeriod: descriptor.calendarIdentity === "utc-month"
-        ? utcCalendarMonth(scheduled.slotStartedAt)
-        : null,
-    };
-  };
 
   const runtime: ScheduledRuntimeContext = {
     db,
@@ -234,7 +206,7 @@ export function createScheduledRuntimeContext(
         ? AbortSignal.any([runtime.slotSignal, slotAbortSignal])
         : runtime.slotSignal ?? slotAbortSignal;
 
-      return fetchBudget.run(JOB_MAX_CONNECTIONS_OVERRIDES[job] ?? descriptor.maxConnections, combinedSlotSignal, async () => {
+      return fetchBudget.run(descriptor.maxConnections, combinedSlotSignal, async () => {
         return logCronRun(db, job, async (signal, reportProgress): Promise<CronResult> => {
           const slotMeta = {
             slotStartedAt: scheduled.slotStartedAt,
@@ -325,7 +297,7 @@ export function createScheduledRuntimeContext(
           timeoutBudget,
           abortSignal: combinedSlotSignal,
           producer: {
-            ...getProducerIdentity(job),
+            ...getRuntimeProducerIdentity(runtime, job),
           },
         });
       });
@@ -338,9 +310,9 @@ export function createScheduledRuntimeContext(
       const combinedSignal = runtime.slotSignal && slotAbortSignal
         ? AbortSignal.any([runtime.slotSignal, slotAbortSignal])
         : runtime.slotSignal ?? slotAbortSignal;
-      return fetchBudget.run(JOB_MAX_CONNECTIONS_OVERRIDES[job] ?? descriptor.maxConnections, combinedSignal, () => fn(combinedSignal));
+      return fetchBudget.run(descriptor.maxConnections, combinedSignal, () => fn(combinedSignal));
     },
-    getProducerIdentity,
+    getProducerIdentity: (job) => getRuntimeProducerIdentity(runtime, job),
   };
   return runtime;
 }

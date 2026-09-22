@@ -5,7 +5,6 @@ import type { LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-ada
 import {
   parseLiveReserveAdapterParams,
 } from "@shared/lib/live-reserve-adapters";
-import type { EvmMulticall3Result } from "../../lib/evm-rpc";
 import {
   DECIMALS_SELECTOR,
   PAUSED_SELECTOR,
@@ -14,8 +13,8 @@ import {
   encodeUint256,
 } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
-import { decodeStrictBoolWord, decodeUint256Word } from "./abi-decode";
-import { parseEvmAddressResult, resolveCoinContractAddress } from "./evm";
+import { decodeStrictAddressWord, decodeStrictBoolWord, decodeUint256Word } from "./abi-decode";
+import { resolveCoinContractAddress } from "./evm";
 import {
   fetchOnchainMulticall3,
   notApplicableFreshnessMetadata,
@@ -30,6 +29,7 @@ import {
   ERC4626_TOTAL_ASSETS_SELECTOR,
   computeErc4626NavConsistencyFromResult,
   makeContractRawCaller,
+  multicallResultOrNull,
 } from "./erc4626";
 import {
   buildExecutableRedemptionCapacityTelemetry,
@@ -42,19 +42,11 @@ import {
   type RedemptionCapacityTelemetry,
 } from "./erc4626-redemption-capacity";
 import {
+  hasExecutableRedemptionObserver,
   observeExecutableRedemptionRoute,
 } from "./executable-redemption-observers";
-import { multicallResultByLabel } from "./onchain-identity";
 
 const YEARN_V3_IS_SHUTDOWN_SELECTOR = "0xbf86d690";
-const EXECUTABLE_REDEMPTION_COIN_IDS = new Set(["eearn-ember", "sdusd-dtrinity"]);
-
-function successfulMulticallResult(
-  results: EvmMulticall3Result[] | null,
-  label: string,
-): string | null {
-  return results ? multicallResultByLabel(results, label) : null;
-}
 
 interface SingleAssetSliceConfig {
   name: ReserveSlice["name"];
@@ -115,7 +107,7 @@ export async function fetchErc4626SingleAssetReserves(
   });
   const usesSfrxusdCrosschainRoute =
     sliceConfig.redemptionLiquidity?.source === "fraxtal-hop-withdrawable";
-  const usesExecutableRedemptionRoute = EXECUTABLE_REDEMPTION_COIN_IDS.has(coin.id);
+  const usesExecutableRedemptionRoute = hasExecutableRedemptionObserver(coin.id);
   const usesGenericBatch = !usesExecutableRedemptionRoute && !usesSfrxusdCrosschainRoute;
   const probesYearnShutdown =
     sliceConfig.redemptionLiquidity?.source === "yearn-v3-withdrawable";
@@ -152,17 +144,17 @@ export async function fetchErc4626SingleAssetReserves(
       fallbackRpcUrl: sliceConfig.fallbackRpcUrl,
       timeoutMs: timeout,
     });
-    assetResult = successfulMulticallResult(stateResults, "asset");
-    totalAssetsResult = successfulMulticallResult(stateResults, "total-assets");
-    totalSupplyResult = successfulMulticallResult(stateResults, "total-supply");
+    assetResult = multicallResultOrNull(stateResults, "asset");
+    totalAssetsResult = multicallResultOrNull(stateResults, "total-assets");
+    totalSupplyResult = multicallResultOrNull(stateResults, "total-supply");
     pauseProbe = {
-      paused: decodeStrictBoolWord(successfulMulticallResult(stateResults, "paused")),
+      paused: decodeStrictBoolWord(multicallResultOrNull(stateResults, "paused")),
       shutdown: probesYearnShutdown
-        ? decodeStrictBoolWord(successfulMulticallResult(stateResults, "yearn-shutdown"))
+        ? decodeStrictBoolWord(multicallResultOrNull(stateResults, "yearn-shutdown"))
         : null,
     };
     for (const [index, lock] of locks.entries()) {
-      const result = successfulMulticallResult(stateResults, `redemption-lock-${index}`);
+      const result = multicallResultOrNull(stateResults, `redemption-lock-${index}`);
       if (lock.kind === "paused-bool") {
         const paused = decodeStrictBoolWord(result);
         if (paused == null) throw new Error(`ERC-4626 redemption lock ${lock.selector} unreadable for ${coin.id}`);
@@ -196,7 +188,7 @@ export async function fetchErc4626SingleAssetReserves(
   }
 
   const warnings: LiveReserveWarning[] = [];
-  const assetAddress = assetResult ? parseEvmAddressResult(assetResult as `0x${string}`) : null;
+  const assetAddress = assetResult ? decodeStrictAddressWord(assetResult as `0x${string}`) : null;
   if (!assetAddress && sliceConfig.expectedAssetAddress) {
     throw new Error(
       `ERC-4626 asset() could not be read for ${coin.id}; expected ${sliceConfig.expectedAssetAddress}`,
@@ -247,11 +239,11 @@ export async function fetchErc4626SingleAssetReserves(
   const navCheck = computeErc4626NavConsistencyFromResult({
     totalAssetsRaw,
     totalSupplyRaw,
-    convertResult: successfulMulticallResult(dependentResults, "convert-to-assets"),
+    convertResult: multicallResultOrNull(dependentResults, "convert-to-assets"),
     warningCode: "erc4626-nav-divergence",
   });
-  const idleBalanceResult = successfulMulticallResult(dependentResults, "idle-underlying-balance");
-  const decimalsResult = successfulMulticallResult(dependentResults, "underlying-decimals");
+  const idleBalanceResult = multicallResultOrNull(dependentResults, "idle-underlying-balance");
+  const decimalsResult = multicallResultOrNull(dependentResults, "underlying-decimals");
   const idleUnderlyingBalanceRaw = idleBalanceResult ? decodeUint256Word(idleBalanceResult) : null;
   const underlyingDecimalsRaw = decimalsResult ? decodeUint256Word(decimalsResult) : null;
   const { navConsistencyRatio, convertToAssetsRaw } = navCheck;
@@ -403,6 +395,20 @@ export async function fetchErc4626SingleAssetReserves(
     }
   }
 
+  const routeStatus =
+    lockPaused || redemptionCapacity?.routeStatus === "paused"
+      ? "paused" as const
+      : hasDegradingWarnings(warnings)
+        ? "degraded" as const
+        : redemptionCapacity?.routeStatus ?? "unknown" as const;
+  // A degraded reserve run is this run's own verdict, so its route claim keeps
+  // the read family that produced it; every other source claim must come from
+  // an openness verdict observed this run.
+  const routeStatusSource = routeStatus === "degraded"
+    ? redemptionCapacity?.routeStatusSource
+      ?? (redemptionCapacity?.freshnessKind === "same-run-api" ? "protocol-api" as const : "onchain" as const)
+    : redemptionCapacity?.routeStatusSource;
+
   return {
     slices,
     ...(warnings.length > 0 ? { warnings } : {}),
@@ -472,14 +478,9 @@ export async function fetchErc4626SingleAssetReserves(
           : {
               capacityKind: "documented-eventual" as const,
             }),
-        freshnessKind: redemptionCapacity?.freshnessKind ?? "same-run-onchain" as const,
-        routeStatus:
-          lockPaused || redemptionCapacity?.routeStatus === "paused"
-            ? "paused" as const
-            : hasDegradingWarnings(warnings)
-              ? "degraded" as const
-              : redemptionCapacity?.routeStatus ?? "unknown" as const,
-        routeStatusSource: redemptionCapacity?.routeStatusSource ?? "onchain" as const,
+        ...(redemptionCapacity ? { freshnessKind: redemptionCapacity.freshnessKind } : {}),
+        routeStatus,
+        ...(routeStatusSource != null ? { routeStatusSource } : {}),
         ...(configuredCapacity?.v9RouteAttempt
           ? { v9RouteAttempt: configuredCapacity.v9RouteAttempt }
           : {}),

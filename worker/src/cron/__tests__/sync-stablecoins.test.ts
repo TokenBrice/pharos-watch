@@ -50,7 +50,7 @@ vi.mock("@shared/lib/stablecoins/frozen-snapshots", () => ({ FROZEN_SNAPSHOTS: [
 vi.mock("../sync-stablecoins/enrich-prices", () => ({
   enrichMissingPrices: vi.fn(async () => ({ totalMissing: 0, pass1: 0, pass1b: 0, passCmc: 0, passJupiter: 0, passDex: 0, passCgLowVolume: 0, finalMissing: 0, failedPasses: [] })),
   hasMissingPrice: vi.fn((asset: { price?: number | null }) => asset.price == null || typeof asset.price !== "number" || asset.price === 0),
-  fetchPrimaryPrices: vi.fn(async () => ({ results: new Map(), stats: { attempted: 0, high: 0, singleSource: 0, cgOnly: 0, low: 0 }, cgPrices: new Map() })),
+  fetchPrimaryPrices: vi.fn(async () => ({ results: new Map(), stats: { attempted: 0, high: 0, singleSource: 0, cgOnly: 0, low: 0 } })),
 }));
 vi.mock("../detect-depegs", () => ({ detectDepegEvents: vi.fn(async () => {}) }));
 vi.mock("../confirm-pending-depegs", () => ({ confirmPendingDepegs: vi.fn(async () => ({ providerDiagnostics: [] })) }));
@@ -118,7 +118,7 @@ describe("syncStablecoins", () => {
     vi.mocked(recordOutcome).mockReset().mockResolvedValue(mockCircuitOutcomeRecord());
     fetchWithRetryMock.mockReset();
     vi.mocked(enrichMissingPrices).mockReset().mockResolvedValue({ totalMissing: 0, pass1: 0, pass1b: 0, passCmc: 0, passJupiter: 0, passDex: 0, passCgLowVolume: 0, finalMissing: 0, failedPasses: [] });
-    vi.mocked(fetchPrimaryPrices).mockReset().mockResolvedValue({ results: new Map(), stats: { attempted: 0, high: 0, singleSource: 0, cgOnly: 0, low: 0 }, cgPrices: new Map() });
+    vi.mocked(fetchPrimaryPrices).mockReset().mockResolvedValue({ results: new Map(), stats: { attempted: 0, high: 0, singleSource: 0, cgOnly: 0, low: 0 } });
     vi.mocked(fetchAuthoritativeLivePriceOverrides).mockReset().mockResolvedValue(new Map());
     vi.mocked(detectDepegEvents).mockReset().mockResolvedValue(undefined);
     vi.mocked(confirmPendingDepegs).mockReset().mockResolvedValue({ providerDiagnostics: [] });
@@ -172,13 +172,17 @@ describe("syncStablecoins", () => {
     const result = await syncStablecoins(makeSyncDb());
     const metadata = JSON.parse(result.metadata ?? "{}");
     expect(enrichMissingPrices).not.toHaveBeenCalled();
-    expect(metadata.gtProbe).toMatchObject({ inlineDisabled: true, isolationReason: "worker-memory-boundary" });
+    expect(metadata).toMatchObject({
+      enrichment: null,
+      enrichmentDisabled: true,
+      gtProbe: { inlineDisabled: true, isolationReason: "worker-memory-boundary" },
+    });
   });
 
   it("keeps a sane list price when a primary source reports a severe downside", async () => {
     const data = makeDlResponse(60);
     Object.assign(data.peggedAssets[0], { id: "usdt-tether", name: "Tether", symbol: "USDT", price: 1, priceSource: "defillama", priceConfidence: "single-source", circulating: { peggedUSD: 100_000_000 } });
-    vi.mocked(fetchPrimaryPrices).mockResolvedValueOnce({ results: new Map([["usdt-tether", { price: 0.15, source: "coingecko", confidence: "single-source", dlPrice: 1, cgPrice: 0.15, candidateSources: ["coingecko"], agreeSources: ["coingecko"] }]]), stats: { attempted: 1, high: 0, singleSource: 1, cgOnly: 1, low: 0 }, cgPrices: new Map([["tether", 0.15]]) });
+    vi.mocked(fetchPrimaryPrices).mockResolvedValueOnce({ results: new Map([["usdt-tether", { price: 0.15, source: "coingecko", confidence: "single-source", dlPrice: 1, cgPrice: 0.15, candidateSources: ["coingecko"], agreeSources: ["coingecko"] }]]), stats: { attempted: 1, high: 0, singleSource: 1, cgOnly: 1, low: 0 } });
     const db = makeSyncDb();
     const writes = trackCacheWrites(db);
     mockFetchWithRetry(defaultSyncRoutes(data));
@@ -193,7 +197,7 @@ describe("syncStablecoins", () => {
     const db = makeSyncDb([{ match: "SELECT value, updated_at FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: JSON.stringify(previous), updated_at: now - 90 } }]);
     const data = makeDlResponse(60);
     Object.assign(data.peggedAssets[0], { id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether", price: 0.5, priceSource: "defillama", priceConfidence: "single-source", circulating: { peggedUSD: 100_000_000 } });
-    vi.mocked(fetchPrimaryPrices).mockResolvedValueOnce({ results: new Map([["usdt-tether", { price: 1.05, source: "coingecko", confidence: "single-source", dlPrice: 0.5, cgPrice: 1.05, candidateSources: ["coingecko"], agreeSources: ["coingecko"] }]]), stats: { attempted: 1, high: 0, singleSource: 1, cgOnly: 1, low: 0 }, cgPrices: new Map([["tether", 1.05]]) });
+    vi.mocked(fetchPrimaryPrices).mockResolvedValueOnce({ results: new Map([["usdt-tether", { price: 1.05, source: "coingecko", confidence: "single-source", dlPrice: 0.5, cgPrice: 1.05, candidateSources: ["coingecko"], agreeSources: ["coingecko"] }]]), stats: { attempted: 1, high: 0, singleSource: 1, cgOnly: 1, low: 0 } });
     const writes = trackCacheWrites(db);
     mockFetchWithRetry(defaultSyncRoutes(data));
     await syncStablecoins(db);

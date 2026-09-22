@@ -2,13 +2,12 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   solanaSlotResponse,
   cleanupEnrichMissingPricesTest,
-  fixtureEnrichMissingPrices,
-  fixtureRunJupiterPass,
-  makeFixtureMockD1 as fixtureMockD1,
-  fixtureMockFetch,
-  fixtureCIRCUIT_SOURCE,
-  type PeggedAsset,
+  makeEnrichPricesDb,
 } from "./enrich-prices.test-support";
+import { enrichMissingPrices, type PeggedAsset } from "../sync-stablecoins/enrich-prices";
+import { runJupiterPass } from "../sync-stablecoins/enrich-prices-jupiter-pass";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
+import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { makePeggedAsset } from "../sync-stablecoins/__tests__/_fixtures";
 import { buildChainRpcs } from "../../lib/chain-registry";
 
@@ -16,24 +15,37 @@ import { buildChainRpcs } from "../../lib/chain-registry";
 
 
 
+function makeMissingUsdg(): PeggedAsset {
+  return makePeggedAsset({ id: "usdg-paxos", name: "USDG", symbol: "USDG", price: 0 });
+}
+
+const USDG_SOLANA_MINT = "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH";
+
+function jupiterRoutes(currentSlot: number, quote: Readonly<Record<string, unknown>>) {
+  return [
+    { match: "api.mainnet-beta.solana.com", body: solanaSlotResponse(currentSlot) },
+    { match: "api.jup.ag/price/v3", body: { [USDG_SOLANA_MINT]: quote } },
+  ];
+}
+
 describe("enrichMissingPrices", () => {
   afterEach(cleanupEnrichMissingPricesTest);
   it.each([false, true])("uses configured Solana references with bounded public fallback (keyed failure: %s)", async (keyedFailure) => {
     const currentSlot = 418_913_760;
     const assets = [makePeggedAsset({ id: "usdg-paxos", symbol: "USDG", price: 0 })];
     const chainRpcs = buildChainRpcs("test-alchemy-secret", "test-drpc-secret");
-    const fetchSpy = fixtureMockFetch([
+    const fetchSpy = mockFetch([
       { match: "solana-mainnet.g.alchemy.com/v2/", matchHeaders: { Authorization: "Bearer test-alchemy-secret" },
         status: keyedFailure ? 503 : 200, body: keyedFailure ? "test-alchemy-secret" : solanaSlotResponse(currentSlot) },
       { match: "lb.drpc.org/ogrpc", respond: () => new Response("invalid JSON test-drpc-secret") },
       { match: "solana-rpc.publicnode.com", body: solanaSlotResponse(currentSlot) },
       { match: "api.jup.ag/price/v3", body: {
         "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH": {
-          usdPrice: 1.0002, decimals: 6, blockId: currentSlot - 20,
+          usdPrice: 1.0002, decimals: 6, blockId: currentSlot - 20, liquidity: 100_000,
         },
       } },
     ]);
-    const result = await fixtureRunJupiterPass(assets, undefined, undefined, undefined, undefined, chainRpcs);
+    const result = await runJupiterPass(assets, undefined, undefined, undefined, undefined, chainRpcs);
     expect(result.resolved).toBe(1);
     const slotCalls = fetchSpy.getHistory().filter((entry) => entry.body?.includes('"method":"getSlot"'));
     expect(slotCalls.map((entry) => new URL(entry.url).hostname)).toEqual(keyedFailure
@@ -46,13 +58,13 @@ describe("enrichMissingPrices", () => {
     expect(JSON.stringify(result.diagnostics)).not.toContain("test-alchemy-secret");
     expect(JSON.stringify(result.diagnostics)).not.toContain("test-drpc-secret");
   });
-  it("fills missing Solana prices from documented Jupiter V3 payloads without liquidity", async () => {
+  it("skips Jupiter V3 quotes without reported liquidity", async () => {
     const currentSlot = 418_913_760;
     const assets: PeggedAsset[] = [
-      makePeggedAsset({ id: "usdg-paxos", name: "USDG", symbol: "USDG", price: 0 }),
+      makeMissingUsdg(),
     ];
 
-    fixtureMockFetch([
+    mockFetch([
       { match: "coins.llama.fi", body: { coins: {} } },
       { match: "api.mainnet-beta.solana.com", body: solanaSlotResponse(currentSlot) },
       {
@@ -68,21 +80,21 @@ describe("enrichMissingPrices", () => {
       },
     ]);
 
-    const stats = await fixtureEnrichMissingPrices(assets);
+    const stats = await enrichMissingPrices(assets);
 
-    expect(stats.passJupiter).toBe(1);
-    expect(assets[0].price).toBe(1.0002);
-    expect(assets[0].priceSource).toBe("jupiter");
-    expect(stats.finalMissing).toBe(0);
+    expect(stats.passJupiter).toBe(0);
+    expect(assets[0].price).toBe(0);
+    expect(assets[0].priceSource).not.toBe("jupiter");
+    expect(stats.finalMissing).toBe(1);
   });
 
   it("falls back to the next bounded Solana RPC when the primary slot endpoint returns 403", async () => {
     const currentSlot = 418_913_760;
     const assets: PeggedAsset[] = [
-      makePeggedAsset({ id: "usdg-paxos", name: "USDG", symbol: "USDG", price: 0 }),
+      makeMissingUsdg(),
     ];
 
-    const fetchSpy = fixtureMockFetch([
+    const fetchSpy = mockFetch([
       { match: "api.mainnet-beta.solana.com", status: 403, body: "blocked" },
       { match: "api.mainnet.solana.com", body: solanaSlotResponse(currentSlot) },
       {
@@ -92,12 +104,13 @@ describe("enrichMissingPrices", () => {
             usdPrice: 1.0002,
             decimals: 6,
             blockId: currentSlot - 20,
+            liquidity: 100_000,
           },
         },
       },
     ]);
 
-    const result = await fixtureRunJupiterPass(assets, undefined, undefined);
+    const result = await runJupiterPass(assets, undefined, undefined);
 
     expect(result.resolved).toBe(1);
     expect(assets[0].price).toBe(1.0002);
@@ -122,10 +135,10 @@ describe("enrichMissingPrices", () => {
   it("fails Jupiter freshness closed after every bounded Solana slot RPC fails", async () => {
     const currentSlot = 418_913_760;
     const assets: PeggedAsset[] = [
-      makePeggedAsset({ id: "usdg-paxos", name: "USDG", symbol: "USDG", price: 0 }),
+      makeMissingUsdg(),
     ];
 
-    const fetchSpy = fixtureMockFetch([
+    const fetchSpy = mockFetch([
       { match: "api.mainnet-beta.solana.com", status: 403, body: "blocked" },
       { match: "api.mainnet.solana.com", status: 503, body: "unavailable" },
       { match: "solana-rpc.publicnode.com", status: 429, body: "rate limited" },
@@ -136,12 +149,13 @@ describe("enrichMissingPrices", () => {
             usdPrice: 1.0002,
             decimals: 6,
             blockId: currentSlot - 20,
+            liquidity: 100_000,
           },
         },
       },
     ]);
 
-    const result = await fixtureRunJupiterPass(assets, undefined, undefined);
+    const result = await runJupiterPass(assets, undefined, undefined);
 
     expect(result.resolved).toBe(0);
     expect(assets[0].price).toBe(0);
@@ -160,24 +174,17 @@ describe("enrichMissingPrices", () => {
   it("sends the configured Jupiter API key on V3 price requests", async () => {
     const currentSlot = 418_913_760;
     const assets: PeggedAsset[] = [
-      makePeggedAsset({ id: "usdg-paxos", name: "USDG", symbol: "USDG", price: 0 }),
+      makeMissingUsdg(),
     ];
 
-    const fetchSpy = fixtureMockFetch([
-      { match: "api.mainnet-beta.solana.com", body: solanaSlotResponse(currentSlot) },
-      {
-        match: "api.jup.ag/price/v3",
-        body: {
-          "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH": {
-            usdPrice: 1.0002,
-            decimals: 6,
-            blockId: currentSlot - 20,
-          },
-        },
-      },
-    ]);
+    const fetchSpy = mockFetch(jupiterRoutes(currentSlot, {
+      usdPrice: 1.0002,
+      decimals: 6,
+      blockId: currentSlot - 20,
+      liquidity: 100_000,
+    }));
 
-    await fixtureRunJupiterPass(assets, undefined, undefined, undefined, "jup-test-key");
+    await runJupiterPass(assets, undefined, undefined, undefined, "jup-test-key");
 
     const jupiterCall = fetchSpy.mock.calls.find(([input]) => String(input).includes("api.jup.ag/price/v3"));
     expect(jupiterCall?.[1]).toMatchObject({
@@ -188,28 +195,22 @@ describe("enrichMissingPrices", () => {
   it("does not reject Jupiter V3 quotes solely because createdAt is old", async () => {
     const currentSlot = 418_913_760;
     const assets: PeggedAsset[] = [
-      makePeggedAsset({ id: "usdg-paxos", name: "USDG", symbol: "USDG", price: 0 }),
+      makeMissingUsdg(),
     ];
 
-    fixtureMockFetch([
+    mockFetch([
       { match: "coins.llama.fi", body: { coins: {} } },
-      { match: "api.mainnet-beta.solana.com", body: solanaSlotResponse(currentSlot) },
-      {
-        match: "api.jup.ag/price/v3",
-        body: {
-          "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH": {
-            usdPrice: 0.9998,
-            liquidity: 250_000,
-            decimals: 6,
-            blockId: currentSlot - 20,
-            priceChange24h: 0.01,
-            createdAt: "2025-01-06T18:38:31Z",
-          },
-        },
-      },
+      ...jupiterRoutes(currentSlot, {
+        usdPrice: 0.9998,
+        liquidity: 250_000,
+        decimals: 6,
+        blockId: currentSlot - 20,
+        priceChange24h: 0.01,
+        createdAt: "2025-01-06T18:38:31Z",
+      }),
     ]);
 
-    const stats = await fixtureEnrichMissingPrices(assets);
+    const stats = await enrichMissingPrices(assets);
 
     expect(stats.passJupiter).toBe(1);
     expect(assets[0].price).toBe(0.9998);
@@ -233,22 +234,14 @@ describe("enrichMissingPrices", () => {
       }),
     ];
 
-    fixtureMockFetch([
-      { match: "api.mainnet-beta.solana.com", body: solanaSlotResponse(currentSlot) },
-      {
-        match: "api.jup.ag/price/v3",
-        body: {
-          "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH": {
-            usdPrice: 1.0002,
-            liquidity: 250_000,
-            decimals: 6,
-            blockId: currentSlot - 20,
-          },
-        },
-      },
-    ]);
+    mockFetch(jupiterRoutes(currentSlot, {
+      usdPrice: 1.0002,
+      liquidity: 250_000,
+      decimals: 6,
+      blockId: currentSlot - 20,
+    }));
 
-    const result = await fixtureRunJupiterPass(assets, undefined, undefined);
+    const result = await runJupiterPass(assets, undefined, undefined);
 
     expect(result.resolved).toBe(1);
     expect(result.diagnostics?.[0]).toMatchObject({
@@ -281,22 +274,14 @@ describe("enrichMissingPrices", () => {
       }),
     ];
 
-    fixtureMockFetch([
-      { match: "api.mainnet-beta.solana.com", body: solanaSlotResponse(currentSlot) },
-      {
-        match: "api.jup.ag/price/v3",
-        body: {
-          "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH": {
-            usdPrice: 1.0002,
-            liquidity: 250_000,
-            decimals: 6,
-            blockId: currentSlot - 20,
-          },
-        },
-      },
-    ]);
+    mockFetch(jupiterRoutes(currentSlot, {
+      usdPrice: 1.0002,
+      liquidity: 250_000,
+      decimals: 6,
+      blockId: currentSlot - 20,
+    }));
 
-    const result = await fixtureRunJupiterPass(assets, undefined, undefined);
+    const result = await runJupiterPass(assets, undefined, undefined);
 
     expect(result.resolved).toBe(0);
     expect(assets[0].consensusSources).toEqual(["coingecko"]);
@@ -306,44 +291,37 @@ describe("enrichMissingPrices", () => {
   it("rejects Jupiter quotes with stale block ids", async () => {
     const currentSlot = 418_913_760;
     const assets: PeggedAsset[] = [
-      makePeggedAsset({ id: "usdg-paxos", name: "USDG", symbol: "USDG", price: 0 }),
+      makeMissingUsdg(),
     ];
 
-    fixtureMockFetch([
-      { match: "api.mainnet-beta.solana.com", body: solanaSlotResponse(currentSlot) },
-      {
-        match: "api.jup.ag/price/v3",
-        body: {
-          "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH": {
-            usdPrice: 1.0002,
-            decimals: 6,
-            blockId: currentSlot - 3_000,
-            priceChange24h: 0.01,
-          },
-        },
-      },
-    ]);
+    mockFetch(jupiterRoutes(currentSlot, {
+      usdPrice: 1.0002,
+      decimals: 6,
+      blockId: currentSlot - 3_000,
+      liquidity: 100_000,
+      priceChange24h: 0.01,
+    }));
 
-    const result = await fixtureRunJupiterPass(assets, undefined, undefined);
+    const result = await runJupiterPass(assets, undefined, undefined);
 
     expect(result.resolved).toBe(0);
     expect(assets[0].price).toBe(0);
   });
 
   it("records a Jupiter breaker failure when an OK response has a malformed V3 payload", async () => {
-    const db = fixtureMockD1([
+    const db = makeEnrichPricesDb([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: [`circuit:${fixtureCIRCUIT_SOURCE.JUPITER_PRICES}`],
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.JUPITER_PRICES}`],
         rows: [],
         first: null,
       },
     ]);
     const assets: PeggedAsset[] = [
-      makePeggedAsset({ id: "usdg-paxos", name: "USDG", symbol: "USDG", price: 0 }),
+      makeMissingUsdg(),
     ];
 
-    fixtureMockFetch([
+    mockFetch([
       {
         match: "api.jup.ag/price/v3",
         body: {
@@ -355,7 +333,7 @@ describe("enrichMissingPrices", () => {
       },
     ]);
 
-    const result = await fixtureRunJupiterPass(assets, undefined, db);
+    const result = await runJupiterPass(assets, undefined, db);
 
     expect(result.resolved).toBe(0);
     expect(result.diagnostics?.[0]).toMatchObject({
@@ -368,7 +346,7 @@ describe("enrichMissingPrices", () => {
       .find(
         (entry) =>
           entry.sql.includes("INSERT OR REPLACE INTO cache") &&
-          entry.binds[0] === `circuit:${fixtureCIRCUIT_SOURCE.JUPITER_PRICES}`,
+          entry.binds[0] === `circuit:${CIRCUIT_SOURCE.JUPITER_PRICES}`,
       );
     expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
       consecutiveFailures: 1,
@@ -376,19 +354,19 @@ describe("enrichMissingPrices", () => {
   });
 
   it("does not open the Jupiter breaker for sparse no-quote V3 rows", async () => {
-    const db = fixtureMockD1([
+    const db = makeEnrichPricesDb([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: [`circuit:${fixtureCIRCUIT_SOURCE.JUPITER_PRICES}`],
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.JUPITER_PRICES}`],
         rows: [],
         first: null,
       },
     ]);
     const assets: PeggedAsset[] = [
-      makePeggedAsset({ id: "usdg-paxos", name: "USDG", symbol: "USDG", price: 0 }),
+      makeMissingUsdg(),
     ];
 
-    fixtureMockFetch([
+    mockFetch([
       {
         match: "api.jup.ag/price/v3",
         body: {
@@ -400,7 +378,7 @@ describe("enrichMissingPrices", () => {
       },
     ]);
 
-    const result = await fixtureRunJupiterPass(assets, undefined, db);
+    const result = await runJupiterPass(assets, undefined, db);
 
     expect(result.resolved).toBe(0);
     expect(result.diagnostics?.[0]).toMatchObject({
@@ -414,7 +392,7 @@ describe("enrichMissingPrices", () => {
       .find(
         (entry) =>
           entry.sql.includes("INSERT OR REPLACE INTO cache") &&
-          entry.binds[0] === `circuit:${fixtureCIRCUIT_SOURCE.JUPITER_PRICES}`,
+          entry.binds[0] === `circuit:${CIRCUIT_SOURCE.JUPITER_PRICES}`,
       );
     expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
       state: "closed",
@@ -424,11 +402,11 @@ describe("enrichMissingPrices", () => {
 
   it("reports Jupiter non-OK responses in pass diagnostics", async () => {
     const assets: PeggedAsset[] = [
-      makePeggedAsset({ id: "usdg-paxos", name: "USDG", symbol: "USDG", price: 0 }),
+      makeMissingUsdg(),
     ];
-    const db = fixtureMockD1([{ match: "cache", rows: [], first: null }]);
+    const db = makeEnrichPricesDb([{ match: "cache", rows: [], first: null }]);
 
-    fixtureMockFetch([
+    mockFetch([
       {
         match: "api.jup.ag/price/v3",
         status: 403,
@@ -436,7 +414,7 @@ describe("enrichMissingPrices", () => {
       },
     ]);
 
-    const result = await fixtureRunJupiterPass(assets, undefined, db);
+    const result = await runJupiterPass(assets, undefined, db);
 
     expect(result.resolved).toBe(0);
     expect(result.diagnostics?.[0]).toMatchObject({
@@ -452,7 +430,7 @@ describe("enrichMissingPrices", () => {
 
   it("closes a stale Jupiter circuit when no fallback candidates remain", async () => {
     const openedAt = Math.floor(Date.now() / 1000) - 3600;
-    const db = fixtureMockD1([
+    const db = makeEnrichPricesDb([
       {
         match: "cache",
         rows: [],
@@ -472,9 +450,9 @@ describe("enrichMissingPrices", () => {
       makePeggedAsset({ id: "usbd-bima", name: "USBD", symbol: "USBD", price: 0 }),
     ];
 
-    const fetchSpy = fixtureMockFetch();
+    const fetchSpy = mockFetch();
 
-    const result = await fixtureRunJupiterPass(assets, undefined, db);
+    const result = await runJupiterPass(assets, undefined, db);
 
     expect(result.resolved).toBe(0);
     expect(result.diagnostics?.[0]).toMatchObject({
@@ -493,9 +471,9 @@ describe("enrichMissingPrices", () => {
       makePeggedAsset({ id: "usbd-bima", name: "USBD", symbol: "USBD", price: 0 }),
     ];
 
-    const db = fixtureMockD1([{ match: "cache", rows: [], first: null }], { requireMatch: true });
+    const db = makeEnrichPricesDb([{ match: "cache", rows: [], first: null }], { requireMatch: true });
 
-    await expect(fixtureRunJupiterPass(assets, undefined, db)).resolves.toEqual({
+    await expect(runJupiterPass(assets, undefined, db)).resolves.toEqual({
       resolved: 0,
       failures: [],
       diagnostics: [],

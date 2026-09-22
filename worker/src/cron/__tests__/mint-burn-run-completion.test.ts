@@ -109,7 +109,7 @@ describe("completeMintBurnRun", () => {
     expect(result.metadata.apiErrors).toBe(0);
   });
 
-  it("keeps apiErrors separate from validationFailures metadata", async () => {
+  it("keeps provider errors in the canonical apiErrors metadata field", async () => {
     vi.mocked(setMintBurnRunState).mockResolvedValue(true);
     vi.mocked(getNullPriceBacklog).mockResolvedValue({ recent: 0, historical: 0 });
     vi.mocked(healNullPrices).mockResolvedValue({ healed: 0, affectedHours: new Map() });
@@ -118,7 +118,6 @@ describe("completeMintBurnRun", () => {
     const result = await completeMintBurnRun(buildRunInput({ apiErrors: 4 }));
 
     expect(result.metadata.apiErrors).toBe(4);
-    expect(result.metadata.validationFailures).toBe(0);
     expect(setMintBurnRunState).toHaveBeenCalledWith(expect.anything(), "sync-mint-burn", 1, null);
   });
 
@@ -257,5 +256,42 @@ describe("completeMintBurnRun", () => {
     const result = await completeMintBurnRun(buildRunInput());
     expect(result.status).toBe("ok");
     expect(result.metadata.roundtripSweepCount).toBe(7);
+  });
+
+  it("degrades explicitly but completes maintenance when backlog metadata is unavailable", async () => {
+    vi.useFakeTimers();
+    vi.mocked(getNullPriceBacklog).mockRejectedValue(
+      new Error("D1_ERROR: D1 DB is overloaded. Requests queued for too long."),
+    );
+    vi.mocked(sweepRecentRoundtrips).mockResolvedValueOnce({
+      reclassified: 4,
+      affectedHours: new Map(),
+      saturated: false,
+    });
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    try {
+      const pending = completeMintBurnRun(buildRunInput());
+      await vi.runAllTimersAsync();
+      const result = await pending;
+      expect(result.status).toBe("degraded");
+      expect(result.metadata).toMatchObject({
+        nullPriceBacklog: null,
+        nullPriceBacklogRecent: null,
+        nullPriceBacklogHistorical: null,
+        nullPriceBacklogAvailable: false,
+        nullPriceBacklogError: "D1_ERROR: D1 DB is overloaded. Requests queued for too long.",
+        roundtripSweepCount: 4,
+      });
+      expect(getNullPriceBacklog).toHaveBeenCalledTimes(4);
+      expect(healNullPrices).toHaveBeenCalledOnce();
+      expect(sweepRecentRoundtrips).toHaveBeenCalledOnce();
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("sync-mint-burn.null-price-backlog-query-failed"),
+      );
+    } finally {
+      warnSpy.mockRestore();
+      vi.useRealTimers();
+    }
   });
 });

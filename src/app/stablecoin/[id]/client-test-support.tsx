@@ -29,6 +29,66 @@ export const createContagionSnapshotMock = () => ({
   ),
 });
 
+function DetailSectionPlaceholder() {
+  return <div data-testid="dynamic-detail-section" />;
+}
+
+/** Stubs every lazily-loaded detail section by export name, so section wiring is
+ *  asserted without coupling to `dynamic()` call order or loader source text. */
+export const createDetailLazySectionsMock = () => {
+  const placeholders = Object.fromEntries(
+    [
+      "FeedbackModal",
+      "McapChart",
+      "MarketDataSection",
+      "DEWSDetail",
+      "DepegHistory",
+      "DdrTrackRecordSection",
+      "PegStabilityCard",
+      "YieldDetailSection",
+      "DexLiquidityCard",
+      "DistributionSection",
+      "SafetyScoreHistorySection",
+      "StablecoinDepegResolverCard",
+    ].map((name) => [name, DetailSectionPlaceholder]),
+  );
+
+  return {
+    ...placeholders,
+    ReservePanel: ({
+      reserves,
+      onRetry,
+      isFetching,
+      isLoading,
+    }: {
+      reserves?: { mode?: string } | null;
+      onRetry?: () => Promise<unknown> | void;
+      isFetching?: boolean;
+      isLoading?: boolean;
+    }) => (
+      <section id="reserves" data-testid="reserve-panel">
+        <span>{isLoading ? "loading-reserves" : reserves?.mode ?? "no-reserves"}</span>
+        <button
+          type="button"
+          disabled={isFetching}
+          onClick={() => {
+            void onRetry?.();
+          }}
+        >
+          Retry reserves
+        </button>
+      </section>
+    ),
+    StablecoinSafetyScoreV9Card: ({ rightColumn }: { rightColumn?: ReactNode }) => (
+      <div data-testid="report-card">{rightColumn}</div>
+    ),
+    FlowsSection: () => <div data-testid="flows-section" />,
+    FlowHistorySection: () => <div data-testid="flow-history-section" />,
+    BlacklistSection: () => <div data-testid="blacklist-section" />,
+    BlacklistHistorySection: () => <div data-testid="blacklist-history-section" />,
+  };
+};
+
 export const obituary: StablecoinObituary = {
   causeOfDeath: "abandoned",
   deathDate: "2026-04",
@@ -65,7 +125,7 @@ function makeViewModelBase(coin: StablecoinMeta) {
       chainCirculating: {}, chains: ["ethereum"],
     },
     mcap: 100, supply: 100, prevDay: 99, prevWeek: 98, prevMonth: 97,
-    performanceVsUsd1y: null, pegRef: 1, deviationBps: 0, gaugeDeviationBps: 0,
+    performanceVsUsd1y: null, pegRef: 1, deviationBps: 0,
     isNavToken: false, pegScoreResult: null, consensusSources: [], agreeSources: [],
     dexPriceCheck: null, liquidityData: undefined, yieldRanking: null, hasYieldSection: false,
     stressSignal: null, redemptionBackstop: undefined, hasFlows: false, hasBlacklist: false,

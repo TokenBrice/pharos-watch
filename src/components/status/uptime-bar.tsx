@@ -9,6 +9,8 @@ interface UptimeBarProps {
   currentStatus: "healthy" | "degraded" | "stale";
   lastChangedAt: number | null;
   days?: number;
+  /** A failed history read has no runway: it must not render as "no probe". */
+  historyUnavailable?: boolean;
 }
 
 interface DaySegment {
@@ -87,7 +89,13 @@ function buildDaySegments(
   return segments;
 }
 
-export function UptimeBar({ transitions, currentStatus, lastChangedAt, days = 30 }: UptimeBarProps) {
+export function UptimeBar({
+  transitions,
+  currentStatus,
+  lastChangedAt,
+  days = 30,
+  historyUnavailable = false,
+}: UptimeBarProps) {
   const segments = useMemo(
     () => buildDaySegments(transitions, currentStatus, days),
     [currentStatus, days, transitions],
@@ -135,22 +143,30 @@ export function UptimeBar({ transitions, currentStatus, lastChangedAt, days = 30
           )}
         </div>
       </div>
-      <div
-        className="flex items-center gap-1.5"
-        role="img"
-        aria-label={`${days}-day status runway: ${summaryParts.join(", ")}`}
-      >
-        {segments.map((segment) => (
+      {historyUnavailable && transitions.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          Status history is unavailable, so the last {days} days cannot be shown.
+        </p>
+      ) : (
+        <>
           <div
-            key={segment.date}
-            className={cn("h-2 flex-1 rounded-full transition-colors", STATUS_COLORS[segment.status])}
-            title={`${segment.date}: ${STATUS_LABELS[segment.status]}`}
-          />
-        ))}
-      </div>
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-        <span>{summaryParts.join(" · ")}</span>
-      </div>
+            className="flex items-center gap-1.5"
+            role="img"
+            aria-label={`${days}-day status runway: ${summaryParts.join(", ")}`}
+          >
+            {segments.map((segment) => (
+              <div
+                key={segment.date}
+                className={cn("h-2 flex-1 rounded-full transition-colors", STATUS_COLORS[segment.status])}
+                title={`${segment.date}: ${STATUS_LABELS[segment.status]}`}
+              />
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+            <span>{summaryParts.join(" · ")}</span>
+          </div>
+        </>
+      )}
     </div>
   );
 }

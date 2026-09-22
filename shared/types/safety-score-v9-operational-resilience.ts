@@ -9,9 +9,13 @@ import {
   V9OperationalResilienceStressEpisodeSchema,
   V9OperationalResilienceStressSettlementSchema,
 } from "./safety-score-v9-operational-resilience-primitives";
-import { CanonicalTextSchema, StrictIsoDateSchema, UnixSecondsSchema } from "./safety-schema-primitives";
+import {
+  CanonicalTextSchema,
+  NonNegativeFiniteSchema,
+  StrictIsoDateSchema,
+  UnixSecondsSchema,
+} from "./safety-schema-primitives";
 
-const NonNegativeFiniteSchema = z.number().finite().nonnegative();
 const IsoDateSchema = StrictIsoDateSchema;
 
 const EvidenceRefIdsSchema = canonicalArrayBy(CanonicalTextSchema, (value) => value).refine(

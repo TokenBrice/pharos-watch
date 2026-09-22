@@ -1,4 +1,4 @@
-import type { CompiledV9AssetInput, V9ScoringInput } from "@shared/types/safety-score-v9";
+import type { CompiledV9AssetInput, V9ScoringInput, V9StructuralSignal } from "@shared/types/safety-score-v9";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import type { V9WrapperParentLimit } from "../safety-score-v9/wrapper-risk";
 import type {
@@ -93,6 +93,26 @@ export function makeV9ScoringInput({
     parentScore,
     structuralSignals,
     unresolved,
+  };
+}
+
+export function makeV9Signal(overrides: Partial<V9StructuralSignal> = {}): V9StructuralSignal {
+  return {
+    kind: "critical-dependency",
+    severity: "high",
+    reason: "A reviewed deployment has bounded local exposure.",
+    materialSharePct: 50,
+    economicLossScope: "deployment",
+    exposureKey: "deployment:bounded",
+    riskEventKey: "event:bounded",
+    recoveryPath: "deployment-migration",
+    expectedRecoverySec: null,
+    lossAbsorptionPct: 0,
+    evidenceConfidence: "high",
+    responsibility: "measured-adverse",
+    failureDomainKeys: ["chain:bounded"],
+    evidence: [],
+    ...overrides,
   };
 }
 

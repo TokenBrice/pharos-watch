@@ -206,6 +206,23 @@ export const CRON_GROWTH_HEADROOM_POLICY = {
 
 export type CronScheduleKey = keyof typeof CRON_SCHEDULE_DEFINITIONS;
 export type CronScheduleExpression = (typeof CRON_SCHEDULE_DEFINITIONS)[CronScheduleKey]["schedule"];
+
+/**
+ * Jobs that intentionally share one logical `cron_runs.job` identity across
+ * more than one scheduled runner slot. Each listed slot needs its own exact
+ * connection-budget entry even though status and lease identity stay shared.
+ */
+export const SHARED_SCHEDULED_JOB_IDENTITIES = {
+  "cron-sentinel": ["statusSelfCheckOffset", "halfHourlyChartsOffset", "fourHourlyReserveSync", "daily0300Utc"],
+  "daily-digest": ["digestTriggerPoll", "daily0805Utc"],
+  "weekly-recap": ["digestTriggerPoll", "daily0810Utc"],
+  "snapshot-supply": ["quarterHourly", "daily0800Utc"],
+  "snapshot-psi": ["quarterHourly", "daily0800Utc"],
+  "snapshot-public-dataset": ["quarterHourly", "daily0800Utc"],
+  "sync-cl-exit-depth": ["halfHourlyMeasuredExecution", "daily0810Utc"],
+  "sync-yield-supplemental": ["hourlyYieldSync", "fourHourlyYieldSupplemental"],
+  "fetch-tbill-rate": ["hourlyYieldSync", "daily0800Utc"],
+} as const satisfies Record<string, readonly CronScheduleKey[]>;
 export type CronTriggerMode = "shared" | "isolated";
 export type CronStatusImpact = "critical" | "watch";
 export type CronFreshnessSurface = "consumer" | "none";
@@ -603,6 +620,17 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     connectionGroup: "v9-publication-chain",
   },
   {
+    job: "compute-safety-score-v9-workflow",
+    label: "V9 shadow Workflow compiler",
+    group: "quarter-hourly",
+    intervalSec: SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC,
+    scheduleKey: "v9PublicationOffset",
+    triggerMode: "isolated",
+    statusImpact: "watch",
+    maxConnections: 0, // Reuses the D1-only publication compiler against a write-capturing facade.
+    connectionGroup: "v9-publication-chain",
+  },
+  {
     job: "prepare-safety-score-v9-input",
     label: "V9 compiler input",
     group: "half-hourly",
@@ -696,7 +724,9 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     scheduleKey: "fourHourlyReserveSync",
     triggerMode: "shared",
     maxConnections: 1, // 2 sequential Kinesis Horizon fetches (KAU + KAG)
-    connectionGroup: "reserve-sync-chain",
+    // Runs beside the reserve-adapter chain, not behind it, so its peak adds
+    // to the trigger total instead of folding into max().
+    connectionGroup: "reserve-kinesis-chain",
   },
   {
     job: "sync-bluechip",
@@ -837,14 +867,19 @@ const CRON_CONNECTION_BUDGET_ONLY_DEFINITIONS: readonly CronConnectionBudgetDefi
 ] as const;
 
 export const CRON_CONNECTION_BUDGET_ENTRIES: readonly CronConnectionBudgetMeta[] = [
-  ...CRON_JOB_DEFINITIONS_BASE.map((definition) => ({
-    job: definition.job,
-    label: definition.label,
-    scheduleKey: definition.scheduleKey,
-    maxConnections: definition.maxConnections ?? 0,
-    connectionGroup: definition.connectionGroup,
-    statusTracked: true,
-  })),
+  ...CRON_JOB_DEFINITIONS_BASE.flatMap((definition) => {
+    const sharedScheduleKeys = (SHARED_SCHEDULED_JOB_IDENTITIES as Partial<
+      Record<string, readonly CronScheduleKey[]>
+    >)[definition.job];
+    return (sharedScheduleKeys ?? [definition.scheduleKey]).map((scheduleKey) => ({
+      job: definition.job,
+      label: definition.label,
+      scheduleKey,
+      maxConnections: definition.maxConnections ?? 0,
+      connectionGroup: definition.connectionGroup,
+      statusTracked: true,
+    }));
+  }),
   ...CRON_CONNECTION_BUDGET_ONLY_DEFINITIONS,
 ].map((definition) => ({
   ...definition,
@@ -857,6 +892,10 @@ export const CRON_CONNECTION_BUDGET_ENTRIES: readonly CronConnectionBudgetMeta[]
 export const CRON_INTERVALS = Object.freeze(
   Object.fromEntries(CRON_JOB_DEFINITIONS.map((item) => [item.job, item.intervalSec])) as Record<string, number>,
 );
+
+export const DEX_LIQUIDITY_STAGE_LEAD_SEC =
+  CRON_SCHEDULE_DEFINITIONS.halfHourlyChartsOffset.offsetSec -
+  CRON_SCHEDULE_DEFINITIONS.halfHourlyOffset.offsetSec;
 
 const CRON_JOB_META_BY_ID = new Map(CRON_JOB_DEFINITIONS.map((definition) => [definition.job, definition]));
 

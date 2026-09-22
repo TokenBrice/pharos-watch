@@ -21,8 +21,7 @@ import type { HydrationContext } from "./source-state/hydration";
 interface LoadDewsSourceStateOptions {
   db: D1Database;
   nowSec: number;
-  bootstrapPending: boolean;
-  registerSourceFailure: (source: string, error: unknown, options?: { bootstrapAllowed?: boolean }) => void;
+  registerSourceFailure: (source: string, error: unknown) => void;
   registerMalformedPersistedInput: (options: {
     source: string;
     context: string;
@@ -38,7 +37,6 @@ type HydrationEvent =
       kind: "sourceFailure";
       source: string;
       error: unknown;
-      options?: { bootstrapAllowed?: boolean };
     }
   | {
       kind: "malformedPersistedInput";
@@ -143,8 +141,8 @@ async function hydrateSource<T>(
   const events: HydrationEvent[] = [];
   const bufferedCtx: HydrationContext = {
     ...ctx,
-    registerSourceFailure: (source, error, options) => {
-      events.push({ kind: "sourceFailure", source, error, options });
+    registerSourceFailure: (source, error) => {
+      events.push({ kind: "sourceFailure", source, error });
     },
     registerMalformedPersistedInput: (options) => {
       events.push({ kind: "malformedPersistedInput", options });
@@ -157,7 +155,7 @@ function replayHydrationEvents(hydrations: readonly { events: HydrationEvent[] }
   for (const hydration of hydrations) {
     for (const event of hydration.events) {
       if (event.kind === "sourceFailure") {
-        ctx.registerSourceFailure(event.source, event.error, event.options);
+        ctx.registerSourceFailure(event.source, event.error);
       } else {
         ctx.registerMalformedPersistedInput(event.options);
       }
@@ -169,7 +167,6 @@ export async function loadDewsSourceState(options: LoadDewsSourceStateOptions): 
   const ctx: HydrationContext = {
     db: options.db,
     nowSec: options.nowSec,
-    bootstrapPending: options.bootstrapPending,
     registerSourceFailure: options.registerSourceFailure,
     registerMalformedPersistedInput: options.registerMalformedPersistedInput,
   };

@@ -52,7 +52,28 @@ describe("subgraph helpers", () => {
       observationCount: 0,
       observations: new Map(),
       shouldLogIndex: false,
+      failed: true,
     });
+  });
+
+  it("flags a GraphQL error that produced no entities as a source failure", async () => {
+    fetchJsonWithRetryMock.mockResolvedValueOnce({
+      response: new Response("", { status: 200 }),
+      body: { errors: [{ message: "Type 'Query' has no field 'pairs'" }] },
+    });
+
+    const result = await fetchSubgraphEntities({
+      subgraphUrl: "https://subgraph.example",
+      sourceLabel: "test subgraph",
+      chain: "base",
+      buildQuery: () => "{ pairs { id } }",
+      extractEntities: () => [],
+      mapEntity: () => [],
+      errorHandling: { warnOnGraphQlErrors: false },
+    });
+
+    expect(result.failed).toBe(true);
+    expect(result.shouldLogIndex).toBe(false);
   });
 
   it("maps entities into observations and stops on short final page", async () => {
@@ -82,6 +103,7 @@ describe("subgraph helpers", () => {
     expect(result.entityCount).toBe(1);
     expect(result.observationCount).toBe(1);
     expect(result.shouldLogIndex).toBe(true);
+    expect(result.failed).toBe(false);
     expect(result.observations.get("usdc-circle")).toHaveLength(1);
   });
 
@@ -114,6 +136,7 @@ describe("subgraph helpers", () => {
       expect(result.observations).toEqual(new Map([["usdc-circle", expected]]));
       expect(result.entityCount).toBe(ending === "http-failure" ? 2 : 3);
       expect(result.observationCount).toBe(ending === "http-failure" ? 2 : 3);
+      expect(result.failed).toBe(ending === "http-failure");
     },
   );
 

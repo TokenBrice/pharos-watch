@@ -71,6 +71,26 @@ export class AnthropicStreamFailure extends Error {
   }
 }
 
+/**
+ * SSE frames end at a blank line. Anthropic emits LF framing, but the spec also
+ * permits CRLF and bare CR, so a `\n\n`-only scan silently drops a CRLF stream.
+ * Return the earliest complete terminator; an incomplete one (for example a
+ * lone trailing `\r`) stays buffered until the next chunk completes it.
+ */
+const SSE_FRAME_TERMINATORS = ["\r\n\r\n", "\n\n", "\r\r"] as const;
+
+function findFrameTerminator(buffer: string): { index: number; length: number } | null {
+  let earliest: { index: number; length: number } | null = null;
+  for (const terminator of SSE_FRAME_TERMINATORS) {
+    const index = buffer.indexOf(terminator);
+    if (index === -1) continue;
+    if (earliest == null || index < earliest.index) {
+      earliest = { index, length: terminator.length };
+    }
+  }
+  return earliest;
+}
+
 export async function accumulateAnthropicStream(response: Response): Promise<AnthropicStreamResult> {
   const body = response.body;
   if (!body) {
@@ -98,12 +118,10 @@ export async function accumulateAnthropicStream(response: Response): Promise<Ant
       if (value) {
         buffer += decoder.decode(value, { stream: true });
       }
-      // An SSE event is terminated by a blank line (\n\n). Any tail without a
-      // terminator stays in the buffer for the next chunk.
-      let separatorIdx: number;
-      while ((separatorIdx = buffer.indexOf("\n\n")) !== -1) {
-        const frame = buffer.slice(0, separatorIdx);
-        buffer = buffer.slice(separatorIdx + 2);
+      let terminator: { index: number; length: number } | null;
+      while ((terminator = findFrameTerminator(buffer)) != null) {
+        const frame = buffer.slice(0, terminator.index);
+        buffer = buffer.slice(terminator.index + terminator.length);
         const result = handleFrame(frame);
         if (result.eventType) {
           eventCounts[result.eventType] = (eventCounts[result.eventType] ?? 0) + 1;
@@ -197,7 +215,7 @@ function handleFrame(frame: string): FrameResult {
   if (!frame.trim()) return {};
   let eventType: string | null = null;
   let dataStr: string | null = null;
-  for (const line of frame.split("\n")) {
+  for (const line of frame.split(/\r\n|\r|\n/)) {
     if (line.startsWith("event:")) eventType = line.slice(6).trim();
     else if (line.startsWith("data:")) {
       const value = line.slice(5);

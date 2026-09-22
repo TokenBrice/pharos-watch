@@ -105,6 +105,10 @@ const GEMINI_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = {
     },
   },
   isReportCandidate: () => false,
+  reportDateFromCandidate: (href) => {
+    const manifest = getIndependentAssuranceManifest("GUSD");
+    return href === manifest.reportUrl ? manifest.reportDate : null;
+  },
 };
 
 export async function fetchGeminiIndependentAssuranceReserves(

@@ -149,6 +149,43 @@ describe("healNullPrices", () => {
     ]);
   });
 
+  it("leaves amount_usd NULL when the only snapshot predates the one-day lookback", async () => {
+    const dayTs = Math.floor((NOW - 3600) / 86400) * 86400;
+    const events = [
+      { id: "e1", stablecoin_id: "usdc-circle", chain_id: "ethereum", amount: 1000, timestamp: NOW - 3600 },
+    ];
+    const db = mockDb(events, [
+      { stablecoin_id: "usdc-circle", snapshot_date: dayTs - 30 * 86400, price: 1.01 },
+    ]);
+    vi.mocked(getPriceCache).mockResolvedValueOnce(new Map());
+
+    const result = await healNullPrices(db, NOW);
+
+    expect(result.healed).toBe(0);
+    expect(batchExecute).not.toHaveBeenCalled();
+  });
+
+  it("uses the replay-safe cache row instead of a stale or implausible snapshot", async () => {
+    const dayTs = Math.floor((NOW - 3600) / 86400) * 86400;
+    const events = [
+      { id: "e1", stablecoin_id: "usdc-circle", chain_id: "ethereum", amount: 1000, timestamp: NOW - 3600 },
+    ];
+    const db = mockDb(events, [
+      { stablecoin_id: "usdc-circle", snapshot_date: dayTs - 30 * 86400, price: 0.98 },
+      { stablecoin_id: "usdc-circle", snapshot_date: dayTs, price: 1.4 },
+    ]);
+    vi.mocked(getPriceCache).mockResolvedValueOnce(
+      new Map([["usdc-circle", { price: 1.0, updatedAt: NOW, source: "binance" }]]),
+    );
+    vi.mocked(batchExecute).mockResolvedValueOnce(1);
+
+    const result = await healNullPrices(db, NOW);
+
+    expect(result.healed).toBe(1);
+    const updateStmts = vi.mocked(batchExecute).mock.calls[0]?.[1] as unknown as BoundStatement[];
+    expect(updateStmts[0].args).toEqual([1000, 1, NOW, "price_cache_heal", "e1"]);
+  });
+
   it("skips events whose stablecoin has no price in price_cache", async () => {
     const events = [
       { id: "e1", stablecoin_id: "unknown-coin", chain_id: "ethereum", amount: 1000, timestamp: NOW - 3600 },

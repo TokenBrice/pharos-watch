@@ -50,9 +50,6 @@ export function getRouteMatch(path: string): RouteMatch | null {
   return getDynamicRouteMatch(path);
 }
 
-export function getRouteDependencies(path: string): readonly RouteDependency[] | null {
-  return getRouteMatch(path)?.dependencies ?? null;
-}
 
 export const ROUTER_STATIC_PATHS = [...STATIC_ROUTE_DEFINITIONS.keys()];
 

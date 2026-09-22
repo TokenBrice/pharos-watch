@@ -7,7 +7,11 @@ import { getFxReferenceTypeFromState, loadFxRateState } from "../lib/fx-rate-sta
 import { buildInClause } from "../lib/db";
 import { chunkArray } from "../lib/collections";
 import { normalizeStablecoinChartDateSeconds } from "../lib/stablecoin-charts-payload";
-import { mergeStructuralSupplementalHistoryIntoCharts, STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS } from "../lib/stablecoin-charts-reconciliation";
+import {
+  mergeStructuralSupplementalHistoryIntoCharts,
+  STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS,
+  type SupplyHistoryChartRow,
+} from "../lib/stablecoin-charts-reconciliation";
 import { throwIfAborted } from "../lib/abort";
 import { runCadenceBucketPublication } from "../lib/cadence-bucket";
 import { logWorkerEvent } from "../lib/structured-log";
@@ -40,11 +44,6 @@ interface DownsampledPoint {
   totalCirculatingUSD: Record<string, number>;
 }
 
-interface SupplyHistoryChartRow {
-  stablecoin_id: string;
-  snapshot_date: number;
-  circulating_usd: number;
-}
 
 function downsample(data: NormalizedRawChartPoint[]): DownsampledPoint[] {
   if (data.length === 0) return [];
@@ -211,7 +210,7 @@ async function runStablecoinChartsPublication(
         const rawVal = circ[key];
         if (!rawVal || rawVal <= 0) continue;
         const referenceType = getFxReferenceTypeFromState(fxState, key, 6 * 3600);
-        if (referenceType !== "fresh" && referenceType !== "static") continue;
+        if (referenceType !== "fresh") continue;
         const fxRate = fxState.rates[key];
         if (!fxRate || fxRate <= 0) continue;
         const impliedRate = usd[key] / rawVal;

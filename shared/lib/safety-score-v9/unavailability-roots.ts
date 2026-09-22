@@ -1,5 +1,5 @@
 import type { V9AssetFactsBase } from "../../types/safety-score-v9-facts";
-import type { V9ResolvedUpstreamExposure } from "./backing";
+import type { V9ResolvedUpstreamExposure } from "./backing-primitives";
 import { canonicalDomains, uniqueSorted } from "./primitives";
 import { canonicalizeV9PublicReasons } from "./reasons";
 import type { V9PillarReason, V9ProductionScoreTrace } from "./score";

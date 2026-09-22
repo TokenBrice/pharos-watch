@@ -16,7 +16,7 @@ describe("public blacklist analytics eligibility", () => {
     insert.run("suppressed-1", "0xtx1", NOW - 10, "circle_mirror_zero_balance");
     insert.run("suppressed-2", "0xtx2", NOW - 20, "circle_mirror_zero_balance");
     const registerSourceFailure = vi.fn();
-    const hydrate = () => hydrateBlacklistEvents({ db, nowSec: NOW, bootstrapPending: false,
+    const hydrate = () => hydrateBlacklistEvents({ db, nowSec: NOW,
       registerSourceFailure, registerMalformedPersistedInput: vi.fn() });
     const collect = () => collectBlacklistActivity({ db, nowSec: NOW, todayTs: NOW, yesterdayTs: NOW - 86400,
       trackedStablecoinAssets: [], trackedStablecoinIds: new Set(), coreAggregateStablecoinAssets: [],

@@ -58,18 +58,20 @@ export async function loadLegacyDexPoolChallengers(
   const topPoolCoins = new Set<string>();
   const fallbackCoins = new Set<string>();
 
+  const cutoffSec = nowSec - maxAgeSec;
   const rows = await db
     .prepare(
       `SELECT stablecoin_id, top_pools_json, updated_at
          FROM dex_liquidity
          WHERE stablecoin_id != '__global__'
            AND top_pools_json IS NOT NULL
+           AND updated_at >= ?
            AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}`,
     )
+    .bind(cutoffSec)
     .all<{ stablecoin_id: string; top_pools_json: string; updated_at: number }>();
 
   for (const row of rows.results ?? []) {
-    if (nowSec - row.updated_at > maxAgeSec) continue;
     const pools = decodeLegacyJsonArray<Array<{ project?: unknown; chain?: unknown; tvlUsd?: unknown; price?: unknown; poolId?: unknown }>[number]>(
       row.top_pools_json,
       {
@@ -108,11 +110,13 @@ export async function loadLegacyDexPoolChallengers(
   }
 
   const priceRows = await db
-    .prepare("SELECT stablecoin_id, price_sources_json, updated_at FROM dex_prices WHERE price_sources_json IS NOT NULL")
+    .prepare(
+      "SELECT stablecoin_id, price_sources_json, updated_at FROM dex_prices WHERE price_sources_json IS NOT NULL AND updated_at >= ?",
+    )
+    .bind(cutoffSec)
     .all<{ stablecoin_id: string; price_sources_json: string; updated_at: number }>();
 
   for (const row of priceRows.results ?? []) {
-    if (nowSec - row.updated_at > maxAgeSec) continue;
     if (challengersByStablecoin.has(row.stablecoin_id)) continue;
     const sources = decodeLegacyJsonArray<LegacyDexPoolSource>(row.price_sources_json, {
         stablecoinId: row.stablecoin_id,

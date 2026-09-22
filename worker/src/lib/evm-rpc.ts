@@ -349,16 +349,18 @@ export function isHexResult(value: string | null | undefined): value is `0x${str
 }
 
 /**
- * Execute one JSON-RPC batch against the reviewed chain endpoint. The adapter
- * owns the operation limiter; keeping the batch primitive here means code and
- * state reads can share one provider request without weakening per-result
- * validation.
+ * One JSON-RPC batch against the reviewed chain endpoints, with the envelope
+ * validation every caller needs: matching row count, safe-integer ids, no
+ * duplicate or out-of-range id, one row per call. `project` owns the
+ * per-variant postcondition and returns null to reject this endpoint and fall
+ * through to the next url.
  */
-export async function fetchEvmRpcBatch(
+async function runEvmRpcBatch<Value>(
   chainId: string | undefined,
   calls: readonly EvmRpcBatchCall[],
-  options?: EvmRpcOptions,
-): Promise<unknown[] | null> {
+  options: EvmRpcOptions | undefined,
+  project: (rowsById: ReadonlyMap<number, JsonRpcEnvelope<unknown>>) => Value | null,
+): Promise<Value | null> {
   const urls = buildRpcUrls(chainId, options?.extraRpcUrls, options?.chainRpcs);
   if (urls.length === 0 || calls.length === 0) return null;
 
@@ -386,32 +388,51 @@ export async function fetchEvmRpcBatch(
       if (!result?.response.ok || !Array.isArray(result.body) || result.body.length !== calls.length) continue;
 
       const byId = new Map<number, JsonRpcEnvelope<unknown>>();
-      for (const row of result.body) {
-        if (!row || typeof row !== "object" || !Number.isSafeInteger((row as { id?: unknown }).id)) {
-          byId.clear();
-          break;
-        }
-        byId.set((row as { id: number }).id, row);
-      }
-      if (byId.size !== calls.length) continue;
-
-      const values: unknown[] = [];
       let valid = true;
-      for (let index = 0; index < calls.length; index += 1) {
-        const row = byId.get(index + 1);
-        if (!row || row.error || !("result" in row) || row.result === undefined) {
+      for (const row of result.body) {
+        const rawId: unknown = row && typeof row === "object" && "id" in row ? row.id : undefined;
+        if (typeof rawId !== "number" || !Number.isSafeInteger(rawId)) {
           valid = false;
           break;
         }
-        values.push(row.result);
+        if (rawId < 1 || rawId > calls.length || byId.has(rawId)) {
+          valid = false;
+          break;
+        }
+        byId.set(rawId, row);
       }
-      if (valid) return values;
+      if (!valid || byId.size !== calls.length) continue;
+
+      const projected = project(byId);
+      if (projected !== null) return projected;
     } catch (error) {
       rethrowIfAborted(error, options?.signal);
     }
   }
 
   return null;
+}
+
+/**
+ * Execute one JSON-RPC batch against the reviewed chain endpoint. The adapter
+ * owns the operation limiter; keeping the batch primitive here means code and
+ * state reads can share one provider request without weakening per-result
+ * validation.
+ */
+export async function fetchEvmRpcBatch(
+  chainId: string | undefined,
+  calls: readonly EvmRpcBatchCall[],
+  options?: EvmRpcOptions,
+): Promise<unknown[] | null> {
+  return runEvmRpcBatch(chainId, calls, options, (rowsById) => {
+    const values: unknown[] = [];
+    for (let index = 0; index < calls.length; index += 1) {
+      const row = rowsById.get(index + 1);
+      if (!row || row.error || !("result" in row) || row.result === undefined) return null;
+      values.push(row.result);
+    }
+    return values;
+  });
 }
 
 /**
@@ -425,73 +446,23 @@ export async function fetchEvmRpcBatchDetailed(
   calls: readonly EvmRpcBatchCall[],
   options?: EvmRpcOptions,
 ): Promise<EvmRpcBatchDetailedResult | null> {
-  const urls = buildRpcUrls(chainId, options?.extraRpcUrls, options?.chainRpcs);
-  if (urls.length === 0 || calls.length === 0) return null;
-
-  const maxRetries = options?.maxRetries ?? 1;
-  for (const rpcUrl of urls) {
-    try {
-      const result = await fetchJsonWithRetry<Array<JsonRpcEnvelope<unknown>>>(
-        rpcUrl,
-        {
-          method: "POST",
-          headers: buildJsonRpcHeaders(rpcUrl),
-          signal: options?.signal,
-          body: JSON.stringify(
-            calls.map((call, index) => ({
-              jsonrpc: "2.0",
-              id: index + 1,
-              method: call.method,
-              params: call.params,
-            })),
-          ),
-        },
-        maxRetries,
-        { timeoutMs: options?.timeoutMs ?? 10_000, retryMode: "network-only" },
-      );
-      if (!result?.response.ok || !Array.isArray(result.body) || result.body.length !== calls.length) continue;
-
-      const byId = new Map<number, JsonRpcEnvelope<unknown>>();
-      let valid = true;
-      for (const row of result.body) {
-        if (!row || typeof row !== "object" || !Number.isSafeInteger((row as { id?: unknown }).id)) {
-          valid = false;
-          break;
-        }
-        const id = (row as { id: number }).id;
-        if (id < 1 || id > calls.length || byId.has(id)) {
-          valid = false;
-          break;
-        }
-        byId.set(id, row);
+  return runEvmRpcBatch(chainId, calls, options, (rowsById) => {
+    const results: Array<unknown | undefined> = [];
+    const errors: EvmRpcBatchError[] = [];
+    for (let index = 0; index < calls.length; index += 1) {
+      const row = rowsById.get(index + 1);
+      if (!row) return null;
+      if (row.error) {
+        results.push(undefined);
+        errors.push({ index, code: row.error.code, message: row.error.message });
+      } else if ("result" in row && row.result !== undefined) {
+        results.push(row.result);
+      } else {
+        return null;
       }
-      if (!valid || byId.size !== calls.length) continue;
-
-      const results: Array<unknown | undefined> = [];
-      const errors: EvmRpcBatchError[] = [];
-      for (let index = 0; index < calls.length; index += 1) {
-        const row = byId.get(index + 1);
-        if (!row) {
-          valid = false;
-          break;
-        }
-        if (row.error) {
-          results.push(undefined);
-          errors.push({ index, code: row.error.code, message: row.error.message });
-        } else if ("result" in row && row.result !== undefined) {
-          results.push(row.result);
-        } else {
-          valid = false;
-          break;
-        }
-      }
-      if (valid) return { results, errors };
-    } catch (error) {
-      rethrowIfAborted(error, options?.signal);
     }
-  }
-
-  return null;
+    return { results, errors };
+  });
 }
 
 export function parseUint256Hex(value: unknown): bigint | null {

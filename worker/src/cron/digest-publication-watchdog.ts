@@ -11,7 +11,6 @@ import {
   NON_INTERNAL_DIGEST_SQL_FILTER,
   NON_WEEKLY_DIGEST_SQL_FILTER,
 } from "../lib/digest-sql-filters";
-import { classifyFreshness } from "../lib/status/freshness-oracle";
 import { deliverOperatorAlert } from "./cron-sentinel-rules";
 
 const DIGEST_WATCHDOG_STATE_KEY = "digest-publication-watchdog:state:v1";
@@ -23,26 +22,6 @@ const DAILY_DIGEST_DUE_AFTER_SEC = 8 * 3600 + 30 * 60;
 const WEEKLY_DIGEST_DUE_AFTER_SEC = 8 * 3600 + 35 * 60;
 const MAP_MANIFEST_MAX_BYTES = 16_384;
 const MAP_MANIFEST_TIMEOUT_MS = 3_000;
-
-function isDueAfter(dayStartSec: number, nowSec: number, dueAfterSec: number): boolean {
-  return classifyFreshness(
-    {
-      job: "digest-publication-clock",
-      lastSuccessAt: dayStartSec,
-      lastRunAt: dayStartSec,
-      expectedIntervalSec: dueAfterSec,
-      lastStatus: "ok",
-    },
-    {
-      // Digest cutoffs are due at the exact second (`elapsed >= dueAfter`),
-      // while freshness age limits are inclusive. Unix clocks are integral,
-      // so dueAfter - 1 preserves the existing boundary exactly.
-      watchAt: { absoluteSec: dueAfterSec - 1 },
-      staleAt: { absoluteSec: dueAfterSec - 1 },
-    },
-    nowSec,
-  ).state === "stale";
-}
 
 /**
  * Single source for the condition set. The union is derived from it and every
@@ -385,9 +364,9 @@ export async function runDigestPublicationWatchdog(
   const daysSinceMonday = (utcDay + 6) % 7;
   const weekStartSec = dayStartSec - daysSinceMonday * 24 * 3600;
   const weekDate = formatIsoDate(weekStartSec);
-  const dailyDue = isDueAfter(dayStartSec, nowSec, DAILY_DIGEST_DUE_AFTER_SEC);
-  const weeklyDue = isDueAfter(weekStartSec, nowSec, WEEKLY_DIGEST_DUE_AFTER_SEC);
-  const mapDue = isDueAfter(dayStartSec, nowSec, MAP_READY_AFTER_SEC);
+  const dailyDue = nowSec - dayStartSec >= DAILY_DIGEST_DUE_AFTER_SEC;
+  const weeklyDue = nowSec - weekStartSec >= WEEKLY_DIGEST_DUE_AFTER_SEC;
+  const mapDue = nowSec - dayStartSec >= MAP_READY_AFTER_SEC;
   const { observations, map } = await readPublicationObservations(
     db,
     date,
@@ -480,7 +459,11 @@ export async function runDigestPublicationWatchdog(
     metadata: JSON.stringify({
       date,
       cutoffs: { mapDue, dailyDue, weeklyDue },
-      healthy: blockingStale.length === 0,
+      checked: observations.length,
+      // Before the first cutoff nothing has been evaluated: a positive health
+      // claim about an empty condition set is indistinguishable from a
+      // verified one, so publish absence instead.
+      healthy: observations.length === 0 ? null : blockingStale.length === 0,
       conditions: Object.fromEntries(observations.map((observation) => [
         observation.condition,
         { state: observation.state, detail: observation.detail, advisory: observation.advisory },

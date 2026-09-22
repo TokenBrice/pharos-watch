@@ -564,7 +564,7 @@ function summarizeFindings(snapshots, statusPayload, coverage, args) {
     findings.push({
       severity: nonOkRuns.some((run) => run.status === "error") ? "High" : "Medium",
       title: `${nonOkRuns.length} non-ok cron run rows in collected window`,
-      evidence: nonOkRuns.slice(0, 8).map((run) => `${run.job}: ${run.status}${run.error ? ` (${String(run.error).slice(0, 120)})` : ""}`),
+      evidence: nonOkRuns.slice(0, 8).map((run) => `${run.job}: ${run.status} [${run.degraded_reason ?? "(no-reason)"}]${run.error ? ` (${String(run.error).slice(0, 120)})` : ""}`),
     });
   }
 

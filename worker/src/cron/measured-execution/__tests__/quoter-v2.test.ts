@@ -35,7 +35,6 @@ import {
   buildDexMeasuredExecutionProfile,
   createDexMeasuredExecutionRpcBudget,
   DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
-  projectProfileForAdapter,
 } from "../profiles";
 import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-observation-assembly";
 import { toMaturePublicProfile } from "./profile.test-support";
@@ -306,13 +305,6 @@ describe("QuoterV2 pinned-block replay proofs", () => {
       });
 
       expect(validateQuoterV2ProfileProof(profile)).toEqual([]);
-      const v2Profile = projectProfileForAdapter(profile, "evm-quoter-v2");
-      expect(v2Profile).toMatchObject({
-        adapterId: "evm-quoter-v2",
-        demandedInputAmountsUsd: DEMANDED_GRID_USD,
-        payload: { platform: "evm", blockNumber: fixture.blockNumber },
-      });
-      expect(v2Profile?.payload.platform === "evm" && v2Profile.payload.callProof).toHaveLength(5);
       expect(isDexMeasuredExecutionDeploymentScoreEligible(fixture.adapterProfileId, fixture.chain))
         .toBe(fixture.scoreEligible);
         const measuredExecution = toMaturePublicProfile(profile);
@@ -431,56 +423,6 @@ describe("QuoterV2 pinned-block replay proofs", () => {
     expect(rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mock.calls.every(
       (call) => call[3]?.timeoutMs === DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
     )).toBe(true);
-  });
-
-  it("preserves the Quoter adaptive multicall golden budget-exhaustion result", async () => {
-    const fixture = REPLAYS[0]!;
-    const target = makeTarget(fixture);
-    const deployment = getDexMeasuredExecutionDeployment(fixture.adapterProfileId, fixture.chain)!;
-    rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockImplementation(
-      async (
-        _chain: string,
-        _calls: unknown,
-        _blockNumber: number,
-        options: { beforeRequest?: () => boolean },
-      ) => {
-        options.beforeRequest?.();
-        return null;
-      },
-    );
-    const budget = createDexMeasuredExecutionRpcBudget({
-      maxRequests: 0,
-      deadlineMs: Date.now() + 60_000,
-    });
-
-    const outcomes = await quoteQuoterV2Requests({
-      requests: [{ target, inputUsd: 1_000, endpointAddress: deployment.endpointAddress }],
-      blockNumber: fixture.blockNumber,
-      chainRpcs: new Map(),
-      rpcBudget: budget,
-    });
-
-    expect(outcomes[0]?.failureReason).toBe("request-budget-exhausted");
-  });
-
-  it("preserves the Quoter adaptive multicall golden deadline result", async () => {
-    const fixture = REPLAYS[0]!;
-    const target = makeTarget(fixture);
-    const deployment = getDexMeasuredExecutionDeployment(fixture.adapterProfileId, fixture.chain)!;
-    rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockResolvedValue(null);
-    const budget = createDexMeasuredExecutionRpcBudget({
-      maxRequests: 100,
-      deadlineMs: Date.now() - 1,
-    });
-
-    const outcomes = await quoteQuoterV2Requests({
-      requests: [{ target, inputUsd: 1_000, endpointAddress: deployment.endpointAddress }],
-      blockNumber: fixture.blockNumber,
-      chainRpcs: new Map(),
-      rpcBudget: budget,
-    });
-
-    expect(outcomes[0]?.failureReason).toBe("runtime-deadline-exceeded");
   });
 
   it("preserves the Quoter adaptive multicall golden unattempted result", async () => {

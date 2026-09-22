@@ -26,7 +26,7 @@ describe("ERC4626 redemption locks", () => {
   it("bounds fully backed capacity by the live cooldown, without adding the withdrawal window", async () => {
     mockLocks(1728000n);
     const result = await runTrackedVault("syrupusdc-maple", withLocks);
-    expect(result.metadata?.redemption).toMatchObject({ capacityKind: "documented-bound", capacityRatioOfSupply: 1, settlementDelaySec: 1728000, routeStatus: "open" });
+    expect(result.metadata?.redemption).toMatchObject({ capacityKind: "documented-bound", capacityRatioOfSupply: 1, settlementDelaySec: 1728000, routeStatus: "open", routeStatusSource: "onchain" });
     expect(result.metadata?.unstakeWindowSec).toBe(172800);
   });
   it("publishes paused evidence as degraded without losing reserve composition", async () => {
@@ -39,7 +39,7 @@ describe("ERC4626 redemption locks", () => {
   it("does not invent a lock when no lock is configured", async () => {
     installErc4626Network({ idleBalance: 100_000_000n });
     const result = await runTrackedVault("syrupusdc-maple");
-    expect(result.metadata?.redemption).toMatchObject({ capacityKind: "live-direct", routeStatus: "open" });
+    expect(result.metadata?.redemption).toMatchObject({ capacityKind: "live-direct", routeStatus: "unknown" });
     expect(result.metadata?.redemption).not.toHaveProperty("settlementDelaySec");
   });
   it("permits immediate redemption when both cooldown and window are disabled", async () => {

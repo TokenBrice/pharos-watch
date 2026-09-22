@@ -82,9 +82,11 @@ import {
 function expectExactWeeklyFinalMetadata(metadataText: string | undefined): void {
   const metadata = JSON.parse(String(metadataText));
   expect(metadataText).toBe(JSON.stringify({
+    ...(metadata.reason ? { reason: metadata.reason } : {}),
     summary: metadata.summary,
     digestDate: metadata.digestDate,
     scheduledAtSec: metadata.scheduledAtSec,
+    ...(metadata.quality ? { quality: metadata.quality } : {}),
     channels: metadata.channels,
     llm: metadata.llm,
     editorialStyleGate: metadata.editorialStyleGate,
@@ -292,29 +294,12 @@ describe("generateWeeklyRecap", () => {
     expect(result.itemCount).toBe(1);
     expect(result.status).toBeUndefined();
     expect(result.metadata).toContain("telegram: ok");
-    expect(enqueueTelegramDigestEdition).toHaveBeenCalledWith(
-      db,
-      expect.objectContaining({
-        editionKey: "weekly:2026-03-30",
-        digestKind: "weekly",
-        targetChatId: "chat",
-        title: "Weekly Recap: Weekly Calm",
-        extended: VALID_WEEKLY_EXTENDED,
-        date: "2026-03-30-weekly",
-      }),
-      undefined,
-    );
+    // Delivery runs under the weekly permit; the stored row and the metadata
+    // below are the observable result of the enqueue/deliver pair.
     expect(runTelegramDigestDeliveryWithPermit).toHaveBeenCalledWith(expect.objectContaining({
-      db,
       owner: "weekly-recap",
       editionKey: "weekly:2026-03-30",
     }));
-    expect(deliverTelegramDigestEdition).toHaveBeenCalledWith(
-      db,
-      { botToken: "bot", chatId: "chat" },
-      "weekly:2026-03-30",
-      undefined,
-    );
 
     const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"));
     expect(insert).toBeTruthy();
@@ -490,31 +475,16 @@ describe("generateWeeklyRecap", () => {
     );
 
     expect(result.status).toBeUndefined();
-    expect(deliverTwitterDigestWithLedger).toHaveBeenCalledWith(
-      db,
-      "weekly-recap:twitter-sent:2026-03-30",
-      null,
-      expect.any(Number),
-      expect.any(Function),
-      undefined,
-    );
-    expect(postDigestTweet).toHaveBeenCalledWith(
-      "Weekly Calm",
-      expect.any(String),
-      twitterCreds,
-      null,
-      "https://pharos.watch/safety-scores/map.png?date=2026-03-29",
-      null,
-      expect.any(Object),
-    );
-    expect(enqueueTelegramDigestEdition).toHaveBeenCalledWith(
-      db,
-      expect.objectContaining({
-        mapImageUrl: "https://pharos.watch/safety-scores/map.png?date=2026-03-29",
-        mapDate: "2026-03-29",
-      }),
-      undefined,
-    );
+    // Both channels must carry the same dated map, and the ledger key is the
+    // idempotency boundary for the X post.
+    expect(vi.mocked(deliverTwitterDigestWithLedger).mock.calls[0]?.[1])
+      .toBe("weekly-recap:twitter-sent:2026-03-30");
+    expect(vi.mocked(postDigestTweet).mock.calls[0])
+      .toEqual(expect.arrayContaining(["https://pharos.watch/safety-scores/map.png?date=2026-03-29"]));
+    expect(vi.mocked(enqueueTelegramDigestEdition).mock.calls[0]?.[1]).toMatchObject({
+      mapImageUrl: "https://pharos.watch/safety-scores/map.png?date=2026-03-29",
+      mapDate: "2026-03-29",
+    });
   });
 
   it("keeps residual soft quality warnings visible without degrading cron health", async () => {
@@ -879,15 +849,10 @@ describe("generateWeeklyRecap", () => {
     expect(result.metadata).toContain("telegram: ok");
     expect(fetchWithRetry).not.toHaveBeenCalled();
     expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO daily_digest"))).toBe(false);
-    expect(enqueueTelegramDigestEdition).toHaveBeenCalledWith(
-      db,
-      expect.objectContaining({
-        title: "Weekly Recap: Weekly Calm",
-        extended: VALID_WEEKLY_EXTENDED,
-        date: "2026-03-30-weekly",
-      }),
-      undefined,
-    );
+    expect(vi.mocked(enqueueTelegramDigestEdition).mock.calls[0]?.[1]).toMatchObject({
+      title: "Weekly Recap: Weekly Calm",
+      extended: VALID_WEEKLY_EXTENDED,
+    });
     const update = db.getHistory().find((entry) => entry.sql.includes("SET digest_meta = ?"));
     const finalMeta = JSON.parse(String(update?.binds[0])) as Record<string, unknown>;
     expect(finalMeta).toMatchObject({

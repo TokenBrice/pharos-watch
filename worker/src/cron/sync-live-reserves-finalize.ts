@@ -304,7 +304,10 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
   throwIfAborted(args.signal);
   if (hasD1FinalizationWindow(args, finalizationBudget)) {
     try {
-      historyPrune = await pruneLiveReserveHistory(args.db, args.runStartedAt);
+      historyPrune = await pruneLiveReserveHistory(args.db, args.runStartedAt, {
+        signal: args.signal,
+        deadlineMs: finalizationBudget.deadlineMs - args.budgetConfig.finalizationMarginMs,
+      });
     } catch (error) {
       await recordFinalizationWarning(
         args.db,

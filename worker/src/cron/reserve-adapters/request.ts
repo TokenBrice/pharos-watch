@@ -52,6 +52,27 @@ export function buildBrowserHeaders(originUrl: string, referer?: string): Header
   };
 }
 
+export async function fetchWithBrowserFallback<T>(
+  origin: string,
+  referer: string,
+  fetcher: (headers: HeadersInit) => Promise<T>,
+  signal: AbortSignal,
+): Promise<T> {
+  try {
+    return await fetcher(buildBrowserHeaders(origin, referer));
+  } catch (primaryError) {
+    if (signal.aborted) throw primaryError;
+    try {
+      return await fetcher(NEUTRAL_ADAPTER_HEADERS);
+    } catch (fallbackError) {
+      if (signal.aborted) throw fallbackError;
+      throw new Error(
+        `browser fetch failed: ${toErrorMessage(primaryError)}; neutral fetch failed: ${toErrorMessage(fallbackError)}`,
+      );
+    }
+  }
+}
+
 interface JsonRetryOptions {
   headers?: HeadersInit;
   maxResponseBytes?: number;

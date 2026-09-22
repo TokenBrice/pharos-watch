@@ -1,6 +1,6 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { mapWithConcurrency } from "../../lib/concurrency";
-import { SUBGRAPH_PER_CHAIN_TIMEOUT_MS } from "./constants";
+import { SUBGRAPH_FAMILY_MAX_CONCURRENCY, SUBGRAPH_PER_CHAIN_TIMEOUT_MS } from "./constants";
 import {
   fetchSubgraphEntities,
   type FetchSubgraphEntitiesConfig,
@@ -30,22 +30,28 @@ interface RunSubgraphFamilyParams<TEntity, TLookups> {
   buildFinalSummary: (lookups: TLookups) => string;
 }
 
-export async function runSubgraphFamily<TEntity, TLookups>(
+/** Lookups plus the chains whose source did not answer this run. */
+export type SubgraphFamilyResult<TLookups> = TLookups & {
+  failedChains: string[];
+};
+
+export async function runSubgraphFamily<TEntity, TLookups extends object>(
   params: RunSubgraphFamilyParams<TEntity, TLookups>,
-): Promise<TLookups> {
+): Promise<SubgraphFamilyResult<TLookups>> {
   const lookups = params.createLookups();
+  const failedChains: string[] = [];
 
   if (!params.graphApiKey) {
     if (params.missingApiKeyMessage) {
       logWorkerEventArgs("handler", "info", params.missingApiKeyMessage);
     }
-    return lookups;
+    return { ...lookups, failedChains };
   }
 
   const subgraphs = Object.entries(params.subgraphs);
   await mapWithConcurrency(
     subgraphs,
-    params.maxConcurrency ?? Math.max(1, subgraphs.length),
+    params.maxConcurrency ?? SUBGRAPH_FAMILY_MAX_CONCURRENCY,
     async ([chain, subgraphId]) => {
       try {
         const perChainTimeout = AbortSignal.timeout(SUBGRAPH_PER_CHAIN_TIMEOUT_MS);
@@ -57,11 +63,13 @@ export async function runSubgraphFamily<TEntity, TLookups>(
           params.buildConfig(chain, subgraphUrl, combinedSignal, lookups),
         );
         params.handleResult(lookups, chain, result);
+        if (result.failed) failedChains.push(chain);
         if (result.shouldLogIndex && params.buildChainSummary) {
           logWorkerEventArgs("handler", "info", params.buildChainSummary(chain, result));
         }
       } catch (error) {
         if (params.signal?.aborted) throw error;
+        failedChains.push(chain);
         logWorkerEventArgs("handler", "warn", `[dex-liquidity] ${params.familyLabel} ${chain} failed (non-fatal):`, error);
       }
     },
@@ -69,5 +77,5 @@ export async function runSubgraphFamily<TEntity, TLookups>(
   );
 
   logWorkerEventArgs("handler", "info", params.buildFinalSummary(lookups));
-  return lookups;
+  return { ...lookups, failedChains };
 }

@@ -1,10 +1,18 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 /**
- * Four-hourly reserve-sync trigger (11 * / 4 * * *):
- *   sync-live-reserves (2) → sync-redemption-backstops (0) → sync-kinesis-supply (1) → cron-sentinel reserve source (1)
+ * Four-hourly reserve-sync trigger (11 * / 4 * * *), three independent chains:
+ *   sync-live-reserves (2) → sync-redemption-backstops (0)
+ *   sync-kinesis-supply (1)
+ *   cron-sentinel reserve source (1)
+ *
+ * Only the backstop computation consumes the reserve-adapter output, so it is
+ * the only member serialized behind the slot's long head. Kinesis supply and
+ * the reserve watchdog run beside it: when the head stalls past the slot
+ * fence, an unrelated sibling must not be abandoned before it starts, and the
+ * watchdog that reports the stall least of all.
  *
  * Reserve adapters run sequentially; backstops are DB-only.
- * Connection budget: 2/6 peak during reserve adapter I/O
+ * Connection budget: 4/6 peak (2 + 1 + 1) while all three chains are in flight
  */
 import { syncLiveReserves } from "../../cron/sync-live-reserves";
 import { syncRedemptionBackstops } from "../../cron/sync-redemption-backstops";
@@ -28,6 +36,8 @@ import {
   type ScheduledRecoveryCheckpoint,
 } from "../../lib/scheduled-recovery-checkpoint";
 import { createLeaseOwner } from "../../lib/cron-lease-primitives";
+
+const SLOT_LABEL = "four-hourly reserve sync slot";
 
 function checkpointIdentity(checkpoint: ScheduledRecoveryCheckpoint): ScheduledCheckpointIdentity {
   return {
@@ -198,20 +208,26 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
   const redemptionTasks = redemptionGroup?.tasks ?? [];
   const kinesisTasks = kinesisGroup?.tasks ?? [];
   const postSyncTasks = postSyncGroup?.tasks ?? [];
-  const mainSummary = syncTask
-    ? await runScheduledSlotGroups(runtime, "four-hourly reserve sync slot", [
-        {
-          ...reserveAdapterGroup,
-          tasks: [syncTask],
-        },
-      ])
-    : buildScheduledSlotSummary([]);
+  // The three chains are launched together: only the backstop computation is
+  // ordered behind the reserve head, so a stalled head can no longer abandon
+  // kinesis supply or the watchdog before they start.
+  const [mainSummary, kinesisSummary, postSyncSummary] = await Promise.all([
+    syncTask
+      ? runScheduledSlotGroups(runtime, SLOT_LABEL, [{ ...reserveAdapterGroup, tasks: [syncTask] }])
+      : buildScheduledSlotSummary([]),
+    kinesisTasks.length > 0 && kinesisGroup
+      ? runScheduledSlotGroups(runtime, SLOT_LABEL, [kinesisGroup])
+      : buildScheduledSlotSummary([]),
+    postSyncTasks.length > 0 && postSyncGroup
+      ? runScheduledSlotGroups(runtime, SLOT_LABEL, [postSyncGroup])
+      : buildScheduledSlotSummary([]),
+  ]);
   const checkpointAfterMain = await loadLiveReserveCheckpoint(runtime.db, identity);
   if (!checkpointAfterMain) {
     throw new Error("live reserve checkpoint missing after queue stage");
   }
   const mainFailedAfterQueueExhaustion = mainSummary.jobsErrored > 0 && isReserveQueueExhausted(checkpointAfterMain);
-  const summaries: ScheduledSlotSummary[] = [mainSummary];
+  const summaries: ScheduledSlotSummary[] = [mainSummary, kinesisSummary, postSyncSummary];
   const reserveStageCompleted =
     isReserveQueueExhausted(checkpointAfterMain)
     && mainSummary.jobsErrored === 0
@@ -226,22 +242,7 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
       ),
     );
   } else if (redemptionTasks.length > 0 && redemptionGroup) {
-    summaries.push(await runScheduledSlotGroups(runtime, "four-hourly reserve sync slot", [redemptionGroup]));
-  }
-  if (kinesisTasks.length > 0 && kinesisGroup) {
-    summaries.push(await runScheduledSlotGroups(runtime, "four-hourly reserve sync slot", [kinesisGroup]));
-  }
-  if (!reserveStageCompleted) {
-    summaries.push(
-      await recordBlockedReserveTasks(
-        runtime,
-        identity,
-        postSyncTasks,
-        "sync-live-reserves",
-      ),
-    );
-  } else if (postSyncTasks.length > 0 && postSyncGroup) {
-    summaries.push(await runScheduledSlotGroups(runtime, "four-hourly reserve sync slot", [postSyncGroup]));
+    summaries.push(await runScheduledSlotGroups(runtime, SLOT_LABEL, [redemptionGroup]));
   }
   const summary = mergeScheduledSlotSummaries(summaries);
   const checkpointAfterChildren = await loadLiveReserveCheckpoint(runtime.db, identity);

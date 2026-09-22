@@ -78,6 +78,7 @@ export async function handleReclassifyAtomicRoundtripsTrusted({
          WHERE flow_type = 'standard' AND timestamp >= ?${coinFilterSql}
          GROUP BY tx_hash, stablecoin_id, chain_id
          HAVING COUNT(DISTINCT direction) > 1
+            AND (${ROUNDTRIP_TOLERANCE_HAVING_SQL})
          ORDER BY MIN(timestamp) ASC, stablecoin_id ASC, tx_hash ASC
          LIMIT ?`,
       )

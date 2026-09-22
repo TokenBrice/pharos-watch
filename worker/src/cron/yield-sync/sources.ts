@@ -28,6 +28,7 @@ export {
   fetchYearnKongSources,
 } from "./sources-optional-protocols-supplemental";
 export {
+  createOptionalRpcFamilyTelemetry,
   fetchAaveV3SupplyRates,
   fetchCompoundV3SupplyRates,
   fetchOnChainRates,

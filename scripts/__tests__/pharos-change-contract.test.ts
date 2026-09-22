@@ -12,11 +12,13 @@ import {
   classifyChangedFiles,
   formatContract,
   getHookHarness,
+  findShellCommandViolation,
   normalizeChangedFiles,
   normalizeExplicitFiles,
   readHookInput,
 } from "../ci/pharos-change-contract.ts";
 import { PATH_FAMILIES } from "../lib/doc-ownership-registry.mts";
+import { analyzeShellCommand } from "../lib/shell-command-analysis.ts";
 
 function requireBlockingReason(output: unknown): string {
   if (typeof output !== "object" || output === null || !("reason" in output) || typeof output.reason !== "string") {
@@ -87,63 +89,155 @@ describe("normalizeChangedFiles", () => {
 });
 
 describe("classifyChangedFiles", () => {
-  it("routes stablecoin registry changes to data docs", () => {
-    const contract = classifyChangedFiles(["shared/data/stablecoins/coins/example-usd.json"]);
+  // One row per owned path family: what the router must attach to a change in it.
+  it.each([
+    {
+      name: "stablecoin registry data to the data docs",
+      files: ["shared/data/stablecoins/coins/example-usd.json"],
+      mappings: ["stablecoin-registry"],
+      docs: ["docs/stablecoin-data.md"],
+      checks: ["npm run check:stablecoin-data"],
+      // wording is owner-editable in docs/doc-ownership.json (it was reworded by
+      // 38dbd97cf), so pin the invariant rather than the sentence.
+      hardRule: /supply overrides?\b/i,
+      deploy: { pagesImpact: true, workerImpact: true },
+    },
+    {
+      name: "a coin record to the addition procedure and scoped context",
+      files: ["shared/data/stablecoins/coins/usdc-circle.json"],
+      mappings: ["stablecoin-registry"],
+      docs: ["docs/process/adding-a-stablecoin.md#source-of-truth"],
+      checks: ["npm run check:stablecoin-data"],
+      scopedContext: ["shared/data/stablecoins/AGENTS.md", "shared/AGENTS.md"],
+    },
+    {
+      name: "scheduled Worker changes to cron docs and guardrails",
+      files: ["worker/src/cron/sync-yield-data.ts"],
+      mappings: ["worker-cron"],
+      background: ["docs/worker-and-api-limits.md"],
+      checks: ["npm run check:cron-sync", "npm run check:cron-connections"],
+      hardRule: /six-connection trigger budget/,
+    },
+    {
+      name: "the yield cron to the shared cron contract",
+      files: ["worker/src/cron/yield-coverage-audit.ts"],
+      mappings: ["worker-cron"],
+      docsHead: [
+        "docs/process/cron-trigger-policy.md",
+        "docs/worker-infrastructure.md#module-initialization",
+        "docs/process/agent-start-here.md",
+      ],
+      scopedContextHead: ["worker/src/cron/AGENTS.md", "worker/AGENTS.md"],
+      checks: ["npm run check:cron-sync"],
+    },
+    {
+      name: "blog publishing changes to the frontend contract",
+      files: ["src/data/blog/posts/example.md"],
+      mappings: ["frontend-routes"],
+      docs: ["docs/architecture.md#frontend-runtime-and-seo-surface"],
+    },
+    {
+      name: "a screener component through the shared frontend route contract",
+      files: ["src/components/screener/screener-table.tsx"],
+      mappings: ["frontend-routes"],
+      docs: ["docs/architecture.md#frontend-runtime-and-seo-surface"],
+      maxDocs: 3,
+      checks: ["npm run typecheck"],
+    },
+    {
+      name: "the homepage entrypoint through the shared frontend route contract",
+      files: ["src/app/page.tsx"],
+      mappings: ["frontend-routes"],
+      docs: ["docs/architecture.md#frontend-runtime-and-seo-surface"],
+      maxDocs: 3,
+      checks: ["npm run typecheck"],
+    },
+    {
+      name: "Next configuration to frontend and deployment owners",
+      files: ["next.config.ts"],
+      mappings: ["frontend-routes", "validation-ci-policy"],
+      docs: ["docs/deployment-process.md#ci-deploy-sequence"],
+    },
+    {
+      name: "Telegram delivery changes to the unified Telegram contract",
+      files: ["worker/src/lib/telegram/mini-app-auth.ts", "shared/lib/telegram-delivery-policy.ts"],
+      mappings: ["telegram"],
+      docs: ["docs/telegram-alerts.md#dispatch"],
+    },
+    {
+      name: "Telegram API ingress to the unified Telegram contract",
+      files: ["worker/src/api/telegram-webhook.ts"],
+      mappings: ["telegram"],
+      docs: [
+        "docs/telegram-architecture.md#1-ingress",
+        "docs/telegram-alerts.md#dispatch",
+        "docs/telegram-mini-app.md",
+      ],
+      checks: ["npm run typecheck"],
+    },
+    {
+      name: "Telegram command handlers to the unified Telegram contract",
+      files: ["worker/src/api/webhook-commands/subscribe.ts"],
+      mappings: ["telegram"],
+      docs: ["docs/telegram-alerts.md#commands", "docs/telegram-architecture.md#1-ingress"],
+      checks: ["npm run typecheck"],
+    },
+    {
+      name: "feedback verification changes to the Worker API contract",
+      files: ["worker/src/api/feedback/verification.ts"],
+      mappings: ["worker-api-auth"],
+      docs: ["docs/api-endpoint-authoring.md"],
+    },
+    {
+      name: "the digest safety-map type contract to the V9 publication owner",
+      files: ["shared/types/digest-safety-map-contract.ts"],
+      mappings: ["safety-score-v9"],
+      docs: ["docs/digest-pipeline.md#generation", "docs/safety-score-map.md"],
+      checks: ["npm run check:doc-sync"],
+    },
+    {
+      name: "repo-local agent config changes to agent process guidance",
+      files: [".codex/config.toml", ".claude/settings.json", "scripts/ci/pharos-change-contract.ts"],
+      mappings: ["agent-hooks-process"],
+      docs: ["docs/process/agent-artifacts.md"],
+      absentDocs: ["CLAUDE.md"],
+      checks: ["npm run check:generated-artifacts -- --only=agents-doc"],
+    },
+  ] as Array<{
+    name: string;
+    files: string[];
+    mappings: string[];
+    docs?: string[];
+    docsHead?: string[];
+    absentDocs?: string[];
+    maxDocs?: number;
+    checks?: string[];
+    background?: string[];
+    scopedContext?: string[];
+    scopedContextHead?: string[];
+    hardRule?: RegExp;
+    deploy?: { pagesImpact: boolean; workerImpact: boolean };
+  }>)("routes $name", (routing) => {
+    const contract = classifyChangedFiles(routing.files);
 
-    expect(contract.mappings.map((mapping: { id: string }) => mapping.id)).toContain("stablecoin-registry");
-    expect(docKeys(contract)).toContain("docs/stablecoin-data.md");
-    expect(contract.checks).toContain("npm run check:stablecoin-data");
-    // wording is owner-editable in docs/doc-ownership.json (it was reworded by
-    // 38dbd97cf), so pin the invariant rather than the sentence.
-    expect(contract.hardRules.some((rule: string) => /supply overrides?\b/i.test(rule))).toBe(true);
-    expect(contract.deploy.pagesImpact).toBe(true);
-    expect(contract.deploy.workerImpact).toBe(true);
-  });
-
-  it("routes scheduled Worker changes to cron docs and guardrails", () => {
-    const contract = classifyChangedFiles(["worker/src/cron/sync-yield-data.ts"]);
-
-    expect(contract.mappings.map((mapping: { id: string }) => mapping.id)).toContain("worker-cron");
-    expect(contract.background.map((doc) => doc.path)).toContain("docs/worker-and-api-limits.md");
-    expect(contract.hardRules.some((rule: string) => /six-connection trigger budget/.test(rule))).toBe(true);
-    expect(contract.checks).toContain("npm run check:cron-sync");
-    expect(contract.checks).toContain("npm run check:cron-connections");
-
-  });
-  it("routes blog publishing changes to the frontend contract", () => {
-    const contract = classifyChangedFiles(["src/data/blog/posts/example.md"]);
-
-    expect(contract.mappings.map((mapping: { id: string }) => mapping.id)).toContain("frontend-routes");
-    expect(docKeys(contract)).toContain("docs/architecture.md#frontend-runtime-and-seo-surface");
-
-  });
-  it("routes Telegram delivery changes to the unified Telegram contract", () => {
-    const contract = classifyChangedFiles([
-      "worker/src/lib/telegram/mini-app-auth.ts",
-      "shared/lib/telegram-delivery-policy.ts",
-    ]);
-
-    expect(contract.mappings.map((mapping: { id: string }) => mapping.id)).toContain("telegram");
-    expect(docKeys(contract)).toContain("docs/telegram-alerts.md#dispatch");
-
-  });
-  it("routes feedback verification changes to the Worker API contract", () => {
-    const contract = classifyChangedFiles(["worker/src/api/feedback/verification.ts"]);
-
-    expect(contract.mappings.map((mapping: { id: string }) => mapping.id)).toContain("worker-api-auth");
-    expect(docKeys(contract)).toContain("docs/api-endpoint-authoring.md");
-
-  });
-  it("routes repo-local agent config changes to agent process guidance", () => {
-    const contract = classifyChangedFiles([
-      ".codex/config.toml",
-      ".claude/settings.json",
-      "scripts/ci/pharos-change-contract.ts",
-    ]);
-    expect(contract.checks).toContain("npm run check:generated-artifacts -- --only=agents-doc");
-    expect(contract.mappings.map((mapping: { id: string }) => mapping.id)).toContain("agent-hooks-process");
-    expect(docKeys(contract)).toContain("docs/process/agent-artifacts.md");
-    expect(docKeys(contract)).not.toContain("CLAUDE.md");
+    expect(contract.mappings.map((mapping) => mapping.id)).toEqual(expect.arrayContaining(routing.mappings));
+    for (const doc of routing.docs ?? []) expect(docKeys(contract)).toContain(doc);
+    for (const doc of routing.absentDocs ?? []) expect(docKeys(contract)).not.toContain(doc);
+    for (const check of routing.checks ?? []) expect(contract.checks).toContain(check);
+    for (const doc of routing.background ?? []) {
+      expect(contract.background.map((entry) => entry.path)).toContain(doc);
+    }
+    if (routing.docsHead) expect(docKeys(contract).slice(0, routing.docsHead.length)).toEqual(routing.docsHead);
+    if (routing.maxDocs !== undefined) expect(docKeys(contract).length).toBeLessThanOrEqual(routing.maxDocs);
+    if (routing.scopedContext) expect(contract.scopedContext).toEqual(routing.scopedContext);
+    if (routing.scopedContextHead) {
+      expect(contract.scopedContext.slice(0, routing.scopedContextHead.length)).toEqual(routing.scopedContextHead);
+    }
+    if (routing.hardRule) {
+      const hardRule = routing.hardRule;
+      expect(contract.hardRules.some((rule: string) => hardRule.test(rule))).toBe(true);
+    }
+    if (routing.deploy) expect(contract.deploy).toMatchObject(routing.deploy);
   });
   it("includes docs, warnings, and deploy impact in text output", () => {
     const contract = classifyChangedFiles(["worker/migrations/0123_example.sql"]);
@@ -174,56 +268,6 @@ describe("representative --file routing", () => {
     return classifyChangedFiles([file]);
   }
 
-  it("routes a screener component through the shared frontend route contract", () => {
-    const contract = route("src/components/screener/screener-table.tsx");
-    expect(contract.mappings.map((mapping) => mapping.id)).toContain("frontend-routes");
-    expect(docKeys(contract)).toContain("docs/architecture.md#frontend-runtime-and-seo-surface");
-    expect(docKeys(contract).length).toBeLessThanOrEqual(3);
-    expect(contract.checks).toContain("npm run typecheck");
-  });
-
-  it("routes the yield cron to the shared cron contract", () => {
-    const contract = route("worker/src/cron/yield-coverage-audit.ts");
-    expect(contract.mappings.map((mapping) => mapping.id)).toContain("worker-cron");
-    expect(docKeys(contract).slice(0, 3)).toEqual([
-      "docs/process/cron-trigger-policy.md",
-      "docs/worker-infrastructure.md#module-initialization",
-      "docs/process/agent-start-here.md",
-    ]);
-    expect(contract.scopedContext.slice(0, 2)).toEqual([
-      "worker/src/cron/AGENTS.md",
-      "worker/AGENTS.md",
-    ]);
-    expect(contract.checks).toContain("npm run check:cron-sync");
-  });
-
-  it("routes a coin record to the addition procedure and scoped context", () => {
-    const contract = route("shared/data/stablecoins/coins/usdc-circle.json");
-    expect(contract.mappings.map((mapping) => mapping.id)).toContain("stablecoin-registry");
-    expect(docKeys(contract)).toContain("docs/process/adding-a-stablecoin.md#source-of-truth");
-    expect(contract.scopedContext).toEqual([
-      "shared/data/stablecoins/AGENTS.md",
-      "shared/AGENTS.md",
-    ]);
-    expect(contract.checks).toContain("npm run check:stablecoin-data");
-  });
-
-  it("routes the digest safety-map type contract to the V9 publication owner", () => {
-    const contract = route("shared/types/digest-safety-map-contract.ts");
-    expect(contract.mappings.map((mapping) => mapping.id)).toContain("safety-score-v9");
-    expect(docKeys(contract)).toContain("docs/digest-pipeline.md#generation");
-    expect(docKeys(contract)).toContain("docs/safety-score-map.md");
-    expect(contract.checks).toContain("npm run check:doc-sync");
-  });
-
-  it("routes the homepage entrypoint through the shared frontend route contract", () => {
-    const contract = route("src/app/page.tsx");
-    expect(contract.mappings.map((mapping) => mapping.id)).toContain("frontend-routes");
-    expect(docKeys(contract)).toContain("docs/architecture.md#frontend-runtime-and-seo-surface");
-    expect(docKeys(contract).length).toBeLessThanOrEqual(3);
-    expect(contract.checks).toContain("npm run typecheck");
-  });
-
   it("routes the depeg route and its owned modules to the depeg page contract", () => {
     const clientContract = route("src/app/depeg/client.tsx");
     expect(clientContract.mappings.map((mapping) => mapping.id)).toContain("depeg-page");
@@ -240,14 +284,6 @@ describe("representative --file routing", () => {
     const hookContract = route("src/hooks/use-depeg-resolver-surfaces.ts");
     expect(hookContract.mappings.map((mapping) => mapping.id)).toContain("depeg-page");
     expect(docKeys(hookContract)).toContain("docs/depeg-page.md");
-  });
-
-  it("routes Next configuration to frontend and deployment owners", () => {
-    const contract = route("next.config.ts");
-    expect(contract.mappings.map((mapping) => mapping.id)).toEqual(
-      expect.arrayContaining(["frontend-routes", "validation-ci-policy"]),
-    );
-    expect(docKeys(contract)).toContain("docs/deployment-process.md#ci-deploy-sequence");
   });
 
   it.each([
@@ -283,23 +319,6 @@ describe("representative --file routing", () => {
     expect(contract.background.map((doc) => doc.path)).toContain("docs/process/feature-flags.md");
     expect(contract.checks).toContain("npx vitest run scripts/__tests__");
     expect(contract.checks).toContain("npm run check:generated-artifacts");
-  });
-
-  it("routes Telegram API ingress to the unified Telegram contract", () => {
-    const contract = route("worker/src/api/telegram-webhook.ts");
-    expect(contract.mappings.map((mapping) => mapping.id)).toContain("telegram");
-    expect(docKeys(contract)).toContain("docs/telegram-architecture.md#1-ingress");
-    expect(docKeys(contract)).toContain("docs/telegram-alerts.md#dispatch");
-    expect(docKeys(contract)).toContain("docs/telegram-mini-app.md");
-    expect(contract.checks).toContain("npm run typecheck");
-  });
-
-  it("routes Telegram command handlers to the unified Telegram contract", () => {
-    const contract = route("worker/src/api/webhook-commands/subscribe.ts");
-    expect(contract.mappings.map((mapping) => mapping.id)).toContain("telegram");
-    expect(docKeys(contract)).toContain("docs/telegram-alerts.md#commands");
-    expect(docKeys(contract)).toContain("docs/telegram-architecture.md#1-ingress");
-    expect(contract.checks).toContain("npm run typecheck");
   });
 
   it("keeps dynamic guidance out of Read first", () => {
@@ -518,8 +537,11 @@ describe("Codex hook outputs", () => {
     ).toEqual({});
   });
 
-  it("does not throw for empty hook stdin", () => {
-    expect(runHookCli("pre-tool-use")).toEqual({});
+  it("fails closed for empty hook stdin in an enforcement mode", () => {
+    expect(runHookCli("pre-tool-use")).toMatchObject({
+      decision: "block",
+      hookSpecificOutput: { permissionDecision: "deny" },
+    });
   });
 });
 
@@ -555,6 +577,23 @@ describe("hook harness classification", () => {
   });
 });
 
+describe("shell command analysis", () => {
+  it("provides one immutable command view to ordered policies", () => {
+    const analysis = analyzeShellCommand(
+      "git reset --hard HEAD && npx wrangler pages deploy out",
+      process.cwd(),
+    );
+
+    expect(Object.isFrozen(analysis)).toBe(true);
+    expect(Object.isFrozen(analysis.invocations)).toBe(true);
+    expect(analysis.invocations.map((invocation) => invocation.name)).toEqual([
+      "git",
+      "wrangler",
+    ]);
+    expect(findShellCommandViolation(analysis)?.rule).toBe("git-destructive");
+  });
+});
+
 describe("hard-block hook outputs", () => {
   it.each([
     { tool_name: "Bash", tool_input: { command: "git reset --hard HEAD" } },
@@ -577,12 +616,67 @@ describe("hard-block hook outputs", () => {
     expect(buildPermissionRequestHookOutput(input)).toEqual({});
   });
 
+  function patchHeredocThen(mention: string, command: string): string {
+    return [
+      "apply_patch <<'PATCH'",
+      "*** Begin Patch",
+      "*** Update File: docs/example.md",
+      "@@",
+      `+${mention}`,
+      "*** End Patch",
+      "PATCH",
+      command,
+    ].join("\n");
+  }
+
   it.each([
     ["destructive git reset", "git reset --hard HEAD", "git reset --hard"],
     ["git global flags", "git --no-pager reset --hard HEAD", "git reset --hard"],
     ["production deploy", "cd worker && npx --no-install wrangler versions deploy 00000000-0000-0000-0000-000000000000@100", "Raw production deploy commands"],
     ["shell eval wrapper", 'bash -lc "cd worker && npx --no-install wrangler pages deploy out"', "opaque shell construct"],
     ["remote D1 mutation", "cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote", "Remote D1 mutation commands"],
+    [
+      "a deploy appended after an apply_patch heredoc",
+      patchHeredocThen(
+        "Do not run `wrangler deploy`; use the release workflow.",
+        "npx --no-install wrangler pages deploy out",
+      ),
+      "Raw production deploy commands",
+    ],
+    [
+      "a remote D1 mutation appended after an apply_patch heredoc",
+      patchHeredocThen(
+        "Mention wrangler d1 execute stablecoin-db --remote without executing it.",
+        "npx --no-install wrangler d1 execute stablecoin-db --remote --command 'delete from cache'",
+      ),
+      "Remote D1 mutation commands",
+    ],
+    [
+      "a protected redirection appended after an apply_patch heredoc",
+      patchHeredocThen("Document .env.local without writing it.", "echo TOKEN=value > .env.local"),
+      "environment files",
+    ],
+    [
+      "a patch payload that adds a protected path",
+      ["*** Begin Patch", "*** Add File: .env.local", "+TOKEN=value", "*** End Patch"].join("\n"),
+      "environment files",
+    ],
+    [
+      "a guarded substitution hidden in a heredoc body",
+      ["cat <<EOF", "$(npx wrangler d1 execute stablecoin-db --remote --command 'DELETE FROM cache')", "EOF"].join("\n"),
+      "opaque shell construct",
+    ],
+    [
+      "a guarded substitution in the first of two heredocs opened on one line",
+      [
+        "cat <<FIRST <<SECOND",
+        "$(npx wrangler d1 execute stablecoin-db --remote --command 'DELETE FROM cache')",
+        "FIRST",
+        "benign",
+        "SECOND",
+      ].join("\n"),
+      "opaque shell construct",
+    ],
   ])("blocks %s with its denial category", (_name, command, reason) => {
     const output = buildPreToolUseHookOutput({ tool_input: { command } });
     expect(output).toMatchObject({
@@ -593,204 +687,44 @@ describe("hard-block hook outputs", () => {
   });
 
   it.each([
-    "git push --no-verify origin main",
-    "git -C /tmp -C /repo push --no-verify origin main",
-  ])("allows bypassing only the advisory local gate: %s", (command) => {
+    ["bypassing only the advisory local gate", "git push --no-verify origin main"],
+    ["bypassing the advisory local gate behind -C flags", "git -C /tmp -C /repo push --no-verify origin main"],
+    [
+      "a search that mentions deploy and remote D1 commands",
+      'rg -n "wrangler deploy|wrangler pages deploy|wrangler d1 migrations apply stablecoin-db --remote" docs scripts',
+    ],
+    [
+      "a patch payload that only mentions deploy commands",
+      [
+        "*** Begin Patch",
+        "*** Update File: docs/example.md",
+        "@@",
+        "+Do not run `wrangler deploy`; use the release workflow.",
+        "*** End Patch",
+      ].join("\n"),
+    ],
+    [
+      "a heredoc script that only quotes blocked commands",
+      [
+        "node - <<'NODE'",
+        "console.log('wrangler pages deploy');",
+        "console.log('wrangler d1 execute stablecoin-db --remote --command \"delete from cache\"');",
+        "NODE",
+      ].join("\n"),
+    ],
+    ["help output for a deploy-shaped command", "npx --no-install wrangler pages deploy --help"],
+  ])("allows %s", (_name, command) => {
     expect(buildPreToolUseHookOutput({ tool_input: { command } })).toEqual({});
   });
 
-  it("allows searches that mention deploy and remote D1 commands", () => {
-    const output = buildPreToolUseHookOutput({
-      tool_input: {
-        command:
-          'rg -n "wrangler deploy|wrangler pages deploy|wrangler d1 migrations apply stablecoin-db --remote" docs scripts',
-      },
-    });
-
-    expect(output).toEqual({});
-  });
-
-  it("allows patch payloads that mention deploy commands", () => {
-    const output = buildPreToolUseHookOutput({
-      tool_input: {
-        command: [
-          "*** Begin Patch",
-          "*** Update File: docs/example.md",
-          "@@",
-          "+Do not run `wrangler deploy`; use the release workflow.",
-          "*** End Patch",
-        ].join("\n"),
-      },
-    });
-
-    expect(output).toEqual({});
-  });
-
-  it("blocks deploy commands appended after apply_patch heredocs", () => {
-    const output = buildPreToolUseHookOutput({
-      tool_input: {
-        command: [
-          "apply_patch <<'PATCH'",
-          "*** Begin Patch",
-          "*** Update File: docs/example.md",
-          "@@",
-          "+Do not run `wrangler deploy`; use the release workflow.",
-          "*** End Patch",
-          "PATCH",
-          "npx --no-install wrangler pages deploy out",
-        ].join("\n"),
-      },
-    });
-
-    expect(output).toMatchObject({
-      decision: "block",
-      hookSpecificOutput: {
-        permissionDecision: "deny",
-      },
-    });
-    expect(requireBlockingReason(output)).toContain("Raw production deploy commands");
-  });
-
-  it("blocks remote D1 mutations appended after apply_patch heredocs", () => {
-    const output = buildPreToolUseHookOutput({
-      tool_input: {
-        command: [
-          "apply_patch <<'PATCH'",
-          "*** Begin Patch",
-          "*** Update File: docs/example.md",
-          "@@",
-          "+Mention wrangler d1 execute stablecoin-db --remote without executing it.",
-          "*** End Patch",
-          "PATCH",
-          "npx --no-install wrangler d1 execute stablecoin-db --remote --command 'delete from cache'",
-        ].join("\n"),
-      },
-    });
-
-    expect(output).toMatchObject({
-      decision: "block",
-      hookSpecificOutput: {
-        permissionDecision: "deny",
-      },
-    });
-    expect(requireBlockingReason(output)).toContain("Remote D1 mutation commands");
-  });
-
-  it("blocks protected redirection writes appended after apply_patch heredocs", () => {
-    const output = buildPreToolUseHookOutput({
-      tool_input: {
-        command: [
-          "apply_patch <<'PATCH'",
-          "*** Begin Patch",
-          "*** Update File: docs/example.md",
-          "@@",
-          "+Document .env.local without writing it.",
-          "*** End Patch",
-          "PATCH",
-          "echo TOKEN=value > .env.local",
-        ].join("\n"),
-      },
-    });
-
-    expect(output).toMatchObject({
-      decision: "block",
-      hookSpecificOutput: {
-        permissionDecision: "deny",
-      },
-    });
-    expect(requireBlockingReason(output)).toContain("environment files");
-  });
-
-  it("still blocks protected paths when patch payloads arrive as commands", () => {
-    const output = buildPreToolUseHookOutput({
-      tool_input: {
-        command: ["*** Begin Patch", "*** Add File: .env.local", "+TOKEN=value", "*** End Patch"].join("\n"),
-      },
-    });
-
-    expect(output).toMatchObject({
-      decision: "block",
-      hookSpecificOutput: {
-        permissionDecision: "deny",
-      },
-    });
-    expect(requireBlockingReason(output)).toContain("environment files");
-  });
-
-  it("allows heredoc scripts that only quote blocked commands", () => {
-    const output = buildPreToolUseHookOutput({
-      tool_input: {
-        command: [
-          "node - <<'NODE'",
-          "console.log('wrangler pages deploy');",
-          "console.log('wrangler d1 execute stablecoin-db --remote --command \"delete from cache\"');",
-          "NODE",
-        ].join("\n"),
-      },
-    });
-
-    expect(output).toEqual({});
-  });
-
-  it("blocks guarded command substitutions hidden in heredoc bodies", () => {
-    const output = buildPreToolUseHookOutput({
-      tool_input: {
-        command: [
-          "cat <<EOF",
-          "$(npx wrangler d1 execute stablecoin-db --remote --command 'DELETE FROM cache')",
-          "EOF",
-        ].join("\n"),
-      },
-    });
-
-    expect(requireBlockingReason(output)).toContain("opaque shell construct");
-  });
-
-  it("blocks guarded substitutions in the first of multiple heredocs opened on one line", () => {
-    const output = buildPreToolUseHookOutput({
-      tool_input: {
-        command: [
-          "cat <<FIRST <<SECOND",
-          "$(npx wrangler d1 execute stablecoin-db --remote --command 'DELETE FROM cache')",
-          "FIRST",
-          "benign",
-          "SECOND",
-        ].join("\n"),
-      },
-    });
-
-    expect(requireBlockingReason(output)).toContain("opaque shell construct");
-  });
-
-  it("allows help output for deploy-shaped commands", () => {
-    const output = buildPreToolUseHookOutput({
-      tool_input: {
-        command: "npx --no-install wrangler pages deploy --help",
-      },
-    });
-
-    expect(output).toEqual({});
-  });
-
-  it("blocks direct env file writes", () => {
-    const output = buildPreToolUseHookOutput({
-      tool_input: {
-        content: "TOKEN=value",
-        file_path: ".env.local",
-      },
-    });
-
-    expect(output).toMatchObject({
-      decision: "block",
-      hookSpecificOutput: {
-        permissionDecision: "deny",
-      },
-    });
-    expect(requireBlockingReason(output)).toContain("environment files");
-  });
-
-  it("blocks obvious destructive migration SQL", () => {
-    const output = buildPreToolUseHookOutput({
+  it.each([
+    {
+      name: "a direct env file write",
+      tool_input: { content: "TOKEN=value", file_path: ".env.local" },
+      reason: "environment files",
+    },
+    {
+      name: "destructive migration SQL",
       tool_input: {
         patch: [
           "*** Begin Patch",
@@ -800,48 +734,31 @@ describe("hard-block hook outputs", () => {
           "*** End Patch",
         ].join("\n"),
       },
-    });
-
+      reason: "destructive migration SQL",
+    },
+  ])("blocks $name arriving without a command", ({ tool_input, reason }) => {
+    const output = buildPreToolUseHookOutput({ tool_input });
     expect(output).toMatchObject({
       decision: "block",
-      hookSpecificOutput: {
-        permissionDecision: "deny",
-      },
+      hookSpecificOutput: { permissionDecision: "deny" },
     });
-    expect(requireBlockingReason(output)).toContain("destructive migration SQL");
+    expect(requireBlockingReason(output)).toContain(reason);
   });
 
-  it("denies production permission requests", () => {
-    const output = buildPermissionRequestHookOutput({
-      tool_input: {
-        command: "npx wrangler versions deploy",
-      },
-    });
-
-    expect(output).toEqual({
+  it.each([
+    ["production deploys", "npx wrangler versions deploy", "Production deploy permission is denied"],
+    [
+      "remote D1 mutations",
+      "npx wrangler d1 execute stablecoin-db --remote --command 'update prices set value = 1'",
+      "Remote D1 mutation permission is denied",
+    ],
+  ])("denies %s as permission requests", (_name, command, message) => {
+    expect(buildPermissionRequestHookOutput({ tool_input: { command } })).toEqual({
       hookSpecificOutput: {
         hookEventName: "PermissionRequest",
         decision: {
           behavior: "deny",
-          message: expect.stringContaining("Production deploy permission is denied"),
-        },
-      },
-    });
-  });
-
-  it("denies remote D1 mutation permission requests", () => {
-    const output = buildPermissionRequestHookOutput({
-      tool_input: {
-        command: "npx wrangler d1 execute stablecoin-db --remote --command 'update prices set value = 1'",
-      },
-    });
-
-    expect(output).toEqual({
-      hookSpecificOutput: {
-        hookEventName: "PermissionRequest",
-        decision: {
-          behavior: "deny",
-          message: expect.stringContaining("Remote D1 mutation permission is denied"),
+          message: expect.stringContaining(message),
         },
       },
     });
@@ -986,6 +903,45 @@ describe("W2.7 deploy wrappers and previews", () => {
     });
 
     expect(requireBlockingReason(output)).toContain("Raw production deploy commands");
+  });
+
+  const blockedVersionQualifiedDeploys = [
+    "npx wrangler@4 deploy",
+    "npx --yes wrangler@latest pages deploy out",
+    "npx wrangler@^4.0.0 versions deploy 00000000-0000-0000-0000-000000000000@100",
+    "bunx wrangler@4.20.0 deploy",
+    "pnpm dlx wrangler@4 deploy",
+    "pnpm exec wrangler@4 deploy",
+    "npm exec wrangler@4 deploy",
+    "npm x wrangler@4 pages deploy out",
+    "pnpm dlx cf-tools@npm:wrangler deploy",
+  ] as const;
+
+  it.each(blockedVersionQualifiedDeploys)("blocks the version-qualified deploy %s", (command) => {
+    expect(requireBlockingReason(buildPreToolUseHookOutput({ tool_input: { command } }))).toContain(
+      "Raw production deploy commands",
+    );
+  });
+
+  const blockedVersionQualifiedRemoteD1 = [
+    "npx wrangler@4 d1 execute stablecoin-db --remote --command 'delete from cache'",
+    "bunx wrangler@4 d1 migrations apply stablecoin-db --remote",
+    "pnpm dlx cf-tools@npm:wrangler d1 execute stablecoin-db --remote --command 'update prices set value = 1'",
+  ] as const;
+
+  it.each(blockedVersionQualifiedRemoteD1)("blocks the version-qualified remote D1 mutation %s", (command) => {
+    expect(requireBlockingReason(buildPreToolUseHookOutput({ tool_input: { command } }))).toContain(
+      "Remote D1 mutation commands",
+    );
+  });
+
+  it.each([
+    "npx wrangler@4 d1 execute stablecoin-db --remote --command 'select 1'",
+    "npx wrangler@4 deploy --dry-run",
+    "npx wrangler@4 deploy --help",
+    "npx wrangler@4 --version",
+  ] as const)("allows the safe version-qualified invocation %s", (command) => {
+    expect(buildPreToolUseHookOutput({ tool_input: { command } })).toEqual({});
   });
 });
 
@@ -1158,8 +1114,32 @@ describe("W2.7 malformed hook payloads", () => {
   it("marks malformed JSON as malformed without touching the process stdin", () => {
     expect(readHookInput({ readStdin: () => "{not-json" })).toEqual({ input: {}, malformed: true });
   });
-  it("keeps the malformed payload CLI response contract", () => {
-    const result = runHookCliProcess("pre-tool-use", "{not-json");
+  it.each([
+    ["empty", ""],
+    ["truncated", '{"tool_name": "Bash", "tool_inp'],
+    ["non-object", '"text"'],
+    ["array", "[]"],
+  ])("denies a %s payload in both enforcement modes", (_label, payload) => {
+    const preToolUse = runHookCliProcess("pre-tool-use", payload);
+    expect(preToolUse.status).toBe(2);
+    expect(JSON.parse(preToolUse.stdout)).toMatchObject({
+      decision: "block",
+      hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "deny" },
+    });
+    expect(preToolUse.stderr).toContain("[rule:malformed-hook-input]");
+
+    const permissionRequest = runHookCliProcess("permission-request", payload);
+    expect(permissionRequest.status).toBe(2);
+    expect(JSON.parse(permissionRequest.stdout)).toMatchObject({
+      hookSpecificOutput: {
+        hookEventName: "PermissionRequest",
+        decision: { behavior: "deny" },
+      },
+    });
+  });
+
+  it("keeps a malformed payload nonfatal and diagnostic in SessionStart", () => {
+    const result = runHookCliProcess("session-start", "{not-json");
 
     expect(result.status).toBe(0);
     expect(result.stdout.trim()).toBe("{}");

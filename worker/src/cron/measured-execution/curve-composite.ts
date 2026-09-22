@@ -1,19 +1,19 @@
 import { encodeFunctionData, parseAbi } from "viem/utils";
 
 import { canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
-import { DEX_MEASURED_TARGET_SCHEMA_VERSION, buildDexMeasuredExecutionTargetId, type DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
-import type { ChainRpcConfig } from "../../lib/chain-registry";
-import {
-  fetchEvmMulticall3Aggregate3AtBlock, type EvmMulticall3Call, type EvmMulticall3Result,
-} from "../../lib/evm-rpc";
-import { DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS, type DexMeasuredExecutionBudgetStopReason, type DexMeasuredExecutionRpcBudget, type DexMeasuredRawQuotePoint } from "./profiles";
-import { usdToRawAmount } from "./fixed-point";
+import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
+import type {
+  DexMeasuredExecutionBudgetStopReason,
+  DexMeasuredRawQuotePoint,
+} from "./profiles";
 import { canonicalEvmAddress } from "./evm-codecs";
-import {
-  createCurveGetDyQuoteAdapter, makeCurveGetDyPlan, type CurveGetDyPlan,
-} from "./curve-get-dy-quote-engine";
-import { decodeCurveMeasuredRawQuotePoint } from "./curve-quote-point";
 import { getCurveCompositePolicy, type CurveCompositePoolPolicy } from "./curve-composite-policies";
+import { buildMeasuredExecutionTargetValue } from "./inventory";
+import {
+  createCurveStableSwapExecutionPipeline,
+  executeCurveGetDyMulticall,
+  type CurveGetDyQuoteDependencies,
+} from "./curve-stableswap-execution-pipeline";
 import {
   decodeCurveCompositeQuote, evaluateCurveCompositeEligibility,
   resolveCurveCompositeTokenIndices, type CurveCompositeEligibility,
@@ -28,8 +28,6 @@ const POOL_ABI = parseAbi([
   "function get_dy(int128 i,int128 j,uint256 dx) view returns (uint256)",
   "function get_dy_underlying(int128 i,int128 j,uint256 dx) view returns (uint256)",
 ]);
-const BATCH_SIZE = 8;
-const MULTICALL_GAS = "0x1c9c380";
 
 interface CurveCompositePoolSource {
   poolAddress?: string;
@@ -130,19 +128,7 @@ export function buildCurveCompositeMeasuredExecutionTarget(input: {
   ) return null;
   const poolId = canonicalExitRouteAssetKey(policy.chain, policy.poolAddress);
   const poolTokenAddresses = policy.executionTokens.map((token) => token.address);
-  const targetId = buildDexMeasuredExecutionTargetId({
-    adapterProfileId: policy.adapterProfileId,
-    stablecoinId: policy.stablecoinId,
-    chain: policy.chain,
-    protocol: "curve",
-    poolId,
-    tokenInAddress: tokenIn.address,
-    tokenOutAddress: tokenOut.address,
-    poolTokenAddresses,
-  });
-  return {
-    schemaVersion: DEX_MEASURED_TARGET_SCHEMA_VERSION,
-    targetId,
+  return buildMeasuredExecutionTargetValue({
     stablecoinId: policy.stablecoinId,
     adapterProfileId: policy.adapterProfileId,
     protocol: "curve",
@@ -166,7 +152,7 @@ export function buildCurveCompositeMeasuredExecutionTarget(input: {
     retainedTvlUsd: input.retainedTvlUsd,
     retainedPoolPriceUsd: inputPrice,
     capturedAt: input.capturedAt,
-  };
+  });
 }
 
 type QuoteFailure =
@@ -189,16 +175,6 @@ export interface CurveCompositeRequest {
   runtimeEvidence?: CurveCompositeRuntimeEvidence;
 }
 
-interface EncodedRequest extends CurveCompositeRequest {
-  index: number;
-  label: string;
-  amountInRaw: bigint;
-  inputIndex: number;
-  outputIndex: number;
-  callData: `0x${string}`;
-  policy: CurveCompositePoolPolicy;
-  eligibility: CurveCompositeEligibility;
-}
 
 export interface CurveCompositeBatchOutcome {
   targetId: string;
@@ -227,158 +203,31 @@ export function encodeCurveCompositeQuote(input: {
   }).toLowerCase() as `0x${string}`;
 }
 
-function prepareRequest(
-  request: CurveCompositeRequest,
-  index: number,
-): {
-  encoded?: EncodedRequest;
-  failureReason?: QuoteFailure;
-  eligibility: CurveCompositeEligibility;
-} {
-  const policy = getCurveCompositePolicy(request.target.chain, request.endpointAddress);
-  const eligibility = evaluateCurveCompositeEligibility({
-    chain: request.target.chain,
-    endpointAddress: request.endpointAddress,
-    blockNumber: request.blockNumber,
-    nowSec: request.blockObservedAt,
-    evidence: request.runtimeEvidence,
-  });
-  if (!policy) return { failureReason: "unsupported-chain-or-pool", eligibility };
-  if (!Number.isSafeInteger(request.blockNumber) || request.blockNumber < 0) {
-    return { failureReason: "invalid-pinned-block", eligibility };
-  }
-  if (!eligibility.ok) return { failureReason: "runtime-evidence-missing", eligibility };
-  const indices = resolveCurveCompositeTokenIndices(request.target);
-  if (!indices.ok) return { failureReason: indices.reason, eligibility };
-  const expectedTargetId = buildDexMeasuredExecutionTargetId({
-    adapterProfileId: request.target.adapterProfileId,
-    stablecoinId: request.target.stablecoinId,
-    chain: request.target.chain,
-    protocol: request.target.protocol,
-    poolId: request.target.poolId,
-    tokenInAddress: request.target.tokenIn.address,
-    tokenOutAddress: request.target.tokenOut.address,
-    poolTokenAddresses: request.target.poolTokenAddresses,
-  });
-  if (request.target.targetId !== expectedTargetId) {
-    return { failureReason: "invalid-curve-composite-target", eligibility };
-  }
-  const amountInRaw = usdToRawAmount(
-    request.inputUsd,
-    request.target.tokenIn.decimals,
-    request.target.tokenIn.referencePriceUsd,
-  );
-  if (!amountInRaw) return { failureReason: "invalid-quote-input", eligibility };
-  return {
-    eligibility,
-    encoded: {
-      ...request,
-      index,
-      label: `${index}:${request.target.targetId}`,
-      amountInRaw,
-      inputIndex: indices.inputIndex,
-      outputIndex: indices.outputIndex,
-      callData: encodeCurveCompositeQuote({
-        policy,
-        inputIndex: indices.inputIndex,
-        outputIndex: indices.outputIndex,
-        amountInRaw,
-      }),
-      policy,
-      eligibility,
-    },
-  };
-}
-
-function decodeQuotePoint(
-  request: EncodedRequest,
-  result: EvmMulticall3Result,
-): { point?: DexMeasuredRawQuotePoint; failureReason?: QuoteFailure } {
-  return decodeCurveMeasuredRawQuotePoint({
-    request,
-    result,
-    decodeAmountOutRaw: (returnData) => decodeCurveCompositeQuote(request.policy, returnData),
-    adapterMetadata: {
+export function createCurveCompositeQuoteExecutor(dependencies: CurveGetDyQuoteDependencies) {
+  return createCurveStableSwapExecutionPipeline<
+    CurveCompositePoolPolicy,
+    CurveCompositeRuntimeEvidence,
+    CurveCompositeEligibility,
+    QuoteFailure
+  >({
+    invalidTargetFailure: "invalid-curve-composite-target",
+    runtimeEvidenceUnavailableReason: "block-header-unavailable",
+    getPolicy: getCurveCompositePolicy,
+    evaluateEligibility: evaluateCurveCompositeEligibility,
+    resolveTokenIndices: resolveCurveCompositeTokenIndices,
+    encodeGetDy: encodeCurveCompositeQuote,
+    decodeAmountOutRaw: decodeCurveCompositeQuote,
+    eligibilityFailure: () => "runtime-evidence-missing",
+    quoteMetadata: (request) => ({
       executionPool: request.endpointAddress,
       blockNumber: request.blockNumber,
       inputIndex: request.inputIndex,
       outputIndex: request.outputIndex,
       quoteFunction: request.policy.quoteFunction,
-    },
-    failureReasons: {
-      poolRevert: "pool-revert",
-      malformedPoolReturn: "malformed-pool-return",
-    },
-  });
-}
-
-interface QuoteDependencies {
-  executeMulticall(input: {
-    chain: string;
-    calls: readonly EvmMulticall3Call[];
-    blockNumber: number;
-    chainRpcs: Map<string, ChainRpcConfig>;
-    signal?: AbortSignal;
-    rpcBudget?: DexMeasuredExecutionRpcBudget;
-  }): Promise<EvmMulticall3Result[] | null>;
-}
-
-export function createCurveCompositeQuoteExecutor(dependencies: QuoteDependencies) {
-  return createCurveGetDyQuoteAdapter<
-    CurveCompositeRequest,
-    CurveGetDyPlan<EncodedRequest>,
-    CurveCompositeEligibility,
-    CurveCompositeBatchOutcome,
-    QuoteFailure
-  >({
-    batchSize: BATCH_SIZE,
-    prepare: (request, index) => {
-      const prepared = prepareRequest(request, index);
-      return {
-        eligibility: prepared.eligibility,
-        ...(prepared.failureReason ? { failureReason: prepared.failureReason } : {}),
-        ...(prepared.encoded
-          ? {
-              plan: makeCurveGetDyPlan(prepared.encoded),
-            }
-          : {}),
-      };
-    },
-    makeOutcome: (request, eligibility, failureReason) => ({
-      targetId: request.target.targetId,
-      inputUsd: request.inputUsd,
-      blockNumber: request.blockNumber,
-      eligibility,
-      ...(failureReason ? { failureReason } : {}),
     }),
-    executeMulticall: dependencies.executeMulticall,
-    resolveResult: (request, result) => ({
-      targetId: request.target.targetId,
-      inputUsd: request.inputUsd,
-      blockNumber: request.blockNumber,
-      eligibility: request.eligibility,
-      ...decodeQuotePoint(request, result),
-    }),
-    materializeTransportFailure: (request, reason) => ({
-      targetId: request.target.targetId,
-      inputUsd: request.inputUsd,
-      blockNumber: request.blockNumber,
-      eligibility: request.eligibility,
-      failureReason: reason ?? "rpc-failure",
-    }),
-  });
+  }, dependencies);
 }
 
 export const quoteCurveCompositeRequests = createCurveCompositeQuoteExecutor({
-  executeMulticall: async (input) =>
-    fetchEvmMulticall3Aggregate3AtBlock(input.chain, input.calls, input.blockNumber, {
-      chainRpcs: input.chainRpcs,
-      signal: input.signal,
-      timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
-      maxRetries: 1,
-      ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs } : {}),
-      ...(input.rpcBudget ? { beforeRequest: () => input.rpcBudget!.tryConsume() } : {}),
-      gas: MULTICALL_GAS,
-      multicallBatchSize: Math.min(BATCH_SIZE, input.calls.length),
-    }),
+  executeMulticall: executeCurveGetDyMulticall,
 });

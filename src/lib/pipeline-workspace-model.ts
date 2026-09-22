@@ -192,9 +192,8 @@ export function buildPipelineModeSummaries(data: StatusResponse): PipelineModeSu
     reserveStates.push("unknown");
   }
   if (data.mintBurnReconciliation) {
-    reserveCount += data.mintBurnReconciliation.criticalCount + data.mintBurnReconciliation.warnCount;
+    reserveCount += data.mintBurnReconciliation.criticalCount;
     if (data.mintBurnReconciliation.criticalCount > 0) reserveStates.push("critical");
-    else if (data.mintBurnReconciliation.warnCount > 0) reserveStates.push("watch");
   } else {
     reserveCount += payloadIssueCount(Boolean(data.sectionErrors.mintBurnReconciliation), 0);
     reserveStates.push("unknown");

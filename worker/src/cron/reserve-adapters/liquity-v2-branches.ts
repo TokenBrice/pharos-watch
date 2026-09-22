@@ -42,7 +42,7 @@ import {
 } from "./branch-balances";
 import {
   decodeAddressWord,
-  decodeBoolWord,
+  decodeStrictBoolWord,
   decodeUint8Word,
   decodeUint256Word,
 } from "./abi-decode";
@@ -242,7 +242,7 @@ async function fetchLiquityV2BranchState(
     const debts = balances.map((entry, index) => ({
       entry,
       debtRaw: decodeUint256Word(rawByLabel.get(`branch:debt:${index}`)),
-      shutDown: decodeBoolWord(rawByLabel.get(`branch:shutdown:${index}`)),
+      shutDown: decodeStrictBoolWord(rawByLabel.get(`branch:shutdown:${index}`)),
       redemptionFeeBps: params.redemptionRateProbe
         ? null
         : rateBpsFromRaw(
@@ -297,7 +297,7 @@ async function fetchLiquityV2BranchState(
     return {
       entry,
       debtRaw,
-      shutDown: decodeBoolWord(shutDownRaw),
+      shutDown: decodeStrictBoolWord(shutDownRaw),
       redemptionFeeBps: branchRedemptionFeeBps,
     };
   }));
@@ -769,12 +769,18 @@ export function buildLiquityV2RedemptionMetadata(
   const unreadableShutdownBranches = snapshot.debts
     .filter((entry) => entry.shutDown == null)
     .map((entry) => entry.entry.branch.name);
-  const routeStatus = shutdownBranches.length > 0 || nonRedeemableBranches.length > 0
-    ? "degraded"
-    : unreadableShutdownBranches.length > 0
-      ? "unknown"
-      : "open";
+  const routeObserved = branchRedeemability !== undefined || shutdownBranches.length > 0;
+  const routeStatus = !routeObserved
+    ? "unknown"
+    : shutdownBranches.length > 0 || nonRedeemableBranches.length > 0
+      ? "degraded"
+      : unreadableShutdownBranches.length > 0
+        ? "unknown"
+        : "open";
   const routeStatusReasons = [
+    ...(!routeObserved
+      ? ["No same-run branch redeemability gate was configured"]
+      : []),
     ...(shutdownBranches.length > 0
       ? [`Collateral branch shutdown/sunset detected for: ${shutdownBranches.join(", ")}`]
       : []),
@@ -786,6 +792,9 @@ export function buildLiquityV2RedemptionMetadata(
       : []),
   ];
   const routeStatusReason = routeStatusReasons.length > 0 ? routeStatusReasons.join("; ") : undefined;
+  const routeStatusEvidence = routeObserved
+    ? { routeStatus, routeStatusSource: "onchain" as const, routeObserved: true as const }
+    : { routeStatus, routeStatusSource: "static-config" as const };
 
   return {
     totalDebtUsd,
@@ -793,8 +802,7 @@ export function buildLiquityV2RedemptionMetadata(
       capacityUsd,
       capacityKind: "live-direct-bounded",
       freshnessKind: "same-run-onchain",
-      routeStatus,
-      routeStatusSource: "onchain",
+      ...routeStatusEvidence,
       ...(routeStatusReason ? { routeStatusReason } : {}),
       holderEligibility: "any-holder",
       settlementDelaySec: 0,

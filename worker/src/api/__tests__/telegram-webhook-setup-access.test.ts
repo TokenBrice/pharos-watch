@@ -1,3 +1,4 @@
+import { pendingDisambiguationTable } from "./telegram-rows.test-support";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   fetchSpy,
@@ -20,15 +21,11 @@ describe("handleTelegramWebhook", () => {
   beforeEach(resetTelegramWebhookTest);
   it("setup-step awaiting-ticker advances to confirm when a unique ticker is replied", async () => {
     const db = makeTelegramWebhookDb([
-      {
-        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        rows: [],
-        first: makeSetupPendingRow({
-          step: "awaiting-ticker",
-          alertTypes: ["dews"],
-          target: null,
-        }),
-      },
+      pendingDisambiguationTable(makeSetupPendingRow({
+        step: "awaiting-ticker",
+        alertTypes: ["dews"],
+        target: null,
+      })),
     ]);
     await handleTelegramWebhook(db, makeWebhookRequest(123, "USDC"), "test-secret", "bot-token");
 
@@ -44,15 +41,11 @@ describe("handleTelegramWebhook", () => {
 
   it("setup-step awaiting-ticker treats slash-prefixed ticker replies as ticker input", async () => {
     const db = makeTelegramWebhookDb([
-      {
-        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        rows: [],
-        first: makeSetupPendingRow({
-          step: "awaiting-ticker",
-          alertTypes: ["dews"],
-          target: null,
-        }),
-      },
+      pendingDisambiguationTable(makeSetupPendingRow({
+        step: "awaiting-ticker",
+        alertTypes: ["dews"],
+        target: null,
+      })),
     ]);
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/USDC"), "test-secret", "bot-token");
 
@@ -72,18 +65,14 @@ describe("handleTelegramWebhook", () => {
       throw new Error("Expected USDF to resolve ambiguously for setup force-reply test");
     }
     const db = makeTelegramWebhookDb([
-      {
-        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        rows: [],
-        first: makeSetupPendingRow(
-          {
-            step: "awaiting-ticker",
-            alertTypes: ["dews"],
-            target: null,
-          },
-          { initiatorUserId: "999" },
-        ),
-      },
+      pendingDisambiguationTable(makeSetupPendingRow(
+        {
+          step: "awaiting-ticker",
+          alertTypes: ["dews"],
+          target: null,
+        },
+        { initiatorUserId: "999" },
+      )),
     ]);
 
     await handleTelegramWebhook(db, makeWebhookRequest(123, "USDF"), "test-secret", "bot-token");
@@ -101,18 +90,15 @@ describe("handleTelegramWebhook", () => {
 
   it("setup:type-toggle:launch toggles Launch on in the custom alert picker", async () => {
     const db = makeTelegramWebhookDb([
-      {
-        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        rows: [],
-        first: makeSetupPendingRow(
-          {
-            step: "custom-types",
-            alertTypes: ["dews", "depeg"],
-            target: null,
-          },
-          { initiatorUserId: "999" },
-        ),
-      },
+      pendingDisambiguationTable(makeSetupPendingRow(
+        {
+          step: "custom-types",
+          alertTypes: ["dews", "depeg"],
+          target: null,
+        },
+        { initiatorUserId: "999" },
+      )),
+      { match: "INSERT INTO telegram_pending_disambiguation", rows: [] },
     ]);
 
     await handleTelegramWebhook(db, makeCallbackRequest("setup:type-toggle:launch"), "test-secret", "bot-token");
@@ -138,18 +124,15 @@ describe("handleTelegramWebhook", () => {
 
   it("setup:target:type opens one ticker prompt with an inline cancel affordance", async () => {
     const db = makeTelegramWebhookDb([
-      {
-        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        rows: [],
-        first: makeSetupPendingRow(
-          {
-            step: "custom-target",
-            alertTypes: ["dews", "launch"],
-            target: null,
-          },
-          { initiatorUserId: "999" },
-        ),
-      },
+      pendingDisambiguationTable(makeSetupPendingRow(
+        {
+          step: "custom-target",
+          alertTypes: ["dews", "launch"],
+          target: null,
+        },
+        { initiatorUserId: "999" },
+      )),
+      { match: "INSERT INTO telegram_pending_disambiguation", rows: [] },
     ]);
 
     await handleTelegramWebhook(db, makeCallbackRequest("setup:target:type"), "test-secret", "bot-token");
@@ -176,18 +159,14 @@ describe("handleTelegramWebhook", () => {
 
   it("setup:branch:skip sends a slim command reference instead of the full start surface", async () => {
     const db = makeTelegramWebhookDb([
-      {
-        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        rows: [],
-        first: makeSetupPendingRow(
-          {
-            step: "branch",
-            alertTypes: [],
-            target: null,
-          },
-          { initiatorUserId: "999" },
-        ),
-      },
+      pendingDisambiguationTable(makeSetupPendingRow(
+        {
+          step: "branch",
+          alertTypes: [],
+          target: null,
+        },
+        { initiatorUserId: "999" },
+      )),
     ]);
 
     await handleTelegramWebhook(db, makeCallbackRequest("setup:branch:skip"), "test-secret", "bot-token");
@@ -208,21 +187,18 @@ describe("handleTelegramWebhook", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
       const db = makeTelegramWebhookDb([
-        {
-          match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-          rows: [],
-          first: makeSetupPendingRow(
-            {
-              step: "awaiting-ticker",
-              alertTypes: ["dews"],
-              target: null,
-            },
-            {
-              expiresAt: Math.floor(Date.now() / 1000) - 1,
-              initiatorUserId: "999",
-            },
-          ),
-        },
+        pendingDisambiguationTable(makeSetupPendingRow(
+          {
+            step: "awaiting-ticker",
+            alertTypes: ["dews"],
+            target: null,
+          },
+          {
+            expiresAt: Math.floor(Date.now() / 1000) - 1,
+            initiatorUserId: "999",
+          },
+        )),
+        { match: "INSERT INTO telegram_pending_disambiguation", rows: [] },
       ]);
 
       await handleTelegramWebhook(db, makeWebhookRequest(123, "/start"), "test-secret", "bot-token");
@@ -245,11 +221,7 @@ describe("handleTelegramWebhook", () => {
 
   it("setup-step pending state lets a fresh slash command through after clearing wizard state", async () => {
     const db = makeTelegramWebhookDb([
-      {
-        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        rows: [],
-        first: makeSetupPendingRow({ step: "branch", alertTypes: [], target: null }),
-      },
+      pendingDisambiguationTable(makeSetupPendingRow({ step: "branch", alertTypes: [], target: null })),
     ]);
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/help"), "test-secret", "bot-token");
 
@@ -260,11 +232,7 @@ describe("handleTelegramWebhook", () => {
 
   it("setup-step branch nudges the user when they type instead of tapping a button", async () => {
     const db = makeTelegramWebhookDb([
-      {
-        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        rows: [],
-        first: makeSetupPendingRow({ step: "branch", alertTypes: [], target: null }),
-      },
+      pendingDisambiguationTable(makeSetupPendingRow({ step: "branch", alertTypes: [], target: null })),
     ]);
     await handleTelegramWebhook(db, makeWebhookRequest(123, "recommended"), "test-secret", "bot-token");
 
@@ -276,11 +244,7 @@ describe("handleTelegramWebhook", () => {
 
   it("setup-step /cancel confirms cancellation instead of replying 'No pending selection'", async () => {
     const db = makeTelegramWebhookDb([
-      {
-        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        rows: [],
-        first: makeSetupPendingRow({ step: "branch", alertTypes: [], target: null }),
-      },
+      pendingDisambiguationTable(makeSetupPendingRow({ step: "branch", alertTypes: [], target: null })),
     ]);
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/cancel"), "test-secret", "bot-token");
 
@@ -658,7 +622,7 @@ describe("handleTelegramWebhook", () => {
       const db = makeTelegramWebhookDb([
         { match: "telegram_pending_disambiguation", rows: [] },
         { match: "FROM cache WHERE key = ?", rows: [], first: null },
-        { match: "FROM telegram_subscribers", rows: [], first: null },
+        { match: "INSERT INTO telegram_subscribers", rows: [] },
       ]);
       fetchSpy.mockImplementation(async (url) => {
         if (String(url).includes("getChatMember")) {

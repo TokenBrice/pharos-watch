@@ -251,7 +251,9 @@ describe("live-reserves-store", () => {
             ('usdo-openeden', 9500, 'adapter', 'adapter', 'ok', 'attempt-recent');
       `);
 
-      const result = await pruneLiveReserveHistory(createSqliteD1(sqlite), 10_000, 1_000);
+      const result = await pruneLiveReserveHistory(createSqliteD1(sqlite), 10_000, {
+        retentionSec: 1_000,
+      });
 
       expect(result.compositionHistoryDeleted).toBe(1);
       expect(result.attemptHistoryDeleted).toBe(1);

@@ -30,6 +30,7 @@ const V9QuarantineMessageSchema = z.string().min(1).max(500);
 const V9AssetQuarantineCodeSchema = z.enum([
   "fact-build-failed",
   "fact-validation-failed",
+  "evaluation-failed",
 ]);
 const V9AssetQuarantineSchema = z
   .object({

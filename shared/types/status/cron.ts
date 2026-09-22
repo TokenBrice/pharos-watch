@@ -61,8 +61,14 @@ export const CronStatusSchema = z.object({
   lastRun: CronRunSchema.nullable(),
   recentRuns: z.array(CronRunSchema),
   expectedIntervalSec: z.number(),
-  healthy: z.boolean(),
+  /**
+   * `true`/`false` only when cron telemetry was actually read. `null` means the
+   * cron-history read failed, so no availability claim is published for this
+   * job (rule R2); `telemetryUnknownReason` names why.
+   */
+  healthy: z.boolean().nullable(),
   telemetryUnknown: z.boolean().optional(),
+  telemetryUnknownReason: z.string().optional(),
   inFlight: CronInFlightSchema.nullable().optional(),
   staleArtifacts: z.array(CronStaleArtifactSchema).optional(),
   latestEvent: CronEventSchema.optional(),

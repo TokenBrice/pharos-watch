@@ -11,6 +11,7 @@ interface PublicStatusHistorySectionProps {
   historyData: PublicStatusHistoryResponse | undefined;
   historyWindow: PublicStatusHistoryWindow;
   historyLoading: boolean;
+  historyError: Error | null;
   onHistoryWindowChange: (window: PublicStatusHistoryWindow) => void;
 }
 
@@ -18,6 +19,7 @@ export function PublicStatusHistorySection({
   historyData,
   historyWindow,
   historyLoading,
+  historyError,
   onHistoryWindowChange,
 }: PublicStatusHistorySectionProps) {
   return (
@@ -39,6 +41,7 @@ export function PublicStatusHistorySection({
         window={historyWindow}
         onWindowChange={onHistoryWindowChange}
         isLoading={historyLoading}
+        error={historyError}
       />
     </StatusSection>
   );

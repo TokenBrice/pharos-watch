@@ -7,12 +7,16 @@ import { ShieldCheck } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HomeAltTrackerLink } from "@/components/home-alt-tracker-link";
 import { useDepegResolverSurfaces } from "@/hooks/use-depeg-resolver-surfaces";
-import { logosById } from "@/lib/logos";
+import { getLogoSrc, logosById } from "@/lib/logos";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 import { cn } from "@/lib/utils";
 import { formatPercentFromRatio } from "@shared/lib/format";
-import { DDR_RESOLUTION_TIER_VALUES, type DdrResolutionTier } from "@shared/types/depeg-resolver";
+import {
+  DDR_RESOLUTION_TIER_VALUES,
+  type DdrResolutionTier,
+  type DdrV2ResponseRow,
+} from "@shared/types/depeg-resolver";
 import {
   formatDurationSec,
   getDuration,
@@ -21,7 +25,6 @@ import {
   getResolution,
   NOW_DOT_TONE,
   TIER_META,
-  type DdrDisplayRow,
 } from "@/components/depeg-resolver-row-card-model";
 
 // Accuracy reads as strong only once enough calls are scored and the rate clears
@@ -67,13 +70,13 @@ interface ForecastItem {
 }
 
 /** Worst gap first: live deviation if present, else this event's peak. */
-function rowSeverity(row: DdrDisplayRow): number {
+function rowSeverity(row: DdrV2ResponseRow): number {
   const now = getLiveCurrentDeviationBps(row);
   if (now != null) return Math.abs(now);
   return Math.abs(getPeakDeviationBps(row));
 }
 
-function toForecastItem(row: DdrDisplayRow): ForecastItem {
+function toForecastItem(row: DdrV2ResponseRow): ForecastItem {
   const duration = getDuration(row);
   const nowBps = getLiveCurrentDeviationBps(row);
   const benchmarked = !duration.suppressed && duration.medianSec != null;
@@ -275,7 +278,7 @@ function ForecastZone({
         {columns.map((column, index) => (
           <div key={index} className="-mx-1.5 divide-y divide-border/30">
             {column.map((item) => (
-              <ForecastRow key={item.id} item={item} logoSrc={logoMap[item.id]} />
+              <ForecastRow key={item.id} item={item} logoSrc={getLogoSrc(logoMap, item.id)} />
             ))}
           </div>
         ))}

@@ -7,6 +7,7 @@ import { RedemptionBackstopConfigSchema } from "@shared/lib/redemption-backstop-
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   REDEMPTION_BACKSTOP_CONFIGS,
+  getRedemptionBackstopConfig,
   resolveReviewedRedemptionSettlement,
 } from "@shared/lib/redemption-backstops";
 import type {
@@ -31,6 +32,12 @@ describe("redemption backstop config consistency", () => {
     });
 
     expect(violations).toEqual([]);
+  });
+
+  it("retrieves every config by its own registry key", () => {
+    for (const [id, config] of entries) {
+      expect(getRedemptionBackstopConfig(id), id).toBe(config);
+    }
   });
 
   it("uses every reviewed settlement override as the canonical public model", () => {
@@ -166,6 +173,18 @@ describe("redemption backstop config consistency", () => {
     expect(violations).toEqual([]);
   });
 
+  it("uses labeled HTTPS evidence", () => {
+    const violations = entries.flatMap(([id, config]) =>
+      (config.docs ?? []).flatMap((doc) => {
+        const issues: string[] = [];
+        if (doc.label.trim() === "") issues.push(`${id}: empty label`);
+        if (new URL(doc.url).protocol !== "https:") issues.push(`${id}: non-HTTPS URL`);
+        return issues;
+      }),
+    );
+    expect(violations).toEqual([]);
+  });
+
   it("expanded shared configs receive per-coin reviewed docs instead of shared first-id docs", () => {
     const expectedPrimaryUrls = new Map([
       ["a7a5-old-vector", "https://www.a7a5.io/"],
@@ -178,6 +197,31 @@ describe("redemption backstop config consistency", () => {
     for (const [id, expectedUrl] of expectedPrimaryUrls) {
       expect(REDEMPTION_BACKSTOP_CONFIGS[id]?.docs?.[0]?.url).toBe(expectedUrl);
     }
+  });
+
+  // Registry-derived invariants cannot catch a curation edit that swaps a coin
+  // onto another family the same module also allows (psm-and-basket permits
+  // both). These reviewed rows pin the published route shape by value.
+  it.each([
+    ["usdc-circle", "offchain-issuer", "supply-ratio", "dynamic-or-unclear"],
+    ["usdcv-societe-generale-forge", "offchain-issuer", "supply-full", "dynamic-or-unclear"],
+    ["chfau-allunity", "offchain-issuer", "supply-full", "dynamic-or-unclear"],
+    ["m-m0", "offchain-issuer", "supply-full", "dynamic-or-unclear"],
+    ["dai-makerdao", "psm-swap", "reserve-sync-metadata", "fee-bps"],
+    ["usds-sky", "psm-swap", "reserve-sync-metadata", "fee-bps"],
+    ["gho-aave", "psm-swap", "reserve-sync-metadata", "fee-bps"],
+    ["lisusd-lista", "psm-swap", "supply-ratio", "fee-bps"],
+    ["usdd-tron-dao-reserve", "psm-swap", "reserve-sync-metadata", "fee-bps"],
+    ["honey-berachain", "basket-redeem", "reserve-sync-metadata", "dynamic-or-unclear"],
+    ["eusd-electronic-usd", "basket-redeem", "reserve-sync-metadata", "fee-bps"],
+    ["usde-ethena", "stablecoin-redeem", "reserve-sync-metadata", "fee-bps"],
+    ["ousd-origin-protocol", "stablecoin-redeem", "reserve-sync-metadata", "fee-bps"],
+    ["frxusd-frax", "stablecoin-redeem", "reserve-sync-metadata", "dynamic-or-unclear"],
+  ] as const)("%s keeps its reviewed route shape (%s / %s / %s)", (id, routeFamily, capacityKind, costKind) => {
+    const config = REDEMPTION_BACKSTOP_CONFIGS[id];
+    expect(config?.routeFamily).toBe(routeFamily);
+    expect(config?.capacityModel.kind).toBe(capacityKind);
+    expect(config?.costModel.kind).toBe(costKind);
   });
 
   it("non-issuer documented supply-full routes do not force issuer-term capacity basis", () => {

@@ -10,6 +10,11 @@ import { logWorkerEvent } from "./structured-log";
 
 export type CatalogActionAuditOwner = "canonical" | "handler";
 export type CatalogActionAuditOutcome = "succeeded" | "accepted" | "queued" | "failed" | "unknown";
+/**
+ * Non-spoofable marker for a route dispatched by an internal prober. Set only
+ * on contexts built in-process (never derived from request headers).
+ */
+export type InternalRouteProbe = "status-self-check";
 
 const IDEMPOTENCY_KEY_MAX_LENGTH = 128;
 const SAFE_TARGET_PATTERN = /^[a-zA-Z0-9._:-]{1,128}$/u;
@@ -71,7 +76,10 @@ function getOutcome(endpoint: EndpointDefinition, response: Response): CatalogAc
 function getExecutionCertainty(response: Response, outcome: CatalogActionAuditOutcome): string {
   const header = response.headers.get("X-Execution-Certainty")?.trim().toLowerCase() ?? "";
   if (/^[a-z0-9_-]+$/u.test(header) && header.length <= EXECUTION_CERTAINTY_MAX_LENGTH) return header;
-  return outcome === "unknown" ? "unknown" : "confirmed";
+  // A 5xx without a certainty header says nothing about whether the effect
+  // committed; the idempotency ledger records the same attempt as unknown.
+  if (outcome === "unknown" || response.status >= 500) return "unknown";
+  return "confirmed";
 }
 
 export async function auditCatalogActionResponse({
@@ -79,13 +87,31 @@ export async function auditCatalogActionResponse({
   endpoint,
   request,
   response,
+  internalProbe,
 }: {
   db: D1Database;
   endpoint: EndpointDefinition | undefined;
   request: Request;
   response: Response;
+  internalProbe?: InternalRouteProbe;
 }): Promise<void> {
   if (!endpoint?.statusPageAction || getCatalogActionAuditOwner(endpoint) !== "canonical") return;
+  if (internalProbe) {
+    // Route health monitoring reuses the operator dispatch path. Its rows are
+    // not operator actions and would fill the ops History window within days,
+    // so the probe is recorded as a structured event instead. The marker comes
+    // from the internally built route context, never from a request header.
+    logWorkerEvent({
+      scope: "admin",
+      level: "debug",
+      event: "catalog_action_audit_skipped_internal_probe",
+      route: endpoint.key,
+      source: internalProbe,
+      message: "Skipped canonical admin action audit for an internal route probe",
+      metadata: { httpStatus: response.status },
+    });
+    return;
+  }
   if (response.headers.get("X-Idempotency-Conflict") === "request-mismatch") return;
 
   const idempotencyKey = getSafeIdempotencyKey(request);

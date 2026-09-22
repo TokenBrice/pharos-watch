@@ -1,8 +1,9 @@
-import { chainConfig } from "./chain-config";
+import { CHAIN_META } from "@shared/lib/chains";
 import type {
   MintBurnBridgeDetectionConfig,
   MintBurnContractConfigSpec,
 } from "./mint-burn-contracts-types";
+import type { ChainConfig } from "./blacklist-contracts";
 import {
   ccipBridgeDetection,
   cctpBridgeDetection,
@@ -10,9 +11,21 @@ import {
   transferMintBurn,
 } from "./mint-burn-contracts-helpers";
 
-const ETHEREUM = chainConfig("ethereum");
-const ARBITRUM = chainConfig("arbitrum");
-const BASE = chainConfig("base");
+function requireChainConfig(chainId: string): ChainConfig {
+  const meta = CHAIN_META[chainId];
+  if (!meta) throw new Error(`Unknown chain: ${chainId}`);
+  return {
+    chainId,
+    chainName: meta.name,
+    evmChainId: meta.evmChainId,
+    explorerUrl: meta.explorerUrl,
+    type: meta.type,
+  };
+}
+
+const ETHEREUM = requireChainConfig("ethereum");
+const ARBITRUM = requireChainConfig("arbitrum");
+const BASE = requireChainConfig("base");
 
 // Phase 2 readiness — USDT Tron uses these instead of Transfer
 const USDT_ISSUE_TOPIC = "0xcb8241adb0c3fdb35b70c24ce35c5eb0c17af7431c99f827d44a445ca624176a";

@@ -1,5 +1,3 @@
-import { hasOwn } from "../has-own";
-
 import type { BackingType, GovernanceType } from "../../types";
 import { BACKING_DESCRIPTORS, GOVERNANCE_DESCRIPTORS, projectDescriptors } from "./descriptors";
 
@@ -52,14 +50,14 @@ export const BACKING_SENTENCE_LABELS = projectDescriptors(
 export const BACKING_PROSE_LABELS = projectDescriptors(BACKING_DESCRIPTORS, (descriptor) => descriptor.proseLabel);
 
 export function getBackingLabelShort(value: string): string {
-  if (hasOwn(BACKING_LABELS_SHORT, value)) {
+  if (Object.prototype.hasOwnProperty.call(BACKING_LABELS_SHORT, value)) {
     return BACKING_LABELS_SHORT[value as BackingType];
   }
   return value;
 }
 
 export function getGovernanceLabelShort(value: string): string {
-  if (hasOwn(GOVERNANCE_LABELS_SHORT, value)) {
+  if (Object.prototype.hasOwnProperty.call(GOVERNANCE_LABELS_SHORT, value)) {
     return GOVERNANCE_LABELS_SHORT[value as GovernanceType];
   }
   return value;

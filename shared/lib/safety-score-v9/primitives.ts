@@ -1,12 +1,10 @@
-import {
-  compareText,
-  type V9FailureDomainRef,
-} from "../../types/safety-score-v9-fact-primitives";
+import { compareCodeUnits } from "../compare";
+import type { V9FailureDomainRef } from "../../types/safety-score-v9-fact-primitives";
 import { sha256HexFromUtf8Chunks } from "../sha256";
 import { stableJsonStringifyChunksV1 } from "../stable-json";
 
-// Canonical ordering is a determinism-digest input; it has one definition.
-export { compareText };
+// Compatibility name for existing V9 callers; implementation lives in compare.ts.
+export { compareCodeUnits as compareText } from "../compare";
 
 export function assertScore(value: number, field: string): void {
   if (!Number.isFinite(value) || value < 0 || value > 100) {
@@ -15,7 +13,7 @@ export function assertScore(value: number, field: string): void {
 }
 
 export function uniqueSorted<T extends string>(values: readonly T[]): T[] {
-  return [...new Set(values)].sort(compareText);
+  return [...new Set(values)].sort(compareCodeUnits);
 }
 
 export function canonicalUniqueBy<T>(
@@ -77,7 +75,7 @@ export function domainKey(domain: V9FailureDomainRef): string {
 }
 
 export function canonicalDomains(domains: readonly V9FailureDomainRef[]): V9FailureDomainRef[] {
-  return canonicalUniqueBy(domains, domainKey, (left, right) => compareText(domainKey(left), domainKey(right)), "last");
+  return canonicalUniqueBy(domains, domainKey, (left, right) => compareCodeUnits(domainKey(left), domainKey(right)), "last");
 }
 
 export function domainDigest(domain: string, payload: unknown): string {

@@ -4,6 +4,7 @@ import { fetchJsonPostWithRetry } from "./request";
 import { getAlchemyAuthHeaders } from "../../lib/chain-registry";
 import { throwIfAborted } from "../../lib/abort";
 import { redactProviderUrls } from "../../lib/safe-error-message";
+import { base64ToBytes } from "@shared/lib/base64";
 import { toErrorMessage } from "@shared/lib/error-utils";
 
 const accountSchema = z.object({ owner: z.string(), executable: z.boolean(), data: z.tuple([z.string().max(100_000), z.literal("base64")]) });
@@ -31,7 +32,7 @@ async function fetchSolanaAccountCensus(addresses: string[], signal: AbortSignal
       const accounts = new Map<string, SolanaAccount | null>();
       result.value.forEach((account, i) => {
         if (account?.executable) throw new Error("Executable account in Solana reserve census");
-        accounts.set(addresses[i], account ? { owner: account.owner, data: Uint8Array.from(atob(account.data[0]), (c) => c.charCodeAt(0)) } : null);
+        accounts.set(addresses[i], account ? { owner: account.owner, data: base64ToBytes(account.data[0]) } : null);
       });
       return { accounts, observedBlock: { chain: "solana", number: result.context.slot, timestamp } };
     } catch (error) { lastError = error; }

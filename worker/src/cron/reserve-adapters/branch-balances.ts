@@ -1,3 +1,4 @@
+import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { LiveReserveAdapterKey, LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
@@ -195,8 +196,8 @@ export async function fetchBranchBalances(
   );
   const isSingleChainEvmConfig = params.branches.every((branch) =>
     (branch.chain ?? branch.token.chain) === input.chain
-    && /^0x[0-9a-fA-F]{40}$/.test(branch.token.address)
-    && /^0x[0-9a-fA-F]{40}$/.test(branch.holder)
+    && canonicalEvmAddress(branch.token.address) !== null
+    && canonicalEvmAddress(branch.holder) !== null
   );
   if (!isSingleChainEvmConfig) return convertReceipts(await fetchIndividually());
 

@@ -119,11 +119,11 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
   // Daily Net] — no nested cards.
   // Cell labels are the bare windows ("24H", "7D", …) — the quadrant header
   // already says "Net" (Figma coin template).
-  const netCells: { label: string; value: number }[] = [
+  const netCells: { label: string; value: number; hasWindow?: boolean }[] = [
     { label: "24h", value: coin.netFlow24hUsd },
     { label: "7d", value: coin.netFlow7dUsd },
-    { label: "30d", value: coin.netFlow30dUsd },
-    { label: "90d", value: coin.netFlow90dUsd },
+    { label: "30d", value: coin.netFlow30dUsd, hasWindow: coin.coverage?.has30dWindow },
+    { label: "90d", value: coin.netFlow90dUsd, hasWindow: coin.coverage?.has90dWindow },
   ];
 
   return (
@@ -203,26 +203,38 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
             <p className="text-sm font-medium text-foreground">Net</p>
           </div>
           <div className="grid flex-1 grid-cols-2">
-            {netCells.map((cell, index) => (
-              <div
-                key={cell.label}
-                className={cn(
-                  "px-4 py-4 sm:px-5",
-                  index % 2 === 0 && "border-r border-border/40",
-                  index < 2 && "border-b border-border/40",
-                )}
-              >
-                <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{cell.label}</p>
-                <p
+            {netCells.map((cell, index) => {
+              const isPartial = cell.hasWindow === false;
+              return (
+                <div
+                  key={cell.label}
                   className={cn(
-                    "mt-1.5 pharos-numeric text-2xl font-extrabold leading-none sm:text-3xl",
-                    getNetColor(cell.value),
+                    "px-4 py-4 sm:px-5",
+                    index % 2 === 0 && "border-r border-border/40",
+                    index < 2 && "border-b border-border/40",
                   )}
+                  title={
+                    isPartial
+                      ? `${cell.label === "30d" ? "30-day" : "90-day"} window is incomplete; value reflects the covered portion only.`
+                      : undefined
+                  }
                 >
-                  {formatSignedCurrency(cell.value)}
-                </p>
-              </div>
-            ))}
+                  <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                    {cell.label}
+                    {isPartial && <span className="ml-1 normal-case tracking-normal">partial</span>}
+                  </p>
+                  <p
+                    className={cn(
+                      "mt-1.5 pharos-numeric text-2xl font-extrabold leading-none sm:text-3xl",
+                      getNetColor(cell.value),
+                      isPartial && "opacity-60",
+                    )}
+                  >
+                    {formatSignedCurrency(cell.value)}
+                  </p>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

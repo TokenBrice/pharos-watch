@@ -7,10 +7,12 @@ name: Shock Coverage Refresh
 # fails closed to legacy LCR, dropping LUSD to `unsafe-backing:high` (~77/B+ ->
 # 59/C) and taking BOLD's and BD's ratings down with it.
 #
-# Cadence is every other day at 03:41 UTC. The 48h gap leaves a roughly 24h
-# manual/rerun remediation window after one scheduled failure; the next automatic
-# attempt at 96h would be too late. The freshness clock runs on the measured BLOCK
-# timestamp, not on merge time, so the PR this opens must be merged promptly.
+# Refresh cadence is every other day at 03:41 UTC. The 48h gap leaves a roughly
+# 24h manual/rerun remediation window after one scheduled failure; the next
+# automatic attempt at 96h would be too late. A separate daily 09:11 UTC job
+# checks committed freshness without regenerating data. The freshness clock runs
+# on the measured BLOCK timestamp, not on merge time, so the PR this opens must
+# be merged promptly.
 #
 # The 72h bound itself lives in
 # shared/data/safety-score-v9/methodology-policy-candidate-v1.json and is not
@@ -19,6 +21,8 @@ name: Shock Coverage Refresh
 on:
   schedule:
     - cron: "41 3 */2 * *"
+    # Independently detect stale/missing committed measurements without regeneration.
+    - cron: "11 9 * * *"
   workflow_dispatch:
 
 permissions:
@@ -30,6 +34,7 @@ concurrency:
 
 jobs:
   targets:
+    if: github.event_name != 'schedule' || github.event.schedule == '41 3 */2 * *'
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.targets.outputs.matrix }}
@@ -45,10 +50,26 @@ jobs:
           set -euo pipefail
           target_file="shared/data/safety-score-v9/shock-coverage-targets.json"
           jq -e '
-            (.assetIds | type == "array" and length > 0 and all(.[]; type == "string" and test("^[a-z0-9][a-z0-9-]*$"))) and
-            (.assetIds | length == (unique | length))
+            (.targets | type == "array" and length > 0 and all(.[];
+              type == "object" and (.assetId | type == "string" and test("^[a-z0-9][a-z0-9-]*$"))
+            )) and
+            ([.targets[].assetId] | length == (unique | length))
           ' "$target_file" >/dev/null
-          echo "matrix=$(jq -c '{asset: .assetIds}' "$target_file")" >> "$GITHUB_OUTPUT"
+          echo "matrix=$(jq -c '{asset: [.targets[].assetId]}' "$target_file")" >> "$GITHUB_OUTPUT"
+
+  freshness:
+    if: github.event_name == 'schedule' && github.event.schedule == '11 9 * * *'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: $/.github/actions/setup-workspace
+
+      - name: Assert committed measurements remain fresh
+        run: node --import tsx scripts/ci/check-shock-coverage-freshness.ts
 
   measure:
     needs: targets
@@ -168,7 +189,7 @@ jobs:
         env:
           AUTOMATION_GITHUB_TOKEN: ${{ secrets.SHOCK_COVERAGE_GITHUB_TOKEN || secrets.OG_REFRESH_GITHUB_TOKEN }}
           PR_BODY: |
-            Automated shock-coverage refresh for the configured targets in `shared/data/safety-score-v9/shock-coverage-targets.json`. Every journal in this PR replayed byte-identically offline before the registry was regenerated.
+            Automated shock-coverage refresh for the targets canonically configured in `shared/data/safety-score-v9/shock-coverage-targets.json`. Every journal in this PR replayed byte-identically offline before the registry was regenerated.
 
             **Merge promptly.** The V9 CDP freshness bound is 72h measured from the pinned block timestamp, not from merge time. Past it the engine fails closed to legacy LCR and the affected ratings will fall back to legacy LCR.
 

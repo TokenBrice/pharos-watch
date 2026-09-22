@@ -5,10 +5,10 @@ import {
   type ReserveEvidenceSourceOriginClass,
 } from "@shared/lib/report-card-evidence-journal";
 import {
-  buildReportCardsFixedInputCacheEntry,
   normalizeFixedInput,
   parseReportCardsFixedInputCacheValue,
 } from "../report-cards-fixed-input";
+import { buildReportCardsFixedInputCacheEntry } from "../../test-helpers/report-cards-fixed-input";
 import { buildSafetyScoreV9Candidate } from "../safety-score-v9/candidate";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import { makeV9FixedInput, v9TestClockSec } from "../../test-helpers/v9-fixed-input";

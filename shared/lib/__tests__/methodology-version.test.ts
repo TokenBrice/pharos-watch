@@ -8,10 +8,12 @@ import {
   type MethodologyChangelogEntry,
 } from "../methodology-versions/base";
 import { DDR_METHODOLOGY_CHANGELOG, DDR_V2_EFFECTIVE_AT } from "../methodology-versions/depeg-resolver";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "../methodology-versions/constants";
 import {
+  getMethodologyVersionAt,
+  METHODOLOGY_CHANGELOG_REGISTRY,
   SAFETY_SCORE_METHODOLOGY_CHANGELOG,
-  SAFETY_SCORE_METHODOLOGY_VERSION,
-} from "../methodology-versions/safety-score";
+} from "../methodology-versions/registry";
 
 function entry(version: string, effectiveAt: number): MethodologyChangelogEntry {
   return { version, title: "", date: "", effectiveAt, summary: "", impact: [], commits: [], reconstructed: false };
@@ -162,6 +164,23 @@ describe("Safety Score methodology head entry", () => {
         compareMethodologyVersions(newer.version, older.version),
         `${newer.version} must sort after ${older.version}`,
       ).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("methodology registry", () => {
+  it("resolves every registered current version through the keyed API", () => {
+    for (const methodology of METHODOLOGY_CHANGELOG_REGISTRY) {
+      expect(getMethodologyVersionAt(methodology.key, Number.POSITIVE_INFINITY)).toBe(
+        methodology.currentLabel.slice(1),
+      );
+    }
+  });
+
+  it("provides an LLM-facing description for every changelog", () => {
+    expect(METHODOLOGY_CHANGELOG_REGISTRY).toHaveLength(11);
+    for (const methodology of METHODOLOGY_CHANGELOG_REGISTRY) {
+      expect(methodology.llmsDescription.trim(), methodology.key).not.toBe("");
     }
   });
 });

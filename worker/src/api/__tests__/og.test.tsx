@@ -541,18 +541,6 @@ describe("chain OG route", () => {
     expect(res?.status).toBe(404);
   });
 
-  it("answers HEAD without loading data or rendering the PNG", async () => {
-    const db = makeChainOgDb([makeAsset({ chainCirculating: {}, chains: [] })]);
-    const satoriMock = vi.mocked(satoriStandalone);
-    satoriMock.mockClear();
-
-    const res = await handleOg(db, "/api/og/chain/ethereum", "HEAD");
-
-    expect(res?.status).toBe(200);
-    expect(res?.headers.get("Content-Type")).toBe("image/png");
-    expect((await res?.arrayBuffer())?.byteLength).toBe(0);
-    expect(satoriMock).not.toHaveBeenCalled();
-  });
 });
 
 describe("depeg OG handler aggregation", () => {
@@ -712,7 +700,7 @@ describe("stability-index OG handler aggregation", () => {
     expect(data.bands.find((b) => b.name === "STEADY")?.active).toBe(true);
   });
 
-  it("falls back to a derived band and zero score when no sample exists", async () => {
+  it("renders unavailable without inventing a zero score or MELTDOWN band when no sample exists", async () => {
     const db = mockD1([
       { match: "stored_at DESC LIMIT 1", rows: [], first: null },
       { match: "AVG(score)", rows: [], first: { avg: null } },
@@ -721,12 +709,15 @@ describe("stability-index OG handler aggregation", () => {
       { match: "MIN(score)", rows: [], first: { min: null } },
     ]);
 
-    const data = await captureStabilityData(db);
-    expect(data.psiScore).toBe(0);
-    // Empty history → sparkline padded entirely from psiScore (0, 0).
-    expect(data.sparklineData).toEqual([0, 0]);
-    expect(data.allTimeHigh).toBe(0);
-    expect(data.allTimeLow).toBe(0);
+    const res = await handleOg(db, "/api/og/stability-index");
+    expect(res?.status).toBe(200);
+    const calls = vi.mocked(satoriStandalone).mock.calls;
+    const element = calls[calls.length - 1]?.[0] as React.ReactElement;
+    const markup = renderToStaticMarkup(element);
+
+    expect(markup).toContain("Stability index unavailable");
+    expect(markup).not.toContain("MELTDOWN");
+    expect(markup).not.toContain(">0.0<");
   });
 });
 

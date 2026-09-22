@@ -1,15 +1,17 @@
 import { getCirculatingRaw } from "@shared/lib/supply";
+import { YieldRankingsResponseSchema } from "@shared/types/yield";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../lib/dex-liquidity";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { getMintBurnConfigsForStablecoin } from "../lib/mint-burn-contracts";
 import { perCoinFlowCacheKey } from "../lib/mint-burn-flows-service";
 import { getCache } from "../lib/db-cache";
+import { handleYieldRankings } from "./cache-handlers";
 import { safeJsonParse } from "../lib/api-cache-read";
-import { loadStressSignalCurrentRowForCoin } from "../lib/stress-signals-current-rows";
 import {
   loadActiveSafetyScoreSource,
   type ActiveSafetyScoreSource,
 } from "../lib/safety-score-active-source";
+import { loadStressSignalCurrentRowForCoin } from "../lib/stress-signals-current-rows";
 
 /** 24h mint/burn flow older than this is "stale": shown on /status with age, omitted from the terse alert Context line. */
 const MINT_BURN_FLOW_STALE_SEC = 6 * 3600;
@@ -75,6 +77,28 @@ interface TelegramSafetyState {
   source: Extract<ActiveSafetyScoreSource, { kind: "v9" }> | null;
 }
 
+async function loadTelegramPysState(
+  db: D1Database,
+  stablecoinId: string,
+): Promise<{ score: number | null; unavailableReason: string | null }> {
+  try {
+    const response = await handleYieldRankings(db);
+    if (!response.ok) return { score: null, unavailableReason: "yield-rankings-unavailable" };
+    const parsed = YieldRankingsResponseSchema.safeParse(await response.json());
+    if (!parsed.success) return { score: null, unavailableReason: "yield-rankings-malformed" };
+    const ranking = parsed.data.rankings.find((row) => row.id === stablecoinId);
+    if (!ranking) return { score: null, unavailableReason: "yield-ranking-not-found" };
+    return {
+      score: ranking.pharosYieldScore,
+      unavailableReason: ranking.pharosYieldScore == null
+        ? ranking.pysNullReason ?? "pys-unavailable"
+        : null,
+    };
+  } catch {
+    return { score: null, unavailableReason: "yield-rankings-unavailable" };
+  }
+}
+
 async function loadTelegramSafetyState(db: D1Database): Promise<TelegramSafetyState> {
   let activeSource;
   try {
@@ -131,11 +155,11 @@ export async function loadStatusForCoin(db: D1Database, stablecoinId: string): P
         .first<{ liquidity_score: number | null; total_tvl_usd: number; updated_at: number }>(),
       db
         .prepare(
-          `SELECT current_apy, apy_30d, yield_source, pharos_yield_score, updated_at
+          `SELECT current_apy, apy_30d, yield_source, updated_at
            FROM yield_data
           WHERE stablecoin_id = ? AND is_best = 1
             AND (publication_generation_id IS NULL OR publication_state = 'published')
-          ORDER BY pharos_yield_score DESC, apy_30d DESC
+          ORDER BY apy_30d DESC, updated_at DESC
           LIMIT 1`,
         )
         .bind(stablecoinId)
@@ -143,7 +167,6 @@ export async function loadStatusForCoin(db: D1Database, stablecoinId: string): P
           current_apy: number;
           apy_30d: number;
           yield_source: string;
-          pharos_yield_score: number | null;
           updated_at: number;
         }>(),
       loadStablecoinsCache(db, { mode: "strict" }).catch(() => null),
@@ -175,6 +198,8 @@ export async function loadStatusForCoin(db: D1Database, stablecoinId: string): P
     safetyState.source !== null
       ? safetyState.source.snapshot.cards.find((card) => card.id === stablecoinId)
       : null;
+
+  const pysState = yieldRow ? await loadTelegramPysState(db, stablecoinId) : null;
 
   return {
     stablecoinId,
@@ -209,8 +234,8 @@ export async function loadStatusForCoin(db: D1Database, stablecoinId: string): P
           currentApy: yieldRow.current_apy,
           apy30d: yieldRow.apy_30d,
           source: yieldRow.yield_source,
-          pharosYieldScore: null,
-          pysUnavailableReason: "pys-v8-retired",
+          pharosYieldScore: pysState?.score ?? null,
+          pysUnavailableReason: pysState?.unavailableReason ?? null,
           updatedAt: yieldRow.updated_at,
         }
       : null,

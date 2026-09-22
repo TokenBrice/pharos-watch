@@ -10,6 +10,7 @@ import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-ad
 import { chunkArray, D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "../collections";
 import { buildInClause, executeAtomicBatch } from "../db";
 import { runWithOverloadRetry } from "../d1-overload-retry";
+import { throwIfAborted } from "../abort";
 import { sha256Hex } from "../hash";
 import {
   LIVE_RESERVE_HISTORY_RETENTION_SEC,
@@ -280,8 +281,13 @@ async function deleteHistoryInBatches(
   table: "reserve_composition_history" | "reserve_sync_attempt_history",
   column: "fetched_at" | "attempted_at",
   cutoff: number,
-  batchSize: number,
-): Promise<number> {
+  options: {
+    batchSize: number;
+    maxBatches: number;
+    signal?: AbortSignal;
+    deadlineMs?: number;
+  },
+): Promise<{ deleted: number; truncated: boolean }> {
   const frozenIdsList = [...FROZEN_IDS];
   const frozenClause =
     frozenIdsList.length > 0
@@ -306,47 +312,60 @@ async function deleteHistoryInBatches(
      LIMIT ?
   )`;
   let totalDeleted = 0;
-  // Loop until a batch deletes fewer rows than the budget, which implies the
-  // table is drained. Keeps each DELETE inside D1's 30s per-statement limit.
-  for (;;) {
-    const result = await runWithOverloadRetry(() =>
-      db
+  for (let batch = 0; batch < options.maxBatches; batch += 1) {
+    throwIfAborted(options.signal);
+    if (options.deadlineMs != null && Date.now() >= options.deadlineMs) {
+      return { deleted: totalDeleted, truncated: true };
+    }
+    const result = await runWithOverloadRetry(
+      () => db
         .prepare(sql)
-        .bind(cutoff, ...frozenIdsList, batchSize)
+        .bind(cutoff, ...frozenIdsList, options.batchSize)
         .run(),
+      3,
+      options.signal,
     );
     const deleted = result.meta.changes ?? 0;
     totalDeleted += deleted;
-    if (deleted < batchSize) break;
+    if (deleted < options.batchSize) return { deleted: totalDeleted, truncated: false };
   }
-  return totalDeleted;
+  return { deleted: totalDeleted, truncated: true };
 }
 
 export async function pruneLiveReserveHistory(
   db: D1Database,
   now = Math.floor(Date.now() / 1000),
-  retentionSec = LIVE_RESERVE_HISTORY_RETENTION_SEC,
-  batchSize = DEFAULT_PRUNE_BATCH_SIZE,
+  options: {
+    retentionSec?: number;
+    batchSize?: number;
+    maxBatches?: number;
+    signal?: AbortSignal;
+    deadlineMs?: number;
+  } = {},
 ): Promise<LiveReserveHistoryPruneResult> {
+  const retentionSec = options.retentionSec ?? LIVE_RESERVE_HISTORY_RETENTION_SEC;
+  const batchSize = options.batchSize ?? DEFAULT_PRUNE_BATCH_SIZE;
+  const maxBatches = options.maxBatches ?? 4;
   const cutoff = now - retentionSec;
-  const compositionHistoryDeleted = await deleteHistoryInBatches(
+  const compositionHistory = await deleteHistoryInBatches(
     db,
     "reserve_composition_history",
     "fetched_at",
     cutoff,
-    batchSize,
+    { ...options, batchSize, maxBatches },
   );
-  const attemptHistoryDeleted = await deleteHistoryInBatches(
+  const attemptHistory = await deleteHistoryInBatches(
     db,
     "reserve_sync_attempt_history",
     "attempted_at",
     cutoff,
-    batchSize,
+    { ...options, batchSize, maxBatches },
   );
 
   return {
     cutoff,
-    compositionHistoryDeleted,
-    attemptHistoryDeleted,
+    compositionHistoryDeleted: compositionHistory.deleted,
+    attemptHistoryDeleted: attemptHistory.deleted,
+    truncated: compositionHistory.truncated || attemptHistory.truncated,
   };
 }

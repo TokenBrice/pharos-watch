@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const TelegramTelemetryQualitySchema = z.object({
+export const TelegramTelemetryQualitySchema = z.object({
   status: z.enum(["complete", "partial"]),
   unavailableFields: z.array(z.string()),
   errors: z.record(z.string(), z.string()).optional(),
@@ -50,11 +50,11 @@ const TelegramWatcherLifecycleSnapshotSchema = z.object({
   date: z.string(),
   snapshotAt: z.number(),
   activeWatchers: z.number(),
-  newWatchers: z.number(),
-  churnedWatchers: z.number(),
-  reactivatedWatchers: z.number(),
+  newWatchers: z.number().nullable(),
+  churnedWatchers: z.number().nullable(),
+  reactivatedWatchers: z.number().nullable(),
   explicitCoinFollows: z.number(),
-  presetImpliedCoinFollows: z.number(),
+  presetImpliedCoinFollows: z.number().nullable(),
   activePresetFollowers: z.number(),
   alertTypeOptIns: TelegramAlertTypeChatsSchema,
   quietHoursEnabledChats: z.number(),
@@ -216,9 +216,9 @@ export const TelegramBotStatsSchema = z.object({
   subscribedChats: z.number(),
   emptyAlertChats: z.number(),
   mutedChatsWithSubscriptions: z.number(),
-  totalSubscriptions: z.number(),
+  totalSubscriptions: z.number().nullable(),
   explicitCoinSubscriptions: z.number().optional(),
-  presetImpliedCoinSubscriptions: z.number().optional(),
+  presetImpliedCoinSubscriptions: z.number().nullable().optional(),
   activePresetFollowers: z.number().optional(),
   avgSubscriptionsPerSubscribedChat: z.number(),
   pendingDisambiguations: z.number(),
@@ -250,12 +250,13 @@ export const TelegramBotStatsSchema = z.object({
 export type TelegramBotStats = z.output<typeof TelegramBotStatsSchema>;
 
 
-const TelegramPulsePrivacySchema = z.object({
+export const TelegramPulsePrivacySchema = z.object({
   exactActiveWatchers: z.boolean(),
   lowCardinalityThreshold: z.number(),
   suppressedFields: z.array(z.string()),
 });
-const TelegramWatcherHistoryPointSchema = z.object({
+export type TelegramPulsePrivacy = z.infer<typeof TelegramPulsePrivacySchema>;
+export const TelegramWatcherHistoryPointSchema = z.object({
   date: z.string(),
   timestamp: z.number(),
   snapshotAt: z.number().nullable().optional(),
@@ -268,14 +269,14 @@ export type TelegramWatcherHistoryPoint = z.infer<typeof TelegramWatcherHistoryP
 
 const TelegramPulseBaseSchema = z.object({
   activeWatchers: z.number(),
-  coinSubscriptions: z.number(),
+  coinSubscriptions: z.number().nullable(),
   explicitCoinSubscriptions: z.number().optional(),
-  presetImpliedCoinSubscriptions: z.number().optional(),
+  presetImpliedCoinSubscriptions: z.number().nullable().optional(),
   activePresetFollowers: z.number().optional(),
   newWatchersToday: z.number().nullable().optional(),
   churnedWatchersToday: z.number().nullable().optional(),
   reactivatedWatchersToday: z.number().nullable().optional(),
-  historySource: z.enum(["snapshot", "live-fallback"]).optional(),
+  historySource: z.literal("snapshot").optional(),
   topCoins: z.array(z.string()),
   watcherHistory: z.array(TelegramWatcherHistoryPointSchema),
   pendingDeliveries: z.number().nullable(),
@@ -302,6 +303,19 @@ export const TelegramPulseSchema = TelegramPulseBaseSchema.transform((pulse) => 
   privacy: pulse.privacy ?? { exactActiveWatchers: true, lowCardinalityThreshold: 5, suppressedFields: [] },
 }));
 export type TelegramPulse = z.infer<typeof TelegramPulseSchema>;
+
+/**
+ * What the route serves after the transform above applies its defaults. The artifact
+ * registry registers this directly, so adding a field to the base is documented without a
+ * second edit; only the defaulted fields are restated here.
+ */
+export const TelegramPulseOutputSchema = TelegramPulseBaseSchema.extend({
+  currentSnapshotAt: z.number(),
+  lifecycleHistoryUpdatedAt: z.number().nullable(),
+  lifecycleHistoryEverySeconds: z.number(),
+  quality: TelegramTelemetryQualitySchema,
+  privacy: TelegramPulsePrivacySchema,
+});
 
 interface TelegramDispatchEventsDetected {
   dews: number;
@@ -362,14 +376,14 @@ export type ReserveAlertSourceState = (typeof RESERVE_ALERT_SOURCE_STATE_VALUES)
 export interface SafetyAlertFieldsNullable {
   safetyAlertSourceState: SafetyAlertSourceState | null;
   safetyAlertSourceAgeSeconds: number | null;
-  safetyAlertsSuppressed: boolean;
+  safetyAlertsSuppressed: boolean | null;
   safetyAlertSourceGeneration: string | null;
 }
 
 export interface ReserveAlertFieldsNullable {
   reserveAlertSourceState: ReserveAlertSourceState | null;
   reserveAlertSourceAgeSeconds: number | null;
-  reserveAlertsSuppressed: boolean;
+  reserveAlertsSuppressed: boolean | null;
   reserveAlertSourceGeneration: string | null;
 }
 
@@ -435,9 +449,9 @@ export interface TelegramDispatchCronMetadata extends SafetyAlertFieldsNullable,
   messagesSent: number | null;
   blockedUsersCleanedUp: number | null;
   blockedUsersCleanupFailed: number | null;
-  cappedAtLimit: boolean;
-  snapshotSeeded: boolean;
-  eventlessFastPath: boolean;
+  cappedAtLimit: boolean | null;
+  snapshotSeeded: boolean | null;
+  eventlessFastPath: boolean | null;
   skipped: string | null;
   freshAttempted: number | null;
   freshSent: number | null;
@@ -454,14 +468,14 @@ export interface TelegramDispatchCronMetadata extends SafetyAlertFieldsNullable,
   pendingDroppedPermanentFailure: number | null;
   pendingDroppedMaxAttemptsFallback: number | null;
   pendingDeferred: number | null;
-  pendingRateLimited: boolean;
+  pendingRateLimited: boolean | null;
   pendingRetryAfterSec: number | null;
   pendingEnqueued: number | null;
   pendingExpired: number | null;
   chatsWithActiveSnooze: number | null;
   presetQueryFailures: number | null;
   presetResolutionFailures: number | null;
-  presetFailure: boolean;
+  presetFailure: boolean | null;
   suppressedSafetyChangesAtSeed: number | null;
   eventsDetected: ParsedTelegramDispatchEventsDetected | null;
   perAlertType: PerAlertTypeDelivery | null;

@@ -1,5 +1,5 @@
 import { buildEditorialPrompt } from "@shared/lib/editorial-style";
-import { ALLOWED_TONES } from "../response";
+import { ALLOWED_LEADS, ALLOWED_TONES } from "../response";
 
 export const DAILY_EXEMPLAR = [
   "Title: EXAUSD Tests An Old Ceiling",
@@ -82,7 +82,7 @@ export const SYSTEM_PROMPT = [
   "Respond with valid JSON only. No markdown fences, no preamble, no trailing text.",
   '{ "title": "2-6 word headline", "extended": "...", "text": "tweet-sized hook under 270 chars combined with title", ',
   '  "meta": { "leadSignalId": "candidate id", "lead": "one of allowed leads", "tone": "one of allowed tones", "coins": ["TOP","COINS"], "usedCandidateIds": [], "suppressedCandidateIds": [] } }',
-  "Allowed leads: psi-streak, psi-regime, psi-band-change, psi-divergence, depeg, resolved-depeg, chronic-depeg, dews-band-change, dews-alert-breadth, dews-warning, ftq, mint-burn, gauge-flip, gauge-divergence, supply-reversal, supply-acceleration, supply-deceleration, chain-migration, grade-transition, blacklist-contrast, reserve-event, yield-anomaly, liquidity-shift, macro-observation, market-structure, issuer-concentration, regime-divergence, other.",
+  `Allowed leads: ${ALLOWED_LEADS.join(", ")}.`,
   `Allowed tones: ${ALLOWED_TONES.join(", ")}.`,
   "Text field (hook) rules: lead with the sharpest number or most provocative observation. Do not start with the title (prepended automatically). Combined 'title + text' must be under 270 characters.",
   "",

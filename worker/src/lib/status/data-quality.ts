@@ -13,7 +13,7 @@ import {
 } from "@shared/lib/status-thresholds";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
-import type { DataQuality, StatusResponse } from "@shared/types/status";
+import type { ActivePriceCoverageHealth, DataQuality, StablecoinPublicationHealth, StatusResponse } from "@shared/types/status";
 import { logWorkerEvent } from "../structured-log";
 import { getSourceFailureMessage } from "./section-errors";
 import { loadDdrRepairDebtDetails, loadRepairDebtSummary } from "../repair-tasks";
@@ -99,6 +99,8 @@ export async function getDataQuality(
   now: number,
   options?: {
     blacklistMetrics?: BlacklistGapMetrics | null;
+    stablecoinPublication?: StablecoinPublicationHealth;
+    activePriceCoverage?: ActivePriceCoverageHealth;
   },
 ): Promise<DataQuality> {
   const stablecoinsCacheResult = await loadStablecoinsCache(db, { mode: "lenient" });
@@ -135,35 +137,43 @@ export async function getDataQuality(
   // DefiLlama residuals and pre-launch canonical coins should not drive the
   // active canonical missing-price ratio.
   const activeCanonicalAssets = stablecoinAssets.filter((asset) => ACTIVE_IDS.has(asset.id));
-  let stablecoinPublication = unknownStablecoinPublicationHealth();
-  try {
-    stablecoinPublication = await loadStablecoinPublicationHealth(db);
-  } catch (error) {
-    logWorkerEvent({
-      scope: "status",
-      level: "warn",
-      event: "stablecoin_publication_health_query_failed",
-      route: "status",
-      source: "sync-stablecoins",
-      message: "Stablecoin publication coverage metadata unavailable",
-      error,
-    });
-  }
-  const hasExactPublicationEvidence = stablecoinPublication.status !== "unknown";
-  const totalStablecoins = hasExactPublicationEvidence
-    ? stablecoinPublication.expectedActiveCount
-    : activeCanonicalAssets.length;
-  const missingActiveIds = new Set(
-    activeCanonicalAssets
-      .filter((asset: { price?: number | null }) => asset.price == null || asset.price === 0)
-      .map((asset) => asset.id),
-  );
-  if (stablecoinPublication.status === "incomplete") {
-    for (const id of stablecoinPublication.missingActiveIds) {
-      missingActiveIds.add(id);
+  let stablecoinPublication = options?.stablecoinPublication ?? unknownStablecoinPublicationHealth();
+  if (options?.stablecoinPublication == null) {
+    try {
+      stablecoinPublication = await loadStablecoinPublicationHealth(db, now);
+    } catch (error) {
+      logWorkerEvent({
+        scope: "status",
+        level: "warn",
+        event: "stablecoin_publication_health_query_failed",
+        route: "status",
+        source: "sync-stablecoins",
+        message: "Stablecoin publication coverage metadata unavailable",
+        error,
+      });
     }
   }
-  const missingPrices = missingActiveIds.size;
+  const activePriceCoverage = options?.activePriceCoverage;
+  const hasExactPriceEvidence = activePriceCoverage != null && activePriceCoverage.status !== "unknown";
+  const totalStablecoins = hasExactPriceEvidence
+    ? activePriceCoverage.expectedActiveCount
+    : activeCanonicalAssets.length;
+  let missingPrices: number;
+  if (hasExactPriceEvidence) {
+    missingPrices = activePriceCoverage.missingPriceCount;
+  } else {
+    const missingActiveIds = new Set(
+      activeCanonicalAssets
+        .filter((asset: { price?: number | null }) => asset.price == null || asset.price === 0)
+        .map((asset) => asset.id),
+    );
+    if (stablecoinPublication.status === "incomplete") {
+      for (const id of stablecoinPublication.missingActiveIds) {
+        missingActiveIds.add(id);
+      }
+    }
+    missingPrices = missingActiveIds.size;
+  }
 
   let blacklistTotal = 0;
   let blacklistMissingAmounts = 0;

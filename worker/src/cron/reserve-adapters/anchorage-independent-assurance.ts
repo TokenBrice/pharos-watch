@@ -29,7 +29,7 @@ export function anchorageReportDate(product: "USAT" | "USDPT" | "USDGO") {
   };
 }
 
-export const USAT_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = {
+const USAT_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = {
   adapterName: "anchorage-independent-assurance",
   product: "USAT",
   profile: "usat-v1",

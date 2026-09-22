@@ -4,6 +4,7 @@ import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { STATUS_MISSING_PRICE_THRESHOLDS } from "@shared/lib/status-thresholds";
 import { makePriceCoverageMetadata } from "./public-health.test-support";
 
 const fixtures = createLatestSchemaFixtureTracker();
@@ -19,7 +20,23 @@ function makeMinimalDb(
   d1Capacity?: Record<string, unknown>,
   stablecoinPublicationMetadata?: Record<string, unknown>,
 ): D1Database {
-  const emptyFirst = async <T>() => null as T | null;
+  // P2-08 bound the coverage scan at a seven-day `started_at` fence, so the
+  // snapshot read now arrives through `bind()`.
+  const firstFor = async <T>(sql: string) => {
+    if (d1Capacity && sql.includes("SELECT value, updated_at FROM cache WHERE key = ?")) {
+      return {
+        value: JSON.stringify({ version: 1, assessment: d1Capacity }),
+        updated_at: nowSec,
+      } as T;
+    }
+    if (stablecoinPublicationMetadata && sql.includes("job = 'sync-stablecoins'")) {
+      return {
+        started_at: nowSec - 30,
+        metadata: JSON.stringify(stablecoinPublicationMetadata),
+      } as T;
+    }
+    return null as T | null;
+  };
   return makeNoopD1({
     prepare: (sql: string) => ({
       bind: (..._args: unknown[]) => ({
@@ -33,27 +50,11 @@ function makeMinimalDb(
           }
           return { results: [] as T[], success: true, meta: {} };
         },
-        first: async <T>() => {
-          if (d1Capacity && sql.includes("SELECT value, updated_at FROM cache WHERE key = ?")) {
-            return {
-              value: JSON.stringify({ version: 1, assessment: d1Capacity }),
-              updated_at: nowSec,
-            } as T;
-          }
-          return emptyFirst<T>();
-        },
+        first: async <T>() => firstFor<T>(sql),
         run: async () => ({ success: true, meta: {} }),
       }),
       all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
-      first: async <T>() => {
-        if (stablecoinPublicationMetadata && sql.includes("job = 'sync-stablecoins'")) {
-          return {
-            started_at: nowSec - 30,
-            metadata: JSON.stringify(stablecoinPublicationMetadata),
-          } as T;
-        }
-        return emptyFirst<T>();
-      },
+      first: async <T>() => firstFor<T>(sql),
       run: async () => ({ success: true, meta: {} }),
     }),
     batch: async () => [],
@@ -71,6 +72,8 @@ function makeMintBurnAssessmentDb(
     rowCount?: number | null;
     rowCountError?: unknown;
     publicationMetadata?: Record<string, unknown>;
+    publicationQueryError?: unknown;
+    yieldSafetyError?: unknown;
   } = {},
 ): D1Database {
   const latestRunStatus = options.latestRunStatus !== undefined ? options.latestRunStatus : "ok";
@@ -137,13 +140,23 @@ function makeMintBurnAssessmentDb(
   return mockD1([
     {
       match: "job = 'sync-stablecoins'", rows: [],
-      first: options.publicationMetadata
-        ? { started_at: nowSec - 30, metadata: JSON.stringify(options.publicationMetadata) }
-        : null,
+      ...(options.publicationQueryError
+        ? { throwError: options.publicationQueryError }
+        : {
+            first: options.publicationMetadata
+              ? { started_at: nowSec - 30, metadata: JSON.stringify(options.publicationMetadata) }
+              : null,
+          }),
     },
     { match: "SELECT 1", rows: [], first: { value: 1 } },
     { match: "cache WHERE key IN", rows: cacheRows },
     { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+    {
+      match: "stamped_identity",
+      matchBinds: ["yield-rankings"],
+      rows: [],
+      ...(options.yieldSafetyError ? { throwError: options.yieldSafetyError } : { first: null }),
+    },
     { match: "SELECT key, value FROM cache WHERE key LIKE 'circuit:%'", rows: [] },
     { match: "blacklist-gap-metrics-cache-read", rows: [], first: null },
     { match: "GROUP BY job", rows: [] },
@@ -316,6 +329,54 @@ describe("assessPublicHealth upstream provider enrichment", () => {
     expect(result.warnings).toContain(`active-price-coverage-incomplete:${missingId}`);
   });
 
+  it("escalates once an alert-eligible price gap outlives the elevated duration band", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const activeIds = [...ACTIVE_IDS];
+    const missingId = activeIds[0]!;
+    const baseline = await assessPublicHealth(makeMintBurnAssessmentDb(nowSec, {
+      publicationMetadata: makePriceCoverageMetadata(nowSec, null),
+    }), nowSec, { logPrefix: "test" });
+    expect(baseline.overallStatus).toBe("healthy");
+    // One gap in a full active set is far below `missingPriceRatio` bands; only
+    // its persistence escalates.
+    const db = makeMintBurnAssessmentDb(nowSec, {
+      publicationMetadata: makePriceCoverageMetadata(
+        nowSec,
+        missingId,
+        STATUS_MISSING_PRICE_THRESHOLDS.generationsElevated,
+      ),
+    });
+
+    const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
+
+    expect(result.activePriceCoverageImpactStatus).toBe("degraded");
+    expect(result.overallStatus).toBe("degraded");
+    expect(result.warnings).toContain(`active-price-coverage-incomplete:${missingId}`);
+  });
+
+  it("escalates to stale once an alert-eligible price gap outlives the critical duration band", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const activeIds = [...ACTIVE_IDS];
+    const missingId = activeIds[0]!;
+    const baseline = await assessPublicHealth(makeMintBurnAssessmentDb(nowSec, {
+      publicationMetadata: makePriceCoverageMetadata(nowSec, null),
+    }), nowSec, { logPrefix: "test" });
+    expect(baseline.overallStatus).toBe("healthy");
+    const db = makeMintBurnAssessmentDb(nowSec, {
+      publicationMetadata: makePriceCoverageMetadata(
+        nowSec,
+        missingId,
+        STATUS_MISSING_PRICE_THRESHOLDS.generationsCritical,
+      ),
+    });
+
+    const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
+
+    expect(result.activePriceCoverageImpactStatus).toBe("stale");
+    expect(result.overallStatus).toBe("stale");
+    expect(result.warnings).toContain(`active-price-coverage-incomplete:${missingId}`);
+  });
+
   it("keeps public health healthy for a transient (non-alert-eligible) price miss while preserving the coverage payload", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const activeIds = [...ACTIVE_IDS];
@@ -456,5 +517,42 @@ describe("assessPublicHealth mint/burn subquery failures", () => {
     expect(result.mintBurnImpactStatus).toBe("stale");
     expect(result.mintBurnBootstrap).toBe(false);
     expect(result.warnings).not.toContain("mint-burn-query-failed");
+  });
+
+  it("degrades the coverage sections instead of rejecting when the coverage read fails", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const db = makeMintBurnAssessmentDb(nowSec, {
+        publicationQueryError: new Error("coverage read failed"),
+      });
+
+      const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
+
+      expect(result.stablecoinPublication.status).toBe("unknown");
+      expect(result.activePriceCoverage.status).toBe("unknown");
+      expect(result.stablecoinPublicationImpactStatus).toBe("degraded");
+      expect(result.activePriceCoverageImpactStatus).toBe("degraded");
+      expect(result.warnings).toContain("stablecoin-coverage-query-failed");
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
+  it("never reports yield safety as healthy when its availability check throws", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const db = makeMintBurnAssessmentDb(nowSec, {
+        yieldSafetyError: new Error("yield identity read failed"),
+      });
+
+      const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
+
+      expect(result.warnings).toContain("yield-safety-availability-unknown");
+      expect(result.overallStatus).not.toBe("healthy");
+    } finally {
+      consoleWarn.mockRestore();
+    }
   });
 });

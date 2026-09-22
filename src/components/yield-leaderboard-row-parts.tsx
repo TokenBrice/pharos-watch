@@ -14,7 +14,6 @@ import { clampScore } from "@shared/lib/math";
 import {
   getYieldBenchmarkSelectionMode,
   getYieldWorkbenchSourceRole,
-  isYieldBenchmarkFallback,
   isYieldRankingSummary,
   deriveYieldRowPresentation,
 } from "@/lib/yield-workbench-row";
@@ -43,6 +42,7 @@ import type {
 import type { YieldRankChangeChipDisplay } from "@/lib/yield-presentation";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 import { trackEvent } from "@/lib/analytics";
+import type { YieldResolvedRowBenchmark } from "@/lib/yield-benchmark";
 
 // These presentational parts are chassis-agnostic: each returns inline content
 // (no `<TableCell>`/`<TableRow>` wrapper) so the yield instrument board can place
@@ -466,7 +466,7 @@ function ExpandedMetricSection({ title, children }: { title: string; children: R
 
 export function YieldExpandedDetails({
   row,
-  riskFreeRate,
+  benchmark,
   medianApy,
   availableSources,
   benchmarkReferenceText,
@@ -480,7 +480,7 @@ export function YieldExpandedDetails({
   onOpenSourceSheet,
 }: {
   row: YieldViewModelRow;
-  riskFreeRate: number;
+  benchmark: YieldResolvedRowBenchmark;
   medianApy: number;
   availableSources: AvailableYieldSource[];
   benchmarkReferenceText: string;
@@ -512,9 +512,9 @@ export function YieldExpandedDetails({
         <div className="min-w-0 max-w-full overflow-hidden">
           <YieldHistoryChart
             stablecoinId={row.id}
-            benchmarkRate={row.benchmarkRate ?? riskFreeRate}
-            benchmarkLabel={row.benchmarkLabel}
-            benchmarkIsFallback={isYieldBenchmarkFallback(row)}
+            benchmarkRate={benchmark.rate}
+            benchmarkLabel={benchmark.label}
+            benchmarkIsFallback={benchmark.isFallback}
             medianApy={medianApy}
             compact
             availableSources={availableSources}

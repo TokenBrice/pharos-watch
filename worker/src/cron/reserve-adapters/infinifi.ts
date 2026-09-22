@@ -130,6 +130,7 @@ const FARM_RISK_MAP: Record<string, FarmRiskConfig> = {
   "aave-v4-usdg":            { risk: "low" },
   "euler-sentora-usdc":      { risk: "low", ...wrapperAssetMeta("usdc") },
   "morpho-steakUSDCinfinifi": { risk: "medium", ...wrapperAssetMeta("usdc") },
+  "base-morpho-steakhouse-prime": { risk: "medium", ...wrapperAssetMeta("usdc") },
   "capfarm":                 { risk: "medium", coinId: "stcusd-cap", depType: "collateral" },
   SwapFarm:                  { risk: "low" },
   "tokemak-autoUSD":         { risk: "medium" },
@@ -231,7 +232,7 @@ export interface AdaptInfiniFiResult {
   sourceTotalGapPct: number;
   excludedProtocolFarms: string[];
   activeFarmCount: number;
-  immediateRedeemableUsd: number;
+  immediateRedeemableUsd?: number;
   supplyUsd?: number;
 }
 
@@ -246,7 +247,9 @@ export function adaptInfiniFi(payload: InfiniFiProtocolData): AdaptInfiniFiResul
       sourceTotalGapPct: 0,
       excludedProtocolFarms: [],
       activeFarmCount: 0,
-      immediateRedeemableUsd: payload.data.stats.asset.totalLiquidAssetNormalized ?? 0,
+      ...(payload.data.stats.asset.totalLiquidAssetNormalized != null
+        ? { immediateRedeemableUsd: payload.data.stats.asset.totalLiquidAssetNormalized }
+        : {}),
       ...(readReceiptSupply(payload) != null ? { supplyUsd: readReceiptSupply(payload) } : {}),
     };
   }
@@ -304,7 +307,9 @@ export function adaptInfiniFi(payload: InfiniFiProtocolData): AdaptInfiniFiResul
     sourceTotalGapPct,
     excludedProtocolFarms: excludedProtocolFarms.map((farm) => farm.name).sort(),
     activeFarmCount: activeFarms.length,
-    immediateRedeemableUsd: payload.data.stats.asset.totalLiquidAssetNormalized ?? 0,
+    ...(payload.data.stats.asset.totalLiquidAssetNormalized != null
+      ? { immediateRedeemableUsd: payload.data.stats.asset.totalLiquidAssetNormalized }
+      : {}),
     ...(readReceiptSupply(payload) != null ? { supplyUsd: readReceiptSupply(payload) } : {}),
   };
 }
@@ -607,7 +612,7 @@ export async function fetchInfiniFiReserves(
   }
 
   const totalReserveUsd = payload.data.stats.asset.totalTVLAssetNormalized;
-  const illiquidReserveUsd = payload.data.stats.asset.totalIlliquidAssetNormalized ?? 0;
+  const illiquidReserveUsd = payload.data.stats.asset.totalIlliquidAssetNormalized;
 
   return {
     slices: adapted.slices,
@@ -621,11 +626,11 @@ export async function fetchInfiniFiReserves(
       ...(adapted.excludedProtocolFarms.length > 0 ? { excludedProtocolFarms: adapted.excludedProtocolFarms } : {}),
       ...freshness,
       totalReserveUsd,
-      illiquidReserveUsd,
+      ...(illiquidReserveUsd != null ? { illiquidReserveUsd } : {}),
       pendingRedemptionsUsd:
         payload.data.stats.asset.pendingRedemptionsAssetNormalized,
       ...(adapted.supplyUsd != null ? { supplyUsd: adapted.supplyUsd } : {}),
-      ...(routeProbe != null
+      ...(routeProbe != null && adapted.immediateRedeemableUsd != null
         ? {
             ...buildRedemptionSnapshotMetadata({
               // The honest bound is the liquid farm total the BeforeRedeemHook
@@ -642,6 +647,7 @@ export async function fetchInfiniFiReserves(
                 : { freshnessKind: "same-run-api" as const }),
               ...resolveInfiniFiRouteStatus(routeProbe),
               routeStatusSource: "onchain",
+              routeObserved: true,
               queueDepthUsd: routeProbe.queuedUsd,
               sourceUrls: [url, INFINIFI_GATEWAY_DOC_URL, INFINIFI_REDEEM_CONTROLLER_DOC_URL],
             }),

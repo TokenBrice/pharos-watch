@@ -20,7 +20,7 @@ import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
-import { pruneOldApiKeyRequestRateLimits } from "../api-key-requests/rate-limit";
+import { pruneOldApiKeyRequestRateLimits } from "../../lib/api-key-request-rate-limit-prune";
 
 function setupSqlite(): DatabaseSync {
   return createLatestSchemaSqlite().sqlite;
@@ -213,6 +213,35 @@ describe("api key self-serve request handlers", () => {
     });
     expect(sqlite.prepare("SELECT status FROM api_key_self_serve_email_claims").get()).toEqual({ status: "issued" });
     expect(sqlite.prepare("SELECT actor FROM api_key_audit_log").get()).toEqual({ actor: "self-serve" });
+  });
+
+  it("spends no verification-token attempt once the IP bucket denies", async () => {
+    await handleApiKeyRequest(db, postRequest("/api/api-key-requests", validBody()), env());
+    const token = extractVerificationToken(sentEmails[0]);
+    await handleApiKeyRequestVerify(
+      db,
+      postRequest("/api/api-key-requests/verify", { token: "z".repeat(40) }),
+      env(),
+      "api-key-pepper",
+    );
+    sqlite.exec(
+      `UPDATE api_key_request_rate_limit_v2 SET count = 9999 WHERE scope = 'verification_ip';
+       DELETE FROM api_key_request_rate_limit_v2 WHERE scope = 'verification_token'`,
+    );
+
+    const denied = await handleApiKeyRequestVerify(
+      db,
+      postRequest("/api/api-key-requests/verify", { token }),
+      env(),
+      "api-key-pepper",
+    );
+
+    expect(denied.status).toBe(429);
+    expect(
+      sqlite
+        .prepare("SELECT COUNT(*) AS n FROM api_key_request_rate_limit_v2 WHERE scope = 'verification_token'")
+        .get(),
+    ).toEqual({ n: 0 });
   });
 
   it("finalizes the self-serve request before activating the returned key", async () => {
@@ -423,6 +452,71 @@ describe("api key self-serve request handlers", () => {
     expect(body.requests[0]?.email).toBe("builder@example.com");
     expect(body.requests[0]?.useCase).toContain("stablecoin monitoring");
     expect(body.requests[0]?.token).toBeUndefined();
+  });
+
+  it("pages request rows 51-100 with an exact status-filtered total", async () => {
+    const insert = sqlite.prepare(`
+      INSERT INTO api_key_requests (
+        request_id, status, normalized_email, email_hash, use_case, accepted_terms,
+        self_serve_rate_limit_per_minute, ip_hash, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, 'Pagination test', 1, 30, ?, 1900000000, 1900000000)
+    `);
+    for (let index = 1; index <= 105; index++) {
+      const suffix = String(index).padStart(3, "0");
+      insert.run(
+        `akr_page_${suffix}`,
+        "pending_verification",
+        `request-${suffix}@example.com`,
+        `email-hash-${suffix}`,
+        `ip-hash-${suffix}`,
+      );
+    }
+    insert.run("akr_issued_extra", "issued", "issued@example.com", "issued-email-hash", "issued-ip-hash");
+
+    const firstResponse = await handleApiKeyRequestsAdmin(
+      db,
+      true,
+      new Request(
+        "https://api.pharos.watch/api/api-key-requests-admin?status=pending_verification&limit=50",
+      ),
+    );
+    const firstPage = await readJsonResponse(firstResponse, 200) as {
+      requests: Array<{ email: string }>;
+      total: number;
+      nextCursor: string | null;
+    };
+
+    expect(firstPage.requests).toHaveLength(50);
+    expect(firstPage.total).toBe(105);
+    expect(firstPage.nextCursor).toBeTypeOf("string");
+
+    const mismatchedFilterResponse = await handleApiKeyRequestsAdmin(
+      db,
+      true,
+      new Request(
+        `https://api.pharos.watch/api/api-key-requests-admin?status=issued&limit=50&cursor=${encodeURIComponent(firstPage.nextCursor!)}`,
+      ),
+    );
+    expect(mismatchedFilterResponse.status).toBe(400);
+
+    const secondResponse = await handleApiKeyRequestsAdmin(
+      db,
+      true,
+      new Request(
+        `https://api.pharos.watch/api/api-key-requests-admin?status=pending_verification&limit=50&cursor=${encodeURIComponent(firstPage.nextCursor!)}`,
+      ),
+    );
+    const secondPage = await readJsonResponse(secondResponse, 200) as {
+      requests: Array<{ email: string }>;
+      total: number;
+      nextCursor: string | null;
+    };
+
+    expect(secondPage.requests).toHaveLength(50);
+    expect(secondPage.requests[0]?.email).toBe("request-055@example.com");
+    expect(secondPage.requests[49]?.email).toBe("request-006@example.com");
+    expect(secondPage.total).toBe(105);
+    expect(secondPage.nextCursor).toBeTypeOf("string");
   });
 
   it("lets admins reject a pending request and releases its claim", async () => {

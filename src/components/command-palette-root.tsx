@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { FileText, Coins, Clock, Trash2, Search, X } from "lucide-react";
@@ -9,10 +8,9 @@ import { trackEvent } from "@/lib/analytics";
 import { logosById } from "@/lib/logos";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { useCommandPaletteHistory } from "@/hooks/use-command-palette-history";
+import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useThemeToggle } from "@/hooks/use-theme-toggle";
 import { useWatchlist } from "@/hooks/use-watchlist";
-import { STABLECOINS_QUERY_KEY } from "@shared/lib/query-keys";
-import type { StablecoinListResponse } from "@shared/types";
 import { groupCommandPaletteResults } from "@/components/command-palette-model";
 import { clampCommandPaletteSelectedIndex } from "@/components/command-palette-actions";
 import {
@@ -47,18 +45,14 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const lastFocusedElementRef = useRef<HTMLElement | null>(null);
   const wasOpenRef = useRef(false);
   const router = useRouter();
-  const queryClient = useQueryClient();
   const { isDark, toggleTheme } = useThemeToggle();
   const logos = logosById;
-  const stablecoinsData = queryClient.getQueryData<{
-    data: StablecoinListResponse;
-    meta: unknown;
-  }>(STABLECOINS_QUERY_KEY)?.data;
+  const { data: stablecoinsData } = useStablecoins();
   const { history, addToHistory, clearHistory } = useCommandPaletteHistory();
   const { ids: watchlistIds, add: addToWatchlist, remove: removeFromWatchlist, clear: clearWatchlist, count: watchlistCount } = useWatchlist();
 
-  // Live metadata powers both ranking and row facts when a validated data
-  // surface has already populated the canonical list cache.
+  // Live metadata powers both ranking and row facts as the canonical observer
+  // resolves; static registry search remains available while it is pending.
   const stablecoinLiveMetadata = useMemo(
     () => buildStablecoinLiveMetadata(stablecoinsData),
     [stablecoinsData],

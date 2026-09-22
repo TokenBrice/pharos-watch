@@ -1,7 +1,8 @@
-import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { projectSafetyGrades } from "@shared/types/report-cards-v9";
-import { errorResponse, jsonFreshResponse } from "../lib/api-response";
-import { CACHE_PROFILES } from "../lib/constants";
+import {
+  errorResponse,
+  jsonSafetyScoreSnapshotResponse,
+} from "../lib/api-response";
 import { loadActiveSafetyScoreSource } from "../lib/safety-score-active-source";
 
 /**
@@ -15,11 +16,8 @@ export const handleSafetyGrades = async (db: D1Database): Promise<Response> => {
     return errorResponse(503, active.detail);
   }
   const snapshot = active.snapshot;
-  const held = snapshot.publicationHealth.status === "held";
-  return jsonFreshResponse(projectSafetyGrades(snapshot), {
-    cacheControl: held ? CACHE_PROFILES.noStore : CACHE_PROFILES.standard,
-    updatedAt: snapshot.updatedAt,
-    maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.reportCards,
-    headers: { "X-Safety-Score-Status": held ? "held" : "current" },
-  });
+  return jsonSafetyScoreSnapshotResponse(
+    snapshot,
+    projectSafetyGrades(snapshot),
+  );
 };

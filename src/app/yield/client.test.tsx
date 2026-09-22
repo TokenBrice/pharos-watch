@@ -55,6 +55,7 @@ vi.mock("@/hooks/use-url-filters", () => ({
 }));
 
 vi.mock("@/lib/logos", () => ({
+  getLogoSrc: () => undefined,
   logosById: {},
 }));
 

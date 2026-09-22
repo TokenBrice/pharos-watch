@@ -5,7 +5,7 @@ import { parseBooleanParam } from "../lib/api-params";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import { CACHE_PROFILES } from "../lib/constants";
+import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { decodeJsonString } from "../lib/cache-json";
 import { logMalformedJsonPath } from "../lib/json-decode-observability";
 import { getConditionBand } from "../lib/stability-index";
@@ -13,8 +13,8 @@ import {
   PSI_METHODOLOGY_CHANGELOG_PATH,
   PSI_METHODOLOGY_VERSION,
   PSI_METHODOLOGY_VERSION_LABEL,
-  getPsiMethodologyVersionAt,
-} from "@shared/lib/methodology-versions/stability-index";
+} from "@shared/lib/methodology-versions/constants";
+import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
 import { upsertPsiHistoryPoint } from "@shared/lib/psi-view-model";
 import { round1 } from "@shared/lib/math";
@@ -169,7 +169,7 @@ export const handleStabilityIndex = async (db: D1Database, url: URL): Promise<Re
   const avg24h = avg24hRow?.avg != null ? round1(avg24hRow.avg) : undefined;
   const avg24hBand = avg24h != null ? getConditionBand(avg24h) : undefined;
   const resolveMethodologyVersion = (version: string | null | undefined, ts: number) =>
-    version ?? getPsiMethodologyVersionAt(ts);
+    version ?? getMethodologyVersionAt("stability-index", ts);
 
   // Build history array (newest-first from stability_index)
   let malformedRows = 0;
@@ -212,7 +212,7 @@ export const handleStabilityIndex = async (db: D1Database, url: URL): Promise<Re
         ? resolveMethodologyVersion(latestSample.methodology_version, latestSampleTs)
         : results[0]
           ? resolveMethodologyVersion(results[0].methodology_version, results[0].computed_at)
-          : getPsiMethodologyVersionAt(todayMidnight);
+          : getMethodologyVersionAt("stability-index", todayMidnight);
     const todayPoint = {
       date: todayMidnight,
       score: todayScore,

@@ -12,7 +12,7 @@ import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import type { CronResult } from "../../lib/cron-logger";
 import { createCronResult } from "../../lib/cron-result";
 import { d1ChangeCount } from "../../lib/telegram/operation-batch";
-import { unixNow } from "./subscribers";
+import { unixNowSec as unixNow } from "@shared/lib/time-constants";
 import {
   appendTelegramOperationStatements,
   type TelegramOperationBatchOptions,
@@ -234,6 +234,36 @@ export async function persistPendingForgetConfirm(
   });
 }
 
+export function pendingDisambiguationClearStatement(
+  db: D1Database,
+  chatId: string,
+  expected?: {
+    actionType: string;
+    actionPayload?: string;
+    expiresAt: number;
+  },
+): D1PreparedStatement {
+  if (!expected) {
+    return db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(chatId);
+  }
+  if (expected.actionPayload === undefined) {
+    return db.prepare(
+      `DELETE FROM telegram_pending_disambiguation
+        WHERE chat_id = ?
+          AND action_type = ?
+          AND expires_at = ?`,
+    ).bind(chatId, expected.actionType, expected.expiresAt);
+  }
+  return db.prepare(
+    `DELETE FROM telegram_pending_disambiguation
+      WHERE chat_id = ?
+        AND action_type = ?
+        AND action_payload = ?
+        AND expires_at = ?`,
+  ).bind(chatId, expected.actionType, expected.actionPayload, expected.expiresAt);
+}
+
+
 export async function clearPendingDisambiguation(
   db: D1Database,
   chatId: string,
@@ -241,14 +271,7 @@ export async function clearPendingDisambiguation(
     expected?: { actionType: string; expiresAt: number };
   } = {},
 ): Promise<void> {
-  const statement = options.expected
-    ? db.prepare(
-        `DELETE FROM telegram_pending_disambiguation
-          WHERE chat_id = ?
-            AND action_type = ?
-            AND expires_at = ?`,
-      ).bind(chatId, options.expected.actionType, options.expected.expiresAt)
-    : db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(chatId);
+  const statement = pendingDisambiguationClearStatement(db, chatId, options.expected);
   await executeAtomicBatch(db, appendTelegramOperationStatements([
     statement,
   ], options));

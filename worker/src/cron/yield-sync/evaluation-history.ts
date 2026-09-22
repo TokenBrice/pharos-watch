@@ -1,8 +1,6 @@
-import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { buildOnChainSourceKey } from "../yield-helpers";
+import { buildOnChainSourceKey } from "../../lib/yield-utils";
 import type { YieldHistorySnapshotRow } from "./history";
 
-const LEGACY_HISTORY_MAX_AGE_SEC = 30 * DAY_SECONDS + 5 * DAY_SECONDS;
 const LEGACY_LUSD_BPROTOCOL_SOURCE_KEY = "bprotocol-lqty-only";
 const SCRVUSD_CURRENT_RATE_SOURCE_KEY = "onchain:scrvusd-curve:scrvusd-current-rate";
 
@@ -42,7 +40,6 @@ export function pickHistoryRowsForSource(
   legacyDeterministicOnChainHistoryById: Map<string, YieldHistorySnapshotRow[]>,
   legacyHistoryById: Map<string, YieldHistorySnapshotRow[]>,
   resolvedCountByCoin: Map<string, number>,
-  startSec: number,
 ): { rows: YieldHistorySnapshotRow[]; usedLegacyHistory: boolean } {
   const directRows = sourceHistory.get(buildHistoryKey(stablecoinId, sourceKey)) ?? [];
   if (directRows.length > 0) {
@@ -71,8 +68,7 @@ export function pickHistoryRowsForSource(
     legacyDataSources.size === 1 &&
     legacyDataSources.has(dataSource);
 
-  const legacyCutoff = startSec - LEGACY_HISTORY_MAX_AGE_SEC;
-  const freshLegacyRows = legacyRows.filter((row) => row.recorded_at >= legacyCutoff);
+  const freshLegacyRows = legacyRows;
   const hasKnownSourceSemanticsBreak =
     stablecoinId === "scrvusd-curve" && sourceKey === SCRVUSD_CURRENT_RATE_SOURCE_KEY;
 

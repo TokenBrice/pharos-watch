@@ -259,6 +259,7 @@ export function renderWatchText(
 }
 
 const LOWER_REASON_LABELS: Readonly<Record<string, string>> = {
+  "supply-unavailable": "a usable current-supply reading",
   "active-depeg": "the current peg-deviation gate",
   "peg-score-floor": "the PegScore floor",
   "safety-resilience-floor": "the Backing floor",
@@ -271,7 +272,6 @@ const LOWER_REASON_LABELS: Readonly<Record<string, string>> = {
   "yield-warning-unstable": "the APY-stability warning gate",
   "yield-warning-thin-tvl": "the source-depth warning gate",
   "liquidity-floor": "the liquidity floor",
-  "liquidity-diversification-floor": "the venue-diversification floor",
   "effective-exit-floor": "the effective-exit floor",
   "supply-tvl-floor-1h": "the fast-exit depth floor",
 };
@@ -286,7 +286,7 @@ export function labelForSelectorReason(reasonKey: string): string {
 
 export function getLowerRankedText(
   entry: Pick<SelectorLowerRanked, "symbol" | "reasonKey" | "failedComponent">,
-): Pick<SelectorLowerRanked, "verdictText" | "teachingText"> {
+): { verdictText: string; teachingText: string } {
   const label = entry.failedComponent
     ? selectorComponentProseLabel(entry.failedComponent) ?? "the emphasized metric"
     : labelForSelectorReason(entry.reasonKey);

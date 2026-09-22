@@ -50,6 +50,7 @@ export interface ReachabilityViolation {
 }
 
 export interface RuntimeReachabilityResult {
+  configurationErrors: string[];
   entrypointCount: number;
   policyId: string;
   violations: ReachabilityViolation[];
@@ -62,6 +63,10 @@ function toRepoPath(root: string, path: string): string {
 
 function isProductionSourceFile(path: string): boolean {
   return !path.endsWith(".test.ts") && !path.endsWith(".test.tsx");
+}
+
+function isFile(path: string): boolean {
+  return existsSync(path) && statSync(path).isFile();
 }
 
 
@@ -84,7 +89,6 @@ function resolveRelativeModule(root: string, fromFile: string, specifier: string
 
 function scheduledLoaderEntrypoints(root: string, sourcePath: string): string[] {
   const absolutePath = resolve(root, sourcePath);
-  if (!existsSync(absolutePath)) return [];
   const { sourceFile } = parseSourceFile(absolutePath);
   const entrypoints = new Set<string>();
   function visit(node: ts.Node): void {
@@ -103,15 +107,54 @@ function scheduledLoaderEntrypoints(root: string, sourcePath: string): string[] 
   return [...entrypoints].sort();
 }
 
-function resolveEntrypoints(root: string, selector: EntrypointSelector): string[] {
-  if (selector.kind === "paths") return selector.paths.map((path) => toRepoPath(root, path));
-  if (selector.kind === "scheduled-loaders") return scheduledLoaderEntrypoints(root, selector.source);
+function resolveEntrypoints(
+  root: string,
+  selector: EntrypointSelector,
+): { configurationErrors: string[]; entrypoints: string[] } {
+  if (selector.kind === "paths") {
+    const entrypoints = selector.paths.map((path) => toRepoPath(root, path));
+    const configurationErrors = entrypoints
+      .filter((path) => !isFile(resolve(root, path)))
+      .map((path) => `Configured entrypoint source is missing: ${path}`);
+    if (entrypoints.length === 0) configurationErrors.push("Configured entrypoint list is empty");
+    return { configurationErrors, entrypoints: entrypoints.filter((path) => isFile(resolve(root, path))) };
+  }
+  if (selector.kind === "scheduled-loaders") {
+    const source = toRepoPath(root, selector.source);
+    if (!isFile(resolve(root, source))) {
+      return {
+        configurationErrors: [`Configured scheduled loader source is missing: ${source}`],
+        entrypoints: [],
+      };
+    }
+    const loaders = scheduledLoaderEntrypoints(root, source);
+    return {
+      configurationErrors: loaders.length === 0
+        ? [`Configured scheduled loader source has no dynamic-import entrypoints: ${source}`]
+        : [],
+      entrypoints: [source, ...loaders],
+    };
+  }
+  const rootPath = resolve(root, selector.root);
+  if (!existsSync(rootPath) || !statSync(rootPath).isDirectory()) {
+    return {
+      configurationErrors: [`Configured entrypoint root is missing: ${toRepoPath(root, selector.root)}`],
+      entrypoints: [],
+    };
+  }
   const files = collectSourceFilesUnderRoots([selector.root], root, {
     extensions: SOURCE_EXTENSIONS,
     excludedDirs: EXCLUDED_DIRS,
   }).filter(isProductionSourceFile);
-  if (selector.kind === "source-files") return files;
-  return files.filter((path) => hasUseClientDirective(readFileSync(resolve(root, path), "utf8")));
+  const entrypoints = selector.kind === "source-files"
+    ? files
+    : files.filter((path) => hasUseClientDirective(readFileSync(resolve(root, path), "utf8")));
+  return {
+    configurationErrors: entrypoints.length === 0
+      ? [`Configured entrypoint root resolved no entrypoints: ${toRepoPath(root, selector.root)}`]
+      : [],
+    entrypoints,
+  };
 }
 
 function importsReactOrUsesDomGlobal(path: string): boolean {
@@ -286,7 +329,8 @@ export async function checkRuntimeReachabilityPolicy(
   policy: RuntimeReachabilityPolicy,
   root = REPO_ROOT,
 ): Promise<RuntimeReachabilityResult> {
-  const entrypoints = resolveEntrypoints(root, policy.entrypoints);
+  const resolved = resolveEntrypoints(root, policy.entrypoints);
+  const { configurationErrors, entrypoints } = resolved;
   const forbidden = resolveForbidden(root, policy.forbidden);
   const graph = await buildReachability(root, entrypoints);
   const violations: ReachabilityViolation[] = [];
@@ -301,7 +345,12 @@ export async function checkRuntimeReachabilityPolicy(
   }
 
   for (const entrypoint of policy.directImports?.entrypoints ?? []) {
-    const source = readFileSync(resolve(root, entrypoint), "utf8");
+    const absolutePath = resolve(root, entrypoint);
+    if (!isFile(absolutePath)) {
+      configurationErrors.push(`Configured direct-import source is missing: ${toRepoPath(root, entrypoint)}`);
+      continue;
+    }
+    const source = readFileSync(absolutePath, "utf8");
     for (const specifier of policy.directImports?.forbiddenSpecifiers ?? []) {
       if (source.includes(`from "${specifier}"`) || source.includes(`from '${specifier}'`)) {
         violations.push({ entrypoint, forbidden: specifier, kind: "direct-import" });
@@ -312,12 +361,15 @@ export async function checkRuntimeReachabilityPolicy(
   violations.sort((left, right) =>
     `${left.entrypoint}\0${left.forbidden}`.localeCompare(`${right.entrypoint}\0${right.forbidden}`),
   );
-  return { entrypointCount: entrypoints.length, policyId: policy.id, violations };
+  return { configurationErrors, entrypointCount: entrypoints.length, policyId: policy.id, violations };
 }
 
 function reportResult(policy: RuntimeReachabilityPolicy, result: RuntimeReachabilityResult): number {
-  if (result.violations.length > 0) {
+  if (result.configurationErrors.length > 0 || result.violations.length > 0) {
     process.stderr.write(`${policy.failureHeading}:\n\n`);
+    for (const error of result.configurationErrors) {
+      process.stderr.write(`  ${error}\n`);
+    }
     for (const violation of result.violations) {
       const relation = violation.kind === "direct-import" ? "directly imports" : "reaches";
       process.stderr.write(`  ${violation.entrypoint} ${relation} ${violation.forbidden}\n`);

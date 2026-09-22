@@ -16,13 +16,15 @@ import {
 } from "../cron/yield-sync/benchmarks";
 import { loadPublishedStressSignalGeneration } from "./stress-signals-current-rows";
 import { loadActiveSafetyScoreSource } from "./safety-score-active-source";
-import type { WorkerCanaryMode } from "./worker-canary-mode";
 import { classifyFreshness } from "./status/freshness-oracle";
+import type { WorkerCanaryMode } from "./worker-canary-mode";
 
 export { pruneWorkerCanaryRuns, WORKER_CANARY_RUN_RETENTION_SEC } from "./canary-prune";
 
-export { normalizeWorkerCanaryMode } from "./worker-canary-mode";
-export type { WorkerCanaryMode } from "./worker-canary-mode";
+export {
+  normalizeWorkerCanaryMode,
+  type WorkerCanaryMode,
+} from "./worker-canary-mode";
 
 export interface CanaryCheckResult {
   checkId: string;
@@ -74,11 +76,6 @@ interface DexPublishedGenerationRow {
   published_at: number | null;
 }
 
-interface DexGlobalRow {
-  current_row_count: number | null;
-  expected_row_count: number | null;
-  metadata_json: string | null;
-}
 
 interface BlacklistNullIdentitySummaryRow {
   event_rows: number | null;
@@ -102,11 +99,15 @@ interface WorkerCanaryRunRow {
   error: string | null;
 }
 
+interface CanaryCheckContext {
+  latestPublishedDexGeneration?: Promise<DexPublishedGenerationRow | null>;
+}
+
 type CanaryCheckDefinition = {
   checkId: string;
   label: string;
   description: string;
-  run: (db: D1Database, observedAt: number, signal?: AbortSignal) => Promise<Omit<CanaryCheckResult, "checkId" | "label" | "description" | "observedAt" | "durationMs">>;
+  run: (db: D1Database, observedAt: number, context: CanaryCheckContext, signal?: AbortSignal) => Promise<Omit<CanaryCheckResult, "checkId" | "label" | "description" | "observedAt" | "durationMs">>;
 };
 
 const CANARY_STATUS_ORDER: Record<CanaryRunStatus, number> = {
@@ -264,6 +265,14 @@ async function loadLatestPublishedDexGeneration(db: D1Database): Promise<DexPubl
       .first<DexPublishedGenerationRow>(),
   );
 }
+
+function loadLatestPublishedDexGenerationOnce(
+  db: D1Database,
+  context: CanaryCheckContext,
+): Promise<DexPublishedGenerationRow | null> {
+  context.latestPublishedDexGeneration ??= loadLatestPublishedDexGeneration(db);
+  return context.latestPublishedDexGeneration;
+}
 async function loadDexLatestGenerationCurrentSummary(
   db: D1Database,
   generationId: string,
@@ -282,12 +291,16 @@ async function loadDexLatestGenerationCurrentSummary(
   )) ?? { live_generation_rows: 0 };
 }
 
-async function checkDexCurrentPublication(db: D1Database) {
+async function checkDexCurrentPublication(
+  db: D1Database,
+  _observedAt: number,
+  context: CanaryCheckContext,
+) {
   try {
     const summary = await loadDexCurrentSummary(db);
     const rowCount = Number(summary.row_count ?? 0);
     const unpublishedRows = Number(summary.unpublished_rows ?? 0);
-    const latestPublished = await loadLatestPublishedDexGeneration(db);
+    const latestPublished = await loadLatestPublishedDexGenerationOnce(db, context);
     const metadata = {
       rowCount,
       unpublishedRows,
@@ -306,19 +319,20 @@ async function checkDexCurrentPublication(db: D1Database) {
     if (unpublishedRows > 0) {
       return errorResult(`${unpublishedRows} current DEX liquidity rows are not published`, metadata);
     }
-    if (!latestPublished) {
-      return skippedResult("no DEX liquidity published generation found", metadata);
-    }
-    const latestGenerationSummary = await loadDexLatestGenerationCurrentSummary(db, latestPublished.generation_id);
+    const publishedGeneration = latestPublished!;
+    const latestGenerationSummary = await loadDexLatestGenerationCurrentSummary(
+      db,
+      publishedGeneration.generation_id,
+    );
     const latestGenerationPublishedRows = Number(latestGenerationSummary.live_generation_rows ?? 0);
     metadata.latestGenerationPublishedRows = latestGenerationPublishedRows;
 
     if (
-      latestPublished.current_row_count != null &&
-      latestGenerationPublishedRows !== latestPublished.current_row_count
+      publishedGeneration.current_row_count != null &&
+      latestGenerationPublishedRows !== publishedGeneration.current_row_count
     ) {
       return errorResult(
-        `DEX latest-generation rows ${latestGenerationPublishedRows} differ from latest published generation ${latestPublished.current_row_count}`,
+        `DEX latest-generation rows ${latestGenerationPublishedRows} differ from latest published generation ${publishedGeneration.current_row_count}`,
         metadata,
       );
     }
@@ -328,22 +342,13 @@ async function checkDexCurrentPublication(db: D1Database) {
   }
 }
 
-async function checkDexGlobalRow(db: D1Database) {
+async function checkDexGlobalRow(
+  db: D1Database,
+  _observedAt: number,
+  context: CanaryCheckContext,
+) {
   try {
-    const row = await runWithOverloadRetry(() =>
-      db
-        .prepare(
-          `SELECT /* canary-dex-global-row */
-             current_row_count,
-             expected_row_count,
-             metadata_json
-           FROM dex_liquidity_publication_generations
-          WHERE state = 'published'
-          ORDER BY COALESCE(published_at, started_at) DESC, started_at DESC
-          LIMIT 1`,
-        )
-        .first<DexGlobalRow>(),
-    );
+    const row = await loadLatestPublishedDexGenerationOnce(db, context);
     const currentRows = Number(row?.current_row_count ?? 0);
     const expectedRows =
       typeof row?.expected_row_count === "number" && Number.isFinite(row.expected_row_count)
@@ -682,12 +687,13 @@ async function runOneCanaryCheck(
   db: D1Database,
   definition: CanaryCheckDefinition,
   observedAt: number,
+  context: CanaryCheckContext,
   signal?: AbortSignal,
 ): Promise<CanaryCheckResult> {
   throwIfAborted(signal);
   const startedAt = Date.now();
   try {
-    const result = await definition.run(db, observedAt, signal);
+    const result = await definition.run(db, observedAt, context, signal);
     throwIfAborted(signal);
     return {
       checkId: definition.checkId,
@@ -719,9 +725,10 @@ export async function runCanaryChecks(
 ): Promise<CanaryRunSummary> {
   const observedAt = options.observedAt ?? nowSec();
   const mode = options.mode ?? "shadow";
+  const context: CanaryCheckContext = {};
   const results: CanaryCheckResult[] = [];
   for (const definition of CANARY_CHECKS) {
-    results.push(await runOneCanaryCheck(db, definition, observedAt, options.signal));
+    results.push(await runOneCanaryCheck(db, definition, observedAt, context, options.signal));
   }
   const counts = summarizeCanaryResults(results);
   return {

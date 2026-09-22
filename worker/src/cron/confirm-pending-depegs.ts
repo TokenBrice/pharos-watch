@@ -1,14 +1,9 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { derivePegRates } from "@shared/lib/peg-rates";
-import { DEX_PROTOCOL_SOURCE_FRESHNESS_SEC } from "@shared/lib/depeg-config";
+import { DEX_PROTOCOL_SOURCE_FRESHNESS_SEC, DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import type { PegAssetBase } from "@shared/types/core";
-import {
-  CIRCUIT_SOURCE,
-  DEX_FRESHNESS_SEC,
-  MAX_OPEN_DEPEG_EVENTS,
-  POOL_CHALLENGE_MIN_TVL,
-} from "../lib/constants";
+import { CIRCUIT_SOURCE, MAX_OPEN_DEPEG_EVENTS, POOL_CHALLENGE_MIN_TVL } from "../lib/constants";
 import { executeAtomicBatch } from "../lib/db";
 import {
   loadDexPoolChallengers,

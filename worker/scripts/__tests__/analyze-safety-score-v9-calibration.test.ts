@@ -4,6 +4,7 @@ import { buildSafetyScoreV9Candidate } from "../../src/lib/safety-score-v9/candi
 import { v9TestClockSec } from "../../src/test-helpers/v9-fixed-input";
 import {
   analyzeV9Calibration,
+  distributionGates,
   captureMovements,
   computeCalibrationResultDigest,
   evaluateRealACandidateChecks,
@@ -543,6 +544,18 @@ describe("Safety Score V9 distribution gates D1-D6", () => {
 
     expect(metrics.unattributedFCount).toBe(1);
     expect(metrics.unattributedFSupplyShare).toBe(0.1);
+  });
+
+  it("D3b fails closed when the unattributed F cohort mixes known and unknown supply", () => {
+    const metrics = metricsFor([
+      { id: "observed", grade: "C", supplyUsd: 900 },
+      { id: "known-f", grade: "F", supplyUsd: 100, backing: 35, exit: 35, control: 45 },
+      { id: "unknown-f", grade: "F", supplyUsd: null, backing: 35, exit: 35, control: 45 },
+    ]);
+
+    expect(metrics.unattributedFCount).toBe(2);
+    expect(metrics.unattributedFSupplyShare).toBeNull();
+    expect(distributionGates(metrics).d3bUnattributedFSupplyShare).toBe(false);
   });
 
   it("D3 does not count a non-binding adverse cap as attribution", () => {

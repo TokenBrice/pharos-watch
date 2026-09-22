@@ -7,6 +7,7 @@ const SELECTOR_PROFILE_LABELS: Readonly<Record<SelectorProfile, string>> = {
 };
 
 const SELECTOR_EXCLUSION_REASON_LABELS: Readonly<Record<ExclusionReason, string>> = {
+  "supply-unavailable": "supply data",
   "below-supply-floor": "supply floor",
   "active-depeg": "active depeg",
   "safety-grade-floor": "safety grade",
@@ -21,7 +22,6 @@ const SELECTOR_EXCLUSION_REASON_LABELS: Readonly<Record<ExclusionReason, string>
   "yield-warning-thin-tvl": "yield depth",
   "high-venue-on-c-tier": "venue risk",
   "liquidity-floor": "liquidity",
-  "liquidity-diversification-floor": "liquidity diversification",
   "effective-exit-floor": "Exit",
   "supply-tvl-floor-1h": "one-hour exit depth",
   "peg-currency-mismatch": "peg currency",

@@ -1,9 +1,9 @@
 import { decodeAbiParameters } from "viem/utils";
 import {
   decodeMentoPoolExchange,
+  mentoSpreadToFeeBps,
   MENTO_GET_EXCHANGE_IDS_SELECTOR,
   MENTO_GET_POOL_EXCHANGE_SELECTOR,
-  MENTO_POOL_SPREAD_FIXIDITY_SCALE,
   type MentoPoolExchange,
 } from "@shared/lib/mento-contracts";
 import {
@@ -17,6 +17,7 @@ import {
 } from "../core";
 import type { MentoConversionMeasurementEvidence } from "../schema";
 import type { MentoConversionMeasurementTarget } from "../targets";
+import { buildMeasurementCompleteness, buildNotApplicableMetrics } from "../evidence-envelope";
 
 const CR_NA =
   "This token is a reserve/conversion product without an independently collateralized per-token vault system.";
@@ -103,7 +104,7 @@ export async function measureMentoConversion(
       conversionCapacityRaw > 0n,
       `counter bucket ${conversionCapacityRaw} is positive`,
     );
-    const feeBps = Number((match.exchange.config.spread * 10_000n) / MENTO_POOL_SPREAD_FIXIDITY_SCALE);
+    const feeBps = mentoSpreadToFeeBps(match.exchange.config.spread);
     derived = {
       mode: "broker-pool",
       exchangeId: match.exchangeId,
@@ -155,15 +156,11 @@ export async function measureMentoConversion(
     rpcUrl,
     block,
     calls: caller.calls,
-    metrics: {
-      collateralizationRatio: null,
-      liquidationCapacityRatio: null,
-      applicability: {
-        collateralizationRatio: { state: "not-applicable", rationale: CR_NA },
-        liquidationCapacityRatio: { state: "not-applicable", rationale: LIQUIDATION_NA },
-      },
-    },
-    completeness: { complete: true, blockers: [] },
+    metrics: buildNotApplicableMetrics({
+      collateralizationRationale: CR_NA,
+      liquidationCapacityRationale: LIQUIDATION_NA,
+    }),
+    completeness: buildMeasurementCompleteness(),
     derived,
     analogousMetrics: {
       conversionCapacityCounterUnits: ratioToRounded(conversionCapacityRaw, 10n ** 18n, 8),

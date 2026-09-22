@@ -3,9 +3,9 @@ import {
   SafetyScoreV9CurrentCardSchema,
   SafetyScoreV9CurrentCardBaseSchema,
   SafetyScoreV9CurrentResponseSchema,
-  SafetyScoreV9BreakdownsSchema,
   SafetyScoreV9ResponseSchema,
 } from "../safety-score-v9-public";
+import { SafetyScoreV9BreakdownsSchema } from "../safety-score-v9-public-breakdowns";
 
 import { adjustedResponse, boundedResponse, breakdowns, currentResponse, deploymentResponse } from "./safety-score-v9-public.test-support";
 

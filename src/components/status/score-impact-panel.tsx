@@ -1,25 +1,14 @@
-import { CLIENT_ACTIVE_META_BY_ID as ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type { ClassificationWarning, ReserveDriftEntry, StatusResponse } from "@shared/types";
-import { SummaryBadge } from "@/components/status/page-primitives";
+import { formatPercentFromRatio } from "@shared/lib/format";
+import { getCoinLabel, STATUS_PANEL_SHELL_CLASS, SummaryBadge } from "@/components/status/page-primitives";
 import { cn } from "@/lib/utils";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
-import { STATUS_PANEL_SHELL_CLASS } from "@/components/status/page-primitives";
 import { STATUS_OK_PILL_CLASS } from "@/lib/status-dashboard-model";
 
 interface ScoreImpactPanelProps {
   reserveComposition: StatusResponse["reserveComposition"];
   reserveDrift: ReserveDriftEntry[] | undefined;
   classificationWarnings: ClassificationWarning[] | undefined;
-}
-
-function getCoinLabel(coinId: string): string {
-  const meta = ACTIVE_META_BY_ID.get(coinId);
-  if (!meta) return coinId;
-  return `${meta.symbol} · ${meta.name}`;
-}
-
-function formatPct(value: number): string {
-  return `${(value * 100).toFixed(1)}%`;
 }
 
 function getDeltaClass(delta: number): string {
@@ -56,7 +45,10 @@ export function ScoreImpactPanel({ reserveComposition, reserveDrift, classificat
                 : STATUS_OK_PILL_CLASS
             }
           />
-          <SummaryBadge label="Score-grade" value={formatPct(reserveComposition.authoritativeFreshCoverageRatio)} />
+          <SummaryBadge
+            label="Score-grade"
+            value={formatPercentFromRatio(reserveComposition.authoritativeFreshCoverageRatio, 1)}
+          />
           <SummaryBadge label="Drift rows" value={reserveDrift ? String(reserveDrift.length) : "Unknown"} />
         </div>
       </div>
@@ -111,7 +103,7 @@ export function ScoreImpactPanel({ reserveComposition, reserveDrift, classificat
             <div>
               <div className="text-muted-foreground">Fresh</div>
               <div className="font-mono text-sm text-foreground">
-                {formatPct(reserveComposition.freshCoverageRatio)}
+                {formatPercentFromRatio(reserveComposition.freshCoverageRatio, 1)}
               </div>
             </div>
             <div>

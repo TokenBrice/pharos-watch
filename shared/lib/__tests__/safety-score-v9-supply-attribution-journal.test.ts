@@ -4,6 +4,7 @@ import {
   SupplyAttributionJournalV1Schema,
   computeSupplyAttributionJournalIdV1,
   createSupplyAttributionJournalV1,
+  WM_SUPPLY_ATTRIBUTION_MAX_POST_CLOCK_SEC,
   type SupplyAttributionJournalV1Payload,
 } from "../safety-score-v9-supply-attribution-journal";
 
@@ -192,16 +193,20 @@ describe("Safety Score V9 supply attribution journal runtime", () => {
     expect(() =>
       createSupplyAttributionJournalV1(
         payload({
-          completedAtSec: 220,
-          sourceObservedAtSec: 220,
+          completedAtSec:
+            100 + WM_SUPPLY_ATTRIBUTION_MAX_POST_CLOCK_SEC,
+          sourceObservedAtSec:
+            100 + WM_SUPPLY_ATTRIBUTION_MAX_POST_CLOCK_SEC,
         }),
       ),
     ).not.toThrow();
     expect(() =>
       createSupplyAttributionJournalV1(
         payload({
-          completedAtSec: 221,
-          sourceObservedAtSec: 221,
+          completedAtSec:
+            101 + WM_SUPPLY_ATTRIBUTION_MAX_POST_CLOCK_SEC,
+          sourceObservedAtSec:
+            101 + WM_SUPPLY_ATTRIBUTION_MAX_POST_CLOCK_SEC,
         }),
       ),
     ).toThrow(/scoring clock/);

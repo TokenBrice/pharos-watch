@@ -59,7 +59,7 @@ vi.mock("../../lib/dews", () => ({
 import { getCache, writeFreshnessSentinel } from "../../lib/db-cache";
 import { computeDEWS } from "../../lib/dews";
 import { derivePegRates } from "@shared/lib/peg-rates";
-import { computeAndStoreDEWS } from "../compute-dews";
+import { computeAndStoreDEWS } from "../../lib/dews/service";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { buildHistoryKey } from "../yield-sync/evaluation";
 import { buildYieldRankingsPayloadFromEvaluatedSources } from "../yield-sync/publication";
@@ -103,6 +103,10 @@ function publishShapedRankingsPayload() {
           previousBestSourceKey: "defillama:usdt-old",
           usedLegacyHistory: false,
           usedDefaultSafety: false,
+          // P1-10 validates complete per-row provenance before publication.
+          benchmarkRecordDate: source.benchmarkRecordDate,
+          benchmarkIsFallback: source.benchmarkIsFallback,
+          benchmarkFallbackMode: source.benchmarkFallbackMode,
           anomalies: [],
         },
       ],
@@ -670,18 +674,18 @@ describe("computeAndStoreDEWS", () => {
       }),
     );
     const metadata = JSON.parse(result.metadata ?? "{}") as {
-      sourceFailures: Array<{ source: string; bootstrapAllowed: boolean }>;
+      sourceFailures: Array<{ source: string }>;
       sourceCoverage: Record<string, number>;
     };
     expect(metadata.sourceFailures).toContainEqual(
-      expect.objectContaining({ source: "mint-burn-hourly-freshness", bootstrapAllowed: false }),
+      expect.objectContaining({ source: "mint-burn-hourly-freshness" }),
     );
     expect(metadata.sourceCoverage.mintBurnHourlyStaleRows).toBe(1);
     expect(metadata.sourceCoverage.mintBurnHourlyFreshRows).toBe(0);
   });
 
 
-  it("does not publish the DEWS freshness sentinel for degraded runs", async () => {
+  it("withholds the publication pointer and freshness sentinel for degraded runs", async () => {
     const sqlSeen: string[] = [];
     const db = makeDb(sqlSeen, { failDexLiquidity: true });
 
@@ -692,8 +696,16 @@ describe("computeAndStoreDEWS", () => {
     expect(writeFreshnessSentinel).not.toHaveBeenCalled();
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       freshnessSentinelPublished: boolean;
+      publicationPointerWritten: boolean;
+      publishedGeneration: number | null;
+      degradedSources: string[];
     };
     expect(metadata.freshnessSentinelPublished).toBe(false);
+    expect(metadata.publicationPointerWritten).toBe(false);
+    expect(metadata.publishedGeneration).toBeNull();
+    expect(metadata.degradedSources).toEqual(["dex-liquidity"]);
+    expect(sqlSeen.some((sql) => sql.includes("pharos:dews:publication-row-insert"))).toBe(false);
+    expect(sqlSeen.some((sql) => sql.includes("pharos:dews:publication-generation-withheld"))).toBe(true);
     expect(JSON.parse(result.metadata ?? "{}").sourceFailures).toContainEqual(
       expect.objectContaining({ source: "dex-liquidity" }),
     );
@@ -900,7 +912,7 @@ describe("computeAndStoreDEWS", () => {
     expect(metadata.sourceFailures.map((failure) => failure.source)).toContain("yield-rankings-freshness");
   });
 
-  it("degrades on a missing mandatory source table during initial bootstrap", async () => {
+  it("degrades on a missing mandatory source table", async () => {
     vi.mocked(getCache).mockImplementation(async (_db, key) => {
       if (key === "dews:bootstrap-complete") {
         return null;
@@ -930,11 +942,9 @@ describe("computeAndStoreDEWS", () => {
 
     expect(result.status).toBe("degraded");
     const metadata = JSON.parse(result.metadata ?? "{}") as {
-      bootstrapPending: boolean;
-      sourceFailures: Array<{ source: string; bootstrapAllowed: boolean }>;
+      sourceFailures: Array<{ source: string }>;
     };
-    expect(metadata.bootstrapPending).toBe(true);
-    expect(metadata.sourceFailures.find((failure) => failure.source === "dex-prices")?.bootstrapAllowed).toBe(false);
+    expect(metadata.sourceFailures.map((failure) => failure.source)).toContain("dex-prices");
   });
 
   it("ignores stale dex price rows when building the DEWS divergence input", async () => {
@@ -1075,7 +1085,7 @@ describe("computeAndStoreDEWS", () => {
 
     expect(result.status).toBe("degraded");
     const metadata = JSON.parse(result.metadata ?? "{}") as {
-      sourceFailures: Array<{ source: string; bootstrapAllowed: boolean }>;
+      sourceFailures: Array<{ source: string }>;
       sourceCoverage: Record<string, number>;
       dependencies: {
         dexLiquidity?: {
@@ -1086,7 +1096,7 @@ describe("computeAndStoreDEWS", () => {
       };
     };
     expect(metadata.sourceFailures).toContainEqual(
-      expect.objectContaining({ source: "dex-liquidity-freshness", bootstrapAllowed: false }),
+      expect.objectContaining({ source: "dex-liquidity-freshness" }),
     );
     expect(metadata.sourceCoverage.dexLiquidityStaleRows).toBe(1);
     expect(metadata.sourceCoverage.dexLiquidityFreshRows).toBe(0);
@@ -1406,6 +1416,54 @@ describe("computeAndStoreDEWS", () => {
     expect(metadata.rowsRetiredCurrent).toBe(1);
     expect(metadata.rowsSkippedNoCurrentSupply).toBe(1);
     expect(metadata.sourceCoverage.coinsSkippedNoCurrentSupply).toBe(1);
+  });
+
+  it("does not retire stress rows for an asset whose circulating buckets are absent", async () => {
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "dews:bootstrap-complete") return null;
+      return {
+        value: JSON.stringify({
+          peggedAssets: [
+            {
+              id: "usdt-tether",
+              symbol: "USDT",
+              pegType: "peggedUSD",
+              price: 1,
+              priceConfidence: "high",
+              circulating: { peggedUSD: 100_000_000 },
+              circulatingPrevDay: { peggedUSD: 99_000_000 },
+              circulatingPrevWeek: { peggedUSD: 98_000_000 },
+            },
+            {
+              id: "pyusd-paypal",
+              symbol: "PYUSD",
+              pegType: "peggedUSD",
+              price: 1,
+              priceConfidence: "high",
+              circulatingPrevDay: { peggedUSD: 0 },
+              circulatingPrevWeek: { peggedUSD: 0 },
+            },
+          ],
+        }),
+        updatedAt: Math.floor(Date.now() / 1000),
+      } as never;
+    });
+    const { db, sqlite } = seededStressDb(["usdt-tether", "pyusd-paypal"]);
+    const actualDb = await vi.importActual<typeof import("../../lib/db")>("../../lib/db");
+    vi.mocked(batchExecute).mockImplementation(actualDb.batchExecute);
+
+    const result = await computeAndStoreDEWS(db);
+
+    // "No buckets at all" is not "redeemed to zero": the coin is skipped, and
+    // its current row survives instead of being permanently deleted.
+    expect(sqlite.prepare("SELECT DISTINCT stablecoin_id FROM stress_signals ORDER BY stablecoin_id").all())
+      .toEqual([{ stablecoin_id: "pyusd-paypal" }, { stablecoin_id: "usdt-tether" }]);
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      rowsRetiredCurrent: number;
+      rowsSkippedNoCurrentSupply: number;
+    };
+    expect(metadata.rowsRetiredCurrent).toBe(0);
+    expect(metadata.rowsSkippedNoCurrentSupply).toBe(0);
   });
 
 });

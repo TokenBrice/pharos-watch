@@ -4,16 +4,24 @@ import {
   cmcUsdQuote,
   cmcCategory,
   cleanupEnrichMissingPricesTest,
-  fixtureEnrichMissingPrices,
-  fixtureRunCmcPass,
-  makeFixtureMockD1 as fixtureMockD1,
-  fixtureMockFetch,
-  fixtureCIRCUIT_SOURCE,
+  makeEnrichPricesDb,
   installFetch,
-  type PeggedAsset,
 } from "./enrich-prices.test-support";
+import { enrichMissingPrices, type PeggedAsset } from "../sync-stablecoins/enrich-prices";
+import { runCmcPass } from "../sync-stablecoins/enrich-prices-cmc-pass";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
+import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { selectRotatedCmcCandidates } from "../sync-stablecoins/enrich-prices-cmc-pass";
 import { makePeggedAsset } from "../sync-stablecoins/__tests__/_fixtures";
+
+function emptyCmcLastFetchCache() {
+  return {
+    match: "SELECT value, updated_at FROM cache WHERE key = ?",
+    matchBinds: ["cmc_last_fetch"],
+    rows: [],
+    first: null,
+  };
+}
 describe("enrichMissingPrices", () => {
   afterEach(cleanupEnrichMissingPricesTest);
   afterEach(() => vi.useRealTimers());
@@ -36,17 +44,12 @@ describe("enrichMissingPrices", () => {
       }),
     ];
 
-    const db = fixtureMockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["cmc_last_fetch"],
-        rows: [],
-        first: null,
-      },
-      { match: "circuit", rows: [] },
+    const db = makeEnrichPricesDb([
+      emptyCmcLastFetchCache(),
+      { match: "circuit", rows: [], allowUnused: true },
     ]);
 
-    fixtureMockFetch([
+    mockFetch([
       {
         match: "pro-api.coinmarketcap.com",
         body: cmcCategory([
@@ -56,7 +59,7 @@ describe("enrichMissingPrices", () => {
       },
     ]);
 
-    const stats = await fixtureEnrichMissingPrices(assets, "test-cmc-key", db);
+    const stats = await enrichMissingPrices(assets, "test-cmc-key", db);
 
     // Both should be priced correctly via slug, not clobbered by symbol collision
     expect(assets[0].price).toBe(1.0001);
@@ -68,13 +71,13 @@ describe("enrichMissingPrices", () => {
 
   it("closes a stale CMC circuit when no fallback candidates remain", async () => {
     const openedAt = Math.floor(Date.now() / 1000) - 3600;
-    const db = fixtureMockD1([
+    const db = makeEnrichPricesDb([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: [`circuit:${fixtureCIRCUIT_SOURCE.CMC_PRICES}`],
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.CMC_PRICES}`],
         rows: [
           {
-            key: `circuit:${fixtureCIRCUIT_SOURCE.CMC_PRICES}`,
+            key: `circuit:${CIRCUIT_SOURCE.CMC_PRICES}`,
             value: JSON.stringify({
               state: "open",
               consecutiveFailures: 3,
@@ -96,9 +99,9 @@ describe("enrichMissingPrices", () => {
       }),
     ];
 
-    const fetchSpy = fixtureMockFetch();
+    const fetchSpy = mockFetch();
 
-    const result = await fixtureRunCmcPass(assets, "test-cmc-key", undefined, db);
+    const result = await runCmcPass(assets, "test-cmc-key", undefined, db);
 
     expect(result.resolved).toBe(0);
     expect(result.diagnostics?.[0]).toMatchObject({
@@ -115,7 +118,7 @@ describe("enrichMissingPrices", () => {
       .find(
         (entry) =>
           entry.sql.includes("INSERT OR REPLACE INTO cache") &&
-          entry.binds[0] === `circuit:${fixtureCIRCUIT_SOURCE.CMC_PRICES}`,
+          entry.binds[0] === `circuit:${CIRCUIT_SOURCE.CMC_PRICES}`,
       );
     expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
       state: "closed",
@@ -134,13 +137,13 @@ describe("enrichMissingPrices", () => {
     ];
 
     const now = Math.floor(Date.now() / 1000);
-    const db = fixtureMockD1([
+    const db = makeEnrichPricesDb([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: [`circuit:${fixtureCIRCUIT_SOURCE.CMC_PRICES}`],
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.CMC_PRICES}`],
         rows: [
           {
-            key: `circuit:${fixtureCIRCUIT_SOURCE.CMC_PRICES}`,
+            key: `circuit:${CIRCUIT_SOURCE.CMC_PRICES}`,
             value: JSON.stringify({
               state: "closed",
               consecutiveFailures: 0,
@@ -154,8 +157,8 @@ describe("enrichMissingPrices", () => {
       },
     ]);
 
-    const fetchSpy = fixtureMockFetch();
-    await expect(fixtureRunCmcPass(assets, "test-cmc-key", undefined, db)).resolves.toEqual({
+    const fetchSpy = mockFetch();
+    await expect(runCmcPass(assets, "test-cmc-key", undefined, db)).resolves.toEqual({
       resolved: 0,
       failures: [],
     });
@@ -173,24 +176,19 @@ describe("enrichMissingPrices", () => {
       }),
     ];
 
-    const db = fixtureMockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["cmc_last_fetch"],
-        rows: [],
-        first: null,
-      },
-      { match: "circuit", rows: [] },
+    const db = makeEnrichPricesDb([
+      emptyCmcLastFetchCache(),
+      { match: "circuit", rows: [], allowUnused: true },
     ]);
 
-    fixtureMockFetch([
+    mockFetch([
       {
         match: "pro-api.coinmarketcap.com",
         body: cmcCategory([{ slug: "gemini-dollar", symbol: "GUSD", quote: { USD: cmcUsdQuote(1.0001) } }]),
       },
     ]);
 
-    const result = await fixtureRunCmcPass(assets, "test-cmc-key", undefined, db);
+    const result = await runCmcPass(assets, "test-cmc-key", undefined, db);
 
     expect(result.resolved).toBe(0);
     expect(assets[0].price).toBe(0);
@@ -206,24 +204,19 @@ describe("enrichMissingPrices", () => {
         cmcSlug: "test-dollar",
       }),
     ];
-    const db = fixtureMockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["cmc_last_fetch"],
-        rows: [],
-        first: null,
-      },
-      { match: "circuit", rows: [] },
+    const db = makeEnrichPricesDb([
+      emptyCmcLastFetchCache(),
+      { match: "circuit", rows: [], allowUnused: true },
     ]);
 
-    fixtureMockFetch([
+    mockFetch([
       {
         match: "pro-api.coinmarketcap.com",
         body: cmcCategory([{ slug: "test-dollar", symbol: "TUSD", quote: { USD: cmcUsdQuote(1.0001) } }]),
       },
     ]);
 
-    const result = await fixtureRunCmcPass(assets, "test-cmc-key", undefined, db);
+    const result = await runCmcPass(assets, "test-cmc-key", undefined, db);
 
     expect(result.resolved).toBe(1);
     expect(assets[0].priceSource).toBe("coinmarketcap");
@@ -251,7 +244,7 @@ describe("enrichMissingPrices", () => {
       }],
     })];
     assets.push(makePeggedAsset({ id: "unknown-dollar", symbol: "UNKNOWN", price: 0, cmcSlug: "unknown-dollar" }));
-    const fetchSpy = fixtureMockFetch([
+    const fetchSpy = mockFetch([
       { match: "/v1/cryptocurrency/category", body: cmcCategory([], 301) },
       {
         match: "/v3/cryptocurrency/quotes/latest",
@@ -269,7 +262,7 @@ describe("enrichMissingPrices", () => {
       },
     ]);
 
-    const result = await fixtureRunCmcPass(assets, "test-cmc-key", undefined, undefined);
+    const result = await runCmcPass(assets, "test-cmc-key", undefined, undefined);
 
     expect(result.resolved).toBe(1);
     expect(assets[0].price).toBe(0.9998);
@@ -320,7 +313,7 @@ describe("enrichMissingPrices", () => {
         decimals: 18,
       }],
     })];
-    const fetchSpy = fixtureMockFetch([
+    const fetchSpy = mockFetch([
       {
         match: "/v1/cryptocurrency/category",
         body: cmcCategory([{ slug: "mnee", symbol: "MNEE", quote: { USD: cmcUsdQuote(1.18) } }], 301),
@@ -337,7 +330,7 @@ describe("enrichMissingPrices", () => {
       },
     ]);
 
-    const result = await fixtureRunCmcPass(assets, "test-cmc-key", undefined, undefined);
+    const result = await runCmcPass(assets, "test-cmc-key", undefined, undefined);
 
     expect(result.resolved).toBe(0);
     expect(assets[0].price).toBe(0);
@@ -379,11 +372,11 @@ describe("enrichMissingPrices", () => {
         decimals: 18,
       }],
     });
-    const initialDb = fixtureMockD1([
+    const initialDb = makeEnrichPricesDb([
       { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
-      { match: "circuit", rows: [] },
+      { match: "circuit", rows: [], allowUnused: true },
     ]);
-    fixtureMockFetch([
+    mockFetch([
       { match: "/v1/cryptocurrency/category", body: cmcCategory([], 301) },
       {
         match: "/v3/cryptocurrency/quotes/latest",
@@ -402,7 +395,7 @@ describe("enrichMissingPrices", () => {
     ]);
 
     const firstAssets = [makeAsset()];
-    await expect(fixtureRunCmcPass(firstAssets, "test-cmc-key", undefined, initialDb))
+    await expect(runCmcPass(firstAssets, "test-cmc-key", undefined, initialDb))
       .resolves.toMatchObject({ resolved: 1 });
     const verifiedCacheWrite = initialDb.getHistory().find(
       (entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") &&
@@ -411,7 +404,7 @@ describe("enrichMissingPrices", () => {
     expect(verifiedCacheWrite).toBeDefined();
 
     const nowSec = Math.floor(Date.now() / 1_000);
-    const replayDb = fixtureMockD1([{
+    const replayDb = makeEnrichPricesDb([{
       match: "SELECT value, updated_at FROM cache WHERE key = ?",
       rows: [
         {
@@ -422,12 +415,12 @@ describe("enrichMissingPrices", () => {
         { key: "cmc_last_fetch", value: "1", updated_at: nowSec },
       ],
     }]);
-    const fetchSpy = fixtureMockFetch();
+    const fetchSpy = mockFetch();
 
     for (let generation = 2; generation <= 4; generation += 1) {
       vi.setSystemTime(initialTime + (generation - 1) * 15 * 60 * 1000);
       const assets = [makeAsset()];
-      const result = await fixtureRunCmcPass(assets, "test-cmc-key", undefined, replayDb);
+      const result = await runCmcPass(assets, "test-cmc-key", undefined, replayDb);
       expect(result.resolved, `generation ${generation}`).toBe(1);
       expect(assets[0]).toMatchObject({
         price: 1.0002,
@@ -451,7 +444,7 @@ describe("enrichMissingPrices", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
     vi.setSystemTime(initialTime + 60 * 60 * 1000);
     const expiredAssets = [makeAsset()];
-    const expired = await fixtureRunCmcPass(expiredAssets, "test-cmc-key", undefined, replayDb);
+    const expired = await runCmcPass(expiredAssets, "test-cmc-key", undefined, replayDb);
     expect(expired.resolved).toBe(0);
     expect(expiredAssets[0].price).toBe(0);
     expect(fetchSpy.getHistory().map(({ url }) => url)).toContainEqual(
@@ -464,7 +457,7 @@ describe("enrichMissingPrices", () => {
     ["wrong contract", Math.floor(Date.now() / 1_000) - 60, "0x2222222222222222222222222222222222222222"],
   ])("rejects a verified CMC cache entry with a %s", async (_reason, observedAt, providerAddress) => {
     const nowSec = Math.floor(Date.now() / 1_000);
-    const db = fixtureMockD1([{
+    const db = makeEnrichPricesDb([{
       match: "SELECT value, updated_at FROM cache WHERE key = ?",
       rows: [
         {
@@ -485,7 +478,7 @@ describe("enrichMissingPrices", () => {
         { key: "cmc_last_fetch", value: "1", updated_at: nowSec },
       ],
     }]);
-    const fetchSpy = fixtureMockFetch();
+    const fetchSpy = mockFetch();
     const assets: PeggedAsset[] = [makePeggedAsset({
       id: "test-dollar",
       name: "Test Dollar",
@@ -499,7 +492,7 @@ describe("enrichMissingPrices", () => {
       }],
     })];
 
-    const result = await fixtureRunCmcPass(assets, "test-cmc-key", undefined, db);
+    const result = await runCmcPass(assets, "test-cmc-key", undefined, db);
 
     expect(result.resolved).toBe(0);
     expect(assets[0].price).toBe(0);
@@ -567,7 +560,7 @@ describe("enrichMissingPrices", () => {
         decimals: 18,
       }],
     })];
-    fixtureMockFetch([
+    mockFetch([
       { match: "/v1/cryptocurrency/category", body: cmcCategory([]) },
       {
         match: "/v3/cryptocurrency/quotes/latest",
@@ -582,7 +575,7 @@ describe("enrichMissingPrices", () => {
       },
     ]);
 
-    const result = await fixtureRunCmcPass(assets, "test-cmc-key", undefined, undefined);
+    const result = await runCmcPass(assets, "test-cmc-key", undefined, undefined);
 
     expect(result.resolved).toBe(0);
     expect(assets[0].price).toBe(0);
@@ -598,17 +591,12 @@ describe("enrichMissingPrices", () => {
         cmcSlug: "test-dollar",
       }),
     ];
-    const db = fixtureMockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["cmc_last_fetch"],
-        rows: [],
-        first: null,
-      },
-      { match: "circuit", rows: [] },
+    const db = makeEnrichPricesDb([
+      emptyCmcLastFetchCache(),
+      { match: "circuit", rows: [], allowUnused: true },
     ]);
 
-    fixtureMockFetch([
+    mockFetch([
       {
         match: "pro-api.coinmarketcap.com",
         body: cmcCategory([
@@ -617,7 +605,7 @@ describe("enrichMissingPrices", () => {
       },
     ]);
 
-    const result = await fixtureRunCmcPass(assets, "test-cmc-key", undefined, db);
+    const result = await runCmcPass(assets, "test-cmc-key", undefined, db);
 
     expect(result.resolved).toBe(0);
     expect(assets[0].price).toBe(0);
@@ -633,29 +621,24 @@ describe("enrichMissingPrices", () => {
         cmcSlug: "test-dollar",
       }),
     ];
-    const db = fixtureMockD1([
+    const db = makeEnrichPricesDb([
+      emptyCmcLastFetchCache(),
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["cmc_last_fetch"],
-        rows: [],
-        first: null,
-      },
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: [`circuit:${fixtureCIRCUIT_SOURCE.CMC_PRICES}`],
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.CMC_PRICES}`],
         rows: [],
         first: null,
       },
     ]);
 
-    fixtureMockFetch([
+    mockFetch([
       {
         match: "pro-api.coinmarketcap.com",
         body: { data: { coins: [] } },
       },
     ]);
 
-    const result = await fixtureRunCmcPass(assets, "test-cmc-key", undefined, db);
+    const result = await runCmcPass(assets, "test-cmc-key", undefined, db);
 
     expect(result.resolved).toBe(0);
     expect(result.diagnostics?.[0]).toMatchObject({
@@ -668,7 +651,7 @@ describe("enrichMissingPrices", () => {
       .find(
         (entry) =>
           entry.sql.includes("INSERT OR REPLACE INTO cache") &&
-          entry.binds[0] === `circuit:${fixtureCIRCUIT_SOURCE.CMC_PRICES}`,
+          entry.binds[0] === `circuit:${CIRCUIT_SOURCE.CMC_PRICES}`,
       );
     expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
       consecutiveFailures: 1,
@@ -684,29 +667,24 @@ describe("enrichMissingPrices", () => {
         price: 0,
       }),
     ];
-    const db = fixtureMockD1([
+    const db = makeEnrichPricesDb([
+      emptyCmcLastFetchCache(),
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["cmc_last_fetch"],
-        rows: [],
-        first: null,
-      },
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: [`circuit:${fixtureCIRCUIT_SOURCE.CMC_PRICES}`],
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.CMC_PRICES}`],
         rows: [],
         first: null,
       },
     ]);
 
-    fixtureMockFetch([
+    mockFetch([
       {
         match: "pro-api.coinmarketcap.com",
         body: cmcCategory([{ slug: "test-dollar", symbol: "TUSD", quote: { USD: cmcUsdQuote(1.0001) } }], 301),
       },
     ]);
 
-    const result = await fixtureRunCmcPass(assets, "test-cmc-key", undefined, db);
+    const result = await runCmcPass(assets, "test-cmc-key", undefined, db);
 
     expect(result.resolved).toBe(0);
     expect(assets[0].price).toBe(0);
@@ -721,7 +699,7 @@ describe("enrichMissingPrices", () => {
       .find(
         (entry) =>
           entry.sql.includes("INSERT OR REPLACE INTO cache") &&
-          entry.binds[0] === `circuit:${fixtureCIRCUIT_SOURCE.CMC_PRICES}`,
+          entry.binds[0] === `circuit:${CIRCUIT_SOURCE.CMC_PRICES}`,
       );
     expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
       state: "closed",
@@ -739,19 +717,14 @@ describe("enrichMissingPrices", () => {
         cmcSlug: "test-dollar",
       }),
     ];
-    const db = fixtureMockD1([
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["cmc_last_fetch"],
-        rows: [],
-        first: null,
-      },
-      { match: "circuit", rows: [] },
+    const db = makeEnrichPricesDb([
+      emptyCmcLastFetchCache(),
+      { match: "circuit", rows: [], allowUnused: true },
     ]);
     const response = new Response("blocked", { status: 500 });
     installFetch(async () => response);
 
-    const result = await fixtureRunCmcPass(assets, "test-cmc-key", undefined, db);
+    const result = await runCmcPass(assets, "test-cmc-key", undefined, db);
 
     expect(result.resolved).toBe(0);
     expect(response.bodyUsed).toBe(true);
@@ -767,16 +740,11 @@ describe("enrichMissingPrices", () => {
         cmcSlug: "test-dollar",
       }),
     ];
-    const db = fixtureMockD1([
+    const db = makeEnrichPricesDb([
+      emptyCmcLastFetchCache(),
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: ["cmc_last_fetch"],
-        rows: [],
-        first: null,
-      },
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: [`circuit:${fixtureCIRCUIT_SOURCE.CMC_PRICES}`],
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.CMC_PRICES}`],
         rows: [],
         first: null,
       },
@@ -786,7 +754,7 @@ describe("enrichMissingPrices", () => {
       headers: { "Retry-After": "1" },
     }));
 
-    const result = await fixtureRunCmcPass(assets, "test-cmc-key", undefined, db);
+    const result = await runCmcPass(assets, "test-cmc-key", undefined, db);
 
     expect(result.resolved).toBe(0);
     expect(result.diagnostics?.[0]).toMatchObject({

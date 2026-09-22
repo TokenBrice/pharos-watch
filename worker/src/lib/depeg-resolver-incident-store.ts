@@ -10,6 +10,7 @@ import {
   repairAuthorizationIdentityBinds,
   repairAuthorizationConsumedPredicate,
   repairAuthorizationIdSubquery,
+  type RepairAuthorizationIdentity,
 } from "./depeg-resolver-repair-store";
 import {
   assertHash,
@@ -64,6 +65,14 @@ const DDR_INCIDENT_MEMBERSHIP_LOCK_PROJECTION = `
                 ls.readiness_threshold,
                 ls.backstop_at,
                 ls.backstop_delay_sec`;
+const DDR_INCIDENT_MEMBERSHIP_LOCK_JOINS = `
+         LEFT JOIN depeg_resolver_incident_policy_membership m ON m.incident_key = i.incident_key
+         LEFT JOIN depeg_resolver_prediction_lock_state ls ON ls.incident_key = i.incident_key`;
+// The nearby-incident ORDER BY tie-break must rank exactly the rows its WHERE
+// arm admits, so both spell the recovered-current window through this fragment.
+const DDR_INCIDENT_RECOVERED_CURRENT_IN_WINDOW = `current_event.ended_at IS NOT NULL
+             AND ? >= current_event.ended_at
+             AND ? - current_event.ended_at <= ?`;
 
 export interface DdrCanonicalIncidentEventInput {
   eventId: number;
@@ -402,6 +411,7 @@ function buildFreshIncident(args: {
 function mapIncidentRow(
   row: IncidentRow,
   policyDelaySec = DDR_PUBLIC_PREDICTION_DELAY_SEC,
+  superseding?: DdrCanonicalIncident,
 ): DdrCanonicalIncident {
   const policyMembership =
     row.membership_incident_key == null
@@ -419,7 +429,7 @@ function mapIncidentRow(
           createdAt: row.membership_created_at ?? row.created_at,
         };
 
-  return {
+  const incident: DdrCanonicalIncident = {
     incidentKey: row.incident_key,
     stablecoinId: row.stablecoin_id,
     pegCurrency: row.peg_currency,
@@ -459,6 +469,17 @@ function mapIncidentRow(
             backstopDelaySec: row.backstop_delay_sec ?? null,
           },
   };
+
+  if (superseding == null || row.incident_state !== "superseded") return incident;
+  return {
+    ...superseding,
+    eventId: incident.eventId,
+    relation: incident.relation,
+    currentEventId: incident.currentEventId,
+    currentStartedAt: incident.currentStartedAt,
+    startedAt: superseding.firstStartedAt,
+    eligibleAt: superseding.firstStartedAt + policyDelaySec,
+  };
 }
 
 async function loadIncidentsByEventIds(
@@ -479,8 +500,7 @@ async function loadIncidentsByEventIds(
 ${DDR_INCIDENT_MEMBERSHIP_LOCK_PROJECTION}
          FROM depeg_resolver_incident_event_links l
          JOIN depeg_resolver_incidents i ON i.incident_key = l.incident_key
-         LEFT JOIN depeg_resolver_incident_policy_membership m ON m.incident_key = i.incident_key
-         LEFT JOIN depeg_resolver_prediction_lock_state ls ON ls.incident_key = i.incident_key
+${DDR_INCIDENT_MEMBERSHIP_LOCK_JOINS}
          ${whereSql}`,
         )
         .bind(...binds)
@@ -506,29 +526,16 @@ ${DDR_INCIDENT_MEMBERSHIP_LOCK_PROJECTION}
 
   for (const row of rows) {
     if (row.event_id == null) continue;
-    const incident = mapIncidentRow(row, policyDelaySec);
-    const superseding = row.superseded_by_incident_key
-      ? supersedingByKey.get(row.superseded_by_incident_key)
-      : undefined;
-    if (row.incident_state === "superseded" && superseding) {
-      linked.set(row.event_id, {
-        ...superseding,
-        eventId: row.event_id,
-        relation: row.relation,
-        currentEventId: incident.currentEventId,
-        currentStartedAt: incident.currentStartedAt,
-        startedAt: superseding.firstStartedAt,
-        eligibleAt: supersedingEligibleAt(superseding, policyDelaySec),
-      });
-      continue;
-    }
-    linked.set(row.event_id, incident);
+    linked.set(
+      row.event_id,
+      mapIncidentRow(
+        row,
+        policyDelaySec,
+        row.superseded_by_incident_key ? supersedingByKey.get(row.superseded_by_incident_key) : undefined,
+      ),
+    );
   }
   return linked;
-}
-
-function supersedingEligibleAt(incident: DdrCanonicalIncident, policyDelaySec: number): number {
-  return incident.firstStartedAt + policyDelaySec;
 }
 
 async function insertNewIncident(
@@ -679,6 +686,77 @@ async function insertNewIncident(
   await executeAtomicBatch(db, statements);
 }
 
+type IncidentAdoptionOperation = "incident_link" | "incident_current_update";
+const INCIDENT_ADOPTION_OPERATIONS: IncidentAdoptionOperation[] = ["incident_link", "incident_current_update"];
+const SEALED_TAIL_AUTHORIZATION_GRANTS: Record<IncidentAdoptionOperation, { columns: string[]; reason: string }> = {
+  incident_link: { columns: ["event_id", "incident_key"], reason: "Live source event reopened inside DDR sealed incident merge window" },
+  incident_current_update: { columns: ["current_event_id", "current_started_at"], reason: "Live source event is the current source event for the sealed canonical incident" },
+};
+
+/**
+ * The link + revision + current-pointer write triple both adoption paths share.
+ * A sealed incident additionally needs repair authorizations, and their creation,
+ * consumption and dependent writes share this one atomic batch so that no partial
+ * state survives an isolate death.
+ */
+function buildIncidentAdoptionStatements(
+  db: D1Database,
+  row: IncidentRow,
+  event: DdrCanonicalIncidentEventInput,
+  nowSec: number,
+  adoption: { note: string; reason: string; createdBy: string; authorization: Omit<RepairAuthorizationIdentity, "operation"> | null },
+): D1PreparedStatement[] {
+  const { note, reason, createdBy, authorization } = adoption;
+  const authorized = (operation: IncidentAdoptionOperation) =>
+    authorization == null
+      ? { id: "NULL", idBinds: [] as unknown[], at: "?", atBinds: [nowSec] as unknown[] }
+      : {
+          id: repairAuthorizationIdSubquery(),
+          idBinds: repairAuthorizationIdentityBinds({ ...authorization, operation }),
+          at: `CASE WHEN ${repairAuthorizationConsumedPredicate()} THEN ? ELSE 0 END`,
+          atBinds: [...repairAuthorizationIdentityBinds({ ...authorization, operation }), nowSec],
+        };
+  const link = authorized("incident_link");
+  const current = authorized("incident_current_update");
+  return [
+    ...(authorization == null ? [] : INCIDENT_ADOPTION_OPERATIONS.flatMap((operation) => [
+      prepareRepairAuthorization(db, { ...authorization, operation, ...SEALED_TAIL_AUTHORIZATION_GRANTS[operation] }),
+      prepareRepairAuthorizationConsumption(db, { ...authorization, operation }, nowSec, authorization.createdBy),
+    ])),
+    db
+      .prepare(
+        `INSERT INTO depeg_resolver_incident_event_links
+         (incident_key, event_id, relation, repair_authorization_id, linked_at, note)
+         VALUES (?, ?, 'repair_replacement', ${link.id}, ${link.at}, ?)`,
+      )
+      .bind(row.incident_key, event.eventId, ...link.idBinds, ...link.atBinds, note),
+    db
+      .prepare(
+        `INSERT INTO depeg_resolver_incident_revisions
+         (incident_key, previous_event_id, current_event_id, reason, repair_authorization_id, erratum_id, created_at, created_by)
+         VALUES (?, ?, ?, ?, ${current.id}, NULL, ${current.at}, ?)`,
+      )
+      .bind(row.incident_key, row.current_event_id, event.eventId, reason, ...current.idBinds, ...current.atBinds, createdBy),
+    db
+      .prepare(
+        // Only a resurrected pre-lock incident has a closed_pre_lock_at to clear.
+        `UPDATE depeg_resolver_incidents
+         SET current_event_id = ?,
+             current_started_at = ?,${row.closed_pre_lock_at == null ? "" : "\n             closed_pre_lock_at = NULL,"}
+             updated_at = ?
+         WHERE incident_key = ?`,
+      )
+      .bind(event.eventId, event.startedAt, nowSec, row.incident_key),
+  ];
+}
+
+function mapAdoptedIncidentRow(row: IncidentRow, event: DdrCanonicalIncidentEventInput, nowSec: number, policyDelaySec: number): DdrCanonicalIncident {
+  return mapIncidentRow(
+    { ...row, current_event_id: event.eventId, current_started_at: event.startedAt, closed_pre_lock_at: null, updated_at: nowSec, event_id: event.eventId, relation: "repair_replacement" },
+    policyDelaySec,
+  );
+}
+
 async function linkUnsealedNearbyIncident(
   db: D1Database,
   event: DdrCanonicalIncidentEventInput,
@@ -699,8 +777,7 @@ async function linkUnsealedNearbyIncident(
 ${DDR_INCIDENT_MEMBERSHIP_LOCK_PROJECTION}
        FROM depeg_resolver_incidents i
        LEFT JOIN depeg_events current_event ON current_event.id = i.current_event_id
-       LEFT JOIN depeg_resolver_incident_policy_membership m ON m.incident_key = i.incident_key
-       LEFT JOIN depeg_resolver_prediction_lock_state ls ON ls.incident_key = i.incident_key
+${DDR_INCIDENT_MEMBERSHIP_LOCK_JOINS}
        WHERE i.stablecoin_id = ?
          AND i.peg_currency = ?
          AND i.direction = ?
@@ -712,9 +789,7 @@ ${DDR_INCIDENT_MEMBERSHIP_LOCK_PROJECTION}
              AND ? - i.current_started_at <= ?
            )
            OR (
-             current_event.ended_at IS NOT NULL
-             AND ? >= current_event.ended_at
-             AND ? - current_event.ended_at <= ?
+             ${DDR_INCIDENT_RECOVERED_CURRENT_IN_WINDOW}
            )
          )
          AND NOT EXISTS (
@@ -726,9 +801,7 @@ ${DDR_INCIDENT_MEMBERSHIP_LOCK_PROJECTION}
        ORDER BY
          CASE
            WHEN i.closed_pre_lock_at IS NOT NULL THEN 0
-           WHEN current_event.ended_at IS NOT NULL
-             AND ? >= current_event.ended_at
-             AND ? - current_event.ended_at <= ?
+           WHEN ${DDR_INCIDENT_RECOVERED_CURRENT_IN_WINDOW}
              THEN 0
            ELSE 1
          END ASC,
@@ -812,39 +885,7 @@ ${DDR_INCIDENT_MEMBERSHIP_LOCK_PROJECTION}
     ? "pre-lock closed incident resurrected with nearby event"
     : "pre-lock nearby event adopted as current incident source";
   try {
-    await executeAtomicBatch(db, [
-      db
-        .prepare(
-          `INSERT INTO depeg_resolver_incident_event_links
-           (incident_key, event_id, relation, repair_authorization_id, linked_at, note)
-           VALUES (?, ?, 'repair_replacement', NULL, ?, ?)`,
-        )
-        .bind(row.incident_key, event.eventId, nowSec, adoptionReason),
-      db
-        .prepare(
-          `INSERT INTO depeg_resolver_incident_revisions
-           (incident_key, previous_event_id, current_event_id, reason, repair_authorization_id, erratum_id, created_at, created_by)
-           VALUES (?, ?, ?, ?, NULL, NULL, ?, ?)`,
-        )
-        .bind(
-          row.incident_key,
-          row.current_event_id,
-          event.eventId,
-          adoptionReason,
-          nowSec,
-          createdBy,
-        ),
-      db
-        .prepare(
-          `UPDATE depeg_resolver_incidents
-           SET current_event_id = ?,
-               current_started_at = ?,
-               closed_pre_lock_at = NULL,
-               updated_at = ?
-           WHERE incident_key = ?`,
-        )
-        .bind(event.eventId, event.startedAt, nowSec, row.incident_key),
-    ]);
+    await executeAtomicBatch(db, buildIncidentAdoptionStatements(db, row, event, nowSec, { note: adoptionReason, reason: adoptionReason, createdBy, authorization: null }));
   } catch (error) {
     if (
       !isSealedIncidentRepairGuardAbort(error) ||
@@ -855,18 +896,7 @@ ${DDR_INCIDENT_MEMBERSHIP_LOCK_PROJECTION}
     return linkSealedNearbyIncidentTail(db, event, row, options, policyDelaySec);
   }
 
-  return mapIncidentRow(
-    {
-      ...row,
-      current_event_id: event.eventId,
-      current_started_at: event.startedAt,
-      closed_pre_lock_at: null,
-      updated_at: nowSec,
-      event_id: event.eventId,
-      relation: "repair_replacement",
-    },
-    policyDelaySec,
-  );
+  return mapAdoptedIncidentRow(row, event, nowSec, policyDelaySec);
 }
 
 async function assertCanonicalLiveEventProvenance(
@@ -944,13 +974,8 @@ function canAutoRepairUnsealedTail(
     event.startedAt - row.current_started_at <= policyDelaySec;
   const incidentLinkCount = row.incident_link_count;
   return (
-    row.incident_state === "active" &&
+    isLiveSuccessorOfCurrent(event, row) &&
     (row.closed_pre_lock_at == null || followsRecoveredCurrent) &&
-    event.source === "live" &&
-    event.stablecoinId === row.stablecoin_id &&
-    event.pegCurrency === row.peg_currency &&
-    event.direction === row.direction &&
-    event.startedAt > row.current_started_at &&
     (withinCurrentRecency || followsRecoveredCurrent) &&
     Number.isInteger(incidentLinkCount) &&
     incidentLinkCount != null &&
@@ -960,10 +985,10 @@ function canAutoRepairUnsealedTail(
   );
 }
 
-function canAutoRepairSealedTail(event: DdrCanonicalIncidentEventInput, row: IncidentRow): boolean {
+/** Identity and strict-successor conjuncts every automatic tail adoption requires. */
+function isLiveSuccessorOfCurrent(event: DdrCanonicalIncidentEventInput, row: IncidentRow): boolean {
   return (
     row.incident_state === "active" &&
-    row.closed_pre_lock_at == null &&
     event.source === "live" &&
     event.stablecoinId === row.stablecoin_id &&
     event.pegCurrency === row.peg_currency &&
@@ -1023,7 +1048,7 @@ async function linkSealedNearbyIncidentTail(
   options: EnsureCanonicalIncidentsOptions,
   policyDelaySec: number,
 ): Promise<DdrCanonicalIncident | RegimeEscalationSplit> {
-  if (!canAutoRepairSealedTail(event, row)) {
+  if (!isLiveSuccessorOfCurrent(event, row) || row.closed_pre_lock_at != null) {
     throw new DdrIncidentRepairRequiredError(
       event.eventId,
       `Unlinked depeg event ${event.eventId} overlaps nearby canonical incident ${row.incident_key}; explicit repair required`,
@@ -1035,78 +1060,10 @@ async function linkSealedNearbyIncidentTail(
   }
 
   const nowSec = optionNowSec(options);
-  const authorizationIdentity = { eventId: event.eventId, incidentKey: row.incident_key, createdAt: nowSec, expiresAt: REPAIR_AUTHORIZATION_LONG_EXPIRY_AT, createdBy: AUTOMATED_SEALED_TAIL_REPAIR_CREATED_BY };
-  const prepareAuthorizationPair = (operation: "incident_link" | "incident_current_update", columns: string[], reason: string) => [prepareRepairAuthorization(db, { ...authorizationIdentity, operation, columns, reason }), prepareRepairAuthorizationConsumption(db, { ...authorizationIdentity, operation }, nowSec, AUTOMATED_SEALED_TAIL_REPAIR_CREATED_BY)];
-  // Authorization creation, consumption, and the dependent writes now share
-  // one atomic batch, closing the former partial-state window.
-  await executeAtomicBatch(db, [
-    ...prepareAuthorizationPair(
-      "incident_link",
-      ["event_id", "incident_key"],
-      "Live source event reopened inside DDR sealed incident merge window",
-    ),
-    ...prepareAuthorizationPair(
-      "incident_current_update",
-      ["current_event_id", "current_started_at"],
-      "Live source event is the current source event for the sealed canonical incident",
-    ),
-    db
-      .prepare(
-        `INSERT INTO depeg_resolver_incident_event_links
-         (incident_key, event_id, relation, repair_authorization_id, linked_at, note)
-         VALUES (?, ?, 'repair_replacement',
-           ${repairAuthorizationIdSubquery()},
-           CASE WHEN ${repairAuthorizationConsumedPredicate()} THEN ? ELSE 0 END,
-           ?)`,
-      )
-      .bind(
-        row.incident_key,
-        event.eventId,
-        ...repairAuthorizationIdentityBinds({ ...authorizationIdentity, operation: "incident_link" }),
-        ...repairAuthorizationIdentityBinds({ ...authorizationIdentity, operation: "incident_link" }),
-        nowSec,
-        AUTOMATED_SEALED_TAIL_LINK_NOTE,
-      ),
-    db
-      .prepare(
-        `INSERT INTO depeg_resolver_incident_revisions
-         (incident_key, previous_event_id, current_event_id, reason, repair_authorization_id, erratum_id, created_at, created_by)
-         VALUES (?, ?, ?, ?, ${repairAuthorizationIdSubquery()}, NULL,
-           CASE WHEN ${repairAuthorizationConsumedPredicate()} THEN ? ELSE 0 END,
-           ?)`,
-      )
-      .bind(
-        row.incident_key,
-        row.current_event_id,
-        event.eventId,
-        AUTOMATED_SEALED_TAIL_CURRENT_REASON,
-        ...repairAuthorizationIdentityBinds({ ...authorizationIdentity, operation: "incident_current_update" }),
-        ...repairAuthorizationIdentityBinds({ ...authorizationIdentity, operation: "incident_current_update" }),
-        nowSec,
-        AUTOMATED_SEALED_TAIL_REPAIR_CREATED_BY,
-      ),
-    db
-      .prepare(
-        `UPDATE depeg_resolver_incidents
-         SET current_event_id = ?,
-             current_started_at = ?,
-             updated_at = ?
-         WHERE incident_key = ?`,
-      )
-      .bind(event.eventId, event.startedAt, nowSec, row.incident_key),
-  ]);
+  const authorization = { eventId: event.eventId, incidentKey: row.incident_key, createdAt: nowSec, expiresAt: REPAIR_AUTHORIZATION_LONG_EXPIRY_AT, createdBy: AUTOMATED_SEALED_TAIL_REPAIR_CREATED_BY };
+  await executeAtomicBatch(db, buildIncidentAdoptionStatements(db, row, event, nowSec, { note: AUTOMATED_SEALED_TAIL_LINK_NOTE, reason: AUTOMATED_SEALED_TAIL_CURRENT_REASON, createdBy: AUTOMATED_SEALED_TAIL_REPAIR_CREATED_BY, authorization }));
 
-  return mapIncidentRow(
-    {
-      ...row,
-      current_event_id: event.eventId,
-      current_started_at: event.startedAt,
-      updated_at: nowSec,
-      event_id: event.eventId,
-      relation: "repair_replacement",
-    },
-    policyDelaySec,
-  );
+  return mapAdoptedIncidentRow(row, event, nowSec, policyDelaySec);
 }
 
 export async function ensureCanonicalIncidents(
@@ -1233,8 +1190,7 @@ export async function loadCanonicalIncidents(
         `SELECT i.*,
 ${DDR_INCIDENT_MEMBERSHIP_LOCK_PROJECTION}
          FROM depeg_resolver_incidents i
-         LEFT JOIN depeg_resolver_incident_policy_membership m ON m.incident_key = i.incident_key
-         LEFT JOIN depeg_resolver_prediction_lock_state ls ON ls.incident_key = i.incident_key
+${DDR_INCIDENT_MEMBERSHIP_LOCK_JOINS}
          ${whereSql}
          ORDER BY i.first_started_at DESC, i.incident_key
          ${limit == null ? "" : "LIMIT ?"}`,
@@ -1258,22 +1214,17 @@ ${DDR_INCIDENT_MEMBERSHIP_LOCK_PROJECTION}
     ...(filters.predictionPolicyVersion ? [filters.predictionPolicyVersion] : []),
   ];
 
-  if (filters.incidentKeys) {
-    if (filters.incidentKeys.length === 0) return [];
+  const chunkedFilter = filters.incidentKeys
+    ? { column: "i.incident_key", values: filters.incidentKeys }
+    : filters.stablecoinIds
+      ? { column: "i.stablecoin_id", values: filters.stablecoinIds }
+      : null;
+  if (chunkedFilter) {
+    if (chunkedFilter.values.length === 0) return [];
     const extraBinds = scopedBinds();
     return runChunkedInRead(
-      [...new Set(filters.incidentKeys)],
-      (inClauseSql) => `WHERE ${scopedConditions(`i.incident_key IN (${inClauseSql})`).join(" AND ")}`,
-      (whereSql, binds) => readRows(whereSql, [...binds, ...extraBinds]),
-    );
-  }
-
-  if (filters.stablecoinIds) {
-    if (filters.stablecoinIds.length === 0) return [];
-    const extraBinds = scopedBinds();
-    return runChunkedInRead(
-      [...new Set(filters.stablecoinIds)],
-      (inClauseSql) => `WHERE ${scopedConditions(`i.stablecoin_id IN (${inClauseSql})`).join(" AND ")}`,
+      [...new Set(chunkedFilter.values)],
+      (inClauseSql) => `WHERE ${scopedConditions(`${chunkedFilter.column} IN (${inClauseSql})`).join(" AND ")}`,
       (whereSql, binds) => readRows(whereSql, [...binds, ...extraBinds]),
     );
   }

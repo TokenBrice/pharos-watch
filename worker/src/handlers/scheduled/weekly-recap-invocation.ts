@@ -8,7 +8,7 @@ import {
 } from "../../lib/runtime-credentials";
 import type { ScheduledRuntimeContext } from "./context";
 import { WEEKLY_RECAP_LLM_CONFIG } from "../../lib/constants";
-import { resolveDigestLlmConfig } from "../../cron/digest/platform";
+import { resolveDigestLlmConfig } from "../../cron/digest/llm-request";
 import { resolveTelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 
 /**

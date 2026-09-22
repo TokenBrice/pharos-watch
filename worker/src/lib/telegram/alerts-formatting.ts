@@ -624,26 +624,6 @@ export function splitMessage(html: string, limit = TELEGRAM_MESSAGE_CHUNK_LIMIT)
   return chunks;
 }
 
-// ---------- List Output Formatting ----------
-
-export function formatListOutput(
-  alertFlags: { dews: boolean; depeg: boolean; safety: boolean; launch: boolean; reserve?: boolean; freeze?: boolean },
-  coins: { symbol: string; id: string }[],
-): string {
-  const types: string[] = [];
-  if (alertFlags.dews) types.push("DEWS");
-  if (alertFlags.depeg) types.push("Depeg");
-  if (alertFlags.safety) types.push("Safety");
-  if (alertFlags.launch) types.push("Launch");
-  if (alertFlags.reserve) types.push("Reserve");
-  if (alertFlags.freeze) types.push("Freeze");
-
-  const typesStr = types.length > 0 ? types.join(", ") : "None";
-  const coinsStr = coins.length > 0 ? coins.map((c) => `- ${c.symbol} (${c.id})`).join("\n") : "None";
-
-  return `Alert types: ${typesStr}\nCoins (${coins.length}):\n${coinsStr}`;
-}
-
 // ---------- DEWS Alert Band Filter ----------
 
 /** Returns true if a DEWS band change should trigger a notification. */

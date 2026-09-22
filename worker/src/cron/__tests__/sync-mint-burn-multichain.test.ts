@@ -1,16 +1,21 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mockD1 } from "@shared/test-utils/mock-d1";
+import {
+  makeMintBurnDb,
+  makeMintBurnMintLog as makeMintLog,
+  mintBurnEventInsertBinds,
+  resetMintBurnMocks,
+  USDT_CONTRACT,
+} from "./mint-burn.test-support";
 
 // Stub MINT_BURN_CONFIGS with two critical configs on different chains so the
 // orchestrator must produce distinct chain contexts and emit events for both.
 vi.mock("../../lib/mint-burn-contracts", async () => {
   const { makeMintBurnConfig } = await import("../../test-helpers/__shared/mint-burn");
   return {
-    MINT_BURN_BRIDGE_VALIDATION_ERROR_COUNT: 0,
     MINT_BURN_CONFIGS: [
       makeMintBurnConfig({
         asset: {
-          contractAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7",
+          contractAddress: USDT_CONTRACT,
           tier: "critical",
         },
         adapter: "mixed",
@@ -60,67 +65,6 @@ vi.mock("../../lib/mint-burn-contracts", async () => {
   };
 });
 
-// Return distinct Alchemy URLs per chain so we can assert each chain was
-// queried via its own endpoint (proves chain-context.ts builds per-chain URLs).
-vi.mock("../../lib/alchemy-logs", () => ({
-  buildAlchemyUrl: vi.fn((chainId: string) => `https://${chainId}.g.alchemy.example/v2/`),
-  getAlchemyBlockNumber: vi.fn(async (url: string) =>
-    url.includes("ethereum") ? 22_000_000 : 250_000_000,
-  ),
-  getAlchemyTransactionContextBatchMany: vi.fn(async (_url: string, txHashes: string[]) =>
-    new Map(txHashes.map((txHash) => [txHash, {
-      tx: { hash: txHash, to: "0xrouter", input: "0x96f4e9f9" },
-      receipt: { transactionHash: txHash, to: "0xrouter", logs: [] },
-    }])),
-  ),
-  fetchAlchemyLogs: vi.fn(async () => ({ logs: [], complete: true, scannedToBlock: 0, calls: 1, maxDepth: 0 })),
-  resolveBlockTimestamps: vi.fn(async () => new Map()),
-}));
-
-vi.mock("../../lib/evm-logs", () => ({
-  createBudget: vi.fn((limit = 200) => ({ count: 0, limit })),
-  budgetExhausted: vi.fn((budget: { count: number; limit: number }) => budget.count >= budget.limit),
-  decodeUint256AtSlotOrNull: vi.fn(() => 50_000),
-  decodeAddress: vi.fn((hex: string) => "0x" + hex.slice(-40)),
-}));
-
-// Capture per-batch bind payloads so we can assert events for both chains
-// landed in the mint_burn_events insert path.
-const capturedInsertBinds: unknown[][] = [];
-vi.mock("../../lib/db", async (importOriginal) => {
-  const orig = await importOriginal<typeof import("../../lib/db")>();
-  return {
-    ...orig,
-    batchExecute: vi.fn(async (_db: D1Database, stmts: D1PreparedStatement[]) => {
-      for (const stmt of stmts) {
-        const boundValues = (stmt as unknown as { boundValues?: unknown[]; sql?: string }).boundValues ?? [];
-        const sql = (stmt as unknown as { sql?: string }).sql ?? "";
-        if (sql.includes("INSERT OR IGNORE INTO mint_burn_events")) {
-          capturedInsertBinds.push([...boundValues]);
-        }
-      }
-      return stmts.length;
-    }),
-  };
-});
-
-vi.mock("../../lib/mint-burn-pipeline/persistence", async (importOriginal) => {
-  const orig = await importOriginal<typeof import("../../lib/mint-burn-pipeline/persistence")>();
-  return {
-    ...orig,
-    recalcAffectedHours: vi.fn(async () => undefined),
-  };
-});
-
-vi.mock("../../lib/mint-burn-pipeline/price-heal", () => ({
-  getNullPriceBacklog: vi.fn(async () => ({ recent: 0, historical: 0 })),
-  healNullPrices: vi.fn(async () => ({ healed: 0, affectedHours: new Map() })),
-}));
-
-vi.mock("../../lib/mint-burn-pipeline/roundtrip-sweep", () => ({
-  sweepRecentRoundtrips: vi.fn(async () => ({ reclassified: 0, affectedHours: new Map(), saturated: false })),
-}));
-
 import { syncMintBurn } from "../sync-mint-burn";
 import {
   buildAlchemyUrl,
@@ -130,57 +74,19 @@ import {
 } from "../../lib/alchemy-logs";
 
 function makeDb(): D1Database {
-  return mockD1([
-    {
-      match: "mint_burn_run_state",
-      rows: [{ degraded_streak: 0, last_config_key: null }],
-      first: { degraded_streak: 0, last_config_key: null },
-    },
-    { match: "mint_burn_sync_state", rows: [] },
-    {
-      match: "price_cache",
-      rows: [
-        { asset_id: "usdt-tether", price: 1.0 },
-        { asset_id: "usdai-usd-ai", price: 1.0 },
-      ],
-    },
-    { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [] },
-    { match: "INSERT OR REPLACE INTO cache", rows: [] },
-    { match: "DELETE FROM cache WHERE key >= ? AND key < ?", rows: [] },
-    { match: "supply_history", rows: [] },
-    { match: "mint_burn_hourly", rows: [] },
-    { match: "mint_burn_events", rows: [] },
-    { match: "SELECT config_key, deferred_until FROM mint_burn_config_deferral", rows: [] },
-    { match: "INSERT OR REPLACE INTO mint_burn_config_deferral", rows: [] },
-  ]);
-}
-
-function makeMintLog(opts: { contract: string; blockNumber: number; txHash: string }) {
-  return {
-    address: opts.contract,
-    topics: [
-      "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
-      "0x0000000000000000000000000000000000000000000000000000000000000000",
-      "0x000000000000000000000000abcdef1234567890abcdef1234567890abcdef12",
+  return makeMintBurnDb({
+    priceRows: [
+      { asset_id: "usdt-tether", price: 1.0 },
+      { asset_id: "usdai-usd-ai", price: 1.0 },
     ],
-    data: "0x00000000000000000000000000000000000000000000000000000002540be400",
-    blockNumber: "0x" + opts.blockNumber.toString(16),
-    transactionHash: opts.txHash,
-    transactionIndex: "0x0",
-    blockHash: "0x0",
-    logIndex: "0x0",
-    removed: false,
-  };
+  });
 }
 
 describe("syncMintBurn — multi-chain invariant", () => {
   beforeEach(() => {
-    capturedInsertBinds.length = 0;
+    resetMintBurnMocks();
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-04-16T12:00:00Z"));
-    vi.mocked(buildAlchemyUrl).mockClear();
-    vi.mocked(getAlchemyBlockNumber).mockClear();
-    vi.mocked(resolveBlockTimestamps).mockReset().mockResolvedValue(new Map());
   });
 
   afterEach(() => {
@@ -194,7 +100,7 @@ describe("syncMintBurn — multi-chain invariant", () => {
     // One mint on Ethereum (USDT), one on Arbitrum (USDai). The remaining
     // fetch call resolves with an empty log set.
     vi.mocked(fetchAlchemyLogs).mockImplementation(async (_url, contract) => {
-      if (contract === "0xdac17f958d2ee523a2206206994597c13d831ec7") {
+      if (contract === USDT_CONTRACT) {
         return {
           logs: [
             makeMintLog({
@@ -256,7 +162,7 @@ describe("syncMintBurn — multi-chain invariant", () => {
         contract: call[1] as string,
       }));
     const ethLogCall = logFetchCallsByChain.find(
-      (c) => c.contract === "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      (c) => c.contract === USDT_CONTRACT,
     );
     const arbLogCall = logFetchCallsByChain.find(
       (c) => c.contract === "0x2bd7d6b2e6bfcf61716bf5d7167e4c6b62a3f9c0",
@@ -266,7 +172,7 @@ describe("syncMintBurn — multi-chain invariant", () => {
 
     // The persistence layer must receive INSERT binds containing chain_id
     // values for BOTH chains (column index 3 on the insert tuple).
-    const insertedChainIds = capturedInsertBinds.map((binds) => binds[3]);
+    const insertedChainIds = mintBurnEventInsertBinds.map((binds) => binds[3]);
     expect(insertedChainIds).toContain("ethereum");
     expect(insertedChainIds).toContain("arbitrum");
 

@@ -39,44 +39,17 @@ export function ArchetypeExplainerBody({
   return (
     <>
       <DiagramHero archetype={content.archetype} />
-      <HowItWorks
-        steps={content.howItWorks}
-        kickerClass={content.visuals.kickerClass}
-      />
-      <RepresentativeCoins
-        coins={content.representativeCoins}
-        kickerClass={content.visuals.kickerClass}
-      />
+      <HowItWorks steps={content.howItWorks} />
+      <RepresentativeCoins coins={content.representativeCoins} />
       {content.decommissioned && content.decommissioned.length > 0 ? (
-        <Decommissioned
-          items={content.decommissioned}
-          kickerClass={content.visuals.kickerClass}
-        />
+        <Decommissioned items={content.decommissioned} />
       ) : null}
-      <RiskProfile
-        items={content.riskProfile}
-        kickerClass={content.visuals.kickerClass}
-      />
-      <Variations
-        items={content.variations}
-        kickerClass={content.visuals.kickerClass}
-      />
-      <WhatToWatch
-        bullets={content.whatToWatch}
-        kickerClass={content.visuals.kickerClass}
-      />
-      <TrackedCoinList
-        archetype={content.archetype}
-        kickerClass={content.visuals.kickerClass}
-      />
-      <MechanismCaseStudies
-        archetype={content.archetype}
-        kickerClass={content.visuals.kickerClass}
-      />
-      <CrossLinksFooter
-        links={content.crossLinks}
-        kickerClass={content.visuals.kickerClass}
-      />
+      <RiskProfile items={content.riskProfile} />
+      <Variations items={content.variations} />
+      <WhatToWatch bullets={content.whatToWatch} />
+      <TrackedCoinList archetype={content.archetype} />
+      <MechanismCaseStudies archetype={content.archetype} />
+      <CrossLinksFooter links={content.crossLinks} />
     </>
   );
 }
@@ -96,15 +69,13 @@ function DiagramHero({ archetype }: { archetype: MechanismArchetype }) {
 
 function HowItWorks({
   steps,
-  kickerClass,
 }: {
   steps: ArchetypeContent["howItWorks"];
-  kickerClass: string;
 }) {
   return (
     <section className="space-y-6">
       <div className="space-y-2">
-        <SectionKicker className={kickerClass}>How it works</SectionKicker>
+        <SectionKicker>How it works</SectionKicker>
         <SectionHeading>The flow, step by step</SectionHeading>
       </div>
       <ol className="space-y-7 border-l border-border/40 pl-6 sm:pl-8">
@@ -133,15 +104,13 @@ function HowItWorks({
 
 function RiskProfile({
   items,
-  kickerClass,
 }: {
   items: ArchetypeContent["riskProfile"];
-  kickerClass: string;
 }) {
   return (
     <section className="space-y-6">
       <div className="space-y-2">
-        <SectionKicker className={kickerClass}>
+        <SectionKicker>
           Where the design fails
         </SectionKicker>
         <SectionHeading>Known failure modes</SectionHeading>
@@ -167,32 +136,26 @@ function RiskProfile({
 
 function WhatToWatch({
   bullets,
-  kickerClass,
 }: {
   bullets: ArchetypeContent["whatToWatch"];
-  kickerClass: string;
 }) {
   return (
     <NumberedListSection
       items={bullets}
       kicker="What to watch on Pharos"
       heading="Signals that matter most"
-      kickerClass={kickerClass}
     />
   );
 }
 
 function RepresentativeCoins({
   coins,
-  kickerClass,
 }: {
   coins: ArchetypeContent["representativeCoins"];
-  kickerClass: string;
 }) {
   return (
     <RelatedCoinsList
       coins={coins}
-      kickerClass={kickerClass}
       kicker="Tracked examples"
       heading="Live coins using this design"
     />
@@ -201,15 +164,13 @@ function RepresentativeCoins({
 
 function Variations({
   items,
-  kickerClass,
 }: {
   items: ArchetypeContent["variations"];
-  kickerClass: string;
 }) {
   return (
     <section className="space-y-6">
       <div className="space-y-2">
-        <SectionKicker className={kickerClass}>Variations</SectionKicker>
+        <SectionKicker>Variations</SectionKicker>
         <SectionHeading>Sub-flavors within the archetype</SectionHeading>
       </div>
       <dl className="space-y-5">
@@ -233,15 +194,13 @@ function Variations({
 
 function Decommissioned({
   items,
-  kickerClass,
 }: {
   items: ArchetypeDecommissioned;
-  kickerClass: string;
 }) {
   return (
     <section className="space-y-6">
       <div className="space-y-2">
-        <SectionKicker className={kickerClass}>Decommissioned</SectionKicker>
+        <SectionKicker>Decommissioned</SectionKicker>
         <SectionHeading>Designs that broke and stayed broken</SectionHeading>
       </div>
       <ul className="divide-y divide-border/40">
@@ -331,10 +290,8 @@ function TrackedCoinRow({
 
 function TrackedCoinList({
   archetype,
-  kickerClass,
 }: {
   archetype: MechanismArchetype;
-  kickerClass: string;
 }) {
   // No build-time supply map for the explainer pages; canonical registry order
   // is roughly supply-descending and matches what the screener defaults to
@@ -382,7 +339,7 @@ function TrackedCoinList({
   return (
     <section className="space-y-6">
       <div className="space-y-2">
-        <SectionKicker className={kickerClass}>Tracked universe</SectionKicker>
+        <SectionKicker>Tracked universe</SectionKicker>
         <SectionHeading>
           {trackedCoinCount === 1
             ? "1 tracked stablecoin in this archetype"
@@ -433,10 +390,8 @@ function TrackedCoinList({
 
 function MechanismCaseStudies({
   archetype,
-  kickerClass,
 }: {
   archetype: MechanismArchetype;
-  kickerClass: string;
 }) {
   // Auto-generated from the case-study registry: every study tagged with this
   // archetype, in canonical list order. Server-rendered, so the full registry
@@ -449,7 +404,7 @@ function MechanismCaseStudies({
   return (
     <section className="space-y-6">
       <div className="space-y-2">
-        <SectionKicker className={kickerClass}>Case studies</SectionKicker>
+        <SectionKicker>Case studies</SectionKicker>
         <SectionHeading>When this mechanism met a stress test</SectionHeading>
       </div>
       <ul className="divide-y divide-border/40">

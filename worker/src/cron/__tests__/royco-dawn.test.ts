@@ -179,11 +179,29 @@ describe("fetchRoycoDawnSources", () => {
     ]);
   });
 
-  it("retains the family when a positive tranche has stale observation evidence", async () => {
-    const market = makeMarket();
-    market.seniorVault.apyInfo.duration.end.blockTimestamp -= 7 * 3600;
-    mockFetch([{ match: "ecosystem/explore", body: { count: 1, data: [market] } }]);
-    expect(await fetchRoycoDawnSources()).toEqual({ candidates: [], degraded: true });
+  it("skips a stale tranche while publishing healthy candidates without family degradation", async () => {
+    const stale = makeMarket({
+      marketId: "stale",
+      juniorVault: makeVault({
+        address: "0x2222222222222222222222222222222222222222",
+        apy: 0.08,
+        tvlUsd: 500_000,
+        depositAddress: "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
+        depositSymbol: "apyUSD",
+        shareAddress: "0x2222222222222222222222222222222222222222",
+      }),
+    });
+    stale.seniorVault.apyInfo.duration.end.blockTimestamp -= 7 * 3600;
+    const healthy = makeMarket({ marketId: "healthy" });
+    mockFetch([{ match: "ecosystem/explore", body: { count: 2, data: [stale, healthy] } }]);
+
+    const { candidates, degraded } = await fetchRoycoDawnSources();
+
+    expect(degraded).toBe(false);
+    expect(candidates.map((candidate) => candidate.yield.sourceKey)).toEqual([
+      "royco-dawn:1:stale:junior",
+      "royco-dawn:1:healthy:senior",
+    ]);
   });
 
   it("retains the family when a discovered market detail cannot be fetched", async () => {
@@ -267,6 +285,38 @@ describe("Royco discovery boundaries", () => {
     // full snapshot instead of replacing it with this partial page set.
     expect(degraded).toBe(true);
     expect(pages).toEqual([1, 2]);
+  });
+
+  it("limits the detail walk to six concurrent requests", async () => {
+    let activeDetailRequests = 0;
+    let maxActiveDetailRequests = 0;
+    let detailRequestCount = 0;
+    let releaseFirstBatch!: () => void;
+    const firstBatchGate = new Promise<void>((resolve) => {
+      releaseFirstBatch = resolve;
+    });
+    const markets = Array.from({ length: 7 }, (_, index) => makeMarket({ marketId: `market-${index}` }));
+
+    vi.stubGlobal("fetch", vi.fn(async (url) => {
+      if (String(url).endsWith("/ecosystem/explore")) {
+        return Response.json({ count: markets.length, data: markets });
+      }
+      detailRequestCount += 1;
+      activeDetailRequests += 1;
+      maxActiveDetailRequests = Math.max(maxActiveDetailRequests, activeDetailRequests);
+      if (detailRequestCount <= 6) await firstBatchGate;
+      activeDetailRequests -= 1;
+      return Response.json(makeMarket({ marketId: String(url).split("/").pop() }));
+    }));
+
+    const resultPromise = fetchRoycoDawnSources();
+    await vi.waitFor(() => expect(detailRequestCount).toBe(6));
+    expect(maxActiveDetailRequests).toBe(6);
+    releaseFirstBatch();
+
+    const result = await resultPromise;
+    expect(result.degraded).toBe(false);
+    expect(detailRequestCount).toBe(7);
   });
 
   it("rejects caller cancellation during a request", async () => {

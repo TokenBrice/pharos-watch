@@ -42,6 +42,7 @@ function makeRow(overrides: RowOverrides): CoverageRow {
   const { blacklistStatus = null, statuses, ...rowOverrides } = overrides;
   return {
     marketCapUsd: 0,
+    marketCapAvailable: true,
     pegLabel: "Tracked",
     backingLabel: "Curated",
     governanceLabel: "Neutral",
@@ -187,7 +188,7 @@ describe("coverage filtering", () => {
     ["live-reserves", ["beta"]],
     ["yield", ["beta"]],
     ["flows", ["gamma"]],
-    ["weak-price", ["alpha", "unsafe", "nodep"]],
+    ["weak-price", ["alpha"]],
     ["blacklist", ["beta"]],
     ["price-2-sources", ["alpha"]],
     ["missing-safety", ["unsafe"]],
@@ -213,7 +214,7 @@ describe("coverage filtering", () => {
     expect(candidates.filter((row) => matchesCoverageFilter(row, "full-headline")).map((row) => row.id)).toEqual(["full"]);
   });
 
-  it("excludes price-only rows from weak-price regardless of source count and reads a missing count as zero", () => {
+  it("excludes price-only rows from weak-price and requires a known source count", () => {
     const priceOnly = makeRow({
       id: "p-only",
       name: "Price Only",
@@ -221,10 +222,17 @@ describe("coverage filtering", () => {
       statuses: { price: { ...status("price-only", false), sourceCount: 1 } },
     });
     const uncounted = makeRow({ id: "no-count", name: "No Count", symbol: "NOC" });
+    const unavailable = makeRow({
+      id: "dark",
+      name: "Data Dark",
+      symbol: "DARK",
+      statuses: { price: status("data-unavailable", false) },
+    });
 
     expect(matchesCoverageFilter(priceOnly, "weak-price")).toBe(false);
     expect(matchesCoverageFilter(priceOnly, "price-2-sources")).toBe(false);
-    expect(matchesCoverageFilter(uncounted, "weak-price")).toBe(true);
+    expect(matchesCoverageFilter(uncounted, "weak-price")).toBe(false);
+    expect(matchesCoverageFilter(unavailable, "weak-price")).toBe(false);
     expect(matchesCoverageFilter(uncounted, "price-2-sources")).toBe(false);
   });
 

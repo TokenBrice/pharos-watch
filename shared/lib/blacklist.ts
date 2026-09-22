@@ -14,22 +14,48 @@ export function isGoldBlacklistStablecoin(symbol: string): symbol is "PAXG" | "X
   return symbol === "PAXG" || symbol === "XAUT" || symbol === "XAUM";
 }
 
-const BLACKLIST_PRICE_ASSET_IDS: Partial<Record<BlacklistStablecoin, string>> = {
+// Total on purpose: `null` records the reviewed decision that the asset is
+// USD-par (native units are USD). A symbol added to BLACKLIST_STABLECOINS
+// without a pricing decision here is a compile error, not a silent $1.00.
+const BLACKLIST_PRICE_ASSET_IDS: Record<BlacklistStablecoin, string | null> = {
+  USDC: null,
+  USDT: null,
   PAXG: "paxg-paxos",
   XAUT: "xaut-tether",
-  XAUM: "xaum-matrixdock",
+  PYUSD: null,
+  USD1: null,
+  USDG: null,
+  RLUSD: null,
+  U: null,
+  USDTB: null,
   A7A5: "a7a5-old-vector",
+  FDUSD: null,
   BRZ: "brz-transfero",
-  EURC: "eurc-circle",
+  AUSD: null,
   EURI: "euri-banking-circle",
-  EURCV: "eurcv-societe-generale-forge",
-  AEUR: "aeur-anchored-coins",
+  USDQ: null,
+  USDO: null,
+  USDX: null,
+  AID: null,
   TGBP: "tgbp-tokenised",
+  EURC: "eurc-circle",
+  BUIDL: null,
+  USDP: null,
+  TUSD: null,
+  NUSD: null,
+  EURCV: "eurcv-societe-generale-forge",
+  USDA: null,
+  USAT: null,
+  AEUR: "aeur-anchored-coins",
+  XUSD: null,
+  XAUM: "xaum-matrixdock",
   JPYC: "jpyc-jpyc",
+  FRXUSD: null,
+  FIDD: null,
 };
 
 export function getBlacklistPriceAssetId(stablecoin: BlacklistStablecoin): string | null {
-  return BLACKLIST_PRICE_ASSET_IDS[stablecoin] ?? null;
+  return BLACKLIST_PRICE_ASSET_IDS[stablecoin];
 }
 
 export function computeBlacklistAmountUsdAtEvent(

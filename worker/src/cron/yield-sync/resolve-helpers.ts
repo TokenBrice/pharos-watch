@@ -12,6 +12,7 @@ import {
   MIN_SAFETY_SCORE_FOR_YIELD,
 } from "../../lib/constants";
 import { findBestLendingPool, isBlockedYieldOpportunitySource } from "../yield-helpers";
+import type { StablecoinSupplyMapState } from "./supply-map";
 import {
   AUTO_LENDING_POOL_MAP,
   AUTO_LENDING_SAFETY_BYPASS_IDS,
@@ -76,11 +77,15 @@ export function getRequiredLendingOpportunityTvlUsd(params: {
   poolChain?: string | null;
   baseMinTvlUsd?: number;
   stablecoinSupplyById: Map<string, number>;
+  stablecoinSupplyMapState: StablecoinSupplyMapState;
 }): number {
   const absoluteFloor = params.baseMinTvlUsd ?? getLendingOpportunityAbsoluteTvlFloor(params.poolChain);
+  if (params.stablecoinSupplyMapState !== "ok") {
+    return Number.POSITIVE_INFINITY;
+  }
   const supplyUsd = params.stablecoinSupplyById.get(params.stablecoinId);
   if (typeof supplyUsd !== "number" || !Number.isFinite(supplyUsd) || supplyUsd <= 0) {
-    // Discovery gates fail open to the absolute floor when supply is unknown.
+    // A coin absent from an otherwise valid map keeps the absolute-floor policy.
     return absoluteFloor;
   }
 
@@ -95,6 +100,7 @@ export type AutoLendingEligibilityReasonCode =
   | "protocol-allowlist"
   | "apy-floor"
   | "tvl-floor"
+  | "supply-map-unavailable"
   | "source-blocked";
 
 export interface AutoLendingEligibilityVerdict {
@@ -110,13 +116,16 @@ export function explainDeterministicAutoLendingEligibility(params: {
   safetyScore?: number;
   safetySnapshotAvailable: boolean;
   stablecoinSupplyById: Map<string, number>;
+  stablecoinSupplyMapState: StablecoinSupplyMapState;
 }): AutoLendingEligibilityVerdict {
   const requiredMinTvlUsd = getRequiredLendingOpportunityTvlUsd({
     stablecoinId: params.stablecoinId,
     poolChain: params.pool.chain,
     stablecoinSupplyById: params.stablecoinSupplyById,
+    stablecoinSupplyMapState: params.stablecoinSupplyMapState,
   });
   const reasonCodes: AutoLendingEligibilityReasonCode[] = [];
+  if (params.stablecoinSupplyMapState !== "ok") reasonCodes.push("supply-map-unavailable");
 
   if (isAutoLendingCollisionBlockedForStablecoin(params.stablecoinId, params.pool)) {
     reasonCodes.push("collision");
@@ -150,6 +159,7 @@ function passesLendingOpportunitySizeGate(params: {
   sourceTvlUsd: number | null | undefined;
   baseMinTvlUsd?: number;
   stablecoinSupplyById: Map<string, number>;
+  stablecoinSupplyMapState: StablecoinSupplyMapState;
 }): boolean {
   if (typeof params.sourceTvlUsd !== "number" || !Number.isFinite(params.sourceTvlUsd) || params.sourceTvlUsd <= 0) {
     return false;
@@ -160,6 +170,7 @@ function passesLendingOpportunitySizeGate(params: {
     poolChain: params.poolChain,
     baseMinTvlUsd: params.baseMinTvlUsd,
     stablecoinSupplyById: params.stablecoinSupplyById,
+    stablecoinSupplyMapState: params.stablecoinSupplyMapState,
   });
 }
 
@@ -277,6 +288,7 @@ interface AppendOptionalYieldCandidateInput {
   entry: ResolvedYieldCandidate;
   meta: { id: string; symbol: string; contracts?: Array<{ chain?: string }>; } | null;
   stablecoinSupplyById: Map<string, number>;
+  stablecoinSupplyMapState: StablecoinSupplyMapState;
 }
 
 export function appendOptionalYieldCandidate(input: AppendOptionalYieldCandidateInput): YieldCandidateAppendStatus {
@@ -292,6 +304,7 @@ export function appendOptionalYieldCandidate(input: AppendOptionalYieldCandidate
       poolChain: entry.chain ?? meta.contracts?.[0]?.chain ?? null,
       sourceTvlUsd: entry.yield.sourceTvlUsd,
       stablecoinSupplyById: input.stablecoinSupplyById,
+      stablecoinSupplyMapState: input.stablecoinSupplyMapState,
     })
   ) {
     return "size-gated";
@@ -317,6 +330,7 @@ function appendResolvedYieldCandidates(
   resolved: ResolvedYieldEntry[],
   entries: ResolvedYieldCandidate[],
   stablecoinSupplyById: Map<string, number>,
+  stablecoinSupplyMapState: StablecoinSupplyMapState,
 ): void {
   const identityLookups = buildYieldIdentityLookups();
   let blockedDrops = 0;
@@ -344,6 +358,7 @@ function appendResolvedYieldCandidates(
         entry,
         meta,
         stablecoinSupplyById,
+        stablecoinSupplyMapState,
       });
       if (result === "size-gated") {
         sizeGateDrops += 1;
@@ -373,6 +388,7 @@ function appendResolvedYieldCandidates(
       entry,
       meta,
       stablecoinSupplyById,
+      stablecoinSupplyMapState,
     });
     if (result === "size-gated") {
       sizeGateDrops += 1;
@@ -415,15 +431,6 @@ function getResolvedEntryKey(entry: ResolvedYieldEntry): string | null {
   return entry.yield ? `${entry.id}:${entry.yield.sourceKey}` : null;
 }
 
-function getEffectiveYieldSource(entry: ResolvedYieldEntry, fallbackSource: string | undefined): string | undefined {
-  const source = entry.yield?.yieldSource ?? fallbackSource;
-  if (!source) return undefined;
-  return source;
-}
-
-function getEffectiveYieldType(entry: ResolvedYieldEntry, fallbackType: YieldType | undefined): YieldType | undefined {
-  return entry.yield?.yieldType ?? fallbackType;
-}
 
 function inferLinkedVariantDeploymentPlace(
   variantKind: string | undefined,
@@ -504,7 +511,7 @@ export function appendLinkedVariantParentYieldSources(resolved: ResolvedYieldEnt
     const parentMeta = getActiveStablecoinMeta(childMeta.variantOf);
     if (!parentMeta) continue;
 
-    const effectiveYieldType = getEffectiveYieldType(entry, childMeta.yieldConfig?.yieldType);
+    const effectiveYieldType = entry.yield.yieldType ?? childMeta.yieldConfig?.yieldType;
     if (isThirdPartyYieldOpportunityType(effectiveYieldType)) continue;
 
     const sourcePoolKey = entry.yield.sourcePool ? `${parentMeta.id}:${entry.yield.sourcePool}` : null;
@@ -525,7 +532,7 @@ export function appendLinkedVariantParentYieldSources(resolved: ResolvedYieldEnt
       yield: {
         ...entry.yield,
         sourceKey,
-        yieldSource: getEffectiveYieldSource(entry, childMeta.yieldConfig?.yieldSource),
+        yieldSource: entry.yield.yieldSource ?? childMeta.yieldConfig?.yieldSource,
         // Holding the deposit asset does not earn a wrapper's NAV yield. The
         // parent projection therefore represents the action of acquiring the
         // child receipt token, while the original child row remains intrinsic.
@@ -562,6 +569,7 @@ function appendExplicitPoolSources(
   resolved: ResolvedYieldEntry[],
   dlPools: DlPool[],
   stablecoinSupplyById: Map<string, number>,
+  stablecoinSupplyMapState: StablecoinSupplyMapState,
 ): void {
   for (const [stablecoinId, configs] of Object.entries(EXPLICIT_YIELD_SOURCE_POOL_MAP)) {
     const meta = getActiveStablecoinMeta(stablecoinId);
@@ -584,6 +592,7 @@ function appendExplicitPoolSources(
           sourceTvlUsd: pool.tvlUsd,
           baseMinTvlUsd: config.minTvlUsd ?? getLendingOpportunityAbsoluteTvlFloor(config.expectedChain ?? pool.chain),
           stablecoinSupplyById,
+          stablecoinSupplyMapState,
         })
       ) {
         continue;
@@ -617,6 +626,7 @@ function appendDeterministicAutoLending(params: {
   safetyScores: Map<string, SafetyScoreSnapshot>;
   safetySnapshotAvailable: boolean;
   stablecoinSupplyById: Map<string, number>;
+  stablecoinSupplyMapState: StablecoinSupplyMapState;
   autoDiscoveredIds: Set<string>;
 }): number {
   let deterministicCount = 0;
@@ -632,6 +642,7 @@ function appendDeterministicAutoLending(params: {
       safetyScore: params.safetyScores.get(stablecoinId)?.score,
       safetySnapshotAvailable: params.safetySnapshotAvailable,
       stablecoinSupplyById: params.stablecoinSupplyById,
+      stablecoinSupplyMapState: params.stablecoinSupplyMapState,
     });
     if (!eligibility.eligible) continue;
 
@@ -655,6 +666,7 @@ function appendDynamicAutoLending(params: {
   safetyScores: Map<string, SafetyScoreSnapshot>;
   safetySnapshotAvailable: boolean;
   stablecoinSupplyById: Map<string, number>;
+  stablecoinSupplyMapState: StablecoinSupplyMapState;
   autoDiscoveredIds: Set<string>;
   reservedPoolIds: Set<string>;
 }): number {
@@ -678,6 +690,7 @@ function appendDynamicAutoLending(params: {
       stablecoinId: meta.id,
       poolChain: primaryChain,
       stablecoinSupplyById: params.stablecoinSupplyById,
+      stablecoinSupplyMapState: params.stablecoinSupplyMapState,
     });
 
     const chainFilter = buildDlChainFilter(meta);
@@ -734,12 +747,23 @@ export function appendPoolFamilyYieldSources(params: {
   safetyScores: Map<string, SafetyScoreSnapshot>;
   safetySnapshotAvailable: boolean;
   stablecoinSupplyById: Map<string, number>;
+  stablecoinSupplyMapState: StablecoinSupplyMapState;
 }): void {
-  appendResolvedYieldCandidates(params.resolved, params.supplementalCandidates, params.stablecoinSupplyById);
+  appendResolvedYieldCandidates(
+    params.resolved,
+    params.supplementalCandidates,
+    params.stablecoinSupplyById,
+    params.stablecoinSupplyMapState,
+  );
 
   if (params.dlPools.length === 0) return;
 
-  appendExplicitPoolSources(params.resolved, params.dlPools, params.stablecoinSupplyById);
+  appendExplicitPoolSources(
+    params.resolved,
+    params.dlPools,
+    params.stablecoinSupplyById,
+    params.stablecoinSupplyMapState,
+  );
 
   const reservedExplicitPoolIds = buildReservedYieldPoolIds();
   const autoDiscoveredIds = new Set<string>();
@@ -756,6 +780,7 @@ export function appendPoolFamilyYieldSources(params: {
     safetyScores: params.safetyScores,
     safetySnapshotAvailable: params.safetySnapshotAvailable,
     stablecoinSupplyById: params.stablecoinSupplyById,
+    stablecoinSupplyMapState: params.stablecoinSupplyMapState,
     autoDiscoveredIds,
   });
 
@@ -765,6 +790,7 @@ export function appendPoolFamilyYieldSources(params: {
     safetyScores: params.safetyScores,
     safetySnapshotAvailable: params.safetySnapshotAvailable,
     stablecoinSupplyById: params.stablecoinSupplyById,
+    stablecoinSupplyMapState: params.stablecoinSupplyMapState,
     autoDiscoveredIds,
     reservedPoolIds: reservedExplicitPoolIds,
   });

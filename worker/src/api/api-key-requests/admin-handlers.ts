@@ -2,7 +2,12 @@ import type {
   ApiKeySelfServeRequestAdminListResponse,
   ApiKeySelfServeStatus,
 } from "@shared/types";
-import { parseOptionalEnumParam, parseOptionalPositiveIntegerParam } from "../../lib/api-params";
+import {
+  encodeJsonCursor,
+  parseJsonCursorParam,
+  parseOptionalEnumParam,
+  parseOptionalPositiveIntegerParam,
+} from "../../lib/api-params";
 import { getNowSec } from "../../lib/api-key-core";
 import {
   adminErrorResponse,
@@ -33,6 +38,34 @@ const ADMIN_STATUS_FILTERS = new Set<ApiKeySelfServeStatus>([
   "blocked",
   "expired",
 ]);
+
+function parseAdminRequestCursor(
+  value: string | null,
+  status: ApiKeySelfServeStatus | null,
+) {
+  return parseJsonCursorParam(value, (parsed) => {
+    if (parsed === null || typeof parsed !== "object") return null;
+    const payload = parsed as {
+      v?: unknown;
+      createdAt?: unknown;
+      id?: unknown;
+      status?: unknown;
+    };
+    if (
+      payload.v !== 1
+      || typeof payload.createdAt !== "number"
+      || typeof payload.id !== "number"
+      || !Number.isSafeInteger(payload.createdAt)
+      || !Number.isSafeInteger(payload.id)
+      || payload.createdAt < 0
+      || payload.id <= 0
+      || payload.status !== status
+    ) {
+      return null;
+    }
+    return { createdAt: payload.createdAt, id: payload.id };
+  });
+}
 
 interface ApiKeyRequestByIdRouteContext extends AdminRouteContext {
   requestId: string;
@@ -97,10 +130,17 @@ export const handleApiKeyRequestsAdminRoute = makeAdminRoute<AdminRouteContext>(
     if (status instanceof Response) return status;
     const parsedLimit = parseOptionalPositiveIntegerParam(url.searchParams.get("limit"), "limit", { max: 100 });
     if (parsedLimit instanceof Response) return parsedLimit;
-    const rows = await listAdminRequests(db, status ?? null, parsedLimit ?? 50);
+    const activeStatus = status ?? null;
+    const cursor = parseAdminRequestCursor(url.searchParams.get("cursor"), activeStatus);
+    if (cursor instanceof Response) return cursor;
+    const page = await listAdminRequests(db, activeStatus, parsedLimit ?? 50, cursor);
     const response: ApiKeySelfServeRequestAdminListResponse = {
       generatedAt: getNowSec(),
-      requests: rows.map(mapAdminRow),
+      requests: page.rows.map(mapAdminRow),
+      total: page.total,
+      nextCursor: page.nextCursor
+        ? encodeJsonCursor({ v: 1, status: activeStatus, ...page.nextCursor })
+        : null,
     };
     return adminJsonResponse(response);
   },

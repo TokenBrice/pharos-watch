@@ -25,6 +25,8 @@ import { makeDexDeploymentProviderCheck, type DexDeploymentProviderCheck } from 
 
 const HORIZON_MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 const HORIZON_PAGE_LIMIT = 200;
+/** Bounded cursor budget per deployment; requests stay sequential. */
+const HORIZON_MAX_PAGES = 3;
 
 interface HorizonReserve {
   asset: string;
@@ -141,40 +143,53 @@ async function paceHorizonRequest(signal?: AbortSignal): Promise<void> {
   horizonRequestState.state.lastStartedAtMs = Date.now();
 }
 
-export async function crawlHorizonPoolsStage(input: {
-  coinTargets: ContractDeployment[];
-  context: CrawlStageContext;
-}): Promise<HorizonPoolsStageResult> {
-  const providerChecks: DexDeploymentProviderCheck[] = [];
-  const targets = input.coinTargets.filter((target) =>
-    isHorizonDiscoveryDeployment(target.chain, target.address),
-  );
-  if (targets.length === 0 || input.context.timeExceeded()) return { providerChecks };
+function horizonNextPageUrl(body: unknown): string | null {
+  if (typeof body !== "object" || body === null || !("_links" in body)) return null;
+  const links = body._links;
+  if (typeof links !== "object" || links === null || !("next" in links)) return null;
+  const next = links.next;
+  if (typeof next !== "object" || next === null || !("href" in next)) return null;
+  const href = next.href;
+  if (typeof href !== "string" || href === "") return null;
+  try {
+    const resolved = new URL(href, STELLAR_HORIZON_API);
+    return resolved.origin === new URL(STELLAR_HORIZON_API).origin ? resolved.toString() : null;
+  } catch {
+    return null;
+  }
+}
 
-  for (const target of targets) {
-    if (input.context.timeExceeded()) return { providerChecks, stoppedEarly: true };
-    const stablecoinSymbol = WORKER_ACTIVE_STABLECOINS.find((coin) => coin.id === input.context.stablecoinId)?.symbol;
-    const horizonAsset = getHorizonDiscoveryAsset(target.address, stablecoinSymbol);
-    if (!horizonAsset) {
-      // A bare issuer needs the tracked asset code to form Horizon's filter.
-      providerChecks.push(makeDexDeploymentProviderCheck(target, "horizon", "failure"));
-      continue;
-    }
+/**
+ * Follows `_links.next.href` until a page shorter than the requested limit is
+ * read — the only positive end-of-inventory evidence Horizon gives. A cursor
+ * loop stopped by the page or time budget reports `degraded` with
+ * `paginationComplete: false`, never a completed query. One request is in
+ * flight at a time.
+ */
+async function crawlHorizonAssetPages(
+  target: ContractDeployment,
+  horizonAsset: string,
+  context: CrawlStageContext,
+): Promise<DexDeploymentProviderCheck> {
+  const url = new URL("/liquidity_pools", STELLAR_HORIZON_API);
+  url.searchParams.set("reserves", horizonAsset);
+  url.searchParams.set("limit", String(HORIZON_PAGE_LIMIT));
 
-    await paceHorizonRequest(input.context.signal);
-    if (input.context.timeExceeded()) return { providerChecks, stoppedEarly: true };
-    const url = new URL("/liquidity_pools", STELLAR_HORIZON_API);
-    url.searchParams.set("reserves", horizonAsset);
-    url.searchParams.set("limit", String(HORIZON_PAGE_LIMIT));
+  let nextUrl: string | null = url.toString();
+  let observedPoolCount = 0;
+  let pagesRead = 0;
+  let paginationComplete = false;
 
-    try {
+  try {
+    while (nextUrl) {
+      const requestUrl: string = nextUrl;
       const result = await fetchJsonWithRetry<unknown>(
-        url.toString(),
+        requestUrl,
         {
           headers: { "User-Agent": USER_AGENT },
           signal: buildStageSignal(
-            input.context.signal,
-            input.context.deadlineMs,
+            context.signal,
+            context.deadlineMs,
             DISCOVERY_STAGE_TIMEOUT_MS.horizon,
           ),
         },
@@ -193,28 +208,26 @@ export async function crawlHorizonPoolsStage(input: {
           ? ((body as { _embedded: Record<string, unknown> })._embedded.records)
           : null;
       if (!Array.isArray(records)) {
-        providerChecks.push(makeDexDeploymentProviderCheck(target, "horizon", "failure", { retryable: true }));
-        continue;
+        return makeDexDeploymentProviderCheck(target, "horizon", "failure", { retryable: true });
       }
       const pools = records.map((record) => parseHorizonPool(record, horizonAsset));
       if (pools.some((pool) => pool == null)) {
-        providerChecks.push(makeDexDeploymentProviderCheck(target, "horizon", "failure", { retryable: true }));
-        continue;
+        return makeDexDeploymentProviderCheck(target, "horizon", "failure", { retryable: true });
       }
 
       for (const pool of pools as HorizonLiquidityPool[]) {
         const poolId = canonicalExitRouteScopedKey(target.chain, pool.id);
-        if (input.context.hasKnownPool(poolId)) continue;
+        if (context.hasKnownPool(poolId)) continue;
         const trackedIndex = pool.reserves.findIndex((reserve) => reserve.asset === horizonAsset);
         const tokenIds = pool.reserves.map((reserve) =>
           reserve.asset === horizonAsset ? target.address : toRepoStellarAsset(reserve.asset),
         );
         if (tokenIds.some((tokenId) => tokenId == null)) continue;
-        const priced = priceHorizonPool(pool, horizonAsset, input.context);
+        const priced = priceHorizonPool(pool, horizonAsset, context);
         const pairedReserve = pool.reserves[trackedIndex === 0 ? 1 : 0];
         const pairedSymbol = pairedReserve.asset === "native" ? "XLM" : pairedReserve.asset.split(":", 1)[0]!;
-        input.context.addPool(
-          toStagedPool(input.context, {
+        context.addPool(
+          toStagedPool(context, {
             poolId,
             source: "horizon",
             chain: target.chain,
@@ -237,13 +250,56 @@ export async function crawlHorizonPoolsStage(input: {
           }),
         );
       }
-      providerChecks.push(makeDexDeploymentProviderCheck(target, "horizon", "success", {
-        observedPoolCount: pools.length,
-      }));
-    } catch (err) {
-      if (input.context.signal?.aborted) throw err;
-      providerChecks.push(makeDexDeploymentProviderCheck(target, "horizon", "failure", { retryable: true }));
+      observedPoolCount += records.length;
+      pagesRead++;
+
+      if (records.length < HORIZON_PAGE_LIMIT) {
+        paginationComplete = true;
+        break;
+      }
+      nextUrl = pagesRead < HORIZON_MAX_PAGES ? horizonNextPageUrl(body) : null;
+      if (nextUrl) {
+        await paceHorizonRequest(context.signal);
+        if (context.timeExceeded()) nextUrl = null;
+      }
     }
+  } catch (err) {
+    if (context.signal?.aborted) throw err;
+    return makeDexDeploymentProviderCheck(target, "horizon", "failure", { retryable: true });
+  }
+
+  return makeDexDeploymentProviderCheck(
+    target,
+    "horizon",
+    paginationComplete ? "success" : "degraded",
+    { observedPoolCount, paginationComplete },
+  );
+}
+
+export async function crawlHorizonPoolsStage(input: {
+  coinTargets: ContractDeployment[];
+  context: CrawlStageContext;
+}): Promise<HorizonPoolsStageResult> {
+  const providerChecks: DexDeploymentProviderCheck[] = [];
+  const targets = input.coinTargets.filter((target) =>
+    isHorizonDiscoveryDeployment(target.chain, target.address),
+  );
+  if (targets.length === 0 || input.context.timeExceeded()) return { providerChecks };
+
+  for (const target of targets) {
+    if (input.context.timeExceeded()) return { providerChecks, stoppedEarly: true };
+    const stablecoinSymbol = WORKER_ACTIVE_STABLECOINS.find((coin) => coin.id === input.context.stablecoinId)?.symbol;
+    const horizonAsset = getHorizonDiscoveryAsset(target.address, stablecoinSymbol);
+    if (!horizonAsset) {
+      // A bare issuer needs the tracked asset code to form Horizon's filter;
+      // an identity this run could not build is a deferral, not an outage.
+      providerChecks.push(makeDexDeploymentProviderCheck(target, "horizon", "failure", { retryable: true }));
+      continue;
+    }
+
+    await paceHorizonRequest(input.context.signal);
+    if (input.context.timeExceeded()) return { providerChecks, stoppedEarly: true };
+    providerChecks.push(await crawlHorizonAssetPages(target, horizonAsset, input.context));
   }
 
   return { providerChecks };

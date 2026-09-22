@@ -23,6 +23,7 @@ import {
   SafetyScoreV9MechanismReviewOverlaySchema,
   type SafetyScoreV9MechanismReviewOverlay,
 } from "@shared/types/safety-score-v9-mechanism-overlays";
+import { isoDateStartSec } from "./extension-shared";
 import type { SafetyScoreV9CompilerInput } from "./native-input";
 
 type MechanismMeta = Pick<StablecoinMeta, "id" | "reserves" | "reserveReview" | "custodyProfile" | "proofOfReserves">;
@@ -101,10 +102,28 @@ function assuranceQuality(report: ProofOfReservesLatestReport): V9MechanismQuali
   return "weak";
 }
 
-function assuranceFact(meta: MechanismMeta): V9MechanismFactV1 {
+function assuranceFact(
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
+  meta: MechanismMeta,
+): V9MechanismFactV1 {
   const report = meta.proofOfReserves?.latestReport;
-  if (report) return knownFact("assurance-and-reconciliation", assuranceQuality(report));
-  return boundedFact("assurance-and-reconciliation", meta.proofOfReserves !== undefined);
+  if (!report) return boundedFact("assurance-and-reconciliation", meta.proofOfReserves !== undefined);
+  const reportPeriodEndSec = isoDateStartSec(
+    report.periodEnd,
+    fixedInput.clockSec,
+    `${meta.id}:assurance-report-period-end`,
+  );
+  if (
+    fixedInput.clockSec - reportPeriodEndSec >
+    V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.assuranceReportMaxAgeSec
+  ) {
+    return {
+      status: status("stale", "assurance-and-reconciliation"),
+      quality: null,
+      failureDomains: [],
+    };
+  }
+  return knownFact("assurance-and-reconciliation", assuranceQuality(report));
 }
 
 function hasReserveEvidence(fixedInput: Readonly<SafetyScoreV9CompilerInput>, meta: MechanismMeta): boolean {
@@ -126,7 +145,7 @@ function buildFiatCashReview(
     archetype: "fiat-cash",
     claimAndSegregation: boundedFact("claim-and-segregation", reserves || meta.proofOfReserves !== undefined),
     custodyContinuity: boundedFact("custody-continuity", custody),
-    assuranceAndReconciliation: assuranceFact(meta),
+    assuranceAndReconciliation: assuranceFact(fixedInput, meta),
   };
 }
 
@@ -150,7 +169,7 @@ function buildCommodityClaimReview(
     archetype: "commodity-claim",
     titleAndAllocation: boundedFact("title-and-allocation", reserves || meta.proofOfReserves !== undefined),
     custodyContinuity: boundedFact("custody-continuity", custody),
-    assuranceAndReconciliation: assuranceFact(meta),
+    assuranceAndReconciliation: assuranceFact(fixedInput, meta),
     physicalRedemption: boundedFact("physical-redemption", false),
   };
 }
@@ -169,7 +188,7 @@ function buildTbillReview(
     fundClaimAndSeniority: boundedFact("fund-claim-and-seniority", reserves || meta.proofOfReserves !== undefined),
     navValuation: boundedFact("nav-valuation", reserves || meta.proofOfReserves !== undefined),
     durationAndLiquidity: boundedFact("duration-and-liquidity", maturityEvidence || reserves),
-    lossRecoveryDesign: assuranceFact(meta),
+    lossRecoveryDesign: assuranceFact(fixedInput, meta),
   };
 }
 

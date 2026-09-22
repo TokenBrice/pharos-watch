@@ -15,6 +15,11 @@ export function makeSubscriptionRow(stablecoinId: string, overrides: Partial<Sub
   };
 }
 
+/** The single mocked read every pending-confirmation suite installs. */
+export function pendingDisambiguationTable(row: Record<string, unknown> | null) {
+  return { match: "FROM telegram_pending_disambiguation WHERE chat_id = ?", rows: [], first: row };
+}
+
 export function pendingRowFromForget(options: {
   initiator_user_id?: string | null;
   expires_at?: number;

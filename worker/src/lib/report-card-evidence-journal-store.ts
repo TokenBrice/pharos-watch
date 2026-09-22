@@ -7,13 +7,9 @@ import {
   type ReportCardEvidenceJournalV1,
 } from "@shared/lib/report-card-evidence-journal";
 import {
-  BOUNDED_JOURNAL_RETENTION_SEC,
   loadBoundedJournal,
   type BoundedJournalStoreConfig,
 } from "./bounded-journal-store";
-
-export const REPORT_CARD_EVIDENCE_JOURNAL_STORE_RETENTION_SEC =
-  BOUNDED_JOURNAL_RETENTION_SEC;
 
 const config: BoundedJournalStoreConfig<
   ReportCardEvidenceJournalV1,

@@ -48,7 +48,7 @@ function makeDb(rows: Record<string, unknown>[]) {
 }
 
 describe("loadYieldHealthSummary", () => {
-  it("summarizes rankings, safety coverage, supplemental, benchmark, and audit cache state", async () => {
+  it("summarizes rankings, safety coverage, supplemental sources, benchmark registry, and audit cache state", async () => {
     const summary = await loadYieldHealthSummary(
       makeDb([
         yieldCacheRow("yield-rankings", NOW - 600, {
@@ -103,12 +103,6 @@ describe("loadYieldHealthSummary", () => {
         degradedFamilyCount: 0,
         staleFamilyCount: 0,
         missingFamilyCount: 0,
-      },
-      benchmark: {
-        ageSec: 3600,
-        source: "tbill-cache",
-        isFallback: false,
-        status: "healthy",
       },
       coverageAudit: {
         ageSec: 86400,
@@ -294,7 +288,6 @@ describe("loadYieldHealthSummary", () => {
     );
 
     expect(summary.status).toBe("degraded");
-    expect(summary.benchmark.status).toBe("healthy");
     expect(summary.benchmarkRegistry).toMatchObject({
       status: "degraded",
       usedBenchmarkCount: 2,
@@ -587,7 +580,6 @@ describe("loadYieldHealthSummary", () => {
     expect(summary.rankingCount).toBeNull();
     expect(summary.safetyCoverage.status).toBe("unknown");
     expect(summary.supplemental.status).toBe("unknown");
-    expect(summary.benchmark.status).toBe("unknown");
     expect(summary.coverageAudit.status).toBe("unknown");
     expect(summary.sourceRiskCoverage.totalRows).toBe(0);
     expect(summary.latestCronStatus).toBe("error");
@@ -629,7 +621,6 @@ describe("loadYieldHealthSummary", () => {
     expect(summary.statusImpact).toBe("admin-watch");
     expect(summary.rankingStatus).toBe("healthy");
     expect(summary.safetyCoverage.status).toBe("degraded");
-    expect(summary.benchmark.status).toBe("degraded");
     expect(summary.supplemental.status).toBe("degraded");
     expect(summary.coverageAudit.status).toBe("degraded");
   });

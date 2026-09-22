@@ -1,5 +1,6 @@
 import type { MicaAuthorizationType, MicaStatus, MicaTokenType } from "../types/core";
 import type { BadgeStyle } from "./classification";
+import { projectDescriptors } from "./classification/descriptors";
 
 /**
  * MiCA (Regulation (EU) 2023/1114) presentation metadata.
@@ -7,7 +8,7 @@ import type { BadgeStyle } from "./classification";
  * MiCA status is a new regulatory dimension distinct from the existing
  * backing / governance / peg / mechanism taxonomy owned by
  * `shared/lib/classification/*`. It lives in its own runtime-neutral module —
- * mirroring how `infrastructure.ts`, `methodology-versions/liquidity-score.ts`, etc. own a
+ * mirroring how `infrastructure.ts`, `methodology-versions/registry.ts`, etc. own a
  * single dimension — so the classification facade stays focused on the core
  * coin taxonomy. Tailwind classes are static strings per the repo gotcha.
  */
@@ -76,21 +77,21 @@ const MICA_STATUS_DESCRIPTORS = {
   },
 } as const satisfies Record<MicaStatus, MicaStatusDescriptor>;
 
-function projectMicaStatuses<Value>(
-  project: (descriptor: MicaStatusDescriptor) => Value,
-): Record<MicaStatus, Value> {
-  return Object.fromEntries(
-    (Object.entries(MICA_STATUS_DESCRIPTORS) as [MicaStatus, MicaStatusDescriptor][])
-      .map(([status, descriptor]) => [status, project(descriptor)]),
-  ) as Record<MicaStatus, Value>;
-}
-
-export const MICA_STATUS_BADGE_STYLES = projectMicaStatuses((descriptor) => descriptor.badge);
+export const MICA_STATUS_BADGE_STYLES = projectDescriptors(
+  MICA_STATUS_DESCRIPTORS,
+  (descriptor) => descriptor.badge,
+);
 /** Solid fill classes for compliance distribution segments. */
-export const MICA_STATUS_SEGMENT_CLASSES = projectMicaStatuses((descriptor) => descriptor.segmentClass);
+export const MICA_STATUS_SEGMENT_CLASSES = projectDescriptors(
+  MICA_STATUS_DESCRIPTORS,
+  (descriptor) => descriptor.segmentClass,
+);
 
 /** Full sentence-form descriptions used in tooltips and copy. */
-export const MICA_STATUS_DESCRIPTIONS = projectMicaStatuses((descriptor) => descriptor.description);
+export const MICA_STATUS_DESCRIPTIONS = projectDescriptors(
+  MICA_STATUS_DESCRIPTORS,
+  (descriptor) => descriptor.description,
+);
 
 /** Token-type pill styles (EMT vs ART). */
 export const MICA_TOKEN_TYPE_BADGE_STYLES: Record<MicaTokenType, MicaBadgeStyle> = {

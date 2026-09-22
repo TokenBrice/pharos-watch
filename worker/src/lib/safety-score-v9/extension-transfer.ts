@@ -3,7 +3,7 @@ import { resolveChainId } from "@shared/lib/chains";
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
-import { compareText } from "@shared/types/safety-score-v9-fact-primitives";
+import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import {
   SafetyScoreV9ReviewedTransferFileSchema,
   safetyScoreV9TransferDeploymentKey,

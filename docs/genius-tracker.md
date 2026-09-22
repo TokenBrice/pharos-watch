@@ -18,7 +18,7 @@ GENIUS is modeled as a set of **separate public dimensions**, not one broad "com
 
 ## Schema
 
-A dedicated `genius?: GeniusProfile` object on `StablecoinMeta`, sibling to `mica?: MicaProfile` and `jurisdiction?`. Enums live in `shared/types/core.ts`, which re-exports the `GeniusProfile` type; the shape itself is inferred from `GeniusProfileSchema` in `shared/types/stablecoin-meta-schemas.ts` (`.strict()`, with cross-field `superRefine` rules) and is wired through `shared/lib/stablecoins/schema.ts`. Presentation labels/badges live in `shared/lib/genius.ts`. Regime effective-date state lives in `shared/lib/compliance-regime-state.ts`.
+A dedicated `genius?: GeniusProfile` object on `StablecoinMeta`, sibling to `mica?: MicaProfile` and `jurisdiction?`. Enums live in `shared/types/core.ts`, which re-exports the `GeniusProfile` type; the shape itself is inferred from `GeniusProfileSchema` in `shared/types/stablecoin-meta-compliance-schemas.ts` (`.strict()`, with cross-field `superRefine` rules) and is wired through `shared/lib/stablecoins/schema.ts`. Presentation labels/badges live in `shared/lib/genius.ts`. Regime effective-date state lives in `shared/lib/compliance-regime-state.ts`.
 
 ### Fields (`GeniusProfile`)
 

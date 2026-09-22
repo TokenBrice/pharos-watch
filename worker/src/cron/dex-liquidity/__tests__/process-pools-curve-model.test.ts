@@ -7,7 +7,6 @@ import {
   buildCurveCryptoSwapMeasuredExecutionTarget,
   buildPoolExecutionCapability,
   buildCurveStableswapExecutionCapability,
-  buildCurveStableswapExecutionModel,
   resolveActiveCurveCryptoSwapCandidateByTvl,
   resolveCurveStableswapCandidateByTvl,
   resolveReviewedCurveStableSwapNgPhysicalPoolId,
@@ -23,6 +22,13 @@ import type {
   ResolvedPoolIdentity,
 } from "../process-pool-types";
 import type { CurvePoolEntry, LlamaPool } from "../types";
+
+const buildCurveStableswapExecutionModel = (
+  curveData: CurvePoolEntry | undefined,
+  chainNorm: string,
+  stablecoinId: string,
+  chainAddressToId: Map<string, string>,
+) => buildCurveStableswapExecutionCapability(curveData, chainNorm, stablecoinId, chainAddressToId).executionModel;
 
 const USDC = "0x00000000000000000000000000000000000000c1";
 const USDT = "0x00000000000000000000000000000000000000c2";
@@ -106,8 +112,6 @@ function compositeCapability(
     curvePoolCandidatesByFingerprint: new Map(),
     uniV3ExecutionCandidates: new Map(),
     uniswapV4ExecutionCandidates: new Map(),
-    aerodromeV2ExecutionCandidates: new Map(),
-    uniqueAerodromeV2ExecutionCandidates: new Map(),
   } as unknown as PoolProcessingContext;
   const identity = {
     pool,

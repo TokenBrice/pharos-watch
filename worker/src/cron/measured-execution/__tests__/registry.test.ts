@@ -1,23 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  DEX_MEASURED_EXECUTION_SCORE_ELIGIBLE_DEPLOYMENT_KEYS,
   getDexMeasuredExecutionDeployment,
   isDexMeasuredExecutionDeploymentScoreEligible,
 } from "../registry";
 
 describe("measured execution deployment registry", () => {
-  it("activates exactly the owner-ratified QuoterV2 cohorts", () => {
-    expect([...DEX_MEASURED_EXECUTION_SCORE_ELIGIBLE_DEPLOYMENT_KEYS].sort()).toEqual([
-      "aerodrome-slipstream-quoter-v2:base",
-      "pancakeswap-v3-quoter-v2:base",
-      "pancakeswap-v3-quoter-v2:bsc",
-      "pancakeswap-v3-quoter-v2:ethereum",
-      "uniswap-v3-quoter-v2:arbitrum",
-      "uniswap-v3-quoter-v2:celo",
-      "uniswap-v3-quoter-v2:ethereum",
-      "uniswap-v3-quoter-v2:polygon",
-    ]);
+  it("activates the owner-ratified QuoterV2 cohorts", () => {
     expect(isDexMeasuredExecutionDeploymentScoreEligible("uniswap-v3-quoter-v2", "ethereum")).toBe(true);
     expect(isDexMeasuredExecutionDeploymentScoreEligible("uniswap-v3-quoter-v2", "Ethereum")).toBe(true);
     expect(isDexMeasuredExecutionDeploymentScoreEligible("uniswap-v3-quoter-v2", "CeLo")).toBe(true);

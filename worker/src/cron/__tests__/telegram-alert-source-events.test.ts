@@ -12,12 +12,14 @@ import {
   completeTelegramAlertSourceEvent,
   expireTelegramAlertSourceEvent,
   loadOldestIncompleteTelegramAlertSourceEvent,
-  loadTelegramSourcePresetSubscribersForChats,
   loadTelegramAlertSourceEvent,
   persistTelegramAlertSourceEvent,
-  resolveTelegramAlertSourcePresetPages,
   suppressIncomparableTelegramSafetySourceEvent,
 } from "../telegram-alert-source-events";
+import {
+  loadTelegramSourcePresetSubscribersForChats,
+  resolveTelegramAlertSourcePresetPages,
+} from "../telegram-alert-source-memberships";
 import type { TelegramAlertSnapshots } from "../telegram-alert-snapshots";
 import { materializeTelegramTargetPlanPage } from "../telegram-alert-target-plans";
 import {

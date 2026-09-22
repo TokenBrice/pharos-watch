@@ -1,4 +1,4 @@
-import { ARCHETYPE_VISUALS, type ArchetypeContent } from "./types";
+import type { ArchetypeContent } from "./types";
 
 export const content: ArchetypeContent = {
   archetype: "synthetic-delta-neutral",
@@ -130,7 +130,6 @@ export const content: ArchetypeContent = {
       label: "Cemetery: historical synthetic delta-neutral failures",
     },
   ],
-  visuals: ARCHETYPE_VISUALS["synthetic-delta-neutral"],
   decommissioned: [
     {
       name: "UXD Stablecoin",

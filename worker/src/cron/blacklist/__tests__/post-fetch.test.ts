@@ -151,6 +151,32 @@ describe("processFetchedBlacklistRows", () => {
     );
   });
 
+  it("returns canonical current-balance budget signals", async () => {
+    const duplicateRow = makePendingBlacklistRow({
+      id: "ethereum-0xduplicate-budget-0",
+      address: "0x0000000000000000000000000000000000000456",
+    });
+    const db = mockD1([
+      { match: "SELECT id FROM blacklist_events WHERE id IN", rows: [{ id: duplicateRow.id }] },
+      { match: "SELECT * FROM blacklist_events", rows: [duplicateRow as unknown as Record<string, unknown>] },
+    ], { requireMatch: true });
+    vi.mocked(syncCurrentBalanceCacheForRows).mockResolvedValue({
+      updated: 0,
+      failed: 0,
+      skippedDueBudget: 1,
+      budgetExhausted: true,
+    });
+
+    const result = await processFetchedBlacklistRows(postFetchOptions(db, [duplicateRow]));
+
+    expect(result.currentBalanceCacheCounters).toEqual({
+      updated: 0,
+      failed: 0,
+      skippedDueBudget: 1,
+      budgetExhausted: true,
+    });
+  });
+
   it("chunks duplicate repair latest-state lookups at the D1 batch limit", async () => {
     const duplicateRows = Array.from({ length: 101 }, (_, index) => makePendingBlacklistRow({
       id: `ethereum-0xduplicate-chunk-${index}`,

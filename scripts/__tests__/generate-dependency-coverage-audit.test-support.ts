@@ -22,11 +22,13 @@ export function reserveReview(overrides: Partial<ReserveReview>): ReserveReview 
 export function targetDisposition(
   targetId: string,
   expectedLifecycle: DependencyTargetDisposition["expectedLifecycle"],
+  overrides: Partial<DependencyTargetDisposition> = {},
 ): DependencyTargetDisposition {
   return {
     targetId, expectedLifecycle, action: "retain-reviewed-link",
     reviewer: "reviewer", reviewedAt: "2026-07-12",
     sources: [{ label: "Docs", url: "https://example.test/target" }],
     rationale: "Fixture reviewed unavailable target.",
+    ...overrides,
   };
 }

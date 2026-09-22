@@ -11,6 +11,11 @@ import {
 } from "../benchmarks";
 import { toErrorMessage } from "@shared/lib/error-utils";
 
+export const DETERMINISTIC_ONCHAIN_COOLDOWN_SEC = 6 * 3600;
+// Cache writers may lead the reading worker briefly during deploy/clock skew.
+// A cooldown beyond its fixed six-hour window plus this allowance is corrupt.
+const YIELD_CACHE_MAX_FUTURE_SKEW_SEC = 5 * 60;
+
 // ---------------------------------------------------------------------------
 // Coercion primitives shared by every cache submodule.
 // ---------------------------------------------------------------------------
@@ -196,7 +201,7 @@ function parseRiskFreeRateRecord(
         rate,
         recordDate: toNullableString(parsed.recordDate),
         fetchedAt: effectiveFetchedAt,
-        ageSeconds: effectiveFetchedAt != null ? Math.max(0, nowSec - effectiveFetchedAt) : null,
+        ageSeconds: effectiveFetchedAt != null ? nowSec - effectiveFetchedAt : null,
         source,
         isFallback,
         fallbackMode: toNullableString(parsed.fallbackMode),
@@ -226,7 +231,7 @@ function parseRiskFreeRateRecord(
     rate: legacyRate,
     recordDate: null,
     fetchedAt: cacheUpdatedAt,
-    ageSeconds: Math.max(0, nowSec - cacheUpdatedAt),
+    ageSeconds: nowSec - cacheUpdatedAt,
     source: "legacy-scalar",
     isFallback: legacyRate === RISK_FREE_RATE_FALLBACK,
     fallbackMode: legacyRate === RISK_FREE_RATE_FALLBACK ? "legacy-scalar-fallback" : null,
@@ -388,17 +393,27 @@ export function serializeDeterministicOnChainHealthState(
   return JSON.stringify(payload);
 }
 
-export function parseDeterministicOnChainHealthState(raw: string): DeterministicOnChainHealthState {
+export function parseDeterministicOnChainHealthState(
+  raw: string,
+  nowSec = Math.floor(Date.now() / 1000),
+): DeterministicOnChainHealthState {
   try {
     const parsed = JSON.parse(raw) as unknown;
     if (!isRecord(parsed)) {
+      return getDefaultDeterministicOnChainHealthState();
+    }
+    const cooldownUntil = toFiniteNumber(parsed.cooldownUntil);
+    if (
+      cooldownUntil != null &&
+      cooldownUntil > nowSec + DETERMINISTIC_ONCHAIN_COOLDOWN_SEC + YIELD_CACHE_MAX_FUTURE_SKEW_SEC
+    ) {
       return getDefaultDeterministicOnChainHealthState();
     }
 
     return {
       consecutiveAllFailRuns: toNonNegativeInteger(parsed.consecutiveAllFailRuns),
       consecutiveMaskedAllFailRuns: toNonNegativeInteger(parsed.consecutiveMaskedAllFailRuns),
-      cooldownUntil: toFiniteNumber(parsed.cooldownUntil),
+      cooldownUntil,
       lastAttemptedAt: toFiniteNumber(parsed.lastAttemptedAt),
       lastAllFailedAt: toFiniteNumber(parsed.lastAllFailedAt),
       lastSuccessAt: toFiniteNumber(parsed.lastSuccessAt),

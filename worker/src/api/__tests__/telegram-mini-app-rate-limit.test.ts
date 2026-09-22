@@ -87,20 +87,21 @@ describe("acquireTelegramMiniAppMutationBurst", () => {
 });
 
 describe("Mini App mutation burst privacy lifecycle", () => {
-  it("retains the active mutation burst counter during subscriber cache wipes", async () => {
+  it("erases the active mutation burst counter during subscriber cache wipes", async () => {
     const { sqlite, db } = openDb();
     try {
       sqlite.exec(`
         INSERT INTO cache (key, value, updated_at) VALUES
           ('telegram:mini-app-mutation-burst:42', '6', 1000),
           ('telegram:command-cooldown:42:/status', '1', 1000),
-          ('telegram:mini-app-mutation-burst:43', '4', 1000);
+          ('telegram:mini-app-mutation-burst:43', '4', 1000),
+          ('telegram:mini-app-mutation-burst:420', '5', 1000);
       `);
 
       await db.batch(prepareDeleteTelegramChatCacheStatements(db, "42"));
 
       expect(sqlite.prepare("SELECT key FROM cache ORDER BY key").all()).toEqual([
-        { key: "telegram:mini-app-mutation-burst:42" },
+        { key: "telegram:mini-app-mutation-burst:420" },
         { key: "telegram:mini-app-mutation-burst:43" },
       ]);
     } finally {

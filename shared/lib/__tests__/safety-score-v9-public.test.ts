@@ -14,6 +14,7 @@ import {
 import type { V9ProductionScoreTrace } from "../safety-score-v9/score";
 import {
   SafetyScoreV9AccessPostureSchema,
+  SafetyScoreV9CurrentCardSchema,
   SafetyScoreV9EvidenceSummarySchema,
   SafetyScoreV9PillarSchema,
 } from "../../types/safety-score-v9-public";
@@ -917,5 +918,70 @@ describe("Safety Score v9 public projection", () => {
         reasons: duplicateReasons,
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("Safety Score v9 public NR cap suppression", () => {
+  const materialityCap = cap({
+    source: "evidence",
+    kind: "reason:runtime-bridge-materiality-unavailable",
+    limit: 55,
+    reason: "Bridge materiality is unavailable.",
+    binding: true,
+  });
+  const notRated = () =>
+    fixture("not-rated", {
+      score: null,
+      grade: "NR",
+      pillars: { backing: null, exit: 90, control: 94 },
+      caps: [materialityCap],
+      nrReasons: [{ code: "missing-pillar", field: "pillars.backing", message: "Backing is missing." }],
+    });
+
+  it("keeps NR cap candidates as diagnostics but suppresses all binding assertions", () => {
+    const card = projectSafetyScoreV9Card(notRated());
+
+    expect(card.score).toBeNull();
+    expect(card.bindingCap).toBeNull();
+    expect(card.caps).toEqual([
+      expect.objectContaining({
+        kind: materialityCap.kind,
+        limit: materialityCap.limit,
+        source: materialityCap.source,
+        binding: false,
+      }),
+    ]);
+  });
+
+  it("keeps the rated binding cap unchanged", () => {
+    const nonBindingCap = cap({ ...materialityCap, kind: "reason:missing-peg-input", limit: 69, binding: false });
+    const card = projectSafetyScoreV9Card(
+      fixture("rated", { score: 91.8, grade: "A+", caps: [nonBindingCap, materialityCap] }),
+    );
+
+    expect(card.score).not.toBeNull();
+    expect(card.caps).toEqual([
+      expect.objectContaining({ kind: nonBindingCap.kind, source: nonBindingCap.source, limit: 69, binding: false }),
+      expect.objectContaining({
+        kind: materialityCap.kind,
+        source: materialityCap.source,
+        limit: 55,
+        binding: true,
+      }),
+    ]);
+    expect(card.bindingCap).toMatchObject({ kind: materialityCap.kind, limit: 55, binding: true });
+  });
+
+  it("rejects hand-built NR cards with a binding cap or binding candidate", () => {
+    const card = projectSafetyScoreV9Card(notRated());
+
+    expect(SafetyScoreV9CurrentCardSchema.safeParse({
+      ...card,
+      bindingCap: { ...card.caps[0]!, binding: true },
+    }).success).toBe(false);
+    expect(SafetyScoreV9CurrentCardSchema.safeParse({
+      ...card,
+      caps: card.caps.map((entry) => ({ ...entry, binding: true })),
+    }).success).toBe(false);
   });
 });

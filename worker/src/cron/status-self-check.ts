@@ -26,6 +26,7 @@ import type { CloudflareD1StatusBindings, CloudflareD1StatusConfig } from "../li
 import type { WorkerCanaryMode } from "../lib/canary-checks";
 import { refreshD1CapacityMonitoring } from "../lib/status/d1-capacity-monitor";
 import { refreshD1TableGrowthSnapshot } from "../lib/status/d1-usage";
+import { getCache, setCache } from "../lib/db-cache";
 
 interface ProbeResult {
   path: string;
@@ -129,16 +130,34 @@ const PROBE_STATUS_SEVERITY: Record<StatusLevel, number> = {
 
 const UNKNOWN_PROBE_SEVERITY = -1;
 
+/**
+ * `cron_runs` rows are pruned after one week (`prune-cron-history`), so a zero
+ * count cannot distinguish "never bootstrapped" from "dead for a week". The
+ * marker below is written the first time the producer is observed to have run
+ * and is never pruned, so only a producer that has genuinely never run keeps
+ * the bootstrap escape hatch.
+ */
+function bootstrapObservedCacheKey(producerJob: string): string {
+  return `status-self-check:bootstrap-observed:${producerJob}`;
+}
+
 export async function isBootstrapCacheMiss(db: D1Database, path: string, status: number): Promise<boolean> {
   if (status !== 503) return false;
   const producerJob = BOOTSTRAP_CACHE_PRODUCER_BY_PATH[path];
   if (!producerJob) return false;
   try {
+    const markerKey = bootstrapObservedCacheKey(producerJob);
+    if (await getCache(db, markerKey) !== null) return false;
     const row = await db
       .prepare("SELECT COUNT(*) AS cnt FROM cron_runs WHERE job = ?")
       .bind(producerJob)
       .first<{ cnt: number | null }>();
-    return (row?.cnt ?? 0) === 0;
+    if ((row?.cnt ?? 0) === 0) return true;
+    await setCache(db, markerKey, JSON.stringify({
+      job: producerJob,
+      observedAt: Math.floor(Date.now() / 1_000),
+    }));
+    return false;
   } catch {
     /* non-blocking: observability only */
     return false;
@@ -476,6 +495,7 @@ async function probePathInternally(
       execCtx: ctx,
       request,
       trustedAdmin: isAdminPath,
+      internalProbe: "status-self-check",
       mintBurnFreshnessConfig,
     });
     if (!response) {
@@ -781,9 +801,12 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
   const discrepancy = buildDiscrepancy(effectiveStatus, probeSummary, now, discrepancyState.consecutiveDivergent);
 
   return {
-    status: probeStatus === "stale" ? "degraded" : "ok",
+    // A degraded probe plane is a degraded monitoring run: the previous
+    // `stale`-only mapping reported `ok` while probes were already failing.
+    status: probeStatus === "healthy" ? "ok" : "degraded",
     itemCount: sampleCount,
     metadata: JSON.stringify({
+      ...(probeStatus === "healthy" ? {} : { reason: `probe-plane-${probeStatus}` }),
       sampleCount,
       passCount,
       failCount,

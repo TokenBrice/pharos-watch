@@ -106,6 +106,7 @@ describe("deriveModelConfidence", () => {
     feeConfidence: "fixed",
     routeStatus: "open",
     routeStatusSource: "onchain",
+    capacityUsd: 1_000_000,
     holderEligibility: "any-holder",
     sourceMode: "dynamic",
     freshnessKind: "same-run-onchain",
@@ -266,12 +267,14 @@ describe("deriveModelConfidence", () => {
     }
   });
 
-  it("pins route-status freshness detail scores", () => {
+  it("scores route-status freshness from status, source, and executable capacity", () => {
     const cases = [
-      [{ routeStatus: "open", routeStatusSource: "protocol-api" }, 100],
-      [{ routeStatus: "open", routeStatusSource: "static-config" }, 70],
-      [{ routeStatus: "unknown", routeStatusSource: "static-config" }, 30],
-      [{ routeStatus: "paused", routeStatusSource: "onchain" }, 20],
+      [{ routeStatus: "open", routeStatusSource: "protocol-api", capacityUsd: 1_000_000 }, 100],
+      [{ routeStatus: "open", routeStatusSource: "onchain", capacityUsd: 0 }, 70],
+      [{ routeStatus: "open", routeStatusSource: "onchain", capacityUsd: null }, 70],
+      [{ routeStatus: "open", routeStatusSource: "static-config", capacityUsd: 1_000_000 }, 70],
+      [{ routeStatus: "unknown", routeStatusSource: "static-config", capacityUsd: 1_000_000 }, 30],
+      [{ routeStatus: "paused", routeStatusSource: "onchain", capacityUsd: 0 }, 20],
     ] as const;
 
     for (const [overrides, expected] of cases) {

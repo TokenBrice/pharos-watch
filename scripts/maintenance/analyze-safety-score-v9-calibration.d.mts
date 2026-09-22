@@ -58,8 +58,8 @@ export function measuredAdverseFDrivers(card: unknown): Record<string, boolean>;
 
 /**
  * The re-derived D1-D6 gate metrics. Supply-weighted members are nullable and
- * read as null - not zero - when no supply is observed, so their gates fail
- * closed rather than passing vacuously.
+ * read as null - not zero - when their selected cohort contains unknown supply,
+ * so their gates fail closed rather than passing with an incomplete numerator.
  */
 export interface DistributionGateMetrics {
   materialEvidenceCoverageExTop2: number | null;
@@ -73,6 +73,7 @@ export interface DistributionGateMetrics {
   materialCohortBMinusOrBetterCount: number;
   scoreIqr: number;
 }
+export function distributionGates(metrics: DistributionGateMetrics): Record<string, boolean>;
 
 export interface DistributionSummary {
   expectedCount: number;

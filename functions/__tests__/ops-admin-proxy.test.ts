@@ -9,6 +9,7 @@ import {
   type HttpResponseObservation,
 } from "@shared/test-utils/http-response-contract";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
+import { mockUpstream } from "./helpers/mock-upstream";
 
 const { verifyAccessJwtUserIdentity } = vi.hoisted(() => ({
   verifyAccessJwtUserIdentity: vi.fn(),
@@ -43,40 +44,7 @@ function makeAuthedRequest(url: string, init: RequestInit = {}) {
   });
 }
 
-function installOpsFetch(
-  path: string,
-  body: unknown,
-  status = 200,
-  headers: Record<string, string> = {},
-) {
-  return mockFetch([{
-    match: `https://ops-api.pharos.watch${path}`,
-    body,
-    status,
-    headers,
-  }], { requireMatch: true, strictUrl: true });
-}
-
-function installOpsResponse(path: string, response: Response) {
-  return mockFetch([{
-    match: `https://ops-api.pharos.watch${path}`,
-    outcomes: [{ response }],
-  }], { requireMatch: true, strictUrl: true });
-}
-
-function installOpsError(path: string, error: Error) {
-  return mockFetch([{
-    match: `https://ops-api.pharos.watch${path}`,
-    outcomes: [error],
-  }], { requireMatch: true, strictUrl: true });
-}
-
-function installOpsTimeout(path: string) {
-  return mockFetch([{
-    match: `https://ops-api.pharos.watch${path}`,
-    outcomes: [{ stall: true }],
-  }], { requireMatch: true, strictUrl: true });
-}
+const opsApi = mockUpstream("https://ops-api.pharos.watch");
 
 function makeCookieAuthedRequest(url: string, init: RequestInit = {}) {
   const headers = new Headers(init.headers);
@@ -120,7 +88,7 @@ describe("ops admin proxy", () => {
       email: "operator@pharos.watch",
       subject: "operator-subject",
     });
-    installOpsFetch("/api/status", { z: "last", a: "first" }, 200, {
+    opsApi.json("/api/status", { z: "last", a: "first" }, 200, {
       "Cache-Control": "public, max-age=300",
     });
     const response = await onRequest(adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/status")));
@@ -182,7 +150,7 @@ describe("ops admin proxy", () => {
   });
 
   it("accepts a bootstrapped Access session cookie when the assertion header is absent", async () => {
-    const fetchSpy = installOpsFetch("/api/status", { ok: true }, 200, {
+    const fetchSpy = opsApi.json("/api/status", { ok: true }, 200, {
       "Cache-Control": "public, max-age=300",
     });
 
@@ -214,7 +182,7 @@ describe("ops admin proxy", () => {
       email: "operator@pharos.watch",
       subject: "operator-subject",
     });
-    const fetchSpy = installOpsFetch("/api/status", { ok: true });
+    const fetchSpy = opsApi.json("/api/status", { ok: true });
 
     const response = await onRequest(
       adminContext(new Request("https://ops.pharos.watch/api/admin/status", {
@@ -237,7 +205,7 @@ describe("ops admin proxy", () => {
       email: "verified@pharos.watch",
       subject: "verified-subject",
     });
-    const fetchSpy = installOpsFetch("/api/status", { ok: true });
+    const fetchSpy = opsApi.json("/api/status", { ok: true });
 
     const response = await onRequest(
       adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/status", {
@@ -293,7 +261,7 @@ describe("ops admin proxy", () => {
   });
 
   it("allowlists shared dynamic admin routes", async () => {
-    const fetchSpy = installOpsFetch("/api/api-keys/42/update", { ok: true });
+    const fetchSpy = opsApi.json("/api/api-keys/42/update", { ok: true });
 
     const response = await onRequest(
       adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/api-keys/42/update", {
@@ -357,7 +325,7 @@ describe("ops admin proxy", () => {
   });
 
   it("proxies the self-serve request admin list route", async () => {
-    const fetchSpy = installOpsFetch("/api/api-key-requests-admin?limit=1", { requests: [] });
+    const fetchSpy = opsApi.json("/api/api-key-requests-admin?limit=1", { requests: [] });
 
     const response = await onRequest(
       adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/api-key-requests-admin?limit=1")),
@@ -371,7 +339,7 @@ describe("ops admin proxy", () => {
   });
 
   it("proxies self-serve reject actions with admin and execution metadata headers", async () => {
-    const fetchSpy = installOpsFetch("/api/api-key-requests-admin/akr_abc12345/reject", { status: "rejected" }, 200, {
+    const fetchSpy = opsApi.json("/api/api-key-requests-admin/akr_abc12345/reject", { status: "rejected" }, 200, {
       "Idempotency-Key": "idem-123",
       "X-Execution-Certainty": "unknown",
       "X-Idempotent-Replay": "true",
@@ -401,7 +369,7 @@ describe("ops admin proxy", () => {
   });
 
   it("proxies self-serve release-claim actions and leaves missing admin headers to the Worker", async () => {
-    const fetchSpy = installOpsFetch(
+    const fetchSpy = opsApi.json(
       "/api/api-key-requests-admin/akr_abc12345/release-claim",
       { error: "Forbidden" },
       403,
@@ -468,7 +436,7 @@ describe("ops admin proxy", () => {
   });
 
   it("translates Cloudflare Access redirects to 502", async () => {
-    installOpsResponse(
+    opsApi.response(
       "/api/status",
       new Response(null, {
         status: 302,
@@ -483,7 +451,7 @@ describe("ops admin proxy", () => {
   });
 
   it("does not treat spoofed Cloudflare Access substrings as auth redirects", async () => {
-    installOpsResponse(
+    opsApi.response(
       "/api/status",
       new Response(null, {
         status: 302,
@@ -498,7 +466,7 @@ describe("ops admin proxy", () => {
   });
 
   it("preserves malformed upstream redirect locations", async () => {
-    installOpsResponse(
+    opsApi.response(
       "/api/status",
       new Response(null, {
         status: 302,
@@ -513,7 +481,7 @@ describe("ops admin proxy", () => {
   });
 
   it("preserves upstream Retry-After headers on degraded admin responses", async () => {
-    installOpsFetch("/api/status", { error: "temporarily unavailable" }, 503, { "Retry-After": "60" });
+    opsApi.json("/api/status", { error: "temporarily unavailable" }, 503, { "Retry-After": "60" });
 
     const response = await onRequest(adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/status")));
 
@@ -525,7 +493,7 @@ describe("ops admin proxy", () => {
 
   it("returns 502 when the upstream fetch itself fails", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    installOpsError("/api/status", new Error("network down"));
+    opsApi.error("/api/status", new Error("network down"));
 
     const response = await onRequest(adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/status")));
 
@@ -541,7 +509,7 @@ describe("ops admin proxy", () => {
     ["request-source-stats", 10_000],
   ])("times out %s at exactly %i ms", async (path, budget) => {
     vi.useFakeTimers();
-    installOpsTimeout(`/api/${path}`);
+    opsApi.stall(`/api/${path}`);
     let settled = false;
     const responsePromise = onRequest(
       adminContext(makeAuthedRequest(`https://ops.pharos.watch/api/admin/${path}`)),
@@ -560,7 +528,7 @@ describe("ops admin proxy", () => {
 
   it("keeps the timeout active while the upstream response body is read", async () => {
     vi.useFakeTimers();
-    installOpsResponse(
+    opsApi.response(
       "/api/status",
       new Response(
         new ReadableStream<Uint8Array>({

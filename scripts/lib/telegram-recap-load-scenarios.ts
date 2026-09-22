@@ -49,6 +49,36 @@ function ceilRuns(items: number, capacity: number): number {
   return items <= 0 ? 0 : Math.ceil(items / capacity);
 }
 
+export function estimateTelegramQueueEnvelope(input: {
+  plannerRuns: number;
+  pendingEnqueued: number;
+  riskChunksAhead?: number;
+  outageUnavailableSeconds?: number;
+  minimumDeliverySeconds?: number;
+}): {
+  pendingDrainRuns: number;
+  planningSeconds: number;
+  deliverySeconds: number;
+  estimatedCompletionSeconds: number;
+} {
+  const pendingDrainRuns = ceilRuns(
+    (input.riskChunksAhead ?? 0) + input.pendingEnqueued,
+    TELEGRAM_PENDING_DRAIN_BUDGET,
+  );
+  const planningSeconds = input.plannerRuns * TELEGRAM_DISPATCH_INTERVAL_SEC;
+  const deliverySeconds = Math.max(
+    pendingDrainRuns * TELEGRAM_DISPATCH_INTERVAL_SEC,
+    input.minimumDeliverySeconds ?? 0,
+  );
+  return {
+    pendingDrainRuns,
+    planningSeconds,
+    deliverySeconds,
+    estimatedCompletionSeconds:
+      planningSeconds + deliverySeconds + (input.outageUnavailableSeconds ?? 0),
+  };
+}
+
 function buildRecapScenario(input: {
   targetRecipients: number;
   scenarioId: TelegramRecapLoadScenarioId;
@@ -64,12 +94,13 @@ function buildRecapScenario(input: {
     ? 1
     : ceilRuns(input.targetRecipients, TELEGRAM_RECAP_MAX_RECIPIENTS_PER_RUN);
   const riskChunksAhead = input.riskChunksAhead ?? 0;
-  const pendingDrainRuns = ceilRuns(riskChunksAhead + input.pendingEnqueued, TELEGRAM_PENDING_DRAIN_BUDGET);
-  const planningSeconds = plannerRuns * TELEGRAM_DISPATCH_INTERVAL_SEC;
-  const drainSeconds = pendingDrainRuns * TELEGRAM_DISPATCH_INTERVAL_SEC;
-  // The planner is sequenced after dispatch. Summing the bounds is deliberately
-  // conservative: production overlaps planning with earlier pending drains.
-  const estimatedCompletionSeconds = planningSeconds + drainSeconds + (input.outageUnavailableSeconds ?? 0);
+  const queueEnvelope = estimateTelegramQueueEnvelope({
+    plannerRuns,
+    pendingEnqueued: input.pendingEnqueued,
+    riskChunksAhead,
+    outageUnavailableSeconds: input.outageUnavailableSeconds,
+  });
+  const { pendingDrainRuns, estimatedCompletionSeconds } = queueEnvelope;
   const ttlMarginSeconds = TELEGRAM_RECAP_TTL_SEC - estimatedCompletionSeconds;
   const plannerRecipientsInPeakRun = input.staleGlobalGate
     ? 0

@@ -12,145 +12,6 @@ import {
   isDexCensusAttemptComplete,
   type DexCensusAttemptResult,
 } from "../dex-deployment-coverage";
-import {
-  DEX_EXECUTION_PERSISTENCE_MODE,
-  DEX_EXECUTION_PROFILE_SCHEMA_VERSION,
-  DEX_EXECUTION_TARGET_SCHEMA_VERSION,
-  DEX_MEASURED_TARGET_SCHEMA_VERSION,
-  DexExecutionProfileV2Schema,
-  DexExecutionTargetV2Schema,
-  projectDexExecutionProfileToV1,
-  projectDexExecutionTargetToV1,
-  projectDexMeasuredExecutionProfileToV2,
-  projectDexMeasuredExecutionTargetToV2,
-  type DexMeasuredExecutionProfile,
-  type DexMeasuredExecutionTarget,
-} from "../../types/measured-execution";
-import { profile } from "./dex-measured-execution.test-support";
-
-const address = (digit: string) => `0x${digit.repeat(40)}` as `0x${string}`;
-const hash = (digit: string) => `0x${digit.repeat(64)}` as `0x${string}`;
-
-function v1Target(): DexMeasuredExecutionTarget {
-  return {
-    schemaVersion: DEX_MEASURED_TARGET_SCHEMA_VERSION,
-    targetId: "dex-measured-target-v1|uniswap-v3-quoter-v2|usdc-circle|ethereum|uniswap-v3|ethereum:0x1111111111111111111111111111111111111111|0x2222222222222222222222222222222222222222|0x3333333333333333333333333333333333333333|0x2222222222222222222222222222222222222222|0x3333333333333333333333333333333333333333|500",
-    stablecoinId: "usdc-circle",
-    adapterProfileId: "uniswap-v3-quoter-v2",
-    protocol: "uniswap-v3",
-    chain: "ethereum",
-    poolId: `ethereum:${address("1")}`,
-    poolTokenAddresses: [address("2"), address("3")],
-    tokenIn: { address: address("2"), symbol: "USDC", decimals: 6, referencePriceUsd: 1, trackedAssetId: "usdc-circle" },
-    tokenOut: { address: address("3"), symbol: "USDT", decimals: 6, referencePriceUsd: 1, trackedAssetId: "usdt-tether" },
-    feePips: 500,
-    retainedTvlUsd: 1_000_000,
-    retainedPoolPriceUsd: 1,
-    capturedAt: 1_800_000_000,
-  };
-}
-
-function v1Profile(target: DexMeasuredExecutionTarget): DexMeasuredExecutionProfile {
-  return profile(target.capturedAt + 120, target, {
-    blockNumber: 20_000_000,
-    executionEndpoint: { address: address("4"), codeHash: hash("a") },
-    capacityCurve: [100_000, 1_000_000, 10_000_000, 25_000_000].map((requestedNotionalUsd) => ({
-      requestedNotionalUsd,
-      maxCostBps: 200,
-      executableUsd: 0,
-      completionRatio: 0,
-    })),
-    quoteProof: [{
-      amountInRaw: "1000000000",
-      amountOutRaw: "999000000",
-      callData: "0x01",
-      returnData: "0x01",
-      inputUsd: 1_000,
-      outputUsd: 999,
-      costBps: 10,
-      passesCostBound: true,
-    }],
-  });
-}
-
-describe("DEX execution V2 envelopes", () => {
-  it("keeps active persistence V1-compatible and losslessly projects legacy EVM rows", () => {
-    const target = v1Target();
-    const profile = v1Profile(target);
-    const targetV2 = projectDexMeasuredExecutionTargetToV2(target);
-    const profileV2 = projectDexMeasuredExecutionProfileToV2(profile);
-
-    expect(DEX_EXECUTION_PERSISTENCE_MODE).toBe("v1-compatible-dual-read");
-    expect(targetV2.schemaVersion).toBe(DEX_EXECUTION_TARGET_SCHEMA_VERSION);
-    expect(profileV2.schemaVersion).toBe(DEX_EXECUTION_PROFILE_SCHEMA_VERSION);
-    expect(projectDexExecutionTargetToV1(targetV2)).toEqual(target);
-    expect(projectDexExecutionProfileToV1(profileV2)).toEqual(profile);
-  });
-
-  it("accepts native Solana identities without EVM placeholders", () => {
-    const solanaIdentity = "11111111111111111111111111111111";
-    const target = DexExecutionTargetV2Schema.parse({
-      schemaVersion: DEX_EXECUTION_TARGET_SCHEMA_VERSION,
-      targetId: "solana:orca:pool:direction",
-      adapterId: "solana-clmm",
-      profileId: "orca-whirlpool-exact-v1",
-      identity: {
-        stablecoinId: "usdc-circle",
-        protocol: "orca",
-        chain: "solana",
-        poolId: solanaIdentity,
-        tokenIn: { identity: solanaIdentity, symbol: "USDC", decimals: 6, referencePriceUsd: 1, trackedAssetId: "usdc-circle" },
-        tokenOut: { identity: solanaIdentity, symbol: "USDT", decimals: 6, referencePriceUsd: 1 },
-      },
-      retainedTvlUsd: 1_000_000,
-      retainedPoolPriceUsd: 1,
-      capturedAt: 1_800_000_000,
-      payload: {
-        platform: "solana",
-        poolAccount: solanaIdentity,
-        programId: solanaIdentity,
-        tokenMintIn: solanaIdentity,
-        tokenMintOut: solanaIdentity,
-        stateAccounts: [solanaIdentity],
-        tickArrayAccounts: [solanaIdentity],
-      },
-    });
-    expect(target.payload.platform).toBe("solana");
-    expect(projectDexExecutionTargetToV1(target)).toBeNull();
-    const nativeProfile = {
-      ...target,
-      schemaVersion: DEX_EXECUTION_PROFILE_SCHEMA_VERSION,
-      kind: "measured-executable-depth",
-      targetGenerationId: "targets-1",
-      quoteGenerationId: "quotes-1",
-      retainedTvlUsdAtQuote: 1_000_000,
-      retainedPoolPriceUsdAtQuote: 1,
-      quotedAt: target.capturedAt,
-      maxCostBps: 200,
-      demandedInputAmountsUsd: [1_000],
-      outputAmountsUsd: [999],
-      capacityCurve: v1Profile(v1Target()).capacityCurve,
-      payload: {
-        ...target.payload,
-        slot: 123,
-        blockHash: solanaIdentity,
-        accountProof: [{ account: solanaIdentity, owner: solanaIdentity, dataHash: "ab".repeat(32) }],
-      },
-    };
-    const parsed = DexExecutionProfileV2Schema.parse(nativeProfile);
-    expect(parsed.payload).toMatchObject({
-      platform: "solana", slot: 123, blockHash: solanaIdentity,
-      accountProof: [{ account: solanaIdentity, owner: solanaIdentity, dataHash: "ab".repeat(32) }],
-    });
-    expect(projectDexExecutionProfileToV1(parsed)).toBeNull();
-    expect(DexExecutionProfileV2Schema.safeParse({
-      ...nativeProfile, payload: { ...nativeProfile.payload, accountProof: [] },
-    }).success).toBe(false);
-    expect(DexExecutionProfileV2Schema.safeParse({
-      ...nativeProfile, outputAmountsUsd: [999, 998],
-    }).success).toBe(false);
-  });
-});
 
 describe("DEX capability gates", () => {
   it("predeclares current and future profile slots without admitting shadow profiles", () => {
@@ -166,20 +27,18 @@ describe("DEX capability gates", () => {
     const active = getDexExecutionCapabilityRegistration("uniswap-v3-quoter-v2")!;
     const shadow = getDexExecutionCapabilityRegistration("orca-whirlpool-exact-v1")!;
     expect(isDexExecutionProfileAdmittedForScoring({ adapterProfileId: active.profileId, chain: "ethereum" }, active)).toBe(true);
-    expect(isDexExecutionProfileAdmittedForScoring({ profileId: shadow.profileId, identity: { chain: "solana" } }, shadow)).toBe(false);
+    expect(isDexExecutionProfileAdmittedForScoring({ adapterProfileId: shadow.profileId, chain: "solana" }, shadow)).toBe(false);
   });
 
-  it("normalizes both profile shapes while independently enforcing identity, chain, lifecycle and deployment", () => {
+  it("normalizes the profile chain while independently enforcing identity, chain, lifecycle and deployment", () => {
     const active = getDexExecutionCapabilityRegistration("uniswap-v3-quoter-v2")!;
-    const legacy = { adapterProfileId: active.profileId, chain: " Ethereum " };
-    const native = { profileId: active.profileId, identity: { chain: " Ethereum " } };
-    expect(isDexExecutionProfileAdmittedForScoring(legacy, active)).toBe(true);
-    expect(isDexExecutionProfileAdmittedForScoring(native, active)).toBe(true);
-    expect(isDexExecutionProfileAdmittedForScoring({ ...legacy, adapterProfileId: "other" }, active)).toBe(false);
-    expect(isDexExecutionProfileAdmittedForScoring({ ...native, identity: { chain: "solana" } }, active)).toBe(false);
-    expect(isDexExecutionProfileAdmittedForScoring(legacy, { ...active, lifecycle: "disabled" })).toBe(false);
-    expect(isDexExecutionProfileAdmittedForScoring(legacy, { ...active, eligibleDeploymentKeys: [] })).toBe(false);
-    expect(isDexExecutionProfileAdmittedForScoring(native, {
+    const profile = { adapterProfileId: active.profileId, chain: " Ethereum " };
+    expect(isDexExecutionProfileAdmittedForScoring(profile, active)).toBe(true);
+    expect(isDexExecutionProfileAdmittedForScoring({ ...profile, adapterProfileId: "other" }, active)).toBe(false);
+    expect(isDexExecutionProfileAdmittedForScoring({ ...profile, chain: "solana" }, active)).toBe(false);
+    expect(isDexExecutionProfileAdmittedForScoring(profile, { ...active, lifecycle: "disabled" })).toBe(false);
+    expect(isDexExecutionProfileAdmittedForScoring(profile, { ...active, eligibleDeploymentKeys: [] })).toBe(false);
+    expect(isDexExecutionProfileAdmittedForScoring(profile, {
       ...active, eligibleDeploymentKeys: [`${active.profileId}:ethereum`],
     })).toBe(true);
   });

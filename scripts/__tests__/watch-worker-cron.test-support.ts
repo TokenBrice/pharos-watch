@@ -1,5 +1,5 @@
 export const optionalTables = [
-  "worker_job_attempts", "worker_repair_tasks", "worker_canary_runs", "surface_publication_generations",
+  "worker_repair_tasks", "worker_canary_runs", "surface_publication_generations",
 ];
 
 export function snapshotSelector({
@@ -9,7 +9,7 @@ export function snapshotSelector({
   const rows: Record<string, Record<string, unknown>[]> = {
     cron_runs: [{ job: "sync-stablecoins", status: "ok" }],
     cron_slot_executions: [], cron_leases: [], cron_run_progress: [],
-    worker_job_attempts: [], worker_repair_tasks: [], worker_canary_runs: [],
+    worker_repair_tasks: [], worker_canary_runs: [],
     surface_publication_generations: [],
     dex_liquidity_publication_generations: [{ generation_id: "dex-retained", state: "published" }],
     yield_publication_generations: [{ generation_id: "yield-retained", state: "published" }],

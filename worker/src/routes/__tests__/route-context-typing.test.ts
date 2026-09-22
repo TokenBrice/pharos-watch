@@ -5,7 +5,7 @@ import type { TelegramCreds } from "../../lib/telegram";
 import { makeScheduledEnv } from "../../test-helpers/scheduled-runtime.test-support";
 import { buildRouteContext } from "../../handlers/http/context";
 import { DYNAMIC_ADMIN_ROUTE_HANDLER_KEYS, getDynamicRouteMatch } from "../dynamic-routes";
-import { getRouteDependencies } from "../registry";
+import { getRouteMatch } from "../registry";
 import { defineDynamicRoute, defineStaticRoute, type RouteContextFor } from "../shared";
 import {
   DYNAMIC_ENDPOINT_DESCRIPTORS,
@@ -164,7 +164,7 @@ describe("route context typing", () => {
 
   it("keeps static route dependency mapping centralized", () => {
     for (const policy of STATIC_ENDPOINT_DEPENDENCY_HYDRATION_POLICIES) {
-      expect(getRouteDependencies(policy.path), policy.key).toEqual(policy.dependencies);
+      expect(getRouteMatch(policy.path)?.dependencies, policy.key).toEqual(policy.dependencies);
     }
   });
 

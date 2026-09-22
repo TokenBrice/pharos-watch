@@ -526,28 +526,50 @@ const V9RouteOutputV2Schema = z
  */
 
 /** Reviewed SLA bound on settlement completion; null encodes a reviewed "no SLA evidence". */
-export const V9RouteSettlementSlaSecSchema = z.number().int().nonnegative().nullable();
+const V9RouteSettlementSlaSecSchema = z.number().int().nonnegative().nullable();
 
 /** Reviewed USD settlement quantity; absent when unreviewed, null when reviewed as unavailable. */
-export const V9RouteSettlementUsdAmountSchema = NonNegativeUsdSchema.nullable().optional();
+const V9RouteSettlementUsdAmountSchema = NonNegativeUsdSchema.nullable().optional();
 
-const V9ExitRouteFactV2Schema = z
+/**
+ * Reviewed route facts shared by the compiled exit-route fact
+ * (`V9ExitRouteFactV2`) and the producer-side route review
+ * (`worker/src/lib/safety-score-v9/fact-set-schema.ts`), so the producer's
+ * accepted/rejected set cannot drift from the published fact contract. The
+ * producer extends this fragment and keeps its producer-only overlays local;
+ * the compiled fact extends it with the compiled-only fields and checks below.
+ */
+export const V9ExitRouteFactBaseSchema = z
   .object({
-    routeKey: CanonicalTextSchema,
     routeId: CanonicalTextSchema,
     lane: V9RouteLaneSchema,
-    sourceGenerationId: CanonicalTextSchema,
-    routeFamily: ExitRouteFamilySchema,
     holderAccess: V9RouteHolderAccessSchema,
     executionModel: V9RouteExecutionModelSchema,
     executionCertainty: V9RouteExecutionCertaintySchema,
-    // Retained schema-v2 facts predate this field. Parse them conservatively;
-    // current compilers still materialize the normalized value in their output.
+    // Retained schema-v2 facts and route reviews predate this field. Parse them
+    // conservatively; current compilers still materialize the normalized value
+    // in their output.
     modelConfidence: z.enum(["high", "medium", "low"]).default("low"),
+    coverageClass: V9RouteCoverageClassSchema,
+    capacityScoringHorizon: RedemptionCapacityScoringHorizonSchema.optional(),
+    settlementModel: V9RouteSettlementModelSchema,
+    settlementSlaSec: V9RouteSettlementSlaSecSchema,
+    queueDepthUsd: V9RouteSettlementUsdAmountSchema,
+    dailyLimitUsd: V9RouteSettlementUsdAmountSchema,
+    minRedeemUsd: V9RouteSettlementUsdAmountSchema,
+    physicalResourceKeys: CanonicalStringArraySchema,
+    failureDomains: CanonicalFailureDomainsSchema,
+  })
+  .strict();
+
+const V9ExitRouteFactV2Schema = V9ExitRouteFactBaseSchema
+  .extend({
+    routeKey: CanonicalTextSchema,
+    sourceGenerationId: CanonicalTextSchema,
+    routeFamily: ExitRouteFamilySchema,
     observationConfidence: ExitRouteConfidenceSchema,
     observationHistory: ExitRouteObservationHistorySchema.nullable().optional(),
     evidenceKind: ExitRouteEvidenceKindSchema,
-    coverageClass: V9RouteCoverageClassSchema,
     /** Carried from the route observation: the reviewed fee is undisclosed, so the modeled capacity has no cost bound. */
     feeEvidence: z.literal("undisclosed-reviewed").optional(),
     /**
@@ -556,20 +578,12 @@ const V9ExitRouteFactV2Schema = z
      * rather than a measurement. Retained schema-v2 facts predate this field.
      */
     settlementBoundUnproven: z.boolean().optional(),
-    capacityScoringHorizon: RedemptionCapacityScoringHorizonSchema.optional(),
-    settlementModel: V9RouteSettlementModelSchema,
-    settlementSlaSec: V9RouteSettlementSlaSecSchema,
-    queueDepthUsd: V9RouteSettlementUsdAmountSchema,
-    dailyLimitUsd: V9RouteSettlementUsdAmountSchema,
-    minRedeemUsd: V9RouteSettlementUsdAmountSchema,
     settlementEvidenceRefIds: CanonicalStringArraySchema,
-    physicalResourceKeys: CanonicalStringArraySchema,
     status: V9FactStatusV2Schema,
     scoreEligible: z.boolean(),
     request: V9RouteRequestV2Schema.nullable(),
     capacityCurve: CanonicalCapacityCurveSchema,
     output: V9RouteOutputV2Schema,
-    failureDomains: CanonicalFailureDomainsSchema,
   })
   .strict()
   .superRefine((route, ctx) => {
@@ -644,7 +658,7 @@ export type V9ExitRouteFactV2 = z.infer<typeof V9ExitRouteFactV2Schema>;
  * authority-ladder rung cannot diverge between review validation and the
  * published fact contract.
  */
-export const V9ControlAuthoritySchema = z
+const V9ControlAuthoritySchema = z
   .object({
     authorityKey: CanonicalTextSchema,
     // AUTHORITY-LADDER 9.46: `validator-quorum` is an external
@@ -672,26 +686,32 @@ export const V9ControlAuthoritySchema = z
 /** Reviewed key-custody attestation for the authority holding this control. An
  * attested MPC/HSM key is an operationally different object from a bare
  * externally-owned key even though both present as one address on chain. */
-export const V9KeyCustodySchema = z.enum(["mpc", "hsm", "unknown"]).default("unknown");
+const V9KeyCustodySchema = z.enum(["mpc", "hsm", "unknown"]).default("unknown");
 
 /** Reviewed Safe module/guard surface. "none-detected" is positive evidence that
  * no side-door module bypasses the quorum; "present" is a reviewed extension
  * surface; "unknown" fails conservative. */
-export const V9ModulesOrGuardsSchema = z.enum(["present", "none-detected", "not-applicable", "unknown"]).default("unknown");
+const V9ModulesOrGuardsSchema = z.enum(["present", "none-detected", "not-applicable", "unknown"]).default("unknown");
 
-export const V9IncidentStateSchema = z.enum(["none", "active", "resolved", "unknown"]);
+const V9IncidentStateSchema = z.enum(["none", "active", "resolved", "unknown"]);
 
-const V9DeploymentControlFactV2Schema = z
+/**
+ * Reviewed control posture shared by the compiled control fact
+ * (`V9DeploymentControlFactV2`) and the producer-side control review overlay
+ * (`worker/src/lib/safety-score-v9/fact-set-schema.ts`): every compiled field
+ * except the two the compiler adds (`sourceGenerationId`, `status`). The
+ * producer extends this fragment instead of re-declaring the shape, and the
+ * compiled fact extends it with the compiled-only fields and checks below.
+ */
+export const V9DeploymentControlFactBaseSchema = z
   .object({
     controlKey: CanonicalTextSchema,
     deploymentKey: CanonicalTextSchema,
-    sourceGenerationId: CanonicalTextSchema,
     // Optional only for retained fact compatibility. Current compilers emit
     // the tracked native asset that owns a reused controller when reviewed.
     controllerAssetId: CanonicalTextSchema.nullable().optional(),
     controlKind: V9ControlKindSchema,
     scope: V9ControlScopeSchema,
-    status: V9FactStatusV2Schema,
     capabilities: canonicalArrayBy(V9ControlCapabilitySchema, (capability) => capability),
     capSemantics: V9ControlCapSemanticsSchema,
     claimImpairment: V9ClaimImpairmentSchema,
@@ -707,6 +727,13 @@ const V9DeploymentControlFactV2Schema = z
     modulesOrGuards: V9ModulesOrGuardsSchema,
     incidentState: V9IncidentStateSchema,
     failureDomains: CanonicalFailureDomainsSchema,
+  })
+  .strict();
+
+const V9DeploymentControlFactV2Schema = V9DeploymentControlFactBaseSchema
+  .extend({
+    sourceGenerationId: CanonicalTextSchema,
+    status: V9FactStatusV2Schema,
   })
   .strict()
   .superRefine((control, ctx) => {

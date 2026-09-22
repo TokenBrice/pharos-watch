@@ -16,37 +16,12 @@ export const REDEMPTION_BACKSTOP_PROVIDER_IDS = {
 export type RedemptionBackstopProviderId =
   (typeof REDEMPTION_BACKSTOP_PROVIDER_IDS)[keyof typeof REDEMPTION_BACKSTOP_PROVIDER_IDS];
 
-export type RedemptionBackstopProviderCapability =
-  | "capacity-source"
-  | "failure-sentinel";
-
-export type RedemptionBackstopProviderCapacitySource =
-  | "supply-full"
-  | "supply-ratio"
-  | "fixed-usd"
-  | "live-reserve-metadata"
-  | "configured-fallback-ratio"
-  | "none";
-
-export type RedemptionBackstopProviderProvenanceClass =
-  | "static-supply-model"
-  | "live-reserve-adapter"
-  | "reviewed-config-fallback"
-  | "runtime-error";
-
-export type RedemptionBackstopProviderSevereDepegScoreability =
-  | "not-scoreable"
-  | "requires-strong-live-direct-route";
 
 export interface RedemptionBackstopProviderDefinition {
   id: RedemptionBackstopProviderId;
-  capability: RedemptionBackstopProviderCapability;
-  capacitySource: RedemptionBackstopProviderCapacitySource;
   defaultSourceMode: RedemptionSourceMode;
-  provenanceClass: RedemptionBackstopProviderProvenanceClass;
   defaultCapacityConfidence: RedemptionCapacityConfidence;
   defaultCapacitySemantics: RedemptionCapacitySemantics;
-  severeDepegScoreability: RedemptionBackstopProviderSevereDepegScoreability;
   readbackCapacityConfidenceBySourceMode?: Partial<
     Record<RedemptionSourceMode, RedemptionCapacityConfidence>
   >;
@@ -58,43 +33,27 @@ export const REDEMPTION_BACKSTOP_PROVIDER_DEFINITIONS: Record<
 > = {
   [REDEMPTION_BACKSTOP_PROVIDER_IDS.SUPPLY_FULL_MODEL]: {
     id: REDEMPTION_BACKSTOP_PROVIDER_IDS.SUPPLY_FULL_MODEL,
-    capability: "capacity-source",
-    capacitySource: "supply-full",
     defaultSourceMode: "estimated",
-    provenanceClass: "static-supply-model",
     defaultCapacityConfidence: "heuristic",
     defaultCapacitySemantics: "eventual-only",
-    severeDepegScoreability: "not-scoreable",
   },
   [REDEMPTION_BACKSTOP_PROVIDER_IDS.SUPPLY_RATIO_MODEL]: {
     id: REDEMPTION_BACKSTOP_PROVIDER_IDS.SUPPLY_RATIO_MODEL,
-    capability: "capacity-source",
-    capacitySource: "supply-ratio",
     defaultSourceMode: "estimated",
-    provenanceClass: "static-supply-model",
     defaultCapacityConfidence: "heuristic",
     defaultCapacitySemantics: "immediate-bounded",
-    severeDepegScoreability: "not-scoreable",
   },
   [REDEMPTION_BACKSTOP_PROVIDER_IDS.FIXED_USD_MODEL]: {
     id: REDEMPTION_BACKSTOP_PROVIDER_IDS.FIXED_USD_MODEL,
-    capability: "capacity-source",
-    capacitySource: "fixed-usd",
     defaultSourceMode: "static",
-    provenanceClass: "reviewed-config-fallback",
     defaultCapacityConfidence: "documented-bound",
     defaultCapacitySemantics: "immediate-bounded",
-    severeDepegScoreability: "not-scoreable",
   },
   [REDEMPTION_BACKSTOP_PROVIDER_IDS.RESERVE_SYNC_METADATA]: {
     id: REDEMPTION_BACKSTOP_PROVIDER_IDS.RESERVE_SYNC_METADATA,
-    capability: "capacity-source",
-    capacitySource: "live-reserve-metadata",
     defaultSourceMode: "dynamic",
-    provenanceClass: "live-reserve-adapter",
     defaultCapacityConfidence: "dynamic",
     defaultCapacitySemantics: "immediate-bounded",
-    severeDepegScoreability: "requires-strong-live-direct-route",
     readbackCapacityConfidenceBySourceMode: {
       dynamic: "dynamic",
       estimated: "heuristic",
@@ -103,23 +62,15 @@ export const REDEMPTION_BACKSTOP_PROVIDER_DEFINITIONS: Record<
   },
   [REDEMPTION_BACKSTOP_PROVIDER_IDS.RESERVE_SYNC_FALLBACK]: {
     id: REDEMPTION_BACKSTOP_PROVIDER_IDS.RESERVE_SYNC_FALLBACK,
-    capability: "capacity-source",
-    capacitySource: "configured-fallback-ratio",
     defaultSourceMode: "estimated",
-    provenanceClass: "reviewed-config-fallback",
     defaultCapacityConfidence: "heuristic",
     defaultCapacitySemantics: "immediate-bounded",
-    severeDepegScoreability: "not-scoreable",
   },
   [REDEMPTION_BACKSTOP_PROVIDER_IDS.SYNC_ERROR]: {
     id: REDEMPTION_BACKSTOP_PROVIDER_IDS.SYNC_ERROR,
-    capability: "failure-sentinel",
-    capacitySource: "none",
     defaultSourceMode: "static",
-    provenanceClass: "runtime-error",
     defaultCapacityConfidence: "heuristic",
     defaultCapacitySemantics: "immediate-bounded",
-    severeDepegScoreability: "not-scoreable",
   },
 };
 
@@ -170,6 +121,6 @@ export function inferProviderCapacitySemantics(args: {
 }): RedemptionCapacitySemantics {
   return (
     getRedemptionBackstopProviderDefinition(args.provider)?.defaultCapacitySemantics ??
-    "immediate-bounded"
+    "eventual-only"
   );
 }

@@ -9,9 +9,6 @@ import {
 import type { PoolProcessingRejection } from "./process-pool-types";
 import type { LiquidityFallbackCounters } from "./types";
 
-export type { DexLiquidityPostScoreAnalysis } from "./orchestrator-analysis";
-export { analyzeDexLiquidityPostScoring } from "./orchestrator-analysis";
-
 export function isDexLiquidityDegraded(params: {
   criticalSourceFailures: string[];
   poolRejections?: PoolProcessingRejection[];
@@ -77,10 +74,10 @@ export function buildDexLiquidityCronMetadata(params: {
   challengerPublication: {
     publishedStablecoins: number;
     skippedStablecoins: number;
-    missingTables: boolean;
   };
   dexPriceDiagnostics: DexPricePersistenceDiagnostics;
   failedSources: string[];
+  degradedSources?: string[];
   fallbackSignals: string[];
   fallbackCounters: LiquidityFallbackCounters;
   persistence: PersistScoresResult;
@@ -122,9 +119,9 @@ export function buildDexLiquidityCronMetadata(params: {
       ...params.sourceCoverage,
       challengerSnapshotsPublished: params.challengerPublication.publishedStablecoins,
       challengerSnapshotsSkipped: params.challengerPublication.skippedStablecoins,
-      challengerSnapshotTablesMissing: params.challengerPublication.missingTables,
     },
     failedSources: [...new Set(params.failedSources)],
+    degradedSources: [...new Set(params.degradedSources ?? [])],
     dexPriceDiagnostics: params.dexPriceDiagnostics,
     fallbackMode: [...new Set(params.fallbackSignals)],
     fallbackCounters: params.fallbackCounters,
@@ -147,6 +144,5 @@ export function buildDexLiquidityCronMetadata(params: {
       historicalSnapshotRowsPruned: params.historicalSnapshot.historyRowsPruned,
       historicalSnapshotRetentionPruneFailed: params.historicalSnapshot.retentionPruneFailed,
     },
-    validationFailures: rejectedPoolCount,
   };
 }

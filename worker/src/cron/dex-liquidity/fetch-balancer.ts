@@ -231,10 +231,8 @@ function formatGraphqlErrors(errors: unknown): string[] {
 }
 
 function extractBalancerPoolAddress(pool: Pick<BalancerPool, "id" | "address">): string {
-  const directAddress = pool.address?.trim();
-  if (directAddress && /^0x[a-f0-9]{40}$/i.test(directAddress)) {
-    return directAddress.toLowerCase();
-  }
+  const directAddress = canonicalEvmAddress(pool.address);
+  if (directAddress) return directAddress;
 
   const poolId = pool.id.trim();
   if (/^0x[a-f0-9]{64}$/i.test(poolId)) {
@@ -242,10 +240,6 @@ function extractBalancerPoolAddress(pool: Pick<BalancerPool, "id" | "address">):
   }
 
   return poolId.toLowerCase();
-}
-
-function isCanonicalEvmAddress(value: string): boolean {
-  return /^0x[a-f0-9]{40}$/.test(value.trim().toLowerCase());
 }
 
 /** Fetch reviewed exact-capability membership and stable amp without throwing on non-abort errors. */
@@ -314,7 +308,7 @@ function captureGateForPool(
   parsedBalances: readonly number[],
   parsedFee: number,
 ): BalancerExecutionCapabilityGate | null {
-  if (!isCanonicalEvmAddress(poolAddress)) {
+  if (canonicalEvmAddress(poolAddress) === null) {
     return balancerGate("incomplete-exact-capture");
   }
   if (pool.dynamicData.isPaused === true || pool.dynamicData.swapEnabled === false) {
@@ -337,7 +331,7 @@ function captureGateForPool(
   if (modeledTokens.length < 2) return balancerGate("incomplete-exact-capture");
   if (modeledTokens.length > 8) return balancerGate("unsupported-invariant");
   if (modeledTokens.some((token) =>
-    !isCanonicalEvmAddress(token.address) ||
+    canonicalEvmAddress(token.address) === null ||
     !token.symbol.trim() ||
     !Number.isInteger(token.decimals) ||
     token.decimals < 0 ||

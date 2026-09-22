@@ -21,7 +21,7 @@ import {
   reserveDegradedWarning,
   slicesFromValues,
 } from "./helpers";
-import { decodeAddressWord, decodeBoolWord, decodeUint256Word } from "./abi-decode";
+import { decodeAddressWord, decodeStrictBoolWord, decodeUint256Word } from "./abi-decode";
 import { normalizeEvmAddress } from "./evm";
 import { validateDecimals } from "./slice-math";
 import { pinnedBlockPlan } from "./evm-observation-plan";
@@ -92,7 +92,7 @@ function decodeDecimals(raw: bigint | null, context: string): number {
 }
 
 function decodeBoolResult(raw: string | null): boolean | null {
-  return decodeBoolWord(raw);
+  return decodeStrictBoolWord(raw);
 }
 
 function buildRedemptionTelemetry(
@@ -110,17 +110,19 @@ function buildRedemptionTelemetry(
   const supplyUsd = decimalNumberFromBigInt(totalSupply, rTokenDecimals);
   if (!Number.isFinite(capacityUsd) || !Number.isFinite(supplyUsd)) return undefined;
 
-  const basketSound = fullyCollateralized && basketStatus === COLLATERAL_STATUS_SOUND;
+  const routeOpen = fullyCollateralized
+    && basketStatus === COLLATERAL_STATUS_SOUND
+    && capacityRaw > 0n;
   return {
     capacityUsd,
     ...(supplyUsd > 0 ? { capacityRatioOfSupply: capacityUsd / supplyUsd } : {}),
     capacityKind: "live-direct",
     freshnessKind: "same-run-onchain",
-    routeStatus: basketSound ? "open" : "degraded",
+    routeStatus: routeOpen ? "open" : "degraded",
     routeStatusSource: "onchain",
-    routeStatusReason: basketSound
+    routeStatusReason: routeOpen
       ? `Reserve Protocol RToken redemptionAvailable() throttle read returned ${redemptionAvailable} raw units; capacity is capped by totalSupply() at ${capacityRaw} raw units`
-      : `Reserve Protocol RToken redemptionAvailable() throttle read returned ${redemptionAvailable} raw units, but basket status is ${basketStatus} and fullyCollateralized() is ${fullyCollateralized}`,
+      : `Reserve Protocol RToken redemptionAvailable() throttle read returned ${redemptionAvailable} raw units, while basket status is ${basketStatus} and fullyCollateralized() is ${fullyCollateralized}`,
     holderEligibility: "any-holder",
     settlementDelaySec: 0,
     sourceUrls: [`https://eth.blockscout.com/address/${rTokenAddress}`],

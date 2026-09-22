@@ -61,6 +61,9 @@ describe("NonUsdShareChart", () => {
     expect(screen.getByRole("button", { name: "1Y" }).getAttribute("aria-pressed")).toBe("true");
     expect(screen.getByText(/coverage starts/i)).toBeTruthy();
     expect(screen.getByText(/non-commodity bucket includes currency-linked plus other non-commodity pegs/i)).toBeTruthy();
+    expect(
+      screen.getByRole("table", { name: /share of total stablecoin market outside usd over 1 points/i }),
+    ).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: /open large share chart/i }));
     expect(onOpenFocus).toHaveBeenCalledWith("1y");

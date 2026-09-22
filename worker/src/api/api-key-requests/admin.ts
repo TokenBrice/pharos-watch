@@ -1,3 +1,5 @@
+import { z } from "zod";
+import { ApiKeySelfServeClaimStatusSchema, ApiKeySelfServeStatusSchema } from "@shared/types/api-key-requests";
 import type {
   ApiKeySelfServeAdminMutationResponse,
   ApiKeySelfServeClaimStatus,
@@ -35,34 +37,146 @@ const ADMIN_REQUEST_WITH_KEY_STATE_SELECT = `SELECT
      LEFT JOIN api_key_self_serve_email_claims c ON c.request_id = r.request_id
      LEFT JOIN api_keys k ON k.id = r.api_key_id`;
 
+/**
+ * Narrow decoder for the admin join. The browser parses the whole list response
+ * strictly, so one malformed row is quarantined here (rule R8) instead of
+ * publishing a payload the panel cannot read.
+ */
+const ApiKeyRequestAdminRowSchema = z
+  .object({
+    id: z.number(),
+    request_id: z.string().min(1),
+    api_key_id: z.number().nullable(),
+    status: ApiKeySelfServeStatusSchema,
+    normalized_email: z.string(),
+    email_hash: z.string(),
+    email_verified: z.number(),
+    requester_name: z.string().nullable(),
+    organization: z.string().nullable(),
+    project_url: z.string().nullable(),
+    use_case: z.string(),
+    expected_cadence: z.string().nullable(),
+    expected_volume: z.string().nullable(),
+    accepted_terms: z.number(),
+    self_serve_rate_limit_per_minute: z.number(),
+    self_serve_expires_at: z.number().nullable(),
+    ip_hash: z.string(),
+    user_agent_hash: z.string().nullable(),
+    verification_token_hash: z.string().nullable(),
+    verification_sent_at: z.number().nullable(),
+    verification_expires_at: z.number().nullable(),
+    issuance_locked_at: z.number().nullable(),
+    issued_at: z.number().nullable(),
+    rejected_at: z.number().nullable(),
+    created_at: z.number(),
+    updated_at: z.number(),
+    claim_status: ApiKeySelfServeClaimStatusSchema.nullable(),
+    linked_key_owner_email: z.string().nullable(),
+    linked_key_prefix: z.string().nullable(),
+    linked_key_tier: z.string().nullable(),
+    linked_key_active: z.number().nullable(),
+    linked_key_expires_at: z.number().nullable(),
+  })
+  .passthrough();
+
+function decodeAdminRequestRows(rows: unknown[], route: string): ApiKeyRequestAdminRow[] {
+  const decoded: ApiKeyRequestAdminRow[] = [];
+  const quarantined: Array<{ requestId: string; field: string }> = [];
+  for (const row of rows) {
+    const parsed = ApiKeyRequestAdminRowSchema.safeParse(row);
+    if (parsed.success) {
+      decoded.push(parsed.data as ApiKeyRequestAdminRow);
+      continue;
+    }
+    const requestId = (row as { request_id?: unknown } | null)?.request_id;
+    quarantined.push({
+      requestId: typeof requestId === "string" ? requestId : "unknown",
+      field: parsed.error.issues[0]?.path.join(".") ?? "unknown",
+    });
+  }
+  if (quarantined.length > 0) {
+    logWorkerEvent({
+      scope: "admin",
+      level: "warn",
+      event: "api_key_request_admin_row_quarantined",
+      route,
+      source: "api_key_requests",
+      message: "Quarantined malformed self-serve request rows",
+      metadata: { quarantinedRows: quarantined.length, rows: quarantined.slice(0, 5) },
+    });
+  }
+  return decoded;
+}
+
 export async function selectRequestWithKeyStateByRequestId(
   db: ApiKeyRequestDb,
   requestId: string,
 ): Promise<ApiKeyRequestAdminRow | null> {
-  return db.prepare(
+  const row = await db.prepare(
     `${ADMIN_REQUEST_WITH_KEY_STATE_SELECT}
      WHERE r.request_id = ?`,
   )
     .bind(requestId)
-    .first<ApiKeyRequestAdminRow>();
+    .first<Record<string, unknown>>();
+  if (!row) return null;
+  return decodeAdminRequestRows([row], "api-key-request-by-id")[0] ?? null;
+}
+
+export interface ApiKeyRequestAdminCursor {
+  createdAt: number;
+  id: number;
 }
 
 export async function listAdminRequests(
   db: ApiKeyRequestDb,
   status: ApiKeySelfServeStatus | null,
   limit: number,
-): Promise<ApiKeyRequestAdminRow[]> {
-  const where = status ? "WHERE r.status = ?" : "";
-  const statement = db.prepare(
+  cursor: ApiKeyRequestAdminCursor | null,
+): Promise<{
+  rows: ApiKeyRequestAdminRow[];
+  total: number;
+  nextCursor: ApiKeyRequestAdminCursor | null;
+}> {
+  const filters: string[] = [];
+  const bindings: unknown[] = [];
+  if (status) {
+    filters.push("r.status = ?");
+    bindings.push(status);
+  }
+  if (cursor) {
+    filters.push("(r.created_at < ? OR (r.created_at = ? AND r.id < ?))");
+    bindings.push(cursor.createdAt, cursor.createdAt, cursor.id);
+  }
+  const where = filters.length > 0 ? `WHERE ${filters.join(" AND ")}` : "";
+  const pageQuery = db.prepare(
     `${ADMIN_REQUEST_WITH_KEY_STATE_SELECT}
      ${where}
      ORDER BY r.created_at DESC, r.id DESC
      LIMIT ?`,
+  )
+    .bind(...bindings, limit + 1)
+    .all<Record<string, unknown>>();
+  const countStatement = db.prepare(
+    `SELECT COUNT(*) AS total
+     FROM api_key_requests r
+     ${status ? "WHERE r.status = ?" : ""}`,
   );
-  const result = status
-    ? await statement.bind(status, limit).all<ApiKeyRequestAdminRow>()
-    : await statement.bind(limit).all<ApiKeyRequestAdminRow>();
-  return result.results ?? [];
+  const countQuery = status
+    ? countStatement.bind(status).first<{ total: number }>()
+    : countStatement.first<{ total: number }>();
+  const [pageResult, countRow] = await Promise.all([pageQuery, countQuery]);
+  const pageRows = pageResult.results ?? [];
+  const pageWindow = pageRows.slice(0, limit);
+  // The cursor advances over the raw page so a quarantined row cannot stall pagination.
+  const last = pageRows.length > limit ? pageWindow[pageWindow.length - 1] : null;
+  return {
+    rows: decodeAdminRequestRows(pageWindow, "api-key-requests-admin"),
+    total: countRow?.total ?? 0,
+    nextCursor:
+      typeof last?.created_at === "number" && typeof last.id === "number"
+        ? { createdAt: last.created_at, id: last.id }
+        : null,
+  };
 }
 
 export function mapAdminRow(row: ApiKeyRequestAdminRow): ApiKeySelfServeRequestAdminSummary {

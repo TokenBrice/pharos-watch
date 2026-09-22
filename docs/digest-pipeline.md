@@ -88,7 +88,7 @@ Digest safety reads resolve through `worker/src/lib/safety-score-active-source.t
 
 The digest's Flight-to-Quality collector uses `buildFlightToQualityClassificationFromV9Snapshot()` from `worker/src/lib/flight-to-quality-classification.ts` via `worker/src/cron/daily-digest/mint-burn-ftq.ts`, aligned with the public `/api/mint-burn-flows` classification path.
 
-**Bank Run Gauge — one producer, one universe.** The gauge is computed exactly once, by `refreshAggregateMintBurnFlowCache()` (`worker/src/api/mint-burn-flows.ts`), over the active tracked-pair universe with tracked-chain mcap weighting. The digest reads that publication through `worker/src/lib/mint-burn-published-gauge.ts` and re-bins it (gauge score, band, per-coin pressure, per-chain net flow, and the net flows the FTQ split runs on); it no longer queries `mint_burn_hourly`. Fail-closed behavior: a publication that is unparseable or older than 24 h is dropped and marks the run degraded (`mint-burn-gauge-malformed` / `mint-burn-gauge-expired`); a publication older than 2 h (≈6 missed producer runs) is still used but marks `mint-burn-gauge-stale`; a gauge that has never been published is silently omitted, matching the pre-existing "no flow rows yet" behavior.
+**Bank Run Gauge — one producer, one universe.** The gauge is computed exactly once, by `refreshAggregateMintBurnFlowCache()` (`worker/src/api/mint-burn-flows.ts`), over the active tracked-pair universe with tracked-chain mcap weighting. The digest reads that publication through `worker/src/lib/mint-burn-published-gauge.ts` and re-bins it (gauge score, band, per-coin pressure, per-chain net flow, and the net flows the FTQ split runs on); it no longer queries `mint_burn_hourly`. Fail-closed behavior: a publication that is unparseable or older than 24 h is dropped and marks the run degraded (`mint-burn-gauge-malformed` / `mint-burn-gauge-expired`); a publication older than 2 h (≈6 missed producer runs) is still used but marks `mint-burn-gauge-stale`; an absent publication (no cache row) is dropped and named as a quality finding (`mint-burn-gauge-missing`) — the digest still publishes and the run stays `ok`, but the reason is recorded in the edition's `dataQuality.degradedSources`, so the prompt treats the section as missing and editorial confidence scoring sees it. The critical lane republishes every 30 minutes, so a missing row means the producer stopped or the cache was dropped, not that the section is optional.
 
 ### DEX liquidity admission gate
 
@@ -192,6 +192,10 @@ All collectors now distinguish "no signal" from "collector failed". If the activ
 
 Staleness is also degradation, not silent currency: a PSI sample older than 2h (`psi-sample-stale`), a PSI-contributor snapshot older than 2h (`psi-contributors-stale`, dropped rather than displayed), a stablecoins cache outside the 600-second public freshness budget (`stablecoins-cache-stale`, with cached prices withheld from live depeg severity), and yield rows older than 24h (filtered out in SQL) are all treated as degraded or excluded rather than presented as current observations.
 
+A failed read is never published as an optimistic observation. `classifyRegime()` floors the regime at WATCHFUL whenever `degradedSources` names the active-depeg, DEWS-stress, or Bank Run Gauge collector, so a collector that could not read cannot publish CALM; the risk tape prints "Unavailable" rather than "No active peg breaks" when the active-depeg query failed; and an absent prior DEWS generation publishes `yesterdayBandCounts: null`, which the prompt renders as "vs yesterday: unavailable" instead of an all-zero band distribution. On the weekly side, `rollupDigestInputs()` publishes `null` for every cross-day total that does not have all seven daily editions behind it, and the weekly prompt prints `N/A (n of 7 daily editions)` rather than a partial sum presented as a week. A coin without a `circulatingPrevWeek` bucket leaves both sides of the 7d supply aggregate instead of having its absent baseline published as full-size growth.
+
+The resolved-depeg collector's window and its published label agree: candidates are bounded to `nowSec - ONE_DAY` and the eligibility predicates (tracked id, market-cap floor, bulk-bump exclusion) run in SQL **before** `ORDER BY`/`LIMIT`, so ineligible large-peak rows cannot crowd a qualifying tracked resolution out of the "last 24h" count. Blacklist events whose amount could not be read publish as unknown rather than `$0`, and are not suppressed as zero-dollar activity.
+
 Change detection and trigger matching key depegs by `stablecoinId` (falling back to symbol only for archived rows without ids), so two tracked coins sharing a symbol can no longer produce fabricated cross-coin movement in `changeSummary` or forward-look outcomes. Depeg candidate `novelty` is computed from the day-over-day live-deviation delta (`new` ≤24h, `worsening`/`improving` at ±100 bps, `chronic` when old and unchanged) instead of labeling every unsuppressed depeg "worsening".
 
 ---
@@ -235,6 +239,8 @@ Read endpoints are public, but they do not all share the same cache profile: `GE
 | `GET /api/digest-snapshot?date=YYYY-MM-DD` | Input data + depeg/blacklist context for a daily digest date — used by SSG detail pages; cached as archive data (`s-maxage=86400, max-age=3600`) |
 | `GET /api/digest-snapshot?date=YYYY-MM-DD-weekly` | Input data for a weekly recap slug; the handler strips `-weekly` for date parsing and returns the weekly snapshot when that digest row exists |
 | `POST /api/trigger-digest` *(admin)* | **Deferred**: optionally validates and persists one explicitly scoped `styleGateMode` update (`{"daily":"shadow|enforce"}` or `{"weekly":"shadow|enforce"}`), writes a bounded pending intent (`requestId`, timestamps, attempt count, retry state, and last error) into the D1 `cache` table, and returns 202 with the full effective `{daily, weekly}` mode state. A dedicated `*/5 * * * *` polling cron (`digestTriggerPoll`) runs the digest under scheduled-event wall-clock (up to 15 min), retries transient failures with bounded backoff, retains exhausted/permanent failures as dead letters, and persists outcome to `digest:last-trigger-result`. Poll-driven daily runs are resume-first: when today already has a publishable digest row, delivery resumes from the stored edition instead of regenerating a duplicate. The same poll resumes a missed weekly recap on Monday after 08:10 UTC when no non-blocked weekly row exists for that scheduled edition day. Expected latency: ≤ 5 min. Requires Access service-token headers on `ops-api.pharos.watch`. See [`worker-and-api-limits.md`](./worker-and-api-limits.md#manual-trigger-runtime-model) for the rationale. |
+
+Archive edition numbers are assigned independently for daily and weekly digests over the full non-blocked history before the 365-row response limit is applied. Internal sentinel rows retain their place in that history, while blocked rows never receive an edition number; therefore an older row leaving the response window cannot renumber an edition already published to X, Telegram, or a digest detail page.
 
 An idle `digestTriggerPoll` with no pending force-run intent or due Monday recovery is a neutral conditional poll, not an omitted daily or weekly execution. Stale-slot reconciliation therefore creates no synthetic digest failure when neither child has durable progress. If a digest did start and left durable progress before losing ownership, the sweeper still records the real abandoned attempt using its original progress timestamps.
 
@@ -405,24 +411,21 @@ Posted to both Twitter/X and Telegram. Twitter/X uses the distinct replay-safe l
 
 ## Frontend
 
-### Broadsheet (shared component)
+### Archive lead preview
 
 **Component:** `src/components/daily-digest.tsx`
 **Hook:** `src/hooks/api-hooks.ts` (`useDailyDigest`) → `GET /api/daily-digest`
 **Cache:** `staleTime: 86400s`, `refetchInterval: 172800s`
 
-The latest digest is presented in a broadsheet newspaper style:
-- **Masthead:** compact uppercase lockup with the full date; the homepage preview uses a slightly sharper mono masthead treatment than the archive broadsheet
-- **Headline:** the homepage preview uses `Newsreader` at a larger newspaper-style display scale, while the full `/digest/` broadsheet keeps the original serif headline treatment
-- **Risk badge + tape:** when `/api/daily-digest` exposes an active depeg `riskSignal`, the API prioritizes critical depegs before market impact and deviation size, and the broadsheet renders the resulting compact depeg badge near the headline so a truncated first paragraph cannot hide the risk state. New rows also render the `riskTape` chips and a compact next-trigger line in preview mode.
-- **Body:** Extended text paragraphs in italic Courier-style monospace (`EDITORIAL_BODY_STYLE`). On the homepage and `/digest/` archive preview, only the first editorial paragraph is shown as a teaser; the paragraph is preserved whole and never character-clamped mid-sentence. Digest detail pages show the full editorial body.
-- **Homepage preview split:** desktop uses an asymmetric two-column layout with a hairline `Executive Summary` label and headline block on the left, then the lead paragraph plus CTA rail on the right
+The `/digest/` archive presents the latest daily edition as a compact broadsheet preview:
+- **Headline:** `Newsreader` provides the newspaper-style display treatment.
+- **Risk badge + tape:** when `/api/daily-digest` exposes an active-depeg `riskSignal`, the API prioritizes critical depegs before market impact and deviation size, and the preview renders the resulting compact badge near the headline. New rows also render the `riskTape` chips and a compact next-trigger line.
+- **Body:** the first `extended` editorial paragraph is shown as a whole-paragraph teaser and is never character-clamped mid-sentence; `text` is the fallback when `extended` is unavailable.
+- **Layout:** desktop uses an asymmetric two-column layout with a hairline `Executive Summary` label and headline block on the left, then the lead paragraph plus CTA rail on the right.
 
 Digest detail metadata trims long headlines at a word boundary to keep the rendered search title within 70 characters, reserving the full edition date and ` | Pharos` suffix. The published headline, article heading, and structured-data headline remain intact.
 
-The `text` field remains the short distribution summary used for metadata and digest detail intros. The shared broadsheet renderer prefers `extended`, and falls back to `text` only if `extended` is unavailable.
-
-Used in three visible modes: the homepage (title + first editorial paragraph + "Read today's full digest" link), the `/digest/` archive page (`variant="preview"` with first paragraph + "Continue reading" link plus a weekly teaser before the wire table), and digest detail pages (full broadsheet body).
+The `text` field remains the short distribution summary used for metadata and digest detail intros. Digest detail pages render their persisted full edition directly in `src/app/digest/[date]/page.tsx`; the shared `DailyDigest` client component is only the archive's latest-edition preview.
 
 ### Archive page
 
@@ -432,7 +435,7 @@ Used in three visible modes: the homepage (title + first editorial paragraph + "
 **Hook:** `src/hooks/api-hooks.ts` (`useDigestArchive`) → `GET /api/digest-archive`
 
 The archive page has two zones:
-1. **Broadsheet** — today's digest in full broadsheet layout (via `DailyDigest`)
+1. **Lead preview** — today's digest teaser via `DailyDigest`, linking to the canonical dated detail page
 2. **Wire table** — all historical digests in a dense, wire-service style list
 
 The wire table shows each digest as a compact row: **date** (monospace, e.g. "27 FEB"), **title**, optional active-depeg **risk badge**, **PSI badge** (pill colored by condition band), and **total market cap**. The archive exposes URL-addressable All/Daily/Weekly, month, and title/body search controls; the selected view is shareable without dropping the server-rendered links. PSI, mcap, and risk data are served from the enriched archive API response (`psiScore`, `psiBand`, `totalMcapUsd`, `riskSignal` — parsed from the stored `input_data` JSON).

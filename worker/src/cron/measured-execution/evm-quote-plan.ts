@@ -2,13 +2,18 @@ import { DEX_MEASURED_MAX_COST_BPS } from "@shared/types/measured-execution";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { throwIfAborted } from "../../lib/abort";
 import { mapWithConcurrency } from "../../lib/concurrency";
-import type { EvmMulticall3Call, EvmMulticall3Result } from "../../lib/evm-rpc";
+import {
+  fetchEvmMulticall3Aggregate3AtBlock,
+  type EvmMulticall3Call,
+  type EvmMulticall3Result,
+} from "../../lib/evm-rpc";
 import { executeAdaptiveMulticall } from "./adaptive-multicall";
 import { rawAmountToUsdOrNull } from "./fixed-point";
-import type {
-  DexMeasuredExecutionBudgetStopReason,
-  DexMeasuredExecutionRpcBudget,
-  DexMeasuredRawQuotePoint,
+import {
+  DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
+  type DexMeasuredExecutionBudgetStopReason,
+  type DexMeasuredExecutionRpcBudget,
+  type DexMeasuredRawQuotePoint,
 } from "./profiles";
 
 const MAX_CONCURRENT_EVM_CHAIN_LANES = 3;
@@ -226,4 +231,76 @@ export function materializeEvmQuotePoint(input: {
     ...(input.reverted ? { reverted: true } : {}),
     adapterMetadata: input.adapterMetadata,
   };
+}
+
+/**
+ * The one Multicall3 transport every non-retrying quote plan uses: request
+ * timeout, budget deadline, budget-stop reporting and batch capping.
+ */
+export function createEvmQuotePlanMulticallExecutor(options: {
+  gas?: string;
+  maxBatchSize?: number;
+}): (input: EvmQuotePlanBatchInput) => Promise<EvmMulticall3Result[] | null> {
+  return ({ chain, calls, blockNumber, chainRpcs, signal, rpcBudget, onBudgetStop }) =>
+    fetchEvmMulticall3Aggregate3AtBlock(chain, calls, blockNumber, {
+      chainRpcs,
+      signal,
+      timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
+      ...(rpcBudget ? { deadlineMs: rpcBudget.deadlineMs } : {}),
+      ...(rpcBudget ? { beforeRequest: () => {
+        const consumed = rpcBudget.tryConsume();
+        const reason = rpcBudget.stopReason;
+        if (!consumed && reason) onBudgetStop?.(reason);
+        return consumed;
+      } } : {}),
+      maxRetries: 0,
+      ...(options.gas ? { gas: options.gas } : {}),
+      multicallBatchSize: options.maxBatchSize == null
+        ? calls.length
+        : Math.min(options.maxBatchSize, calls.length),
+    });
+}
+
+/** One encoded call per request, addressed to that request's execution endpoint. */
+export function buildEvmSingleCallQuotePlans<
+  TEncoded extends {
+    index: number;
+    label: string;
+    endpointAddress: `0x${string}`;
+    callData: `0x${string}`;
+    target: { chain: string };
+  },
+>(encoded: readonly (TEncoded | null)[], blockNumber: number): Array<TEncoded & EvmQuotePlanItem> {
+  return encoded.flatMap((request) => request ? [{
+    ...request,
+    chain: request.target.chain,
+    blockNumber,
+    call: {
+      label: request.label,
+      target: request.endpointAddress,
+      callData: request.callData,
+      allowFailure: true,
+    },
+  }] : []);
+}
+
+/** A reverted quote is published as a zero-output point, never dropped. */
+export function materializeRevertedEvmQuotePoint(
+  request: {
+    amountInRaw: bigint;
+    callData: string;
+    target: { tokenIn: QuoteTokenAmount; tokenOut: QuoteTokenAmount };
+  },
+  result: EvmMulticall3Result,
+): DexMeasuredRawQuotePoint {
+  return materializeEvmQuotePoint({
+    amountInRaw: request.amountInRaw,
+    amountOutRaw: 0n,
+    callData: request.callData,
+    returnData: result.returnData,
+    tokenIn: request.target.tokenIn,
+    tokenOut: request.target.tokenOut,
+    reverted: true,
+    adapterMetadata: { executionReverted: true },
+  })!;
 }

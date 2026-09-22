@@ -2,9 +2,12 @@ import {
   getLiveCurrentDeviationBps,
   getPeakDeviationBps,
   getResolution,
-  type DdrDisplayRow,
 } from "@/components/depeg-resolver-row-card-model";
-import { DDR_RESOLUTION_TIER_VALUES, type DdrResolutionTier } from "@shared/types/depeg-resolver";
+import {
+  DDR_RESOLUTION_TIER_VALUES,
+  type DdrResolutionTier,
+  type DdrV2ResponseRow,
+} from "@shared/types/depeg-resolver";
 
 /**
  * Below this the "past peak" test is snapshot jitter, not a real move. A bare
@@ -21,7 +24,7 @@ const PAST_PEAK_FLOOR_BPS = 25;
  * The baseline is the event's peak deviation, so this says "past its worst" —
  * not "worse than at lock", which this data cannot support.
  */
-function isPastEventPeak(row: DdrDisplayRow): boolean {
+function isPastEventPeak(row: DdrV2ResponseRow): boolean {
   const live = getLiveCurrentDeviationBps(row);
   if (live == null) return false;
   const peak = Math.abs(getPeakDeviationBps(row));
@@ -35,7 +38,7 @@ function isPastEventPeak(row: DdrDisplayRow): boolean {
  * between refreshes on API row order. DDR rows are not control-board rows, so
  * the board's attention comparator does not apply.
  */
-export function compareResolverUrgency(a: DdrDisplayRow, b: DdrDisplayRow): number {
+export function compareResolverUrgency(a: DdrV2ResponseRow, b: DdrV2ResponseRow): number {
   const pastPeakDelta = Number(isPastEventPeak(b)) - Number(isPastEventPeak(a));
   if (pastPeakDelta !== 0) return pastPeakDelta;
   const deviationDelta =
@@ -55,7 +58,7 @@ export interface ResolverBookSummary {
  * One derivation of the whole resolver book, shared by the hero's recovery
  * posture and the resolver module's own header, so the two can never disagree.
  */
-export function summarizeResolverBook(rows: readonly DdrDisplayRow[]): ResolverBookSummary {
+export function summarizeResolverBook(rows: readonly DdrV2ResponseRow[]): ResolverBookSummary {
   const tierCounts = {} as Record<DdrResolutionTier, number>;
   for (const tier of DDR_RESOLUTION_TIER_VALUES) tierCounts[tier] = 0;
   let pastPeakCount = 0;

@@ -1,7 +1,7 @@
 import { CLIENT_ACTIVE_META_BY_ID, CLIENT_TRACKED_STABLECOINS } from "../stablecoins/client-registry";
 import { resolveMechanismArchetype } from "../classification";
-import { getCirculatingRaw } from "../supply";
-import { canonicalizeForDatasetHash } from "./canonicalize";
+import { getCirculatingRawOrNull } from "../supply";
+import { canonicalizeForSid } from "./canonicalize";
 import type { MergedRow, SelectorInput, SelectorOutput } from "./types";
 import { SELECTOR_VERSION } from "./version";
 import { sha256Hex } from "../sha256";
@@ -22,7 +22,6 @@ import type {
   YieldType,
   YieldVenueRiskTier,
 } from "../../types";
-import type { StablecoinClientMeta } from "../../types/stablecoin-client-meta";
 
 export interface BuildSelectorRowsArgs {
   stablecoinsData: StablecoinListResponse | null;
@@ -51,9 +50,11 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
   const reportById = new Map((args.reportData?.cards ?? []).map((card) => [card.id, card] as const));
   const yieldById = new Map((args.yieldData?.rankings ?? []).map((ranking) => [ranking.id, ranking] as const));
 
-  const supplyById = new Map<string, number>();
+  // `null` covers both shapes of unavailability: absent from the payload, and
+  // present with no finite circulating bucket. Neither is a $0 supply fact.
+  const supplyById = new Map<string, number | null>();
   for (const asset of args.stablecoinsData?.peggedAssets ?? []) {
-    supplyById.set(asset.id, getCirculatingRaw(asset));
+    supplyById.set(asset.id, getCirculatingRawOrNull(asset));
   }
 
   for (const meta of CLIENT_TRACKED_STABLECOINS) {
@@ -98,10 +99,10 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
       isYieldBearing: Boolean(meta.flags.yieldBearing),
       pegCurrency: meta.flags.pegCurrency,
       governance: meta.flags.governance,
-      canBeBlacklisted: resolveBlacklistability(meta),
+      canBeBlacklisted: meta.blacklistStatus ?? null,
       mechanismArchetype: resolveMechanismArchetype(meta, CLIENT_ACTIVE_META_BY_ID),
 
-      supplyUsd: supplyById.get(id) ?? 0,
+      supplyUsd: supplyById.get(id) ?? null,
 
       pegScore: peg?.pegScore ?? null,
       activeDepeg: peg?.activeDepeg ?? false,
@@ -227,7 +228,7 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
         yieldFreshnessAgeSec: row.yieldFreshness?.ageSeconds ?? null,
         effectiveTvlUsd: row.effectiveTvlUsd,
         concentrationHhi: row.concentrationHhi,
-        // No pre-sort: canonicalizeForDatasetHash recursively sorts object
+        // No pre-sort: canonicalizeForSid recursively sorts object
         // keys before hashing. The explicit sorts around this object sort
         // arrays, which are order-bearing in the canonical form.
         chainTvl: row.chainTvl,
@@ -261,13 +262,9 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
   return {
     rows,
     timestamp: args.now,
-    datasetHash: sha256Hex(canonicalizeForDatasetHash(datasetContent)),
+    datasetHash: sha256Hex(canonicalizeForSid(datasetContent)),
     methodologyVersions,
   };
-}
-
-function resolveBlacklistability(meta: StablecoinClientMeta): MergedRow["canBeBlacklisted"] {
-  return meta.blacklistStatus ?? null;
 }
 
 function normalizeVenueRiskTier(tier: YieldVenueRiskTier | null | undefined): MergedRow["venueRiskTier"] {

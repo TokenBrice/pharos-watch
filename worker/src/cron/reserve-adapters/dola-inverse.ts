@@ -17,7 +17,7 @@ import {
   unverifiedFreshnessMetadata,
 } from "./helpers";
 import { accumulateBucketedExposure } from "./classification";
-import { parseEvmAddressResult } from "./evm";
+import { decodeStrictAddressWord } from "./abi-decode";
 import { rethrowIfAborted } from "../../lib/abort";
 import { encodeAddressCallData } from "../../lib/evm-selectors";
 
@@ -261,9 +261,9 @@ async function probeInversePsm(signal: AbortSignal, ctx?: AdapterContext): Promi
       ),
     ]);
 
-    const vault = vaultHex ? parseEvmAddressResult(vaultHex as `0x${string}`) : null;
-    const collateral = collateralHex ? parseEvmAddressResult(collateralHex as `0x${string}`) : null;
-    const dola = dolaHex ? parseEvmAddressResult(dolaHex as `0x${string}`) : null;
+    const vault = vaultHex ? decodeStrictAddressWord(vaultHex as `0x${string}`) : null;
+    const collateral = collateralHex ? decodeStrictAddressWord(collateralHex as `0x${string}`) : null;
+    const dola = dolaHex ? decodeStrictAddressWord(dolaHex as `0x${string}`) : null;
     if (vault !== INVERSE_PSM_VAULT_ADDRESS) return null;
     if (collateral !== INVERSE_PSM_COLLATERAL_ADDRESS) return null;
     if (dola !== INVERSE_PSM_DOLA_ADDRESS) return null;

@@ -1,16 +1,15 @@
 import { TelegramSendOriginatedError } from "../lib/telegram/transport-errors";
 import type { TelegramDispatchCronResult } from "@shared/types";
-import { TELEGRAM_DISPATCH_INTERVAL_SEC, TELEGRAM_PENDING_DRAIN_BUDGET } from "./telegram-pending";
+import type { PendingCapacitySnapshot, PendingDrainResult } from "./telegram-pending";
 import { emptyPerAlertTypeDelivery } from "./dispatch-telegram-routing";
 import type { TelegramAlertType } from "@shared/types/status";
-import { readTelegramPendingCapacitySnapshot } from "../lib/telegram/pending-capacity";
-import type {
-  PendingCapacitySnapshot,
-  PendingDrainResult,
-} from "./telegram-pending";
+import {
+  emptyPendingCapacitySnapshot,
+  pendingCapacityProgressFields,
+} from "../lib/telegram/pending-capacity";
+
 import type { AlertSafetySourceAssessment } from "../lib/alert-safety-source-cache";
 import type { AlertReserveSourceAssessment } from "../lib/alert-reserve-source-cache";
-import { pendingCapacityFields } from "./dispatch-telegram-alerts-fanout";
 
 export type PerAlertTypeTargets = Record<Exclude<TelegramAlertType, "freeze">, { chats: number; chunks: number }> &
   Partial<Record<"freeze", { chats: number; chunks: number }>>;
@@ -29,8 +28,8 @@ export interface DispatchCapacityMetadata {
   oldestDuePendingAgeSec: number | null;
   estimatedDrainTimeSec: number;
   pendingDrainBudgetPerRun: number;
-  pendingCapacityBefore: Awaited<ReturnType<typeof readTelegramPendingCapacitySnapshot>>;
-  pendingCapacityAfter: Awaited<ReturnType<typeof readTelegramPendingCapacitySnapshot>>;
+  pendingCapacityBefore: PendingCapacitySnapshot;
+  pendingCapacityAfter: PendingCapacitySnapshot;
   perAlertTypeTargets: PerAlertTypeTargets;
   fanoutQueryMs: number;
   fanoutBuildMs: number;
@@ -74,17 +73,25 @@ export interface DispatchCapacityMetadata {
 
 export type DispatchResult = TelegramDispatchCronResult & DispatchCapacityMetadata;
 
+/**
+ * Published progress-tail view (`deferredTail`) of a capacity snapshot. Its
+ * column names differ from the flattened run-metadata projection, so this is a
+ * view over `pendingCapacityProgressFields` rather than a second mapping of the
+ * snapshot; only `total` (which the flattened projection does not carry) is read
+ * from the snapshot.
+ */
 export function pendingTailState(snapshot: PendingCapacitySnapshot | null | undefined): Record<string, unknown> | null {
   if (!snapshot) return null;
+  const fields = pendingCapacityProgressFields(snapshot);
   return {
     total: snapshot.total,
-    active: snapshot.active,
-    due: snapshot.due,
-    deferred: snapshot.deferred,
-    expired: snapshot.expired,
-    nearTtl: snapshot.nearTtl,
-    oldestPendingAgeSec: snapshot.oldestPendingAgeSec,
-    estimatedDrainTimeSec: snapshot.estimatedDrainTimeSec,
+    active: fields.pendingTotal,
+    due: fields.pendingDue,
+    deferred: fields.pendingDeferredCount,
+    expired: fields.pendingExpiredCount,
+    nearTtl: fields.pendingNearTtlCount,
+    oldestPendingAgeSec: fields.oldestPendingAgeSec,
+    estimatedDrainTimeSec: fields.estimatedDrainTimeSec,
   };
 }
 
@@ -153,6 +160,20 @@ function pendingDispatchFields(
   };
 }
 
+/**
+ * Published progress-metadata subset of the drain counters. It reads the built
+ * result — the single drain → counters projection — so the progress totals
+ * cannot drift from the run counters they mirror.
+ */
+export function pendingCountTotals(result: DispatchResult) {
+  return {
+    pendingAttempted: result.pendingAttempted,
+    pendingSent: result.pendingSent,
+    pendingDeferred: result.pendingDeferred,
+    pendingDropped: result.pendingDropped,
+  };
+}
+
 function isAbortError(error: unknown): boolean {
   return (
     typeof error === "object" &&
@@ -193,33 +214,8 @@ export function buildPerAlertTypeTargets(
   return targets;
 }
 
-function emptyPendingCapacity() {
-  return {
-    total: 0,
-    active: 0,
-    due: 0,
-    deferred: 0,
-    expired: 0,
-    nearTtl: 0,
-    sending: 0,
-    pendingSending: 0,
-    freshSending: 0,
-    pendingExecutionUnknown: 0,
-    freshExecutionUnknown: 0,
-    executionUnknown: 0,
-    sentCleanup: 0,
-    oldestExecutionUnknownAgeSec: null,
-    executionUnknownSampleLimit: 5_001,
-    executionUnknownLowerBound: false,
-    oldestPendingAgeSec: null,
-    oldestDuePendingAgeSec: null,
-    estimatedDrainTimeSec: 0,
-    drainBudgetPerRun: TELEGRAM_PENDING_DRAIN_BUDGET,
-    dispatchIntervalSec: TELEGRAM_DISPATCH_INTERVAL_SEC,
-  } satisfies Awaited<ReturnType<typeof readTelegramPendingCapacitySnapshot>>;
-}
-
 function emptyResult(snapshotSeeded: boolean, chatsWithActiveSnooze = 0): DispatchResult {
+  const emptyCapacity = emptyPendingCapacitySnapshot();
   return {
     eventsDetected: {
       dews: 0,
@@ -252,17 +248,9 @@ function emptyResult(snapshotSeeded: boolean, chatsWithActiveSnooze = 0): Dispat
     pendingEnqueued: 0,
     pendingExpired: 0,
     pendingSent: 0,
-    pendingTotal: 0,
-    pendingDue: 0,
-    pendingDeferredCount: 0,
-    pendingExpiredCount: 0,
-    pendingNearTtlCount: 0,
-    oldestPendingAgeSec: null,
-    oldestDuePendingAgeSec: null,
-    estimatedDrainTimeSec: 0,
-    pendingDrainBudgetPerRun: TELEGRAM_PENDING_DRAIN_BUDGET,
-    pendingCapacityBefore: emptyPendingCapacity(),
-    pendingCapacityAfter: emptyPendingCapacity(),
+    ...pendingCapacityProgressFields(emptyCapacity),
+    pendingCapacityBefore: emptyCapacity,
+    pendingCapacityAfter: emptyCapacity,
     freshAttempted: 0,
     freshSent: 0,
     freshRetryQueued: 0,
@@ -359,7 +347,7 @@ export function buildDispatchResult(args: {
     Object.assign(result, pendingDispatchFields(drainResult, { expiredCount, pendingEnqueued }));
   }
   if (args.capacity) {
-    Object.assign(result, pendingCapacityFields(args.capacity.after));
+    Object.assign(result, pendingCapacityProgressFields(args.capacity.after));
     result.pendingCapacityBefore = args.capacity.before;
     result.pendingCapacityAfter = args.capacity.after;
   }

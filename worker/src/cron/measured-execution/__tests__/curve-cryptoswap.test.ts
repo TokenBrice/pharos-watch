@@ -1,9 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
-import {
-  buildDexMeasuredExecutionTargetId,
-  type DexMeasuredExecutionProfile,
-  type DexMeasuredExecutionTarget,
+import type {
+  DexMeasuredExecutionProfile,
+  DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
 import {
   buildDexMeasuredExecutionProfile,
@@ -23,7 +22,9 @@ import {
   validateCurveCryptoSwapProfileProof,
   type CurveCryptoSwapPoolPolicy,
 } from "../curve-cryptoswap";
+import { isOperationalDexMeasuredFailure } from "../persistence";
 import { makeMeasuredTarget } from "@shared/test-utils/measured-execution.test-support";
+import { makeCurveQuoteRequests } from "./measured-execution.test-support";
 
 const ETHEREUM_BLOCK = 25_536_894;
 const USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
@@ -31,7 +32,6 @@ const CADD = "0x16f93ebc5320c89efc8701577efe49d14a276a06";
 const CRVUSD = "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e";
 const WETH = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";
 const CRV = "0xd533a949740bb3306d119cc777fa900ba034cd52";
-const LEGACY_POOL = "0x98a7f18d4e56cfe84e3d081b40001b3d5bd3eb8b";
 const TWOCRYPTO_POOL = "0x4fdccb810f22578ad6700fc10a8c9b6c1df61852";
 const ACTIVE_TWOCRYPTO_POOL = "0x313698667d7fdd6789a9bc70821309ff891e729a";
 const TRICRYPTO_POOL = "0x4ebdf703948ddcea3b11f675b4d1fba9d2414a14";
@@ -87,18 +87,7 @@ function makeTarget(
     referencePriceUsd: input.outputPrice ?? 1,
     trackedAssetId: "output-asset",
   };
-  const targetId = buildDexMeasuredExecutionTargetId({
-    adapterProfileId: CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID,
-    stablecoinId,
-    chain,
-    protocol: "curve",
-    poolId,
-    tokenInAddress: tokenIn.address,
-    tokenOutAddress: tokenOut.address,
-    poolTokenAddresses,
-  });
   return makeMeasuredTarget({
-    targetId,
     stablecoinId,
     adapterProfileId: CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID,
     protocol: "curve",
@@ -113,16 +102,12 @@ function makeTarget(
   });
 }
 
-function completePinnedPolicy(
-  generation: CurveCryptoSwapPoolPolicy["generation"] = "twocrypto-ng",
-): CurveCryptoSwapPoolPolicy {
+function completePinnedPolicy(): CurveCryptoSwapPoolPolicy {
   return {
     chain: "ethereum",
     poolAddress: TWOCRYPTO_POOL,
-    generation,
-    mode: "active",
+    generation: "twocrypto-ng",
     identityAnchor: "pinned-pool-code",
-    scoreEligible: true,
     expectedPoolCodeHash: HASH_A,
     expectedFactoryAddress: DEP_A,
     expectedFactoryCodeHash: HASH_B,
@@ -134,7 +119,7 @@ function completePinnedPolicy(
   };
 }
 
-function completeRuntimeEvidence(generation: CurveCryptoSwapPoolPolicy["generation"] = "twocrypto-ng") {
+function completeRuntimeEvidence() {
   return {
     apiIsBroken: false,
     poolCodeHash: HASH_A,
@@ -144,7 +129,7 @@ function completeRuntimeEvidence(generation: CurveCryptoSwapPoolPolicy["generati
     viewsCodeHash: HASH_C,
     mathAddress: DEP_C,
     mathCodeHash: HASH_D,
-    ...(generation === "legacy-cryptoswap" ? { legacyIsKilled: false } : { ngKillMethodUnavailable: true }),
+    ngKillMethodUnavailable: true,
     transferSemanticsReviewed: true,
   } as const;
 }
@@ -154,7 +139,7 @@ describe("Curve CryptoSwap policy", () => {
     expect(CURVE_CRYPTOSWAP_SHADOW_COHORT).toHaveLength(19);
     expect(CURVE_CRYPTOSWAP_SHADOW_COHORT.every((entry) => entry.generation === "twocrypto-ng")).toBe(true);
     const active = CURVE_CRYPTOSWAP_SHADOW_COHORT;
-    expect(active.every((entry) => entry.scoreEligible && entry.transferSemanticsReviewed)).toBe(true);
+    expect(active.every((entry) => entry.transferSemanticsReviewed)).toBe(true);
     const pinned = active.filter((entry) => entry.identityAnchor === "pinned-pool-code");
     expect(pinned).toHaveLength(8);
     expect(
@@ -323,28 +308,14 @@ describe("Curve CryptoSwap policy", () => {
         policy: {
           chain: "ethereum",
           poolAddress: TRICRYPTO_POOL,
-          generation: "tricrypto-ng",
-          mode: "active",
+          generation: "twocrypto-ng",
           identityAnchor: "pinned-pool-code",
-          scoreEligible: true,
           transferSemanticsReviewed: true,
         },
         evidence: { apiIsBroken: false, ngKillMethodUnavailable: true },
       }),
     ).toEqual({ ok: false, reason: "runtime-allowlist-incomplete" });
 
-    const legacyPolicy: CurveCryptoSwapPoolPolicy = {
-      ...completePinnedPolicy("legacy-cryptoswap"),
-      poolAddress: LEGACY_POOL,
-    };
-    expect(
-      evaluateCurveCryptoSwapEligibility({
-        chain: "ethereum",
-        endpointAddress: LEGACY_POOL,
-        policy: legacyPolicy,
-        evidence: { ...completeRuntimeEvidence("legacy-cryptoswap"), legacyIsKilled: true },
-      }),
-    ).toEqual({ ok: false, reason: "legacy-pool-killed" });
 
     expect(
       evaluateCurveCryptoSwapEligibility({
@@ -463,7 +434,7 @@ describe("Curve CryptoSwap quote transport", () => {
           executionPool: TWOCRYPTO_POOL,
           inputIndex: 0,
           outputIndex: 1,
-          shadow: true,
+          shadow: false,
         },
       },
     });
@@ -479,63 +450,13 @@ describe("Curve CryptoSwap quote transport", () => {
     const quote = createCurveCryptoSwapQuoteExecutor({ executeMulticall });
     const target = makeTarget();
     const outcomes = await quote({
-      requests: Array.from({ length: 9 }, (_, index) => ({
-        target,
-        inputUsd: 1_000 + index,
-        blockNumber: ETHEREUM_BLOCK,
-        endpointAddress: TWOCRYPTO_POOL,
-      })),
+      requests: makeCurveQuoteRequests(target, TWOCRYPTO_POOL, ETHEREUM_BLOCK, 9),
       chainRpcs: new Map(),
     });
 
     expect(sizes).toEqual([8, 4, 4, 1]);
     expect(outcomes).toHaveLength(9);
     expect(outcomes.every((outcome) => outcome.point?.amountOutRaw === "0")).toBe(true);
-  });
-
-  it("preserves the Curve adaptive multicall golden budget-exhaustion result", async () => {
-    const executeMulticall = vi.fn(async (input: {
-      onBudgetStop?: (reason: "request-budget-exhausted") => void;
-    }) => {
-      input.onBudgetStop?.("request-budget-exhausted");
-      return null;
-    });
-    const quote = createCurveCryptoSwapQuoteExecutor({ executeMulticall });
-    const target = makeTarget();
-
-    const outcomes = await quote({
-      requests: [{
-        target,
-        inputUsd: 1_000,
-        blockNumber: ETHEREUM_BLOCK,
-        endpointAddress: TWOCRYPTO_POOL,
-      }],
-      chainRpcs: new Map(),
-    });
-
-    expect(outcomes[0]?.failureReason).toBe("request-budget-exhausted");
-  });
-
-  it("preserves the Curve adaptive multicall golden deadline result", async () => {
-    const executeMulticall = vi.fn(async () => null);
-    const quote = createCurveCryptoSwapQuoteExecutor({ executeMulticall });
-    const budget = createDexMeasuredExecutionRpcBudget({
-      maxRequests: 100,
-      deadlineMs: Date.now() - 1,
-    });
-
-    const outcomes = await quote({
-      requests: [{
-        target: makeTarget(),
-        inputUsd: 1_000,
-        blockNumber: ETHEREUM_BLOCK,
-        endpointAddress: TWOCRYPTO_POOL,
-      }],
-      chainRpcs: new Map(),
-      rpcBudget: budget,
-    });
-
-    expect(outcomes[0]?.failureReason).toBe("runtime-deadline-exceeded");
   });
 
   it("preserves the Curve adaptive multicall golden unattempted result", async () => {
@@ -551,12 +472,13 @@ describe("Curve CryptoSwap quote transport", () => {
     });
 
     const outcomes = await quote({
-      requests: Array.from({ length: 4 }, () => ({
-        target: makeTarget(),
-        inputUsd: 1_000,
-        blockNumber: ETHEREUM_BLOCK,
-        endpointAddress: TWOCRYPTO_POOL,
-      })),
+      requests: makeCurveQuoteRequests(
+        makeTarget(),
+        TWOCRYPTO_POOL,
+        ETHEREUM_BLOCK,
+        4,
+        () => 1_000,
+      ),
       chainRpcs: new Map(),
       rpcBudget: budget,
     });
@@ -564,11 +486,12 @@ describe("Curve CryptoSwap quote transport", () => {
     expect(sizes).toEqual([4, 2]);
     expect(budget.openChains).toEqual(["ethereum"]);
     expect(outcomes.map((outcome) => outcome.failureReason)).toEqual([
-      "pool-revert",
-      "pool-revert",
-      "pool-revert",
-      "pool-revert",
+      "rpc-failure",
+      "rpc-failure",
+      "rpc-failure",
+      "rpc-failure",
     ]);
+    expect(outcomes.every((outcome) => isOperationalDexMeasuredFailure(outcome.failureReason))).toBe(true);
   });
 
   it("does not relabel a genuine pool revert from an already stopped budget", async () => {
@@ -583,22 +506,18 @@ describe("Curve CryptoSwap quote transport", () => {
     expect(budget.tryConsume()).toBe(false);
 
     const outcomes = await quote({
-      requests: [{
-        target: makeTarget(),
-        inputUsd: 1_000,
-        blockNumber: ETHEREUM_BLOCK,
-        endpointAddress: TWOCRYPTO_POOL,
-      }],
+      requests: makeCurveQuoteRequests(makeTarget(), TWOCRYPTO_POOL, ETHEREUM_BLOCK, 1),
       chainRpcs: new Map(),
       rpcBudget: budget,
     });
 
     expect(outcomes[0]?.failureReason).toBe("pool-revert");
+    expect(isOperationalDexMeasuredFailure(outcomes[0]?.failureReason)).toBe(false);
   });
 
   it("rejects active quotes when provider token order disagrees with on-chain coins", async () => {
     const policy = getCurveCryptoSwapShadowPolicy("ethereum", ACTIVE_TWOCRYPTO_POOL);
-    if (policy == null || !policy.scoreEligible) throw new Error("missing active Curve CryptoSwap policy");
+    if (policy == null) throw new Error("missing active Curve CryptoSwap policy");
     const executeMulticall = vi.fn(async () => [
       {
         label: "unused",

@@ -198,6 +198,18 @@ const COMMAND_DB_EXTRA_TABLES: MockTableConfig[] = [
 const LIFECYCLE_DB_EXTRA_TABLES: MockTableConfig[] = [
   { match: "SELECT status, received_at, effect_state, claim_owner, claim_generation", rows: [], first: null },
 ];
+const TELEGRAM_WEBHOOK_HARNESS_FALLBACKS: MockTableConfig[] = [
+  { match: "INSERT INTO cache", rows: [] },
+  { match: "INSERT OR REPLACE INTO cache", rows: [] },
+  { match: "UPDATE cache", rows: [] },
+  { match: "DELETE FROM cache", rows: [] },
+  { match: "INSERT OR IGNORE INTO telegram_processed_updates", rows: [] },
+  { match: "UPDATE telegram_processed_updates", rows: [], runMeta: { changes: 1 } },
+  { match: "DELETE FROM telegram_processed_updates", rows: [], runMeta: { changes: 1 } },
+  { match: "INSERT INTO telegram_chat_delivery_diagnostics", rows: [] },
+  { match: "preference_generation = preference_generation + 1", rows: [] },
+];
+
 
 export function makeTelegramWebhookDb(
   tables: MockTableConfig[] = [],
@@ -205,7 +217,18 @@ export function makeTelegramWebhookDb(
   profile: "command" | "lifecycle" = "command",
 ): MockD1Database {
   const defaults = profile === "lifecycle" ? LIFECYCLE_DB_EXTRA_TABLES : COMMAND_DB_EXTRA_TABLES;
-  return mockTelegramD1(tables, { ...options, fallbackTables: defaults });
+  const hasFloodOverride = tables.some((table) => table.match.includes("RETURNING value"));
+  const floodDefault: MockTableConfig[] = hasFloodOverride
+    ? []
+    : [{ match: "RETURNING value", rows: [{ value: "1" }], allowUnused: true }];
+  return mockTelegramD1([...floodDefault, ...tables], {
+    ...options,
+    fallbackTables: [
+      ...(options.fallbackTables ?? []),
+      ...TELEGRAM_WEBHOOK_HARNESS_FALLBACKS,
+      ...defaults,
+    ],
+  });
 }
 
 export {

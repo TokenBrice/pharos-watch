@@ -1,16 +1,24 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { DdrActiveEventInput } from "@shared/lib/depeg-resolver";
 import type { StablecoinMeta } from "@shared/types/core";
-import { mockD1 as createMockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { buildDewsStablecoinIdsDigest } from "../../../lib/dews-publication-pointer";
+import { D1_MAX_BOUND_PARAMETERS } from "../../../lib/d1-primitives";
 import * as activeSafetyScoreSource from "../../../lib/safety-score-active-source";
 import {
   makeWorkerReportCardsV9Response,
   makeWorkerV9Card,
 } from "../../../test-helpers/report-cards-v9";
-import type { DdrEventDbRow } from "../types";
-import { makeEventRow, stablecoinsCache } from "./depeg-resolver.test-support";
-import { buildCurrentDeviationMap, loadDdrContext, type DdrLoadedContext } from "../context";
+import {
+  activeInput,
+  activeRow,
+  DAY,
+  loadedContext,
+  mockResolverD1,
+  NOW_SEC,
+  publishedDewsConfigs,
+  stablecoinsCache,
+  supplyHistory,
+} from "./depeg-resolver.test-support";
+import { buildCurrentDeviationMap, loadDdrContext } from "../context";
 import { deriveMintSurge, resolveDdrIncidents } from "../incident-resolution";
 import {
   allocateDdrRunId,
@@ -25,116 +33,6 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const NOW_SEC = 1_780_358_400;
-const DAY = 86_400;
-
-const DEFAULT_DDR_D1_TABLES: MockTableConfig[] = [
-  { match: "SELECT stablecoin_id, direction, peak_deviation_bps, started_at, ended_at, recovery_price, close_reason FROM depeg_events WHERE ended_at IS NOT NULL", rows: [] },
-  { match: "FROM supply_history", rows: [] },
-  { match: "FROM mint_burn_hourly", rows: [] },
-  { match: "FROM dex_liquidity", rows: [] },
-  { match: "FROM dex_liquidity_history", rows: [] },
-  { match: "FROM redemption_backstop_runs", rows: [] },
-  { match: "FROM redemption_backstop_run_rows", rows: [] },
-];
-
-function mockD1(tables: MockTableConfig[] = []) {
-  return createMockD1([...tables, ...DEFAULT_DDR_D1_TABLES]);
-}
-
-function publishedDewsConfigs(signalsJson = "{}") {
-  const computedAt = NOW_SEC - 60;
-  const row = {
-    stablecoin_id: "usdc-circle",
-    score: 66,
-    band: "WARNING",
-    signals_json: signalsJson,
-    computed_at: computedAt,
-  };
-  return [
-    {
-      match: "FROM cache WHERE key = ?",
-      matchBinds: ["dews:published-generation"],
-      rows: [],
-      first: {
-        value: JSON.stringify({
-          updatedAt: computedAt,
-          source: "compute-dews",
-          publishStatus: "published",
-          coverageVersion: 2,
-          expectedRowCount: 1,
-          stablecoinIdsDigest: buildDewsStablecoinIdsDigest([row.stablecoin_id]),
-        }),
-        updated_at: computedAt,
-      },
-    },
-    { match: "pharos:stress-signals:published-exact", rows: [row] },
-  ];
-}
-
-function activeInput(overrides: Partial<DdrActiveEventInput> = {}): DdrActiveEventInput {
-  return {
-    id: 101,
-    stablecoinId: "usdc-circle",
-    symbol: "USDC",
-    pegType: "peggedUSD",
-    direction: "below",
-    peakDeviationBps: -350,
-    startedAt: NOW_SEC - DAY,
-    pegReference: 1,
-    currentDeviationBps: -250,
-    ...overrides,
-  };
-}
-
-function activeRow(overrides: Partial<DdrEventDbRow> = {}): DdrEventDbRow {
-  return makeEventRow({
-    id: 101,
-    stablecoin_id: "usdc-circle",
-    symbol: "USDC",
-    peak_deviation_bps: -350,
-    started_at: NOW_SEC - DAY,
-    ...overrides,
-  });
-}
-
-function supplyHistory(startedAt: number) {
-  return [
-    { date: startedAt - 30 * DAY, usd: 1_000_000_000 },
-    { date: startedAt - 7 * DAY, usd: 1_000_000_000 },
-    { date: startedAt, usd: 1_000_000_000 },
-  ];
-}
-
-function loadedContext(overrides: Partial<DdrLoadedContext> = {}): DdrLoadedContext {
-  const active = activeInput();
-  return {
-    active: [active],
-    activeCoinIds: [active.stablecoinId],
-    activeEventById: new Map(),
-    incidents: [],
-    quarantined: new Set(),
-    supplyByCoin: new Map([[active.stablecoinId, supplyHistory(active.startedAt)]]),
-    mintBurnHourlyByCoin: new Map(),
-    dewsByCoin: new Map(),
-    liqByCoin: new Map(),
-    liqTvlChange7dByCoin: new Map(),
-    liqTvlChange30dByCoin: new Map(),
-    liqVolumeChange30dByCoin: new Map(),
-    redemptionByCoin: new Map(),
-    safetyByCoin: new Map(),
-    v9ExitByCoin: new Map(),
-    safetyContext: { status: "identity-missing", reason: "test", identity: null },
-    lineage: {
-      trainingWindow: { start: NOW_SEC - 365 * DAY, end: NOW_SEC },
-      eventCount: 0,
-      incidentCount: 0,
-      coinCount: 0,
-      quarantinedCoins: 0,
-    },
-    ...overrides,
-  };
-}
 
 describe("deriveMintSurge", () => {
   const startedAt = NOW_SEC - DAY;
@@ -182,6 +80,25 @@ describe("deriveMintSurge", () => {
         true,
       ),
     ).toEqual({ mintSurge: null, mintSurgeCoverage: "unavailable" });
+  });
+
+  it("marks mint-burn coverage unavailable without valid event-window observations", () => {
+    expect(deriveMintSurge(snapshots, startedAt, 90, [], true)).toEqual({
+      mintSurge: null,
+      mintSurgeCoverage: "unavailable",
+    });
+    expect(
+      deriveMintSurge(
+        snapshots,
+        startedAt,
+        90,
+        [{ hourTs: startedAt - DAY, netFlowUsd: Number.NaN }],
+        true,
+      ),
+    ).toEqual({
+      mintSurge: null,
+      mintSurgeCoverage: "unavailable",
+    });
   });
 
   it("marks the change-7d fallback explicitly when mint-burn coverage is absent", () => {
@@ -349,7 +266,7 @@ describe("allocateDdrRunId", () => {
 
 describe("loadDdrContext", () => {
   it("accepts a producer-cadence-old cache and leaves thin non-USD peg references null", async () => {
-    const db = mockD1([
+    const db = mockResolverD1([
       {
         match: "FROM cache WHERE key = ?",
         rows: [
@@ -388,7 +305,7 @@ describe("loadDdrContext", () => {
 
   it("degrades when the stablecoins cache is older than the producer cadence", async () => {
     const staleAt = NOW_SEC - 15 * 60 - 1;
-    const db = mockD1([
+    const db = mockResolverD1([
       {
         match: "FROM cache WHERE key = ?",
         rows: [
@@ -475,7 +392,7 @@ describe("loadDdrContext", () => {
         supply: { value: 10, available: true },
       },
     });
-    const db = mockD1([
+    const db = mockResolverD1([
       ...publishedDewsConfigs(signalsJson),
       stablecoinsCache(NOW_SEC),
       { match: "FROM depeg_events WHERE ended_at IS NOT NULL", rows: [] },
@@ -590,7 +507,7 @@ describe("loadDdrContext", () => {
 
   it("degrades rather than resolving from a partially staged DEWS generation", async () => {
     const computedAt = NOW_SEC - 60;
-    const db = mockD1([
+    const db = mockResolverD1([
       {
         match: "FROM cache WHERE key = ?",
         matchBinds: ["dews:published-generation"],
@@ -646,7 +563,7 @@ describe("loadDdrContext", () => {
   });
 
   it("keeps a missing completed redemption run non-fatal with empty redemption context", async () => {
-    const db = mockD1([
+    const db = mockResolverD1([
       ...publishedDewsConfigs(),
       stablecoinsCache(NOW_SEC),
       { match: "FROM redemption_backstop_runs", rows: [] },
@@ -657,6 +574,30 @@ describe("loadDdrContext", () => {
     expect(result.kind).toBe("ok");
     if (result.kind !== "ok") return;
     expect(result.context.redemptionByCoin.size).toBe(0);
+  });
+
+  it("splits active-coin reads into bind-limit-safe statements during a market-wide depeg", async () => {
+    const rows = Array.from({ length: 150 }, (_, index) => activeRow({
+      id: 1_000 + index,
+      stablecoin_id: `synthetic-${index}`,
+      symbol: `SYN${index}`,
+    }));
+    const db = mockResolverD1([
+      ...publishedDewsConfigs(),
+      stablecoinsCache(NOW_SEC),
+      { match: "FROM redemption_backstop_runs", rows: [] },
+    ]);
+
+    const result = await loadDdrContext(db, rows, NOW_SEC);
+
+    expect(result.kind).toBe("ok");
+    for (const table of ["FROM supply_history", "FROM dex_liquidity WHERE stablecoin_id", "FROM dex_liquidity_history"]) {
+      const statements = db.getHistory().filter((entry) => entry.sql.includes(table));
+      expect(statements.length).toBeGreaterThan(1);
+      for (const statement of statements) {
+        expect(statement.binds.length).toBeLessThanOrEqual(D1_MAX_BOUND_PARAMETERS);
+      }
+    }
   });
 
   it("leaves V9 exit context null-degraded when the published V9 snapshot is held", async () => {
@@ -681,7 +622,7 @@ describe("loadDdrContext", () => {
         detail: "Canonical Safety Score V9 ratings are held at the last verified snapshot",
         snapshot,
       });
-    const db = mockD1([
+    const db = mockResolverD1([
       ...publishedDewsConfigs(),
       stablecoinsCache(NOW_SEC, { price: 1 }),
       { match: "FROM redemption_backstop_runs", rows: [] },
@@ -699,7 +640,7 @@ describe("loadDdrContext", () => {
   });
 
   it("degrades when the redemption live-signal read fails", async () => {
-    const db = mockD1([
+    const db = mockResolverD1([
       ...publishedDewsConfigs(),
       stablecoinsCache(NOW_SEC),
       {
@@ -733,7 +674,7 @@ describe("loadDdrContext", () => {
   });
 
   it("degrades when the covered mint-burn read fails", async () => {
-    const db = mockD1([
+    const db = mockResolverD1([
       ...publishedDewsConfigs(),
       stablecoinsCache(NOW_SEC),
       { match: "FROM mint_burn_hourly", rows: [], throwError: new Error("hourly rows unavailable") },

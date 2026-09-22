@@ -41,16 +41,21 @@ export function buildAdaptiveMonthlyTicks(first: number, last: number): number[]
   else if (spanDays > 2 * 365) step = 3;
   else if (spanDays > 365) step = 2;
 
+  // Ticks label a UTC data contract: building them from local calendar
+  // arithmetic shifts a January tick into December for negative offsets.
   const ticks: number[] = [];
-  const d = new Date(first);
-  d.setDate(1);
-  d.setHours(0, 0, 0, 0);
-  if (step > 1 && d.getMonth() !== 0) {
-    d.setFullYear(d.getFullYear() + 1, 0, 1);
+  const start = new Date(first);
+  let year = start.getUTCFullYear();
+  let month = start.getUTCMonth();
+  if (step > 1 && month !== 0) {
+    year += 1;
+    month = 0;
   }
-  while (d.getTime() <= last) {
-    ticks.push(d.getTime());
-    d.setMonth(d.getMonth() + step);
+  let tick = Date.UTC(year, month, 1);
+  while (tick <= last) {
+    ticks.push(tick);
+    month += step;
+    tick = Date.UTC(year, month, 1);
   }
   return ticks;
 }

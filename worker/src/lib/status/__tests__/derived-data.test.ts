@@ -3,7 +3,7 @@ import * as conservationModule from "../../mint-burn-conservation";
 import { MINT_BURN_CONFIGS } from "../../mint-burn-contracts";
 import { MintBurnConservationRecordSchema, MintBurnReconciliationSummarySchema } from "@shared/types/status";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { getDatasetFreshness, getMintBurnReconciliation } from "../derived-data";
 
@@ -61,7 +61,7 @@ async function reconcile(options: {
 describe("conservation compatibility schema", () => {
   it("accepts old status payloads without implying conservation evidence", () => {
     const parsed = MintBurnReconciliationSummarySchema.parse({ checkedAt: NOW, comparedCoins: 1,
-      criticalCount: 1, warnCount: 0, insufficientCount: 0, rows: [{ stablecoinId: "usds-sky", symbol: "USDS",
+      criticalCount: 1, insufficientCount: 0, rows: [{ stablecoinId: "usds-sky", symbol: "USDS",
         flowNet24hUsd: 10, chainSupplyDelta24hUsd: 100, absoluteDiffUsd: 90, diffRatio: 0.9,
         status: "critical", coverageStatus: "full" }] });
     expect(parsed.conservationVersion).toBeUndefined();

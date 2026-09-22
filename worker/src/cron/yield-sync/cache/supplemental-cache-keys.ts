@@ -1,5 +1,6 @@
 import { logWorkerEventArgs } from "../../../lib/structured-log";
 import { isRecord } from "@shared/lib/type-guards";
+import { PYS_APY_SANITY_MAX } from "@shared/lib/yield-scoring";
 import type { ResolvedYieldCandidate } from "../types";
 import type { SupplementalSourceFamilyKey } from "../supplemental-source-family-keys";
 import {
@@ -122,7 +123,7 @@ function isResolvedYieldCandidate(value: unknown, nowSec: number): value is Reso
   if (!isRecord(value.yield)) return false;
   const candidateYield = value.yield;
   if (typeof candidateYield.sourceKey !== "string" || candidateYield.sourceKey.trim() === "") return false;
-  if (!isFiniteNumber(candidateYield.currentApy)) return false;
+  if (!isFiniteNumber(candidateYield.currentApy) || candidateYield.currentApy > PYS_APY_SANITY_MAX) return false;
   if (!isNullableFiniteNumber(candidateYield.apyBase)) return false;
   if (!isNullableFiniteNumber(candidateYield.apyReward)) return false;
   if (!isNullableStringValue(candidateYield.sourcePool)) return false;

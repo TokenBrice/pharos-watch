@@ -42,8 +42,14 @@ const recorded: Record<string, { owner: string; data: string }> = {
   }
 };
 let accounts: Record<string, { owner: string; data: string }>;
-function mutate(address: string, offset: number, byte: number) {
-  const data = Buffer.from(accounts[address].data, "base64"); data[offset] = byte;
+function mutatePinned(address: string, identityHex: string, identityOffset: number, byte: number) {
+  const data = Buffer.from(accounts[address].data, "base64");
+  const identity = Buffer.from(identityHex, "hex");
+  const start = data.indexOf(identity);
+  if (start < 0 || data.indexOf(identity, start + 1) >= 0) {
+    throw new Error(`pinned identity is missing or duplicated for ${address}`);
+  }
+  data[start + identityOffset] = byte;
   accounts[address].data = data.toString("base64");
 }
 function spl(mint: string, vault: string, mintBytes: Uint8Array, amount: bigint, decimals: number) {
@@ -151,12 +157,12 @@ describe("hylo-solana", () => {
   });
 
   it("fails closed on an unknown registry LST", async () => {
-    mutate(p.registry, 600, 0);
+    mutatePinned(p.registry, "00ae7b4ffad4eccafcd141e9832caf10ad", 8, 0);
     await expect(run()).rejects.toThrow(/unknown LST/);
   });
 
   it("retains composition but degrades paused state", async () => {
-    mutate(p.state, 478, 1);
+    mutatePinned(p.state, "420f0000000000f7000000000000000000", 8, 1);
     const { result } = await run();
     expect(result.metadata?.collateralizationRatio).toBeGreaterThan(1);
     expect(result.warnings).toContainEqual(expect.objectContaining({ code: "route-paused", effect: "degraded" }));
@@ -164,7 +170,7 @@ describe("hylo-solana", () => {
 
   it.each(["owner", "discriminator"])("rejects %s mismatches", async (kind) => {
     if (kind === "owner") accounts[p.state].owner = TOKEN;
-    else mutate(p.state, 0, 0);
+    else mutatePinned(p.state, "72a1a9d2ccaf95ae00", 0, 0);
     await expect(run()).rejects.toThrow(/owner mismatch|discriminator/);
   });
 
@@ -174,13 +180,13 @@ describe("hylo-solana", () => {
   });
 
   it("rejects substitution of an exogenous oracle feed", async () => {
-    mutate(p.exoPairs[0].pair, 76, 0);
+    mutatePinned(p.exoPairs[0].pair, "788d24c871311cfce62df6c8b4a85fe1a6", 8, 0);
     await expect(run()).rejects.toThrow(/oracle identity/);
   });
 
   it("rejects a registry changed between discovery and the atomic census", async () => {
     const network = hyloNetwork(true, (_rpc, requestIndex) => {
-      if (requestIndex === 2) mutate(p.registry, 21, 0);
+      if (requestIndex === 2) mutatePinned(p.registry, "4f9d1600000000140169cd88c074150b64", 8, 0);
     });
     await expect(run(network)).rejects.toThrow(/registry changed/);
   });

@@ -42,13 +42,14 @@ describe("CHAIN_META", () => {
 });
 
 describe("getActiveChainIds", () => {
-  it("returns chain IDs that appear in both contracts and CHAIN_META", () => {
+  it("returns every CHAIN_META key, including chains without tracked supply", () => {
     const ids = getActiveChainIds();
     expect(ids.length).toBeGreaterThan(0);
     for (const id of ids) {
       expect(CHAIN_META[id]).toBeDefined();
     }
     expect(ids).toContain("ethereum");
+    expect(ids).toEqual(Object.keys(CHAIN_META).sort());
   });
 
   it("returns sorted, deduplicated IDs", () => {
@@ -89,10 +90,12 @@ describe("resolveChainId", () => {
   });
 
   it("resolves DefiLlama chain names that differ from local metadata names", () => {
-    expect(resolveChainId("XDC")).toBe("xdc");
+    expect(resolveChainId("OP Mainnet")).toBe("optimism");
+    expect(resolveChainId("Plume Mainnet")).toBe("plume");
     expect(resolveChainId("ZKsync Era")).toBe("zksync");
-    expect(resolveChainId("Abcore")).toBe("abcore");
+    expect(resolveChainId("Kaia")).toBe("klaytn");
     expect(resolveChainId("edgeX L1")).toBe("edgechain");
+    expect(resolveChainId("Echelon Initia")).toBe("initia");
   });
 });
 

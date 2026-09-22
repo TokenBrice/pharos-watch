@@ -1,4 +1,5 @@
 import { THREAT_BAND_ORDER, isThreatBand } from "@shared/lib/classification";
+import { crossesTelegramDepegWorseningStep } from "@shared/lib/telegram-delivery-policy";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import {
   isDewsAlertable,
@@ -46,14 +47,6 @@ function isMaterialSafetyDowngrade(change: SafetyChange): boolean {
   return true;
 }
 
-function crossesDepegWorseningStep(
-  previousDeviationBps: number,
-  currentDeviationBps: number,
-  step: number | null,
-): boolean {
-  if (step == null || step <= 0 || currentDeviationBps <= previousDeviationBps) return false;
-  return Math.floor(previousDeviationBps / step) < Math.floor(currentDeviationBps / step);
-}
 
 export function meetsDepegStepThreshold(deviationBps: number, step: number | null): boolean {
   if (step == null || step <= 0) return true;
@@ -67,7 +60,7 @@ export function shouldIncludeSafetyForSubscriber(sub: SubscriberRow, change: Saf
 }
 
 export function shouldIncludeDepegWorsening(sub: SubscriberRow, event: DepegWorsening): boolean {
-  return crossesDepegWorseningStep(
+  return crossesTelegramDepegWorseningStep(
     event.previousDeviationBps,
     event.currentDeviationBps,
     sub.depeg_worsening_bps_step,

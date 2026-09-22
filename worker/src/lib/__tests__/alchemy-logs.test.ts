@@ -216,6 +216,36 @@ describe("getAlchemyTransactionContextBatchMany", () => {
     expect(result.get("0xbbb")?.receipt?.transactionHash).toBe("0xbbb");
   });
 
+  it("quarantines malformed transaction-context peers without dropping valid peers", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify([
+          { jsonrpc: "2.0", id: 0, result: { hash: "0xaaa", to: "0xrouter", input: 42 } },
+          { jsonrpc: "2.0", id: 1, result: { transactionHash: "0xaaa", to: "0xrouter", logs: {} } },
+          { jsonrpc: "2.0", id: 2, result: { hash: "0xbbb", to: "0xrouter", input: "0x87654321" } },
+          { jsonrpc: "2.0", id: 3, result: { transactionHash: "0xbbb", to: "0xrouter", logs: [] } },
+        ]),
+        { status: 200 },
+      ),
+    );
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    try {
+      const result = await getAlchemyTransactionContextBatchMany(
+        "https://eth-mainnet.g.alchemy.com/v2/key",
+        ["0xaaa", "0xbbb"],
+        createBudget(100),
+      );
+
+      expect(result.get("0xaaa")).toEqual({ tx: null, receipt: null });
+      expect(result.get("0xbbb")?.tx?.hash).toBe("0xbbb");
+      expect(result.get("0xbbb")?.receipt?.transactionHash).toBe("0xbbb");
+      expect(warnSpy).toHaveBeenCalledTimes(2);
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
   it("returns null contexts without fetching when budget is exhausted", async () => {
     const budget = createBudget(0);
     const result = await getAlchemyTransactionContextBatchMany(

@@ -113,11 +113,49 @@ describe("check-cron-schedule-sync", () => {
     expect(report.onlyInSharedSchedules).toEqual(["2 * * * *"]);
   });
 
+  it("rejects a duplicate raw Wrangler cron expression before set comparison", () => {
+    const report = evaluateCronScheduleSync({
+      cronSchedules: { slotA: "1 * * * *" },
+      scheduledSlotPlans: { slotA: { jobChains: [["job-a"]] } },
+      cronJobDefinitions: [{ job: "job-a" }],
+      cronConnectionBudgetEntries: [{ job: "job-a" }],
+      wranglerCronTriggers: ["1 * * * *", "1 * * * *"],
+    });
+
+    expect(report.duplicateWranglerSchedules).toEqual(["1 * * * *"]);
+    expect(report.duplicateSlotPlanSchedules).toEqual([]);
+    expect(report.onlyInWranglerSchedules).toEqual([]);
+    expect(report.onlyInSharedSchedules).toEqual([]);
+    expect(report.failed).toBe(true);
+  });
+
+  it("rejects a duplicate raw slot trigger schedule before set comparison", () => {
+    const report = evaluateCronScheduleSync({
+      cronSchedules: { slotA: "1 * * * *" },
+      cronTriggerSchedules: { slotA: ["1 * * * *"] },
+      scheduledSlotPlans: {
+        slotA: {
+          triggerSchedules: ["1 * * * *", "1 * * * *"],
+          jobChains: [["job-a"]],
+        },
+      },
+      cronJobDefinitions: [{ job: "job-a" }],
+      cronConnectionBudgetEntries: [{ job: "job-a" }],
+      wranglerCronTriggers: ["1 * * * *"],
+    });
+
+    expect(report.duplicateSlotPlanSchedules).toEqual(["1 * * * *"]);
+    expect(report.duplicateWranglerSchedules).toEqual([]);
+    expect(report.onlyInSlotPlanSchedules).toEqual([]);
+    expect(report.missingSlotPlanSchedules).toEqual([]);
+    expect(report.failed).toBe(true);
+  });
+
   it.each([
     ["missingPlanKeys", { cronSchedules: { slotA: "1 * * * *", missing: "1 * * * *" } }, "missing"],
     ["extraPlanKeys", { scheduledSlotPlans: {
       slotA: { jobChains: [["job-a"]] },
-      extra: { schedule: "1 * * * *", jobChains: [] },
+      extra: { jobChains: [] },
     } }, "extra"],
     ["missingRuntimeJobs", { cronJobDefinitions: [{ job: "job-a" }, { job: "missing" }] }, "missing"],
     ["unknownRuntimeJobs", { cronJobDefinitions: [] }, "job-a"],
@@ -137,9 +175,10 @@ describe("check-cron-schedule-sync", () => {
     expect(report[field]).toEqual([offender]);
     expect(report.failed).toBe(true);
     for (const other of [
-      "missingPlanKeys", "extraPlanKeys", "missingRuntimeJobs", "unknownRuntimeJobs",
-      "missingBudgetJobs", "unknownBudgetJobs", "onlyInWranglerSchedules",
-      "onlyInSharedSchedules", "onlyInSlotPlanSchedules", "missingSlotPlanSchedules",
+      "duplicateSlotPlanSchedules", "duplicateWranglerSchedules", "missingPlanKeys",
+      "extraPlanKeys", "missingRuntimeJobs", "unknownRuntimeJobs", "missingBudgetJobs",
+      "unknownBudgetJobs", "onlyInWranglerSchedules", "onlyInSharedSchedules",
+      "onlyInSlotPlanSchedules", "missingSlotPlanSchedules",
     ] as const) {
       if (other !== field) expect(report[other]).toEqual([]);
     }

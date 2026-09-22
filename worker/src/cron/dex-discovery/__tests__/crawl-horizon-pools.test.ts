@@ -37,6 +37,13 @@ function poolRow() {
   };
 }
 
+function poolRows(count: number, offset = 0) {
+  return Array.from({ length: count }, (_, index) => ({
+    ...poolRow(),
+    id: (index + offset + 1).toString(16).padStart(64, "0"),
+  }));
+}
+
 function context(options?: { deadlineMs?: number; stablecoinId?: string }) {
   return discoveryContext(options?.stablecoinId ?? "eurc-circle", {
     deadlineMs: options?.deadlineMs,
@@ -77,6 +84,7 @@ describe("Horizon pool discovery", () => {
           provider: "horizon",
           status: "success",
           observedPoolCount: 1,
+          paginationComplete: true,
         },
       ],
     });
@@ -97,6 +105,62 @@ describe("Horizon pool discovery", () => {
       quoteToken: USDC_ADDRESS,
       quoteSymbol: "USDC",
     });
+  });
+
+  it("follows the Horizon cursor until a short page proves the query ended", async () => {
+    const nextHref = "https://horizon.stellar.org/liquidity_pools?cursor=page2&limit=200";
+    const fetchMock = mockFetch([
+      {
+        match: "reserves=EURC%3AGDHU",
+        body: { ...payload(poolRows(200)), _links: { next: { href: nextHref } } },
+      },
+      { match: "cursor=page2", body: payload(poolRows(5, 200)) },
+    ], { requireMatch: true });
+    const stageContext = context();
+
+    const result = await crawlHorizonPoolsStage({
+      coinTargets: [target()],
+      context: stageContext.value,
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(result.providerChecks).toEqual([
+      {
+        chain: "stellar",
+        address: EURC_ADDRESS,
+        provider: "horizon",
+        status: "success",
+        observedPoolCount: 205,
+        paginationComplete: true,
+      },
+    ]);
+    expect(stageContext.pools).toHaveLength(205);
+  });
+
+  it("reports a full page without a usable cursor as partial, never a completed query", async () => {
+    const fetchMock = mockFetch([{
+      match: "reserves=EURC%3AGDHU",
+      body: { ...payload(poolRows(200)), _links: { next: { href: "https://evil.example/liquidity_pools" } } },
+    }], { requireMatch: true });
+    const stageContext = context();
+
+    const result = await crawlHorizonPoolsStage({
+      coinTargets: [target()],
+      context: stageContext.value,
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(result.providerChecks).toEqual([
+      {
+        chain: "stellar",
+        address: EURC_ADDRESS,
+        provider: "horizon",
+        status: "degraded",
+        observedPoolCount: 200,
+        paginationComplete: false,
+      },
+    ]);
+    expect(stageContext.pools).toHaveLength(200);
   });
 
   it("fails every queried target closed when Horizon returns a malformed payload", async () => {
@@ -189,6 +253,7 @@ describe("Horizon pool discovery", () => {
         provider: "horizon",
         status: "success",
         observedPoolCount: 0,
+        paginationComplete: true,
       },
     ]);
   });

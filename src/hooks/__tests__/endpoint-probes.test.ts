@@ -40,6 +40,7 @@ describe("collectEndpointProbes", () => {
         JSON.stringify({
           status: "degraded",
           warnings: ["Health cache is delayed."],
+          blacklist: { missingAmounts: 0, missingRatio: 0, recentMissingAmounts: 0 },
         }),
         {
           status: 200,
@@ -93,6 +94,24 @@ describe("collectEndpointProbes", () => {
         semanticStatus: "stale",
         semanticScope: "health",
         semanticDetail: "Response did not match the health probe contract.",
+        error: "Invalid health probe response",
+      }),
+    );
+  });
+
+  it("refuses a healthy verdict from a health body with no gap evidence", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ status: "healthy", warnings: [] }), { status: 200 }),
+    );
+
+    const result = await collectEndpointProbes(["/api/health"]);
+
+    expect(result[0]).toEqual(
+      expect.objectContaining({
+        path: "/api/health",
+        status: 200,
+        semanticStatus: "stale",
+        semanticScope: "health",
         error: "Invalid health probe response",
       }),
     );
@@ -214,6 +233,7 @@ describe("collectEndpointProbes", () => {
         JSON.stringify({
           status: "healthy",
           warnings: [],
+          blacklist: { missingAmounts: 0, missingRatio: 0, recentMissingAmounts: 0 },
         }),
         {
           status: 200,

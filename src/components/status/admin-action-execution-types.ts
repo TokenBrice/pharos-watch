@@ -1,8 +1,42 @@
 import type { EndpointMethod, StatusPageAction } from "@shared/lib/api-endpoints";
 import type { ActionReadinessCheck } from "@/lib/status/admin-ops-insights";
 
-export type AdminActionExecutionStatus =
-  "ready" | "running" | "accepted" | "queued" | "succeeded" | "failed" | "unknown";
+export type AdminMutationExecutionStatus =
+  | "ready"
+  | "running"
+  | "accepted"
+  | "queued"
+  | "succeeded"
+  | "failed"
+  | "unknown";
+
+export interface AdminMutationExecution<Request> {
+  laneKey: string;
+  intentId: string;
+  idempotencyKey: string;
+  request: Request;
+  status: AdminMutationExecutionStatus;
+  requestInFlight: boolean;
+  ok: boolean;
+  attempts: number;
+  data: unknown;
+  output: string;
+  error: string | null;
+  httpStatus: number | null;
+  idempotentReplay: boolean | null;
+  responseIdempotencyKey: string | null;
+  executionCertainty: string | null;
+  warning: string | null;
+  createdAt: number;
+  startedAt: number | null;
+  completedAt: number | null;
+  executedAt: number | null;
+}
+
+export interface AdminMutationRunResult<Execution> {
+  execution: Execution;
+  didStart: boolean;
+}
 
 export interface AdminActionExecutionRequest {
   action: StatusPageAction;
@@ -12,37 +46,16 @@ export interface AdminActionExecutionRequest {
   scopeLabel: string;
 }
 
-export interface AdminActionExecution {
+export interface AdminActionExecution extends AdminMutationExecution<AdminActionExecutionRequest> {
   action: StatusPageAction;
   executionKey: string;
-  intentId: string;
-  idempotencyKey: string;
   requestPath: string;
   requestMethod: EndpointMethod;
   scopeKey: string;
   scopeLabel: string;
-  status: AdminActionExecutionStatus;
-  requestInFlight: boolean;
-  ok: boolean;
-  output: string;
-  resultData: unknown;
-  error: string | null;
-  attempts: number;
-  createdAt: number;
-  startedAt: number | null;
-  completedAt: number | null;
-  executedAt: number | null;
-  httpStatus: number | null;
-  idempotentReplay: boolean | null;
-  responseIdempotencyKey: string | null;
-  executionCertainty: string | null;
-  warning: string | null;
 }
 
-export interface AdminActionRunResult {
-  execution: AdminActionExecution;
-  didStart: boolean;
-}
+export type AdminActionRunResult = AdminMutationRunResult<AdminActionExecution>;
 
 export interface AdminActionReadinessSource {
   getSnapshot: () => readonly ActionReadinessCheck[];

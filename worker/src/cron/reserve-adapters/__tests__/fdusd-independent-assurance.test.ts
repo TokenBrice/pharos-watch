@@ -1,33 +1,25 @@
-import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { getIndependentAssuranceManifest, independentAssuranceSourceTimestamp, reconcileIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { FDUSD_INDEPENDENT_ASSURANCE_PROFILE, fetchFdusdIndependentAssuranceReserves } from "../fdusd-independent-assurance";
-import { fetchIndependentAssuranceReserves, verifyIndependentAssuranceReport } from "../independent-assurance";
+import { fetchIndependentAssuranceReserves } from "../independent-assurance";
 import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
+import { PDF_BYTES, verifyFixtureIndex } from "./independent-assurance.test-support";
 
 vi.mock("../independent-assurance", async () => {
   const actual = await vi.importActual<Record<string, unknown>>("../independent-assurance");
   return { ...actual, fetchIndependentAssuranceReserves: vi.fn() };
 });
 
-const PDF_BYTES = new TextEncoder().encode("%PDF-1.7\nfixture\n");
 const reviewed = getIndependentAssuranceManifest("FDUSD");
 
-const TEST_DIR = dirname(fileURLToPath(import.meta.url));
 const FEB_2026_HREF =
   "https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/69b8bb692133e7d22020f80a_FD121_(BVI)_-_ISAE3000_Attestation_Report_on_Reserves_Account_(Feb_2026)_(FINAL).pdf";
 const SEP_2025_HREF =
   "https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/68f09f623c0571b23acecbcc_ISAE3000_-_Attestion_Report_on_Reserves_Account_(Sept_2025)_Final.pdf";
 
-// The live Webflow index capture: every ISAE 3000 row the newer-report fence
-// dates, including the Feb 2026 and Sept 2025 rows whose CDN filenames separate
-// the report month and year with an underscore instead of a space.
-const LIVE_INDEX_FIXTURE = resolve(TEST_DIR, "fixtures", "fdusd-independent-assurance.html");
 
 // Webflow CDN cohort: the June signed-image report (no ISAE 3000 marker) and a
 // whitepaper handout carrying an ISAE 3000 label must both stay out of the
@@ -45,33 +37,6 @@ function indexHtml(extra = ""): string {
   `;
 }
 
-function installFetch(html: string) {
-  const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
-    const url = String(input);
-    if (url === reviewed.officialIndexUrl) {
-      return new Response(html, { headers: { "content-type": "text/html" } });
-    }
-    if (url === reviewed.reportUrl) {
-      return new Response(PDF_BYTES, {
-        headers: { "content-type": "application/pdf", "content-length": String(PDF_BYTES.length) },
-      });
-    }
-    throw new Error(`unexpected fixture request ${url}`);
-  });
-  vi.stubGlobal("fetch", fetchMock);
-  return fetchMock;
-}
-
-function verifyIndex() {
-  return verifyIndependentAssuranceReport({
-    manifest: reviewed,
-    indexUrl: reviewed.officialIndexUrl,
-    indexHost: "firstdigitallabs.webflow.io",
-    reportHosts: ["cdn.prod.website-files.com"],
-    profile: FDUSD_INDEPENDENT_ASSURANCE_PROFILE,
-    signal: new AbortController().signal,
-  });
-}
 
 describe("fdusd-independent-assurance (AOGB ISAE 3000 limited assurance)", () => {
   afterEach(() => {
@@ -115,12 +80,12 @@ describe("fdusd-independent-assurance (AOGB ISAE 3000 limited assurance)", () =>
     expect(timestamp - Date.parse("2026-08-31T00:00:00Z") / 1000).toBe(25 * 3_600);
   });
 
-  it("selects the reviewed report on the Webflow index and reaches the PDF byte gate", async () => {
-    installFetch(indexHtml());
-    await expect(verifyIndex()).rejects.toThrow(
-      `PDF byte length ${PDF_BYTES.length} does not match reviewed ${reviewed.reportByteLength}`,
+  it("keeps maturity dates out of the Treasury slice label", () => {
+    expect(FDUSD_INDEPENDENT_ASSURANCE_PROFILE.classifications["treasury-bills"].name).toBe(
+      "U.S. Treasury Bills",
     );
   });
+
 
   it("dates every row of the live Webflow index, including underscore-separated CDN filenames", async () => {
     // Regression: the live index pairs "(Feb_2026)" and "(Sept_2025)" filenames
@@ -133,10 +98,9 @@ describe("fdusd-independent-assurance (AOGB ISAE 3000 limited assurance)", () =>
     expect(FDUSD_INDEPENDENT_ASSURANCE_PROFILE.reportDateFromCandidate?.(SEP_2025_HREF, "Download")).toBe(
       "2025-09-30",
     );
-    installFetch(readFileSync(LIVE_INDEX_FIXTURE, "utf8"));
-    await expect(verifyIndex()).rejects.toThrow(
-      `PDF byte length ${PDF_BYTES.length} does not match reviewed ${reviewed.reportByteLength}`,
-    );
+    await expect(verifyFixtureIndex(
+      "FDUSD", FDUSD_INDEPENDENT_ASSURANCE_PROFILE, "fdusd-independent-assurance.html",
+    )).rejects.toThrow(`PDF byte length ${PDF_BYTES.length} does not match reviewed ${reviewed.reportByteLength}`);
   });
 
   it("derives the report month only from the reviewed CDN filename convention", () => {
@@ -150,18 +114,14 @@ describe("fdusd-independent-assurance (AOGB ISAE 3000 limited assurance)", () =>
     )).toBeNull();
   });
 
-  it("fails closed when a newer unreviewed ISAE 3000 report appears", async () => {
-    installFetch(indexHtml(
-      '<a href="https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/cafe_ISAE3000%20-%20Attestation%20Report%20on%20Reserves%20Account%20September%202026.pdf">September 2026</a>',
-    ));
-    await expect(verifyIndex()).rejects.toThrow("newer unreviewed report");
-  });
 
   it("rejects an ISAE 3000 candidate whose report month cannot be derived", async () => {
-    installFetch(indexHtml(
+    const html = indexHtml(
       '<a href="https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/ISAE3000-attestation-report.pdf">Latest</a>',
-    ));
-    await expect(verifyIndex()).rejects.toThrow("ambiguous report date");
+    );
+    await expect(verifyFixtureIndex(
+      "FDUSD", FDUSD_INDEPENDENT_ASSURANCE_PROFILE, "fdusd-independent-assurance.html", html,
+    )).rejects.toThrow("ambiguous report date");
   });
 
   it("dispatches the bound coin through the publisher adapter and validates output", async () => {

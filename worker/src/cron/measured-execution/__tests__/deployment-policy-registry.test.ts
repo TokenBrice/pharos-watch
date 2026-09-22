@@ -1,61 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
   CURVE_STABLESWAP_DEPLOYMENT,
-  CURVE_STABLESWAP_NG_DEPLOYMENTS,
-  CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT,
   UNISWAP_V4_DEPLOYMENT,
   CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS,
 } from "@shared/lib/measured-execution-deployment-policies";
-import { CURVE_3POOL_STABLESWAP_POLICY } from "../curve-stableswap";
-import {
-  CURVE_DUSD_USDC_STABLESWAP_NG_POLICY,
-  CURVE_USDG_USDC_STABLESWAP_NG_POLICY,
-  getCurveStableSwapNgPolicy,
-} from "../curve-stableswap-ng";
+import { getCurveStableSwapNgPolicy } from "../curve-stableswap-ng";
 import { getUniswapV4Deployment } from "../uniswap-v4";
-import {
-  CURVE_DOLA_SUSDE_RATE_BEARING_POLICY,
-  CURVE_GUSD_3CRV_METAPOOL_POLICY,
-  CURVE_LUSD_3CRV_METAPOOL_POLICY,
-  CURVE_R3_METAPOOL_POLICIES,
-} from "../curve-composite-policies";
+import { CURVE_R3_METAPOOL_POLICIES } from "../curve-composite-policies";
 import { getDexMeasuredExecutionDeployment } from "../registry";
 import { isDexMeasuredExecutionTargetScoreEligible, resolveTargetDeployment } from "../admission";
 import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
 
 describe("measured deployment policy registry", () => {
-  it("projects the legacy Curve identity byte-for-byte into the producer policy", () => {
-    expect(CURVE_3POOL_STABLESWAP_POLICY).toEqual({
-      chain: CURVE_STABLESWAP_DEPLOYMENT.chain,
-      poolAddress: CURVE_STABLESWAP_DEPLOYMENT.poolAddress,
-      expectedPoolCodeHash: CURVE_STABLESWAP_DEPLOYMENT.poolCodeHash,
-      registryAddress: CURVE_STABLESWAP_DEPLOYMENT.registryAddress,
-      expectedRegistryCodeHash: CURVE_STABLESWAP_DEPLOYMENT.registryCodeHash,
-      lpTokenAddress: CURVE_STABLESWAP_DEPLOYMENT.lpTokenAddress,
-      poolTokens: CURVE_STABLESWAP_DEPLOYMENT.poolTokens,
-      mode: "active",
-      scoreEligible: true,
-    });
-  });
-
-  it.each([
-    [CURVE_USDG_USDC_STABLESWAP_NG_POLICY, CURVE_STABLESWAP_NG_DEPLOYMENTS[0]],
-    [CURVE_DUSD_USDC_STABLESWAP_NG_POLICY, CURVE_STABLESWAP_NG_DEPLOYMENTS[1]],
-  ])("projects each StableSwap-NG identity into its producer policy", (policy, deployment) => {
-    expect(policy).toMatchObject({
-      chain: deployment.chain,
-      stablecoinId: deployment.stablecoinId,
-      poolAddress: deployment.poolAddress,
-      expectedPoolCodeHash: deployment.poolCodeHash,
-      factoryAddress: CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT.address,
-      expectedFactoryCodeHash: CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT.codeHash,
-      factoryPoolIndex: deployment.factoryPoolIndex,
-      poolTokens: deployment.poolTokens,
-      inputIndex: deployment.inputIndex,
-      outputIndex: deployment.outputIndex,
-    });
-  });
-
   it("collects pinned shadow cohorts without admitting them to scoring", () => {
     const targets = [
       ...["bsc", "base", "arbitrum", "polygon"].map((chain) => ({
@@ -92,27 +48,6 @@ describe("measured deployment policy registry", () => {
     expect(getUniswapV4Deployment("ethereum")).toMatchObject({ mode: "active", scoreEligible: true });
     expect(getUniswapV4Deployment("unsupported-chain")).toBeNull();
     expect(getCurveStableSwapNgPolicy("etherlink", "0x" + "ab".repeat(20))).toBeNull();
-  });
-
-  it("reuses the shared Curve factory and 3pool identities in composite policies", () => {
-    expect(CURVE_DOLA_SUSDE_RATE_BEARING_POLICY).toMatchObject({
-      factoryAddress: CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT.address,
-      expectedFactoryCodeHash: CURVE_STABLESWAP_NG_FACTORY_DEPLOYMENT.codeHash,
-    });
-    expect(CURVE_GUSD_3CRV_METAPOOL_POLICY.metapool).toMatchObject({
-      basePoolAddress: CURVE_STABLESWAP_DEPLOYMENT.poolAddress,
-      expectedBasePoolCodeHash: CURVE_STABLESWAP_DEPLOYMENT.poolCodeHash,
-      basePoolTokens: CURVE_STABLESWAP_DEPLOYMENT.poolTokens,
-    });
-    expect(CURVE_LUSD_3CRV_METAPOOL_POLICY).toMatchObject({
-      factoryPoolIndex: 16,
-      implementationAddress: "0x5f890841f657d90e081babdb532a05996af79fe6",
-      metapool: {
-        basePoolAddress: CURVE_STABLESWAP_DEPLOYMENT.poolAddress,
-        expectedBasePoolCodeHash: CURVE_STABLESWAP_DEPLOYMENT.poolCodeHash,
-        basePoolTokens: CURVE_STABLESWAP_DEPLOYMENT.poolTokens,
-      },
-    });
   });
 
   it("keeps legacy Ethereum factory/3Crv policies on one reviewed template", () => {

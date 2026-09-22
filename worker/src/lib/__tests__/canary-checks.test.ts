@@ -224,15 +224,6 @@ function healthyD1(
       rows: [],
     },
     {
-      match: "canary-dex-global-row",
-      first: {
-        current_row_count: latestPublishedRows,
-        expected_row_count: dex.missingGenerationEvidence ? null : latestPublishedRows,
-        metadata_json: generationMetadata,
-      },
-      rows: [],
-    },
-    {
       match: "blacklist-null-identity-canary",
       first: {
         event_rows: dex.blacklistEventNullIdentityRows ?? 0,
@@ -316,13 +307,13 @@ describe("worker data invariant canaries", () => {
     await runCanaryChecks(db, { observedAt: NOW, mode: "status" });
 
     const dexQueries = db.getHistory().filter((entry) => entry.sql.includes("canary-dex-"));
-    expect(dexQueries).toHaveLength(4);
+    expect(dexQueries).toHaveLength(3);
     expect(dexQueries.filter((entry) =>
       /FROM dex_liquidity(?:\s|$)/.test(entry.sql)
     )).toHaveLength(1);
     expect(dexQueries.filter((entry) =>
       entry.sql.includes("FROM dex_liquidity_publication_generations")
-    )).toHaveLength(3);
+    )).toHaveLength(2);
   });
 
   it("flags a seeded null-identity blacklist row", async () => {
@@ -595,15 +586,6 @@ describe("worker data invariant canaries", () => {
         rows: [],
       },
       {
-        match: "canary-dex-global-row",
-        first: {
-          current_row_count: 408,
-          expected_row_count: 408,
-          metadata_json: JSON.stringify({ activeStablecoinCount: 408 }),
-        },
-        rows: [],
-      },
-      {
         match: "FROM cache WHERE key = ?",
         rows: [
           { key: "stablecoins", value: stablecoinsPayload(1), updatedAt: NOW - 60, updated_at: NOW - 60 },
@@ -712,7 +694,7 @@ describe("worker data invariant canaries", () => {
   it("prunes canary run rows older than the 14-day retention cutoff", async () => {
     const db = mockD1([
       {
-        match: "DELETE FROM worker_canary_runs WHERE observed_at < ?",
+        match: "DELETE FROM worker_canary_runs",
         rows: [],
         runMeta: { changes: 4 },
       },
@@ -720,11 +702,14 @@ describe("worker data invariant canaries", () => {
     const cutoff = NOW - WORKER_CANARY_RUN_RETENTION_SEC;
 
     expect(WORKER_CANARY_RUN_RETENTION_SEC).toBe(14 * 24 * 3600);
-    await expect(pruneWorkerCanaryRuns(db, cutoff)).resolves.toBe(4);
+    await expect(pruneWorkerCanaryRuns(db, cutoff)).resolves.toEqual({
+      deleted: 4,
+      truncated: false,
+    });
     expect(db.getHistory()).toEqual([
       expect.objectContaining({
-        sql: expect.stringContaining("DELETE FROM worker_canary_runs WHERE observed_at < ?"),
-        binds: [cutoff],
+        sql: expect.stringContaining("DELETE FROM worker_canary_runs"),
+        binds: [cutoff, 5_000],
       }),
     ]);
   });
@@ -739,7 +724,7 @@ describe("worker data invariant canaries", () => {
         rows: [],
       },
       {
-        match: "canary-dex-global-row",
+        match: "canary-dex-latest-published-generation",
         throwError: new Error("D1_ERROR: no such table: dex_liquidity_publication_generations"),
         rows: [],
       },

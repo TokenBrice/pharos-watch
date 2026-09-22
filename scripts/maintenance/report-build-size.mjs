@@ -32,11 +32,9 @@ const MINIMUM_FILE_HEADROOM_RATIO = 0.25;
 const MAX_CLASSIC_ZOD_HTML_REFERENCE_RATIO = 0.75;
 const CLASSIC_ZOD_CHUNK_MARKER = "_zod.traits";
 
-// `totalOutFiles` is the only blocking gate: exceeding it means the Pages
-// direct upload physically cannot ship. Every other entry below is a
-// *reference* size — `--check` reports its delta to `$GITHUB_STEP_SUMMARY`
-// and exits 0, so payload growth stays visible without turning a release
-// into a budget-ratchet hotfix PR.
+// The direct-upload file count and named payload byte ceilings are blocking
+// under `--check`. File headroom and classic-Zod reach remain advisory because
+// they are capacity/architecture diagnostics rather than payload byte limits.
 const DEFAULT_BUDGETS = {
   // Keep a conservative 20,000-file repo budget. Cloudflare's current paid
   // Pages limit can be higher, but Free and legacy Wrangler paths use 20,000.
@@ -219,10 +217,15 @@ function formatPercent(value) {
 }
 
 /**
- * Non-blocking delta against a reference size. `direction: "floor"` marks
- * metrics where higher is better (headroom); everything else is a ceiling.
+ * Delta against a reference value. `direction: "floor"` marks metrics where
+ * higher is better (headroom); everything else is a ceiling.
  */
-function referenceDelta(label, actual, reference, { format = formatBytes, direction = "ceiling" } = {}) {
+function referenceDelta(
+  label,
+  actual,
+  reference,
+  { format = formatBytes, direction = "ceiling", enforcement = "blocking", responsible = label } = {},
+) {
   const delta = actual - reference;
   const within = direction === "floor" ? actual >= reference : actual <= reference;
   const ratio = reference !== 0 ? (delta / reference) * 100 : 0;
@@ -233,6 +236,8 @@ function referenceDelta(label, actual, reference, { format = formatBytes, direct
     reference: format(reference),
     delta: `${sign}${format(Math.abs(delta))} (${sign}${Math.abs(ratio).toFixed(1)}%)`,
     status: within ? "within" : "OVER",
+    enforcement,
+    responsible,
   };
 }
 
@@ -240,14 +245,17 @@ function writeStepSummary(rows) {
   const summaryPath = process.env.GITHUB_STEP_SUMMARY;
   if (!summaryPath) return;
   const lines = [
-    "## Build size reference deltas",
+    "## Build size budgets",
     "",
-    "Non-blocking. Only the Cloudflare 20,000-file direct-upload limit blocks a release.",
+    "Named payload byte ceilings and the total-file limit are blocking under `--check`. "
+      + "File headroom and classic-Zod reach are advisory diagnostics.",
     "",
-    "| Metric | Actual | Reference | Delta | |",
-    "|---|---:|---:|---:|---|",
+    "| Metric | Actual | Reference | Delta | Enforcement | Status |",
+    "|---|---:|---:|---:|---|---|",
     ...rows.map(
-      (row) => `| ${row.label} | ${row.actual} | ${row.reference} | ${row.delta} | ${row.status === "OVER" ? "⚠️" : ""} |`,
+      (row) =>
+        `| ${row.label} | ${row.actual} | ${row.reference} | ${row.delta} | ${row.enforcement} | `
+        + `${row.status === "OVER" ? "⚠️" : ""} |`,
     ),
     "",
   ];
@@ -392,36 +400,70 @@ if (check) {
       "direct-upload file headroom",
       overallCapacity.headroomRatio * 100,
       MINIMUM_FILE_HEADROOM_RATIO * 100,
-      { format: formatPercent, direction: "floor" },
+      { format: formatPercent, direction: "floor", enforcement: "advisory" },
     ),
     referenceDelta(
       "classic Zod HTML references",
       classicZodHtmlReferenceRatio * 100,
       MAX_CLASSIC_ZOD_HTML_REFERENCE_RATIO * 100,
-      { format: formatPercent },
+      { format: formatPercent, enforcement: "advisory" },
     ),
     referenceDelta("total JS chunks", sum(jsFiles), budgets.totalJsBytes),
-    referenceDelta("largest JS chunk", jsFiles[0]?.size ?? 0, budgets.largestJsBytes),
+    referenceDelta(
+      "largest JS chunk",
+      jsFiles[0]?.size ?? 0,
+      budgets.largestJsBytes,
+      { responsible: jsFiles[0]?.rel ?? "largest JS chunk" },
+    ),
     referenceDelta("total CSS chunks", sum(cssFiles), budgets.totalCssBytes),
-    referenceDelta("largest CSS chunk gzip", cssFilesWithGzip[0]?.gzipSize ?? 0, budgets.largestCssGzipBytes),
+    referenceDelta(
+      "largest CSS chunk gzip",
+      cssFilesWithGzip[0]?.gzipSize ?? 0,
+      budgets.largestCssGzipBytes,
+      { responsible: cssFilesWithGzip[0]?.rel ?? "largest CSS chunk gzip" },
+    ),
     referenceDelta("total static media", sum(mediaFiles), budgets.totalStaticMediaBytes),
-    referenceDelta("largest HTML file", htmlFiles[0]?.size ?? 0, budgets.largestHtmlBytes),
-    referenceDelta("largest TXT/RSC helper", txtFiles[0]?.size ?? 0, budgets.largestTxtBytes),
+    referenceDelta(
+      "largest HTML file",
+      htmlFiles[0]?.size ?? 0,
+      budgets.largestHtmlBytes,
+      { responsible: htmlFiles[0]?.rel ?? "largest HTML file" },
+    ),
+    referenceDelta(
+      "largest TXT/RSC helper",
+      txtFiles[0]?.size ?? 0,
+      budgets.largestTxtBytes,
+      { responsible: txtFiles[0]?.rel ?? "largest TXT/RSC helper" },
+    ),
     ...representativeDetails.map((detail) =>
       referenceDelta(
         `${detail.route} ${detail.kind}`,
         detail.size,
         detail.kind === "html" ? budgets.representativeDetailHtmlBytes : budgets.representativeDetailPageTxtBytes,
+        { responsible: detail.rel },
       ),
     ),
     ...representativeDetailEagerJs.map((detail) =>
-      referenceDelta(`${detail.route} eager JS gzip`, detail.size, budgets.representativeDetailEagerJsGzipBytes),
+      referenceDelta(
+        `${detail.route} eager JS gzip`,
+        detail.size,
+        budgets.representativeDetailEagerJsGzipBytes,
+        { responsible: detail.rel },
+      ),
     ),
   ];
 
-  console.log("\nSize reference deltas (report only)");
+  console.log("\nSize budget deltas");
   for (const row of referenceRows) {
-    console.log(`${row.status === "OVER" ? "OVER" : "  ok"} ${row.label}: ${row.actual} / ${row.reference} (${row.delta})`);
+    console.log(
+      `${row.status === "OVER" ? "OVER" : "  ok"} ${row.label}: ${row.actual} / ${row.reference} `
+        + `(${row.delta}; ${row.enforcement})`,
+    );
+    if (row.enforcement === "blocking" && row.status === "OVER") {
+      failures.push(
+        `${row.label} exceeds its byte ceiling (${row.actual} / ${row.reference}); responsible: ${row.responsible}`,
+      );
+    }
   }
   writeStepSummary(referenceRows);
 

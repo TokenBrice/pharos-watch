@@ -85,7 +85,7 @@ function ClassIcon({ type, className = "h-4 w-4" }: ClassIconProps) {
 // UTC to match the feed's UTC day grouping — local times made rows near
 // midnight sort under a wrong-looking day header.
 function formatHhMm(tsMs: number): string {
-  return new Date(tsMs).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" });
+  return new Date(tsMs).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "UTC" });
 }
 
 function humanizeEventType(type: string): string {
@@ -115,7 +115,6 @@ const DEPEG_BAR_MAX_BPS = 500;
 
 interface DepegPayload {
   absBps: number;
-  signedBps: number;
   direction: "above" | "below";
   prevAbsBps: number | null;
 }
@@ -126,9 +125,8 @@ function readDepegPayload(event: TapeEvent): DepegPayload | null {
   const dir = p?.direction;
   if (typeof abs !== "number") return null;
   if (dir !== "above" && dir !== "below") return null;
-  const signed = typeof p.signedDeviationBps === "number" ? p.signedDeviationBps : abs;
   const prev = typeof p.prevAbsDeviationBps === "number" ? p.prevAbsDeviationBps : null;
-  return { absBps: abs, signedBps: signed, direction: dir, prevAbsBps: prev };
+  return { absBps: abs, direction: dir, prevAbsBps: prev };
 }
 
 function DepegEnrichment({ event }: { event: TapeEvent }) {

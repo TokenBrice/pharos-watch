@@ -11,7 +11,14 @@ import yusd from "@shared/data/stablecoins/coins/yusd-aegis.json";
 import yzusd from "@shared/data/stablecoins/coins/yzusd-yuzu.json";
 import utyxsy from "@shared/data/stablecoins/coins/uty-xsy.json";
 import usn from "@shared/data/stablecoins/coins/usn-noon.json";
-import { makeTimestampedYuzuPayload } from "./accountable.test-support";
+import {
+  ACCOUNTABLE_MAPPING_CASES,
+  makeTimestampedYuzuPayload,
+  NEUTRL_TYPE_SPLIT_CAPTURE,
+  TORI_ASSET_BREAKDOWN_CAPTURE,
+  USN_DEPLOYMENT_CAPTURE,
+  YUZU_SIGNED_EXPOSURE_CAPTURE,
+} from "./accountable.test-support";
 import { installAdapterNetwork, runAdapter } from "./reserve-adapter.test-support";
 
 // Production removed NUSD's live config after its endpoint stopped resolving.
@@ -78,73 +85,16 @@ afterEach(() => {
 });
 
 describe("adaptAccountableDashboard", () => {
-  it("maps the type breakdown into reserve slices", () => {
-    const slices = adaptAccountableDashboard(
-      {
-        res: "ok",
-        data: {
-          collateralization: 1.0595,
-          ts: "1773304804848",
-          reserves: {
-            type: {
-              "Liquid Bonds": 8_971_650.68,
-              "Short Term Cash": 4_398_374.55,
-            },
-          },
-        },
-      },
-      {
-        bucket: "type",
-        riskMap: {
-          "Liquid Bonds": "high",
-          "Short Term Cash": "very-low",
-        },
-      },
+  it.each(ACCOUNTABLE_MAPPING_CASES)("maps $name into reserve slices", (testCase) => {
+    const result = adaptAccountableDashboard(
+      { res: "ok", data: {
+        collateralization: testCase.collateralization,
+        ts: testCase.ts,
+        reserves: { [testCase.bucket]: testCase.buckets },
+      } },
+      testCase.params,
     );
-
-    expect(slices.slices).toEqual([
-      { name: "Liquid Bonds", pct: 67.1, risk: "high" },
-      { name: "Short Term Cash", pct: 32.9, risk: "very-low" },
-    ]);
-  });
-
-  it("maps the reserves_split breakdown into reserve slices", () => {
-    const slices = adaptAccountableDashboard(
-      {
-        res: "ok",
-        data: {
-          collateralization: 1.00007,
-          ts: "1773337492853",
-          reserves: {
-            reserves_split: [
-              { name: "Copper", value: 28_058_537.09 },
-              { name: "Fireblocks", value: 9_964_626 },
-              { name: "Insurance Fund", value: 656_796.7 },
-              { name: "Insurance Fund Usage", value: 20_000 },
-              { name: "Binance", value: 1_181.38 },
-              { name: "Ethereum Chain", value: 7.96 },
-            ],
-          },
-        },
-      },
-      {
-        bucket: "reserves_split",
-        riskMap: {
-          Copper: "medium",
-          Fireblocks: "medium",
-          "Insurance Fund": "low",
-          "Insurance Fund Usage": "very-high",
-          Binance: "high",
-        },
-      },
-    );
-
-    expect(slices.slices).toEqual([
-      { name: "Copper", pct: 72.5, risk: "medium" },
-      { name: "Fireblocks", pct: 25.7, risk: "medium" },
-      { name: "Insurance Fund", pct: 1.7, risk: "low" },
-      { name: "Insurance Fund Usage", pct: 0.1, risk: "very-high" },
-    ]);
+    expect(result.slices).toEqual(testCase.expected);
   });
 
   it("reconciles signed reserves_split buckets without emitting negative reserve slices", () => {
@@ -190,55 +140,11 @@ describe("adaptAccountableDashboard", () => {
     });
   });
 
-  it("maps deployment object buckets into reserve slices", () => {
-    const slices = adaptAccountableDashboard(
-      {
-        res: "ok",
-        data: {
-          collateralization: 1.013,
-          ts: "1773337732067",
-          reserves: {
-            deployment: {
-              "Private Credit (Fasanara FTAC)": 60,
-              "DeFi Lending": 20,
-              "CLOs (JAAA)": 15,
-              "Funding Rate (BTC)": 5,
-            },
-          },
-        },
-      },
-      {
-        bucket: "deployment",
-        riskMap: {
-          "Private Credit (Fasanara FTAC)": "high",
-          "DeFi Lending": "medium",
-          "CLOs (JAAA)": "high",
-          "Funding Rate (BTC)": "high",
-        },
-      },
-    );
-
-    expect(slices.slices).toEqual([
-      { name: "Private Credit (Fasanara FTAC)", pct: 60, risk: "high" },
-      { name: "DeFi Lending", pct: 20, risk: "medium" },
-      { name: "CLOs (JAAA)", pct: 15, risk: "high" },
-      { name: "Funding Rate (BTC)", pct: 5, risk: "high" },
-    ]);
-  });
 
   it("retains every USN deployment bucket and the signed same-snapshot residual without changing classifications", async () => {
     const config = usn.liveReservesConfig as LiveReservesConfig;
 
-    const dashboardTimestamp = "1785194915915";
-    const totalReserves = 34_400_188.21;
-    const deployment = {
-      "Private Credit (Fasanara FTAC)": 24_486_151.98,
-      "DeFi Lending": 3_521_782.048151,
-      "US Treasury Bills": 2_748_703.094363,
-      Other: 1_844_795.0026801375,
-      "CLOs (JAAA)": 1_798_755.11936221,
-      "Funding Rate (BTC)": 0.9612150669,
-    };
+    const { dashboardTimestamp, totalReserves, deployment } = USN_DEPLOYMENT_CAPTURE;
 
     const result = await runAccountablePayload(config, {
       collateralization: 1.013786,
@@ -286,168 +192,9 @@ describe("adaptAccountableDashboard", () => {
     }));
   });
 
-  it("maps type_split buckets and applies renameMap", () => {
-    const slices = adaptAccountableDashboard(
-      {
-        res: "ok",
-        data: {
-          collateralization: 1.01,
-          ts: "1773337561984",
-          reserves: {
-            type_split: {
-              Stablecoin: 220,
-              ETH: 10,
-              "OTC Aggregate": 15,
-              Other: 5,
-            },
-          },
-        },
-      },
-      {
-        bucket: "type_split",
-        riskMap: {
-          Stablecoin: "low",
-          ETH: "very-low",
-          "OTC Aggregate": "high",
-          Other: "high",
-        },
-        renameMap: {
-          Stablecoin: "Stablecoin reserves",
-        },
-      },
-    );
 
-    expect(slices.slices).toEqual([
-      { name: "Stablecoin reserves", pct: 88, risk: "low" },
-      { name: "OTC Aggregate", pct: 6, risk: "high" },
-      { name: "ETH", pct: 4, risk: "very-low" },
-      { name: "Other", pct: 2, risk: "high" },
-    ]);
-  });
 
-  it("applies renameMap exactly once even when a renamed value is itself a rename key", () => {
-    // "A" renames to "B", and "B" is also a renameMap key ("B" -> "C").
-    // The rename must resolve "A" -> "B" once; it must NOT cascade to "C".
-    const slices = adaptAccountableDashboard(
-      {
-        res: "ok",
-        data: {
-          collateralization: 1.0,
-          ts: "1773304804848",
-          reserves: {
-            type: {
-              A: 60,
-              B: 40,
-            },
-          },
-        },
-      },
-      {
-        bucket: "type",
-        riskMap: {
-          A: "low",
-          B: "high",
-        },
-        renameMap: {
-          A: "B",
-          B: "C",
-        },
-      },
-    );
 
-    expect(slices.slices).toEqual([
-      { name: "B", pct: 60, risk: "low" },
-      { name: "C", pct: 40, risk: "high" },
-    ]);
-  });
-
-  it("maps nested exposure_split values into reserve slices", () => {
-    const slices = adaptAccountableDashboard(
-      {
-        res: "ok",
-        data: {
-          collateralization: 1.06,
-          ts: "1773336724281",
-          reserves: {
-            exposure_split: {
-              "[Ethena]_sUSDe_Loop": { "": 50 },
-              "[Maple]_syrupUSDT_Loop": { "": 30 },
-              "[Fluid]_fUSDT0": { "": 20 },
-            },
-          },
-        },
-      },
-      {
-        bucket: "exposure_split",
-        riskMap: {
-          "[Ethena]_sUSDe_Loop": "high",
-          "[Maple]_syrupUSDT_Loop": "high",
-          "[Fluid]_fUSDT0": "low",
-        },
-        renameMap: {
-          "[Fluid]_fUSDT0": "Fluid fUSDT0",
-        },
-      },
-    );
-
-    expect(slices.slices).toEqual([
-      { name: "[Ethena]_sUSDe_Loop", pct: 50, risk: "high" },
-      { name: "[Maple]_syrupUSDT_Loop", pct: 30, risk: "high" },
-      { name: "Fluid fUSDT0", pct: 20, risk: "low" },
-    ]);
-  });
-
-  it("maps product-scoped protocol_split values into reserve slices", () => {
-    const slices = adaptAccountableDashboard(
-      {
-        res: "ok",
-        data: {
-          collateralization: 1.002,
-          ts: "1778509189684",
-          reserves: {
-            protocol_split: {
-              hoUSDT: { hoUSDT: 3_676_711.58 },
-              USDT0: { USDT0: 25_184.45 },
-              USDC: { Morpho: 586_637.21 },
-              masterUSD: { masterUSD: 2_001_257.2 },
-            },
-          },
-        },
-      },
-      {
-        bucket: "protocol_split",
-        riskMap: {
-          hoUSDT: "high",
-          USDT0: "low",
-          USDC: "medium",
-          masterUSD: "high",
-        },
-        coinIdMap: {
-          hoUSDT: "usdt-tether",
-          USDT0: "usdt-tether",
-          USDC: "usdc-circle",
-        },
-        depTypeMap: {
-          hoUSDT: "wrapper",
-          USDT0: "wrapper",
-          USDC: "collateral",
-        },
-        renameMap: {
-          hoUSDT: "hoUSDT strategy exposure",
-          USDT0: "USDT0 reserves",
-          USDC: "Morpho USDC lending exposure",
-          masterUSD: "masterUSD strategy exposure",
-        },
-      },
-    );
-
-    expect(slices.slices).toEqual([
-      { name: "hoUSDT strategy exposure", pct: 58.5, risk: "high", coinId: "usdt-tether", depType: "wrapper" },
-      { name: "masterUSD strategy exposure", pct: 31.8, risk: "high" },
-      { name: "Morpho USDC lending exposure", pct: 9.3, risk: "medium", coinId: "usdc-circle", depType: "collateral" },
-      { name: "USDT0 reserves", pct: 0.4, risk: "low", coinId: "usdt-tether", depType: "wrapper" },
-    ]);
-  });
 
   it("preserves unmapped buckets as explicit unknown exposure instead of defaulting them to medium risk", async () => {
     const config: LiveReservesConfig = {
@@ -784,11 +531,12 @@ describe("adaptAccountableDashboard", () => {
       breakdownCount: 2,
       mappedBucketCount: 1,
       collateralization: 1.083117,
-      collateralizationRatio: 1.083117,
+      reportedCollateralizationRatio: 1.083117,
       signedBucketCount: 1,
       signedBucketNames: ["[Global_Dollar]_USDG_Loop"],
       signedBucketValue: -15725261.164036,
     });
+    expect(result.metadata).not.toHaveProperty("collateralizationRatio");
   });
 
   it("reconciles a timestamped Yuzu exposure split against the nearest contemporaneous timeline total", async () => {
@@ -836,41 +584,7 @@ describe("adaptAccountableDashboard", () => {
     // Captured 2026-09-11 from https://cache.accountable.capital/dashboard/yuzu: every
     // exposure_split bucket now wraps its value in an empty-key object, and the Pendle PT loop
     // buckets are signed.
-    const result = await runAccountablePayload(config, {
-      collateralization: 1.095045,
-      ts: "1789113764216",
-      reserves: {
-        total_reserves: { value: 58_985_325.95, name: "Total Backing Assets", value_rwa: 7_571_879.01 },
-        total_supply: { value: 53_865_657.54, name: "Total TVL" },
-        exposure_split_ts: "2026.09.09 06:53:39 UTC",
-        exposure_split: {
-          "[Securitize]_VBILL_Loop": { "": 387.8 },
-          "[Superstate]_USTB_Loop": { "": 1_314_576.60286784 },
-          "[Ethena]_sUSDe_Pendle_PT_Loop": { "": -7_311_212.03139069 },
-          "[Ethena]_USDe_Loop": { "": 34_314_100.69942264 },
-          "[Ethena]_USDe": { "": 8.08180506854668e-8 },
-          "[Agora]_PT_AUSD": { "": 527.368232779483 },
-          "[Strata]_srUSDe_Pendle_PT_Loop": { "": -6_460_236.588979 },
-          "[Maple]_syrupUSDT_Loop": { "": 4_686_357.13103792 },
-          Liquidity_Buffer: { "": 999_772.8403514099 },
-          "[Maple]_syrupUSDG_Loop": { "": 4_156_007.11462765 },
-          "[Agora]_PT_AUSD_Loop": { "": 957_512.38038019 },
-          "[Sky]_sUSDS_Loop": { "": -0.106646060264309 },
-          "[Ethena]_sUSDe_Loop": { "": 25_543_913.240860812 },
-          "[Maple]_syrupUSDC_Loop": { "": 3_884_580.00930017 },
-          "[Aave]_Gho": { "": 29.7254528139977 },
-          "[Aave]_RLUSD": { "": 62.7277558172802 },
-          Rest_of_Assets: { "": 228.63385745949134 },
-          "[Fasanara]_mGLOBAL_Loop": { "": 297_472.582149001 },
-          "[Yuzu]_yzPRIME": { "": 3_063_702.74075465 },
-          "[Aave]_USDT0": { "": 503_294.863749914 },
-          "[Fasanara]_mGLO_Loop": { "": 788_250.11893378 },
-          "[Aave]_Gho_Savings": { "": 4.72610696572865 },
-          "[Sky]_PT_sUSDS_Loop": { "": 7.69220720329771 },
-        },
-        timeline: [{ ts: "1788994123413", reserves: 63_289_806.86 }],
-      },
-    });
+    const result = await runAccountablePayload(config, YUZU_SIGNED_EXPOSURE_CAPTURE);
 
     expect(result.warnings?.map((warning) => warning.code)).toEqual(["signed-negative-bucket"]);
     expect(result.warnings?.[0]?.message).toContain(
@@ -1028,23 +742,7 @@ describe("adaptAccountableDashboard", () => {
     const config = NEUTRL_ACCOUNTABLE_TEST_CONFIG;
 
     // Latest verifiable Neutrl type_split snapshot: 2026-08-13T11:02:37.520Z.
-    const result = await runAccountablePayload(config, {
-      collateralization: 1.02,
-      ts: "1786618957520",
-      reserves: {
-        interval: "live",
-        verifiability: "100",
-        total_reserves: 54_437_465.43,
-        type_split: {
-          Stablecoin: 31_317_867.09,
-          JLP: 9_230_249.65,
-          "OTC Aggregate": 9_803_139.04,
-          Other: 1_937_498.13,
-          "Protocol Owned Liquidity": 2_145_062.40,
-          ETH: 3_649.13,
-        },
-      },
-    });
+    const result = await runAccountablePayload(config, NEUTRL_TYPE_SPLIT_CAPTURE);
 
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).toMatchObject({
@@ -1148,31 +846,7 @@ describe("adaptAccountableDashboard", () => {
     // live at data.assetBreakdown (not data.reserves.type*), and their nested
     // entries sum to the published total_reserves value.
     const result = adaptAccountableDashboard(
-      {
-        res: "ok",
-        data: {
-          collateralization: 1.00218,
-          ts: "1788968760934",
-          reserves: {
-            interval: "live",
-            verifiability: "100",
-            total_reserves: { name: "Total Reserves", value: 67_390_916.86 },
-            total_supply: { name: "Total Supply", fx: 1, value: 67_244_323.59 },
-          },
-          assetBreakdown: {
-            "On-chain Buffer": { "On-chain Buffer": { status: "private", value: 1_022_633.741500425 } },
-            "Money Markets": { "Money Market Instruments": { status: "private", value: 41_544_625.36 } },
-            "Cash & Equivalents": {
-              "OTC & Exchange Reserve": 0,
-              "FX Collateral": { status: "private", value: 6_796_722.89 },
-              "Bank Cash": { status: "private", value: 206.2812771119609 },
-            },
-            "Delta-Neutral Futures Arbitrage": {
-              "Delta-Neutral Futures Arbitrage": { status: "private", value: 18_026_728.59 },
-            },
-          },
-        },
-      },
+      TORI_ASSET_BREAKDOWN_CAPTURE,
       {
         layout: "asset-breakdown",
         riskMap: {
@@ -1249,221 +923,3 @@ describe("adaptAccountableDashboard", () => {
   });
 });
 
-describe("adaptAccountableDashboard collateralization reconciliation", () => {
-  /** Verbatim Apyx dashboard scalars captured at 2026-07-27T22:45:43Z (payload ts 1785192343737).
-   *  This is the snapshot behind the reported 0.922477 vs reserves/supply 0.9435191072 contradiction. */
-  const APYX_2026_07_27_PAYLOAD = {
-    res: "ok",
-    data: {
-      collateralization: 0.922477,
-      ts: "1785192343737",
-      reserves: {
-        interval: "live",
-        verifiability: "100",
-        total_reserves: { name: "Total Reserves", value: 308_600_110.7 },
-        total_supply: { name: "Total Supply", fx: 1, value: 327_073_514.82 },
-        inventory: 39_967_447.71,
-        pol: 48_810_415.17,
-        reserves_split: [
-          { name: "STRC", value: 189_087_988.65 },
-          { name: "Protocol Owned Liquidity", value: 48_810_415.17 },
-          { name: "Inventory", value: 39_967_447.71 },
-          { name: "Cash & Equivalents", value: 30_725_438.26 },
-          { name: "Other", value: 8_820.91 },
-        ],
-      },
-    },
-  } as const;
-
-  const apxusdParams = {
-    bucket: "reserves_split",
-    riskMap: {
-      STRC: "high",
-      "Cash & Equivalents": "very-low",
-      "Protocol Owned Liquidity": "high",
-      Inventory: "high",
-      Other: "high",
-    },
-  } as const;
-
-  it("reconciles the contradicted Apyx snapshot to a net-of-protocol-owned denominator", () => {
-    const result = adaptAccountableDashboard({ ...APYX_2026_07_27_PAYLOAD }, { ...apxusdParams });
-
-    // The gross ratio the prior review derived, and the ratio the dashboard actually reports.
-    expect(308_600_110.7 / 327_073_514.82).toBeCloseTo(0.943519, 6);
-    expect(result.metadata?.collateralizationBasis).toBe("net-of-protocol-owned");
-    expect(result.metadata?.collateralizationReconciliation).toMatchObject({
-      basis: "net-of-protocol-owned",
-      reportedRatio: 0.922477,
-      supplyUsd: 327_073_514.82,
-      totalReservesUsd: 308_600_110.7,
-      protocolOwnedUsd: 88_777_862.88,
-    });
-
-    const reconciliation = result.metadata?.collateralizationReconciliation as {
-      grossRatio: number;
-      netRatio: number;
-    };
-    expect(reconciliation.grossRatio).toBeCloseTo(0.9435191072, 9);
-    expect(reconciliation.netRatio).toBeCloseTo(0.922477, 6);
-    expect(result.metadata?.supplyUsd).toBe(327_073_514.82);
-    expect(result.metadata?.protocolOwnedUsd).toBe(88_777_862.88);
-  });
-
-  it("states the denominator basis on the undercollateralization warning and flags protocol-owned reserves", () => {
-    const result = adaptAccountableDashboard({ ...APYX_2026_07_27_PAYLOAD }, { ...apxusdParams });
-
-    expect(result.warnings?.map((warning) => warning.code).sort()).toEqual([
-      "protocol-owned-bucket",
-      "reserve-undercollateralized",
-    ]);
-    expect(result.warnings).toContainEqual({
-      code: "reserve-undercollateralized",
-      message:
-        "Accountable dashboard reports 92.25% collateralization net of protocol-owned reserves (gross reserves/supply 94.35%)",
-      severity: "warning",
-      effect: "degraded",
-    });
-
-    // 28.77% of reserves is issuer-held; it must never read as itemized third-party composition.
-    const protocolOwned = result.warnings?.find((warning) => warning.code === "protocol-owned-bucket");
-    expect(protocolOwned).toMatchObject({ severity: "warning", effect: "degraded" });
-    expect(protocolOwned?.message).toContain("not itemized third-party backing");
-    expect(result.metadata?.protocolOwnedPctOfReserves).toBeCloseTo(28.77, 2);
-  });
-
-  it("keeps the gross basis for feeds that report gross collateralization despite publishing protocol-owned liquidity", () => {
-    // Verbatim Neutrl dashboard scalars: pol is published, but collateralization is the gross ratio.
-    const result = adaptAccountableDashboard(
-      {
-        res: "ok",
-        data: {
-          collateralization: 1.033906,
-          ts: "1785450200998",
-          reserves: {
-            total_reserves: { name: "Total Reserves", value: 60_607_322.11 },
-            total_supply: { name: "Total Supply", value: 58_619_735.19 },
-            pol: 1_996_688.4539363272,
-            type_split: { Stablecoin: 60_607_322.11 },
-          },
-        },
-      },
-      { bucket: "type_split", riskMap: { Stablecoin: "very-low" } },
-    );
-
-    expect(result.metadata?.collateralizationBasis).toBe("gross");
-    expect(result.warnings?.map((warning) => warning.code)).toEqual(["protocol-owned-bucket"]);
-    expect(result.metadata?.collateralizationReconciliation).toMatchObject({
-      basis: "gross",
-      netRatio: expect.any(Number),
-    });
-  });
-
-  it("fails closed with a degraded warning when the reported ratio matches no derivable denominator", () => {
-    const result = adaptAccountableDashboard(
-      {
-        res: "ok",
-        data: {
-          collateralization: 0.75,
-          ts: "1785192343737",
-          reserves: {
-            total_reserves: { name: "Total Reserves", value: 1_000 },
-            total_supply: { name: "Total Supply", value: 1_000 },
-            inventory: 100,
-            pol: 50,
-            reserves_split: [{ name: "Cash & Equivalents", value: 1_000 }],
-          },
-        },
-      },
-      { bucket: "reserves_split", riskMap: { "Cash & Equivalents": "very-low" } },
-    );
-
-    expect(result.metadata?.collateralizationBasis).toBe("unreconciled");
-    expect(result.warnings).toContainEqual(expect.objectContaining({
-      code: "collateralization-unreconciled",
-      effect: "degraded",
-    }));
-    expect(
-      result.warnings?.find((warning) => warning.code === "reserve-undercollateralized")?.message,
-    ).toBe(
-      "Accountable dashboard reports 75.00% collateralization on an unreconciled denominator (gross reserves/supply 100.00%)",
-    );
-  });
-
-  it("leaves the basis underived when the feed publishes no total_supply", () => {
-    const result = adaptAccountableDashboard(
-      {
-        res: "ok",
-        data: {
-          collateralization: 0.9,
-          ts: "1785192343737",
-          reserves: {
-            total_reserves: 1_000,
-            reserves_split: [{ name: "Cash & Equivalents", value: 1_000 }],
-          },
-        },
-      },
-      { bucket: "reserves_split", riskMap: { "Cash & Equivalents": "very-low" } },
-    );
-
-    expect(result.metadata?.collateralizationBasis).toBe("underived");
-    expect(result.metadata?.supplyUsd).toBeUndefined();
-    expect(result.warnings?.map((warning) => warning.code)).toEqual(["reserve-undercollateralized"]);
-    expect(
-      result.warnings?.find((warning) => warning.code === "reserve-undercollateralized")?.message,
-    ).toBe("Accountable dashboard reports 90.00% collateralization");
-  });
-
-  it("rejects a malformed total_supply instead of silently dropping the denominator", () => {
-    expect(() =>
-      adaptAccountableDashboard(
-        {
-          res: "ok",
-          data: {
-            collateralization: 1,
-            ts: "1785192343737",
-            reserves: {
-              total_reserves: 1_000,
-              total_supply: { name: "Total Supply", value: "n/a" },
-              reserves_split: [{ name: "Cash & Equivalents", value: 1_000 }],
-            },
-          },
-        },
-        { bucket: "reserves_split", riskMap: { "Cash & Equivalents": "very-low" } },
-      ),
-    ).toThrow(/total_supply has invalid value/);
-  });
-});
-
-
-describe("Apyx reviewed external-reserve guards", () => {
-  function payload() {
-    return { res: "ok", data: { collateralization: 1, ts: "1789502434250", reserves: {
-      total_reserves: 100, total_supply: 100, inventory: 20, pol: 10,
-      reserves_split: [{ name: "STRC", value: 70 }, { name: "Inventory", value: 20 }, { name: "Protocol Owned Liquidity", value: 10 }],
-    } } };
-  }
-  const params = { bucket: "reserves_split", accountingMode: "apyx-net-external-reserves", riskMap: { STRC: "high" } } as const;
-  it.each(["missing", "duplicate", "negative", "scalar-drift", "gross-drift", "ratio-drift", "zero-claims"])("fails closed on %s", (kind) => {
-    const p = payload();
-    if (kind === "missing") p.data.reserves.reserves_split.pop();
-    if (kind === "duplicate") p.data.reserves.reserves_split.push({ name: "Inventory", value: 20 });
-    if (kind === "negative") p.data.reserves.inventory = -1;
-    if (kind === "scalar-drift") p.data.reserves.inventory = 25;
-    if (kind === "gross-drift") p.data.reserves.total_reserves = 105;
-    if (kind === "ratio-drift") p.data.collateralization = 0.9;
-    if (kind === "zero-claims") p.data.reserves.total_supply = 30;
-    expect(() => adaptAccountableDashboard(p, params)).toThrow(/Accountable/);
-  });
-  it("rejects overflowing nested source values", () => {
-    const p = payload();
-    const reserves = { ...p.data.reserves, inventory: { first: 1e308, second: 1e308 } };
-    expect(() => adaptAccountableDashboard({ ...p, data: { ...p.data, reserves } }, params)).toThrow(/self-claim Inventory/);
-  });
-  it("preserves genuine net coverage shortfalls", () => {
-    const p = payload(); p.data.reserves.total_supply = 110; p.data.collateralization = 70 / 80;
-    const r = adaptAccountableDashboard(p, params);
-    expect(r.warnings?.map((row) => row.code)).toEqual(["reserve-undercollateralized"]);
-    expect(r.metadata?.selfIssuedAccounting).toMatchObject({ netExternalReservesUsd: 70, netRedeemableClaimsUsd: 80 });
-  });
-});

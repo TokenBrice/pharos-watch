@@ -1,7 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
-  loadTelegramAdoptionWeeklyReport,
   loadTelegramFirstMutationP50,
   recordTelegramFirstFollow,
   recordTelegramMiniAppAdoptionSession,
@@ -103,21 +102,5 @@ describe("Telegram adoption analytics", () => {
     expect(sqlite.prepare(
       "SELECT DISTINCT quality, cohort_size, retained_count FROM telegram_adoption_retention_daily",
     ).all()).toEqual([{ quality: "pre_rollout_unavailable", cohort_size: 0, retained_count: 0 }]);
-  });
-
-  it("reports directional rates above 100 percent with an explicit warning", async () => {
-    const insert = sqlite.prepare(`INSERT INTO telegram_adoption_daily
-      (day, campaign, placement, stage, feature, latency_bucket, outcome, count, first_seen_at, last_seen_at)
-      VALUES (?, 'landing', 'hero', ?, '', '', 'success', ?, ?, ?)`);
-    insert.run(day(-1), "cta_click", 5, NOW - 10, NOW - 10);
-    insert.run(day(-1), "bot_start", 7, NOW - 9, NOW - 9);
-    insert.run(day(-1), "setup_complete", 5, NOW - 8, NOW - 8);
-
-    const report = await loadTelegramAdoptionWeeklyReport(db, NOW) as {
-      placements: Array<{ startPerClickPct: number }>;
-      quality: { warnings: string[] };
-    };
-    expect(report.placements[0].startPerClickPct).toBe(140);
-    expect(report.quality.warnings.join(" ")).toContain("may exceed 100%");
   });
 });

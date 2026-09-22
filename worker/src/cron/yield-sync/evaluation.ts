@@ -1,32 +1,27 @@
 import { assessYieldEvidence } from "@shared/lib/yield-evidence";
 import { resolveYieldRowSafety } from "@shared/lib/yield-opportunity-risk";
 import {
-  computePYSFromComponents,
-  computePysComponents,
   derivePysSourceRiskPenalty,
+  PYS_DEFAULT_SAFETY_SCORE as DEFAULT_SAFETY_SCORE,
   PYS_MAX_SOURCE_RISK_PENALTY,
   yieldStabilityToApyVarianceScore,
 } from "@shared/lib/yield-scoring";
 import type { PysSourceRiskPenaltyInput } from "@shared/lib/yield-scoring";
 import type {
-  YieldPysNullReason,
   YieldSafetyProvenance,
   YieldSafetyReason,
   YieldSourceInputMeta,
 } from "@shared/types/yield";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { DEFAULT_SAFETY_SCORE, PYS_SCALING_FACTOR } from "../../lib/constants";
 import { isOnChainBootstrapYieldSeed } from "../../lib/yield-utils";
-import { isRealSourceSwitch } from "../../lib/yield-history-ownership-handoffs";
-import { countSourceSwitchesWithTail } from "./coordinator-history";
-import { derivePysNullReasonFromComponents } from "../../lib/yield-ranking-helpers";
 import {
   classifyYieldSourceFreshness,
   getComparisonAnchorStaleThresholdMs,
+} from "../../lib/yield-ranking-helpers";
+import {
   computeYieldStability,
   detectWarningSignals,
-  type YieldSourceFreshness,
 } from "../yield-helpers";
 import type { YieldHistorySnapshotRow } from "./history";
 import { computeTvlWeightedMedianApy } from "./rankings";
@@ -41,16 +36,18 @@ import {
 import { resolveDependencyConcentration, resolveYieldRewardShare, resolveYieldVenueProtocol } from "./source-risk";
 import { buildHistoryKey, pickHistoryRowsForSource } from "./evaluation-history";
 import {
-  compareCandidates,
-  getConfidencePriority,
   getConfidenceTier,
-  relativeDivergence,
   resolveCalculationMode,
   resolveEvidenceClass,
   resolveYieldSourceLabel,
   resolveYieldTypeLabel,
 } from "./evaluation-arbitration";
 import type { EvaluatedYieldSource } from "./evaluation-types";
+import {
+  resolveEvidenceNullReason,
+  resolvePenaltyOrderingFields,
+} from "./evaluation-scoring";
+import { selectYieldSourceGroup } from "./evaluation-selection";
 import { throwIfAborted, yieldToEventLoop as defaultYieldToEventLoop } from "../../lib/abort";
 
 export { buildHistoryKey } from "./evaluation-history";
@@ -58,18 +55,6 @@ export { buildSelectionReason } from "./evaluation-arbitration";
 export type { EvaluatedYieldSource } from "./evaluation-types";
 
 const LOW_SOURCE_TVL_USD = 250_000;
-const CROSS_SOURCE_DIVERGENCE_THRESHOLD = 0.35;
-/**
- * B3 — arbitration churn margin. `derivePysSourceRiskPenalty` charges
- * `min(0.3, sourceSwitchCount30d * 0.1)`, so the current-run `+1` used to vanish
- * from the comparison once a coin had already switched three times: stickiness
- * disappeared exactly on the coins that churn most and sub-0.1% APY noise flipped
- * the winner, which then wrote another switch. Arbitration instead charges every
- * candidate whose selection would be a real switch this flat margin — the first
- * churn increment — while the chosen row still publishes its true 30d count (and
- * the penalty derived from it).
- */
-const PYS_SWITCH_ARBITRATION_MARGIN = 0.1;
 
 function isResolvedYieldEntryWithYield(
   entry: ResolvedYieldEntry,
@@ -215,80 +200,6 @@ function resolveSourceAgeSeconds(
   return computeSourceAgeSeconds(startSec, sourceObservedAt);
 }
 
-/**
- * The null reason a row's own freshness evidence forces. Shared by the initial
- * scoring pass and the post-selection publication pass so the two cannot disagree.
- */
-function resolveEvidenceNullReason(params: {
-  sourceFreshness: YieldSourceFreshness;
-  benchmarkFreshness: YieldBenchmarkFreshness;
-  referenceBenchmarkFreshness: YieldBenchmarkFreshness;
-}): YieldPysNullReason | null {
-  if (params.sourceFreshness === "stale") return "source-stale";
-  if (params.sourceFreshness === "unknown") return "source-freshness-unknown";
-  if (params.benchmarkFreshness === "stale") return "benchmark-stale";
-  // A3: a stale USD reference makes the row's re-based hurdle meaningless, so the
-  // row publishes NR under the same benchmark-unavailable reason.
-  if (params.referenceBenchmarkFreshness === "stale") return "benchmark-stale";
-  return null;
-}
-
-/**
- * Resolve the penalty-dependent published fields from the source-risk penalty a
- * row should carry. Called twice per candidate: once with the arbitration penalty
- * (B3 switch margin, which orders the candidates) and once after selection with
- * the penalty the row actually publishes (true 30d count on the best row, no
- * switch term on alternates — B42).
- */
-function resolvePenaltyDerivedFields(params: {
-  apy30d: number;
-  safetyScore: number;
-  apyVarianceScore: number;
-  benchmarkRate: number;
-  benchmarkCurrency: string;
-  usdBenchmarkRate: number | null;
-  sourceRiskPenalty: number;
-  safetySnapshotUnavailable: boolean;
-  evidenceNullReason: YieldPysNullReason | null;
-}): Pick<
-  EvaluatedYieldSource,
-  | "sourceRiskPenalty"
-  | "sourceRiskPenaltyReason"
-  | "sourceRiskPenaltyProvided"
-  | "sourceRiskAdjustedUtility"
-  | "hurdleRebase"
-  | "pharosYieldScore"
-  | "pysNullReason"
-> {
-  const components = computePysComponents({
-    apy30d: params.apy30d,
-    safetyScore: params.safetyScore,
-    apyVarianceScore: params.apyVarianceScore,
-    benchmarkRate: params.benchmarkRate,
-    benchmarkCurrency: params.benchmarkCurrency,
-    usdBenchmarkRate: params.usdBenchmarkRate,
-    sourceRiskPenalty: params.sourceRiskPenalty,
-  });
-  const computedPharosYieldScore = computePYSFromComponents(params.apy30d, PYS_SCALING_FACTOR, components);
-  return {
-    sourceRiskPenalty: components.sourceRiskPenalty,
-    sourceRiskPenaltyReason: components.sourceRiskPenaltyReason,
-    sourceRiskPenaltyProvided: components.sourceRiskPenaltyProvided,
-    sourceRiskAdjustedUtility: components.rowUtility,
-    hurdleRebase: components.hurdleRebase,
-    pharosYieldScore:
-      !params.safetySnapshotUnavailable && params.evidenceNullReason == null && Number.isFinite(computedPharosYieldScore)
-        ? computedPharosYieldScore
-        : null,
-    pysNullReason: params.safetySnapshotUnavailable
-      ? "safety-unrated"
-      : params.evidenceNullReason ?? (
-          computedPharosYieldScore > 0
-            ? null
-            : derivePysNullReasonFromComponents(params.apy30d, PYS_SCALING_FACTOR, components.effectiveYield)
-        ),
-  };
-}
 
 function prepareYieldEvaluation(input: EvaluateYieldSourcesInput): PreparedYieldEvaluation {
   const resolvedWithYield = input.resolved.filter(isResolvedYieldEntryWithYield);
@@ -377,7 +288,6 @@ function evaluateYieldSourceGroup(
       input.legacyDeterministicOnChainHistoryById,
       input.legacyHistoryById,
       prepared.resolvedCountByCoin,
-      input.startSec,
     );
     const historyRows = historySelection.rows;
     // B26 — `isOnChainBootstrapYieldSeed` is lane-agnostic: the Tier-1 `onchain`
@@ -388,6 +298,7 @@ function evaluateYieldSourceGroup(
     const samples: number[] = [];
     const apy7dSamples: number[] = [];
     for (const row of historyRowsForStats) {
+      if (!Number.isFinite(row.apy)) continue;
       samples.push(row.apy);
       if (row.recorded_at >= input.sevenDaysAgoSec) {
         apy7dSamples.push(row.apy);
@@ -561,7 +472,7 @@ function evaluateYieldSourceGroup(
       referenceBenchmarkFreshness: rowReferenceBenchmarkFreshness,
     });
 
-    const penaltyDerivedFields = resolvePenaltyDerivedFields({
+    const penaltyDerivedFields = resolvePenaltyOrderingFields({
       apy30d,
       safetyScore,
       apyVarianceScore,
@@ -672,164 +583,24 @@ function evaluateYieldSourceGroup(
     } satisfies EvaluatedYieldSource;
   });
 
-  let canonicalReference: EvaluatedYieldSource | undefined;
-  for (const candidate of provisional) {
-    if (candidate.confidenceTier === "discovered") continue;
-    if (!canonicalReference || compareCandidates(candidate, canonicalReference) < 0) {
-      canonicalReference = candidate;
-    }
-  }
-
-  const candidates = provisional.map((candidate) => {
-    const anomalies = [...candidate.anomalies];
-    let rejected: boolean = candidate.rejected;
-
-    if (
-      canonicalReference &&
-      canonicalReference.sourceKey !== candidate.sourceKey &&
-      getConfidencePriority(candidate.confidenceTier) < getConfidencePriority(canonicalReference.confidenceTier)
-    ) {
-      const divergence = relativeDivergence(candidate.currentApy, canonicalReference.currentApy);
-      if (canonicalReference.currentApy > 0 && candidate.currentApy > 0 && divergence > CROSS_SOURCE_DIVERGENCE_THRESHOLD) {
-        anomalies.push("diverges-from-canonical");
-        accumulator.divergenceFlags++;
-        if (candidate.dataSource === "defillama-auto" || candidate.dataSource === "price-derived") {
-          rejected = true;
-        }
-      }
-    }
-
-    if (
-      canonicalReference &&
-      canonicalReference.currentApy === 0 &&
-      candidate.currentApy > 1 &&
-      canonicalReference.sourceKey !== candidate.sourceKey &&
-      getConfidencePriority(canonicalReference.confidenceTier) > getConfidencePriority(candidate.confidenceTier)
-    ) {
-      anomalies.push("canonical-zero-vs-positive");
-    }
-
-    if (anomalies.includes("source-zero-vs-history")) {
-      rejected = true;
-    }
-
-    return {
-      ...candidate,
-      anomalies,
-      rejected,
-    };
+  const selection = selectYieldSourceGroup({
+    stablecoinId,
+    provisional,
+    previousBestSourceKey,
+    priorSwitches30d,
+    derivedPenaltyInputByKey,
+    bestRowsByCoin: input.bestRowsByCoin,
+    safetySnapshotUnavailable: input.safetySnapshotAvailable === false,
+    referenceBenchmarkFreshness: prepared.referenceBenchmarkFreshness,
+    usdBenchmarkRate: prepared.usdBenchmarkRate,
   });
+  if (!selection) return;
 
-  // B2/F4: one predicate decides whether the previous winner still carries
-  // switch weight this run — present *and* publishable, not merely resolved. The
-  // arbitration margin below and the transient-missing anomaly read this single
-  // fact, so a rejected incumbent can no longer arm a margin that a missing
-  // incumbent does not.
-  const previousWinnerStillCandidate =
-    previousBestSourceKey != null &&
-    candidates.some((candidate) => candidate.sourceKey === previousBestSourceKey && !candidate.rejected);
-
-  // B3: the flat switch margin belongs to the arbitration basis (it makes a
-  // challenger beat a live incumbent by a margin), never to the row that gets
-  // published. It can only be applied once rejections are final, so it is added
-  // here instead of while the rows were being built.
-  const arbitratedCandidates = !previousWinnerStillCandidate
-    ? candidates
-    : candidates.map((candidate) => {
-      const derivedPenaltyInput = derivedPenaltyInputByKey.get(candidate.sourceKey);
-      if (derivedPenaltyInput == null || !isRealSourceSwitch(previousBestSourceKey, candidate.sourceKey)) {
-        return candidate;
-      }
-      return {
-        ...candidate,
-        ...resolvePenaltyDerivedFields({
-          apy30d: candidate.apy30d,
-          safetyScore: candidate.safetyScore,
-          apyVarianceScore: candidate.apyVarianceScore,
-          benchmarkRate: candidate.benchmarkRate,
-          benchmarkCurrency: candidate.benchmarkCurrency,
-          usdBenchmarkRate: prepared.usdBenchmarkRate,
-          sourceRiskPenalty: Math.min(
-            PYS_MAX_SOURCE_RISK_PENALTY,
-            candidate.sourceRiskPenalty + PYS_SWITCH_ARBITRATION_MARGIN,
-          ),
-          safetySnapshotUnavailable: input.safetySnapshotAvailable === false,
-          evidenceNullReason: resolveEvidenceNullReason({
-            sourceFreshness: candidate.sourceFreshness,
-            benchmarkFreshness: candidate.benchmarkFreshness,
-            referenceBenchmarkFreshness:
-              candidate.benchmarkCurrency === "USD" ? "healthy" : prepared.referenceBenchmarkFreshness,
-          }),
-        }),
-      };
-    });
-
-  const sortedCandidates = [...arbitratedCandidates].sort(compareCandidates);
-  const rejectedPeerCount = sortedCandidates.filter((candidate) => candidate.rejected).length;
-  const winner = sortedCandidates.find((candidate) => !candidate.rejected) ?? sortedCandidates[0];
-  if (!winner) return;
-
-  accumulator.bestSourceKeyByCoin.set(stablecoinId, winner.sourceKey);
-  // B2/F5: the published count is the same selected-source series the recount
-  // reads, with this run's winner appended as the newest publication and the
-  // identical collapse-runs-shorter-than-2 rule applied. A durable switch is
-  // therefore charged from its second consecutive publication, and a
-  // one-publication excursion never publishes a count the next run erases — the
-  // erasure moved a realistic row by ~3 PYS points at the published 8x scale.
-  // Callers that supply only `sourceSwitchCount30dByCoin` (no history rows) keep
-  // the previous approximation; the coordinator always spreads `bestRowsByCoin`.
-  const winnerWouldChangeSource = isRealSourceSwitch(previousBestSourceKey, winner.sourceKey);
-  const sourceSwitchCount30d =
-    input.bestRowsByCoin != null
-      ? countSourceSwitchesWithTail(input.bestRowsByCoin.get(stablecoinId) ?? [], winner.sourceKey)
-      : winnerWouldChangeSource && previousWinnerStillCandidate
-        ? priorSwitches30d + 1
-        : priorSwitches30d;
-  if (sourceSwitchCount30d > priorSwitches30d) {
-    accumulator.sourceSwitches++;
-  }
-
-  // Publish what the row can evidence: the best row carries the true 30d count
-  // (with the +1 only when the previous winner was still a candidate) and the
-  // penalty derived from it; every other row drops the switch term entirely
-  // because it publishes no switch count (B42).
-  const resolvePublishedPenaltyFields = (candidate: EvaluatedYieldSource, switchCount30d: number | null) => {
-    const derivedPenaltyInput = derivedPenaltyInputByKey.get(candidate.sourceKey);
-    return resolvePenaltyDerivedFields({
-      apy30d: candidate.apy30d,
-      safetyScore: candidate.safetyScore,
-      apyVarianceScore: candidate.apyVarianceScore,
-      benchmarkRate: candidate.benchmarkRate,
-      benchmarkCurrency: candidate.benchmarkCurrency,
-      usdBenchmarkRate: prepared.usdBenchmarkRate,
-      sourceRiskPenalty: derivedPenaltyInput
-        ? derivePysSourceRiskPenalty({ ...derivedPenaltyInput, sourceSwitchCount30d: switchCount30d })
-        : candidate.sourceRiskPenalty,
-      safetySnapshotUnavailable: input.safetySnapshotAvailable === false,
-      evidenceNullReason: resolveEvidenceNullReason({
-        sourceFreshness: candidate.sourceFreshness,
-        benchmarkFreshness: candidate.benchmarkFreshness,
-        referenceBenchmarkFreshness:
-          candidate.benchmarkCurrency === "USD" ? "healthy" : prepared.referenceBenchmarkFreshness,
-      }),
-    });
-  };
-
-  accumulator.rowsRejected += rejectedPeerCount;
-  accumulator.evaluatedSources.push(
-    ...candidates.map((candidate) => {
-      const isBest = candidate.sourceKey === winner.sourceKey;
-      return {
-        ...candidate,
-        ...resolvePublishedPenaltyFields(candidate, isBest ? sourceSwitchCount30d : null),
-        sourceSwitchCount30d: isBest ? sourceSwitchCount30d : null,
-        anomalies:
-          isBest && winnerWouldChangeSource && !previousWinnerStillCandidate
-            ? [...candidate.anomalies, "previous-source-transiently-missing"]
-            : candidate.anomalies,
-      };
-    }),
-  );
+  accumulator.bestSourceKeyByCoin.set(stablecoinId, selection.bestSourceKey);
+  accumulator.rowsRejected += selection.rowsRejected;
+  accumulator.divergenceFlags += selection.divergenceFlags;
+  accumulator.sourceSwitches += selection.sourceSwitches;
+  accumulator.evaluatedSources.push(...selection.evaluatedSources);
 }
 
 function finalizeYieldEvaluation(accumulator: YieldEvaluationAccumulator): EvaluateYieldSourcesResult {

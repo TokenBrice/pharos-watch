@@ -90,18 +90,30 @@ export const StablecoinLiveSummarySchema = z.object({
 });
 export type StablecoinLiveSummary = z.infer<typeof StablecoinLiveSummarySchema>;
 
+/**
+ * Detail history is a daily series, so a sample more than one daily bucket older than the
+ * target is not a stand-in for it.
+ */
+const DETAIL_BUCKET_MAX_BACKFILL_SEC = 86_400;
+
+/**
+ * Newest sample at or before `targetDate`. A later sample never substitutes for an earlier
+ * one, and a gap wider than one daily bucket reads as unavailable (`{}`, the no-bucket
+ * discriminant `sumPegBucketsOrNull` resolves to `null`) rather than as a real reading.
+ */
 function detailBucketsAt(detail: StablecoinDetailResponse, targetDate: number): Record<string, number> {
-  let nearest: NonNullable<StablecoinDetailResponse["tokens"]>[number] | undefined;
-  let nearestDistance = Number.POSITIVE_INFINITY;
+  let chosen: Record<string, number> | undefined;
+  let chosenDate = Number.NEGATIVE_INFINITY;
   for (const token of detail.tokens ?? []) {
-    if (token.date == null) continue;
-    const distance = Math.abs(token.date - targetDate);
-    if (distance < nearestDistance) {
-      nearest = token;
-      nearestDistance = distance;
+    const date = token.date;
+    if (date == null || date > targetDate) continue;
+    if (targetDate - date > DETAIL_BUCKET_MAX_BACKFILL_SEC) continue;
+    if (date > chosenDate) {
+      chosenDate = date;
+      chosen = token.totalCirculatingUSD;
     }
   }
-  return nearest?.totalCirculatingUSD ?? {};
+  return chosen ?? {};
 }
 
 /** Project the history-heavy endpoint into only the fields consumed above the fold. */

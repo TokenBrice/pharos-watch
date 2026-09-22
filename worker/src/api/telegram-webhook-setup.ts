@@ -14,6 +14,10 @@ import { recordTelegramUsageEvent } from "../lib/telegram/usage-analytics";
 import { MINI_APP_PAYLOAD_NAMES } from "@shared/lib/telegram-mini-app-payloads";
 import { parseTelegramAdoptionToken } from "@shared/lib/telegram-adoption-analytics";
 import {
+  TELEGRAM_PRESET_DEFINITIONS,
+  TELEGRAM_PRESET_IDS,
+} from "@shared/lib/telegram-presets";
+import {
   recordTelegramFirstFollow,
   recordTelegramFirstSetupComplete,
   telegramAdoptionDimensionsForStart,
@@ -75,17 +79,11 @@ Common starts:
 <code>/settings</code>
 <code>/list</code>`;
 
-const PRESET_PICKER_ORDER: TelegramPresetId[] = [
-  "usd-top10",
-  "usd-top25",
-  "usd-top50",
-  "non-usd-top10",
-  "non-usd-top25",
-  "non-usd-top50",
-  "eur-top10",
-  "gold-top5",
-  "mcap-ge-100m",
-  "mcap-ge-1b",
+const PRESET_PICKER_DEFINITIONS = [
+  ...TELEGRAM_PRESET_DEFINITIONS.filter((preset) => preset.category === "peg-leaders"),
+  ...TELEGRAM_PRESET_DEFINITIONS
+    .filter((preset) => preset.category === "market-cap")
+    .sort((a, b) => (a.minMarketCapUsd ?? 0) - (b.minMarketCapUsd ?? 0)),
 ];
 
 function buildBranchKeyboard(options: { includeMiniAppButton?: boolean } = {}): InlineKeyboardMarkup {
@@ -123,8 +121,8 @@ function buildTypeToggleKeyboard(selected: Set<string>): InlineKeyboardMarkup {
 }
 
 function buildTargetKeyboard(): InlineKeyboardMarkup {
-  const rows: InlineKeyboardButton[][] = PRESET_PICKER_ORDER.map((presetId) => [
-    { text: (TELEGRAM_PRESET_LABEL_BY_ID.get(presetId as TelegramPresetId) ?? presetId), callback_data: `setup:target:${presetId}` },
+  const rows: InlineKeyboardButton[][] = PRESET_PICKER_DEFINITIONS.map((preset) => [
+    { text: preset.label, callback_data: `setup:target:${preset.id}` },
   ]);
   rows.push([{ text: "All tracked coins", callback_data: "setup:target:all" }]);
   rows.push([{ text: "Type a ticker", callback_data: "setup:target:type" }]);
@@ -169,7 +167,7 @@ function isAllowedAlertType(value: string): value is (typeof ALERT_TYPE_ORDER)[n
 }
 
 function isKnownPresetId(value: string): value is TelegramPresetId {
-  return PRESET_PICKER_ORDER.includes(value as TelegramPresetId);
+  return TELEGRAM_PRESET_IDS.includes(value as TelegramPresetId);
 }
 
 async function persistSetupState(
@@ -445,10 +443,10 @@ async function openRecommendedConfirm(
   }
 
   const nextState: SetupWizardState = {
+    ...state,
     step: "confirm-recommended",
     alertTypes: [...RECOMMENDED_ALERT_TYPES],
     target: { kind: "preset", presetId: RECOMMENDED_PRESET_ID },
-    initiatorUserId: state.initiatorUserId,
   };
   await persistSetupTransition(context, "branch-recommended", nextState);
 

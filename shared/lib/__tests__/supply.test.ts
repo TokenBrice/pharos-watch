@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   sumPegBuckets,
   getCirculatingRaw,
+  getCirculatingRawOrNull,
   getPrevDayRaw,
   getPrevDayRawOrNull,
   getPrevWeekRaw,
@@ -40,6 +41,73 @@ describe("getCirculatingRaw", () => {
   it("sums circulating peg buckets", () => {
     const coin = makeStablecoin({ circulating: { usd: 1_000_000 } });
     expect(getCirculatingRaw(coin)).toBe(1_000_000);
+  });
+
+  it("collapses absent buckets to 0 for callers that established availability", () => {
+    expect(getCirculatingRaw(makeStablecoin({ circulating: undefined }))).toBe(0);
+    expect(getCirculatingRaw(makeStablecoin({ circulating: {} }))).toBe(0);
+  });
+});
+
+describe("getCirculatingRawOrNull", () => {
+  it("returns null when the asset is absent from the payload", () => {
+    expect(getCirculatingRawOrNull(undefined)).toBeNull();
+    expect(getCirculatingRawOrNull(null)).toBeNull();
+  });
+
+  it("returns null when the asset carries no circulating buckets", () => {
+    expect(getCirculatingRawOrNull(makeStablecoin({ circulating: undefined }))).toBeNull();
+  });
+
+  it("returns null for an empty bucket record", () => {
+    expect(getCirculatingRawOrNull(makeStablecoin({ circulating: {} }))).toBeNull();
+  });
+
+  it("returns null when all buckets are missing-equivalent", () => {
+    const coin = makeStablecoin({
+      circulating: {
+        peggedEUR: null as unknown as number,
+        peggedGBP: undefined as unknown as number,
+      },
+    });
+    expect(getCirculatingRawOrNull(coin)).toBeNull();
+  });
+
+  it("returns null when all buckets are non-finite", () => {
+    const coin = makeStablecoin({
+      circulating: {
+        peggedUSD: NaN,
+        peggedEUR: Infinity,
+        peggedGBP: -Infinity,
+      },
+    });
+    expect(getCirculatingRawOrNull(coin)).toBeNull();
+  });
+
+  it("returns zero when an explicit finite bucket is zero", () => {
+    const coin = makeStablecoin({
+      circulating: {
+        peggedUSD: 0,
+      },
+    });
+    expect(getCirculatingRawOrNull(coin)).toBe(0);
+  });
+
+  it("returns zero when real bucket data exists but sums to zero", () => {
+    const coin = makeStablecoin({
+      circulating: {
+        peggedUSD: 100,
+        peggedEUR: -100,
+      },
+    });
+    expect(getCirculatingRawOrNull(coin)).toBe(0);
+  });
+
+  it("returns the summed USD value when bucket data exists", () => {
+    const coin = makeStablecoin({
+      circulating: { peggedUSD: 1_000_000, peggedEUR: 250_000 },
+    });
+    expect(getCirculatingRawOrNull(coin)).toBe(1_250_000);
   });
 });
 

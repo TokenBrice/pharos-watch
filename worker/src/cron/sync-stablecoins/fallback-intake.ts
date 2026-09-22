@@ -53,7 +53,7 @@ export function resolveFreshCoinGeckoFallbackEntry(entry: CoinGeckoMcapData[stri
   const observedAt = toPositiveFiniteNumber(entry?.last_updated_at);
   if (mcap == null || observedAt == null) return null;
   const freshness = validatePricingSourceFreshness({
-    source: "coingecko", observedAt, observedAtMode: "upstream", nowSec, requireObservedAt: true, maxFutureSkewSec: 0,
+    source: "coingecko", observedAt, observedAtMode: "upstream", nowSec, requireObservedAt: true,
   });
   if (!freshness.accepted || freshness.observedAt == null) return null;
 
@@ -137,9 +137,7 @@ export async function overlayFallbackCuratedAggregateSupply(
     const meta = ACTIVE_META_BY_ID.get(String(asset.id));
     if (!meta || !selectCuratedAggregateOnchainSupplyProbeContracts(meta)) continue;
 
-    const navLikeAsset = meta.flags.navToken || meta.flags.yieldBearing;
-    const priceUsd = toPositiveFiniteNumber(asset.price)
-      ?? (!navLikeAsset && meta.flags.pegCurrency === "USD" ? 1 : null);
+    const priceUsd = toPositiveFiniteNumber(asset.price);
     if (priceUsd == null) continue;
 
     const onChainMcap = await fetchCuratedAggregateOnChainMcap(meta, priceUsd, undefined, signal);
@@ -148,6 +146,7 @@ export async function overlayFallbackCuratedAggregateSupply(
     const pegKey = pegTypeKey(meta);
     asset.circulating = { [pegKey]: onChainMcap.mcap };
     asset.supplySource = onChainMcap.supplySource;
+    asset.supplyObservedAt = onChainMcap.observedAt ?? null;
     asset.chainCirculating = toPublicChainCirculating(onChainMcap.chainCirculating);
     asset.chains = Object.keys(onChainMcap.chainCirculating);
   }

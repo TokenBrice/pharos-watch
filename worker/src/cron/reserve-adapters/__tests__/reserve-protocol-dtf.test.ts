@@ -485,7 +485,7 @@ describe("reserve-protocol-dtf adapter", () => {
       .toBeCloseTo(1, 10);
   });
 
-  it("emits zero capacity when the redemption throttle is exhausted", async () => {
+  it("publishes degraded route evidence when the redemption throttle is exhausted", async () => {
     mockReserveProtocolOnchain({ redemptionAvailable: 0n });
 
     const result = await fetchReserveProtocolDtfReserves(coin as never, createOnchainConfig(), signal);
@@ -495,7 +495,7 @@ describe("reserve-protocol-dtf adapter", () => {
       capacityRatioOfSupply: 0,
       capacityKind: "live-direct",
       freshnessKind: "same-run-onchain",
-      routeStatus: "open",
+      routeStatus: "degraded",
       routeStatusSource: "onchain",
     });
   });

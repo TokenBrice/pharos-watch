@@ -23,7 +23,11 @@
 import type { YieldSourceRisk, YieldVenueRiskTier } from "../types/yield";
 import { numberValue } from "./type-guards";
 import { deriveVenueRiskTier } from "./yield-scoring";
-import { resolveReviewedYieldRiskConfig, venueRiskWeightedOf } from "./yield-source-risk-registry";
+import {
+  resolveReviewedYieldRiskConfig,
+  venueRiskTierOf,
+  venueRiskWeightedOf,
+} from "./yield-source-risk-registry";
 
 /** A descending `[threshold, penalty]` band table. First matching band wins. */
 export type PenaltyBands = readonly (readonly [threshold: number, penalty: number])[];
@@ -172,5 +176,5 @@ export function resolveVenueRisk(params: {
   );
   if (reviewedConfig == null) return { weighted: null, tier: "unknown", reviewed: false };
   const weighted = venueRiskWeightedOf(reviewedConfig);
-  return { weighted, tier: deriveVenueRiskTier(weighted), reviewed: true };
+  return { weighted, tier: venueRiskTierOf(reviewedConfig), reviewed: true };
 }

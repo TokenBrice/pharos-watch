@@ -7,7 +7,7 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { useYieldRankingsSummary } from "@/hooks/api-hooks";
 import { useUrlFilters } from "@/hooks/use-url-filters";
-import { logosById } from "@/lib/logos";
+import { getLogoSrc, logosById } from "@/lib/logos";
 import { useWatchlist } from "@/hooks/use-watchlist";
 import { YieldLeaderboard } from "@/components/yield-leaderboard";
 import { YieldLeaderboardControls } from "@/components/yield-leaderboard-controls";
@@ -89,7 +89,7 @@ function HeroPysPodium({ rows, logos, onSelect }: HeroPysPodiumProps) {
           onClick={() => onSelect(winner.id)}
           className="pharos-focus-ring flex shrink-0 flex-col items-center gap-1 rounded-md px-1 py-1 text-[9px] font-medium leading-none text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground sm:hidden"
         >
-          <StablecoinLogo src={logos[winner.id]} name={winner.name} size={44} />
+          <StablecoinLogo src={getLogoSrc(logos, winner.id)} name={winner.name} size={44} />
           <span className="max-w-12 truncate">{winner.symbol}</span>
         </button>
       ) : null}
@@ -112,7 +112,7 @@ function HeroPysPodium({ rows, logos, onSelect }: HeroPysPodiumProps) {
               className={`pharos-focus-ring ${place.orderClass} group/podium flex min-w-11 flex-col items-center gap-1 rounded-md px-0.5 py-1 text-[10px] font-medium leading-none text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground`}
             >
               <span className="relative">
-                <StablecoinLogo src={logos[row.id]} name={row.name} size={place.logoSize} />
+                <StablecoinLogo src={getLogoSrc(logos, row.id)} name={row.name} size={place.logoSize} />
                 <span
                   aria-hidden="true"
                   className="absolute -bottom-1 -right-1 inline-flex size-5 items-center justify-center rounded-full border border-border bg-background font-mono text-[10px] font-bold text-foreground"

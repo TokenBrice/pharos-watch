@@ -3,6 +3,7 @@ import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitive
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import {
   DEPEG_EVENT_CLOSE_REASON_VALUES,
+  refineDepegEventChronology,
   type DepegEvent,
   type PegSummaryCoin,
 } from "@shared/types/market";
@@ -123,13 +124,7 @@ const PegProvenanceEventSchema = z
   })
   .strict()
   .superRefine((event, ctx) => {
-    if (event.endedAt != null && event.endedAt <= event.startedAt) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["endedAt"],
-        message: "A closed event must end after it starts",
-      });
-    }
+    refineDepegEventChronology(event, ctx);
     // The prepared peg summary uses the signed peak and ignores direction. Historical rows
     // contain known direction/sign disagreements, so bind that metadata in the
     // event digest without rejecting or silently rewriting the scored event.

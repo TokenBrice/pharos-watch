@@ -1,4 +1,8 @@
 import type { MinimalD1Database } from "../../lib/minimal-d1";
+import {
+  API_KEY_REQUEST_BUCKETED_LIMIT_TABLE_NAMES,
+  type ApiKeyRequestBucketedLimitTable,
+} from "../../lib/api-key-request-rate-limit-prune";
 
 type RateLimitDb = MinimalD1Database;
 
@@ -25,7 +29,7 @@ export interface ApiKeyRequestRateLimitResult {
  * batch; only the code is shared.
  */
 export interface BucketedLimitTable {
-  readonly table: "api_key_request_rate_limit_v2" | "api_key_self_serve_issuance_limits";
+  readonly table: ApiKeyRequestBucketedLimitTable;
   readonly lastSeenColumn: "last_seen_at" | "updated_at";
 }
 
@@ -63,10 +67,6 @@ export function bucketStartFor(nowSec: number, windowSec: number): number {
  * inflates the bucket. `allowed` is driven purely by `meta.changes`, which is
  * what keeps both callers fail-closed on a rejected write.
  */
-const BUCKETED_LIMIT_TABLE_NAMES = new Set<BucketedLimitTable["table"]>([
-  "api_key_request_rate_limit_v2",
-  "api_key_self_serve_issuance_limits",
-]);
 const BUCKETED_LIMIT_LAST_SEEN_COLUMNS = new Set<BucketedLimitTable["lastSeenColumn"]>([
   "last_seen_at",
   "updated_at",
@@ -77,7 +77,7 @@ export async function acquireBucketedLimitSlot(
   target: BucketedLimitTable,
   request: BucketedLimitSlotRequest,
 ): Promise<BucketedLimitSlotResult> {
-  if (!BUCKETED_LIMIT_TABLE_NAMES.has(target.table) || !BUCKETED_LIMIT_LAST_SEEN_COLUMNS.has(target.lastSeenColumn)) {
+  if (!API_KEY_REQUEST_BUCKETED_LIMIT_TABLE_NAMES.has(target.table) || !BUCKETED_LIMIT_LAST_SEEN_COLUMNS.has(target.lastSeenColumn)) {
     throw new Error(`unknown bucketed limit target: ${target.table}.${target.lastSeenColumn}`);
   }
   const bucketStart = bucketStartFor(request.nowSec, request.windowSec);
@@ -121,16 +121,4 @@ export async function checkApiKeyRequestRateLimit(
     nowSec,
   });
   return { allowed, retryAfterSec };
-}
-
-export async function pruneOldApiKeyRequestRateLimits(
-  db: RateLimitDb,
-  olderThanSec: number,
-): Promise<void> {
-  await db.prepare("DELETE FROM api_key_request_rate_limit_v2 WHERE bucket_start < ?")
-    .bind(olderThanSec)
-    .run();
-  await db.prepare("DELETE FROM api_key_self_serve_issuance_limits WHERE bucket_start < ?")
-    .bind(olderThanSec)
-    .run();
 }

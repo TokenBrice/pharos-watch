@@ -3,6 +3,7 @@ import { formatCurrency } from "@shared/lib/format";
 import { round1 } from "@shared/lib/math";
 import { ALLOWED_TONES, type DigestValidationProfile } from "../daily-digest/response";
 import { buildSafetyMapCensusLines } from "../daily-digest/prompt";
+import { WEEKLY_ROLLUP_EXPECTED_DAYS } from "../daily-digest/collectors-shared";
 import type { WeeklyInputData } from "./types";
 
 export const WEEKLY_SYSTEM_PROMPT = [
@@ -61,16 +62,19 @@ export function buildWeeklyPrompt(
       ? data.safetyContext.identity
       : null;
   const safetyContextAvailable = safetyIdentity != null;
+  // A total the window could not fully observe is published as unavailable,
+  // never as the sum of however many editions happened to be readable.
+  const partialCoverage = `N/A (${data.dailyDigests.length} of ${WEEKLY_ROLLUP_EXPECTED_DAYS} daily editions)`;
   const lines: string[] = [
     `Weekly recap: trailing daily editions from ${data.weekStartDate} to ${data.weekEndDate}`,
     "",
     `PSI range: ${data.psiRange.min} to ${data.psiRange.max} (start: ${data.psiRange.start}, end: ${data.psiRange.end})`,
     `Dominant band: ${data.psiRange.dominantBand}`,
     `Market cap: ${formatCurrency(data.mcapRange.start)} -> ${formatCurrency(data.mcapRange.end)} (${data.mcapRange.pctChange == null ? "N/A" : `${data.mcapRange.pctChange >= 0 ? "+" : ""}${data.mcapRange.pctChange.toFixed(2)}%`})`,
-    `Active depeg observations across daily editions: ${data.activeDepegObservationsThisWeek}`,
-    `Unique depeg signals reconstructed from daily inputs: ${data.uniqueDepegSignalsThisWeek}`,
-    `Total blacklist events: ${data.totalBlacklistEventsThisWeek}, ${formatCurrency(data.totalBlacklistAmountUsd)} affected`,
-    `${safetyContextAvailable ? "Grade transitions" : "Risk transitions"}: ${data.gradeTransitionCount}`,
+    `Active depeg observations across daily editions: ${data.activeDepegObservationsThisWeek ?? partialCoverage}`,
+    `Unique depeg signals reconstructed from daily inputs: ${data.uniqueDepegSignalsThisWeek ?? partialCoverage}`,
+    `Total blacklist events: ${data.totalBlacklistEventsThisWeek ?? partialCoverage}, ${data.totalBlacklistAmountUsd == null ? partialCoverage : formatCurrency(data.totalBlacklistAmountUsd)} affected`,
+    `${safetyContextAvailable ? "Grade transitions" : "Risk transitions"}: ${data.gradeTransitionCount ?? partialCoverage}`,
   ];
 
   if (safetyContextAvailable) {
@@ -144,15 +148,17 @@ export function buildWeeklyPrompt(
     );
     lines.push(`  PSI dominant band: current ${d.psiDominantBand.current} / prior ${d.psiDominantBand.prior}`);
     lines.push(
-      `  Active depeg observations: current ${d.activeDepegObservations.current} / prior ${d.activeDepegObservations.prior}`,
-    );
-    lines.push(`  Unique depeg signals: current ${d.uniqueDepegSignals.current} / prior ${d.uniqueDepegSignals.prior}`);
-    lines.push(`  Blacklist events: current ${d.blacklistEvents.current} / prior ${d.blacklistEvents.prior}`);
-    lines.push(
-      `  Blacklist USD: current ${formatCurrency(d.blacklistUsd.current)} / prior ${formatCurrency(d.blacklistUsd.prior)}`,
+      `  Active depeg observations: current ${d.activeDepegObservations.current ?? "n/a"} / prior ${d.activeDepegObservations.prior ?? "n/a"}`,
     );
     lines.push(
-      `  ${safetyContextAvailable ? "Grade transitions" : "Risk transitions"}: current ${d.gradeTransitions.current} / prior ${d.gradeTransitions.prior}`,
+      `  Unique depeg signals: current ${d.uniqueDepegSignals.current ?? "n/a"} / prior ${d.uniqueDepegSignals.prior ?? "n/a"}`,
+    );
+    lines.push(`  Blacklist events: current ${d.blacklistEvents.current ?? "n/a"} / prior ${d.blacklistEvents.prior ?? "n/a"}`);
+    lines.push(
+      `  Blacklist USD: current ${d.blacklistUsd.current == null ? "n/a" : formatCurrency(d.blacklistUsd.current)} / prior ${d.blacklistUsd.prior == null ? "n/a" : formatCurrency(d.blacklistUsd.prior)}`,
+    );
+    lines.push(
+      `  ${safetyContextAvailable ? "Grade transitions" : "Risk transitions"}: current ${d.gradeTransitions.current ?? "n/a"} / prior ${d.gradeTransitions.prior ?? "n/a"}`,
     );
     if (d.gauge.current != null && d.gauge.prior != null) {
       lines.push(
@@ -236,7 +242,7 @@ export function buildWeeklyPrompt(
     lines.push("  Top blacklist events:");
     for (const event of data.weeklySignals.topBlacklistEvents) {
       lines.push(
-        `    ${event.date} ${event.symbol} on ${event.chain}: ${event.type}, ${formatCurrency(event.amountUsd)}`,
+        `    ${event.date} ${event.symbol} on ${event.chain}: ${event.type}, ${event.amountUsd == null ? "amount unknown" : formatCurrency(event.amountUsd)}`,
       );
     }
   }

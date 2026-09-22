@@ -59,8 +59,9 @@ import {
   SafetyScoreHistoryResponseSchema,
   SafetyScoreHistoryV2ResponseSchema,
 } from "@shared/types/safety-score-history";
-import { StabilityIndexResponseSchema } from "@shared/types/stability";
+import { StabilityIndexResponseSchema, UsdsStatusResponseOutputSchema } from "@shared/types/stability";
 import { HealthResponseSchema, PublicStatusHistoryResponseSchema } from "@shared/types/status";
+import { TelegramPulseOutputSchema } from "@shared/types/status/telegram";
 import { TapeEventsResponseSchema } from "@shared/types/tape-event";
 import {
   YieldAdapterManifestResponseSchema,
@@ -108,6 +109,11 @@ const SnapshotIndexEntrySchema = z.object({
 
 export const SnapshotsIndexResponseSchema = z.object({
   snapshots: z.array(SnapshotIndexEntrySchema),
+  pagination: z.object({
+    limit: z.number(),
+    hasMore: z.boolean(),
+    nextCursor: z.string().nullable(),
+  }),
 });
 
 const SnapshotCoinScoreRowSchema = z
@@ -124,18 +130,15 @@ export const SnapshotCoinResponseSchema = z.object({
   // The stored snapshot envelope guarantees the id; remaining stablecoin fields are versioned data.
   stablecoin: z.object({ id: z.string() }).passthrough(),
   scores: z.object({
+    // `reportCard` serves either a strict V9 card or a legacy V8 map entry, and `psi` is the
+    // envelope-level PSI object that legacy V1 rows never bound to a schema, so these two stay
+    // JsonValue fields on purpose: a faithful schema would have to accept two mutually
+    // incompatible historical shapes. Same deliberate debt as `snapshot-day` in the endpoint list.
     reportCard: z.unknown().nullable(),
     psi: z.unknown().nullable(),
     dews: SnapshotCoinScoreRowSchema,
     liquidity: SnapshotCoinScoreRowSchema,
   }),
-});
-
-/** Output shape of the worker's normalized USDS status response, without its runtime transform. */
-export const UsdsStatusResponseArtifactSchema = z.object({
-  implementationAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
-  freezeCapabilityPresent: z.boolean(),
-  lastChecked: z.number(),
 });
 
 const DailyDigestRiskSignalArtifactSchema = z.object({
@@ -161,56 +164,6 @@ export const DailyDigestResponseArtifactSchema = z.object({
   forwardLookOutcomes: z.array(DigestForwardLookOutcomeSchema).nullable(),
   riskTape: z.array(DigestRiskTapeItemSchema).nullable(),
   standingConditions: z.array(DigestStandingConditionSchema).nullable(),
-});
-
-const TelegramPulsePrivacyArtifactSchema = z.object({
-  exactActiveWatchers: z.boolean(),
-  lowCardinalityThreshold: z.number(),
-  suppressedFields: z.array(z.string()),
-});
-
-const TelegramWatcherHistoryPointArtifactSchema = z.object({
-  date: z.string(),
-  timestamp: z.number(),
-  snapshotAt: z.number().nullable().optional(),
-  newWatchers: z.number().nullable().optional(),
-  activeWatchers: z.number(),
-  churnedWatchers: z.number().nullable().optional(),
-  reactivatedWatchers: z.number().nullable().optional(),
-});
-
-const TelegramTelemetryQualityArtifactSchema = z.object({
-  status: z.enum(["complete", "partial"]),
-  unavailableFields: z.array(z.string()),
-  errors: z.record(z.string(), z.string()).optional(),
-});
-
-/** Output shape of Telegram pulse after runtime defaults are applied. */
-export const TelegramPulseResponseArtifactSchema = z.object({
-  activeWatchers: z.number(),
-  coinSubscriptions: z.number(),
-  explicitCoinSubscriptions: z.number().optional(),
-  presetImpliedCoinSubscriptions: z.number().optional(),
-  activePresetFollowers: z.number().optional(),
-  newWatchersToday: z.number().nullable().optional(),
-  churnedWatchersToday: z.number().nullable().optional(),
-  reactivatedWatchersToday: z.number().nullable().optional(),
-  historySource: z.enum(["snapshot", "live-fallback"]).optional(),
-  topCoins: z.array(z.string()),
-  watcherHistory: z.array(TelegramWatcherHistoryPointArtifactSchema),
-  pendingDeliveries: z.number().nullable(),
-  miniAppSessionsToday: z.number().nullable().optional(),
-  miniAppMutationsToday: z.number().nullable().optional(),
-  miniAppDeniedToday: z.number().nullable().optional(),
-  miniAppReplayClaimsToday: z.number().nullable().optional(),
-  miniAppOpenToFirstMutationP50Sec: z.number().nullable().optional(),
-  currentSnapshotAt: z.number(),
-  lifecycleHistoryUpdatedAt: z.number().nullable(),
-  lifecycleHistoryEverySeconds: z.number(),
-  quality: TelegramTelemetryQualityArtifactSchema,
-  privacy: TelegramPulsePrivacyArtifactSchema,
-  updatedAt: z.number(),
-  updatedEverySeconds: z.number(),
 });
 
 /**
@@ -252,7 +205,7 @@ export const PUBLIC_API_RESPONSE_SCHEMAS = {
   DexLiquidityResponse: DexLiquidityMapSchema,
   DepegEventsResponse: DepegEventsResponseSchema,
   TapeEventsResponse: TapeEventsResponseSchema,
-  UsdsStatusResponse: UsdsStatusResponseArtifactSchema,
+  UsdsStatusResponse: UsdsStatusResponseOutputSchema,
   DexLiquidityHistoryResponse: DexLiquidityHistoryResponseSchema,
   ReportCardsV9Response: ReportCardsV9ResponseSchema,
   SafetyGradesResponse: SafetyGradesResponseSchema,
@@ -279,7 +232,7 @@ export const PUBLIC_API_RESPONSE_SCHEMAS = {
   DigestArchiveResponse: DigestArchiveResponseSchema,
   DigestSnapshotResponse: DigestSnapshotResponseSchema,
   PublicStatusHistoryResponse: PublicStatusHistoryResponseSchema,
-  TelegramPulseResponse: TelegramPulseResponseArtifactSchema,
+  TelegramPulseResponse: TelegramPulseOutputSchema,
 } as const satisfies Record<string, z.ZodType>;
 
 export type PublicApiResponseSchemaName = keyof typeof PUBLIC_API_RESPONSE_SCHEMAS;

@@ -17,10 +17,3 @@ export function deriveIndicativeDeviationBps(
   if (priceUsd == null || pegReference == null) return null;
   return deriveDepegSignal(priceUsd, pegReference)?.bps ?? null;
 }
-
-export function deriveGaugeDeviationBps(
-  deviationBps: number | null,
-  isNavToken: boolean,
-): number {
-  return isNavToken ? 0 : deviationBps ?? 0;
-}

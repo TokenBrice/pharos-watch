@@ -24,6 +24,10 @@ import { isGroupChatType } from "./telegram-webhook-auth";
 import { sendAuditedTelegramReply } from "./telegram-webhook-replies";
 import { createTelegramWebhookIntent } from "./telegram-webhook-effect-fence";
 import type { TelegramWebhookOperationIntent } from "./telegram-webhook-store";
+import {
+  commandRequiresGroupAdmin,
+  isRecapMutationArgs,
+} from "./telegram-webhook-ingress-policy";
 
 export type ParsedTelegramCommand = NonNullable<ReturnType<typeof parseCommand>>;
 export type ReplyFn = (message: string) => Promise<void>;
@@ -31,20 +35,10 @@ export type ReplyFn = (message: string) => Promise<void>;
 type PendingDisambiguationRow = Awaited<ReturnType<typeof loadPendingDisambiguation>>;
 type PendingFlowResult = "continue" | "continue-clear-pending" | "finished";
 
-const MUTATING_PENDING_REPLACEMENT_COMMANDS = new Set([
-  "/forget",
-  "/mute",
-  "/set",
-  "/subscribe",
-  "/unmutehours",
-  "/unsnooze",
-  "/unsubscribe",
-]);
 
 function mutatesAfterPendingClear(command: ParsedTelegramCommand): boolean {
-  return MUTATING_PENDING_REPLACEMENT_COMMANDS.has(command.command)
-    || (command.command === "/timezone" && command.args.trim().length > 0)
-    || (command.command === "/recap" && /^(?:on|off|time\s+(?:[0-9]|1[0-9]|2[0-3]))$/i.test(command.args.trim()));
+  return commandRequiresGroupAdmin(command.command, command.args)
+    || (command.command === "/recap" && isRecapMutationArgs(command.args));
 }
 
 function normalizedPendingActionType(value: string | null | undefined): string {

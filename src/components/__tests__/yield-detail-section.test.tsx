@@ -104,8 +104,30 @@ function makeRanking(overrides: Partial<YieldRanking> = {}): YieldRanking {
   });
 }
 
-function makeResponse(rankings: YieldRanking[] = []): YieldRankingsResponse {
-  return makeYieldDetailResponse(rankings, { riskFreeRate: 0.03, scalingFactor: 1 });
+function altSource(sourceKey: string, yieldSource: string, currentApy: number, apy30d: number, sourceTvlUsd: number) {
+  return makeAltYieldSource({
+    sourceKey,
+    yieldSource,
+    yieldSourceUrl: `https://example.com/${sourceKey}`,
+    yieldType: "lending-vault",
+    currentApy,
+    apy30d,
+    sourceTvlUsd,
+    dataSource: "defillama",
+  });
+}
+
+function mockRankingsQuery(overrides: {
+  data?: YieldRankingsResponse;
+  meta?: { warning: string } | null;
+  error?: Error | null;
+  isLoading?: boolean;
+}): void {
+  useYieldRankingsMock.mockReturnValue({ data: undefined, meta: null, error: null, isLoading: false, ...overrides });
+}
+
+function mockRankings(rankings: YieldRanking[], meta: { warning: string } | null = null): void {
+  mockRankingsQuery({ data: makeYieldDetailResponse(rankings, { riskFreeRate: 0.03, scalingFactor: 1 }), meta });
 }
 
 describe("YieldDetailSection", () => {
@@ -130,14 +152,8 @@ describe("YieldDetailSection", () => {
     HTMLElement.prototype.scrollIntoView = vi.fn();
   });
 
-
   it("renders the loading shell for tracked yield-bearing assets", () => {
-    useYieldRankingsMock.mockReturnValue({
-      data: undefined,
-      meta: null,
-      error: null,
-      isLoading: true,
-    });
+    mockRankingsQuery({ isLoading: true });
 
     const { container } = render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
@@ -146,12 +162,7 @@ describe("YieldDetailSection", () => {
   });
 
   it("mounts one history chart in each viewport mode", async () => {
-    useYieldRankingsMock.mockReturnValue({
-      data: makeResponse([makeRanking()]),
-      meta: null,
-      error: null,
-      isLoading: false,
-    });
+    mockRankings([makeRanking()]);
 
     const { container, rerender } = render(<YieldDetailSection stablecoinId="usdn-smardex" />);
     expect(container.querySelectorAll("[data-testid='yield-history-chart']")).toHaveLength(1);
@@ -173,12 +184,7 @@ describe("YieldDetailSection", () => {
   });
 
   it("shows the unavailable-yet state when a yield-bearing asset has no ranking and no fetch error", () => {
-    useYieldRankingsMock.mockReturnValue({
-      data: makeResponse([]),
-      meta: null,
-      error: null,
-      isLoading: false,
-    });
+    mockRankings([]);
 
     render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
@@ -191,12 +197,7 @@ describe("YieldDetailSection", () => {
   });
 
   it("shows the error notice when the ranking fetch fails for a tracked yield-bearing asset", () => {
-    useYieldRankingsMock.mockReturnValue({
-      data: undefined,
-      meta: null,
-      error: new Error("yield rankings failed"),
-      isLoading: false,
-    });
+    mockRankingsQuery({ error: new Error("yield rankings failed") });
 
     render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
@@ -205,12 +206,7 @@ describe("YieldDetailSection", () => {
   });
 
   it("renders the deep-link breadcrumb with three named anchor links when ready", () => {
-    useYieldRankingsMock.mockReturnValue({
-      data: makeResponse([makeRanking()]),
-      meta: null,
-      error: null,
-      isLoading: false,
-    });
+    mockRankings([makeRanking()]);
 
     render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
@@ -227,16 +223,11 @@ describe("YieldDetailSection", () => {
   });
 
   it("renders source-risk penalty in the PYS breakdown", () => {
-    useYieldRankingsMock.mockReturnValue({
-      data: makeResponse([
-        makeRanking({
-          sourceRisk: buildSourceRiskGoldenFixture("reward-heavy", { sourceRiskPenalty: 2 }),
-        }),
-      ]),
-      meta: null,
-      error: null,
-      isLoading: false,
-    });
+    mockRankings([
+      makeRanking({
+        sourceRisk: buildSourceRiskGoldenFixture("reward-heavy", { sourceRiskPenalty: 2 }),
+      }),
+    ]);
 
     const { container } = render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
@@ -245,25 +236,20 @@ describe("YieldDetailSection", () => {
   });
 
   it("explains populated source-risk drivers in the detail PYS block", () => {
-    useYieldRankingsMock.mockReturnValue({
-      data: makeResponse([
-        makeRanking({
-          sourceRisk: mergeSourceRiskGoldenFixtures(
-            ["reward-heavy", "stale-source-age"],
-            { sourceRiskPenalty: 1.8 },
-          ),
-          provenance: makeYieldProvenance({
-            sourceKey: "primary-source", sourceObservedAt: 1_700_000_000,
-            sourceAgeSeconds: 8 * 60 * 60, sourceFreshness: "stale",
-            selectionReason: "Higher confidence than retained alternates.",
-            sourceSwitch: true, previousBestSourceKey: "previous-source", benchmarkRecordDate: null,
-          }),
+    mockRankings([
+      makeRanking({
+        sourceRisk: mergeSourceRiskGoldenFixtures(
+          ["reward-heavy", "stale-source-age"],
+          { sourceRiskPenalty: 1.8 },
+        ),
+        provenance: makeYieldProvenance({
+          sourceKey: "primary-source", sourceObservedAt: 1_700_000_000,
+          sourceAgeSeconds: 8 * 60 * 60, sourceFreshness: "stale",
+          selectionReason: "Higher confidence than retained alternates.",
+          sourceSwitch: true, previousBestSourceKey: "previous-source", benchmarkRecordDate: null,
         }),
-      ]),
-      meta: null,
-      error: null,
-      isLoading: false,
-    });
+      }),
+    ]);
 
     render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
@@ -276,25 +262,10 @@ describe("YieldDetailSection", () => {
   });
 
   it("persists selected alternative sources in the URL state and forwards them to the chart", () => {
-    useYieldRankingsMock.mockReturnValue({
-      data: makeResponse([
-        makeRanking({
-          altSources: [
-            makeAltYieldSource({
-              sourceKey: "alt-source", yieldSource: "Alt Source", yieldSourceUrl: "https://example.com/alt",
-              yieldType: "lending-vault", currentApy: 0.049, apy30d: 0.048, sourceTvlUsd: 750_000, dataSource: "defillama",
-            }),
-            makeAltYieldSource({
-              sourceKey: "second-alt-source", yieldSource: "Second Alt Source", yieldSourceUrl: "https://example.com/alt-2",
-              yieldType: "lending-vault", currentApy: 0.047, apy30d: 0.046, sourceTvlUsd: 600_000, dataSource: "defillama",
-            }),
-          ],
-        }),
-      ]),
-      meta: { warning: "Using cached yield snapshot." },
-      error: null,
-      isLoading: false,
-    });
+    mockRankings(
+      [makeRanking({ altSources: [altSource("alt-source", "Alt Source", 0.049, 0.048, 750_000), altSource("second-alt-source", "Second Alt Source", 0.047, 0.046, 600_000)] })],
+      { warning: "Using cached yield snapshot." },
+    );
 
     const { rerender } = render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
@@ -327,21 +298,7 @@ describe("YieldDetailSection", () => {
 
   it("drops stale sources URL values before forwarding chart overlays", () => {
     sourcesParam = "stale-source,alt-source";
-    useYieldRankingsMock.mockReturnValue({
-      data: makeResponse([
-        makeRanking({
-          altSources: [
-            makeAltYieldSource({
-              sourceKey: "alt-source", yieldSource: "Alt Source", yieldSourceUrl: "https://example.com/alt",
-              yieldType: "lending-vault", currentApy: 0.049, apy30d: 0.048, sourceTvlUsd: 750_000, dataSource: "defillama",
-            }),
-          ],
-        }),
-      ]),
-      meta: null,
-      error: null,
-      isLoading: false,
-    });
+    mockRankings([makeRanking({ altSources: [altSource("alt-source", "Alt Source", 0.049, 0.048, 750_000)] })]);
 
     render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
@@ -350,12 +307,7 @@ describe("YieldDetailSection", () => {
 
   it("falls back to best chart source when all sources URL values are stale", () => {
     sourcesParam = "stale-source";
-    useYieldRankingsMock.mockReturnValue({
-      data: makeResponse([makeRanking()]),
-      meta: null,
-      error: null,
-      isLoading: false,
-    });
+    mockRankings([makeRanking()]);
 
     render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
@@ -363,23 +315,14 @@ describe("YieldDetailSection", () => {
   });
 
   it("limits the chart source selection to four alternatives", () => {
-    useYieldRankingsMock.mockReturnValue({
-      data: makeResponse([
-        makeRanking({
-          altSources: Array.from({ length: 5 }, (_, index) => {
-            const n = index + 1;
-            return makeAltYieldSource({
-              sourceKey: `alt-source-${n}`, yieldSource: `Alt Source ${n}`, yieldSourceUrl: `https://example.com/alt-${n}`,
-              yieldType: "lending-vault", currentApy: 0.05 - n * 0.001, apy30d: 0.049 - n * 0.001,
-              sourceTvlUsd: 800_000 - n * 50_000, dataSource: "defillama",
-            });
-          }),
+    mockRankings([
+      makeRanking({
+        altSources: Array.from({ length: 5 }, (_, index) => {
+          const n = index + 1;
+          return altSource(`alt-source-${n}`, `Alt Source ${n}`, 0.05 - n * 0.001, 0.049 - n * 0.001, 800_000 - n * 50_000);
         }),
-      ]),
-      meta: null,
-      error: null,
-      isLoading: false,
-    });
+      }),
+    ]);
 
     const { rerender } = render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
@@ -396,12 +339,7 @@ describe("YieldDetailSection", () => {
   });
 
   it("renders the 'Why this APY changed' attribution card with a headline", () => {
-    useYieldRankingsMock.mockReturnValue({
-      data: makeResponse([makeRanking()]),
-      meta: null,
-      error: null,
-      isLoading: false,
-    });
+    mockRankings([makeRanking()]);
 
     render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
@@ -411,32 +349,27 @@ describe("YieldDetailSection", () => {
   });
 
   it("uses decision-ledger reason codes for source arbitration copy", () => {
-    useYieldRankingsMock.mockReturnValue({
-      data: makeResponse([
-        makeRanking({
-          provenance: makeYieldProvenance({
-            sourceKey: "primary-source", sourceObservedAt: 1_700_000_000, sourceAgeSeconds: 60,
-            selectionReason: "legacy freeform selection reason", benchmarkRecordDate: null,
-          }),
-          decisionLedger: {
-            selectedReasonCode: "curated-over-discovered",
-            sourceSwitch: false,
-            rejectedCount: 1,
-            alternatives: [
-              {
-                sourceKey: "alt-source",
-                yieldSource: "Alt Source",
-                apy30dDelta: 0.01,
-                rejectionReasonCode: "lower-confidence",
-              },
-            ],
-          },
+    mockRankings([
+      makeRanking({
+        provenance: makeYieldProvenance({
+          sourceKey: "primary-source", sourceObservedAt: 1_700_000_000, sourceAgeSeconds: 60,
+          selectionReason: "legacy freeform selection reason", benchmarkRecordDate: null,
         }),
-      ]),
-      meta: null,
-      error: null,
-      isLoading: false,
-    });
+        decisionLedger: {
+          selectedReasonCode: "curated-over-discovered",
+          sourceSwitch: false,
+          rejectedCount: 1,
+          alternatives: [
+            {
+              sourceKey: "alt-source",
+              yieldSource: "Alt Source",
+              apy30dDelta: 0.01,
+              rejectionReasonCode: "lower-confidence",
+            },
+          ],
+        },
+      }),
+    ]);
 
     render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
@@ -450,12 +383,7 @@ describe("YieldDetailSection", () => {
   });
 
   it("renders 'no comparison baseline' when rankChangeAttribution is null (E21)", () => {
-    useYieldRankingsMock.mockReturnValue({
-      data: makeResponse([makeRanking()]),
-      meta: null,
-      error: null,
-      isLoading: false,
-    });
+    mockRankings([makeRanking()]);
 
     render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
@@ -465,21 +393,16 @@ describe("YieldDetailSection", () => {
   });
 
   it("renders 'Stable' only when a measured baseline shows zero movement (E21)", () => {
-    useYieldRankingsMock.mockReturnValue({
-      data: makeResponse([
-        makeRanking({
-          rankChangeAttribution: {
-            previousRank: 5,
-            rankDelta: 0,
-            pysDelta: 0,
-            primaryDriver: null,
-          },
-        }),
-      ]),
-      meta: null,
-      error: null,
-      isLoading: false,
-    });
+    mockRankings([
+      makeRanking({
+        rankChangeAttribution: {
+          previousRank: 5,
+          rankDelta: 0,
+          pysDelta: 0,
+          primaryDriver: null,
+        },
+      }),
+    ]);
 
     render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
@@ -487,14 +410,9 @@ describe("YieldDetailSection", () => {
   });
 
   it("calls sub-basis-point excess a hurdle match and defaults a missing benchmark label (E20)", () => {
-    useYieldRankingsMock.mockReturnValue({
-      data: makeResponse([
-        makeRanking({ excessYield: -0.0000596, benchmarkLabel: undefined }),
-      ]),
-      meta: null,
-      error: null,
-      isLoading: false,
-    });
+    mockRankings([
+      makeRanking({ excessYield: -0.0000596, benchmarkLabel: undefined }),
+    ]);
 
     const { container } = render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
@@ -503,12 +421,7 @@ describe("YieldDetailSection", () => {
   });
 
   it("keeps clears/misses wording outside display precision (E20)", () => {
-    useYieldRankingsMock.mockReturnValue({
-      data: makeResponse([makeRanking({ excessYield: 0.02, benchmarkLabel: "SOFR" })]),
-      meta: null,
-      error: null,
-      isLoading: false,
-    });
+    mockRankings([makeRanking({ excessYield: 0.02, benchmarkLabel: "SOFR" })]);
 
     const { container } = render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
@@ -516,39 +429,37 @@ describe("YieldDetailSection", () => {
   });
 
   it("renders rank delta and PYS delta when rankChangeAttribution carries movement", () => {
-    useYieldRankingsMock.mockReturnValue({
-      data: makeResponse([
-        makeRanking({
-          rankChangeAttribution: {
-            previousRank: 12,
-            rankDelta: 3,
-            previousPys: 60,
-            pysDelta: 4.5,
-            primaryDriver: "apy",
-            driverContributions: {
-              apy: 3.2,
-              benchmark: 0.8,
-              stablecoinSafety: null,
-              sourceRisk: null,
-              sourceSwitch: null,
-              freshness: null,
-              volatility: null,
-              tvlDepth: null,
-            },
+    mockRankings([
+      makeRanking({
+        rankChangeAttribution: {
+          previousRank: 12,
+          rankDelta: 3,
+          previousPys: 60,
+          pysDelta: 4.5,
+          primaryDriver: "apy",
+          driverContributions: {
+            apy: 3.2,
+            benchmark: 0.8,
+            stablecoinSafety: null,
+            sourceRisk: null,
+            sourceSwitch: null,
+            freshness: null,
+            volatility: null,
+            tvlDepth: null,
           },
-        }),
-      ]),
-      meta: null,
-      error: null,
-      isLoading: false,
-    });
+        },
+      }),
+    ]);
 
     const { container } = render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
     expect(screen.getByText("Movement vs last publication")).toBeTruthy();
-    // Arrow + signed delta together: "▲ +3"
-    expect(container.textContent ?? "").toMatch(/▲\s*\+3/);
-    expect(container.textContent ?? "").toMatch(/PYS\s+\+4\.50%/);
+    // Arrow + signed delta together: "▲ +3 places"
+    expect(container.textContent ?? "").toMatch(/▲\s*\+3 places/);
+    expect(container.textContent ?? "").toMatch(/\+4\.50\s+PYS/);
+    expect(container.textContent ?? "").not.toMatch(/PYS\s*\+4\.50%/);
+    expect(container.textContent ?? "").toMatch(/APY:\s*\+3\.20\s+PYS/);
+    expect(container.textContent ?? "").toMatch(/Benchmark:\s*\+0\.80\s+PYS/);
     expect(container.textContent ?? "").toMatch(/Previous rank/);
     expect(container.textContent ?? "").toMatch(/#12/);
     expect(container.textContent ?? "").toMatch(/#9/);

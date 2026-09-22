@@ -131,12 +131,42 @@ describe("live-reserves-store", () => {
       }),
     });
 
-    const result = await pruneLiveReserveHistory(db, 10_000, 1_000, 100);
+    const result = await pruneLiveReserveHistory(db, 10_000, {
+      retentionSec: 1_000,
+      batchSize: 100,
+      maxBatches: 10,
+    });
     expect(result.compositionHistoryDeleted).toBe(650);
     expect(result.attemptHistoryDeleted).toBe(230);
+    expect(result.truncated).toBe(false);
     expect(history.length).toBe(compositionCounts.length + attemptCounts.length);
     for (const entry of history) {
       expect(entry.binds[entry.binds.length - 1]).toBe(100);
     }
+  });
+
+  it("stops at the configured batch budget and reports truncation", async () => {
+    const db = makeNoopD1({
+      prepare: (sql: string) => ({
+        bind: () => ({
+          run: async () => ({
+            success: true,
+            meta: { changes: sql.includes("reserve_") ? 100 : 0 },
+          }),
+        }),
+      }),
+    });
+
+    const result = await pruneLiveReserveHistory(db, 10_000, {
+      retentionSec: 1_000,
+      batchSize: 100,
+      maxBatches: 2,
+    });
+
+    expect(result).toMatchObject({
+      compositionHistoryDeleted: 200,
+      attemptHistoryDeleted: 200,
+      truncated: true,
+    });
   });
 });

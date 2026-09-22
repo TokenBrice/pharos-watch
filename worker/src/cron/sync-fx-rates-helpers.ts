@@ -137,11 +137,16 @@ export async function persistFxSyncResult(
       syncStartSec,
     },
   });
+  const repeatedCachedFallback =
+    state.mode === "cached-fallback" && meta.consecutiveFallbackRuns >= 4;
+  const degradedReason = state.degradedReason
+    ?? (repeatedCachedFallback ? "repeated-cached-fallback" : undefined);
   return {
-    status: state.mode === "cached-fallback" && meta.consecutiveFallbackRuns >= 4 ? "degraded" : undefined,
+    status: degradedReason ? "degraded" : undefined,
     itemCount: cacheResult.rates.written ? Object.keys(state.usableRates).length : 0,
     metadata: JSON.stringify({
       ...state.buildResultMetadata(secondaryPegKeys),
+      reason: degradedReason,
       cacheWriteMode: cacheResult.rates.written ? "published" : "skipped-newer",
       casSkipped: cacheResult.rates.skippedBecauseNewer || cacheResult.meta.skippedBecauseNewer,
       cacheKey: "fx-rates",
@@ -163,7 +168,7 @@ interface FxSyncRunStateParams {
 interface ApplyInverseRateMappingsInput {
   mappings: SecondaryFxMappings;
   includeMissingPrevious?: boolean;
-  sourceUpdatedAt: number;
+  sourceUpdatedAt: number | null;
   sourceDate: string | null;
   cadence: FxSourceCadence;
   getPerUsd(currency: string): number | undefined;
@@ -175,7 +180,7 @@ interface ApplyPerUsdPayloadInput<TPayload> {
   includeMissingPrevious?: boolean;
   cadence: FxSourceCadence;
   resolveSourceMeta(payload: TPayload): {
-    sourceUpdatedAt: number;
+    sourceUpdatedAt: number | null;
     sourceDate: string | null;
   };
   getPerUsd(payload: TPayload, currency: string): number | undefined;
@@ -185,13 +190,13 @@ function resolveDatedSourceUpdatedAt(
   dateText: string | null | undefined,
   syncStartSec: number,
   publishedHourUtc?: number,
-): number {
-  if (!dateText) return syncStartSec;
+): number | null {
+  if (!dateText || !/^\d{4}-\d{2}-\d{2}$/.test(dateText)) return null;
   const timeSuffix = publishedHourUtc == null
     ? "T23:59:59Z"
     : `T${String(publishedHourUtc).padStart(2, "0")}:00:00Z`;
   const parsed = Date.parse(`${dateText}${timeSuffix}`);
-  if (!Number.isFinite(parsed)) return syncStartSec;
+  if (!Number.isFinite(parsed)) return null;
   return Math.min(syncStartSec, Math.floor(parsed / 1000));
 }
 
@@ -214,6 +219,7 @@ export class FxSyncRunState {
   ecbDate: string | null = null;
   fallbackMode: string | undefined;
   validationIssues: string | undefined;
+  degradedReason: string | undefined;
   sources: Record<string, string>;
 
   constructor(params: FxSyncRunStateParams) {
@@ -238,7 +244,7 @@ export class FxSyncRunState {
 
   markLive(
     pegKey: string,
-    updatedAt: number,
+    updatedAt: number | null,
     cadence: FxSourceCadence = "intraday",
     sourceDate: string | null = null,
   ): void {
@@ -266,6 +272,9 @@ export class FxSyncRunState {
       this.prevRates,
       this.syncStartSec,
     );
+  }
+  degrade(reason: string): void {
+    this.degradedReason ??= reason;
   }
 
   hasFreshFullFxCoverage(): boolean {
@@ -352,9 +361,7 @@ export class FxSyncRunState {
           ? payload.date
           : null;
         return {
-          sourceUpdatedAt: sourceDate
-            ? resolveDatedSourceUpdatedAt(sourceDate, this.syncStartSec)
-            : this.syncStartSec,
+          sourceUpdatedAt: resolveDatedSourceUpdatedAt(sourceDate, this.syncStartSec),
           sourceDate,
         };
       },
@@ -378,10 +385,12 @@ export class FxSyncRunState {
           Number.isFinite(sourcePayload.time_last_update_unix) &&
           sourcePayload.time_last_update_unix > 0
             ? Math.min(this.syncStartSec, Math.floor(sourcePayload.time_last_update_unix))
-            : this.syncStartSec;
+            : null;
         return {
           sourceUpdatedAt,
-          sourceDate: new Date(sourceUpdatedAt * 1000).toISOString().slice(0, 10),
+          sourceDate: sourceUpdatedAt == null
+            ? null
+            : new Date(sourceUpdatedAt * 1000).toISOString().slice(0, 10),
         };
       },
       getPerUsd: (sourcePayload, currency) => sourcePayload.rates[currency.toUpperCase()],
@@ -396,54 +405,42 @@ export class FxSyncRunState {
       primaryMappings: SecondaryFxMappings;
       secondaryMappings: SecondaryFxMappings;
     },
-  ): Promise<boolean> {
+  ): Promise<"full" | "partial" | "unavailable"> {
     const secondaryCandidate = await loaders.loadSecondaryCurrencyCandidate();
     if (secondaryCandidate) {
       this.usableRates = {};
-      this.applySecondaryRates(
-        secondaryCandidate,
-        loaders.primaryMappings,
-        { includeMissingPrevious: true },
-      );
-      // includeMissingPrevious intentionally omitted here: the secondary-live
-      // fallback is best-effort, consistent with the Frankfurter happy path
-      // (sync-fx-rates.ts also omits it). Only the exchange-rate-api fallback
-      // carries forward missing previous values.
+      this.applySecondaryRates(secondaryCandidate, loaders.primaryMappings);
       this.applySecondaryRates(secondaryCandidate, loaders.secondaryMappings);
+      const fullCoverage = this.expectedPegKeys.every((pegKey) => pegKey in this.usableRates);
+      const hasProvenance = this.expectedPegKeys.every(
+        (pegKey) => this.sourceUpdatedAtByPeg[pegKey] != null,
+      );
       this.fallbackMode = "secondary-live-fallback";
       this.sources = {
         ...this.sources,
         frankfurter: frankfurterSource,
-        fawazahmed0: this.expectedPegKeys.every((pegKey) => pegKey in this.usableRates)
-          ? "ok"
-          : "partial",
+        fawazahmed0: fullCoverage && hasProvenance ? "ok" : "partial",
       };
-      return true;
+      return fullCoverage ? "full" : "partial";
     }
 
     const exchangeRateApiPayload = await loaders.loadExchangeRateApiPayload();
     if (exchangeRateApiPayload) {
       this.usableRates = {};
-      this.applyExchangeRateApiRates(
-        exchangeRateApiPayload,
-        loaders.primaryMappings,
-        { includeMissingPrevious: true },
-      );
-      this.applyExchangeRateApiRates(
-        exchangeRateApiPayload,
-        loaders.secondaryMappings,
-        { includeMissingPrevious: true },
+      this.applyExchangeRateApiRates(exchangeRateApiPayload, loaders.primaryMappings);
+      this.applyExchangeRateApiRates(exchangeRateApiPayload, loaders.secondaryMappings);
+      const fullCoverage = this.expectedPegKeys.every((pegKey) => pegKey in this.usableRates);
+      const hasProvenance = this.expectedPegKeys.every(
+        (pegKey) => this.sourceUpdatedAtByPeg[pegKey] != null,
       );
       this.fallbackMode = "exchange-rate-api-live-fallback";
       this.sources = {
         ...this.sources,
         frankfurter: frankfurterSource,
         fawazahmed0: "error",
-        exchangeRateApi: this.expectedPegKeys.every((pegKey) => pegKey in this.usableRates)
-          ? "ok"
-          : "partial",
+        exchangeRateApi: fullCoverage && hasProvenance ? "ok" : "partial",
       };
-      return true;
+      return fullCoverage ? "full" : "partial";
     }
 
     this.sources = {
@@ -459,9 +456,9 @@ export class FxSyncRunState {
         ...this.sources,
         cache: "carry-forward",
       };
-      return true;
+      return "full";
     }
-    return false;
+    return "unavailable";
   }
 
   applyFrankfurterRates(
@@ -704,7 +701,7 @@ export class FxSyncRunState {
       if (resolved.source === "cached") {
         this.inheritPrevious(pegKey);
       } else {
-        this.markLive(pegKey, resolved.updatedAt ?? this.syncStartSec);
+        this.markLive(pegKey, resolved.updatedAt);
       }
     }
   }

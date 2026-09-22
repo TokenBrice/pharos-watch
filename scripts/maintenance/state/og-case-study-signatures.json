@@ -96,10 +96,10 @@
       "title": "USD0++ depeg: when Usual changed the redemption floor",
       "outcome": "wounded",
       "logo": {
-        "path": "public/logos/195-usd0.png",
-        "sha256": "b81e02db0b9f226ee7d0a2c8dae33fe5a77be1b5559d437ae618df8121a02d03"
+        "path": "public/logos/busd0-usual.png",
+        "sha256": "6226d116c4c24e6b1ac65f72f6b18e42deae6a1b7f3aa976cb693c30a533fccb"
       },
-      "svgSha256": "3f2e7c050dd03a32f3f63c04c615da57b316bca1bbb956cc64596042433818bd"
+      "svgSha256": "58e8877b5b2c1490ebddf167cff244c12e67bc685308e546aeb413acfb94fe42"
     },
     {
       "file": "og-learn-case-crvusd-exploit-trilogy.png",

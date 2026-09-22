@@ -32,6 +32,7 @@ Static Next.js 16 export on Cloudflare Pages; API on a Cloudflare Worker + D1. L
 - Cron-backed hooks: `staleTime = producer interval`, `refetchInterval = 2x producer interval` (checked by `npm run check:hook-polling-window`).
 - Worker fetches: Cloudflare caps six simultaneous requests waiting on response headers; Pharos enforces a stricter trigger-wide six-connection budget (`npm run check:cron-connections`) — consume bodies before opening more fetches (`docs/worker-and-api-limits.md#connection-budget-operating-assumption`).
 - D1 migrations run before the new Worker is live; destructive cleanup is a separate coordinated rollout (`npm run check:migrations`).
+- Data-integrity rules R1-R8 (unavailable is not zero; a failed read never becomes a positive claim; a freshness verdict names its budget and generation; non-`ok` names a machine-readable reason; one authority per cadence/threshold/vocabulary; provenance names what was read this run; never publish a display-capped or clamped value as a statistic; quarantine the bad asset and publish the rest) are ADR-28 to ADR-35 in `docs/architecture.md`.
 - Long docs (notably `docs/api-reference.md`): use the top navigation block, then read only the matched section.
 
 ## Verify and ship

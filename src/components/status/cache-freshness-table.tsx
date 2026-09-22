@@ -1,4 +1,4 @@
-import { FRESHNESS_RATIOS, STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
+import { FRESHNESS_RATIOS, getCacheRatioThresholds, STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
 import type { CacheStatus } from "@shared/types";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { getCacheFreshnessRatio, getCacheFreshnessStatus } from "@shared/lib/cache-health";
@@ -26,36 +26,46 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
     return ratioB - ratioA;
   });
 
-  const describeBand = (cache: CacheStatus) => {
+  const describeBand = (cache: CacheStatus, key: string) => {
+    const thresholds = getCacheRatioThresholds(key);
+    const thresholdLabel =
+      thresholds.degraded !== STATUS_CACHE_RATIO_THRESHOLDS.degraded ||
+      thresholds.stale !== STATUS_CACHE_RATIO_THRESHOLDS.stale
+        ? `degraded >${thresholds.degraded.toFixed(2)}x · stale >${thresholds.stale.toFixed(2)}x`
+        : null;
     const { ageSeconds } = cache;
     if (ageSeconds == null) {
       return {
         label: "missing",
         ratio: null,
         className: "bg-muted text-muted-foreground",
+        thresholdLabel,
       };
     }
 
     const ratio = getCacheFreshnessRatio(cache);
-    const status = getCacheFreshnessStatus(cache);
+    const status = getCacheFreshnessStatus(cache, key);
     if (status === "stale") {
       return {
-        label: `stale (>${STATUS_CACHE_RATIO_THRESHOLDS.stale.toFixed(2)}x)`,
+        label: `stale (>${thresholds.stale.toFixed(2)}x)`,
         ratio,
         className: OPERATIONAL_PILL_CLASS.error,
+        thresholdLabel,
       };
     }
     if (status === "degraded") {
       return {
-        label: `degraded (>${STATUS_CACHE_RATIO_THRESHOLDS.degraded.toFixed(2)}x)`,
+        label: `degraded (>${thresholds.degraded.toFixed(2)}x)`,
         ratio,
         className: OPERATIONAL_PILL_CLASS.warning,
+        thresholdLabel,
       };
     }
     return {
       label: "ok",
       ratio,
       className: OPERATIONAL_PILL_CLASS.ok,
+      thresholdLabel,
     };
   };
 
@@ -71,17 +81,17 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
     return [cache.producerJob, interval].filter(Boolean).join(" · ") || "—";
   };
 
-  const unhealthy = sorted.filter(([, cache]) => {
-    const status = getCacheFreshnessStatus(cache);
+  const unhealthy = sorted.filter(([key, cache]) => {
+    const status = getCacheFreshnessStatus(cache, key);
     return status === "stale" || status === "degraded";
   });
-  const ok = sorted.filter(([, cache]) => {
-    const status = getCacheFreshnessStatus(cache);
+  const ok = sorted.filter(([key, cache]) => {
+    const status = getCacheFreshnessStatus(cache, key);
     return status !== "stale" && status !== "degraded";
   });
 
   const renderRow = ([key, cache]: [string, CacheStatus]) => {
-    const band = describeBand(cache);
+    const band = describeBand(cache, key);
     const modeLabel = cache.mode ?? "live";
     const budgetsDiffer =
       cache.endpointMaxAge != null && cache.endpointMaxAge !== (cache.availabilityMaxAge ?? cache.maxAge);
@@ -137,6 +147,9 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
         </TableCell>
         <TableCell className="py-2 align-top">
           <StatusPill className={band.className}>{band.label}</StatusPill>
+          {band.thresholdLabel ? (
+            <div className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{band.thresholdLabel}</div>
+          ) : null}
         </TableCell>
         <TableCell className="py-2 align-top text-xs leading-relaxed text-muted-foreground">
           {noteParts.length > 0 ? noteParts.join(" · ") : "No extra warning"}

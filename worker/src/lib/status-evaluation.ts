@@ -15,11 +15,12 @@ import {
   maxStatus,
   scoreStatusConfidence,
 } from "./status/evaluation-state";
+import { synthesizeOverallCauses } from "./status/evaluation-causes";
 import {
-  synthesizeOverallCauses,
+  evaluateAvailabilityStatus,
+  evaluateDataQualityStatus,
   withRunbook,
-} from "./status/evaluation-causes";
-import { evaluateAvailabilityStatus, evaluateDataQualityStatus } from "./status/evaluation-rules";
+} from "./status/evaluation-rules";
 import { loadCronHealth } from "./status/cron-health";
 import { buildStatusSummary, emptyStatusSummary } from "./status/summary";
 import { loadBudgetOnlySurfaceStatuses } from "./budget-surface-telemetry";
@@ -118,7 +119,11 @@ export async function computeRawStatus(db: D1Database, now: number) {
   const [cronHealth, budgetOnlySurfaceResult, dataQuality, supplements, transitionsLast24h] = await Promise.all([
     loadCronHealth(db, now),
     loadBudgetOnlySurfaceStatuses(db, now),
-    getDataQuality(db, now, { blacklistMetrics: publicHealth.blacklistMetrics }),
+    getDataQuality(db, now, {
+      blacklistMetrics: publicHealth.blacklistMetrics,
+      stablecoinPublication: publicHealth.stablecoinPublication,
+      activePriceCoverage: publicHealth.activePriceCoverage,
+    }),
     loadSupplementalStatusSections(db, now),
     countRecentStatusTransitions(db, now),
   ]);

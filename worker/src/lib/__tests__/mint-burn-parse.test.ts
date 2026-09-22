@@ -402,4 +402,55 @@ describe("parseMintBurnLogs — price resolution", () => {
     expect(rows[0].price_timestamp).toBe(runTimestamp);
     expect(rows[0].amount_usd).toBeCloseTo(999.8, 1);
   });
+
+  it("ignores a supply_history snapshot older than the one-day event-day lookback", () => {
+    const dayTs = Math.floor(1700000000 / 86400) * 86400;
+    const prices = new Map([["usdc-circle", 0.9998]]);
+    const priceHistory = new Map([
+      ["usdc-circle", [{ snapshotDate: dayTs - 30 * 86400, price: 1.0002 }]],
+    ]);
+
+    const { rows } = parseMintBurnLogs(
+      config,
+      mintEventDef,
+      [makeTransferLog()],
+      blockTimestamps,
+      prices,
+      priceHistory,
+      runTimestamp,
+    );
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].price_used).toBe(0.9998);
+    expect(rows[0].price_source).toBe("price-cache-current");
+  });
+
+  it("accepts the previous-day snapshot but rejects an implausible event-day price", () => {
+    const dayTs = Math.floor(1700000000 / 86400) * 86400;
+    const prices = new Map([["usdc-circle", 0.9998]]);
+
+    const previousDay = parseMintBurnLogs(
+      config,
+      mintEventDef,
+      [makeTransferLog()],
+      blockTimestamps,
+      prices,
+      new Map([["usdc-circle", [{ snapshotDate: dayTs - 86400, price: 1.0002 }]]]),
+      runTimestamp,
+    );
+    expect(previousDay.rows[0].price_used).toBe(1.0002);
+    expect(previousDay.rows[0].price_source).toBe("supply-history-daily");
+
+    const implausible = parseMintBurnLogs(
+      config,
+      mintEventDef,
+      [makeTransferLog()],
+      blockTimestamps,
+      prices,
+      new Map([["usdc-circle", [{ snapshotDate: dayTs, price: 1.4 }]]]),
+      runTimestamp,
+    );
+    expect(implausible.rows[0].price_used).toBe(0.9998);
+    expect(implausible.rows[0].price_source).toBe("price-cache-current");
+  });
 });

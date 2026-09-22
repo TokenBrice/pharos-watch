@@ -4,8 +4,8 @@ import { notFound } from "next/navigation";
 import { MethodologyChangelogPage } from "@/components/methodology-changelog-page";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
-import { SAFETY_SCORE_METHODOLOGY_CHANGELOG_NAV_VERSIONS } from "@shared/lib/methodology-versions/safety-score";
 import {
+  SAFETY_SCORE_METHODOLOGY_CHANGELOG_NAV_VERSIONS,
   METHODOLOGY_CHANGELOG_REGISTRY,
   type MethodologyChangelogRegistryEntry,
   type MethodologyChangelogRegistryKey,

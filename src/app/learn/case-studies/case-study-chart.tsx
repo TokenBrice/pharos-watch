@@ -3,9 +3,11 @@
 import { useSupplyHistory } from "@/hooks/use-stablecoins";
 import { PegDeviationChart } from "@/components/peg-deviation-chart";
 import { QueryErrorNotice } from "@/components/query-error-notice";
-import type { CaseStudyDataWidget } from "@/lib/case-studies/types";
-
-const CASE_STUDY_CHART_DAYS = 1825;
+import type {
+  CaseStudyDataWidget,
+  CaseStudyEventWindow,
+} from "@/lib/case-studies/types";
+import { getCaseStudyChartDays } from "@/lib/case-study-event-window";
 
 /**
  * Live Pharos peg-deviation chart embedded in a case study. Hydrates
@@ -13,8 +15,17 @@ const CASE_STUDY_CHART_DAYS = 1825;
  * coin's curated annotation overlay. Only rendered for data-rich coins where a
  * real series exists; historical pre-collection events omit `dataWidgets`.
  */
-export function CaseStudyChart({ widget }: { widget: CaseStudyDataWidget }) {
-  const { data, error } = useSupplyHistory(widget.coinId, CASE_STUDY_CHART_DAYS);
+export function CaseStudyChart({
+  widget,
+  eventWindows,
+}: {
+  widget: CaseStudyDataWidget;
+  eventWindows: readonly CaseStudyEventWindow[];
+}) {
+  const { data, error } = useSupplyHistory(
+    widget.coinId,
+    getCaseStudyChartDays(eventWindows),
+  );
 
   return (
     <figure className="pharos-card-shell overflow-hidden">

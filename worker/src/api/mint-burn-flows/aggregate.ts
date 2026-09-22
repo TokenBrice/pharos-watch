@@ -31,7 +31,7 @@ import {
   type HourlyRow,
   MINT_BURN_CRON_JOB,
   mintBurnPairKey,
-  readMintBurnCronSnapshot,
+  readMintBurnCronSnapshotResult,
   resolveFlowUpdatedAt,
   selectLargestEvents,
 } from "../../lib/mint-burn-flows-service";
@@ -42,7 +42,6 @@ export const TRACKED_IDS = new Set(ACTIVE_MINT_BURN_CONFIGS.map((config) => conf
 export interface CoinFlowSummary {
   stablecoinId: string;
   symbol: string;
-  flowIntensity: number | null;
   pressureShiftScore: number | null;
   pressureShiftState: "improving" | "stable" | "worsening" | "nr";
   netFlowDirection24h: "minting" | "burning" | "flat" | "inactive";
@@ -77,6 +76,7 @@ export interface CoinFlowSummary {
     startBlockSource?: string;
     startBlockConfidence?: "high" | "medium" | "low";
     status: "full" | "partial-history" | "lagging" | "bootstrapping" | "unknown" | "disabled";
+    unavailableReason?: "cron-snapshot-unavailable" | null;
   };
 }
 
@@ -161,6 +161,7 @@ export async function fetchAggregateData(
   const trackedPairs = getMintBurnTrackedPairs(ACTIVE_MINT_BURN_CONFIGS);
   const trackedChainIds = [...new Set(ACTIVE_MINT_BURN_CONFIGS.map((config) => config.chain.chainId))];
   const chainInClause = buildInClause(trackedChainIds);
+  const trackedPairsJson = JSON.stringify([...trackedPairs].map((pair) => pair.split("|")));
   const hourlyScanStart = Math.min(params.windowStart, params.window24h);
   const firstHourSeekStatements = buildMintBurnFirstHourSeekStatements(
     db,
@@ -172,7 +173,7 @@ export async function fetchAggregateData(
   );
   const eventResultIndex = 5 + firstHourSeekStatements.length;
 
-  const [batchResults, [lastBlocks, latestCronSnapshot]] = await Promise.all([
+  const [batchResults, [lastBlocks, latestCronSnapshotResult]] = await Promise.all([
     db.batch([
       db
         .prepare(
@@ -180,40 +181,64 @@ export async function fetchAggregateData(
                    /* pharos:mint-burn-flows:window-rows */
                    mint_volume_usd, burn_volume_usd, net_flow_usd
             FROM mint_burn_hourly INDEXED BY idx_mbh_ts
-           WHERE chain_id IN (${chainInClause.sql}) AND hour_ts >= ?
+           WHERE chain_id IN (${chainInClause.sql})
+             AND EXISTS (
+               SELECT 1 FROM json_each(?) AS tracked_pair
+               WHERE json_extract(tracked_pair.value, '$[0]') = stablecoin_id
+                 AND json_extract(tracked_pair.value, '$[1]') = chain_id
+             )
+             AND hour_ts >= ?
             ORDER BY hour_ts ASC`,
         )
-        .bind(...chainInClause.binds, hourlyScanStart),
+        .bind(...chainInClause.binds, trackedPairsJson, hourlyScanStart),
       db
         .prepare(
           `SELECT stablecoin_id, chain_id,
                   /* pharos:mint-burn-flows:net-7d */
                   SUM(net_flow_usd) as net_flow_usd
            FROM mint_burn_hourly INDEXED BY idx_mbh_ts
-           WHERE chain_id IN (${chainInClause.sql}) AND hour_ts >= ?
+           WHERE chain_id IN (${chainInClause.sql})
+             AND EXISTS (
+               SELECT 1 FROM json_each(?) AS tracked_pair
+               WHERE json_extract(tracked_pair.value, '$[0]') = stablecoin_id
+                 AND json_extract(tracked_pair.value, '$[1]') = chain_id
+             )
+             AND hour_ts >= ?
            GROUP BY stablecoin_id, chain_id`,
         )
-        .bind(...chainInClause.binds, params.window7d),
+        .bind(...chainInClause.binds, trackedPairsJson, params.window7d),
       db
         .prepare(
           `SELECT stablecoin_id, chain_id,
                   /* pharos:mint-burn-flows:net-30d */
                   SUM(net_flow_usd) as net_flow_usd
            FROM mint_burn_hourly INDEXED BY idx_mbh_ts
-           WHERE chain_id IN (${chainInClause.sql}) AND hour_ts >= ?
+           WHERE chain_id IN (${chainInClause.sql})
+             AND EXISTS (
+               SELECT 1 FROM json_each(?) AS tracked_pair
+               WHERE json_extract(tracked_pair.value, '$[0]') = stablecoin_id
+                 AND json_extract(tracked_pair.value, '$[1]') = chain_id
+             )
+             AND hour_ts >= ?
            GROUP BY stablecoin_id, chain_id`,
         )
-        .bind(...chainInClause.binds, params.window30d),
+        .bind(...chainInClause.binds, trackedPairsJson, params.window30d),
       db
         .prepare(
           `SELECT stablecoin_id, chain_id,
                   /* pharos:mint-burn-flows:net-90d */
                   SUM(net_flow_usd) as net_flow_usd
            FROM mint_burn_hourly INDEXED BY idx_mbh_ts
-           WHERE chain_id IN (${chainInClause.sql}) AND hour_ts >= ?
+           WHERE chain_id IN (${chainInClause.sql})
+             AND EXISTS (
+               SELECT 1 FROM json_each(?) AS tracked_pair
+               WHERE json_extract(tracked_pair.value, '$[0]') = stablecoin_id
+                 AND json_extract(tracked_pair.value, '$[1]') = chain_id
+             )
+             AND hour_ts >= ?
            GROUP BY stablecoin_id, chain_id`,
         )
-        .bind(...chainInClause.binds, params.window90d),
+        .bind(...chainInClause.binds, trackedPairsJson, params.window90d),
       db
         .prepare(
           `SELECT stablecoin_id, chain_id,
@@ -222,27 +247,48 @@ export async function fetchAggregateData(
                   SUM(net_flow_usd) as daily_net,
                   SUM(mint_volume_usd + burn_volume_usd) as daily_abs
            FROM mint_burn_hourly INDEXED BY idx_mbh_ts
-           WHERE chain_id IN (${chainInClause.sql}) AND hour_ts >= ? AND hour_ts < ?
+           WHERE chain_id IN (${chainInClause.sql})
+             AND EXISTS (
+               SELECT 1 FROM json_each(?) AS tracked_pair
+               WHERE json_extract(tracked_pair.value, '$[0]') = stablecoin_id
+                 AND json_extract(tracked_pair.value, '$[1]') = chain_id
+             )
+             AND hour_ts >= ? AND hour_ts < ?
            GROUP BY stablecoin_id, chain_id, day_ts`,
         )
-        .bind(...chainInClause.binds, params.baselineWindowStart, params.nowDayTs),
+        .bind(...chainInClause.binds, trackedPairsJson, params.baselineWindowStart, params.nowDayTs),
       ...firstHourSeekStatements,
       db
         .prepare(
-          `SELECT id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd,
+          `WITH ranked_events AS (
+             SELECT id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd,
+                    counterparty, tx_hash, block_number, timestamp, explorer_tx_url,
+                    ROW_NUMBER() OVER (
+                      PARTITION BY stablecoin_id
+                      ORDER BY amount_usd DESC, timestamp DESC, block_number DESC, id DESC
+                    ) AS row_num
+             FROM mint_burn_events AS e
+             WHERE e.chain_id IN (${chainInClause.sql})
+               AND EXISTS (
+                 SELECT 1 FROM json_each(?) AS tracked_pair
+                 WHERE json_extract(tracked_pair.value, '$[0]') = e.stablecoin_id
+                   AND json_extract(tracked_pair.value, '$[1]') = e.chain_id
+               )
+               AND e.timestamp >= ?
+               AND (e.direction = 'mint' OR e.burn_type = 'effective_burn')
+               AND e.flow_type = 'standard'
+               AND e.amount_usd IS NOT NULL
+           )
+           SELECT id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd,
                   counterparty, tx_hash, block_number, timestamp, explorer_tx_url
-           FROM mint_burn_events
-           WHERE chain_id IN (${chainInClause.sql})
-             AND timestamp >= ?
-             AND (direction = 'mint' OR burn_type = 'effective_burn')
-             AND flow_type = 'standard'
-             AND amount_usd IS NOT NULL`,
+           FROM ranked_events
+           WHERE row_num = 1`,
         )
-        .bind(...chainInClause.binds, params.window24h),
+        .bind(...chainInClause.binds, trackedPairsJson, params.window24h),
     ]),
     Promise.all([
       readMintBurnSyncStateBatch(db, ACTIVE_MINT_BURN_CONFIGS),
-      readMintBurnCronSnapshot(db),
+      readMintBurnCronSnapshotResult(db),
     ]),
   ]);
 
@@ -261,6 +307,7 @@ export async function fetchAggregateData(
     (batchResults[eventResultIndex]?.results ?? []) as EventRow[],
     trackedPairs,
   );
+  const latestCronSnapshot = latestCronSnapshotResult.value;
   const latestSuccessfulSyncLookup = await getLatestSuccessfulCronTimestampResult(db, MINT_BURN_CRON_JOB);
   const fallbackSyncAt =
     latestCronSnapshot.startedAt
@@ -278,7 +325,13 @@ export async function fetchAggregateData(
     net90dMap: buildGroupedNetFlowMap((batchResults[3].results ?? []) as GroupedNetFlowRow[], trackedPairs),
     baselineMap: buildBaselineMap(params.nowSec, baselineRows, firstSeenRows),
     largestEventMap: selectLargestEvents(largestEventRows),
-    coverageMap: buildCoinCoverageMap(params.nowSec, firstSeenRows, lastBlocks, latestCronSnapshot.chainHeads),
+    coverageMap: buildCoinCoverageMap(
+      params.nowSec,
+      firstSeenRows,
+      lastBlocks,
+      latestCronSnapshot.chainHeads,
+      latestCronSnapshotResult.error ? "cron-snapshot-unavailable" : null,
+    ),
     sync: buildMintBurnSyncHealth(params.nowSec, latestSuccessfulSyncAt, latestCronSnapshot.status),
     latestSuccessfulSyncAt,
     freshnessLookupWarning,
@@ -312,7 +365,7 @@ export function buildCoinSummaries(
       || (agg?.burnCount ?? 0) > 0
       || (agg?.mintVolume ?? 0) > 0
       || (agg?.burnVolume ?? 0) > 0;
-    const intensity = has24hActivity && baseline
+    const pressureShiftScore = has24hActivity && baseline
       ? computeFlowIntensity({
           currentDailyNet: netFlow24h,
           baselineDailyNet: baseline.avgNet,
@@ -321,9 +374,8 @@ export function buildCoinSummaries(
           currentDailyAbs: (agg?.mintVolume ?? 0) + (agg?.burnVolume ?? 0),
         })
       : null;
-    const pressureShiftScore = intensity;
 
-    gaugeInputs.push({ intensity, mcap });
+    gaugeInputs.push({ intensity: pressureShiftScore, mcap });
 
     if (gradeClassification) {
       if (gradeClassification.safeIds.has(id)) {
@@ -348,7 +400,6 @@ export function buildCoinSummaries(
     coins.push({
       stablecoinId: id,
       symbol: config.symbol,
-      flowIntensity: intensity,
       pressureShiftScore,
       pressureShiftState: getPressureShiftState(pressureShiftScore),
       netFlowDirection24h: getNetFlowDirection24h({ netFlow24hUsd: netFlow24h, has24hActivity }),

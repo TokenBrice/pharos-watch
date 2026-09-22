@@ -19,6 +19,7 @@ vi.mock("@/hooks/use-events", () => ({
 
 vi.mock("@/lib/logos", () => ({
   logosById: {},
+  getLogoSrc: () => undefined,
 }));
 
 import { HomepageTape } from "@/components/homepage-tape";

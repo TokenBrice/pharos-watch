@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { RUNBOOK_BY_CODE, withRunbook } from "../status/evaluation-causes";
+import { withRunbook } from "../status/evaluation-rules";
 import type { StatusCause } from "@shared/types/status";
 
 describe("StatusCause.runbookUrl", () => {
@@ -38,13 +38,4 @@ describe("StatusCause.runbookUrl", () => {
     expect(withUrl.runbookUrl).toBe("https://github.com/TokenBrice/pharos-watch/blob/main/docs/runbooks/stablecoins-cache.md");
   });
 
-  it("covers all codes listed in RUNBOOK_BY_CODE with valid documented URLs", () => {
-    for (const [code, url] of Object.entries(RUNBOOK_BY_CODE)) {
-      expect(code, `code must be non-empty`).toBeTruthy();
-      expect(url.endsWith(".md"), `url for ${code} must end with .md`).toBe(true);
-      expect(/^https:\/\//.test(url), `url for ${code} must be absolute`).toBe(true);
-    }
-    // Sanity: at least 5 documented runbooks so the feature is meaningful.
-    expect(Object.keys(RUNBOOK_BY_CODE).length).toBeGreaterThanOrEqual(5);
-  });
 });

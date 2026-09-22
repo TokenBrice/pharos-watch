@@ -1,6 +1,7 @@
 import { BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import type { BlacklistStatus } from "@shared/lib/report-card-blacklist-matchers";
 import { COVERAGE_FEATURE_MODULES as modules } from "@/lib/coverage-feature-modules";
+import { DATA_UNAVAILABLE_KIND } from "@/lib/coverage/shared";
 import { COVERAGE_FEATURES } from "@/lib/coverage-features";
 import type {
   CoverageFeatureDefinition,
@@ -51,6 +52,8 @@ export type CoverageCoinMeta = Pick<
 interface BuildCoverageRowInput {
   coin: CoverageCoinMeta;
   marketCapUsd: number;
+  /** False when the market cap was never observed; `marketCapUsd` then carries a 0 placeholder. */
+  marketCapAvailable?: boolean;
   hasPegCoverage: boolean;
   consensusSources?: string[];
   priceConfidence?: string;
@@ -81,21 +84,23 @@ export const COVERAGE_BADGE_TONE_CLASS: Record<CoverageTone, string> = {
 export function buildCoverageFeatureSummary(
   feature: CoverageFeatureDefinition,
   rows: CoverageRow[],
-  totalMcapUsd: number,
 ): CoverageFeatureSummary {
   const scopedRows = feature.scopeFilter ? rows.filter((row) => feature.scopeFilter!(row)) : rows;
-  const availableRows = scopedRows.filter((row) => row.statuses[feature.key].available);
+  // `data-unavailable` rows are neither covered nor uncovered: they leave the
+  // count and cap denominators entirely and surface through their own
+  // breakdown bucket. The raw scoped total stays visible in that bucket.
+  const knownRows = scopedRows.filter((row) => row.statuses[feature.key].kind !== DATA_UNAVAILABLE_KIND);
+  const availableRows = knownRows.filter((row) => row.statuses[feature.key].available);
   const primaryRows = feature.headlineFilter
-    ? scopedRows.filter((row) => feature.headlineFilter!(row))
+    ? knownRows.filter((row) => feature.headlineFilter!(row))
     : feature.headlineKinds?.length
-      ? scopedRows.filter((row) => feature.headlineKinds?.includes(row.statuses[feature.key].kind))
+      ? knownRows.filter((row) => feature.headlineKinds?.includes(row.statuses[feature.key].kind))
       : availableRows;
-  const coveredMcapUsd = primaryRows.reduce((sum, row) => sum + row.marketCapUsd, 0);
-  const scopedMcapUsd = feature.scopeFilter
-    ? scopedRows.reduce((sum, row) => sum + row.marketCapUsd, 0)
-    : totalMcapUsd;
+  const coveredMcapUsd = sumKnownMarketCap(primaryRows);
+  const scopedMcapUsd = sumKnownMarketCap(knownRows);
   const breakdownMap = new Map<string, number>();
-  const coveragePct = scopedRows.length > 0 ? (primaryRows.length / scopedRows.length) * 100 : 0;
+  const coveragePct =
+    knownRows.length > 0 ? (primaryRows.length / knownRows.length) * 100 : scopedRows.length > 0 ? null : 0;
 
   for (const row of scopedRows) {
     const kind = row.statuses[feature.key].kind;
@@ -105,15 +110,22 @@ export function buildCoverageFeatureSummary(
   return {
     feature,
     availableCount: primaryRows.length,
-    totalCount: scopedRows.length,
+    totalCount: knownRows.length,
     coveragePct,
     coveredMcapUsd,
     mcapSharePct: scopedMcapUsd > 0 ? (coveredMcapUsd / scopedMcapUsd) * 100 : null,
     countLabel: feature.headlineCountLabel ?? "Coin count",
-    coverageLabel: feature.headlineCoverageLabel?.(coveragePct) ?? `${coveragePct.toFixed(0)}% of active coins`,
+    coverageLabel:
+      coveragePct == null
+        ? "Data n/a"
+        : feature.headlineCoverageLabel?.(coveragePct) ?? `${coveragePct.toFixed(0)}% of active coins`,
     shareLabel: feature.headlineShareLabel ?? "Active market-cap reach",
     breakdown: feature.formatBreakdown(scopedRows, breakdownMap),
   };
+}
+
+function sumKnownMarketCap(rows: readonly CoverageRow[]): number {
+  return rows.reduce((sum, row) => (row.marketCapAvailable ? sum + row.marketCapUsd : sum), 0);
 }
 
 function countAvailableFeatures(
@@ -145,6 +157,7 @@ function countHeadlineFeatures(
 export function buildCoverageRow({
   coin,
   marketCapUsd,
+  marketCapAvailable = true,
   hasPegCoverage,
   consensusSources,
   priceConfidence,
@@ -181,6 +194,7 @@ export function buildCoverageRow({
     symbol: coin.symbol,
     name: coin.name,
     marketCapUsd,
+    marketCapAvailable,
     pegLabel: PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency,
     backingLabel: BACKING_LABELS_SHORT[coin.flags.backing] ?? coin.flags.backing,
     governanceLabel: GOVERNANCE_LABELS_SHORT[coin.flags.governance] ?? coin.flags.governance,

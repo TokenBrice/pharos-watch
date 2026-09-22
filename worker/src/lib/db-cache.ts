@@ -17,7 +17,6 @@ export interface CacheRetentionPolicy {
   storage: "d1-kv" | "domain-table" | "isolate-memory";
   /** Null means identity/schema controls validity and wall-clock age does not expire the value. */
   ttlSec: number | null;
-  maxEntries: number | null;
   stale: CacheStaleSemantics;
   invalid: CacheInvalidationSemantics;
   schemaId: string;
@@ -32,13 +31,6 @@ export interface CachePolicy<T> extends CacheRetentionPolicy {
 export type PolicyCacheRead<T> =
   | { state: "missing" | "invalid"; value: null; updatedAt: number | null; usable: false }
   | { state: "fresh" | "stale"; value: T; updatedAt: number; usable: boolean };
-
-function buildCacheInClause(values: readonly unknown[]): { sql: string; binds: unknown[] } {
-  if (values.length === 0 || values.length > 100) {
-    throw new RangeError(`cache IN clause requires 1-100 values (received ${values.length})`);
-  }
-  return buildInClause(values);
-}
 
 export async function getCache(
   db: D1Database,
@@ -68,7 +60,7 @@ export async function getCaches(
   const rowsByKey = new Map<string, { value: string; updatedAt: number }>();
   if (uniqueKeys.length === 0) return rowsByKey;
 
-  const keyClause = buildCacheInClause(uniqueKeys);
+  const keyClause = buildInClause(uniqueKeys);
   const rows = await runWithOverloadRetry(() =>
     db
       .prepare(`SELECT key, value, updated_at FROM cache WHERE key IN (${keyClause.sql})`)

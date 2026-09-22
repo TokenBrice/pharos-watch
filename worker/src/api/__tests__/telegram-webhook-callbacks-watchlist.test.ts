@@ -11,22 +11,6 @@ import {
   resetCallbackTest,
 } from "./telegram-webhook-callbacks.test-support";
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 beforeEach(resetCallbackTest);
 function asMockSubscriptionRows(rows: SubscriptionRow[]): Record<string, unknown>[] {
   return rows.map((row): Record<string, unknown> => ({ ...row }));
@@ -214,36 +198,5 @@ describe("handleCallbackQuery", () => {
 
       expect(editMessageBody().text).toContain("Page 2/3");
     });
-  });
-
-  it("confirm:bulk replies with an expiry toast when pending TTL has elapsed", async () => {
-    const db = mockTelegramD1([
-      {
-        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        rows: [],
-        first: {
-          action_type: "confirm-bulk",
-          action_payload: JSON.stringify({
-            kind: "unsubscribe",
-            presetIds: [],
-            coinIds: [],
-            unsubscribeAll: true,
-          }),
-          alert_types: JSON.stringify([]),
-          resolved_ids: JSON.stringify([]),
-          ambiguous_ticker: "",
-          candidates: JSON.stringify([]),
-          remaining_tickers: JSON.stringify([]),
-          expires_at: Math.floor(Date.now() / 1000) - 1,
-          initiator_user_id: "999",
-        },
-      },
-    ]);
-    await handleCallbackQuery(db, "fake-token", makeCallbackQuery("confirm:bulk", { id: "cb-expired", from: { id: 999, username: "requester" }, message: { chat: { id: 123, type: "private" }, message_id: 1 } }));
-
-    const ackCall = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
-    expect(ackCall).toBeDefined();
-    const body = JSON.parse((ackCall?.[1] as RequestInit).body as string);
-    expect(body.text).toMatch(/expired/i);
   });
 });

@@ -1,3 +1,4 @@
+import { pendingDisambiguationTable } from "./telegram-rows.test-support";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   fetchSpy,
@@ -13,6 +14,18 @@ import {
   fixtureLastSendMessageBody,
   mockTelegramMembership,
 } from "./telegram-webhook.test-support";
+import type * as TelegramWebhookReplies from "../telegram-webhook-replies";
+
+// The audited reply helper keeps its production behaviour by default; the flood
+// cases below make one notice reply throw, which the helper swallows internally.
+const sendAuditedTelegramReplyMock = vi.hoisted(() =>
+  vi.fn<typeof TelegramWebhookReplies.sendAuditedTelegramReply>(),
+);
+vi.mock("../telegram-webhook-replies", async (importOriginal) => {
+  const actual = await importOriginal<typeof TelegramWebhookReplies>();
+  sendAuditedTelegramReplyMock.mockImplementation(actual.sendAuditedTelegramReply);
+  return { ...actual, sendAuditedTelegramReply: sendAuditedTelegramReplyMock };
+});
 
 
 // Webhook tests exercise command routing, so stub the canonical V9 loader with
@@ -245,7 +258,7 @@ describe("handleTelegramWebhook", () => {
     nowSpy.mockRestore();
   });
 
-  it("fails open when the chat flood counter store errors", async () => {
+  it("fails closed when the chat flood counter store errors", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const db = makeTelegramWebhookDb([
       { match: "telegram_pending_disambiguation", rows: [] },
@@ -259,9 +272,8 @@ describe("handleTelegramWebhook", () => {
     const res = await handleTelegramWebhook(db, makeWebhookRequest(123, "/help"), "test-secret", "bot-token");
 
     expect(res.status).toBe(200);
-    // /help still replied despite the flood-store failure.
-    expect(sentMessageBody().text).toContain("/subscribe");
-    expect(sentMessageBody().text).toContain("/status");
+    expect(sentMessageBody().text).toContain("Command traffic is busy");
+    expect(sentMessageBody().text).not.toContain("/subscribe");
     warn.mockRestore();
   });
 
@@ -391,28 +403,24 @@ describe("handleTelegramWebhook", () => {
       throw new Error("Expected USDF to resolve ambiguously for health passthrough test");
     }
     const db = makeTelegramWebhookDb([
-      {
-        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        rows: [],
-        first: {
-          action_type: "subscribe",
-          action_payload: JSON.stringify({
-            schemaVersion: 1,
-            alertTypes: ["dews"],
-            candidates: ambiguous.matches,
-            ambiguousTicker: "USDF",
-            resolvedIds: [],
-            remainingTickers: [],
-          }),
-          alert_types: JSON.stringify(["dews"]),
-          resolved_ids: JSON.stringify([]),
-          ambiguous_ticker: "USDF",
-          candidates: JSON.stringify(ambiguous.matches),
-          remaining_tickers: JSON.stringify([]),
-          expires_at: Math.floor(Date.now() / 1000) + 60,
-          initiator_user_id: "999",
-        },
-      },
+      pendingDisambiguationTable({
+        action_type: "subscribe",
+        action_payload: JSON.stringify({
+          schemaVersion: 1,
+          alertTypes: ["dews"],
+          candidates: ambiguous.matches,
+          ambiguousTicker: "USDF",
+          resolvedIds: [],
+          remainingTickers: [],
+        }),
+        alert_types: JSON.stringify(["dews"]),
+        resolved_ids: JSON.stringify([]),
+        ambiguous_ticker: "USDF",
+        candidates: JSON.stringify(ambiguous.matches),
+        remaining_tickers: JSON.stringify([]),
+        expires_at: Math.floor(Date.now() / 1000) + 60,
+        initiator_user_id: "999",
+      }),
       { match: "FROM telegram_subscribers", rows: [], first: null },
       { match: "FROM telegram_preset_subscriptions", rows: [] },
       { match: "COUNT(*) AS active_count", first: { active_count: 0 }, rows: [] },
@@ -432,27 +440,23 @@ describe("handleTelegramWebhook", () => {
 
   it("lets /health pass through during pending bulk confirmation without clearing it", async () => {
     const db = makeTelegramWebhookDb([
-      {
-        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        rows: [],
-        first: {
-          action_type: "confirm-bulk",
-          action_payload: JSON.stringify({
-            kind: "subscribe",
-            alertTypes: ["dews"],
-            presetIds: [],
-            coinIds: ["usdc-circle"],
-            subscribeAll: false,
-          }),
-          alert_types: JSON.stringify([]),
-          resolved_ids: JSON.stringify([]),
-          ambiguous_ticker: "",
-          candidates: JSON.stringify([]),
-          remaining_tickers: JSON.stringify([]),
-          expires_at: Math.floor(Date.now() / 1000) + 60,
-          initiator_user_id: "999",
-        },
-      },
+      pendingDisambiguationTable({
+        action_type: "confirm-bulk",
+        action_payload: JSON.stringify({
+          kind: "subscribe",
+          alertTypes: ["dews"],
+          presetIds: [],
+          coinIds: ["usdc-circle"],
+          subscribeAll: false,
+        }),
+        alert_types: JSON.stringify([]),
+        resolved_ids: JSON.stringify([]),
+        ambiguous_ticker: "",
+        candidates: JSON.stringify([]),
+        remaining_tickers: JSON.stringify([]),
+        expires_at: Math.floor(Date.now() / 1000) + 60,
+        initiator_user_id: "999",
+      }),
       { match: "FROM telegram_subscribers", rows: [], first: null },
       { match: "FROM telegram_preset_subscriptions", rows: [] },
       { match: "COUNT(*) AS active_count", first: { active_count: 0 }, rows: [] },
@@ -887,5 +891,60 @@ describe("handleTelegramWebhook", () => {
     const history = db.getHistory();
     expect(history.some((entry) => entry.sql.includes("FROM stress_signals"))).toBe(false);
     expect(sentMessageBody().text).toContain("Pick a path below");
+  });
+});
+
+describe("telegram webhook per-chat flood cap", () => {
+  beforeEach(() => {
+    resetTelegramWebhookTest();
+    sendAuditedTelegramReplyMock.mockClear();
+  });
+
+  it("does not process an over-limit command when the flood notice reply throws", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
+    sendAuditedTelegramReplyMock.mockRejectedValueOnce(new Error("reply boom"));
+    // 21st command inside the window: counter row already at the limit of 20.
+    const db = makeTelegramWebhookDb([{ match: "RETURNING value", rows: [{ value: "21" }] }]);
+
+    const res = await handleTelegramWebhook(db, makeWebhookRequest(123, "/help"), "test-secret", "bot-token");
+
+    expect(res.status).toBe(200);
+    // Only the failed flood notice — the /help handler never produced a reply.
+    expect(sendAuditedTelegramReplyMock).toHaveBeenCalledTimes(1);
+    expect(String(sendAuditedTelegramReplyMock.mock.calls[0]?.[2])).toContain("Too many commands");
+    const usageRow = db
+      .getHistory()
+      .find(
+        (entry) =>
+          entry.sql.includes("INSERT INTO telegram_usage_daily") &&
+          entry.binds[1] === "command" &&
+          entry.binds[3] === "/help",
+      );
+    expect(usageRow).toBeDefined();
+    expect(usageRow!.binds[4]).toBe("rate_limited");
+    expect(usageRow!.binds[6]).toBe("chat-flood");
+    nowSpy.mockRestore();
+    warn.mockRestore();
+  });
+
+  it("fails closed with the busy reply when no flood scope can be evaluated", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const db = makeTelegramWebhookDb([
+      { match: "RETURNING value", rows: [], throwError: new Error("d1 flood unavailable") },
+    ]);
+
+    const res = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(123, "/help"),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(res.status).toBe(200);
+    expect(sendAuditedTelegramReplyMock).toHaveBeenCalledTimes(1);
+    expect(String(sendAuditedTelegramReplyMock.mock.calls[0]?.[2])).toContain("Command traffic is busy");
+    expect(warn).toHaveBeenCalledTimes(1);
+    warn.mockRestore();
   });
 });

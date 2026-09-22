@@ -218,7 +218,19 @@ function buildSections(pegRates: Record<string, number>): ComparisonSection[] {
         { key: "primary-exit", label: "Primary exit access", render: (coin) => humanize(coin.safetyCard?.accessPosture.primaryExit) },
         { key: "freeze-exposure", label: "Freeze exposure", render: (coin) => humanize(coin.safetyCard?.accessPosture.freezeExposure) },
         { key: "dependencies", label: "Scored dependencies", render: dependencySummary },
-        { key: "bluechip", label: "External Bluechip", render: (coin) => coin.bluechipRating ? `${coin.bluechipRating.grade} · ${coin.bluechipRating.smartContractAudit ? "audit recorded" : "no audit flag"}` : "Not rated" },
+        {
+          key: "bluechip",
+          label: "External Bluechip",
+          render: (coin) => {
+            if (!coin.bluechipRating) return "Not rated";
+            const audit = coin.bluechipRating.smartContractAudit == null
+              ? "audit not reported"
+              : coin.bluechipRating.smartContractAudit
+                ? "audit recorded"
+                : "no audit flag";
+            return `${coin.bluechipRating.grade} · ${audit}`;
+          },
+        },
       ],
     },
     {

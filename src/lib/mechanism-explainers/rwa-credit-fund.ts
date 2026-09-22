@@ -1,4 +1,4 @@
-import { ARCHETYPE_VISUALS, type ArchetypeContent } from "./types";
+import type { ArchetypeContent } from "./types";
 
 export const content: ArchetypeContent = {
   archetype: "rwa-credit-fund",
@@ -129,5 +129,4 @@ export const content: ArchetypeContent = {
       label: "Case study: pmUSD's in-situ gold collateral",
     },
   ],
-  visuals: ARCHETYPE_VISUALS["rwa-credit-fund"],
 };

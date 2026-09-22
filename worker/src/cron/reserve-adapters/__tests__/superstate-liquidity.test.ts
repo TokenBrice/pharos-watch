@@ -41,8 +41,8 @@ describe("adaptSuperstateLiquidity", () => {
         capacityUsd: 9_310_000,
         capacityKind: "live-direct-bounded",
         freshnessKind: "same-run-onchain",
-        routeStatus: "open",
-        routeStatusSource: "onchain",
+        routeStatus: "unknown",
+        routeStatusSource: "static-config",
       },
       liquidityFreshnessSource: "same-run-onchain",
       details: {
@@ -56,7 +56,7 @@ describe("adaptSuperstateLiquidity", () => {
     expectValidAdapterOutput("superstate-liquidity", result);
   });
 
-  it("marks the route paused when the on-chain RedemptionIdle balance is zero", () => {
+  it("keeps the route unknown when the on-chain RedemptionIdle balance is zero", () => {
     const result = adaptSuperstateLiquidity(
       navResult,
       {
@@ -71,7 +71,7 @@ describe("adaptSuperstateLiquidity", () => {
 
     expect(result.metadata?.redemption).toMatchObject({
       capacityUsd: 0,
-      routeStatus: "paused",
+      routeStatus: "unknown",
     });
   });
 

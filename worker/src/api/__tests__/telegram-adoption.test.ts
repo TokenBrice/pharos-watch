@@ -4,6 +4,7 @@ import { handleTelegramAdoption } from "../telegram-adoption";
 import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
 import type { FullRouteContext } from "../../routes/shared";
 import { getRouteMatch } from "../../routes/registry";
+import { routeContextFactory } from "../../test-helpers/__shared/routes";
 
 function request(body: unknown, headers: HeadersInit = {}): Request {
   return makeJsonRequest("https://site-api.pharos.watch/api/telegram-adoption", body, {
@@ -30,13 +31,7 @@ function rawRequest(body: BodyInit | null, headers: HeadersInit = {}): Request {
 }
 
 function context(db: MockD1Database, req: Request): FullRouteContext {
-  return {
-    db,
-    request: req,
-    url: new URL(req.url),
-    execCtx: {} as ExecutionContext,
-    trustedAdmin: false,
-  };
+  return routeContextFactory({ db })({ request: req });
 }
 
 function quotaDb(): MockD1Database {

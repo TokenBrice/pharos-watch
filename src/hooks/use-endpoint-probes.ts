@@ -135,6 +135,12 @@ async function discardResponseBody(response: Response): Promise<void> {
   }
 }
 
+function readFiniteNumber(source: object | null, key: string): number | null {
+  if (!source || !(key in source)) return null;
+  const value = (source as Record<string, unknown>)[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
 function extractHealthProbeSemantics(body: unknown): Partial<EndpointProbeResult> | null {
   if (!body || typeof body !== "object") return null;
 
@@ -147,16 +153,13 @@ function extractHealthProbeSemantics(body: unknown): Partial<EndpointProbeResult
       : [];
   const blacklist = "blacklist" in body && body.blacklist && typeof body.blacklist === "object" ? body.blacklist : null;
   const mintBurn = "mintBurn" in body && body.mintBurn && typeof body.mintBurn === "object" ? body.mintBurn : null;
-  const missingAmounts =
-    blacklist && "missingAmounts" in blacklist && typeof blacklist.missingAmounts === "number"
-      ? blacklist.missingAmounts
-      : 0;
-  const missingRatio =
-    blacklist && "missingRatio" in blacklist && typeof blacklist.missingRatio === "number" ? blacklist.missingRatio : 0;
-  const recentMissingAmounts =
-    blacklist && "recentMissingAmounts" in blacklist && typeof blacklist.recentMissingAmounts === "number"
-      ? blacklist.recentMissingAmounts
-      : 0;
+  const missingAmounts = readFiniteNumber(blacklist, "missingAmounts");
+  const missingRatio = readFiniteNumber(blacklist, "missingRatio");
+  const recentMissingAmounts = readFiniteNumber(blacklist, "recentMissingAmounts");
+  // An absent gap section is absent evidence, not a clean ledger: defaulting it
+  // to zero would let a schema-invalid 200 publish "healthy". Fail the contract
+  // instead and let the caller render the probe stale.
+  if (missingAmounts === null || missingRatio === null || recentMissingAmounts === null) return null;
   const mintBurnWarning =
     mintBurn &&
     "sync" in mintBurn &&

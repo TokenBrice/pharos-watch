@@ -12,7 +12,7 @@ import { formatScoreTrimmed as formatScore } from "@shared/lib/format";
 import { Bot, ExternalLink } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CopyButton } from "@/components/copy-button";
-import { logosById } from "@/lib/logos";
+import { getLogoSrc, logosById } from "@/lib/logos";
 import { useYieldRankings } from "@/hooks/api-hooks";
 import { SelectorResultSummary } from "@/components/selector/selector-result-summary";
 import { SelectorShortlistCard } from "@/components/selector/selector-shortlist-card";
@@ -71,7 +71,6 @@ export function ResultPane({
   shareFallbackUrl,
   sessionRecovered,
 }: ResultPaneProps) {
-  const logos = logosById;
   const yieldRankings = useYieldRankings();
   const yieldSourceUrls = useMemo(() => {
     const map = new Map<string, string>();
@@ -284,7 +283,7 @@ export function ResultPane({
                 recommendation={enriched}
                 profile={profile}
                 isMobile={isMobile}
-                logoUrl={logos[rec.id] ?? undefined}
+                logoUrl={getLogoSrc(logosById, rec.id)}
                 prominentOpenDetail={singleResult}
                 yieldSourceUrl={yieldSourceUrl}
                 yieldInspectionHref={yieldInspectionHref}

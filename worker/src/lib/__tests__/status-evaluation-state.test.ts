@@ -7,19 +7,14 @@ import {
   makeDataQuality,
   makeReserveComposition as makeBaseReserveComposition,
 } from "@shared/types/__tests__/status.test-support";
+import { synthesizeOverallCauses } from "../status/evaluation-causes";
+import { deriveReserveCompositionStatus } from "../status/evaluation-state";
 import {
-  buildAvailabilityCauses,
-  buildDataQualityCauses,
   evaluateAvailabilityStatus,
   evaluateDataQualityStatus,
-  synthesizeOverallCauses,
-} from "../status/evaluation-causes";
-import {
-  deriveAvailabilityStatus,
-  deriveDataQualityStatus,
-  deriveReserveCompositionStatus,
-} from "../status/evaluation-state";
-import type { AvailabilityEvaluationInput, DataQualityEvaluationInput } from "../status/evaluation-rules";
+  type AvailabilityEvaluationInput,
+  type DataQualityEvaluationInput,
+} from "../status/evaluation-rules";
 
 function makeReserveComposition(
   overrides?: Partial<StatusResponse["reserveComposition"]>,
@@ -54,12 +49,22 @@ function makeAvailabilityCauseInput(publicHealth: PublicHealthAssessment) {
   };
 }
 
+function makeAvailabilityEvaluationInput(
+  overrides: Partial<AvailabilityEvaluationInput> = {},
+): AvailabilityEvaluationInput {
+  return {
+    ...makeAvailabilityCauseInput(overrides.publicHealth ?? makePublicHealth()),
+    ...overrides,
+  };
+}
+
 function makeDataQualityEvaluationInput(
   overrides: Partial<DataQualityEvaluationInput> = {},
 ): DataQualityEvaluationInput {
   const publicHealth = makePublicHealth();
   return {
     dataQuality: makeDataQuality(),
+    repairRunnerAutoRepairCount: null,
     activePriceCoverage: publicHealth.activePriceCoverage,
     missingPriceRatio: 0,
     blacklistMissingRatio: 0,
@@ -174,47 +179,41 @@ describe("status evaluation policy", () => {
   });
 
   it("does not let circuit diagnostics failure degrade availability on its own", () => {
-    const availability = deriveAvailabilityStatus({
-      publicHealth: makePublicHealth("healthy", {
-        circuitImpactStatus: "degraded",
-        circuitQueryError: "Circuit breaker diagnostics unavailable.",
-      }),
-      availabilityImpactingCronErrors: 0,
-      availabilityImpactingUnhealthyCrons: 0,
-      availabilityImpactingConsecutiveCronErrors: 0,
-    });
+    const availability = evaluateAvailabilityStatus(makeAvailabilityEvaluationInput({ publicHealth: makePublicHealth("healthy", {
+      circuitImpactStatus: "degraded",
+      circuitQueryError: "Circuit breaker diagnostics unavailable.",
+    }),
+    availabilityImpactingCronErrors: 0,
+    availabilityImpactingUnhealthyCrons: 0,
+    availabilityImpactingConsecutiveCronErrors: 0, })).status;
 
     expect(availability).toBe("healthy");
   });
 
   it("uses the same durable alert floor for admin availability", () => {
-    const availability = deriveAvailabilityStatus({
-      publicHealth: makePublicHealth("healthy", {
-        alertBrokerImpactStatus: "degraded",
-        alertBroker: {
-          ...makePublicHealth().alertBroker,
-          activeCount: 1,
-          criticalActiveCount: 1,
-          activeConditionKeys: ["cron:sync-live-reserves"],
-        },
-      }),
-      availabilityImpactingCronErrors: 0,
-      availabilityImpactingUnhealthyCrons: 0,
-      availabilityImpactingConsecutiveCronErrors: 0,
-    });
+    const availability = evaluateAvailabilityStatus(makeAvailabilityEvaluationInput({ publicHealth: makePublicHealth("healthy", {
+      alertBrokerImpactStatus: "degraded",
+      alertBroker: {
+        ...makePublicHealth().alertBroker,
+        activeCount: 1,
+        criticalActiveCount: 1,
+        activeConditionKeys: ["cron:sync-live-reserves"],
+      },
+    }),
+    availabilityImpactingCronErrors: 0,
+    availabilityImpactingUnhealthyCrons: 0,
+    availabilityImpactingConsecutiveCronErrors: 0, })).status;
 
     expect(availability).toBe("degraded");
   });
 
   it("uses the D1 capacity floor for admin availability", () => {
-    const availability = deriveAvailabilityStatus({
-      publicHealth: makePublicHealth("healthy", {
-        d1CapacityImpactStatus: "stale",
-      }),
-      availabilityImpactingCronErrors: 0,
-      availabilityImpactingUnhealthyCrons: 0,
-      availabilityImpactingConsecutiveCronErrors: 0,
-    });
+    const availability = evaluateAvailabilityStatus(makeAvailabilityEvaluationInput({ publicHealth: makePublicHealth("healthy", {
+      d1CapacityImpactStatus: "stale",
+    }),
+    availabilityImpactingCronErrors: 0,
+    availabilityImpactingUnhealthyCrons: 0,
+    availabilityImpactingConsecutiveCronErrors: 0, })).status;
 
     expect(availability).toBe("stale");
   });
@@ -271,19 +270,17 @@ describe("status cause text", () => {
   });
 
   it("warns when the DEX liquidity dataset exceeds its endpoint publication budget", () => {
-    const causes = buildAvailabilityCauses(
-      makeAvailabilityCauseInput(
-        makePublicHealth("healthy", {
-          caches: {
-            "dex-liquidity": {
-              ageSeconds: 14_401,
-              maxAge: 43_200,
-              healthy: true,
-            },
+    const causes = evaluateAvailabilityStatus(makeAvailabilityCauseInput(
+      makePublicHealth("healthy", {
+        caches: {
+          "dex-liquidity": {
+            ageSeconds: 14_401,
+            maxAge: 43_200,
+            healthy: true,
           },
-        }),
-      ),
-    );
+        },
+      }),
+    )).causes;
 
     expect(causes).toContainEqual(
       expect.objectContaining({
@@ -294,6 +291,8 @@ describe("status cause text", () => {
         threshold: 14_400,
       }),
     );
+    expect(causes.find((cause) => cause.code === "dex_pricing_bridge_stale")?.message)
+      .toContain("one missed four-hour scoring runway");
   });
 
   it("keeps dataset ages inside the endpoint budget off the stale cause the per-row window used to flag", () => {
@@ -301,39 +300,35 @@ describe("status cause text", () => {
     // or below the 14_400 s dataset endpoint budget (including the exact
     // boundary) must not fire the dataset-age diagnostic.
     for (const ageSeconds of [4_501, 5_000, 14_400]) {
-      const causes = buildAvailabilityCauses(
-        makeAvailabilityCauseInput(
-          makePublicHealth("healthy", {
-            caches: {
-              "dex-liquidity": {
-                ageSeconds,
-                maxAge: 43_200,
-                healthy: true,
-              },
+      const causes = evaluateAvailabilityStatus(makeAvailabilityCauseInput(
+        makePublicHealth("healthy", {
+          caches: {
+            "dex-liquidity": {
+              ageSeconds,
+              maxAge: 43_200,
+              healthy: true,
             },
-          }),
-        ),
-      );
+          },
+        }),
+      )).causes;
 
       expect(causes.some((cause) => cause.code === "dex_pricing_bridge_stale")).toBe(false);
     }
   });
 
   it("emits a warning cache cause when an override-tightened cache breaches its degraded band below the global threshold", () => {
-    const causes = buildAvailabilityCauses(
-      makeAvailabilityCauseInput(
-        makePublicHealth("healthy", {
-          // yield-data override bands are 2x/4x, so 2.1x degrades it even though
-          // the global 8x band is untouched. A non-overridden cache at the same
-          // 2.1x ratio stays healthy, proving per-key override resolution.
-          caches: {
-            "yield-data": { ageSeconds: 7_560, maxAge: 3_600, healthy: false },
-            stablecoins: { ageSeconds: 7_560, maxAge: 3_600, healthy: true },
-          },
-          worstCacheRatio: 2.1,
-        }),
-      ),
-    );
+    const causes = evaluateAvailabilityStatus(makeAvailabilityCauseInput(
+      makePublicHealth("healthy", {
+        // yield-data override bands are 2x/4x, so 2.1x degrades it even though
+        // the global 8x band is untouched. A non-overridden cache at the same
+        // 2.1x ratio stays healthy, proving per-key override resolution.
+        caches: {
+          "yield-data": { ageSeconds: 7_560, maxAge: 3_600, healthy: false },
+          stablecoins: { ageSeconds: 7_560, maxAge: 3_600, healthy: true },
+        },
+        worstCacheRatio: 2.1,
+      }),
+    )).causes;
 
     expect(causes).toContainEqual(
       expect.objectContaining({
@@ -346,17 +341,35 @@ describe("status cause text", () => {
     expect(causes.some((cause) => cause.code === "cache_ratio_stale")).toBe(false);
   });
 
-  it("escalates an override-tightened cache to a critical stale cause past its stale band", () => {
-    const causes = buildAvailabilityCauses(
-      makeAvailabilityCauseInput(
-        makePublicHealth("healthy", {
-          caches: {
-            "yield-data": { ageSeconds: 14_760, maxAge: 3_600, healthy: false },
-          },
-          worstCacheRatio: 4.1,
-        }),
-      ),
+  it("reports the highest-ratio cache when multiple caches breach the same tier", () => {
+    const causes = evaluateAvailabilityStatus(makeAvailabilityCauseInput(
+      makePublicHealth("healthy", {
+        caches: {
+          alpha: { ageSeconds: 32_400, maxAge: 3_600, healthy: false },
+          beta: { ageSeconds: 43_200, maxAge: 3_600, healthy: false },
+        },
+        worstCacheRatio: 12,
+      }),
+    )).causes;
+
+    expect(causes).toContainEqual(
+      expect.objectContaining({
+        code: "cache_ratio_degraded",
+        message: expect.stringContaining("beta at 12.00x"),
+        value: 12,
+      }),
     );
+  });
+
+  it("escalates an override-tightened cache to a critical stale cause past its stale band", () => {
+    const causes = evaluateAvailabilityStatus(makeAvailabilityCauseInput(
+      makePublicHealth("healthy", {
+        caches: {
+          "yield-data": { ageSeconds: 14_760, maxAge: 3_600, healthy: false },
+        },
+        worstCacheRatio: 4.1,
+      }),
+    )).causes;
 
     expect(causes).toContainEqual(
       expect.objectContaining({
@@ -369,79 +382,78 @@ describe("status cause text", () => {
   });
 
   it("does not emit a cache-ratio cause when a non-overridden cache is within the global band", () => {
-    const causes = buildAvailabilityCauses(
-      makeAvailabilityCauseInput(
-        makePublicHealth("healthy", {
-          caches: {
-            stablecoins: { ageSeconds: 18_000, maxAge: 3_600, healthy: true },
-          },
-          worstCacheRatio: 5,
-        }),
-      ),
-    );
+    const causes = evaluateAvailabilityStatus(makeAvailabilityCauseInput(
+      makePublicHealth("healthy", {
+        caches: {
+          stablecoins: { ageSeconds: 18_000, maxAge: 3_600, healthy: true },
+        },
+        worstCacheRatio: 5,
+      }),
+    )).causes;
 
     expect(
       causes.some((cause) => cause.code === "cache_ratio_degraded" || cause.code === "cache_ratio_stale"),
     ).toBe(false);
   });
 
-  it("groups DEWS stale health downstream of DEX liquidity", () => {
-    const causes = buildAvailabilityCauses({
-      publicHealth: makePublicHealth("healthy", {
+  it("fires the DEWS-downstream cause on the DEX ratio alone, inside the DEX stale band", () => {
+    const causes = evaluateAvailabilityStatus(makeAvailabilityCauseInput(
+      makePublicHealth("healthy", {
         caches: {
-          "dex-liquidity": {
-            ageSeconds: 8_000,
-            maxAge: 7_200,
-            healthy: false,
-          },
-          dews: {
-            ageSeconds: 8_100,
-            maxAge: 7_200,
-            healthy: false,
-          },
+          "dex-liquidity": { ageSeconds: 2 * 43_200 + 1, maxAge: 43_200, healthy: true },
+          dews: { ageSeconds: 21_601, maxAge: 1_800, healthy: false },
         },
-        worstCacheRatio: 1.2,
+        worstCacheRatio: 12.1,
       }),
-      availabilityImpactingUnhealthyCrons: 0,
-      watchUnhealthyCrons: 0,
-      degradedCronRuns: 0,
-      cronErrorCount: 0,
-      availabilityImpactingCronErrors: 0,
-      availabilityImpactingConsecutiveCronErrors: 0,
-      cronHistoryQueryFailed: false,
-      cronProgressQueryFailed: false,
-      cronLeaseQueryFailed: false,
-    });
+    )).causes;
 
     expect(causes).toContainEqual(
       expect.objectContaining({
         code: "dews_downstream_of_dex_liquidity",
         severity: "warning",
         metric: "dexLiquidityAgeSeconds",
-        value: 8_000,
+        value: 86_401,
+        threshold: 86_400,
       }),
     );
+    expect(
+      causes
+        .filter((cause) => cause.code === "dews_downstream_of_dex_liquidity")
+        .map((cause) => cause.severity),
+    ).toEqual(["warning"]);
+  });
+
+  it("stays silent while DEX liquidity is inside twice its budget, even with both caches unhealthy", () => {
+    const causes = evaluateAvailabilityStatus(makeAvailabilityCauseInput(
+      makePublicHealth("healthy", {
+        caches: {
+          "dex-liquidity": { ageSeconds: 2 * 43_200, maxAge: 43_200, healthy: false },
+          dews: { ageSeconds: 21_600, maxAge: 1_800, healthy: false },
+        },
+        worstCacheRatio: 12,
+      }),
+    )).causes;
+
+    expect(causes.some((cause) => cause.code === "dews_downstream_of_dex_liquidity")).toBe(false);
   });
 
   it("gives mint/burn query failure precedence over stale public classification", () => {
-    const causes = buildAvailabilityCauses(
-      makeAvailabilityCauseInput(
-        makePublicHealth("healthy", {
-          mintBurnImpactStatus: "stale",
-          mintBurnQueryError: "Mint/burn health data unavailable.",
-          mintBurnLastRunStatus: "error",
-          mintBurn: {
-            ...makePublicHealth().mintBurn,
-            sync: {
-              lastSuccessfulSyncAt: null,
-              freshnessStatus: "stale",
-              warning: "Mint/burn sync freshness is stale versus the 30-minute cron cadence.",
-              criticalLaneHealthy: false,
-            },
+    const causes = evaluateAvailabilityStatus(makeAvailabilityCauseInput(
+      makePublicHealth("healthy", {
+        mintBurnImpactStatus: "stale",
+        mintBurnQueryError: "Mint/burn health data unavailable.",
+        mintBurnLastRunStatus: "error",
+        mintBurn: {
+          ...makePublicHealth().mintBurn,
+          sync: {
+            lastSuccessfulSyncAt: null,
+            freshnessStatus: "stale",
+            warning: "Mint/burn sync freshness is stale versus the 30-minute cron cadence.",
+            criticalLaneHealthy: false,
           },
-        }),
-      ),
-    );
+        },
+      }),
+    )).causes;
 
     expect(causes).toContainEqual(
       expect.objectContaining({
@@ -456,24 +468,22 @@ describe("status cause text", () => {
   });
 
   it("emits stale mint/burn cause when the timestamp query succeeds with no recent sync", () => {
-    const causes = buildAvailabilityCauses(
-      makeAvailabilityCauseInput(
-        makePublicHealth("healthy", {
-          mintBurnImpactStatus: "stale",
-          mintBurnQueryError: null,
-          mintBurnLastRunStatus: "error",
-          mintBurn: {
-            ...makePublicHealth().mintBurn,
-            sync: {
-              lastSuccessfulSyncAt: null,
-              freshnessStatus: "stale",
-              warning: "Mint/burn sync freshness is stale versus the 30-minute cron cadence.",
-              criticalLaneHealthy: false,
-            },
+    const causes = evaluateAvailabilityStatus(makeAvailabilityCauseInput(
+      makePublicHealth("healthy", {
+        mintBurnImpactStatus: "stale",
+        mintBurnQueryError: null,
+        mintBurnLastRunStatus: "error",
+        mintBurn: {
+          ...makePublicHealth().mintBurn,
+          sync: {
+            lastSuccessfulSyncAt: null,
+            freshnessStatus: "stale",
+            warning: "Mint/burn sync freshness is stale versus the 30-minute cron cadence.",
+            criticalLaneHealthy: false,
           },
-        }),
-      ),
-    );
+        },
+      }),
+    )).causes;
 
     expect(causes).toContainEqual(
       expect.objectContaining({
@@ -495,16 +505,14 @@ describe("status cause text", () => {
       ],
     });
 
-    const causes = buildDataQualityCauses({
-      dataQuality: makeDataQuality(),
-      activePriceCoverage: makePublicHealth().activePriceCoverage,
-      missingPriceRatio: 0,
-      blacklistMissingRatio: 0,
-      blacklistRecentMissing: 0,
-      onchainAssessmentCauses: [],
-      reserveCompositionQueryFailed: false,
-      reserveComposition,
-    });
+    const causes = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ dataQuality: makeDataQuality(),
+    activePriceCoverage: makePublicHealth().activePriceCoverage,
+    missingPriceRatio: 0,
+    blacklistMissingRatio: 0,
+    blacklistRecentMissing: 0,
+    onchainAssessmentCauses: [],
+    reserveCompositionQueryFailed: false,
+    reserveComposition, })).causes;
 
     expect(causes).toContainEqual(
       expect.objectContaining({
@@ -522,16 +530,14 @@ describe("status cause text", () => {
       nextCursorStablecoinId: "coin-a",
     });
 
-    const causes = buildDataQualityCauses({
-      dataQuality: makeDataQuality(),
-      activePriceCoverage: makePublicHealth().activePriceCoverage,
-      missingPriceRatio: 0,
-      blacklistMissingRatio: 0,
-      blacklistRecentMissing: 0,
-      onchainAssessmentCauses: [],
-      reserveCompositionQueryFailed: false,
-      reserveComposition,
-    });
+    const causes = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ dataQuality: makeDataQuality(),
+    activePriceCoverage: makePublicHealth().activePriceCoverage,
+    missingPriceRatio: 0,
+    blacklistMissingRatio: 0,
+    blacklistRecentMissing: 0,
+    onchainAssessmentCauses: [],
+    reserveCompositionQueryFailed: false,
+    reserveComposition, })).causes;
 
     expect(causes).toContainEqual(
       expect.objectContaining({
@@ -543,24 +549,22 @@ describe("status cause text", () => {
   });
 
   it("emits a distinct warning cause for DDR repair debt", () => {
-    const causes = buildDataQualityCauses({
-      dataQuality: makeDataQuality({
-        ddrRepairDebtStatus: "present",
-        ddrRepairDebtCount: 2,
-        ddrRepairDebtCheckedAt: 1_700_000_000,
-        ddrRepairDebtEvents: [
-          { eventId: 42, reason: "incident-conflict" },
-          { eventId: 43, reason: "incident-conflict" },
-        ],
-      }),
-      activePriceCoverage: makePublicHealth().activePriceCoverage,
-      missingPriceRatio: 0,
-      blacklistMissingRatio: 0,
-      blacklistRecentMissing: 0,
-      onchainAssessmentCauses: [],
-      reserveCompositionQueryFailed: false,
-      reserveComposition: makeReserveComposition(),
-    });
+    const causes = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ dataQuality: makeDataQuality({
+      ddrRepairDebtStatus: "present",
+      ddrRepairDebtCount: 2,
+      ddrRepairDebtCheckedAt: 1_700_000_000,
+      ddrRepairDebtEvents: [
+        { eventId: 42, reason: "incident-conflict" },
+        { eventId: 43, reason: "incident-conflict" },
+      ],
+    }),
+    activePriceCoverage: makePublicHealth().activePriceCoverage,
+    missingPriceRatio: 0,
+    blacklistMissingRatio: 0,
+    blacklistRecentMissing: 0,
+    onchainAssessmentCauses: [],
+    reserveCompositionQueryFailed: false,
+    reserveComposition: makeReserveComposition(), })).causes;
 
     expect(causes).toContainEqual(
       expect.objectContaining({
@@ -573,17 +577,15 @@ describe("status cause text", () => {
   });
 
   it("reports the most recent DDR repair runner auto-repair count", () => {
-    const causes = buildDataQualityCauses({
-      dataQuality: makeDataQuality(),
-      repairRunnerAutoRepairCount: 2,
-      activePriceCoverage: makePublicHealth().activePriceCoverage,
-      missingPriceRatio: 0,
-      blacklistMissingRatio: 0,
-      blacklistRecentMissing: 0,
-      onchainAssessmentCauses: [],
-      reserveCompositionQueryFailed: false,
-      reserveComposition: makeReserveComposition(),
-    });
+    const causes = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ dataQuality: makeDataQuality(),
+    repairRunnerAutoRepairCount: 2,
+    activePriceCoverage: makePublicHealth().activePriceCoverage,
+    missingPriceRatio: 0,
+    blacklistMissingRatio: 0,
+    blacklistRecentMissing: 0,
+    onchainAssessmentCauses: [],
+    reserveCompositionQueryFailed: false,
+    reserveComposition: makeReserveComposition(), })).causes;
 
     expect(causes).toContainEqual(
       expect.objectContaining({
@@ -608,25 +610,21 @@ describe("status cause text", () => {
         observedAt: null,
       },
     });
-    const status = deriveDataQualityStatus({
-      dataQuality,
-      activePriceCoverageImpactStatus: "healthy",
-      missingPriceRatio: 0,
-      blacklistMissingRatio: 0,
-      blacklistRecentMissing: 0,
-      onchainAssessment: { status: "healthy", causes: [], representative: false },
-      reserveCompositionStatus: "healthy",
-    });
-    const causes = buildDataQualityCauses({
-      dataQuality,
-      activePriceCoverage: makePublicHealth().activePriceCoverage,
-      missingPriceRatio: 0,
-      blacklistMissingRatio: 0,
-      blacklistRecentMissing: 0,
-      onchainAssessmentCauses: [],
-      reserveCompositionQueryFailed: false,
-      reserveComposition: makeReserveComposition(),
-    });
+    const status = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ dataQuality,
+    activePriceCoverageImpactStatus: "healthy",
+    missingPriceRatio: 0,
+    blacklistMissingRatio: 0,
+    blacklistRecentMissing: 0,
+    onchainAssessment: { status: "healthy", causes: [], representative: false },
+    reserveCompositionStatus: "healthy", })).status;
+    const causes = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ dataQuality,
+    activePriceCoverage: makePublicHealth().activePriceCoverage,
+    missingPriceRatio: 0,
+    blacklistMissingRatio: 0,
+    blacklistRecentMissing: 0,
+    onchainAssessmentCauses: [],
+    reserveCompositionQueryFailed: false,
+    reserveComposition: makeReserveComposition(), })).causes;
 
     expect(status).toBe("degraded");
     expect(causes).toContainEqual(
@@ -683,25 +681,21 @@ describe("status cause text", () => {
       alertEligibleIds: ["coin-b"],
     };
 
-    const status = deriveDataQualityStatus({
-      dataQuality: makeDataQuality(),
-      activePriceCoverageImpactStatus: "healthy",
-      missingPriceRatio: 0,
-      blacklistMissingRatio: 0,
-      blacklistRecentMissing: 0,
-      onchainAssessment: { status: "healthy", causes: [], representative: false },
-      reserveCompositionStatus: "healthy",
-    });
-    const causes = buildDataQualityCauses({
-      dataQuality: makeDataQuality(),
-      activePriceCoverage,
-      missingPriceRatio: 0,
-      blacklistMissingRatio: 0,
-      blacklistRecentMissing: 0,
-      onchainAssessmentCauses: [],
-      reserveCompositionQueryFailed: false,
-      reserveComposition: makeReserveComposition(),
-    });
+    const status = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ dataQuality: makeDataQuality(),
+    activePriceCoverageImpactStatus: "healthy",
+    missingPriceRatio: 0,
+    blacklistMissingRatio: 0,
+    blacklistRecentMissing: 0,
+    onchainAssessment: { status: "healthy", causes: [], representative: false },
+    reserveCompositionStatus: "healthy", })).status;
+    const causes = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ dataQuality: makeDataQuality(),
+    activePriceCoverage,
+    missingPriceRatio: 0,
+    blacklistMissingRatio: 0,
+    blacklistRecentMissing: 0,
+    onchainAssessmentCauses: [],
+    reserveCompositionQueryFailed: false,
+    reserveComposition: makeReserveComposition(), })).causes;
 
     expect(status).toBe("healthy");
     expect(causes).toContainEqual(
@@ -750,25 +744,21 @@ describe("status cause text", () => {
     // transient miss, so the admin dataQualityStatus floor no longer degrades on
     // it either. The cause is still emitted for observability, but at info
     // severity so it is neither public-impacting nor durable.
-    const status = deriveDataQualityStatus({
-      dataQuality: makeDataQuality(),
-      activePriceCoverageImpactStatus: "healthy",
-      missingPriceRatio: 0,
-      blacklistMissingRatio: 0,
-      blacklistRecentMissing: 0,
-      onchainAssessment: { status: "healthy", causes: [], representative: false },
-      reserveCompositionStatus: "healthy",
-    });
-    const causes = buildDataQualityCauses({
-      dataQuality: makeDataQuality(),
-      activePriceCoverage,
-      missingPriceRatio: 0,
-      blacklistMissingRatio: 0,
-      blacklistRecentMissing: 0,
-      onchainAssessmentCauses: [],
-      reserveCompositionQueryFailed: false,
-      reserveComposition: makeReserveComposition(),
-    });
+    const status = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ dataQuality: makeDataQuality(),
+    activePriceCoverageImpactStatus: "healthy",
+    missingPriceRatio: 0,
+    blacklistMissingRatio: 0,
+    blacklistRecentMissing: 0,
+    onchainAssessment: { status: "healthy", causes: [], representative: false },
+    reserveCompositionStatus: "healthy", })).status;
+    const causes = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ dataQuality: makeDataQuality(),
+    activePriceCoverage,
+    missingPriceRatio: 0,
+    blacklistMissingRatio: 0,
+    blacklistRecentMissing: 0,
+    onchainAssessmentCauses: [],
+    reserveCompositionQueryFailed: false,
+    reserveComposition: makeReserveComposition(), })).causes;
 
     expect(status).toBe("healthy");
     expect(causes).toContainEqual(
@@ -792,16 +782,14 @@ describe("status cause text", () => {
       }),
     } as StatusResponse["reserveComposition"];
 
-    const causes = buildDataQualityCauses({
-      dataQuality: makeDataQuality(),
-      activePriceCoverage: makePublicHealth().activePriceCoverage,
-      missingPriceRatio: 0,
-      blacklistMissingRatio: 0,
-      blacklistRecentMissing: 0,
-      onchainAssessmentCauses: [],
-      reserveCompositionQueryFailed: false,
-      reserveComposition,
-    });
+    const causes = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ dataQuality: makeDataQuality(),
+    activePriceCoverage: makePublicHealth().activePriceCoverage,
+    missingPriceRatio: 0,
+    blacklistMissingRatio: 0,
+    blacklistRecentMissing: 0,
+    onchainAssessmentCauses: [],
+    reserveCompositionQueryFailed: false,
+    reserveComposition, })).causes;
 
     expect(causes).toContainEqual(
       expect.objectContaining({
@@ -818,85 +806,68 @@ describe("status cause text", () => {
   });
 });
 
-describe("deriveAvailabilityStatus cron-error semantic", () => {
-  const baseInput = {
-    publicHealth: makePublicHealth(),
-    availabilityImpactingCronErrors: 0,
-    availabilityImpactingUnhealthyCrons: 0,
-    availabilityImpactingConsecutiveCronErrors: 0,
-  };
+describe("availability cron-error semantics", () => {
+  const baseInput = makeAvailabilityEvaluationInput();
 
   it("stays healthy when nothing is wrong", () => {
-    expect(deriveAvailabilityStatus(baseInput)).toBe("healthy");
+    expect(evaluateAvailabilityStatus(baseInput).status).toBe("healthy");
   });
 
   it("degrades on a single critical cron error without escalating to stale", () => {
     expect(
-      deriveAvailabilityStatus({
-        ...baseInput,
-        availabilityImpactingCronErrors: 1,
-        availabilityImpactingUnhealthyCrons: 1,
-      }),
+      evaluateAvailabilityStatus(makeAvailabilityEvaluationInput({ ...baseInput,
+      availabilityImpactingCronErrors: 1,
+      availabilityImpactingUnhealthyCrons: 1, })).status,
     ).toBe("degraded");
   });
 
   it("escalates to stale on 2+ consecutive errors on the same critical cron", () => {
     expect(
-      deriveAvailabilityStatus({
-        ...baseInput,
-        availabilityImpactingCronErrors: 1,
-        availabilityImpactingUnhealthyCrons: 1,
-        availabilityImpactingConsecutiveCronErrors: 1,
-      }),
+      evaluateAvailabilityStatus(makeAvailabilityEvaluationInput({ ...baseInput,
+      availabilityImpactingCronErrors: 1,
+      availabilityImpactingUnhealthyCrons: 1,
+      availabilityImpactingConsecutiveCronErrors: 1, })).status,
     ).toBe("stale");
   });
 
   it("escalates to stale when 2+ critical crons are simultaneously unhealthy", () => {
     expect(
-      deriveAvailabilityStatus({
-        ...baseInput,
-        availabilityImpactingCronErrors: 2,
-        availabilityImpactingUnhealthyCrons: 2,
-      }),
+      evaluateAvailabilityStatus(makeAvailabilityEvaluationInput({ ...baseInput,
+      availabilityImpactingCronErrors: 2,
+      availabilityImpactingUnhealthyCrons: 2, })).status,
     ).toBe("stale");
   });
 
   it("preserves cacheImpactStatus=stale escalation independent of cron health", () => {
     expect(
-      deriveAvailabilityStatus({
-        ...baseInput,
-        publicHealth: makePublicHealth("healthy", { cacheImpactStatus: "stale" }),
-      }),
+      evaluateAvailabilityStatus(makeAvailabilityEvaluationInput({ ...baseInput,
+      publicHealth: makePublicHealth("healthy", { cacheImpactStatus: "stale" }), })).status,
     ).toBe("stale");
   });
 
   it("respects publicAvailabilityFloor via mintBurnImpactStatus=stale", () => {
     expect(
-      deriveAvailabilityStatus({
-        ...baseInput,
-        publicHealth: makePublicHealth("healthy", {
-          mintBurnImpactStatus: "stale",
-          mintBurnLastRunStatus: "error",
-        }),
-      }),
+      evaluateAvailabilityStatus(makeAvailabilityEvaluationInput({ ...baseInput,
+      publicHealth: makePublicHealth("healthy", {
+        mintBurnImpactStatus: "stale",
+        mintBurnLastRunStatus: "error",
+      }), })).status,
     ).toBe("stale");
   });
 
   it("excludes mintBurnImpactStatus from availability when mintBurnQueryError is set", () => {
     expect(
-      deriveAvailabilityStatus({
-        ...baseInput,
-        publicHealth: makePublicHealth("healthy", {
-          mintBurnImpactStatus: "stale",
-          mintBurnQueryError: "Mint/burn health data unavailable.",
-          mintBurnLastRunStatus: "error",
-        }),
-      }),
+      evaluateAvailabilityStatus(makeAvailabilityEvaluationInput({ ...baseInput,
+      publicHealth: makePublicHealth("healthy", {
+        mintBurnImpactStatus: "stale",
+        mintBurnQueryError: "Mint/burn health data unavailable.",
+        mintBurnLastRunStatus: "error",
+      }), })).status,
     ).toBe("healthy");
   });
 });
 
-describe("status rule-set parity at policy boundaries", () => {
+describe("status rule-set behavior at policy boundaries", () => {
   it("preserves availability diagnostic cause ordering", () => {
     const input: AvailabilityEvaluationInput = {
       ...makeAvailabilityCauseInput(makePublicHealth()),
@@ -912,8 +883,6 @@ describe("status rule-set parity at policy boundaries", () => {
     };
 
     const combined = evaluateAvailabilityStatus(input);
-    expect(deriveAvailabilityStatus(input)).toBe(combined.status);
-    expect(buildAvailabilityCauses(input)).toEqual(combined.causes);
     expect(combined.causes.map((cause) => cause.code)).toEqual([
       "cron_history_query_failed",
       "cron_progress_query_failed",
@@ -938,11 +907,8 @@ describe("status rule-set parity at policy boundaries", () => {
     [{ blacklistRecentMissing: STATUS_BLACKLIST_THRESHOLDS.missingRecentStale }, "stale"],
     [{ reserveCompositionStatus: "degraded", reserveComposition: makeReserveComposition({ status: "degraded" }) }, "degraded"],
     [{ reserveCompositionStatus: "stale", reserveComposition: makeReserveComposition({ status: "stale" }) }, "stale"],
-  ] as Array<[Partial<DataQualityEvaluationInput>, StatusResponse["dataQualityStatus"]]>)("keeps data-quality projections aligned at a policy boundary", (overrides, status) => {
-    const fullInput = makeDataQualityEvaluationInput(overrides);
-    const combined = evaluateDataQualityStatus(fullInput);
-    expect(combined.status).toBe(status);
-    expect(deriveDataQualityStatus(fullInput)).toBe(combined.status);
-    expect(buildDataQualityCauses(fullInput)).toEqual(combined.causes);
+  ] as Array<[Partial<DataQualityEvaluationInput>, StatusResponse["dataQualityStatus"]]>)("classifies data quality at policy boundaries", (overrides, status) => {
+    const evaluation = evaluateDataQualityStatus(makeDataQualityEvaluationInput(overrides));
+    expect(evaluation.status).toBe(status);
   });
 });

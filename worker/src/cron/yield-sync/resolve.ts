@@ -4,6 +4,7 @@ import { resolveTrackedYieldSources } from "./resolve-tracked-sources";
 import { appendLinkedVariantParentYieldSources, appendPoolFamilyYieldSources, enforceExternalOpportunityTvlEligibility } from "./resolve-helpers";
 import { type ParsedYieldBenchmarkRegistry } from "./benchmarks";
 import type { YieldOptionalSourceOutcome } from "./optional-source-runtime";
+import type { StablecoinSupplyMapState } from "./supply-map";
 import type {
   DlPool,
   ResolvedYieldCandidate,
@@ -25,6 +26,7 @@ interface ResolveYieldSourcesParams {
   coingeckoApiKey?: string | null;
   supplementalCandidates?: ResolvedYieldCandidate[];
   stablecoinSupplyById: Map<string, number>;
+  stablecoinSupplyMapState: StablecoinSupplyMapState;
   onOptionalSourceOutcome?: (outcome: YieldOptionalSourceOutcome) => void;
 }
 
@@ -42,6 +44,7 @@ export async function resolveYieldSources({
   coingeckoApiKey,
   supplementalCandidates = [],
   stablecoinSupplyById,
+  stablecoinSupplyMapState,
   onOptionalSourceOutcome,
 }: ResolveYieldSourcesParams): Promise<YieldResolutionResult> {
   const trackedResolution = await resolveTrackedYieldSources({
@@ -65,6 +68,7 @@ export async function resolveYieldSources({
     safetyScores,
     safetySnapshotAvailable,
     stablecoinSupplyById,
+    stablecoinSupplyMapState,
   });
 
   const linkedVariantSourceCount = appendLinkedVariantParentYieldSources(trackedResolution.resolved);

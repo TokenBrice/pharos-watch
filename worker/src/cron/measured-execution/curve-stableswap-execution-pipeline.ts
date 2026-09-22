@@ -2,6 +2,7 @@ import {
   decodeFunctionData,
   decodeFunctionResult,
   encodeFunctionData,
+  keccak256,
   parseAbi,
 } from "viem/utils";
 
@@ -12,10 +13,12 @@ import {
 } from "@shared/types/measured-execution";
 import { throwIfAborted } from "../../lib/abort";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import type {
-  EvmCodeAtBlockResult,
-  EvmMulticall3Call,
-  EvmMulticall3Result,
+import {
+  fetchEvmMulticall3Aggregate3AtBlock,
+  type EvmCodeAtBlockResult,
+  type EvmMulticall3Call,
+  type EvmMulticall3Result,
+  type EvmRpcOptions,
 } from "../../lib/evm-rpc";
 import { decodeCurveMeasuredRawQuotePoint } from "./curve-quote-point";
 import {
@@ -25,21 +28,63 @@ import {
 } from "./curve-get-dy-quote-engine";
 import { canonicalEvmAddress, decodeAddressResult as decodeEvmAddressResult } from "./evm-codecs";
 import { usdToRawAmount } from "./fixed-point";
-import type {
-  DexMeasuredExecutionBudgetStopReason,
-  DexMeasuredExecutionRpcBudget,
-  DexMeasuredRawQuotePoint,
+import {
+  DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
+  type DexMeasuredExecutionBudgetStopReason,
+  type DexMeasuredExecutionRpcBudget,
+  type DexMeasuredRawQuotePoint,
 } from "./profiles";
 
 const CURVE_STABLESWAP_POOL_ABI = parseAbi([
   "function coins(uint256) view returns (address)",
   "function get_dy(int128 i,int128 j,uint256 dx) view returns (uint256)",
 ]);
+const CURVE_FAMILY_LEGACY_REGISTRY_ABI = parseAbi([
+  "function get_lp_token(address pool) view returns (address)",
+  "function get_coins(address pool) view returns (address[8])",
+]);
+const CURVE_FAMILY_NG_FACTORY_ABI = parseAbi([
+  "function pool_list(uint256) view returns (address)",
+  "function get_coins(address pool) view returns (address[])",
+]);
 const CURVE_STABLESWAP_ERC20_METADATA_ABI = parseAbi([
   "function decimals() view returns (uint8)",
 ]);
 export const CURVE_STABLESWAP_MULTICALL_BATCH_SIZE = 8;
-export const CURVE_STABLESWAP_MULTICALL_GAS = "0x1c9c380";
+const CURVE_STABLESWAP_MULTICALL_GAS = "0x1c9c380";
+
+/**
+ * The one Multicall3 transport every Curve `get_dy` family uses: one retry,
+ * budget deadline, budget-stop reporting and the family batch/gas limits.
+ */
+export function executeCurveGetDyMulticall(input: {
+  chain: string;
+  calls: readonly EvmMulticall3Call[];
+  blockNumber: number;
+  chainRpcs: Map<string, ChainRpcConfig>;
+  signal?: AbortSignal;
+  rpcBudget?: DexMeasuredExecutionRpcBudget;
+  onBudgetStop?: (reason: DexMeasuredExecutionBudgetStopReason) => void;
+}): Promise<EvmMulticall3Result[] | null> {
+  const { rpcBudget } = input;
+  return fetchEvmMulticall3Aggregate3AtBlock(input.chain, input.calls, input.blockNumber, {
+    chainRpcs: input.chainRpcs,
+    signal: input.signal,
+    timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
+    maxRetries: 1,
+    ...(rpcBudget ? { deadlineMs: rpcBudget.deadlineMs } : {}),
+    ...(rpcBudget ? { beforeRequest: () => {
+      const consumed = rpcBudget.tryConsume();
+      if (!consumed) {
+        const reason = rpcBudget.stopReason;
+        if (reason) input.onBudgetStop?.(reason);
+      }
+      return consumed;
+    } } : {}),
+    gas: CURVE_STABLESWAP_MULTICALL_GAS,
+    multicallBatchSize: Math.min(CURVE_STABLESWAP_MULTICALL_BATCH_SIZE, input.calls.length),
+  });
+}
 
 interface CurveStableSwapTokenPolicy {
   address: `0x${string}`;
@@ -75,7 +120,7 @@ interface CurveStableSwapPinnedReaderDependencies {
   ): Promise<`0x${string}` | null>;
 }
 
-export function createCurveStableSwapPinnedReaders<P extends CurveStableSwapExecutionPolicy>(
+function createCurveStableSwapPinnedReaders<P extends CurveStableSwapExecutionPolicy>(
   input: CurveStableSwapPinnedReaderInput<P>,
   dependencies: CurveStableSwapPinnedReaderDependencies,
   requestOptions: unknown,
@@ -125,7 +170,7 @@ interface CurveStableSwapDecimalsProof {
   returnData: `0x${string}`;
 }
 
-export async function verifyCurveStableSwapPoolTokens<Failure extends string>(input: {
+async function verifyCurveStableSwapPoolTokens<Failure extends string>(input: {
   policy: CurveStableSwapExecutionPolicy;
   signal?: AbortSignal;
   readCall(address: `0x${string}`, callData: `0x${string}`): Promise<`0x${string}` | null>;
@@ -203,6 +248,249 @@ export async function verifyCurveStableSwapPoolTokens<Failure extends string>(in
   return { ok: true, poolCoinsProof, tokenDecimalsProof };
 }
 
+/**
+ * The published token binding every Curve family re-checks at eligibility time:
+ * the pool's coin order, the indexed coin proof and the ERC-20 decimals proof.
+ */
+export function findCurveStableSwapTokenBindingFailure<Failure extends string>(
+  policy: CurveStableSwapExecutionPolicy,
+  proof: CurveStableSwapProofShape & { poolTokenAddresses: readonly string[] },
+  failures: { poolTokenOrder: Failure; tokenDecimals: Failure },
+): Failure | null {
+  if (
+    proof.poolTokenAddresses.length !== policy.poolTokens.length ||
+    proof.poolTokenAddresses.some((address, index) => address !== policy.poolTokens[index]!.address) ||
+    proof.poolCoinsProof.length !== policy.poolTokens.length ||
+    proof.poolCoinsProof.some((entry, index) => entry.index !== index)
+  ) return failures.poolTokenOrder;
+  if (
+    proof.tokenDecimalsProof.length !== policy.poolTokens.length ||
+    proof.tokenDecimalsProof.some((entry, index) =>
+      entry.tokenAddress !== policy.poolTokens[index]!.address ||
+      entry.decimals !== policy.poolTokens[index]!.decimals
+    )
+  ) return failures.tokenDecimals;
+  return null;
+}
+
+export interface CurveFamilyVerificationDependencies {
+  fetchCodeStatus(
+    chain: string,
+    address: string,
+    blockNumber: number,
+    options: EvmRpcOptions,
+  ): Promise<EvmCodeAtBlockResult>;
+  fetchCall(
+    chain: string,
+    address: string,
+    callData: string,
+    blockNumber: number,
+    options: EvmRpcOptions,
+  ): Promise<`0x${string}` | null>;
+  hashCode?(code: `0x${string}`): `0x${string}`;
+}
+
+interface CurveFamilyVerificationInput<Policy> {
+  policy?: Policy;
+  nowSec: number;
+  chainRpcs: Map<string, ChainRpcConfig>;
+  signal?: AbortSignal;
+  rpcBudget?: DexMeasuredExecutionRpcBudget;
+}
+
+interface CurveFamilyPinnedBlock {
+  number: number;
+  timestamp: number;
+  hash?: `0x${string}`;
+}
+
+interface CurveFamilyCodeBinding<Policy, Failure extends string> {
+  key: string;
+  address(policy: Policy): `0x${string}`;
+  expectedHash(policy: Policy): `0x${string}`;
+  unavailable: Failure;
+  absent: Failure;
+  mismatch: Failure;
+}
+interface CurveFamilyBindingResult {
+  registeredPoolAddress: `0x${string}`;
+  poolTokenAddresses: `0x${string}`[];
+  identityCallData: `0x${string}`;
+  identityReturnData: `0x${string}`;
+  coinsCallData: `0x${string}`;
+  coinsReturnData: `0x${string}`;
+  lpTokenAddress?: `0x${string}`;
+}
+
+interface CurveFamilyBindingSpec<Policy, Failure extends string> {
+  kind: "legacy-registry" | "ng-factory";
+  address(policy: Policy): `0x${string}`;
+  poolIndex?(policy: Policy): number;
+  lpTokenAddress?(policy: Policy): `0x${string}`;
+  unavailable: Failure;
+  mismatch: Failure;
+  lpTokenMismatch?: Failure;
+}
+
+interface CurveFamilyVerificationContext<
+  Policy extends CurveStableSwapExecutionPolicy,
+  Failure extends string,
+  Input extends CurveFamilyVerificationInput<Policy>,
+> {
+  input: Input;
+  policy: Policy;
+  block: CurveFamilyPinnedBlock;
+  requestOptions: EvmRpcOptions;
+  codeHashes: ReadonlyMap<string, `0x${string}`>;
+  readCall(address: `0x${string}`, callData: `0x${string}`): Promise<`0x${string}` | null>;
+  fail(reason: Failure): { ok: false; reason: Failure };
+}
+
+/**
+ * Canonical verifier skeleton for Curve families whose deployment proof is a
+ * pinned block, a declarative code allowlist, binding calls, and coin metadata.
+ * Family specs retain control of block selection, binding evidence, failures,
+ * confirmation, and the exact published result.
+ */
+export function createCurveFamilyDeploymentVerifier<
+  Policy extends CurveStableSwapExecutionPolicy,
+  Failure extends string,
+  Result,
+  Input extends CurveFamilyVerificationInput<Policy> = CurveFamilyVerificationInput<Policy>,
+>(spec: {
+  defaultPolicy: Policy;
+  dependencies: CurveFamilyVerificationDependencies;
+  resolveBlock(input: Input, policy: Policy, requestOptions: EvmRpcOptions):
+    Promise<CurveFamilyPinnedBlock | { ok: false; reason: Failure }>;
+  codeBindings: readonly CurveFamilyCodeBinding<Policy, Failure>[];
+  binding: CurveFamilyBindingSpec<Policy, Failure>;
+  tokenFailures: {
+    poolTokenUnavailable: Failure;
+    poolTokenMismatch: Failure;
+    tokenDecimalsUnavailable: Failure;
+    tokenDecimalsMismatch: Failure;
+  };
+  confirmBlock?(context: CurveFamilyVerificationContext<Policy, Failure, Input>):
+    Promise<{ ok: true } | { ok: false; reason: Failure }>;
+  makeResult(
+    context: CurveFamilyVerificationContext<Policy, Failure, Input>,
+    binding: CurveFamilyBindingResult,
+    tokenProof: {
+      poolCoinsProof: CurveStableSwapIndexedProof[];
+      tokenDecimalsProof: CurveStableSwapDecimalsProof[];
+    },
+  ): Result | { ok: false; reason: Failure };
+}) {
+  return async (input: Input): Promise<Result | { ok: false; reason: Failure }> => {
+    const policy = input.policy ?? spec.defaultPolicy;
+    const requestOptions: EvmRpcOptions = {
+      chainRpcs: input.chainRpcs,
+      signal: input.signal,
+      timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
+      maxRetries: 0,
+      ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs } : {}),
+      ...(input.rpcBudget ? { beforeRequest: () => input.rpcBudget!.tryConsume() } : {}),
+    };
+    const block = await spec.resolveBlock(input, policy, requestOptions);
+    if ("ok" in block) return block;
+    const { readCode, readCall } = createCurveStableSwapPinnedReaders(
+      { policy, blockNumber: block.number, rpcBudget: input.rpcBudget },
+      spec.dependencies,
+      requestOptions,
+    );
+    const hashCode = spec.dependencies.hashCode ?? ((code: `0x${string}`) => keccak256(code));
+    const codeHashes = new Map<string, `0x${string}`>();
+    for (const codeBinding of spec.codeBindings) {
+      throwIfAborted(input.signal);
+      const result = await readCode(codeBinding.address(policy));
+      if (result.status === "unavailable") return { ok: false, reason: codeBinding.unavailable };
+      if (result.status === "absent") return { ok: false, reason: codeBinding.absent };
+      const codeHash = hashCode(result.code).toLowerCase() as `0x${string}`;
+      if (codeHash !== codeBinding.expectedHash(policy)) {
+        return { ok: false, reason: codeBinding.mismatch };
+      }
+      codeHashes.set(codeBinding.key, codeHash);
+    }
+    const context: CurveFamilyVerificationContext<Policy, Failure, Input> = {
+      input, policy, block, requestOptions, codeHashes, readCall,
+      fail: (reason) => ({ ok: false, reason }),
+    };
+    const bindingAddress = spec.binding.address(policy);
+    const isLegacy = spec.binding.kind === "legacy-registry";
+    const identityCallData = (isLegacy
+      ? encodeFunctionData({
+          abi: CURVE_FAMILY_LEGACY_REGISTRY_ABI,
+          functionName: "get_lp_token",
+          args: [policy.poolAddress],
+        })
+      : encodeFunctionData({
+          abi: CURVE_FAMILY_NG_FACTORY_ABI,
+          functionName: "pool_list",
+          args: [BigInt(spec.binding.poolIndex!(policy))],
+        })).toLowerCase() as `0x${string}`;
+    const coinsCallData = (isLegacy
+      ? encodeFunctionData({
+          abi: CURVE_FAMILY_LEGACY_REGISTRY_ABI,
+          functionName: "get_coins",
+          args: [policy.poolAddress],
+        })
+      : encodeFunctionData({
+          abi: CURVE_FAMILY_NG_FACTORY_ABI,
+          functionName: "get_coins",
+          args: [policy.poolAddress],
+        })).toLowerCase() as `0x${string}`;
+    const identityReturnData = await readCall(bindingAddress, identityCallData);
+    const coinsReturnData = await readCall(bindingAddress, coinsCallData);
+    if (identityReturnData == null || coinsReturnData == null) {
+      return { ok: false, reason: spec.binding.unavailable };
+    }
+    let identityAddress: `0x${string}` | null;
+    let coins: readonly (`0x${string}` | null)[];
+    try {
+      identityAddress = canonicalEvmAddress(decodeFunctionResult({
+        abi: isLegacy ? CURVE_FAMILY_LEGACY_REGISTRY_ABI : CURVE_FAMILY_NG_FACTORY_ABI,
+        functionName: isLegacy ? "get_lp_token" : "pool_list",
+        data: identityReturnData,
+      } as never));
+      coins = (decodeFunctionResult({
+        abi: isLegacy ? CURVE_FAMILY_LEGACY_REGISTRY_ABI : CURVE_FAMILY_NG_FACTORY_ABI,
+        functionName: "get_coins",
+        data: coinsReturnData,
+      } as never) as readonly string[]).map(canonicalEvmAddress);
+    } catch {
+      return { ok: false, reason: spec.binding.mismatch };
+    }
+    const poolTokenAddresses = policy.poolTokens.map((token) => token.address);
+    if (isLegacy && identityAddress !== spec.binding.lpTokenAddress!(policy)) {
+      return { ok: false, reason: spec.binding.lpTokenMismatch! };
+    }
+    if (
+      (!isLegacy && identityAddress !== policy.poolAddress) ||
+      coins.length !== (isLegacy ? 8 : poolTokenAddresses.length) ||
+      poolTokenAddresses.some((address, index) => coins[index] !== address) ||
+      (isLegacy && coins.slice(poolTokenAddresses.length).some((address) =>
+        address !== "0x0000000000000000000000000000000000000000"
+      ))
+    ) return { ok: false, reason: spec.binding.mismatch };
+    const binding: CurveFamilyBindingResult = {
+      registeredPoolAddress: policy.poolAddress,
+      poolTokenAddresses,
+      identityCallData,
+      identityReturnData: identityReturnData.toLowerCase() as `0x${string}`,
+      coinsCallData,
+      coinsReturnData: coinsReturnData.toLowerCase() as `0x${string}`,
+      ...(isLegacy ? { lpTokenAddress: identityAddress! } : {}),
+    };
+    const tokenProof = await verifyCurveStableSwapPoolTokens({
+      policy, signal: input.signal, readCall, failures: spec.tokenFailures,
+    });
+    if (!tokenProof.ok) return tokenProof;
+    const confirmation = await spec.confirmBlock?.(context);
+    if (confirmation && !confirmation.ok) return confirmation;
+    return spec.makeResult(context, binding, tokenProof);
+  };
+}
+
 export function encodeCurveStableSwapGetDyCall(input: {
   inputIndex: number;
   outputIndex: number;
@@ -273,7 +561,14 @@ interface CurveStableSwapExecutionStrategy<
   resolveTokenIndices(
     target: DexMeasuredExecutionTarget | DexMeasuredExecutionProfile,
   ): { ok: true; inputIndex: number; outputIndex: number } | { ok: false; reason: Failure };
-  encodeGetDy(input: { inputIndex: number; outputIndex: number; amountInRaw: bigint }): `0x${string}`;
+  encodeGetDy(input: {
+    policy: Policy;
+    inputIndex: number;
+    outputIndex: number;
+    amountInRaw: bigint;
+  }): `0x${string}`;
+  decodeAmountOutRaw?(policy: Policy, returnData: `0x${string}`): bigint | null;
+  eligibilityFailure?(eligibility: Eligibility): Failure;
   quoteMetadata(input: {
     policy: Policy;
     endpointAddress: `0x${string}`;
@@ -298,7 +593,7 @@ interface EncodedCurveStableSwapExecutionRequest<
   eligibility: Eligibility;
 }
 
-interface CurveStableSwapQuoteDependencies {
+export interface CurveGetDyQuoteDependencies {
   executeMulticall(input: {
     chain: string;
     calls: readonly EvmMulticall3Call[];
@@ -306,6 +601,7 @@ interface CurveStableSwapQuoteDependencies {
     chainRpcs: Map<string, ChainRpcConfig>;
     signal?: AbortSignal;
     rpcBudget?: DexMeasuredExecutionRpcBudget;
+    onBudgetStop?: (reason: DexMeasuredExecutionBudgetStopReason) => void;
   }): Promise<readonly EvmMulticall3Result[] | null>;
 }
 
@@ -341,7 +637,7 @@ export function createCurveStableSwapExecutionPipeline<
   Failure extends string,
 >(
   strategy: CurveStableSwapExecutionStrategy<Policy, Evidence, Eligibility, Failure>,
-  dependencies: CurveStableSwapQuoteDependencies,
+  dependencies: CurveGetDyQuoteDependencies,
 ) {
   type Request = CurveStableSwapExecutionRequest<Evidence>;
   type Encoded = EncodedCurveStableSwapExecutionRequest<Policy, Evidence, Eligibility>;
@@ -370,7 +666,7 @@ export function createCurveStableSwapExecutionPipeline<
       }
       if (!eligibility.ok) {
         return {
-          failureReason: (
+          failureReason: strategy.eligibilityFailure?.(eligibility) ?? (
             eligibility.reason === strategy.runtimeEvidenceUnavailableReason
               ? "runtime-evidence-missing"
               : strategy.invalidTargetFailure
@@ -399,6 +695,7 @@ export function createCurveStableSwapExecutionPipeline<
         inputIndex: indices.inputIndex,
         outputIndex: indices.outputIndex,
         callData: strategy.encodeGetDy({
+          policy,
           inputIndex: indices.inputIndex,
           outputIndex: indices.outputIndex,
           amountInRaw,
@@ -418,7 +715,10 @@ export function createCurveStableSwapExecutionPipeline<
       ...decodeCurveMeasuredRawQuotePoint({
         request,
         result,
-        decodeAmountOutRaw: decodeCurveStableSwapGetDyResult,
+        decodeAmountOutRaw: (returnData) =>
+          strategy.decodeAmountOutRaw
+            ? strategy.decodeAmountOutRaw(request.policy, returnData)
+            : decodeCurveStableSwapGetDyResult(returnData),
         adapterMetadata: strategy.quoteMetadata(request),
         failureReasons: {
           poolRevert: "pool-revert" as Failure,

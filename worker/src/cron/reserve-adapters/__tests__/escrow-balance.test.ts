@@ -175,7 +175,10 @@ describe("fetchEscrowBalanceReserves", () => {
     const { result, network } = await runEscrow(coin, { ...config, params });
 
     expect(network.rpcCalls).toHaveLength(1);
-    expect(result.metadata?.redemption).toMatchObject({ routeStatus: "open" });
+    expect(result.metadata?.redemption).toMatchObject({
+      routeStatus: "unknown",
+      routeStatusSource: "static-config",
+    });
   });
 
   it("throws when the escrow read fails", async () => {

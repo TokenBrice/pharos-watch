@@ -92,7 +92,7 @@ describe("challenger load", () => {
           ],
         },
       ],
-      { requireMatch: true },
+      { assertMatchesUsed: true },
     ) as MockD1Database;
 
     const result = await loadPublishedDexPoolChallengers(db, 20_000, 1_000, 120);
@@ -242,13 +242,12 @@ describe("challenger load", () => {
           ],
         },
       ],
-      { requireMatch: true },
+      { assertMatchesUsed: true },
     );
 
     const result = await loadPublishedDexPoolChallengers(db, 20_000, 1_000, 120);
 
     expect(result.diagnostics.mode).toBe("mixed");
-    expect(result.diagnostics.missingTables).toBe(false);
     expect(result.diagnostics.emptyPublishedCoins).toEqual(["coin-b"]);
     expect(result.diagnostics.incompletePublishedCoins).toEqual(["coin-c"]);
     expect(new Set(result.diagnostics.legacyFallbackCoins)).toEqual(new Set(["coin-c", "coin-d", "coin-e"]));
@@ -298,5 +297,78 @@ describe("challenger load", () => {
         publishedAt: 100,
       }),
     ]);
+  });
+
+  it("surfaces a missing mandatory challenger snapshot table", async () => {
+    const db = mockD1(
+      [
+        {
+          match: "FROM dex_price_challenger_snapshots",
+          rows: [{
+            stablecoin_id: "coin-z",
+            snapshot_at: 100,
+            published_at: 100,
+            has_rows: 0,
+            source_coverage_complete: 0,
+          }],
+          throwError: new Error("no such table: dex_price_challenger_snapshots"),
+        },
+      ],
+      { assertMatchesUsed: true },
+    );
+
+    await expect(
+      loadPublishedDexPoolChallengers(db, 20_000, 1_000, 120),
+    ).rejects.toThrow("no such table: dex_price_challenger_snapshots");
+  });
+
+  it("skips malformed legacy challenger JSON payloads", async () => {
+    const db = mockD1(
+      [
+        {
+          match: "SELECT stablecoin_id\n     FROM dex_liquidity",
+          rows: [{ stablecoin_id: "coin-z" }],
+        },
+        {
+          match: "FROM dex_price_challenger_snapshots",
+          rows: [],
+        },
+        {
+          match: "FROM dex_price_challengers",
+          rows: [],
+        },
+        {
+          match: "SELECT stablecoin_id, top_pools_json",
+          rows: [
+            {
+              stablecoin_id: "coin-z",
+              top_pools_json: "{bad-json",
+              updated_at: 100,
+            },
+          ],
+        },
+        {
+          match: "SELECT stablecoin_id, price_sources_json",
+          rows: [
+            {
+              stablecoin_id: "coin-y",
+              price_sources_json: "{bad-json",
+              updated_at: 100,
+            },
+          ],
+        },
+      ],
+      { assertMatchesUsed: true },
+    );
+
+    const result = await loadPublishedDexPoolChallengers(db, 20_000, 1_000, 120);
+
+    expect(result.diagnostics.mode).toBe("absent");
+    expect(result.challengersByStablecoin.size).toBe(0);
+    const history = db.getHistory();
+    const topPoolRead = history.find((entry) => entry.sql.includes("SELECT stablecoin_id, top_pools_json"));
+    const priceSourceRead = history.find((entry) => entry.sql.includes("SELECT stablecoin_id, price_sources_json"));
+    expect(topPoolRead?.binds).toEqual([-880]);
+    expect(priceSourceRead?.binds).toEqual([-880]);
   });
 });

@@ -1,9 +1,8 @@
-import { rethrowIfAborted, throwIfAborted } from "../lib/abort";
+import { throwIfAborted } from "../lib/abort";
 import type { CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
 import { runWithOverloadRetry } from "../lib/d1-overload-retry";
-import { toErrorMessage } from "@shared/lib/error-utils";
-import { type CappedDeleteResult, deleteCapped } from "./shared/capped-delete";
+import { type CappedDeleteResult, deleteCapped, runCappedPruneFamily } from "./shared/capped-delete";
 import {
   TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT,
   countTelegramProcessedUpdateBacklog,
@@ -31,6 +30,25 @@ const RETENTION_DELETE_BATCH_LIMIT = 10_000;
 const HIGH_VOLUME_RETENTION_DELETE_LIMIT = 100_000;
 export const TELEGRAM_PROCESSED_UPDATE_PRUNE_BATCH_LIMIT = 1_000;
 const TELEGRAM_PROCESSED_UPDATE_PRUNE_TIME_BUDGET_MS = 2_000;
+
+const RETENTION_DAYS = {
+  alertAudit: ALERT_AUDIT_RETENTION_SEC / DAY_SEC,
+  authoritativeWorkflow: AUTHORITATIVE_WORKFLOW_RETENTION_SEC / DAY_SEC,
+  authoritativeReplay: AUTHORITATIVE_REPLAY_RETENTION_SEC / DAY_SEC,
+  staleUnresolved: STALE_UNRESOLVED_RETENTION_SEC / DAY_SEC,
+  recapTargetsTerminal: 90,
+  usageDaily: USAGE_DAILY_RETENTION_SEC / DAY_SEC,
+  watcherLifecycle: USAGE_DAILY_RETENTION_SEC / DAY_SEC,
+  adoptionDaily: USAGE_DAILY_RETENTION_SEC / DAY_SEC,
+  adoptionRetention: USAGE_DAILY_RETENTION_SEC / DAY_SEC,
+  adoptionIngressQuota: 2,
+  adoptionClientQuota: 2,
+  chatDiagnostics: CHAT_DIAGNOSTICS_RETENTION_SEC / DAY_SEC,
+  shortLivedChatCache: SHORT_LIVED_CHAT_CACHE_RETENTION_SEC / DAY_SEC,
+  miniAppAdoptionSessionCache: TELEGRAM_ADOPTION_SESSION_TTL_SEC / DAY_SEC,
+  reEngagementWarningCache: RE_ENGAGEMENT_WARNING_CACHE_RETENTION_SEC / DAY_SEC,
+  processedUpdates: 7,
+} as const;
 
 const SOURCE_EVENT_CHILD_TABLES = [
   "telegram_alert_target_plan_items",
@@ -209,25 +227,8 @@ async function pruneTelegramHighGrowthRetention(
   highGrowthDeleteLimit: number,
   signal?: AbortSignal,
 ): Promise<TelegramHighGrowthRetentionResult> {
-  const startedAtMs = Date.now();
   const terminalCutoff = nowSec - AUTHORITATIVE_REPLAY_RETENTION_SEC;
   const unresolvedCutoff = nowSec - STALE_UNRESOLVED_RETENTION_SEC;
-  const result: TelegramHighGrowthRetentionResult = {
-    terminalCutoff,
-    unresolvedCutoff,
-    rowLimit: highGrowthDeleteLimit,
-    legacyTargetItemsPruned: 0,
-    legacyTargetsPruned: 0,
-    legacyTerminalJobsPruned: 0,
-    staleUnresolvedJobsPruned: 0,
-    staleUnresolvedSourcesPruned: 0,
-    oldestLegacyTargetRemainingAt: null,
-    oldestLegacyTargetEligibleAt: null,
-    oldestUnresolvedSourceRemainingAt: null,
-    cappedAtLimit: false,
-    durationMs: 0,
-    error: null,
-  };
 
   const legacyTerminalTargetPredicate = `
     target.plan_generation IS NULL
@@ -250,11 +251,14 @@ async function pruneTelegramHighGrowthRetention(
        WHERE item.job_id = target.job_id
          AND item.target_key = target.target_key
     )`;
+  const cappedByRowLimit = { batchLimit: RETENTION_DELETE_BATCH_LIMIT, runLimit: highGrowthDeleteLimit };
 
-  try {
-    const legacyTargetItems = await deleteOlderThanCapped(
-      db,
-      `/* pharos:telegram:legacy-terminal-target-items-retention */
+  const family = await runCappedPruneFamily({
+    db,
+    signal,
+    statements: {
+      legacyTargetItems: {
+        sql: `/* pharos:telegram:legacy-terminal-target-items-retention */
        DELETE FROM telegram_alert_job_target_items
         WHERE rowid IN (
           SELECT item.rowid
@@ -266,16 +270,11 @@ async function pruneTelegramHighGrowthRetention(
            ORDER BY target.created_at ASC, target.rowid ASC, item.rowid ASC
            LIMIT ?
         )`,
-      terminalCutoff,
-      { signal, totalLimit: highGrowthDeleteLimit, cutoffBindCount: 1 },
-    );
-    result.legacyTargetItemsPruned = legacyTargetItems.pruned;
-    result.cappedAtLimit ||= legacyTargetItems.cappedAtLimit;
-    throwIfAborted(signal);
-
-    const legacyTargets = await deleteOlderThanCapped(
-      db,
-      `/* pharos:telegram:legacy-terminal-targets-retention */
+        bindsForLimit: (limit) => [terminalCutoff, limit],
+        ...cappedByRowLimit,
+      },
+      legacyTargets: {
+        sql: `/* pharos:telegram:legacy-terminal-targets-retention */
        DELETE FROM telegram_alert_job_targets
         WHERE rowid IN (
           SELECT target.rowid
@@ -284,36 +283,21 @@ async function pruneTelegramHighGrowthRetention(
            ORDER BY target.created_at ASC, target.rowid ASC
            LIMIT ?
         )`,
-      terminalCutoff,
-      { signal, totalLimit: highGrowthDeleteLimit, cutoffBindCount: 1 },
-    );
-    result.legacyTargetsPruned = legacyTargets.pruned;
-    result.cappedAtLimit ||= legacyTargets.cappedAtLimit;
-    throwIfAborted(signal);
-
-    const legacyTerminalJobs = await deleteOlderThanCapped(
-      db,
-      buildOrphanJobDeleteSql(["sent", "expired"]),
-      terminalCutoff,
-      { signal, totalLimit: highGrowthDeleteLimit },
-    );
-    result.legacyTerminalJobsPruned = legacyTerminalJobs.pruned;
-    result.cappedAtLimit ||= legacyTerminalJobs.cappedAtLimit;
-    throwIfAborted(signal);
-
-    const staleUnresolvedJobs = await deleteOlderThanCapped(
-      db,
-      buildOrphanJobDeleteSql(["discovered", "queued"]),
-      unresolvedCutoff,
-      { signal, totalLimit: highGrowthDeleteLimit },
-    );
-    result.staleUnresolvedJobsPruned = staleUnresolvedJobs.pruned;
-    result.cappedAtLimit ||= staleUnresolvedJobs.cappedAtLimit;
-    throwIfAborted(signal);
-
-    const staleUnresolvedSources = await deleteCapped(
-      db,
-      `/* pharos:telegram:stale-unresolved-sources-retention */
+        bindsForLimit: (limit) => [terminalCutoff, limit],
+        ...cappedByRowLimit,
+      },
+      legacyTerminalJobs: {
+        sql: buildOrphanJobDeleteSql(["sent", "expired"]),
+        bindsForLimit: (limit) => [terminalCutoff, terminalCutoff, limit],
+        ...cappedByRowLimit,
+      },
+      staleUnresolvedJobs: {
+        sql: buildOrphanJobDeleteSql(["discovered", "queued"]),
+        bindsForLimit: (limit) => [unresolvedCutoff, unresolvedCutoff, limit],
+        ...cappedByRowLimit,
+      },
+      staleUnresolvedSources: {
+        sql: `/* pharos:telegram:stale-unresolved-sources-retention */
              DELETE FROM telegram_alert_source_events
               WHERE detected_at < ?
                 AND rowid IN (
@@ -326,64 +310,49 @@ ${indentSqlFragment(buildSourceEventChildAbsenceSql(true), 21)}
                    ORDER BY source.detected_at ASC, source.rowid ASC
                    LIMIT ?
                 )`,
-      (limit) => [unresolvedCutoff, unresolvedCutoff, nowSec, limit],
-      RETENTION_DELETE_BATCH_LIMIT,
-      highGrowthDeleteLimit,
-      signal,
-    );
-    result.staleUnresolvedSourcesPruned = staleUnresolvedSources.pruned;
-    result.cappedAtLimit ||= staleUnresolvedSources.cappedAtLimit;
-    throwIfAborted(signal);
-
-    const oldestLegacyTarget = await runWithOverloadRetry(
-      () => db
-        .prepare(
-          `SELECT MIN(created_at) AS oldest_remaining_at
+        bindsForLimit: (limit) => [unresolvedCutoff, unresolvedCutoff, nowSec, limit],
+        ...cappedByRowLimit,
+      },
+    },
+    probes: {
+      oldestLegacyTarget: {
+        sql: `SELECT MIN(created_at) AS oldest_remaining_at
              FROM telegram_alert_job_targets
             WHERE plan_generation IS NULL`,
-        )
-        .first<{ oldest_remaining_at: number | null }>(),
-      3,
-      signal,
-    );
-    result.oldestLegacyTargetRemainingAt = oldestLegacyTarget?.oldest_remaining_at ?? null;
-
-    const oldestEligibleTarget = await runWithOverloadRetry(
-      () => db
-        .prepare(
-          `/* pharos:telegram:legacy-terminal-targets-oldest-eligible */
+      },
+      oldestEligibleTarget: {
+        sql: `/* pharos:telegram:legacy-terminal-targets-oldest-eligible */
            SELECT target.created_at AS oldest_eligible_at
              FROM telegram_alert_job_targets target
             WHERE ${legacyTerminalTargetPredicate}
             ORDER BY target.created_at ASC, target.rowid ASC
             LIMIT 1`,
-        )
-        .bind(terminalCutoff)
-        .first<{ oldest_eligible_at: number | null }>(),
-      3,
-      signal,
-    );
-    result.oldestLegacyTargetEligibleAt = oldestEligibleTarget?.oldest_eligible_at ?? null;
-
-    const oldestUnresolvedSource = await runWithOverloadRetry(
-      () => db
-        .prepare(
-          `SELECT MIN(detected_at) AS oldest_remaining_at
+        binds: [terminalCutoff],
+      },
+      oldestUnresolvedSource: {
+        sql: `SELECT MIN(detected_at) AS oldest_remaining_at
              FROM telegram_alert_source_events
             WHERE status IN ('resolving', 'planned', 'baseline_committed')`,
-        )
-        .first<{ oldest_remaining_at: number | null }>(),
-      3,
-      signal,
-    );
-    result.oldestUnresolvedSourceRemainingAt = oldestUnresolvedSource?.oldest_remaining_at ?? null;
-  } catch (error) {
-    rethrowIfAborted(error, signal);
-    result.error = toErrorMessage(error).slice(0, 500);
-  }
+      },
+    },
+  });
 
-  result.durationMs = Math.max(0, Date.now() - startedAtMs);
-  return result;
+  return {
+    terminalCutoff,
+    unresolvedCutoff,
+    rowLimit: highGrowthDeleteLimit,
+    legacyTargetItemsPruned: family.changed.legacyTargetItems,
+    legacyTargetsPruned: family.changed.legacyTargets,
+    legacyTerminalJobsPruned: family.changed.legacyTerminalJobs,
+    staleUnresolvedJobsPruned: family.changed.staleUnresolvedJobs,
+    staleUnresolvedSourcesPruned: family.changed.staleUnresolvedSources,
+    oldestLegacyTargetRemainingAt: family.probes.oldestLegacyTarget.oldest_remaining_at ?? null,
+    oldestLegacyTargetEligibleAt: family.probes.oldestEligibleTarget.oldest_eligible_at ?? null,
+    oldestUnresolvedSourceRemainingAt: family.probes.oldestUnresolvedSource.oldest_remaining_at ?? null,
+    cappedAtLimit: family.cappedAtLimit,
+    durationMs: family.durationMs,
+    error: family.error,
+  };
 }
 
 function deleteCachePrefixOlderThanCapped(
@@ -839,11 +808,6 @@ ${indentSqlFragment(SOURCE_EVENT_CHILD_ABSENCE_SQL, 13)}
       processedUpdatesPruned: processedUpdates.pruned,
       recapTargetsPruned: recapTargets.deletedTargets,
       highGrowthRetention: { ...highGrowthRetention },
-      legacyTargetItemsPruned: highGrowthRetention.legacyTargetItemsPruned,
-      legacyTargetsPruned: highGrowthRetention.legacyTargetsPruned,
-      legacyTerminalJobsPruned: highGrowthRetention.legacyTerminalJobsPruned,
-      staleUnresolvedJobsPruned: highGrowthRetention.staleUnresolvedJobsPruned,
-      staleUnresolvedSourcesPruned: highGrowthRetention.staleUnresolvedSourcesPruned,
       ...retentionStepReport.pruned,
       expiredTargetsReconciled,
       runBudgetTruncated: processedUpdates.remainingBacklog.count > 0 || recapTargets.cappedAtLimit || retentionDeleteCapped,
@@ -867,24 +831,7 @@ ${indentSqlFragment(SOURCE_EVENT_CHILD_ABSENCE_SQL, 13)}
         highGrowthRetention: highGrowthRetention.cappedAtLimit,
         ...retentionStepReport.cappedAtLimit,
       },
-      retentionDays: {
-        alertAudit: ALERT_AUDIT_RETENTION_SEC / DAY_SEC,
-        authoritativeWorkflow: AUTHORITATIVE_WORKFLOW_RETENTION_SEC / DAY_SEC,
-        authoritativeReplay: AUTHORITATIVE_REPLAY_RETENTION_SEC / DAY_SEC,
-        staleUnresolved: STALE_UNRESOLVED_RETENTION_SEC / DAY_SEC,
-        recapTargetsTerminal: 90,
-        usageDaily: USAGE_DAILY_RETENTION_SEC / DAY_SEC,
-        watcherLifecycle: USAGE_DAILY_RETENTION_SEC / DAY_SEC,
-        adoptionDaily: USAGE_DAILY_RETENTION_SEC / DAY_SEC,
-        adoptionRetention: USAGE_DAILY_RETENTION_SEC / DAY_SEC,
-        adoptionIngressQuota: 2,
-        adoptionClientQuota: 2,
-        chatDiagnostics: CHAT_DIAGNOSTICS_RETENTION_SEC / DAY_SEC,
-        shortLivedChatCache: SHORT_LIVED_CHAT_CACHE_RETENTION_SEC / DAY_SEC,
-        miniAppAdoptionSessionCache: TELEGRAM_ADOPTION_SESSION_TTL_SEC / DAY_SEC,
-        reEngagementWarningCache: RE_ENGAGEMENT_WARNING_CACHE_RETENTION_SEC / DAY_SEC,
-        processedUpdates: 7,
-      },
+      retentionDays: RETENTION_DAYS,
     },
   });
 }

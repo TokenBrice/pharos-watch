@@ -157,6 +157,19 @@ describe("buildBriefMessage", () => {
     vi.advanceTimersByTime(1000);
     expect(await buildBriefMessage(db)).toContain("May be stale");
   });
+
+  it("drops malformed risk-tape entries instead of failing the whole brief", async () => {
+    const input = {
+      riskTape: [null, { label: "good", value: "1" }, { label: 7, value: "2" }],
+      nextTriggers: [{ label: "trigger", thresholdLabel: "500 bps" }, { label: "broken" }],
+    };
+    const message = await buildBriefMessage(mockD1([{ match: "FROM daily_digest", rows: [{
+      generated_at: Math.floor(Date.now() / 1000), digest_text: "fallback", input_data: JSON.stringify(input),
+    }] }]));
+    expect(message).toContain("good: 1");
+    expect(message).toContain("trigger: 500 bps");
+    expect(message).not.toContain("broken");
+  });
 });
 
 describe("buildTopMessage", () => {

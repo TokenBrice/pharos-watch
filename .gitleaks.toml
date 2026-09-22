@@ -164,6 +164,81 @@ regexes = [
 ]
 paths = ['''(?:^|/)shared/data/safety-score-v9/transfer-review-overlays-v1\.json$''']
 
+# API-key tests use one deliberately synthetic token/secret pair across parser,
+# authentication, and request-gate fixtures. Pin both representations to those
+# test files; a different token or secret in the same files still fails.
+[[allowlists]]
+description = "Canonical synthetic Pharos API-key fixture values"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = [
+  '''^abcdefghijklmnopqrstuvwxyzABCDEF$''',
+  '''^ph_live_(?:0123456789abcdef|ffffffffffffffff)_abcdefghijklmnopqrstuvwxyzABCDEF$''',
+]
+paths = [
+  '''(?:^|/)worker/src/api/__tests__/api-keys\.test\.ts$''',
+  '''(?:^|/)worker/src/lib/__tests__/api-keys\.test\.ts$''',
+  '''(?:^|/)worker/src/__tests__/index\.fetch\.test\.ts$''',
+  '''(?:^|/)worker/src/test-helpers/__shared/fixtures\.ts$''',
+]
+
+# API-key prefixes are public routing identifiers, not bearer secrets. Match the
+# complete key-prefix field shape only inside API-key fixture files, so a real
+# token or any other credential beside the field remains independently visible.
+[[allowlists]]
+description = "Public 16-hex API-key prefixes in API-key fixtures"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "match"
+regexes = ['''^(?:key_prefix|keyPrefix)\s*:\s*"[0-9a-f]{16}"$''']
+paths = [
+  '''(?:^|/)worker/src/api/__tests__/api-keys\.test\.ts$''',
+  '''(?:^|/)worker/src/lib/__tests__/api-keys\.test\.ts$''',
+  '''(?:^|/)worker/src/__tests__/index\.fetch\.test\.ts$''',
+  '''(?:^|/)worker/src/test-helpers/__shared/fixtures\.ts$''',
+]
+
+# These are the exact public Solana accounts used by the staged-pool identity
+# fixtures. The exemption is value-pinned and test-file-pinned rather than a
+# generic base58 carve-out, because a similarly shaped private value must fail.
+[[allowlists]]
+description = "Public Solana pool and mint ids in staged-liquidity fixtures"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = [
+  '''^(?:9j7M8s9d5M5x6o8N9vQm3P4r5T6u7V8w9X1y2Z3a4Bc|9j7m8s9d5M5x6o8N9vQm3P4r5T6u7V8w9X1y2Z3a4Bc|EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1|Es9vMFrzaCERmJfrF4H2FY6q2JvE4YJzS83p2wM8wus|EJ3FwL8D2PkAaHmj1vawbR7fiUhXomt7vJhAaTBW4dnH|6GGYCNjZ5jqNFRfjJqCRdYiiTZY47LfweYAA4RRsYb4A|EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v|EeBX9JLdvsp4HnBbMgC1HnAjBkBQxgxtWxspcCLtT6ci|susdabGDNbhrnCa6ncrYo81u4s9GM8ecK2UwMyZiq4X|2D9mokxthTheNAU6hCWGRXdNmhNQoypHs1JcRCbwkgLL)$''',
+]
+paths = ['''(?:^|/)worker/src/cron/dex-liquidity/__tests__/staging-merge\.test\.ts$''']
+
+# Exact public chain identifiers in discovery fixtures. Pairing the reviewed
+# constants with only their owning fixture files avoids exempting arbitrary
+# base32/base58 or ICON-looking credentials elsewhere (or beside them).
+[[allowlists]]
+description = "Reviewed Soroban and ICON identifiers in discovery fixtures"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = [
+  '''^(?:CBOOCGZSVRSZFRE4U2NWR2B4RXYVJWRCBTGOUD2JPI2TDJPWMTJX7FZP|CBGV2QFQBBGEQRUKUMCPO3SZOHDDYO6SCP5CH6TW7EALKVHCXTMWDDOF|CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA|CCY2PXGMKNQHO7WNYXEWX76L2C5BH3JUW3RCATGUYKY7QQTRILBZIFWV|cxa0af3165c08318e988cb30993b3048335b94af6c|cx88fd7df7ddff82f7cc735c871dc519838cb235bb|cx2609b924e33ef00b648a409245c7ea394c467824)$''',
+]
+paths = [
+  '''(?:^|/)worker/src/cron/dex-discovery/__tests__/crawl-soroban-pools\.test\.ts$''',
+  '''(?:^|/)worker/src/cron/dex-discovery/__tests__/crawl-icon-balanced-pools\.test\.ts$''',
+]
+
+# The recorded Raydium fixture contains public pool/mint accounts plus opaque
+# binary account data. Only the two reviewed mint values are exempted.
+[[allowlists]]
+description = "Public mint ids in the recorded Raydium measured-execution fixture"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = [
+  '''^(?:mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp|EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v)$''',
+]
+paths = ['''(?:^|/)worker/src/cron/measured-execution/__tests__/fixtures/raydium-wm-usdc-single-segment-2026-07-27\.json$''']
 # DEX price-source registry keys (`<protocol>-dex`) are public pricing-lane identifiers
 # that the primary-price-collector fixtures pair with `sourceKey:`. The rule pins the
 # reviewed key shape to that one test file; any other high-entropy value there fails.

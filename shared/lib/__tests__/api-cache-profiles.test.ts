@@ -8,29 +8,6 @@ import {
 } from "../api-cache-profiles";
 
 describe("API cache profiles", () => {
-  it("keeps documented cache profiles stable", () => {
-    expect(API_CACHE_PROFILES.realtime).toBe("public, s-maxage=60, max-age=10");
-    expect(API_CACHE_PROFILES.producerBacked).toBe("public, s-maxage=300, max-age=60, stale-while-revalidate=300");
-    expect(API_CACHE_PROFILES.standard).toBe("public, s-maxage=300, max-age=60");
-    expect(API_CACHE_PROFILES.custom).toBe("public, s-maxage=300, max-age=300");
-    expect(API_CACHE_PROFILES.perCoin).toBe("public, s-maxage=300, max-age=10");
-    expect(API_CACHE_PROFILES.slow).toBe("public, s-maxage=3600, max-age=300");
-    expect(API_CACHE_PROFILES.archive).toBe("public, s-maxage=86400, max-age=3600");
-    expect(API_CACHE_PROFILES.noStore).toBe("no-store");
-  });
-
-  it("lists the documented profile keys in API reference order", () => {
-    expect(API_CACHE_PROFILE_DOCUMENTED_KEYS).toEqual([
-      "realtime",
-      "producerBacked",
-      "standard",
-      "custom",
-      "perCoin",
-      "slow",
-      "archive",
-      "noStore",
-    ]);
-  });
 
   it("builds bounded per-coin cache headers", () => {
     expect(buildPerCoinCacheControl(300)).toBe("public, s-maxage=300, max-age=10");

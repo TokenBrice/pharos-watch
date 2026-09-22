@@ -1,3 +1,4 @@
+import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { buildUniswapV4RegisteredExecutionTarget } from "./execution-targets/uniswap-v4";
 import {
   canonicalExitRouteAssetKey,
@@ -12,12 +13,9 @@ import type {
 } from "./types";
 import { isCryptoSwap, normalizeProtocol } from "./pool-helpers";
 import type { DexAmmExecutionModel, DexExecutionCapabilityGate } from "@shared/types/market";
+import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
 import {
-  DEX_MEASURED_TARGET_SCHEMA_VERSION,
-  buildDexMeasuredExecutionTargetId,
-  type DexMeasuredExecutionTarget,
-} from "@shared/types/measured-execution";
-import {
+  buildMeasuredExecutionTargetValue,
   buildUniV3ExecutionCandidateKey,
   buildUniV3MeasuredExecutionTarget,
   parseUniV3FeePips,
@@ -36,10 +34,7 @@ import {
   getCurveStableSwapNgPolicy,
 } from "../measured-execution/curve-stableswap-ng";
 import { buildCurveCompositeMeasuredExecutionTarget } from "../measured-execution/curve-composite";
-import {
-  buildEvmV2ExecutionCandidate,
-  resolveEvmV2ExecutionCandidate,
-} from "./constant-product-v2";
+import { buildEvmV2ExecutionCandidate } from "./constant-product-v2";
 import { CURVE_STABLESWAP_FEE_BOUND } from "./curve-stableswap-rates";
 import { parsePoolSymbols } from "./pool-helpers";
 import type {
@@ -57,7 +52,6 @@ import {
 export interface DirectApiExecutionTargetContext {
   uniV3ExecutionCandidates: PoolProcessingContext["uniV3ExecutionCandidates"];
   uniswapV4ExecutionCandidates: PoolProcessingContext["uniswapV4ExecutionCandidates"];
-  aerodromeIsStable: PoolProcessingContext["aerodromeIsStable"];
   measuredTargetCapturedAt: number;
   contractMetaByChainAddress: SymbolLookups["contractMetaByChainAddress"];
 }
@@ -118,13 +112,10 @@ function buildDirectApiFactoryInput(input: {
     curvePoolMap: new Map(),
     uniV3PoolFees: new Map(),
     uniV3SymbolFees: new Map(),
-    aerodromeIsStable: executionTargetContext.aerodromeIsStable,
     uniV3ExecutionCandidates: executionTargetContext.uniV3ExecutionCandidates,
     stablecoinPriceById,
     measuredTargetCapturedAt: executionTargetContext.measuredTargetCapturedAt,
     validationReferences,
-    aerodromeV2ExecutionCandidates: new Map(),
-    uniqueAerodromeV2ExecutionCandidates: new Map(),
     curvePoolCandidatesByFingerprint: new Map(),
     uniswapV4ExecutionCandidates: executionTargetContext.uniswapV4ExecutionCandidates,
     contractMetaByChainAddress: executionTargetContext.contractMetaByChainAddress,
@@ -224,6 +215,30 @@ function findExactUniV3Candidates(
 const CURVE_STABLESWAP_MAX_COIN_PRICE_SPREAD = 1.01;
 const ACTIVE_CURVE_CRYPTOSWAP_MAX_TVL_RELATIVE_DRIFT = 0.005;
 
+export function verifyCurveExecutionCoins(input: {
+  executionCoins: readonly { address: string; symbol: string; decimals: number }[] | null | undefined;
+  policyTokens: readonly { address: string; symbol: string; decimals: number; trackedAssetId?: string }[];
+  chain?: string;
+  chainAddressToId?: ReadonlyMap<string, string>;
+  expectedTrackedAssetIds?: readonly string[];
+}): boolean {
+  if (input.executionCoins?.length !== input.policyTokens.length) return false;
+  return input.policyTokens.every((expected, index) => {
+    const actual = input.executionCoins![index]!;
+    const trackedAssetId = input.expectedTrackedAssetIds?.[index] ?? expected.trackedAssetId;
+    return actual.address.toLowerCase() === expected.address &&
+      actual.symbol.trim().toUpperCase() === expected.symbol.toUpperCase() &&
+      actual.decimals === expected.decimals &&
+      (
+        trackedAssetId == null ||
+        input.chainAddressToId == null ||
+        (
+          input.chain != null &&
+          input.chainAddressToId.get(canonicalExitRouteAssetKey(input.chain, actual.address)) === trackedAssetId
+        )
+      );
+  });
+}
 export interface CurveStableswapExecutionCapability {
   executionModel: DexAmmExecutionModel | null;
   gate: DexExecutionCapabilityGate | null;
@@ -234,15 +249,15 @@ function buildCurveStableswapRateInputExecutionCandidate(
   curveData: CurvePoolEntry,
 ): CurveStableswapRateInputExecutionCandidate | null {
   if (curveData.registryId.trim().toLowerCase() !== "factory-stable-ng") return null;
-  const poolAddress = curveData.poolAddress?.trim().toLowerCase();
+  const poolAddress = canonicalEvmAddress(curveData.poolAddress);
   const coins = curveData.executionCoins;
-  if (!poolAddress || !/^0x[a-f0-9]{40}$/.test(poolAddress) || !coins || coins.length < 2 || coins.length > 8) {
+  if (!poolAddress || !coins || coins.length < 2 || coins.length > 8) {
     return null;
   }
   const candidateCoins = coins.map((coin) => {
-    const address = coin.address.trim().toLowerCase();
+    const address = canonicalEvmAddress(coin.address);
     if (
-      !/^0x[a-f0-9]{40}$/.test(address) ||
+      !address ||
       !coin.symbol.trim() ||
       !Number.isInteger(coin.decimals) ||
       coin.decimals < 0 ||
@@ -253,7 +268,7 @@ function buildCurveStableswapRateInputExecutionCandidate(
       return null;
     }
     return {
-      address: address as `0x${string}`,
+      address,
       symbol: coin.symbol,
       decimals: coin.decimals,
       referencePriceUsd: coin.usdPrice,
@@ -262,7 +277,7 @@ function buildCurveStableswapRateInputExecutionCandidate(
   if (candidateCoins.some((coin) => coin == null)) return null;
   const exactCoins = candidateCoins as NonNullable<typeof candidateCoins[number]>[];
   if (new Set(exactCoins.map((coin) => coin.address)).size !== exactCoins.length) return null;
-  return { poolAddress: poolAddress as `0x${string}`, coins: exactCoins };
+  return { poolAddress, coins: exactCoins };
 }
 
 export function buildCurveStableswapExecutionCapability(
@@ -364,16 +379,6 @@ export function buildCurveStableswapExecutionCapability(
   };
 }
 
-/** @internal Exported for focused Curve StableSwap model tests. */
-export function buildCurveStableswapExecutionModel(
-  curveData: CurvePoolEntry | undefined,
-  chainNorm: string,
-  stablecoinId: string,
-  chainAddressToId: Map<string, string>,
-): DexAmmExecutionModel | null {
-  return buildCurveStableswapExecutionCapability(curveData, chainNorm, stablecoinId, chainAddressToId).executionModel;
-}
-
 /** @internal Exported for focused execution-target validation. */
 export function buildCurveCryptoSwapMeasuredExecutionTarget(input: {
   curveData: CurvePoolEntry | undefined;
@@ -391,10 +396,10 @@ export function buildCurveCryptoSwapMeasuredExecutionTarget(input: {
   if (!policy) return null;
   const executionCoins = curveData.executionCoins;
   if (!executionCoins || executionCoins.length !== 2) return null;
-  const poolAddress = curveData.poolAddress.toLowerCase();
-  if (!/^0x[a-f0-9]{40}$/.test(poolAddress)) return null;
-  const poolTokenAddresses = executionCoins.map((coin) => coin.address.toLowerCase());
-  if (poolTokenAddresses.some((address) => !/^0x[a-f0-9]{40}$/.test(address))) return null;
+  const poolAddress = canonicalEvmAddress(curveData.poolAddress);
+  if (!poolAddress) return null;
+  const poolTokenAddresses = executionCoins.map((coin) => canonicalEvmAddress(coin.address));
+  if (poolTokenAddresses.some((address) => address === null)) return null;
   const inputIndex = executionCoins.findIndex(
     (coin) => input.chainAddressToId.get(canonicalExitRouteAssetKey(input.chain, coin.address)) === input.stablecoinId,
   );
@@ -414,19 +419,7 @@ export function buildCurveCryptoSwapMeasuredExecutionTarget(input: {
   if (outputStablecoinId === input.stablecoinId) return null;
   const poolId = canonicalExitRouteAssetKey(input.chain, poolAddress);
   const canonicalTokens = poolTokenAddresses as [`0x${string}`, `0x${string}`];
-  const targetId = buildDexMeasuredExecutionTargetId({
-    adapterProfileId: CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID,
-    stablecoinId: input.stablecoinId,
-    chain: input.chain,
-    protocol: "curve",
-    poolId,
-    tokenInAddress: canonicalTokens[inputIndex]!,
-    tokenOutAddress: canonicalTokens[outputIndex]!,
-    poolTokenAddresses: canonicalTokens,
-  });
-  return {
-    schemaVersion: DEX_MEASURED_TARGET_SCHEMA_VERSION,
-    targetId,
+  return buildMeasuredExecutionTargetValue({
     stablecoinId: input.stablecoinId,
     adapterProfileId: CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID,
     protocol: "curve",
@@ -450,7 +443,7 @@ export function buildCurveCryptoSwapMeasuredExecutionTarget(input: {
     retainedTvlUsd: input.retainedTvlUsd,
     retainedPoolPriceUsd: inputReferencePriceUsd,
     capturedAt: input.capturedAt,
-  };
+  });
 }
 
 const CURVE_3POOL_REVIEWED_INPUT_IDS = new Set(["usdc-circle", "usdt-tether"]);
@@ -510,17 +503,13 @@ export function buildCurveStableSwapMeasuredExecutionTargets(input: {
   const executionCoins = curveData.executionCoins;
   if (!executionCoins) return [];
   const poolTokenAddresses = policy.poolTokens.map((token) => token.address);
-  for (let index = 0; index < policy.poolTokens.length; index += 1) {
-    const expected = policy.poolTokens[index]!;
-    const actual = executionCoins[index]!;
-    if (
-      actual.address.toLowerCase() !== expected.address ||
-      actual.symbol.trim().toUpperCase() !== expected.symbol ||
-      actual.decimals !== expected.decimals ||
-      input.chainAddressToId.get(canonicalExitRouteAssetKey(input.chain, actual.address)) !==
-        CURVE_3POOL_TRACKED_IDS[index]
-    ) return [];
-  }
+  if (!verifyCurveExecutionCoins({
+    executionCoins,
+    policyTokens: policy.poolTokens,
+    chain: input.chain,
+    chainAddressToId: input.chainAddressToId,
+    expectedTrackedAssetIds: CURVE_3POOL_TRACKED_IDS,
+  })) return [];
   const referencePrices = CURVE_3POOL_TRACKED_IDS.map((stablecoinId) =>
     input.stablecoinPriceById?.get(stablecoinId)
   );
@@ -534,19 +523,7 @@ export function buildCurveStableSwapMeasuredExecutionTargets(input: {
     const tokenInPolicy = policy.poolTokens[inputIndex]!;
     const tokenIn = executionCoins[inputIndex]!;
     const tokenOut = executionCoins[outputIndex]!;
-    const targetId = buildDexMeasuredExecutionTargetId({
-      adapterProfileId: CURVE_STABLESWAP_ADAPTER_PROFILE_ID,
-      stablecoinId: input.stablecoinId,
-      chain: input.chain,
-      protocol: "curve",
-      poolId: physicalPoolId,
-      tokenInAddress: tokenInPolicy.address,
-      tokenOutAddress: tokenOutPolicy.address,
-      poolTokenAddresses,
-    });
-    return [{
-      schemaVersion: DEX_MEASURED_TARGET_SCHEMA_VERSION,
-      targetId,
+    return [buildMeasuredExecutionTargetValue({
       stablecoinId: input.stablecoinId,
       adapterProfileId: CURVE_STABLESWAP_ADAPTER_PROFILE_ID,
       protocol: "curve",
@@ -570,7 +547,7 @@ export function buildCurveStableSwapMeasuredExecutionTargets(input: {
       retainedTvlUsd: input.retainedTvlUsd,
       retainedPoolPriceUsd: referencePrices[inputIndex]!,
       capturedAt: input.capturedAt,
-    }];
+    })];
   });
 }
 
@@ -592,15 +569,10 @@ export function resolveReviewedCurveStableSwapNgPhysicalPoolId(input: {
     curveData.poolAddress?.toLowerCase() !== policy.poolAddress ||
     curveData.executionCoins?.length !== policy.poolTokens.length
   ) return null;
-  for (let index = 0; index < policy.poolTokens.length; index += 1) {
-    const expected = policy.poolTokens[index]!;
-    const actual = curveData.executionCoins[index]!;
-    if (
-      actual.address.toLowerCase() !== expected.address ||
-      actual.symbol.trim().toUpperCase() !== expected.symbol ||
-      actual.decimals !== expected.decimals
-    ) return null;
-  }
+  if (!verifyCurveExecutionCoins({
+    executionCoins: curveData.executionCoins,
+    policyTokens: policy.poolTokens,
+  })) return null;
   return canonicalExitRouteAssetKey(input.chain, policy.poolAddress);
 }
 
@@ -629,17 +601,12 @@ export function buildCurveStableSwapNgMeasuredExecutionTarget(input: {
     !curveData?.executionCoins
   ) return null;
 
-  for (let index = 0; index < policy.poolTokens.length; index += 1) {
-    const expected = policy.poolTokens[index]!;
-    const actual = curveData.executionCoins[index]!;
-    if (
-      actual.address.toLowerCase() !== expected.address ||
-      actual.symbol.trim().toUpperCase() !== expected.symbol ||
-      actual.decimals !== expected.decimals ||
-      input.chainAddressToId.get(canonicalExitRouteAssetKey(input.chain, actual.address)) !==
-        expected.trackedAssetId
-    ) return null;
-  }
+  if (!verifyCurveExecutionCoins({
+    executionCoins: curveData.executionCoins,
+    policyTokens: policy.poolTokens,
+    chain: input.chain,
+    chainAddressToId: input.chainAddressToId,
+  })) return null;
 
   const tokenInPolicy = policy.poolTokens[policy.inputIndex];
   const tokenOutPolicy = policy.poolTokens[policy.outputIndex];
@@ -654,19 +621,7 @@ export function buildCurveStableSwapNgMeasuredExecutionTarget(input: {
     !(outputReferencePriceUsd! > 0)
   ) return null;
   const poolTokenAddresses = policy.poolTokens.map((token) => token.address);
-  const targetId = buildDexMeasuredExecutionTargetId({
-    adapterProfileId: CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID,
-    stablecoinId: input.stablecoinId,
-    chain: input.chain,
-    protocol: "curve",
-    poolId: physicalPoolId,
-    tokenInAddress: tokenInPolicy.address,
-    tokenOutAddress: tokenOutPolicy.address,
-    poolTokenAddresses,
-  });
-  return {
-    schemaVersion: DEX_MEASURED_TARGET_SCHEMA_VERSION,
-    targetId,
+  return buildMeasuredExecutionTargetValue({
     stablecoinId: input.stablecoinId,
     adapterProfileId: CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID,
     protocol: "curve",
@@ -690,7 +645,7 @@ export function buildCurveStableSwapNgMeasuredExecutionTarget(input: {
     retainedTvlUsd: input.retainedTvlUsd,
     retainedPoolPriceUsd: inputReferencePriceUsd!,
     capturedAt: input.capturedAt,
-  };
+  });
 }
 
 /**
@@ -698,20 +653,27 @@ export function buildCurveStableSwapNgMeasuredExecutionTarget(input: {
  * snapshots identify exactly one physical pool by TVL and that address is
  * already in the reviewed active CryptoSwap cohort.
  */
-export function resolveActiveCurveCryptoSwapCandidateByTvl(
+export function uniqueCandidateByTvl(
   candidates: readonly CurvePoolEntry[],
   retainedTvlUsd: number,
-  chain: string,
+  maxRelativeDrift = ACTIVE_CURVE_CRYPTOSWAP_MAX_TVL_RELATIVE_DRIFT,
 ): CurvePoolEntry | null {
   if (!Number.isFinite(retainedTvlUsd) || retainedTvlUsd <= 0) return null;
   const matching = candidates.filter(
     (candidate) =>
       Number.isFinite(candidate.tvl) &&
       candidate.tvl > 0 &&
-      Math.abs(candidate.tvl / retainedTvlUsd - 1) <= ACTIVE_CURVE_CRYPTOSWAP_MAX_TVL_RELATIVE_DRIFT,
+      Math.abs(candidate.tvl / retainedTvlUsd - 1) <= maxRelativeDrift,
   );
-  if (matching.length !== 1) return null;
-  const candidate = matching[0]!;
+  return matching.length === 1 ? matching[0]! : null;
+}
+export function resolveActiveCurveCryptoSwapCandidateByTvl(
+  candidates: readonly CurvePoolEntry[],
+  retainedTvlUsd: number,
+  chain: string,
+): CurvePoolEntry | null {
+  const candidate = uniqueCandidateByTvl(candidates, retainedTvlUsd);
+  if (!candidate) return null;
   if (!candidate.poolAddress || !isCryptoSwap(candidate.registryId) || candidate.isMetaPool || candidate.apiIsBroken) {
     return null;
   }
@@ -731,15 +693,8 @@ export function resolveCurveStableswapCandidateByTvl(
   candidates: readonly CurvePoolEntry[],
   retainedTvlUsd: number,
 ): CurvePoolEntry | null {
-  if (!Number.isFinite(retainedTvlUsd) || retainedTvlUsd <= 0) return null;
-  const matching = candidates.filter(
-    (candidate) =>
-      Number.isFinite(candidate.tvl) &&
-      candidate.tvl > 0 &&
-      Math.abs(candidate.tvl / retainedTvlUsd - 1) <= ACTIVE_CURVE_CRYPTOSWAP_MAX_TVL_RELATIVE_DRIFT,
-  );
-  if (matching.length !== 1) return null;
-  const candidate = matching[0]!;
+  const candidate = uniqueCandidateByTvl(candidates, retainedTvlUsd);
+  if (!candidate) return null;
   if (
     candidate.apiIsBroken ||
     candidate.isMetaPool ||
@@ -902,36 +857,14 @@ export function buildPoolExecutionCapability(
     (protocol === "uniswap-v4" && !uniswapV4MeasuredTarget)
       ? { family: "measured-execution", reason: "target-unresolved" }
       : null;
-  const aerodromeV2ExecutionCandidate =
-    protocol === "aerodrome"
-      ? resolveEvmV2ExecutionCandidate({
-          chain: chainNorm,
-          protocol: pool.project,
-          poolAddressOrId: pool.pool,
-          tokenAddresses: pool.underlyingTokens ?? [],
-          exactCandidates: context.aerodromeV2ExecutionCandidates,
-          uniqueFingerprintCandidates:
-            context.uniqueAerodromeV2ExecutionCandidates,
-        })
-      : undefined;
-  const evmV2ExecutionCandidate =
-    (resolvedPoolType === "aerodrome-volatile"
-      ? aerodromeV2ExecutionCandidate
-      : undefined) ??
-    buildEvmV2ExecutionCandidate({
-      chain: chainNorm,
-      protocol: pool.project,
-      poolType: resolvedPoolType,
-      poolAddress: pool.pool,
-      tokenAddresses: pool.underlyingTokens ?? [],
-      tokenSymbols: parsePoolSymbols(pool.symbol),
-      confirmedStable:
-        protocol === "aerodrome"
-          ? context.aerodromeIsStable.get(
-              canonicalExitRouteAssetKey(chainNorm, pool.pool),
-            )
-          : undefined,
-    });
+  const evmV2ExecutionCandidate = buildEvmV2ExecutionCandidate({
+    chain: chainNorm,
+    protocol: pool.project,
+    poolType: resolvedPoolType,
+    poolAddress: pool.pool,
+    tokenAddresses: pool.underlyingTokens ?? [],
+    tokenSymbols: parsePoolSymbols(pool.symbol),
+  });
   const executionCapabilityGate =
     curveExecutionCapability.gate &&
     !curveCryptoSwapMeasuredTarget &&

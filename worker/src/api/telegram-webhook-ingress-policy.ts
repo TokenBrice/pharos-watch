@@ -37,6 +37,10 @@ const COMMAND_COOLDOWNS_SEC: Record<string, number> = {
 };
 const CANONICAL_COMMAND_KEYS: Record<string, string> = { "/market": "/brief" };
 
+export function isRecapMutationArgs(args: string): boolean {
+  return /^(?:on|off|time\s+(?:[0-9]|1[0-9]|2[0-3]))$/i.test(args.trim());
+}
+
 type FloodScope = "actor" | "chat";
 
 export function logTelegramWebhookWarning(message: string, action: string, err: unknown): void {
@@ -75,6 +79,7 @@ export async function enforceIngressFlood(
   },
 ): Promise<boolean> {
   let blocked: { flood: TelegramChatCommandFloodResult; scope: FloodScope } | null = null;
+  let evaluatedScopeCount = 0;
   for (const floodScope of floodScopesForUpdate(input.chatId, input.chatType, input.actorUserId)) {
     try {
       const flood = await recordTelegramChatCommandFlood(db, {
@@ -83,6 +88,7 @@ export async function enforceIngressFlood(
         windowSec: CHAT_COMMAND_FLOOD_WINDOW_SEC,
         limit: floodScope.limit,
       });
+      evaluatedScopeCount += 1;
       if (!flood.allowed) {
         blocked = { flood, scope: floodScope.scope };
         break;
@@ -91,7 +97,15 @@ export async function enforceIngressFlood(
       logTelegramWebhookWarning("chat command flood check failed", "command-flood", err);
     }
   }
-  if (!blocked) return true;
+  if (!blocked && evaluatedScopeCount > 0) return true;
+  if (!blocked) {
+    try {
+      await input.reply("Command traffic is busy. Please try again shortly.");
+    } catch (err) {
+      logTelegramWebhookWarning("chat command flood unavailable reply failed", "command-flood", err);
+    }
+    return false;
+  }
 
   if (blocked.flood.firstExceeded) {
     try {

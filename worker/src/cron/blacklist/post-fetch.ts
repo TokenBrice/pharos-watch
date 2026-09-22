@@ -2,10 +2,13 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
 import { getBlacklistPriceAssetId } from "@shared/lib/blacklist";
 import { CONTRACT_CONFIGS } from "../../lib/blacklist-contracts";
 import { D1_BATCH_SIZE } from "../../lib/constants";
-import { buildInClause } from "../../lib/db";
+import { buildInClause, D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "../../lib/db";
 import { type RateLimitedFetch } from "../../lib/evm-logs";
 import { type ChainRpcConfig } from "../../lib/chain-registry";
-import { syncCurrentBalanceCacheForRows } from "../../lib/blacklist/current-balance-cache";
+import {
+  syncCurrentBalanceCacheForRows,
+  type SyncCurrentBalanceCacheResult,
+} from "../../lib/blacklist/current-balance-cache";
 import { type BlacklistRow, shouldSuppressAsMirrorZero } from "../../lib/blacklist/shared";
 import { enrichRowBalances } from "../../lib/blacklist/amount-recovery";
 import { insertBlacklistRows } from "./persistence";
@@ -19,8 +22,6 @@ import {
 } from "../../lib/blacklist/row-preparation";
 
 type BlacklistConfig = (typeof CONTRACT_CONFIGS)[number];
-// D1's practical SQL-variable ceiling can be lower than the nominal 100.
-const EXISTING_BLACKLIST_ID_QUERY_CHUNK = 90;
 
 export interface BlacklistPostFetchCounters {
   attempted: number;
@@ -28,10 +29,6 @@ export interface BlacklistPostFetchCounters {
   failed: number;
 }
 
-export interface CurrentBalanceCacheCounters {
-  updated: number;
-  failed: number;
-}
 
 interface ProcessFetchedBlacklistRowsOptions {
   db: D1Database;
@@ -56,9 +53,9 @@ async function filterNewBlacklistRows(
   if (rows.length === 0) return rows;
 
   const existingIds = new Set<string>();
-  for (let i = 0; i < rows.length; i += EXISTING_BLACKLIST_ID_QUERY_CHUNK) {
+  for (let i = 0; i < rows.length; i += D1_SAFE_IN_CLAUSE_BIND_LIMIT) {
     throwIfAborted(signal);
-    const ids = rows.slice(i, i + EXISTING_BLACKLIST_ID_QUERY_CHUNK).map((row) => row.id);
+    const ids = rows.slice(i, i + D1_SAFE_IN_CLAUSE_BIND_LIMIT).map((row) => row.id);
     const { sql, binds } = buildInClause(ids);
     const result = await runWithOverloadRetry(() => db
         .prepare(`/* blacklist-post-fetch-existing-id-filter */ SELECT id FROM blacklist_events WHERE id IN (${sql})`)
@@ -138,7 +135,7 @@ export async function processFetchedBlacklistRows(
 ): Promise<{
   insertedRows: number;
   enrichCounters: BlacklistPostFetchCounters;
-  currentBalanceCacheCounters: CurrentBalanceCacheCounters;
+  currentBalanceCacheCounters: SyncCurrentBalanceCacheResult;
 }> {
   const newRows = await filterNewBlacklistRows(options.db, options.rows, options.signal);
   const newRowIds = new Set(newRows.map((row) => row.id));
@@ -183,7 +180,12 @@ export async function processFetchedBlacklistRows(
     return {
       insertedRows: 0,
       enrichCounters: { attempted: 0, succeeded: 0, failed: 0 },
-      currentBalanceCacheCounters: { updated: 0, failed: 0 },
+      currentBalanceCacheCounters: {
+        updated: 0,
+        failed: 0,
+        skippedDueBudget: 0,
+        budgetExhausted: false,
+      },
     };
   }
 

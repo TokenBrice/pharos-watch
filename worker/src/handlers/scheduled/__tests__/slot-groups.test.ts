@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import type { ScheduledRuntimeContext } from "../context";
 import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
-import { flattenScheduledSlotGroupTasks, runScheduledSlotGroups } from "../slot-groups";
+import { runScheduledSlotGroups } from "../slot-groups";
+import { logSkippedCronRun } from "../preflight-skip";
 
 function buildRuntime(
   runLeasedCron: ScheduledRuntimeContext["runLeasedCron"],
@@ -220,24 +221,69 @@ describe("scheduled slot groups", () => {
       ["snapshot-supply", "error"], ["snapshot-psi", "skipped"], ["snapshot-safety-grade-history", "ok"],
     ]);
   });
+});
 
-  it("flattens mixed group shapes for preflight accounting", () => {
-    const tasks = flattenScheduledSlotGroupTasks([
-      {
-        mode: "serial",
-        label: "serial",
-        tasks: [{ job: "a", run: async () => undefined }],
-      },
-      {
-        mode: "parallel-serial",
-        label: "chains",
-        chains: [
-          { label: "left", tasks: [{ job: "b", run: async () => undefined }] },
-          { label: "right", tasks: [{ job: "c", run: async () => undefined }] },
-        ],
-      },
-    ]);
+describe("logSkippedCronRun", () => {
+  function recordingRuntime(): { runtime: ScheduledRuntimeContext; binds: unknown[][] } {
+    const binds: unknown[][] = [];
+    const runtime = makeScheduledRuntime({
+      db: makeNoopD1({
+        prepare: () => ({
+          bind: (...args: unknown[]) => {
+            binds.push(args);
+            return { run: async () => ({ meta: { changes: 1 } }) };
+          },
+        }),
+      }),
+      cron: "16,46 * * * *",
+      scheduleKey: "halfHourlyChartsOffset",
+      scheduledTimeMs: null,
+      slotStartedAt: 1_772_000_000,
+      runLeasedCron: vi.fn() as ScheduledRuntimeContext["runLeasedCron"],
+    });
+    return { runtime, binds };
+  }
 
-    expect(tasks.map((task) => task.job)).toEqual(["a", "b", "c"]);
+  function skipMetadata(binds: unknown[]): Record<string, unknown> {
+    const payload = binds.find((bind) => typeof bind === "string" && bind.startsWith("{"));
+    return JSON.parse(String(payload)) as Record<string, unknown>;
+  }
+
+  it("records a skipped preflight run as degraded under a deduplicating run key", async () => {
+    const { runtime, binds } = recordingRuntime();
+
+    await logSkippedCronRun(runtime, {
+      job: "sync-dex-liquidity",
+      reason: "circuit-open",
+      message: "DEX circuit open",
+      metadata: { circuitSource: "dex-liquidity" },
+    });
+
+    expect(binds[0]).toContain("degraded");
+    expect(binds[0]).toContain(
+      "scheduled-preflight:halfHourlyChartsOffset:1772000000:sync-dex-liquidity:circuit-open",
+    );
+    const metadata = skipMetadata(binds[0]);
+    expect(metadata).toMatchObject({
+      circuitSource: "dex-liquidity",
+      skippedReason: "circuit-open",
+      message: "DEX circuit open",
+      slotStartedAt: 1_772_000_000,
+      scheduleKey: "halfHourlyChartsOffset",
+    });
+    expect(metadata).not.toHaveProperty("skipped");
+  });
+
+  it("allows explicitly benign skip rows", async () => {
+    const { runtime, binds } = recordingRuntime();
+
+    await logSkippedCronRun(runtime, {
+      job: "sync-dex-liquidity",
+      reason: "manually-disabled",
+      status: "ok",
+    });
+
+    expect(binds[0]).toContain("ok");
+    expect(binds[0]).not.toContain("degraded");
   });
 });

@@ -138,6 +138,7 @@ export async function fetchLiquityNativeActivePoolReserves(
         freshnessKind: "same-run-onchain",
         routeStatus,
         routeStatusSource: "onchain",
+        routeObserved: true,
         ...(routeStatusReason ? { routeStatusReason } : {}),
         holderEligibility: "any-holder",
         settlementDelaySec: 0,

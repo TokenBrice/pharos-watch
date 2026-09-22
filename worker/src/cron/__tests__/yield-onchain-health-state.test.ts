@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { buildNextDeterministicOnChainHealthState } from "../yield-sync/state-loading";
 import {
   getDefaultDeterministicOnChainHealthState,
+  parseDeterministicOnChainHealthState,
   type DeterministicOnChainHealthState,
 } from "../yield-sync/cache";
 
@@ -32,6 +33,20 @@ function baseParams(overrides: Partial<Params> = {}): Params {
 function previousWith(overrides: Partial<DeterministicOnChainHealthState>): DeterministicOnChainHealthState {
   return { ...DEFAULT, ...overrides };
 }
+
+describe("parseDeterministicOnChainHealthState", () => {
+  it("resets a far-future cooldown instead of suppressing on-chain reads indefinitely", () => {
+    const parsed = parseDeterministicOnChainHealthState(JSON.stringify({
+      consecutiveAllFailRuns: 9,
+      consecutiveMaskedAllFailRuns: 9,
+      cooldownUntil: START + 10 * 365 * 24 * 3600,
+      lastAttemptedAt: START - 10,
+      lastFailureMissingIds: ["coin-a"],
+    }), START);
+
+    expect(parsed).toEqual(DEFAULT);
+  });
+});
 
 describe("buildNextDeterministicOnChainHealthState", () => {
   it("resets to default when there are no deterministic configs", () => {

@@ -94,9 +94,14 @@ export interface DEWSInput {
   yieldRankChangeAttribution?: YieldRankChangeAttribution | null;
   // Systemic backdrop (optional — latest PSI score from previous cycle)
   psiScore: number | null;
-  // Smoothing (optional — previous reading for averaging)
+  // Smoothing (optional — previous reading for averaging). The persisted
+  // previous generation keeps unavailable signals as `{value: 0, available:
+  // false}`, so a value alone is not evidence: smoothing requires the matching
+  // `*Available` flag to be explicitly `true`.
   prevPoolValue?: number;
+  prevPoolAvailable?: boolean;
   prevDivergValue?: number;
+  prevDivergAvailable?: boolean;
   /**
    * Pre-computed contagion amplifier >= 1.0 derived from other stablecoins'
    * first-pass DEWS bands. 1.0 means no contagion; 1.15 = +15%. Caller must

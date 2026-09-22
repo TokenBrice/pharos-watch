@@ -59,7 +59,7 @@ describe("DEWS publication pointer reader", () => {
         amplifiers: { psi: 1, contagion: 1 }, baseScore: 12, finalScore: 12, availableWeight: 1,
         effectiveWeights: { supply: 1 }, evidenceKinds: ["supply"], insufficientEvidenceReason: null, dataQualityScore: 1, topContributors: [],
       } as unknown as DewsComputedRow;
-      await persistDewsResults({ db, results: [result], eligibleIds: new Set(["usdt-tether"]), publishFreshnessSentinel: false, nowSec });
+      await persistDewsResults({ db, results: [result], eligibleIds: new Set(["usdt-tether"]), degradedSources: [], nowSec });
       for (const table of ["stress_signal_publication_rows", "stress_signals_latest"]) {
         const rows = sqlite.prepare(`SELECT stablecoin_id, computed_at, score, band, signals_json FROM ${table}`).all();
         expect(rows).toEqual([{

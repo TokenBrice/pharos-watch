@@ -5,6 +5,8 @@ import {
   parseSetCommand,
   parseStartPayload,
 } from "../telegram-webhook-parsing";
+import { resolveCoinTargets } from "../telegram-webhook-resolution";
+import { resolveTicker } from "../../lib/telegram/alerts";
 import type { PendingDisambiguationRow } from "../telegram-webhook-shared";
 
 function canonicalPayload(overrides: Record<string, unknown> = {}): string {
@@ -138,6 +140,20 @@ describe("parseSetCommand", () => {
       error: "Safety values: off, all, downgrade-only, upgrade-only",
     });
   });
+
+  it("turns depeg alerts off for `depeg-step off` instead of on", () => {
+    expect(parseSetCommand("USDC depeg-step off")).toEqual({
+      ticker: "USDC",
+      setting: "depeg",
+      enabled: false,
+    });
+    expect(parseSetCommand("USDC depeg-step 250")).toEqual({
+      ticker: "USDC",
+      setting: "depeg-step",
+      enabled: true,
+      step: 250,
+    });
+  });
 });
 
 describe("parseStartPayload", () => {
@@ -151,7 +167,7 @@ describe("parseStartPayload", () => {
     expect(parseStartPayload("SETUP")).toEqual({ kind: "setup" });
   });
 
-  it("accepts only catalog-issued adoption tokens for the bot setup surface", () => {
+  it("routes a pw1 setup token through the adoption path separately from subscribe payloads", () => {
     expect(parseStartPayload("pw1_landing_hero")).toEqual({
       kind: "adoption",
       token: "pw1_landing_hero",
@@ -206,6 +222,7 @@ describe("parseStartPayload", () => {
 
   it("returns none for unknown prefixes or malformed sub payloads", () => {
     expect(parseStartPayload("foo_bar")).toEqual({ kind: "none" });
+    expect(parseStartPayload("sub_usdc")).toEqual({ kind: "none" });
     expect(parseStartPayload("sub_dews")).toEqual({ kind: "none" });
     expect(parseStartPayload("sub__usd-top25")).toEqual({ kind: "none" });
     expect(parseStartPayload("status_")).toEqual({ kind: "none" });
@@ -350,5 +367,62 @@ describe("parsePendingDisambiguation", () => {
     );
 
     expect(parsed).toEqual({ actionType: "setup-step" });
+  });
+});
+
+describe("resolveCoinTargets", () => {
+  it("resolves a single unique ticker", () => {
+    const result = resolveCoinTargets(["USDC"]);
+    expect(result.kind).toBe("complete");
+    if (result.kind === "complete") {
+      expect(result.coins).toHaveLength(1);
+      expect(result.coins[0].symbol).toBe("USDC");
+    }
+  });
+
+  it("deduplicates repeated tickers", () => {
+    const result = resolveCoinTargets(["USDC", "USDC"]);
+    expect(result.kind).toBe("complete");
+    if (result.kind === "complete") {
+      expect(result.coins).toHaveLength(1);
+    }
+  });
+
+  it("returns not_found for unknown ticker", () => {
+    const result = resolveCoinTargets(["XYZZY"]);
+    expect(result.kind).toBe("not_found");
+    if (result.kind === "not_found") {
+      expect(result.ticker).toBe("XYZZY");
+    }
+  });
+
+  it("returns ambiguous with candidates and remaining tickers", () => {
+    const ambiguous = resolveTicker("USDF");
+    expect(ambiguous.status).toBe("ambiguous");
+    const result = resolveCoinTargets(["USDF", "USDC"]);
+    expect(result.kind).toBe("ambiguous");
+    if (result.kind === "ambiguous") {
+      expect(result.ticker).toBe("USDF");
+      expect(result.candidates).toEqual(ambiguous.status === "ambiguous" ? ambiguous.matches : []);
+      expect(result.remainingTickers).toEqual(["USDC"]);
+    }
+  });
+
+  it("includes initialCoins in the result", () => {
+    const initial = [{ id: "dai-maker", symbol: "DAI", name: "Dai" }];
+    const result = resolveCoinTargets(["USDC"], initial);
+    expect(result.kind).toBe("complete");
+    if (result.kind === "complete") {
+      expect(result.coins.length).toBe(2);
+      expect(result.coins.map((c) => c.symbol).sort()).toEqual(["DAI", "USDC"]);
+    }
+  });
+
+  it("stops at first not_found ticker", () => {
+    const result = resolveCoinTargets(["USDC", "XYZZY", "DAI"]);
+    expect(result.kind).toBe("not_found");
+    if (result.kind === "not_found") {
+      expect(result.ticker).toBe("XYZZY");
+    }
   });
 });

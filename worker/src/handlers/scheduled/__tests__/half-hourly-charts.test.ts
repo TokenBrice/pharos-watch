@@ -261,7 +261,6 @@ describe("half-hourly charts scheduling", () => {
       expect.any(Function),
       scheduledRuntime.slotStartedAt,
       {
-        publishLiquidity: true,
         publishShadowTargets: false,
         stageReadyDeadlineMs: scheduledRuntime.scheduledTimeMs! + 90_000,
       },

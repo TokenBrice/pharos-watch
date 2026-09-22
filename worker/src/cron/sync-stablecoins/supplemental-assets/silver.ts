@@ -115,6 +115,7 @@ export async function fetchSilverTokens(
         return {
           mcap: aggregate?.mcap ?? mcapMap[meta.id] ?? 0,
           supplySource: aggregate?.supplySource ?? "coingecko-fallback",
+          supplyObservedAt: aggregate?.supplyObservedAt,
           chainCirculating: aggregate?.chainCirculating,
         };
       },

@@ -1,3 +1,4 @@
+import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { logWorkerEventArgs } from "../lib/structured-log";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import { safetyScorePublicationIdentitiesAreComparable } from "@shared/lib/safety-score-publication";
@@ -13,12 +14,12 @@ import {
   type YieldSafetyReason,
   type YieldVenueRiskTier,
 } from "@shared/types/yield";
-import { computePYS, yieldStabilityToApyVarianceScore } from "@shared/lib/yield-scoring";
+import { computePYS, yieldStabilityToApyVarianceScore, PYS_DEFAULT_SAFETY_SCORE as DEFAULT_SAFETY_SCORE } from "@shared/lib/yield-scoring";
 import { assessYieldEvidence } from "@shared/lib/yield-evidence";
 import { projectYieldRankingsSummary } from "@shared/lib/yield-rankings-summary";
 import type { YieldRankingsSummaryResponse } from "@shared/types/yield-summary";
 import { numberValue as finiteNumber } from "@shared/lib/type-guards";
-import { resolveYieldRowSafety } from "@shared/lib/yield-opportunity-risk";
+import { resolveYieldRowSafety, stripSafetyDerivedSourceRisk } from "@shared/lib/yield-opportunity-risk";
 import { classifyYieldSourceAgeTier, classifyYieldSourceFreshness, derivePysNullReason } from "../lib/yield-ranking-helpers";
 import {
   classifyYieldBenchmarkFreshness,
@@ -30,30 +31,15 @@ import {
   buildYieldRankChangeAttribution,
   compareYieldRankRows,
 } from "../lib/yield-rank-attribution";
-import {
-  YIELD_METHODOLOGY_CHANGELOG_PATH,
-  YIELD_METHODOLOGY_VERSION,
-  YIELD_METHODOLOGY_VERSION_LABEL,
-} from "@shared/lib/methodology-versions/yield-methodology";
+import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { addFreshnessHeaders, buildFreshnessMeta } from "../lib/api-freshness";
-import { buildMethodologyEnvelope } from "../lib/api-methodology";
 import { createCacheHandler } from "../lib/api-cache-read";
 import { errorResponse, jsonResponseWithHeaders } from "../lib/api-response";
-import { CACHE_PROFILES, DEFAULT_SAFETY_SCORE } from "../lib/constants";
+
 import { computeSafetyScoresSnapshot } from "../lib/safety-scores";
 
 const YIELD_RANKINGS_MAX_AGE_SEC = CRON_INTERVALS["sync-yield-data"];
 
-function buildYieldMethodology(asOf: number) {
-  return buildMethodologyEnvelope({
-    version: YIELD_METHODOLOGY_VERSION,
-    versionLabel: YIELD_METHODOLOGY_VERSION_LABEL,
-    currentVersion: YIELD_METHODOLOGY_VERSION,
-    currentVersionLabel: YIELD_METHODOLOGY_VERSION_LABEL,
-    changelogPath: YIELD_METHODOLOGY_CHANGELOG_PATH,
-    asOf,
-  });
-}
 
 function hasYieldPublicationContract(payload: YieldRankingsResponse): boolean {
   const publication = payload.publication;
@@ -70,15 +56,6 @@ function hasYieldPublicationContract(payload: YieldRankingsResponse): boolean {
   );
 }
 
-function normalizeYieldRankingsContract(
-  payload: YieldRankingsResponse,
-  cached: { updatedAt: number },
-): YieldRankingsResponse {
-  return {
-    ...payload,
-    methodology: payload.methodology ?? buildYieldMethodology(finiteNumber(payload.updatedAt) ?? cached.updatedAt),
-  };
-}
 
 function recomputeYieldScore(
   row: YieldRanking,
@@ -464,8 +441,6 @@ function hydrateYieldRankingsWithLiveSafety(
     degradationReasons,
     payload: {
       ...payload,
-      methodology:
-        payload.methodology ?? buildYieldMethodology(finiteNumber(payload.updatedAt) ?? Math.floor(Date.now() / 1000)),
       ...(degradationReasons.length > 0
         ? {
             warnings: [
@@ -507,18 +482,6 @@ function hasCompatibleSafetyIdentity(
   );
 }
 
-function removeSafetyDerivedSourceRisk(sourceRisk: YieldRanking["sourceRisk"]): YieldRanking["sourceRisk"] {
-  if (sourceRisk == null) return sourceRisk;
-
-  const { opportunityRisk: _opportunityRisk, ...independentSourceRisk } = sourceRisk;
-  return {
-    ...independentSourceRisk,
-    underlyingSafetyScore: null,
-    trancheSafetyScore: null,
-    trancheSafetyPenalty: null,
-  };
-}
-
 function removeSafetyDerivedRankChangeAttribution(
   attribution: YieldRanking["rankChangeAttribution"],
 ): YieldRanking["rankChangeAttribution"] {
@@ -553,7 +516,7 @@ function canServePublishTimeSafety(
 
 function markYieldRankingsSafetyStale(
   payload: YieldRankingsResponse,
-  reason: "safety-snapshot-unavailable" | "safety-identity-missing" | "safety-identity-mismatch",
+  reason: "safety-snapshot-unavailable" | "safety-hydration-error" | "safety-identity-missing" | "safety-identity-mismatch",
   source: LiveSafetyHydrationSource,
 ): YieldRankingsResponse {
   const { coveredCount, trackedCount, coverageRatio } = countRowSafetyCoverage(payload.rankings);
@@ -592,14 +555,16 @@ function markYieldRankingsSafetyStale(
 
 function degradeYieldRankingsSafety(
   payload: YieldRankingsResponse,
-  reason: "safety-snapshot-unavailable" | "safety-identity-missing" | "safety-identity-mismatch",
+  reason: "safety-snapshot-unavailable" | "safety-hydration-error" | "safety-identity-missing" | "safety-identity-mismatch",
   source: LiveSafetyHydrationSource,
 ): YieldRankingsResponse {
+  const safetyReason: YieldSafetyReason =
+    reason === "safety-hydration-error" ? "safety-snapshot-unavailable" : reason;
   const rankings = payload.rankings.map((row) => ({
     ...row,
     safetyScore: null,
     safetyGrade: "NR" as const,
-    safetyReason: reason,
+    safetyReason,
     pharosYieldScore: null,
     // B37: the row's own reason survived the safety loss (source-stale,
     // benchmark-stale, apy-non-positive, ...) — rewriting it to `safety-unrated`
@@ -609,10 +574,10 @@ function degradeYieldRankingsSafety(
         ? row.pysNullReason
         : ("safety-unrated" as const),
     yieldToRisk: null,
-    sourceRisk: removeSafetyDerivedSourceRisk(row.sourceRisk),
+    sourceRisk: stripSafetyDerivedSourceRisk(row.sourceRisk),
     altSources: row.altSources.map((alternate) => ({
       ...alternate,
-      sourceRisk: removeSafetyDerivedSourceRisk(alternate.sourceRisk),
+      sourceRisk: stripSafetyDerivedSourceRisk(alternate.sourceRisk),
     })),
     rankChangeAttribution: removeSafetyDerivedRankChangeAttribution(row.rankChangeAttribution),
     warningSignals: row.warningSignals.includes("safety-unrated")
@@ -626,7 +591,7 @@ function degradeYieldRankingsSafety(
           sourceFreshness: resolveHydratedSourceFreshness(row),
           usedDefaultSafety: true,
           safetyProvenance: "safety-snapshot-unavailable" as const,
-          safetyReason: reason,
+          safetyReason,
           safetyScoreIdentity: source.safetyScoreIdentity,
           scoreQualification: "NR" as const,
           scoreQualified: false,
@@ -692,6 +657,19 @@ function buildYieldRankingsResponse(
   );
 }
 
+function buildDegradedYieldRankingsResponse(
+  payload: YieldRankingsResponse,
+  cached: { updatedAt: number },
+  reason: "safety-snapshot-unavailable" | "safety-hydration-error" | "safety-identity-missing" | "safety-identity-mismatch",
+  source: LiveSafetyHydrationSource,
+  project: (payload: YieldRankingsResponse) => YieldRankingsResponse | YieldRankingsSummaryResponse,
+): Response {
+  const fallbackPayload = canServePublishTimeSafety(payload, cached)
+    ? markYieldRankingsSafetyStale(payload, reason, source)
+    : degradeYieldRankingsSafety(payload, reason, source);
+  return buildYieldRankingsResponse(project(fallbackPayload), cached, [reason]);
+}
+
 /**
  * GET /api/yield-rankings
  * Returns cached yield rankings with values hydrated only from the exact,
@@ -711,7 +689,7 @@ function createYieldRankingsCacheHandler(
       if (!hasYieldPublicationContract(payload as YieldRankingsResponse)) {
         return errorResponse(503, "Cached yield-rankings payload is malformed");
       }
-      const validatedPayload = normalizeYieldRankingsContract(payload as YieldRankingsResponse, cached);
+      const validatedPayload = payload as YieldRankingsResponse;
       try {
         const snapshot = await computeSafetyScoresSnapshot(db);
         const hydrationSource: LiveSafetyHydrationSource = {
@@ -726,18 +704,12 @@ function createYieldRankingsCacheHandler(
           const reason = snapshot.safetyScoreIdentity == null && snapshot.kind === "ok"
             ? "safety-identity-missing"
             : "safety-snapshot-unavailable";
-          const fallbackPayload = canServePublishTimeSafety(validatedPayload, cached)
-            ? markYieldRankingsSafetyStale(validatedPayload, reason, hydrationSource)
-            : degradeYieldRankingsSafety(validatedPayload, reason, hydrationSource);
-          return buildYieldRankingsResponse(project(fallbackPayload), cached, [reason]);
+          return buildDegradedYieldRankingsResponse(validatedPayload, cached, reason, hydrationSource, project);
         }
         if (!hasCompatibleSafetyIdentity(validatedPayload, snapshot.safetyScoreIdentity)) {
           const publishedIdentity = validatedPayload.provenance?.safetySnapshot.safetyScoreIdentity;
           const reason = publishedIdentity == null ? "safety-identity-missing" : "safety-identity-mismatch";
-          const fallbackPayload = canServePublishTimeSafety(validatedPayload, cached)
-            ? markYieldRankingsSafetyStale(validatedPayload, reason, hydrationSource)
-            : degradeYieldRankingsSafety(validatedPayload, reason, hydrationSource);
-          return buildYieldRankingsResponse(project(fallbackPayload), cached, [reason]);
+          return buildDegradedYieldRankingsResponse(validatedPayload, cached, reason, hydrationSource, project);
         }
         const hydrated = hydrateYieldRankingsWithLiveSafety(validatedPayload, snapshot.scores, hydrationSource);
         if (hydrated.degradationReasons.length > 0) {
@@ -752,12 +724,15 @@ function createYieldRankingsCacheHandler(
           publicationGenerationId: null,
           methodologyVersion: null,
           publishedAt: null,
-          degradationReasons: ["safety-snapshot-unavailable"],
+          degradationReasons: ["safety-hydration-error"],
         };
-        const fallbackPayload = canServePublishTimeSafety(validatedPayload, cached)
-          ? markYieldRankingsSafetyStale(validatedPayload, "safety-snapshot-unavailable", hydrationSource)
-          : degradeYieldRankingsSafety(validatedPayload, "safety-snapshot-unavailable", hydrationSource);
-        return buildYieldRankingsResponse(project(fallbackPayload), cached, ["safety-snapshot-unavailable"]);
+        return buildDegradedYieldRankingsResponse(
+          validatedPayload,
+          cached,
+          "safety-hydration-error",
+          hydrationSource,
+          project,
+        );
       }
     },
   });

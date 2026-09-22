@@ -8,7 +8,13 @@ import { mapWithConcurrency } from "../../lib/concurrency";
 import { rethrowIfAborted } from "../../lib/abort";
 import { fetchEvmCodeAtBlock } from "../../lib/evm-rpc";
 import { runAdapterIo } from "./concurrency";
-import { decodeAbiWordAt, decodeStrictAddressArrayWord, decodeStrictAddressWord, decodeUint256Word } from "./abi-decode";
+import {
+  decodeAbiWordAt,
+  decodeStrictAddressArrayWord,
+  decodeStrictAddressWord,
+  strictAddressDecoder,
+  strictUint256Decoder,
+} from "./abi-decode";
 import { pinnedBlockPlan } from "./evm-observation-plan";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
@@ -71,15 +77,12 @@ const IDENTITIES: Record<string, { symbol: string; risk: ReserveSlice["risk"]; c
 function query(label: string, contract: string, signature: string, address?: string): OnchainMulticall3Call {
   return { label, contract, data: toFunctionSelector(signature) + (address ? encodeAddress(address) : ""), allowFailure: true };
 }
-function uint(raw: string | undefined, label: string): bigint {
-  const value = decodeUint256Word(raw);
-  if (value == null) throw new Error(`${KEY}: unreadable ${label}`);
-  return value;
-}
+const uint = strictUint256Decoder(KEY);
+const strictAddress = strictAddressDecoder(KEY);
 function address(raw: string | null | undefined, label: string): string {
-  const value = decodeStrictAddressWord(raw);
-  if (!value || value === ZERO) throw new Error(`${KEY}: unreadable ${label}`);
-  return value.toLowerCase();
+  const value = strictAddress(raw, label);
+  if (value === ZERO) throw new Error(`${KEY}: unreadable ${label}`);
+  return value;
 }
 
 /**

@@ -5,9 +5,7 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 import { writeHistoricalSnapshots } from "../dex-liquidity/persistence";
 import type { FullScoreResult } from "../dex-liquidity/types";
 import { makeFullScoreResult } from "./dex-liquidity-persistence.test-support";
-import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/liquidity-score";
-
-const NOW_SEC = Math.floor(Date.UTC(2026, 6, 10, 12) / 1000);
+import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";const NOW_SEC = Math.floor(Date.UTC(2026, 6, 10, 12) / 1000);
 const SNAPSHOT_DATE = NOW_SEC - (NOW_SEC % 86_400);
 const ACTIVE_ID_LIST = ACTIVE_STABLECOINS.map((coin) => coin.id);
 

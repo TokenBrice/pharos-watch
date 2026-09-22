@@ -32,7 +32,7 @@ describe("selectYieldSource ordering", () => {
     sourceRiskScore: 20,
     venueRiskTier: "low",
     deploymentPlace: "lending",
-    sourceDepthRatio: 0.8,
+    sourceDepthRatio: 0.02,
     sourceSwitchCount30d: 0,
     observationCount30d: 30,
     freshness: { capturedAt: 1_700_000_000, ageSeconds: 120 },
@@ -50,11 +50,11 @@ describe("selectYieldSource ordering", () => {
     const selected = selectYieldSource(
       makeRow([
         candidate("safer-low-apy", {
-          apy30d: 2.5, sourceRiskScore: 15, sourceDepthRatio: 0.1,
+          apy30d: 2.5, sourceRiskScore: 15,
           freshness: { capturedAt: 1, ageSeconds: 172_800 },
         }),
         candidate("riskier-high-apy", {
-          apy30d: 40, sourceRiskScore: 20, sourceDepthRatio: 1,
+          apy30d: 40, sourceRiskScore: 20,
           freshness: { capturedAt: 1, ageSeconds: 0 },
         }),
       ]),
@@ -70,9 +70,8 @@ describe("selectYieldSource ordering", () => {
           yieldType: "lp-receipt",
           deploymentPlace: "lp",
           sourceRiskScore: 1,
-          sourceDepthRatio: 1,
         }),
-        candidate("lending-rail", { sourceRiskScore: 60, sourceDepthRatio: 0.1 }),
+        candidate("lending-rail", { sourceRiskScore: 60 }),
       ]),
       lendInput,
     );
@@ -83,8 +82,8 @@ describe("selectYieldSource ordering", () => {
   it("falls through risk to depth, then freshness, then source key", () => {
     const byDepth = selectYieldSource(
       makeRow([
-        candidate("thin", { sourceDepthRatio: 0.2, freshness: { capturedAt: 1, ageSeconds: 0 } }),
-        candidate("deep", { sourceDepthRatio: 0.9, freshness: { capturedAt: 1, ageSeconds: 172_800 } }),
+        candidate("thin", { sourceDepthRatio: 0.0005, freshness: { capturedAt: 1, ageSeconds: 0 } }),
+        candidate("deep", { sourceDepthRatio: 0.02, freshness: { capturedAt: 1, ageSeconds: 172_800 } }),
       ]),
       lendInput,
     );
@@ -104,6 +103,34 @@ describe("selectYieldSource ordering", () => {
       lendInput,
     );
     expect(byKey?.sourceKey).toBe("aaa");
+  });
+
+  it("ranks a measured rail above one with no depth evidence, deepest band first", () => {
+    // `sourceDepthRatio` is a share of tracked supply, so 0.02 is already the
+    // top band. Scoring it as a 0-100 score put the deepest measurable rail at
+    // 2 against an unmeasured rail's neutral 45. The unmeasured rail sorts
+    // first alphabetically, so the source-key tie-break cannot produce a pass.
+    const unmeasured = candidate("a-unmeasured", { sourceDepthRatio: null, sourceTvlUsd: null });
+
+    for (const [ratio, measured] of [[0.02, "z-deep"], [0.0005, "z-thin"]] as const) {
+      expect(
+        selectYieldSource(
+          makeRow([unmeasured, candidate(measured, { sourceDepthRatio: ratio })]),
+          lendInput,
+        )?.sourceKey,
+        `${measured} vs no depth evidence`,
+      ).toBe(measured);
+    }
+
+    expect(
+      selectYieldSource(
+        makeRow([
+          candidate("a-moderate", { sourceDepthRatio: 0.003 }),
+          candidate("z-deep", { sourceDepthRatio: 0.02 }),
+        ]),
+        lendInput,
+      )?.sourceKey,
+    ).toBe("z-deep");
   });
 
   it("falls back to the published venue risk tier when no source-risk score exists", () => {
@@ -137,16 +164,25 @@ describe("selectYieldSource ordering", () => {
     }
   });
 
-  it("fails closed when the winning rail has no chain rather than substituting a runner-up", () => {
+  it("degrades one chain-less rail instead of dropping the coin's whole yield coverage", () => {
     const row = makeRow([
       candidate("winner", { chain: null, sourceRiskScore: 1 }),
       candidate("runner-up", { sourceRiskScore: 50 }),
     ]);
-    expect(selectYieldSource(row, lendInput)).toBeNull();
+    expect(selectYieldSource(row, lendInput)?.sourceKey).toBe("runner-up");
     expect(selectYieldSource(makeRow([
       candidate("winner", { sourceRiskScore: 1 }),
       candidate("runner-up", { sourceRiskScore: 50 }),
     ]), lendInput)?.sourceKey).toBe("winner");
+    expect(selectYieldSource(makeRow([candidate("only", { chain: null })]), lendInput)).toBeNull();
+  });
+
+  it("publishes an unsourced venue tier as unknown rather than a measured mid", () => {
+    const selected = selectYieldSource(
+      makeRow([candidate("untiered", { sourceRiskScore: null, venueRiskTier: null })]),
+      lendInput,
+    );
+    expect(selected?.sourceRiskTier).toBeNull();
   });
 
   it("prefers wrapper rails only for wrap, not all or unsupported venue answers", () => {

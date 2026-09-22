@@ -4,6 +4,9 @@ const ABI_WORD_HEX_PATTERN = /^0x[0-9a-fA-F]{64}$/;
 const ZERO_ADDRESS_PATTERN = /^0x0{40}$/;
 const PADDED_ADDRESS_WORD_PATTERN = /^0{24}[0-9a-f]{40}$/;
 const ABI_WORD_HEX_LENGTH = 64;
+type StrictWordDecoder<Value> = (raw: unknown, label: string) => Value;
+
+
 
 /**
  * Word-indexed accessor over a raw ABI return payload. The whole payload must
@@ -38,10 +41,6 @@ export function decodeUint256Word(raw: string | null | undefined): bigint | null
   }
 }
 
-export function decodeBoolWord(raw: string | null | undefined): boolean | null {
-  const value = decodeUint256Word(raw);
-  return value == null ? null : value !== 0n;
-}
 
 /**
  * Strict single-word boolean: exactly one ABI word of value 0 or 1. Route
@@ -54,6 +53,26 @@ export function decodeStrictBoolWord(raw: string | null | undefined): boolean | 
   if (value === 1n) return true;
   return null;
 }
+export function strictUint256Decoder(adapterKey: string): StrictWordDecoder<bigint> {
+  return (raw, label) => {
+    const value = decodeUint256Word(typeof raw === "string" ? raw : null);
+    if (value == null) {
+      throw new Error(`${adapterKey}: ${label} returned malformed uint256 payload`);
+    }
+    return value;
+  };
+}
+
+export function strictBoolDecoder(adapterKey: string): StrictWordDecoder<boolean> {
+  return (raw, label) => {
+    const value = decodeStrictBoolWord(typeof raw === "string" ? raw : null);
+    if (value == null) {
+      throw new Error(`${adapterKey}: ${label} returned malformed bool payload`);
+    }
+    return value;
+  };
+}
+
 
 export function decodeUint8Word(raw: string | null | undefined): number | null {
   const value = decodeUint256Word(raw);
@@ -80,6 +99,16 @@ export function decodeStrictAddressWord(
     ? (`0x${word.slice(-40)}` as `0x${string}`)
     : null;
 }
+export function strictAddressDecoder(adapterKey: string): StrictWordDecoder<`0x${string}`> {
+  return (raw, label) => {
+    const value = decodeStrictAddressWord(typeof raw === "string" ? raw : null);
+    if (value == null) {
+      throw new Error(`${adapterKey}: ${label} returned malformed address payload`);
+    }
+    return value;
+  };
+}
+
 
 export function decodeAddressArrayWord(raw: string | null | undefined): `0x${string}`[] | null {
   if (typeof raw !== "string" || !raw.startsWith("0x")) return null;

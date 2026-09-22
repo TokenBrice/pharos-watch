@@ -39,4 +39,19 @@ describe("PublicTransitionTimeline", () => {
 
     expect(onWindowChange).toHaveBeenCalledWith("30d");
   });
+
+  it("reports a failed history read instead of an empty incident log", () => {
+    render(
+      <PublicTransitionTimeline
+        transitions={[]}
+        window="7d"
+        onWindowChange={vi.fn()}
+        isLoading={false}
+        error={new Error("history query rejected")}
+      />,
+    );
+
+    expect(screen.getByText("Status history is unavailable: history query rejected")).toBeTruthy();
+    expect(screen.queryByText("No status changes recorded in this window.")).toBeNull();
+  });
 });

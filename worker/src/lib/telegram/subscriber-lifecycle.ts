@@ -131,6 +131,7 @@ const CHAT_CACHE_EXACT_KEY_BUILDERS = [
   (chatId: string) => `telegram:chat-admins:${chatId}`,
   (chatId: string) => `telegram:group-welcome:${chatId}`,
   (chatId: string) => `telegram:adoption-mini-app-session:${chatId}`,
+  (chatId: string) => `telegram:mini-app-mutation-burst:${chatId}`,
 ] as const;
 
 const CHAT_CACHE_PREFIX_BUILDERS = [
@@ -475,6 +476,8 @@ export async function migrateTelegramChatId(
         alert_launch,
         alert_reserve,
         alert_freeze,
+        watcher_active,
+        watcher_ever_active,
         global_alert_dews,
         global_alert_depeg,
         global_alert_safety,
@@ -504,6 +507,8 @@ export async function migrateTelegramChatId(
         alert_launch,
         alert_reserve,
         alert_freeze,
+        watcher_active,
+        watcher_ever_active,
         global_alert_dews,
         global_alert_depeg,
         global_alert_safety,
@@ -533,6 +538,8 @@ export async function migrateTelegramChatId(
         alert_launch = MAX(telegram_subscribers.alert_launch, excluded.alert_launch),
         alert_reserve = MAX(telegram_subscribers.alert_reserve, excluded.alert_reserve),
         alert_freeze = MAX(telegram_subscribers.alert_freeze, excluded.alert_freeze),
+        watcher_active = MAX(telegram_subscribers.watcher_active, excluded.watcher_active),
+        watcher_ever_active = MAX(telegram_subscribers.watcher_ever_active, excluded.watcher_ever_active),
         global_alert_dews = MAX(telegram_subscribers.global_alert_dews, excluded.global_alert_dews),
         global_alert_depeg = MAX(telegram_subscribers.global_alert_depeg, excluded.global_alert_depeg),
         global_alert_safety = MAX(telegram_subscribers.global_alert_safety, excluded.global_alert_safety),

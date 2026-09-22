@@ -150,33 +150,39 @@ async function loadPreviousBestRowsForChunk(
   startSec: number,
   signal?: AbortSignal,
 ): Promise<YieldHistorySnapshotRow[]> {
-  const rows: YieldHistorySnapshotRow[] = [];
+  throwIfAborted(signal);
   const exclusion = buildSuppressedYieldHistoryExclusion("h");
-
-  for (const stablecoinId of idChunk) {
-    throwIfAborted(signal);
-    const result = await db
-      .prepare(
-        `SELECT /* pharos:yield-sync:previous-best-point */
-           h.stablecoin_id, h.source_key, h.recorded_at, h.is_best, h.apy, h.apy_base, h.source_tvl_usd, h.data_source, h.yield_source, h.yield_type, h.exchange_rate
-         FROM yield_history h
-         WHERE h.stablecoin_id = ?
-           AND h.is_best = 1
-           AND h.recorded_at < ?
-           AND (h.publication_state IS NULL OR h.publication_state = 'published')
-           AND ${exclusion.sql}
-         ORDER BY h.recorded_at DESC, h.rowid DESC
-         LIMIT 1`,
-      )
-      .bind(stablecoinId, startSec, ...exclusion.binds)
-      .all<YieldHistorySnapshotRow>();
-    const row = result.results?.[0] ?? null;
-    if (row && !isSuppressedYieldHistoryRow(row.stablecoin_id, row.source_key)) {
-      rows.push(row);
-    }
-  }
-
-  return rows;
+  const inClause = buildInClause(idChunk);
+  const result = await db
+    .prepare(
+      `SELECT /* pharos:yield-sync:previous-best-point */
+         stablecoin_id, source_key, recorded_at, is_best, apy, apy_base, source_tvl_usd, data_source, yield_source, yield_type, exchange_rate
+       FROM (
+         SELECT h.stablecoin_id, h.source_key, h.recorded_at, h.is_best, h.apy, h.apy_base, h.source_tvl_usd, h.data_source, h.yield_source, h.yield_type, h.exchange_rate,
+                ROW_NUMBER() OVER (
+                  PARTITION BY h.stablecoin_id
+                  ORDER BY h.recorded_at DESC, h.rowid DESC
+                ) AS row_rank
+           FROM yield_history h
+          WHERE h.stablecoin_id IN (${inClause.sql})
+            AND h.is_best = 1
+            AND h.recorded_at < ?
+            AND (h.publication_state IS NULL OR h.publication_state = 'published')
+            AND ${exclusion.sql}
+       )
+       WHERE row_rank = 1`,
+    )
+    .bind(...inClause.binds, startSec, ...exclusion.binds)
+    .all<YieldHistorySnapshotRow>();
+  const rowById = new Map(
+    (result.results ?? [])
+      .filter((row) => !isSuppressedYieldHistoryRow(row.stablecoin_id, row.source_key))
+      .map((row) => [row.stablecoin_id, row]),
+  );
+  return idChunk.flatMap((stablecoinId) => {
+    const row = rowById.get(stablecoinId);
+    return row ? [row] : [];
+  });
 }
 
 export async function loadYieldHistorySnapshots(

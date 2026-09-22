@@ -8,6 +8,10 @@ import {
   resolveFeeConfidence,
   resolveFeeModelKind,
 } from "@shared/lib/redemption-backstop-confidence";
+import {
+  validateRedemptionBackstopConfigOutputIdentity,
+  type RedemptionOutputIdentityIssue,
+} from "@shared/lib/redemption-backstops";
 import { ACTIVE_META_BY_ID, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   RedemptionBackstopsResponseSchema,
@@ -21,7 +25,7 @@ import type {
   RedemptionBackstopConfig,
   RedemptionCapacityModel,
 } from "@shared/lib/redemption-backstop-configs/shared";
-import { REDEMPTION_BACKSTOP_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/redemption-backstop";
+import { REDEMPTION_BACKSTOP_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import {
   REDEMPTION_BACKSTOP_CONFIG_MANIFEST,
   type RedemptionBackstopConfigManifestEntry,
@@ -166,6 +170,20 @@ function resolveAuditCapacityConfidence(
   return staticConfidence;
 }
 
+function describeOutputIdentityIssue(stablecoinId: string, issue: RedemptionOutputIdentityIssue): string {
+  const key = issue.key ? ` "${issue.key}"` : "";
+  switch (issue.code) {
+    case "unknown-tracked-output-id":
+      return `${stablecoinId}: tracked output identity${key} is not a tracked stablecoin id`;
+    case "unknown-collateral-output-key":
+      return `${stablecoinId}: collateral output identity${key} is not in the reviewed asset:* vocabulary`;
+    case "undeclared-unresolved-output-key":
+      return `${stablecoinId}: unresolved output identity${key} is not declared by unresolvedOutputAssetKeys`;
+    case "output-identity-mismatch":
+      return `${stablecoinId}: output identities do not match the reviewed config`;
+  }
+}
+
 export function validateRedemptionBackstopRegistry(
   options: RedemptionRegistryValidationOptions = {},
 ): RedemptionRegistryValidationResult {
@@ -303,6 +321,19 @@ export function validateRedemptionBackstopRegistry(
           },
         );
       }
+    }
+    for (const issue of validateRedemptionBackstopConfigOutputIdentity(config)) {
+      addFinding(
+        findings,
+        "error",
+        issue.code,
+        describeOutputIdentityIssue(id, issue),
+        {
+          stablecoinId: id,
+          family: owner?.name,
+          filePath: sourceFilePath ?? owner?.filePath,
+        },
+      );
     }
 
     validateConfigInvariants(id, config, owner, sourceFilePath, findings);

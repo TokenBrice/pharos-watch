@@ -15,13 +15,18 @@ import {
   getYieldSupplementalFamilyCacheKey,
   type DeterministicOnChainHealthState,
 } from "./cache";
+import { DETERMINISTIC_ONCHAIN_COOLDOWN_SEC } from "./cache/normalization";
 import {
   getYieldSupplementalRunOutcomeCacheKey,
   parseYieldSupplementalRunOutcome,
 } from "./cache/supplemental-cache-keys";
 import { SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS } from "../../lib/yield-ranking-helpers";
 import { fetchOnChainRates, loadDlStablecoinPools, loadRiskFreeRateRegistry } from "./sources";
-import { buildStablecoinSupplyMapFromCacheValue } from "./supply-map";
+import {
+  loadStablecoinSupplyMapFromCacheValue,
+  type StablecoinSupplyMapLoadResult,
+  type StablecoinSupplyMapState,
+} from "./supply-map";
 import {
   REQUIRED_SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
   SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
@@ -36,7 +41,6 @@ const DETERMINISTIC_ONCHAIN_HEALTH_CACHE_KEY = "yield:onchain-health:v1";
 // contract and the status panel, instead of the older 12h literal.
 const YIELD_SUPPLEMENTAL_MAX_AGE_SEC = SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS / 1000;
 const DETERMINISTIC_ONCHAIN_COOLDOWN_THRESHOLD = 2;
-const DETERMINISTIC_ONCHAIN_COOLDOWN_SEC = 6 * 3600;
 
 export interface YieldSupplementalCacheMeta {
   mode: "cache" | "stale-cache" | "unavailable";
@@ -60,7 +64,6 @@ export interface YieldSyncLoadedState {
   supplementalCandidates: ResolvedYieldCandidate[];
   supplementalMeta: YieldSupplementalCacheMeta;
   onChainHealthState: DeterministicOnChainHealthState;
-  onChainCooldownActive: boolean;
   onChainCooldownRemainingSec: number;
   onChainSkippedDueToCooldown: boolean;
   onChainRates: Map<string, { rate: number; sourceTvlUsd?: number | null }>;
@@ -72,6 +75,7 @@ export interface YieldSyncLoadedState {
   riskFreeRates: Awaited<ReturnType<typeof loadRiskFreeRateRegistry>>;
   riskFreeRateMeta: YieldBenchmarkMeta;
   stablecoinSupplyById: Map<string, number>;
+  stablecoinSupplyMapState: StablecoinSupplyMapState;
   safetySnapshot: PublishedSafetyScoresResultMap;
   safetyScores: PublishedSafetyScoresResultMap["scores"];
   safetyCoverageRatio: number;
@@ -252,6 +256,29 @@ export function buildNextDeterministicOnChainHealthState(params: {
   };
 }
 
+async function loadStablecoinSupplyMap(db: D1Database): Promise<StablecoinSupplyMapLoadResult> {
+  try {
+    const cacheRow = await getCache(db, "stablecoins");
+    const result = loadStablecoinSupplyMapFromCacheValue(cacheRow?.value);
+    if (result.state === "malformed") {
+      logWorkerEventArgs(
+        "handler",
+        "warn",
+        "[sync-yield-data] Failed to parse stablecoins cache for lending size gates",
+      );
+    }
+    return result;
+  } catch (error) {
+    logWorkerEventArgs(
+      "handler",
+      "warn",
+      "[sync-yield-data] Failed to read stablecoins cache for lending size gates:",
+      error,
+    );
+    return { state: "malformed", supplyById: new Map() };
+  }
+}
+
 export async function loadYieldSyncState(params: {
   db: D1Database;
   startSec: number;
@@ -264,29 +291,28 @@ export async function loadYieldSyncState(params: {
     supplementalResult,
     onChainHealthCache,
     riskFreeRates,
-    stablecoinsCacheRow,
+    stablecoinSupplyMap,
   ] = await Promise.all([
     loadDlStablecoinPools(params.db, params.signal),
     loadYieldSupplementalCandidates(params.db, params.startSec),
     getCache(params.db, DETERMINISTIC_ONCHAIN_HEALTH_CACHE_KEY),
     loadRiskFreeRateRegistry(params.db),
-    getCache(params.db, "stablecoins"),
+    loadStablecoinSupplyMap(params.db),
   ]);
   const { pools: dlPools, meta: dlPoolsMeta, envelopeRejectedCount } = dlPoolsResult;
   const dlApyEnvelopeRejectedCount = envelopeRejectedCount ?? 0;
   const { candidates: supplementalCandidates, meta: supplementalMeta } = supplementalResult;
   const onChainHealthState = onChainHealthCache
-    ? parseDeterministicOnChainHealthState(onChainHealthCache.value)
+    ? parseDeterministicOnChainHealthState(onChainHealthCache.value, params.startSec)
     : getDefaultDeterministicOnChainHealthState();
-  const onChainCooldownActive =
+  const onChainSkippedDueToCooldown =
     ON_CHAIN_RATE_CONFIGS.length > 0 &&
     onChainHealthState.cooldownUntil != null &&
     onChainHealthState.cooldownUntil > params.startSec;
   const onChainCooldownRemainingSec =
-    onChainCooldownActive && onChainHealthState.cooldownUntil != null
+    onChainSkippedDueToCooldown && onChainHealthState.cooldownUntil != null
       ? Math.max(0, onChainHealthState.cooldownUntil - params.startSec)
       : 0;
-  const onChainSkippedDueToCooldown = onChainCooldownActive;
   const onChainFetchResultPromise = onChainSkippedDueToCooldown
     ? {
         rates: new Map<string, { rate: number; sourceTvlUsd?: number | null }>(),
@@ -312,16 +338,7 @@ export async function loadYieldSyncState(params: {
   } = onChainFetchResult;
   const riskFreeRateMeta = riskFreeRates.USD;
 
-  const stablecoinSupplyById = new Map<string, number>();
-  if (stablecoinsCacheRow?.value) {
-    try {
-      for (const [id, supplyUsd] of buildStablecoinSupplyMapFromCacheValue(stablecoinsCacheRow.value)) {
-        stablecoinSupplyById.set(id, supplyUsd);
-      }
-    } catch (error) {
-      logWorkerEventArgs("handler", "warn", "[sync-yield-data] Failed to parse stablecoins cache for lending size gates:", error);
-    }
-  }
+  const { state: stablecoinSupplyMapState, supplyById: stablecoinSupplyById } = stablecoinSupplyMap;
   const safetyScores = safetySnapshot.scores;
   const safetyCoverageRatio = safetySnapshot.coverageRatio;
   const safetySnapshotAvailable =
@@ -336,7 +353,6 @@ export async function loadYieldSyncState(params: {
     supplementalCandidates,
     supplementalMeta,
     onChainHealthState,
-    onChainCooldownActive,
     onChainCooldownRemainingSec,
     onChainSkippedDueToCooldown,
     onChainRates,
@@ -348,6 +364,7 @@ export async function loadYieldSyncState(params: {
     riskFreeRates,
     riskFreeRateMeta,
     stablecoinSupplyById,
+    stablecoinSupplyMapState,
     safetySnapshot,
     safetyScores,
     safetyCoverageRatio,

@@ -161,16 +161,20 @@ export function classifyYieldSourceFreshness(input: {
   return input.sourceAgeSeconds * 1000 > staleThresholdMs ? "stale" : "fresh";
 }
 
-function isLongHorizonNavAnchor(sourceKey: string | null | undefined): boolean {
-  return sourceKey?.includes("protocol-api:ondo-usdy-oracle") === true
-    || sourceKey?.includes("protocol-api:midas-mmev-nav-oracle") === true;
-}
+/**
+ * Long-horizon NAV anchors, matched exactly. Substring matching made any
+ * source key that merely contained one of these into one of them.
+ */
+const LONG_HORIZON_NAV_ANCHOR_SOURCE_KEYS = new Set([
+  "protocol-api:ondo-usdy-oracle",
+  "protocol-api:midas-mmev-nav-oracle",
+]);
 
 export function getComparisonAnchorStaleThresholdMs(
   dataSource: string,
   sourceKey?: string | null,
 ): number {
-  if (dataSource === "price-derived" || isLongHorizonNavAnchor(sourceKey)) {
+  if (dataSource === "price-derived" || (sourceKey != null && LONG_HORIZON_NAV_ANCHOR_SOURCE_KEYS.has(sourceKey))) {
     return LONG_HORIZON_COMPARISON_ANCHOR_STALE_THRESHOLD_MS;
   }
   return COMPARISON_ANCHOR_STALE_THRESHOLD_MS;

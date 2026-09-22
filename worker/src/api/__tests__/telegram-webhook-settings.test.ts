@@ -181,7 +181,7 @@ describe("handleSettingsCallback — chat-level", () => {
   });
 
   it("settings:gt:dews flips the global flag and re-renders", async () => {
-    const db = mockD1();
+    const db = mockD1([{ match: "INSERT INTO telegram_subscribers", rows: [] }]);
     await handleSettingsCallback(
       db,
       "fake-token",
@@ -264,7 +264,7 @@ describe("handleSettingsCallback — chat-level", () => {
   });
 
   it("settings:q:1 enables quiet hours with the default 22-07 window", async () => {
-    const db = mockD1();
+    const db = mockD1([{ match: "INSERT INTO telegram_subscribers", rows: [] }]);
     await handleSettingsCallback(
       db,
       "fake-token",
@@ -319,7 +319,7 @@ describe("handleSettingsCallback — chat-level", () => {
   });
 
   it("settings:sc clears the snooze timestamp", async () => {
-    const db = mockD1();
+    const db = mockD1([{ match: "INSERT INTO telegram_subscribers", rows: [] }]);
     await handleSettingsCallback(
       db,
       "fake-token",
@@ -364,7 +364,11 @@ describe("handleSettingsCallback — per-coin", () => {
   });
 
   it("settings:c:<id>:db:W sets DEWS min band to WARNING", async () => {
-    const db = mockD1([{ match: "FROM telegram_subscriptions", rows: [] }]);
+    const db = mockD1([
+      { match: "FROM telegram_subscriptions", rows: [] },
+      { match: "INSERT INTO telegram_subscribers", rows: [] },
+      { match: "INSERT INTO telegram_subscriptions", rows: [] },
+    ]);
     await handleSettingsCallback(
       db,
       "fake-token",
@@ -415,7 +419,11 @@ describe("handleSettingsCallback — per-coin", () => {
   });
 
   it("settings:c:<id>:sm:d sets safety mode to downgrade-only", async () => {
-    const db = mockD1([{ match: "FROM telegram_subscriptions", rows: [] }]);
+    const db = mockD1([
+      { match: "FROM telegram_subscriptions", rows: [] },
+      { match: "INSERT INTO telegram_subscribers", rows: [] },
+      { match: "INSERT INTO telegram_subscriptions", rows: [] },
+    ]);
     await handleSettingsCallback(
       db,
       "fake-token",
@@ -436,7 +444,11 @@ describe("handleSettingsCallback — per-coin", () => {
   });
 
   it("settings:c:<id>:ds:250 sets depeg-step to 250 bps", async () => {
-    const db = mockD1([{ match: "FROM telegram_subscriptions", rows: [] }]);
+    const db = mockD1([
+      { match: "FROM telegram_subscriptions", rows: [] },
+      { match: "INSERT INTO telegram_subscribers", rows: [] },
+      { match: "INSERT INTO telegram_subscriptions", rows: [] },
+    ]);
     await handleSettingsCallback(
       db,
       "fake-token",
@@ -458,7 +470,11 @@ describe("handleSettingsCallback — per-coin", () => {
   });
 
   it("settings:c:<id>:ds:0 clears depeg-step and disables depeg for the coin", async () => {
-    const db = mockD1([{ match: "FROM telegram_subscriptions", rows: [] }]);
+    const db = mockD1([
+      { match: "FROM telegram_subscriptions", rows: [] },
+      { match: "INSERT INTO telegram_subscribers", rows: [] },
+      { match: "INSERT INTO telegram_subscriptions", rows: [] },
+    ]);
     await handleSettingsCallback(
       db,
       "fake-token",
@@ -484,7 +500,11 @@ describe("handleSettingsCallback — per-coin", () => {
   });
 
   it("settings:c:<id>:lc:1 enables launch for the coin", async () => {
-    const db = mockD1([{ match: "FROM telegram_subscriptions", rows: [] }]);
+    const db = mockD1([
+      { match: "FROM telegram_subscriptions", rows: [] },
+      { match: "INSERT INTO telegram_subscribers", rows: [] },
+      { match: "INSERT INTO telegram_subscriptions", rows: [] },
+    ]);
     await handleSettingsCallback(
       db,
       "fake-token",
@@ -673,6 +693,44 @@ describe("message builders", () => {
     for (const label of toggleLabels) {
       expect(message).toContain(`\n${label}: `);
     }
+  });
+
+  it("never shows a depeg step that is not in force", () => {
+    const subscriber = {
+      alert_dews: 0,
+      alert_depeg: 0,
+      alert_safety: 0,
+      alert_launch: 0,
+      global_alert_dews: 0,
+      global_alert_depeg: 0,
+      global_depeg_worsening_bps_step: 250,
+      global_alert_safety: 0,
+      global_alert_launch: 0,
+      global_alert_reserve: 0,
+      global_alert_freeze: 0,
+      quiet_hours_enabled: 0,
+      quiet_hours_start_utc: null,
+      quiet_hours_end_utc: null,
+      alert_snooze_until_ts: null,
+    };
+    const message = buildHomeMessage(subscriber);
+    expect(message).toContain("Depeg: OFF\n");
+    expect(message).not.toContain("(+250bps)");
+  });
+
+  it("marks no per-coin step when the depeg family is on without one", () => {
+    const row = { alert_depeg: 1, depeg_worsening_bps_step: null } as unknown as SubscriptionRow;
+    const depegButtons = buildCoinKeyboard("usdc-circle", row)
+      .inline_keyboard.flat()
+      .filter((button) => button.callback_data?.includes(":ds:") ?? false);
+    expect(depegButtons.some((button) => button.text.includes("•"))).toBe(false);
+
+    const offRow = { alert_depeg: 0, depeg_worsening_bps_step: 250 } as unknown as SubscriptionRow;
+    const offButtons = buildCoinKeyboard("usdc-circle", offRow)
+      .inline_keyboard.flat()
+      .filter((button) => button.callback_data?.includes(":ds:") ?? false);
+    expect(offButtons.find((button) => button.callback_data?.endsWith(":ds:0"))?.text).toContain("•");
+    expect(offButtons.find((button) => button.callback_data?.endsWith(":ds:250"))?.text).not.toContain("•");
   });
 
   it("home message reflects active snooze duration", () => {

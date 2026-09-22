@@ -39,5 +39,6 @@ export type SafetyScoreHistoryV2Point = z.infer<typeof SafetyScoreHistoryV2Point
 export const SafetyScoreHistoryV2ResponseSchema = z.object({
   schemaVersion: z.literal(2),
   history: z.array(SafetyScoreHistoryV2PointSchema),
+  malformedRows: z.number().int().nonnegative().optional(),
 });
 export type SafetyScoreHistoryV2Response = z.infer<typeof SafetyScoreHistoryV2ResponseSchema>;

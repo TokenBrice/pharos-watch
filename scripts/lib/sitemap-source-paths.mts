@@ -6,6 +6,7 @@
  */
 export const SITEMAP_COMMIT_DERIVED_SOURCE_PATHS: string[] = [
   "shared/data/stablecoins/coins/**",
+  "shared/data/stablecoins/domains/**",
   "src/app/**",
   "src/lib/case-studies/**",
   "src/data/blog/**",

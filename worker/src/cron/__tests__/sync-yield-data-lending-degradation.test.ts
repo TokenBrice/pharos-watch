@@ -4,18 +4,18 @@ import {
   findPublishedYieldRow,
   findPublishedYieldHistoryRow,
   getYieldRankingsCachePayload,
-  makeYieldOrphanDb,
+  mockD1WithYieldPruneTables,
+  yieldFallbackTableMatches,
   resetSyncYieldDataTest,
   cleanupSyncYieldDataTest,
-  fixtureSyncYieldData,
-  fixtureGetCache,
-  fixtureSetCacheIfNewer,
-  fixtureShouldAttemptFetch,
-  fixtureMockFetch,
-  fixtureSafetyScoresModule,
-  fixtureYieldConfigModule,
-  fixtureYieldHelpersModule,
 } from "./sync-yield-data.test-support";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
+import { syncYieldData } from "../sync-yield-data";
+import * as yieldHelpersModule from "../yield-helpers";
+import { getCache, setCacheIfNewer } from "../../lib/db-cache";
+import { shouldAttemptFetch } from "../../lib/circuit-breaker";
+import * as safetyScoresModule from "../../lib/safety-scores";
+import * as yieldConfigModule from "../../lib/yield-config/yield-config";
 import { cacheRow, dlPoolsCacheRow, installYieldCacheReader } from "./yield-cache.test-support";
 import { makeDlYieldPool } from "./yield-resolve.test-support";
 
@@ -25,13 +25,13 @@ describe("syncYieldData", () => {
   it("labels yield-bearing auto-discovered rows as lending opportunities", async () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
-    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+    installYieldCacheReader(vi.mocked(getCache), {
       "dl-stablecoin-pools": dlPoolsCacheRow([
             makeDlYieldPool({ pool: "pool-placeholder", project: "aave-v3", symbol: "USDC", tvlUsd: 5_000_000, apy: 3.25, apyBase: 3.25, apyMean30d: 3.25 }),
           ], nowSec - 60),
     });
-    vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
-    vi.mocked(fixtureYieldHelpersModule.findBestLendingPool).mockImplementation((symbol) =>
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    vi.mocked(yieldHelpersModule.findBestLendingPool).mockImplementation((symbol) =>
       symbol === "sDAI"
         ? {
             pool: "pool-sdai-aave",
@@ -44,9 +44,9 @@ describe("syncYieldData", () => {
           }
         : null,
     );
-    fixtureMockFetch([]);
+    mockFetch([]);
 
-    const result = await fixtureSyncYieldData(db);
+    const result = await syncYieldData(db);
 
     expect(result.itemCount).toBe(1);
     const autoRow = findPublishedYieldRow(db, "100", (row) => row.data_source === "defillama-auto");
@@ -58,7 +58,7 @@ describe("syncYieldData", () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
-    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+    installYieldCacheReader(vi.mocked(getCache), {
       stablecoins: cacheRow({
             peggedAssets: [
               {
@@ -74,14 +74,14 @@ describe("syncYieldData", () => {
             makeDlYieldPool({ pool: "pool-placeholder", project: "aave-v3", symbol: "USDC", tvlUsd: 5_000_000, apy: 3.25, apyBase: 3.25, apyMean30d: 3.25 }),
       ], nowSec - 60),
     });
-    vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
-    vi.mocked(fixtureYieldHelpersModule.findBestLendingPool).mockReturnValue(null);
-    fixtureMockFetch([]);
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    vi.mocked(yieldHelpersModule.findBestLendingPool).mockReturnValue(null);
+    mockFetch([]);
 
-    await fixtureSyncYieldData(db);
+    await syncYieldData(db);
 
     const usdcDiscoveryCall = vi
-      .mocked(fixtureYieldHelpersModule.findBestLendingPool)
+      .mocked(yieldHelpersModule.findBestLendingPool)
       .mock.calls.find((call) => call[0] === "USDC");
     expect(usdcDiscoveryCall?.[2]).toEqual(expect.any(Set));
     expect(usdcDiscoveryCall?.[3]).toMatchObject({
@@ -94,7 +94,7 @@ describe("syncYieldData", () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
-    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+    installYieldCacheReader(vi.mocked(getCache), {
       "dl-stablecoin-pools": dlPoolsCacheRow([], nowSec - 6 * 3600),
       risk_free_rate: cacheRow({
             rate: 3.71,
@@ -105,10 +105,10 @@ describe("syncYieldData", () => {
             fallbackMode: "fred-api-error-retained",
           }, nowSec - 6 * 3600),
     });
-    vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
-    fixtureMockFetch([]);
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
 
-    const result = await fixtureSyncYieldData(db);
+    const result = await syncYieldData(db);
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       fallbackMode: string | null;
     };
@@ -127,7 +127,7 @@ describe("syncYieldData", () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
-    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+    installYieldCacheReader(vi.mocked(getCache), {
       "dl-stablecoin-pools": dlPoolsCacheRow([], nowSec - 49 * 3600),
       risk_free_rate: cacheRow({
             rate: 3.71,
@@ -138,10 +138,10 @@ describe("syncYieldData", () => {
             fallbackMode: "fred-api-error-retained",
           }, nowSec - 49 * 3600),
     });
-    vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
-    fixtureMockFetch([]);
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
 
-    const result = await fixtureSyncYieldData(db);
+    const result = await syncYieldData(db);
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       fallbackMode: string | null;
     };
@@ -152,11 +152,11 @@ describe("syncYieldData", () => {
 
   it("marks run degraded but still writes yield-rankings cache when safety snapshot coverage is empty", async () => {
     const db = makeDb();
-    installYieldCacheReader(vi.mocked(fixtureGetCache), {});
-    vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
-    fixtureMockFetch([]);
+    installYieldCacheReader(vi.mocked(getCache), {});
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
 
-    vi.spyOn(fixtureSafetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValueOnce({
+    vi.spyOn(safetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValueOnce({
       kind: "degraded",
       mode: "map",
       coveredCount: 0,
@@ -171,7 +171,7 @@ describe("syncYieldData", () => {
       publishedAt: null,
     } as never);
 
-    const result = await fixtureSyncYieldData(db);
+    const result = await syncYieldData(db);
 
     expect(result.status).toBe("degraded");
     const metadata = JSON.parse(result.metadata ?? "{}") as {
@@ -184,7 +184,7 @@ describe("syncYieldData", () => {
     expect(metadata.sourceCoverage.safetyCoverageRatio).toBe(0);
 
     expect(getYieldRankingsCachePayload(db)).toBeDefined();
-    expect(vi.mocked(fixtureSetCacheIfNewer).mock.calls.some((call) => call[1] === "report_card_cache")).toBe(false);
+    expect(vi.mocked(setCacheIfNewer).mock.calls.some((call) => call[1] === "report_card_cache")).toBe(false);
   });
 
   it.each([
@@ -194,10 +194,10 @@ describe("syncYieldData", () => {
   ])("retains auto-lending rows as unrated for %s", async (_label, reason) => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
-    const nativePoolMap = fixtureYieldConfigModule.YIELD_POOL_MAP as Record<string, string>;
+    const nativePoolMap = yieldConfigModule.YIELD_POOL_MAP as Record<string, string>;
     nativePoolMap["100"] = "pool-sdai-native";
 
-    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+    installYieldCacheReader(vi.mocked(getCache), {
       "dl-stablecoin-pools": dlPoolsCacheRow([
             makeDlYieldPool({ pool: "pool-sdai-native", project: "maker", symbol: "sDAI", tvlUsd: 100_000_000, apy: 4.5, apyBase: 4.5, apyMean30d: 4.4 }),
             {
@@ -224,9 +224,9 @@ describe("syncYieldData", () => {
             fallbackMode: null,
           }, nowSec),
     });
-    vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
-    fixtureMockFetch([]);
-    vi.spyOn(fixtureSafetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValueOnce({
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
+    vi.spyOn(safetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValueOnce({
       kind: "degraded",
       mode: "map",
       coveredCount: 0,
@@ -241,7 +241,7 @@ describe("syncYieldData", () => {
       publishedAt: null,
     } as never);
 
-    const result = await fixtureSyncYieldData(db);
+    const result = await syncYieldData(db);
     const payload = getYieldRankingsCachePayload(db) as {
       rankings: Array<{ id: string }>;
       provenance: { safetySnapshot: { reason: string | null } };
@@ -270,10 +270,10 @@ describe("syncYieldData", () => {
   });
 
   it("skips destructive yield row cleanup on degraded runs", async () => {
-    const db = makeYieldOrphanDb(["orphan-coin"]);
+    const db = mockD1WithYieldPruneTables(yieldFallbackTableMatches());
     const nowSec = Math.floor(Date.now() / 1000);
 
-    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+    installYieldCacheReader(vi.mocked(getCache), {
       "dl-stablecoin-pools": dlPoolsCacheRow([
             makeDlYieldPool({ pool: "pool-sdai-cached", project: "maker", symbol: "sDAI", tvlUsd: 900_000_000, apy: 4.8, apyBase: 4.8, apyMean30d: 4.7 }),
           ], nowSec),
@@ -286,10 +286,10 @@ describe("syncYieldData", () => {
             fallbackMode: "fred-api-error-retained",
           }, nowSec - 50 * 3600),
     });
-    vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
-    fixtureMockFetch([]);
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
 
-    const result = await fixtureSyncYieldData(db);
+    const result = await syncYieldData(db);
 
     expect(result.status).toBe("degraded");
     const staleDeleteCall = db

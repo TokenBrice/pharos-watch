@@ -9,9 +9,7 @@ import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { buildSafetyScoreV9BaselineExtension } from "../../src/lib/safety-score-v9/extension";
 import { buildNativeV9InputCacheEntry } from "../../src/lib/safety-score-v9/native-input";
 import { createNativeSafetyScoreV9FullRegistryInput } from "../../src/lib/__tests__/fixtures/safety-score-v9-full-registry-input";
-import {
-  buildReportCardsFixedInputCacheEntry,
-} from "../../src/lib/report-cards-fixed-input";
+import { buildReportCardsFixedInputCacheEntry } from "../../src/test-helpers/report-cards-fixed-input";
 import {
   findFutureDatedCuratedReviews,
   formatFutureDatedReviewError,
@@ -130,9 +128,20 @@ describe("Safety Score v9 deterministic replay CLI", () => {
         control.claimImpairment === "unknown" ||
         control.economicLossScope === "unknown",
     );
-    expect(compiledUsdc.controlStatus.observationState).toBe("known");
+    // SAFETY-SCORE-V9-25 L-08: an unmeasured route share is unattributed,
+    // never a measured zero-share exemption.
+    expect(compiledUsdc.controlStatus.observationState).toBe("bounded-unknown");
     expect(incompleteControls.length).toBeGreaterThan(0);
-    expect(incompleteControls.every((control) => control.status.observationState === "bounded-unknown")).toBe(true);
+    expect(incompleteControls).toEqual([
+      expect.objectContaining({
+        economicLossScope: "deployment",
+        materialSupplyShare: null,
+        status: expect.objectContaining({
+          applicability: expect.objectContaining({ state: "required" }),
+          observationState: "bounded-unknown",
+        }),
+      }),
+    ]);
   });
 
   it("writes identical canonical output for raw JSON and a cache envelope", async () => {

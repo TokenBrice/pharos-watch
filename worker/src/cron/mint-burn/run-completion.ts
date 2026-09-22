@@ -13,6 +13,8 @@ import {
 import type { MintBurnRunConfigPhaseResult } from "./run-configs";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { throwIfAborted } from "../../lib/abort";
+import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
+import { toErrorMessage } from "@shared/lib/error-utils";
 
 // healNullPrices only heals events inside its 48h LOOKBACK_SEC window; events older
 // than that are intentionally left unhealed (their cached prices are no longer
@@ -110,19 +112,39 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
   throwIfAborted(input.signal);
   const nowSec = Math.floor(Date.now() / 1000);
   let nullPricesHealed = 0;
-  const nullPriceBacklog = await getNullPriceBacklog(input.db, nowSec);
-  throwIfAborted(input.signal);
-  if (nullPriceBacklog.historical > NULL_PRICE_HISTORICAL_BACKLOG_WARN_THRESHOLD) {
+  let nullPriceBacklog: { recent: number; historical: number } | null = null;
+  let nullPriceBacklogError: string | null = null;
+  try {
+    nullPriceBacklog = await runWithOverloadRetry(
+      () => getNullPriceBacklog(input.db, nowSec),
+      3,
+      input.signal,
+    );
+    throwIfAborted(input.signal);
+    if (nullPriceBacklog.historical > NULL_PRICE_HISTORICAL_BACKLOG_WARN_THRESHOLD) {
+      logWorkerEvent({
+        scope: "lib",
+        level: "warn",
+        event: "sync-mint-burn.historical-null-price-backlog",
+        job: "sync-mint-burn",
+        message: "Historical NULL amount_usd backlog exceeds threshold",
+        metadata: {
+          historical: nullPriceBacklog.historical,
+          threshold: NULL_PRICE_HISTORICAL_BACKLOG_WARN_THRESHOLD,
+        },
+      });
+    }
+  } catch (backlogError) {
+    throwIfAborted(input.signal);
+    nullPriceBacklogError = toErrorMessage(backlogError);
+    if (status === "ok") status = "degraded";
     logWorkerEvent({
       scope: "lib",
       level: "warn",
-      event: "sync-mint-burn.historical-null-price-backlog",
+      event: "sync-mint-burn.null-price-backlog-query-failed",
       job: "sync-mint-burn",
-      message: "Historical NULL amount_usd backlog exceeds threshold",
-      metadata: {
-        historical: nullPriceBacklog.historical,
-        threshold: NULL_PRICE_HISTORICAL_BACKLOG_WARN_THRESHOLD,
-      },
+      message: "NULL-price backlog query failed after overload retries; continuing completion",
+      error: backlogError,
     });
   }
   if (status !== "error") {
@@ -252,8 +274,6 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
     apiErrors: phase.apiErrors,
     conservationFailures,
     conservationUnavailable,
-    validationFailures: 0,
-    fallbackMode: null,
     burnClassification: {
       effectiveBurns: phase.effectiveBurns,
       bridgeBurns: phase.bridgeBurns,
@@ -290,8 +310,10 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
     runStatePersistenceFailed,
     nullPricesHealed,
     nullPriceBacklog,
-    nullPriceBacklogRecent: nullPriceBacklog.recent,
-    nullPriceBacklogHistorical: nullPriceBacklog.historical,
+    nullPriceBacklogRecent: nullPriceBacklog?.recent ?? null,
+    nullPriceBacklogHistorical: nullPriceBacklog?.historical ?? null,
+    nullPriceBacklogAvailable: nullPriceBacklogError == null,
+    nullPriceBacklogError,
     roundtripSweepCount,
     roundtripsBacklogSaturated,
   });

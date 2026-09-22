@@ -14,7 +14,7 @@ import {
   PENDING_OWNERSHIP_CONFLICT_MESSAGE,
   persistPendingDisambiguation,
 } from "./telegram-webhook-store";
-import { dedupeCoins } from "./telegram-webhook-parsing";
+import { dedupeCoins } from "../lib/telegram/coin-dedupe";
 
 export function resolveCoinTargets(
   tickers: string[],

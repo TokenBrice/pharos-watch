@@ -21,13 +21,9 @@ const phaseFixtures = vi.hoisted(() => {
         uniV3SymbolFees: new Map(),
         uniV3PriceObs: new Map(),
         uniV3ExecutionCandidates: new Map(),
+        failedChains: [],
       },
-      aerodrome: {
-        aerodromePriceObs: new Map(),
-        aerodromeIsStable: new Map(),
-        aerodromeV2ExecutionCandidates: new Map(),
-      },
-      uniswapV4: { uniswapV4ExecutionCandidates: new Map() },
+      uniswapV4: { uniswapV4ExecutionCandidates: new Map(), failedChains: [] },
       primary: {
         pools: [],
         rawPoolCount: 0,
@@ -81,7 +77,7 @@ const phaseFixtures = vi.hoisted(() => {
         maxDepthDown2PctUsdBySymbol: { USDT: 1_000_000, USDC: 500_000 },
         maxDepthUp2PctUsdBySymbol: { USDT: 900_000, USDC: 450_000 },
       },
-      challenger: { publishedStablecoins: 0, skippedStablecoins: 0, missingTables: false },
+      challenger: { publishedStablecoins: 0, skippedStablecoins: 0 },
       ...overrides,
     };
   }
@@ -111,7 +107,6 @@ function deferred<T>() {
 
 vi.mock("../dex-liquidity/subgraph-source-families", () => ({
   fetchUniV3Data: vi.fn(async () => phaseFixtures.current.uniV3),
-  fetchAerodromeData: vi.fn(async () => phaseFixtures.current.aerodrome),
   fetchUniswapV4Data: vi.fn(async () => phaseFixtures.current.uniswapV4),
 }));
 
@@ -258,15 +253,20 @@ vi.mock("../../lib/cex-orderbooks", () => ({
 }));
 
 import {
+  DEX_LIQUIDITY_STAGE_LEAD_SEC,
+  getCronSlotStartedAtForSchedule,
+} from "@shared/lib/cron-jobs";
+import {
   consumeDexLiquidityScoringStage,
   reuseCurrentDexLiquidityScoringGeneration,
   stageDexLiquidityScoring,
 } from "../dex-liquidity/orchestrator";
+import { loadDexLiquidityScoringStage } from "../dex-liquidity/scoring-stage";
 import { UNIV3_SUBGRAPHS } from "../dex-liquidity/constants";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { convertToGtNewPools, extractPriceObservations } from "../../lib/dex-api-common";
 import { buildCurveLookups, fetchDataSources, buildKnownPoolAddresses } from "../dex-liquidity/fetch-primary";
-import { fetchAerodromeData, fetchUniV3Data } from "../dex-liquidity/subgraph-source-families";
+import { fetchUniV3Data } from "../dex-liquidity/subgraph-source-families";
 import { fetchFluidPools } from "../dex-liquidity/fetch-fluid";
 import { fetchBalancerPools } from "../dex-liquidity/fetch-balancer";
 import { fetchRaydiumPools } from "../dex-liquidity/fetch-raydium";
@@ -312,7 +312,7 @@ async function runDexLiquidityScoringCycle(
   coingeckoApiKey?: string | null,
   chainRpcs?: Map<string, ChainRpcConfig>,
   reportProgress?: CronProgressReporter,
-  options?: { publishLiquidity?: boolean; publishShadowTargets?: boolean },
+  options?: { publishShadowTargets?: boolean },
 ): Promise<CronResult> {
   await stageDexLiquidityScoring(database, graphApiKey, signal, coingeckoApiKey, chainRpcs, reportProgress);
   return await consumeDexLiquidityScoringStage(database, signal, reportProgress, undefined, options);
@@ -619,7 +619,7 @@ describe("dex liquidity scoring stage cycle", () => {
     expect(metadata.fallbackCounters?.stagedOrganicFractionDefault).toBeTypeOf("number");
   });
 
-  it("names a chain that failed inside a usable direct API source in the scoring-stage metadata", async () => {
+  it("carries partial-source telemetry through the stage into consumer metadata", async () => {
     vi.mocked(fetchPancakeSwapPools).mockResolvedValueOnce({
       pools: [],
       ok: true,
@@ -628,9 +628,9 @@ describe("dex liquidity scoring stage cycle", () => {
       degradedChains: ["bsc"],
     });
 
-    const stageResult = await stageDexLiquidityScoring(db, "graph-key");
+    const result = await runDexLiquidityScoringCycle(db, "graph-key");
 
-    const metadata = JSON.parse(stageResult.metadata ?? "{}") as {
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
       failedSources?: string[];
       degradedSources?: string[];
     };
@@ -638,56 +638,22 @@ describe("dex liquidity scoring stage cycle", () => {
     expect(metadata.failedSources).toEqual([]);
   });
 
-  it("reuses the current generation for hourly prices without liquidity writes", async () => {
-    vi.mocked(loadCurrentDexScoringGenerationId).mockResolvedValueOnce("dex-liquidity-current");
+  it("loads the source slot derived from the registered stage and consumer offsets", async () => {
+    await stageDexLiquidityScoring(db, "graph-key");
+    const scheduledAtMs = Date.parse("2026-09-22T12:16:00Z");
+    const consumerSlot = getCronSlotStartedAtForSchedule("halfHourlyChartsOffset", scheduledAtMs);
+    const sourceSlot = getCronSlotStartedAtForSchedule("halfHourlyOffset", scheduledAtMs);
 
-    const result = await runDexLiquidityScoringCycle(
+    await consumeDexLiquidityScoringStage(db, undefined, undefined, consumerSlot);
+
+    expect(consumerSlot - DEX_LIQUIDITY_STAGE_LEAD_SEC).toBe(sourceSlot);
+    expect(loadDexLiquidityScoringStage).toHaveBeenLastCalledWith(
       db,
-      "graph-key",
+      expect.objectContaining({ expectedSourceSlotStartedAt: sourceSlot }),
       undefined,
-      undefined,
-      undefined,
-      undefined,
-      { publishLiquidity: false, publishShadowTargets: false },
     );
-
-    const metadata = JSON.parse(result.metadata ?? "{}") as {
-      rowsWritten?: number;
-      persistence?: { generationId?: string; skippedReason?: string | null };
-    };
-    expect(result.status).toBe("ok");
-    expect(metadata.rowsWritten).toBe(0);
-    expect(metadata.persistence).toMatchObject({
-      generationId: "dex-liquidity-current",
-      skippedReason: "liquidity-cadence-reuse",
-    });
-    const scoreCalls = vi.mocked(computeStablecoinScores).mock.calls;
-    expect(scoreCalls[scoreCalls.length - 1]?.[8]).toBe("none");
-    expect(persistScores).not.toHaveBeenCalled();
-    expect(publishStablecoinScoreTargets).not.toHaveBeenCalled();
-    expect(writeHistoricalSnapshots).not.toHaveBeenCalled();
-    expect(computeDepthStability).not.toHaveBeenCalled();
-    expect(computeDexPrices).toHaveBeenCalledOnce();
   });
 
-  it("bootstraps full liquidity publication when the current generation is missing", async () => {
-    const result = await runDexLiquidityScoringCycle(
-      db,
-      "graph-key",
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      { publishLiquidity: false, publishShadowTargets: false },
-    );
-
-    expect(result.status).toBe("ok");
-    const scoreCalls = vi.mocked(computeStablecoinScores).mock.calls;
-    expect(scoreCalls[scoreCalls.length - 1]?.[8]).toBe("active");
-    expect(persistScores).toHaveBeenCalledOnce();
-    expect(writeHistoricalSnapshots).toHaveBeenCalledOnce();
-    expect(computeDepthStability).toHaveBeenCalledOnce();
-  });
 
   it("publishes active and shadow measured targets during the daily inventory cycle", async () => {
     await runDexLiquidityScoringCycle(
@@ -697,7 +663,7 @@ describe("dex liquidity scoring stage cycle", () => {
       undefined,
       undefined,
       undefined,
-      { publishLiquidity: true, publishShadowTargets: true },
+      { publishShadowTargets: true },
     );
 
     const scoreCalls = vi.mocked(computeStablecoinScores).mock.calls;
@@ -986,6 +952,7 @@ describe("dex liquidity scoring stage cycle", () => {
       uniV3SymbolFees: new Map(),
       uniV3PriceObs: new Map(),
       uniV3ExecutionCandidates,
+      failedChains: [],
     });
     vi.mocked(mergeStagedPools).mockImplementationOnce(
       async (_db, _metrics, _known, _now, _references, confirmation) => {
@@ -1129,14 +1096,12 @@ describe("dex liquidity scoring stage cycle", () => {
       await entered.promise;
       expect(fetchDataSources).not.toHaveBeenCalled();
       expect(fetchUniV3Data).not.toHaveBeenCalled();
-      expect(fetchAerodromeData).not.toHaveBeenCalled();
     } finally {
       fluidGate.resolve(makeDirectApiResult());
       await syncPromise;
     }
     expect(fetchDataSources).toHaveBeenCalledOnce();
     expect(fetchUniV3Data).toHaveBeenCalledOnce();
-    expect(fetchAerodromeData).toHaveBeenCalledOnce();
   });
 
   it("stages the exact bounded six-chain Uni V3 source family", async () => {

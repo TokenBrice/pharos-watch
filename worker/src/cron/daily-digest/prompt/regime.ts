@@ -1,4 +1,5 @@
 import type { DigestInputData } from "@shared/types/digest";
+import { REGIME_CRITICAL_DEGRADED_SOURCES } from "../degraded-sources";
 
 export function classifyRegime(data: DigestInputData): "CRISIS" | "TENSION" | "WATCHFUL" | "CALM" {
   const band = data.stabilityIndex?.band ?? "BEDROCK";
@@ -12,7 +13,10 @@ export function classifyRegime(data: DigestInputData): "CRISIS" | "TENSION" | "W
       .flatMap((change) => change.symbols.map((symbol) => symbol.toUpperCase())),
   );
   const activeDepegImpact = data.topDepegs.reduce((sum, depeg) => {
-    const impact = depeg.impactScore ?? Math.abs(depeg.currentBps ?? depeg.bps) * depeg.mcapUsd / 1_000_000_000;
+    const rawImpact = depeg.impactScore ?? Math.abs(depeg.currentBps ?? depeg.bps) * depeg.mcapUsd / 1_000_000_000;
+    // A non-finite impact silently defuses every threshold below, making
+    // CRISIS/TENSION unreachable: drop it instead of comparing against NaN.
+    const impact = Number.isFinite(rawImpact) ? rawImpact : 0;
     const suppressedButMaterial = depeg.suppressReason && impact < 5_000;
     if (suppressedButMaterial) return sum;
     const chronicUnchanged =
@@ -37,5 +41,10 @@ export function classifyRegime(data: DigestInputData): "CRISIS" | "TENSION" | "W
   if ((data.dewsStress?.bandChanges?.length ?? 0) > 0 || unsuppressedActiveDepegs >= 1 || gaugeScore < -10) {
     return "WATCHFUL";
   }
-  return "CALM";
+  // A regime-critical collector that could not read did not observe calm:
+  // an unavailable input never publishes the optimistic end of the scale.
+  const inputsUnavailable = REGIME_CRITICAL_DEGRADED_SOURCES.some(
+    (source) => data.degradedSources?.includes(source) ?? false,
+  );
+  return inputsUnavailable ? "WATCHFUL" : "CALM";
 }

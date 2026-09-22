@@ -20,6 +20,7 @@ import { YieldSourceRiskBar } from "@/components/yield-source-risk-bar";
 import { YieldFreshnessLabel } from "@/components/yield-freshness-label";
 import { YieldWatchlistStar } from "@/components/yield-watchlist-star";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
+import { getLogoSrc } from "@/lib/logos";
 import { useYieldRankings } from "@/hooks/api-hooks";
 import { useSortedPaginatedTable } from "@/hooks/use-sorted-paginated-table";
 import { TABLE_PAGE_SIZE } from "@/lib/constants";
@@ -40,7 +41,6 @@ import {
 } from "@/components/yield-leaderboard-row-parts";
 import { trackEvent } from "@/lib/analytics";
 import { resolveYieldDisplayRebaseReferenceRate, resolveYieldRowBenchmark } from "@/lib/yield-benchmark";
-import { isYieldBenchmarkFallback } from "@/lib/yield-workbench-row";
 import type { YieldBenchmarkRegistry } from "@shared/types";
 import { downloadCsvWithPreamble, type CsvColumn } from "@/lib/exports/csv";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
@@ -177,10 +177,7 @@ const YIELD_EXPORT_COLUMNS: CsvColumn<YieldExportRow>[] = [
   { header: "Safety score", accessor: (entry) => entry.row.safetyScore ?? "NR" },
   {
     header: "Safety provenance",
-    accessor: (entry) =>
-      isOpportunityDerivedSafety(entry.row.provenance?.safetyProvenance)
-        ? "opportunity-derived"
-        : "safety-score-v9",
+    accessor: (entry) => entry.row.provenance?.safetyProvenance ?? "unknown",
   },
   { header: "Yield source", accessor: (entry) => entry.row.yieldSource },
   { header: "Yield type", accessor: (entry) => entry.row.yieldType },
@@ -365,7 +362,7 @@ export function YieldLeaderboard({
                   <YieldMobileCard
                     key={row.id}
                     row={row}
-                    logo={logos[row.id]}
+                    logo={getLogoSrc(logos, row.id)}
                     riskFreeRate={riskFreeRate}
                     medianApy={medianApy}
                     scalingFactor={scalingFactor}
@@ -439,9 +436,10 @@ export function YieldLeaderboard({
       </div>
       <YieldSourceSheet
         ranking={sheetRanking}
-        logo={sheetRankingId ? logos[sheetRankingId] : undefined}
+        logo={sheetRankingId ? getLogoSrc(logos, sheetRankingId) : undefined}
         riskFreeRate={riskFreeRate}
         medianApy={medianApy}
+        benchmarks={benchmarks}
         open={sheetRankingId !== null}
         onOpenChange={(open) => {
           if (!open) setSheetRankingId(null);
@@ -531,6 +529,7 @@ export function YieldMobileCard({
       ),
     [row, scalingFactor, methodologyVersion, riskFreeRate],
   );
+  const resolvedBenchmark = resolveYieldRowBenchmark(row, benchmarks, riskFreeRate);
 
   return (
     <article
@@ -618,8 +617,7 @@ export function YieldMobileCard({
         <YieldZoneChip
           safetyScore={safetyScore}
           apy30d={row.apy30d}
-          // Row rate -> registry entry for the row's key -> USD frame -> risk-free.
-          benchmarkRate={resolveYieldRowBenchmark(row, benchmarks, riskFreeRate).rate}
+          benchmarkRate={resolvedBenchmark.rate}
         />
         <MobileMetricPill>
           TVL{" "}
@@ -734,9 +732,9 @@ export function YieldMobileCard({
           ) : null}
           <YieldHistoryChart
             stablecoinId={row.id}
-            benchmarkRate={row.benchmarkRate ?? null}
-            benchmarkLabel={row.benchmarkLabel}
-            benchmarkIsFallback={isYieldBenchmarkFallback(row)}
+            benchmarkRate={resolvedBenchmark.rate}
+            benchmarkLabel={resolvedBenchmark.label}
+            benchmarkIsFallback={resolvedBenchmark.isFallback}
             medianApy={medianApy}
             compact
             availableSources={availableSources}

@@ -40,6 +40,10 @@ function makeSummaryPayload() {
       trackedAmountGapCount: 0,
       recentCount: 4,
       recentCount24h: 1,
+      recentFreezeCount24h: 1,
+      recentFreezeCount7d: 4,
+      recentFreezeAmount24hUsd: 500,
+      recentFreezeAmount7dUsd: 2_000,
       recoverableGapCount: 0,
       perCoinBlacklistCounts: makePerCoinCounts(1),
       perCoinTotalEvents: makePerCoinCounts(101),
@@ -119,7 +123,6 @@ function makeSummaryPayload() {
       },
       freezeLedger: {
         providerFailedCount: 0,
-        staleSnapshotCount: 0,
         trackedGapCount: 0,
         scopedRows: 0,
         legacyRows: 0,

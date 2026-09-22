@@ -407,11 +407,24 @@ describe("generate-public-datasets", () => {
     expect(rows.map((row) => row.id)).toEqual([3, 2, 9]);
   });
 
-  it("uses source coverage instead of a volatile fixed floor for rolling depeg history", () => {
-    expect(() => testExports.validateTopicRowFloor("depeg-history", [makeEvent(null)])).not.toThrow();
-    expect(() =>
-      testExports.validateDepegHistoryCoverage([makeEvent(null), makeCoverageSentinel()], "2026-05-16"),
-    ).not.toThrow();
+  it("rejects an old complete prefix with a truncated recent depeg window", () => {
+    const recent = Array.from({ length: 59 }, (_, index) => ({
+      ...makeEvent(null),
+      id: 100 + index,
+      startedAt: Date.parse("2026-05-16T12:00:00Z") / 1000 - index,
+    }));
+    const source = [makeCoverageSentinel(), ...recent];
+    expect(() => testExports.validateDepegHistoryCoverage(source, "2026-05-16")).not.toThrow();
+    const projected = testExports.projectDepegHistory(source, "2026-05-16");
+    expect(projected).toHaveLength(59);
+    expect(() => testExports.validateTopicRowFloor("depeg-history", projected)).toThrow(
+      "expected at least 60",
+    );
+  });
+  it("requires a source shard for the requested snapshot year", () => {
+    expect(() => testExports.validateDepegHistorySourceShard("2030-05-16")).toThrow(
+      "no 2030 shard",
+    );
   });
 
   it("includes only the independently specified 90-day UTC window boundaries", () => {

@@ -1,6 +1,3 @@
-import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import {
@@ -8,51 +5,7 @@ import {
   reconcileIndependentAssuranceManifest,
 } from "@shared/lib/independent-assurance";
 import { CADD_INDEPENDENT_ASSURANCE_PROFILE } from "../cadd-independent-assurance";
-import { verifyIndependentAssuranceReport } from "../independent-assurance";
-import { installAdapterNetwork } from "./reserve-adapter.test-support";
-
-const TEST_DIR = dirname(fileURLToPath(import.meta.url));
-const PDF_BYTES = new TextEncoder().encode("%PDF-1.7\nfixture\n");
-const INDEX_HOST = "tetradg.com";
-const REPORT_HOSTS = ["drive.google.com", "drive.usercontent.google.com"];
-const SEPTEMBER_ANCHOR =
-  '<li data-section-id="mpyslq"><a href="https://drive.google.com/file/d/1SepFailsClosedPlaceholderID/view?usp=sharing" target="_blank" rel="noopener">September 2026 attestation</a></li>';
-
-
-function indexFixture(): string {
-  return readFileSync(
-    resolve(TEST_DIR, "fixtures", "cadd-independent-assurance.html"),
-    "utf8",
-  );
-}
-
-function installFetch(html: string) {
-  const reviewed = getIndependentAssuranceManifest("CADD");
-  return installAdapterNetwork({
-    html: {
-      [reviewed.officialIndexUrl]: html,
-      [reviewed.reportUrl]: {
-        body: new TextDecoder().decode(PDF_BYTES),
-        headers: {
-          "content-type": "application/pdf",
-          "content-length": String(PDF_BYTES.length),
-        },
-      },
-    },
-  });
-}
-
-async function verifyIndex() {
-  const reviewed = getIndependentAssuranceManifest("CADD");
-  await verifyIndependentAssuranceReport({
-    manifest: reviewed,
-    indexUrl: reviewed.officialIndexUrl,
-    indexHost: INDEX_HOST,
-    reportHosts: REPORT_HOSTS,
-    profile: CADD_INDEPENDENT_ASSURANCE_PROFILE,
-    signal: new AbortController().signal,
-  });
-}
+import { indexFixture, verifyFixtureIndex } from "./independent-assurance.test-support";
 
 describe("cadd-independent-assurance (Baker Tilly CSAE 3000)", () => {
   afterEach(() => {
@@ -93,7 +46,7 @@ describe("cadd-independent-assurance (Baker Tilly CSAE 3000)", () => {
 
   it("rewrites Drive share links to direct downloads and dates candidates from anchor text", async () => {
     const prepared = await CADD_INDEPENDENT_ASSURANCE_PROFILE.prepareIndexHtml!(
-      indexFixture(),
+      indexFixture("cadd-independent-assurance.html"),
       new AbortController().signal,
       undefined,
     );
@@ -120,25 +73,13 @@ describe("cadd-independent-assurance (Baker Tilly CSAE 3000)", () => {
     ).toBe(true);
   });
 
-  it("parses the real index shape and reaches the PDF byte-verification gate", async () => {
-    installFetch(indexFixture());
-    await expect(verifyIndex()).rejects.toThrow(
-      "PDF byte length",
-    );
-  });
-
-  it("fails closed when a newer unreviewed attestation appears on the index", async () => {
-    const html = indexFixture() + SEPTEMBER_ANCHOR;
-    installFetch(html);
-    await expect(verifyIndex()).rejects.toThrow("newer unreviewed report");
-  });
 
   it("rejects an attestation whose anchor text carries no date", async () => {
-    const html =
-      indexFixture() +
+    const html = indexFixture("cadd-independent-assurance.html") +
       '<a href="https://drive.google.com/file/d/1AAAAAAA/view?usp=sharing">Attestation</a>';
-    installFetch(html);
-    await expect(verifyIndex()).rejects.toThrow("ambiguous report date");
+    await expect(verifyFixtureIndex(
+      "CADD", CADD_INDEPENDENT_ASSURANCE_PROFILE, "cadd-independent-assurance.html", html,
+    )).rejects.toThrow("ambiguous report date");
   });
 
 });

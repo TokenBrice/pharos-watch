@@ -10,6 +10,7 @@ import {
 } from "../core";
 import type { YamatoMeasurementEvidence } from "../schema";
 import type { YamatoMeasurementTarget } from "../targets";
+import { buildMeasurementCompleteness } from "../evidence-envelope";
 
 const LIQUIDATION_NA =
   "Yamato documents a no-liquidation design; the protocol pool is a redemption/sweep resource, not committed liquidation capital.";
@@ -136,7 +137,7 @@ export async function measureYamato(
         liquidationCapacityRatio: { state: "not-applicable", rationale: LIQUIDATION_NA },
       },
     },
-    completeness: { complete: true, blockers: [] },
+    completeness: buildMeasurementCompleteness(),
     derived: {
       yamato,
       currencyOs,

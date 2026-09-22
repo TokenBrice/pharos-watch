@@ -15,24 +15,8 @@ import { logWorkerEventArgs } from "../lib/structured-log";
  * I/O counterparts live in yield-sync/: sources.ts (pool discovery), resolve.ts
  * (APY resolution), cache.ts (KV caching), rankings.ts (DB row mapping).
  */
-export { buildOnChainSourceKey } from "../lib/yield-utils";
 
 export const DETERMINISTIC_APY_SANITY_MAX = 300;
-
-export {
-  classifyYieldSourceFreshness,
-  COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
-  derivePysNullReason,
-  getComparisonAnchorStaleThresholdMs,
-  getRankingStaleThresholdMs,
-  LONG_HORIZON_COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
-  PRICE_DERIVED_STALE_THRESHOLD_MS,
-  RATE_DERIVED_STALE_THRESHOLD_MS,
-  SLOW_NAV_SOURCE_STALE_THRESHOLD_MS,
-  STALE_THRESHOLD_MS,
-  SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS,
-  type YieldSourceFreshness,
-} from "../lib/yield-ranking-helpers";
 
 export {
   computePYS,
@@ -43,6 +27,7 @@ export {
   resolvePysSourceRiskPenalty,
 } from "@shared/lib/yield-scoring";
 import { normalizeChainId } from "@shared/lib/chains";
+import type { YieldWarningSignalKey } from "@shared/types/yield";
 import { normalizeDexSymbol } from "../lib/dex-cron-constants";
 import { normalizeTokenAddress } from "./dex-liquidity/token-resolution";
 
@@ -127,8 +112,13 @@ interface WarningInput {
   prevTvlUsd: number | null;
 }
 
-export function detectWarningSignals(input: WarningInput): string[] {
-  const signals: string[] = [];
+/**
+ * The emitted vocabulary is `YIELD_WARNING_SIGNAL_KEYS` (`@shared/types/yield`),
+ * the single authority DEWS pins its `YIELD_WARNING_SCORES` table against: the
+ * return type below makes the compiler reject any key outside it (R5).
+ */
+export function detectWarningSignals(input: WarningInput): YieldWarningSignalKey[] {
+  const signals: YieldWarningSignalKey[] = [];
   if (input.apy30d > 0 && input.currentApy > YIELD_SPIKE_MIN_APY && input.currentApy / input.apy30d > YIELD_SPIKE_THRESHOLD) signals.push("yield-spike");
   if (input.medianApy > 0 && input.currentApy > input.medianApy * YIELD_DIVERGENCE_THRESHOLD) signals.push("yield-divergence");
   if (input.apy30d > NEGATIVE_TREND_MIN_APY && input.currentApy < input.apy30d * NEGATIVE_TREND_THRESHOLD) signals.push("negative-trend");

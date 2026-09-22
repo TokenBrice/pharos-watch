@@ -3,10 +3,11 @@ import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-
 import type { EvaluatedYieldSource } from "./evaluation-types";
 import { classifyYieldBenchmarkFreshness } from "./benchmarks";
 import type { YieldEnvelopeRejection } from "./types";
+import type { StablecoinSupplyMapState } from "./supply-map";
 import type { YieldSupplementalCacheMeta } from "./state-loading";
 import type { YieldOptionalSourceOutcome } from "./optional-source-runtime";
 import type { YieldRowsWriteStats } from "./publication-atomic-batch";
-import { getComparisonAnchorStaleThresholdMs } from "../yield-helpers";
+import { getComparisonAnchorStaleThresholdMs } from "../../lib/yield-ranking-helpers";
 
 const YIELD_METADATA_EXAMPLE_LIMIT = 25;
 
@@ -100,6 +101,7 @@ export function buildYieldDegradationReasons(params: {
   selectedSources: readonly EvaluatedYieldSource[];
   dlPoolsMeta: YieldSourceInputMeta;
   supplementalMeta: YieldSupplementalCacheMeta;
+  stablecoinSupplyMapState: StablecoinSupplyMapState;
   allDeterministicFailed: boolean;
   maskedAllDeterministicFailure: boolean;
   onChainSkippedDueToCooldown: boolean;
@@ -128,17 +130,17 @@ export function buildYieldDegradationReasons(params: {
   for (const [key, source] of benchmarkByKey) {
     if (source.benchmarkFreshness === "healthy") continue;
     const reason = source.benchmarkFallbackMode ?? source.benchmarkFreshness;
-    degradationReasons.push(
-      key === "USD"
-        ? `risk-free-rate:${reason}`
-        : `risk-free-rate:${key}:${reason}`,
-    );
+    degradationReasons.push(`risk-free-rate:${key}:${reason}`);
   }
-  if (params.selectedSources.some((source) => source.sourceFreshness === "stale")) {
-    degradationReasons.push("yield-source:expired-selected");
+  const staleSelectedSource = params.selectedSources.find((source) => source.sourceFreshness === "stale");
+  if (staleSelectedSource) {
+    degradationReasons.push(`yield-source:expired-selected:${staleSelectedSource.sourceKey}`);
   }
   if (params.dlPoolsMeta.mode === "unavailable" || params.dlPoolsMeta.fallbackMode === "cache-parse-failed") {
     degradationReasons.push(`dl-pools:${params.dlPoolsMeta.fallbackMode ?? params.dlPoolsMeta.mode}`);
+  }
+  if (params.stablecoinSupplyMapState !== "ok") {
+    degradationReasons.push(`yield-supply-map:${params.stablecoinSupplyMapState}`);
   }
   // The aggregate coverage floor (60%) cannot see the supplemental lane's share
   // of published rows, so its own cache state and retained-degraded families are
@@ -151,7 +153,9 @@ export function buildYieldDegradationReasons(params: {
   // still degrades the run.
   const supplementalLaneUnprovisioned =
     supplemental.fallbackMode === "missing-cache" && supplemental.sourceCount === 0;
-  if (!supplementalLaneUnprovisioned && (supplemental.mode !== "cache" || supplemental.sourceCount === 0)) {
+  if (supplemental.fallbackMode === "partial-family-cache") {
+    degradationReasons.push("yield-supplemental:partial-family-cache");
+  } else if (!supplementalLaneUnprovisioned && (supplemental.mode !== "cache" || supplemental.sourceCount === 0)) {
     degradationReasons.push(`yield-supplemental:${supplemental.fallbackMode ?? supplemental.mode}`);
   }
   for (const family of supplemental.degradedFamilies) {
@@ -192,7 +196,6 @@ export interface YieldOnChainSyncMeta {
   alternativeCoverageMissingIds: string[];
   failures: Record<string, number> | null;
   skippedDueToCooldown: boolean;
-  cooldownActive: boolean;
   cooldownTriggered: boolean;
   cooldownUntil: number | null;
   cooldownRemainingSec: number;
@@ -228,6 +231,7 @@ export function buildYieldSyncMetadata(input: {
   /** SRC-SUPP-3: DL pool rows dropped by the APY envelope during this run's load. */
   dlApyEnvelopeRejectedCount: number;
   supplementalMeta: YieldSupplementalCacheMeta;
+  stablecoinSupplyMapState: StablecoinSupplyMapState;
   /** B15 optional-family failures: reported here, never as a degradation reason. */
   optionalSourceFailures: readonly YieldOptionalSourceOutcome[];
   onChain: YieldOnChainSyncMeta;
@@ -272,6 +276,7 @@ export function buildYieldSyncMetadata(input: {
       supplementalSourceAgeSeconds: input.supplementalMeta.ageSeconds,
       supplementalSourceCount: input.supplementalMeta.sourceCount,
       supplementalFallbackMode: input.supplementalMeta.fallbackMode,
+      stablecoinSupplyMapState: input.stablecoinSupplyMapState,
       optionalSourceFailures: input.optionalSourceFailures,
       optionalSourceFailureCount: input.optionalSourceFailures.length,
       onChainRatesResolved: onChain.ratesResolved,
@@ -287,7 +292,7 @@ export function buildYieldSyncMetadata(input: {
       onChainAlternativeCoverageMissingIds: onChain.alternativeCoverageMissingIds,
       onChainFailures: onChain.failures,
       onChainSkippedDueToCooldown: onChain.skippedDueToCooldown,
-      onChainCooldownActive: onChain.cooldownActive,
+      onChainCooldownActive: onChain.skippedDueToCooldown,
       onChainCooldownTriggered: onChain.cooldownTriggered,
       onChainCooldownUntil: onChain.cooldownUntil,
       onChainCooldownRemainingSec: onChain.cooldownRemainingSec,

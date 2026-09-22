@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  aggregateV9GeneralizedMean,
   aggregateV9SmoothBoundedHeadroom,
   type V9AggregationPillars,
 } from "../safety-score-v9/aggregation";
@@ -11,10 +10,6 @@ function smooth(pillars: V9AggregationPillars): number {
   return aggregateV9SmoothBoundedHeadroom(pillars, WEIGHTS, 30).score;
 }
 
-function generalized(pillars: V9AggregationPillars): number {
-  return aggregateV9GeneralizedMean(pillars, WEIGHTS, -4).score;
-}
-
 describe("Safety Score v9 weakest-path aggregation", () => {
   // Boundary grid replacing the former 11^3 dense sweep (≈6,050 redundant
   // scorer calls per run). Each remaining point carries a distinct behavior:
@@ -22,10 +17,8 @@ describe("Safety Score v9 weakest-path aggregation", () => {
   // cap, and 50/71/90 lay out every weakest/non-weakest ordering, so any
   // monotonicity violation the sweep could catch still fires here.
   const boundaryScores = [0, 1, 50, 71, 90, 99, 100] as const;
-  it.each([
-    ["smooth bounded headroom", smooth],
-    ["generalized mean", generalized],
-  ])("%s is monotonic in every pillar", (_name, aggregate) => {
+  it("smooth bounded headroom is monotonic in every pillar", () => {
+    const aggregate = smooth;
     for (const backing of boundaryScores) {
       for (const exit of boundaryScores) {
         for (const control of boundaryScores) {
@@ -59,29 +52,16 @@ describe("Safety Score v9 weakest-path aggregation", () => {
     expect(new Set(scores.map((score) => score.toFixed(8))).size).toBe(101);
   });
 
-  it("generalized mean increasingly emphasizes weak pillars as the exponent falls", () => {
-    const pillars = { backing: 95, exit: 45, control: 90 };
-    const mild = aggregateV9GeneralizedMean(pillars, WEIGHTS, -1);
-    const strong = aggregateV9GeneralizedMean(pillars, WEIGHTS, -6);
-    expect(strong.score).toBeLessThan(mild.score);
-    expect(strong.score).toBeGreaterThanOrEqual(strong.weakestScore);
-  });
-
   it("rejects invalid policy parameters", () => {
     expect(() =>
       aggregateV9SmoothBoundedHeadroom({ backing: 80, exit: 80, control: 80 }, WEIGHTS, 0),
     ).toThrow(/headroom/);
-    expect(() =>
-      aggregateV9GeneralizedMean({ backing: 80, exit: 80, control: 80 }, WEIGHTS, 1),
-    ).toThrow(/negative/);
   });
 
-  it("rejects invalid pillars for either aggregation method", () => {
-    for (const aggregate of [smooth, generalized]) {
-      for (const pillar of ["backing", "exit", "control"] as const) {
-        for (const value of [NaN, Infinity, -1, 101]) {
-          expect(() => aggregate({ backing: 80, exit: 80, control: 80, [pillar]: value })).toThrow();
-        }
+  it("rejects invalid pillars", () => {
+    for (const pillar of ["backing", "exit", "control"] as const) {
+      for (const value of [NaN, Infinity, -1, 101]) {
+        expect(() => smooth({ backing: 80, exit: 80, control: 80, [pillar]: value })).toThrow();
       }
     }
   });
@@ -95,7 +75,6 @@ describe("Safety Score v9 weakest-path aggregation", () => {
       { backing: Infinity, exit: -Infinity, control: 0.25 },
     ]) {
       expect(() => aggregateV9SmoothBoundedHeadroom(pillars, weights, 30)).toThrow();
-      expect(() => aggregateV9GeneralizedMean(pillars, weights, -4)).toThrow();
     }
   });
 
@@ -103,19 +82,8 @@ describe("Safety Score v9 weakest-path aggregation", () => {
     const pillars = { backing: 80, exit: 80, control: 80 };
     const accepted = { ...WEIGHTS, backing: 0.4000005 };
     expect(aggregateV9SmoothBoundedHeadroom(pillars, accepted, 30).score).toBeCloseTo(80, 3);
-    expect(aggregateV9GeneralizedMean(pillars, accepted, -4).score).toBeCloseTo(80, 3);
     for (const backing of [0.399998, 0.400002]) {
       expect(() => aggregateV9SmoothBoundedHeadroom(pillars, { ...WEIGHTS, backing }, 30)).toThrow();
-      expect(() => aggregateV9GeneralizedMean(pillars, { ...WEIGHTS, backing }, -4)).toThrow();
-    }
-  });
-
-  it("generalized mean preserves equal scores and makes any zero pillar binding", () => {
-    for (const score of [0, 37, 100]) {
-      expect(generalized({ backing: score, exit: score, control: score })).toBeCloseTo(score, 10);
-    }
-    for (const pillar of ["backing", "exit", "control"] as const) {
-      expect(generalized({ backing: 83, exit: 71, control: 92, [pillar]: 0 })).toBe(0);
     }
   });
 });

@@ -13,6 +13,9 @@
  * platformTypes: ANY_PLATFORM (covers all platforms) for URL targets.
  */
 
+import { runDirectCli } from "../lib/cli-args.mjs";
+import { z } from "zod";
+
 const API_KEY = process.env.GOOGLE_SAFE_BROWSING_API_KEY;
 
 const URLS_TO_CHECK = [
@@ -33,18 +36,25 @@ const THREAT_TYPES = [
 
 const PLATFORM_TYPES = ["ANY_PLATFORM"];
 
-interface SafeBrowsingThreatMatch {
-  threat?: { url?: string };
-  threatType?: string;
-  platformType?: string;
-  cacheDuration?: string;
-}
+const SafeBrowsingThreatMatchSchema = z.object({
+  threat: z.object({ url: z.string().optional() }).optional(),
+  threatType: z.string().optional(),
+  platformType: z.string().optional(),
+  cacheDuration: z.string().optional(),
+});
+type SafeBrowsingThreatMatch = z.output<typeof SafeBrowsingThreatMatchSchema>;
 
-interface SafeBrowsingResponse {
-  matches?: SafeBrowsingThreatMatch[];
-}
+const SafeBrowsingResponseSchema = z.object({
+  matches: z.array(SafeBrowsingThreatMatchSchema).optional(),
+});
 
-async function findThreats(apiKey: string): Promise<SafeBrowsingThreatMatch[]> {
+const SAFE_BROWSING_TIMEOUT_MS = 15_000;
+
+export async function findThreats(
+  apiKey: string,
+  fetchImpl: typeof fetch = fetch,
+  timeoutMs = SAFE_BROWSING_TIMEOUT_MS,
+): Promise<SafeBrowsingThreatMatch[]> {
   const endpoint = `https://safebrowsing.googleapis.com/v4/threatMatches:find?key=${encodeURIComponent(apiKey)}`;
   const body = {
     client: { clientId: "pharos-watch-ci", clientVersion: "1.0" },
@@ -56,10 +66,11 @@ async function findThreats(apiKey: string): Promise<SafeBrowsingThreatMatch[]> {
     },
   };
 
-  const response = await fetch(endpoint, {
+  const response = await fetchImpl(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(timeoutMs),
   });
 
   if (!response.ok) {
@@ -67,8 +78,8 @@ async function findThreats(apiKey: string): Promise<SafeBrowsingThreatMatch[]> {
     throw new Error(`Safe Browsing API error ${response.status}: ${text.slice(0, 400)}`);
   }
 
-  const payload = (await response.json()) as SafeBrowsingResponse;
-  return Array.isArray(payload.matches) ? payload.matches : [];
+  const payload = SafeBrowsingResponseSchema.parse(await response.json());
+  return payload.matches ?? [];
 }
 
 async function main() {
@@ -99,8 +110,10 @@ async function main() {
   process.exit(1);
 }
 
-main().catch((err: unknown) => {
-  const message = err instanceof Error ? err.message : String(err);
-  console.error(`[check:safe-browsing] ${message}`);
-  process.exit(2);
+runDirectCli(import.meta.url, () => {
+  void main().catch((err: unknown) => {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`[check:safe-browsing] ${message}`);
+    process.exitCode = 2;
+  });
 });

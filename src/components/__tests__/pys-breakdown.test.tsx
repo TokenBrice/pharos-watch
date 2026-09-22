@@ -8,7 +8,7 @@ import { formatSignedPysDelta } from "@/lib/yield-presentation";
 import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,
   YIELD_METHODOLOGY_VERSION_LABEL,
-} from "@shared/lib/methodology-versions/yield-methodology";
+} from "@shared/lib/methodology-versions/constants";
 import {
   PYS_DEFAULT_SAFETY_SCORE,
   PYS_MAX_SOURCE_RISK_PENALTY,

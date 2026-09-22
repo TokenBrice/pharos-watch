@@ -28,14 +28,14 @@ import { createCronResult } from "../lib/cron-result";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../lib/dex-liquidity";
 import { sha256Hex } from "../lib/hash";
 import { toErrorMessage } from "@shared/lib/error-utils";
-import { CHAIN_HEALTH_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/chain-health";
-import { DEPEG_DEWS_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/depeg-dews";
-import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/liquidity-score";
-import { PRICING_PIPELINE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/pricing-pipeline";
-import { PSI_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/stability-index";
-import { REDEMPTION_BACKSTOP_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/redemption-backstop";
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
-import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/yield-methodology";
+import { CHAIN_HEALTH_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
+import { DEPEG_DEWS_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
+import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
+import { PRICING_PIPELINE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
+import { PSI_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
+import { REDEMPTION_BACKSTOP_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
+import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { safeJsonParse } from "../lib/api-cache-read";
@@ -109,6 +109,7 @@ interface SnapshotPublicDatasetOptions {
   freshnessGateLabel?: string;
   stablecoinsCacheRetryAttempts?: number;
   stablecoinsCacheRetryDelayMs?: number;
+  completionReason?: string;
 }
 
 const DEFAULT_STABLECOINS_CACHE_RETRY_ATTEMPTS = 0;
@@ -543,6 +544,7 @@ export async function snapshotPublicDataset(
   return createCronResult({
     itemCount: 1,
     metadata: {
+      ...(options.completionReason ? { reason: options.completionReason } : {}),
       snapshotDate,
       contentHash,
       byteSize,

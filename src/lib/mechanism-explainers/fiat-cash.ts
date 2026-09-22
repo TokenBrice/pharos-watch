@@ -1,4 +1,4 @@
-import { ARCHETYPE_VISUALS, type ArchetypeContent } from "./types";
+import type { ArchetypeContent } from "./types";
 
 export const content: ArchetypeContent = {
   archetype: "fiat-cash",
@@ -118,7 +118,6 @@ export const content: ArchetypeContent = {
       label: "Cemetery: historical fiat-cash failures",
     },
   ],
-  visuals: ARCHETYPE_VISUALS["fiat-cash"],
   decommissioned: [
     {
       name: "Binance USD",

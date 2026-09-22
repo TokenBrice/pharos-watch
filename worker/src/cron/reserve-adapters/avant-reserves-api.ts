@@ -138,9 +138,12 @@ function closeEnough(actual: number, expected: number, tolerance: number, floor 
 /**
  * Adapts Avant's avUSD metrics payload into a gross-assets view: slices are
  * gross long positions, while gross debt (including perpetual shorts) is
- * published as totalLiabilitiesUsd / collateralizationRatio and never netted
- * into the stablecoin slice. Freshness comes from the reserve snapshot
- * `updatedAtIso`/`periodEnd`, not the daily yield refresh clock.
+ * published as grossLongUsd / grossFinancingDebtUsd /
+ * grossLeverageCoverageRatio under `details` and never netted into the
+ * stablecoin slice. Those are leverage-coverage totals, not assets backing the
+ * coin's liabilities, so this adapter publishes no collateralization ratio.
+ * Freshness comes from the reserve snapshot `updatedAtIso`/`periodEnd`, not the
+ * daily yield refresh clock.
  */
 export function adaptAvantReserves(payload: AvantPayload): AdapterResult {
   const { breakdown, location, leverage, nav } = payload.transparency;
@@ -289,13 +292,13 @@ export function adaptAvantReserves(payload: AvantPayload): AdapterResult {
     slices: slicesFromValues(values, 1),
     warnings,
     metadata: {
-      totalAssetsUsd: leverage.assetsUsd,
-      totalLiabilitiesUsd: leverage.liabilitiesUsd,
-      collateralizationRatio: leverage.assetsUsd / leverage.liabilitiesUsd,
       referenceNavUsd: nav.netNav,
       ...verifiedFreshnessMetadata(sourceTimestamp),
       details: {
         freshnessSource: "avant-reserve-snapshot",
+        grossLongUsd: leverage.assetsUsd,
+        grossFinancingDebtUsd: leverage.liabilitiesUsd,
+        grossLeverageCoverageRatio: leverage.assetsUsd / leverage.liabilitiesUsd,
         navPeriodEnd: nav.periodEnd,
         leverageCoveragePct: leverage.coveragePercent,
         perpShortsUsd,

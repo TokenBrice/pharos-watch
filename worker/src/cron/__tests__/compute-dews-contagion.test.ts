@@ -129,7 +129,7 @@ vi.mock("../../lib/db-cache", () => ({
 }));
 
 // Real computeDEWS — no mock. Two-pass scoring must propagate amplifiers.
-import { computeAndStoreDEWS } from "../compute-dews";
+import { computeAndStoreDEWS } from "../../lib/dews/service";
 
 function makeDb(): D1Database {
   const nowSec = Math.floor(Date.now() / 1000);

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { findD1HistoryEntry } from "@shared/test-utils/mock-d1";
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import {
   makePublicDatasetDb,
@@ -288,9 +288,13 @@ describe("snapshotPublicDataset", () => {
     vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
       .mockResolvedValue(source);
     const db = buildDb();
-    const result = await snapshotPublicDataset(db);
+    const result = await snapshotPublicDataset(db, undefined, { completionReason: "same_day_catch_up" });
 
     expect(result.itemCount).toBe(1);
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: "same_day_catch_up",
+      snapshotDate: ISO_DATE,
+    });
 
     const binds = getInsertBinds(db);
     expect(binds).toBeDefined();

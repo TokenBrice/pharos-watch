@@ -50,14 +50,6 @@ const FIXTURE_SOURCES: readonly HtmlFixtureSource[] = [
     fixture: "circle-usdc.html",
   },
   {
-    // The canonical `www.firstdigitallabs.com/transparency` host answers automation
-    // with a Cloudflare 403 challenge, so refreshes target the issuer's own Webflow
-    // origin — the same-provider fallback the live-reserves config already uses.
-    name: "First Digital FDUSD transparency (Webflow origin)",
-    url: "https://firstdigitallabs.webflow.io/transparency",
-    fixture: "fdusd-transparency.html",
-  },
-  {
     name: "Mento reserve dashboard",
     url: "https://reserve.mento.org/",
     fixture: "mento-reserve-composition.html",

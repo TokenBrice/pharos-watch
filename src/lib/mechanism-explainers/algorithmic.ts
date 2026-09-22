@@ -1,4 +1,4 @@
-import { ARCHETYPE_VISUALS, type ArchetypeContent } from "./types";
+import type { ArchetypeContent } from "./types";
 
 export const content: ArchetypeContent = {
   archetype: "algorithmic",
@@ -238,5 +238,4 @@ export const content: ArchetypeContent = {
       coinId: "pinto-pinto-2025-10",
     },
   ],
-  visuals: ARCHETYPE_VISUALS.algorithmic,
 };

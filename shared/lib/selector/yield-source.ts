@@ -7,8 +7,11 @@ import type {
   YieldSourceCandidate,
 } from "./types";
 
+/** A rail the yield domain resolved to a venue chain, i.e. one it can name. */
+type ResolvedYieldSourceCandidate = YieldSourceCandidate & { chain: string };
+
 interface RankedYieldSourceCandidate {
-  candidate: YieldSourceCandidate;
+  candidate: ResolvedYieldSourceCandidate;
   /** 1 when the candidate satisfies the user's venue answer, 0 otherwise. */
   venueMatch: number;
   risk: number;
@@ -56,11 +59,38 @@ function venueMatchesPreference(
   });
 }
 
+/**
+ * Published rail-depth bands, and the depth score each one contributes to the
+ * comparator.
+ *
+ * `sourceDepthRatio` is a venue's share of tracked stablecoin supply, not a
+ * normalized score: the published depth lens already calls `>= 1%` "deep", so
+ * real readings live in `1e-4`..`5e-2`. Scaling that fraction to 0-100 scored
+ * the deepest possible rail at `<= 10`. The bands carry their own score
+ * instead. `src/lib/yield-source-risk.ts` classifies the same lens from these
+ * thresholds rather than re-typing them.
+ */
+export const YIELD_SOURCE_DEPTH_BANDS = {
+  deep: { minRatio: 0.01, score: 100 },
+  moderate: { minRatio: 0.001, score: 70 },
+  thin: { minRatio: 0, score: 40 },
+} as const;
+
+/**
+ * A rail nothing sized ranks below every measured band. An unmeasured venue is
+ * not a shallow one, and the neutral score this replaced let an evidence-free
+ * rail win the depth key against the deepest measured one.
+ */
+const UNMEASURED_DEPTH_SCORE = 0;
+
 function sourceDepthScore(candidate: YieldSourceCandidate): number {
-  if (candidate.sourceDepthRatio != null) {
-    return clamp(candidate.sourceDepthRatio * 100, 0, 100);
+  const ratio = candidate.sourceDepthRatio;
+  if (ratio != null && Number.isFinite(ratio) && ratio >= 0) {
+    if (ratio >= YIELD_SOURCE_DEPTH_BANDS.deep.minRatio) return YIELD_SOURCE_DEPTH_BANDS.deep.score;
+    if (ratio >= YIELD_SOURCE_DEPTH_BANDS.moderate.minRatio) return YIELD_SOURCE_DEPTH_BANDS.moderate.score;
+    return YIELD_SOURCE_DEPTH_BANDS.thin.score;
   }
-  if (candidate.sourceTvlUsd == null || candidate.sourceTvlUsd <= 0) return 45;
+  if (candidate.sourceTvlUsd == null || candidate.sourceTvlUsd <= 0) return UNMEASURED_DEPTH_SCORE;
   return clamp((Math.log10(candidate.sourceTvlUsd) / Math.log10(500_000_000)) * 100, 0, 100);
 }
 
@@ -90,7 +120,7 @@ function sourceFreshnessScore(candidate: YieldSourceCandidate): number {
  * decides a rail is one a reader can look up.
  */
 function rankYieldSourceCandidate(
-  candidate: YieldSourceCandidate,
+  candidate: ResolvedYieldSourceCandidate,
   input: SelectorInput,
 ): RankedYieldSourceCandidate {
   return {
@@ -137,7 +167,14 @@ function fallbackYieldSources(row: MergedRow): YieldSourceCandidate[] {
 }
 
 export function selectYieldSource(row: MergedRow, input: SelectorInput): RecommendedSource | null {
-  const candidates = row.yieldSources?.length ? [...row.yieldSources] : fallbackYieldSources(row);
+  const pool = row.yieldSources?.length ? row.yieldSources : fallbackYieldSources(row);
+  // A rail whose venue chain the yield domain never resolved cannot be rendered
+  // as a destination, but it is one rail — not the coin's whole yield coverage.
+  // Filtering before the ranking keeps every resolvable sibling in play instead
+  // of discarding the coin under `missingSignals: ["recommendedSource"]`.
+  const candidates = pool.filter(
+    (candidate): candidate is ResolvedYieldSourceCandidate => candidate.chain != null,
+  );
   if (candidates.length === 0) {
     return null;
   }
@@ -154,7 +191,6 @@ export function selectYieldSource(row: MergedRow, input: SelectorInput): Recomme
     return a.candidate.sourceKey.localeCompare(b.candidate.sourceKey);
   });
   const selected = rankedCandidates[0]!.candidate;
-  if (selected.chain == null) return null;
   return {
     sourceKey: selected.sourceKey,
     protocol: selected.protocol,
@@ -163,7 +199,10 @@ export function selectYieldSource(row: MergedRow, input: SelectorInput): Recomme
     apy30d: selected.apy30d,
     pharosYieldScore: selected.pharosYieldScore,
     sourceTvlUsd: selected.sourceTvlUsd,
-    sourceRiskTier: selected.venueRiskTier ?? "mid",
+    // Unknown stays unknown, here as for `freshness`: an unsourced venue tier
+    // published as `"mid"` is a measurement the registry never made.
+    // `riskTierScore` keeps its neutral 55 for ordering.
+    sourceRiskTier: selected.venueRiskTier,
     // Unknown stays unknown: `sourceFreshnessScore` ranks a missing reading as
     // neutral 50, and rendering `{ 0, 0 }` would print "0s old" for the same row.
     freshness: selected.freshness,

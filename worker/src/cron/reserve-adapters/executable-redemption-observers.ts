@@ -1,4 +1,3 @@
-import { erc20Abi, erc4626Abi } from "./executable-redemption-abis";
 import type {
   EvmMulticall3Call,
   EvmMulticall3Result,
@@ -11,6 +10,7 @@ import {
   fetchEvmMulticall3Aggregate3AtBlock,
   fetchEvmStorageAtBlock,
 } from "../../lib/evm-rpc";
+import type { Abi } from "abitype";
 import { parseAbi } from "viem/utils";
 import type { AdapterContext } from "./types";
 import { runAdapterIo } from "./concurrency";
@@ -34,6 +34,16 @@ const RPC_DEADLINE_MS = 10_000;
 const BLOCK_MAX_AGE_SEC = 10 * 60;
 const BLOCK_FUTURE_SKEW_SEC = 60;
 const OBSERVATION_BLOCK_LAG = 2;
+
+const erc20Abi = parseAbi([
+  "function balanceOf(address account) view returns (uint256)",
+  "function decimals() view returns (uint8)",
+]);
+const erc4626Abi = parseAbi([
+  "function asset() view returns (address)",
+  "function totalAssets() view returns (uint256)",
+  "function maxWithdraw(address owner) view returns (uint256)",
+]);
 
 const EARN_VAULT_ABI = parseAbi([
   "function vaultValidator() view returns (address)",
@@ -253,8 +263,8 @@ function fixedPointFeeBpsCeil(rawFee: bigint, scale: bigint, coinId: string): nu
 }
 
 function verifyExpectedAddress(coinId: string, label: string, expected: string) {
-  return (value: string): null => {
-    const normalized = normalizeEvmAddress(value);
+  return (value: unknown): null => {
+    const normalized = typeof value === "string" ? normalizeEvmAddress(value) : null;
     if (!normalized) fail(coinId, `${label} returned an invalid address`);
     if (normalized !== expected) fail(coinId, "live route dependency identity drift");
     return null;
@@ -492,13 +502,13 @@ async function observeEarn(
 
 type AbiFieldOptions = {
   args?: readonly unknown[];
-  verify?: (value: string) => string | null;
+  verify?: (value: unknown) => string | null;
 };
 
 function abiField(
   label: string,
   contract: string,
-  abi: readonly unknown[],
+  abi: Abi,
   functionName: string,
   options: AbiFieldOptions = {},
 ): AnyEvmObservationField {
@@ -508,30 +518,9 @@ function abiField(
     abi,
     functionName,
     ...options,
-  } as never) as AnyEvmObservationField;
+  });
 }
 
-function strategyFields() {
-  const label = "dlend";
-  const strategyName = "dLEND";
-  const strategyAddress = DSTAKE.dlendStrategy.address;
-  const adapterAddress = DSTAKE.dlendAdapter.address;
-  return [
-    abiField(`${label}-strategy-asset`, strategyAddress, erc4626Abi, "asset", {
-      verify: verifyExpectedAddress(DSTAKE.coinId, `${strategyName} strategy asset`, DSTAKE.assetAddress),
-    }),
-    abiField(`${label}-strategy-max-withdraw`, strategyAddress, erc4626Abi, "maxWithdraw", {
-      args: [DSTAKE.collateralVault.address],
-    }),
-    abiField(`${label}-strategy-adapter`, DSTAKE.router.address, DSTAKE_ROUTER_ABI, "strategyShareToAdapter", {
-      args: [strategyAddress],
-      verify: verifyExpectedAddress(DSTAKE.coinId, `${strategyName} strategy adapter`, adapterAddress),
-    }),
-    abiField(`${label}-strategy-healthy`, DSTAKE.router.address, DSTAKE_ROUTER_ABI, "isVaultHealthyForWithdrawals", {
-      args: [strategyAddress],
-    }),
-  ] as const;
-}
 
 function dStakeFields() {
   return [
@@ -565,7 +554,19 @@ function dStakeFields() {
     abiField("router-max-withdrawal-fee", DSTAKE.router.address, DSTAKE_ROUTER_ABI, "maxWithdrawalFeeBps"),
     abiField("router-shortfall", DSTAKE.router.address, DSTAKE_ROUTER_ABI, "currentShortfall"),
     abiField("router-active-withdrawal-vaults", DSTAKE.router.address, DSTAKE_ROUTER_ABI, "getActiveVaultsForWithdrawals"),
-    ...strategyFields(),
+    abiField("dlend-strategy-asset", DSTAKE.dlendStrategy.address, erc4626Abi, "asset", {
+      verify: verifyExpectedAddress(DSTAKE.coinId, "dLEND strategy asset", DSTAKE.assetAddress),
+    }),
+    abiField("dlend-strategy-max-withdraw", DSTAKE.dlendStrategy.address, erc4626Abi, "maxWithdraw", {
+      args: [DSTAKE.collateralVault.address],
+    }),
+    abiField("dlend-strategy-adapter", DSTAKE.router.address, DSTAKE_ROUTER_ABI, "strategyShareToAdapter", {
+      args: [DSTAKE.dlendStrategy.address],
+      verify: verifyExpectedAddress(DSTAKE.coinId, "dLEND strategy adapter", DSTAKE.dlendAdapter.address),
+    }),
+    abiField("dlend-strategy-healthy", DSTAKE.router.address, DSTAKE_ROUTER_ABI, "isVaultHealthyForWithdrawals", {
+      args: [DSTAKE.dlendStrategy.address],
+    }),
     abiField("dlend-pool", DSTAKE.dlendStrategy.address, STATIC_ATOKEN_ABI, "POOL", {
       verify: verifyExpectedAddress(DSTAKE.coinId, "dLEND pool", DSTAKE.dlendPoolAddress),
     }),
@@ -692,6 +693,10 @@ async function observeDStake(
   };
 }
 
+export function hasExecutableRedemptionObserver(coinId: string): boolean {
+  return coinId === EARN.coinId || coinId === DSTAKE.coinId;
+}
+
 export async function observeExecutableRedemptionRoute(
   coinId: string,
   contractAddress: string,
@@ -699,7 +704,7 @@ export async function observeExecutableRedemptionRoute(
   ctx?: AdapterContext,
   options: ObserverOptions = {},
 ): Promise<ExecutableRedemptionObservation | null> {
-  if (coinId !== EARN.coinId && coinId !== DSTAKE.coinId) return null;
+  if (!hasExecutableRedemptionObserver(coinId)) return null;
 
   const expectedContractAddress =
     coinId === EARN.coinId ? EARN.vault.address : DSTAKE.token.address;

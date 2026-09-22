@@ -10,7 +10,6 @@ function makeSummary(rowCount = 1): MintBurnReconciliationSummary {
     checkedAt: 1_773_000_000,
     comparedCoins: rowCount,
     criticalCount: rowCount,
-    warnCount: 0,
     insufficientCount: 0,
     rows: Array.from({ length: rowCount }, (_, index) => ({
       stablecoinId: `coin-${index}`,

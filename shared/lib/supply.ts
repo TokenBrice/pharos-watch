@@ -17,7 +17,8 @@ function hasAnyBucket(obj: PegBucketRecord): boolean {
   return Object.values(obj).some((v) => isFiniteNumber(v));
 }
 
-function sumPegBucketsOrNull(obj: PegBucketRecord): number | null {
+/** Sum peg buckets, returning `null` when the record carries no explicit bucket at all — the absent/zero discriminant. */
+export function sumPegBucketsOrNull(obj: PegBucketRecord): number | null {
   const val = sumPegBuckets(obj);
   return val === 0 && !hasAnyBucket(obj) ? null : val;
 }
@@ -26,9 +27,24 @@ function sumPegBucketsOrNull(obj: PegBucketRecord): number | null {
  * Sum circulating values across all peg buckets.
  * DefiLlama's list API returns values already in USD for all peg types,
  * so the values we receive here are always in USD — no FX conversion needed.
+ *
+ * Reserved for callers that have already established availability — absent, empty and wholly-invalid buckets
+ * collapse to `0` here. Callers that must keep "no supply data" distinct from a genuine zero read
+ * `getCirculatingRawOrNull()`; migrating them off this default is owned by plan task P1-05.
  */
 export function getCirculatingRaw(c: { circulating?: PegBucketRecord }): number {
   return sumPegBuckets(c.circulating);
+}
+
+/**
+ * Canonical absence-preserving current supply: `null` when the asset is missing from the payload, or its peg buckets
+ * are absent, empty or wholly invalid; `0` only for an explicit finite zero. Shares its
+ * `sumPegBucketsOrNull`/`hasAnyBucket` discriminant with the historical `*OrNull` helpers.
+ */
+export function getCirculatingRawOrNull(
+  c: { circulating?: PegBucketRecord } | null | undefined,
+): number | null {
+  return sumPegBucketsOrNull(c?.circulating);
 }
 
 /** Previous-day USD circulating, with missing buckets coerced to 0. Use the `*OrNull` variant when you need to distinguish "no data" from "zero". */

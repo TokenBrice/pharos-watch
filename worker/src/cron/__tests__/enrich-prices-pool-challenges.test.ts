@@ -1,9 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   cleanupEnrichMissingPricesTest,
-  fixtureFetchPrimaryPrices,
-  fixtureApplyPoolChallenge,
-  fixtureApplyListAggregatorDowngrade,
   installPrimaryPriceRoutes,
   makePoolChallengeInputs,
   makePrimaryPriceResult,
@@ -11,16 +8,18 @@ import {
   makePriceConsensusResult,
   makePriceValidationStats,
   makePrimaryPricingDb,
-  type PriceValidationContext,
-  type PriceValidationReferences,
 } from "./enrich-prices.test-support";
+import { fetchPrimaryPrices } from "../sync-stablecoins/enrich-prices";
+import {
+  applyListAggregatorDowngrade,
+  applyPoolChallenge,
+} from "../sync-stablecoins/enrich-prices-primary-hardening";
+import type { PriceValidationContext, PriceValidationReferences } from "../../lib/price-validation";
 import { makePeggedAsset } from "../sync-stablecoins/__tests__/_fixtures";
 
-const installFetch = installPrimaryPriceRoutes;
 import { selectDexPriceChallengerRowsFromPools } from "../dex-liquidity/challenger-publish";
 import type { PoolEntry } from "../dex-liquidity/types";
 
-const fixtureMockD1 = makePrimaryPricingDb;
 
 describe("pool challenge — soft-only high confidence downgrade", () => {
   afterEach(() => {
@@ -31,49 +30,41 @@ describe("pool challenge — soft-only high confidence downgrade", () => {
   function makePoolChallengeDb(
     poolSources: Array<{ stablecoin_id: string; price_sources_json: string; updated_at: number }>,
   ) {
-    return fixtureMockD1([
-      { match: "circuit", rows: [] },
+    return makePrimaryPricingDb([
+      { match: "circuit", rows: [], allowUnused: true },
       { match: "price_sources_json", rows: poolSources },
     ]);
   }
 
-  it("replaces price when ≥2 protocols diverge from soft consensus", async () => {
-    // CG = $0.995, DL-list = $0.994 → agree within 50bps → high confidence
-    // Two protocols (curve and balancer) show diverging prices → replace with TVL-weighted mean
+  async function fetchDtrinityPoolChallenge(
+    sources: Array<{ protocol: string; chain: string; price: number; tvl: number }>,
+  ) {
     const assets = [makePeggedAsset({
       id: "dusd-dtrinity",
       name: "dUSD",
       symbol: "dUSD",
       geckoId: "dtrinity-usd",
     })];
-
-    installFetch({ coingecko: { body: { "dtrinity-usd": { usd: 0.995 } } } });
-
-    const nowSec = Math.floor(Date.now() / 1000);
-    const db = makePoolChallengeDb([
-      {
-        stablecoin_id: "dusd-dtrinity",
-        price_sources_json: JSON.stringify([
-          { protocol: "uniswap-v3", chain: "ethereum", price: 1.0, tvl: 1_480_000 },
-          { protocol: "curve", chain: "ethereum", price: 0.8, tvl: 849_000 },
-          { protocol: "balancer", chain: "ethereum", price: 0.82, tvl: 967_000 },
-        ]),
-        updated_at: nowSec - 60,
-      },
-    ]);
-
+    installPrimaryPriceRoutes({ coingecko: { body: { "dtrinity-usd": { usd: 0.995 } } } });
+    const db = makePoolChallengeDb([{
+      stablecoin_id: "dusd-dtrinity",
+      price_sources_json: JSON.stringify(sources),
+      updated_at: Math.floor(Date.now() / 1000) - 60,
+    }]);
     const dlListPrices = new Map([
       ["dusd-dtrinity", { price: 0.994, observedAt: null, observedAtMode: "unknown" as const }],
     ]);
-    const { results, stats } = await fixtureFetchPrimaryPrices(
-      assets,
-      db,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      dlListPrices,
-    );
+    return fetchPrimaryPrices(assets, db, undefined, undefined, undefined, undefined, dlListPrices);
+  }
+
+  it("replaces price when ≥2 protocols diverge from soft consensus", async () => {
+    // CG = $0.995, DL-list = $0.994 → agree within 50bps → high confidence
+    // Two protocols (curve and balancer) show diverging prices → replace with TVL-weighted mean
+    const { results, stats } = await fetchDtrinityPoolChallenge([
+      { protocol: "uniswap-v3", chain: "ethereum", price: 1.0, tvl: 1_480_000 },
+      { protocol: "curve", chain: "ethereum", price: 0.8, tvl: 849_000 },
+      { protocol: "balancer", chain: "ethereum", price: 0.82, tvl: 967_000 },
+    ]);
 
     expect(results.size).toBe(1);
     const result = results.get("dusd-dtrinity")!;
@@ -90,39 +81,10 @@ describe("pool challenge — soft-only high confidence downgrade", () => {
   it("downgrades but preserves price when only single protocol diverges", async () => {
     // CG = $0.995, DL-list = $0.994 → agree within 50bps → high confidence
     // Only one protocol (curve) diverges → downgrade confidence but keep consensus price
-    const assets = [makePeggedAsset({
-      id: "dusd-dtrinity",
-      name: "dUSD",
-      symbol: "dUSD",
-      geckoId: "dtrinity-usd",
-    })];
-
-    installFetch({ coingecko: { body: { "dtrinity-usd": { usd: 0.995 } } } });
-
-    const nowSec = Math.floor(Date.now() / 1000);
-    const db = makePoolChallengeDb([
-      {
-        stablecoin_id: "dusd-dtrinity",
-        price_sources_json: JSON.stringify([
-          { protocol: "uniswap-v3", chain: "ethereum", price: 1.0, tvl: 1_480_000 },
-          { protocol: "curve", chain: "ethereum", price: 0.8, tvl: 849_000 },
-        ]),
-        updated_at: nowSec - 60,
-      },
+    const { results } = await fetchDtrinityPoolChallenge([
+      { protocol: "uniswap-v3", chain: "ethereum", price: 1.0, tvl: 1_480_000 },
+      { protocol: "curve", chain: "ethereum", price: 0.8, tvl: 849_000 },
     ]);
-
-    const dlListPrices = new Map([
-      ["dusd-dtrinity", { price: 0.994, observedAt: null, observedAtMode: "unknown" as const }],
-    ]);
-    const { results } = await fixtureFetchPrimaryPrices(
-      assets,
-      db,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      dlListPrices,
-    );
 
     expect(results.size).toBe(1);
     const result = results.get("dusd-dtrinity")!;
@@ -132,38 +94,9 @@ describe("pool challenge — soft-only high confidence downgrade", () => {
   });
 
   it("does NOT downgrade via pool challenge when pool divergence is <500bps", async () => {
-    const assets = [makePeggedAsset({
-      id: "dusd-dtrinity",
-      name: "dUSD",
-      symbol: "dUSD",
-      geckoId: "dtrinity-usd",
-    })];
-
-    installFetch({ coingecko: { body: { "dtrinity-usd": { usd: 0.995 } } } });
-
-    const nowSec = Math.floor(Date.now() / 1000);
-    const db = makePoolChallengeDb([
-      {
-        stablecoin_id: "dusd-dtrinity",
-        price_sources_json: JSON.stringify([
-          { protocol: "curve", chain: "ethereum", price: 0.97, tvl: 500_000 }, // ~2.5% divergence = 254bps, below 500
-        ]),
-        updated_at: nowSec - 60,
-      },
+    const { results } = await fetchDtrinityPoolChallenge([
+      { protocol: "curve", chain: "ethereum", price: 0.97, tvl: 500_000 },
     ]);
-
-    const dlListPrices = new Map([
-      ["dusd-dtrinity", { price: 0.994, observedAt: null, observedAtMode: "unknown" as const }],
-    ]);
-    const { results } = await fixtureFetchPrimaryPrices(
-      assets,
-      db,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      dlListPrices,
-    );
 
     expect(results.size).toBe(1);
     // Pool challenge doesn't fire (<500bps), but CG+DL-only downgrade applies
@@ -221,7 +154,7 @@ describe("applyPoolChallenge", () => {
       stats: { high: 0, low: 1 },
     });
 
-    const downgrades = fixtureApplyPoolChallenge(
+    const downgrades = applyPoolChallenge(
       results,
       pools,
       pegTypes,
@@ -249,7 +182,7 @@ describe("applyPoolChallenge", () => {
       pools: [{ price: 0.00704, tvlUsd: 500_000, protocol: "uniswap", chain: "ethereum" }],
     });
 
-    const downgrades = fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
+    const downgrades = applyPoolChallenge(results, pools, pegTypes, stats);
 
     expect(downgrades).toBe(1);
     expect(results.get("jpyc-jpyc")!.confidence).toBe("low");
@@ -269,7 +202,7 @@ describe("applyPoolChallenge", () => {
       pools: [{ price: 0.97, tvlUsd: 500_000, protocol: "uniswap", chain: "ethereum" }],
     });
 
-    const downgrades = fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
+    const downgrades = applyPoolChallenge(results, pools, pegTypes, stats);
 
     expect(downgrades).toBe(0);
     expect(results.get("usdt-tether")!.confidence).toBe("high");
@@ -282,7 +215,7 @@ describe("applyPoolChallenge", () => {
       pools: [{ price: 0.8, tvlUsd: 500_000, protocol: "curve", chain: "ethereum" }],
     });
 
-    const downgrades = fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
+    const downgrades = applyPoolChallenge(results, pools, pegTypes, stats);
 
     expect(downgrades).toBe(1);
     expect(results.get("dusd-test")!.confidence).toBe("low");
@@ -301,7 +234,7 @@ describe("applyPoolChallenge", () => {
       ],
     });
 
-    const downgrades = fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
+    const downgrades = applyPoolChallenge(results, pools, pegTypes, stats);
 
     expect(downgrades).toBe(1);
     expect(results.get("dusd-test")!.confidence).toBe("low");
@@ -320,7 +253,7 @@ describe("applyPoolChallenge", () => {
       ],
     });
 
-    const downgrades = fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
+    const downgrades = applyPoolChallenge(results, pools, pegTypes, stats);
 
     expect(downgrades).toBe(1);
     expect(results.get("xusd-test")!.confidence).toBe("low");
@@ -369,7 +302,7 @@ describe("applyPoolChallenge", () => {
       ],
     });
 
-    const downgrades = fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
+    const downgrades = applyPoolChallenge(results, pools, pegTypes, stats);
     const result = results.get("apxusd-apyx")!;
 
     expect(downgrades).toBe(1);
@@ -429,7 +362,7 @@ describe("applyPoolChallenge", () => {
       stats: { high: 0, low: 1 },
     });
 
-    const downgrades = fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
+    const downgrades = applyPoolChallenge(results, pools, pegTypes, stats);
     const result = results.get("apxusd-apyx")!;
 
     expect(downgrades).toBe(1);
@@ -464,7 +397,7 @@ describe("applyPoolChallenge", () => {
       ],
     });
 
-    const downgrades = fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
+    const downgrades = applyPoolChallenge(results, pools, pegTypes, stats);
     const result = results.get("apxusd-apyx")!;
 
     expect(downgrades).toBe(1);
@@ -498,7 +431,7 @@ describe("applyPoolChallenge", () => {
       ],
     });
 
-    const downgrades = fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
+    const downgrades = applyPoolChallenge(results, pools, pegTypes, stats);
     const result = results.get("dusd-test")!;
 
     expect(downgrades).toBe(1);
@@ -519,7 +452,7 @@ describe("applyPoolChallenge", () => {
       ],
     });
 
-    const downgrades = fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
+    const downgrades = applyPoolChallenge(results, pools, pegTypes, stats);
     const result = results.get("dusd-test")!;
 
     expect(downgrades).toBe(1);
@@ -542,7 +475,7 @@ describe("applyPoolChallenge", () => {
       ],
     });
 
-    const downgrades = fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
+    const downgrades = applyPoolChallenge(results, pools, pegTypes, stats);
 
     expect(downgrades).toBe(1);
     expect(results.get("dusd-test")!.confidence).toBe("low");
@@ -560,7 +493,7 @@ describe("applyPoolChallenge", () => {
       ],
     });
 
-    fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
+    applyPoolChallenge(results, pools, pegTypes, stats);
 
     expect(results.get("dusd-test")!.source).toBe("pool-tvl-weighted");
     expect(results.get("dusd-test")!.price).toBeCloseTo(0.81, 6);
@@ -601,7 +534,7 @@ describe("applyPoolChallenge", () => {
       commodityOunces: 1,
       tracked: true,
     };
-    const downgrades = fixtureApplyPoolChallenge(
+    const downgrades = applyPoolChallenge(
       results,
       pools,
       pegTypes,
@@ -643,7 +576,7 @@ describe("applyPoolChallenge", () => {
       stats: { high: 0, singleSource: 1 },
     });
 
-    const downgrades = fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
+    const downgrades = applyPoolChallenge(results, pools, pegTypes, stats);
     const result = results.get("usr-resolv")!;
 
     expect(downgrades).toBe(1);
@@ -668,7 +601,7 @@ describe("applyPoolChallenge", () => {
       ],
     });
 
-    const downgrades = fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
+    const downgrades = applyPoolChallenge(results, pools, pegTypes, stats);
 
     expect(downgrades).toBe(1);
     expect(results.get("usr-test")!.confidence).toBe("low");
@@ -687,7 +620,7 @@ describe("applyPoolChallenge", () => {
       pools: [{ price: 0.8, tvlUsd: 500_000, protocol: "curve", chain: "ethereum" }],
     });
 
-    const downgrades = fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
+    const downgrades = applyPoolChallenge(results, pools, pegTypes, stats);
 
     expect(downgrades).toBe(0); // binance is a hard source
   });
@@ -713,7 +646,7 @@ describe("applyPoolChallenge", () => {
       ],
     });
 
-    fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
+    applyPoolChallenge(results, pools, pegTypes, stats);
 
     const updated = results.get(assetId);
     expect(updated).toBeDefined();
@@ -732,7 +665,7 @@ describe("applyPoolChallenge", () => {
     });
     const navTokenAssetIds = new Set(["ousg-ondo-finance"]);
 
-    const downgrades = fixtureApplyPoolChallenge(results, pools, pegTypes, stats, undefined, navTokenAssetIds);
+    const downgrades = applyPoolChallenge(results, pools, pegTypes, stats, undefined, navTokenAssetIds);
 
     expect(downgrades).toBe(0);
     expect(results.get("ousg-ondo-finance")!.confidence).toBe("high");
@@ -753,7 +686,7 @@ describe("applyPoolChallenge", () => {
       result: makePriceConsensusResult({ price }),
       pools: [{ price: poolPrice, tvlUsd: 500_000, protocol: "curve", chain: "ethereum" }],
     });
-    expect(fixtureApplyPoolChallenge(results, pools, pegTypes, stats)).toBe(expected);
+    expect(applyPoolChallenge(results, pools, pegTypes, stats)).toBe(expected);
     expect(results.get("boundary-test")).toMatchObject({
       price,
       source: "coingecko+defillama-list",
@@ -772,7 +705,7 @@ describe("applyPoolChallenge", () => {
       ],
     });
 
-    const downgrades = fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
+    const downgrades = applyPoolChallenge(results, pools, pegTypes, stats);
 
     expect(downgrades).toBe(1);
     expect(results.get("dusd-test")!.confidence).toBe("low");
@@ -791,7 +724,7 @@ describe("applyPoolChallenge", () => {
       ],
     });
 
-    fixtureApplyPoolChallenge(results, pools, pegTypes, stats);
+    applyPoolChallenge(results, pools, pegTypes, stats);
 
     const updated = results.get("dusd-test")!;
     expect(updated.source).toBe("pool-tvl-weighted");
@@ -813,7 +746,7 @@ describe("applyListAggregatorDowngrade", () => {
       agreeSources: ["coingecko", other],
     });
     const stats = makePriceValidationStats();
-    fixtureApplyListAggregatorDowngrade(results, stats);
+    applyListAggregatorDowngrade(results, stats);
     expect(results.get("usdt-tether")!.confidence).toBe("single-source");
     expect(stats.high).toBe(0);
     expect(stats.singleSource).toBe(1);
@@ -828,7 +761,7 @@ describe("applyListAggregatorDowngrade", () => {
       agreeSources: ["coingecko+defillama-list"],
     });
     const stats = makePriceValidationStats();
-    fixtureApplyListAggregatorDowngrade(results, stats);
+    applyListAggregatorDowngrade(results, stats);
     expect(results.get("usdt-tether")!.confidence).toBe("single-source");
     expect(stats.high).toBe(0);
     expect(stats.singleSource).toBe(1);
@@ -843,7 +776,7 @@ describe("applyListAggregatorDowngrade", () => {
       agreeSources: ["binance", "coingecko"],
     });
     const stats = makePriceValidationStats();
-    fixtureApplyListAggregatorDowngrade(results, stats);
+    applyListAggregatorDowngrade(results, stats);
     expect(results.get("usdt-tether")!.confidence).toBe("high");
     expect(stats.high).toBe(1);
   });
@@ -857,7 +790,7 @@ describe("applyListAggregatorDowngrade", () => {
       agreeSources: ["coingecko", "defillama", "defillama-list"],
     });
     const stats = makePriceValidationStats();
-    fixtureApplyListAggregatorDowngrade(results, stats);
+    applyListAggregatorDowngrade(results, stats);
     expect(results.get("usdt-tether")!.confidence).toBe("high");
   });
 });

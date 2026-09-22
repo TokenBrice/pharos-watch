@@ -41,6 +41,10 @@ When an `Idempotency-Key` is supplied on one of those routes, the worker fingerp
 
 Once execution has been marked as started, an unconfirmed outcome is never retried automatically. An in-flight duplicate, a handler throw after that point, or a terminal response that cannot be confirmed as persisted returns `503` with `error: "execution_unknown"`; subsequent requests with the same key also return `503` with `X-Idempotent-Replay: true` and do not invoke the handler again. Operators must reconcile whether the external effect occurred before deciding whether to submit a new idempotency key.
 
+A stale started reservation stays terminally `execution_unknown`: it is never handed back for re-execution unless the action ships a reconciliation callback that proves the original effect did not commit. No API-key or feedback action ships one today, so those keys are operator-reconciled.
+
+API-key mutations are compare-and-swap writes. `PATCH /api/api-keys/:id` sets only the fields present in the validated body and is fenced on the key prefix observed by the request, so a concurrent deactivation is never undone by an unrelated `{name}` update; `POST /api/api-keys/:id/rotate` is fenced on the same prefix in the batch that moves the donor claim. When the fence does not match, both return `409` (`API key changed concurrently; re-read it before updating`/`… before rotating`) instead of a silently lost write, and the caller must re-read the key before retrying.
+
 The worker’s idempotent admin route helpers now authenticate first and only then enter idempotency bookkeeping. That keeps the helper contract aligned with its name and prevents future admin endpoints from accidentally becoming “idempotent but unauthenticated” through wrapper misuse.
 
 The `/admin/` UI now sends an `Idempotency-Key` automatically for supported manual actions so double-submits from the operator surface replay safely.
@@ -431,15 +435,6 @@ The legacy top-level projections `gtProbe`, `priceProviderDiagnostics`, `cacheBl
       "maxAgeSec": 21600,
       "status": "healthy"
     },
-    "benchmark": {
-      "fetchedAt": 1771849000,
-      "ageSec": 7453,
-      "maxAgeSec": 172800,
-      "source": "risk_free_rates",
-      "isFallback": false,
-      "fallbackMode": null,
-      "status": "healthy"
-    },
     "coverageAudit": {
       "updatedAt": 1769810400,
       "ageSec": 2046053,
@@ -475,7 +470,6 @@ The legacy top-level projections `gtProbe`, `priceProviderDiagnostics`, `cacheBl
     "checkedAt": 1771856453,
     "comparedCoins": 42,
     "criticalCount": 1,
-    "warnCount": 3,
     "insufficientCount": 12,
     "rows": [
       {
@@ -485,7 +479,7 @@ The legacy top-level projections `gtProbe`, `priceProviderDiagnostics`, `cacheBl
         "chainSupplyDelta24hUsd": -220000000,
         "absoluteDiffUsd": 20000000,
         "diffRatio": 0.08,
-        "status": "warn",
+        "status": "critical",
         "coverageStatus": "full"
       }
     ]

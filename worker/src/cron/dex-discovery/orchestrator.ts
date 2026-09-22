@@ -239,10 +239,6 @@ export function computeEffectiveTier(
   return cadenceEligible(tier, runSeq, stablecoinId) ? tier : "skip";
 }
 
-export function isEligibleThisRun(tier: EffectiveTier): boolean {
-  return tier !== "skip";
-}
-
 export function compareDiscoveryMeta(
   a: Pick<DiscoveryMeta, "lastCrawlAt"> | undefined,
   b: Pick<DiscoveryMeta, "lastCrawlAt"> | undefined,
@@ -333,6 +329,27 @@ export async function syncDexDiscovery(
   const allUnresolvedChains = new Set<string>();
   const poolsBySource: Record<string, number> = {};
   const dexScreenerRunState = createDexScreenerDiscoveryRunState();
+  const buildRunMetadata = (extra: Record<string, unknown> = {}): Record<string, unknown> => ({
+    coinsCrawled,
+    poolsDiscovered,
+    tierBreakdown,
+    censusCadenceHolds,
+    budgetExhausted,
+    stagingWritesSkippedForBudget,
+    cleanupSkippedForBudget,
+    cleanup,
+    runSeq,
+    deploymentOutcomesWritten,
+    windowedCoins,
+    windowedDeploymentsDeferred,
+    dexscreener: {
+      attemptedRequests: dexScreenerRunState.attemptedRequests,
+      successfulRequests: dexScreenerRunState.successfulRequests,
+      hardRefusal: dexScreenerRunState.hardRefusal,
+    },
+    ...extra,
+  });
+
   const persistTargetCursors = async () => {
     if (!targetCursorsChanged) return;
     try {
@@ -614,54 +631,19 @@ export async function syncDexDiscovery(
       itemsDone: eligibleCoins.length,
       itemsTotal: eligibleCoins.length,
       message: "Completed DEX discovery sync",
-      metadata: {
-        coinsCrawled,
-        poolsDiscovered,
-        tierBreakdown,
-        censusCadenceHolds,
-        budgetExhausted,
-        stagingWritesSkippedForBudget,
-        cleanupSkippedForBudget,
-        cleanup,
-        runSeq,
-        deploymentOutcomesWritten,
-        windowedCoins,
-        windowedDeploymentsDeferred,
-        dexscreener: {
-          attemptedRequests: dexScreenerRunState.attemptedRequests,
-          successfulRequests: dexScreenerRunState.successfulRequests,
-          hardRefusal: dexScreenerRunState.hardRefusal,
-        },
-      },
+      metadata: buildRunMetadata(),
     });
 
     return {
       status: failedCoins.length > 0 || budgetExhausted || cleanup?.error != null ? "degraded" : "ok",
       itemCount: coinsCrawled,
-      metadata: JSON.stringify({
-        coinsCrawled,
-        poolsDiscovered,
-        tierBreakdown,
-        censusCadenceHolds,
-        budgetExhausted,
-        stagingWritesSkippedForBudget,
-        cleanupSkippedForBudget,
-        cleanup,
+      metadata: JSON.stringify(buildRunMetadata({
         finalizationTailBudgetMs: DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS,
-        runSeq,
-        deploymentOutcomesWritten,
-        windowedCoins,
-        windowedDeploymentsDeferred,
-        dexscreener: {
-          attemptedRequests: dexScreenerRunState.attemptedRequests,
-          successfulRequests: dexScreenerRunState.successfulRequests,
-          hardRefusal: dexScreenerRunState.hardRefusal,
-        },
         failedCoins,
         failedCoinErrors: Object.keys(failedCoinErrors).length > 0 ? failedCoinErrors : undefined,
         unresolvedChains: allUnresolvedChains.size > 0 ? [...allUnresolvedChains] : undefined,
         poolsBySource: Object.keys(poolsBySource).length > 0 ? poolsBySource : undefined,
-      }),
+      })),
     };
   } catch (err) {
     await finalizeDexScreenerOutcome();
@@ -670,31 +652,14 @@ export async function syncDexDiscovery(
     return {
       status: "error",
       itemCount: coinsCrawled,
-      metadata: JSON.stringify({
-        coinsCrawled,
-        poolsDiscovered,
-        tierBreakdown,
-        censusCadenceHolds,
-        budgetExhausted,
-        stagingWritesSkippedForBudget,
-        cleanupSkippedForBudget,
-        cleanup,
+      metadata: JSON.stringify(buildRunMetadata({
         finalizationTailBudgetMs: DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS,
-        runSeq,
-        deploymentOutcomesWritten,
-        windowedCoins,
-        windowedDeploymentsDeferred,
-        dexscreener: {
-          attemptedRequests: dexScreenerRunState.attemptedRequests,
-          successfulRequests: dexScreenerRunState.successfulRequests,
-          hardRefusal: dexScreenerRunState.hardRefusal,
-        },
         failedCoins,
         failedCoinErrors: Object.keys(failedCoinErrors).length > 0 ? failedCoinErrors : undefined,
         unresolvedChains: allUnresolvedChains.size > 0 ? [...allUnresolvedChains] : undefined,
         poolsBySource: Object.keys(poolsBySource).length > 0 ? poolsBySource : undefined,
         error,
-      }),
+      })),
     };
   }
 }

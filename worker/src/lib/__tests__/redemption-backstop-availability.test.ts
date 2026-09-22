@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
-import { mockD1 } from "@shared/test-utils/mock-d1";
+import { mockD1Strict } from "@shared/test-utils/mock-d1";
 import {
   buildRedemptionCurrentDepegObservationMap,
   evaluateOutputDependencyImpairment,
@@ -13,6 +13,14 @@ import type { ReserveSnapshotMetadataRecord } from "../live-reserves/store";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 
 const REVIEW_DATE = "2026-04-22";
+const ACTIVE_DEPEG_AVAILABILITY_SQL = `SELECT stablecoin_id, direction, started_at
+  FROM depeg_events
+  WHERE ended_at IS NULL
+    AND source = 'live'`;
+
+function activeDepegQuery(rows: Record<string, unknown>[]) {
+  return { match: ACTIVE_DEPEG_AVAILABILITY_SQL, rows };
+}
 
 function observations(entries: Array<[string, number]>) {
   return new Map(entries.map(([id, currentDeviationBps]) => [id, { currentDeviationBps }]));
@@ -58,18 +66,15 @@ describe("buildRedemptionCurrentDepegObservationMap", () => {
 describe("loadSevereActiveDepegAvailabilityMap", () => {
   it("inherits parent severe depeg into tracked wrapper route status", async () => {
     const parentStartedAt = Math.floor(Date.UTC(2026, 3, 20) / 1000);
-    const db = mockD1([
-      {
-        match: "FROM depeg_events",
-        rows: [
-          {
-            stablecoin_id: "usds-sky",
-            peak_deviation_bps: -3100,
-            direction: "below",
-            started_at: parentStartedAt,
-          },
-        ],
-      },
+    const db = mockD1Strict([
+      activeDepegQuery([
+        {
+          stablecoin_id: "usds-sky",
+          peak_deviation_bps: -3100,
+          direction: "below",
+          started_at: parentStartedAt,
+        },
+      ]),
     ]);
 
     const result = await loadSevereActiveDepegAvailabilityMap(
@@ -94,18 +99,15 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
   });
 
   it("does not propagate a sub-severe parent depeg to wrappers", async () => {
-    const db = mockD1([
-      {
-        match: "FROM depeg_events",
-        rows: [
-          {
-            stablecoin_id: "usds-sky",
-            peak_deviation_bps: -1200,
-            direction: "below",
-            started_at: Math.floor(Date.now() / 1000),
-          },
-        ],
-      },
+    const db = mockD1Strict([
+      activeDepegQuery([
+        {
+          stablecoin_id: "usds-sky",
+          peak_deviation_bps: -1200,
+          direction: "below",
+          started_at: Math.floor(Date.now() / 1000),
+        },
+      ]),
     ]);
 
     const result = await loadSevereActiveDepegAvailabilityMap(
@@ -118,24 +120,21 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
   });
 
   it("prefers the wrapper's own direct depeg over the inherited parent entry", async () => {
-    const db = mockD1([
-      {
-        match: "FROM depeg_events",
-        rows: [
-          {
-            stablecoin_id: "usds-sky",
-            peak_deviation_bps: -3100,
-            direction: "below",
-            started_at: 1_000_000,
-          },
-          {
-            stablecoin_id: "susds-sky",
-            peak_deviation_bps: -4200,
-            direction: "below",
-            started_at: 2_000_000,
-          },
-        ],
-      },
+    const db = mockD1Strict([
+      activeDepegQuery([
+        {
+          stablecoin_id: "usds-sky",
+          peak_deviation_bps: -3100,
+          direction: "below",
+          started_at: 1_000_000,
+        },
+        {
+          stablecoin_id: "susds-sky",
+          peak_deviation_bps: -4200,
+          direction: "below",
+          started_at: 2_000_000,
+        },
+      ]),
     ]);
 
     const result = await loadSevereActiveDepegAvailabilityMap(
@@ -153,18 +152,15 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
   });
 
   it("does not impair routes for severe upside depegs", async () => {
-    const db = mockD1([
-      {
-        match: "FROM depeg_events",
-        rows: [
-          {
-            stablecoin_id: "usds-sky",
-            peak_deviation_bps: 3100,
-            direction: "above",
-            started_at: 1_000_000,
-          },
-        ],
-      },
+    const db = mockD1Strict([
+      activeDepegQuery([
+        {
+          stablecoin_id: "usds-sky",
+          peak_deviation_bps: 3100,
+          direction: "above",
+          started_at: 1_000_000,
+        },
+      ]),
     ]);
 
     const result = await loadSevereActiveDepegAvailabilityMap(
@@ -178,17 +174,14 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
   });
 
   it("requires an explicit below direction on the open incident", async () => {
-    const db = mockD1([
-      {
-        match: "FROM depeg_events",
-        rows: [
-          {
-            stablecoin_id: "usds-sky",
-            peak_deviation_bps: -3100,
-            started_at: 1_000_000,
-          },
-        ],
-      },
+    const db = mockD1Strict([
+      activeDepegQuery([
+        {
+          stablecoin_id: "usds-sky",
+          peak_deviation_bps: -3100,
+          started_at: 1_000_000,
+        },
+      ]),
     ]);
 
     const result = await loadSevereActiveDepegAvailabilityMap(
@@ -201,18 +194,15 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
   });
 
   it("impairs configured collateral routes when their structured output dependency is depegged", async () => {
-    const db = mockD1([
-      {
-        match: "FROM depeg_events",
-        rows: [
-          {
-            stablecoin_id: "ausd-agora",
-            peak_deviation_bps: -3600,
-            direction: "below",
-            started_at: 2_000_000,
-          },
-        ],
-      },
+    const db = mockD1Strict([
+      activeDepegQuery([
+        {
+          stablecoin_id: "ausd-agora",
+          peak_deviation_bps: -3600,
+          direction: "below",
+          started_at: 2_000_000,
+        },
+      ]),
     ]);
 
     const result = await loadSevereActiveDepegAvailabilityMap(
@@ -228,24 +218,21 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
   });
 
   it("accumulates impaired shares across multiple basket dependencies without an over-leverage marker", async () => {
-    const db = mockD1([
-      {
-        match: "FROM depeg_events",
-        rows: [
-          {
-            stablecoin_id: "usdc-circle",
-            peak_deviation_bps: -3000,
-            direction: "below",
-            started_at: 3_000_000,
-          },
-          {
-            stablecoin_id: "usdt-tether",
-            peak_deviation_bps: -2600,
-            direction: "below",
-            started_at: 3_100_000,
-          },
-        ],
-      },
+    const db = mockD1Strict([
+      activeDepegQuery([
+        {
+          stablecoin_id: "usdc-circle",
+          peak_deviation_bps: -3000,
+          direction: "below",
+          started_at: 3_000_000,
+        },
+        {
+          stablecoin_id: "usdt-tether",
+          peak_deviation_bps: -2600,
+          direction: "below",
+          started_at: 3_100_000,
+        },
+      ]),
     ]);
 
     const result = await loadSevereActiveDepegAvailabilityMap(
@@ -269,18 +256,15 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
   });
 
   it("ignores severe depegs of coins that are no configured route's output dependency", async () => {
-    const db = mockD1([
-      {
-        match: "FROM depeg_events",
-        rows: [
-          {
-            stablecoin_id: "not-a-tracked-dependency",
-            peak_deviation_bps: -4000,
-            direction: "below",
-            started_at: 1_000_000,
-          },
-        ],
-      },
+    const db = mockD1Strict([
+      activeDepegQuery([
+        {
+          stablecoin_id: "not-a-tracked-dependency",
+          peak_deviation_bps: -4000,
+          direction: "below",
+          started_at: 1_000_000,
+        },
+      ]),
     ]);
 
     const result = await loadSevereActiveDepegAvailabilityMap(
@@ -295,18 +279,15 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
   });
 
   it("reports full output impairment when the sole backing asset is depegged", async () => {
-    const db = mockD1([
-      {
-        match: "FROM depeg_events",
-        rows: [
-          {
-            stablecoin_id: "usde-ethena",
-            peak_deviation_bps: -2800,
-            direction: "below",
-            started_at: 3_000_000,
-          },
-        ],
-      },
+    const db = mockD1Strict([
+      activeDepegQuery([
+        {
+          stablecoin_id: "usde-ethena",
+          peak_deviation_bps: -2800,
+          direction: "below",
+          started_at: 3_000_000,
+        },
+      ]),
     ]);
 
     const result = await loadSevereActiveDepegAvailabilityMap(
@@ -324,17 +305,14 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
   });
 
   it("publishes unknown from stale evidence and never mutates the incident", async () => {
-    const db = mockD1([
-      {
-        match: "FROM depeg_events",
-        rows: [
-          {
-            stablecoin_id: "usda-avalon",
-            direction: "below",
-            started_at: 1_765_756_800,
-          },
-        ],
-      },
+    const db = mockD1Strict([
+      activeDepegQuery([
+        {
+          stablecoin_id: "usda-avalon",
+          direction: "below",
+          started_at: 1_765_756_800,
+        },
+      ]),
     ]);
 
     const result = await loadSevereActiveDepegAvailabilityMap(db, REVIEW_DATE, new Map());
@@ -464,9 +442,19 @@ describe("wave2 redemption exit-route embeds", () => {
     expect(config).toBeDefined();
 
     const entry = await buildRedemptionBackstopEntry(
-      mockD1([
-        { match: "FROM reserve_sync_state", rows: [] },
-        { match: "FROM reserve_composition", rows: [] },
+      mockD1Strict([
+        {
+          match:
+            "SELECT stablecoin_id, adapter_key, breaker_key, last_attempted_at, last_success_at, last_status, warning_count, warnings, last_error, metadata, last_attempt_id, pending_attempt_id, last_success_attempt_id, config_fingerprint FROM reserve_sync_state WHERE stablecoin_id IN (?)",
+          matchBinds: ["usda-avalon"],
+          rows: [],
+        },
+        {
+          match:
+            "SELECT stablecoin_id, slices, fetched_at, source, attempt_id, metadata, warning_count, warnings, adapter_source_model, adapter_evidence_class, config_fingerprint FROM reserve_composition WHERE stablecoin_id IN (?)",
+          matchBinds: ["usda-avalon"],
+          rows: [],
+        },
       ]),
       "usda-avalon",
       config!,
@@ -491,7 +479,7 @@ describe("wave2 redemption exit-route embeds", () => {
     expect(config).toBeDefined();
 
     const entry = await buildRedemptionBackstopEntry(
-      mockD1(),
+      mockD1Strict([]),
       "usdz-anzen",
       config!,
       806_422.8,
@@ -531,7 +519,7 @@ describe("wave2 redemption exit-route embeds", () => {
     expect(config).toBeDefined();
 
     const entry = await buildRedemptionBackstopEntry(
-      mockD1(),
+      mockD1Strict([]),
       "satusd-river",
       config!,
       159_000_000,
@@ -573,7 +561,7 @@ describe("wave2 redemption exit-route embeds", () => {
     expect(config).toBeDefined();
 
     const entry = await buildRedemptionBackstopEntry(
-      mockD1(),
+      mockD1Strict([]),
       "satusd-river",
       config!,
       159_000_000,

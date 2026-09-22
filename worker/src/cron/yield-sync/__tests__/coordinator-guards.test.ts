@@ -8,7 +8,7 @@ import {
   guardPublishedYieldCoverage,
   summarizeYieldPublicationQualityMix,
 } from "../coordinator-guards";
-import { pruneYieldTables } from "../publication";
+import { loadPreviousYieldPublicationSnapshot, pruneYieldTables } from "../publication";
 import { repairPublishedYieldGenerationFromCache } from "../publication-lifecycle";
 import type { PreviousYieldPublicationSnapshot } from "../publication";
 
@@ -297,6 +297,29 @@ describe("Yield publication coverage guard snapshots", () => {
     expect(guarded.previousPublishedYieldBearingCount).toBe(0);
     expect(guarded.previousPublishedOpportunityCount).toBe(0);
     expect(guarded.previousPublishedRankingCount).toBe(snapshot.status === "ok" ? snapshot.rankings.length : 0);
+  });
+
+  it("allows a valid replacement for a malformed rankings payload", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      sqlite
+        .prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+        .run("yield-rankings", JSON.stringify({ rankings: "nope" }), GENERATION_START_SEC);
+      const snapshot = await loadPreviousYieldPublicationSnapshot(db);
+      const current = directRankings(1, "replacement");
+      const guarded = await guardPublishedYieldCoverage({
+        previousYieldPublicationSnapshot: snapshot,
+        previewRankingsPayload: { rankings: current },
+        yieldCoinIdSet: new Set(current.map(({ id }) => id)),
+        opportunityCoinIdSet: new Set(),
+      });
+
+      expect(snapshot.status).toBe("malformed-payload");
+      expect(guarded.result).toBeNull();
+      expect(guarded.currentPublishedRankingCount).toBe(1);
+    } finally {
+      sqlite.close();
+    }
   });
 
   it.each([

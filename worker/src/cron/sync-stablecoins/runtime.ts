@@ -1,12 +1,15 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
-import { buildSyncMetadata, type PreviousStablecoinsCacheState } from "./shared";
+import {
+  buildSyncMetadata,
+  isSevereStalenessOverlapRepresentative,
+  SEVERE_PRICE_STALENESS_RATIO,
+  type PreviousStablecoinsCacheState,
+} from "./shared";
 import { detectPriceStaleness } from "./phase-helpers";
 import { reportCronProgress } from "../../lib/cron-progress";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
 import type { PeggedAsset } from "./enrich-prices";
-
-const SEVERE_PRICE_STALENESS_RATIO = 0.98;
 
 export interface StablecoinsStalenessSummary {
   compared: number;
@@ -171,7 +174,7 @@ export async function checkStablecoinsPriceStaleness(params: {
     }
 
     if (
-      staleness.summary.compared >= 50 &&
+      isSevereStalenessOverlapRepresentative(staleness.summary.compared, params.assets.length) &&
       stalenessSummary.identicalRatio >= SEVERE_PRICE_STALENESS_RATIO
     ) {
       return {

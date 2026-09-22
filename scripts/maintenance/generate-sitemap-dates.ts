@@ -2,10 +2,10 @@ import { execFileSync } from "node:child_process";
 import { readdirSync, statSync } from "node:fs";
 import { join, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
-import { buildStablecoinUrl } from "@shared/lib/urls";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 import { assertFullGitHistory } from "../lib/git-history.mts";
-import { listPerCoinStablecoinSourceFiles } from "../lib/stablecoin-catalog-sources";
+import { loadPerCoinStablecoinEntries, STABLECOIN_DOMAIN_SOURCE_DIR } from "../lib/stablecoin-catalog-sources";
+import { collectStablecoinDetailDates, latestIso } from "../lib/sitemap-detail-dates";
 import { CASE_STUDY_LIST } from "../../src/lib/case-studies";
 import { BLOG_POSTS } from "../../src/data/blog";
 import {
@@ -73,6 +73,7 @@ const GIT_DATE_SCAN_PATHS = [
   "src/lib/page-metadata.ts",
   "src/lib/stablecoin-detail-json-ld.ts",
   "shared/data/stablecoins/coins",
+  STABLECOIN_DOMAIN_SOURCE_DIR,
   "shared/data/methodology-changelogs",
 ];
 
@@ -144,12 +145,6 @@ function getLastModified(pagePath: string): string {
   return pageStat.mtime.toISOString();
 }
 
-function latestIso(...dates: string[]): string {
-  return dates.reduce((latest, candidate) => {
-    return new Date(candidate).getTime() > new Date(latest).getTime() ? candidate : latest;
-  });
-}
-
 function walkPages(dir: string, prefix: string, dates: Record<string, string>): void {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
@@ -172,9 +167,15 @@ function walkPages(dir: string, prefix: string, dates: Record<string, string>): 
 function addStablecoinDetailDates(dates: Record<string, string>): void {
   const sharedLastModified = latestIso(...STABLECOIN_DETAIL_SHARED_SOURCES.map(getLastModified));
 
-  for (const { id, file } of listPerCoinStablecoinSourceFiles(REPO_ROOT)) {
-    dates[buildStablecoinUrl(id)] = latestIso(getLastModified(join(REPO_ROOT, file)), sharedLastModified);
-  }
+  Object.assign(
+    dates,
+    collectStablecoinDetailDates(
+      loadPerCoinStablecoinEntries(REPO_ROOT),
+      getLastModified,
+      sharedLastModified,
+      REPO_ROOT,
+    ),
+  );
 }
 
 function addCaseStudyDates(dates: Record<string, string>): void {

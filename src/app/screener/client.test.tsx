@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { makeReportCardsV9Response, makeV9Card, makeV9Pillars } from "@/test/fixtures/safety-score-v9";
 import type { ScreenerRow } from "@/lib/screener-filters";
+import type { CsvColumn } from "@/lib/exports/csv";
 
 import { ScreenerClient } from "./client";
 
@@ -19,6 +20,7 @@ const mocks = vi.hoisted(() => ({
   useSort: vi.fn(),
   useStablecoins: vi.fn(),
   useStressSignals: vi.fn(),
+  TableExportMenu: vi.fn(),
   useUrlFilters: vi.fn(),
 }));
 
@@ -47,7 +49,14 @@ vi.mock("@/components/screener/screener-table", () => ({
 }));
 
 vi.mock("@/components/table-export-menu", () => ({
-  TableExportMenu: () => <div data-testid="table-export-menu" />,
+  TableExportMenu: (props: {
+    data: ScreenerRow[];
+    columns: CsvColumn<ScreenerRow>[];
+    asOfISO: string;
+  }) => {
+    mocks.TableExportMenu(props);
+    return <div data-testid="table-export-menu" />;
+  },
 }));
 
 vi.mock("@/hooks/use-stablecoins", () => ({
@@ -229,5 +238,31 @@ describe("ScreenerClient freshness notices", () => {
       safetyWeakestScore: 86,
       safetyBindingCapReason: "Mint control evidence caps the published score.",
     }));
+  });
+
+  it("keeps unavailable supply empty in exports and stamps the source update time", () => {
+    const sourceUpdatedAt = Date.parse("2026-05-16T06:00:00.000Z");
+    mocks.useStablecoins.mockReturnValue({
+      data: { peggedAssets: [makeStablecoin()] },
+      isLoading: false,
+      error: null,
+      dataUpdatedAt: sourceUpdatedAt,
+      meta: null,
+      refetch,
+    });
+
+    render(<ScreenerClient />);
+
+    const props = mocks.TableExportMenu.mock.calls[0]?.[0] as {
+      data: ScreenerRow[];
+      columns: CsvColumn<ScreenerRow>[];
+      asOfISO: string;
+    };
+    const unavailableRow = props.data.find((row) => row.supplyUsd === 0);
+    const supplyColumn = props.columns.find((column) => column.header === "supply_usd");
+
+    expect(unavailableRow).toBeDefined();
+    expect(supplyColumn?.accessor(unavailableRow!, 0)).toBe("");
+    expect(props.asOfISO).toBe("2026-05-16T06:00:00.000Z");
   });
 });

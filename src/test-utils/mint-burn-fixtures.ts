@@ -7,7 +7,6 @@ export function makeMintBurnFlowCoin(overrides: Partial<MintBurnFlowCoin> = {}):
   return {
     stablecoinId: "usdc-circle",
     symbol: "USDC",
-    flowIntensity: -42,
     pressureShiftScore: -42,
     pressureShiftState: "worsening",
     netFlowDirection24h: "burning",

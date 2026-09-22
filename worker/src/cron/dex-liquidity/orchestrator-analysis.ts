@@ -1,22 +1,22 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { DexLiquidityCronMetadataSchema } from "../../lib/schemas";
+import { DexLiquidityCronMetadataSchema, type DexLiquidityCronMetadata } from "../../lib/schemas";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
 import type { DexPriceObs, FullScoreResult, GlobalAgg, LiquidityMetrics } from "./types";
 import type { DirectCexOrderbookDepthSummary } from "../../lib/cex-orderbooks";
+import { round4 } from "@shared/lib/math";
+import { median } from "@shared/lib/stats";
 import {
   DRIFT_WATCHLIST,
   computeDexLiquidityDriftSummary,
   readPreviousDexLiquidityDriftCandidates,
   readPreviousDexLiquiditySummary,
-  round4,
   type DexLiquidityDriftCandidate,
   type DexLiquidityDriftSummary,
   type PreviousDexLiquiditySummary,
 } from "./orchestrator-drift";
 import { toErrorMessage } from "@shared/lib/error-utils";
 
-type DexLiquidityCronMetadata = ReturnType<typeof DexLiquidityCronMetadataSchema.parse>;
 
 type ParsedPreviousCronRow = {
   startedAt: number | null;
@@ -157,10 +157,7 @@ function isProductiveCronRow(row: ParsedPreviousCronRow): boolean {
  * one noisy hour.
  */
 function medianOfRecentRuns(values: number[]): number | null {
-  const sorted = [...values.slice(0, GUARD_BASELINE_RUNS)].sort((left, right) => left - right);
-  if (sorted.length === 0) return null;
-  const middle = Math.floor(sorted.length / 2);
-  return sorted.length % 2 === 0 ? (sorted[middle - 1]! + sorted[middle]!) / 2 : sorted[middle]!;
+  return median(values.slice(0, GUARD_BASELINE_RUNS));
 }
 
 function readLatestProductiveDexLiquidityBaseline(rows: ParsedPreviousCronRow[]): {

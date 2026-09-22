@@ -13,10 +13,13 @@ function normalizeCandidateIds(ids: readonly string[]): string[] {
 
 function mentionsAnyToken(haystack: string, tokens: readonly string[]): boolean {
   const normalized = haystack.toLowerCase();
+  const haystackWords = new Set(normalized.split(/[^a-z0-9]+/).filter(Boolean));
   return tokens
     .map((token) => token.trim().toLowerCase())
     .filter(Boolean)
-    .some((token) => normalized.includes(token));
+    // A symbol is one alphanumeric word, so "USDTB" must not satisfy a
+    // required "USDT" mention. Multi-word tokens stay exact-phrase matches.
+    .some((token) => (/^[a-z0-9]+$/.test(token) ? haystackWords.has(token) : normalized.includes(token)));
 }
 
 export function validateDigestLeadRequirements(params: {

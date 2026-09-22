@@ -4,17 +4,27 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TapeEvent } from "@shared/types/tape-event";
 
 const {
-  useRegisteredApiQueryMock,
+  useInfiniteQueryMock,
+  apiFetchWithMetaMock,
   isChartAnnotationsEnabledMock,
   getCuratedAnnotationsMock,
 } = vi.hoisted(() => ({
-  useRegisteredApiQueryMock: vi.fn(),
+  useInfiniteQueryMock: vi.fn(),
+  apiFetchWithMetaMock: vi.fn(),
   isChartAnnotationsEnabledMock: vi.fn(),
   getCuratedAnnotationsMock: vi.fn(),
 }));
 
-vi.mock("../api-hooks", () => ({
-  useRegisteredApiQuery: useRegisteredApiQueryMock,
+vi.mock("@tanstack/react-query", () => ({
+  infiniteQueryOptions: (options: unknown) => options,
+  keepPreviousData: Symbol("keepPreviousData"),
+  useQuery: vi.fn(),
+  useInfiniteQuery: useInfiniteQueryMock,
+}));
+
+vi.mock("@/lib/api", () => ({
+  apiFetch: vi.fn(),
+  apiFetchWithMeta: apiFetchWithMetaMock,
 }));
 
 vi.mock("@/lib/feature-flags", () => ({
@@ -49,14 +59,51 @@ function tape(partial: Partial<TapeEvent> & Pick<TapeEvent, "id" | "type" | "ts"
   };
 }
 
-function queryResult(events: TapeEvent[], overrides: Record<string, unknown> = {}) {
+function queryResult(
+  events: TapeEvent[],
+  overrides: Record<string, unknown> = {},
+  nextCursor: string | null = null,
+) {
   return {
     data: {
-      events,
-      nextCursor: null,
-      total: events.length,
-      totalExact: true,
+      pages: [{
+        data: {
+          events,
+          nextCursor,
+          total: events.length,
+          totalExact: true,
+        },
+        meta: null,
+      }],
     },
+    error: null,
+    fetchNextPage: vi.fn(async () => undefined),
+    hasNextPage: nextCursor !== null,
+    isFetchingNextPage: false,
+    isLoading: false,
+    ...overrides,
+  };
+}
+
+function pagedQueryResult(
+  pages: Array<{ events: TapeEvent[]; nextCursor: string | null }>,
+  overrides: Record<string, unknown> = {},
+) {
+  return {
+    data: {
+      pages: pages.map((page) => ({
+        data: {
+          ...page,
+          total: null,
+          totalExact: false,
+        },
+        meta: null,
+      })),
+    },
+    error: null,
+    fetchNextPage: vi.fn(async () => undefined),
+    hasNextPage: pages.at(-1)?.nextCursor != null,
+    isFetchingNextPage: false,
     isLoading: false,
     ...overrides,
   };
@@ -64,11 +111,12 @@ function queryResult(events: TapeEvent[], overrides: Record<string, unknown> = {
 
 describe("useChartAnnotations", () => {
   beforeEach(() => {
-    useRegisteredApiQueryMock.mockReset();
+    useInfiniteQueryMock.mockReset();
+    apiFetchWithMetaMock.mockReset();
     isChartAnnotationsEnabledMock.mockReset();
     getCuratedAnnotationsMock.mockReset();
     isChartAnnotationsEnabledMock.mockReturnValue(true);
-    useRegisteredApiQueryMock.mockReturnValue({ data: undefined, isLoading: false });
+    useInfiniteQueryMock.mockReturnValue(queryResult([]));
     getCuratedAnnotationsMock.mockReturnValue([]);
   });
 
@@ -83,7 +131,7 @@ describe("useChartAnnotations", () => {
     );
 
     expect(result.current.data).toEqual([]);
-    const opts = useRegisteredApiQueryMock.mock.calls.at(-1)?.[1] as { enabled: boolean };
+    const opts = useInfiniteQueryMock.mock.calls.at(-1)?.[0] as { enabled: boolean };
     expect(opts.enabled).toBe(false);
   });
 
@@ -104,7 +152,8 @@ describe("useChartAnnotations", () => {
       useChartAnnotations("usdc-circle", Date.UTC(2023, 0, 1), Date.UTC(2023, 5, 1)),
     );
 
-    expect(useRegisteredApiQueryMock.mock.calls.at(-1)?.[0]?.producerIntervalMs).toBe(CRON_TAPE);
+    expect(useInfiniteQueryMock.mock.calls.at(-1)?.[0]?.staleTime).toBe(CRON_TAPE);
+    expect(useInfiniteQueryMock.mock.calls.at(-1)?.[0]?.refetchInterval).toBe(2 * CRON_TAPE);
   });
 
   it("clamps curated annotations to the [fromMs, toMs] window", () => {
@@ -121,11 +170,11 @@ describe("useChartAnnotations", () => {
     expect(result.current.data.map((a) => a.label)).toEqual(["in range"]);
   });
 
-  it("uses a bucketed event query window across brush moves while preserving the raw display clamp", () => {
+  it("uses a bucketed event query window across brush moves while preserving the raw display clamp", async () => {
     const bucketStart = 30 * DAY_MS * 650;
     const rawFrom = bucketStart + 5 * DAY_MS;
     const rawTo = bucketStart + 10 * DAY_MS;
-    useRegisteredApiQueryMock.mockReturnValue(queryResult([
+    useInfiniteQueryMock.mockReturnValue(queryResult([
       tape({
         id: "before-raw-window",
         type: "depeg.opened",
@@ -155,9 +204,14 @@ describe("useChartAnnotations", () => {
     );
 
     expect(result.current.data.map((a) => a.label)).toEqual(["Inside raw window"]);
-    const firstCall = useRegisteredApiQueryMock.mock.calls.at(-1);
+    const firstCall = useInfiniteQueryMock.mock.calls.at(-1);
     const firstKey = JSON.stringify(firstCall?.[0]?.queryKey);
-    const firstPath = firstCall?.[0]?.path as string;
+    apiFetchWithMetaMock.mockResolvedValue({
+      data: queryResult([]).data.pages[0].data,
+      meta: null,
+    });
+    await firstCall?.[0]?.queryFn({ pageParam: "older-events" });
+    const firstPath = apiFetchWithMetaMock.mock.calls.at(-1)?.[0] as string;
     const firstUrl = new URL(firstPath, "https://pharos.test");
     expect(firstUrl.searchParams.get("since")).toBe(String(bucketStart));
     expect(firstUrl.searchParams.get("until")).toBe(String(bucketStart + 30 * DAY_MS));
@@ -165,17 +219,65 @@ describe("useChartAnnotations", () => {
     expect(firstUrl.searchParams.getAll("type")).toEqual(["depeg.opened", "depeg.peak_worsened"]);
     expect(firstUrl.searchParams.getAll("class")).toEqual(["methodology"]);
     expect(firstUrl.searchParams.get("limit")).toBe("200");
+    expect(firstUrl.searchParams.get("cursor")).toBe("older-events");
 
     rerender({ from: rawFrom + 60_000, to: rawTo + 60_000 });
 
-    const secondCall = useRegisteredApiQueryMock.mock.calls.at(-1);
+    const secondCall = useInfiniteQueryMock.mock.calls.at(-1);
     expect(JSON.stringify(secondCall?.[0]?.queryKey)).toBe(firstKey);
-    expect(secondCall?.[0]?.path).toBe(firstPath);
     expect(result.current.data.map((a) => a.label)).toEqual(["Inside raw window"]);
   });
 
+  it("merges a second cursor page so the oldest of 201 events is included", () => {
+    const newest = Date.UTC(2025, 0, 1);
+    const firstPage = Array.from({ length: 200 }, (_, index) =>
+      tape({
+        id: `event-${index}`,
+        type: "depeg.opened",
+        ts: newest - index * DAY_MS,
+        title: `Event ${index}`,
+      }),
+    );
+    const oldest = tape({
+      id: "event-oldest",
+      type: "depeg.opened",
+      ts: newest - 200 * DAY_MS,
+      title: "Oldest event",
+    });
+    useInfiniteQueryMock.mockReturnValue(pagedQueryResult([
+      { events: firstPage, nextCursor: "page-2" },
+      { events: [oldest], nextCursor: null },
+    ]));
+
+    const { result } = renderHook(() =>
+      useChartAnnotations("usdc-circle", oldest.ts, newest),
+    );
+
+    expect(result.current.data).toHaveLength(201);
+    expect(result.current.data[0]?.label).toBe("Oldest event");
+    expect(result.current.isTruncated).toBe(false);
+  });
+
+  it("discloses truncation when the hard page cap is reached with a cursor remaining", () => {
+    const fetchNextPage = vi.fn(async () => undefined);
+    useInfiniteQueryMock.mockReturnValue(pagedQueryResult(
+      Array.from({ length: 10 }, (_, index) => ({
+        events: [],
+        nextCursor: `page-${index + 2}`,
+      })),
+      { fetchNextPage, hasNextPage: true },
+    ));
+
+    const { result } = renderHook(() =>
+      useChartAnnotations("usdc-circle", Date.UTC(2023, 0, 1), Date.UTC(2023, 5, 1)),
+    );
+
+    expect(result.current.isTruncated).toBe(true);
+    expect(fetchNextPage).not.toHaveBeenCalled();
+  });
+
   it("merges curated + tape sources and dedupes same-day same-kind (curated wins)", () => {
-    useRegisteredApiQueryMock.mockReturnValue(queryResult([
+    useInfiniteQueryMock.mockReturnValue(queryResult([
       tape({
         id: "tape-depeg",
         type: "depeg.opened",
@@ -222,7 +324,7 @@ describe("useChartAnnotations", () => {
   });
 
   it("drops mint_burn and freeze tape rows from chart annotations", () => {
-    useRegisteredApiQueryMock.mockReturnValue(queryResult([
+    useInfiniteQueryMock.mockReturnValue(queryResult([
       tape({
         id: "tape-mint",
         type: "mint_burn.usdt.spike",
@@ -247,7 +349,7 @@ describe("useChartAnnotations", () => {
   });
 
   it("ignores tape rows with unmapped event-type prefixes", () => {
-    useRegisteredApiQueryMock.mockReturnValue(queryResult([
+    useInfiniteQueryMock.mockReturnValue(queryResult([
       tape({
         id: "psi-1",
         type: "score.psi.drop",
@@ -270,7 +372,7 @@ describe("useChartAnnotations", () => {
   });
 
   it("drops low-severity tape rows (info, notice) but keeps curated annotations", () => {
-    useRegisteredApiQueryMock.mockReturnValue(queryResult([
+    useInfiniteQueryMock.mockReturnValue(queryResult([
       tape({
         id: "tape-notice",
         type: "depeg.opened",
@@ -313,7 +415,7 @@ describe("useChartAnnotations", () => {
   });
 
   it("drops depeg.resolved tape rows even when severity passes the filter", () => {
-    useRegisteredApiQueryMock.mockReturnValue(queryResult([
+    useInfiniteQueryMock.mockReturnValue(queryResult([
       tape({
         id: "tape-resolved",
         type: "depeg.resolved",
@@ -338,7 +440,7 @@ describe("useChartAnnotations", () => {
   });
 
   it("keeps material depeg peak-worsened tape rows", () => {
-    useRegisteredApiQueryMock.mockReturnValue(queryResult([
+    useInfiniteQueryMock.mockReturnValue(queryResult([
       tape({
         id: "tape-peak-worsened",
         type: "depeg.peak_worsened",
@@ -365,7 +467,7 @@ describe("useChartAnnotations", () => {
   });
 
   it("sorts merged output by timestamp ascending", () => {
-    useRegisteredApiQueryMock.mockReturnValue(queryResult([
+    useInfiniteQueryMock.mockReturnValue(queryResult([
       tape({
         id: "tape-late",
         type: "depeg.opened",

@@ -7,39 +7,31 @@ import {
   mockHealthyRiskFreeRateCache,
   resetSyncYieldDataTest,
   cleanupSyncYieldDataTest,
-  fixtureSyncYieldData,
-  fixtureBatchExecute,
-  fixtureGetCache,
-  fixtureWriteFreshnessSentinel,
-  fixtureShouldAttemptFetch,
-  fixtureMockFetch,
   mockD1WithYieldPruneTables,
-  fixtureACTIVE_STABLECOINS,
-  fixtureSafetyScoreActiveSourceModule,
-  fixtureSafetyScoresModule,
-  fixtureYieldHelpersModule,
-  fixturePublicationModule,
-  fixtureYIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY,
+  yieldFallbackTableMatches,
   type CronProgressUpdate,
 } from "./sync-yield-data.test-support";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { syncYieldData } from "../sync-yield-data";
+import * as yieldHelpersModule from "../yield-helpers";
+import * as publicationModule from "../yield-sync/publication";
+import { batchExecute } from "../../lib/db";
+import { getCache, writeFreshnessSentinel } from "../../lib/db-cache";
+import { shouldAttemptFetch } from "../../lib/circuit-breaker";
+import * as safetyScoreActiveSourceModule from "../../lib/safety-score-active-source";
+import * as safetyScoresModule from "../../lib/safety-scores";
+import { YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY } from "../../lib/yield-history-cleanup";
 import { cacheRow, installYieldCacheReader } from "./yield-cache.test-support";
 import { makeDlYieldPool } from "./yield-resolve.test-support";
 import type * as YieldHelpers from "../yield-helpers";
 
 function makePublicationCacheDb(existingIds: Record<string, unknown>[] = []) {
-  return mockD1WithYieldPruneTables([
-    { match: "pharos:yield-sync:yield-data-existing-ids", rows: existingIds },
-    { match: "cache", rows: [] },
-    { match: "yield_data", rows: [] },
-    { match: "yield_history", rows: [] },
-    { match: "supply_history", rows: [] },
-    { match: "depeg_events", rows: [] },
-    { match: "dex_liquidity", rows: [] },
-    { match: "ranked_linked_generations", rows: [] },
-    { match: "pharos:yield-sync:decision-retention-delete", rows: [] },
-    { match: "pharos:yield-sync:decision-alternatives-retention-delete", rows: [] },
-    { match: "source_switch = 0", rows: [] },
-  ]);
+  return mockD1WithYieldPruneTables(yieldFallbackTableMatches(
+    existingIds.length > 0
+      ? [{ match: "pharos:yield-sync:yield-data-existing-ids", rows: existingIds }]
+      : [],
+  ));
 }
 
 describe("syncYieldData", () => {
@@ -49,7 +41,7 @@ describe("syncYieldData", () => {
     const db = makePublicationCacheDb();
 
     // DL yields API returns a pool matching sDAI
-    fixtureMockFetch([
+    mockFetch([
       {
         match: "yields.llama.fi",
         body: {
@@ -60,13 +52,13 @@ describe("syncYieldData", () => {
       },
     ]);
 
-    const result = await fixtureSyncYieldData(db);
+    const result = await syncYieldData(db);
 
     // Should have updated 1 yield-bearing coin
     expect(result.itemCount).toBe(1);
     expect(getPublishedYieldRows(db)).toHaveLength(1);
     expect(getYieldRankingsCachePayload(db)).toBeDefined();
-    expect(fixtureWriteFreshnessSentinel).toHaveBeenCalledWith(
+    expect(writeFreshnessSentinel).toHaveBeenCalledWith(
       db,
       "yield-data",
       Math.floor(Date.now() / 1000),
@@ -77,16 +69,16 @@ describe("syncYieldData", () => {
   it("loads stablecoin supply once and requests the published safety generation", async () => {
     const db = makePublicationCacheDb();
     const updatedAt = Math.floor(Date.now() / 1000);
-    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+    installYieldCacheReader(vi.mocked(getCache), {
       stablecoins: cacheRow(makeStablecoinsCacheValue(), updatedAt),
     });
-    vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
-    fixtureMockFetch([]);
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
 
-    await fixtureSyncYieldData(db);
+    await syncYieldData(db);
 
-    const stablecoinsReads = vi.mocked(fixtureGetCache).mock.calls.filter((call) => call[1] === "stablecoins");
-    const safetyCalls = vi.mocked(fixtureSafetyScoresModule.computeSafetyScoresSnapshot).mock.calls;
+    const stablecoinsReads = vi.mocked(getCache).mock.calls.filter((call) => call[1] === "stablecoins");
+    const safetyCalls = vi.mocked(safetyScoresModule.computeSafetyScoresSnapshot).mock.calls;
     const safetyCall = safetyCalls[safetyCalls.length - 1];
 
     expect(stablecoinsReads).toHaveLength(1);
@@ -96,9 +88,9 @@ describe("syncYieldData", () => {
   it("publishes coherent results when the safety identity changes before publish", async () => {
     const db = makePublicationCacheDb();
     const nowSec = Math.floor(Date.now() / 1000);
-    const safetySnapshot = vi.mocked(fixtureSafetyScoresModule.computeSafetyScoresSnapshot);
+    const safetySnapshot = vi.mocked(safetyScoresModule.computeSafetyScoresSnapshot);
     const currentSafetyIdentity = vi.mocked(
-      fixtureSafetyScoreActiveSourceModule.loadActiveSafetyScoreIdentity,
+      safetyScoreActiveSourceModule.loadActiveSafetyScoreIdentity,
     );
     safetySnapshot
       .mockResolvedValueOnce({
@@ -142,7 +134,7 @@ describe("syncYieldData", () => {
       },
     });
 
-    fixtureMockFetch([
+    mockFetch([
       {
         match: "yields.llama.fi",
         body: {
@@ -153,7 +145,7 @@ describe("syncYieldData", () => {
       },
     ]);
 
-    const result = await fixtureSyncYieldData(db);
+    const result = await syncYieldData(db);
 
     expect(safetySnapshot).toHaveBeenCalledTimes(1);
     expect(currentSafetyIdentity).toHaveBeenCalledTimes(1);
@@ -169,7 +161,7 @@ describe("syncYieldData", () => {
       provenance?: { safetySnapshot?: { safetyScoreIdentity?: { evaluationBuildDigest?: string } } };
     } | undefined;
     expect(cachePayload?.provenance?.safetySnapshot?.safetyScoreIdentity?.evaluationBuildDigest).toBe("b".repeat(64));
-    expect(fixtureWriteFreshnessSentinel).toHaveBeenCalled();
+    expect(writeFreshnessSentinel).toHaveBeenCalled();
   });
 
   it("reports writer-pause progress metadata before returning", async () => {
@@ -178,15 +170,15 @@ describe("syncYieldData", () => {
     const reportProgress = vi.fn(async (update: CronProgressUpdate) => {
       progressUpdates.push(update);
     });
-    installYieldCacheReader(vi.mocked(fixtureGetCache), {
-      [fixtureYIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY]: cacheRow({
+    installYieldCacheReader(vi.mocked(getCache), {
+      [YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY]: cacheRow({
             reason: "history-cleanup",
             operator: "ops",
             pausedAt: Math.floor(Date.now() / 1000) - 60,
           }, Math.floor(Date.now() / 1000) - 60),
     });
 
-    const result = await fixtureSyncYieldData(db, undefined, undefined, undefined, undefined, reportProgress);
+    const result = await syncYieldData(db, undefined, undefined, undefined, undefined, reportProgress);
     const writerPaused = progressUpdates.find((update) => update.stage === "writer-paused");
 
     expect(result.status).toBe("degraded");
@@ -212,9 +204,9 @@ describe("syncYieldData", () => {
     // stale-benchmark NR row under B13.
     mockHealthyRiskFreeRateCache();
     const actual = await vi.importActual<typeof YieldHelpers>("../yield-helpers");
-    vi.spyOn(fixtureYieldHelpersModule, "detectWarningSignals").mockImplementation(actual.detectWarningSignals);
+    vi.spyOn(yieldHelpersModule, "detectWarningSignals").mockImplementation(actual.detectWarningSignals);
 
-    fixtureMockFetch([
+    mockFetch([
       {
         match: "yields.llama.fi",
         body: {
@@ -225,7 +217,7 @@ describe("syncYieldData", () => {
       },
     ]);
 
-    const result = await fixtureSyncYieldData(db);
+    const result = await syncYieldData(db);
 
     expect(result.itemCount).toBe(1);
     const parsed = getYieldRankingsCachePayload(db) as {
@@ -237,11 +229,11 @@ describe("syncYieldData", () => {
   it("continues when published-generation repair fails before history load", async () => {
     const db = makePublicationCacheDb();
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    vi.spyOn(fixturePublicationModule, "repairPublishedYieldGenerationFromCache").mockRejectedValueOnce(
+    vi.spyOn(publicationModule, "repairPublishedYieldGenerationFromCache").mockRejectedValueOnce(
       new Error("repair failed"),
     );
 
-    fixtureMockFetch([
+    mockFetch([
       {
         match: "yields.llama.fi",
         body: {
@@ -252,7 +244,7 @@ describe("syncYieldData", () => {
       },
     ]);
 
-    const result = await fixtureSyncYieldData(db);
+    const result = await syncYieldData(db);
 
     expect(result.itemCount).toBe(1);
     const warningRecords = warnSpy.mock.calls.flatMap(([message]) => {
@@ -274,7 +266,7 @@ describe("syncYieldData", () => {
   it("returns a degraded no-op result while the cleanup writer pause is armed", async () => {
     const db = makePublicationCacheDb();
     const nowSec = Math.floor(Date.now() / 1000);
-    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+    installYieldCacheReader(vi.mocked(getCache), {
       "yield-history-cleanup:writer-pause": cacheRow({
             reason: "yield-history-cleanup",
             pausedAt: nowSec - 60,
@@ -282,21 +274,21 @@ describe("syncYieldData", () => {
           }, nowSec - 60),
     });
 
-    const result = await fixtureSyncYieldData(db);
+    const result = await syncYieldData(db);
 
     expect(result).toMatchObject({
       status: "degraded",
       itemCount: 0,
     });
     expect(result.metadata).toContain('"writerPaused":true');
-    expect(fixtureBatchExecute).not.toHaveBeenCalled();
+    expect(batchExecute).not.toHaveBeenCalled();
   });
 
   it("purges stale yield rows for refreshed coins after writing the current source set", async () => {
     const db = makePublicationCacheDb();
     mockHealthyRiskFreeRateCache();
 
-    fixtureMockFetch([
+    mockFetch([
       {
         match: "yields.llama.fi",
         body: {
@@ -307,7 +299,7 @@ describe("syncYieldData", () => {
       },
     ]);
 
-    await fixtureSyncYieldData(db);
+    await syncYieldData(db);
 
     const deleteCall = db
       .getHistory()
@@ -327,7 +319,7 @@ describe("syncYieldData", () => {
     ]);
     mockHealthyRiskFreeRateCache();
 
-    fixtureMockFetch([
+    mockFetch([
       {
         match: "yields.llama.fi",
         body: {
@@ -338,7 +330,7 @@ describe("syncYieldData", () => {
       },
     ]);
 
-    await fixtureSyncYieldData(db);
+    await syncYieldData(db);
 
     const orphanScanCall = db
       .getHistory()
@@ -361,7 +353,7 @@ describe("syncYieldData", () => {
 
   it("chunks stale-yield cleanup under the D1 bind limit", async () => {
     const db = makePublicationCacheDb();
-    const originalLength = fixtureACTIVE_STABLECOINS.length;
+    const originalLength = ACTIVE_STABLECOINS.length;
     mockHealthyRiskFreeRateCache();
 
     for (let i = 0; i < 120; i++) {
@@ -372,7 +364,7 @@ describe("syncYieldData", () => {
         geckoId: `extra-${i}`,
         flags: {
           pegCurrency: "USD",
-          backing: fixtureACTIVE_STABLECOINS[1]!.flags.backing,
+          backing: ACTIVE_STABLECOINS[1]!.flags.backing,
           yieldBearing: false,
           rwa: false,
           navToken: false,
@@ -382,7 +374,7 @@ describe("syncYieldData", () => {
     }
 
     try {
-      fixtureMockFetch([
+      mockFetch([
         {
           match: "yields.llama.fi",
           body: {
@@ -393,7 +385,7 @@ describe("syncYieldData", () => {
         },
       ]);
 
-      await fixtureSyncYieldData(db);
+      await syncYieldData(db);
     } finally {
       mutableActiveStablecoins.splice(originalLength);
     }
@@ -415,7 +407,7 @@ describe("syncYieldData", () => {
     const db = makePublicationCacheDb();
 
     // Simulate cached pools from DEX sync
-    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+    installYieldCacheReader(vi.mocked(getCache), {
       "dl-stablecoin-pools": cacheRow({
             updatedAt: Math.floor(Date.now() / 1000),
             source: "sync-dex-liquidity",
@@ -427,9 +419,9 @@ describe("syncYieldData", () => {
     });
 
     // No DL yields API call should happen (pools already cached)
-    const fetchSpy = fixtureMockFetch([]);
+    const fetchSpy = mockFetch([]);
 
-    const result = await fixtureSyncYieldData(db);
+    const result = await syncYieldData(db);
 
     expect(result.itemCount).toBe(1);
     // Should NOT have fetched from yields.llama.fi since cached pools were available

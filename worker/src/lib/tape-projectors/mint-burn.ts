@@ -12,7 +12,7 @@
  * table today, so gauge-band-changed events are left for a follow-up.
  */
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/mint-burn-flow";
+import { MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
 import { formatCompactUsd } from "@shared/lib/format";
 import type { TapeEventSeverity } from "@shared/types/tape-event";
 

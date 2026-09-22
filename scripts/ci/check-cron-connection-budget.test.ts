@@ -12,7 +12,8 @@ describe("check-cron-connection-budget", () => {
   });
 
   it.each([
-    ["quarterHourly", ["sync-fx-rates", "sync-stablecoins", "snapshot-supply", "snapshot-chain-supply"], 4],
+    // P2-03 registers the same-day PSI and public-dataset catch-ups in the declared quarter-hourly chain.
+    ["quarterHourly", ["sync-fx-rates", "sync-stablecoins", "snapshot-supply", "snapshot-chain-supply", "snapshot-psi", "snapshot-public-dataset"], 4],
     ["v9SupplyAttributionOffset", ["sync-v9-supply-attribution"], 3],
     ["depegResolverOffset", ["compute-depeg-resolver"], 0],
     ["v9PublicationOffset", ["compute-safety-score-v9"], 0],
@@ -25,7 +26,8 @@ describe("check-cron-connection-budget", () => {
 
   it.each([
     ["sync-stablecoins", 4], ["compute-depeg-resolver", 0], ["compute-safety-score-v9", 0],
-    ["sync-dex-liquidity-stage", 5], ["prepare-safety-score-v9-input", 3],
+    ["compute-safety-score-v9-workflow", 0], ["sync-dex-liquidity-stage", 5],
+    ["prepare-safety-score-v9-input", 3],
   ] as const)("preserves reviewed %s job pressure", (job, peak) => {
     expect(CRON_CONNECTION_BUDGET_ENTRIES.find((entry) => entry.job === job)?.maxConnections).toBe(peak);
   });
@@ -105,7 +107,7 @@ describe("check-cron-connection-budget", () => {
     expect(missingJob).toMatchObject({ failed: true, missingBudgetScheduleKeys: [], missingBudgetJobs: ["slot:absent"] });
   });
 
-  it("prefers the same schedule and accepts only unambiguous cross-schedule budgets", () => {
+  it("requires an exact schedule budget entry", () => {
     const entry = (scheduleKey: string, maxConnections: number) => ({ job: "job", scheduleKey, maxConnections, statusTracked: true });
     const evaluate = (entries: { job: string; scheduleKey: string; maxConnections: number; statusTracked: boolean }[]) => evaluateCronConnectionBudget({
       entries, schedules: { slot: "*" }, slotPlans: { slot: { jobChains: [["job"]] } },
@@ -114,10 +116,16 @@ describe("check-cron-connection-budget", () => {
     expect(local.failed).toBe(false);
     expect(local.triggerReports[0].totalConnections).toBe(2);
     const unique = evaluate([entry("other", 3)]);
-    expect(unique.failed).toBe(false);
-    expect(unique.triggerReports[0].totalConnections).toBe(3);
+    expect(unique).toMatchObject({
+      failed: true,
+      missingBudgetJobs: [],
+      mismatchedBudgetJobs: ["slot:job (budget entry uses other)"],
+    });
+    expect(unique.triggerReports[0].totalConnections).toBe(0);
     expect(evaluate([entry("other", 2), entry("another", 3)])).toMatchObject({
-      failed: true, missingBudgetJobs: ["slot:job (ambiguous budget entry)"],
+      failed: true,
+      missingBudgetJobs: [],
+      mismatchedBudgetJobs: ["slot:job (budget entry uses other, another)"],
     });
   });
 

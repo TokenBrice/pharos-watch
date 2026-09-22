@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import AboutPage from "./page";
 import { CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
+import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import { extractJsonLd } from "@/test/json-ld";
 
 vi.mock("next/font/local", () => ({
@@ -78,5 +79,11 @@ describe("AboutPage", () => {
     }));
     expect(visibleItems.length).toBeGreaterThan(0);
     expect(faqJsonLd.mainEntity).toEqual(visibleItems);
+  });
+
+  it("states the freeze-monitoring count the monitored-asset tuple actually has", () => {
+    const visibleText = visibleDocument.body.textContent ?? "";
+
+    expect(visibleText).toContain(`freeze monitoring across ${BLACKLIST_STABLECOINS.length} stablecoins`);
   });
 });

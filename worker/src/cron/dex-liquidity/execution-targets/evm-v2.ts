@@ -94,9 +94,6 @@ function buildTarget(
     poolAddress: identity.pool.pool,
     tokenAddresses,
     tokenSymbols: parsePoolSymbols(identity.pool.symbol),
-    confirmedStable: context.aerodromeIsStable?.get(
-      canonicalExitRouteAssetKey(identity.chainNorm, identity.pool.pool),
-    ),
   });
 
   if (!candidate) {

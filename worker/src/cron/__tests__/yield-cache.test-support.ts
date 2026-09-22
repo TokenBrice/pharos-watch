@@ -38,6 +38,30 @@ export function cacheRow(value: string | unknown, updatedAt: number): CacheRow {
   };
 }
 
+export function healthyRiskFreeRateCacheRow(
+  rate: number,
+  updatedAt: number,
+): CacheRow {
+  return cacheRow({
+    rate,
+    source: "test-benchmark",
+    recordDate: new Date(updatedAt * 1000).toISOString().slice(0, 10),
+    fetchedAt: updatedAt,
+    isFallback: false,
+    fallbackMode: null,
+  }, updatedAt);
+}
+
+export function stablecoinsCacheRow(updatedAt = 0): CacheRow {
+  return cacheRow([
+    { id: "100", circulating: { peggedUSD: 10_000_000 } },
+    { id: "usdc-circle", circulating: { peggedUSD: 10_000_000 } },
+    { id: "u-united-stables", circulating: { peggedUSD: 10_000_000 } },
+    { id: "lusd-liquity", circulating: { peggedUSD: 10_000_000 } },
+    { id: "xaut-tether", circulating: { peggedGOLD: 10_000_000 } },
+  ], updatedAt);
+}
+
 export function dlPoolsCacheRow(
   pools: Parameters<typeof buildDlStablecoinPoolsCache>[0],
   updatedAt: number,
@@ -76,6 +100,7 @@ export function makeYieldCacheReader(
   return async (db, key, signal) => {
     const fixture = entries.get(key);
     if (fixture !== undefined) return resolveFixture(fixture, db, key, signal);
+    if (key === "stablecoins") return stablecoinsCacheRow();
     if (options.fallback) {
       return resolveFixture(await options.fallback(key, db, signal), db, key, signal);
     }

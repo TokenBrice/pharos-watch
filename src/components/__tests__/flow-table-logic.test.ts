@@ -14,7 +14,6 @@ function makeFlow(overrides: Partial<MintBurnCoinFlow> = {}): MintBurnCoinFlow {
   return {
     stablecoinId: "usdc",
     symbol: "USDC",
-    flowIntensity: 0,
     pressureShiftScore: null,
     pressureShiftState: "stable",
     netFlowDirection24h: "inactive",
@@ -41,18 +40,13 @@ const sort = (key: FlowTableSortKey, direction: "asc" | "desc" = "desc"): TableS
 });
 
 describe("getPressureScore", () => {
-  it("prefers pressureShiftScore over flowIntensity", () => {
-    const coin = makeFlow({ pressureShiftScore: 42, flowIntensity: 10 });
+  it("returns pressureShiftScore", () => {
+    const coin = makeFlow({ pressureShiftScore: 42 });
     expect(getPressureScore(coin)).toBe(42);
   });
 
-  it("falls back to flowIntensity when pressureShiftScore is null", () => {
-    const coin = makeFlow({ pressureShiftScore: null, flowIntensity: 15 });
-    expect(getPressureScore(coin)).toBe(15);
-  });
-
-  it("returns null when both are null", () => {
-    const coin = makeFlow({ pressureShiftScore: null, flowIntensity: null });
+  it("returns null when pressureShiftScore is null", () => {
+    const coin = makeFlow({ pressureShiftScore: null });
     expect(getPressureScore(coin)).toBeNull();
   });
 });
@@ -79,7 +73,7 @@ describe("getPressureState", () => {
   });
 
   it("returns nr when no score available", () => {
-    const coin = makeFlow({ pressureShiftState: undefined, pressureShiftScore: null, flowIntensity: null });
+    const coin = makeFlow({ pressureShiftState: undefined, pressureShiftScore: null });
     expect(getPressureState(coin)).toBe("nr");
   });
 });
@@ -142,13 +136,11 @@ describe("getCoverageBadge", () => {
 });
 
 describe("compareFlowRows — numeric sort keys", () => {
-  it("sorts net24h: larger absolute value ranks higher descending", () => {
-    const large = makeFlow({ netFlow24hUsd: -10_000_000 });
-    const small = makeFlow({ netFlow24hUsd: 500_000 });
-    const result = compareFlowRows(large, small, sort("net24h", "desc"));
-    // large |val| = 10M, small |val| = 0.5M
-    // desc: smallVal - largeVal = 0.5M - 10M < 0 → large ranks first
-    expect(result).toBeLessThan(0);
+  it("sorts net24h by signed value so a burn never outranks a mint descending", () => {
+    const bigBurn = makeFlow({ netFlow24hUsd: -10_000_000 });
+    const smallMint = makeFlow({ netFlow24hUsd: 500_000 });
+    const result = compareFlowRows(bigBurn, smallMint, sort("net24h", "desc"));
+    expect(result).toBeGreaterThan(0); // the mint ranks first
   });
 
   it("sorts mint24h descending", () => {
@@ -166,25 +158,25 @@ describe("compareFlowRows — numeric sort keys", () => {
     expect(result).toBeGreaterThan(0);
   });
 
-  it("sorts net7d by abs value descending", () => {
+  it("sorts net7d by signed value descending", () => {
     const a = makeFlow({ netFlow7dUsd: -20_000_000 });
     const b = makeFlow({ netFlow7dUsd: 5_000_000 });
     const result = compareFlowRows(a, b, sort("net7d", "desc"));
-    expect(result).toBeLessThan(0); // |a| = 20M > |b| = 5M → a ranks first
+    expect(result).toBeGreaterThan(0); // b is the larger net inflow
   });
 
-  it("sorts net30d by abs value", () => {
+  it("sorts net30d by signed value", () => {
     const a = makeFlow({ netFlow30dUsd: 100_000_000 });
     const b = makeFlow({ netFlow30dUsd: -50_000_000 });
     const result = compareFlowRows(a, b, sort("net30d", "desc"));
-    expect(result).toBeLessThan(0); // |a| > |b|
+    expect(result).toBeLessThan(0);
   });
 
-  it("sorts net90d by abs value", () => {
+  it("sorts net90d by signed value", () => {
     const a = makeFlow({ netFlow90dUsd: -300_000_000 });
     const b = makeFlow({ netFlow90dUsd: 200_000_000 });
     const result = compareFlowRows(a, b, sort("net90d", "desc"));
-    expect(result).toBeLessThan(0); // |a| > |b|
+    expect(result).toBeGreaterThan(0);
   });
 
   it("sorts largest event by amountUsd", () => {
@@ -210,15 +202,15 @@ describe("compareFlowRows — numeric sort keys", () => {
 
 describe("compareFlowRows — pressure sort key", () => {
   it("sorts pressure descending with null pushing to end", () => {
-    const hasScore = makeFlow({ pressureShiftScore: 50, flowIntensity: 50 });
-    const noScore = makeFlow({ pressureShiftScore: null, flowIntensity: null });
+    const hasScore = makeFlow({ pressureShiftScore: 50 });
+    const noScore = makeFlow({ pressureShiftScore: null });
     const result = compareFlowRows(hasScore, noScore, sort("pressure", "desc"));
     expect(result).toBeLessThan(0); // hasScore ranks first (non-null before null)
   });
 
   it("sorts pressure numerically descending", () => {
-    const high = makeFlow({ pressureShiftScore: 80, flowIntensity: 80 });
-    const low = makeFlow({ pressureShiftScore: 20, flowIntensity: 20 });
+    const high = makeFlow({ pressureShiftScore: 80 });
+    const low = makeFlow({ pressureShiftScore: 20 });
     const result = compareFlowRows(high, low, sort("pressure", "desc"));
     expect(result).toBeLessThan(0); // high ranks first
   });

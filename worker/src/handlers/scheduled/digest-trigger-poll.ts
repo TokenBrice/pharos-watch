@@ -47,6 +47,12 @@ const DIGEST_TRIGGER_POLL_SURFACE = "digest-trigger-poll";
 const TELEGRAM_DIGEST_OUTBOX_DRAIN_SURFACE = "telegram-digest-outbox-drain";
 export const MAX_ATTEMPTS = 3;
 export const DIGEST_TRIGGER_POLL_INTERVAL_SECONDS = 5 * 60;
+/**
+ * A `running` state is only reclaimable after one `daily-digest` lease TTL: an
+ * isolate kill between the `running` write and the post-run handler leaves
+ * `attempts` untouched, so without a deadline every poll restarts the run.
+ */
+const DIGEST_FORCE_RUN_RUNNING_DEADLINE_SEC = 15 * 60;
 
 async function runTelegramDigestOutboxDrain(runtime: ScheduledRuntimeContext): Promise<void> {
   const startedMs = Date.now();
@@ -330,26 +336,43 @@ async function runWeeklyResumeIfDue(
   ], { budgetOnlyJobs: 2 });
 }
 
+async function finishSkippedDigestTriggerPoll(
+  runtime: ScheduledRuntimeContext,
+  startedMs: number,
+  skippedReason: string,
+  metadata: Record<string, unknown>,
+  neutral = false,
+) {
+  const weeklyResume = await runWeeklyResumeIfDue(runtime, startedMs);
+  if (weeklyResume) return weeklyResume;
+  await recordBudgetSurfaceTelemetry(runtime.db, {
+    surface: DIGEST_TRIGGER_POLL_SURFACE,
+    durationMs: Date.now() - startedMs,
+    dueCount: 0,
+    processedCount: 0,
+    outcome: "skipped",
+    skippedReason,
+    metadata,
+    producer: getRuntimeProducerIdentity(runtime, DIGEST_TRIGGER_POLL_SURFACE),
+  });
+  return buildScheduledSlotSummary([
+    summarizeSkippedScheduledJob("digest-trigger-poll", skippedReason, neutral ? { neutral: true } : undefined),
+  ], { budgetOnlyJobs: 2 });
+}
+
+
 export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext) {
   const startedMs = Date.now();
   await runTelegramDigestOutboxDrain(runtime);
   const pending = await getCache(runtime.db, DIGEST_FORCE_RUN_CACHE_KEY);
   if (!pending) {
-    const weeklyResume = await runWeeklyResumeIfDue(runtime, startedMs);
-    if (weeklyResume) return weeklyResume;
-    await recordBudgetSurfaceTelemetry(runtime.db, {
-      surface: DIGEST_TRIGGER_POLL_SURFACE,
-      durationMs: Date.now() - startedMs,
-      dueCount: 0,
-      processedCount: 0,
-      outcome: "skipped",
-      skippedReason: "no-pending-request",
-      metadata: { pending: false },
-      producer: getRuntimeProducerIdentity(runtime, DIGEST_TRIGGER_POLL_SURFACE),
-    });
-    return buildScheduledSlotSummary([
-      summarizeSkippedScheduledJob("digest-trigger-poll", "no-pending-request", { neutral: true }),
-    ], { budgetOnlyJobs: 2 });
+    return finishSkippedDigestTriggerPoll(
+      runtime,
+      startedMs,
+      "no-pending-request",
+      { pending: false },
+      true,
+    );
   }
 
   const payload = parseForceRunPayload(pending.value);
@@ -381,52 +404,22 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
 
   const now = Math.floor(Date.now() / 1000);
   if (payload.state === "succeeded" || payload.state === "dead_letter") {
-    const weeklyResume = await runWeeklyResumeIfDue(runtime, startedMs);
-    if (weeklyResume) return weeklyResume;
-    await recordBudgetSurfaceTelemetry(runtime.db, {
-      surface: DIGEST_TRIGGER_POLL_SURFACE,
-      durationMs: Date.now() - startedMs,
-      dueCount: 0,
-      processedCount: 0,
-      outcome: "skipped",
-      skippedReason: payload.state === "dead_letter" ? "dead-letter" : "already-succeeded",
-      metadata: {
-        pending: true,
-        requestId: payload.requestId,
-        state: payload.state,
-        attempts: payload.attempts,
-      },
-      producer: getRuntimeProducerIdentity(runtime, DIGEST_TRIGGER_POLL_SURFACE),
+    const skippedReason = payload.state === "dead_letter" ? "dead-letter" : "already-succeeded";
+    return finishSkippedDigestTriggerPoll(runtime, startedMs, skippedReason, {
+      pending: true,
+      requestId: payload.requestId,
+      state: payload.state,
+      attempts: payload.attempts,
     });
-    return buildScheduledSlotSummary([
-      summarizeSkippedScheduledJob(
-        "digest-trigger-poll",
-        payload.state === "dead_letter" ? "dead-letter" : "already-succeeded",
-      ),
-    ], { budgetOnlyJobs: 2 });
   }
   if (payload.nextAttemptAt > now) {
-    const weeklyResume = await runWeeklyResumeIfDue(runtime, startedMs);
-    if (weeklyResume) return weeklyResume;
-    await recordBudgetSurfaceTelemetry(runtime.db, {
-      surface: DIGEST_TRIGGER_POLL_SURFACE,
-      durationMs: Date.now() - startedMs,
-      dueCount: 0,
-      processedCount: 0,
-      outcome: "skipped",
-      skippedReason: "retry-not-due",
-      metadata: {
-        pending: true,
-        requestId: payload.requestId,
-        state: payload.state,
-        attempts: payload.attempts,
-        nextAttemptAt: payload.nextAttemptAt,
-      },
-      producer: getRuntimeProducerIdentity(runtime, DIGEST_TRIGGER_POLL_SURFACE),
+    return finishSkippedDigestTriggerPoll(runtime, startedMs, "retry-not-due", {
+      pending: true,
+      requestId: payload.requestId,
+      state: payload.state,
+      attempts: payload.attempts,
+      nextAttemptAt: payload.nextAttemptAt,
     });
-    return buildScheduledSlotSummary([
-      summarizeSkippedScheduledJob("digest-trigger-poll", "retry-not-due"),
-    ], { budgetOnlyJobs: 2 });
   }
 
   let result: CronResult | null = null;
@@ -438,7 +431,11 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
         await setCache(
           runtime.db,
           DIGEST_FORCE_RUN_CACHE_KEY,
-          JSON.stringify({ ...payload, state: "running" }),
+          JSON.stringify({
+            ...payload,
+            state: "running",
+            nextAttemptAt: Math.floor(Date.now() / 1_000) + DIGEST_FORCE_RUN_RUNNING_DEADLINE_SEC,
+          }),
         );
       } catch (err) {
         logWorkerEvent({ scope: "handler", level: "warn", event: "digest_force_run_running_state_persistence_failed", message: "Failed to persist running digest force-run state", job: DIGEST_TRIGGER_POLL_SURFACE, error: err, metadata: { requestId: payload.requestId } });

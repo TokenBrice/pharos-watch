@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getDepegDewsMethodologyVersionAt } from "@shared/lib/methodology-versions/depeg-dews";
+import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { type MockD1Database } from "@shared/test-utils/mock-d1";
 import { projectDepegOpened, projectDepegPeakWorsened, projectDepegResolved } from "../depeg";
 import { mockTapeD1, tapeCacheWriteBinds, tapeInsertBinds } from "./test-support";
@@ -47,9 +47,9 @@ describe("depeg projector", () => {
     expect(result).toEqual({ projected: 3, advanced: SEC });
     expect(tapeInsertBinds(db).map((binds) => binds[13])).toEqual(["1", "2", "3"]);
     expect(tapeInsertBinds(db).map((binds) => binds[16])).toEqual([
-      getDepegDewsMethodologyVersionAt(SEC),
-      getDepegDewsMethodologyVersionAt(SEC),
-      getDepegDewsMethodologyVersionAt(SEC),
+      getMethodologyVersionAt("depeg-dews", SEC),
+      getMethodologyVersionAt("depeg-dews", SEC),
+      getMethodologyVersionAt("depeg-dews", SEC),
     ]);
     expect(tapeCacheWriteBinds(db, "depeg.opened")[0]?.[1]).toBe(String(SEC));
   });
@@ -74,9 +74,9 @@ describe("depeg projector", () => {
     expect(result).toEqual({ projected: 3, advanced: SEC + 900 });
     expect(tapeInsertBinds(db).map((binds) => binds[13])).toEqual(["10", "11", "12"]);
     expect(tapeInsertBinds(db).map((binds) => binds[16])).toEqual([
-      getDepegDewsMethodologyVersionAt(SEC + 900),
-      getDepegDewsMethodologyVersionAt(SEC + 900),
-      getDepegDewsMethodologyVersionAt(SEC + 900),
+      getMethodologyVersionAt("depeg-dews", SEC + 900),
+      getMethodologyVersionAt("depeg-dews", SEC + 900),
+      getMethodologyVersionAt("depeg-dews", SEC + 900),
     ]);
     expect(tapeCacheWriteBinds(db, "depeg.resolved")[0]?.[1]).toBe(String(SEC + 900));
   });

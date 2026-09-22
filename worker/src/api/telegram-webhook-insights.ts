@@ -4,6 +4,7 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { formatTelegramAge } from "../lib/telegram/format-age";
 import type { DigestInputData } from "@shared/types/digest";
 import { escapeHtml } from "../lib/telegram";
+import { isRecord } from "@shared/lib/type-guards";
 import { safeJsonParse } from "../lib/api-cache-read";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { suggestClosestToken } from "../lib/telegram/alerts";
@@ -36,6 +37,11 @@ function expectedV9UnavailableText(
   return activeSource.kind === "error"
     ? `expected model V9, ${activeSource.reason.replace(/-/g, " ")}`
     : "expected model V9";
+}
+
+/** D1/JSON rows are compile-time assertions only; renderers must check. */
+function hasStrings(value: unknown, ...keys: readonly string[]): boolean {
+  return isRecord(value) && keys.every((key) => typeof value[key] === "string");
 }
 
 export async function buildBriefMessage(db: D1Database): Promise<string> {
@@ -77,24 +83,29 @@ export async function buildBriefMessage(db: D1Database): Promise<string> {
     lines.push(`May be stale: latest digest is ${formatAge(row.generated_at, nowSec)}.`);
   }
 
+  // `input_data` is persisted JSON cast to its type, never validated: one
+  // malformed entry must drop itself rather than throw out of `/brief`.
+  const riskTape = (Array.isArray(input?.riskTape) ? input.riskTape : [])
+    .filter((item) => hasStrings(item, "label", "value"))
+    .slice(0, 4);
   let hasStructuredBrief = false;
-  if (input?.riskTape?.length) {
+  if (riskTape.length > 0) {
     hasStructuredBrief = true;
     lines.push("");
     lines.push("<b>Risk tape</b>");
-    for (const item of input.riskTape.slice(0, 4)) {
-      lines.push(
-        `- ${escapeHtml(item.label)}: ${escapeHtml(item.value)}${item.detail ? ` — ${escapeHtml(item.detail)}` : ""}`,
-      );
+    for (const item of riskTape) {
+      const detail = typeof item.detail === "string" ? ` — ${escapeHtml(item.detail)}` : "";
+      lines.push(`- ${escapeHtml(item.label)}: ${escapeHtml(item.value)}${detail}`);
     }
   }
 
-  if (input?.changeSummary) {
+  const changeSummary = input?.changeSummary;
+  if (changeSummary) {
     const changes = [
-      ...input.changeSummary.newSignals,
-      ...input.changeSummary.worsenedSignals,
-      ...input.changeSummary.resolvedSignals,
-    ].slice(0, 4);
+      ...(Array.isArray(changeSummary.newSignals) ? changeSummary.newSignals : []),
+      ...(Array.isArray(changeSummary.worsenedSignals) ? changeSummary.worsenedSignals : []),
+      ...(Array.isArray(changeSummary.resolvedSignals) ? changeSummary.resolvedSignals : []),
+    ].filter((change) => hasStrings(change, "label", "detail")).slice(0, 4);
     if (changes.length > 0) {
       hasStructuredBrief = true;
       lines.push("");
@@ -105,11 +116,14 @@ export async function buildBriefMessage(db: D1Database): Promise<string> {
     }
   }
 
-  if (input?.nextTriggers?.length) {
+  const nextTriggers = (Array.isArray(input?.nextTriggers) ? input.nextTriggers : [])
+    .filter((trigger) => hasStrings(trigger, "label", "thresholdLabel"))
+    .slice(0, 3);
+  if (nextTriggers.length > 0) {
     hasStructuredBrief = true;
     lines.push("");
     lines.push("<b>Next triggers</b>");
-    for (const trigger of input.nextTriggers.slice(0, 3)) {
+    for (const trigger of nextTriggers) {
       lines.push(`- ${escapeHtml(trigger.label)}: ${escapeHtml(trigger.thresholdLabel)}`);
     }
   }
@@ -149,7 +163,11 @@ export async function buildTopMessage(db: D1Database, view: string): Promise<str
         }>();
       return formatTopRows(
         "Top active depegs",
-        result.results ?? [],
+        (result.results ?? []).filter((row) => (
+          typeof row.symbol === "string"
+          && Number.isFinite(row.peak_deviation_bps)
+          && Number.isFinite(row.display_price)
+        )),
         (row, i) =>
           `${i}. ${row.symbol} — ${row.direction} peg ${(row.peak_deviation_bps / 100).toFixed(1)}%, price $${row.display_price.toFixed(4)}, ${formatAge(row.started_at)} old`,
       );
@@ -193,7 +211,7 @@ export async function buildTopMessage(db: D1Database, view: string): Promise<str
         pysAvailable
           ? "Top risk-adjusted yields"
           : `Top yields (PYS unavailable; ${expectedV9UnavailableText(activeSource)})`,
-        result.results ?? [],
+        (result.results ?? []).filter((row) => typeof row.symbol === "string" && Number.isFinite(row.apy_30d)),
         (row, i) =>
           `${i}. ${row.symbol} — ${row.apy_30d.toFixed(2)}% 30d, PYS ${
             pysAvailable
@@ -247,6 +265,7 @@ export async function buildTopMessage(db: D1Database, view: string): Promise<str
         peggedAssets: stablecoinsResult.payload.peggedAssets,
         safetyScores,
         pegRates,
+        updatedAt: stablecoinsResult.updatedAt,
       }).chains.slice(0, TOP_LIMIT);
       const message = formatTopRows(
         "Top chains by stablecoin supply",

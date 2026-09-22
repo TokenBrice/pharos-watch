@@ -9,7 +9,7 @@ import {
 } from "../lib/api-keys";
 import { jsonResponse } from "../lib/api-response";
 import { parseOptionalRequestJsonObject } from "../lib/api-json-body";
-import { runIdempotentAdminAction } from "../lib/idempotency";
+import { runIdempotentAction } from "../lib/idempotency";
 import { parseJsonObject } from "../lib/json-parse";
 import { makeAdminRoute, type AdminRouteContext } from "../lib/route-wrappers";
 
@@ -124,7 +124,7 @@ export const handleApiKeysRoute = makeAdminRoute<ApiKeysRouteContext>(
   "api-keys",
   async ({ db, request, apiKeyHashPepper }) => {
     if (request.method === "POST") {
-      return runIdempotentAdminAction(db, "api-key-create", request, async () => {
+      return runIdempotentAction(db, "api-key-create", request, async () => {
         const body = await parseOptionalRequestJsonObject(request);
         if (body instanceof Response) {
           return body;
@@ -145,7 +145,7 @@ export const handleApiKeysRoute = makeAdminRoute<ApiKeysRouteContext>(
 export const handleApiKeyUpdateRoute = makeAdminRoute<ApiKeyByIdRouteContext>(
   "api-key-update",
   async ({ db, request, apiKeyId }) => {
-    return runIdempotentAdminAction(db, "api-key-update", request, async () => {
+    return runIdempotentAction(db, "api-key-update", request, async () => {
       const body = await parseOptionalRequestJsonObject(request);
       if (body instanceof Response) {
         return body;
@@ -162,7 +162,7 @@ export const handleApiKeyUpdateRoute = makeAdminRoute<ApiKeyByIdRouteContext>(
 export const handleApiKeyDeactivateRoute = makeAdminRoute<ApiKeyByIdRouteContext>(
   "api-key-deactivate",
   async ({ db, request, apiKeyId }) =>
-    runIdempotentAdminAction(db, "api-key-deactivate", request, async () => {
+    runIdempotentAction(db, "api-key-deactivate", request, async () => {
       const result = await deactivateApiKey(db, apiKeyId);
       if (result instanceof Response) {
         return result;
@@ -174,7 +174,7 @@ export const handleApiKeyDeactivateRoute = makeAdminRoute<ApiKeyByIdRouteContext
 export const handleApiKeyRotateRoute = makeAdminRoute<ApiKeyByIdRouteContext>(
   "api-key-rotate",
   async ({ db, request, apiKeyId, apiKeyHashPepper }) =>
-    runIdempotentAdminAction(db, "api-key-rotate", request, async () => {
+    runIdempotentAction(db, "api-key-rotate", request, async () => {
       const result = await rotateApiKey(db, apiKeyHashPepper, apiKeyId);
       if (result instanceof Response) {
         return result;

@@ -4,6 +4,7 @@ import { mockD1 } from "@shared/test-utils/mock-d1";
 import { recalcAffectedHours } from "../../lib/mint-burn-pipeline/persistence";
 import type * as Persistence from "../../lib/mint-burn-pipeline/persistence";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { ROUNDTRIP_TOLERANCE_HAVING_SQL } from "../../lib/mint-burn-pipeline/roundtrip-detection";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
@@ -101,6 +102,23 @@ describe("reclassify-atomic-roundtrips", () => {
     }
   });
 
+  it("applies the canonical amount tolerance to forward classification", async () => {
+    const db = mockD1([
+      { match: "WHERE flow_type = 'standard'", rows: [] },
+      { match: "WHERE flow_type = 'atomic_roundtrip'", rows: [] },
+    ]);
+
+    await handleReclassifyAtomicRoundtripsTrusted({
+      db,
+      url: new URL("https://api.pharos.watch/api/reclassify-atomic-roundtrips"),
+    });
+
+    const forwardQuery = db.getHistory().find((entry) =>
+      entry.sql.includes("WHERE flow_type = 'standard'"),
+    );
+    expect(forwardQuery?.sql).toContain(`AND (${ROUNDTRIP_TOLERANCE_HAVING_SQL})`);
+  });
+
   it("flips atomic_roundtrip back to standard when amounts fail new tolerance", async () => {
     // Legacy group: mint=100, burn=50 (50% divergence, far exceeds 0.5%
     // tolerance). The reverse SQL pass should surface and re-tag the rows.
@@ -174,6 +192,8 @@ describe("reclassify-atomic-roundtrips", () => {
       VALUES (?, ?, 'USDC', ?, ?, ?, ?, ?, 1, ?, '', 'effective_burn', ?)`);
     insert.run("match-mint", "usdc-circle", "ethereum", "mint", 100, 100, "shared", 1700000000, "standard");
     insert.run("match-burn", "usdc-circle", "ethereum", "burn", 100, 100, "shared", 1700000000, "standard");
+    insert.run("mismatch-mint", "usdc-circle", "ethereum", "mint", 100, 100, "forward-mismatch", 1700000000, "standard");
+    insert.run("mismatch-burn", "usdc-circle", "ethereum", "burn", 50, 50, "forward-mismatch", 1700000000, "standard");
     insert.run("other-chain", "usdc-circle", "arbitrum", "mint", 70, 70, "shared", 1700000000, "standard");
     insert.run("other-coin", "usdt-tether", "ethereum", "mint", 80, 80, "shared", 1700000000, "standard");
     insert.run("reverse-mint", "usdc-circle", "ethereum", "mint", 100, 100, "mismatch", 1700003600, "atomic_roundtrip");
@@ -189,12 +209,13 @@ describe("reclassify-atomic-roundtrips", () => {
     expect(await response.json()).toMatchObject({ toRoundtrip: 2, toStandard: 2, hoursRecalculated: 2 });
     expect(sqlite.prepare("SELECT id, flow_type FROM mint_burn_events ORDER BY id").all()).toEqual([
       { id: "match-burn", flow_type: "atomic_roundtrip" }, { id: "match-mint", flow_type: "atomic_roundtrip" },
+      { id: "mismatch-burn", flow_type: "standard" }, { id: "mismatch-mint", flow_type: "standard" },
       { id: "other-chain", flow_type: "standard" }, { id: "other-coin", flow_type: "standard" },
       { id: "reverse-burn", flow_type: "standard" }, { id: "reverse-mint", flow_type: "standard" },
     ]);
     expect(sqlite.prepare("SELECT stablecoin_id, chain_id, hour_ts, mint_volume_usd, burn_volume_usd FROM mint_burn_hourly ORDER BY stablecoin_id, chain_id, hour_ts").all()).toEqual([
       { stablecoin_id: "usdc-circle", chain_id: "arbitrum", hour_ts: 1699999200, mint_volume_usd: 70, burn_volume_usd: 0 },
-      { stablecoin_id: "usdc-circle", chain_id: "ethereum", hour_ts: 1699999200, mint_volume_usd: 0, burn_volume_usd: 0 },
+      { stablecoin_id: "usdc-circle", chain_id: "ethereum", hour_ts: 1699999200, mint_volume_usd: 100, burn_volume_usd: 50 },
       { stablecoin_id: "usdc-circle", chain_id: "ethereum", hour_ts: 1700002800, mint_volume_usd: 100, burn_volume_usd: 50 },
       { stablecoin_id: "usdt-tether", chain_id: "ethereum", hour_ts: 1699999200, mint_volume_usd: 80, burn_volume_usd: 0 },
     ]);

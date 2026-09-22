@@ -33,7 +33,6 @@ import { fetchEthenaReserves } from "./ethena";
 import { fetchEthenaWhitelabelReserves } from "./ethena-whitelabel";
 import { fetchFalconReserves } from "./falcon";
 import { fetchFdusdIndependentAssuranceReserves } from "./fdusd-independent-assurance";
-import { fetchFdusdTransparencyReserves } from "./fdusd-transparency";
 import { fetchFiddIndependentAssuranceReserves } from "./fidd-independent-assurance";
 import { fetchFlyingTulipFtUsdReserves } from "./flying-tulip-ftusd";
 import { fetchFraxBalanceSheetReserves, fetchFraxFpiCollateralReserves } from "./frax";
@@ -73,7 +72,6 @@ import { fetchSaturnPyusdxReserves } from "./saturn-pyusdx";
 import { fetchSbcIndependentAssuranceReserves } from "./sbc-independent-assurance";
 import { fetchReserveProtocolDtfReserves } from "./reserve-protocol-dtf";
 import { fetchReservoirReserves } from "./reservoir";
-import { fetchRippleTransparencyReserves } from "./ripple-transparency";
 import { fetchRlusdIndependentAssuranceReserves } from "./rlusd-independent-assurance";
 import { fetchOndoOusgReserves } from "./ondo-ousg";
 import { fetchMidasMtbillReserves } from "./midas-mtbill";
@@ -153,7 +151,6 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS: Record<LiveReserveAdapterKey, Adapte
   "evm-branch-balances": fetchEvmBranchBalancesReserves,
   falcon: fetchFalconReserves,
   "fdusd-independent-assurance": fetchFdusdIndependentAssuranceReserves,
-  "fdusd-transparency": fetchFdusdTransparencyReserves,
   "fidd-independent-assurance": fetchFiddIndependentAssuranceReserves,
   "flying-tulip-ftusd": fetchFlyingTulipFtUsdReserves,
   "frax-balance-sheet": fetchFraxBalanceSheetReserves,
@@ -196,7 +193,6 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS: Record<LiveReserveAdapterKey, Adapte
   "sbc-independent-assurance": fetchSbcIndependentAssuranceReserves,
   "reserve-protocol-dtf": fetchReserveProtocolDtfReserves,
   reservoir: fetchReservoirReserves,
-  "ripple-transparency": fetchRippleTransparencyReserves,
   "rlusd-independent-assurance": fetchRlusdIndependentAssuranceReserves,
   "ondo-ousg": fetchOndoOusgReserves,
   "midas-mtbill": fetchMidasMtbillReserves,

@@ -25,7 +25,7 @@ function makeCollected(overrides: Partial<PrimaryCollectedQuotes> = {}): Primary
 }
 
 describe("buildPrimarySourceCandidates", () => {
-  it("withholds aggregate DEX promotion when a single protocol candidate lacks hard corroboration", () => {
+  it("withholds the aggregate DEX promotion when the only protocol candidate lacks hard corroboration", () => {
     const collected = makeCollected({
       cgPrice: 1.0,
       cgObservedAt: 1_700_000_000,
@@ -49,6 +49,8 @@ describe("buildPrimarySourceCandidates", () => {
     const { sources, hasPromotedDexProtocolSource, dexCandidateTelemetry, priceSourceConfidenceProfile } =
       buildPrimarySourceCandidates({ id: "dusd-test", symbol: "DUSD" }, collected, { nowSec: 1_700_000_030 });
 
+    // P1-13 (PRICE-05) admits DEX lanes per candidate; it does not re-admit the aggregate once every lane
+    // is rejected. CoinGecko alone is a soft aggregator and cannot corroborate the lone Balancer lane.
     expect(hasPromotedDexProtocolSource).toBe(true);
     expect(sources.some((s) => s.source.endsWith("-dex"))).toBe(false);
     expect(sources.map((s) => s.source)).toEqual(["coingecko"]);
@@ -213,6 +215,49 @@ describe("buildPrimarySourceCandidates", () => {
       freshestDexLaneAgeSec: 30,
       aggregateLaneOnly: false,
     });
+  });
+
+  it("admits only the promoted DEX lane corroborated by a hard source", () => {
+    const collected = makeCollected({
+      binancePrice: 1,
+      binanceObservedAt: 1_700_000_000,
+      protocolSources: [
+        {
+          protocol: "curve",
+          price: 1.0001,
+          tvl: 2_000_000,
+          updatedAt: 1_700_000_000,
+          chain: "ethereum",
+        },
+        {
+          protocol: "balancer",
+          price: 0.9,
+          tvl: 2_000_000,
+          updatedAt: 1_700_000_000,
+          chain: "ethereum",
+        },
+        {
+          protocol: "uniswap-v3",
+          price: 1.1,
+          tvl: 2_000_000,
+          updatedAt: 1_700_000_000,
+          chain: "base",
+        },
+      ],
+    });
+
+    const { sources, dexCandidateTelemetry } = buildPrimarySourceCandidates(
+      { id: "usdc-circle", symbol: "USDC" },
+      collected,
+      { nowSec: 1_700_000_030 },
+    );
+
+    expect(sources.map((source) => source.source)).toEqual(["binance", "curve-dex"]);
+    expect(dexCandidateTelemetry).toMatchObject([
+      { sourceKey: "curve-dex", status: "accepted" },
+      { sourceKey: "balancer-dex", status: "excluded", reason: "lacked_corroboration" },
+      { sourceKey: "uniswap-v3-dex", status: "excluded", reason: "lacked_corroboration" },
+    ]);
   });
 
   it("accepts Curve as a promoted DEX protocol when a hard source agrees", () => {

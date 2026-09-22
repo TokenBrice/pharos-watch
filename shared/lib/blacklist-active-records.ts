@@ -23,21 +23,14 @@ export interface BlacklistCurrentBalanceSnapshot {
 }
 
 export interface BlacklistActiveRecord {
-  id: string;
+  /** Identity the record was built under (`buildBlacklistRecordIdentityKey`). */
+  key: string;
   stablecoin: BlacklistStablecoin;
   chainId: string;
-  chainName: string;
   address: string;
-  configKey?: string | null;
-  contractAddress?: string | null;
   blacklistedAt: number;
-  blacklistTxHash: string;
   destroyedAt: number | null;
-  destroyTxHash: string | null;
-  frozenAmountNative: number | null;
   frozenAmountUsd: number | null;
-  amountStatus: "resolved" | "provider_failed";
-  amountSource: string;
 }
 
 export interface BlacklistActiveSummaryStats {
@@ -116,44 +109,20 @@ function findActiveRecordKey(
 function resolveBlacklistAmount(
   event: BlacklistEvent,
   currentBalances: ReadonlyMap<string, BlacklistCurrentBalanceSnapshot>,
-): Pick<BlacklistActiveRecord, "frozenAmountNative" | "frozenAmountUsd" | "amountStatus" | "amountSource"> {
+): Pick<BlacklistActiveRecord, "frozenAmountUsd"> {
   const currentBalance = findCurrentBalanceSnapshot(event, currentBalances);
 
   if (currentBalance?.status === "resolved") {
-    return {
-      frozenAmountNative: currentBalance.amountNative,
-      frozenAmountUsd: currentBalance.amountUsd,
-      amountStatus: currentBalance.status,
-      amountSource: currentBalance.source,
-    };
+    return { frozenAmountUsd: currentBalance.amountUsd };
   }
 
+  // Tron keeps balances on the contract, so an absent snapshot means the
+  // amount is genuinely unknown rather than recoverable from the event.
   if (event.chainId === "tron") {
-    return {
-      frozenAmountNative: null,
-      frozenAmountUsd: null,
-      amountStatus: currentBalance?.status ?? "provider_failed",
-      amountSource: currentBalance?.source ?? "unavailable",
-    };
+    return { frozenAmountUsd: null };
   }
 
-  return {
-    frozenAmountNative: event.amountNative,
-    frozenAmountUsd: event.amountUsdAtEvent,
-    amountStatus: event.amountNative != null || event.amountUsdAtEvent != null ? "resolved" : "provider_failed",
-    amountSource: event.amountSource,
-  };
-}
-
-function resolveDestroyAmount(
-  event: BlacklistEvent,
-): Pick<BlacklistActiveRecord, "frozenAmountNative" | "frozenAmountUsd" | "amountStatus" | "amountSource"> {
-  return {
-    frozenAmountNative: event.amountNative,
-    frozenAmountUsd: event.amountUsdAtEvent,
-    amountStatus: event.amountNative != null || event.amountUsdAtEvent != null ? "resolved" : "provider_failed",
-    amountSource: "destroy_event",
-  };
+  return { frozenAmountUsd: event.amountUsdAtEvent };
 }
 
 export function buildBlacklistActiveRecords(
@@ -168,17 +137,12 @@ export function buildBlacklistActiveRecords(
     if (event.eventType === "blacklist") {
       const amount = resolveBlacklistAmount(event, currentBalances);
       active.set(key, {
-        id: key,
+        key,
         stablecoin: event.stablecoin,
         chainId: event.chainId,
-        chainName: event.chainName,
         address: event.address,
-        configKey: event.configKey,
-        contractAddress: event.contractAddress,
         blacklistedAt: event.timestamp,
-        blacklistTxHash: event.txHash,
         destroyedAt: null,
-        destroyTxHash: null,
         ...amount,
       });
       continue;
@@ -188,12 +152,11 @@ export function buildBlacklistActiveRecords(
       const existingKey = findActiveRecordKey(event, active);
       const existing = existingKey ? active.get(existingKey) : undefined;
       if (!existing) continue;
-      const amount = resolveDestroyAmount(event);
+      // The destroy event closes the record; destroyed rows are excluded from
+      // every frozen-amount surface, so their amount is left as recorded.
       active.set(existingKey!, {
         ...existing,
         destroyedAt: event.timestamp,
-        destroyTxHash: event.txHash,
-        ...amount,
       });
       continue;
     }
@@ -205,7 +168,7 @@ export function buildBlacklistActiveRecords(
     }
   }
 
-  return [...active.values()].sort((a, b) => (a.blacklistedAt === b.blacklistedAt ? a.id.localeCompare(b.id) : b.blacklistedAt - a.blacklistedAt));
+  return [...active.values()].sort((a, b) => (a.blacklistedAt === b.blacklistedAt ? a.key.localeCompare(b.key) : b.blacklistedAt - a.blacklistedAt));
 }
 
 export function computeBlacklistActiveSummaryStats(

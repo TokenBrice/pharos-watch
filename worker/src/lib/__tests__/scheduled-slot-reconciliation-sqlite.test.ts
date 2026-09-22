@@ -463,6 +463,35 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
     });
   });
 
+  it("does not invent a weekly-recap failure for a non-Monday 08:10 slot", async () => {
+    const { sqlite, db } = createMigratedDb();
+    // 2026-09-22 08:10Z is a Tuesday: weekly-recap was never due in this slot.
+    const slotStartedAt = Math.floor(Date.UTC(2026, 8, 22, 8, 10) / 1_000);
+    const nowSec = slotStartedAt + 3_600;
+    sqlite.prepare(
+      `INSERT INTO cron_slot_executions (
+         slot_key, slot_started_at, state, result_status, execution_owner,
+         started_at, finished_at, updated_at, metadata, execution_generation,
+         invocation_id, worker_version
+       ) VALUES ('daily0810Utc', ?, 'running', NULL, 'stale-owner', ?, NULL, ?, NULL, 1,
+                 'stale-invocation', 'worker-version')`,
+    ).run(slotStartedAt, slotStartedAt, slotStartedAt + 30);
+
+    const summary = await sweepStaleScheduledSlotExecutions(db, {
+      nowSec,
+      staleAfterSec: 1_200,
+      slotKey: "daily0810Utc",
+    });
+
+    expect(summary).toMatchObject({ slotsReconciled: 1 });
+    expect(sqlite.prepare(
+      `SELECT COUNT(*) AS count FROM cron_runs WHERE job = 'weekly-recap'`,
+    ).get()).toEqual({ count: 0 });
+    expect(sqlite.prepare(
+      `SELECT status, error FROM cron_runs WHERE job = 'sync-cl-exit-depth'`,
+    ).get()).toEqual({ status: "error", error: "scheduled slot abandoned before child job started" });
+  });
+
   it("classifies a correlated zero-duration child as neutral only with an in-window activation marker", async () => {
     const { sqlite, db } = createMigratedDb();
     const nowSec = 1_772_004_000;

@@ -6,6 +6,8 @@
  * capacity model cannot silently drift from production delivery behavior.
  */
 
+import { CRON_INTERVALS } from "./cron-jobs";
+
 /** Default source/queue TTL leaves 20% headroom after bounded planning and drain. */
 export const PENDING_TTL_SEC = 2 * 60 * 60;
 
@@ -22,8 +24,11 @@ export const TELEGRAM_ALERT_TTL_SEC = {
 /** Defaults retained only for rows written before alert-family attribution was explicit. */
 export const TELEGRAM_HISTORICAL_SOURCE_TTL_SEC = PENDING_TTL_SEC;
 
-/** The dedicated Telegram alert dispatcher runs every five minutes. */
-export const TELEGRAM_DISPATCH_INTERVAL_SEC = 5 * 60;
+/**
+ * The dedicated Telegram alert dispatcher's cadence. `cron-jobs.ts` is the
+ * only cadence authority; capacity, drain and timeout models derive from it.
+ */
+export const TELEGRAM_DISPATCH_INTERVAL_SEC = CRON_INTERVALS["dispatch-telegram-alerts"];
 
 /**
  * Hard application timeout for the Telegram dispatch job.
@@ -52,6 +57,26 @@ export const TELEGRAM_TARGET_PLAN_ENQUEUE_PAGE_SIZE = 45;
 
 /** Durable target-plan transitions permitted in one dispatch invocation. */
 export const TELEGRAM_TARGET_PLAN_MAX_STEPS_PER_RUN = 32;
+
+export function crossesTelegramDepegWorseningStep(
+  previousDeviationBps: number,
+  currentDeviationBps: number,
+  step: number | null,
+): boolean {
+  return step != null
+    && step > 0
+    && currentDeviationBps > previousDeviationBps
+    && Math.floor(previousDeviationBps / step) < Math.floor(currentDeviationBps / step);
+}
+
+export function mergeTelegramDepegWorseningSteps(
+  existing: number | null,
+  additional: number | null,
+): number | null {
+  if (existing == null) return additional;
+  if (additional == null) return existing;
+  return Math.min(existing, additional);
+}
 
 export function estimateTelegramTargetPlanCoordinatorBound(input: {
   subscriberCount: number;
@@ -134,6 +159,15 @@ export function isPausedSentinel(ts: number | null | undefined): boolean {
 export const TELEGRAM_LOAD_GUARD_ASSUMPTIONS = {
   watcherTargets: [500, 1_000, 5_000, 10_000],
   requiredTarget: 5_000,
+  /**
+   * Tier whose planning-plus-delivery completion is enforced against the risk-alert SLO.
+   * Reviewed 2026-09-22: once planning time counts, the 5-minute planner cadence caps a
+   * single-depeg fan-out at ~40 min for 5,000 watchers (production: 855); 1,000 is the
+   * largest tier the current planner meets. CPU, TTL-margin and status-path budgets stay
+   * measured at `requiredTarget`. Raising this back to 5,000 needs the planner redesign
+   * recorded in agents/2026-09-21-holistic-review/execution/DECISIONS.md.
+   */
+  sloEnforcedTarget: 1_000,
   exploratoryTarget: 10_000,
   telegramBroadcastMessagesPerSecond: 30,
   telegramP95SendLatencyMs: 250,

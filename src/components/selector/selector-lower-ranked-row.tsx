@@ -2,7 +2,7 @@
 
 import type { SelectorInput, SelectorLowerRanked } from "@shared/lib/selector";
 import { PEG_METADATA } from "@shared/lib/classification";
-import { selectorComponentReadingLabel } from "@shared/lib/selector/selector-labels";
+import { getLowerRankedText } from "@shared/lib/selector/what-to-watch-templates";
 
 interface SelectorLowerRankedRowProps {
   entry: SelectorLowerRanked;
@@ -13,12 +13,12 @@ export function SelectorLowerRankedRow({
   entry,
   pegCurrency,
 }: SelectorLowerRankedRowProps) {
-  const verdict = entry.verdictText ?? `${entry.symbol} needs review`;
-  const teaching =
-    entry.teachingText
-    ?? (entry.failedComponent
-      ? `Lower-ranked for this profile because its ${readableComponent(entry.failedComponent)} reading did not clear the selected profile threshold.`
-      : "Lower-ranked for this profile after the same filters and weights were applied.");
+  // Snapshot replay stores the lower-ranked entry prose-free, so a shared link
+  // re-derives the curated text from the same inputs the live run used instead
+  // of falling back to a generic sentence the reader never saw.
+  const derived = getLowerRankedText(entry);
+  const verdict = entry.verdictText ?? derived.verdictText;
+  const teaching = entry.teachingText ?? derived.teachingText;
   const pegLabel = PEG_METADATA[pegCurrency]?.filterLabel ?? pegCurrency;
 
   return (
@@ -29,8 +29,4 @@ export function SelectorLowerRankedRow({
       <p className="min-w-0 break-words text-sm leading-relaxed text-muted-foreground">{teaching}</p>
     </li>
   );
-}
-
-function readableComponent(key: string): string {
-  return selectorComponentReadingLabel(key) ?? key.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
 }

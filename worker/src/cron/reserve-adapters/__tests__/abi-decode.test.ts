@@ -3,6 +3,9 @@ import {
   decodeAbiWordAt,
   decodeStrictAddressArrayWord,
   decodeStrictAddressWord,
+  strictAddressDecoder,
+  strictBoolDecoder,
+  strictUint256Decoder,
 } from "../abi-decode";
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
@@ -71,6 +74,27 @@ describe("decodeStrictAddressWord", () => {
   it("rejects non-word input", () => {
     expect(decodeStrictAddressWord(`0x${"00".repeat(31)}`)).toBeNull();
     expect(decodeStrictAddressWord(null)).toBeNull();
+  });
+});
+
+describe("strict decoder factories", () => {
+  it("decodes one-word uint, bool, and address results", () => {
+    expect(strictUint256Decoder("fixture")(payload(word("2a")), "amount")).toBe(42n);
+    expect(strictBoolDecoder("fixture")(payload(word("1")), "paused")).toBe(true);
+    expect(strictAddressDecoder("fixture")(`0x${addressWord(STRATEGY_A)}`, "asset")).toBe(STRATEGY_A);
+  });
+
+  it("rejects malformed and non-canonical results with adapter context", () => {
+    expect(() => strictUint256Decoder("fixture")("0x01", "amount")).toThrow(
+      "fixture: amount returned malformed uint256 payload",
+    );
+    expect(() => strictBoolDecoder("fixture")(payload(word("2")), "paused")).toThrow(
+      "fixture: paused returned malformed bool payload",
+    );
+    expect(() => strictAddressDecoder("fixture")(
+      `0x${"00".repeat(11)}de${STRATEGY_A.slice(2)}`,
+      "asset",
+    )).toThrow("fixture: asset returned malformed address payload");
   });
 });
 

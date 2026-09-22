@@ -55,11 +55,11 @@ interface GitleaksOptions {
   fullHistory: boolean;
   headRef: string;
   lenientPlatform: boolean;
-  mode: "worktree" | "range";
+  mode: "tree" | "worktree" | "range";
 }
 
 function parseOptions(argv: readonly string[], env: NodeJS.ProcessEnv): GitleaksOptions {
-  const mode = argv.includes("--worktree") ? "worktree" : "range";
+  const mode = argv.includes("--worktree") ? "worktree" : argv.includes("--tree") ? "tree" : "range";
   const baseRef = env.GITLEAKS_BASE_REF ?? "origin/main";
   const headRef = env.GITLEAKS_HEAD_REF ?? "HEAD";
   return {
@@ -96,6 +96,25 @@ export function buildGitleaksWorktreeInput({
     }
   }
   return Buffer.concat(chunks);
+}
+
+/**
+ * Lines the checked-out merge commit introduces relative to *both* parents —
+ * i.e. content that came from the conflict resolution rather than from either
+ * side's already-scanned history. Combined diff prefixes those lines with `++`.
+ * A non-merge HEAD has no resolution and yields no input.
+ */
+export function buildGitleaksMergeResolutionInput({
+  execFile = execFileSync,
+}: { execFile?: (file: string, args: string[], options: { encoding: "utf8" }) => string } = {}): Buffer {
+  const parents = execFile("git", ["rev-list", "--parents", "-n", "1", "HEAD"], { encoding: "utf8" }).trim().split(/\s+/g);
+  if (parents.length < 3) return Buffer.from("\n");
+  const combined = execFile("git", ["diff-tree", "--cc", "--no-color", "-r", "HEAD"], { encoding: "utf8" });
+  const resolutionLines = combined
+    .split(/\r?\n/g)
+    .filter((line) => line.startsWith("++") && !line.startsWith("+++"))
+    .map((line) => line.slice(2));
+  return Buffer.from(`${resolutionLines.join("\n")}\n`);
 }
 
 export async function ensurePinnedGitleaks({
@@ -240,6 +259,7 @@ export function runGitleaksConfigSelfTest(
  */
 export async function runGitleaks({
   argv = process.argv.slice(2),
+  buildMergeResolutionInput = buildGitleaksMergeResolutionInput,
   buildWorktreeInput = buildGitleaksWorktreeInput,
   env = process.env,
   ensureBinary = ensurePinnedGitleaks,
@@ -249,6 +269,7 @@ export async function runGitleaks({
   argv?: string[];
   env?: NodeJS.ProcessEnv;
   ensureBinary?: () => Promise<string>;
+  buildMergeResolutionInput?: () => Buffer;
   buildWorktreeInput?: () => Buffer;
   platformKey?: string;
   runBinary?: GitleaksRunner;
@@ -264,8 +285,12 @@ export async function runGitleaks({
   }
   const binaryPath = await ensureBinary();
   runGitleaksConfigSelfTest(binaryPath, { runBinary });
-  const worktreeMode = options.mode === "worktree";
-  const args = worktreeMode
+  // `.gitleaksignore` fingerprints are commit-pinned, which only a history scan can honour, so both
+  // stdin lanes carry exactly the bytes the range scan cannot see: uncommitted edits (worktree) or
+  // the lines a merge resolution introduced in neither parent's history (tree). Anything flagged in
+  // those bytes is new and has no fingerprint to hide behind.
+  const stdinMode = options.mode === "worktree" || options.mode === "tree";
+  const args = stdinMode
     ? [
         "stdin",
         "--no-banner",
@@ -288,8 +313,9 @@ export async function runGitleaks({
           ".",
         ];
   const result = runBinary(binaryPath, args, {
-    ...(worktreeMode ? { input: buildWorktreeInput() } : {}),
-    stdio: worktreeMode ? ["pipe", "inherit", "inherit"] : "inherit",
+    ...(options.mode === "worktree" ? { input: buildWorktreeInput() } : {}),
+    ...(options.mode === "tree" ? { input: buildMergeResolutionInput() } : {}),
+    stdio: stdinMode ? ["pipe", "inherit", "inherit"] : "inherit",
   });
   return { status: result.status ?? 1 };
 }

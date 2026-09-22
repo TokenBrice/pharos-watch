@@ -2,23 +2,14 @@ import type { YieldDeploymentPlace, YieldSourceRisk } from "@shared/types/yield"
 import {
   computePysRewardShare,
   computeSourceRiskScoreFromPenalty,
-  deriveVenueRiskTier,
 } from "@shared/lib/yield-scoring";
 import {
   resolveReviewedYieldRiskConfig,
+  venueRiskTierOf,
   venueRiskWeightedOf,
   YIELD_VARIANT_CHILD_VENUE_PROTOCOLS,
 } from "@shared/lib/yield-source-risk-registry";
-export {
-  findStaleVenueRiskScores,
-  resolveDependencyConcentration,
-  resolveReviewedYieldRiskConfig,
-  venueRiskTierOf,
-  venueRiskWeightedOf,
-  YIELD_RISK_CONFIG,
-  YIELD_RISK_CONFIG_PROTOCOLS,
-  YIELD_RISK_CONFIG_REVIEW_CADENCE,
-} from "@shared/lib/yield-source-risk-registry";
+export { resolveDependencyConcentration } from "@shared/lib/yield-source-risk-registry";
 import { numberValue as finiteNumber } from "@shared/lib/type-guards";
 import type { EvaluatedYieldSource } from "./evaluation-types";
 import { resolveYieldSourceKeyRoute } from "./yield-source-key-routing";
@@ -147,6 +138,7 @@ export function buildYieldSourceRisk(params: {
   });
   const reviewedConfig = resolveReviewedYieldRiskConfig(venueProtocol);
   const reviewedWeighted = reviewedConfig ? venueRiskWeightedOf(reviewedConfig) : null;
+  const reviewedTier = reviewedConfig ? venueRiskTierOf(reviewedConfig) : "unknown";
 
   return {
     sourceRiskScore:
@@ -165,8 +157,7 @@ export function buildYieldSourceRisk(params: {
     deploymentPlace: existing.deploymentPlace ?? inferDeploymentPlace(params.source),
     venueProtocol,
     venueChain: existing.venueChain ?? params.source.venueChain ?? inferVenueChain(params.source.sourceKey),
-    venueRiskTier:
-      existing.venueRiskTier ?? (reviewedConfig ? deriveVenueRiskTier(reviewedWeighted) : "unknown"),
+    venueRiskTier: existing.venueRiskTier ?? reviewedTier,
     venueRiskScores: existing.venueRiskScores ?? reviewedConfig?.scores ?? null,
     venueRiskWeighted: existing.venueRiskWeighted ?? reviewedWeighted,
     venueRiskConfidence: existing.venueRiskConfidence ?? reviewedConfig?.confidence ?? null,

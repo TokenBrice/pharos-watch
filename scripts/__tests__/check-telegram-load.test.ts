@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import {
@@ -6,6 +9,7 @@ import {
   buildTelegramLoadCheckReport,
   evaluateQueryPlan,
   evaluateStatusPathBudget,
+  extractProductionSubscriberFanoutSql,
   findCpuBudgetBreaches,
   findProductionDispatchBreaches,
   findRecapLoadBreaches,
@@ -76,7 +80,7 @@ describe("Telegram load simulation", () => {
     expect(report.scenarios.filter((scenario) => scenario.exploratory)).toHaveLength(6);
   });
 
-  it("meets the required 5000-watcher delivery SLO scenarios", () => {
+  it("classifies the required 5000-watcher SLO across planning and delivery", () => {
     const requiredScenarios = report.scenarios.filter((scenario) =>
       scenario.scenarioId === "single-depeg" ||
       scenario.scenarioId === "market-wide-burst" ||
@@ -87,12 +91,36 @@ describe("Telegram load simulation", () => {
     expect(report.assumptions.freshAttemptsPerRun).toBe(3_600);
     expect(report.assumptions.pendingDrainAttemptsPerRun).toBe(1_800);
     expect(report.assumptions.sendLoopSoftDeadlineSeconds).toBe(4 * 60);
-    expect(requiredScenarios.every((scenario) => scenario.sloStatus !== "breach")).toBe(true);
+    expect(Object.fromEntries(
+      requiredScenarios.map((scenario) => [scenario.scenarioId, scenario.sloStatus]),
+    )).toEqual({
+      "single-depeg": "slow",
+      "market-wide-burst": "breach",
+      "dews-safety-burst": "slow",
+      "telegram-429-storm": "outage-unavailable",
+    });
     expect(requiredScenarios.every((scenario) => scenario.initialFreshAttempts === 0)).toBe(true);
     expect(requiredScenarios.every((scenario) => scenario.ttlMarginFraction >= 0.2)).toBe(true);
     expect(findTtlMarginBreaches(report)).toEqual([]);
     expect(requiredScenarios.find((scenario) => scenario.scenarioId === "telegram-429-storm"))
       .toMatchObject({ sloStatus: "outage-unavailable", outageUnavailableSeconds: 15 * 60 });
+
+    const normal = requiredScenarios.find((scenario) => scenario.scenarioId === "single-depeg")!;
+    expect(normal.planningDelaySeconds).toBeGreaterThan(0);
+    expect(normal.postRecoveryDrainSeconds).toBeLessThanOrEqual(report.assumptions.normalSloSeconds);
+    expect(normal.estimatedDrainSeconds).toBeGreaterThan(report.assumptions.normalSloSeconds);
+    expect(normal.sloStatus).toBe("slow");
+    const pendingSendCpuMs =
+      Math.min(normal.pendingEnqueued, report.assumptions.pendingDrainAttemptsPerRun)
+      * report.assumptions.sendCpuMsPerMessage;
+    expect(pendingSendCpuMs).toBeGreaterThan(0);
+    expect(normal.estimatedCpuMs).toBe(
+      Math.round(Math.max(
+        Math.min(normal.messageChunks, report.assumptions.freshAttemptsPerRun)
+          * report.assumptions.formatCpuMsPerChat,
+        pendingSendCpuMs,
+      )),
+    );
   });
 
   it("computes a per-invocation CPU estimate and keeps the required burst under the safety fraction", () => {
@@ -237,6 +265,29 @@ describe("Telegram query-plan evaluation", () => {
     binds: [],
     requiredDetails: ["idx_needed"],
   };
+
+  it("derives fan-out predicates from the production subscriber SQL template", () => {
+    const sourcePath = resolve(
+      process.cwd(),
+      "worker/src/cron/dispatch-telegram-subscribers.ts",
+    );
+    const productionSource = readFileSync(sourcePath, "utf8");
+    const columns = {
+      directColumn: "alert_depeg",
+      globalColumn: "global_alert_depeg",
+    };
+    const extracted = extractProductionSubscriberFanoutSql(productionSource, columns);
+    const mutatedSource = productionSource.replace(
+      "AND (sub.alert_snooze_until_ts IS NULL OR sub.alert_snooze_until_ts <= ?)",
+      "AND sub.alert_snooze_until_ts IS NULL",
+    );
+    const mutated = extractProductionSubscriberFanoutSql(mutatedSource, columns);
+    const directCheck = buildQueryPlanChecks().find((candidate) => candidate.id === "fanout-direct-depeg")!;
+
+    expect(directCheck.sql).toBe(extracted.direct);
+    expect(mutated.direct).not.toBe(extracted.direct);
+    expect(mutated.direct).toContain("AND sub.alert_snooze_until_ts IS NULL");
+  });
 
   it("excludes terminal job targets from otherwise eligible pending claims", () => {
     const { sqlite } = databases.open();

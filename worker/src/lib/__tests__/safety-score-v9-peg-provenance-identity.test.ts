@@ -2,11 +2,11 @@ import { computePegScore } from "@shared/lib/peg-score";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type { DepegEvent } from "@shared/types/market";
 import { describe, expect, it } from "vitest";
+import { normalizeFixedInput } from "../report-cards-fixed-input";
 import {
   buildReportCardsFixedInputCacheEntry,
   createReportCardsFixedInput,
-  normalizeFixedInput,
-} from "../report-cards-fixed-input";
+} from "../../test-helpers/report-cards-fixed-input";
 import { buildSafetyScoreV9Candidate } from "../safety-score-v9/candidate";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import {

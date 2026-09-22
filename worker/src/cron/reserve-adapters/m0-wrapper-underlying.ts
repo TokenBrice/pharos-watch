@@ -12,7 +12,7 @@ import {
   encodeAddress,
   encodeBalanceOfCallData,
 } from "../../lib/evm-selectors";
-import { decodeAddressWord, decodeBoolWord, decodeUint8Word } from "./abi-decode";
+import { decodeAddressWord, decodeStrictBoolWord, decodeUint8Word } from "./abi-decode";
 import { normalizeEvmAddress, resolveCoinContractAddress } from "./evm";
 import {
   makeOnchainCallers,
@@ -203,8 +203,10 @@ export async function fetchM0WrapperUnderlyingReserves(
   let swapFacilityAddress: `0x${string}` | undefined;
   let swapFacilityPaused: boolean | null = null;
   let swapperCanRedeem: boolean | null = null;
-  let routeStatus: "open" | "paused" | "cohort-limited" | "unknown" = "open";
-  let routeStatusReason: string | undefined;
+  let routeStatus: "open" | "paused" | "cohort-limited" | "unknown" =
+    params.mode === "m-extension" ? "open" : "unknown";
+  let routeStatusReason: string | undefined =
+    params.mode === "m-extension" ? undefined : "No same-run wrapped-M redemption route gate was observed";
   const holderEligibility = params.mode === "m-extension" ? "whitelisted-primary" : "any-holder";
 
   if (params.mode === "m-extension") {
@@ -239,8 +241,8 @@ export async function fetchM0WrapperUnderlyingReserves(
           )
         : Promise.resolve(null),
     ]);
-    swapFacilityPaused = decodeBoolWord(pausedRaw);
-    swapperCanRedeem = decodeBoolWord(canSwapRaw);
+    swapFacilityPaused = decodeStrictBoolWord(pausedRaw);
+    swapperCanRedeem = decodeStrictBoolWord(canSwapRaw);
     if (swapFacilityPaused === true) {
       routeStatus = "paused";
       routeStatusReason = "M0 SwapFacility is paused for this extension route";
@@ -293,6 +295,7 @@ export async function fetchM0WrapperUnderlyingReserves(
     },
     redemption: {
       routeStatus,
+      routeStatusSource: params.mode === "m-extension" ? "onchain" : "static-config",
       ...(routeStatusReason ? { routeStatusReason } : {}),
       holderEligibility,
       ...(params.sourceUrls ? { sourceUrls: params.sourceUrls } : {}),

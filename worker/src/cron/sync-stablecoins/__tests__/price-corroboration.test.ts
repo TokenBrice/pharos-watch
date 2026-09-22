@@ -46,8 +46,6 @@ describe("hourly price corroboration", () => {
       const args = collect.mock.calls[0];
       expect(args[0][0]).toMatchObject({ cmcSlug: "lorenzo-staked-usd1", navToken: true, price: null });
       expect(args[0][1].geckoId).toBeUndefined();
-      expect(args[8]).toEqual(new Set(["usdv-solomon"]));
-      expect(args[9]).toBe(chainRpcs);
       expect(published).toEqual(original);
     } finally {
       load.mockRestore();

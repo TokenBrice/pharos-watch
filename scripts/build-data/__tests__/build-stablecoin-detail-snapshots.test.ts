@@ -133,22 +133,27 @@ describe("stablecoin detail snapshot generator", () => {
     })).toThrow();
   });
 
-  it("attaches the build API key and omits an authenticated 401 lane", async () => {
+  it("fails closed on upstream errors while allowing an explicitly absent lane", async () => {
     vi.stubEnv("PHAROS_API_KEY", "fixture-key");
-    const fetchMock = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) =>
-      new Response("valid X-API-Key required", { status: 401 }));
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response("", { status: 404 }))
+      .mockImplementation(async () => new Response("upstream unavailable", { status: 503 }));
     vi.stubGlobal("fetch", fetchMock);
     const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-
     await expect(fetchOptionalDetailSnapshotLane(
+      "optional history",
+      "https://api.pharos.watch/api/supply-history",
+      SupplyHistoryResponseSchema,
+    )).resolves.toBeNull();
+    expect(warning).toHaveBeenCalledWith(expect.stringContaining("HTTP 404"));
+    vi.useFakeTimers();
+    const failure = expect(fetchOptionalDetailSnapshotLane(
       "coin detail for usdt-tether",
       "https://api.pharos.watch/api/stablecoin/usdt-tether",
       StablecoinDetailResponseSchema,
-    )).resolves.toBeNull();
-
-    const requestInit = fetchMock.mock.calls[0]?.[1] as RequestInit;
-    expect(requestInit.headers).toMatchObject({ "X-API-Key": "fixture-key" });
-    expect(warning).toHaveBeenCalledWith(expect.stringContaining("HTTP 401"));
+    )).rejects.toThrow("HTTP 503");
+    await vi.runAllTimersAsync();
+    await failure;
   });
 
   it("reads the public site-data lane when no build credential is configured", () => {
@@ -165,48 +170,14 @@ describe("stablecoin detail snapshot generator", () => {
     expect(resolveSnapshotApiBase()).toBe("https://stablecoin-dashboard.pages.dev/_site-data");
   });
 
-  it("omits a schema-invalid 200 response and still emits every coin", async () => {
+  it("fails closed when a successful response does not match its lane schema", async () => {
     vi.stubEnv("PHAROS_API_KEY", "fixture-key");
     vi.stubGlobal("fetch", vi.fn(async () => Response.json({ price: "invalid", tokens: [] })));
-    const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-
-    const invalidDetail = await fetchOptionalDetailSnapshotLane(
+    await expect(fetchOptionalDetailSnapshotLane(
       "coin detail for usdt-tether",
       "https://api.pharos.watch/api/stablecoin/usdt-tether",
       StablecoinDetailResponseSchema,
-    );
-    const snapshots = buildStablecoinDetailSnapshots({
-      generatedAt: 1_700_000_000_000,
-      updatedAtById: new Map(),
-      liveSummariesById: new Map([
-        ["usdt-tether", invalidDetail ? projectStablecoinLiveSummary(invalidDetail.data) : null],
-        ["usdc-circle", liveSummary()],
-      ]),
-      supplyHistoryById: new Map(),
-    });
-
-    expect(invalidDetail).toBeNull();
-    expect(snapshots).toHaveLength(TRACKED_STABLECOINS.length);
-    expect(snapshots.find((snapshot) => snapshot.stablecoinId === "usdt-tether")?.lanes).toEqual({});
-    expect(snapshots.find((snapshot) => snapshot.stablecoinId === "usdc-circle")?.lanes.liveSummary)
-      .toEqual(liveSummary());
-    expect(warning).toHaveBeenCalledTimes(1);
-    expect(warning.mock.calls[0]?.[0]).toContain("price");
-  });
-
-  it("omits a schema-invalid optional supply response", async () => {
-    vi.stubEnv("PHAROS_API_KEY", "fixture-key");
-    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ points: [] })));
-    const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-
-    await expect(fetchOptionalDetailSnapshotLane(
-      "supply history for usdt-tether",
-      "https://api.pharos.watch/api/supply-history?stablecoin=usdt-tether&days=90",
-      SupplyHistoryResponseSchema,
-    )).resolves.toBeNull();
-
-    expect(warning).toHaveBeenCalledTimes(1);
-    expect(warning.mock.calls[0]?.[0]).toContain("supply history for usdt-tether");
+    )).rejects.toThrow();
   });
 
   it("keeps a representative compact summary and 90-day supply envelope within 8 KiB", () => {
@@ -296,6 +267,14 @@ describe("stablecoin detail snapshot generator", () => {
     await expect(fetchOptionalDetailSnapshotLane(
       "detail", "https://api.pharos.watch/api/stablecoin/usdt-tether", StablecoinDetailResponseSchema,
     )).rejects.toBeInstanceOf(SyntaxError);
+  });
+
+  it("refuses to generate an empty envelope for a live stablecoin", async () => {
+    vi.stubEnv("PHAROS_API_KEY", "fixture-key");
+    for (const name of ["DIGEST_API_URL", "PUBLIC_DATASETS_API_URL", "SMOKE_API_BASE", "API_BASE_URL"]) vi.stubEnv(name, "");
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("", { status: 404 })));
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    await expect(generateSnapshots(false)).rejects.toThrow(/No detail snapshot lanes were available/);
   });
 
   it("fetches live IDs but preserves empty envelopes for non-live catalog members", async () => {

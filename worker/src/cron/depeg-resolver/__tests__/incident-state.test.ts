@@ -1,12 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
+import { D1_MAX_BOUND_PARAMETERS } from "../../../lib/d1-primitives";
+import { DDR_LOCK_ON_TIME_GRACE_SEC, DDR_V2_EFFECTIVE_AT } from "@shared/lib/methodology-versions/depeg-resolver";
 import {
   applyConfirmationTimes,
+  computeLockTiming,
   ensureCanonicalIncidentsForEvents,
+  loadPendingPromotionConfirmationTimes,
   recordSystemHealthDeferrals,
 } from "../incident-state";
 import { toStructural } from "../utils";
-import { makeEventRow, makeIncident } from "./depeg-resolver.test-support";
+import { makeEventRow, makeIncident, mockResolverD1 } from "./depeg-resolver.test-support";
 import type { DdrCanonicalIncident, DdrV2StoreContracts } from "../../depeg-resolver-v2-contracts";
 
 
@@ -97,6 +101,63 @@ describe("ensureCanonicalIncidentsForEvents", () => {
     expect(byEventId.has(2)).toBe(false);
   });
 
+});
+
+describe("loadPendingPromotionConfirmationTimes", () => {
+  it("chunks the promoted-outcome read and joins every candidate across chunks", async () => {
+    const events = Array.from({ length: 150 }, (_, index) => makeEventRow({
+      id: 1_000 + index,
+      stablecoin_id: `synthetic-${index}`,
+      symbol: `SYN${index}`,
+      pending_reason: "awaiting-confirmation",
+    }));
+    const db = mockResolverD1([
+      {
+        match: "FROM depeg_pending_outcomes",
+        rows: events.map((event) => ({
+          stablecoin_id: event.stablecoin_id,
+          peg_type: event.peg_type,
+          direction: event.direction,
+          first_seen_at: event.started_at,
+          outcome_at: event.started_at + 600,
+        })),
+      },
+    ]);
+
+    const { byEventId, error } = await loadPendingPromotionConfirmationTimes(db, events);
+
+    expect(error).toBeNull();
+    expect(byEventId.size).toBe(150);
+    const statements = db.getHistory().filter((entry) => entry.sql.includes("FROM depeg_pending_outcomes"));
+    expect(statements.length).toBeGreaterThan(1);
+    for (const statement of statements) {
+      expect(statement.binds.length).toBeLessThanOrEqual(D1_MAX_BOUND_PARAMETERS);
+      expect(statement.binds.every((bind) => typeof bind === "string")).toBe(true);
+    }
+  });
+
+  it("fails closed with an empty map when the promoted-outcome read errors", async () => {
+    const events = [makeEventRow({ id: 7, pending_reason: "awaiting-confirmation" })];
+    const db = mockResolverD1([{ match: "FROM depeg_pending_outcomes", rows: [], throwError: new Error("D1_ERROR: internal error") }]);
+
+    const { byEventId, error } = await loadPendingPromotionConfirmationTimes(db, events);
+
+    expect(byEventId.size).toBe(0);
+    expect(error).toContain("D1_ERROR");
+  });
+});
+
+describe("computeLockTiming", () => {
+  it("labels a post-landmark lock beyond the cron grace window as late_freeze", () => {
+    const incident = makeIncident({
+      startedAt: DDR_V2_EFFECTIVE_AT + 3_600,
+      eligibleAt: DDR_V2_EFFECTIVE_AT + 3_600,
+      rolloutActiveAtEnablement: false,
+    });
+
+    expect(computeLockTiming(incident, incident.eligibleAt + DDR_LOCK_ON_TIME_GRACE_SEC)).toBe("on_time");
+    expect(computeLockTiming(incident, incident.eligibleAt + DDR_LOCK_ON_TIME_GRACE_SEC + 1)).toBe("late_freeze");
+  });
 });
 
 describe("applyConfirmationTimes", () => {

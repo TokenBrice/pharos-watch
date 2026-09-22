@@ -4,6 +4,7 @@ import { EventCard, SEVERITY_LABEL } from "@/components/tape/event-card";
 import { tapeClassRowBg } from "@/lib/tape-class-style";
 import type { DigestedClass } from "@/lib/tape-digest";
 import { SEVERITY_TEXT_CLASS } from "@shared/types/tape-event";
+import { getLogoSrc } from "@/lib/logos";
 
 interface ClassDigestRowProps {
   digest: DigestedClass;
@@ -26,7 +27,7 @@ export function ClassDigestRow({ digest, logos, highlightedId, eventDomId }: Cla
           key={key}
           event={event}
           count={count}
-          logoSrc={event.coinId ? logos[event.coinId] : undefined}
+          logoSrc={event.coinId ? getLogoSrc(logos, event.coinId) : undefined}
           highlighted={highlightedId === event.id}
           domId={eventDomId(event.id)}
         />

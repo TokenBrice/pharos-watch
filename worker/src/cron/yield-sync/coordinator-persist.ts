@@ -232,15 +232,17 @@ export async function publishYieldCoordinatorResults(params: {
       params.degradationReasons.push("yield-publication:payload-oversize");
     }
     throwIfAborted(params.signal);
-    try {
-      await writeFreshnessSentinel(params.db, "yield-data", params.startSec, params.signal);
-    } catch (error) {
-      rethrowIfAborted(error, params.signal);
-      const reason = getD1FailureReason("yield-data-freshness-sentinel-failed", error);
-      params.degradationReasons.push(reason);
-      await repairPublishedYieldGenerationFromCache(params.db, params.startSec).catch((repairError: unknown) => {
-        logWorkerEventArgs("handler", "warn", "[sync-yield-data] Failed to repair published yield generation after freshness sentinel failure:", repairError);
-      });
+    if (!params.degradationReasons.some((reason) => reason.startsWith("yield-source:"))) {
+      try {
+        await writeFreshnessSentinel(params.db, "yield-data", params.startSec, params.signal);
+      } catch (error) {
+        rethrowIfAborted(error, params.signal);
+        const reason = getD1FailureReason("yield-data-freshness-sentinel-failed", error);
+        params.degradationReasons.push(reason);
+        await repairPublishedYieldGenerationFromCache(params.db, params.startSec).catch((repairError: unknown) => {
+          logWorkerEventArgs("handler", "warn", "[sync-yield-data] Failed to repair published yield generation after freshness sentinel failure:", repairError);
+        });
+      }
     }
 
     throwIfAborted(params.signal);

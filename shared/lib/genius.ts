@@ -7,6 +7,7 @@ import type {
   GeniusIssuerPathway,
 } from "../types/core";
 import type { BadgeStyle } from "./classification";
+import { projectDescriptors } from "./classification/descriptors";
 
 interface GeniusAuthorizationStatusDescriptor {
   badge: BadgeStyle;
@@ -80,22 +81,13 @@ const GENIUS_AUTHORIZATION_STATUS_DESCRIPTORS = {
   },
 } as const satisfies Record<GeniusAuthorizationStatus, GeniusAuthorizationStatusDescriptor>;
 
-function projectAuthorizationStatuses<Value>(
-  project: (descriptor: GeniusAuthorizationStatusDescriptor) => Value,
-): Record<GeniusAuthorizationStatus, Value> {
-  return Object.fromEntries(
-    (Object.entries(GENIUS_AUTHORIZATION_STATUS_DESCRIPTORS) as [
-      GeniusAuthorizationStatus,
-      GeniusAuthorizationStatusDescriptor,
-    ][]).map(([status, descriptor]) => [status, project(descriptor)]),
-  ) as Record<GeniusAuthorizationStatus, Value>;
-}
-
-export const GENIUS_AUTHORIZATION_STATUS_BADGE_STYLES = projectAuthorizationStatuses(
+export const GENIUS_AUTHORIZATION_STATUS_BADGE_STYLES = projectDescriptors(
+  GENIUS_AUTHORIZATION_STATUS_DESCRIPTORS,
   (descriptor) => descriptor.badge,
 );
 /** Solid fill classes for signal segments; null means no public signal. */
-export const GENIUS_STATUS_SEGMENT_CLASSES = projectAuthorizationStatuses(
+export const GENIUS_STATUS_SEGMENT_CLASSES = projectDescriptors(
+  GENIUS_AUTHORIZATION_STATUS_DESCRIPTORS,
   (descriptor) => descriptor.segmentClass,
 );
 
@@ -106,7 +98,10 @@ export const GENIUS_STATUS_SEGMENT_CLASSES = projectAuthorizationStatuses(
  * every label describes a *pathway* status — never a present-day federal
  * license.
  */
-export const GENIUS_STATUS_SHORT_LABELS = projectAuthorizationStatuses((descriptor) => descriptor.shortLabel);
+export const GENIUS_STATUS_SHORT_LABELS = projectDescriptors(
+  GENIUS_AUTHORIZATION_STATUS_DESCRIPTORS,
+  (descriptor) => descriptor.shortLabel,
+);
 
 /**
  * Text-only tones for flat surfaces that carry no pill background. Approved
@@ -114,9 +109,13 @@ export const GENIUS_STATUS_SHORT_LABELS = projectAuthorizationStatuses((descript
  * (`undefined`), and absent/inapplicable statuses are muted. Tailwind classes
  * are static strings per the repo gotcha.
  */
-export const GENIUS_STATUS_TEXT_CLS = projectAuthorizationStatuses((descriptor) => descriptor.textCls);
+export const GENIUS_STATUS_TEXT_CLS = projectDescriptors(
+  GENIUS_AUTHORIZATION_STATUS_DESCRIPTORS,
+  (descriptor) => descriptor.textCls,
+);
 
-export const GENIUS_AUTHORIZATION_STATUS_DESCRIPTIONS = projectAuthorizationStatuses(
+export const GENIUS_AUTHORIZATION_STATUS_DESCRIPTIONS = projectDescriptors(
+  GENIUS_AUTHORIZATION_STATUS_DESCRIPTORS,
   (descriptor) => descriptor.description,
 );
 

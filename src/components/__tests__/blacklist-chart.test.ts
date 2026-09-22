@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { createElement, isValidElement } from "react";
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getBlacklistChartCoins, getBlacklistTooltipSummary, BlacklistChart } from "@/components/blacklist-chart";
 import type { QuarterlyStackedBarChart } from "@/components/chart-primitives/quarterly-stacked-bar-chart";
@@ -98,5 +98,22 @@ describe("getBlacklistTooltipSummary", () => {
     expect(isValidElement(props.children)).toBe(true);
     if (!isValidElement<{ dataKey: string }>(props.children)) throw new Error("Expected total overlay element");
     expect(props.children.props.dataKey).toBe("total");
+  });
+
+  it("shows an unavailable notice instead of the empty-ledger copy when the summary read fails", () => {
+    render(createElement(BlacklistChart, { chart: undefined, isLoading: false, error: new Error("summary down") }));
+
+    expect(screen.getByRole("alert").textContent).toContain(
+      "Freeze ledger chart is temporarily unavailable. No status claim is being made.",
+    );
+    expect(screen.queryByText("No freeze events recorded yet.")).toBeNull();
+    expect(quarterlyChartMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps the empty-ledger copy for a successful empty response", () => {
+    render(createElement(BlacklistChart, { chart: [], isLoading: false }));
+
+    expect(screen.getByText("No freeze events recorded yet.")).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });

@@ -8,6 +8,7 @@ import { StablecoinCard, type StablecoinCardData } from "../lib/og-templates/sta
 import { SafetyScoresCard, type SafetyScoresCardData } from "../lib/og-templates/safety-scores-card";
 import { DepegCard, type DepegCardData } from "../lib/og-templates/depeg-card";
 import { StabilityIndexCard, type StabilityIndexCardData } from "../lib/og-templates/stability-index-card";
+import { CardFrame } from "../lib/og-templates/shared";
 import { ChainCard, type ChainCardData } from "../lib/og-templates/chain-card";
 import { isActiveChainAggregateAsset } from "./chains";
 import { aggregateChains } from "@shared/lib/chains/aggregator";
@@ -16,7 +17,6 @@ import { derivePegRates } from "@shared/lib/peg-rates";
 import { CHAIN_META } from "@shared/lib/chains";
 import { resolveOrReject } from "../lib/api-params";
 import { loadDexLiquidityMap } from "../lib/dex-liquidity";
-import { getConditionBand } from "../lib/stability-index";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { ACTIVE_IDS, FROZEN_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
@@ -605,6 +605,36 @@ async function handleDepegOg(db: D1Database): Promise<Response> {
 // /api/og/stability-index
 // ---------------------------------------------------------------------------
 
+function StabilityIndexUnavailableCard() {
+  return (
+    <CardFrame
+      title="Pharos Stability Index"
+      subtitle="Market-wide Peg Health"
+      borderTopColor="#64748b"
+      lastUpdated={nowUtcLabel()}
+    >
+      <div
+        style={{
+          display: "flex",
+          flex: 1,
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 12,
+          textAlign: "center",
+        }}
+      >
+        <span style={{ fontSize: 36, fontWeight: 700 }}>
+          Stability index unavailable
+        </span>
+        <span style={{ fontSize: 20, color: "#5f6570" }}>
+          No PSI sample is available yet.
+        </span>
+      </div>
+    </CardFrame>
+  );
+}
+
 async function handleStabilityIndexOg(db: D1Database): Promise<Response> {
   const now = Math.floor(Date.now() / 1000);
   const sevenDaysAgo = now - 7 * DAY_SECONDS;
@@ -642,8 +672,13 @@ async function handleStabilityIndexOg(db: D1Database): Promise<Response> {
       .first<{ min: number | null }>(),
   ]);
 
-  const psiScore = latestSample?.score ?? 0;
-  const psiBand = latestSample?.band ?? getConditionBand(psiScore);
+  if (!latestSample) {
+    const png = await renderPng(<StabilityIndexUnavailableCard />);
+    return new Response(png, { headers: CACHE_HEADERS });
+  }
+
+  const psiScore = latestSample.score;
+  const psiBand = latestSample.band;
   const avg24h = avg24hRow?.avg ?? psiScore;
   const delta24h = psiScore - avg24h;
   const avg7d = avg7dRow?.avg ?? psiScore;
@@ -714,7 +749,12 @@ async function handleChainOg(db: D1Database, chainId: string): Promise<Response>
     }
   }
 
-  const aggregated = aggregateChains({ peggedAssets: activePeggedAssets, safetyScores, pegRates });
+  const aggregated = aggregateChains({
+    peggedAssets: activePeggedAssets,
+    safetyScores,
+    pegRates,
+    updatedAt: stablecoinsResult.updatedAt,
+  });
   const chain = aggregated.chains.find((entry) => entry.id === chainId);
 
   // Every CHAIN_META chain page bakes this og:image URL, but aggregateChains()
@@ -765,10 +805,8 @@ const CHAIN_OG_PATTERN = /^\/api\/og\/chain\/([a-z0-9-]+)$/;
 
 interface OgRoute {
   pattern: RegExp;
-  /** Decode/normalize the captured segment; a Response short-circuits both GET and HEAD. */
+  /** Decode/normalize the captured segment; a Response short-circuits routing. */
   resolveCapture?: (capture: string) => string | Response;
-  /** HEAD-only existence check. GET surfaces the same 404 from its renderer. */
-  headCheck?: (capture: string) => Response | null;
   render: (db: D1Database, capture: string) => Promise<Response>;
 }
 
@@ -782,13 +820,10 @@ const OG_ROUTES: readonly OgRoute[] = [
         return ogErrorResponse("Malformed URI", 400);
       }
     },
-    headCheck: (coinId) =>
-      resolveOrReject(coinId) instanceof Response ? ogErrorResponse("Unknown stablecoin", 404) : null,
     render: (db, coinId) => handleStablecoinOg(db, coinId),
   },
   {
     pattern: CHAIN_OG_PATTERN,
-    headCheck: (chainId) => (CHAIN_META[chainId] ? null : ogErrorResponse("Unknown chain", 404)),
     render: (db, chainId) => handleChainOg(db, chainId),
   },
   { pattern: /^\/api\/og\/safety-scores$/, render: (db) => handleSafetyScoresOg(db) },
@@ -796,17 +831,13 @@ const OG_ROUTES: readonly OgRoute[] = [
   { pattern: /^\/api\/og\/stability-index$/, render: (db) => handleStabilityIndexOg(db) },
 ];
 
-export async function handleOg(db: D1Database, path: string, method = "GET"): Promise<Response | null> {
+export async function handleOg(db: D1Database, path: string, _method = "GET"): Promise<Response | null> {
   const route = OG_ROUTES.find((candidate) => candidate.pattern.test(path));
   if (!route) return null;
 
   const rawCapture = path.match(route.pattern)?.[1] ?? "";
   const capture = route.resolveCapture ? route.resolveCapture(rawCapture) : rawCapture;
   if (capture instanceof Response) return capture;
-
-  if (method === "HEAD") {
-    return route.headCheck?.(capture) ?? new Response(null, { headers: CACHE_HEADERS });
-  }
 
   try {
     return await route.render(db, capture);

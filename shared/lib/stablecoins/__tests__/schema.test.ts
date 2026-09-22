@@ -5,7 +5,7 @@ import {
   StablecoinMintAuthoritySidecarSchema,
   StablecoinRiskReviewSidecarSchema,
 } from "../schema";
-import { OracleRiskProfileSchema } from "../../../types/stablecoin-meta-schemas";
+import { OracleRiskProfileSchema } from "../../../types/stablecoin-meta-control-schemas";
 import { CANONICAL_STABLECOIN_FLAGS, makeRawStablecoinMeta as makeCoin } from "./test-support";
 import { makeSafeControl } from "./schema.test-support";
 
@@ -793,6 +793,21 @@ describe("StablecoinMeta schema — mint authority", () => {
         }),
       }),
     ], "fixture")).toThrow(/parent is none-resolved/);
+  });
+
+  it("keeps single-record validation lenient on parent lookups it cannot perform", () => {
+    const parsed = parseStablecoinMetaAssets([
+      makeCoin({
+        id: "fixture-wrapped-single",
+        mintAuthority: makeMintAuthority({
+          mintPath: "wrapped-or-variant-inherited",
+          authorityPosture: "none-resolved",
+          inheritedFrom: "parent-not-in-this-catalog",
+          controls: undefined,
+        }),
+      }),
+    ], "fixture");
+    expect(parsed[0]!.mintAuthority?.authorityPosture).toBe("none-resolved");
   });
 
   it("accepts the last valid inheritance depth of three links", () => {

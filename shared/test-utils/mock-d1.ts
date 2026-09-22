@@ -1,3 +1,4 @@
+import { onTestFinished } from "vitest";
 import type { D1Database, D1PreparedStatement } from "@shared/types/cloudflare-runtime";
 
 /**
@@ -6,7 +7,7 @@ import type { D1Database, D1PreparedStatement } from "@shared/types/cloudflare-r
  */
 
 export interface MockTableConfig {
-  /** Substring to match in SQL query (e.g., "mint_burn_hourly") */
+  /** Statement marker (see `sqlMarker`) or substring to match in the SQL query. */
   match: string;
   /** Optional bind array to match in order. */
   matchBinds?: unknown[];
@@ -47,10 +48,29 @@ export interface MockD1Options {
   runChanges?: (sql: string) => number;
   /** Execute every batch entry with run(), matching the legacy scripts preset. */
   batchMode?: "auto" | "run";
+  /** Fail the test on a configured match the run never selected. Implied by `strict`. */
+  assertMatchesUsed?: boolean;
 }
 
 export function mockD1Strict(tables: MockTableConfig[] = []): MockD1Database {
-  return mockD1(tables, { strict: true });
+  return mockD1(tables, { strict: true, assertMatchesUsed: true });
+}
+
+/** The canonical statement comment production SQL carries for a stable marker. */
+export function sqlMarker(marker: string): string {
+  return `/* pharos:${marker} */`;
+}
+
+/**
+ * Marker-based match table: binds the fixture to the statement's stable marker
+ * instead of to a substring of its SQL text.
+ */
+export function matchMarker(
+  marker: string,
+  rows: Record<string, unknown>[] = [],
+  overrides: Omit<MockTableConfig, "match" | "rows"> = {},
+): MockTableConfig {
+  return { ...overrides, match: sqlMarker(marker), rows };
 }
 
 export function createMockD1Preset(defaults: readonly MockTableConfig[]) {
@@ -103,6 +123,14 @@ async function maybeDelay(table: MockTableConfig | undefined): Promise<void> {
 
 function isCacheKeyLookup(sql: string): boolean {
   return /FROM\s+cache\s+WHERE\s+key\s*=\s*\?/i.test(sql);
+}
+
+function registerMatchAssertion(db: MockD1Database): void {
+  try {
+    onTestFinished(() => db.assertAllMatchesUsed());
+  } catch {
+    // Built outside a running test (module or beforeAll scope): the caller owns the assertion.
+  }
 }
 
 export function mockD1(tables: MockTableConfig[] = [], options: MockD1Options = {}): MockD1Database {
@@ -198,7 +226,7 @@ export function mockD1(tables: MockTableConfig[] = [], options: MockD1Options = 
     } as unknown as MockPreparedStatement;
   }
 
-  return {
+  const db = {
     prepare: (sql: string) => createStatement(sql),
     batch: async (stmts: D1PreparedStatement[]) => {
       const results: unknown[] = [];
@@ -251,6 +279,9 @@ export function mockD1(tables: MockTableConfig[] = [], options: MockD1Options = 
       }
     },
   } as unknown as MockD1Database;
+
+  if (options.assertMatchesUsed === true) registerMatchAssertion(db);
+  return db;
 }
 
 /** Compatibility preset for the Pages site-data attribution fixture. */

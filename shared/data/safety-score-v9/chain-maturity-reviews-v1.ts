@@ -7,15 +7,28 @@ export const CHAIN_MATURITY_GATE_IDS = [
 ] as const;
 
 export type ChainMaturityGateId = (typeof CHAIN_MATURITY_GATE_IDS)[number];
-export type ChainMaturityGateResult = "pass" | "fail";
+export type ChainMaturityGateResult = "pass" | "fail" | "pending";
 export type ChainMaturityAdmissionDecision = "admit" | "exclude";
+export type ChainMaturityReviewerOutcome =
+  | "supports"
+  | "partial"
+  | "does-not-support"
+  | "unreachable"
+  | "unchecked";
+
+export interface ChainMaturityEvidenceVerification {
+  readonly assertedText: string;
+  readonly accessedAt: string | null;
+  readonly reviewerOutcome: ChainMaturityReviewerOutcome;
+  readonly httpStatus: number | null;
+}
 
 export interface ChainMaturityEvidenceSource {
   readonly title: string;
   readonly url: string;
   /** The source's own publication/update date. Null means the living source publishes no date. */
   readonly documentDate: string | null;
-  readonly accessedAt: string;
+  readonly verification?: ChainMaturityEvidenceVerification;
 }
 
 export interface ChainMaturityGateReview {
@@ -27,19 +40,27 @@ export interface ChainMaturityGateReview {
 export interface ChainMaturityReview {
   readonly chainSlug: string;
   readonly displayName: string;
-  readonly admission: ChainMaturityAdmissionDecision;
   readonly reviewedAt: string;
+  readonly nextReviewAt: string;
   readonly gates: Readonly<Record<ChainMaturityGateId, ChainMaturityGateReview>>;
 }
 
+export interface ResolvedChainMaturityReview extends ChainMaturityReview {
+  readonly admission: ChainMaturityAdmissionDecision;
+  readonly state: "admitted" | "pending" | "failed" | "expired";
+  readonly evaluationClockSec: number;
+}
+
 const REVIEWED_AT = "2026-08-24";
+const VERIFICATION_ACCESSED_AT = "2026-09-21";
+const DAY_SEC = 86_400;
 
 function source(
   title: string,
   url: string,
   documentDate: string | null,
 ): ChainMaturityEvidenceSource {
-  return { title, url, documentDate, accessedAt: REVIEWED_AT };
+  return { title, url, documentDate };
 }
 
 function gate(
@@ -263,6 +284,8 @@ export const CHAIN_MATURITY_ADMISSION_TEST_V1 = {
   schemaVersion: 1,
   reviewedAt: REVIEWED_AT,
   reviewCadence: "quarterly",
+  maxAgeSec: 92 * DAY_SEC,
+  verificationAt: VERIFICATION_ACCESSED_AT,
   gates: {
     continuity:
       "At least 36 months of production history; reset after a material consensus or security-model migration unless ledger, operator, and exit-security continuity are proved.",
@@ -277,7 +300,8 @@ export const CHAIN_MATURITY_ADMISSION_TEST_V1 = {
   } satisfies Readonly<Record<ChainMaturityGateId, string>>,
 } as const;
 
-export const CHAIN_MATURITY_REVIEWS_V1 = [
+const AUTHORED_CHAIN_MATURITY_REVIEWS_V1 = [
+
   {
     chainSlug: "arbitrum",
     displayName: "Arbitrum One",
@@ -616,7 +640,162 @@ export const CHAIN_MATURITY_REVIEWS_V1 = [
       "dependency-exit": gate("fail", "Agglayer withdrawals ended with the sunset, so the holder withdrawal path is unavailable.", SOURCES.polygonZkevmSunset),
     },
   },
-] as const satisfies readonly ChainMaturityReview[];
+] as const;
+
+const VERIFIED_CHAIN_SLUGS = new Set([
+  "arbitrum",
+  "avalanche",
+  "base",
+  "bsc",
+  "ethereum",
+  "hyperliquid",
+  "optimism",
+  "polygon",
+  "solana",
+  "tron",
+  "xrpl",
+  "cardano",
+  "gnosis",
+  "hedera",
+  "rootstock",
+  "sui",
+  "conflux",
+  "klaytn",
+]);
+
+const NON_SUPPORTING_SOURCE_URLS = new Set([
+  "https://blog.arbitrum.io/arbitrum-one-mainnet-beta-is-live/",
+  "https://www.avax.network/about/blog/avalanche-mainnet-launches-bringing-defi-to-the-world",
+  "https://build.avax.network/docs/acps/overview",
+  "https://www.bnbchain.org/en/blog/binance-smart-chain-mainnet-is-live",
+  "https://www.bnbchain.org/en/releases",
+  "https://docs.bnbchain.org/bnb-smart-chain/governance/",
+  "https://hyperliquid.gitbook.io/hyperliquid-docs/hypercore/hyperliquid-l1",
+  "https://hyperliquid.gitbook.io/hyperliquid-docs/hypercore/bridge2",
+  "https://www.optimism.io/blog/optimistic-ethereum-mainnet-soft-launch",
+  "https://posmainnet.status.polygon.technology/history",
+  "https://docs.polygon.technology/pos/get-started/validator/",
+  "https://solana.com/news/solana-mainnet-beta",
+  "https://solana.com/docs/operations/requirements",
+  "https://developers.tron.network/docs/tron-protocol",
+  "https://tronscan.org/#/data/stats2/total-transactions",
+  "https://developers.tron.network/docs/tron-proposal",
+  "https://status.ripple.com/history",
+  "https://status.cardano.org/history",
+  "https://status.gnosischain.com/history",
+  "https://docs.gnosischain.com/about/history/",
+  "https://docs.gnosischain.com/concepts/governance/",
+  "https://status.rootstock.io/history",
+  "https://docs.sui.io/concepts/cryptography/transaction-auth/validators",
+  "https://forum.conflux.fun/t/topic/1234",
+  "https://status.confluxnetwork.org/history",
+  "https://doc.confluxnetwork.org/docs/general/governance/",
+  "https://docs.kaia.io/build/tools/bridge/",
+]);
+
+const PARTIAL_SOURCE_URLS = new Set([
+  "https://status.arbitrum.io/history",
+  "https://status.avax.network/history",
+  "https://build.avax.network/explorer/mainnet/p-chain/validators",
+  "https://docs.base.org/chain/network-information",
+  "https://status.base.org/history",
+  "https://hyperliquid.statuspage.io/history",
+  "https://hyperliquid.gitbook.io/hyperliquid-docs/validators/running-a-validator",
+  "https://status.optimism.io/history",
+  "https://docs.polygon.technology/pos/",
+  "https://status.solana.com/history",
+  "https://solana.com/docs/references/clusters",
+  "https://xrpl.org/docs/concepts/consensus-protocol",
+  "https://docs.gnosischain.com/node/",
+  "https://docs.gnosischain.com/bridges/",
+  "https://status.hedera.com/history",
+  "https://status.sui.io/history",
+  "https://docs.sui.io/concepts/tokenomics/sui-bridging",
+  "https://doc.confluxnetwork.org/docs/overview/",
+  "https://status.kaia.io/history",
+]);
+
+const UNREACHABLE_SOURCE_URLS = new Set([
+  "https://blog.arbitrum.io/arbitrum-one-mainnet-beta-is-live/",
+  "https://www.avax.network/about/blog/avalanche-mainnet-launches-bringing-defi-to-the-world",
+  "https://build.avax.network/docs/acps/overview",
+  "https://docs.bnbchain.org/bnb-smart-chain/governance/",
+  "https://hyperliquid.gitbook.io/hyperliquid-docs/hypercore/bridge2",
+  "https://www.optimism.io/blog/optimistic-ethereum-mainnet-soft-launch",
+  "https://posmainnet.status.polygon.technology/history",
+  "https://docs.polygon.technology/pos/get-started/validator/",
+  "https://solana.com/news/solana-mainnet-beta",
+  "https://solana.com/docs/operations/requirements",
+  "https://developers.tron.network/docs/tron-protocol",
+  "https://tronscan.org/#/data/stats2/total-transactions",
+  "https://developers.tron.network/docs/tron-proposal",
+  "https://status.ripple.com/history",
+  "https://status.cardano.org/history",
+  "https://status.gnosischain.com/history",
+  "https://status.rootstock.io/history",
+  "https://docs.sui.io/concepts/cryptography/transaction-auth/validators",
+  "https://status.confluxnetwork.org/history",
+  "https://doc.confluxnetwork.org/docs/general/governance/",
+]);
+
+function nextReviewAt(reviewedAt: string): string {
+  const reviewedAtSec = Date.parse(`${reviewedAt}T00:00:00.000Z`) / 1000;
+  if (!Number.isInteger(reviewedAtSec)) throw new Error(`Invalid chain-maturity review date ${reviewedAt}`);
+  return new Date((reviewedAtSec + CHAIN_MATURITY_ADMISSION_TEST_V1.maxAgeSec) * 1000)
+    .toISOString()
+    .slice(0, 10);
+}
+
+function materializeReview(
+  authored: (typeof AUTHORED_CHAIN_MATURITY_REVIEWS_V1)[number],
+): ChainMaturityReview {
+  const gates = {} as Record<ChainMaturityGateId, ChainMaturityGateReview>;
+  const reviewed = VERIFIED_CHAIN_SLUGS.has(authored.chainSlug);
+  for (const gateId of CHAIN_MATURITY_GATE_IDS) {
+    const reviewedGate = authored.gates[gateId];
+    const sources: ChainMaturityEvidenceSource[] = reviewedGate.sources.map((evidence) => {
+      const unreachable = UNREACHABLE_SOURCE_URLS.has(evidence.url);
+      const reviewerOutcome: ChainMaturityReviewerOutcome = !reviewed
+        ? "unchecked"
+        : unreachable
+          ? "unreachable"
+          : NON_SUPPORTING_SOURCE_URLS.has(evidence.url)
+            ? "does-not-support"
+            : PARTIAL_SOURCE_URLS.has(evidence.url)
+              ? "partial"
+              : "supports";
+      return {
+        ...evidence,
+        verification: {
+          assertedText: reviewedGate.finding,
+          accessedAt: reviewed ? VERIFICATION_ACCESSED_AT : null,
+          reviewerOutcome,
+          httpStatus: reviewed ? (unreachable ? 404 : 200) : null,
+        },
+      };
+    });
+    const result: ChainMaturityGateResult =
+      reviewedGate.result === "pass" &&
+      sources.some(
+        (source) =>
+          source.verification?.reviewerOutcome === "unreachable" ||
+          source.verification?.reviewerOutcome === "does-not-support",
+      )
+        ? "pending"
+        : reviewedGate.result;
+    gates[gateId] = { ...reviewedGate, result, sources };
+  }
+  return {
+    chainSlug: authored.chainSlug,
+    displayName: authored.displayName,
+    reviewedAt: authored.reviewedAt,
+    nextReviewAt: nextReviewAt(authored.reviewedAt),
+    gates,
+  };
+}
+
+export const CHAIN_MATURITY_REVIEWS_V1 = AUTHORED_CHAIN_MATURITY_REVIEWS_V1.map(materializeReview) satisfies
+  readonly ChainMaturityReview[];
 
 function validateChainMaturityReviews(reviews: readonly ChainMaturityReview[]): void {
   const slugs = new Set<string>();
@@ -625,6 +804,9 @@ function validateChainMaturityReviews(reviews: readonly ChainMaturityReview[]): 
     slugs.add(review.chainSlug);
     if (review.reviewedAt !== CHAIN_MATURITY_ADMISSION_TEST_V1.reviewedAt) {
       throw new Error(`Chain-maturity review date mismatch for ${review.chainSlug}`);
+    }
+    if (review.nextReviewAt !== nextReviewAt(review.reviewedAt)) {
+      throw new Error(`Chain-maturity next-review date mismatch for ${review.chainSlug}`);
     }
     const gateIds = Object.keys(review.gates).sort();
     const expectedGateIds = [...CHAIN_MATURITY_GATE_IDS].sort();
@@ -640,24 +822,73 @@ function validateChainMaturityReviews(reviews: readonly ChainMaturityReview[]): 
         if (!evidence.url.startsWith("https://")) {
           throw new Error(`Non-HTTPS chain-maturity source for ${review.chainSlug}/${gateId}`);
         }
-        if (evidence.documentDate === null && evidence.accessedAt.length === 0) {
-          throw new Error(`Undated chain-maturity source lacks an access date for ${review.chainSlug}/${gateId}`);
+        if (evidence.verification?.assertedText !== reviewedGate.finding) {
+          throw new Error(`Chain-maturity source assertion mismatch for ${review.chainSlug}/${gateId}`);
+        }
+        if (evidence.verification?.reviewerOutcome === undefined) {
+          throw new Error(`Chain-maturity source lacks reviewer outcome for ${review.chainSlug}/${gateId}`);
         }
       }
-    }
-    const passed = CHAIN_MATURITY_GATE_IDS.every((gateId) => review.gates[gateId].result === "pass");
-    if ((review.admission === "admit") !== passed) {
-      throw new Error(`Chain-maturity admission contradicts gate results for ${review.chainSlug}`);
     }
   }
 }
 
 validateChainMaturityReviews(CHAIN_MATURITY_REVIEWS_V1);
 
-export const CHAIN_MATURITY_ADMITTED_CHAIN_SLUGS = CHAIN_MATURITY_REVIEWS_V1
-  .filter((review) => review.admission === "admit")
-  .map((review) => review.chainSlug);
+export const CHAIN_MATURITY_POLICY_DEFAULT_EVALUATION_CLOCK_SEC =
+  Date.parse(`${VERIFICATION_ACCESSED_AT}T00:00:00.000Z`) / 1000;
 
-export function chainMaturityReviewForSlug(chainSlug: string): ChainMaturityReview | null {
-  return CHAIN_MATURITY_REVIEWS_V1.find((review) => review.chainSlug === chainSlug) ?? null;
+export interface ChainMaturityResolution {
+  readonly evaluationClockSec: number;
+  readonly admittedChainSlugs: readonly string[];
+  readonly reviews: readonly ResolvedChainMaturityReview[];
+}
+
+function resolveChainMaturityReviewsAt(
+  evaluationClockSec = CHAIN_MATURITY_POLICY_DEFAULT_EVALUATION_CLOCK_SEC,
+): readonly ResolvedChainMaturityReview[] {
+  if (!Number.isInteger(evaluationClockSec) || evaluationClockSec < 0) {
+    throw new Error("Chain-maturity evaluation clock must be a non-negative integer");
+  }
+  return CHAIN_MATURITY_REVIEWS_V1.map((review) => {
+    const expired = evaluationClockSec >= Date.parse(`${review.nextReviewAt}T00:00:00.000Z`) / 1000;
+    const hasFailure = CHAIN_MATURITY_GATE_IDS.some((gateId) => review.gates[gateId].result === "fail");
+    const hasPending = CHAIN_MATURITY_GATE_IDS.some((gateId) => review.gates[gateId].result === "pending");
+    const state: ResolvedChainMaturityReview["state"] = hasFailure
+      ? "failed"
+      : hasPending
+        ? "pending"
+        : expired
+          ? "expired"
+          : "admitted";
+    return {
+      ...review,
+      admission: state === "admitted" ? "admit" : "exclude",
+      state,
+      evaluationClockSec,
+    };
+  });
+}
+
+export function resolveChainMaturityAdmissionsAt(
+  evaluationClockSec = CHAIN_MATURITY_POLICY_DEFAULT_EVALUATION_CLOCK_SEC,
+): ChainMaturityResolution {
+  const reviews = resolveChainMaturityReviewsAt(evaluationClockSec);
+  return {
+    evaluationClockSec,
+    admittedChainSlugs: reviews
+      .filter((review) => review.admission === "admit")
+      .map((review) => review.chainSlug)
+      .sort(),
+    reviews,
+  };
+}
+
+export const CHAIN_MATURITY_ADMITTED_CHAIN_SLUGS = resolveChainMaturityAdmissionsAt().admittedChainSlugs;
+
+export function chainMaturityReviewForSlug(
+  chainSlug: string,
+  evaluationClockSec = CHAIN_MATURITY_POLICY_DEFAULT_EVALUATION_CLOCK_SEC,
+): ResolvedChainMaturityReview | null {
+  return resolveChainMaturityReviewsAt(evaluationClockSec).find((review) => review.chainSlug === chainSlug) ?? null;
 }

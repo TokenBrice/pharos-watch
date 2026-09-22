@@ -1,11 +1,4 @@
-/**
- * Yield Pipeline — DB Row Mapping & Ranking Helpers
- *
- * Converts raw D1 query results into typed ranking objects for the API.
- * Also handles warning signal deserialization and TVL-weighted median computation.
- *
- * Pure computation counterparts live in ../yield-helpers.ts.
- */
+/** TVL-weighted median helper for the yield evaluation stage. */
 import { weightedMedian } from "@shared/lib/stats";
 
 export function computeTvlWeightedMedianApy(

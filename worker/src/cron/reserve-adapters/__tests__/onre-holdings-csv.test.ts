@@ -42,12 +42,13 @@ describe("parseOnReSchedule", () => {
     expect(schedule.snapshotDateUnixSec).toBeNull();
   });
 
-  it("rejects an ambiguous numeric snapshot date instead of guessing the convention", () => {
-    const schedule = parseOnReSchedule(CSV.replaceAll("14/08/2026", "08/09/2026"));
-    expect(schedule.snapshotDateUnixSec).toBeNull();
-    expect(adaptOnReSchedule(schedule).metadata).toMatchObject({
-      freshnessMode: "unverified",
+  it("accepts reviewed numeric snapshot dates in the first half of the month", () => {
+    const result = adaptOnReSchedule(parseOnReSchedule(CSV.replaceAll("14/08/2026", "05/09/2026")));
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "verified",
+      sourceTimestamp: Math.floor(Date.parse("2026-09-05T00:00:00Z") / 1000),
     });
+    expect(result.warnings?.some((warning) => warning.code === "stale-source-undeterminable")).toBe(false);
   });
 });
 

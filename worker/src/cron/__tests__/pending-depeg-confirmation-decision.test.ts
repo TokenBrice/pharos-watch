@@ -1,3 +1,4 @@
+import { DEPEG_PENDING_EXPIRY_SEC, DEPEG_PENDING_MIN_AGE_SEC } from "@shared/lib/depeg-config";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 import {
@@ -6,10 +7,7 @@ import {
 } from "../../test-helpers/pending-depeg-fixtures";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import {
-  DEPEG_PENDING_EXPIRY_SEC,
-  DEPEG_PENDING_MIN_AGE_SEC,
-} from "../../lib/constants";
+
 import { normalizePendingDepegRow } from "../../lib/depeg-pending";
 import { deriveDepegSignal } from "../../lib/depeg-signals";
 import type {

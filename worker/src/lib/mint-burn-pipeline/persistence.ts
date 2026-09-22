@@ -161,29 +161,6 @@ export async function recalcAffectedHours(
   await batchExecute(db, interleaved, { signal: options.signal });
 }
 
-export async function rebuildHourlyForStablecoinIds(
-  db: D1Database,
-  stablecoinIds: Iterable<string>,
-  options: MintBurnPersistenceOptions = {},
-): Promise<void> {
-  throwIfAborted(options.signal);
-  const ids = [...new Set(stablecoinIds)].sort();
-  if (ids.length === 0) return;
-
-  const deleteStmt = db.prepare("DELETE FROM mint_burn_hourly WHERE stablecoin_id = ?");
-  await batchExecute(
-    db,
-    ids.map((id) => deleteStmt.bind(id)),
-    { signal: options.signal },
-  );
-
-  const rebuildStmt = db.prepare(hourlyAggSql("stablecoin_id = ?"));
-  await batchExecute(
-    db,
-    ids.map((id) => rebuildStmt.bind(id)),
-    { signal: options.signal },
-  );
-}
 
 export async function persistMintBurnRows(
   db: D1Database,

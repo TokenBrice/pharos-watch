@@ -1,11 +1,10 @@
 import { handleStablecoinHistoryRequest } from "../lib/api-history";
-import { CACHE_PROFILES } from "../lib/constants";
+import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { normalizeDexLiquidityEvidence, type DexLiquidityRow } from "../lib/dex-liquidity";
 import { safeJsonParse } from "../lib/api-cache-read";
 import {
+  DexExitRouteObservationsSchema,
   ExitRouteObservationCoverageSchema,
-  ExitRouteObservationSchema,
-  MAX_DEX_EXIT_ROUTE_OBSERVATIONS,
 } from "@shared/types/market";
 import { STABLECOIN_HISTORY_QUERY_CONTRACTS } from "@shared/lib/api-query-history";
 
@@ -26,9 +25,7 @@ function parseRouteSummary(json: string | null) {
   const raw = safeJsonParse<unknown>(json, null, "dex-liquidity-history:exit_route_summary_json");
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
   const summary = raw as Record<string, unknown>;
-  const observations = ExitRouteObservationSchema.array()
-    .max(MAX_DEX_EXIT_ROUTE_OBSERVATIONS)
-    .safeParse(summary.observations);
+  const observations = DexExitRouteObservationsSchema.safeParse(summary.observations);
   const coverage = ExitRouteObservationCoverageSchema.safeParse(summary.coverage);
   return {
     ...(observations.success ? { exitRouteObservations: observations.data } : {}),

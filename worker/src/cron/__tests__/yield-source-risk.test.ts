@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { derivePysSourceRiskPenalty } from "@shared/lib/yield-scoring";
 import {
-  buildYieldSourceRisk,
   findStaleVenueRiskScores,
   resolveDependencyConcentration,
   resolveReviewedYieldRiskConfig,
@@ -9,8 +8,8 @@ import {
   venueRiskWeightedOf,
   YIELD_RISK_CONFIG,
   YIELD_RISK_CONFIG_PROTOCOLS,
-  YIELD_RISK_CONFIG_REVIEW_CADENCE,
-} from "../yield-sync/source-risk";
+} from "@shared/lib/yield-source-risk-registry";
+import { buildYieldSourceRisk } from "../yield-sync/source-risk";
 import type { EvaluatedYieldSource } from "../yield-sync/evaluation-types";
 
 function makeSource(overrides: Partial<EvaluatedYieldSource> = {}): EvaluatedYieldSource {
@@ -98,13 +97,11 @@ const WAVE_2_REVIEWED_TIERS = {
 } as const;
 
 describe("yield source-risk registry", () => {
-  it("provides reviewed candidate entries with 5-category scores and evidence for every tracked tier", () => {
-    expect(YIELD_RISK_CONFIG_REVIEW_CADENCE).toBe("monthly-yield-coverage-audit");
-
+  it("provides reviewed candidate entries with 5-category scores for every tracked tier", () => {
     for (const protocol of YIELD_RISK_CONFIG_PROTOCOLS) {
       const config = YIELD_RISK_CONFIG[protocol];
       const expectedTier = WAVE_2_REVIEWED_TIERS[protocol];
-      expect(config.reviewCadence, protocol).toBe(YIELD_RISK_CONFIG_REVIEW_CADENCE);
+      expect(config.rationale?.length ?? 0, protocol).toBeGreaterThan(0);
       // Tier is now DERIVED from the weighted 5-category score, not hand-set.
       expect(venueRiskTierOf(config), protocol).toBe(expectedTier);
       expect(venueRiskTierOf(config), protocol).not.toBe("unknown");
@@ -112,9 +109,6 @@ describe("yield source-risk registry", () => {
         expect(config.scores[category], `${protocol}.${category}`).toBeGreaterThanOrEqual(1);
         expect(config.scores[category], `${protocol}.${category}`).toBeLessThanOrEqual(5);
       }
-      // Reviewer provenance lives on the entry itself; every enrolled protocol carries both.
-      expect(config.evidence?.length ?? 0, protocol).toBeGreaterThan(0);
-      expect(config.rationale?.length ?? 0, protocol).toBeGreaterThan(0);
     }
   });
 

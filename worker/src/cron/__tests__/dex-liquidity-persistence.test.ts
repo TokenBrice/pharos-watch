@@ -10,7 +10,7 @@ vi.mock("../../lib/db", async (importOriginal) => {
 });
 
 import { ACTIVE_IDS, ACTIVE_STABLECOINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/liquidity-score";
+import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { batchExecute, executeAtomicBatch } from "../../lib/db";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { initMetrics } from "../dex-liquidity/pool-helpers";
@@ -21,7 +21,11 @@ import {
   pruneOldDexLiquidityGenerations,
   writeHistoricalSnapshots,
 } from "../dex-liquidity/persistence";
-import { makeFullScoreResult } from "./dex-liquidity-persistence.test-support";
+import {
+  makeDexRouteObservation,
+  makeDexRouteObservationCoverage,
+  makeFullScoreResult,
+} from "./dex-liquidity-persistence.test-support";
 import type { DexDeploymentCensusRow } from "../dex-liquidity/deployment-census-coverage";
 import type { FullScoreResult } from "../dex-liquidity/types";
 
@@ -50,6 +54,8 @@ function makeDb(options: {
   currentGenerationRows?: number;
   newerCurrentRows?: number;
   deploymentOutcomeRows?: DexDeploymentCensusRow[];
+  currentRouteRows?: Array<{ stablecoin_id: string; score_components_json: string | null }>;
+  orphanIds?: string[];
 } = {}): DexPersistenceMockDb {
   const history: Array<{ sql: string; binds: unknown[] }> = [];
 
@@ -60,6 +66,13 @@ function makeDb(options: {
       bind: (...args: unknown[]) => createStatement(sql, args),
       all: async <T>() => {
         history.push({ sql, binds: [...boundValues] });
+        if (sql.includes("SELECT stablecoin_id, score_components_json")) {
+          return {
+            results: (options.currentRouteRows ?? []) as T[],
+            success: true,
+            meta: {},
+          };
+        }
         if (sql.includes("FROM dex_liquidity_history")) {
           if (options.historyError != null) {
             throw (options.historyError instanceof Error ? options.historyError : new Error(String(options.historyError)));
@@ -73,6 +86,13 @@ function makeDb(options: {
         if (sql.includes("FROM dex_deployment_outcomes")) {
           return {
             results: (options.deploymentOutcomeRows ?? []) as T[],
+            success: true,
+            meta: {},
+          };
+        }
+        if (sql.includes("SELECT DISTINCT stablecoin_id")) {
+          return {
+            results: (options.orphanIds ?? []).map((stablecoin_id) => ({ stablecoin_id })) as T[],
             success: true,
             meta: {},
           };
@@ -579,6 +599,103 @@ describe("dex-liquidity persistence", () => {
       inactiveMetricRowsSkipped: 1,
       inactiveMetricIdsSkipped: [INACTIVE_TRACKED_STABLECOIN.id],
     });
+  });
+
+  it("publishes the generation when the orphan-cleanup tail flush fails", async () => {
+    const metrics = initMetrics("usdt-tether", "USDT");
+    vi.mocked(batchExecute).mockImplementation(async (_db, statements) => {
+      if ((statements as PreparedStatementWithMeta[]).some((statement) =>
+        statement.sql.includes("DELETE FROM dex_")
+      )) {
+        throw new Error("orphan cleanup unavailable");
+      }
+      return statements.length;
+    });
+
+    const result = await persistScores(
+      makeDb({ orphanIds: ["retired-asset"] }),
+      new Map([["usdt-tether", metrics]]),
+      new Map([["usdt-tether", makeFullScoreResult()]]),
+      {
+        totalTvl: 1,
+        totalVol24h: 1,
+        totalVol7d: 1,
+        totalVol7dMeasured: true,
+        poolCount: 1,
+        chainCount: 1,
+        protocolTvl: {},
+        chainTvl: {},
+      },
+      1_700_000_000,
+    );
+
+    expect(result.orphanCleanupFailed).toBe(true);
+    expect(result.currentGenerationRows).toBe(ACTIVE_STABLECOINS.length + 1);
+  });
+
+  it("uses a held route set for both current and daily history rows", async () => {
+    const nowSec = 1_800_000_000;
+    const coverage = makeDexRouteObservationCoverage();
+    const previousObservation = makeDexRouteObservation(
+      "dex:usdt:curve:deep",
+      24_000_000,
+      nowSec - 60,
+      {
+        chain: "ethereum",
+        commonModeKeys: ["pool:dex:usdt:curve:deep"],
+      },
+    );
+    const candidate = Object.assign(makeFullScoreResult(), {
+      exitRouteObservations: [
+        makeDexRouteObservation("dex:usdt:curve:thin", 1_000, nowSec, {
+          chain: "ethereum",
+          commonModeKeys: ["pool:dex:usdt:curve:thin"],
+        }),
+      ],
+      exitRouteObservationCoverage: coverage,
+    });
+    const scoreMap = new Map([["usdt-tether", candidate]]);
+    const metrics = initMetrics("usdt-tether", "USDT");
+    const db = makeDb({
+      currentRouteRows: [{
+        stablecoin_id: "usdt-tether",
+        score_components_json: JSON.stringify({
+          exitRouteObservations: [previousObservation],
+          exitRouteObservationCoverage: coverage,
+        }),
+      }],
+    });
+
+    await persistScores(
+      db,
+      new Map([["usdt-tether", metrics]]),
+      scoreMap,
+      {
+        totalTvl: 1,
+        totalVol24h: 1,
+        totalVol7d: 1,
+        totalVol7dMeasured: true,
+        poolCount: 1,
+        chainCount: 1,
+        protocolTvl: {},
+        chainTvl: {},
+      },
+      nowSec,
+    );
+    await writeHistoricalSnapshots(db, scoreMap, undefined, nowSec);
+
+    const currentRow = extractDexLiquidityRunRows(
+      getPreparedBatchStatements("INSERT OR REPLACE INTO dex_liquidity_run_rows"),
+    ).find((row) => row[1] === "usdt-tether");
+    const currentRoute = JSON.parse(String(currentRow?.[20])).exitRouteObservations[0].routeId;
+    const historyRoute = vi.mocked(executeAtomicBatch).mock.calls
+      .flatMap(([, statements]) => statements as PreparedStatementWithMeta[])
+      .filter((statement) => statement.sql.includes("INSERT INTO dex_liquidity_history"))
+      .flatMap((statement) => statement.boundValues)
+      .find((value) => typeof value === "string" && value.includes(previousObservation.routeId));
+
+    expect(currentRoute).toBe(previousObservation.routeId);
+    expect(JSON.parse(String(historyRoute)).observations[0].routeId).toBe(previousObservation.routeId);
   });
 
   it("does not publish freshness when the signal aborts after score batch writes", async () => {

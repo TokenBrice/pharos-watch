@@ -1,6 +1,6 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_IDS, ACTIVE_STABLECOINS, TRACKED_IDS } from "@shared/lib/stablecoins/registry";
-import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/liquidity-score";
+import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import type { ContractDeployment } from "@shared/types/core";
@@ -818,6 +818,7 @@ export async function persistScores(
               publishedAtSec: nowSec,
             }
           : null;
+      if (heldRouteSet !== null) scoreResults.set(id, persistedScoreResult);
       if (heldRouteSet !== null) {
         logWorkerEvent({
           scope: "lib",
@@ -977,12 +978,12 @@ export async function persistScores(
           );
         }
       }
+      await flushPendingCleanupStatements();
     } catch (err) {
       rethrowIfAborted(err, signal);
       orphanCleanupFailed = true;
       logWorkerEventArgs("handler", "warn", "[dex-liquidity] Failed to check for orphaned rows:", err);
     }
-    await flushPendingCleanupStatements();
 
     throwIfAborted(signal);
     const coverage = await loadCandidateGenerationCoverage(db, generationId, signal);

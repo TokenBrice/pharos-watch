@@ -74,6 +74,7 @@ Use /help for commands and /presets for preset watchlists.`;
 // subscription-first order the message has always used. Rows (syntax + one
 // line) come from the shared command reference; this file owns only order,
 // framing, and the preset/group footnotes.
+type HelpCommand = Exclude<keyof typeof TELEGRAM_COMMAND_REFERENCE, "start" | "help">;
 const HELP_COMMAND_SEQUENCE = [
   "subscribe",
   "presets",
@@ -98,9 +99,13 @@ const HELP_COMMAND_SEQUENCE = [
   "cancel",
   "export",
   "import",
-] as const satisfies readonly (keyof typeof TELEGRAM_COMMAND_REFERENCE)[];
+] as const satisfies readonly HelpCommand[];
 
-const HELP_COMMAND_ROWS = HELP_COMMAND_SEQUENCE.flatMap((command) =>
+const HELP_COMMAND_ROWS = (
+  HELP_COMMAND_SEQUENCE satisfies readonly HelpCommand[] & (
+    Exclude<HelpCommand, (typeof HELP_COMMAND_SEQUENCE)[number]> extends never ? unknown : never
+  )
+).flatMap((command) =>
   TELEGRAM_COMMAND_REFERENCE[command].variants.map(
     (variant) => `<code>${escapeHtml(variant.syntax)}</code>\n${escapeHtml(variant.help)}`,
   ),

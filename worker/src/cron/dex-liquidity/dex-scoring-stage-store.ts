@@ -1,9 +1,8 @@
 import { ACTIVE_IDS, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { bucketUnixMillisecondsToUtcDay } from "@shared/lib/time-buckets";
-import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
-import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
+import { throwIfAborted } from "../../lib/abort";
 import { batchExecute, executeAtomicBatch } from "../../lib/db";
-import { toErrorMessage } from "@shared/lib/error-utils";
+import { runCappedPruneFamily } from "../shared/capped-delete";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 
 /** Limit the lifetime of prepared statements carrying serialized price/depth data. */
@@ -109,21 +108,13 @@ export async function pruneExpiredDexPriceStages(
   nowSec: number,
   signal?: AbortSignal,
 ): Promise<DexPriceStageRetentionResult> {
-  const startedAtMs = Date.now();
   const cutoff = Math.max(0, Math.floor(nowSec) - DEX_PRICE_STAGE_RETENTION_SEC);
-  const result: DexPriceStageRetentionResult = {
-    cutoff,
-    deletedRows: 0,
-    oldestRemainingAt: null,
-    durationMs: 0,
-    error: null,
-  };
-  try {
-    throwIfAborted(signal);
-    const deleted = await runWithOverloadRetry(
-      () => db
-        .prepare(
-          `/* pharos:dex-scoring:price-stage-retention */
+  const family = await runCappedPruneFamily({
+    db,
+    signal,
+    statements: {
+      stages: {
+        sql: `/* pharos:dex-scoring:price-stage-retention */
            DELETE FROM dex_price_run_rows
            WHERE generation_id IN (
              SELECT candidate.generation_id
@@ -147,31 +138,22 @@ export async function pruneExpiredDexPriceStages(
              ORDER BY MIN(candidate.updated_at), candidate.generation_id
              LIMIT ?
            )`,
-        )
-        .bind(
-          protectedGenerationId,
-          cutoff,
-          DEX_PRICE_STAGE_RETENTION_GENERATIONS_PER_RUN,
-        )
-        .run(),
-      3,
-      signal,
-    );
-    result.deletedRows = Number(deleted.meta?.changes ?? 0);
-    const oldest = await runWithOverloadRetry(
-      () => db
-        .prepare("SELECT MIN(updated_at) AS oldest_remaining_at FROM dex_price_run_rows")
-        .first<{ oldest_remaining_at: number | null }>(),
-      3,
-      signal,
-    );
-    result.oldestRemainingAt = oldest?.oldest_remaining_at ?? null;
-  } catch (error) {
-    rethrowIfAborted(error, signal);
-    result.error = toErrorMessage(error).slice(0, 500);
-  }
-  result.durationMs = Math.max(0, Date.now() - startedAtMs);
-  return result;
+        bindsForLimit: (limit) => [protectedGenerationId, cutoff, limit],
+        batchLimit: DEX_PRICE_STAGE_RETENTION_GENERATIONS_PER_RUN,
+        runLimit: DEX_PRICE_STAGE_RETENTION_GENERATIONS_PER_RUN,
+      },
+    },
+    probes: {
+      oldest: { sql: "SELECT MIN(updated_at) AS oldest_remaining_at FROM dex_price_run_rows" },
+    },
+  });
+  return {
+    cutoff,
+    deletedRows: family.changedRows,
+    oldestRemainingAt: family.probes.oldest.oldest_remaining_at ?? null,
+    durationMs: family.durationMs,
+    error: family.error,
+  };
 }
 
 export async function flushScoringStatements(

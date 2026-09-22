@@ -46,8 +46,12 @@ export default function StatusClient({ faqItems }: { faqItems: readonly FaqItem[
     refetch: refetchProbes,
     dataUpdatedAt: probesUpdatedAt,
   } = usePublicEndpointProbes();
-  const { data: runwayHistoryData } = usePublicStatusHistory(RUNWAY_WINDOW);
-  const { data: historyData, isLoading: historyLoading } = usePublicStatusHistory(historyWindow);
+  const { data: runwayHistoryData, error: runwayHistoryError } = usePublicStatusHistory(RUNWAY_WINDOW);
+  const {
+    data: historyData,
+    isLoading: historyLoading,
+    error: historyError,
+  } = usePublicStatusHistory(historyWindow);
 
   const handleRefresh = () => {
     void refetchHealth();
@@ -141,6 +145,7 @@ export default function StatusClient({ faqItems }: { faqItems: readonly FaqItem[
           transitions={runwayHistoryData?.transitions ?? []}
           currentStatus={runwayHistoryData?.currentStatus ?? healthData.status}
           lastChangedAt={runwayHistoryData?.lastChangedAt ?? null}
+          historyUnavailable={runwayHistoryError != null}
         />
 
         <NoticeRail notices={notices} />
@@ -164,6 +169,7 @@ export default function StatusClient({ faqItems }: { faqItems: readonly FaqItem[
           historyData={historyData}
           historyWindow={historyWindow}
           historyLoading={historyLoading}
+          historyError={historyError}
           onHistoryWindowChange={setHistoryWindow}
         />
       </div>

@@ -13,7 +13,6 @@ import type {
   DdrRow,
 } from "@shared/types/depeg-resolver";
 import {
-  DDR_PUBLICATION_SNAPSHOT_KIND,
   type DdrCanonicalIncident,
   type DdrFirstPublicationMembership,
   type DdrPublicationManifest,
@@ -29,7 +28,7 @@ import {
   publicPredictionIdOf,
   sealedByIncident,
 } from "./storage-adapters";
-import { fallbackIncidentForEvent, formatDdrrFailure, publicationSnapshotToken } from "./utils";
+import { formatDdrrFailure, publicationSnapshotToken } from "./utils";
 
 export async function loadSealedAndPublicationState(input: {
   stores: DdrV2StoreContracts;
@@ -44,7 +43,6 @@ export async function loadSealedAndPublicationState(input: {
   }
   const sealed = await input.stores.loadSealedPublicPredictions(input.db, {
     incidentKeys: input.incidentKeys,
-    includeUnpublished: true,
   });
   const firstPublication = await input.stores.loadFirstPublicationMembership(input.db, {
     incidentKeys: input.incidentKeys,
@@ -73,8 +71,8 @@ export async function sealEligibleLocks(input: {
   for (const row of input.rows) {
     const sourceEvent = input.activeEventById.get(row.eventId);
     if (!sourceEvent) continue;
-    const incident = input.incidentsByEventId.get(row.eventId) ?? fallbackIncidentForEvent(sourceEvent);
-    if (!incident.policyUniverseIncluded) continue;
+    const incident = input.incidentsByEventId.get(row.eventId);
+    if (!incident?.policyUniverseIncluded) continue;
 
     if (sealedByKey.has(incident.incidentKey)) continue;
 
@@ -188,7 +186,6 @@ export async function writePublicationBeforeCache(input: {
   firstPublication: DdrFirstPublicationMembership[];
   error: string | null;
 }> {
-  const activeIncidentKeys = [...new Set([...input.incidentsByEventId.values()].map((incident) => incident.incidentKey))];
   const snapshotToken = publicationSnapshotToken(input.ddrRunId, input.nowSec);
   const existingFirstPublication = firstPublicationByPredictionId(input.firstPublication);
   const retryPendingSealed = input.sealed.filter((sealed) => !existingFirstPublication.has(publicPredictionIdOf(sealed)));
@@ -200,7 +197,6 @@ export async function writePublicationBeforeCache(input: {
       snapshotToken,
       snapshotGeneration: DDR_SNAPSHOT_CACHE_GENERATION,
       publishedAt: input.nowSec,
-      firstPublished: true,
     })),
   ];
   const basePayload = buildV2PublicationBasePayload({
@@ -218,13 +214,10 @@ export async function writePublicationBeforeCache(input: {
   );
   try {
     const manifest = await input.stores.writePublicationManifest(input.db, {
-      runId: input.ddrRunId,
       snapshotToken,
       publishedAt: input.nowSec,
-      snapshotKind: DDR_PUBLICATION_SNAPSHOT_KIND,
       snapshotGeneration: DDR_SNAPSHOT_CACHE_GENERATION,
       basePayload,
-      activeIncidentKeys,
       publicPredictionIds,
       publicPredictionRowHashes,
     });

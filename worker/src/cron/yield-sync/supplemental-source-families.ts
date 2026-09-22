@@ -1,10 +1,12 @@
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { PYS_APY_SANITY_MAX } from "@shared/lib/yield-scoring";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { mapWithConcurrency } from "../../lib/concurrency";
 import type { VaultsFyiRuntimeConfig } from "../../lib/env";
 import { normalizeTokenAddress } from "../dex-liquidity/token-resolution";
 import {
   COMPOUND_V3_COMETS,
+  createOptionalRpcFamilyTelemetry,
   fetchAaveV3SupplyRates,
   fetchBeefySources,
   fetchCompoundV3SupplyRates,
@@ -25,20 +27,10 @@ import type { SupplementalSourceFamilyKey } from "./supplemental-source-family-k
 import { resolveYieldSourceKeyRoute } from "./yield-source-key-routing";
 
 const AAVE_SUPPORTED_CHAINS = new Set(["ethereum", "arbitrum", "base"]);
+const AAVE_TARGETS_PER_RUN = 6;
+const AAVE_TARGET_ROTATION_INTERVAL_SEC = 4 * 60 * 60;
+const AAVE_ORDINARY_MISS_RATIO_LIMIT = 0.5;
 
-const EMPTY_OPTIONAL_RPC_TELEMETRY: OptionalRpcFamilyTelemetry = {
-  targetCount: 0,
-  attemptedCount: 0,
-  resolvedTargetCount: 0,
-  emittedCount: 0,
-  missingTargetCount: 0,
-  missingByChain: {},
-  missingReasonCounts: {},
-  missingTargets: [],
-  missingTargetsTruncated: false,
-  budgetExhausted: false,
-  endpointStrategy: "alternating-fallback-primary",
-};
 
 interface SupplementalSourceFamilyContext {
   db?: D1Database;
@@ -89,7 +81,7 @@ export interface SupplementalSourceAccounting {
     concurrencyLimit: number;
   };
   malformedSourceDrops: SupplementalDropBucket;
-  sizeGatedDrops: SupplementalDropBucket;
+  apyEnvelopeDrops: SupplementalDropBucket;
 }
 
 export interface SupplementalSourceFamilySummary {
@@ -159,8 +151,7 @@ function shouldPublishVaultsFyiFamilyCache(
     return telemetry.skipReason === "credit-cap" && candidateCount > 0;
   }
   return telemetry.skipReason === "disabled"
-    || telemetry.skipReason === "no-key"
-    || telemetry.skipReason === "invalid-config";
+    || telemetry.skipReason === "no-key";
 }
 
 export function getSupplementalCandidateFamily(
@@ -262,12 +253,21 @@ function recordDropExample(
 function filterMalformedSupplementalCandidates(
   result: SupplementalSourceFamilyResult,
   malformedSourceDrops: SupplementalDropBucket,
+  apyEnvelopeDrops: SupplementalDropBucket,
 ): SupplementalSourceFamilyResult {
   const candidates: ResolvedYieldCandidate[] = [];
   for (const candidate of result.candidates) {
     if (!isStructurallyValidSupplementalCandidate(candidate)) {
       recordDropExample(
         malformedSourceDrops,
+        result.key,
+        getSupplementalCandidateSourceKey(candidate),
+      );
+      continue;
+    }
+    if (candidate.yield.currentApy > PYS_APY_SANITY_MAX) {
+      recordDropExample(
+        apyEnvelopeDrops,
         result.key,
         getSupplementalCandidateSourceKey(candidate),
       );
@@ -297,11 +297,8 @@ function buildOptionalRpcSummary(telemetry: OptionalRpcFamilyTelemetry): Supplem
 }
 
 /**
- * SRC-SUPP-2: the RPC families fetch target-by-target, so a run where some
- * targets failed resolves with a partial list and an `ok` status. Publishing it
- * would replace the previous full snapshot with the partial one, so a fetch
- * that attempted targets and missed any of them is degraded exactly like an
- * HTTP family that ended early, and the writer retains instead (B1).
+ * Compound probes a fixed, small inventory. Any missing target makes that
+ * family incomplete, so the writer retains its prior snapshot.
  */
 function rpcFamilyFetchEndedDegraded(
   status: SupplementalSourceFamilyStatus,
@@ -309,6 +306,23 @@ function rpcFamilyFetchEndedDegraded(
 ): boolean {
   return status === "failed"
     || (telemetry != null && telemetry.attemptedCount > 0 && telemetry.missingTargetCount > 0);
+}
+
+/**
+ * Aave probes a bounded rotating target window. An ordinary isolated miss can
+ * replace the family cache when a strict majority of probes resolved, while
+ * budget exhaustion, a wholly unresolved RPC run, or a miss ratio of 50% or
+ * more retains the previous snapshot.
+ */
+function aaveFamilyFetchEndedDegraded(
+  status: SupplementalSourceFamilyStatus,
+  telemetry: OptionalRpcFamilyTelemetry | undefined,
+): boolean {
+  if (status === "failed" || !telemetry) return status === "failed";
+  if (telemetry.budgetExhausted) return true;
+  if (telemetry.targetCount > 0 && telemetry.resolvedTargetCount === 0) return true;
+  return telemetry.targetCount > 0
+    && telemetry.missingTargetCount / telemetry.targetCount >= AAVE_ORDINARY_MISS_RATIO_LIMIT;
 }
 
 function buildSourceFamilySummaries(
@@ -354,7 +368,7 @@ function getTrackedContractAddress(stablecoinId: string, chain: string): string 
   return contract?.address ?? null;
 }
 
-function buildAaveTargets(): AaveV3RateTarget[] {
+function buildAaveTargets(startSec: number): AaveV3RateTarget[] {
   const targets: AaveV3RateTarget[] = [];
 
   for (const meta of ACTIVE_STABLECOINS) {
@@ -375,7 +389,13 @@ function buildAaveTargets(): AaveV3RateTarget[] {
     }
   }
 
-  return targets;
+  if (targets.length <= AAVE_TARGETS_PER_RUN) return targets;
+  const rotation = Math.floor(startSec / AAVE_TARGET_ROTATION_INTERVAL_SEC);
+  const start = (rotation * AAVE_TARGETS_PER_RUN) % targets.length;
+  return Array.from(
+    { length: AAVE_TARGETS_PER_RUN },
+    (_, index) => targets[(start + index) % targets.length]!,
+  );
 }
 
 function buildAaveSourceKey(stablecoinId: string, chain: string, assetAddress: string | null): string {
@@ -385,71 +405,55 @@ function buildAaveSourceKey(stablecoinId: string, chain: string, assetAddress: s
     : `aave-v3-onchain:${chain}:${stablecoinId}`;
 }
 
-async function runMorphoFamily(
-  context: SupplementalSourceFamilyContext,
-): Promise<SupplementalSourceFamilyResult> {
-  const { value, status } = await runOptionalSupplementalFamily(
-    "Morpho supplemental family",
-    context.signal,
-    () => fetchMorphoVaultSources(context.signal),
-    { candidates: [], degraded: false },
-  );
-  return {
+interface SimpleSupplementalFamily {
+  key: "morpho" | "pendle" | "yearnKong" | "beefy" | "roycoDawn";
+  label: string;
+  fetch: (signal?: AbortSignal) => Promise<{
+    candidates: ResolvedYieldCandidate[];
+    degraded: boolean;
+  }>;
+}
+
+const SIMPLE_SUPPLEMENTAL_FAMILIES: Record<SimpleSupplementalFamily["key"], SimpleSupplementalFamily> = {
+  morpho: {
     key: "morpho",
-    candidates: value.candidates,
-    sourceFamilyCount: value.candidates.length,
-    status,
-    degraded: status === "failed" || value.degraded,
-  };
-}
-
-async function runPendleFamily(
-  context: SupplementalSourceFamilyContext,
-): Promise<SupplementalSourceFamilyResult> {
-  const { value, status } = await runOptionalSupplementalFamily(
-    "Pendle supplemental family",
-    context.signal,
-    () => fetchPendleMarketSources(context.signal),
-    { candidates: [], degraded: false },
-  );
-  return {
+    label: "Morpho supplemental family",
+    fetch: fetchMorphoVaultSources,
+  },
+  pendle: {
     key: "pendle",
-    candidates: value.candidates,
-    sourceFamilyCount: value.candidates.length,
-    status,
-    degraded: status === "failed" || value.degraded,
-  };
-}
-
-async function runYearnKongFamily(
-  context: SupplementalSourceFamilyContext,
-): Promise<SupplementalSourceFamilyResult> {
-  const { value, status } = await runOptionalSupplementalFamily(
-    "Yearn Kong supplemental family",
-    context.signal,
-    () => fetchYearnKongSources(context.signal),
-    { candidates: [], degraded: false },
-  );
-  return {
+    label: "Pendle supplemental family",
+    fetch: fetchPendleMarketSources,
+  },
+  yearnKong: {
     key: "yearnKong",
-    candidates: value.candidates,
-    sourceFamilyCount: value.candidates.length,
-    status,
-    degraded: status === "failed" || value.degraded,
-  };
-}
+    label: "Yearn Kong supplemental family",
+    fetch: fetchYearnKongSources,
+  },
+  beefy: {
+    key: "beefy",
+    label: "Beefy supplemental family",
+    fetch: fetchBeefySources,
+  },
+  roycoDawn: {
+    key: "roycoDawn",
+    label: "Royco Dawn supplemental family",
+    fetch: fetchRoycoDawnSources,
+  },
+};
 
-async function runBeefyFamily(
+async function runSimpleSupplementalFamily(
   context: SupplementalSourceFamilyContext,
+  family: SimpleSupplementalFamily,
 ): Promise<SupplementalSourceFamilyResult> {
   const { value, status } = await runOptionalSupplementalFamily(
-    "Beefy supplemental family",
+    family.label,
     context.signal,
-    () => fetchBeefySources(context.signal),
+    () => family.fetch(context.signal),
     { candidates: [], degraded: false },
   );
   return {
-    key: "beefy",
+    key: family.key,
     candidates: value.candidates,
     sourceFamilyCount: value.candidates.length,
     status,
@@ -495,7 +499,7 @@ async function runCompoundFamily(
     () => fetchCompoundV3SupplyRates([...COMPOUND_V3_COMETS], context.signal, context.chainRpcs),
     {
       results: [],
-      telemetry: EMPTY_OPTIONAL_RPC_TELEMETRY,
+      telemetry: createOptionalRpcFamilyTelemetry(0),
     },
   );
   const { results, telemetry } = value;
@@ -523,7 +527,7 @@ async function runCompoundFamily(
 async function runAaveFamily(
   context: SupplementalSourceFamilyContext,
 ): Promise<SupplementalSourceFamilyResult> {
-  const targets = buildAaveTargets();
+  const targets = buildAaveTargets(context.startSec);
   if (targets.length === 0) {
     return {
       key: "aaveV3",
@@ -531,7 +535,7 @@ async function runAaveFamily(
       sourceFamilyCount: 0,
       status: "ok",
       degraded: false,
-      telemetry: EMPTY_OPTIONAL_RPC_TELEMETRY,
+      telemetry: createOptionalRpcFamilyTelemetry(0),
     };
   }
 
@@ -541,7 +545,7 @@ async function runAaveFamily(
     () => fetchAaveV3SupplyRates(targets, context.signal, context.chainRpcs),
     {
       results: [],
-      telemetry: EMPTY_OPTIONAL_RPC_TELEMETRY,
+      telemetry: createOptionalRpcFamilyTelemetry(0),
     },
   );
   const { results, telemetry } = value;
@@ -576,41 +580,26 @@ async function runAaveFamily(
     candidates,
     sourceFamilyCount: results.length,
     status,
-    degraded: rpcFamilyFetchEndedDegraded(status, telemetry),
+    degraded: aaveFamilyFetchEndedDegraded(status, telemetry),
     telemetry,
   };
 }
 
-async function runRoycoDawnFamily(
-  context: SupplementalSourceFamilyContext,
-): Promise<SupplementalSourceFamilyResult> {
-  const { value, status } = await runOptionalSupplementalFamily(
-    "Royco Dawn supplemental family",
-    context.signal,
-    () => fetchRoycoDawnSources(context.signal),
-    { candidates: [], degraded: false },
-  );
-  return {
-    key: "roycoDawn",
-    candidates: value.candidates,
-    sourceFamilyCount: value.candidates.length,
-    status,
-    // SRC-SUPP-2: a pagination failure returns the pages fetched so far, so the
-    // early-end flag has to retain the previous full snapshot like the RPC
-    // families' partial telemetry.
-    degraded: status === "failed" || value.degraded,
-  };
-}
 
 const SUPPLEMENTAL_SOURCE_FAMILY_REGISTRY = [
-  runMorphoFamily,
-  runPendleFamily,
-  runYearnKongFamily,
-  runBeefyFamily,
+  (context: SupplementalSourceFamilyContext) =>
+    runSimpleSupplementalFamily(context, SIMPLE_SUPPLEMENTAL_FAMILIES.morpho),
+  (context: SupplementalSourceFamilyContext) =>
+    runSimpleSupplementalFamily(context, SIMPLE_SUPPLEMENTAL_FAMILIES.pendle),
+  (context: SupplementalSourceFamilyContext) =>
+    runSimpleSupplementalFamily(context, SIMPLE_SUPPLEMENTAL_FAMILIES.yearnKong),
+  (context: SupplementalSourceFamilyContext) =>
+    runSimpleSupplementalFamily(context, SIMPLE_SUPPLEMENTAL_FAMILIES.beefy),
   runVaultsFyiFamily,
   runCompoundFamily,
   runAaveFamily,
-  runRoycoDawnFamily,
+  (context: SupplementalSourceFamilyContext) =>
+    runSimpleSupplementalFamily(context, SIMPLE_SUPPLEMENTAL_FAMILIES.roycoDawn),
 ] as const;
 
 function runSupplementalFamiliesWithConcurrency(
@@ -639,8 +628,9 @@ export async function loadSupplementalSourceFamilies(
 }> {
   const rawFamilyResults = await runSupplementalFamiliesWithConcurrency(context);
   const malformedSourceDrops = buildDropBucket();
+  const apyEnvelopeDrops = buildDropBucket();
   const familyResults = rawFamilyResults.map((result) =>
-    filterMalformedSupplementalCandidates(result, malformedSourceDrops),
+    filterMalformedSupplementalCandidates(result, malformedSourceDrops, apyEnvelopeDrops),
   );
   const sourceFamilyCounts = buildSourceFamilyCountRecord();
   const sourceFamilyInventoryCounts = buildSourceFamilyCountRecord();
@@ -661,16 +651,16 @@ export async function loadSupplementalSourceFamilies(
         concurrencyLimit: SUPPLEMENTAL_SOURCE_FAMILY_CONCURRENCY,
       },
       malformedSourceDrops,
-      sizeGatedDrops: buildDropBucket(),
+      apyEnvelopeDrops,
     },
     sourceFamilySummaries: buildSourceFamilySummaries(familyResults, malformedSourceDrops),
     optionalRpcTelemetry: {
       compoundV3:
         familyResults.find((result) => result.key === "compoundV3")?.telemetry
-        ?? EMPTY_OPTIONAL_RPC_TELEMETRY,
+        ?? createOptionalRpcFamilyTelemetry(0),
       aaveV3:
         familyResults.find((result) => result.key === "aaveV3")?.telemetry
-        ?? EMPTY_OPTIONAL_RPC_TELEMETRY,
+        ?? createOptionalRpcFamilyTelemetry(0),
     },
   };
 }

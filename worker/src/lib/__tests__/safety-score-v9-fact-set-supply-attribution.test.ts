@@ -1,9 +1,3 @@
-/**
- * Split out of the 6,063-line `safety-score-v9-fact-set.test.ts`. Assertions are
- * unchanged; the fixture builders now come from the shared V9 helper, imported
- * under their original local names so the bodies read exactly as before.
- */
-
 import { describe, expect, it } from "vitest";
 import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards-base-input-identity";
 import { createSupplyAttributionJournalV1 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
@@ -15,6 +9,7 @@ import {
 import {
   compileSafetyScoreV9FactSetFromFixedInput,
 } from "../safety-score-v9/fact-set";
+import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import {
   deriveXautRepresentationGroupSupplyAttribution,
@@ -36,8 +31,6 @@ import {
   xautFactSetFixedInput,
   xautFactSetMeta,
 } from "./safety-score-v9-fact-set.test-support";
-
-// The shared builders pin clocks after each asset's newest reviewed registry date.
 
 function nullSupplyReviewExtension(options: {
   bridge?: "not-applicable" | "missing" | "required";
@@ -92,6 +85,82 @@ function rejectedWmAttributionRecord(
   });
 }
 
+const XAUT_NON_BRIDGE_CONTROL_CASES = [
+  {
+    controlKind: "mint", scope: "deployment", capabilities: ["mint"],
+    deploymentKey: "ethereum:0x68749665ff8d2d112fa859aa293f07a622782f38",
+    authority: {
+      authorityKey: "ethereum:0x68749665ff8d2d112fa859aa293f07a622782f38",
+      model: "contract", threshold: null,
+    },
+  },
+  {
+    controlKind: "upgrade", scope: "deployment", capabilities: ["mint", "upgrade"],
+    deploymentKey: "ethereum:0x68749665ff8d2d112fa859aa293f07a622782f38",
+    authority: {
+      authorityKey: "ethereum:0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828",
+      model: "multisig", threshold: { required: 3, total: 6 },
+    },
+  },
+] as const;
+
+const XAUT_COMMON_MODE_SIGNAL_CASES = [
+  { failureDomainKey: "bridge-route:contract:ethereum:0xb9c2321bb7d0db468f570d10a424d1cc8efd696c" },
+  { failureDomainKey: "bridge-route:protocol:xaut0-omnichain" },
+] as const;
+
+function reviewedXautGroupFixture() {
+  const clockSec = XAUT_FACT_SET_CLOCK_SEC;
+  const fixed = xautFactSetFixedInput({
+    chainSupplyByChain: {},
+    aggregateCirculating: { peggedGOLD: 2_480_000_000 },
+    omitLiveReserve: true,
+  });
+  const attribution = deriveXautRepresentationGroupSupplyAttribution({
+    aggregateSupplyUsd: 2_480_000_000,
+    registryFingerprint: fixed.registryFingerprint,
+    scoringClockSec: fixed.clockSec,
+    observation: makeXautObservation({
+      clockSec,
+      blockTimeSec: clockSec - 2_800,
+      disclosure: { sourceTimestampSec: clockSec - 2_900, responseSha256: "e".repeat(64) },
+    }),
+  });
+  fixed.safetyScoreV9SupplyAttributionById = { "xaut-tether": attribution! };
+  fixed.baseInputGenerationId = deriveReportCardsBaseInputGenerationId(fixed);
+  const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
+    metaById: new Map([["xaut-tether", xautFactSetMeta()]]),
+  });
+  const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
+  const xaut = compiled.assets[0]!;
+  return {
+    attribution,
+    bridgeControls: xaut.controls.filter((control) => control.controlKind === "bridge"),
+    clockSec,
+    compiled,
+    groupRow: xaut.supply.selectedBridgeRoutes.find((route) =>
+      route.deploymentRouteKey.startsWith("representation-group:")),
+    supplyEvidence: xaut.evidence.find((evidence) => evidence.evidenceId === "xaut-tether:chain-supply"),
+    xaut,
+  };
+}
+
+function wmFixedInput() {
+  return wmFactSetFixedInput({
+    chainSupplyByChain: {},
+    aggregateCirculating: { peggedUSD: 87_020_618.58982982 },
+    omitLiveReserve: true,
+  });
+}
+
+function compileWm(fixed: ReportCardsFixedInput) {
+  const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
+    metaById: new Map([["wm-m0", wmFactSetMeta()]]),
+  });
+  const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
+  return { baseline, compiled, wm: compiled.assets[0]! };
+}
+
 describe("Safety Score v9 exact base fact-set adapter — supply attribution", { timeout: V9_EVALUATION_TEST_TIMEOUT_MS }, () => {
   it("aggregates chain aliases and conserves unresolved source supply without price multiplication", () => {
     const original = exactFixedInput();
@@ -136,11 +205,9 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     const supply = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension()).assets[0]!.supply;
     expect(supply.status.observationState).toBe("known");
     expect(supply.sourceKind).toBe("aggregate-circulating");
-    // Summed, never multiplied by price: list circulating is already USD.
     expect(supply.circulatingUsd).toBe(5_000_000);
     expect(supply.referencePriceUsd).toBeNull();
     expect(supply.circulatingUnits).toBeNull();
-    // Per-chain attribution genuinely does not exist, so it is not synthesized.
     expect(supply.chainDistribution).toBeNull();
     expect(supply.failureDomains).toEqual([]);
     expect(supply.selectedBridgeRoutes).toEqual([]);
@@ -150,18 +217,8 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
   });
 
   it("compiles exact wM route shares without bridge-materiality uncertainty", () => {
-    const fixed = withWmReviewedDeploymentAttribution(
-      wmFactSetFixedInput({
-        chainSupplyByChain: {},
-        aggregateCirculating: { peggedUSD: 87_020_618.58982982 },
-        omitLiveReserve: true,
-      }),
-    );
-    const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
-      metaById: new Map([["wm-m0", wmFactSetMeta()]]),
-    });
-    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
-    const wm = compiled.assets[0]!;
+    const fixed = withWmReviewedDeploymentAttribution(wmFixedInput());
+    const { baseline, compiled, wm } = compileWm(fixed);
 
     expect(wm.supply.status.observationState).toBe("known");
     expect(wm.supply.selectedBridgeRoutes).toHaveLength(5);
@@ -187,63 +244,14 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
   });
 
   it("compiles one reviewed XAUt0 group control without destination supply claims", () => {
-    // At or after the committed xaut-tether control/access review dates
-    // (2026-08-08), so the reviewed mint controls are clock-admissible.
-    const clockSec = XAUT_FACT_SET_CLOCK_SEC;
-    const aggregateSupplyUsd = 2_480_000_000;
-    const fixed = xautFactSetFixedInput({
-      chainSupplyByChain: {},
-      aggregateCirculating: { peggedGOLD: aggregateSupplyUsd },
-      omitLiveReserve: true,
-    });
-    const attribution =
-      deriveXautRepresentationGroupSupplyAttribution({
-        aggregateSupplyUsd,
-        registryFingerprint: fixed.registryFingerprint,
-        scoringClockSec: fixed.clockSec,
-        observation: makeXautObservation({
-          clockSec,
-          // Production-shaped consumer age: finalized-block lag plus the
-          // healthy 30-minute capture cadence exceeds the generic 1800s
-          // chain-supply window while remaining inside XAUT's explicit hour.
-          blockTimeSec: clockSec - 2_800,
-          disclosure: {
-            sourceTimestampSec: clockSec - 2_900,
-            responseSha256: "e".repeat(64),
-          },
-        }),
-      });
+    const {
+      attribution, bridgeControls, clockSec, compiled, groupRow, supplyEvidence, xaut,
+    } = reviewedXautGroupFixture();
     expect(attribution).not.toBeNull();
-    fixed.safetyScoreV9SupplyAttributionById = {
-      "xaut-tether": attribution!,
-    };
-    fixed.baseInputGenerationId =
-      deriveReportCardsBaseInputGenerationId(fixed);
-
-    const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
-      metaById: new Map([["xaut-tether", xautFactSetMeta()]]),
-    });
-    const compiled =
-      compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
-    const xaut = compiled.assets[0]!;
-    const supplyEvidence = xaut.evidence.find(
-      (evidence) => evidence.evidenceId === "xaut-tether:chain-supply",
-    );
-    const groupRow = xaut.supply.selectedBridgeRoutes.find((route) =>
-      route.deploymentRouteKey.startsWith("representation-group:"),
-    );
-    const bridgeControls = xaut.controls.filter(
-      (control) => control.controlKind === "bridge",
-    );
-
     expect(xaut.supply.status.observationState).toBe("known");
     expect(supplyEvidence).toMatchObject({
       observedAtSec: clockSec - 2_800,
-      freshness: {
-        state: "current",
-        ageSec: 2_800,
-        maxAgeSec: XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC,
-      },
+      freshness: { state: "current", ageSec: 2_800, maxAgeSec: XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC },
     });
     expect(xaut.supply.selectedBridgeRoutes).toHaveLength(2);
     expect(groupRow).toMatchObject({
@@ -254,57 +262,29 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     expect(xaut.supply.selectedRouteSupplyShare).toBe(1);
     expect(xaut.supply.unknownRouteSupplyShare).toBe(0);
     expect(xaut.supply.chainDistribution).toMatchObject({
-      chains: [
-        {
-          chainId: "ethereum",
-          supplyShare: expect.closeTo(0.95150186773, 9),
-        },
-      ],
+      chains: [{ chainId: "ethereum", supplyShare: expect.closeTo(0.95150186773, 9) }],
       unattributedSupplyShare: expect.closeTo(0.04849813227, 9),
     });
     expect(bridgeControls).toHaveLength(1);
     expect(bridgeControls[0]).toMatchObject({
-      status: {
-        applicability: { state: "required" },
-        observationState: "bounded-unknown",
-      },
-      deploymentKey:
-        "representation-group:xaut-tether:xaut0-omnichain",
+      status: { applicability: { state: "required" }, observationState: "known", gapIds: [] },
+      deploymentKey: "representation-group:xaut-tether:xaut0-omnichain",
       capSemantics: { kind: "unbounded" },
       claimImpairment: "unbounded",
       economicLossScope: "deployment",
       materialSupplyShare: expect.closeTo(0.04849813227, 9),
       authority: {
-        authorityKey:
-          "contract:ethereum:0xb9c2321bb7d0db468f570d10a424d1cc8efd696c",
+        authorityKey: "contract:ethereum:0xb9c2321bb7d0db468f570d10a424d1cc8efd696c",
         model: "unknown",
       },
       failureDomains: [
-        {
-          kind: "bridge-route",
-          key: "contract:ethereum:0xb9c2321bb7d0db468f570d10a424d1cc8efd696c",
-        },
-        {
-          kind: "bridge-route",
-          key: "protocol:xaut0-omnichain",
-        },
+        { kind: "bridge-route", key: "contract:ethereum:0xb9c2321bb7d0db468f570d10a424d1cc8efd696c" },
+        { kind: "bridge-route", key: "protocol:xaut0-omnichain" },
       ],
     });
-    expect(
-      xaut.economicControlReview.bridge.status.observationState,
-    ).toBe("known");
-    expect(
-      bridgeControls.some((control) =>
-        attribution!.representationGroup.routeIds.includes(
-          control.deploymentKey,
-        ),
-      ),
-    ).toBe(false);
-    // The reviewed canonical authority stays partitioned away from the XAUt0
-    // group: the onlyOwner mint path on the canonical Ethereum deployment and
-    // the separate upgrade-only ProxyAdmin owner (3-of-6 legacy multisig, the
-    // exact `upgradeability.controlRef` target) are the only non-bridge controls.
-    // Both are deployment-scoped; neither is a global root-claim authority.
+    expect(xaut.economicControlReview.bridge.status.observationState).toBe("known");
+    expect(bridgeControls.some((control) =>
+      attribution!.representationGroup.routeIds.includes(control.deploymentKey))).toBe(false);
     expect(
       xaut.controls
         .filter((control) => control.controlKind !== "bridge")
@@ -315,87 +295,35 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
           deploymentKey: control.deploymentKey,
           authority: control.authority,
         }))
-        // Control identities are content-derived, so compare by authority rather than array order.
-        .sort((left, right) => (left.authority?.authorityKey ?? "").localeCompare(right.authority?.authorityKey ?? "")),
-    ).toEqual([
-      {
-        controlKind: "mint",
-        scope: "deployment",
-        capabilities: ["mint"],
-        deploymentKey: "ethereum:0x68749665ff8d2d112fa859aa293f07a622782f38",
-        authority: {
-          authorityKey:
-            "ethereum:0x68749665ff8d2d112fa859aa293f07a622782f38",
-          model: "contract",
-          threshold: null,
-        },
-      },
-      {
-        controlKind: "upgrade",
-        scope: "deployment",
-        capabilities: ["mint", "upgrade"],
-        deploymentKey: "ethereum:0x68749665ff8d2d112fa859aa293f07a622782f38",
-        authority: {
-          authorityKey:
-            "ethereum:0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828",
-          model: "multisig",
-          threshold: { required: 3, total: 6 },
-        },
-      },
-    ]);
+        .sort((left, right) =>
+          (left.authority?.authorityKey ?? "").localeCompare(right.authority?.authorityKey ?? "")),
+    ).toEqual(XAUT_NON_BRIDGE_CONTROL_CASES);
 
-    const evaluated = evaluateV9FactSet(
-      compiled,
-      V9_CANDIDATE_POLICY_V1,
-    ).assets[0]!;
-    const reasonCodes =
-      evaluated.scoreInput.pillars.control.reasons.map(
-        (reason) => reason.code,
-      );
-    expect(reasonCodes).not.toContain(
-      "immaterial-unrecognized-chain-pool",
-    );
-    expect(reasonCodes).not.toContain(
-      "material-bridge-supply-unmatched",
-    );
-
-    const singleAssetCommonModePolicy = loadV9MethodologyPolicy({
+    const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
+    const reasonCodes = evaluated.scoreInput.pillars.control.reasons.map((reason) => reason.code);
+    expect(reasonCodes).not.toContain("immaterial-unrecognized-chain-pool");
+    expect(reasonCodes).not.toContain("material-bridge-supply-unmatched");
+    const commonModePolicy = loadV9MethodologyPolicy({
       ...V9_CANDIDATE_POLICY_V1.policy,
       policyId: "safety-score-v9-xaut-common-mode-test",
       semantic: {
         ...V9_CANDIDATE_POLICY_V1.policy.semantic,
-        materiality: {
-          ...V9_CANDIDATE_POLICY_V1.policy.semantic.materiality,
-          commonControlMinAssets: 1,
-        },
+        materiality: { ...V9_CANDIDATE_POLICY_V1.policy.semantic.materiality, commonControlMinAssets: 1 },
       },
     });
     const commonModeSignals = evaluateV9FactSet(
-      compiled,
-      singleAssetCommonModePolicy,
+      compiled, commonModePolicy,
     ).assets[0]!.scoreInput.dependencyStructuralSignals.filter((signal) =>
-      signal.failureDomainKeys.some((key) =>
-        key.startsWith("bridge-route:"),
-      ),
+      signal.failureDomainKeys.some((key) => key.startsWith("bridge-route:")));
+    expect(commonModeSignals).toEqual(
+      XAUT_COMMON_MODE_SIGNAL_CASES.map(({ failureDomainKey }) =>
+        expect.objectContaining({
+          failureDomainKeys: [failureDomainKey],
+          materialSharePct: expect.closeTo(4.849813227, 7),
+          severity: "low",
+          responsibility: "measured-adverse",
+        })),
     );
-    expect(commonModeSignals).toEqual([
-      expect.objectContaining({
-        failureDomainKeys: [
-          "bridge-route:contract:ethereum:0xb9c2321bb7d0db468f570d10a424d1cc8efd696c",
-        ],
-        materialSharePct: expect.closeTo(4.849813227, 7),
-        severity: "low",
-        responsibility: "measured-adverse",
-      }),
-      expect.objectContaining({
-        failureDomainKeys: [
-          "bridge-route:protocol:xaut0-omnichain",
-        ],
-        materialSharePct: expect.closeTo(4.849813227, 7),
-        severity: "low",
-        responsibility: "measured-adverse",
-      }),
-    ]);
   });
 
   it("withholds XAUT when no reconciled V2 supply packet can establish global chain supply", () => {
@@ -445,7 +373,6 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
   });
 
   it("fails closed when the circulating-liability denominator pushes XAUt0 above materiality", () => {
-    // At or after the committed 2026-08-08 xaut-tether control review dates.
     const clockSec = XAUT_FACT_SET_CLOCK_SEC;
     const aggregateSupplyUsd = 2_480_000_000;
     const fixed = xautFactSetFixedInput({
@@ -453,96 +380,60 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
       chainSupplyByChain: {},
       aggregateCirculating: { peggedGOLD: aggregateSupplyUsd },
     });
-    const attribution =
-      deriveXautRepresentationGroupSupplyAttribution({
-        aggregateSupplyUsd,
-        registryFingerprint: fixed.registryFingerprint,
-        scoringClockSec: fixed.clockSec,
-        observation: makeXautObservation({
-          clockSec,
-          canonicalTotalSupplyRaw: "1000000000",
-          treasuryBalanceRaw: "100000000",
-          adapterLockedSupplyRaw: "95000000",
-          blockTimeSec: clockSec - 100,
-          blockHash: `0x${"cd".repeat(32)}`,
-          disclosure: {
-            sourceTimestampSec: clockSec - 200,
-            responseSha256: "f".repeat(64),
-            totalAuthorizedRaw: "1000000000",
-            notIssuedRaw: "100000000",
-            quarantinedRaw: "0",
-          },
-        }),
-      });
+    const attribution = deriveXautRepresentationGroupSupplyAttribution({
+      aggregateSupplyUsd,
+      registryFingerprint: fixed.registryFingerprint,
+      scoringClockSec: fixed.clockSec,
+      observation: makeXautObservation({
+        clockSec,
+        canonicalTotalSupplyRaw: "1000000000",
+        treasuryBalanceRaw: "100000000",
+        adapterLockedSupplyRaw: "95000000",
+        blockTimeSec: clockSec - 100,
+        blockHash: `0x${"cd".repeat(32)}`,
+        disclosure: {
+          sourceTimestampSec: clockSec - 200, responseSha256: "f".repeat(64),
+          totalAuthorizedRaw: "1000000000", notIssuedRaw: "100000000", quarantinedRaw: "0",
+        },
+      }),
+    });
     expect(attribution).not.toBeNull();
+    const groupShare = attribution!.representationGroup.currentSupplyUsd / aggregateSupplyUsd;
     expect(95_000_000 / 1_000_000_000).toBeLessThan(0.1);
-    expect(
-      attribution!.representationGroup.currentSupplyUsd /
-        aggregateSupplyUsd,
-    ).toBeCloseTo(95_000_000 / 900_000_000, 12);
-    expect(
-      attribution!.representationGroup.currentSupplyUsd /
-        aggregateSupplyUsd,
-    ).toBeGreaterThanOrEqual(0.1);
-    fixed.safetyScoreV9SupplyAttributionById = {
-      "xaut-tether": attribution!,
-    };
-    fixed.baseInputGenerationId =
-      deriveReportCardsBaseInputGenerationId(fixed);
-
+    expect(groupShare).toBeCloseTo(95_000_000 / 900_000_000, 12);
+    expect(groupShare).toBeGreaterThanOrEqual(0.1);
+    fixed.safetyScoreV9SupplyAttributionById = { "xaut-tether": attribution! };
+    fixed.baseInputGenerationId = deriveReportCardsBaseInputGenerationId(fixed);
     const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
       metaById: new Map([["xaut-tether", xautFactSetMeta()]]),
     });
-    expect(
-      baseline.assets[0]!.supplyReview?.selectedBridgeRoutes.find((route) =>
-        route.deploymentRouteKey.startsWith("representation-group:"),
-      ),
-    ).toMatchObject({
+    expect(baseline.assets[0]!.supplyReview?.selectedBridgeRoutes.find((route) =>
+      route.deploymentRouteKey.startsWith("representation-group:"))).toMatchObject({
       reviewState: "selected-unresolved",
       supplyShare: expect.closeTo(0.10555555556, 9),
     });
     expect(
-      baseline.assets[0]!.economicControlReview?.bridge.status
-        .observationState,
+      baseline.assets[0]!.economicControlReview?.bridge.status.observationState,
     ).toBe("bounded-unknown");
-
-    const compiled =
-      compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
     const evaluated = evaluateV9FactSet(
-      compiled,
+      compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline),
       V9_CANDIDATE_POLICY_V1,
     ).assets[0]!;
-    expect(
-      evaluated.scoreInput.pillars.control.reasons.map(
-        (reason) => reason.code,
-      ),
-    ).toContain("runtime-bridge-materiality-unavailable");
-    expect(evaluated.trace.caps).toContainEqual(
-      expect.objectContaining({
-        kind: "reason:runtime-bridge-materiality-unavailable",
-        limit: 55,
-        source: "evidence",
-        binding: true,
-      }),
-    );
-    expect(evaluated.trace.bindingCap).toMatchObject({
+    expect(evaluated.scoreInput.pillars.control.reasons.map(
+      (reason) => reason.code,
+    )).toContain("runtime-bridge-materiality-unavailable");
+    expect(evaluated.trace.caps).toContainEqual(expect.objectContaining({
       kind: "reason:runtime-bridge-materiality-unavailable",
-      limit: 55,
-      source: "evidence",
+      limit: 55, source: "evidence", binding: true,
+    }));
+    expect(evaluated.trace.bindingCap).toMatchObject({
+      kind: "reason:runtime-bridge-materiality-unavailable", limit: 55, source: "evidence",
     });
   });
 
   it("restores the bridge-materiality cap when the wM packet is absent", () => {
-    const fixed = wmFactSetFixedInput({
-      chainSupplyByChain: {},
-      aggregateCirculating: { peggedUSD: 87_020_618.58982982 },
-      omitLiveReserve: true,
-    });
-    const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
-      metaById: new Map([["wm-m0", wmFactSetMeta()]]),
-    });
-    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
-    const wm = compiled.assets[0]!;
+    const fixed = wmFixedInput();
+    const { compiled, wm } = compileWm(fixed);
 
     expect(wm.supply.chainDistribution).toBeNull();
     expect(wm.supply.status.observationState).toBe("bounded-unknown");
@@ -576,21 +467,14 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
   });
 
   it("uses the latest rejected attribution record in hashed outcome diagnostics", () => {
-    const fixed = wmFactSetFixedInput({
-      chainSupplyByChain: {},
-      aggregateCirculating: { peggedUSD: 87_020_618.58982982 },
-      omitLiveReserve: true,
-    });
+    const fixed = wmFixedInput();
     fixed.supplyAttributionJournalById = {
       "wm-m0": [
         rejectedWmAttributionRecord(fixed, fixed.clockSec - 20, "chain-rpc-unavailable"),
         rejectedWmAttributionRecord(fixed, fixed.clockSec - 10, "deployment-state-unavailable"),
       ],
     };
-    const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
-      metaById: new Map([["wm-m0", wmFactSetMeta()]]),
-    });
-    const wm = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline).assets[0]!;
+    const { wm } = compileWm(fixed);
     const outcomeEvidence = wm.evidence.find(
       (evidence) => evidence.evidenceId === "wm-m0:supply-review-outcome",
     )!;
@@ -642,49 +526,37 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
       },
       {
         name: "stale-review",
-        extension: {
-          bridge: "required" as const,
-          chainSupplyObservedAtSec: AS_OF_SEC - 501,
-        },
+        extension: { bridge: "required" as const, chainSupplyObservedAtSec: AS_OF_SEC - 501 },
         responsibility: "producer-failed" as const,
         observationState: "stale" as const,
       },
     ];
-
-    for (const outcomeCase of cases) {
+    for (const { name, extension: extensionCase, responsibility, observationState } of cases) {
       const fixed = exactFixedInput();
       const alpha = compileSafetyScoreV9FactSetFromFixedInput(
-        fixed,
-        nullSupplyReviewExtension(outcomeCase.extension),
+        fixed, nullSupplyReviewExtension(extensionCase),
       ).assets[0]!;
       const outcomeEvidence = alpha.evidence.find(
-        (evidence) => evidence.evidenceId === "alpha:supply-review-outcome",
-      );
+        (evidence) => evidence.evidenceId === "alpha:supply-review-outcome");
       const materialityGap = alpha.gaps.find(
-        (gap) => gap.reasonCode === "runtime-bridge-materiality-unavailable",
-      );
-
-      expect(outcomeEvidence, outcomeCase.name).toMatchObject({
+        (gap) => gap.reasonCode === "runtime-bridge-materiality-unavailable");
+      expect(outcomeEvidence, name).toMatchObject({
         sourceId: "safety-score-v9-supply-review-producer",
         disposition: "rejected",
         contentSha256: expect.stringMatching(/^[a-f0-9]{64}$/),
         sourceGenerationId: expect.stringMatching(/^supply-review-outcome:v1:[a-f0-9]{64}$/),
-        rejection: {
-          code: `supply-review.${outcomeCase.name}`,
-          rejectedAtSec: fixed.clockSec,
-        },
+        rejection: { code: `supply-review.${name}`, rejectedAtSec: fixed.clockSec },
       });
       expect(outcomeEvidence!.sourceGenerationId).toBe(
-        `supply-review-outcome:v1:${outcomeEvidence!.contentSha256}`,
-      );
+        `supply-review-outcome:v1:${outcomeEvidence!.contentSha256}`);
       expect(alpha.supply.status).toMatchObject({
-        observationState: outcomeCase.observationState,
+        observationState,
         evidenceRefIds: ["alpha:chain-supply", "alpha:supply-review-outcome"],
       });
       expect(materialityGap).toMatchObject({
         ownerDomain: "control",
-        responsibility: outcomeCase.responsibility,
-        observationState: outcomeCase.observationState,
+        responsibility,
+        observationState,
         evidenceRefIds: ["alpha:chain-supply", "alpha:supply-review-outcome"],
       });
       expect(alpha.supply.selectedBridgeRoutes).toEqual([]);
@@ -737,8 +609,6 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
 
     const alpha = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension()).assets[0]!;
     const evidence = alpha.evidence.find((entry) => entry.evidenceId === "alpha:aggregate-supply")!;
-    // Carried-forward supply legitimately predates the chain-supply lane's own
-    // window (500s in this fixture); it is bounded by the 7-day intake ceiling.
     expect(evidence.freshness.maxAgeSec).toBe(7 * 86400);
     expect(evidence.observedAtSec).toBe(supplyObservedAtSec);
     expect(evidence.freshness.ageSec).toBe(4_000);
@@ -749,7 +619,6 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
   it("leaves chain-attributed supply untouched when per-chain rows are present", () => {
     const withoutAggregate = compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput(), extension()).assets[0]!
       .supply;
-    // An aggregate bucket that disagrees must not displace real chain attribution.
     const withAggregate = compileSafetyScoreV9FactSetFromFixedInput(
       exactFixedInput({ aggregateCirculating: { peggedUSD: 999_000_000 } }),
       extension(),

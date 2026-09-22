@@ -1,4 +1,4 @@
-import { ScoreTapeEventPayloadSchema, type TapeEvent, type TapeEventSeverity } from "@shared/types/tape-event";
+import { TapeEventSchema, type TapeEvent, type TapeEventSeverity } from "@shared/types/tape-event";
 import { getReportCardGradeRank, UNKNOWN_REPORT_CARD_GRADE_RANK } from "@shared/lib/report-card-core";
 import type { TapeEventRow } from "./tape-event-types";
 
@@ -76,21 +76,34 @@ export function severityForScoreDowngrade(prevGrade: string, newGrade: string): 
   return "notice";
 }
 
+const DATE_YEAR_MONTH_RE = /^\d{4}-\d{2}$/;
+const DATE_YEAR_MONTH_DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+
 /**
- * Parse a "YYYY-MM-DD" or "YYYY-MM" date string to epoch-seconds (UTC).
- * Missing day defaults to 1, missing month defaults to January.
- * Returns Math.floor(Date.now() / 1000) on invalid input.
+ * Parse an exact "YYYY-MM-DD" or "YYYY-MM" date string to epoch-seconds
+ * (UTC). Missing days default to the first of the month. Invalid or absent
+ * curated dates return null.
  */
-export function parseDateStringToEpochSec(value: string | undefined | null): number {
-  if (!value) return Math.floor(Date.now() / 1000);
-  const segments = value.split("-");
-  const year = Number(segments[0]);
-  const month = Number(segments[1] ?? "1");
-  const day = Number(segments[2] ?? "1");
-  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
-    return Math.floor(Date.now() / 1000);
+export function parseDateStringToEpochSec(value: string | undefined | null): number | null {
+  if (!value) return null;
+  const hasDay = DATE_YEAR_MONTH_DAY_RE.test(value);
+  if (!hasDay && !DATE_YEAR_MONTH_RE.test(value)) return null;
+
+  const year = Number(value.slice(0, 4));
+  const month = Number(value.slice(5, 7));
+  const day = hasDay ? Number(value.slice(8, 10)) : 1;
+  const parsed = new Date(0);
+  parsed.setUTCHours(0, 0, 0, 0);
+  parsed.setUTCFullYear(year, month - 1, day);
+  const timestampMs = parsed.getTime();
+  if (
+    parsed.getUTCFullYear() !== year ||
+    parsed.getUTCMonth() !== month - 1 ||
+    parsed.getUTCDate() !== day
+  ) {
+    return null;
   }
-  return Math.floor(Date.UTC(year, Math.max(0, month - 1), Math.max(1, day)) / 1000);
+  return Math.floor(timestampMs / 1000);
 }
 
 export function truncateSummary(summary: string): string {
@@ -112,55 +125,67 @@ export function severityForMethodologyBump(version: string): TapeEventSeverity {
 
 // --- Row → wire -------------------------------------------------------------
 
-function parsePayload(payloadJson: string): Record<string, unknown> {
+/** Named reasons a persisted row is quarantined at the D1 read boundary (rule R8). */
+export type TapeEventQuarantineReason = "payload-json-invalid" | "wire-schema-invalid";
+
+/** Quarantine record for a stored row that cannot be emitted as a wire event. */
+export interface TapeEventQuarantine {
+  reason: TapeEventQuarantineReason;
+  /** Wire-field paths that failed validation; empty when the stored JSON itself is unreadable. */
+  fields: string[];
+}
+
+/** Result of mapping one D1 row: either the wire event or the reason it is quarantined. */
+export type TapeEventRowMapping =
+  | { event: TapeEvent; quarantine: null }
+  | { event: null; quarantine: TapeEventQuarantine };
+
+/** Parse stored `payload_json`; unparsable or non-object JSON is never coerced into `{}`. */
+function parsePayload(payloadJson: string): Record<string, unknown> | null {
+  let parsed: unknown;
   try {
-    const parsed = JSON.parse(payloadJson);
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : {};
+    parsed = JSON.parse(payloadJson);
   } catch {
-    return {};
+    return null;
   }
+  return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : null;
 }
 
 function isScoreTapeEventType(type: string): boolean {
   return type === "score.upgraded" || type === "score.downgraded";
 }
 
-function normalizeScoreTapePayload(row: TapeEventRow, payload: Record<string, unknown>): Record<string, unknown> | null {
+/**
+ * Rows written before V9 score provenance existed carry no `safetyScore`
+ * object. Synthesize the documented legacy provenance for the v8 history table
+ * so those rows stay readable; the wire schema still validates the result.
+ */
+function withLegacyScoreProvenance(row: TapeEventRow, payload: Record<string, unknown>): Record<string, unknown> {
   if (!isScoreTapeEventType(row.type)) return payload;
-
-  const parsed = ScoreTapeEventPayloadSchema.safeParse(payload);
-  if (
-    parsed.success &&
-    (parsed.data.safetyScore.identityStatus === "complete" || row.source_table === "safety_grade_history")
-  ) {
-    return parsed.data;
-  }
-
-  const hasSafetyScore = Object.prototype.hasOwnProperty.call(payload, "safetyScore");
-  if (row.source_table === "safety_grade_history" && !hasSafetyScore) {
-    const legacyPayload = {
-      ...payload,
-      safetyScore: {
-        identityStatus: "legacy-v8-unidentified",
-        identity: null,
-      },
-    };
-    const legacy = ScoreTapeEventPayloadSchema.safeParse(legacyPayload);
-    if (legacy.success) return legacy.data;
-  }
-
-  return null;
+  if (row.source_table !== "safety_grade_history") return payload;
+  if (Object.prototype.hasOwnProperty.call(payload, "safetyScore")) return payload;
+  return {
+    ...payload,
+    safetyScore: {
+      identityStatus: "legacy-v8-unidentified",
+      identity: null,
+    },
+  };
 }
 
 /**
- * Map a persisted row for the read path. Invalid score payloads return null so
- * callers can drop only that row; projector writes validate with a throwing
- * schema parse before insertion.
+ * Map a persisted D1 row to the wire event, validating the complete event
+ * against `TapeEventSchema` — the schema this endpoint publishes. A row that
+ * fails is quarantined with a named reason so callers drop only that row and
+ * keep serving the remainder (rule R8); it is never emitted as an empty event.
  */
-export function rowToTapeEvent(row: TapeEventRow): TapeEvent | null {
-  const payload = normalizeScoreTapePayload(row, parsePayload(row.payload_json));
-  if (payload == null) return null;
-  return {
+export function mapTapeEventRow(row: TapeEventRow): TapeEventRowMapping {
+  const parsedPayload = parsePayload(row.payload_json);
+  if (parsedPayload == null) {
+    return { event: null, quarantine: { reason: "payload-json-invalid", fields: [] } };
+  }
+
+  const parsed = TapeEventSchema.safeParse({
     id: row.event_id,
     type: row.type,
     severity: row.severity,
@@ -172,11 +197,22 @@ export function rowToTapeEvent(row: TapeEventRow): TapeEvent | null {
     chain: row.chain,
     title: row.title,
     summary: row.summary,
-    payload,
+    payload: withLegacyScoreProvenance(row, parsedPayload),
     sourceTable: row.source_table,
     sourceRowId: row.source_row_id,
     transition: row.transition,
     sourceUrl: row.source_url,
     methodologyVersion: row.methodology_version,
-  };
+  });
+  if (!parsed.success) {
+    return {
+      event: null,
+      quarantine: {
+        reason: "wire-schema-invalid",
+        fields: [...new Set(parsed.error.issues.map((issue) => issue.path.join(".") || "root"))].sort(),
+      },
+    };
+  }
+
+  return { event: parsed.data, quarantine: null };
 }

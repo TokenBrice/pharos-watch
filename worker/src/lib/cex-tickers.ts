@@ -263,31 +263,14 @@ async function fetchBinanceTickerUrl(
     }
 
     diagnostic.responseRowCount = payload.length;
-    const pendingStableQuoted: Array<{ symbol: string; quoteSymbol: string; quotePrice: number }> = [];
     for (const ticker of payload as Array<{ symbol?: string; price?: string }>) {
       const market = ticker.symbol ? BINANCE_PAIR_TO_MARKET.get(ticker.symbol) : undefined;
       const price = parseCexPrice(ticker.price);
       if (!market || price == null) continue;
 
-      if (market.quoteSymbol) {
-        pendingStableQuoted.push({
-          symbol: market.symbol,
-          quoteSymbol: market.quoteSymbol,
-          quotePrice: price,
-        });
-      } else {
-        results.set(market.symbol, price);
-      }
+      results.set(market.symbol, price);
     }
 
-    for (const market of pendingStableQuoted) {
-      const quoteUsd = results.get(market.quoteSymbol);
-      if (quoteUsd == null) continue;
-
-      const convertedPrice = market.quotePrice * quoteUsd;
-      const existingPrice = results.get(market.symbol);
-      results.set(market.symbol, existingPrice == null ? convertedPrice : (existingPrice + convertedPrice) / 2);
-    }
 
     diagnostic.matchedCount = results.size;
     diagnostic.success = results.size > 0;

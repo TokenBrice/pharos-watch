@@ -256,8 +256,6 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
         capacityKind: "live-queue",
         freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" : "unverified",
         ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
-        routeStatus: "open",
-        routeStatusSource: "protocol-api",
         holderEligibility: "whitelisted-primary",
         settlementDelaySec: 7 * 24 * 60 * 60,
         sourceUrls: ["https://api.falcon.finance/api/v1/transparency"],

@@ -13,6 +13,7 @@ const { logosByIdMock, useStablecoinsMock } = vi.hoisted(() => ({
 
 vi.mock("@/lib/logos", () => ({
   logosById: logosByIdMock,
+  getLogoSrc: (map: Record<string, string | undefined>, id: string) => map[id],
 }));
 
 vi.mock("@/hooks/use-stablecoins", () => ({

@@ -89,6 +89,17 @@ describe("findNearestSupplySnapshot", () => {
     expect(findNearestSupplySnapshot(snapshots, 55 * DAY)).toBeNull();
   });
 
+  it("selects the earlier snapshot when a later one is closer", () => {
+    expect(findNearestSupplySnapshot(snapshots, 32 * DAY)).toEqual({
+      date: 20 * DAY,
+      mcap: 2000,
+    });
+  });
+
+  it("returns null when every snapshot is later than the day being replayed", () => {
+    expect(findNearestSupplySnapshot(snapshots, 5 * DAY)).toBeNull();
+  });
+
   it("returns null for empty/undefined snapshots", () => {
     expect(findNearestSupplySnapshot([], 10 * DAY)).toBeNull();
     expect(findNearestSupplySnapshot(undefined, 10 * DAY)).toBeNull();

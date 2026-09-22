@@ -24,8 +24,9 @@ import {
   decodeEvmCaptureString,
   decodeEvmCaptureUint256,
   decodeEvmCaptureUint256Array,
-  isFreshEvmCaptureHeader,
   mapEvmCaptureResults,
+  resolveTrackedReferencePrices,
+  runPinnedBlockCapture,
 } from "./evm-capture-helpers";
 import { normalizeProtocol } from "./pool-helpers";
 import { hasScoreFacingMeasuredExecution, resolveUniqueTrackedTokenIndex } from "./scoring-helpers";
@@ -202,7 +203,7 @@ function buildCurveStableswapFactoryExecutionModel(input: {
   state: FactoryPoolState;
   chainAddressToId: SymbolLookups["chainAddressToId"];
   stablecoinPriceById: Map<string, number>;
-}): { model: DexAmmExecutionModel | null; reason: CurveGateReason } {
+}): { ok: true; model: DexAmmExecutionModel } | { ok: false; reason: CurveGateReason } {
   const { state } = input;
   const tokenCount = state.coins.length;
   if (
@@ -213,23 +214,23 @@ function buildCurveStableswapFactoryExecutionModel(input: {
     state.storedRates.length !== tokenCount ||
     state.symbols.length !== tokenCount
   ) {
-    return { model: null, reason: "incomplete-exact-capture" };
+    return { ok: false, reason: "incomplete-exact-capture" };
   }
   if (new Set(state.coins).size !== tokenCount) {
-    return { model: null, reason: "ambiguous-token-identity" };
+    return { ok: false, reason: "ambiguous-token-identity" };
   }
   for (let index = 0; index < tokenCount; index++) {
     const decimals = state.decimals[index]!;
     if (!Number.isInteger(decimals) || decimals < 0 || decimals > 36) {
-      return { model: null, reason: "incomplete-exact-capture" };
+      return { ok: false, reason: "incomplete-exact-capture" };
     }
     if (state.storedRates[index] !== 10n ** BigInt(36 - decimals)) {
-      return { model: null, reason: "rate-bearing-inputs" };
+      return { ok: false, reason: "rate-bearing-inputs" };
     }
   }
   const amplification = curveAmplificationFromContract(state.amplification, tokenCount);
   if (amplification == null) {
-    return { model: null, reason: "invalid-invariant-parameters" };
+    return { ok: false, reason: "invalid-invariant-parameters" };
   }
   // The shared closed-form model carries the off-balance maximum so its fee
   // remains a conservative lower bound on exit capacity.
@@ -238,43 +239,32 @@ function buildCurveStableswapFactoryExecutionModel(input: {
       ? curveConservativeFeeRate(state.fee, state.offpegFeeMultiplier)
       : null;
   if (feeRate == null) {
-    return { model: null, reason: "invalid-invariant-parameters" };
+    return { ok: false, reason: "invalid-invariant-parameters" };
   }
 
   const balances = state.balances.map((balance, index) => toTokenUnits(balance, state.decimals[index]!));
   if (balances.some((balance) => balance == null)) {
-    return { model: null, reason: "incomplete-exact-capture" };
+    return { ok: false, reason: "incomplete-exact-capture" };
   }
   const assetIds = state.coins.map((address) =>
     input.chainAddressToId.get(canonicalExitRouteAssetKey(input.chain, address)),
   );
   const trackedResolution = resolveUniqueTrackedTokenIndex(assetIds, input.stablecoinId);
-  if (trackedResolution.trackedTokenIndex === null) return { model: null, reason: trackedResolution.reason };
+  if (trackedResolution.trackedTokenIndex === null) return { ok: false, reason: trackedResolution.reason };
   const { trackedTokenIndex } = trackedResolution;
 
-  const trustedPriceByIndex = assetIds.map((assetId) => {
-    if (!assetId) return null;
-    const price = input.stablecoinPriceById.get(assetId);
-    return Number.isFinite(price) && price! > 0 ? price! : null;
+  const resolvedPrices = resolveTrackedReferencePrices({
+    balances: balances as number[],
+    assetIds,
+    trackedTokenIndex,
+    stablecoinPriceById: input.stablecoinPriceById,
+    implyUntrackedPrices: false,
   });
-  let trackedReferencePrice = trustedPriceByIndex[trackedTokenIndex];
-  // Weak/single-source quotes never enter stablecoinPriceById. A unique
-  // authoritative counter-asset still sizes the tracked input from same-block
-  // balances, the same inverse imply the reviewed V2 capture uses.
-  if (trackedReferencePrice == null) {
-    const pricedOthers = trustedPriceByIndex.flatMap((price, index) =>
-      index !== trackedTokenIndex && price != null ? [{ index, price }] : [],
-    );
-    if (pricedOthers.length !== 1) return { model: null, reason: "incomplete-exact-capture" };
-    const other = pricedOthers[0]!;
-    const implied = (balances[other.index]! * other.price) / balances[trackedTokenIndex]!;
-    if (!Number.isFinite(implied) || implied <= 0) return { model: null, reason: "incomplete-exact-capture" };
-    trackedReferencePrice = implied;
-  }
+  if (!resolvedPrices.ok) return { ok: false, reason: "incomplete-exact-capture" };
 
   const tokens = state.coins.map((address, index) => {
-    const referencePriceUsd = index === trackedTokenIndex ? trackedReferencePrice! : trustedPriceByIndex[index];
-    if (referencePriceUsd == null || !Number.isFinite(referencePriceUsd) || referencePriceUsd <= 0) return null;
+    const referencePriceUsd = resolvedPrices.value.prices[index];
+    if (referencePriceUsd == null) return null;
     const assetId = assetIds[index];
     return {
       address,
@@ -287,10 +277,11 @@ function buildCurveStableswapFactoryExecutionModel(input: {
     };
   });
   if (tokens.some((token) => token == null)) {
-    return { model: null, reason: "incomplete-exact-capture" };
+    return { ok: false, reason: "incomplete-exact-capture" };
   }
 
   return {
+    ok: true,
     model: {
       source: "curve",
       invariant: "stableswap",
@@ -299,7 +290,6 @@ function buildCurveStableswapFactoryExecutionModel(input: {
       amplification,
       tokens: tokens as NonNullable<typeof tokens[number]>[],
     },
-    reason: "incomplete-exact-capture",
   };
 }
 
@@ -485,121 +475,110 @@ async function enrichDeployment(input: {
     timeoutMs: 15_000,
     maxRetries: 0,
   };
-
-  const blockNumber = await input.dependencies.fetchBlockNumber(deployment.chain, rpcOptions);
-  if (blockNumber == null) return;
-  const header = await input.dependencies.fetchBlockHeader(deployment.chain, blockNumber, rpcOptions);
-  if (
-    !header ||
-    header.number !== blockNumber ||
-    !isFreshEvmCaptureHeader(header, input.nowSec, CURVE_STABLESWAP_FACTORY_CAPTURE_MAX_AGE_SEC)
-  ) return;
-
-  const factoryCode = await input.dependencies.fetchCodeAtBlock(
-    deployment.chain,
-    deployment.factoryAddress,
-    blockNumber,
+  await runPinnedBlockCapture<Array<() => void>>({
+    chain: deployment.chain,
     rpcOptions,
-  );
-  if (!factoryCode || input.dependencies.hashCode(factoryCode) !== deployment.expectedFactoryCodeHash) return;
-  const implementationCode = await input.dependencies.fetchCodeAtBlock(
-    deployment.chain,
-    deployment.expectedPoolImplementationAddress,
-    blockNumber,
-    rpcOptions,
-  );
-  if (
-    !implementationCode ||
-    input.dependencies.hashCode(implementationCode) !== deployment.expectedPoolImplementationCodeHash
-  ) {
-    return;
-  }
-
-  const indexed = await readIndexedPools({
-    deployment,
-    blockNumber,
-    rpcOptions,
-    signal: input.signal,
-    dependencies: input.dependencies,
-  });
-  if (!indexed) return;
-
-  const stateByPool = new Map<`0x${string}`, FactoryPoolState | null>();
-  for (const reference of input.references) {
-    throwIfAborted(input.signal);
-    const matches = indexed.filter((candidate) =>
-      candidate.coins.some(
-        (coin) =>
-          input.chainAddressToId.get(canonicalExitRouteAssetKey(deployment.chain, coin)) === reference.stablecoinId,
-      ),
-    );
-    // The factory index is the join. Zero matches leaves the original
-    // unresolved gate; more than one physical pool holding the same tracked
-    // token is an ambiguity this stage refuses to break on TVL.
-    if (matches.length === 0) continue;
-    if (matches.length > 1) {
-      gateReference(reference, "ambiguous-token-identity");
-      continue;
-    }
-    const match = matches[0]!;
-    if (!stateByPool.has(match.address)) {
-      stateByPool.set(
-        match.address,
-        await readPoolState({
-          deployment,
-          pool: match,
-          blockNumber,
-          rpcOptions,
-          signal: input.signal,
-          dependencies: input.dependencies,
-        }),
+    fetchBlockNumber: input.dependencies.fetchBlockNumber,
+    fetchBlockHeader: input.dependencies.fetchBlockHeader,
+    nowSec: input.nowSec,
+    maxAgeSec: CURVE_STABLESWAP_FACTORY_CAPTURE_MAX_AGE_SEC,
+    verifyDeployment: async ({ blockNumber }) => {
+      const factoryCode = await input.dependencies.fetchCodeAtBlock(
+        deployment.chain,
+        deployment.factoryAddress,
+        blockNumber,
+        rpcOptions,
       );
-    }
-    const state = stateByPool.get(match.address) ?? null;
-    if (!state) {
-      gateReference(reference, "incomplete-exact-capture");
-      continue;
-    }
-    const built = buildCurveStableswapFactoryExecutionModel({
-      chain: deployment.chain,
-      stablecoinId: reference.stablecoinId,
-      state,
-      chainAddressToId: input.chainAddressToId,
-      stablecoinPriceById: input.stablecoinPriceById,
-    });
-    if (!built.model) {
-      gateReference(reference, built.reason);
-      continue;
-    }
-    const extra = { ...(reference.pool.extra ?? {}) };
-    delete extra.executionCapabilityGate;
-    extra.ammExecutionModel = built.model;
-    extra.measurement = { ...(extra.measurement ?? {}), balanceMeasured: true };
-    extra.registryId = deployment.registryId;
-    extra.isMetaPool = false;
-    reference.pool.extra = extra;
-  }
+      if (!factoryCode || input.dependencies.hashCode(factoryCode) !== deployment.expectedFactoryCodeHash) {
+        return { ok: false };
+      }
+      const implementationCode = await input.dependencies.fetchCodeAtBlock(
+        deployment.chain,
+        deployment.expectedPoolImplementationAddress,
+        blockNumber,
+        rpcOptions,
+      );
+      if (
+        !implementationCode ||
+        input.dependencies.hashCode(implementationCode) !== deployment.expectedPoolImplementationCodeHash
+      ) {
+        return { ok: false };
+      }
+      return { ok: true };
+    },
+    buildCalls: async ({ blockNumber }) => {
+      const indexed = await readIndexedPools({
+        deployment,
+        blockNumber,
+        rpcOptions,
+        signal: input.signal,
+        dependencies: input.dependencies,
+      });
+      if (!indexed) return { ok: false };
 
-  const confirmedHeader = await input.dependencies.fetchBlockHeader(deployment.chain, blockNumber, rpcOptions);
-  if (
-    !confirmedHeader ||
-    confirmedHeader.number !== header.number ||
-    confirmedHeader.hash.toLowerCase() !== header.hash.toLowerCase() ||
-    !isFreshEvmCaptureHeader(
-      confirmedHeader,
-      input.nowSec,
-      CURVE_STABLESWAP_FACTORY_CAPTURE_MAX_AGE_SEC,
-    )
-  ) {
-    // The capture straddled a reorg or went stale mid-read; withdraw every
-    // model this run published and restore the unresolved join.
-    for (const reference of input.references) {
-      const extra = { ...(reference.pool.extra ?? {}) };
-      delete extra.ammExecutionModel;
-      extra.executionCapabilityGate = { family: "curve-stableswap", reason: "exact-pool-join-unresolved" };
-      reference.pool.extra = extra;
-    }
-  }
+      const actions: Array<() => void> = [];
+      const stateByPool = new Map<`0x${string}`, FactoryPoolState | null>();
+      for (const reference of input.references) {
+        throwIfAborted(input.signal);
+        const matches = indexed.filter((candidate) =>
+          candidate.coins.some(
+            (coin) =>
+              input.chainAddressToId.get(canonicalExitRouteAssetKey(deployment.chain, coin)) ===
+              reference.stablecoinId,
+          ),
+        );
+        if (matches.length === 0) continue;
+        if (matches.length > 1) {
+          actions.push(() => gateReference(reference, "ambiguous-token-identity"));
+          continue;
+        }
+        const match = matches[0]!;
+        if (!stateByPool.has(match.address)) {
+          stateByPool.set(
+            match.address,
+            await readPoolState({
+              deployment,
+              pool: match,
+              blockNumber,
+              rpcOptions,
+              signal: input.signal,
+              dependencies: input.dependencies,
+            }),
+          );
+        }
+        const state = stateByPool.get(match.address) ?? null;
+        if (!state) {
+          actions.push(() => gateReference(reference, "incomplete-exact-capture"));
+          continue;
+        }
+        const built = buildCurveStableswapFactoryExecutionModel({
+          chain: deployment.chain,
+          stablecoinId: reference.stablecoinId,
+          state,
+          chainAddressToId: input.chainAddressToId,
+          stablecoinPriceById: input.stablecoinPriceById,
+        });
+        if (!built.ok) {
+          actions.push(() => gateReference(reference, built.reason));
+          continue;
+        }
+        actions.push(() => {
+          const extra = { ...(reference.pool.extra ?? {}) };
+          delete extra.executionCapabilityGate;
+          extra.ammExecutionModel = built.model;
+          extra.measurement = { ...(extra.measurement ?? {}), balanceMeasured: true };
+          extra.registryId = deployment.registryId;
+          extra.isMetaPool = false;
+          reference.pool.extra = extra;
+        });
+      }
+      return { ok: true, value: actions };
+    },
+    onResults: (actions) => {
+      for (const apply of actions) apply();
+    },
+    onFailure: () => undefined,
+  });
 }
 
 /**

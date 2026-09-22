@@ -254,7 +254,12 @@ export interface RecommendedSource {
   apy30d: number;
   pharosYieldScore: number | null;
   sourceTvlUsd?: number | null;
-  sourceRiskTier: "low" | "mid" | "high";
+  /**
+   * `null` when the venue-risk registry has not sourced a tier for this rail.
+   * The comparator scores an unknown tier as the neutral 55; publishing it as
+   * `"mid"` would render an unmade measurement as a measured one.
+   */
+  sourceRiskTier: "low" | "mid" | "high" | null;
   /**
    * `null` when the winning rail published no freshness reading. The engine
    * scores unknown freshness as neutral (50), so callers must render it as
@@ -360,10 +365,12 @@ export type SelectorRecommendation =
 // ---------------------------------------------------------------------------
 
 export const EXCLUSION_REASONS = [
+  "supply-unavailable",
   "below-supply-floor",
   "active-depeg",
   "safety-grade-floor",
   "safety-resilience-floor",
+  /** Retired before `selector-v2.0`; kept so v1.x snapshots still replay. */
   "safety-dependency-risk-floor",
   "dews-ceiling",
   "bluechip-d-or-f",
@@ -374,7 +381,6 @@ export const EXCLUSION_REASONS = [
   "yield-warning-thin-tvl",
   "high-venue-on-c-tier",
   "liquidity-floor",
-  "liquidity-diversification-floor",
   "effective-exit-floor",
   "supply-tvl-floor-1h",
   "peg-currency-mismatch",
@@ -577,7 +583,8 @@ export interface MergedRow {
   canBeBlacklisted: boolean | "possible" | "inherited" | null;
   mechanismArchetype: string | null;
 
-  supplyUsd: number;
+  /** `null` when the run had no usable current-supply reading for the coin — never a stand-in zero. */
+  supplyUsd: number | null;
 
   /** Peg domain's published PegScore. Every peg weight slot reads this one field. */
   pegScore: number | null;

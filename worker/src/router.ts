@@ -4,13 +4,9 @@ import {
   type EndpointDefinition,
   type EndpointMethodValidationError,
 } from "@shared/lib/api-endpoints";
-import { cloneResponse } from "@shared/lib/http-response";
 
 import { errorResponse, jsonResponse, methodNotAllowedResponse, noStoreResponse } from "./lib/api-response";
-import {
-  getRouteMatch,
-  ROUTER_STATIC_PATHS,
-} from "./routes/registry";
+import { getRouteMatch } from "./routes/registry";
 import { logWorkerEvent } from "./lib/structured-log";
 import { auditCatalogActionResponseSafely } from "./lib/catalog-action-audit";
 import type { FullRouteContext, RouteMatch } from "./routes/shared";
@@ -28,11 +24,6 @@ function addAdminGetNoStoreHeader(
   if (request?.method !== "GET") return response;
   if (!endpoint?.adminRequired) return response;
   return noStoreResponse(response);
-}
-
-function stripHeadBody(request: Request | undefined, response: Response): Response {
-  if (request?.method !== "HEAD") return response;
-  return cloneResponse(response, { method: request.method });
 }
 
 function auditPersistenceFailureResponse(response: Response): Response {
@@ -102,9 +93,9 @@ async function handleRouteWithErrorBoundary(
     endpoint: routeMatch.endpoint,
     request: routeCtx.request,
     response: responseWithHeaders,
+    internalProbe: routeCtx.internalProbe,
   });
-  const finalResponse = audited ? responseWithHeaders : auditPersistenceFailureResponse(responseWithHeaders);
-  return stripHeadBody(routeCtx.request, finalResponse);
+  return audited ? responseWithHeaders : auditPersistenceFailureResponse(responseWithHeaders);
 }
 
 export function route(routeCtx: FullRouteContext, resolvedRoute: ResolvedRoute): Promise<Response>;
@@ -124,4 +115,3 @@ export function route(
 
   return handleRouteWithErrorBoundary(routeCtx, resolvedRoute.routeMatch, path);
 }
-export { ROUTER_STATIC_PATHS };

@@ -109,6 +109,7 @@ describe("redemption backstop config helpers", () => {
     expect(() => defineBackstopRegistry(entries)).toThrow();
   });
 
+
   it("finalizes entries and their registry without mutating source configs", () => {
     const entries = defineBatch(["alpha", "beta"], createBaseConfig(), { sourceFilePath: "shared/base.ts" });
     const finalized = finalizeBackstopRegistry(entries, [
@@ -212,8 +213,7 @@ describe("redemption backstop config helpers", () => {
     const fixedCosts = {
       kind: "fee-bps" as const,
       feeBps: 0,
-      flatFeeUsd: 25,
-      gasOrBridgeCostUsd: 25,
+      gasOrBridgeCostUsd: 50,
     };
     expect(resolveRedemptionCostBpsAtNotional(fixedCosts, 100_000)).toBe(5);
   });

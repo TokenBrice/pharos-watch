@@ -34,7 +34,7 @@ vi.mock("../../../lib/coingecko-onchain", async () => {
   );
   return {
     ...actual,
-    fetchCgTokenPoolsWithStatus: vi.fn(async () => ({ transportOk: true, schemaDegraded: false, pools: [] })),
+    fetchCgTokenPoolsWithStatus: vi.fn(async () => ({ transportOk: true, schemaDegraded: false, complete: true, pools: [] })),
   };
 });
 
@@ -456,6 +456,7 @@ describe("crawlCoin DexScreener hardening", () => {
     vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({
       transportOk: true,
       schemaDegraded: false,
+      complete: true,
       pools: [
         coinGeckoPool() as never,
       ],
@@ -506,6 +507,7 @@ describe("crawlCoin DexScreener hardening", () => {
     vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({
       transportOk: true,
       schemaDegraded: false,
+      complete: true,
       pools: [
         coinGeckoPool({
           id: "solana_PoolCase", address: "PoolCase", name: "EUSD / USDC", network: "solana",
@@ -594,8 +596,8 @@ describe("crawlCoin DexScreener hardening", () => {
   it("keeps shared CoinGecko onchain pools distinct across stablecoins", async () => {
     const sharedPool = coinGeckoPool() as never;
     vi.mocked(fetchCgTokenPoolsWithStatus)
-      .mockResolvedValueOnce({ transportOk: true, schemaDegraded: false, pools: [sharedPool] })
-      .mockResolvedValueOnce({ transportOk: true, schemaDegraded: false, pools: [sharedPool] });
+      .mockResolvedValueOnce({ transportOk: true, schemaDegraded: false, complete: true, pools: [sharedPool] })
+      .mockResolvedValueOnce({ transportOk: true, schemaDegraded: false, complete: true, pools: [sharedPool] });
 
     const knownPoolIds = new Set<string>();
     const usdcResult = await crawlCoin(
@@ -624,6 +626,7 @@ describe("crawlCoin DexScreener hardening", () => {
     vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({
       transportOk: true,
       schemaDegraded: false,
+      complete: true,
       pools: [
         coinGeckoPool({
           id: "eth_0xc537e898cd774e2dcba3b14ea6f34c93d5ea45e1-2236",
@@ -652,6 +655,7 @@ describe("crawlCoin DexScreener hardening", () => {
     vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({
       transportOk: false,
       schemaDegraded: false,
+      complete: false,
       pools: [],
     });
 
@@ -671,6 +675,7 @@ describe("crawlCoin DexScreener hardening", () => {
     vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({
       transportOk: false,
       schemaDegraded: false,
+      complete: false,
       pools: [],
     });
 
@@ -688,6 +693,7 @@ describe("crawlCoin DexScreener hardening", () => {
         provider: "coingecko",
         status: "failure",
         retryable: true,
+        paginationComplete: false,
         error: "coingecko-transport-failure",
       },
     ]);
@@ -701,6 +707,7 @@ describe("crawlCoin DexScreener hardening", () => {
       .mockResolvedValueOnce({
         transportOk: true,
         schemaDegraded: true,
+        complete: true,
         pools: [],
       });
 
@@ -745,6 +752,7 @@ describe("crawlCoin DexScreener hardening", () => {
         address: "0xjkl",
         provider: "coingecko",
         status: "degraded",
+        paginationComplete: true,
         error: "coingecko-malformed-payload",
       },
     ]);
@@ -754,6 +762,7 @@ describe("crawlCoin DexScreener hardening", () => {
     vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({
       transportOk: true,
       schemaDegraded: true,
+      complete: true,
       pools: [],
     });
 
@@ -777,6 +786,7 @@ describe("crawlCoin DexScreener hardening", () => {
     vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({
       transportOk: true,
       schemaDegraded: false,
+      complete: true,
       pools: [],
     });
 
@@ -825,7 +835,7 @@ describe("crawlCoin DexScreener hardening", () => {
 
     vi.mocked(fetchCgTokenPoolsWithStatus).mockImplementation(async (network) => {
       events.push(`cg:${network}`);
-      return { transportOk: false, schemaDegraded: false, pools: [] };
+      return { transportOk: false, schemaDegraded: false, complete: false, pools: [] };
     });
     vi.mocked(crawlTokenPools).mockImplementation(async (config) => {
       events.push("gt");
@@ -912,6 +922,7 @@ describe("crawlCoin DexScreener hardening", () => {
     vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValue({
       transportOk: true,
       schemaDegraded: false,
+      complete: true,
       pools: [],
     });
     vi.mocked(fetchDsTokenPairsWithStatus).mockResolvedValue({ ok: true, pairs: [] });
@@ -943,6 +954,7 @@ describe("crawlCoin DexScreener hardening", () => {
     vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValue({
       transportOk: true,
       schemaDegraded: false,
+      complete: true,
       pools: [],
     });
     vi.mocked(fetchJsonWithRetry).mockResolvedValueOnce({

@@ -1,16 +1,15 @@
 import { addFreshnessHeaders, getLatestSuccessfulCronTimestamp } from "./api-freshness";
 import { buildMethodologyEnvelope } from "./api-methodology";
 import { jsonResponseWithHeaders } from "./api-response";
-import { CACHE_PROFILES } from "./constants";
+import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import {
   BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
   BLACKLIST_TRACKER_METHODOLOGY_VERSION,
   BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
-} from "@shared/lib/methodology-versions/blacklist-tracker";
+} from "@shared/lib/methodology-versions/constants";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import type { BlacklistReconciliationStatus } from "@shared/types/status";
 import { getBlacklistGapStatus, type FreshnessStatus } from "@shared/lib/status-thresholds";
-import { isRecord } from "@shared/lib/type-guards";
 import { CONTRACT_CONFIGS } from "./blacklist-contracts";
 import { getDeferredBlacklistCoverage } from "./blacklist-coverage-manifest";
 import { loadBlacklistCurrentBalanceMap } from "./blacklist-current-balances";
@@ -44,6 +43,7 @@ import {
   BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY,
   BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,
 } from "./blacklist-cache-keys";
+import { claimCadenceBucket, failCadenceBucket } from "./cadence-bucket";
 
 type BlacklistSummaryPayload = BlacklistSummaryResponse &
   Required<Pick<BlacklistSummaryResponse, "coverage" | "freezeLedgerMeta" | "dataQuality" | "methodology">> & {
@@ -70,6 +70,10 @@ interface CachedBlacklistSummarySnapshot {
 }
 
 const BLACKLIST_SUMMARY_CURRENT_BALANCE_MAX_AGE_SEC = API_FRESHNESS_MAX_AGE_SEC.blacklistSummary * 2;
+const BLACKLIST_SUMMARY_REQUEST_CLAIM_KEY = "blacklist-summary:request-materialization-claim";
+const BLACKLIST_SUMMARY_REQUEST_CLAIM_STALE_SEC = 120;
+const BLACKLIST_SUMMARY_REQUEST_WAIT_ATTEMPTS = 100;
+const BLACKLIST_SUMMARY_REQUEST_WAIT_MS = 20;
 
 type BlacklistChartPoint = { quarter: string; total: number } & Record<BlacklistStablecoin, number>;
 
@@ -301,11 +305,8 @@ function buildDataQuality(
     missingRatio: gapMetrics.missingRatio,
     recentMissingAmounts: gapMetrics.recentMissingAmounts,
   });
-  // Resolved freeze-ledger rows are retained historical snapshots by design.
-  // Their age remains visible in freezeLedgerMeta.currentFreshnessDistribution,
-  // but it is not an actionable stale condition unless the provider is failing
-  // or recoverable amount gaps cross the shared gap thresholds.
-  const actionableStaleSnapshotCount = 0;
+  // Retained historical snapshot age stays visible in freezeLedgerMeta.currentFreshnessDistribution;
+  // ledger status degrades on provider failures and recoverable amount gaps, not on snapshot age.
   const status =
     gapStatus === "stale"
       ? "stale"
@@ -329,7 +330,6 @@ function buildDataQuality(
     },
     freezeLedger: {
       providerFailedCount: freezeLedgerMeta.providerFailedCount,
-      staleSnapshotCount: actionableStaleSnapshotCount,
       trackedGapCount: freezeLedgerMeta.gaps.tracked,
       scopedRows: freezeLedgerMeta.scopedRows,
       legacyRows: freezeLedgerMeta.legacyRows,
@@ -544,9 +544,8 @@ async function buildBlacklistSummaryPayload(
       .all<{ stablecoin: string; event_type: string; n: number }>(),
 
     // Collapse total / max(timestamp) / recoverable-gap / recent-30d /
-    // recent-24h into a single aggregate pass so we don't hit the
-    // public-events table five separate times under the
-    // WHERE suppression_reason IS NULL predicate.
+    // recent-24h and freeze-only window totals into a single aggregate pass
+    // under the WHERE suppression_reason IS NULL predicate.
     db
       .prepare(
         `/* blacklist-summary-public-aggregate */
@@ -554,12 +553,25 @@ async function buildBlacklistSummaryPayload(
              COUNT(*) AS total,
              MAX(timestamp) AS max_ts,
              SUM(CASE WHEN timestamp >= ? THEN 1 ELSE 0 END) AS recent_30d,
-             SUM(CASE WHEN timestamp >= ? THEN 1 ELSE 0 END) AS recent_24h
+             SUM(CASE WHEN timestamp >= ? THEN 1 ELSE 0 END) AS recent_24h,
+             SUM(CASE WHEN event_type IN ('blacklist', 'destroy') AND timestamp >= ? THEN 1 ELSE 0 END) AS freeze_24h,
+             SUM(CASE WHEN event_type IN ('blacklist', 'destroy') AND timestamp >= ? THEN 1 ELSE 0 END) AS freeze_7d,
+             SUM(CASE WHEN event_type IN ('blacklist', 'destroy') AND timestamp >= ? THEN COALESCE(amount_usd_at_event, 0) ELSE 0 END) AS freeze_usd_24h,
+             SUM(CASE WHEN event_type IN ('blacklist', 'destroy') AND timestamp >= ? THEN COALESCE(amount_usd_at_event, 0) ELSE 0 END) AS freeze_usd_7d
            FROM blacklist_events
            WHERE suppression_reason IS NULL`,
       )
-      .bind(now - 30 * 86400, now - 86400)
-      .first<{ total: number; max_ts: number | null; recent_30d: number; recent_24h: number }>(),
+      .bind(now - 30 * 86400, now - 86400, now - 86400, sevenDayCutoffSec, now - 86400, sevenDayCutoffSec)
+      .first<{
+        total: number;
+        max_ts: number | null;
+        recent_30d: number;
+        recent_24h: number;
+        freeze_24h: number;
+        freeze_7d: number;
+        freeze_usd_24h: number;
+        freeze_usd_7d: number;
+      }>(),
 
     loadBlacklistCurrentBalanceMap(db, now - BLACKLIST_SUMMARY_CURRENT_BALANCE_MAX_AGE_SEC),
 
@@ -655,6 +667,10 @@ async function buildBlacklistSummaryPayload(
         destroyedTotal,
         recentCount: aggregateRow?.recent_30d ?? 0,
         recentCount24h: aggregateRow?.recent_24h ?? 0,
+        recentFreezeCount24h: aggregateRow?.freeze_24h ?? 0,
+        recentFreezeCount7d: aggregateRow?.freeze_7d ?? 0,
+        recentFreezeAmount24hUsd: aggregateRow?.freeze_usd_24h ?? 0,
+        recentFreezeAmount7dUsd: aggregateRow?.freeze_usd_7d ?? 0,
         recoverableGapCount: gapMetrics.missingAmounts,
         activeAddressCount: activeStats.activeAddressCount,
         activeFrozenTotal: activeStats.activeFrozenTotal,
@@ -690,21 +706,65 @@ async function buildBlacklistSummaryPayload(
   };
 }
 
+async function buildAndWriteBlacklistSummarySnapshot(
+  db: D1Database,
+  now: number,
+  freshnessTs?: number,
+): Promise<CachedBlacklistSummarySnapshot> {
+  const boundedFreshnessTs = freshnessTs == null
+    ? undefined
+    : Math.min(now, Math.max(0, Math.floor(freshnessTs)));
+  const built = await buildBlacklistSummaryPayload(
+    db,
+    now,
+    boundedFreshnessTs == null ? undefined : { freshnessTsOverride: boundedFreshnessTs },
+  );
+  const snapshot: CachedBlacklistSummarySnapshot = {
+    version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,
+    materializedAt: now,
+    freshnessTs: built.freshnessTs,
+    payload: built.payload,
+  };
+  await writeBlacklistSummarySnapshot(db, snapshot);
+  return snapshot;
+}
+
 export async function materializeBlacklistSummarySnapshot(
   db: D1Database,
   now = Math.floor(Date.now() / 1000),
   freshnessTs = now,
 ): Promise<{ written: boolean }> {
-  const boundedFreshnessTs = Math.min(now, Math.max(0, Math.floor(freshnessTs)));
-  const built = await buildBlacklistSummaryPayload(db, now, { freshnessTsOverride: boundedFreshnessTs });
-  await writeBlacklistSummarySnapshot(db, {
-    version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,
-    materializedAt: now,
-    freshnessTs: built.freshnessTs,
-    payload: built.payload,
-  });
+  await buildAndWriteBlacklistSummarySnapshot(db, now, freshnessTs);
   return { written: true };
 }
+async function materializeBlacklistSummaryForRequest(
+  db: D1Database,
+  now: number,
+): Promise<CachedBlacklistSummarySnapshot> {
+  for (let claimAttempt = 0; claimAttempt < 2; claimAttempt++) {
+    const claim = await claimCadenceBucket(db, {
+      key: BLACKLIST_SUMMARY_REQUEST_CLAIM_KEY,
+      bucket: 0,
+      nowSec: now,
+      staleClaimAfterSec: BLACKLIST_SUMMARY_REQUEST_CLAIM_STALE_SEC,
+    });
+    if (claim.kind === "claimed") {
+      try {
+        return await buildAndWriteBlacklistSummarySnapshot(db, now);
+      } finally {
+        await failCadenceBucket(db, claim.claim, now).catch(() => false);
+      }
+    }
+
+    for (let waitAttempt = 0; waitAttempt < BLACKLIST_SUMMARY_REQUEST_WAIT_ATTEMPTS; waitAttempt++) {
+      await new Promise<void>((resolve) => setTimeout(resolve, BLACKLIST_SUMMARY_REQUEST_WAIT_MS));
+      const snapshot = await readBlacklistSummarySnapshot(db);
+      if (snapshot) return snapshot;
+    }
+  }
+  throw new Error("Blacklist summary materialization claim did not publish a snapshot");
+}
+
 
 function blacklistSummaryHeaders(freshnessTs: number): Record<string, string> {
   return addFreshnessHeaders(
@@ -715,29 +775,9 @@ function blacklistSummaryHeaders(freshnessTs: number): Record<string, string> {
 }
 
 export const handleBlacklistSummary = async (db: D1Database): Promise<Response> => {
-    const now = Math.floor(Date.now() / 1000);
-    const snapshot = await readBlacklistSummarySnapshot(db);
-    if (snapshot) {
-      let payload = snapshot.payload;
-      if (!isRecord(payload.reconciliation)) {
-        try {
-          const reconciliation = await loadBlacklistReconciliationStatus(db);
-          if (reconciliation.status !== "not-run") payload = { ...payload, reconciliation };
-        } catch {
-          // The summary cache remains backward-compatible while migration 0181
-          // rolls out. A later producer write includes the durable status.
-        }
-      }
-      return jsonResponseWithHeaders(payload, blacklistSummaryHeaders(snapshot.freshnessTs));
-    }
-
-    const built = await buildBlacklistSummaryPayload(db, now);
-    await writeBlacklistSummarySnapshot(db, {
-      version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,
-      materializedAt: now,
-      freshnessTs: built.freshnessTs,
-      payload: built.payload,
-    });
-    return jsonResponseWithHeaders(built.payload, blacklistSummaryHeaders(built.freshnessTs));
-  };
+  const now = Math.floor(Date.now() / 1000);
+  const snapshot = await readBlacklistSummarySnapshot(db)
+    ?? await materializeBlacklistSummaryForRequest(db, now);
+  return jsonResponseWithHeaders(snapshot.payload, blacklistSummaryHeaders(snapshot.freshnessTs));
+};
 

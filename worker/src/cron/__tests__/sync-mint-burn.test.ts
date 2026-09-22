@@ -1,9 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mockD1 } from "@shared/test-utils/mock-d1";
+import { type MockD1Database } from "@shared/test-utils/mock-d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import {
+  makeMintBurnDb as makeDb,
+  makeMintBurnMintLog as makeMintLog,
+  resetMintBurnMocks,
+  MINT_BURN_TRANSFER_TOPIC as TRANSFER_TOPIC,
+  MINT_BURN_ZERO_TOPIC as ZERO_TOPIC,
+  USDT_CONTRACT,
+} from "./mint-burn.test-support";
 
-const ZERO_TOPIC = "0x0000000000000000000000000000000000000000000000000000000000000000";
-const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 const CCIP_SEND_REQUESTED_TOPIC = "0xd0c3c799bf9e2639de44391e7f524d229b2b55f5b1ea94b2bf7da42f7243dddd";
 
 vi.mock("../../lib/mint-burn-contracts", async () => {
@@ -13,7 +19,6 @@ vi.mock("../../lib/mint-burn-contracts", async () => {
       chainIds: [...new Set(configs.map((config) => config.chain.chainId))],
       label: "Ethereum",
     })),
-    MINT_BURN_BRIDGE_VALIDATION_ERROR_COUNT: 0,
     getMintBurnConfigsForStablecoin: vi.fn((stablecoinId: string) =>
       stablecoinId === "usdt-tether"
         ? [makeMintBurnConfig({
@@ -93,117 +98,23 @@ vi.mock("../../lib/mint-burn-contracts", async () => {
   };
 });
 
-vi.mock("../../lib/alchemy-logs", () => ({
-  buildAlchemyUrl: vi.fn(() => "https://eth-mainnet.g.alchemy.com/v2/"),
-  getAlchemyBlockNumber: vi.fn(async () => 22_000_000),
-  getAlchemyTransactionContextBatchMany: vi.fn(async (_url: string, txHashes: string[]) =>
-    new Map(txHashes.map((txHash) => [txHash, {
-      tx: { hash: txHash, to: "0xrouter", input: "0x96f4e9f9" },
-      receipt: { transactionHash: txHash, to: "0xrouter", logs: [] },
-    }])),
-  ),
-  fetchAlchemyLogs: vi.fn(async () => ({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })),
-  resolveBlockTimestamps: vi.fn(async () => new Map()),
-}));
-
-vi.mock("../../lib/evm-logs", () => ({
-  createBudget: vi.fn((limit = 200) => ({ count: 0, limit })),
-  budgetExhausted: vi.fn((budget: { count: number; limit: number }) => budget.count >= budget.limit),
-  decodeUint256AtSlotOrNull: vi.fn(() => 50_000),
-  decodeAddress: vi.fn((hex: string) => "0x" + hex.slice(-40)),
-}));
-
-vi.mock("../../lib/db", async (importOriginal) => {
-  const orig = await importOriginal<typeof import("../../lib/db")>();
-  return {
-    ...orig,
-    batchExecute: vi.fn(async (_db: D1Database, stmts: D1PreparedStatement[]) => stmts.length),
-  };
-});
-
-vi.mock("../../lib/mint-burn-pipeline/persistence", async (importOriginal) => {
-  const orig = await importOriginal<typeof import("../../lib/mint-burn-pipeline/persistence")>();
-  return {
-    ...orig,
-    recalcAffectedHours: vi.fn(orig.recalcAffectedHours),
-  };
-});
-
-vi.mock("../../lib/mint-burn-pipeline/price-heal", () => ({
-  getNullPriceBacklog: vi.fn(async () => ({ recent: 0, historical: 0 })),
-  healNullPrices: vi.fn(async () => ({ healed: 0, affectedHours: new Map() })),
-}));
-
-vi.mock("../../lib/mint-burn-pipeline/roundtrip-sweep", () => ({
-  sweepRecentRoundtrips: vi.fn(async () => ({ reclassified: 0, affectedHours: new Map(), saturated: false })),
-}));
-
 import { syncMintBurn } from "../sync-mint-burn";
 import { syncMintBurnConfig } from "../mint-burn/sync-config";
 import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
 import { batchExecute } from "../../lib/db";
 import { recalcAffectedHours } from "../../lib/mint-burn-pipeline/persistence";
-import { getNullPriceBacklog, healNullPrices } from "../../lib/mint-burn-pipeline/price-heal";
+import { getNullPriceBacklog } from "../../lib/mint-burn-pipeline/price-heal";
 import { sweepRecentRoundtrips } from "../../lib/mint-burn-pipeline/roundtrip-sweep";
-// batchExecute stays in db.ts (core DB utility)
 import {
   fetchAlchemyLogs,
-  getAlchemyBlockNumber,
   getAlchemyTransactionContextBatchMany,
   resolveBlockTimestamps,
 } from "../../lib/alchemy-logs";
 import { createBudget, decodeUint256AtSlotOrNull } from "../../lib/evm-logs";
 
-function makeDb(opts: {
-  runState?: { degradedStreak: number; lastConfigKey?: string | null } | null;
-  syncRows?: Array<{ last_block: number; config_key?: string }>;
-  cacheRows?: Array<{ key: string; value: string; updated_at: number }>;
-} = {}): D1Database {
-  const runState = opts.runState ?? { degradedStreak: 0, lastConfigKey: null };
-  return mockD1([
-    {
-      match: "mint_burn_run_state",
-      rows: runState ? [{ degraded_streak: runState.degradedStreak, last_config_key: runState.lastConfigKey ?? null }] : [],
-      first: runState ? { degraded_streak: runState.degradedStreak, last_config_key: runState.lastConfigKey ?? null } : null,
-    },
-    { match: "mint_burn_sync_state", rows: opts.syncRows ?? [] },
-    { match: "price_cache", rows: [{ asset_id: "usdt-tether", price: 1.0 }, { asset_id: "usdc-circle", price: 0.999 }] },
-    { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: opts.cacheRows ?? [] },
-    { match: "INSERT OR REPLACE INTO cache", rows: [] },
-    { match: "DELETE FROM cache WHERE key >= ? AND key < ?", rows: [] },
-    { match: "supply_history", rows: [] },
-    { match: "mint_burn_hourly", rows: [] },
-    { match: "mint_burn_events", rows: [] },
-    { match: "SELECT config_key, deferred_until FROM mint_burn_config_deferral", rows: [] },
-    { match: "INSERT OR REPLACE INTO mint_burn_config_deferral", rows: [] },
-    ...(opts.cacheRows
-      ? [{ match: "cache", rows: opts.cacheRows }]
-      : []),
-  ]);
-}
-
-const USDT_CONFIG_KEY = "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7";
+const USDT_CONFIG_KEY = `ethereum-${USDT_CONTRACT}`;
 
 const sqliteFixtures = createLatestSchemaFixtureTracker();
-
-function makeMintLog(opts: { blockNumber?: number; txHash?: string; logIndex?: number } = {}) {
-  const block = opts.blockNumber ?? 22_000_000;
-  return {
-    address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
-    topics: [
-      "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
-      "0x0000000000000000000000000000000000000000000000000000000000000000",
-      "0x000000000000000000000000abcdef1234567890abcdef1234567890abcdef12",
-    ],
-    data: "0x00000000000000000000000000000000000000000000000000000002540be400",
-    blockNumber: "0x" + block.toString(16),
-    transactionHash: opts.txHash ?? "0xabc123",
-    transactionIndex: "0x0",
-    blockHash: "0x0",
-    logIndex: "0x" + (opts.logIndex ?? 0).toString(16),
-    removed: false,
-  };
-}
 
 function topicAddress(address: string): string {
   const raw = address.toLowerCase().replace(/^0x/, "");
@@ -214,7 +125,7 @@ function makeBurnLog(opts: { blockNumber?: number; txHash?: string; logIndex?: n
   const block = opts.blockNumber ?? 22_000_000;
   const sender = opts.sender ?? "0x1234000000000000000000000000000000000000";
   return {
-    address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    address: USDT_CONTRACT,
     topics: [
       TRANSFER_TOPIC,
       topicAddress(sender),
@@ -246,30 +157,9 @@ function makeReceiptLog(txHash: string, topics: string[]) {
 
 describe("syncMintBurn", () => {
   beforeEach(() => {
+    resetMintBurnMocks();
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-04T12:00:00Z"));
-    vi.mocked(createBudget).mockReset().mockImplementation((limit = 200) => ({ count: 0, limit }));
-    vi.mocked(decodeUint256AtSlotOrNull).mockReset().mockReturnValue(50_000);
-    vi.mocked(getAlchemyBlockNumber).mockReset().mockResolvedValue(22_000_000);
-    vi.mocked(getAlchemyTransactionContextBatchMany).mockReset().mockImplementation(async (_url, txHashes: string[]) =>
-      new Map(txHashes.map((txHash) => [txHash, {
-        tx: { hash: txHash, to: "0xrouter", input: "0x96f4e9f9" },
-        receipt: { transactionHash: txHash, to: "0xrouter", logs: [] },
-      }])),
-    );
-    vi.mocked(fetchAlchemyLogs).mockReset().mockResolvedValue({
-      logs: [],
-      complete: true,
-      scannedToBlock: 22_000_000,
-      calls: 1,
-      maxDepth: 0,
-    });
-    vi.mocked(resolveBlockTimestamps).mockReset().mockResolvedValue(new Map());
-    vi.mocked(batchExecute).mockReset().mockImplementation(async (_db, stmts) => stmts.length);
-    vi.mocked(recalcAffectedHours).mockReset().mockResolvedValue(undefined);
-    vi.mocked(getNullPriceBacklog).mockReset().mockResolvedValue({ recent: 0, historical: 0 });
-    vi.mocked(healNullPrices).mockReset().mockResolvedValue({ healed: 0, affectedHours: new Map() });
-    vi.mocked(sweepRecentRoundtrips).mockReset().mockResolvedValue({ reclassified: 0, affectedHours: new Map(), saturated: false });
   });
 
   afterEach(() => {
@@ -462,6 +352,64 @@ describe("syncMintBurn", () => {
     expect(result.summary.rowsDroppedDecode).toBe(1);
     expect(result.summary.earliestDecodeFailureBlock).toBe(failedBlock);
     expect(result.newLastBlock).toBe(failedBlock - 1);
+  });
+
+  it("advances past an undecodable log after its bounded retry quarantine", async () => {
+    const config = MINT_BURN_CONFIGS[0]!;
+    const failedBlock = 21_910_000;
+    const failedLog = makeMintLog({ blockNumber: failedBlock });
+    const retryKey = `mint-burn:decode-retry:${USDT_CONFIG_KEY}:${failedLog.blockNumber}:${failedLog.transactionHash}:${failedLog.logIndex}`;
+    const db = makeDb({
+      cacheRows: [{
+        key: retryKey,
+        value: JSON.stringify({ attempts: 2, quarantined: false, reason: "amount-decode-retry" }),
+        updated_at: 1_718_650_000,
+      }],
+    });
+    vi.mocked(decodeUint256AtSlotOrNull).mockReturnValue(null);
+    vi.mocked(fetchAlchemyLogs)
+      .mockResolvedValueOnce({
+        logs: [failedLog],
+        complete: true,
+        scannedToBlock: 21_960_000,
+        calls: 1,
+        maxDepth: 0,
+      })
+      .mockResolvedValueOnce({
+        logs: [],
+        complete: true,
+        scannedToBlock: 21_960_000,
+        calls: 1,
+        maxDepth: 0,
+      });
+
+    const result = await syncMintBurnConfig({
+      db,
+      config,
+      key: USDT_CONFIG_KEY,
+      tier: "critical",
+      fromBlock: failedBlock,
+      scanTo: 21_960_000,
+      chainHead: 22_000_000,
+      alchemyUrl: "https://eth-mainnet.g.alchemy.com/v2/",
+      configBudgetLimit: 200,
+      runTimestamp: 1_718_650_752,
+      priceContext: { prices: new Map([["usdt-tether", 1]]), priceHistory: new Map() },
+      chainTimestampCache: new Map(),
+      txContextCache: new Map(),
+      affectedHours: new Map(),
+      safetyMarginBlocks: 10_000,
+    });
+
+    expect(result.newLastBlock).toBe(21_960_000);
+    expect(result.summary.rowsDroppedDecode).toBe(1);
+    expect(result.summary.rowsQuarantinedDecode).toBe(1);
+    expect(result.summary.decodeQuarantines).toEqual([expect.objectContaining({
+      blockNumber: failedBlock,
+      reason: "amount-decode-retry-exhausted",
+      attempts: 3,
+    })]);
+    expect(result.summary.advanceReason).toBe("full-success-empty");
   });
 
   it("resumes from canonical sync-state progress", async () => {
@@ -762,7 +710,6 @@ describe("syncMintBurn", () => {
     expect(meta.burnClassification.bridgeBurns).toBe(1);
     expect(meta.burnClassification.effectiveBurns).toBe(1);
     expect(meta.burnClassification.reviewBurns).toBe(0);
-    expect(meta.bridgeValidationErrors).toBe(0);
   });
 
   it("withholds tx-context shortfall rows and keeps the frontier retryable", async () => {
@@ -952,6 +899,25 @@ describe("syncMintBurn", () => {
         && entry.binds[1] === "mint-burn-flows:v3:\uffff",
     );
     expect(invalidation).toBeDefined();
+  });
+
+  it("keeps the published aggregate gauge cache row when the extended lane invalidates", async () => {
+    const db = makeDb();
+
+    await syncMintBurn(db, "alchemy-key", { lane: "extended", jobName: "sync-mint-burn-extended" });
+
+    const history = (db as MockD1Database).getHistory();
+    const cacheDeletes = history.filter(({ sql }) => sql.includes("DELETE FROM cache"));
+    expect(
+      cacheDeletes.some(
+        (entry) => entry.binds[0] === "mint-burn-flows:v3:coin:" && entry.binds[1] === "mint-burn-flows:v3:coin:\uffff",
+      ),
+    ).toBe(true);
+    expect(
+      cacheDeletes.some(
+        (entry) => entry.binds[0] === "mint-burn-flows:v3:" || entry.binds[0] === "mint-burn-flows:v3:aggregate:",
+      ),
+    ).toBe(false);
   });
 
   it("emits nullPriceBacklog and roundtripsBacklogSaturated in metadata", async () => {

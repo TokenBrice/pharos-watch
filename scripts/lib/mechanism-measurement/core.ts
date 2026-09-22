@@ -338,9 +338,15 @@ export async function fetchBlockByNumber(rpcUrl: string, blockNumber: number): P
   if (!header?.number || !header.hash || !header.timestamp) {
     throw new Error(`Block ${blockNumber} not available on this RPC endpoint`);
   }
+  const verifiedBlockNumber = BigInt(header.number);
+  if (verifiedBlockNumber !== BigInt(blockNumber)) {
+    throw new Error(
+      `Block ${blockNumber} RPC response was labelled as block ${verifiedBlockNumber}; refusing mismatched evidence`,
+    );
+  }
   const timestampUnix = Number(BigInt(header.timestamp));
   return {
-    number: blockNumber,
+    number: Number(verifiedBlockNumber),
     hash: header.hash.toLowerCase(),
     timestampUnix,
     timestampIso: new Date(timestampUnix * 1000).toISOString(),

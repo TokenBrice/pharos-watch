@@ -1,6 +1,6 @@
 import { TELEGRAM_BOT_URL, TELEGRAM_BOT_USERNAME } from "@shared/lib/telegram-bot-registration";
 import { escapeHtml } from "../lib/telegram";
-import { deleteCache, getCache, setCache } from "../lib/db-cache";
+import { deleteCache, getCache, setCacheIfAbsent } from "../lib/db-cache";
 import { logTelegramEvent } from "../lib/telegram/log";
 import { isChannelChatType, isGroupChatType } from "./telegram-webhook-auth";
 import { forgetSubscriber } from "./telegram-webhook-store";
@@ -122,27 +122,39 @@ export async function handleMyChatMember(
     return;
   }
 
-  // 24h idempotency marker per chat — Telegram may redeliver `my_chat_member`
-  // when the bot is removed and re-added quickly; we never want two welcomes.
+  // Claim before the irreversible send so overlapping Telegram redeliveries
+  // cannot both welcome the same group.
   const cacheKey = `telegram:group-welcome:${chatIdStr}`;
+  const nowSec = Math.floor(Date.now() / 1000);
   const cached = await getCache(db, cacheKey);
-  if (cached && Date.now() / 1000 - cached.updatedAt < TELEGRAM_GROUP_WELCOME_CACHE_TTL_SEC) {
+  if (cached && nowSec - cached.updatedAt < TELEGRAM_GROUP_WELCOME_CACHE_TTL_SEC) {
+    return;
+  }
+  if (cached) {
+    await deleteCache(db, cacheKey);
+  }
+  if (!await setCacheIfAbsent(db, cacheKey, "1", nowSec)) {
     return;
   }
 
-  const adderMention = formatAdderMention(payload.from);
-  await options.beforeIrreversibleEffect?.("group-welcome");
-  const welcomeSend = await sendAuditedTelegramReply(
-    db,
-    chatIdStr,
-    buildGroupWelcomeMessage(adderMention),
-    botToken,
-    {
-      actionDetail: "group-welcome",
-      replyMarkup: buildGroupWelcomeReplyMarkup(),
-    },
-  );
-  if (welcomeSend.ok) {
-    await setCache(db, cacheKey, "1");
+  try {
+    const adderMention = formatAdderMention(payload.from);
+    await options.beforeIrreversibleEffect?.("group-welcome");
+    const welcomeSend = await sendAuditedTelegramReply(
+      db,
+      chatIdStr,
+      buildGroupWelcomeMessage(adderMention),
+      botToken,
+      {
+        actionDetail: "group-welcome",
+        replyMarkup: buildGroupWelcomeReplyMarkup(),
+      },
+    );
+    if (!welcomeSend.ok) {
+      await deleteCache(db, cacheKey);
+    }
+  } catch (err) {
+    await deleteCache(db, cacheKey);
+    throw err;
   }
 }

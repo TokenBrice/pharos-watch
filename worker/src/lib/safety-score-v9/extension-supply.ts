@@ -9,7 +9,7 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { CURATED_NATIVE_SINGLE_ROUTE_SUPPLY_ATTRIBUTION } from "./curated-single-route-supply";
-import type { SafetyScoreV9FactSetExtensionV2 } from "./fact-set";
+import type { SafetyScoreV9FactSetExtensionV2 } from "./fact-set-schema";
 import type { V9ExtensionRegistryMeta } from "./extension-shared";
 import type { SafetyScoreV9CompilerInput } from "./native-input";
 import {
@@ -163,6 +163,23 @@ const REPRESENTATION_GROUP_MATERIAL_SHARE_THRESHOLD = Math.min(
 function unmatchedRouteKey(assetId: string, chain: string, routeCount: number): string {
   return `${routeCount === 0 ? V9_UNMATCHED_CHAIN_ROUTE_PREFIX : V9_AMBIGUOUS_CHAIN_ROUTE_PREFIX}${assetId}:${canonicalChainKey(chain)}`;
 }
+function finalizeSupplyReview(review: SupplyReview): SupplyReview {
+  return {
+    selectedBridgeRoutes: review.selectedBridgeRoutes
+      .map((route) => ({
+        ...route,
+        supplyShare: Math.min(1, Math.max(0, route.supplyShare)),
+      }))
+      .sort((left, right) => compareText(left.deploymentRouteKey, right.deploymentRouteKey)),
+    selectedRouteSupplyShare: Math.min(1, Math.max(0, review.selectedRouteSupplyShare)),
+    unknownRouteSupplyShare: Math.min(1, Math.max(0, review.unknownRouteSupplyShare)),
+    unreviewedRouteSupplyShare: Math.min(1, Math.max(0, review.unreviewedRouteSupplyShare)),
+    failureDomains: [
+      ...new Map(review.failureDomains.map((domain) => [`${domain.kind}:${domain.key}`, domain])).values(),
+    ].sort((left, right) => compareText(`${left.kind}:${left.key}`, `${right.kind}:${right.key}`)),
+  };
+}
+
 
 function buildReviewedDeploymentSupplyReview(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
@@ -229,17 +246,13 @@ function buildReviewedDeploymentSupplyReview(
     }
   }
 
-  return {
-    selectedBridgeRoutes: selectedBridgeRoutes.sort((left, right) =>
-      compareText(left.deploymentRouteKey, right.deploymentRouteKey),
-    ),
-    selectedRouteSupplyShare: Math.min(1, reviewedSelectedUsd / totalUsd),
+  return finalizeSupplyReview({
+    selectedBridgeRoutes,
+    selectedRouteSupplyShare: reviewedSelectedUsd / totalUsd,
     unknownRouteSupplyShare: 0,
-    unreviewedRouteSupplyShare: Math.min(1, unreviewedUsd / totalUsd),
-    failureDomains: [...new Map(failureDomains.map((domain) => [`${domain.kind}:${domain.key}`, domain])).values()].sort(
-      (left, right) => compareText(`${left.kind}:${left.key}`, `${right.kind}:${right.key}`),
-    ),
-  };
+    unreviewedRouteSupplyShare: unreviewedUsd / totalUsd,
+    failureDomains,
+  });
 }
 
 function buildRepresentationGroupSupplyReview(
@@ -341,10 +354,7 @@ function buildRepresentationGroupSupplyReview(
           reviewState: "selected-unresolved",
         },
   );
-  selectedBridgeRoutes.sort((left, right) =>
-    compareText(left.deploymentRouteKey, right.deploymentRouteKey),
-  );
-  return {
+  return finalizeSupplyReview({
     selectedBridgeRoutes,
     selectedRouteSupplyShare: groupIsSubmaterial
       ? 1
@@ -358,7 +368,7 @@ function buildRepresentationGroupSupplyReview(
         kind: "bridge-route",
         key,
       })),
-  };
+  });
 }
 
 /**
@@ -463,15 +473,13 @@ function buildIndependentLiabilitySupplyReview(
     };
   });
 
-  return {
+  return finalizeSupplyReview({
     selectedBridgeRoutes,
     selectedRouteSupplyShare: 1,
     unknownRouteSupplyShare: 0,
     unreviewedRouteSupplyShare: 0,
-    failureDomains: [...new Map(failureDomains.map((domain) => [`${domain.kind}:${domain.key}`, domain])).values()].sort(
-      (left, right) => compareText(`${left.kind}:${left.key}`, `${right.kind}:${right.key}`),
-    ),
-  };
+    failureDomains,
+  });
 }
 
 /**
@@ -507,7 +515,7 @@ function buildCuratedNativeSingleRouteSupplyReview(
   const failureDomains: SupplyReview["failureDomains"] = (
     route.failureDomainKeys?.length ? route.failureDomainKeys : [route.id]
   ).map((key) => ({ kind: "bridge-route", key }));
-  return {
+  return finalizeSupplyReview({
     selectedBridgeRoutes: [{
       deploymentRouteKey: route.id,
       supplyUsd: aggregateSupplyUsd,
@@ -519,10 +527,8 @@ function buildCuratedNativeSingleRouteSupplyReview(
     selectedRouteSupplyShare: 1,
     unknownRouteSupplyShare: 0,
     unreviewedRouteSupplyShare: 0,
-    failureDomains: [...new Map(failureDomains.map((domain) => [`${domain.kind}:${domain.key}`, domain])).values()].sort(
-      (left, right) => compareText(`${left.kind}:${left.key}`, `${right.kind}:${right.key}`),
-    ),
-  };
+    failureDomains,
+  });
 }
 
 /**
@@ -672,22 +678,18 @@ export function buildSafetyScoreV9SupplyReview(
     (sum, route) => sum + (route.reviewState === "selected-reviewed" ? route.supplyUsd : 0),
     0,
   );
-  return {
-    selectedBridgeRoutes: selectedBridgeRoutes.sort((left, right) =>
-      compareText(left.deploymentRouteKey, right.deploymentRouteKey),
-    ),
-    selectedRouteSupplyShare: Math.min(1, reviewedSelectedUsd / totalUsd),
-    unknownRouteSupplyShare: Math.min(1, unknownUsd / totalUsd),
-    unreviewedRouteSupplyShare: Math.min(1, unreviewedUsd / totalUsd),
-    failureDomains: [...new Map(failureDomains.map((domain) => [`${domain.kind}:${domain.key}`, domain])).values()].sort(
-      (left, right) => compareText(`${left.kind}:${left.key}`, `${right.kind}:${right.key}`),
-    ),
-  };
+  return finalizeSupplyReview({
+    selectedBridgeRoutes,
+    selectedRouteSupplyShare: reviewedSelectedUsd / totalUsd,
+    unknownRouteSupplyShare: unknownUsd / totalUsd,
+    unreviewedRouteSupplyShare: unreviewedUsd / totalUsd,
+    failureDomains,
+  });
 }
 
 /** Supply share reconciled to one reviewed route row, for control materiality. */
 export function safetyScoreV9RouteSupplyShare(review: SupplyReview | null, deploymentRouteKey: string): number | null {
   if (review === null) return null;
   const route = review.selectedBridgeRoutes.find((candidate) => candidate.deploymentRouteKey === deploymentRouteKey);
-  return route?.supplyShare ?? 0;
+  return route?.supplyShare ?? null;
 }

@@ -5,6 +5,8 @@
  */
 export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
   "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
+  "shared/data/safety-score-v9/chain-maturity-reviews-v1.ts",
+  "shared/lib/compare.ts",
   "shared/lib/dependency-graph.ts",
   "shared/lib/exit-route-scoring.ts",
   "shared/lib/sha256.ts",
@@ -13,11 +15,17 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
   "shared/lib/safety-score-v9/aggregation.ts",
   "shared/lib/safety-score-v9/archetypes/algorithmic.ts",
   "shared/lib/safety-score-v9/archetypes/cdp.ts",
+  "shared/lib/safety-score-v9/archetypes/evaluation.ts",
   "shared/lib/safety-score-v9/archetypes/index.ts",
   "shared/lib/safety-score-v9/archetypes/rwa-credit-fund.ts",
   "shared/lib/safety-score-v9/archetypes/synthetic-delta-neutral.ts",
+  "shared/lib/safety-score-v9/backing-inheritance.ts",
+  "shared/lib/safety-score-v9/backing-primitives.ts",
   "shared/lib/safety-score-v9/backing.ts",
   "shared/lib/safety-score-v9/compile.ts",
+  "shared/lib/safety-score-v9/control-bridge-join.ts",
+  "shared/lib/safety-score-v9/control-mint-grade.ts",
+  "shared/lib/safety-score-v9/control-primitives.ts",
   "shared/lib/safety-score-v9/control.ts",
   "shared/lib/safety-score-v9/dependencies.ts",
   "shared/lib/safety-score-v9/evaluate-asset.ts",
@@ -26,7 +34,9 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
   "shared/lib/safety-score-v9/exit.ts",
   "shared/lib/safety-score-v9/facts.ts",
   "shared/lib/safety-score-v9/formula.ts",
+  "shared/lib/safety-score-v9/gap-index.ts",
   "shared/lib/safety-score-v9/mechanism-profiles.ts",
+  "shared/lib/safety-score-v9/operational-market-depth.ts",
   "shared/lib/safety-score-v9/operational-resilience.ts",
   "shared/lib/safety-score-v9/policy.ts",
   "shared/lib/safety-score-v9/primitives.ts",
@@ -35,6 +45,7 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
   "shared/lib/safety-score-v9/score.ts",
   "shared/lib/safety-score-v9/stress.ts",
   "shared/lib/safety-score-v9/trace.ts",
+  "shared/lib/safety-score-v9/unavailability-roots.ts",
   "shared/lib/safety-score-v9/wrapper-risk.ts",
   "shared/types/safety-score-v9-backing.ts",
   "shared/types/safety-score-v9-fact-primitives.ts",
@@ -58,10 +69,9 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
  * file, add its score-bearing transitive sources here too.
  *
  * `shared/lib/math.ts` (clampScore, roundScore, bandFromThresholds) and the
- * `shared/lib/methodology-versions/` subtree reached through the two version
- * re-export shims were closure holes: a rounding rule or a published methodology
- * version could change with no movement in the build identity. Both are listed
- * now.
+ * methodology constants reached by score-bearing producers were closure holes:
+ * a rounding rule or a published methodology version could change with no
+ * movement in the build identity. Both authorities are listed now.
  *
  * Deliberately still open: the *literal* transitive closure of the listed
  * producers is ~131 further modules, almost all worker I/O infrastructure
@@ -92,8 +102,6 @@ export const V9_FACT_PRODUCER_SOURCE_PATHS = [
   "shared/lib/methodology-versions/base.ts",
   "shared/lib/methodology-versions/constants.ts",
   "shared/lib/methodology-versions/current-version.json",
-  "shared/lib/methodology-versions/liquidity-score.ts",
-  "shared/lib/methodology-versions/redemption-backstop.ts",
   "shared/lib/p4-exit-route-amm-simulation.ts",
   "shared/lib/p4-exit-route-capability-policy.ts",
   "shared/lib/p4-exit-route-capacity.ts",

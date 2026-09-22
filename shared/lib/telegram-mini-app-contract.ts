@@ -12,7 +12,7 @@ export const TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM = "mini_app_contract";
 export const TELEGRAM_MINI_APP_CATALOG_VERSION_PARAM = "mini_app_catalog";
 export { TELEGRAM_MINI_APP_CATALOG_VERSION };
 
-export const TELEGRAM_MINI_APP_ERROR_CODES = [
+const TELEGRAM_MINI_APP_ERROR_CODES = [
   "stale-auth",
   "not-private",
   "rate-limited",

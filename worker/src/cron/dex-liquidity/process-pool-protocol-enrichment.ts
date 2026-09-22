@@ -89,15 +89,6 @@ export function enrichPoolProtocol(
       else resolvedPoolType = "uniswap-v3-30bp";
     }
     qualityMultiplier = getQualityMultiplier(resolvedPoolType);
-  } else if (
-    poolType === "aerodrome-volatile" &&
-    context.aerodromeIsStable.size > 0
-  ) {
-    const addrKey = canonicalExitRouteAssetKey(chainNorm, pool.pool);
-    if (context.aerodromeIsStable.get(addrKey) === true) {
-      resolvedPoolType = "aerodrome-stable";
-    }
-    qualityMultiplier = getQualityMultiplier(resolvedPoolType);
   } else {
     qualityMultiplier = getQualityMultiplier(poolType);
   }

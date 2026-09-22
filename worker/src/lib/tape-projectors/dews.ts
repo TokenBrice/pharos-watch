@@ -20,7 +20,7 @@
  * absorbs duplicates. Watermark advancement keeps the scan cheap on re-runs.
  */
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { DEPEG_DEWS_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/depeg-dews";
+import { DEPEG_DEWS_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { THREAT_BAND_ORDER, isThreatBand, type ThreatBand } from "@shared/lib/classification";
 
 import { buildTapeEventId, deriveIssuerId } from "../tape-event-helpers";
@@ -35,7 +35,6 @@ import {
   DEFAULT_BATCH_LIMIT,
   fetchRowsWithTieExpansion,
   finalizeProjectorBatch,
-  resolveProjectorOptions,
   type ProjectorOptions,
   type ProjectorResult,
 } from "./types";
@@ -244,39 +243,6 @@ async function scanDewsBandTransitions(
   return { transitions: classifyTransitions(rows, priorByCoin), maxCursor };
 }
 
-async function projectDewsByVariant(
-  db: D1Database,
-  variant: "escalated" | "deescalated",
-  options: ProjectorOptions | undefined,
-): Promise<ProjectorResult> {
-  const cursorKey = variant === "escalated" ? "dews.escalated" : "dews.deescalated";
-  if (options?.dryRun !== true) {
-    await reconcileDewsPublishedGenerationLedger(db, Math.floor(Date.now() / 1000));
-  }
-  const { since, until, limit } = await resolveProjectorOptions(db, cursorKey, options);
-
-  const scan = await scanDewsBandTransitions(db, since, until, limit);
-  if (!scan) return { projected: 0, advanced: null };
-
-  const events = scan.transitions
-    .filter((t) => t.direction === variant)
-    .map(buildEvent);
-  return finalizeProjectorBatch(db, { events, maxCursor: scan.maxCursor, cursorKey, options });
-}
-
-export function projectDewsEscalated(
-  db: D1Database,
-  options?: ProjectorOptions,
-): Promise<ProjectorResult> {
-  return projectDewsByVariant(db, "escalated", options);
-}
-
-export function projectDewsDeescalated(
-  db: D1Database,
-  options?: ProjectorOptions,
-): Promise<ProjectorResult> {
-  return projectDewsByVariant(db, "deescalated", options);
-}
 
 /**
  * Single-pass projector that detects both escalations and deescalations from

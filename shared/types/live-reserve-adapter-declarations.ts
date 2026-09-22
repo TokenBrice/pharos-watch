@@ -28,7 +28,6 @@ import {
   DASHBOARD_WITH_UNKNOWN_CAP_VALIDATION,
   DISCLOSURE_SOURCE_MAX_AGE_SEC,
   DISCLOSURE_VALIDATION,
-  LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
   LATE_MONTHLY_VERIFIED_VALIDATION,
   LAGGED_MONTHLY_EXAMINATION_VALIDATION,
   LATEST_STATE_VALIDATION,
@@ -39,7 +38,6 @@ import {
   QUARTERLY_ASSURANCE_MAX_AGE_SEC,
   TIMESTAMPED_FEED_VALIDATION,
   TIMESTAMPLESS_WITH_UNKNOWN_CAP_VALIDATION,
-  UNVERIFIED_OR_NOT_APPLICABLE_FRESHNESS,
   VERIFIED_ONLY_FRESHNESS,
   VERIFIED_ONLY_VALIDATION,
   VERIFIED_OR_UNVERIFIED_FRESHNESS,
@@ -1471,25 +1469,18 @@ const mentoLiquityV2CrRedemptionParamsSchema = z
   })
   .strict();
 
-// Mento V3 FPMM pool (JPYm/CHFm): capacity reads the USDm balance held by the
-// pool; the swap fee reads the pool's own lpFee() + protocolFee() basis points.
-const mentoFpmmPoolRedemptionParamsSchema = z
-  .object({
-    kind: z.literal("fpmm-pool"),
-    poolAddress: EvmAddressSchema,
-    usdmTokenAddress: EvmAddressSchema,
-    ...OptionalSourceUrlsFields,
-    ...OptionalEvmRpcFields,
-  })
-  .strict();
 
 // Reviewed USDm output pools; identities and native units are checked live.
 const mentoFpmmPoolsRedemptionParamsSchema = z.object({
   kind: z.literal("fpmm-pools"),
   selfTokenAddress: EvmAddressSchema,
+  selfDecimals: z.number().int().nonnegative().max(36),
   pools: z.array(z.object({
     poolAddress: EvmAddressSchema,
-    counterAsset: z.object({ address: EvmAddressSchema, decimals: z.literal(6) }).strict(),
+    counterAsset: z.object({
+      address: EvmAddressSchema,
+      decimals: z.number().int().nonnegative().max(36),
+    }).strict(),
   }).strict()).min(1).max(2),
   ...OptionalSourceUrlsFields,
 }).strict();
@@ -1497,7 +1488,6 @@ const mentoFpmmPoolsRedemptionParamsSchema = z.object({
 const mentoRedemptionParamsSchema = z.discriminatedUnion("kind", [
   mentoBrokerPoolRedemptionParamsSchema,
   mentoLiquityV2CrRedemptionParamsSchema,
-  mentoFpmmPoolRedemptionParamsSchema,
   mentoFpmmPoolsRedemptionParamsSchema,
 ]);
 
@@ -1776,14 +1766,15 @@ const agoraAssuranceParamsSchema = z
   })
   .strict();
 
-// FIDD: Fidelity Digital Assets transparency index; runtime resolves the
-// reviewed July Widen viewer link and its original PDF download anchor. The
-// fwc.widen.net PDF URL 303-redirects to the Widen CDN (cf-store.widencdn.net),
-// so reportHosts pins both the download-anchor host and the redirect target.
+// FIDD: Fidelity Digital Assets transparency index; runtime selects the newest
+// dated Widen viewer matching the reviewed config pattern, then follows its
+// original PDF download anchor. The Widen PDF URL redirects to the CDN, so
+// reportHosts pins both the viewer and redirect hosts.
 const fiddAssuranceParamsSchema = z
   .object({
     product: z.literal("FIDD"),
     profile: z.literal("fidd-v1"),
+    viewerUrlPattern: z.string().min(1),
     ...assuranceParamsShape,
   })
   .strict();
@@ -2274,20 +2265,6 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: { capacity: "proxy", fee: "none" },
   }),
   "fdusd-independent-assurance": declareAdapter(fdusdAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V2),
-  "fdusd-transparency": declareAdapter(noParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V1, {
-    preferredFreshnessMode: "verified",
-    provenance: {
-      status: "retired",
-      rationale:
-        "Superseded by the compiled AOGB assurance manifest (fdusd-independent-assurance); retain the adapter only for historical review of the pre-compiled signed-report era.",
-      parkedSince: "2026-09-09",
-      nextReview: "2027-03-09",
-    },
-    validation: {
-      maxSourceAgeSec: LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
-      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
-    },
-  }),
   "fidd-independent-assurance": declareAdapter(fiddAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V2),
   "flying-tulip-ftusd": {
     primaryInputKinds: ["http-json"],
@@ -2331,7 +2308,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     validation: DASHBOARD_WITH_UNKNOWN_CAP_VALIDATION,
   },
   fx: {
-    primaryInputKinds: ["http-json", "onchain-evm"],
+    primaryInputKinds: ["onchain-evm"],
     paramsSchema: fxParamsSchema,
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
@@ -2339,10 +2316,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "proxy", fee: "none" },
-    validation: {
-      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
-      allowedFreshnessModes: UNVERIFIED_OR_NOT_APPLICABLE_FRESHNESS,
-    },
+    validation: LATEST_STATE_VALIDATION,
   },
   "gemini-independent-assurance": declareAdapter(noParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V2, {
     // Gemini's /dollar attestation list loads from its public Contentful
@@ -2678,7 +2652,10 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     freshnessLimitation: "The reserve balance-sheet API publishes no accounting timestamp; same-run PSM reads date redemption liquidity, not the reserve book.",
-    sharedSourceMode: "source-invariant",
+    // Not shareable: the adapter's fee contract is coin-dependent (only srUSD
+    // and wsrUSD exit through the SavingModule), while the shared-source cache
+    // key deliberately omits the coin id.
+    sharedSourceMode: "none",
     configValidation: CONFIG_PROTOCOL_V1,
     // Capacity comes from a same-run read of the terminal USDC PSM balance, not
     // from the balance-sheet payload; the adapter withholds the redemption
@@ -2687,22 +2664,6 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     // bound is defensible.
     redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
     validation: DASHBOARD_WITH_UNKNOWN_CAP_VALIDATION,
-  },
-  "ripple-transparency": {
-    provenance: {
-      status: "retired",
-      rationale: "Superseded by the hash-bound Deloitte report manifest (rlusd-independent-assurance); retained for historical review of the transparency-page adapter.",
-      parkedSince: "2026-09-14",
-      nextReview: "2027-03-14",
-    },
-    primaryInputKinds: ["http-html"],
-    paramsSchema: noParamsSchema,
-    sourceModel: "single-bucket",
-    evidenceClass: "independent",
-    sharedSourceMode: "none",
-    configValidation: CONFIG_ATTESTATION_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
-    validation: MONTHLY_VERIFIED_VALIDATION,
   },
   "rlusd-independent-assurance": declareAdapter(rlusdAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V2),
   "sgforge-coinvertible": {

@@ -3,12 +3,18 @@ import { computeDexLiquidityPayloadFingerprint } from "@shared/lib/report-cards-
 import {
   evaluateV9FactSet,
   evaluateValidatedV9FactSet,
+  V9AssetEvaluationError,
 } from "@shared/lib/safety-score-v9/evaluate-set";
+import * as evaluateSetModule from "@shared/lib/safety-score-v9/evaluate-set";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
-import { loadV9MethodologyPolicy, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import {
+  loadV9CandidateMethodologyPolicy,
+  loadV9MethodologyPolicy,
+  V9_CANDIDATE_POLICY_V1,
+} from "@shared/lib/safety-score-v9/policy";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { SafetyScoreV9ResponseSchema } from "@shared/types/safety-score-v9-public";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   buildSafetyScoreV9Candidate,
   buildSafetyScoreV9PublicationFromNormalizedInput,
@@ -257,6 +263,42 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
     );
   });
 
+  it("quarantines one evaluation failure and still builds a conservative candidate", () => {
+    const fixedInput = exactFixedInput("alpha");
+    const evaluate = vi
+      .spyOn(evaluateSetModule, "evaluateValidatedV9FactSet")
+      .mockImplementationOnce(() => {
+        throw new V9AssetEvaluationError("alpha", {
+          issues: [
+            {
+              path: ["structuralSignals", 0, "materialSharePct"],
+            },
+          ],
+        });
+      });
+
+    const result = buildSafetyScoreV9Candidate({
+      fixedInput,
+      extension: reviewedExtension(fixedInput),
+      publishedAtSec: PUBLISHED_AT_SEC,
+    });
+
+    expect(result.quarantines).toEqual([
+      expect.objectContaining({
+        assetId: "alpha",
+        code: "evaluation-failed",
+        message: expect.stringContaining(
+          "structuralSignals[0].materialSharePct",
+        ),
+      }),
+    ]);
+    expect(result.quarantineAffectedAssetIds).toEqual(["alpha"]);
+    expect(result.candidate.cards).toEqual([
+      expect.objectContaining({ id: "alpha", grade: "NR", score: null }),
+    ]);
+    evaluate.mockRestore();
+  });
+
   it("keeps strict, trusted, full, and compact paths identical with provenance guards", () => {
     const fixedInput = exactFixedInput("alpha");
     const full = buildSafetyScoreV9Candidate({
@@ -264,8 +306,9 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
       extension: reviewedExtension(fixedInput),
       publishedAtSec: PUBLISHED_AT_SEC,
     });
-    const strictEvaluation = evaluateV9FactSet(full.compiledFacts, V9_CANDIDATE_POLICY_V1);
-    const trustedEvaluation = evaluateValidatedV9FactSet(full.compiledFacts, V9_CANDIDATE_POLICY_V1);
+    const clockBoundPolicy = loadV9CandidateMethodologyPolicy(fixedInput.clockSec);
+    const strictEvaluation = evaluateV9FactSet(full.compiledFacts, clockBoundPolicy);
+    const trustedEvaluation = evaluateValidatedV9FactSet(full.compiledFacts, clockBoundPolicy);
     const trustedCompilation = compileSafetyScoreV9FactSetFromValidatedExtension(
       full.fixedInput,
       full.extension,
@@ -289,7 +332,7 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
       bridgeJoinDiagnostics: full.bridgeJoinDiagnostics,
     });
     expect(() =>
-      evaluateValidatedV9FactSet(structuredClone(full.compiledFacts), V9_CANDIDATE_POLICY_V1),
+      evaluateValidatedV9FactSet(structuredClone(full.compiledFacts), clockBoundPolicy),
     ).toThrow("requires an in-process compiled fact set");
     expect(() =>
       compileSafetyScoreV9FactSetFromValidatedExtension(
@@ -430,7 +473,8 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
         custodyContinuity: { status: { observationState: "known" } },
         assuranceAndReconciliation: { status: { observationState: "known" } },
       },
-      controlReview: { state: "reviewed-controls" },
+      // SAFETY-SCORE-V9-25 L-08 keeps an unattributed bridge share unresolved.
+      controlReview: { state: "partially-reviewed-controls" },
       economicControlReview: {
         mint: {
           status: { observationState: "known" },

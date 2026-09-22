@@ -16,12 +16,11 @@ describe("classifyClPoolType", () => {
     expect(classifyClPoolType("velodrome-slipstream", 5)).toBe("velodrome-slipstream-5bp");
   });
 
-  it("defaults null/undefined PancakeSwap fees to the widest tier (via the 500 fallback)", () => {
-    // classifyClPoolType's internal default is normalizedFeeBps = 500. After the fix,
-    // pancakeswap at 500bps flows past 1/5/25/30 into the 100bp bucket.
-    expect(classifyClPoolType("pancakeswap", null)).toBe("pancakeswap-v3-100bp");
-    expect(classifyClPoolType("pancakeswap", undefined)).toBe("pancakeswap-v3-100bp");
-    // Slipstream still falls through to the legacy 30bp bucket.
-    expect(classifyClPoolType("aerodrome-slipstream", null)).toBe("aerodrome-slipstream-30bp");
+  it("publishes the neutral bucket instead of a fabricated tier for an unknown fee", () => {
+    expect(classifyClPoolType("pancakeswap", null)).toBe("pancakeswap-v3-unknown-fee");
+    expect(classifyClPoolType("pancakeswap", undefined)).toBe("pancakeswap-v3-unknown-fee");
+    expect(classifyClPoolType("pancakeswap", 0)).toBe("pancakeswap-v3-unknown-fee");
+    expect(classifyClPoolType("aerodrome-slipstream", null)).toBe("aerodrome-slipstream-unknown-fee");
+    expect(classifyClPoolType("velodrome-slipstream", Number.NaN)).toBe("velodrome-slipstream-unknown-fee");
   });
 });

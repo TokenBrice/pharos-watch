@@ -15,6 +15,7 @@ import type { TapeFilterState } from "@/components/tape/tape-filters";
 import type { ActiveFilterChip, TimelineFeedController } from "./timeline-controller";
 import { bucketByDay, eventDomId } from "./timeline-feed-helpers";
 import { DayDigestSection, EmptyState, EventSkeleton, OpenIncidentsSection } from "./timeline-feed-sections";
+import { getLogoSrc } from "@/lib/logos";
 
 interface TimelineFeedProps {
   filters: TapeFilterState;
@@ -142,7 +143,7 @@ export function TimelineFeed({
                   </p>
                   <EventCard
                     event={bufferEvent}
-                    logoSrc={bufferEvent.coinId ? logos[bufferEvent.coinId] : undefined}
+                    logoSrc={bufferEvent.coinId ? getLogoSrc(logos, bufferEvent.coinId) : undefined}
                     highlighted={highlightedId === bufferEvent.id}
                     domId={eventDomId(bufferEvent.id)}
                   />

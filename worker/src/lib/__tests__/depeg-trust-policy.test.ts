@@ -170,6 +170,18 @@ describe("DEX trust policy", () => {
     expect(isTrustedDexPriceRow(thinFreshRow, nowSec, "ui")).toBe(true);
     expect(isTrustedDexPriceRow(thinFreshRow, nowSec, "depeg")).toBe(false);
   });
+
+  it("rejects future-dated and non-finite rows for every tier", () => {
+    const futureRow = {
+      updated_at: nowSec + 86_400,
+      source_total_tvl: 50_000_000,
+    };
+
+    expect(isTrustedDexPriceRow(futureRow, nowSec, "ui")).toBe(false);
+    expect(isTrustedDexPriceRow(futureRow, nowSec, "depeg")).toBe(false);
+    expect(isTrustedDexPriceRow({ updated_at: Number.NaN, source_total_tvl: 50_000_000 }, nowSec, "ui")).toBe(false);
+    expect(isTrustedDexPriceRow({ updated_at: nowSec - 60, source_total_tvl: Number.NaN }, nowSec, "ui")).toBe(false);
+  });
 });
 
 describe("depeg confirmation source families", () => {

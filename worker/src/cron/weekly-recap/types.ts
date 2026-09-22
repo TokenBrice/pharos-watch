@@ -56,11 +56,12 @@ export interface WeeklyInputData {
   dailyDigests: { date: string; title: string; text: string; inputData: DigestInputData }[];
   psiRange: { min: number; max: number; start: number; end: number; dominantBand: string };
   mcapRange: { start: number; end: number; netChange: number; pctChange: number | null };
-  activeDepegObservationsThisWeek: number;
-  uniqueDepegSignalsThisWeek: number;
-  totalBlacklistEventsThisWeek: number;
-  totalBlacklistAmountUsd: number;
-  gradeTransitionCount: number;
+  /** Cross-day totals: null when the window did not observe every daily edition. */
+  activeDepegObservationsThisWeek: number | null;
+  uniqueDepegSignalsThisWeek: number | null;
+  totalBlacklistEventsThisWeek: number | null;
+  totalBlacklistAmountUsd: number | null;
+  gradeTransitionCount: number | null;
   gaugeRange: { min: number; max: number } | null;
   spikeMetrics: WeeklySpikeMetrics;
   weeklySignals: {
@@ -70,7 +71,7 @@ export interface WeeklyInputData {
     topDewsChanges: { symbol: string; from: string; to: string; score: number; mcapUsd: number; driver: string }[];
     maxAlertPlusMcapUsd: number;
     topPressureSignals: { symbol: string; intensity: number; net24hUsd: number; date: string }[];
-    topBlacklistEvents: { symbol: string; chain: string; type: string; amountUsd: number; date: string }[];
+    topBlacklistEvents: { symbol: string; chain: string; type: string; amountUsd: number | null; date: string }[];
     topGradeTransitions: {
       historyId: string;
       recordedAt: number;
@@ -91,11 +92,11 @@ export interface WeeklyInputData {
     mcap: { current: number; prior: number; deltaPct: number | null };
     psi: { current: number; prior: number; delta: number };
     psiDominantBand: { current: string; prior: string };
-    activeDepegObservations: { current: number; prior: number };
-    uniqueDepegSignals: { current: number; prior: number };
-    blacklistEvents: { current: number; prior: number };
-    blacklistUsd: { current: number; prior: number };
-    gradeTransitions: { current: number; prior: number };
+    activeDepegObservations: { current: number | null; prior: number | null };
+    uniqueDepegSignals: { current: number | null; prior: number | null };
+    blacklistEvents: { current: number | null; prior: number | null };
+    blacklistUsd: { current: number | null; prior: number | null };
+    gradeTransitions: { current: number | null; prior: number | null };
     gauge: { current: number | null; prior: number | null };
     dataCoverage: { currentDays: number; priorDays: number };
   } | null;
@@ -112,6 +113,5 @@ export interface DailyDigestSourceRow {
   generated_at: number;
   digest_title: string | null;
   digest_text: string;
-  digest_extended?: string | null;
   input_data: string;
 }

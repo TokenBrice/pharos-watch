@@ -75,7 +75,6 @@ export interface RadarClickOutcome {
 
 export interface DewsAggregateFreshnessLike {
   updatedAt: number;
-  oldestComputedAt?: number | null;
 }
 
 export interface DewsSummaryViewModel {
@@ -189,9 +188,6 @@ export function resolveRadarClick(
   return { shouldNavigate: false, nextHoveredId: tappedId };
 }
 
-export function getAggregateFreshnessTimestamp(data: DewsAggregateFreshnessLike): number {
-  return data.updatedAt;
-}
 
 export function buildDewsSummaryViewModel(
   data: DewsAggregateFreshnessLike & { signals: Record<string, { score: number; band: string }> },
@@ -199,7 +195,6 @@ export function buildDewsSummaryViewModel(
   mcapById?: Map<string, number>,
 ): DewsSummaryViewModel {
   const elevated = computePositions(data.signals, logos, mcapById);
-  const freshnessTimestamp = getAggregateFreshnessTimestamp(data);
 
   return {
     totalCount: Object.keys(data.signals).length,
@@ -207,7 +202,7 @@ export function buildDewsSummaryViewModel(
     calmDots: computeCalmDots(data.signals),
     bandCounts: computeBandCounts(data.signals),
     highest: highestBand(elevated.map((coin) => coin.band)),
-    updatedAtLabel: new Date(freshnessTimestamp * 1000).toLocaleString(undefined, {
+    updatedAtLabel: new Date(data.updatedAt * 1000).toLocaleString(undefined, {
       month: "short",
       day: "numeric",
       hour: "numeric",

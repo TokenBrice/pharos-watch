@@ -42,8 +42,8 @@ export const MESSAGING_STATIC_ROUTES = [
   defineLazyStaticRoute("api-key-request-verify", () =>
     import("../api/api-key-requests").then(
       ({ handleApiKeyRequestVerify }) =>
-        ({ db, request, apiKeySelfServeEnv, apiKeyHashPepper, execCtx }) =>
-          handleApiKeyRequestVerify(db, request, apiKeySelfServeEnv, apiKeyHashPepper, execCtx),
+        ({ db, request, apiKeySelfServeEnv, apiKeyHashPepper }) =>
+          handleApiKeyRequestVerify(db, request, apiKeySelfServeEnv, apiKeyHashPepper),
     ),
   ),
   defineLazyStaticRoute("telegram-mini-app-session", () =>

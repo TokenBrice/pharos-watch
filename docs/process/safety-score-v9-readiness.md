@@ -113,17 +113,10 @@ runs prove capture-time registry/NAV interpretation and deterministic replay,
 See the [equivalence harness](./safety-score-equivalence-harness.md#capture-time-registry-replay)
 for snapshot scope and current-curation mode.
 
-## Composite ceiling gate
+## Composite ceiling policy
 
-`scripts/maintenance/check-safety-score-v9-composite-ceiling.ts` is the
-operator-side A+ reachability gate. Given a replay artifact, it assembles the
-best real, currently-measured pillar sub-scores per cohort (unrestricted,
-non-wrapper, issuer-class) and asserts the resulting composite can still reach
-A+. The donor composite is scored by the production aggregation seam
-(`aggregateV9SmoothBoundedHeadroom` with the policy's single
-`compensabilityHeadroom` — the same call the live formula makes), so the gate
-certifies the real frontier rather than a historical hard-cap counterfactual.
-Pillar-dependent headroom (the retired `controlCompensabilityHeadroom`
-`legacy-control-selector` experiment) belongs only to
-`scripts/maintenance/replay-safety-score-v9-aggregation.ts` and must not
-re-enter the gate.
+No separate composite ceiling is applied today, and there is no operator-side
+A+ reachability gate. V9 uses the production smooth-bounded-headroom
+aggregation and the policy's single `compensabilityHeadroom`; evidence ceilings
+and structural caps remain the scoped constraints documented in
+[report cards](../report-cards.md#cap-limits-and-scope-gates).

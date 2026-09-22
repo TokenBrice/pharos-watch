@@ -17,7 +17,7 @@ import {
   SNAPSHOT_DATE_PATTERN,
 } from "@shared/lib/api-endpoints";
 import { errorResponse, jsonResponse } from "../lib/api-response";
-import { CACHE_PROFILES } from "../lib/constants";
+import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { tryParseJson } from "../lib/json-parse";
 import {
   SafetyScorePublicationIdentitySchema,
@@ -33,6 +33,11 @@ import {
 } from "@shared/types/public-snapshot";
 
 const IMMUTABLE_CACHE_CONTROL = "public, s-maxage=31536000, max-age=31536000, immutable";
+// The archive holds ~130 daily rows (2026-09); a default equal to the bound keeps
+// parameterless key-holder calls returning the full index until the archive
+// outgrows it, at which point `pagination.hasMore` tells them to page.
+const SNAPSHOT_INDEX_MAX_LIMIT = 500;
+const SNAPSHOT_INDEX_DEFAULT_LIMIT = SNAPSHOT_INDEX_MAX_LIMIT;
 
 interface PublicSnapshotIndexRow {
   snapshot_date: string;
@@ -99,10 +104,6 @@ const TRANSITIONAL_IDENTITY_DATES: ReadonlySet<string> = new Set([
 ]);
 /** Last snapshot date that may legitimately carry no safety-score identity. */
 const IDENTITY_CUTOVER_DATE = "2026-07-15";
-
-function hasOwn(value: Record<string, unknown>, key: string): boolean {
-  return Object.prototype.hasOwnProperty.call(value, key);
-}
 
 function isValidScoreEntry(value: unknown): boolean {
   return (
@@ -246,9 +247,9 @@ function validateStoredSafetyPublication(
     return { kind: "error", reason: "snapshot-envelope-invalid" };
   }
 
-  const metadataHasIdentity = hasOwn(metadataRecord, "safetyScoreIdentity");
-  const envelopeHasIdentity = hasOwn(envelope as unknown as Record<string, unknown>, "safetyScoreIdentity");
-  const reportCardsHasIdentity = hasOwn(reportCards, "safetyScoreIdentity");
+  const metadataHasIdentity = Object.prototype.hasOwnProperty.call(metadataRecord, "safetyScoreIdentity");
+  const envelopeHasIdentity = Object.prototype.hasOwnProperty.call(envelope, "safetyScoreIdentity");
+  const reportCardsHasIdentity = Object.prototype.hasOwnProperty.call(reportCards, "safetyScoreIdentity");
   const identityValues = [
     ...(metadataHasIdentity ? [metadataRecord.safetyScoreIdentity] : []),
     ...(envelopeHasIdentity ? [envelope.safetyScoreIdentity] : []),
@@ -371,14 +372,32 @@ async function loadSnapshotBytes(
   return { row, bytes };
 }
 
-export const handleSnapshotsIndex = async (db: D1Database): Promise<Response> => {
-  const result = await db
-    .prepare(
-      "SELECT snapshot_date, methodology_versions, content_hash, byte_size, created_at FROM public_snapshots ORDER BY snapshot_date DESC",
-    )
-    .all<PublicSnapshotIndexRow>();
+export const handleSnapshotsIndex = async (
+  db: D1Database,
+  url = new URL("https://api.pharos.watch/api/snapshots/index"),
+): Promise<Response> => {
+  const cursor = url.searchParams.get("cursor");
+  if (cursor != null && !SNAPSHOT_DATE_PATTERN.test(cursor)) {
+    return errorResponse(400, "Invalid cursor — expected YYYY-MM-DD");
+  }
+  const rawLimit = url.searchParams.get("limit");
+  const limit = rawLimit == null ? SNAPSHOT_INDEX_DEFAULT_LIMIT : Number(rawLimit);
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > SNAPSHOT_INDEX_MAX_LIMIT) {
+    return errorResponse(400, `Invalid limit — expected an integer from 1 to ${SNAPSHOT_INDEX_MAX_LIMIT}`);
+  }
 
-  const snapshots = (result.results ?? []).map((row) => ({
+  const statement = cursor == null
+    ? db.prepare(
+        "SELECT snapshot_date, methodology_versions, content_hash, byte_size, created_at FROM public_snapshots ORDER BY snapshot_date DESC LIMIT ?",
+      ).bind(limit + 1)
+    : db.prepare(
+        "SELECT snapshot_date, methodology_versions, content_hash, byte_size, created_at FROM public_snapshots WHERE snapshot_date < ? ORDER BY snapshot_date DESC LIMIT ?",
+      ).bind(cursor, limit + 1);
+  const result = await statement.all<PublicSnapshotIndexRow>();
+  const rows = result.results ?? [];
+  const hasMore = rows.length > limit;
+  const pageRows = rows.slice(0, limit);
+  const snapshots = pageRows.map((row) => ({
     snapshotDate: row.snapshot_date,
     methodologyVersions: safeParseMethodology(row.methodology_versions),
     safetyScoreIdentity: safeParseSafetyScoreIdentity(row.methodology_versions),
@@ -387,7 +406,14 @@ export const handleSnapshotsIndex = async (db: D1Database): Promise<Response> =>
     createdAt: row.created_at,
   }));
 
-  return jsonResponse({ snapshots }, { headers: { "Cache-Control": CACHE_PROFILES.archive } });
+  return jsonResponse({
+    snapshots,
+    pagination: {
+      limit,
+      hasMore,
+      nextCursor: hasMore ? pageRows[pageRows.length - 1]?.snapshot_date ?? null : null,
+    },
+  }, { headers: { "Cache-Control": CACHE_PROFILES.archive } });
 };
 
 export const handleSnapshotDay = async (

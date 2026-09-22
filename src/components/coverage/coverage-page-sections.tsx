@@ -65,10 +65,13 @@ export function CoverageFeatureSnapshotCard({
   "featureSummaries" | "sourceDepthProgress" | "widestFeature" | "narrowestFeature" | "mostConcentratedFeature"
 >) {
   const activeCoinTotal = featureSummaries.reduce((total, summary) => Math.max(total, summary.totalCount), 0);
+  const knownCoveragePcts = featureSummaries
+    .map((summary) => summary.coveragePct)
+    .filter((coveragePct): coveragePct is number => coveragePct != null);
   const averageCoveragePct =
-    featureSummaries.length > 0
-      ? featureSummaries.reduce((sum, summary) => sum + summary.coveragePct, 0) / featureSummaries.length
-      : 0;
+    knownCoveragePcts.length > 0
+      ? knownCoveragePcts.reduce((sum, coveragePct) => sum + coveragePct, 0) / knownCoveragePcts.length
+      : null;
 
   return (
     <Card className="pharos-card-shell overflow-hidden">
@@ -96,7 +99,7 @@ export function CoverageFeatureSnapshotCard({
                     Avg. reach
                   </dt>
                   <dd className="pharos-numeric text-[15px] font-semibold leading-none text-foreground">
-                    {averageCoveragePct.toFixed(0)}%
+                    {averageCoveragePct == null ? "n/a" : `${averageCoveragePct.toFixed(0)}%`}
                   </dd>
                   <span className="text-[11px] text-muted-foreground">headline</span>
                 </div>
@@ -138,7 +141,9 @@ export function CoverageFeatureSnapshotCard({
                 title={widestFeature.feature.shortLabel}
                 detail={
                   <>
-                    <span className="text-foreground">{widestFeature.coveragePct.toFixed(0)}%</span>
+                    <span className="text-foreground">
+                      {widestFeature.coveragePct == null ? "n/a" : `${widestFeature.coveragePct.toFixed(0)}%`}
+                    </span>
                     <span aria-hidden="true" className="mx-1.5 text-muted-foreground/60">·</span>
                     {widestFeature.availableCount}/{widestFeature.totalCount}
                   </>
@@ -152,7 +157,9 @@ export function CoverageFeatureSnapshotCard({
                 title={narrowestFeature.feature.shortLabel}
                 detail={
                   <>
-                    <span className="text-foreground">{narrowestFeature.coveragePct.toFixed(0)}%</span>
+                    <span className="text-foreground">
+                      {narrowestFeature.coveragePct == null ? "n/a" : `${narrowestFeature.coveragePct.toFixed(0)}%`}
+                    </span>
                     <span aria-hidden="true" className="mx-1.5 text-muted-foreground/60">·</span>
                     {narrowestFeature.availableCount}/{narrowestFeature.totalCount}
                   </>
@@ -172,8 +179,7 @@ export function CoverageFeatureSnapshotCard({
                         : `${mostConcentratedFeature.mcapSharePct.toFixed(0)}%`}
                     </span>
                     <span className="ml-1 text-muted-foreground/80">cap</span>
-                    <span aria-hidden="true" className="mx-1.5 text-muted-foreground/60">·</span>
-                    {mostConcentratedFeature.coveragePct.toFixed(0)}% count
+                    {mostConcentratedFeature.coveragePct == null ? "n/a" : `${mostConcentratedFeature.coveragePct.toFixed(0)}%`} count
                   </>
                 }
               />

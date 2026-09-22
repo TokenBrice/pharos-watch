@@ -60,7 +60,8 @@ describe("fetchHashnoteUsycSource", () => {
         yieldSource: "Hashnote USYC",
       }),
     );
-    expect(result!.currentApy).toBeGreaterThan(0);
+    expect(result!.currentApy).toBeCloseTo(5.7517, 4);
+    expect(result!.comparisonAnchorObservedAt).toBe(sevenDaysAgoSec);
   });
 
   it("returns null on HTTP error", async () => {

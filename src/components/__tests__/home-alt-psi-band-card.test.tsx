@@ -56,13 +56,13 @@ describe("PsiBandCard", () => {
       isLoading: false,
     });
 
-    const { container, getByText, queryByText } = render(<PsiBandCard />);
+    const { container, getByText } = render(<PsiBandCard />);
 
     expect(container.textContent).toContain("Stability Index");
     expect(getByText("40.00")).toBeTruthy();
     expect(getByText("+15.0")).toBeTruthy();
-    expect(queryByText("raw instant")).toBeNull();
-    expect(queryByText("35.0")).toBeNull();
+    expect(getByText("raw instant")).toBeTruthy();
+    expect(getByText("35.0")).toBeTruthy();
 
     const polyline = container.querySelector("polyline");
     expect(polyline).toBeTruthy();

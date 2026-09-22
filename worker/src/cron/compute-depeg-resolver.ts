@@ -3,7 +3,7 @@ import type { DdrResponse, DdrRow } from "@shared/types/depeg-resolver";
 import { logCronEvent, type CronResult } from "../lib/cron-logger";
 import { getCache, setCache } from "../lib/db-cache";
 import { syncDdrRepairDebtTasks } from "../lib/repair-tasks";
-import { loadDepegResolverSnapshot } from "../lib/depeg-resolver-snapshot-cache";
+import { loadDepegResolverSnapshot, writeDepegResolverSnapshot } from "../lib/depeg-resolver-snapshot-cache";
 import {
   emptyDdrLineage,
   loadActiveConfirmedEvents,
@@ -20,10 +20,7 @@ import {
 } from "./depeg-resolver/incident-state";
 import { resolveDdrIncidents } from "./depeg-resolver/incident-resolution";
 import { normalizeComputeOptions } from "./depeg-resolver/options";
-import {
-  persistDepegResolverReviewArtifacts,
-  persistDepegResolverSnapshot,
-} from "./depeg-resolver/persistence";
+import { persistDepegResolverReviewArtifacts } from "./depeg-resolver/persistence";
 import {
   loadErrataForSealedPredictions,
   loadSealedAndPublicationState,
@@ -36,7 +33,7 @@ import {
 } from "./depeg-resolver/public-projection";
 import { DDR_SNAPSHOT_TTL_SEC } from "./depeg-resolver/constants";
 import type { ComputeDepegResolverV2Options, DdrLineage } from "./depeg-resolver/types";
-import { abortIf } from "./depeg-resolver/utils";
+import { throwIfAborted } from "../lib/abort";
 
 export type { DdrV2StoreContracts } from "./depeg-resolver-v2-contracts";
 export type { ComputeDepegResolverV2Options } from "./depeg-resolver/types";
@@ -81,10 +78,11 @@ async function degradedPublicSnapshotFromCache(input: {
     ...cached.payload,
     _meta: {
       ...cached.payload._meta,
-      computedAt: input.nowSec,
       expiresAt: input.nowSec + DDR_SNAPSHOT_TTL_SEC,
       degraded: true,
-      degradedReason: input.reason,
+      degradedReason: "stale-cache",
+      degradedReasonDetail: input.reason,
+      lastRefreshAttemptAt: input.nowSec,
     },
     rows: cached.payload.rows.map((row) => ({
       ...row,
@@ -150,7 +148,7 @@ async function persistDegradedArtifacts(input: {
     reason: input.reason,
     lineage: input.lineage,
   });
-  await persistDepegResolverSnapshot(input.db, publicSnapshot);
+  await writeDepegResolverSnapshot(input.db, publicSnapshot);
 
   const diagnosticSnapshot = buildDiagnosticSnapshot({ rows: [], lineage: input.lineage, nowSec: input.nowSec });
   const reviewArtifacts = await persistDepegResolverReviewArtifacts(
@@ -171,7 +169,7 @@ export async function computeDepegResolver(
 ): Promise<CronResult> {
   const options = normalizeComputeOptions(input, signal);
   const { db, storeContracts } = options;
-  abortIf(options.signal, "compute-depeg-resolver");
+  throwIfAborted(options.signal);
   const nowSec = options.runAt;
 
   const v2PreLockIncidentsClosed = await (
@@ -270,13 +268,13 @@ export async function computeDepegResolver(
   applyConfirmationTimes(incidentsByEventId, confirmationTiming.byEventId);
 
   if (activeRows.length > 0) {
-    abortIf(options.signal, "compute-depeg-resolver");
+    throwIfAborted(options.signal);
     const contextResult = await loadDdrContext(db, activeRows, nowSec);
     if (contextResult.kind === "degraded") {
       return degradedResult(contextResult.reason);
     }
 
-    abortIf(options.signal, "compute-depeg-resolver");
+    throwIfAborted(options.signal);
     activeEventById = contextResult.context.activeEventById;
     lineage = contextResult.context.lineage;
     v2ConfirmedSeen = await recordConfirmedSeenOpportunities({
@@ -353,7 +351,7 @@ export async function computeDepegResolver(
     publicSnapshot._meta.degraded = true;
     publicSnapshot._meta.degradedReason = `publication-retry-pending:${publication.error ?? "manifest-write-failed"}`;
   }
-  await persistDepegResolverSnapshot(db, publicSnapshot);
+  await writeDepegResolverSnapshot(db, publicSnapshot);
   const reviewArtifacts = await persistDepegResolverReviewArtifacts(db, diagnosticSnapshot, storeContracts, options.signal);
   assessmentWriteCount = reviewArtifacts.assessmentWriteCount;
   reviewRows = reviewArtifacts.reviewRows;

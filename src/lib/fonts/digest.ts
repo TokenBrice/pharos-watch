@@ -7,8 +7,7 @@ export const digestDisplay = localFont({
   ],
   display: "swap",
   fallback: ["Georgia", "Times New Roman", "serif"],
-  // Lazy: Newsreader is only mounted under <DailyDigest> (dynamic on the
-  // homepage and statically on /digest/*). preload: false keeps it off the
-  // critical fetch list for routes that don't render the digest surface.
+  // Lazy: Newsreader is mounted by the digest archive preview and dated digest
+  // pages. preload: false keeps it off routes without a digest surface.
   preload: false,
 });

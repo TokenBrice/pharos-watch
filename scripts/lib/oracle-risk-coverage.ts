@@ -21,6 +21,18 @@ export interface OracleRiskCoverageFinding {
   detail: string;
 }
 
+const ADVISORY_FINDING_KINDS: Partial<Record<OracleRiskCoverageFindingKind, true>> = {
+  "stale-review": true,
+  "stale-branch-observation": true,
+  "missing-branch-applicability": true,
+  "branch-applicability-unresolved": true,
+  "reviewed-inoperable-branch-evidence": true,
+};
+
+export function isBlockingOracleRiskCoverageFinding(finding: OracleRiskCoverageFinding): boolean {
+  return ADVISORY_FINDING_KINDS[finding.kind] !== true;
+}
+
 export interface OracleRiskCoverageResult {
   totalCryptoCdp: number;
   withOracleRisk: number;
@@ -97,6 +109,10 @@ const REQUIRED_BRANCH_EVIDENCE_FIELDS = [
 
 function missingBranchEvidenceFields(branch: NonNullable<OracleRiskProfile["branches"]>[number]): string[] {
   return REQUIRED_BRANCH_EVIDENCE_FIELDS.filter((field) => {
+    // A reviewed-uncallable branch has no delay to report; `liquidationState`
+    // is the evidence for this field, and the schema forbids pairing it with
+    // a `liquidationDelaySec` value.
+    if (field === "liquidationDelaySec" && branch.liquidationState === "uncallable") return false;
     const value = branch[field];
     return value == null || (Array.isArray(value) && value.length === 0);
   });

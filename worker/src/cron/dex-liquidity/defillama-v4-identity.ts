@@ -1,3 +1,4 @@
+import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import type { LlamaPool } from "./types";
 
 export const DEFILLAMA_V4_IDENTITIES_URL =
@@ -5,8 +6,9 @@ export const DEFILLAMA_V4_IDENTITIES_URL =
 
 function tokenSet(value: unknown): string | null {
   if (!Array.isArray(value) || value.length !== 2) return null;
-  if (!value.every((token) => typeof token === "string" && /^0x[0-9a-f]{40}$/i.test(token))) return null;
-  const tokens = value.map((token: string) => token.toLowerCase()).sort();
+  const tokens = value.map((token) => canonicalEvmAddress(token));
+  if (tokens.some((token) => token === null)) return null;
+  tokens.sort();
   return tokens[0] !== tokens[1] ? tokens.join(":") : null;
 }
 

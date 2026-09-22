@@ -194,23 +194,21 @@ vi.mock("../../lib/constants", () => ({
   MIN_LENDING_POOL_TVL_SHARE_OF_STABLECOIN_SUPPLY: 0.001,
 }));
 
-import { syncYieldData } from "../sync-yield-data";
 import { batchExecute } from "../../lib/db";
 import { getCache, getCaches, setCache, setCacheIfNewer, writeFreshnessSentinel } from "../../lib/db-cache";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { getChainRpc, type ChainRpcConfig } from "../../lib/chain-registry";
 import type { CronProgressUpdate } from "../../lib/cron-logger";
-import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 import * as safetyScoreActiveSourceModule from "../../lib/safety-score-active-source";
 import * as safetyScoresModule from "../../lib/safety-scores";
 import * as yieldConfigModule from "../../lib/yield-config/yield-config";
 import * as yieldHelpersModule from "../yield-helpers";
-import * as publicationModule from "../yield-sync/publication";
-import * as evmRpcModule from "../../lib/evm-rpc";
-import { YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY } from "../../lib/yield-history-cleanup";
-import { cacheRow, installYieldCacheReader } from "./yield-cache.test-support";
+import {
+  healthyRiskFreeRateCacheRow,
+  installYieldCacheReader,
+  stablecoinsCacheRow,
+} from "./yield-cache.test-support";
 
 const mutableActiveStablecoins = ACTIVE_STABLECOINS as typeof ACTIVE_STABLECOINS extends readonly (infer T)[]
   ? T[]
@@ -263,46 +261,64 @@ export function makeYieldHistoryRow(
  */
 export function yieldSyncPruneTableMatches(): MockTableConfig[] {
   return [
-    { match: "pharos:yield-sync:abandoned-staged-generation-finalize", rows: [] },
+    { match: "pharos:yield-sync:abandoned-staged-generation-finalize", rows: [], allowUnused: true },
     // D1 audit follow-up: the generation-retention prune (0240 window) and the
     // predicate-first decision-retention candidate read both run on every
     // publication, so a suite without a matcher fails the whole sync.
-    { match: "pharos:yield-sync:publication-generation-retention-delete", rows: [] },
-    { match: "pharos:yield-sync:decision-retention-delete-candidates", rows: [] },
+    { match: "pharos:yield-sync:publication-generation-retention-delete", rows: [], allowUnused: true },
+    { match: "pharos:yield-sync:decision-retention-delete-candidates", rows: [], allowUnused: true },
   ];
 }
 
-/** `mockD1` with the always-issued yield prune matchers appended to a custom list. */
+/**
+ * `mockD1` with the always-issued yield prune matchers appended to a custom
+ * list. The caller's own matchers are asserted as used: a fixture the run never
+ * selects fails the test instead of passing vacuously.
+ */
 export function mockD1WithYieldPruneTables(tables: MockTableConfig[] = []): MockD1Database {
-  return mockD1([...tables, ...yieldSyncPruneTableMatches()]);
+  return mockD1([...tables, ...yieldSyncPruneTableMatches()], { assertMatchesUsed: true });
+}
+
+/**
+ * Catch-all matchers for the reads and prunes a full sync issues regardless of
+ * the case under test. They are `allowUnused`, so a suite's own fixtures stay
+ * the only matches `assertMatchesUsed` holds it to. `overrides` come first and
+ * win, and are asserted.
+ */
+export function yieldFallbackTableMatches(overrides: MockTableConfig[] = []): MockTableConfig[] {
+  const fallbacks: MockTableConfig[] = [
+    { match: "pharos:yield-sync:yield-data-existing-ids", rows: [], first: null },
+    { match: "ranked_linked_generations", rows: [] },
+    { match: "pharos:yield-sync:decision-retention-delete", rows: [] },
+    { match: "pharos:yield-sync:decision-alternatives-retention-delete", rows: [] },
+    { match: "source_switch = 0", rows: [] },
+    { match: "cache", rows: [] },
+    { match: "yield_data", rows: [] },
+    { match: "yield_history", rows: [] },
+    { match: "supply_history", rows: [] },
+    { match: "depeg_events", rows: [] },
+    { match: "dex_liquidity", rows: [] },
+  ];
+  return [...overrides, ...fallbacks.map((table) => ({ ...table, allowUnused: true }))];
 }
 
 function makeYieldHistoryTables(historyRows: YieldHistoryFixtureRow[]): MockTableConfig[] {
   return [
-    { match: "pharos:yield-sync:daily-history-materialize", rows: [] },
-    { match: "pharos:yield-sync:stale-yield-data-delete", rows: [] },
-    { match: "pharos:yield-sync:yield-data-existing-ids", rows: [], first: null },
-    { match: "pharos:yield-sync:orphan-yield-data-delete", rows: [] },
-    { match: "pharos:yield-sync:history-retention-delete", rows: [] },
-    { match: "pharos:yield-sync:daily-history-retention-delete", rows: [] },
-    { match: "WITH ranked_linked_generations AS", rows: [] },
-    { match: "pharos:yield-sync:decision-retention-delete", rows: [] },
-    { match: "pharos:yield-sync:decision-alternatives-retention-delete", rows: [] },
+    { match: "pharos:yield-sync:daily-history-materialize", rows: [], allowUnused: true },
+    { match: "pharos:yield-sync:stale-yield-data-delete", rows: [], allowUnused: true },
+    { match: "pharos:yield-sync:orphan-yield-data-delete", rows: [], allowUnused: true },
+    { match: "pharos:yield-sync:history-retention-delete", rows: [], allowUnused: true },
+    { match: "pharos:yield-sync:daily-history-retention-delete", rows: [], allowUnused: true },
+    { match: "pharos:yield-sync:ownership-handoff-delete", rows: [], allowUnused: true },
     ...yieldSyncPruneTableMatches(),
-    { match: "pharos:yield-sync:ownership-handoff-delete", rows: [] },
-    { match: "source_switch = 0", rows: [] },
     {
       match: "SELECT value, updated_at FROM cache WHERE key = ?",
       matchBinds: ["yield-rankings"],
       rows: [],
       first: null,
+      allowUnused: true,
     },
-    { match: "cache", rows: [] },
-    { match: "yield_data", rows: [] },
-    { match: "yield_history", rows: historyRows },
-    { match: "supply_history", rows: [] },
-    { match: "depeg_events", rows: [] },
-    { match: "dex_liquidity", rows: [] },
+    ...yieldFallbackTableMatches([{ match: "yield_history", rows: historyRows, allowUnused: true }]),
   ];
 }
 
@@ -313,7 +329,7 @@ export function makeYieldHistoryDb(
     createDb?: (tables: MockTableConfig[]) => MockD1Database;
   } = {},
 ): MockD1Database {
-  const createDb = options.createDb ?? mockD1;
+  const createDb = options.createDb ?? ((tables: MockTableConfig[]) => mockD1(tables, { assertMatchesUsed: true }));
   return createDb([
     ...(options.additionalTables ?? []),
     ...makeYieldHistoryTables(historyRows),
@@ -480,41 +496,11 @@ function getYieldRankingsCachePayload(db: MockHistoryDb): unknown {
   return entry ? JSON.parse(String(entry.binds[1])) : undefined;
 }
 
-function makeYieldOrphanDb(orphanIds: string[]) {
-  return mockD1WithYieldPruneTables([
-    { match: "pharos:yield-sync:yield-data-existing-ids", rows: orphanIds.map((stablecoin_id) => ({ stablecoin_id })) },
-    { match: "cache", rows: [] },
-    { match: "yield_data", rows: [] },
-    { match: "yield_history", rows: [] },
-    { match: "supply_history", rows: [] },
-    { match: "depeg_events", rows: [] },
-    { match: "dex_liquidity", rows: [] },
-  ]);
-}
-
-function makeBrokenYieldRankingsDb() {
-  return mockD1WithYieldPruneTables([
-    { match: "cache", rows: [] },
-    { match: "yield_data", rows: [{ symbol: "BROKEN", current_apy: 5 }] },
-    { match: "yield_history", rows: [] },
-    { match: "supply_history", rows: [] },
-    { match: "depeg_events", rows: [] },
-    { match: "dex_liquidity", rows: [] },
-  ]);
-}
-
 function mockHealthyRiskFreeRateCache() {
   const nowSec = Math.floor(Date.now() / 1000);
   installYieldCacheReader(vi.mocked(getCache), {}, {
     fallback: (key) => key === "risk_free_rate"
-      ? cacheRow({
-          rate: 4.0,
-          source: "fred",
-          fetchedAt: nowSec - 3600,
-          recordDate: "2025-06-15",
-          isFallback: false,
-          fallbackMode: null,
-        }, nowSec - 3600)
+      ? healthyRiskFreeRateCacheRow(4, nowSec - 3600)
       : null,
   });
 }
@@ -529,7 +515,9 @@ function resetSyncYieldDataTest() {
     yieldConfigModule.EXPLICIT_YIELD_SOURCE_POOL_MAP as typeof yieldConfigModule.EXPLICIT_YIELD_SOURCE_POOL_MAP;
   for (const key of Object.keys(explicitPoolMap)) delete explicitPoolMap[key];
   // Reset mocks to factory defaults
-  vi.mocked(getCache).mockReset().mockResolvedValue(null);
+  vi.mocked(getCache).mockReset().mockImplementation(async (_db, key) =>
+    key === "stablecoins" ? stablecoinsCacheRow() : null
+  );
   vi.mocked(getCaches)
     .mockReset()
     .mockImplementation(async (db, keys) => {
@@ -594,27 +582,6 @@ function cleanupSyncYieldDataTest() {
   vi.unstubAllGlobals();
 }
 
-const fixtureMockD1 = mockD1;
-const fixtureSyncYieldData = syncYieldData;
-const fixtureBatchExecute = batchExecute;
-const fixtureGetCache = getCache;
-const fixtureGetCaches = getCaches;
-const fixtureSetCacheIfNewer = setCacheIfNewer;
-const fixtureWriteFreshnessSentinel = writeFreshnessSentinel;
-const fixtureShouldAttemptFetch = shouldAttemptFetch;
-const fixtureRecordOutcome = recordOutcome;
-const fixtureGetChainRpc = getChainRpc;
-const fixtureMockFetch = mockFetch;
-const fixtureACTIVE_STABLECOINS = ACTIVE_STABLECOINS;
-const fixtureACTIVE_YIELD_BEARING_STABLECOINS = ACTIVE_YIELD_BEARING_STABLECOINS;
-const fixtureSafetyScoreActiveSourceModule = safetyScoreActiveSourceModule;
-const fixtureSafetyScoresModule = safetyScoresModule;
-const fixtureYieldConfigModule = yieldConfigModule;
-const fixtureYieldHelpersModule = yieldHelpersModule;
-const fixturePublicationModule = publicationModule;
-const fixtureEvmRpcModule = evmRpcModule;
-const fixtureYIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY = YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY;
-
 export {
   mutableActiveStablecoins,
   mutableTrackedMetaById,
@@ -625,8 +592,6 @@ export {
   findPublishedYieldRow,
   findPublishedYieldHistoryRow,
   getYieldRankingsCachePayload,
-  makeYieldOrphanDb,
-  makeBrokenYieldRankingsDb,
   mockHealthyRiskFreeRateCache,
   resetSyncYieldDataTest,
   cleanupSyncYieldDataTest,
@@ -635,24 +600,4 @@ export {
   type MockHistoryDb,
   type YieldDataTestRow,
   type YieldHistoryTestRow,
-  fixtureMockD1,
-  fixtureSyncYieldData,
-  fixtureBatchExecute,
-  fixtureGetCache,
-  fixtureGetCaches,
-  fixtureSetCacheIfNewer,
-  fixtureWriteFreshnessSentinel,
-  fixtureShouldAttemptFetch,
-  fixtureRecordOutcome,
-  fixtureGetChainRpc,
-  fixtureMockFetch,
-  fixtureACTIVE_STABLECOINS,
-  fixtureACTIVE_YIELD_BEARING_STABLECOINS,
-  fixtureSafetyScoreActiveSourceModule,
-  fixtureSafetyScoresModule,
-  fixtureYieldConfigModule,
-  fixtureYieldHelpersModule,
-  fixturePublicationModule,
-  fixtureEvmRpcModule,
-  fixtureYIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY,
 };

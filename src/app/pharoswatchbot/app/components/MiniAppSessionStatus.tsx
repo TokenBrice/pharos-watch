@@ -2,11 +2,10 @@
 
 import { ExternalLink, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { TELEGRAM_BOT_URL } from "@shared/lib/telegram-bot-registration";
 import { STALE_AUTH_READ_ONLY_COPY } from "./StatusPanel";
 import { HomeSkeleton } from "./HomeSkeleton";
 import { MiniButton } from "./MiniButton";
-
-const BOT_URL = "https://t.me/PharosWatchBot";
 
 export type MiniAppSessionStatus = "preview" | "loading" | "ready" | "stale" | "error";
 
@@ -81,7 +80,7 @@ export function MiniAppSessionStatus({
               <MiniButton variant="secondary" onClick={onClose}>Close and reopen</MiniButton>
             ) : (
               <Button asChild variant="outline" className="gap-2">
-                <a href={BOT_URL} target="_blank" rel="noopener noreferrer">
+                <a href={TELEGRAM_BOT_URL} target="_blank" rel="noopener noreferrer">
                   Open PharosWatchBot <ExternalLink className="h-4 w-4" aria-hidden="true" />
                 </a>
               </Button>

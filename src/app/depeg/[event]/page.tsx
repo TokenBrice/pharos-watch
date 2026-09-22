@@ -13,10 +13,8 @@ import { resolveMechanismArchetype } from "@shared/lib/classification";
 import { formatApproxDurationSeconds } from "@shared/lib/relative-time";
 import { formatDeviationBps, formatIsoTimestamp } from "@shared/lib/format";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import {
-  DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
-  getDepegDewsMethodologyVersionAt,
-} from "@shared/lib/methodology-versions/depeg-dews";
+import { DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH } from "@shared/lib/methodology-versions/constants";
+import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
 import { getCuratedAnnotations } from "@shared/data/annotations/curated-annotations";
 import type { ChartAnnotation } from "@shared/types/chart-annotation";
@@ -100,7 +98,7 @@ export async function generateMetadata(
 }
 
 function ProvenanceLine({ event }: { event: DepegEventEntry }) {
-  const methodologyVersion = getDepegDewsMethodologyVersionAt(event.startedAt);
+  const methodologyVersion = getMethodologyVersionAt("depeg-dews", event.startedAt);
   const versionLabel = toMethodologyVersionLabel(methodologyVersion);
   const provenance = event.provenance ?? null;
   const parts: string[] = [`Detected under ${versionLabel}`];
@@ -217,7 +215,7 @@ export default async function DepegEventPage(
     : baseHeroTitle;
   const heroDescription = buildDepegEventDescription(event, isCollision);
   const eventSynopsis = buildDepegEventSynopsis(event);
-  const methodologyVersion = getDepegDewsMethodologyVersionAt(event.startedAt);
+  const methodologyVersion = getMethodologyVersionAt("depeg-dews", event.startedAt);
   const versionLabel = toMethodologyVersionLabel(methodologyVersion);
   const eventRecordContext = buildDepegRecordContext({ event, versionLabel });
   const canonicalUrl = `${SITE_URL}/depeg/${event.slug}/`;

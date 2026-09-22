@@ -71,7 +71,6 @@ vi.mock("@/components/homepage-client-view-model", () => ({
   }),
   buildHomepageOptionalViewModel: () => ({
     reportCardMap: {},
-    dewsRiskLevel: "normal",
   }),
 }));
 

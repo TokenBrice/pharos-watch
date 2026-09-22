@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  TELEGRAM_MINI_APP_ERROR_CODES,
   isTelegramMiniAppErrorCode,
   type TelegramMiniAppErrorCode,
 } from "@shared/lib/telegram-mini-app-contract";
@@ -15,7 +14,6 @@ import {
  * fallback and expose mutation-specific codes only where they apply.
  */
 
-export const MINI_APP_ERROR_CODES = TELEGRAM_MINI_APP_ERROR_CODES;
 export type MiniAppErrorCode = TelegramMiniAppErrorCode;
 
 export class MiniAppRequestError extends Error {

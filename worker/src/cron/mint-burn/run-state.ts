@@ -10,7 +10,6 @@ export interface MintBurnRunStateRow {
   resumeConfigKey: string | null;
 }
 
-const LEGACY_NEXT_CONFIG_INDEX = 0;
 
 /** Rotate configs so the persisted resume frontier is attempted first. */
 export function resolveRotatedConfigs<T>(
@@ -81,15 +80,14 @@ export async function setMintBurnRunState(
     const now = Math.floor(Date.now() / 1000);
     await db
       .prepare(
-        `INSERT INTO mint_burn_run_state (job, next_config_index, degraded_streak, last_config_key, updated_at)
-         VALUES (?, ?, ?, ?, ?)
+        `INSERT INTO mint_burn_run_state (job, degraded_streak, last_config_key, updated_at)
+         VALUES (?, ?, ?, ?)
          ON CONFLICT(job) DO UPDATE SET
-           next_config_index = excluded.next_config_index,
            degraded_streak = excluded.degraded_streak,
            last_config_key = excluded.last_config_key,
            updated_at = excluded.updated_at`,
       )
-      .bind(jobName, LEGACY_NEXT_CONFIG_INDEX, degradedStreak, resumeConfigKey, now)
+      .bind(jobName, degradedStreak, resumeConfigKey, now)
       .run();
     return true;
   } catch (error) {

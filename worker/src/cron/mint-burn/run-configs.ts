@@ -1,5 +1,4 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
-import type { MintBurnTxContext } from "../../lib/mint-burn-bridge-classifier";
 import type { CronProgressReporter } from "../../lib/cron-logger";
 import { reportCronProgress } from "../../lib/cron-progress";
 import { budgetExhausted } from "../../lib/evm-logs";
@@ -8,6 +7,7 @@ import type { MintBurnAffectedHour, MintBurnPriceContext } from "../../lib/mint-
 import type { MintBurnContractConfig, MintBurnTier } from "../../lib/mint-burn-contracts";
 import { deferConfig, loadActiveConfigDeferrals, shouldDeferConfig } from "./run-state";
 import { createMintBurnConfigSummary, syncMintBurnConfig, type MintBurnConfigSummary } from "./sync-config";
+import type { MintBurnChainContext } from "./chain-context";
 
 const MINT_BURN_RUNTIME_BUDGET_MS = 9 * 60_000;
 const MINT_BURN_MIN_CONFIG_WINDOW_MS = 60_000;
@@ -56,12 +56,7 @@ export async function runMintBurnConfigPhase(input: {
   jobName: string;
   reportProgress?: CronProgressReporter;
   budget: { limit: number; count: number };
-  chainContexts: Map<string, {
-    chainHead: number;
-    alchemyUrl: string;
-    chainTimestampCache: Map<number, number>;
-    txContextCache: Map<string, MintBurnTxContext | null>;
-  }>;
+  chainContexts: Map<string, MintBurnChainContext>;
   signal?: AbortSignal;
   runTimestamp: number;
   priceContext: MintBurnPriceContext;

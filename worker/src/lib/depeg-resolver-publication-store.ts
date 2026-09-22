@@ -1,6 +1,6 @@
 import { DDR_HASH_DOMAINS, stableJsonHashV1, stableJsonStringifyV1 } from "@shared/lib/depeg-resolver/hash";
 import { attachDdrPublicRowHash, computeDdrPublicRowHash } from "@shared/lib/depeg-resolver/public-contract";
-import { isRecord } from "@shared/lib/type-guards";
+import { readRecord } from "@shared/lib/type-guards";
 import { executeAtomicBatch, runChunkedInRead } from "./db";
 import { gunzipTextBounded, gzipCanonicalJson } from "./canonical-json-gzip";
 import {
@@ -112,7 +112,6 @@ export interface LoadSealedPublicPredictionsFilters {
   incidentKeys?: string[];
   eventIds?: number[];
   predictionPolicyVersion?: string;
-  includeUnpublished?: boolean;
 }
 
 export interface WritePublicationManifestInput {
@@ -121,9 +120,6 @@ export interface WritePublicationManifestInput {
   publishedAt: number;
   createdAt?: number;
   validatorVersion?: string;
-  runId?: string;
-  snapshotKind?: string;
-  activeIncidentKeys?: string[];
   basePayload: unknown;
   publicPredictionIds?: number[];
   publicPredictionRowHashes?: Record<string, string> | Record<number, string>;
@@ -140,7 +136,6 @@ export interface DdrPublicationManifest {
   basePayloadHash: string;
   publicPredictionIdsHash: string;
   publicPredictionIds: number[];
-  firstPublishedPublicPredictionIds: number[];
   publicPredictionRowHashes: Record<string, string>;
   basePayloadJson: string;
   baseRowCount: number;
@@ -158,7 +153,6 @@ export interface DdrFirstPublicationMembership {
   snapshotGeneration: number;
   publishedAt: number;
   finalizedAt: number;
-  firstPublished: boolean;
 }
 
 interface SealedPublicPredictionRow {
@@ -212,6 +206,12 @@ interface CompressedPublicationManifestRow extends Omit<PublicationManifestRow, 
   base_payload_gzip: ArrayBuffer | Uint8Array;
   base_payload_bytes: number;
   compressed_payload_bytes: number;
+}
+
+interface PublicationSnapshotRefRow extends Omit<PublicationManifestRow, "base_payload_json"> {
+  payload_snapshot_token: string;
+  base_payload_content_hash: string;
+  base_payload_clock_json: string;
 }
 
 interface FirstPublicationMembershipRow {
@@ -316,7 +316,6 @@ function mapPublicationManifest(row: PublicationManifestRow): DdrPublicationMani
     basePayloadHash: row.base_payload_hash,
     publicPredictionIdsHash: row.public_prediction_ids_hash,
     publicPredictionIds: parsePositiveIntegerArrayJson(row.public_prediction_ids_json, "publicPredictionIdsJson"),
-    firstPublishedPublicPredictionIds: [],
     publicPredictionRowHashes: parseStringRecordJson(
       row.public_prediction_row_hashes_json,
       "publicPredictionRowHashesJson",
@@ -349,6 +348,68 @@ async function mapCompressedPublicationManifest(
   });
   parseJsonObject(basePayloadJson, "basePayloadJson");
   return mapPublicationManifest({ ...row, base_payload_json: basePayloadJson });
+}
+
+/**
+ * The publication clock: the canonical payload fields that advance on every
+ * quarter-hour run even when the published content is identical. Splitting them
+ * out yields the content identity a run is deduplicated on, and keeps the
+ * published payload exactly reconstructible from the payload it references.
+ */
+interface DdrPublicationPayloadClock {
+  methodologyAsOf?: number;
+  lineageTrainingWindow?: { start: number; end: number };
+}
+
+function splitPublicationPayloadClock(payload: Record<string, unknown>): {
+  content: Record<string, unknown>;
+  clock: DdrPublicationPayloadClock;
+} {
+  const clock: DdrPublicationPayloadClock = {};
+  const content = { ...payload };
+  const methodology = readRecord(content.methodology);
+  if (methodology && typeof methodology.asOf === "number") {
+    const { asOf, ...stableMethodology } = methodology;
+    clock.methodologyAsOf = asOf;
+    content.methodology = stableMethodology;
+  }
+  const meta = readRecord(content._meta);
+  const lineage = readRecord(meta?.lineage);
+  const trainingWindow = readRecord(lineage?.trainingWindow);
+  if (meta && lineage && typeof trainingWindow?.start === "number" && typeof trainingWindow.end === "number") {
+    const { trainingWindow: _trainingWindow, ...stableLineage } = lineage;
+    clock.lineageTrainingWindow = { start: trainingWindow.start, end: trainingWindow.end };
+    content._meta = { ...meta, lineage: stableLineage };
+  }
+  return { content, clock };
+}
+
+function applyPublicationPayloadClock(
+  content: Record<string, unknown>,
+  clock: DdrPublicationPayloadClock,
+): Record<string, unknown> {
+  const payload = { ...content };
+  const methodology = readRecord(payload.methodology);
+  if (methodology && clock.methodologyAsOf != null) {
+    payload.methodology = { ...methodology, asOf: clock.methodologyAsOf };
+  }
+  const meta = readRecord(payload._meta);
+  const lineage = readRecord(meta?.lineage);
+  if (meta && lineage && clock.lineageTrainingWindow) {
+    payload._meta = { ...meta, lineage: { ...lineage, trainingWindow: { ...clock.lineageTrainingWindow } } };
+  }
+  return payload;
+}
+
+function parsePublicationPayloadClock(value: string): DdrPublicationPayloadClock {
+  const parsed = parseJsonObject(value, "basePayloadClockJson");
+  const clock: DdrPublicationPayloadClock = {};
+  if (typeof parsed.methodologyAsOf === "number") clock.methodologyAsOf = parsed.methodologyAsOf;
+  const trainingWindow = readRecord(parsed.lineageTrainingWindow);
+  if (typeof trainingWindow?.start === "number" && typeof trainingWindow.end === "number") {
+    clock.lineageTrainingWindow = { start: trainingWindow.start, end: trainingWindow.end };
+  }
+  return clock;
 }
 
 function basePayloadObject(input: unknown): Record<string, unknown> {
@@ -413,13 +474,10 @@ function assertMatchingIdAndHashSets(ids: number[], rowHashes: Record<string, st
   }
 }
 
-function recordValue(value: unknown): Record<string, unknown> | null {
-  return isRecord(value) ? value : null;
-}
 
 function publicPredictionIdFromPayloadRow(row: unknown): number | null {
-  const record = recordValue(row);
-  const prediction = recordValue(record?.prediction);
+  const record = readRecord(row);
+  const prediction = readRecord(record?.prediction);
   const id = prediction?.publicPredictionId;
   if (id == null) return null;
   if (typeof id !== "number") throw new Error("basePayload row prediction.publicPredictionId must be a number");
@@ -429,8 +487,8 @@ function publicPredictionIdFromPayloadRow(row: unknown): number | null {
 }
 
 function publicPredictionRowHashFromPayloadRow(row: unknown): string | null {
-  const record = recordValue(row);
-  const prediction = recordValue(record?.prediction);
+  const record = readRecord(row);
+  const prediction = readRecord(record?.prediction);
   const rowHash = prediction?.rowHash;
   if (rowHash == null) return null;
   if (typeof rowHash !== "string") throw new Error("basePayload row prediction.rowHash must be a string");
@@ -737,11 +795,11 @@ export async function loadSealedPublicPredictions(
   );
 }
 
-async function loadPublicationManifestByToken(
+async function loadCompressedPublicationRow(
   db: D1Database,
   snapshotToken: string,
-): Promise<DdrPublicationManifest | null> {
-  const compressed = await db
+): Promise<CompressedPublicationManifestRow | null> {
+  return db
     .prepare(
       `SELECT *
        FROM depeg_resolver_publication_snapshots_v2
@@ -749,7 +807,48 @@ async function loadPublicationManifestByToken(
     )
     .bind(snapshotToken)
     .first<CompressedPublicationManifestRow>();
+}
+
+/**
+ * Rebuilds a publication that stored no payload of its own from the payload it
+ * references plus its recorded clock, and refuses the row unless the rebuilt
+ * payload hashes to the hash that publication was published under.
+ */
+async function mapReferencedPublicationManifest(
+  db: D1Database,
+  row: PublicationSnapshotRefRow,
+): Promise<DdrPublicationManifest> {
+  const source = await loadCompressedPublicationRow(db, row.payload_snapshot_token);
+  if (!source) {
+    throw new Error(
+      `Publication manifest ${row.snapshot_token} references missing payload ${row.payload_snapshot_token}`,
+    );
+  }
+  const sourceManifest = await mapCompressedPublicationManifest(source);
+  const { content } = splitPublicationPayloadClock(parseJsonObject(sourceManifest.basePayloadJson, "basePayloadJson"));
+  const payload = applyPublicationPayloadClock(content, parsePublicationPayloadClock(row.base_payload_clock_json));
+  if (stableJsonHashV1(DDR_HASH_DOMAINS.publicationManifest, payload) !== row.base_payload_hash) {
+    throw new Error(`Publication manifest ${row.snapshot_token} payload reconstruction does not match its published hash`);
+  }
+  return mapPublicationManifest({ ...row, base_payload_json: stableJsonStringifyV1(payload) });
+}
+
+async function loadPublicationManifestByToken(
+  db: D1Database,
+  snapshotToken: string,
+): Promise<DdrPublicationManifest | null> {
+  const compressed = await loadCompressedPublicationRow(db, snapshotToken);
   if (compressed) return mapCompressedPublicationManifest(compressed);
+
+  const reference = await db
+    .prepare(
+      `SELECT *
+       FROM depeg_resolver_publication_snapshot_refs
+       WHERE snapshot_token = ?`,
+    )
+    .bind(snapshotToken)
+    .first<PublicationSnapshotRefRow>();
+  if (reference) return mapReferencedPublicationManifest(db, reference);
 
   const row = await db
     .prepare(
@@ -762,6 +861,152 @@ async function loadPublicationManifestByToken(
     .bind(snapshotToken)
     .first<PublicationManifestRow>();
   return row ? mapPublicationManifest(row) : null;
+}
+
+interface PublicationRowValues {
+  snapshotToken: string;
+  snapshotGeneration: number;
+  publishedAt: number;
+  basePayloadHash: string;
+  basePayloadContentHash: string;
+  publicPredictionIdsHash: string;
+  publicPredictionIdsJson: string;
+  publicPredictionRowHashesJson: string;
+  baseRowCount: number;
+  publicPredictionCount: number;
+  createdAt: number;
+  validatorVersion: string;
+}
+
+const NEXT_PUBLICATION_SEQUENCE_SQL =
+  `(SELECT COALESCE(MAX(snapshot_sequence), 0) + 1
+      FROM (
+        SELECT snapshot_sequence FROM depeg_resolver_publication_snapshots WHERE snapshot_kind = 'ddr_public'
+        UNION ALL
+        SELECT snapshot_sequence FROM depeg_resolver_publication_snapshots_v2 WHERE snapshot_kind = 'ddr_public'
+        UNION ALL
+        SELECT snapshot_sequence FROM depeg_resolver_publication_snapshot_refs WHERE snapshot_kind = 'ddr_public'
+      ))`;
+
+/**
+ * The newest stored payload, when its content identity is the one being
+ * published. A quarter-hour run whose content is unchanged cites it instead of
+ * compressing and storing the same bytes again.
+ */
+async function loadReusablePayloadToken(db: D1Database, basePayloadContentHash: string): Promise<string | null> {
+  const row = await db
+    .prepare(
+      `SELECT snapshot_token, base_payload_content_hash
+       FROM depeg_resolver_publication_snapshots_v2
+       WHERE snapshot_kind = 'ddr_public'
+       ORDER BY snapshot_sequence DESC
+       LIMIT 1`,
+    )
+    .first<{ snapshot_token: string; base_payload_content_hash: string | null }>();
+  return row && row.base_payload_content_hash === basePayloadContentHash ? row.snapshot_token : null;
+}
+
+async function compressedPublicationStatement(
+  db: D1Database,
+  values: PublicationRowValues,
+  basePayloadJson: string,
+): Promise<D1PreparedStatement> {
+  const compressedPayload = await gzipCanonicalJson(basePayloadJson, {
+    label: "DDR public publication manifest",
+    maximumCompressedBytes: DDR_PUBLICATION_MAX_COMPRESSED_BYTES,
+    maximumUncompressedBytes: DDR_PUBLICATION_MAX_UNCOMPRESSED_BYTES,
+  });
+  return db
+    .prepare(
+      `INSERT INTO depeg_resolver_publication_snapshots_v2
+       (snapshot_token, snapshot_kind, snapshot_sequence, snapshot_generation, published_at,
+        base_payload_hash, base_payload_content_hash, public_prediction_ids_hash,
+        public_prediction_ids_json, public_prediction_row_hashes_json, base_payload_gzip,
+        base_payload_bytes, compressed_payload_bytes, base_row_count, public_prediction_count,
+        created_at, finalized_at, validator_version)
+       VALUES (?, 'ddr_public', ${NEXT_PUBLICATION_SEQUENCE_SQL}, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .bind(
+      values.snapshotToken,
+      values.snapshotGeneration,
+      values.publishedAt,
+      values.basePayloadHash,
+      values.basePayloadContentHash,
+      values.publicPredictionIdsHash,
+      values.publicPredictionIdsJson,
+      values.publicPredictionRowHashesJson,
+      compressedPayload.compressed,
+      compressedPayload.uncompressedBytes,
+      compressedPayload.compressed.byteLength,
+      values.baseRowCount,
+      values.publicPredictionCount,
+      values.createdAt,
+      values.publishedAt,
+      values.validatorVersion,
+    );
+}
+
+function referencePublicationStatement(
+  db: D1Database,
+  values: PublicationRowValues,
+  reference: { payloadSnapshotToken: string; clock: DdrPublicationPayloadClock },
+): D1PreparedStatement {
+  return db
+    .prepare(
+      `INSERT INTO depeg_resolver_publication_snapshot_refs
+       (snapshot_token, snapshot_kind, snapshot_sequence, snapshot_generation, published_at,
+        base_payload_hash, base_payload_content_hash, payload_snapshot_token, base_payload_clock_json,
+        public_prediction_ids_hash, public_prediction_ids_json, public_prediction_row_hashes_json,
+        base_row_count, public_prediction_count, created_at, finalized_at, validator_version)
+       VALUES (?, 'ddr_public', ${NEXT_PUBLICATION_SEQUENCE_SQL}, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .bind(
+      values.snapshotToken,
+      values.snapshotGeneration,
+      values.publishedAt,
+      values.basePayloadHash,
+      values.basePayloadContentHash,
+      reference.payloadSnapshotToken,
+      JSON.stringify(reference.clock),
+      values.publicPredictionIdsHash,
+      values.publicPredictionIdsJson,
+      values.publicPredictionRowHashesJson,
+      values.baseRowCount,
+      values.publicPredictionCount,
+      values.createdAt,
+      values.publishedAt,
+      values.validatorVersion,
+    );
+}
+
+function firstPublicationsStatement(
+  db: D1Database,
+  snapshotToken: string,
+  publicPredictionIdsJson: string,
+  snapshotTable: "depeg_resolver_publication_snapshots_v2" | "depeg_resolver_publication_snapshot_refs",
+): D1PreparedStatement {
+  return db
+    // SAFETY: snapshotTable is a closed two-member string-literal union enforced by the compiler; no caller-supplied text reaches the SQL.
+    .prepare(
+      `INSERT OR IGNORE INTO depeg_resolver_first_publications_v2
+       (public_prediction_id, incident_key, snapshot_token, snapshot_sequence,
+        snapshot_generation, published_at, finalized_at)
+       SELECT p.id, p.incident_key, ?, s.snapshot_sequence,
+              s.snapshot_generation, s.published_at, s.finalized_at
+       FROM json_each(?) ids
+       JOIN depeg_resolver_public_predictions p
+         ON p.id = CAST(ids.value AS INTEGER)
+       JOIN ${snapshotTable} s
+         ON s.snapshot_token = ?
+       WHERE NOT EXISTS (
+         SELECT 1
+         FROM depeg_resolver_publication_snapshot_rows existing
+         WHERE existing.public_prediction_id = p.id
+           AND existing.first_published = 1
+       )
+       ORDER BY p.id`,
+    )
+    .bind(snapshotToken, publicPredictionIdsJson, snapshotToken);
 }
 
 export async function writePublicationManifest(
@@ -824,86 +1069,43 @@ export async function writePublicationManifest(
     input.snapshotToken ??
     `ddrpub:${input.publishedAt}:${basePayloadHash.slice(0, 16)}:${publicPredictionIdsHash.slice(0, 8)}`;
   const createdAt = input.createdAt ?? input.publishedAt;
-  const compressedPayload = await gzipCanonicalJson(basePayloadJson, {
-    label: "DDR public publication manifest",
-    maximumCompressedBytes: DDR_PUBLICATION_MAX_COMPRESSED_BYTES,
-    maximumUncompressedBytes: DDR_PUBLICATION_MAX_UNCOMPRESSED_BYTES,
-  });
+  const { content, clock } = splitPublicationPayloadClock(payload);
+  const basePayloadContentHash = stableJsonHashV1(DDR_HASH_DOMAINS.publicationManifest, content);
+  const reusablePayloadToken = await loadReusablePayloadToken(db, basePayloadContentHash);
+  const values: PublicationRowValues = {
+    snapshotToken,
+    snapshotGeneration: input.snapshotGeneration,
+    publishedAt: input.publishedAt,
+    basePayloadHash,
+    basePayloadContentHash,
+    publicPredictionIdsHash,
+    publicPredictionIdsJson,
+    publicPredictionRowHashesJson,
+    baseRowCount: payloadRows.length,
+    publicPredictionCount: ids.length,
+    createdAt,
+    validatorVersion,
+  };
 
   await executeAtomicBatch(db, [
-    db
-      .prepare(
-        `INSERT INTO depeg_resolver_publication_snapshots_v2
-         (snapshot_token, snapshot_kind, snapshot_sequence, snapshot_generation, published_at,
-          base_payload_hash, public_prediction_ids_hash, public_prediction_ids_json,
-          public_prediction_row_hashes_json, base_payload_gzip, base_payload_bytes,
-          compressed_payload_bytes, base_row_count, public_prediction_count, created_at,
-          finalized_at, validator_version)
-         VALUES (
-           ?,
-           'ddr_public',
-           (SELECT COALESCE(MAX(snapshot_sequence), 0) + 1
-              FROM (
-                SELECT snapshot_sequence FROM depeg_resolver_publication_snapshots WHERE snapshot_kind = 'ddr_public'
-                UNION ALL
-                SELECT snapshot_sequence FROM depeg_resolver_publication_snapshots_v2 WHERE snapshot_kind = 'ddr_public'
-              )),
-           ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-         )`,
-      )
-      .bind(
-        snapshotToken,
-        input.snapshotGeneration,
-        input.publishedAt,
-        basePayloadHash,
-        publicPredictionIdsHash,
-        publicPredictionIdsJson,
-        publicPredictionRowHashesJson,
-        compressedPayload.compressed,
-        compressedPayload.uncompressedBytes,
-        compressedPayload.compressed.byteLength,
-        payloadRows.length,
-        ids.length,
-        createdAt,
-        input.publishedAt,
-        validatorVersion,
-      ),
-    db
-      .prepare(
-        `INSERT OR IGNORE INTO depeg_resolver_first_publications_v2
-         (public_prediction_id, incident_key, snapshot_token, snapshot_sequence,
-          snapshot_generation, published_at, finalized_at)
-         SELECT p.id, p.incident_key, ?, s.snapshot_sequence,
-                s.snapshot_generation, s.published_at, s.finalized_at
-         FROM json_each(?) ids
-         JOIN depeg_resolver_public_predictions p
-           ON p.id = CAST(ids.value AS INTEGER)
-         JOIN depeg_resolver_publication_snapshots_v2 s
-           ON s.snapshot_token = ?
-         WHERE NOT EXISTS (
-           SELECT 1
-           FROM depeg_resolver_publication_snapshot_rows existing
-           WHERE existing.public_prediction_id = p.id
-             AND existing.first_published = 1
-         )
-         ORDER BY p.id`,
-      )
-      .bind(snapshotToken, publicPredictionIdsJson, snapshotToken),
+    reusablePayloadToken
+      ? referencePublicationStatement(db, values, { payloadSnapshotToken: reusablePayloadToken, clock })
+      : await compressedPublicationStatement(db, values, basePayloadJson),
+    firstPublicationsStatement(
+      db,
+      snapshotToken,
+      publicPredictionIdsJson,
+      reusablePayloadToken ? "depeg_resolver_publication_snapshot_refs" : "depeg_resolver_publication_snapshots_v2",
+    ),
   ]);
 
   const manifest = await loadPublicationManifestByToken(db, snapshotToken);
   if (!manifest) throw new Error(`Publication manifest ${snapshotToken} was not finalized`);
-  const firstMembership = await loadFirstPublicationMembership(db, { publicPredictionIds: ids });
-  return {
-    ...manifest,
-    firstPublishedPublicPredictionIds: firstMembership
-      .filter((membership) => membership.snapshotToken === snapshotToken)
-      .map((membership) => membership.publicPredictionId),
-  };
+  return manifest;
 }
 
 export async function loadLatestPublicationManifest(db: D1Database): Promise<DdrPublicationManifest | null> {
-  const [legacyRow, compressedRow] = await Promise.all([
+  const [legacyRow, compressedRow, referenceRow] = await Promise.all([
     db
       .prepare(
         `SELECT s.*, f.finalized_at, f.validator_version
@@ -934,15 +1136,58 @@ export async function loadLatestPublicationManifest(db: D1Database): Promise<Ddr
          LIMIT 1`,
       )
       .first<CompressedPublicationManifestRow>(),
+    db
+      .prepare(
+        `SELECT *
+         FROM depeg_resolver_publication_snapshot_refs s
+         WHERE s.snapshot_kind = 'ddr_public'
+           AND NOT EXISTS (
+             SELECT 1
+             FROM depeg_resolver_publication_snapshot_errata e
+             WHERE e.snapshot_token = s.snapshot_token
+           )
+         ORDER BY s.published_at DESC, s.snapshot_sequence DESC
+         LIMIT 1`,
+      )
+      .first<PublicationSnapshotRefRow>(),
   ]);
-  if (!legacyRow && !compressedRow) return null;
-  if (!compressedRow) return mapPublicationManifest(legacyRow!);
-  if (!legacyRow) return mapCompressedPublicationManifest(compressedRow);
-  return compressedRow.published_at > legacyRow.published_at ||
-    (compressedRow.published_at === legacyRow.published_at &&
-      compressedRow.snapshot_sequence > legacyRow.snapshot_sequence)
-    ? mapCompressedPublicationManifest(compressedRow)
-    : mapPublicationManifest(legacyRow);
+  const candidates: Array<{
+    publishedAt: number;
+    sequence: number;
+    load: () => DdrPublicationManifest | Promise<DdrPublicationManifest>;
+  }> = [];
+  if (legacyRow) {
+    candidates.push({
+      publishedAt: legacyRow.published_at,
+      sequence: legacyRow.snapshot_sequence,
+      load: () => mapPublicationManifest(legacyRow),
+    });
+  }
+  if (compressedRow) {
+    candidates.push({
+      publishedAt: compressedRow.published_at,
+      sequence: compressedRow.snapshot_sequence,
+      load: () => mapCompressedPublicationManifest(compressedRow),
+    });
+  }
+  if (referenceRow) {
+    candidates.push({
+      publishedAt: referenceRow.published_at,
+      sequence: referenceRow.snapshot_sequence,
+      load: () => mapReferencedPublicationManifest(db, referenceRow),
+    });
+  }
+  let latest: (typeof candidates)[number] | null = null;
+  for (const candidate of candidates) {
+    if (
+      latest == null ||
+      candidate.publishedAt > latest.publishedAt ||
+      (candidate.publishedAt === latest.publishedAt && candidate.sequence > latest.sequence)
+    ) {
+      latest = candidate;
+    }
+  }
+  return latest ? latest.load() : null;
 }
 
 export async function loadFirstPublicationMembership(
@@ -982,7 +1227,6 @@ export async function loadFirstPublicationMembership(
       snapshotGeneration: row.snapshot_generation,
       publishedAt: row.published_at,
       finalizedAt: row.finalized_at,
-      firstPublished: true,
     }));
   };
 

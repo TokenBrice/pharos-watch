@@ -2,10 +2,10 @@
 
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import type { CemeteryEntry } from "@shared/lib/cemetery-merged";
+import { type CemeterySortMode, sortCemeteryCoins } from "@shared/lib/cemetery";
 import { CemeteryTombstones } from "@/components/cemetery-tombstones";
 import { StablecoinCemetery } from "@/components/stablecoin-cemetery";
 import { ControlPillToggle } from "@/components/control-pill-toggle";
-import { type CemeterySortMode, sortCemeteryCoins } from "@/lib/cemetery";
 
 const SORT_OPTIONS: { value: CemeterySortMode; label: string }[] = [
   { value: "newest", label: "Newest first" },

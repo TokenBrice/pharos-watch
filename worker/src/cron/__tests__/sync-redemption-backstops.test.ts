@@ -675,7 +675,7 @@ describe("syncRedemptionBackstops", () => {
     expect(metadata.unresolvedCritical).toBe(0);
   });
 
-  it("still degrades when missing-capacity drift exceeds the tolerance budget", async () => {
+  it("reports missing-capacity drift beyond the tolerance budget as quality, not a degraded run", async () => {
     const now = Math.floor(Date.now() / 1000);
     configuredIdsMock = Array.from({ length: 101 }, (_value, index) => `coin-${index + 1}`);
     const unresolvedIds = new Set(["coin-1", "coin-2", "coin-3"]);
@@ -716,7 +716,7 @@ describe("syncRedemptionBackstops", () => {
     const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
     const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
 
-    expect(result.status).toBe("degraded");
+    expect(result.status).toBe("ok");
 
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
     expect(metadata.resolved).toBe(98);
@@ -726,6 +726,11 @@ describe("syncRedemptionBackstops", () => {
     expect(metadata.providerMissingCapacityBy).toEqual({ "reserve-sync-metadata": 3 });
     expect(metadata.unresolvedCritical).toBe(0);
     expect(metadata.missingCapacityOkThreshold).toBe(2);
+    expect(metadata.quality).toEqual({
+      reason: "capacity-coverage-floor",
+      unresolvedMissingCapacity: 3,
+      missingCapacityOkThreshold: 2,
+    });
   });
 
   it("forwards run retention telemetry from the snapshot write into cron metadata", async () => {

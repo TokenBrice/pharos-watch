@@ -1,4 +1,3 @@
-import { erc20Abi, erc4626Abi } from "../executable-redemption-abis";
 import { describe, expect, it, vi } from "vitest";
 import { encodeFunctionData, encodeFunctionResult, parseAbi } from "viem/utils";
 import type { Abi } from "abitype";
@@ -31,6 +30,16 @@ const DLEND_ADAPTER = "0x1a5bb485c58a86c193b823d0ea031b68813e100f";
 const DUSD = "0x07fff99e1664d9b116fbc158c0e99785f81ca236";
 const DLEND_POOL = "0x6598dad18bda89a0e58a1f427c8cebc0de90f153";
 const DLEND_ATOKEN = "0x5cc741931d01cb1adde193222dfb1ad75930fd60";
+
+const erc20Abi = parseAbi([
+  "function balanceOf(address account) view returns (uint256)",
+  "function decimals() view returns (uint8)",
+]);
+const erc4626Abi = parseAbi([
+  "function asset() view returns (address)",
+  "function totalAssets() view returns (uint256)",
+  "function maxWithdraw(address owner) view returns (uint256)",
+]);
 
 const EARN_VAULT_ABI = parseAbi([
   "function vaultValidator() view returns (address)",

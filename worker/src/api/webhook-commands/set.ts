@@ -9,11 +9,11 @@ import {
   validateGlobalSetCommand,
 } from "../telegram-webhook-store";
 import type { WebhookCommandHandler } from "./context";
-import { makeActionRunner } from "./action-runner";
+import { buildTelegramActionContext, makeActionRunner } from "./action-runner";
 import { createTelegramWebhookIntent } from "../telegram-webhook-effect-fence";
 
 export const handleSet: WebhookCommandHandler = async (ctx, args) => {
-  const { db, chatId, username, actorUserId } = ctx;
+  const { db, chatId, username } = ctx;
   const parsed = parseSetCommand(args);
   if ("error" in parsed) {
     await ctx.replyToChat(escapeHtml(parsed.error));
@@ -62,22 +62,7 @@ export const handleSet: WebhookCommandHandler = async (ctx, args) => {
   }
 
   const runAction = makeActionRunner(
-    {
-      db,
-      chatId,
-      username,
-      initiatorUserId: actorUserId,
-      beforeIrreversibleEffect: ctx.beforeIrreversibleEffect,
-      planIntent: ctx.planIntent,
-      prepareMutationAppliedStatement: ctx.prepareMutationAppliedStatement,
-      prepareMutationOperationStatements: ctx.prepareMutationOperationStatements,
-      preparePendingMutationAppliedStatement: ctx.preparePendingMutationAppliedStatement,
-      confirmAtomicMutationApplied: ctx.confirmAtomicMutationApplied,
-      markMutationApplied: ctx.markMutationApplied,
-      storedIntent: ctx.storedIntent,
-      wasMutationApplied: ctx.wasMutationApplied,
-      operationNowSec: ctx.operationNowSec,
-    },
+    buildTelegramActionContext(ctx),
     ctx.botToken,
     undefined,
     ctx.chatType === "private"

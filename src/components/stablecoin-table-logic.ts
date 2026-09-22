@@ -175,10 +175,10 @@ export function sortStablecoins({
 }: SortStablecoinsParams): StablecoinData[] {
   const extractors: Record<StablecoinTableSortKey, (row: StablecoinData) => StablecoinSortValue> = {
     name: (r) => r.name.toLowerCase(),
-    price: (r) => r.price ?? 0,
+    price: (r) => r.price ?? null,
     mcap: (r) => getCirculatingRaw(r),
-    change24h: (r) => getSupplyChangePercent(getCirculatingRaw(r), getPrevDayRaw(r)) ?? 0,
-    change7d: (r) => getSupplyChangePercent(getCirculatingRaw(r), getPrevWeekRaw(r)) ?? 0,
+    change24h: (r) => getSupplyChangePercent(getCirculatingRaw(r), getPrevDayRaw(r)),
+    change7d: (r) => getSupplyChangePercent(getCirculatingRaw(r), getPrevWeekRaw(r)),
     stability: (r) => pegScores?.get(r.id)?.pegScore ?? null,
     liquidity: (r) => dexLiquidity?.[r.id]?.liquidityScore ?? null,
     grade: (r) => reportCards?.[r.id]?.score ?? null,

@@ -1,3 +1,4 @@
+import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { runPruneCronHistory } from "../prune-cron-history";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
@@ -14,17 +15,18 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-function insert(sqlite: import("node:sqlite").DatabaseSync, sql: string, ...values: unknown[]): void {
+function insert(sqlite: DatabaseSync, sql: string, ...values: unknown[]): void {
   sqlite.prepare(sql).run(...(values as never[]));
 }
 
-function select<T>(sqlite: import("node:sqlite").DatabaseSync, sql: string): T[] {
+function select<T>(sqlite: DatabaseSync, sql: string): T[] {
   return sqlite.prepare(sql).all() as T[];
 }
 
 const ONE_WEEK_SEC = 7 * 24 * 60 * 60;
 const TWO_DAYS_SEC = 2 * 24 * 60 * 60;
 const TWO_WEEKS_SEC = 14 * 24 * 60 * 60;
+const THIRTY_FIVE_DAYS_SEC = 35 * 24 * 60 * 60;
 
 function toUtcDateString(timestampSec: number): string {
   return new Date(timestampSec * 1000).toISOString().slice(0, 10);
@@ -42,12 +44,11 @@ describe("runPruneCronHistory", () => {
   it.each([
     {
       label: "removes cron_runs older than 7 days and keeps newer rows",
-      seed: (sqlite: import("node:sqlite").DatabaseSync, now: number) => {
+      seed: (sqlite: DatabaseSync, now: number) => {
         insert(sqlite, "INSERT INTO cron_runs (job, started_at, duration_ms, status) VALUES (?, ?, ?, ?)", "sync-stablecoins", now - ONE_WEEK_SEC - 1, 1, "ok");
         insert(sqlite, "INSERT INTO cron_runs (job, started_at, duration_ms, status) VALUES (?, ?, ?, ?)", "sync-stablecoins", now - ONE_WEEK_SEC, 1, "ok");
       },
-      remaining: (sqlite: import("node:sqlite").DatabaseSync) =>
-        select<{ started_at: number }>(sqlite, "SELECT started_at FROM cron_runs"),
+      remaining: (sqlite: DatabaseSync) => select<{ started_at: number }>(sqlite, "SELECT started_at FROM cron_runs"),
       expected: (now: number) => [{ started_at: now - ONE_WEEK_SEC }],
       deletedKey: "cronRunsDeleted",
       cutoffKey: "cutoffCronRunsSec",
@@ -55,12 +56,11 @@ describe("runPruneCronHistory", () => {
     },
     {
       label: "removes cron_slot_executions older than 14 days and keeps newer rows",
-      seed: (sqlite: import("node:sqlite").DatabaseSync, now: number) => {
+      seed: (sqlite: DatabaseSync, now: number) => {
         insert(sqlite, "INSERT INTO cron_slot_executions (slot_key, slot_started_at, state, execution_owner, started_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)", "quarterHourly", now - TWO_WEEKS_SEC - 3600, "finished", "test", now, now);
         insert(sqlite, "INSERT INTO cron_slot_executions (slot_key, slot_started_at, state, execution_owner, started_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)", "quarterHourly", now - 3600, "finished", "test", now, now);
       },
-      remaining: (sqlite: import("node:sqlite").DatabaseSync) =>
-        select<{ slot_started_at: number }>(sqlite, "SELECT slot_started_at FROM cron_slot_executions"),
+      remaining: (sqlite: DatabaseSync) => select<{ slot_started_at: number }>(sqlite, "SELECT slot_started_at FROM cron_slot_executions"),
       expected: (now: number) => [{ slot_started_at: now - 3600 }],
       deletedKey: "slotExecutionsDeleted",
       cutoffKey: "cutoffSlotExecutionsSec",
@@ -68,13 +68,12 @@ describe("runPruneCronHistory", () => {
     },
     {
       label: "removes selector snapshot daily quota rows older than 2 days and keeps newer rows",
-      seed: (sqlite: import("node:sqlite").DatabaseSync, now: number) => {
+      seed: (sqlite: DatabaseSync, now: number) => {
         const quota = "INSERT INTO selector_snapshot_daily_quota (quota_date, ip_hash, first_seen_at, last_seen_at) VALUES (?, ?, ?, ?)";
         insert(sqlite, quota, toUtcDateString(now - TWO_DAYS_SEC - 24 * 60 * 60), "old", now, now);
         insert(sqlite, quota, toUtcDateString(now - 3600), "new", now, now);
       },
-      remaining: (sqlite: import("node:sqlite").DatabaseSync) =>
-        select<{ quota_date: string }>(sqlite, "SELECT quota_date FROM selector_snapshot_daily_quota"),
+      remaining: (sqlite: DatabaseSync) => select<{ quota_date: string }>(sqlite, "SELECT quota_date FROM selector_snapshot_daily_quota"),
       expected: (now: number) => [{ quota_date: toUtcDateString(now - 3600) }],
       deletedKey: "selectorSnapshotDailyQuotaDeleted",
       cutoffKey: "cutoffSelectorSnapshotDailyQuotaDate",
@@ -82,16 +81,54 @@ describe("runPruneCronHistory", () => {
     },
     {
       label: "removes block timestamp cache rows older than 14 days and keeps newer rows",
-      seed: (sqlite: import("node:sqlite").DatabaseSync, now: number) => {
+      seed: (sqlite: DatabaseSync, now: number) => {
         insert(sqlite, "INSERT INTO block_timestamp_cache (chain_id, block_number, timestamp, updated_at) VALUES (?, ?, ?, ?)", "ethereum", 1, now, now - TWO_WEEKS_SEC - 3600);
         insert(sqlite, "INSERT INTO block_timestamp_cache (chain_id, block_number, timestamp, updated_at) VALUES (?, ?, ?, ?)", "ethereum", 2, now, now - 3600);
       },
-      remaining: (sqlite: import("node:sqlite").DatabaseSync) =>
-        select<{ updated_at: number }>(sqlite, "SELECT updated_at FROM block_timestamp_cache"),
+      remaining: (sqlite: DatabaseSync) => select<{ updated_at: number }>(sqlite, "SELECT updated_at FROM block_timestamp_cache"),
       expected: (now: number) => [{ updated_at: now - 3600 }],
       deletedKey: "blockTimestampCacheDeleted",
       cutoffKey: "cutoffBlockTimestampCacheSec",
       cutoff: (now: number) => now - TWO_WEEKS_SEC,
+    },
+    {
+      label: "removes Worker request attribution older than 35 days and reports the count",
+      seed: (sqlite: DatabaseSync, now: number) => {
+        const row = "INSERT INTO api_request_consumer_stats (bucket_start, route_key, route_path, lane, consumer_class, request_count) VALUES (?, ?, ?, ?, ?, ?)";
+        insert(sqlite, row, now - THIRTY_FIVE_DAYS_SEC - 1, "old", "/api/old", "public-api", "external", 1);
+        insert(sqlite, row, now - THIRTY_FIVE_DAYS_SEC, "boundary", "/api/boundary", "public-api", "external", 1);
+      },
+      remaining: (sqlite: DatabaseSync) => select<{ bucket_start: number }>(sqlite, "SELECT bucket_start FROM api_request_consumer_stats"),
+      expected: (now: number) => [{ bucket_start: now - THIRTY_FIVE_DAYS_SEC }],
+      deletedKey: "apiRequestConsumerStatsDeleted",
+      cutoffKey: "cutoffRequestTelemetrySec",
+      cutoff: (now: number) => now - THIRTY_FIVE_DAYS_SEC,
+    },
+    {
+      label: "removes Pages request attribution older than 35 days and reports the count",
+      seed: (sqlite: DatabaseSync, now: number) => {
+        const row = "INSERT INTO site_data_request_stats (bucket_start, route_key, route_path, delivery_path, upstream_lane, request_count) VALUES (?, ?, ?, ?, ?, ?)";
+        insert(sqlite, row, now - THIRTY_FIVE_DAYS_SEC - 1, "old", "/api/old", "pages-cache-hit", "", 1);
+        insert(sqlite, row, now - THIRTY_FIVE_DAYS_SEC, "boundary", "/api/boundary", "pages-cache-hit", "", 1);
+      },
+      remaining: (sqlite: DatabaseSync) => select<{ bucket_start: number }>(sqlite, "SELECT bucket_start FROM site_data_request_stats"),
+      expected: (now: number) => [{ bucket_start: now - THIRTY_FIVE_DAYS_SEC }],
+      deletedKey: "siteDataRequestStatsDeleted",
+      cutoffKey: "cutoffRequestTelemetrySec",
+      cutoff: (now: number) => now - THIRTY_FIVE_DAYS_SEC,
+    },
+    {
+      label: "removes per-key request attribution older than 35 days and reports the count",
+      seed: (sqlite: DatabaseSync, now: number) => {
+        const row = "INSERT INTO api_key_request_stats (api_key_id, bucket_start, request_count) VALUES (?, ?, ?)";
+        insert(sqlite, row, 1, now - THIRTY_FIVE_DAYS_SEC - 1, 1);
+        insert(sqlite, row, 1, now - THIRTY_FIVE_DAYS_SEC, 1);
+      },
+      remaining: (sqlite: DatabaseSync) => select<{ bucket_start: number }>(sqlite, "SELECT bucket_start FROM api_key_request_stats"),
+      expected: (now: number) => [{ bucket_start: now - THIRTY_FIVE_DAYS_SEC }],
+      deletedKey: "apiKeyRequestStatsDeleted",
+      cutoffKey: "cutoffRequestTelemetrySec",
+      cutoff: (now: number) => now - THIRTY_FIVE_DAYS_SEC,
     },
   ])("$label", async ({ seed, remaining, expected, deletedKey, cutoffKey, cutoff }) => {
     const { db, sqlite } = createTestDb();

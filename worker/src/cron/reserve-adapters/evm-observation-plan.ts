@@ -1,13 +1,6 @@
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { LiveReserveWarning } from "@shared/types/live-reserves";
-import type {
-  Abi,
-  AbiFunction,
-  AbiParametersToPrimitiveTypes,
-  AbiStateMutability,
-  ExtractAbiFunction,
-  ExtractAbiFunctionNames,
-} from "abitype";
+import type { Abi } from "abitype";
 import { decodeFunctionResult, encodeFunctionData } from "viem/utils";
 import { fetchEvmBlockNumber, fetchEvmBlockTimestamp, type EvmRpcOptions } from "../../lib/evm-rpc";
 import type { AdapterContext } from "./types";
@@ -217,90 +210,17 @@ export function customObservation<
   return defineField(field, decode);
 }
 
-type AbiObservationValue<
-  AbiType extends Abi | readonly unknown[],
-  FunctionName extends ContractFunctionName<AbiType>,
-  Args extends ContractFunctionArgs<AbiType, AbiStateMutability, FunctionName>,
-> = AbiType extends Abi
-  ? Abi extends AbiType
-    ? unknown
-    : AbiParametersToPrimitiveTypes<
-        AbiFunctionForArgs<AbiType, FunctionName, Args>["outputs"],
-        "outputs",
-        true
-      > extends infer Types
-      ? Types extends readonly []
-        ? void
-        : Types extends readonly [infer Type]
-          ? Type
-          : Types
-      : unknown
-  : unknown;
-
-type AbiFunctionForArgs<
-  AbiType extends Abi | readonly unknown[],
-  FunctionName extends ContractFunctionName<AbiType>,
-  Args extends ContractFunctionArgs<AbiType, AbiStateMutability, FunctionName>,
-> = ExtractAbiFunction<AbiType extends Abi ? AbiType : Abi, FunctionName, AbiStateMutability> extends infer Function
-  ? Function extends AbiFunction
-    ? (readonly [] extends Args ? readonly [] : Args) extends AbiParametersToPrimitiveTypes<
-        Function["inputs"],
-        "inputs",
-        true
-      >
-      ? Function
-      : never
-    : never
-  : never;
-
-type ContractFunctionName<
-  AbiType extends Abi | readonly unknown[],
-  Mutability extends AbiStateMutability = AbiStateMutability,
-> = ExtractAbiFunctionNames<AbiType extends Abi ? AbiType : Abi, Mutability> extends infer FunctionName extends string
-  ? [FunctionName] extends [never]
-    ? string
-    : FunctionName
-  : string;
-
-type ContractFunctionArgs<
-  AbiType extends Abi | readonly unknown[],
-  Mutability extends AbiStateMutability,
-  FunctionName extends ContractFunctionName<AbiType, Mutability>,
-> = AbiParametersToPrimitiveTypes<
-  ExtractAbiFunction<AbiType extends Abi ? AbiType : Abi, FunctionName, Mutability>["inputs"],
-  "inputs",
-  true
-> extends infer Args
-  ? [Args] extends [never]
-    ? readonly unknown[]
-    : Args
-  : readonly unknown[];
-
 export function abiObservation<
   const Label extends string,
-  const AbiType extends Abi | readonly unknown[],
-  const FunctionName extends ContractFunctionName<AbiType>,
-  const Args extends ContractFunctionArgs<AbiType, AbiStateMutability, FunctionName> = ContractFunctionArgs<
-    AbiType,
-    AbiStateMutability,
-    FunctionName
-  >,
   const Optional extends boolean | undefined = undefined,
 >(
-  options: Omit<
-    FieldOptionsBase<Label, AbiObservationValue<AbiType, FunctionName, Args>>,
-    "data"
-  > & {
-    abi: AbiType;
-    functionName: FunctionName;
-    args?: Args;
+  options: Omit<FieldOptionsBase<Label, unknown>, "data"> & {
+    abi: Abi;
+    functionName: string;
+    args?: readonly unknown[];
     optional?: Optional;
   },
-): EvmObservationField<
-  Label,
-  AbiObservationValue<AbiType, FunctionName, Args>,
-  ObservationOptional<Optional>
-> {
+): EvmObservationField<Label, unknown, ObservationOptional<Optional>> {
   const { abi, functionName, args, ...field } = options;
   const encodeOptions = {
     abi,
@@ -318,7 +238,7 @@ export function abiObservation<
       data: encodeFunctionData(encodeOptions),
       allowFailure: field.allowFailure ?? false,
     },
-    (raw) => decodeFunctionResult({ ...decodeOptions, data: raw }) as AbiObservationValue<AbiType, FunctionName, Args>,
+    (raw) => decodeFunctionResult({ ...decodeOptions, data: raw }),
   );
 }
 

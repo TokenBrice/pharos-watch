@@ -16,10 +16,10 @@ export function MarketDataXTick({
 }) {
   if (x === undefined || y === undefined || !payload) return null;
   const date = new Date(payload.value);
-  const isJanuary = date.getMonth() === 0;
+  const isJanuary = date.getUTCMonth() === 0;
 
   if (range === "all") {
-    const month = date.toLocaleDateString("en-US", { month: "short" });
+    const month = date.toLocaleDateString("en-US", { month: "short", timeZone: "UTC" });
     return (
       <g transform={`translate(${x},${y})`}>
         <text
@@ -44,7 +44,7 @@ export function MarketDataXTick({
             fontFamily="var(--font-mono, monospace)"
             fill="var(--color-muted-foreground)"
           >
-            {date.getFullYear()}
+            {date.getUTCFullYear()}
           </text>
         ) : null}
       </g>

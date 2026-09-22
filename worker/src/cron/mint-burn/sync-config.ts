@@ -19,6 +19,9 @@ import type {
   MintBurnTier,
 } from "../../lib/mint-burn-contracts";
 
+const DECODE_RETRY_LIMIT = 3;
+const DECODE_QUARANTINE_REASON = "amount-decode-retry-exhausted" as const;
+
 export interface MintBurnConfigSummary {
   key: string;
   symbol: string;
@@ -38,6 +41,14 @@ export interface MintBurnConfigSummary {
   rowsDroppedDecode: number;
   earliestDecodeFailureBlock: number | null;
   errors: number;
+  rowsQuarantinedDecode?: number;
+  decodeQuarantines?: Array<{
+    blockNumber: number;
+    transactionHash: string;
+    logIndex: string;
+    reason: typeof DECODE_QUARANTINE_REASON;
+    attempts: number;
+  }>;
   conservationFailure?: boolean;
   conservationStatus?: MintBurnConservationRecord["status"];
   conservationReason?: string;
@@ -123,6 +134,8 @@ export function createMintBurnConfigSummary(
     rowsDropped: 0,
     rowsDroppedDecode: 0,
     earliestDecodeFailureBlock: null,
+    rowsQuarantinedDecode: 0,
+    decodeQuarantines: [],
     errors: 0,
     failedEventDefs: [],
     eventCoverage: [],
@@ -159,6 +172,32 @@ function timestampRequiredBlockForLog(
   const logIndex = parseInt(log.logIndex, 16);
   if (!Number.isFinite(blockNum) || !Number.isFinite(logIndex)) return null;
   return blockNum;
+}
+
+async function shouldQuarantineDecodeFailure(
+  db: D1Database,
+  configKey: string,
+  log: AlchemyLogEntry,
+  runTimestamp: number,
+): Promise<{ quarantined: boolean; attempts: number }> {
+  const cacheKey = `mint-burn:decode-retry:${configKey}:${log.blockNumber}:${log.transactionHash}:${log.logIndex}`;
+  try {
+    const prior = await db.prepare("SELECT value FROM cache WHERE key = ?").bind(cacheKey).first<{ value: string }>();
+    const parsed = prior ? JSON.parse(prior.value) as { attempts?: unknown } : null;
+    const attempts = (typeof parsed?.attempts === "number" ? parsed.attempts : 0) + 1;
+    const quarantined = attempts >= DECODE_RETRY_LIMIT;
+    await db.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .bind(cacheKey, JSON.stringify({
+        attempts,
+        quarantined,
+        reason: quarantined ? DECODE_QUARANTINE_REASON : "amount-decode-retry",
+      }), runTimestamp)
+      .run();
+    return { quarantined, attempts };
+  } catch (error) {
+    logWorkerEventArgs("handler", "warn", "[sync-mint-burn] decode retry state unavailable:", error);
+    return { quarantined: false, attempts: 0 };
+  }
 }
 
 export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promise<SyncMintBurnConfigResult> {
@@ -296,10 +335,43 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
 
   const allParsedRows: MintBurnRow[] = [];
   for (const { eventDef, logs } of allConfigLogs) {
+    const parseableLogs: AlchemyLogEntry[] = [];
+    for (const log of logs) {
+      const slot = eventDef.amountEncoding === "nth-data-uint256" ? (eventDef.dataSlot ?? 0) : 0;
+      if (decodeUint256AtSlotOrNull(log.data, slot, config.decimals) != null) {
+        parseableLogs.push(log);
+        continue;
+      }
+
+      const retry = await shouldQuarantineDecodeFailure(db, key, log, runTimestamp);
+      if (!retry.quarantined) {
+        parseableLogs.push(log);
+        continue;
+      }
+
+      const blockNumber = parseInt(log.blockNumber, 16);
+      summary.rowsDroppedDecode++;
+      summary.rowsQuarantinedDecode = (summary.rowsQuarantinedDecode ?? 0) + 1;
+      summary.decodeQuarantines?.push({
+        blockNumber,
+        transactionHash: log.transactionHash,
+        logIndex: log.logIndex,
+        reason: DECODE_QUARANTINE_REASON,
+        attempts: retry.attempts,
+      });
+      logWorkerEventArgs("handler", "warn",
+        `[sync-mint-burn] ${config.symbol} on ${config.chain.chainName}: quarantined undecodable log ` +
+        `${log.transactionHash}:${log.logIndex} after ${retry.attempts} attempts (${DECODE_QUARANTINE_REASON})`,
+      );
+    }
+    if (parseableLogs.length !== logs.length) {
+      logs.splice(0, logs.length, ...parseableLogs);
+    }
+
     const parsed = parseMintBurnLogs(
       config,
       eventDef,
-      logs,
+      parseableLogs,
       blockTimestamps,
       priceContext.prices,
       priceContext.priceHistory,
@@ -363,7 +435,7 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
   const fullEventCoverage =
     summary.eventCoverage.length === config.events.length &&
     summary.eventCoverage.every((coverage) => coverage.complete && coverage.scannedToBlock >= scanTo) &&
-    summary.rowsDroppedDecode === 0;
+    summary.rowsDroppedDecode === (summary.rowsQuarantinedDecode ?? 0);
   let conservationFence = false;
   let parserFailure = false;
   let conservationAudit: MintBurnConservationRecord | null = null;

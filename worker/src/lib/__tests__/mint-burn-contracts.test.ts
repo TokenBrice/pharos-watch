@@ -5,7 +5,6 @@ import {
   buildMintBurnScope,
   collectMintBurnBridgeValidationErrors,
   getMintBurnConfigsForStablecoin,
-  MINT_BURN_BRIDGE_VALIDATION_ERROR_COUNT,
   MINT_BURN_BRIDGE_VALIDATION_ERRORS,
   MINT_BURN_CONFIGS,
   validateMintBurnBridgeDetection,
@@ -328,7 +327,6 @@ describe("mint-burn-contracts provenance metadata", () => {
 describe("validateMintBurnBridgeDetection", () => {
   it("keeps checked-in bridge configs clean at module load", () => {
     expect(MINT_BURN_BRIDGE_VALIDATION_ERRORS).toEqual([]);
-    expect(MINT_BURN_BRIDGE_VALIDATION_ERROR_COUNT).toBe(0);
     expect(collectMintBurnBridgeValidationErrors(MINT_BURN_CONFIGS)).toEqual([]);
   });
 

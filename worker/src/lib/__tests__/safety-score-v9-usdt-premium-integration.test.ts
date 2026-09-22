@@ -8,7 +8,7 @@ import productionCapture from "./fixtures/safety-score-v9-usdt-premium-capture.j
 import {
   createReportCardsFixedInput,
   type ReportCardsFixedInputDraft,
-} from "../report-cards-fixed-input";
+} from "../../test-helpers/report-cards-fixed-input";
 import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9/extension";
 import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9/fact-set";
 
@@ -64,19 +64,14 @@ describe("Safety Score v9 USDT premium production integration", () => {
     }
 
     const usdt = evaluatedById.get("usdt-tether")!;
+    // P1-03: tron left matureChains, so this capture's 48.9% tron slice is priced as a
+    // common-mode deployment adjustment and the premium's 75-point base-score gate is missed.
     expect(usdt.trace).toMatchObject({
-      finalScore: 87,
-      inheritableScore: 83,
-      finalGrade: "A+",
-      scoreAdjustments: [{
-        source: "asset-premium",
-        kind: "market-anchor-longevity",
-        label: "#1 & Longevity Premium",
-        configuredPoints: 12,
-        appliedPoints: 12,
-        publishedScoreBefore: 83,
-        publishedScoreAfter: 87,
-      }],
+      finalScore: 73,
+      inheritableScore: 73,
+      finalGrade: "B",
+      scoreAdjustments: [],
+      deploymentAdjustments: [{ failureDomainKey: "chain:tron", exposedScore: 64 }],
     });
 
     const childFacts = factsById.get("susdt-spark")!;

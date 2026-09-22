@@ -19,9 +19,6 @@ import { logWorkerEventArgs } from "../structured-log";
  * Persistence: current scores → `stress_signals` (7-day rolling);
  * daily snapshots → `stress_signal_history` (365-day rolling).
  *
- * Bootstrap mode: On first run or after schema migration, sources flagged in
- * `BOOTSTRAP_ALLOWED_MISSING_TABLE_SOURCES` are tolerated as missing so that
- * DEWS can produce partial scores before all tables are populated.
  */
 // DEWS cron job — runs every 30 minutes, chained after syncStablecoins
 // (same pattern as stability-index).
@@ -31,7 +28,7 @@ import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
 import { throwIfAborted } from "../abort";
 import type { CronProgressReporter, CronResult } from "../cron-logger";
 import { logMalformedJsonPath } from "../json-decode-observability";
-import { assembleDewsScoringInput, markDewsBootstrapComplete } from "./input-assembly";
+import { assembleDewsScoringInput } from "./input-assembly";
 import { buildDewsScoringResult } from "./scoring";
 import { persistDewsResults } from "./persistence";
 import { buildStablecoinsCacheFailureResult, reportDewsProgress } from "./progress";
@@ -85,15 +82,12 @@ export async function computeAndStoreDEWS(
   const registerSourceFailure = (
     source: string,
     error: unknown,
-    options?: { bootstrapAllowed?: boolean },
   ): void => {
-    const bootstrapAllowed = options?.bootstrapAllowed ?? false;
     sourceFailures.push({
       source,
       reason: String(error),
-      bootstrapAllowed,
     });
-    logWorkerEventArgs("lib", "warn", `[dews] ${source} unavailable${bootstrapAllowed ? " (bootstrap-allowed)" : ""}:`, error);
+    logWorkerEventArgs("lib", "warn", `[dews] ${source} unavailable:`, error);
   };
   const registerMalformedPersistedInput = (options: {
     source: string;
@@ -158,7 +152,6 @@ export async function computeAndStoreDEWS(
     assets,
     eligibleAssets,
     assetById,
-    bootstrapPending,
     pegRates,
     pegRateSources,
     pegRateContributorCounts,
@@ -178,9 +171,12 @@ export async function computeAndStoreDEWS(
   });
   await reportDewsProgress(reportProgress, "scoring-complete", { rowsComputed: results.length, validationFailures });
 
-  const hardFailures = sourceFailures.filter((failure) => !failure.bootstrapAllowed);
   const degradedByMalformedInputs = malformedCoreInputRows > 0;
-  const degraded = hardFailures.length > 0 || degradedByMalformedInputs;
+  const degraded = sourceFailures.length > 0 || degradedByMalformedInputs;
+  const degradedSources = [
+    ...sourceFailures.map((failure) => failure.source),
+    ...(degradedByMalformedInputs ? ["malformed-persisted-inputs"] : []),
+  ];
   const freshnessSentinelPublished = results.length > 0 && !degraded;
 
   await reportDewsProgress(reportProgress, "persistence", { rowsComputed: results.length, validationFailures });
@@ -197,7 +193,7 @@ export async function computeAndStoreDEWS(
     results,
     eligibleIds,
     noCurrentSupplyIds,
-    publishFreshnessSentinel: freshnessSentinelPublished,
+    degradedSources,
     nowSec,
     signal,
   });
@@ -212,25 +208,24 @@ export async function computeAndStoreDEWS(
   Object.assign(sourceCoverage, { liquidityHistoryCoveragePct: Number((liqHistCoverage * 100).toFixed(2)), coinsComputed: results.length, coinsSkippedInsufficientData: insufficientDataCount, coinsSkippedNoCurrentSupply: noCurrentSupplyIds.length });
 
   logWorkerEventArgs("lib", "info", `[dews] Computed DEWS for ${results.length} coins`);
-  if (bootstrapPending) {
-    throwIfAborted(signal);
-    await markDewsBootstrapComplete(db, nowSec);
-    throwIfAborted(signal);
-  }
   return {
     itemCount: results.length,
     ...(degraded ? { status: "degraded" as const } : {}),
     productivity: {
       productive: publicationPointerWritten && publishedGeneration != null,
-      reason: publicationPointerWritten ? "dews-generation-published" : "dews-generation-not-published",
+      reason: publicationPointerWritten
+        ? "dews-generation-published"
+        : degraded
+          ? "dews-generation-withheld-degraded"
+          : "dews-generation-not-published",
       publications: publicationPointerWritten && publishedGeneration != null
         ? [{
             surface: "dews" as const,
             generationId: `dews:${publishedGeneration}`,
             publishedAt: publishedGeneration,
             candidateRows: results.length,
-            publishedRows: latestGenerationRows,
-            expectedRows: currentGenerationRows,
+            publishedRows: currentGenerationRows,
+            expectedRows: latestGenerationRows,
             artifactCacheKey: "dews",
           }]
         : [],
@@ -243,6 +238,7 @@ export async function computeAndStoreDEWS(
       rowsDropped,
       freshnessSentinelPublished,
       publicationPointerWritten,
+      degradedSources,
       publishedGeneration,
       currentGenerationRows,
       latestGenerationRows,
@@ -250,7 +246,7 @@ export async function computeAndStoreDEWS(
       dependencies: sourceState.dependencyDiagnostics,
       sourceFailures,
       fallbackMode:
-        hardFailures.length > 0
+        sourceFailures.length > 0
           ? "degraded-inputs"
           : degradedByMalformedInputs
             ? "malformed-persisted-inputs"
@@ -258,7 +254,6 @@ export async function computeAndStoreDEWS(
       validationFailures,
       malformedCoreInputRows,
       malformedPersistedInputs,
-      bootstrapPending,
     }),
   };
 }

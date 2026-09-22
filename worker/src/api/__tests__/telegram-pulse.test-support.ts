@@ -15,7 +15,7 @@ export function cachedPulse(updatedAt: number, overrides: Partial<TelegramPulse>
   return {
     activeWatchers: 8, coinSubscriptions: 13, explicitCoinSubscriptions: 10,
     presetImpliedCoinSubscriptions: 3, activePresetFollowers: 2, newWatchersToday: 5,
-    churnedWatchersToday: 0, reactivatedWatchersToday: 0, historySource: "live-fallback",
+    churnedWatchersToday: 0, reactivatedWatchersToday: 0, historySource: "snapshot",
     topCoins: ["USDC"], pendingDeliveries: 5, miniAppSessionsToday: 7, miniAppMutationsToday: 6,
     miniAppDeniedToday: 2, miniAppReplayClaimsToday: 1, miniAppOpenToFirstMutationP50Sec: null,
     currentSnapshotAt: updatedAt, lifecycleHistoryUpdatedAt: updatedAt, lifecycleHistoryEverySeconds: 900,

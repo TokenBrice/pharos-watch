@@ -23,6 +23,7 @@ import { getGtDexQuality, normalizeProtocol, parsePoolSymbols } from "./pool-hel
 import { isPlausibleDexObservationPrice } from "./price-sanity";
 import type { CgNewPool, GtNewPool, LiquidityFallbackCounters, LiquidityMetrics, DexPriceObs, LiquidityPoolSourceFamily } from "./types";
 import {
+  buildDexPriceObservationIdentity,
   buildPoolIdentity,
   createKnownPoolIdentityIndex,
   getIdentityDedupReason,
@@ -615,9 +616,7 @@ export async function mergeStagedPools(
         tvl: adjustedTvl,
         chain: stagedPool.chain,
         protocol: dexId,
-        poolKey: identity.exactPoolKey ?? undefined,
-        derivedMatchKey: identity.derivedMatchKey ?? undefined,
-        identityConfidence: identity.exactPoolKey ? "exact" : identity.derivedMatchKey ? "derived_ambiguous" : "none",
+        ...buildDexPriceObservationIdentity(identity),
         sourceFamily: view.price!.source,
       });
       stagedPriceObs.set(stagedPool.stablecoinId, obs);

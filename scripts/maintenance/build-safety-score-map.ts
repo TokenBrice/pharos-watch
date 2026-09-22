@@ -49,7 +49,7 @@ import { GRADE_RADAR_COLORS } from "@shared/lib/classification";
 import { formatSafetyMapUsd as formatUsdCompact, formatScore } from "@shared/lib/format";
 import { getDisplayedPsi, getDisplayedPsiBasis } from "@shared/lib/psi-view-model";
 import { PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/psi-colors";
-import { GRADE_THRESHOLDS, scoreToGrade } from "@shared/lib/report-card-core";
+import { scoreToGrade, V9_GRADE_THRESHOLDS } from "@shared/lib/report-card-core";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { StablecoinListResponseSchema, type StablecoinListResponse } from "@shared/types/market";
 import { SAFETY_GRADE_VALUES } from "@shared/types/report-card-grade";
@@ -415,9 +415,9 @@ function asciiInitial(text: string): string {
 
 // Grade-band score range projected from the methodology policy thresholds.
 function tierRange(tier: Tier): string {
-  const mins = GRADE_THRESHOLDS.filter((t) => t.grade.charAt(0) === tier).map((t) => t.min);
+  const mins = V9_GRADE_THRESHOLDS.filter((t) => t.grade.charAt(0) === tier).map((t) => t.min);
   const min = Math.min(...mins);
-  const higher = GRADE_THRESHOLDS.filter((t) => t.grade.charAt(0) !== tier && t.min > min).map((t) => t.min);
+  const higher = V9_GRADE_THRESHOLDS.filter((t) => t.grade.charAt(0) !== tier && t.min > min).map((t) => t.min);
   const max = higher.length > 0 ? Math.min(...higher) - 1 : 100;
   return `${min}–${max}`;
 }

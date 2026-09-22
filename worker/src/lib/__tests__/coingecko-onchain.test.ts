@@ -12,9 +12,7 @@ import { RATE_LIMITS } from "../rate-limit";
 import { sleepWithSignal } from "../abort";
 import { fetchWithRetry } from "../fetch-retry";
 import {
-  fetchCgTokenPools,
   fetchCgTokenPoolsWithStatus,
-  isOnchainAvailable,
   onchainRateLimit,
   parseCgPoolVolume,
 } from "../coingecko-onchain";
@@ -44,10 +42,7 @@ describe("coingecko-onchain", () => {
     vi.clearAllMocks();
   });
 
-  it("tracks API-key availability and rate-limit only after the first request", async () => {
-    expect(isOnchainAvailable("cg-key")).toBe(true);
-    expect(isOnchainAvailable(null)).toBe(false);
-
+  it("rate-limits only after the first request", async () => {
     const signal = new AbortController().signal;
     await onchainRateLimit(0, signal);
     expect(sleepWithSignal).not.toHaveBeenCalled();
@@ -61,27 +56,10 @@ describe("coingecko-onchain", () => {
     vi.mocked(fetchWithRetry).mockResolvedValueOnce(
       new Response(JSON.stringify({ data: [validPool, missingAttributes] }), { status: 200 }),
     );
-
-    const pools = await fetchCgTokenPools("eth", "0xabc");
-    expect(pools).toEqual([validPool]);
-    expect(fetchWithRetry).toHaveBeenCalledWith(
-      expect.stringContaining("/onchain/networks/eth/tokens/0xabc/pools?include=base_token,quote_token&page=1"),
-      expect.objectContaining({
-        headers: expect.objectContaining({
-          Accept: "application/json",
-          "User-Agent": "Pharos/1.0 (stablecoin analytics)",
-        }),
-      }),
-      1,
-      expect.objectContaining({ timeoutMs: undefined }),
-    );
-
-    vi.mocked(fetchWithRetry).mockResolvedValueOnce(
-      new Response(JSON.stringify({ data: [validPool, missingAttributes] }), { status: 200 }),
-    );
     await expect(fetchCgTokenPoolsWithStatus("eth", "0xdef")).resolves.toEqual({
       transportOk: true,
       schemaDegraded: true,
+      complete: true,
       pools: [validPool],
     });
   });
@@ -93,6 +71,7 @@ describe("coingecko-onchain", () => {
     await expect(fetchCgTokenPoolsWithStatus("eth", "0xall-invalid")).resolves.toEqual({
       transportOk: true,
       schemaDegraded: true,
+      complete: true,
       pools: [],
     });
 
@@ -113,6 +92,7 @@ describe("coingecko-onchain", () => {
     await expect(fetchCgTokenPoolsWithStatus("eth", "0xmalformed-relationship")).resolves.toEqual({
       transportOk: true,
       schemaDegraded: true,
+      complete: true,
       pools: [],
     });
   });
@@ -143,6 +123,7 @@ describe("coingecko-onchain", () => {
     await expect(fetchCgTokenPoolsWithStatus("eth", "0xa0b8")).resolves.toEqual({
       transportOk: true,
       schemaDegraded: false,
+      complete: true,
       pools: [capturedPool],
     });
   });
@@ -152,6 +133,7 @@ describe("coingecko-onchain", () => {
     await expect(fetchCgTokenPoolsWithStatus("eth", "0xghi")).resolves.toEqual({
       transportOk: false,
       schemaDegraded: false,
+      complete: false,
       pools: [],
     });
 
@@ -161,6 +143,7 @@ describe("coingecko-onchain", () => {
     await expect(fetchCgTokenPoolsWithStatus("eth", "0xempty")).resolves.toEqual({
       transportOk: true,
       schemaDegraded: false,
+      complete: true,
       pools: [],
     });
 
@@ -170,6 +153,7 @@ describe("coingecko-onchain", () => {
     await expect(fetchCgTokenPoolsWithStatus("eth", "0xnon-array")).resolves.toEqual({
       transportOk: true,
       schemaDegraded: true,
+      complete: false,
       pools: [],
     });
   });
@@ -179,6 +163,7 @@ describe("coingecko-onchain", () => {
     await expect(fetchCgTokenPoolsWithStatus("eth", "0xmissing")).resolves.toEqual({
       transportOk: true,
       schemaDegraded: false,
+      complete: true,
       pools: [],
     });
 
@@ -190,6 +175,21 @@ describe("coingecko-onchain", () => {
         passthroughStatuses: [400, 404],
       }),
     );
+  });
+
+  it("never claims completeness for a scan that ran out of pages", async () => {
+    const fullPage = { data: Array.from({ length: 20 }, () => validPool) };
+    for (let page = 0; page < 3; page++) {
+      vi.mocked(fetchWithRetry).mockResolvedValueOnce(
+        new Response(JSON.stringify(fullPage), { status: 200 }),
+      );
+    }
+
+    const result = await fetchCgTokenPoolsWithStatus("eth", "0xdeep");
+
+    expect(result.complete).toBe(false);
+    expect(result.transportOk).toBe(true);
+    expect(result.pools).toHaveLength(60);
   });
 
   it("parses pool volume from flat, nested, and invalid payloads", () => {

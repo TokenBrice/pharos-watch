@@ -1,3 +1,4 @@
+import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import {
   canonicalExitRouteChain,
   canonicalExitRouteScopedId,
@@ -8,12 +9,32 @@ import { normalizeProtocol } from "./pool-helpers";
 export type PoolIdentitySource = "address" | "native-id" | "token-shape-heuristic" | "none";
 export type PoolDedupReason = "exact" | "derived_unique" | "derived_optional_wildcard";
 
+export interface PoolIdentityKeyCounts {
+  derived: Map<string, number>;
+  wildcard: Map<string, number>;
+}
+
 export interface PoolIdentity {
   exactPoolKey: string | null;
   derivedMatchKey: string | null;
   optionalWildcardKey: string | null;
   hasMissingOptionalIdentityFields: boolean;
   identitySource: PoolIdentitySource;
+}
+
+export type DexPriceObservationIdentity =
+  | { poolKey: string; identityConfidence: "exact" }
+  | { derivedMatchKey: string; identityConfidence: "derived_unique" }
+  | { identityConfidence: "none" };
+
+export function buildDexPriceObservationIdentity(identity: PoolIdentity): DexPriceObservationIdentity {
+  if (identity.exactPoolKey) {
+    return { poolKey: identity.exactPoolKey, identityConfidence: "exact" };
+  }
+  if (identity.derivedMatchKey) {
+    return { derivedMatchKey: identity.derivedMatchKey, identityConfidence: "derived_unique" };
+  }
+  return { identityConfidence: "none" };
 }
 
 export interface KnownPoolIdentityIndex {
@@ -76,7 +97,7 @@ export function isTrustworthyExactPoolId(poolId: string | null | undefined, prot
   if (!trimmed) return false;
   if (trimmed.startsWith("orderbook-") || trimmed.startsWith("orderbook:"))
     return isTrustworthyOrderbookPoolId(trimmed);
-  if (/^0x[a-f0-9]{40}$/i.test(trimmed)) return true;
+  if (canonicalEvmAddress(trimmed)) return true;
   if (isUniswapV4PoolId(trimmed, protocol)) return true;
   return /^[1-9A-HJ-NP-Za-km-z]{32,64}$/.test(trimmed);
 }
@@ -255,10 +276,7 @@ function updateConcreteFeeVariantIndex(
   }
 }
 
-export function countPoolIdentityKeys(identities: PoolIdentity[]): {
-  derived: Map<string, number>;
-  wildcard: Map<string, number>;
-} {
+export function countPoolIdentityKeys(identities: PoolIdentity[]): PoolIdentityKeyCounts {
   const derived = new Map<string, number>();
   const wildcard = new Map<string, number>();
   for (const identity of identities) {
@@ -341,4 +359,34 @@ export function getIdentityDedupReason(
   }
 
   return "derived_optional_wildcard";
+}
+
+export function partitionByKnownIdentity<T>(
+  entries: readonly T[],
+  identityFor: (entry: T, index: number) => PoolIdentity,
+  known: KnownPoolIdentityIndex,
+  counts: PoolIdentityKeyCounts,
+  handlers: Record<PoolDedupReason, (entry: T) => void>,
+  options?: { allowOptionalWildcard?: boolean; stablecoinId?: string },
+): T[] {
+  const retained: T[] = [];
+  for (let index = 0; index < entries.length; index++) {
+    const entry = entries[index]!;
+    const identity = identityFor(entry, index);
+    const reason = getIdentityDedupReason(
+      identity,
+      known,
+      {
+        derived: identity.derivedMatchKey ? (counts.derived.get(identity.derivedMatchKey) ?? 0) : 0,
+        wildcard: identity.optionalWildcardKey ? (counts.wildcard.get(identity.optionalWildcardKey) ?? 0) : 0,
+      },
+      options,
+    );
+    if (reason) {
+      handlers[reason](entry);
+    } else {
+      retained.push(entry);
+    }
+  }
+  return retained;
 }

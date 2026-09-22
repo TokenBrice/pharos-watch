@@ -1,6 +1,4 @@
 import type { DeadStablecoin } from "@shared/types";
-export { sortCemeteryCoins } from "@shared/lib/cemetery";
-export type { CemeterySortMode } from "@shared/lib/cemetery";
 
 export interface CemeteryYearSection {
   year: string;
@@ -9,7 +7,7 @@ export interface CemeteryYearSection {
 
 /**
  * Groups coins into contiguous year sections. Precondition: `coins` must be
- * pre-sorted by death date (see `sortCemeteryCoins`) — the grouping coalesces
+ * pre-sorted by death date (see `sortCemeteryCoins` in `@shared/lib/cemetery`) — the grouping coalesces
  * only adjacent same-year coins, so unsorted input would split a year into
  * multiple sections. A missing/malformed `deathDate` is bucketed under
  * "Unknown" rather than producing an `undefined` year key.

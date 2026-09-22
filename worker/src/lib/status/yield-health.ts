@@ -8,6 +8,12 @@ import { safetyScorePublicationIdentitiesAreComparable } from "@shared/lib/safet
 import { SafetyScorePublicationIdentitySchema } from "@shared/types/safety-score-publication";
 import { YIELD_SAFETY_STALE_COHERENT_MAX_AGE_SEC } from "@shared/lib/yield-safety-fallback";
 import {
+  booleanValue as getBoolean,
+  numberValue as getNumber,
+  readRecord as getObject,
+  stringValue as getString,
+} from "@shared/lib/type-guards";
+import {
   YIELD_BENCHMARK_KEY_VALUES,
   type YieldBenchmarkKey,
 } from "@shared/types/yield";
@@ -30,7 +36,6 @@ import {
   REQUIRED_SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
   SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
 } from "../../cron/yield-sync/supplemental-source-families";
-import { getBoolean, getNumber, getObject, getString } from "../dews/source-state/legacy-bridge";
 import { safeJsonParse } from "../api-cache-read";
 import { loadSafetyScoreV9PublicationIdentityEnvelope } from "../safety-score-v9/publication-store";
 import {
@@ -909,17 +914,6 @@ export async function loadYieldHealthSummary(
 
   const supplemental = buildSupplementalHealth(now, byKey);
 
-  const benchmark = getObject(provenance?.benchmark);
-  const benchmarkFetchedAt = getNumber(benchmark?.fetchedAt);
-  const benchmarkAgeSec = ageSeconds(now, benchmarkFetchedAt) ?? getNumber(benchmark?.ageSeconds);
-  const benchmarkIsFallback = getBoolean(benchmark?.isFallback);
-  const benchmarkStatus: YieldHealthFieldStatus = benchmark == null
-    ? "unknown"
-    : classifyYieldBenchmarkFreshness({
-        ageSeconds: benchmarkAgeSec,
-        isFallback: benchmarkIsFallback === true,
-        fallbackMode: getString(benchmark.fallbackMode),
-      });
   const benchmarkRegistry = buildBenchmarkRegistryHealth({
     now,
     rankings,
@@ -997,15 +991,6 @@ export async function loadYieldHealthSummary(
       reason: getString(safetySnapshot?.reason),
     },
     supplemental,
-    benchmark: {
-      fetchedAt: benchmarkFetchedAt,
-      ageSec: benchmarkAgeSec,
-      maxAgeSec: STATUS_YIELD_HEALTH_THRESHOLDS.benchmarkMaxAgeSec,
-      source: getString(benchmark?.source),
-      isFallback: benchmarkIsFallback,
-      fallbackMode: getString(benchmark?.fallbackMode),
-      status: benchmarkStatus,
-    },
     benchmarkRegistry,
     coverageAudit: {
       updatedAt: coverageAuditUpdatedAt,

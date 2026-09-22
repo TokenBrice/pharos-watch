@@ -21,6 +21,7 @@ const ZERO_SHA: RegExp = /^0+$/;
 const CRITICAL_COVERAGE_INFRA_PATHS = new Set([
   ".github/actions/setup-workspace/action.yml",
   ".github/workflows/pull-request-checks.yml",
+  ".ci/critical-coverage-baseline.json",
   "scripts/ci/check-critical-coverage.ts",
   "scripts/lib/critical-coverage.mjs",
   "scripts/lib/critical-test-files.mts",

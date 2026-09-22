@@ -282,26 +282,21 @@ export async function fetchLatestSafetyScoreHistoryV2Rows(
 ): Promise<SafetyScoreHistoryV2Row[]> {
   const result = await db
     .prepare(
-      `SELECT h.history_id, h.stablecoin_id, h.recorded_at, h.model,
-              h.identity_schema_version, h.methodology_version,
-              h.policy_id, h.policy_digest, h.evaluation_build_digest,
-              h.base_input_generation_id, h.model_publication_generation_id,
-              h.transition_kind, h.grade, h.score, h.prev_grade, h.prev_score
-         FROM safety_score_history_v2 h
-         INNER JOIN (
-           SELECT stablecoin_id, MAX(recorded_at) AS max_recorded_at
-             FROM safety_score_history_v2
-            GROUP BY stablecoin_id
-         ) latest
-           ON latest.stablecoin_id = h.stablecoin_id
-          AND latest.max_recorded_at = h.recorded_at
-        WHERE h.history_id = (
-          SELECT MAX(tied.history_id)
-            FROM safety_score_history_v2 tied
-           WHERE tied.stablecoin_id = h.stablecoin_id
-             AND tied.recorded_at = h.recorded_at
-        )
-        ORDER BY h.stablecoin_id ASC`,
+      `SELECT history_id, stablecoin_id, recorded_at, model,
+              identity_schema_version, methodology_version,
+              policy_id, policy_digest, evaluation_build_digest,
+              base_input_generation_id, model_publication_generation_id,
+              transition_kind, grade, score, prev_grade, prev_score
+         FROM (
+           SELECT h.*,
+                  ROW_NUMBER() OVER (
+                    PARTITION BY h.stablecoin_id
+                    ORDER BY h.recorded_at DESC, h.history_id DESC
+                  ) AS row_rank
+             FROM safety_score_history_v2 h
+         ) ranked
+        WHERE row_rank = 1
+        ORDER BY stablecoin_id ASC`,
     )
     .all<SafetyScoreHistoryV2Row>();
   return result.results ?? [];

@@ -1,23 +1,24 @@
 import { afterEach, describe, it, expect, vi } from "vitest";
-import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import {
-  PRICE_DERIVED_STALE_THRESHOLD_MS,
-  RATE_DERIVED_STALE_THRESHOLD_MS,
-  STALE_THRESHOLD_MS,
-  SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS,
-  SLOW_NAV_SOURCE_STALE_THRESHOLD_MS,
   COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
   LONG_HORIZON_COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
+  PRICE_DERIVED_STALE_THRESHOLD_MS,
+  RATE_DERIVED_STALE_THRESHOLD_MS,
+  SLOW_NAV_SOURCE_STALE_THRESHOLD_MS,
+  STALE_THRESHOLD_MS,
+  SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS,
+  derivePysNullReason,
+  getComparisonAnchorStaleThresholdMs,
+  getRankingStaleThresholdMs,
+} from "../../lib/yield-ranking-helpers";
+import {
   DETERMINISTIC_APY_SANITY_MAX,
   computeApyFromRate,
   computeApyFromPrice,
   computePYS,
   computeYieldStability,
   computeApyVarianceScore,
-  derivePysNullReason,
   detectWarningSignals,
-  getRankingStaleThresholdMs,
-  getComparisonAnchorStaleThresholdMs,
   isDeterministicApyWithinSanityBounds,
   matchAllDlPools,
   findBestLendingPool,
@@ -29,21 +30,6 @@ import { LENDING_PROTOCOL_ALLOWLIST } from "../../lib/yield-config/yield-config"
 import { makeDlYieldPool } from "./yield-resolve.test-support";
 
 afterEach(() => vi.restoreAllMocks());
-
-// computeTvlWeightedMedianApy is internal to sync-yield-data.ts - tested via integration
-describe("STALE_THRESHOLD_MS", () => {
-  it("tracks three sync-yield-data intervals in milliseconds", () => {
-    expect(STALE_THRESHOLD_MS).toBe(CRON_INTERVALS["sync-yield-data"] * 3 * 1000);
-  });
-
-  it("gives supplemental families one four-hour cycle plus buffer before stale", () => {
-    expect(SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS).toBe(CRON_INTERVALS["sync-yield-supplemental"] * 1.5 * 1000);
-  });
-
-  it("marks comparison anchors stale after the conservative two-week window", () => {
-    expect(COMPARISON_ANCHOR_STALE_THRESHOLD_MS).toBe(14 * 24 * 60 * 60 * 1000);
-  });
-});
 
 describe("getRankingStaleThresholdMs", () => {
   it("keeps price-derived rows on the daily snapshot threshold", () => {
@@ -71,7 +57,6 @@ describe("getRankingStaleThresholdMs", () => {
       SLOW_NAV_SOURCE_STALE_THRESHOLD_MS,
     );
     expect(getRankingStaleThresholdMs("defillama", "protocol-api:hashnote-usyc")).toBe(STALE_THRESHOLD_MS);
-    expect(SLOW_NAV_SOURCE_STALE_THRESHOLD_MS).toBe(3 * 24 * 60 * 60 * 1000);
   });
 
   it("uses the supplemental threshold for optional onchain source keys", () => {

@@ -8,7 +8,9 @@ import {
   computePriceSignal,
   computeSupplySignal,
   computeYieldSignal,
+  YIELD_WARNING_SCORES,
 } from "../signal-families";
+import { YIELD_WARNING_SIGNAL_KEYS } from "@shared/types/yield";
 import { makeDewsInput } from "../../__tests__/dews.test-support";
 
 describe("DEWS signal family curves", () => {
@@ -51,11 +53,27 @@ describe("DEWS signal family curves", () => {
         { tvlUsd: 500_000, balanceRatio: 0.5 },
       ],
       prevPoolValue: 45,
+      prevPoolAvailable: true,
     }));
 
     expect(result.available).toBe(true);
     expect(result.value).toBeCloseTo(39.75, 5);
     expect(result.worstPool).toBe(50);
+
+    // Cycle 1 had no pool evidence, so it persisted `{value: 0, available:
+    // false}`. Cycle 2's fresh reading must pass through un-smoothed rather
+    // than being averaged with that phantom zero.
+    const afterUnavailableCycle = computePoolSignal(makeDewsInput({
+      weightedBalanceRatio: 0.8,
+      avgPoolStress: 40,
+      topPools: [
+        { tvlUsd: 50_000, balanceRatio: 0.1 },
+        { tvlUsd: 500_000, balanceRatio: 0.5 },
+      ],
+      prevPoolValue: 0,
+      prevPoolAvailable: false,
+    }));
+    expect(afterUnavailableCycle.value).toBeCloseTo(34.5, 5);
   });
 
   it("pins liquidity score and TVL erosion curves", () => {
@@ -88,6 +106,14 @@ describe("DEWS signal family curves", () => {
     expect(computePriceSignal(makeDewsInput({ priceConfidence: "low", prevPriceConfidence: "high" })).value).toBe(75);
     expect(computePriceSignal(makeDewsInput({ priceConfidence: "single-source", prevPriceConfidence: "high" })).value).toBe(25);
     expect(computePriceSignal(makeDewsInput({ priceConfidence: "fallback" })).value).toBe(80);
+
+    // An absent or unrecognised tier is unvalidated evidence, so it scores as
+    // the worst known tier instead of the best one.
+    const missing = computePriceSignal(makeDewsInput({ priceConfidence: null }));
+    expect(missing.value).toBe(80);
+    expect(missing.warnings).toEqual(["price-confidence-unmapped"]);
+    expect(computePriceSignal(makeDewsInput({ priceConfidence: "  " })).value).toBe(80);
+    expect(computePriceSignal(makeDewsInput({ priceConfidence: "brand-new-tier" })).value).toBe(80);
   });
 
   it("pins divergence curve anchors, non-USD damping, smoothing, and unavailable peg references", () => {
@@ -108,8 +134,19 @@ describe("DEWS signal family curves", () => {
     const eur = computeDivergSignal(makeDewsInput({ pegType: "peggedEUR", price: 0.9925 }));
     expect(eur.value).toBeCloseTo(35, 5);
 
-    const smoothed = computeDivergSignal(makeDewsInput({ price: 0.9925, prevDivergValue: 10 }));
+    const smoothed = computeDivergSignal(makeDewsInput({
+      price: 0.9925,
+      prevDivergValue: 10,
+      prevDivergAvailable: true,
+    }));
     expect(smoothed.value).toBeCloseTo(30, 5);
+
+    const afterUnavailableCycle = computeDivergSignal(makeDewsInput({
+      price: 0.9925,
+      prevDivergValue: 0,
+      prevDivergAvailable: false,
+    }));
+    expect(afterUnavailableCycle.value).toBeCloseTo(50, 5);
   });
 
   it("fails closed on a non-positive price instead of publishing zero divergence", () => {
@@ -207,6 +244,26 @@ describe("DEWS signal family curves", () => {
     expect(result.available).toBe(true);
     expect(result.value).toBe(90);
     expect(result.warnings).toEqual(["yield-spike", "yield-divergence", "tvl-outflow"]);
+  });
+
+  it("publishes no yield verdict when every warning carries zero scored stress", () => {
+    const zeroYield = computeYieldSignal(makeDewsInput({ yieldWarnings: ["zero-yield"] }));
+    expect(zeroYield.available).toBe(false);
+    expect(zeroYield.value).toBe(0);
+    expect(zeroYield.warnings).toEqual(["zero-yield"]);
+
+    expect(computeYieldSignal(makeDewsInput({ yieldWarnings: ["not-a-real-signal"] })).available).toBe(false);
+
+    // A scored key alongside an unscored one still has a verdict.
+    const mixed = computeYieldSignal(makeDewsInput({ yieldWarnings: ["zero-yield", "yield-spike"] }));
+    expect(mixed.available).toBe(true);
+    expect(mixed.value).toBe(30);
+  });
+
+  it("scores every warning key the yield producer can emit", () => {
+    for (const key of YIELD_WARNING_SIGNAL_KEYS) {
+      expect(Object.prototype.hasOwnProperty.call(YIELD_WARNING_SCORES, key), key).toBe(true);
+    }
   });
 
   it.each([

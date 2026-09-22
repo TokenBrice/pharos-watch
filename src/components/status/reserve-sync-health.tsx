@@ -27,7 +27,7 @@ function formatPersistentStaleIndependentFeeds(
   return examples ? `${coins.length} (${examples}${suffix})` : String(coins.length);
 }
 
-function formatCoveragePct(value: number): string {
+function formatRatioPct(value: number): string {
   return `${(value * 100).toFixed(1)}%`;
 }
 
@@ -63,8 +63,8 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
               report cards can show lower reserve scores until a clean run completes.
             </p>
             <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[11px]">
-              <span>{formatCoveragePct(health.freshCoverageRatio)} fresh</span>
-              <span>{formatCoveragePct(health.authoritativeFreshCoverageRatio)} score-grade</span>
+              <span>{formatRatioPct(health.freshCoverageRatio)} fresh</span>
+              <span>{formatRatioPct(health.authoritativeFreshCoverageRatio)} score-grade</span>
               {health.deferredCoins > 0 ? <span>{health.deferredCoins} deferred</span> : null}
               {health.nextCursorStablecoinId ? <span>resume {health.nextCursorStablecoinId}</span> : null}
             </div>
@@ -113,8 +113,8 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
             {health.oldestFreshAgeSec != null ? formatElapsedSeconds(health.oldestFreshAgeSec) : "—"}
           </div>
           <div>
-            Coverage: {formatCoveragePct(health.freshCoverageRatio)} fresh,{" "}
-            {formatCoveragePct(health.authoritativeFreshCoverageRatio)} score-grade
+            Coverage: {formatRatioPct(health.freshCoverageRatio)} fresh,{" "}
+            {formatRatioPct(health.authoritativeFreshCoverageRatio)} score-grade
           </div>
           {health.nextCursorStablecoinId && <div>Next deferred cursor: {health.nextCursorStablecoinId}</div>}
           <div>
@@ -191,7 +191,7 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
                     <TableCell className="text-right font-mono text-red-600 dark:text-red-400">{row.error}</TableCell>
                     <TableCell className="text-right font-mono">{row.skipped}</TableCell>
                     <TableCell className="text-right font-mono">
-                      {row.successRate != null ? formatCoveragePct(row.successRate) : "—"}
+                      {row.successRate != null ? formatRatioPct(row.successRate) : "—"}
                     </TableCell>
                   </TableRow>
                 ))}

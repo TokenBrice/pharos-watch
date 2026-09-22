@@ -114,6 +114,16 @@ describe("handleMintBurnFlows contract tests", () => {
       .getHistory()
       .filter((entry) => entry.sql.includes("FROM mint_burn_hourly INDEXED BY idx_mbh_ts"));
     expect(recentAggregateQueries.length).toBeGreaterThanOrEqual(5);
+    const largestEventQuery = scopedDb
+      .getHistory()
+      .find((entry) => entry.sql.includes("WITH ranked_events AS"));
+    expect(largestEventQuery?.sql).toContain("ROW_NUMBER() OVER");
+    expect(largestEventQuery?.sql).toContain("PARTITION BY stablecoin_id");
+    expect(largestEventQuery?.sql).toContain(
+      "ORDER BY amount_usd DESC, timestamp DESC, block_number DESC, id DESC",
+    );
+    expect(largestEventQuery?.sql).toContain("WHERE row_num = 1");
+    expect(recentAggregateQueries.every((entry) => entry.sql.includes("json_each(?)"))).toBe(true);
   });
 
   it("excludes historical rows for quarantined mint/burn configs from the public aggregate", async () => {
@@ -277,7 +287,8 @@ describe("handleMintBurnFlows contract tests", () => {
     const history = db.getHistory();
     const windowScans = history.filter((entry) => entry.sql.includes("pharos:mint-burn-flows:window-rows"));
     expect(windowScans).toHaveLength(1);
-    expect(windowScans[0]?.binds).toEqual(["ethereum", "base", "arbitrum", sevenDayStart]);
+    expect(windowScans[0]?.binds.slice(0, 3)).toEqual(["ethereum", "base", "arbitrum"]);
+    expect(windowScans[0]?.binds[windowScans[0].binds.length - 1]).toBe(sevenDayStart);
     expect(history.some((entry) => entry.sql.includes("pharos:mint-burn-flows:window-24h-rows"))).toBe(false);
   });
 
@@ -357,7 +368,8 @@ describe("handleMintBurnFlows contract tests", () => {
     const history = db.getHistory();
     const windowScans = history.filter((entry) => entry.sql.includes("pharos:mint-burn-flows:window-rows"));
     expect(windowScans).toHaveLength(1);
-    expect(windowScans[0]?.binds).toEqual(["ethereum", "base", "arbitrum", twentyFourHourStart]);
+    expect(windowScans[0]?.binds.slice(0, 3)).toEqual(["ethereum", "base", "arbitrum"]);
+    expect(windowScans[0]?.binds[windowScans[0].binds.length - 1]).toBe(twentyFourHourStart);
     expect(history.some((entry) => entry.sql.includes("pharos:mint-burn-flows:window-24h-rows"))).toBe(false);
   });
 
@@ -532,7 +544,6 @@ describe("handleMintBurnFlows contract tests", () => {
         stablecoinId,
         symbol: "TEST",
         netFlow24hUsd: invalid ? null : netFlow24hUsd,
-        flowIntensity: null,
         pressureShiftScore: null,
         pressureShiftState: "nr",
         netFlowDirection24h: "flat",

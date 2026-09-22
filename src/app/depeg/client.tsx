@@ -185,12 +185,9 @@ export function DepegClient() {
     [eventsData],
   );
   const reliability = useMemo(() => {
-    const signals = dewsData?.signals ? Object.values(dewsData.signals) : [];
-    const oldestComputedAt = dewsData?.oldestComputedAt ?? signals.reduce<number | null>((oldest, entry) => {
-      if (!entry.computedAt) return oldest;
-      return oldest == null ? entry.computedAt : Math.min(oldest, entry.computedAt);
-    }, null);
-    const oldestAgeSec = oldestComputedAt ? Math.max(0, nowSeconds - oldestComputedAt) : null;
+    const oldestAgeSec = dewsData?.oldestComputedAt
+      ? Math.max(0, nowSeconds - dewsData.oldestComputedAt)
+      : null;
     return {
       oldestAgeSec,
       malformedRows: dewsData?.malformedRows ?? 0,

@@ -40,7 +40,7 @@ describe("status-metadata", () => {
     });
   });
 
-  it("coerces dispatch counts and distinguishes unavailable numbers from false flags", () => {
+  it("coerces dispatch counts and preserves unavailable booleans", () => {
     expect(parseTelegramDispatchCronMetadata({
       subscribersNotified: "12",
       messagesSent: 10,
@@ -62,7 +62,7 @@ describe("status-metadata", () => {
       pendingRetryAfterSec: null,
       cappedAtLimit: true,
       snapshotSeeded: false,
-      pendingRateLimited: false,
+      pendingRateLimited: null,
     });
   });
 

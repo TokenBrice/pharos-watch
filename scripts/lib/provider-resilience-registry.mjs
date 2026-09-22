@@ -95,7 +95,12 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
       "worker/src/lib/authoritative-price-sources/infinifi-iusd.ts",
       "worker/src/lib/authoritative-price-sources/protocol-redeem-provider.ts",
     ],
-    tests: ["worker/src/lib/__tests__/authoritative-price-sources.test.ts"],
+    tests: [
+      "worker/src/lib/__tests__/authoritative-price-sources.test.ts",
+      "worker/src/lib/__tests__/authoritative-price-sources-replay.test.ts",
+      "worker/src/lib/__tests__/authoritative-price-sources-vaults.test.ts",
+      "worker/src/lib/__tests__/authoritative-price-sources-supply.test.ts",
+    ],
     allowBareFetch: false,
     resilience: {
       transport: "EVM RPC helpers behind live override budget",

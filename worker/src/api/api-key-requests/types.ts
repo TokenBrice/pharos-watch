@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { ApiKeySelfServeClaimStatus, ApiKeySelfServeStatus } from "@shared/types";
+import { ApiKeySelfServeCadenceSchema } from "@shared/types/api-key-requests";
 import { SELF_SERVE_USE_CASE_MAX_LENGTH, SELF_SERVE_USE_CASE_MIN_LENGTH } from "@shared/lib/ops-limits";
 import type { MinimalD1Database } from "../../lib/minimal-d1";
 
@@ -18,6 +19,7 @@ export interface ApiKeySelfServeEnv {
 export type ApiKeyRequestDb = MinimalD1Database;
 
 export interface ApiKeyRequestRow {
+  id: number;
   request_id: string;
   api_key_id: number | null;
   status: ApiKeySelfServeStatus;
@@ -105,7 +107,7 @@ export const ApiKeySelfServeRequestSchema = z
      * a static export, so stale bundles must not start 400-ing on submit.
      */
     intendedEndpoints: z.array(z.string().trim().max(160)).max(20).optional(),
-    expectedCadence: z.enum(["hourly", "every_5_min", "every_1_min", "manual", "other"], {
+    expectedCadence: z.enum(ApiKeySelfServeCadenceSchema.options, {
       message: "Expected cadence is required",
     }),
     expectedVolume: z.string().trim().max(300, "Expected volume must be 300 characters or fewer").optional(),

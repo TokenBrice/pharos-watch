@@ -2,6 +2,7 @@ import { computeCentralizedCustodyFraction } from "@shared/lib/centralized-custo
 import {
   STATUS_COINGECKO_PRICE_DIFF_THRESHOLD_PCT,
 } from "@shared/lib/status-thresholds";
+import { PriceSourceHealthSchema } from "@shared/types/pricing-source-health";
 import { ACTIVE_IDS, ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type {
   CanaryStatus,
@@ -14,7 +15,6 @@ import type {
   ProviderCircuitHealth,
   ReserveDriftEntry,
   StatusResponse,
-  StatusSectionError,
   StatusSectionErrors,
   TelegramDispatchCronMetadata,
   TelegramHealthSummary,
@@ -47,30 +47,12 @@ import { loadYieldHealthSummary } from "./yield-health";
 import { logWorkerEvent } from "../structured-log";
 import { loadPublicationHealth } from "../publication-contract";
 import { loadProviderCircuitHealth } from "../provider-circuit-health";
-import { readTelegramPendingCapacity } from "../telegram/pending-capacity";
+import { readTelegramPendingCapacity, toPendingDeliveryBacklog } from "../telegram/pending-capacity";
 import { loadCanaryStatus } from "../canary-checks";
 import type { WorkerCanaryMode } from "../canary-checks";
 import type { StatusSupplements } from "./raw-snapshot";
+import { createStatusSectionError } from "./section-errors";
 export type { StatusSupplements } from "./raw-snapshot";
-
-const SECTION_ERROR_MESSAGES: Record<string, string> = {
-  liquidity_health_extraction_failed: "Liquidity health data unavailable.",
-  publication_health_partial_failure: "Publication health partially unavailable.",
-  publication_health_query_failed: "Publication health unavailable.",
-  provider_circuit_health_query_failed: "Provider circuit health unavailable.",
-  canary_status_query_failed: "Data-invariant canaries unavailable.",
-  price_source_health_extraction_failed: "Price source health data unavailable.",
-  coingecko_price_diff_query_failed: "CoinGecko price diff unavailable.",
-  d1_usage_query_failed: "D1 usage metrics unavailable.",
-  mint_burn_reconciliation_query_failed: "Mint/burn reconciliation unavailable.",
-  reserve_drift_computation_failed: "Reserve drift diagnostics unavailable.",
-  classification_warnings_computation_failed: "Classification warnings unavailable.",
-};
-
-function sectionError(code: string, message?: string): StatusSectionError {
-  const safeMessage = message ?? SECTION_ERROR_MESSAGES[code] ?? "Section unavailable.";
-  return { code, message: safeMessage };
-}
 
 function logStatusSupplementWarning(
   event: string,
@@ -119,33 +101,17 @@ async function loadTelegramHealthSummary(
       pendingDeliveries: pendingCapacity.status === "available" ? pendingCapacity.value.active : null,
       pendingDeliveryLifecycleStatus: pendingCapacity.status,
       pendingDeliveryBacklog: pendingCapacity.status === "available"
-        ? {
-            claimable: pendingCapacity.value.due,
-            due: pendingCapacity.value.due,
-            deferred: pendingCapacity.value.deferred,
-            expired: pendingCapacity.value.expired,
-            nearTtl: pendingCapacity.value.nearTtl,
-            sending: pendingCapacity.value.sending,
-            pendingSending: pendingCapacity.value.pendingSending,
-            freshSending: pendingCapacity.value.freshSending,
-            executionUnknown: pendingCapacity.value.executionUnknown,
-            pendingExecutionUnknown: pendingCapacity.value.pendingExecutionUnknown,
-            freshExecutionUnknown: pendingCapacity.value.freshExecutionUnknown,
-            oldestExecutionUnknownAgeSec: pendingCapacity.value.oldestExecutionUnknownAgeSec,
-            executionUnknownSampleLimit: pendingCapacity.value.executionUnknownSampleLimit,
-            executionUnknownLowerBound: pendingCapacity.value.executionUnknownLowerBound,
-            sentCleanup: pendingCapacity.value.sentCleanup,
-          }
+        ? toPendingDeliveryBacklog(pendingCapacity.value)
         : undefined,
       lastDispatchAt: lastDispatch?.started_at ?? null,
       lastDispatchStatus: lastDispatch?.status ?? null,
       safetyAlertSourceState: dispatchMeta?.safetyAlertSourceState ?? null,
       safetyAlertSourceAgeSeconds: dispatchMeta?.safetyAlertSourceAgeSeconds ?? null,
-      safetyAlertsSuppressed: dispatchMeta?.safetyAlertsSuppressed ?? false,
+      safetyAlertsSuppressed: dispatchMeta?.safetyAlertsSuppressed ?? null,
       safetyAlertSourceGeneration: dispatchMeta?.safetyAlertSourceGeneration ?? null,
       reserveAlertSourceState: dispatchMeta?.reserveAlertSourceState ?? null,
       reserveAlertSourceAgeSeconds: dispatchMeta?.reserveAlertSourceAgeSeconds ?? null,
-      reserveAlertsSuppressed: dispatchMeta?.reserveAlertsSuppressed ?? false,
+      reserveAlertsSuppressed: dispatchMeta?.reserveAlertsSuppressed ?? null,
       reserveAlertSourceGeneration: dispatchMeta?.reserveAlertSourceGeneration ?? null,
     };
   } catch (error) {
@@ -374,7 +340,7 @@ export async function loadStatusSupplements(
       "Liquidity health extraction failed",
       err,
     );
-    sectionErrors.liquidityHealth = sectionError(
+    sectionErrors.liquidityHealth = createStatusSectionError(
       "liquidity_health_extraction_failed",
     );
   }
@@ -388,9 +354,8 @@ export async function loadStatusSupplements(
       "Yield health summary failed",
       err,
     );
-    sectionErrors.yieldHealth = sectionError(
+    sectionErrors.yieldHealth = createStatusSectionError(
       "yield_health_summary_failed",
-      "Yield health summary unavailable.",
     );
   }
 
@@ -398,7 +363,7 @@ export async function loadStatusSupplements(
   try {
     publicationHealth = await loadPublicationHealth(db, now);
     if ((publicationHealth.failedSurfaces?.length ?? 0) > 0) {
-      sectionErrors.publicationHealth = sectionError(
+      sectionErrors.publicationHealth = createStatusSectionError(
         "publication_health_partial_failure",
       );
     }
@@ -408,7 +373,7 @@ export async function loadStatusSupplements(
       "Publication health query failed",
       err,
     );
-    sectionErrors.publicationHealth = sectionError(
+    sectionErrors.publicationHealth = createStatusSectionError(
       "publication_health_query_failed",
     );
   }
@@ -422,7 +387,7 @@ export async function loadStatusSupplements(
       "Provider circuit health query failed",
       err,
     );
-    sectionErrors.providerCircuitHealth = sectionError(
+    sectionErrors.providerCircuitHealth = createStatusSectionError(
       "provider_circuit_health_query_failed",
     );
   }
@@ -436,17 +401,27 @@ export async function loadStatusSupplements(
       "Data-invariant canary status query failed",
       err,
     );
-    sectionErrors.canaries = sectionError(
+    sectionErrors.canaries = createStatusSectionError(
       "canary_status_query_failed",
     );
   }
 
   let priceSourceHealth: PriceSourceHealth | null = null;
-  try {
-    const syncStablecoinsCron = crons["sync-stablecoins"];
-    const metadata = syncStablecoinsCron?.lastRun?.metadata;
-    if (metadata?.priceSourceHealth) {
-      priceSourceHealth = metadata.priceSourceHealth as PriceSourceHealth;
+  // The self-check probe path calls this before any cron map exists; absence is not an error.
+  const priceSourceHealthMetadata: unknown = crons?.["sync-stablecoins"]?.lastRun?.metadata?.priceSourceHealth;
+  if (priceSourceHealthMetadata != null) {
+    const parsedPriceSourceHealth = PriceSourceHealthSchema.safeParse(priceSourceHealthMetadata);
+    if (!parsedPriceSourceHealth.success) {
+      logStatusSupplementWarning(
+        "price_source_health_extraction_failed",
+        "Price source health extraction failed",
+        parsedPriceSourceHealth.error,
+      );
+      sectionErrors.priceSourceHealth = createStatusSectionError(
+        "price_source_health_extraction_failed",
+      );
+    } else {
+      priceSourceHealth = parsedPriceSourceHealth.data;
       try {
         const sourceDepthDistribution = await loadSourceDepthDistribution(db, stablecoinsCache);
         if (sourceDepthDistribution) {
@@ -463,15 +438,6 @@ export async function loadStatusSupplements(
         );
       }
     }
-  } catch (err) {
-    logStatusSupplementWarning(
-      "price_source_health_extraction_failed",
-      "Price source health extraction failed",
-      err,
-    );
-    sectionErrors.priceSourceHealth = sectionError(
-      "price_source_health_extraction_failed",
-    );
   }
 
   let coingeckoPriceDiff: CoinGeckoPriceDiff | null = null;
@@ -488,7 +454,7 @@ export async function loadStatusSupplements(
         message: "CoinGecko price diff query failed",
         error: err,
       });
-      sectionErrors.coingeckoPriceDiff = sectionError(
+      sectionErrors.coingeckoPriceDiff = createStatusSectionError(
         "coingecko_price_diff_query_failed",
       );
     }
@@ -502,9 +468,8 @@ export async function loadStatusSupplements(
     if (d1StatusConfig) {
       d1Usage = await getD1UsageSummary(d1StatusConfig, now, db);
     } else if (cloudflareD1StatusBindings && hasAnyCloudflareD1StatusBinding(cloudflareD1StatusBindings)) {
-      sectionErrors.d1Usage = sectionError(
+      sectionErrors.d1Usage = createStatusSectionError(
         "cloudflare_d1_status_config_incomplete",
-        "CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_D1_STATUS_API_TOKEN, and CLOUDFLARE_D1_DATABASE_ID must be configured together for admin D1 metrics.",
       );
     }
   } catch (err) {
@@ -514,7 +479,7 @@ export async function loadStatusSupplements(
       err,
       { source: "cloudflare-d1-status" },
     );
-    sectionErrors.d1Usage = sectionError(
+    sectionErrors.d1Usage = createStatusSectionError(
       "d1_usage_query_failed",
     );
   }
@@ -529,7 +494,7 @@ export async function loadStatusSupplements(
       "Mint/burn reconciliation query failed",
       err,
     );
-    sectionErrors.mintBurnReconciliation = sectionError(
+    sectionErrors.mintBurnReconciliation = createStatusSectionError(
       "mint_burn_reconciliation_query_failed",
     );
   }
@@ -553,7 +518,7 @@ export async function loadStatusSupplements(
       err,
       { source: "live-reserves" },
     );
-    sectionErrors.reserveDrift = sectionError(
+    sectionErrors.reserveDrift = createStatusSectionError(
       "reserve_drift_computation_failed",
     );
   }
@@ -581,7 +546,7 @@ export async function loadStatusSupplements(
       "Classification warnings computation failed",
       err,
     );
-    sectionErrors.classificationWarnings = sectionError(
+    sectionErrors.classificationWarnings = createStatusSectionError(
       "classification_warnings_computation_failed",
     );
   }

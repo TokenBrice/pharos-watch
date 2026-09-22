@@ -35,6 +35,27 @@ import {
   V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX,
 } from "./extension-supply";
 
+type BridgeSupplyRow = NonNullable<
+  ExtensionAsset["supplyReview"]
+>["selectedBridgeRoutes"][number];
+
+type BridgeSupplyRowClassification = "accepted-bounded" | "control-required";
+
+function classifyBridgeSupplyRow(row: BridgeSupplyRow): BridgeSupplyRowClassification {
+  if (row.deploymentRouteKey.startsWith(V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX)) {
+    return row.supplyShare < COMMON_MODE_MATERIAL_SHARE_THRESHOLD
+      ? "accepted-bounded"
+      : "control-required";
+  }
+  if (
+    row.reviewState === "unmatched" &&
+    row.supplyShare < DEPLOYMENT_MATERIAL_SHARE_THRESHOLD
+  ) {
+    return "accepted-bounded";
+  }
+  return "control-required";
+}
+
 function normalizedBridgeDeploymentId(value: string): string {
   const normalized = normalizeDeploymentId(value);
   if (normalized === "") throw new Error(`Safety Score v9 bridge deployment ID is invalid: ${value}`);
@@ -526,27 +547,9 @@ function hasCompleteSubthresholdBridgeInventory(
       continue;
     }
     if (row.reviewState === "selected-reviewed") continue;
-    // RULED D-J (2026-07-19): an unrecognized-chain-label pool below the
-    // common-mode materiality floor is an accepted bounded row; the proof no
-    // longer requires its joined subthreshold control. At or above the floor
-    // the pool keeps the ordinary fail-closed join below.
-    if (
-      row.deploymentRouteKey.startsWith(V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX) &&
-      row.supplyShare < COMMON_MODE_MATERIAL_SHARE_THRESHOLD
-    ) {
-      continue;
-    }
-    // Same shape as D-J, applied to a resolved chain that has no reviewed
-    // route: each unmatched row has its own deployment failure domain, so a
-    // share independently below the deployment floor is accepted supply
-    // evidence rather than an unknown-identity control.
-    if (
-      row.reviewState === "unmatched" &&
-      !row.deploymentRouteKey.startsWith(V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX) &&
-      row.supplyShare < DEPLOYMENT_MATERIAL_SHARE_THRESHOLD
-    ) {
-      continue;
-    }
+    // Sub-threshold unmatched rows are accepted supply evidence rather than
+    // unknown-identity controls; material rows keep the fail-closed join below.
+    if (classifyBridgeSupplyRow(row) !== "control-required") continue;
     const joinedControls = controlsByDeployment.get(row.deploymentRouteKey) ?? [];
     const control = joinedControls.length === 1 ? joinedControls[0] : undefined;
     if (
@@ -625,11 +628,8 @@ function buildUnprovenRouteJoins(
   }
   const unproven: V9BridgeSupplyRouteJoinV1[] = [];
   for (const row of supplyReview?.selectedBridgeRoutes ?? []) {
-    const pooled = row.deploymentRouteKey.startsWith(V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX);
-    // RULED D-J (2026-07-19) and the sub-material unmatched branch: both are
-    // accepted bounded rows, not join failures. Do not report them.
-    if (pooled && row.supplyShare < COMMON_MODE_MATERIAL_SHARE_THRESHOLD) continue;
-    if (row.reviewState === "unmatched" && !pooled && row.supplyShare < DEPLOYMENT_MATERIAL_SHARE_THRESHOLD) continue;
+    // Accepted bounded rows are not join failures.
+    if (classifyBridgeSupplyRow(row) !== "control-required") continue;
     const joined = controlsByDeployment.get(row.deploymentRouteKey) ?? [];
     const single = joined.length === 1 ? joined[0]! : null;
     const proven = (() => {
@@ -954,13 +954,11 @@ export function adaptBridgeReview(
   // accepted supply evidence, not an unresolved deployment-control identity.
   // At the floor it keeps the ordinary synthetic control and fails closed.
   const unmatchedControls = (supplyReview?.selectedBridgeRoutes ?? [])
-    .filter((route) => {
-      if (route.reviewState !== "unmatched") return false;
-      if (route.deploymentRouteKey.startsWith(V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX)) {
-        return route.supplyShare >= COMMON_MODE_MATERIAL_SHARE_THRESHOLD;
-      }
-      return route.supplyShare >= DEPLOYMENT_MATERIAL_SHARE_THRESHOLD;
-    })
+    .filter(
+      (route) =>
+        route.reviewState === "unmatched" &&
+        classifyBridgeSupplyRow(route) === "control-required",
+    )
     .map((route) => unmatchedBridgeControl(meta.id, route));
   const controls = [
     ...structuredOverlays,
@@ -1011,17 +1009,10 @@ export function adaptBridgeReview(
   // resolve, so control emptiness alone cannot prove the absence of a bridge.
   const hasReviewedRepresentationRoute = reviewedRoutes.some(isBridgeRepresentationRoute);
   const allMaterialRoutesReviewed = hasCompleteSubthresholdBridgeInventory(profileRoutes, controls, supplyReview);
-  const hasToleratedUncanonicalizedPool = (supplyReview?.selectedBridgeRoutes ?? []).some(
+  const hasToleratedUnmatchedRow = (supplyReview?.selectedBridgeRoutes ?? []).some(
     (route) =>
       route.reviewState === "unmatched" &&
-      route.deploymentRouteKey.startsWith(V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX) &&
-      route.supplyShare < COMMON_MODE_MATERIAL_SHARE_THRESHOLD,
-  );
-  const hasToleratedUnmatchedDust = (supplyReview?.selectedBridgeRoutes ?? []).some(
-    (route) =>
-      route.reviewState === "unmatched" &&
-      !route.deploymentRouteKey.startsWith(V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX) &&
-      route.supplyShare < DEPLOYMENT_MATERIAL_SHARE_THRESHOLD,
+      classifyBridgeSupplyRow(route) !== "control-required",
   );
   // Deliberately over the whole inventory, not `bridgeClaimControls`: a canonical
   // control carrying real supply must keep blocking this branch, so an unresolved
@@ -1037,8 +1028,7 @@ export function adaptBridgeReview(
     !reviewStale &&
     ((bridgeClaimControls.length === 0 &&
       !hasReviewedRepresentationRoute &&
-      !hasToleratedUncanonicalizedPool &&
-      !hasToleratedUnmatchedDust) ||
+      !hasToleratedUnmatchedRow) ||
       (allMaterialRoutesReviewed && onlyZeroShareUnroutedControls))
   ) {
     return {

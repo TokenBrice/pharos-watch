@@ -6,7 +6,7 @@ import {
   STABLECOIN_STATUS_VALUES,
   type StablecoinMeta,
 } from "../core";
-import { OracleRiskBranchSchema } from "../stablecoin-meta-schemas";
+import { OracleRiskBranchSchema } from "../stablecoin-meta-control-schemas";
 import { StablecoinMetaSourceAssetSchema } from "@shared/lib/stablecoins/schema";
 
 function makeCoin(overrides: Partial<StablecoinMeta> = {}): StablecoinMeta {

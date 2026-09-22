@@ -1,7 +1,8 @@
 import { getStatusPageActions, type StatusPageAction } from "@shared/lib/api-endpoints";
 import { getCronJobMeta } from "@shared/lib/cron-jobs";
-import type { CronStatus, StatusCause, StatusResponse } from "@shared/types";
+import type { StatusCause, StatusResponse } from "@shared/types";
 import { STATUS_CAUSE_SEVERITY_RANK } from "@/lib/status/cause-severity";
+import { countConsecutiveStatus } from "@/lib/status/cron-run-utils";
 
 const ACTION_BY_PATH = new Map<string, StatusPageAction>(
   getStatusPageActions().map((action) => [action.path, action]),
@@ -56,15 +57,6 @@ export function getRecommendedActionsForCause(cause: StatusCause): StatusPageAct
     .filter((action): action is StatusPageAction => action != null);
 }
 
-function countConsecutive(runs: CronStatus["recentRuns"], status: string): number {
-  let count = 0;
-  for (const run of runs) {
-    if (run.status !== status) break;
-    count += 1;
-  }
-  return count;
-}
-
 function pushRecommendation(
   recommendations: Map<string, StatusActionRecommendation>,
   next: StatusActionRecommendation,
@@ -94,13 +86,13 @@ export function deriveStatusActionRecommendations(
   }
 
   for (const [job, cron] of Object.entries(status.crons)) {
-    if (cron.healthy) continue;
+    if (cron.healthy !== false) continue;
     if (getCronJobMeta(job)?.statusImpact !== "critical") continue;
 
     const actions = CRON_ACTION_PATHS[job] ?? [];
     const jobMeta = getCronJobMeta(job);
-    const errorStreak = countConsecutive(cron.recentRuns, "error");
-    const skippedStreak = countConsecutive(cron.recentRuns, "skipped_locked");
+    const errorStreak = countConsecutiveStatus(cron.recentRuns, "error");
+    const skippedStreak = countConsecutiveStatus(cron.recentRuns, "skipped_locked");
     const reason = errorStreak > 0
       ? `${jobMeta?.label ?? job} has ${errorStreak} consecutive error run(s).`
       : skippedStreak > 0

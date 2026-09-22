@@ -46,15 +46,13 @@ function makeSnapshot(overrides: Partial<BlacklistCurrentBalanceSnapshot>): Blac
 
 function makeActiveRecord(overrides: Partial<BlacklistActiveRecord> = {}): BlacklistActiveRecord {
   return {
-    id: "1", stablecoin: "USDT", chainId: "ethereum", chainName: "Ethereum",
-    address: "0x1", blacklistedAt: 10, blacklistTxHash: "0x1",
-    destroyedAt: null, destroyTxHash: null, frozenAmountNative: 100,
-    frozenAmountUsd: 100, amountStatus: "resolved", amountSource: "event", ...overrides,
+    key: "1", stablecoin: "USDT", chainId: "ethereum", address: "0x1",
+    blacklistedAt: 10, destroyedAt: null, frozenAmountUsd: 100, ...overrides,
   };
 }
 
 describe("buildBlacklistActiveRecords", () => {
-  it("keeps destroy amounts on active records until an unblacklist arrives", () => {
+  it("marks a destroyed record and keeps it out of the frozen total", () => {
     const events = [
       makeEvent({ id: "1", eventType: "blacklist", amountNative: 10, amountUsdAtEvent: 10, timestamp: 10 }),
       makeEvent({ id: "2", eventType: "destroy", amountNative: 8, amountUsdAtEvent: 8, timestamp: 11 }),
@@ -63,8 +61,7 @@ describe("buildBlacklistActiveRecords", () => {
     const records = buildBlacklistActiveRecords(events);
     expect(records).toHaveLength(1);
     expect(records[0]?.destroyedAt).toBe(11);
-    expect(records[0]?.frozenAmountUsd).toBe(8);
-    expect(records[0]?.amountSource).toBe("destroy_event");
+    expect(computeBlacklistActiveSummaryStats(records).activeFrozenTotal).toBe(0);
   });
 
   it("uses current balance snapshots for active Tron blacklist records", () => {
@@ -93,7 +90,6 @@ describe("buildBlacklistActiveRecords", () => {
     const records = buildBlacklistActiveRecords(events, balances);
     expect(records).toHaveLength(1);
     expect(records[0]?.frozenAmountUsd).toBe(500);
-    expect(records[0]?.amountSource).toBe("current_balance");
   });
 
   it("reports an unavailable amount when a Tron blacklist has no current snapshot", () => {
@@ -104,12 +100,7 @@ describe("buildBlacklistActiveRecords", () => {
       amountUsdAtEvent: 1_000,
     })]);
 
-    expect(records[0]).toMatchObject({
-      frozenAmountNative: null,
-      frozenAmountUsd: null,
-      amountStatus: "provider_failed",
-      amountSource: "unavailable",
-    });
+    expect(records[0]?.frozenAmountUsd).toBeNull();
   });
 
   it("prefers resolved current balance snapshots for active EVM blacklist records", () => {
@@ -138,7 +129,6 @@ describe("buildBlacklistActiveRecords", () => {
     const records = buildBlacklistActiveRecords(events, balances);
     expect(records).toHaveLength(1);
     expect(records[0]?.frozenAmountUsd).toBe(250);
-    expect(records[0]?.amountSource).toBe("current_balance");
   });
 
   it("prefers contract-scoped current balance snapshots over legacy address rows", () => {
@@ -195,7 +185,6 @@ describe("buildBlacklistActiveRecords", () => {
 
     const records = buildBlacklistActiveRecords([legacy, upgraded]);
     expect(records).toHaveLength(2);
-    expect(records.map((record) => record.contractAddress).sort()).toEqual(["0xlegacy", "0xupgraded"]);
   });
 
   it("dedupes repeated blacklist events for the same scoped identity to the latest record", () => {
@@ -224,7 +213,6 @@ describe("buildBlacklistActiveRecords", () => {
 
     expect(records).toHaveLength(1);
     expect(records[0]?.blacklistedAt).toBe(11);
-    expect(records[0]?.blacklistTxHash).toBe("0xnewer");
   });
 
   it("removes both legacy and matching scoped identities without removing another contract", () => {
@@ -232,11 +220,14 @@ describe("buildBlacklistActiveRecords", () => {
     const scoped = makeEvent({ id: "scoped", timestamp: 2 });
     const other = makeEvent({ id: "other", configKey: "ethereum-other", contractAddress: "0xother", timestamp: 3 });
     const events = [legacy, scoped, other];
-    expect(buildBlacklistActiveRecords(events).map((record) => record.contractAddress))
-      .toEqual(["0xother", "0xcontract", null]);
+    expect(buildBlacklistActiveRecords(events).map((record) => record.key)).toEqual([
+      buildBlacklistRecordIdentityKey(other),
+      buildBlacklistRecordIdentityKey(scoped),
+      buildBlacklistRecordIdentityKey(legacy),
+    ]);
     const removal = makeEvent({ id: "remove", eventType: "unblacklist", timestamp: 4 });
     expect(buildBlacklistActiveRecords([...events, removal]))
-      .toEqual([expect.objectContaining({ contractAddress: "0xother", blacklistedAt: 3 })]);
+      .toEqual([expect.objectContaining({ key: buildBlacklistRecordIdentityKey(other), blacklistedAt: 3 })]);
   });
 
   it("clears destruction metadata when a removed identity is blacklisted again in scrambled input", () => {
@@ -246,8 +237,7 @@ describe("buildBlacklistActiveRecords", () => {
     const renewed = makeEvent({ id: "4", timestamp: 4, txHash: "0xrenewed", amountNative: 25, amountUsdAtEvent: 25 });
     expect(buildBlacklistActiveRecords([renewed, destroy, blacklist, remove])).toEqual([
       expect.objectContaining({
-        blacklistedAt: 4, blacklistTxHash: "0xrenewed", destroyedAt: null, destroyTxHash: null,
-        frozenAmountNative: 25, frozenAmountUsd: 25, amountSource: "event",
+        blacklistedAt: 4, destroyedAt: null, frozenAmountUsd: 25,
       }),
     ]);
   });
@@ -278,7 +268,6 @@ describe("buildBlacklistActiveRecords", () => {
     const records = buildBlacklistActiveRecords(events, balances);
     expect(records).toHaveLength(1);
     expect(records[0]?.frozenAmountUsd).toBe(100);
-    expect(records[0]?.amountSource).toBe("historical_balance");
   });
 
   it("drops records after unblacklist", () => {
@@ -304,11 +293,10 @@ describe("computeBlacklistActiveSummaryStats", () => {
 
   it("excludes destroyed records from activeFrozenTotal", () => {
     const records = [
-      makeActiveRecord({ frozenAmountNative: 100, frozenAmountUsd: 100 }),
+      makeActiveRecord({ frozenAmountUsd: 100 }),
       makeActiveRecord({
-        id: "2", address: "0x2", blacklistedAt: 11, blacklistTxHash: "0x2",
-        destroyedAt: 12, destroyTxHash: "0x3", frozenAmountNative: 500,
-        frozenAmountUsd: 500, amountSource: "destroy_event",
+        key: "2", address: "0x2", blacklistedAt: 11,
+        destroyedAt: 12, frozenAmountUsd: 500,
       }),
     ];
 
@@ -321,11 +309,10 @@ describe("computeBlacklistActiveSummaryStats", () => {
 
   it("sums frozen totals and counts gaps", () => {
     const records = [
-      makeActiveRecord({ frozenAmountNative: 100, frozenAmountUsd: 100 }),
+      makeActiveRecord({ frozenAmountUsd: 100 }),
       makeActiveRecord({
-        id: "2", chainId: "tron", chainName: "Tron", address: "0x2",
-        blacklistedAt: 11, blacklistTxHash: "0x2", frozenAmountNative: null,
-        frozenAmountUsd: null, amountStatus: "provider_failed", amountSource: "current_balance",
+        key: "2", chainId: "tron", address: "0x2",
+        blacklistedAt: 11, frozenAmountUsd: null,
       }),
     ];
 

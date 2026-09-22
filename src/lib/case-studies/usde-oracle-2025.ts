@@ -27,6 +27,7 @@ export const content: CaseStudy = {
     endISO: "2025-10-11",
     peakDeviationBps: -3500,
     lowPrice: 0.65,
+    metricScope: "Binance order-book print",
   },
   timeline: [
     {

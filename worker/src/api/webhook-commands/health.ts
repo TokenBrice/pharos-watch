@@ -1,6 +1,6 @@
 import { escapeHtml } from "../../lib/telegram";
 import { isPausedSentinel } from "@shared/lib/telegram-delivery-policy";
-import { formatTelegramAge } from "../../lib/telegram/format-age";
+import { formatTelegramAge, formatTelegramIsoTimestamp } from "../../lib/telegram/format-age";
 import { coerceCount, loadTelegramChatHealthDiagnostics } from "../../lib/telegram/usage-analytics";
 import { isQuietHoursActive } from "../../lib/telegram/quiet-hours";
 import {
@@ -149,7 +149,7 @@ export const handleHealth: WebhookCommandHandler = async (ctx) => {
     `Snooze: ${formatSnooze(subscriber?.alert_snooze_until_ts, nowSec)}`,
     `Alert readiness: ${readiness}`,
     `Daily recap: ${recap?.enabled === 1 ? "On" : "Off"}`,
-    `Recap next due: ${recap?.next_due_at == null ? "Not scheduled" : new Date(recap.next_due_at * 1000).toISOString()}`,
+    `Recap next due: ${formatTelegramIsoTimestamp(recap?.next_due_at, "Not scheduled")}`,
     `Recap last local date: ${recap?.last_delivered_local_date ?? "Not recorded yet"}`,
     `Recap last outcome: ${recap?.last_outcome ?? "Not recorded yet"}`,
     "",

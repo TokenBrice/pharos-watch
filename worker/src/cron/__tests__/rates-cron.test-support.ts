@@ -1,5 +1,6 @@
 import { mockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import type { MockRoute } from "@shared/test-utils/mock-fetch";
+import type { ChainRpcConfig } from "../../lib/chain-registry";
 
 export type MockUrlResponse = Response | null | ((url: string, opts?: RequestInit) => Response | null);
 export type BenchmarkFetchRoutes = Record<string, MockUrlResponse>;
@@ -138,30 +139,56 @@ export function makeFxRatesMeta(
   };
 }
 
-export function makeChainlinkFxRoutes({
-  rpcUrl,
+const CHAINLINK_FX_CHAINS = {
+  base: { chainId: "base", chainName: "Base", type: "evm", rpcUrl: "https://rpc.base.test", explorerUrl: "https://basescan.org" },
+  ethereum: {
+    chainId: "ethereum",
+    chainName: "Ethereum",
+    type: "evm",
+    rpcUrl: "https://rpc.ethereum.test",
+    explorerUrl: "https://etherscan.io",
+  },
+} satisfies Record<string, ChainRpcConfig>;
+
+/**
+ * FX fetch routes plus the matching scheduled chain RPC map for one Chainlink
+ * reference feed: `latestRoundData` is encoded from the semantic answer and
+ * round timestamp rather than hand-packed ABI words per call site.
+ */
+export function makeChainlinkFxFeed({
+  chain,
   feedAddress,
-  decimalsHex,
-  latestRoundDataHex,
+  answer,
+  updatedAt,
+  decimals = 8,
 }: {
-  rpcUrl: string;
+  chain: keyof typeof CHAINLINK_FX_CHAINS;
   feedAddress: string;
-  decimalsHex: string;
-  latestRoundDataHex: string;
-}): MockRoute[] {
+  answer: bigint;
+  updatedAt: number;
+  decimals?: number;
+}): { routes: MockRoute[]; chainRpcs: Map<string, ChainRpcConfig> } {
+  const word = (value: bigint | number) => BigInt(value).toString(16).padStart(64, "0");
+  const rpcConfig = CHAINLINK_FX_CHAINS[chain];
   const callRoute = (data: string, result: string): MockRoute => ({
-    match: rpcUrl,
+    match: rpcConfig.rpcUrl,
     matchBody: `"to":"${feedAddress}","data":"${data}"`,
     body: { jsonrpc: "2.0", id: 1, result },
   });
-  return [
-    { match: "frankfurter.dev", body: frankfurterBody() },
-    { match: "currency-api", body: secondaryBody() },
-    { match: "gold-api.com/price/XAU", body: { price: 2900 } },
-    { match: "gold-api.com/price/XAG", body: { price: 32 } },
-    callRoute("0x313ce567", decimalsHex),
-    callRoute("0xfeaf968c", latestRoundDataHex),
-  ];
+  return {
+    routes: [
+      { match: "frankfurter.dev", body: frankfurterBody() },
+      { match: "currency-api", body: secondaryBody() },
+      { match: "gold-api.com/price/XAU", body: { price: 2900 } },
+      { match: "gold-api.com/price/XAG", body: { price: 32 } },
+      callRoute("0x313ce567", `0x${word(decimals)}`),
+      callRoute(
+        "0xfeaf968c",
+        `0x${word(1n)}${word(answer)}${word(0n)}${word(updatedAt)}${word(1n)}`,
+      ),
+    ],
+    chainRpcs: new Map([[chain, rpcConfig]]),
+  };
 }
 
 export function makeFxRatesFetchRoutes(axes: {

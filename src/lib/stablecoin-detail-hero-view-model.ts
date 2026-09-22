@@ -79,7 +79,6 @@ export interface HeroCardViewModel {
   price: {
     pegRef: number | null;
     deviationBps: number | null;
-    gaugeDeviationBps: number;
     pegReferenceUnavailable: boolean;
     isNavToken: boolean;
     limitedDepegCoverageNote: string | null;
@@ -116,7 +115,6 @@ export interface BuildHeroCardViewModelParams {
   performanceVsUsd1y: number | null;
   pegRef: number | null;
   deviationBps: number | null;
-  gaugeDeviationBps: number;
   pegReferenceUnavailable: boolean;
   pegScoreResult: PegSummaryCoin | null;
   liquidityData: DexLiquidityData | undefined;
@@ -253,7 +251,6 @@ export function buildStablecoinDetailHeroViewModel({
   performanceVsUsd1y,
   pegRef,
   deviationBps,
-  gaugeDeviationBps,
   pegReferenceUnavailable,
   pegScoreResult,
   liquidityData,
@@ -315,7 +312,6 @@ export function buildStablecoinDetailHeroViewModel({
     price: {
       pegRef,
       deviationBps,
-      gaugeDeviationBps,
       pegReferenceUnavailable,
       isNavToken,
       limitedDepegCoverageNote: buildLimitedDepegCoverageNote(coinData, isNavToken, pegScoreResult, deviationBps),

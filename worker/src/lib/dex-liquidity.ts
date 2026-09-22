@@ -1,7 +1,6 @@
 import { logWorkerEventArgs } from "./structured-log";
 import {
-  DexExitRouteObservationSchema,
-  MAX_DEX_EXIT_ROUTE_OBSERVATIONS,
+  DexExitRouteObservationsSchema,
   ExitRouteObservationCoverageSchema,
   type DexLiquidityData,
   type LiquidityCoverageClass,
@@ -73,8 +72,15 @@ type DexLiquiditySnapshot = Pick<DexLiquidityData, "liquidityScore" | "concentra
     } | null;
   };
 
+export function dexLiquidityPublishedRowFilter(tableAlias?: string): string {
+  const generationColumn = tableAlias
+    ? `${tableAlias}.publication_generation_id`
+    : "publication_generation_id";
+  return `(${generationColumn} IS NULL OR ${generationColumn} IN (SELECT generation_id FROM dex_liquidity_publication_generations WHERE state = 'published'))`;
+}
+
 export const DEX_LIQUIDITY_PUBLISHED_ROW_FILTER =
-  "(publication_generation_id IS NULL OR publication_generation_id IN (SELECT generation_id FROM dex_liquidity_publication_generations WHERE state = 'published'))";
+  dexLiquidityPublishedRowFilter();
 
 export type DexLiquidityDbMap = Record<string, DexLiquiditySnapshot>;
 
@@ -193,9 +199,7 @@ function parseExitRouteDetails(
   const observations =
     raw.exitRouteObservations === undefined
       ? null
-      : DexExitRouteObservationSchema.array()
-          .max(MAX_DEX_EXIT_ROUTE_OBSERVATIONS)
-          .safeParse(raw.exitRouteObservations);
+      : DexExitRouteObservationsSchema.safeParse(raw.exitRouteObservations);
   const coverage =
     raw.exitRouteObservationCoverage === undefined
       ? null
@@ -233,7 +237,7 @@ async function loadDexLiquidityRows(db: D1Database): Promise<DexLiquidityRow[]> 
                 dco.outcome AS deployment_outcome
          FROM dex_liquidity dl
          LEFT JOIN dex_deployment_outcomes dco ON dco.stablecoin_id = dl.stablecoin_id
-         WHERE ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER.replaceAll("publication_generation_id", "dl.publication_generation_id")}`,
+         WHERE ${dexLiquidityPublishedRowFilter("dl")}`,
       )
       .all<DexLiquidityRow>();
   return rows.results ?? [];

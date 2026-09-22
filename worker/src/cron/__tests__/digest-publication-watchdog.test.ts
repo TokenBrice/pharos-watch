@@ -149,6 +149,12 @@ describe("digest publication watchdog", () => {
     expect(sendToChatMock).not.toHaveBeenCalled();
   });
 
+  it("reports an unevaluated condition set instead of claiming health", async () => {
+    const result = await runDigestPublicationWatchdog(healthyDigestDb(), at("2026-08-31T03:00:00Z"));
+    expect(result.status).toBe("ok");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ checked: 0, healthy: null, conditions: {} });
+  });
+
   it("alerts when the daily row is missing after 08:30 UTC", async () => {
     const result = await runDigestPublicationWatchdog(
       fakeDb({ dailyRow: false, twitterState: JSON.stringify({ state: "sent" }) }),

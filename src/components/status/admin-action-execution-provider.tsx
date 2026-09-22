@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
 import { AdminActionExecutionDialog } from "@/components/status/admin-action-execution-dialog";
 import type {
   AdminActionDialogRequest,
@@ -8,312 +8,83 @@ import type {
   AdminActionExecution,
   AdminActionExecutionController,
   AdminActionExecutionRequest,
-  AdminActionExecutionStatus,
-  AdminActionRunResult,
+  AdminMutationExecution,
 } from "@/components/status/admin-action-execution-types";
-import { classifyAdminMutationFailure } from "@/components/status/admin-mutation-failure";
+import {
+  createAdminMutationIdempotencyKey,
+  useAdminMutationController,
+} from "@/components/status/admin-mutation-intent";
 import { focusElement } from "@/lib/focus-element";
-import { AdminMutationError, adminMutation, type AdminMutationResult } from "@/lib/admin-access";
-
 export type {
   AdminActionDialogRequest,
   AdminActionDialogState,
   AdminActionExecution,
   AdminActionExecutionController,
   AdminActionExecutionRequest,
-  AdminActionExecutionStatus,
   AdminActionReadinessSource,
-  AdminActionRunResult,
 } from "@/components/status/admin-action-execution-types";
 
 interface AdminActionExecutionContextValue extends AdminActionExecutionController {
   openDialog: (request: AdminActionDialogRequest) => void;
 }
 
-interface ExecutionStore {
-  currentIntentByKey: Map<string, string>;
-  records: Map<string, AdminActionExecution>;
-}
-
-interface ExecutionSnapshot {
-  current: Record<string, AdminActionExecution>;
-  executions: AdminActionExecution[];
-}
-
 const AdminActionExecutionContext = createContext<AdminActionExecutionContextValue | null>(null);
 
-let fallbackId = 0;
-
-function createDefaultIdempotencyKey(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-  fallbackId += 1;
-  return `admin-action:${Date.now()}:${fallbackId}`;
+function getAdminActionExecutionKey(request: AdminActionExecutionRequest): string {
+  return `${request.action.path}\u0000${request.scopeKey}`;
 }
 
-function getAdminActionExecutionKey(actionPath: string, scopeKey: string): string {
-  return `${actionPath}\u0000${scopeKey}`;
-}
-
-function statusFromSuccessfulResponse(result: AdminMutationResult<unknown>): AdminActionExecutionStatus {
-  const headerStatus = result.executionCertainty?.trim().toLowerCase();
-  if (headerStatus === "unknown") return "unknown";
-
-  if (result.data && typeof result.data === "object") {
-    const body = result.data as Record<string, unknown>;
-    const bodyStatus =
-      typeof body.executionStatus === "string"
-        ? body.executionStatus.toLowerCase()
-        : typeof body.status === "string"
-          ? body.status.toLowerCase()
-          : null;
-    if (
-      bodyStatus === "accepted" ||
-      bodyStatus === "queued" ||
-      bodyStatus === "running" ||
-      bodyStatus === "succeeded" ||
-      bodyStatus === "failed" ||
-      bodyStatus === "unknown"
-    ) {
-      return bodyStatus;
-    }
-    if (body.accepted === true) return "accepted";
-    if (body.queued === true) return "queued";
-  }
-
-  return result.status === 202 ? "accepted" : "succeeded";
-}
-
-function executionFromFailure(
-  execution: AdminActionExecution,
-  error: unknown,
-  completedAt: number,
-): AdminActionExecution {
-  const status = classifyAdminMutationFailure(error, execution.idempotencyKey);
-  if (error instanceof AdminMutationError) {
-    return {
-      ...execution,
-      status,
-      requestInFlight: false,
-      ok: false,
-      output: error.result.formattedBody || error.message,
-      resultData: error.result.data,
-      error: error.message,
-      completedAt,
-      httpStatus: error.result.status,
-      idempotentReplay: error.result.idempotentReplay,
-      responseIdempotencyKey: error.result.idempotencyKey,
-      executionCertainty: error.result.executionCertainty ?? status,
-      warning: error.result.warning,
-    };
-  }
-
-  const message = error instanceof Error ? error.message : "Unknown error";
+function getAdminActionMutationRequest(request: AdminActionExecutionRequest) {
   return {
-    ...execution,
-    status,
-    requestInFlight: false,
-    ok: false,
-    output: message,
-    resultData: null,
-    error: message,
-    completedAt,
-    executionCertainty: status,
+    path: request.requestPath,
+    method: request.requestMethod,
   };
 }
 
-function buildSnapshot(store: ExecutionStore): ExecutionSnapshot {
-  const current: Record<string, AdminActionExecution> = {};
-  for (const [executionKey, intentId] of store.currentIntentByKey) {
-    const execution = store.records.get(intentId);
-    if (execution) current[executionKey] = execution;
-  }
-
+function decorateAdminActionExecution(
+  execution: AdminMutationExecution<AdminActionExecutionRequest>,
+  request: AdminActionExecutionRequest,
+): AdminActionExecution {
   return {
-    current,
-    executions: [...store.records.values()].sort(
-      (a, b) => (b.completedAt ?? b.startedAt ?? b.createdAt) - (a.completedAt ?? a.startedAt ?? a.createdAt),
-    ),
+    ...execution,
+    action: request.action,
+    executionKey: execution.laneKey,
+    requestPath: request.requestPath,
+    requestMethod: request.requestMethod,
+    scopeKey: request.scopeKey,
+    scopeLabel: request.scopeLabel,
   };
 }
 
 export function AdminActionExecutionProvider({
   children,
-  createIdempotencyKey = createDefaultIdempotencyKey,
+  createIdempotencyKey = createAdminMutationIdempotencyKey,
 }: {
   children: ReactNode;
   createIdempotencyKey?: () => string;
 }) {
-  const storeRef = useRef<ExecutionStore>({
-    currentIntentByKey: new Map(),
-    records: new Map(),
+  const controller = useAdminMutationController<AdminActionExecutionRequest, AdminActionExecution>({
+    getLaneKey: getAdminActionExecutionKey,
+    getMutationRequest: getAdminActionMutationRequest,
+    decorateExecution: decorateAdminActionExecution,
+    createIdempotencyKey,
   });
-  const inFlightRef = useRef(new Set<string>());
   const nextDialogIdRef = useRef(0);
-  const [snapshot, setSnapshot] = useState<ExecutionSnapshot>({ current: {}, executions: [] });
   const [dialogRequest, setDialogRequest] = useState<AdminActionDialogState | null>(null);
-
-  const publish = useCallback(() => {
-    setSnapshot(buildSnapshot(storeRef.current));
-  }, []);
-
-  const createIntent = useCallback(
-    (request: AdminActionExecutionRequest, shouldPublish: boolean): AdminActionExecution => {
-      const executionKey = getAdminActionExecutionKey(request.action.path, request.scopeKey);
-      const idempotencyKey = createIdempotencyKey();
-      const createdAt = Date.now();
-      const execution: AdminActionExecution = {
-        action: request.action,
-        executionKey,
-        intentId: idempotencyKey,
-        idempotencyKey,
-        requestPath: request.requestPath,
-        requestMethod: request.requestMethod,
-        scopeKey: request.scopeKey,
-        scopeLabel: request.scopeLabel,
-        status: "ready",
-        requestInFlight: false,
-        ok: false,
-        output: "",
-        resultData: null,
-        error: null,
-        attempts: 0,
-        createdAt,
-        startedAt: null,
-        completedAt: null,
-        executedAt: null,
-        httpStatus: null,
-        idempotentReplay: null,
-        responseIdempotencyKey: null,
-        executionCertainty: null,
-        warning: null,
-      };
-      const store = storeRef.current;
-      store.records.set(execution.intentId, execution);
-      store.currentIntentByKey.set(executionKey, execution.intentId);
-      if (shouldPublish) publish();
-      return execution;
-    },
-    [createIdempotencyKey, publish],
-  );
-
-  const runIntent = useCallback(
-    async (execution: AdminActionExecution): Promise<AdminActionRunResult> => {
-      const store = storeRef.current;
-      const currentIntentId = store.currentIntentByKey.get(execution.executionKey);
-      const current = currentIntentId ? store.records.get(currentIntentId) : undefined;
-      if (!current || current.intentId !== execution.intentId || current.status !== "ready") {
-        return { execution: current ?? execution, didStart: false };
-      }
-      if (inFlightRef.current.has(execution.executionKey)) {
-        return { execution: current, didStart: false };
-      }
-
-      inFlightRef.current.add(execution.executionKey);
-      const startedAt = Date.now();
-      const running: AdminActionExecution = {
-        ...current,
-        status: "running",
-        requestInFlight: true,
-        ok: false,
-        attempts: current.attempts + 1,
-        startedAt: current.startedAt ?? startedAt,
-        executedAt: current.executedAt ?? Math.floor(startedAt / 1000),
-        completedAt: null,
-        error: null,
-      };
-      store.records.set(running.intentId, running);
-      publish();
-
-      let finished: AdminActionExecution;
-      try {
-        const response = await adminMutation(running.requestPath, {
-          method: running.requestMethod,
-          idempotencyKey: running.idempotencyKey,
-        });
-        const status = statusFromSuccessfulResponse(response);
-        finished = {
-          ...running,
-          status,
-          requestInFlight: false,
-          ok: status !== "failed" && status !== "unknown",
-          output: response.formattedBody,
-          resultData: response.data,
-          error: status === "failed" || status === "unknown" ? response.formattedBody : null,
-          completedAt: Date.now(),
-          httpStatus: response.status,
-          idempotentReplay: response.idempotentReplay,
-          responseIdempotencyKey: response.idempotencyKey,
-          executionCertainty: response.executionCertainty ?? (status === "unknown" ? "unknown" : "confirmed"),
-          warning: response.warning,
-        };
-      } catch (error) {
-        finished = executionFromFailure(running, error, Date.now());
-      } finally {
-        inFlightRef.current.delete(execution.executionKey);
-      }
-
-      store.records.set(finished.intentId, finished);
-      publish();
-      return { execution: finished, didStart: true };
-    },
-    [publish],
-  );
-
-  const execute = useCallback(
-    async (request: AdminActionExecutionRequest): Promise<AdminActionRunResult> => {
-      const executionKey = getAdminActionExecutionKey(request.action.path, request.scopeKey);
-      const currentIntentId = storeRef.current.currentIntentByKey.get(executionKey);
-      const current = currentIntentId ? storeRef.current.records.get(currentIntentId) : undefined;
-      const execution = current ?? createIntent(request, false);
-      return runIntent(execution);
-    },
-    [createIntent, runIntent],
-  );
-
-  const retry = useCallback(
-    async (executionKey: string): Promise<AdminActionRunResult> => {
-      const store = storeRef.current;
-      const currentIntentId = store.currentIntentByKey.get(executionKey);
-      const current = currentIntentId ? store.records.get(currentIntentId) : undefined;
-      if (!current || (current.status !== "failed" && current.status !== "unknown")) {
-        if (!current) throw new Error(`No execution intent exists for ${executionKey}`);
-        return { execution: current, didStart: false };
-      }
-      const ready: AdminActionExecution = {
-        ...current,
-        status: "ready",
-        requestInFlight: false,
-        ok: false,
-        completedAt: null,
-      };
-      store.records.set(ready.intentId, ready);
-      return runIntent(ready);
-    },
-    [runIntent],
-  );
-
-  const startNew = useCallback(
-    (request: AdminActionExecutionRequest): AdminActionExecution => {
-      const executionKey = getAdminActionExecutionKey(request.action.path, request.scopeKey);
-      const currentIntentId = storeRef.current.currentIntentByKey.get(executionKey);
-      const current = currentIntentId ? storeRef.current.records.get(currentIntentId) : undefined;
-      if (current?.requestInFlight) return current;
-      return createIntent(request, true);
-    },
-    [createIntent],
-  );
 
   const openDialog = useCallback((request: AdminActionDialogRequest) => {
     nextDialogIdRef.current += 1;
     setDialogRequest({ ...request, dialogId: nextDialogIdRef.current });
   }, []);
 
-  const value = useMemo<AdminActionExecutionContextValue>(
-    () => ({ ...snapshot, execute, retry, startNew, openDialog }),
-    [execute, openDialog, retry, snapshot, startNew],
-  );
+  const value: AdminActionExecutionContextValue = {
+    current: controller.current,
+    executions: controller.executions,
+    execute: controller.runCurrentOrCreate,
+    retry: controller.retrySame,
+    startNew: controller.startNew,
+    openDialog,
+  };
 
   return (
     <AdminActionExecutionContext.Provider value={value}>

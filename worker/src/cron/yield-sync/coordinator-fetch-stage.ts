@@ -147,7 +147,7 @@ export async function runYieldCoordinatorFetchStage(params: YieldCoordinatorFetc
       },
       supplementalMode: loadedState.supplementalMeta.mode,
       supplementalFallbackMode: loadedState.supplementalMeta.fallbackMode,
-      onChainCooldownActive: loadedState.onChainCooldownActive,
+      onChainCooldownActive: loadedState.onChainSkippedDueToCooldown,
       onChainCooldownRemainingSec: loadedState.onChainCooldownRemainingSec,
       safetySnapshotAvailable: loadedState.safetySnapshotAvailable,
     },

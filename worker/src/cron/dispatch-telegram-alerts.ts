@@ -64,6 +64,11 @@ const TELEGRAM_PLANNING_TABLES = [
 ] as const;
 
 
+// Classification has exactly two boundaries: the normalized statement head
+// (INSERT/REPLACE/UPDATE/DELETE and their OR-alternative forms) decides whether
+// the statement writes, and TELEGRAM_PLANNING_TABLES decides whether the written
+// table is part of the planning pipeline. Anything outside either boundary still
+// counts toward `d1RowsWritten`, just not toward `planningRowsWritten`.
 function telegramPlanningWriteTarget(sql: string): string | null {
   const normalizedSql = sql
     .replace(/\/\*[\s\S]*?\*\//g, " ")
@@ -92,7 +97,7 @@ type D1ResponseWithRowsWritten = {
   meta?: { rows_written?: unknown } | null;
 };
 
-interface TelegramPlanningWriteCounters {
+export interface TelegramPlanningWriteCounters {
   planningRowsWritten: number;
   d1RowsWritten: number;
   planningRowsWrittenAvailable: boolean;
@@ -151,12 +156,20 @@ function createTelegramPlanningStatement(
   return counted;
 }
 
-function createTelegramPlanningDatabase(
+/**
+ * Counting handle over the dispatch database.
+ *
+ * `prepare`/`batch` are overridden so planning writes are measured; every other
+ * member is forwarded to the real binding. Spread (`{...db}`) would copy own
+ * enumerable properties only and publish D1's prototype members (`exec`,
+ * `withSession`, `dump`) as `undefined` behind a cast, so the handle is a proxy
+ * that resolves unknown properties on the target instead.
+ */
+export function createTelegramPlanningDatabase(
   db: D1Database,
   counters: TelegramPlanningWriteCounters,
 ): D1Database {
-  const countedDb = {
-    ...db,
+  const overrides = {
     prepare(sql: string) {
       return createTelegramPlanningStatement(
         db.prepare(sql),
@@ -174,53 +187,53 @@ function createTelegramPlanningDatabase(
       return results;
     },
   };
-  return countedDb as D1Database;
+  return new Proxy(db, {
+    get(target, property) {
+      if (Object.prototype.hasOwnProperty.call(overrides, property)) {
+        return Reflect.get(overrides, property, overrides);
+      }
+      const descriptor = Reflect.getOwnPropertyDescriptor(target, property);
+      const member = Reflect.get(target, property, target);
+      // Own members keep their descriptor (and identity); members reached
+      // through the prototype chain are called with the real handle as `this`.
+      if (descriptor || typeof member !== "function") return member;
+      return member.bind(target);
+    },
+  });
 }
 
-function parseTelegramDispatchMetadata(metadata: string): Record<string, unknown> {
-  try {
-    const parsed = JSON.parse(metadata) as unknown;
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? parsed as Record<string, unknown>
-      : {};
-  } catch {
-    return {};
-  }
-}
-
-function finiteMetadataNumber(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
+/**
+ * A gated idle pass (eventless fast path or circuit-open) is a no-work run only
+ * when it produced no drain, expiry, enqueue, or freeze observation. The signals
+ * come from the drain/planner counters on the result instead of a hand-picked
+ * metadata key list: `pendingSent`/`pendingDrained`, `pendingDropped`,
+ * `blockedUsersCleanedUp`, and `messagesSent` are all subsets of
+ * `pendingAttempted`, so these four cover every work signal such a pass can emit.
+ */
+function isNoWorkRun(result: DispatchResult): boolean {
+  if (result.eventlessFastPath !== true && result.skipped !== "circuit-open") return false;
+  return result.pendingAttempted === 0
+    && result.pendingExpired === 0
+    && result.pendingEnqueued === 0
+    && result.eventsDetected.freeze === 0;
 }
 
 function addTelegramDispatchMetadataCounters(
-  result: { itemCount: number; metadata: string },
+  result: DispatchResult,
+  itemCount: number,
   counters: TelegramPlanningWriteCounters,
 ): { itemCount: number; metadata: string } {
-  const metadata = parseTelegramDispatchMetadata(result.metadata);
-  const pendingWork = [
-    metadata.pendingAttempted,
-    metadata.pendingExpired,
-    metadata.pendingEnqueued,
-    metadata.pendingDrained,
-    metadata.pendingDropped,
-    metadata.messagesSent,
-    metadata.freezeObserved,
-    metadata.freezeQueued,
-    metadata.blockedUsersCleanedUp,
-  ].some((value) => (finiteMetadataNumber(value) ?? 0) > 0);
-  const noWorkRun = (metadata.eventlessFastPath === true || metadata.skipped === "circuit-open") && !pendingWork;
-
   return {
-    ...result,
+    itemCount,
     metadata: JSON.stringify({
-      ...metadata,
+      ...result,
       planningRowsWritten: counters.planningRowsWrittenAvailable
         ? Math.max(0, Math.floor(counters.planningRowsWritten))
         : null,
       d1RowsWritten: counters.d1RowsWrittenAvailable
         ? Math.max(0, Math.floor(counters.d1RowsWritten))
         : null,
-      noWorkRun,
+      noWorkRun: isNoWorkRun(result),
     }),
   };
 }
@@ -288,7 +301,7 @@ async function dispatchTelegramAlertsImpl(
   if (!allowed) {
     const nowSec = dispatchNowSec;
     const result = await executeCircuitOpenQueuePath({
-      db,
+      db: planningDb,
       botToken,
       nowSec,
       dispatchStartedAtMs,
@@ -307,10 +320,10 @@ async function dispatchTelegramAlertsImpl(
         deferredTail: pendingTailState(result.pendingCapacityAfter),
       },
     });
-    return addTelegramDispatchMetadataCounters(
-      { itemCount: result.messagesSent, metadata: JSON.stringify(result) },
-      planningCounters,
-    );
+    // The freeze outbox runs after the circuit gate, so a circuit-open run
+    // publishes `eventsDetected.freeze: 0` as a measured zero, not as the
+    // outbox observation it never took.
+    return addTelegramDispatchMetadataCounters(result, result.messagesSent, planningCounters);
   }
 
   let telegramDeliveryStarted = false;
@@ -399,10 +412,12 @@ async function dispatchTelegramAlertsImpl(
       markTelegramDeliveryStarted,
     });
     if (recovery.kind === "handled") {
-      return addTelegramDispatchMetadataCounters(
-        { itemCount: recovery.itemCount, metadata: recovery.metadata },
-        planningCounters,
-      );
+      // The recovery sidecar serializes its own result, so the freeze count the
+      // outbox observed earlier in this run is merged into the published events
+      // rather than left at the zero its own builder produced.
+      const handled = JSON.parse(recovery.metadata) as DispatchResult;
+      handled.eventsDetected.freeze = freezeOutbox.observed;
+      return addTelegramDispatchMetadataCounters(handled, recovery.itemCount, planningCounters);
     }
     let sourceEvent = recovery.sourceEvent;
     const resumedSourceEvent = recovery.resumedSourceEvent;
@@ -421,10 +436,8 @@ async function dispatchTelegramAlertsImpl(
         sharedState,
         reportProgress,
       });
-      return addTelegramDispatchMetadataCounters(
-        { itemCount: 0, metadata: JSON.stringify(result) },
-        planningCounters,
-      );
+      result.eventsDetected.freeze = freezeOutbox.observed;
+      return addTelegramDispatchMetadataCounters(result, 0, planningCounters);
     }
 
     await reportCronProgress(reportProgress, {
@@ -505,10 +518,7 @@ async function dispatchTelegramAlertsImpl(
         markTelegramDeliveryStarted,
       });
       result.eventsDetected.freeze = freezeOutbox.observed;
-      return addTelegramDispatchMetadataCounters(
-        { itemCount: result.messagesSent, metadata: JSON.stringify(result) },
-        planningCounters,
-      );
+      return addTelegramDispatchMetadataCounters(result, result.messagesSent, planningCounters);
     }
 
     if (!sourceEvent) {
@@ -533,10 +543,7 @@ async function dispatchTelegramAlertsImpl(
     });
 
     result.eventsDetected.freeze = freezeOutbox.observed;
-    return addTelegramDispatchMetadataCounters(
-      { itemCount: result.messagesSent, metadata: JSON.stringify(result) },
-      planningCounters,
-    );
+    return addTelegramDispatchMetadataCounters(result, result.messagesSent, planningCounters);
   } catch (error) {
     if (shouldRecordTelegramDispatchFailure(error, signal, telegramDeliveryStarted)) {
       await recordOutcome(db, CIRCUIT_SOURCE.TELEGRAM_API, false);

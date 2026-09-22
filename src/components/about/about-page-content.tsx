@@ -9,6 +9,7 @@ import { FaqSection } from "@/components/faq-section";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { formatLongDate } from "@shared/lib/format";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
+import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import { cn } from "@/lib/utils";
 import { safeJsonLd } from "@/lib/json-ld";
 import {
@@ -383,8 +384,9 @@ export function AboutPageContent() {
             {ACTIVE_VARIANT_STABLECOIN_COUNT} variants, {ACTIVE_STABLE_VALUE_INVESTMENT_COUNT} stable-value investments,{" "}
             {PRE_LAUNCH_STABLECOIN_COUNT} upcoming launches, and {DEAD_STABLECOIN_COUNT} dead ones, then scores the core
             universe with honest governance classification, transitive dependency scoring, and live reserve composition
-            where available. Real-time depeg detection, freeze monitoring across 35 stablecoins, and a 30-minute
-            ecosystem-wide stability index surface stress as it builds, before it reaches the headlines.
+            where available. Real-time depeg detection, freeze monitoring across {BLACKLIST_STABLECOINS.length} stablecoins,
+            and a 30-minute ecosystem-wide stability index surface stress as it builds, before it reaches the
+            headlines.
           </p>
           <p>
             When a tracked stablecoin effectively dies (issuer abandonment, supply trending to zero,

@@ -40,6 +40,13 @@ describe("Telegram fixture accounting", () => {
     expect(() => cleanup.callbacks[0]()).not.toThrow();
   });
 
+  it("rejects a write the scenario did not declare", async () => {
+    const db = mockTelegramD1();
+    await expect(
+      db.prepare("UPDATE telegram_subscribers SET alert_depeg = 1 WHERE chat_id = ?").bind("42").run(),
+    ).rejects.toThrow(/no match for SQL/);
+  });
+
   it("accounts for normalized strict SQL hits", async () => {
     const db = mockTelegramD1([{ match: "SELECT  value", rows: [{ value: 3 }] }], { strictSql: true });
     expect(await db.prepare("SELECT\nvalue").first()).toEqual({ value: 3 });

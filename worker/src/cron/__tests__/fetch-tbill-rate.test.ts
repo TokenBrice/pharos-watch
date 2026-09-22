@@ -51,6 +51,7 @@ import {
   withYieldBenchmarkStaticMeta,
   YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
 } from "../yield-sync/benchmarks";
+import { loadRiskFreeRateRegistryWithState } from "../yield-sync/sources-riskfree";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { getCache, setCache } from "../../lib/db-cache";
 import { logCronEvent } from "../../lib/cron-logger";
@@ -1226,7 +1227,7 @@ describe("fetchTbillRate — benchmark observation guard and registry integrity"
     });
   });
 
-  it("degrades a single unparseable USD sub-entry without discarding the readable keys", async () => {
+  it("marks an unparseable USD member invalid, preserves readable keys, and skips replacement", async () => {
     installCacheByKey(vi.mocked(getCache), {
       risk_free_rates: makeRiskFreeRatesCacheRow({
         USD: { key: "USD", rate: "not-a-number" },
@@ -1241,19 +1242,20 @@ describe("fetchTbillRate — benchmark observation guard and registry integrity"
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     mockUnavailableTbillByUrl();
 
+    const loaded = await loadRiskFreeRateRegistryWithState(db, 1774479600);
+    expect(loaded.cacheState).toBe("invalid");
+    expect(loaded.registry.EUR).toMatchObject({
+      rate: 1.94,
+      source: "ecb-estr-3m",
+    });
+
     const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
     const metadata = runMetadata(result);
 
-    expect(metadata.registryCacheState).toBe("valid");
-    expect(writtenBenchmarks().EUR).toMatchObject({
-      rate: 1.94,
-      source: "ecb-estr-3m",
-      fallbackMode: "circuit-open-retained",
-    });
-    expect(writtenBenchmarks().USD).toMatchObject({
-      source: "hardcoded-fallback",
-      fallbackMode: "circuit-open",
-    });
+    expect(metadata.registryCacheState).toBe("invalid");
+    expect(metadata.registryCacheWrite).toBe("skipped-unreadable-cache");
+    expect(cacheKeysWritten()).not.toContain("risk_free_rates");
+    expect(cacheKeysWritten()).not.toContain("risk_free_rate");
   });
 
   it("leaves an unreadable registry untouched when the run resolved no benchmark", async () => {

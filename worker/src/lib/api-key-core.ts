@@ -32,7 +32,6 @@ const API_KEY_AUTH_CACHE_POLICY = {
   storage: "isolate-memory",
   schemaId: "api-key-auth-row:v1",
   ttlSec: API_KEY_AUTH_CACHE_TTL_MS / 1_000,
-  maxEntries: API_KEY_AUTH_CACHE_MAX_ENTRIES,
   stale: "reject",
   invalid: "delete",
 } satisfies CacheRetentionPolicy;

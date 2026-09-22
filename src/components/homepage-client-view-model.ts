@@ -3,9 +3,7 @@ import type {
   PegSummaryResponse,
   ReportCardsV9CurrentResponse,
   StablecoinListResponse,
-  StressSignalsAllResponse,
 } from "@shared/types";
-import { getDewsRiskLevel, isThreatBand } from "@shared/lib/classification";
 import { buildTrackedIdSet, filterStablecoins } from "@/components/stablecoin-table-logic";
 import { buildStablecoinTableInputs } from "@/lib/stablecoin-table-inputs";
 import { buildV9SafetyTableMap } from "@/lib/safety-score-v9-consumers";
@@ -42,21 +40,11 @@ export function buildHomepageCriticalViewModel(args: {
 
 export function buildHomepageOptionalViewModel(args: {
   reportCardsData?: ReportCardsV9CurrentResponse;
-  stressData?: StressSignalsAllResponse;
 }) {
   const projected = args.reportCardsData
     ? buildV9SafetyTableMap(args.reportCardsData, args.reportCardsData.safetyScoreIdentity)
     : null;
   const reportCardMap = projected?.status === "available" ? projected.value : undefined;
 
-  return {
-    reportCardMap,
-    dewsRiskLevel: getDewsRiskLevel(
-      args.stressData?.signals
-        ? Object.values(args.stressData.signals)
-            .map((signal) => signal.band)
-            .filter(isThreatBand)
-        : [],
-    ),
-  };
+  return { reportCardMap };
 }

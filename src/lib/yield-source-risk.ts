@@ -1,4 +1,5 @@
 import { EXTERNAL_OPPORTUNITY_YIELD_TYPES } from "@/lib/yield-view-config";
+import { YIELD_SOURCE_DEPTH_BANDS } from "@shared/lib/selector/yield-source";
 import { numberValue as finiteNumber } from "@shared/lib/type-guards";
 import type {
   YieldSourceRisk,
@@ -111,8 +112,8 @@ export function classifyYieldSourceDepth(params: {
   const sourceTvlUsd = finiteNumber(params.sourceTvlUsd);
 
   if (sourceDepthRatio === null || sourceTvlUsd === null) return "unknown";
-  if (sourceDepthRatio >= 0.01) return "deep";
-  if (sourceDepthRatio >= 0.001) return "moderate";
+  if (sourceDepthRatio >= YIELD_SOURCE_DEPTH_BANDS.deep.minRatio) return "deep";
+  if (sourceDepthRatio >= YIELD_SOURCE_DEPTH_BANDS.moderate.minRatio) return "moderate";
   return "thin";
 }
 

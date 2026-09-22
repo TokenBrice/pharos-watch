@@ -22,16 +22,7 @@ import {
   HERO_CHIP_PEG_LABELS,
   getHeroPegLabel,
 } from "@shared/lib/classification";
-import {
-  HeroCompactMarketCapCell,
-  HeroCompactPriceCell,
-  HeroCompactSupplyCell,
-  HeroCompactTertiaryCell,
-  HeroMarketCapCard,
-  HeroPriceCard,
-  HeroSupplyCard,
-  HeroTertiaryMetrics,
-} from "./hero-card-metrics";
+import { HeroMarketMetricGrid, HeroTertiaryMetrics } from "./hero-card-metrics";
 import type { HeroSignalRailItem, HeroTertiaryMetricConfig } from "./hero-card-metrics";
 export type { HeroSignalRailItem, HeroTertiaryMetricConfig } from "./hero-card-metrics";
 
@@ -182,27 +173,7 @@ export function HeroCardMobileSection({
 
       <HeroVerdict coinId={coin.id} verdict={verdict} />
 
-      <div className="mt-4 grid grid-cols-2 gap-3">
-        <HeroPriceCard coin={coin} coinData={coinData} price={price} />
-        <HeroMarketCapCard
-          coin={coin}
-          coinData={coinData}
-          mcap={market.mcap}
-          safePrevDay={market.safePrevDay}
-          prevDayTrendClass={market.prevDayTrendClass}
-        />
-      </div>
-
-      <HeroSupplyCard
-        supply={market.supply}
-        coinSymbol={coin.symbol}
-        mcap={market.mcap}
-        safePrevWeek={market.safePrevWeek}
-        prevWeekTrendClass={market.prevWeekTrendClass}
-        hasPrevMonth={market.hasPrevMonth}
-        safePrevMonth={market.safePrevMonth}
-        prevMonthTrendClass={market.prevMonthTrendClass}
-      />
+      <HeroMarketMetricGrid variant="card" coin={coin} coinData={coinData} price={price} market={market} />
 
       <HeroTertiaryMetrics metrics={tertiaryMetrics} activeDepeg={peg.activeDepeg} />
     </div>
@@ -224,30 +195,18 @@ export function HeroCardDesktopSection({
   // the visual chrome now matches the compact reference dossier.
   const excessMetric = tertiaryMetrics.find((metric) => metric.key === "excess-yield");
 
+
   return (
     <div className="hidden lg:block">
       <HeroDesktopChipRail coin={coin} verdict={verdict} />
-      <div className={`grid lg:grid-cols-3 ${excessMetric ? "xl:grid-cols-4" : ""}`}>
-        <HeroCompactPriceCell coin={coin} coinData={coinData} price={price} />
-        <HeroCompactMarketCapCell
-          coin={coin}
-          coinData={coinData}
-          mcap={market.mcap}
-          safePrevDay={market.safePrevDay}
-          prevDayTrendClass={market.prevDayTrendClass}
-        />
-        <HeroCompactSupplyCell
-          supply={market.supply}
-          coinSymbol={coin.symbol}
-          mcap={market.mcap}
-          safePrevWeek={market.safePrevWeek}
-          prevWeekTrendClass={market.prevWeekTrendClass}
-          hasPrevMonth={market.hasPrevMonth}
-          safePrevMonth={market.safePrevMonth}
-          prevMonthTrendClass={market.prevMonthTrendClass}
-        />
-        {excessMetric ? <HeroCompactTertiaryCell metric={excessMetric} /> : null}
-      </div>
+      <HeroMarketMetricGrid
+        variant="cell"
+        coin={coin}
+        coinData={coinData}
+        price={price}
+        market={market}
+        tertiaryMetric={excessMetric}
+      />
     </div>
   );
 }

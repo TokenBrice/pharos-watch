@@ -105,6 +105,48 @@ describe("frontend API query descriptors", () => {
     expect(summary).not.toHaveProperty("tokens");
   });
 
+  it("leaves prev-period buckets unavailable when the history has no sample at or before the target", () => {
+    const day = 86_400;
+    const summary = projectStablecoinLiveSummary({
+      price: 1,
+      priceSource: "coingecko",
+      priceConfidence: "high" as const,
+      priceUpdatedAt: 1_700_000_000,
+      tokens: [
+        { date: 1_700_000_000, totalCirculatingUSD: { peggedUSD: 10 } },
+        { date: 1_700_000_000 + 40 * day, totalCirculatingUSD: { peggedUSD: 90 } },
+      ],
+    });
+
+    expect(summary.circulating).toEqual({ peggedUSD: 90 });
+    expect(summary.circulatingPrevDay).toEqual({});
+    expect(summary.circulatingPrevWeek).toEqual({});
+    expect(summary.circulatingPrevMonth).toEqual({});
+  });
+
+  it("uses the newest sample at or before each target instead of the nearest one", () => {
+    const day = 86_400;
+    const latest = 1_700_000_000;
+    const summary = projectStablecoinLiveSummary({
+      price: 1,
+      priceSource: "coingecko",
+      priceConfidence: "high" as const,
+      priceUpdatedAt: latest,
+      tokens: [
+        { date: latest - 30 * day - 4 * 3600, totalCirculatingUSD: { peggedUSD: 30 } },
+        { date: latest - 30 * day + 4 * 3600, totalCirculatingUSD: { peggedUSD: 31 } },
+        { date: latest - 7 * day - 4 * 3600, totalCirculatingUSD: { peggedUSD: 70 } },
+        { date: latest - 7 * day + 2 * 3600, totalCirculatingUSD: { peggedUSD: 71 } },
+        { date: latest - day, totalCirculatingUSD: { peggedUSD: 99 } },
+        { date: latest, totalCirculatingUSD: { peggedUSD: 100 } },
+      ],
+    });
+
+    expect(summary.circulatingPrevDay).toEqual({ peggedUSD: 99 });
+    expect(summary.circulatingPrevWeek).toEqual({ peggedUSD: 70 });
+    expect(summary.circulatingPrevMonth).toEqual({ peggedUSD: 30 });
+  });
+
   it("keeps the summary projection isolated from the detailed rankings cache", () => {
     expect(FRONTEND_API_QUERY_DESCRIPTORS.yieldRankings).toMatchObject({
       queryKey: ["yield-rankings"],

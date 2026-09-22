@@ -20,7 +20,7 @@ import {
   reserveInfoWarning,
   verifiedFreshnessMetadata,
 } from "./helpers";
-import { decodeAddressWord, decodeBoolWord, decodeUint256Word } from "./abi-decode";
+import { decodeAddressWord, decodeStrictBoolWord, decodeUint256Word } from "./abi-decode";
 import { runAdapterIo } from "./concurrency";
 import { normalizeEvmAddress, resolveCoinContractAddress } from "./evm";
 import { fetchOnchainMulticall3, fetchOnchainUint256 } from "./onchain";
@@ -200,6 +200,7 @@ export function buildMakinaRedemptionMetadata(state: MakinaRedemptionState) {
       queueDepthUsd: state.queueDepthUsd,
       routeStatus: state.whitelistEnabled ? "cohort-limited" : "open",
       routeStatusSource: "onchain",
+      routeObserved: true,
       routeStatusReason: state.whitelistEnabled
         ? "AsyncRedeemer whitelist is enabled; requests and claims are limited to the active allowlist"
         : state.sanctionsCheckEnabled
@@ -356,8 +357,8 @@ async function fetchMakinaRedemptionState(
       return redemptionTelemetryUnavailable("Makina AsyncRedeemer telemetry unavailable: queued-share liability conversion failed");
     }
 
-    const whitelistEnabled = decodeBoolWord(multicallResultByLabel(reads, "redeemer-whitelist"));
-    const sanctionsCheckEnabled = decodeBoolWord(multicallResultByLabel(reads, "redeemer-sanctions-check"));
+    const whitelistEnabled = decodeStrictBoolWord(multicallResultByLabel(reads, "redeemer-whitelist"));
+    const sanctionsCheckEnabled = decodeStrictBoolWord(multicallResultByLabel(reads, "redeemer-sanctions-check"));
     const minimumFinalizationDelaySec = readSafeOnchainNumber(decodeUint256Word(
       multicallResultByLabel(reads, "redeemer-finalization-delay"),
     ));

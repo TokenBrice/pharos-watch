@@ -1,16 +1,8 @@
 import type { ReportCardGrade } from "../types";
-import { V9_GRADE_THRESHOLDS } from "../types/safety-score-v9-grade";
 import type { ReportCardGradeRange } from "../types/report-card-grade";
 
 export { V9_GRADE_THRESHOLDS, scoreToGrade } from "../types/safety-score-v9-grade";
 export type { ReportCardGradeRange } from "../types/report-card-grade";
-
-/**
- * Presentation uses the grade thresholds projected from the active V9 policy
- * so a policy change cannot leave report-card labels on a different threshold set.
- */
-export const GRADE_THRESHOLDS: readonly { grade: ReportCardGrade; min: number }[] = V9_GRADE_THRESHOLDS;
-
 export const REPORT_CARD_GRADE_RANK: Record<ReportCardGrade, number> = {
   NR: -1,
   F: 0,

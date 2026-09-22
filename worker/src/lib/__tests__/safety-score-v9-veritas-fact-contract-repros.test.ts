@@ -4,7 +4,8 @@
  * files; every assertion and VER-0xx describe name is preserved verbatim.
  */
 
-import { evaluateV9EconomicControl, type V9EconomicControlAssetFacts } from "@shared/lib/safety-score-v9/control";
+import { evaluateV9EconomicControl } from "@shared/lib/safety-score-v9/control";
+import type { V9EconomicControlAssetFacts } from "@shared/lib/safety-score-v9/control-primitives";
 import { evaluateV9Exit } from "@shared/lib/safety-score-v9/exit";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
@@ -14,11 +15,13 @@ import type { ReserveSlice } from "@shared/types/reserves";
 import { describe, expect, it } from "vitest";
 import miniCapture from "./fixtures/safety-score-v9-rateable-mini-capture.json";
 import {
-  createReportCardsFixedInput,
   normalizeFixedInput,
   type ReportCardsFixedInput,
-  type ReportCardsFixedInputDraft,
 } from "../report-cards-fixed-input";
+import {
+  createReportCardsFixedInput,
+  type ReportCardsFixedInputDraft,
+} from "../../test-helpers/report-cards-fixed-input";
 import {
   compileSafetyScoreV9FactSetFromNormalizedInput,
   compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension,

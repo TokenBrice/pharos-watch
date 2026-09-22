@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { getCirculatingRaw, getPrevDayRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
+import { getCirculatingRaw, getPrevDayRawOrNull, getPrevWeekRawOrNull, sumPegBucketsOrNull } from "@shared/lib/supply";
 import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
 import { getPegReference, normalizePegType } from "@shared/lib/peg-rates";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
@@ -92,6 +92,10 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
     const asset = assetById.get(meta.id);
     if (!asset) continue;
 
+    // "No supply buckets at all" is not "redeemed to zero": only an explicitly
+    // present zero may retire the coin's current and 7-day rows, which are
+    // never resurrected. An absent record skips the coin without writing.
+    if (sumPegBucketsOrNull(asset.circulating) === null) continue;
     const current = getCirculatingRaw(asset);
     if (current <= 0) {
       noCurrentSupplyIds.push(meta.id);
@@ -178,8 +182,10 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
       yieldSourceRisk: sourceState.yieldSourceRisk.get(meta.id) ?? null,
       yieldRankChangeAttribution: sourceState.yieldRankChangeAttribution.get(meta.id) ?? null,
       psiScore: sourceState.latestPsiScore,
-      prevPoolValue: (prev?.pool as { value?: number })?.value,
-      prevDivergValue: (prev?.diverg as { value?: number })?.value,
+      prevPoolValue: prev?.pool?.value,
+      prevPoolAvailable: prev?.pool?.available === true,
+      prevDivergValue: prev?.diverg?.value,
+      prevDivergAvailable: prev?.diverg?.available === true,
       contagionAmplifier: 1,
       sourceAges: {
         dexLiquidity: sourceState.dexLiqAgeSecById.get(meta.id) ?? null,

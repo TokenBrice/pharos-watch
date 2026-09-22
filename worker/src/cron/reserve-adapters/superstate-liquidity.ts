@@ -58,8 +58,8 @@ export function adaptSuperstateLiquidity(
         capacityUsd: onchainRedemptionIdleUsd,
         capacityKind: "live-direct-bounded" as const,
         freshnessKind: "same-run-onchain" as const,
-        routeStatus: onchainRedemptionIdleUsd > 0 ? "open" as const : "paused" as const,
-        routeStatusSource: "onchain" as const,
+        routeStatus: "unknown" as const,
+        routeStatusSource: "static-config" as const,
         sourceUrls: [`https://etherscan.io/address/${SUPERSTATE_REDEMPTION_IDLE_ADDRESS}`],
       },
       details: {

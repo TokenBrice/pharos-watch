@@ -35,11 +35,13 @@ function mockD1(
   return baseMockD1([
     ...tables,
     { match: "SELECT snapshot_at FROM telegram_watcher_lifecycle_daily WHERE day = ?", rows: [], first: null },
+    { match: "FROM telegram_watcher_lifecycle_events_daily", rows: [], first: null },
     { match: "FROM telegram_adoption_daily", rows: [] },
     { match: "FROM telegram_usage_daily", rows: [], first: null },
     { match: "FROM telegram_adoption_retention_daily", rows: [] },
     { match: "INSERT INTO telegram_adoption_retention_daily", rows: [] },
     { match: "INSERT OR REPLACE INTO cache", rows: [] },
+    { match: "INSERT INTO cache", rows: [], runMeta: { changes: 1 } },
   ], options);
 }
 
@@ -54,7 +56,7 @@ describe("handleTelegramPulse", () => {
       newWatchersToday: 1,
       churnedWatchersToday: 0,
       reactivatedWatchersToday: 0,
-      historySource: "live-fallback",
+      historySource: "snapshot",
       topCoins: ["USDC"],
       pendingDeliveries: 3,
       miniAppSessionsToday: 4,
@@ -268,6 +270,26 @@ describe("handleTelegramPulse", () => {
     });
   });
 
+  it("publishes only pending delivery rows in pendingDeliveries", async () => {
+    const { db, sqlite } = fixtures.open();
+    const now = Math.floor(Date.now() / 1000);
+    const insert = sqlite.prepare(
+      "INSERT INTO telegram_pending_alerts (chat_id, message_html, created_at, delivery_state) VALUES (?, 'test', ?, ?)",
+    );
+    for (let index = 0; index < 5; index += 1) {
+      insert.run(`pending-${index}`, now, "pending");
+    }
+    for (const state of ["sending", "sent", "execution_unknown"] as const) {
+      for (let index = 0; index < 4; index += 1) {
+        insert.run(`${state}-${index}`, now, state);
+      }
+    }
+
+    const body = await readJsonResponse<{ pendingDeliveries: number | null }>(await handleTelegramPulse(db), 200);
+
+    expect(body.pendingDeliveries).toBe(5);
+  });
+
   it("suppresses low-cardinality Mini App usage counts but exposes abuse-health counts", async () => {
     const db = mockD1([
       {
@@ -374,225 +396,48 @@ describe("handleTelegramPulse", () => {
     expect(body.privacy.suppressedFields).not.toContain("pendingDeliveries");
   });
 
-  it("prefixes snapshot history with active-chat lifecycle fallback during bootstrap", async () => {
+  it("publishes only completed snapshot days as lifecycle history", async () => {
+    const nowSec = Math.floor(Date.parse("2026-05-13T12:00:00.000Z") / 1000);
     const db = mockD1([
       {
         match: "FROM telegram_watcher_lifecycle_daily",
         rows: [
           {
+            day: "2026-05-12",
+            snapshot_at: nowSec - 86_400,
+            active_watchers: 500,
+            new_watchers: 20,
+            churned_watchers: 7,
+            reactivated_watchers: 3,
+          },
+          {
             day: "2026-05-13",
-            snapshot_at: 1_778_680_000,
+            snapshot_at: nowSec,
             active_watchers: 519,
-            new_watchers: 305,
+            new_watchers: 19,
             churned_watchers: 0,
             reactivated_watchers: 0,
           },
-        ],
-      },
-      {
-        match: "GROUP BY day",
-        rows: [
-          { day: "2026-05-11", day_ts: 1_778_457_600, new_watchers: 214 },
-          { day: "2026-05-13", day_ts: 1_778_630_400, new_watchers: 305 },
         ],
       },
       {
         match: "FROM telegram_subscribers s",
-        first: pulseAggregate({ active_watchers: 519, new_watchers: 305, explicit_coin_follows: 3080, active_preset_followers: 43, active_dews_opt_ins: 216, active_depeg_opt_ins: 479, active_safety_opt_ins: 86, active_launch_opt_ins: 9, active_all_types_opt_ins: 5, quiet_hours_enabled_chats: 6 }),
+        first: pulseAggregate({ active_watchers: 519 }),
         rows: [],
       },
-      {
-        match: "ORDER BY day DESC",
-        first: null,
-        rows: [],
-      },
-      {
-        match: "FROM telegram_preset_subscriptions",
-        rows: [],
-      },
-      {
-        match: "FROM telegram_subscriptions",
-        rows: [{ stablecoin_id: "usdc-circle", subscribers: 479 }],
-      },
-      {
-        match: "FROM telegram_pending_alerts",
-        first: { pending_count: 0 },
-        rows: [],
-      },
+      { match: "FROM telegram_preset_subscriptions", rows: [] },
+      { match: "FROM telegram_subscriptions", rows: [] },
+      { match: "FROM telegram_pending_alerts", first: { pending_count: 0 }, rows: [] },
     ]);
 
-    const response = await handleTelegramPulse(db);
-    const body = (await response.json()) as {
-      historySource: string;
-      lifecycleHistoryUpdatedAt: number | null;
-      watcherHistory: Array<{ date: string; activeWatchers: number; snapshotAt?: number | null }>;
-    };
+    const pulse = await publishTelegramPulseSnapshot(db, nowSec);
 
-    expect(body.historySource).toBe("live-fallback");
-    expect(body.lifecycleHistoryUpdatedAt).toBe(1_778_680_000);
-    expect(body.watcherHistory).toEqual([
-      {
-        date: "2026-05-11",
-        timestamp: 1_778_457_600_000,
-        newWatchers: 214,
-        activeWatchers: 214,
-      },
-      {
-        date: "2026-05-13",
-        timestamp: 1_778_630_400_000,
-        snapshotAt: 1_778_680_000,
-        newWatchers: 305,
-        activeWatchers: 519,
-        churnedWatchers: 0,
-        reactivatedWatchers: 0,
-      },
-    ]);
+    expect(pulse.historySource).toBe("snapshot");
+    expect(pulse.watcherHistory.map((point) => point.date)).toEqual(["2026-05-12"]);
+    expect(db.getHistory().some((entry) => entry.sql.includes("GROUP BY day"))).toBe(false);
   });
 
-  it("prefixes pre-snapshot fallback cohorts even after multiple snapshot days exist", async () => {
-    const db = mockD1([
-      {
-        match: "FROM telegram_watcher_lifecycle_daily",
-        rows: [
-          {
-            day: "2026-05-13",
-            snapshot_at: 1_778_680_000,
-            active_watchers: 519,
-            new_watchers: 305,
-            churned_watchers: 0,
-            reactivated_watchers: 0,
-          },
-          {
-            day: "2026-05-14",
-            snapshot_at: 1_778_766_000,
-            active_watchers: 540,
-            new_watchers: 0,
-            churned_watchers: 0,
-            reactivated_watchers: 0,
-          },
-        ],
-      },
-      {
-        match: "GROUP BY day",
-        rows: [
-          { day: "2026-03-08", day_ts: 1_741_392_000, new_watchers: 10 },
-          { day: "2026-05-11", day_ts: 1_778_457_600, new_watchers: 509 },
-          { day: "2026-05-13", day_ts: 1_778_630_400, new_watchers: 21 },
-        ],
-      },
-      {
-        match: "FROM telegram_subscribers s",
-        first: pulseAggregate({ active_watchers: 540, new_watchers: 0, explicit_coin_follows: 3233, active_preset_followers: 48, active_dews_opt_ins: 222, active_depeg_opt_ins: 500, active_safety_opt_ins: 87, active_launch_opt_ins: 9, active_all_types_opt_ins: 5, quiet_hours_enabled_chats: 6 }),
-        rows: [],
-      },
-      {
-        match: "ORDER BY day DESC",
-        first: null,
-        rows: [],
-      },
-      {
-        match: "FROM telegram_preset_subscriptions",
-        rows: [],
-      },
-      {
-        match: "FROM telegram_subscriptions",
-        rows: [{ stablecoin_id: "usdc-circle", subscribers: 3233 }],
-      },
-      {
-        match: "FROM telegram_pending_alerts",
-        first: { pending_count: 0 },
-        rows: [],
-      },
-    ]);
 
-    const response = await handleTelegramPulse(db);
-    const body = (await response.json()) as {
-      historySource: string;
-      lifecycleHistoryUpdatedAt: number | null;
-      watcherHistory: Array<{ date: string; activeWatchers: number; snapshotAt?: number | null }>;
-    };
-
-    // The full available lifecycle stays visible: cohort points that predate
-    // the first daily snapshot lead the series, snapshots follow.
-    expect(body.historySource).toBe("live-fallback");
-    expect(body.lifecycleHistoryUpdatedAt).toBe(1_778_766_000);
-    expect(body.watcherHistory.map((point) => point.date)).toEqual([
-      "2026-03-08",
-      "2026-05-11",
-      "2026-05-13",
-      "2026-05-14",
-    ]);
-    expect(body.watcherHistory[0]?.activeWatchers).toBe(10);
-    const lastPoint = body.watcherHistory[body.watcherHistory.length - 1];
-    expect(lastPoint?.activeWatchers).toBe(540);
-    expect(lastPoint?.snapshotAt).toBe(1_778_766_000);
-  });
-
-  it("serves a one-point lifecycle snapshot only when live fallback history is empty", async () => {
-    const db = mockD1([
-      {
-        match: "FROM telegram_watcher_lifecycle_daily",
-        rows: [
-          {
-            day: "2026-05-13",
-            snapshot_at: 1_778_680_000,
-            active_watchers: 519,
-            new_watchers: 305,
-            churned_watchers: 0,
-            reactivated_watchers: 0,
-          },
-        ],
-      },
-      {
-        match: "GROUP BY day",
-        rows: [],
-      },
-      {
-        match: "FROM telegram_subscribers s",
-        first: pulseAggregate({ active_watchers: 519, new_watchers: 305, explicit_coin_follows: 3080, active_preset_followers: 43, active_dews_opt_ins: 216, active_depeg_opt_ins: 479, active_safety_opt_ins: 86, active_launch_opt_ins: 9, active_all_types_opt_ins: 5, quiet_hours_enabled_chats: 6 }),
-        rows: [],
-      },
-      {
-        match: "ORDER BY day DESC",
-        first: null,
-        rows: [],
-      },
-      {
-        match: "FROM telegram_preset_subscriptions",
-        rows: [],
-      },
-      {
-        match: "FROM telegram_subscriptions",
-        rows: [{ stablecoin_id: "usdc-circle", subscribers: 479 }],
-      },
-      {
-        match: "FROM telegram_pending_alerts",
-        first: { pending_count: 0 },
-        rows: [],
-      },
-    ]);
-
-    const response = await handleTelegramPulse(db);
-    const body = (await response.json()) as {
-      historySource: string;
-      lifecycleHistoryUpdatedAt: number | null;
-      watcherHistory: Array<{ date: string; activeWatchers: number; snapshotAt?: number | null }>;
-    };
-
-    expect(body.historySource).toBe("snapshot");
-    expect(body.lifecycleHistoryUpdatedAt).toBe(1_778_680_000);
-    expect(body.watcherHistory).toEqual([
-      {
-        date: "2026-05-13",
-        timestamp: 1_778_630_400_000,
-        snapshotAt: 1_778_680_000,
-        newWatchers: 305,
-        activeWatchers: 519,
-        churnedWatchers: 0,
-        reactivatedWatchers: 0,
-      },
-    ]);
-  });
 });
 
 describe("publishTelegramPulseSnapshot", () => {
@@ -783,7 +628,7 @@ describe("publishTelegramPulseSnapshotWithOutcome", () => {
       ...inner,
       prepare: (sql: string) => {
         const statement = inner.prepare(sql) as MockPreparedStatement;
-        if (!sql.includes("INSERT OR REPLACE INTO cache")) return statement;
+        if (!sql.includes("INTO cache")) return statement;
         return {
           ...statement,
           bind: (...binds: unknown[]) => {
@@ -870,8 +715,27 @@ describe("publishTelegramPulseSnapshotWithOutcome", () => {
     expect(outcome.error).toContain("simulated D1 cache write failure");
 
     const snapshotWrites = inner.getHistory().filter(
-      (entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === PULSE_SNAPSHOT_KEY,
+      (entry) => entry.sql.includes("INSERT INTO cache") && entry.binds[0] === PULSE_SNAPSHOT_KEY,
     );
     expect(snapshotWrites).toHaveLength(1);
+  });
+
+  it("does not let an older pulse generation replace a newer publication", async () => {
+    const newerAt = Math.floor(Date.parse("2027-01-15T12:00:00.000Z") / 1000);
+    const { db, sqlite } = persistedPulseDb();
+
+    const newer = await publishTelegramPulseSnapshotWithOutcome(db, newerAt);
+    const older = await publishTelegramPulseSnapshotWithOutcome(db, newerAt - 60);
+    const stored = sqlite.prepare(
+      "SELECT value, updated_at FROM cache WHERE key = 'telegram:pulse:snapshot'",
+    ).get() as { value: string; updated_at: number };
+
+    expect(newer.snapshotPublished).toBe(true);
+    expect(older.status).toBe("ok");
+    expect(older.snapshotPublished).toBe(false);
+    expect(older.staleWriteSkipped).toBe(true);
+    expect(older.pulse.updatedAt).toBe(newerAt);
+    expect(stored.updated_at).toBe(newerAt);
+    expect(JSON.parse(stored.value)).toMatchObject({ updatedAt: newerAt });
   });
 });

@@ -4,7 +4,7 @@ import type { PriceSourceHealth } from "@shared/types/status";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { CHAIN_META } from "@shared/lib/chains";
 import { CURATED_AGGREGATE_ESCROW_RESIDUALS, selectCuratedAggregateOnchainSupplyProbeContracts, selectSupplementalOnchainSupplyProbeContract } from "@shared/lib/onchain-supply-probe";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRaw, getCirculatingRawOrNull } from "@shared/lib/supply";
 import { setCacheIfNewer, getCache, getPriceCache, type PriceCacheEntry } from "../../lib/db-cache";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { CronResult } from "../../lib/cron-logger";
@@ -16,14 +16,6 @@ const INVALID_STABLECOINS_CACHE_KEY = "stablecoins:invalid-last";
 const VALIDATION_ISSUES_MAX_CHARS = 400;
 const FX_REFERENCE_MAX_AGE_SEC = 6 * 3600;
 const MISSING_PRICE_SOURCE = "missing";
-const SUPPLEMENTAL_TRACKED_IDS = new Set(
-  ACTIVE_STABLECOINS.filter(
-    (meta) =>
-      (meta.flags.pegCurrency === "GOLD" && !!meta.geckoId) ||
-      (meta.flags.pegCurrency === "SILVER" && !!meta.geckoId) ||
-      meta.detailProvider === "coingecko",
-  ).map((meta) => meta.id),
-);
 const CURATED_AGGREGATE_SUPPLY_CHAIN_LABELS_BY_ID = new Map(
   ACTIVE_STABLECOINS.flatMap((meta) => {
     const selected = selectCuratedAggregateOnchainSupplyProbeContracts(meta);
@@ -34,6 +26,23 @@ const CURATED_AGGREGATE_SUPPLY_CHAIN_LABELS_BY_ID = new Map(
     ] as const];
   }),
 );
+const SEVERE_STALENESS_REPRESENTATIVE_COMPARED = 50;
+const SEVERE_STALENESS_REPRESENTATIVE_COVERAGE = 0.5;
+
+/**
+ * Severe price staleness blocks publication when nearly every compared price is
+ * identical to the previous cache. The ratio alone is meaningless on a tiny
+ * overlap, so the block also needs a representative comparison: fifty compared
+ * rows stand on their own, and below that the overlap must still cover at least
+ * half of the current payload. Without the coverage floor a payload that
+ * collapsed to a handful of assets would fail open and publish frozen prices.
+ */
+export const SEVERE_PRICE_STALENESS_RATIO = 0.98;
+
+export function isSevereStalenessOverlapRepresentative(compared: number, currentAssetCount: number): boolean {
+  if (compared >= SEVERE_STALENESS_REPRESENTATIVE_COMPARED) return true;
+  return compared > 0 && compared >= Math.ceil(currentAssetCount * SEVERE_STALENESS_REPRESENTATIVE_COVERAGE);
+}
 
 export type StablecoinsPayload = {
   peggedAssets: PeggedAsset[];
@@ -342,6 +351,13 @@ export async function loadReplayPriceCacheForTrustedContinuity(db: D1Database): 
 export const SUPPLEMENTAL_RESTORE_MAX_AGE_SEC = 7 * 86400;
 export const SUPPLEMENTAL_RESTORE_MAX_FUTURE_SKEW_SEC = 60;
 
+/**
+ * Fill a primary coverage gap from a supplemental row. Only an absent or
+ * wholly invalid primary bucket is a gap: an explicit finite zero is an
+ * observed redemption and is published as read, never swapped for a positive
+ * supplemental amount. A row that is swapped carries `supplyRestored`, so the
+ * published supply never claims to be the primary lane's own reading.
+ */
 export function replaceZeroSupplyPrimaryAssets(
   primaryAssets: readonly PeggedAsset[],
   supplementalAssets: readonly PeggedAsset[],
@@ -353,11 +369,12 @@ export function replaceZeroSupplyPrimaryAssets(
   );
   const replacedIds: string[] = [];
   const assets = primaryAssets.map((asset) => {
-    if (getCirculatingRaw(asset) > 0) return asset;
+    const primarySupply = getCirculatingRawOrNull(asset);
+    if (primarySupply != null && primarySupply >= 0) return asset;
     const replacement = positiveSupplementalById.get(String(asset.id));
     if (!replacement) return asset;
     replacedIds.push(String(asset.id));
-    return replacement;
+    return markRestoredSupply(replacement);
   });
 
   return { assets, replacedIds: [...new Set(replacedIds)].sort() };
@@ -400,6 +417,7 @@ function hasReconciledCuratedAggregateSupplyPacket(
   asset: PeggedAsset,
   expectedChainLabels: readonly string[],
   expectedCirculatingBucket: string,
+  freshAggregateSupply?: number,
 ): boolean {
   if (asset.supplySource !== "onchain-total-supply") return false;
   const aggregateSupply = getCirculatingRaw(asset);
@@ -439,12 +457,24 @@ function hasReconciledCuratedAggregateSupplyPacket(
     const current = row.current as number;
     chainSupply += current;
   }
-  if (!Number.isFinite(chainSupply)) return false;
-  const tolerance = Math.max(0.01, aggregateSupply * 1e-9);
-  return chainSupply > 0 && Math.abs(chainSupply - aggregateSupply) <= tolerance;
+  if (!Number.isFinite(chainSupply) || chainSupply <= 0) return false;
+  if (Math.abs(chainSupply - aggregateSupply) > Math.max(0.01, aggregateSupply * 1e-9)) return false;
+  // A partition carried onto a fresh aggregate must still add up to that
+  // aggregate, otherwise the published breakdown contradicts the published total.
+  return (
+    freshAggregateSupply === undefined ||
+    Math.abs(chainSupply - freshAggregateSupply) <= Math.max(0.01, freshAggregateSupply * 1e-9)
+  );
 }
 
-function restoreCuratedAggregateSupplyPacket(
+/**
+ * A fresh CoinGecko aggregate carries no chain partition of its own. Restore
+ * only the previous curated packet's partition onto it, and only when that
+ * partition still reconciles with today's fresh aggregate. The aggregate, its
+ * source and its observation time stay fresh, so the row is not a restored
+ * supply and does not claim stale provenance.
+ */
+function restoreCuratedAggregateChainPartition(
   current: PeggedAsset,
   previous: PeggedAsset | undefined,
   nowSec: number,
@@ -458,7 +488,12 @@ function restoreCuratedAggregateSupplyPacket(
     Object.keys(current.chainCirculating ?? {}).length > 0 ||
     !previous ||
     normalizeOptionalTimestamp(previous.supplyObservedAt) === null ||
-    !hasReconciledCuratedAggregateSupplyPacket(previous, expectedChainLabels, expectedCirculatingBucket)
+    !hasReconciledCuratedAggregateSupplyPacket(
+      previous,
+      expectedChainLabels,
+      expectedCirculatingBucket,
+      getCirculatingRaw(current),
+    )
   ) {
     return null;
   }
@@ -467,13 +502,9 @@ function restoreCuratedAggregateSupplyPacket(
   return {
     asset: {
       ...current,
-      circulating: { ...(previous.circulating ?? {}) },
       chainCirculating: Object.fromEntries(
         Object.entries(previous.chainCirculating ?? {}).map(([chain, row]) => [chain, { ...row }]),
       ),
-      supplySource: previous.supplySource,
-      supplyObservedAt: previous.supplyObservedAt,
-      supplyRestored: true,
     },
     expired: false,
   };
@@ -498,11 +529,11 @@ export function mergeSupplementalLastKnownGood(
     }
 
     const previous = previousAssetsById.get(id);
-    const curatedAggregateRestore = restoreCuratedAggregateSupplyPacket(asset, previous, nowSec);
-    if (curatedAggregateRestore) {
-      if (curatedAggregateRestore.expired) expiredRestoreIds.push(id);
+    const curatedPartitionRestore = restoreCuratedAggregateChainPartition(asset, previous, nowSec);
+    if (curatedPartitionRestore) {
+      if (curatedPartitionRestore.expired) expiredRestoreIds.push(id);
       else restoredCount++;
-      resolved.set(id, curatedAggregateRestore.asset);
+      resolved.set(id, curatedPartitionRestore.asset);
       continue;
     }
 
@@ -538,17 +569,6 @@ export function mergeSupplementalLastKnownGood(
     resolved.set(id, asset);
   }
 
-  for (const id of SUPPLEMENTAL_TRACKED_IDS) {
-    if (primaryAssetIds.has(id) || resolved.has(id)) continue;
-    const previous = previousAssetsById.get(id);
-    if (!previous || getCirculatingRaw(previous) <= 0) continue;
-    if (!isWithinRestoreCeiling(previous, nowSec)) {
-      expiredRestoreIds.push(id);
-      continue;
-    }
-    resolved.set(id, markRestoredSupply(previous));
-    restoredCount++;
-  }
 
   return {
     assets: [...resolved.values()],
@@ -624,9 +644,9 @@ export async function loadFreshFxRates(
     const type = getFxReferenceTypeFromState(fxState, pegKey, FX_REFERENCE_MAX_AGE_SEC, nowSec);
     typeByPeg[pegKey] = type;
     updatedAtByPeg[pegKey] = fxState.sourceUpdatedAtByPeg[pegKey] ?? null;
-    if (type === "fresh" || type === "static") {
+    if (type === "fresh") {
       freshOrStaticRates[pegKey] = fxState.rates[pegKey];
-      globalType = type === "fresh" ? "fresh" : globalType === "none" ? "static" : globalType;
+      globalType = "fresh";
       if (updatedAtByPeg[pegKey] != null) {
         globalUpdatedAt =
           globalUpdatedAt == null

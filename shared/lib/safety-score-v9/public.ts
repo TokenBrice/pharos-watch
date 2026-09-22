@@ -6,8 +6,8 @@ import {
   type SafetyScoreV9PublicReason,
   type SafetyScoreV9CurrentResponse,
   type SafetyScoreV9CurrentCard,
-  type SafetyScoreV9PillarAdjustment,
 } from "../../types/safety-score-v9-public";
+import type { SafetyScoreV9PillarAdjustment } from "../../types/safety-score-v9-public-breakdowns";
 import type {
   V9EvidenceLevel,
   V9QualityPillar,
@@ -16,10 +16,11 @@ import type {
 } from "../../types/safety-score-v9";
 import type { V9EvidenceResponsibility } from "../../types/safety-score-v9-facts";
 import { V9EvidenceResponsibilitySchema } from "../../types/safety-score-v9-fact-primitives";
+import { round4 } from "../math";
 import type { V9DependencyEconomicRole } from "../../types/dependency-types";
 import type { V9AccessPostureResult } from "./access-posture";
-import type { V9BackingResult } from "./backing";
-import type { V9EconomicControlResult } from "./control";
+import type { V9BackingResult } from "./backing-primitives";
+import type { V9EconomicControlResult } from "./control-primitives";
 import type { V9ResolvedDependencyInputs } from "./dependencies";
 import type { V9ExitEvaluationResult, V9ExitHolderEligibility } from "./exit";
 import type { V9PillarReason, V9ProductionScoreInput, V9ProductionScoreTrace } from "./score";
@@ -581,10 +582,6 @@ function projectDependencies(input: V9PublicCardProjectionInput): SafetyScoreV9C
   };
 }
 
-function roundTrace(value: number): number {
-  return Math.round(value * 10_000) / 10_000;
-}
-
 function projectScoreTrace(input: V9PublicCardProjectionInput): SafetyScoreV9CurrentCard["scoreTrace"] {
   const trace = input.trace;
   if (trace.aggregation !== null && trace.aggregation.method !== "smooth-bounded-headroom") {
@@ -603,7 +600,7 @@ function projectScoreTrace(input: V9PublicCardProjectionInput): SafetyScoreV9Cur
     .map((adjustment) => ({
       ...adjustment,
       sourceSignalKeys: uniqueSorted(adjustment.sourceSignalKeys),
-      adjustmentPoints: roundTrace(adjustment.scoreBefore - adjustment.scoreAfter),
+      adjustmentPoints: round4(adjustment.scoreBefore - adjustment.scoreAfter),
       modeledLossPoints: adjustment.adjustmentPoints,
     }));
   const unresolvedExposures = [...trace.unresolvedDeploymentSignals]
@@ -664,7 +661,7 @@ function projectScoreTrace(input: V9PublicCardProjectionInput): SafetyScoreV9Cur
   const deploymentAdjustmentPoints =
     trace.baseAssetScore === null || trace.deploymentAdjustedScore === null
       ? null
-      : roundTrace(trace.baseAssetScore - trace.deploymentAdjustedScore);
+      : round4(trace.baseAssetScore - trace.deploymentAdjustedScore);
 
   return {
     schemaVersion: 3,

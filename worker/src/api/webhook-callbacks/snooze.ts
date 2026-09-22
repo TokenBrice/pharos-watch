@@ -23,14 +23,13 @@ export const handleSnoozeCallback: CallbackHandler = async ({
     botToken,
     cb,
     chatId,
-    validate: () => hasExactParts(parsed.parts, 2) && isSnoozeArg(parsed.arg)
-      ? {
-          duration: parsed.arg,
-          untilSec: storedIntent?.kind === "callback:snooze"
-            ? Number(storedIntent.payload.untilSec)
-            : unixNow() + SNOOZE_SECONDS[parsed.arg],
-        }
-      : null,
+    validate: () => {
+      if (!hasExactParts(parsed.parts, 2) || !isSnoozeArg(parsed.arg)) return null;
+      const untilSec = storedIntent?.kind === "callback:snooze"
+        ? Number(storedIntent.payload.untilSec)
+        : unixNow() + SNOOZE_SECONDS[parsed.arg];
+      return Number.isFinite(untilSec) ? { duration: parsed.arg, untilSec } : null;
+    },
     requireAdmin: true,
     eventType: "snooze_change",
     actionDetail: "chat",

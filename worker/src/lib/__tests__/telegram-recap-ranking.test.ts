@@ -30,6 +30,16 @@ describe("Telegram recap ranking", () => {
     expect(collapsed[0]?.type).toBe("depeg.resolved");
   });
 
+  it("reports the reopened depeg when a coin re-depegs after resolving inside the window", () => {
+    const collapsed = collapseTelegramRecapFacts([
+      fact({ eventId: "open", ts: 100 }),
+      fact({ eventId: "resolved", type: "depeg.resolved", severity: "info", ts: 200 }),
+      fact({ eventId: "reopened", ts: 300, payload: { direction: "below", absDeviationBps: 120 } }),
+    ]);
+    expect(collapsed).toHaveLength(1);
+    expect(collapsed[0]?.eventId).toBe("reopened");
+  });
+
   it("uses severity, transition, membership, time, then event id ordering", () => {
     const selected = selectTelegramRecapFacts([
       fact({ eventId: "z", coinId: "usdt-tether", symbol: "USDT", membership: "global", ts: 500 }),

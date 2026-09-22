@@ -42,7 +42,7 @@ import {
   type DueTelegramRecapPreference,
 } from "../lib/telegram/recap-store";
 
-/** Read one extra row so a complete fact ledger is never silently truncated. */
+/** Maximum age of the project Tape run accepted as fresh planning input. */
 const TELEGRAM_RECAP_TAPE_FRESHNESS_SEC = 90 * 60;
 const TELEGRAM_RECAP_STALE_SKIP_AFTER_SEC = 4 * 60 * 60;
 
@@ -133,7 +133,14 @@ function isPaused(row: SubscriberRecapRow): boolean {
   return isPausedSentinel(row.alert_snooze_until_ts);
 }
 
-function nextDueAtAfterLocalDateSec(
+/**
+ * Per-run memo for {@link nextDueAtAfterLocalDateSec}. Every call in one run
+ * passes the run-level `nowSec`, so that triple always resolves to one instant
+ * and recipients sharing a timezone, delivery hour, and local date scan once.
+ */
+type NextDueAtMemo = Map<string, number | null>;
+
+function computeNextDueAtAfterLocalDateSec(
   nowSec: number,
   timezone: string,
   deliveryHourLocal: number,
@@ -152,6 +159,21 @@ function nextDueAtAfterLocalDateSec(
     cursorSec = Math.floor(dueAtMs / 1000);
   }
   return null;
+}
+
+/** Reuse the first result for repeated arguments; keys are the exact call arguments. */
+function nextDueAtAfterLocalDateSec(
+  nowSec: number,
+  timezone: string,
+  deliveryHourLocal: number,
+  localDate: string,
+  memo: NextDueAtMemo,
+): number | null {
+  const key = `${timezone}\n${deliveryHourLocal}\n${localDate}`;
+  if (memo.has(key)) return memo.get(key) ?? null; // a cached null must not rescan
+  const dueAtSec = computeNextDueAtAfterLocalDateSec(nowSec, timezone, deliveryHourLocal, localDate);
+  memo.set(key, dueAtSec);
+  return dueAtSec;
 }
 
 function recapWindow(preference: DueTelegramRecapPreference, nowSec: number): { startSec: number; endSec: number } {
@@ -295,6 +317,7 @@ async function recordStalePage(
   subscriberByChat: ReadonlyMap<string, SubscriberRecapRow>,
   nowSec: number,
   reason: "delivery-window-expired" | "project-tape-stale",
+  memo: NextDueAtMemo,
 ): Promise<number> {
   let skipped = 0;
   for (const preference of preferences) {
@@ -309,6 +332,7 @@ async function recordStalePage(
       timezone,
       preference.deliveryHourLocal,
       localDate,
+      memo,
     );
     if (nextDueAt == null) continue;
     const window = recapWindow(preference, nowSec);
@@ -355,6 +379,9 @@ export async function planTelegramPersonalizedRecaps(
   const eligibleChatIds = rolloutPolicy.mode === "canary"
     ? [...rolloutPolicy.allowedChatIds]
     : undefined;
+  // One run-level `nowSec` fixes every due instant, so this run-scoped memo can
+  // key on the schedule identity alone.
+  const nextDueMemo: NextDueAtMemo = new Map();
   const counts = {
     pagesAttempted: 0,
     pagesCompleted: 0,
@@ -410,7 +437,7 @@ export async function planTelegramPersonalizedRecaps(
     counts.due = due.length;
     counts.stale = dryRun
       ? due.filter((preference) => shouldRecordStaleSkip(preference, nowSec)).length
-      : await recordStalePage(db, due, subscribers, nowSec, "project-tape-stale");
+      : await recordStalePage(db, due, subscribers, nowSec, "project-tape-stale", nextDueMemo);
     counts.oldestDueAgeSec = Math.max(0, ...due.map((preference) => nowSec - preference.expectedNextDueAt));
     return finish("degraded", "stale");
   }
@@ -444,7 +471,7 @@ export async function planTelegramPersonalizedRecaps(
     if (stalePreferences.length > 0) {
       const recorded = dryRun
         ? stalePreferences.length
-        : await recordStalePage(db, stalePreferences, subscriberByChat, nowSec, "delivery-window-expired");
+        : await recordStalePage(db, stalePreferences, subscriberByChat, nowSec, "delivery-window-expired", nextDueMemo);
       counts.stale += recorded;
       counts.deferred += stalePreferences.length - recorded;
     }
@@ -509,6 +536,7 @@ export async function planTelegramPersonalizedRecaps(
         timezone,
         preference.deliveryHourLocal,
         localDate,
+        nextDueMemo,
       );
       if (nextDueAt == null) {
         counts.invalidTimezone += 1;

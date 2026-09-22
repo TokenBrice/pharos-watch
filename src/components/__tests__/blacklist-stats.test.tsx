@@ -38,6 +38,10 @@ function makeStats(): BlacklistSummaryResponse["stats"] {
     trackedAmountGapCount: 0,
     recentCount: 12,
     recentCount24h: 1,
+    recentFreezeCount24h: 1,
+    recentFreezeCount7d: 4,
+    recentFreezeAmount24hUsd: 500,
+    recentFreezeAmount7dUsd: 2_000,
     recoverableGapCount: 0,
     perCoinBlacklistCounts: {
       ...makePerCoinRecord(() => 0),
@@ -129,7 +133,6 @@ describe("BlacklistStats", () => {
             },
             freezeLedger: {
               providerFailedCount: 4,
-              staleSnapshotCount: 3,
               trackedGapCount: 2,
               scopedRows: 10,
               legacyRows: 0,
@@ -146,7 +149,6 @@ describe("BlacklistStats", () => {
     expect(screen.getByText("Data Quality")).toBeTruthy();
     expect(screen.getByText("Freeze ledger coverage is stale")).toBeTruthy();
     expect(screen.getByText("4 current-balance provider failures")).toBeTruthy();
-    expect(screen.getByText("3 stale current-balance snapshots")).toBeTruthy();
     expect(screen.getByText("2 tracked ledger gaps")).toBeTruthy();
     expect(screen.getByText(/2 recoverable amount gaps across/)).toBeTruthy();
     expect(screen.queryByText(/deferred coverage configs/)).toBeNull();
@@ -170,7 +172,6 @@ describe("BlacklistStats", () => {
             },
             freezeLedger: {
               providerFailedCount: 0,
-              staleSnapshotCount: 0,
               trackedGapCount: 1,
               scopedRows: 10,
               legacyRows: 0,
@@ -221,5 +222,43 @@ describe("BlacklistStats", () => {
     );
 
     expect(screen.getByText("—")).toBeTruthy();
+  });
+
+  it("renders an unavailable notice instead of zeroed totals when the summary query fails", () => {
+    render(
+      <BlacklistStats
+        summary={undefined}
+        isLoading={false}
+        error={new Error("summary unavailable")}
+        blacklistStatusBuckets={null}
+        supportDataLoading={false}
+        supportError={new Error("stablecoin list unavailable")}
+      />,
+    );
+
+    expect(screen.getByRole("alert").textContent).toContain(
+      "Freeze ledger data is temporarily unavailable. No status claim is being made.",
+    );
+    expect(screen.getAllByText("—")).toHaveLength(3);
+    expect(screen.queryByText("$0")).toBeNull();
+    expect(screen.queryByText("0%")).toBeNull();
+  });
+
+  it("marks the unfreezable share unavailable when the support read fails", () => {
+    render(
+      <BlacklistStats
+        summary={{ ...makeSummary(), stats: makeStats() }}
+        isLoading={false}
+        blacklistStatusBuckets={null}
+        supportDataLoading={false}
+        supportError={new Error("stablecoin list unavailable")}
+        onUnfreezableSelect={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("—")).toBeTruthy();
+    expect(screen.getByText("Freeze status data unavailable")).toBeTruthy();
+    expect(screen.queryByText("0%")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Show unfreezable stablecoins" })).toBeNull();
   });
 });

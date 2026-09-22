@@ -1,3 +1,4 @@
+import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC, DEX_FRESHNESS_SEC, DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD } from "@shared/lib/depeg-config";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import type { DepegPrimaryTrust, PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
 import {
@@ -5,13 +6,7 @@ import {
   hasUpstreamCapableDepegAuthoritativeSource,
   isSingleSourceDepegAuthoritative,
 } from "@shared/lib/pricing-source-policy";
-import {
-  DEPEG_PRIMARY_PRICE_MAX_AGE_SEC,
-  DEX_FRESHNESS_SEC,
-  DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD,
-  DEX_PRICE_CHECK_FRESHNESS_SEC,
-  DEX_PRICE_CHECK_UI_MIN_TVL_USD,
-} from "./constants";
+import { DEX_PRICE_CHECK_FRESHNESS_SEC, DEX_PRICE_CHECK_UI_MIN_TVL_USD } from "./constants";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 
 export type DexPriceTrustTier = "ui" | "depeg";
@@ -156,6 +151,9 @@ export function isTrustedDexPriceRow(
   nowSec: number,
   tier: DexPriceTrustTier,
 ): boolean {
+  if (!Number.isSafeInteger(row.updated_at) || row.updated_at > nowSec) return false;
+  if (!Number.isFinite(row.source_total_tvl) || row.source_total_tvl < 0) return false;
+
   const policy = getDexTrustPolicy(tier);
   return (nowSec - row.updated_at) < policy.maxAgeSec && row.source_total_tvl >= policy.minTvlUsd;
 }

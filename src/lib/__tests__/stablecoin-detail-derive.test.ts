@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   deriveIndicativeDeviationBps,
-  deriveGaugeDeviationBps,
   deriveSupplyFromMarketCap,
 } from "../stablecoin-detail-derive";
 
@@ -27,9 +26,3 @@ describe("deriveIndicativeDeviationBps", () => {
   });
 });
 
-describe("deriveGaugeDeviationBps", () => {
-  it.each([[240, 240], [-30, -30], [null, 0]])("projects deviation %s with NAV precedence", (deviation, expected) => {
-    expect(deriveGaugeDeviationBps(deviation, false)).toBe(expected);
-    expect(deriveGaugeDeviationBps(deviation, true)).toBe(0);
-  });
-});

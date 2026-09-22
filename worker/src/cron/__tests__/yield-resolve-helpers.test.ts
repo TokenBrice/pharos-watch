@@ -36,6 +36,7 @@ describe("lending opportunity TVL floors", () => {
         stablecoinId: "usdc-circle",
         poolChain: "Monad",
         stablecoinSupplyById: new Map([["usdc-circle", 500_000_000]]),
+        stablecoinSupplyMapState: "ok",
       }),
     ).toBe(500_000);
   });
@@ -46,18 +47,31 @@ describe("lending opportunity TVL floors", () => {
         stablecoinId: "paxg-paxos",
         poolChain: "ethereum",
         stablecoinSupplyById: new Map([["paxg-paxos", 1_960_000_000]]),
+        stablecoinSupplyMapState: "ok",
       }),
     ).toBe(1_960_000);
   });
 
-  it("fails open to the absolute floor when supply is missing", () => {
+  it("uses the absolute floor when a coin is absent from an otherwise valid supply map", () => {
     expect(
       getRequiredLendingOpportunityTvlUsd({
         stablecoinId: "usdc-circle",
         poolChain: "ethereum",
         stablecoinSupplyById: new Map(),
+        stablecoinSupplyMapState: "ok",
       }),
     ).toBe(100_000);
+  });
+
+  it.each(["missing", "malformed"] as const)("fails closed when the bulk supply map is %s", (state) => {
+    expect(
+      getRequiredLendingOpportunityTvlUsd({
+        stablecoinId: "usdc-circle",
+        poolChain: "ethereum",
+        stablecoinSupplyById: new Map(),
+        stablecoinSupplyMapState: state,
+      }),
+    ).toBe(Number.POSITIVE_INFINITY);
   });
 });
 

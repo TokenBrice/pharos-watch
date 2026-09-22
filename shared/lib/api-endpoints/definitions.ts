@@ -473,7 +473,6 @@ const BASE_ENDPOINT_DEFINITIONS = [
   publicGet({
     key: "snapshots-index",
     path: API_PATHS.snapshotsIndex(),
-    cacheKeyIgnoresQuery: true,
     probeGroup: "public",
   }),
   publicGet({

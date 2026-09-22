@@ -132,7 +132,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
           ? JSON.stringify({ curve: 80, uniswap: 20 })
           : coin.id === "crash" ? "malformed" : JSON.stringify({ curve: coin.previous }),
       })),
-    }]);
+    }], { assertMatchesUsed: true });
     const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
       db,
       currentGenerationId: "current",
@@ -164,7 +164,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
       match: "FROM dex_liquidity_run_rows r",
       rows: [],
       throwError: new Error("generation read failed"),
-    }]);
+    }], { assertMatchesUsed: true });
     const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({ db }));
 
     expect(analysis.sourceCoverage.coinTvlStepCount150).toBe(0);
@@ -180,7 +180,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
         first: null,
         throwError: new Error("count read failed"),
       },
-    ]);
+    ], { assertMatchesUsed: true });
 
     const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
       db,
@@ -259,7 +259,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
         match: "WHERE stablecoin_id IN",
         rows: [],
       },
-    ]);
+    ], { assertMatchesUsed: true });
 
     const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
       db,
@@ -343,7 +343,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
         match: "WHERE stablecoin_id IN",
         rows: [],
       },
-    ]);
+    ], { assertMatchesUsed: true });
 
     const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
       db,
@@ -405,7 +405,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
           match: "WHERE stablecoin_id IN",
           rows: [],
         },
-      ]);
+      ], { assertMatchesUsed: true });
     const scoreResults = new Map([
       ["usds-sky", { ...BASE_SCORE_RESULT, tvl: collapsedTvl, effectiveTvl: collapsedTvl }],
     ]);
@@ -489,7 +489,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
         match: "WHERE stablecoin_id IN",
         rows: [],
       },
-    ]);
+    ], { assertMatchesUsed: true });
 
     const analysis = await analyzeDexLiquidityPostScoring(
       makeAnalysisInput({
@@ -549,7 +549,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
         match: "WHERE stablecoin_id IN",
         rows: [],
       },
-    ]);
+    ], { assertMatchesUsed: true });
 
     const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
       db,
@@ -600,7 +600,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
         match: "WHERE stablecoin_id IN",
         rows: [],
       },
-    ]);
+    ], { assertMatchesUsed: true });
 
     const analysis = await analyzeDexLiquidityPostScoring(
       makeAnalysisInput({
@@ -650,7 +650,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
         match: "WHERE stablecoin_id IN",
         rows: [],
       },
-    ]);
+    ], { assertMatchesUsed: true });
 
     const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
       db,
@@ -710,7 +710,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
         match: "WHERE stablecoin_id IN",
         rows: [],
       },
-    ]);
+    ], { assertMatchesUsed: true });
 
     const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
       db,
@@ -759,7 +759,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
         match: "WHERE stablecoin_id IN",
         rows: [],
       },
-    ]);
+    ], { assertMatchesUsed: true });
 
     const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
       db,

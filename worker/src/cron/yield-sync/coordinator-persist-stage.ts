@@ -166,6 +166,7 @@ export async function runYieldCoordinatorPersistStage(
       dlPoolsMeta: fetched.dlPoolsMeta,
       dlApyEnvelopeRejectedCount: fetched.dlApyEnvelopeRejectedCount,
       supplementalMeta: fetched.supplementalMeta,
+      stablecoinSupplyMapState: fetched.stablecoinSupplyMapState,
       optionalSourceFailures: normalized.optionalSourceFailures,
       onChain: {
         ratesResolved: fetched.onChainRates.size,
@@ -179,7 +180,6 @@ export async function runYieldCoordinatorPersistStage(
         alternativeCoverageMissingIds: health.onChainAlternativeCoverageMissingIds,
         failures: fetched.onChainFailures,
         skippedDueToCooldown: fetched.onChainSkippedDueToCooldown,
-        cooldownActive: fetched.onChainCooldownActive,
         cooldownTriggered: health.onChainCooldownTriggered,
         cooldownUntil: health.nextOnChainHealthState.cooldownUntil,
         cooldownRemainingSec: fetched.onChainCooldownRemainingSec,

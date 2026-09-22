@@ -147,23 +147,12 @@ interface VisibleDepeg {
   mcapUsd: number | null;
 }
 
-function getVisibleDepegs(
-  inputData: DigestSnapshotInputData,
-  depegEvents: DigestSnapshotResponse["depegEvents"],
-): { count: number; rows: VisibleDepeg[] } {
+/**
+ * The edition's own capture. Day-overlap episodes from the archive API describe the UTC day,
+ * not what this edition published, so they never replace `activeDepegCount`/`topDepegs`.
+ */
+function getCapturedDepegs(inputData: DigestSnapshotInputData): { count: number; rows: VisibleDepeg[] } {
   const inputTopDepegs = inputData.topDepegs ?? [];
-  if (depegEvents.length > 0) {
-    return {
-      count: depegEvents.length,
-      rows: depegEvents.slice(0, 5).map((depeg) => ({
-        key: `${depeg.stablecoinId}-${depeg.startedAt}`,
-        symbol: depeg.symbol,
-        bps: depeg.peakDeviationBps,
-        direction: depeg.direction,
-        mcapUsd: null,
-      })),
-    };
-  }
   return {
     count: inputData.activeDepegCount ?? inputTopDepegs.length,
     rows: inputTopDepegs.slice(0, 5).map((depeg) => ({
@@ -176,6 +165,20 @@ function getVisibleDepegs(
   };
 }
 
+function DepegRowList({ rows }: { rows: VisibleDepeg[] }) {
+  return (
+    <ul className="space-y-0.5">
+      {rows.map((d) => (
+        <li key={d.key} className="text-xs text-muted-foreground">
+          {d.symbol}: {d.bps > 0 ? "+" : ""}
+          {d.bps} bps {d.direction ? `${d.direction} peg` : "off peg"}
+          {d.mcapUsd != null ? ` (${formatCurrency(d.mcapUsd)})` : ""}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function ActiveDepegsCard({
   inputData,
   depegEvents,
@@ -183,27 +186,41 @@ function ActiveDepegsCard({
   inputData: DigestSnapshotInputData;
   depegEvents: DigestSnapshotResponse["depegEvents"];
 }) {
-  const { count, rows } = getVisibleDepegs(inputData, depegEvents);
-  if (count <= 0) return null;
+  const { count, rows } = getCapturedDepegs(inputData);
+  const dayRows: VisibleDepeg[] = depegEvents.slice(0, 5).map((depeg) => ({
+    key: `${depeg.stablecoinId}-${depeg.startedAt}`,
+    symbol: depeg.symbol,
+    bps: depeg.peakDeviationBps,
+    direction: depeg.direction,
+    mcapUsd: null,
+  }));
+  if (count <= 0 && dayRows.length === 0) return null;
   return (
     <SnapshotCard
       title="Active Depegs"
       icon={<TriangleAlert className="h-4 w-4" aria-hidden="true" />}
     >
-      <p className="text-sm text-foreground/90">
-        <span className="font-medium">{count}</span>{" "}
-        active depeg{count !== 1 ? "s" : ""}
-      </p>
-      {rows.length > 0 && (
-        <ul className="space-y-0.5">
-          {rows.map((d) => (
-            <li key={d.key} className="text-xs text-muted-foreground">
-              {d.symbol}: {d.bps > 0 ? "+" : ""}
-              {d.bps} bps {d.direction ? `${d.direction} peg` : "off peg"}
-              {d.mcapUsd != null ? ` (${formatCurrency(d.mcapUsd)})` : ""}
-            </li>
-          ))}
-        </ul>
+      {count > 0 ? (
+        <>
+          <p className="text-sm text-foreground/90">
+            <span className="font-medium">{count}</span>{" "}
+            active depeg{count !== 1 ? "s" : ""} at publication
+          </p>
+          {rows.length > 0 && <DepegRowList rows={rows} />}
+        </>
+      ) : (
+        <p className="text-sm text-foreground/90">No active depegs at publication</p>
+      )}
+      {dayRows.length > 0 && (
+        <div className="space-y-0.5 border-t border-border/40 pt-1.5">
+          <p className="text-xs font-medium text-foreground/80">
+            Episodes active at any point this day
+          </p>
+          <DepegRowList rows={dayRows} />
+          <p className="text-[11px] text-muted-foreground/80">
+            Day-overlap sample from the archive query, not this edition&rsquo;s count.
+          </p>
+        </div>
       )}
     </SnapshotCard>
   );
@@ -235,11 +252,18 @@ export function DigestSnapshot({ date }: { date: string }) {
 
   const { inputData, prevInputData, depegEvents, blacklistEvents } = data;
   const prev = prevInputData ?? undefined;
-  const totalMcapUsd = inputData.totalMcapUsd ?? 0;
-  const mcap7dDelta = inputData.mcap7dDelta ?? 0;
-  const prevTotalMcapUsd = prev?.totalMcapUsd;
+  const totalMcapUsd = inputData.totalMcapUsd ?? null;
+  const mcap7dDelta = inputData.mcap7dDelta ?? null;
+  const prevTotalMcapUsd = prev?.totalMcapUsd ?? null;
 
-  const mcapDelta = prevTotalMcapUsd != null ? totalMcapUsd - prevTotalMcapUsd : 0;
+  // Archive-compatible editions may omit either operand; a delta is published only when both
+  // are real readings.
+  const mcapDelta =
+    totalMcapUsd != null && prevTotalMcapUsd != null ? totalMcapUsd - prevTotalMcapUsd : null;
+  const mcap7dPercent =
+    totalMcapUsd != null && mcap7dDelta != null && totalMcapUsd - mcap7dDelta !== 0
+      ? formatPercentChange(totalMcapUsd, totalMcapUsd - mcap7dDelta)
+      : null;
 
   return (
     <section className="mt-8 space-y-4 animate-in fade-in duration-300">
@@ -265,10 +289,14 @@ export function DigestSnapshot({ date }: { date: string }) {
         >
           <p className="text-sm text-foreground/90">
             Total mcap:{" "}
-            <span className="font-medium">
-              {formatCurrency(totalMcapUsd)}
-            </span>
-            {prevTotalMcapUsd != null && (
+            {totalMcapUsd == null ? (
+              <span className="text-muted-foreground">Not captured for this edition</span>
+            ) : (
+              <span className="font-medium">
+                {formatCurrency(totalMcapUsd)}
+              </span>
+            )}
+            {mcapDelta != null && (
               <span className={getNetColor(mcapDelta)}>
                 {" "}({mcapDelta >= 0 ? "+" : ""}
                 {formatCurrency(mcapDelta)} from yesterday)
@@ -277,17 +305,20 @@ export function DigestSnapshot({ date }: { date: string }) {
           </p>
           <p className="text-sm text-muted-foreground">
             7d change:{" "}
-            <span className={`font-medium ${getNetColor(mcap7dDelta)}`}>
-              {formatCurrency(mcap7dDelta)}
-            </span>
-            {totalMcapUsd - mcap7dDelta !== 0 && (
-              <span className={getNetColor(mcap7dDelta)}>
-                {" "}
-                ({formatPercentChange(
-                  totalMcapUsd,
-                  totalMcapUsd - mcap7dDelta
-                )})
-              </span>
+            {mcap7dDelta == null ? (
+              <span>Not captured for this edition</span>
+            ) : (
+              <>
+                <span className={`font-medium ${getNetColor(mcap7dDelta)}`}>
+                  {formatCurrency(mcap7dDelta)}
+                </span>
+                {mcap7dPercent != null && (
+                  <span className={getNetColor(mcap7dDelta)}>
+                    {" "}
+                    ({mcap7dPercent})
+                  </span>
+                )}
+              </>
             )}
           </p>
         </SnapshotCard>

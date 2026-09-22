@@ -9,9 +9,27 @@ import { fetchOnchainRateBps, type OnchainRateProbe } from "./onchain";
 
 type EvmInput = Extract<LiveReserveInput, { kind: "onchain-evm" }>;
 
-type BuildRedemptionSnapshotMetadataOptions = Omit<LiveReserveRedemptionTelemetry, "feeBps"> & {
+type LiveRouteStatusSource = Extract<
+  LiveReserveRedemptionTelemetry["routeStatusSource"],
+  "onchain" | "protocol-api"
+>;
+
+type BuildRedemptionSnapshotMetadataBase = Omit<
+  LiveReserveRedemptionTelemetry,
+  "feeBps" | "routeStatusSource"
+> & {
   feeBps?: LiveReserveRedemptionTelemetry["feeBps"] | null;
 };
+
+type BuildRedemptionSnapshotMetadataOptions =
+  | (BuildRedemptionSnapshotMetadataBase & {
+      routeStatusSource?: Exclude<LiveReserveRedemptionTelemetry["routeStatusSource"], LiveRouteStatusSource>;
+      routeObserved?: never;
+    })
+  | (BuildRedemptionSnapshotMetadataBase & {
+      routeStatusSource: LiveRouteStatusSource;
+      routeObserved: true;
+    });
 
 interface DocumentedRedemptionTelemetryOptions {
   holderEligibility?: RedemptionHolderEligibility;
@@ -33,10 +51,15 @@ export function buildDocumentedRedemptionTelemetry(
 export function buildRedemptionSnapshotMetadata(
   options: BuildRedemptionSnapshotMetadataOptions,
 ): Pick<LiveReserveSnapshotMetadata, "redemption"> {
-  const { feeBps, ...redemption } = options;
+  const { feeBps, routeObserved, routeStatusSource, ...redemption } = options;
+  const routeStatusSourceRequiresObservation =
+    routeStatusSource === "onchain" || routeStatusSource === "protocol-api";
   return {
     redemption: {
       ...redemption,
+      ...(routeStatusSource != null && (!routeStatusSourceRequiresObservation || routeObserved === true)
+        ? { routeStatusSource }
+        : {}),
       ...(feeBps != null ? { feeBps } : {}),
     },
   };

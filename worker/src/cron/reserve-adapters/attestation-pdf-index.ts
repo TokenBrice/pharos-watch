@@ -6,7 +6,6 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   collectPdfAnchors,
   decodeHtmlEntities,
-  fetchPrimaryHtmlInput,
   fetchTextWithRetry,
   htmlLayoutChangedError,
   normalizeSlices,
@@ -14,7 +13,7 @@ import {
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
 } from "./helpers";
-import { buildBrowserHeaders, HTML_ACCEPT_HEADER, NEUTRAL_ADAPTER_HEADERS } from "./request";
+import { fetchWithBrowserFallback, HTML_ACCEPT_HEADER, NEUTRAL_ADAPTER_HEADERS } from "./request";
 import { buildDocumentedRedemptionTelemetry } from "./redemption";
 import { reserveDegradedWarning, reserveInfoWarning } from "./warnings";
 import {
@@ -37,12 +36,6 @@ function shouldUseNeutralHtmlHeadersFirst(url: string): boolean {
   }
 }
 
-function buildBrowserHtmlHeaders(url: string): HeadersInit {
-  return {
-    Accept: HTML_ACCEPT_HEADER,
-    ...buildBrowserHeaders(new URL(url).origin, url),
-  };
-}
 
 function buildNeutralHtmlHeaders(): HeadersInit {
   return {
@@ -52,7 +45,6 @@ function buildNeutralHtmlHeaders(): HeadersInit {
 }
 
 async function fetchAttestationIndexHtml(
-  config: LiveReservesConfig,
   inputUrl: string,
   signal: AbortSignal,
   ctx?: AdapterContext,
@@ -61,19 +53,14 @@ async function fetchAttestationIndexHtml(
     return fetchTextWithRetry(inputUrl, signal, 15_000, ctx, { headers: buildNeutralHtmlHeaders() });
   }
 
-  try {
-    return await fetchPrimaryHtmlInput(
-      config,
-      ADAPTER_NAME,
-      signal,
-      ctx,
-      15_000,
-      { headers: buildBrowserHtmlHeaders(inputUrl) },
-    );
-  } catch (error) {
-    if (signal.aborted) throw error;
-    return fetchTextWithRetry(inputUrl, signal, 15_000, ctx, { headers: buildNeutralHtmlHeaders() });
-  }
+  return fetchWithBrowserFallback(
+    new URL(inputUrl).origin,
+    inputUrl,
+    (headers) => fetchTextWithRetry(inputUrl, signal, 15_000, ctx, {
+      headers: { ...Object.fromEntries(new Headers(headers).entries()), Accept: HTML_ACCEPT_HEADER },
+    }),
+    signal,
+  );
 }
 
 export interface AttestationPdfIndexParams {
@@ -402,7 +389,7 @@ export async function fetchAttestationPdfIndexReserves(
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireHtmlInput(config.inputs.primary, ADAPTER_NAME);
-  const html = await fetchAttestationIndexHtml(config, input.url, signal, ctx);
+  const html = await fetchAttestationIndexHtml(input.url, signal, ctx);
   return adaptAttestationPdfIndex(
     html,
     parseLiveReserveAdapterParams("attestation-pdf-index", config.params),

@@ -2,7 +2,7 @@ import { logWorkerEventArgs } from "../lib/structured-log";
 import { safeJsonParse } from "../lib/api-cache-read";
 import { addFreshnessHeaders } from "../lib/api-freshness";
 import { jsonResponseWithHeaders } from "../lib/api-response";
-import { CACHE_PROFILES } from "../lib/constants";
+import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { isMissingTableError } from "../lib/db";
 import {
   DEX_LIQUIDITY_PUBLISHED_ROW_FILTER,

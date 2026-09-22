@@ -7,15 +7,6 @@ export type TelegramTargetFinalDeliveryState =
   | "expired"
   | "execution_unknown";
 
-export type TelegramTargetCounterBucket =
-  | "planned"
-  | "accepted"
-  | "enqueued"
-  | "failed"
-  | "cancelled"
-  | "expired"
-  | "execution_unknown";
-
 export interface TelegramJobTargetPendingIdentity {
   pendingDedupeKey: string;
   sourceEventId: string;
@@ -53,41 +44,6 @@ interface PendingTerminalProjectionRow extends TargetIdentityRow {
   delivery_generation: number;
   delivery_completed_at: number | null;
   last_error_class: string | null;
-}
-
-interface TargetCounterInput {
-  status: string;
-  effectState?: string | null;
-  cancelledAt?: number | null;
-  finalDeliveryState?: string | null;
-}
-
-export function classifyTelegramTargetCounterBucket(
-  target: TargetCounterInput,
-): TelegramTargetCounterBucket {
-  switch (target.finalDeliveryState) {
-    case "accepted":
-    case "failed":
-    case "cancelled":
-    case "expired":
-    case "execution_unknown":
-      return target.finalDeliveryState;
-    default:
-      break;
-  }
-  if (target.cancelledAt != null) return "cancelled";
-  if (target.effectState === "execution_unknown") return "execution_unknown";
-  if (target.status === "sent") return "accepted";
-  if (target.status === "failed") return "failed";
-  if (target.status === "expired") return "expired";
-  if (
-    target.status === "queued" ||
-    target.effectState === "sending" ||
-    target.effectState === "complete"
-  ) {
-    return "enqueued";
-  }
-  return "planned";
 }
 
 /**
@@ -371,6 +327,8 @@ export function prepareTelegramAlertJobCounterReconciliation(
                   THEN 'degraded'
                 WHEN COALESCE((SELECT planned_count FROM counts), 0) > 0 THEN 'discovered'
                 WHEN COALESCE((SELECT enqueued_count FROM counts), 0) > 0 THEN 'queued'
+                WHEN COALESCE((SELECT cancelled_count FROM counts), 0)
+                     = COALESCE((SELECT target_count FROM counts), 0) THEN 'expired'
                 ELSE 'sent'
               END,
               metadata = CASE

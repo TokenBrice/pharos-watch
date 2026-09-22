@@ -1,5 +1,5 @@
 import { withAdmin } from "./auth";
-import { runIdempotentAdminAction } from "./idempotency";
+import { runIdempotentAction } from "./idempotency";
 import { errorResponse, jsonResponse, noStoreResponse, withErrorHandler } from "./api-response";
 import { logWorkerEvent } from "./structured-log";
 import type { JsonResponseOptions } from "./api-response";
@@ -38,7 +38,7 @@ export function runAdminRoute(options: RunAdminRouteOptions, handler: () => Prom
       options.request,
       () => {
         if (options.action && options.db && options.shouldUseIdempotency !== false) {
-          return runIdempotentAdminAction(options.db, options.action, options.request, handler);
+          return runIdempotentAction(options.db, options.action, options.request, handler);
         }
         return handler();
       },

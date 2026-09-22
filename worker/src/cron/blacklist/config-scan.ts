@@ -38,7 +38,12 @@ import {
 type ScanCounters = {
   totalInsertedRows: number;
   enrichCounters: { attempted: number; succeeded: number; failed: number };
-  currentBalanceCacheCounters: { updated: number; deleted: number; failed: number };
+  currentBalanceCacheCounters: {
+    updated: number;
+    failed: number;
+    skippedDueBudget: number;
+    budgetExhausted: boolean;
+  };
 };
 
 type ScanState = {
@@ -432,7 +437,12 @@ export async function scanBlacklistConfigs(args: ScanBlacklistConfigsArgs): Prom
     counters: {
       totalInsertedRows: 0,
       enrichCounters: { attempted: 0, succeeded: 0, failed: 0 },
-      currentBalanceCacheCounters: { updated: 0, deleted: 0, failed: 0 },
+      currentBalanceCacheCounters: {
+        updated: 0,
+        failed: 0,
+        skippedDueBudget: 0,
+        budgetExhausted: false,
+      },
     },
     apiErrorClasses: {},
     apiErrorConfigs: [],

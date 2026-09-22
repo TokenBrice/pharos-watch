@@ -63,12 +63,6 @@ const BLACKLIST_STATUS_PRESETS = {
   },
 } satisfies Record<string, CoverageStatusPreset>;
 
-function hasBlacklistTrackerCoverage(coin: Pick<StablecoinMeta, "symbol">, blacklistStatus: BlacklistStatus | null = null): boolean {
-  if (blacklistStatus !== null && blacklistStatus !== true) {
-    return false;
-  }
-  return BLACKLIST_SYMBOLS.has(coin.symbol.toUpperCase());
-}
 
 function resolveBlacklist(
   coin: Pick<StablecoinMeta, "symbol">,
@@ -78,7 +72,7 @@ function resolveBlacklist(
     return createDataUnavailableStatus("Blacklist status");
   }
 
-  if (hasBlacklistTrackerCoverage(coin, blacklistStatus)) {
+  if (blacklistStatus === true && BLACKLIST_SYMBOLS.has(coin.symbol.toUpperCase())) {
     return createPresetStatus(BLACKLIST_STATUS_PRESETS.live);
   }
 

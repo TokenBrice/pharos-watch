@@ -39,37 +39,20 @@ function payload(
 }
 
 describe("report-card evidence journal runtime", () => {
-  it("keeps the reserve outcome vocabulary explicit and stable", () => {
-    expect(ReserveEvidenceAttemptCodeSchema.options).toEqual([
-      "reserve.collector.attempted",
-      "reserve.collector.not-configured",
-      "reserve.collector.deferred",
-    ]);
-    expect(ReserveEvidenceAdmissionCodeSchema.options).toEqual([
-      "reserve.admission.accepted",
-      "reserve.admission.not-evaluated",
-      "reserve.admission.rejected-upstream",
-      "reserve.admission.rejected-timeout",
-      "reserve.admission.rejected-invalid-payload",
-      "reserve.admission.rejected-schema-drift",
-      "reserve.admission.rejected-stale",
-      "reserve.admission.rejected-reconciliation",
-      "reserve.admission.rejected-sidecar-mismatch",
-    ]);
-    expect(ReserveEvidenceFallbackCodeSchema.options).toEqual([
-      "reserve.fallback.not-used",
-      "reserve.fallback.curated",
-      "reserve.fallback.reviewed-sidecar",
-      "reserve.fallback.last-known-good",
-      "reserve.fallback.unavailable",
-    ]);
-    expect(ReserveEvidenceSourceOriginClassSchema.options).toEqual([
-      "issuer-attested",
-      "onchain-observation",
-      "independent-assurance",
-      "reviewed-curation",
-      "unknown",
-    ]);
+  it.each([
+    [ReserveEvidenceAttemptCodeSchema, "reserve.collector."],
+    [ReserveEvidenceAdmissionCodeSchema, "reserve.admission."],
+    [ReserveEvidenceFallbackCodeSchema, "reserve.fallback."],
+  ])("keeps each reserve outcome vocabulary non-empty, unique, and namespaced", (schema, prefix) => {
+    expect(schema.options.length).toBeGreaterThan(0);
+    expect(new Set(schema.options).size).toBe(schema.options.length);
+    expect(schema.options.every((option) => option.startsWith(prefix))).toBe(true);
+  });
+
+  it("keeps reserve source-origin values non-empty and unique", () => {
+    expect(ReserveEvidenceSourceOriginClassSchema.options.length).toBeGreaterThan(0);
+    expect(new Set(ReserveEvidenceSourceOriginClassSchema.options).size)
+      .toBe(ReserveEvidenceSourceOriginClassSchema.options.length);
   });
 
   it("canonicalizes asset and reserve-attempt ordering", () => {

@@ -12,6 +12,10 @@ const LAST_CHECKED_FMT = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
   hour: "2-digit",
   minute: "2-digit",
+  hourCycle: "h23",
+  // The probe timestamp is UTC; the label names the frame it is read in.
+  timeZone: "UTC",
+  timeZoneName: "short",
 });
 
 function formatLastChecked(timestamp: number): string | null {

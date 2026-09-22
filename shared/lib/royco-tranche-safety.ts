@@ -135,7 +135,7 @@ export function computeRoycoDawnTrancheSafetyScore(params: {
     params.sourceRisk.marketUtilizationLimitRatio,
   );
   const drawdownRatio = numberValue(params.sourceRisk.marketDrawdownRatio);
-  const trancheTvlUsd = params.sourceRisk.trancheTvlUsd ?? params.sourceRisk.marketTvlUsd;
+  const trancheTvlUsd = params.sourceRisk.trancheTvlUsd;
   const venueRiskWeighted =
     params.venueRiskWeighted !== undefined
       ? params.venueRiskWeighted

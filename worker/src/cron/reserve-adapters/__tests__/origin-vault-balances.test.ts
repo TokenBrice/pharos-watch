@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
+import type { StablecoinMeta } from "@shared/types/core";
 import { runAdapter, expectWarnings, installAdapterNetwork, type AdapterNetworkSpec } from "./reserve-adapter.test-support";
 
 const USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
+const OUSD = "0x2a8e1e676ec238d8a992307b495b45b3feaa5e86";
 const CHECK_BALANCE_SELECTOR = "0x5f515226";
 const BALANCE_OF_SELECTOR = "0x70a08231";
 const TOTAL_VALUE_SELECTOR = "0xd4c3eea0";
+const DECIMALS_SELECTOR = "0x313ce567";
 const BLOCK_NUMBER = 12345;
 const BLOCK_TIMESTAMP = 1776154391;
 
@@ -17,6 +20,7 @@ interface OriginNetworkOptions {
   reserve?: bigint;
   idle?: bigint;
   total?: bigint;
+  decimals?: bigint | null;
   failed?: string;
   assets?: Record<string, OriginAssetValues>;
 }
@@ -50,6 +54,7 @@ function originNetwork(options: OriginNetworkOptions = {}): AdapterNetworkSpec {
         if (options.failed && data.startsWith(options.failed)) return null;
         return options.total ?? 5_000_000n * 10n ** 18n;
       },
+      [`${OUSD}:${DECIMALS_SELECTOR}`]: options.decimals === undefined ? 18n : options.decimals,
     },
   };
 }
@@ -58,11 +63,13 @@ function runOrigin(
   network: AdapterNetworkSpec,
   params?: Record<string, unknown>,
   validate = true,
+  coin?: Partial<StablecoinMeta>,
 ) {
   return runAdapter("origin-vault-balances", "ousd-origin-protocol", {
     network: installAdapterNetwork(network),
     nowSec: BLOCK_TIMESTAMP,
     ...(params ? { params } : {}),
+    ...(coin ? { coin } : {}),
     ...(validate ? {} : { validate: false as const }),
   });
 }
@@ -107,6 +114,7 @@ describe("fetchOriginVaultBalancesReserves", () => {
       },
       details: {
         proofKind: "origin-vault-check-balance",
+        totalValueDecimals: 18,
       },
     });
     const idleCall = network.rpcCalls.find(
@@ -116,6 +124,33 @@ describe("fetchOriginVaultBalancesReserves", () => {
       contract: USDC.toLowerCase(),
       data: "0x70a08231000000000000000000000000e75d77b1865ae93c7eaa3040b038d7aa7bc02f70",
     });
+    expect(network.rpcCalls.filter((call) => call.selector === DECIMALS_SELECTOR).map((call) => call.contract))
+      .toEqual([OUSD]);
+  });
+
+  it("scales totalValue by the decimals read at the pinned block instead of an assumed 18", async () => {
+    const { result } = await runOrigin(
+      originNetwork({ decimals: 6n, total: 5_000_000n * 10n ** 6n }),
+      undefined,
+      true,
+      { contracts: [{ chain: "ethereum", address: OUSD, decimals: 6 }] },
+    );
+
+    expect(result.metadata).toMatchObject({
+      totalValueUsd: 5_000_000,
+      assetCoverageRatio: 1,
+      unknownExposurePct: 0,
+      details: { totalValueDecimals: 6 },
+    });
+    expect(result.slices).toHaveLength(1);
+    expectWarnings(result, []);
+  });
+
+  it("fails closed when the decimals read disagrees with the reviewed deployment or fails", async () => {
+    await expect(runOrigin(originNetwork({ decimals: 6n }), undefined, false))
+      .rejects.toThrow(/totalValue scale drifted \(decimals\(\) 6, reviewed 18\)/);
+    await expect(runOrigin(originNetwork({ decimals: null }), undefined, false))
+      .rejects.toThrow(/decimals\(\) probe failed/);
   });
 
   it("distinguishes failed invested, idle and total-value probes", async () => {

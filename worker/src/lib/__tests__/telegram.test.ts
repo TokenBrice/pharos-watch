@@ -215,13 +215,13 @@ describe("sendToChat", () => {
     expect(result.retryAfterSec).toBeNull();
   });
 
-  it("preserves legacy negative Retry-After parsing", async () => {
+  it("returns retryAfterSec null for a negative Retry-After header", async () => {
     fetchSpy.mockResolvedValueOnce(new Response("Too Many Requests", {
       status: 429,
       headers: { "Retry-After": "-1" },
     }));
     const result = await sendToChat("12345", "test", "bot-token");
-    expect(result.retryAfterSec).toBe(-1);
+    expect(result.retryAfterSec).toBeNull();
   });
 
   it("uses Telegram JSON retry_after when the Retry-After header is absent", async () => {
@@ -458,6 +458,22 @@ describe("editMessage", () => {
     await expect(editMessage("12345", 17, "test", "bot-token")).resolves.toBe(false);
     await expect(editMessage("12345", 17, "test", "bot-token")).resolves.toBe(false);
     await expect(editMessage("12345", 17, "test", "bot-token")).resolves.toBe(false);
+  });
+
+  it("truncates an oversized edit response instead of buffering it", async () => {
+    let bodyCancelled = false;
+    const oversizedBody = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode("x".repeat(64 * 1024)));
+      },
+      cancel() {
+        bodyCancelled = true;
+      },
+    });
+    fetchSpy.mockResolvedValueOnce(new Response(oversizedBody, { status: 503 }));
+
+    await expect(editMessage("12345", 17, "test", "bot-token")).resolves.toBe(false);
+    expect(bodyCancelled).toBe(true);
   });
 });
 

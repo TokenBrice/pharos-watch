@@ -160,9 +160,6 @@ export async function postMiniAppBulkWatchlistPreview(
   return postVersionedMiniAppJson(path, body, TelegramMiniAppBulkWatchlistResponseSchema);
 }
 
-export async function postMiniAppState(path: string, body: unknown): Promise<TelegramMiniAppState> {
-  return (await postMiniAppSnapshot(path, body)).state;
-}
 
 const VERSION_REFRESH_STORAGE_KEY = "pharos-mini-app-version-refresh";
 

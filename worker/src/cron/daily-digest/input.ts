@@ -8,7 +8,7 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { isRecord } from "@shared/lib/type-guards";
 import { round1 } from "@shared/lib/math";
 import type { StablecoinData } from "@shared/types/market";
-import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
+import { getCirculatingRaw, getPrevWeekRawOrNull } from "@shared/lib/supply";
 import { getDisplayedPsi } from "@shared/lib/psi-view-model";
 import { CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-registry";
 import { CORE_STABLECOIN_AGGREGATE_UNIVERSE } from "@shared/lib/stablecoins/aggregate-universe";
@@ -41,7 +41,7 @@ import type {
   CollectorContext,
   CollectorResult,
 } from "./collectors-shared";
-import { collectorDegraded } from "./collectors-shared";
+import { collectorDegraded, collectorResult } from "./collectors-shared";
 import type { DepegLifecycleFlag } from "../../lib/depeg-lifecycle";
 import { buildRecentDigestMeta, type RecentDigestMetaEntry } from "./runtime-helpers";
 import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "../../lib/digest-sql-filters";
@@ -50,17 +50,20 @@ import { buildStandingConditions, collectCauseContext } from "./cause-context";
 import { buildDigestIntelligence, parseStoredDigestInput } from "./digest-intelligence";
 import { tryParseJson } from "../../lib/json-parse";
 
-function aggregateCollectorReasons(results: readonly CollectorResult<unknown>[]): string[] {
+function aggregateCollectorReasons(
+  results: readonly CollectorResult<unknown>[],
+  channel: "degradedReasons" | "qualityReasons",
+): string[] {
   const seen = new Set<string>();
-  const degradedReasons: string[] = [];
+  const reasons: string[] = [];
   for (const result of results) {
-    for (const reason of result.degradedReasons) {
+    for (const reason of result[channel] ?? []) {
       if (seen.has(reason)) continue;
       seen.add(reason);
-      degradedReasons.push(reason);
+      reasons.push(reason);
     }
   }
-  return degradedReasons;
+  return reasons;
 }
 
 export interface DailyDigestInputBuildResult {
@@ -205,15 +208,25 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
 
   let totalMcapUsd = 0;
   let totalPrevWeek = 0;
+  let baselineMcapUsd = 0;
+  let coreCoinCount = 0;
+  let baselineCoinCount = 0;
   let biggestSupplyChange: DigestInputData["biggestSupplyChange"] = null;
   const supplyChanges7d: NonNullable<DigestInputData["supplyChanges7d"]> = [];
   let biggestAbsChange = 0;
 
   for (const coin of coreAggregateStablecoinAssets) {
     const mcap = getCirculatingRaw(coin);
-    const prevWeek = getPrevWeekRaw(coin);
+    const prevWeek = getPrevWeekRawOrNull(coin);
     if (mcap <= 0) continue;
     totalMcapUsd += mcap;
+    coreCoinCount += 1;
+    // A coin with no prior-week bucket has no measurable 7-day change. Counting
+    // its whole market cap as growth publishes a fabricated delta, so it leaves
+    // both sides of the aggregate and cannot become the week's biggest mover.
+    if (prevWeek == null) continue;
+    baselineCoinCount += 1;
+    baselineMcapUsd += mcap;
     totalPrevWeek += prevWeek;
 
     if (mcap > 1_000_000) {
@@ -260,6 +273,9 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
   const collectorResults: CollectorResult<unknown>[] = [];
   if (!ctx.stablecoinsCacheIsFresh) {
     collectorResults.push(collectorDegraded(undefined, "stablecoins-cache-stale"));
+  }
+  if (baselineCoinCount < coreCoinCount) {
+    collectorResults.push(collectorResult(undefined, [], ["supply-prev-week-baseline"]));
   }
 
   const activeDepegsResult = await collectActiveDepegs(ctx);
@@ -371,7 +387,14 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
   const gradeTransitionsResult = await collectGradeTransitions(ctx, safetyGrades, safetyIdentity);
   collectorResults.push(gradeTransitionsResult);
 
-  const degradedReasons = aggregateCollectorReasons(collectorResults);
+  const degradedReasons = aggregateCollectorReasons(collectorResults, "degradedReasons");
+  // Soft findings (an absent upstream publication, not a failed query) never
+  // degrade the run, but the prompt and editorial scoring must still see the
+  // section as missing, so both channels feed the recorded data-quality sources.
+  const missingSources = [
+    ...degradedReasons,
+    ...aggregateCollectorReasons(collectorResults, "qualityReasons"),
+  ];
   const resolvedDepegs = resolvedDepegsResult.value;
   const mintBurnFlows = mintBurnFlowsResult.value;
   const dewsStress = dewsStressResult.value;
@@ -387,7 +410,12 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     digestVersion: 2,
     aggregateUniverse: CORE_STABLECOIN_AGGREGATE_UNIVERSE,
     totalMcapUsd,
-    mcap7dDelta: totalMcapUsd - totalPrevWeek,
+    mcap7dDelta: baselineMcapUsd - totalPrevWeek,
+    mcap7dDeltaCoverage: {
+      coveredCoins: baselineCoinCount,
+      totalCoins: coreCoinCount,
+      coveredMcapUsd: baselineMcapUsd,
+    },
     totalMcapAth,
     dataQuality: {
       generatedAt: nowSec,
@@ -395,12 +423,13 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
       stablecoinsCacheAgeSec: stablecoinsCacheResult.updatedAt
         ? Math.max(0, nowSec - stablecoinsCacheResult.updatedAt)
         : null,
-      // Intentional dual-write of degradedReasons (mirrored at top level below):
-      // this nested copy feeds the LLM prompt data-quality block (prompt/data-fmt.ts
-      // reads quality.degradedSources), while the top-level copy feeds editorial
-      // confidence scoring (editorial-candidates.ts reads data.degradedSources).
-      // Both are snapshotted from the same array at the same time and must stay in sync.
-      ...(degradedReasons.length > 0 ? { degradedSources: [...degradedReasons] } : {}),
+      // Intentional dual-write of the missing/degraded sources (mirrored at top
+      // level below): this nested copy feeds the LLM prompt data-quality block
+      // (prompt/data-fmt.ts reads quality.degradedSources), while the top-level
+      // copy feeds editorial confidence scoring (editorial-candidates.ts reads
+      // data.degradedSources). Both are snapshotted from the same array at the
+      // same time and must stay in sync.
+      ...(missingSources.length > 0 ? { degradedSources: [...missingSources] } : {}),
       windows: {
         blacklistActivity: {
           label: "rolling last 24h",
@@ -428,7 +457,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     // Top-level mirror of dataQuality.degradedSources (see comment above): consumed
     // by editorial-candidates.ts for confidence scoring; kept separate so the LLM
     // prompt block and editorial scoring read from their own stable field.
-    ...(degradedReasons.length > 0 ? { degradedSources: [...degradedReasons] } : {}),
+    ...(missingSources.length > 0 ? { degradedSources: [...missingSources] } : {}),
     safetyContext,
     activeDepegCount,
     topDepegs,

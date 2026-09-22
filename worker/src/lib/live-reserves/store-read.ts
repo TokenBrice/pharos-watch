@@ -121,30 +121,18 @@ export async function loadReserveCompositionRowMap(
 
 export async function getMaxSyncAge(
   db: D1Database,
-  now = Math.floor(Date.now() / 1000),
-  stablecoinIds?: readonly string[],
+  now: number,
+  stablecoinIds: readonly string[],
 ): Promise<number> {
-  if (stablecoinIds?.length === 0) return Infinity;
-  if (stablecoinIds) {
-    const uniqueIds = [...new Set(stablecoinIds)];
-    const stateById = await loadReserveSyncStateMap(db, uniqueIds);
-    if (stateById.size !== uniqueIds.length) return Infinity;
+  if (stablecoinIds.length === 0) return Infinity;
+  const uniqueIds = [...new Set(stablecoinIds)];
+  const stateById = await loadReserveSyncStateMap(db, uniqueIds);
+  if (stateById.size !== uniqueIds.length) return Infinity;
 
-    let oldestAttemptedAt = Infinity;
-    for (const state of stateById.values()) {
-      if (state.lastAttemptedAt == null) return Infinity;
-      oldestAttemptedAt = Math.min(oldestAttemptedAt, state.lastAttemptedAt);
-    }
-    return now - oldestAttemptedAt;
+  let oldestAttemptedAt = Infinity;
+  for (const state of stateById.values()) {
+    if (state.lastAttemptedAt == null) return Infinity;
+    oldestAttemptedAt = Math.min(oldestAttemptedAt, state.lastAttemptedAt);
   }
-
-  const row = await db
-    .prepare(
-      `SELECT MIN(last_attempted_at) AS oldest_ts
-         FROM reserve_sync_state`,
-    )
-    .bind()
-    .first<{ oldest_ts: number | null }>();
-  if (!row?.oldest_ts) return Infinity;
-  return now - row.oldest_ts;
+  return now - oldestAttemptedAt;
 }

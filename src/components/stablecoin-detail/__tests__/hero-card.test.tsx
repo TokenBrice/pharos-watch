@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { HeroCard, HeroDesktopIdentityToolbar } from "@/components/stablecoin-detail/hero-card";
-import { HeroPriceCard } from "@/components/stablecoin-detail/hero-card-metrics";
+import { HeroPriceMetric } from "@/components/stablecoin-detail/hero-card-metrics";
 import { buildStablecoinDetailHeroViewModel } from "@/lib/stablecoin-detail-view-model";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import type { StablecoinClientMeta } from "@shared/types/stablecoin-client-meta";
@@ -255,7 +255,6 @@ function makeHeroProps(overrides: HeroBuilderOverrides = {}): HeroBuilderParams 
     performanceVsUsd1y: null,
     pegRef: 1,
     deviationBps: -2,
-    gaugeDeviationBps: 2,
     pegReferenceUnavailable: false,
     pegScoreResult,
     liquidityData,
@@ -289,17 +288,17 @@ function renderHero(overrides: HeroBuilderOverrides = {}): string {
 describe("HeroCard", () => {
   it("renders the existing unavailable placeholder when live price is null", () => {
     const html = renderToStaticMarkup(
-      <HeroPriceCard
+      <HeroPriceMetric
         coin={coin}
         coinData={{ ...coinData, price: null, priceConfidence: null }}
         price={{
           pegRef: 1,
           deviationBps: null,
-          gaugeDeviationBps: 0,
           pegReferenceUnavailable: false,
           isNavToken: false,
           limitedDepegCoverageNote: null,
         }}
+        variant="card"
       />,
     );
 
@@ -369,7 +368,6 @@ describe("HeroCard", () => {
       prevWeek: 1_000_000,
       prevMonth: 1_000_000,
       deviationBps: 350,
-      gaugeDeviationBps: 350,
       pegScoreResult: null,
       verdict: { archetype: "yield-bearing-hybrid", label: "Yield-Bearing Hybrid" },
     });
@@ -440,7 +438,6 @@ describe("HeroCard", () => {
       logoSrc: "/logos/susds.svg",
       isNavToken: true,
       deviationBps: 0,
-      gaugeDeviationBps: 0,
       pegScoreResult: null,
       reportCard: null,
       variantParent: parentCoin,
@@ -489,12 +486,33 @@ describe("HeroCard", () => {
       prevWeek: 490_000,
       prevMonth: 480_000,
       deviationBps: -300,
-      gaugeDeviationBps: -300,
       pegScoreResult: { ...pegScoreResult, activeDepeg: false, depegEventCoverageLimited: true },
       reportCard: reportCardWithInheritedBlacklistRisk,
     });
 
     expect(html).toContain("Below $1.00M live-event floor. Deviation is shown, but event history may stay empty.");
+  });
+
+  it("does not use USD market-cap history for Supply trends", () => {
+    const html = renderHero({
+      coin: { flags: { pegCurrency: "CHF" } },
+      coinData: {
+        price: 1.2,
+        circulating: { peggedCHF: 1_200_000 },
+        circulatingPrevWeek: { peggedCHF: 1_000_000 },
+        circulatingPrevMonth: { peggedCHF: 1_000_000 },
+      },
+      mcap: 1_200_000,
+      supply: 1_000_000,
+      prevDay: 1_100_000,
+      prevWeek: 1_000_000,
+      prevMonth: 1_000_000,
+      pegRef: 1.2,
+      reportCard: null,
+    });
+
+    expect(html).not.toContain("+20.00%");
+    expect(html).toContain("1.00M");
   });
 
   // Infrastructure membership is the only axis these cases vary: everything

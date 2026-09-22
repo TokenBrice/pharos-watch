@@ -85,15 +85,15 @@ async function recoverSlipstreamPoolsFromStaging(input: {
   }
 
   const candidates = rows.flatMap((row) => {
-    const poolAddress = row.pool_id.startsWith(`${config.chain}:`)
-      ? row.pool_id.slice(config.chain.length + 1).toLowerCase()
-      : "";
-    const baseToken = row.base_token?.toLowerCase() ?? "";
-    const quoteToken = row.quote_token?.toLowerCase() ?? "";
+    const poolAddress = canonicalEvmAddress(
+      row.pool_id.startsWith(`${config.chain}:`) ? row.pool_id.slice(config.chain.length + 1) : null,
+    );
+    const baseToken = canonicalEvmAddress(row.base_token);
+    const quoteToken = canonicalEvmAddress(row.quote_token);
     if (
-      !/^0x[0-9a-f]{40}$/.test(poolAddress) ||
-      !/^0x[0-9a-f]{40}$/.test(baseToken) ||
-      !/^0x[0-9a-f]{40}$/.test(quoteToken) ||
+      !poolAddress ||
+      !baseToken ||
+      !quoteToken ||
       !input.chainAddressToId.has(buildChainAddressKey(config.chain, baseToken)) ||
       !input.chainAddressToId.has(buildChainAddressKey(config.chain, quoteToken))
     ) return [];
@@ -103,7 +103,7 @@ async function recoverSlipstreamPoolsFromStaging(input: {
     const feeBps = row.fee_tier != null && Number.isFinite(row.fee_tier) && row.fee_tier > 0
       ? row.fee_tier
       : null;
-    return [{ poolAddress, expectedTokens: new Set([baseToken, quoteToken]), feeBps }];
+    return [{ poolAddress, expectedTokens: new Set<string>([baseToken, quoteToken]), feeBps }];
   });
   if (candidates.length === 0) return [];
 
@@ -536,12 +536,13 @@ export async function fetchSlipstreamPools(
           `[fetch-slipstream] ${protocol} pool ${pool.lp}: unexpected pool_fee ${pool.pool_fee}`,
         );
       }
-      const effectiveFeeBps = feeBps ?? 30;
+      // An undecodable fee stays null: `DexApiPool.feeRate` is nullable, so the
+      // row carries the neutral bucket instead of a fabricated tier.
       pools.push({
         source: protocol,
         chain: config.chain,
         poolAddress: pool.lp,
-        poolType: classifyClPoolType(protocol, effectiveFeeBps),
+        poolType: classifyClPoolType(protocol, feeBps),
         tokens: [
           {
             address: token0.token_address,
@@ -562,7 +563,7 @@ export async function fetchSlipstreamPools(
         // Keep this as unmeasured zero so downstream filters can distinguish
         // "unknown volume" from a measured no-volume pool.
         volume24hUsd: 0,
-        feeRate: normalizeFeeRateFromBps(effectiveFeeBps),
+        feeRate: normalizeFeeRateFromBps(feeBps),
         tickSpacing,
         balances: [reserve0, reserve1],
       });

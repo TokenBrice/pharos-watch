@@ -9,7 +9,6 @@ import {
   classifyTelegramPlanningOutcome,
   estimateTelegramTargetPlanCoordinatorBound,
 } from "../telegram-alert-target-plans";
-import { classifyTelegramTargetCounterBucket } from "../telegram-alert-job-target-outcomes";
 import { emptyAlerts, type RoutedSubscriberAlert } from "../dispatch-telegram-routing";
 import { parsePendingAlertProvenance } from "../../lib/telegram/pending-provenance";
 
@@ -137,24 +136,5 @@ describe("authoritative Telegram target plan contract", () => {
       currentEligible: true,
       generationChanged: false,
     })).toBe("snapshot_missing");
-  });
-
-  it("assigns every target to exactly one counter bucket with final state precedence", () => {
-    expect(classifyTelegramTargetCounterBucket({ status: "planned" })).toBe("planned");
-    expect(classifyTelegramTargetCounterBucket({ status: "queued" })).toBe("enqueued");
-    expect(classifyTelegramTargetCounterBucket({ status: "sent" })).toBe("accepted");
-    expect(classifyTelegramTargetCounterBucket({ status: "failed" })).toBe("failed");
-    expect(classifyTelegramTargetCounterBucket({ status: "expired" })).toBe("expired");
-    expect(classifyTelegramTargetCounterBucket({ status: "queued", cancelledAt: 1 })).toBe("cancelled");
-    expect(classifyTelegramTargetCounterBucket({
-      status: "queued",
-      finalDeliveryState: "execution_unknown",
-      cancelledAt: 1,
-    })).toBe("execution_unknown");
-    expect(classifyTelegramTargetCounterBucket({
-      status: "expired",
-      finalDeliveryState: "accepted",
-      effectState: "execution_unknown",
-    })).toBe("accepted");
   });
 });

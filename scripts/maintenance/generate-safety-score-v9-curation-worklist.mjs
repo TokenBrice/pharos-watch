@@ -13,6 +13,7 @@ import {
   classifyV9CurationWorklistStream,
   generateV9MissingDataRegistry,
 } from "./generate-safety-score-v9-missing-data-registry.ts";
+import { PRIORITY_BANDS, priorityBand } from "../lib/safety-score-v9-missing-data-work-types.ts";
 
 const STREAMS = [
   {
@@ -95,6 +96,7 @@ if (registry.summary.stablecoinCount !== cards.length) {
   throw new Error("Typed missing-data registry and replay card counts differ");
 }
 const assets = new Map(replay.pipeline.evaluatedSet.assets.map((asset) => [asset.assetId, asset]));
+const registryAssets = new Map(registry.stablecoins.map((asset) => [asset.assetId, asset]));
 
 function money(value) {
   if (!value) return "$0";
@@ -103,18 +105,24 @@ function money(value) {
   return `$${Math.round(value / 1e3)}k`;
 }
 
-const items = new Map(); // `${stream}:${assetId}` -> { codes: Map(code -> Set(path)) }
-function addItem(streamKey, assetId, code, path) {
+const items = new Map(); // `${stream}:${assetId}` -> { codes: Map(code -> Set(path)), critical }
+function addItem(streamKey, assetId, code, path, critical = false) {
   const key = `${streamKey}:${assetId}`;
-  const item = items.get(key) ?? { streamKey, assetId, codes: new Map() };
+  const item = items.get(key) ?? { streamKey, assetId, codes: new Map(), critical: false };
   const paths = item.codes.get(code) ?? new Set();
   if (path) paths.add(path);
   item.codes.set(code, paths);
+  item.critical ||= critical;
   items.set(key, item);
 }
 
 for (const card of cards) {
   const asset = assets.get(card.id);
+  const criticalReasonCodes = new Set(
+    registryAssets.get(card.id)?.missingItems
+      .filter((item) => item.critical)
+      .map((item) => item.reasonCode) ?? [],
+  );
   const lanes = [
     ...["backing", "exit", "control"].flatMap((pillar) => asset.scoreInput.pillars[pillar].reasons),
     ...asset.scoreInput.peg.reasons,
@@ -122,11 +130,15 @@ for (const card of cards) {
   ];
   for (const reason of lanes) {
     const streamKey = classifyV9CurationWorklistStream(reason.code);
-    if (streamKey) addItem(streamKey, card.id, reason.code, reason.path);
+    if (streamKey) {
+      addItem(streamKey, card.id, reason.code, reason.path, criticalReasonCodes.has(reason.code));
+    }
   }
   for (const reason of card.nrReasons ?? []) {
     const streamKey = classifyV9CurationWorklistStream(reason.code);
-    if (streamKey) addItem(streamKey, card.id, reason.code, reason.field ?? null);
+    if (streamKey) {
+      addItem(streamKey, card.id, reason.code, reason.field ?? null, criticalReasonCodes.has(reason.code));
+    }
   }
   const mechStream = STREAMS.find((stream) => stream.key === "MECH");
   if (
@@ -140,7 +152,6 @@ for (const card of cards) {
 }
 
 const supplyOf = (assetId) => assets.get(assetId)?.stressState?.exitPortfolio?.circulatingUsd ?? 0;
-const priority = (supply) => (supply >= 1e9 ? "P0" : supply >= 1e8 ? "P1" : supply >= 1e7 ? "P2" : "P3");
 
 const lines = [];
 lines.push("# V9 evidence-curation worklist (generated — do not hand-edit rows)");
@@ -187,7 +198,12 @@ lines.push("");
 for (const stream of STREAMS) {
   const streamItems = [...items.values()]
     .filter((item) => item.streamKey === stream.key)
-    .sort((left, right) => supplyOf(right.assetId) - supplyOf(left.assetId));
+    .sort((left, right) => {
+      const leftPriority = priorityBand(left.critical, supplyOf(left.assetId));
+      const rightPriority = priorityBand(right.critical, supplyOf(right.assetId));
+      const priorityOrder = PRIORITY_BANDS.indexOf(leftPriority) - PRIORITY_BANDS.indexOf(rightPriority);
+      return priorityOrder || supplyOf(right.assetId) - supplyOf(left.assetId);
+    });
   lines.push(`## ${stream.key} — ${stream.title} (${streamItems.length})`);
   lines.push("");
   lines.push(`**Releases:** ${stream.ceiling}. **How to fix:** ${stream.fix}`);
@@ -210,7 +226,7 @@ for (const stream of STREAMS) {
       })
       .join("; ");
     lines.push(
-      `| ☐ | ${stream.key}-${item.assetId} | ${priority(supply)} | ${money(supply)} | ` +
+      `| ☐ | ${stream.key}-${item.assetId} | ${priorityBand(item.critical, supply)} | ${money(supply)} | ` +
         `${card.grade}/${card.score ?? "—"} | ${codes} |`,
     );
   }

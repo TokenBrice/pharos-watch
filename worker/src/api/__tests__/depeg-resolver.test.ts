@@ -14,7 +14,7 @@ import {
   computeDdrPublicRowHash,
 } from "@shared/lib/depeg-resolver/public-contract";
 import { DDR_SNAPSHOT_CACHE_GENERATION as DDR_CACHE_ENVELOPE_GENERATION } from "../../lib/depeg-resolver-snapshot-cache";
-import { DDR_DURATION_BAND_META } from "@shared/types/depeg-resolver";
+import { DDR_DURATION_BAND_META, DdrResponseSchema } from "@shared/types/depeg-resolver";
 import type {
   DdrPredictionMeta,
   DdrResponse,
@@ -252,6 +252,7 @@ function cacheRows(payload: DdrResponse) {
       ],
     },
     { match: "FROM depeg_resolver_publication_snapshots", rows: [] },
+    { match: "FROM depeg_resolver_publication_snapshot_refs", rows: [] },
     { match: "FROM depeg_resolver_prediction_errata", rows: [] },
     { match: "FROM depeg_resolver_prediction_lock_state", rows: [] },
     { match: "FROM depeg_events WHERE id IN", rows: [] },
@@ -290,15 +291,23 @@ describe("handleDepegResolver", () => {
     vi.useFakeTimers();
     vi.setSystemTime(2_000_000 * 1000);
     const payload = snapshot(1_998_000, 1_999_000);
+    payload._meta.degraded = true;
+    payload._meta.degradedReason = "stale-cache";
+    payload._meta.degradedReasonDetail = "stablecoins-cache-unsafe";
+    payload._meta.lastRefreshAttemptAt = 1_999_900;
     const db = mockD1(cacheRows(payload));
 
     const res = await handleDepegResolver(db);
     const body = (await readJsonResponse(res, 200)) as DdrResponse;
+    const parsed = DdrResponseSchema.parse(body);
 
     expect(res.headers.get("Cache-Control")).toBe("no-store");
-    expect(body._meta.schemaVersion).toBe(2);
-    expect(body._meta.degraded).toBe(true);
-    expect(body._meta.degradedReason).toBe("stale-cache");
+    expect(parsed._meta.schemaVersion).toBe(2);
+    expect(parsed._meta.degraded).toBe(true);
+    expect(parsed._meta.degradedReason).toBe("stale-cache");
+    expect(parsed._meta.degradedReasonDetail).toBe("stablecoins-cache-unsafe");
+    expect(parsed._meta.lastRefreshAttemptAt).toBe(1_999_900);
+    expect(parsed._meta.computedAt).toBe(1_998_000);
     expect(body.rows[0].kind).toBe("prediction");
     expect(body.rows[0].live.stale).toBe(true);
     expect(body._meta.durationBand).toEqual(DDR_DURATION_BAND_META);
@@ -509,6 +518,7 @@ describe("handleDepegResolver", () => {
     latest._meta.basePayloadHash = computeDdrManifestBasePayloadHash(latest);
     const db = mockD1([
       { match: "FROM depeg_resolver_publication_snapshots", rows: [manifestRow(latest, 2)] },
+      { match: "FROM depeg_resolver_publication_snapshot_refs", rows: [] },
       ...cacheRows(cached),
     ]);
 
@@ -567,6 +577,7 @@ describe("handleDepegResolver", () => {
       },
       { match: "FROM cache WHERE key = ?", rows: [], first: null },
       { match: "FROM depeg_resolver_publication_snapshots", rows: [] },
+      { match: "FROM depeg_resolver_publication_snapshot_refs", rows: [] },
       { match: "FROM depeg_resolver_prediction_errata", rows: [] },
       { match: "FROM depeg_events WHERE id IN", rows: [] },
     ]);

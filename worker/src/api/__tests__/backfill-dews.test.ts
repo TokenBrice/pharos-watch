@@ -202,6 +202,12 @@ describe("handleBackfillDEWS", () => {
         tvl7dAgo: 2_000_000,
       }),
     );
+    const historyReads = db.getHistory().filter((entry) =>
+      entry.sql.includes("FROM supply_history") || entry.sql.includes("FROM dex_liquidity_history")
+    );
+    expect(historyReads).toHaveLength(2);
+    expect(historyReads.every((entry) => entry.sql.includes("snapshot_date BETWEEN ? AND ?"))).toBe(true);
+    expect(historyReads.every((entry) => entry.binds.length === 2)).toBe(true);
   });
 
   it("rejects GET repair mutations without dry-run", async () => {

@@ -156,6 +156,21 @@ describe("buildSelectorRows", () => {
     });
     expect(result.datasetHash).toMatch(/^[a-f0-9]{64}$/);
   });
+
+  it("keeps an unread supply distinct from an explicit zero", () => {
+    const rows = buildSelectorRows({
+      ...EMPTY_ARGS,
+      stablecoinsData: {
+        peggedAssets: [
+          { id: "usdc-circle", circulating: { peggedUSD: 0 } },
+          { id: "unreviewed", circulating: {} },
+        ],
+      } as unknown as StablecoinListResponse,
+    }).rows;
+    expect(rows.get("usdc-circle")!.supplyUsd).toBe(0);
+    expect(rows.get("unreviewed")!.supplyUsd).toBeNull();
+    expect(buildSelectorRows(EMPTY_ARGS).rows.get("usdc-circle")!.supplyUsd).toBeNull();
+  });
 });
 
 describe("controlled custody-model projection", () => {

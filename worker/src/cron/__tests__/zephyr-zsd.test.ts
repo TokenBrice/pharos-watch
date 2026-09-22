@@ -55,8 +55,23 @@ describe("parseZephyrZsdStats", () => {
       supply: 385_038.0963333748,
       mcapPrice: 1.003,
       mcap: 386_193.2106223749,
+      observedAt: null,
       priceReported: true,
     });
+  });
+
+  it("carries the upstream scanner observation time instead of fetch time", () => {
+    expect(parseZephyrZsdStats({
+      zsd_circ: 385_038.0963333748,
+      zsd_price: 1.003,
+      captured_at: "2026-09-21T05:24:56.925Z",
+    })?.observedAt).toBe(1_789_968_296);
+
+    expect(parseZephyrZsdStats({
+      zsd_circ: 385_038.0963333748,
+      zsd_price: 1.003,
+      block_timestamp: 1_790_000_000,
+    })?.observedAt).toBe(1_790_000_000);
   });
 
   it("ignores unreasonable live zsd_price values for ZSD market-cap metadata", () => {
@@ -67,6 +82,7 @@ describe("parseZephyrZsdStats", () => {
       supply: 12_345,
       mcapPrice: 1,
       mcap: 12_345,
+      observedAt: null,
       priceReported: false,
     });
 
@@ -77,6 +93,7 @@ describe("parseZephyrZsdStats", () => {
       supply: 12_345,
       mcapPrice: 1,
       mcap: 12_345,
+      observedAt: null,
       priceReported: false,
     });
   });
@@ -89,6 +106,7 @@ describe("parseZephyrZsdStats", () => {
       supply: 385_038.0963333748,
       mcapPrice: 1,
       mcap: 385_038.0963333748,
+      observedAt: null,
       priceReported: false,
     });
   });
@@ -109,6 +127,7 @@ describe("parseZephyrZysStats", () => {
       supply: 165_587.3320289986,
       mcapPrice: 1.9068,
       mcap: 315_741.9247128945,
+      observedAt: null,
       priceReported: true,
     });
   });
@@ -166,6 +185,7 @@ describe("buildZephyrZsdPeggedAsset", () => {
       priceObservedAtMode: "upstream",
       priceSyncedAt: 1_700_000_060,
       supplySource: "zephyr-scanner",
+      supplyObservedAt: null,
       circulating: { peggedUSD: 384_268.020140708 },
       chainCirculating: {},
       chains: [],
@@ -204,12 +224,36 @@ describe("buildZephyrZsdPeggedAsset", () => {
       price: 0.9999,
       priceSource: "zephyr-scanner",
       priceConfidence: "single-source",
-      priceUpdatedAt: 1_700_000_060,
-      priceObservedAt: 1_700_000_060,
-      priceObservedAtMode: "local_fetch",
+      priceUpdatedAt: null,
+      priceObservedAt: null,
+      priceObservedAtMode: null,
       priceSyncedAt: 1_700_000_060,
       supplySource: "zephyr-scanner",
+      supplyObservedAt: null,
       circulating: { peggedUSD: 385_038.0963333748 },
+    });
+  });
+
+  it("carries the upstream scanner observation time into supply and price provenance", () => {
+    const asset = buildZephyrZsdPeggedAsset(
+      makeZsdMeta(),
+      {
+        supply: 385_038.0963333748,
+        mcapPrice: 0.9999,
+        mcap: 384_999.5925237415,
+        observedAt: 1_789_968_296,
+        priceReported: true,
+      },
+      null,
+      1_700_000_060,
+    );
+
+    expect(asset).toMatchObject({
+      priceUpdatedAt: 1_789_968_296,
+      priceObservedAt: 1_789_968_296,
+      priceObservedAtMode: "upstream",
+      priceSyncedAt: 1_700_000_060,
+      supplyObservedAt: 1_789_968_296,
     });
   });
 

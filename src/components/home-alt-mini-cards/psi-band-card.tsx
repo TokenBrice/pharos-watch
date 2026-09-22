@@ -2,14 +2,13 @@
 
 import { useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PulseCardHeader } from "@/components/home-alt-mini-cards/pulse-card-header";
-import { QueryStateNotice } from "@/components/query-state-notice";
+import { PulseCard } from "@/components/home-alt-mini-cards/pulse-card-header";
 import { RowSparkline } from "@/components/row-sparkline";
 import { useStabilityIndex } from "@/hooks/api-hooks";
 import { CHART_BLUE } from "@/lib/chart-colors";
 import { resolveQueryViewState } from "@/lib/query-view-state";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
-import { buildPsiChartData } from "@shared/lib/psi-view-model";
+import { buildPsiChartData, getDisplayedPsi, getDisplayedPsiBasis } from "@shared/lib/psi-view-model";
 
 function StabilityAreaChart({ values, color }: { values: number[]; color: string }): React.JSX.Element | null {
   return (
@@ -51,6 +50,8 @@ export function PsiBandCard({ embedded = false }: { embedded?: boolean } = {}): 
     const avg = sparkValues.reduce((sum, value) => sum + value, 0) / sparkValues.length;
     return current.score - avg;
   }, [current, sparkValues]);
+  const displayedPsi = current ? getDisplayedPsi(current) : null;
+  const displayedPsiBasis = current ? getDisplayedPsiBasis(current) : null;
 
   const band = current?.band as ConditionBand | undefined;
   const sparkColor = CHART_BLUE;
@@ -66,58 +67,64 @@ export function PsiBandCard({ embedded = false }: { embedded?: boolean } = {}): 
   });
 
   return (
-    <div className={`${embedded ? "h-full min-h-0 gap-3 p-3.5" : "pharos-card-shell gap-4 p-4"} flex flex-col`}>
-      <PulseCardHeader
-        href="/stability-index/"
-        expandLabel="Open Stability Index"
-        label={
-          <span className="flex items-center gap-1.5">
-            Stability Index
-            {bandLabel ? <span className={`font-medium ${bandClass}`}>· {bandLabel}</span> : null}
-          </span>
-        }
-      />
-      {state === "unavailable" ? (
-        <QueryStateNotice state={state} label="Stability Index" onRetry={() => void query.refetch()} compact />
-      ) : (
-        <div className="flex flex-col gap-2">
-          {state === "stale-with-data" ? (
-            <QueryStateNotice
-              state={state}
-              label="Stability Index"
-              dataUpdatedAt={query.dataUpdatedAt}
-              onRetry={() => void query.refetch()}
-              compact
-            />
-          ) : null}
-          <div className="flex items-center gap-4">
-            <div className="min-w-0 shrink-0">
-              {state === "loading" ? (
-                <Skeleton className="h-9 w-24" />
-              ) : current ? (
-                <span className="block pharos-numeric text-4xl font-bold tracking-tight text-foreground">
-                  {current.score.toFixed(2)}
-                </span>
+    <PulseCard
+      className={`${embedded ? "h-full min-h-0 gap-3 p-3.5" : "pharos-card-shell gap-4 p-4"} flex flex-col`}
+      href="/stability-index/"
+      expandLabel="Open Stability Index"
+      label={
+        <span className="flex items-center gap-1.5">
+          Stability Index
+          {bandLabel ? <span className={`font-medium ${bandClass}`}>· {bandLabel}</span> : null}
+        </span>
+      }
+      state={state}
+      notice={{
+        label: "Stability Index",
+        dataUpdatedAt: query.dataUpdatedAt,
+        onRetry: () => void query.refetch(),
+        compact: true,
+      }}
+    >
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-4">
+          <div className="min-w-0 shrink-0">
+            {state === "loading" ? (
+              <Skeleton className="h-9 w-24" />
+            ) : current ? (
+              <span className="block pharos-numeric text-4xl font-bold tracking-tight text-foreground">
+                {current.score.toFixed(2)}
+              </span>
+            ) : null}
+            <p className="mt-1.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+              {current ? (
+                <>
+                  <span>raw instant</span>
+                  {displayedPsi && displayedPsiBasis === "rolling 24h avg" ? (
+                    <>
+                      {" · "}
+                      {displayedPsiBasis} <span className="pharos-numeric">{displayedPsi.score.toFixed(1)}</span>
+                    </>
+                  ) : null}
+                  {" · "}
+                </>
               ) : null}
-              <p className="mt-1.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                90D{" "}
-                {avgDelta !== null ? (
-                  <span className={`pharos-numeric ${avgDeltaClass}`}>
-                    {avgDelta >= 0 ? "+" : ""}
-                    {avgDelta.toFixed(1)}
-                  </span>
-                ) : (
-                  "—"
-                )}{" "}
-                vs avg
-              </p>
-            </div>
-            <div className={`ml-auto flex-1 ${embedded ? "h-14" : "h-20"}`}>
-              <StabilityAreaChart values={sparkValues} color={sparkColor} />
-            </div>
+              90D{" "}
+              {avgDelta !== null ? (
+                <span className={`pharos-numeric ${avgDeltaClass}`}>
+                  {avgDelta >= 0 ? "+" : ""}
+                  {avgDelta.toFixed(1)}
+                </span>
+              ) : (
+                "—"
+              )}{" "}
+              vs avg
+            </p>
+          </div>
+          <div className={`ml-auto flex-1 ${embedded ? "h-14" : "h-20"}`}>
+            <StabilityAreaChart values={sparkValues} color={sparkColor} />
           </div>
         </div>
-      )}
-    </div>
+      </div>
+    </PulseCard>
   );
 }

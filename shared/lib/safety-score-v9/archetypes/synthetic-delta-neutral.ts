@@ -1,14 +1,14 @@
 import type { V9SyntheticDeltaNeutralMechanismRiskReview } from "../../../types/safety-score-v9-backing";
-import { compareText } from "../../../types/safety-score-v9-fact-primitives";
+import { compareText } from "../primitives";
+import { evaluateV9ArchetypeBacking } from "./evaluation";
 import {
   createV9BackingStructuralReason,
-  evaluateV9ArchetypeBacking,
   v9StructuralResponsibilityForStatus,
   type V9BackingAssetInput,
   type V9BackingEvaluationPolicy,
   type V9BackingResult,
   type V9BackingStructuralReason,
-} from "../backing";
+} from "../backing-primitives";
 import { resolveV9MetricApplicability } from "./rwa-credit-fund";
 
 export type { V9SyntheticDeltaNeutralMechanismRiskReview } from "../../../types/safety-score-v9-backing";

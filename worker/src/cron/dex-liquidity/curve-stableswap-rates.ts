@@ -21,8 +21,8 @@ import {
   decodeEvmCaptureAddress,
   decodeEvmCaptureUint256,
   decodeEvmCaptureUint256Array,
-  isFreshEvmCaptureHeader,
   mapEvmCaptureResults,
+  runPinnedBlockCapture,
 } from "./evm-capture-helpers";
 import { hasScoreFacingMeasuredExecution } from "./scoring-helpers";
 import type {
@@ -291,88 +291,69 @@ async function enrichChain(input: {
     timeoutMs: 15_000,
     maxRetries: 0,
   };
-  const blockNumber = await input.dependencies.fetchBlockNumber(input.chain, rpcOptions);
-  if (blockNumber == null) {
-    input.probes.forEach(clearProbe);
-    return;
-  }
-  const header = await input.dependencies.fetchBlockHeader(input.chain, blockNumber, rpcOptions);
-  if (
-    !header ||
-    header.number !== blockNumber ||
-    !isFreshEvmCaptureHeader(header, input.nowSec, CURVE_STABLESWAP_RATE_CAPTURE_MAX_AGE_SEC)
-  ) {
-    input.probes.forEach(clearProbe);
-    return;
-  }
-
-  const states = new Map<CurveRateProbe, CurveRatePoolState | null>();
-  for (let start = 0; start < input.probes.length; start += MAX_PROBES_PER_MULTICALL) {
-    throwIfAborted(input.signal);
-    const probes = input.probes.slice(start, start + MAX_PROBES_PER_MULTICALL);
-    const results = await input.dependencies.fetchMulticall(
-      input.chain,
-      buildPoolCalls(probes, start),
-      blockNumber,
-      rpcOptions,
-    );
-    if (!results) {
-      input.probes.forEach(clearProbe);
-      return;
-    }
-    const byLabel = mapEvmCaptureResults(results);
-    for (let batchIndex = 0; batchIndex < probes.length; batchIndex++) {
-      const probe = probes[batchIndex]!;
-      states.set(
-        probe,
-        probe.incompatibleLayout
-          ? null
-          : parsePoolState({ chain: input.chain, probe, index: start + batchIndex, results: byLabel }),
-      );
-    }
-  }
-
-  const confirmedHeader = await input.dependencies.fetchBlockHeader(input.chain, blockNumber, rpcOptions);
-  if (
-    !confirmedHeader ||
-    confirmedHeader.number !== header.number ||
-    confirmedHeader.hash.toLowerCase() !== header.hash.toLowerCase() ||
-    !isFreshEvmCaptureHeader(
-      confirmedHeader,
-      input.nowSec,
-      CURVE_STABLESWAP_RATE_CAPTURE_MAX_AGE_SEC,
-    )
-  ) {
-    input.probes.forEach(clearProbe);
-    return;
-  }
-
-  for (const probe of input.probes) {
-    const state = states.get(probe);
-    if (!state) {
-      clearProbe(probe);
-      continue;
-    }
-    for (const reference of probe.references) {
-      const model = buildRateAwareExecutionModel({
-        chain: input.chain,
-        stablecoinId: reference.stablecoinId,
-        candidate: reference.candidate,
-        state,
-        chainAddressToId: input.chainAddressToId,
-      });
-      if (!model) {
-        clearCandidate(reference);
-        continue;
+  await runPinnedBlockCapture<Map<CurveRateProbe, CurveRatePoolState | null>>({
+    chain: input.chain,
+    rpcOptions,
+    fetchBlockNumber: input.dependencies.fetchBlockNumber,
+    fetchBlockHeader: input.dependencies.fetchBlockHeader,
+    nowSec: input.nowSec,
+    maxAgeSec: CURVE_STABLESWAP_RATE_CAPTURE_MAX_AGE_SEC,
+    verifyDeployment: async () => ({ ok: true }),
+    buildCalls: async ({ blockNumber }) => {
+      const states = new Map<CurveRateProbe, CurveRatePoolState | null>();
+      for (let start = 0; start < input.probes.length; start += MAX_PROBES_PER_MULTICALL) {
+        throwIfAborted(input.signal);
+        const probes = input.probes.slice(start, start + MAX_PROBES_PER_MULTICALL);
+        const results = await input.dependencies.fetchMulticall(
+          input.chain,
+          buildPoolCalls(probes, start),
+          blockNumber,
+          rpcOptions,
+        );
+        if (!results) return { ok: false };
+        const byLabel = mapEvmCaptureResults(results);
+        for (let batchIndex = 0; batchIndex < probes.length; batchIndex++) {
+          const probe = probes[batchIndex]!;
+          states.set(
+            probe,
+            probe.incompatibleLayout
+              ? null
+              : parsePoolState({ chain: input.chain, probe, index: start + batchIndex, results: byLabel }),
+          );
+        }
       }
-      const extra = { ...(reference.pool.extra ?? {}) };
-      delete extra.curveStableswapRateInputExecutionCandidate;
-      delete extra.executionCapabilityGate;
-      extra.ammExecutionModel = model;
-      extra.measurement = { ...(extra.measurement ?? {}), balanceMeasured: true };
-      reference.pool.extra = extra;
-    }
-  }
+      return { ok: true, value: states };
+    },
+    onResults: (states) => {
+      for (const probe of input.probes) {
+        const state = states.get(probe);
+        if (!state) {
+          clearProbe(probe);
+          continue;
+        }
+        for (const reference of probe.references) {
+          const model = buildRateAwareExecutionModel({
+            chain: input.chain,
+            stablecoinId: reference.stablecoinId,
+            candidate: reference.candidate,
+            state,
+            chainAddressToId: input.chainAddressToId,
+          });
+          if (!model) {
+            clearCandidate(reference);
+            continue;
+          }
+          const extra = { ...(reference.pool.extra ?? {}) };
+          delete extra.curveStableswapRateInputExecutionCandidate;
+          delete extra.executionCapabilityGate;
+          extra.ammExecutionModel = model;
+          extra.measurement = { ...(extra.measurement ?? {}), balanceMeasured: true };
+          reference.pool.extra = extra;
+        }
+      }
+    },
+    onFailure: () => input.probes.forEach(clearProbe),
+  });
 }
 
 /**

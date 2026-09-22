@@ -14,12 +14,10 @@ import {
   type DexMeasuredExecutionUniswapV4PoolProof,
 } from "@shared/types/measured-execution";
 import { UNISWAP_V4_DEPLOYMENT, UNISWAP_V4_SHADOW_DEPLOYMENTS } from "@shared/lib/measured-execution-deployment-policies";
-import { throwIfAborted } from "../../lib/abort";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import {
   fetchEvmCodeAtBlock,
   fetchEvmMulticall3Aggregate3AtBlock,
-  type EvmMulticall3Call,
   type EvmMulticall3Result,
 } from "../../lib/evm-rpc";
 import {
@@ -27,8 +25,15 @@ import {
   type DexMeasuredExecutionRpcBudget,
   type DexMeasuredRawQuotePoint,
 } from "./profiles";
+import { decodeAddressResult as decodeEvmAddressResult } from "./evm-codecs";
 import { MAX_UINT128, usdToRawAmount } from "./fixed-point";
-import { executeEvmQuotePlan, materializeEvmQuotePoint } from "./evm-quote-plan";
+import {
+  buildEvmSingleCallQuotePlans,
+  createEvmQuotePlanMulticallExecutor,
+  executeEvmQuotePlan,
+  materializeEvmQuotePoint,
+  materializeRevertedEvmQuotePoint,
+} from "./evm-quote-plan";
 
 export const UNISWAP_V4_ADAPTER_PROFILE_ID = UNISWAP_V4_DEPLOYMENT.adapterProfileId;
 export const UNISWAP_V4_HOOK_FREE_ADDRESS = UNISWAP_V4_DEPLOYMENT.hookFreeAddress;
@@ -48,6 +53,11 @@ const UNISWAP_V4_POOL_KEY_PARAMETERS = parseAbiParameters(
 const UNISWAP_V4_MULTICALL_BATCH_SIZE = 8;
 const UNISWAP_V4_MULTICALL_GAS = "0x1c9c380";
 const UNISWAP_V4_Q192 = 1n << 192n;
+
+const uniswapV4PoolStateMulticallExecutor = createEvmQuotePlanMulticallExecutor({});
+const uniswapV4QuoteMulticallExecutor = createEvmQuotePlanMulticallExecutor({
+  gas: UNISWAP_V4_MULTICALL_GAS,
+});
 
 export interface UniswapV4Deployment {
   adapterProfileId: typeof UNISWAP_V4_ADAPTER_PROFILE_ID;
@@ -193,17 +203,9 @@ function decodeAddressResult(
   abi: typeof UNISWAP_V4_QUOTER_ABI | typeof UNISWAP_V4_STATE_VIEW_ABI,
   data: `0x${string}`,
 ): `0x${string}` | null {
-  try {
-    const result = decodeFunctionResult({
-      abi,
-      functionName: "poolManager",
-      data,
-    });
-    const normalized = String(result).toLowerCase();
-    return /^0x[a-f0-9]{40}$/.test(normalized) ? (normalized as `0x${string}`) : null;
-  } catch {
-    return null;
-  }
+  return decodeEvmAddressResult({
+    decode: () => decodeFunctionResult({ abi, functionName: "poolManager", data }),
+  });
 }
 
 export interface UniswapV4RuntimeEvidence {
@@ -455,115 +457,123 @@ export async function resolveUniswapV4PoolBindings(input: {
   const outcomes = input.requests.map<UniswapV4PoolBindingOutcome>((request) => ({
     targetId: request.target.targetId,
   }));
-  for (let index = 0; index < encoded.length; index++) {
-    if (encoded[index] == null) {
-      outcomes[index] = {
-        targetId: input.requests[index]!.target.targetId,
-        failureReason: "invalid-v4-target",
-      };
-    }
-  }
-  const valid = encoded.filter((request): request is NonNullable<typeof request> => request != null);
-  for (let offset = 0; offset < valid.length; offset += UNISWAP_V4_MULTICALL_BATCH_SIZE) {
-    throwIfAborted(input.signal);
-    const chunk = valid.slice(offset, offset + UNISWAP_V4_MULTICALL_BATCH_SIZE);
-    const chain = chunk[0]!.target.chain;
-    if (input.rpcBudget && !input.rpcBudget.canRequestChain(chain)) {
-      for (const request of chunk) {
-        outcomes[request.index] = {
-          targetId: request.target.targetId,
-          failureReason: "pool-state-rpc-unavailable",
-        };
-      }
-      continue;
-    }
-    const calls: EvmMulticall3Call[] = chunk.flatMap((request) => [
-      {
+  const plans = encoded.flatMap((request) => request == null ? [] : [
+    {
+      index: request.index * 2,
+      request,
+      kind: "slot0" as const,
+      label: `${request.index}:slot0`,
+      chain: request.target.chain,
+      blockNumber: input.blockNumber,
+      call: {
         label: `${request.index}:slot0`,
         target: request.deployment.stateViewAddress,
         callData: request.slot0CallData,
         allowFailure: true,
       },
-      {
+    },
+    {
+      index: request.index * 2 + 1,
+      request,
+      kind: "liquidity" as const,
+      label: `${request.index}:liquidity`,
+      chain: request.target.chain,
+      blockNumber: input.blockNumber,
+      call: {
         label: `${request.index}:liquidity`,
         target: request.deployment.stateViewAddress,
         callData: request.liquidityCallData,
         allowFailure: true,
       },
-    ]);
-    const results = await fetchEvmMulticall3Aggregate3AtBlock(
-      chain,
-      calls,
-      input.blockNumber,
-      {
-        chainRpcs: input.chainRpcs,
-        signal: input.signal,
-        timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
-        ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs } : {}),
-        ...(input.rpcBudget ? { beforeRequest: () => input.rpcBudget!.tryConsume() } : {}),
-        maxRetries: 0,
-        multicallBatchSize: calls.length,
+    },
+  ]);
+  const reads: Array<{ result?: EvmMulticall3Result; failureReason?: string } | null> = Array.from(
+    { length: input.requests.length * 2 },
+    () => null,
+  );
+  await executeEvmQuotePlan({
+    plans,
+    outcomes: reads,
+    chainRpcs: input.chainRpcs,
+    signal: input.signal,
+    rpcBudget: input.rpcBudget,
+    spec: {
+      batchSize: UNISWAP_V4_MULTICALL_BATCH_SIZE * 2,
+      executeMulticall: uniswapV4PoolStateMulticallExecutor,
+      adaptive: {
+        failedAttemptAccounting: "single-call",
+        unattemptedResult: "failure-result",
       },
-    );
-    input.rpcBudget?.recordChainResult(chain, results != null);
-    if (results == null) {
-      for (const request of chunk) {
-        outcomes[request.index] = {
-          targetId: request.target.targetId,
-          failureReason: input.rpcBudget?.stopReason ?? "pool-state-rpc-unavailable",
-        };
-      }
+      materializeTransportFailure: (_plan, reason) => ({
+        failureReason: reason ?? "pool-state-rpc-unavailable",
+      }),
+      resolveResult: (_plan, result) => ({ result }),
+    },
+  });
+  for (let index = 0; index < encoded.length; index += 1) {
+    const request = encoded[index];
+    if (request == null) {
+      outcomes[index] = {
+        targetId: input.requests[index]!.target.targetId,
+        failureReason: "invalid-v4-target",
+      };
       continue;
     }
-    const byLabel = new Map(results.map((result) => [result.label, result]));
-    for (const request of chunk) {
-      const slot0Result = byLabel.get(`${request.index}:slot0`);
-      const liquidityResult = byLabel.get(`${request.index}:liquidity`);
-      const slot0 = slot0Result?.success ? decodeSlot0(slot0Result.returnData) : null;
-      const liquidity = liquidityResult?.success
-        ? decodeLiquidity(liquidityResult.returnData)
-        : null;
-      if (!slot0Result?.success || !liquidityResult?.success || slot0 == null || liquidity == null) {
-        outcomes[request.index] = {
-          targetId: request.target.targetId,
-          failureReason: "pool-state-call-failed",
-        };
-      } else if (slot0.sqrtPriceX96 <= 0n || liquidity <= 0n) {
-        outcomes[request.index] = {
-          targetId: request.target.targetId,
-          failureReason: "pool-uninitialized-or-empty",
-        };
-      } else if (slot0.lpFee !== request.target.feePips) {
-        outcomes[request.index] = {
-          targetId: request.target.targetId,
-          failureReason: "pool-fee-mismatch",
-        };
-      } else {
-        outcomes[request.index] = {
-          targetId: request.target.targetId,
-          proof: {
-            blockNumber: input.blockNumber,
-            poolId: request.poolId,
-            poolManagerAddress: request.deployment.poolManagerAddress,
-            poolManagerCodeHash: request.runtimeEvidence.poolManagerCodeHash,
-            stateViewAddress: request.deployment.stateViewAddress,
-            stateViewCodeHash: request.runtimeEvidence.stateViewCodeHash,
-            quoterPoolManagerCallData: request.runtimeEvidence.quoterPoolManagerCallData,
-            quoterPoolManagerReturnData: request.runtimeEvidence.quoterPoolManagerReturnData,
-            stateViewPoolManagerCallData: request.runtimeEvidence.stateViewPoolManagerCallData,
-            stateViewPoolManagerReturnData: request.runtimeEvidence.stateViewPoolManagerReturnData,
-            slot0CallData: request.slot0CallData.toLowerCase(),
-            slot0ReturnData: slot0Result.returnData.toLowerCase(),
-            liquidityCallData: request.liquidityCallData.toLowerCase(),
-            liquidityReturnData: liquidityResult.returnData.toLowerCase(),
-            sqrtPriceX96: slot0.sqrtPriceX96.toString(),
-            tick: slot0.tick,
-            protocolFee: slot0.protocolFee,
-            lpFee: slot0.lpFee,
-            liquidity: liquidity.toString(),
-          },
-        };
-      }
+    const slot0Read = reads[index * 2];
+    const liquidityRead = reads[index * 2 + 1];
+    if (slot0Read?.failureReason || liquidityRead?.failureReason) {
+      outcomes[index] = {
+        targetId: request.target.targetId,
+        failureReason: slot0Read?.failureReason ?? liquidityRead!.failureReason,
+      };
+      continue;
+    }
+    const slot0Result = slot0Read?.result;
+    const liquidityResult = liquidityRead?.result;
+    const slot0 = slot0Result?.success ? decodeSlot0(slot0Result.returnData) : null;
+    const liquidity = liquidityResult?.success
+      ? decodeLiquidity(liquidityResult.returnData)
+      : null;
+    if (!slot0Result?.success || !liquidityResult?.success || slot0 == null || liquidity == null) {
+      outcomes[index] = {
+        targetId: request.target.targetId,
+        failureReason: "pool-state-call-failed",
+      };
+    } else if (slot0.sqrtPriceX96 <= 0n || liquidity <= 0n) {
+      outcomes[index] = {
+        targetId: request.target.targetId,
+        failureReason: "pool-uninitialized-or-empty",
+      };
+    } else if (slot0.lpFee !== request.target.feePips) {
+      outcomes[index] = {
+        targetId: request.target.targetId,
+        failureReason: "pool-fee-mismatch",
+      };
+    } else {
+      outcomes[index] = {
+        targetId: request.target.targetId,
+        proof: {
+          blockNumber: input.blockNumber,
+          poolId: request.poolId,
+          poolManagerAddress: request.deployment.poolManagerAddress,
+          poolManagerCodeHash: request.runtimeEvidence.poolManagerCodeHash,
+          stateViewAddress: request.deployment.stateViewAddress,
+          stateViewCodeHash: request.runtimeEvidence.stateViewCodeHash,
+          quoterPoolManagerCallData: request.runtimeEvidence.quoterPoolManagerCallData,
+          quoterPoolManagerReturnData: request.runtimeEvidence.quoterPoolManagerReturnData,
+          stateViewPoolManagerCallData: request.runtimeEvidence.stateViewPoolManagerCallData,
+          stateViewPoolManagerReturnData: request.runtimeEvidence.stateViewPoolManagerReturnData,
+          slot0CallData: request.slot0CallData.toLowerCase(),
+          slot0ReturnData: slot0Result.returnData.toLowerCase(),
+          liquidityCallData: request.liquidityCallData.toLowerCase(),
+          liquidityReturnData: liquidityResult.returnData.toLowerCase(),
+          sqrtPriceX96: slot0.sqrtPriceX96.toString(),
+          tick: slot0.tick,
+          protocolFee: slot0.protocolFee,
+          lpFee: slot0.lpFee,
+          liquidity: liquidity.toString(),
+        },
+      };
     }
   }
   return outcomes;
@@ -665,22 +675,6 @@ function decodeQuotePoint(
   }
 }
 
-function buildRevertedPoint(
-  request: EncodedUniswapV4QuoteRequest,
-  result: EvmMulticall3Result,
-): DexMeasuredRawQuotePoint {
-  return materializeEvmQuotePoint({
-    amountInRaw: request.amountInRaw,
-    amountOutRaw: 0n,
-    callData: request.callData,
-    returnData: result.returnData,
-    tokenIn: request.target.tokenIn,
-    tokenOut: request.target.tokenOut,
-    reverted: true,
-    adapterMetadata: { executionReverted: true },
-  })!;
-}
-
 export async function quoteUniswapV4Requests(input: {
   requests: readonly UniswapV4QuoteRequest[];
   blockNumber: number;
@@ -698,17 +692,7 @@ export async function quoteUniswapV4Requests(input: {
         }
       : { targetId: request.target.targetId, inputUsd: request.inputUsd },
   );
-  const plans = encoded.flatMap((request) => request ? [{
-    ...request,
-    chain: request.target.chain,
-    blockNumber: input.blockNumber,
-    call: {
-          label: request.label,
-          target: request.endpointAddress,
-          callData: request.callData,
-          allowFailure: true,
-    },
-  }] : []);
+  const plans = buildEvmSingleCallQuotePlans(encoded, input.blockNumber);
   return executeEvmQuotePlan({
     plans,
     outcomes,
@@ -717,22 +701,7 @@ export async function quoteUniswapV4Requests(input: {
     rpcBudget: input.rpcBudget,
     spec: {
       batchSize: UNISWAP_V4_MULTICALL_BATCH_SIZE,
-      executeMulticall: ({ chain, calls, blockNumber, chainRpcs, signal, rpcBudget, onBudgetStop }) =>
-        fetchEvmMulticall3Aggregate3AtBlock(chain, calls, blockNumber, {
-          chainRpcs,
-          signal,
-          timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
-          ...(rpcBudget ? { deadlineMs: rpcBudget.deadlineMs } : {}),
-          ...(rpcBudget ? { beforeRequest: () => {
-            const consumed = rpcBudget.tryConsume();
-            const reason = rpcBudget.stopReason;
-            if (!consumed && reason) onBudgetStop?.(reason);
-            return consumed;
-          } } : {}),
-          maxRetries: 0,
-          gas: UNISWAP_V4_MULTICALL_GAS,
-          multicallBatchSize: calls.length,
-        }),
+      executeMulticall: uniswapV4QuoteMulticallExecutor,
       adaptive: {
         failedAttemptAccounting: "single-call",
         unattemptedResult: "failure-result",
@@ -753,7 +722,7 @@ export async function quoteUniswapV4Requests(input: {
             : {
                 targetId: request.target.targetId,
                 inputUsd: request.inputUsd,
-                point: buildRevertedPoint(request, result),
+                point: materializeRevertedEvmQuotePoint(request, result),
               };
         }
         const point = decodeQuotePoint(request, result);

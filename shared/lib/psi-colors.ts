@@ -1,6 +1,17 @@
 /** PSI band colors — single source of truth for hex and Tailwind classes. */
 
-export type ConditionBand = "BEDROCK" | "STEADY" | "TREMOR" | "FRACTURE" | "CRISIS" | "MELTDOWN";
+import { PSI_CONDITION_BAND_VALUES, type PsiConditionBand } from "../types/stability";
+
+/** The closed band vocabulary lives in the wire contract; this alias keeps lib call sites terse. */
+export type ConditionBand = PsiConditionBand;
+
+/** Hex color for a band value that is not in the closed vocabulary (legacy rows, unvalidated caches). */
+export const PSI_UNKNOWN_BAND_HEX = "#8b8fa3";
+
+/** Narrowing guard for band values that arrive unvalidated, e.g. from historical rows. */
+export function isConditionBand(value: string): value is ConditionBand {
+  return (PSI_CONDITION_BAND_VALUES as readonly string[]).includes(value);
+}
 
 /** Hex colors for each PSI condition band. */
 export const PSI_HEX_COLORS: Record<ConditionBand, string> = {

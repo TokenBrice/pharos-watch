@@ -8,7 +8,7 @@ export type { CsvColumn };
 
 /**
  * Build the CSV body (preamble + header + rows). Pure: no DOM access.
- * Mirrors `src/lib/csv-export.ts` field-escaping rules exactly.
+ * Uses the shared CSV field-escaping rules for every rendered row.
  */
 export function buildCsvWithPreamble<T>(
   data: T[],

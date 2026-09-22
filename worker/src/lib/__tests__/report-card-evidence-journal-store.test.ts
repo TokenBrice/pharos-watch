@@ -7,11 +7,9 @@ import {
   type ReportCardEvidenceJournalV1,
   type ReportCardEvidenceJournalV1Payload,
 } from "@shared/lib/report-card-evidence-journal";
+import { BOUNDED_JOURNAL_RETENTION_SEC } from "../bounded-journal-store";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
-import {
-  REPORT_CARD_EVIDENCE_JOURNAL_STORE_RETENTION_SEC,
-  loadReportCardEvidenceJournalByIdV1,
-} from "../report-card-evidence-journal-store";
+import { loadReportCardEvidenceJournalByIdV1 } from "../report-card-evidence-journal-store";
 
 const DIGEST = "a".repeat(64);
 const MIGRATION = readFileSync(
@@ -111,7 +109,7 @@ describe("report-card evidence journal store", () => {
     try {
       const oldNow = 2_000;
       seed(sqlite, [record("reserve-old", oldNow)], oldNow);
-      const currentNow = oldNow + REPORT_CARD_EVIDENCE_JOURNAL_STORE_RETENTION_SEC + 1;
+      const currentNow = oldNow + BOUNDED_JOURNAL_RETENTION_SEC + 1;
       await expect(
         loadReportCardEvidenceJournalByIdV1(db, ["usdc-circle"], currentNow),
       ).resolves.toEqual({});

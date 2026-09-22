@@ -70,6 +70,27 @@ describe("stablecoin V9 safety presentation", () => {
     },
   });
 
+  // Producer order and weights are fixed by the exit schema; fixtures differ
+  // only in the per-component scores, and the contribution is score x weight.
+  const EXIT_ROUTE_COMPONENTS = [
+    { key: "access", label: "Access", weight: 0.2 },
+    { key: "settlement", label: "Settlement", weight: 0.15 },
+    { key: "executionCertainty", label: "Execution certainty", weight: 0.15 },
+    { key: "capacity", label: "Capacity", weight: 0.25 },
+    { key: "outputAssetQuality", label: "Output asset quality", weight: 0.15 },
+    { key: "cost", label: "Cost", weight: 0.1 },
+  ] as const;
+
+  const exitRouteComponents = (
+    scores: Record<(typeof EXIT_ROUTE_COMPONENTS)[number]["key"], number>,
+  ) => EXIT_ROUTE_COMPONENTS.map(({ key, label, weight }) => ({
+    key,
+    label,
+    weight,
+    score: scores[key],
+    weightedContribution: Number((scores[key] * weight).toFixed(6)),
+  }));
+
   it("derives honest score trace labels without recreating V8 dimensions", () => {
     const card = makeV9Card({
       score: 84,
@@ -242,27 +263,6 @@ describe("stablecoin V9 safety presentation", () => {
     const card = makeV9Card({ pillars: BREAKDOWN_PILLARS });
     card.breakdowns = {
       ...breakdownsFixture(),
-      backing: {
-        evaluatedScore: 86,
-        publishedScore: 88,
-        aggregationWeight: 0.4,
-        groups: [{ key: "reserves" as const, label: "Reserves", score: 86, effectiveWeight: 1 }],
-        components: [{
-          key: "reserve:reserve:wsteth",
-          label: "wstETH",
-          source: "reserve-exposure",
-          score: 86,
-          effectiveWeight: 1,
-          weightedContribution: 86,
-          observationState: "known",
-        }],
-        adjustments: [{
-          kind: "operational-resilience-credit",
-          scoreBefore: 86,
-          scoreAfter: 88,
-          delta: 2,
-        }],
-      },
       exit: {
         evaluatedScore: 84,
         publishedScore: 84,
@@ -277,14 +277,7 @@ describe("stablecoin V9 safety presentation", () => {
           label: "Direct redemption",
           routeFamily: "issuer-redemption",
           score: 84,
-          components: [
-            { key: "access", label: "Access", score: 90, weight: 0.2, weightedContribution: 18 },
-            { key: "settlement", label: "Settlement", score: 84, weight: 0.15, weightedContribution: 12.6 },
-            { key: "executionCertainty", label: "Execution certainty", score: 80, weight: 0.15, weightedContribution: 12 },
-            { key: "capacity", label: "Capacity", score: 78, weight: 0.25, weightedContribution: 19.5 },
-            { key: "outputAssetQuality", label: "Output asset quality", score: 92, weight: 0.15, weightedContribution: 13.8 },
-            { key: "cost", label: "Cost", score: 81, weight: 0.1, weightedContribution: 8.1 },
-          ],
+          components: exitRouteComponents({ access: 90, settlement: 84, executionCertainty: 80, capacity: 78, outputAssetQuality: 92, cost: 81 }),
           confidenceFactor: 1,
           eligibilityMultiplier: 1,
           capsApplied: [],
@@ -321,16 +314,12 @@ describe("stablecoin V9 safety presentation", () => {
         adjustments: [],
       },
       control: {
-        evaluatedScore: 86,
-        publishedScore: 86,
-        aggregationWeight: 0.25,
-        method: "minimum-binding-component",
+        ...breakdownsFixture().control,
         components: [
-          { key: "abstract", label: "Abstract bridge", kind: "bridge", score: 65, binding: false, posture: "distributed" },
-          { key: "mint", label: "Mint authority", kind: "mint", score: 86, binding: true, posture: "concentrated" },
-          { key: "oracle", label: "Oracle design", kind: "oracle", score: 95, binding: false, posture: "distributed" },
+          { key: "abstract", label: "Abstract bridge", kind: "bridge" as const, score: 65, binding: false, posture: "distributed" as const },
+          { key: "mint", label: "Mint authority", kind: "mint" as const, score: 86, binding: true, posture: "concentrated" as const },
+          { key: "oracle", label: "Oracle design", kind: "oracle" as const, score: 95, binding: false, posture: "distributed" as const },
         ],
-        adjustments: [],
       },
     };
 
@@ -431,14 +420,7 @@ describe("stablecoin V9 safety presentation", () => {
           label: "Queued USDC redemption",
           routeFamily: "protocol-redemption",
           score: 0,
-          components: [
-            { key: "access", label: "Access", score: 100, weight: 0.2, weightedContribution: 20 },
-            { key: "settlement", label: "Settlement", score: 100, weight: 0.15, weightedContribution: 15 },
-            { key: "executionCertainty", label: "Execution certainty", score: 60, weight: 0.15, weightedContribution: 9 },
-            { key: "capacity", label: "Capacity", score: 0, weight: 0.25, weightedContribution: 0 },
-            { key: "outputAssetQuality", label: "Output asset quality", score: 100, weight: 0.15, weightedContribution: 15 },
-            { key: "cost", label: "Cost", score: 100, weight: 0.1, weightedContribution: 10 },
-          ],
+          components: exitRouteComponents({ access: 100, settlement: 100, executionCertainty: 60, capacity: 0, outputAssetQuality: 100, cost: 100 }),
           confidenceFactor: 1,
           eligibilityMultiplier: 1,
           capsApplied: ["zero-executable-capacity"],
@@ -532,10 +514,7 @@ describe("stablecoin V9 safety presentation", () => {
     card.breakdowns = {
       ...breakdownsFixture(),
       control: {
-        evaluatedScore: 86,
-        publishedScore: 86,
-        aggregationWeight: 0.25,
-        method: "minimum-binding-component" as const,
+        ...breakdownsFixture().control,
         // Producer order is alphabetical by key, which the schema enforces.
         components: [
           { key: "abstract", label: "Abstract bridge", kind: "bridge" as const, score: 65, binding: false, posture: "distributed" as const },
@@ -544,7 +523,6 @@ describe("stablecoin V9 safety presentation", () => {
           { key: "flow", label: "Flow bridge", kind: "bridge" as const, score: 50, binding: false, posture: "distributed" as const },
           { key: "mint", label: "Mint authority", kind: "mint" as const, score: 90, binding: true, posture: "concentrated" as const },
         ],
-        adjustments: [],
       },
     };
 

@@ -1,7 +1,7 @@
+import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { LiveReserveWarning } from "@shared/types/live-reserves";
 import type { LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
-import type { EvmMulticall3Result } from "../../lib/evm-rpc";
 import {
   encodeAddress,
 } from "../../lib/evm-selectors";
@@ -18,8 +18,8 @@ import {
   reserveDegradedWarning,
   requireOnchainInput,
 } from "./helpers";
+import { multicallResultOrNull } from "./erc4626";
 import { parseBoundedDecimals, ratioFromRaw } from "./slice-math";
-import { multicallResultByLabel } from "./onchain-identity";
 import { observeSfrxusdCrosschainRedemptionRoute } from "./sfrxusd-crosschain-redemption";
 import type { SfrxusdCrosschainV9RouteAttempt } from "../../lib/sfrxusd-crosschain-redemption-route";
 import type { ExecutableRedemptionObservation } from "./executable-redemption-observers";
@@ -47,7 +47,8 @@ export interface RedemptionCapacityTelemetry {
     | ExecutableRedemptionObservation["capacitySource"];
   settlementBoundUnproven?: true;
   freshnessKind: "same-run-onchain" | "same-run-api";
-  routeStatusSource: "onchain" | "protocol-api";
+  /** Route-status evidence claim; absent unless this run observed an openness verdict. */
+  routeStatusSource?: "onchain" | "protocol-api";
   idleUnderlyingBalanceRaw?: string;
   underlyingDecimals: number;
   capacityRatioOfSupply?: number;
@@ -234,7 +235,7 @@ function decodeErc20Decimals(raw: bigint | null): number | null {
 
 function routeForSource(source: Erc4626CapacitySource): Erc4626CapacityRoute {
   const api = source === "morpho-vault-v1-liquidity" || source === "morpho-vault-v2-liquidity";
-  return { freshnessKind: api ? "same-run-api" : "same-run-onchain", routeStatusSource: api ? "protocol-api" : "onchain" };
+  return { freshnessKind: api ? "same-run-api" : "same-run-onchain" };
 }
 
 function probeFailure(code: string, message: string): CapacityProbeResult {
@@ -244,12 +245,6 @@ function probeFailure(code: string, message: string): CapacityProbeResult {
   };
 }
 
-function successfulMulticallResult(
-  results: EvmMulticall3Result[] | null,
-  label: string,
-): string | null {
-  return results ? multicallResultByLabel(results, label) : null;
-}
 
 async function fetchYearnV3WithdrawableCapacity(input: OnchainProbeInput & { settlementDelaySec?: number }): Promise<CapacityProbeResult> {
   // Wave 1: the strategy list. Wave 2 depends on the decoded queue, so the
@@ -266,8 +261,8 @@ async function fetchYearnV3WithdrawableCapacity(input: OnchainProbeInput & { set
     fallbackRpcUrl: input.fallbackRpcUrl,
     timeoutMs: input.timeoutMs,
   });
-  const totalIdleResult = successfulMulticallResult(listResults, "yearn-total-idle");
-  const defaultQueueResult = successfulMulticallResult(listResults, "yearn-default-queue");
+  const totalIdleResult = multicallResultOrNull(listResults, "yearn-total-idle");
+  const defaultQueueResult = multicallResultOrNull(listResults, "yearn-default-queue");
   if (!totalIdleResult || !defaultQueueResult) {
     return probeFailure("yearn-v3-withdrawable-unavailable", `Yearn V3 withdrawable-capacity probes failed for ${input.coinId}`);
   }
@@ -311,7 +306,7 @@ async function fetchYearnV3WithdrawableCapacity(input: OnchainProbeInput & { set
   let withdrawableRaw = totalIdleRaw;
   for (const [index, strategyAddress] of defaultQueue.entries()) {
     const currentDebtRaw = decodeUint256Word(decodeAbiWordAt(
-      successfulMulticallResult(strategyResults, `yearn-strategy-${index}-params`),
+      multicallResultOrNull(strategyResults, `yearn-strategy-${index}-params`),
       2,
     ));
     if (currentDebtRaw == null) {
@@ -320,7 +315,7 @@ async function fetchYearnV3WithdrawableCapacity(input: OnchainProbeInput & { set
     if (currentDebtRaw === 0n) continue;
 
     const strategyWithdrawableRaw = decodeUint256Word(
-      successfulMulticallResult(strategyResults, `yearn-strategy-${index}-max-withdraw`),
+      multicallResultOrNull(strategyResults, `yearn-strategy-${index}-max-withdraw`),
     );
     if (strategyWithdrawableRaw == null) {
       return probeFailure("yearn-v3-strategy-max-withdraw-unavailable", `Yearn V3 strategy maxWithdraw() failed for ${input.coinId} strategy ${strategyAddress}`);
@@ -336,7 +331,6 @@ async function fetchYearnV3WithdrawableCapacity(input: OnchainProbeInput & { set
     warnings: [],
     route: {
       freshnessKind: "same-run-onchain",
-      routeStatusSource: "onchain",
       settlementDelaySec,
       ...(settlementDelaySec > 0 ? { capacityKind: "documented-bound" as const } : {}),
     },
@@ -386,12 +380,6 @@ function parseOptionalNonNegativeNumber(value: unknown): number | undefined {
 function parseMorphoChainId(value: unknown): number | null {
   const parsed = typeof value === "number" ? value : Number(value);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
-}
-
-function parseMorphoAddress(value: unknown): string | null {
-  if (typeof value !== "string") return null;
-  const normalized = value.toLowerCase();
-  return /^0x[0-9a-f]{40}$/.test(normalized) ? normalized : null;
 }
 
 function parseNonNegativeBigIntLike(value: unknown): bigint | null {
@@ -457,10 +445,10 @@ async function fetchMorphoVaultLiquidity(input: MorphoQueryInput): Promise<Capac
     if (!vault) {
       return morphoFailure(input, "liquidity-unavailable", "liquidity query returned no vault");
     }
-    if (parseMorphoAddress(vault.address) !== input.contractAddress.toLowerCase()) {
+    if (canonicalEvmAddress(vault.address) !== input.contractAddress.toLowerCase()) {
       return morphoFailure(input, "identity-mismatch", "liquidity vault address mismatch");
     }
-    if (parseMorphoAddress(vault.asset?.address) !== input.assetAddress.toLowerCase()) {
+    if (canonicalEvmAddress(vault.asset?.address) !== input.assetAddress.toLowerCase()) {
       return morphoFailure(input, "asset-mismatch", "liquidity asset mismatch");
     }
     if (parseMorphoChainId(vault.chain?.id) !== input.config.chainId) {
@@ -717,23 +705,34 @@ function resolveRouteOpenness(
   capacitySource: Erc4626CapacitySource,
   capacityRaw: bigint,
   pauseProbe: Erc4626CapacityPauseProbe,
-): Pick<RedemptionCapacityTelemetry, "routeStatus" | "routeStatusReason"> {
+): Pick<RedemptionCapacityTelemetry, "routeStatus" | "routeStatusSource" | "routeStatusReason"> {
   if (pauseProbe.paused === true) {
     return {
       routeStatus: "paused",
+      routeStatusSource: "onchain",
       routeStatusReason: "Vault paused() returned true on-chain",
     };
   }
   if (pauseProbe.shutdown === true) {
     return {
       routeStatus: "paused",
+      routeStatusSource: "onchain",
       routeStatusReason: "Yearn vault isShutdown() returned true on-chain",
     };
   }
   if (capacityRaw <= 0n) return {};
+  // A null pause word covers both a vault without the surface and a failed
+  // probe; neither supports an openness verdict, so publish none.
+  if (pauseProbe.paused == null) return {};
   if (capacitySource === "yearn-v3-withdrawable" && pauseProbe.shutdown !== false) return {};
   const routeStatusReason = ROUTE_OPEN_REASON_BY_CAPACITY_SOURCE[capacitySource];
-  return routeStatusReason ? { routeStatus: "open", routeStatusReason } : {};
+  if (!routeStatusReason) return {};
+  const protocolApi = routeForSource(capacitySource).freshnessKind === "same-run-api";
+  return {
+    routeStatus: "open",
+    routeStatusSource: protocolApi ? "protocol-api" : "onchain",
+    routeStatusReason,
+  };
 }
 
 export function buildExecutableRedemptionCapacityTelemetry(
@@ -813,17 +812,19 @@ export function finalizeErc4626RedemptionCapacity(input: {
   const diagnostics = configured.diagnostics as Erc4626CapacityDiagnostics;
   const usesSboldSpWithdrawable = configured.source === "sbold-sp-withdrawable";
   const defaultRouteOpenness = resolveRouteOpenness(capacitySource, capacityRaw, pause);
-  const sboldRouteOpenness =
+  const routeOpenness =
     usesSboldSpWithdrawable && pause.paused !== true
       ? diagnostics.collateralHealthGate === "restricted"
         ? {
             routeStatus: "degraded" as const,
+            routeStatusSource: "onchain" as const,
             routeStatusReason:
               "sBOLD collateral in BOLD exceeds maxCollInBold; _maxWithdraw() and _maxRedeem() return zero",
           }
-        : diagnostics.collateralHealthGate === "open" && capacityRaw > 0n
+        : defaultRouteOpenness.routeStatus === "open" && diagnostics.collateralHealthGate === "open"
           ? {
               routeStatus: "open" as const,
+              routeStatusSource: "onchain" as const,
               routeStatusReason:
                 "sBOLD Stability Pool withdrawable BOLD positive and collateral-health gate open on-chain this run",
             }
@@ -842,11 +843,10 @@ export function finalizeErc4626RedemptionCapacity(input: {
     capacityRaw: capacityRaw.toString(),
     capacitySource,
     freshnessKind: provenance.freshnessKind,
-    routeStatusSource: provenance.routeStatusSource,
     ...(idleCapacityRaw != null ? { idleUnderlyingBalanceRaw: idleCapacityRaw.toString() } : {}),
     underlyingDecimals,
     ...(capacityRatioOfSupply != null ? { capacityRatioOfSupply } : {}),
-    ...sboldRouteOpenness,
+    ...routeOpenness,
     ...(usesSboldSpWithdrawable && route.capacityKind
       ? { capacityKind: route.capacityKind }
       : {}),

@@ -11,12 +11,50 @@ import {
   resetTelegramWebhookTest,
   makeTelegramWebhookDb,
 } from "./telegram-webhook.test-support";
+import { handleMyChatMember } from "../telegram-webhook-group-welcome";
 
+
+const LIFECYCLE_MIGRATION_FALLBACKS = [
+  { match: "INSERT INTO telegram_subscriptions", rows: [] },
+  { match: "INSERT INTO telegram_preset_subscriptions", rows: [] },
+  { match: "INSERT OR IGNORE INTO telegram_pending_disambiguation", rows: [] },
+  { match: "UPDATE OR IGNORE telegram_pending_alerts", rows: [] },
+  { match: "UPDATE telegram_pending_alerts", rows: [] },
+  { match: "DELETE FROM telegram_pending_alerts", rows: [] },
+  { match: "DELETE FROM telegram_recap_targets", rows: [] },
+  { match: "DELETE FROM telegram_recap_preferences", rows: [] },
+  { match: "UPDATE OR IGNORE telegram_freeze_alert_targets", rows: [] },
+  { match: "DELETE FROM telegram_freeze_alert_targets", rows: [] },
+  { match: "UPDATE OR IGNORE telegram_alert_source_resolution_targets", rows: [] },
+  { match: "DELETE FROM telegram_alert_source_resolution_targets", rows: [] },
+  { match: "UPDATE telegram_alert_job_targets", rows: [] },
+  { match: "UPDATE OR IGNORE telegram_alert_job_targets", rows: [] },
+  { match: "DELETE FROM telegram_alert_job_targets", rows: [] },
+  { match: "UPDATE OR IGNORE telegram_alert_job_target_items", rows: [] },
+  { match: "DELETE FROM telegram_alert_job_target_items", rows: [] },
+  { match: "UPDATE OR IGNORE telegram_alert_planning_subscribers", rows: [] },
+  { match: "DELETE FROM telegram_alert_planning_subscribers", rows: [] },
+  { match: "UPDATE telegram_alert_target_plans", rows: [] },
+  { match: "DELETE FROM telegram_alert_target_plans", rows: [] },
+  { match: "UPDATE OR IGNORE telegram_transport_failure_observations", rows: [] },
+  { match: "DELETE FROM telegram_transport_failure_observations", rows: [] },
+  { match: "UPDATE telegram_alert_dead_letters", rows: [] },
+  { match: "DELETE FROM telegram_alert_dead_letters", rows: [] },
+  { match: "DELETE FROM telegram_alert_target_plan_items", rows: [] },
+  { match: "DELETE FROM telegram_chat_delivery_diagnostics", rows: [] },
+  { match: "DELETE FROM telegram_subscriptions", rows: [] },
+  { match: "DELETE FROM telegram_preset_subscriptions", rows: [] },
+  { match: "DELETE FROM telegram_pending_disambiguation", rows: [] },
+  { match: "DELETE FROM telegram_subscribers", rows: [] },
+];
 
 const makeLifecycleDb = (
   tables: Parameters<typeof makeTelegramWebhookDb>[0] = [],
   options: Parameters<typeof makeTelegramWebhookDb>[1] = {},
-) => makeTelegramWebhookDb(tables, options, "lifecycle");
+) => makeTelegramWebhookDb(tables, {
+  ...options,
+  fallbackTables: [...(options.fallbackTables ?? []), ...LIFECYCLE_MIGRATION_FALLBACKS],
+}, "lifecycle");
 
 describe("handleTelegramWebhook", () => {
   beforeEach(resetTelegramWebhookTest);
@@ -62,6 +100,31 @@ describe("handleTelegramWebhook", () => {
     expect(warn).not.toHaveBeenCalledWith(
       "[telegram-webhook] auth validation failed — returning 200 to prevent retry storm",
     );
+  });
+
+  it("rate-limits a loud warning when the bot token is missing while acknowledging updates", async () => {
+    const db = makeLifecycleDb([]);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const first = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(123, "/start"),
+      "test-secret",
+    );
+    const second = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(123, "/help"),
+      "test-secret",
+    );
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    const missingTokenWarnings = warn.mock.calls
+      .map(([record]) => JSON.parse(String(record)) as { action?: string })
+      .filter((record) => record.action === "webhook-missing-bot-token");
+    expect(missingTokenWarnings).toHaveLength(1);
+    warn.mockRestore();
   });
 
   it("acknowledges malformed authenticated update bodies without creating an effect fence", async () => {
@@ -182,13 +245,13 @@ describe("handleTelegramWebhook", () => {
     const replyMarkup = body.reply_markup as { inline_keyboard?: Array<Array<{ url?: string }>> };
     expect(replyMarkup.inline_keyboard?.flat().some((button) => button.url?.includes("/pharoswatchbot/"))).toBe(true);
 
-    const cacheWrite = db.getHistory().find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
+    const cacheWrite = db.getHistory().find((entry) => entry.sql.includes("ON CONFLICT(key) DO NOTHING"));
     expect(cacheWrite).toBeDefined();
     expect(cacheWrite!.binds[0]).toBe("telegram:group-welcome:-123");
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM telegram_chat_delivery_diagnostics"))).toBe(false);
   });
 
-  it("does not cache group welcome idempotency when Telegram send fails", async () => {
+  it("deletes the claimed group welcome marker when Telegram send fails", async () => {
     fetchSpy.mockResolvedValueOnce(new Response("blocked", { status: 403 }));
     const db = makeLifecycleDb([
       {
@@ -207,7 +270,12 @@ describe("handleTelegramWebhook", () => {
 
     expect(res.status).toBe(200);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
-    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"))).toBe(false);
+    expect(db.getHistory().some((entry) => entry.sql.includes("ON CONFLICT(key) DO NOTHING"))).toBe(true);
+    expect(db.getHistory().some(
+      (entry) =>
+        entry.sql.includes("DELETE FROM cache WHERE key = ?") &&
+        entry.binds[0] === "telegram:group-welcome:-123",
+    )).toBe(true);
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM telegram_chat_delivery_diagnostics"))).toBe(false);
   });
 
@@ -228,6 +296,29 @@ describe("handleTelegramWebhook", () => {
 
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"))).toBe(false);
+  });
+
+  it("atomically claims a group welcome before concurrent sends", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const payload = {
+        chat: { id: -123, type: "supergroup" },
+        from: { id: 999, username: "alice" },
+        old_chat_member: { status: "left" },
+        new_chat_member: { status: "member" },
+      };
+
+      await Promise.all([
+        handleMyChatMember(db, "bot-token", payload),
+        handleMyChatMember(db, "bot-token", payload),
+      ]);
+
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expect(sqlite.prepare("SELECT key FROM cache WHERE key = ?").get("telegram:group-welcome:-123"))
+        .toEqual({ key: "telegram:group-welcome:-123" });
+    } finally {
+      sqlite.close();
+    }
   });
 
   it("returns ok when a my_chat_member welcome cache read fails", async () => {
@@ -347,7 +438,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("migrates stored chat state on migrate_to_chat_id service messages", async () => {
-    const db = makeLifecycleDb();
+    const db = makeLifecycleDb([{ match: "INSERT INTO telegram_subscribers", rows: [] }]);
     const info = vi.spyOn(console, "info").mockImplementation(() => {});
 
     const res = await handleTelegramWebhook(
@@ -436,7 +527,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("migrates stored chat state on migrate_from_chat_id service messages", async () => {
-    const db = makeLifecycleDb();
+    const db = makeLifecycleDb([{ match: "INSERT INTO telegram_subscribers", rows: [] }]);
 
     await handleTelegramWebhook(
       db,

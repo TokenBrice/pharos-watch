@@ -1,9 +1,11 @@
+import { DEPEG_PENDING_EXPIRY_SEC, DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
+import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { type DepegRow } from "../lib/depeg-helpers";
 import { resolveOrReject, parseBooleanParam } from "../lib/api-params";
 import { buildMethodologyEnvelope } from "../lib/api-methodology";
 import { buildPaginatedEventResponse } from "../lib/api-pagination";
-import { CACHE_PROFILES, DEPEG_PENDING_EXPIRY_SEC, DEX_FRESHNESS_SEC } from "../lib/constants";
+
 import {
   normalizePendingDepegRow,
   SELECT_PENDING_DEPEGS_SQL,
@@ -20,8 +22,8 @@ import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
   DEPEG_DEWS_METHODOLOGY_VERSION,
   DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
-  getDepegDewsMethodologyVersionAt,
-} from "@shared/lib/methodology-versions/depeg-dews";
+} from "@shared/lib/methodology-versions/constants";
+import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { DepegPendingIncident } from "@shared/types/market";
@@ -235,7 +237,7 @@ export const handleDepegEvents = async (db: D1Database, url: URL): Promise<Respo
       },
       cacheControl: CACHE_PROFILES.producerBacked,
       buildExtraBody: async (_events, _total, latestEventTs) => {
-        const methodologyVersion = getDepegDewsMethodologyVersionAt(latestEventTs);
+        const methodologyVersion = getMethodologyVersionAt("depeg-dews", latestEventTs);
         return {
           ...(includePending ? { pending: await loadPendingIncidents(db, stablecoinId) } : {}),
           methodology: buildMethodologyEnvelope({

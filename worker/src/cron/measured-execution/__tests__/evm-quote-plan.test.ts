@@ -7,6 +7,7 @@ import {
   type EvmQuotePlanItem,
   type EvmQuotePlanBatchInput,
 } from "../evm-quote-plan";
+import { createDexMeasuredExecutionRpcBudget } from "../profiles";
 
 interface TestPlan extends EvmQuotePlanItem {
   value: number;
@@ -170,6 +171,35 @@ describe("EVM quote-plan executor", () => {
       })).rejects.toThrow(TypeError);
     }
     expect(executeMulticall).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["request-budget-exhausted", { maxRequests: 0, deadlineOffsetMs: 60_000, reportsStop: true }],
+    ["runtime-deadline-exceeded", { maxRequests: 100, deadlineOffsetMs: -1, reportsStop: false }],
+  ] as const)("materializes an adaptive batch stopped by the budget as %s", async (reason, limits) => {
+    const executeMulticall = vi.fn(async ({ onBudgetStop }: EvmQuotePlanBatchInput) => {
+      if (limits.reportsStop) onBudgetStop?.("request-budget-exhausted");
+      return null;
+    });
+    const plans = [plan(0, "ethereum", 10), plan(1, "ethereum", 10)];
+    const outcomes = await executeEvmQuotePlan({
+      plans,
+      outcomes: plans.map(() => "pending"),
+      chainRpcs: new Map(),
+      rpcBudget: createDexMeasuredExecutionRpcBudget({
+        maxRequests: limits.maxRequests,
+        deadlineMs: Date.now() + limits.deadlineOffsetMs,
+      }),
+      spec: {
+        batchSize: 8,
+        adaptive: { failedAttemptAccounting: "all", unattemptedResult: "omit" },
+        executeMulticall,
+        resolveResult: (item) => `ok:${item.index}`,
+        materializeTransportFailure: (item, stopReason) => `failed:${item.index}:${stopReason}`,
+      },
+    });
+
+    expect(outcomes).toEqual([`failed:0:${reason}`, `failed:1:${reason}`]);
   });
 
   it("converts raw amounts to USD and clamps favorable execution cost at zero", () => {

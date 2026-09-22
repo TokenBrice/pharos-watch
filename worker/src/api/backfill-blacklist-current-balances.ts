@@ -8,7 +8,6 @@ import { createBudget, createRateLimiter } from "../lib/evm-logs";
 import {
   syncCurrentBalanceCacheForRows,
 } from "../lib/blacklist/current-balance-cache";
-import { backfillTronFromLedger } from "../lib/blacklist/amount-recovery";
 import type { BlacklistRunBudget } from "../lib/blacklist/run-budget";
 import {
   blacklistRuntimeBudgetReached,
@@ -215,13 +214,6 @@ export async function handleBackfillBlacklistCurrentBalances({
     }
   }
 
-  if (!dryRun) {
-    // Keep admin remediation aligned with the cron path: once current
-    // balances exist for Tron rows, reapply the ledger mirror so matching
-    // blacklist_events resolve immediately instead of waiting for another
-    // scheduled sync.
-    await backfillTronFromLedger(db);
-  }
 
   const totals = configResults.reduce(
     (acc, r) => ({

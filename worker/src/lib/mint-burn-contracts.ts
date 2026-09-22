@@ -67,8 +67,6 @@ export function collectMintBurnBridgeValidationErrors(
 
 export const MINT_BURN_BRIDGE_VALIDATION_ERRORS =
   collectMintBurnBridgeValidationErrors(MINT_BURN_CONFIGS);
-export const MINT_BURN_BRIDGE_VALIDATION_ERROR_COUNT =
-  MINT_BURN_BRIDGE_VALIDATION_ERRORS.length;
 
 if (MINT_BURN_BRIDGE_VALIDATION_ERRORS.length > 0) {
   throw new Error(

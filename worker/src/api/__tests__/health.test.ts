@@ -14,6 +14,8 @@ type HealthDbOptions = {
   symbolRows?: Record<string, unknown>[];
   statusStartedAt?: number;
   extras?: MockTableConfig[];
+  yieldSentinelAge?: number | null;
+  producerCronRows?: Record<string, unknown>[];
 };
 
 const STABLECOIN_COVERAGE_QUERY_MATCH =
@@ -115,6 +117,8 @@ function makeHealthyHealthDb(now: number, options: HealthDbOptions = {}) {
     symbolRows = [{ symbol: "USDT", latest: now - 600 }],
     statusStartedAt = now - 300,
     extras = [],
+    yieldSentinelAge = 60,
+    producerCronRows = [],
   } = options;
 
   return healthD1([
@@ -128,6 +132,30 @@ function makeHealthyHealthDb(now: number, options: HealthDbOptions = {}) {
         { key: "usds-status", updated_at: now - 60, value: "{}" },
         { key: "fx-rates", updated_at: now - 60, value: JSON.stringify({ peggedEUR: 1.08 }) },
         { key: "bluechip-ratings", updated_at: now - 60, value: "{}" },
+        // Sentinel-backed lanes attest their own published generation; without
+        // one the reader can only fall back and must publish a degraded quality
+        // verdict, so the steady-state fixture carries them.
+        {
+          key: "freshness:dex-liquidity",
+          updated_at: now - dexAge,
+          value: JSON.stringify({ updatedAt: now - dexAge, source: "sync-dex-liquidity", publishStatus: "ok" }),
+        },
+        ...(yieldSentinelAge == null
+          ? []
+          : [{
+              key: "freshness:yield-data",
+              updated_at: now - yieldSentinelAge,
+              value: JSON.stringify({
+                updatedAt: now - yieldSentinelAge,
+                source: "sync-yield-data",
+                publishStatus: "ok",
+              }),
+            }]),
+        {
+          key: "freshness:dews",
+          updated_at: now - 60,
+          value: JSON.stringify({ updatedAt: now - 60, source: "compute-dews", publishStatus: "ok" }),
+        },
         ...extraCacheRows,
       ],
     },
@@ -139,6 +167,7 @@ function makeHealthyHealthDb(now: number, options: HealthDbOptions = {}) {
     { match: "SELECT MAX(timestamp) as latest FROM mint_burn_events", rows: [], first: { latest: now - 30 } },
     { match: "SELECT MAX(hour_ts) as latest FROM mint_burn_hourly", rows: [], first: { latest: now - 3600 } },
     { match: "SELECT symbol, MAX(timestamp) as latest", rows: symbolRows },
+    { match: "GROUP BY job", rows: producerCronRows },
     { match: "SELECT status", rows: [], first: { status: "ok" } },
     { match: "status = 'ok'", rows: [], first: { started_at: statusStartedAt } },
     ...extras,
@@ -223,6 +252,26 @@ describe("handleHealth", () => {
     const db = healthD1([
       completePublicationEntry(now),
       dewsPublicationEntry(now),
+      {
+        match: "cache WHERE key IN",
+        rows: [
+          {
+            key: "freshness:dex-liquidity",
+            updated_at: now - 60,
+            value: JSON.stringify({ updatedAt: now - 60, source: "sync-dex-liquidity", publishStatus: "ok" }),
+          },
+          {
+            key: "freshness:yield-data",
+            updated_at: now - 60,
+            value: JSON.stringify({ updatedAt: now - 60, source: "sync-yield-data", publishStatus: "ok" }),
+          },
+          {
+            key: "freshness:dews",
+            updated_at: now - 60,
+            value: JSON.stringify({ updatedAt: now - 60, source: "compute-dews", publishStatus: "ok" }),
+          },
+        ],
+      },
       { match: "cache", rows: [] },
       { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
       { match: "mint_burn_hourly", rows: [], first: { total: 1234 } },
@@ -638,6 +687,104 @@ describe("handleHealth", () => {
       warning: "dex-liquidity: freshness sentinel invalid (wrong-source); using table-fallback",
     });
     expect(body.warnings).toContain("dex-liquidity: freshness sentinel invalid (wrong-source); using table-fallback");
+  });
+
+  it("reports yield-data unhealthy when a fresh table fallback has no freshness sentinel", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = makeHealthyHealthDb(now, { yieldSentinelAge: null });
+
+    const res = await handleHealth(db);
+    const body = (await readJsonResponse(res, 200)) as {
+      status: string;
+      warnings: string[];
+      caches: Record<string, {
+        ageSeconds: number | null;
+        freshnessSource?: string;
+        degraded?: boolean;
+        degradedReason?: string | null;
+        streakDegradedRuns?: number | null;
+        healthy: boolean;
+      }>;
+    };
+
+    expect(body.status).toBe("degraded");
+    expect(body.caches["yield-data"]).toMatchObject({
+      ageSeconds: 60,
+      freshnessSource: "table-fallback",
+      degraded: true,
+      degradedReason: "freshness-sentinel-missing",
+      streakDegradedRuns: null,
+      healthy: false,
+    });
+    expect(body.warnings).toContain(
+      "cache-quality-degraded: yield-data:freshness-sentinel-missing",
+    );
+  });
+
+  it("reports yield-data unhealthy when degraded runs follow a recent last-good sentinel", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = makeHealthyHealthDb(now, {
+      producerCronRows: [{
+        job: "sync-yield-data",
+        started_at: now - 3_600,
+        degraded_runs_since_ok: 3,
+      }],
+    });
+
+    const res = await handleHealth(db);
+    const body = (await readJsonResponse(res, 200)) as {
+      status: string;
+      warnings: string[];
+      caches: Record<string, {
+        degraded?: boolean;
+        degradedReason?: string | null;
+        streakDegradedRuns?: number | null;
+        healthy: boolean;
+      }>;
+    };
+
+    expect(body.status).toBe("degraded");
+    expect(body.caches["yield-data"]).toMatchObject({
+      degraded: true,
+      degradedReason: "producer-degraded-since-last-clean-run",
+      streakDegradedRuns: 3,
+      healthy: false,
+    });
+    expect(body.warnings).toContain(
+      "cache-quality-degraded: yield-data:producer-degraded-since-last-clean-run",
+    );
+  });
+
+  it("reports yield-data healthy again after a clean recovery run", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = makeHealthyHealthDb(now, {
+      producerCronRows: [{
+        job: "sync-yield-data",
+        started_at: now - 60,
+        degraded_runs_since_ok: 0,
+      }],
+    });
+
+    const res = await handleHealth(db);
+    const body = (await readJsonResponse(res, 200)) as {
+      status: string;
+      warnings: string[];
+      caches: Record<string, {
+        degraded?: boolean;
+        degradedReason?: string | null;
+        streakDegradedRuns?: number | null;
+        healthy: boolean;
+      }>;
+    };
+
+    expect(body.status).toBe("healthy");
+    expect(body.caches["yield-data"]).toMatchObject({
+      degraded: false,
+      degradedReason: null,
+      streakDegradedRuns: 0,
+      healthy: true,
+    });
+    expect(body.warnings.some((warning) => warning.startsWith("cache-quality-degraded:"))).toBe(false);
   });
 
   it("returns stale with warnings when the DB health sentinel fails", async () => {

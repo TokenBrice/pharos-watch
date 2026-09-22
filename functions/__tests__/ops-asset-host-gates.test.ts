@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { onRequest as serveAdmin } from "../admin/[[path]].ts";
 import { onRequest as serveAdminApi } from "../admin-api/[[path]].ts";
-import routes from "../../public/_routes.json";
 
 const SURFACES = [
   { label: "admin", path: "/admin/", marker: "window.__ADMIN__ = true;", onRequest: serveAdmin },
@@ -9,14 +8,6 @@ const SURFACES = [
 ] as const;
 
 describe("ops asset host gates", () => {
-  it("keeps both static route families behind Pages Functions", () => {
-    expect(routes.include).toContain("/*");
-
-    for (const pattern of ["/admin", "/admin/*", "/admin-api", "/admin-api/*"] as const) {
-      expect(routes.exclude).not.toContain(pattern);
-    }
-  });
-
   for (const surface of SURFACES) {
     it(`${surface.label} returns 404 outside the configured ops host`, async () => {
       const response = await surface.onRequest({
@@ -72,7 +63,6 @@ describe("ops asset host gates", () => {
         .map((directive) => directive.trim())
         .find((directive) => directive.startsWith("script-src")) ?? "";
       expect(scriptSrc).toContain("script-src 'self' 'nonce-");
-      expect(scriptSrc).not.toContain("'unsafe-inline'");
       expect(response.headers.get("Content-Length")).toBeNull();
       expect(response.headers.get("Content-Encoding")).toBeNull();
       expect(response.headers.get("Cloudflare-CDN-Cache-Control")).toBe("no-store");

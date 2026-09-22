@@ -1,4 +1,4 @@
-import { pendingRowFromForget } from "./telegram-rows.test-support";
+import { pendingDisambiguationTable, pendingRowFromForget } from "./telegram-rows.test-support";
 import { describe, expect, it, beforeEach } from "vitest";
 import {
   fetchSpy,
@@ -52,11 +52,8 @@ describe("handleCallbackQuery", () => {
   describe("setup wizard", () => {
     it("setup:branch:recommended writes confirm-state and previews usd-top25", async () => {
       const db = mockTelegramD1([
-        {
-          match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-          rows: [],
-          first: pendingRowFromSetup({ step: "branch", alertTypes: [], target: null }),
-        },
+        pendingDisambiguationTable(pendingRowFromSetup({ step: "branch", alertTypes: [], target: null })),
+        { match: "INSERT INTO telegram_pending_disambiguation", rows: [] },
         {
           match: "FROM cache WHERE key = ?",
           matchBinds: ["stablecoins"],
@@ -83,11 +80,8 @@ describe("handleCallbackQuery", () => {
 
     it("setup:branch:custom shows the alert-type toggle keyboard", async () => {
       const db = mockTelegramD1([
-        {
-          match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-          rows: [],
-          first: pendingRowFromSetup({ step: "branch", alertTypes: [], target: null }),
-        },
+        pendingDisambiguationTable(pendingRowFromSetup({ step: "branch", alertTypes: [], target: null })),
+        { match: "INSERT INTO telegram_pending_disambiguation", rows: [] },
       ]);
       await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:branch:custom", { id: "cb-custom", from: { id: 999 }, message: { chat: { id: 42 } } }));
 
@@ -103,11 +97,7 @@ describe("handleCallbackQuery", () => {
 
     it("setup:branch:skip clears state and sends the legacy /start message", async () => {
       const db = mockTelegramD1([
-        {
-          match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-          rows: [],
-          first: pendingRowFromSetup({ step: "branch", alertTypes: [], target: null }),
-        },
+        pendingDisambiguationTable(pendingRowFromSetup({ step: "branch", alertTypes: [], target: null })),
       ]);
       await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:branch:skip", { id: "cb-skip", from: { id: 999 }, message: { chat: { id: 42 } } }));
 
@@ -119,11 +109,7 @@ describe("handleCallbackQuery", () => {
 
     it("setup:branch:skip lets group non-admins exit their own wizard without an admin lookup", async () => {
       const db = mockTelegramD1([
-        {
-          match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-          rows: [],
-          first: pendingRowFromSetup({ step: "branch", alertTypes: [], target: null }, { initiator_user_id: "7" }),
-        },
+        pendingDisambiguationTable(pendingRowFromSetup({ step: "branch", alertTypes: [], target: null }, { initiator_user_id: "7" })),
       ]);
       await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:branch:skip", { id: "cb-skip-group", from: { id: 7, username: "member" }, message: { chat: { id: -42, type: "supergroup" }, message_id: 1 } }));
 
@@ -135,15 +121,12 @@ describe("handleCallbackQuery", () => {
 
     it("setup:type-toggle:safety flips selection", async () => {
       const db = mockTelegramD1([
-        {
-          match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-          rows: [],
-          first: pendingRowFromSetup({
-            step: "custom-types",
-            alertTypes: ["dews", "depeg"],
-            target: null,
-          }),
-        },
+        pendingDisambiguationTable(pendingRowFromSetup({
+          step: "custom-types",
+          alertTypes: ["dews", "depeg"],
+          target: null,
+        })),
+        { match: "INSERT INTO telegram_pending_disambiguation", rows: [] },
       ]);
       await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:type-toggle:safety", { id: "cb-toggle", from: { id: 999 }, message: { chat: { id: 42 } } }));
 
@@ -154,11 +137,7 @@ describe("handleCallbackQuery", () => {
 
     it("setup:next refuses when no alert types are selected", async () => {
       const db = mockTelegramD1([
-        {
-          match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-          rows: [],
-          first: pendingRowFromSetup({ step: "custom-types", alertTypes: [], target: null }),
-        },
+        pendingDisambiguationTable(pendingRowFromSetup({ step: "custom-types", alertTypes: [], target: null })),
       ]);
       await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:next", { id: "cb-next-empty", from: { id: 999 }, message: { chat: { id: 42 } } }));
 
@@ -170,15 +149,12 @@ describe("handleCallbackQuery", () => {
 
     it("setup:next on custom-types step shows the target picker", async () => {
       const db = mockTelegramD1([
-        {
-          match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-          rows: [],
-          first: pendingRowFromSetup({
-            step: "custom-types",
-            alertTypes: ["dews"],
-            target: null,
-          }),
-        },
+        pendingDisambiguationTable(pendingRowFromSetup({
+          step: "custom-types",
+          alertTypes: ["dews"],
+          target: null,
+        })),
+        { match: "INSERT INTO telegram_pending_disambiguation", rows: [] },
       ]);
       await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:next", { id: "cb-next", from: { id: 999 }, message: { chat: { id: 42 } } }));
 
@@ -191,15 +167,12 @@ describe("handleCallbackQuery", () => {
 
     it("setup:target:usd-top10 advances to confirm-custom with preview", async () => {
       const db = mockTelegramD1([
-        {
-          match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-          rows: [],
-          first: pendingRowFromSetup({
-            step: "custom-target",
-            alertTypes: ["dews", "safety"],
-            target: null,
-          }),
-        },
+        pendingDisambiguationTable(pendingRowFromSetup({
+          step: "custom-target",
+          alertTypes: ["dews", "safety"],
+          target: null,
+        })),
+        { match: "INSERT INTO telegram_pending_disambiguation", rows: [] },
         {
           match: "FROM cache WHERE key = ?",
           matchBinds: ["stablecoins"],
@@ -219,15 +192,13 @@ describe("handleCallbackQuery", () => {
 
     it("setup:confirm on recommended path writes preset provenance without direct coin rows", async () => {
       const db = mockTelegramD1([
-        {
-          match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-          rows: [],
-          first: pendingRowFromSetup({
-            step: "confirm-recommended",
-            alertTypes: ["dews", "depeg"],
-            target: { kind: "preset", presetId: "usd-top25" },
-          }),
-        },
+        pendingDisambiguationTable(pendingRowFromSetup({
+          step: "confirm-recommended",
+          alertTypes: ["dews", "depeg"],
+          target: { kind: "preset", presetId: "usd-top25" },
+        })),
+        { match: "INSERT INTO telegram_subscribers", rows: [] },
+        { match: "INSERT INTO telegram_preset_subscriptions", rows: [] },
         {
           match: "FROM cache WHERE key = ?",
           matchBinds: ["stablecoins"],
@@ -248,15 +219,12 @@ describe("handleCallbackQuery", () => {
 
     it("setup:confirm with target=all writes only global alert flags", async () => {
       const db = mockTelegramD1([
-        {
-          match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-          rows: [],
-          first: pendingRowFromSetup({
-            step: "confirm-custom",
-            alertTypes: ["dews"],
-            target: { kind: "all" },
-          }),
-        },
+        pendingDisambiguationTable(pendingRowFromSetup({
+          step: "confirm-custom",
+          alertTypes: ["dews"],
+          target: { kind: "all" },
+        })),
+        { match: "INSERT INTO telegram_subscribers", rows: [] },
       ]);
       await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:confirm", { id: "cb-confirm-all", from: { id: 999, username: "alice" }, message: { chat: { id: 42 } } }));
 
@@ -270,11 +238,7 @@ describe("handleCallbackQuery", () => {
 
     it("setup:cancel clears the pending row and sends a cancellation message", async () => {
       const db = mockTelegramD1([
-        {
-          match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-          rows: [],
-          first: pendingRowFromSetup({ step: "custom-types", alertTypes: ["dews"], target: null }),
-        },
+        pendingDisambiguationTable(pendingRowFromSetup({ step: "custom-types", alertTypes: ["dews"], target: null })),
       ]);
       await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:cancel", { id: "cb-cancel", from: { id: 999 }, message: { chat: { id: 42 } } }));
 
@@ -285,14 +249,10 @@ describe("handleCallbackQuery", () => {
 
     it("setup:cancel lets group non-admins cancel their own wizard without an admin lookup", async () => {
       const db = mockTelegramD1([
-        {
-          match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-          rows: [],
-          first: pendingRowFromSetup(
-            { step: "custom-types", alertTypes: ["dews"], target: null },
-            { initiator_user_id: "7" },
-          ),
-        },
+        pendingDisambiguationTable(pendingRowFromSetup(
+          { step: "custom-types", alertTypes: ["dews"], target: null },
+          { initiator_user_id: "7" },
+        )),
       ]);
       await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:cancel", { id: "cb-cancel-group", from: { id: 7, username: "member" }, message: { chat: { id: -42, type: "supergroup" }, message_id: 1 } }));
 
@@ -304,11 +264,7 @@ describe("handleCallbackQuery", () => {
 
     it("setup:cancel does not clear unrelated pending rows when no active wizard exists", async () => {
       const db = mockTelegramD1([
-        {
-          match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-          rows: [],
-          first: pendingRowFromForget({ action_type: "confirm-bulk", initiator_user_id: "999" }),
-        },
+        pendingDisambiguationTable(pendingRowFromForget({ action_type: "confirm-bulk", initiator_user_id: "999" })),
       ]);
       await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:cancel", { id: "cb-cancel-unrelated", from: { id: 7, username: "member" }, message: { chat: { id: -42, type: "supergroup" }, message_id: 1 } }));
 
@@ -320,11 +276,7 @@ describe("handleCallbackQuery", () => {
 
     it("setup:branch:recommended from a non-initiator user is refused", async () => {
       const db = mockTelegramD1([
-        {
-          match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-          rows: [],
-          first: pendingRowFromSetup({ step: "branch", alertTypes: [], target: null }, { initiator_user_id: "111" }),
-        },
+        pendingDisambiguationTable(pendingRowFromSetup({ step: "branch", alertTypes: [], target: null }, { initiator_user_id: "111" })),
       ]);
       await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:branch:recommended", { id: "cb-other", from: { id: 222 }, message: { chat: { id: 42, type: "private" } } }));
 

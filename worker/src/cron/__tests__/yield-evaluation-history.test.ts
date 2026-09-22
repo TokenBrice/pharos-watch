@@ -3,16 +3,13 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { buildHistoryKey, pickHistoryRowsForSource } from "../yield-sync/evaluation-history";
 import type { YieldHistorySnapshotRow } from "../yield-sync/history";
 
-// D5: the legacy carry-forward branch decides whether a switched row inherits
-// or silently empties its 30-day window (apy30d, apyVarianceScore,
-// observationCount30d, PYS), so the acceptance and each rejection guard are
+// Legacy carry-forward decides whether a switched row inherits or empties its
+// loaded 30-day window, so the acceptance and semantic rejection guards stay
 // pinned here.
 
 const COIN_ID = "test-coin";
 const CURRENT_SOURCE_KEY = "defillama:new-source";
 const CURRENT_DATA_SOURCE = "defillama";
-/** evaluation-history.ts's private bound: a 30-day window plus 5 days of slack. */
-const LEGACY_HISTORY_MAX_AGE_SEC = 35 * DAY_SECONDS;
 const START_SEC = 1_774_000_000;
 
 function legacyRow(
@@ -49,32 +46,18 @@ function pick(params: {
     new Map(),
     params.legacyRows ? new Map([[COIN_ID, params.legacyRows]]) : new Map(),
     params.resolvedCount == null ? new Map() : new Map([[COIN_ID, params.resolvedCount]]),
-    START_SEC,
   );
 }
 
 describe("pickHistoryRowsForSource legacy carry-forward", () => {
-  it("carries fresh same-family legacy history into a switched row", () => {
+  it("carries same-family legacy history into a switched row", () => {
     const fresh = legacyRow(START_SEC - 2 * DAY_SECONDS);
-    const outsideWindow = legacyRow(START_SEC - LEGACY_HISTORY_MAX_AGE_SEC - 1, { apy: 9 });
 
-    const result = pick({ legacyRows: [fresh, outsideWindow] });
+    const result = pick({ legacyRows: [fresh] });
 
-    // The coin has no resolved candidate (`resolvedCountByCoin` defaults to 0)
-    // and the rows all belong to the current family, so the window carries over.
     expect(result).toEqual({ rows: [fresh], usedLegacyHistory: true });
   });
 
-  it.each([
-    { label: "just inside the 35-day bound", ageSec: LEGACY_HISTORY_MAX_AGE_SEC - 1, accepted: true },
-    { label: "exactly at the 35-day bound", ageSec: LEGACY_HISTORY_MAX_AGE_SEC, accepted: true },
-    { label: "one second past the 35-day bound", ageSec: LEGACY_HISTORY_MAX_AGE_SEC + 1, accepted: false },
-  ])("$label — carried forward: $accepted", ({ ageSec, accepted }) => {
-    const result = pick({ legacyRows: [legacyRow(START_SEC - ageSec)], resolvedCount: 1 });
-
-    expect(result.usedLegacyHistory).toBe(accepted);
-    expect(result.rows).toHaveLength(accepted ? 1 : 0);
-  });
 
   it("rejects legacy history once more than one candidate resolved for the coin", () => {
     const result = pick({ legacyRows: [legacyRow(START_SEC - DAY_SECONDS)], resolvedCount: 2 });
@@ -114,7 +97,6 @@ describe("pickHistoryRowsForSource legacy carry-forward", () => {
       new Map(),
       new Map([[COIN_ID, [legacyRow(START_SEC - DAY_SECONDS, { apy: 4.2 })]]]),
       new Map(),
-      START_SEC,
     );
 
     expect(result).toEqual({ rows: [keyed], usedLegacyHistory: false });

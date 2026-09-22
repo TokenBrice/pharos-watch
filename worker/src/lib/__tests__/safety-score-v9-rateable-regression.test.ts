@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import miniCapture from "./fixtures/safety-score-v9-rateable-mini-capture.json";
 import { buildSafetyScoreV9ReplayArtifact } from "../../../scripts/replay-safety-score-v9";
-import { createReportCardsFixedInput, type ReportCardsFixedInputDraft } from "../report-cards-fixed-input";
+import {
+  createReportCardsFixedInput,
+  type ReportCardsFixedInputDraft,
+} from "../../test-helpers/report-cards-fixed-input";
 
 // Frozen producer rows for usdt-tether and usdc-circle, originally captured
 // on 2026-07-13 and coherently reclocked to 2026-09-05 so current registry

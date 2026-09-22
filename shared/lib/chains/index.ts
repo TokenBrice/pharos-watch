@@ -158,25 +158,20 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   gatelayer:      { name: "Gate Layer",      explorerUrl: "https://www.gatescan.org/gatelayer",             evmChainId: 10088,    type: "evm",   logoPath: "/chains/gatelayer.png"      },
 };
 
-/** Alias chains that share a display name. Map alias -> canonical key. */
+/**
+ * Labels that differ from both a chain's canonical key and its `CHAIN_META`
+ * display name. A label whose lowercase form already matches one of those is
+ * resolved by `CHAIN_NAME_TO_ID`; listing it here is dead weight.
+ */
 const CHAIN_ALIASES: Record<string, string> = {
   "hyperliquid-l1": "hyperliquid",
   // DL display names that differ from our CHAIN_META names
   "OP Mainnet": "optimism",
   "Plume Mainnet": "plume",
-  "Citrea": "citrea",
   "zkSync Era": "zksync",
   "ZKsync Era": "zksync",
-  "XRPL": "xrpl",
-  "Bsquared": "bsquared",
-  "BSquared": "bsquared",
-  "Abcore": "abcore",
   "Kaia": "klaytn",  // Klaytn rebranded to Kaia
-  "XDC": "xdc",
   "edgeX L1": "edgechain",
-  "Secret": "secret",
-  "Redbelly": "redbelly",
-  "Pharos": "pharos",
   "Echelon Initia": "initia",
 };
 
@@ -264,10 +259,15 @@ export function normalizeChainId(raw: string | number | null | undefined): strin
   return normalized || null;
 }
 
-/** Chain IDs that have a CHAIN_META entry (all defined chains are potentially active). */
+/**
+ * Every chain that has a `CHAIN_META` entry, sorted.
+ *
+ * Membership means "has chain metadata" — not "has provider registration or
+ * tracked supply". `aggregateChains` skips any chain whose tracked supply is
+ * zero, so these IDs also back static `/chains/<id>/` pages and sitemap entries
+ * that can render a no-tracked-supply state.
+ */
 export function getActiveChainIds(): string[] {
-  // Return all chains that have metadata defined, as they may have supply data
-  // from DefiLlama even without explicit contract tracking
   return Object.keys(CHAIN_META).sort();
 }
 

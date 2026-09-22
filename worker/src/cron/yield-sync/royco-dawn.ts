@@ -18,6 +18,7 @@ const ROYCO_DAWN_PAGE_SIZE = 100;
 const ROYCO_DAWN_MIN_MARKET_TVL_USD = 100_000;
 const ROYCO_DAWN_MIN_TRANCHE_TVL_USD = 100_000;
 const ROYCO_DAWN_MAX_APY_RATIO = 2;
+const ROYCO_DAWN_DETAIL_CONCURRENCY = 6;
 
 interface RoycoToken {
   symbol?: string | null;
@@ -186,8 +187,12 @@ function buildTrancheCandidate(params: {
   const sourceTvlUsd = finiteNumber(params.vault.tvl?.tokenAmountUsd);
   if (sourceTvlUsd == null || sourceTvlUsd < ROYCO_DAWN_MIN_TRANCHE_TVL_USD) return null;
   const sourceObservedAt = finiteNumber(params.vault.apyInfo?.duration?.end?.blockTimestamp);
-  if (sourceObservedAt == null || sourceObservedAt > params.observedAt + 60 || params.observedAt - sourceObservedAt > SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS / 1000) {
-    throw new Error("Royco tranche APY observation is missing or stale");
+  if (
+    sourceObservedAt == null ||
+    sourceObservedAt > params.observedAt + 60 ||
+    params.observedAt - sourceObservedAt > SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS / 1000
+  ) {
+    return null;
   }
   const sourcePool = normalizeTokenAddress(params.vault.address ?? params.vault.shareToken?.contractAddress ?? "");
   const marketName = params.market.name?.trim() || "Royco Dawn market";
@@ -288,54 +293,75 @@ export async function fetchRoycoDawnSources(signal?: AbortSignal): Promise<Royco
       const markets = body.data;
       if (markets.length === 0) break;
 
+      const detailTargets: Array<{ discovery: RoycoMarket; chain: string; marketId: string }> = [];
       for (const discovery of markets) {
         const chain = resolveCanonicalChain(discovery.chainId);
         if (!chain || discovery.majorType !== "marketv2" || discovery.listingType !== "verified") continue;
-        if (!discovery.marketId?.trim()) return { candidates: results, degraded: true };
-        // The ecosystem snapshot mixes Day and Dawn and reports TVL in native NAV units.
-        // Use it only for discovery; the detail endpoint preserves Dawn's USD/risk schema.
-        const detail = await fetchJsonWithRetry<RoycoMarket>(
-          `https://dawn.royco.org/api/v1/market/info/${discovery.chainId}/${encodeURIComponent(discovery.marketId)}`,
-          { headers: { Accept: "application/json", "User-Agent": USER_AGENT }, signal: budget.signal },
-          0, { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
+        const marketId = discovery.marketId;
+        if (!marketId?.trim()) return { candidates: results, degraded: true };
+        detailTargets.push({ discovery, chain, marketId });
+      }
+
+      for (let offset = 0; offset < detailTargets.length; offset += ROYCO_DAWN_DETAIL_CONCURRENCY) {
+        throwIfAborted(budget.budgetController.signal);
+        const details = await Promise.all(
+          detailTargets.slice(offset, offset + ROYCO_DAWN_DETAIL_CONCURRENCY).map(async ({ discovery, chain, marketId }) => {
+            // The ecosystem snapshot mixes Day and Dawn and reports TVL in native NAV units.
+            // Use it only for discovery; the detail endpoint preserves Dawn's USD/risk schema.
+            const detail = await fetchJsonWithRetry<RoycoMarket>(
+              `https://dawn.royco.org/api/v1/market/info/${discovery.chainId}/${encodeURIComponent(marketId)}`,
+              { headers: { Accept: "application/json", "User-Agent": USER_AGENT }, signal: budget.signal },
+              0,
+              { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
+            );
+            return { discovery, chain, marketId, detail };
+          }),
         );
-        if (!detail?.response.ok) return { candidates: results, degraded: true };
-        const market = detail.body;
-        if (market.chainId !== discovery.chainId || market.marketId?.toLowerCase() !== discovery.marketId.toLowerCase()
-          || market.majorType !== "marketv2") return { candidates: results, degraded: true };
-        const marketTvlUsd = finiteNumber(market.tvlUsd);
-        if (marketTvlUsd == null || marketTvlUsd < ROYCO_DAWN_MIN_MARKET_TVL_USD) continue;
-        if (market.listingType !== "verified") continue;
 
-        const seniorVault = market.seniorVault ?? null;
-        if (seniorVault) {
-          const trackedAsset = resolveVaultDepositToken(seniorVault, chain, trackedByAddress);
-          if (trackedAsset) {
-            const candidate = buildTrancheCandidate({
-              side: "senior",
-              market,
-              vault: seniorVault,
-              chain,
-              trackedAsset,
-              observedAt,
-            });
-            if (candidate) results.push(candidate);
+        for (const { discovery, chain, marketId, detail } of details) {
+          if (!detail?.response.ok) return { candidates: results, degraded: true };
+          const market = detail.body;
+          if (
+            market.chainId !== discovery.chainId ||
+            market.marketId?.toLowerCase() !== marketId.toLowerCase() ||
+            market.majorType !== "marketv2"
+          ) {
+            return { candidates: results, degraded: true };
           }
-        }
+          const marketTvlUsd = finiteNumber(market.tvlUsd);
+          if (marketTvlUsd == null || marketTvlUsd < ROYCO_DAWN_MIN_MARKET_TVL_USD) continue;
+          if (market.listingType !== "verified") continue;
 
-        const juniorVault = market.juniorVault ?? null;
-        if (juniorVault) {
-          const trackedAsset = resolveVaultDepositToken(juniorVault, chain, trackedByAddress);
-          if (trackedAsset) {
-            const candidate = buildTrancheCandidate({
-              side: "junior",
-              market,
-              vault: juniorVault,
-              chain,
-              trackedAsset,
-              observedAt,
-            });
-            if (candidate) results.push(candidate);
+          const seniorVault = market.seniorVault ?? null;
+          if (seniorVault) {
+            const trackedAsset = resolveVaultDepositToken(seniorVault, chain, trackedByAddress);
+            if (trackedAsset) {
+              const candidate = buildTrancheCandidate({
+                side: "senior",
+                market,
+                vault: seniorVault,
+                chain,
+                trackedAsset,
+                observedAt,
+              });
+              if (candidate) results.push(candidate);
+            }
+          }
+
+          const juniorVault = market.juniorVault ?? null;
+          if (juniorVault) {
+            const trackedAsset = resolveVaultDepositToken(juniorVault, chain, trackedByAddress);
+            if (trackedAsset) {
+              const candidate = buildTrancheCandidate({
+                side: "junior",
+                market,
+                vault: juniorVault,
+                chain,
+                trackedAsset,
+                observedAt,
+              });
+              if (candidate) results.push(candidate);
+            }
           }
         }
       }
@@ -349,10 +375,22 @@ export async function fetchRoycoDawnSources(signal?: AbortSignal): Promise<Royco
       }
     }
 
+    throwIfAborted(budget.budgetController.signal);
     return { candidates: results, degraded: false };
   } catch (error) {
     if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
-    if (!budget.budgetController.signal.aborted) {
+    if (budget.budgetController.signal.aborted) {
+      logWorkerEvent({
+        scope: "lib",
+        level: "warn",
+        event: "royco-dawn-sources-budget-exhausted",
+        job: "sync-yield-supplemental",
+        provider: "royco-dawn",
+        source: "yield-supplemental",
+        message: "Royco Dawn sources budget exhausted; keeping partial results",
+        metadata: { resultCount: results.length },
+      });
+    } else {
       logWorkerEvent({
         scope: "lib",
         level: "warn",

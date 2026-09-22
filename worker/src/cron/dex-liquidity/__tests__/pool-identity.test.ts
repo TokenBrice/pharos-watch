@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildDexPriceObservationIdentity,
   buildPoolIdentity,
   clearKnownPoolIdentityIndex,
   countPoolIdentityKeys,
@@ -49,6 +50,24 @@ describe("pool identity dedup", () => {
       getIdentityDedupReason(identity, known, { derived: 0, wildcard: 0 }, { stablecoinId: "eur0-usual" }),
     ).toBeNull();
     expect(getIdentityDedupReason(identity, known, { derived: 0, wildcard: 0 })).toBe("exact");
+  });
+
+  it("normalizes producer observation labels from the shared pool identity", () => {
+    const derived = buildPoolIdentity({
+      chain: "ethereum",
+      protocol: "curve",
+      poolAddressOrId: "opaque-provider-id",
+      tokenAddresses: [
+        "0xabc0000000000000000000000000000000000001",
+        "0xabc0000000000000000000000000000000000002",
+      ],
+      poolType: "curve-stableswap",
+    });
+
+    expect(buildDexPriceObservationIdentity(derived)).toEqual({
+      derivedMatchKey: derived.derivedMatchKey,
+      identityConfidence: "derived_unique",
+    });
   });
 
   it("preserves case-distinct Solana pool and token identities", () => {

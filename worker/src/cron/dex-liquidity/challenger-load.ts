@@ -227,7 +227,6 @@ export async function loadPublishedDexPoolChallengers(
     challengersByStablecoin,
     diagnostics: {
       mode,
-      missingTables: false,
       emptyPublishedCoins,
       incompletePublishedCoins,
       legacyFallbackCoins: [...legacyFallbackCoins],

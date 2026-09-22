@@ -9,7 +9,6 @@ import {
   computeEffectiveTier,
   hasRemappedUnsupportedCensusRow,
   hasVerifiedEmptyCensus,
-  isEligibleThisRun,
   isDiscoveryEvidenceRefreshDue,
 } from "../orchestrator";
 
@@ -291,16 +290,6 @@ describe("verified-empty census cadence (ODR-B1a)", () => {
     };
     expect(computeEffectiveTier("coin-91", 0, 0, meta, 84, nowSec, false)).toBe("skip");
     expect(computeEffectiveTier("coin-91", 0, 0, meta, 84, nowSec, true)).toBe("t3");
-  });
-});
-
-describe("isEligibleThisRun", () => {
-  it("treats only skip as ineligible", () => {
-    expect(isEligibleThisRun("t1")).toBe(true);
-    expect(isEligibleThisRun("t2")).toBe(true);
-    expect(isEligibleThisRun("t3")).toBe(true);
-    expect(isEligibleThisRun("dormant")).toBe(true);
-    expect(isEligibleThisRun("skip")).toBe(false);
   });
 });
 

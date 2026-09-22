@@ -5,10 +5,9 @@ import {
   didDigestChannelDeliver,
   insertDigestRecord,
   markDigestMetaBlocked,
-  requestDigestCopy,
-  resolveDigestLlmConfig,
   runDigestChannelDelivery,
 } from "../platform";
+import { requestDigestCopy, resolveDigestLlmConfig } from "../llm-request";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { makeNoopD1, makeRunCountingNoopD1 } from "../../../test-helpers/noop-d1";
 import {
@@ -29,7 +28,7 @@ vi.mock("../../../lib/fetch-retry", () => ({
 
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../../lib/circuit-breaker";
 import { fetchWithRetry } from "../../../lib/fetch-retry";
-import { WEEKLY_RECAP_LLM_CONFIG } from "../../../lib/constants";
+import { CIRCUIT_SOURCE, WEEKLY_RECAP_LLM_CONFIG } from "../../../lib/constants";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -241,6 +240,43 @@ describe("requestDigestCopy refusals", () => {
       await rejects;
 
       expect(vi.mocked(fetchWithRetry)).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("accounts the attempt and circuit outcome when the error body stalls", async () => {
+    vi.useFakeTimers();
+    try {
+      let bodyCancelled = false;
+      const stalledBody = new ReadableStream<Uint8Array>({
+        start() {},
+        cancel() {
+          bodyCancelled = true;
+        },
+      });
+      vi.mocked(fetchWithRetry).mockResolvedValueOnce(new Response(stalledBody, { status: 400 }));
+      const reportAttempt = vi.fn(async (_attempts: unknown[]) => {});
+
+      const pending = requestDigestCopy({
+        db,
+        anthropicApiKey: "key",
+        systemPrompt: "system",
+        userPrompt: "user",
+        llmConfig: WEEKLY_RECAP_LLM_CONFIG,
+        logPrefix: "test",
+        reportAttempt,
+      });
+      const rejects = expect(pending).rejects.toThrow(
+        /Claude API error 400: error body read failed \(TimeoutError\)/,
+      );
+      await vi.advanceTimersByTimeAsync(15_000);
+      await rejects;
+
+      expect(bodyCancelled).toBe(true);
+      expect(recordOutcomeSafe).toHaveBeenCalledWith(db, CIRCUIT_SOURCE.ANTHROPIC, false);
+      expect(reportAttempt).toHaveBeenCalledTimes(1);
+      expect(reportAttempt.mock.calls[0]![0]).toMatchObject([{ httpAttempt: 1, httpStatus: 400 }]);
     } finally {
       vi.useRealTimers();
     }

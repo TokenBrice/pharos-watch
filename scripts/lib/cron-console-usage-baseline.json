@@ -28,7 +28,6 @@
   "worker/src/cron/blacklist/post-fetch.ts": 2,
   "worker/src/cron/blacklist/sync-support.ts": 2,
   "worker/src/cron/blacklist/tron-source.ts": 1,
-  "worker/src/cron/compute-dews.ts": 3,
   "worker/src/cron/confirm-pending-depegs.ts": 1,
   "worker/src/cron/daily-digest.ts": 6,
   "worker/src/cron/daily-digest/collectors-history.ts": 4,

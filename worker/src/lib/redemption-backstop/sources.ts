@@ -23,7 +23,7 @@ import {
 } from "@shared/lib/redemption-backstops";
 import { resolveDefaultHolderEligibility } from "@shared/lib/redemption-backstop-configs/shared";
 import { REDEMPTION_BACKSTOP_PROVIDER_IDS } from "@shared/lib/redemption-backstop-providers";
-import { REDEMPTION_BACKSTOP_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/redemption-backstop";
+import { REDEMPTION_BACKSTOP_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import type { StablecoinData } from "@shared/types/market";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import { getLatestSuccessfulReserveSnapshotMetadata, type ReserveSnapshotMetadataRecord } from "../live-reserves/store";
@@ -326,6 +326,7 @@ export async function buildRedemptionBackstopEntry(
     feeConfidence: staticFields.feeConfidence,
     routeStatus,
     routeStatusSource,
+    capacityUsd: capacity.immediateCapacityUsd,
     reviewedAt: config.reviewedAt,
     holderEligibility,
     sourceMode: capacity.sourceMode,

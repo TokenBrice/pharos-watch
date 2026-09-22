@@ -74,6 +74,15 @@ describe("universal exclusions", () => {
     expect(evaluateExclusions(makeRow({ supplyUsd: 5_500_000 }), makeInput())).toBeNull();
   });
 
+  it("supply-unavailable: an unread supply is not the supply floor", () => {
+    expect(evaluateExclusions(makeRow({ supplyUsd: null }), makeInput())).toEqual(
+      expect.objectContaining({ reason: "supply-unavailable", severity: "hard" }),
+    );
+    expect(evaluateExclusions(makeRow({ supplyUsd: 0 }), makeInput())).toEqual(
+      expect.objectContaining({ reason: "below-supply-floor" }),
+    );
+  });
+
   it.each([["zero", 50], ["tight", 100], ["moderate", 200]] as const)(
     "active-depeg boundary for %s",
     (depegTolerance, threshold) => {

@@ -2,7 +2,7 @@ import { logWorkerEventArgs } from "../lib/structured-log";
 import { getCirculatingRaw, getPrevWeekRawOrNull } from "@shared/lib/supply";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { CORE_PSI_ELIGIBLE_IDS } from "@shared/lib/psi-eligible";
-import { PSI_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/stability-index";
+import { PSI_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { round1 } from "@shared/lib/math";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import type { CronResult } from "../lib/cron-logger";
@@ -231,27 +231,9 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
   }
 
   throwIfAborted(signal);
-  if (openDepegsWithoutPrice > 0) {
-    return createCronResult({
-      status: "degraded",
-      itemCount: 0,
-      metadata: {
-        fallbackMode: "open-depeg-price-unavailable",
-        openDepegsWithoutPrice,
-        replayPriceFallbackCount,
-        totalMcapUsd,
-        mcap7dChangePct,
-        depegCount: depegs.length,
-        dewsStressBreadth,
-        dewsUnavailable,
-        dewsFailureReason,
-        dewsLatestComputedAt,
-        dewsRowsRead,
-        dewsMaxAgeSec: DEWS_STRESS_MAX_AGE_SEC,
-        preservedCurrentSample: true,
-      },
-    });
-  }
+  const degradedComponents: string[] = openDepegsWithoutPrice > 0
+    ? ["open-depeg-no-price"]
+    : [];
 
   const result = computeStabilityIndex({ depegs, totalMcapUsd, mcap7dChangePct, dewsStressBreadth });
   if (!result) {
@@ -298,6 +280,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
         dewsMaxAgeSec: DEWS_STRESS_MAX_AGE_SEC,
         replayPriceFallbackCount,
         openDepegsWithoutPrice,
+        degradedComponents,
         contributors,
         methodologyVersion: PSI_METHODOLOGY_VERSION,
       }),
@@ -341,6 +324,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
       dewsMaxAgeSec: DEWS_STRESS_MAX_AGE_SEC,
       replayPriceFallbackCount,
       openDepegsWithoutPrice,
+      degradedComponents,
     },
   });
 }

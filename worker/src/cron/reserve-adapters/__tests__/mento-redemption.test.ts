@@ -2,6 +2,7 @@ import { encodeAbiParameters } from "viem/utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import source from "@shared/data/stablecoins/coins/cusd-celo.json";
 import type { LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
+import { mentoSpreadToFeeBps, MENTO_POOL_SPREAD_FIXIDITY_SCALE } from "@shared/lib/mento-contracts";
 import { fetchMentoRedemptionMetadata } from "../mento-redemption";
 import { fetchOnchainMulticall3, fetchOnchainUint256 } from "../helpers";
 import { pinnedBlockPlan } from "../evm-observation-plan";
@@ -38,6 +39,12 @@ function setup(change: Record<string, `0x${string}` | null> = {}) {
   vi.mocked(fetchOnchainUint256).mockResolvedValue(999_999_999n);
 }
 afterEach(() => vi.resetAllMocks());
+describe("Mento spread fee conversion", () => {
+  it("preserves fractional basis points", () => {
+    expect(mentoSpreadToFeeBps(MENTO_POOL_SPREAD_FIXIDITY_SCALE / 4_000n)).toBe(2.5);
+    expect(mentoSpreadToFeeBps(MENTO_POOL_SPREAD_FIXIDITY_SCALE / 25_000n)).toBe(0.4);
+  });
+});
 describe("USDm V3 output pools", () => {
   it("sums distinct six-decimal outputs below inventory, checks both directions at one block", async () => {
     setup();

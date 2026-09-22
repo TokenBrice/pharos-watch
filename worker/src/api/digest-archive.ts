@@ -1,5 +1,5 @@
 import { jsonFreshResponse } from "../lib/api-response";
-import { CACHE_PROFILES } from "../lib/constants";
+import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { DigestForwardLookOutcome, DigestNextTrigger, DigestRiskSignal, DigestRiskTapeItem } from "@shared/types/digest";
 import { decodeJsonString } from "../lib/cache-json";
@@ -90,10 +90,18 @@ function decodeDigestMeta(value: string | null, generatedAt: number): DigestArch
 
 export const handleDigestArchive = async (db: D1Database): Promise<Response> => {
   const rows = await db.prepare(
-    // Blocked rows never published and get no edition number, so a SQL filter
-    // is safe here; internal sentinel rows are numbered first and hidden in JS.
-    `SELECT digest_text, digest_title, generated_at, digest_extended, input_data, digest_meta FROM daily_digest WHERE ${NON_BLOCKED_DIGEST_SQL_FILTER} ORDER BY generated_at DESC LIMIT 365`
-  ).all<{ digest_text: string; digest_title: string | null; generated_at: number; digest_extended: string | null; input_data: string | null; digest_meta: string | null }>();
+    // The window function numbers the full non-blocked history before the
+    // response limit is applied, so an older row leaving the archive window
+    // cannot renumber editions that have already been published.
+    `SELECT * FROM (
+       SELECT digest_text, digest_title, generated_at, digest_extended, input_data, digest_meta,
+         ROW_NUMBER() OVER (
+           PARTITION BY CASE WHEN json_extract(digest_meta, '$.type') = 'weekly' THEN 'weekly' ELSE 'daily' END
+           ORDER BY generated_at ASC
+         ) AS edition_number
+       FROM daily_digest WHERE ${NON_BLOCKED_DIGEST_SQL_FILTER}
+     ) ORDER BY generated_at DESC LIMIT 365`,
+  ).all<{ digest_text: string; digest_title: string | null; generated_at: number; digest_extended: string | null; input_data: string | null; digest_meta: string | null; edition_number: number }>();
 
   const digests = (rows.results ?? []).map((r) => {
     let psiScore: number | null = null;
@@ -142,23 +150,9 @@ export const handleDigestArchive = async (db: D1Database): Promise<Response> => 
       digestType,
       editorialStyleVersion: meta?.editorialStyleVersion ?? "pre-policy",
       editorialStyleHash: meta?.editorialStyleHash ?? "pre-policy",
-      editionNumber: 0, // computed below
+      editionNumber: r.edition_number,
     };
   });
-
-  // Assign sequential edition numbers per type (oldest first). Internal
-  // sentinel rows are numbered too — hiding them below must not shift the
-  // edition numbers already published on socials and detail pages.
-  let dailyCount = 0;
-  let weeklyCount = 0;
-  const chronological = [...digests].sort((a, b) => a.generatedAt - b.generatedAt);
-  for (const d of chronological) {
-    if (d.digestType === "weekly") {
-      d.editionNumber = ++weeklyCount;
-    } else {
-      d.editionNumber = ++dailyCount;
-    }
-  }
 
   const publicDigests = digests
     .filter((d) => !d.isInternal)

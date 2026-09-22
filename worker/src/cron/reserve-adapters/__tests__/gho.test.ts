@@ -6,8 +6,8 @@ import { adaptGhoFacilitators, type GhoFacilitatorData } from "../gho";
 import type { AdapterNetworkSpec, AdapterRpcCall } from "./reserve-adapter.test-support";
 import { runAdapter } from "./reserve-adapter.test-support";
 
-const CORE = "0x1111111111111111111111111111111111111111";
-const GSM = "0x2222222222222222222222222222222222222222";
+const CORE = "0x5513224daaeabca31af5280727878d52097afa05";
+const GSM = "0xe9ac5231faecb633da0fe85fcb2785b8363427d2";
 const MODULE = "0x3333333333333333333333333333333333333333";
 const GHO_TOKEN = "0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f";
 const UNIT = 10n ** 18n;
@@ -85,6 +85,21 @@ describe("GHO parent-local exposure", () => {
     expect(result.slices.find((slice) => slice.name === "CoreGhoDirectMinter")?.pct).toBe(40);
     expect(result.slices.find((slice) => slice.coinId === "usdc-circle")?.pct).toBe(16);
     expect(result.metadata?.unknownExposurePct).toBe(44);
+  });
+
+  it("keeps an unreviewed facilitator unknown even when its label claims Aave direct issuance", () => {
+    const data = sample();
+    data.facilitators[0] = {
+      ...data.facilitators[0],
+      address: "0x4444444444444444444444444444444444444444",
+      label: "AaveCoreGhoDirectMinter",
+    };
+
+    const result = adaptGhoFacilitators(data);
+    expect(result.slices.find((slice) => slice.name === "AaveCoreGhoDirectMinter")).toMatchObject({
+      risk: "high",
+    });
+    expect(result.metadata?.unknownExposurePct).toBe(50);
   });
 
   it("does not attribute backing from a module whose parent is absent", () => {

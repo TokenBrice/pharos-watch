@@ -46,7 +46,7 @@ describe("USDaf on-chain rebinding", () => {
     expect(result.slices.map((slice) => slice.name).sort()).toEqual(["sUSDS", "scrvUSD", "sfrxUSD", "tBTC", "wBTC", "ysyBOLD"].sort());
     for (const slice of result.slices) expect(slice.pct).toBeCloseTo(100 / 6, 0);
     expect(result.slices.find((slice) => slice.name === "wBTC")?.sourceKey).toBe("liquity-v2-branches:ethereum:0xe065bc161b90c9c4bba2de7f1e194b70a3267c47");
-    expect(result.metadata?.redemption).toMatchObject({ capacityUsd: 300, routeStatus: "open", routeStatusSource: "onchain", freshnessKind: "same-run-onchain", feeBps: 50 });
+    expect(result.metadata?.redemption).toMatchObject({ capacityUsd: 300, routeStatus: "unknown", routeStatusSource: "static-config", freshnessKind: "same-run-onchain", feeBps: 50 });
     expectWarnings(result, []);
   });
 

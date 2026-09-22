@@ -9,6 +9,7 @@
 import { ACTIVE_STABLECOINS, ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { StablecoinData } from "@shared/types/market";
 import type { ReportCardsFixedInput } from "./report-cards-fixed-input";
+import { dexLiquidityPublishedRowFilter } from "./dex-liquidity";
 
 interface DexPublicationRow {
   stablecoin_id: string;
@@ -88,9 +89,7 @@ export async function loadExactDexPublicationGeneration(db: D1Database): Promise
       `SELECT stablecoin_id, publication_generation_id, updated_at
          FROM dex_liquidity
         WHERE stablecoin_id != '__global__'
-          AND (publication_generation_id IS NULL OR publication_generation_id IN (
-            SELECT generation_id FROM dex_liquidity_publication_generations WHERE state = 'published'
-          ))`,
+          AND ${dexLiquidityPublishedRowFilter()}`,
     )
     .all<DexPublicationRow>();
   return resolveExactDexPublicationGeneration(rows.results ?? []);

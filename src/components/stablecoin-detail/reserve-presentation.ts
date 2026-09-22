@@ -104,6 +104,9 @@ function formatReserveUpdatedAt(timestamp: number | undefined): string {
         day: "numeric",
         hour: "2-digit",
         minute: "2-digit",
+        hourCycle: "h23",
+        // The `as of` half of this sentence is UTC; both halves must share one frame.
+        timeZone: "UTC",
         timeZoneName: "short",
       })
     : "the previous successful run";

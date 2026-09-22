@@ -20,7 +20,6 @@ function coin(symbol: string, netFlow24hUsd: number): MintBurnCoinFlow {
   return {
     stablecoinId: symbol.toLowerCase(),
     symbol,
-    flowIntensity: 0,
     pressureShiftScore: 0,
     pressureShiftState: "stable",
     netFlowDirection24h: netFlow24hUsd > 0 ? "minting" : netFlow24hUsd < 0 ? "burning" : "inactive",

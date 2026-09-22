@@ -1,5 +1,3 @@
-import { hasOwn } from "../has-own";
-
 import {
   L2BEAT_CHAIN_ALIASES,
   L2BEAT_CHAIN_RISK_FIELDS,
@@ -49,10 +47,10 @@ export interface L2BeatChainEnvironmentAssessment {
 }
 
 export function resolveL2BeatProjectId(chainId: string): keyof typeof L2BEAT_CHAIN_RISK_SNAPSHOT | null {
-  if (hasOwn(L2BEAT_CHAIN_RISK_SNAPSHOT, chainId)) {
+  if (Object.prototype.hasOwnProperty.call(L2BEAT_CHAIN_RISK_SNAPSHOT, chainId)) {
     return chainId as keyof typeof L2BEAT_CHAIN_RISK_SNAPSHOT;
   }
-  return hasOwn(L2BEAT_CHAIN_ALIASES, chainId)
+  return Object.prototype.hasOwnProperty.call(L2BEAT_CHAIN_ALIASES, chainId)
     ? (L2BEAT_CHAIN_ALIASES as Partial<Record<string, keyof typeof L2BEAT_CHAIN_RISK_SNAPSHOT>>)[chainId] ?? null
     : null;
 }

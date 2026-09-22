@@ -293,13 +293,16 @@ export async function snapshotSupply(
 
   logWorkerEventArgs("handler", "info", `[snapshot-supply] Inserted ${snapshotRows.length} rows for date ${formatIsoDate(snapshotDate)}`);
   if (restoredOnlyIds.length > 0) {
+    // The atomic replacement above already committed the full snapshot: a
+    // restored-only tail is input quality, not work that did not happen.
     return createCronResult({
-      status: "degraded",
       itemCount: snapshotRows.length,
       metadata: {
-        reason: "snapshot_written_restored_skipped",
         writtenRows: snapshotRows.length,
-        restoredOnlyIds,
+        quality: {
+          reason: "snapshot_written_restored_skipped",
+          restoredOnlyIds,
+        },
       },
     });
   }

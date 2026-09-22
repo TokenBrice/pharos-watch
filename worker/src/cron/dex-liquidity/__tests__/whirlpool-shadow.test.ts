@@ -145,7 +145,7 @@ describe("Orca native shadow producer", () => {
     expect(buildOrcaWhirlpoolRegisteredExecutionTarget(input)).toEqual({ executionCapabilityGate: { family: "measured-execution", reason: "activation-pending" } });
     const registration = getDexExecutionCapabilityRegistration("orca-whirlpool-exact-v1")!;
     expect(registration.capabilityId).toBe("measured-adapter-shadow");
-    expect(isDexExecutionProfileAdmittedForScoring({ profileId: registration.profileId, identity: { chain: "solana" } }, registration)).toBe(false);
+    expect(isDexExecutionProfileAdmittedForScoring({ adapterProfileId: registration.profileId, chain: "solana" }, registration)).toBe(false);
   });
 
   it("registers only Solana Raydium CLMM as activation-pending, never standard AMM", () => {
@@ -154,6 +154,6 @@ describe("Orca native shadow producer", () => {
     input.identity.poolType = "raydium-amm";
     expect(buildRaydiumClmmRegisteredExecutionTarget(input)).toBeNull();
     const registration = getDexExecutionCapabilityRegistration("raydium-clmm-exact-v1")!;
-    expect(isDexExecutionProfileAdmittedForScoring({ profileId: registration.profileId, identity: { chain: "solana" } }, registration)).toBe(false);
+    expect(isDexExecutionProfileAdmittedForScoring({ adapterProfileId: registration.profileId, chain: "solana" }, registration)).toBe(false);
   });
 });

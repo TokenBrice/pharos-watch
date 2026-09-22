@@ -21,6 +21,7 @@ import { stripTermMarkup } from "@/lib/term-markup";
 import type { LaunchPhase, StablecoinMeta } from "@shared/types";
 import { type UrlStateSchema } from "@/lib/url-state";
 import { useUrlState } from "@/hooks/use-url-state";
+import { getLogoSrc } from "@/lib/logos";
 
 export type UpcomingCoin = Pick<
   StablecoinMeta,
@@ -322,7 +323,7 @@ export function UpcomingClient({
               >
                 {/* Header */}
                 <div className="flex items-center gap-3">
-                  <StablecoinLogo src={logos[coin.id]} name={coin.name} size={36} />
+                  <StablecoinLogo src={getLogoSrc(logos, coin.id)} name={coin.name} size={36} />
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-foreground group-hover:text-foreground/80">
                       {coin.name}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { COMPARISON_ANCHOR_STALE_THRESHOLD_MS } from "../yield-helpers";
+import { COMPARISON_ANCHOR_STALE_THRESHOLD_MS } from "../../lib/yield-ranking-helpers";
 import { buildHardcodedUsdBenchmark } from "../yield-sync/benchmarks";
 import {
   buildComparisonAnchorFreshnessMeta,
@@ -96,6 +96,7 @@ describe("buildYieldDegradationReasons", () => {
       fallbackMode: null,
       degradedFamilies: [] as string[],
     },
+    stablecoinSupplyMapState: "ok" as const,
     allDeterministicFailed: false,
     maskedAllDeterministicFailure: false,
     onChainSkippedDueToCooldown: false,
@@ -127,6 +128,14 @@ describe("buildYieldDegradationReasons", () => {
     ).toContain("yield-supplemental:stale-cache");
   });
 
+  it.each(["missing", "malformed"] as const)("reports the %s bulk stablecoin supply map", (state) => {
+    expect(buildYieldDegradationReasons({
+      ...baseParams,
+      defaultBenchmarkMeta: buildHardcodedUsdBenchmark("test"),
+      stablecoinSupplyMapState: state,
+    })).toContain(`yield-supply-map:${state}`);
+  });
+
   it("reports retained degraded families by name and keeps optional-source failures out of the reasons", () => {
     const reasons = buildYieldDegradationReasons({
       ...baseParams,
@@ -141,11 +150,31 @@ describe("buildYieldDegradationReasons", () => {
       },
     });
 
-    expect(reasons).toEqual(expect.arrayContaining(["yield-supplemental:family-degraded:morpho-vault"]));
+    expect(reasons).toEqual(expect.arrayContaining([
+      "yield-supplemental:partial-family-cache",
+      "yield-supplemental:family-degraded:morpho-vault",
+    ]));
     // B15/W1d: a failed optional family is not a degraded run on its own (the
     // sync-yield-data rates-history contract); it travels in the run metadata
     // asserted in the `buildYieldSyncMetadata` block below.
     expect(reasons.filter((reason) => reason.startsWith("yield-source:family-failed:"))).toEqual([]);
+  });
+
+  it("names the stale selected source in the degradation reason", () => {
+    const reasons = buildYieldDegradationReasons({
+      ...baseParams,
+      defaultBenchmarkMeta: buildHardcodedUsdBenchmark("test"),
+      selectedSources: [
+        makeEvaluatedSource({
+          sourceKey: "defillama:expired-pool",
+          sourceFreshness: "stale",
+          benchmarkKey: "USD",
+          benchmarkFreshness: "healthy",
+        }),
+      ],
+    });
+
+    expect(reasons).toContain("yield-source:expired-selected:defillama:expired-pool");
   });
 
   it("stays quiet for a healthy supplemental cache with no optional-source failures", () => {
@@ -216,6 +245,7 @@ describe("buildYieldSyncMetadata", () => {
           fallbackMode: null,
           degradedFamilies: [],
         },
+        stablecoinSupplyMapState: "ok",
         optionalSourceFailures: [
           { label: "Midas mMEV NAV oracle source", outcome: "timeout" },
           { label: "Yearn yBOLD source", outcome: "failed" },
@@ -232,7 +262,6 @@ describe("buildYieldSyncMetadata", () => {
           alternativeCoverageMissingIds: [],
           failures: null,
           skippedDueToCooldown: false,
-          cooldownActive: false,
           cooldownTriggered: false,
           cooldownUntil: null,
           cooldownRemainingSec: 0,
@@ -269,6 +298,7 @@ describe("buildYieldSyncMetadata", () => {
         previousTvlRowsTruncated: boolean;
         optionalSourceFailures: Array<{ label: string; outcome: string }>;
         optionalSourceFailureCount: number;
+        stablecoinSupplyMapState: string;
         safetySnapshot: {
           source: string;
           publicationGenerationId: string;
@@ -291,6 +321,7 @@ describe("buildYieldSyncMetadata", () => {
       { label: "Yearn yBOLD source", outcome: "failed" },
     ]);
     expect(metadata.sourceCoverage.optionalSourceFailureCount).toBe(2);
+    expect(metadata.sourceCoverage.stablecoinSupplyMapState).toBe("ok");
     expect(metadata.publicationStats).toEqual({
       cacheValueChars: 812_345,
       yieldDataRowsChars: 120_000,

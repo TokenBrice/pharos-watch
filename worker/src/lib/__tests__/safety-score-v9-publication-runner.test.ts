@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeWorkerSafetyScoreV9Publication, makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
 import { createSafetyScoreV9FullRegistryInput } from "./fixtures/safety-score-v9-full-registry-input";
-import { createReportCardsFixedInput } from "../report-cards-fixed-input";
+import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import { canonicalV9RouteKey } from "@shared/lib/safety-score-v9/facts";
 import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
+import { V9AssetEvaluationError } from "@shared/lib/safety-score-v9/evaluate-set";
 
 const mocks = vi.hoisted(() => ({
   assess: vi.fn(),
@@ -319,7 +320,7 @@ describe("Safety Score V9 publication runner", () => {
       compilerFactSchemaDigest: "1".repeat(64),
       producerCapabilityDigest: "2".repeat(64),
       quarantines: [
-        { assetId: "alpha", code: "fact-build-failed", message: "fixture quarantine" },
+        { assetId: "alpha", code: "evaluation-failed", message: "fixture evaluation quarantine" },
       ],
       quarantineAffectedAssetIds: ["alpha"],
       bridgeJoinDiagnostics: [],
@@ -454,6 +455,50 @@ describe("Safety Score V9 publication runner", () => {
           failure: expect.objectContaining({
             stage: "compile",
             message: "compiler fixture failure",
+          }),
+        }),
+      }),
+    );
+  });
+
+  it("names the asset and Zod field path in a compile failure", async () => {
+    mocks.build.mockImplementation(() => {
+      throw new V9AssetEvaluationError("alpha", {
+        issues: [
+          {
+            path: ["structuralSignals", 0, "materialSharePct"],
+          },
+        ],
+      });
+    });
+
+    const result = await runSafetyScoreV9Publication({
+      db: {} as D1Database,
+      fixedInput,
+      nowSec: fixedInput.clockSec,
+    });
+
+    expect(result).toMatchObject({
+      status: "failed",
+      stage: "compile",
+      code: expect.stringContaining(
+        "alpha-structuralSignals-0-.materialSharePct",
+      ),
+      message: expect.stringContaining(
+        "alpha evaluation failed at structuralSignals[0].materialSharePct",
+      ),
+    });
+    expect(mocks.persistAttempt).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        publicationAttempt: expect.objectContaining({
+          failure: expect.objectContaining({
+            code: expect.stringContaining(
+              "alpha-structuralSignals-0-.materialSharePct",
+            ),
+            message: expect.stringContaining(
+              "structuralSignals[0].materialSharePct",
+            ),
           }),
         }),
       }),

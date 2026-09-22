@@ -6,20 +6,12 @@ import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards
 import {
   FixedDexLiquidityRowSchema,
   ReportCardsFixedInputMethodologyVersionsSchema,
-  computeDexLiquidityPayloadFingerprint,
-  computeRedemptionPayloadFingerprint,
-  computeReportCardsRegistryFingerprint,
   normalizeFixedDexLiquidityMap,
   normalizeFixedRedemptionBackstopMap,
   normalizeReportCardsFixedInputMethodologyVersions,
-  projectFixedDexLiquidityMap,
   projectReportCardsFixedInputMethodologyVersions,
 } from "@shared/lib/report-cards-fixed-input-identity";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import {
-  SafetyScoreV8PublicationIdentitySchema,
-  type SafetyScoreV8PublicationIdentity,
-} from "@shared/types/safety-score-publication";
+import { SafetyScoreV8PublicationIdentitySchema } from "@shared/types/safety-score-publication";
 import { BaseInputGenerationIdSchema, Sha256Schema } from "@shared/types/safety-schema-primitives";
 import {
   assertCommonFixedInputConsistency,
@@ -30,7 +22,6 @@ import {
   type DexDeploymentSupplyCoverage,
 } from "./report-cards-fixed-input-contract";
 import {
-  buildFixedInputCacheEntry,
   FixedInputCacheEnvelopeFields,
   parseFixedInputCacheEntry,
 } from "./report-cards-fixed-input-cache-codec";
@@ -42,8 +33,6 @@ export {
 };
 
 const BlacklistStatusSchema = z.union([z.boolean(), z.literal("possible"), z.literal("inherited")]);
-
-export { computeDexLiquidityPayloadFingerprint, computeRedemptionPayloadFingerprint, computeReportCardsRegistryFingerprint } from "@shared/lib/report-cards-fixed-input-identity";
 
 const FixedInputPayloadFields = createFixedInputPayloadFields({
   publicationHealthSchema: V9PublicationInputHealthSchema.default({
@@ -103,6 +92,9 @@ const LegacyReportCardsFixedInputV3Schema = z
 const ReportCardsFixedInputSchema = LegacyReportCardsFixedInputV3Schema.extend({
   baseInputGenerationId: BaseInputGenerationIdSchema,
 }).strict();
+const ReportCardsFixedInputIntakeSchema = ReportCardsFixedInputSchema.omit({
+  baseInputGenerationId: true,
+}).extend({ baseInputGenerationId: BaseInputGenerationIdSchema.optional() });
 
 export type ReportCardsFixedInput = z.infer<typeof ReportCardsFixedInputSchema>;
 type LegacyReportCardsFixedInputV3 = z.infer<typeof LegacyReportCardsFixedInputV3Schema>;
@@ -115,49 +107,10 @@ const FixedInputCacheEnvelopeSchema = z.object({
   safetyScoreIdentity: SafetyScoreV8PublicationIdentitySchema.optional(),
 });
 
-export async function buildReportCardsFixedInputCacheEntry(
-  value: unknown,
-  safetyScoreIdentity?: SafetyScoreV8PublicationIdentity,
-): Promise<{ key: string; value: string; storedBytes: number; uncompressedBytes: number }> {
-  const input = normalizeFixedInput(value);
-  if (input.captureKind !== "exact-publication-inputs") {
-    throw new Error("Only exact publication inputs may be persisted as the P0c cache artifact");
-  }
-  const identity =
-    safetyScoreIdentity === undefined ? undefined : SafetyScoreV8PublicationIdentitySchema.parse(safetyScoreIdentity);
-  if (
-    identity &&
-    (identity.baseInputGenerationId !== input.baseInputGenerationId ||
-      identity.methodologyVersion !== input.methodologyVersion ||
-      identity.publicationGenerationId !== input.sourceGeneration)
-  ) {
-    throw new Error("Exact report-card fixed input does not match its Safety Score publication identity");
-  }
-  const {
-    safetyScoreV9SupplyAttributionById: _v9SupplyAttribution,
-    evidenceJournalById: _evidenceJournal,
-    supplyAttributionJournalById: _supplyAttributionJournal,
-    pegProvenanceById: _pegProvenance,
-    ...baseInput
-  } = input;
-  return buildFixedInputCacheEntry({
-    schemaVersion: 1,
-    sourceGeneration: input.sourceGeneration,
-    safetyScoreIdentity: identity,
-    payload: baseInput,
-    label: "Exact report-card fixed input cache artifact",
-  });
-}
-
-export interface ReportCardsFixedInputCacheArtifact {
-  input: ReportCardsFixedInput;
-  safetyScoreIdentity: SafetyScoreV8PublicationIdentity | null;
-}
-
-export async function parseReportCardsFixedInputCacheArtifact(
+export async function parseReportCardsFixedInputCacheValue(
   value: unknown,
   navAssetIds?: ReadonlySet<string>,
-): Promise<ReportCardsFixedInputCacheArtifact> {
+): Promise<ReportCardsFixedInput> {
   const { envelope, payload } = await parseFixedInputCacheEntry({
     value,
     envelopeSchema: FixedInputCacheEnvelopeSchema,
@@ -180,70 +133,8 @@ export async function parseReportCardsFixedInputCacheArtifact(
   ) {
     throw new Error("Exact report-card fixed input cache identity mismatch");
   }
-  return {
-    input,
-    safetyScoreIdentity: envelope.safetyScoreIdentity ?? null,
-  };
+  return input;
 }
-
-export async function parseReportCardsFixedInputCacheValue(value: unknown, navAssetIds?: ReadonlySet<string>): Promise<ReportCardsFixedInput> {
-  return (await parseReportCardsFixedInputCacheArtifact(value, navAssetIds)).input;
-}
-
-export type ReportCardsFixedInputDraft = Omit<
-  ReportCardsFixedInput,
-  | "schemaVersion"
-  | "captureKind"
-  | "activeAssetIds"
-  | "dexPayloadFingerprint"
-  | "redemptionPayloadFingerprint"
-  | "registryFingerprint"
-  | "inputMethodologyVersions"
-  | "baseInputGenerationId"
-  | "aggregateCirculatingById"
-  | "safetyScoreV9SupplyAttributionById"
-  | "evidenceJournalById"
-  | "supplyAttributionJournalById"
-  | "pegProvenanceById"
-  | "v9PublicationInputHealth"
-> & {
-  captureKind: ReportCardsFixedInput["captureKind"];
-  activeAssetIds?: string[];
-  // Optional so reconstruction and test drafts that carry no aggregate bucket
-  // keep compiling; the schema default fills in an empty record.
-  aggregateCirculatingById?: ReportCardsFixedInput["aggregateCirculatingById"];
-  safetyScoreV9SupplyAttributionById?: ReportCardsFixedInput["safetyScoreV9SupplyAttributionById"];
-  evidenceJournalById?: ReportCardsFixedInput["evidenceJournalById"];
-  supplyAttributionJournalById?: ReportCardsFixedInput["supplyAttributionJournalById"];
-  pegProvenanceById?: ReportCardsFixedInput["pegProvenanceById"];
-  v9PublicationInputHealth?: ReportCardsFixedInput["v9PublicationInputHealth"];
-};
-
-export function createReportCardsFixedInput(draft: ReportCardsFixedInputDraft): ReportCardsFixedInput {
-  const activeAssetIds = [...(draft.activeAssetIds ?? ACTIVE_STABLECOINS.map((coin) => coin.id))].sort();
-  const dexLiqMap = normalizeFixedDexLiquidityMap(projectFixedDexLiquidityMap(draft.dexLiqMap));
-  const redemptionBackstopMap = normalizeFixedRedemptionBackstopMap(draft.redemptionBackstopMap);
-  return normalizeFixedInput({
-    ...draft,
-    dexLiqMap,
-    redemptionBackstopMap,
-    schemaVersion: 3,
-    activeAssetIds,
-    registryFingerprint: computeReportCardsRegistryFingerprint(),
-    dexPayloadFingerprint: computeDexLiquidityPayloadFingerprint(dexLiqMap, draft.dexGenerationId),
-    redemptionPayloadFingerprint: computeRedemptionPayloadFingerprint(
-      redemptionBackstopMap,
-      draft.redemptionGenerationId,
-    ),
-    inputMethodologyVersions: projectReportCardsFixedInputMethodologyVersions({
-      methodologyVersion: draft.methodologyVersion,
-      dexLiqMap,
-      pegDataById: draft.pegDataById,
-      redemptionBackstopMap,
-    }),
-  });
-}
-
 function assertFixedInputConsistency(
   input: ReportCardsFixedInput,
   options: { verifyBaseInputGenerationId: boolean; navAssetIds?: ReadonlySet<string> } = { verifyBaseInputGenerationId: true },
@@ -307,24 +198,16 @@ function assertFixedInputConsistency(
     validateNavPriceIds: false,
   });
 }
-
-function parseReportCardsFixedInput(value: unknown): ReportCardsFixedInput | LegacyReportCardsFixedInputV3 {
-  const parsed = ReportCardsFixedInputSchema.safeParse(value);
-  if (parsed.success) return parsed.data;
-  const v3 = LegacyReportCardsFixedInputV3Schema.safeParse(value);
-  if (v3.success) return v3.data;
-  const issue = parsed.error.issues[0];
-  throw new Error(`Malformed fixed report-card input at ${issue?.path.join(".") || "root"}: ${issue?.message}`);
-}
-
 export function normalizeFixedInput(value: unknown, navAssetIds?: ReadonlySet<string>): ReportCardsFixedInput {
-  const input = parseReportCardsFixedInput(value);
+  const parsed = ReportCardsFixedInputIntakeSchema.safeParse(value);
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    throw new Error(`Malformed fixed report-card input at ${issue?.path.join(".") || "root"}: ${issue?.message}`);
+  }
+  const input = parsed.data;
   const redemptionBackstopMap = normalizeFixedRedemptionBackstopMap(input.redemptionBackstopMap);
-  const suppliedBaseInputGenerationId = "baseInputGenerationId" in input ? input.baseInputGenerationId : undefined;
-  const inputPayload = "baseInputGenerationId" in input
-    ? (({ baseInputGenerationId: _baseInputGenerationId, ...payload }) => payload)(input)
-    : input;
-  const normalizedPayload = LegacyReportCardsFixedInputV3Schema.parse({
+  const { baseInputGenerationId: suppliedBaseInputGenerationId, ...inputPayload } = input;
+  const normalizedPayload: LegacyReportCardsFixedInputV3 = {
     ...inputPayload,
     activeAssetIds: [...input.activeAssetIds].sort(),
     inputMethodologyVersions: normalizeReportCardsFixedInputMethodologyVersions(input.inputMethodologyVersions),
@@ -332,12 +215,12 @@ export function normalizeFixedInput(value: unknown, navAssetIds?: ReadonlySet<st
     dexLiqMap: normalizeFixedDexLiquidityMap(input.dexLiqMap),
     redemptionBackstopMap,
     collateralDriftCoins: [...input.collateralDriftCoins].sort((left, right) => compareCodeUnits(left.id, right.id)),
-  });
-  const normalized = ReportCardsFixedInputSchema.parse({
+  };
+  const normalized: ReportCardsFixedInput = {
     ...normalizedPayload,
     baseInputGenerationId:
       suppliedBaseInputGenerationId ?? deriveReportCardsBaseInputGenerationId(normalizedPayload),
-  });
+  };
   assertFixedInputConsistency(normalized, {
     verifyBaseInputGenerationId: suppliedBaseInputGenerationId !== undefined,
     navAssetIds,

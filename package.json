@@ -31,7 +31,7 @@
     "start": "npm run serve:static-export",
     "lint": "eslint . --cache --cache-strategy content --cache-location .cache/eslint/ --max-warnings=0",
     "lint:changed": "node --import tsx scripts/ci/run-changed-eslint.ts",
-    "lint:typed": "eslint --config eslint.typed.config.mjs \"worker/src/**/*.ts\" \"worker/src/**/*.tsx\" \"shared/lib/**/*.ts\" \"functions/**/*.ts\" --max-warnings=0",
+    "lint:typed": "eslint --config eslint.typed.config.mjs \"worker/src/**/*.ts\" \"worker/src/**/*.tsx\" \"shared/lib/**/*.ts\" \"functions/**/*.ts\" \"functions/**/*.tsx\" \"src/lib/**/*.ts\" \"src/lib/**/*.tsx\" \"src/hooks/**/*.ts\" \"src/hooks/**/*.tsx\" --max-warnings=0",
     "typecheck": "next typegen && tsc --noEmit -p tsconfig.typecheck.json",
     "typecheck:tests": "tsc --noEmit -p tsconfig.test-typecheck.json",
     "typecheck:worker": "cd worker && npx tsc --noEmit",

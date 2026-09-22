@@ -26,7 +26,7 @@ import {
 import { logWorkerEvent } from "../../lib/structured-log";
 import { tryParseJson } from "../../lib/json-parse";
 import { reportCronProgress } from "../../lib/cron-progress";
-import { NON_WEEKLY_DIGEST_SQL_FILTER } from "../../lib/digest-sql-filters";
+import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "../../lib/digest-sql-filters";
 import {
   classifyDigestChannelStatus,
   insertDigestRecord,
@@ -170,9 +170,6 @@ function resolveDisposition(
   channel: { creds: unknown | null; required?: boolean } | null,
 ): DigestChannelDisposition {
   const classified = classifyDigestChannelStatus(status);
-  if (/\b(?:execution_unknown|failed_permanent)\b/.test(status)) {
-    return "terminal-unsent";
-  }
   return classified === "not-configured" && channel?.required && !channel.creds
     ? "terminal-unsent"
     : classified;
@@ -436,6 +433,22 @@ export async function deliverDigestEdition(
   };
 }
 
+/**
+ * The one owner of the published daily edition number. Blocked editions never
+ * reached readers, so they are excluded here exactly as they are excluded from
+ * every public read; a second counter over a different row set silently gaps
+ * the public series the first time a daily edition is quality-gate blocked.
+ */
+export async function resolveDailyDigestEditionNumber(db: D1Database): Promise<number | null> {
+  // SAFETY: both filters are hardcoded SQL fragments, not user input.
+  const countResult = await db
+    .prepare(
+      `SELECT COUNT(*) as cnt FROM daily_digest WHERE (${NON_WEEKLY_DIGEST_SQL_FILTER}) AND (${NON_BLOCKED_DIGEST_SQL_FILTER})`,
+    )
+    .all<{ cnt: number }>();
+  return countResult.results?.[0]?.cnt ?? null;
+}
+
 export async function publishDigestEdition(
   input: PublishDigestEditionInput,
 ): Promise<DigestPublicationOutcome> {
@@ -463,11 +476,8 @@ export async function publishDigestEdition(
 
   let editionNumber = input.editionNumber;
   if (input.kind === "daily" && editionNumber == null) {
-    const countResult = await input.db
-      .prepare(`SELECT COUNT(*) as cnt FROM daily_digest WHERE ${NON_WEEKLY_DIGEST_SQL_FILTER}`)
-      .all<{ cnt: number }>();
+    editionNumber = await resolveDailyDigestEditionNumber(input.db);
     throwIfAborted(input.signal);
-    editionNumber = countResult.results?.[0]?.cnt ?? null;
   }
 
   return deliverDigestEdition({

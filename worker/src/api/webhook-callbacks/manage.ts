@@ -1,8 +1,8 @@
 import { answerCallbackQuery, editMessage } from "../../lib/telegram";
 import {
-  MANAGE_PAGE_SIZE,
   buildManageWatchlistKeyboard,
   buildManageWatchlistMessage,
+  paginateChatRows,
 } from "../telegram-webhook-messages";
 import { sendAuditedTelegramReply } from "../telegram-webhook-replies";
 import { loadSubscriptionRowsByChat } from "../telegram-webhook-store";
@@ -29,8 +29,7 @@ export async function renderManageWatchlistPage(
   const { chatId, subscriptions, requestedPage, ackText } = params;
   const answer = params.answerCallback
     ?? ((options?: { text?: string }) => answerCallbackQuery(cb.id, botToken, options));
-  const totalPages = Math.max(1, Math.ceil(subscriptions.length / MANAGE_PAGE_SIZE));
-  const page = Math.max(0, Math.min(requestedPage, totalPages - 1));
+  const { page } = paginateChatRows(subscriptions, requestedPage);
   const messageId = cb.message?.message_id;
   const text = buildManageWatchlistMessage(subscriptions, page);
   const replyMarkup = subscriptions.length === 0

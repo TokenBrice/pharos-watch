@@ -114,57 +114,55 @@ function stringOrNull(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
 }
 
-function parseGbpRetainedFallbackStreak(value: string | null | undefined): GbpRetainedFallbackStreak {
-  if (!value) {
-    return {
-      consecutiveRetainedRuns: 0,
-      consecutiveFreshRuns: 0,
-      firstRetainedAt: null,
-      lastRetainedAt: null,
-      lastFreshAt: null,
-      lastFreshSource: null,
-      lastFreshRecordDate: null,
-      lastFallbackMode: null,
-      lastMarketSource: null,
-      lastMarketRecordDate: null,
-      lastMarketFetchedAt: null,
-    };
-  }
+function readStreakRecord<T>(
+  value: string | null | undefined,
+  empty: () => T,
+  parse: (record: Record<string, unknown>) => T,
+): T {
+  if (!value) return empty();
   try {
     const parsed = JSON.parse(value);
-    if (!isRecord(parsed)) throw new Error("not an object");
-    const consecutiveRetainedRuns = numberValue(parsed.consecutiveRetainedRuns) ?? 0;
-    const consecutiveFreshRuns = numberValue(parsed.consecutiveFreshRuns) ?? 0;
-    return {
-      consecutiveRetainedRuns: Math.max(0, Math.floor(consecutiveRetainedRuns)),
-      consecutiveFreshRuns: Math.max(0, Math.floor(consecutiveFreshRuns)),
-      firstRetainedAt: numberValue(parsed.firstRetainedAt),
-      lastRetainedAt: numberValue(parsed.lastRetainedAt),
-      lastFreshAt: numberValue(parsed.lastFreshAt),
-      lastFreshSource: stringOrNull(parsed.lastFreshSource),
-      lastFreshRecordDate: stringOrNull(parsed.lastFreshRecordDate),
-      lastFallbackMode: stringOrNull(parsed.lastFallbackMode),
-      lastMarketSource: stringOrNull(parsed.lastMarketSource),
-      lastMarketRecordDate: stringOrNull(parsed.lastMarketRecordDate),
-      lastMarketFetchedAt: numberValue(parsed.lastMarketFetchedAt),
-      recoveredAt: numberValue(parsed.recoveredAt),
-      recoveredSource: stringOrNull(parsed.recoveredSource),
-    };
+    return isRecord(parsed) ? parse(parsed) : empty();
   } catch {
-    return {
-      consecutiveRetainedRuns: 0,
-      consecutiveFreshRuns: 0,
-      firstRetainedAt: null,
-      lastRetainedAt: null,
-      lastFreshAt: null,
-      lastFreshSource: null,
-      lastFreshRecordDate: null,
-      lastFallbackMode: null,
-      lastMarketSource: null,
-      lastMarketRecordDate: null,
-      lastMarketFetchedAt: null,
-    };
+    return empty();
   }
+}
+
+function parseGbpRetainedFallbackStreak(value: string | null | undefined): GbpRetainedFallbackStreak {
+  const empty = (): GbpRetainedFallbackStreak => ({
+    consecutiveRetainedRuns: 0,
+    consecutiveFreshRuns: 0,
+    firstRetainedAt: null,
+    lastRetainedAt: null,
+    lastFreshAt: null,
+    lastFreshSource: null,
+    lastFreshRecordDate: null,
+    lastFallbackMode: null,
+    lastMarketSource: null,
+    lastMarketRecordDate: null,
+    lastMarketFetchedAt: null,
+  });
+  return readStreakRecord(value, empty, (parsed) => ({
+    consecutiveRetainedRuns: Math.max(
+      0,
+      Math.floor(numberValue(parsed.consecutiveRetainedRuns) ?? 0),
+    ),
+    consecutiveFreshRuns: Math.max(
+      0,
+      Math.floor(numberValue(parsed.consecutiveFreshRuns) ?? 0),
+    ),
+    firstRetainedAt: numberValue(parsed.firstRetainedAt),
+    lastRetainedAt: numberValue(parsed.lastRetainedAt),
+    lastFreshAt: numberValue(parsed.lastFreshAt),
+    lastFreshSource: stringOrNull(parsed.lastFreshSource),
+    lastFreshRecordDate: stringOrNull(parsed.lastFreshRecordDate),
+    lastFallbackMode: stringOrNull(parsed.lastFallbackMode),
+    lastMarketSource: stringOrNull(parsed.lastMarketSource),
+    lastMarketRecordDate: stringOrNull(parsed.lastMarketRecordDate),
+    lastMarketFetchedAt: numberValue(parsed.lastMarketFetchedAt),
+    recoveredAt: numberValue(parsed.recoveredAt),
+    recoveredSource: stringOrNull(parsed.recoveredSource),
+  }));
 }
 
 function isRetainedGbpFallback(benchmark: ParsedYieldBenchmarkMeta | null): boolean {
@@ -189,25 +187,24 @@ interface BenchmarkFreshStreak {
 }
 
 function parseBenchmarkFreshStreak(value: string | null | undefined): BenchmarkFreshStreak {
-  const empty: BenchmarkFreshStreak = {
-    consecutiveFreshRuns: 0,
-    lastFreshAt: null,
-    lastFreshSource: null,
-    lastFreshRecordDate: null,
-  };
-  if (!value) return empty;
-  try {
-    const parsed = JSON.parse(value);
-    if (!isRecord(parsed)) return empty;
-    return {
-      consecutiveFreshRuns: Math.max(0, Math.floor(numberValue(parsed.consecutiveFreshRuns) ?? 0)),
+  return readStreakRecord(
+    value,
+    () => ({
+      consecutiveFreshRuns: 0,
+      lastFreshAt: null,
+      lastFreshSource: null,
+      lastFreshRecordDate: null,
+    }),
+    (parsed) => ({
+      consecutiveFreshRuns: Math.max(
+        0,
+        Math.floor(numberValue(parsed.consecutiveFreshRuns) ?? 0),
+      ),
       lastFreshAt: numberValue(parsed.lastFreshAt),
       lastFreshSource: stringOrNull(parsed.lastFreshSource),
       lastFreshRecordDate: stringOrNull(parsed.lastFreshRecordDate),
-    };
-  } catch {
-    return empty;
-  }
+    }),
+  );
 }
 
 /**

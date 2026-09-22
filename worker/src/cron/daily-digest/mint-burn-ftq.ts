@@ -50,7 +50,6 @@ export async function computeDigestMintBurnFtqFlows(
 
   const classification = buildFlightToQualityClassificationFromV9Snapshot(
     source.snapshot,
-    { expectedIdentity: source.snapshot.safetyScoreIdentity },
   );
   if (classification.kind !== "ok") {
     return {

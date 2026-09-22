@@ -9,6 +9,46 @@
 
 import { slugifyId } from "../format";
 
+/** Inline run inside a changelog detail block: plain text or a styled span. */
+export type MethodologyChangelogInline =
+  | string
+  | { readonly code: string }
+  | { readonly emphasis: string }
+  | { readonly numeric: string };
+
+/** Plain text, or an ordered mix of plain text and styled spans. */
+export type MethodologyChangelogRichText = string | readonly MethodologyChangelogInline[];
+
+export interface MethodologyChangelogDetailTableColumn {
+  readonly id: string;
+  readonly label: string;
+  readonly rowHeader?: boolean;
+}
+
+export interface MethodologyChangelogDetailTableRow {
+  readonly id: string;
+  readonly cells: Readonly<Record<string, string>>;
+}
+
+/**
+ * Ordered body block of a changelog entry whose published card carries more
+ * than `summary`/`impact`. `weights` renders the six-dimension weight row.
+ */
+export type MethodologyChangelogDetailBlock =
+  | { readonly kind: "paragraph"; readonly text: MethodologyChangelogRichText }
+  | { readonly kind: "list"; readonly items: readonly MethodologyChangelogRichText[] }
+  | { readonly kind: "formula"; readonly text: string }
+  | { readonly kind: "weights"; readonly values: readonly [string, string, string, string, string, string] }
+  | {
+      readonly kind: "table";
+      readonly ariaLabel: string;
+      readonly tableId: string;
+      readonly testId: string;
+      readonly columns: readonly MethodologyChangelogDetailTableColumn[];
+      readonly rows: readonly MethodologyChangelogDetailTableRow[];
+    }
+  | { readonly kind: "section"; readonly heading: string; readonly blocks: readonly MethodologyChangelogDetailBlock[] };
+
 export interface MethodologyChangelogEntry {
   version: string;
   title: string;
@@ -22,6 +62,12 @@ export interface MethodologyChangelogEntry {
   effectiveAt: number;
   summary: string;
   impact: readonly string[];
+  /**
+   * Published card body for versions whose rendered detail is richer than
+   * `summary`/`impact` — headings, paragraphs, lists, formulas and tables in
+   * render order. Entries without it render `summary` plus `impact`.
+   */
+  detail?: readonly MethodologyChangelogDetailBlock[];
   /**
    * Real commit hashes only; best-effort and independent of `reconstructed`.
    * Empty means commit provenance was not recorded — this is expected for many

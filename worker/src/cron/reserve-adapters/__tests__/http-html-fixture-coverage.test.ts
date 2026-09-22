@@ -37,7 +37,6 @@ const FIXTURE_EXEMPT_ADAPTERS: Record<string, string> = {
   "issuer-attested-report": "Shared sibling descriptor for BRLV/AUDM: each product profile parses its own compact issuer index inline and evidence is the exact reviewed PDF bytes bound to a manifest SHA-256.",
   "sbc-independent-assurance": "Compact Brale index HTML for newer-report detection is covered inline; evidence is the exact official PDF bytes bound to a reviewed manifest SHA-256.",
   "quantoz-transparency": "Adapter test uses inline HTML; upstream layout is stable and compact.",
-  "ripple-transparency": "Adapter test uses inline HTML; upstream layout is stable and compact.",
   "onre-holdings-csv": "Adapter parses the published Schedule of Assets CSV (RFC-4180 quoted), not an HTML page; the compact CSV payload is covered inline in tests.",
   "usdy-holdings-report": "Parses no HTML surface: evidence is the exact Ankura PDF report bytes pinned to a manifest SHA-256, and the live feed is suspended with the reviewed manifest retained as static evidence.",
 };

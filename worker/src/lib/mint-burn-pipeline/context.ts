@@ -1,13 +1,28 @@
 import type { MintBurnPriceContext } from "./types";
 import { buildInClause } from "../db";
 import { chunkArray } from "../collections";
+import { D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "../d1-primitives";
+import { buildPriceValidationContext, validatePriceCandidate } from "../price-validation";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 
-const DEFAULT_SQL_IN_CHUNK_SIZE = 90;
+const MAX_EVENT_DAY_LOOKBACK_SEC = DAY_SECONDS;
 
 export interface MintBurnHistoricalPriceResolution {
   price: number;
   snapshotDate: number;
+}
+
+/**
+ * Same peg-plausibility contract the historical price repair scanner applies
+ * before it writes `amount_usd` (`historical_backfill` validation mode).
+ */
+function isPlausibleEventDayPrice(stablecoinId: string, price: number): boolean {
+  return validatePriceCandidate(
+    price,
+    buildPriceValidationContext({ stablecoinId }),
+    "historical_backfill",
+  ).accepted;
 }
 
 export function findMintBurnHistoricalPrice(
@@ -31,18 +46,19 @@ export function findMintBurnHistoricalPrice(
     }
   }
 
-  if (bestIdx < 0) return null;
-  const hit = history[bestIdx];
-  return {
-    price: hit.price,
-    snapshotDate: hit.snapshotDate,
-  };
+  for (let idx = bestIdx; idx >= 0; idx--) {
+    const hit = history[idx];
+    if (eventDay - hit.snapshotDate > MAX_EVENT_DAY_LOOKBACK_SEC) return null;
+    if (!isPlausibleEventDayPrice(stablecoinId, hit.price)) continue;
+    return { price: hit.price, snapshotDate: hit.snapshotDate };
+  }
+  return null;
 }
 
 export async function loadMintBurnPriceHistoryBatch(
   db: D1Database,
   stablecoinIds: string[],
-  sqlInChunkSize = DEFAULT_SQL_IN_CHUNK_SIZE,
+  sqlInChunkSize = D1_SAFE_IN_CLAUSE_BIND_LIMIT,
 ): Promise<Map<string, { snapshotDate: number; price: number }[]>> {
   const uniqueIds = [...new Set(stablecoinIds)];
   const priceHistory = new Map<string, { snapshotDate: number; price: number }[]>();
@@ -74,7 +90,7 @@ export async function loadMintBurnPriceHistoryBatch(
 export async function loadMintBurnPriceContextBatch(
   db: D1Database,
   stablecoinIds: string[],
-  sqlInChunkSize = DEFAULT_SQL_IN_CHUNK_SIZE,
+  sqlInChunkSize = D1_SAFE_IN_CLAUSE_BIND_LIMIT,
 ): Promise<MintBurnPriceContext> {
   const uniqueIds = [...new Set(stablecoinIds)];
   const prices = new Map<string, number>();

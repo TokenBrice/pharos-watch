@@ -155,6 +155,7 @@ export function mockLiveReserveAdapterRegistry(fetchImpl: LiveReserveAdapterFetc
       sourceModel: definition.sourceModel,
       evidenceClass: definition.evidenceClass,
       sharedSourceMode: definition.sharedSourceMode,
+      redemptionTelemetry: definition.redemptionTelemetry,
       ...(validation ? { validation } : {}),
     };
   });

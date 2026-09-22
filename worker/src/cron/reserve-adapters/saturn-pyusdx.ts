@@ -176,6 +176,7 @@ export async function fetchSaturnPyusdxReserves(
         : paused === false && coverage.capacityUsd > 0
           ? "open"
           : "unknown",
+      routeStatusSource: paused == null ? "static-config" : "onchain",
       ...(paused === true
         ? { routeStatusReason: "Saturn USDat MultiMint paused() returned true on-chain" }
         : paused == null

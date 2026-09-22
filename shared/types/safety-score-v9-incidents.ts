@@ -9,15 +9,11 @@ import {
   V9OperationalResilienceIncidentStateSchema,
 } from "./safety-score-v9-operational-resilience-primitives";
 import {
+  CanonicalKeySchema,
   CanonicalTextSchema,
   FractionSchema,
   StrictIsoDateSchema,
 } from "./safety-schema-primitives";
-
-const CanonicalKeySchema = CanonicalTextSchema.refine(
-  (value) => /^[a-z0-9][a-z0-9._:-]*$/.test(value),
-  "Value must be a canonical lowercase identifier",
-);
 
 // The domain vocabulary is validated by the four `z.literal("…")` discriminants
 // on the incident union below, so a parallel enum would be a second source of

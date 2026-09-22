@@ -18,9 +18,6 @@ interface DepegFeedProps {
   logos?: Record<string, string>;
   title?: string;
   emptyMessage?: string;
-  hasMore?: boolean;
-  isLoadingMore?: boolean;
-  onLoadMore?: () => void;
 }
 
 const MOBILE_PAGE_SIZE = 3;
@@ -31,9 +28,6 @@ export function DepegFeed({
   logos,
   title = "Recent Depeg Events",
   emptyMessage = "No confirmed depeg events in this view.",
-  hasMore = false,
-  isLoadingMore = false,
-  onLoadMore,
 }: DepegFeedProps) {
   const prefetch = usePrefetchStablecoin();
   // Desktop/mobile page size from the live breakpoint; `false` keeps SSR and
@@ -160,26 +154,15 @@ export function DepegFeed({
           );
         })}
 
-        {(hasMoreLoaded || hasMore) && (
+        {hasMoreLoaded && (
           <div className="pt-2 text-center lg:col-span-3">
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => {
-                setVisibleCount((c) => c + pageSize);
-                if (hasMoreLoaded) {
-                  return;
-                }
-                onLoadMore?.();
-              }}
+              onClick={() => setVisibleCount((count) => count + pageSize)}
               className="pharos-focus-ring text-xs"
-              disabled={isLoadingMore}
             >
-              {isLoadingMore
-                ? "Loading..."
-                : hasMoreLoaded
-                  ? `Load more (${sorted.length - visibleCount} loaded remaining)`
-                  : "Load more history"}
+              {`Load more (${sorted.length - visibleCount} loaded remaining)`}
             </Button>
           </div>
         )}

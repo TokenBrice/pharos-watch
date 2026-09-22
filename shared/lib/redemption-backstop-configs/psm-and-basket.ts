@@ -14,9 +14,7 @@ import {
   sourceRefRouteCapacityFees,
 } from "./shared";
 import {
-  REVIEWED_EXIT_CREDIT_WAVE_AT,
-  REVIEWED_EXIT_CREDIT_WAVE3_AT,
-  REVIEWED_EXIT_CREDIT_WAVE2_AT,
+  REVIEWED_EXIT_CREDIT_AT,
   REVIEWED_FIRST_WAVE_AT,
   REVIEWED_FOLLOWUP_REMEDIATION_AT,
   REVIEWED_MAY_BATCH_AT,
@@ -58,7 +56,7 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
     ...basketRedeemBase,
     ...reviewedBasketRedemptionSupplyFull,
     capacityModel: { kind: "reserve-sync-metadata", basis: "live-direct-telemetry" },
-    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE3_AT,
+    reviewedAt: REVIEWED_EXIT_CREDIT_AT,
     outputAssets: ["usdc-circle", "usdt-tether", "pyusd-paypal", "usde-ethena"],
     costModel: documentedVariableFee(
       "Normal redemptions are asset-specific: 0 bps for USDT/byUSD and 5 bps for USDC/USDe; stress Basket Mode returns a proportional collateral basket instead",
@@ -216,7 +214,7 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
       0,
       "USDD docs describe 1:1 PSM conversions between USDD and USDT/USDC/TUSD, and the deployed Tron PSM's `tout()` reads 0 bps on-chain",
     ),
-    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE2_AT,
+    reviewedAt: REVIEWED_EXIT_CREDIT_AT,
     docs: [
       sourceRefRouteCapacityFees("USDD documentation", "https://docs.usdd.io"),
       sourceRef("USDD website", "https://usdd.io/", ["capacity"]),
@@ -233,7 +231,7 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
       "Inter Protocol docs describe 1:1 PSM trades between IST and approved external stable tokens, but public docs reviewed do not publish a numeric redemption fee",
     ),
     routeStatus: "unknown",
-    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE_AT,
+    reviewedAt: REVIEWED_EXIT_CREDIT_AT,
     docs: [
       sourceRefFull(
         "Inter Protocol Parity Stability Module",
@@ -260,7 +258,7 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
       25,
       "The Fathom whitepaper states a fee of 0.25% is charged for each trade in the Stable Swap module",
     ),
-    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE2_AT,
+    reviewedAt: REVIEWED_EXIT_CREDIT_AT,
     docs: [
       sourceRef("Fathom whitepaper v1.0", "https://docs.fathom.fi/whitepaper/version-1.0", [
         "route",
@@ -293,7 +291,7 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
     costModel: documentedVariableFee(
       "Hydration's HSM charges a per-collateral `buy_back_fee` held on-chain as a Permill in the pallet's Collaterals storage; the published HOLLAR documentation does not publish that fee as a number",
     ),
-    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE2_AT,
+    reviewedAt: REVIEWED_EXIT_CREDIT_AT,
     docs: [
       sourceRefRouteCapacityAccess("Hydration HOLLAR", "https://docs.hydration.net/products/hollar/"),
       sourceRefRouteCapacity("Hydration HOLLAR quick start", "https://docs.hydration.net/quick_start/hollar/"),
@@ -328,7 +326,7 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
       "Hubble's Peg Stability Module documentation lists 50 bps (0.5%) for depositing USDH to redeem another stablecoin, against 0 bps to mint",
     ),
     routeStatus: "unknown",
-    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE2_AT,
+    reviewedAt: REVIEWED_EXIT_CREDIT_AT,
     docs: [
       sourceRef(
         "Hubble Peg Stability Module",
@@ -370,7 +368,7 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
       20,
       "Inverse FiRM docs list a 20 bps DOLA -> USDS exit fee, and the deployed PSM's `sellFeeBps()` reads 20 on-chain",
     ),
-    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE2_AT,
+    reviewedAt: REVIEWED_EXIT_CREDIT_AT,
     docs: [
       sourceRefRouteCapacityFees(
         "Inverse Peg Stability Module",
@@ -457,13 +455,11 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
     ...reviewedBasketRedemptionSupplyFull,
     capacityModel: { kind: "reserve-sync-metadata" },
     outputAssets: ["usdc-circle", "usdt-tether"],
-    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE3_AT,
-    costModel: {
-      ...documentedVariableFee(
-        "Reserve's documented DTF fee schedule has exactly two fees — a TVL fee and a mint fee charged whenever a user mints new DTF tokens — so redeeming the pro-rata basket is charged 0 bps",
-      ),
-      feeBpsMax: 0,
-    },
+    reviewedAt: REVIEWED_EXIT_CREDIT_AT,
+    costModel: fixedFee(
+      0,
+      "Reserve's documented DTF fee schedule has exactly two fees — a TVL fee and a mint fee charged whenever a user mints new DTF tokens — so redeeming the pro-rata basket is charged 0 bps",
+    ),
     docs: [
       sourceRefRouteCapacityAccess(
         "Reserve DTF minting & redeeming",
@@ -491,13 +487,11 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
     executionModel: "deterministic-basket",
     outputAssetType: "stable-basket",
     capacityModel: { kind: "reserve-sync-metadata" },
-    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE2_AT,
-    costModel: {
-      ...documentedVariableFee(
-        "Reserve Yield DTF revenue is documented as onchain collateral yield and issuer revenue shares rather than a user-charged redemption fee, and redemption returns the entire backing basket, so the reviewed ceiling is 0 bps",
-      ),
-      feeBpsMax: 0,
-    },
+    reviewedAt: REVIEWED_EXIT_CREDIT_AT,
+    costModel: fixedFee(
+      0,
+      "Reserve Yield DTF revenue is documented as onchain collateral yield and issuer revenue shares rather than a user-charged redemption fee, and redemption returns the entire backing basket, so the reviewed ceiling is 0 bps",
+    ),
     notes: [
       "Capacity became live-only 2026-08-12: the adapter now reads the RToken's own `redemptionAvailable()` throttle each run as the direct redeemable bound, so the prior documented-bound full-supply model is removed. The throttle refills over time and shrinks as it is drawn down, so a static supply figure would consistently overstate what a holder can exit right now.",
       "The read also degrades on basket state: when the collateral basket is not SOUND the measured capacity is withheld rather than published, and if the throttle cannot be read at all the route is left unrated instead of falling back to a static bound",

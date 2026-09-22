@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const ApiKeySelfServeStatusSchema = z.enum([
+export const ApiKeySelfServeStatusSchema = z.enum([
   "pending_verification",
   "issued",
   "rejected",
@@ -9,10 +9,11 @@ const ApiKeySelfServeStatusSchema = z.enum([
 ]);
 export type ApiKeySelfServeStatus = z.infer<typeof ApiKeySelfServeStatusSchema>;
 
-const ApiKeySelfServeClaimStatusSchema = z.enum(["pending_verification", "issued", "released"]);
+export const ApiKeySelfServeClaimStatusSchema = z.enum(["pending_verification", "issued", "released"]);
 export type ApiKeySelfServeClaimStatus = z.infer<typeof ApiKeySelfServeClaimStatusSchema>;
 
-const API_KEY_SELF_SERVE_CADENCE_VALUES = [
+/** The one cadence vocabulary: the Worker request schema and the request form both derive from this tuple. */
+export const API_KEY_SELF_SERVE_CADENCE_VALUES = [
   "hourly",
   "every_5_min",
   "every_1_min",
@@ -94,6 +95,8 @@ export type ApiKeySelfServeRequestAdminSummary = z.output<typeof ApiKeySelfServe
 export const ApiKeySelfServeRequestAdminListResponseSchema = z.object({
   generatedAt: z.number(),
   requests: z.array(ApiKeySelfServeRequestAdminSummarySchema),
+  total: z.number().int().nonnegative(),
+  nextCursor: z.string().nullable(),
 });
 export type ApiKeySelfServeRequestAdminListResponse = z.output<typeof ApiKeySelfServeRequestAdminListResponseSchema>;
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
+import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import { buildScoreWaterfall } from "../safety-score-v9-waterfall";
 
 type Stages = ReturnType<typeof makeV9Card>["scoreTrace"]["stages"];
@@ -84,6 +85,47 @@ describe("buildScoreWaterfall", () => {
     expect(steps.at(-1)?.operator).toBe("max 60");
     // CapSection renders the reason directly beneath; the row must not repeat it.
     expect(steps.at(-1)?.detail).toBeNull();
+  });
+
+  it("itemises a published score adjustment instead of leaving a silent gap", () => {
+    const base = cardWithStages({
+      aggregatedQualityScore: 80,
+      pegMultiplier: 1,
+      baseAssetScore: 80,
+      deploymentAdjustmentPoints: 2,
+      deploymentAdjustedScore: 78,
+      preCapScore: 83,
+      publishedScore: 83,
+    });
+    const card = {
+      ...base,
+      scoreTrace: {
+        ...base.scoreTrace,
+        scoreAdjustments: [
+          {
+            source: "asset-premium",
+            kind: "market-anchor-longevity",
+            label: "Market anchor longevity",
+            configuredPoints: 5,
+            appliedPoints: 5,
+            scoreBefore: 78,
+            scoreAfter: 83,
+            publishedScoreBefore: 78,
+            publishedScoreAfter: 83,
+            capRelief: { source: "structural", kind: "structural:ceiling", fromLimit: 80, toLimit: 85 },
+          },
+        ],
+      },
+    } as SafetyScoreV9CurrentCard;
+    const steps = buildScoreWaterfall(card);
+    expect(steps.map((step) => step.key)).toEqual([
+      "quality",
+      "deployment",
+      "adjustment-market-anchor-longevity",
+    ]);
+    expect(steps.at(-1)?.operator).toBe("+5.0");
+    expect(steps.at(-1)?.value).toBe(83);
+    expect(steps.at(-1)?.kind).toBe("published");
   });
 
   it("returns nothing when the asset is not rated", () => {

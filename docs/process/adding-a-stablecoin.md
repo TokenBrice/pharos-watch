@@ -118,6 +118,8 @@ Record one accepted path in the research packet:
 
 Do not treat a filled JSON profile, a static route, or `canonical-order.json` inclusion as sufficient. If the active asset cannot satisfy both columns, do not add it as active; track it as pre-launch/watchlist material or document the missing upstream path before continuing.
 
+The gate is re-checked continuously, not only at addition time. A tracked active asset whose price path stops resolving keeps publishing its market cap while `/api/health` reports the gap: an alert-eligible gap of 96 consecutive missing `sync-stablecoins` generations (one day) degrades the active-price coverage dimension, and 672 (one week) makes it `stale`. Past that point a permanently unpriceable asset is a catalog decision — re-source the price or retire/replace the entry — not a fetch gap to wait out. The bands live in `STATUS_MISSING_PRICE_THRESHOLDS` (`generationsElevated` / `generationsCritical`); see [Status Dashboard: Active-price gap duration bands](../status-dashboard.md#active-price-gap-duration-bands-2026-09-21).
+
 Exclusions:
 
 - free-floating NAV/fund-share tokens with no stable reference
@@ -602,6 +604,10 @@ Two authoring paths:
 - **Shortcut** - for plain Transfer-to-zero-address mint/burn on Ethereum, add an entry to `EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS` with `stablecoinId`, `dustThreshold`, and (optionally) `bridgeDetection`. The array expands into full specs automatically.
 - **Full spec** - for custom events (USDT `Issue`/`Redeem`, reUSD deposits, etc.) or non-Ethereum chains, add a `MintBurnContractConfigSpec` to `MINT_BURN_CONFIG_SPECS`.
 
+For a coin configured only outside Ethereum, also add its canonical chain to
+`worker/src/lib/mint-burn-canonical-chain.ts`. The registry-coverage test requires each such coin to have a mapping or
+a documented exception; coins with any Ethereum config continue to use Ethereum by default.
+
 Current practice:
 
 - token identity should come from shared metadata where possible; use `contractSource: "primary" | "traded"` (default `"primary"`) to pick from the coin's `contracts[]` vs `tradedContracts[]`.
@@ -784,6 +790,7 @@ Before running commands, confirm the addition-specific artifacts:
 - high-value active additions have either a reviewed `mintAuthority` profile or a documented intentional gap
 - the Phase 4a couplings, Phase 4b test snapshots, and Phase 4c checked-in artifacts all match the new catalog
 - downstream coverage decision notes cover every Phase 5 branch
+- every per-coin or per-chain map this addition touches (native-peg currency, canonical mint/burn chain, Bluechip slug, redemption-backstop config) is derived from the registry or covered by a registry-iterating test that fails on the next unmapped addition — rule R5, ADR-32 in [../architecture.md](../architecture.md#architectural-decision-records); a "keep in sync" comment is not a mechanism
 
 For a normal stablecoin addition, generate the working-tree projections and run focused checks first:
 

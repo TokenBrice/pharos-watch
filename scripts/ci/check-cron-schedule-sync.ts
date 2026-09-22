@@ -8,7 +8,10 @@ import {
   CRON_SCHEDULES,
   CRON_TRIGGER_SCHEDULES,
 } from "@shared/lib/cron-jobs";
-import { SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
+import {
+  OFF_SLOT_SCHEDULED_PRODUCERS,
+  SCHEDULED_SLOT_PLANS,
+} from "@shared/lib/scheduled-runner-registry";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { parseAssignments } from "../lib/wrangler-toml.mjs";
 import type {
@@ -31,6 +34,8 @@ const SOURCE_OWNER = {
 export interface CronScheduleSyncReport {
   physicalTriggerLimitExceeded: boolean;
   growthPolicy: CronGrowthTopologyPolicyForCheck;
+  duplicateSlotPlanSchedules: string[];
+  duplicateWranglerSchedules: string[];
   extraPlanKeys: string[];
   failed: boolean;
   missingBudgetJobs: string[];
@@ -57,6 +62,16 @@ export function parseWranglerCronTriggers(wranglerToml: string): string[] {
   }
 
   return [...cronAssignments[0].value.matchAll(/"([^"]+)"/g)].map((match) => match[1]);
+}
+
+function findDuplicates(values: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const duplicates = new Set<string>();
+  for (const value of values) {
+    if (seen.has(value)) duplicates.add(value);
+    seen.add(value);
+  }
+  return [...duplicates];
 }
 
 function keyByExpression(entries: Iterable<readonly [string, string]>): Map<string, string> {
@@ -114,7 +129,9 @@ export function evaluateCronScheduleSync(input: {
   const cronConnectionBudgetEntries = input.cronConnectionBudgetEntries ?? CRON_CONNECTION_BUDGET_ENTRIES;
   const growthPolicy = input.growthPolicy ?? CRON_GROWTH_HEADROOM_POLICY;
 
-  const wranglerCrons = new Set(input.wranglerCronTriggers);
+  const wranglerCronTriggers = [...input.wranglerCronTriggers];
+  const duplicateWranglerSchedules = findDuplicates(wranglerCronTriggers);
+  const wranglerCrons = new Set(wranglerCronTriggers);
   const sharedScheduleEntries = Object.entries(cronTriggerSchedules).flatMap(
     ([key, schedules]) => schedules.map((schedule) => [key, schedule] as const),
   );
@@ -131,6 +148,9 @@ export function evaluateCronScheduleSync(input: {
     .filter(([, schedule]) => schedule.length > 0);
   const slotPlanKeyByExpression = keyByExpression(slotPlanScheduleEntries);
   const slotPlanCrons = new Set<string>(slotPlanScheduleEntries.map(([, schedule]) => schedule));
+  const duplicateSlotPlanSchedules = findDuplicates(
+    slotPlanScheduleEntries.map(([, schedule]) => schedule),
+  );
 
   const onlyInWranglerSchedules = [...wranglerCrons].filter((schedule) => !sharedCrons.has(schedule));
   const onlyInSharedSchedules = [...sharedCrons].filter((schedule) => !wranglerCrons.has(schedule));
@@ -141,18 +161,27 @@ export function evaluateCronScheduleSync(input: {
   const missingPlanKeys = Object.keys(cronSchedules).filter((key) => !planKeys.has(key));
   const extraPlanKeys = [...planKeys].filter((key) => !(key in cronSchedules));
 
+  // Producers executed off the slot chain (a Workflow instance writes their
+  // run) are declared in the registry, not planned as chain members.
+  const offSlotProducers = new Set(Object.keys(OFF_SLOT_SCHEDULED_PRODUCERS));
   const runtimeJobs = new Set(Object.values(scheduledSlotPlans).flatMap(flattenScheduledJobs));
   const expectedCronJobs = new Set(cronJobDefinitions.map((definition) => definition.job));
-  const missingRuntimeJobs = [...expectedCronJobs].filter((job) => !runtimeJobs.has(job));
+  const missingRuntimeJobs = [...expectedCronJobs].filter(
+    (job) => !runtimeJobs.has(job) && !offSlotProducers.has(job),
+  );
   const unknownRuntimeJobs = [...runtimeJobs].filter((job) => !expectedCronJobs.has(job));
 
   const scheduledBudgetJobs = new Set(Object.values(scheduledSlotPlans).flatMap(getScheduledBudgetEntries));
   const expectedBudgetJobs = new Set(cronConnectionBudgetEntries.map((definition) => definition.job));
-  const missingBudgetJobs = [...expectedBudgetJobs].filter((job) => !scheduledBudgetJobs.has(job));
+  const missingBudgetJobs = [...expectedBudgetJobs].filter(
+    (job) => !scheduledBudgetJobs.has(job) && !offSlotProducers.has(job),
+  );
   const unknownBudgetJobs = [...scheduledBudgetJobs].filter((job) => !expectedBudgetJobs.has(job));
   const physicalTriggerLimitExceeded = wranglerCrons.size > growthPolicy.maxPhysicalTriggersBeforeRebalance;
 
   const failed = Boolean(
+    duplicateWranglerSchedules.length ||
+    duplicateSlotPlanSchedules.length ||
     onlyInWranglerSchedules.length ||
     onlyInSharedSchedules.length ||
     onlyInSlotPlanSchedules.length ||
@@ -170,6 +199,8 @@ export function evaluateCronScheduleSync(input: {
     physicalTriggerLimitExceeded,
     growthPolicy,
     extraPlanKeys,
+    duplicateSlotPlanSchedules,
+    duplicateWranglerSchedules,
     failed,
     missingBudgetJobs,
     missingPlanKeys,
@@ -200,6 +231,20 @@ export function printCronScheduleSyncReport(report: CronScheduleSyncReport): voi
   if (report.physicalTriggerLimitExceeded) {
     console.error(
       `\nCron growth decision required: ${report.wranglerTriggerCount} physical triggers exceed the reviewed ${report.growthPolicy.maxPhysicalTriggersBeforeRebalance}-trigger topology. Consolidate or rebalance before adding fetch-heavy scheduled work.`,
+    );
+  }
+
+  if (report.duplicateWranglerSchedules.length) {
+    console.error(`\nDuplicate raw schedules in ${SOURCE_OWNER.wrangler}:`);
+    console.error(formatList(report.duplicateWranglerSchedules).join("\n"));
+  }
+
+  if (report.duplicateSlotPlanSchedules.length) {
+    console.error(`\nDuplicate raw trigger schedules in ${SOURCE_OWNER.slotPlans}:`);
+    console.error(
+      formatList(report.duplicateSlotPlanSchedules, (schedule) =>
+        formatSchedule(schedule, report.slotPlanKeyByExpression),
+      ).join("\n"),
     );
   }
 

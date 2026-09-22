@@ -281,8 +281,8 @@ Publication is ordered so the heavy-section reuse marker can never claim work th
 Freshness is split deliberately:
 
 - `currentSnapshotAt` / `updatedAt` describe the current aggregate pulse, refreshed on the 5-minute Telegram pulse cadence.
-- `lifecycleHistoryUpdatedAt` describes the latest daily lifecycle-history snapshot when any lifecycle snapshot exists, including periods where `historySource="live-fallback"` because older active-chat cohort points are prefixed ahead of the fixed daily snapshots.
+- `lifecycleHistoryUpdatedAt` describes the latest persisted daily lifecycle snapshot. `historySource` is always `snapshot`; unavailable snapshot history is reported through `quality.unavailableFields` rather than reconstructed from current subscriber cohorts.
 - `lifecycleHistoryEverySeconds=900` documents the lifecycle snapshot refresh cadence.
 - Heavy public pulse sections (`topCoins`, lifecycle history, and Mini App daily usage counters) are reused for up to 15 minutes when the cached pulse is valid. The current aggregate counts still refresh on the 5-minute pulse cadence, and pending-delivery count can reuse the dispatch lane's pending-capacity snapshot.
 
-The public chart labels snapshot-backed history as daily lifecycle snapshots. It keeps the full lifecycle visible by permanently prefixing fixed daily snapshots with live fallback points whenever active chats predate the first snapshot row. Those fallback prefix points are cumulative current active chats by subscriber-created date and should not be presented as stable churn-adjusted lifecycle history.
+The public chart contains at most 90 completed UTC days of persisted lifecycle snapshots. Daily subscribe, unsubscribe, and reactivation counts come from transition events captured when subscription state changes; the current partial UTC day is never presented as finalized history.

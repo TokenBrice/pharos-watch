@@ -75,9 +75,45 @@ describe("historical FX configuration", () => {
       applyBackfillEvents,
     });
 
-    expect(outcome).toEqual({ status: "skipped", eventCount: 0 });
+    expect(outcome).toEqual({
+      status: "skipped",
+      eventCount: 0,
+      reason: "missing-fx-reference",
+    });
     expect(applyBackfillEvents).not.toHaveBeenCalled();
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("missing-fx-reference"));
+  });
+
+  it("skips a commodity coin without a spot series or current reference and performs no writes", async () => {
+    const meta = ACTIVE_STABLECOINS.find((coin) => coin.id === "xaut-tether");
+    expect(meta).toBeDefined();
+    if (!meta) throw new Error("missing XAUT fixture");
+    const applyBackfillEvents = vi.fn();
+
+    const outcome = await executeBackfillForCoin({
+      db: mockD1(),
+      prepared: {
+        meta,
+        geckoId: "unused-because-missing-commodity-reference-skips-first",
+        supplyByDate: [],
+        currentSupplyUsd: null,
+      },
+      pegRates: { peggedUSD: 1 },
+      fxRates: undefined,
+      fxSeries: {},
+      commoditySeries: {},
+      replayWindow: null,
+      coingeckoApiKey: null,
+      dryRun: false,
+      applyBackfillEvents,
+    });
+
+    expect(outcome).toEqual({
+      status: "skipped",
+      eventCount: 0,
+      reason: "missing-fx-reference",
+    });
+    expect(applyBackfillEvents).not.toHaveBeenCalled();
   });
 });
 
@@ -117,6 +153,15 @@ describe("findNearestSupply", () => {
 
   it("returns null when supply history is empty", () => {
     expect(findNearestSupply([], 1_000)).toBeNull();
+  });
+
+  it("returns null once the nearest snapshot is beyond the distance bound", () => {
+    const supply = [{ ts: 1_000, supply: 10 }];
+
+    expect(findNearestSupply(supply, 1_000 + 14 * 86_400)).toBe(10);
+    expect(findNearestSupply(supply, 1_000 + 14 * 86_400 + 1)).toBeNull();
+    expect(findNearestSupply(supply, 1_500, 500)).toBe(10);
+    expect(findNearestSupply(supply, 1_501, 500)).toBeNull();
   });
 });
 
@@ -219,6 +264,44 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     expect(series.CNH).toHaveLength(2);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(fetchSpy.mock.calls[0]?.[0]).toContain("@2025-06-15/v1/currencies/usd.min.json");
+  });
+
+  it.each([
+    ["null-shaped", "null"],
+    ["string-shaped", JSON.stringify("not-a-year-cache")],
+  ] as const)("refetches a %s secondary FX year cache", async (_shape, cachedValue) => {
+    const fetchSpy = mockFetch([
+      {
+        match: "@2025-06-14/v1/currencies/usd.min.json",
+        body: { date: "2025-06-14", usd: { cnh: 7.2 } },
+      },
+    ]);
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-history-secondary:2025"],
+        rows: [],
+        first: {
+          value: cachedValue,
+          updated_at: Math.floor(Date.now() / 1000),
+        },
+      },
+      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+    ]);
+
+    const series = await fetchHistoricalSecondaryFxRates(db, ["CNH"], "2025-06-14", "2025-06-14");
+
+    expect(series.CNH).toEqual([
+      {
+        timestamp: Math.floor(new Date("2025-06-14T00:00:00Z").getTime() / 1000),
+        rate: 1 / 7.2,
+      },
+    ]);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const cacheWrite = db.getHistory().find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
+    expect(JSON.parse(cacheWrite?.binds[1] as string)).toEqual({
+      "2025-06-14": { cnh: 7.2 },
+    });
   });
 
   it("drains non-OK secondary FX fallback responses", async () => {

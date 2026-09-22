@@ -68,10 +68,12 @@ async function authenticateLoadedApiKey(
 
   if (allowPepperMigrationWrite && db) {
     try {
+      // Fenced on the exact credential that was just authenticated: a concurrent
+      // rotation must win, so zero changes is a benign no-op, not a failure.
       await db.prepare(
-        "UPDATE api_keys SET secret_hash = ?, pepper_version = pepper_version + 1, updated_at = ? WHERE id = ?",
+        "UPDATE api_keys SET secret_hash = ?, pepper_version = pepper_version + 1, updated_at = ? WHERE id = ? AND key_prefix = ? AND secret_hash = ?",
       )
-        .bind(expectedHash, nowSec, row.id)
+        .bind(expectedHash, nowSec, row.id, row.key_prefix, row.secret_hash)
         .run();
       clearApiKeyCache(parsed.prefix);
     } catch (err) {

@@ -1,15 +1,17 @@
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type {
-  LiveReserveEvidenceClass,
-  LiveReserveFreshnessMode,
-  LiveReserveRedemptionCapacityKind,
-  LiveReserveRedemptionFreshnessKind,
-  LiveReserveRedemptionRouteStatus,
-  LiveReserveRedemptionRouteStatusSource,
-  LiveReserveSnapshotMetadata,
-  LiveReserveSourceModel,
-  LiveReserveWarning,
+import {
+  LIVE_RESERVE_REDEMPTION_TELEMETRY_NUMBER_FIELD_KEYS,
+  parseLiveReserveRedemptionTelemetryNumber,
+  type LiveReserveEvidenceClass,
+  type LiveReserveFreshnessMode,
+  type LiveReserveRedemptionCapacityKind,
+  type LiveReserveRedemptionFreshnessKind,
+  type LiveReserveRedemptionRouteStatus,
+  type LiveReserveRedemptionRouteStatusSource,
+  type LiveReserveSnapshotMetadata,
+  type LiveReserveSourceModel,
+  type LiveReserveWarning,
 } from "@shared/types/live-reserves";
 import { RedemptionHolderEligibilitySchema } from "@shared/types/redemption";
 import { ReserveSliceSchema, type ReserveSlice } from "@shared/types/reserves";
@@ -149,27 +151,12 @@ function normalizeSnapshotMetadata(metadata: Record<string, unknown>): LiveReser
   if (metadata.redemption && typeof metadata.redemption === "object" && !Array.isArray(metadata.redemption)) {
     const rawRedemption = metadata.redemption as Record<string, unknown>;
     const redemption: NonNullable<LiveReserveSnapshotMetadata["redemption"]> = { ...rawRedemption };
-    const knownRedemptionNumberKeys: Array<keyof NonNullable<LiveReserveSnapshotMetadata["redemption"]>> = [
-      "capacityUsd",
-      "capacityRatioOfSupply",
-      "sourceTimestamp",
-      "blockNumber",
-      "settlementDelaySec",
-      "queueDepthUsd",
-      "dailyLimitUsd",
-      "minRedeemUsd",
-      "feeBps",
-    ];
+    const knownRedemptionNumberKeys = LIVE_RESERVE_REDEMPTION_TELEMETRY_NUMBER_FIELD_KEYS;
     let hasMalformedRedemptionTelemetry = false;
     for (const key of knownRedemptionNumberKeys) {
-      const value = coerceFiniteMetadataNumber(rawRedemption[key]);
-      const isOutOfRange =
-        (key === "capacityRatioOfSupply" && value != null && (value < 0 || value > 1))
-        || (key === "feeBps" && value != null && (value < 0 || value > 10_000));
-      if (value == null || isOutOfRange) {
-        hasMalformedRedemptionTelemetry ||=
-          hasOwnMetadataKey(rawRedemption, key)
-          && (isMalformedMetadataNumber(rawRedemption[key]) || isOutOfRange);
+      const value = parseLiveReserveRedemptionTelemetryNumber(key, rawRedemption[key]);
+      if (value == null) {
+        hasMalformedRedemptionTelemetry ||= hasOwnMetadataKey(rawRedemption, key);
         delete redemption[key];
       } else {
         redemption[key] = value;

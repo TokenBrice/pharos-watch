@@ -93,7 +93,7 @@ function watchdogDb(currentRows: Record<string, unknown>[], previousValue: strin
       rows: [],
       runMeta: { changes: 1 },
     },
-  ]);
+  ], { assertMatchesUsed: true });
 }
 
 describe("DEX exit-route turnover watchdog", () => {

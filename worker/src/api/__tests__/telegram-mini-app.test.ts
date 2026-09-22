@@ -178,8 +178,10 @@ describe("handleTelegramMiniAppSession", () => {
 
     expect(response.status).toBe(200);
     expect(batchSpy).toHaveBeenCalledTimes(2);
-    expect(batchSpy.mock.calls[0]?.[0]).toHaveLength(2);
-    expect(batchSpy.mock.calls[1]?.[0]).toHaveLength(5);
+    await expect(response.json()).resolves.toMatchObject({
+      viewer: { chatId: "42" },
+      subscriber: { exists: true, snoozeUntilTs: null },
+    });
     const history = db.getHistory();
     expect(history.filter((entry) => entry.sql.includes("FROM telegram_chat_delivery_diagnostics"))).toHaveLength(1);
   });

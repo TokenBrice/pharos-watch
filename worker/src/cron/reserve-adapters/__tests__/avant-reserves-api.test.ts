@@ -22,15 +22,20 @@ describe("adaptAvantReserves", () => {
     expect(result.slices.reduce((sum, s) => sum + s.pct, 0)).toBeCloseTo(100, 6);
 
     expect(result.metadata).toMatchObject({
-      totalAssetsUsd: expect.closeTo(1_024_715_743.450049, 4),
-      totalLiabilitiesUsd: expect.closeTo(891_966_994.7413934, 4),
-      collateralizationRatio: expect.closeTo(1_024_715_743.450049 / 891_966_994.7413934, 9),
       referenceNavUsd: expect.closeTo(132_748_763.3728162, 4),
       freshnessMode: "verified",
       sourceTimestamp: Math.floor(Date.parse("2026-09-01T23:59:59+00:00") / 1000),
     });
+    // Gross longs over gross financing debt is leverage coverage, not assets backing avUSD's
+    // liabilities, so it never populates the canonical totals or the canonical ratio field.
+    expect(result.metadata).not.toHaveProperty("collateralizationRatio");
+    expect(result.metadata).not.toHaveProperty("totalAssetsUsd");
+    expect(result.metadata).not.toHaveProperty("totalLiabilitiesUsd");
     expect(result.metadata!.details).toMatchObject({
       freshnessSource: "avant-reserve-snapshot",
+      grossLongUsd: expect.closeTo(1_024_715_743.450049, 4),
+      grossFinancingDebtUsd: expect.closeTo(891_966_994.7413934, 4),
+      grossLeverageCoverageRatio: expect.closeTo(1_024_715_743.450049 / 891_966_994.7413934, 9),
       perpShortsUsd: expect.closeTo(949_763.61228 + 18_965_228.8815, 4),
       bridgesUsd: expect.closeTo(17_318_101.26750012, 4),
       unknownChainLongUsd: expect.closeTo(18_269_272.44 + 18_964_013.413176355, 6),

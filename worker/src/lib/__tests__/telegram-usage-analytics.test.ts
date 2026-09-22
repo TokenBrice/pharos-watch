@@ -4,6 +4,7 @@ import {
   bucketTelegramCommandLatency,
   classifyTelegramStartSource,
   computeTelegramCurrentLifecycleSnapshot,
+  loadTelegramLifecycleHistory,
   loadTelegramTopFollowedCoins,
   recordTelegramDeliveryOutcomes,
   recordTelegramUsageEvent,
@@ -34,6 +35,86 @@ describe("telegram usage analytics", () => {
     expect(snapshot.alertTypeOptIns).toEqual({
       dews: 1, depeg: 1, safety: 1, launch: 1, reserve: 1, freeze: 2, allTypes: 1,
     });
+  });
+
+  it("counts only pending delivery rows in lifecycle snapshots", async () => {
+    const { sqlite, db } = fixtures.open();
+    const insert = sqlite.prepare(
+      "INSERT INTO telegram_pending_alerts (chat_id, message_html, created_at, delivery_state) VALUES (?, 'test', ?, ?)",
+    );
+    for (let index = 0; index < 3; index += 1) {
+      insert.run(`pending-${index}`, 1_771_833_600, "pending");
+    }
+    for (const state of ["sending", "sent", "execution_unknown"] as const) {
+      for (let index = 0; index < 4; index += 1) {
+        insert.run(`${state}-${index}`, 1_771_833_600, state);
+      }
+    }
+
+    const snapshot = await computeTelegramCurrentLifecycleSnapshot(db, 1_771_833_600);
+
+    expect(snapshot.pendingDeliveries).toBe(3);
+  });
+  it("counts subscribe, unsubscribe, and reactivate transitions independently", async () => {
+    const { sqlite, db } = fixtures.open();
+    const nowSec = Math.floor(Date.now() / 1000);
+    sqlite.prepare(
+      "INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES ('lifecycle', ?, ?)",
+    ).run(nowSec, nowSec);
+    sqlite.exec("UPDATE telegram_subscribers SET global_alert_dews = 1 WHERE chat_id = 'lifecycle'");
+    sqlite.exec("UPDATE telegram_subscribers SET global_alert_dews = 0 WHERE chat_id = 'lifecycle'");
+    sqlite.exec("UPDATE telegram_subscribers SET global_alert_dews = 1 WHERE chat_id = 'lifecycle'");
+
+    const snapshot = await computeTelegramCurrentLifecycleSnapshot(db, nowSec, {
+      pendingDeliveryCount: 0,
+    });
+
+    expect(snapshot.newWatchers).toBe(1);
+    expect(snapshot.churnedWatchers).toBe(1);
+    expect(snapshot.reactivatedWatchers).toBe(1);
+  });
+
+  it("bounds lifecycle history to complete days in the explicit window", async () => {
+    const db = mockD1([{
+      match: "FROM telegram_watcher_lifecycle_daily",
+      rows: [{
+        day: "2026-02-22",
+        snapshot_at: 1_771_747_200,
+        active_watchers: 10,
+        new_watchers: 5,
+        churned_watchers: 2,
+        reactivated_watchers: 1,
+      }],
+    }]);
+
+    const history = await loadTelegramLifecycleHistory(db, 1_771_833_600);
+
+    expect(history.points.map((point) => point.date)).toEqual(["2026-02-22"]);
+    const query = db.getHistory().find((entry) => entry.sql.includes("FROM telegram_watcher_lifecycle_daily"));
+    expect(query?.sql).toContain("WHERE day >= ? AND day < ?");
+    expect(query?.sql).toContain("LIMIT ?");
+    expect(query?.binds[1]).toBe("2026-02-23");
+  });
+  it("publishes preset-implied adoption as unavailable when preset resolution fails", async () => {
+    const { sqlite, db } = fixtures.open();
+    const nowSec = Math.floor(Date.now() / 1000);
+    sqlite.prepare(
+      "INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES ('preset', ?, ?)",
+    ).run(nowSec, nowSec);
+    sqlite.prepare(
+      `INSERT INTO telegram_preset_subscriptions
+         (chat_id, preset_id, alert_dews, created_at, updated_at)
+       VALUES ('preset', 'mcap-ge-1b', 1, ?, ?)`,
+    ).run(nowSec, nowSec);
+
+    const snapshot = await computeTelegramCurrentLifecycleSnapshot(db, nowSec, {
+      pendingDeliveryCount: 0,
+    });
+
+    expect(snapshot.presetImpliedCoinFollows).toBeNull();
+    expect(snapshot.unavailableFields).toEqual(
+      expect.arrayContaining(["presetImpliedCoinSubscriptions", "topCoins"]),
+    );
   });
 
   it("classifies deep-link payloads without storing raw payloads", () => {
@@ -110,6 +191,19 @@ describe("telegram usage analytics", () => {
     expect(inserts).toHaveLength(2);
     expect(inserts[0]?.binds).toEqual(["42", 101, null, 101, null, 101]);
     expect(inserts[1]?.binds).toEqual(["43", null, null, 103, "network", 103]);
+  });
+
+  it("keeps a later failure's error class and the earlier success timestamp", async () => {
+    const db = mockD1([{ match: "INSERT INTO telegram_chat_delivery_diagnostics", rows: [] }]);
+
+    await recordTelegramDeliveryOutcomes(db, [
+      { chatId: "42", ok: true, nowSec: 200 },
+      { chatId: "42", ok: false, errorClass: "blocked", nowSec: 201 },
+    ]);
+
+    const inserts = db.getHistory().filter((entry) => entry.sql.includes("INSERT INTO telegram_chat_delivery_diagnostics"));
+    expect(inserts).toHaveLength(1);
+    expect(inserts[0]?.binds).toEqual(["42", 200, null, 201, "blocked", 201]);
   });
 
   it("merges explicit top-coin follows with the preset-aware shape", async () => {

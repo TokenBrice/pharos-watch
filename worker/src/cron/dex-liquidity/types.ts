@@ -81,6 +81,7 @@ export interface LiquidityMetrics {
 import type {
   DexAmmExecutionModel,
   DexExecutionCapabilityGate,
+  DexLiquidityPool,
   LiquidityPoolSourceFamily,
   LiquiditySourceMixEntry,
   LiquidityCoverageClass,
@@ -192,16 +193,7 @@ export interface PoolEntry {
   };
 }
 
-export interface PoolMeasurementFlags {
-  tvlMeasured?: boolean;
-  volumeMeasured?: boolean;
-  balanceMeasured?: boolean;
-  maturityMeasured?: boolean;
-  priceMeasured?: boolean;
-  synthetic?: boolean;
-  decayed?: boolean;
-  capped?: boolean;
-}
+export type PoolMeasurementFlags = NonNullable<NonNullable<DexLiquidityPool["extra"]>["measurement"]>;
 
 export interface DexPriceObs {
   price: number;
@@ -294,7 +286,6 @@ export interface CurvePoolEntry {
 export interface SymbolLookups {
   symbolToIds: Map<string, string[]>;
   symbolToChainScopedIds: Map<string, Map<string, string[]>>;
-  addressToId: Map<string, string>;
   chainAddressToId: Map<string, string>;
   contractMetaByChainAddress: Map<
     string,
@@ -350,12 +341,6 @@ export interface ScoreResult {
   effectiveTvl: number;
   vol24h: number;
   score: number;
-}
-
-export interface AerodromeLookups {
-  aerodromePriceObs: Map<string, DexPriceObs[]>;
-  aerodromeIsStable: Map<string, boolean>; // "chain:poolAddress" → isStable
-  aerodromeV2ExecutionCandidates: Map<string, EvmV2ExecutionCandidate>;
 }
 
 export interface GtNewPool {

@@ -1,5 +1,6 @@
 import type { ReserveSyncAdapterReliability } from "@shared/types/live-reserves";
 import { runWithOverloadRetry } from "../d1-overload-retry";
+import { parseJsonObject } from "../json-parse";
 import { LIVE_RESERVE_HISTORY_RETENTION_SEC, type ReserveSyncStatus } from "./store-shared";
 
 /**
@@ -44,17 +45,6 @@ interface ReliabilityRow {
   skipped_count: number;
 }
 
-function parseJsonObject(value: string | null | undefined): Record<string, unknown> {
-  if (!value) return {};
-  try {
-    const parsed: unknown = JSON.parse(value);
-    return parsed != null && typeof parsed === "object" && !Array.isArray(parsed)
-      ? parsed as Record<string, unknown>
-      : {};
-  } catch {
-    return {};
-  }
-}
 
 function parseDiagDurationMs(metadata: Record<string, unknown>): number | null {
   const diag = metadata.diag;
@@ -84,7 +74,7 @@ function parseWarningCodes(value: string | null | undefined): string[] {
 }
 
 function mapTimelineRow(row: AttemptHistoryRow): ReserveSyncAttemptTimelineEntry {
-  const metadata = parseJsonObject(row.metadata);
+  const metadata = parseJsonObject(row.metadata, "reserve-sync-attempt-history.metadata") ?? {};
   return {
     stablecoinId: row.stablecoin_id,
     attemptedAt: row.attempted_at,

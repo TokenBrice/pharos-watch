@@ -31,6 +31,7 @@ import { resolveYieldDisplayRebaseReferenceRate, resolveYieldRowBenchmark } from
 import type { YieldTableSortKey } from "@/components/yield-table-logic";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
+import { getLogoSrc } from "@/lib/logos";
 import { clampScore } from "@shared/lib/math";
 
 // ---------------------------------------------------------------------------
@@ -257,10 +258,7 @@ function YieldInstrumentRowBase({
   const totalSourceCount = 1 + altSourceCount;
   const benchmarkRate = row.benchmarkRate ?? riskFreeRate;
   const excess = benchmarkRate != null ? row.apy30d - benchmarkRate : null;
-  // The zone chip judges the row against its OWN benchmark (row rate ->
-  // registry entry for the row's key -> USD frame -> risk-free); the APY bar
-  // and excess line above keep the published-vs-risk-free frame they label.
-  const zoneBenchmarkRate = resolveYieldRowBenchmark(row, benchmarks, riskFreeRate).rate;
+  const resolvedBenchmark = resolveYieldRowBenchmark(row, benchmarks, riskFreeRate);
 
   return (
     <div className="border-b border-border/55 last:border-b-0">
@@ -316,7 +314,7 @@ function YieldInstrumentRowBase({
             <Badge variant="outline" className={`text-[10px] ${YIELD_TYPE_STYLES[row.yieldType]?.badge ?? ""}`}>
               {YIELD_TYPE_LABELS[row.yieldType] ?? row.yieldType}
             </Badge>
-            <YieldZoneChip safetyScore={safetyScore} apy30d={row.apy30d} benchmarkRate={zoneBenchmarkRate} />
+            <YieldZoneChip safetyScore={safetyScore} apy30d={row.apy30d} benchmarkRate={resolvedBenchmark.rate} />
             <YieldSignalsIndicator
               row={row}
               sourceRiskMaterial={sourceRiskMaterial}
@@ -497,7 +495,7 @@ function YieldInstrumentRowBase({
         <div id={`yield-row-${row.id}-details`}>
           <YieldExpandedDetails
             row={row}
-            riskFreeRate={riskFreeRate}
+            benchmark={resolvedBenchmark}
             medianApy={medianApy}
             availableSources={availableSources}
             benchmarkReferenceText={benchmarkReferenceText}
@@ -648,7 +646,7 @@ export function YieldInstrumentBoard({
               key={row.id}
               row={row}
               rank={pageStartIndex + index + 1}
-              logo={logos[row.id]}
+              logo={getLogoSrc(logos, row.id)}
               riskFreeRate={riskFreeRate}
               medianApy={medianApy}
               scalingFactor={scalingFactor}

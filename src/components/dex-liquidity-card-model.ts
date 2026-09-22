@@ -1,3 +1,4 @@
+import { getHhiBand } from "@shared/lib/classification";
 import { LIQUIDITY_SCORE_WEIGHTS } from "@shared/lib/liquidity-score-weights";
 import type { DexLiquidityData, DexLiquidityPool } from "@shared/types";
 
@@ -6,39 +7,6 @@ type PoolBalanceDetails = NonNullable<NonNullable<DexLiquidityPool["extra"]>["ba
 // ---------------------------------------------------------------------------
 // Pure helpers
 // ---------------------------------------------------------------------------
-
-const HHI_BANDS = [
-  {
-    min: 0.35,
-    key: "crowded",
-    concentrationLabel: "High",
-    color: "text-red-700 dark:text-red-400",
-    throatLabel: "Crowded exits",
-    interpretation: "Exit depth is crowded into a small set of venues.",
-  },
-  {
-    min: 0.18,
-    key: "visible",
-    concentrationLabel: "Medium",
-    color: "text-amber-700 dark:text-amber-400",
-    throatLabel: "Visible route concentration",
-    interpretation: "Exit depth is usable, but route concentration is visible.",
-  },
-  {
-    min: Number.NEGATIVE_INFINITY,
-    key: "broad",
-    concentrationLabel: "Low",
-    color: "text-emerald-700 dark:text-emerald-400",
-    throatLabel: "Broad route diversity",
-    interpretation: "Exit depth is broadly distributed across venues.",
-  },
-] as const;
-
-export type HhiBand = (typeof HHI_BANDS)[number];
-
-export function getHhiBand(hhi: number): HhiBand {
-  return HHI_BANDS.find((band) => hhi >= band.min)!;
-}
 
 export function getConcentrationLabel(hhi: number): { label: string; color: string } {
   const band = getHhiBand(hhi);

@@ -17,7 +17,6 @@ import {
   postMiniAppBulkWatchlistPreview,
   postMiniAppPortability,
   postMiniAppSnapshot,
-  postMiniAppState,
   refreshMiniAppBundleOnce,
 } from "./mini-app-api";
 import { makeMiniAppState } from "./mini-app-test-fixtures";
@@ -174,12 +173,6 @@ describe("Mini App versioned API client", () => {
       .rejects.toMatchObject({ status: 504, code: null, retryAfterSec: 45 });
   });
 
-  it("keeps the state-only compatibility wrapper for callers that do not need revision metadata", async () => {
-    mockFetch([{ match: "/api/telegram-mini-app/session", body: legacyState }], { requireMatch: true });
-
-    await expect(postMiniAppState("/api/telegram-mini-app/session", { initData: "signed" }))
-      .resolves.toEqual(normalizedLegacyState.state);
-  });
 
   it("validates a versioned portable watchlist preview without hydrating state", async () => {
     mockFetch([{

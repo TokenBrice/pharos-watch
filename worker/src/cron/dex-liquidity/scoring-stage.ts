@@ -253,6 +253,7 @@ function* iterateScoringStageRecords(
     dlProtocolsAvailable: sourceState.dlProtocolsAvailable,
     primaryRawPoolCount: sourceState.primaryRawPoolCount,
     failedSources: sourceState.failedSources,
+    degradedSources: sourceState.degradedSources,
     criticalSourceFailures: sourceState.criticalSourceFailures,
     fallbackSignals: sourceState.fallbackSignals,
     directApiSourceSummary: sourceState.directApiSourceSummary,

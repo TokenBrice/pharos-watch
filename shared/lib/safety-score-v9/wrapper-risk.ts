@@ -6,6 +6,7 @@ import {
   type V9WrapperLocalFactKey,
   type V9WrapperRiskAssessment,
 } from "../../types/safety-score-v9-wrapper";
+import { round4 } from "../math";
 import { assertScore, compareText } from "./primitives";
 
 export type { V9WrapperForm } from "../../types/safety-score-v9-wrapper";
@@ -91,10 +92,6 @@ function effectiveAssessment(
   )[0] ?? null;
 }
 
-function roundPoints(value: number): number {
-  return Math.round(value * 10_000) / 10_000;
-}
-
 function unavailableDisposition(
   disposition: V9WrapperFactDisposition,
 ): disposition is Exclude<V9WrapperFactDisposition, "reviewed" | "not-applicable"> {
@@ -124,7 +121,7 @@ export function resolveV9WrapperParentLimit(input: V9WrapperParentLimitInput): V
     const assessment = effectiveAssessment(factKey, fact);
     const discountPoints =
       assessment !== null
-        ? roundPoints(maximumDiscountPoints * ASSESSMENT_MULTIPLIER[assessment])
+        ? round4(maximumDiscountPoints * ASSESSMENT_MULTIPLIER[assessment])
         : 0;
     return {
       factKey,
@@ -151,12 +148,12 @@ export function resolveV9WrapperParentLimit(input: V9WrapperParentLimitInput): V
       compareText(left.disposition, right.disposition),
   );
 
-  const localRiskDiscount = roundPoints(
+  const localRiskDiscount = round4(
     adjustments.reduce((sum, adjustment) => sum + adjustment.discountPoints, 0),
   );
   const factsComplete = missingFacts.length === 0;
   const fallbackDiscount = factsComplete ? 0 : configuredFallbackDiscount;
-  const appliedDiscount = roundPoints(
+  const appliedDiscount = round4(
     factsComplete ? localRiskDiscount : Math.max(localRiskDiscount, fallbackDiscount),
   );
 
@@ -168,8 +165,8 @@ export function resolveV9WrapperParentLimit(input: V9WrapperParentLimitInput): V
       : 0;
   assertScore(requestedCredit, "wrapper risk-transfer credit");
   const scoreBeforeCredit = Math.max(0, input.parentScore - appliedDiscount);
-  const appliedCredit = roundPoints(Math.min(requestedCredit, 100 - scoreBeforeCredit));
-  const limit = roundPoints(scoreBeforeCredit + appliedCredit);
+  const appliedCredit = round4(Math.min(requestedCredit, 100 - scoreBeforeCredit));
+  const limit = round4(scoreBeforeCredit + appliedCredit);
 
   return {
     schemaVersion: 1,

@@ -10,7 +10,6 @@
 
 import {
   SELECTOR_ELIGIBLE_PEG_CURRENCIES,
-  isSelectorEligiblePegCurrency,
   type SelectorEligiblePegCurrency,
   type SelectorInput,
 } from "@shared/lib/selector";
@@ -141,7 +140,7 @@ export function decodeSelectorState(search: string | URLSearchParams): SelectorW
   const profile = decodeEnum(params.get("p"), SELECTOR_PROFILE_VALUES);
   const requestedPeg =
     decodeEnum(params.get("peg"), SELECTOR_ELIGIBLE_PEG_CURRENCIES) ?? "USD";
-  const pegCurrency = normalizePegForProfile(profile, requestedPeg);
+  const pegCurrency = requestedPeg;
   const decodedVenue = decodeEnumList(params.get("v"), SELECTOR_VENUE_VALUES);
   const venue = profile ? pruneVenueForProfile(profile, decodedVenue) : [];
   return {
@@ -200,15 +199,6 @@ function pruneVenueForProfile(
   return filtered;
 }
 
-function normalizePegForProfile(
-  profile: SelectorProfile | null,
-  pegCurrency: SelectorPeg,
-): SelectorPeg {
-  if (profile === "yield" && !isSelectorEligiblePegCurrency(pegCurrency)) {
-    return "USD";
-  }
-  return pegCurrency;
-}
 
 function hasValidVenue(state: SelectorWizardState): boolean {
   return state.profile != null && pruneVenueForProfile(state.profile, state.venue).length > 0;
@@ -272,7 +262,7 @@ export function transition(
       return {
         ...withoutSnapshot,
         profile: action.value,
-        pegCurrency: normalizePegForProfile(action.value, state.pegCurrency),
+        pegCurrency: state.pegCurrency,
         horizon: null,
         depegTolerance: null,
         venue: [],
@@ -283,7 +273,7 @@ export function transition(
       return {
         ...withoutSnapshot,
         profile: action.value,
-        pegCurrency: normalizePegForProfile(action.value, state.pegCurrency),
+        pegCurrency: state.pegCurrency,
         horizon: null,
         depegTolerance: null,
         venue: [],
@@ -293,12 +283,12 @@ export function transition(
     case "set-peg":
       return {
         ...withoutSnapshot,
-        pegCurrency: normalizePegForProfile(state.profile, action.value),
+        pegCurrency: action.value,
       };
     case "answer-peg":
       return {
         ...withoutSnapshot,
-        pegCurrency: normalizePegForProfile(state.profile, action.value),
+        pegCurrency: action.value,
         step: 3,
       };
     case "set-horizon":
@@ -365,7 +355,6 @@ function previousStep(state: SelectorWizardState): SelectorStep {
 export function toSelectorInput(state: SelectorWizardState): SelectorInput | null {
   if (
     !state.profile ||
-    (state.profile === "yield" && !isSelectorEligiblePegCurrency(state.pegCurrency)) ||
     !state.horizon ||
     !state.depegTolerance ||
     !hasValidVenue(state)

@@ -1,3 +1,4 @@
+import { pendingDisambiguationTable } from "./telegram-rows.test-support";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TELEGRAM_SUBSCRIBABLE_STABLECOINS } from "../../lib/telegram/subscription-eligibility";
 import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
@@ -139,22 +140,19 @@ describe("handleTelegramWebhook", () => {
 
   it("subscribe reserve all (after Confirm) writes the global reserve flag", async () => {
     const db = makeTelegramWebhookDb([
-      {
-        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        rows: [],
-        first: {
-          action_type: "confirm-bulk",
-          action_payload: JSON.stringify({
-            kind: "subscribe",
-            alertTypes: ["reserve"],
-            coinIds: [],
-            presetIds: [],
-            subscribeAll: true,
-          }),
-          expires_at: Math.floor(Date.now() / 1000) + 60,
-          initiator_user_id: "999",
-        },
-      },
+      { match: "INSERT INTO telegram_subscribers", rows: [] },
+      pendingDisambiguationTable({
+        action_type: "confirm-bulk",
+        action_payload: JSON.stringify({
+          kind: "subscribe",
+          alertTypes: ["reserve"],
+          coinIds: [],
+          presetIds: [],
+          subscribeAll: true,
+        }),
+        expires_at: Math.floor(Date.now() / 1000) + 60,
+        initiator_user_id: "999",
+      }),
     ]);
 
     await handleTelegramWebhook(
@@ -173,6 +171,7 @@ describe("handleTelegramWebhook", () => {
 
   it("gates /subscribe with a >10-coin preset behind a confirmation prompt", async () => {
     const db = makeTelegramWebhookDb([
+      { match: "INSERT INTO telegram_pending_disambiguation", rows: [] },
       {
         match: "FROM cache WHERE key = ?",
         matchBinds: ["stablecoins"],
@@ -210,7 +209,7 @@ describe("handleTelegramWebhook", () => {
       alertTypes: ["dews", "reserve"],
       presetIds: ["usd-top25"],
     });
-    const db = makeTelegramWebhookDb();
+    const db = makeTelegramWebhookDb([{ match: "INSERT INTO telegram_pending_disambiguation", rows: [] }]);
 
     await handleTelegramWebhook(db, makeWebhookRequest(123, `/import ${token}`), "test-secret", "bot-token");
 
@@ -239,7 +238,7 @@ describe("handleTelegramWebhook", () => {
       alertTypes: ["dews"],
       presetIds: [],
     });
-    const db = makeTelegramWebhookDb();
+    const db = makeTelegramWebhookDb([{ match: "INSERT INTO telegram_pending_disambiguation", rows: [] }]);
 
     await handleTelegramWebhook(db, makeWebhookRequest(123, `/import ${token}`), "test-secret", "bot-token");
 
@@ -272,7 +271,7 @@ describe("handleTelegramWebhook", () => {
       alertTypes: ["dews"],
       presetIds: [],
     });
-    const db = makeTelegramWebhookDb();
+    const db = makeTelegramWebhookDb([{ match: "INSERT INTO telegram_pending_disambiguation", rows: [] }]);
 
     await handleTelegramWebhook(db, makeWebhookRequest(123, `/import ${token}`), "test-secret", "bot-token");
 
@@ -364,6 +363,7 @@ describe("handleTelegramWebhook", () => {
 
   it("gates /subscribe with a >10-coin preset and depeg-step modifier behind a confirmation prompt", async () => {
     const db = makeTelegramWebhookDb([
+      { match: "INSERT INTO telegram_pending_disambiguation", rows: [] },
       {
         match: "FROM cache WHERE key = ?",
         matchBinds: ["stablecoins"],
@@ -403,6 +403,7 @@ describe("handleTelegramWebhook", () => {
 
   it("handles /subscribe with a dashed preset alias (still gated above threshold)", async () => {
     const db = makeTelegramWebhookDb([
+      { match: "INSERT INTO telegram_pending_disambiguation", rows: [] },
       {
         match: "FROM cache WHERE key = ?",
         matchBinds: ["stablecoins"],
@@ -457,7 +458,7 @@ describe("handleTelegramWebhook", () => {
       throw new Error("Expected USDF to be ambiguous for disambiguation test");
     }
 
-    const db = makeTelegramWebhookDb();
+    const db = makeTelegramWebhookDb([{ match: "INSERT INTO telegram_pending_disambiguation", rows: [] }]);
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/subscribe dews USDF"), "test-secret", "bot-token");
 
     const history = db.getHistory();
@@ -481,13 +482,9 @@ describe("handleTelegramWebhook", () => {
     }
 
     const db = makeTelegramWebhookDb([
-      {
-        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        rows: [],
-        first: makePendingSelectionRow("subscribe", pendingActionPayload(firstAmbiguous.matches,
-        { alertTypes: ["dews"], presetIds: [] },
-        ["USDA"],), "999"),
-      },
+      pendingDisambiguationTable(makePendingSelectionRow("subscribe", pendingActionPayload(firstAmbiguous.matches,
+      { alertTypes: ["dews"], presetIds: [] },
+      ["USDA"],), "999")),
     ]);
 
     await handleTelegramWebhook(
@@ -510,13 +507,11 @@ describe("handleTelegramWebhook", () => {
     }
 
     const db = makeTelegramWebhookDb([
-      {
-        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        rows: [],
-        first: makePendingSelectionRow("subscribe", pendingActionPayload(ambiguous.matches,
-        { alertTypes: ["dews"] },
-        ["USDC"],)),
-      },
+      pendingDisambiguationTable(makePendingSelectionRow("subscribe", pendingActionPayload(ambiguous.matches,
+      { alertTypes: ["dews"] },
+      ["USDC"],))),
+      { match: "INSERT INTO telegram_subscribers", rows: [] },
+      { match: "INSERT INTO telegram_subscriptions", rows: [] },
       {
         match: "FROM telegram_subscriptions",
         matchBinds: ["123", ambiguous.matches[0].id, usdc.matches[0].id],
@@ -550,15 +545,13 @@ describe("handleTelegramWebhook", () => {
     }
 
     const db = makeTelegramWebhookDb([
-      {
-        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        rows: [],
-        first: makePendingSelectionRow("subscribe", pendingActionPayload(ambiguous.matches, {
-          alertTypes: ["depeg"],
-          presetIds: [],
-          depegWorseningBpsStep: 250,
-        }), "999"),
-      },
+      pendingDisambiguationTable(makePendingSelectionRow("subscribe", pendingActionPayload(ambiguous.matches, {
+        alertTypes: ["depeg"],
+        presetIds: [],
+        depegWorseningBpsStep: 250,
+      }), "999")),
+      { match: "INSERT INTO telegram_subscribers", rows: [] },
+      { match: "INSERT INTO telegram_subscriptions", rows: [] },
       {
         match: "FROM telegram_subscriptions",
         rows: [
@@ -590,11 +583,7 @@ describe("handleTelegramWebhook", () => {
     }
 
     const db = makeTelegramWebhookDb([
-      {
-        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        rows: [],
-        first: makePendingSelectionRow("subscribe", pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] }), "111"),
-      },
+      pendingDisambiguationTable(makePendingSelectionRow("subscribe", pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] }), "111")),
     ]);
 
     await handleTelegramWebhook(
@@ -617,11 +606,7 @@ describe("handleTelegramWebhook", () => {
     }
 
     const db = makeTelegramWebhookDb([
-      {
-        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        rows: [],
-        first: makePendingSelectionRow("subscribe", pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] }), "999"),
-      },
+      pendingDisambiguationTable(makePendingSelectionRow("subscribe", pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] }), "999")),
     ]);
 
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/sample"), "test-secret", "bot-token");
@@ -640,11 +625,8 @@ describe("handleTelegramWebhook", () => {
     }
 
     const db = makeTelegramWebhookDb([
-      {
-        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        rows: [],
-        first: makePendingSelectionRow("subscribe", pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] }), "999"),
-      },
+      { match: "INSERT INTO telegram_pending_disambiguation", rows: [] },
+      pendingDisambiguationTable(makePendingSelectionRow("subscribe", pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] }), "999")),
     ]);
 
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/forget"), "test-secret", "bot-token");
@@ -667,11 +649,7 @@ describe("handleTelegramWebhook", () => {
     }
 
     const db = makeTelegramWebhookDb([
-      {
-        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        rows: [],
-        first: makePendingSelectionRow("subscribe", pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] }), "111"),
-      },
+      pendingDisambiguationTable(makePendingSelectionRow("subscribe", pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] }), "111")),
       {
         match: "RETURNING value",
         rows: [{ value: "21" }],
@@ -698,11 +676,7 @@ describe("handleTelegramWebhook", () => {
     }
 
     const db = makeTelegramWebhookDb([
-      {
-        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        rows: [],
-        first: makePendingSelectionRow("subscribe", pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] }), "111"),
-      },
+      pendingDisambiguationTable(makePendingSelectionRow("subscribe", pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] }), "111")),
     ]);
 
     await handleTelegramWebhook(
@@ -725,11 +699,7 @@ describe("handleTelegramWebhook", () => {
     }
 
     const db = makeTelegramWebhookDb([
-      {
-        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        rows: [],
-        first: makePendingSelectionRow("subscribe", pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] }), "999"),
-      },
+      pendingDisambiguationTable(makePendingSelectionRow("subscribe", pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] }), "999")),
     ]);
 
     await handleTelegramWebhook(db, makeWebhookRequest(123, "not a number"), "test-secret", "bot-token");
@@ -751,11 +721,9 @@ describe("handleTelegramWebhook", () => {
     }
 
     const db = makeTelegramWebhookDb([
-      {
-        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        rows: [],
-        first: makePendingSelectionRow("subscribe", pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] }), "111"),
-      },
+      pendingDisambiguationTable(makePendingSelectionRow("subscribe", pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] }), "111")),
+      { match: "INSERT INTO telegram_subscribers", rows: [] },
+      { match: "INSERT INTO telegram_subscriptions", rows: [] },
       {
         match: "FROM telegram_subscriptions",
         rows: [
@@ -783,11 +751,8 @@ describe("handleTelegramWebhook", () => {
     }
 
     const db = makeTelegramWebhookDb([
-      {
-        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        rows: [],
-        first: makePendingSelectionRow("unsubscribe", pendingActionPayload(ambiguous.matches, {}, ["USDC"])),
-      },
+      pendingDisambiguationTable(makePendingSelectionRow("unsubscribe", pendingActionPayload(ambiguous.matches, {}, ["USDC"]))),
+      { match: "DELETE FROM telegram_subscriptions", rows: [] },
     ]);
 
     await handleTelegramWebhook(db, makeWebhookRequest(123, "1"), "test-secret", "bot-token");
@@ -804,15 +769,11 @@ describe("handleTelegramWebhook", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     const db = makeTelegramWebhookDb([
-      {
-        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        rows: [],
-        first: {
-          action_type: "subscribe",
-          action_payload: "{bad-json",
-          expires_at: Math.floor(Date.now() / 1000) + 60,
-        },
-      },
+      pendingDisambiguationTable({
+        action_type: "subscribe",
+        action_payload: "{bad-json",
+        expires_at: Math.floor(Date.now() / 1000) + 60,
+      }),
     ]);
 
     await handleTelegramWebhook(db, makeWebhookRequest(123, "1"), "test-secret", "bot-token");
@@ -826,23 +787,19 @@ describe("handleTelegramWebhook", () => {
   it("clears malformed active pending selections with a recovery message", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const db = makeTelegramWebhookDb([
-      {
-        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        rows: [],
-        first: {
-          action_type: "subscribe",
-          action_payload: JSON.stringify({
-            schemaVersion: 1,
-            alertTypes: ["dews"],
-            resolvedIds: [],
-            ambiguousTicker: "USDF",
-            candidates: "{bad-json",
-            remainingTickers: [],
-          }),
-          expires_at: Math.floor(Date.now() / 1000) + 60,
-          initiator_user_id: "999",
-        },
-      },
+      pendingDisambiguationTable({
+        action_type: "subscribe",
+        action_payload: JSON.stringify({
+          schemaVersion: 1,
+          alertTypes: ["dews"],
+          resolvedIds: [],
+          ambiguousTicker: "USDF",
+          candidates: "{bad-json",
+          remainingTickers: [],
+        }),
+        expires_at: Math.floor(Date.now() / 1000) + 60,
+        initiator_user_id: "999",
+      }),
     ]);
 
     await handleTelegramWebhook(db, makeWebhookRequest(123, "1"), "test-secret", "bot-token");
@@ -854,7 +811,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("gates /unsubscribe all behind a confirmation prompt", async () => {
-    const db = makeTelegramWebhookDb();
+    const db = makeTelegramWebhookDb([{ match: "INSERT INTO telegram_pending_disambiguation", rows: [] }]);
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/unsubscribe all"), "test-secret", "bot-token");
 
     const history = db.getHistory();
@@ -867,10 +824,13 @@ describe("handleTelegramWebhook", () => {
     expect(payload.unsubscribeAll).toBe(true);
     const text = sentMessageBody().text.toLowerCase();
     expect(text).toContain("confirm?");
+    expect(text).toContain("preset follows");
+    expect(text).not.toContain(`${TELEGRAM_SUBSCRIBABLE_STABLECOINS.length} coins`);
   });
 
   it("gates /unsubscribe with a >10-coin preset behind a confirmation prompt", async () => {
     const db = makeTelegramWebhookDb([
+      { match: "INSERT INTO telegram_pending_disambiguation", rows: [] },
       {
         match: "FROM cache WHERE key = ?",
         matchBinds: ["stablecoins"],
@@ -904,7 +864,7 @@ describe("handleTelegramWebhook", () => {
       throw new Error("Expected at least one frozen stablecoin fixture");
     }
 
-    const db = makeTelegramWebhookDb();
+    const db = makeTelegramWebhookDb([{ match: "DELETE FROM telegram_subscriptions", rows: [] }]);
     await handleTelegramWebhook(db, makeWebhookRequest(123, `/unsubscribe ${frozen.id}`), "test-secret", "bot-token");
 
     const history = db.getHistory();
@@ -922,7 +882,7 @@ describe("handleTelegramWebhook", () => {
       throw new Error("Expected USDF to be ambiguous for unsubscribe disambiguation test");
     }
 
-    const db = makeTelegramWebhookDb();
+    const db = makeTelegramWebhookDb([{ match: "INSERT INTO telegram_pending_disambiguation", rows: [] }]);
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/unsubscribe USDF"), "test-secret", "bot-token");
 
     const history = db.getHistory();
@@ -945,11 +905,7 @@ describe("handleTelegramWebhook", () => {
     }
 
     const db = makeTelegramWebhookDb([
-      {
-        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        rows: [],
-        first: makePendingSelectionRow("subscribe", pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] })),
-      },
+      pendingDisambiguationTable(makePendingSelectionRow("subscribe", pendingActionPayload(ambiguous.matches, { alertTypes: ["dews"] }))),
     ]);
 
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/cancel"), "test-secret", "bot-token");
@@ -961,21 +917,17 @@ describe("handleTelegramWebhook", () => {
 
   it("unsubscribe all (after Confirm) clears launch alert flags", async () => {
     const db = makeTelegramWebhookDb([
-      {
-        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        rows: [],
-        first: {
-          action_type: "confirm-bulk",
-          action_payload: JSON.stringify({
-            kind: "unsubscribe",
-            presetIds: [],
-            coinIds: [],
-            unsubscribeAll: true,
-          }),
-          expires_at: Math.floor(Date.now() / 1000) + 60,
-          initiator_user_id: "999",
-        },
-      },
+      pendingDisambiguationTable({
+        action_type: "confirm-bulk",
+        action_payload: JSON.stringify({
+          kind: "unsubscribe",
+          presetIds: [],
+          coinIds: [],
+          unsubscribeAll: true,
+        }),
+        expires_at: Math.floor(Date.now() / 1000) + 60,
+        initiator_user_id: "999",
+      }),
     ]);
 
     const request = makeCallbackRequest("confirm:bulk");
@@ -1022,6 +974,7 @@ describe("handleTelegramWebhook", () => {
     const db = makeTelegramWebhookDb([
       { match: "SELECT action_type, action_payload", rows: [], first: null },
       { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: null },
+      { match: "DELETE FROM telegram_preset_subscriptions", rows: [] },
     ]);
     const res = await handleTelegramWebhook(
       db,
@@ -1045,13 +998,11 @@ describe("handleTelegramWebhook", () => {
     }
 
     const db = makeTelegramWebhookDb([
-      {
-        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        rows: [],
-        first: makePendingSelectionRow("set", pendingActionPayload(ambiguous.matches, {
-          ticker: "USDF", setting: "dews", enabled: true, minBand: "WARNING",
-        }, ["USDC"])),
-      },
+      pendingDisambiguationTable(makePendingSelectionRow("set", pendingActionPayload(ambiguous.matches, {
+        ticker: "USDF", setting: "dews", enabled: true, minBand: "WARNING",
+      }, ["USDC"]))),
+      { match: "INSERT INTO telegram_subscribers", rows: [] },
+      { match: "INSERT INTO telegram_subscriptions", rows: [] },
       {
         match: "FROM telegram_subscriptions",
         matchBinds: ["123", ambiguous.matches[0].id, usdc.matches[0].id],

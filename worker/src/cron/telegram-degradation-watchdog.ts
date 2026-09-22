@@ -402,32 +402,21 @@ async function evaluateZeroSendStreak(
     const nextStreak = priorStreak + 1;
     await writeZeroSendState(db, { streak: nextStreak, lastRunIdentity: latestRun.runIdentity });
     outcome.streak = nextStreak;
-    if (nextStreak >= ZERO_SEND_STREAK_THRESHOLD) {
-      outcome.triggered = true;
-      outcome.detail = `eventsDetected=${events}, freshCandidateChats=${freshCandidateChats}, streak=${nextStreak}`;
-    } else {
-      outcome.detail = `eventsDetected=${events}, freshCandidateChats=${freshCandidateChats}, streak=${nextStreak}`;
-    }
+    outcome.triggered = nextStreak >= ZERO_SEND_STREAK_THRESHOLD;
+    outcome.detail = `eventsDetected=${events}, freshCandidateChats=${freshCandidateChats}, streak=${nextStreak}`;
     return outcome;
   }
 
+  outcome.streak = 0;
   if (priorStreak >= ZERO_SEND_STREAK_THRESHOLD) {
-    outcome.streak = 0;
-    const cleared = await clearEpisode(
-      db,
-      WATCHDOG_KEYS.zeroSendStreak,
-    );
+    const cleared = await clearEpisode(db, WATCHDOG_KEYS.zeroSendStreak);
     outcome.recovered = cleared.recovered;
     outcome.detail = `recovered after streak=${priorStreak}`;
-    return outcome;
-  }
-
-  if (priorStreak > 0) {
-    await writeZeroSendState(db, { streak: 0, lastRunIdentity: latestRun.runIdentity });
-    outcome.streak = 0;
-    outcome.detail = `streak reset (priorStreak=${priorStreak})`;
   } else {
     await writeZeroSendState(db, { streak: 0, lastRunIdentity: latestRun.runIdentity });
+    if (priorStreak > 0) {
+      outcome.detail = `streak reset (priorStreak=${priorStreak})`;
+    }
   }
   return outcome;
 }

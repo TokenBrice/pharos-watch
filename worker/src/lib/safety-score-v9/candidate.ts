@@ -1,9 +1,16 @@
 import { SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST } from "@shared/data/safety-score-v9/evaluation-build-manifest-v1";
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
-import { evaluateValidatedV9FactSet, type V9EvaluatedSet } from "@shared/lib/safety-score-v9/evaluate-set";
+import {
+  evaluateValidatedV9FactSet,
+  V9AssetEvaluationError,
+  type V9EvaluatedSet,
+} from "@shared/lib/safety-score-v9/evaluate-set";
 import type { V9ExitHolderEligibility } from "@shared/lib/safety-score-v9/exit";
 import { DEX_ROUTE_SOURCE_CAPABILITIES } from "@shared/lib/p4-exit-route-capacity";
-import { assertV9ValidatedPolicyEnvelope, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import {
+  assertV9ValidatedPolicyEnvelope,
+  loadV9CandidateMethodologyPolicy,
+} from "@shared/lib/safety-score-v9/policy";
 import { compareText, deepFreeze, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { buildSafetyScoreV9Response } from "@shared/lib/safety-score-v9/public";
 import type {
@@ -519,7 +526,7 @@ function buildSafetyScoreV9CandidatePipeline(
     throw new Error("Safety Score v9 publication cannot predate its evidence clock");
   }
 
-  const policy = input.policy ?? V9_CANDIDATE_POLICY_V1;
+  const policy = input.policy ?? loadV9CandidateMethodologyPolicy(fixedInput.clockSec);
   assertV9ValidatedPolicyEnvelope(policy);
   const policyVersion = v9PolicyVersion(policy);
   let extension: SafetyScoreV9FactSetExtensionV2 | null = materializeSafetyScoreV9FactSetExtension(
@@ -538,12 +545,35 @@ function buildSafetyScoreV9CandidatePipeline(
   // never drift from the bound the exit evidence itself was judged against;
   // the extension graph is released below.
   const dexExitRouteMaxAgeSec = extension.routeFreshness.dexMaxAgeSec;
-  const compilation =
+  let compilation =
     compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
       fixedInput,
       extension,
     );
   let compiledFacts: CompiledV9FactSetV3 | null = compilation.factSet;
+  const evaluationFailures = new Map<string, string>();
+  let evaluatedSet: Readonly<V9EvaluatedSet>;
+  while (true) {
+    try {
+      evaluatedSet = evaluateValidatedV9FactSet(compiledFacts, policy);
+      break;
+    } catch (error) {
+      if (
+        !(error instanceof V9AssetEvaluationError) ||
+        evaluationFailures.has(error.assetId)
+      ) {
+        throw error;
+      }
+      evaluationFailures.set(error.assetId, error.message);
+      compilation =
+        compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
+          fixedInput,
+          extension,
+          evaluationFailures,
+        );
+      compiledFacts = compilation.factSet;
+    }
+  }
   const affectedAssetIds = quarantineAffectedAssetIds(
     compiledFacts,
     compilation.quarantines,
@@ -574,7 +604,6 @@ function buildSafetyScoreV9CandidatePipeline(
   // verification callers keep the same graphs through `retained`.
   const retained = retainIntermediates ? { extension, compiledFacts } : null;
   extension = null;
-  const evaluatedSet = evaluateValidatedV9FactSet(compiledFacts, policy);
   compiledFacts = null;
   const candidateIdentity = SafetyScoreV9CandidateIdentityV1Schema.parse({
     schemaVersion: 1,

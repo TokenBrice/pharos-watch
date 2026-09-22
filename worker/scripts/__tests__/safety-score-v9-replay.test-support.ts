@@ -1,5 +1,5 @@
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
-import { createReportCardsFixedInput } from "../../src/lib/report-cards-fixed-input";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
+import { createReportCardsFixedInput } from "../../src/test-helpers/report-cards-fixed-input";
 
 export interface ReplayFixedInputOptions {
   activeAssetIds?: string[];

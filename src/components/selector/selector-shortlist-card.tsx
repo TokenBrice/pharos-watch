@@ -280,7 +280,8 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
           <p className="mt-1 flex flex-wrap items-center gap-1.5">
             <ShieldAlert className="h-3 w-3" aria-hidden="true" />
             <span>
-              Source risk: {rec.recommendedSource.sourceRiskTier}. Data freshness:{" "}
+              Source risk:{" "}
+              {rec.recommendedSource.sourceRiskTier ?? "tier not sourced"}. Data freshness:{" "}
               {rec.recommendedSource.freshness === null
                 ? "unknown"
                 : `${preciseStaleness(rec.recommendedSource.freshness.ageSeconds)} old`}.

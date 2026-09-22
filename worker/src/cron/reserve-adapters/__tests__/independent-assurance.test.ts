@@ -1,7 +1,4 @@
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import { describe, expect, it, afterEach, vi } from "vitest";
 import * as assurance from "@shared/lib/independent-assurance";
 import * as adapters from "@shared/lib/live-reserve-adapters";
@@ -11,7 +8,6 @@ import {
   IndependentAssuranceManifestSchema,
   reconcileIndependentAssuranceManifest,
   type IndependentAssuranceManifest,
-  type IndependentAssuranceProduct,
 } from "@shared/lib/independent-assurance";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { LiveReserveAdapterKey } from "@shared/types/live-reserves";
@@ -27,13 +23,17 @@ import { getReserveAdapter } from "../index";
 import { USDGO_INDEPENDENT_ASSURANCE_PROFILE } from "../usdgo-transparency";
 import { validateAdapterOutput } from "../validate";
 import { buildReviewedReserveClassifications } from "../../../lib/safety-score-v9/extension-reserves";
+import {
+  PDF_BYTES,
+  indexFixture,
+  verifyFixtureIndex,
+  verifyIndex as verifyAssuranceIndex,
+} from "./independent-assurance.test-support";
 
 /** One registered live-reserve adapter definition: the union
  * `getLiveReserveAdapterDefinition` hands out for any adapter key. */
 type LiveReserveAdapterDefinition = LiveReserveAdapterDefinitionMap[LiveReserveAdapterKey];
 
-const TEST_DIR = dirname(fileURLToPath(import.meta.url));
-const PDF_BYTES = new TextEncoder().encode("%PDF-1.7\nfixture\n");
 const PDF_SHA256 = createHash("sha256").update(PDF_BYTES).digest("hex");
 
 const PROFILE: IndependentAssuranceProfile = {
@@ -43,6 +43,12 @@ const PROFILE: IndependentAssuranceProfile = {
   requiredAssetCodes: [],
   classifications: {},
   isReportCandidate: (_href, text) => /report/i.test(text),
+  reportDateFromCandidate: (href, text) => {
+    const value = `${href} ${text}`;
+    return value.match(/\b\d{4}-\d{2}-\d{2}\b/)?.[0] ??
+      (/\bJuly 2026\b/i.test(value) ? "2026-07-31" : null) ??
+      (/\bJune 2026\b/i.test(value) || /\/reviewed\.pdf$/i.test(href) ? "2026-06-30" : null);
+  },
 };
 
 function manifest(overrides: Partial<IndependentAssuranceManifest> = {}): IndependentAssuranceManifest {
@@ -125,47 +131,6 @@ async function verify(manifestOverride: Partial<IndependentAssuranceManifest> = 
   });
 }
 
-function readIndexFixture(name: string): string {
-  return readFileSync(resolve(TEST_DIR, "fixtures", name), "utf8");
-}
-
-async function verifyRealIndexFixture(
-  product: IndependentAssuranceProduct,
-  profile: IndependentAssuranceProfile,
-  fixtureName: string,
-  htmlOverride?: string,
-): Promise<void> {
-  const reviewed = getIndependentAssuranceManifest(product);
-  const indexHost = new URL(reviewed.officialIndexUrl).hostname;
-  const reportHost = new URL(reviewed.reportUrl).hostname;
-  const html = htmlOverride ?? readIndexFixture(fixtureName);
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (input: RequestInfo | URL) => {
-      const url = String(input);
-      if (url === reviewed.officialIndexUrl) {
-        return new Response(html, { headers: { "content-type": "text/html" } });
-      }
-      if (url === reviewed.reportUrl) {
-        return new Response(PDF_BYTES, {
-          headers: {
-            "content-type": "application/pdf",
-            "content-length": String(PDF_BYTES.length),
-          },
-        });
-      }
-      throw new Error(`unexpected fixture request ${url}`);
-    }),
-  );
-  await verifyIndependentAssuranceReport({
-    manifest: reviewed,
-    indexUrl: reviewed.officialIndexUrl,
-    indexHost,
-    reportHosts: [reportHost],
-    profile,
-    signal: new AbortController().signal,
-  });
-}
 
 const ROUTED_ASSURANCE_COINS = [
   "xsgd-straitsx",
@@ -195,11 +160,114 @@ function assuranceCandidate(
   return `<a href="${url}">${label}</a>`;
 }
 
+const FIDD_VIEWER_URL = "https://fwc.widen.net/s/drcwdbtqzk/fidelity-digital-assets---fidd-reserve-attestation-report---july26";
+const FIDD_AUGUST_VIEWER_URL = "https://fwc.widen.net/s/nextreport/fidelity-digital-assets---fidd-reserve-attestation-report---august26";
+const FIDD_VIEWER_HTML = '<html><head><title>Fidelity-Digital-Assets---FIDD-Reserve-Attestation-Report---July26.pdf</title></head><body><a id="download" href="/content/iizyowcatt/original/Fidelity-Digital-Assets---FIDD-Reserve-Attestation-Report---July26.pdf?u=zfczv1&amp;download=true">Download</a></body></html>';
+const FIDD_AUGUST_VIEWER_HTML = FIDD_VIEWER_HTML.replaceAll("July26", "August26");
+
+function assuranceFenceCases() {
+  const ausd = getIndependentAssuranceManifest("AUSD");
+  const agoraReviewed =
+    `https://fdr-prod-docs-files-public.s3.us-east-1.amazonaws.com/agora.docs.buildwithfern.com/${ausd.reportSha256.toLowerCase()}/docs/assets/2026%20Jul%20-%20Agora%20Dollar%20Reserve%20Report.pdf?X-Amz-Signature=fixture`;
+  const fiddIndex = `<a href="${FIDD_VIEWER_URL}">July</a>`;
+  return [
+    {
+      adapter: "agora-independent-assurance",
+      coinId: "ausd-agora",
+      product: "AUSD",
+      html: `<a href="${agoraReviewed}">July</a>`,
+      newerHtml: `<a href="${agoraReviewed}">July</a><a href="https://files.buildwithfern.com/agora.docs.buildwithfern.com/new/docs/assets/2026%20Aug%20-%20Agora%20Dollar%20Reserve%20Report.pdf">August</a>`,
+    },
+    {
+      adapter: "anchorage-independent-assurance",
+      coinId: "usat-tether",
+      product: "USAT",
+      html: indexFixture("anchorage-independent-assurance.html"),
+      newerHtml: indexFixture("anchorage-independent-assurance.html") +
+        '<a href="https://learn.anchorage.com/08.31.26_USAT-Stablecoin-Attestation-Report.pdf">Aug</a>',
+    },
+    {
+      adapter: "audd-independent-assurance",
+      coinId: "audd-novatti",
+      product: "AUDD",
+      html: indexFixture("audd-independent-assurance.html"),
+      newerHtml: indexFixture("audd-independent-assurance.html") +
+        '<a href="https://www.audd.digital/wp-content/uploads/2026/10/AUDC-Agreed-upon-procedures-report-Sep26_.pdf">September 2026</a>',
+    },
+    {
+      adapter: "cadd-independent-assurance",
+      coinId: "cadd-cad-digital",
+      product: "CADD",
+      html: indexFixture("cadd-independent-assurance.html"),
+      newerHtml: indexFixture("cadd-independent-assurance.html") +
+        '<a href="https://drive.google.com/file/d/1SepFailsClosedPlaceholderID/view?usp=sharing">September 2026 attestation</a>',
+    },
+    {
+      adapter: "fdusd-independent-assurance",
+      coinId: "fdusd-first-digital",
+      product: "FDUSD",
+      html: indexFixture("fdusd-independent-assurance.html"),
+      newerHtml: indexFixture("fdusd-independent-assurance.html") +
+        '<a href="https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/cafe_ISAE3000%20-%20Attestation%20Report%20on%20Reserves%20Account%20September%202026.pdf">September 2026</a>',
+    },
+    {
+      adapter: "fidd-independent-assurance",
+      coinId: "fidd-fidelity",
+      product: "FIDD",
+      html: fiddIndex,
+      newerHtml: `${fiddIndex}<a href="${FIDD_AUGUST_VIEWER_URL}">August</a>`,
+      options: {
+        extraHtml: {
+          [FIDD_VIEWER_URL]: FIDD_VIEWER_HTML,
+          [FIDD_AUGUST_VIEWER_URL]: FIDD_AUGUST_VIEWER_HTML,
+        },
+      },
+    },
+  ] as const;
+}
+
 describe("independent-assurance manifest framework", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
+
+  it.each(assuranceFenceCases())(
+    "$adapter keeps the reviewed index, redirect hosts, and newer-report fence fail-closed",
+    async (testCase) => {
+      const options = "options" in testCase ? testCase.options : undefined;
+      await expect(
+        verifyAssuranceIndex(testCase.adapter, testCase.coinId, testCase.product, testCase.html, options),
+      ).rejects.toThrow("PDF byte length");
+      await expect(
+        verifyAssuranceIndex(testCase.adapter, testCase.coinId, testCase.product, testCase.html, {
+          ...options,
+          indexRedirect: "https://unreviewed.example/index",
+        }),
+      ).rejects.toThrow(/index response host .* is not in the reviewed allowlist/);
+      await expect(
+        verifyAssuranceIndex(testCase.adapter, testCase.coinId, testCase.product, testCase.html, {
+          ...options,
+          reportRedirect: "https://unreviewed.example/report.pdf",
+        }),
+      ).rejects.toThrow(/PDF response host .* is not in the reviewed allowlist/);
+      await expect(
+        verifyAssuranceIndex(testCase.adapter, testCase.coinId, testCase.product, testCase.newerHtml, options),
+      ).rejects.toThrow("newer unreviewed report");
+    },
+  );
+
+  it.each(["08/09/2026", "08.09.2026"])(
+    "rejects AUDX's ambiguous numeric report date %s",
+    async (ambiguousDate) => {
+      const reviewed = getIndependentAssuranceManifest("AUDX");
+      const html = `<a href="${reviewed.reportUrl}">31 July 2026 report</a>` +
+        `<a href="https://www.audxtoken.com/reports/report-${ambiguousDate}.pdf">AUDX report</a>`;
+      await expect(
+        verifyAssuranceIndex("audx-independent-assurance", "audx-aussie-dollar-token", "AUDX", html),
+      ).rejects.toThrow("ambiguous report date");
+    },
+  );
 
   it.each(["agreed-upon-procedures", "issuer-attested"] as const)(
     "derives %s provenance and prevents independent publication",
@@ -357,14 +425,14 @@ describe("independent-assurance manifest framework", () => {
     ["XUSD", straitsxIndependentAssuranceProfile("XUSD"), "straitsx-independent-assurance-xusd.html"],
     ["USDGO", USDGO_INDEPENDENT_ASSURANCE_PROFILE, "usdgo-transparency.html"],
   ] as const)("accepts the trimmed real %s index shape before verifying PDF bytes", async (product, profile, fixture) => {
-    await expect(verifyRealIndexFixture(product, profile, fixture)).rejects.toThrow("PDF byte length");
+    await expect(verifyFixtureIndex(product, profile, fixture)).rejects.toThrow("PDF byte length");
   });
 
   it("accepts EUROP's official WordPress media index before verifying PDF bytes", async () => {
     const reviewed = getIndependentAssuranceManifest("EUROP");
     const media = JSON.stringify([{ source_url: reviewed.reportUrl }]);
     await expect(
-      verifyRealIndexFixture("EUROP", EUROP_INDEPENDENT_ASSURANCE_PROFILE, "europ-independent-assurance.html", media),
+      verifyFixtureIndex("EUROP", EUROP_INDEPENDENT_ASSURANCE_PROFILE, "europ-independent-assurance.html", media),
     ).rejects.toThrow("PDF byte length");
   });
 
@@ -378,29 +446,29 @@ describe("independent-assurance manifest framework", () => {
       },
     ]);
     await expect(
-      verifyRealIndexFixture("EUROP", EUROP_INDEPENDENT_ASSURANCE_PROFILE, "europ-independent-assurance.html", media),
+      verifyFixtureIndex("EUROP", EUROP_INDEPENDENT_ASSURANCE_PROFILE, "europ-independent-assurance.html", media),
     ).rejects.toThrow("newer unreviewed report");
   });
 
   it("ignores an unrelated StraitsX whitepaper but fails closed on a newer XSGD report", async () => {
     const fixture = "straitsx-independent-assurance-xsgd.html";
     await expect(
-      verifyRealIndexFixture("XSGD", straitsxIndependentAssuranceProfile("XSGD"), fixture),
+      verifyFixtureIndex("XSGD", straitsxIndependentAssuranceProfile("XSGD"), fixture),
     ).rejects.toThrow("PDF byte length");
 
-    const withNewReport = readIndexFixture(fixture) +
+    const withNewReport = indexFixture(fixture) +
       '<button data-gated-asset="XSGD Attestation Report August 2026" data-gated-url="https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/XSGD_SCS_Reserve_Account_Report_(31_August_2026).pdf"></button>';
     await expect(
-      verifyRealIndexFixture("XSGD", straitsxIndependentAssuranceProfile("XSGD"), fixture, withNewReport),
+      verifyFixtureIndex("XSGD", straitsxIndependentAssuranceProfile("XSGD"), fixture, withNewReport),
     ).rejects.toThrow("newer unreviewed report");
   });
 
   it("still fails closed when the USDGO family has two reports for the reviewed latest date", async () => {
     const fixture = "usdgo-transparency.html";
-    const ambiguous = readIndexFixture(fixture) +
+    const ambiguous = indexFixture(fixture) +
       '<a href="https://learn.anchorage.com/07.31.26_USDGO-Stablecoin-Attestation-Report-revised.pdf">Jul revised</a>';
     await expect(
-      verifyRealIndexFixture("USDGO", USDGO_INDEPENDENT_ASSURANCE_PROFILE, fixture, ambiguous),
+      verifyFixtureIndex("USDGO", USDGO_INDEPENDENT_ASSURANCE_PROFILE, fixture, ambiguous),
     ).rejects.toThrow("reviewed report URL is missing or duplicated");
   });
 
@@ -534,6 +602,29 @@ describe("independent-assurance manifest framework", () => {
     expect(result.collateralizationRatio).toBeGreaterThan(1);
     expect(result.reportedAssetDifference).toBe("0.41");
     expect(IndependentAssuranceManifestSchema.safeParse(base).success).toBe(true);
+  });
+
+  it("requires adjustments to declare that they are already netted into asset rows", () => {
+    const raw = {
+      ...manifest(),
+      adjustments: [{
+        code: "settlement",
+        label: "Settlement difference",
+        amount: "1",
+        treatment: "Already reflected in the reported total",
+      }],
+    };
+    expect(IndependentAssuranceManifestSchema.safeParse(raw).success).toBe(false);
+  });
+
+  it("rejects a zero reported asset total before computing a relative difference", () => {
+    const zeroAssets = manifest({
+      assets: [{ code: "cash", label: "Cash", amount: "0" }],
+      computedAssetTotal: "0",
+      reportedAssetTotal: "0",
+    });
+    expect(() => reconcileIndependentAssuranceManifest(zeroAssets))
+      .toThrow("reported asset total must be greater than zero");
   });
 
   it("rejects an EUROP asset discrepancy outside the reviewed tolerance", () => {

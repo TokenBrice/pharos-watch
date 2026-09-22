@@ -67,7 +67,11 @@ export interface CoverageFeatureSummary {
   feature: CoverageFeatureDefinition;
   availableCount: number;
   totalCount: number;
-  coveragePct: number;
+  /**
+   * Null when every scoped row is `data-unavailable`: an upstream outage is
+   * published as "Data n/a", never as 0% coverage.
+   */
+  coveragePct: number | null;
   coveredMcapUsd: number;
   mcapSharePct: number | null;
   countLabel: string;
@@ -81,6 +85,8 @@ export interface CoverageRow {
   symbol: string;
   name: string;
   marketCapUsd: number;
+  /** False when the stablecoins payload carried no row for this coin, so `marketCapUsd` is a 0 placeholder, not a measurement. */
+  marketCapAvailable: boolean;
   pegLabel: string;
   backingLabel: string;
   governanceLabel: string;

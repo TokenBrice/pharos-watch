@@ -33,6 +33,26 @@ import {
   type TelegramRecapRolloutPolicy,
 } from "@shared/lib/telegram-recap-rollout";
 
+const MISSING_BOT_TOKEN_WARN_INTERVAL_MS = 60_000;
+let lastMissingBotTokenWarnAtMs: number | null = null;
+
+function logMissingBotTokenWarning(): void {
+  const nowMs = Date.now();
+  if (
+    lastMissingBotTokenWarnAtMs != null &&
+    nowMs - lastMissingBotTokenWarnAtMs < MISSING_BOT_TOKEN_WARN_INTERVAL_MS
+  ) {
+    return;
+  }
+  lastMissingBotTokenWarnAtMs = nowMs;
+  logTelegramEvent({
+    level: "warn",
+    message: "telegram webhook bot token is missing; authenticated updates are being acknowledged without dispatch",
+    action: "webhook-missing-bot-token",
+    signal: "missing_bot_token",
+  });
+}
+
 /**
  * Group admin gating mode for group-wide mutating commands in
  * group/supergroup chats. "hard" refuses the command for non-admins (default).
@@ -62,7 +82,10 @@ export const handleTelegramWebhook = withErrorHandler(
     if (authResult !== "valid") {
       return ok();
     }
-    if (!botToken) return ok();
+    if (!botToken) {
+      logMissingBotTokenWarning();
+      return ok();
+    }
 
     let update: TelegramWebhookUpdateWithChatMember;
     try {

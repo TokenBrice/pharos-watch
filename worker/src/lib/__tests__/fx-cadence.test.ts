@@ -52,28 +52,24 @@ describe("fx cadence classification", () => {
 
   it.each(BUSINESS_DAILY_PEGS)("classifies %s as business-daily", (pegKey) => {
     expect(getNaturalFxCadence(pegKey)).toBe("business-daily");
-    expect(inferFxSourceCadence(pegKey, "live")).toBe("business-daily");
-    expect(inferFxSourceCadence(pegKey, "cached")).toBe("business-daily");
+    expect(inferFxSourceCadence(pegKey)).toBe("business-daily");
   });
 
   it.each(CALENDAR_DAILY_PEGS)("classifies %s as calendar-daily", (pegKey) => {
     expect(getNaturalFxCadence(pegKey)).toBe("calendar-daily");
-    expect(inferFxSourceCadence(pegKey, "live")).toBe("calendar-daily");
-    expect(inferFxSourceCadence(pegKey, "cached")).toBe("calendar-daily");
+    expect(inferFxSourceCadence(pegKey)).toBe("calendar-daily");
   });
 
   it.each(["peggedUSD", "peggedGOLD", "peggedSILVER", "peggedUNKNOWN"])(
     "classifies %s as intraday by default",
     (pegKey) => {
       expect(getNaturalFxCadence(pegKey)).toBeNull();
-      expect(inferFxSourceCadence(pegKey, "live")).toBe("intraday");
-      expect(inferFxSourceCadence(pegKey, "cached")).toBe("intraday");
+      expect(inferFxSourceCadence(pegKey)).toBe("intraday");
     },
   );
 
-  it("preserves explicit cadence before natural or hardcoded defaults", () => {
-    expect(inferFxSourceCadence("peggedEUR", "live", "calendar-daily")).toBe("calendar-daily");
-    expect(inferFxSourceCadence("peggedEUR", "hardcoded")).toBe("intraday");
-    expect(inferFxSourceCadence("peggedEUR", "hardcoded", "business-daily")).toBe("business-daily");
+  it("preserves explicit cadence before the natural default", () => {
+    expect(inferFxSourceCadence("peggedEUR", "calendar-daily")).toBe("calendar-daily");
+    expect(inferFxSourceCadence("peggedEUR", "business-daily")).toBe("business-daily");
   });
 });

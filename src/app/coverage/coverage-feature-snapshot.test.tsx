@@ -39,4 +39,52 @@ describe("CoverageFeatureSnapshotRow", () => {
     expect(bar.getAttribute("aria-label")).not.toContain("Concentrated");
     expect(bar.getAttribute("aria-label")).not.toContain("NR");
   });
+
+  it("stacks legacy DEX rows in their own bucket and counts only true gaps as not covered", () => {
+    const summary: CoverageFeatureSummary = {
+      feature: COVERAGE_FEATURES.find((feature) => feature.key === "dex")!,
+      availableCount: 3,
+      totalCount: 4,
+      coveragePct: 75,
+      coveredMcapUsd: 0,
+      mcapSharePct: null,
+      countLabel: "Coin count",
+      coverageLabel: "75% of active coins",
+      shareLabel: "Active market-cap reach",
+      breakdown: [
+        { key: "primary", label: "primary", count: 2 },
+        { key: "legacy", label: "legacy", count: 1 },
+        { key: "data-unavailable", label: "data n/a", count: 1 },
+      ],
+    };
+
+    render(<CoverageFeatureSnapshotRow summary={summary} />);
+
+    const label = screen.getByRole("img").getAttribute("aria-label") ?? "";
+    expect(label).toContain("primary 2");
+    expect(label).toContain("legacy 1");
+    expect(label).toContain("data n/a 1");
+    // One unobserved row is the only true gap; the n/a row must not inflate it.
+    expect(label).toContain("not covered 1");
+  });
+
+  it("renders Data n/a instead of 0% when the whole feature is unavailable", () => {
+    const summary: CoverageFeatureSummary = {
+      feature: COVERAGE_FEATURES.find((feature) => feature.key === "yield")!,
+      availableCount: 0,
+      totalCount: 0,
+      coveragePct: null,
+      coveredMcapUsd: 0,
+      mcapSharePct: null,
+      countLabel: "Coin count",
+      coverageLabel: "Data n/a",
+      shareLabel: "Active market-cap reach",
+      breakdown: [{ key: "data-unavailable", label: "data n/a", count: 3 }],
+    };
+
+    render(<CoverageFeatureSnapshotRow summary={summary} />);
+
+    expect(screen.getAllByText("Data n/a").length).toBeGreaterThan(0);
+    expect(screen.queryByText("0%")).toBeNull();
+  });
 });

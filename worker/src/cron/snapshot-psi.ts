@@ -5,10 +5,18 @@ import { rethrowIfAborted, throwIfAborted } from "../lib/abort";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { getConditionBand } from "../lib/stability-index";
-import { PSI_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/stability-index";
+import { PSI_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { round1 } from "@shared/lib/math";
 
-export async function snapshotPsiDaily(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
+interface SnapshotPsiDailyOptions {
+  completionReason?: string;
+}
+
+export async function snapshotPsiDaily(
+  db: D1Database,
+  signal?: AbortSignal,
+  options: SnapshotPsiDailyOptions = {},
+): Promise<CronResult> {
   throwIfAborted(signal);
   const now = Math.floor(Date.now() / 1000);
   const todayMidnight = bucketUnixSecondsToUtcDay(now);
@@ -99,5 +107,13 @@ export async function snapshotPsiDaily(db: D1Database, signal?: AbortSignal): Pr
   throwIfAborted(signal);
 
   logWorkerEventArgs("handler", "info", `[snapshot-psi] yesterday avg=${score} band=${band} samples=${row.cnt}`);
-  return { itemCount: 1, metadata: `avg=${score} band=${band} samples=${row.cnt}` };
+  return createCronResult({
+    itemCount: 1,
+    metadata: {
+      ...(options.completionReason ? { reason: options.completionReason } : {}),
+      avgScore: score,
+      band,
+      sampleCount: row.cnt,
+    },
+  });
 }

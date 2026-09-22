@@ -8,7 +8,9 @@ import {
   normalizeFixedInputExitRouteObservations,
   normalizeFixedRedemptionBackstopMap,
   normalizeReportCardsFixedInputMethodologyVersions,
+  normalizeSortedRowMap,
 } from "@shared/lib/report-cards-fixed-input-identity";
+import { domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { sha256Hex } from "@shared/lib/sha256";
 import {
   SafetyScoreV9InputIdentitySchema,
@@ -23,7 +25,6 @@ import {
   assertCommonFixedInputConsistency,
   createFixedInputPayloadFields,
   normalizeCommonFixedInputRecords,
-  sortedRecord,
 } from "../report-cards-fixed-input-contract";
 import {
   buildFixedInputCacheEntry,
@@ -80,9 +81,10 @@ const NativeChainCirculatingRowSchema = z
 const NativeSafetyScoreV9InputPayloadFields = createFixedInputPayloadFields({
   publicationHealthSchema: V9PublicationInputHealthSchema,
   afterRedemptionBackstopMap: {},
-  chainCirculatingByIdSchema: z
-    .record(z.string(), z.record(z.string(), NativeChainCirculatingRowSchema))
-    .default({}),
+  chainCirculatingByIdSchema: z.record(
+    z.string(),
+    z.record(z.string(), NativeChainCirculatingRowSchema),
+  ),
   beforeLiveToFallbackCoins: {},
 });
 
@@ -177,10 +179,7 @@ export function deriveNativeV9BaseInputGenerationId(input: NativeV9BaseInputDige
     pegProvenanceById: _pegProvenance,
     ...baseInput
   } = input;
-  const digest = sha256Hex(
-    stableJsonStringifyV1({ domain: NATIVE_V9_BASE_INPUT_DIGEST_DOMAIN, payload: baseInput }),
-  );
-  return `${NATIVE_V9_BASE_INPUT_GENERATION_ID_PREFIX}${digest}`;
+  return `${NATIVE_V9_BASE_INPUT_GENERATION_ID_PREFIX}${domainDigest(NATIVE_V9_BASE_INPUT_DIGEST_DOMAIN, baseInput)}`;
 }
 
 const NATIVE_V9_DEX_PAYLOAD_DIGEST_DOMAIN = "safety-score-v9.native-input.dex-payload.v1";
@@ -188,19 +187,12 @@ const NATIVE_V9_DEX_PAYLOAD_DIGEST_DOMAIN = "safety-score-v9.native-input.dex-pa
 function normalizeNativeDexLiquidityMap(
   record: Record<string, NativeDexLiquidityRow>,
 ): Record<string, NativeDexLiquidityRow> {
-  return sortedRecord(
-    Object.fromEntries(
-      Object.entries(record).map(([id, row]) => [
-        id,
-        {
-          ...row,
-          ...(row.exitRouteObservations !== undefined
-            ? { exitRouteObservations: normalizeFixedInputExitRouteObservations(row.exitRouteObservations) }
-            : {}),
-        },
-      ]),
-    ),
-  );
+  return normalizeSortedRowMap(record, (row) => ({
+    ...row,
+    ...(row.exitRouteObservations !== undefined
+      ? { exitRouteObservations: normalizeFixedInputExitRouteObservations(row.exitRouteObservations) }
+      : {}),
+  }));
 }
 
 /**

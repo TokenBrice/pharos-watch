@@ -177,10 +177,10 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // than failing the whole aggregate closed.
   "susde-ethena": [
     { chain: "ethereum" },
-    { chain: "plasma", rpcUrl: "https://rpc.plasma.to" },
+    supplyProbeChain("plasma"),
     supplyProbeChain("linea"),
     supplyProbeChain("fraxtal"),
-    { chain: "hyperevm", rpcUrl: "https://rpc.hyperliquid.xyz/evm" },
+    supplyProbeChain("hyperevm"),
     supplyProbeChain("berachain"),
     { chain: "zircuit", rpcUrl: "https://mainnet.zircuit.com" },
     { chain: "metis", rpcUrl: "https://andromeda.metis.io/?owner=1088", fallbackRpcUrl: "https://metis-rpc.publicnode.com" },
@@ -214,19 +214,19 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   "wsrusd-reservoir": [
     { chain: "ethereum" },
     { chain: "base" },
-    { chain: "berachain", rpcUrl: "https://rpc.berachain.com" },
+    supplyProbeChain("berachain"),
     { chain: "sonic", rpcUrl: "https://rpc.soniclabs.com" },
     { chain: "arbitrum" },
     { chain: "bsc" },
     { chain: "avalanche" },
     { chain: "unichain", rpcUrl: "https://mainnet.unichain.org" },
-    { chain: "plume", rpcUrl: "https://rpc.plume.org" },
+    supplyProbeChain("plume"),
     { chain: "sei", rpcUrl: "https://evm-rpc.sei-apis.com" },
     { chain: "worldchain", rpcUrl: "https://worldchain-mainnet.g.alchemy.com/public" },
-    { chain: "katana", rpcUrl: "https://rpc.katana.network" },
-    { chain: "hyperevm", rpcUrl: "https://rpc.hyperliquid.xyz/evm" },
-    { chain: "linea", rpcUrl: "https://rpc.linea.build" },
-    { chain: "monad", rpcUrl: "https://rpc.monad.xyz" },
+    supplyProbeChain("katana"),
+    supplyProbeChain("hyperevm"),
+    supplyProbeChain("linea"),
+    supplyProbeChain("monad"),
     { chain: "pharos", rpcUrl: "https://api.zan.top/public/pharos-mainnet" },
     { chain: "solana" },
   ],
@@ -243,7 +243,7 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "base" },
     { chain: "optimism" },
     { chain: "sonic", rpcUrl: "https://rpc.soniclabs.com", fallbackRpcUrl: "https://sonic-rpc.publicnode.com" },
-    { chain: "plume", rpcUrl: "https://rpc.plume.org" },
+    supplyProbeChain("plume"),
     supplyProbeChain("katana"),
     { chain: "bsc" },
     { chain: "avalanche" },
@@ -263,7 +263,7 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     supplyProbeChain("plasma"),
     supplyProbeChain("berachain"),
     { chain: "bsc", allowZeroSupply: true },
-    { chain: "monad", rpcUrl: "https://rpc.monad.xyz", fallbackRpcUrl: "https://monad.drpc.org" },
+    supplyProbeChain("monad"),
     supplyProbeChain("katana", { allowZeroSupply: true }),
     { chain: "megaeth", rpcUrl: "https://mainnet.megaeth.com/rpc", fallbackRpcUrl: "https://megaeth.drpc.org", allowZeroSupply: true },
     { chain: "sei", rpcUrl: "https://evm-rpc.sei-apis.com", fallbackRpcUrl: "https://sei-evm-rpc.publicnode.com" },
@@ -839,10 +839,16 @@ export function selectCuratedAggregateOnchainSupplyProbeContracts(
     selected.push({ config, contract });
   }
 
-  // A summed roster is a global total only when every registered deployment
-  // participates. Canonical lock/mint totals already conserve remote supply.
-  if (!CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS[meta.id]
-    && meta.contracts?.some((contract) => !selected.some((entry) => entry.contract === contract))) {
+  // A roster speaks for the whole asset only when every registered deployment
+  // participates. A summed roster that skips one under-counts; a canonical
+  // lock/mint roster conserves remote supply but attributes the unprobed
+  // remainder to the canonical chain, so it must carry an explicit per-asset
+  // unattributed-residual policy instead of deriving permission from
+  // membership.
+  if (
+    CURATED_AGGREGATE_ESCROW_RESIDUALS[meta.id] == null
+    && meta.contracts?.some((contract) => !selected.some((entry) => entry.contract === contract))
+  ) {
     return null;
   }
   return selected;

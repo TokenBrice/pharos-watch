@@ -265,7 +265,10 @@ describe("adapter registry completeness", () => {
     }
   });
 
-  it("documents safe source-invariant flip candidates without relying on coin-specific parser params", () => {
+  // Byte-identical configs are necessary but not sufficient for source-invariant
+  // sharing: the shared cache key omits the coin id, so an adapter whose result
+  // is coin-gated (Reservoir's SavingModule fee) stays per-coin regardless.
+  it("documents config-identical live-reserve source groups without coin-specific parser params", () => {
     const expectedDuplicateGroups: Record<string, string[][]> = {
       "frax-balance-sheet": [],
       reservoir: [["rusd-reservoir", "srusd-reservoir", "wsrusd-reservoir"]],

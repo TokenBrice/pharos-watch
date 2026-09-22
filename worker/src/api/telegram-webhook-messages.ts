@@ -1,6 +1,11 @@
 import { formatCoinPayload } from "@shared/lib/telegram-mini-app-payloads";
 import { formatRelativeAgeSeconds, formatRelativeDurationSeconds } from "@shared/lib/relative-time";
 import { isPausedSentinel } from "@shared/lib/telegram-delivery-policy";
+import {
+  TELEGRAM_ALERT_FAMILY_SHORT_LABELS,
+  TELEGRAM_ALERT_PERSISTENCE,
+} from "@shared/lib/telegram-alert-families";
+import { TELEGRAM_ALERT_TYPES, type TelegramAlertType } from "@shared/types/status";
 import { escapeHtml, type InlineKeyboardButton } from "../lib/telegram";
 import { formatTelegramAge } from "../lib/telegram/format-age";
 import { MANAGE_PAGE_SIZE } from "../lib/telegram/constants";
@@ -13,8 +18,13 @@ import type { PresetSubscriptionRow, SubscriberRow, SubscriptionRow } from "./te
 import { STABLECOIN_BY_ID } from "./telegram-webhook-shared";
 import type { StatusForCoin } from "./telegram-webhook-status";
 
-// Re-export so existing callers importing this constant from this module keep working.
-export { MANAGE_PAGE_SIZE };
+type AlertFamilySource = SubscriptionRow | PresetSubscriptionRow | SubscriberRow;
+
+interface AlertFamilyDescriptionOptions {
+  scope: "subscription" | "global";
+  emptyLabel: string;
+  labels?: Partial<Record<TelegramAlertType, string>>;
+}
 
 const GLOBAL_SAFETY_LABEL = "Safety (downgrades; 3-point drop when scored)";
 
@@ -60,7 +70,7 @@ interface UnsubscribeSummaryOptions {
   footerLine?: string;
 }
 
-function sortSubscriptions(subscriptions: SubscriptionRow[]): SubscriptionRow[] {
+export function sortSubscriptions(subscriptions: SubscriptionRow[]): SubscriptionRow[] {
   return [...subscriptions].sort((a, b) => {
     const aCoin = STABLECOIN_BY_ID.get(a.stablecoin_id);
     const bCoin = STABLECOIN_BY_ID.get(b.stablecoin_id);
@@ -68,6 +78,32 @@ function sortSubscriptions(subscriptions: SubscriptionRow[]): SubscriptionRow[] 
     const bSymbol = bCoin?.symbol ?? b.stablecoin_id;
     return aSymbol.localeCompare(bSymbol) || a.stablecoin_id.localeCompare(b.stablecoin_id);
   });
+}
+
+export function paginateChatRows<T>(
+  rows: readonly T[],
+  requestedPage: number,
+): { rows: T[]; page: number; totalPages: number } {
+  const totalPages = Math.max(1, Math.ceil(rows.length / MANAGE_PAGE_SIZE));
+  const page = Math.max(0, Math.min(requestedPage, totalPages - 1));
+  const start = page * MANAGE_PAGE_SIZE;
+  return { rows: rows.slice(start, start + MANAGE_PAGE_SIZE), page, totalPages };
+}
+
+function describeAlertFamilies(
+  source: AlertFamilySource | null,
+  options: AlertFamilyDescriptionOptions,
+): string {
+  if (!source) return options.emptyLabel;
+  const values = source as unknown as Record<string, unknown>;
+  const labels = TELEGRAM_ALERT_TYPES.flatMap((alertType) => {
+    const persistence = TELEGRAM_ALERT_PERSISTENCE[alertType];
+    const column = options.scope === "global" ? persistence.globalColumn : persistence.subscriptionColumn;
+    return values[column]
+      ? [options.labels?.[alertType] ?? TELEGRAM_ALERT_FAMILY_SHORT_LABELS[alertType]]
+      : [];
+  });
+  return labels.join(", ") || options.emptyLabel;
 }
 
 function formatCoinLabel(stablecoinId: string): string {
@@ -260,42 +296,28 @@ export function describeSubscriptionSettings(
   nowSec: number = Math.floor(Date.now() / 1000),
   options: { perCoinTag?: boolean } = {},
 ): string {
-  const labels: string[] = [];
-
-  if (row.alert_dews) {
-    labels.push(row.dews_min_band ? `DEWS>=${row.dews_min_band}` : "DEWS");
-  }
-  if (row.alert_depeg) {
-    labels.push(formatDepegLabel(row.depeg_worsening_bps_step));
-  }
-  if (row.alert_safety) {
-    if (row.safety_mode === "downgrade-only") {
-      labels.push("Safety downgrade-only");
-    } else if (row.safety_mode === "upgrade-only") {
-      labels.push("Safety upgrade-only");
-    } else {
-      labels.push("Safety");
-    }
-  }
-  if (row.alert_launch) {
-    labels.push("Launch");
-  }
-  if (row.alert_reserve) {
-    labels.push("Reserve");
-  }
-  if (row.alert_freeze) {
-    labels.push("Freeze");
-  }
-
+  const description = describeAlertFamilies(row, {
+    scope: "subscription",
+    emptyLabel: "",
+    labels: {
+      dews: row.dews_min_band ? `DEWS>=${row.dews_min_band}` : "DEWS",
+      depeg: formatDepegLabel(row.depeg_worsening_bps_step),
+      safety: row.safety_mode === "downgrade-only"
+        ? "Safety downgrade-only"
+        : row.safety_mode === "upgrade-only"
+          ? "Safety upgrade-only"
+          : "Safety",
+    },
+  });
   // C74: in /list (perCoinTag) make the precedence model legible — an
   // all-flags-0 row is a per-coin Muted that suppresses preset/global defaults
   // (the C02 per-coin `off` precedence), and a flagged row is tagged so the
   // active per-coin override lane is visible. Other callers keep the bare label.
   let base: string;
-  if (labels.length === 0) {
+  if (!description) {
     base = options.perCoinTag ? "Muted (overrides defaults)" : "Muted";
   } else {
-    base = options.perCoinTag ? `${labels.join(", ")} · per-coin` : labels.join(", ");
+    base = options.perCoinTag ? `${description} · per-coin` : description;
   }
 
   // Per-coin snooze countdown (P1-U10): shown alongside the alert list so
@@ -309,39 +331,22 @@ export function describeSubscriptionSettings(
 }
 
 function describePresetSubscriptionSettings(row: PresetSubscriptionRow): string {
-  const labels: string[] = [];
-  if (row.alert_dews) labels.push("DEWS");
-  if (row.alert_depeg) {
-    labels.push(formatDepegLabel(row.depeg_worsening_bps_step));
-  }
-  if (row.alert_safety) labels.push("Safety");
-  return labels.join(", ") || "Muted";
+  return describeAlertFamilies(row, {
+    scope: "subscription",
+    emptyLabel: "Muted",
+    labels: { depeg: formatDepegLabel(row.depeg_worsening_bps_step) },
+  });
 }
 
 export function describeGlobalAlertSettings(subscriber: SubscriberRow | null): string {
-  if (!subscriber) return "None";
-  const labels: string[] = [];
-
-  if (subscriber.global_alert_dews) {
-    labels.push("DEWS");
-  }
-  if (subscriber.global_alert_depeg) {
-    labels.push(formatDepegLabel(subscriber.global_depeg_worsening_bps_step));
-  }
-  if (subscriber.global_alert_safety) {
-    labels.push(GLOBAL_SAFETY_LABEL);
-  }
-  if (subscriber.global_alert_launch) {
-    labels.push("Launch");
-  }
-  if (subscriber.global_alert_reserve) {
-    labels.push("Reserve");
-  }
-  if (subscriber.global_alert_freeze) {
-    labels.push("Freeze");
-  }
-
-  return labels.join(", ") || "None";
+  return describeAlertFamilies(subscriber, {
+    scope: "global",
+    emptyLabel: "None",
+    labels: {
+      depeg: formatDepegLabel(subscriber?.global_depeg_worsening_bps_step),
+      safety: GLOBAL_SAFETY_LABEL,
+    },
+  });
 }
 
 function formatCoinLines(coins: ResolvedCoin[]): string {
@@ -452,7 +457,7 @@ export function buildMiniAppOnlyKeyboard(
 /**
  * Paginated keyboard for watchlist management. Renders up to `MANAGE_PAGE_SIZE`
  * rows of `[ ❌ <SYMBOL> ]` buttons followed by a Prev/Next nav row when needed.
- * Caller clamps `page` to a valid range; this helper trusts the input.
+ * Page bounds are normalized by the shared pagination helper.
  */
 export function buildManageWatchlistKeyboard(
   subscriptions: SubscriptionRow[],
@@ -461,12 +466,9 @@ export function buildManageWatchlistKeyboard(
   inline_keyboard: Array<Array<{ text: string; callback_data: string }>>;
 } {
   const sorted = sortSubscriptions(subscriptions);
-  const totalPages = Math.max(1, Math.ceil(sorted.length / MANAGE_PAGE_SIZE));
-  const clampedPage = Math.max(0, Math.min(page, totalPages - 1));
-  const start = clampedPage * MANAGE_PAGE_SIZE;
-  const slice = sorted.slice(start, start + MANAGE_PAGE_SIZE);
+  const pageRows = paginateChatRows(sorted, page);
 
-  const rows: Array<Array<{ text: string; callback_data: string }>> = slice.map((row) => {
+  const rows: Array<Array<{ text: string; callback_data: string }>> = pageRows.rows.map((row) => {
     const coin = STABLECOIN_BY_ID.get(row.stablecoin_id);
     const symbol = coin?.symbol ?? row.stablecoin_id;
     return [
@@ -477,13 +479,13 @@ export function buildManageWatchlistKeyboard(
     ];
   });
 
-  if (totalPages > 1) {
+  if (pageRows.totalPages > 1) {
     const nav: Array<{ text: string; callback_data: string }> = [];
-    if (clampedPage > 0) {
-      nav.push({ text: "◀ Prev", callback_data: `manage:page:${clampedPage - 1}` });
+    if (pageRows.page > 0) {
+      nav.push({ text: "◀ Prev", callback_data: `manage:page:${pageRows.page - 1}` });
     }
-    if (clampedPage < totalPages - 1) {
-      nav.push({ text: "Next ▶", callback_data: `manage:page:${clampedPage + 1}` });
+    if (pageRows.page < pageRows.totalPages - 1) {
+      nav.push({ text: "Next ▶", callback_data: `manage:page:${pageRows.page + 1}` });
     }
     if (nav.length > 0) rows.push(nav);
   }
@@ -496,8 +498,7 @@ export function buildManageWatchlistMessage(subscriptions: SubscriptionRow[], pa
   if (subscriptions.length === 0) {
     return escapeHtml("No coin subscriptions to manage. Use /subscribe to add some.");
   }
-  const totalPages = Math.max(1, Math.ceil(subscriptions.length / MANAGE_PAGE_SIZE));
-  const clampedPage = Math.max(0, Math.min(page, totalPages - 1));
+  const { page: clampedPage, totalPages } = paginateChatRows(subscriptions, page);
   const pageLine = totalPages > 1 ? ` Page ${clampedPage + 1}/${totalPages}.` : "";
   return escapeHtml(
     `Manage watchlist (${subscriptions.length} coin${subscriptions.length === 1 ? "" : "s"}).${pageLine} Tap a row to remove that coin.`,

@@ -10,6 +10,7 @@ import {
   getAllowedRedemptionCapacityWarningReason,
   isRedemptionFreshnessAllowedByPolicy,
 } from "@shared/lib/redemption-backstop-configs/policies";
+import { validateRedemptionOutputIdentity } from "@shared/lib/redemption-backstops";
 import { validateRedemptionBackstopRegistry } from "../lib/redemption-backstop-validation";
 import type { RedemptionBackstopConfigManifestEntry } from "@shared/lib/redemption-backstop-configs";
 import type { RedemptionBackstopConfig } from "@shared/lib/redemption-backstop-configs/shared";
@@ -366,9 +367,9 @@ describe("validateRedemptionBackstopRegistry", () => {
       path: ["costModel", "feeBpsMin"], code: "custom",
     },
     {
-      name: "stress fee below normal bound",
-      overrides: { costModel: { kind: "dynamic-or-unclear", feeDescription: "Reviewed fees", feeBpsMax: 100, stressFeeBps: 50 } },
-      path: ["costModel", "stressFeeBps"], code: "custom",
+      name: "removed fee scenario",
+      overrides: { costModel: { kind: "dynamic-or-unclear", feeDescription: "Reviewed fees", feeScenario: "stress" } },
+      path: ["costModel"], code: "unrecognized_keys",
     },
     {
       name: "formula confidence with nonformula kind",
@@ -470,6 +471,75 @@ describe("validateRedemptionBackstopRegistry", () => {
       (finding) => finding.stablecoinId === "usdt-tether" && finding.code.startsWith("documented-bound-missing-"),
     );
     expect(supportWarnings).toEqual([]);
+  });
+
+  it("enforces canonical identities for tracked, collateral, and unresolved outputs", () => {
+    const unknownTracked = validateFixture([
+      singleOwner({
+        ...baseConfig,
+        outputAssetType: "stable-single",
+        outputAssets: ["not-a-tracked-coin"],
+      }),
+    ]);
+    expect(unknownTracked.findings).toContainEqual(
+      expect.objectContaining({ code: "unknown-tracked-output-id", stablecoinId: "usdt-tether" }),
+    );
+
+    const unknownCollateral = validateFixture([
+      {
+        name: "collateral",
+        filePath: "collateral.ts",
+        configs: {
+          "bold-liquity": {
+            ...baseConfig,
+            routeFamily: "collateral-redeem",
+            outputAssetType: "mixed-collateral",
+            outputAssets: ["asset:not-reviewed"],
+          },
+        },
+        allowedRouteFamilies: ["collateral-redeem"],
+      },
+    ]);
+    expect(unknownCollateral.findings).toContainEqual(
+      expect.objectContaining({ code: "unknown-collateral-output-key", stablecoinId: "bold-liquity" }),
+    );
+
+    expect(
+      validateRedemptionOutputIdentity("dai-makerdao", {
+        kind: "tracked-stablecoin",
+        trackedAssetIds: ["not-a-tracked-coin"],
+      }),
+    ).toContainEqual(expect.objectContaining({ code: "unknown-tracked-output-id" }));
+    expect(
+      validateRedemptionOutputIdentity("dai-makerdao", {
+        kind: "tracked-stablecoin",
+        trackedAssetIds: ["usdc-circle"],
+      }),
+    ).toEqual([]);
+    expect(
+      validateRedemptionOutputIdentity("bold-liquity", {
+        kind: "collateral",
+        assetKeys: ["asset:not-reviewed"],
+      }),
+    ).toContainEqual(expect.objectContaining({ code: "unknown-collateral-output-key" }));
+    expect(
+      validateRedemptionOutputIdentity("bold-liquity", {
+        kind: "collateral",
+        assetKeys: ["asset:weth", "asset:wsteth", "asset:reth"],
+      }),
+    ).toEqual([]);
+    expect(
+      validateRedemptionOutputIdentity("witry-brix", {
+        kind: "unresolved-asset",
+        assetKeys: ["asset:not-declared"],
+      }),
+    ).toContainEqual(expect.objectContaining({ code: "undeclared-unresolved-output-key" }));
+    expect(
+      validateRedemptionOutputIdentity("witry-brix", {
+        kind: "unresolved-asset",
+        assetKeys: ["asset:itry"],
+      }),
+    ).toEqual([]);
   });
 
   it("aligns configured output baskets to the 16-member exit-route asset-key bound", () => {

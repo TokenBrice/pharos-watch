@@ -1,5 +1,6 @@
 import { CHAIN_META, resolveChainId } from "@shared/lib/chains";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
+import { WM_SUPPLY_ATTRIBUTION_MAX_POST_CLOCK_SEC } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -605,6 +606,16 @@ export function reviewedDeploymentObservationTimingIssue(input: {
     input.observedAtSec !== input.captureEndedAtSec
   ) {
     return { code: "invalid-envelope", failedRouteId: null };
+  }
+  if (
+    (input.assetId ?? "wm-m0") === "wm-m0" &&
+    input.observedAtSec - input.clockSec >
+      WM_SUPPLY_ATTRIBUTION_MAX_POST_CLOCK_SEC
+  ) {
+    return {
+      code: "future-clock",
+      failedRouteId: boundaryRouteId(input.deployments, "latest"),
+    };
   }
   if (
     input.captureEndedAtSec - input.captureStartedAtSec >

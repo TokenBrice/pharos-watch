@@ -1,4 +1,4 @@
-import { ARCHETYPE_VISUALS, type ArchetypeContent } from "./types";
+import type { ArchetypeContent } from "./types";
 
 export const content: ArchetypeContent = {
   archetype: "commodity-claim",
@@ -126,5 +126,4 @@ export const content: ArchetypeContent = {
       label: "Real-world-asset-backed directory",
     },
   ],
-  visuals: ARCHETYPE_VISUALS["commodity-claim"],
 };

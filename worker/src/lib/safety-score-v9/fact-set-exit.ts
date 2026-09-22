@@ -15,6 +15,7 @@ import {
 } from "@shared/lib/safety-score-v9/reasons";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { canonicalV9ExecutionCostKey } from "@shared/types/safety-score-v9-fact-primitives";
 import type {
   V9EvidenceResponsibility,
   V9ExitRouteFactV2,
@@ -33,7 +34,6 @@ import {
   RouteReviewSchema,
   RouteValuationSchema,
 } from "./fact-set-schema";
-import { canonicalExecutionCostKey } from "./extension-routes";
 import {
   addEvidence,
   addGap,
@@ -259,7 +259,7 @@ function buildRoute(
   }
 
   const costByKey = new Map(
-    args.review.executionCosts.map((point) => [canonicalExecutionCostKey(point), point]),
+    args.review.executionCosts.map((point) => [canonicalV9ExecutionCostKey(point), point]),
   );
   const rawCurve = args.observation.capacityCurve ?? [
     {
@@ -270,9 +270,9 @@ function buildRoute(
     },
   ];
   const capacityCurve = rawCurve.map((point) => {
-    const cost = costByKey.get(canonicalExecutionCostKey(point));
+    const cost = costByKey.get(canonicalV9ExecutionCostKey(point));
     if (!cost) throw new Error(`Missing execution cost for ${context.asset.assetId}:${routeKey}`);
-    costByKey.delete(canonicalExecutionCostKey(point));
+    costByKey.delete(canonicalV9ExecutionCostKey(point));
     return { ...point, executionCostBps: cost.executionCostBps };
   });
   if (costByKey.size > 0) throw new Error(`Unmatched execution costs for ${context.asset.assetId}:${routeKey}`);

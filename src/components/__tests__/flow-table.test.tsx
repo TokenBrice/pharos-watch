@@ -17,7 +17,6 @@ vi.mock("@/hooks/use-prefetch-stablecoin", () => ({
 const coin = {
   stablecoinId: "usdt-tether",
   symbol: "USDT",
-  flowIntensity: -18,
   pressureShiftScore: -18,
   pressureShiftState: "worsening" as const,
   netFlowDirection24h: "burning" as const,

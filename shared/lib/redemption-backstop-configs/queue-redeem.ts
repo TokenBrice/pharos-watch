@@ -15,12 +15,12 @@ import {
 } from "./shared";
 import { NEST_NAV_VAULT_CONFIGS } from "./queue-redeem-nest-nav";
 import {
-  REVIEWED_EXIT_CREDIT_WAVE2_AT,
+  REVIEWED_EXIT_CREDIT_AT,
   REVIEWED_FIRST_WAVE_AT,
   REVIEWED_REMEDIATION_AT,
   REVIEWED_STABLECOIN_AUDIT_AT,
   REVIEWED_WRAPPER_WAVE_AT,
-  REVIEWED_YIELD_COVERAGE_WAVE_AT as REVIEWED_YIELD_EXPANSION_AT,
+  REVIEWED_YIELD_COVERAGE_WAVE_AT,
 } from "./review-dates";
 
 const REVIEWED_QUEUE_REDEMPTION_AT = REVIEWED_FIRST_WAVE_AT;
@@ -607,7 +607,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       0,
       "Nerona's fee documentation states there are no mint or redeem fees on USDnr itself at the protocol level; the 1% instant fee and the four-day unwind apply to sUSDnr, not USDnr",
     ),
-    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE2_AT,
+    reviewedAt: REVIEWED_EXIT_CREDIT_AT,
     docs: [
       sourceRef("Nerona redemptions", "https://docs.nerona.xyz/redemptions", ["route", "capacity", "settlement"]),
       sourceRef("Nerona fees and revenue", "https://docs.nerona.xyz/fees-revenue", ["fees"]),
@@ -700,7 +700,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     ],
   }),
   "apyusd-apyx": erc4626ReserveTelemetryQueueConfig({
-    reviewedAt: REVIEWED_YIELD_EXPANSION_AT,
+    reviewedAt: REVIEWED_YIELD_COVERAGE_WAVE_AT,
     accessModel: "whitelisted-onchain",
     settlementModel: "days",
     executionModel: "rules-based-nav",
@@ -717,7 +717,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     settlementConstraint: "the documented unlock window",
   }),
   "savusd-avant": erc4626ReserveTelemetryQueueConfig({
-      reviewedAt: REVIEWED_YIELD_EXPANSION_AT,
+      reviewedAt: REVIEWED_YIELD_COVERAGE_WAVE_AT,
       settlementModel: "days",
       executionModel: "rules-based-nav",
       costModel: fixedFee(
@@ -772,7 +772,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     telemetrySubject: "the tranche vault's idle underlying balance",
     settlementConstraint: "the documented redemption window",
   }),
-  "scusd-rings": defineReviewedQueueRedeemConfig(REVIEWED_YIELD_EXPANSION_AT, {
+  "scusd-rings": defineReviewedQueueRedeemConfig(REVIEWED_YIELD_COVERAGE_WAVE_AT, {
     outputAssetType: "stable-basket",
     outputAssets: ["usdc-circle", "usdt-tether", "dai-makerdao"],
     settlementModel: "days",
@@ -791,7 +791,7 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
       "Secondary sources also list GHO and USDS as collateral; both are excluded pending primary confirmation because docs.rings.money renders as an unreadable GitBook shell to non-browser clients (re-verified 2026-07-27).",
     ],
   }),
-  "hbusdt-hyperbeat": defineReviewedQueueRedeemConfig(REVIEWED_YIELD_EXPANSION_AT, {
+  "hbusdt-hyperbeat": defineReviewedQueueRedeemConfig(REVIEWED_YIELD_COVERAGE_WAVE_AT, {
     settlementModel: "days",
     executionModel: "rules-based-nav",
     costModel: fixedFee(0, "Hyperbeat docs state classic redemption completes within two days with no fee"),

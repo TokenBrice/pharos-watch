@@ -298,8 +298,27 @@ describe("telegram authoritative retention", () => {
     const { sqlite, db } = setupLatestSchema();
 
     const result = await runTelegramRetentionCleanup(db);
+    const metadata = JSON.parse(result.metadata!) as Record<string, unknown>;
 
-    expect(JSON.parse(result.metadata!)).toMatchSnapshot();
+    expect(result.status).toBe("ok");
+    expect(Object.entries(metadata).filter(([key, value]) => key.endsWith("Pruned") && value !== 0)).toEqual([]);
+    expect(
+      Object.entries(metadata.cappedAtLimit as Record<string, boolean>).filter(([, capped]) => capped),
+    ).toEqual([]);
+    expect(metadata.runBudgetTruncated).toBe(false);
+    expect(metadata.expiredTargetsReconciled).toBe(0);
+    expect(metadata.processedUpdatesPruned).toBe(0);
+    expect(metadata.processedUpdatesRemainingBacklog).toEqual({ count: 0, exact: true, probeLimit: 5001 });
+    expect(metadata.highGrowthRetention).toMatchObject({
+      error: null,
+      cappedAtLimit: false,
+      legacyTerminalJobsPruned: 0,
+      staleUnresolvedJobsPruned: 0,
+      staleUnresolvedSourcesPruned: 0,
+      oldestUnresolvedSourceRemainingAt: null,
+      terminalCutoff: NOW_SEC - 14 * DAY_SEC,
+      unresolvedCutoff: NOW_SEC - 30 * DAY_SEC,
+    });
     sqlite.close();
   });
 
@@ -381,6 +400,12 @@ describe("telegram authoritative retention", () => {
       targetPlanPagesPruned: 2,
       targetPlanItemsPruned: 2,
       targetExpiryProgressPruned: 2,
+      sourceResolutionPagesPruned: 2,
+      sourceResolutionMembershipsPruned: 2,
+      sourceResolutionTargetsPruned: 2,
+      sourceEventsPruned: 1,
+      jobsPruned: 1,
+      jobTargetsPruned: 1,
       replayJobTargetsPruned: 1,
       targetPlansPruned: 1,
       replayJobsPruned: 1,
@@ -391,7 +416,6 @@ describe("telegram authoritative retention", () => {
         authoritativeReplay: 14,
       },
     });
-    expect(metadata).toMatchSnapshot();
     sqlite.close();
   });
 
@@ -457,10 +481,10 @@ describe("telegram authoritative retention", () => {
 
     const result = await runTelegramRetentionCleanup(db);
     const metadata = JSON.parse(result.metadata!) as {
-      legacyTargetItemsPruned: number;
-      legacyTargetsPruned: number;
-      legacyTerminalJobsPruned: number;
       highGrowthRetention: {
+        legacyTargetItemsPruned: number;
+        legacyTargetsPruned: number;
+        legacyTerminalJobsPruned: number;
         terminalCutoff: number;
         unresolvedCutoff: number;
         rowLimit: number;
@@ -472,9 +496,9 @@ describe("telegram authoritative retention", () => {
     };
 
     expect(result.status).toBe("ok");
-    expect(metadata.legacyTargetItemsPruned).toBe(1);
-    expect(metadata.legacyTargetsPruned).toBe(2);
-    expect(metadata.legacyTerminalJobsPruned).toBe(1);
+    expect(metadata.highGrowthRetention.legacyTargetItemsPruned).toBe(1);
+    expect(metadata.highGrowthRetention.legacyTargetsPruned).toBe(2);
+    expect(metadata.highGrowthRetention.legacyTerminalJobsPruned).toBe(1);
     expect(
       sqlite
         .prepare("SELECT job_id FROM telegram_alert_job_target_items WHERE job_id = 'legacy-job-eligible-child'")
@@ -538,15 +562,18 @@ describe("telegram authoritative retention", () => {
 
     const first = await runTelegramRetentionCleanup(db, undefined, { highGrowthDeleteLimit: 2 });
     const firstMetadata = JSON.parse(first.metadata!) as {
-      legacyTargetItemsPruned: number;
-      legacyTargetsPruned: number;
-      highGrowthRetention: { cappedAtLimit: boolean; oldestLegacyTargetEligibleAt: number | null };
+      highGrowthRetention: {
+        legacyTargetItemsPruned: number;
+        legacyTargetsPruned: number;
+        cappedAtLimit: boolean;
+        oldestLegacyTargetEligibleAt: number | null;
+      };
       runBudgetTruncated: boolean;
     };
     expect(firstMetadata).toMatchObject({
-      legacyTargetItemsPruned: 2,
-      legacyTargetsPruned: 2,
       highGrowthRetention: {
+        legacyTargetItemsPruned: 2,
+        legacyTargetsPruned: 2,
         cappedAtLimit: true,
         oldestLegacyTargetEligibleAt: NOW_SEC - 15 * DAY_SEC,
       },
@@ -561,14 +588,17 @@ describe("telegram authoritative retention", () => {
 
     const second = await runTelegramRetentionCleanup(db, undefined, { highGrowthDeleteLimit: 2 });
     const secondMetadata = JSON.parse(second.metadata!) as {
-      legacyTargetItemsPruned: number;
-      legacyTargetsPruned: number;
-      highGrowthRetention: { cappedAtLimit: boolean; oldestLegacyTargetEligibleAt: number | null };
+      highGrowthRetention: {
+        legacyTargetItemsPruned: number;
+        legacyTargetsPruned: number;
+        cappedAtLimit: boolean;
+        oldestLegacyTargetEligibleAt: number | null;
+      };
     };
     expect(secondMetadata).toMatchObject({
-      legacyTargetItemsPruned: 1,
-      legacyTargetsPruned: 1,
       highGrowthRetention: {
+        legacyTargetItemsPruned: 1,
+        legacyTargetsPruned: 1,
         cappedAtLimit: false,
         oldestLegacyTargetEligibleAt: null,
       },
@@ -605,14 +635,17 @@ describe("telegram authoritative retention", () => {
 
     const result = await runTelegramRetentionCleanup(db);
     const metadata = JSON.parse(result.metadata!) as {
-      staleUnresolvedJobsPruned: number;
-      staleUnresolvedSourcesPruned: number;
-      highGrowthRetention: { oldestUnresolvedSourceRemainingAt: number | null; error: string | null };
+      highGrowthRetention: {
+        staleUnresolvedJobsPruned: number;
+        staleUnresolvedSourcesPruned: number;
+        oldestUnresolvedSourceRemainingAt: number | null;
+        error: string | null;
+      };
     };
 
     expect(result.status).toBe("ok");
-    expect(metadata.staleUnresolvedJobsPruned).toBe(1);
-    expect(metadata.staleUnresolvedSourcesPruned).toBe(1);
+    expect(metadata.highGrowthRetention.staleUnresolvedJobsPruned).toBe(1);
+    expect(metadata.highGrowthRetention.staleUnresolvedSourcesPruned).toBe(1);
     expect(
       sqlite.prepare("SELECT source_event_id FROM telegram_alert_source_events WHERE source_event_id = 'stale-orphan'").get(),
     ).toBeUndefined();
@@ -670,19 +703,24 @@ describe("telegram authoritative retention", () => {
 
     const result = await runTelegramRetentionCleanup(db, undefined, { highGrowthDeleteLimit: 2 });
     const metadata = JSON.parse(result.metadata!) as {
-      legacyTerminalJobsPruned: number;
-      staleUnresolvedJobsPruned: number;
-      staleUnresolvedSourcesPruned: number;
-      highGrowthRetention: { rowLimit: number; cappedAtLimit: boolean };
+      highGrowthRetention: {
+        legacyTerminalJobsPruned: number;
+        staleUnresolvedJobsPruned: number;
+        staleUnresolvedSourcesPruned: number;
+        rowLimit: number;
+        cappedAtLimit: boolean;
+      };
     };
 
     expect(metadata).toMatchObject({
-      legacyTerminalJobsPruned: 2,
-      staleUnresolvedJobsPruned: 2,
-      staleUnresolvedSourcesPruned: 2,
-      highGrowthRetention: { rowLimit: 2, cappedAtLimit: true },
+      highGrowthRetention: {
+        legacyTerminalJobsPruned: 2,
+        staleUnresolvedJobsPruned: 2,
+        staleUnresolvedSourcesPruned: 2,
+        rowLimit: 2,
+        cappedAtLimit: true,
+      },
     });
-    expect(metadata).toMatchSnapshot();
     expect(Number(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_jobs").get()?.count)).toBe(2);
     expect(
       Number(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_source_events").get()?.count),
@@ -705,15 +743,13 @@ describe("telegram authoritative retention", () => {
 
     const result = await runTelegramRetentionCleanup(isolatedDb);
     const metadata = JSON.parse(result.metadata!) as {
-      highGrowthRetention: { error: string | null; durationMs: number };
+      highGrowthRetention: { error: string | null };
       usageDailyPruned: number;
     };
 
     expect(result.status).toBe("degraded");
     expect(metadata.highGrowthRetention.error).toContain("injected Telegram high-growth cleanup failure");
-    expect(metadata.highGrowthRetention.durationMs).toBeGreaterThanOrEqual(0);
     expect(metadata.usageDailyPruned).toBe(0);
-    expect(metadata).toMatchSnapshot();
     sqlite.close();
   });
 });

@@ -12,6 +12,7 @@ import {
 } from "../core";
 import type { FxProtocolMeasurementEvidence } from "../schema";
 import type { FxProtocolMeasurementTarget } from "../targets";
+import { buildMeasuredMetrics, buildMeasurementCompleteness } from "../evidence-envelope";
 
 export async function measureFxProtocol(
   caller: EthCallJournal,
@@ -303,15 +304,11 @@ export async function measureFxProtocol(
     block,
     calls: caller.calls,
     logQueries: caller.logQueries,
-    metrics: {
+    metrics: buildMeasuredMetrics({
       collateralizationRatio: ratioToRounded(totalCollateralValueWad, totalSupplyRaw),
       liquidationCapacityRatio: ratioToRounded(committedCapacityRaw, totalSupplyRaw),
-      applicability: {
-        collateralizationRatio: { state: "measured" },
-        liquidationCapacityRatio: { state: "measured" },
-      },
-    },
-    completeness: { complete: true, blockers: [] },
+    }),
+    completeness: buildMeasurementCompleteness(),
     ...(healthWarnings.length > 0 ? { warnings: healthWarnings } : {}),
     derived: {
       token,

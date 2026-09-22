@@ -3,7 +3,6 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { ZodError } from "zod";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { API_ORIGIN, PAGES_APP_ORIGIN, SITE_API_ORIGIN } from "@shared/lib/runtime-origins";
 import { SITE_DATA_PATH_PREFIX } from "@shared/lib/site-data-lane";
@@ -183,17 +182,8 @@ export async function fetchOptionalDetailSnapshotLane<T>(
     const payload = await fetchDetailSnapshotJson(url);
     return { data: schema.parse(payload.data), updatedAt: payload.updatedAt };
   } catch (error) {
-    if (error instanceof DetailSnapshotHttpError) {
+    if (error instanceof DetailSnapshotHttpError && (error.status === 404 || error.status === 410)) {
       console.warn(`[stablecoin-detail-snapshots] Omitting ${label} lane: ${error.message}`);
-      return null;
-    }
-    if (error instanceof ZodError) {
-      const issue = error.issues[0];
-      const issuePath = issue?.path.length ? issue.path.map(String).join(".") : "<root>";
-      const issueMessage = issue?.message ?? "unknown schema validation error";
-      const warning = `[stablecoin-detail-snapshots] Omitting ${label} lane: ` +
-        `schema validation failed at ${issuePath}: ${issueMessage}`;
-      console.warn(warning.slice(0, 360));
       return null;
     }
     throw error;
@@ -245,6 +235,9 @@ export async function generateSnapshots(
       resolveApiPathUrl(apiBase, API_PATHS.supplyHistory(id, STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS)),
       SupplyHistoryResponseSchema,
     );
+    if (!detail && !history) {
+      throw new Error(`No detail snapshot lanes were available for live stablecoin ${id}.`);
+    }
     return [id, detail, history] as const;
   });
   return buildStablecoinDetailSnapshots({

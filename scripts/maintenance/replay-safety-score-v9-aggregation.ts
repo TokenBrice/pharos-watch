@@ -79,6 +79,11 @@ const ReplaySchema = z.object({
     evaluatedSet: z.object({
       policyId: z.string(),
       policyDigest: z.string(),
+      chainMaturityPolicy: z.object({
+        schemaVersion: z.literal(1),
+        evaluationClockSec: z.number().int().nonnegative(),
+        matureChains: z.array(z.string()),
+      }).optional(),
       evaluationBuildDigest: z.string(),
       factSetDigest: z.string(),
       baseInputGenerationId: z.string(),
@@ -212,6 +217,7 @@ export function buildV9AggregationCounterfactual(input: unknown, inputPath = "<m
       path: inputPath === "<memory>" ? inputPath : resolve(inputPath),
       policyId: evaluated.policyId,
       policyDigest: evaluated.policyDigest,
+      chainMaturityPolicy: evaluated.chainMaturityPolicy ?? null,
       evaluationBuildDigest: evaluated.evaluationBuildDigest,
       factSetDigest: evaluated.factSetDigest,
       baseInputGenerationId: evaluated.baseInputGenerationId,

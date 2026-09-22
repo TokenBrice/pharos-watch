@@ -17,7 +17,7 @@ import {
   resolveExitScoringRequest,
   resolveExitThresholdBandMultiplier,
 } from "../exit-route-scoring";
-import { clampScore } from "../math";
+import { clampScore, roundTo } from "../math";
 import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonPolicy } from "./policy";
 import { compareText, uniqueSorted } from "./primitives";
 
@@ -133,10 +133,6 @@ const EMPTY_HORIZONS: Readonly<Record<V9ExitHorizon, V9ExitHorizonTrace>> = {
   "near-term": { primaryRouteKey: null, score: null },
   queued: { primaryRouteKey: null, score: null },
 };
-
-function roundTraceScore(value: number): number {
-  return Math.round(value * 100) / 100;
-}
 
 /**
  * The pillar's view of the shared exit request: the same clamped supply share
@@ -755,20 +751,20 @@ function evaluateRoute(
   return {
     routeKey: route.routeKey,
     ...attribution,
-    score: roundTraceScore(clampScore(score)),
+    score: roundTo(clampScore(score), 2),
     included: true,
     exclusionReason: null,
     capacityPoint: {
       ...capacityPoint,
-      executableUsd: roundTraceScore(valuedExecutableUsd),
-      completionRatio: roundTraceScore(completionRatio),
+      executableUsd: roundTo(valuedExecutableUsd, 2),
+      completionRatio: roundTo(completionRatio, 2),
       executionCostBps: capacityPoint.executionCostBps,
     },
     components: {
       ...components,
-      capacity: roundTraceScore(components.capacity),
-      outputAssetQuality: roundTraceScore(components.outputAssetQuality),
-      cost: roundTraceScore(components.cost),
+      capacity: roundTo(components.capacity, 2),
+      outputAssetQuality: roundTo(components.outputAssetQuality, 2),
+      cost: roundTo(components.cost, 2),
     },
     confidenceFactor,
     capsApplied,
@@ -1074,11 +1070,11 @@ export function evaluateV9Exit(
   return {
     score: boundedGapFloorApplies
       ? boundedGapFloor
-      : roundTraceScore(primary.score + diversificationBonus),
+      : roundTo(primary.score + diversificationBonus, 2),
     stressRequest,
     primaryRouteKey: boundedGapFloorApplies ? null : primary.route.routeKey,
     diversificationRouteKey: boundedGapFloorApplies ? null : independent?.route.routeKey ?? null,
-    diversificationBonus: boundedGapFloorApplies ? 0 : roundTraceScore(diversificationBonus),
+    diversificationBonus: boundedGapFloorApplies ? 0 : roundTo(diversificationBonus, 2),
     horizons,
     // Excluded optional routes stay visible on their per-route traces; a weak
     // or unreviewed alternative cannot impose a critical reason once a

@@ -31,6 +31,7 @@ export type ReadyDetailParamsOverrides = {
   id: string;
   coin: BuildStablecoinDetailViewModelParams["core"]["coin"];
   asset?: Partial<StablecoinData>;
+  fxFallbackRates?: Record<string, number>;
   queries?: BuildStablecoinDetailViewModelOverrides["queries"];
   supplemental?: BuildStablecoinDetailViewModelOverrides["supplemental"];
 };
@@ -147,6 +148,7 @@ export function makeReadyDetailParams({
   id,
   coin,
   asset,
+  fxFallbackRates,
   queries,
   supplemental,
 }: ReadyDetailParamsOverrides): BuildStablecoinDetailViewModelParams {
@@ -167,7 +169,7 @@ export function makeReadyDetailParams({
         ...queries?.supplyHistory,
       },
       stablecoinList: {
-        data: { peggedAssets: [readyAsset], fxFallbackRates: {} },
+        data: { peggedAssets: [readyAsset], fxFallbackRates: fxFallbackRates ?? {} },
         dataUpdatedAt: 1,
         ...queries?.stablecoinList,
       },

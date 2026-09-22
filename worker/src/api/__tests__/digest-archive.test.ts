@@ -1,3 +1,5 @@
+import { DatabaseSync } from "node:sqlite";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { describe, it, expect } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
@@ -132,7 +134,11 @@ describe("handleDigestArchive", () => {
       digest_title: "Second Public Weekly",
       digest_meta: JSON.stringify({ type: "weekly" }),
     });
-    const db = mockD1([{ match: "daily_digest", rows: [weekly2, sentinel, weekly1] }]);
+    const db = mockD1([{ match: "daily_digest", rows: [
+      { ...weekly2, edition_number: 3 },
+      { ...sentinel, edition_number: 2 },
+      { ...weekly1, edition_number: 1 },
+    ] }]);
     const res = await handleDigestArchive(db);
     const body = (await res.json()) as {
       digests: Array<{ digestTitle: string | null; editionNumber: number; isInternal?: unknown }>;
@@ -142,6 +148,51 @@ describe("handleDigestArchive", () => {
     // weekly keeps its published number 3.
     expect(body.digests.map((d) => d.editionNumber)).toEqual([3, 1]);
     expect(body.digests[0]).not.toHaveProperty("isInternal");
+  });
+
+  it("keeps published edition numbers stable after the archive exceeds its response window", async () => {
+    async function loadEditions(rowCount: number): Promise<Map<string, number>> {
+      const sqlite = new DatabaseSync(":memory:");
+      try {
+        sqlite.exec(`
+          CREATE TABLE daily_digest (
+            digest_text TEXT NOT NULL,
+            digest_title TEXT,
+            generated_at INTEGER NOT NULL,
+            digest_extended TEXT,
+            input_data TEXT,
+            digest_meta TEXT
+          )
+        `);
+        const insert = sqlite.prepare(`
+          INSERT INTO daily_digest (
+            digest_text, digest_title, generated_at, digest_extended, input_data, digest_meta
+          ) VALUES (?, ?, ?, NULL, '{}', NULL)
+        `);
+        sqlite.exec("BEGIN");
+        for (let edition = 1; edition <= rowCount; edition += 1) {
+          insert.run(`Digest ${edition}`, `Edition ${edition}`, edition);
+        }
+        sqlite.exec("COMMIT");
+
+        const body = await (await handleDigestArchive(createSqliteD1(sqlite))).json() as {
+          digests: Array<{ digestTitle: string; editionNumber: number }>;
+        };
+        return new Map(body.digests.map((digest) => [digest.digestTitle, digest.editionNumber]));
+      } finally {
+        sqlite.close();
+      }
+    }
+
+    const editionsAt300 = await loadEditions(300);
+    const editionsAt400 = await loadEditions(400);
+    const sharedEditions = [...editionsAt300].filter(([title]) => editionsAt400.has(title));
+
+    expect(sharedEditions).toHaveLength(265);
+    for (const [title, editionNumber] of sharedEditions) {
+      expect(editionsAt400.get(title)).toBe(editionNumber);
+    }
+    expect(editionsAt400.get("Edition 36")).toBe(36);
   });
 });
 

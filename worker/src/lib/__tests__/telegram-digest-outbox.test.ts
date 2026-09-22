@@ -403,6 +403,65 @@ describe("Telegram digest outbox", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("terminalizes a daily edition that exhausts its retry budget", async () => {
+    const { sqlite, db } = fixtures.open();
+    await enqueueDaily(db);
+    const fetchMock = mockFetch([{
+      match: () => true,
+      body: { ok: false, description: "server unavailable" },
+      status: 503,
+    }]);
+
+    for (let attempt = 1; attempt <= 13; attempt++) {
+      const result = await deliverTelegramDigestEdition(db, creds, "daily:2026-07-10");
+      const row = loadEdition(sqlite);
+      expect(row.attempts).toBe(attempt);
+      if (attempt < 13) {
+        expect(result).toMatchObject({ outcome: "pending", errorClass: "server_error" });
+        expect(row.state).toBe("pending");
+        vi.setSystemTime(row.next_attempt_at! * 1_000);
+      } else {
+        expect(result).toMatchObject({
+          outcome: "failed_permanent",
+          state: "failed_permanent",
+          errorClass: "retry_budget_exhausted:server_error",
+          retryAfterSec: null,
+        });
+      }
+    }
+
+    expect(fetchMock).toHaveBeenCalledTimes(13);
+    expect(loadEdition(sqlite)).toMatchObject({
+      state: "failed_permanent",
+      last_error_class: "retry_budget_exhausted:server_error",
+      last_status_code: 503,
+      attempts: 13,
+    });
+  });
+
+  it("terminalizes an aged daily edition on its next retryable failure", async () => {
+    const { sqlite, db } = fixtures.open();
+    await enqueueDaily(db, { digestGeneratedAt: Math.floor(Date.now() / 1000) - 25 * 60 * 60 });
+    const fetchMock = mockFetch([{
+      match: () => true,
+      body: { ok: false, description: "server unavailable" },
+      status: 503,
+    }]);
+
+    const result = await deliverTelegramDigestEdition(db, creds, "daily:2026-07-10");
+
+    expect(result).toMatchObject({
+      outcome: "failed_permanent",
+      errorClass: "edition_age_exceeded:server_error",
+    });
+    expect(loadEdition(sqlite)).toMatchObject({
+      state: "failed_permanent",
+      last_error_class: "edition_age_exceeded:server_error",
+      attempts: 1,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("turns an expired sending owner into execution_unknown without replay", async () => {
     const { sqlite, db } = fixtures.open();
     await enqueueDaily(db);

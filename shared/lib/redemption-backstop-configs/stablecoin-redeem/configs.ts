@@ -11,27 +11,27 @@ import {
   undisclosedReviewedFee,
 } from "../shared";
 import {
+  REVIEWED_DIRECT_REDEMPTION_AT,
+  REVIEWED_EXIT_CREDIT_AT,
+  REVIEWED_FOLLOWUP_REMEDIATION_AT,
+  REVIEWED_MAY_BATCH_AT,
+  REVIEWED_REMEDIATION_AT,
+  REVIEWED_STABLECOIN_AUDIT_AT,
+  REVIEWED_WRAPPER_WAVE_AT,
+  REVIEWED_YIELD_COVERAGE_WAVE_AT,
+} from "../review-dates";
+import {
   defineStablecoinRedeemConfig,
   defineReviewedStablecoinRedeemConfig,
   erc4626InstantConfig,
   gauntletMorphoConfig,
-  REVIEWED_DIRECT_REDEMPTION_AT,
-  REVIEWED_EXIT_CREDIT_WAVE_AT,
-  REVIEWED_EXIT_CREDIT_WAVE2_AT,
-  REVIEWED_EXIT_CREDIT_WAVE3_AT,
-  REVIEWED_FOLLOWUP_REMEDIATION_AT,
-  REVIEWED_FXSAVE_LIVE_REDEMPTION_AT,
-  REVIEWED_REMEDIATION_AT,
-  REVIEWED_STABLECOIN_AUDIT_AT,
-  REVIEWED_STABLECOIN_BATCH_AT,
-  REVIEWED_WRAPPER_REDEMPTION_AT,
-  REVIEWED_YIELD_EXPANSION_AT,
-  REVIEWED_ZCHF_BRIDGE_AT,
   steakhousePrimeInstantConfig,
 } from "./shared";
 
 const SOURCE_FILE_PATH = "shared/lib/redemption-backstop-configs/stablecoin-redeem/configs.ts";
 const REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT = "2026-07-19";
+const REVIEWED_ZCHF_BRIDGE_AT = "2026-05-25";
+const REVIEWED_FXSAVE_LIVE_REDEMPTION_AT = "2026-05-27";
 
 const RESERVOIR_REDEEM_CONFIGS = defineConfigFamily(
   [
@@ -111,7 +111,7 @@ const RESERVOIR_REDEEM_CONFIGS = defineConfigFamily(
         confidence: "documented-bound",
         basis: "hot-buffer",
       },
-      reviewedAt: REVIEWED_EXIT_CREDIT_WAVE_AT,
+      reviewedAt: REVIEWED_EXIT_CREDIT_AT,
       ...row,
     }),
 );
@@ -191,7 +191,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
   }),
   "ousg-ondo-finance": defineReviewedStablecoinRedeemConfig(REVIEWED_DIRECT_REDEMPTION_AT, {
-    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE2_AT,
+    reviewedAt: REVIEWED_EXIT_CREDIT_AT,
     outputAssets: ["usdc-circle"],
     accessModel: "whitelisted-onchain",
     executionModel: "rules-based-nav",
@@ -229,7 +229,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       0,
       "Superstate's smart-contract docs state that for the USTB RedemptionIdle contract fees are set to 0 and only USDC is supported",
     ),
-    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE_AT,
+    reviewedAt: REVIEWED_EXIT_CREDIT_AT,
     docs: [
       sourceRefRouteCapacity("Superstate USTB", "https://superstate.com/assets/ustb"),
       sourceRef("Superstate liquidity API", "https://api.superstate.com/v1/funds/liquidity", ["capacity"]),
@@ -439,7 +439,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   }),
   "cusdo-openeden": erc4626InstantConfig({
     symbol: "USDO",
-    reviewedAt: REVIEWED_WRAPPER_REDEMPTION_AT,
+    reviewedAt: REVIEWED_WRAPPER_WAVE_AT,
     feeDescription:
       "OpenEden integration docs route cUSDO redeem through the wrapper into USDO at convertToAssets; the separate USDO primary redemption fee is downstream of this wrapper leg.",
     docs: [
@@ -536,7 +536,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       10,
       "GAIB docs currently show a 10 bps sell fee in the dApp — confirmed by the deployed redeemer's redemptionFeeBps() reading 10 on-chain — while direct AID minting and redemption are reserved for whitelisted users and partners",
     ),
-    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE3_AT,
+    reviewedAt: REVIEWED_EXIT_CREDIT_AT,
     docs: [
       sourceRef(
         "GAIB AID acquisition and redemption guide",
@@ -621,7 +621,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   }),
   "usdai-usd-ai": defineReviewedStablecoinRedeemConfig(REVIEWED_DIRECT_REDEMPTION_AT, {
     capacityModel: { kind: "reserve-sync-metadata" },
-    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE3_AT,
+    reviewedAt: REVIEWED_EXIT_CREDIT_AT,
     outputAssets: ["pyusd-paypal"],
     accessModel: "whitelisted-onchain",
     costModel: fixedFee(
@@ -721,7 +721,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   "bbqusdc-steakhouse": erc4626InstantConfig({
     symbol: "USDC",
     fallback: { fallbackRatio: 0.05, basis: "strategy-buffer" },
-    reviewedAt: REVIEWED_YIELD_EXPANSION_AT,
+    reviewedAt: REVIEWED_YIELD_COVERAGE_WAVE_AT,
     feeDescription:
       "Smokehouse USDC uses a MetaMorpho vault; withdrawals redeem to USDC when vault liquidity is available and Morpho vault fees accrue from generated yield rather than a separate withdrawal fee.",
     docs: [
@@ -785,7 +785,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   }),
   "usdz-anzen": defineReviewedStablecoinRedeemConfig("2026-04-16", {
     capacityModel: { kind: "reserve-sync-metadata" },
-    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE3_AT,
+    reviewedAt: REVIEWED_EXIT_CREDIT_AT,
     outputAssets: ["usdc-circle"],
     costModel: undisclosedReviewedFee(
       "Qualified Market Makers mint and redeem 1:1 USDz/USDC against SPCT collateral; public docs reviewed do not publish a fixed retail redemption fee",
@@ -857,7 +857,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "The backing vault is a smart account (arbitrary execution) owned by a 12h-timelock-gated 3/6 Safe, and the pUSD token itself is UUPS-upgradeable behind the same timelock, so admin/upgrade risk is not captured by the live vault-balance ratio alone",
     ],
   }),
-  "susd-solayer": defineReviewedStablecoinRedeemConfig(REVIEWED_STABLECOIN_BATCH_AT, {
+  "susd-solayer": defineReviewedStablecoinRedeemConfig(REVIEWED_MAY_BATCH_AT, {
     outputAssets: ["usdc-circle"],
     executionModel: "rules-based-nav",
     costModel: undisclosedReviewedFee(
@@ -874,7 +874,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       ]),
     ],
   }),
-  "usx-dforce": defineReviewedStablecoinRedeemConfig(REVIEWED_STABLECOIN_BATCH_AT, {
+  "usx-dforce": defineReviewedStablecoinRedeemConfig(REVIEWED_MAY_BATCH_AT, {
     outputAssetType: "stable-basket",
     costModel: undisclosedReviewedFee(
       "dForce docs describe USX mint and redemption through supported collateral/stablecoin routes; public docs reviewed do not publish a single fixed redemption fee",
@@ -888,7 +888,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       sourceRefRouteCapacityFees("dForce USX LSR", "https://docs.usx.finance/minting-and-redeeming/lsr"),
     ],
   }),
-  "xdai-gnosis": defineReviewedStablecoinRedeemConfig(REVIEWED_STABLECOIN_BATCH_AT, {
+  "xdai-gnosis": defineReviewedStablecoinRedeemConfig(REVIEWED_MAY_BATCH_AT, {
     outputAssetType: "stable-basket",
     outputAssets: ["dai-makerdao", "usds-sky"],
     costModel: undisclosedReviewedFee(
@@ -907,7 +907,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   }),
   "susdd-tron-dao-reserve": erc4626InstantConfig({
     symbol: "USDD",
-    reviewedAt: REVIEWED_YIELD_EXPANSION_AT,
+    reviewedAt: REVIEWED_YIELD_COVERAGE_WAVE_AT,
     feeDescription: "USDD docs describe sUSDD withdrawals to USDD with no lock-up or protocol fee",
     docs: [
       sourceRefFull("USDD sUSDD mechanism", "https://docs.usdd.io/susdd-mechanism"),
@@ -924,7 +924,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   "steakusdt-steakhouse": steakhousePrimeInstantConfig("USDT"),
   "syzusd-yuzu": erc4626InstantConfig({
     symbol: "yzUSD",
-    reviewedAt: REVIEWED_YIELD_EXPANSION_AT,
+    reviewedAt: REVIEWED_YIELD_COVERAGE_WAVE_AT,
     totalScoreCap: 65,
     feeDescription:
       "Yuzu syzUSD ERC-4626 unwrap charges no exit fee: on-chain previewRedeem == convertToAssets (Plasma 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6), no fee selectors; downstream yzUSD primary redemption stays KYC-gated",
@@ -962,7 +962,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   }),
   "susn-noon": erc4626InstantConfig({
     symbol: "USN",
-    reviewedAt: REVIEWED_YIELD_EXPANSION_AT,
+    reviewedAt: REVIEWED_YIELD_COVERAGE_WAVE_AT,
     accessModel: "whitelisted-onchain",
     totalScoreCap: 65,
     feeDescription:
@@ -988,7 +988,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     outputAssets: ["usdc-circle"],
     executionModel: "deterministic-onchain",
     capacityModel: { kind: "reserve-sync-metadata" },
-    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE2_AT,
+    reviewedAt: REVIEWED_EXIT_CREDIT_AT,
     costModel: undisclosedReviewedFee(
       "Circle xReserve docs describe 1:1 USDCx burn/release against USDC; public materials reviewed do not publish a separate fixed redemption fee",
     ),
@@ -1106,7 +1106,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   }),
   "sbold-k3-capital": erc4626InstantConfig({
     symbol: "BOLD",
-    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE3_AT,
+    reviewedAt: REVIEWED_EXIT_CREDIT_AT,
     // The static documented-bound downgrade is retired: the adapter now reads
     // K3's collateral-health gate (maxCollInBold) each run and self-downgrades
     // to documented-bound whenever the gate is restricted or unreadable, so an
@@ -1191,7 +1191,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     executionModel: "rules-based-nav",
     outputAssetType: "stable-single",
     outputAssets: ["zsd-zephyr-protocol"],
-    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE2_AT,
+    reviewedAt: REVIEWED_EXIT_CREDIT_AT,
     costModel: fixedFee(
       10,
       "Zephyr's consensus RingCT verification deducts a fixed 0.1% conversion fee from the yield price on every REDEEM_YIELD conversion",
@@ -1279,7 +1279,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "The documented 0.5% reserve buffer is the immediate capacity bound; strategy assets and derivatives backing remain outside immediate redemption capacity.",
     ],
   }),
-  "weusd-picwe": defineReviewedStablecoinRedeemConfig(REVIEWED_YIELD_EXPANSION_AT, {
+  "weusd-picwe": defineReviewedStablecoinRedeemConfig(REVIEWED_YIELD_COVERAGE_WAVE_AT, {
     outputAssets: ["usdc-circle"],
     costModel: fixedFee(100, "PicWe docs describe a 1% WEUSD redemption fee"),
     docs: [
@@ -1481,7 +1481,7 @@ const FINALIZED_STABLECOIN_REDEEM_BACKSTOP_REGISTRY = finalizeBackstopRegistry(
     { stablecoinIds: ["dusd-dtrinity", "yousd-yield-optimizer"], reviewedAt: REVIEWED_REMEDIATION_AT },
     {
       stablecoinIds: ["pusd-polymarket", "susd-solayer", "usx-dforce", "xdai-gnosis"],
-      reviewedAt: REVIEWED_STABLECOIN_BATCH_AT,
+      reviewedAt: REVIEWED_MAY_BATCH_AT,
     },
   ],
 );

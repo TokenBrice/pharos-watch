@@ -4,8 +4,6 @@ import {
   fetchMajorStablecoinOrderbookDepthSummary,
   type DirectCexOrderbookDepthSummary,
 } from "../../../lib/cex-orderbooks";
-import { getFallbackTargets } from "../fetch-fallbacks";
-import type { DexPriceObs, LiquidityMetrics } from "../types";
 
 export interface FallbackCrawlerPhaseResult {
   weakCoverageCoinsBeforeFallback: number;
@@ -26,23 +24,3 @@ export async function fetchDirectCexOrderbookDepthTelemetry(params: {
   }
 }
 
-export async function runFallbackCrawlerPhase(params: {
-  metrics: Map<string, LiquidityMetrics>;
-  priceObservations: Map<string, DexPriceObs[]>;
-  directCexOrderbookDepth: DirectCexOrderbookDepthSummary | null;
-}): Promise<FallbackCrawlerPhaseResult> {
-  const weakCoverageTargetIdsBeforeFallback = new Set(
-    getFallbackTargets(params.metrics, params.priceObservations, { requireTrackedContracts: true }).map(
-      (meta) => meta.id,
-    ),
-  );
-  logWorkerEventArgs("handler", "info",
-    `[dex-liquidity] Discovery staging supplied ${params.priceObservations.size} coins with price observations; ` +
-      "inline discovery is disabled in the scoring lane",
-  );
-
-  return {
-    weakCoverageCoinsBeforeFallback: weakCoverageTargetIdsBeforeFallback.size,
-    directCexOrderbookDepth: params.directCexOrderbookDepth,
-  };
-}

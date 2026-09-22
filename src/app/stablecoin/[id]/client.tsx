@@ -31,11 +31,9 @@ import { DetailContent } from "./detail-content";
 function DetailLoadingShell({
   coin,
   logoSrc,
-  staticProfileContent = null,
 }: {
   coin: StablecoinStaticMeta;
   logoSrc?: string;
-  staticProfileContent?: ReactNode;
 }) {
   return (
     <div className="space-y-6">
@@ -58,7 +56,6 @@ function DetailLoadingShell({
           <Skeleton className="h-[180px] rounded-xl" />
         </div>
       </div>
-      {staticProfileContent ? <div className="mt-12">{staticProfileContent}</div> : null}
       <div className="mt-12 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Skeleton className="h-[200px] rounded-xl" />
         <Skeleton className="h-[200px] rounded-xl" />
@@ -79,7 +76,6 @@ interface StablecoinDetailClientProps {
   mechanismCollateralization?: MechanismCollateralizationView | null;
   mechanismReview?: MechanismReviewView | null;
   transferReview?: TransferReviewView | null;
-  staticProfileContent?: ReactNode;
   exploreNextContent?: ReactNode;
   faqContent?: ReactNode;
   snapshot?: StablecoinDetailSnapshot | null;
@@ -116,7 +112,6 @@ function StablecoinDetailClientContent({
   mechanismCollateralization = null,
   mechanismReview = null,
   transferReview = null,
-  staticProfileContent = null,
   exploreNextContent = null,
   faqContent = null,
 }: StablecoinDetailClientProps) {
@@ -149,7 +144,7 @@ function StablecoinDetailClientContent({
   });
 
   if (viewModel.status === "loading") {
-    return <DetailLoadingShell coin={staticCoin} logoSrc={logoSrc} staticProfileContent={staticProfileContent} />;
+    return <DetailLoadingShell coin={staticCoin} logoSrc={logoSrc} />;
   }
   if (viewModel.status === "list-error") {
     return (

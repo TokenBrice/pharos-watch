@@ -1,14 +1,35 @@
 import { describe, expect, it } from "vitest";
 
 import { NonUsdShareResponseSchema } from "@shared/types/market";
+import { PSI_CONDITION_BAND_VALUES } from "@shared/types/stability";
+import { TelegramPulseOutputSchema, TelegramPulseSchema } from "@shared/types/status/telegram";
 import {
   PUBLIC_API_RESPONSE_SCHEMAS,
   SnapshotCoinResponseSchema,
   SnapshotsIndexResponseSchema,
   StablecoinSummaryResponseSchema,
 } from "../lib/public-api-response-schemas";
+import { buildOpenApiDocument } from "../maintenance/generate-openapi-spec";
 
 const StablecoinDetailResponseSchema = PUBLIC_API_RESPONSE_SCHEMAS.StablecoinDetailResponse;
+
+function documentSchemas(): Record<string, unknown> {
+  return buildOpenApiDocument().components.schemas as Record<string, unknown>;
+}
+
+type JsonSchemaObject = Record<string, unknown> & { $ref?: string };
+
+function resolveSharedRef(schema: JsonSchemaObject): JsonSchemaObject {
+  const ref = schema.$ref;
+  if (typeof ref !== "string") {
+    return schema;
+  }
+  let resolved: unknown = buildOpenApiDocument();
+  for (const segment of ref.replace("#/", "").split("/")) {
+    resolved = (resolved as Record<string, unknown>)[segment];
+  }
+  return resolved as JsonSchemaObject;
+}
 
 describe("public API response schemas", () => {
   it("accepts the public null-price response and preserves its provenance", () => {
@@ -105,6 +126,7 @@ describe("public API response schemas", () => {
         byteSize: 12345,
         createdAt: 1_779_105_600,
       }],
+      pagination: { limit: 500, hasMore: false, nextCursor: null },
     };
     expect(SnapshotsIndexResponseSchema.safeParse(payload).success).toBe(true);
     const invalid = SnapshotsIndexResponseSchema.safeParse({ ...payload, snapshots: [{ ...payload.snapshots[0], byteSize: "invalid" }]});
@@ -138,5 +160,63 @@ describe("public API response schemas", () => {
         { code: "invalid_type", path: ["stablecoinId"] },
       ]);
     }
+  });
+  it("publishes the closed PSI band vocabulary and the route's malformed-row count", () => {
+    const psi = documentSchemas().StabilityIndexResponse as {
+      required: readonly string[];
+      properties: {
+        current: { anyOf: Array<{ properties: Record<string, Record<string, unknown>> }> };
+        malformedRows: Record<string, unknown>;
+      };
+    };
+    const current = psi.properties.current.anyOf[0].properties;
+
+    expect(resolveSharedRef(current.band as JsonSchemaObject).enum).toEqual([...PSI_CONDITION_BAND_VALUES]);
+    expect(resolveSharedRef(current.avg24hBand as JsonSchemaObject).enum).toEqual([...PSI_CONDITION_BAND_VALUES]);
+    expect(psi.properties.malformedRows).toMatchObject({ type: "number" });
+    // The no-history response omits the count, so the contract must not require it.
+    expect(psi.required).not.toContain("malformedRows");
+  });
+  it("publishes nullable Bluechip fields for values the upstream rating may omit", () => {
+    const rating = (documentSchemas().BluechipRatingsResponse as {
+      additionalProperties: { properties: Record<string, Record<string, unknown>> };
+    }).additionalProperties.properties;
+
+    for (const field of ["collateralization", "smartContractAudit", "dateOfRating"]) {
+      expect(rating[field].type, field).toContain("null");
+    }
+  });
+  it("publishes the served USDS shape derived from its runtime contract", () => {
+    const usds = (documentSchemas().UsdsStatusResponse as {
+      properties: Record<string, Record<string, unknown>>;
+    }).properties;
+
+    expect(usds.implementationAddress).toMatchObject({ type: "string" });
+    expect(usds.lastChecked).toMatchObject({ type: "number" });
+  });
+  it("publishes the Telegram pulse fields the runtime transform produces", () => {
+    const pulse = (documentSchemas().TelegramPulseResponse as {
+      required: readonly string[];
+      properties: Record<string, unknown>;
+    });
+    const served = TelegramPulseSchema.parse({
+      activeWatchers: 42,
+      coinSubscriptions: 7,
+      topCoins: ["USDT"],
+      watcherHistory: [{ date: "2026-09-21", timestamp: 1_790_000_000, activeWatchers: 42 }],
+      pendingDeliveries: null,
+      updatedAt: 1_790_000_000,
+      updatedEverySeconds: 900,
+    });
+
+    // The artifact documents the post-transform shape, so a runtime field add cannot be
+    // served while absent from the published contract.
+    expect(TelegramPulseOutputSchema.parse(served)).toEqual(served);
+    for (const field of ["currentSnapshotAt", "lifecycleHistoryUpdatedAt", "quality", "privacy"]) {
+      expect(pulse.properties[field], field).toBeDefined();
+      expect(pulse.required, field).toContain(field);
+    }
+    expect(pulse.properties).toHaveProperty("watcherHistory");
+    expect(pulse.properties).toHaveProperty("privacy");
   });
 });

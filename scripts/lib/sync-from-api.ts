@@ -13,6 +13,18 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { SITE_DATA_PATH_PREFIX, SITE_DATA_PROXY_SECRET_HEADER, toSiteDataPath } from "@shared/lib/site-data-lane";
 import { SITE_API_ORIGIN, SITE_ORIGIN } from "@shared/lib/runtime-origins";
 
+/**
+ * A deterministic snapshot-integrity failure (archive shrink, empty replacement,
+ * schema mismatch). Falling back to the previous artifact would relabel a guard
+ * failure as a recoverable fetch outage, so these errors never take that path.
+ */
+export class SnapshotIntegrityError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SnapshotIntegrityError";
+  }
+}
+
 interface ResolveApiUrlOptions {
   /** CLI flag label used in error messages, e.g. `--api-url`. */
   argName: string;
@@ -271,6 +283,7 @@ export function preserveExistingJsonArrayOnFetchFailure(options: {
 }): boolean {
   const { allow, error, label, minEntries = 1, outputPath } = options;
   if (!allow) return false;
+  if (error instanceof SnapshotIntegrityError) return false;
 
   const outputFile = fileURLToPath(outputPath);
   let parsed: unknown;

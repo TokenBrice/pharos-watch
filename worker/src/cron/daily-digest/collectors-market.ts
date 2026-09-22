@@ -220,7 +220,7 @@ export async function collectBlacklistActivity(
               symbol: event.symbol,
               chain: event.chain_name,
               type: event.event_type as "blacklist" | "destroy",
-              amountUsd: event.amount_usd_at_event ?? 0,
+              amountUsd: event.amount_usd_at_event,
             })),
         });
       }
@@ -307,16 +307,26 @@ export async function collectResolvedDepegs(
   ctx: CollectorContext,
 ): Promise<CollectorResult<DigestInputData["resolvedDepegs"]>> {
   try {
-    const cutoff48h = ctx.nowSec - SECONDS.TWO_DAYS;
+    // The published claim is "resolved in the last 24h", so the evidence window
+    // is the same 24h. Every publishability predicate runs inside the query:
+    // applied after ORDER BY/LIMIT they let twenty ineligible large-peak rows
+    // crowd out a qualifying tracked resolution.
+    const cutoff24h = ctx.nowSec - SECONDS.ONE_DAY;
+    const eligibleIds = [...ctx.mcapById.entries()]
+      .filter(([, mcapUsd]) => mcapUsd > 20_000_000)
+      .map(([stablecoinId]) => stablecoinId);
+    if (eligibleIds.length === 0) return collectorOk(undefined);
     const resolvedRows = await ctx.db
       .prepare(
         `SELECT symbol, direction, peak_deviation_bps, started_at, ended_at, stablecoin_id
          FROM depeg_events
          WHERE ended_at IS NOT NULL AND ended_at >= ?
+           AND ABS(peak_deviation_bps) > 100
+           AND stablecoin_id IN (SELECT value FROM json_each(?))
          ORDER BY ABS(peak_deviation_bps) DESC
          LIMIT 20`,
       )
-      .bind(cutoff48h)
+      .bind(cutoff24h, JSON.stringify(eligibleIds))
       .all<{
         symbol: string;
         direction: "above" | "below";
@@ -341,7 +351,6 @@ export async function collectResolvedDepegs(
           impactScore: getDepegMarketImpactScore(row.peak_deviation_bps, mcapUsd),
         };
       })
-      .filter((row) => row.peakBps > 100 && row.mcapUsd > 20_000_000)
       .sort((a, b) => b.impactScore - a.impactScore)
       .slice(0, 5);
 
@@ -366,12 +375,16 @@ export async function collectMintBurnFlows(
     // from `mint_burn_hourly` over a different universe and mcap basis.
     const published = await readPublishedMintBurnGauge(ctx.db, ctx.nowSec);
     if (published.kind !== "ok") {
-      // A never-published gauge is the old "no flow rows yet" case and stays
-      // silent; a malformed or expired publication means the producer broke.
-      if (published.reason !== "missing") {
-        degradedReasons.push(`mint-burn-gauge-${published.reason}`);
-      }
-      return collectorResult(undefined, degradedReasons);
+      // Every non-ok gauge outcome carries a machine-readable reason. An
+      // absent publication is attributable too: the critical lane publishes
+      // every 30 minutes, so a missing row means the producer stopped or the
+      // cache was dropped, not that the section is silently optional. The
+      // digest still publishes without the section, so absence is a named
+      // quality finding; a broken publication is a collector failure.
+      const reason = `mint-burn-gauge-${published.reason}`;
+      return published.reason === "missing"
+        ? collectorResult(undefined, degradedReasons, [reason])
+        : collectorResult(undefined, [...degradedReasons, reason]);
     }
     const { gauge } = published;
     if (gauge.stale) {
@@ -514,12 +527,15 @@ export async function collectLiquidityShifts(
 
     // Surface the drop so the prompt's data-quality block and the status page
     // record that a liquidity story was withheld rather than never existed.
-    for (const rejection of rejections) {
-      degradedReasons.push(`liquidity-shift-${rejection}`);
-    }
+    // A deliberately withheld story is soft quality, never a degraded run.
+    const withheldStoryReasons = [...rejections].map((rejection) => `liquidity-shift-${rejection}`);
 
     shifts.sort((a, b) => Math.abs(b.scoreDelta) * b.mcapUsd - Math.abs(a.scoreDelta) * a.mcapUsd);
-    return collectorResult(shifts.length > 0 ? shifts.slice(0, 5) : undefined, degradedReasons);
+    return collectorResult(
+      shifts.length > 0 ? shifts.slice(0, 5) : undefined,
+      degradedReasons,
+      withheldStoryReasons,
+    );
   } catch (error) {
     logWorkerEventArgs("handler", "error", "[daily-digest] Failed to collect liquidity shifts:", error);
     degradedReasons.push("liquidity-shifts-query");

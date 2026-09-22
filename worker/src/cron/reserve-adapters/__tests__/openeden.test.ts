@@ -47,8 +47,8 @@ describe("adaptOpenEdenUsdo", () => {
       supplyUsd: 62_283_070,
       redemption: {
         capacityUsd: 4_767_161.22,
-        routeStatus: "open",
-        routeStatusSource: "protocol-api",
+        routeStatus: "unknown",
+        routeStatusSource: "static-config",
         holderEligibility: "verified-customer",
       },
     });

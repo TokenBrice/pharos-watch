@@ -12,6 +12,7 @@ import {
 } from "../core";
 import type { ResupplyMeasurementEvidence } from "../schema";
 import type { ResupplyMeasurementTarget } from "../targets";
+import { buildMeasuredMetrics, buildMeasurementCompleteness } from "../evidence-envelope";
 
 export async function measureResupply(
   caller: EthCallJournal,
@@ -313,15 +314,11 @@ export async function measureResupply(
     rpcUrl,
     block,
     calls: caller.calls,
-    metrics: {
+    metrics: buildMeasuredMetrics({
       collateralizationRatio: ratioToRounded(totalCollateralAssetsRaw, totalDebtRaw),
       liquidationCapacityRatio: ratioToRounded(insuranceAssetsRaw, totalDebtRaw),
-      applicability: {
-        collateralizationRatio: { state: "measured" },
-        liquidationCapacityRatio: { state: "measured" },
-      },
-    },
-    completeness: { complete: true, blockers: [] },
+    }),
+    completeness: buildMeasurementCompleteness(),
     warnings,
     derived: {
       token,

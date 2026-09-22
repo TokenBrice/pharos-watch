@@ -1,4 +1,5 @@
 import { DAY_MS as EVENT_MATCH_DAY_MS } from "@/lib/constants";
+import { STABLECOIN_HISTORY_QUERY_CONTRACTS } from "@shared/lib/api-query-history";
 
 export interface CaseStudyEventWindowResolverItem {
   readonly slug: string;
@@ -6,6 +7,25 @@ export interface CaseStudyEventWindowResolverItem {
   readonly relatedCoinIds: readonly string[];
   readonly startISO: string;
   readonly endISO: string | null;
+}
+
+export const CASE_STUDY_CHART_MAX_DAYS =
+  STABLECOIN_HISTORY_QUERY_CONTRACTS.supply.maxDays;
+
+export function getCaseStudyChartDays(
+  windows: readonly { readonly startISO: string }[],
+  nowMs = Date.now(),
+): number {
+  const earliestStart = Math.min(
+    ...windows.map((window) => Date.parse(window.startISO)).filter(Number.isFinite),
+  );
+  if (!Number.isFinite(earliestStart)) return 1;
+
+  const daysThroughStart = Math.ceil((nowMs - earliestStart) / EVENT_MATCH_DAY_MS) + 1;
+  return Math.min(
+    CASE_STUDY_CHART_MAX_DAYS,
+    Math.max(1, daysThroughStart),
+  );
 }
 
 function eventWindowContains(study: CaseStudyEventWindowResolverItem, tsMs: number): boolean {

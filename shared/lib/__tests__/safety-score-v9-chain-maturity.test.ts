@@ -7,20 +7,20 @@ import {
   CHAIN_MATURITY_REVIEWS_V1,
   chainMaturityReviewForSlug,
   type ChainMaturityGateId,
+  resolveChainMaturityAdmissionsAt,
 } from "@shared/data/safety-score-v9/chain-maturity-reviews-v1";
 import { commonModeSignalSeverity, type V9CommonModeContext } from "../safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1, loadV9MethodologyPolicy } from "../safety-score-v9/policy";
 
-const EXPECTED_ADMITTED = [
+const EXPECTED_ADMITTED = ["base", "ethereum", "hedera"] as const;
+
+const EXPECTED_PENDING = [
   "arbitrum",
   "avalanche",
-  "base",
   "bsc",
   "cardano",
   "conflux",
-  "ethereum",
   "gnosis",
-  "hedera",
   "hyperliquid",
   "klaytn",
   "optimism",
@@ -68,7 +68,7 @@ describe("Safety Score v9 chain-maturity registry", () => {
   it("admits every chain that passes all five dated gates", () => {
     expect(CHAIN_MATURITY_REVIEWS_V1).toHaveLength(26);
     expect(CHAIN_MATURITY_REVIEWS_V1.map((review) => review.chainSlug).sort()).toEqual(
-      [...EXPECTED_ADMITTED, ...Object.keys(EXPECTED_EXCLUDED_FAILURES)].sort(),
+      [...EXPECTED_ADMITTED, ...EXPECTED_PENDING, ...Object.keys(EXPECTED_EXCLUDED_FAILURES)].sort(),
     );
     expect([...CHAIN_MATURITY_ADMITTED_CHAIN_SLUGS].sort()).toEqual([...EXPECTED_ADMITTED].sort());
     for (const chainSlug of EXPECTED_ADMITTED) {
@@ -95,14 +95,18 @@ describe("Safety Score v9 chain-maturity registry", () => {
     }
   });
 
-  it("records an own document date or an explicit dated access for every gate source", () => {
+  it("records an own document date or independent verification metadata for every gate source", () => {
     for (const review of CHAIN_MATURITY_REVIEWS_V1) {
       for (const gateId of CHAIN_MATURITY_GATE_IDS) {
         expect(review.gates[gateId].sources.length, `${review.chainSlug}/${gateId}`).toBeGreaterThan(0);
         for (const evidence of review.gates[gateId].sources) {
-          const date = evidence.documentDate ?? evidence.accessedAt;
+          const accessDate = evidence.verification?.accessedAt;
+          const date = evidence.documentDate ?? accessDate;
+          if (date === null || date === undefined) {
+            expect(evidence.verification?.reviewerOutcome, `${review.chainSlug}/${gateId}`).toBe("unchecked");
+            continue;
+          }
           expect(date, `${review.chainSlug}/${gateId}`).toMatch(/^\d{4}$|^\d{4}-\d{2}$|^\d{4}-\d{2}-\d{2}$/);
-          // Authored documents may disclose only a year or month; access dates are full dates.
           if (evidence.documentDate == null) expect(date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
           const fullDate = date.length === 4 ? `${date}-01-01` : date.length === 7 ? `${date}-01` : date;
           expect(new Date(`${fullDate}T00:00:00Z`).toISOString().slice(0, 10)).toBe(fullDate);
@@ -111,9 +115,18 @@ describe("Safety Score v9 chain-maturity registry", () => {
     }
   });
 
-  it("uses the codebase slug klaytn for the admitted Kaia continuation", () => {
+  it("holds the 404/non-supporting review queue outside matureChains", () => {
+    const resolution = resolveChainMaturityAdmissionsAt();
+    expect(resolution.admittedChainSlugs).toEqual(["base", "ethereum", "hedera"]);
+    for (const chainSlug of EXPECTED_PENDING) {
+      expect(chainMaturityReviewForSlug(chainSlug)?.admission, chainSlug).toBe("exclude");
+      expect(chainMaturityReviewForSlug(chainSlug)?.state, chainSlug).toBe("pending");
+    }
+  });
+
+  it("uses the codebase slug klaytn for the pending Kaia continuation", () => {
     expect(chainMaturityReviewForSlug("klaytn")?.displayName).toBe("Kaia (formerly Klaytn)");
-    expect(CHAIN_MATURITY_ADMITTED_CHAIN_SLUGS).toContain("klaytn");
+    expect(CHAIN_MATURITY_ADMITTED_CHAIN_SLUGS).not.toContain("klaytn");
     expect(CHAIN_MATURITY_ADMITTED_CHAIN_SLUGS).not.toContain("kaia");
   });
 
@@ -137,7 +150,7 @@ describe("Safety Score v9 chain common-mode maturity severity", () => {
   it("keeps a mature chain low at the 10% and 25% thresholds and at unknown share", () => {
     for (const share of [0.1, 0.25, null] as const) {
       expect(
-        commonModeSignalSeverity({ kind: "chain", key: "cardano" }, chainContext("cardano", share), materiality),
+        commonModeSignalSeverity({ kind: "chain", key: "ethereum" }, chainContext("ethereum", share), materiality),
         `share=${share}`,
       ).toBe("low");
     }

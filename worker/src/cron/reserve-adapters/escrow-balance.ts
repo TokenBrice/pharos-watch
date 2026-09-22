@@ -5,7 +5,8 @@ import {
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { RedemptionRouteStatus } from "@shared/types/redemption";
-import { TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
+import { encodeBalanceOfCallData, TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
+import { decodeAbiWordAt, decodeUint256Word } from "./abi-decode";
 import { validateDecimals } from "./slice-math";
 import {
   buildCoverageShortfallWarnings,
@@ -18,7 +19,6 @@ import {
 import type { AdapterContext, AdapterResult } from "./types";
 
 const ADAPTER = "escrow-balance";
-const ERC20_BALANCE_OF_SELECTOR = "0x70a08231";
 const MAX_MULTI_READS = 16;
 
 type EscrowBalanceParams = LiveReserveAdapterParamsByKey[typeof ADAPTER];
@@ -41,13 +41,9 @@ function encodeSelectorCall(selector: string, args?: readonly string[]): string 
   return `${selector}${(args ?? []).map((word) => word.slice(2)).join("")}`;
 }
 
-function encodeErc20BalanceOfCall(holder: string): string {
-  return `${ERC20_BALANCE_OF_SELECTOR}${holder.slice(2).toLowerCase().padStart(64, "0")}`;
-}
 
 function parseFirstUint256Word(result: string | null): bigint | null {
-  if (result == null || !/^0x[0-9a-fA-F]{64,}$/.test(result)) return null;
-  return BigInt(`0x${result.slice(2, 66)}`);
+  return decodeUint256Word(decodeAbiWordAt(result, 0));
 }
 
 async function fetchMultiReadCapacity(
@@ -85,7 +81,7 @@ async function fetchMultiReadCapacity(
       ? parseFirstUint256Word(
           await onchain.raw(read.contract, encodeSelectorCall(read.selector, read.args)),
         )
-      : await onchain.uint256(read.contract, encodeErc20BalanceOfCall(read.erc20BalanceOf));
+      : await onchain.uint256(read.contract, encodeBalanceOfCallData(read.erc20BalanceOf));
     if (valueRaw == null) {
       throw new Error(`${ADAPTER}: capacity read ${index + 1} failed for ${coin.id}`);
     }
@@ -114,14 +110,21 @@ async function fetchMultiReadCapacity(
       routeStatusReason: "Configured on-chain redemption pause check returned true",
     };
   }
-  if (capacityUsd > 0) {
+  if (capacityUsd > 0 && params.pauseCheck) {
     return {
       capacityRaw,
       capacityUsd,
       routeStatus: "open",
-      routeStatusReason: params.pauseCheck
-        ? `${params.reads.length} pinned capacity reads succeeded with a positive sum and the on-chain pause check returned false`
-        : `${params.reads.length} pinned capacity reads succeeded with a positive sum`,
+      routeStatusReason:
+        `${params.reads.length} pinned capacity reads succeeded with a positive sum and the on-chain pause check returned false`,
+    };
+  }
+  if (capacityUsd > 0) {
+    return {
+      capacityRaw,
+      capacityUsd,
+      routeStatus: "unknown",
+      routeStatusReason: `${params.reads.length} pinned capacity reads succeeded, but no route gate was observed`,
     };
   }
   return {
@@ -210,7 +213,9 @@ export async function fetchEscrowBalanceReserves(
           capacityKind: supplyUsd == null ? "live-direct" : "live-direct-bounded",
           freshnessKind: "same-run-onchain",
           routeStatus: multiRead.routeStatus,
-          routeStatusSource: "onchain",
+          ...(params.pauseCheck
+            ? { routeStatusSource: "onchain" as const, routeObserved: true as const }
+            : { routeStatusSource: "static-config" as const }),
           routeStatusReason: multiRead.routeStatusReason,
           ...(params.holderEligibility ? { holderEligibility: params.holderEligibility } : {}),
           ...(params.settlementDelaySec != null
@@ -233,7 +238,7 @@ export async function fetchEscrowBalanceReserves(
     throw new Error(`${ADAPTER}: escrow balance is zero for ${coin.id}`);
   }
 
-  let routeStatus: RedemptionRouteStatus = "open";
+  let routeStatus: RedemptionRouteStatus = "unknown";
   if (params.pausedSelector) {
     const pausedRaw = await onchain.uint256(params.contract, params.pausedSelector);
     if (pausedRaw == null) {
@@ -263,7 +268,9 @@ export async function fetchEscrowBalanceReserves(
         capacityKind: supplyUsd == null ? "live-direct" : "live-direct-bounded",
         freshnessKind: "same-run-onchain",
         routeStatus,
-        routeStatusSource: "onchain",
+        ...(params.pausedSelector
+          ? { routeStatusSource: "onchain" as const, routeObserved: true as const }
+          : { routeStatusSource: "static-config" as const }),
         ...(params.holderEligibility ? { holderEligibility: params.holderEligibility } : {}),
         ...(params.settlementDelaySec != null
           ? { settlementDelaySec: params.settlementDelaySec }

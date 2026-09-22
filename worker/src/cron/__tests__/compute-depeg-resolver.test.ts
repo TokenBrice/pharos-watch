@@ -236,7 +236,6 @@ describe("computeDepegResolver", () => {
         publishedAt: NOW_SEC,
         basePayloadHash: "b".repeat(64),
         publicPredictionIds: [7],
-        firstPublishedPublicPredictionIds: [7],
       })),
     };
     return { sealed, stores };
@@ -377,9 +376,10 @@ describe("computeDepegResolver", () => {
 
     const payload = readDdrSnapshotPayload(db);
     expect(payload._meta.degraded).toBe(true);
-    expect(payload._meta.degradedReason).toBe("stablecoins-cache-unsafe");
-    expect(payload._meta.computedAt).toBe(NOW_SEC);
-    expect(payload._meta.dataAsOf).toBe(previousSnapshot._meta.dataAsOf);
+    expect(payload._meta.degradedReason).toBe("stale-cache");
+    expect(payload._meta.degradedReasonDetail).toBe("stablecoins-cache-unsafe");
+    expect(payload._meta.lastRefreshAttemptAt).toBe(NOW_SEC);
+    expect(payload._meta.computedAt).toBe(previousSnapshot._meta.computedAt);
     expect(payload.rows).toHaveLength(1);
     expect(payload.rows[0].live).toMatchObject({
       stale: true,
@@ -526,7 +526,6 @@ describe("computeDepegResolver", () => {
         publishedAt: NOW_SEC,
         basePayloadHash: "b".repeat(64),
         publicPredictionIds: [7],
-        firstPublishedPublicPredictionIds: [7],
       };
     });
     const db = resolverDb([
@@ -622,7 +621,6 @@ describe("computeDepegResolver", () => {
         snapshotToken: "ddr-public-original",
         snapshotGeneration: 2,
         publishedAt: NOW_SEC - 600,
-        firstPublished: true,
       },
     ]);
     stores.loadPredictionErrata = vi.fn(async () => [
@@ -651,7 +649,6 @@ describe("computeDepegResolver", () => {
         publishedAt: NOW_SEC,
         basePayloadHash: "b".repeat(64),
         publicPredictionIds: [7],
-        firstPublishedPublicPredictionIds: [],
       };
     });
     const db = resolverDb([

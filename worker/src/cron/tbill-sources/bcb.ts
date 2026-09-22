@@ -7,7 +7,7 @@ import {
 } from "./shared";
 
 const BCB_SELIC_ANNUALIZATION_BUSINESS_DAYS = 252;
-const BCB_SELIC_MIN_DAILY_PERCENTAGE_RATE = -100;
+const BCB_SELIC_MIN_DAILY_PERCENTAGE_RATE = 0;
 
 function isValidBcbSelicDailyRate(rate: number): boolean {
   return Number.isFinite(rate) && rate > BCB_SELIC_MIN_DAILY_PERCENTAGE_RATE;

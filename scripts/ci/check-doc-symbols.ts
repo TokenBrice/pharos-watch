@@ -50,7 +50,6 @@ const SYMBOL_EXCLUSIONS = Object.freeze({
   queryBatchSwap: "External Balancer contract method named by provider documentation.",
   useLogos: "Legacy route hook name retained in documentation; no current export.",
   KeyInfoCard: "Retired detail-page component name retained for migration history.",
-  RefreshCountdown: "Legacy status component name retained in route documentation.",
   openCircuitGroups: "Status payload field described as a wire-contract key, not a code symbol.",
   evaluateStatusAndPersist: "Historical status-probe helper name retained in operational prose.",
   DetailToken: "API response-shape label; source uses opaque detail-token rows.",

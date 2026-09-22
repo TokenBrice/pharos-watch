@@ -23,25 +23,23 @@ import {
   verifyAnalyticsSnippet,
 } from "../maintenance/smoke-ui.mjs";
 
+const GA_ID = "G-6TS0KG8H04";
+const GTAG_SCRIPT_URL = `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`;
+const PAGE_VIEW_COLLECT_URL = `https://www.google-analytics.com/g/collect?v=2&tid=${GA_ID}&en=page_view`;
+
+function cspViolation(blockedURI: string, directive = "script-src", sourceFile = "https://pharos.watch/") {
+  return { blockedURI, effectiveDirective: directive, sourceFile, violatedDirective: directive };
+}
+
 describe("hasGaConfigInit", () => {
-  it("accepts the single-quoted GA config emitted by older builds", () => {
-    expect(hasGaConfigInit("gtag('config', 'G-6TS0KG8H04');", "G-6TS0KG8H04")).toBe(true);
-  });
-
-  it("accepts the double-quoted GA config emitted by JSON.stringify", () => {
-    expect(hasGaConfigInit("gtag('config', \"G-6TS0KG8H04\");", "G-6TS0KG8H04")).toBe(true);
-  });
-
-  it("accepts GA config calls with options", () => {
-    expect(hasGaConfigInit("gtag('config', \"G-6TS0KG8H04\", { send_page_view: false });", "G-6TS0KG8H04")).toBe(true);
-  });
-
-  it("accepts the JSON-escaped GA config emitted in static RSC payloads", () => {
-    expect(hasGaConfigInit("gtag('config', \\\"G-6TS0KG8H04\\\");", "G-6TS0KG8H04")).toBe(true);
-  });
-
-  it("rejects a different GA measurement id", () => {
-    expect(hasGaConfigInit("gtag('config', \"G-OTHER\");", "G-6TS0KG8H04")).toBe(false);
+  it.each([
+    ["the single-quoted config emitted by older builds", "gtag('config', 'G-6TS0KG8H04');", true],
+    ["the double-quoted config emitted by JSON.stringify", "gtag('config', \"G-6TS0KG8H04\");", true],
+    ["a config call with options", "gtag('config', \"G-6TS0KG8H04\", { send_page_view: false });", true],
+    ["the JSON-escaped config emitted in static RSC payloads", "gtag('config', \\\"G-6TS0KG8H04\\\");", true],
+    ["a different GA measurement id", "gtag('config', \"G-OTHER\");", false],
+  ] as const)("reads %s as %s", (_name, snippet, expected) => {
+    expect(hasGaConfigInit(snippet, GA_ID)).toBe(expected);
   });
 });
 
@@ -55,206 +53,155 @@ describe("getAnalyticsPayloadUrls", () => {
   });
 });
 
-describe("isExpectedGaPageViewCollectUrl", () => {
-  it("accepts successful GA4 page_view collect URLs from both GA hosts", () => {
-    expect(
-      isExpectedGaPageViewCollectUrl(
-        "https://analytics.google.com/g/collect?v=2&tid=G-6TS0KG8H04&en=page_view",
-        "G-6TS0KG8H04",
-      ),
-    ).toBe(true);
-    expect(
-      isExpectedGaPageViewCollectUrl(
-        "https://www.google-analytics.com/g/collect?v=2&tid=G-6TS0KG8H04&en=page_view",
-        "G-6TS0KG8H04",
-      ),
-    ).toBe(true);
-  });
-
-  it("rejects non-pageview or wrong-measurement collect URLs", () => {
-    expect(
-      isExpectedGaPageViewCollectUrl(
-        "https://analytics.google.com/g/collect?v=2&tid=G-OTHER&en=page_view",
-        "G-6TS0KG8H04",
-      ),
-    ).toBe(false);
-    expect(
-      isExpectedGaPageViewCollectUrl(
-        "https://analytics.google.com/g/collect?v=2&tid=G-6TS0KG8H04&en=scroll",
-        "G-6TS0KG8H04",
-      ),
-    ).toBe(false);
+describe("GA collect URL classification", () => {
+  it.each([
+    {
+      name: "a page_view collect from analytics.google.com",
+      url: `https://analytics.google.com/g/collect?v=2&tid=${GA_ID}&en=page_view`,
+      collect: true,
+      pageView: true,
+    },
+    { name: "a page_view collect from www.google-analytics.com", url: PAGE_VIEW_COLLECT_URL, collect: true, pageView: true },
+    {
+      name: "a collect URL without an event name",
+      url: `https://www.google-analytics.com/g/collect?v=2&tid=${GA_ID}&dp=%2F&dt=Pharos`,
+      collect: true,
+      pageView: false,
+    },
+    {
+      name: "a non-pageview event",
+      url: `https://analytics.google.com/g/collect?v=2&tid=${GA_ID}&en=scroll`,
+      collect: true,
+      pageView: false,
+    },
+    {
+      name: "another measurement id",
+      url: "https://analytics.google.com/g/collect?v=2&tid=G-OTHER&en=page_view",
+      collect: false,
+      pageView: false,
+    },
+    {
+      name: "a lookalike host",
+      url: `https://google-analytics.com.evil.test/g/collect?tid=${GA_ID}&en=page_view`,
+      collect: false,
+      pageView: false,
+    },
+    {
+      name: "an analytics host smuggled into the query",
+      url: `https://evil.test/g/collect?host=google-analytics.com&tid=${GA_ID}&en=page_view`,
+      collect: false,
+      pageView: false,
+    },
+    {
+      name: "a malformed URL",
+      url: `not a URL google-analytics.com/g/collect?tid=${GA_ID}&en=page_view`,
+      collect: false,
+      pageView: false,
+    },
+    {
+      name: "a non-collect path",
+      url: `https://www.google-analytics.com/g/collect/other?tid=${GA_ID}&en=page_view`,
+      collect: false,
+      pageView: false,
+    },
+    {
+      name: "a non-HTTP scheme",
+      url: `ftp://www.google-analytics.com/g/collect?tid=${GA_ID}&en=page_view`,
+      collect: false,
+      pageView: false,
+    },
+  ])("classifies $name", ({ url, collect, pageView }) => {
+    expect(isExpectedGaCollectUrl(url, GA_ID)).toBe(collect);
+    expect(isExpectedGaPageViewCollectUrl(url, GA_ID)).toBe(pageView);
   });
 });
 
-describe("isExpectedGaCollectUrl", () => {
-  it("accepts GA4 collect URLs for the configured measurement id even without an event name", () => {
+describe("GA collect failure tolerance", () => {
+  it.each([
+    { name: "a collect URL that also returned success", successful: [PAGE_VIEW_COLLECT_URL], tolerated: true },
+    { name: "a collect URL with no successful twin", successful: [] as string[], tolerated: false },
+  ])("tolerates an abort for $name: $tolerated", ({ successful, tolerated }) => {
     expect(
-      isExpectedGaCollectUrl(
-        "https://www.google-analytics.com/g/collect?v=2&tid=G-6TS0KG8H04&dp=%2F&dt=Pharos",
-        "G-6TS0KG8H04",
-      ),
-    ).toBe(true);
-  });
-
-  it("rejects collect URLs for other measurement ids", () => {
-    expect(
-      isExpectedGaCollectUrl(
-        "https://www.google-analytics.com/g/collect?v=2&tid=G-OTHER&dp=%2F&dt=Pharos",
-        "G-6TS0KG8H04",
-      ),
-    ).toBe(false);
+      isToleratedGaCollectFailure({ errorText: "net::ERR_ABORTED", url: PAGE_VIEW_COLLECT_URL }, new Set(successful)),
+    ).toBe(tolerated);
   });
 
   it.each([
-    "https://google-analytics.com.evil.test/g/collect?tid=G-6TS0KG8H04&en=page_view",
-    "https://evil.test/g/collect?host=google-analytics.com&tid=G-6TS0KG8H04&en=page_view",
-    "not a URL google-analytics.com/g/collect?tid=G-6TS0KG8H04&en=page_view",
-    "https://www.google-analytics.com/g/collect/other?tid=G-6TS0KG8H04&en=page_view",
-    "ftp://www.google-analytics.com/g/collect?tid=G-6TS0KG8H04&en=page_view",
-  ])("rejects spoofed, malformed, or non-collect analytics URLs: %s", (url) => {
-    expect(isExpectedGaCollectUrl(url, "G-6TS0KG8H04")).toBe(false);
-    expect(isExpectedGaPageViewCollectUrl(url, "G-6TS0KG8H04")).toBe(false);
+    {
+      name: "an aborted collect for the expected measurement id",
+      failure: {
+        errorText: "net::ERR_ABORTED",
+        url: `https://www.google-analytics.com/g/collect?v=2&tid=${GA_ID}&dp=%2F&dt=Pharos`,
+      },
+      expected: true,
+    },
+    {
+      name: "an aborted collect for another measurement id",
+      failure: {
+        errorText: "net::ERR_ABORTED",
+        url: "https://www.google-analytics.com/g/collect?v=2&tid=G-OTHER&en=page_view",
+      },
+      expected: false,
+    },
+    {
+      name: "a non-abort collect failure",
+      failure: { errorText: "net::ERR_FAILED", url: PAGE_VIEW_COLLECT_URL },
+      expected: false,
+    },
+  ])("reads $name as an expected abort: $expected", ({ failure, expected }) => {
+    expect(isExpectedGaCollectAbort(failure, GA_ID)).toBe(expected);
+  });
+
+  it.each([
+    {
+      name: "tolerates expected GA collect aborts after a successful collect signal",
+      abortedUrl: `https://www.google-analytics.com/g/collect?v=2&tid=${GA_ID}&_s=2`,
+      unexpected: false,
+    },
+    {
+      name: "keeps wrong-measurement GA collect aborts as failures",
+      abortedUrl: "https://www.google-analytics.com/g/collect?v=2&tid=G-OTHER&_s=2",
+      unexpected: true,
+    },
+  ])("$name", ({ abortedUrl, unexpected }) => {
+    const failure = { errorText: "net::ERR_ABORTED", url: abortedUrl };
+
+    expect(
+      getUnexpectedGaAnalyticsFailures([failure], new Set([PAGE_VIEW_COLLECT_URL]), GA_ID, {
+        tolerateExpectedCollectAbort: true,
+      }),
+    ).toEqual(unexpected ? [failure] : []);
   });
 });
 
-describe("isToleratedGaCollectFailure", () => {
-  it("tolerates Playwright net::ERR_ABORTED reports for collect URLs that also returned success", () => {
-    const url = "https://analytics.google.com/g/collect?v=2&tid=G-6TS0KG8H04&en=page_view";
-    expect(isToleratedGaCollectFailure({ errorText: "net::ERR_ABORTED", url }, new Set([url]))).toBe(true);
-    expect(isToleratedGaCollectFailure({ errorText: "net::ERR_ABORTED", url }, new Set())).toBe(false);
-  });
-});
+describe("analytics CSP violations", () => {
+  const unrelatedViolation = cspViolation(
+    "eval",
+    "script-src",
+    "http://127.0.0.1:4173/_next/static/chunks/036srswv-1d~3.js",
+  );
+  const blockedGtagScript = cspViolation(GTAG_SCRIPT_URL, "script-src", "http://127.0.0.1:4173/");
+  const blockedCollect = cspViolation(PAGE_VIEW_COLLECT_URL, "connect-src", GTAG_SCRIPT_URL);
 
-describe("isExpectedGaCollectAbort", () => {
-  it("accepts aborted GA4 collect requests for the expected measurement id", () => {
-    expect(
-      isExpectedGaCollectAbort(
-        {
-          errorText: "net::ERR_ABORTED",
-          url: "https://www.google-analytics.com/g/collect?v=2&tid=G-6TS0KG8H04&dp=%2F&dt=Pharos",
-        },
-        "G-6TS0KG8H04",
-      ),
-    ).toBe(true);
+  it.each([
+    { name: "an unrelated first-party eval probe", violation: unrelatedViolation, analytics: false },
+    { name: "a blocked gtag.js script", violation: blockedGtagScript, analytics: true },
+    { name: "a blocked GA collect connection", violation: blockedCollect, analytics: true },
+  ])("classifies $name", ({ violation, analytics }) => {
+    expect(isAnalyticsCspViolation(violation, GA_ID)).toBe(analytics);
   });
 
-  it("rejects unrelated collect aborts", () => {
-    expect(
-      isExpectedGaCollectAbort(
-        {
-          errorText: "net::ERR_ABORTED",
-          url: "https://www.google-analytics.com/g/collect?v=2&tid=G-OTHER&en=page_view",
-        },
-        "G-6TS0KG8H04",
-      ),
-    ).toBe(false);
-    expect(
-      isExpectedGaCollectAbort(
-        {
-          errorText: "net::ERR_FAILED",
-          url: "https://www.google-analytics.com/g/collect?v=2&tid=G-6TS0KG8H04&en=page_view",
-        },
-        "G-6TS0KG8H04",
-      ),
-    ).toBe(false);
-  });
-});
-
-describe("getUnexpectedGaAnalyticsFailures", () => {
-  it("tolerates expected GA collect aborts after a successful collect signal", () => {
-    const successfulUrl = "https://www.google-analytics.com/g/collect?v=2&tid=G-6TS0KG8H04&en=page_view";
-    const abortedUrl = "https://www.google-analytics.com/g/collect?v=2&tid=G-6TS0KG8H04&_s=2";
-
-    expect(
-      getUnexpectedGaAnalyticsFailures(
-        [{ errorText: "net::ERR_ABORTED", url: abortedUrl }],
-        new Set([successfulUrl]),
-        "G-6TS0KG8H04",
-        { tolerateExpectedCollectAbort: true },
-      ),
-    ).toEqual([]);
-  });
-
-  it("keeps wrong-measurement GA collect aborts as failures", () => {
-    const successfulUrl = "https://www.google-analytics.com/g/collect?v=2&tid=G-6TS0KG8H04&en=page_view";
-    const abortedUrl = "https://www.google-analytics.com/g/collect?v=2&tid=G-OTHER&_s=2";
-
-    expect(
-      getUnexpectedGaAnalyticsFailures(
-        [{ errorText: "net::ERR_ABORTED", url: abortedUrl }],
-        new Set([successfulUrl]),
-        "G-6TS0KG8H04",
-        { tolerateExpectedCollectAbort: true },
-      ),
-    ).toEqual([{ errorText: "net::ERR_ABORTED", url: abortedUrl }]);
-  });
-});
-
-describe("isAnalyticsCspViolation", () => {
-  it("ignores unrelated first-party eval probes", () => {
-    expect(
-      isAnalyticsCspViolation(
-        {
-          blockedURI: "eval",
-          effectiveDirective: "script-src",
-          sourceFile: "http://127.0.0.1:4173/_next/static/chunks/036srswv-1d~3.js",
-          violatedDirective: "script-src",
-        },
-        "G-6TS0KG8H04",
-      ),
-    ).toBe(false);
-  });
-
-  it("detects blocked GA and GTM resources", () => {
-    expect(
-      isAnalyticsCspViolation(
-        {
-          blockedURI: "https://www.googletagmanager.com/gtag/js?id=G-6TS0KG8H04",
-          effectiveDirective: "script-src",
-          sourceFile: "http://127.0.0.1:4173/",
-          violatedDirective: "script-src",
-        },
-        "G-6TS0KG8H04",
-      ),
-    ).toBe(true);
-    expect(
-      isAnalyticsCspViolation(
-        {
-          blockedURI: "https://www.google-analytics.com/g/collect?v=2&tid=G-6TS0KG8H04&en=page_view",
-          effectiveDirective: "connect-src",
-          sourceFile: "https://www.googletagmanager.com/gtag/js?id=G-6TS0KG8H04",
-          violatedDirective: "connect-src",
-        },
-        "G-6TS0KG8H04",
-      ),
-    ).toBe(true);
-  });
-});
-
-describe("getUnexpectedGaCspViolations", () => {
   it("keeps only analytics CSP violations", () => {
-    const analyticsViolation = {
-      blockedURI: "https://analytics.google.com/g/collect?v=2&tid=G-6TS0KG8H04&en=page_view",
-      effectiveDirective: "connect-src",
-      sourceFile: "https://www.googletagmanager.com/gtag/js?id=G-6TS0KG8H04",
-      violatedDirective: "connect-src",
-    };
+    expect(getUnexpectedGaCspViolations([unrelatedViolation, blockedCollect], GA_ID)).toEqual([blockedCollect]);
+  });
 
+  it.each([
+    { name: "ignores unrelated CSP violations when deciding live analytics retry eligibility", violation: unrelatedViolation, retryBlocking: false },
+    { name: "treats analytics CSP violations as retry-blocking evidence", violation: blockedGtagScript, retryBlocking: true },
+  ])("$name", ({ violation, retryBlocking }) => {
     expect(
-      getUnexpectedGaCspViolations(
-        [
-          {
-            blockedURI: "eval",
-            effectiveDirective: "script-src",
-            sourceFile: "http://127.0.0.1:4173/_next/static/chunks/036srswv-1d~3.js",
-            violatedDirective: "script-src",
-          },
-          analyticsViolation,
-        ],
-        "G-6TS0KG8H04",
-      ),
-    ).toEqual([analyticsViolation]);
+      hasRetryBlockingGaAnalyticsSignal({ requests: [], responses: [], failures: [], violations: [violation] }, GA_ID),
+    ).toBe(retryBlocking);
   });
 });
 
@@ -290,50 +237,6 @@ describe("hasAnyGaAnalyticsSignal", () => {
     expect(hasAnyGaAnalyticsSignal({ responses: [{ status: 200 }] })).toBe(true);
     expect(hasAnyGaAnalyticsSignal({ failures: [{ errorText: "net::ERR_FAILED" }] })).toBe(true);
     expect(hasAnyGaAnalyticsSignal({ violations: [{ blockedURI: "https://www.googletagmanager.com" }] })).toBe(true);
-  });
-});
-
-describe("hasRetryBlockingGaAnalyticsSignal", () => {
-  it("ignores unrelated CSP violations when deciding live analytics retry eligibility", () => {
-    expect(
-      hasRetryBlockingGaAnalyticsSignal(
-        {
-          requests: [],
-          responses: [],
-          failures: [],
-          violations: [
-            {
-              blockedURI: "eval",
-              effectiveDirective: "script-src",
-              sourceFile: "https://pharos.watch/_next/static/chunks/0abpcssvqzw-7.js",
-              violatedDirective: "script-src",
-            },
-          ],
-        },
-        "G-6TS0KG8H04",
-      ),
-    ).toBe(false);
-  });
-
-  it("treats analytics CSP violations as retry-blocking evidence", () => {
-    expect(
-      hasRetryBlockingGaAnalyticsSignal(
-        {
-          requests: [],
-          responses: [],
-          failures: [],
-          violations: [
-            {
-              blockedURI: "https://www.googletagmanager.com/gtag/js?id=G-6TS0KG8H04",
-              effectiveDirective: "script-src",
-              sourceFile: "https://pharos.watch/",
-              violatedDirective: "script-src",
-            },
-          ],
-        },
-        "G-6TS0KG8H04",
-      ),
-    ).toBe(true);
   });
 });
 

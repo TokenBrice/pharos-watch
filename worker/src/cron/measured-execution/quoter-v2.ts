@@ -6,18 +6,21 @@ import {
   type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import type { EvmMulticall3Result } from "../../lib/evm-rpc";
 import {
-  fetchEvmMulticall3Aggregate3AtBlock,
-  type EvmMulticall3Result,
-} from "../../lib/evm-rpc";
-import {
-  DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
   type DexMeasuredExecutionRpcBudget,
   type DexMeasuredRawQuotePoint,
 } from "./profiles";
 import { getDexMeasuredExecutionDeployment } from "./registry";
+import { canonicalEvmAddress, decodeAddressResult as decodeEvmAddressResult } from "./evm-codecs";
 import { MAX_UINT256, usdToRawAmount } from "./fixed-point";
-import { executeEvmQuotePlan, materializeEvmQuotePoint } from "./evm-quote-plan";
+import {
+  buildEvmSingleCallQuotePlans,
+  createEvmQuotePlanMulticallExecutor,
+  executeEvmQuotePlan,
+  materializeEvmQuotePoint,
+  materializeRevertedEvmQuotePoint,
+} from "./evm-quote-plan";
 
 const QUOTER_V2_ABI = parseAbi([
   "function quoteExactInputSingle((address tokenIn,address tokenOut,uint256 amountIn,uint24 fee,uint160 sqrtPriceLimitX96) params) returns (uint256 amountOut,uint160 sqrtPriceX96After,uint32 initializedTicksCrossed,uint256 gasEstimate)",
@@ -42,6 +45,7 @@ interface QuoterV2Request {
 }
 
 interface EncodedQuoterV2Request extends QuoterV2Request {
+  index: number;
   label: string;
   amountInRaw: bigint;
   callData: `0x${string}`;
@@ -107,6 +111,7 @@ function encodeRequest(request: QuoterV2Request, index: number): EncodedQuoterV2
   try {
     return {
       ...request,
+      index,
       label: `${index}:${request.target.targetId}`,
       amountInRaw,
       callData: encodeQuoterV2ExactInputSingle(request.target, amountInRaw),
@@ -144,21 +149,10 @@ function decodePoint(request: EncodedQuoterV2Request, result: EvmMulticall3Resul
   }
 }
 
-function buildRevertedPoint(
-  request: EncodedQuoterV2Request,
-  result: EvmMulticall3Result,
-): DexMeasuredRawQuotePoint {
-  return materializeEvmQuotePoint({
-    amountInRaw: request.amountInRaw,
-    amountOutRaw: 0n,
-    callData: request.callData,
-    returnData: result.returnData,
-    tokenIn: request.target.tokenIn,
-    tokenOut: request.target.tokenOut,
-    reverted: true,
-    adapterMetadata: { executionReverted: true },
-  })!;
-}
+const quoterMulticallExecutor = createEvmQuotePlanMulticallExecutor({
+  gas: QUOTER_MULTICALL_GAS,
+  maxBatchSize: QUOTER_MULTICALL_BATCH_SIZE,
+});
 
 export async function quoteQuoterV2Requests(input: {
   requests: readonly QuoterV2Request[];
@@ -173,18 +167,7 @@ export async function quoteQuoterV2Requests(input: {
       ? { targetId: request.target.targetId, inputUsd: request.inputUsd, failureReason: "invalid-quote-input" }
       : { targetId: request.target.targetId, inputUsd: request.inputUsd },
   );
-  const plans = encoded.flatMap((request) => request ? [{
-    ...request,
-    chain: request.target.chain,
-    blockNumber: input.blockNumber,
-    index: Number.parseInt(request.label.slice(0, request.label.indexOf(":")), 10),
-    call: {
-        label: request.label,
-        target: request.endpointAddress,
-        callData: request.callData,
-        allowFailure: true,
-    },
-  }] : []);
+  const plans = buildEvmSingleCallQuotePlans(encoded, input.blockNumber);
   return executeEvmQuotePlan({
     plans,
     outcomes,
@@ -193,22 +176,7 @@ export async function quoteQuoterV2Requests(input: {
     rpcBudget: input.rpcBudget,
     spec: {
       batchSize: QUOTER_MULTICALL_BATCH_SIZE,
-      executeMulticall: ({ chain, calls, blockNumber, chainRpcs, signal, rpcBudget, onBudgetStop }) =>
-        fetchEvmMulticall3Aggregate3AtBlock(chain, calls, blockNumber, {
-          chainRpcs,
-          signal,
-          timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
-          ...(rpcBudget ? { deadlineMs: rpcBudget.deadlineMs } : {}),
-          ...(rpcBudget ? { beforeRequest: () => {
-            const consumed = rpcBudget.tryConsume();
-            const reason = rpcBudget.stopReason;
-            if (!consumed && reason) onBudgetStop?.(reason);
-            return consumed;
-          } } : {}),
-          maxRetries: 0,
-          gas: QUOTER_MULTICALL_GAS,
-          multicallBatchSize: Math.min(QUOTER_MULTICALL_BATCH_SIZE, calls.length),
-        }),
+      executeMulticall: quoterMulticallExecutor,
       adaptive: {
         failedAttemptAccounting: "single-call",
         unattemptedResult: "failure-result",
@@ -224,7 +192,7 @@ export async function quoteQuoterV2Requests(input: {
           return {
             targetId: request.target.targetId,
             inputUsd: request.inputUsd,
-            point: buildRevertedPoint(request, result),
+            point: materializeRevertedEvmQuotePoint(request, result),
           };
         }
         const point = decodePoint(request, result);
@@ -242,10 +210,10 @@ export async function quoteQuoterV2Requests(input: {
 
 function targetPoolAddress(target: Pick<DexMeasuredExecutionTarget, "chain" | "poolId">): `0x${string}` | null {
   const normalized = target.poolId.trim().toLowerCase();
-  if (/^0x[a-f0-9]{40}$/.test(normalized)) return normalized as `0x${string}`;
+  const direct = canonicalEvmAddress(normalized);
+  if (direct) return direct;
   const prefix = `${target.chain.trim().toLowerCase()}:`;
-  const address = normalized.startsWith(prefix) ? normalized.slice(prefix.length) : "";
-  return /^0x[a-f0-9]{40}$/.test(address) ? (address as `0x${string}`) : null;
+  return normalized.startsWith(prefix) ? canonicalEvmAddress(normalized.slice(prefix.length)) : null;
 }
 
 export function encodeV3FactoryGetPool(target: DexMeasuredExecutionTarget): `0x${string}` {
@@ -266,17 +234,9 @@ export function encodeV3FactoryGetPool(target: DexMeasuredExecutionTarget): `0x$
 }
 
 function decodeV3FactoryGetPool(returnData: `0x${string}`): `0x${string}` | null {
-  try {
-    const value = decodeFunctionResult({
-      abi: V3_FACTORY_ABI,
-      functionName: "getPool",
-      data: returnData,
-    });
-    const normalized = String(value).toLowerCase();
-    return /^0x[a-f0-9]{40}$/.test(normalized) ? (normalized as `0x${string}`) : null;
-  } catch {
-    return null;
-  }
+  return decodeEvmAddressResult({
+    decode: () => decodeFunctionResult({ abi: V3_FACTORY_ABI, functionName: "getPool", data: returnData }),
+  });
 }
 
 export interface QuoterV2PoolBindingOutcome {
@@ -341,26 +301,7 @@ export async function resolveQuoterV2PoolBindings(input: {
     rpcBudget: input.rpcBudget,
     spec: {
       batchSize: QUOTER_MULTICALL_BATCH_SIZE,
-      executeMulticall: ({ chain, calls, blockNumber, chainRpcs, signal, rpcBudget, onBudgetStop }) =>
-        fetchEvmMulticall3Aggregate3AtBlock(chain, calls, blockNumber, {
-          chainRpcs,
-          signal,
-          timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
-          ...(rpcBudget ? { deadlineMs: rpcBudget.deadlineMs } : {}),
-          ...(rpcBudget
-            ? {
-                beforeRequest: () => {
-                  const consumed = rpcBudget.tryConsume();
-                  const reason = rpcBudget.stopReason;
-                  if (!consumed && reason) onBudgetStop?.(reason);
-                  return consumed;
-                },
-              }
-            : {}),
-          maxRetries: 0,
-          gas: QUOTER_MULTICALL_GAS,
-          multicallBatchSize: Math.min(QUOTER_MULTICALL_BATCH_SIZE, calls.length),
-        }),
+      executeMulticall: quoterMulticallExecutor,
       adaptive: {
         failedAttemptAccounting: "single-call",
         unattemptedResult: "failure-result",

@@ -2,14 +2,13 @@ import { buildMethodologyEnvelope } from "../lib/api-methodology";
 import { parseStablecoinHistoryQuery } from "../lib/api-history";
 import { jsonFreshResponse, errorResponse } from "../lib/api-response";
 import { getLatestSuccessfulCronTimestampResult } from "../lib/api-freshness";
-import { CACHE_PROFILES } from "../lib/constants";
+import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { getCache } from "../lib/db-cache";
 import { buildOnChainSourceKey, isOnChainBootstrapYieldSeed, parseYieldWarningSignals } from "../lib/yield-utils";
 import { resolveYieldSourceUrl } from "../lib/yield-source-links";
 import { logMalformedJsonPath } from "../lib/json-decode-observability";
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { parseJson } from "../lib/json-parse";
-import { parseYieldRankingsPublishedCutoff } from "../lib/yield-rankings-cache";
 import { isSuppressedYieldHistoryRow } from "../lib/yield-history-ownership-handoffs";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { isRecord } from "@shared/lib/type-guards";
@@ -28,9 +27,7 @@ import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,
   YIELD_METHODOLOGY_VERSION,
   YIELD_METHODOLOGY_VERSION_LABEL,
-} from "@shared/lib/methodology-versions/yield-methodology";
-
-interface YieldHistoryRow {
+} from "@shared/lib/methodology-versions/constants";interface YieldHistoryRow {
   recorded_at: number;
   apy: number;
   apy_base: number | null;
@@ -52,91 +49,93 @@ interface YieldHistoryRow {
 
 const LEGACY_LUSD_BPROTOCOL_SOURCE_KEY = "bprotocol-lqty-only";
 
-function hasOwn(value: Record<string, unknown>, key: string): boolean {
-  return Object.prototype.hasOwnProperty.call(value, key);
-}
-
 function buildSourceRiskLookupKey(generationId: string, stablecoinId: string, sourceKey: string): string {
   return `${generationId}\u0000${stablecoinId}\u0000${sourceKey}`;
 }
 
-function buildYieldHistorySourceRiskLookup(cached: { value: string } | null): Map<string, YieldSourceRisk | null> {
+type ParsedYieldRankingsCache =
+  | { status: "ok"; payload: Record<string, unknown> }
+  | { status: "missing" | "parse-error" | "invalid-shape"; payload: null };
+
+function parseYieldRankingsCache(cached: { value: string } | null): ParsedYieldRankingsCache {
+  if (!cached) return { status: "missing", payload: null };
+  const parsed = parseJson(cached.value);
+  if (!parsed.ok) return { status: "parse-error", payload: null };
+  if (!isRecord(parsed.value)) return { status: "invalid-shape", payload: null };
+  return { status: "ok", payload: parsed.value };
+}
+
+function extractYieldRankingsPublishedCutoff(
+  parsed: ParsedYieldRankingsCache,
+): { status: "ok"; updatedAt: number } | { status: "missing" | "parse-error" | "invalid-shape"; updatedAt: null } {
+  if (parsed.status !== "ok") return { status: parsed.status, updatedAt: null };
+  const updatedAt = parsed.payload.updatedAt;
+  return typeof updatedAt === "number" && Number.isFinite(updatedAt) && updatedAt > 0
+    ? { status: "ok", updatedAt }
+    : { status: "invalid-shape", updatedAt: null };
+}
+
+function buildYieldHistorySourceRiskLookup(payload: Record<string, unknown> | null): Map<string, YieldSourceRisk | null> {
   const lookup = new Map<string, YieldSourceRisk | null>();
-  if (!cached) return lookup;
+  if (!payload || !Array.isArray(payload.rankings)) return lookup;
+  const rootPublication = isRecord(payload.publication) ? payload.publication : null;
+  const rootGenerationId = typeof rootPublication?.generationId === "string" ? rootPublication.generationId : null;
 
-  try {
-    const parsed = parseJson(cached.value);
-    if (!parsed.ok) return lookup;
-    const payload = parsed.value;
-    if (!isRecord(payload) || !Array.isArray(payload.rankings)) return lookup;
-    const rootPublication = isRecord(payload.publication) ? payload.publication : null;
-    const rootGenerationId = typeof rootPublication?.generationId === "string" ? rootPublication.generationId : null;
-
-    for (const row of payload.rankings) {
-      if (!isRecord(row)) continue;
-      const stablecoinId = typeof row.id === "string" ? row.id : null;
-      const generationId =
-        typeof row.publicationGenerationId === "string" ? row.publicationGenerationId : rootGenerationId;
-      const provenance = isRecord(row.provenance) ? row.provenance : null;
-      const sourceKey = typeof provenance?.sourceKey === "string" ? provenance.sourceKey : null;
-      if (stablecoinId && generationId && sourceKey && hasOwn(row, "sourceRisk")) {
-        lookup.set(
-          buildSourceRiskLookupKey(generationId, stablecoinId, sourceKey),
-          normalizeYieldSourceRisk(row.sourceRisk),
-        );
-      }
-
-      if (!stablecoinId || !generationId || !Array.isArray(row.altSources)) continue;
-      for (const alt of row.altSources) {
-        if (!isRecord(alt) || typeof alt.sourceKey !== "string" || !hasOwn(alt, "sourceRisk")) continue;
-        lookup.set(
-          buildSourceRiskLookupKey(generationId, stablecoinId, alt.sourceKey),
-          normalizeYieldSourceRisk(alt.sourceRisk),
-        );
-      }
+  for (const row of payload.rankings) {
+    if (!isRecord(row)) continue;
+    const stablecoinId = typeof row.id === "string" ? row.id : null;
+    const generationId =
+      typeof row.publicationGenerationId === "string" ? row.publicationGenerationId : rootGenerationId;
+    const provenance = isRecord(row.provenance) ? row.provenance : null;
+    const sourceKey = typeof provenance?.sourceKey === "string" ? provenance.sourceKey : null;
+    if (stablecoinId && generationId && sourceKey && Object.prototype.hasOwnProperty.call(row, "sourceRisk")) {
+      lookup.set(
+        buildSourceRiskLookupKey(generationId, stablecoinId, sourceKey),
+        normalizeYieldSourceRisk(row.sourceRisk),
+      );
     }
-  } catch {
-    return lookup;
+
+    if (!stablecoinId || !generationId || !Array.isArray(row.altSources)) continue;
+    for (const alt of row.altSources) {
+      if (!isRecord(alt) || typeof alt.sourceKey !== "string" || !Object.prototype.hasOwnProperty.call(alt, "sourceRisk")) continue;
+      lookup.set(
+        buildSourceRiskLookupKey(generationId, stablecoinId, alt.sourceKey),
+        normalizeYieldSourceRisk(alt.sourceRisk),
+      );
+    }
   }
 
   return lookup;
 }
 
-function parseYieldPublicationMetadata(
-  cached: { value: string; updatedAt: number } | null,
+function extractYieldPublicationMetadata(
+  payload: Record<string, unknown> | null,
+  cached: { updatedAt: number } | null,
 ): YieldPublicationMetadata | null {
-  if (!cached) return null;
-  try {
-    const parsed = parseJson(cached.value);
-    if (!parsed.ok) return null;
-    const payload = parsed.value;
-    if (!isRecord(payload) || !isRecord(payload.publication)) return null;
-    const publication = payload.publication;
-    const generationId = typeof publication.generationId === "string" ? publication.generationId : null;
-    const status = publication.status === "published" ? "published" : null;
-    if (!generationId || !status) return null;
-    const updatedAt =
-      typeof publication.updatedAt === "number" && Number.isFinite(publication.updatedAt)
-        ? publication.updatedAt
-        : cached.updatedAt;
-    const cutoffAt =
-      typeof publication.cutoffAt === "number" && Number.isFinite(publication.cutoffAt)
-        ? publication.cutoffAt
-        : updatedAt;
-    const schemaVersion =
-      typeof publication.schemaVersion === "number" && Number.isFinite(publication.schemaVersion)
-        ? Math.floor(publication.schemaVersion)
-        : 1;
-    return {
-      generationId,
-      updatedAt,
-      cutoffAt,
-      schemaVersion,
-      status,
-    };
-  } catch {
-    return null;
-  }
+  if (!payload || !cached || !isRecord(payload.publication)) return null;
+  const publication = payload.publication;
+  const generationId = typeof publication.generationId === "string" ? publication.generationId : null;
+  const status = publication.status === "published" ? "published" : null;
+  if (!generationId || !status) return null;
+  const updatedAt =
+    typeof publication.updatedAt === "number" && Number.isFinite(publication.updatedAt)
+      ? publication.updatedAt
+      : cached.updatedAt;
+  const cutoffAt =
+    typeof publication.cutoffAt === "number" && Number.isFinite(publication.cutoffAt)
+      ? publication.cutoffAt
+      : updatedAt;
+  const schemaVersion =
+    typeof publication.schemaVersion === "number" && Number.isFinite(publication.schemaVersion)
+      ? Math.floor(publication.schemaVersion)
+      : 1;
+  return {
+    generationId,
+    updatedAt,
+    cutoffAt,
+    schemaVersion,
+    status,
+  };
 }
 
 function normalizeHistorySourceKey(stablecoinId: string, row: YieldHistoryRow, mode: "best" | "source"): string {
@@ -196,19 +195,21 @@ export const handleYieldHistory = async (db: D1Database, url: URL): Promise<Resp
     }
 
     const requestedMode = url.searchParams.get("mode")?.trim() ?? "best";
-    const sourceKey = url.searchParams.get("sourceKey")?.trim() ?? null;
-    const mode = sourceKey ? "source" : requestedMode;
-    if (mode !== "best" && mode !== "source") {
+    if (requestedMode !== "best" && requestedMode !== "source") {
       return errorResponse(400, "Invalid mode: expected 'best' or 'source'");
     }
+    const sourceKey = url.searchParams.get("sourceKey")?.trim() ?? null;
+    const mode = sourceKey ? "source" : requestedMode;
     if (mode === "source" && !sourceKey) {
       return errorResponse(400, "Missing ?sourceKey= parameter for source history mode");
     }
 
     const rankingsCache = await getCache(db, "yield-rankings");
-    const publication = parseYieldPublicationMetadata(rankingsCache);
-    const sourceRiskByHistoryKey = buildYieldHistorySourceRiskLookup(rankingsCache);
-    const publishedCutoffResult = parseYieldRankingsPublishedCutoff(rankingsCache);
+    const parsedRankingsCache = parseYieldRankingsCache(rankingsCache);
+    const rankingsPayload = parsedRankingsCache.payload;
+    const publication = extractYieldPublicationMetadata(rankingsPayload, rankingsCache);
+    const sourceRiskByHistoryKey = buildYieldHistorySourceRiskLookup(rankingsPayload);
+    const publishedCutoffResult = extractYieldRankingsPublishedCutoff(parsedRankingsCache);
     const publishedCutoffLookup =
       publishedCutoffResult.status === "ok"
         ? { timestamp: publishedCutoffResult.updatedAt, status: "ok" as const }
@@ -230,7 +231,7 @@ export const handleYieldHistory = async (db: D1Database, url: URL): Promise<Resp
           ? null
           : "Yield history published cutoff unavailable; serving history without the published cutoff cap.";
 
-    if (publishedCutoffResult.status !== "ok") {
+    if (publishedCutoffResult.status === "parse-error" || publishedCutoffResult.status === "invalid-shape") {
       logMalformedJsonPath({
         scope: "api",
         owner: "yield-history",
@@ -250,37 +251,16 @@ export const handleYieldHistory = async (db: D1Database, url: URL): Promise<Resp
     const historyColumns =
       "recorded_at, apy, apy_base, apy_reward, exchange_rate, source_tvl_usd, warning_signals, source_key, yield_source, yield_type, data_source, is_best, publication_generation_id, pys_at_publish, safety_at_publish, variance_at_publish, pys_inputs_at_publish";
 
-    const sql =
-      mode === "source"
-        ? `SELECT /* pharos:yield-history:source-window-tiered */ * FROM (
+    const sourceSelection = mode === "source" ? "source_key = ?" : "is_best = 1";
+    const sql = `SELECT /* pharos:yield-history:${mode}-window-tiered */ * FROM (
              SELECT ${historyColumns}
                FROM yield_history_daily
-              WHERE stablecoin_id = ? AND recorded_at >= ? AND recorded_at < ? AND source_key = ?
+              WHERE stablecoin_id = ? AND recorded_at >= ? AND recorded_at < ? AND ${sourceSelection}
                 ${publicationFilter}
              UNION ALL
              SELECT ${historyColumns}
                FROM yield_history h
-              WHERE stablecoin_id = ? AND recorded_at >= ? AND recorded_at <= ? AND source_key = ?
-                ${publicationFilter}
-                AND (
-                  recorded_at >= ?
-                  OR NOT EXISTS (
-                    SELECT 1 FROM yield_history_daily d
-                     WHERE d.stablecoin_id = h.stablecoin_id
-                       AND d.source_key = h.source_key
-                       AND d.snapshot_date = CAST(h.recorded_at / 86400 AS INTEGER) * 86400
-                  )
-                )
-           ) ORDER BY recorded_at ASC`
-        : `SELECT /* pharos:yield-history:best-window-tiered */ * FROM (
-             SELECT ${historyColumns}
-               FROM yield_history_daily
-              WHERE stablecoin_id = ? AND recorded_at >= ? AND recorded_at < ? AND is_best = 1
-                ${publicationFilter}
-             UNION ALL
-             SELECT ${historyColumns}
-               FROM yield_history h
-              WHERE stablecoin_id = ? AND recorded_at >= ? AND recorded_at <= ? AND is_best = 1
+              WHERE stablecoin_id = ? AND recorded_at >= ? AND recorded_at <= ? AND ${sourceSelection}
                 ${publicationFilter}
                 AND (
                   recorded_at >= ?
@@ -292,35 +272,21 @@ export const handleYieldHistory = async (db: D1Database, url: URL): Promise<Resp
                   )
                 )
            ) ORDER BY recorded_at ASC`;
-
-    const result =
-      mode === "source"
-        ? await db
-            .prepare(sql)
-            .bind(
-              parsed.stablecoinId,
-              parsed.cutoff,
-              rawCutoff,
-              sourceKey,
-              parsed.stablecoinId,
-              parsed.cutoff,
-              publishedCutoffCap,
-              sourceKey,
-              rawCutoff,
-            )
-            .all<YieldHistoryRow>()
-        : await db
-            .prepare(sql)
-            .bind(
-              parsed.stablecoinId,
-              parsed.cutoff,
-              rawCutoff,
-              parsed.stablecoinId,
-              parsed.cutoff,
-              publishedCutoffCap,
-              rawCutoff,
-            )
-            .all<YieldHistoryRow>();
+    const sourceBinds = mode === "source" ? [sourceKey] : [];
+    const result = await db
+      .prepare(sql)
+      .bind(
+        parsed.stablecoinId,
+        parsed.cutoff,
+        rawCutoff,
+        ...sourceBinds,
+        parsed.stablecoinId,
+        parsed.cutoff,
+        publishedCutoffCap,
+        ...sourceBinds,
+        rawCutoff,
+      )
+      .all<YieldHistoryRow>();
 
     let previousSourceKey: string | null = null;
     let previousIsBest: boolean | null = null;

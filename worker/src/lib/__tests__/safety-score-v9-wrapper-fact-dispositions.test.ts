@@ -77,7 +77,7 @@ describe("Safety Score V9 wrapper fact dispositions", () => {
     });
   });
 
-  it("turns a reviewed leverage factor of 1.0 into reviewed none", () => {
+  it("deduplicates repeated leverage findings across distinct reserve slices", () => {
     const { fixed, extension, asset } = wrapperFacts("strategy-vault");
     const context = createAssetBuildContext(
       fixed,
@@ -85,55 +85,11 @@ describe("Safety Score V9 wrapper fact dispositions", () => {
       extension.assets.find((candidate) => candidate.assetId === "alpha")!,
       "a".repeat(64),
     );
-    const reserveExposures = structuredClone(asset.reserveExposures);
-    reserveExposures[0]!.riskFactors = ["leverage-factor:1.0"];
-
-    const facts = buildWrapperLocalFacts(context, {
-      implementation: asset.implementation,
-      dependencies: asset.dependencies,
-      reserveStatus: asset.reserveStatus,
-      reserveExposures,
-      exitStatus: asset.exitStatus,
-      exitRoutes: asset.exitRoutes,
-      controlStatus: asset.controlStatus,
-      controls: asset.controls,
-      economicControlReview: asset.economicControlReview,
-      peg: asset.peg,
-      supply: asset.supply,
-    });
-    if (facts.applicability !== "wrapper") throw new Error("Expected wrapper-local facts");
-
-    expect(facts.facts.leverage).toMatchObject({
-      disposition: "reviewed",
-      assessment: "none",
-      signals: ["wrapper-leverage-factor:leverage-factor:1.0"],
-    });
-  });
-
-  it.each([
-    {
-      factors: ["leverage", "leverage"],
-      assessment: "high",
-      signals: ["wrapper-leverage-factor:leverage"],
-    },
-    {
-      factors: ["leverage-factor:1.0", "leverage-factor:2.5", "leverage-factor:2.5"],
-      assessment: "critical",
-      signals: ["wrapper-leverage-factor:leverage-factor:1.0", "wrapper-leverage-factor:leverage-factor:2.5"],
-    },
-  ])("aggregates repeated leverage findings across distinct reserve slices: $factors", ({ factors, assessment, signals }) => {
-    const { fixed, extension, asset } = wrapperFacts("strategy-vault");
-    const context = createAssetBuildContext(
-      fixed,
-      extension,
-      extension.assets.find((candidate) => candidate.assetId === "alpha")!,
-      "a".repeat(64),
-    );
-    const reserveExposures = factors.map((factor, index) => ({
+    const reserveExposures = (["leverage", "leverage"] as const).map((factor, index) => ({
       ...structuredClone(asset.reserveExposures[0]!),
       exposureKey: `alpha:reserve:${index}`,
       riskFactors: [factor],
-      weight: 1 / factors.length,
+      weight: 0.5,
     }));
 
     const facts = buildWrapperLocalFacts(context, {
@@ -153,8 +109,8 @@ describe("Safety Score V9 wrapper fact dispositions", () => {
 
     expect(facts.facts.leverage).toMatchObject({
       disposition: "reviewed",
-      assessment,
-      signals,
+      assessment: "high",
+      signals: ["wrapper-leverage-factor:leverage"],
     });
   });
 

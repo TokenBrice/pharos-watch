@@ -1,6 +1,7 @@
 import {
   DdrRowSchema,
   DdrV2ResponseRowSchema,
+  DDR_PUBLIC_WARNING,
   type DdrResponse,
   type DdrRow,
   type DdrV2ResponseRow,
@@ -21,11 +22,13 @@ export const DDR_TEST_META: DdrResponse["_meta"] = {
   readOverlay: { degradedLockDeferralIncidentKeys: [], closedPendingReviewIncidentKeys: [], suppressedIncidentKeys: [] },
   degraded: false,
   degradedReason: null,
-  publicWarning: "",
+  degradedReasonDetail: null,
+  lastRefreshAttemptAt: null,
   resolutionRubricVersion: "resolution-rubric-v1",
   durationModelVersion: "duration-landmark-v1",
   incidentGroupingVersion: "incident-group-v1",
   supportRulesVersion: "support-rules-v1",
+  publicWarning: DDR_PUBLIC_WARNING,
   lineage: null,
 };
 

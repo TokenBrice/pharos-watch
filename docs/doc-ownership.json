@@ -340,7 +340,8 @@
       ],
       "docs": [
         { "path": "docs/status-dashboard.md", "anchor": "backend-contract-get-apistatus" },
-        { "path": "docs/worker-infrastructure.md", "anchor": "health--status-endpoints" }
+        { "path": "docs/worker-infrastructure.md", "anchor": "health--status-endpoints" },
+        { "path": "docs/runbooks/dated-source-age-caps.md", "anchor": "scheduled-boundaries" }
       ],
       "checks": ["npx vitest run src/lib/status worker/src/lib/status"],
       "rules": ["Status causes, recommended actions, public-health floors, and runbooks must remain aligned."]
@@ -460,6 +461,25 @@
         "Keep the event archive server-rendered; it is the crawlable link hub for permanent event pages."
       ],
       "checks": ["npm run lint:changed", "npm run typecheck", "npx vitest run src/app/depeg"]
+    },
+    {
+      "id": "table-exports",
+      "label": "Interactive table export contracts",
+      "risk": "medium",
+      "sources": [
+        "src/lib/exports/**",
+        "src/components/table-export-menu.tsx",
+        "src/app/screener/client.tsx",
+        "src/components/yield-leaderboard.tsx"
+      ],
+      "docs": [{ "path": "docs/exports.md", "anchor": "export-contract" }],
+      "checks": [
+        "npx vitest run src/components/__tests__/table-export-menu.test.tsx src/components/__tests__/yield-leaderboard-export.test.tsx src/app/screener/client.test.tsx"
+      ],
+      "rules": [
+        "Export as-of timestamps identify source-data generation, not download time.",
+        "Unknown values and provenance remain unknown in published export cells."
+      ]
     },
     {
       "id": "frontend-routes",

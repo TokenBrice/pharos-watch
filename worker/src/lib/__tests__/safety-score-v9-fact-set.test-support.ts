@@ -9,7 +9,7 @@ import {
   buildSafetyScoreV9RouteReviews,
 } from "../safety-score-v9/extension-routes";
 import type { SafetyScoreV9FactSetExtensionV2 } from "../safety-score-v9/fact-set";
-import { createReportCardsFixedInput } from "../report-cards-fixed-input";
+import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import {
   makeV9FixedInput as exactFixedInput,
   makeV9TwoAssetFixedInput as exactTwoAssetFixedInput,

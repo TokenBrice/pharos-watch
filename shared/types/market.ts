@@ -27,6 +27,7 @@ export {
 export {
   DexExitEvidenceKindSchema,
   DexExitRouteObservationSchema,
+  DexExitRouteObservationsSchema,
   ExitRouteCapacityPointSchema,
   ExitRouteConfidenceSchema,
   ExitRouteEvidenceKindSchema,
@@ -523,15 +524,35 @@ export const DEPEG_EVENT_CLOSE_REASON_VALUES = [
 export const DepegEventCloseReasonSchema = z.enum(DEPEG_EVENT_CLOSE_REASON_VALUES);
 export type DepegEventCloseReason = z.infer<typeof DepegEventCloseReasonSchema>;
 
-export const DepegEventSchema = z.object({
+const DepegTimestampSchema = z.number().int().nonnegative();
+
+/**
+ * Chronology invariant shared by the public depeg surfaces and the V9
+ * peg-provenance parser: a closed event must end after it starts. Negative
+ * durations are impossible values, not data.
+ */
+export function refineDepegEventChronology(
+  event: { startedAt: number; endedAt: number | null },
+  ctx: z.RefinementCtx,
+): void {
+  if (event.endedAt != null && event.endedAt <= event.startedAt) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["endedAt"],
+      message: "A closed event must end after it starts",
+    });
+  }
+}
+
+const DepegEventObjectSchema = z.object({
   id: z.number(),
   stablecoinId: z.string(),
   symbol: z.string(),
   pegType: z.string(),
   direction: DepegDirectionSchema,
   peakDeviationBps: z.number(),
-  startedAt: z.number(),
-  endedAt: z.number().nullable(),
+  startedAt: DepegTimestampSchema,
+  endedAt: DepegTimestampSchema.nullable(),
   startPrice: z.number(),
   peakPrice: z.number().nullable(),
   recoveryPrice: z.number().nullable(),
@@ -562,31 +583,52 @@ export const DepegEventSchema = z.object({
     .optional()
     .default(null),
 });
+export const DepegEventSchema = DepegEventObjectSchema.superRefine(refineDepegEventChronology);
 export type DepegEvent = z.infer<typeof DepegEventSchema>;
 
 /** Build-time depeg archive written to data/depeg-events/*.json. */
 export const DepegEventStoredSnapshotSchema = z.array(
-  DepegEventSchema.extend({
-    slug: z.string().min(1),
-  }),
+  DepegEventObjectSchema
+    .extend({
+      slug: z.string().min(1),
+    })
+    .superRefine(refineDepegEventChronology),
 );
 export type DepegEventEntry = z.infer<typeof DepegEventStoredSnapshotSchema>[number];
 
-export const DepegPendingIncidentSchema = z.object({
-  stablecoinId: z.string(),
-  symbol: z.string(),
-  direction: DepegDirectionSchema,
-  firstSeenAt: z.number(),
-  lastSeenAt: z.number(),
-  firstSeenBps: z.number(),
-  lastSeenBps: z.number(),
-  peakSeenBps: z.number(),
-  reason: z.string(),
-  ageSec: z.number(),
-  expiresAt: z.number(),
-  availableConfirmationCategories: z.array(z.string()),
-  missingConfirmationCategories: z.array(z.string()),
-});
+export const DepegPendingIncidentSchema = z
+  .object({
+    stablecoinId: z.string(),
+    symbol: z.string(),
+    direction: DepegDirectionSchema,
+    firstSeenAt: DepegTimestampSchema,
+    lastSeenAt: DepegTimestampSchema,
+    firstSeenBps: z.number(),
+    lastSeenBps: z.number(),
+    peakSeenBps: z.number(),
+    reason: z.string(),
+    ageSec: z.number(),
+    expiresAt: DepegTimestampSchema,
+    availableConfirmationCategories: z.array(z.string()),
+    missingConfirmationCategories: z.array(z.string()),
+  })
+  .superRefine((incident, ctx) => {
+    if (incident.lastSeenAt < incident.firstSeenAt) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["lastSeenAt"],
+        message: "A pending incident cannot be last seen before it is first seen",
+      });
+    }
+    if (incident.expiresAt < incident.lastSeenAt) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["expiresAt"],
+        message: "A pending incident cannot expire before it is last seen",
+      });
+    }
+  });
+
 export type DepegPendingIncident = z.infer<typeof DepegPendingIncidentSchema>;
 
 export const DepegEventsResponseSchema = z.object({
@@ -833,13 +875,20 @@ const BlacklistSummaryStatsSchema = z.object({
   trackedAmountGapCount: z.number(),
   recentCount: z.number(),
   recentCount24h: z.number(),
+  recentFreezeCount24h: z.number(),
+  recentFreezeCount7d: z.number(),
+  recentFreezeAmount24hUsd: z.number(),
+  recentFreezeAmount7dUsd: z.number(),
   recoverableGapCount: z.number(),
   perCoinBlacklistCounts: z.record(z.string(), z.number()),
   perCoinTotalEvents: z.record(z.string(), z.number()),
   perCoinFrozenAddressCount: z.record(z.string(), z.number()),
   perCoinFrozenTotal: z.record(z.string(), z.number()),
   perCoinDestroyedTotal: z.record(z.string(), z.number()),
-  perCoinQuarterlyEventTypes: z.record(z.enum(BLACKLIST_STABLECOINS), z.array(BlacklistQuarterlyEventTypePointSchema)),
+  // Key is `z.string()` like the sibling maps above: Zod 4 enum-keyed records
+  // are exhaustive, so a cache snapshot written before the next
+  // BLACKLIST_STABLECOINS addition would fail the whole summary parse.
+  perCoinQuarterlyEventTypes: z.record(z.string(), z.array(BlacklistQuarterlyEventTypePointSchema)),
   // Key is `z.string()` (not the BLACKLIST_STABLECOINS enum) so older cached
   // payloads — which either omit the field entirely or carry a partial record
   // — still parse. Optional with `{}` default covers the missing-field case;
@@ -937,7 +986,6 @@ const BlacklistDataQualitySchema = z.object({
   }),
   freezeLedger: z.object({
     providerFailedCount: z.number(),
-    staleSnapshotCount: z.number(),
     trackedGapCount: z.number(),
     scopedRows: z.number(),
     legacyRows: z.number(),

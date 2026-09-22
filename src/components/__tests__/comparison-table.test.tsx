@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { ComparisonTable } from "@/components/comparison-table";
 import type { StablecoinData } from "@shared/types";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
+import { makeUnreportedBluechipRating } from "@shared/test-utils/bluechip.test-support";
 import type { ComparisonCoinEntry } from "@/lib/compare-derive";
 
 vi.mock("next/link", async () => {
@@ -145,6 +146,15 @@ describe("ComparisonTable", () => {
     expect(html).toContain("Open Safety Score waterfall for USDT");
     expect(html).toContain("Evidence age stale");
   });
+  it("marks missing Bluechip audit data as not reported", () => {
+    const coin = makeCoin("usdt", "USDT");
+    coin.bluechipRating = makeUnreportedBluechipRating();
+    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={PEG_RATES} logos={{}} />);
+
+    expect(html).toContain("A · audit not reported");
+    expect(html).not.toContain("no audit flag");
+  });
+
 
   it("uses the shared horizontally scrollable table foundation", () => {
     const html = renderToStaticMarkup(

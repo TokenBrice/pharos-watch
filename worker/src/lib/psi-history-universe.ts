@@ -1,9 +1,6 @@
 import { CORE_PSI_ELIGIBLE_IDS } from "@shared/lib/psi-eligible";
 import { SHADOW_IDS } from "@shared/lib/shadow-stablecoins";
-import { binarySearchNearest } from "./binary-search";
-import { DAY_SECONDS } from "@shared/lib/time-constants";
-
-const MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC = 14 * DAY_SECONDS;
+import { findAsOfSnapshot, MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC } from "@shared/lib/rate-series";
 
 export interface SupplySnapshot {
   date: number;
@@ -21,14 +18,16 @@ export interface PsiHistoricalUniverse {
   shadowCoverageCount: number;
 }
 
+/**
+ * As-of lookup: the newest snapshot on or before `targetDay`, within 14 days.
+ * A later snapshot is never selected — a replayed PSI day must not read market
+ * cap or price that was first observed after that day.
+ */
 export function findNearestSupplySnapshot(
   snapshots: SupplySnapshot[] | undefined,
   targetDay: number,
 ): SupplySnapshot | null {
-  if (!snapshots || snapshots.length === 0) return null;
-  const nearest = binarySearchNearest(snapshots, targetDay, (s) => s.date);
-  if (!nearest) return null;
-  return Math.abs(nearest.date - targetDay) <= MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC ? nearest : null;
+  return findAsOfSnapshot(snapshots, targetDay, (s) => s.date, MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC);
 }
 
 export function buildPsiHistoricalSupplySnapshotMap(

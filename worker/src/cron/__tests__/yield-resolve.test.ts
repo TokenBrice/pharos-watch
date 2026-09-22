@@ -3,18 +3,22 @@ import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import {
   findPublishedYieldRow,
-  fixtureGetCache,
-  fixtureMockD1,
-  fixtureMockFetch,
-  fixtureShouldAttemptFetch,
-  fixtureSyncYieldData,
-  fixtureYieldConfigModule,
   getYieldRankingsCachePayload,
   makeDb,
   resetSyncYieldDataTest,
   cleanupSyncYieldDataTest,
 } from "./sync-yield-data.test-support";
-import { cacheRow, installYieldCacheReader } from "./yield-cache.test-support";
+import { mockD1 } from "@shared/test-utils/mock-d1";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
+import { syncYieldData } from "../sync-yield-data";
+import { getCache } from "../../lib/db-cache";
+import { shouldAttemptFetch } from "../../lib/circuit-breaker";
+import * as yieldConfigModule from "../../lib/yield-config/yield-config";
+import {
+  cacheRow,
+  healthyRiskFreeRateCacheRow,
+  installYieldCacheReader,
+} from "./yield-cache.test-support";
 import { makeDlYieldPool } from "./yield-resolve.test-support";
 import { buildDlStablecoinPoolsCache } from "../yield-sync/cache";
 import {
@@ -35,19 +39,19 @@ describe("syncYieldData publication sentinels", () => {
   it("publishes a resolved curated source and marks it best in D1 and rankings cache", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = makeDb();
-    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+    installYieldCacheReader(vi.mocked(getCache), {
       "yield-rankings": null,
       // Scoring evidence: the curated row is only publishable while the USD
       // benchmark entry it scores against is fresh.
-      risk_free_rate: cacheRow("5.0", nowSec),
+      risk_free_rate: healthyRiskFreeRateCacheRow(5, nowSec),
       "dl-stablecoin-pools": cacheRow(buildDlStablecoinPoolsCache([
         makeDlYieldPool({ apy: 6.5, apyBase: 6.5, apyMean30d: 6.3 }),
       ], nowSec), nowSec),
     });
-    vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
-    fixtureMockFetch([]);
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
 
-    const result = await fixtureSyncYieldData(db);
+    const result = await syncYieldData(db);
 
     expect(result.itemCount).toBeGreaterThanOrEqual(1);
     const published = findPublishedYieldRow(db, "100", (row) => row.source_key === "pool-sdai-native");
@@ -69,7 +73,7 @@ describe("syncYieldData publication sentinels", () => {
   });
 
   it("selects fresh curated evidence over a deterministic modeled proxy", async () => {
-    const configs = fixtureYieldConfigModule.RATE_DERIVED_CONFIGS as typeof fixtureYieldConfigModule.RATE_DERIVED_CONFIGS;
+    const configs = yieldConfigModule.RATE_DERIVED_CONFIGS as typeof yieldConfigModule.RATE_DERIVED_CONFIGS;
     configs.push({
       stablecoinId: "100",
       spreadBps: 25,
@@ -79,17 +83,17 @@ describe("syncYieldData publication sentinels", () => {
     try {
       const nowSec = Math.floor(Date.now() / 1000);
       const db = makeDb();
-      installYieldCacheReader(vi.mocked(fixtureGetCache), {
+      installYieldCacheReader(vi.mocked(getCache), {
         "yield-rankings": null,
-        risk_free_rate: cacheRow("5.0", nowSec),
+        risk_free_rate: healthyRiskFreeRateCacheRow(5, nowSec),
         "dl-stablecoin-pools": cacheRow(buildDlStablecoinPoolsCache([
           makeDlYieldPool({ apy: 4.5, apyBase: 4.5, apyMean30d: 4.5 }),
         ], nowSec), nowSec),
       });
-      vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
-      fixtureMockFetch([]);
+      vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+      mockFetch([]);
 
-      const result = await fixtureSyncYieldData(db);
+      const result = await syncYieldData(db);
 
       expect(result.itemCount).toBeGreaterThanOrEqual(2);
       const curated = findPublishedYieldRow(db, "100", (row) => row.source_key === "pool-sdai-native");
@@ -104,14 +108,14 @@ describe("syncYieldData publication sentinels", () => {
   it("keeps the cron healthy when an optional source stalls past its budget", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = makeDb();
-    installYieldCacheReader(vi.mocked(fixtureGetCache), {
+    installYieldCacheReader(vi.mocked(getCache), {
       "yield-rankings": null,
       "dl-stablecoin-pools": cacheRow(buildDlStablecoinPoolsCache([
         makeDlYieldPool({ apy: 6.5, apyBase: 6.5, apyMean30d: 6.3 }),
       ], nowSec), nowSec),
     });
-    vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
-    fixtureMockFetch([
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([
       {
         match: () => true,
         respond: (request) => request.url.includes("api-v2.pendle.finance")
@@ -120,7 +124,7 @@ describe("syncYieldData publication sentinels", () => {
       },
     ], { requireMatch: true });
 
-    const resultPromise = fixtureSyncYieldData(db);
+    const resultPromise = syncYieldData(db);
     await vi.advanceTimersByTimeAsync(30_000);
     const result = await resultPromise;
 
@@ -133,20 +137,24 @@ describe("syncYieldData publication sentinels", () => {
 // --- Tracked-source query contracts ---
 
 describe("tracked optional source anchors", () => {
-  it("loads deterministic on-chain anchors with one bounded query per candidate", async () => {
+  it("loads deterministic on-chain anchors with one batched query", async () => {
     const sevenDaysAgoSec = 1_747_000_000;
-    const db = fixtureMockD1([
+    const db = mockD1([
       {
         match: "pharos:yield-sync:tier1-previous-rate",
-        matchBinds: ["usde-ethena", sevenDaysAgoSec],
-        rows: [],
-        first: { exchange_rate: 1.07, recorded_at: sevenDaysAgoSec - 3 },
-      },
-      {
-        match: "pharos:yield-sync:tier1-previous-rate",
-        matchBinds: ["100", sevenDaysAgoSec],
-        rows: [],
-        first: { exchange_rate: 1.01, recorded_at: sevenDaysAgoSec - 9 },
+        matchBinds: ["usde-ethena", "100", sevenDaysAgoSec],
+        rows: [
+          {
+            stablecoin_id: "usde-ethena",
+            exchange_rate: 1.07,
+            recorded_at: sevenDaysAgoSec - 3,
+          },
+          {
+            stablecoin_id: "100",
+            exchange_rate: 1.01,
+            recorded_at: sevenDaysAgoSec - 9,
+          },
+        ],
       },
     ], { requireMatch: true });
 
@@ -155,11 +163,8 @@ describe("tracked optional source anchors", () => {
     expect(rows.get("usde-ethena")).toEqual({ exchangeRate: 1.07, recordedAt: sevenDaysAgoSec - 3 });
     expect(rows.get("100")).toEqual({ exchangeRate: 1.01, recordedAt: sevenDaysAgoSec - 9 });
     const queries = db.getHistory().filter((entry) => entry.sql.includes("pharos:yield-sync:tier1-previous-rate"));
-    expect(queries).toHaveLength(2);
-    expect(queries.map((entry) => entry.binds)).toEqual([
-      ["usde-ethena", sevenDaysAgoSec],
-      ["100", sevenDaysAgoSec],
-    ]);
+    expect(queries).toHaveLength(1);
+    expect(queries[0]?.binds).toEqual(["usde-ethena", "100", sevenDaysAgoSec]);
     db.assertAllMatchesUsed();
   });
 
@@ -283,7 +288,7 @@ describe("auto-lending safety availability", () => {
   it("retains eligible lending candidates as unrated when the expected safety snapshot is unavailable", () => {
     const resolved: ResolvedYieldEntry[] = [];
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    const autoLendingPoolMap = fixtureYieldConfigModule.AUTO_LENDING_POOL_MAP as Record<string, string>;
+    const autoLendingPoolMap = yieldConfigModule.AUTO_LENDING_POOL_MAP as Record<string, string>;
     autoLendingPoolMap["usdc-circle"] = "pool-usdc-aave";
 
     try {
@@ -294,6 +299,7 @@ describe("auto-lending safety availability", () => {
         safetyScores: new Map(),
         safetySnapshotAvailable: false,
         stablecoinSupplyById: new Map(),
+        stablecoinSupplyMapState: "ok",
       });
 
       expect(resolved).toEqual([
@@ -322,6 +328,7 @@ describe("auto-lending safety availability", () => {
       safetyScores: new Map([["usdc-circle", { score: 49, grade: "D" }]]),
       safetySnapshotAvailable: true,
       stablecoinSupplyById: new Map(),
+      stablecoinSupplyMapState: "ok",
     });
 
     expect(resolved).toHaveLength(0);
@@ -376,6 +383,7 @@ describe("appendOptionalYieldCandidate", () => {
         : input.supply === null
           ? new Map()
           : new Map([[stablecoinId, input.supply]]),
+      stablecoinSupplyMapState: "ok",
     };
   }
 

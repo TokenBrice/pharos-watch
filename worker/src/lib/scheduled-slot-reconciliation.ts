@@ -1,6 +1,7 @@
 import {
   flattenScheduledSlotPlanJobs,
   getScheduledTaskDescriptor,
+  isScheduledTaskDueAt,
   SCHEDULED_SLOT_PLANS,
 } from "@shared/lib/scheduled-runner-registry";
 import type { CronScheduleKey } from "@shared/lib/cron-jobs";
@@ -580,11 +581,11 @@ async function reconcileStaleSlotArtifacts(
       stillMissingProgressJobs.push(job);
     }
   }
-  const unconditionallyDueMissingJobs = stillMissingProgressJobs.filter(
-    (job) => !(
-      slot.slot_key === "digestTriggerPoll"
-      && (job === "daily-digest" || job === "weekly-recap")
-    ),
+  // A member that was not due on this occurrence was never going to start, so
+  // it must not be reconciled as an abandoned error (rule R4). The cadence
+  // gate lives on the slot plan, not in a name list here.
+  const unconditionallyDueMissingJobs = stillMissingProgressJobs.filter((job) =>
+    isScheduledTaskDueAt(slot.slot_key as CronScheduleKey, job, slot.slot_started_at),
   );
   for (const job of unconditionallyDueMissingJobs) {
     if (await insertSyntheticNotStartedCronRun(db, slot, job, nowSec, fence, reconcilerWorkerVersion)) {

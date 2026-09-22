@@ -58,15 +58,6 @@ function makeHealth(overrides: Partial<YieldHealthSummary> = {}): YieldHealthSum
       staleFamilyCount: 1,
       missingFamilyCount: 1,
     },
-    benchmark: {
-      fetchedAt: 1_700_000_000,
-      ageSec: 1200,
-      maxAgeSec: 172_800,
-      source: "SOFR",
-      isFallback: false,
-      fallbackMode: null,
-      status: "healthy",
-    },
     benchmarkRegistry: {
       status: "degraded",
       usedBenchmarkCount: 2,

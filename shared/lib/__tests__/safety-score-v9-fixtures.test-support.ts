@@ -9,7 +9,7 @@ import {
   type V9EconomicControlAssetFacts,
   type V9MintMechanismReview,
   type V9OracleControlReview,
-} from "../safety-score-v9/control";
+} from "../safety-score-v9/control-primitives";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 
 export function requiredKnown(rule = "fixture.required"): V9FactStatusV2 {

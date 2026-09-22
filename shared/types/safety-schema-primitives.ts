@@ -10,10 +10,26 @@ export const CanonicalTextSchema = z
   .min(1)
   .refine((value) => value.trim() === value, "Value must not have leading or trailing whitespace");
 
+/** Canonical lowercase identifier: one pattern for overlay/incident keys and chain ids. */
+const CANONICAL_KEY_PATTERN = /^[a-z0-9][a-z0-9._:-]*$/u;
+
+export const CanonicalKeySchema = CanonicalTextSchema.refine(
+  (value) => CANONICAL_KEY_PATTERN.test(value),
+  "Value must be a canonical lowercase identifier",
+);
+
+export const CanonicalChainIdSchema = CanonicalTextSchema.refine(
+  (value) => CANONICAL_KEY_PATTERN.test(value),
+  "Chain ID must be a canonical lowercase identifier",
+);
+
 export const Sha256Schema = z.string().regex(SHA256_PATTERN);
 export const BaseInputGenerationIdSchema = z.string().regex(BASE_INPUT_GENERATION_ID_PATTERN);
 export const UnixSecondsSchema = z.number().int().nonnegative();
 export const FractionSchema = z.number().finite().min(0).max(1);
+export const NonNegativeFiniteSchema = z.number().finite().nonnegative();
+/** A published 0-100 score point. */
+export const ScoreSchema = z.number().finite().min(0).max(100);
 export const StrictIsoDateSchema = z.string().refine(isValidIsoDateOnly, "Expected YYYY-MM-DD");
 
 /** Strict versioned envelope for authored collections with unique item keys. */

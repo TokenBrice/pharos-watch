@@ -2,14 +2,16 @@
  * Fails when the CDP shock-coverage registry does not carry a fresh, complete,
  * replay-attested measurement for every automated target.
  *
- * The Shock Coverage Refresh workflow runs this after regenerating the
- * registry so a partial or non-scoring refresh fails loudly instead of being
- * committed. The V9 engine rejects any measurement that misses one of these
- * conditions and falls back to legacy LCR.
+ * The Shock Coverage Refresh workflow runs this independently on a daily
+ * cadence and after regenerating the registry, so stale, partial, or non-scoring
+ * refreshes fail loudly. The V9 engine rejects any measurement that misses one
+ * of these conditions and falls back to legacy LCR.
  */
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
+import { SHOCK_COVERAGE_TARGET_IDS } from "../lib/mechanism-measurement/shock-targets";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const REGISTRY_PATH = "shared/data/safety-score-v9/shock-coverage-measurements-v1.json";
@@ -40,7 +42,7 @@ interface ShockCoverageRegistry {
 }
 
 interface ShockCoverageTargetCatalog {
-  assetIds?: unknown;
+  targets?: unknown;
 }
 
 interface ShockCoveragePolicy {
@@ -61,24 +63,40 @@ function readJson<T>(relativePath: string): T {
   return JSON.parse(readFileSync(resolve(ROOT, relativePath), "utf8")) as T;
 }
 
-function readRequiredAssetIds(): string[] {
-  const targets = readJson<ShockCoverageTargetCatalog>(TARGETS_PATH);
-  const assetIds = targets?.assetIds;
+export function readRequiredAssetIds(
+  catalog: ShockCoverageTargetCatalog,
+  expectedAssetIds: readonly string[] = SHOCK_COVERAGE_TARGET_IDS,
+): string[] {
+  const targets = catalog.targets;
+  if (!Array.isArray(targets) || targets.length === 0) {
+    throw new Error(`${TARGETS_PATH} must declare a non-empty targets array`);
+  }
+  const assetIds = targets.map((target) =>
+    target && typeof target === "object" && "assetId" in target ? target.assetId : undefined,
+  );
   if (
-    !Array.isArray(assetIds) ||
-    assetIds.length === 0 ||
-    assetIds.some((assetId) => typeof assetId !== "string" || assetId.length === 0 || assetId.trim() !== assetId)
+    assetIds.some(
+      (assetId) =>
+        typeof assetId !== "string" ||
+        assetId.length === 0 ||
+        assetId.trim() !== assetId ||
+        !/^[a-z0-9][a-z0-9-]*$/.test(assetId),
+    )
   ) {
-    throw new Error(`${TARGETS_PATH} must declare a non-empty assetIds array of trimmed strings`);
+    throw new Error(`${TARGETS_PATH} target assetIds must be non-empty slugs`);
   }
   const normalizedAssetIds = assetIds as string[];
   if (new Set(normalizedAssetIds).size !== normalizedAssetIds.length) {
-    throw new Error(`${TARGETS_PATH} assetIds must not contain duplicates`);
+    throw new Error(`${TARGETS_PATH} target assetIds must not contain duplicates`);
+  }
+  if (
+    normalizedAssetIds.length !== expectedAssetIds.length ||
+    normalizedAssetIds.some((assetId, index) => assetId !== expectedAssetIds[index])
+  ) {
+    throw new Error(`${TARGETS_PATH} target assetIds must match the derived shock target IDs`);
   }
   return normalizedAssetIds;
 }
-
-const REQUIRED_ASSET_IDS = readRequiredAssetIds();
 
 function readPolicyMaxAgeSec() {
   const policy = readJson<ShockCoveragePolicy>(POLICY_PATH);
@@ -89,13 +107,21 @@ function readPolicyMaxAgeSec() {
   return maxAgeSec;
 }
 
-function main() {
-  const registry = readJson<ShockCoverageRegistry>(REGISTRY_PATH);
-  const maxAgeSec = readPolicyMaxAgeSec();
-  const nowSec = Math.floor(Date.now() / 1000);
-  const failures = [];
+export function evaluateShockCoverageFreshness({
+  registry,
+  maxAgeSec,
+  nowSec,
+  requiredAssetIds,
+}: {
+  registry: ShockCoverageRegistry;
+  maxAgeSec: number;
+  nowSec: number;
+  requiredAssetIds: readonly string[];
+}) {
+  const failures: string[] = [];
+  const successes: string[] = [];
 
-  for (const assetId of REQUIRED_ASSET_IDS) {
+  for (const assetId of requiredAssetIds) {
     const measurements = (registry.measurements ?? []).filter((entry) => entry.assetId === assetId);
     if (measurements.length === 0) {
       failures.push(`${assetId}: no measurement in ${REGISTRY_PATH}`);
@@ -132,15 +158,30 @@ function main() {
       continue;
     }
 
-    console.log(`[shock-coverage-freshness] ${assetId}: OK - ${context}`);
+    successes.push(`[shock-coverage-freshness] ${assetId}: OK - ${context}`);
   }
 
-  if (failures.length > 0) {
-    console.error(`[shock-coverage-freshness] FAILED\n  - ${failures.join("\n  - ")}`);
+  return { failures, successes };
+}
+
+function main() {
+  const requiredAssetIds = readRequiredAssetIds(readJson<ShockCoverageTargetCatalog>(TARGETS_PATH));
+  const result = evaluateShockCoverageFreshness({
+    registry: readJson<ShockCoverageRegistry>(REGISTRY_PATH),
+    maxAgeSec: readPolicyMaxAgeSec(),
+    nowSec: Math.floor(Date.now() / 1000),
+    requiredAssetIds,
+  });
+  for (const success of result.successes) console.log(success);
+
+  if (result.failures.length > 0) {
+    console.error(`[shock-coverage-freshness] FAILED\n  - ${result.failures.join("\n  - ")}`);
     process.exitCode = 1;
     return;
   }
-  console.log(`[shock-coverage-freshness] All ${REQUIRED_ASSET_IDS.length} targets are fresh, complete and attested.`);
+  console.log(`[shock-coverage-freshness] All ${requiredAssetIds.length} targets are fresh, complete and attested.`);
 }
 
-main();
+if (isDirectRun(import.meta.url, process.argv[1])) {
+  main();
+}

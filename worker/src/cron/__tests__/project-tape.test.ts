@@ -1,8 +1,12 @@
-import { afterEach, describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import { type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
+import { CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
+import { FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { projectTape } from "../project-tape";
 import { TAPE_PROJECTOR_JOBS } from "../../lib/tape-projectors/registry";
 import { mockTapeD1, tapeInsertBinds, tapeInsertBindsForType } from "../../lib/tape-projectors/__tests__/test-support";
+import { projectCemeteryEntries } from "../../lib/tape-projectors/cemetery";
+import { projectLifecycleFrozen } from "../../lib/tape-projectors/lifecycle";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(fixtures.closeAll);
@@ -425,5 +429,49 @@ describe("projectTape", () => {
     const db = mockTapeD1(baseTables()) as MockD1Database;
     await projectTape(db);
     expect(tapeInsertBindsForType(db, "lifecycle.tracked.frozen").length).toBeGreaterThan(0);
+  });
+
+  it("logs and skips cemetery entries with invalid curated dates", async () => {
+    const id = "fixture-invalid-cemetery-date";
+    const invalid = {
+      ...CEMETERY_ENTRIES[0]!,
+      id,
+      deathDate: "2024-02-31",
+    };
+    CEMETERY_ENTRIES.push(invalid);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    try {
+      const db = mockTapeD1(baseTables()) as MockD1Database;
+      await projectCemeteryEntries(db);
+
+      expect(tapeInsertBinds(db).some((binds) => binds[13] === id)).toBe(false);
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining(`Skipping cemetery entry ${id}`));
+    } finally {
+      CEMETERY_ENTRIES.pop();
+      warn.mockRestore();
+    }
+  });
+
+  it("logs and skips frozen lifecycle entries with invalid curated dates", async () => {
+    const id = "fixture-invalid-frozen-date";
+    const entries = FROZEN_STABLECOINS as Array<(typeof FROZEN_STABLECOINS)[number]>;
+    entries.push({
+      ...entries[0]!,
+      id,
+      frozenAt: "24-01-01",
+    });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    try {
+      const db = mockTapeD1(baseTables()) as MockD1Database;
+      await projectLifecycleFrozen(db);
+
+      expect(tapeInsertBinds(db).some((binds) => binds[13] === id)).toBe(false);
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining(`Skipping frozen stablecoin ${id}`));
+    } finally {
+      entries.pop();
+      warn.mockRestore();
+    }
   });
 });

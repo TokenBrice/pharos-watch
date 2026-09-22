@@ -62,6 +62,26 @@ describe("restoreMissingTrackedAssets", () => {
     });
   });
 
+  it("restores an omitted supplemental tracked coin exactly once through tracked coverage", () => {
+    const id = "paxg-paxos";
+    const previous = asset({
+      id,
+      symbol: "PAXG",
+      circulating: { peggedGOLD: 1_000_000 },
+      supplyObservedAt: NOW_SEC - 900,
+    });
+
+    const result = restoreMissingTrackedAssets(
+      fullActiveIntake([id]),
+      new Map([[id, previous]]),
+      NOW_SEC,
+    );
+
+    expect(result.restoredIds).toEqual([id]);
+    expect(result.assets).toHaveLength(1);
+    expect(result.assets[0]).toMatchObject({ id, supplyRestored: true });
+  });
+
   it("does not restore coins already present in the intake list", () => {
     const row = asset({
       id: "usdc-circle",

@@ -36,11 +36,8 @@ function parseOperationallyAffectedAssetIds(value: string): string[] {
   return [...new Set(assetIds)].sort();
 }
 
-interface LatestSafetyGradeRow {
+interface LegacySafetyGradeRow {
   stablecoin_id: string;
-  grade: ReportCardGrade;
-  score: number | null;
-  recorded_at: number;
 }
 
 interface HistoryCard {
@@ -133,27 +130,19 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
   }
   const methodologyVersion = identity.methodologyVersion;
 
-  const [latestRows, latestV2Rows] = await Promise.all([
+  const [legacyRows, latestV2Rows] = await Promise.all([
     db
       .prepare(
-        `SELECT h.stablecoin_id, h.grade, h.score, h.recorded_at
-           FROM safety_grade_history h
-           INNER JOIN (
-             SELECT stablecoin_id, MAX(recorded_at) AS max_recorded_at
-             FROM safety_grade_history
-             GROUP BY stablecoin_id
-           ) latest
-           ON latest.stablecoin_id = h.stablecoin_id
-          AND latest.max_recorded_at = h.recorded_at`,
+        `SELECT DISTINCT stablecoin_id
+           FROM safety_grade_history`,
       )
-      .all<LatestSafetyGradeRow>(),
+      .all<LegacySafetyGradeRow>(),
     fetchLatestSafetyScoreHistoryV2Rows(db),
   ]);
 
-  const latestByCoin = new Map<string, LatestSafetyGradeRow>();
-  for (const row of latestRows.results ?? []) {
-    latestByCoin.set(row.stablecoin_id, row);
-  }
+  const legacyCoinIds = new Set(
+    (legacyRows.results ?? []).map((row) => row.stablecoin_id),
+  );
   const latestV2ByCoin = new Map(latestV2Rows.map((row) => [row.stablecoin_id, row]));
 
   let seeded = 0;
@@ -168,7 +157,7 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
   for (const card of liveCards) {
     throwIfAborted(signal);
 
-    let latest = latestByCoin.get(card.id);
+    let latest: { grade: ReportCardGrade; score: number | null } | undefined;
     const latestV2 = latestV2ByCoin.get(card.id);
     let requiresIdentityBoundary = false;
     let previousIdentity: SafetyScorePublicationIdentity | null = null;
@@ -179,10 +168,8 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
           requiresIdentityBoundary = true;
         } else {
           latest = {
-            stablecoin_id: latestV2.stablecoin_id,
             grade: latestV2.grade,
             score: latestV2.score,
-            recorded_at: latestV2.recorded_at,
           };
           previousIdentity = latestIdentity;
         }
@@ -190,7 +177,7 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
         suppressedIdentityTransitions++;
         continue;
       }
-    } else if (latest) {
+    } else if (legacyCoinIds.has(card.id)) {
       // Legacy rows have no complete publication identity, so they cannot
       // establish an organic predecessor for the current V9 snapshot.
       requiresIdentityBoundary = true;
@@ -281,6 +268,11 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
     ...(degradedReportCardInputs || suppressedIdentityTransitions > 0 ? { status: "degraded" as const } : {}),
     itemCount: seeded + changed + identityBoundaryBaselines,
     metadata: {
+      ...(degradedReportCardInputs
+        ? { reason: "degraded-report-card-inputs" }
+        : suppressedIdentityTransitions > 0
+          ? { reason: "identity-transitions-suppressed" }
+          : {}),
       snapshotDay,
       methodologyVersion,
       model: identity.model,

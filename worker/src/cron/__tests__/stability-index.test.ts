@@ -1,5 +1,7 @@
+import type { StablecoinData } from "@shared/types/market";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { makeStabilityAsset, makeUnpricedFalconAsset } from "./stability-index.test-support";
 
 vi.mock("../../lib/stablecoins-cache", () => ({
   loadStablecoinsCache: vi.fn(),
@@ -10,8 +12,44 @@ import { computeAndStoreStabilityIndex } from "../stability-index";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
 
+const fixtures = createLatestSchemaFixtureTracker();
+
 interface TestDb extends D1Database {
-  runHistory: Array<{ sql: string; binds: unknown[] }>;
+  sqlite: DatabaseSync;
+}
+
+function makeStabilityAsset(overrides: Partial<StablecoinData> = {}): StablecoinData {
+  const nowSec = Math.floor(Date.now() / 1000);
+  return {
+    id: "usdt-tether", name: "Tether USD", symbol: "USDT", geckoId: "tether",
+    pegType: "peggedUSD", pegMechanism: "fiat-backed", price: 1,
+    priceSource: "defillama", priceConfidence: "high", priceUpdatedAt: nowSec,
+    priceObservedAt: nowSec, priceObservedAtMode: "upstream", priceSyncedAt: nowSec,
+    consensusSources: [], agreeSources: [], supplySource: "defillama",
+    circulating: { peggedUSD: 100_000_000 }, circulatingPrevDay: { peggedUSD: 99_000_000 },
+    circulatingPrevWeek: { peggedUSD: 98_000_000 }, circulatingPrevMonth: { peggedUSD: 97_000_000 },
+    chainCirculating: {}, chains: [], ...overrides,
+  };
+}
+
+function makeUnpricedFalconAsset(): StablecoinData {
+  return makeStabilityAsset({
+    id: "usdf-falcon", name: "Falcon USD", symbol: "USDf", geckoId: "falcon-finance",
+    pegMechanism: "crypto-backed", price: null, priceConfidence: null,
+    priceUpdatedAt: null, priceObservedAt: null, priceObservedAtMode: null, priceSyncedAt: null,
+    circulating: { peggedUSD: 93_500_000 }, circulatingPrevDay: { peggedUSD: 92_000_000 },
+    circulatingPrevWeek: { peggedUSD: 90_000_000 }, circulatingPrevMonth: { peggedUSD: 88_000_000 },
+  });
+}
+
+function failAll(statement: D1PreparedStatement, message: string): D1PreparedStatement {
+  return {
+    ...statement,
+    bind: (...args: unknown[]) => failAll(statement.bind(...args), message),
+    all: async () => {
+      throw new Error(message);
+    },
+  } as unknown as D1PreparedStatement;
 }
 
 function makeDb(opts: {
@@ -22,125 +60,96 @@ function makeDb(opts: {
   depegRows?: Array<{ stablecoin_id: string; peg_reference: number; started_at: number }>;
   priceCacheRows?: Array<{ asset_id: string; price: number; updated_at: number }>;
 } = {}): TestDb {
-  const runHistory: Array<{ sql: string; binds: unknown[] }> = [];
-  const defaultDewsRows = [{
+  const { sqlite, db } = fixtures.open();
+  const nowSec = Math.floor(Date.now() / 1000);
+  const configuredDewsRows = opts.dewsRows ?? [{
     stablecoin_id: "usdt-tether",
     score: 72,
     band: "WARNING",
-    computed_at: Math.floor(Date.now() / 1000) - 300,
+    computed_at: nowSec - 300,
   }];
-  const configuredDewsRows = opts.dewsRows ?? defaultDewsRows;
   const hasExplicitPublishedAt = Object.prototype.hasOwnProperty.call(opts, "dewsPublishedAt");
   const dewsPublishedAt = hasExplicitPublishedAt
     ? opts.dewsPublishedAt ?? null
-    : configuredDewsRows[0]?.computed_at ?? Math.floor(Date.now() / 1000) - 300;
+    : configuredDewsRows[0]?.computed_at ?? nowSec - 300;
 
-  const stmt = (sql: string, binds: unknown[] = []) => {
-    const all = async <T>() => {
-      if (sql.includes("FROM depeg_events")) {
-        if (opts.depegQueryFails) {
-          throw new Error("no such table: depeg_events");
-        }
-        return {
-          results: (opts.depegRows ?? [
-            {
-              stablecoin_id: "usdt-tether",
-              peg_reference: 1,
-              started_at: Math.floor(Date.now() / 1000) - 3600,
-            },
-          ]) as T[],
-        };
-      }
-      if (sql.includes("source, confidence, observed_at")) {
-        return {
-          results: (opts.priceCacheRows ?? []).map((r) => ({
-            ...r,
-            source: null,
-            confidence: null,
-            observed_at: null,
-            observed_at_mode: null,
-            synced_at: null,
-            agree_sources_json: null,
-            consensus_sources_json: null,
-          })) as T[],
-        };
-      }
-      if (sql.includes("SELECT asset_id, price, updated_at FROM price_cache")) {
-        return {
-          results: (opts.priceCacheRows ?? []) as T[],
-        };
-      }
-      if (sql.includes("FROM stress_signal_publication_rows") || sql.includes("FROM stress_signals")) {
-        if (opts.dewsUnavailable) {
-          throw new Error("no such table: stress_signal_publication_rows");
-        }
-        const bound = typeof binds[0] === "number" ? binds[0] : null;
-        let filtered = configuredDewsRows;
-        if (bound != null) {
-          if (sql.includes("computed_at = ?")) {
-            filtered = configuredDewsRows.filter((row) => row.computed_at === bound);
-          } else {
-            filtered = configuredDewsRows.filter((row) => row.computed_at <= bound);
-          }
-        }
-        return { results: filtered as T[] };
-      }
-      return { results: [] as T[] };
-    };
+  const insertDepeg = sqlite.prepare(
+    `INSERT INTO depeg_events
+       (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at,
+        ended_at, start_price, peak_price, peg_reference, source)
+     VALUES (?, ?, 'peggedUSD', 'below', -100, ?, NULL, 1, 0.99, ?, 'live')`,
+  );
+  for (const row of opts.depegRows ?? [{
+    stablecoin_id: "usdt-tether",
+    peg_reference: 1,
+    started_at: nowSec - 3600,
+  }]) {
+    insertDepeg.run(row.stablecoin_id, row.stablecoin_id, row.started_at, row.peg_reference);
+  }
 
-    const first = async <T>() => {
-      if (sql.includes("FROM cache WHERE key = ?") && binds[0] === "dews:published-generation" && dewsPublishedAt != null) {
-        const publishedRows = configuredDewsRows.filter((row) => row.computed_at === dewsPublishedAt);
-        return {
-          value: JSON.stringify({
-            updatedAt: dewsPublishedAt,
-            source: "compute-dews",
-            publishStatus: "published",
-            ...(publishedRows.length > 0
-              ? {
-                  coverageVersion: 2,
-                  expectedRowCount: publishedRows.length,
-                  stablecoinIdsDigest: buildDewsStablecoinIdsDigest(
-                    publishedRows.map((row) => row.stablecoin_id),
-                  ),
-                }
-              : {}),
-          }),
-          updated_at: dewsPublishedAt,
-        } as T;
-      }
-      return null as T | null;
-    };
-    const run = async () => {
-      runHistory.push({ sql, binds: [...binds] });
-      return { success: true, meta: { changes: 1 } };
-    };
+  const insertDews = sqlite.prepare(
+    `INSERT INTO stress_signal_publication_rows
+       (stablecoin_id, computed_at, score, band, signals_json)
+     VALUES (?, ?, ?, ?, '{}')`,
+  );
+  for (const row of configuredDewsRows) {
+    insertDews.run(row.stablecoin_id, row.computed_at, row.score, row.band);
+  }
+  if (dewsPublishedAt != null) {
+    const publishedRows = configuredDewsRows.filter((row) => row.computed_at === dewsPublishedAt);
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
+      "dews:published-generation",
+      JSON.stringify({
+        updatedAt: dewsPublishedAt,
+        source: "compute-dews",
+        publishStatus: "published",
+        ...(publishedRows.length > 0
+          ? {
+              coverageVersion: 2,
+              expectedRowCount: publishedRows.length,
+              stablecoinIdsDigest: buildDewsStablecoinIdsDigest(
+                publishedRows.map((row) => row.stablecoin_id),
+              ),
+            }
+          : {}),
+      }),
+      dewsPublishedAt,
+    );
+  }
 
-    return {
-      bind: (...args: unknown[]) => stmt(sql, args),
-      all,
-      first,
-      run,
-    };
-  };
+  const insertPrice = sqlite.prepare(
+    "INSERT INTO price_cache (asset_id, price, updated_at) VALUES (?, ?, ?)",
+  );
+  for (const row of opts.priceCacheRows ?? []) {
+    insertPrice.run(row.asset_id, row.price, row.updated_at);
+  }
 
-  return {
-    prepare: (sql: string) => stmt(sql),
-    batch: async () => [],
-    exec: async () => ({ count: 0, duration: 0 }),
-    dump: async () => new ArrayBuffer(0),
-    runHistory,
-  } as unknown as TestDb;
+  const originalPrepare = db.prepare.bind(db);
+  db.prepare = ((sql: string) => {
+    const statement = originalPrepare(sql);
+    if (opts.depegQueryFails && sql === "SELECT stablecoin_id, peg_reference, started_at FROM depeg_events WHERE ended_at IS NULL") {
+      return failAll(statement, "no such table: depeg_events");
+    }
+    if (opts.dewsUnavailable && sql.includes("pharos:stress-signals:published-exact")) {
+      return failAll(statement, "no such table: stress_signal_publication_rows");
+    }
+    return statement;
+  }) as typeof db.prepare;
+
+  return Object.assign(db, { sqlite }) as TestDb;
 }
 
 function readInsertedInputSnapshot(db: TestDb): Record<string, unknown> {
-  const insertCall = [...db.runHistory].reverse().find((entry) =>
-    entry.sql.includes("INSERT OR REPLACE INTO stability_index_samples"),
-  );
-  if (!insertCall) {
-    throw new Error("Expected stability_index_samples insert");
-  }
-  return JSON.parse(String(insertCall.binds[4] ?? "{}")) as Record<string, unknown>;
+  const row = db.sqlite.prepare(
+    "SELECT input_snapshot FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1",
+  ).get() as { input_snapshot: string } | undefined;
+  if (!row) throw new Error("Expected stability_index_samples insert");
+  return JSON.parse(row.input_snapshot) as Record<string, unknown>;
+}
+
+function persistedSampleCount(db: TestDb): number {
+  const row = db.sqlite.prepare("SELECT COUNT(*) AS count FROM stability_index_samples").get() as { count: number };
+  return Number(row.count);
 }
 
 describe("computeAndStoreStabilityIndex", () => {
@@ -175,9 +184,7 @@ describe("computeAndStoreStabilityIndex", () => {
     expect(metadata.dewsUnavailable).toBe(true);
     expect(metadata.dewsFailureReason).toContain("stress_signal_publication_rows");
     expect(metadata.preservedCurrentSample).toBe(true);
-    expect(
-      db.runHistory.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO stability_index_samples")),
-    ).toBe(false);
+    expect(persistedSampleCount(db)).toBe(0);
   });
 
   it("returns degraded when DEWS has no latest rows", async () => {
@@ -199,9 +206,7 @@ describe("computeAndStoreStabilityIndex", () => {
     expect(metadata.dewsFailureReason).toContain("has no rows");
     expect(metadata.dewsRowsRead).toBe(0);
     expect(metadata.preservedCurrentSample).toBe(true);
-    expect(
-      db.runHistory.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO stability_index_samples")),
-    ).toBe(false);
+    expect(persistedSampleCount(db)).toBe(0);
   });
 
   it("returns degraded when latest DEWS rows are stale", async () => {
@@ -235,9 +240,7 @@ describe("computeAndStoreStabilityIndex", () => {
     expect(metadata.dewsLatestComputedAt).toBe(staleComputedAt);
     expect(metadata.dewsRowsRead).toBe(1);
     expect(metadata.dewsMaxAgeSec).toBe(CRON_INTERVALS["compute-dews"] * 2);
-    expect(
-      db.runHistory.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO stability_index_samples")),
-    ).toBe(false);
+    expect(persistedSampleCount(db)).toBe(0);
   });
 
   it("uses only the stale published generation while a fresher generation is staging", async () => {
@@ -292,9 +295,7 @@ describe("computeAndStoreStabilityIndex", () => {
     expect(metadata.dewsFailureReason).toContain("stale");
     expect(metadata.dewsLatestComputedAt).toBe(staleComputedAt);
     expect(metadata.dewsRowsRead).toBe(1);
-    expect(
-      db.runHistory.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO stability_index_samples")),
-    ).toBe(false);
+    expect(persistedSampleCount(db)).toBe(0);
   });
 
   it("fails closed when no DEWS publication pointer is available", async () => {
@@ -443,9 +444,7 @@ describe("computeAndStoreStabilityIndex", () => {
     expect(metadata.fallbackMode).toBe("depeg-events-unavailable");
     expect(metadata.depegEventsUnavailable).toBe(true);
     expect(metadata.depegEventsFailureReason).toContain("depeg_events");
-    expect(
-      db.runHistory.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO stability_index_samples")),
-    ).toBe(false);
+    expect(persistedSampleCount(db)).toBe(0);
   });
 
   it("keeps run ok when DEWS dependency query succeeds", async () => {
@@ -571,7 +570,7 @@ describe("computeAndStoreStabilityIndex", () => {
     expect(contributors[0]?.bps).toBe(-8800);
   });
 
-  it("returns degraded without publishing when an open depeg has no usable price", async () => {
+  it("publishes with an explicit degraded component when an open depeg has no usable price", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
       kind: "ok",
@@ -601,23 +600,22 @@ describe("computeAndStoreStabilityIndex", () => {
     });
 
     const result = await computeAndStoreStabilityIndex(db);
+    const snapshot = readInsertedInputSnapshot(db);
     const metadata = JSON.parse(result.metadata ?? "{}") as {
-      fallbackMode: string;
       openDepegsWithoutPrice: number;
-      preservedCurrentSample: boolean;
+      degradedComponents: string[];
     };
 
-    expect(result.status).toBe("degraded");
-    expect(result.itemCount).toBe(0);
-    expect(metadata.fallbackMode).toBe("open-depeg-price-unavailable");
+    expect(result.status).toBeUndefined();
+    expect(result.itemCount).toBe(1);
     expect(metadata.openDepegsWithoutPrice).toBe(1);
-    expect(metadata.preservedCurrentSample).toBe(true);
-    expect(
-      db.runHistory.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO stability_index_samples")),
-    ).toBe(false);
+    expect(metadata.degradedComponents).toEqual(["open-depeg-no-price"]);
+    expect(snapshot.degradedComponents).toEqual(["open-depeg-no-price"]);
+    expect(persistedSampleCount(db)).toBe(1);
   });
 
   afterEach(() => {
+    fixtures.closeAll();
     vi.useRealTimers();
     vi.restoreAllMocks();
   });

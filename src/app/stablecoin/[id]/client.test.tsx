@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
 
 import { cleanup, render, screen } from "@testing-library/react";
-import { useRef, type ReactNode } from "react";
+import { useRef } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createContagionSnapshotMock,
   createDepegEventsMock,
+  createDetailLazySectionsMock,
   createHeroCardMock,
   createLogosMock,
   createNextLinkMock,
@@ -30,97 +31,15 @@ const {
   longformScrollspyNavMock,
   useNearViewportMock,
   useStablecoinDetailViewModelMock,
-  detailSectionNames,
-  detailSectionIndex,
 } = vi.hoisted(() => ({
   lazyViewportValues: [] as boolean[],
   nearViewportValues: [] as boolean[],
   longformScrollspyNavMock: vi.fn(),
   useNearViewportMock: vi.fn(),
   useStablecoinDetailViewModelMock: vi.fn(),
-  detailSectionNames: [
-    "McapChart",
-    "MarketDataSection",
-    "DEWSDetail",
-    "StablecoinSafetyScoreV9Card",
-    "ReservePanel",
-    "DepegHistory",
-    "FlowsSection",
-    "FlowHistorySection",
-    "BlacklistSection",
-    "BlacklistHistorySection",
-    "PegStabilityCard",
-    "YieldDetailSection",
-    "DexLiquidityCard",
-    "DistributionSection",
-    "SafetyScoreHistorySection",
-    "StablecoinDepegResolverCard",
-  ],
-  detailSectionIndex: { current: 0 },
 }));
 
-vi.mock("next/dynamic", () => ({
-  default: (loader: () => Promise<unknown>) => {
-    const source = loader.toString();
-    const sectionName = source.includes("mod[name]") ? detailSectionNames[detailSectionIndex.current++] : source;
-    if (sectionName.includes("ReservePanel")) {
-      return function ReservePanelStub({
-        reserves,
-        onRetry,
-        isFetching,
-        isLoading,
-      }: {
-        reserves?: { mode?: string } | null;
-        onRetry?: () => Promise<unknown> | void;
-        isFetching?: boolean;
-        isLoading?: boolean;
-      }) {
-        return (
-          <section id="reserves" data-testid="reserve-panel">
-            <span>{isLoading ? "loading-reserves" : reserves?.mode ?? "no-reserves"}</span>
-            <button
-              type="button"
-              disabled={isFetching}
-              onClick={() => {
-                void onRetry?.();
-              }}
-            >
-              Retry reserves
-            </button>
-          </section>
-        );
-      };
-    }
-    if (sectionName.includes("StablecoinSafetyScoreV9Card")) {
-      return function ReportCardDetailStub({ rightColumn }: { rightColumn?: ReactNode }) {
-        return <div data-testid="report-card">{rightColumn}</div>;
-      };
-    }
-    if (sectionName.includes("FlowHistorySection")) {
-      return function FlowHistorySectionStub() {
-        return <div data-testid="flow-history-section" />;
-      };
-    }
-    if (sectionName.includes("FlowsSection")) {
-      return function FlowsSectionStub() {
-        return <div data-testid="flows-section" />;
-      };
-    }
-    if (sectionName.includes("BlacklistHistorySection")) {
-      return function BlacklistHistorySectionStub() {
-        return <div data-testid="blacklist-history-section" />;
-      };
-    }
-    if (sectionName.includes("BlacklistSection")) {
-      return function BlacklistSectionStub() {
-        return <div data-testid="blacklist-section" />;
-      };
-    }
-    return function DynamicPlaceholder() {
-      return <div data-testid="dynamic-detail-section" />;
-    };
-  },
-}));
+vi.mock("./detail-lazy-sections", () => createDetailLazySectionsMock());
 
 vi.mock("next/link", async () => createNextLinkMock());
 
@@ -174,8 +93,6 @@ vi.mock("@/components/coin-notice", () => createNoopComponentMock("CoinNotices")
 
 vi.mock("@/components/tape-for-coin-teaser", () => createNoopComponentMock("TapeForCoinTeaser"));
 
-vi.mock("@/components/feedback-modal", () => createNoopComponentMock("FeedbackModal"));
-
 vi.mock("@/components/exploit-notice-banner", () => createNoopComponentMock("ExploitNoticeBanner"));
 
 vi.mock("@/components/stablecoin-detail/contagion-snapshot", () => createContagionSnapshotMock());
@@ -213,24 +130,6 @@ describe("StablecoinDetailClient", () => {
     cleanup();
   });
 
-  it("renders static profile content in the loading fallback", () => {
-    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
-    useStablecoinDetailViewModelMock.mockReturnValue({ status: "loading" });
-
-    const { container } = render(
-      <StablecoinDetailClient
-        id={coin.id}
-        coin={coin}
-        summary={null}
-        staticCoin={buildStablecoinStaticMeta(coin)}
-        staticProfileContent={<section data-testid="static-profile">Static stablecoin profile</section>}
-      />,
-    );
-
-    const staticProfile = screen.getByTestId("static-profile");
-    expect(staticProfile.textContent).toContain("Static stablecoin profile");
-    expect(container.textContent).toContain("Loading research dossier");
-  });
 
   it.each([
     { name: "activity near", near: [false, true, false], redemption: true, flows: true, blacklist: true, reserves: false },

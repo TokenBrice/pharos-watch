@@ -313,7 +313,7 @@ export const MINT_AUTHORITY_MODULES_OR_GUARDS_STATUS_VALUES = [
   "unknown",
   "not-applicable",
 ] as const;
-export type MintAuthoritySafeState = import("./stablecoin-meta-schemas").MintAuthoritySafeState;
+export type MintAuthoritySafeState = import("./stablecoin-meta-control-schemas").MintAuthoritySafeState;
 
 export const MINT_AUTHORITY_UPGRADE_MODEL_VALUES = [
   "immutable",
@@ -324,18 +324,18 @@ export const MINT_AUTHORITY_UPGRADE_MODEL_VALUES = [
   "custom",
   "unknown",
 ] as const;
-export type MintAuthorityUpgradeability = import("./stablecoin-meta-schemas").MintAuthorityUpgradeability;
-export type MintAuthorityRouteChecks = import("./stablecoin-meta-schemas").MintAuthorityRouteChecks;
+export type MintAuthorityUpgradeability = import("./stablecoin-meta-control-schemas").MintAuthorityUpgradeability;
+export type MintAuthorityRouteChecks = import("./stablecoin-meta-control-schemas").MintAuthorityRouteChecks;
 
 export const MINT_AUTHORITY_KEY_CUSTODY_ATTESTATION_KIND_VALUES = ["mpc", "hsm"] as const;
-export type MintAuthorityKeyCustodyAttestation = import("./stablecoin-meta-schemas").MintAuthorityKeyCustodyAttestation;
-export type MintAuthorityControl = import("./stablecoin-meta-schemas").MintAuthorityControl;
-export type MintAuthorityReview = import("./stablecoin-meta-schemas").MintAuthorityReview;
-export type MintAuthorityScopedQuestion = import("./stablecoin-meta-schemas").MintAuthorityScopedQuestion;
-export type MintAuthorityNoLocalIssuanceException = import("./stablecoin-meta-schemas").MintAuthorityNoLocalIssuanceException;
-export type MintAuthorityProfile = import("./stablecoin-meta-schemas").MintAuthorityProfile;
-export type BlacklistabilityReview = import("./stablecoin-meta-schemas").BlacklistabilityReview;
-export type Jurisdiction = import("./stablecoin-meta-schemas").Jurisdiction;
+export type MintAuthorityKeyCustodyAttestation = import("./stablecoin-meta-control-schemas").MintAuthorityKeyCustodyAttestation;
+export type MintAuthorityControl = import("./stablecoin-meta-control-schemas").MintAuthorityControl;
+export type MintAuthorityReview = import("./stablecoin-meta-control-schemas").MintAuthorityReview;
+export type MintAuthorityScopedQuestion = import("./stablecoin-meta-control-schemas").MintAuthorityScopedQuestion;
+export type MintAuthorityNoLocalIssuanceException = import("./stablecoin-meta-control-schemas").MintAuthorityNoLocalIssuanceException;
+export type MintAuthorityProfile = import("./stablecoin-meta-control-schemas").MintAuthorityProfile;
+export type BlacklistabilityReview = import("./stablecoin-meta-compliance-schemas").BlacklistabilityReview;
+export type Jurisdiction = import("./stablecoin-meta-compliance-schemas").Jurisdiction;
 
 export const MICA_STATUS_VALUES = ["authorized", "pending", "transitional", "non-compliant", "out-of-scope"] as const;
 export type MicaStatus = (typeof MICA_STATUS_VALUES)[number];
@@ -345,7 +345,7 @@ export type MicaTokenType = (typeof MICA_TOKEN_TYPE_VALUES)[number];
 
 export const MICA_AUTHORIZATION_TYPE_VALUES = ["emi", "credit-institution"] as const;
 export type MicaAuthorizationType = (typeof MICA_AUTHORIZATION_TYPE_VALUES)[number];
-export type MicaProfile = import("./stablecoin-meta-schemas").MicaProfile;
+export type MicaProfile = import("./stablecoin-meta-compliance-schemas").MicaProfile;
 
 export const GENIUS_APPLICABILITY_VALUES = [
   "apparent-payment-stablecoin",
@@ -419,11 +419,11 @@ export const GENIUS_DASP_OFFER_SALE_STATUS_VALUES = [
   "unknown",
 ] as const;
 export type GeniusDaspOfferSaleStatus = (typeof GENIUS_DASP_OFFER_SALE_STATUS_VALUES)[number];
-export type GeniusReference = import("./stablecoin-meta-schemas").GeniusReference;
-export type GeniusApplicabilityBasis = import("./stablecoin-meta-schemas").GeniusApplicabilityBasis;
-export type GeniusForeignExceptionEvidence = import("./stablecoin-meta-schemas").GeniusForeignExceptionEvidence;
-export type GeniusNegativeEvidenceReview = import("./stablecoin-meta-schemas").GeniusNegativeEvidenceReview;
-export type GeniusProfile = import("./stablecoin-meta-schemas").GeniusProfile;
+export type GeniusReference = import("./stablecoin-meta-compliance-schemas").GeniusReference;
+export type GeniusApplicabilityBasis = import("./stablecoin-meta-compliance-schemas").GeniusApplicabilityBasis;
+export type GeniusForeignExceptionEvidence = import("./stablecoin-meta-compliance-schemas").GeniusForeignExceptionEvidence;
+export type GeniusNegativeEvidenceReview = import("./stablecoin-meta-compliance-schemas").GeniusNegativeEvidenceReview;
+export type GeniusProfile = import("./stablecoin-meta-compliance-schemas").GeniusProfile;
 export type ContractDeployment = import("./stablecoin-meta-schemas").ContractDeployment;
 export type DependencyWeight = import("./stablecoin-meta-schemas").DependencyWeight;
 
@@ -485,12 +485,12 @@ export const ORACLE_RISK_BRANCH_APPLICABILITY_VALUES = [
   "unresolved",
 ] as const;
 export const ORACLE_RISK_LIQUIDATION_STATE_VALUES = ["callable", "uncallable", "unknown"] as const;
-export type OracleRiskBranchApplicabilityReview = import("./stablecoin-meta-schemas").OracleRiskBranchApplicabilityReview;
-export type OracleRiskFeed = import("./stablecoin-meta-schemas").OracleRiskFeed;
-export type OracleRiskCollateralParameter = import("./stablecoin-meta-schemas").OracleRiskCollateralParameter;
+export type OracleRiskBranchApplicabilityReview = import("./stablecoin-meta-control-schemas").OracleRiskBranchApplicabilityReview;
+export type OracleRiskFeed = import("./stablecoin-meta-control-schemas").OracleRiskFeed;
+export type OracleRiskCollateralParameter = import("./stablecoin-meta-control-schemas").OracleRiskCollateralParameter;
 
-export type OracleRiskBranch = import("./stablecoin-meta-schemas").OracleRiskBranch;
-export type OracleRiskProfile = import("./stablecoin-meta-schemas").OracleRiskProfile;
+export type OracleRiskBranch = import("./stablecoin-meta-control-schemas").OracleRiskBranch;
+export type OracleRiskProfile = import("./stablecoin-meta-control-schemas").OracleRiskProfile;
 
 export const BRIDGE_ROUTE_RISK_TIER_VALUES = [
   "single-chain-or-native",
@@ -508,7 +508,7 @@ export const BRIDGE_ROUTE_RISK_CONFIDENCE_VALUES = ["verified", "probable", "man
 export type BridgeRouteRiskConfidence = (typeof BRIDGE_ROUTE_RISK_CONFIDENCE_VALUES)[number];
 
 export const BRIDGE_ROUTE_RISK_SOURCE_VALUES = ["l2beat", "issuer", "docs", "explorer", "manual"] as const;
-export type BridgeRouteProtocolEvidence = import("./stablecoin-meta-schemas").BridgeRouteProtocolEvidence;
+export type BridgeRouteProtocolEvidence = import("./stablecoin-meta-control-schemas").BridgeRouteProtocolEvidence;
 
 export const BRIDGE_ROUTE_CLASS_VALUES = ["native", "canonical", "third-party", "unknown"] as const;
 export const BRIDGE_ROUTE_REVIEW_DISPOSITION_VALUES = ["reviewed", "unresolved"] as const;
@@ -543,10 +543,10 @@ export const BRIDGE_ROUTE_CONTROL_CAPABILITY_VALUES = [
   "peer-config",
 ] as const;
 export type BridgeRouteControlCapability = (typeof BRIDGE_ROUTE_CONTROL_CAPABILITY_VALUES)[number];
-export type BridgeRouteControl = import("./stablecoin-meta-schemas").BridgeRouteControl;
-export type BridgeRouteDeployment = import("./stablecoin-meta-schemas").BridgeRouteDeployment;
-export type BridgeRouteRiskProfile = import("./stablecoin-meta-schemas").BridgeRouteRiskProfile;
-export type BridgeRouteScopedQuestion = import("./stablecoin-meta-schemas").BridgeRouteScopedQuestion;
+export type BridgeRouteControl = import("./stablecoin-meta-control-schemas").BridgeRouteControl;
+export type BridgeRouteDeployment = import("./stablecoin-meta-control-schemas").BridgeRouteDeployment;
+export type BridgeRouteRiskProfile = import("./stablecoin-meta-control-schemas").BridgeRouteRiskProfile;
+export type BridgeRouteScopedQuestion = import("./stablecoin-meta-control-schemas").BridgeRouteScopedQuestion;
 
 export const INFRASTRUCTURE_VALUES = ["liquity-v1", "liquity-v2", "m0"] as const;
 export type Infrastructure = (typeof INFRASTRUCTURE_VALUES)[number];

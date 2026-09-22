@@ -4,7 +4,6 @@ import {
   createBudget,
 } from "../lib/evm-logs";
 import {
-  MINT_BURN_BRIDGE_VALIDATION_ERROR_COUNT,
   MINT_BURN_CONFIGS,
   type MintBurnContractConfig,
 } from "../lib/mint-burn-contracts";
@@ -15,6 +14,7 @@ import {
   mintBurnConfigKey,
   readMintBurnSyncStateBatch,
 } from "../lib/mint-burn-pipeline/sync-state";
+import { D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "../lib/d1-primitives";
 import type { CronProgressReporter } from "../lib/cron-logger";
 import { reportCronProgress } from "../lib/cron-progress";
 import { loadMintBurnChainContexts } from "./mint-burn/chain-context";
@@ -45,7 +45,6 @@ const CRITICAL_BRIDGE_CONFIG_BUDGET_LIMIT = 150;
 const EXTENDED_CONFIG_BUDGET_LIMIT = 25;
 const DEGRADE_CONSECUTIVE_THRESHOLD = 2;
 const ERROR_CONSECUTIVE_THRESHOLD = 3;
-const SQL_IN_CHUNK_SIZE = 90;
 
 export type { SyncMintBurnStatus, MintBurnLane } from "../lib/mint-burn-pipeline/types";
 
@@ -141,9 +140,6 @@ export async function syncMintBurn(
       contractsSkipped: 0,
       chainHeads: {},
       apiErrors: 0,
-      fallbackMode: null,
-      validationFailures: 0,
-      bridgeValidationErrors: MINT_BURN_BRIDGE_VALIDATION_ERROR_COUNT,
       bridgeClassification: {
         txContextShortfalls: 0,
         deferredRows: 0,
@@ -201,7 +197,7 @@ export async function syncMintBurn(
   const { prices, priceHistory } = await loadMintBurnPriceContextBatch(
     db,
     stablecoinIds,
-    SQL_IN_CHUNK_SIZE,
+    D1_SAFE_IN_CLAUSE_BIND_LIMIT,
   );
 
   await reportCronProgress(reportProgress, {
@@ -307,7 +303,6 @@ export async function syncMintBurn(
     status = "degraded";
   }
   completion.metadata.recalcFailed = recalcFailed;
-  completion.metadata.bridgeValidationErrors = MINT_BURN_BRIDGE_VALIDATION_ERROR_COUNT;
   if (recalcError) completion.metadata.recalcError = recalcError;
   if (lane === "critical") {
     const retention = await pruneMintBurnRetention(db, runTimestamp, signal);
@@ -336,7 +331,11 @@ export async function syncMintBurn(
 
   if (status === "ok" || status === "degraded") {
     try {
-      await invalidateMintBurnFlowCaches(db);
+      // Only the critical lane's scheduled sidecar republishes the aggregate
+      // (Bank Run Gauge) cache rows after this purge; the extended lane has
+      // no such sidecar and must leave the publication in place so the gauge
+      // stays available between critical-lane runs.
+      await invalidateMintBurnFlowCaches(db, { includeAggregate: lane !== "extended" });
     } catch (e) {
       logWorkerEventArgs("handler", "warn", "[sync-mint-burn] cache invalidation failed:", e);
     }

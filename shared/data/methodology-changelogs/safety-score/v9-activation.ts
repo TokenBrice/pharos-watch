@@ -2,6 +2,36 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const SAFETY_SCORE_V9: readonly MethodologyChangelogEntry[] = [
   {
+    version: "9.91",
+    title: "Bounded assurance-report freshness",
+    date: "2026-09-21",
+    effectiveAt: 1789990001,
+    summary:
+      "Proof-of-reserves reports can support a known assurance component for at most 100 days from the conservative UTC start of their reporting-period end. Older reports remain visible as stale evidence rather than current assurance.",
+    impact: [
+      "Fiat-cash, commodity-claim, and Treasury-bill mechanism reviews apply the same policy-owned 100-day report-age cap.",
+      "Assurance components bind to the report's own period, publication date, sources, and payload instead of inheriting only generic mechanism-review evidence.",
+      "A newer report discovered by an independent-assurance adapter still fails closed until its exact URL, hash, byte length, dates, and reconciled rows are reviewed.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
+    version: "9.9",
+    title: "Clock-bound chain-maturity admissions",
+    date: "2026-09-21",
+    effectiveAt: 1789990000,
+    summary:
+      "Chain maturity is now an evidence-backed, time-bounded admission rather than a static roster. Every citation carries its captured assertion, independent verification outcome, and reachability state; unresolved sources remain pending.",
+    impact: [
+      "The five chain-maturity gates derive matureChains from the review registry at the fixed capture clock, with a numeric quarterly nextReviewAt and explicit expired state.",
+      "The 404/non-supporting review queue holds Hyperliquid, Conflux, and the other affected chains outside mature common-mode treatment until evidence is independently remediated.",
+      "Resolved evaluation clock and mature-chain identity are persisted in evaluated-set envelopes so historical replay does not consult wall-clock time.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "9.8",
     title: "Published-fee physical delivery with an unbounded-terms cap",
     date: "2026-09-21",
@@ -12,6 +42,7 @@ export const SAFETY_SCORE_V9: readonly MethodologyChangelogEntry[] = [
       "Unbounded delivery carries an explicit output-quality cap of 55, strictly below bounded physical delivery at 65 and never above fiat-par quality.",
       "Published percentage and flat fees reduce value; unbounded delivery receives no invented USD deduction. Minimum lots still apply and every physical output remains ineligible for same-notional credit.",
       "Historical captures lacking the raw USD-per-troy-ounce reference remain unresolved; closure requires the next peg producer cycle and refreshed redemption observations.",
+      "Evaluation-build identity: the V9 evaluation-build digest now covers the evaluator's runtime import closure — gap-index, operational-market-depth, unavailability-roots and the reviewed chain-maturity registry enroll alongside the existing inputs — producing evaluationBuildDigest 474ced11fd05835a0f953c1041e73de92c709d1320423e7c1146d0f08f39fcc1; later edits to those score-bearing sources rotate the identity again without a methodology bump.",
     ],
     commits: [],
     reconstructed: false,

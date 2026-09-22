@@ -269,34 +269,23 @@ describe("pages middleware markdown negotiation", () => {
     expect(await res.text()).toBe("");
   });
 
-  it("serves decoded HTML when the client accepts gzip while preserving nonce injection", async () => {
-    const req = new Request("https://pharos.watch/", {
-      headers: { "Accept-Encoding": "gzip, deflate, br" },
-    });
-    const html = "<html><head><script>window.__INLINE__ = true;</script></head></html>";
-    const res = await onRequest(ctx(req, { "/index.html": html }));
+  it.each(["gzip, deflate, br", "identity"])(
+    "serves decoded HTML with the injected nonce when the client sends Accept-Encoding: %s",
+    async (acceptEncoding) => {
+      const req = new Request("https://pharos.watch/", {
+        headers: { "Accept-Encoding": acceptEncoding },
+      });
+      const html = "<html><head><script>window.__INLINE__ = true;</script></head></html>";
+      const res = await onRequest(ctx(req, { "/index.html": html }));
 
-    expect(res.headers.get("Content-Encoding")).toBeNull();
-    expect(res.headers.get("Vary")).toContain("Accept-Encoding");
-    expect(res.headers.get("Content-Security-Policy")).toContain("script-src 'self' 'nonce-");
+      expect(res.headers.get("Content-Encoding")).toBeNull();
+      expect(res.headers.get("Vary")).toContain("Accept-Encoding");
+      expect(res.headers.get("Content-Security-Policy")).toContain("script-src 'self' 'nonce-");
 
-    const body = await res.text();
-    expect(body).toMatch(/<script nonce="[^"]+">window\.__INLINE__ = true;<\/script>/);
-  });
-
-  it("serves plaintext HTML with the nonce when the client does not accept gzip", async () => {
-    const req = new Request("https://pharos.watch/", {
-      headers: { "Accept-Encoding": "identity" },
-    });
-    const html = "<html><head><script>window.__INLINE__ = true;</script></head></html>";
-    const res = await onRequest(ctx(req, { "/index.html": html }));
-
-    expect(res.headers.get("Content-Encoding")).toBeNull();
-    expect(res.headers.get("Vary")).toContain("Accept-Encoding");
-
-    const body = await res.text();
-    expect(body).toMatch(/<script nonce="[^"]+">window\.__INLINE__ = true;<\/script>/);
-  });
+      const body = await res.text();
+      expect(body).toMatch(/<script nonce="[^"]+">window\.__INLINE__ = true;<\/script>/);
+    },
+  );
 
   it("keeps HEAD responses unencoded even when the client accepts gzip", async () => {
     const req = new Request("https://pharos.watch/", {

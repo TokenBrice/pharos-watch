@@ -14,6 +14,7 @@ import {
 } from "../lib/telegram/pending-queue";
 import { emptyAlerts } from "./dispatch-telegram-routing";
 import { loadFreshFreezeAlerts, type FreezeAlert } from "./telegram-alert-freeze";
+import { prepareTelegramAlertJobCounterReconciliation } from "./telegram-alert-job-target-outcomes";
 import { isQuietHoursActive } from "../lib/telegram/quiet-hours";
 
 const FREEZE_CURSOR_KEY = "alert:freeze-tape-cursor";
@@ -293,20 +294,10 @@ async function persistAndQueueFreezeEvent(db: D1Database, event: FreezeAlert, no
       "UPDATE telegram_freeze_alert_events SET status = 'complete', completed_at = ?, updated_at = ? WHERE source_event_id = ?",
     ).bind(nowSec, nowSec, sourceEventId).run();
   }
-  await db.prepare(
-    `UPDATE telegram_alert_jobs
-        SET status = CASE WHEN ? > 0 THEN 'queued' ELSE status END,
-            target_count = (
-              SELECT COUNT(*) FROM telegram_alert_job_targets WHERE job_id = telegram_alert_jobs.job_id
-            ),
-            planned_count = (
-              SELECT COUNT(*) FROM telegram_alert_job_targets WHERE job_id = telegram_alert_jobs.job_id
-            ),
-            enqueued_count = (
-              SELECT COUNT(*) FROM telegram_alert_job_targets
-               WHERE job_id = telegram_alert_jobs.job_id AND status = 'queued'
-            )
-      WHERE job_id = ?`,
-  ).bind(queued, `telegram:${sourceEventId}:freeze`).run();
+  await prepareTelegramAlertJobCounterReconciliation(
+    db,
+    `telegram:${sourceEventId}:freeze`,
+    nowSec,
+  ).run();
   return queued;
 }

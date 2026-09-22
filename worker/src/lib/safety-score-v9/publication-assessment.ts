@@ -7,18 +7,29 @@ import type {
 } from "@shared/types/safety-score-v9-public";
 import { REPORT_CARD_GRADE_RANK } from "@shared/lib/report-card-core";
 import type { V9Grade } from "@shared/types/safety-score-v9";
-import { compareText } from "@shared/types/safety-score-v9-fact-primitives";
+import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import { z } from "zod";
 import { canonicalV9RouteKey } from "@shared/lib/safety-score-v9/facts";
 import {
   getDexMeasuredExecutionFreshnessMaxSec,
   isDexMeasuredExecutionObservationHistoryMature,
 } from "@shared/types/measured-execution";
-import type { SafetyScoreV9CompilerInput } from "./native-input";
+import type { ExitRouteObservation } from "@shared/types/exit-route";
+
+interface MeasuredExitPublicationInput {
+  clockSec: number;
+  dexGenerationId: string;
+  dexLiqMap: Readonly<
+    Record<
+      string,
+      { exitRouteObservations?: readonly ExitRouteObservation[] | null }
+    >
+  >;
+}
 
 /** Snapshot publication time cannot refresh the measured history embedded in it. */
 export function expiredMeasuredExitAssetIds(
-  fixedInput: Pick<SafetyScoreV9CompilerInput, "clockSec" | "dexGenerationId" | "dexLiqMap">,
+  fixedInput: MeasuredExitPublicationInput,
   candidate: SafetyScoreV9CurrentResponse,
   acceptedPublication: SafetyScoreV9AcceptedPublicationBaseline | null = null,
 ): string[] {
@@ -81,7 +92,7 @@ export const V9PublicationInputHealthSchema = z
     liveReserves: z
       .object({
         state: z.enum(["available", "unavailable"]),
-        coverageRatio: z.number().finite().min(0).max(1).nullable().default(null),
+        coverageRatio: z.number().finite().min(0).nullable().default(null),
       })
       .strict(),
   })

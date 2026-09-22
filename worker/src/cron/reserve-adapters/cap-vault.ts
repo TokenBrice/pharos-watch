@@ -28,7 +28,7 @@ import {
 } from "./helpers";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "./validate";
 import { validateDecimals } from "./slice-math";
-import { decodeAddressArrayWord, decodeBoolWord } from "./abi-decode";
+import { decodeAddressArrayWord, decodeStrictBoolWord } from "./abi-decode";
 import { pinnedBlockPlan } from "./evm-observation-plan";
 
 const ADAPTER_KEY = "cap-vault";
@@ -324,6 +324,7 @@ export function adaptCapVaultState(args: {
             ? "degraded"
             : "paused",
         routeStatusSource: "onchain",
+        routeObserved: true,
         holderEligibility: "any-holder",
         settlementDelaySec: 0,
         sourceUrls: ["https://docs.cap.app/concepts/vault"],
@@ -402,7 +403,7 @@ export async function fetchCapVaultReserves(
 
     const decimals = validateDecimals(decimalsRaw, `${ADAPTER_KEY}: decimals() for asset ${address}`);
     // Conservative: treat a missing/undecodable paused() response as paused.
-    const pausedDecoded = decodeBoolWord(pausedRaw);
+    const pausedDecoded = decodeStrictBoolWord(pausedRaw);
     const pausedStatusUnavailable = pausedDecoded == null;
     const paused = pausedDecoded ?? true;
 

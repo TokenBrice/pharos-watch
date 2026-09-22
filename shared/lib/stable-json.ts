@@ -40,24 +40,6 @@ function assertPlainStableJsonValue(value: unknown, path: string): void {
   }
 }
 
-function stringifyCanonical(value: unknown): string {
-  if (value === null) return "null";
-  if (value === undefined) return "";
-
-  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
-    return JSON.stringify(value);
-  }
-  if (Array.isArray(value)) {
-    return `[${value.map((entry) => stringifyCanonical(entry)).join(",")}]`;
-  }
-
-  const objectValue = value as Record<string, unknown>;
-  const entries = Object.keys(objectValue)
-    .filter((key) => objectValue[key] !== undefined)
-    .sort()
-    .map((key) => `${JSON.stringify(key)}:${stringifyCanonical(objectValue[key])}`);
-  return `{${entries.join(",")}}`;
-}
 
 const CANONICAL_CHUNK_TARGET = 64 * 1024;
 
@@ -124,8 +106,7 @@ function* stringifyCanonicalChunks(value: unknown): Generator<string> {
 
 /** Deterministic JSON for runtime-neutral identity and digest projections. */
 export function stableJsonStringifyV1(value: unknown): string {
-  assertPlainStableJsonValue(value, "$");
-  return stringifyCanonical(value);
+  return [...stableJsonStringifyChunksV1(value)].join("");
 }
 
 /**

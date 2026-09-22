@@ -9,21 +9,8 @@ import {
   type RedemptionBackstopConfig,
 } from "../shared";
 import {
-  REVIEWED_MAY_BATCH_AT,
   REVIEWED_STABLECOIN_AUDIT_AT,
-  REVIEWED_WRAPPER_WAVE_AT,
   REVIEWED_YIELD_COVERAGE_WAVE_AT,
-} from "../review-dates";
-
-// Re-exported from review-dates as a convenience barrel so per-coin files in
-// this directory can import cross-cutting review dates from a single local import.
-export {
-  REVIEWED_REMEDIATION_AT,
-  REVIEWED_STABLECOIN_AUDIT_AT,
-  REVIEWED_FOLLOWUP_REMEDIATION_AT,
-  REVIEWED_EXIT_CREDIT_WAVE_AT,
-  REVIEWED_EXIT_CREDIT_WAVE2_AT,
-  REVIEWED_EXIT_CREDIT_WAVE3_AT,
 } from "../review-dates";
 
 /** Scaffold for the one-coin modules in this directory: applies the shared
@@ -79,7 +66,7 @@ export function steakhousePrimeInstantConfig(symbol: "USDC" | "USDT"): Redemptio
       0,
       `Steakhouse Prime Instant uses Morpho vaults; withdrawals redeem to ${symbol} when liquidity is available and Morpho vault fees accrue from generated yield rather than a separate withdrawal fee.`,
     ),
-    reviewedAt: REVIEWED_YIELD_EXPANSION_AT,
+    reviewedAt: REVIEWED_YIELD_COVERAGE_WAVE_AT,
     docs: [
       sourceRefFull("Steakhouse Prime Instant", "https://www.steakhouse.financial/docs/products/vault-products/current/prime-instant"),
       sourceRef("Morpho vault integration", "https://legacy.docs.morpho.org/morpho-vaults/tutorials/integrate-vaults/", ["route"]),
@@ -111,9 +98,3 @@ export function gauntletMorphoConfig(vaultLabel: string, vaultUrl: string): Rede
   });
 }
 
-export { REVIEWED_DIRECT_REDEMPTION_AT } from "../review-dates";
-export const REVIEWED_ZCHF_BRIDGE_AT = "2026-05-25";
-export const REVIEWED_WRAPPER_REDEMPTION_AT = REVIEWED_WRAPPER_WAVE_AT;
-export const REVIEWED_STABLECOIN_BATCH_AT = REVIEWED_MAY_BATCH_AT;
-export const REVIEWED_YIELD_EXPANSION_AT = REVIEWED_YIELD_COVERAGE_WAVE_AT;
-export const REVIEWED_FXSAVE_LIVE_REDEMPTION_AT = "2026-05-27";

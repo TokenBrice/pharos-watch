@@ -54,7 +54,7 @@ export const CASE_STUDY_CLIENT_BY_COIN_ID: Record<string, CaseStudyClientSummary
     "title": "USYC: when a T-bill fund became DeFi collateral",
     "outcome": "wounded"
   },
-  "usd0-usual": {
+  "busd0-usual": {
     "slug": "usd0pp-usual-2025",
     "title": "USD0++ depeg: when Usual changed the redemption floor",
     "outcome": "wounded"
@@ -215,10 +215,17 @@ export const CASE_STUDY_EVENT_WINDOWS: readonly CaseStudyEventWindowResolverItem
   {
     "slug": "dai-black-thursday",
     "primaryCoinId": "dai-makerdao",
+    "relatedCoinIds": [],
+    "startISO": "2020-03-12",
+    "endISO": "2020-04-01"
+  },
+  {
+    "slug": "dai-black-thursday",
+    "primaryCoinId": "dai-makerdao",
     "relatedCoinIds": [
       "usdc-circle"
     ],
-    "startISO": "2020-03-12",
+    "startISO": "2023-03-11",
     "endISO": "2023-03-13"
   },
   {
@@ -248,7 +255,7 @@ export const CASE_STUDY_EVENT_WINDOWS: readonly CaseStudyEventWindowResolverItem
   },
   {
     "slug": "usd0pp-usual-2025",
-    "primaryCoinId": "usd0-usual",
+    "primaryCoinId": "busd0-usual",
     "relatedCoinIds": [],
     "startISO": "2025-01-09",
     "endISO": "2025-01-16"
@@ -503,10 +510,10 @@ export const CASE_STUDY_CLIENT_LIST: readonly CaseStudyClientListEntry[] = [
     "title": "USD0++ depeg: when Usual changed the redemption floor",
     "outcome": "wounded",
     "coinSymbols": [
-      "USD0"
+      "bUSD0"
     ],
     "year": "2025",
-    "keywords": "usual usd usd0 usd0pp usual 2025"
+    "keywords": "bond usd0 busd0 usd0pp usual 2025"
   },
   {
     "slug": "crvusd-exploit-trilogy",

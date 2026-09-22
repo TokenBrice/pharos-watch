@@ -1,6 +1,7 @@
 import type { LiveReserveInput, LiveReserveWarning } from "@shared/types/live-reserves";
 import { ratioToNumber } from "../../lib/authoritative-price-sources/helpers";
 import type { AdapterContext } from "./types";
+import type { EvmMulticall3Result } from "../../lib/evm-rpc";
 import {
   makeOnchainCallers,
   reserveDegradedWarning,
@@ -13,6 +14,14 @@ export const ERC4626_ASSET_SELECTOR = "0x38d52e0f";
 export const ERC4626_CONVERT_TO_ASSETS_SELECTOR = "0x07a2d13a";
 
 export type ContractRawCaller = (data: string) => Promise<string | null>;
+
+export function multicallResultOrNull(
+  results: EvmMulticall3Result[] | null,
+  label: string,
+): string | null {
+  const result = results?.find((candidate) => candidate.label === label);
+  return result?.success ? result.returnData : null;
+}
 
 interface ContractRawCallerOptions {
   contractAddress: string;

@@ -80,7 +80,12 @@ export function TelegramBroadcastPanel() {
     setState((previous) => ({ ...previous, ...next }));
   }
 
+  // The preview-first invariant belongs to the lane, not to the primary
+  // button: the failure banner's retry/new-intent actions rebuild the body
+  // from current form state too, so any of them could fan an unreviewed draft
+  // out to every subscriber.
   async function run(lane: string, dryRun: boolean, mode: AdminMutationIntentMode) {
+    if (!dryRun && !canSendLive) return;
     const execution = await runIntent({
       laneKey: lane,
       mode,

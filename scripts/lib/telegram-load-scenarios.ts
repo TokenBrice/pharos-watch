@@ -18,6 +18,7 @@ import {
   TELEGRAM_TARGET_PLAN_ENQUEUE_PAGE_SIZE,
   TELEGRAM_TARGET_PLAN_HORIZON_PAGE_SIZE,
 } from "@shared/lib/telegram-delivery-policy";
+import { estimateTelegramQueueEnvelope } from "./telegram-recap-load-scenarios";
 type AlertType = "depeg" | "dews" | "safety" | "launch" | "reserve" | "freeze";
 type ScenarioId = "single-depeg" | "market-wide-burst" | "dews-safety-burst" | "freeze-event" | "admin-broadcast" | "telegram-429-storm";
 type SloStatus = "ok" | "slow" | "breach" | "outage-unavailable" | "exploratory";
@@ -135,6 +136,7 @@ export interface ProductionCalibratedDispatchScenario {
 export const {
   watcherTargets: WATCHER_TARGETS,
   requiredTarget: REQUIRED_TARGET,
+  sloEnforcedTarget: SLO_ENFORCED_TARGET,
   exploratoryTarget: EXPLORATORY_TARGET,
   telegramBroadcastMessagesPerSecond: TELEGRAM_BROADCAST_MESSAGES_PER_SECOND,
   telegramP95SendLatencyMs: TELEGRAM_P95_SEND_LATENCY_MS,
@@ -232,15 +234,23 @@ export const DISPATCH_CPU_MS = readDispatchCpuMs();
 export const CPU_BUDGET_CEILING_MS = DISPATCH_CPU_MS * CPU_BUDGET_SAFETY_FRACTION;
 
 /**
- * Estimate per-invocation CPU for a scenario AFTER the C102 budget-before-format
- * reorder: at most `FRESH_ATTEMPTS_PER_RUN` chats are formatted on the hot path,
- * and only the fresh-sent chunks incur send cost in the same invocation.
+ * Estimate peak per-invocation CPU across the planning and pending-delivery
+ * phases. Production enqueues every fresh target, so pending sends still
+ * consume CPU when `initialFreshAttempts` is zero.
  */
-function estimateCpuMs(args: { messageChunks: number; initialFreshAttempts: number }): number {
+function estimateCpuMs(args: {
+  messageChunks: number;
+  initialFreshAttempts: number;
+  pendingEnqueued: number;
+}): number {
   const formattedChats = Math.min(args.messageChunks, FRESH_ATTEMPTS_PER_RUN);
-  const formatMs = formattedChats * FORMAT_CPU_MS_PER_CHAT;
-  const sendMs = args.initialFreshAttempts * SEND_CPU_MS_PER_MESSAGE;
-  return Math.round(formatMs + sendMs);
+  const plannerCpuMs =
+    formattedChats * FORMAT_CPU_MS_PER_CHAT
+    + args.initialFreshAttempts * SEND_CPU_MS_PER_MESSAGE;
+  const pendingDrainCpuMs =
+    Math.min(args.pendingEnqueued, PENDING_DRAIN_ATTEMPTS_PER_RUN)
+    * SEND_CPU_MS_PER_MESSAGE;
+  return Math.round(Math.max(plannerCpuMs, pendingDrainCpuMs));
 }
 
 export const EFFECTIVE_SEND_MESSAGES_PER_SECOND = Math.min(
@@ -544,17 +554,17 @@ function estimateRiskD1Ops(args: {
 function classifySlo(
   targetActiveWatchers: number,
   scenarioId: ScenarioId,
-  postRecoverySeconds: number,
+  completionSeconds: number,
   outageUnavailableSeconds: number,
 ): SloStatus {
   if (targetActiveWatchers === EXPLORATORY_TARGET) return "exploratory";
   if (outageUnavailableSeconds > 0) return "outage-unavailable";
   if (scenarioId === "market-wide-burst" || scenarioId === "telegram-429-storm") {
-    return postRecoverySeconds <= SPIKE_MAX_SECONDS ? "slow" : "breach";
+    return completionSeconds <= SPIKE_MAX_SECONDS ? "slow" : "breach";
   }
-  return postRecoverySeconds <= NORMAL_SLO_SECONDS
+  return completionSeconds <= NORMAL_SLO_SECONDS
     ? "ok"
-    : postRecoverySeconds <= SPIKE_MAX_SECONDS
+    : completionSeconds <= SPIKE_MAX_SECONDS
       ? "slow"
       : "breach";
 }
@@ -592,18 +602,26 @@ function buildScenarioResult(args: {
   // pending lifecycle; the legacy direct-fresh sender is rollback-only.
   const initialFreshAttempts = 0;
   const pendingEnqueued = messageChunks;
-  const pendingDrainRuns = Math.ceil(pendingEnqueued / PENDING_DRAIN_ATTEMPTS_PER_RUN);
-  const pendingScheduleSeconds = pendingDrainRuns * CRON_INTERVAL_SECONDS;
-  const pendingSendSeconds = estimateSendSeconds(pendingEnqueued);
-  const postRecoveryDrainSeconds = Math.max(pendingScheduleSeconds, pendingSendSeconds);
-  const planningDelaySeconds = args.adminPendingOnly
+  const plannerRuns = args.adminPendingOnly
     ? 0
     : estimateTelegramTargetPlanCoordinatorBound({
         subscriberCount: args.fixture.activeWatchers,
         targetCount: messageChunks,
-      }).runs * CRON_INTERVAL_SECONDS;
+      }).runs;
+  const pendingSendSeconds = estimateSendSeconds(pendingEnqueued);
   const outageUnavailableSeconds = args.stormSeconds ?? 0;
-  const estimatedDrainSeconds = planningDelaySeconds + outageUnavailableSeconds + postRecoveryDrainSeconds;
+  const queueEnvelope = estimateTelegramQueueEnvelope({
+    plannerRuns,
+    pendingEnqueued,
+    outageUnavailableSeconds,
+    minimumDeliverySeconds: pendingSendSeconds,
+  });
+  const {
+    pendingDrainRuns,
+    planningSeconds: planningDelaySeconds,
+    deliverySeconds: postRecoveryDrainSeconds,
+    estimatedCompletionSeconds: estimatedDrainSeconds,
+  } = queueEnvelope;
   const ttlSeconds = args.adminPendingOnly ? ADMIN_PENDING_TTL_SECONDS : PENDING_TTL_SECONDS;
   const ttlMarginSeconds = ttlSeconds - estimatedDrainSeconds;
   const ttlMarginFraction = ttlMarginSeconds / ttlSeconds;
@@ -647,12 +665,12 @@ function buildScenarioResult(args: {
     ttlSeconds,
     ttlMarginSeconds,
     ttlMarginFraction,
-    estimatedCpuMs: estimateCpuMs({ messageChunks, initialFreshAttempts }),
+    estimatedCpuMs: estimateCpuMs({ messageChunks, initialFreshAttempts, pendingEnqueued }),
     d1Operations,
     sloStatus: classifySlo(
       args.fixture.activeWatchers,
       args.scenarioId,
-      postRecoveryDrainSeconds,
+      planningDelaySeconds + postRecoveryDrainSeconds,
       outageUnavailableSeconds,
     ),
     exploratory: args.fixture.activeWatchers === EXPLORATORY_TARGET,

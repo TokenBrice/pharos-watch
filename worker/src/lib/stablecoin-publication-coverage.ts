@@ -219,7 +219,7 @@ function acceptedObservation(asset: StablecoinPriceCoverageAsset | undefined): {
   };
 }
 
-function parsePriorMissingDetail(value: unknown): MissingActivePriceDetail | null {
+export function parseMissingActivePriceDetail(value: unknown): MissingActivePriceDetail | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const entry = value as Record<string, unknown>;
   if (typeof entry.stablecoinId !== "string") return null;
@@ -245,7 +245,7 @@ function parsePriorMissingDetail(value: unknown): MissingActivePriceDetail | nul
   };
 }
 
-function parsePersistedMissingState(value: unknown): MissingActivePriceDetail | null {
+export function parsePersistedMissingActivePriceState(value: unknown): MissingActivePriceDetail | null {
   if (!Array.isArray(value) || value.length < 6 || typeof value[0] !== "string") return null;
   const consecutiveMissingGenerations = Math.max(
     1,
@@ -282,13 +282,13 @@ function parsePreviousCoverageMetadata(metadataJson: string): PreviousStablecoin
       : [];
     const verboseDetails = Array.isArray(coverage.missingActiveAssets)
       ? coverage.missingActiveAssets
-          .map(parsePriorMissingDetail)
+          .map(parseMissingActivePriceDetail)
           .filter((detail): detail is MissingActivePriceDetail => detail != null)
       : [];
     const compactedDetails = Array.isArray(coverage.missingActiveState)
       ? coverage.missingActiveState
           .slice(0, WORKER_ACTIVE_STABLECOINS.length)
-          .map(parsePersistedMissingState)
+          .map(parsePersistedMissingActivePriceState)
           .filter((detail): detail is MissingActivePriceDetail => detail != null)
       : [];
     const detailsById = new Map(compactedDetails.map((detail) => [detail.stablecoinId, detail] as const));

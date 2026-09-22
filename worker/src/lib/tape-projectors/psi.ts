@@ -16,7 +16,7 @@
  *      otherwise) and advance the rolling baseline.
  *   4. Advance the watermark to the max `stored_at` we processed.
  */
-import { PSI_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/stability-index";
+import { PSI_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import type { TapeEventSeverity } from "@shared/types/tape-event";
 
 import { buildTapeEventId } from "../tape-event-helpers";

@@ -57,6 +57,7 @@ import {
   safetyScoreV9ChainRows,
   safetyScoreV9ChainSupplyObservedAtSec,
 } from "../safety-score-v9/supply-attribution";
+import { createSafetyScoreV9SupplyAttributionGeneration } from "../safety-score-v9/supply-attribution-generation";
 import { buildSafetyScoreV9SupplyReview } from "../safety-score-v9/extension-supply";
 
 const XAUT_TOTAL_SUPPLY_RAW = 707_747_089_000n;
@@ -452,6 +453,79 @@ describe("Safety Score V9 lock/mint supply attribution", () => {
       sourceId: "wm.reviewed-deployment-unit-partition.v1",
       admissionCode: "supply-attribution.admission.accepted",
       sourceObservedAtSec: OBSERVED_AT_SEC + 5,
+    });
+  });
+
+  it("quarantines a +300s wM packet while the cohort still produces a generation", async () => {
+    rpcMocks.observeWmReviewedDeploymentUnitPartitionAttempt.mockResolvedValue({
+      status: "accepted",
+      attribution: {
+        model: "reviewed-deployment-unit-partition-v1",
+        assetId: "wm-m0",
+        observedAtSec: OBSERVED_AT_SEC + 300,
+        captureStartedAtSec: OBSERVED_AT_SEC - 20,
+        captureEndedAtSec: OBSERVED_AT_SEC + 300,
+        registryFingerprint: "a".repeat(64),
+        routeInventoryDigest: "b".repeat(64),
+        deployments: [],
+      },
+    });
+    rpcMocks.observeXautRepresentationGroupSupplyAttributionAttempt
+      .mockResolvedValue({
+        status: "rejected",
+        rejectionCode: "transparency-source-unavailable",
+        rejectedSourceObservedAtSec: null,
+        failedRouteId: null,
+      });
+    const fixedInput = {
+      activeAssetIds: ["wm-m0", "xaut-tether"],
+      clockSec: OBSERVED_AT_SEC,
+      sourceGeneration: "report-cards:v8:fixture",
+      baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
+      registryFingerprint: "a".repeat(64),
+      chainCirculatingById: {
+        "wm-m0": {},
+        "xaut-tether": {},
+      },
+      aggregateCirculatingById: {
+        "wm-m0": {
+          circulating: { peggedUSD: 87_020_618.58982982 },
+          observedAtSec: OBSERVED_AT_SEC,
+        },
+        "xaut-tether": {
+          circulating: { peggedGOLD: XAUT_AGGREGATE_SUPPLY_USD },
+          observedAtSec: OBSERVED_AT_SEC,
+        },
+      },
+    } as unknown as ReportCardsFixedInput;
+    const completedAtSec = OBSERVED_AT_SEC + 300;
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(
+      completedAtSec * 1_000,
+    );
+
+    const capture = await captureSafetyScoreV9SupplyAttribution(
+      fixedInput,
+      chainRpcs(),
+    ).finally(() => nowSpy.mockRestore());
+
+    expect(capture.attributionById).not.toHaveProperty("wm-m0");
+    expect(capture.journalRecords).toHaveLength(2);
+    expect(
+      capture.journalRecords.find((record) => record.assetId === "wm-m0"),
+    ).toMatchObject({
+      admissionCode: "supply-attribution.admission.rejected-upstream",
+      rejectionCode: "deployment-state-unavailable",
+      sourceObservedAtSec: null,
+    });
+    const generation = createSafetyScoreV9SupplyAttributionGeneration({
+      fixedInput,
+      capture,
+      capturedAtSec: completedAtSec,
+    });
+    expect(generation).toMatchObject({
+      observedAssetIds: ["wm-m0", "xaut-tether"],
+      acceptedAssetIds: [],
+      rejectedAssetIds: ["wm-m0", "xaut-tether"],
     });
   });
 

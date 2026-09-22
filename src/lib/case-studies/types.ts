@@ -59,6 +59,17 @@ export interface CaseStudyRelatedCoin {
   readonly note: string;
 }
 
+export interface CaseStudyEventWindow {
+  readonly startISO: string;
+  readonly endISO?: string;
+  readonly peakDeviationBps?: number;
+  readonly lowPrice?: number;
+  /** Plain-language measurement boundary for venue- or market-specific figures. */
+  readonly metricScope?: string;
+  /** Related coins whose annotations belong to this window; defaults to every related coin. */
+  readonly relatedCoinIds?: readonly string[];
+}
+
 export interface CaseStudy {
   /** URL slug → /learn/case-studies/<slug>/. Also the content filename. */
   readonly slug: string;
@@ -84,12 +95,10 @@ export interface CaseStudy {
 
   /** Human label for cards/meta, e.g. "March 2023". */
   readonly eventDateLabel: string;
-  readonly eventWindow: {
-    readonly startISO: string;
-    readonly endISO?: string;
-    readonly peakDeviationBps?: number;
-    readonly lowPrice?: number;
-  };
+  /** Headline event window and the measurement boundary for displayed metrics. */
+  readonly eventWindow: CaseStudyEventWindow;
+  /** Disjoint incident windows used by charts and annotation linking. */
+  readonly eventWindows?: readonly CaseStudyEventWindow[];
 
   /** Optional cross-links into existing layers — validated at build (see index.ts test). */
   readonly depegEventSlug?: string;

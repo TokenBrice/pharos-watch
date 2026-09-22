@@ -200,7 +200,7 @@ Admin recovery paths preserve the same effect and queue boundaries. Broadcast is
 - `worker/src/cron/telegram-alert-target-plans.ts`, `telegram-alert-target-plans/*`, `telegram-alert-target-plan-contract.ts` (planning ownership, frozen subscriber ledger, rendered plans/items/pages, bounded expiry, delivery-open and pending handoff)
 - `worker/src/cron/telegram-alert-job-target-outcomes.ts` (exclusive final-state projection and job counter reconciliation)
 - `worker/src/cron/telegram-alert-snapshots.ts`, `telegram-alert-changes.ts`, `telegram-alert-context.ts`, `telegram-alert-safety-reasons.ts`, `telegram-alert-target-status.ts` (snapshot I/O, diff producers, alert context/reason builders, and per-target status helpers)
-- `worker/src/cron/telegram-alert-source-events.ts`, `telegram-alert-event-lineage.ts`, `dispatch-telegram-pending-lifecycle.ts` (source-event and preset-subscriber page loading, per-item key listing and handled-item pruning, and the shared pending-queue lifecycle step invoked by the authoritative and queue paths)
+- `worker/src/cron/telegram-alert-source-events.ts`, `telegram-alert-source-memberships.ts`, `telegram-alert-event-lineage.ts`, `dispatch-telegram-pending-lifecycle.ts` (source-event loading, preset-subscriber membership and follower-page resolution, per-item key listing and handled-item pruning, and the shared pending-queue lifecycle step invoked by the authoritative and queue paths)
 - `worker/src/lib/telegram/quiet-hours.ts` (quiet-hours predicate; shared with Callback routing for the `tz:*` validation only)
 - `worker/src/cron/telegram-degradation-watchdog.ts` (post-dispatch one-shot operator alerts on degraded delivery; same five-minute lane)
 - `worker/src/handlers/scheduled/five-minute-telegram.ts` (token-aware five-minute orchestration: dispatch when configured, token-independent watchdog/cleanup/pulse, then all four serial registration checks)
@@ -227,7 +227,7 @@ Admin recovery paths preserve the same effect and queue boundaries. Broadcast is
 **Owned files.**
 - `worker/src/cron/telegram-pending/index.ts` (compatibility barrel for existing imports)
 - `worker/src/cron/telegram-pending/*` (claim/drain, backoff, cleanup, dead-letter, preference revalidation, recap terminal projection, lifecycle helpers)
-- `worker/src/lib/telegram/pending-queue.ts` (enqueue, dedupe-key construction, priority and upsert SQL, re-exported by `telegram-pending/upsert-sql.ts`) and `worker/src/lib/telegram/pending-capacity.ts` (capacity/watchdog read model)
+- `worker/src/lib/telegram/pending-queue.ts` (enqueue, dedupe-key construction, priority and upsert SQL) and `worker/src/lib/telegram/pending-capacity.ts` (capacity/watchdog read model)
 - `shared/lib/telegram-delivery-policy.ts` owns runtime-neutral queue, batch, TTL, rate-limit, deadline, and load-model policy. `worker/src/lib/telegram/constants.ts` re-exports the established Worker import surface.
 
 **Allowed inbound dependencies.** Dispatch and the personalized recap planner (the only legitimate alert/recap enqueuers), Admin Telegram routes (`admin-telegram-broadcast.ts`), Callback routing only via `SNOOZE_REPLY_MARKUP` re-export (the `lib/telegram/alerts.ts` keyboard).

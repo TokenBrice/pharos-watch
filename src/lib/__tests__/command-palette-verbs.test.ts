@@ -19,7 +19,7 @@ describe("parsePaletteInput", () => {
     if (parsed.kind !== "screen") return;
 
     expect(parsed.filters).toEqual({
-      safetyPegStabilityMin: "80",
+      safetyScoreMin: "80",
       dewsMax: "20",
       pegs: "USD",
       mechanism: "cdp",
@@ -30,7 +30,7 @@ describe("parsePaletteInput", () => {
 
     const params = new URLSearchParams(parsed.href.split("?")[1] ?? "");
     expect(parsed.href.startsWith("/screener/?")).toBe(true);
-    expect(params.get("safetyPegStabilityMin")).toBe("80");
+    expect(params.get("safetyScoreMin")).toBe("80");
     expect(params.get("dewsMax")).toBe("20");
     expect(params.get("pegs")).toBe("USD");
     expect(params.get("mechanism")).toBe("cdp");
@@ -47,7 +47,7 @@ describe("parsePaletteInput", () => {
     expect(gte.kind).toBe("screen");
     if (gt.kind !== "screen" || gte.kind !== "screen") return;
 
-    expect(gt.filters).toEqual({ safetyPegStabilityMin: "80", supplyMin: "1000000" });
+    expect(gt.filters).toEqual({ safetyScoreMin: "80", supplyMin: "1000000" });
     expect(gt.filters).toEqual(gte.filters);
     expect(gt.href).toBe(gte.href);
   });

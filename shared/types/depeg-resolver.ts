@@ -445,6 +445,8 @@ export const DdrMetaSchema = z.object({
   modelAsOf: z.number(),
   computedAt: z.number(),
   expiresAt: z.number(),
+  /** Last failed refresh attempt; does not replace the carried snapshot's observation time. */
+  lastRefreshAttemptAt: z.number().int().nullable().optional(),
   snapshotToken: z.string().nullable(),
   snapshotGeneration: z.number().int().positive().nullable(),
   publicPredictionIds: z.array(z.number().int().positive()),
@@ -453,6 +455,8 @@ export const DdrMetaSchema = z.object({
   readOverlay: DdrReadOverlaySchema.optional().default(DDR_EMPTY_READ_OVERLAY),
   degraded: z.boolean(),
   degradedReason: z.string().nullable().optional().default(null),
+  /** Diagnostic detail for a stable degraded-reason vocabulary value. */
+  degradedReasonDetail: z.string().nullable().optional(),
   publicWarning: z.string(),
   resolutionRubricVersion: z.string(),
   durationModelVersion: z.string(),

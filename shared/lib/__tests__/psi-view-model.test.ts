@@ -119,5 +119,23 @@ describe("psi-view-model", () => {
       expect(buildPsiChartData(null, { computedAt, score: 78 })).toEqual([]);
       expect(buildPsiChartData([{ date: yesterday, score: 76, band: "STEADY" }], null)).toEqual([]);
     });
+  describe("calendar-day resolution", () => {
+    const point = (date: number, band: string) => ({ date, score: 50, band });
+
+    it("stops a band streak at a missing calendar day instead of skipping over it", () => {
+      const history = [
+        point(yesterday, "crisis"),
+        point(twoDaysAgo, "crisis"),
+        point(todayMidnight - 4 * 86_400, "crisis"),
+      ];
+      expect(getPsiBandStreak(history, computedAt, "crisis")).toBe(3);
+    });
+
+    it("resolves yesterday by exact UTC date, not by row index", () => {
+      const gapHistory = [point(twoDaysAgo, "crisis")];
+      expect(getPsiCompletedDayPoint(gapHistory, computedAt, 1)).toBeNull();
+      expect(getPsiCompletedDayPoint(gapHistory, computedAt, 2)?.date).toBe(twoDaysAgo);
+    });
+  });
   });
 });

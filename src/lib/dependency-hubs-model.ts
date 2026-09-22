@@ -58,9 +58,25 @@ type V9DependencyEdge = ReportCardsV9Response["dependencyGraph"]["edges"][number
 type DependencyHubEdge = DependencyGraphEdge | V9DependencyEdge;
 type DependencyMateriality = DependencyGraphEdge["type"] | V9DependencyEdge["materiality"];
 
-function edgeWeight(edge: DependencyHubEdge): number {
-  if ("kind" in edge) return edge.kind === "serial" ? 1 : edge.weight ?? 0;
-  return edge.weight;
+/**
+ * Known exposure magnitude for one V9 edge. `null` means the weight itself is
+ * absent — an unknown exposure, not a measured zero.
+ */
+export function v9DependencyEdgeWeight(edge: V9DependencyEdge): number | null {
+  return edge.kind === "serial" ? 1 : edge.weight;
+}
+
+/**
+ * Whether the upstream score resolved, read from `materiality` — never from
+ * the weight. `serial-blocked` and `basket-bounded-unknown` mark an
+ * unrateable upstream; a known exposure weight survives that.
+ */
+export function v9DependencyEdgeScoreKnown(edge: V9DependencyEdge): boolean {
+  return edge.materiality === "serial" || edge.materiality === "basket-weighted";
+}
+
+function edgeWeight(edge: DependencyHubEdge): number | null {
+  return "kind" in edge ? v9DependencyEdgeWeight(edge) : edge.weight;
 }
 
 function edgeMateriality(edge: DependencyHubEdge): DependencyMateriality {
@@ -117,9 +133,11 @@ export function buildDependencyHubsModel({
     };
 
     hub.dependentIds.add(edge.to);
-    hub.summedDirectDependencyWeight += weight;
     breakdown.edgeCount += 1;
-    breakdown.summedDirectDependencyWeight += weight;
+    if (weight !== null) {
+      hub.summedDirectDependencyWeight += weight;
+      breakdown.summedDirectDependencyWeight += weight;
+    }
     hub.typeBreakdown.set(edgeType, breakdown);
     hubMap.set(edge.from, hub);
     allDependentIds.add(edge.to);
@@ -173,7 +191,10 @@ export function buildDependencyHubsModel({
     upstreamHubCount: hubs.length,
     directEdgeCount: liveEdges.length,
     uniqueDirectDependentCount: allDependentIds.size,
-    summedDirectDependencyWeight: liveEdges.reduce((sum, edge) => sum + edgeWeight(edge), 0),
+    summedDirectDependencyWeight: liveEdges.reduce(
+      (sum, edge) => sum + (edgeWeight(edge) ?? 0),
+      0,
+    ),
     uniqueDependentMcapUsd,
   };
 }

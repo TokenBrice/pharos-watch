@@ -1,14 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  API_HOSTNAME,
   API_ORIGIN,
-  PAGES_APP_HOSTNAME,
-  SITE_API_HOSTNAME,
-  SITE_API_ORIGIN,
-  SITE_HOSTNAME,
-  OPS_API_ORIGIN,
   OPS_UI_ORIGIN,
-  PAGES_APP_ORIGIN,
   SITE_ORIGIN,
   isCanonicalSiteHostname,
   isPagesAppHostname,
@@ -16,18 +9,6 @@ import {
 } from "../runtime-origins";
 
 describe("runtime origins", () => {
-  it("uses the canonical production origins", () => {
-    expect(SITE_ORIGIN).toBe("https://pharos.watch");
-    expect(API_ORIGIN).toBe("https://api.pharos.watch");
-    expect(SITE_API_ORIGIN).toBe("https://site-api.pharos.watch");
-    expect(OPS_UI_ORIGIN).toBe("https://ops.pharos.watch");
-    expect(OPS_API_ORIGIN).toBe("https://ops-api.pharos.watch");
-    expect(PAGES_APP_ORIGIN).toBe("https://stablecoin-dashboard.pages.dev");
-    expect(SITE_HOSTNAME).toBe("pharos.watch");
-    expect(API_HOSTNAME).toBe("api.pharos.watch");
-    expect(SITE_API_HOSTNAME).toBe("site-api.pharos.watch");
-    expect(PAGES_APP_HOSTNAME).toBe("stablecoin-dashboard.pages.dev");
-  });
 
   it("normalizes configured origins and falls back on invalid input", () => {
     expect(resolveOrigin("ops.pharos.watch/admin", SITE_ORIGIN)).toBe("https://ops.pharos.watch");

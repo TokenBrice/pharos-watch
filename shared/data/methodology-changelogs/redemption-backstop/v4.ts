@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const REDEMPTION_BACKSTOP_V4: readonly MethodologyChangelogEntry[] = [
   {
+    version: "4.43",
+    title: "Live route status requires same-run route evidence",
+    date: "2026-09-21",
+    effectiveAt: 1789948800,
+    summary:
+      "Adapters now attribute onchain or protocol-api route status only after the same run evaluates a route-specific executable predicate, while balance, TVL, collateral, and static configuration evidence remains unknown or static-config.",
+    impact: [
+      "The shared reserve metadata builder requires an explicit non-persisted routeObserved proof before preserving onchain or protocol-api provenance, preventing capacity-only observations from becoming live openness claims.",
+      "HoneyFactory pause and cap guards, Liquity branch mechanisms, Sky LitePSM halt fees, Reserve DTF basket and throttle guards, and reviewed M0 extension predicates now publish route status from their observed execution gates; Falcon, OpenEden, f(x), Superstate, collateral-position, and unsupported wrapper paths no longer overclaim live openness.",
+      "GHO facilitator attribution is keyed by reviewed addresses rather than mutable labels, and unreviewed facilitators remain unknown exposure.",
+      "Route-status freshness reaches 100 only for an open current onchain or protocol-api observation with positive executable capacity; open routes with zero or missing capacity are capped at the reviewed 70-point tier.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "4.42",
     title: "Market-implied impairment requires current severe-depeg evidence",
     date: "2026-09-01",

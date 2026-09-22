@@ -4,8 +4,6 @@ import {
   DEX_MEASURED_TARGET_SCHEMA_VERSION,
   buildDexMeasuredExecutionTargetId,
   type DexMeasuredExecutionQuotePointProof,
-  projectDexMeasuredExecutionProfileToV2,
-  type DexExecutionProfileV2,
   type DexMeasuredExecutionProfile,
   type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
@@ -291,7 +289,6 @@ export function buildReviewedV2Profile(input: {
   target: DexMeasuredExecutionTarget;
 }): {
   profile: DexMeasuredExecutionProfile;
-  profileV2: DexExecutionProfileV2;
   capacityCurve: ReturnType<typeof buildAmmCapacityCurve>;
 } {
   const { replay, model, target } = input;
@@ -332,7 +329,6 @@ export function buildReviewedV2Profile(input: {
 
   return {
     profile,
-    profileV2: projectDexMeasuredExecutionProfileToV2(profile),
     capacityCurve,
   };
 }

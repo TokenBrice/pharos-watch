@@ -11,6 +11,8 @@ import {
 import { DDR_V2_EFFECTIVE_AT } from "@shared/lib/methodology-versions/depeg-resolver";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { isTerminalStablecoinStatus } from "@shared/lib/stablecoin-lifecycle";
+import { chunkArray } from "../../lib/collections";
+import { buildInClause } from "../../lib/d1-primitives";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import type { StablecoinData } from "@shared/types/market";
@@ -88,7 +90,7 @@ export function emptyDdrLineage(nowSec: number): DdrLineage {
   };
 }
 
-export async function queryRows<T>(label: string, query: () => Promise<{ results?: T[] }>): Promise<QueryRowsResult<T>> {
+async function queryRows<T>(label: string, query: () => Promise<{ results?: T[] }>): Promise<QueryRowsResult<T>> {
   try {
     // Transient "D1 DB is overloaded" spikes were converting whole DDR runs
     // into failed cron_runs; these reads are idempotent and retryable.
@@ -100,6 +102,26 @@ export async function queryRows<T>(label: string, query: () => Promise<{ results
       error: `${label}:${formatDdrrFailure(error)}`,
     };
   }
+}
+
+/**
+ * Run an `IN (…)` read in bind-limit-safe chunks. A market-wide depeg pushes
+ * the active-coin list past `D1_MAX_BOUND_PARAMETERS`, where a single
+ * statement would throw and degrade the whole run.
+ */
+export async function queryRowsChunked<T>(
+  label: string,
+  ids: readonly string[],
+  query: (inClauseSql: string, binds: unknown[]) => Promise<{ results?: T[] }>,
+): Promise<QueryRowsResult<T>> {
+  const rows: T[] = [];
+  for (const chunk of chunkArray(ids)) {
+    const inClause = buildInClause(chunk);
+    const result = await queryRows(label, () => query(inClause.sql, inClause.binds));
+    if (result.error) return { rows: [], error: result.error };
+    rows.push(...result.rows);
+  }
+  return { rows, error: null };
 }
 
 export async function buildCurrentDeviationMap(
@@ -246,12 +268,12 @@ export async function loadDdrContext(
   }));
   const quarantined = quarantinedCoins(incidents);
 
-  const supplyResult = await queryRows("supply_history", () => db
+  const supplyResult = await queryRowsChunked("supply_history", activeCoinIds, (inClauseSql, binds) => db
     .prepare(
       `SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history ` +
-        `WHERE stablecoin_id IN (${placeholders(activeCoinIds.length)}) ORDER BY stablecoin_id, snapshot_date ASC`,
+        `WHERE stablecoin_id IN (${inClauseSql}) ORDER BY stablecoin_id, snapshot_date ASC`,
     )
-    .bind(...activeCoinIds)
+    .bind(...binds)
     .all<{ stablecoin_id: string; snapshot_date: number; circulating_usd: number }>());
   const supplyByCoin = new Map<string, { date: number; usd: number }[]>();
   for (const s of supplyResult.rows) {
@@ -261,28 +283,22 @@ export async function loadDdrContext(
   }
 
   const mintBurnCoinIds = activeCoinIds.filter((id) => MINT_BURN_COVERED_COIN_IDS.has(id));
-  const mintBurnResult: QueryRowsResult<{
-    stablecoin_id: string;
-    hour_ts: number;
-    net_flow_usd: number;
-  }> = mintBurnCoinIds.length === 0
-    ? { rows: [], error: null }
-    : await queryRows("mint_burn_hourly", () => db
-        .prepare(
-          `SELECT stablecoin_id, hour_ts, net_flow_usd FROM mint_burn_hourly ` +
-            `WHERE stablecoin_id IN (${placeholders(mintBurnCoinIds.length)}) AND hour_ts >= ? AND hour_ts <= ? ` +
-            "ORDER BY stablecoin_id, hour_ts ASC",
-        )
-        .bind(
-          ...mintBurnCoinIds,
-          Math.min(...active.map((event) => event.startedAt - 7 * DAY)),
-          Math.max(...active.map((event) => event.startedAt)),
-        )
-        .all<{
-          stablecoin_id: string;
-          hour_ts: number;
-          net_flow_usd: number;
-        }>());
+  const mintBurnResult = await queryRowsChunked("mint_burn_hourly", mintBurnCoinIds, (inClauseSql, binds) => db
+    .prepare(
+      `SELECT stablecoin_id, hour_ts, net_flow_usd FROM mint_burn_hourly ` +
+        `WHERE stablecoin_id IN (${inClauseSql}) AND hour_ts >= ? AND hour_ts <= ? ` +
+        "ORDER BY stablecoin_id, hour_ts ASC",
+    )
+    .bind(
+      ...binds,
+      Math.min(...active.map((event) => event.startedAt - 7 * DAY)),
+      Math.max(...active.map((event) => event.startedAt)),
+    )
+    .all<{
+      stablecoin_id: string;
+      hour_ts: number;
+      net_flow_usd: number;
+    }>());
   const mintBurnHourlyByCoin = new Map<string, { hourTs: number; netFlowUsd: number }[]>();
   for (const row of mintBurnResult.rows) {
     const list = mintBurnHourlyByCoin.get(row.stablecoin_id) ?? [];
@@ -306,13 +322,13 @@ export async function loadDdrContext(
     : { rows: [], error: `stress_signals:${publishedDews.reason}` };
   const dewsByCoin = new Map(dewsResult.rows.map((d) => [d.stablecoin_id, d]));
 
-  const liqResult = await queryRows("dex_liquidity", () => db
+  const liqResult = await queryRowsChunked("dex_liquidity", activeCoinIds, (inClauseSql, binds) => db
     .prepare(
       `SELECT stablecoin_id, liquidity_score, concentration_hhi, total_tvl_usd, total_volume_24h_usd, updated_at FROM dex_liquidity ` +
-        `WHERE stablecoin_id IN (${placeholders(activeCoinIds.length)}) ` +
+        `WHERE stablecoin_id IN (${inClauseSql}) ` +
         `AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}`,
     )
-    .bind(...activeCoinIds)
+    .bind(...binds)
     .all<{
       stablecoin_id: string;
       liquidity_score: number | null;
@@ -323,14 +339,14 @@ export async function loadDdrContext(
     }>());
   const liqByCoin = new Map(liqResult.rows.map((l) => [l.stablecoin_id, l]));
 
-  const liqHistResult = await queryRows("dex_liquidity_history", () => db
+  const liqHistResult = await queryRowsChunked("dex_liquidity_history", activeCoinIds, (inClauseSql, binds) => db
     .prepare(
       `SELECT stablecoin_id, total_tvl_usd, total_volume_24h_usd, snapshot_date, coverage_class, coverage_confidence ` +
         `FROM dex_liquidity_history ` +
-        `WHERE stablecoin_id IN (${placeholders(activeCoinIds.length)}) AND snapshot_date >= ? ` +
+        `WHERE stablecoin_id IN (${inClauseSql}) AND snapshot_date >= ? ` +
         `ORDER BY stablecoin_id, snapshot_date DESC`,
     )
-    .bind(...activeCoinIds, nowSec - 32 * DAY)
+    .bind(...binds, nowSec - 32 * DAY)
     .all<DdrDexHistoryRow>());
   const liqHistoryByCoin = new Map<string, DdrDexHistoryRow[]>();
   for (const row of liqHistResult.rows) {

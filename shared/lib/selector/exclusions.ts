@@ -133,12 +133,17 @@ function failPegScoreFloor(row: MergedRow, floor: number): ExclusionRecord | nul
  * Universal exclusions (apply to every profile). Returns the first matching
  * record or `null`.
  */
-export function applyUniversalExclusions(
+function applyUniversalExclusions(
   row: MergedRow,
   input: SelectorInput,
 ): ExclusionRecord | null {
   if (row.pegCurrency !== input.pegCurrency) {
     return fail(row.id, "peg-currency-mismatch");
+  }
+  // Unavailable supply is not a $0 supply: a coin missing from the upstream
+  // payload must not be published under the supply-floor reason.
+  if (row.supplyUsd == null) {
+    return fail(row.id, "supply-unavailable", "hard", "Current supply unavailable this run");
   }
   if (row.supplyUsd < 5_000_000) {
     return fail(row.id, "below-supply-floor");
@@ -169,7 +174,7 @@ export function applyUniversalExclusions(
 /**
  * Profile-specific exclusions. Returns the first matching record or `null`.
  */
-export function applyProfileExclusions(
+function applyProfileExclusions(
   row: MergedRow,
   profile: SelectorProfile,
   input: SelectorInput,
@@ -328,7 +333,7 @@ export function evaluateExclusions(
 // Required-signals coverage check
 // ---------------------------------------------------------------------------
 
-export const REQUIRED_SIGNALS_BY_PROFILE: Record<SelectorProfile, readonly (keyof MergedRow)[]> = {
+const REQUIRED_SIGNALS_BY_PROFILE: Record<SelectorProfile, readonly (keyof MergedRow)[]> = {
   treasury: [
     "safetyGrade",
     "safetyScore",

@@ -1,11 +1,14 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { clamp, clampScore } from "@shared/lib/math";
-import { DURABILITY_COMPONENT_WEIGHTS } from "@shared/lib/liquidity-score-weights";
+import {
+  DURABILITY_COMPONENT_WEIGHTS,
+  LIQUIDITY_TVL_DEPTH_ANCHOR_RATIO,
+  LIQUIDITY_TVL_DEPTH_SLOPE,
+} from "@shared/lib/liquidity-score-weights";
 import {
   canonicalExitRouteAssetKey,
   canonicalExitRouteChain,
-  canonicalExitRouteScopedId,
 } from "@shared/lib/exit-route-identity";
 import type { ContractDeployment, StablecoinMeta } from "@shared/types/core";
 import {
@@ -26,8 +29,8 @@ export { buildPoolFingerprint, getGtDexQuality, normalizeProtocol } from "./pool
  */
 const POOL_QUALITY_FLOOR_RATIO = 0.15;
 const POOL_QUALITY_WINDOW = 0.65; // 0.80 - 0.15
-const TVL_DEPTH_SLOPE = 35;
-const TVL_DEPTH_ANCHOR_RATIO = 0.0007;
+const TVL_DEPTH_SLOPE = LIQUIDITY_TVL_DEPTH_SLOPE;
+const TVL_DEPTH_ANCHOR_RATIO = LIQUIDITY_TVL_DEPTH_ANCHOR_RATIO;
 const TVL_DEPTH_FALLBACK_MCAP_USD = 1_000_000_000;
 
 function computeTvlDepthScore(depthRatio: number): number {
@@ -82,7 +85,7 @@ export function classifyPoolType(project: string, poolMeta?: string | null): str
   if (proj.includes("curve")) return "curve-stableswap"; // refined later via registryId
   if (proj.includes("fluid")) return "fluid-dex";
   if (proj.includes("meteora")) return "meteora-dlmm";
-  if (proj.includes("aerodrome")) return "aerodrome-volatile"; // refined to aerodrome-stable via subgraph isStable flag
+  if (proj.includes("aerodrome")) return "aerodrome-volatile"; // no sAMM/vAMM label upstream; classic rows stay volatile
   if (proj.includes("balancer") && proj.includes("stable")) return "balancer-stable";
   if (proj.includes("balancer")) return "balancer-weighted";
   // DL lists every Raydium pool under the raydium-amm slug; the CLMM signal
@@ -365,7 +368,6 @@ export function buildSymbolLookups(): SymbolLookups {
     logWorkerEventArgs("handler", "info", `[dex-liquidity] Symbol collisions detected: ${[...collidingSymbols].join(", ")}`);
   }
 
-  const addressToId = new Map<string, string>();
   const chainAddressToId = new Map<string, string>();
   const contractMetaByChainAddress = new Map<
     string,
@@ -376,13 +378,6 @@ export function buildSymbolLookups(): SymbolLookups {
       source: "contract" | "tradedContract";
     }
   >();
-  const globalAddressOwners = new Map<string, Set<string>>();
-  const addAddressOwner = (chain: string, address: string, id: string) => {
-    const canonicalAddress = canonicalExitRouteScopedId(chain, address);
-    const owners = globalAddressOwners.get(canonicalAddress) ?? new Set<string>();
-    owners.add(id);
-    globalAddressOwners.set(canonicalAddress, owners);
-  };
   for (const meta of ACTIVE_STABLECOINS) {
     for (const contract of meta.contracts ?? []) {
       const key = buildChainAddressKey(contract.chain, contract.address);
@@ -394,7 +389,6 @@ export function buildSymbolLookups(): SymbolLookups {
           typeof contract.decimals === "number" && Number.isFinite(contract.decimals) ? contract.decimals : null,
         source: "contract",
       });
-      addAddressOwner(contract.chain, contract.address, meta.id);
     }
     for (const contract of meta.tradedContracts ?? []) {
       const key = buildChainAddressKey(contract.chain, contract.address);
@@ -408,18 +402,13 @@ export function buildSymbolLookups(): SymbolLookups {
           source: "tradedContract",
         });
       }
-      addAddressOwner(contract.chain, contract.address, meta.id);
     }
   }
 
-  for (const [address, owners] of globalAddressOwners) {
-    if (owners.size === 1) addressToId.set(address, [...owners][0]);
-  }
 
   return {
     symbolToIds,
     symbolToChainScopedIds,
-    addressToId,
     chainAddressToId,
     contractMetaByChainAddress,
   };

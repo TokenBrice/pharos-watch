@@ -910,14 +910,16 @@ describe("handleStatus", () => {
     const body = (await readJsonResponse(res, 200)) as {
       availabilityStatus: string;
       summary: { unhealthyCrons: number };
-      crons: Record<string, { healthy: boolean; telemetryUnknown?: boolean }>;
+      crons: Record<string, { healthy: boolean | null; telemetryUnknown?: boolean; telemetryUnknownReason?: string }>;
       causes: { availability: Array<{ code: string }> };
     };
 
     expect(body.availabilityStatus).toBe("healthy");
     expect(body.summary.unhealthyCrons).toBe(0);
-    expect(body.crons["sync-stablecoins"]?.healthy).toBe(true);
+    expect(Object.values(body.crons).some((cron) => cron.healthy === true)).toBe(false);
+    expect(body.crons["sync-stablecoins"]?.healthy).toBeNull();
     expect(body.crons["sync-stablecoins"]?.telemetryUnknown).toBe(true);
+    expect(body.crons["sync-stablecoins"]?.telemetryUnknownReason).toBe("cron-history-query-failed");
     expect(body.causes.availability.some((cause) => cause.code === "cron_history_query_failed")).toBe(true);
   });
 });

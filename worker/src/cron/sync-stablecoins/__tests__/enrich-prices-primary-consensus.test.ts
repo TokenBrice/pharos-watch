@@ -1,11 +1,22 @@
 import { describe, expect, it } from "vitest";
 import { buildPrimaryConsensusResults } from "../enrich-prices-primary-consensus";
-import type {
-  PrimaryDexPriceSources,
-  PrimaryDexRows,
+import {
+  createEmptyPrimaryConsensusQuoteMaps,
+  type PrimaryDexPriceSources,
+  type PrimaryDexRows,
 } from "../enrich-prices-primary-provider-collection";
-import type { PeggedAsset, PrimaryPriceResult } from "../enrich-prices-shared";
-import { createEmptyQuoteMaps, createStats } from "./enrich-prices-primary-consensus.test-support";
+import type { PeggedAsset, PriceValidationStats, PrimaryPriceResult } from "../enrich-prices-shared";
+
+
+function createStats(): PriceValidationStats {
+  return {
+    attempted: 0,
+    high: 0,
+    singleSource: 0,
+    cgOnly: 0,
+    low: 0,
+  };
+}
 
 describe("buildPrimaryConsensusResults", () => {
   it("attributes RedStone quotes by stablecoin id instead of same-symbol peers", () => {
@@ -24,7 +35,7 @@ describe("buildPrimaryConsensusResults", () => {
         pegType: "peggedUSD",
       },
     ];
-    const quoteMaps = createEmptyQuoteMaps();
+    const quoteMaps = createEmptyPrimaryConsensusQuoteMaps();
     quoteMaps.redstonePrices.set("usdh-native-markets", {
       price: 0.9999,
       venueCount: 2,

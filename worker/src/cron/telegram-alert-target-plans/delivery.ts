@@ -6,7 +6,7 @@ import { reconcileTelegramAlertJobCounters } from "../telegram-alert-job-target-
 import {
   buildPendingAlertUpsertSql,
   pendingPrioritySql,
-} from "../telegram-pending/upsert-sql";
+} from "../../lib/telegram/pending-queue";
 import {
   markTelegramTargetPlanDegraded,
   PENDING_TERMINAL_DUPLICATE_PREDICATE,

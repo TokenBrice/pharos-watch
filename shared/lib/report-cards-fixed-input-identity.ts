@@ -1,12 +1,12 @@
 import { z } from "zod";
 import {
-  DexExitRouteObservationSchema,
+  DexExitRouteObservationsSchema,
   ExitRouteObservationCoverageSchema,
   type ExitRouteObservation,
 } from "../types/market";
 import type { RedemptionBackstopMap } from "../types/redemption";
 import { REPORT_CARDS_REGISTRY_FINGERPRINT } from "../data/stablecoins/report-card-registry-fingerprint.generated";
-import { compareText } from "../types/safety-score-v9-fact-primitives";
+import { compareCodeUnits, sortedRecord } from "./compare";
 import { sha256Hex } from "./sha256";
 import { stableJsonStringifyV1 } from "./stable-json";
 
@@ -34,7 +34,7 @@ export const FixedDexLiquidityRowSchema = z
       })
       .nullable()
       .optional(),
-    exitRouteObservations: z.array(DexExitRouteObservationSchema).nullable().optional(),
+    exitRouteObservations: DexExitRouteObservationsSchema.nullable().optional(),
     exitRouteObservationCoverage: ExitRouteObservationCoverageSchema.optional(),
     methodologyVersion: z.string().min(1).optional(),
     updatedAt: z.number().int().nonnegative(),
@@ -71,12 +71,21 @@ export const ReportCardsFixedInputMethodologyVersionsSchema = z.object({
 
 export type ReportCardsFixedInputMethodologyVersions = z.infer<typeof ReportCardsFixedInputMethodologyVersionsSchema>;
 
-function sortedRecord<T>(record: Record<string, T>): Record<string, T> {
-  return Object.fromEntries(Object.entries(record).sort(([left], [right]) => compareText(left, right)));
+/**
+ * Rewrite every row of a keyed map through `normalizeRow`, then emit the map in
+ * canonical key order. The row callback stays lane-specific — the native V9
+ * capture admits a narrower DEX row than the v3 fixed input does — while the
+ * ordering and re-mapping scaffold has one definition for both lanes.
+ */
+export function normalizeSortedRowMap<T>(
+  record: Record<string, T>,
+  normalizeRow: (row: T) => T,
+): Record<string, T> {
+  return sortedRecord(Object.fromEntries(Object.entries(record).map(([id, row]) => [id, normalizeRow(row)])));
 }
 
 function uniqueSorted(values: Iterable<string>): string[] {
-  return [...new Set(values)].sort(compareText);
+  return [...new Set(values)].sort(compareCodeUnits);
 }
 
 export function normalizeReportCardsFixedInputMethodologyVersions(
@@ -96,21 +105,21 @@ function normalizeFixedInputExitRouteObservation<T extends ExitRouteObservation>
     output: {
       ...observation.output,
       ...(observation.output.trackedAssetIds
-        ? { trackedAssetIds: [...observation.output.trackedAssetIds].sort(compareText) }
+        ? { trackedAssetIds: [...observation.output.trackedAssetIds].sort(compareCodeUnits) }
         : {}),
-      ...(observation.output.assetKeys ? { assetKeys: [...observation.output.assetKeys].sort(compareText) } : {}),
+      ...(observation.output.assetKeys ? { assetKeys: [...observation.output.assetKeys].sort(compareCodeUnits) } : {}),
       ...(observation.output.basketWeights
         ? {
             basketWeights: [...observation.output.basketWeights].sort(
               (left, right) =>
-                compareText(left.assetId ?? "", right.assetId ?? "") ||
-                compareText(left.symbol ?? "", right.symbol ?? "") ||
+                compareCodeUnits(left.assetId ?? "", right.assetId ?? "") ||
+                compareCodeUnits(left.symbol ?? "", right.symbol ?? "") ||
                 left.weight - right.weight,
             ),
           }
         : {}),
     },
-    commonModeKeys: [...observation.commonModeKeys].sort(compareText),
+    commonModeKeys: [...observation.commonModeKeys].sort(compareCodeUnits),
     ...(observation.capacityCurve
       ? {
           capacityCurve: [...observation.capacityCurve].sort(
@@ -130,27 +139,20 @@ export function normalizeFixedInputExitRouteObservations<T extends ExitRouteObse
     .map(normalizeFixedInputExitRouteObservation)
     .sort(
       (left, right) =>
-        compareText(left.routeId, right.routeId) ||
-        compareText(stableJsonStringifyV1(left), stableJsonStringifyV1(right)),
+        compareCodeUnits(left.routeId, right.routeId) ||
+        compareCodeUnits(stableJsonStringifyV1(left), stableJsonStringifyV1(right)),
     );
 }
 
 export function normalizeFixedDexLiquidityMap(
   record: Record<string, FixedDexLiquidityRow>,
 ): Record<string, FixedDexLiquidityRow> {
-  return sortedRecord(
-    Object.fromEntries(
-      Object.entries(record).map(([id, row]) => [
-        id,
-        {
-          ...row,
-          ...(row.exitRouteObservations !== undefined
-            ? { exitRouteObservations: normalizeFixedInputExitRouteObservations(row.exitRouteObservations) }
-            : {}),
-        },
-      ]),
-    ),
-  );
+  return normalizeSortedRowMap(record, (row) => ({
+    ...row,
+    ...(row.exitRouteObservations !== undefined
+      ? { exitRouteObservations: normalizeFixedInputExitRouteObservations(row.exitRouteObservations) }
+      : {}),
+  }));
 }
 
 export function projectFixedDexLiquidityMap(

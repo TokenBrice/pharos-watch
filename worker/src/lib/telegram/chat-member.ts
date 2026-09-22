@@ -57,7 +57,15 @@ function normalizeStatus(status: string | undefined): TelegramChatMemberStatus |
 
 function normalizeMember(raw: TelegramChatMemberResult, fallbackUserId: string): TelegramChatMember | null {
   const status = normalizeStatus(raw.status);
-  if (!status) return null;
+  if (!status) {
+    logWorkerEventArgs(
+      "lib",
+      "warn",
+      "[telegram-chat-member] ignored malformed administrator status:",
+      String(raw.status),
+    );
+    return null;
+  }
   const userId = raw.user?.id != null ? String(raw.user.id) : fallbackUserId;
   return {
     status,

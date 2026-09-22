@@ -81,9 +81,9 @@ export async function loadRiskFreeRateRegistry(
 
 /**
  * Readability of the cached `risk_free_rates` row this load started from.
- * `invalid` means a row existed and could not be parsed at all; `missing` means
- * there was no row. Callers that publish the registry use it to avoid stamping a
- * placeholder snapshot over an unreadable row.
+ * `invalid` means the row or its required USD member could not be parsed;
+ * `missing` means there was no row. Callers that publish the registry use this
+ * to avoid stamping a placeholder snapshot over unreadable required evidence.
  */
 export type RiskFreeRateRegistryCacheState = "valid" | "invalid" | "missing";
 
@@ -119,7 +119,7 @@ export async function loadRiskFreeRateRegistryWithState(
   if (parsedRegistry) {
     return {
       registry: { ...parsedRegistry.registry, USD: legacyUsd ?? parsedRegistry.registry.USD },
-      cacheState: "valid",
+      cacheState: "invalid",
     };
   }
 

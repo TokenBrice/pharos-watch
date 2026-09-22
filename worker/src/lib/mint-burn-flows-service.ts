@@ -3,7 +3,7 @@ import { getCache, setCacheIfNewer } from "./db-cache";
 import { addFreshnessHeaders } from "./api-freshness";
 import { jsonResponseWithHeaders } from "./api-response";
 import { readCachedJsonOr503 } from "./api-cache-read";
-import { CACHE_PROFILES } from "./constants";
+import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC } from "./mint-burn-health-config";
 import { MINT_BURN_CONFIGS } from "./mint-burn-contracts";
 import { decodeJsonString } from "./cache-json";
@@ -102,6 +102,11 @@ export interface MintBurnCronSnapshot {
   status: string | null;
   chainHead: number | null;
   chainHeads: Map<string, number>;
+}
+
+export interface MintBurnCronSnapshotResult {
+  value: MintBurnCronSnapshot;
+  error: unknown | null;
 }
 
 export interface FlowAggregate {
@@ -419,7 +424,14 @@ export function selectLargestEvents(rows: EventRow[]): Map<string, EventRow> {
   return bestByCoin;
 }
 
-export async function readMintBurnCronSnapshot(db: D1Database, job = MINT_BURN_CRON_JOB): Promise<MintBurnCronSnapshot> {
+function emptyMintBurnCronSnapshot(): MintBurnCronSnapshot {
+  return { startedAt: null, status: null, chainHead: null, chainHeads: new Map() };
+}
+
+export async function readMintBurnCronSnapshotResult(
+  db: D1Database,
+  job = MINT_BURN_CRON_JOB,
+): Promise<MintBurnCronSnapshotResult> {
   try {
     const row = await db
       .prepare(
@@ -433,7 +445,7 @@ export async function readMintBurnCronSnapshot(db: D1Database, job = MINT_BURN_C
       .first<{ started_at: number | null; status: string | null; metadata: string | null }>();
 
     if (!row) {
-      return { startedAt: null, status: null, chainHead: null, chainHeads: new Map() };
+      return { value: emptyMintBurnCronSnapshot(), error: null };
     }
 
     const metadata = parseMintBurnCronMetadata(row.metadata, row.started_at ?? null);
@@ -449,14 +461,30 @@ export async function readMintBurnCronSnapshot(db: D1Database, job = MINT_BURN_C
     }
 
     return {
-      startedAt: row.started_at ?? null,
-      status: row.status ?? null,
-      chainHead: metadata.chainHead,
-      chainHeads: metadata.chainHeads,
+      value: {
+        startedAt: row.started_at ?? null,
+        status: row.status ?? null,
+        chainHead: metadata.chainHead,
+        chainHeads: metadata.chainHeads,
+      },
+      error: null,
     };
-  } catch {
-    return { startedAt: null, status: null, chainHead: null, chainHeads: new Map() };
+  } catch (error) {
+    logWorkerEventArgs(
+      "lib",
+      "error",
+      `[mint-burn-flows] event=cron-snapshot-read-failed job=${job} summary=${toErrorMessage(error)}`,
+      error,
+    );
+    return { value: emptyMintBurnCronSnapshot(), error };
   }
+}
+
+export async function readMintBurnCronSnapshot(
+  db: D1Database,
+  job = MINT_BURN_CRON_JOB,
+): Promise<MintBurnCronSnapshot> {
+  return (await readMintBurnCronSnapshotResult(db, job)).value;
 }
 
 export function buildBaselineMap(
@@ -524,6 +552,7 @@ export function buildCoinCoverageMap(
   firstSeenRows: FirstSeenRow[],
   lastBlocks: Map<string, number>,
   chainHeads: Map<string, number>,
+  unavailableReason: "cron-snapshot-unavailable" | null = null,
 ) {
   const firstSeenMap = new Map<string, number>();
   for (const row of firstSeenRows) {
@@ -552,6 +581,7 @@ export function buildCoinCoverageMap(
     startBlockSource: string;
     startBlockConfidence: "high" | "medium" | "low";
     status: "full" | "partial-history" | "lagging" | "bootstrapping" | "disabled" | "unknown";
+    unavailableReason: "cron-snapshot-unavailable" | null;
   }>();
 
   for (const [stablecoinId, configs] of configsByCoin) {
@@ -635,6 +665,7 @@ export function buildCoinCoverageMap(
       adapterKinds,
       startBlockSource: startBlockSources.length === 1 ? startBlockSources[0]! : "mixed",
       startBlockConfidence,
+      unavailableReason,
       status,
     });
   }
@@ -647,19 +678,29 @@ export async function readCachedFlow(db: D1Database, key: string): Promise<{ val
 }
 
 /**
- * Purge all cached mint-burn-flows API responses. Called from the cron at end
+ * Purge cached mint-burn-flows API responses. Called from the cron at end
  * of a successful run so the next API call recomputes against fresh events.
  *
  * Range predicate (not LIKE) because the `cache` table's PRIMARY KEY on `key`
  * supports guaranteed index-range scans; LIKE 'prefix%' falls back to a full
  * scan on SQLite in some configurations.
  */
-export async function invalidateMintBurnFlowCaches(db: D1Database): Promise<void> {
+export async function invalidateMintBurnFlowCaches(
+  db: D1Database,
+  options: { includeAggregate?: boolean } = {},
+): Promise<void> {
   // Prefix matches every key FLOW_CACHE_PREFIX writes
   // (`lib/mint-burn-flow-cache-keys.ts`); `\uffff`
   // is the largest UTF-16 code unit and safely bounds any future suffix.
+  // `includeAggregate: false` narrows the purge to per-coin keys: the
+  // aggregate rows carry the published Bank Run Gauge, which only the
+  // critical lane's post-run sidecar republishes, so a lane without that
+  // sidecar must leave the publication in place.
+  const scope = options.includeAggregate === false
+    ? `${FLOW_CACHE_PREFIX}:coin:`
+    : `${FLOW_CACHE_PREFIX}:`;
   await db
     .prepare("DELETE FROM cache WHERE key >= ? AND key < ?")
-    .bind(`${FLOW_CACHE_PREFIX}:`, `${FLOW_CACHE_PREFIX}:\uffff`)
+    .bind(scope, `${scope}\uffff`)
     .run();
 }

@@ -1,21 +1,18 @@
 import type { TelegramCreds } from "../lib/telegram";
 import type { CronResult } from "../lib/cron-logger";
-import { runWorkerRepairTaskRunner } from "../lib/repair-tasks";
 import { runCronStalenessWatchdog } from "./cron-staleness-watchdog";
 import { runDigestPublicationWatchdog } from "./digest-publication-watchdog";
-import { runCronDurationWatchdog } from "./cron-duration-watchdog";
 import { runDexExitRouteTurnoverWatchdog } from "./dex-exit-route-turnover-watchdog";
-import { runMintBurnGrowthWatchdog } from "./mint-burn-growth-watchdog";
 import { runReservePostSyncWatchdog } from "./reserve-post-sync-watchdog";
-import { runCronSentinelSources } from "./cron-sentinel-result";
+import { runCronSentinelSources, type CronSentinelMode } from "./cron-sentinel-result";
 
-export type CronSentinelMode = "status" | "daily" | "turnover" | "reserve-post-sync";
+/** `daily` is reached only through `runDailyCronSentinel`, never dispatched here. */
+export type CronSentinelDispatchMode = Exclude<CronSentinelMode, "daily">;
 
 export interface CronSentinelOptions {
-  mode: CronSentinelMode;
+  mode: CronSentinelDispatchMode;
   nowSec?: number;
   operatorTelegramCreds?: TelegramCreds | null;
-  repairRunnerEnabled?: boolean;
   signal?: AbortSignal;
 }
 
@@ -40,17 +37,6 @@ export async function runCronSentinel(
         { operatorTelegramCreds: options.operatorTelegramCreds ?? null },
         options.signal,
       ),
-    });
-  } else if (options.mode === "daily") {
-    sources.push({ source: "growth", run: () => runMintBurnGrowthWatchdog(db, options.signal) });
-    sources.push({ source: "duration", run: () => runCronDurationWatchdog(db, options.signal) });
-    sources.push({
-      source: "repair-debt",
-      run: () => runWorkerRepairTaskRunner(db, {
-        nowSec,
-        signal: options.signal,
-        enabled: options.repairRunnerEnabled,
-      }),
     });
   } else if (options.mode === "turnover") {
     sources.push({

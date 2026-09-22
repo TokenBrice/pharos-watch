@@ -8,7 +8,6 @@ import {
 import { formatUtcDayLabel, slugifyId } from "@shared/lib/format";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { cn } from "@/lib/utils";
-import { ARCHETYPE_VISUALS } from "@/lib/mechanism-explainers/types";
 import { RelatedCoinsList } from "../_shared/related-coins-list";
 import {
   CrossLinksFooter,
@@ -94,19 +93,13 @@ function ArticleWayfinding({ study }: { study: CaseStudy }) {
   );
 }
 
-function Takeaways({
-  study,
-  kickerClass,
-}: {
-  study: CaseStudy;
-  kickerClass: string;
-}) {
+function Takeaways({ study }: { study: CaseStudy }) {
   const takeaways = study.takeaways ?? [];
   if (takeaways.length === 0) return null;
   return (
     <section id="key-takeaways" className="space-y-5">
       <div className="space-y-2">
-        <SectionKicker className={kickerClass}>The short version</SectionKicker>
+        <SectionKicker>The short version</SectionKicker>
         <SectionHeading>Key takeaways</SectionHeading>
       </div>
       <ul className="pharos-card-shell space-y-3 p-5 sm:p-6">
@@ -200,19 +193,13 @@ function PrevNextPager({ study }: { study: CaseStudy }) {
   );
 }
 
-function RelatedStudies({
-  study,
-  kickerClass,
-}: {
-  study: CaseStudy;
-  kickerClass: string;
-}) {
+function RelatedStudies({ study }: { study: CaseStudy }) {
   const related = pickRelatedStudies(study, 3);
   if (related.length === 0) return null;
   return (
     <section className="space-y-5">
       <div className="space-y-2">
-        <SectionKicker className={kickerClass}>Keep reading</SectionKicker>
+        <SectionKicker>Keep reading</SectionKicker>
         <SectionHeading>Related case studies</SectionHeading>
       </div>
       <ul className="divide-y divide-border/40">
@@ -223,12 +210,7 @@ function RelatedStudies({
               className="pharos-focus-ring group grid gap-1 py-4 first:pt-0 last:pb-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-baseline sm:gap-8"
             >
               <div className="flex flex-col gap-1">
-                <span
-                  className={cn(
-                    "pharos-kicker",
-                    ARCHETYPE_VISUALS[item.archetype].kickerClass,
-                  )}
-                >
+                <span className="pharos-kicker">
                   {item.eyebrow}
                 </span>
                 <span className="text-[15px] font-semibold leading-snug text-foreground transition-colors group-hover:text-frost-blue">
@@ -250,6 +232,7 @@ function RelatedStudies({
 function FactStrip({ study }: { study: CaseStudy }) {
   const peak = study.eventWindow.peakDeviationBps;
   const low = study.eventWindow.lowPrice;
+  const metricScope = study.eventWindow.metricScope;
   return (
     <dl className="pharos-card-shell grid grid-cols-2 gap-x-6 gap-y-4 p-5 sm:grid-cols-4 sm:p-6">
       <div className="space-y-1">
@@ -291,6 +274,11 @@ function FactStrip({ study }: { study: CaseStudy }) {
               low ${low.toFixed(3)}
             </span>
           ) : null}
+          {metricScope ? (
+            <span className="block font-sans text-xs font-normal text-muted-foreground">
+              Scope: {metricScope}
+            </span>
+          ) : null}
         </dd>
       </div>
     </dl>
@@ -328,6 +316,11 @@ function EvidenceSnapshot({ study }: { study: CaseStudy }) {
             {study.eventWindow.peakDeviationBps != null
               ? `${study.eventWindow.peakDeviationBps > 0 ? "+" : ""}${study.eventWindow.peakDeviationBps} bps`
               : "n/a"}
+            {study.eventWindow.metricScope ? (
+              <span className="block font-sans text-xs font-normal text-muted-foreground">
+                Scope: {study.eventWindow.metricScope}
+              </span>
+            ) : null}
           </p>
         </div>
         <div className="space-y-1">
@@ -358,24 +351,22 @@ function EvidenceSnapshot({ study }: { study: CaseStudy }) {
   );
 }
 
-function HowPharosSawIt({
-  study,
-  kickerClass,
-}: {
-  study: CaseStudy;
-  kickerClass: string;
-}) {
+function HowPharosSawIt({ study }: { study: CaseStudy }) {
   const widgets = study.dataWidgets ?? [];
   return (
     <section id="peg-on-the-tape" className="space-y-6">
       <div className="space-y-2">
-        <SectionKicker className={kickerClass}>How Pharos saw it</SectionKicker>
+        <SectionKicker>How Pharos saw it</SectionKicker>
         <SectionHeading>The peg on the tape</SectionHeading>
       </div>
       {widgets.length ? (
         <div className="space-y-6">
           {widgets.map((widget, i) => (
-            <CaseStudyChart key={`${widget.coinId}-${i}`} widget={widget} />
+            <CaseStudyChart
+              key={`${widget.coinId}-${i}`}
+              widget={widget}
+              eventWindows={study.eventWindows ?? [study.eventWindow]}
+            />
           ))}
         </div>
       ) : (
@@ -385,17 +376,11 @@ function HowPharosSawIt({
   );
 }
 
-function Timeline({
-  study,
-  kickerClass,
-}: {
-  study: CaseStudy;
-  kickerClass: string;
-}) {
+function Timeline({ study }: { study: CaseStudy }) {
   return (
     <section id="timeline" className="space-y-6">
       <div className="space-y-2">
-        <SectionKicker className={kickerClass}>How it unfolded</SectionKicker>
+        <SectionKicker>How it unfolded</SectionKicker>
         <SectionHeading>Timeline</SectionHeading>
       </div>
       <CaseStudyTimeline entries={study.timeline} />
@@ -403,20 +388,12 @@ function Timeline({
   );
 }
 
-function Narrative({
-  study,
-  kickerClass,
-}: {
-  study: CaseStudy;
-  kickerClass: string;
-}) {
+function Narrative({ study }: { study: CaseStudy }) {
   return (
     <>
       {study.sections.map((section, i) => (
         <section key={i} id={caseStudySectionId(i, section.heading)} className="space-y-4">
-          <SectionKicker className={kickerClass}>
-            Section {String(i + 1).padStart(2, "0")}
-          </SectionKicker>
+          <SectionKicker>Section {String(i + 1).padStart(2, "0")}</SectionKicker>
           <SectionHeading>{section.heading}</SectionHeading>
           <div className="space-y-3 text-[15px] leading-relaxed text-muted-foreground">
             {section.paragraphs.map((paragraph, j) => (
@@ -429,37 +406,23 @@ function Narrative({
   );
 }
 
-function Watchpoints({
-  study,
-  kickerClass,
-}: {
-  study: CaseStudy;
-  kickerClass: string;
-}) {
+function Watchpoints({ study }: { study: CaseStudy }) {
   return (
     <NumberedListSection
       items={study.watchpoints}
       kicker="What to watch if this recurs"
       heading="Watchpoints"
-      kickerClass={kickerClass}
       id="watchpoints"
     />
   );
 }
 
-function RelatedCoins({
-  study,
-  kickerClass,
-}: {
-  study: CaseStudy;
-  kickerClass: string;
-}) {
+function RelatedCoins({ study }: { study: CaseStudy }) {
   const related = study.relatedCoins ?? [];
   if (related.length === 0) return null;
   return (
     <RelatedCoinsList
       coins={related}
-      kickerClass={kickerClass}
       kicker="The blast radius"
       heading="Coins caught in the contagion"
       id="related-coins"
@@ -467,16 +430,10 @@ function RelatedCoins({
   );
 }
 
-function Sources({
-  study,
-  kickerClass,
-}: {
-  study: CaseStudy;
-  kickerClass: string;
-}) {
+function Sources({ study }: { study: CaseStudy }) {
   return (
     <section id="sources" className="space-y-5 rounded-xl border border-border/50 bg-card/25 p-5 sm:p-6">
-      <SectionKicker className={kickerClass}>Primary sources</SectionKicker>
+      <SectionKicker>Primary sources</SectionKicker>
       <ul className="divide-y divide-border/40">
         {study.sources.map((source, i) => (
           <li key={i}>
@@ -500,21 +457,20 @@ function Sources({
 }
 
 export function CaseStudyBody({ study }: { study: CaseStudy }) {
-  const kickerClass = ARCHETYPE_VISUALS[study.archetype].kickerClass;
   return (
     <>
       <ArticleWayfinding study={study} />
       <ArticleMeta study={study} />
       <FactStrip study={study} />
-      <Takeaways study={study} kickerClass={kickerClass} />
-      <HowPharosSawIt study={study} kickerClass={kickerClass} />
-      <Timeline study={study} kickerClass={kickerClass} />
-      <Narrative study={study} kickerClass={kickerClass} />
-      <Watchpoints study={study} kickerClass={kickerClass} />
-      <RelatedCoins study={study} kickerClass={kickerClass} />
-      <Sources study={study} kickerClass={kickerClass} />
-      <CrossLinksFooter links={study.crossLinks} kickerClass={kickerClass} />
-      <RelatedStudies study={study} kickerClass={kickerClass} />
+      <Takeaways study={study} />
+      <HowPharosSawIt study={study} />
+      <Timeline study={study} />
+      <Narrative study={study} />
+      <Watchpoints study={study} />
+      <RelatedCoins study={study} />
+      <Sources study={study} />
+      <CrossLinksFooter links={study.crossLinks} />
+      <RelatedStudies study={study} />
       <PreferredSourcePrompt />
       <PrevNextPager study={study} />
     </>

@@ -1,8 +1,48 @@
+import { DAY_SECONDS } from "./time-constants";
+
 export { bucketUnixSecondsToUtcDay as bucketTimestampToUtcDay } from "./time-buckets";
 
 export interface TimestampedRatePoint {
   timestamp: number;
   rate: number;
+}
+
+/**
+ * Shared bound for supply-snapshot lookups: a snapshot further than this from
+ * the requested moment is treated as no observation at all.
+ */
+export const MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC = 14 * DAY_SECONDS;
+
+/**
+ * Select the newest snapshot at or before `target`, within `maxDistanceSec`.
+ *
+ * As-of semantics: a later snapshot is never returned, so a replayed day can
+ * only read observations that already existed on that day.
+ *
+ * @param snapshots Array sorted in ascending order by `getKey`
+ */
+export function findAsOfSnapshot<T>(
+  snapshots: readonly T[] | undefined,
+  target: number,
+  getKey: (item: T) => number,
+  maxDistanceSec: number,
+): T | null {
+  if (!snapshots || snapshots.length === 0) return null;
+
+  let lo = 0;
+  let hi = snapshots.length - 1;
+  let asOf: T | null = null;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (getKey(snapshots[mid]) <= target) {
+      asOf = snapshots[mid];
+      lo = mid + 1;
+    } else {
+      hi = mid - 1;
+    }
+  }
+
+  return asOf && target - getKey(asOf) <= maxDistanceSec ? asOf : null;
 }
 
 export function interpolateRateAtTimestamp(

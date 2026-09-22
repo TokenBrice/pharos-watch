@@ -354,7 +354,7 @@ const POLYGON_AM3CRV: CurveCompositeToken = {
   decimals: 18,
 };
 
-function activeMetapoolPolicy(
+function shadowMetapoolPolicy(
   policy: Omit<
     CurveMetapoolPolicy,
     "adapterProfileId" | "quoteFunction" | "mode" | "scoreEligible"
@@ -364,8 +364,8 @@ function activeMetapoolPolicy(
     ...policy,
     adapterProfileId: CURVE_METAPOOL_ADAPTER_PROFILE_ID,
     quoteFunction: "get_dy_underlying",
-    mode: "active",
-    scoreEligible: true,
+    mode: "shadow",
+    scoreEligible: false,
   };
 }
 
@@ -384,7 +384,7 @@ function ethereumLegacyFactory3CrvMetapool(input: {
     ...input.token,
     trackedAssetId: input.stablecoinId,
   };
-  return activeMetapoolPolicy({
+  return shadowMetapoolPolicy({
     chain: "ethereum",
     stablecoinId: input.stablecoinId,
     poolAddress: input.poolAddress,
@@ -433,7 +433,7 @@ function ethereumFraxBpMetapool(input: {
   factoryPoolIndex: number;
   token: CurveCompositeToken;
 }): CurveMetapoolPolicy {
-  return activeMetapoolPolicy({
+  return shadowMetapoolPolicy({
     chain: "ethereum",
     stablecoinId: input.stablecoinId,
     poolAddress: input.poolAddress,
@@ -499,7 +499,7 @@ const CURVE_MSUSD_FRAXBP_METAPOOL_POLICY = ethereumFraxBpMetapool({
   },
 });
 
-export const CURVE_GUSD_3CRV_METAPOOL_POLICY = activeMetapoolPolicy({
+export const CURVE_GUSD_3CRV_METAPOOL_POLICY = shadowMetapoolPolicy({
   chain: "ethereum",
   stablecoinId: "gusd-gemini",
   poolAddress: CURVE_GUSD_3CRV_METAPOOL_ADDRESS,
@@ -554,7 +554,7 @@ export const CURVE_LUSD_3CRV_METAPOOL_POLICY = ethereumLegacyFactory3CrvMetapool
   },
 });
 
-const CURVE_MEUSD_CRV2POOL_METAPOOL_POLICY = activeMetapoolPolicy({
+const CURVE_MEUSD_CRV2POOL_METAPOOL_POLICY = shadowMetapoolPolicy({
   chain: "ethereum",
   stablecoinId: "meusd-mezo",
   poolAddress: CURVE_MEUSD_CRV2POOL_METAPOOL_ADDRESS,
@@ -615,7 +615,7 @@ function polygonAm3CrvMetapool(input: {
   factoryPoolIndex: number;
   token: CurveCompositeToken;
 }): CurveMetapoolPolicy {
-  return activeMetapoolPolicy({
+  return shadowMetapoolPolicy({
     chain: "polygon",
     stablecoinId: input.stablecoinId,
     poolAddress: input.poolAddress,

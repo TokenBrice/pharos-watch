@@ -1,3 +1,4 @@
+import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import {
@@ -70,11 +71,10 @@ interface FluidTicker {
   liquidity_in_usd: string;
 }
 
-const EVM_ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
 const INVALID_FLUID_POOL_ID_LOG_LIMIT = 80;
 
 function isEvmAddress(value: unknown): value is string {
-  return typeof value === "string" && EVM_ADDRESS_RE.test(value);
+  return canonicalEvmAddress(value) !== null;
 }
 
 function formatInvalidFluidPoolId(value: unknown): string {

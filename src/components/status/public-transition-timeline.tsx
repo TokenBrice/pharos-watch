@@ -23,6 +23,8 @@ interface PublicTransitionTimelineProps {
   window: PublicStatusHistoryWindow;
   onWindowChange: (window: PublicStatusHistoryWindow) => void;
   isLoading: boolean;
+  /** A failed read is not an empty incident log. */
+  error?: Error | null;
 }
 
 export function PublicTransitionTimeline({
@@ -30,6 +32,7 @@ export function PublicTransitionTimeline({
   window,
   onWindowChange,
   isLoading,
+  error = null,
 }: PublicTransitionTimelineProps) {
   return (
     <div>
@@ -50,7 +53,9 @@ export function PublicTransitionTimeline({
       </div>
 
       <div className="mt-4">
-        {isLoading && transitions.length === 0 ? (
+        {error && transitions.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Status history is unavailable: {error.message}</p>
+        ) : isLoading && transitions.length === 0 ? (
           <p className="text-sm text-muted-foreground">Loading status history...</p>
         ) : transitions.length === 0 ? (
           <p className="text-sm text-muted-foreground">No status changes recorded in this window.</p>

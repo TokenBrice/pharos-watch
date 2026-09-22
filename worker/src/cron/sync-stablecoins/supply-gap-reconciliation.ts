@@ -1,4 +1,8 @@
-import { canonicalizeChainCirculating } from "@shared/lib/chains/circulating";
+import {
+  canonicalizeChainCirculating,
+  type ChainCirculatingNormalizationDiagnostics,
+} from "@shared/lib/chains/circulating";
+
 import { CHAIN_META } from "@shared/lib/chains";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { getCirculatingRaw } from "@shared/lib/supply";
@@ -27,12 +31,31 @@ interface CoinGeckoCurrentMcapRow {
 }
 
 interface CoinGeckoRecentMarketChart {
-  market_caps?: [number, number][];
+  market_caps?: unknown;
 }
 
 interface DefiLlamaChartPoint {
   date?: number | string;
   totalCirculatingUSD?: Record<string, number>;
+}
+
+interface MarketCapObservation {
+  value: number;
+  observedAt: number;
+}
+
+interface SupplyGapBaselineMismatch {
+  id: string;
+  expectedCurrent: number;
+  attributedCurrent: number;
+  tolerance: number;
+  droppedRows: number;
+  droppedChainIds: string[];
+}
+
+interface MissingChainGapApplication {
+  reconciledCurrent: number | null;
+  baselineMismatch?: SupplyGapBaselineMismatch;
 }
 
 interface MissingChainSupplyGapCandidate {
@@ -60,6 +83,8 @@ export interface SupplyGapReconciliationAsset {
   reason: SupplyGapReconciliationReason;
   fromSource: string | null;
   toValue: number;
+  observedAt: number | null;
+  observedAgeSec: number | null;
 }
 
 export interface SupplyGapReconciliationResult {
@@ -67,6 +92,7 @@ export interface SupplyGapReconciliationResult {
   totalReconciled: number;
   byReason: Record<SupplyGapReconciliationReason, number>;
   assets: SupplyGapReconciliationAsset[];
+  baselineMismatches: SupplyGapBaselineMismatch[];
 }
 
 type SupplyGapCandidate = MissingChainSupplyGapCandidate | ZeroSupplyCollapseCandidate;
@@ -115,22 +141,28 @@ function findNearestMarketCap(
   points: [number, number][],
   targetMs: number,
   maxDistanceMs: number,
-): number | null {
+): MarketCapObservation | null {
   let bestValue: number | null = null;
+  let bestTimestampMs: number | null = null;
   let bestDistance = Number.POSITIVE_INFINITY;
 
   for (const [timestampMs, marketCap] of points) {
     const value = toPositiveFiniteNumber(marketCap);
-    if (value == null) continue;
+    if (value == null || !Number.isFinite(timestampMs) || timestampMs <= 0) continue;
 
     const distance = Math.abs(timestampMs - targetMs);
     if (distance < bestDistance) {
       bestDistance = distance;
       bestValue = value;
+      bestTimestampMs = timestampMs;
     }
   }
 
-  return bestDistance <= maxDistanceMs ? bestValue : null;
+  if (bestDistance > maxDistanceMs || bestValue == null || bestTimestampMs == null) return null;
+  return {
+    value: bestValue,
+    observedAt: Math.floor(bestTimestampMs / 1000),
+  };
 }
 
 function normalizeChartTimestampMs(value: unknown): number | null {
@@ -218,7 +250,33 @@ async function fetchRecentCoinGeckoMarketCaps(
 
   try {
     const payload = JSON.parse(result.body) as CoinGeckoRecentMarketChart;
-    return Array.isArray(payload.market_caps) ? payload.market_caps : [];
+    if (!Array.isArray(payload.market_caps)) return [];
+
+    let malformedCount = 0;
+    const points = payload.market_caps.flatMap((entry) => {
+      if (!Array.isArray(entry) || entry.length < 2) {
+        malformedCount++;
+        return [];
+      }
+      const timestampMs = normalizeChartTimestampMs(entry[0]);
+      const marketCap = toPositiveFiniteNumber(entry[1]);
+      if (timestampMs == null || marketCap == null) {
+        malformedCount++;
+        return [];
+      }
+      return [[timestampMs, marketCap] as [number, number]];
+    });
+    if (malformedCount > 0) {
+      logWorkerEvent({
+        scope: "lib",
+        level: "warn",
+        event: "sync-stablecoins.coingecko-market-chart-points-dropped",
+        job: "sync-stablecoins",
+        message: "Dropped malformed CoinGecko market-chart points",
+        metadata: { geckoId, malformedCount },
+      });
+    }
+    return points;
   } catch (error) {
     logWorkerEvent({
       scope: "lib",
@@ -262,12 +320,35 @@ async function fetchRecentDefiLlamaMarketCaps(
     const payload = JSON.parse(result.body);
     if (!Array.isArray(payload)) return [];
 
-    return payload.flatMap((entry) => {
+    let malformedCount = 0;
+    const points = payload.flatMap((entry) => {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+        malformedCount++;
+        return [];
+      }
       const point = entry as DefiLlamaChartPoint;
       const timestampMs = normalizeChartTimestampMs(point.date);
-      const marketCap = toPositiveFiniteNumber(point.totalCirculatingUSD?.[pegKey]);
-      return timestampMs != null && marketCap != null ? [[timestampMs, marketCap] as [number, number]] : [];
+      const buckets = point.totalCirculatingUSD;
+      const marketCap = buckets && typeof buckets === "object" && !Array.isArray(buckets)
+        ? toPositiveFiniteNumber(buckets[pegKey])
+        : null;
+      if (timestampMs == null || marketCap == null) {
+        malformedCount++;
+        return [];
+      }
+      return [[timestampMs, marketCap] as [number, number]];
     });
+    if (malformedCount > 0) {
+      logWorkerEvent({
+        scope: "lib",
+        level: "warn",
+        event: "sync-stablecoins.defillama-chart-points-dropped",
+        job: "sync-stablecoins",
+        message: "Dropped malformed DefiLlama market-chart points",
+        metadata: { llamaId, malformedCount },
+      });
+    }
+    return points;
   } catch (error) {
     logWorkerEvent({
       scope: "lib",
@@ -346,8 +427,8 @@ function buildSupplyGapCandidates(
 function applySingleMissingChainGap(
   candidate: MissingChainSupplyGapCandidate,
   totals: { current: number; day: number; week: number; month: number },
-): number | null {
-  if (candidate.missingChainIds.length !== 1) return null;
+): MissingChainGapApplication {
+  if (candidate.missingChainIds.length !== 1) return { reconciledCurrent: null };
 
   const dlTotals = {
     current: getCirculatingRaw(candidate.asset),
@@ -355,11 +436,29 @@ function applySingleMissingChainGap(
     week: getCirculatingRaw({ circulating: candidate.asset.circulatingPrevWeek ?? undefined }),
     month: getCirculatingRaw({ circulating: candidate.asset.circulatingPrevMonth ?? undefined }),
   };
-  const attributedCurrent = [...canonicalizeChainCirculating(candidate.asset.chainCirculating).values()]
+  const diagnostics: ChainCirculatingNormalizationDiagnostics = {
+    droppedRows: 0,
+    droppedChainIds: [],
+  };
+  const attributedCurrent = [...canonicalizeChainCirculating(candidate.asset.chainCirculating, diagnostics).values()]
     .reduce((sum, row) => sum + row.current, 0);
-  const baselineTolerance = Math.max(0.01, dlTotals.current * 1e-9);
-  if (!Number.isFinite(attributedCurrent) || Math.abs(attributedCurrent - dlTotals.current) > baselineTolerance) {
-    return null;
+  const baselineTolerance = Math.max(0.01, dlTotals.current * 1e-6);
+  if (
+    !Number.isFinite(attributedCurrent)
+    || diagnostics.droppedRows > 0
+    || Math.abs(attributedCurrent - dlTotals.current) > baselineTolerance
+  ) {
+    return {
+      reconciledCurrent: null,
+      baselineMismatch: {
+        id: candidate.asset.id,
+        expectedCurrent: dlTotals.current,
+        attributedCurrent,
+        tolerance: baselineTolerance,
+        droppedRows: diagnostics.droppedRows,
+        droppedChainIds: diagnostics.droppedChainIds,
+      },
+    };
   }
   const reconciledTotals = {
     current: Math.max(dlTotals.current, totals.current),
@@ -375,7 +474,7 @@ function applySingleMissingChainGap(
   if (
     remainderCurrent <= 0 ||
     ![remainderCurrent, remainderDay, remainderWeek, remainderMonth].every(Number.isFinite)
-  ) return null;
+  ) return { reconciledCurrent: null };
 
   const chainId = candidate.missingChainIds[0];
   const chainLabel = CHAIN_META[chainId]?.name ?? chainId;
@@ -393,7 +492,7 @@ function applySingleMissingChainGap(
   candidate.asset.circulatingPrevWeek = { [candidate.pegKey]: reconciledTotals.week };
   candidate.asset.circulatingPrevMonth = { [candidate.pegKey]: reconciledTotals.month };
   candidate.asset.supplySource = "coingecko-gap-fill";
-  return reconciledTotals.current;
+  return { reconciledCurrent: reconciledTotals.current };
 }
 
 function getPegReferencePriceUsd(
@@ -413,7 +512,7 @@ async function applyCuratedOnChainSupplyGap(input: {
   chainRpcs?: Map<string, ChainRpcConfig>;
   fxFallbackRates?: Record<string, number>;
   signal?: AbortSignal;
-}): Promise<number | null> {
+}): Promise<{ mcap: number; observedAt: number | null } | null> {
   const meta = ACTIVE_META_BY_ID.get(String(input.candidate.asset.id));
   if (!meta) return null;
 
@@ -433,13 +532,14 @@ async function applyCuratedOnChainSupplyGap(input: {
   input.candidate.asset.circulatingPrevWeek = null;
   input.candidate.asset.circulatingPrevMonth = null;
   input.candidate.asset.supplySource = onChainMcap.supplySource;
+  input.candidate.asset.supplyObservedAt = onChainMcap.observedAt ?? null;
   input.candidate.asset.chains = buildKnownDisplayChains(input.candidate.asset.id, input.candidate.asset.chains);
 
   if (onChainMcap.chainCirculating) {
     input.candidate.asset.chainCirculating = toPublicChainCirculating(onChainMcap.chainCirculating);
   }
 
-  return onChainMcap.mcap;
+  return { mcap: onChainMcap.mcap, observedAt: onChainMcap.observedAt ?? null };
 }
 
 export async function reconcileTrackedSupplyGaps(
@@ -492,12 +592,15 @@ export async function reconcileTrackedSupplyGaps(
       totalReconciled: 0,
       byReason: createEmptyReasonCounts(),
       assets: [],
+      baselineMismatches: [],
     };
   }
 
   const nowMs = Date.now();
+  const nowSec = Math.floor(nowMs / 1000);
   const reconciledIds: string[] = [];
   const reconciledAssets: SupplyGapReconciliationAsset[] = [];
+  const baselineMismatches: SupplyGapBaselineMismatch[] = [];
   const byReason = createEmptyReasonCounts();
 
   for (const candidate of candidates) {
@@ -515,7 +618,7 @@ export async function reconcileTrackedSupplyGaps(
     if (
       candidate.kind === "zero-supply-collapse" &&
       (currentFromHistory == null || day == null || week == null || month == null ||
-        currentFromHistory < DEFILLAMA_ZERO_SUPPLY_MIN_MARKET_CAP)
+        currentFromHistory.value < DEFILLAMA_ZERO_SUPPLY_MIN_MARKET_CAP)
     ) {
       const fromSource = candidate.asset.supplySource ?? null;
       const onChainMcap = await applyCuratedOnChainSupplyGap({
@@ -531,7 +634,9 @@ export async function reconcileTrackedSupplyGaps(
         id: candidate.asset.id,
         reason: "onchain-total-supply",
         fromSource,
-        toValue: onChainMcap,
+        toValue: onChainMcap.mcap,
+        observedAt: onChainMcap.observedAt,
+        observedAgeSec: onChainMcap.observedAt == null ? null : Math.max(0, nowSec - onChainMcap.observedAt),
       });
       byReason["onchain-total-supply"] += 1;
       continue;
@@ -539,24 +644,39 @@ export async function reconcileTrackedSupplyGaps(
     if (currentFromHistory == null || day == null || week == null || month == null) continue;
 
     const totals = {
-      current: currentFromHistory,
-      day,
-      week,
-      month,
+      current: currentFromHistory.value,
+      day: day.value,
+      week: week.value,
+      month: month.value,
     };
+    const observedAt = currentFromHistory.observedAt;
+    const observedAgeSec = Math.max(0, nowSec - observedAt);
 
     if (candidate.kind === "missing-chain") {
       const fromSource = candidate.asset.supplySource ?? null;
-      const reconciledCurrent = applySingleMissingChainGap(candidate, totals);
-      if (reconciledCurrent == null) continue;
-
+      const application = applySingleMissingChainGap(candidate, totals);
+      if (application.baselineMismatch) {
+        baselineMismatches.push(application.baselineMismatch);
+        logWorkerEvent({
+          scope: "lib",
+          level: "warn",
+          event: "sync-stablecoins.supply-gap-baseline-mismatch",
+          job: "sync-stablecoins",
+          message: "Supply-gap baseline did not reconcile after chain canonicalization",
+          metadata: application.baselineMismatch as unknown as Record<string, unknown>,
+        });
+      }
+      if (application.reconciledCurrent == null) continue;
+      candidate.asset.supplyObservedAt = observedAt;
       candidate.asset.chains = buildKnownDisplayChains(candidate.asset.id, candidate.asset.chains);
       reconciledIds.push(candidate.asset.id);
       reconciledAssets.push({
         id: candidate.asset.id,
         reason: "coingecko-gap-fill",
         fromSource,
-        toValue: reconciledCurrent,
+        toValue: application.reconciledCurrent,
+        observedAt,
+        observedAgeSec,
       });
       byReason["coingecko-gap-fill"] += 1;
       continue;
@@ -564,6 +684,7 @@ export async function reconcileTrackedSupplyGaps(
 
     const fromSource = candidate.asset.supplySource ?? null;
     const reason: SupplyGapReconciliationReason = "defillama-history-gap-fill";
+    candidate.asset.supplyObservedAt = observedAt;
     candidate.asset.circulating = { [candidate.pegKey]: totals.current };
     candidate.asset.circulatingPrevDay = { [candidate.pegKey]: totals.day };
     candidate.asset.circulatingPrevWeek = { [candidate.pegKey]: totals.week };
@@ -576,6 +697,8 @@ export async function reconcileTrackedSupplyGaps(
       reason,
       fromSource,
       toValue: totals.current,
+      observedAt,
+      observedAgeSec,
     });
     byReason[reason] += 1;
   }
@@ -585,5 +708,6 @@ export async function reconcileTrackedSupplyGaps(
     totalReconciled: reconciledIds.length,
     byReason,
     assets: reconciledAssets,
+    baselineMismatches,
   };
 }

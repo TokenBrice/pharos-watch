@@ -82,6 +82,7 @@ describe("watch-worker-cron artifact gap classification", () => {
     });
     expect(JSON.stringify(report)).not.toContain("secret");
     expect(JSON.stringify(report)).not.toContain("client");
+    expect(report).not.toHaveProperty("jobAttempts");
   });
 
   it("returns an informational gap without querying an undiscovered optional table", async () => {
@@ -109,13 +110,14 @@ describe("watch-worker-cron artifact gap classification", () => {
       yieldRankings: [{ generation_id: "yield-retained", state: "published" }],
       surface: [],
     });
-    expect([report.jobAttempts, report.repairTasks, report.canaryRuns]).toEqual([[], [], []]);
+    expect([report.repairTasks, report.canaryRuns]).toEqual([[], []]);
+    expect(report).not.toHaveProperty("jobAttempts");
     expect(report.artifactErrors).toEqual({
-      jobAttempts: "discovery unavailable", repairTasks: "discovery unavailable",
+      repairTasks: "discovery unavailable",
       canaryRuns: "discovery unavailable", surfacePublicationGenerations: "discovery unavailable",
     });
     expect(report.artifactGaps).toEqual(
-      ["jobAttempts", "repairTasks", "canaryRuns", "surfacePublicationGenerations"].map((artifact) =>
+      ["repairTasks", "canaryRuns", "surfacePublicationGenerations"].map((artifact) =>
         expect.objectContaining({
           artifact, code: "query_failed", severity: "warning", optional: true, message: "discovery unavailable",
         })),

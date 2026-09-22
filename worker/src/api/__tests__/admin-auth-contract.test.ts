@@ -6,7 +6,7 @@ import {
 } from "@shared/lib/api-endpoints";
 import { isMutatingAdminGetAllowed } from "@shared/lib/api-endpoints/validation";
 import { route } from "../../router";
-import type { FullRouteContext } from "../../routes/shared";
+import { routeContextFactory } from "../../test-helpers/__shared/routes";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 
@@ -23,10 +23,7 @@ const execCtx = {
   passThroughOnException: () => {},
 } as unknown as ExecutionContext;
 
-function makeRouteCtx(overrides: Partial<FullRouteContext> & { url: URL }): FullRouteContext {
-  const defaultRequest = new Request(overrides.url.toString());
-  return { db, execCtx, request: defaultRequest, trustedAdmin: false, ...overrides };
-}
+const makeRouteCtx = routeContextFactory({ db, execCtx });
 
 /** Synthetic placeholders that satisfy each dynamic admin pattern's parameter constraints. */
 const DYNAMIC_ADMIN_PROBE_PATHS: Record<string, string> = {

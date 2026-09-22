@@ -138,6 +138,21 @@ export async function recoverIncompleteTelegramSourceEvent(args: {
     markTelegramDeliveryStarted,
   } = args;
   const { safetySourceAssessment } = snapshotState;
+  const runRecoverySidecar = () => executeSourceRecoveryQueueSidecar({
+    db,
+    botToken,
+    nowSec,
+    dispatchStartedAtMs,
+    pendingCapacityBefore,
+    chatsWithActiveSnooze,
+    reserveSourceUnavailable: snapshotState.reserveSourceUnavailable,
+    reserveSourceAssessment: snapshotState.reserveSourceAssessment,
+    safetySourceAssessment,
+    signal,
+    sharedState,
+    markTelegramDeliveryStarted,
+  });
+
 
   let sourceEvent = await loadOldestIncompleteTelegramAlertSourceEvent(db);
   if (sourceEvent) {
@@ -175,20 +190,7 @@ export async function recoverIncompleteTelegramSourceEvent(args: {
         )
         .bind(nowSec, sourceEvent.sourceEventId)
         .run();
-      const sidecar = await executeSourceRecoveryQueueSidecar({
-        db,
-        botToken,
-        nowSec,
-        dispatchStartedAtMs,
-        pendingCapacityBefore,
-        chatsWithActiveSnooze,
-        reserveSourceUnavailable: snapshotState.reserveSourceUnavailable,
-        reserveSourceAssessment: snapshotState.reserveSourceAssessment,
-        safetySourceAssessment,
-        signal,
-        sharedState,
-        markTelegramDeliveryStarted,
-      });
+      const sidecar = await runRecoverySidecar();
       const result = {
         ...sidecar,
         skipped: "source-event-backfill-required" as const,
@@ -214,20 +216,7 @@ export async function recoverIncompleteTelegramSourceEvent(args: {
     if (expiry.complete) {
       await expireTelegramAlertSourceEvent(db, sourceEvent, nowSec, signal);
     }
-    const sidecar = await executeSourceRecoveryQueueSidecar({
-      db,
-      botToken,
-      nowSec,
-      dispatchStartedAtMs,
-      pendingCapacityBefore,
-      chatsWithActiveSnooze,
-      reserveSourceUnavailable: snapshotState.reserveSourceUnavailable,
-      reserveSourceAssessment: snapshotState.reserveSourceAssessment,
-      safetySourceAssessment,
-      signal,
-      sharedState,
-      markTelegramDeliveryStarted,
-    });
+    const sidecar = await runRecoverySidecar();
     const result = {
       ...sidecar,
       skipped: "source-event-expired" as const,

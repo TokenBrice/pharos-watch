@@ -409,7 +409,7 @@ export function adaptFraxFpiCollateral(payload: FraxFpiCollateralResponse): Adap
         freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" : "unverified",
         ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
         routeStatus: "open",
-        routeStatusSource: "protocol-api",
+        routeStatusSource: "static-config",
         sourceUrls: ["https://frax.com/transparency"],
       }),
     },

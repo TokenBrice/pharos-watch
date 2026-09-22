@@ -9,7 +9,16 @@ import {
   getScheduledSlotPlanBudgetEntries,
   SHARED_SCHEDULED_JOB_IDENTITIES,
   SCHEDULED_SLOT_PLANS,
+  OFF_SLOT_SCHEDULED_PRODUCERS,
 } from "@shared/lib/scheduled-runner-registry";
+import type { ScheduledSlotGroupDefinition } from "../slot-groups";
+import { buildDaily0810SlotGroups } from "../daily-0810";
+import { buildDepegResolverSlotGroups } from "../depeg-resolver";
+import { buildDewsPsiSlotGroups } from "../dews-psi";
+import { buildHalfHourlyChartsSlotGroups } from "../half-hourly-charts";
+import { buildStatusSelfCheckSlotGroups } from "../status-self-check";
+import { buildV9PublicationSlotGroups } from "../v9-publication";
+import { buildV9SupplyAttributionSlotGroups } from "../v9-supply-attribution";
 import { CRON_TIMEOUT_MS } from "../../../lib/cron-timeouts";
 import {
   PUBLIC_DATASET_CRON_TIMEOUT_MS,
@@ -34,15 +43,20 @@ describe("scheduled runner contract", () => {
     const plannedStatusJobs = new Set(
       Object.values(SCHEDULED_SLOT_PLANS).flatMap((plan) => flattenScheduledSlotPlanJobs(plan)),
     );
-    expect(sorted(plannedStatusJobs)).toEqual(sorted(CRON_JOB_DEFINITIONS.map((definition) => definition.job)));
+    const slotExecutedJobs = CRON_JOB_DEFINITIONS
+      .map((definition) => definition.job)
+      .filter((job) => !(job in OFF_SLOT_SCHEDULED_PRODUCERS));
+    expect(sorted(plannedStatusJobs)).toEqual(sorted(slotExecutedJobs));
 
     for (const definition of CRON_JOB_DEFINITIONS) {
+      if (definition.job in OFF_SLOT_SCHEDULED_PRODUCERS) continue;
       const plan = SCHEDULED_SLOT_PLANS[definition.scheduleKey];
       expect(flattenScheduledSlotPlanJobs(plan), `${definition.job} must be planned in ${definition.scheduleKey}`)
         .toContain(definition.job);
     }
 
     for (const entry of CRON_CONNECTION_BUDGET_ENTRIES) {
+      if (entry.job in OFF_SLOT_SCHEDULED_PRODUCERS) continue;
       const plan = SCHEDULED_SLOT_PLANS[entry.scheduleKey];
       expect(getScheduledSlotPlanBudgetEntries(plan), `${entry.job} must have a scheduled budget entry`)
         .toContain(entry.job);
@@ -54,6 +68,63 @@ describe("scheduled runner contract", () => {
       expect(Number.isFinite(timeoutMs), `${job} duration budget must be finite`).toBe(true);
       expect(timeoutMs, `${job} duration budget must be positive`).toBeGreaterThan(0);
     }
+  });
+
+  it("binds every multi-job static slot to its registry chain", () => {
+    // Slots whose task set is computed per invocation: the reserve slot skips
+    // children already completed by an earlier attempt of the same slot, and
+    // the quarter-hourly / telegram / digest lanes gate members on run-time
+    // capability and stored requests.
+    const dynamicSlots: readonly CronScheduleKey[] = [
+      "quarterHourly",
+      "fourHourlyReserveSync",
+      "fiveMinuteTelegramAlerts",
+      "digestTriggerPoll",
+      "daily0300Utc",
+      "daily0800Utc",
+      "daily0805Utc",
+      "hourlyYieldSync",
+    ];
+    const builders: Partial<Record<CronScheduleKey, (runtime: never) => unknown>> = {
+      depegResolverOffset: buildDepegResolverSlotGroups,
+      halfHourlyChartsOffset: buildHalfHourlyChartsSlotGroups,
+      daily0810Utc: buildDaily0810SlotGroups,
+      dewsPsiOffset: buildDewsPsiSlotGroups,
+      statusSelfCheckOffset: buildStatusSelfCheckSlotGroups,
+      v9PublicationOffset: buildV9PublicationSlotGroups,
+      v9SupplyAttributionOffset: buildV9SupplyAttributionSlotGroups,
+    };
+    const runtime = { db: {}, env: {}, slotStartedAt: 0 } as never;
+
+    for (const plan of Object.values(SCHEDULED_SLOT_PLANS)) {
+      const plannedJobs = flattenScheduledSlotPlanJobs(plan);
+      const builder = builders[plan.scheduleKey];
+      if (builder) {
+        const groups = builder(runtime) as readonly ScheduledSlotGroupDefinition[];
+        const boundJobs = groups.flatMap((group) => (
+          group.mode === "parallel-serial"
+            ? group.chains.flatMap((chain) => chain.tasks.map((task) => task.job))
+            : group.tasks.map((task) => task.job)
+        ));
+        expect(sorted(boundJobs), `${plan.scheduleKey} must bind every planned job`).toEqual(sorted(plannedJobs));
+        continue;
+      }
+      // Every remaining slot must be a single-job plan (guarded at run time by
+      // runSingleScheduledJob) or a declared dynamic slot; otherwise a chain
+      // member has no bound implementation and would silently never run.
+      expect(
+        plannedJobs.length === 1 || dynamicSlots.includes(plan.scheduleKey),
+        `${plan.scheduleKey} must bind its implementations through bindScheduledSlotPlan`,
+      ).toBe(true);
+    }
+  });
+
+  it("keeps cron-sentinel out of the reserve head's chain", () => {
+    expect(SCHEDULED_SLOT_PLANS.fourHourlyReserveSync.jobChains).toEqual([
+      ["sync-live-reserves", "sync-redemption-backstops"],
+      ["sync-kinesis-supply"],
+      ["cron-sentinel"],
+    ]);
   });
 
   it("keeps the public dataset cache-wait budget inside its cron timeout", () => {

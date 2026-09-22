@@ -16,6 +16,8 @@ import { logWorkerEvent } from "../../lib/structured-log";
 const OPTIONAL_PROTOCOL_RPC_BUDGET_MS = 30_000;
 const OPTIONAL_PROTOCOL_RPC_REQUEST_TIMEOUT_MS = 10_000;
 const OPTIONAL_PROTOCOL_RPC_MAX_RETRIES = 2;
+const AAVE_V3_RPC_BUDGET_MS = 28_000;
+const AAVE_V3_RPC_MAX_CONCURRENCY = 6;
 const ON_CHAIN_RATE_REQUEST_TIMEOUT_MS = 6_000;
 export const OPTIONAL_RPC_MISSING_TARGET_EXAMPLE_LIMIT = 20;
 
@@ -33,7 +35,7 @@ export interface OptionalRpcFamilyTelemetry {
   endpointStrategy: "alternating-fallback-primary";
 }
 
-function createOptionalRpcFamilyTelemetry(targetCount: number): OptionalRpcFamilyTelemetry {
+export function createOptionalRpcFamilyTelemetry(targetCount: number): OptionalRpcFamilyTelemetry {
   return {
     targetCount,
     attemptedCount: 0,
@@ -122,10 +124,11 @@ function finalizeOptionalRpcTelemetry<T extends { chain: string; symbol: string 
   accountedTargets: Set<string>,
   emittedCount: number,
   budgetExhausted: boolean,
+  getTargetLabel: (target: T) => string = (target) => buildOptionalRpcTargetLabel(target.chain, target.symbol),
 ): void {
   if (budgetExhausted) telemetry.budgetExhausted = true;
   for (const target of targets) {
-    const targetLabel = buildOptionalRpcTargetLabel(target.chain, target.symbol);
+    const targetLabel = getTargetLabel(target);
     if (!accountedTargets.has(targetLabel)) {
       recordOptionalRpcMiss(telemetry, target.chain, targetLabel, "budget-exhausted");
       accountedTargets.add(targetLabel);
@@ -351,16 +354,17 @@ export async function fetchOnChainRates(
     };
   }
 
-  const rateBatchSize = 1;
   const allResults: PromiseSettledResult<OnChainRateFetchResult>[] = [];
-  for (let i = 0; i < ON_CHAIN_RATE_CONFIGS.length; i += rateBatchSize) {
-    const batch = ON_CHAIN_RATE_CONFIGS.slice(i, i + rateBatchSize);
-    const tasks = batch.map(async (config): Promise<OnChainRateFetchResult> => {
+  for (const config of ON_CHAIN_RATE_CONFIGS) {
+    try {
       const rpc = getChainRpc(chainRpcs, config.chain);
-      return fetchSingleOnChainRate(config, rpc, etherscanApiKey, signal);
-    });
-    const batchSettled = await Promise.allSettled(tasks);
-    allResults.push(...batchSettled);
+      allResults.push({
+        status: "fulfilled",
+        value: await fetchSingleOnChainRate(config, rpc, etherscanApiKey, signal),
+      });
+    } catch (reason) {
+      allResults.push({ status: "rejected", reason });
+    }
   }
 
   const rates = new Map<string, OnChainRateValue>();
@@ -621,6 +625,10 @@ export interface AaveV3RateTarget {
   assetDecimals?: number;
 }
 
+function buildAaveTargetLabel(target: AaveV3RateTarget): string {
+  return `${target.chain}:${target.symbol}:${target.assetAddress.toLowerCase()}`;
+}
+
 export interface AaveV3SupplyRateRow {
   stablecoinId: string;
   symbol: string;
@@ -648,7 +656,7 @@ export async function fetchAaveV3SupplyRates(
   if (!chainRpcs || targets.length === 0) {
     if (!chainRpcs && targets.length > 0) {
       for (const target of targets) {
-        const targetLabel = buildOptionalRpcTargetLabel(target.chain, target.symbol);
+        const targetLabel = buildAaveTargetLabel(target);
         recordOptionalRpcMiss(telemetry, target.chain, targetLabel, "no-chain-rpcs");
       }
     }
@@ -656,8 +664,8 @@ export async function fetchAaveV3SupplyRates(
     return { results, telemetry };
   }
 
-  const budget = createOptionalSourceBudget("Aave V3 supply rates", OPTIONAL_PROTOCOL_RPC_BUDGET_MS, signal);
-  const aaveBatchSize = 2;
+  const budget = createOptionalSourceBudget("Aave V3 supply rates", AAVE_V3_RPC_BUDGET_MS, signal);
+  const aaveBatchSize = AAVE_V3_RPC_MAX_CONCURRENCY;
 
   try {
     for (let i = 0; i < targets.length; i += aaveBatchSize) {
@@ -668,7 +676,7 @@ export async function fetchAaveV3SupplyRates(
       const batch = targets.slice(i, i + aaveBatchSize);
       await Promise.all(
         batch.map(async (target, batchIndex) => {
-          const targetLabel = buildOptionalRpcTargetLabel(target.chain, target.symbol);
+          const targetLabel = buildAaveTargetLabel(target);
           if (budget.budgetController.signal.aborted) {
             telemetry.budgetExhausted = true;
             return;
@@ -815,6 +823,7 @@ export async function fetchAaveV3SupplyRates(
       accountedTargets,
       results.length,
       budget.budgetController.signal.aborted,
+      buildAaveTargetLabel,
     );
     return { results, telemetry };
   } finally {

@@ -15,10 +15,12 @@ import { classifyPegClass, normalizePegTypeFromCurrency } from "@shared/lib/peg-
 import { hasRuntimeOnchainSupplyPath } from "@shared/lib/onchain-supply-probe";
 import type { DeadStablecoin, StablecoinMeta } from "@shared/types";
 import { MANIFEST_SOURCES } from "@shared/data/live-reserves/independent-assurance";
+import { REVIEWED_ORACLE_RISK_BRANCH_DISPOSITIONS } from "@shared/data/coverage-dispositions/oracle-risk-branch-dispositions";
 import listingDecisionsAsset from "@shared/data/stablecoins/listing-decisions.json";
 import { RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT, validateReserveCompositionTotal } from "@shared/types/reserves";
 import { StablecoinFlagsSchema } from "@shared/types/stablecoin-meta-schemas";
 import { findBlacklistabilityReviewIssues } from "../lib/blacklistability-review";
+import { analyzeOracleRiskCoverage, isBlockingOracleRiskCoverageFinding } from "../lib/oracle-risk-coverage";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { getTrackedAlgorithmicBackingIssue } from "../lib/stablecoin-data-gate-issues";
 import {
@@ -34,6 +36,7 @@ import {
   syncGeneratedPerCoinAsset,
   type StablecoinSourceEntry,
 } from "../lib/stablecoin-catalog-sources";
+import { validateReviewedRedemptionDispositionRows } from "../maintenance/generate-redemption-coverage-audit";
 
 const INDEPENDENT_ASSURANCE_MANIFEST_DIR = "shared/data/live-reserves/independent-assurance";
 const INDEPENDENT_ASSURANCE_MANIFEST_PRODUCTS = new Set(Object.keys(MANIFEST_SOURCES));
@@ -276,6 +279,10 @@ function getDependencyTotalIssue(coin: StablecoinMeta): string | null {
   if (!coin.dependencies || coin.dependencies.length === 0) return null;
 
   const total = coin.dependencies.reduce((sum, dependency) => sum + dependency.weight, 0);
+  // Downstream composition treats an over-committed basket as a defect
+  // (`overLeveragedComposition`, `totalWeight > 1 + 1e-9`), so authoring it must
+  // fail here rather than silently null the V9 backing inputs.
+  if (total > 1 + 1e-9) return "dependency weight total must not exceed 1";
   return total > 0 ? null : "dependency weight total must be greater than 0";
 }
 
@@ -795,6 +802,41 @@ function runStablecoinDataCheck(): void {
 
     for (const issue of findBlacklistabilityReviewIssues(allEntries.map((entry) => entry.coin))) {
       reportError(`${STABLECOIN_DATA_DIR}: ${issue.id}: ${issue.message}`);
+    }
+
+    // Reviewed coverage dispositions promise they "cannot silently become
+    // stale". Their audits are maintenance CLIs that no pull request runs, so
+    // the registers are validated here as well: a row that no longer describes
+    // the corpus (duplicate, unknown, no-longer-active, now-configured, or a
+    // stale oracle branch) blocks. The genuine coverage *backlog* — an active
+    // unconfigured asset that has no reviewed row yet, or an incomplete CDP
+    // oracle profile — is reported through the advisory lane and stays owned by
+    // `npm run audit:coverage`, whose `--check` mode is where it blocks.
+    const coverageCoins = allEntries.map((entry) => entry.coin);
+    const redemptionDispositions = validateReviewedRedemptionDispositionRows({
+      trackedCoins: coverageCoins,
+      activeCoins: coverageCoins.filter((coin) => isActiveStablecoinMeta(coin)),
+    });
+    for (const issue of redemptionDispositions.rowErrors) {
+      reportError(`redemption coverage dispositions: ${issue}`);
+    }
+    if (redemptionDispositions.missingIds.length > 0) {
+      reportWarning(
+        `redemption coverage dispositions: active unconfigured stablecoins without a reviewed row: ` +
+          `${redemptionDispositions.missingIds.join(", ")} ` +
+          `(npm run audit:coverage -- --domain=redemption-coverage)`,
+      );
+    }
+
+    for (const finding of analyzeOracleRiskCoverage(coverageCoins, {
+      reviewedBranchDispositions: REVIEWED_ORACLE_RISK_BRANCH_DISPOSITIONS,
+    }).findings) {
+      const message = `${STABLECOIN_DATA_DIR}: ${finding.id} (${finding.symbol}): oracleRisk ${finding.kind} — ${finding.detail}`;
+      if (isBlockingOracleRiskCoverageFinding(finding)) {
+        reportError(message);
+      } else {
+        reportWarning(message);
+      }
     }
 
     // Advisory only: catches `collateral` prose written from a

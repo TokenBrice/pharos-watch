@@ -1,20 +1,18 @@
+import {
+  SAFETY_SCORE_V9_WORKFLOW_JOB,
+  safetyScoreV9WorkflowInstanceId,
+} from "../../workflows/safety-score-v9-publication";
 import { runV9AfterCoreWithinWindow } from "../../lib/v9-slot-window";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { parseObjectMetadata } from "../../lib/json-metadata";
 import type { ScheduledRuntimeContext } from "./context";
-import { runSingleScheduledJob } from "./slot-groups";
+import { bindScheduledSlotPlan, runScheduledSlotGroups } from "./slot-groups";
 
 // The publication runner has its own two-minute end-to-end timeout. Give that
 // controlled timeout room to settle while v9-slot-window still clamps the
 // outer memory lane to the next quarter-hour boundary.
 const V9_PUBLICATION_WINDOW_MS = 3 * 60_000;
 const V9_PUBLICATION_MINIMUM_REMAINING_MS = 10_000;
-
-export function safetyScoreV9WorkflowInstanceId(
-  slotStartedAt: number,
-): string {
-  return `v9-publication-${slotStartedAt}`;
-}
 
 async function triggerSafetyScoreV9ShadowWorkflow(
   runtime: ScheduledRuntimeContext,
@@ -42,7 +40,7 @@ async function triggerSafetyScoreV9ShadowWorkflow(
       scope: "handler",
       level: "warn",
       event: "safety_score_v9_shadow_workflow_trigger_failed",
-      job: "compute-safety-score-v9-workflow",
+      job: SAFETY_SCORE_V9_WORKFLOW_JOB,
       message: "Safety Score V9 shadow Workflow could not be created",
       error,
       metadata: {
@@ -54,16 +52,15 @@ async function triggerSafetyScoreV9ShadowWorkflow(
   }
 }
 
-export async function runV9PublicationSlot(
+export function buildV9PublicationSlotGroups(
   runtime: ScheduledRuntimeContext,
+  recordCompilerIdentity: (hasCompilerIdentity: boolean) => void = () => undefined,
 ) {
-  let hasCompilerIdentity = false;
-  const result = await runSingleScheduledJob(
-    runtime,
-    "fenced V9 publication slot",
-    {
-      job: "compute-safety-score-v9",
-      run: (signal, reportProgress) =>
+  return bindScheduledSlotPlan("v9PublicationOffset", {
+    mode: "serial",
+    label: "v9-publication",
+    implementations: {
+      "compute-safety-score-v9": (signal, reportProgress) =>
         runV9AfterCoreWithinWindow(
           {
             db: runtime.db,
@@ -86,14 +83,28 @@ export async function runV9PublicationSlot(
                   reportProgress,
                 );
                 const metadata = parseObjectMetadata(compiled.metadata);
-                hasCompilerIdentity =
-                  typeof metadata?.sourceGenerationId === "string" &&
-                  typeof metadata.baseInputGenerationId === "string";
+                recordCompilerIdentity(
+                  typeof metadata?.sourceGenerationId === "string"
+                  && typeof metadata.baseInputGenerationId === "string",
+                );
                 return compiled;
               },
             ),
         ),
     },
+  });
+}
+
+export async function runV9PublicationSlot(
+  runtime: ScheduledRuntimeContext,
+) {
+  let hasCompilerIdentity = false;
+  const result = await runScheduledSlotGroups(
+    runtime,
+    "fenced V9 publication slot",
+    buildV9PublicationSlotGroups(runtime, (value) => {
+      hasCompilerIdentity = value;
+    }),
   );
   if (
     hasCompilerIdentity &&

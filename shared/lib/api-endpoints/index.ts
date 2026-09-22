@@ -33,7 +33,6 @@ export {
 export {
   getPublicApiAccess,
   getSiteDataAccess,
-  getProbePaths,
   isAdminLikePath,
   isAdminPath,
   isProtectedPublicApiPath,
@@ -49,6 +48,7 @@ export {
   STATIC_ENDPOINT_DEPENDENCY_HYDRATION_POLICIES,
   STATIC_ENDPOINT_ROUTE_DEFINITIONS,
   getEndpointProbeDescriptors,
+  getProbePaths,
   getStaticEndpointDependenciesByKey,
   isStaticEndpointPath,
 } from "./selectors";

@@ -143,8 +143,8 @@ describe("fetchAstherusEarnWrapperReserves", () => {
       },
       redemption: {
         freshnessKind: "same-run-onchain",
-        routeStatus: "open",
-        routeStatusSource: "onchain",
+        routeStatus: "unknown",
+        routeStatusSource: "static-config",
       },
     });
     expect(result.metadata?.collateralizationRatio).toBeCloseTo(1, 10);
@@ -162,10 +162,12 @@ describe("fetchAstherusEarnWrapperReserves", () => {
     mockEarnState({ paused: 1n });
     const paused = await runTracked();
     expect(paused.metadata?.redemption?.routeStatus).toBe("paused");
+    expect(paused.metadata?.redemption?.routeStatusSource).toBe("onchain");
     expect(paused.warnings).toBeUndefined();
     mockEarnState({ paused: null });
     const unavailable = await runTracked();
     expect(unavailable.metadata?.redemption?.routeStatus).toBe("unknown");
+    expect(unavailable.metadata?.redemption?.routeStatusSource).toBeUndefined();
     expect(unavailable.warnings).toContainEqual(expect.objectContaining({
       code: "astherus-earn-wrapper-pause-unavailable",
     }));

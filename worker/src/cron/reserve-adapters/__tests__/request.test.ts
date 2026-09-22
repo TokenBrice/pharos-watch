@@ -7,6 +7,7 @@ import {
   fetchJsonPostWithRetry,
   fetchJsonWithRetry,
   fetchBinaryResponseWithRetry,
+  fetchWithBrowserFallback,
   fetchTextWithRetry,
   getCachedRequest,
   REQUEST_CACHE_MAX_ENTRY_BYTES,
@@ -28,6 +29,39 @@ describe("buildBrowserHeaders", () => {
     ) as Record<string, string>;
     expect(headers.Origin).toBe("https://app.ethena.fi");
     expect(headers.Referer).toBe("https://app.ethena.fi/dashboards/transparency");
+  });
+
+  it("tries browser headers first and only falls back to neutral headers after failure", async () => {
+    const signal = new AbortController().signal;
+    const calls: HeadersInit[] = [];
+    const result = await fetchWithBrowserFallback(
+      "https://app.example.com",
+      "https://app.example.com/reserves",
+      async (headers) => {
+        calls.push(headers);
+        if (calls.length === 1) throw new Error("browser blocked");
+        return "ok";
+      },
+      signal,
+    );
+
+    expect(result).toBe("ok");
+    expect(new Headers(calls[0]).get("origin")).toBe("https://app.example.com");
+    expect(new Headers(calls[1]).get("origin")).toBeNull();
+  });
+
+  it("preserves both failure reasons when browser and neutral identities fail", async () => {
+    const signal = new AbortController().signal;
+    let calls = 0;
+    await expect(fetchWithBrowserFallback(
+      "https://app.example.com",
+      "https://app.example.com/reserves",
+      async () => {
+        calls++;
+        throw new Error(calls === 1 ? "browser blocked" : "neutral blocked");
+      },
+      signal,
+    )).rejects.toThrow("browser fetch failed: browser blocked; neutral fetch failed: neutral blocked");
   });
 
   it("evicts failed cached requests so the next call can recover", async () => {

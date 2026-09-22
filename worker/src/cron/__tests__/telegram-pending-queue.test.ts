@@ -1,18 +1,23 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import type { MockInstance } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import { mockD1 as createMockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import {
+  serializePendingAlertScope,
   serializePendingMarkupPolicy,
 } from "../../lib/telegram/pending-provenance";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import {
   DEFAULT_TELEGRAM_PENDING_D1_TABLES,
+  insertAlertJobTargetFixture,
   insertPendingSqlite,
+  insertRecapDeliveryFixture,
+  insertSourceEventSqlite,
   resetTelegramPendingMocks,
 } from "./telegram-pending-queue.test-support";
 
 function mockD1(tables: MockTableConfig[] = []) {
-  return createMockD1([...tables, ...DEFAULT_TELEGRAM_PENDING_D1_TABLES]);
+  return createMockD1([...tables, ...DEFAULT_TELEGRAM_PENDING_D1_TABLES], { assertMatchesUsed: true });
 }
 
 const mockSendToChat = vi.fn();
@@ -59,10 +64,7 @@ vi.mock("../../lib/telegram/subscriber-lifecycle", () => ({
 const {
   cleanupExpiredPendingAlerts,
   archiveAgedExecutionUnknownPendingAlerts,
-  countPendingAlertsForAdmin,
-  clearPendingAlertsForAdmin,
   disableBlockedSubscriber,
-  loadChatsInBackoff,
   registerSubscriberBlockAndShouldDisable,
   resetSubscriberBlockCount,
   PENDING_TTL_SEC,
@@ -71,8 +73,10 @@ const {
   TELEGRAM_PENDING_PRIORITY,
   SEND_BATCH_SIZE,
   EXPIRED_PENDING_CLEANUP_BATCH_LIMIT,
+  clearPendingAlertsForDisabledChat,
 } = await import("../telegram-pending");
-const { enqueuePendingAlerts, buildDedupeKey } = await import("../../lib/telegram/pending-queue");
+const { enqueuePendingAlerts, buildDedupeKey, buildPendingAlertEnqueueStatement } = await import("../../lib/telegram/pending-queue");
+const { buildSetBasedPendingHandoffStatements } = await import("../telegram-alert-target-plans/delivery");
 const {
   readTelegramPendingCapacitySnapshot,
   estimateTelegramDrainTimeSec,
@@ -95,44 +99,70 @@ afterEach(() => {
 });
 
 describe("disableBlockedSubscriber", () => {
-  it("resets all alert flags including launch, reserve, and freeze for subscribers and subscriptions", async () => {
-    const db = mockD1([
-      { match: "UPDATE telegram_subscribers", rows: [] },
-      { match: "UPDATE telegram_subscriptions", rows: [] },
-      { match: "DELETE FROM telegram_preset_subscriptions", rows: [] },
-    ]);
+  it("clears every alert flag, preset subscription, and recap commitment for the blocked chat", async () => {
+    const { sqlite, db } = setupTelegramPendingSqlite();
+    const now = Math.floor(Date.now() / 1000);
+    const { chatId, recapKey } = insertRecapDeliveryFixture(sqlite, now, { chatId: "blocked-chat" });
+    sqlite
+      .prepare(
+        `UPDATE telegram_subscribers
+            SET alert_dews=1, alert_depeg=1, alert_safety=1, alert_launch=1, alert_reserve=1, alert_freeze=1,
+                global_alert_dews=1, global_alert_depeg=1, global_alert_safety=1, global_alert_launch=1,
+                global_alert_reserve=1, global_alert_freeze=1, global_depeg_worsening_bps_step=25
+          WHERE chat_id=?`,
+      )
+      .run(chatId);
+    sqlite
+      .prepare(
+        `INSERT INTO telegram_subscriptions
+           (chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve, alert_freeze)
+         VALUES (?, 'usdc-circle', 1, 1, 1, 1, 1, 1)`,
+      )
+      .run(chatId);
+    sqlite
+      .prepare(
+        `INSERT INTO telegram_preset_subscriptions (chat_id, preset_id, alert_dews, created_at, updated_at)
+         VALUES (?, 'bluechips', 1, ?, ?)`,
+      )
+      .run(chatId, now, now);
 
-    const result = await disableBlockedSubscriber(db, "blocked-chat");
-    expect(result).toBe(true);
+    await expect(disableBlockedSubscriber(db, chatId)).resolves.toBe(true);
 
-    const history = db.getHistory();
-    const subscriberUpdate = history.find((e) => e.sql.includes("UPDATE telegram_subscribers"));
-    expect(subscriberUpdate).toBeDefined();
-    expect(subscriberUpdate!.sql).toContain("alert_launch=0");
-    expect(subscriberUpdate!.sql).toContain("alert_reserve=0");
-    expect(subscriberUpdate!.sql).toContain("alert_freeze=0");
-    expect(subscriberUpdate!.sql).toContain("global_alert_launch=0");
-    expect(subscriberUpdate!.sql).toContain("global_alert_reserve=0");
-    expect(subscriberUpdate!.sql).toContain("global_alert_freeze=0");
-
-    const subscriptionUpdate = history.find((e) => e.sql.includes("UPDATE telegram_subscriptions"));
-    expect(subscriptionUpdate).toBeDefined();
-    expect(subscriptionUpdate!.sql).toContain("alert_launch=0");
-    expect(subscriptionUpdate!.sql).toContain("alert_reserve=0");
-    expect(subscriptionUpdate!.sql).toContain("alert_freeze=0");
-
-    const presetDelete = history.find((e) => e.sql.includes("DELETE FROM telegram_preset_subscriptions"));
-    expect(presetDelete).toBeDefined();
-    expect(presetDelete!.binds).toEqual(["blocked-chat"]);
-
-    const recapPreferenceUpdate = history.find((e) => e.sql.includes("UPDATE telegram_recap_preferences"));
-    expect(recapPreferenceUpdate).toBeDefined();
-    expect(recapPreferenceUpdate!.sql).toContain("enabled = 0");
-    expect(recapPreferenceUpdate!.sql).toContain("next_due_at = NULL");
-    const recapTargetUpdate = history.find((e) => e.sql.includes("UPDATE telegram_recap_targets"));
-    expect(recapTargetUpdate).toBeDefined();
-    expect(recapTargetUpdate!.sql).toContain("status = 'cancelled'");
-    expect(recapTargetUpdate!.sql).toContain("blocked_disabled");
+    expect(
+      sqlite
+        .prepare(
+          `SELECT alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve, alert_freeze,
+                  global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch,
+                  global_alert_reserve, global_alert_freeze, global_depeg_worsening_bps_step, preference_generation
+             FROM telegram_subscribers WHERE chat_id = ?`,
+        )
+        .get(chatId),
+    ).toEqual({
+      alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0, alert_reserve: 0, alert_freeze: 0,
+      global_alert_dews: 0, global_alert_depeg: 0, global_alert_safety: 0, global_alert_launch: 0,
+      global_alert_reserve: 0, global_alert_freeze: 0, global_depeg_worsening_bps_step: null,
+      preference_generation: 5,
+    });
+    expect(
+      sqlite
+        .prepare(
+          `SELECT alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve, alert_freeze
+             FROM telegram_subscriptions WHERE chat_id = ?`,
+        )
+        .get(chatId),
+    ).toEqual({ alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0, alert_reserve: 0, alert_freeze: 0 });
+    expect(
+      sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_preset_subscriptions WHERE chat_id = ?").get(chatId),
+    ).toEqual({ count: 0 });
+    expect(
+      sqlite.prepare("SELECT enabled, next_due_at FROM telegram_recap_preferences WHERE chat_id = ?").get(chatId),
+    ).toEqual({ enabled: 0, next_due_at: null });
+    expect(
+      sqlite
+        .prepare("SELECT status, terminal_reason FROM telegram_recap_targets WHERE recap_key = ?")
+        .get(recapKey),
+    ).toEqual({ status: "cancelled", terminal_reason: "blocked_disabled" });
+    sqlite.close();
   });
 
   it("returns false and logs on D1 error", async () => {
@@ -415,7 +445,7 @@ describe("enqueuePendingAlerts", () => {
   });
 
   it("rejects partially populated new-format risk provenance", async () => {
-    const db = mockD1([{ match: "INSERT INTO telegram_pending_alerts", rows: [] }]);
+    const db = mockD1();
     await expect(enqueuePendingAlerts(db, [{
       chatId: "partial-provenance",
       html: "<b>Alert</b>",
@@ -426,7 +456,7 @@ describe("enqueuePendingAlerts", () => {
   });
 
   it("rejects safety alerts without a Safety Score identity", async () => {
-    const db = mockD1([{ match: "INSERT INTO telegram_pending_alerts", rows: [] }]);
+    const db = mockD1();
     await expect(enqueuePendingAlerts(db, [{
       chatId: "missing-safety-identity",
       html: "<b>Safety alert</b>",
@@ -630,34 +660,6 @@ describe("buildDedupeKey", () => {
   });
 });
 
-describe("loadChatsInBackoff", () => {
-  it("aggregates only live future backoffs, including legacy TTL boundaries", async () => {
-    const { sqlite, db } = setupTelegramPendingSqlite();
-    const now = 5_000;
-    try {
-      for (const seed of [
-        { chatId: "live", notBeforeAt: 5_100, expiresAt: 5_001 },
-        { chatId: "live", notBeforeAt: 5_200, expiresAt: 6_000 },
-        { chatId: "live", notBeforeAt: 9_000, expiresAt: 5_000 },
-        { chatId: "expired", notBeforeAt: 9_000, expiresAt: 4_999 },
-        { chatId: "ready", notBeforeAt: 5_000, expiresAt: 6_000 },
-        { chatId: "unset", notBeforeAt: null, expiresAt: 6_000 },
-        { chatId: "legacy-live", notBeforeAt: 5_300, createdAt: now - PENDING_TTL_SEC + 1 },
-        { chatId: "legacy-expired", notBeforeAt: 9_000, createdAt: now - PENDING_TTL_SEC },
-      ]) insertPendingSqlite(sqlite, { html: seed.chatId, createdAt: now - 60, ...seed });
-
-      expect(await loadChatsInBackoff(db, now)).toEqual(new Map([
-        ["legacy-live", 5_300],
-        ["live", 5_200],
-      ]));
-      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts").get()).toEqual({ count: 8 });
-      expect(await loadChatsInBackoff(db, 10_000)).toEqual(new Map());
-    } finally {
-      sqlite.close();
-    }
-  });
-});
-
 describe("cleanupExpiredPendingAlerts", () => {
   it("retries deletion after a committed dead-letter insert without duplicating audit rows", async () => {
     const { sqlite, db } = setupTelegramPendingSqlite();
@@ -700,82 +702,6 @@ describe("cleanupExpiredPendingAlerts", () => {
     await expect(cleanupExpiredPendingAlerts(crashDb, now + 1)).resolves.toBe(1);
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_dead_letters").get()).toEqual({ count: 1 });
     expect(sqlite.prepare("SELECT id FROM telegram_pending_alerts WHERE id = 901").get()).toBeUndefined();
-    sqlite.close();
-  });
-
-  it("keeps repeated manual clear idempotent after delete failure", async () => {
-    const { sqlite, db } = setupTelegramPendingSqlite();
-    const now = Math.floor(Date.now() / 1000);
-    insertPendingSqlite(sqlite, {
-      id: 902,
-      chatId: "manual-clear-crash",
-      html: "<b>Manual</b>",
-      createdAt: now - 60,
-      expiresAt: now + 600,
-      dedupeKey: "manual-clear-crash-key",
-    });
-    let failDelete = true;
-    const crashDb = {
-      ...db,
-      prepare: (sql: string) => {
-        if (sql.includes("DELETE FROM telegram_pending_alerts WHERE id IN")) {
-          const statement = db.prepare(sql);
-          return {
-            bind: (...binds: unknown[]) => {
-              const bound = statement.bind(...binds);
-              return {
-                run: async () => {
-                  if (failDelete) {
-                    failDelete = false;
-                    throw new Error("manual delete failed");
-                  }
-                  return bound.run();
-                },
-              };
-            },
-          } as unknown as D1PreparedStatement;
-        }
-        return db.prepare(sql);
-      },
-    } as D1Database;
-
-    await expect(clearPendingAlertsForAdmin(crashDb, { chatId: "manual-clear-crash" }, now))
-      .rejects.toThrow("manual delete failed");
-    await expect(clearPendingAlertsForAdmin(crashDb, { chatId: "manual-clear-crash" }, now + 1))
-      .resolves.toBe(1);
-    expect(sqlite.prepare(
-      "SELECT COUNT(*) AS count, MIN(reason) AS reason FROM telegram_alert_dead_letters WHERE pending_id = 902",
-    ).get()).toEqual({ count: 1, reason: "manual_clear" });
-    sqlite.close();
-  });
-
-  it("keeps sending and execution-unknown rows out of ordinary admin clear", async () => {
-    const { sqlite, db } = setupTelegramPendingSqlite();
-    const now = Math.floor(Date.now() / 1000);
-    for (const [id, state] of [[910, "pending"], [911, "sending"], [912, "execution_unknown"]] as const) {
-      insertPendingSqlite(sqlite, {
-        id,
-        chatId: "admin-clear-lifecycle",
-        html: `<b>${state}</b>`,
-        createdAt: now - 60,
-        expiresAt: now + 600,
-        dedupeKey: `admin-clear-${state}`,
-      });
-      sqlite.prepare(
-        `UPDATE telegram_pending_alerts
-            SET delivery_state = ?, delivery_owner = ?, delivery_generation = 1
-          WHERE id = ?`,
-      ).run(state, state === "pending" ? null : `${state}-owner`, id);
-    }
-
-    await expect(countPendingAlertsForAdmin(db, { chatId: "admin-clear-lifecycle" })).resolves.toBe(1);
-    await expect(clearPendingAlertsForAdmin(db, { chatId: "admin-clear-lifecycle" }, now)).resolves.toBe(1);
-    expect(sqlite.prepare(
-      "SELECT id, delivery_state FROM telegram_pending_alerts ORDER BY id",
-    ).all()).toEqual([
-      { id: 911, delivery_state: "sending" },
-      { id: 912, delivery_state: "execution_unknown" },
-    ]);
     sqlite.close();
   });
 
@@ -874,7 +800,9 @@ describe("cleanupExpiredPendingAlerts", () => {
       e.sql.includes("DELETE FROM telegram_pending_alerts") && !e.sql.includes("delivery_state = 'sent'")
     );
     expect(deleteCall).toBeDefined();
-    expect(deleteCall!.binds).toEqual([1, 2, 3]);
+    expect(deleteCall!.sql).toContain("AND delivery_state = ?");
+    expect(deleteCall!.sql).toContain("processing_expires_at <= ?");
+    expect(deleteCall!.binds).toEqual([1, 2, 3, "pending", nowSec]);
   });
 
   it("caps expired cleanup work to one batch per run", async () => {
@@ -1114,4 +1042,203 @@ describe("cleanupExpiredPendingAlerts", () => {
       }),
     );
   });
+});
+
+describe("pending cleanup delivery_state fencing (TELEGRAM-DIGEST-13)", () => {
+  let warnSpy: MockInstance;
+
+  beforeEach(() => {
+    warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+  afterEach(() => warnSpy.mockRestore());
+
+  it("keeps an expired row that a competing drain re-claimed after the SELECT", async () => {
+    const { sqlite, db } = setupTelegramPendingSqlite();
+    try {
+      const now = Math.floor(Date.now() / 1000);
+      insertPendingSqlite(sqlite, {
+        id: 950,
+        chatId: "reclaimed-expired",
+        html: "<b>Reclaimed</b>",
+        createdAt: now - PENDING_TTL_SEC - 10,
+        dedupeKey: "reclaimed-expired-key",
+      });
+      let reclaimed = false;
+      const racingDb = {
+        ...db,
+        prepare: (sql: string) => {
+          const statement = db.prepare(sql);
+          if (!reclaimed && sql.includes("COALESCE(expires_at, created_at + ?)") && sql.includes("SELECT")) {
+            return {
+              bind: (...binds: unknown[]) => {
+                const bound = statement.bind(...binds);
+                return {
+                  all: async () => {
+                    const result = await bound.all();
+                    reclaimed = true;
+                    sqlite.prepare(
+                      `UPDATE telegram_pending_alerts
+                          SET processing_owner = 'competing-drain',
+                              processing_started_at = ?,
+                              processing_expires_at = ?
+                        WHERE id = 950`,
+                    ).run(now, now + 600);
+                    return result;
+                  },
+                };
+              },
+            } as unknown as D1PreparedStatement;
+          }
+          return statement;
+        },
+      } as D1Database;
+
+      await expect(cleanupExpiredPendingAlerts(racingDb, now)).resolves.toBe(0);
+      expect(sqlite.prepare(
+        "SELECT delivery_state, processing_owner FROM telegram_pending_alerts WHERE id = 950",
+      ).get()).toEqual({ delivery_state: "pending", processing_owner: "competing-drain" });
+      expect(parseLogRecords(warnSpy).some((record) =>
+        record.action === "cleanup-expired-pending-delete-fenced" && record.rowCount === 1
+      )).toBe(true);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("keeps a disabled-chat row that a competing drain re-claimed after the SELECT", async () => {
+    const { sqlite, db } = setupTelegramPendingSqlite();
+    try {
+      const now = Math.floor(Date.now() / 1000);
+      insertPendingSqlite(sqlite, {
+        id: 951,
+        chatId: "reclaimed-disabled",
+        html: "<b>Reclaimed sibling</b>",
+        createdAt: now - 60,
+        dedupeKey: "reclaimed-disabled-key",
+      });
+      let reclaimed = false;
+      const racingDb = {
+        ...db,
+        prepare: (sql: string) => {
+          const statement = db.prepare(sql);
+          if (!reclaimed && sql.includes("FROM telegram_pending_alerts") && sql.includes("WHERE chat_id = ?")) {
+            return {
+              bind: (...binds: unknown[]) => {
+                const bound = statement.bind(...binds);
+                return {
+                  all: async () => {
+                    const result = await bound.all();
+                    reclaimed = true;
+                    sqlite.prepare(
+                      `UPDATE telegram_pending_alerts
+                          SET processing_owner = 'competing-drain',
+                              processing_started_at = ?,
+                              processing_expires_at = ?
+                        WHERE id = 951`,
+                    ).run(now, now + 600);
+                    return result;
+                  },
+                };
+              },
+            } as unknown as D1PreparedStatement;
+          }
+          return statement;
+        },
+      } as D1Database;
+
+      await expect(clearPendingAlertsForDisabledChat(racingDb, "reclaimed-disabled", now))
+        .resolves.toEqual({ deleted: 0, failed: true });
+      expect(sqlite.prepare(
+        "SELECT delivery_state, processing_owner FROM telegram_pending_alerts WHERE id = 951",
+      ).get()).toEqual({ delivery_state: "pending", processing_owner: "competing-drain" });
+    } finally {
+      sqlite.close();
+    }
+  });
+});
+
+const COLLISION_NOW = 10_000;
+const collisionMessage = {
+  chatId: "collision", html: "Fresh content", canonicalHtml: "Canonical", disableNotification: true,
+  alertType: "depeg" as const, chunkIndex: 2, sourceEventId: "source-new", preferenceGeneration: 7,
+  alertScope: [{ stablecoinId: "usdc-circle", family: "depeg" as const }],
+};
+
+describe.each(["enqueue", "handoff"] as const)("%s pending collision semantics", (producer) => {
+  it.each(["live", "expired", "claimed", "sending", "priority"] as const)("preserves the %s row contract", async (scenario) => {
+    const { sqlite, db } = setupTelegramPendingSqlite();
+    try {
+      const dedupeKey = buildDedupeKey(collisionMessage);
+      insertPendingSqlite(sqlite, {
+        id: 1, chatId: "collision", html: "Original", createdAt: COLLISION_NOW - 60,
+        expiresAt: scenario === "expired" ? COLLISION_NOW : COLLISION_NOW + 600,
+        dedupeKey, attempts: 4, notBeforeAt: COLLISION_NOW + 300, priority: scenario === "priority" ? 100 : 10,
+        sourceType: scenario === "priority" ? "admin_broadcast" : "risk_alert", sourceEventId: "source-old",
+        preferenceGeneration: 2,
+      });
+      if (scenario === "claimed" || scenario === "expired" || scenario === "sending") {
+        sqlite.prepare("UPDATE telegram_pending_alerts SET processing_owner = 'owner', processing_started_at = ?, processing_expires_at = ?").run(COLLISION_NOW - 30, COLLISION_NOW + 300);
+      }
+      if (scenario === "sending") {
+        sqlite.prepare("UPDATE telegram_pending_alerts SET delivery_state = 'sending', delivery_owner = 'owner', delivery_generation = 4").run();
+      }
+      const before = sqlite.prepare("SELECT * FROM telegram_pending_alerts").get();
+      if (producer === "enqueue") {
+        await buildPendingAlertEnqueueStatement(db, collisionMessage, COLLISION_NOW, { ttlSec: 600 }).run();
+      } else {
+        insertSourceEventSqlite(sqlite, { sourceEventId: "source-new", planGeneration: 3 }, COLLISION_NOW);
+        insertAlertJobTargetFixture(sqlite, {
+          jobId: "job", targetKey: "target", chatId: collisionMessage.chatId, alertType: "depeg", status: "planned",
+          pendingDedupeKey: dedupeKey, sourceEventId: "source-new", planGeneration: 3,
+          messageHtml: collisionMessage.html, disableNotification: 1, chunkIndex: 2, preferenceGeneration: 7,
+          alertScopeJson: serializePendingAlertScope(collisionMessage.alertScope), markupPolicyJson: serializePendingMarkupPolicy({}),
+        }, COLLISION_NOW);
+        sqlite.prepare("UPDATE telegram_alert_job_targets SET target_expires_at = ?").run(COLLISION_NOW + 600);
+        await db.batch(buildSetBasedPendingHandoffStatements(db, "source-new", 3, COLLISION_NOW, ["target"]));
+      }
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts").get()).toEqual({ count: 1 });
+      if (scenario === "claimed" || scenario === "sending") {
+        expect(sqlite.prepare("SELECT * FROM telegram_pending_alerts").get()).toEqual(before);
+      } else {
+        expect(sqlite.prepare(`SELECT chat_id, message_html, disable_notification, chunk_index, priority, source_type,
+          attempts, not_before_at, created_at, expires_at, processing_owner, source_event_id, preference_generation
+          FROM telegram_pending_alerts`).get()).toEqual({
+          chat_id: "collision", message_html: "Fresh content", disable_notification: 1, chunk_index: 2,
+          priority: 10, source_type: "risk_alert", attempts: scenario === "expired" ? 0 : 4,
+          not_before_at: scenario === "expired" ? null : COLLISION_NOW + 300,
+          created_at: scenario === "expired" ? COLLISION_NOW : COLLISION_NOW - 60, expires_at: COLLISION_NOW + 600, processing_owner: null,
+          source_event_id: scenario === "expired" ? "source-new" : "source-old",
+          preference_generation: scenario === "expired" ? 7 : 2,
+        });
+      }
+    } finally {
+      sqlite.close();
+    }
+  });
+});
+
+it("assigns each handed-off alert family its delivery priority", async () => {
+  const { sqlite, db } = setupTelegramPendingSqlite();
+  try {
+    const families = ["depeg", "dews", "freeze", "launch", "reserve", "safety"];
+    insertSourceEventSqlite(sqlite, { sourceEventId: "priorities", planGeneration: 1 }, COLLISION_NOW);
+    for (const alertType of families) {
+      insertAlertJobTargetFixture(sqlite, {
+        jobId: alertType, targetKey: alertType, chatId: alertType, alertType, status: "planned",
+        pendingDedupeKey: alertType, sourceEventId: "priorities", planGeneration: 1,
+        messageHtml: alertType, disableNotification: 0, preferenceGeneration: 0,
+      }, COLLISION_NOW);
+    }
+    await db.batch(buildSetBasedPendingHandoffStatements(db, "priorities", 1, COLLISION_NOW, families));
+    expect(sqlite.prepare("SELECT alert_type, priority FROM telegram_pending_alerts ORDER BY alert_type").all()).toEqual([
+      { alert_type: "depeg", priority: 10 },
+      { alert_type: "dews", priority: 20 },
+      { alert_type: "freeze", priority: 10 },
+      { alert_type: "launch", priority: 30 },
+      { alert_type: "reserve", priority: 30 },
+      { alert_type: "safety", priority: 20 },
+    ]);
+  } finally {
+    sqlite.close();
+  }
 });

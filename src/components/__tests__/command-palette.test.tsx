@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ImgHTMLAttributes } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
@@ -130,19 +130,42 @@ describe("CommandPalette", () => {
     expect(navRow.textContent).not.toContain("Off peg");
   });
 
-  it("keeps rendered search ordering aligned with live market caps", () => {
+  it("keeps the exact symbol ahead of high-cap substring matches", () => {
     renderPalette();
 
     fireEvent.change(screen.getByRole("combobox", { name: "Search" }), {
       target: { value: "USDC" },
     });
     const options = screen.getAllByRole("option");
+    const usdCoin = screen.getByRole("option", { name: /USD CoinUSDC/i });
     const maple = screen.getByRole("option", { name: /Maple syrupUSDC/i });
-    const movement = screen.getByRole("option", { name: /Movement USDCx/i });
-    expect(options.indexOf(maple)).toBeLessThan(options.indexOf(movement));
+    expect(options.indexOf(usdCoin)).toBeLessThan(options.indexOf(maple));
+  });
+
+  it("shows live market caps when the stablecoin observer resolves while open", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => {})));
+    queryClient.clear();
+    renderPalette();
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Search" }), {
+      target: { value: "USDC" },
+    });
+    expect(screen.getByRole("option", { name: /USD CoinUSDC/i }).textContent).not.toContain("$76.00B");
+
+    act(() => {
+      queryClient.setQueryData(STABLECOINS_QUERY_KEY, {
+        data: stablecoinsPayload(),
+        meta: null,
+      });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole("option", { name: /USD CoinUSDC/i }).textContent).toContain("$76.00B");
+    });
   });
 
   it("keeps static stablecoin search available when the validated list cache is absent", () => {
+    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => {})));
     queryClient.clear();
     renderPalette();
 

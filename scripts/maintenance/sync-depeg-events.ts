@@ -29,6 +29,7 @@ import {
   fetchWithRetry,
   resolveApiUrl,
   shouldAllowExistingDataOnFetchFailure,
+  SnapshotIntegrityError,
 } from "../lib/sync-from-api";
 
 const USAGE = `Usage: npx tsx scripts/maintenance/sync-depeg-events.ts [options]
@@ -143,7 +144,7 @@ export function assertStaticDepegArchivePreserved(
   const suffix = missing.length > 10 ? ` (+${missing.length - 10} more)` : "";
   const message = `Depeg static archive lost ${missing.length} published slug(s): ${sample}${suffix}`;
   if (!allowShrink) {
-    throw new Error(`${message}. Pass --allow-archive-shrink only for an explicitly reviewed removal.`);
+    throw new SnapshotIntegrityError(`${message}. Pass --allow-archive-shrink only for an explicitly reviewed removal.`);
   }
   console.warn(`[sync-depeg-events] WARNING: ${message}`);
 }
@@ -324,7 +325,9 @@ export async function runDepegSync(argv = process.argv.slice(2)) {
               `Refusing to overwrite — pass --allow-empty to override (e.g. when the API is intentionally drained).`,
           );
           if (!options.allowEmpty)
-            throw new Error("Refusing to replace a non-empty depeg snapshot with an empty response");
+            throw new SnapshotIntegrityError(
+              "Refusing to replace a non-empty depeg snapshot with an empty response",
+            );
         }
       }
 
@@ -346,6 +349,8 @@ export async function runDepegSync(argv = process.argv.slice(2)) {
         : `[sync-depeg-events] Wrote ${entries.length} confirmed events to ${outputPaths.indexFile} and ${shardCount} yearly shards`,
     );
   } catch (err) {
+    // Integrity guards are deterministic, so the fetch-failure fallback must not relabel them.
+    if (err instanceof SnapshotIntegrityError) throw err;
     const allowExisting =
       options.allowExistingOnFetchFailure ||
       shouldAllowExistingDataOnFetchFailure(["DEPEG_EVENTS_SYNC_ALLOW_EXISTING_ON_FETCH_FAILURE"]);

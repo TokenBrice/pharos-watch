@@ -449,6 +449,29 @@ describe("runV9AfterCoreWithinWindow", () => {
     expect(run).not.toHaveBeenCalled();
   });
 
+  it("fails loudly when a completed memory-lane lease has no result", async () => {
+    const scheduledTimeMs = Date.parse("2026-07-26T12:14:00Z");
+    vi.useFakeTimers();
+    vi.setSystemTime(scheduledTimeMs + 1_000);
+    const fixture = dbWithCoreSlot({
+      state: "finished",
+      result_status: "ok",
+      worker_version: "worker-v2",
+    });
+    leaseMocks.runCronWithLease.mockResolvedValueOnce({
+      status: "ok",
+    });
+
+    await expect(
+      runV9AfterCoreWithinWindow(
+        options(fixture.db, scheduledTimeMs),
+        vi.fn(),
+      ),
+    ).rejects.toThrow(
+      "compute-safety-score-v9 lease completed without a result",
+    );
+  });
+
   it("skips delayed delivery before reading D1 when the pre-quarter window is too short", async () => {
     const scheduledTimeMs = Date.parse("2026-07-26T12:14:00Z");
     vi.useFakeTimers();

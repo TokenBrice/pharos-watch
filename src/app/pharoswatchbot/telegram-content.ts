@@ -1,4 +1,3 @@
-import { Bell, MessageSquareText, ShieldCheck, type LucideIcon } from "lucide-react";
 import type { FaqItem } from "@/lib/faq";
 import type { TelegramAlertType } from "@shared/types/status";
 import {
@@ -23,7 +22,6 @@ export const TELEGRAM_ACTIONS = [
     description:
       "Per-coin or all-stablecoin alerts for DEWS changes, depegs, safety-grade moves with reason lines, launches, live reserve-mix drift, and issuer freeze events, plus an optional private daily watchlist recap. Tune thresholds, set quiet hours, snooze on the fly.",
     cardButtonLabel: "Open Bot",
-    finalButtonLabel: "Start Bot",
     showArchiveLink: false,
     isPrimary: true,
   },
@@ -35,7 +33,6 @@ export const TELEGRAM_ACTIONS = [
     description:
       "Optional daily recap, AI-written from the same signals: peg deviations, supply shifts, liquidity changes, and what changed overnight.",
     cardButtonLabel: "Join Channel",
-    finalButtonLabel: "Digest",
     showArchiveLink: true,
     isPrimary: false,
   },
@@ -47,7 +44,6 @@ export const TELEGRAM_ACTIONS = [
     description:
       "Optional open channel where watchers compare notes between digests: fresh depegs, risk signals, and live commentary.",
     cardButtonLabel: "Join Community",
-    finalButtonLabel: "Community",
     showArchiveLink: false,
     isPrimary: false,
   },
@@ -100,28 +96,19 @@ export const MINI_APP_SCREENSHOTS = [
 
 export const RECOMMENDED_SETUPS = [
   {
-    title: "First watcher setup",
-    command: "/subscribe dews,depeg usd-top25",
-    description: "Top 25 USD stablecoins, DEWS plus depeg. The safe default if you're not sure where to start.",
-    icon: Bell,
-  },
-  {
     title: "Research desk setup",
     command: "/subscribe safety mcap-ge-1b",
     description: "All safety-grade changes with reason lines, on coins above $1B mcap.",
-    icon: ShieldCheck,
   },
   {
     title: "Group setup",
     command: "/subscribe@PharosWatchBot dews usd-top25",
     description: "Address commands to the bot so a shared Telegram group runs one watch desk without colliding with other bots.",
-    icon: MessageSquareText,
   },
 ] as const satisfies readonly {
   title: string;
   command: string;
   description: string;
-  icon: LucideIcon;
 }[];
 
 // Page-specific presentation for each alert-family example; keys, labels, and

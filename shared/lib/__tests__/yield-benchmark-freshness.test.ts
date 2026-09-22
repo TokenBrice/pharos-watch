@@ -18,6 +18,7 @@ describe("classifyYieldBenchmarkFreshness", () => {
   it("goes stale past the fetch-age TTL regardless of the observation date", () => {
     expect(classifyYieldBenchmarkFreshness({ ...healthyMeta, ageSeconds: YIELD_BENCHMARK_SCORE_TTL_SEC + 1 })).toBe("stale");
     expect(classifyYieldBenchmarkFreshness({ ...healthyMeta, ageSeconds: null })).toBe("stale");
+    expect(classifyYieldBenchmarkFreshness({ ...healthyMeta, ageSeconds: -DAY_SECONDS })).toBe("stale");
   });
 
   it("goes stale when the observation itself is older than the key's bound, even on a fresh fetch", () => {
@@ -32,6 +33,15 @@ describe("classifyYieldBenchmarkFreshness", () => {
     ).toBe("healthy");
   });
 
+  it("fails closed when bounded observation evidence is missing, unparseable, or future-dated", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW_SEC * 1000);
+    const bounded = { maxRecordAgeSec: YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.USD };
+    expect(classifyYieldBenchmarkFreshness(healthyMeta, { ...bounded, recordDate: null })).toBe("stale");
+    expect(classifyYieldBenchmarkFreshness(healthyMeta, { ...bounded, recordDate: "not-a-date" })).toBe("stale");
+    expect(classifyYieldBenchmarkFreshness(healthyMeta, { ...bounded, recordDate: "2099-01-01" })).toBe("stale");
+  });
+
   it("degrades on feed fallback but not on documented proxy selection alone", () => {
     expect(classifyYieldBenchmarkFreshness({ ...healthyMeta, isFallback: true })).toBe("degraded");
     expect(classifyYieldBenchmarkFreshness({ ...healthyMeta, fallbackMode: "retained" })).toBe("degraded");
@@ -41,8 +51,8 @@ describe("classifyYieldBenchmarkFreshness", () => {
 });
 
 describe("benchmarkRecordAgeSeconds", () => {
-  it("clamps future-dated observations to zero and rejects unparseable dates", () => {
-    expect(benchmarkRecordAgeSeconds("2099-01-01", NOW_SEC)).toBe(0);
+  it("returns negative age for far-future observations and rejects unparseable dates", () => {
+    expect(benchmarkRecordAgeSeconds("2099-01-01", NOW_SEC)).toBeLessThan(0);
     expect(benchmarkRecordAgeSeconds("not-a-date", NOW_SEC)).toBeNull();
     expect(benchmarkRecordAgeSeconds(null, NOW_SEC)).toBeNull();
     expect(benchmarkRecordAgeSeconds("2026-09-10", NOW_SEC)).toBe(2 * DAY_SECONDS + 12 * 3600);

@@ -149,10 +149,16 @@ function makeNoCallRow(): DdrV2ResponseRow {
   });
 }
 
-function makeInvalidatedRow(): DdrV2ResponseRow {
+function makeInvalidatedRow(originalKind: "prediction" | "no_call" = "prediction"): DdrV2ResponseRow {
   const source = makeSourceRow();
   const original = makePredictionRow(source);
   if (original.kind !== "prediction") throw new Error("Expected prediction fixture");
+  const noCall = {
+    lockedAt: 86_401,
+    eventAgeAtLockSec: 86_400,
+    missingReasons: ["no usable live price"],
+    relatedContext: source.relatedContext,
+  };
   const erratum = {
     id: 1,
     state: "invalidated" as const,
@@ -176,10 +182,10 @@ function makeInvalidatedRow(): DdrV2ResponseRow {
       errataCount: 1,
       errataHistory: [erratum],
     }),
-    originalKind: "prediction",
-    originalOutcome: original.frozen,
-    frozen: null,
-    noCall: null,
+    originalKind,
+    originalOutcome: originalKind === "prediction" ? original.frozen : noCall,
+    frozen: originalKind === "prediction" ? original.frozen : null,
+    noCall: originalKind === "no_call" ? noCall : null,
     live: liveOverlay(source, { eventState: "event_invalidated" }),
   });
 }
@@ -369,6 +375,20 @@ describe("DepegResolverModule", () => {
     expect(screen.getByText("Prediction invalidated by erratum")).toBeTruthy();
     expect(screen.getByText("Erratum and original outcome")).toBeTruthy();
   });
+
+  it("labels an invalidated no-call from its authoritative original kind", () => {
+    render(
+      <DepegResolverModule
+        data={response({
+          rows: [makeInvalidatedRow("no_call")],
+        })}
+      />,
+    );
+
+    expect(screen.getByText("no-call")).toBeTruthy();
+    expect(screen.queryByText("published prediction")).toBeNull();
+  });
+
 });
 
 describe("StablecoinDepegResolverRows", () => {

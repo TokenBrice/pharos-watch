@@ -5,6 +5,7 @@ import {
   getRedemptionBackstopConfig,
   resolveMoreConservativeRedemptionSettlement,
   resolveV9RedemptionRouteCostBpsAtNotional,
+  validateRedemptionOutputIdentity,
   type RedemptionBackstopConfig,
 } from "@shared/lib/redemption-backstops";
 import { isRedemptionSettlementFaster } from "@shared/lib/redemption-backstop-configs/settlement";
@@ -21,7 +22,7 @@ import {
   deriveSupplyModelExitRouteObservation,
   REDEMPTION_SETTLEMENT_HORIZON_CEILING_SEC,
 } from "../redemption-exit-route-observations";
-import type { SafetyScoreV9FactSetExtensionV2 } from "./fact-set";
+import type { SafetyScoreV9FactSetExtensionV2 } from "./fact-set-schema";
 import type { SafetyScoreV9CompilerInput } from "./native-input";
 
 type ExtensionAsset = SafetyScoreV9FactSetExtensionV2["assets"][number];
@@ -36,7 +37,6 @@ type TrackedStablecoinValuation = Pick<
 type RedemptionSettlementModel = RedemptionBackstopConfig["settlementModel"];
 type ComposedDexExit = NonNullable<RedemptionBackstopConfig["v9ComposedDexExit"]>;
 
-export const canonicalExecutionCostKey = canonicalV9ExecutionCostKey;
 function canonicalExecutionCosts(
   observation: ExitRouteObservation,
   resolveCostBps: (point: {
@@ -62,7 +62,7 @@ function canonicalExecutionCosts(
         point.executionCostBps ?? resolveCostBps(point) ?? point.maxCostBps,
     }))
     .sort((left, right) =>
-      compareText(canonicalExecutionCostKey(left), canonicalExecutionCostKey(right)),
+      compareText(canonicalV9ExecutionCostKey(left), canonicalV9ExecutionCostKey(right)),
     );
 }
 
@@ -398,7 +398,10 @@ function buildOutputReview(
     const weakest =
       pricedComponents.length > 0
         ? pricedComponents.reduce((minimum, component) =>
-        component.tracked!.unitValueUsd < minimum.tracked!.unitValueUsd ? component : minimum,
+            component.tracked.unitValueUsd / component.tracked.expectedUnitValueUsd <
+              minimum.tracked.unitValueUsd / minimum.tracked.expectedUnitValueUsd
+              ? component
+              : minimum,
           )
         : null;
     const weakestKnownValuation = weakest
@@ -766,6 +769,12 @@ function buildRedemptionRouteReview(
       : scope.kind === "protocol"
         ? [`protocol:${scope.protocol}${scope.chain ? `:${scope.chain}` : ""}`]
         : dexPhysicalResourceKeys(observation);
+  const outputIdentityIssues = validateRedemptionOutputIdentity(entry.stablecoinId, observation.output);
+  const outputReview =
+    outputIdentityIssues.every((issue) => issue.code === "output-identity-mismatch")
+      ? buildOutputReview(fixedInput, observation, fixedInput.redemptionGenerationId, entry.stablecoinId)
+      : null;
+
   return {
     lane: "redemption",
     routeId: observation.routeId,
@@ -782,9 +791,9 @@ function buildRedemptionRouteReview(
     queueDepthUsd: entry.queueDepthUsd ?? null,
     dailyLimitUsd: entry.dailyLimitUsd ?? null,
     minRedeemUsd: reviewedTerms.minRedeemUsd,
-    physicalResourceKeys,
     executionCosts: redemptionExecutionCosts(entry, observation),
-    output: buildOutputReview(fixedInput, observation, fixedInput.redemptionGenerationId, entry.stablecoinId),
+    physicalResourceKeys,
+    output: outputReview,
     ...(unresolvedOutputResponsibility === null ? {} : { unresolvedOutputResponsibility }),
     failureDomains: [],
   };

@@ -2,7 +2,10 @@ import { describe, expect, it, beforeEach } from "vitest";
 import { mockTelegramMembership } from "../../test-helpers/__shared/telegram";
 import {
   fetchSpy,
+  firstAckBody,
   handleCallbackQuery,
+  lastAckBody,
+  lastEditedMessageBody,
   makeCallbackQuery,
   mockTelegramD1,
   resetCallbackTest,
@@ -74,7 +77,11 @@ describe("handleCallbackQuery", () => {
     });
 
     it("settings:c:<id>:db:A writes the alert_dews flag", async () => {
-      const db = mockTelegramD1([{ match: "FROM telegram_subscriptions", rows: [] }]);
+      const db = mockTelegramD1([
+        { match: "FROM telegram_subscriptions", rows: [] },
+        { match: "INSERT INTO telegram_subscribers", rows: [] },
+        { match: "INSERT INTO telegram_subscriptions", rows: [] },
+      ]);
       await handleCallbackQuery(db, "fake-token", makeCallbackQuery("settings:c:usdc-circle:db:A", { id: "cb-coin" }));
 
       const history = db.getHistory();
@@ -111,4 +118,92 @@ describe("handleCallbackQuery", () => {
     });
   });
 
+  describe("coinsnooze (P1-U10)", () => {
+    it("coinsnooze:<id>:4h upserts alert_snooze_until_ts on the matching subscription row", async () => {
+      const before = Math.floor(Date.now() / 1000);
+      const db = mockTelegramD1([
+        { match: "INSERT INTO telegram_subscribers", rows: [] },
+        { match: "INSERT INTO telegram_subscriptions", rows: [] },
+      ]);
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("coinsnooze:usdc-circle:4h", { id: "cb-coinsnooze", message: { chat: { id: 42 }, message_id: 999 } }));
+
+      const upsert = db
+        .getHistory()
+        .find(
+          (h) =>
+            /INSERT INTO telegram_subscriptions/.test(h.sql) &&
+            /alert_snooze_until_ts = excluded\.alert_snooze_until_ts/.test(h.sql),
+        );
+      expect(upsert).toBeDefined();
+      expect(upsert!.binds[0]).toBe("42");
+      expect(upsert!.binds[1]).toBe("usdc-circle");
+      const until = Number(upsert!.binds[2]);
+      expect(until).toBeGreaterThanOrEqual(before + 4 * 3600 - 2);
+      expect(until).toBeLessThanOrEqual(before + 4 * 3600 + 60);
+
+      const body = firstAckBody();
+      expect(body.text).toMatch(/Snoozed USDC for 4h/);
+    });
+
+    it("coinsnooze D1 write failure records a failure usage event", async () => {
+      const db = mockTelegramD1([
+        {
+          match: "INSERT INTO telegram_subscriptions",
+          rows: [],
+          throwError: new Error("d1 boom"),
+        },
+      ]);
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("coinsnooze:usdc-circle:4h", { id: "cb-coinsnooze-fail" }));
+
+      const usageRow = db
+        .getHistory()
+        .find(
+          (entry) =>
+            entry.sql.includes("INSERT INTO telegram_usage_daily") &&
+            entry.binds.includes("snooze_change") &&
+            entry.binds.includes("coin") &&
+            entry.binds.includes("failure"),
+        );
+      expect(usageRow).toBeDefined();
+      expect(usageRow!.binds[6]).toBe("d1_write_failed");
+      expect(lastAckBody().text).toMatch(/could not save snooze/i);
+    });
+
+    it.each([
+      { label: "an unknown stablecoin id", data: "coinsnooze:not-a-coin:1h", id: "cb-coinsnooze-bad" },
+      { label: "an unknown duration token", data: "coinsnooze:usdc-circle:12h", id: "cb-coinsnooze-bad-dur" },
+    ])("coinsnooze rejects $label without touching D1", async ({ data, id }) => {
+      const db = mockTelegramD1([]);
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery(data, { id, from: { id: 1 }, message: { chat: { id: 42 }, message_id: 999 } }));
+
+      expect(db.getHistory().some((h) => /INSERT INTO telegram_subscriptions/.test(h.sql))).toBe(false);
+      expect(lastAckBody().text).toBe("Action not recognized.");
+    });
+  });
+
+  describe("tz timezone callback", () => {
+    it("tz:<zone> persists a valid IANA zone with timezone in the upsert", async () => {
+      const db = mockTelegramD1([{ match: "INSERT INTO telegram_subscribers", rows: [] }]);
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("tz:Europe/Paris", { id: "cb-tz" }));
+
+      const upsert = db
+        .getHistory()
+        .find((h) => /INSERT INTO telegram_subscribers/.test(h.sql) && /timezone = excluded\.timezone/.test(h.sql));
+      expect(upsert).toBeDefined();
+      expect(upsert!.binds).toContain("Europe/Paris");
+
+      const editBody = lastEditedMessageBody();
+      expect(editBody.text).toContain("Current timezone: Europe/Paris");
+      expect(editBody.text).toContain("Quiet hours from /mute");
+      expect(lastAckBody().text).toContain("Europe/Paris");
+    });
+
+    it("tz:<unknown> rejects with a toast and does not write", async () => {
+      const db = mockTelegramD1([]);
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("tz:Mars/Olympus_Mons", { id: "cb-tz-bad" }));
+
+      expect(db.getHistory().some((h) => /INSERT INTO telegram_subscribers/.test(h.sql))).toBe(false);
+      expect(lastAckBody().text).toMatch(/unknown timezone/i);
+    });
+  });
 });

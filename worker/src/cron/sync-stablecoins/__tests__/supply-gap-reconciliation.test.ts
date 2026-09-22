@@ -123,12 +123,16 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
     const chainCurrent = Object.values(asset.chainCirculating ?? {})
       .reduce((sum, row) => sum + row.current, 0);
     expect(chainCurrent).toBe(getCirculatingRaw(asset));
-    expect(result.assets).toEqual([{
+    expect(result.assets).toHaveLength(1);
+    expect(result.assets[0]).toMatchObject({
       id: asset.id,
       reason: "coingecko-gap-fill",
       fromSource: "defillama",
       toValue: 130,
-    }]);
+      observedAt: Math.floor(nowMs / 1000),
+    });
+    expect(result.assets[0].observedAgeSec).toBeLessThanOrEqual(2);
+    expect(asset.supplyObservedAt).toBe(Math.floor(nowMs / 1000));
   });
 
   it("restores zero-supply DefiLlama rows from complete chart history", async () => {
@@ -167,12 +171,17 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
       circulatingPrevWeek: { peggedTRY: 15_100_000 },
       circulatingPrevMonth: { peggedTRY: 14_800_000 },
     });
-    expect(result.assets).toEqual([{
+    expect(result.assets).toHaveLength(1);
+    expect(result.assets[0]).toMatchObject({
       id: "tryb-bilira",
       reason: "defillama-history-gap-fill",
       fromSource: "defillama",
       toValue: 15_260_000,
-    }]);
+    });
+    expect(result.assets[0].observedAt).toBeGreaterThanOrEqual(Math.floor(nowMs / 1000) - 1);
+    expect(result.assets[0].observedAt).toBeLessThanOrEqual(Math.floor(Date.now() / 1000));
+    expect(result.assets[0].observedAgeSec).toBeLessThanOrEqual(2);
+    expect(asset.supplyObservedAt).toBe(result.assets[0].observedAt);
   });
 
   it("repairs curated zero-supply Mento rows from on-chain aggregate probes", async () => {
@@ -205,11 +214,13 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
     const onchainById: Record<string, {
       mcap: number;
       supplySource: "onchain-total-supply";
+      observedAt?: number | null;
       chainCirculating?: Record<string, { current: number; chainId?: string }>;
     }> = {
       "cadd-cad-digital": {
         mcap: 387_447.5,
         supplySource: "onchain-total-supply",
+        observedAt: 1_789_968_296,
         chainCirculating: {
           Ethereum: { current: 197_574.5, chainId: "ethereum" },
           Base: { current: 189_873, chainId: "base" },
@@ -265,14 +276,22 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
       ["xofm-mento", 0.00172],
     ]);
     expect(result.assets).toEqual([
-      { id: "cadd-cad-digital", reason: "onchain-total-supply", fromSource: "defillama", toValue: 387_447.5 },
-      { id: "jpym-mento", reason: "onchain-total-supply", fromSource: "defillama", toValue: 103_627.12712522845 },
-      { id: "zarm-mento", reason: "onchain-total-supply", fromSource: "defillama", toValue: 8_598.7022994136 },
-      { id: "xofm-mento", reason: "onchain-total-supply", fromSource: "defillama", toValue: 33_000.819008033395 },
+      {
+        id: "cadd-cad-digital",
+        reason: "onchain-total-supply",
+        fromSource: "defillama",
+        toValue: 387_447.5,
+        observedAt: 1_789_968_296,
+        observedAgeSec: expect.any(Number),
+      },
+      { id: "jpym-mento", reason: "onchain-total-supply", fromSource: "defillama", toValue: 103_627.12712522845, observedAt: null, observedAgeSec: null },
+      { id: "zarm-mento", reason: "onchain-total-supply", fromSource: "defillama", toValue: 8_598.7022994136, observedAt: null, observedAgeSec: null },
+      { id: "xofm-mento", reason: "onchain-total-supply", fromSource: "defillama", toValue: 33_000.819008033395, observedAt: null, observedAgeSec: null },
     ]);
     const byId = new Map(assets.map((asset) => [asset.id, asset]));
     expect(byId.get("cadd-cad-digital")).toMatchObject({
       supplySource: "onchain-total-supply",
+      supplyObservedAt: 1_789_968_296,
       circulating: { peggedCAD: 387_447.5 },
       chainCirculating: {
         Ethereum: { current: 197_574.5, chainId: "ethereum" },
@@ -342,6 +361,102 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
 
     expect(result.totalReconciled).toBe(0);
     expect(fetchTextWithRetryMock).toHaveBeenCalledTimes(1);
+    expect(asset).toEqual(before);
+  });
+
+  it("stamps a bounded but aged chart point instead of publishing it as current", async () => {
+    const nowMs = Date.now();
+    const asset = makeAsset();
+    const pointMs = nowMs - (47 * 60 * 60 * 1000);
+    mockCoinGeckoHistory([
+      [pointMs - (23 * 60 * 60 * 1000), 140],
+      [pointMs - (5 * DAY_MS), 120],
+      [pointMs - (28 * DAY_MS), 80],
+      [pointMs, 130],
+    ]);
+
+    const result = await reconcileTrackedSupplyGaps([asset]);
+
+    expect(result.totalReconciled).toBe(1);
+    expect(result.assets[0].observedAt).toBe(Math.floor(pointMs / 1000));
+    expect(result.assets[0].observedAgeSec).toBeGreaterThanOrEqual(47 * 60 * 60);
+    expect(asset.supplyObservedAt).toBe(Math.floor(pointMs / 1000));
+  });
+
+  it("withholds publication when the only current chart point exceeds the age bound", async () => {
+    const nowMs = Date.now();
+    const asset = makeAsset();
+    const before = structuredClone(asset);
+    mockCoinGeckoHistory([
+      [nowMs - (49 * 60 * 60 * 1000), 130],
+      [nowMs - (3 * DAY_MS), 140],
+      [nowMs - (9 * DAY_MS), 120],
+      [nowMs - (30 * DAY_MS), 80],
+    ]);
+
+    const result = await reconcileTrackedSupplyGaps([asset]);
+
+    expect(result.totalReconciled).toBe(0);
+    expect(asset).toEqual(before);
+  });
+
+  it("quarantines malformed chart points without aborting the candidate", async () => {
+    const nowMs = Date.now();
+    const asset = makeAsset();
+
+    fetchTextWithRetryMock.mockImplementation((url: string) => ({
+      response: { ok: true },
+      body: JSON.stringify(url.includes("/simple/price")
+        ? { "societe-generale-forge-eurcv": { usd_market_cap: 130, last_updated_at: Math.floor(nowMs / 1000) } }
+        : {
+          market_caps: [
+            null,
+            {},
+            [nowMs - (30 * DAY_MS)],
+            [nowMs - (30 * DAY_MS), 65],
+            [nowMs - (7 * DAY_MS), 110],
+            [nowMs - DAY_MS, 85],
+            [nowMs, 130],
+            [nowMs, "not-a-number"],
+          ],
+        }),
+    }));
+
+    const result = await reconcileTrackedSupplyGaps([asset]);
+
+    expect(result.totalReconciled).toBe(1);
+    expect(asset.supplySource).toBe("coingecko-gap-fill");
+    expect(asset.circulating).toEqual({ peggedEUR: 130 });
+  });
+
+  it("surfaces a gap-fill baseline mismatch with both totals instead of dropping it silently", async () => {
+    const nowMs = Date.now();
+    const asset = makeAsset();
+    asset.chainCirculating = {
+      Ethereum: { current: 60, circulatingPrevDay: 54, circulatingPrevWeek: 48, circulatingPrevMonth: 42 },
+      Solana: { current: 30, circulatingPrevDay: 27, circulatingPrevWeek: 24, circulatingPrevMonth: 21 },
+      Stellar: { current: 10, circulatingPrevDay: 9, circulatingPrevWeek: 8, circulatingPrevMonth: 7 },
+      Notaland: { current: 1, circulatingPrevDay: 1, circulatingPrevWeek: 1, circulatingPrevMonth: 1 },
+    };
+    const before = structuredClone(asset);
+    mockCoinGeckoHistory([
+      [nowMs - (30 * DAY_MS), 65],
+      [nowMs - (7 * DAY_MS), 110],
+      [nowMs - DAY_MS, 85],
+      [nowMs, 130],
+    ]);
+
+    const result = await reconcileTrackedSupplyGaps([asset]);
+
+    expect(result.totalReconciled).toBe(0);
+    expect(result.baselineMismatches).toEqual([{
+      id: asset.id,
+      expectedCurrent: 100,
+      attributedCurrent: 100,
+      tolerance: Math.max(0.01, 100 * 1e-6),
+      droppedRows: 1,
+      droppedChainIds: ["Notaland"],
+    }]);
     expect(asset).toEqual(before);
   });
 });

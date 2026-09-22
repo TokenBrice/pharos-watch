@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { makeAsset } from "../__shared/fixtures";
 import { mergeSourceRiskGoldenFixtures } from "@shared/test-utils/yield-source-risk-golden-fixtures";
 import { compileSafetyScoreV9FactSetFromFixedInput } from "../../lib/safety-score-v9/fact-set";
-import { createReportCardsFixedInput } from "../../lib/report-cards-fixed-input";
+import { createReportCardsFixedInput } from "../report-cards-fixed-input";
 import { makeV9FixedInput, v9RouteReview } from "../v9-fixed-input-core";
 import { makeV9Extension, makeV9RoleExtension, v9ExtensionRoleEdge } from "../v9-fixed-input-extensions";
 import { makeV9TwoAssetFixedInput, withV9WmReviewedDeploymentAttribution } from "../v9-fixed-input-variants";

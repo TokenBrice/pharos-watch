@@ -231,9 +231,6 @@ function parseResolvedCoins(value: unknown): ResolvedCoin[] {
   return coins;
 }
 
-// Re-exported from worker/src/lib/telegram/coin-dedupe.ts so existing API-layer
-// importers keep their import path; the store layer imports it from lib directly.
-export { dedupeCoins };
 
 export function parsePendingDisambiguation(
   pending: PendingDisambiguationRow,
@@ -245,7 +242,7 @@ export function parsePendingDisambiguation(
     return { actionType: SETUP_PENDING_ACTION_TYPE };
   }
 
-  const actionType = parsePendingActionType(pending.action_type ?? "subscribe");
+  const actionType = parsePendingActionType(pending.action_type);
   if (!actionType) {
     logWorkerEventArgs("api", "warn",
       `[telegram-webhook] malformed pending action_type value=${String(pending.action_type)}`,
@@ -421,14 +418,16 @@ export function parseSetCommand(args: string): ParsedSetCommand | { error: strin
       return { error: "Freeze values: on, off" };
     }
     case "depeg-step": {
+      // "off" means here what it means on the settings keyboard: the depeg
+      // family goes off. Writing the step alone turned depeg alerts *on*.
       if (value === "off") {
-        return { ticker, setting: "depeg-step", enabled: true, step: null };
+        return { ticker, setting: "depeg", enabled: false };
       }
       const step = Number(value);
       if (isDepegStepValue(step)) {
         return { ticker, setting: "depeg-step", enabled: true, step };
       }
-      return { error: "Depeg-step values: off, 100, 250, 500" };
+      return { error: "Depeg-step values: off (turns depeg alerts off), 100, 250, 500" };
     }
     default:
       return { error: "Supported settings: dews, safety, depeg, depeg-step, launch, reserve, freeze" };

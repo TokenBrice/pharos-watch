@@ -25,7 +25,7 @@ const coin: StablecoinMeta = {
 
 describe("PreLaunchDetail", () => {
   it("puts identity first and retains the complete narrative in a closed native disclosure", () => {
-    const html = renderToStaticMarkup(<PreLaunchDetail coin={coin} logoSrc={undefined} summary={null} logos={{}} />);
+    const html = renderToStaticMarkup(<PreLaunchDetail coin={coin} logoSrc={undefined} summary={null} />);
     const document = new DOMParser().parseFromString(html, "text/html");
     const heading = document.querySelector("h1");
     const disclosure = document.querySelector("details");
@@ -46,7 +46,7 @@ describe("PreLaunchDetail", () => {
 
   it("omits the disclosure when no launch narrative is available", () => {
     const html = renderToStaticMarkup(
-      <PreLaunchDetail coin={{ ...coin, launchPhaseDetail: undefined }} logoSrc={undefined} summary={null} logos={{}} />,
+      <PreLaunchDetail coin={{ ...coin, launchPhaseDetail: undefined }} logoSrc={undefined} summary={null} />,
     );
     expect(html).not.toContain("<details");
     expect(html).toContain("Pre-launch Stablecoin Tracker");
@@ -60,12 +60,12 @@ describe("PreLaunchDetail", () => {
     };
 
     vi.setSystemTime(new Date("2026-04-01T00:00:00Z"));
-    const first = render(<PreLaunchDetail coin={timelineCoin} logoSrc={undefined} summary={null} logos={{}} />);
+    const first = render(<PreLaunchDetail coin={timelineCoin} logoSrc={undefined} summary={null} />);
     const firstProgress = Number((first.getByRole("progressbar").firstElementChild as HTMLElement).style.width.slice(0, -1));
     first.unmount();
 
     vi.setSystemTime(new Date("2026-04-02T00:00:00Z"));
-    const second = render(<PreLaunchDetail coin={timelineCoin} logoSrc={undefined} summary={null} logos={{}} />);
+    const second = render(<PreLaunchDetail coin={timelineCoin} logoSrc={undefined} summary={null} />);
     const secondProgress = Number((second.getByRole("progressbar").firstElementChild as HTMLElement).style.width.slice(0, -1));
     expect(secondProgress).toBeGreaterThan(firstProgress);
     vi.useRealTimers();

@@ -1,18 +1,6 @@
-import { API_CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
-import { CACHE_AVAILABILITY_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import {
   DEPEG_THRESHOLD_BPS,
   DEPEG_THRESHOLD_BPS_NON_USD,
-  DEX_FRESHNESS_SEC,
-  DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD,
-  DEPEG_EVENT_MIN_SUPPLY_USD,
-  DEPEG_DEX_PROTOCOL_CORROBORATION_MIN,
-  DEPEG_CONFIRMATION_SUPPLY_THRESHOLD,
-  DEPEG_PRIMARY_PRICE_MAX_AGE_SEC,
-  DEPEG_EXTREME_MOVE_BPS,
-  DEPEG_PENDING_MIN_AGE_SEC,
-  DEPEG_PENDING_EXPIRY_SEC,
-  DEPEG_SECONDARY_THRESHOLD_RATIO,
   DEPEG_RECOVERY_THRESHOLD_RATIO,
 } from "@shared/lib/depeg-config";
 
@@ -32,18 +20,6 @@ export function getDepegRecoveryThresholdBps(pegType: string | undefined): numbe
   return Math.round(getDepegThresholdBps(pegType) * DEPEG_RECOVERY_THRESHOLD_RATIO);
 }
 
-export {
-  DEX_FRESHNESS_SEC,
-  DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD,
-  DEPEG_EVENT_MIN_SUPPLY_USD,
-  DEPEG_DEX_PROTOCOL_CORROBORATION_MIN,
-  DEPEG_CONFIRMATION_SUPPLY_THRESHOLD,
-  DEPEG_PRIMARY_PRICE_MAX_AGE_SEC,
-  DEPEG_EXTREME_MOVE_BPS,
-  DEPEG_PENDING_MIN_AGE_SEC,
-  DEPEG_PENDING_EXPIRY_SEC,
-  DEPEG_SECONDARY_THRESHOLD_RATIO,
-};
 /** Minimum per-pool liquidity required for a DEX price observation to be stored. */
 export const DEX_PRICE_OBSERVATION_MIN_TVL_USD = 50_000;
 
@@ -83,14 +59,6 @@ export const MIN_VALID_ASSET_COUNT = 50;
 
 /** DexScreener minimum liquidity threshold in USD for pool validation */
 export const DEXSCREENER_MIN_LIQUIDITY_USD = 50_000;
-
-/** Standard Cache-Control header profiles for API responses */
-export const CACHE_PROFILES = API_CACHE_PROFILES;
-
-/** Maximum cache age (in seconds) per cache key — used by both /health and /status endpoints */
-export const CACHE_FRESHNESS_THRESHOLDS: Record<string, number> = CACHE_AVAILABILITY_MAX_AGE_SEC;
-
-// --- Depeg multi-source confirmation (>$1B coins) ---
 
 // --- Yield Intelligence ---
 
@@ -147,11 +115,6 @@ export const CBRT_TLREF_SERIES_CODE = "TP.BISTTLREF.ORAN";
 export const BENCHMARK_FETCH_TIMEOUT_MS = 15_000;
 export const BENCHMARK_FETCH_MAX_RETRIES = 2;
 export const PYS_SCALING_FACTOR = 8;
-/**
- * Default safety score for unrated coins (navTokens, coins with insufficient data).
- * Single definition lives with the PYS formula it feeds.
- */
-export { PYS_DEFAULT_SAFETY_SCORE as DEFAULT_SAFETY_SCORE } from "@shared/lib/yield-scoring";
 /** Minimum report-card score for a coin to qualify for automatic yield discovery (C- = 50). */
 export const MIN_SAFETY_SCORE_FOR_YIELD = 50;
 /** Minimum APY (%) for auto-discovered lending pools to be eligible. */

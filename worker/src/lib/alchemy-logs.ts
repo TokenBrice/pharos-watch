@@ -95,6 +95,37 @@ export function buildAlchemyUrl(chainId: string, apiKey: string): string | null 
 }
 
 // --- Helpers ---
+function isAlchemyLogEntry(value: unknown): value is AlchemyLogEntry {
+  if (!value || typeof value !== "object") return false;
+  const log = value as Record<string, unknown>;
+  return typeof log.address === "string"
+    && Array.isArray(log.topics)
+    && log.topics.every((topic) => typeof topic === "string")
+    && typeof log.data === "string"
+    && typeof log.blockNumber === "string"
+    && typeof log.transactionHash === "string"
+    && typeof log.transactionIndex === "string"
+    && typeof log.blockHash === "string"
+    && typeof log.logIndex === "string"
+    && typeof log.removed === "boolean";
+}
+
+function isAlchemyTransactionEntry(value: unknown, txHash: string): value is AlchemyTransactionEntry {
+  if (!value || typeof value !== "object") return false;
+  const tx = value as Record<string, unknown>;
+  return tx.hash === txHash
+    && (typeof tx.to === "string" || tx.to === null)
+    && typeof tx.input === "string";
+}
+
+function isAlchemyTransactionReceipt(value: unknown, txHash: string): value is AlchemyTransactionReceipt {
+  if (!value || typeof value !== "object") return false;
+  const receipt = value as Record<string, unknown>;
+  return receipt.transactionHash === txHash
+    && (typeof receipt.to === "string" || receipt.to === null)
+    && Array.isArray(receipt.logs)
+    && receipt.logs.every(isAlchemyLogEntry);
+}
 
 async function jsonRpcCall<T>(
   alchemyUrl: string,
@@ -368,10 +399,29 @@ export async function getAlchemyTransactionContextBatchMany(
     const txHash = uniqueTxHashes[Math.floor(item.id / 2)];
     if (!txHash) continue;
     const current = results.get(txHash) ?? { tx: null, receipt: null };
+    const validResult = item.result == null
+      ? null
+      : item.id % 2 === 0
+      ? isAlchemyTransactionEntry(item.result, txHash)
+        ? item.result
+        : null
+      : isAlchemyTransactionReceipt(item.result, txHash)
+      ? item.result
+      : null;
+    if (item.result != null && validResult == null) {
+      logWorkerEvent({
+        scope: "lib",
+        level: "warn",
+        event: "alchemy_transaction_context_batch_malformed_item",
+        message: "Alchemy transaction-context batch item had a malformed result",
+        provider: "alchemy",
+        metadata: { txHash, responseId: item.id, kind: item.id % 2 === 0 ? "transaction" : "receipt" },
+      });
+    }
     if (item.id % 2 === 0) {
-      current.tx = (item.result ?? null) as AlchemyTransactionEntry | null;
+      current.tx = validResult as AlchemyTransactionEntry | null;
     } else {
-      current.receipt = (item.result ?? null) as AlchemyTransactionReceipt | null;
+      current.receipt = validResult as AlchemyTransactionReceipt | null;
     }
     results.set(txHash, current);
   }
@@ -614,7 +664,6 @@ const ALCHEMY_BLOCK_TIMESTAMP_CACHE_POLICY = {
   storage: "domain-table",
   schemaId: "alchemy:block-timestamp:v1",
   ttlSec: DEFAULT_TIMESTAMP_CACHE_MAX_AGE_SEC,
-  maxEntries: null,
   stale: "reject",
   invalid: "retain",
 } satisfies CacheRetentionPolicy;

@@ -17,7 +17,6 @@ import {
   DEX_MEASURED_ADAPTER_PROFILE_IDS,
   getDexMeasuredExecutionFreshnessMaxSec,
   type DexExactQuoteAdapterId,
-  type DexExecutionProfileV2,
   type DexMeasuredExecutionObservationHistory,
   type DexMeasuredExecutionPublicProfile,
 } from "../types/measured-execution";
@@ -56,6 +55,13 @@ export interface DexExecutionCapabilityRegistration {
   routeSemanticsVersion: string;
 }
 
+/**
+ * Owner-ratified score cohort. The fork-equivalence, cross-check, drift, and
+ * shadow packet recorded 120/120 exact provider reproductions. Base
+ * Slipstream was admitted after full target rotation and replay; Celo after
+ * the Graph + QuoterV2 lane review. The retired Optimism lane remains absent.
+ * Reviewed deployments not listed here stay shadow-only fail-closed.
+ */
 const ACTIVE_QUOTER_V2_DEPLOYMENT_KEYS = [
   "aerodrome-slipstream-quoter-v2:base",
   "uniswap-v3-quoter-v2:ethereum",
@@ -204,15 +210,14 @@ export function getDexExecutionCapabilityRegistration(
   return DEX_EXECUTION_CAPABILITY_REGISTRY.find((entry) => entry.profileId === profileId) ?? null;
 }
 
-type DexExecutionProfileAdmissionInput = Pick<DexMeasuredExecutionPublicProfile, "adapterProfileId" | "chain"> |
-  Pick<DexExecutionProfileV2, "profileId"> & { identity: Pick<DexExecutionProfileV2["identity"], "chain"> };
+type DexExecutionProfileAdmissionInput = Pick<DexMeasuredExecutionPublicProfile, "adapterProfileId" | "chain">;
 
 export function isDexExecutionProfileAdmittedForScoring(
   profile: DexExecutionProfileAdmissionInput,
   registration: DexExecutionCapabilityRegistration,
 ): boolean {
-  const profileId = "adapterProfileId" in profile ? profile.adapterProfileId : profile.profileId;
-  const chain = ("chain" in profile ? profile.chain : profile.identity.chain).trim().toLowerCase();
+  const profileId = profile.adapterProfileId;
+  const chain = profile.chain.trim().toLowerCase();
   if (profileId !== registration.profileId || registration.lifecycle !== "active") return false;
   if (!registration.eligibleChains.includes(chain)) return false;
   if (!registration.eligibleDeploymentKeys) return true;

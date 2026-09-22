@@ -499,6 +499,139 @@ describe("buildCacheStatuses sentinel validation", () => {
     expect(caches["yield-data"]).toMatchObject({ ageSeconds: 20_000, healthy: false });
     expect(statusFloor).toBe("stale");
   });
+
+  it("publishes a degraded quality verdict when a sentinel-backed cache has no sentinel at all", async () => {
+    const now = 1_800_000_000;
+    const db = mockD1([
+      {
+        match: "cache WHERE key IN",
+        rows: [
+          cacheRow("stablecoins", now - 60),
+          cacheRow("stablecoin-charts", now - 60),
+          cacheRow("usds-status", now - 60),
+          cacheRow("fx-rates", now - 60, { peggedEUR: 1.08 }),
+          cacheRow("bluechip-ratings", now - 60),
+          sentinelRow("dex-liquidity", now - 120),
+          sentinelRow("dews", now - 240),
+        ],
+      },
+      { match: "GROUP BY job", rows: [] },
+      { match: "FROM yield_data", rows: [], first: { age: 60 } },
+    ]);
+
+    const { caches } = await buildCacheStatuses(db, now);
+
+    // Table freshness is well inside budget, but it measures row writes, not the
+    // generation that was published, so the lane cannot be called healthy.
+    expect(caches["yield-data"]).toMatchObject({
+      ageSeconds: 60,
+      freshnessSource: "table-fallback",
+      degraded: true,
+      degradedReason: "freshness-sentinel-missing",
+      healthy: false,
+    });
+    expect(caches.dews).toMatchObject({ degraded: false, healthy: true });
+  });
+
+  it("degrades a sentinel-fresh cache whose producer degraded since its last clean run", async () => {
+    const now = 1_800_000_000;
+    const db = mockD1([
+      {
+        match: "cache WHERE key IN",
+        rows: [
+          cacheRow("stablecoins", now - 60),
+          cacheRow("stablecoin-charts", now - 60),
+          cacheRow("usds-status", now - 60),
+          cacheRow("fx-rates", now - 60, { peggedEUR: 1.08 }),
+          cacheRow("bluechip-ratings", now - 60),
+          sentinelRow("dex-liquidity", now - 120),
+          sentinelRow("yield-data", now - 60),
+          sentinelRow("dews", now - 240),
+        ],
+      },
+      {
+        match: "GROUP BY job",
+        rows: [{ job: "sync-yield-data", started_at: now - 7_200, degraded_runs_since_ok: 3 }],
+      },
+    ]);
+
+    const { caches } = await buildCacheStatuses(db, now);
+
+    expect(caches["yield-data"]).toMatchObject({
+      ageSeconds: 60,
+      freshnessSource: "freshness-sentinel",
+      degraded: true,
+      degradedReason: "producer-degraded-since-last-clean-run",
+      streakDegradedRuns: 3,
+      healthy: false,
+    });
+  });
+
+  it("publishes healthy again on the generation after a clean producer run", async () => {
+    const now = 1_800_000_000;
+    const db = mockD1([
+      {
+        match: "cache WHERE key IN",
+        rows: [
+          cacheRow("stablecoins", now - 60),
+          cacheRow("stablecoin-charts", now - 60),
+          cacheRow("usds-status", now - 60),
+          cacheRow("fx-rates", now - 60, { peggedEUR: 1.08 }),
+          cacheRow("bluechip-ratings", now - 60),
+          sentinelRow("dex-liquidity", now - 120),
+          sentinelRow("yield-data", now - 60),
+          sentinelRow("dews", now - 240),
+        ],
+      },
+      {
+        match: "GROUP BY job",
+        rows: [{ job: "sync-yield-data", started_at: now - 60, degraded_runs_since_ok: 0 }],
+      },
+    ]);
+
+    const { caches } = await buildCacheStatuses(db, now);
+
+    expect(caches["yield-data"]).toMatchObject({
+      freshnessSource: "freshness-sentinel",
+      degraded: false,
+      degradedReason: null,
+      streakDegradedRuns: 0,
+      healthy: true,
+    });
+  });
+
+  it("publishes an unknown degraded streak when the producer-history read fails", async () => {
+    const now = 1_800_000_000;
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const db = mockD1([
+        {
+          match: "cache WHERE key IN",
+          rows: [
+            cacheRow("stablecoins", now - 60),
+            cacheRow("stablecoin-charts", now - 60),
+            cacheRow("usds-status", now - 60),
+            cacheRow("fx-rates", now - 60, { peggedEUR: 1.08 }),
+            cacheRow("bluechip-ratings", now - 60),
+            sentinelRow("dex-liquidity", now - 120),
+            sentinelRow("yield-data", now - 60),
+            sentinelRow("dews", now - 240),
+          ],
+        },
+        { match: "GROUP BY job", rows: [], throwError: new Error("cron lookup failed") },
+      ]);
+
+      const { caches } = await buildCacheStatuses(db, now);
+
+      expect(caches["yield-data"]).toMatchObject({
+        streakDegradedRuns: null,
+        degraded: false,
+        healthy: true,
+      });
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
 });
 
 describe("buildCacheStatuses", () => {
@@ -703,5 +836,57 @@ describe("buildCacheStatuses", () => {
     expect(caches["fx-rates"]?.consecutiveFallbackRuns).toBe(4);
     expect(statusFloor).toBe("degraded");
     expect(warnings[0]).toContain("cached fallback FX rates");
+  });
+
+  it("publishes the healthy band each cache verdict was measured against", async () => {
+    const now = 1_800_000_000;
+    const db = mockD1([
+      {
+        match: "cache WHERE key IN",
+        rows: [
+          cacheRow("stablecoins", now - 60),
+          cacheRow("stablecoin-charts", now - 60),
+          cacheRow("usds-status", now - 60),
+          cacheRow("fx-rates", now - 60, { peggedEUR: 1.08 }),
+          cacheRow("bluechip-ratings", now - 60),
+          sentinelRow("dex-liquidity", now - 120),
+          // ~2.06x the hourly budget: two missed publishes, past the override ceiling.
+          sentinelRow("yield-data", now - 7_400),
+          // The captured /api/health shape: 1.93x the DEWS budget, still inside its band.
+          sentinelRow("dews", now - 3_473),
+        ],
+      },
+      { match: "GROUP BY job", rows: [] },
+    ]);
+
+    const { caches } = await buildCacheStatuses(db, now);
+
+    expect(caches.dews).toMatchObject({
+      ageSeconds: 3_473,
+      maxAge: 1_800,
+      healthyMaxRatio: 12,
+      healthyMaxAge: 21_600,
+      healthy: true,
+    });
+    expect(caches["yield-data"]).toMatchObject({
+      ageSeconds: 7_400,
+      maxAge: 3_600,
+      healthyMaxRatio: 2,
+      healthyMaxAge: 7_200,
+      healthy: false,
+    });
+
+    const bandMismatches = Object.entries(caches)
+      .filter(([, cache]) => cache.healthyMaxAge !== cache.maxAge * (cache.healthyMaxRatio ?? 0))
+      .map(([key]) => key);
+    const contradictions = Object.entries(caches)
+      .filter(
+        ([, cache]) =>
+          cache.healthy !== (cache.ageSeconds != null && cache.ageSeconds <= (cache.healthyMaxAge ?? 0)),
+      )
+      .map(([key]) => key);
+
+    expect(bandMismatches).toEqual([]);
+    expect(contradictions).toEqual([]);
   });
 });
