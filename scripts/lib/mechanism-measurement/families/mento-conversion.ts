@@ -1,9 +1,9 @@
 import { decodeAbiParameters } from "viem/utils";
 import {
   decodeMentoPoolExchange,
+  mentoSpreadToFeeBps,
   MENTO_GET_EXCHANGE_IDS_SELECTOR,
   MENTO_GET_POOL_EXCHANGE_SELECTOR,
-  MENTO_POOL_SPREAD_FIXIDITY_SCALE,
   type MentoPoolExchange,
 } from "@shared/lib/mento-contracts";
 import {
@@ -103,7 +103,7 @@ export async function measureMentoConversion(
       conversionCapacityRaw > 0n,
       `counter bucket ${conversionCapacityRaw} is positive`,
     );
-    const feeBps = Number((match.exchange.config.spread * 10_000n) / MENTO_POOL_SPREAD_FIXIDITY_SCALE);
+    const feeBps = mentoSpreadToFeeBps(match.exchange.config.spread);
     derived = {
       mode: "broker-pool",
       exchangeId: match.exchangeId,

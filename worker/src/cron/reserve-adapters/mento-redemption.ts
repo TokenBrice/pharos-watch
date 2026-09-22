@@ -4,10 +4,10 @@ import type { LiveReserveInput } from "@shared/types/live-reserves";
 import type { LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
 import {
   decodeMentoPoolExchange,
+  mentoSpreadToFeeBps,
   MENTO_BIPOOL_MANAGER_ADDRESS,
   MENTO_GET_EXCHANGE_IDS_SELECTOR,
   MENTO_GET_POOL_EXCHANGE_SELECTOR,
-  MENTO_POOL_SPREAD_FIXIDITY_SCALE,
   type MentoPoolExchange,
 } from "@shared/lib/mento-contracts";
 import type { AdapterContext, AdapterResult } from "./types";
@@ -15,7 +15,6 @@ import { decodeBytes32ArrayWord } from "./abi-decode";
 import {
   buildRedemptionSnapshotMetadata,
   decimalNumberFromBigInt,
-  fetchErc20Balance,
   fetchErc20TotalSupply,
   fetchOnchainMulticall3,
   fetchOnchainRateBps,
@@ -34,7 +33,7 @@ import { throwIfAborted } from "../../lib/abort";
 //     stables).
 //   - liquity-v2-cr: a mento-protocol/bold (Liquity v2 fork) CDP branch
 //     (GBPm).
-//   - fpmm-pool: a Mento V3 FPMM pool that redeems into USDm (JPYm, CHFm).
+//   - fpmm-pools: one or more Mento V3 FPMM pools with configured token identities.
 // Any read failure fails closed: no redemption telemetry is emitted for that
 // coin (a degraded warning is added instead) and the reserve composition
 // computed upstream is returned unaffected.
@@ -75,7 +74,6 @@ type MentoParams = LiveReserveAdapterParamsByKey["mento"];
 type MentoRedemptionParams = NonNullable<MentoParams["redemption"]>;
 type MentoBrokerPoolParams = Extract<MentoRedemptionParams, { kind: "broker-pool" }>;
 type MentoLiquityV2CrParams = Extract<MentoRedemptionParams, { kind: "liquity-v2-cr" }>;
-type MentoFpmmPoolParams = Extract<MentoRedemptionParams, { kind: "fpmm-pool" }>;
 
 function mentoPoolCacheKey(params: MentoBrokerPoolParams, resource: string): string {
   return [
@@ -222,7 +220,7 @@ async function fetchMentoBrokerPoolRedemption(
     // USDm-pegged.
     const counterBucketRaw = match.asset0.toLowerCase() === counterAddress ? match.bucket0 : match.bucket1;
     capacityUsd += decimalNumberFromBigInt(counterBucketRaw, 18);
-    const feeBps = Number((match.config.spread * 10_000n) / MENTO_POOL_SPREAD_FIXIDITY_SCALE);
+    const feeBps = mentoSpreadToFeeBps(match.config.spread);
     maxFeeBps = maxFeeBps == null ? feeBps : Math.max(maxFeeBps, feeBps);
   }
 
@@ -299,60 +297,8 @@ async function fetchMentoLiquityV2CrRedemption(
   });
 }
 
-async function fetchMentoFpmmPoolRedemption(
-  params: MentoFpmmPoolParams,
-  signal: AbortSignal,
-  ctx: AdapterContext | undefined,
-): Promise<NonNullable<AdapterResult["metadata"]>> {
-  const callOptions = {
-    signal,
-    ctx,
-    rpcUrl: params.rpcUrl,
-    fallbackRpcUrl: params.fallbackRpcUrl,
-    rpcMode: CELO_ONCHAIN_INPUT.rpcMode,
-    chain: CELO_ONCHAIN_INPUT.chain,
-  };
 
-  const [balanceRaw, lpFeeRaw, protocolFeeRaw] = await Promise.all([
-    fetchErc20Balance(
-      CELO_ONCHAIN_INPUT,
-      params.usdmTokenAddress,
-      params.poolAddress,
-      signal,
-      ctx,
-      params.rpcUrl,
-      params.fallbackRpcUrl,
-    ),
-    fetchOnchainUint256({ ...callOptions, contract: params.poolAddress, data: FPMM_LP_FEE_SELECTOR }),
-    fetchOnchainUint256({ ...callOptions, contract: params.poolAddress, data: FPMM_PROTOCOL_FEE_SELECTOR }),
-  ]);
-  if (balanceRaw == null) {
-    throw new Error("mento fpmm-pool: could not read USDm pool balance");
-  }
-  const capacityUsd = decimalNumberFromBigInt(balanceRaw, 18);
-  if (capacityUsd <= 0) {
-    throw new Error("mento fpmm-pool: USDm pool balance returned zero capacity");
-  }
-
-  // A missing fee leg keeps the capacity but emits no bound, so a partial read
-  // can never understate the swap cost.
-  const feeBps = lpFeeRaw != null && protocolFeeRaw != null ? Number(lpFeeRaw + protocolFeeRaw) : null;
-
-  return buildRedemptionSnapshotMetadata({
-    capacityUsd,
-    capacityKind: "live-direct-bounded",
-    freshnessKind: "same-run-onchain",
-    routeStatus: "open",
-    routeStatusSource: "onchain",
-    routeObserved: true,
-    holderEligibility: "any-holder",
-    settlementDelaySec: 0,
-    feeBps,
-    ...(params.sourceUrls ? { sourceUrls: params.sourceUrls } : {}),
-  });
-}
-
-// These pools use six-decimal dollar output assets and 18-decimal USDm input.
+// Pool token identities and native units are checked live against config.
 // Conservatively keep the full inventory unrated if a trading limit binds;
 // we do not infer executable capacity from an oracle quote alone.
 async function fetchMentoFpmmPoolsRedemption(
@@ -361,9 +307,8 @@ async function fetchMentoFpmmPoolsRedemption(
   ctx: AdapterContext | undefined,
 ): Promise<NonNullable<AdapterResult["metadata"]>> {
   const self = params.selfTokenAddress.toLowerCase();
-  if (self !== "0x765de816845861e75a25fca122bb6898b8b1282a"
-    || new Set(params.pools.map((pool) => pool.poolAddress.toLowerCase())).size !== params.pools.length) {
-    throw new Error("mento fpmm-pools: unsupported input or duplicate pool");
+  if (new Set(params.pools.map((pool) => pool.poolAddress.toLowerCase())).size !== params.pools.length) {
+    throw new Error("mento fpmm-pools: duplicate pool");
   }
   const plan = await pinnedBlockPlan({ chain: CELO_CHAIN, signal, ctx });
   const word = (address: string) => address.toLowerCase().slice(2).padStart(64, "0");
@@ -373,9 +318,7 @@ async function fetchMentoFpmmPoolsRedemption(
   // Sequential pools share one pinned block and the adapter's connection budget.
   for (const pool of params.pools) {
     const output = pool.counterAsset.address.toLowerCase();
-    if (!["0xceba9300f2b948710d2653dd7b07f33a8b32118c", "0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e"].includes(output)) {
-      throw new Error("mento fpmm-pools: unsupported dollar output");
-    }
+    const outputDecimals = pool.counterAsset.decimals;
     const calls = [
       ["token0", pool.poolAddress, "0x0dfe1681"],
       ["token1", pool.poolAddress, "0xd21220a7"],
@@ -387,7 +330,7 @@ async function fetchMentoFpmmPoolsRedemption(
       ["protocol", pool.poolAddress, FPMM_PROTOCOL_FEE_SELECTOR],
       ["inputLimits", pool.poolAddress, `0x6391f7db${word(self)}`],
       ["outputLimits", pool.poolAddress, `0x6391f7db${word(output)}`],
-      ["unitQuote", pool.poolAddress, quoteData(10n ** 24n)],
+      ["unitQuote", pool.poolAddress, quoteData(10n ** BigInt(params.selfDecimals + 6))],
     ].map(([label, contract, data]) => ({ label, contract, data }));
     const rows = await fetchOnchainMulticall3({ chain: CELO_CHAIN, signal, ctx: plan.ctx, calls });
     const values = new Map(rows?.filter((row) => row.success).map((row) => [row.label, row.returnData]));
@@ -401,7 +344,7 @@ async function fetchMentoFpmmPoolsRedemption(
     const token0 = address("token0");
     const token1 = address("token1");
     if (!((token0 === self && token1 === output) || (token0 === output && token1 === self))
-      || uint("decimals") !== 6n) throw new Error("mento fpmm-pools: token identity mismatch");
+      || uint("decimals") !== BigInt(outputDecimals)) throw new Error("mento fpmm-pools: token identity mismatch");
     const reserves = decodeAbiParameters([{ type: "uint256" }, { type: "uint256" }, { type: "uint256" }], raw("reserves"));
     const reserve = reserves[token0 === output ? 0 : 1];
     const inputReserve = reserves[token0 === self ? 0 : 1];
@@ -417,12 +360,15 @@ async function fetchMentoFpmmPoolsRedemption(
     if (inventoryBound <= 0n || unitQuote <= 0n || fee > 200n) throw new Error("mento fpmm-pools: invalid inventory, quote or fee");
     // A large oracle-only probe minimizes integer quote rounding. Round input
     // down, then admit only the actual quote within the strict inventory bound.
-    const amountIn = (inventoryBound * 10n ** 24n) / unitQuote;
+    const amountIn = (inventoryBound * 10n ** BigInt(params.selfDecimals + 6)) / unitQuote;
     const amountOut = await fetchOnchainUint256({ chain: CELO_CHAIN, signal, ctx: plan.ctx, contract: pool.poolAddress, data: quoteData(amountIn) });
     if (amountIn <= 0n || amountOut == null || amountOut <= 0n || amountOut > inventoryBound) {
       throw new Error("mento fpmm-pools: bounded quote failed");
     }
-    for (const [label, amount, decimals] of [["inputLimits", amountIn, 18], ["outputLimits", amountOut, 6]] as const) {
+    for (const [label, amount, decimals] of [
+      ["inputLimits", amountIn, params.selfDecimals],
+      ["outputLimits", amountOut, outputDecimals],
+    ] as const) {
       const limits = decodeAbiParameters([
         { type: "int120" }, { type: "int120" }, { type: "uint8" },
         { type: "uint32" }, { type: "uint32" }, { type: "int96" }, { type: "int96" },
@@ -438,7 +384,7 @@ async function fetchMentoFpmmPoolsRedemption(
         }
       }
     }
-    capacityUsd += decimalNumberFromBigInt(amountOut, 6);
+    capacityUsd += decimalNumberFromBigInt(amountOut, outputDecimals);
     maxFeeBps = Math.max(maxFeeBps, Number(fee));
   }
   return buildRedemptionSnapshotMetadata({
@@ -462,7 +408,5 @@ export function fetchMentoRedemptionMetadata(
       return fetchMentoLiquityV2CrRedemption(redemption, signal, ctx);
     case "fpmm-pools":
       return fetchMentoFpmmPoolsRedemption(redemption, signal, ctx);
-    case "fpmm-pool":
-      return fetchMentoFpmmPoolRedemption(redemption, signal, ctx);
   }
 }

@@ -1469,25 +1469,18 @@ const mentoLiquityV2CrRedemptionParamsSchema = z
   })
   .strict();
 
-// Mento V3 FPMM pool (JPYm/CHFm): capacity reads the USDm balance held by the
-// pool; the swap fee reads the pool's own lpFee() + protocolFee() basis points.
-const mentoFpmmPoolRedemptionParamsSchema = z
-  .object({
-    kind: z.literal("fpmm-pool"),
-    poolAddress: EvmAddressSchema,
-    usdmTokenAddress: EvmAddressSchema,
-    ...OptionalSourceUrlsFields,
-    ...OptionalEvmRpcFields,
-  })
-  .strict();
 
 // Reviewed USDm output pools; identities and native units are checked live.
 const mentoFpmmPoolsRedemptionParamsSchema = z.object({
   kind: z.literal("fpmm-pools"),
   selfTokenAddress: EvmAddressSchema,
+  selfDecimals: z.number().int().nonnegative().max(36),
   pools: z.array(z.object({
     poolAddress: EvmAddressSchema,
-    counterAsset: z.object({ address: EvmAddressSchema, decimals: z.literal(6) }).strict(),
+    counterAsset: z.object({
+      address: EvmAddressSchema,
+      decimals: z.number().int().nonnegative().max(36),
+    }).strict(),
   }).strict()).min(1).max(2),
   ...OptionalSourceUrlsFields,
 }).strict();
@@ -1495,7 +1488,6 @@ const mentoFpmmPoolsRedemptionParamsSchema = z.object({
 const mentoRedemptionParamsSchema = z.discriminatedUnion("kind", [
   mentoBrokerPoolRedemptionParamsSchema,
   mentoLiquityV2CrRedemptionParamsSchema,
-  mentoFpmmPoolRedemptionParamsSchema,
   mentoFpmmPoolsRedemptionParamsSchema,
 ]);
 

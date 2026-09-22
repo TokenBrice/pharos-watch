@@ -68,9 +68,18 @@
     "params": {
       "cdpStablecoin": "JPYm",
       "redemption": {
-        "kind": "fpmm-pool",
-        "poolAddress": "0x9861F6D2Fe392b934C86eC89D2886CEb772B2b41",
-        "usdmTokenAddress": "0x765De816845861e75A25fCA122bb6898B8B1282a",
+        "kind": "fpmm-pools",
+        "selfTokenAddress": "0xc45ecf20f3cd864b32d9794d6f76814ae8892e20",
+        "selfDecimals": 18,
+        "pools": [
+          {
+            "poolAddress": "0x9861F6D2Fe392b934C86eC89D2886CEb772B2b41",
+            "counterAsset": {
+              "address": "0x765De816845861e75A25fCA122bb6898B8B1282a",
+              "decimals": 18
+            }
+          }
+        ],
         "sourceUrls": [
           "https://docs.mento.org/mento-v3"
         ]

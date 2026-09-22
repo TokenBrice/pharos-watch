@@ -58,8 +58,6 @@ const EXCHANGE_ID_1 = `0x${"11".repeat(32)}`;
 const EXCHANGE_ID_2 = `0x${"22".repeat(32)}`;
 const EXCHANGE_ID_3 = `0x${"33".repeat(32)}`;
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
-const FPMM_LP_FEE_SELECTOR = "0x704ce43e";
-const FPMM_PROTOCOL_FEE_SELECTOR = "0xb0e21e8a";
 // The Mento fork's Liquity v2 selectors (see mento-redemption.ts).
 const LIQUITY_V2_DEBT_SELECTOR = "0x45507998"; // getBoldDebt()
 const LIQUITY_V2_SHUTDOWN_SELECTOR = "0x58569081"; // shutdownTime()
@@ -1043,79 +1041,6 @@ describe("mento redemption telemetry", () => {
     expectWarnings(result, ["mento-redemption-telemetry-failed"]);
   });
 
-  it("computes fpmm-pool capacity and fee from the pool's USDm balance and swap fees", async () => {
-    const fpmm = resolveAdapterCoin("mento", "jpym-mento").coin.liveReservesConfig!.params!.redemption! as {
-      poolAddress: string;
-      usdmTokenAddress: string;
-    };
-
-    const { result } = await runAdapter("mento", "jpym-mento", {
-      network: mentoNetwork({
-        dashboardHtml: sampleMatchingDashboardHtml("JPYm"),
-        rpc: {
-          [`celo:${fpmm.usdmTokenAddress.toLowerCase()}:balanceOf(address)`]: 750n * 10n ** 18n,
-          [`celo:${fpmm.poolAddress.toLowerCase()}:${FPMM_LP_FEE_SELECTOR}`]: 20n,
-          [`celo:${fpmm.poolAddress.toLowerCase()}:${FPMM_PROTOCOL_FEE_SELECTOR}`]: 10n,
-        },
-      }),
-      nowSec: OVERRIDE_DASHBOARD_NOW_SEC,
-    });
-
-    expect(result.metadata?.redemption).toMatchObject({
-      capacityUsd: 750,
-      capacityKind: "live-direct-bounded",
-      freshnessKind: "same-run-onchain",
-      routeStatus: "open",
-      feeBps: 30,
-    });
-    expect(result.slices).toHaveLength(1);
-    expectWarnings(result, []);
-  });
-
-  it("keeps fpmm-pool capacity but omits the fee when a fee leg does not read", async () => {
-    const fpmm = resolveAdapterCoin("mento", "jpym-mento").coin.liveReservesConfig!.params!.redemption! as {
-      poolAddress: string;
-      usdmTokenAddress: string;
-    };
-
-    const { result } = await runAdapter("mento", "jpym-mento", {
-      network: mentoNetwork({
-        dashboardHtml: sampleMatchingDashboardHtml("JPYm"),
-        rpc: {
-          [`celo:${fpmm.usdmTokenAddress.toLowerCase()}:balanceOf(address)`]: 750n * 10n ** 18n,
-          [`celo:${fpmm.poolAddress.toLowerCase()}:${FPMM_LP_FEE_SELECTOR}`]: 20n,
-          [`celo:${fpmm.poolAddress.toLowerCase()}:${FPMM_PROTOCOL_FEE_SELECTOR}`]: null,
-        },
-      }),
-      nowSec: OVERRIDE_DASHBOARD_NOW_SEC,
-    });
-
-    expect(result.metadata?.redemption).toMatchObject({ capacityUsd: 750 });
-    expect(result.metadata?.redemption?.feeBps).toBeUndefined();
-  });
-
-  it("fails closed when the fpmm-pool balance read fails, leaving reserve slices unaffected", async () => {
-    const fpmm = resolveAdapterCoin("mento", "chfm-mento").coin.liveReservesConfig!.params!.redemption! as {
-      poolAddress: string;
-      usdmTokenAddress: string;
-    };
-
-    const { result } = await runAdapter("mento", "chfm-mento", {
-      network: mentoNetwork({
-        dashboardHtml: sampleMatchingDashboardHtml("CHFm"),
-        rpc: {
-          [`celo:${fpmm.usdmTokenAddress.toLowerCase()}:balanceOf(address)`]: null,
-          [`celo:${fpmm.poolAddress.toLowerCase()}:${FPMM_LP_FEE_SELECTOR}`]: 20n,
-          [`celo:${fpmm.poolAddress.toLowerCase()}:${FPMM_PROTOCOL_FEE_SELECTOR}`]: 10n,
-        },
-      }),
-      nowSec: OVERRIDE_DASHBOARD_NOW_SEC,
-    });
-
-    expect(result.slices).toHaveLength(1);
-    expect(result.metadata?.redemption).toBeUndefined();
-    expectWarnings(result, ["mento-redemption-telemetry-failed"]);
-  });
 });
 
 

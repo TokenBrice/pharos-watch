@@ -110,6 +110,7 @@
       "redemption": {
         "kind": "fpmm-pools",
         "selfTokenAddress": "0x765de816845861e75a25fca122bb6898b8b1282a",
+        "selfDecimals": 18,
         "pools": [
           {
             "poolAddress": "0x462fe04b4fd719cbd04c0310365d421d02aaa19e",

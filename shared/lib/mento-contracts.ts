@@ -8,6 +8,10 @@ export const MENTO_GET_POOL_EXCHANGE_SELECTOR = "0x278488a4"; // getPoolExchange
 // PoolConfig.spread is a Fixidity fraction with 24-decimal precision.
 export const MENTO_POOL_SPREAD_FIXIDITY_SCALE = 10n ** 24n;
 
+export function mentoSpreadToFeeBps(spread: bigint): number {
+  return Number((spread * 1_000_000n) / MENTO_POOL_SPREAD_FIXIDITY_SCALE) / 100;
+}
+
 export const MENTO_POOL_EXCHANGE_ABI_PARAMETERS = [
   {
     type: "tuple",
