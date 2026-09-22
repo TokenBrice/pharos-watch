@@ -15,7 +15,7 @@ import {
 } from "./shared";
 import {
   REVIEWED_DIRECT_REDEMPTION_AT,
-  REVIEWED_EXIT_CREDIT_WAVE3_AT,
+  REVIEWED_EXIT_CREDIT_AT,
   REVIEWED_FOLLOWUP_REMEDIATION_AT,
   REVIEWED_MAY_BATCH_AT,
   REVIEWED_REMEDIATION_AT,
@@ -397,7 +397,7 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
     "ussd-sonic-labs": defineLiveCollateralConfig({
       outputAssetType: "stable-single",
       outputAssets: ["frxusd-frax"],
-      reviewedAt: REVIEWED_EXIT_CREDIT_WAVE3_AT,
+      reviewedAt: REVIEWED_EXIT_CREDIT_AT,
       costModel: fixedFee(0, "The verified Sonic BrandedCustodian returned redeemFee() = 0 at Sonic block 77432523."),
       docs: [
         sourceRef("Sonic USSD docs", "https://docs.soniclabs.com/sonic/ussd", [
@@ -544,7 +544,7 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
     "doc-money-on-chain": defineCollateralConfig({
       outputAssets: ["asset:btc"],
       capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.95, confidence: "documented-bound" },
-      reviewedAt: REVIEWED_EXIT_CREDIT_WAVE3_AT,
+      reviewedAt: REVIEWED_EXIT_CREDIT_AT,
       costModel: undisclosedReviewedFee(
         "Money On Chain docs describe permissionless DOC redemption into RBTC, but the reviewed public materials do not publish a single fixed numeric redemption fee schedule",
       ),
@@ -734,7 +734,7 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
       outputAssets: ["asset:zeph"],
       executionModel: "rules-based-nav",
       outputAssetType: "mixed-collateral",
-      reviewedAt: REVIEWED_EXIT_CREDIT_WAVE3_AT,
+      reviewedAt: REVIEWED_EXIT_CREDIT_AT,
       costModel: fixedFee(
         10,
         "Zephyr's consensus RingCT verification deducts a fixed 0.1% conversion fee from the ZSD/ZEPH exchange rate on every REDEEM_STABLE conversion",

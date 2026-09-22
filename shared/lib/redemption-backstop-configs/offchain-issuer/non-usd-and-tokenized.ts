@@ -174,12 +174,10 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   "europ-schuman": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: {
-      ...documentedVariableFee(
-        "EURØP tokens can be redeemed and exchanged for the underlying legal tender currency at any time, as described in the Right to Redemption above, without fees.",
-      ),
-      feeBpsMax: 0,
-    },
+    costModel: fixedFee(
+      0,
+      "EURØP tokens can be redeemed and exchanged for the underlying legal tender currency at any time, as described in the Right to Redemption above, without fees.",
+    ),
     docs: [
       sourceRefRouteCapacity("EUROP white paper", "https://schuman.io/wp-content/uploads/2025/02/EUROP-White-Paper_1.3.pdf"),
       sourceRef("EUROP white paper v1.7", "https://schuman.io/wp-content/uploads/EUROP-White-Paper.pdf", ["fees"]),

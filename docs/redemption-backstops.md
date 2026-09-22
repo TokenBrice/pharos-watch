@@ -312,6 +312,7 @@ Each row also carries:
 ### Cost Modeling
 
 - `feeBps` is still used only when the route has a bounded fixed basis-point fee that can be represented cleanly in the score model
+- Explicit issuer statements that redemption charges no fee are modeled as a fixed `0` bps schedule rather than as an opaque or variable fee. This applies to the reviewed Spiko funds, Midas mF-ONE, JTRSY, YLDS, EUROP, EUSD, and USD3 routes; the registry validates the complete reviewed ID tables so additions and removals cannot silently drift.
 - Formula-based routes can also populate `feeBps` from fresh latest-success live reserve snapshot metadata when the protocol exposes a current on-chain redemption rate; the route still remains labeled as `feeModelKind = formula`
 - Every on-chain rate probe must explicitly pin the return-value decimal scale; missing scale fails configuration validation rather than silently publishing an unknown fee
 - Reviewed fixed-fee routes may also consume fresh authoritative live fee telemetry when the protocol exposes the current active redemption fee and the static config is only a safe fallback bound

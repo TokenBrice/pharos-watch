@@ -13,7 +13,7 @@ import {
   sourceRefRouteCapacityFees,
 } from "../shared";
 import { reviewedDirectRedemptionSupplyFull } from "./shared";
-import { REVIEWED_EXIT_CREDIT_WAVE3_AT, REVIEWED_WRAPPER_WAVE_AT } from "../review-dates";
+import { REVIEWED_EXIT_CREDIT_AT, REVIEWED_WRAPPER_WAVE_AT } from "../review-dates";
 
 /** usdq-quantoz and eurq-quantoz are byte-identical (same base, cost, docs). */
 const quantozBase: RedemptionBackstopConfig = {
@@ -462,12 +462,10 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   "ylds-figure": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: {
-      ...documentedVariableFee(
-        "FCC does not charge holders of Figure Transferable Certificates any fees or expenses in connection with the issuance or surrender of Figure Transferable Certificates.",
-      ),
-      feeBpsMax: 0,
-    },
+    costModel: fixedFee(
+      0,
+      "FCC does not charge holders of Figure Transferable Certificates any fees or expenses in connection with the issuance or surrender of Figure Transferable Certificates.",
+    ),
     docs: [
       sourceRef("Figure YLDS overview", "https://www.figuremarkets.com/c/learn/ylds", [
         "route",
@@ -515,7 +513,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   },
   "usdpt-western-union": {
     ...issuerBase,
-    ...documentedBoundSupplyFull(REVIEWED_EXIT_CREDIT_WAVE3_AT),
+    ...documentedBoundSupplyFull(REVIEWED_EXIT_CREDIT_AT),
     settlementModel: "days",
     costModel: undisclosedReviewedFee(
       "Anchorage redeems at Par Value net of any applicable fees disclosed in its Covered Stablecoin Fee Schedule, which is not published publicly",

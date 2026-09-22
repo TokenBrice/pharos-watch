@@ -18,6 +18,30 @@ import {
   REVIEWED_MAJOR_ISSUER_REDEMPTION_AT,
   REVIEWED_STABLECOIN_AUDIT_AT,
 } from "./shared";
+function assertKnownTableKeys(
+  label: string,
+  ids: readonly string[],
+  table: Readonly<Record<string, unknown>>,
+): void {
+  const knownIds = new Set(ids);
+  const unexpected = Object.keys(table).filter((id) => !knownIds.has(id));
+  if (unexpected.length > 0) {
+    throw new Error(`${label} contains unknown stablecoin ids: ${unexpected.join(", ")}`);
+  }
+}
+
+function assertExactTableKeys(
+  label: string,
+  ids: readonly string[],
+  table: Readonly<Record<string, unknown>>,
+): void {
+  assertKnownTableKeys(label, ids, table);
+  const missing = ids.filter((id) => !Object.prototype.hasOwnProperty.call(table, id));
+  if (missing.length > 0) {
+    throw new Error(`${label} is missing stablecoin ids: ${missing.join(", ")}`);
+  }
+}
+
 
 /** Midas liquid-yield-token (LYT) vaults share an identical issuer-API NAV-redemption
  *  shape, settlement, and the standard `liquid-yield-token` doc; they differ only in the
@@ -64,6 +88,12 @@ const MIDAS_LYT_FEE_DISCLOSURES: Partial<
     url: "https://2732961456-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FsPjk0ggBxEJCCnVFFkDR%2Fuploads%2FEoSLAqc1ZoCEV1LBkiup%2FMidas_Final_Terms_mMEV_Update_2025.pdf?alt=media&token=d58efef6-7d01-4889-9af7-3c86f1a9e932",
   },
 };
+assertKnownTableKeys(
+  "MIDAS_LYT_FEE_DISCLOSURES",
+  MIDAS_LYT_VAULTS.map(([id]) => id),
+  MIDAS_LYT_FEE_DISCLOSURES,
+);
+
 
 type MidasLytTermsGap = Required<
   Pick<RedemptionV9RouteReviewTerms, "missingScoringFields" | "rationale">
@@ -91,16 +121,24 @@ const MIDAS_LYT_TERMS_GAPS: Partial<Record<string, MidasLytTermsGap>> = {
       "The shared Midas liquidity architecture establishes a redemption mechanism, but the mAPOLLO materials checked on 2026-09-04 publish no current executable capacity, binding calendar-day fallback SLA, or all-in cost.",
   },
 };
+assertKnownTableKeys(
+  "MIDAS_LYT_TERMS_GAPS",
+  MIDAS_LYT_VAULTS.map(([id]) => id),
+  MIDAS_LYT_TERMS_GAPS,
+);
+
 
 const MIDAS_LYT_CONFIGS: Record<string, RedemptionBackstopConfig> = Object.fromEntries(
   MIDAS_LYT_VAULTS.map(([id, ticker, productUrl]) => {
     const config = cloneRedemptionBackstopConfig(midasLytBase);
     const feeDisclosure = MIDAS_LYT_FEE_DISCLOSURES[id];
     config.costModel = feeDisclosure
-      ? {
-          ...documentedVariableFee(feeDisclosure.statement),
-          feeBpsMax: feeDisclosure.feeBpsMax,
-        }
+      ? feeDisclosure.feeBpsMax === 0
+        ? fixedFee(0, feeDisclosure.statement)
+        : {
+            ...documentedVariableFee(feeDisclosure.statement),
+            feeBpsMax: feeDisclosure.feeBpsMax,
+          }
       : undisclosedReviewedFee(
           `Midas token docs describe primary-market redemption through Midas rails; public materials reviewed do not publish one fixed ${ticker} redemption fee`,
         );
@@ -323,6 +361,12 @@ const SPIKO_FUNDS: readonly [
     spikoCashAndCarrySettlementReview,
   ],
 ];
+assertExactTableKeys(
+  "SPIKO_FEE_DISCLOSURES",
+  SPIKO_FUNDS.map(([id]) => id),
+  SPIKO_FEE_DISCLOSURES,
+);
+
 
 const SPIKO_FUND_CONFIGS: Record<string, RedemptionBackstopConfig> = Object.fromEntries(
   SPIKO_FUNDS.map(([id, ticker, currency, productRef, note, settlementReview]): [string, RedemptionBackstopConfig] => {
@@ -335,10 +379,7 @@ const SPIKO_FUND_CONFIGS: Record<string, RedemptionBackstopConfig> = Object.from
         ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
         settlementModel: "days",
         outputAssetType: "nav",
-        costModel: {
-          ...documentedVariableFee(feeDisclosure.statement),
-          feeBpsMax: 0,
-        },
+        costModel: fixedFee(0, feeDisclosure.statement),
         ...(settlementReview ? { v9RouteReviewTerms: settlementReview() } : {}),
         docs: [
           ...baseDocs,
@@ -597,12 +638,10 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     outputAssetType: "nav",
-    costModel: {
-      ...documentedVariableFee(
-        "Standard redemptions are free, for instant redemptions, please see the section about the Anemoy Liquidity Network (ALN).",
-      ),
-      feeBpsMax: 0,
-    },
+    costModel: fixedFee(
+      0,
+      "Standard redemptions are free, for instant redemptions, please see the section about the Anemoy Liquidity Network (ALN).",
+    ),
     docs: [
       sourceRefFull("Centrifuge JTRSY pool", "https://centrifuge.io/pools/jtrsy"),
       sourceRef("Centrifuge investor docs", "https://docs.centrifuge.io/user/investor/", [
