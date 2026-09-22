@@ -253,10 +253,15 @@ vi.mock("../../lib/cex-orderbooks", () => ({
 }));
 
 import {
+  DEX_LIQUIDITY_STAGE_LEAD_SEC,
+  getCronSlotStartedAtForSchedule,
+} from "@shared/lib/cron-jobs";
+import {
   consumeDexLiquidityScoringStage,
   reuseCurrentDexLiquidityScoringGeneration,
   stageDexLiquidityScoring,
 } from "../dex-liquidity/orchestrator";
+import { loadDexLiquidityScoringStage } from "../dex-liquidity/scoring-stage";
 import { UNIV3_SUBGRAPHS } from "../dex-liquidity/constants";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { convertToGtNewPools, extractPriceObservations } from "../../lib/dex-api-common";
@@ -614,7 +619,7 @@ describe("dex liquidity scoring stage cycle", () => {
     expect(metadata.fallbackCounters?.stagedOrganicFractionDefault).toBeTypeOf("number");
   });
 
-  it("names a chain that failed inside a usable direct API source in the scoring-stage metadata", async () => {
+  it("carries partial-source telemetry through the stage into consumer metadata", async () => {
     vi.mocked(fetchPancakeSwapPools).mockResolvedValueOnce({
       pools: [],
       ok: true,
@@ -623,15 +628,32 @@ describe("dex liquidity scoring stage cycle", () => {
       degradedChains: ["bsc"],
     });
 
-    const stageResult = await stageDexLiquidityScoring(db, "graph-key");
+    const result = await runDexLiquidityScoringCycle(db, "graph-key");
 
-    const metadata = JSON.parse(stageResult.metadata ?? "{}") as {
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
       failedSources?: string[];
       degradedSources?: string[];
     };
     expect(metadata.degradedSources).toEqual(["pancakeswap-api:bsc"]);
     expect(metadata.failedSources).toEqual([]);
   });
+
+  it("loads the source slot derived from the registered stage and consumer offsets", async () => {
+    await stageDexLiquidityScoring(db, "graph-key");
+    const scheduledAtMs = Date.parse("2026-09-22T12:16:00Z");
+    const consumerSlot = getCronSlotStartedAtForSchedule("halfHourlyChartsOffset", scheduledAtMs);
+    const sourceSlot = getCronSlotStartedAtForSchedule("halfHourlyOffset", scheduledAtMs);
+
+    await consumeDexLiquidityScoringStage(db, undefined, undefined, consumerSlot);
+
+    expect(consumerSlot - DEX_LIQUIDITY_STAGE_LEAD_SEC).toBe(sourceSlot);
+    expect(loadDexLiquidityScoringStage).toHaveBeenLastCalledWith(
+      db,
+      expect.objectContaining({ expectedSourceSlotStartedAt: sourceSlot }),
+      undefined,
+    );
+  });
+
 
   it("reuses the current generation for hourly prices without liquidity writes", async () => {
     vi.mocked(loadCurrentDexScoringGenerationId).mockResolvedValueOnce("dex-liquidity-current");

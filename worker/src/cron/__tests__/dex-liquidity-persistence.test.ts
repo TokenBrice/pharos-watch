@@ -50,6 +50,8 @@ function makeDb(options: {
   currentGenerationRows?: number;
   newerCurrentRows?: number;
   deploymentOutcomeRows?: DexDeploymentCensusRow[];
+  currentRouteRows?: Array<{ stablecoin_id: string; score_components_json: string | null }>;
+  orphanIds?: string[];
 } = {}): DexPersistenceMockDb {
   const history: Array<{ sql: string; binds: unknown[] }> = [];
 
@@ -60,6 +62,13 @@ function makeDb(options: {
       bind: (...args: unknown[]) => createStatement(sql, args),
       all: async <T>() => {
         history.push({ sql, binds: [...boundValues] });
+        if (sql.includes("SELECT stablecoin_id, score_components_json")) {
+          return {
+            results: (options.currentRouteRows ?? []) as T[],
+            success: true,
+            meta: {},
+          };
+        }
         if (sql.includes("FROM dex_liquidity_history")) {
           if (options.historyError != null) {
             throw (options.historyError instanceof Error ? options.historyError : new Error(String(options.historyError)));
@@ -73,6 +82,13 @@ function makeDb(options: {
         if (sql.includes("FROM dex_deployment_outcomes")) {
           return {
             results: (options.deploymentOutcomeRows ?? []) as T[],
+            success: true,
+            meta: {},
+          };
+        }
+        if (sql.includes("SELECT DISTINCT stablecoin_id")) {
+          return {
+            results: (options.orphanIds ?? []).map((stablecoin_id) => ({ stablecoin_id })) as T[],
             success: true,
             meta: {},
           };
@@ -579,6 +595,129 @@ describe("dex-liquidity persistence", () => {
       inactiveMetricRowsSkipped: 1,
       inactiveMetricIdsSkipped: [INACTIVE_TRACKED_STABLECOIN.id],
     });
+  });
+
+  it("publishes the generation when the orphan-cleanup tail flush fails", async () => {
+    const metrics = initMetrics("usdt-tether", "USDT");
+    vi.mocked(batchExecute).mockImplementation(async (_db, statements) => {
+      if ((statements as PreparedStatementWithMeta[]).some((statement) =>
+        statement.sql.includes("DELETE FROM dex_")
+      )) {
+        throw new Error("orphan cleanup unavailable");
+      }
+      return statements.length;
+    });
+
+    const result = await persistScores(
+      makeDb({ orphanIds: ["retired-asset"] }),
+      new Map([["usdt-tether", metrics]]),
+      new Map([["usdt-tether", makeFullScoreResult()]]),
+      {
+        totalTvl: 1,
+        totalVol24h: 1,
+        totalVol7d: 1,
+        totalVol7dMeasured: true,
+        poolCount: 1,
+        chainCount: 1,
+        protocolTvl: {},
+        chainTvl: {},
+      },
+      1_700_000_000,
+    );
+
+    expect(result.orphanCleanupFailed).toBe(true);
+    expect(result.currentGenerationRows).toBe(ACTIVE_STABLECOINS.length + 1);
+  });
+
+  it("uses a held route set for both current and daily history rows", async () => {
+    const nowSec = 1_800_000_000;
+    const coverage = {
+      status: "populated" as const,
+      capabilityMatrixVersion: "p4a.9",
+      retainedPoolCount: 1,
+      observationCount: 1,
+      scoreEligibleObservationCount: 1,
+      scoreEligiblePoolCount: 1,
+      scoreEligibleCapabilityPoolCount: 1,
+      unsupportedPoolCount: 0,
+      evidenceCounts: { "reserve-based-amm-simulation": 1 },
+      unsupportedReasons: {},
+    };
+    const observation = (routeId: string, executableUsd: number, observedAt: number) => ({
+      routeId,
+      routeFamily: "dex-amm" as const,
+      scope: {
+        kind: "chain-contract" as const,
+        chain: "ethereum",
+        contractOrPoolId: routeId,
+        protocol: "curve",
+      },
+      requestedNotionalUsd: 25_000_000,
+      settlementHorizonSec: 300,
+      maxCostBps: 200,
+      executableUsd,
+      completionRatio: executableUsd / 25_000_000,
+      output: { kind: "tracked-stablecoin" as const, trackedAssetIds: ["usdc-circle"] },
+      evidenceKind: "reserve-based-amm-simulation" as const,
+      confidence: "high" as const,
+      scoreEligible: true,
+      observedAt,
+      freshnessSeconds: 0,
+      commonModeKeys: [`pool:${routeId}`],
+      capacityCurve: [{
+        requestedNotionalUsd: 25_000_000,
+        maxCostBps: 200,
+        executableUsd,
+        completionRatio: executableUsd / 25_000_000,
+      }],
+    });
+    const previousObservation = observation("dex:usdt:curve:deep", 24_000_000, nowSec - 60);
+    const candidate = Object.assign(makeFullScoreResult(), {
+      exitRouteObservations: [observation("dex:usdt:curve:thin", 1_000, nowSec)],
+      exitRouteObservationCoverage: coverage,
+    });
+    const scoreMap = new Map([["usdt-tether", candidate]]);
+    const metrics = initMetrics("usdt-tether", "USDT");
+    const db = makeDb({
+      currentRouteRows: [{
+        stablecoin_id: "usdt-tether",
+        score_components_json: JSON.stringify({
+          exitRouteObservations: [previousObservation],
+          exitRouteObservationCoverage: coverage,
+        }),
+      }],
+    });
+
+    await persistScores(
+      db,
+      new Map([["usdt-tether", metrics]]),
+      scoreMap,
+      {
+        totalTvl: 1,
+        totalVol24h: 1,
+        totalVol7d: 1,
+        totalVol7dMeasured: true,
+        poolCount: 1,
+        chainCount: 1,
+        protocolTvl: {},
+        chainTvl: {},
+      },
+      nowSec,
+    );
+    await writeHistoricalSnapshots(db, scoreMap, undefined, nowSec);
+
+    const currentRow = extractDexLiquidityRunRows(
+      getPreparedBatchStatements("INSERT OR REPLACE INTO dex_liquidity_run_rows"),
+    ).find((row) => row[1] === "usdt-tether");
+    const currentRoute = JSON.parse(String(currentRow?.[20])).exitRouteObservations[0].routeId;
+    const historyRoute = vi.mocked(executeAtomicBatch).mock.calls
+      .flatMap(([, statements]) => statements as PreparedStatementWithMeta[])
+      .filter((statement) => statement.sql.includes("INSERT INTO dex_liquidity_history"))
+      .flatMap((statement) => statement.boundValues)
+      .find((value) => typeof value === "string" && value.includes(previousObservation.routeId));
+
+    expect(currentRoute).toBe(previousObservation.routeId);
+    expect(JSON.parse(String(historyRoute)).observations[0].routeId).toBe(previousObservation.routeId);
   });
 
   it("does not publish freshness when the signal aborts after score batch writes", async () => {

@@ -1,4 +1,5 @@
 import { toErrorMessage } from "@shared/lib/error-utils";
+import { DEX_LIQUIDITY_STAGE_LEAD_SEC } from "@shared/lib/cron-jobs";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
 import { createCronResult } from "../../lib/cron-result";
@@ -291,8 +292,9 @@ export async function consumeDexLiquidityScoringStage(
     stageReadyDeadlineMs?: number;
   } = {},
 ): Promise<CronResult> {
-  const expectedSourceSlotStartedAt =
-    consumerSlotStartedAt == null ? undefined : consumerSlotStartedAt - 6 * 60;
+  const expectedSourceSlotStartedAt = consumerSlotStartedAt == null
+    ? undefined
+    : consumerSlotStartedAt - DEX_LIQUIDITY_STAGE_LEAD_SEC;
   const staged = expectedSourceSlotStartedAt != null && options.stageReadyDeadlineMs != null
     ? await loadDexLiquidityScoringStageWhenReady(
         db,
@@ -1297,6 +1299,7 @@ function buildDexLiquidityCronResult(
         challengerPublication: persistenceState.challengerPublication,
         dexPriceDiagnostics: persistenceState.dexPriceDiagnostics,
         failedSources: sourceState.failedSources,
+        degradedSources: sourceState.degradedSources,
         fallbackSignals: sourceState.fallbackSignals,
         fallbackCounters: scoreState.diagnostics.fallbackCounters,
         persistence: persistenceState.persistence,

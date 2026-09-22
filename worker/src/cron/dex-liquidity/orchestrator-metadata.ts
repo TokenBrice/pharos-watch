@@ -78,6 +78,7 @@ export function buildDexLiquidityCronMetadata(params: {
   };
   dexPriceDiagnostics: DexPricePersistenceDiagnostics;
   failedSources: string[];
+  degradedSources?: string[];
   fallbackSignals: string[];
   fallbackCounters: LiquidityFallbackCounters;
   persistence: PersistScoresResult;
@@ -122,6 +123,7 @@ export function buildDexLiquidityCronMetadata(params: {
       challengerSnapshotTablesMissing: params.challengerPublication.missingTables,
     },
     failedSources: [...new Set(params.failedSources)],
+    degradedSources: [...new Set(params.degradedSources ?? [])],
     dexPriceDiagnostics: params.dexPriceDiagnostics,
     fallbackMode: [...new Set(params.fallbackSignals)],
     fallbackCounters: params.fallbackCounters,

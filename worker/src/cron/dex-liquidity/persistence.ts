@@ -818,6 +818,7 @@ export async function persistScores(
               publishedAtSec: nowSec,
             }
           : null;
+      if (heldRouteSet !== null) scoreResults.set(id, persistedScoreResult);
       if (heldRouteSet !== null) {
         logWorkerEvent({
           scope: "lib",
@@ -977,12 +978,12 @@ export async function persistScores(
           );
         }
       }
+      await flushPendingCleanupStatements();
     } catch (err) {
       rethrowIfAborted(err, signal);
       orphanCleanupFailed = true;
       logWorkerEventArgs("handler", "warn", "[dex-liquidity] Failed to check for orphaned rows:", err);
     }
-    await flushPendingCleanupStatements();
 
     throwIfAborted(signal);
     const coverage = await loadCandidateGenerationCoverage(db, generationId, signal);

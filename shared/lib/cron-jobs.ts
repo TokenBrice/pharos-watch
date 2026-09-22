@@ -858,6 +858,10 @@ export const CRON_INTERVALS = Object.freeze(
   Object.fromEntries(CRON_JOB_DEFINITIONS.map((item) => [item.job, item.intervalSec])) as Record<string, number>,
 );
 
+export const DEX_LIQUIDITY_STAGE_LEAD_SEC =
+  CRON_SCHEDULE_DEFINITIONS.halfHourlyChartsOffset.offsetSec -
+  CRON_SCHEDULE_DEFINITIONS.halfHourlyOffset.offsetSec;
+
 const CRON_JOB_META_BY_ID = new Map(CRON_JOB_DEFINITIONS.map((definition) => [definition.job, definition]));
 
 export function getCronJobMeta(job: string): CronJobMeta | null {
