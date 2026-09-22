@@ -35,6 +35,81 @@ import {
 } from "../../test-helpers/v9-fixed-input";
 
 describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage", { timeout: V9_EVALUATION_TEST_TIMEOUT_MS }, () => {
+  it.each([false, true])("bounds unavailable live-only redemption with an observed DEX route (empty DEX: %s)", (emptyDex) => {
+    const fixed = structuredClone(queuedRedemptionFixedInput());
+    const redemption = fixed.redemptionBackstopMap.alpha!;
+    redemption.provider = "reserve-sync-metadata";
+    redemption.resolutionState = "missing-capacity";
+    redemption.capacityBasis = "live-direct-telemetry";
+    redemption.capacityProfile = undefined;
+    redemption.routeStatus = "open";
+    const dex = fixed.dexLiqMap.alpha!;
+    if (emptyDex) {
+      dex.exitRouteObservations = [];
+      dex.exitRouteObservationCoverage = {
+        ...dex.exitRouteObservationCoverage!,
+        observationCount: 0,
+        scoreEligibleObservationCount: 0,
+        scoreEligiblePoolCount: 0,
+        evidenceCounts: {},
+      };
+    }
+    else for (const observation of dex.exitRouteObservations ?? []) {
+      observation.executableUsd = 0;
+      observation.completionRatio = 0;
+      for (const point of observation.capacityCurve ?? []) {
+        point.executableUsd = 0;
+        point.completionRatio = 0;
+      }
+    }
+    const rebuilt = rebuildFixed(fixed);
+    const reviewed = structuredClone(extension());
+    reviewed.registryFingerprint = rebuilt.registryFingerprint;
+    reviewed.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(rebuilt, "alpha");
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(rebuilt, reviewed);
+    const asset = compiled.assets[0]!;
+    const missing = asset.exitRoutes.find((route) => route.lane === "redemption")!;
+    expect(missing.status.observationState).toBe("missing");
+    expect(missing.capacityCurve).toEqual([]);
+    expect(missing.scoreEligible).toBe(false);
+    const result = evaluateV9Exit({
+      circulatingUsd: 10_000_000,
+      portfolioStatus: "incomplete",
+      routes: asset.exitRoutes.map(projectV9ExitEvaluationRoute),
+    }, V9_CANDIDATE_POLICY_V1);
+    expect(result.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
+    expect(result.reasons).toContain("missing-same-notional-route");
+    expect(result.reasons).not.toContain("no-viable-exit-path");
+    const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
+    expect(evaluated.exit.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
+    const trace = scoreV9EvaluatedAsset(evaluated.scoreInput, V9_CANDIDATE_POLICY_V1);
+    expect(trace.finalScore).not.toBeNull();
+    expect(trace.finalScore).toBeGreaterThanOrEqual(40);
+
+  });
+
+  it.each(["absent", "paused", "degraded", "resolved"] as const)("does not invent a missing-capacity diagnostic for %s redemption", (state) => {
+    const fixed = structuredClone(queuedRedemptionFixedInput());
+    const redemption = fixed.redemptionBackstopMap.alpha!;
+    redemption.provider = "reserve-sync-metadata";
+    redemption.resolutionState = state === "resolved" ? "resolved" : "missing-capacity";
+    redemption.capacityBasis = "live-direct-telemetry";
+    redemption.routeStatus = state === "paused" || state === "degraded" ? state : "open";
+    redemption.capacityProfile = undefined;
+    if (state === "absent") {
+      fixed.redemptionBackstopMap = exactFixedInput().redemptionBackstopMap;
+      fixed.redemptionGenerationId = exactFixedInput().redemptionGenerationId;
+      fixed.redemptionStale = exactFixedInput().redemptionStale;
+      fixed.inputFreshness.redemptionBackstops = exactFixedInput().inputFreshness.redemptionBackstops;
+    }
+    const rebuilt = rebuildFixed(fixed);
+    const reviewed = structuredClone(extension());
+    reviewed.registryFingerprint = rebuilt.registryFingerprint;
+    reviewed.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(rebuilt, "alpha");
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(rebuilt, reviewed);
+    expect(compiled.assets[0]!.exitRoutes.some((route) => route.lane === "redemption")).toBe(false);
+  });
+
   it("canonicalizes fractional capacity points in ascending numeric order", () => {
     const fixed = structuredClone(exactFixedInput());
     const observation = fixed.dexLiqMap.alpha!.exitRouteObservations![0]!;
