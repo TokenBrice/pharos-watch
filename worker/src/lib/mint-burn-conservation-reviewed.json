@@ -2,6 +2,270 @@
   "version": 1,
   "entries": [
     {
+      "chainId": "arbitrum",
+      "stablecoinId": "usdai-usd-ai",
+      "address": "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
+      "decimals": 18,
+      "disposition": "admitted",
+      "unsupportedReason": null,
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "identity": {
+        "explorerSourceUrl": "https://arbitrum.blockscout.com/address/0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef?tab=contract",
+        "sourceVerified": true,
+        "contractName": "USDai (TransparentUpgradeableProxy -> USDai impl v1.7)",
+        "proxy": {
+          "isProxy": true,
+          "kind": "eip1967",
+          "implementation": "0xe6ee2cd3e4f2b3844689aa1be176e4dff744a6f9",
+          "implementationSourceVerified": true,
+          "note": "EIP-1967 slot 0x360894…82bbc read on-chain == Blockscout implementations[0] == Sourcify. Proxy fully verified on Blockscout (TransparentUpgradeableProxy, OZ, compiler 0.8.29). Implementation PARTIAL on Blockscout (matched via verifier-alliance/eth-bytecode-db) but FULL match on Sourcify (creationMatch='match', runtimeMatch='match'); the Sourcify src/USDai.sol is byte-identical to the Blockscout-submitted source. Proxy is upgradeable: a future implementation change is a recorded fact only; a semantics-breaking upgrade surfaces as a verified conservation mismatch, which is the intended detection."
+        },
+        "externalMatches": [
+          {
+            "source": "coingecko",
+            "geckoId": "usdai",
+            "value": "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
+            "matches": true,
+            "decimalPlace": 18,
+            "detail": "pro-api /coins/usdai platforms['arbitrum-one'] == config address (same address also on ethereum/base/plasma platforms); detail_platforms['arbitrum-one'].decimal_place == 18"
+          },
+          {
+            "source": "defillama",
+            "llamaId": 309,
+            "value": "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
+            "matches": true,
+            "detail": "stablecoins.llama.fi/stablecoin/309 -> name USD.AI, symbol USDai, primary address 'plasma:0x0A1a…82EF' (same 0x0a1a…82ef address deployed chain-wide via the shared OAdapter setup); registry contracts list the identical address on ethereum/arbitrum/base/plasma"
+          }
+        ],
+        "onChain": {
+          "block": 507911802,
+          "blockHash": "0x2abdce4632b1268a9a5298f3a0e056751fb1b8d6e105d32011f20b05710048c7",
+          "decimals": 18,
+          "symbol": "USDai",
+          "name": "USDai",
+          "totalSupplyRaw": "327816049450824297759236678",
+          "hasCode": true
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "deposit(uint256,address) / deposit(address,uint256,uint256,address) / deposit(address,uint256,uint256,address,bytes)",
+          "internal": "_mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "_deposit() mints _scale(depositAmount) to recipient after pulling base-token collateral; nonZeroAddress(recipient) blocks address(0); OZ v5.2.0 _update(from=0) increments _totalSupply and emits Transfer(0,recipient,usdaiAmount)"
+        },
+        {
+          "function": "withdraw(uint256,address) / withdraw(address,uint256,uint256,address) / withdraw(address,uint256,uint256,address,bytes)",
+          "internal": "_burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "_withdraw() burns usdaiAmount from msg.sender and pays out collateral; OZ v5.2.0 _update(to=0) decrements _totalSupply and emits Transfer(msg.sender,0,usdaiAmount)"
+        },
+        {
+          "function": "mint(address,uint256) [LayerZero OFT _credit]",
+          "internal": "_mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "onlyBridgeAdapter (immutable _bridgeAdapter = 0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5, the OAdapter OFT). OAdapter._credit calls _token.mint(_to,_amountLD); OFTCore._lzReceive routes every inbound LayerZero message through _credit. Also decrements the separate bridgedSupply() counter (accounting only, not totalSupply)."
+        },
+        {
+          "function": "burn(address,uint256) [LayerZero OFT _debit]",
+          "internal": "_burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "onlyBridgeAdapter. OAdapter._debit calls _token.burn(_from,amountSentLD); OFTCore.send routes every outbound send through _debit. Also increments bridgedSupply() (accounting only)."
+        },
+        {
+          "function": "harvest()",
+          "internal": "_mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "callable only by immutable _baseYieldRecipient (0x0b2b2b2076d95dda7817e785989fe353fe955ef9); mints accrued base yield to that recipient"
+        },
+        {
+          "function": "transfer(address,uint256) / transferFrom(address,address,uint256)",
+          "internal": "_update(from,to,value)",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "OZ v5.2.0 semantics: a user transfer with to==address(0) does NOT revert and is a REAL burn — _update decrements _totalSupply by exactly value and emits Transfer(from,0,value). Any zero-side Transfer through _update always moves supply by the same amount, so no zero-address Transfer can occur without the matching supply change."
+        }
+      ],
+      "unpairedPaths": [],
+      "totalSupplyView": {
+        "isStoredSum": true,
+        "note": "OZ v5.2.0 ERC20Upgradeable totalSupply() returns $._totalSupply (ERC-7201 namespaced storage); the only writers are the from==0/to==0 branches of _update, each paired with the emitted Transfer. bridgedSupply() is a separate cross-chain accounting counter, not the supply view."
+      },
+      "zeroRecipientTransferReverts": false,
+      "zeroRecipientTransferBurns": true,
+      "identityIssue": null,
+      "notes": "Reverse-pairing review: OZ v5.2.0 _update moves _totalSupply whenever either side is zero, so an ordinary transfer to address(0) burns (paired), not the 'zero-address-transfer-without-supply-change' blocker. The only way to emit a zero-side Transfer without a NET supply change is mint(address(0),x)/burn(address(0),x) (from==0 and to==0 -> supply +=x then -=x, emits Transfer(0,0,x)); those functions are onlyBridgeAdapter, so this is privileged-only and fails closed at runtime via the existing 'ambiguous-zero-transfer' guard (worker/src/lib/mint-burn-conservation.ts rawEvents, topics[1]==ZERO && topics[2]==ZERO -> throw). Note: privileged-zero-to-zero-mint-possible: mint/burn (bridge adapter only). Blacklisting (notBlacklisted on msg.sender/from/to in the _update override) reverts transfers for blacklisted addresses; it never moves supply or emits events. OFT identity: the configured token is the ERC20 itself (not the OFT); the OFT is OAdapter 0xffa10065…bae5 (fully verified on Blockscout, constructor arg 0 = token proxy 0x0a1a…82ef, LayerZero v2 OFTCore) whose _debit/_credit call IMintableBurnable burn/mint on the token — exactly the zero-address-Transfer pairing the P4 plan requires. Second config peer 0x31cae3b7…6660d is an unrelated OptimizedTransparentUpgradeableProxy -> 'Executor' implementation (bridge-detection classification only, not a supply path of this token). Quantitative: two disjoint ~24h windows (2026-09-21/22 and 2026-09-20/21) each had residual exactly 0 (window 1: 10 mints/7 burns, supplyDelta 1098131109880163163212452; window 2: 18 mints/5 burns, supplyDelta 19802085019295030343240828); window-2 closing supply == window-1 opening supply (326717918340944134596024226) at adjacent boundary blocks. Full-history conservation from deploy was not summed (Alchemy caps getLogs at 10k blocks/10k logs on Arbitrum; would need ~17k chunked requests) — not required for admission, which uses bounded windows.",
+      "windows": [
+        {
+          "fromBlock": 507589818,
+          "fromBlockHash": "0x4580d0f8c8f845f6dd1df490b71cbfde90f28094b9709cd46a7bff039df53e8d",
+          "fromTimestamp": 1790030983,
+          "toBlock": 507928850,
+          "toBlockHash": "0x6e74b6b5d2c6aea968f99203908b8f99693bda24eaf40de34abd64201894c1af",
+          "toTimestamp": 1790117383,
+          "mintRaw": "1101198396653000000000000",
+          "burnRaw": "3067286772836836787548",
+          "supplyDeltaRaw": "1098131109880163163212452",
+          "residualRaw": "0",
+          "logCount": 17,
+          "journalSha256": "46a85c7fb530ae7add66683aafc68a5329748ba06ce5140273d2baac140101a0"
+        },
+        {
+          "fromBlock": 507251883,
+          "fromBlockHash": "0xc6310ef9b809658889dc9985af34a2ce3cde0a88f5b973897d61bead27d542f3",
+          "fromTimestamp": 1789944583,
+          "toBlock": 507589818,
+          "toBlockHash": "0x4580d0f8c8f845f6dd1df490b71cbfde90f28094b9709cd46a7bff039df53e8d",
+          "toTimestamp": 1790030983,
+          "mintRaw": "21765088898144000000000000",
+          "burnRaw": "1963003878848969656759172",
+          "supplyDeltaRaw": "19802085019295030343240828",
+          "residualRaw": "0",
+          "logCount": 23,
+          "journalSha256": "46a85c7fb530ae7add66683aafc68a5329748ba06ce5140273d2baac140101a0"
+        }
+      ],
+      "reviewedAt": "2026-09-22",
+      "reviewer": "P4ChainProbe"
+    },
+    {
+      "chainId": "base",
+      "stablecoinId": "bd-basedollar",
+      "address": "0x252d36f435582ecb01686448d21e8c9ea0b2ca65",
+      "decimals": 18,
+      "disposition": "admitted",
+      "unsupportedReason": null,
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "identity": {
+        "explorerSourceUrl": "https://base.blockscout.com/address/0x252d36f435582ecb01686448d21e8c9ea0b2ca65?tab=contract",
+        "sourceVerified": true,
+        "contractName": "BoldToken",
+        "proxy": {
+          "isProxy": false,
+          "kind": "none",
+          "implementation": null,
+          "implementationSourceVerified": null
+        },
+        "externalMatches": [
+          {
+            "source": "defillama",
+            "llamaId": 434,
+            "value": "0x252d36f435582ecb01686448d21e8c9ea0b2ca65",
+            "matches": true,
+            "detail": "stablecoins.llama.fi/stablecoin/434 -> address \"base:0x252D36F435582EcB01686448d21e8C9eA0B2Ca65\", name Base Dollar, symbol BD, url https://basedollar.org (matches registry links)"
+          },
+          {
+            "source": "coingecko",
+            "geckoId": null,
+            "value": null,
+            "matches": false,
+            "detail": "registry geckoId null; pro-api /coins/base-dollar -> 404; /search?query=base%20dollar -> no coins. DefiLlama lists gecko_id 'base-dollar' but CoinGecko has no such coin indexed."
+          }
+        ],
+        "onChain": {
+          "block": 51661820,
+          "blockHash": "0xfcd1405205a2561205e9a6fd1edc3f7d3cdc7521d8cf6df6bfc72ca0f699c269",
+          "decimals": 18,
+          "symbol": "BD",
+          "name": "Base Dollar",
+          "totalSupplyRaw": "140628777393512264614916",
+          "hasCode": true
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "mint(address,uint256)",
+          "internal": "_mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "guarded by _requireCallerIsBOorAP (BorrowerOperations/ActivePool allowlists set by owner/collateralRegistry); OZ v4.9.0 _mint reverts on account==0, adds amount to _totalSupply, emits Transfer(0,account,amount)"
+        },
+        {
+          "function": "burn(address,uint256)",
+          "internal": "_burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "guarded by _requireCallerIsCRorBOorTMorSP (CollateralRegistry/BorrowerOperations/TroveManager/StabilityPool); OZ v4.9.0 _burn reverts on account==0, subtracts amount from _totalSupply, emits Transfer(account,0,amount)"
+        },
+        {
+          "function": "sendToPool(address,address,uint256)",
+          "internal": "_transfer",
+          "emitsZeroTransfer": false,
+          "sameAmount": null,
+          "note": "StabilityPool-only balance move; OZ _transfer requires from!=0 and to!=0, no supply change"
+        },
+        {
+          "function": "returnFromPool(address,address,uint256)",
+          "internal": "_transfer",
+          "emitsZeroTransfer": false,
+          "sameAmount": null,
+          "note": "StabilityPool-only balance move; OZ _transfer requires from!=0 and to!=0, no supply change"
+        },
+        {
+          "function": "transfer(address,uint256)",
+          "internal": "_transfer",
+          "emitsZeroTransfer": false,
+          "sameAmount": null,
+          "note": "BoldToken override adds _requireValidRecipient(recipient): recipient must not be 0 nor the token contract; then OZ _transfer also requires from!=0/to!=0. No zero-address Transfer possible."
+        },
+        {
+          "function": "transferFrom(address,address,uint256)",
+          "internal": "_transfer",
+          "emitsZeroTransfer": false,
+          "sameAmount": null,
+          "note": "same _requireValidRecipient(recipient) guard as transfer; OZ _transfer enforces from!=0/to!=0"
+        }
+      ],
+      "unpairedPaths": [],
+      "totalSupplyView": {
+        "isStoredSum": true,
+        "note": "OZ v4.9.0 totalSupply() returns _totalSupply; only _mint/_burn write it (verified by grep over the full verified source set: exactly 3 references, declaration + the two paired writes)"
+      },
+      "zeroRecipientTransferReverts": true,
+      "zeroRecipientTransferBurns": null,
+      "identityIssue": "no-external-match: CoinGecko has no listing for this asset (registry geckoId null; /coins/base-dollar 404; search 'base dollar' empty). DefiLlama llamaId 434 address matches exactly and on-chain name()/symbol()/decimals() = 'Base Dollar'/'BD'/18 match the registry, so identity is otherwise unambiguous. Verification nuance (not an address disagreement): Blockscout verification is PARTIAL (is_fully_verified=false, submitted source compiled with constructor string constants name='Test Base Dollar', symbol='TBD'), while the deployed storage holds name='Base Dollar', symbol='BD' (OZ stores name/symbol in storage written by the constructor, so runtime bytecode is constant-independent). Sourcify reports runtimeMatch='match' (full) with creationMatch=null for the same source; the runtime logic reviewed here is byte-exact against on-chain code (eth_getCode == verified deployed_bytecode).",
+      "notes": "Liquity BoldToken fork (BUSL-1.1, compiler 0.8.24, OZ v4.9.0 + ERC20Permit + Liquity Ownable; no _beforeTokenTransfer/_afterTokenTransfer overrides, no direct _totalSupply writes outside OZ _mint/_burn, no other 'emit Transfer' sites). Reverse pairing: no path can emit a zero-address Transfer without a matching supply change (zero recipient/sender reverts everywhere; _mint/_burn revert on account==0 so Transfer(0,0,x) is impossible). Mint/burn are permissioned to Liquity-branch contracts only; privilege cannot move supply without the paired event. Quantitative: full-history (deploy block 49,406,521 -> head) mints 170990176124536958812829 - burns 30361398731024694197913 == totalSupply 140628777393512264614916 exactly; last-24h and prior-48h windows have zero mint/burn events with unchanged supply (last mint 2026-09-18T05:41Z block 51460375, last burn 2026-09-17T06:42Z block 51418988), so admission windows will legitimately be 0-event/0-delta and the plan's second-window rule for zero-event windows applies.",
+      "windows": [
+        {
+          "fromBlock": 51620763,
+          "fromBlockHash": "0xe2dc993159530217914e180e5c5355c0dcea4aa1db538285701bbea36d8fed9f",
+          "fromTimestamp": 1790030873,
+          "toBlock": 51663963,
+          "toBlockHash": "0xea029ee702a579fdc3f82b5e056a92b1147075e7318e9dc67c2d47ad3f849183",
+          "toTimestamp": 1790117273,
+          "mintRaw": "0",
+          "burnRaw": "0",
+          "supplyDeltaRaw": "0",
+          "residualRaw": "0",
+          "logCount": 0,
+          "journalSha256": "46a85c7fb530ae7add66683aafc68a5329748ba06ce5140273d2baac140101a0"
+        },
+        {
+          "fromBlock": 51577563,
+          "fromBlockHash": "0xe25779e81ead61b10ea93041d39017568d74fee6f8fb8cc7577abdcfc003c29c",
+          "fromTimestamp": 1789944473,
+          "toBlock": 51620763,
+          "toBlockHash": "0xe2dc993159530217914e180e5c5355c0dcea4aa1db538285701bbea36d8fed9f",
+          "toTimestamp": 1790030873,
+          "mintRaw": "0",
+          "burnRaw": "0",
+          "supplyDeltaRaw": "0",
+          "residualRaw": "0",
+          "logCount": 0,
+          "journalSha256": "46a85c7fb530ae7add66683aafc68a5329748ba06ce5140273d2baac140101a0"
+        }
+      ],
+      "reviewedAt": "2026-09-22",
+      "reviewer": "P4ChainProbe"
+    },
+    {
       "chainId": "ethereum",
       "stablecoinId": "a7a5-old-vector",
       "address": "0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9",
