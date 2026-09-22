@@ -61,7 +61,8 @@ describe("handleTelegramWebhook", () => {
 
   it("releases a status callback cooldown when the callback handler throws", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const db = makeTelegramWebhookDb([{ match: "FROM stress_signals", rows: [], throwError: new Error("status read failed") }]);
+    // P2-13 CRON-14 makes DEWS exact/legacy read failures degrade instead of throwing; fail an uncaught dependency.
+    const db = makeTelegramWebhookDb([{ match: "FROM depeg_events", rows: [], throwError: new Error("status read failed") }]);
 
     const res = await handleTelegramWebhook(db, makeCallbackRequest("status:usdc-circle"), "test-secret", "bot-token");
 

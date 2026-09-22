@@ -351,7 +351,11 @@ describe("migrateTelegramChatId", () => {
             ...sentinel,
             chat_id: newChatId,
             ...(table === "telegram_subscribers"
-              ? { preference_generation: Number(sentinel.preference_generation) + 1 }
+              ? {
+                  preference_generation: Number(sentinel.preference_generation) + 1,
+                  // Migration 0246 derives current activity from the migrated preferences.
+                  watcher_active: 0,
+                }
               : {}),
           },
         ];

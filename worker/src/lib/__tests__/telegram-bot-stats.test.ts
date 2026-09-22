@@ -241,6 +241,9 @@ describe("mapTelegramBotStats", () => {
         expired: 1,
         nearTtl: 2,
         sending: 3,
+        // P2-13 part 3 single-sources both pending and fresh in-flight capacity in the public backlog.
+        pendingSending: 1,
+        freshSending: 2,
         executionUnknown: 2,
         pendingExecutionUnknown: 1,
         freshExecutionUnknown: 1,
@@ -308,9 +311,10 @@ describe("mapTelegramBotStats", () => {
       subscribedChats: 0,
       emptyAlertChats: 0,
       mutedChatsWithSubscriptions: 0,
-      totalSubscriptions: 0,
+      // P2-12 publishes unavailable preset-derived totals as null rather than fabricating zero.
+      totalSubscriptions: null,
       explicitCoinSubscriptions: 0,
-      presetImpliedCoinSubscriptions: 0,
+      presetImpliedCoinSubscriptions: null,
       activePresetFollowers: 0,
       avgSubscriptionsPerSubscribedChat: 0,
       pendingDisambiguations: 0,
@@ -410,6 +414,7 @@ describe("getTelegramBotStats", () => {
         rows: [{ error_class: "rate_limit", pending_count: 1 }],
       },
       { match: "SELECT COUNT(*) AS pending_count FROM telegram_pending_alerts", first: { pending_count: 2 }, rows: [] },
+      { match: "FROM telegram_preset_subscriptions", rows: [] },
       { match: "FROM telegram_subscriptions", rows: [{ stablecoin_id: "usdpt-western-union", subscribers: 2 }] },
     ]);
 
@@ -436,6 +441,9 @@ describe("getTelegramBotStats", () => {
       expired: 0,
       nearTtl: 0,
       sending: 0,
+      // P2-13 part 3 exposes both pending and fresh in-flight capacity, including zeroes.
+      pendingSending: 0,
+      freshSending: 0,
       executionUnknown: 0,
       pendingExecutionUnknown: 0,
       freshExecutionUnknown: 0,
@@ -513,6 +521,7 @@ describe("getTelegramBotStats", () => {
       },
       { match: "last_error_class AS error_class", rows: [] },
       { match: "SELECT COUNT(*) AS pending_count FROM telegram_pending_alerts", first: { pending_count: 0 }, rows: [] },
+      { match: "FROM telegram_preset_subscriptions", rows: [] },
       { match: "FROM telegram_subscriptions", rows: [] },
       {
         match: "FROM cache WHERE key = ?",

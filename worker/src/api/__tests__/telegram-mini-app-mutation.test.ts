@@ -1113,7 +1113,8 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(historyMatches(db, "DELETE FROM telegram_alert_dead_letters WHERE chat_id = ?", { 0: "42" })).toBe(true);
     expect(historyMatches(db, "DELETE FROM telegram_chat_delivery_diagnostics WHERE chat_id = ?", { 0: "42" })).toBe(true);
     expect(historyMatches(db, "DELETE FROM telegram_subscribers WHERE chat_id = ?", { 0: "42" })).toBe(true);
-    expect(historyMatches(db, "DELETE FROM cache WHERE key = ?", { 0: "telegram:mini-app-mutation-burst:42" })).toBe(false);
+    // P2-11 TELEGRAM-DIGEST-35 atomically erases the exact per-user burst key during forget-me.
+    expect(historyMatches(db, "DELETE FROM cache WHERE key = ?", { 0: "telegram:mini-app-mutation-burst:42" })).toBe(true);
     // processed_updates intentionally retained for idempotency.
     expect(db.getHistory().some((entry) => entry.sql.includes("DELETE FROM telegram_processed_updates"))).toBe(false);
   });
