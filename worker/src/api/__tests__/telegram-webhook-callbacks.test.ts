@@ -38,29 +38,25 @@ describe("handleCallbackQuery", () => {
     }
 
     const db = mockTelegramD1([
-      {
-        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        rows: [],
-        first: {
-          action_type: "subscribe",
-          action_payload: JSON.stringify({
-            schemaVersion: 1,
-            alertTypes: ["dews"],
-            presetIds: [],
-            resolvedIds: [],
-            ambiguousTicker: "USDF",
-            candidates: ambiguous.matches,
-            remainingTickers: ["USDC"],
-          }),
-          alert_types: JSON.stringify(["dews"]),
-          resolved_ids: JSON.stringify([]),
-          ambiguous_ticker: "USDF",
-          candidates: JSON.stringify(ambiguous.matches),
-          remaining_tickers: JSON.stringify(["USDC"]),
-          expires_at: Math.floor(Date.now() / 1000) + 60,
-          initiator_user_id: "999",
-        },
-      },
+      pendingDisambiguationTable({
+        action_type: "subscribe",
+        action_payload: JSON.stringify({
+          schemaVersion: 1,
+          alertTypes: ["dews"],
+          presetIds: [],
+          resolvedIds: [],
+          ambiguousTicker: "USDF",
+          candidates: ambiguous.matches,
+          remainingTickers: ["USDC"],
+        }),
+        alert_types: JSON.stringify(["dews"]),
+        resolved_ids: JSON.stringify([]),
+        ambiguous_ticker: "USDF",
+        candidates: JSON.stringify(ambiguous.matches),
+        remaining_tickers: JSON.stringify(["USDC"]),
+        expires_at: Math.floor(Date.now() / 1000) + 60,
+        initiator_user_id: "999",
+      }),
       {
         match: "FROM telegram_subscriptions",
         matchBinds: ["123", ambiguous.matches[0].id, usdc.matches[0].id],
@@ -191,42 +187,41 @@ describe("handleCallbackQuery", () => {
 
 
   it("confirm:bulk rejects non-initiator with an alert toast and does not execute", async () => {
-    const db = mockTelegramD1([
-      {
-        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        rows: [],
-        first: makeBulkPendingRow({
-          kind: "subscribe",
-          alertTypes: ["dews"],
-          presetIds: [],
-          coinIds: [],
-          subscribeAll: true,
-        }, { expires_at: Math.floor(Date.now() / 1000) + 60, initiator_user_id: "999" }),
-      },
-    ]);
+    const db = mockTelegramD1([pendingDisambiguationTable(makeBulkPendingRow({
+      kind: "subscribe",
+      alertTypes: ["dews"],
+      presetIds: [],
+      coinIds: [],
+      subscribeAll: true,
+    }, { expires_at: Math.floor(Date.now() / 1000) + 60, initiator_user_id: "999" }))]);
     await handleCallbackQuery(db, "fake-token", makeCallbackQuery("confirm:bulk", { id: "cb-bulk", from: { id: 7, username: "interloper" }, message: { chat: { id: 123, type: "private" }, message_id: 1 } }));
 
     const history = db.getHistory();
     expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(false);
     expect(history.some((entry) => /UPDATE.*global_alert_/.test(entry.sql))).toBe(false);
-    const ackCall = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
-    expect(ackCall).toBeDefined();
-    const body = JSON.parse((ackCall?.[1] as RequestInit).body as string);
-    expect(body.text).toMatch(/only the user who started/i);
+    expect(firstAckBody().text).toMatch(/only the user who started/i);
+  });
+
+  it("confirm:bulk replies with an expiry toast when pending TTL has elapsed", async () => {
+    const db = mockTelegramD1([pendingDisambiguationTable(makeBulkPendingRow({
+      kind: "unsubscribe",
+      presetIds: [],
+      coinIds: [],
+      unsubscribeAll: true,
+    }, { expires_at: Math.floor(Date.now() / 1000) - 1, initiator_user_id: "999" }))]);
+    await handleCallbackQuery(db, "fake-token", makeCallbackQuery("confirm:bulk", { id: "cb-expired", from: { id: 999, username: "requester" }, message: { chat: { id: 123, type: "private" }, message_id: 1 } }));
+
+    expect(firstAckBody().text).toMatch(/expired/i);
   });
 
   it("confirm:bulk keeps preset-only follow provenance out of direct coin rows", async () => {
-    const db = mockTelegramD1([{
-      match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-      rows: [],
-      first: makeBulkPendingRow({
-        kind: "subscribe",
-        alertTypes: ["dews"],
-        presetIds: ["usd-top25"],
-        coinIds: [],
-        subscribeAll: false,
-      }, { expires_at: Math.floor(Date.now() / 1000) + 60, initiator_user_id: "999" }),
-    }]);
+    const db = mockTelegramD1([pendingDisambiguationTable(makeBulkPendingRow({
+      kind: "subscribe",
+      alertTypes: ["dews"],
+      presetIds: ["usd-top25"],
+      coinIds: [],
+      subscribeAll: false,
+    }, { expires_at: Math.floor(Date.now() / 1000) + 60, initiator_user_id: "999" }))]);
 
     await handleCallbackQuery(db, "fake-token", makeCallbackQuery("confirm:bulk", { id: "cb-preset-follow", from: { id: 999, username: "requester" }, message: { chat: { id: 123, type: "private" }, message_id: 1 } }));
 
@@ -236,16 +231,12 @@ describe("handleCallbackQuery", () => {
   });
 
   it("confirm:bulk preset unfollow preserves direct coin rows", async () => {
-    const db = mockTelegramD1([{
-      match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-      rows: [],
-      first: makeBulkPendingRow({
-        kind: "unsubscribe",
-        presetIds: ["usd-top25"],
-        coinIds: [],
-        unsubscribeAll: false,
-      }, { expires_at: Math.floor(Date.now() / 1000) + 60, initiator_user_id: "999" }),
-    }]);
+    const db = mockTelegramD1([pendingDisambiguationTable(makeBulkPendingRow({
+      kind: "unsubscribe",
+      presetIds: ["usd-top25"],
+      coinIds: [],
+      unsubscribeAll: false,
+    }, { expires_at: Math.floor(Date.now() / 1000) + 60, initiator_user_id: "999" }))]);
 
     await handleCallbackQuery(db, "fake-token", makeCallbackQuery("confirm:bulk", { id: "cb-preset-unfollow", from: { id: 999, username: "requester" }, message: { chat: { id: 123, type: "private" }, message_id: 1 } }));
 

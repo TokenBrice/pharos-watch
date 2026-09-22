@@ -1,4 +1,4 @@
-import { makeBulkPendingRow } from "./telegram-rows.test-support";
+import { makeBulkPendingRow, pendingDisambiguationTable } from "./telegram-rows.test-support";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   fetchSpy,
@@ -151,16 +151,12 @@ describe("handleTelegramWebhook", () => {
 
   it("confirm:bulk callback executes a deferred /unsubscribe all", async () => {
     const db = makeTelegramWebhookDb([
-      {
-        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        rows: [],
-        first: makeBulkPendingRow({
-          kind: "unsubscribe",
-          presetIds: [],
-          coinIds: [],
-          unsubscribeAll: true,
-        }, { expires_at: Math.floor(Date.now() / 1000) + 60, initiator_user_id: "999" }),
-      },
+      pendingDisambiguationTable(makeBulkPendingRow({
+        kind: "unsubscribe",
+        presetIds: [],
+        coinIds: [],
+        unsubscribeAll: true,
+      }, { expires_at: Math.floor(Date.now() / 1000) + 60, initiator_user_id: "999" })),
     ]);
 
     const request = makeCallbackRequest("confirm:bulk");
@@ -173,16 +169,12 @@ describe("handleTelegramWebhook", () => {
 
   it("cancel:bulk callback clears pending without executing", async () => {
     const db = makeTelegramWebhookDb([
-      {
-        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        rows: [],
-        first: makeBulkPendingRow({
-          kind: "unsubscribe",
-          presetIds: [],
-          coinIds: [],
-          unsubscribeAll: true,
-        }, { expires_at: Math.floor(Date.now() / 1000) + 60, initiator_user_id: "999" }),
-      },
+      pendingDisambiguationTable(makeBulkPendingRow({
+        kind: "unsubscribe",
+        presetIds: [],
+        coinIds: [],
+        unsubscribeAll: true,
+      }, { expires_at: Math.floor(Date.now() / 1000) + 60, initiator_user_id: "999" })),
     ]);
 
     const request = makeCallbackRequest("cancel:bulk");
@@ -195,17 +187,13 @@ describe("handleTelegramWebhook", () => {
 
   it("pending confirm-bulk ignores plain text replies in private chats with a reminder", async () => {
     const db = makeTelegramWebhookDb([
-      {
-        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        rows: [],
-        first: makeBulkPendingRow({
-          kind: "subscribe",
-          alertTypes: ["dews"],
-          presetIds: [],
-          coinIds: [],
-          subscribeAll: true,
-        }, { expires_at: Math.floor(Date.now() / 1000) + 60, initiator_user_id: "999" }),
-      },
+      pendingDisambiguationTable(makeBulkPendingRow({
+        kind: "subscribe",
+        alertTypes: ["dews"],
+        presetIds: [],
+        coinIds: [],
+        subscribeAll: true,
+      }, { expires_at: Math.floor(Date.now() / 1000) + 60, initiator_user_id: "999" })),
     ]);
 
     await handleTelegramWebhook(db, makeWebhookRequest(123, "1,2,3"), "test-secret", "bot-token");
@@ -224,11 +212,7 @@ describe("handleTelegramWebhook", () => {
       subscribeAll: true,
     }, { expires_at: Math.floor(Date.now() / 1000) + 60, initiator_user_id: "999" });
     const nonInitiatorDb = makeTelegramWebhookDb([
-      {
-        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        rows: [],
-        first: pendingRow,
-      },
+      pendingDisambiguationTable(pendingRow),
     ]);
 
     await handleTelegramWebhook(
@@ -243,11 +227,7 @@ describe("handleTelegramWebhook", () => {
     fetchSpy.mockClear();
     fetchSpy.mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
     const initiatorDb = makeTelegramWebhookDb([
-      {
-        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        rows: [],
-        first: pendingRow,
-      },
+      pendingDisambiguationTable(pendingRow),
     ]);
 
     await handleTelegramWebhook(
@@ -262,21 +242,17 @@ describe("handleTelegramWebhook", () => {
 
   it("pending forget-confirm ignores plain text replies in private chats with a reminder", async () => {
     const db = makeTelegramWebhookDb([
-      {
-        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        rows: [],
-        first: {
-          action_type: "forget-confirm",
-          action_payload: "{}",
-          alert_types: JSON.stringify([]),
-          resolved_ids: JSON.stringify([]),
-          ambiguous_ticker: "",
-          candidates: JSON.stringify([]),
-          remaining_tickers: JSON.stringify([]),
-          expires_at: Math.floor(Date.now() / 1000) + 60,
-          initiator_user_id: "999",
-        },
-      },
+      pendingDisambiguationTable({
+        action_type: "forget-confirm",
+        action_payload: "{}",
+        alert_types: JSON.stringify([]),
+        resolved_ids: JSON.stringify([]),
+        ambiguous_ticker: "",
+        candidates: JSON.stringify([]),
+        remaining_tickers: JSON.stringify([]),
+        expires_at: Math.floor(Date.now() / 1000) + 60,
+        initiator_user_id: "999",
+      }),
     ]);
 
     await handleTelegramWebhook(db, makeWebhookRequest(123, "delete this"), "test-secret", "bot-token");
