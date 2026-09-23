@@ -37,6 +37,16 @@
 /depeg/apxusd-2026-06-16/ /depeg/apxusd-2026-06-02/ 301
 /depeg/apxusd-2026-06-16 /depeg/apxusd-2026-06-02/ 301
 
+# Reviewed removal of Noon USN upside "depeg" events (2026-09-22 forensics):
+# CoinGecko last-trade prints of sub-cent dust swaps, no economic on-chain USN
+# trade above 1.0011 in any window. The coin page remains the canonical surface.
+/depeg/usn-2026-03-02/ /stablecoin/usn-noon/ 301
+/depeg/usn-2026-03-02 /stablecoin/usn-noon/ 301
+/depeg/usn-2026-02-14-up-24424/ /stablecoin/usn-noon/ 301
+/depeg/usn-2026-02-14-up-24424 /stablecoin/usn-noon/ 301
+/depeg/usn-2026-02-14-up-49237/ /stablecoin/usn-noon/ 301
+/depeg/usn-2026-02-14-up-49237 /stablecoin/usn-noon/ 301
+
 # MiCA tracker moved to Compliance; /compliance/ is canonical.
 /mica/* /compliance/:splat 301
 /mica/ /compliance/ 301

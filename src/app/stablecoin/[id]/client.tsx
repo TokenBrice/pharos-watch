@@ -26,6 +26,7 @@ import {
   seedStablecoinDetailQueryCache,
   type StablecoinDetailSnapshot,
 } from "@/lib/api";
+import type { StablecoinLiveSummary } from "@/lib/api-query-descriptors";
 import { DetailContent } from "./detail-content";
 
 function DetailLoadingShell({
@@ -79,6 +80,8 @@ interface StablecoinDetailClientProps {
   exploreNextContent?: ReactNode;
   faqContent?: ReactNode;
   snapshot?: StablecoinDetailSnapshot | null;
+  /** Frozen coins only: archived list row used when the live detail row is unavailable. */
+  archivedLiveSummary?: StablecoinLiveSummary | null;
 }
 
 export function StablecoinDetailSnapshotHydrator({
@@ -114,6 +117,7 @@ function StablecoinDetailClientContent({
   transferReview = null,
   exploreNextContent = null,
   faqContent = null,
+  archivedLiveSummary = null,
 }: StablecoinDetailClientProps) {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [activeBannerId, setActiveBannerId] = useState("overview");
@@ -130,6 +134,7 @@ function StablecoinDetailClientContent({
     coin,
     summary,
     logoSrc,
+    archivedLiveSummary,
     supplementalQueryControls: {
       // These lanes also supply the visible hero, not only their deeper sections.
       liquidity: true,

@@ -30,6 +30,12 @@ const GENERATION_ID = `dex-liquidity-${NOW_SEC}`;
 const EXPECTED_GENERATION_ROWS = ACTIVE_STABLECOINS.length + 1;
 const openSqlite: Array<import("node:sqlite").DatabaseSync> = [];
 
+// The publisher fails closed without a trusted primary (P8): staging fixtures
+// that expect rows must supply one explicitly for every staged coin.
+const USD_POOL_PRIMARY_PRICES = new Map(
+  [...makeUsdPricePools(30).keys()].map((id) => [id, 1] as const),
+);
+
 function seedPublishedDexGeneration(options: SeedGenerationOptions = {}): {
   sqlite: import("node:sqlite").DatabaseSync;
   db: D1Database;
@@ -215,7 +221,7 @@ describe("DEX scoring publication atomicity", () => {
     const before = readPublicPrices(sqlite);
 
     await expect(
-      computePriceGeneration(failAfterSuccessfulBatches(db, 1), makeUsdPricePools(30), NOW_SEC),
+      computePriceGeneration(failAfterSuccessfulBatches(db, 1), makeUsdPricePools(30), NOW_SEC, undefined, USD_POOL_PRIMARY_PRICES),
     ).rejects.toThrow("injected D1 batch failure");
 
     expect(readPublicPrices(sqlite)).toEqual(before);
@@ -232,7 +238,7 @@ describe("DEX scoring publication atomicity", () => {
     });
 
     await expect(
-      computePriceGeneration(fault.db, makeUsdPricePools(30), NOW_SEC),
+      computePriceGeneration(fault.db, makeUsdPricePools(30), NOW_SEC, undefined, USD_POOL_PRIMARY_PRICES),
     ).rejects.toThrow("injected publication failure");
     expect(fault.injections).toEqual(["price:before"]);
 
@@ -248,7 +254,7 @@ describe("DEX scoring publication atomicity", () => {
     const fault = atPublication(db, "price", "after", () => {
       throw new Error("D1_ERROR: internal error; reference injected-post-commit");
     });
-    await computePriceGeneration(fault.db, makeUsdPricePools(30), NOW_SEC);
+    await computePriceGeneration(fault.db, makeUsdPricePools(30), NOW_SEC, undefined, USD_POOL_PRIMARY_PRICES);
     expect(fault.injections).toEqual(["price:after"]);
 
     expect(
@@ -266,7 +272,7 @@ describe("DEX scoring publication atomicity", () => {
     const fault = supersedeBeforePublication(db, sqlite);
 
     await expect(
-      computePriceGeneration(fault.db, makeUsdPricePools(30), NOW_SEC),
+      computePriceGeneration(fault.db, makeUsdPricePools(30), NOW_SEC, undefined, USD_POOL_PRIMARY_PRICES),
     ).rejects.toThrow("price publication fence/replacement changed 0 rows");
     expect(fault.injections).toEqual(["price:before"]);
 
@@ -319,7 +325,7 @@ describe("DEX scoring publication atomicity", () => {
       throw error;
     }
 
-    await computePriceGeneration(db, makeUsdPricePools(30), NOW_SEC);
+    await computePriceGeneration(db, makeUsdPricePools(30), NOW_SEC, undefined, USD_POOL_PRIMARY_PRICES);
 
     expect(
       sqlite.prepare("SELECT COUNT(*) AS count FROM dex_prices WHERE updated_at = ?").get(NOW_SEC),

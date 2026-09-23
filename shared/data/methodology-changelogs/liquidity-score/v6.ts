@@ -9,6 +9,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 // are newest-first by version.
 export const LIQUIDITY_SCORE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.7",
+    title: "Pair-price coherence gate at pool admission",
+    date: "2026-09-23",
+    effectiveAt: 1790160000,
+    summary:
+      "GeckoTerminal and CoinGecko Onchain pool rows are admitted only when the tracked leg's USD price stays coherent with the pool's own pair ratio and the counter-leg's USD price; provider rows carrying the broken-price signature (leg USD prices published with null/zero pair-ratio inputs) are rejected before staging instead of contributing bogus TVL and price evidence.",
+    impact: [
+      "One registry-backed policy (`POOL_PRICE_COHERENCE_POLICY`, `maxPairDivergenceBps = 500`) owns both admission paths — the GeckoTerminal crawl and the CoinGecko Onchain discovery stage — and rejections carry the frozen reasons `pool-pair-ratio-unavailable` and `pool-pair-price-incoherent`, counted per reason in one warn summary per run",
+      "Retention effect (pre-ship dry-run over all 483 guard-scope challenger rows: 422 admitted, 24 rejected, no threshold tuning): incoherent provider rows no longer stage, so their TVL decays out of the 14-day staged-pool horizon and their price evidence expires after the 24-hour staged-price window. The two Sophon rows (USN ~$429K and sUSN ~$105K of bogus TVL) leave USN/sUSN — USN retained TVL ~$3.86M -> ~$3.43M with its Sophon chain TVL at zero and its pool count 7 -> 5, sUSN ~$1.99M -> ~$1.89M and its pool count 1 -> 0 — and 21 further provider-broken GT rows are rejected and named by share of the asset's DEX TVL: gtusdc-gauntlet 100% (~$1.97M, its only pool), usdx-hex-trust 98% (~$637K), ceur-celo 92% (~$12.84M), yusd-yieldfi 72% (~$161K), vchf-vnx 70% (~$4.71M), usr-resolv 44% (~$194K, its only and already dust/stale row), frax-frax 38% (~$47.77M), gho-aave 26% (~$14.0M), zarp-zarp 20% (~$329K), gldt-gold-dao 19% (~$101K), savusd-avant 9% and avusd-avant 6% (the same monad savUSD/avUSD row), eurs-stasis 5% (~$285K), then apyusd-apyx, dai-makerdao, usde-ethena, usdc-circle, and usdt-tether at 1-2% and susds-sky/susde-ethena unchanged; every rejected row is one whose own GT numbers disagree with each other (a broken pair-ratio field or the broken-price signature), not a pool judged on its tracked-leg price alone",
+      "Two rejections are flagged as misjudgment risks in the dry-run — a sui USDB/USDC row and the ethereum GHO/DMusd row, where both USD legs are mutually sane and only GT's pair-ratio field is broken. They are rejected by the unchanged 500 bps rule and re-admit automatically once the provider row is internally consistent; a rule review could retain them, but no threshold was widened here",
+      "Direction of the remaining score surfaces: the pool challenge only downgrades when a diverging protocol group survives challengeability filtering, so removing these rows can only reduce challenge pressure — confidence stays or rises and no asset gains a new downgrade. Zero volume and zero transactions are corroboration only and never an independent rejection — pool prices derive from reserves and quiet pools are legitimate — while rows whose payload omits the pair-ratio fields entirely are admitted unchecked",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.6",
     title: "Recorded concentration band thresholds",
     date: "2026-09-21",

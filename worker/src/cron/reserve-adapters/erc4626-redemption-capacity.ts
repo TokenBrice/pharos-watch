@@ -754,6 +754,9 @@ export function buildExecutableRedemptionCapacityTelemetry(
     underlyingDecimals: observation.underlyingDecimals,
     ...(capacityRatioOfSupply != null ? { capacityRatioOfSupply } : {}),
     capacityKind: observation.capacityKind,
+    ...(observation.settlementDelaySec != null
+      ? { settlementDelaySec: observation.settlementDelaySec }
+      : {}),
     blockNumber: observation.blockNumber,
     sourceTimestamp: observation.sourceTimestamp,
     sourceUrls: observation.sourceUrls,

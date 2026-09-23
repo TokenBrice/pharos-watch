@@ -21,3 +21,5 @@ export const REVIEWED_STABLECOIN_AUDIT_AT = "2026-05-12";
 export const REVIEWED_FOLLOWUP_REMEDIATION_AT = "2026-05-13";
 /** Exit-credit review pass covering fee bounds and route remodels. */
 export const REVIEWED_EXIT_CREDIT_AT = "2026-08-12";
+/** Noon sUSN withdrawal-handler rail review (request/claim, live withdrawPeriod). */
+export const REVIEWED_SUSN_WITHDRAWAL_RAIL_AT = "2026-09-22";

@@ -196,6 +196,95 @@ describe("Safety Score v9 fact compilation and upgrades", () => {
       ),
     ).toBe(true);
   });
+  it("attributes a gapless withheld same-notional route to integration-missing while a real producer gap keeps producer-failed", () => {
+    // Live susn-noon shape (Noon feedback P4): the exit surface carries only
+    // an exit-portfolio gap under a different reason code, so the evaluator
+    // synthesizes `missing-same-notional-route` with no causal gap object.
+    // The same-run capacity read may have succeeded, so the gapless fallback
+    // must not claim a producer/data-collection failure.
+    const core = nativeCompleteEmptyCoreFixture();
+    const asset = core.assets.find(
+      (candidate) => candidate.assetId === "alpha",
+    ) as V9AssetFactsV3;
+    asset.exitRoutes = [];
+    const portfolioGap = createV9FactGapV3({
+      gapId: "alpha:gap:exit-portfolio-coverage",
+      reasonCode: "incomplete-dex-route-coverage",
+      ownerDomain: "exit",
+      policyRuleId: "exit.route.coverage",
+      observationState: "bounded-unknown",
+      path: { kind: "local-component", componentKey: "exit-portfolio-coverage" },
+      message: "The exit portfolio could not be certified.",
+      evidenceRefIds: ["evidence:base"],
+      responsibility: "producer-failed",
+    });
+    asset.gaps.push(portfolioGap);
+    asset.exitStatus = createV9FactStatus({
+      applicability: requiredV9Applicability("exit.route.coverage"),
+      observationState: "bounded-unknown",
+      evidenceRefIds: ["evidence:base"],
+      gapIds: [portfolioGap.gapId],
+    });
+
+    const evaluated = evaluateV9FactSet(
+      compileV9FactSetV3(core),
+      V9_CANDIDATE_POLICY_V1,
+    ).assets.find((candidate) => candidate.assetId === "alpha")!;
+    expect(evaluated.exit.reasons).toContain("missing-same-notional-route");
+    const gaplessReasons = evaluated.scoreInput.pillars.exit.reasons.filter(
+      (reason) => reason.code === "missing-same-notional-route",
+    );
+    expect(gaplessReasons).not.toHaveLength(0);
+    expect(
+      gaplessReasons.every(
+        (reason) =>
+          reason.responsibility === "integration-missing" &&
+          reason.sourceGapId === undefined,
+      ),
+    ).toBe(true);
+
+    // The authored-gap control: a real producer gap with this reason code
+    // keeps its authored owner and stays causally linked.
+    const gapCore = nativeCompleteEmptyCoreFixture();
+    const gapAsset = gapCore.assets.find(
+      (candidate) => candidate.assetId === "alpha",
+    ) as V9AssetFactsV3;
+    gapAsset.exitRoutes = [];
+    const producerGap = createV9FactGapV3({
+      gapId: "alpha:gap:exit-route-withheld-producer",
+      reasonCode: "missing-same-notional-route",
+      ownerDomain: "exit",
+      policyRuleId: "exit.route.coverage",
+      observationState: "bounded-unknown",
+      path: { kind: "local-component", componentKey: "exit-route-coverage" },
+      message: "The producer route capture failed.",
+      evidenceRefIds: ["evidence:base"],
+      responsibility: "producer-failed",
+    });
+    gapAsset.gaps.push(producerGap);
+    gapAsset.exitStatus = createV9FactStatus({
+      applicability: requiredV9Applicability("exit.route.coverage"),
+      observationState: "bounded-unknown",
+      evidenceRefIds: ["evidence:base"],
+      gapIds: [producerGap.gapId],
+    });
+
+    const gapEvaluated = evaluateV9FactSet(
+      compileV9FactSetV3(gapCore),
+      V9_CANDIDATE_POLICY_V1,
+    ).assets.find((candidate) => candidate.assetId === "alpha")!;
+    const gappedReasons = gapEvaluated.scoreInput.pillars.exit.reasons.filter(
+      (reason) => reason.code === "missing-same-notional-route",
+    );
+    expect(gappedReasons).not.toHaveLength(0);
+    expect(
+      gappedReasons.some(
+        (reason) =>
+          reason.responsibility === "producer-failed" &&
+          reason.sourceGapId === producerGap.gapId,
+      ),
+    ).toBe(true);
+  });
   it("preserves explicit exit-gap and mechanism-profile ownership over native complete-empty fallback", () => {
     const nativeWithGap = structuredClone(compileNativeV3FactSet(coreFixture()));
     const { v9FactSetDigest: _gapDigest, ...gapCore } = nativeWithGap;

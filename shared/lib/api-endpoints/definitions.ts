@@ -962,6 +962,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
     probeGroup: "manual",
     probePath: API_PATHS.auditDepegHistoryDryRun(),
     opsProxyTimeoutMs: 45_000,
+    routeDependencies: ["coingeckoApiKey"],
     statusPageAction: {
       label: "Audit Depegs",
       confirm: "Audit depeg history and review possible provenance repairs?",

@@ -496,7 +496,7 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
     });
   });
 
-  it("keeps a diagnostic bounded route-terms gap rateable and producer-attributed", () => {
+  it("keeps a diagnostic bounded route-terms gap rateable and producer-attributed through its causal output gap", () => {
     const fixedInput = makeV9BoundedUnknownFeeRedemptionFixedInput({ clockSec: AS_OF_SEC });
     const extension = structuredClone(buildSafetyScoreV9BaselineExtension(fixedInput));
     for (const review of extension.assets[0]!.routeReviews) {
@@ -513,16 +513,24 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
     expect(card.score).not.toBeNull();
     expect(card.nrReasons).toEqual([]);
     expect(card.reasonCodes).toContain("missing-same-notional-route");
+    // This reason is carried by a real authored gap (the stale last-known
+    // route output valuation), so its owner is the gap's authored
+    // `producer-failed` and it stays causally linked. The gapless variant —
+    // a route withheld by methodology with no authored gap — attributes to
+    // `integration-missing` instead; that contract is asserted in
+    // safety-score-v9-facts-compile-upgrade.test.ts.
     expect(card.scoreTrace.boundedUncertaintyAttribution.items).toContainEqual(
       expect.objectContaining({
         source: "reason",
         code: "missing-same-notional-route",
         responsibility: "producer-failed",
+        path: expect.stringContaining(":cause:"),
       }),
     );
     expect(card.scoreTrace.evidenceResponsibility.facts).toContainEqual(
       expect.objectContaining({
         reasonCode: "missing-same-notional-route",
+        sourceGapId: expect.stringContaining("offchain-issuer:output"),
         responsibility: "producer-failed",
         critical: false,
       }),

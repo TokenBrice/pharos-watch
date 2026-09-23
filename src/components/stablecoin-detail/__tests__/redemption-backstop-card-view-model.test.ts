@@ -420,7 +420,7 @@ describe("buildRedemptionBackstopCardViewModel", () => {
     });
   });
 
-  it("states the operator-queue modality for an unproven settlement bound instead of a generic capacity gap", () => {
+  it("states the producer's route modality for an unproven settlement bound instead of a generic capacity gap", () => {
     const flagged = buildRedemptionBackstopCardViewModel(
       entry({
         score: null,
@@ -449,5 +449,34 @@ describe("buildRedemptionBackstopCardViewModel", () => {
     expect(
       buildRedemptionBackstopCardViewModel(entry({ resolutionState: "missing-capacity" })).resolutionSummary,
     ).toContain("could not resolve enough capacity data");
+  });
+
+  it("describes the fallback unproven-bound modality as a request/claim rail without asserting operator batching", () => {
+    // No producer routeStatusReason: the card must fall back to copy that is
+    // neutral about who moves settlement forward. Operator batching is a
+    // per-rail fact (true for eEARN, false for holder-initiated request/claim
+    // rails like sUSN's WithdrawalHandler), so the fallback may not assert it.
+    const fallback = buildRedemptionBackstopCardViewModel(
+      entry({
+        score: null,
+        capacityScore: null,
+        resolutionState: "missing-capacity",
+        settlementModel: "queued",
+        routeStatus: "open",
+        capacityProfile: {
+          immediateUsd: null,
+          scoringUsd: null,
+          settlementBoundUnproven: true,
+          scoringHorizon: "unknown",
+          capacityProfileConfidence: "live-direct",
+        },
+      }),
+    );
+
+    expect(fallback.resolutionSummary).toContain("request-and-claim (queued withdrawal) process");
+    expect(fallback.resolutionSummary).toContain("no settlement completion bound is proven");
+    expect(fallback.resolutionSummary).toContain("unrated rather than scored zero");
+    expect(fallback.resolutionSummary).not.toContain("operator-batched");
+    expect(fallback.resolutionSummary).not.toContain("operator batch");
   });
 });

@@ -166,6 +166,31 @@ describe("redemption same-notional route observations", () => {
     });
   });
 
+  it("publishes a live same-run settlement delay as the horizon, keeping the model ceiling as fallback", () => {
+    const daysConfig: RedemptionBackstopConfig = { ...config, settlementModel: "days" };
+    const live = build({ config: daysConfig, settlementDelaySec: 604_800 });
+    expect(live?.settlementHorizonSec).toBe(604_800);
+    const unreported = build({ config: daysConfig });
+    expect(unreported?.settlementHorizonSec).toBe(14 * 86_400);
+  });
+
+  it("stamps a documented-bound observation with the chain-read time, not the review date", () => {
+    const chainReadAt = Date.UTC(2026, 8, 22, 12) / 1_000;
+    const observation = build({
+      sourceMode: "dynamic",
+      capacityConfidence: "documented-bound",
+      capacityKind: "documented-bound",
+      freshnessKind: "same-run-onchain",
+      sourceTimestamp: chainReadAt,
+      now: chainReadAt + 60,
+    });
+    expect(observation).toMatchObject({
+      evidenceKind: "documented-terms",
+      observedAt: chainReadAt,
+    });
+    expect(observation?.observedAt).not.toBe(Date.parse("2026-07-01T00:00:00.000Z") / 1_000);
+  });
+
   it("preserves a source-bound proportional CUSD basket and its all-in value", () => {
     const cusdConfig = getRedemptionBackstopConfig("cusd-cap");
     expect(cusdConfig).toBeDefined();

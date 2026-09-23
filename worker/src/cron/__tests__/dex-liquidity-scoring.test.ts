@@ -1527,7 +1527,8 @@ describe("dex-liquidity scoring", () => {
       })],
     ]));
 
-    await computeDexPrices(makeQueryDb([]), retainedPools, 1_700_000_000);
+    const primaryPrices = new Map(coins.map((coin) => [coin.id, 1] as const));
+    await computeDexPrices(makeQueryDb([]), retainedPools, 1_700_000_000, undefined, undefined, undefined, undefined, primaryPrices);
 
     const calls = vi.mocked(batchExecute).mock.calls;
     expect(calls.map(([, statements]) => statements.length)).toEqual([25, 5]);
@@ -1555,13 +1556,14 @@ describe("dex-liquidity scoring", () => {
         source: "gecko_terminal",
       })],
     ]));
+    const primaryPrices = new Map(coins.map((coin) => [coin.id, 1] as const));
     vi.mocked(batchExecute).mockImplementationOnce(async (_db, statements) => {
       controller.abort(abortReason);
       return statements.length;
     });
 
     await expect(
-      computeDexPrices(makeQueryDb([]), retainedPools, 1_700_000_000, undefined, controller.signal),
+      computeDexPrices(makeQueryDb([]), retainedPools, 1_700_000_000, undefined, controller.signal, undefined, undefined, primaryPrices),
     ).rejects.toThrow("DEX price publication timed out");
 
     expect(batchExecute).toHaveBeenCalledTimes(1);

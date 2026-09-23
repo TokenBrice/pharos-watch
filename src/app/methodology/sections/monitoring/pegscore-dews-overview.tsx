@@ -58,6 +58,15 @@ export function PegScoreDewsOverview() {
             Live depeg events still require at least $1M of current circulating supply. Historical replay applies the same floor from historical supply snapshots, or from current stablecoins-cache supply when historical supply is absent; if neither supply source exists, backfill preserves existing rows. Below that floor, the detail page may still show the current price deviation from peg, but it labels live event coverage as limited instead of implying the coin held peg.
           </p>
           <p>
+            Replay never re-persists an episode that has already been accounted for. A recomputed episode is skipped
+            when a reviewed suppression window covers it — an operator verdict, backed by on-chain evidence, that the
+            episode is a price-feed artifact rather than a market depeg — or when an existing live event for the same
+            coin and direction overlaps it, since the live detector and the hourly replay read the same price series
+            and would otherwise count one market episode twice. Skips keep the dry-run preview, the replay fingerprint,
+            and the stored rows in agreement, and the replayed window&apos;s own delete still removes the stale
+            backfill twin.
+          </p>
+          <p>
             PegScore begins at a reviewed replay-coverage anchor when one is curated for the asset; otherwise it uses the documented age and first-observation fallbacks. Detail and tracker surfaces distinguish projected incidents from their constituent threshold crossings and publish a recent 90-day peg view whose denominator contains only observed coverage.
           </p>
           <p>

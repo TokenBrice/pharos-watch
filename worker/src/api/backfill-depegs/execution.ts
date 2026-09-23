@@ -1,5 +1,6 @@
 import { getPegReference } from "@shared/lib/peg-rates";
 import { isCommodityPeg } from "@shared/lib/filter-tags";
+import { findBackfillReplaySuppression } from "@shared/data/depegs/backfill-replay-suppressions";
 import type { D1Database } from "@cloudflare/workers-types";
 import {
   type FxTimeSeries,
@@ -9,13 +10,15 @@ import {
   buildFxLookup,
 } from "../../lib/backfill-fx";
 import { logWorkerEvent } from "../../lib/structured-log";
-import type { BackfillReplayWindow } from "../backfill-depegs-window";
+import { backfillEpisodeCoveredByLiveEvent, type BackfillReplayWindow } from "../backfill-depegs-window";
 import {
   buildBackfillReplayPreview,
   loadExistingReplayRows,
   type BackfillReplayPreview,
+  type ExistingDepegEventRow,
 } from "../backfill-depegs-preview";
 import { backfillCoin } from "../backfill-depegs-replay";
+import type { BackfillEvent } from "../backfill-depegs-extraction";
 import type { PreparedBackfillCoin } from "./planning";
 import {
   type BackfillEventProvenanceInput,
@@ -45,6 +48,63 @@ export interface CoinExecutionOutcome {
   reason?: "missing-fx-reference";
   preview?: BackfillReplayPreview;
   errorMessage?: string;
+}
+
+/**
+ * Drops recomputed episodes that reviewed data or an existing live row already
+ * covers, so a replay can never re-persist them:
+ * - a reviewed replay-suppression window (price-feed artifact verdict), and
+ * - a `source='live'` row for the same coin and direction whose interval
+ *   overlaps the episode (the same market episode detected by both lanes).
+ */
+function skipCoveredBackfillEpisodes(
+  meta: { id: string; symbol: string },
+  events: BackfillEvent[],
+  liveRows: ExistingDepegEventRow[],
+): BackfillEvent[] {
+  const kept: BackfillEvent[] = [];
+  for (const event of events) {
+    const suppression = findBackfillReplaySuppression(meta.id, event.direction, event);
+    if (suppression) {
+      logWorkerEvent({
+        scope: "api",
+        level: "info",
+        event: "backfill-depegs-episode-skipped",
+        message: `[backfill-depegs] ${meta.symbol}: recomputed ${event.direction} episode falls in a reviewed suppression window (${suppression.reason})`,
+        metadata: {
+          stablecoinId: meta.id,
+          symbol: meta.symbol,
+          skipReason: "reviewed-suppression",
+          episodeStartedAt: event.startedAt,
+          episodeEndedAt: event.endedAt,
+          suppressionWindowStart: suppression.windowStart,
+          suppressionWindowEnd: suppression.windowEnd,
+          reviewedAt: suppression.reviewedAt,
+        },
+      });
+      continue;
+    }
+    const coveringLiveRow = liveRows.find((row) => backfillEpisodeCoveredByLiveEvent(event, row));
+    if (coveringLiveRow) {
+      logWorkerEvent({
+        scope: "api",
+        level: "info",
+        event: "backfill-depegs-episode-skipped",
+        message: `[backfill-depegs] ${meta.symbol}: recomputed ${event.direction} episode is already covered by live event ${coveringLiveRow.id}`,
+        metadata: {
+          stablecoinId: meta.id,
+          symbol: meta.symbol,
+          skipReason: "live-overlap",
+          episodeStartedAt: event.startedAt,
+          episodeEndedAt: event.endedAt,
+          liveEventId: coveringLiveRow.id,
+        },
+      });
+      continue;
+    }
+    kept.push(event);
+  }
+  return kept;
 }
 
 export async function executeBackfillForCoin(opts: {
@@ -167,10 +227,14 @@ export async function executeBackfillForCoin(opts: {
       coingeckoApiKey: coingeckoApiKey ?? null,
       missingSupplyUsd: currentSupplyUsd,
     });
-    const events = replay.events;
+    const existingRows = await loadExistingReplayRows(db, meta.id, replayWindow);
+    // Reviewed skip decisions run before the preview and the apply call so the
+    // dry-run diff, the run fingerprint, and the inserted rows all agree.
+    const events = replay.events === null
+      ? null
+      : skipCoveredBackfillEpisodes(meta, replay.events, existingRows.existingLiveRows);
 
     if (dryRun) {
-      const existingRows = await loadExistingReplayRows(db, meta.id, replayWindow);
       const preview = buildBackfillReplayPreview({
         meta,
         sourceKind: replay.sourceKind,
@@ -192,7 +256,6 @@ export async function executeBackfillForCoin(opts: {
 
     // Only replace backfill-sourced events; preserve live-cron-detected events
     // (live cron catches brief intraday depegs that daily backfill data misses).
-    const existingRows = await loadExistingReplayRows(db, meta.id, replayWindow);
     const preview = buildBackfillReplayPreview({
       meta,
       sourceKind: replay.sourceKind,

@@ -170,7 +170,13 @@ export const V9_LEGACY_RESPONSIBILITY_BY_REASON = {
   "missing-required-oracle-branches": "issuer-undisclosed",
   "missing-reserve-composition": "issuer-undisclosed",
   "missing-runtime-route-evidence": "producer-failed",
-  "missing-same-notional-route": "producer-failed",
+  // A gapless `missing-same-notional-route` is synthesized by the evaluator
+  // when the method withholds a route by design (no reviewed same-notional
+  // terms, unsizeable stress request) and no producer gap object exists — the
+  // same-run capacity read may have succeeded. Only an authored producer gap
+  // (non-null sourceGapId) may carry `producer-failed`; the gapless fallback
+  // is Pharos-side unreviewed-route evidence.
+  "missing-same-notional-route": "integration-missing",
   "unproven-settlement-bound": "producer-failed",
   "missing-upgrade-control": "issuer-undisclosed",
   "missing-upgradeability-review": "integration-missing",

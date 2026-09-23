@@ -206,6 +206,94 @@ describe("crawlTokenPools", () => {
     expect(priceObs.size).toBe(0);
   });
 
+  it("rejects pools carrying the provider broken-price signature before any price observation", async () => {
+    const newPools = new Map<string, GtNewPool[]>();
+    const priceObs = new Map();
+    await crawlTokenPools<RawPool, GtNewPool>({
+      sourceLabel: "test",
+      tokens: [{ sourceChain: "sophon", ourChain: "sophon", address: "0xusn", stablecoinId: "usn-noon" }],
+      chainAddressToId: new Map([["sophon:0xusn", "usn-noon"]]),
+      knownPoolAddrs: new Set(),
+      protocolTvlCaps: new Map(),
+      newPools,
+      priceObs,
+      fetchPools: async () => ({ rows: [{ id: "0xpool", tvlUsd: 324_992, price: 0.3323290599 }], complete: true, cappedAtMaxPages: false, failedAfterRows: null }),
+      parsePool: (pool) => ({
+        dexId: "syncswap-v3-sophon",
+        poolAddress: pool.id,
+        tvlUsd: pool.tvlUsd,
+        volume24hUsd: 0,
+        baseTokenAddress: "0xusdt",
+        quoteTokenAddress: "0xusn",
+        baseTokenPriceUsd: 0.3323456606,
+        quoteTokenPriceUsd: pool.price,
+        baseTokenPriceQuoteToken: null,
+        quoteTokenPriceBaseToken: null,
+        baseTokenPriceNativeCurrency: null,
+        quoteTokenPriceNativeCurrency: null,
+        createdAt: "2025-05-29T11:33:16Z",
+        poolName: "USDT / USN 0.04%",
+      }),
+      buildNewPool: () => {
+        throw new Error("should not build");
+      },
+    });
+
+    expect(newPools.size).toBe(0);
+    expect(priceObs.size).toBe(0);
+  });
+
+  it("admits a coherent quiet pool with zero volume and takes its price observation", async () => {
+    const newPools = new Map<string, GtNewPool[]>();
+    const priceObs = new Map();
+    await crawlTokenPools<RawPool, GtNewPool>({
+      sourceLabel: "test",
+      tokens: [{ sourceChain: "zksync", ourChain: "zksync", address: "0xusn", stablecoinId: "test" }],
+      chainAddressToId: new Map([["zksync:0xusn", "test"]]),
+      knownPoolAddrs: new Set(),
+      protocolTvlCaps: new Map(),
+      newPools,
+      priceObs,
+      fetchPools: async () => ({ rows: [{ id: "0xpool", tvlUsd: 52_313, price: 1.0018122159 }], complete: true, cappedAtMaxPages: false, failedAfterRows: null }),
+      parsePool: (pool) => ({
+        dexId: "syncswap-v3-zksync",
+        poolAddress: pool.id,
+        tvlUsd: pool.tvlUsd,
+        volume24hUsd: 0,
+        baseTokenAddress: "0xusn",
+        quoteTokenAddress: "0xusdc",
+        baseTokenPriceUsd: pool.price,
+        quoteTokenPriceUsd: 1.0016693845,
+        baseTokenPriceQuoteToken: 1.0005451588,
+        quoteTokenPriceBaseToken: 0.9994551383,
+        baseTokenPriceNativeCurrency: 0.000401420873955884,
+        quoteTokenPriceNativeCurrency: 0.000401202155087959,
+        createdAt: "2025-01-01T00:00:00Z",
+        poolName: "USN / USDC",
+      }),
+      buildNewPool: ({ price }) => ({
+        address: "0xpool",
+        project: "syncswap-v3-zksync",
+        chain: "zksync",
+        dexId: "syncswap-v3-zksync",
+        name: "USN / USDC",
+        symbol: "USN / USDC",
+        tvlUsd: 52_313,
+        volume24hUsd: 0,
+        qualityMultiplier: 1,
+        maturityDays: 1,
+        price,
+        poolType: "gt-concentrated",
+        sourceFamily: "gecko_terminal",
+      }),
+    });
+
+    expect(newPools.get("test")).toHaveLength(1);
+    expect(priceObs.get("test")).toEqual([
+      { price: 1.0018122159, tvl: 52_313, chain: "zksync", protocol: "syncswap-v3-zksync" },
+    ]);
+  });
+
   it("does not collapse case-distinct non-EVM token identities", async () => {
     const pair = {
       baseToken: { address: "MintCase" },

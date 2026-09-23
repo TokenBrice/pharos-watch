@@ -18,6 +18,7 @@ import {
   REVIEWED_REMEDIATION_AT,
   REVIEWED_STABLECOIN_AUDIT_AT,
   REVIEWED_WRAPPER_WAVE_AT,
+  REVIEWED_SUSN_WITHDRAWAL_RAIL_AT,
   REVIEWED_YIELD_COVERAGE_WAVE_AT,
 } from "../review-dates";
 import {
@@ -32,6 +33,7 @@ const SOURCE_FILE_PATH = "shared/lib/redemption-backstop-configs/stablecoin-rede
 const REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT = "2026-07-19";
 const REVIEWED_ZCHF_BRIDGE_AT = "2026-05-25";
 const REVIEWED_FXSAVE_LIVE_REDEMPTION_AT = "2026-05-27";
+const REVIEWED_NOON_USN_TERMS_AT = "2026-09-22";
 
 const RESERVOIR_REDEEM_CONFIGS = defineConfigFamily(
   [
@@ -507,11 +509,25 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     outputAssetType: "stable-basket",
     outputAssets: ["usdc-circle", "usdt-tether"],
     accessModel: "whitelisted-onchain",
+    settlementModel: "days",
+    executionModel: "rules-based-nav",
     capacityModel: { kind: "supply-ratio", ratio: 0.15, confidence: "heuristic" },
     costModel: undisclosedReviewedFee(
-      "Noon documents 1:1 minting and redemption for approved users, but does not publish a fixed redemption fee",
+      "Noon's fees page states the dApp charges no fees, but the binding USN Terms of Service Section 7 reserve the right to charge minting and redemption fees with current fees 'published on the Website' — no fee schedule is published today and any increase takes effect no sooner than 14 days after publication, while Sections 2 and 6 pay redemptions 'less any applicable fees (including applicable swap fees)'",
     ),
-    reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
+    reviewedAt: REVIEWED_NOON_USN_TERMS_AT,
+    v9RouteReviewTerms: {
+      settlementModel: "days",
+      settlementDelaySec: 604_800,
+      reviewedAt: REVIEWED_NOON_USN_TERMS_AT,
+      docs: [
+        sourceRef(
+          "Noon USN Terms of Service",
+          "https://docs.noon.capital/additional-resources/terms-and-policies/asset-terms-usn-terms-of-service",
+          ["route", "settlement"],
+        ),
+      ],
+    },
     docs: [
       sourceRefRouteCapacity(
         "Noon USN documentation",
@@ -522,10 +538,27 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
         "access",
       ]),
       sourceRef("Noon Accountable dashboard", "https://noon.accountable.capital/", ["capacity"]),
+      sourceRef(
+        "Noon USN Terms of Service",
+        "https://docs.noon.capital/additional-resources/terms-and-policies/asset-terms-usn-terms-of-service",
+        ["route", "access", "fees", "settlement"],
+      ),
+      sourceRef(
+        "Noon fees and other charges",
+        "https://docs.noon.capital/built-for-high-yields/fees-and-other-charges",
+        ["fees"],
+      ),
+      sourceRef("Noon liquidity", "https://docs.noon.capital/noon-the-basics/liquidity", [
+        "route",
+        "capacity",
+        "settlement",
+      ]),
     ],
     notes: [
-      "Direct mint and redemption are reserved for approved primary-market users; current model does not treat Noon strategy collateral as a separately measured instant stablecoin buffer",
-      "Because USN relies on delta-neutral exchange strategies rather than a pure cash-equivalent reserve bucket, the reviewed route keeps a conservative 15% immediate-capacity bound instead of scoring against full supply",
+      "Direct mint and redemption are issuer-processed off-chain through the Company's designated interface for KYC-verified users only: ToS Section 6 commits to 1:1 redemption less applicable fees within five Business Days while reserving the right to delay redemptions, Section 29 reserves absolute and unfettered discretion to gate redemptions, and a submitted redemption request is unsecured debt owed by the Company",
+      "The reviewed reserve mix is majority Fasanara FTAC private credit with a three-month redemption window (61.9% of the 2026-09-22 Accountable attestation), with delta-neutral funding-rate arbitrage a listed ToS Section 5 reserve category but a 13.40% minority slice ($5.37M HYPE book), so the reviewed route keeps a conservative 15% immediate-capacity bound instead of scoring against full supply",
+      "Noon's published liquidity waterfall (20% of TVL same-day, 60% at T+3, 100% at T+5) is non-binding: it is stated in calendar days against the ToS Business-Day SLA and rests on an undisclosed multi-party PLMS facility, so it is not credited as settlement or capacity evidence",
+      "The published collateral wallets are not read as live capacity: their balances are transient ($3.05M of USDC/USDT at the cited 2026-09-14 block fell to $0.57M by 2026-09-22), one listed wallet is a plain EOA ops account, and they do not reconcile with Accountable's Undeployed bucket",
     ],
   }),
   "aid-gaib": defineReviewedStablecoinRedeemConfig(REVIEWED_DIRECT_REDEMPTION_AT, {
@@ -962,26 +995,44 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   }),
   "susn-noon": erc4626InstantConfig({
     symbol: "USN",
-    reviewedAt: REVIEWED_YIELD_COVERAGE_WAVE_AT,
+    reviewedAt: REVIEWED_SUSN_WITHDRAWAL_RAIL_AT,
     accessModel: "whitelisted-onchain",
+    settlementModel: "days",
     totalScoreCap: 65,
     feeDescription:
-      "Noon docs state Noon does not charge fees or other dApp charges; sUSN unstaking exits to USN subject to cooldown and gas.",
+      "Noon docs state Noon does not charge fees or other dApp charges; sUSN unstaking exits to USN through the withdrawal-handler request/claim rail with no protocol fee (gas only).",
     docs: [
       sourceRefFull("Noon USN and sUSN", "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn"),
       sourceRef(
         "Noon minting and redemption",
         "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/minting-and-redemption",
-        ["route", "access"],
+        ["route", "access", "settlement"],
       ),
       sourceRef(
         "Noon fees and other charges",
         "https://docs.noon.capital/built-for-high-yields/fees-and-other-charges",
         ["fees"],
       ),
+      sourceRef(
+        "sUSN staking vault (Ethereum)",
+        "https://etherscan.io/address/0xE24a3DC889621612422A64E6388927901608B91D#readContract",
+        ["route", "capacity"],
+      ),
+      sourceRef(
+        "Noon WithdrawalHandler (Ethereum)",
+        "https://etherscan.io/address/0x0DaBc0D9B270c9B0C4C77AaCeAa712b56D0F9178#readContract",
+        ["route", "settlement"],
+      ),
+      sourceRef(
+        "WithdrawalHandler admin timelock (Ethereum)",
+        "https://etherscan.io/address/0x36857EF0B10A61A68d58C29eE256990fa9699722#readContract",
+        ["settlement"],
+      ),
     ],
     notes: [
-      "Fresh ERC-4626 reserve telemetry reads the vault's idle USN balance as current direct wrapper capacity; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
+      "Exits run a holder-initiated request/claim rail with no operator step: a withdraw moves USN to the WithdrawalHandler with a timestamp in the same transaction, and claimWithdrawal pays after the handler's on-chain withdrawPeriod (604,800 seconds today, live-read each run by the redemption observer).",
+      "withdrawPeriod is changeable only through the 48-hour GenericTimelock that admins the handler, but the value is unbounded and a change applies retroactively to requests already in flight; ten whitelisted addresses keep a one-transaction instant path.",
+      "Capacity is the vault's measured idle USN read on-chain each run (100% of totalAssets as of the 2026-09-22 review), combined with the 7-day settlement bound; if the live snapshot is unavailable, the route is left unrated instead of using a prior model.",
     ],
   }),
   "usdcx-movement": defineReviewedStablecoinRedeemConfig(REVIEWED_STABLECOIN_AUDIT_AT, {

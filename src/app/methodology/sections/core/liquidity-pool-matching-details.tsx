@@ -13,7 +13,11 @@ export function LiquidityPoolMatchingDetails() {
           Discovery coverage is less page-fragile now: CoinGecko Onchain and GeckoTerminal token crawls read multiple
           bounded pages, and fallback enrichment can activate for weak partial coverage instead of waiting for a strict
           zero-pool outcome. Secondary discovery rows with non-finite, negative, or impossible pool TVL are rejected
-          before staging and skipped again at scoring merge time if stale bad data is already present.
+          before staging and skipped again at scoring merge time if stale bad data is already present. CoinGecko Onchain
+          and GeckoTerminal pair rows must also pass the pair-price coherence gate: the tracked leg&apos;s USD price must
+          agree with the pool&apos;s own pair ratio × the counter-leg&apos;s USD price, and a provider row that publishes leg
+          USD prices with null or zero pair-ratio inputs is rejected before it stages any TVL or price evidence. Zero
+          volume and zero transactions never reject a pool on their own, so quiet pools remain eligible.
         </p>
         <p>
           Stellar classic-AMM discovery uses Horizon with exact, case-preserving <code>CODE:ISSUER</code> identities.

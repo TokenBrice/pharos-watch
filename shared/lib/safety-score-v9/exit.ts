@@ -404,7 +404,8 @@ function routeExclusionReason(route: V9ExitEvaluationRoute, envelope: V9Validate
   // even when its reviewed scoring terms are incomplete. The V9 adapter marks
   // that bounded-gap disposition diagnostic while preserving its modeled
   // capacity curve. Classify the absent scoreable terms as Pharos-side missing
-  // same-notional evidence (globally bounded / producer-failed), not as an
+  // same-notional evidence (globally bounded; `integration-missing` unless an
+  // authored producer gap carries `producer-failed`), not as an
   // unsupported method or an adverse issuer fact.
   if (
     route.lane === "redemption" &&

@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { CLIENT_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
+import { FROZEN_SNAPSHOTS_BY_ID } from "@shared/lib/stablecoins/frozen-snapshots";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { getStaticComparisonPagesForCoin } from "@/lib/compare-pages";
@@ -31,6 +32,7 @@ import { buildMechanismCollateralizationView } from "@/lib/mechanism-collaterali
 import { buildMechanismReviewView } from "@/lib/mechanism-review";
 import { buildTransferReviewView } from "@/lib/transfer-review";
 import type { StablecoinDetailSnapshot } from "@/lib/api";
+import { projectFrozenSnapshotLiveSummary } from "@/lib/api-query-descriptors";
 import type { StablecoinAiSummariesById } from "@shared/types";
 
 const typedSummaries = aiSummaries as StablecoinAiSummariesById;
@@ -260,6 +262,10 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
   });
   const clientCoin = buildStablecoinDetailClientCoin(coin, { parentById: TRACKED_META_BY_ID });
   const detailSnapshot = readDetailSnapshot(id);
+  // Frozen coins never refresh provider detail, so their archived list row backs the hero
+  // whenever the live detail row is unavailable.
+  const frozenSnapshot = coin.status === "frozen" ? FROZEN_SNAPSHOTS_BY_ID.get(id) : undefined;
+  const archivedLiveSummary = frozenSnapshot ? projectFrozenSnapshotLiveSummary(frozenSnapshot) : null;
   const structuredDataDateModified = summary?.updatedAt ?? coin.frozenAt;
   // Keep the FAQ visible and its FAQPage JSON-LD attached to the hydrated
   // dossier without placing it ahead of the primary coin identity.
@@ -317,6 +323,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
           }
           faqContent={faqContent}
           snapshot={detailSnapshot}
+          archivedLiveSummary={archivedLiveSummary}
         />
       </Suspense>
       <BreadcrumbJsonLd

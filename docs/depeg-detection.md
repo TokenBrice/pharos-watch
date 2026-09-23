@@ -6,7 +6,7 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 (detection) runs eve
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.24`<!-- GENERATED-END: methodology-version-depeg-detection -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.25`<!-- GENERATED-END: methodology-version-depeg-detection -->
 - **Runtime/version source:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/depeg-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/depeg-dews/`
@@ -359,6 +359,13 @@ Historical backfills in `worker/src/api/backfill-depegs.ts` do **not** reuse the
 
 Backfill rewrites delete prior `source='backfill'` rows even when a trusted replay finds zero replacement events. Dry-runs preview that same removal scope through `removedBackfillEventCount`. For non-empty replacements, the delete and first insert chunk share one D1 `batch()` call (up to the D1 100-statement batch limit: delete + 99 inserts). Additional inserts are written in later chunks, so large replacements are bounded and restartable but not a single all-rows transaction.
 
+Replay now drops recomputed episodes that reviewed data or an existing live row already covers, inside `executeBackfillForCoin` (`worker/src/api/backfill-depegs/execution.ts`; overlap predicate `backfillEpisodeCoveredByLiveEvent` in `worker/src/api/backfill-depegs-window.ts`):
+
+- **Reviewed suppression.** An episode whose inclusive `[startedAt, endedAt]` interval overlaps a matching registry entry for the same coin and direction is skipped.
+- **Live overlap.** An episode that overlaps an existing `source='live'` row of the same coin and direction (`episodeStart <= liveEnd && liveStart <= episodeEnd`, inclusive; an open row collapses to its start second) is skipped. Live detection polls at minute cadence while replay consumes hourly samples, so same-side overlapping windows are one market episode counted twice; intervals one second apart are disjoint.
+
+Both rules run before the dry-run/apply split, so the preview, `expectedEventCount`/`expectedFingerprint`, and the inserted rows stay mutually consistent. Each skip logs a `backfill-depegs-episode-skipped` event with `skipReason: reviewed-suppression` or `live-overlap`. Neither rule deletes anything by itself: the replayed window's delete still removes stale `source='backfill'` rows, live rows are never removed by replay, and the skip only prevents the twin from being re-inserted. A read-only production dry-run of the live-overlap rule found 85 overlapping live/backfill pairs across 52 distinct backfill rows on 21 coins.
+
 Mutating backfills now persist replay-run status and event provenance. Backfilled rows receive replay version, provider roster, quote mode, peg-reference source, supply source, confirmation policy, confidence tier, and compact public provenance. Existing rows without provenance are still accepted by API mappers and PegScore.
 
 When DefiLlama historical supply is absent, replay applies the live `$1M` event floor using the current stablecoins-cache supply for that asset. If neither historical nor current supply is available, the backfill preserves existing rows instead of silently replaying market prices without a supply floor. The same fallback supply also controls large-cap confirmation behavior for absent-history assets.
@@ -377,6 +384,29 @@ Instead, `extractDepegEvents()` now validates each price point in `historical_ba
 - commodity tokens use `commodityOunces` when converting the historical gold/silver peg reference into per-token units
 
 This keeps confirmed historical crashes visible without weakening the stricter live-source filters used to protect sync and DEX ingestion.
+
+### Reviewed replay suppression registry
+
+`shared/data/depegs/backfill-replay-suppressions.ts` records operator verdicts that a recomputed backfill episode is a price-feed artifact rather than a market depeg. It is what keeps a reviewed artifact deletion durable: without it, the next admin replay would delete and recompute the same window and re-persist the artifact.
+
+| Field | Type | Meaning |
+| ----- | ---- | ------- |
+| `coinId` | `string` | Tracked stablecoin id (validated against `shared/data/stablecoins/canonical-order.json`) |
+| `direction` | `"above" \| "below"` | Depeg side the verdict applies to (shared `DepegDirectionSchema` vocabulary) |
+| `windowStart` / `windowEnd` | `number` | Inclusive UTC window bounds in Unix seconds; `windowStart < windowEnd` |
+| `reason` | `string` | The reviewed verdict, stated as the artifact conclusion |
+| `evidenceUrls` | `string[]` | Primary forensics (on-chain transaction links, price-feed pages); `https` only |
+| `reviewedAt` | `string` | Review date, `YYYY-MM-DD` |
+
+Matching is inclusive interval overlap between the recomputed episode `[startedAt, endedAt ?? startedAt]` and the entry window, scoped to `(coinId, direction)`.
+
+The module validates the corpus at import time and fails closed. `shared/data/depegs/__tests__/backfill-replay-suppressions.test.ts` additionally guards tracked coin ids, the shared direction vocabulary, ordered integer windows, `https` evidence URLs, `YYYY-MM-DD` review dates, non-overlapping same-coin/same-direction windows, and the behavioral contract of the seeded USN windows.
+
+To add an entry: establish from primary evidence that the stored episode is an artifact (no economic-size on-chain trade, pool mids at peg), set the window to the union of the stored episode and its dust/recovery transactions plus a ±2h margin (hourly CoinGecko samples move episode edges by up to an hour), cite the evidence URLs with the review date, then re-run the integrity suite. Add the entry **before** deleting the matching `source='backfill'` rows, so a later replay cannot re-persist them. The seeded entries are the four `usn-noon` `above` windows for 2025-10-07, 2025-12-27/28, 2026-02-14, and 2026-03-02, where on-chain forensics found no economic-size USN trade above 1.0011 and pool mids stayed near $1.000.
+
+### Operator runbook
+
+Artifact-event removal is an operator procedure with a hard ordering constraint: the registry and the live-overlap skip must be deployed before the delete, and the review previews with `GET /api/audit-depeg-history?dry-run=true` before `POST /api/audit-depeg-history?delete=<ids>` and `npm run sync-depeg-events -- --allow-archive-shrink`. The full sequence, the reviewed Noon USN id set (`49235,49236,49237,24424,83782`), and the registry-entry steps live in [Depeg Artifact-Event Removal](./runbooks/depeg-artifact-removal.md).
 
 ## Event Lifecycle
 
@@ -517,7 +547,7 @@ Cache: producer-backed profile (`s-maxage=300`, `max-age=60`, `stale-while-reval
 - TanStack Query: `staleTime` = 15 min, `refetchInterval` = 30 min
 - Pages through `/api/depeg-events?limit=100&cursor=...`, advancing via the response `nextCursor`; oversized `limit` values are rejected rather than silently clamped
 - `/depeg` uses the unfiltered infinite hook for the global recent-events feed
-- `/depeg/<event>/` static pages form a grow-only permanent archive: every confirmed event starting at or after the archive epoch (2026-01-01, `DEPEG_ARCHIVE_EPOCH_SECONDS`) with an absolute peak deviation at or above the 5.0% static-page threshold keeps its page permanently, plus pinned authored incidents such as USDC 2023 from before the epoch. Published event URLs never become unhandled 404s (the former 12-newest recency window churned already-ranked pages to 404). `sync-depeg-events.ts` carries previously published static rows forward when a live reclassification would drop them below the page threshold, then verifies that no archived slug disappeared; an operator must explicitly supply the reviewed `--allow-archive-shrink` override for an intentional removal. The release SEO gate separately compares the new build with the currently deployed sitemap, covering refresh-only routes that have not reached the checked-in snapshot: each deployed event must remain submitted or receive a direct 301 to its surviving submitted incident when the resolver consolidates fragments. The full event table remains available through the API, live tracker, stablecoin detail history, and feeds; sub-threshold feed entries link back to the relevant stablecoin history anchor instead of consuming Cloudflare Pages files.
+- `/depeg/<event>/` static pages form a grow-only permanent archive: every confirmed event starting at or after the archive epoch (2026-01-01, `DEPEG_ARCHIVE_EPOCH_SECONDS`) with an absolute peak deviation at or above the 5.0% static-page threshold keeps its page permanently, plus pinned authored incidents such as USDC 2023 from before the epoch. Published event URLs never become unhandled 404s (the former 12-newest recency window churned already-ranked pages to 404). `sync-depeg-events.ts` carries previously published static rows forward when a live reclassification would drop them below the page threshold, then verifies that no archived slug disappeared; an operator must explicitly supply the reviewed `--allow-archive-shrink` override for an intentional removal. The release SEO gate separately compares the new build with the currently deployed sitemap, covering refresh-only routes that have not reached the checked-in snapshot: each deployed event must remain submitted or receive a direct 301 to its surviving submitted incident when the resolver consolidates fragments. A reviewed artifact removal is the other sanctioned shrink path: `sync-depeg-events --allow-archive-shrink` retires the rows and `public/_redirects` supplies the one-hop 301s, so a published `/depeg/<slug>/` URL never 404s (the three retired Noon USN slugs redirect to `/stablecoin/usn-noon/`; see the operator runbook above). The full event table remains available through the API, live tracker, stablecoin detail history, and feeds; sub-threshold feed entries link back to the relevant stablecoin history anchor instead of consuming Cloudflare Pages files.
 - When multiple static events share the same stablecoin, UTC date, and direction, their detail pages add the precise UTC start time to metadata, H1, event metrics, and adjacent navigation. They also render a factual time/deviation/duration/recovery synopsis and use the canonical URL as the `NewsArticle.@id`, preventing materially separate observations from presenting as identical search documents.
 - Stablecoin detail pages use the filtered infinite hook with `autoLoadAll` so the hero can read the full recorded-event `total` while the history table hydrates every page in the background
 

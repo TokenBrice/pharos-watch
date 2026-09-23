@@ -4,6 +4,7 @@ import { DATA_SURFACE_DESCRIPTORS, type YieldHistoryMode } from "@shared/lib/dat
 import type { ChainsResponse } from "@shared/types/chains";
 import { PriceConfidenceSchema, PriceObservedAtModeSchema } from "@shared/types/core";
 import { StablecoinDetailResponseSchema, type StablecoinDetailResponse } from "@shared/types/market";
+import type { FrozenSnapshot } from "@shared/lib/stablecoins/frozen-snapshots";
 import type { DdrResponse } from "@shared/types/depeg-resolver";
 import type { DdrrResponse } from "@shared/types/depeg-resolver-review";
 import type { DailyDigestResponse, DigestArchiveResponse, DigestSnapshotResponse } from "@shared/types/digest";
@@ -143,6 +144,32 @@ export function projectStablecoinLiveSummary(detail: StablecoinDetailResponse): 
     circulatingPrevWeek: latestDate == null ? {} : detailBucketsAt(detail, latestDate - 7 * 86_400),
     circulatingPrevMonth: latestDate == null ? {} : detailBucketsAt(detail, latestDate - 30 * 86_400),
   });
+}
+
+/**
+ * Project a frozen coin's archived list row (captured at freeze time) into the same compact
+ * summary. Supply is observed at `capturedAt`; a row that no longer satisfies the summary
+ * schema yields `null` so the page keeps its live-query behavior instead of inventing fields.
+ */
+export function projectFrozenSnapshotLiveSummary(snapshot: FrozenSnapshot): StablecoinLiveSummary | null {
+  const row = snapshot.peggedAssetRow;
+  const parsed = StablecoinLiveSummarySchema.safeParse({
+    price: row.price ?? null,
+    priceSource: row.priceSource ?? null,
+    priceConfidence: row.priceConfidence ?? null,
+    priceUpdatedAt: row.priceUpdatedAt ?? null,
+    priceObservedAt: row.priceObservedAt ?? row.priceUpdatedAt ?? null,
+    priceObservedAtMode: row.priceObservedAtMode,
+    priceSyncedAt: row.priceSyncedAt,
+    consensusSources: row.consensusSources,
+    agreeSources: row.agreeSources,
+    supplyObservedAt: Math.floor(Date.parse(snapshot.capturedAt) / 1000),
+    circulating: row.circulating,
+    circulatingPrevDay: row.circulatingPrevDay,
+    circulatingPrevWeek: row.circulatingPrevWeek,
+    circulatingPrevMonth: row.circulatingPrevMonth,
+  });
+  return parsed.success ? parsed.data : null;
 }
 
 const StablecoinLiveSummaryResponseSchema = StablecoinDetailResponseSchema.transform(

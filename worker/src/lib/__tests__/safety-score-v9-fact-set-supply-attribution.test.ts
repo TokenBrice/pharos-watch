@@ -563,6 +563,58 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     }
   });
 
+  it("publishes an aggregate-only circulating quantity that intake never partitioned, and still bounds a broken producer promise", () => {
+    // sUSN shape: a reviewed multi-route bridge profile, an admitted aggregate
+    // circulating figure, and no per-chain rows at all — so no route join ever
+    // ran and none failed. The quantity is published and the exit pillar sizes
+    // a stress request from it instead of returning its bounded floor.
+    const aggregateOnly = exactFixedInput({
+      chainSupplyByChain: {},
+      aggregateCirculating: { peggedUSD: 35_596_469.1 },
+    });
+    const unpartitioned = compileSafetyScoreV9FactSetFromFixedInput(
+      aggregateOnly,
+      nullSupplyReviewExtension({ bridge: "required" }),
+    );
+    const unpartitionedAlpha = unpartitioned.assets[0]!;
+    expect(unpartitionedAlpha.supply.status).toMatchObject({
+      observationState: "known",
+      evidenceRefIds: ["alpha:aggregate-supply"],
+    });
+    expect(unpartitionedAlpha.supply.circulatingUsd).toBeCloseTo(35_596_469.1, 6);
+    expect(unpartitionedAlpha.supply.selectedBridgeRoutes).toEqual([]);
+    expect(unpartitionedAlpha.evidence).not.toContainEqual(
+      expect.objectContaining({ evidenceId: "alpha:supply-review-outcome" }),
+    );
+    expect(unpartitionedAlpha.gaps).not.toContainEqual(
+      expect.objectContaining({ reasonCode: "runtime-bridge-materiality-unavailable" }),
+    );
+    expect(
+      evaluateV9FactSet(unpartitioned, V9_CANDIDATE_POLICY_V1)
+        .assets[0]!.scoreInput.pillars.exit.reasons.map((reason) => reason.code),
+    ).not.toContain("missing-same-notional-route");
+
+    // A producer that owed a measured partition and did not deliver one still
+    // fails closed, because its aggregate was never meant to stand alone.
+    const { wm } = compileWm(wmFixedInput());
+    expect(wm.supply.status.observationState).toBe("bounded-unknown");
+    expect(wm.gaps).toContainEqual(expect.objectContaining({
+      reasonCode: "runtime-bridge-materiality-unavailable",
+      responsibility: "producer-failed",
+    }));
+
+    // A join that did run over real per-chain rows and failed also stays bounded.
+    const joinedAlpha = compileSafetyScoreV9FactSetFromFixedInput(
+      exactFixedInput(),
+      nullSupplyReviewExtension({ bridge: "required" }),
+    ).assets[0]!;
+    expect(joinedAlpha.supply.status.observationState).toBe("bounded-unknown");
+    expect(joinedAlpha.evidence).toContainEqual(expect.objectContaining({
+      evidenceId: "alpha:supply-review-outcome",
+      rejection: expect.objectContaining({ code: "supply-review.ambiguous-route-join" }),
+    }));
+  });
+
   it("keeps a null supply review known when bridge applicability is explicitly not applicable", () => {
     const fixed = exactFixedInput();
     const alpha = compileSafetyScoreV9FactSetFromFixedInput(

@@ -12,6 +12,7 @@ import { RATE_LIMITS } from "../../lib/rate-limit";
 import { classifyCgPool, parseCgPool } from "../dex-liquidity/coingecko-onchain-shared";
 import { normalizeProtocol } from "../dex-liquidity/pool-normalization";
 import { isPlausibleDexObservationPrice } from "../dex-liquidity/price-sanity";
+import { createPoolPriceCoherenceAdmissionGate } from "../dex-liquidity/pool-price-coherence";
 import { buildChainAddressKey } from "../dex-liquidity/token-resolution";
 import { DISCOVERY_STAGE_TIMEOUT_MS, type CrawlStageContext, toStagedPool } from "./staged-pool";
 import { makeDexDeploymentProviderCheck, type DexDeploymentProviderCheck } from "./types";
@@ -110,6 +111,7 @@ export async function crawlCoinGeckoPoolsStage({
   const priceObservationTargets = new Set<string>();
   const unresolvedChains: string[] = [];
   const apiKey = cgApiKey?.trim() ? cgApiKey : null;
+  const coherenceRejections = createPoolPriceCoherenceAdmissionGate("dex-discovery", "CG onchain");
   const providerChecks: CoinGeckoProviderCheck[] = [];
 
   if (!apiKey) {
@@ -191,10 +193,12 @@ export async function crawlCoinGeckoPoolsStage({
               ? "quote"
               : null;
         if (!side) continue;
-
         const priceRaw = side === "base" ? parsed.baseTokenPriceUsd : parsed.quoteTokenPriceUsd;
         const tvlUsd = parsed.tvlUsd;
         if (!Number.isFinite(tvlUsd) || tvlUsd < 1_000) continue;
+
+        if (!coherenceRejections.admits(side, parsed)) continue;
+
         const hasUsablePrice = Number.isFinite(priceRaw) && priceRaw > 0;
         if (hasUsablePrice && !isPlausibleDexObservationPrice(context.stablecoinId, priceRaw, context.references)) {
           continue;
@@ -202,7 +206,6 @@ export async function crawlCoinGeckoPoolsStage({
 
         const volume24h = parsed.volume24hUsd;
         if (tvlUsd > 0 && volume24h / tvlUsd > 50) continue;
-
         const { qualityMultiplier, poolType, feePercentage, lockedLiquidityPct, balanceRatio } = classifyCgPool(
           parsed,
           pool.attributes,
@@ -260,6 +263,8 @@ export async function crawlCoinGeckoPoolsStage({
       await dependencies.recordOutcome(db, CIRCUIT_SOURCE.CG_ONCHAIN, classification.retryable !== true);
     }
   }
+
+  coherenceRejections.flush();
 
   return { priceObservationTargets, unresolvedChains, stoppedEarly: false, providerChecks };
 }

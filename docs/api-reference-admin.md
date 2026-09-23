@@ -1079,6 +1079,29 @@ The same endpoint also supports dry-run historical repair previews:
 - `repair=synthetic-splits` surfaces adjacent same-direction events that were likely split either by the old DEX-only auto-close behavior or by a backfill-to-live handoff where historical replay expired mid-ongoing depeg
 - `repair=contradictory-recovery-price` surfaces ended events whose stored `recovery_price` is still outside the allowed depeg threshold and should be nulled
 
+The CoinGecko-backed audit (the default mode) reads CoinGecko through the configured `COINGECKO_API_KEY` binding: requests go to the pro-api host (`https://pro-api.coingecko.com/api/v3/...`) with the `x-cg-pro-api-key` header, at 200 ms start spacing and concurrency 4. When the binding is unset, no upstream request is attempted and the endpoint still returns `200` with `upstreamErrorReason: "coingecko_api_key_missing"`, `upstreamReachable: false`, every inspected event carrying `verdict: "error"`, and no provenance persisted. The delete and repair modes never contact CoinGecko and do not need the key.
+
+```json
+{
+  "totalMatching": 5,
+  "offset": 0,
+  "limit": 25,
+  "dryRun": true,
+  "auditedEvents": [
+    { "id": 49235, "symbol": "USN", "startedAt": 1759849487, "verdict": "error" }
+  ],
+  "falsePositivesFound": 0,
+  "deletedEvents": [],
+  "daysRecomputed": 0,
+  "rejectedByValidationCount": 0,
+  "upstreamErrorCount": 5,
+  "upstreamReachable": false,
+  "upstreamErrorReason": "coingecko_api_key_missing"
+}
+```
+
+The audit can only rule on episodes whose stored move CoinGecko's own history does not reproduce, so a CoinGecko-derived price-feed artifact looks `confirmed` to it by construction. Removing those artifacts is a reviewed operator decision recorded in the backfill replay-suppression registry, not an audit verdict — see [Depeg Artifact-Event Removal](./runbooks/depeg-artifact-removal.md).
+
 **Query parameters**
 
 | Param        | Type                                                   | Default  | Description                                                                                                                 |
@@ -1092,7 +1115,7 @@ The same endpoint also supports dry-run historical repair previews:
 
 ### `POST /api/audit-depeg-history`
 
-Audits existing depeg events against CoinGecko historical price data to detect false positives.
+Audits existing depeg events against CoinGecko historical price data to detect false positives. The CoinGecko pass uses the same keyed path as the dry-run (`COINGECKO_API_KEY` binding, `pro-api` host, `x-cg-pro-api-key` header); without that binding the run returns `200` with `upstreamErrorReason: "coingecko_api_key_missing"`, `upstreamReachable: false`, and per-event `verdict: "error"`, and persists no provenance. `?delete=<ids>` and both `repair=` modes skip the CoinGecko audit and do not need the key.
 
 `POST /api/audit-depeg-history?repair=synthetic-splits` instead runs a historical repair pass that consolidates adjacent same-direction events when either:
 

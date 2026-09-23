@@ -547,6 +547,7 @@ describe("handleAuditDepegHistory method safety", () => {
       offset: 0,
       limit: 10,
       dryRun: true,
+      coingeckoApiKey: "cg-test-key",
     });
 
     expect(result.deletedEvents).toHaveLength(0);
@@ -607,6 +608,7 @@ describe("handleAuditDepegHistory method safety", () => {
       offset: 0,
       limit: 10,
       dryRun: true,
+      coingeckoApiKey: "cg-test-key",
     });
 
     expect(result.totalMatching).toBe(1);
@@ -649,7 +651,7 @@ describe("handleAuditDepegHistory method safety", () => {
       method: "POST",
     });
 
-    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
+    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req, coingeckoApiKey: "cg-test-key" });
     const body = (await readJsonResponse(res, 409)) as { operation: string; conflicts: Array<{ eventId: number }> };
     expect(body.operation).toBe("audit-depeg-history:provenance-invalidation");
     expect(body.conflicts).toEqual([expect.objectContaining({ eventId: 45 })]);
@@ -676,6 +678,7 @@ describe("handleAuditDepegHistory method safety", () => {
       offset: 0,
       limit: 10,
       dryRun: true,
+      coingeckoApiKey: "cg-test-key",
     });
 
     expect(result.auditedEvents[0]).toMatchObject({
@@ -713,6 +716,7 @@ describe("handleAuditDepegHistory method safety", () => {
       offset: 0,
       limit: 10,
       dryRun: false,
+      coingeckoApiKey: "cg-test-key",
     });
 
     expect(result.auditedEvents[0]?.verdict).toBe("no_data");
@@ -752,12 +756,37 @@ describe("handleAuditDepegHistory method safety", () => {
       offset: 0,
       limit: 10,
       dryRun: false,
+      coingeckoApiKey: "cg-test-key",
     });
 
     expect(result.upstreamErrorCount).toBe(2);
     expect(result.upstreamReachable).toBe(false);
     expect(result.auditedEvents.every((e) => e.verdict === "error")).toBe(true);
     expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO depeg_event_provenance"))).toBe(false);
+  });
+
+  it("reports a machine-readable upstream error reason when the CoinGecko key binding is unset", async () => {
+    fetchWithRetryMock.mockReset();
+    const event = makeAuditEvent({
+      id: 63, direction: "below", source: "live",
+      peak_deviation_bps: -150, start_price: 0.985, peak_price: 0.985,
+    });
+    const db = mockD1([
+      { match: "FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at", rows: [event] },
+    ]) as MockD1Database;
+    const req = makeApiRequest("/api/audit-depeg-history?dry-run=true", { adminKey: "secret" });
+
+    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
+    const body = (await readJsonResponse(res, 200)) as {
+      upstreamErrorReason?: string;
+      upstreamReachable: boolean;
+      auditedEvents: Array<{ verdict: string }>;
+    };
+
+    expect(fetchWithRetryMock).not.toHaveBeenCalled();
+    expect(body.upstreamErrorReason).toBe("coingecko_api_key_missing");
+    expect(body.upstreamReachable).toBe(false);
+    expect(body.auditedEvents.every((e) => e.verdict === "error")).toBe(true);
   });
 });
 
@@ -767,7 +796,7 @@ it("skips recycled Solomon provider history without fetching or invalidating eit
   const events = ["usdv-solomon", "usdv-solomon-v2"].map((stablecoin_id, index) => makeAuditEvent({
     id: 90 + index, stablecoin_id, symbol: "USDV",
   }));
-  const result = await runCoinGeckoAuditBatch(makeNoopD1(), events);
+  const result = await runCoinGeckoAuditBatch(makeNoopD1(), events, "cg-test-key");
   expect(result.attemptedCgFetches).toBe(0);
   expect(result.outcomes).toHaveLength(2);
   for (const outcome of result.outcomes) {
@@ -777,4 +806,55 @@ it("skips recycled Solomon provider history without fetching or invalidating eit
     });
   }
   expect(fetchWithRetryMock).not.toHaveBeenCalled();
+});
+
+it("fetches CoinGecko history through the keyed pro endpoint with the API key header", async () => {
+  fetchWithRetryMock.mockReset();
+  fetchWithRetryMock.mockResolvedValue(
+    new Response(JSON.stringify({ prices: [[1_800_000_000_000, 1.02]] }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }),
+  );
+  const event = makeAuditEvent({
+    id: 61, direction: "below", source: "live",
+    peak_deviation_bps: -150, start_price: 0.985, peak_price: 0.985,
+  });
+
+  const result = await runCoinGeckoAuditBatch(mockD1([]), [event], "cg-test-key");
+
+  expect(fetchWithRetryMock).toHaveBeenCalledTimes(1);
+  const [url, init] = fetchWithRetryMock.mock.calls[0] as [string, { headers: Record<string, string> }];
+  expect(url).toBe(
+    "https://pro-api.coingecko.com/api/v3/coins/tether/market_chart/range?vs_currency=usd&from=1799996400&to=1800007200&precision=full",
+  );
+  expect(init.headers).toMatchObject({ "x-cg-pro-api-key": "cg-test-key" });
+  expect(result.errorReason).toBeUndefined();
+  expect(result.attemptedCgFetches).toBe(1);
+  expect(result.outcomes[0]).toMatchObject({
+    auditedEvent: { id: 61, verdict: "disputed", cgMaxBps: 200 },
+    attemptedCgFetch: true,
+    upstreamError: false,
+  });
+});
+
+it("fails the batch with an explicit reason instead of a keyless CoinGecko fetch", async () => {
+  fetchWithRetryMock.mockReset();
+  const event = makeAuditEvent({
+    id: 62, direction: "below", source: "live",
+    peak_deviation_bps: -150, start_price: 0.985, peak_price: 0.985,
+  });
+
+  const result = await runCoinGeckoAuditBatch(mockD1([]), [event], null);
+
+  expect(fetchWithRetryMock).not.toHaveBeenCalled();
+  expect(result.errorReason).toBe("coingecko_api_key_missing");
+  expect(result.attemptedCgFetches).toBe(1);
+  expect(result.outcomes[0]).toMatchObject({
+    auditedEvent: { id: 62, verdict: "error", cgMaxBps: null },
+    attemptedCgFetch: true,
+    upstreamError: true,
+    provenanceVerdict: null,
+    invalidatesProvenance: false,
+  });
 });

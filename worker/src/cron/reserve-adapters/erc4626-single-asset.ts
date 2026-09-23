@@ -44,6 +44,7 @@ import {
 import {
   hasExecutableRedemptionObserver,
   observeExecutableRedemptionRoute,
+  type ExecutableRedemptionObservation,
 } from "./executable-redemption-observers";
 
 const YEARN_V3_IS_SHUTDOWN_SELECTOR = "0xbf86d690";
@@ -250,10 +251,11 @@ export async function fetchErc4626SingleAssetReserves(
   warnings.push(...navCheck.warnings);
 
   let redemptionCapacity: RedemptionCapacityTelemetry | null = null;
+  let executableObservation: ExecutableRedemptionObservation | null = null;
   let configuredCapacity: Erc4626CapacityObservation | null = null;
   if (assetAddress) {
     const supplyAssetsRaw = convertToAssetsRaw ?? totalAssetsRaw;
-    const executableObservation = await observeExecutableRedemptionRoute(
+    executableObservation = await observeExecutableRedemptionRoute(
       coin.id,
       contractAddress,
       signal,
@@ -321,7 +323,10 @@ export async function fetchErc4626SingleAssetReserves(
     if (settlementDelaySec != null) {
       redemptionCapacity.settlementDelaySec = Math.max(redemptionCapacity.settlementDelaySec ?? 0, settlementDelaySec);
     }
-    if ((redemptionCapacity.settlementDelaySec ?? 0) > 0 || (unstakeWindowSec ?? 0) > 0) {
+    if (
+      executableObservation == null
+      && ((redemptionCapacity.settlementDelaySec ?? 0) > 0 || (unstakeWindowSec ?? 0) > 0)
+    ) {
       redemptionCapacity.capacityKind = "documented-bound";
     }
     if (sliceConfig.redemptionRoute === "async-request") {

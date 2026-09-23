@@ -11,7 +11,18 @@ import {
   fetchEvmStorageAtBlock,
 } from "../../lib/evm-rpc";
 import type { Abi } from "abitype";
-import { parseAbi } from "viem/utils";
+import {
+  DSTAKE_ROUTER_ABI,
+  DSTAKE_TOKEN_ABI,
+  EARN_PROTOCOL_CONFIG_ABI,
+  EARN_VALIDATOR_ABI,
+  EARN_VAULT_ABI,
+  NOON_SUSN_VAULT_ABI,
+  NOON_SUSN_WITHDRAWAL_HANDLER_ABI,
+  STATIC_ATOKEN_ABI,
+  erc20Abi,
+  erc4626Abi,
+} from "./executable-redemption-abis";
 import type { AdapterContext } from "./types";
 import { runAdapterIo } from "./concurrency";
 import { normalizeEvmAddress } from "./evm";
@@ -25,7 +36,7 @@ import type {
   EvmCodeIdentity,
   EvmObservationSnapshot,
 } from "./evm-observation-plan";
-import { runtimeCodeHash } from "./onchain-identity";
+import { implementationAddressFromSlot, runtimeCodeHash } from "./onchain-identity";
 
 type Hex = `0x${string}`;
 
@@ -35,51 +46,6 @@ const BLOCK_MAX_AGE_SEC = 10 * 60;
 const BLOCK_FUTURE_SKEW_SEC = 60;
 const OBSERVATION_BLOCK_LAG = 2;
 
-const erc20Abi = parseAbi([
-  "function balanceOf(address account) view returns (uint256)",
-  "function decimals() view returns (uint8)",
-]);
-const erc4626Abi = parseAbi([
-  "function asset() view returns (address)",
-  "function totalAssets() view returns (uint256)",
-  "function maxWithdraw(address owner) view returns (uint256)",
-]);
-
-const EARN_VAULT_ABI = parseAbi([
-  "function vaultValidator() view returns (address)",
-  "function protocolConfig() view returns (address)",
-  "function pauseStatus() view returns (bool depositsPaused, bool withdrawalsPaused, bool privilegedOperationsPaused)",
-  "function getPendingWithdrawalsLength() view returns (uint256)",
-  "function minWithdrawableShares() view returns (uint256)",
-]);
-const EARN_VALIDATOR_ABI = parseAbi([
-  "function withdrawalFee(address vault) view returns (uint256 permanentFeePercentage, uint256 timeBasedFeePercentage, uint256 balanceThreshold)",
-  "function depositAllowListCount(address vault) view returns (uint256)",
-]);
-const EARN_PROTOCOL_CONFIG_ABI = parseAbi([
-  "function getProtocolPauseStatus() view returns (bool)",
-]);
-const DSTAKE_TOKEN_ABI = parseAbi([
-  "function router() view returns (address)",
-  "function collateralVault() view returns (address)",
-]);
-const DSTAKE_ROUTER_ABI = parseAbi([
-  "function governanceModule() view returns (address)",
-  "function rebalanceModule() view returns (address)",
-  "function dStakeToken() view returns (address)",
-  "function collateralVault() view returns (address)",
-  "function paused() view returns (bool)",
-  "function withdrawalFeeBps() view returns (uint256)",
-  "function maxWithdrawalFeeBps() view returns (uint256)",
-  "function currentShortfall() view returns (uint256)",
-  "function getActiveVaultsForWithdrawals() view returns (address[])",
-  "function strategyShareToAdapter(address strategyShare) view returns (address)",
-  "function isVaultHealthyForWithdrawals(address strategyShare) view returns (bool)",
-]);
-const STATIC_ATOKEN_ABI = parseAbi([
-  "function POOL() view returns (address)",
-  "function aToken() view returns (address)",
-]);
 
 interface ProxyIdentity extends EvmCodeIdentity {
   address: Hex;
@@ -169,6 +135,44 @@ const DSTAKE = {
   ],
 } as const;
 
+// Noon sUSN exits through a holder-initiated request/claim rail: a vault
+// withdraw moves USN to the WithdrawalHandler with a timestamp, and
+// claimWithdrawal pays after the handler's withdrawPeriod. The vault exposes
+// no getter for its handler pointer (StakingVaultStorage.withdrawalHandler
+// sits one slot above the namespaced base), so the pointer is read from
+// storage and pinned every run: setWithdrawalHandler must fail closed here,
+// not silently redirect the settlement-bound read to a retired contract.
+// Runtime code hashes captured 2026-09-23 (block 26,038,220); vault
+// implementation and handler verified byte-identical to Protocol-Core
+// commit 45ee4e19 via Sourcify exact matches.
+const NOON_SUSN = {
+  coinId: "susn-noon",
+  vault: {
+    address: "0xe24a3dc889621612422a64e6388927901608b91d",
+    codeHash: "0xb108840d91ea6f26d83fc692d0ac870fe1e895debcd9e67c1d7d4317296a88e6",
+    implementationAddress: "0xebbcbc6672683e1956125e7c5e89e14ceac8cd3d",
+    implementationCodeHash: "0x2fec4424636a25ee95ed7135af071433609bce018d51aca35d222ea4787876ef",
+  } satisfies ProxyIdentity,
+  withdrawalHandler: {
+    address: "0x0dabc0d9b270c9b0c4c77aaceaa712b56d0f9178",
+    codeHash: "0x48f64f2a52f543354cd46deeb67405df9544289012d18bd9b48920d44d0a4c13",
+  } satisfies DirectIdentity,
+  withdrawalHandlerStorageSlot:
+    "0xeb35582a09ab498623cb7b45bfdff1ae6ef9e826b054d3e2fb048e4d27a9fce",
+  // The handler admin since 2026-08-04: a 48h-min-delay GenericTimelock owned
+  // by the 3-of-6 Noon Safe. setWithdrawPeriod is unbounded and applies
+  // retroactively to in-flight requests, so the live value is re-read each run.
+  withdrawalHandlerTimelockAddress: "0x36857ef0b10a61a68d58c29ee256990fa9699722",
+  assetAddress: "0xda67b4284609d2d48e5d10cfac411572727dc1ed",
+  assetDecimals: 18,
+  sourceUrls: [
+    "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/minting-and-redemption",
+    "https://etherscan.io/address/0xe24a3dc889621612422a64e6388927901608b91d#readContract",
+    "https://etherscan.io/address/0x0dabc0d9b270c9b0c4c77aaceaa712b56d0f9178#readContract",
+    "https://etherscan.io/address/0x36857ef0b10a61a68d58c29ee256990fa9699722#readContract",
+  ],
+} as const;
+
 export interface ExecutableRedemptionReadClient {
   blockNumber(options: EvmRpcOptions): Promise<number | null>;
   blockTimestamp(blockNumber: number, options: EvmRpcOptions): Promise<number | null>;
@@ -190,8 +194,11 @@ export interface ExecutableRedemptionObservation {
   capacityRaw: bigint;
   capacitySource:
     | "eearn-operator-batched-no-immediate-capacity"
-    | "dtrinity-dlend-max-withdraw";
+    | "dtrinity-dlend-max-withdraw"
+    | "noon-susn-withdrawal-handler-idle-usn";
   settlementBoundUnproven?: true;
+  /** Measured settlement completion bound in seconds, read on-chain this run. */
+  settlementDelaySec?: number;
   underlyingDecimals: number;
   capacityKind: "live-direct-bounded";
   freshnessKind: "same-run-onchain";
@@ -693,8 +700,123 @@ async function observeDStake(
   };
 }
 
+function susnNoonFields() {
+  return [
+    abiField("susn-asset", NOON_SUSN.vault.address, erc4626Abi, "asset", {
+      verify: verifyExpectedAddress(NOON_SUSN.coinId, "asset", NOON_SUSN.assetAddress),
+    }),
+    abiField("susn-total-assets", NOON_SUSN.vault.address, erc4626Abi, "totalAssets"),
+    abiField("susn-vault-paused", NOON_SUSN.vault.address, NOON_SUSN_VAULT_ABI, "paused"),
+    abiField("susn-idle-usn", NOON_SUSN.assetAddress, erc20Abi, "balanceOf", {
+      args: [NOON_SUSN.vault.address],
+    }),
+    abiField("susn-asset-decimals", NOON_SUSN.assetAddress, erc20Abi, "decimals"),
+    abiField("handler-usn", NOON_SUSN.withdrawalHandler.address, NOON_SUSN_WITHDRAWAL_HANDLER_ABI, "usn", {
+      verify: verifyExpectedAddress(NOON_SUSN.coinId, "handler usn", NOON_SUSN.assetAddress),
+    }),
+    abiField(
+      "handler-withdraw-period",
+      NOON_SUSN.withdrawalHandler.address,
+      NOON_SUSN_WITHDRAWAL_HANDLER_ABI,
+      "withdrawPeriod",
+    ),
+  ] as const;
+}
+
+async function observeSusnNoon(
+  blockNumber: number,
+  blockTimestamp: number,
+  rpcOptions: EvmRpcOptions,
+  client: ExecutableRedemptionReadClient,
+  ctx: AdapterContext | undefined,
+  signal: AbortSignal,
+): Promise<ExecutableRedemptionObservation> {
+  const handlerPointerWord = await runAdapterIo(
+    ctx,
+    "susn-noon-redemption-withdrawal-handler",
+    () =>
+      client.storage(
+        NOON_SUSN.vault.address,
+        NOON_SUSN.withdrawalHandlerStorageSlot,
+        blockNumber,
+        rpcOptions,
+      ),
+    { signal },
+  );
+  const handlerAddress = implementationAddressFromSlot(handlerPointerWord);
+  if (handlerAddress == null || handlerAddress !== NOON_SUSN.withdrawalHandler.address) {
+    fail(NOON_SUSN.coinId, "vault withdrawal-handler pointer is unreadable or drifted");
+  }
+
+  const state = await readStateWithPlan(
+    NOON_SUSN.coinId,
+    "susn-noon-redemption-state",
+    susnNoonFields(),
+    [NOON_SUSN.vault, NOON_SUSN.withdrawalHandler],
+    blockNumber,
+    rpcOptions,
+    client,
+    ctx,
+    signal,
+  );
+  const assetDecimals = state.values["susn-asset-decimals"] as number;
+  const totalAssetsRaw = state.values["susn-total-assets"] as bigint;
+  const idleUsnRaw = state.values["susn-idle-usn"] as bigint;
+  const withdrawPeriodRaw = state.values["handler-withdraw-period"] as bigint;
+  const vaultPaused = state.values["susn-vault-paused"] as boolean;
+  if (assetDecimals !== NOON_SUSN.assetDecimals) {
+    fail(NOON_SUSN.coinId, "USN decimals drift");
+  }
+  if (totalAssetsRaw <= 0n || idleUsnRaw < 0n) {
+    fail(NOON_SUSN.coinId, "invalid vault idle-USN or totalAssets state");
+  }
+  // setWithdrawPeriod has no on-chain min/max and applies retroactively to
+  // in-flight requests; a value outside the safe integer range leaves the
+  // completion bound unknown, so the read fails closed instead of publishing.
+  if (withdrawPeriodRaw < 0n || withdrawPeriodRaw > BigInt(Number.MAX_SAFE_INTEGER)) {
+    fail(NOON_SUSN.coinId, "withdrawPeriod is outside the supported range");
+  }
+  const settlementDelaySec = Number(withdrawPeriodRaw);
+  const boundedIdleRaw = idleUsnRaw > totalAssetsRaw ? totalAssetsRaw : idleUsnRaw;
+  const routeStatus = vaultPaused ? "paused" : boundedIdleRaw > 0n ? "open" : "degraded";
+  return {
+    // Held idle USN backs every exit, but the rail settles only after the
+    // live withdrawPeriod, so the capacity is a bounded live read, not an
+    // immediate same-notional one.
+    capacityRaw: routeStatus === "open" ? boundedIdleRaw : 0n,
+    capacitySource: "noon-susn-withdrawal-handler-idle-usn",
+    settlementDelaySec,
+    underlyingDecimals: NOON_SUSN.assetDecimals,
+    capacityKind: "live-direct-bounded",
+    freshnessKind: "same-run-onchain",
+    routeStatusSource: "onchain",
+    routeStatus,
+    routeStatusReason: routeStatus === "open"
+      ? "Noon sUSN unstake requests are open onchain; the holder-initiated request/claim rail settles after the WithdrawalHandler's live withdrawPeriod"
+      : routeStatus === "paused"
+        ? "Noon vault pause blocks new sUSN unstake requests onchain"
+        : "Noon sUSN vault holds no idle USN backing for new unstake requests",
+    feeBps: 0,
+    holderEligibility: "any-holder",
+    blockNumber,
+    sourceTimestamp: blockTimestamp,
+    sourceUrls: [...NOON_SUSN.sourceUrls],
+    diagnostics: {
+      outputAssetAddress: NOON_SUSN.assetAddress,
+      vaultAddress: NOON_SUSN.vault.address,
+      vaultImplementationAddress: NOON_SUSN.vault.implementationAddress,
+      withdrawalHandlerAddress: handlerAddress,
+      withdrawalHandlerTimelockAddress: NOON_SUSN.withdrawalHandlerTimelockAddress,
+      withdrawPeriodSec: settlementDelaySec,
+      vaultPaused,
+      totalAssetsRaw: totalAssetsRaw.toString(),
+      idleUnderlyingBalanceRaw: idleUsnRaw.toString(),
+    },
+  };
+}
+
 export function hasExecutableRedemptionObserver(coinId: string): boolean {
-  return coinId === EARN.coinId || coinId === DSTAKE.coinId;
+  return coinId === EARN.coinId || coinId === DSTAKE.coinId || coinId === NOON_SUSN.coinId;
 }
 
 export async function observeExecutableRedemptionRoute(
@@ -707,7 +829,11 @@ export async function observeExecutableRedemptionRoute(
   if (!hasExecutableRedemptionObserver(coinId)) return null;
 
   const expectedContractAddress =
-    coinId === EARN.coinId ? EARN.vault.address : DSTAKE.token.address;
+    coinId === EARN.coinId
+      ? EARN.vault.address
+      : coinId === NOON_SUSN.coinId
+        ? NOON_SUSN.vault.address
+        : DSTAKE.token.address;
   if (contractAddress.toLowerCase() !== expectedContractAddress) {
     fail(coinId, `tracked contract identity drift (${contractAddress})`);
   }
@@ -745,8 +871,9 @@ export async function observeExecutableRedemptionRoute(
   ) {
     fail(coinId, "block timestamp is unavailable or out of range");
   }
-
   return coinId === EARN.coinId
     ? observeEarn(blockNumber, blockTimestamp, rpcOptions, client, ctx, signal)
-    : observeDStake(blockNumber, blockTimestamp, rpcOptions, client, ctx, signal);
+    : coinId === NOON_SUSN.coinId
+      ? observeSusnNoon(blockNumber, blockTimestamp, rpcOptions, client, ctx, signal)
+      : observeDStake(blockNumber, blockTimestamp, rpcOptions, client, ctx, signal);
 }

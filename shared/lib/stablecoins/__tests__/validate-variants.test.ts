@@ -182,7 +182,7 @@ describe("validateVariantRelationships", () => {
   });
 
   it("fails when a child declares an archetype but the parent's archetype is null (no override)", () => {
-    // I7: matches the susn-noon / usn-noon situation pre-fix.
+    // I7: a child archetype against an unclassified parent needs an explicit override.
     const parent = makeParent("parent-a", null);
     const child = makeChild("child-a", "parent-a", {
       mechanismArchetype: "synthetic-delta-neutral",
@@ -196,7 +196,7 @@ describe("validateVariantRelationships", () => {
   });
 
   it("passes when a child declares an archetype against a null-parent with override set", () => {
-    // I7 fix: susn-noon now adds archetypeOverride: true.
+    // I7: the explicit override admits the child archetype.
     const parent = makeParent("parent-a", null);
     const child = makeChild("child-a", "parent-a", {
       mechanismArchetype: "synthetic-delta-neutral",

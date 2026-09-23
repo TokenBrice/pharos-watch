@@ -459,7 +459,7 @@ Returns detected depeg incidents with filters for asset, state, and review statu
 
 ```json
 {
-  "currentVersion": "6.24"
+  "currentVersion": "6.25"
 }
 ```
 
@@ -497,7 +497,7 @@ Returns the current cross-market peg-monitoring summary.
 
 ```json
 {
-  "currentVersion": "6.24"
+  "currentVersion": "6.25"
 }
 ```
 
@@ -732,8 +732,8 @@ Returns the currently published Safety Score V9 report-card set.
 
 ```json
 {
-  "version": "9.91",
-  "methodologyVersion": "9.91"
+  "version": "9.92",
+  "methodologyVersion": "9.92"
 }
 ```
 
@@ -763,10 +763,10 @@ Returns reviewed redemption paths and backstop evidence.
 {
   "coins": {},
   "methodology": {
-    "version": "4.43",
-    "versionLabel": "v4.43",
-    "currentVersion": "4.43",
-    "currentVersionLabel": "v4.43",
+    "version": "4.44",
+    "versionLabel": "v4.44",
+    "currentVersion": "4.44",
+    "currentVersionLabel": "v4.44",
     "changelogPath": "/methodology/redemption-backstop-changelog/",
     "asOf": 0,
     "isCurrent": true,
@@ -825,7 +825,7 @@ Returns current Yield Intelligence rankings and risk-adjusted fields.
 ```json
 {
   "currentVersion": "8.43",
-  "methodologyVersion": "9.91"
+  "methodologyVersion": "9.92"
 }
 ```
 
@@ -902,8 +902,8 @@ Freshness threshold: 1800 s.
 
 ```json
 {
-  "currentVersion": "6.24",
-  "methodologyVersion": "6.24"
+  "currentVersion": "6.25",
+  "methodologyVersion": "6.25"
 }
 ```
 

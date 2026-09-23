@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const SAFETY_SCORE_V9: readonly MethodologyChangelogEntry[] = [
   {
+    version: "9.92",
+    title: "Aggregate-only supply publishes and gapless route reasons attribute to Pharos",
+    date: "2026-09-23",
+    effectiveAt: 1790140597,
+    summary:
+      "An asset whose intake publishes only an aggregate circulating quantity and no per-chain partition no longer bounds that quantity on a bridge gap the control pillar already owns, and a same-notional route the method withholds by design attributes to Pharos's missing integration instead of a feed failure.",
+    impact: [
+      "The aggregate supply lane now publishes the circulating USD as known when there are no per-chain rows to join, diagnosed as `supply-review.unpartitioned-aggregate`; the exit pillar can therefore size its stress request. A join that ran and failed over real per-chain rows, a missing bridge profile, stale input, and a missing or rejected runtime attribution packet all still fail closed.",
+      "Bridge-materiality availability keeps a single owner on the control pillar (`runtime-bridge-materiality-unavailable`): no control reason was lost, and `cngn-compliant-naira` gains seven stricter per-route materiality rows once per-route materiality is evaluable.",
+      "A gapless `missing-same-notional-route` — synthesized when the method withholds a route and no authored producer gap exists — now attributes to `integration-missing` rather than `producer-failed`; producer failure is claimed only through an authored causal gap carrying a `sourceGapId`. Scores, ceilings, and NR treatment are unchanged, so only the published limiting-fact owner moves.",
+      "On replay of the production capture from generation `report-cards:9.91:1790140517` at clock `1790140597`, 20 assets move. Eleven grades flip: `sdola-inverse-finance` D -> C, `dusd-dialectic` D -> C, `susdai-usd-ai` D -> C-, `susds-sky` D -> C, `syrupusdt-maple` D -> C, `sdai-sky` C- -> C, `susde-ethena` C- -> C, `ustb-superstate` C- -> C, `syrupusdc-maple` C- -> C, and `usdcx-movement` C- -> C, all from a higher exit pillar; `usn-noon` B- -> C+ moves the other way on the refreshed mechanism overlay rather than this supply change.",
+      "Nine more assets move inside their grade: `cusdo-openeden`, `brlv-crown`, and `krwq-iq` up, and `nbasis-nest`, `ntbill-nest`, `nopal-nest`, `acred-apollo-securitize`, `srusd-reservoir`, and `susn-noon` down.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "9.91",
     title: "Bounded assurance-report freshness",
     date: "2026-09-21",

@@ -110,6 +110,21 @@ export function SafetyScoresOverview() {
         evidence-retention changes: pillar weights, score math, and grade thresholds are unchanged.
       </p>
       <p>
+        Since methodology v9.92, an asset whose intake publishes only an aggregate circulating quantity and no per-chain
+        rows no longer bounds that quantity on a bridge gap the control pillar already owns: there is no per-chain
+        partition for the bridge-materiality join to be ambiguous about, the state is diagnosed as
+        <code className="text-xs">supply-review.unpartitioned-aggregate</code>, and the circulating USD publishes as
+        known so the Exit pillar can size a stress request. Bridge-materiality availability keeps its single owner on
+        the control pillar (<code className="text-xs">runtime-bridge-materiality-unavailable</code>), while a join that
+        ran and failed over real rows, a missing bridge profile, stale input, and a missing or rejected runtime
+        attribution packet all still fail closed. The same release attributes a gapless
+        <code className="text-xs">missing-same-notional-route</code> — a route the method withholds by design with no
+        authored producer gap — to <code className="text-xs">integration-missing</code> instead of
+        <code className="text-xs">producer-failed</code>; only an authored causal gap carrying a
+        <code className="text-xs">sourceGapId</code> may claim a producer failure, and scores, ceilings, and NR
+        treatment are unchanged.
+      </p>
+      <p>
         Since methodology v9.6, an exhaustive-liability attestation can complete transfer scope for one exact
         active contract with positive admitted aggregate supply and no bridge or wrapper representations.
         Singleton assets and savings-passthrough, risk-absorption, and strategy-vault share tokens qualify;

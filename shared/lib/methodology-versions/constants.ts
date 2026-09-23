@@ -12,7 +12,7 @@ export const CHAIN_HEALTH_METHODOLOGY_VERSION = "1.5";
 export const CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL = methodologyLabel(CHAIN_HEALTH_METHODOLOGY_VERSION);
 export const CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH = "/methodology/chain-health-changelog/";
 
-export const DEPEG_DEWS_METHODOLOGY_VERSION = "6.24";
+export const DEPEG_DEWS_METHODOLOGY_VERSION = "6.25";
 export const DEPEG_DEWS_METHODOLOGY_VERSION_LABEL = methodologyLabel(DEPEG_DEWS_METHODOLOGY_VERSION);
 export const DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH = "/methodology/depeg-changelog/";
 
@@ -20,7 +20,7 @@ export const DDR_METHODOLOGY_VERSION = "4.5";
 export const DDR_METHODOLOGY_VERSION_LABEL = methodologyLabel(DDR_METHODOLOGY_VERSION);
 export const DDR_METHODOLOGY_CHANGELOG_PATH = "/methodology/depeg-resolver-changelog/";
 
-export const LIQUIDITY_METHODOLOGY_VERSION = "6.6";
+export const LIQUIDITY_METHODOLOGY_VERSION = "6.7";
 export const LIQUIDITY_METHODOLOGY_VERSION_LABEL = methodologyLabel(LIQUIDITY_METHODOLOGY_VERSION);
 export const LIQUIDITY_METHODOLOGY_CHANGELOG_PATH = "/methodology/liquidity-score-changelog/";
 
@@ -32,11 +32,11 @@ export const MINT_BURN_FLOW_METHODOLOGY_VERSION = "6.2";
 export const MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL = methodologyLabel(MINT_BURN_FLOW_METHODOLOGY_VERSION);
 export const MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH = "/methodology/mint-burn-flow-changelog/";
 
-export const PRICING_PIPELINE_METHODOLOGY_VERSION = "6.29";
+export const PRICING_PIPELINE_METHODOLOGY_VERSION = "6.30";
 export const PRICING_PIPELINE_METHODOLOGY_VERSION_LABEL = methodologyLabel(PRICING_PIPELINE_METHODOLOGY_VERSION);
 export const PRICING_PIPELINE_METHODOLOGY_CHANGELOG_PATH = "/methodology/pricing-pipeline-changelog/";
 
-export const REDEMPTION_BACKSTOP_METHODOLOGY_VERSION = "4.43";
+export const REDEMPTION_BACKSTOP_METHODOLOGY_VERSION = "4.44";
 export const REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL = methodologyLabel(REDEMPTION_BACKSTOP_METHODOLOGY_VERSION);
 export const REDEMPTION_BACKSTOP_METHODOLOGY_PATH = "/methodology/#redemption-backstop-methodology";
 export const REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG_PATH = "/methodology/redemption-backstop-changelog/";

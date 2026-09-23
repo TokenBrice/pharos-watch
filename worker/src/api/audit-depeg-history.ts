@@ -10,6 +10,7 @@ import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { deriveDepegSignal } from "../lib/depeg-signals";
 import {
   runCoinGeckoAuditBatch,
+  type AuditCgErrorReason,
   type AuditedEvent,
   type Verdict,
 } from "./audit-depeg-history/coingecko-audit";
@@ -80,6 +81,11 @@ interface AuditResult {
    * genuine data errors. Provenance is not persisted in that case.
    */
   upstreamReachable: boolean;
+  /**
+   * Machine-readable reason the batch could not use CoinGecko at all (e.g. the
+   * COINGECKO_API_KEY binding is unset). Provenance is not persisted in that case.
+   */
+  upstreamErrorReason?: AuditCgErrorReason;
 }
 
 interface SyntheticSplitRepairResult {
@@ -527,12 +533,15 @@ export interface AuditDepegHistoryRouteContext {
   db: D1Database;
   url: URL;
   request?: Request;
+  /** Normalized COINGECKO_API_KEY binding; absent/null fails the CG-backed audit with an explicit reason. */
+  coingeckoApiKey?: string | null;
 }
 
 export async function handleAuditDepegHistoryTrusted({
   db,
   url,
   request,
+  coingeckoApiKey,
 }: AuditDepegHistoryRouteContext): Promise<Response> {
   return runTrustedAdminMutation(async () => {
     try {
@@ -560,6 +569,7 @@ export async function handleAuditDepegHistoryTrusted({
         offset: auditRequest.offset,
         limit: auditRequest.limit,
         dryRun: auditRequest.dryRun,
+        coingeckoApiKey: coingeckoApiKey ?? null,
       });
 
       return jsonResponse(result);
@@ -585,6 +595,8 @@ export interface AuditEventsOptions {
   offset: number;
   limit: number;
   dryRun: boolean;
+  /** Normalized COINGECKO_API_KEY binding; null fails the batch with an explicit reason instead of a keyless fetch. */
+  coingeckoApiKey: string | null;
 }
 
 /**
@@ -595,7 +607,7 @@ export async function auditEvents(
   db: D1Database,
   options: AuditEventsOptions,
 ): Promise<AuditResult> {
-  const { events, minSupply, symbolFilter, offset, limit, dryRun } = options;
+  const { events, minSupply, symbolFilter, offset, limit, dryRun, coingeckoApiKey } = options;
   const symbolFilteredEvents = symbolFilter
     ? events.filter((event) => event.symbol.toUpperCase() === symbolFilter)
     : events;
@@ -654,7 +666,8 @@ export async function auditEvents(
   const provenanceStatements: D1PreparedStatement[] = [];
   const invalidatingProvenanceEventIds: number[] = [];
   const nowSec = Math.floor(Date.now() / 1000);
-  const { outcomes, attemptedCgFetches } = await runCoinGeckoAuditBatch(db, paginatedEvents);
+  const { outcomes, attemptedCgFetches, errorReason } = await runCoinGeckoAuditBatch(db, paginatedEvents, coingeckoApiKey);
+  if (errorReason) result.upstreamErrorReason = errorReason;
 
   for (const outcome of outcomes) {
     result.auditedEvents.push(outcome.auditedEvent);

@@ -2,7 +2,7 @@
   "id": "susn-noon",
   "name": "Staked USN",
   "symbol": "sUSN",
-  "oneLiner": "sUSN is Noon's staking wrapper of USN; share price accrues yield from private credit, CLOs, DeFi lending, and T-bills, with delta-neutral CEX strategies on top.",
+  "oneLiner": "sUSN is Noon's staking wrapper of USN; share price accrues yield from a reserve led by private credit, plus funding-rate arbitrage, DeFi lending, and T-bills.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized-dependent",
@@ -88,7 +88,6 @@
       }
     },
     "params": {
-      "redemptionRoute": "async-request",
       "slice": {
         "name": "USN staking wrapper shares",
         "risk": "high",
