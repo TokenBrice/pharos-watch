@@ -502,7 +502,7 @@ describe("handleYieldRankings", () => {
       code: "yield-safety-hydration-stale",
       reasons: ["safety-identity-mismatch"],
     });
-    expect(res.headers.get("Warning")).toContain("199");
+    expect(res.headers.get("Warning")).toBeNull();
   })
 
   it("degrades to explicit NR when the mismatched cached payload is older than the stale-coherent window", async () => {
@@ -541,6 +541,7 @@ describe("handleYieldRankings", () => {
       source: "safety-score-v9-publication",
     });
     expect(body.provenance?.liveSafetyHydration?.fallback).toBeUndefined();
+    expect(res.headers.get("Warning")).toContain("199");
   })
 
   it("serves the publish-time snapshot when live safety hydration throws", async () => {
@@ -1146,7 +1147,7 @@ describe("handleYieldRankings", () => {
     ["active V9 marker", "active-safety-score:v9"],
     ["malformed V9 marker", "active-safety-score:activation-marker-invalid"],
     ["mismatched V9 identity", "active-safety-score:v9-identity-mismatch"],
-  ])("serves the publish-time snapshot with Warning 199 for %s", async (_label, snapshotReason) => {
+  ])("serves the publish-time snapshot without an HTTP Warning for %s", async (_label, snapshotReason) => {
     computeSafetyScoresSnapshotMock.mockResolvedValueOnce({
       kind: "degraded",
       mode: "map",
@@ -1170,7 +1171,7 @@ describe("handleYieldRankings", () => {
       _meta: { ageSeconds: number };
     };
 
-    expect(res.headers.get("Warning")).toContain("199");
+    expect(res.headers.get("Warning")).toBeNull();
     expect(body.warnings?.[0]).toMatchObject({
       code: "yield-safety-hydration-stale",
       // C17: the upstream snapshot reason is threaded next to the read path's own.
