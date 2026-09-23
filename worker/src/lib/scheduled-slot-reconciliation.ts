@@ -428,31 +428,60 @@ async function insertSyntheticStaleCronRun(
     && progress.updated_at > 0
     && slot.updated_at < nowSec - CHILD_LEASE_HEARTBEAT_STALE_SEC
     && Math.abs(slot.updated_at - progress.updated_at) <= DEPLOY_INTERRUPTION_HEARTBEAT_ALIGNMENT_SEC;
-  const slotWorkerVersion = slot.worker_version?.trim() || null;
+  // `cron_slot_executions.worker_version` is the direct drift evidence, but a
+  // stale-takeover row can be NULL (older claims, transplanted rows). The
+  // dying invocation stamps its own `workerVersion` into every progress write
+  // (`handlers/scheduled/context.ts` slotMeta), so that copy is the fallback
+  // before declaring the versions never drifted.
+  let progressWorkerVersion: string | null = null;
+  if (progress.metadata) {
+    try {
+      const parsed: unknown = JSON.parse(progress.metadata);
+      if (parsed != null && typeof parsed === "object" && !Array.isArray(parsed)) {
+        const version = (parsed as Record<string, unknown>).workerVersion;
+        if (typeof version === "string" && version.trim().length > 0) progressWorkerVersion = version.trim();
+      }
+    } catch {
+      // Malformed progress metadata carries no version evidence.
+    }
+  }
+  const slotWorkerVersion = slot.worker_version?.trim() || progressWorkerVersion;
   const currentWorkerVersion = reconcilerWorkerVersion?.trim() || null;
   const hasWorkerVersionDrift =
     slotWorkerVersion != null
     && currentWorkerVersion != null
     && slotWorkerVersion !== currentWorkerVersion;
-  const correlatedDeathWithVersionDrift =
-    progress.updated_at === startedAt
-    && hasWorkerVersionDrift
-    && slotHeartbeatStoppedWithChild;
+  // A deploy eviction kills the isolate at an arbitrary point in the child's
+  // life. Requiring zero progress (progress.updated_at === startedAt) matched
+  // only children killed inside their first second, so every mid-run eviction
+  // was misclassified as an in-place kill (2026-09-23 sync-yield-data@17:55,
+  // duration_ms 1000). The heartbeat alignment above is the death bound: the
+  // slot's own heartbeat and the child's last progress write must have
+  // stopped together, which a later heartbeat disproves.
+  const correlatedDeathWithVersionDrift = hasWorkerVersionDrift && slotHeartbeatStoppedWithChild;
   // First-seen is retained as forensic evidence only. The deploy workflow's
   // activation marker is the classification boundary because it is written
   // at version activation rather than at the first scheduled execution.
-  const reconcilerWorkerVersionFirstSeenAt = correlatedDeathWithVersionDrift
+  // Read both markers whenever drift exists so an out-of-window death keeps
+  // the activation evidence that proves it was not the deploy's eviction.
+  const reconcilerWorkerVersionFirstSeenAt = hasWorkerVersionDrift
     ? await readWorkerVersionMarker(() => getWorkerVersionFirstSeenAt(db, currentWorkerVersion))
     : null;
-  const reconcilerWorkerVersionActivatedAt = correlatedDeathWithVersionDrift
+  const reconcilerWorkerVersionActivatedAt = hasWorkerVersionDrift
     ? await readWorkerVersionMarker(() => getWorkerVersionActivatedAt(db, currentWorkerVersion))
     : null;
-  const activationWithinDeathWindow =
+  // The death instant is bounded by the slot's own last heartbeat and the
+  // child's last progress write; both must fall inside the single activation
+  // window (up to 15 seconds of clock skew before, up to 120 seconds of
+  // isolate drain after). Any other death stays abandoned.
+  const deathWithinActivationWindow =
     reconcilerWorkerVersionActivatedAt != null
     && progress.updated_at >= reconcilerWorkerVersionActivatedAt - DEPLOY_INTERRUPTION_DEATH_CLOCK_SKEW_SEC
     && progress.updated_at <= reconcilerWorkerVersionActivatedAt + DEPLOY_INTERRUPTION_ISOLATE_DRAIN_SEC
+    && slot.updated_at >= reconcilerWorkerVersionActivatedAt - DEPLOY_INTERRUPTION_DEATH_CLOCK_SKEW_SEC
+    && slot.updated_at <= reconcilerWorkerVersionActivatedAt + DEPLOY_INTERRUPTION_ISOLATE_DRAIN_SEC
     && reconcilerWorkerVersionActivatedAt <= nowSec;
-  const interruptedByWorkerDeploy = correlatedDeathWithVersionDrift && activationWithinDeathWindow;
+  const interruptedByWorkerDeploy = correlatedDeathWithVersionDrift && deathWithinActivationWindow;
   return insertSyntheticCronRun(
     db,
     slot,
@@ -482,9 +511,11 @@ async function insertSyntheticStaleCronRun(
         reconciledAt: nowSec,
         activeDurationMs,
         reconciliationDelayMs,
-        // Dead isolate's version rides the worker_version column; recording the
-        // reconciler's version alongside makes deploy-eviction (versions differ at
-        // time of death) vs in-place kill (e.g. OOM) decidable from this row.
+        // Dead isolate's version: the slot row when present, otherwise the
+        // dying invocation's own progress-metadata copy (the worker_version
+        // column keeps the raw slot value). Recording the reconciler's version
+        // alongside makes deploy-eviction (versions differ at time of death)
+        // vs in-place kill (e.g. OOM) decidable from this row.
         slotWorkerVersion: slotWorkerVersion,
         reconciledByWorkerVersion: reconcilerWorkerVersion ?? null,
         reconciledByWorkerVersionFirstSeenAt: reconcilerWorkerVersionFirstSeenAt,

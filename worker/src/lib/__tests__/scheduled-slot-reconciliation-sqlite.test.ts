@@ -8,20 +8,40 @@ import { sweepStaleScheduledSlotExecutions } from "../scheduled-slot-fence";
 const fixtures = createLatestSchemaFixtureTracker();
 const createMigratedDb = fixtures.open;
 
-function seedZeroDurationDeployInterruptedCase(
+/**
+ * Seeds one stale `cron_slot_executions` row with a dead child progress row
+ * and optional version markers. Defaults reproduce the zero-duration shape;
+ * the offset options reproduce a mid-run death (2026-09-23 sync-yield-data,
+ * `duration_ms` 1000 while progress advanced past the start).
+ */
+function seedStaleSlotWithDeadChild(
   sqlite: DatabaseSync,
   nowSec: number,
-  markers: { firstSeenAt: number | null; activatedAt: number | null },
+  options: {
+    firstSeenAt: number | null;
+    activatedAt: number | null;
+    /** Seconds after slot_started_at; all three default to the zero-duration shape. */
+    progressStartedOffset?: number;
+    progressUpdatedOffset?: number;
+    slotUpdatedOffset?: number;
+    /** Defaults to the pre-deploy version; null models a slot row without one. */
+    slotWorkerVersion?: string | null;
+    /** Stamped into progress metadata like the scheduled handler's slotMeta. */
+    progressWorkerVersion?: string;
+  },
 ): number {
   const slotStartedAt = nowSec - 3_600;
+  const progressStartedAt = slotStartedAt + (options.progressStartedOffset ?? 0);
+  const progressUpdatedAt = slotStartedAt + (options.progressUpdatedOffset ?? 0);
+  const slotUpdatedAt = slotStartedAt + (options.slotUpdatedOffset ?? options.progressUpdatedOffset ?? 0);
   sqlite.prepare(
     `INSERT INTO cron_slot_executions (
      slot_key, slot_started_at, state, result_status, execution_owner,
      started_at, finished_at, updated_at, metadata, execution_generation,
      invocation_id, worker_version
    ) VALUES ('halfHourlyMeasuredExecution', ?, 'running', NULL, 'slot-owner', ?, NULL, ?, NULL, 1,
-             'old-invocation', 'worker-old')`,
-  ).run(slotStartedAt, slotStartedAt, slotStartedAt);
+             'old-invocation', ?)`,
+  ).run(slotStartedAt, slotStartedAt, slotUpdatedAt, options.slotWorkerVersion === undefined ? "worker-old" : options.slotWorkerVersion);
   sqlite.prepare(
     `INSERT INTO cron_leases (job, lease_owner, lease_until, heartbeat_at, updated_at)
      VALUES ('sync-cl-exit-depth', 'child-owner', ?, ?, ?)`,
@@ -30,19 +50,24 @@ function seedZeroDurationDeployInterruptedCase(
     `INSERT INTO cron_run_progress (
      job, started_at, updated_at, stage, items_done, items_total,
      message, lease_owner, metadata, slot_started_at
-   ) VALUES ('sync-cl-exit-depth', ?, ?, 'lease-acquired', 0, NULL, 'Lease acquired', 'child-owner', NULL, ?)`,
-  ).run(slotStartedAt, slotStartedAt, slotStartedAt);
-  if (markers.firstSeenAt != null) {
+   ) VALUES ('sync-cl-exit-depth', ?, ?, 'lease-acquired', 0, NULL, 'Lease acquired', 'child-owner', ?, ?)`,
+  ).run(
+    progressStartedAt,
+    progressUpdatedAt,
+    options.progressWorkerVersion == null ? null : JSON.stringify({ workerVersion: options.progressWorkerVersion }),
+    slotStartedAt,
+  );
+  if (options.firstSeenAt != null) {
     sqlite.prepare(
       `INSERT INTO cache (key, value, updated_at)
        VALUES ('worker-version-first-seen:worker-new', ?, ?)`,
-    ).run(JSON.stringify({ workerVersion: "worker-new", firstSeenAt: markers.firstSeenAt }), markers.firstSeenAt);
+    ).run(JSON.stringify({ workerVersion: "worker-new", firstSeenAt: options.firstSeenAt }), options.firstSeenAt);
   }
-  if (markers.activatedAt != null) {
+  if (options.activatedAt != null) {
     sqlite.prepare(
       `INSERT INTO cache (key, value, updated_at)
        VALUES ('worker-version-activated:worker-new', ?, ?)`,
-    ).run(JSON.stringify({ workerVersion: "worker-new", activatedAt: markers.activatedAt }), markers.activatedAt);
+    ).run(JSON.stringify({ workerVersion: "worker-new", activatedAt: options.activatedAt }), options.activatedAt);
   }
   return slotStartedAt;
 }
@@ -495,7 +520,7 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
   it("classifies a correlated zero-duration child as neutral only with an in-window activation marker", async () => {
     const { sqlite, db } = createMigratedDb();
     const nowSec = 1_772_004_000;
-    const slotStartedAt = seedZeroDurationDeployInterruptedCase(sqlite, nowSec, {
+    const slotStartedAt = seedStaleSlotWithDeadChild(sqlite, nowSec, {
       firstSeenAt: nowSec - 3_600 + 5,
       activatedAt: nowSec - 3_600 - 60,
     });
@@ -536,7 +561,7 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
     const { sqlite, db } = createMigratedDb();
     const nowSec = 1_772_004_000;
     const slotStartedAt = nowSec - 3_600;
-    seedZeroDurationDeployInterruptedCase(sqlite, nowSec, {
+    seedStaleSlotWithDeadChild(sqlite, nowSec, {
       firstSeenAt: firstSeenDelaySec == null ? null : slotStartedAt + firstSeenDelaySec,
       activatedAt: activationDelaySec == null ? null : slotStartedAt + activationDelaySec,
     });
@@ -572,6 +597,179 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
         activationDelaySec == null ? null : slotStartedAt + activationDelaySec,
     });
   });
+
+  it("classifies a mid-run deploy eviction as neutral (2026-09-23 sync-yield-data shape)", async () => {
+    const { sqlite, db } = createMigratedDb();
+    const nowSec = 1_772_004_000;
+    const slotStartedAt = nowSec - 3_600;
+    const progressStartedAt = slotStartedAt + 8;
+    const progressUpdatedAt = slotStartedAt + 9;
+    sqlite.prepare(
+      `INSERT INTO cron_slot_executions (
+       slot_key, slot_started_at, state, result_status, execution_owner,
+       started_at, finished_at, updated_at, metadata, execution_generation,
+       invocation_id, worker_version
+     ) VALUES ('hourlyYieldSync', ?, 'running', NULL, 'slot-owner', ?, NULL, ?, NULL, 1,
+               'old-invocation', 'worker-old')`,
+    ).run(slotStartedAt, slotStartedAt, progressUpdatedAt);
+    sqlite.prepare(
+      `INSERT INTO cron_leases (job, lease_owner, lease_until, heartbeat_at, updated_at)
+       VALUES ('sync-yield-data', 'child-owner', ?, ?, ?)`,
+    ).run(nowSec - 60, progressUpdatedAt, progressUpdatedAt);
+    const insertProgress = sqlite.prepare(
+      `INSERT INTO cron_run_progress (
+       job, started_at, updated_at, stage, items_done, items_total,
+       message, lease_owner, metadata, slot_started_at
+     ) VALUES (?, ?, ?, 'lease-acquired', 0, NULL, 'Lease acquired', 'child-owner', NULL, ?)`,
+    );
+    for (const job of ["sync-yield-supplemental", "fetch-tbill-rate", "sync-yield-data"]) {
+      insertProgress.run(job, progressStartedAt, progressUpdatedAt, slotStartedAt);
+    }
+    // The replacing version activated 30 seconds before the old isolate died.
+    sqlite.prepare(
+      `INSERT INTO cache (key, value, updated_at)
+       VALUES ('worker-version-activated:worker-new', ?, ?)`,
+    ).run(JSON.stringify({ workerVersion: "worker-new", activatedAt: progressUpdatedAt - 30 }), progressUpdatedAt - 30);
+
+    const summary = await sweepStaleScheduledSlotExecutions(db, {
+      nowSec,
+      staleAfterSec: 1_200,
+      slotKey: "hourlyYieldSync",
+      reconcilerWorkerVersion: "worker-new",
+    });
+
+    expect(summary).toMatchObject({ slotsReconciled: 1, syntheticCronRuns: 3, notStartedCronRuns: 0 });
+    const yieldRun = sqlite.prepare(
+      `SELECT status, error, duration_ms, metadata
+         FROM cron_runs
+        WHERE job = 'sync-yield-data'`,
+    ).get() as { status: string; error: string | null; duration_ms: number; metadata: string };
+    // One second of progress was written before the eviction: a zero-duration
+    // child was never required, only a slot heartbeat that stopped with it.
+    expect(yieldRun.status).toBe("skipped_neutral");
+    expect(yieldRun.error).toBeNull();
+    expect(yieldRun.duration_ms).toBe(1_000);
+    expect(JSON.parse(yieldRun.metadata)).toMatchObject({
+      failureCategory: "platform-interrupted",
+      childDisposition: "interrupted-by-deploy",
+      interruptedByWorkerVersionChange: true,
+      progressStage: "lease-acquired",
+      progressUpdatedAt,
+      activeDurationMs: 1_000,
+      slotWorkerVersion: "worker-old",
+      reconciledByWorkerVersion: "worker-new",
+      reconciledByWorkerVersionActivatedAt: progressUpdatedAt - 30,
+    });
+  });
+
+  it.each([
+    ["the activation marker fires 121 seconds after the death", 121],
+    ["the activation marker fires 121 seconds before the death", -121],
+    ["no activation marker exists", null],
+  ] as const)("keeps a mid-run child abandoned when %s", async (_reason, activationOffsetSec) => {
+    const { sqlite, db } = createMigratedDb();
+    const nowSec = 1_772_004_000;
+    const progressUpdatedAt = nowSec - 3_600 + 9;
+    seedStaleSlotWithDeadChild(sqlite, nowSec, {
+      firstSeenAt: progressUpdatedAt + 5,
+      activatedAt: activationOffsetSec == null ? null : progressUpdatedAt + activationOffsetSec,
+      progressStartedOffset: 8,
+      progressUpdatedOffset: 9,
+      slotUpdatedOffset: 9,
+    });
+
+    const summary = await sweepStaleScheduledSlotExecutions(db, {
+      nowSec,
+      staleAfterSec: 1_200,
+      slotKey: "halfHourlyMeasuredExecution",
+      reconcilerWorkerVersion: "worker-new",
+    });
+
+    expect(summary).toMatchObject({ slotsReconciled: 1, syntheticCronRuns: 1 });
+    const runRow = sqlite.prepare(
+      `SELECT status, error, metadata
+         FROM cron_runs
+        WHERE job = 'sync-cl-exit-depth'`,
+    ).get() as { status: string; error: string | null; metadata: string };
+    expect(runRow.status).toBe("error");
+    expect(runRow.error).toBe("scheduled slot heartbeat stale; child job progress abandoned");
+    // Drift exists, so the marker evidence is recorded even though the death
+    // falls outside the activation window and stays abandoned.
+    expect(JSON.parse(runRow.metadata)).toMatchObject({
+      failureCategory: "platform-abandoned",
+      childDisposition: "abandoned",
+      interruptedByWorkerVersionChange: false,
+      activeDurationMs: 1_000,
+      reconciledByWorkerVersionFirstSeenAt: progressUpdatedAt + 5,
+      reconciledByWorkerVersionActivatedAt:
+        activationOffsetSec == null ? null : progressUpdatedAt + activationOffsetSec,
+    });
+  });
+
+  it.each([
+    {
+      name: "falls back to the dying invocation's progress metadata version",
+      progressWorkerVersion: "worker-old",
+      expectedStatus: "skipped_neutral",
+      expectedSlotWorkerVersion: "worker-old",
+      activationRecorded: true,
+    },
+    {
+      name: "stays abandoned when no version evidence survives",
+      progressWorkerVersion: undefined,
+      expectedStatus: "error",
+      expectedSlotWorkerVersion: null,
+      activationRecorded: false,
+    },
+    {
+      name: "stays abandoned when the progress version matches the reconciler",
+      progressWorkerVersion: "worker-new",
+      expectedStatus: "error",
+      expectedSlotWorkerVersion: "worker-new",
+      activationRecorded: false,
+    },
+  ])("with a NULL slot worker_version, $name", async ({
+    progressWorkerVersion,
+    expectedStatus,
+    expectedSlotWorkerVersion,
+    activationRecorded,
+  }) => {
+    const { sqlite, db } = createMigratedDb();
+    const nowSec = 1_772_004_000;
+    const progressUpdatedAt = nowSec - 3_600 + 9;
+    seedStaleSlotWithDeadChild(sqlite, nowSec, {
+      firstSeenAt: null,
+      activatedAt: progressUpdatedAt - 30,
+      progressStartedOffset: 8,
+      progressUpdatedOffset: 9,
+      slotUpdatedOffset: 9,
+      slotWorkerVersion: null,
+      progressWorkerVersion,
+    });
+
+    const summary = await sweepStaleScheduledSlotExecutions(db, {
+      nowSec,
+      staleAfterSec: 1_200,
+      slotKey: "halfHourlyMeasuredExecution",
+      reconcilerWorkerVersion: "worker-new",
+    });
+
+    expect(summary).toMatchObject({ slotsReconciled: 1, syntheticCronRuns: 1 });
+    const runRow = sqlite.prepare(
+      `SELECT status, error, metadata
+         FROM cron_runs
+        WHERE job = 'sync-cl-exit-depth'`,
+    ).get() as { status: string; error: string | null; metadata: string };
+    expect(runRow.status).toBe(expectedStatus);
+    expect(runRow.error).toBe(
+      expectedStatus === "error" ? "scheduled slot heartbeat stale; child job progress abandoned" : null,
+    );
+    expect(JSON.parse(runRow.metadata)).toMatchObject({
+      interruptedByWorkerVersionChange: expectedStatus === "skipped_neutral",
+      slotWorkerVersion: expectedSlotWorkerVersion,
+      reconciledByWorkerVersionActivatedAt: activationRecorded ? progressUpdatedAt - 30 : null,
+    });
+  });
 });
 
 
@@ -591,7 +789,7 @@ describe("bounded abandonment progress evidence", () => {
   ])("retains only bounded evidence for $name metadata and remains idempotent", async ({ metadata, status, name }) => {
     const { sqlite, db } = createMigratedDb();
     const nowSec = 1_772_004_000;
-    seedZeroDurationDeployInterruptedCase(sqlite, nowSec, { firstSeenAt: null, activatedAt: null });
+    seedStaleSlotWithDeadChild(sqlite, nowSec, { firstSeenAt: null, activatedAt: null });
     sqlite.prepare("UPDATE cron_run_progress SET items_done = 261, items_total = 278, metadata = ?").run(metadata);
     const options = { nowSec, staleAfterSec: 1200, slotKey: "halfHourlyMeasuredExecution" };
     await sweepStaleScheduledSlotExecutions(db, options);
@@ -619,7 +817,7 @@ describe("bounded abandonment progress evidence", () => {
   it("does not snapshot or clear a child whose matching lease is still heartbeating", async () => {
     const { sqlite, db } = createMigratedDb();
     const nowSec = 1_772_004_000;
-    seedZeroDurationDeployInterruptedCase(sqlite, nowSec, { firstSeenAt: null, activatedAt: null });
+    seedStaleSlotWithDeadChild(sqlite, nowSec, { firstSeenAt: null, activatedAt: null });
     sqlite.prepare("UPDATE cron_leases SET heartbeat_at = ?, lease_until = ?, updated_at = ?").run(nowSec, nowSec + 600, nowSec);
     sqlite.prepare("UPDATE cron_run_progress SET metadata = ?").run(JSON.stringify({ currentCoinId: "usdnr-nerona" }));
     await sweepStaleScheduledSlotExecutions(db, { nowSec, staleAfterSec: 1200, slotKey: "halfHourlyMeasuredExecution" });
