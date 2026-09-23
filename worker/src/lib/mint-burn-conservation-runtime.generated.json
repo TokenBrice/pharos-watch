@@ -2,6 +2,24 @@
   "version": 1,
   "entries": [
     {
+      "chainId": "arbitrum",
+      "stablecoinId": "usdai-usd-ai",
+      "address": "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
+      "decimals": 18,
+      "disposition": "admitted",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply"
+    },
+    {
+      "chainId": "base",
+      "stablecoinId": "bd-basedollar",
+      "address": "0x252d36f435582ecb01686448d21e8c9ea0b2ca65",
+      "decimals": 18,
+      "disposition": "admitted",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply"
+    },
+    {
       "chainId": "ethereum",
       "stablecoinId": "a7a5-old-vector",
       "address": "0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9",
