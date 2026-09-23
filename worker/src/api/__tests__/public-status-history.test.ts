@@ -281,5 +281,49 @@ describe("handlePublicStatusHistory", () => {
       expect(body.currentStatus).toBe("healthy");
       expect(body.transitions).toHaveLength(0);
     });
+
+    it("keeps a duration-driven degradation and its recovery as public incidents", async () => {
+      const now = Math.floor(Date.now() / 1000);
+      const db = makeDb({
+        transitions: [
+          transition({
+            id: 2,
+            previous_status: "degraded",
+            next_status: "healthy",
+            raw_status: "healthy",
+            transition_type: "recover",
+            reason: "raw-healthy-recovery-threshold",
+            causes: [{
+              code: "active_price_coverage_incomplete",
+              layer: "data-quality",
+              severity: "info",
+              message: "Transient live-price miss; not degrading public status.",
+            }],
+            created_at: now - 1800,
+          }),
+          transition({
+            id: 1,
+            next_status: "degraded",
+            causes: [{
+              code: "active_price_coverage_duration_degraded",
+              layer: "data-quality",
+              severity: "warning",
+              message: "Persistent live-price gap(s) have outlived the duration budget: coin-b.",
+            }],
+            created_at: now - 3600,
+          }),
+        ],
+      });
+      assessPublicHealthMock.mockResolvedValue(makePublicHealth("healthy"));
+
+      const body = await readHistory(db);
+
+      expect(body.currentStatus).toBe("healthy");
+      expect(body.transitions.map(({ id, to }) => ({ id, to }))).toEqual([
+        { id: 2, to: "healthy" },
+        { id: 1, to: "degraded" },
+      ]);
+      expect(body.lastChangedAt).toBe(now - 1800);
+    });
   });
 });

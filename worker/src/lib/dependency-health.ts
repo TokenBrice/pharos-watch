@@ -58,7 +58,12 @@ function worseSignal(left: DependencySignal | null, right: DependencySignal | nu
  * unreadable streak is omitted rather than published as a number (R1).
  */
 function cacheQualityReason(cache: CacheStatus): string | null {
-  if (cache.degraded !== true) return null;
+  if (cache.degraded === undefined) return null;
+  if (cache.degraded === null) {
+    // Unreadable quality evidence: name it (R4) instead of letting the fresh
+    // age band imply a clean lane (R2).
+    return `Cache input quality unavailable: ${cache.degradedReason ?? "unknown"}.`;
+  }
   const reason = cache.degradedReason ?? "unknown";
   const streak = cache.streakDegradedRuns;
   return `Cache input quality degraded: ${reason}` +

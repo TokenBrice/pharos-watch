@@ -1,4 +1,7 @@
-import { STATUS_MISSING_PRICE_THRESHOLDS, getBlacklistGapStatus, getMissingPriceDurationStatus } from "@shared/lib/status-thresholds";
+import {
+  assessActivePriceGapDuration,
+  getBlacklistGapStatus,
+} from "@shared/lib/status-thresholds";
 import { getD1CapacityImpactStatus } from "@shared/lib/d1-capacity";
 import {
   countPublicImpactOpenCircuits,
@@ -615,10 +618,19 @@ export async function assessPublicHealth(
   const degradedQualityCaches = Object.entries(cachesWithProvider)
     .filter(([, cache]) => cache.degraded === true)
     .map(([key, cache]) => `${key}:${cache.degradedReason ?? "unknown"}`);
+  // Rule R2: unreadable quality evidence is unknown, never clean. It degrades
+  // the quality verdict and is named with its machine-readable reason (R4)
+  // instead of letting a fresh sentinel publish a clean assessment.
+  const unknownQualityCaches = Object.entries(cachesWithProvider)
+    .filter(([, cache]) => cache.degraded === null)
+    .map(([key, cache]) => `${key}:${cache.degradedReason ?? "unknown"}`);
   const cacheQualityImpactStatus: HealthResponse["status"] =
-    degradedQualityCaches.length > 0 ? "degraded" : "healthy";
+    degradedQualityCaches.length > 0 || unknownQualityCaches.length > 0 ? "degraded" : "healthy";
   if (degradedQualityCaches.length > 0) {
     warnings.push(`cache-quality-degraded: ${degradedQualityCaches.join(", ")}`);
+  }
+  if (unknownQualityCaches.length > 0) {
+    warnings.push(`cache-quality-unknown: ${unknownQualityCaches.join(", ")}`);
   }
   if (cacheAssessment.failures.length > 0) {
     warnings.push(
@@ -693,20 +705,9 @@ export async function assessPublicHealth(
   const acknowledgedGapIds = new Set(activePriceCoverage.acknowledgedGapIds ?? []);
   const alertEligibleIds = activePriceCoverage.alertEligibleIds.filter((id) => !acknowledgedGapIds.has(id));
   const activePriceCoverageAlertEligible = alertEligibleIds.length > 0;
-  const unacknowledgedAlertGaps = activePriceCoverage.missingActiveAssets
-    .filter((asset) => asset.alertEligible && !asset.acknowledgedGap && !acknowledgedGapIds.has(asset.stablecoinId));
-  const criticalDurationIds = unacknowledgedAlertGaps
-    .filter((asset) => getMissingPriceDurationStatus(asset.consecutiveMissingGenerations) === "stale")
-    .map((asset) => asset.stablecoinId);
-  // Unknown size (compacted evidence) fails closed as material.
-  const activePriceCoverageDurationStatus = getMissingPriceDurationStatus(
-    unacknowledgedAlertGaps.reduce(
-      (worst, asset) => (asset.marketCapUsd == null
-        || asset.marketCapUsd >= STATUS_MISSING_PRICE_THRESHOLDS.durationMaterialMarketCapUsd
-        ? Math.max(worst, asset.consecutiveMissingGenerations) : worst),
-      0,
-    ),
-  );
+  const gapDuration = assessActivePriceGapDuration(activePriceCoverage);
+  const criticalDurationIds = gapDuration.criticalGapIds;
+  const activePriceCoverageDurationStatus = gapDuration.status;
   const activePriceCoverageImpactStatus: HealthResponse["status"] =
     activePriceCoverage.status === "unknown" || activePriceCoverageDurationStatus !== "healthy"
       ? "degraded"

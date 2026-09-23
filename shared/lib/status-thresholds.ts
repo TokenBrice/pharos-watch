@@ -1,5 +1,5 @@
 import { CRON_INTERVALS } from "./cron-jobs";
-import type { StatusHealthValue } from "../types/status";
+import type { ActivePriceCoverageHealth, StatusHealthValue } from "../types/status";
 
 // --- Data freshness ratio boundaries ---
 // Canonical thresholds for age/interval ratio. Used by worker buildFreshnessMeta
@@ -125,6 +125,51 @@ export function getMissingPriceDurationStatus(consecutiveMissingGenerations: num
     return "degraded";
   }
   return "healthy";
+}
+
+export interface ActivePriceGapDurationVerdict {
+  /** Worst duration band across material unacknowledged alert-eligible gaps. */
+  status: StatusHealthValue;
+  /** Worst consecutive-missing-generation count among those material gaps. */
+  worstGenerations: number;
+  /** Material unacknowledged alert-eligible gaps whose own band is past `elevated`. */
+  degradedGapIds: string[];
+  /** Every unacknowledged alert-eligible gap at the `critical` band, material or not. */
+  criticalGapIds: string[];
+}
+
+/**
+ * Duration verdict over a coverage payload's unacknowledged alert-eligible
+ * gaps. Shared by the public-health assessment (impact status, critical ids)
+ * and the data-quality evaluator (dedicated transition cause) so both derive
+ * the same degradation from the same evidence. Unknown market cap fails
+ * closed as material.
+ */
+export function assessActivePriceGapDuration(
+  coverage: Pick<ActivePriceCoverageHealth, "missingActiveAssets" | "acknowledgedGapIds">,
+): ActivePriceGapDurationVerdict {
+  const acknowledgedGapIds = new Set(coverage.acknowledgedGapIds ?? []);
+  const alertGaps = coverage.missingActiveAssets.filter(
+    (asset) => asset.alertEligible && !asset.acknowledgedGap && !acknowledgedGapIds.has(asset.stablecoinId),
+  );
+  const materialGaps = alertGaps.filter(
+    (asset) => asset.marketCapUsd == null
+      || asset.marketCapUsd >= STATUS_MISSING_PRICE_THRESHOLDS.durationMaterialMarketCapUsd,
+  );
+  const worstGenerations = materialGaps.reduce(
+    (worst, asset) => Math.max(worst, asset.consecutiveMissingGenerations),
+    0,
+  );
+  return {
+    status: getMissingPriceDurationStatus(worstGenerations),
+    worstGenerations,
+    degradedGapIds: materialGaps
+      .filter((asset) => getMissingPriceDurationStatus(asset.consecutiveMissingGenerations) !== "healthy")
+      .map((asset) => asset.stablecoinId),
+    criticalGapIds: alertGaps
+      .filter((asset) => getMissingPriceDurationStatus(asset.consecutiveMissingGenerations) === "stale")
+      .map((asset) => asset.stablecoinId),
+  };
 }
 
 // --- Cache ratio thresholds (availability status) ---

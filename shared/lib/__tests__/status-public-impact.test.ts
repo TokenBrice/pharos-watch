@@ -17,6 +17,10 @@ describe("transitionHasPublicImpact", () => {
     expect(transitionHasPublicImpact([cause()])).toBe(false);
   });
 
+  it("treats a duration-degraded persistent price gap as public impact", () => {
+    expect(transitionHasPublicImpact([cause({ code: "active_price_coverage_duration_degraded" })])).toBe(true);
+  });
+
   it("treats unknown exact active-price coverage as public impact", () => {
     expect(transitionHasPublicImpact([cause({ code: "active_price_coverage_unknown" })])).toBe(true);
   });

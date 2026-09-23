@@ -2,6 +2,7 @@ import {
   STATUS_BLACKLIST_THRESHOLDS,
   STATUS_MISSING_PRICE_THRESHOLDS,
   STATUS_RESERVE_COMPOSITION_THRESHOLDS,
+  assessActivePriceGapDuration,
   getCacheRatioThresholds,
 } from "@shared/lib/status-thresholds";
 import { getCacheFreshnessRatio, getCacheFreshnessStatus } from "@shared/lib/cache-health";
@@ -564,6 +565,19 @@ const DATA_QUALITY_STATUS_RULES_CORE: readonly StatusRule<DataQualityEvaluationI
             : `${baseMessage}${notAlerting}; not degrading public status.`,
           { metric: "missingActivePrices", value: coverage.missingPriceCount, threshold: 1 },
         ));
+        // A duration-driven degradation opens a public uptime incident, so it
+        // gets its own allowlisted cause; the generic incomplete-coverage
+        // warning above stays admin-only.
+        const gapDuration = assessActivePriceGapDuration(coverage);
+        if (gapDuration.status !== "healthy") {
+          causes.push(makeCause(
+            "data-quality",
+            "active_price_coverage_duration_degraded",
+            "warning",
+            `Persistent live-price gap(s) have outlived the duration budget (${gapDuration.worstGenerations} consecutive missing generations, threshold ${STATUS_MISSING_PRICE_THRESHOLDS.generationsElevated}): ${gapDuration.degradedGapIds.join(", ")}. Each requires catalog review to re-source the price or retire the listing.`,
+            { metric: "missingPriceDurationGenerations", value: gapDuration.worstGenerations, threshold: STATUS_MISSING_PRICE_THRESHOLDS.generationsElevated },
+          ));
+        }
       } else if (coverage.status === "unknown") {
         causes.push(makeCause("data-quality", "active_price_coverage_unknown", "warning", "Exact active stablecoin live-price coverage evidence is unavailable."));
       }
@@ -706,6 +720,7 @@ const RUNBOOK_BY_CODE: Record<string, string> = {
   stablecoin_publication_incomplete: `${RUNBOOK_BASE}/stablecoins-cache.md`,
   stablecoin_publication_unknown: `${RUNBOOK_BASE}/stablecoins-cache.md`,
   active_price_coverage_incomplete: `${RUNBOOK_BASE}/stablecoins-cache.md`,
+  active_price_coverage_duration_degraded: `${RUNBOOK_BASE}/stablecoins-cache.md`,
   active_price_coverage_unknown: `${RUNBOOK_BASE}/stablecoins-cache.md`,
   price_gap_reviews_expired: `${RUNBOOK_BASE}/stablecoins-cache.md`,
   price_gap_reviews_invalid: `${RUNBOOK_BASE}/stablecoins-cache.md`,
