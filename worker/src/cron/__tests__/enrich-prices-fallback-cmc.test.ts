@@ -569,7 +569,7 @@ describe("enrichMissingPrices", () => {
       ]));
     }
     expect(fetchSpy).not.toHaveBeenCalled();
-    vi.setSystemTime(initialTime + 60 * 60 * 1000);
+    vi.setSystemTime(initialTime + (2 * 60 + 6) * 60 * 1000);
     const expiredAssets = [makeAsset()];
     const expired = await runCmcPass(expiredAssets, "test-cmc-key", undefined, replayDb);
     expect(expired.resolved).toBe(0);
@@ -579,8 +579,133 @@ describe("enrichMissingPrices", () => {
     );
   });
 
+  it("keeps a targeted quote that missed exactly one hourly CMC roll", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    // The hourly consumer fetches right after CMC's roll boundary (02:07:59 →
+    // 02:09:31); a slug whose quote last rolled one cadence earlier at 01:07:59
+    // is 3692s old at fetch time and must still be admissible.
+    vi.setSystemTime(new Date("2026-09-23T02:09:31Z"));
+    const missedRollSec = Math.floor(Date.parse("2026-09-23T01:07:59Z") / 1000);
+    const db = makeEnrichPricesDb([
+      emptyCmcLastFetchCache(),
+      { match: "circuit", rows: [], allowUnused: true },
+    ]);
+    const assets: PeggedAsset[] = [makePeggedAsset({
+      id: "test-dollar",
+      name: "Test Dollar",
+      symbol: "TUSD",
+      price: 0,
+      cmcSlug: "test-dollar",
+      contracts: [{
+        chain: "ethereum",
+        address: "0x1111111111111111111111111111111111111111",
+        decimals: 18,
+      }],
+    })];
+    mockFetch([
+      { match: "/v1/cryptocurrency/category", body: cmcCategory([]) },
+      {
+        match: "/v3/cryptocurrency/quotes/latest",
+        body: { data: [{
+          id: 123,
+          slug: "test-dollar",
+          symbol: "TUSD",
+          is_active: 1,
+          platform: {
+            slug: "ethereum",
+            token_address: "0x1111111111111111111111111111111111111111",
+          },
+          quote: {
+            USD: {
+              ...cmcUsdQuote(1.0002, new Date(missedRollSec * 1000).toISOString()),
+              volume_24h: 50_000,
+            },
+          },
+        }] },
+      },
+    ]);
+
+    const result = await runCmcPass(assets, "test-cmc-key", undefined, db);
+
+    expect(result.resolved).toBe(1);
+    expect(assets[0]).toMatchObject({
+      price: 1.0002,
+      priceSource: "coinmarketcap",
+      priceConfidence: "fallback",
+      priceObservedAt: missedRollSec,
+      priceObservedAtMode: "upstream",
+    });
+  });
+
+  it("bridges a rotation-skipped fetch hour from the verified cache", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const makeAsset = () => makePeggedAsset({
+      id: "test-dollar",
+      name: "Test Dollar",
+      symbol: "TUSD",
+      price: 0,
+      cmcSlug: "test-dollar",
+      contracts: [{
+        chain: "ethereum",
+        address: "0x1111111111111111111111111111111111111111",
+        decimals: 18,
+      }],
+    });
+    const rolledSec = Math.floor(Date.parse("2026-09-23T01:07:59Z") / 1000);
+    // The 01:09 fetch admitted the 01:07:59 roll; this slug is outside the
+    // 25-slug rotation window at 02:09 and returns at 03:09, so 03:09:31 must
+    // still replay the two-cadence-old verified quote (another run consumed
+    // the hour's fetch quota at 03:00).
+    const db = makeEnrichPricesDb([{
+      match: "SELECT value, updated_at FROM cache WHERE key = ?",
+      rows: [
+        {
+          key: "cmc_verified_targeted_quotes:v1",
+          value: JSON.stringify([{
+            assetId: "test-dollar",
+            slug: "test-dollar",
+            symbol: "TUSD",
+            price: 1.0002,
+            volume24h: 50_000,
+            observedAt: rolledSec,
+            providerAddress: "0x1111111111111111111111111111111111111111",
+            chain: "ethereum",
+            active: true,
+          }]),
+          updated_at: Math.floor(Date.parse("2026-09-23T01:09:31Z") / 1000),
+        },
+        {
+          key: "cmc_last_fetch",
+          value: JSON.stringify({ version: 1, kind: "success" }),
+          updated_at: Math.floor(Date.parse("2026-09-23T03:00:41Z") / 1000),
+        },
+      ],
+    }]);
+    const fetchSpy = mockFetch();
+
+    vi.setSystemTime(new Date("2026-09-23T03:09:31Z"));
+    const bridgedAssets = [makeAsset()];
+    const bridged = await runCmcPass(bridgedAssets, "test-cmc-key", undefined, db);
+    expect(bridged.resolved).toBe(1);
+    expect(bridgedAssets[0]).toMatchObject({
+      price: 1.0002,
+      priceSource: "coinmarketcap",
+      priceConfidence: "fallback",
+      priceObservedAt: rolledSec,
+      priceObservedAtMode: "upstream",
+    });
+    expect(fetchSpy).not.toHaveBeenCalled();
+
+    // Past two fetch cadences plus grace the quote is deliberately dropped.
+    vi.setSystemTime(new Date("2026-09-23T03:13:21Z"));
+    const expiredAssets = [makeAsset()];
+    const expired = await runCmcPass(expiredAssets, "test-cmc-key", undefined, db);
+    expect(expired.resolved).toBe(0);
+    expect(expiredAssets[0].price).toBe(0);
+  });
+
   it.each([
-    ["stale observation", Math.floor(Date.now() / 1_000) - 3_601, "0x1111111111111111111111111111111111111111"],
+    ["stale observation", Math.floor(Date.now() / 1_000) - 7_501, "0x1111111111111111111111111111111111111111"],
     ["wrong contract", Math.floor(Date.now() / 1_000) - 60, "0x2222222222222222222222222222222222222222"],
   ])("rejects a verified CMC cache entry with a %s", async (_reason, observedAt, providerAddress) => {
     const nowSec = Math.floor(Date.now() / 1_000);
