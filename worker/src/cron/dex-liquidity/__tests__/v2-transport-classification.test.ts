@@ -193,6 +193,7 @@ describe("EVM V2 verification transport classification", () => {
 
   it("resolves the enrichment deadline as the earlier of the slot budget and the loop cap", () => {
     const nowMs = Date.now();
+    vi.spyOn(Date, "now").mockReturnValue(nowMs);
     const slotSec = Math.floor(nowMs / 1000);
     const withSlot = resolveV2EnrichmentDeadlineMs(slotSec);
     expect(withSlot).toBeLessThanOrEqual(nowMs + V2_ENRICHMENT_MAX_WALL_MS);
@@ -202,5 +203,6 @@ describe("EVM V2 verification transport classification", () => {
     const noSlot = resolveV2EnrichmentDeadlineMs(undefined);
     expect(noSlot).toBeGreaterThan(nowMs);
     expect(noSlot).toBeLessThanOrEqual(nowMs + V2_ENRICHMENT_MAX_WALL_MS);
+    vi.restoreAllMocks();
   });
 });
