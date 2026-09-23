@@ -367,6 +367,19 @@ describe("exact-address coverage refresh", () => {
     expect(JSON.parse((await getCache(db, DEX_REFRESH_CACHE_KEY))!.value).observations).toEqual([]);
   });
 
+  it("skips the address lane without a request or circuit write while its breaker is open", async () => {
+    prepareAddressRefresh(usda());
+    const cg = mockFetch(onchainRoutes());
+    vi.spyOn(circuit, "shouldAttemptFetch").mockResolvedValue(false);
+    const recordOutcome = vi.spyOn(circuit, "recordOutcomeDecision").mockResolvedValue(undefined);
+
+    const summary = await runPriceDexRefresh({ db, syncStartSec: now, addressProvider });
+
+    expect(summary.addressRefresh).toMatchObject({ enabled: true, circuitOpen: true, resolved: 0, attemptedRequests: 0 });
+    expect(cg.getHistory().filter((entry) => onchainRequest(entry.url))).toEqual([]);
+    expect(recordOutcome).not.toHaveBeenCalledWith(db, CIRCUIT_SOURCE.CG_ONCHAIN, expect.anything());
+  });
+
   it("runs no address request when the provider is unconfigured or the row is under a reviewed gap", async () => {
     prepareAddressRefresh(usda());
     const cg = mockFetch([{ match: (request) => onchainRequest(request.url), respond: (request) =>
