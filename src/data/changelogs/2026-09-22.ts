@@ -66,6 +66,12 @@ export const entry: ChangelogEntry = {
         "Mu Digital AZND freezes after the issuer's July 10 wind-down announcement left only a ~$767 Curve pool near $0.03, and XTUSD freezes after XT.com's official market went stale on July 18 with an empty book and no admissible route. Both keep archived detail pages and cemetery records.",
     },
     {
+      label: "Cod3x cdxUSD frozen",
+      tag: "coverage",
+      description:
+        "Cod3x cdxUSD freezes after the peg broke on August 27 and bottomed at $0.2457 while supply held at 6,150,000 with zero burns; the issuer's site and docs now cover only AI trading agents and DefiLlama flags it dead.",
+    },
+    {
       label: "Freeze-day supply cliff is honest",
       tag: "infra",
       description:
