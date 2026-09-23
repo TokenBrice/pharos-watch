@@ -113,6 +113,17 @@ describe("hourly corroboration before the next publication", () => {
     expect(mocks.recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ outcome: "degraded" }));
   });
 
+  it.each([
+    [["rate-limited"], "ok"],
+    [["circuit-open"], "degraded"],
+    [["rate-limited", "http-error"], "degraded"],
+  ])("treats a slot refused with %j as %s (throttling escalates through the refresh circuit)", async (errorClasses, outcome) => {
+    mocks.runPriceDexRefresh.mockResolvedValueOnce({ cohortSize: 2, resolved: 0, attemptedBatches: 1, deferredBatches: 1,
+      unsupportedAssets: 0, missingQuotes: 2, hintedAttempted: 1, hintedResolved: 0, timedOut: false, cacheWritten: true, errorClasses });
+    await runStatusSelfCheckSlot(runtime([], 24));
+    expect(mocks.recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ outcome }));
+  });
+
   it("continues hourly recovery when the DEX routing cache fails", async () => {
     mocks.runPriceDexRefresh.mockRejectedValueOnce(new Error("private cache detail"));
     mocks.runPriceCorroboration.mockResolvedValueOnce({ cohortSize: 2, cacheEntriesWritten: 2,
