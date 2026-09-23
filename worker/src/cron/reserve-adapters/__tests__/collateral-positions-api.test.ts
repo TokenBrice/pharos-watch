@@ -444,6 +444,16 @@ function bridgeBasketNetwork(options: BridgeBasketOptions = {}): AdapterNetworkS
 const runBridgeBasket = (options: BridgeBasketOptions = {}) =>
   runAdapter("collateral-positions-api", "deuro-deuro", { network: bridgeBasketNetwork(options) });
 
+/** Every bridge output token priced in the same payload, as the adapter needs
+ *  before it may publish an observed basket unit value. */
+const memberPricesWith = (usd: Record<string, number> = {}) =>
+  Object.fromEntries(BRIDGE_INVENTORY.map((bridge) => [
+    bridge.token,
+    { price: { usd: usd[bridge.token] ?? 1.2, eur: (usd[bridge.token] ?? 1.2) / 1.2 } },
+  ]));
+
+const EURA_TOKEN = BRIDGE_INVENTORY.find((bridge) => bridge.label === "EURA")!.token;
+
 describe("fetchCollateralPositionsApiReserves bridge basket", () => {
   it("sums every verified bridge inventory and converts the EUR total to USD", async () => {
     const { result, network } = await runBridgeBasket();
@@ -473,17 +483,47 @@ describe("fetchCollateralPositionsApiReserves bridge basket", () => {
           expect.objectContaining({ label: "EURS", inventoryRaw: "51", inventoryEur: 0.51 }),
           expect.objectContaining({ label: "EURC", inventoryRaw: "100250000", inventoryEur: 100.25 }),
         ]),
-        outputValuation: {
-          sourceId: `collateral-positions-api:deuro-bridge-basket:${DEURO}`,
-          unitValueUsd: 1.2,
-          expectedUnitValueUsd: 1.2,
-          basketWeights: expect.arrayContaining([
-            { assetId: "asset:eurt", weight: expect.closeTo(1 / 126.26, 8) },
-            { assetId: "eurc-circle", weight: expect.closeTo(100.25 / 126.26, 8) },
-          ]),
-        },
+        // R1: this payload prices no bridge output token, so the observed
+        // basket value is withheld instead of reusing the EUR/USD expectation
+        // as both the observed and expected unit value.
+        outputValuationUnavailableReason: "output-tokens-unpriced",
       },
     });
+    expect(result.metadata?.redemption).not.toHaveProperty("outputValuation");
+  });
+
+  it("values the basket from member market prices when every output token is priced", async () => {
+    const { result } = await runBridgeBasket({ prices: { ...BASE_PRICES, ...memberPricesWith() } });
+
+    expect(result.metadata?.redemption).toMatchObject({
+      capacityEur: expect.closeTo(126.26, 6),
+      capacityUsd: expect.closeTo(151.512, 6),
+      eurUsdReference: 1.2,
+      outputValuation: {
+        unitValueUsd: expect.closeTo(1.2, 10),
+        expectedUnitValueUsd: 1.2,
+        basketWeights: expect.arrayContaining([
+          { assetId: "asset:eura", weight: expect.closeTo(5 / 126.26, 8) },
+        ]),
+      },
+    });
+    expect(result.metadata?.redemption).not.toHaveProperty("outputValuationUnavailableReason");
+  });
+
+  it("reduces the observed basket value when a member trades below its EUR expectation", async () => {
+    const euraUsd = 0.96;
+    const { result } = await runBridgeBasket({
+      prices: { ...BASE_PRICES, ...memberPricesWith({ [EURA_TOKEN]: euraUsd }) },
+    });
+
+    const valuation = result.metadata?.redemption?.outputValuation;
+    const euraWeight = 5 / 126.26;
+    expect(valuation?.expectedUnitValueUsd).toBe(1.2);
+    expect(valuation?.unitValueUsd).toBeCloseTo(euraWeight * euraUsd + (1 - euraWeight) * 1.2, 10);
+    expect(valuation!.unitValueUsd).toBeLessThan(1.2);
+    // Capacity follows the market value of the measured inventory rather than
+    // its nominal EUR face amount.
+    expect(result.metadata?.redemption?.capacityUsd).toBeCloseTo((126.26 - 5) * 1.2 + 5 * euraUsd, 6);
   });
 
   it("withholds the whole redemption block when one bridge inventory read fails", async () => {

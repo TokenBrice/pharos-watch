@@ -224,6 +224,30 @@ describe("fetchNestVaultPositionsReserves", () => {
     expectWarnings(result, []);
   });
 
+  it.each([
+    { label: "accepts sub-dollar published-NAV drift", nav: 119.5, rejected: false },
+    { label: "rejects a published NAV that contradicts the calculated net NAV", nav: 1_000, rejected: true },
+  ])("cross-checks the nBASIS calculated NAV against the published NAV: $label", async ({ nav, rejected }) => {
+    const network = nestNetwork("nbasis-nest", { data: { positions: {
+      liquidAssets: [], yieldAssets: [{ slug: "superstate-uscc", tokens: [{
+        symbol: "USCC", position: { value: 100 },
+        pendingTransactions: [{ type: "PendingWithdrawal", amount: 2, price: 10, value: 20 }],
+      }] }],
+    } } }, { data: { nav } }, { data: { lastPriceUpdates: [{ updatedAt: FIXTURE_NOW }] } });
+    network.json!["https://api.nest.credit/v1/vaults/nest-basis-vault/calculated-price"] = { data: {
+      grossCalculatedNav: 120, calculatedNav: 119, claimableFees: 1, claimableFeesAdjusted: true,
+    } };
+    const attempt = runAdapter("nest-vault-positions", "nbasis-nest", {
+      network: installAdapterNetwork(network), nowSec: FIXTURE_NOW,
+    });
+    if (rejected) {
+      await expect(attempt).rejects.toThrow(/does not match the published NAV/);
+      return;
+    }
+    const { result } = await attempt;
+    expect(result.metadata).toMatchObject({ calculatedNavUsd: 119, navUsd: nav, totalReserveUsd: 120 });
+  });
+
   it("keeps other Nest assets on settled-only accounting without pending transaction arrays", async () => {
     const { result } = await runNest(
       "inalpha-nest",

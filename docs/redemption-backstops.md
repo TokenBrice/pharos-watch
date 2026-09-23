@@ -292,6 +292,7 @@ Each row also carries:
   - `capacityKind` describes the adapter-declared evidence shape, such as `live-direct-bounded`, `live-queue`, `live-proxy-validated`, `documented-bound`, `documented-eventual`, or `heuristic`
   - `freshnessKind` describes the adapter-declared redemption freshness evidence, such as `verified-source-timestamp`, `same-run-onchain`, `same-run-api`, `reviewed-static`, or `unverified`
   - `sourceTimestamp`, `sourceUrls`, `settlementDelaySec`, `queueDepthUsd`, `dailyLimitUsd`, `minRedeemUsd`, and `liveHolderEligibility` are carried through the API/UI when emitted by live reserve adapters
+  - `settlementDelaySec` is raw nonnegative telemetry: a measured `0` is an atomic route, not a missing value. The projected exit-route observation window (`settlementHorizonSec`) is a separate strictly positive integer, so a live positive integer delay becomes the horizon and a zero or absent delay takes the reviewed `settlementModel` ceiling instead of publishing an invalid zero-second horizon.
 - `feeConfidence`:
   - `fixed` for bounded bps schedules
   - `formula` for disclosed formulas such as Liquity-style base-rate fees
