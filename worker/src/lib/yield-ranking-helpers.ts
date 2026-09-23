@@ -10,6 +10,15 @@ export const STALE_THRESHOLD_MS = CRON_INTERVALS["sync-yield-data"] * YIELD_STAL
 const SUPPLEMENTAL_STALE_THRESHOLD_CYCLES = 1.5;
 export const SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS =
   CRON_INTERVALS["sync-yield-supplemental"] * SUPPLEMENTAL_STALE_THRESHOLD_CYCLES * 1000;
+/**
+ * Daily Pendle term-yield observations trade intraday precision for a smaller
+ * anonymous-IP quota footprint. Two cycles (48h) allow one missed daily
+ * refresh; observation timestamps remain unchanged during retained reuse.
+ * Scheduling, ranking freshness, and family health share this authority.
+ */
+const PENDLE_SUPPLEMENTAL_FETCH_CADENCE_MS = DAY_MS;
+export const PENDLE_SUPPLEMENTAL_FETCH_CADENCE_SEC = PENDLE_SUPPLEMENTAL_FETCH_CADENCE_MS / 1000;
+export const PENDLE_SUPPLEMENTAL_STALE_THRESHOLD_MS = PENDLE_SUPPLEMENTAL_FETCH_CADENCE_MS * 2;
 export const SLOW_NAV_SOURCE_STALE_THRESHOLD_MS = 3 * DAY_MS;
 const SLOW_NAV_SOURCE_KEYS = new Set([
   "protocol-api:hashnote-usyc",
@@ -95,6 +104,9 @@ export function getRankingStaleThresholdMs(dataSource: string, sourceKey?: strin
   if (dataSource === "protocol-api" && sourceKey != null && SLOW_NAV_SOURCE_KEYS.has(sourceKey)) {
     return SLOW_NAV_SOURCE_STALE_THRESHOLD_MS;
   }
+  if (dataSource === "protocol-api" && sourceKey?.startsWith("protocol-api:pendle:") === true) {
+    return PENDLE_SUPPLEMENTAL_STALE_THRESHOLD_MS;
+  }
   if (dataSource === "protocol-api" || (dataSource === "onchain" && isSupplementalOnchainSource(sourceKey))) {
     return SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS;
   }
@@ -111,6 +123,9 @@ function getRankingProducerCadenceMs(dataSource: string, sourceKey?: string | nu
     (dataSource === "protocol-api" && sourceKey != null && SLOW_NAV_SOURCE_KEYS.has(sourceKey))
   ) {
     return DAY_MS;
+  }
+  if (dataSource === "protocol-api" && sourceKey?.startsWith("protocol-api:pendle:") === true) {
+    return PENDLE_SUPPLEMENTAL_FETCH_CADENCE_MS;
   }
   if (dataSource === "protocol-api" || (dataSource === "onchain" && isSupplementalOnchainSource(sourceKey))) {
     return CRON_INTERVALS["sync-yield-supplemental"] * 1000;

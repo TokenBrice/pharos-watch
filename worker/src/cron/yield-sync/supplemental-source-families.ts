@@ -2,6 +2,13 @@ import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/
 import { PYS_APY_SANITY_MAX } from "@shared/lib/yield-scoring";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { mapWithConcurrency } from "../../lib/concurrency";
+import { getCaches, setCache } from "../../lib/db-cache";
+import { logWorkerEvent } from "../../lib/structured-log";
+import {
+  PENDLE_SUPPLEMENTAL_FETCH_CADENCE_SEC,
+  PENDLE_SUPPLEMENTAL_STALE_THRESHOLD_MS,
+  SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS,
+} from "../../lib/yield-ranking-helpers";
 import type { VaultsFyiRuntimeConfig } from "../../lib/env";
 import { normalizeTokenAddress } from "../dex-liquidity/token-resolution";
 import {
@@ -20,16 +27,41 @@ import {
   type VaultsFyiSourceResult,
   type VaultsFyiTelemetry,
 } from "./sources";
+import type { SupplementalFamilyFetchResult } from "./sources-optional-protocols-supplemental";
 import { OPTIONAL_RPC_MISSING_TARGET_EXAMPLE_LIMIT } from "./sources-rpc";
 import { runOptionalSourceFamily } from "./optional-source-runtime";
 import type { ResolvedYieldCandidate } from "./types";
-import type { SupplementalSourceFamilyKey } from "./supplemental-source-family-keys";
+import {
+  SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
+  type SupplementalSourceFamilyKey,
+} from "./supplemental-source-family-keys";
 import { resolveYieldSourceKeyRoute } from "./yield-source-key-routing";
+import {
+  PENDLE_RATE_LIMIT_BACKOFF_REASON,
+  buildYieldSupplementalPendleBackoff,
+  getYieldSupplementalFamilyCacheKey,
+  getYieldSupplementalPendleBackoffCacheKey,
+  parseYieldSupplementalPendleBackoff,
+  parseYieldSupplementalSourcesCache,
+} from "./cache/supplemental-cache-keys";
 
 const AAVE_SUPPORTED_CHAINS = new Set(["ethereum", "arbitrum", "base"]);
 const AAVE_TARGETS_PER_RUN = 6;
 const AAVE_TARGET_ROTATION_INTERVAL_SEC = 4 * 60 * 60;
 const AAVE_ORDINARY_MISS_RATIO_LIMIT = 0.5;
+
+/** Pendle alone refreshes daily; the other families still refresh each producer run. */
+const SUPPLEMENTAL_FAMILY_FETCH_CADENCE_SEC = {
+  pendle: PENDLE_SUPPLEMENTAL_FETCH_CADENCE_SEC,
+} as const;
+
+const SUPPLEMENTAL_FAMILY_STALE_THRESHOLD_SEC: Partial<Record<SupplementalSourceFamilyKey, number>> = {
+  pendle: PENDLE_SUPPLEMENTAL_STALE_THRESHOLD_MS / 1000,
+};
+
+export function getSupplementalFamilyStaleThresholdSec(family: SupplementalSourceFamilyKey): number {
+  return SUPPLEMENTAL_FAMILY_STALE_THRESHOLD_SEC[family] ?? SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS / 1000;
+}
 
 
 interface SupplementalSourceFamilyContext {
@@ -38,7 +70,6 @@ interface SupplementalSourceFamilyContext {
   signal?: AbortSignal;
   chainRpcs?: Map<string, ChainRpcConfig>;
   vaultsFyi?: VaultsFyiRuntimeConfig;
-  pendleApiKey?: string;
 }
 
 export interface SupplementalSourceFamilyResult {
@@ -53,6 +84,15 @@ export interface SupplementalSourceFamilyResult {
    * incomplete one.
    */
   degraded: boolean;
+  /**
+   * PENDLE-RL: neutral skip — the family kept its retained snapshot without a
+   * fetch (per-family cadence not elapsed, or an active 429 backoff refused
+   * the call). The writer leaves the family cache row untouched and the run
+   * stays non-degraded while the retained row is inside its staleness budget.
+   */
+  skipReason?: "pendle-cadence-not-due" | "pendle-rate-limited-backoff";
+  /** PENDLE-RL (R4): machine-readable cause carried into the run-outcome row when degraded. */
+  degradedReason?: string;
   telemetry?: OptionalRpcFamilyTelemetry;
   provider?: unknown;
 }
@@ -121,26 +161,6 @@ type SupplementalSourceFamilySummaryRecord = Record<
 const SUPPLEMENTAL_SOURCE_KEY_EXAMPLE_LIMIT = 5;
 export const SUPPLEMENTAL_SOURCE_FAMILY_CONCURRENCY = 1;
 
-export const SUPPLEMENTAL_SOURCE_FAMILY_KEYS: SupplementalSourceFamilyKey[] = [
-  "morpho",
-  "pendle",
-  "yearnKong",
-  "beefy",
-  "vaultsFyi",
-  "compoundV3",
-  "aaveV3",
-  "roycoDawn",
-];
-
-export const REQUIRED_SUPPLEMENTAL_SOURCE_FAMILY_KEYS: SupplementalSourceFamilyKey[] = [
-  "morpho",
-  "pendle",
-  "yearnKong",
-  "beefy",
-  "compoundV3",
-  "aaveV3",
-  "roycoDawn",
-];
 
 function shouldPublishVaultsFyiFamilyCache(
   telemetry: VaultsFyiTelemetry | undefined,
@@ -407,7 +427,7 @@ function buildAaveSourceKey(stablecoinId: string, chain: string, assetAddress: s
 }
 
 interface SimpleSupplementalFamily {
-  key: "morpho" | "pendle" | "yearnKong" | "beefy" | "roycoDawn";
+  key: "morpho" | "yearnKong" | "beefy" | "roycoDawn";
   label: string;
   fetch: (signal?: AbortSignal) => Promise<{
     candidates: ResolvedYieldCandidate[];
@@ -420,11 +440,6 @@ const SIMPLE_SUPPLEMENTAL_FAMILIES: Record<SimpleSupplementalFamily["key"], Simp
     key: "morpho",
     label: "Morpho supplemental family",
     fetch: fetchMorphoVaultSources,
-  },
-  pendle: {
-    key: "pendle",
-    label: "Pendle supplemental family",
-    fetch: fetchPendleMarketSources,
   },
   yearnKong: {
     key: "yearnKong",
@@ -443,6 +458,90 @@ const SIMPLE_SUPPLEMENTAL_FAMILIES: Record<SimpleSupplementalFamily["key"], Simp
   },
 };
 
+/** Anonymous Pendle requests share an IP quota; skips never refresh observation timestamps. */
+async function runPendleFamily(
+  context: SupplementalSourceFamilyContext,
+): Promise<SupplementalSourceFamilyResult> {
+  const { db, startSec, signal } = context;
+  const familyKey = getYieldSupplementalFamilyCacheKey("pendle");
+  const backoffKey = getYieldSupplementalPendleBackoffCacheKey();
+  // A failed state read must not kill the whole producer run: fall back to an
+  // ungated fetch, which costs at most the three page requests.
+  let rows = new Map<string, { value: string; updatedAt: number }>();
+  if (db) {
+    try {
+      rows = await getCaches(db, [familyKey, backoffKey]);
+    } catch (error) {
+      logWorkerEvent({
+        scope: "lib",
+        job: "sync-yield-supplemental",
+        level: "warn",
+        event: "pendle-lane-state-read-failed",
+        message: "Pendle lane state read failed; fetching without cadence/backoff gate",
+        error,
+      });
+    }
+  }
+  const row = rows.get(familyKey);
+  const retained = row ? parseYieldSupplementalSourcesCache(row.value, row.updatedAt, startSec) : null;
+  let backoff = parseYieldSupplementalPendleBackoff(rows.get(backoffKey)?.value, startSec);
+  const notDue = retained != null && retained.ageSeconds < SUPPLEMENTAL_FAMILY_FETCH_CADENCE_SEC.pendle;
+
+  if (!backoff && !notDue) {
+    const { value, status } = await runOptionalSupplementalFamily<SupplementalFamilyFetchResult>(
+      "Pendle supplemental family",
+      signal,
+      () => fetchPendleMarketSources(signal),
+      { candidates: [], degraded: false },
+    );
+    if (!value.rateLimited) {
+      return {
+        key: "pendle",
+        candidates: value.candidates,
+        sourceFamilyCount: value.candidates.length,
+        status,
+        degraded: status === "failed" || value.degraded,
+      };
+    }
+    const recordedAtSec = Math.floor(Date.now() / 1000);
+    backoff = {
+      backoffUntilSec: recordedAtSec + value.rateLimited.backoffSec,
+      source: value.rateLimited.source,
+      recordedAtSec,
+      reason: PENDLE_RATE_LIMIT_BACKOFF_REASON,
+    };
+    // A failed write must not kill the run: the in-memory window still governs
+    // this execution, and the next run re-derives it from a fresh 429.
+    if (db) {
+      try {
+        await setCache(db, backoffKey, buildYieldSupplementalPendleBackoff(backoff), signal);
+      } catch (error) {
+        logWorkerEvent({
+          scope: "lib",
+          job: "sync-yield-supplemental",
+          level: "warn",
+          event: "pendle-backoff-write-failed",
+          message: "Pendle rate-limit backoff row could not be persisted",
+          error,
+        });
+      }
+    }
+  }
+
+  const fresh = retained != null && retained.ageSeconds <= getSupplementalFamilyStaleThresholdSec("pendle");
+  const candidates = fresh ? retained.candidates : [];
+  return {
+    key: "pendle",
+    candidates,
+    sourceFamilyCount: candidates.length,
+    status: "ok",
+    degraded: !fresh,
+    ...(fresh
+      ? { skipReason: backoff ? "pendle-rate-limited-backoff" : "pendle-cadence-not-due" }
+      : { degradedReason: PENDLE_RATE_LIMIT_BACKOFF_REASON }),
+  };
+}
+
 async function runSimpleSupplementalFamily(
   context: SupplementalSourceFamilyContext,
   family: SimpleSupplementalFamily,
@@ -450,9 +549,7 @@ async function runSimpleSupplementalFamily(
   const { value, status } = await runOptionalSupplementalFamily(
     family.label,
     context.signal,
-    () => family.key === "pendle"
-      ? fetchPendleMarketSources(context.signal, context.pendleApiKey)
-      : family.fetch(context.signal),
+    () => family.fetch(context.signal),
     { candidates: [], degraded: false },
   );
   return {
@@ -588,12 +685,10 @@ async function runAaveFamily(
   };
 }
 
-
 const SUPPLEMENTAL_SOURCE_FAMILY_REGISTRY = [
   (context: SupplementalSourceFamilyContext) =>
     runSimpleSupplementalFamily(context, SIMPLE_SUPPLEMENTAL_FAMILIES.morpho),
-  (context: SupplementalSourceFamilyContext) =>
-    runSimpleSupplementalFamily(context, SIMPLE_SUPPLEMENTAL_FAMILIES.pendle),
+  runPendleFamily,
   (context: SupplementalSourceFamilyContext) =>
     runSimpleSupplementalFamily(context, SIMPLE_SUPPLEMENTAL_FAMILIES.yearnKong),
   (context: SupplementalSourceFamilyContext) =>

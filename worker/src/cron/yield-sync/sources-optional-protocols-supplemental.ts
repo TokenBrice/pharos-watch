@@ -1,14 +1,17 @@
 import { CHAIN_META } from "@shared/lib/chains";
+import { parseRetryAfterSeconds } from "@shared/lib/retry-after";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { isRecord } from "@shared/lib/type-guards";
 import { throwIfAborted } from "../../lib/abort";
 import { logWorkerEvent } from "../../lib/structured-log";
-import { fetchJsonWithRetry } from "../../lib/fetch-retry";
+import { DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES, fetchJsonWithRetry, fetchWithRetry } from "../../lib/fetch-retry";
+import { cancelResponseBodyQuietly, readResponseJsonWithinLimitWithSignal } from "../../lib/response-body";
 import { USER_AGENT } from "../../lib/constants";
 import { buildChainAddressKey } from "../dex-liquidity/token-resolution";
 import { createOptionalSourceBudget, resolveCanonicalChain } from "./sources-helpers";
 import { OPTIONAL_PROTOCOL_API_BUDGET_MS, OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS } from "./optional-source-runtime";
 import type { ResolvedYieldCandidate } from "./types";
+import { PENDLE_SUPPLEMENTAL_FETCH_CADENCE_SEC } from "../../lib/yield-ranking-helpers";
 
 interface MorphoVaultItem {
   address: string;
@@ -81,6 +84,37 @@ interface TrackedMorphoFilters {
 export interface SupplementalFamilyFetchResult {
   candidates: ResolvedYieldCandidate[];
   degraded: boolean;
+  /** A 429's retry window, persisted by the supplemental producer. */
+  rateLimited?: PendleRateLimitBackoff;
+}
+
+interface PendleRateLimitBackoff {
+  backoffSec: number;
+  source: "retry-after" | "x-ratelimit-weekly-reset" | "x-ratelimit-reset" | "default";
+}
+
+/** Respect the exhausted quota window, not the weekly reset on an ordinary minute-limit response. */
+function resolvePendleRateLimitBackoff(response: Response, nowMs: number): PendleRateLimitBackoff {
+  const retryAfterSec = parseRetryAfterSeconds(response.headers.get("Retry-After"), { nowMs });
+  const weeklyRemaining = response.headers.get("x-ratelimit-weekly-remaining");
+  const weeklyExhausted = weeklyRemaining != null && Number(weeklyRemaining) === 0;
+  const resetHeaders = weeklyExhausted || (weeklyRemaining == null && !retryAfterSec)
+    ? ["x-ratelimit-weekly-reset", "x-ratelimit-reset"] as const
+    : ["x-ratelimit-reset"] as const;
+  let backoffSec = retryAfterSec && retryAfterSec > 0 ? retryAfterSec : 0;
+  let source: PendleRateLimitBackoff["source"] = backoffSec ? "retry-after" : "default";
+  for (const header of resetHeaders) {
+    const resetSec = Number(response.headers.get(header));
+    const delaySec = resetSec - Math.floor(nowMs / 1000);
+    if (Number.isSafeInteger(resetSec) && delaySec > backoffSec) {
+      backoffSec = delaySec;
+      source = header;
+    }
+  }
+  return {
+    backoffSec: backoffSec > 0 ? Math.min(backoffSec, 7 * 86400) : PENDLE_SUPPLEMENTAL_FETCH_CADENCE_SEC,
+    source,
+  };
 }
 
 function isNonEmptyString(value: unknown): value is string {
@@ -277,8 +311,7 @@ export async function fetchMorphoVaultSources(signal?: AbortSignal): Promise<Sup
   }
 }
 
-export async function fetchPendleMarketSources(signal?: AbortSignal, apiKey?: string): Promise<SupplementalFamilyFetchResult> {
-  const configuredApiKey = apiKey?.trim();
+export async function fetchPendleMarketSources(signal?: AbortSignal): Promise<SupplementalFamilyFetchResult> {
   const results: ResolvedYieldCandidate[] = [];
   const budget = createOptionalSourceBudget("Pendle market sources", OPTIONAL_PROTOCOL_API_BUDGET_MS, signal);
   const nowMs = Date.now();
@@ -293,25 +326,34 @@ export async function fetchPendleMarketSources(signal?: AbortSignal, apiKey?: st
         while (!budget.budgetController.signal.aborted) {
           throwIfAborted(budget.budgetController.signal);
           const url = `https://api-v2.pendle.finance/core/v1/${chainId}/markets?limit=${limit}&skip=${skip}&is_active=true`;
-          const result = await fetchJsonWithRetry<{ total?: number; results?: PendleMarket[] }>(
+          const response = await fetchWithRetry(
             url,
             {
               headers: {
                 Accept: "application/json",
                 "User-Agent": USER_AGENT,
-                ...(configuredApiKey ? { Authorization: `Bearer ${configuredApiKey}` } : {}),
               },
               signal: budget.signal,
             },
             0,
-            { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
+            { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS, passthroughStatuses: [429], waitOnPassthrough429: false },
           );
-          if (!result?.response.ok) {
+          if (!response?.ok) {
             degraded = true;
+            if (response?.status === 429) {
+              const rateLimited = resolvePendleRateLimitBackoff(response, Date.now());
+              await cancelResponseBodyQuietly(response);
+              // The quota is shared across chains: stop immediately, not after
+              // two more doomed requests. Error bodies need not be JSON.
+              return { candidates: results, degraded, rateLimited };
+            }
+            await cancelResponseBodyQuietly(response);
             break;
           }
 
-          const body = result.body;
+          const body = await readResponseJsonWithinLimitWithSignal<{ total?: number; results?: PendleMarket[] }>(
+            response, DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES, budget.signal,
+          );
           if (!Array.isArray(body.results)) {
             degraded = true;
             break;

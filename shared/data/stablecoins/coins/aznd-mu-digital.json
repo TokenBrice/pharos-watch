@@ -3,6 +3,27 @@
   "name": "Mu Digital AZND",
   "symbol": "AZND",
   "oneLiner": "AZND is Mu Digital's KYC-gated dollar token; users lock it in the loAZND vault for Asia credit yield, with muBOND absorbing first losses.",
+  "status": "frozen",
+  "windDownAnnouncedAt": "2026-07-10",
+  "windDownSourceUrl": "https://x.com/MuDigitalHQ/status/2075417387625832880",
+  "frozenAt": "2026-09-23",
+  "obituary": {
+    "causeOfDeath": "abandoned",
+    "deathDate": "2026-07-10",
+    "epitaph": "An orderly exit from Asia credit",
+    "obituary": "Mu Digital announced an orderly wind-down of AZND, loAZND, and muBOND on July 10, 2026, and opened its redemption portal on August 7, 2026. Secondary trading had already collapsed: Pharos accepted its last admissible price, 0.19444 from the thin Curve pool, on July 20, 2026, and the residual pool now holds roughly $767 of liquidity near $0.03. CoinGecko stopped updating the feed on July 10 and DefiLlama delisted the project, leaving no admissible market or provider path. Pharos freezes AZND as an archived wind-down asset rather than an active stablecoin.",
+    "peakMcap": 16326376,
+    "sourceUrl": "https://x.com/MuDigitalHQ/status/2075417387625832880",
+    "sourceLabel": "Mu Digital wind-down announcement"
+  },
+  "marketAvailability": "legacy-or-wind-down",
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Wind-down in progress",
+      "message": "Mu Digital commenced an orderly wind-down on July 10, 2026 and opened its redemption portal on August 7, 2026. AZND no longer has an admissible market price."
+    }
+  ],
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized",

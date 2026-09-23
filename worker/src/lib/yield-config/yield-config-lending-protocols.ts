@@ -88,6 +88,17 @@ const LENDING_PROTOCOLS = {
   // Wave 3 — 2026-06-11 audit queue follow-up; runtime safety/TVL gates still decide coin eligibility.
   "bifi": { label: "BiFi" },
   "fraxlend": { label: "Fraxlend v1" },
+  // 2026-09-23 coverage-audit drain — queue-guided promotions from the
+  // 2026-09-01 audit's lendingAllowlistRecommendations. Categories re-verified
+  // against api.llama.fi/protocols on 2026-09-23; runtime safety/TVL gates
+  // still decide coin eligibility.
+  "sky-lending": { label: "Sky Lending" },
+  "justlend-v1": { label: "JustLend V1" },
+  "accountable": { label: "Accountable" },
+  "pareto-credit": { label: "Pareto Credit" },
+  "inverse-finance-firm": { label: "Inverse Finance FiRM" },
+  "segment-finance": { label: "Segment Finance" },
+  "save": { label: "Save" },
   // YIELD_ALLOWLIST_AUDIT_QUEUE_ANCHOR
   // Future allowlist rounds start from the monthly yield-coverage-audit
   // operatorQueue.recommendationCandidates entries with kind "lending-allowlist".
@@ -225,10 +236,7 @@ export const AUTO_LENDING_SAFETY_BYPASS_IDS = new Set([
   "usdx-hex-trust",
   "usdo-openeden",
   "usdm-moneta",
-  // reusd-resupply: exact Pendle fixed-yield market repaired on 2026-06-11.
-  // Live report-card safety was 49/100, one point below the generic gate, so
-  // publication is deliberately limited to the pinned pool.
-  "reusd-resupply",
-  // xusd-babelfish: Rootstock-only, but Sovryn is the canonical Bitcoin-side venue
-  "xusd-babelfish",
+  // reusd-resupply and xusd-babelfish bypasses were removed with their stale
+  // pins in the 2026-09-23 audit drain (pinned pools no longer exist on
+  // DeFiLlama; a bypass without its pinned pool has no effect).
 ]);

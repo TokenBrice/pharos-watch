@@ -224,6 +224,12 @@ export const YieldHealthSummarySchema = z.object({
         status: StatusHealthOrUnknownSchema,
         /** True when this row is the retained snapshot from the last degraded fetch. */
         retained: z.boolean().optional(),
+        /**
+         * PENDLE-RL: the per-family retained-row budget this row's freshness
+         * was graded against (Pendle's daily lane carries a wider budget than
+         * the lane default). Absent on older payloads.
+         */
+        maxAgeSec: z.number().optional(),
       }),
     ).optional(),
   }),

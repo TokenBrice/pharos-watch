@@ -8,7 +8,7 @@ const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
 
 describe("blacklist amount repair queue", () => {
-  it("enqueues eligible EVM events and legacy zeros but excludes Tron and resolved amounts", async () => {
+  it("enqueues eligible EVM and Tron events and legacy zeros but excludes resolved amounts", async () => {
     const { db, sqlite } = fixtures.open();
     await insertBlacklistRows(db, [
       makePendingBlacklistRow({ id: "pending", amount_status: "recoverable_pending" }),
@@ -26,6 +26,7 @@ describe("blacklist amount repair queue", () => {
       { event_id: "failed", priority: 40, reason: "missing-event-amount" },
       { event_id: "legacy-zero", priority: 40, reason: "legacy-derived-zero" },
       { event_id: "pending", priority: 20, reason: "missing-event-amount" },
+      { event_id: "tron", priority: 20, reason: "missing-event-amount" },
     ]);
   });
 

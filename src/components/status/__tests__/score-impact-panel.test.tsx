@@ -50,6 +50,28 @@ describe("ScoreImpactPanel", () => {
     expect(screen.getByText(/Safety Scores may look lower/)).toBeTruthy();
   });
 
+  it("reports a clean reserve input for a healthy lane at live 73.7% score-grade coverage", () => {
+    const data = makeHealthyStatusResponse();
+
+    render(
+      <ScoreImpactPanel
+        reserveComposition={{
+          ...data.reserveComposition,
+          freshCoins: 74,
+          degradedCoins: 39,
+          errorCoins: 7,
+          freshCoverageRatio: 0.7374,
+          authoritativeFreshCoverageRatio: 0.7374,
+        }}
+        reserveDrift={[]}
+        classificationWarnings={[]}
+      />,
+    );
+
+    expect(screen.getAllByText("73.7%").length).toBeGreaterThan(0);
+    expect(screen.queryByText("conservative")).toBeNull();
+  });
+
   it("renders absent optional payloads as Unknown instead of zero", () => {
     const data = makeHealthyStatusResponse();
 
