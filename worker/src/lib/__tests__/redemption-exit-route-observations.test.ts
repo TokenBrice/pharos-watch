@@ -172,6 +172,9 @@ describe("redemption same-notional route observations", () => {
     expect(live?.settlementHorizonSec).toBe(604_800);
     const unreported = build({ config: daysConfig });
     expect(unreported?.settlementHorizonSec).toBe(14 * 86_400);
+    // A zero live delay (instant route) is not a horizon; the schema requires > 0.
+    const instant = build({ config: daysConfig, settlementDelaySec: 0 });
+    expect(instant?.settlementHorizonSec).toBe(14 * 86_400);
   });
 
   it("stamps a documented-bound observation with the chain-read time, not the review date", () => {
