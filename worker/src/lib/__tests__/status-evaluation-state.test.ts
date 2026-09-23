@@ -15,6 +15,7 @@ import {
   type AvailabilityEvaluationInput,
   type DataQualityEvaluationInput,
 } from "../status/evaluation-rules";
+import { evaluateStablecoinActivePriceCoverage, STABLECOIN_PRICE_GAP_REVIEWS } from "../stablecoin-publication-coverage";
 
 function makeReserveComposition(
   overrides?: Partial<StatusResponse["reserveComposition"]>,
@@ -597,6 +598,35 @@ describe("status cause text", () => {
     );
   });
 
+  it("does not report a zero-task repair execution as an informational issue", () => {
+    const result = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ repairRunnerAutoRepairCount: 0 }));
+    expect(result.causes.some((cause) => cause.code === "ddr_auto_repair_count")).toBe(false);
+  });
+
+  it("reports acknowledged gaps as info with identity and expiry, and exposes ignored reviews", () => {
+    const review = STABLECOIN_PRICE_GAP_REVIEWS[0]!;
+    const evaluated = evaluateStablecoinActivePriceCoverage(
+      [{ id: review.stablecoinId, price: null }],
+      [review.stablecoinId],
+      { nowSec: review.reviewedAt, priceGapReviews: [review] },
+    );
+    const result = evaluateDataQualityStatus(makeDataQualityEvaluationInput({
+      activePriceCoverage: {
+        ...evaluated, status: "incomplete", observedAt: review.reviewedAt,
+        expiredGapReviewIds: ["expired-coin"], invalidGapReviewIds: ["invalid-coin"],
+      },
+    }));
+    expect(result.status).toBe("healthy");
+    const priceCause = result.causes.find((cause) => cause.code === "active_price_coverage_incomplete");
+    expect(priceCause?.severity).toBe("info");
+    expect(priceCause?.message).toContain(review.stablecoinId);
+    expect(priceCause?.message).toContain(new Date(review.expiresAt * 1000).toISOString().slice(0, 10));
+    expect(result.causes).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "price_gap_reviews_expired", severity: "info" }),
+      expect.objectContaining({ code: "price_gap_reviews_invalid", severity: "info" }),
+    ]));
+  });
+
   it("degrades and explains unavailable exact publication evidence", () => {
     const dataQuality = makeDataQuality({
       stablecoinPublication: {
@@ -704,9 +734,10 @@ describe("status cause text", () => {
         severity: "warning",
         metric: "missingActivePrices",
         value: 2,
-        message: expect.stringContaining("coin-b, coin-c"),
+        message: expect.stringContaining("coin-b"),
       }),
     );
+    expect(causes.find((cause) => cause.code === "active_price_coverage_incomplete")?.message).not.toContain("coin-c");
   });
 
   it("emits an info-severity, non-degrading cause for a transient non-alert-eligible price miss", () => {

@@ -679,9 +679,20 @@ export async function loadCronHealth(
       }
     }
 
+    // Serve the ten-run display window plus, when that window is entirely
+    // neutral admission skips, the single older required attempt the history
+    // read appends for inheritance evaluation. Without the appended row the
+    // summary can count a job in degradedCronRuns (or cronErrors) while every
+    // served run is neutral, leaving the warning unattributable in the admin
+    // cron table.
+    const displayRuns = runs.slice(0, CRON_HISTORY_ROWS_PER_JOB);
+    const inheritedRequiredRun = runs.length > displayRuns.length
+      && displayRuns.every((run) => run.status === NEUTRAL_CRON_RUN_STATUS)
+      ? runs[displayRuns.length]
+      : null;
     crons[job] = {
       lastRun,
-      recentRuns: runs.slice(0, CRON_HISTORY_ROWS_PER_JOB),
+      recentRuns: inheritedRequiredRun != null ? [...displayRuns, inheritedRequiredRun] : displayRuns,
       expectedIntervalSec: interval,
       healthy,
       telemetryUnknown,

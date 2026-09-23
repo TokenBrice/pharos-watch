@@ -20,13 +20,13 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-09-23",
+    "reviewer": "Pharos safety-score curation 2026-09-23",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Crowe USD1 Reserve Attestation Report - May 2026",
-        "url": "https://landing.bitgo.com/rs/552-OGK-141/images/USD1_Reserve_Attestation_Report_May_2026.pdf?version=0"
+        "label": "KPMG USD1 Reserve Report - July 2026 (examination dated August 27, 2026)",
+        "url": "https://landing.bitgo.com/rs/552-OGK-141/images/USD1_Reserve_Attestation_Report_July_2026.pdf"
       },
       {
         "label": "Fidelity Government Portfolio institutional fund literature",
@@ -37,9 +37,9 @@
         "url": "https://por.worldlibertyfinancial.com"
       }
     ],
-    "rationale": "The current USD1 proof-of-reserves adapter exposes one aggregate U.S. Treasury Bills, Money Market Funds & Cash slice. The May 31 Crowe examination provides the latest reviewed underlying split of 85% government money-market fund and 15% demand deposits, but the live aggregate is retained as one exact source-native row rather than pretending the adapter provides a current constituent split.",
-    "compositionBasis": "Current USD1 proof-of-reserves aggregate with Crowe examination of the May 31, 2026 reserve report",
-    "compositionAsOf": "2026-05-31",
+    "rationale": "The USD1 proof-of-reserves adapter exposes one aggregate U.S. Treasury Bills, Money Market Funds & Cash slice, retained as the exact source-native row. Note B of the KPMG-examined July 31, 2026 report records $1,101,473,492 in demand-deposit cash and cash equivalents and $2,899,393,738 in government money-market fund shares (CUSIP 31607A703), totaling $4,000,867,230. The underlying split is 27.53% deposits and 72.47% government money-market fund, but those dated percentages are not presented as live adapter constituents. The separate BitGo Bank & Trust account balance is zero.",
+    "compositionBasis": "USD1 proof-of-reserves aggregate with KPMG examination of the July 31, 2026 reserve report, Note B",
+    "compositionAsOf": "2026-07-31",
     "scope": "full-composition",
     "knownUnknownExposure": "No material unclassified reserve exposure is present in the examined report; individual deposit banks and the money-market fund's current underlying positions are not enumerated in the USD1 report.",
     "knownUnknownExposurePct": 0,

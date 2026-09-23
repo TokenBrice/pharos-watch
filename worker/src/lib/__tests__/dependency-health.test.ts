@@ -126,6 +126,60 @@ describe("buildDependencyHealth", () => {
     },
   );
 
+  it("names the cache-quality verdict instead of age when a fresh cache's producer streak degraded", () => {
+    const dependencyHealth = buildDependencyHealth({
+      now: NOW,
+      publicationHealth: null,
+      caches: {
+        "yield-data": cache({
+          ageSeconds: 347,
+          maxAge: 3_600,
+          healthy: false,
+          degraded: true,
+          degradedReason: "producer-degraded-since-last-clean-run",
+          streakDegradedRuns: 135,
+          producerJob: "sync-yield-data",
+          producerIntervalSec: 3_600,
+        }),
+      },
+      crons: {
+        "sync-yield-data": cron({ expectedIntervalSec: 3_600 }),
+      },
+    });
+
+    const yieldRankings = dependencyHealth.dependencies["yield-rankings"];
+    expect(yieldRankings.status).toBe("degraded");
+    expect(yieldRankings.reason).toContain("producer-degraded-since-last-clean-run");
+    expect(yieldRankings.reason).toContain("135");
+    expect(yieldRankings.reason).not.toContain("Freshness age");
+  });
+
+  it("keeps the age sentence for an age-driven unhealthy cache even when its quality is also degraded", () => {
+    const dependencyHealth = buildDependencyHealth({
+      now: NOW,
+      publicationHealth: null,
+      caches: {
+        "yield-data": cache({
+          ageSeconds: 2 * 3_600 + 1,
+          maxAge: 3_600,
+          healthy: false,
+          degraded: true,
+          degradedReason: "producer-degraded-since-last-clean-run",
+          streakDegradedRuns: 3,
+          producerJob: "sync-yield-data",
+          producerIntervalSec: 3_600,
+        }),
+      },
+      crons: {
+        "sync-yield-data": cron({ expectedIntervalSec: 3_600 }),
+      },
+    });
+
+    expect(dependencyHealth.dependencies["yield-rankings"].reason).toBe(
+      "Freshness age 7201s is outside the healthy budget.",
+    );
+  });
+
   it("surfaces failed publication metadata as a degraded dependency signal", () => {
     const dependencyHealth = buildDependencyHealth({
       now: NOW,

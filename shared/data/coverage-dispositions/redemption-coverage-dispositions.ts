@@ -420,17 +420,6 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     evidenceUrls: ["https://docs.virtue.money/redemption"],
     allowedRouteFamilyIfProven: null,
   }),
-  reviewed({
-    id: "xtusd-xt",
-    disposition: "hard-reject",
-    reasonCode: "secondary-market-only",
-    blocker:
-      "XTUSD's CDP design and XT.com market access do not provide a holder redemption claim against vault collateral or fiat.",
-    rationale: "Borrower repayment and exchange liquidity are not scoreable redemption routes.",
-    evidenceNeeded: "New official ordinary-holder redemption terms and live route evidence.",
-    evidenceUrls: ["https://www.xt.com/"],
-    allowedRouteFamilyIfProven: null,
-  }),
   reviewedOn("2026-08-12", {
     id: "zeusd-zoth",
     disposition: "hard-reject",

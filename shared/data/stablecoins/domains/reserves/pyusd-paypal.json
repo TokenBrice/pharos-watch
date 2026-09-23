@@ -4,7 +4,7 @@
     {
       "sourceKey": "paxos-independent-assurance:pyusd:cash",
       "name": "Cash held for authorized token holders",
-      "pct": 8.66,
+      "pct": 3.52,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Commercial banks; individual institutions not disclosed",
@@ -14,32 +14,43 @@
     {
       "sourceKey": "paxos-independent-assurance:pyusd:reverse-repo",
       "name": "Overnight reverse repurchase agreements collateralized by U.S. Treasury obligations",
-      "pct": 91.34,
+      "pct": 81.68,
       "risk": "very-low",
       "assetClass": "repo",
       "issuerOrObligor": "Selected commercial banks and broker-dealers; Treasury obligations as collateral",
       "riskFactors": ["counterparty", "liquidity", "custody"],
       "liquidityHorizon": "one-day",
-      "maturityDaysMax": 1
+      "maturityDaysMax": 3
+    },
+    {
+      "sourceKey": "paxos-independent-assurance:pyusd:treasury-bills",
+      "name": "U.S. Treasury bills",
+      "pct": 14.8,
+      "risk": "very-low",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury",
+      "riskFactors": ["duration", "market", "custody"],
+      "liquidityHorizon": "over-seven-days",
+      "maturityDaysMax": 48
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-09-23",
+    "reviewer": "Pharos safety-score curation 2026-09-23",
     "confidence": "verified",
     "sources": [
       {
-        "label": "KPMG PYUSD Redemption Assets Report - May 2026",
-        "url": "https://framerusercontent.com/assets/99N5QwJCmGdSIzUsGoGdLXxYI0.pdf"
+        "label": "KPMG PYUSD Redemption Assets Report - July 2026 (examination dated August 25, 2026)",
+        "url": "https://framerusercontent.com/assets/AzDCU1EG16dVKso3JV6W7I5Bk.pdf"
       },
       {
         "label": "PayPal Cryptocurrency Terms - PYUSD reserves",
         "url": "https://www.paypal.com/us/legalhub/paypal/cryptocurrencies-tnc?locale.x=en_US%5C"
       }
     ],
-    "rationale": "The KPMG-examined PYUSD Redemption Assets Report as of May 29, 2026 reports $262,423,747 of cash and $2,768,410,000 of repurchase agreements, for total redemption assets of $3,030,833,747. The report states that the repo agreements mature overnight, are overcollateralized by U.S. Treasury obligations, and may not be sold or repledged. The two reported asset types normalize to 8.66% and 91.34%.",
-    "compositionBasis": "KPMG examination of the PYUSD Redemption Assets Report as of May 29, 2026",
-    "compositionAsOf": "2026-05-29",
+    "rationale": "Exhibit B of the KPMG-examined PYUSD report at July 31, 2026 records $94,699,538 cash, $2,200,625,000 Treasury-collateralized reverse repos and $398,747,625 Treasury bills, totaling $2,694,072,163. Rounded weights are 3.52%, 81.68% and 14.80%. The repos mature August 3, three calendar days after the Friday observation, despite being described as overnight; collateral may not be sold or repledged. The three Treasury bills mature August 18, August 27 and September 17, a maximum of 48 days after period end. No government money-market funds were held.",
+    "compositionBasis": "KPMG examination of the PYUSD Redemption Assets Report, Exhibit B as of July 31, 2026",
+    "compositionAsOf": "2026-07-31",
     "scope": "full-composition",
     "knownUnknownExposure": "The report identifies the complete asset-type composition. Individual commercial-bank and broker-dealer counterparties are anonymized, but no reserve asset class is unclassified.",
     "knownUnknownExposurePct": 0

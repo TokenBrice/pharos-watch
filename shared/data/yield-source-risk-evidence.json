@@ -1,16 +1,18 @@
 {
   "aave-v3": [
     "Trail of Bits audit (Aave V3, 2022)",
-    "OpenZeppelin audit (Aave V3 core + periphery, 2022)",
+    "OpenZeppelin audit (Aave V3 core + periphery, 2021-2022)",
+    "PeckShield audits (Aave V3, 2022) and Sigma Prime audits (Aave V3.0.x, 2022-2023), aave-v3-core/audits",
     "Certora formal verification of core invariants",
     "Live since V1 in Jan 2020 and V3 since March 2022 across 10+ chains",
-    "Multi-billion-USD TVL throughout 2024-2026"
+    "2026-09-23 re-review: aave-v3-core/audits lists eight reports (OpenZeppelin 2021 through Sigma Prime 2023); DeFiLlama $18.7B TVL across 21 chains"
   ],
   "compound-v3": [
     "OpenZeppelin audit (Compound III, 2022)",
     "ChainSecurity audit (Compound III, 2022)",
     "Compound V1 in production since 2018; V3 since August 2022",
-    "Sustained multi-billion-USD TVL across deployments"
+    "Sustained multi-billion-USD TVL across deployments",
+    "2026-09-23 re-review: issuer security page (compound.finance/security) still lists Trail of Bits and OpenZeppelin audits plus formal verification and a community bug bounty; DeFiLlama $1.5B TVL across 10 chains"
   ],
   "sparklend": [
     "Aave V3 upstream audits (Trail of Bits, OpenZeppelin, Certora) cover the shared codebase",
@@ -49,11 +51,12 @@
     "Morpho Blue is already reviewed as medium because the venue is younger than Aave/Compound and has limited remediation paths"
   ],
   "morpho-blue": [
-    "Spearbit / Cantina audit (Morpho Blue, late 2023)",
-    "OpenZeppelin audit (Morpho Blue, late 2023)",
+    "OpenZeppelin audit (Morpho Blue, 2023-10-13), morpho-blue/audits",
+    "Cantina managed review (Morpho Blue, 2023-11-13) and Cantina competition (2024-01-05), morpho-blue/audits",
     "Runtime Verification formal review (Morpho Blue, 2024)",
-    "Live since January 2024; growing TVL but younger than Aave/Compound cohort",
-    "Immutable singleton; market-creator-permissioned vaults inherit issuer risk"
+    "Live since January 2024",
+    "Immutable singleton; market-creator-permissioned vaults inherit issuer risk",
+    "2026-09-23 re-review: morpho-blue/audits still lists the OpenZeppelin and Cantina reports; DeFiLlama $11.0B TVL across 45 chains, closing on the Aave/Compound cohort"
   ],
   "pendle": [
     "Pendle has operated yield-tokenization markets across multiple market cycles",
@@ -67,7 +70,7 @@
   ],
   "clearpool": [
     "Hacken audits in docs; no top-tier (ToB/OZ/Certora) audit surfaced; live since 2022 with no exploit",
-    "Risk review: multisig under 4 signers and no timelock — upgrades can execute instantly",
+    "Risk review: multisig under 4 signers and no timelock \u2014 upgrades can execute instantly",
     "Uncollateralized loans to KYC'd institutions; minimal lender protection on borrower default",
     "Redemption depends on borrower repayment/utilization; TVL ~$28M, modest depth"
   ],
@@ -135,7 +138,7 @@
   "dolomite": [
     "6 audits (Zeppelin/Bramah/SECBIT/Cyfrin/Zokyo/Guardian); 100% line/branch coverage; immutable core + upgradable modules",
     "Admin via 2/3 multisig (under 4 signers); timelock under 48h limits user exit window",
-    "Virtual liquidity supports 1000+ assets — broader/newer collateral; dynamic collateral; no hacks since 2022",
+    "Virtual liquidity supports 1000+ assets \u2014 broader/newer collateral; dynamic collateral; no hacks since 2022",
     "Broad asset support means some thin/concentrated markets; multichain Arbitrum/Berachain/Ethereum"
   ],
   "exactly": [
@@ -333,7 +336,7 @@
   "resupply": [
     "Audited yet hit a Jun-2025 ~$9.6M donation/oracle exploit (empty-vault price flaw); bad debt fully repaid",
     "Convex/Yearn sub-DAO with RSUP governance; coordinated DAO crisis response; upgrade delay not documented",
-    "reUSD backed by yield-bearing stablecoin CDP collateral (other protocols' LP/vault tokens — composability risk)",
+    "reUSD backed by yield-bearing stablecoin CDP collateral (other protocols' LP/vault tokens \u2014 composability risk)",
     "reUSD liquidity declined post-exploit; ~$38M insurance pool backstopped the recovery"
   ],
   "termmax": [

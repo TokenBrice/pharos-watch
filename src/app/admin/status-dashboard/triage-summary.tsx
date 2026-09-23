@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { HealthResponse, StatusResponse, StatusTransition } from "@shared/types";
 import { formatElapsedSeconds } from "@shared/lib/format";
+import { hasReserveScoreInputHold } from "@shared/lib/status-thresholds";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
 import { RecommendedActionStrip } from "@/components/status/recommended-action-strip";
 import { STATUS_PANEL_SHELL_CLASS, SummaryBadge } from "@/components/status/page-primitives";
@@ -125,11 +126,7 @@ export function TriageSummary({
   const healthSync = querySyncs.find((s) => s.key === "health");
   const probeSync = querySyncs.find((s) => s.key === "probes");
   const requestSourceSync = querySyncs.find((s) => s.key === "requestSource");
-  const reserveScoreInputHold =
-    data.reserveComposition.status !== "healthy" ||
-    data.reserveComposition.deferredCoins > 0 ||
-    data.reserveComposition.runBudgetTruncated ||
-    data.reserveComposition.writeTimeoutUncertain > 0;
+  const reserveScoreInputHold = hasReserveScoreInputHold(data.reserveComposition);
   const reserveForecast = buildReserveRecoveryForecast(data);
   const actionReadinessChecks = buildActionReadinessChecks({
     data,

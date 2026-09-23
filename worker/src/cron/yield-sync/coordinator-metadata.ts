@@ -161,7 +161,14 @@ export function buildYieldDegradationReasons(params: {
     degradationReasons.push(`yield-supplemental:${supplemental.fallbackMode ?? supplemental.mode}`);
   }
   for (const family of supplemental.degradedFamilies) {
-    degradationReasons.push(`yield-supplemental:family-degraded:${family}`);
+    // PENDLE-RL (R4): append the producer's machine-readable cause when the
+    // run-outcome row carries one (e.g. `pendle-rate-limited-backoff`).
+    const familyReason = supplemental.degradedFamilyReasons?.[family];
+    degradationReasons.push(
+      familyReason
+        ? `yield-supplemental:family-degraded:${family}:${familyReason}`
+        : `yield-supplemental:family-degraded:${family}`,
+    );
   }
   // B15 optional-family failures deliberately do not appear here: a coin whose
   // optional read failed still publishes from its other coverage, and the

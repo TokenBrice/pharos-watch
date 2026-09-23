@@ -12,7 +12,7 @@ The slower supplemental source snapshot is missing, malformed, empty, or older t
 
 ## Impact
 
-Core yield publication should remain available. Optional protocol-API and optional RPC family coverage is reduced, so some alternate sources or best rows may disappear until `sync-yield-supplemental` writes fresh per-family snapshots. A fresh all-empty family snapshot is valid current state and yields zero supplemental candidates; a family row absent entirely (missing cache with zero sources) means the lane was never provisioned and does not degrade the core run — the hourly chain provisions it. The acceptance bound is cadence-derived: 1.5× the 4-hour producer cadence (6 hours).
+Core yield publication should remain available. Optional protocol-API and optional RPC family coverage is reduced, so some alternate sources or best rows may disappear until `sync-yield-supplemental` writes fresh per-family snapshots. A fresh all-empty family snapshot is valid current state and yields zero supplemental candidates; a family row absent entirely (missing cache with zero sources) means the lane was never provisioned and does not degrade the core run — the hourly chain provisions it. The acceptance bound is per-family and cadence-derived: the lane default is 1.5× the 4-hour producer cadence (6 hours); the Pendle daily lane fetches at most once per day on the free unkeyed quota and accepts its retained row through 48 hours (two daily cycles), so a `skipped-not-due` / `skipped-backoff` Pendle run is healthy, not degraded, while that row is inside the bound.
 
 ## First Checks
 
@@ -53,6 +53,8 @@ ORDER BY rows DESC;
 - Optional RPC families exhausted their family budget or missed many chain targets.
 - The cache payload became malformed or older than the supplemental freshness window.
 - One family's upstream fetch failed mid-run (HTTP/parse failure or exhausted pagination). The family skips its cache write, retains the previous snapshot (`retained-previous` in the run-outcome row), and is named in `degradedFamilies` instead of publishing a fresh empty row.
+- The Pendle lane skipped neutrally (`skipped-not-due` inside its 24h cadence, or `skipped-backoff` while a recorded 429 window is active). Both are healthy while the retained row is inside its 48h budget; inspect `yield:supplemental-sources:v1:pendle-backoff` for the parsed replenish window and expect `pendle-rate-limited-backoff` in `degradedFamilyReasons` only once the retained row leaves the budget.
+- The free unkeyed Pendle quota is shared per-IP and can be spent by other Cloudflare egress tenants; that is not a Pharos failure and cannot be cleared from our side. Confirm the backoff row records an `x-ratelimit-weekly-reset`-derived window rather than retrying the API.
 - `setCacheIfNewer` skipped the write because a newer snapshot already existed.
 
 ## Remediation
@@ -75,7 +77,7 @@ ORDER BY rows DESC;
 - The next `sync-yield-data` metadata shows `supplementalSourceMode: "cache"`; `supplementalSourceCount` may be zero when the current family snapshot is explicitly all-empty.
 - Public rankings/source board show expected optional family rows or alternatives.
 
-- The `yield:supplemental-source-run:v1` outcome row parses and its `familyCacheResults` / `degradedFamilies` match the per-family rows: a degraded family is expected to still hold its previous snapshot, not a fresh empty row.
+- The `yield:supplemental-source-run:v1` outcome row parses and its `familyCacheResults` / `degradedFamilies` match the per-family rows: a degraded family is expected to still hold its previous snapshot, not a fresh empty row. `skipped-not-due` / `skipped-backoff` mean the Pendle lane deliberately reused its retained row — verify that row's age is inside 48h before treating the skip as healthy.
 
 ## Rollback Notes
 

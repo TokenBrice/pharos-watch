@@ -2,6 +2,7 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { StatusResponse } from "@shared/types";
 import { makeHealthyHealthResponse, makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
 import { buildStatusDashboardData, type DashboardSection } from "@/lib/status-dashboard-model";
 
@@ -92,5 +93,88 @@ describe("TriageSummary workspace links", () => {
     expect(screen.getByText("State machine, probe, and discrepancy diagnostics").className).toContain("min-h-11");
     expect(screen.getByRole("link", { name: /pipeline health/i }).getAttribute("href")).toBe("/admin/pipeline/");
     expect(screen.queryByRole("button", { name: "Sign out" })).toBeNull();
+  });
+});
+
+describe("TriageSummary reserve score-input hold", () => {
+  function renderTriage(data: StatusResponse) {
+    const healthData = makeHealthyHealthResponse();
+    const model = buildStatusDashboardData({
+      data,
+      healthData,
+      probes: [],
+      probeLabel: "Critical browser probes",
+      querySyncs: {
+        statusUpdatedAt: 1_700_000_000_000,
+        healthUpdatedAt: 1_700_000_000_000,
+        probesUpdatedAt: 1_700_000_000_000,
+        historyUpdatedAt: 0,
+        requestSourceUpdatedAt: 0,
+      },
+      nowMs: 1_700_000_000_000,
+      healthError: null,
+      probesError: null,
+      historyError: null,
+      requestSourceError: null,
+      historyTransitions: undefined,
+    });
+    render(
+      <TriageSummary
+        data={data}
+        healthData={healthData}
+        overallTone={model.overallTone}
+        statusHoldingAge={model.statusHoldingAge}
+        issueGroups={model.issueGroups}
+        evidence={model.evidence}
+        decision={model.decision}
+        latestTransition={model.latestTransition}
+        attentionSections={[]}
+        recommendedActions={[]}
+        isDiagnosticsOpen={false}
+        setIsDiagnosticsOpen={vi.fn()}
+        browserProbeSummary={model.browserProbeSummary}
+        probeCoverageLabel="Critical Browser Probes"
+        querySyncs={model.querySyncs}
+        freshnessFloorMs={model.freshnessFloorMs}
+        clientDataStale={model.clientDataStale}
+        lastUpdated={1_700_000_000_000}
+        handleRefresh={vi.fn()}
+        showSignOut={false}
+      />,
+    );
+  }
+
+  it("hides the reserve recovery notice for a healthy lane at live 73.7% score-grade coverage", () => {
+    const base = makeHealthyStatusResponse();
+    renderTriage({
+      ...base,
+      reserveComposition: {
+        ...base.reserveComposition,
+        freshCoins: 74,
+        degradedCoins: 39,
+        errorCoins: 7,
+        freshCoverageRatio: 0.7374,
+        authoritativeFreshCoverageRatio: 0.7374,
+      },
+    });
+
+    expect(screen.queryByText("Reserve recovery forecast")).toBeNull();
+  });
+
+  it("shows the reserve recovery notice when the lane itself is degraded", () => {
+    const base = makeHealthyStatusResponse();
+    renderTriage({
+      ...base,
+      reserveComposition: {
+        ...base.reserveComposition,
+        status: "degraded",
+        deferredCoins: 48,
+        runBudgetTruncated: true,
+        freshCoverageRatio: 0.4,
+        authoritativeFreshCoverageRatio: 0.3,
+      },
+    });
+
+    expect(screen.getByText("Reserve recovery forecast")).toBeTruthy();
   });
 });

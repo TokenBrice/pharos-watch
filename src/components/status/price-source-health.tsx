@@ -1,6 +1,10 @@
 "use client";
 
-import { STATUS_PRICE_CONFIDENCE_BANDS } from "@shared/lib/status-thresholds";
+import {
+  getHighConfidenceTileSeverity,
+  getLowConfidenceTileSeverity,
+  getMissingPriceTileSeverity,
+} from "@shared/lib/status-thresholds";
 import {
   PRICE_SOURCE_HEALTH_BUCKET_KEYS,
   getPriceSourceHealthBucketShortLabel,
@@ -26,16 +30,6 @@ function MetricCard({ label, value, pct, severity }: { label: string; value: num
   );
 }
 
-function confidenceSeverity(label: string, value: number, total: number): string {
-  if (label === "High") {
-    const pct = total > 0 ? (value / total) * 100 : 0;
-    return pct > STATUS_PRICE_CONFIDENCE_BANDS.highPctGreen ? "green" : pct > STATUS_PRICE_CONFIDENCE_BANDS.highPctAmber ? "amber" : "red";
-  }
-  if (label === "Missing") return value === 0 ? "green" : value <= STATUS_PRICE_CONFIDENCE_BANDS.missingCountAmber ? "amber" : "red";
-  if (label === "Low") return value <= STATUS_PRICE_CONFIDENCE_BANDS.lowCountAmber ? "neutral" : value <= STATUS_PRICE_CONFIDENCE_BANDS.lowCountRed ? "amber" : "red";
-  return "neutral";
-}
-
 export function PriceSourceHealthCard({
   health,
   error,
@@ -53,16 +47,58 @@ export function PriceSourceHealthCard({
     );
   }
 
-  const { confidenceDistribution: cd, sourceDistribution: sd, totalAssets } = health.active ?? health;
+  const {
+    confidenceDistribution: cd,
+    sourceDistribution: sd,
+    totalAssets,
+    confidenceMarketCapUsd: cdValue,
+    pricedMarketCapUsd: pricedValue,
+    acknowledgedMissingCount,
+  } = health.active ?? health;
   const pct = (n: number) => totalAssets > 0 ? `${((n / totalAssets) * 100).toFixed(1)}%` : "—";
+  // Accepted single-source prices are not failed consensus. Confidence colors
+  // measure priced-value exposure; legacy snapshots remain explicitly neutral.
+  const valueShare = (n: number | undefined) =>
+    typeof n === "number" && typeof pricedValue === "number" && pricedValue > 0 ? (n / pricedValue) * 100 : null;
+  const valuePct = (n: number | undefined) => {
+    const share = valueShare(n);
+    return share == null ? null : `${share.toFixed(1)}% of value`;
+  };
   const lastSyncAgeSeconds = Math.max(0, nowSeconds - health.lastSync);
 
-  const metrics: { label: string; key: keyof typeof cd }[] = [
-    { label: "High", key: "high" },
-    { label: "Single", key: "single-source" },
-    { label: "Low", key: "low" },
-    { label: "Fallback", key: "fallback" },
+  const metrics: { label: string; key: keyof typeof cd; severity: string; pctText: string }[] = [
+    {
+      label: "High",
+      key: "high",
+      severity: getHighConfidenceTileSeverity(valueShare(cdValue?.high)),
+      pctText: valuePct(cdValue?.high) ?? pct(cd.high),
+    },
+    {
+      label: "Single",
+      key: "single-source",
+      severity: "neutral",
+      pctText: valuePct(cdValue?.["single-source"]) ?? pct(cd["single-source"]),
+    },
+    {
+      label: "Low",
+      key: "low",
+      severity: getLowConfidenceTileSeverity(valueShare(cdValue?.low)),
+      pctText: valuePct(cdValue?.low) ?? pct(cd.low),
+    },
+    {
+      label: "Fallback",
+      key: "fallback",
+      severity: "neutral",
+      pctText: valuePct(cdValue?.fallback) ?? pct(cd.fallback),
+    },
   ];
+
+  // Acknowledged price-gap reviews stay visible as raw missing rows but do not
+  // drive the Missing tile; an expired review counts again on the next sync.
+  const acknowledged = typeof acknowledgedMissingCount === "number"
+    ? Math.max(0, Math.min(acknowledgedMissingCount, sd.missing))
+    : 0;
+  const unacknowledgedMissing = sd.missing - acknowledged;
 
   return (
     <Card>
@@ -81,15 +117,17 @@ export function PriceSourceHealthCard({
               key={m.key}
               label={m.label}
               value={cd[m.key]}
-              pct={pct(cd[m.key])}
-              severity={confidenceSeverity(m.label, cd[m.key], totalAssets)}
+              pct={m.pctText}
+              severity={m.severity}
             />
           ))}
           <MetricCard
             label="Missing"
-            value={sd.missing}
-            pct={pct(sd.missing)}
-            severity={confidenceSeverity("Missing", sd.missing, totalAssets)}
+            value={unacknowledgedMissing}
+            pct={acknowledged > 0
+              ? `${pct(unacknowledgedMissing)} · ${acknowledged} acknowledged`
+              : pct(unacknowledgedMissing)}
+            severity={getMissingPriceTileSeverity(unacknowledgedMissing)}
           />
         </div>
 

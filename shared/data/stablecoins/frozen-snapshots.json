@@ -1414,5 +1414,100 @@
         }
       ]
     }
+  },
+  {
+    "id": "aznd-mu-digital",
+    "capturedAt": "2026-09-22T22:35:15.823Z",
+    "peggedAssetRow": {
+      "id": "aznd-mu-digital",
+      "name": "Mu Digital AZND",
+      "symbol": "AZND",
+      "geckoId": "mu-digital-aznd",
+      "pegType": "peggedUSD",
+      "pegMechanism": "crypto-backed",
+      "price": null,
+      "priceSource": "missing",
+      "priceConfidence": null,
+      "priceUpdatedAt": null,
+      "priceObservedAt": null,
+      "priceObservedAtMode": null,
+      "priceSyncedAt": null,
+      "consensusSources": [],
+      "agreeSources": [],
+      "supplySource": "defillama",
+      "circulating": {
+        "peggedUSD": 16326375.99
+      },
+      "circulatingPrevDay": {
+        "peggedUSD": 16326375.99
+      },
+      "circulatingPrevWeek": {
+        "peggedUSD": 16326375.99
+      },
+      "circulatingPrevMonth": {
+        "peggedUSD": 16326375.99
+      },
+      "chainCirculating": {
+        "Monad": {
+          "current": 16326375.99,
+          "circulatingPrevDay": 16326375.99,
+          "circulatingPrevWeek": 16326375.99,
+          "circulatingPrevMonth": 16326375.99
+        }
+      },
+      "chains": [
+        "Monad"
+      ],
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0",
+          "decimals": 18
+        },
+        {
+          "chain": "monad",
+          "address": "0x4917a5ec9fcb5e10f47cbb197abe6ab63be81fe8",
+          "decimals": 18
+        }
+      ]
+    }
+  },
+  {
+    "id": "xtusd-xt",
+    "capturedAt": "2026-09-22T22:35:18.705Z",
+    "peggedAssetRow": {
+      "id": "xtusd-xt",
+      "name": "XTUSD",
+      "symbol": "XTUSD",
+      "geckoId": "xtusd",
+      "pegType": "peggedUSD",
+      "pegMechanism": "crypto-backed",
+      "price": null,
+      "priceSource": "missing",
+      "priceConfidence": null,
+      "priceUpdatedAt": null,
+      "priceObservedAt": null,
+      "priceObservedAtMode": null,
+      "priceSyncedAt": null,
+      "consensusSources": [],
+      "agreeSources": [],
+      "supplySource": "coingecko-fallback",
+      "supplyObservedAt": 1789603269,
+      "supplyRestored": true,
+      "circulating": {
+        "peggedUSD": 1245546.7268784922
+      },
+      "circulatingPrevDay": {
+        "peggedUSD": 1245546.7268784922
+      },
+      "circulatingPrevWeek": {
+        "peggedUSD": 1245546.7268784922
+      },
+      "circulatingPrevMonth": {
+        "peggedUSD": 1245546.7268784922
+      },
+      "chainCirculating": {},
+      "chains": []
+    }
   }
 ]

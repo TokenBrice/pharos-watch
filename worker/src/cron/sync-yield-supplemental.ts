@@ -13,17 +13,18 @@ import {
 } from "./yield-sync/cache/supplemental-cache-keys";
 import {
   loadSupplementalSourceFamilies,
-  SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
   type SupplementalDedupeDiscardedValue,
 } from "./yield-sync/supplemental-source-families";
-import type { SupplementalSourceFamilyKey } from "./yield-sync/supplemental-source-family-keys";
+import {
+  SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
+  type SupplementalSourceFamilyKey,
+} from "./yield-sync/supplemental-source-family-keys";
 import type { ResolvedYieldCandidate } from "./yield-sync/types";
 
 /** B27: bounded audit trail for values collapsed by the intra-family dedupe. */
 const SUPPLEMENTAL_DEDUPE_DISCARDED_VALUE_LIMIT = 5;
 
 export interface SyncYieldSupplementalOptions {
-  pendleApiKey?: string;
   /**
    * C16 hourly catch-up gate: when set, the run is skipped unless the newest
    * family cache marker is at least this old, so the hourly slot only refetches
@@ -195,7 +196,6 @@ export async function syncYieldSupplemental(
       signal,
       chainRpcs,
       vaultsFyi,
-      pendleApiKey: options?.pendleApiKey,
     });
   await reportSupplementalProgress("source-family-fetch-complete", "Completed supplemental yield source fetches", {
     itemsDone: familyResults.length,
@@ -245,14 +245,27 @@ export async function syncYieldSupplemental(
       SupplementalFamilyCacheResult
     >;
   const degradedFamilies: SupplementalSourceFamilyKey[] = [];
+  const degradedFamilyReasons: Record<string, string> = {};
   let supplementalCandidatesWritten = 0;
 
   for (const family of familyResults) {
+    if (family.skipReason) {
+      // PENDLE-RL: a neutral skip keeps the retained family row authoritative —
+      // no cache write, no degraded-family entry. The staleness budget the
+      // publication applies per family is what turns a long skip into a real
+      // degradation; it is never masked here.
+      familyCacheResults[family.key] =
+        family.skipReason === "pendle-rate-limited-backoff" ? "skipped-backoff" : "skipped-not-due";
+      continue;
+    }
     if (family.status !== "ok" || family.degraded) {
       // B1: a family whose fetch ended early keeps the snapshot the previous run
       // published instead of a fresh, incomplete one.
       familyCacheResults[family.key] = "retained-previous";
       degradedFamilies.push(family.key);
+      if (family.degradedReason) {
+        degradedFamilyReasons[family.key] = family.degradedReason;
+      }
       continue;
     }
     await reportSupplementalProgress("family-cache-write", `Publishing ${family.key} supplemental yield cache`, {
@@ -294,7 +307,7 @@ export async function syncYieldSupplemental(
   await setCache(
     db,
     getYieldSupplementalRunOutcomeCacheKey(),
-    buildYieldSupplementalRunOutcome(familyCacheResults, degradedFamilies, startSec),
+    buildYieldSupplementalRunOutcome(familyCacheResults, degradedFamilies, startSec, degradedFamilyReasons),
     signal,
   );
   await reportSupplementalProgress("complete", "Published supplemental yield source caches", {
@@ -309,6 +322,7 @@ export async function syncYieldSupplemental(
       },
       familyCacheResults,
       degradedFamilies,
+      degradedFamilyReasons,
       sourceFamilyInventoryCounts,
       sourceFamilySummaries,
     },
@@ -331,6 +345,10 @@ export async function syncYieldSupplemental(
     fallbackMode: emptySnapshot ? "empty-snapshot" : null,
     familyCacheResults,
     degradedFamilies,
+    degradedFamilyReasons,
+    reason: degradedFamilies.length > 0
+      ? degradedFamilies.map((family) => degradedFamilyReasons[family] ?? `family-degraded:${family}`).join(",")
+      : emptySnapshot ? "empty-snapshot" : null,
     syncStartSec: startSec,
   });
 

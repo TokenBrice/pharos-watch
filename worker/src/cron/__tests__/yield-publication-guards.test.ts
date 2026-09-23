@@ -10,6 +10,7 @@ import {
   COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
   LONG_HORIZON_COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
   PRICE_DERIVED_STALE_THRESHOLD_MS,
+  PENDLE_SUPPLEMENTAL_STALE_THRESHOLD_MS,
   SLOW_NAV_SOURCE_STALE_THRESHOLD_MS,
   STALE_THRESHOLD_MS,
   SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS,
@@ -99,7 +100,7 @@ describe("buildYieldRankingsPayloadFromEvaluatedSources", () => {
       sourceObservedAt: (nowSec) => nowSec - SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS / 1000 + 60,
       overrides: {
         dataSource: "protocol-api",
-        sourceKey: "protocol-api:pendle:ethereum:0xpool",
+        sourceKey: "protocol-api:morpho-vault:ethereum:0xvault",
       },
       expectedStale: false,
       expectedRole: "canonical-holder",
@@ -108,6 +109,28 @@ describe("buildYieldRankingsPayloadFromEvaluatedSources", () => {
       label: "adds data-stale once supplemental protocol-api rows miss their cadence window",
       boundary: "after threshold",
       sourceObservedAt: (nowSec) => nowSec - SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS / 1000 - 60,
+      overrides: {
+        dataSource: "protocol-api",
+        sourceKey: "protocol-api:morpho-vault:ethereum:0xvault",
+      },
+      expectedStale: true,
+      expectedRole: "degraded-canonical",
+    },
+    {
+      label: "does not add data-stale for healthy Pendle daily-lane rows",
+      boundary: "before threshold",
+      sourceObservedAt: (nowSec) => nowSec - PENDLE_SUPPLEMENTAL_STALE_THRESHOLD_MS / 1000 + 60,
+      overrides: {
+        dataSource: "protocol-api",
+        sourceKey: "protocol-api:pendle:ethereum:0xpool",
+      },
+      expectedStale: false,
+      expectedRole: "canonical-holder",
+    },
+    {
+      label: "adds data-stale once Pendle daily-lane rows miss their weekly-adjusted window",
+      boundary: "after threshold",
+      sourceObservedAt: (nowSec) => nowSec - PENDLE_SUPPLEMENTAL_STALE_THRESHOLD_MS / 1000 - 60,
       overrides: {
         dataSource: "protocol-api",
         sourceKey: "protocol-api:pendle:ethereum:0xpool",

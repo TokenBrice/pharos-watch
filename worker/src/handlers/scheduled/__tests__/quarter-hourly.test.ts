@@ -20,6 +20,7 @@ vi.mock("../../../cron/snapshot-public-dataset", () => ({ snapshotPublicDataset:
 vi.mock("../preflight-skip", () => ({ logSkippedCronRun: vi.fn(async () => undefined) }));
 
 import { runQuarterHourlySlot } from "../quarter-hourly";
+import { logSkippedCronRun } from "../preflight-skip";
 
 interface SnapshotPresence {
   psi: boolean;
@@ -80,7 +81,7 @@ describe("runQuarterHourlySlot", () => {
     });
     const order: string[] = [];
 
-    const summary = await runQuarterHourlySlot(runtime(order));
+    const summary = await runQuarterHourlySlot(runtime(order, { psi: false, publicDataset: false }));
 
     expect(order).toEqual(["sync-fx-rates", "sync-stablecoins"]);
     expect(mocks.snapshotSupply).not.toHaveBeenCalled();
@@ -88,6 +89,38 @@ describe("runQuarterHourlySlot", () => {
     expect(mocks.snapshotPsiDaily).not.toHaveBeenCalled();
     expect(mocks.snapshotPublicDataset).not.toHaveBeenCalled();
     expect(summary.jobsSkipped).toBe(4);
+  });
+
+  it("records an already-completed daily snapshot as not due instead of cache-gated", async () => {
+    mocks.syncStablecoins.mockResolvedValue({
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({ downstreamSafe: false }),
+    });
+    const order: string[] = [];
+
+    await runQuarterHourlySlot(runtime(order, { psi: true, publicDataset: true }));
+
+    expect(order).toEqual(["sync-fx-rates", "sync-stablecoins", "snapshot-psi", "snapshot-public-dataset"]);
+    expect(mocks.snapshotPsiDaily).not.toHaveBeenCalled();
+    expect(mocks.snapshotPublicDataset).not.toHaveBeenCalled();
+    const skippedJobs = vi.mocked(logSkippedCronRun).mock.calls.map(([, entry]) => entry.job);
+    expect(skippedJobs).toEqual(["snapshot-supply", "snapshot-chain-supply"]);
+  });
+
+  it("records a failed due-check read as the job's error instead of treating the day as missing", async () => {
+    mocks.syncStablecoins.mockResolvedValue({ status: "ok", itemCount: 1, metadata: JSON.stringify({ downstreamSafe: true, capabilities: { stablecoinsCache: true } }) });
+    const order: string[] = [];
+    const failingDb = {
+      prepare: () => ({ bind: () => ({ first: async () => { throw new Error("D1 unavailable"); } }) }),
+    } as unknown as D1Database;
+
+    const summary = await runQuarterHourlySlot({ ...runtime(order), db: failingDb });
+
+    expect(order).toEqual(["sync-fx-rates", "sync-stablecoins", "snapshot-supply", "snapshot-chain-supply", "snapshot-psi", "snapshot-public-dataset"]);
+    expect(mocks.snapshotPsiDaily).not.toHaveBeenCalled();
+    expect(mocks.snapshotPublicDataset).not.toHaveBeenCalled();
+    expect(summary.jobsErrored).toBe(2);
   });
 
   it("runs snapshot jobs when sync-stablecoins writes a safe cache with depeg failures", async () => {

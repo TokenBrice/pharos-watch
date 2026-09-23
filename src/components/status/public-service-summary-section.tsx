@@ -6,6 +6,7 @@ import type { HealthResponse } from "@shared/types";
 import { StatusSection, StatusSummaryBadge } from "@/components/status/page-primitives";
 import { PublicSignalCard } from "@/components/status/public-signal-card";
 import {
+  getAcknowledgedPriceGapNotice,
   getImpactedPublicSurfaces,
   getPublicMintBurnStatus,
 } from "@/lib/status/public-status";
@@ -26,6 +27,7 @@ export function PublicServiceSummarySection({
   const blacklistWindowHours = Math.max(1, Math.round(healthData.blacklist.recentWindowSec / 3600));
   const telegramSummary = healthData.telegramSummary ?? null;
   const impactedPublicSurfaces = getImpactedPublicSurfaces(healthData);
+  const acknowledgedPriceGapNotice = getAcknowledgedPriceGapNotice(healthData.activePriceCoverage);
 
   return (
     <StatusSection
@@ -243,8 +245,13 @@ export function PublicServiceSummarySection({
           </div>
         ) : (
           <div className="border-t border-border/60 pt-3 text-sm leading-relaxed text-muted-foreground">
-            No current public surface impact flags are active beyond the hero summary.
+            {healthData.warnings.length > 0
+              ? "Health warnings are summarized above. No additional surfaces meet the impact thresholds tracked in this section."
+              : "No current public surface impact flags are active beyond the hero summary."}
           </div>
+        )}
+        {acknowledgedPriceGapNotice && (
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{acknowledgedPriceGapNotice}</p>
         )}
       </PublicSignalCard>
     </StatusSection>

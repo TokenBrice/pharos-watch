@@ -32,10 +32,11 @@ import {
   getYieldSupplementalRunOutcomeCacheKey,
   parseYieldSupplementalRunOutcome,
 } from "../../cron/yield-sync/cache";
+import { getSupplementalFamilyStaleThresholdSec } from "../../cron/yield-sync/supplemental-source-families";
 import {
   REQUIRED_SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
   SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
-} from "../../cron/yield-sync/supplemental-source-families";
+} from "../../cron/yield-sync/supplemental-source-family-keys";
 import { safeJsonParse } from "../api-cache-read";
 import { loadSafetyScoreV9PublicationIdentityEnvelope } from "../safety-score-v9/publication-store";
 import {
@@ -724,9 +725,11 @@ function buildSupplementalHealth(
     );
     const sourceCount = getNumber(payload?.sourceCount);
     const degraded = degradedFamilySet.has(family);
+    // Share the producer's per-family budget; retained reuse never advances its marker.
+    const familyMaxAgeSec = getSupplementalFamilyStaleThresholdSec(family);
     const freshness = freshnessStatus(
       ageSec,
-      STATUS_YIELD_HEALTH_THRESHOLDS.supplementalMaxAgeSec,
+      familyMaxAgeSec,
       { missingIs: "unknown", degradedAfterOne: true },
     );
     // A degraded family can only read worse than its marker age: the retained
@@ -739,6 +742,7 @@ function buildSupplementalHealth(
       updatedAt: row?.updated_at ?? null,
       ageSec,
       sourceCount,
+      maxAgeSec: familyMaxAgeSec,
       // Only a family that still holds a previous snapshot has one to retain.
       retained: degraded && row != null,
       status,
@@ -753,6 +757,7 @@ function buildSupplementalHealth(
         updatedAt: row.updatedAt,
         ageSec: row.ageSec,
         sourceCount: row.sourceCount,
+        maxAgeSec: row.maxAgeSec,
         status: row.status,
         retained: row.retained,
       },
@@ -848,11 +853,12 @@ function buildPysInputsPersistence(
   crons: Record<string, CronStatus>,
 ): NonNullable<YieldHealthSummary["pysInputs"]> {
   const metadata = getSyncYieldDataMetadata(crons);
-  const publication = getObject(metadata?.publication);
-  const persistedCount =
-    getNumber(metadata?.pysInputsPersistedCount) ?? getNumber(publication?.pysInputsPersistedCount);
-  const nullCount =
-    getNumber(metadata?.pysInputsNullCount) ?? getNumber(publication?.pysInputsNullCount);
+  // The writer (`buildYieldSyncMetadata`) publishes the replay-evidence
+  // counters under `metadata.publicationStats`; runs that skip publication
+  // emit no entry, which stays `unknown` instead of counting as zero (R1).
+  const publicationStats = getObject(metadata?.publicationStats);
+  const persistedCount = getNumber(publicationStats?.pysInputsPersistedCount);
+  const nullCount = getNumber(publicationStats?.pysInputsNullCount);
   const total = (persistedCount ?? 0) + (nullCount ?? 0);
   const nullRate = persistedCount == null && nullCount == null
     ? null

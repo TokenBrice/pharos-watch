@@ -59,6 +59,28 @@ describe("ReserveSyncHealthCard", () => {
     expect(container.textContent).toContain("100.0% fresh, 100.0% score-grade");
   });
 
+  it("does not flag conservative inputs for a healthy lane at live 73.7% score-grade coverage", () => {
+    // Live 2026-09-22 payload: reserveComposition.status healthy,
+    // authoritativeFreshCoverageRatio 0.7374 (>= 0.5 documented floor),
+    // no deferred tail, no truncation, no uncertain writes. The banner must
+    // match the triage notice and Score impact monitor: no hold.
+    const { container } = render(
+      <ReserveSyncHealthCard
+        health={makeReserveHealth({
+          freshCoins: 74,
+          degradedCoins: 39,
+          errorCoins: 7,
+          freshCoverageRatio: 0.7374,
+          authoritativeFreshCoverageRatio: 0.7374,
+        })}
+        nowSeconds={1_712_600_120}
+      />,
+    );
+
+    expect(screen.queryByText("Report-card inputs are conservative")).toBeNull();
+    expect(container.textContent).toContain("73.7% fresh, 73.7% score-grade");
+  });
+
   it("renders the 30-day adapter reliability rollup as a compact table", () => {
     const { container } = render(
       <ReserveSyncHealthCard
