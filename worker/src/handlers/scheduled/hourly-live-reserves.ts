@@ -1,18 +1,20 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 /**
- * Four-hourly reserve-sync trigger (11 * / 4 * * *), three independent chains:
- *   sync-live-reserves (2) → sync-redemption-backstops (0)
+ * Four-hourly reserve-sync trigger (11 * / 4 * * *), two chains:
+ *   sync-live-reserves (2) → sync-redemption-backstops (0) → cron-sentinel (1)
  *   sync-kinesis-supply (1)
- *   cron-sentinel reserve source (1)
  *
- * Only the backstop computation consumes the reserve-adapter output, so it is
- * the only member serialized behind the slot's long head. Kinesis supply and
- * the reserve watchdog run beside it: when the head stalls past the slot
- * fence, an unrelated sibling must not be abandoned before it starts, and the
- * watchdog that reports the stall least of all.
+ * Both consumers of the generation the head writes stay serialized behind it:
+ * the backstop computation reads the live-reserve snapshot metadata, and the
+ * reserve watchdog publishes a drift envelope stamped with the current time,
+ * so it must observe a completed queue rather than racing the producer and
+ * re-publishing the previous generation as current. Kinesis supply reads no
+ * reserve output and runs beside the head; a stalled head is replayed in chain
+ * order by the five-minute reserve-recovery lane, so the watchdog is delayed,
+ * never lost.
  *
  * Reserve adapters run sequentially; backstops are DB-only.
- * Connection budget: 4/6 peak (2 + 1 + 1) while all three chains are in flight
+ * Connection budget: 3/6 peak (2 + 1) while both chains are in flight
  */
 import { syncLiveReserves } from "../../cron/sync-live-reserves";
 import { syncRedemptionBackstops } from "../../cron/sync-redemption-backstops";
@@ -208,18 +210,20 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
   const redemptionTasks = redemptionGroup?.tasks ?? [];
   const kinesisTasks = kinesisGroup?.tasks ?? [];
   const postSyncTasks = postSyncGroup?.tasks ?? [];
-  // The three chains are launched together: only the backstop computation is
-  // ordered behind the reserve head, so a stalled head can no longer abandon
-  // kinesis supply or the watchdog before they start.
-  const [mainSummary, kinesisSummary, postSyncSummary] = await Promise.all([
+  // Kinesis supply reads no reserve output, so it runs beside the head instead
+  // of queueing behind it. The two reserve consumers stay ordered behind the
+  // head: the backstop computation reads the live-reserve snapshot metadata,
+  // and the post-sync watchdog publishes a reserve-drift envelope stamped with
+  // the current time, so running it beside the producer let it observe and
+  // re-publish the previous generation before this slot's rows were written.
+  // An abandoned head delays the watchdog rather than losing it: the
+  // five-minute reserve-recovery lane replays the checkpoint in chain order.
+  const [mainSummary, kinesisSummary] = await Promise.all([
     syncTask
       ? runScheduledSlotGroups(runtime, SLOT_LABEL, [{ ...reserveAdapterGroup, tasks: [syncTask] }])
       : buildScheduledSlotSummary([]),
     kinesisTasks.length > 0 && kinesisGroup
       ? runScheduledSlotGroups(runtime, SLOT_LABEL, [kinesisGroup])
-      : buildScheduledSlotSummary([]),
-    postSyncTasks.length > 0 && postSyncGroup
-      ? runScheduledSlotGroups(runtime, SLOT_LABEL, [postSyncGroup])
       : buildScheduledSlotSummary([]),
   ]);
   const checkpointAfterMain = await loadLiveReserveCheckpoint(runtime.db, identity);
@@ -227,7 +231,7 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
     throw new Error("live reserve checkpoint missing after queue stage");
   }
   const mainFailedAfterQueueExhaustion = mainSummary.jobsErrored > 0 && isReserveQueueExhausted(checkpointAfterMain);
-  const summaries: ScheduledSlotSummary[] = [mainSummary, kinesisSummary, postSyncSummary];
+  const summaries: ScheduledSlotSummary[] = [mainSummary, kinesisSummary];
   const reserveStageCompleted =
     isReserveQueueExhausted(checkpointAfterMain)
     && mainSummary.jobsErrored === 0
@@ -241,8 +245,24 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
         "sync-live-reserves",
       ),
     );
-  } else if (redemptionTasks.length > 0 && redemptionGroup) {
-    summaries.push(await runScheduledSlotGroups(runtime, SLOT_LABEL, [redemptionGroup]));
+    // The watchdog validates the generation this slot was supposed to write, so
+    // an unfinished or failed reserve stage must not refresh the drift envelope
+    // from the previous one. It re-runs with the replayed suffix.
+    summaries.push(
+      await recordBlockedReserveTasks(
+        runtime,
+        identity,
+        postSyncTasks,
+        "sync-live-reserves",
+      ),
+    );
+  } else {
+    if (redemptionTasks.length > 0 && redemptionGroup) {
+      summaries.push(await runScheduledSlotGroups(runtime, SLOT_LABEL, [redemptionGroup]));
+    }
+    if (postSyncTasks.length > 0 && postSyncGroup) {
+      summaries.push(await runScheduledSlotGroups(runtime, SLOT_LABEL, [postSyncGroup]));
+    }
   }
   const summary = mergeScheduledSlotSummaries(summaries);
   const checkpointAfterChildren = await loadLiveReserveCheckpoint(runtime.db, identity);

@@ -119,11 +119,14 @@ describe("scheduled runner contract", () => {
     }
   });
 
-  it("keeps cron-sentinel out of the reserve head's chain", () => {
+  it("keeps the reserve watchdog chained behind the reserve producer", () => {
+    // The watchdog publishes a reserve-drift envelope timestamped with the
+    // current time, so it must read a completed generation: chained behind the
+    // producer, never launched beside it. Kinesis supply reads no reserve
+    // output and stays independent.
     expect(SCHEDULED_SLOT_PLANS.fourHourlyReserveSync.jobChains).toEqual([
-      ["sync-live-reserves", "sync-redemption-backstops"],
+      ["sync-live-reserves", "sync-redemption-backstops", "cron-sentinel"],
       ["sync-kinesis-supply"],
-      ["cron-sentinel"],
     ]);
   });
 

@@ -19,8 +19,8 @@ import { LIVE_RESERVE_QUEUE_HASH } from "../../cron/sync-live-reserves-shared";
 const CHILD_JOBS = [
   "sync-live-reserves",
   "sync-redemption-backstops",
-  "sync-kinesis-supply",
   "cron-sentinel",
+  "sync-kinesis-supply",
 ] as const;
 
 function createHarness() {
