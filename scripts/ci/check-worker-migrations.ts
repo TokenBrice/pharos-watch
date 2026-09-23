@@ -85,17 +85,40 @@ export const UNSAFE_ROLLOUT_ADD_COLUMN_LABEL = "ALTER TABLE ... ADD COLUMN ... N
 // Repository migration SQL is the only input (trusted, checked in, small). Every
 // adjacent quantifier is over disjoint character classes (`\s` vs identifier
 // chars), so there is exactly one parse and no catastrophic backtracking.
-/* eslint-disable security/detect-unsafe-regex */
-const UPDATE_TARGET_PATTERN_GLOBAL = /\bUPDATE\s+(?:OR\s+(?:ROLLBACK|ABORT|REPLACE|FAIL|IGNORE)\s+)?["`[]?([A-Za-z_][A-Za-z0-9_]*)[\]`"]?\s+SET\b/gi;
-const UPDATE_TARGET_PATTERN = { label: "UPDATE", pattern: /\bUPDATE\s+(?:OR\s+(?:ROLLBACK|ABORT|REPLACE|FAIL|IGNORE)\s+)?["`[]?[A-Za-z_][A-Za-z0-9_]*[\]`"]?\s+SET\b/i };
-/* eslint-enable security/detect-unsafe-regex */
-
-export const DESTRUCTIVE_DATA_MIGRATION_PATTERNS = Object.freeze([
-  { label: "DELETE FROM", pattern: /\bDELETE\s+FROM\b/i },
-  UPDATE_TARGET_PATTERN,
-  { label: "INSERT OR REPLACE", pattern: /\bINSERT\s+OR\s+REPLACE\s+INTO\b/i },
-]);
-
+/* eslint-disable security/detect-non-literal-regexp */
+const SQL_IDENTIFIER = String.raw`[A-Za-z_][A-Za-z0-9_]*`;
+const OPENING_IDENTIFIER_QUOTE = '["`\\[]?';
+const CLOSING_IDENTIFIER_QUOTE = '[\\]`"]?';
+// SQLite qualified-table-name: an optional `schema.` prefix before the table. The
+// capture keeps the bare table name so an extracted seeding target stays usable.
+const QUALIFIED_TABLE_NAME = String.raw`(?:${OPENING_IDENTIFIER_QUOTE}${SQL_IDENTIFIER}${CLOSING_IDENTIFIER_QUOTE}\s*\.\s*)?${OPENING_IDENTIFIER_QUOTE}(${SQL_IDENTIFIER})${CLOSING_IDENTIFIER_QUOTE}`;
+// SQLite treats `REPLACE INTO` exactly as `INSERT OR REPLACE INTO`: both delete
+// the conflicting row before inserting the replacement.
+const REPLACE_INTO_TABLE = String.raw`\b(?:INSERT\s+OR\s+)?REPLACE\s+INTO\s+${QUALIFIED_TABLE_NAME}`;
+// Upsert conflict updates. `[^;]*?` keeps both clauses within one statement, so
+// `ON CONFLICT ... DO NOTHING` stays insert-only and an ON CONFLICT clause in a
+// later statement cannot leak across the statement-ending semicolon.
+const UPSERT_DO_UPDATE_TABLE = String.raw`\bINSERT\s+(?:OR\s+(?:ROLLBACK|ABORT|REPLACE|FAIL|IGNORE)\s+)?INTO\s+${QUALIFIED_TABLE_NAME}[^;]*?\bON\s+CONFLICT\b[^;]*?\bDO\s+UPDATE\b`;
+const DESTRUCTIVE_DATA_MIGRATION_PATTERN_SOURCES = [
+  { label: "DELETE FROM", source: String.raw`\bDELETE\s+FROM\s+${QUALIFIED_TABLE_NAME}` },
+  {
+    label: "UPDATE",
+    source: String.raw`\bUPDATE\s+(?:OR\s+(?:ROLLBACK|ABORT|REPLACE|FAIL|IGNORE)\s+)?${QUALIFIED_TABLE_NAME}\s+SET\b`,
+  },
+  { label: "INSERT OR REPLACE", source: REPLACE_INTO_TABLE },
+  { label: "INSERT ... ON CONFLICT ... DO UPDATE", source: UPSERT_DO_UPDATE_TABLE },
+];
+export const DESTRUCTIVE_DATA_MIGRATION_PATTERNS = Object.freeze(
+  DESTRUCTIVE_DATA_MIGRATION_PATTERN_SOURCES.map(({ label, source }) => ({ label, pattern: new RegExp(source, "i") })),
+);
+const DESTRUCTIVE_DATA_MIGRATION_TARGET_PATTERNS = DESTRUCTIVE_DATA_MIGRATION_PATTERN_SOURCES.map(
+  ({ source }) => new RegExp(source, "gi"),
+);
+const CREATE_TABLE_TARGET_PATTERN = new RegExp(
+  String.raw`\bCREATE\s+(?:TEMP(?:ORARY)?\s+)?(?:VIRTUAL\s+)?TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?${QUALIFIED_TABLE_NAME}`,
+  "gi",
+);
+/* eslint-enable security/detect-non-literal-regexp */
 
 export function getMigrationSequenceNumber(file: string): number {
   const match = file.match(/^(\d+)/);
@@ -374,12 +397,18 @@ export function findDestructiveDataStatements(sql: string): string[] {
 
 export function findDataMigrationTargets(sql: string): string[] {
   const normalizedSql = stripSqlComments(sql);
-  const targets = [
-    ...normalizedSql.matchAll(/\bDELETE\s+FROM\s+["`[]?([A-Za-z_][A-Za-z0-9_]*)/gi),
-    ...normalizedSql.matchAll(UPDATE_TARGET_PATTERN_GLOBAL),
-    ...normalizedSql.matchAll(/\bINSERT\s+OR\s+REPLACE\s+INTO\s+["`[]?([A-Za-z_][A-Za-z0-9_]*)/gi),
-  ].map((match) => match[1].toLowerCase());
+  const targets = DESTRUCTIVE_DATA_MIGRATION_TARGET_PATTERNS.flatMap((pattern) =>
+    [...normalizedSql.matchAll(pattern)].map((match) => match[1].toLowerCase()),
+  );
   return [...new Set(targets)];
+}
+
+export function findCreatedTables(sql: string): string[] {
+  const normalizedSql = stripSqlComments(sql);
+  const createdTables = [...normalizedSql.matchAll(CREATE_TABLE_TARGET_PATTERN)].map((match) =>
+    match[1].toLowerCase(),
+  );
+  return [...new Set(createdTables)];
 }
 
 export function validateDataMigrationManifestRows(
@@ -744,7 +773,14 @@ export async function validateWorkerMigrations({
           fixtureExecutor.execute(migrationSql.get(priorFile)!);
         }
         const sql = migrationSql.get(row.filename)!;
-        seedPreMigrationFixture(fixtureExecutor, findDataMigrationTargets(sql));
+        // A table created by this same migration cannot hold pre-existing
+        // production rows, so the fresh replay already covers it; every earlier
+        // table still needs a representative seeded fixture.
+        const createdInMigration = new Set(findCreatedTables(sql));
+        seedPreMigrationFixture(
+          fixtureExecutor,
+          findDataMigrationTargets(sql).filter((target) => !createdInMigration.has(target)),
+        );
         fixtureExecutor.execute(sql);
         dataMigrationFixtureCheckedCount += 1;
       } catch (error) {
