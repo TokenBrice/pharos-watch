@@ -132,6 +132,33 @@ describe("measured execution durable publication", () => {
     expect(evidence?.byTargetId.get(failedTarget.targetId)).not.toHaveProperty("rawPayload");
   });
 
+  it("publishes a complete quote generation when the post-insert COUNT readback hits transient D1 overload", async () => {
+    const opened = databases.open();
+    const target = fixtureTarget("ethereum");
+    const published = await publishDexMeasuredTargetInventory({ db: opened.db, targets: [target], capturedAt: 1_000 });
+    const profile = fixtureProfile(target, { targetGenerationId: published.generationId });
+    let overloaded = false;
+    const flakyDb = {
+      ...opened.db,
+      prepare(sql: string) {
+        if (!overloaded && sql.includes("SELECT COUNT(*) AS count FROM dex_measured_execution_quotes")) {
+          overloaded = true;
+          throw new Error("D1_ERROR: D1 DB is overloaded. Requests queued for too long.");
+        }
+        return opened.db.prepare(sql);
+      },
+    } as D1Database;
+
+    await publishDexMeasuredQuoteGeneration({ db: flakyDb, generationId: "quote-generation",
+      targetGeneration: { generationId: published.generationId, targets: [target], publishedAt: 1_000 },
+      outcomes: [{ target, status: "measured", profile }], quotedAt: 1_060 });
+
+    expect(overloaded).toBe(true);
+    expect(opened.sqlite.prepare(
+      "SELECT state, published_rows FROM surface_publication_generations WHERE generation_id = 'quote-generation'",
+    ).get()).toEqual({ state: "published", published_rows: 1 });
+  });
+
   it("reconstructs sparse and all-deferred generations and rejects a tampered manifest", async () => {
     const { db, sqlite } = databases.open();
     const targets = [fixtureTarget("ethereum"), fixtureTarget("base")];

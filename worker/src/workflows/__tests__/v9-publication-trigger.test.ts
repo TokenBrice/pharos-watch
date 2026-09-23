@@ -6,6 +6,7 @@ import type {
 import type { ScheduledRuntimeContext } from "../../handlers/scheduled/context";
 import type { CronResult } from "../../lib/cron-logger";
 import { buildScheduledSlotSummary, summarizeCronResult } from "../../handlers/scheduled/slot-summary";
+import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 const { runSingleScheduledJob, computeSafetyScoreV9, runV9AfterCoreWithinWindow } = vi.hoisted(() => ({
   runSingleScheduledJob: vi.fn(),
@@ -44,6 +45,7 @@ import { runV9PublicationSlot } from "../../handlers/scheduled/v9-publication";
 function runtimeWith(
   mode: string | undefined,
   workflow: Pick<Workflow, "create" | "get">,
+  db?: D1Database,
 ): ScheduledRuntimeContext {
   return {
     slotStartedAt: 1788433200,
@@ -51,6 +53,7 @@ function runtimeWith(
       WORKER_V9_WORKFLOW_MODE: mode,
       SAFETY_SCORE_V9_WORKFLOW: workflow,
     },
+    ...(db === undefined ? {} : { db }),
   } as unknown as ScheduledRuntimeContext;
 }
 
@@ -176,6 +179,34 @@ describe("V9 publication Workflow trigger", () => {
     expect(result).toMatchObject({ jobsRun: 1, jobsSucceeded: 1 });
     expect(workflow.get).toHaveBeenCalledWith(
       "v9-publication-1788433200",
+    );
+  });
+
+  it("records the neutral workflow row instead of a bare missing run when inputs are unavailable", async () => {
+    computeSafetyScoreV9.mockResolvedValue({
+      status: "degraded",
+      metadata: JSON.stringify({ stage: "input-load", reason: "stablecoins-generation-mismatch" }),
+    });
+    const inserts: { sql: string; bindings: unknown[] }[] = [];
+    const db = makeNoopD1({
+      prepare: (sql: string) => ({
+        bind: (...bindings: unknown[]) => ({
+          run: async () => {
+            inserts.push({ sql, bindings });
+            return { success: true };
+          },
+        }),
+      }),
+    });
+    const workflow = { create: vi.fn(), get: vi.fn() };
+
+    await runV9PublicationSlot(runtimeWith("shadow", workflow, db));
+
+    expect(workflow.create).not.toHaveBeenCalled();
+    expect(inserts).toHaveLength(1);
+    expect(inserts[0]!.sql).toContain("INSERT INTO cron_runs");
+    expect(inserts[0]!.bindings[5]).toBe(
+      "workflow:compute-safety-score-v9-workflow:v9-publication-1788433200:upstream-absent",
     );
   });
 });

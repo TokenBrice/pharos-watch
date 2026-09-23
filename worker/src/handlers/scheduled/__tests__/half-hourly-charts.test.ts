@@ -25,16 +25,21 @@ vi.mock("../../../cron/sync-stablecoin-charts", () => ({
   syncStablecoinCharts: mocks.syncStablecoinCharts,
 }));
 
+import type { CronResult } from "../../../lib/cron-logger";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+
 import { runHalfHourlyChartsSlot } from "../half-hourly-charts";
 
-function runtime(): ScheduledRuntimeContext {
+function runtime(dbOverride?: D1Database): ScheduledRuntimeContext {
   const signal = new AbortController().signal;
   return makeScheduledRuntime({
-    db: makeNoopD1({
-      prepare: () => ({
-        bind: () => ({ run: async () => ({ meta: { changes: 1 } }) }),
+    db:
+      dbOverride
+      ?? makeNoopD1({
+        prepare: () => ({
+          bind: () => ({ run: async () => ({ meta: { changes: 1 } }) }),
+        }),
       }),
-    }),
     cron: "16,46 * * * *",
     scheduleKey: "halfHourlyChartsOffset",
     scheduledTimeMs: 960_000,
@@ -42,6 +47,40 @@ function runtime(): ScheduledRuntimeContext {
     workerVersion: "worker-v1",
     runLeasedCron: vi.fn(async (_job, fn) => fn(signal, vi.fn())),
   });
+}
+
+function dexGenerationRows(updatedAt: number) {
+  return ACTIVE_STABLECOINS.map((coin) => ({
+    stablecoin_id: coin.id,
+    publication_generation_id: `dex-liquidity-${updatedAt}`,
+    updated_at: updatedAt,
+  }));
+}
+
+function dexPublicationDb(updatedAt: number): D1Database {
+  const rows = dexGenerationRows(updatedAt);
+  return makeNoopD1({
+    // loadExactDexPublicationGeneration() binds no parameters.
+    prepare: () => ({
+      bind: () => ({ all: async () => ({ results: rows }) }),
+      all: async () => ({ results: rows }),
+    }),
+  });
+}
+
+function captureJobResults(scheduledRuntime: ScheduledRuntimeContext) {
+  const results = new Map<string, CronResult>();
+  scheduledRuntime.runLeasedCron = vi.fn(async (job: string, fn: (signal: AbortSignal) => Promise<CronResult>) => {
+    const result = await fn(new AbortController().signal);
+    results.set(job, result);
+    return result;
+  }) as unknown as ScheduledRuntimeContext["runLeasedCron"];
+  return results;
+}
+
+function jobMetadata(results: Map<string, CronResult>, job: string): Record<string, unknown> {
+  const metadata = results.get(job)?.metadata;
+  return metadata === undefined ? {} : JSON.parse(metadata) as Record<string, unknown>;
 }
 
 describe("half-hourly charts scheduling", () => {
@@ -263,6 +302,11 @@ describe("half-hourly charts scheduling", () => {
       {
         publishShadowTargets: false,
         stageReadyDeadlineMs: scheduledRuntime.scheduledTimeMs! + 90_000,
+        stageRecovery: {
+          graphApiKey: null,
+          coingeckoApiKey: scheduledRuntime.coingeckoApiKey,
+          chainRpcs: scheduledRuntime.chainRpcs,
+        },
       },
     );
     expect(mocks.runCronSentinel).toHaveBeenCalledWith(scheduledRuntime.db, {
@@ -281,6 +325,15 @@ describe("half-hourly charts scheduling", () => {
     expect(mocks.reuseCurrentDexLiquidityScoringGeneration).toHaveBeenCalledWith(
       scheduledRuntime.db,
       expect.any(AbortSignal),
+      expect.any(Function),
+      scheduledRuntime.slotStartedAt,
+      {
+        stageRecovery: {
+          graphApiKey: null,
+          coingeckoApiKey: scheduledRuntime.coingeckoApiKey,
+          chainRpcs: scheduledRuntime.chainRpcs,
+        },
+      },
     );
     expect(mocks.prepareSafetyScoreV9Input).toHaveBeenCalledWith(
       scheduledRuntime.db,
@@ -314,5 +367,98 @@ describe("half-hourly charts scheduling", () => {
 
     expect(order.indexOf("prepare")).toBeGreaterThan(order.indexOf("consume"));
     expect(order.indexOf("charts")).toBeGreaterThan(order.indexOf("prepare"));
+  });
+
+  it("prepares V9 input from the last in-budget accepted DEX generation after a DEX error", async () => {
+    mocks.consumeDexLiquidityScoringStage.mockRejectedValue(
+      new Error("D1_ERROR: internal error; reference = nug416i4dsl"),
+    );
+    mocks.prepareSafetyScoreV9Input.mockResolvedValue({
+      status: "ok",
+      itemCount: 239,
+      metadata: JSON.stringify({ dexGenerationId: "dex-liquidity-recovered" }),
+    });
+    // Slot 960 (:16); the accepted publication is one hour old, inside the
+    // four-hour DEX evidence budget.
+    const scheduledRuntime = runtime(dexPublicationDb(960 - 3_600));
+    const results = captureJobResults(scheduledRuntime);
+
+    const summary = await runHalfHourlyChartsSlot(scheduledRuntime);
+
+    expect(mocks.prepareSafetyScoreV9Input).toHaveBeenCalledWith(
+      scheduledRuntime.db,
+      expect.any(AbortSignal),
+      `dex-liquidity-${960 - 3_600}`,
+      scheduledRuntime.chainRpcs,
+    );
+    expect(summary.jobs[2]).toMatchObject({
+      job: "prepare-safety-score-v9-input",
+      outcome: "ok",
+    });
+    expect(jobMetadata(results, "prepare-safety-score-v9-input")).toMatchObject({
+      dexPublicationRecovery: {
+        upstreamJob: "sync-dex-liquidity",
+        upstreamStatus: "error",
+        reusedGenerationId: `dex-liquidity-${960 - 3_600}`,
+        publicationAgeSec: 3_600,
+        budgetSec: 4 * 3_600,
+      },
+    });
+  });
+
+  it("fails V9 closed when the last accepted DEX generation is outside the evidence budget", async () => {
+    mocks.consumeDexLiquidityScoringStage.mockRejectedValue(new Error("stale DEX stage"));
+    const scheduledRuntime = runtime(dexPublicationDb(960 - 4 * 3_600 - 1));
+    const results = captureJobResults(scheduledRuntime);
+
+    const summary = await runHalfHourlyChartsSlot(scheduledRuntime);
+
+    expect(mocks.prepareSafetyScoreV9Input).not.toHaveBeenCalled();
+    expect(summary.jobs[2]).toMatchObject({
+      job: "prepare-safety-score-v9-input",
+      outcome: "skipped",
+      reason: "upstream-dex-publication-unavailable",
+      neutral: true,
+    });
+    expect(jobMetadata(results, "prepare-safety-score-v9-input")).toMatchObject({
+      reason: "upstream-dex-publication-unavailable",
+      upstreamStatus: "error",
+      upstreamRecovery: {
+        outcome: "outside-freshness-budget",
+        publicationAgeSec: 4 * 3_600 + 1,
+        budgetSec: 4 * 3_600,
+      },
+    });
+  });
+
+  it("fails V9 closed when the accepted DEX generation cannot be read after a DEX error", async () => {
+    mocks.consumeDexLiquidityScoringStage.mockRejectedValue(new Error("stale DEX stage"));
+    const failingReadsDb = makeNoopD1({
+      prepare: () => ({
+        bind: () => ({
+          all: async () => {
+            throw new TypeError("Exact fixed-input capture missing active DEX rows");
+          },
+        }),
+      }),
+    });
+    const scheduledRuntime = runtime(failingReadsDb);
+    const results = captureJobResults(scheduledRuntime);
+
+    const summary = await runHalfHourlyChartsSlot(scheduledRuntime);
+
+    expect(mocks.prepareSafetyScoreV9Input).not.toHaveBeenCalled();
+    expect(summary.jobs[2]).toMatchObject({
+      job: "prepare-safety-score-v9-input",
+      outcome: "skipped",
+      reason: "upstream-dex-publication-unavailable",
+      neutral: true,
+    });
+    expect(jobMetadata(results, "prepare-safety-score-v9-input")).toMatchObject({
+      upstreamRecovery: {
+        outcome: "generation-unavailable",
+        code: "TypeError",
+      },
+    });
   });
 });

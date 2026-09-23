@@ -469,6 +469,51 @@ async function writeTerminalFailure(
   ).run();
 }
 
+/**
+ * Records the neutral `cron_runs` row for a shadow Workflow slot whose
+ * upstream compiler returned a terminal result with no publication to
+ * shadow. Without this row the job shows as bare `unavailable` whenever
+ * compute skips or fails closed; with it, the status surface names the real
+ * machine-readable upstream reason. The row uses an `:upstream-absent`
+ * idempotency-key suffix so a later duplicate delivery of the same slot that
+ * does publish can still write its real terminal row — the two must never
+ * share a key, or the neutral row would permanently mask an admitted shadow.
+ */
+export async function recordSkippedSafetyScoreV9WorkflowRun(
+  db: D1Database,
+  instanceId: string,
+  slotStartedAt: number,
+  upstream: {
+    status: NonNullable<CronResult["status"]>;
+    reason: string | null;
+    stage: string | null;
+  },
+): Promise<void> {
+  await db.prepare(
+    `INSERT INTO cron_runs
+       (job, started_at, duration_ms, status, item_count, metadata,
+        slot_started_at, error, idempotency_key)
+     VALUES (?, ?, ?, 'skipped_neutral', 0, ?, ?, NULL, ?)
+     ON CONFLICT DO NOTHING`,
+  ).bind(
+    SAFETY_SCORE_V9_WORKFLOW_JOB,
+    Math.floor(Date.now() / 1_000),
+    0,
+    stableJsonStringifyV1({
+      workflow: "safety-score-v9-publication",
+      instanceId,
+      slotStartedAt,
+      reason: "upstream-compute-publication-absent",
+      upstreamJob: "compute-safety-score-v9",
+      upstreamStatus: upstream.status,
+      upstreamReason: upstream.reason,
+      upstreamStage: upstream.stage,
+    }),
+    slotStartedAt,
+    `${terminalIdempotencyKey(instanceId)}:upstream-absent`,
+  ).run();
+}
+
 export function safetyScoreV9WorkflowInstanceId(
   slotStartedAt: number,
 ): string {

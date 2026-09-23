@@ -246,18 +246,35 @@ exclusion list. A cron is healthy when:
 - Last run exists within `2 * expectedIntervalSec`
 - Last run status is `ok`, or
 - Last run status is `degraded` (warning-only fallback mode), or
-- Last run status is `skipped_neutral` (expected no-op) **and** the latest non-neutral required run is a fresh `ok` or `degraded`, or
+- Last run status is `skipped_neutral` (expected no-op) **and** the latest non-neutral required run is a fresh
+  `ok` or `degraded`, or
+- Last run status is `skipped_neutral` whose `metadata.reason` is in `PROVEN_SATISFIED_NEUTRAL_SKIP_REASONS`
+  (`shared/lib/cron-jobs.ts`: `same_day_snapshot_exists`, `weekly-recap-exists`) — the skip was recorded only after a
+  successful precheck read found the period's write-once artifact, so it is fresh positive evidence the period's
+  output exists. Such a skip also supersedes an earlier fresh error for the same period in `summary.cronErrors`
+  (the error row and its machine-readable reason stay in history; one transient precheck read failure must not keep
+  a write-once daily artifact's producer red until the next day's real run). An inherited `degraded` run stays a
+  warning: the artifact existing proves availability, not that the producing run's inputs were clean, or
 - Last run status is `skipped_locked` **and** there is a fresh `ok` run in the same freshness window, or
 - The job is **not** reported healthy when the cron-history query itself failed: `crons[*].healthy` is `null` with `crons[*].telemetryUnknown = true` and `crons[*].telemetryUnknownReason` naming the failed read, and the job is excluded from unhealthy/error counters rather than reported falsely unhealthy or falsely healthy, or
 - The job is a watch-tier bootstrap (`crons[*].bootstrap = true`): no required non-neutral attempt yet and at most one recorded run. Critical-tier jobs always require real availability evidence
 
 The display retains the latest ten runs. When all ten entries in that window are neutral skips, the loader performs a bounded per-job lookup for the latest non-neutral run so admission skips cannot evict valid producer evidence. Jobs whose display window already contains a required attempt need no extra lookup. This does not extend freshness budgets or treat skipped work as successful. That appended required attempt is also served as an eleventh `recentRuns` entry, so a job counted in `summary.degradedCrons` (or `summary.cronErrors`) through inheritance is always attributable from the served records instead of warning with an all-neutral visible history.
 
-Otherwise the job is unhealthy, including stale history, non-fresh errors, or a neutral skip whose latest required run errored. A required degraded run remains counted in degraded diagnostics even though later neutral skips inherit its availability.
+Otherwise the job is unhealthy, including stale history, non-fresh errors, or a generic neutral skip (no
+proven-satisfied reason) whose latest required run errored. A required degraded run remains counted in degraded
+diagnostics even though later neutral skips inherit its availability.
 
 Operational nuance: a fresh recovery attempt should not keep `/status` degraded purely because the most recent completed run failed. When a leased cron is actively running and its heartbeat is fresh, availability treats that lane as live again while still preserving the previous completed run in card history.
 
-The admin cron workbench resolves a neutral skip against the latest required non-neutral run before building its attention filter. A fresh `skipped_neutral` row with no inherited warning or failure renders as **Skipped**, not **Unhealthy**. Known V9 admission reasons replace the generic no-work label with the actual condition, such as `competing slot active` or `core slot not ready`. The row remains under `Needs attention` when backend availability still lacks required success evidence, so the neutral attempt outcome does not hide a starved producer. Inherited degraded outcomes retain warning treatment, inherited failures remain unhealthy, and stale neutral skips remain unhealthy.
+The admin cron workbench resolves a neutral skip against the latest required non-neutral run before building its
+attention filter, using the same proven-satisfied vocabulary: a fresh `skipped_neutral` row whose reason proves the
+period's artifact exists clears an inherited failure, with no inherited warning or failure rendering as **Skipped**,
+not **Unhealthy**. Known V9 admission reasons replace the generic no-work label with the actual condition, such as
+`competing slot active` or `core slot not ready`. The row remains under `Needs attention` when backend availability
+still lacks required success evidence, so the neutral attempt outcome does not hide a starved producer. Inherited
+degraded outcomes retain warning treatment, inherited failures remain unhealthy unless superseded by a
+proven-satisfied skip, and stale neutral skips remain unhealthy.
 
 Scheduled-slot abandonment is surfaced separately from child job runtime failures. When a later trigger reconciles a stale `cron_slot_executions` row, `/api/status` can attach `crons[*].latestEvent` with `eventType = "scheduled-slot-abandoned"` to each child job in that slot; the marker includes the schedule key, slot owner, and abandoned child progress stage. Synthetic child rows with `metadata.reason = "stale-slot-reconciled"` remain in `recentRuns` for audit history, except legacy false `daily-digest` not-started rows from idle `digestTriggerPoll` slots, which are excluded before the per-job history limit. Genuine forced digest outcomes and abandoned started-progress rows remain visible. The sentinel's duration source excludes synthetic reconciliation rows from runtime averages and reports proven publication, not-started children, publication failures, terminal-accounting unknowns, and real child failures as separate lifecycle counters. Remediation: [`docs/runbooks/cron-slot-abandonment.md`](./runbooks/cron-slot-abandonment.md).
 

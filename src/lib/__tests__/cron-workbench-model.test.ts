@@ -328,6 +328,65 @@ describe("cron workbench model", () => {
     });
   });
 
+  it("clears an inherited failure when the fresh skip proves the period's artifact exists", () => {
+    // Backend parity for the 2026-09-23 snapshot-public-dataset incident: a
+    // transient precheck error followed by `same_day_snapshot_exists` skips.
+    // The lane must resolve to Skipped, not stay Unavailable until the next
+    // day's real run.
+    const neutralRun = {
+      startedAt: 1_700_000_000,
+      durationMs: 200,
+      status: "skipped_neutral" as const,
+      metadata: { reason: "same_day_snapshot_exists", snapshotDate: "2026-09-23" },
+    };
+    const errorRun = { startedAt: 1_699_999_000, durationMs: 1_600, status: "error" as const };
+    const cron = makeCron({
+      lastRun: neutralRun,
+      recentRuns: [neutralRun, errorRun],
+      expectedIntervalSec: 86_400,
+      healthy: true,
+    });
+
+    expect(classifyCronWorkbenchState(cron, 1_700_000_600)).toBe("skipped");
+
+    const model = buildCronWorkbenchModel(
+      [
+        {
+          key: "daily",
+          title: "Daily slot",
+          badge: "daily",
+          description: "Daily snapshot jobs.",
+          entries: [["snapshot-public-dataset", cron]],
+        },
+      ],
+      makeFilters(),
+      1_700_000_600,
+    );
+
+    expect(model.rows[0]).toMatchObject({
+      job: "snapshot-public-dataset",
+      state: "skipped",
+    });
+    expect(model.groups[0]?.summary).toMatchObject({ unhealthy: 0, skipped: 1 });
+  });
+
+  it("keeps an inherited failure unhealthy when the skip reason proves nothing", () => {
+    const neutralRun = {
+      startedAt: 1_700_000_000,
+      durationMs: 200,
+      status: "skipped_neutral" as const,
+      metadata: { reason: "before_daily_slot" },
+    };
+    const errorRun = { startedAt: 1_699_999_000, durationMs: 1_600, status: "error" as const };
+    const cron = makeCron({
+      lastRun: neutralRun,
+      recentRuns: [neutralRun, errorRun],
+      healthy: false,
+    });
+
+    expect(classifyCronWorkbenchState(cron, 1_700_000_600)).toBe("unhealthy");
+  });
+
   it("formats raw run values into readable labels", () => {
     expect(formatCronRunStatus("skipped_neutral")).toBe("Skipped: no work required");
     expect(

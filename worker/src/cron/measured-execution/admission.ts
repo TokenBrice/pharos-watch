@@ -11,6 +11,7 @@ import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
 import { parseJsonObject } from "../../lib/json-parse";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { rotateFromCursor } from "../shared/cursor-rotation";
+import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import type { DexMeasuredQuoteOutcome } from "./persistence";
 import type { DexMeasuredRawQuotePoint } from "./profiles";
 import {
@@ -27,7 +28,7 @@ import { getUniswapV4Deployment, type UniswapV4Deployment } from "./uniswap-v4";
 export const MEASURED_EXECUTION_RPC_REQUEST_LIMIT = 1_300;
 const RPC_ADMISSION_FRAGMENTATION_HEADROOM = 80;
 const MAX_ADMISSION_RPC_REQUESTS = MEASURED_EXECUTION_RPC_REQUEST_LIMIT - RPC_ADMISSION_FRAGMENTATION_HEADROOM;
-const CONSERVATIVE_MULTICALL_BATCH_SIZE = 8;
+export const CONSERVATIVE_MULTICALL_BATCH_SIZE = 8;
 export const MAX_ADMISSION_ROTATION_CYCLES = 2;
 export const MAX_EXPIRING_PRIORITY_RPC_REQUESTS = 20;
 export const MEASURED_EXECUTION_ADMISSION_RUN_METADATA = {
@@ -38,6 +39,82 @@ export const MEASURED_EXECUTION_ADMISSION_RUN_METADATA = {
 export const MEASURED_EXECUTION_REFINEMENT_ROUNDS = 3;
 export const MEASURED_EXECUTION_ADMISSION_SOURCE_KEY = "measured-execution:quote-admission";
 export const SHADOW_MEASURED_EXECUTION_ADMISSION_SOURCE_KEY = "measured-execution:shadow-quote-admission";
+
+/**
+ * Minimum observed quote requests before the pacing projection trusts its
+ * measured request rate; below this sample the lane keeps following the hard
+ * eight-minute runtime wall alone.
+ */
+export const MIN_MEASURED_EXECUTION_PACING_SAMPLES = 20;
+
+/** Structural slice of a lane quote state the remaining-work estimate reads. */
+export interface MeasuredQuotePacingState {
+  target: Pick<DexMeasuredExecutionTarget, "retainedTvlUsd">;
+  failedReason: string | null;
+  stopped: boolean;
+  points: ReadonlyArray<{ inputUsd: number }>;
+  /** `upperFailingUsd - lowerPassingUsd` while a refinement bracket is still open. */
+  bracketGapUsd: number | null;
+}
+
+/** Remaining quote RPC requests a lane still owes, in conservative multicall batches. */
+export function estimateRemainingMeasuredQuoteRpcRequests(
+  states: readonly MeasuredQuotePacingState[],
+  multicallBatchSize: number = CONSERVATIVE_MULTICALL_BATCH_SIZE,
+): number {
+  let remainingQuoteCalls = 0;
+  for (const state of states) {
+    if (state.failedReason || state.stopped) continue;
+    for (const notional of getDexMeasuredExecutionProbeNotionals(state.target.retainedTvlUsd)) {
+      if (!state.points.some((point) => Math.abs(point.inputUsd - notional) <= 0.02)) {
+        remainingQuoteCalls++;
+      }
+    }
+    if (state.bracketGapUsd != null && state.bracketGapUsd > 0.02) {
+      remainingQuoteCalls += MEASURED_EXECUTION_REFINEMENT_ROUNDS;
+    }
+  }
+  return Math.ceil(remainingQuoteCalls / multicallBatchSize);
+}
+
+export interface MeasuredExecutionPacingProjectionInput {
+  nowMs: number;
+  softDeadlineMs: number;
+  observedQuoteRpcRequests: number;
+  observedQuoteElapsedMs: number;
+  remainingEstimatedRpcRequests: number;
+}
+
+export interface MeasuredExecutionPacingProjection {
+  stop: boolean;
+  projectedFinishMs: number | null;
+}
+
+/**
+ * Projects whether the observed provider request rate can still finish the
+ * remaining quote work before the soft pacing deadline. The hard runtime wall
+ * stays authoritative for in-flight stages; this only decides whether the lane
+ * should stop starting further stages, so a slow provider degrades to a partial
+ * generation instead of holding the lease, the heartbeat writes, and the slot
+ * for the full runtime budget while D1-heavy lanes contend.
+ */
+export function projectMeasuredExecutionPacingStop(
+  input: MeasuredExecutionPacingProjectionInput,
+): MeasuredExecutionPacingProjection {
+  if (input.remainingEstimatedRpcRequests <= 0) {
+    return { stop: false, projectedFinishMs: null };
+  }
+  if (
+    input.observedQuoteRpcRequests < MIN_MEASURED_EXECUTION_PACING_SAMPLES ||
+    input.observedQuoteElapsedMs <= 0
+  ) {
+    return { stop: false, projectedFinishMs: null };
+  }
+  const requestsPerMs = input.observedQuoteRpcRequests / input.observedQuoteElapsedMs;
+  const projectedFinishMs = input.nowMs + input.remainingEstimatedRpcRequests / requestsPerMs;
+  return { stop: projectedFinishMs > input.softDeadlineMs, projectedFinishMs };
+}
+
 
 export type TargetDeployment =
   | { kind: "quoter-v2"; config: DexMeasuredExecutionDeployment }
@@ -478,16 +555,23 @@ export async function loadPublishedScoreBearingDexRoutes(
 ): Promise<PublishedScoreBearingDexRoute[] | null> {
   try {
     throwIfAborted(signal);
-    const result = await db
-      .prepare(
-        `SELECT stablecoin_id, score_components_json
+    // Idempotent read: a transient D1 overload must not skip the whole
+    // score-bearing run (the caller treats null as route-load failure).
+    const result = await runWithOverloadRetry(
+      () =>
+        db
+          .prepare(
+            `SELECT stablecoin_id, score_components_json
            FROM dex_liquidity
           WHERE ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}
             AND score_components_json IS NOT NULL
             AND instr(score_components_json, '"measured-executable-depth"') > 0
           ORDER BY stablecoin_id`,
-      )
-      .all<PublishedDexScoreDetailsRow>();
+          )
+          .all<PublishedDexScoreDetailsRow>(),
+      3,
+      signal,
+    );
     throwIfAborted(signal);
     const publishedRoutes: PublishedScoreBearingDexRoute[] = [];
     for (const row of result.results ?? []) {

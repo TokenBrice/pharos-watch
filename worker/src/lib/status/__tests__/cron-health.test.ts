@@ -157,6 +157,67 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
   });
 
   it.each([
+    { job: "snapshot-public-dataset", reason: "same_day_snapshot_exists" },
+    { job: "snapshot-psi", reason: "same_day_snapshot_exists" },
+  ])(
+    "recovers $job availability from a proven same-day skip after a transient precheck error",
+    async ({ job, reason }) => {
+      // Production shape 2026-09-23: the 08:00 run wrote the day's artifact,
+      // one 09:31 precheck read failed on a transient D1 internal error, and
+      // every later quarter-hourly run recorded a fresh skip whose reason
+      // proves the artifact exists. The write-once artifact's producer must
+      // not stay red until the next day's real run.
+      const rows = seedWithOverrides(NOW, [
+        { job, status: "skipped_neutral", ageSec: 300 },
+        { job, status: "error", ageSec: 20_000 },
+        { job, status: "ok", ageSec: 30_000 },
+      ]);
+      const skipRow = rows.find((row) => row.job === job && row.status === "skipped_neutral");
+      skipRow!.metadata = JSON.stringify({ reason, snapshotDate: "2026-09-23" });
+
+      const snapshot = await loadCronHealth(makeDb(NOW, rows), NOW);
+
+      expect(snapshot.crons[job]?.healthy).toBe(true);
+      expect(snapshot.unhealthyCrons).toBe(0);
+      expect(snapshot.cronErrorCount).toBe(0);
+      expect(snapshot.degradedCronRuns).toBe(0);
+    },
+  );
+
+  it("does not let a generic same-day skip reason mask a fresh failed required run", async () => {
+    // `before_daily_slot` says the period is not due yet; it proves nothing
+    // about the artifact, so the earlier error stays the health evidence.
+    const rows = seedWithOverrides(NOW, [
+      { job: "snapshot-public-dataset", status: "skipped_neutral", ageSec: 300 },
+      { job: "snapshot-public-dataset", status: "error", ageSec: 20_000 },
+    ]);
+    const skipRow = rows.find((row) => row.job === "snapshot-public-dataset" && row.status === "skipped_neutral");
+    skipRow!.metadata = JSON.stringify({ reason: "before_daily_slot" });
+
+    const snapshot = await loadCronHealth(makeDb(NOW, rows), NOW);
+
+    expect(snapshot.crons["snapshot-public-dataset"]?.healthy).toBe(false);
+    expect(snapshot.cronErrorCount).toBe(1);
+  });
+
+  it("keeps counting an inherited degraded run behind a proven same-day skip", async () => {
+    // The artifact existing proves availability, not that the producing run's
+    // inputs were clean: a degraded required run stays a visible warning.
+    const rows = seedWithOverrides(NOW, [
+      { job: "snapshot-public-dataset", status: "skipped_neutral", ageSec: 300 },
+      { job: "snapshot-public-dataset", status: "degraded", ageSec: 20_000 },
+    ]);
+    const skipRow = rows.find((row) => row.job === "snapshot-public-dataset" && row.status === "skipped_neutral");
+    skipRow!.metadata = JSON.stringify({ reason: "same_day_snapshot_exists" });
+
+    const snapshot = await loadCronHealth(makeDb(NOW, rows), NOW);
+
+    expect(snapshot.crons["snapshot-public-dataset"]?.healthy).toBe(true);
+    expect(snapshot.degradedCronRuns).toBe(1);
+    expect(snapshot.cronErrorCount).toBe(0);
+  });
+
+  it.each([
     { status: "ok", ageSec: 12 * 3600, healthy: true },
     { status: "error", ageSec: 12 * 3600, healthy: false },
     { status: "ok", ageSec: 3 * 86400, healthy: false },

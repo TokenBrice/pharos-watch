@@ -1,4 +1,4 @@
-import { CRON_INTERVALS, getCronStatusImpact } from "@shared/lib/cron-jobs";
+import { CRON_INTERVALS, getCronStatusImpact, isProvenSatisfiedNeutralSkipReason } from "@shared/lib/cron-jobs";
 import { flattenScheduledSlotPlanJobs, SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
 import { CronRunStatusSchema } from "@shared/types/status";
 import type { CronEvent, CronInFlight, CronRun, CronStaleArtifact, CronStatus } from "@shared/types/status";
@@ -608,6 +608,18 @@ export async function loadCronHealth(
     const latestRequiredRun = requiredRuns[0] ?? null;
     const latestRequiredRunFresh = isFreshCronRun(latestRequiredRun, now, interval);
     const hasFreshOk = runs.some((run) => run.status === "ok" && now - run.startedAt <= interval * 2);
+    // A neutral skip whose machine-readable reason proves the period's
+    // write-once artifact exists (PROVEN_SATISFIED_NEUTRAL_SKIP_REASONS) is
+    // fresh positive evidence that the period's requirement is satisfied: the
+    // precheck read succeeded and found the artifact. It therefore both
+    // satisfies availability and supersedes an earlier fresh error for the
+    // same period — one transient precheck read failure must not keep a
+    // write-once daily artifact's producer red all day. Generic admission
+    // skips prove nothing and keep inheriting the latest required run.
+    const lastRunProvesPeriodSatisfied =
+      lastRun != null &&
+      lastRun.status === NEUTRAL_CRON_RUN_STATUS &&
+      isProvenSatisfiedNeutralSkipReason(lastRun.metadata?.reason);
     const hasFreshRequiredAvailability =
       latestRequiredRunFresh
       && (latestRequiredRun.status === "ok" || latestRequiredRun.status === "degraded");
@@ -616,7 +628,7 @@ export async function loadCronHealth(
       lastRun != null &&
       (lastRun.status === "ok" ||
         lastRun.status === "degraded" ||
-        (lastRun.status === NEUTRAL_CRON_RUN_STATUS && hasFreshRequiredAvailability) ||
+        (lastRun.status === NEUTRAL_CRON_RUN_STATUS && (hasFreshRequiredAvailability || lastRunProvesPeriodSatisfied)) ||
         (lastRun.status === "skipped_locked" && hasFreshOk));
     const statusImpact = getCronStatusImpact(job);
     const metadataDegraded =
@@ -659,16 +671,21 @@ export async function loadCronHealth(
     }
     const latestErrorRunFresh =
       (lastRun?.status === "error" && isFresh)
-      || (lastRun?.status === NEUTRAL_CRON_RUN_STATUS && latestRequiredRun?.status === "error" && latestRequiredRunFresh);
+      || (lastRun?.status === NEUTRAL_CRON_RUN_STATUS
+        && latestRequiredRun?.status === "error"
+        && latestRequiredRunFresh
+        && !lastRunProvesPeriodSatisfied);
     if (!telemetryUnknown && latestErrorRunFresh && !inFlightFresh) {
       cronErrorCount++;
       if (statusImpact === "critical") {
         availabilityImpactingCronErrors++;
       }
       // Consecutive-error streak: only counts if the two most-recent runs are
-      // both in-error. Neutral skips do not reset the streak because they are
-      // not required attempts. A single transient error surfaces as `degraded`
-      // in availability evaluation; only 2+ consecutive escalate to `stale`.
+      // both in-error. Generic neutral skips do not reset the streak because
+      // they are not required attempts; a proven-satisfied skip supersedes the
+      // earlier error entirely (see lastRunProvesPeriodSatisfied). A single
+      // transient error surfaces as `degraded` in availability evaluation;
+      // only 2+ consecutive escalate to `stale`.
       if (
         statusImpact === "critical"
         && requiredRuns.length >= 2

@@ -123,6 +123,47 @@ describe("runQuarterHourlySlot", () => {
     expect(summary.jobsErrored).toBe(2);
   });
 
+  it("retries a transient D1 overload in the same-day precheck instead of recording an error run", async () => {
+    mocks.syncStablecoins.mockResolvedValue({ status: "ok", itemCount: 1, metadata: JSON.stringify({ downstreamSafe: true }) });
+    const order: string[] = [];
+    let psiReads = 0;
+    let publicReads = 0;
+    // First precheck read per job hits the transient D1 internal error seen
+    // in production (cron run 2026-09-23 09:31); the retry succeeds.
+    const flakyDb = {
+      prepare: (sql: string) => ({
+        bind: () => ({
+          first: async () => {
+            const isPsi = sql.includes("stability_index");
+            if (isPsi ? psiReads++ === 0 : publicReads++ === 0) {
+              throw new Error("D1_ERROR: internal error; reference = fbgkvk0rf5kea3obe144noi3");
+            }
+            return { present: 1 };
+          },
+        }),
+      }),
+    } as unknown as D1Database;
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0);
+
+    try {
+      const summary = await runQuarterHourlySlot({ ...runtime(order), db: flakyDb });
+
+      expect(order).toEqual([
+        "sync-fx-rates",
+        "sync-stablecoins",
+        "snapshot-supply",
+        "snapshot-chain-supply",
+        "snapshot-psi",
+        "snapshot-public-dataset",
+      ]);
+      expect(summary.jobsErrored).toBe(0);
+      expect(summary.jobsSkipped).toBe(0);
+      expect(summary.jobsNeutralSkipped).toBe(2);
+    } finally {
+      randomSpy.mockRestore();
+    }
+  });
+
   it("runs snapshot jobs when sync-stablecoins writes a safe cache with depeg failures", async () => {
     mocks.syncStablecoins.mockResolvedValue({
       status: "degraded",

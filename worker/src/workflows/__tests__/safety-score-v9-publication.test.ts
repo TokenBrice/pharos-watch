@@ -40,6 +40,7 @@ import {
   SAFETY_SCORE_V9_WORKFLOW_JOB,
   createSafetyScoreV9ShadowCaptureDatabase,
   gateSafetyScoreV9ShadowPublication,
+  recordSkippedSafetyScoreV9WorkflowRun,
   runSafetyScoreV9PublicationWorkflow,
   safetyScoreV9WorkflowInstanceId,
   safetyScoreV9WorkflowSlotStartedAt,
@@ -277,6 +278,55 @@ describe("Safety Score V9 publication Workflow", () => {
       }]);
       expect(sqlite.prepare("SELECT * FROM cron_runs").all()).toEqual(rows);
     }
+  });
+
+  it("records the upstream-absent neutral row without masking a later real terminal row", async () => {
+    const { db, sqlite } = fixtures.open();
+    const instanceId = EVENT.instanceId as string;
+
+    await recordSkippedSafetyScoreV9WorkflowRun(db, instanceId, 1788433200, {
+      status: "skipped_neutral",
+      reason: "v9-core-slot-not-ready",
+      stage: null,
+    });
+    const rows = sqlite.prepare("SELECT * FROM cron_runs").all();
+    expect(rows).toMatchObject([{
+      job: SAFETY_SCORE_V9_WORKFLOW_JOB,
+      status: "skipped_neutral",
+      item_count: 0,
+      slot_started_at: 1788433200,
+      error: null,
+      idempotency_key: `workflow:${SAFETY_SCORE_V9_WORKFLOW_JOB}:${instanceId}:upstream-absent`,
+    }]);
+    expect(JSON.parse(String((rows[0] as { metadata: string }).metadata))).toMatchObject({
+      workflow: "safety-score-v9-publication",
+      reason: "upstream-compute-publication-absent",
+      upstreamJob: "compute-safety-score-v9",
+      upstreamStatus: "skipped_neutral",
+      upstreamReason: "v9-core-slot-not-ready",
+    });
+
+    await recordSkippedSafetyScoreV9WorkflowRun(db, instanceId, 1788433200, {
+      status: "skipped_neutral",
+      reason: "v9-core-slot-not-ready",
+      stage: null,
+    });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM cron_runs").get()).toEqual({ count: 1 });
+
+    // A duplicate delivery that does publish this slot writes the real terminal
+    // row under its own key: the neutral marker must not block it.
+    await writeSafetyScoreV9ShadowPublication(db, instanceId, 1788433200, EVENT.timestamp.getTime(), {
+      shadowKey: `${SAFETY_SCORE_V9_SHADOW_CACHE_PREFIX}:report-cards:v9:1788433200`,
+      shadowValue: "late-shadow",
+      updatedAt: 1788433200,
+      cronStatus: "ok" as const,
+      itemCount: 200,
+      error: null,
+      cronMetadata: "{\"publicationStatus\":\"published\"}",
+    });
+    expect(
+      sqlite.prepare("SELECT status FROM cron_runs ORDER BY id").all(),
+    ).toEqual([{ status: "skipped_neutral" }, { status: "ok" }]);
   });
 
   it("retains the newest shadow generation when an older workflow finishes later", async () => {

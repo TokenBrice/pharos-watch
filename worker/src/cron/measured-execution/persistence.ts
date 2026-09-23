@@ -57,18 +57,29 @@ export interface NativeShadowQuote {
 }
 
 /** Deliberately isolated from V1 target/quote generations and all score readers. */
-export async function persistNativeShadowQuote(db: D1Database, quote: NativeShadowQuote): Promise<void> {
+export async function persistNativeShadowQuote(
+  db: D1Database,
+  quote: NativeShadowQuote,
+  signal?: AbortSignal,
+): Promise<void> {
   if (quote.amountIn <= 0n || quote.amountOut <= 0n || !Number.isSafeInteger(quote.slot) || quote.slot <= 0) {
     throw new Error("Invalid native shadow quote");
   }
-  await db.prepare(`INSERT INTO dex_native_shadow_quotes_v2
+  // Idempotent insert (conflict-tolerant): a transient D1 overload must not
+  // drop an otherwise measured native shadow quote for the slot.
+  await runWithOverloadRetry(
+    () =>
+      db.prepare(`INSERT INTO dex_native_shadow_quotes_v2
     (pool_id, stablecoin_id, slot, quoted_at, notional_usd, token_mint_in, token_mint_out,
      amount_in, amount_out, input_price_usd, input_decimals, model_version, profile_id, capability_id, score_eligible)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'measured-adapter-shadow', 0)
     ON CONFLICT(pool_id, stablecoin_id, slot, notional_usd, model_version) DO NOTHING`)
-    .bind(quote.poolId, quote.stablecoinId, quote.slot, quote.quotedAt, quote.notionalUsd,
-      quote.tokenMintIn, quote.tokenMintOut, quote.amountIn.toString(), quote.amountOut.toString(),
-      quote.inputPriceUsd, quote.inputDecimals, quote.modelVersion, quote.profileId).run();
+        .bind(quote.poolId, quote.stablecoinId, quote.slot, quote.quotedAt, quote.notionalUsd,
+          quote.tokenMintIn, quote.tokenMintOut, quote.amountIn.toString(), quote.amountOut.toString(),
+          quote.inputPriceUsd, quote.inputDecimals, quote.modelVersion, quote.profileId).run(),
+    3,
+    signal,
+  );
 }
 
 export interface PublishedDexMeasuredTargets {
@@ -272,10 +283,17 @@ async function publishNativeMeasuredTargetInventory<
       ),
       { signal: input.signal },
     );
-    const count = await input.db
-      .prepare("SELECT COUNT(*) AS count FROM dex_measured_execution_targets WHERE generation_id = ?")
-      .bind(id)
-      .first<{ count: number }>();
+    // Idempotent readback: a transient D1 overload after the rows landed must
+    // not fail an otherwise complete publication.
+    const count = await runWithOverloadRetry(
+      () =>
+        input.db
+          .prepare("SELECT COUNT(*) AS count FROM dex_measured_execution_targets WHERE generation_id = ?")
+          .bind(id)
+          .first<{ count: number }>(),
+      3,
+      input.signal,
+    );
     if (Number(count?.count ?? -1) !== targets.length) {
       throw new Error(
         `${config.label} measured target generation row mismatch: expected=${targets.length} actual=${count?.count ?? -1}`,
@@ -461,10 +479,17 @@ async function publishNativeMeasuredQuoteGeneration<
         { signal: input.signal },
       );
     }
-    const count = await input.db
-      .prepare("SELECT COUNT(*) AS count FROM dex_measured_execution_quotes WHERE generation_id = ?")
-      .bind(id)
-      .first<{ count: number }>();
+    // Idempotent readback: on 2026-09-23 the 15:05 run lost a complete quote
+    // generation to this exact read failing once under transient D1 overload.
+    const count = await runWithOverloadRetry(
+      () =>
+        input.db
+          .prepare("SELECT COUNT(*) AS count FROM dex_measured_execution_quotes WHERE generation_id = ?")
+          .bind(id)
+          .first<{ count: number }>(),
+      3,
+      input.signal,
+    );
     if (Number(count?.count ?? -1) !== persistedOutcomes.length) {
       throw new Error(
         `${config.label} measured quote generation row mismatch: expected=${persistedOutcomes.length} actual=${count?.count ?? -1}`,

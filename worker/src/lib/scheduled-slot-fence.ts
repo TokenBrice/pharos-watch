@@ -47,7 +47,10 @@ interface ScheduledSlotFenceMetadata {
 // job duration, so a healthy slot of any length keeps its row fresh. Five
 // minutes of silence therefore means the isolate is gone (OOM/eviction kills
 // write no terminal row), and waiting longer only extends the outage window
-// for every lane that gates on this slot.
+// for every lane that gates on this slot. A heartbeat write that is queued
+// behind a D1 overload for a full heartbeat period does not count as silence:
+// the fence starts a replacement attempt (the write is an idempotent CAS), so
+// only a genuinely unreachable D1 or a dead isolate can let the row go stale.
 const SLOT_EXECUTION_RUNNING_STALE_SEC = 5 * 60;
 const SLOT_EXECUTION_HEARTBEAT_SEC = 60;
 // A Cloudflare scheduled invocation cannot outlive the 15-minute event wall
@@ -660,12 +663,28 @@ export async function runScheduledSlotWithFence(
   let heartbeatFailures = 0;
   let heartbeatOwnershipLost = false;
   let deadlineTimer: ReturnType<typeof setTimeout> | null = null;
-  let heartbeatInFlight: Promise<void> | null = null;
+  const heartbeatAttempts = new Set<Promise<void>>();
+  let heartbeatLatestStartedAtMs = 0;
   let deadlineReject: ((error: Error) => void) | null = null;
   let deadlineSettled = false;
   const timer = setInterval(() => {
-    if (heartbeatInFlight) return;
-    heartbeatInFlight = touchScheduledSlotExecution(db, slotKey, opts.slotStartedAt, owner, executionGeneration)
+    // Skip only while an attempt is still inside its first heartbeat period.
+    // A heartbeat stuck beyond that is queued behind a D1 overload (overload
+    // errors fast-fail and retry inside touchScheduledSlotExecution); leaving
+    // it as the only attempt silences the fence for the whole stale window
+    // while the isolate is alive, and the slot is then falsely reconciled as
+    // abandoned (2026-09-23 depegResolverOffset: one queued child read plus
+    // one queued heartbeat produced a platform-abandoned error). The write is
+    // an idempotent CAS on owner/generation/state, so overlapping attempts
+    // are safe; each attempt stamps its own wall clock, and a late attempt
+    // can stamp at most one heartbeat period in the past — always absorbed by
+    // the stale window (>= 2x heartbeatSec).
+    if (heartbeatLatestStartedAtMs > 0 && Date.now() - heartbeatLatestStartedAtMs < heartbeatSec * 1000) return;
+    if (heartbeatLatestStartedAtMs > 0) {
+      logWorkerEventArgs("lib", "warn", `[cron-slot] Slot ${slotKey}@${opts.slotStartedAt} heartbeat still in flight after ${heartbeatSec}s; starting a replacement attempt`);
+    }
+    heartbeatLatestStartedAtMs = Date.now();
+    const attempt: Promise<void> = touchScheduledSlotExecution(db, slotKey, opts.slotStartedAt, owner, executionGeneration)
       .then((touched) => {
         if (touched || heartbeatOwnershipLost) return;
         heartbeatOwnershipLost = true;
@@ -676,8 +695,9 @@ export async function runScheduledSlotWithFence(
         logWorkerEventArgs("lib", "warn", `[cron-slot] Failed to heartbeat slot ${slotKey}@${opts.slotStartedAt}:`, err);
       })
       .finally(() => {
-        heartbeatInFlight = null;
+        heartbeatAttempts.delete(attempt);
       });
+    heartbeatAttempts.add(attempt);
   }, heartbeatSec * 1000);
   const abortForDeadline = () => {
     if (deadlineSettled) return;
@@ -728,7 +748,7 @@ export async function runScheduledSlotWithFence(
       throw new ScheduledSlotOwnershipLostError(slotKey, opts.slotStartedAt);
     }
     clearInterval(timer);
-    await heartbeatInFlight;
+    await Promise.allSettled(heartbeatAttempts);
     const finished = await finishScheduledSlotExecution(
       db,
       slotKey,
@@ -751,7 +771,7 @@ export async function runScheduledSlotWithFence(
     };
   } catch (err) {
     clearInterval(timer);
-    await heartbeatInFlight;
+    await Promise.allSettled(heartbeatAttempts);
     try {
       const finished = await finishScheduledSlotExecution(
         db,

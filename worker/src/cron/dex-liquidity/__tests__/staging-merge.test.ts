@@ -684,6 +684,23 @@ describe("mergeStagedPools", () => {
     ).rejects.toThrow("no such table: dex_pool_registry");
   });
 
+  it("retries the staged-registry read through transient D1 overload", async () => {
+    let attempts = 0;
+    const db = createMockDb(async () => {
+      attempts++;
+      if (attempts === 1) {
+        throw new Error("D1_ERROR: internal error; reference = nug416i4dsl121n6q9kebocm");
+      }
+      return { results: [] };
+    });
+
+    const result = await mergeStagedPools(db, new Map(), makeKnownPoolIndex(), 1_710_000_000);
+
+    expect(attempts).toBe(2);
+    expect(result.mergedCount).toBe(0);
+    expect(result.registryRowsRead).toBe(0);
+  });
+
   it("merges GT-style staged pools with confidence decay and GT dex quality", async () => {
     const now = 1710000000;
     const decay = stagedPoolConfidence(150);

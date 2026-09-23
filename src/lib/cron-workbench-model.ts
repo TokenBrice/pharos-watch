@@ -1,4 +1,4 @@
-import { CRON_CONNECTION_BUDGET_ENTRIES, CRON_JOB_DEFINITIONS, getCronStatusImpact } from "@shared/lib/cron-jobs";
+import { CRON_CONNECTION_BUDGET_ENTRIES, CRON_JOB_DEFINITIONS, getCronStatusImpact, isProvenSatisfiedNeutralSkipReason } from "@shared/lib/cron-jobs";
 import type {
   BudgetOnlySurfaceStatus,
   CronRun,
@@ -219,9 +219,20 @@ type InheritedRequiredOutcome = Extract<CronRunStatus, "degraded" | "error"> | n
 function getInheritedRequiredOutcome(cron: CronStatus): InheritedRequiredOutcome {
   if (cron.lastRun?.status !== "skipped_neutral") return null;
   const latestRequiredRun = cron.recentRuns.find((run) => run.status !== "skipped_neutral");
-  return latestRequiredRun?.status === "degraded" || latestRequiredRun?.status === "error"
-    ? latestRequiredRun.status
-    : null;
+  if (latestRequiredRun?.status !== "degraded" && latestRequiredRun?.status !== "error") return null;
+  // The backend supersedes an inherited error when the fresh skip proves the
+  // period's write-once artifact exists (it was read and found); the lane
+  // must resolve the same way, or one transient precheck failure keeps the
+  // row "Unavailable" until the next real run. An inherited degraded run
+  // stays a warning: the artifact existing does not prove that run's inputs
+  // were clean.
+  if (
+    latestRequiredRun.status === "error"
+    && isProvenSatisfiedNeutralSkipReason(cron.lastRun.metadata?.reason)
+  ) {
+    return null;
+  }
+  return latestRequiredRun.status;
 }
 
 function matchesSearch(row: CronWorkbenchRow, normalizedSearch: string): boolean {

@@ -240,12 +240,7 @@ describe("runV9AfterCoreWithinWindow", () => {
     expect(result.itemCount).toBe(335);
     expect(run).toHaveBeenCalledTimes(1);
     expect(fixture.bind).toHaveBeenNthCalledWith(
-      1,
-      Math.floor(Date.parse("2026-07-26T12:15:00Z") / 1_000),
-    );
-    expect(fixture.bind).toHaveBeenNthCalledWith(
       2,
-      "worker-v2",
       Math.floor(Date.parse("2026-07-26T12:15:00Z") / 1_000),
       Math.floor(Date.parse("2026-07-26T12:30:00Z") / 1_000),
       Math.floor(Date.parse("2026-07-26T12:15:00Z") / 1_000),
@@ -309,14 +304,14 @@ describe("runV9AfterCoreWithinWindow", () => {
     expect(run).not.toHaveBeenCalled();
   });
 
-  it("skips neutrally when the core slot is incomplete or from another Worker version", async () => {
+  it("skips neutrally when the core slot never reached a terminal state", async () => {
     const scheduledTimeMs = Date.parse("2026-07-26T12:23:00Z");
     vi.useFakeTimers();
     vi.setSystemTime(scheduledTimeMs + 1_000);
     const fixture = dbWithCoreSlot({
-      state: "finished",
-      result_status: "ok",
-      worker_version: "worker-v1",
+      state: "running",
+      result_status: null,
+      worker_version: "worker-v2",
     });
     const run = vi.fn();
 
@@ -331,6 +326,39 @@ describe("runV9AfterCoreWithinWindow", () => {
     expect(fixture.bind).toHaveBeenCalledWith(
       Math.floor(Date.parse("2026-07-26T12:15:00Z") / 1_000),
     );
+  });
+
+  it("admits from publication evidence when a deploy replaced the Worker version mid-quarter", async () => {
+    const scheduledTimeMs = Date.parse("2026-07-26T12:23:00Z");
+    vi.useFakeTimers();
+    vi.setSystemTime(scheduledTimeMs + 1_000);
+    // The 12:15 core slot finished ok on the previous Worker version; the
+    // publication ledger still proves this slot published the live cache.
+    const fixture = dbWithCoreSlot(
+      {
+        state: "finished",
+        result_status: "ok",
+        worker_version: "worker-v1",
+      },
+      {
+        published_at: Math.floor(
+          Date.parse("2026-07-26T12:15:30Z") / 1_000,
+        ),
+      },
+    );
+    const run = vi.fn(async () => ({
+      status: "ok" as const,
+      itemCount: 337,
+    }));
+
+    const result = await runV9AfterCoreWithinWindow(
+      options(fixture.db, scheduledTimeMs),
+      run,
+    );
+
+    expect(result.status).toBe("ok");
+    expect(result.itemCount).toBe(337);
+    expect(run).toHaveBeenCalledTimes(1);
   });
 
   it.each([

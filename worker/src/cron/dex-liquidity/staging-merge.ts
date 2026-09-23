@@ -1,3 +1,4 @@
+import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { StagedPool } from "../dex-discovery/types";
 import { CHAIN_META } from "@shared/lib/chains";
@@ -445,6 +446,7 @@ export async function mergeStagedPools(
   references?: PriceValidationReferences,
   authoritativeConfirmation?: AuthoritativeStagedPoolConfirmationIndex,
   fallbackCounters?: LiquidityFallbackCounters,
+  signal?: AbortSignal,
 ): Promise<{
   mergedCount: number;
   skippedCount: number;
@@ -459,21 +461,26 @@ export async function mergeStagedPools(
   registryFamilyBySource: Record<string, number>;
 }> {
   registerRetainedPoolExactStablecoins(knownPoolIndex, metrics);
-  const result = await db
-    .prepare(
-      `SELECT pool_id, stablecoin_id, source, chain, protocol, dex_id, symbol,
+  const result = await runWithOverloadRetry(
+    () =>
+      db
+        .prepare(
+          `SELECT pool_id, stablecoin_id, source, chain, protocol, dex_id, symbol,
                        tvl_usd, volume_24h, quality_multiplier, pool_type, fee_tier, balance_ratio, is_stable,
                        base_token, quote_token, quote_symbol, price_usd, locked_liq_pct,
                        raw_json, discovered_at, refreshed_at
                 FROM dex_pool_registry WHERE refreshed_at >= ?`,
-    )
-    // Fetch a 60s grace beyond the confidence horizon so rows that have just
-    // crossed it surface as stagedPoolConfidence === 0 and are recorded under
-    // the stale_confidence_zero skip reason instead of silently never
-    // appearing. Without the grace the read window and the zero gate align
-    // exactly and the guard below is unreachable.
-    .bind(nowSec - STAGED_POOL_CONFIDENCE_HORIZON_HOURS * 3600 - 60)
-    .all<StagedPoolRow>();
+        )
+        // Fetch a 60s grace beyond the confidence horizon so rows that have just
+        // crossed it surface as stagedPoolConfidence === 0 and are recorded under
+        // the stale_confidence_zero skip reason instead of silently never
+        // appearing. Without the grace the read window and the zero gate align
+        // exactly and the guard below is unreachable.
+        .bind(nowSec - STAGED_POOL_CONFIDENCE_HORIZON_HOURS * 3600 - 60)
+        .all<StagedPoolRow>(),
+    3,
+    signal,
+  );
   const rows: Array<StagedPoolRow | undefined> = result.results ?? [];
   const registryRowsRead = rows.length;
 

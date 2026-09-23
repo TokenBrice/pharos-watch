@@ -64,6 +64,44 @@ describe("DEX source pagination state", () => {
     expect(bind.mock.calls[1]?.[1]).toBe("retryable-tail");
   });
 
+  it("retries a transient D1 overload on the cursor write before reporting the bounded failure", async () => {
+    const run = vi.fn()
+      .mockRejectedValueOnce(new Error("D1_ERROR: D1 DB is overloaded. Requests queued for too long."))
+      .mockResolvedValueOnce({ success: true, meta: { changes: 1 } });
+    const bind = vi.fn((..._values: unknown[]) => ({ run }));
+    const db = makeNoopD1({ prepare: vi.fn(() => ({ bind })) });
+
+    await expect(writeDexSourcePaginationState({
+      db, sourceKey: "measured-execution:quote-admission", cursor: "opaque-tail",
+      cycleStartedAt: 90, nowSec: 110, completed: false, pagesFetched: 4, job: "sync-cl-exit-depth",
+    })).resolves.toEqual({ written: true, errorClass: null });
+
+    expect(run).toHaveBeenCalledTimes(2);
+  });
+
+  it("retries a transient D1 overload on reads instead of silently restarting cursor rotation", async () => {
+    const opened = fixtures.open();
+    await writeDexSourcePaginationState({
+      db: opened.db, sourceKey: "measured-execution:quote-admission", cursor: "opaque-tail",
+      cycleStartedAt: 90, nowSec: 100, completed: false, pagesFetched: 4, job: "sync-cl-exit-depth",
+    });
+    let overloaded = false;
+    const db = {
+      ...opened.db,
+      prepare(sql: string) {
+        if (!overloaded && sql.includes("FROM dex_source_pagination_state")) {
+          overloaded = true;
+          throw new Error("D1_ERROR: D1 DB is overloaded. Requests queued for too long.");
+        }
+        return opened.db.prepare(sql);
+      },
+    } as typeof opened.db;
+
+    await expect(readDexSourcePaginationState(db, "measured-execution:quote-admission", "sync-cl-exit-depth"))
+      .resolves.toMatchObject({ cursor: "opaque-tail", pagesFetched: 4 });
+    expect(overloaded).toBe(true);
+  });
+
   it("reports a missing mandatory table as a degrading write failure", async () => {
     const run = vi.fn(async () => {
       throw new Error("D1_ERROR: no such table: dex_source_pagination_state");

@@ -2,6 +2,7 @@ import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getDexMeasuredExecutionProbeNotionals } from "@shared/types/measured-execution";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { parseUnits } from "viem/utils";
+import { runWithOverloadRetry } from "../../../lib/d1-overload-retry";
 import { throwIfAborted } from "../../../lib/abort";
 import type { AdapterContext } from "../../reserve-adapters/types";
 import { fetchSolanaAccountBatch } from "../../reserve-adapters/solana";
@@ -60,7 +61,10 @@ async function collectSolanaShadowQuotes(input: CollectorInput, family: Family):
   const cursorKey = orca ? "orca-whirlpool-native-shadow:v1" : "raydium-clmm-native-shadow:v1";
   throwIfAborted(input.signal);
   const state = await readDexSourcePaginationState(input.db, cursorKey, "sync-cl-exit-depth");
-  const retained = await input.db.prepare(`SELECT json_extract(pool.value, '$.poolId') AS pool_id,
+  // Idempotent read: on 2026-09-23 the 15:05 run failed both shadow families
+  // in ~24ms because this first D1 read hit the transient overload window.
+  const retained = await runWithOverloadRetry(
+    () => input.db.prepare(`SELECT json_extract(pool.value, '$.poolId') AS pool_id,
       dl.stablecoin_id, json_extract(pool.value, '$.tvlUsd') AS tvl_usd
     FROM dex_liquidity dl, json_each(dl.top_pools_json) pool
     WHERE dl.updated_at >= ? AND dl.publication_state = 'published'
@@ -71,7 +75,10 @@ async function collectSolanaShadowQuotes(input: CollectorInput, family: Family):
       AND ((? = 'orca' AND json_extract(pool.value, '$.project') = 'orca')
         OR (? = 'raydium-clmm' AND json_extract(pool.value, '$.project') IN ('raydium', 'raydium-amm', 'raydium-clmm')
           AND json_extract(pool.value, '$.poolType') = 'raydium-clmm'))`)
-    .bind(nowSec - 24 * 60 * 60, family, family).all<RetainedPool>();
+      .bind(nowSec - 24 * 60 * 60, family, family).all<RetainedPool>(),
+    3,
+    input.signal,
+  );
   const window = selectSolanaShadowPools((retained.results ?? []).filter((row) => ACTIVE_META_BY_ID.has(row.stablecoin_id)), state.cursor, Infinity);
   const { stablecoinPriceById } = await loadTrackedStablecoinMaps(input.db, nowSec);
   let examined = 0;
@@ -127,7 +134,7 @@ async function collectSolanaShadowQuotes(input: CollectorInput, family: Family):
         amountIn, amountOut: quote.amountOut, inputPriceUsd: price, inputDecimals: decimals,
         modelVersion: orca ? "orca-whirlpool-native-v1" : "raydium-clmm-native-v1",
         profileId: orca ? "orca-whirlpool-exact-v1" : "raydium-clmm-exact-v1",
-      });
+      }, signal);
       summary.persisted++;
     } catch (error) {
       throwIfAborted(input.signal);
@@ -145,9 +152,11 @@ async function collectSolanaShadowQuotes(input: CollectorInput, family: Family):
     pagesFetched: state.pagesFetched + 1, diagnostics: summary.failures, job: "sync-cl-exit-depth",
   });
   if (!cursorWrite.written) throw new Error(`${family} shadow cursor persistence failed`);
-  await input.db.prepare(`DELETE FROM dex_native_shadow_quotes_v2 WHERE rowid IN
+  // Idempotent retention delete: transient overload must not discard the
+  // already-collected shadow summary.
+  await runWithOverloadRetry(() => input.db.prepare(`DELETE FROM dex_native_shadow_quotes_v2 WHERE rowid IN
     (SELECT rowid FROM dex_native_shadow_quotes_v2 WHERE quoted_at < ? ORDER BY quoted_at LIMIT 256)`)
-    .bind(nowSec - 7 * 24 * 60 * 60).run();
+    .bind(nowSec - 7 * 24 * 60 * 60).run(), 3, input.signal);
   summary.durationMs = Date.now() - startedAt;
   return summary;
 }
