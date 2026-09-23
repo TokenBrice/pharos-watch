@@ -176,7 +176,7 @@ function extractHealthProbeSemantics(body: unknown): Partial<EndpointProbeResult
     semanticDetail:
       warnings[0] ??
       mintBurnWarning ??
-      (getBlacklistGapStatus({ missingRatio, recentMissingAmounts }) !== "healthy"
+      (getBlacklistGapStatus({ missingRatio }) !== "healthy"
         ? `Blacklist gaps missing amounts: ${missingAmounts}.`
         : null),
   };

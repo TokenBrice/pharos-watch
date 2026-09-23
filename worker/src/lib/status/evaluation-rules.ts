@@ -612,28 +612,34 @@ const DATA_QUALITY_STATUS_RULES_CORE: readonly StatusRule<DataQualityEvaluationI
       return null;
   },
   (input) => {
-      if (
-        input.blacklistMissingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioStale ||
-        input.blacklistRecentMissing >= STATUS_BLACKLIST_THRESHOLDS.missingRecentStale
-      ) {
+      const detail = `ratio=${formatPercentFromRatio(input.blacklistMissingRatio)}, recent=${input.blacklistRecentMissing}`;
+      if (input.blacklistMissingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioStale) {
         return ruleResult("stale", [makeCause(
           "data-quality",
           "blacklist_gaps_stale",
           "critical",
-          `Blacklist amount gaps exceed stale thresholds (ratio=${formatPercentFromRatio(input.blacklistMissingRatio)}, recent=${input.blacklistRecentMissing}).`,
+          `Blacklist amount gaps exceed stale thresholds (${detail}).`,
           { metric: "blacklistMissingRatio", value: input.blacklistMissingRatio, threshold: STATUS_BLACKLIST_THRESHOLDS.missingRatioStale },
         )]);
       }
-      if (
-        input.blacklistRecentMissing >= STATUS_BLACKLIST_THRESHOLDS.missingRecentDegraded ||
-        input.blacklistMissingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded
-      ) {
+      if (input.blacklistMissingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded) {
         return ruleResult("degraded", [makeCause(
           "data-quality",
           "blacklist_gaps_degraded",
           "warning",
-          `Recent or elevated blacklist amount gaps detected (ratio=${formatPercentFromRatio(input.blacklistMissingRatio)}, recent=${input.blacklistRecentMissing}).`,
+          `Elevated blacklist amount gaps detected (${detail}).`,
           { metric: "blacklistMissingRatio", value: input.blacklistMissingRatio, threshold: STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded },
+        )]);
+      }
+      // A recent burst below the material share is amount recovery in progress,
+      // not a degraded data surface: keep it visible without degrading status.
+      if (input.blacklistRecentMissing >= STATUS_BLACKLIST_THRESHOLDS.missingRecentWatch) {
+        return ruleResult("healthy", [makeCause(
+          "data-quality",
+          "blacklist_gaps_recent",
+          "info",
+          `Recent blacklist events are awaiting amount recovery (${detail}); below the degrading share.`,
+          { metric: "blacklistRecentMissing", value: input.blacklistRecentMissing, threshold: STATUS_BLACKLIST_THRESHOLDS.missingRecentWatch },
         )]);
       }
       return null;
@@ -704,6 +710,7 @@ const RUNBOOK_BY_CODE: Record<string, string> = {
   price_gap_reviews_expired: `${RUNBOOK_BASE}/stablecoins-cache.md`,
   price_gap_reviews_invalid: `${RUNBOOK_BASE}/stablecoins-cache.md`,
   blacklist_gaps_degraded: `${RUNBOOK_BASE}/blacklist-sync.md`,
+  blacklist_gaps_recent: `${RUNBOOK_BASE}/blacklist-sync.md`,
   blacklist_gaps_stale: `${RUNBOOK_BASE}/blacklist-sync.md`,
   onchain_integrity_degraded: `${RUNBOOK_BASE}/mint-burn-integrity.md`,
   onchain_integrity_stale: `${RUNBOOK_BASE}/mint-burn-integrity.md`,

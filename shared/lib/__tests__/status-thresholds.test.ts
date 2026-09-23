@@ -52,44 +52,14 @@ describe("missing-price duration bands", () => {
 });
 
 describe("getBlacklistGapStatus", () => {
-  it("returns healthy for historical low-ratio blacklist gaps", () => {
-    expect(getBlacklistGapStatus({
-      missingRatio: 0.005,
-      recentMissingAmounts: 0,
-    })).toBe("healthy");
-  });
-
-  it("stays healthy for isolated recent blacklist gaps below the degraded floor", () => {
-    expect(getBlacklistGapStatus({
-      missingRatio: 0.005,
-      recentMissingAmounts: 1,
-    })).toBe("healthy");
-  });
-
-  it("returns degraded when recent blacklist gaps cross the degraded floor", () => {
-    expect(getBlacklistGapStatus({
-      missingRatio: 0.005,
-      recentMissingAmounts: 5,
-    })).toBe("degraded");
-  });
-
-  it("returns degraded when the missing-ratio warning threshold is crossed", () => {
-    expect(getBlacklistGapStatus({
-      missingRatio: 0.01,
-      recentMissingAmounts: 0,
-    })).toBe("degraded");
-  });
-
-  it("returns stale when the stale thresholds are crossed", () => {
-    expect(getBlacklistGapStatus({
-      missingRatio: 0.02,
-      recentMissingAmounts: 0,
-    })).toBe("stale");
-
-    expect(getBlacklistGapStatus({
-      missingRatio: 0.005,
-      recentMissingAmounts: 25,
-    })).toBe("stale");
+  it.each([
+    [0.005, "healthy"],
+    [0.0099, "healthy"],
+    [0.01, "degraded"],
+    [0.0199, "degraded"],
+    [0.02, "stale"],
+  ] as const)("classifies a %s missing-amount share as %s", (missingRatio, status) => {
+    expect(getBlacklistGapStatus({ missingRatio })).toBe(status);
   });
 });
 

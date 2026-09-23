@@ -934,8 +934,8 @@ describe("status rule-set behavior at policy boundaries", () => {
     [{ missingPriceRatio: STATUS_MISSING_PRICE_THRESHOLDS.ratioStale + 0.0001 }, "stale"],
     [{ blacklistMissingRatio: STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded }, "degraded"],
     [{ blacklistMissingRatio: STATUS_BLACKLIST_THRESHOLDS.missingRatioStale }, "stale"],
-    [{ blacklistRecentMissing: STATUS_BLACKLIST_THRESHOLDS.missingRecentDegraded }, "degraded"],
-    [{ blacklistRecentMissing: STATUS_BLACKLIST_THRESHOLDS.missingRecentStale }, "stale"],
+    [{ blacklistRecentMissing: STATUS_BLACKLIST_THRESHOLDS.missingRecentWatch }, "healthy"],
+    [{ blacklistRecentMissing: 500 }, "healthy"],
     [{ reserveCompositionStatus: "degraded", reserveComposition: makeReserveComposition({ status: "degraded" }) }, "degraded"],
     [{ reserveCompositionStatus: "stale", reserveComposition: makeReserveComposition({ status: "stale" }) }, "stale"],
   ] as Array<[Partial<DataQualityEvaluationInput>, StatusResponse["dataQualityStatus"]]>)("classifies data quality at policy boundaries", (overrides, status) => {

@@ -108,7 +108,7 @@ function buildDashboardNotices({
       if (sync.lastSuccessfulSyncAt != null) reasons.push(`Last successful mint/burn sync ${formatElapsedSeconds(Math.max(0, timestamp - sync.lastSuccessfulSyncAt))} ago.`);
       if (healthData.mintBurn.majorStaleCount > 0) reasons.push(`Impacted majors: ${healthData.mintBurn.staleMajorSymbols.join(", ")}.`);
     }
-    if (getBlacklistGapStatus({ missingRatio: healthData.blacklist.missingRatio, recentMissingAmounts: healthData.blacklist.recentMissingAmounts }) !== "healthy") {
+    if (getBlacklistGapStatus({ missingRatio: healthData.blacklist.missingRatio }) !== "healthy") {
       reasons.push(`Blacklist gaps tracked by /api/health: ${healthData.blacklist.missingAmounts}.`);
     }
     if (reasons.length === 0) reasons.push(...getImpactedPublicSurfaces(healthData).map((surface) => surface.detail));

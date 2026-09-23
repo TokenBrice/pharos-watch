@@ -59,8 +59,8 @@ export function buildPipelineQualityModel(data: StatusResponse): PipelineQuality
         ),
         thresholdState(
           blacklistRecent,
-          STATUS_BLACKLIST_THRESHOLDS.missingRecentDegraded,
-          STATUS_BLACKLIST_THRESHOLDS.missingRecentStale,
+          STATUS_BLACKLIST_THRESHOLDS.missingRecentWatch,
+          Number.POSITIVE_INFINITY,
           true,
         ),
       ]);
@@ -146,8 +146,8 @@ export function buildPipelineQualityModel(data: StatusResponse): PipelineQuality
         blacklistTotal != null && blacklistTotal > 0
           ? `${blacklistTotal} retained blacklist events`
           : "Unknown retained-event population",
-      warningThreshold: `>=${formatPercentFromRatio(STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded, 0)} or >=${STATUS_BLACKLIST_THRESHOLDS.missingRecentDegraded} recent`,
-      staleThreshold: `>=${formatPercentFromRatio(STATUS_BLACKLIST_THRESHOLDS.missingRatioStale, 0)} or >=${STATUS_BLACKLIST_THRESHOLDS.missingRecentStale} recent`,
+      warningThreshold: `>=${formatPercentFromRatio(STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded, 0)} (watch at >=${STATUS_BLACKLIST_THRESHOLDS.missingRecentWatch} recent)`,
+      staleThreshold: `>=${formatPercentFromRatio(STATUS_BLACKLIST_THRESHOLDS.missingRatioStale, 0)}`,
       state: blacklistState,
       stateDetail: blacklistUnknown
         ? dq.blacklistGapStatus === "failed"
