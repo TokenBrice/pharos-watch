@@ -8,6 +8,8 @@ import {
   yieldFallbackTableMatches,
   resetSyncYieldDataTest,
   cleanupSyncYieldDataTest,
+  testSafetyScoreIdentity,
+  testSafetyScoresSnapshot,
 } from "./sync-yield-data.test-support";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { syncYieldData } from "../sync-yield-data";
@@ -160,20 +162,14 @@ describe("syncYieldData", () => {
     installYieldCacheReader(vi.mocked(getCache), {});
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     mockFetch([]);
-    vi.spyOn(safetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValueOnce({
-      kind: "degraded",
-      mode: "map",
-      coveredCount: 0,
-      trackedCount: 4,
-      coverageRatio: 0,
-      reason,
-      scores: new Map(),
-      source: "safety-score-v9-publication",
-      safetyScoreIdentity: null,
-      publicationGenerationId: null,
-      methodologyVersion: null,
-      publishedAt: null,
-    } as never);
+    vi.spyOn(safetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValue(
+      testSafetyScoresSnapshot({
+        kind: "degraded",
+        reason,
+        trackedCount: 4,
+        safetyScoreIdentity: null,
+      }),
+    );
 
     const result = await syncYieldData(db);
     const metadata = JSON.parse(result.metadata ?? "{}") as {
@@ -204,37 +200,20 @@ describe("syncYieldData", () => {
 
   it("still publishes a usable but coverage-degraded published safety snapshot", async () => {
     const db = makeDb();
-    const nowSec = Math.floor(Date.now() / 1000);
     installYieldCacheReader(vi.mocked(getCache), {});
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     mockFetch([]);
     // Usable identity with a partial score map (coverage below the 0.75 degraded
     // ratio): the input gate keys on usability, so this must stay publishable.
-    vi.spyOn(safetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValueOnce({
-      kind: "ok",
-      mode: "map",
-      coveredCount: 2,
-      trackedCount: 4,
-      coverageRatio: 0.5,
-      source: "safety-score-v9-publication",
-      safetyScoreIdentity: {
-        model: "v9",
-        schemaVersion: 1,
-        methodologyVersion: "9.0",
-        policyId: "safety-score-v9",
-        policyDigest: "a".repeat(64),
-        evaluationBuildDigest: "b".repeat(64),
-        baseInputGenerationId: `report-cards-input:v1:${"c".repeat(64)}`,
-        publicationGenerationId: "report-cards:v9:test",
-      },
-      publicationGenerationId: "report-cards:v9:test",
-      methodologyVersion: "9.0",
-      publishedAt: nowSec,
-      scores: new Map([
-        ["lusd-liquity", { score: 86, grade: "A-" }],
-        ["100", { score: 80, grade: "B+" }],
-      ]),
-    } as never);
+    vi.spyOn(safetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValue(
+      testSafetyScoresSnapshot({
+        trackedCount: 4,
+        scores: new Map([
+          ["lusd-liquity", { score: 86, grade: "A-" }],
+          ["100", { score: 80, grade: "B+" }],
+        ]),
+      }),
+    );
 
     const result = await syncYieldData(db);
     const metadata = JSON.parse(result.metadata ?? "{}") as { fallbackMode: string | null };
@@ -297,29 +276,18 @@ describe("syncYieldData", () => {
     // Held health with the accepted generation still inside the read path's
     // stale-coherent budget: the report-card route serves exactly these ratings,
     // so yield must publish against them instead of deferring.
-    vi.spyOn(safetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValueOnce({
-      kind: "degraded",
-      mode: "map",
-      coveredCount: 1,
-      trackedCount: 4,
-      coverageRatio: 0.25,
-      reason: "v9-publication-held",
-      scores: new Map([["lusd-liquity", { score: 86, grade: "A-" }]]),
-      source: "safety-score-v9-publication",
-      safetyScoreIdentity: {
-        model: "v9",
-        schemaVersion: 1,
-        methodologyVersion: "9.0",
-        policyId: "safety-score-v9",
-        policyDigest: "a".repeat(64),
-        evaluationBuildDigest: "b".repeat(64),
-        baseInputGenerationId: `report-cards-input:v1:${"c".repeat(64)}`,
-        publicationGenerationId: acceptedPublicationGenerationId,
-      },
-      publicationGenerationId: acceptedPublicationGenerationId,
-      methodologyVersion: "9.0",
-      publishedAt: nowSec - 2 * 3600,
-    } as never);
+    vi.spyOn(safetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValue(
+      testSafetyScoresSnapshot({
+        kind: "degraded",
+        reason: "v9-publication-held",
+        trackedCount: 4,
+        scores: new Map([["lusd-liquity", { score: 86, grade: "A-" }]]),
+        safetyScoreIdentity: testSafetyScoreIdentity({
+          publicationGenerationId: acceptedPublicationGenerationId,
+        }),
+        publishedAt: nowSec - 2 * 3600,
+      }),
+    );
 
     const result = await syncYieldData(db);
     const metadata = JSON.parse(result.metadata ?? "{}") as { fallbackMode: string | null };
@@ -351,29 +319,18 @@ describe("syncYieldData", () => {
     installYieldCacheReader(vi.mocked(getCache), {});
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     mockFetch([]);
-    vi.spyOn(safetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValueOnce({
-      kind: "degraded",
-      mode: "map",
-      coveredCount: 1,
-      trackedCount: 4,
-      coverageRatio: 0.25,
-      reason: "v9-publication-held",
-      scores: new Map([["lusd-liquity", { score: 86, grade: "A-" }]]),
-      source: "safety-score-v9-publication",
-      safetyScoreIdentity: {
-        model: "v9",
-        schemaVersion: 1,
-        methodologyVersion: "9.0",
-        policyId: "safety-score-v9",
-        policyDigest: "a".repeat(64),
-        evaluationBuildDigest: "b".repeat(64),
-        baseInputGenerationId: `report-cards-input:v1:${"c".repeat(64)}`,
-        publicationGenerationId: "report-cards:v9:stale-accepted",
-      },
-      publicationGenerationId: "report-cards:v9:stale-accepted",
-      methodologyVersion: "9.0",
-      publishedAt: nowSec - 25 * 3600,
-    } as never);
+    vi.spyOn(safetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValue(
+      testSafetyScoresSnapshot({
+        kind: "degraded",
+        reason: "v9-publication-held",
+        trackedCount: 4,
+        scores: new Map([["lusd-liquity", { score: 86, grade: "A-" }]]),
+        safetyScoreIdentity: testSafetyScoreIdentity({
+          publicationGenerationId: "report-cards:v9:stale-accepted",
+        }),
+        publishedAt: nowSec - 25 * 3600,
+      }),
+    );
 
     const result = await syncYieldData(db);
     const metadata = JSON.parse(result.metadata ?? "{}") as {

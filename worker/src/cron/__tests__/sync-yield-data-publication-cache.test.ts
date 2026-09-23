@@ -9,6 +9,8 @@ import {
   cleanupSyncYieldDataTest,
   mockD1WithYieldPruneTables,
   yieldFallbackTableMatches,
+  testSafetyScoreIdentity,
+  testSafetyScoresSnapshot,
   type CronProgressUpdate,
 } from "./sync-yield-data.test-support";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
@@ -92,26 +94,9 @@ describe("syncYieldData", () => {
     const currentSafetyIdentity = vi.mocked(
       safetyScoreActiveSourceModule.loadActiveSafetyScoreIdentity,
     );
-    safetySnapshot
-      .mockResolvedValueOnce({
-        kind: "ok",
-        mode: "map",
-        coveredCount: 4,
+    safetySnapshot.mockResolvedValueOnce(
+      testSafetyScoresSnapshot({
         trackedCount: 4,
-        coverageRatio: 1,
-        source: "safety-score-v9-publication",
-        safetyScoreIdentity: {
-          model: "v9",
-          schemaVersion: 1,
-          methodologyVersion: "9.0",
-          policyId: "safety-score-v9",
-          policyDigest: "a".repeat(64),
-          evaluationBuildDigest: "b".repeat(64),
-          baseInputGenerationId: `report-cards-input:v1:${"c".repeat(64)}`,
-          publicationGenerationId: "report-cards:v9:test",
-        },
-        publicationGenerationId: "report-cards:v9:test",
-        methodologyVersion: "9.0",
         publishedAt: nowSec,
         scores: new Map([
           ["100", { score: 80, grade: "B+" }],
@@ -119,19 +104,15 @@ describe("syncYieldData", () => {
           ["u-united-stables", { score: 55, grade: "C" }],
           ["lusd-liquity", { score: 86, grade: "A-" }],
         ]),
-      } as never);
+      }),
+    );
     currentSafetyIdentity.mockResolvedValue({
       kind: "v9",
-      safetyScoreIdentity: {
-        model: "v9",
-        schemaVersion: 1,
-        methodologyVersion: "9.0",
-        policyId: "safety-score-v9",
-        policyDigest: "a".repeat(64),
+      safetyScoreIdentity: testSafetyScoreIdentity({
         evaluationBuildDigest: "d".repeat(64),
         baseInputGenerationId: `report-cards-input:v1:${"e".repeat(64)}`,
         publicationGenerationId: "report-cards:v9:new-build",
-      },
+      }),
     });
 
     mockFetch([
