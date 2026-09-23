@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const DEPEG_DEWS_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.25",
+    title: "Backfill replay honors reviewed suppressions and live-overlap dedupe",
+    date: "2026-09-23",
+    effectiveAt: 1790121600,
+    summary:
+      "A recomputed backfill episode is no longer persisted when a reviewed suppression window covers it or when an existing live row already covers the same coin and direction, so reviewed artifact removals survive future admin replays and one market episode is never counted twice.",
+    impact: [
+      "Replay skips a recomputed `source='backfill'` episode when its inclusive `[startedAt, endedAt]` interval overlaps a reviewed entry for the same coin and direction in `shared/data/depegs/backfill-replay-suppressions.ts`; that registry is validated at module load and guarded by the registry-integrity suite in `shared/data/depegs/__tests__/`",
+      "Replay also skips an episode when an existing `source='live'` row for the same coin and direction overlaps it (`episodeStart <= liveEnd && liveStart <= episodeEnd`, inclusive; open rows collapse to their start second) — the two detectors read the same price series at minutes and hourly granularity, so same-side overlapping windows are one episode counted twice, while one second apart stays disjoint",
+      "Both skips run in `executeBackfillForCoin` before the dry-run/apply split, so the preview, the run fingerprint (`expectedEventCount`/`expectedFingerprint`), and the inserted rows stay mutually consistent; each skip is ledgered as `backfill-depegs-episode-skipped` with `skipReason: reviewed-suppression` or `live-overlap`",
+      "The four seeded suppression windows cover the Noon USN upside artifacts for 2025-10-07, 2025-12-27/28, 2026-02-14, and 2026-03-02, whose on-chain forensics found no economic-size USN trade above 1.0011; the ledgered 14 Feb live/backfill pair is caught by both rules",
+      "Live detection, thresholds, confirmation policy, price extraction, and the PegScore/DEWS formulas are unchanged; a one-off read-only production dry-run found 85 overlapping live/backfill pairs across 52 distinct backfill rows on 21 coins, and each affected coin drops at most its distinct backfill-row count at its next window replay",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.24",
     title: "Degraded DEWS runs withhold the published generation",
     date: "2026-09-21",

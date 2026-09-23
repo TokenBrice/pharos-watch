@@ -17,6 +17,13 @@ import { logWorkerEvent } from "../../lib/structured-log";
 
 export type Verdict = "false_positive" | "confirmed" | "disputed" | "no_data" | "repaired" | "skipped" | "error";
 
+/**
+ * Machine-readable reason a batch could not use CoinGecko at all. Reported on
+ * the audit result so operators see a configuration gap instead of silent
+ * per-event fetch errors.
+ */
+export type AuditCgErrorReason = "coingecko_api_key_missing";
+
 export interface AuditedEvent {
   id: number;
   symbol: string;
@@ -124,6 +131,7 @@ async function auditSingleEventWithCoinGecko(
   event: DepegRow,
   validationReferences: PriceValidationReferences | undefined,
   waitForCgFetchStart: () => Promise<void>,
+  coingeckoApiKey: string,
 ): Promise<AuditEventOutcome> {
   const meta = TRACKED_META_BY_ID.get(event.stablecoin_id);
   const geckoId = meta?.geckoId;
@@ -148,8 +156,9 @@ async function auditSingleEventWithCoinGecko(
 
     const cgEndpoint = cgUrl(
       `/coins/${geckoId}/market_chart/range?vs_currency=usd&from=${from}&to=${to}&precision=full`,
+      coingeckoApiKey,
     );
-    const cgFetchHeaders = cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT });
+    const cgFetchHeaders = cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }, coingeckoApiKey);
     const cgResult = await fetchJsonWithRetry<{ prices?: [number, number][] }>(
       cgEndpoint,
       { headers: cgFetchHeaders },
@@ -266,7 +275,22 @@ async function auditSingleEventWithCoinGecko(
 export async function runCoinGeckoAuditBatch(
   db: D1Database,
   events: readonly DepegRow[],
-): Promise<{ outcomes: AuditEventOutcome[]; attemptedCgFetches: number }> {
+  coingeckoApiKey: string | null,
+): Promise<{ outcomes: AuditEventOutcome[]; attemptedCgFetches: number; errorReason?: AuditCgErrorReason }> {
+  // A keyless fetch would hit the free public CoinGecko API, whose datacenter
+  // traffic the Worker cannot rely on in production (every event fails with an
+  // opaque upstream error). Instead of silently degrading like that, refuse the
+  // batch with an explicit machine-readable reason. Per-event outcomes still
+  // count as attempted upstream errors so the existing outage logic marks
+  // upstreamReachable=false and skips provenance persistence.
+  if (!coingeckoApiKey) {
+    return {
+      outcomes: events.map((event) => buildAuditEventOutcome(event, "error", { upstreamError: true })),
+      attemptedCgFetches: events.length,
+      errorReason: "coingecko_api_key_missing",
+    };
+  }
+
   const validationReferences = events.length > 0
     ? await loadPriceValidationReferences(db)
     : undefined;
@@ -275,7 +299,7 @@ export async function runCoinGeckoAuditBatch(
   const outcomes = await mapWithConcurrency(
     events,
     AUDIT_CG_FETCH_CONCURRENCY,
-    (event) => auditSingleEventWithCoinGecko(event, validationReferences, waitForCgFetchStart),
+    (event) => auditSingleEventWithCoinGecko(event, validationReferences, waitForCgFetchStart, coingeckoApiKey),
   );
   const attemptedCgFetches = outcomes.filter((outcome) => outcome.attemptedCgFetch).length;
   return { outcomes, attemptedCgFetches };

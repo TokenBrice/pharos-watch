@@ -207,6 +207,26 @@ export function existingRowOverlapsReplayWindow(
   return eventOverlapsReplayWindow({ startedAt: row.started_at, endedAt: row.ended_at }, replayWindow);
 }
 
+/**
+ * Live-overlap dedupe: a recomputed backfill episode is the same market
+ * episode as an existing `source='live'` row when both cover the same coin and
+ * direction and their inclusive intervals share at least one second
+ * (`episodeStart <= liveEnd && liveStart <= episodeEnd`). The two detectors
+ * read the same price series at different granularities (live polls at minutes,
+ * backfill consumes hourly samples), so overlapping windows of the same side
+ * are one episode counted twice; the replay's delete already removes the stale
+ * backfill twin, and this predicate keeps it from being re-inserted.
+ */
+export function backfillEpisodeCoveredByLiveEvent(
+  episode: { startedAt: number; endedAt: number | null; direction: string },
+  liveRow: { started_at: number; ended_at: number | null; direction: string },
+): boolean {
+  if (episode.direction !== liveRow.direction) return false;
+  const episodeEnd = episode.endedAt ?? episode.startedAt;
+  const liveEnd = liveRow.ended_at ?? liveRow.started_at;
+  return episode.startedAt <= liveEnd && liveRow.started_at <= episodeEnd;
+}
+
 const SEALED_EVENT_DELETE_GUARD = ` AND id NOT IN (
   SELECT l.event_id
   FROM depeg_resolver_incident_event_links l
