@@ -39,8 +39,17 @@ import {
 const CMC_REQUEST_TIMEOUT_MS = 10_000;
 const CMC_MAX_RETRIES = 0;
 const CMC_CATEGORY_LIMIT = 300;
-const CMC_QUOTE_MAX_AGE_SEC = 60 * 60;
+// CMC rolls its quote `last_updated` timestamps on an hourly cadence and the
+// consumer fetch lands ~90s after each roll boundary, so a window equal to the
+// cadence drops a quote that missed exactly one roll (age = cadence + fetch
+// offset). The fetch window therefore admits one full missed roll, and the
+// verified-cache bridge window additionally covers one rotation-skipped fetch
+// hour (`CMC_TARGETED_MAX_SLUGS` rotates candidate slugs when more than 25
+// remain), while anything older still goes missing instead of publishing stale.
 const CMC_FETCH_COOLDOWN_SEC = 3600;
+const CMC_STALENESS_GRACE_SEC = 300;
+const CMC_QUOTE_MAX_AGE_SEC = CMC_FETCH_COOLDOWN_SEC + CMC_STALENESS_GRACE_SEC;
+const CMC_VERIFIED_QUOTE_BRIDGE_SEC = 2 * CMC_FETCH_COOLDOWN_SEC + CMC_STALENESS_GRACE_SEC;
 const CMC_PASSTHROUGH_STATUSES = [400, 401, 403, 404, 408, 409, 418, 425, 429, 451, 500, 502, 503, 504];
 const CMC_CATEGORY_ENDPOINT = "pro-api.coinmarketcap.com/v1/cryptocurrency/category";
 const CMC_QUOTES_ENDPOINT = "pro-api.coinmarketcap.com/v3/cryptocurrency/quotes/latest";
@@ -203,7 +212,7 @@ function replayVerifiedCmcQuotes(params: {
       cached.symbol === candidate.asset.symbol.toUpperCase() &&
       cached.active &&
       providerAddressMatches &&
-      isFreshFallbackObservedAt(cached.observedAt, CMC_QUOTE_MAX_AGE_SEC) &&
+      isFreshFallbackObservedAt(cached.observedAt, CMC_VERIFIED_QUOTE_BRIDGE_SEC) &&
       isUsableFallbackPrice(candidate.asset, cached.price, params.fxRates);
     attempts.push(createPricingAssetAttempt({
       assetId: candidate.asset.id,
@@ -255,7 +264,7 @@ async function persistVerifiedCmcQuotes(
   if (!db || accepted.length === 0) return;
   const merged = new Map<string, CmcVerifiedTargetedQuote>();
   for (const quote of [...previous, ...accepted]) {
-    if (isFreshFallbackObservedAt(quote.observedAt, CMC_QUOTE_MAX_AGE_SEC)) {
+    if (isFreshFallbackObservedAt(quote.observedAt, CMC_VERIFIED_QUOTE_BRIDGE_SEC)) {
       merged.set(quote.assetId, quote);
     }
   }

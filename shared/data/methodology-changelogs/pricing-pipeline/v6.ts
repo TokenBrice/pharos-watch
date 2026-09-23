@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.29",
+    title: "CMC verified-quote staleness calibrated to the fetch cadence",
+    date: "2026-09-23",
+    effectiveAt: 1790142000,
+    summary:
+      "The CoinMarketCap fallback's freshness windows now exceed the producer cadence instead of equaling it, so a single missed hourly quote roll or one rotation-skipped fetch hour no longer blanks otherwise priceable assets such as usdn-smardex.",
+    impact: [
+      "Live targeted and category quotes remain admissible for one fetch cadence plus a five-minute grace, because CMC rolls `last_updated` hourly and the consumer fetch lands just after each roll boundary",
+      "The identity-verified targeted cache bridges up to two fetch cadences plus grace, covering the 25-slug request-cap rotation that leaves each slug unfetched for an hour when more than 25 candidates remain",
+      "Identity, active-status, positive-volume, peg-bound, fallback-confidence, and non-depeg-authoritative guards are unchanged, observed timestamps are never refreshed, and quotes older than the bridge still go missing instead of publishing stale",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.28",
     title: "USDaf guarded Uniswap v4 recovery route",
     date: "2026-09-23",
