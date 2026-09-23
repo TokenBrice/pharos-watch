@@ -1,4 +1,5 @@
 import { guardPublishedYieldCoverage, guardTrackedYieldCoverage } from "./coordinator-guards";
+import type { CronMetadataRecord } from "../../lib/cron-result";
 import { computeDeterministicOnChainHealth, logYieldApyDivergences } from "./coordinator-health";
 import {
   buildYieldDegradationReasons,
@@ -32,9 +33,33 @@ export async function runYieldCoordinatorHealthTelemetryStage(
 
   logYieldApyDivergences(normalized.evaluatedSources);
 
+  // Every coverage guard result replaces the whole run metadata, so the loaded
+  // input counters travel with it: without them a collapsed count only says
+  // "the counts dropped", not which input was empty (this is what made the
+  // 2026-09-23 held-safety regression opaque from cron history).
+  const inputDiagnostics: CronMetadataRecord = {
+    resolvedYieldBearingCount: normalized.resolvedYieldBearingIds.size,
+    expectedYieldBearingCount: fetched.yieldCoins.length,
+    evaluatedSourceCount: normalized.evaluatedSources.length,
+    rejectedSourceCount: normalized.evaluatedSources.filter((source) => source.rejected).length,
+    selectedSourceCoinCount: normalized.bestSourceKeyByCoin.size,
+    dlPoolCount: fetched.dlPools.length,
+    dlPoolFallbackMode: fetched.dlPoolsMeta.fallbackMode ?? null,
+    supplementalSourceCount: fetched.supplementalCandidates.length,
+    supplementalSourceMode: fetched.supplementalMeta.mode,
+    onChainRatesResolved: fetched.onChainRates.size,
+    safetySnapshotAvailable: fetched.safetySnapshotAvailable,
+    safetySnapshotHeld: fetched.safetySnapshotHeld,
+    acceptedSafetyPublicationAgeSeconds: fetched.acceptedSafetyPublicationAgeSeconds,
+    safetyScoresComputed: fetched.safetySnapshot.coveredCount,
+    safetyScoresExpected: fetched.safetySnapshot.trackedCount,
+    safetySnapshotReason: fetched.safetySnapshot.reason ?? null,
+  };
+
   const trackedCoverageGuard = guardTrackedYieldCoverage({
     resolvedYieldBearingCount: normalized.resolvedYieldBearingIds.size,
     expectedYieldBearingCount: fetched.yieldCoins.length,
+    inputDiagnostics,
   });
   if (trackedCoverageGuard) {
     await fetched.reportYieldProgress("coverage-guard", "Yield tracked coverage guard deferred publication", "yield", {
@@ -85,6 +110,7 @@ export async function runYieldCoordinatorHealthTelemetryStage(
     previewRankingsPayload,
     yieldCoinIdSet: fetched.yieldCoinIdSet,
     opportunityCoinIdSet: fetched.opportunityCoinIdSet,
+    inputDiagnostics,
   });
   if (publishedCoverageGuard.result) {
     await fetched.reportYieldProgress(

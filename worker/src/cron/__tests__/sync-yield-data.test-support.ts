@@ -565,13 +565,19 @@ function resetSyncYieldDataTest() {
     ]),
   } as never);
   // Identity-only publish-time guard: mirror whatever published snapshot the
-  // test has staged so per-test safety identities keep driving the guard.
+  // test has staged so per-test safety identities keep driving the guard. The
+  // three states follow `loadActiveSafetyScoreIdentity`: an identity-less result
+  // is an unavailable publication, a healthy map is the current publication, and
+  // a map that only travels with `kind: "degraded"` is the held accepted one.
   vi.spyOn(safetyScoreActiveSourceModule, "loadActiveSafetyScoreIdentity").mockImplementation(
     async (db) => {
       const snapshot = await safetyScoresModule.computeSafetyScoresSnapshot(db);
-      return snapshot.kind === "ok" && snapshot.safetyScoreIdentity !== null
+      if (snapshot.safetyScoreIdentity === null) {
+        return { kind: "error", safetyScoreIdentity: null };
+      }
+      return snapshot.kind === "ok"
         ? { kind: "v9", safetyScoreIdentity: snapshot.safetyScoreIdentity }
-        : { kind: "error", safetyScoreIdentity: null };
+        : { kind: "held", safetyScoreIdentity: snapshot.safetyScoreIdentity };
     },
   );
 }

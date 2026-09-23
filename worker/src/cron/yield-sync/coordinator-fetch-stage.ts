@@ -150,10 +150,33 @@ export async function runYieldCoordinatorFetchStage(params: YieldCoordinatorFetc
       onChainCooldownActive: loadedState.onChainSkippedDueToCooldown,
       onChainCooldownRemainingSec: loadedState.onChainCooldownRemainingSec,
       safetySnapshotAvailable: loadedState.safetySnapshotAvailable,
+      safetySnapshotHeld: loadedState.safetySnapshotHeld,
+      acceptedSafetyPublicationAgeSeconds: loadedState.acceptedSafetyPublicationAgeSeconds,
     },
   });
 
-  if (loadedState.safetySnapshotDegraded) {
+  if (loadedState.safetySnapshotHeld) {
+    // A hold rejects the newest V9 attempt, not the accepted ratings the public
+    // report-card route keeps serving, so the run publishes against the accepted
+    // generation inside the read path's stale-coherent budget and reports the
+    // hold as a degradation reason instead of deferring.
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "yield-safety-publication-held",
+      job: "sync-yield-data",
+      message: loadedState.safetySnapshotAvailable
+        ? "Safety Score V9 publication is held; publishing against the accepted generation"
+        : "Safety Score V9 publication is held past the accepted-generation budget; publication deferred",
+      metadata: {
+        reason: loadedState.safetySnapshot.reason ?? null,
+        acceptedPublicationAgeSeconds: loadedState.acceptedSafetyPublicationAgeSeconds,
+        acceptedPublicationWithinBudget: loadedState.safetySnapshotAvailable,
+        coveredCount: loadedState.safetySnapshot.coveredCount,
+        trackedCount: loadedState.safetySnapshot.trackedCount,
+      },
+    });
+  } else if (loadedState.safetySnapshotDegraded) {
     logWorkerEvent({
       scope: "lib",
       level: "warn",
@@ -167,6 +190,58 @@ export async function runYieldCoordinatorFetchStage(params: YieldCoordinatorFetc
         reason: loadedState.safetySnapshot.reason ?? null,
       },
     });
+  }
+
+  // R2 / E-yield: an unusable published V9 snapshot is an input outage, not a
+  // zero-coverage measurement. It forces `scoreQualification: "NR"` on every
+  // evaluated row (`safetySnapshotUnavailable`), which drops every publication
+  // view (B13) and makes the run's ranking set empty by construction — while the
+  // tracked-coverage guard still passes, because resolution is unaffected. Runs
+  // that continue therefore report the empty set as
+  // `published-yield-coverage-regression` (blaming yield sources for a safety
+  // outage) and, with no prior rankings baseline to trip that guard, would
+  // publish the empty payload outright. Fail closed on the real cause before the
+  // resolution, history, and evaluation passes: the previous published
+  // generation is retained and the run names its upstream reason verbatim. A
+  // held publication whose accepted generation is still inside the read path's
+  // stale-coherent budget is not unusable, so it does not reach this branch.
+  if (!loadedState.safetySnapshotAvailable) {
+    const safetySnapshotReason =
+      loadedState.safetySnapshot.reason ?? "safety-score-v9-publication:identity-missing";
+    const reason = `safety-snapshot-unavailable:${safetySnapshotReason}`;
+    await reportYieldProgress(
+      "safety-snapshot-unavailable",
+      "Yield publication deferred: no usable published safety snapshot",
+      "yield",
+      {
+        itemsDone: 0,
+        metadata: {
+          reason: safetySnapshotReason,
+          safetySnapshotSource: loadedState.safetySnapshot.source,
+          safetyScoresComputed: loadedState.safetySnapshot.coveredCount,
+          safetyScoresExpected: loadedState.safetySnapshot.trackedCount,
+          safetySnapshotHeld: loadedState.safetySnapshotHeld,
+          acceptedPublicationAgeSeconds: loadedState.acceptedSafetyPublicationAgeSeconds,
+        },
+      },
+    );
+    return {
+      ok: false as const,
+      result: createCronResult({
+        status: "degraded" as const,
+        itemCount: 0,
+        productivity: { productive: false, reason: "safety-snapshot-unavailable" },
+        metadata: {
+          reason,
+          safetySnapshotSource: loadedState.safetySnapshot.source,
+          safetyScoresComputed: loadedState.safetySnapshot.coveredCount,
+          safetyScoresExpected: loadedState.safetySnapshot.trackedCount,
+          safetyScoreIdentity: loadedState.safetySnapshot.safetyScoreIdentity,
+          safetySnapshotHeld: loadedState.safetySnapshotHeld,
+          acceptedPublicationAgeSeconds: loadedState.acceptedSafetyPublicationAgeSeconds,
+        },
+      }),
+    };
   }
 
   return {

@@ -6,6 +6,7 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 import {
   detectYieldQualityMixRegression,
   guardPublishedYieldCoverage,
+  guardTrackedYieldCoverage,
   summarizeYieldPublicationQualityMix,
 } from "../coordinator-guards";
 import { loadPreviousYieldPublicationSnapshot, pruneYieldTables } from "../publication";
@@ -246,6 +247,50 @@ describe("Yield publication coverage guard snapshots", () => {
         currentPublishedYieldBearingCount: yieldCount, currentPublishedOpportunityCount: opportunityCount,
       });
     }
+  });
+
+  it("keeps the loaded-input diagnostics on a blocked publication", async () => {
+    const yieldRows = directRankings(11, "yield");
+    const inputDiagnostics = {
+      resolvedYieldBearingCount: 108,
+      expectedYieldBearingCount: 108,
+      evaluatedSourceCount: 140,
+      rejectedSourceCount: 140,
+      dlPoolCount: 1889,
+      safetySnapshotAvailable: false,
+      safetySnapshotReason: "v9-publication-held",
+    };
+
+    const guarded = await guardPublishedYieldCoverage({
+      previousYieldPublicationSnapshot: previousSnapshot(yieldRows),
+      previewRankingsPayload: { rankings: [] },
+      yieldCoinIdSet: new Set(yieldRows.map(({ id }) => id)),
+      opportunityCoinIdSet: new Set(),
+      inputDiagnostics,
+    });
+
+    // A blocked publication replaces the run metadata, so the counters that say
+    // which input cohort was empty have to travel on the guard result.
+    expect(JSON.parse(guarded.result?.metadata ?? "{}")).toMatchObject({
+      reason: "published-yield-coverage-regression",
+      currentPublishedYieldBearingCount: 0,
+      inputDiagnostics,
+    });
+  });
+
+  it("keeps the loaded-input diagnostics on a blocked tracked-coverage run", () => {
+    const blocked = guardTrackedYieldCoverage({
+      resolvedYieldBearingCount: 0,
+      expectedYieldBearingCount: 108,
+      inputDiagnostics: { dlPoolCount: 0, dlPoolFallbackMode: "direct-fetch-failed" },
+    });
+
+    expect(JSON.parse(blocked?.metadata ?? "{}")).toMatchObject({
+      reason: "coverage-regression",
+      resolvedCount: 0,
+      totalCount: 108,
+      inputDiagnostics: { dlPoolCount: 0, dlPoolFallbackMode: "direct-fetch-failed" },
+    });
   });
 
   it.each([4, 5])("requires the proportional substitution floor (increase %s)", async (increase) => {

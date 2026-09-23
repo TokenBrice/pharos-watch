@@ -150,19 +150,23 @@ describe("syncYieldData", () => {
     expect(metadata.fallbackMode).toContain("risk-free-rate:fred-api-error-retained");
   });
 
-  it("marks run degraded but still writes yield-rankings cache when safety snapshot coverage is empty", async () => {
+  it.each([
+    ["empty snapshot coverage", "stablecoins-cache:missing-cache"],
+    ["active V9 marker", "active-safety-score:v9"],
+    ["malformed V9 marker", "active-safety-score:activation-marker-invalid"],
+    ["mismatched V9 identity", "active-safety-score:v9-identity-mismatch"],
+  ])("defers publication on the upstream reason when no accepted safety publication is readable for %s", async (_label, reason) => {
     const db = makeDb();
     installYieldCacheReader(vi.mocked(getCache), {});
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     mockFetch([]);
-
     vi.spyOn(safetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValueOnce({
       kind: "degraded",
       mode: "map",
       coveredCount: 0,
       trackedCount: 4,
       coverageRatio: 0,
-      reason: "stablecoins-cache:missing-cache",
+      reason,
       scores: new Map(),
       source: "safety-score-v9-publication",
       safetyScoreIdentity: null,
@@ -172,30 +176,94 @@ describe("syncYieldData", () => {
     } as never);
 
     const result = await syncYieldData(db);
-
-    expect(result.status).toBe("degraded");
     const metadata = JSON.parse(result.metadata ?? "{}") as {
-      fallbackMode: string | null;
-      cacheWriteSkipped: boolean;
-      sourceCoverage: { safetyCoverageRatio: number };
+      reason: string;
+      safetySnapshotSource: string;
+      safetyScoresComputed: number;
+      safetyScoresExpected: number;
+      safetyScoreIdentity: unknown;
     };
-    expect(metadata.fallbackMode ?? "").toContain("safety-snapshot-coverage");
-    expect(metadata.cacheWriteSkipped).toBe(false);
-    expect(metadata.sourceCoverage.safetyCoverageRatio).toBe(0);
 
-    expect(getYieldRankingsCachePayload(db)).toBeDefined();
+    // R2: an unusable published snapshot is an input outage, not a measurement
+    // of zero. Every evaluated row would be forced to `NR` and dropped from the
+    // publication views, so continuing would publish an empty ranking set and
+    // report it as `published-yield-coverage-regression` — blaming yield sources
+    // for a safety outage. The run defers and names the upstream reason verbatim.
+    expect(result.status).toBe("degraded");
+    expect(result.itemCount).toBe(0);
+    expect(metadata.reason).toBe(`safety-snapshot-unavailable:${reason}`);
+    expect(metadata.safetySnapshotSource).toBe("safety-score-v9-publication");
+    expect(metadata.safetyScoresComputed).toBe(0);
+    expect(metadata.safetyScoresExpected).toBe(4);
+    expect(metadata.safetyScoreIdentity).toBeNull();
+    expect(getYieldRankingsCachePayload(db)).toBeUndefined();
+    expect(findPublishedYieldRow(db, "lusd-liquity", () => true)).toBeUndefined();
+    expect(findPublishedYieldHistoryRow(db, "lusd-liquity", () => true)).toBeUndefined();
     expect(vi.mocked(setCacheIfNewer).mock.calls.some((call) => call[1] === "report_card_cache")).toBe(false);
   });
 
-  it.each([
-    ["active V9 marker", "active-safety-score:v9"],
-    ["malformed V9 marker", "active-safety-score:activation-marker-invalid"],
-    ["mismatched V9 identity", "active-safety-score:v9-identity-mismatch"],
-  ])("retains auto-lending rows as unrated for %s", async (_label, reason) => {
+  it("still publishes a usable but coverage-degraded published safety snapshot", async () => {
+    const db = makeDb();
+    const nowSec = Math.floor(Date.now() / 1000);
+    installYieldCacheReader(vi.mocked(getCache), {});
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
+    // Usable identity with a partial score map (coverage below the 0.75 degraded
+    // ratio): the input gate keys on usability, so this must stay publishable.
+    vi.spyOn(safetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValueOnce({
+      kind: "ok",
+      mode: "map",
+      coveredCount: 2,
+      trackedCount: 4,
+      coverageRatio: 0.5,
+      source: "safety-score-v9-publication",
+      safetyScoreIdentity: {
+        model: "v9",
+        schemaVersion: 1,
+        methodologyVersion: "9.0",
+        policyId: "safety-score-v9",
+        policyDigest: "a".repeat(64),
+        evaluationBuildDigest: "b".repeat(64),
+        baseInputGenerationId: `report-cards-input:v1:${"c".repeat(64)}`,
+        publicationGenerationId: "report-cards:v9:test",
+      },
+      publicationGenerationId: "report-cards:v9:test",
+      methodologyVersion: "9.0",
+      publishedAt: nowSec,
+      scores: new Map([
+        ["lusd-liquity", { score: 86, grade: "A-" }],
+        ["100", { score: 80, grade: "B+" }],
+      ]),
+    } as never);
+
+    const result = await syncYieldData(db);
+    const metadata = JSON.parse(result.metadata ?? "{}") as { fallbackMode: string | null };
+
+    expect(result.status).toBe("degraded");
+    expect(metadata.fallbackMode ?? "").toContain("safety-snapshot-coverage");
+    expect(getYieldRankingsCachePayload(db)).toBeDefined();
+  });
+
+  it("fails the run instead of reporting a malformed supply map when the bulk stablecoin read fails", async () => {
+    const db = makeDb();
+    installYieldCacheReader(vi.mocked(getCache), {
+      // R2: an unreachable cache row is not evidence that the payload is
+      // malformed, so it must not degrade into an empty supply map.
+      stablecoins: { throw: new Error("D1_ERROR: Currently processing a long-running import.") },
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
+
+    await expect(syncYieldData(db)).rejects.toThrow("Currently processing a long-running import");
+    expect(getYieldRankingsCachePayload(db)).toBeUndefined();
+  });
+
+  it("publishes from the accepted generation while the newest V9 attempt is held inside the budget", async () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
     const nativePoolMap = yieldConfigModule.YIELD_POOL_MAP as Record<string, string>;
     nativePoolMap["100"] = "pool-sdai-native";
+    const acceptedPublicationGenerationId = "report-cards:v9:accepted";
 
     installYieldCacheReader(vi.mocked(getCache), {
       "dl-stablecoin-pools": dlPoolsCacheRow([
@@ -226,47 +294,99 @@ describe("syncYieldData", () => {
     });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     mockFetch([]);
+    // Held health with the accepted generation still inside the read path's
+    // stale-coherent budget: the report-card route serves exactly these ratings,
+    // so yield must publish against them instead of deferring.
     vi.spyOn(safetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValueOnce({
       kind: "degraded",
       mode: "map",
-      coveredCount: 0,
+      coveredCount: 1,
       trackedCount: 4,
-      coverageRatio: 0,
-      reason,
-      scores: new Map(),
+      coverageRatio: 0.25,
+      reason: "v9-publication-held",
+      scores: new Map([["lusd-liquity", { score: 86, grade: "A-" }]]),
       source: "safety-score-v9-publication",
-      safetyScoreIdentity: null,
-      publicationGenerationId: null,
-      methodologyVersion: null,
-      publishedAt: null,
+      safetyScoreIdentity: {
+        model: "v9",
+        schemaVersion: 1,
+        methodologyVersion: "9.0",
+        policyId: "safety-score-v9",
+        policyDigest: "a".repeat(64),
+        evaluationBuildDigest: "b".repeat(64),
+        baseInputGenerationId: `report-cards-input:v1:${"c".repeat(64)}`,
+        publicationGenerationId: acceptedPublicationGenerationId,
+      },
+      publicationGenerationId: acceptedPublicationGenerationId,
+      methodologyVersion: "9.0",
+      publishedAt: nowSec - 2 * 3600,
     } as never);
 
     const result = await syncYieldData(db);
+    const metadata = JSON.parse(result.metadata ?? "{}") as { fallbackMode: string | null };
     const payload = getYieldRankingsCachePayload(db) as {
-      rankings: Array<{ id: string }>;
-      provenance: { safetySnapshot: { reason: string | null } };
+      rankings: Array<{ id: string; safetyScore: number | null; safetyGrade: string }>;
+      provenance: { safetySnapshot: { safetyScoreIdentity: { publicationGenerationId: string } | null } };
+    } | undefined;
+
+    expect(result.status).toBe("degraded");
+    expect(metadata.fallbackMode ?? "").toContain("safety-snapshot:v9-publication-held");
+    expect(payload).toBeDefined();
+    expect(payload?.provenance.safetySnapshot.safetyScoreIdentity?.publicationGenerationId)
+      .toBe(acceptedPublicationGenerationId);
+    // The accepted generation's safety reached the row, so it scores normally
+    // instead of the old all-NR collapse that withheld the publication.
+    expect(findPublishedYieldRow(db, "lusd-liquity", (row) => row.source_key === "pool-lusd-aave"))
+      .toMatchObject({ safety_score: 86, safety_grade: "A" });
+    expect(
+      findPublishedYieldRow(db, "lusd-liquity", (row) => row.source_key === "pool-lusd-aave")
+        ?.pharos_yield_score,
+    ).toEqual(expect.any(Number));
+    // The hold is recorded, never laundered into a clean run.
+    expect(result.itemCount).toBeGreaterThan(0);
+  });
+
+  it("defers when the held accepted publication is past the stale-coherent budget", async () => {
+    const db = makeDb();
+    const nowSec = Math.floor(Date.now() / 1000);
+    installYieldCacheReader(vi.mocked(getCache), {});
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
+    vi.spyOn(safetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValueOnce({
+      kind: "degraded",
+      mode: "map",
+      coveredCount: 1,
+      trackedCount: 4,
+      coverageRatio: 0.25,
+      reason: "v9-publication-held",
+      scores: new Map([["lusd-liquity", { score: 86, grade: "A-" }]]),
+      source: "safety-score-v9-publication",
+      safetyScoreIdentity: {
+        model: "v9",
+        schemaVersion: 1,
+        methodologyVersion: "9.0",
+        policyId: "safety-score-v9",
+        policyDigest: "a".repeat(64),
+        evaluationBuildDigest: "b".repeat(64),
+        baseInputGenerationId: `report-cards-input:v1:${"c".repeat(64)}`,
+        publicationGenerationId: "report-cards:v9:stale-accepted",
+      },
+      publicationGenerationId: "report-cards:v9:stale-accepted",
+      methodologyVersion: "9.0",
+      publishedAt: nowSec - 25 * 3600,
+    } as never);
+
+    const result = await syncYieldData(db);
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      reason: string;
+      safetySnapshotHeld: boolean;
+      acceptedPublicationAgeSeconds: number;
     };
 
     expect(result.status).toBe("degraded");
-    expect(findPublishedYieldRow(db, "lusd-liquity", (row) => row.data_source === "defillama-auto")).toMatchObject({
-      safety_score: null,
-      safety_grade: "NR",
-      pharos_yield_score: null,
-    });
-    expect(findPublishedYieldHistoryRow(db, "lusd-liquity", (row) => row.source_key === "pool-lusd-aave"))
-      .toMatchObject({
-        safety_at_publish: null,
-        pys_at_publish: null,
-        pys_inputs_at_publish: null,
-      });
-    // B13: an unavailable compact safety snapshot forces `NR` on every candidate
-    // for the coin (`scoreQualification` NR), so the publication view is skipped —
-    // the coin keeps the retained rows asserted above but publishes no ranking
-    // entry, rather than a least-bad rejected row as `is_best`/unrated best.
-    expect(payload.rankings.find((row) => row.id === "lusd-liquity")).toBeUndefined();
-    expect(payload.provenance.safetySnapshot).toMatchObject({
-      reason,
-    });
+    expect(metadata.reason).toBe("safety-snapshot-unavailable:v9-publication-held");
+    expect(metadata.safetySnapshotHeld).toBe(true);
+    expect(metadata.acceptedPublicationAgeSeconds).toBeGreaterThan(24 * 3600);
+    expect(getYieldRankingsCachePayload(db)).toBeUndefined();
   });
 
   it("skips destructive yield row cleanup on degraded runs", async () => {
