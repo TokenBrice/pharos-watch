@@ -68,7 +68,12 @@ export function deriveMintSurge(
   };
 }
 
-function buildSupplyContext(
+/**
+ * Supply context for one active event. Exported so tests can prove the windowed
+ * `supply_history` read (`readActiveSupplyHistory`) yields exactly the same
+ * context as the coin's full series for every lookup it performs.
+ */
+export function buildSupplyContext(
   snapshots: { date: number; usd: number }[],
   startedAt: number,
   evaluatedAt: number,
