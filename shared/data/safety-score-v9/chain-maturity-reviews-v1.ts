@@ -158,14 +158,33 @@ const SOURCES = {
   solanaStatus: source("Solana status history", "https://status.solana.com/history", null),
   solanaValidators: source("Solana validator requirements", "https://solana.com/docs/operations/requirements", null),
   solanaClusters: source("Solana clusters", "https://solana.com/docs/references/clusters", null),
-  tronHistory: source("TRON mainnet history", "https://developers.tron.network/docs/tron-protocol", null),
-  tronStatus: source("TRON network statistics", "https://tronscan.org/#/data/stats2/total-transactions", null),
+  tronGenesisBlock: source(
+    "TRON mainnet block 1 (TronGrid)",
+    "https://api.trongrid.io/wallet/getblockbynum?num=1",
+    "2018-06-25",
+  ),
+  tronLivenessStartBlock: source(
+    "TRON block 75,984,431 (TronGrid)",
+    "https://api.trongrid.io/wallet/getblockbynum?num=75984431",
+    "2025-09-23",
+  ),
+  tronLivenessEndBlock: source(
+    "TRON block 86,496,431 (TronGrid)",
+    "https://api.trongrid.io/wallet/getblockbynum?num=86496431",
+    "2026-09-23",
+  ),
+  tronConsensus: source("TRON consensus and DPoS", "https://developers.tron.network/docs/concensus", "2026-09-10"),
   tronValidators: source(
     "TRON Super Representatives",
     "https://developers.tron.network/docs/super-representatives",
-    "2026-07",
+    "2026-09-10",
   ),
-  tronGovernance: source("TRON proposals", "https://developers.tron.network/docs/tron-proposal", null),
+  tronActiveWitnesses: source(
+    "TRONSCAN Super Representative ranking",
+    "https://apilist.tronscanapi.com/api/witness?sort=votes&status=0&count=true&limit=40&start=0",
+    null,
+  ),
+  tronCommittee: source("TRON committee and proposals", "https://developers.tron.network/docs/committee", "2026-09-16"),
   xrplHistory: source("XRP Ledger history", "https://xrpl.org/about/history", null),
   xrplStatus: source("Ripple and XRP Ledger status history", "https://status.ripple.com/history", null),
   xrplConsensus: source("XRP Ledger consensus", "https://xrpl.org/docs/concepts/consensus-protocol", null),
@@ -422,14 +441,33 @@ const AUTHORED_CHAIN_MATURITY_REVIEWS_V1 = [
   {
     chainSlug: "tron",
     displayName: "TRON",
-    admission: "admit",
+    admission: "exclude",
     reviewedAt: REVIEWED_AT,
     gates: {
-      continuity: gate("pass", "Production history exceeds 36 months.", SOURCES.tronHistory),
-      liveness: gate("pass", "The public chain record covers the review window and shows no active sunset.", SOURCES.tronStatus),
-      "block-production-finality": gate("pass", "Twenty-seven elected Super Representatives produce blocks under stake-backed DPoS.", SOURCES.tronValidators),
-      "change-control": gate("pass", "Parameter changes use voted on-chain proposals rather than one instant unilateral key.", SOURCES.tronGovernance),
-      "dependency-exit": gate("pass", "Native assets transact and exit on the L1 without an upstream canonical bridge or external DA custodian.", SOURCES.tronHistory),
+      continuity: gate("pass", "Mainnet block 1 is timestamped 2018-06-25, so production history exceeds 36 months.", SOURCES.tronGenesisBlock),
+      liveness: gate(
+        "pass",
+        "Blocks 75,984,431 (2025-09-23) through 86,496,431 (2026-09-23) span 365.14 days with 10,512,000 blocks against 10,516,074 three-second slots; a timestamp bisection over the window finds no block interval above 60 seconds, and the chain has no active sunset.",
+        SOURCES.tronLivenessStartBlock,
+        SOURCES.tronLivenessEndBlock,
+      ),
+      "block-production-finality": gate(
+        "pending",
+        "Candidacy is permissionless and blocks solidify once 19 of 27 active Super Representatives build on them, so nine coordinated producers can stall finality. On 2026-09-23, 14 of the 27 active producers (55.7% of votes) published no URL or a dead or parked one, and 17 (78.3% of votes) charged 0% brokerage; independent operation of at least nine of them cannot be established, so the no-single-entity halt condition is unproven.",
+        SOURCES.tronConsensus,
+        SOURCES.tronValidators,
+        SOURCES.tronActiveWitnesses,
+      ),
+      "change-control": gate(
+        "pass",
+        "Parameter changes need approvals from 18 of the 27 active Super Representatives, tallied only at expiry of a voting window of about three days, rather than one instant unilateral key.",
+        SOURCES.tronCommittee,
+      ),
+      "dependency-exit": gate(
+        "pass",
+        "Blocks are produced and solidified by the L1's own Super Representatives, so native assets transact and exit without an upstream canonical bridge or external DA custodian.",
+        SOURCES.tronConsensus,
+      ),
     },
   },
   {
@@ -677,9 +715,6 @@ const NON_SUPPORTING_SOURCE_URLS = new Set([
   "https://docs.polygon.technology/pos/get-started/validator/",
   "https://solana.com/news/solana-mainnet-beta",
   "https://solana.com/docs/operations/requirements",
-  "https://developers.tron.network/docs/tron-protocol",
-  "https://tronscan.org/#/data/stats2/total-transactions",
-  "https://developers.tron.network/docs/tron-proposal",
   "https://status.ripple.com/history",
   "https://status.cardano.org/history",
   "https://status.gnosischain.com/history",
@@ -726,9 +761,6 @@ const UNREACHABLE_SOURCE_URLS = new Set([
   "https://docs.polygon.technology/pos/get-started/validator/",
   "https://solana.com/news/solana-mainnet-beta",
   "https://solana.com/docs/operations/requirements",
-  "https://developers.tron.network/docs/tron-protocol",
-  "https://tronscan.org/#/data/stats2/total-transactions",
-  "https://developers.tron.network/docs/tron-proposal",
   "https://status.ripple.com/history",
   "https://status.cardano.org/history",
   "https://status.gnosischain.com/history",
@@ -737,6 +769,19 @@ const UNREACHABLE_SOURCE_URLS = new Set([
   "https://status.confluxnetwork.org/history",
   "https://doc.confluxnetwork.org/docs/general/governance/",
 ]);
+
+// Sources re-verified after the batch access date carry their own access date.
+const REVERIFIED_SOURCE_ACCESSED_AT: Readonly<Record<string, string | undefined>> = Object.fromEntries(
+  [
+    SOURCES.tronGenesisBlock,
+    SOURCES.tronLivenessStartBlock,
+    SOURCES.tronLivenessEndBlock,
+    SOURCES.tronConsensus,
+    SOURCES.tronValidators,
+    SOURCES.tronActiveWitnesses,
+    SOURCES.tronCommittee,
+  ].map((evidence) => [evidence.url, "2026-09-23"]),
+);
 
 function nextReviewAt(reviewedAt: string): string {
   const reviewedAtSec = Date.parse(`${reviewedAt}T00:00:00.000Z`) / 1000;
@@ -768,7 +813,7 @@ function materializeReview(
         ...evidence,
         verification: {
           assertedText: reviewedGate.finding,
-          accessedAt: reviewed ? VERIFICATION_ACCESSED_AT : null,
+          accessedAt: reviewed ? (REVERIFIED_SOURCE_ACCESSED_AT[evidence.url] ?? VERIFICATION_ACCESSED_AT) : null,
           reviewerOutcome,
           httpStatus: reviewed ? (unreachable ? 404 : 200) : null,
         },

@@ -1038,7 +1038,8 @@ describe("commonModeSignalSeverity proportional materiality", () => {
   });
 
   it("pins the ruled mature-chain membership and the fail-closed common-mode signal", () => {
-    // P1-03: tron, hyperliquid and xrpl are excluded until batch 3 re-reviews their citations.
+    // P1-03: hyperliquid and xrpl are excluded until batch 3 re-reviews their citations; tron's
+    // 2026-09-23 re-review holds block-production-finality pending on unverified SR independence.
     expect(materiality.matureChains).toEqual(["base", "ethereum", "hedera"]);
     expect(materiality.commonModeSignal).toEqual({ kind: "critical-dependency", severity: "high" });
   });
