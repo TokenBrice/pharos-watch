@@ -42,6 +42,7 @@ const SYMBOL_EXCLUSIONS = Object.freeze({
   HourlyFlow: "API reference response label; source owns the hourly flow row shape.",
   SearchAction: "JSON-LD vocabulary described as intentionally un-emitted; not a Pharos identifier.",
   exceededMemory: "Cloudflare platform outcome label retained in architecture history.",
+  clientDisconnected: "Cloudflare invocation status label cited as operational evidence, not a Pharos identifier.",
   useCoverageMatrixModel: "Planned route hook retained in coverage documentation; not implemented in source.",
   fetchBlacklistEvents: "Superseded pipeline prose retains a historical client helper name.",
   fetchBlacklistSummary: "Superseded pipeline prose retains a historical client helper name.",

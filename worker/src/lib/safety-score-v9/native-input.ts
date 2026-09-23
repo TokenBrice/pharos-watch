@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { ReportCardEvidenceJournalByIdV1Schema } from "@shared/lib/report-card-evidence-journal";
+import { SupplyAttributionJournalByIdV1Schema } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { REPORT_CARDS_BASE_INPUT_GENERATION_ID_PREFIX } from "@shared/lib/report-cards-base-input-identity";
 import {
@@ -310,6 +312,41 @@ export function normalizeNativeV9Input(value: unknown, navAssetIds?: ReadonlySet
     navAssetIds,
   });
   return normalized;
+}
+
+/**
+ * Validates and attaches the two diagnostic journal projections a prepared
+ * input layers onto an already-normalized base input.
+ *
+ * The publication runner's `prepareFixedInput` hook composes its result by
+ * spreading the normalized input and adding the loader-validated journal
+ * projections. Re-running {@link normalizeSafetyScoreV9Input} over that value
+ * re-parses the entire ~2.4 MB base payload — three full Zod passes, the DEX and
+ * redemption row copies, and both payload fingerprints (each a canonical
+ * stringify plus SHA-256 over the whole map) — to reach a conclusion the intake
+ * parse already proved, because every spread field shares the intake's object
+ * reference. This helper keeps the part that is actually new (the two journals)
+ * validated under their real schemas — which also apply their `{}` defaults,
+ * matching the strict base schema — and leaves base-field identity to the
+ * runner's `sameBaseInput` assertion. The remaining enrichment fields
+ * (`pegProvenanceById`, `safetyScoreV9SupplyAttributionById`,
+ * `dexDeploymentSupplyCoverageById`) arrive either from the intake-normalized
+ * input by reference or from their own validating producers, and malformed
+ * content still fails closed at the compile (asset quarantine or a held
+ * publication) instead of reaching the published generation.
+ */
+export function withNormalizedV9JournalProjections(
+  prepared: SafetyScoreV9CompilerInput,
+): SafetyScoreV9CompilerInput {
+  return {
+    ...prepared,
+    evidenceJournalById: prepared.evidenceJournalById === undefined
+      ? {}
+      : ReportCardEvidenceJournalByIdV1Schema.parse(prepared.evidenceJournalById),
+    supplyAttributionJournalById: prepared.supplyAttributionJournalById === undefined
+      ? {}
+      : SupplyAttributionJournalByIdV1Schema.parse(prepared.supplyAttributionJournalById),
+  };
 }
 
 function isNativeV9InputShape(value: unknown): boolean {

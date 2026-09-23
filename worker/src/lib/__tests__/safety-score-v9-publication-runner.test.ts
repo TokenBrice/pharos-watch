@@ -430,6 +430,43 @@ describe("Safety Score V9 publication runner", () => {
     expect(mocks.build).not.toHaveBeenCalled();
   });
 
+  it("still rejects a mutated base input when preparation declares itself pre-normalized", async () => {
+    const result = await runSafetyScoreV9Publication({
+      db: {} as D1Database,
+      fixedInput,
+      nowSec: fixedInput.clockSec,
+      // The composition shortcut only skips re-parsing the base payload; the
+      // base-identity assertion must still reject a moved generation.
+      preparedFixedInputAlreadyNormalized: true,
+      prepareFixedInput: async (input) => ({
+        ...input,
+        sourceGeneration: "mutated-source-generation",
+      }),
+    });
+
+    expect(result).toMatchObject({
+      status: "failed",
+      stage: "v9-enrichment",
+    });
+    expect(mocks.build).not.toHaveBeenCalled();
+  });
+
+  it("accepts a pre-normalized prepared input that keeps the base identity", async () => {
+    const result = await runSafetyScoreV9Publication({
+      db: {} as D1Database,
+      fixedInput,
+      nowSec: fixedInput.clockSec,
+      preparedFixedInputAlreadyNormalized: true,
+      prepareFixedInput: async (input) => ({
+        ...input,
+        evidenceJournalById: { "usdc-circle": [] },
+      }),
+    });
+
+    expect(result.status).toBe("published");
+    expect(mocks.persist).toHaveBeenCalledTimes(1);
+  });
+
   it("records a failed attempt when compilation fails", async () => {
     mocks.build.mockImplementation(() => {
       throw new Error("compiler fixture failure");

@@ -8,6 +8,7 @@ import type {
 import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
 import {
   normalizeSafetyScoreV9CompilerInput,
+  withNormalizedV9JournalProjections,
   type SafetyScoreV9CompilerInput,
 } from "./native-input";
 import {
@@ -51,6 +52,17 @@ export interface RunSafetyScoreV9PublicationInput {
   fixedInput: unknown;
   /** The cache parser already normalized this value; avoid cloning it again on the production hot path. */
   fixedInputAlreadyNormalized?: boolean;
+  /**
+   * `prepareFixedInput` composes its result from the already-normalized input
+   * (spreading its fields and adding the loader-validated journal projections),
+   * so the runner must not re-run the full native-input normalization over it.
+   * That pass re-parsed the whole base payload — three Zod passes, the DEX and
+   * redemption row copies, and both payload fingerprints — for data the intake
+   * parse already validated and canonicalized. With this set, only the journal
+   * projections are re-validated (`withNormalizedV9JournalProjections`) and the
+   * base-input identity is still asserted below.
+   */
+  preparedFixedInputAlreadyNormalized?: boolean;
   prepareFixedInput?: (
     fixedInput: Readonly<SafetyScoreV9CompilerInput>,
     signal: AbortSignal,
@@ -401,9 +413,12 @@ export async function runSafetyScoreV9Publication(
 
     stage = "v9-enrichment";
     if (input.prepareFixedInput) {
-      const preparedFixedInput = normalizeSafetyScoreV9CompilerInput(
-        await input.prepareFixedInput(fixedInput, publicationSignal),
-      );
+      const prepared = await input.prepareFixedInput(fixedInput, publicationSignal);
+      const preparedFixedInput = input.preparedFixedInputAlreadyNormalized
+        ? withNormalizedV9JournalProjections(
+            prepared as SafetyScoreV9CompilerInput,
+          )
+        : normalizeSafetyScoreV9CompilerInput(prepared);
       if (!sameBaseInput(preparedFixedInput, fixedInput)) {
         throw new Error(
           "Safety Score v9 preparation changed the authoritative fixed input",
