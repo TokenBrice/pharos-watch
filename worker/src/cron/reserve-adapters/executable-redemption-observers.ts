@@ -139,7 +139,8 @@ const DSTAKE = {
 // withdraw moves USN to the WithdrawalHandler with a timestamp, and
 // claimWithdrawal pays after the handler's withdrawPeriod. The vault exposes
 // no getter for its handler pointer (StakingVaultStorage.withdrawalHandler
-// sits one slot above the namespaced base), so the pointer is read from
+// sits one slot above the namespaced base
+// keccak256("StakingVault.storage.location")), so the pointer is read from
 // storage and pinned every run: setWithdrawalHandler must fail closed here,
 // not silently redirect the settlement-bound read to a retired contract.
 // Runtime code hashes captured 2026-09-23 (block 26,038,220); vault
@@ -158,7 +159,7 @@ const NOON_SUSN = {
     codeHash: "0x48f64f2a52f543354cd46deeb67405df9544289012d18bd9b48920d44d0a4c13",
   } satisfies DirectIdentity,
   withdrawalHandlerStorageSlot:
-    "0xeb35582a09ab498623cb7b45bfdff1ae6ef9e826b054d3e2fb048e4d27a9fce",
+    "0xeb35582a09ab498623cb7b45bfdff1ae6ef9e826b054d3e2fb0481e4d27a9fce",
   // The handler admin since 2026-08-04: a 48h-min-delay GenericTimelock owned
   // by the 3-of-6 Noon Safe. setWithdrawPeriod is unbounded and applies
   // retroactively to in-flight requests, so the live value is re-read each run.
