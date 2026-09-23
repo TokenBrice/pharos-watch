@@ -1,8 +1,10 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
+
 /**
  * Pool price coherence policy — single owning registry (ADR-32) for the
- * thresholds and rejection vocabulary used by GeckoTerminal / CoinGecko
- * onchain pool admission (the GT crawl in `crawl-helpers.ts` and the CG
- * onchain crawl in `dex-discovery/crawl-coingecko-pools.ts`).
+ * thresholds, rejection vocabulary, and admission gate used by GeckoTerminal /
+ * CoinGecko onchain pool admission (the GT crawl in `crawl-helpers.ts` and the
+ * CG onchain crawl in `dex-discovery/crawl-coingecko-pools.ts`).
  *
  * The guarded failure mode is a provider pricing break on one leg of the
  * pair: the tracked leg's USD price must stay coherent with the pool's own
@@ -37,8 +39,8 @@ export const POOL_PRICE_COHERENCE_REJECT_REASONS = Object.freeze({
 export type PoolPriceCoherenceRejectReason =
   (typeof POOL_PRICE_COHERENCE_REJECT_REASONS)[keyof typeof POOL_PRICE_COHERENCE_REJECT_REASONS];
 
+/** The parsed-pool price projection both admission paths already carry. */
 export interface PoolPriceCoherenceLegs {
-  side: "base" | "quote";
   baseTokenPriceUsd: number;
   quoteTokenPriceUsd: number;
   /** Price of one base token in quote tokens; `undefined` when the payload omits the field, `null` when present but unusable. */
@@ -62,7 +64,10 @@ function isUsableRatio(value: number | null | undefined): value is number {
  * pair-ratio inputs are admitted unchecked (the guard stays inert for
  * providers that omit the fields) instead of being misread as broken.
  */
-export function evaluatePoolPriceCoherence(legs: PoolPriceCoherenceLegs): PoolPriceCoherenceDecision {
+export function evaluatePoolPriceCoherence(
+  side: "base" | "quote",
+  legs: PoolPriceCoherenceLegs,
+): PoolPriceCoherenceDecision {
   const ratioProvided =
     legs.baseTokenPriceQuoteToken !== undefined ||
     legs.quoteTokenPriceBaseToken !== undefined ||
@@ -70,10 +75,10 @@ export function evaluatePoolPriceCoherence(legs: PoolPriceCoherenceLegs): PoolPr
     legs.quoteTokenPriceNativeCurrency !== undefined;
   if (!ratioProvided) return { verdict: "admit", checked: false };
 
-  const directRatio = legs.side === "base" ? legs.baseTokenPriceQuoteToken : legs.quoteTokenPriceBaseToken;
+  const directRatio = side === "base" ? legs.baseTokenPriceQuoteToken : legs.quoteTokenPriceBaseToken;
   const nativeRatio =
     isUsableRatio(legs.baseTokenPriceNativeCurrency) && isUsableRatio(legs.quoteTokenPriceNativeCurrency)
-      ? legs.side === "base"
+      ? side === "base"
         ? legs.baseTokenPriceNativeCurrency / legs.quoteTokenPriceNativeCurrency
         : legs.quoteTokenPriceNativeCurrency / legs.baseTokenPriceNativeCurrency
       : null;
@@ -89,8 +94,8 @@ export function evaluatePoolPriceCoherence(legs: PoolPriceCoherenceLegs): PoolPr
     };
   }
 
-  const trackedUsd = legs.side === "base" ? legs.baseTokenPriceUsd : legs.quoteTokenPriceUsd;
-  const counterUsd = legs.side === "base" ? legs.quoteTokenPriceUsd : legs.baseTokenPriceUsd;
+  const trackedUsd = side === "base" ? legs.baseTokenPriceUsd : legs.quoteTokenPriceUsd;
+  const counterUsd = side === "base" ? legs.quoteTokenPriceUsd : legs.baseTokenPriceUsd;
   if (!isUsableRatio(trackedUsd) || !isUsableRatio(counterUsd)) {
     // Nothing to cross-check (existing paths already tolerate a missing leg
     // price); the ratio itself is healthy, so the row stays admissible.
@@ -106,4 +111,37 @@ export function evaluatePoolPriceCoherence(legs: PoolPriceCoherenceLegs): PoolPr
     };
   }
   return { verdict: "admit", checked: true };
+}
+
+export interface PoolPriceCoherenceAdmissionGate {
+  /** True when the pool may be admitted. Rejections are tallied by machine-readable reason. */
+  admits(side: "base" | "quote", legs: PoolPriceCoherenceLegs): boolean;
+  /** Emits one warn line per run when anything was rejected, or nothing at all. */
+  flush(): void;
+}
+
+/**
+ * Run-scoped admission gate shared by both crawl paths: records every
+ * rejection with its machine-readable reason (R4) and reports one aggregate
+ * warn line through the existing structured-log pattern.
+ */
+export function createPoolPriceCoherenceAdmissionGate(
+  logScope: string,
+  sourceLabel: string,
+): PoolPriceCoherenceAdmissionGate {
+  const rejectedByReason = new Map<PoolPriceCoherenceRejectReason, number>();
+  return {
+    admits(side, legs) {
+      const decision = evaluatePoolPriceCoherence(side, legs);
+      if (decision.verdict === "admit") return true;
+      rejectedByReason.set(decision.reason, (rejectedByReason.get(decision.reason) ?? 0) + 1);
+      return false;
+    },
+    flush() {
+      if (rejectedByReason.size === 0) return;
+      logWorkerEventArgs("handler", "warn",
+        `[${logScope}] ${sourceLabel} rejected incoherent pool prices by reason: ${JSON.stringify(Object.fromEntries(rejectedByReason))}`,
+      );
+    },
+  };
 }

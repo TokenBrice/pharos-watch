@@ -11,7 +11,7 @@ import type { PagedTokenPoolsResult } from "../../lib/paged-token-pools";
 import type { DexPriceObs, GtNewPool } from "./types";
 import { buildPoolFingerprint, normalizeProtocol } from "./pool-normalization";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
-import { evaluatePoolPriceCoherence, type PoolPriceCoherenceRejectReason } from "./pool-price-coherence";
+import { createPoolPriceCoherenceAdmissionGate } from "./pool-price-coherence";
 import { buildChainAddressKey } from "./token-resolution";
 
 export type CrawlToken = {
@@ -153,7 +153,7 @@ export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(
   const startMs = Date.now();
   const minTvlUsd = config.minTvlUsd ?? 10_000;
   let requestCount = 0;
-  const coherenceRejections = new Map<PoolPriceCoherenceRejectReason, number>();
+  const coherenceRejections = createPoolPriceCoherenceAdmissionGate("dex-liquidity", config.sourceLabel);
   let stoppedEarly = false;
   for (const token of config.tokens) {
     throwIfAborted(config.signal);
@@ -201,19 +201,7 @@ export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(
         );
         if (!side) continue;
 
-        const coherence = evaluatePoolPriceCoherence({
-          side,
-          baseTokenPriceUsd: parsed.baseTokenPriceUsd,
-          quoteTokenPriceUsd: parsed.quoteTokenPriceUsd,
-          baseTokenPriceQuoteToken: parsed.baseTokenPriceQuoteToken,
-          quoteTokenPriceBaseToken: parsed.quoteTokenPriceBaseToken,
-          baseTokenPriceNativeCurrency: parsed.baseTokenPriceNativeCurrency,
-          quoteTokenPriceNativeCurrency: parsed.quoteTokenPriceNativeCurrency,
-        });
-        if (coherence.verdict === "reject") {
-          coherenceRejections.set(coherence.reason, (coherenceRejections.get(coherence.reason) ?? 0) + 1);
-          continue;
-        }
+        if (!coherenceRejections.admits(side, parsed)) continue;
 
         const price = side === "base" ? parsed.baseTokenPriceUsd : parsed.quoteTokenPriceUsd;
         const hasUsablePrice = Number.isFinite(price) && price > 0;
@@ -269,11 +257,7 @@ export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(
     }
   }
 
-  if (coherenceRejections.size > 0) {
-    logWorkerEventArgs("handler", "warn",
-      `[dex-liquidity] ${config.sourceLabel} rejected incoherent pool prices by reason: ${JSON.stringify(Object.fromEntries(coherenceRejections))}`,
-    );
-  }
+  coherenceRejections.flush();
 
   return { stoppedEarly };
 }

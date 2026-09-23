@@ -12,7 +12,7 @@ import { RATE_LIMITS } from "../../lib/rate-limit";
 import { classifyCgPool, parseCgPool } from "../dex-liquidity/coingecko-onchain-shared";
 import { normalizeProtocol } from "../dex-liquidity/pool-normalization";
 import { isPlausibleDexObservationPrice } from "../dex-liquidity/price-sanity";
-import { evaluatePoolPriceCoherence, type PoolPriceCoherenceRejectReason } from "../dex-liquidity/pool-price-coherence";
+import { createPoolPriceCoherenceAdmissionGate } from "../dex-liquidity/pool-price-coherence";
 import { buildChainAddressKey } from "../dex-liquidity/token-resolution";
 import { DISCOVERY_STAGE_TIMEOUT_MS, type CrawlStageContext, toStagedPool } from "./staged-pool";
 import { makeDexDeploymentProviderCheck, type DexDeploymentProviderCheck } from "./types";
@@ -111,7 +111,7 @@ export async function crawlCoinGeckoPoolsStage({
   const priceObservationTargets = new Set<string>();
   const unresolvedChains: string[] = [];
   const apiKey = cgApiKey?.trim() ? cgApiKey : null;
-  const coherenceRejections = new Map<PoolPriceCoherenceRejectReason, number>();
+  const coherenceRejections = createPoolPriceCoherenceAdmissionGate("dex-discovery", "CG onchain");
   const providerChecks: CoinGeckoProviderCheck[] = [];
 
   if (!apiKey) {
@@ -197,19 +197,7 @@ export async function crawlCoinGeckoPoolsStage({
         const tvlUsd = parsed.tvlUsd;
         if (!Number.isFinite(tvlUsd) || tvlUsd < 1_000) continue;
 
-        const coherence = evaluatePoolPriceCoherence({
-          side,
-          baseTokenPriceUsd: parsed.baseTokenPriceUsd,
-          quoteTokenPriceUsd: parsed.quoteTokenPriceUsd,
-          baseTokenPriceQuoteToken: parsed.baseTokenPriceQuoteToken,
-          quoteTokenPriceBaseToken: parsed.quoteTokenPriceBaseToken,
-          baseTokenPriceNativeCurrency: parsed.baseTokenPriceNativeCurrency,
-          quoteTokenPriceNativeCurrency: parsed.quoteTokenPriceNativeCurrency,
-        });
-        if (coherence.verdict === "reject") {
-          coherenceRejections.set(coherence.reason, (coherenceRejections.get(coherence.reason) ?? 0) + 1);
-          continue;
-        }
+        if (!coherenceRejections.admits(side, parsed)) continue;
 
         const hasUsablePrice = Number.isFinite(priceRaw) && priceRaw > 0;
         if (hasUsablePrice && !isPlausibleDexObservationPrice(context.stablecoinId, priceRaw, context.references)) {
@@ -276,11 +264,7 @@ export async function crawlCoinGeckoPoolsStage({
     }
   }
 
-  if (coherenceRejections.size > 0) {
-    logWorkerEventArgs("handler", "warn",
-      `[dex-discovery] CG onchain rejected incoherent pool prices by reason: ${JSON.stringify(Object.fromEntries(coherenceRejections))}`,
-    );
-  }
+  coherenceRejections.flush();
 
   return { priceObservationTargets, unresolvedChains, stoppedEarly: false, providerChecks };
 }
