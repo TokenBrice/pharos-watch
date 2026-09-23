@@ -155,6 +155,11 @@ export async function materializeYieldHistoryDaily(
  * Reclassify the historical linked-variant false-switch pattern only after the
  * same coin has published the linked identity cleanly in two consecutive
  * generations. This prevents a one-off winner change from rewriting evidence.
+ *
+ * The decisions CTE is pinned to `idx_yield_source_decisions_created_coin` so
+ * the 7-day `created_at >= ?` bound drives a range scan. Without the hint the
+ * planner joins from every published generation into its decisions and reads
+ * the whole 200k+ row table (~5.5s) on each destructive-cleanup run.
  */
 export async function cleanupFalseLinkedVariantSourceSwitches(
   db: D1Database,
@@ -168,7 +173,7 @@ export async function cleanupFalseLinkedVariantSourceSwitches(
                     PARTITION BY d.stablecoin_id
                     ORDER BY d.created_at DESC, d.generation_id DESC
                   ) AS generation_rank
-             FROM yield_source_decisions d
+            FROM yield_source_decisions d INDEXED BY idx_yield_source_decisions_created_coin
              JOIN yield_publication_generations g
                ON g.generation_id = d.generation_id
               AND g.state = 'published'

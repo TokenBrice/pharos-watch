@@ -5,7 +5,6 @@ import {
   getPressureShiftState,
 } from "@shared/lib/mint-burn-signals";
 import { getLatestSuccessfulCronTimestampResult } from "../../lib/api-freshness";
-import { buildInClause } from "../../lib/db";
 import type { FlightToQualityClassification } from "../../lib/flight-to-quality-classification";
 import {
   buildMintBurnSyncHealth,
@@ -159,8 +158,6 @@ export async function fetchAggregateData(
   params: AggregateQueryParams,
 ): Promise<AggregateData> {
   const trackedPairs = getMintBurnTrackedPairs(ACTIVE_MINT_BURN_CONFIGS);
-  const trackedChainIds = [...new Set(ACTIVE_MINT_BURN_CONFIGS.map((config) => config.chain.chainId))];
-  const chainInClause = buildInClause(trackedChainIds);
   const trackedPairsJson = JSON.stringify([...trackedPairs].map((pair) => pair.split("|")));
   const hourlyScanStart = Math.min(params.windowStart, params.window24h);
   const firstHourSeekStatements = buildMintBurnFirstHourSeekStatements(
@@ -173,6 +170,20 @@ export async function fetchAggregateData(
   );
   const eventResultIndex = 5 + firstHourSeekStatements.length;
 
+  // Tracked-pair membership is expressed as a row-value IN over json_each so
+  // SQLite drives each (chain, coin) prefix of idx_mbh_chain_coin_hour /
+  // idx_mbe_coin_chain_ts directly. A correlated EXISTS (SELECT ... FROM
+  // json_each(...)) re-scans the whole pair array for every index row and made
+  // these the hottest reads in D1 insights (~1.6M rows read per net-90d call).
+  const hourlyPairFilter = `(chain_id, stablecoin_id) IN (
+             SELECT json_extract(value, '$[1]'), json_extract(value, '$[0]')
+               FROM json_each(?)
+           )`;
+  const eventPairFilter = `(stablecoin_id, chain_id) IN (
+               SELECT json_extract(value, '$[0]'), json_extract(value, '$[1]')
+                 FROM json_each(?)
+             )`;
+
   const [batchResults, [lastBlocks, latestCronSnapshotResult]] = await Promise.all([
     db.batch([
       db
@@ -180,65 +191,45 @@ export async function fetchAggregateData(
            `SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
                    /* pharos:mint-burn-flows:window-rows */
                    mint_volume_usd, burn_volume_usd, net_flow_usd
-            FROM mint_burn_hourly INDEXED BY idx_mbh_ts
-           WHERE chain_id IN (${chainInClause.sql})
-             AND EXISTS (
-               SELECT 1 FROM json_each(?) AS tracked_pair
-               WHERE json_extract(tracked_pair.value, '$[0]') = stablecoin_id
-                 AND json_extract(tracked_pair.value, '$[1]') = chain_id
-             )
+            FROM mint_burn_hourly INDEXED BY idx_mbh_chain_coin_hour
+           WHERE ${hourlyPairFilter}
              AND hour_ts >= ?
             ORDER BY hour_ts ASC`,
         )
-        .bind(...chainInClause.binds, trackedPairsJson, hourlyScanStart),
+        .bind(trackedPairsJson, hourlyScanStart),
       db
         .prepare(
           `SELECT stablecoin_id, chain_id,
                   /* pharos:mint-burn-flows:net-7d */
                   SUM(net_flow_usd) as net_flow_usd
-           FROM mint_burn_hourly INDEXED BY idx_mbh_ts
-           WHERE chain_id IN (${chainInClause.sql})
-             AND EXISTS (
-               SELECT 1 FROM json_each(?) AS tracked_pair
-               WHERE json_extract(tracked_pair.value, '$[0]') = stablecoin_id
-                 AND json_extract(tracked_pair.value, '$[1]') = chain_id
-             )
+           FROM mint_burn_hourly INDEXED BY idx_mbh_chain_coin_hour
+           WHERE ${hourlyPairFilter}
              AND hour_ts >= ?
            GROUP BY stablecoin_id, chain_id`,
         )
-        .bind(...chainInClause.binds, trackedPairsJson, params.window7d),
+        .bind(trackedPairsJson, params.window7d),
       db
         .prepare(
           `SELECT stablecoin_id, chain_id,
                   /* pharos:mint-burn-flows:net-30d */
                   SUM(net_flow_usd) as net_flow_usd
-           FROM mint_burn_hourly INDEXED BY idx_mbh_ts
-           WHERE chain_id IN (${chainInClause.sql})
-             AND EXISTS (
-               SELECT 1 FROM json_each(?) AS tracked_pair
-               WHERE json_extract(tracked_pair.value, '$[0]') = stablecoin_id
-                 AND json_extract(tracked_pair.value, '$[1]') = chain_id
-             )
+           FROM mint_burn_hourly INDEXED BY idx_mbh_chain_coin_hour
+           WHERE ${hourlyPairFilter}
              AND hour_ts >= ?
            GROUP BY stablecoin_id, chain_id`,
         )
-        .bind(...chainInClause.binds, trackedPairsJson, params.window30d),
+        .bind(trackedPairsJson, params.window30d),
       db
         .prepare(
           `SELECT stablecoin_id, chain_id,
                   /* pharos:mint-burn-flows:net-90d */
                   SUM(net_flow_usd) as net_flow_usd
-           FROM mint_burn_hourly INDEXED BY idx_mbh_ts
-           WHERE chain_id IN (${chainInClause.sql})
-             AND EXISTS (
-               SELECT 1 FROM json_each(?) AS tracked_pair
-               WHERE json_extract(tracked_pair.value, '$[0]') = stablecoin_id
-                 AND json_extract(tracked_pair.value, '$[1]') = chain_id
-             )
+           FROM mint_burn_hourly INDEXED BY idx_mbh_chain_coin_hour
+           WHERE ${hourlyPairFilter}
              AND hour_ts >= ?
            GROUP BY stablecoin_id, chain_id`,
         )
-        .bind(...chainInClause.binds, trackedPairsJson, params.window90d),
+        .bind(trackedPairsJson, params.window90d),
       db
         .prepare(
           `SELECT stablecoin_id, chain_id,
@@ -246,17 +237,12 @@ export async function fetchAggregateData(
                   (hour_ts / 86400) * 86400 as day_ts,
                   SUM(net_flow_usd) as daily_net,
                   SUM(mint_volume_usd + burn_volume_usd) as daily_abs
-           FROM mint_burn_hourly INDEXED BY idx_mbh_ts
-           WHERE chain_id IN (${chainInClause.sql})
-             AND EXISTS (
-               SELECT 1 FROM json_each(?) AS tracked_pair
-               WHERE json_extract(tracked_pair.value, '$[0]') = stablecoin_id
-                 AND json_extract(tracked_pair.value, '$[1]') = chain_id
-             )
+           FROM mint_burn_hourly INDEXED BY idx_mbh_chain_coin_hour
+           WHERE ${hourlyPairFilter}
              AND hour_ts >= ? AND hour_ts < ?
            GROUP BY stablecoin_id, chain_id, day_ts`,
         )
-        .bind(...chainInClause.binds, trackedPairsJson, params.baselineWindowStart, params.nowDayTs),
+        .bind(trackedPairsJson, params.baselineWindowStart, params.nowDayTs),
       ...firstHourSeekStatements,
       db
         .prepare(
@@ -267,13 +253,8 @@ export async function fetchAggregateData(
                       PARTITION BY stablecoin_id
                       ORDER BY amount_usd DESC, timestamp DESC, block_number DESC, id DESC
                     ) AS row_num
-             FROM mint_burn_events AS e
-             WHERE e.chain_id IN (${chainInClause.sql})
-               AND EXISTS (
-                 SELECT 1 FROM json_each(?) AS tracked_pair
-                 WHERE json_extract(tracked_pair.value, '$[0]') = e.stablecoin_id
-                   AND json_extract(tracked_pair.value, '$[1]') = e.chain_id
-               )
+             FROM mint_burn_events AS e INDEXED BY idx_mbe_coin_chain_ts
+             WHERE ${eventPairFilter}
                AND e.timestamp >= ?
                AND (e.direction = 'mint' OR e.burn_type = 'effective_burn')
                AND e.flow_type = 'standard'
@@ -284,7 +265,7 @@ export async function fetchAggregateData(
            FROM ranked_events
            WHERE row_num = 1`,
         )
-        .bind(...chainInClause.binds, trackedPairsJson, params.window24h),
+        .bind(trackedPairsJson, params.window24h),
     ]),
     Promise.all([
       readMintBurnSyncStateBatch(db, ACTIVE_MINT_BURN_CONFIGS),

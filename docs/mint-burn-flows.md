@@ -329,6 +329,8 @@ gauge_score = Σ(intensity_i * mcap_i) / Σ(mcap_i)
 
 **Mcap weighting — tracked-chain scope.** Each coin's weight is now its **canonical tracked-chain circulating supply**, not its global peg-bucket total. A coin is only scored against chains where we actually ingest mint/burn events, so omnichain tokens don't over-contribute via supply we don't observe.
 
+**Aggregate read path.** `fetchAggregateData()` (`worker/src/api/mint-burn-flows/aggregate.ts`) expresses tracked-pair membership as a row-value `(chain_id, stablecoin_id) IN (SELECT ... FROM json_each(?))` pinned to `idx_mbh_chain_coin_hour` (and `(stablecoin_id, chain_id)` pinned to `idx_mbe_coin_chain_ts` for the largest-event scan), so each tracked pair's window is an index range seek. A correlated `EXISTS (SELECT ... FROM json_each(?))` instead re-scans the whole pair array for every index row — with ~130 tracked pairs that turned the 90-day net-flow read into ~1.6M rows per call and made it a leading D1 contention source; keep the filter row-value/index-driven if these statements are ever edited.
+
 Implementation (`worker/src/lib/mint-burn-mcap-weighting.ts`):
 
 - `getMintBurnTrackedChains(stablecoinId)` derives the active `chainId` set from `MINT_BURN_CONFIGS`.

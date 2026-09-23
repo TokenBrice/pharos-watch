@@ -417,6 +417,8 @@ The sync inserts a `running` row before writing immutable run rows, writes histo
 
 Run manifests and immutable run rows are pruned after successful writes with a 14-day retention window. The prune keeps the just-written run and the latest completed run even when either is older than the cutoff, so current API reads stay intact. Retention failures are recorded as completed-run warnings instead of failing the already-written snapshot.
 
+The orphan run-row pass (rows whose manifest no longer exists) derives its candidate run ids from a covering-index `DISTINCT snapshot_run_id` scan and is bounded per distinct orphan run, instead of walking the whole run-row table with a correlated manifest probe per row. An empty pass therefore stays a cheap index scan rather than a ~28k-row table walk on every retention run.
+
 ---
 
 ## API Endpoint
