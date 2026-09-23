@@ -406,9 +406,10 @@ export async function fetchAuthoritativeLivePriceOverrides(
     }
   };
 
-  const recordSkippedBudget = (startIndex: number): void => {
+  const recordSkippedBudget = (skippedIndices: readonly number[]): void => {
+    if (skippedIndices.length === 0) return;
     const candidateAt = Math.floor(Date.now() / 1000);
-    for (let index = startIndex; index < prioritizedCandidates.length; index += 1) {
+    for (const index of skippedIndices) {
       const candidate = prioritizedCandidates[index];
       recordAttempt(index, candidate.asset, candidate.provider, {
         state: "skipped",
@@ -567,18 +568,44 @@ export async function fetchAuthoritativeLivePriceOverrides(
     }
   };
 
-  // Bounded lanes: each lane pulls the next candidate in priority order, so the
-  // documented dispatch order (alert-eligible missing, then the rest of the
-  // missing cohort, then priced refresh candidates) and the per-candidate
-  // deadlines are unchanged while one slow chain route can no longer serialize
-  // ahead of every cheap local/cache-backed repair.
+  // Same-run parent dependencies: a child that prices from a tracked parent row
+  // must not read that row before the parent's own attempt has settled, or a
+  // rescue chain such as wm-m0 -> m-m0 -> usdn-noble loses its parent price.
+  // Blocked children stay queued while every ready candidate keeps a lane busy.
+  const candidateIndexByAssetId = new Map(prioritizedCandidates.map((candidate, index) => [candidate.asset.id, index]));
+  const parentIndexByCandidateIndex = new Map<number, number>();
+  for (const [index, candidate] of prioritizedCandidates.entries()) {
+    const parentAssetId = candidate.provider.liveParentByAssetId?.[candidate.asset.id];
+    if (!parentAssetId) continue;
+    const parentIndex = candidateIndexByAssetId.get(parentAssetId);
+    if (parentIndex != null && parentIndex !== index) parentIndexByCandidateIndex.set(index, parentIndex);
+  }
+
+  // Bounded lanes: each lane pulls the lowest-priority-order candidate that is
+  // ready, so the documented dispatch order (alert-eligible missing, then the
+  // rest of the missing cohort, then priced refresh candidates) and the
+  // per-candidate deadlines are unchanged while one slow chain route can no
+  // longer serialize ahead of every cheap local/cache-backed repair.
   const concurrency = resolveLiveCandidateConcurrency(options?.maxConcurrency, prioritizedCandidates.length);
-  let nextIndex = 0;
+  const dispatched = prioritizedCandidates.map(() => false);
+  const settled = prioritizedCandidates.map(() => false);
+  const takeNextReadyIndex = (): number | null => {
+    for (let index = 0; index < prioritizedCandidates.length; index += 1) {
+      if (dispatched[index]) continue;
+      const parentIndex = parentIndexByCandidateIndex.get(index);
+      if (parentIndex != null && !settled[parentIndex]) continue;
+      return index;
+    }
+    return null;
+  };
+  const undispatchedIndices = (): number[] =>
+    prioritizedCandidates.map((_candidate, index) => index).filter((index) => !dispatched[index]);
   let outerAbort: unknown = null;
   const runLane = async (): Promise<void> => {
-    while (!liveSignal?.aborted && nextIndex < prioritizedCandidates.length) {
-      const index = nextIndex;
-      nextIndex += 1;
+    while (!liveSignal?.aborted) {
+      const index = takeNextReadyIndex();
+      if (index === null) return;
+      dispatched[index] = true;
       try {
         await runCandidate(index);
       } catch (error) {
@@ -586,6 +613,8 @@ export async function fetchAuthoritativeLivePriceOverrides(
         // and rethrow after the remaining lanes drain.
         outerAbort ??= error;
         return;
+      } finally {
+        settled[index] = true;
       }
     }
   };
@@ -594,12 +623,23 @@ export async function fetchAuthoritativeLivePriceOverrides(
     Array.from({ length: Math.min(concurrency, prioritizedCandidates.length) }, () => runLane()),
   );
 
-  if (outerAbort === null && budgetSignal?.aborted && !signal?.aborted && nextIndex < prioritizedCandidates.length) {
-    if (stats) {
-      stats.timedOut = true;
-      stats.skippedBudget += prioritizedCandidates.length - nextIndex;
+  const skippedIndices = undispatchedIndices();
+  if (outerAbort === null && !signal?.aborted && skippedIndices.length > 0) {
+    if (budgetSignal?.aborted) {
+      if (stats) {
+        stats.timedOut = true;
+        stats.skippedBudget += skippedIndices.length;
+      }
+      recordSkippedBudget(skippedIndices);
+    } else {
+      // Unreachable with an acyclic provider registry: never relabel an
+      // unsatisfiable parent chain as a budget skip.
+      logWorkerEventArgs(
+        "lib",
+        "warn",
+        `[authoritative-price-sources] ${skippedIndices.length} live override candidates left undispatched without a budget abort`,
+      );
     }
-    recordSkippedBudget(nextIndex);
   }
 
   // Flush once every lane has settled so the ledger keeps dispatch order and

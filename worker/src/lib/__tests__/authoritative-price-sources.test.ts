@@ -1076,6 +1076,61 @@ describe("authoritative-price-sources", () => {
     }
   });
 
+  it("waits for a same-pass parent even when the child is scheduled first, without idling a lane", async () => {
+    vi.useFakeTimers();
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      fetchEvmCallHexAtBlockMock.mockImplementation(
+        (_chain: string, _to: string, _data: string, _block: number | "latest", options?: { signal?: AbortSignal }) =>
+          new Promise<never>((_resolve, reject) => {
+            options?.signal?.addEventListener("abort", () => reject(options.signal?.reason), { once: true });
+          }),
+      );
+      const nowSec = Math.floor(Date.now() / 1000);
+      const stats = createAuthoritativeLivePriceOverrideStats();
+      const run = fetchLiveOverrides(
+        [
+          // `usdn-noble` inherits `m-m0`, which is itself a candidate; the
+          // circuit-backed `cusd-cap` probe sits ahead of both in the queue.
+          unpricedChild("usdn-noble"),
+          unpricedChild("cusd-cap", { circulating: { peggedUSD: 114_000_000 } }),
+          unpricedChild("m-m0"),
+          freshParent("wm-m0", 0.999812, "coingecko", { nowSec, priceConfidence: "single-source" }),
+        ],
+        { stats },
+      );
+
+      // The blocked child cannot hold the queue head: the independent probe and the
+      // parent are both in flight before any candidate deadline fires.
+      await vi.advanceTimersByTimeAsync(0);
+      expect(stats.attemptedCount).toBe(3);
+
+      await vi.advanceTimersByTimeAsync(AUTHORITATIVE_LIVE_CANDIDATE_TIMEOUT_MS);
+      const overrides = await run;
+
+      // The child only resolves from the parent's own same-pass override.
+      expect(overrides.get("m-m0")).toMatchObject({
+        price: 0.999812,
+        metadata: { inheritedFrom: "wm-m0" },
+      });
+      expect(overrides.get("usdn-noble")).toMatchObject({
+        price: 0.999812,
+        metadata: { inheritedFrom: "m-m0" },
+      });
+      expect(stats).toMatchObject({
+        candidateCount: 3,
+        attemptedCount: 3,
+        successCount: 2,
+        failedCount: 1,
+        skippedBudget: 0,
+        timedOut: false,
+      });
+    } finally {
+      warnSpy.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
   it("keeps every attempted candidate accounted for exactly once", async () => {
     vi.useFakeTimers();
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);

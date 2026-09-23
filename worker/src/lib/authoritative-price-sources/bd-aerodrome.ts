@@ -92,6 +92,7 @@ export async function fetchBdAerodromePrice(context: LivePriceContext, signal?: 
 export const bdAerodromeProvider: PriceSourceProvider = {
   source: "aerodrome-exact", liveMissingOnly: true, liveCircuitSource: CIRCUIT_SOURCE.BD_AERODROME,
   livePriority: 1, liveTimeoutMs: 6_000, matches: (id) => id === "bd-basedollar",
+  liveParentByAssetId: { "bd-basedollar": "usdc-circle" },
   async fetchLivePrice(asset: PeggedAsset, context: LivePriceContext, signal?: AbortSignal) {
     return hasPublishableCurrentPrice(asset) ? null : fetchBdAerodromePrice(context, signal);
   },

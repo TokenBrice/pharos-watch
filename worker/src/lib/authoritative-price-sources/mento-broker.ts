@@ -21,6 +21,8 @@ const ROUTES: Record<string, { token: string; exchange: string; feed: string; de
   "copm-mento": { token: "0x8a567e2ae79ca692bd748ab832081c45de4041ea", exchange: "0x1c9378bd0973ff313a599d3effc654ba759f8ccca655ab6d6ce5bd39a212943b", feed: "0x0196d1f4fda21fa442e53eaf18bf31282f6139f1", depth: 1_000_000n * UNIT },
 };
 const CONFIG = parseAbiParameters("uint32,uint32,int48,int48,int48,uint8");
+/** Celo USDm row this route multiplies its sell quote by. */
+const MENTO_BROKER_PARENT_ID = "cusd-celo";
 const STATE = parseAbiParameters("uint32,uint32,int48,int48,int48");
 // Context identity confines reuse to one serial override stage. Every route still
 // reads its full state and rechecks this block's canonical hash before publishing.
@@ -30,7 +32,7 @@ export async function fetchMentoBrokerPrice(id: string, context: LivePriceContex
   const reject = (reason: string): null => { context.lastRejectionReason = `mento-broker:${reason}`; return null; };
   const route = Object.prototype.hasOwnProperty.call(ROUTES, id) ? ROUTES[id] : undefined;
   if (!route) return reject("unsupported-asset");
-  const parent = resolveTrustedOverrideParent(context, "cusd-celo", () => "Mento Broker: trusted USDm unavailable", { allowFreshReplaySafeSingleSourceParent: true });
+  const parent = resolveTrustedOverrideParent(context, MENTO_BROKER_PARENT_ID, () => "Mento Broker: trusted USDm unavailable", { allowFreshReplaySafeSingleSourceParent: true });
   if (!parent) return reject("parent-unavailable");
   const parentAge = Math.floor(Date.now() / 1000) - parent.trustedParent.observedAt;
   if (parentAge < 0 || parentAge >= 300) return reject("parent-age");
@@ -128,6 +130,7 @@ export async function fetchMentoBrokerPrice(id: string, context: LivePriceContex
 export const mentoBrokerProvider: PriceSourceProvider = {
   source: "mento-broker", liveMissingOnly: true, liveCircuitSource: CIRCUIT_SOURCE.MENTO_BROKER,
   livePriority: 1, liveTimeoutMs: 6_000, matches: (id) => Object.prototype.hasOwnProperty.call(ROUTES, id),
+  liveParentByAssetId: Object.fromEntries(Object.keys(ROUTES).map((id) => [id, MENTO_BROKER_PARENT_ID])),
   async fetchLivePrice(asset: PeggedAsset, context: LivePriceContext, signal?: AbortSignal) {
     return hasPublishableCurrentPrice(asset) ? null : fetchMentoBrokerPrice(asset.id, context, signal);
   },

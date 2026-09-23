@@ -67,6 +67,7 @@ async function fetchIdleCdoTrancheAssetsPerShare(
 export const idleCdoTrancheProvider: PriceSourceProvider = {
   source: PROTOCOL_REDEEM_SOURCE,
   liveCircuitSource: CIRCUIT_SOURCE.PROTOCOL_REDEEM,
+  liveParentByAssetId: Object.fromEntries(IDLE_CDO_TRANCHES.map((entry) => [entry.id, entry.parentId])),
   matches(stablecoinId: string): boolean {
     return IDLE_CDO_TRANCHES_BY_ID.has(stablecoinId);
   },

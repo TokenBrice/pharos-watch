@@ -88,6 +88,7 @@ export async function fetchUsdafUniswapV4Price(context: LivePriceContext, signal
 export const usdafUniswapV4Provider: PriceSourceProvider = {
   source: "uniswap-v4-exact", liveMissingOnly: true, liveCircuitSource: CIRCUIT_SOURCE.USDAF_UNISWAP_V4,
   livePriority: 1, liveTimeoutMs: 6_000, matches: (id) => id === "usdaf-asymmetry",
+  liveParentByAssetId: { "usdaf-asymmetry": "usdt-tether" },
   async fetchLivePrice(asset, context, signal) {
     return hasPublishableCurrentPrice(asset) ? null : fetchUsdafUniswapV4Price(context, signal);
   },
