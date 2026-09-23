@@ -29,11 +29,27 @@ vi.mock("../../../lib/cron-logger", async (importOriginal) => ({
 vi.mock("../../../lib/budget-surface-telemetry", () => ({ recordBudgetSurfaceTelemetry: mocks.recordBudgetSurfaceTelemetry }));
 
 import { runStatusSelfCheckSlot } from "../status-self-check";
+import type { DexRefreshSummary } from "../../../cron/sync-stablecoins/price-dex-refresh";
+
+/** The exact-price refresh summary a slot reports. A slot that never reaches a
+ * coverage refresh reports the address lane as disabled. */
+const dexRefreshSummary = (overrides: Partial<DexRefreshSummary> = {}): DexRefreshSummary => ({
+  cohortSize: 0, resolved: 0, attemptedBatches: 0, deferredBatches: 0, unsupportedAssets: 0, missingQuotes: 0,
+  acknowledgedGapsSkipped: 0, hintedAttempted: 0, hintedResolved: 0, timedOut: false, cacheWritten: true, errorClasses: [],
+  addressRefresh: { enabled: false, cohortSize: 0, targetCount: 0, resolved: 0, attemptedRequests: 0,
+    successfulRequests: 0, cappedTargets: 0, failureClasses: [], circuitOpen: false, timedOut: false },
+  ...overrides,
+});
+
+const addressRefresh = (overrides: Partial<DexRefreshSummary["addressRefresh"]> = {}) => ({
+  enabled: true, cohortSize: 1, targetCount: 1, resolved: 1, attemptedRequests: 1, successfulRequests: 1,
+  cappedTargets: 0, failureClasses: [], circuitOpen: false, timedOut: false, ...overrides,
+});
 
 describe("hourly corroboration before the next publication", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.runPriceDexRefresh.mockResolvedValue({ cohortSize: 1, resolved: 1, attemptedBatches: 1, deferredBatches: 0, unsupportedAssets: 0, missingQuotes: 0, timedOut: false, cacheWritten: true, errorClasses: [] });
+    mocks.runPriceDexRefresh.mockResolvedValue(dexRefreshSummary({ cohortSize: 1, resolved: 1, attemptedBatches: 1 }));
     mocks.runStatusSelfCheck.mockResolvedValue({ status: "ok", itemCount: 1 });
     mocks.runDataInvariantCanary.mockResolvedValue({ status: "ok", itemCount: 1 });
     mocks.runCronSentinel.mockResolvedValue({ status: "ok", itemCount: 1 });
@@ -54,7 +70,7 @@ describe("hourly corroboration before the next publication", () => {
     const order: string[] = [];
     mocks.runPriceDexRefresh.mockImplementation(async () => {
       order.push("dex-refresh");
-      return { cohortSize: 1, resolved: 1, attemptedBatches: 1, deferredBatches: 0, unsupportedAssets: 0, missingQuotes: 0, timedOut: false, cacheWritten: true, errorClasses: [] };
+      return dexRefreshSummary({ cohortSize: 1, resolved: 1, attemptedBatches: 1 });
     });
     mocks.runPriceCorroboration.mockImplementation(async () => {
       order.push("price-corroboration");
@@ -82,8 +98,8 @@ describe("hourly corroboration before the next publication", () => {
   });
 
   it("keeps a failed DEX refresh degraded when broad collection succeeds", async () => {
-    mocks.runPriceDexRefresh.mockResolvedValueOnce({ cohortSize: 1, resolved: 0, attemptedBatches: 1, deferredBatches: 0,
-      unsupportedAssets: 0, missingQuotes: 1, timedOut: false, cacheWritten: true, errorClasses: ["http-error"] });
+    mocks.runPriceDexRefresh.mockResolvedValueOnce(dexRefreshSummary({ cohortSize: 1, attemptedBatches: 1,
+      missingQuotes: 1, errorClasses: ["http-error"] }));
     mocks.runPriceCorroboration.mockResolvedValueOnce({ cohortSize: 2, cacheEntriesWritten: 2,
       addressProviderCount: 0, providerDiagnosticCount: 0, fallbackStats: { totalMissing: 2, finalMissing: 0,
         pass1: 2, pass1b: 0, passCmc: 0, passJupiter: 0, passDex: 0, passCgLowVolume: 0,
@@ -93,22 +109,21 @@ describe("hourly corroboration before the next publication", () => {
   });
 
   it("reports ok when a successful round-trip resolves only unsupported and pool-less cohort rows", async () => {
-    mocks.runPriceDexRefresh.mockResolvedValueOnce({ cohortSize: 10, resolved: 0, attemptedBatches: 3, deferredBatches: 0,
-      unsupportedAssets: 3, missingQuotes: 6, hintedAttempted: 0, hintedResolved: 0, timedOut: false, cacheWritten: true, errorClasses: [] });
+    mocks.runPriceDexRefresh.mockResolvedValueOnce(dexRefreshSummary({ cohortSize: 10, attemptedBatches: 3,
+      unsupportedAssets: 3, missingQuotes: 6 }));
     await runStatusSelfCheckSlot(runtime([], 24));
     expect(mocks.recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ outcome: "ok" }));
   });
 
   it("degrades when previously resolvable routes answer without any quote", async () => {
-    mocks.runPriceDexRefresh.mockResolvedValueOnce({ cohortSize: 10, resolved: 0, attemptedBatches: 3, deferredBatches: 0,
-      unsupportedAssets: 3, missingQuotes: 7, hintedAttempted: 1, hintedResolved: 0, timedOut: false, cacheWritten: true, errorClasses: [] });
+    mocks.runPriceDexRefresh.mockResolvedValueOnce(dexRefreshSummary({ cohortSize: 10, attemptedBatches: 3,
+      unsupportedAssets: 3, missingQuotes: 7, hintedAttempted: 1 }));
     await runStatusSelfCheckSlot(runtime([], 24));
     expect(mocks.recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ outcome: "degraded" }));
   });
 
   it("keeps budget-exhaustion deferrals degraded without error classes", async () => {
-    mocks.runPriceDexRefresh.mockResolvedValueOnce({ cohortSize: 320, resolved: 30, attemptedBatches: 9, deferredBatches: 2,
-      unsupportedAssets: 0, missingQuotes: 0, timedOut: false, cacheWritten: true, errorClasses: [] });
+    mocks.runPriceDexRefresh.mockResolvedValueOnce(dexRefreshSummary({ cohortSize: 320, resolved: 30, attemptedBatches: 9, deferredBatches: 2 }));
     await runStatusSelfCheckSlot(runtime([], 24));
     expect(mocks.recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ outcome: "degraded" }));
   });
@@ -118,10 +133,24 @@ describe("hourly corroboration before the next publication", () => {
     [["circuit-open"], "degraded"],
     [["rate-limited", "http-error"], "degraded"],
   ])("treats a slot refused with %j as %s (throttling escalates through the refresh circuit)", async (errorClasses, outcome) => {
-    mocks.runPriceDexRefresh.mockResolvedValueOnce({ cohortSize: 2, resolved: 0, attemptedBatches: 1, deferredBatches: 1,
-      unsupportedAssets: 0, missingQuotes: 2, hintedAttempted: 1, hintedResolved: 0, timedOut: false, cacheWritten: true, errorClasses });
+    mocks.runPriceDexRefresh.mockResolvedValueOnce(dexRefreshSummary({ cohortSize: 2, attemptedBatches: 1, deferredBatches: 1,
+      missingQuotes: 2, hintedAttempted: 1, errorClasses }));
     await runStatusSelfCheckSlot(runtime([], 24));
     expect(mocks.recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ outcome }));
+  });
+
+  it.each([
+    [addressRefresh(), "ok"],
+    [addressRefresh({ failureClasses: ["upstream-error"] }), "degraded"],
+    [addressRefresh({ timedOut: true }), "degraded"],
+    [addressRefresh({ circuitOpen: true, attemptedRequests: 0, successfulRequests: 0 }), "degraded"],
+  ])("reports a coverage refresh of %j as %s", async (refresh, outcome) => {
+    mocks.runPriceDexRefresh.mockResolvedValueOnce(dexRefreshSummary({ addressRefresh: refresh }));
+    await runStatusSelfCheckSlot(runtime([], 24));
+    expect(mocks.recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ outcome }));
+    expect(mocks.logCronEvent).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      metadata: expect.objectContaining({ addressRefresh: refresh }),
+    }));
   });
 
   it("continues hourly recovery when the DEX routing cache fails", async () => {

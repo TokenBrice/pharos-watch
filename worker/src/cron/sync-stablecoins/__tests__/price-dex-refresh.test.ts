@@ -1,15 +1,22 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import * as shared from "../shared";
 import * as progress from "../enrich-prices-progress";
 import * as dex from "../enrich-prices-dexscreener-pass";
 import * as lifecycle from "../../../lib/pricing-provider-lifecycle";
+import * as addressProviders from "../../../lib/address-price-providers";
+import type { AddressPriceProviderCollectionResult } from "../../../lib/address-price-providers";
+import * as circuit from "../../../lib/circuit-breaker";
 import { getCache, setCacheIfNewer } from "../../../lib/db-cache";
 import { CIRCUIT_SOURCE } from "../../../lib/constants";
 import * as dexscreener from "../../../lib/dexscreener";
+import { coingeckoResponse } from "../../../lib/__tests__/address-price-providers.test-support";
+import { STABLECOIN_PRICE_GAP_REVIEWS } from "../../../lib/stablecoin-publication-coverage";
 import { DEX_REFRESH_CACHE_KEY, PRICE_CORROBORATION_OBSERVATIONS_KEY, loadPriceCorroborationObservations } from "../price-corroboration-observations";
+import type { PeggedAsset } from "../enrich-prices-shared";
 import { planDexRefresh, runPriceDexRefresh } from "../price-dex-refresh";
 import { makePeggedAsset } from "./_fixtures";
 
@@ -278,5 +285,125 @@ describe("DEX refresh continuity", () => {
     expect(result.byId.get(id)?.some((row) => row.source === "dexscreener-exact")).toBe(false);
     await setCacheIfNewer(db, DEX_REFRESH_CACHE_KEY, JSON.stringify({ observations: [observation(now + 900)], targets: [target], cursor: 0 }), now + 900);
     expect((await loadPriceCorroborationObservations(db, now + 1260)).byId.get(id)?.some((row) => row.source === "dexscreener-exact")).toBe(true);
+  });
+});
+
+describe("exact-address coverage refresh", () => {
+  // USDA: an active row whose only live lane is the exact-address provider.
+  const usda = () => makePeggedAsset({ id: "usda-avalon", symbol: "USDA", price: 0.9750917398,
+    priceSource: "coingecko-onchain-address", priceConfidence: "fallback",
+    priceObservedAt: now - 600, priceObservedAtMode: "local_fetch" });
+  const addressProvider = { enabledProviders: "coingecko-onchain-address", cgApiKey: "cg-key" };
+  const onchainRequest = (url: string) => url.includes("/onchain/networks/");
+  // Only the deep network answers; everything else is an unindexed deployment,
+  // exactly as the live provider sees USDA's dust chains.
+  const onchainRoutes = (price = "0.9822") => [{
+    match: (request: Request) => onchainRequest(request.url) && request.url.includes("/networks/berachain/"),
+    respond: (request: Request) => coingeckoResponse(
+      new URL(request.url).pathname.split("/tokens/multi/")[1]!.split(",")[0]!, price, "120000"),
+  }, {
+    match: (request: Request) => onchainRequest(request.url),
+    status: 404,
+    body: { error: { error_code: 404, error_message: "Not found" } },
+  }];
+
+  function prepareAddressRefresh(...published: PeggedAsset[]) {
+    const fetch = prepareRefresh();
+    vi.mocked(shared.loadPreviousStablecoinsById).mockResolvedValue({
+      previousAssetsById: new Map(published.map((asset) => [asset.id, asset])), cacheState: { state: "ok" },
+    });
+    fetch.mockResolvedValue({ resolved: 0, failures: [] });
+    return fetch;
+  }
+
+  it("re-observes the row this lane prices and stages the quote for the next publication", async () => {
+    prepareAddressRefresh(usda());
+    const cg = mockFetch(onchainRoutes());
+    const before = Math.floor(Date.now() / 1_000);
+    const recordOutcome = vi.spyOn(circuit, "recordOutcomeDecision").mockResolvedValue(undefined);
+
+    const summary = await runPriceDexRefresh({ db, syncStartSec: now, addressProvider });
+
+    expect(summary.addressRefresh).toMatchObject({ enabled: true, cohortSize: 1, resolved: 1, circuitOpen: false,
+      timedOut: false, failureClasses: [], successfulRequests: 1, cappedTargets: summary.addressRefresh.targetCount - 5 });
+    expect(summary.addressRefresh.attemptedRequests).toBe(5);
+    expect(summary.addressRefresh.targetCount).toBeGreaterThan(5);
+    // Unindexed deployments are a healthy negative answer, never a circuit failure.
+    expect(recordOutcome).toHaveBeenCalledWith(db, CIRCUIT_SOURCE.CG_ONCHAIN, "success");
+    const state = JSON.parse((await getCache(db, DEX_REFRESH_CACHE_KEY))!.value);
+    const observation = state.observations.find((row: { source: string }) => row.source === "coingecko-onchain-address");
+    expect(observation).toMatchObject({ id: "usda-avalon", chain: "berachain", price: 0.9822, observedAtMode: "local_fetch" });
+    expect(observation.observedAt).toBeGreaterThanOrEqual(before);
+    expect(observation.observedAt).toBeLessThanOrEqual(Math.floor(Date.now() / 1_000));
+    // The deployment that produced the quote becomes the next slot's routed target.
+    expect(state.addressTargets).toEqual([{ id: "usda-avalon", chain: "berachain",
+      target: "0xff12470a969dd362eb6595ffb44c82c959fe9acc", observedAt: observation.observedAt }]);
+    expect(cg.getHistory().some((entry) => onchainRequest(entry.url))).toBe(true);
+  });
+
+  it("re-reads a stored deployment instead of re-probing every chain", async () => {
+    prepareAddressRefresh(usda());
+    await setCacheIfNewer(db, DEX_REFRESH_CACHE_KEY, JSON.stringify({ observations: [], targets: [], cursor: 0,
+      addressTargets: [{ id: "usda-avalon", chain: "berachain", target: "0xff12470a969dd362eb6595ffb44c82c959fe9acc", observedAt: now - 900 }] }), now - 900);
+    const cg = mockFetch(onchainRoutes());
+
+    const summary = await runPriceDexRefresh({ db, syncStartSec: now, addressProvider });
+
+    const requests = cg.getHistory().map((entry) => entry.url).filter(onchainRequest);
+    expect(requests).toEqual(["https://pro-api.coingecko.com/api/v3/onchain/networks/berachain/tokens/multi/0xff12470a969dd362eb6595ffb44c82c959fe9acc"]);
+    expect(summary.addressRefresh).toMatchObject({ targetCount: 1, resolved: 1, cappedTargets: 0, successfulRequests: 1 });
+  });
+
+  it("records the exact-address circuit outcome and stages nothing when the provider refuses", async () => {
+    prepareAddressRefresh(usda());
+    mockFetch([{ match: (request) => onchainRequest(request.url), status: 429, body: { error: "rate limited" } }]);
+    const recordOutcome = vi.spyOn(circuit, "recordOutcomeDecision").mockResolvedValue(undefined);
+
+    const summary = await runPriceDexRefresh({ db, syncStartSec: now, addressProvider });
+
+    expect(summary.addressRefresh).toMatchObject({ enabled: true, resolved: 0, successfulRequests: 0,
+      failureClasses: ["upstream-error"] });
+    expect(recordOutcome).toHaveBeenCalledWith(db, CIRCUIT_SOURCE.CG_ONCHAIN, "failure");
+    expect(JSON.parse((await getCache(db, DEX_REFRESH_CACHE_KEY))!.value).observations).toEqual([]);
+  });
+
+  it("runs no address request when the provider is unconfigured or the row is under a reviewed gap", async () => {
+    prepareAddressRefresh(usda());
+    const cg = mockFetch([{ match: (request) => onchainRequest(request.url), respond: (request) =>
+      coingeckoResponse(new URL(request.url).pathname.split("/tokens/multi/")[1]!.split(",")[0]!, "0.9822", "120000") }]);
+
+    const disabled = await runPriceDexRefresh({ db, syncStartSec: now });
+    expect(disabled.addressRefresh).toMatchObject({ enabled: false, targetCount: 0, resolved: 0 });
+    expect(cg.getHistory().filter((entry) => onchainRequest(entry.url))).toEqual([]);
+
+    const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === "wusd-worldwide");
+    expect(review).toBeDefined();
+    prepareRefresh();
+    vi.mocked(shared.loadPreviousStablecoinsById).mockResolvedValue({
+      previousAssetsById: new Map([["wusd-worldwide", makePeggedAsset({ id: "wusd-worldwide", symbol: "WUSD", price: null })]]),
+      cacheState: { state: "ok" },
+    });
+    cg.mockClear();
+    const acknowledged = await runPriceDexRefresh({ db, syncStartSec: review!.reviewedAt + 60, addressProvider });
+    expect(acknowledged.addressRefresh).toMatchObject({ enabled: true, cohortSize: 0, targetCount: 0, resolved: 0 });
+    expect(cg.getHistory().filter((entry) => onchainRequest(entry.url))).toEqual([]);
+  });
+
+  it("keeps the DEX lane and the staged payload intact when the address lane spends its deadline", async () => {
+    vi.useFakeTimers();
+    prepareAddressRefresh(usda());
+    vi.spyOn(addressProviders, "collectAddressPriceProviderQuotes").mockImplementation((params) => {
+      let rejectRequest!: (reason?: unknown) => void;
+      const pending = new Promise<AddressPriceProviderCollectionResult>((_resolve, reject) => { rejectRequest = reject; });
+      params.signal!.addEventListener("abort", () => rejectRequest(params.signal!.reason), { once: true });
+      return pending;
+    });
+
+    const pending = runPriceDexRefresh({ db, syncStartSec: now, addressProvider });
+    await vi.advanceTimersByTimeAsync(25_000);
+
+    await expect(pending).resolves.toMatchObject({ cacheWritten: true,
+      addressRefresh: { enabled: true, timedOut: true, resolved: 0, failureClasses: [] } });
+    expect(await getCache(db, DEX_REFRESH_CACHE_KEY)).not.toBeNull();
   });
 });

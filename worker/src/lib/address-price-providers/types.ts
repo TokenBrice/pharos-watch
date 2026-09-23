@@ -70,4 +70,7 @@ export interface AddressPriceProviderCollectionResult {
   quotesByStablecoinId: Map<string, AddressPriceQuote[]>;
   diagnostics: PricingProviderAttemptDiagnostic[];
   providerOutcomes: Map<AddressPriceProviderKey, "success" | "failure" | "neutral">;
+  /** Provider transport calls made, excluding accounting-only diagnostics. */
+  attemptedRequests: number;
+  successfulRequests: number;
 }
