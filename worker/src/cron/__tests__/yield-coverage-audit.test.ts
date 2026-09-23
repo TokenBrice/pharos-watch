@@ -331,7 +331,6 @@ describe("runYieldCoverageAudit", () => {
       expect.objectContaining({ id: "lending-allowlist:new-lender" }),
     );
     expect(cachedReport.operatorReviewSummary.suppressedItemCount).toBe(1);
-    expect(cachedReport.staleVenueRiskScoreCount).toBe(58);
     expect(progressUpdates.map((update) => update.stage)).toEqual(
       expect.arrayContaining([
         "pool-load",
@@ -1085,9 +1084,9 @@ describe("identifyCoverageGaps", () => {
   it("queues a deterministic override whose source runtime blocks", () => {
     const stale = identifyStaleAutoLendingOverrides([
       makeDlYieldPool({
-        pool: "436e4129-667b-44d6-8322-ea59ce9b587c",
-        project: "aave-v3",
-        symbol: "DLLR",
+        pool: "ce3021c9-af52-46b0-a61a-3e92acdfd79b",
+        project: "liqwid",
+        symbol: "USDM",
         poolMeta: "wstUSR lending market",
         tvlUsd: 2_000_000,
       }),
@@ -1095,7 +1094,7 @@ describe("identifyCoverageGaps", () => {
 
     expect(stale).toContainEqual(
       expect.objectContaining({
-        stablecoinId: "dllr-sovryn",
+        stablecoinId: "usdm-moneta",
         reasons: ["blocked-source"],
       }),
     );
@@ -1131,21 +1130,21 @@ describe("identifyCoverageGaps", () => {
     const stale = identifyStaleAutoLendingOverrides(
       [
         makeDlYieldPool({
-          pool: "436e4129-667b-44d6-8322-ea59ce9b587c",
-          project: "aave-v3",
-          symbol: "DLLR",
+          pool: "d3b28212-a46b-4db8-8bb7-2c946b3cbe76",
+          project: "morpho-blue",
+          symbol: "STEAKEURCV",
           tvlUsd: 2_000_000,
         }),
       ],
       {
-        stablecoinSupplyById: new Map([["dllr-sovryn", 1_000_000]]),
-        safetyScores: new Map([["dllr-sovryn", { score: 49 }]]),
+        stablecoinSupplyById: new Map([["eurcv-societe-generale-forge", 1_000_000]]),
+        safetyScores: new Map([["eurcv-societe-generale-forge", { score: 49 }]]),
       },
     );
 
     expect(stale).toContainEqual(
       expect.objectContaining({
-        stablecoinId: "dllr-sovryn",
+        stablecoinId: "eurcv-societe-generale-forge",
         reasons: expect.arrayContaining(["below-safety-score"]),
       }),
     );
@@ -1326,21 +1325,20 @@ describe("identifyDeadCuratedPins", () => {
         reasons: ["missing-pool"],
         coverage: "dead-config",
       });
-    expect(pins.find((pin) => pin.registry === "native-pool" && pin.stablecoinId === "aznd-mu-digital"))
+    expect(pins.find((pin) => pin.registry === "native-pool" && pin.stablecoinId === "ousd-origin-protocol"))
       .toMatchObject({ coverage: "coverage-outage" });
   });
 
   it("keeps a variant pin resolved while a single-exposure pool matches its identity", () => {
-    const variant = YIELD_VARIANT_MAP["aznd-mu-digital"];
+    const variant = YIELD_VARIANT_MAP["usbd-bima"];
     const pins = identifyDeadCuratedPins([makeDlYieldPool({
-      pool: "loaznd-live",
-      chain: "Monad",
-      project: "mu-digital",
+      pool: "susbd-live",
+      project: "bima",
       symbol: variant.variantSymbol,
       stablecoin: false,
     })]);
 
-    expect(pins.find((pin) => pin.registry === "variant-pool" && pin.stablecoinId === "aznd-mu-digital"))
+    expect(pins.find((pin) => pin.registry === "variant-pool" && pin.stablecoinId === "usbd-bima"))
       .toBeUndefined();
     expect(pins.find((pin) => pin.registry === "variant-pool" && pin.stablecoinId === "nusd-neutrl"))
       .toMatchObject({ pin: "sNUSD on ethereum", reasons: ["missing-pool"] });

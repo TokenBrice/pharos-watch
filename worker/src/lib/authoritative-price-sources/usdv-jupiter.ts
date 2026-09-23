@@ -2,7 +2,7 @@ import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shar
 import { CIRCUIT_SOURCE } from "../constants";
 import { fetchJsonWithRetry } from "../fetch-retry";
 import { getAlchemyAuthHeaders } from "../chain-registry";
-import { throwIfAborted } from "../abort";
+import { sleepWithSignal, throwIfAborted } from "../abort";
 import { hasPublishableCurrentPrice } from "../price-publication-state";
 import { resolveTrustedOverrideParent, type CurrentPriceOverride, type LivePriceContext, type PriceSourceProvider } from "./helpers";
 
@@ -19,6 +19,10 @@ const HEX = {
   reserveX: "d54b4d2f24657fac890ad4ae40488277b96f7d58c6e36cd0f86401fe8f1f6b7c",
   reserveY: "26ebd01291842324a47d057001e1288bd75d5f0c2dd9be53abf0d4399b01dd65",
 };
+// Jupiter's quote context slot advances continuously; reachable Solana RPCs can briefly
+// lag it. The confirmed-state read catches up with bounded, endpoint-rotated retries.
+const POOL_STATE_MAX_ATTEMPTS = 3;
+const POOL_STATE_RETRY_DELAY_MS = 450;
 interface Account { owner: string; executable: boolean; data: [string, string] }
 interface State { context: { slot: number }; value: (Account | null)[] }
 interface Quote { inputMint: string; outputMint: string; inAmount: string; outAmount: string; swapMode: string;
@@ -62,10 +66,13 @@ export async function fetchUsdvJupiterPrice(context: LivePriceContext, signal?: 
   if (!parent || !fresh(parent.trustedParent.observedAt)) return reject("parent-unavailable");
   const configured = context.chainRpcs?.get("solana");
   const urls = [...new Set([configured?.rpcUrl, configured?.fallbackRpcUrl, "https://api.mainnet-beta.solana.com", "https://solana-rpc.publicnode.com"].filter((s): s is string => !!s))];
+  async function rpcOnce<T>(url: string, method: string, params: unknown[]) {
+    throwIfAborted(signal);
+    return fetchJsonWithRetry<{ result?: T; error?: { code?: number } }>(url, { method: "POST", headers: { "Content-Type": "application/json", ...getAlchemyAuthHeaders(url) }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }), signal }, 0, { timeoutMs: 2000, maxResponseBytes: 64000 });
+  }
   async function rpc<T>(method: string, params: unknown[]): Promise<T | null> {
     for (const url of urls) {
-      throwIfAborted(signal);
-      const r = await fetchJsonWithRetry<{ result?: T; error?: unknown }>(url, { method: "POST", headers: { "Content-Type": "application/json", ...getAlchemyAuthHeaders(url) }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }), signal }, 0, { timeoutMs: 2000, maxResponseBytes: 64000 });
+      const r = await rpcOnce<T>(url, method, params);
       if (r?.response.ok && !r.body.error && r.body.result != null) return r.body.result;
     }
     return null;
@@ -87,7 +94,25 @@ export async function fetchUsdvJupiterPrice(context: LivePriceContext, signal?: 
   if (depthOut * 100n < smallOut * 1000n * 95n || depthOut * 100n > smallOut * 1000n * 105n) return reject("quote-depth");
   const slots = [small.contextSlot, depth.contextSlot, Number(small.routePlan[0].swapInfo.updateContextSlot), Number(depth.routePlan[0].swapInfo.updateContextSlot)];
   if (slots.some((slot) => !Number.isSafeInteger(slot) || slot <= 0) || slots[2] > slots[0] || slots[3] > slots[1]) return reject("quote-slot");
-  const state = await rpc<State>("getMultipleAccounts", [ACCOUNTS, { encoding: "base64", commitment: "confirmed", minContextSlot: Math.max(...slots) }]);
+  // Catch-up loop: an RPC -32010 (min context slot not reached) or an answered state whose
+  // context slot still trails the quotes is endpoint lag, not bad state. Only that lag is
+  // retryable — bounded, endpoint-rotated, inside the candidate deadline — so every guard
+  // below stays unchanged and persistent lag still fails closed.
+  const maxSlot = Math.max(...slots);
+  let state: State | null = null;
+  for (let attempt = 0; !state && attempt < POOL_STATE_MAX_ATTEMPTS; attempt += 1) {
+    if (attempt > 0) await sleepWithSignal(POOL_STATE_RETRY_DELAY_MS, signal);
+    let lagging = false;
+    for (let i = 0; i < urls.length && !state; i += 1) {
+      const r = await rpcOnce<State>(urls[(i + attempt) % urls.length], "getMultipleAccounts", [ACCOUNTS, { encoding: "base64", commitment: "confirmed", minContextSlot: maxSlot }]);
+      if (r?.response.ok && r.body.result != null && !r.body.error) {
+        const slot = r.body.result.context?.slot;
+        if (Number.isSafeInteger(slot) && slot >= maxSlot) state = r.body.result;
+        else lagging = true;
+      } else if (r?.response.ok && r.body.error?.code === -32010) lagging = true;
+    }
+    if (!state && !lagging) break;
+  }
   const pool = state && validateUsdvPoolState(state);
   if (!state || !pool || state.context.slot < Math.max(...slots) || state.context.slot - Math.min(...slots) > 600) return reject("pool-state");
   if (depthOut >= pool.activeOutput || Math.abs(Number(smallOut) / 1e6 / pool.binPrice - 1) > .02) return reject("pool-quote");

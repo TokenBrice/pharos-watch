@@ -1,7 +1,12 @@
 const MAX_RETRY_DELAY_SEC = 6 * 60 * 60;
 const BASE_RETRY_DELAY_SEC = 5 * 60;
+// Deterministic failures (a ledger beyond the page cap, shared-millisecond
+// evidence, missing config) cannot be fixed by retrying, so they are parked far
+// enough out that they stop consuming the run's page budget while staying
+// visible as unresolved gaps for the operator repair path.
+const PARKED_RETRY_DELAY_SEC = 7 * 24 * 60 * 60;
 
-export type BlacklistAmountRepairQueueOutcome = "resolved" | "retry" | "unrecoverable";
+export type BlacklistAmountRepairQueueOutcome = "resolved" | "retry" | "park" | "unrecoverable";
 
 export async function refreshBlacklistAmountRepairQueue(db: D1Database, now: number): Promise<void> {
   await db
@@ -27,7 +32,6 @@ export async function refreshBlacklistAmountRepairQueue(db: D1Database, now: num
          ?
        FROM blacklist_events
        WHERE event_type IN ('blacklist', 'unblacklist', 'destroy')
-         AND chain_id != 'tron'
          AND (
            amount_status IN ('recoverable_pending', 'provider_failed', 'ambiguous')
            OR (amount_source = 'derived' AND amount_native = 0 AND amount_status = 'resolved')
@@ -74,7 +78,11 @@ export function buildBlacklistAmountRepairQueueUpdate(
     MAX_RETRY_DELAY_SEC,
     BASE_RETRY_DELAY_SEC * 2 ** Math.min(6, Math.max(0, args.priorAttempts)),
   );
-  const terminal = args.outcome !== "retry";
+  const terminal = args.outcome === "resolved" || args.outcome === "unrecoverable";
+  const delaySec = args.outcome === "park" ? PARKED_RETRY_DELAY_SEC : retryDelay;
+  // "park" stays a retry row so the due-time filter, not the status value, decides
+  // when the row is eligible again.
+  const status = args.outcome === "park" ? "retry" : args.outcome;
   return db
     .prepare(
       `/* blacklist-amount-repair-queue-finish */
@@ -88,8 +96,8 @@ export function buildBlacklistAmountRepairQueueUpdate(
        WHERE event_id = ?`,
     )
     .bind(
-      args.outcome,
-      args.outcome === "retry" ? args.attemptedAt + retryDelay : args.attemptedAt,
+      status,
+      terminal ? args.attemptedAt : args.attemptedAt + delaySec,
       args.errorClass,
       args.attemptedAt,
       terminal ? 1 : 0,

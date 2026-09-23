@@ -4,7 +4,7 @@ import { adaptBtcfi, fetchBtcfiReserves } from "../btcfi";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { BTCFI_HANDLER_ROWS, BTCFI_MARKET_ROWS } from "./reserve-adapter-payloads.test-support";
-import { expectValidAdapterOutput, installAdapterNetwork } from "./reserve-adapter.test-support";
+import { expectValidAdapterOutput, expectWarningEffect, installAdapterNetwork } from "./reserve-adapter.test-support";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -100,12 +100,7 @@ describe("adaptBtcfi", () => {
       unknownExposurePct: 100,
       freshnessMode: "not-applicable",
     });
-    expect(result.warnings).toContainEqual({
-      code: "unknown-btc-wrapper",
-      message: "btcfi handler bucketed into unmapped BTC variants: FBTC",
-      severity: "warning",
-      effect: "degraded",
-    });
+    expectWarningEffect(result, "unknown-btc-wrapper", "degraded");
   });
 
   it("aggregates normalized duplicate symbols with known and unknown weights", () => {
@@ -135,7 +130,7 @@ describe("adaptBtcfi", () => {
     const handlers = [{ id: 0, symbol: "WBTC", isStable: false }, { id: 1, symbol: "USD", isStable: true }];
     const result = adaptBtcfi(
       [
-        { token_handler_id: 5, deposit_value: "20" },
+        { token_handler_id: 7, deposit_value: "20" },
         { token_handler_id: 1, deposit_value: "999" },
         { token_handler_id: 0, deposit_value: "80" },
       ],
@@ -146,11 +141,72 @@ describe("adaptBtcfi", () => {
       { sourceKey: "btcfi:unknown", name: "Unmapped BTC variants", pct: 20, risk: "high" },
     ]);
     expect(result.metadata?.unknownExposurePct).toBe(20);
-    expect(result.warnings).toContainEqual(expect.objectContaining({
-      code: "unknown-handler",
-      message: "btcfi market row references unknown handler id: 5",
-      effect: "degraded",
-    }));
+    expectWarningEffect(result, "unknown-handler", "degraded");
+  });
+
+  it("attributes the registry-lagged JPYC handler to its reviewed pin", () => {
+    // Mirrors the live September 2026 payloads: the market endpoint reports
+    // handler 5 (Bifrost's Unified JPYC collateral) while
+    // getAvailableBtcfiHandlers still stops at id 4.
+    const result = adaptBtcfi(
+      [
+        { token_handler_id: 0, deposit_value: "80" },
+        { token_handler_id: 2, deposit_value: "0", borrow_value: "70" },
+        { token_handler_id: 5, deposit_value: "20" },
+      ],
+      [
+        { id: 0, symbol: "WBTC", isStable: false },
+        { id: 2, symbol: "BtcUSD", isStable: true },
+      ],
+    );
+
+    expect(result.slices).toEqual([
+      { sourceKey: "btcfi:wbtc", name: "WBTC", pct: 80, risk: "medium" },
+      { sourceKey: "btcfi:jpyc", name: "JPYC", pct: 20, risk: "medium" },
+    ]);
+    expect(result.metadata).toMatchObject({
+      handlerCount: 2,
+      details: { pinnedHandlerIds: [5] },
+    });
+    expect(result.metadata).not.toHaveProperty("unknownExposurePct");
+    expect(result.warnings).toBeUndefined();
+  });
+
+  it("prefers the published registry identity over the reviewed pin", () => {
+    const result = adaptBtcfi(
+      [
+        { token_handler_id: 0, deposit_value: "60" },
+        { token_handler_id: 5, deposit_value: "40" },
+      ],
+      [
+        { id: 0, symbol: "WBTC", isStable: false },
+        { id: 5, symbol: "JPYC", isStable: false },
+      ],
+    );
+
+    expect(result.slices).toEqual([
+      { sourceKey: "btcfi:wbtc", name: "WBTC", pct: 60, risk: "medium" },
+      { sourceKey: "btcfi:jpyc", name: "JPYC", pct: 40, risk: "medium" },
+    ]);
+    expect(result.metadata?.details).not.toHaveProperty("pinnedHandlerIds");
+    expect(result.warnings).toBeUndefined();
+  });
+
+  it("keeps sub-material registry-lagged exposure informational", () => {
+    const result = adaptBtcfi(
+      [
+        { token_handler_id: 0, deposit_value: "98" },
+        { token_handler_id: 6, deposit_value: "2" },
+      ],
+      [{ id: 0, symbol: "WBTC", isStable: false }],
+    );
+
+    expect(result.slices).toEqual([
+      { sourceKey: "btcfi:wbtc", name: "WBTC", pct: 98, risk: "medium" },
+      { sourceKey: "btcfi:unknown", name: "Unmapped BTC variants", pct: 2, risk: "high" },
+    ]);
+    expect(result.metadata?.unknownExposurePct).toBe(2);
+    expectWarningEffect(result, "unknown-handler", "info");
   });
 
   it.each([undefined, "", "NaN", "Infinity", "-1"])("rejects invalid collateral deposit %s", (deposit_value) => {

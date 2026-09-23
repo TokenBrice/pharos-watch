@@ -52,18 +52,18 @@ export const YIELD_RISK_CONFIG = {
   "aave-v3": {
     scores: { audits: 1, centralization: 2, fundsManagement: 1, liquidity: 1, operational: 1 },
     confidence: "verified",
-    reviewedAt: "2026-05-15",
+    reviewedAt: "2026-09-23",
     rationale:
-      "Aave V3 is a mature, multi-billion-USD lending venue with repeated independent audits, formal verification, and an active governance + safety-module stake.",
+      "Aave V3 is a mature, multi-billion-USD lending venue with repeated independent audits, formal verification, and an active governance + safety-module stake. 2026-09-23 re-review: the aave-v3-core audit directory still lists eight independent reports (OpenZeppelin 2021 through Sigma Prime 2023), and DeFiLlama reports $18.7B TVL across 21 chains; no surface change that moves the sub-scores.",
   },
   // Established Compound product line; isolated-asset V3 design has matured since 2022
   // with multiple audits and active COMP governance. Low venue risk.
   "compound-v3": {
     scores: { audits: 1, centralization: 2, fundsManagement: 1, liquidity: 1, operational: 1 },
     confidence: "verified",
-    reviewedAt: "2026-05-15",
+    reviewedAt: "2026-09-23",
     rationale:
-      "Compound III (Comet) is an isolated-asset lending market with a multi-year audit history, billions in TVL, and active COMP governance; the Comet codebase narrowed the protocol surface area relative to V2.",
+      "Compound III (Comet) is an isolated-asset lending market with a multi-year audit history, billions in TVL, and active COMP governance; the Comet codebase narrowed the protocol surface area relative to V2. 2026-09-23 re-review: the issuer security page still lists Trail of Bits and OpenZeppelin audits plus formal verification and a community bug bounty, and DeFiLlama reports $1.5B TVL across 10 chains; no surface change that moves the sub-scores.",
   },
   // SparkLend is an Aave V3 fork deployed by Sky / former MakerDAO; benefits from
   // upstream audit inheritance, has a billion-plus TVL, and is operated through Sky
@@ -106,26 +106,27 @@ export const YIELD_RISK_CONFIG = {
   morpho: {
     scores: MORPHO_VENUE_SCORES,
     confidence: "verified",
-    reviewedAt: "2026-06-09",
+    reviewedAt: "2026-09-23",
     rationale:
-      "Morpho sources are reviewed as medium to align with Morpho Blue where vault and market parameters shift risk to market creators and allocators despite the audited lending primitive.",
+      "Morpho sources are reviewed as medium to align with Morpho Blue where vault and market parameters shift risk to market creators and allocators despite the audited lending primitive. 2026-09-23 family re-review (see `morpho-blue`): the audit directory and DeFiLlama scale check still support the medium tier; sub-scores unchanged.",
   },
   "morpho-v1": {
     scores: MORPHO_VENUE_SCORES,
     confidence: "verified",
-    reviewedAt: "2026-06-09",
+    reviewedAt: "2026-09-23",
     rationale:
-      "Morpho v1 belongs to the reviewed Morpho lending venue family and inherits allocator, market-parameter, and integration risk that is broader than mature canonical money markets.",
+      "Morpho v1 belongs to the reviewed Morpho lending venue family and inherits allocator, market-parameter, and integration risk that is broader than mature canonical money markets. 2026-09-23 family re-review (see `morpho-blue`); sub-scores unchanged.",
   },
-  // Morpho Blue is the modern immutable lending primitive (January 2024). Audited
-  // family but younger TVL cohort vs Aave/Compound. Medium venue risk reflects the
-  // shorter live track record and the immutable design limiting remediation paths.
+  // Morpho Blue is the modern immutable lending primitive (January 2024) with a
+  // multi-auditor trail and a TVL cohort that has since closed on Aave/Compound
+  // scale. Medium venue risk reflects the immutable design limiting remediation
+  // paths and the market-creator/allocator risk transfer.
   "morpho-blue": {
     scores: MORPHO_VENUE_SCORES,
     confidence: "verified",
-    reviewedAt: "2026-05-15",
+    reviewedAt: "2026-09-23",
     rationale:
-      "Morpho Blue is an immutable singleton lending primitive launched in January 2024 with multiple audits; design choices reduce ongoing governance surface but limit remediation, and the product is still in its younger TVL cohort versus Aave/Compound.",
+      "Morpho Blue is an immutable singleton lending primitive launched in January 2024 with multiple audits; design choices reduce ongoing governance surface but limit remediation, and vault/market risk shifts to curators and allocators. 2026-09-23 re-review: the morpho-blue audit directory still lists the OpenZeppelin (2023-10) and Cantina (2023-11, 2024-01) reports, and DeFiLlama reports $11.0B TVL across 45 chains; scale no longer separates it from the Aave/Compound cohort, while the immutable-design and allocator-risk sub-scores stand.",
   },
   pendle: {
     scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 2, operational: 2 },
@@ -196,9 +197,9 @@ export const YIELD_RISK_CONFIG = {
   "euler-v2": {
     scores: { audits: 1, centralization: 2, fundsManagement: 2, liquidity: 2, operational: 1 },
     confidence: "verified",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-09-23",
     rationale:
-      "Euler v2 is a hardened modular relaunch with an exemplary post-2023 security program and full prior-exploit recovery; low venue risk.",
+      "Euler v2 is a hardened modular relaunch with an exemplary post-2023 security program and full prior-exploit recovery; low venue risk. 2026-09-23 re-review: the protocol security page still documents the formal-verification and audit program (Certora verification of the V2 core and EulerEarn plus independent reviews), and the venue remains live at scale on DeFiLlama; sub-scores unchanged.",
   },
   gearbox: {
     scores: { audits: 2, centralization: 2, fundsManagement: 3, liquidity: 3, operational: 2 },
@@ -597,32 +598,32 @@ const YIELD_DEPENDENCY_CONCENTRATION: Record<string, YieldDependencyConcentratio
   "gtusdc-gauntlet": {
     ecosystem: "Morpho (Gauntlet)",
     severity: "low",
-    note: "All exposure is Morpho Blue lending markets allocated by a single curator (Gauntlet); apparent market diversification is bounded by one curator. Morpho protocol risk is already priced by the venue tier, so this is surfaced without an added penalty.",
-    reviewedAt: "2026-06-15",
+    note: "All exposure is Morpho Blue lending markets allocated by a single curator (Gauntlet); apparent market diversification is bounded by one curator. Morpho protocol risk is already priced by the venue tier, so this is surfaced without an added penalty. 2026-09-23 re-review: the Morpho app still attributes the vault to Gauntlet (curator TVL about $945M) with the vault live at about $23M deposits.",
+    reviewedAt: "2026-09-23",
   },
   "gtusdcp-gauntlet": {
     ecosystem: "Morpho (Gauntlet)",
     severity: "low",
-    note: "All exposure is Morpho Blue lending markets allocated by a single curator (Gauntlet); apparent market diversification is bounded by one curator. Morpho protocol risk is already priced by the venue tier, so this is surfaced without an added penalty.",
-    reviewedAt: "2026-06-15",
+    note: "All exposure is Morpho Blue lending markets allocated by a single curator (Gauntlet); apparent market diversification is bounded by one curator. Morpho protocol risk is already priced by the venue tier, so this is surfaced without an added penalty. 2026-09-23 re-review: the Morpho app still attributes the vault to Gauntlet with the vault live at about $99M deposits.",
+    reviewedAt: "2026-09-23",
   },
   "steakusdc-steakhouse": {
     ecosystem: "Morpho (Steakhouse)",
     severity: "low",
-    note: "All exposure is Morpho lending markets allocated by a single curator (Steakhouse); apparent market diversification is bounded by one curator. Morpho protocol risk is already priced by the venue tier, so this is surfaced without an added penalty.",
-    reviewedAt: "2026-06-15",
+    note: "All exposure is Morpho lending markets allocated by a single curator (Steakhouse); apparent market diversification is bounded by one curator. Morpho protocol risk is already priced by the venue tier, so this is surfaced without an added penalty. 2026-09-23 re-review: the Morpho app still attributes the vault to Steakhouse Financial with the vault live at about $67M deposits.",
+    reviewedAt: "2026-09-23",
   },
   "bbqusdc-steakhouse": {
     ecosystem: "Morpho (Steakhouse Smokehouse)",
     severity: "low",
-    note: "All exposure is Morpho lending markets allocated by Steakhouse's Smokehouse curator line; apparent market diversification is bounded by one curator. The higher-risk collateral mix is carried in stablecoin reserve metadata while Morpho protocol risk is already priced by the venue tier.",
-    reviewedAt: "2026-06-20",
+    note: "All exposure is Morpho lending markets allocated by Steakhouse's Smokehouse curator line; apparent market diversification is bounded by one curator. The higher-risk collateral mix is carried in stablecoin reserve metadata while Morpho protocol risk is already priced by the venue tier. 2026-09-23 re-review: the Morpho app still attributes the vault to the Smokehouse line with the vault live at about $14M deposits.",
+    reviewedAt: "2026-09-23",
   },
   "steakusdt-steakhouse": {
     ecosystem: "Morpho (Steakhouse)",
     severity: "low",
-    note: "All exposure is Morpho lending markets allocated by a single curator (Steakhouse); apparent market diversification is bounded by one curator. Morpho protocol risk is already priced by the venue tier, so this is surfaced without an added penalty.",
-    reviewedAt: "2026-06-15",
+    note: "All exposure is Morpho lending markets allocated by a single curator (Steakhouse); apparent market diversification is bounded by one curator. Morpho protocol risk is already priced by the venue tier, so this is surfaced without an added penalty. 2026-09-23 re-review: the Morpho app still attributes the vault to Steakhouse with the vault live at about $86M deposits.",
+    reviewedAt: "2026-09-23",
   },
   // syrupUSDC/USDT yield is originated by a single off-chain Pool Delegate EOA
   // ("Maple Direct") controlling ~97% of AUM loan origination/impairments with no

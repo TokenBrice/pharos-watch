@@ -186,13 +186,57 @@ export const STATUS_PROBE_THRESHOLDS = {
 } as const;
 
 // --- Price source confidence severity bands (UI visual indicators) ---
+// Value-share bands, reviewed 2026-09-23: single-source long-tail rows are
+// legitimate, not failed corroboration. The live all-peg-bucket snapshot had
+// 40% of active rows at `high` but 96.95% of priced circulating USD value.
+// 90/80% high-coverage floors and 1/5% low-exposure ceilings flag economically
+// material confidence loss without catalog-size noise. Counts stay visible.
+// See docs/status-dashboard.md#price-source-health-card for evidence and limits.
 export const STATUS_PRICE_CONFIDENCE_BANDS = {
-  highPctGreen: 85,
-  highPctAmber: 70,
+  /** Green when `high`-confidence rows carry at least this share of priced circulating value. */
+  highMcapShareGreenPct: 90,
+  /** Amber floor for the same share; below this the tile is red. */
+  highMcapShareAmberPct: 80,
+  /** `low`-confidence share of priced circulating value at or above which the tile is amber. */
+  lowMcapShareAmberPct: 1,
+  /** `low`-confidence share of priced circulating value at or above which the tile is red. */
+  lowMcapShareRedPct: 5,
+  /** Unacknowledged active missing-price count: 0 is green, up to this amber, above red. */
   missingCountAmber: 3,
-  lowCountAmber: 5,
-  lowCountRed: 10,
 } as const;
+
+/** Visual severity for a Price Source Health metric tile. `neutral` = unknown/monitor-only. */
+export type PriceConfidenceTileSeverity = "green" | "amber" | "red" | "neutral";
+
+/** Classify the High-confidence tile from the `high` share of priced circulating value (percent). `null` when the payload lacks market-cap sums. */
+export function getHighConfidenceTileSeverity(highMcapSharePct: number | null): PriceConfidenceTileSeverity {
+  if (highMcapSharePct == null || !Number.isFinite(highMcapSharePct)) return "neutral";
+  return highMcapSharePct >= STATUS_PRICE_CONFIDENCE_BANDS.highMcapShareGreenPct
+    ? "green"
+    : highMcapSharePct >= STATUS_PRICE_CONFIDENCE_BANDS.highMcapShareAmberPct
+      ? "amber"
+      : "red";
+}
+
+/** Classify the Low-confidence tile from the `low` share of priced circulating value (percent). `null` when the payload lacks market-cap sums. */
+export function getLowConfidenceTileSeverity(lowMcapSharePct: number | null): PriceConfidenceTileSeverity {
+  if (lowMcapSharePct == null || !Number.isFinite(lowMcapSharePct)) return "neutral";
+  return lowMcapSharePct >= STATUS_PRICE_CONFIDENCE_BANDS.lowMcapShareRedPct
+    ? "red"
+    : lowMcapSharePct >= STATUS_PRICE_CONFIDENCE_BANDS.lowMcapShareAmberPct
+      ? "amber"
+      : "neutral";
+}
+
+/** Classify the Missing tile from the count of active missing prices that carry no valid, unexpired price-gap acknowledgement. */
+export function getMissingPriceTileSeverity(unacknowledgedMissingCount: number): PriceConfidenceTileSeverity {
+  if (!Number.isFinite(unacknowledgedMissingCount)) return "neutral";
+  return unacknowledgedMissingCount === 0
+    ? "green"
+    : unacknowledgedMissingCount <= STATUS_PRICE_CONFIDENCE_BANDS.missingCountAmber
+      ? "amber"
+      : "red";
+}
 
 // --- CoinGecko comparison thresholds ---
 /** Percent gap (Pharos vs CoinGecko) above which a coin's cross-source price is flagged as divergent. */
@@ -212,6 +256,37 @@ export const STATUS_RESERVE_COMPOSITION_THRESHOLDS = {
   degradedFreshCoverageRatio: 0.75,
   degradedAuthoritativeCoverageRatio: 0.5,
 } as const;
+
+/** Reserve-sync fields the score-input hold predicate needs; structurally compatible with `StatusResponse["reserveComposition"]`. */
+export interface ReserveScoreInputHoldInput {
+  status: string;
+  deferredCoins: number;
+  runBudgetTruncated: boolean;
+  writeTimeoutUncertain: number;
+  authoritativeFreshCoverageRatio: number;
+}
+
+/**
+ * Single shared predicate for "reserve evidence is forcing conservative score
+ * inputs" — used by the Live Reserve Sync banner, the triage reserve notice,
+ * and the Score impact monitor so one payload can never render contradictory
+ * states. A hold exists only when the worker already deems the lane unhealthy
+ * (`status !== "healthy"`, which itself covers fresh coverage below
+ * `degradedFreshCoverageRatio`), when score-grade coverage drops below the
+ * documented `degradedAuthoritativeCoverageRatio`, or when a deferred /
+ * budget-truncated / write-uncertain tail is present. Coverage strictly below
+ * 1.0 is NOT a hold: the documented thresholds tolerate partially conservative
+ * inputs while the lane still reports healthy.
+ */
+export function hasReserveScoreInputHold(reserve: ReserveScoreInputHoldInput): boolean {
+  return (
+    reserve.status !== "healthy"
+    || reserve.deferredCoins > 0
+    || reserve.runBudgetTruncated
+    || reserve.writeTimeoutUncertain > 0
+    || reserve.authoritativeFreshCoverageRatio < STATUS_RESERVE_COMPOSITION_THRESHOLDS.degradedAuthoritativeCoverageRatio
+  );
+}
 
 // --- Yield health summary ---
 /**

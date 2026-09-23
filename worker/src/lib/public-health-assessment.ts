@@ -687,13 +687,20 @@ export async function assessPublicHealth(
   // which the ratio bands cannot see, is a catalog decision (re-source or
   // retire): it degrades availability and is named on its own, but it never
   // reports the public surface as stale — the data is served, one price is not.
-  const activePriceCoverageAlertEligible = activePriceCoverage.alertEligibleCount > 0;
+  // Reviewed gaps remain missing in the payload but do not warn or contribute
+  // to duration degradation. The coverage reader re-arms them at expiry.
+  const acknowledgedGapIds = new Set(activePriceCoverage.acknowledgedGapIds ?? []);
+  const alertEligibleIds = activePriceCoverage.alertEligibleIds.filter((id) => !acknowledgedGapIds.has(id));
+  const activePriceCoverageAlertEligible = alertEligibleIds.length > 0;
   const criticalDurationIds = activePriceCoverage.missingActiveAssets
-    .filter((asset) => asset.alertEligible && getMissingPriceDurationStatus(asset.consecutiveMissingGenerations) === "stale")
+    .filter((asset) => asset.alertEligible && !asset.acknowledgedGap
+      && !acknowledgedGapIds.has(asset.stablecoinId)
+      && getMissingPriceDurationStatus(asset.consecutiveMissingGenerations) === "stale")
     .map((asset) => asset.stablecoinId);
   const activePriceCoverageDurationStatus = getMissingPriceDurationStatus(
     activePriceCoverage.missingActiveAssets.reduce(
-      (worst, asset) => (asset.alertEligible ? Math.max(worst, asset.consecutiveMissingGenerations) : worst),
+      (worst, asset) => (asset.alertEligible && !asset.acknowledgedGap && !acknowledgedGapIds.has(asset.stablecoinId)
+        ? Math.max(worst, asset.consecutiveMissingGenerations) : worst),
       0,
     ),
   );
@@ -705,7 +712,7 @@ export async function assessPublicHealth(
     warnings.push("active-price-coverage-unknown");
   } else if (activePriceCoverageAlertEligible) {
     warnings.push(
-      `active-price-coverage-incomplete:${activePriceCoverage.alertEligibleIds.join(",") || "count-mismatch"}`,
+      `active-price-coverage-incomplete:${alertEligibleIds.join(",")}`,
     );
     if (criticalDurationIds.length > 0) {
       warnings.push(`active-price-coverage-critical-duration:${criticalDurationIds.join(",")}`);

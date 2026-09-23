@@ -169,9 +169,66 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
       const snapshot = await loadCronHealth(db, NOW);
       expect(snapshot.crons["fetch-tbill-rate"].healthy).toBe(healthy);
       expect(snapshot.crons["fetch-tbill-rate"].lastRun?.status).toBe("skipped_neutral");
-      expect(snapshot.crons["fetch-tbill-rate"].recentRuns).toHaveLength(10);
-      expect(snapshot.crons["fetch-tbill-rate"].recentRuns.every((run) => run.status === "skipped_neutral")).toBe(true);
+      // The required attempt beyond the display window is served as an
+      // eleventh run so the inherited outcome stays attributable in the
+      // admin cron table instead of counting silently in the summary.
+      expect(snapshot.crons["fetch-tbill-rate"].recentRuns).toHaveLength(11);
+      expect(snapshot.crons["fetch-tbill-rate"].recentRuns.slice(0, 10).every((run) => run.status === "skipped_neutral"))
+        .toBe(true);
+      expect(snapshot.crons["fetch-tbill-rate"].recentRuns[10]?.status).toBe(status);
     } finally { sqlite.close(); }
+  });
+
+  it("serves inherited required runs so degradedCronRuns stays attributable to visible evidence", async () => {
+    // Live 2026-09-22 discrepancy: summary.degradedCrons reported 8 while the
+    // admin cron table showed 6 "Run warning" rows. snapshot-psi and
+    // snapshot-public-dataset each counted via a degraded daily required run
+    // hidden behind a display window filled with quarter-hourly neutral
+    // admission skips. The served recentRuns must carry that inherited run so
+    // the count equals what the cron UI can attribute.
+    const psiOverrides = [
+      { job: "snapshot-psi", status: "degraded" as const, ageSec: 20_000 },
+      ...Array.from({ length: 10 }, (_, index) => ({
+        job: "snapshot-psi",
+        status: "skipped_neutral" as const,
+        ageSec: 300 + index * 300,
+      })),
+    ];
+    const rows = seedWithOverrides(NOW, [
+      ...psiOverrides,
+      { job: "snapshot-public-dataset", status: "degraded" as const, ageSec: 20_500 },
+      ...Array.from({ length: 10 }, (_, index) => ({
+        job: "snapshot-public-dataset",
+        status: "skipped_neutral" as const,
+        ageSec: 300 + index * 300,
+      })),
+      { job: "cron-sentinel", status: "degraded" as const, ageSec: 30 },
+    ]);
+    const snapshot = await loadCronHealth(makeDb(NOW, rows), NOW);
+
+    // 3 counted jobs: one visible degraded last run plus the two hidden
+    // inherited ones reproduced above.
+    expect(snapshot.degradedCronRuns).toBe(3);
+
+    for (const job of ["snapshot-psi", "snapshot-public-dataset"]) {
+      expect(snapshot.crons[job].lastRun?.status).toBe("skipped_neutral");
+      expect(snapshot.crons[job].recentRuns).toHaveLength(11);
+      expect(snapshot.crons[job].recentRuns[10]?.status).toBe("degraded");
+    }
+
+    // Parity invariant: every counted degraded job is derivable from the
+    // served records using the admin table's classification rule (fresh
+    // degraded last run, or a neutral last run inheriting a degraded
+    // required run from recentRuns).
+    const visibleDegraded = Object.values(snapshot.crons).filter((cron) => {
+      if (cron.telemetryUnknown || cron.lastRun == null) return false;
+      if (cron.lastRun.status === "degraded") return true;
+      if (cron.lastRun.status !== "skipped_neutral") return false;
+      const requiredRun = cron.recentRuns.find((run) => run.status !== "skipped_neutral");
+      return requiredRun?.status === "degraded";
+    });
+    expect(visibleDegraded).toHaveLength(3);
+    expect(snapshot.degradedCronRuns).toBe(visibleDegraded.length);
   });
 
   it("does not add required-history lookups when all recent windows contain required evidence", async () => {

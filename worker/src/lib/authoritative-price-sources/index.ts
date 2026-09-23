@@ -16,6 +16,7 @@ import {
 } from "../pricing-provider-diagnostics";
 import type { PriceValidationReferences } from "../price-validation";
 import { usdvJupiterProvider } from "./usdv-jupiter";
+import { usdafUniswapV4Provider } from "./usdaf-uniswap-v4";
 import { bdAerodromeProvider } from "./bd-aerodrome";
 import { azndCurvePoolProvider } from "./aznd-curve-pool";
 import { mentoFpmmProvider } from "./mento-fpmm";
@@ -58,6 +59,7 @@ const AUTHORITATIVE_PRICE_PROVIDERS: PriceSourceProvider[] = [
   azndCurvePoolProvider,
   bdAerodromeProvider,
   usdvJupiterProvider,
+  usdafUniswapV4Provider,
   mentoFpmmProvider,
   mentoBrokerProvider,
   kavaUsdxPricefeedProvider,

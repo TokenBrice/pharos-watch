@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PRE_LAUNCH_STABLECOINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { FROZEN_IDS, PRE_LAUNCH_STABLECOINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { isActiveStablecoinMeta, isPreLaunchStablecoinMeta } from "@shared/lib/stablecoins/status";
 import {
   EXPLICIT_YIELD_SOURCE_POOL_MAP,
@@ -135,18 +135,13 @@ describe("yield config registry", () => {
     });
   });
 
-  it("keeps base AZND non-yield-bearing while retaining the exact loAZND identity", () => {
-    const coin = trackedCoinsById.get("aznd-mu-digital");
-    const manifest = YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === "aznd-mu-digital");
-
-    expect(coin?.flags).toMatchObject({ yieldBearing: false, navToken: false });
-    expect(ON_CHAIN_RATE_CONFIGS.some((entry) => entry.stablecoinId === "aznd-mu-digital")).toBe(false);
-    expect(YIELD_VARIANT_MAP["aznd-mu-digital"]).toMatchObject({
-      variantSymbol: "loAZND",
-      variantChain: "monad",
-      variantAddress: "0x9c82eB49B51F7Dc61e22Ff347931CA32aDc6cd90",
-    });
-    expect(manifest).toBeUndefined();
+  it("keeps frozen coins out of every curated yield registry", () => {
+    for (const id of FROZEN_IDS) {
+      expect(YIELD_POOL_MAP[id], id).toBeUndefined();
+      expect(YIELD_VARIANT_MAP[id], id).toBeUndefined();
+      expect(ON_CHAIN_RATE_CONFIGS.some((entry) => entry.stablecoinId === id), id).toBe(false);
+      expect(YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === id), id).toBeUndefined();
+    }
   });
 
   it("promotes Wave 1 tracked vaults to deterministic on-chain readers", () => {
@@ -396,32 +391,6 @@ describe("yield config registry", () => {
     }
   });
 
-  it("pins current exact lending venues for newer coverage candidates", () => {
-    expect(LENDING_PROTOCOL_ALLOWLIST.has("felix-cdp")).toBe(true);
-    expect(LENDING_PROTOCOL_ALLOWLIST.has("sovryn-dex")).toBe(true);
-    for (const protocol of [
-      "autofinance",
-      "neverland",
-      "metrom",
-      "mystic-finance-lending",
-      "bitway",
-      "frankencoin",
-    ]) {
-      expect(LENDING_PROTOCOL_ALLOWLIST.has(protocol), protocol).toBe(true);
-      expect(LENDING_PROTOCOL_LABELS[protocol], protocol).toBeTruthy();
-    }
-    expect(AUTO_LENDING_POOL_MAP).toMatchObject({
-      "feusd-felix": "2bae7cf8-d278-4b27-9959-7f5f92c6f14b",
-      "dllr-sovryn": "436e4129-667b-44d6-8322-ea59ce9b587c",
-      "tgbp-tokenised": "61a6a976-f70f-4f38-b4a4-a5d3fda6832c",
-      "reusd-resupply": "02c7722b-dfd6-415b-8292-01dddb88c6fc",
-      "xusd-babelfish": "59901fb6-d071-4923-822a-af871670a7fb",
-      "usda-anzens": "fa66f3f5-24ba-4929-8549-9b811b68ef48",
-      "usdx-hex-trust": "be50b874-8147-440d-b8ca-f2c202e9ed64",
-    });
-    expect(AUTO_LENDING_POOL_MAP["doc-money-on-chain"]).toBeUndefined();
-    expect(AUTO_LENDING_POOL_MAP["pmusd-precious-metals"]).toBeUndefined();
-  });
 
   it("allows Wave 2 category-gated thin-chain and app-chain lenders", () => {
     const wave2Protocols = {

@@ -7,6 +7,8 @@ Triggered by `StatusCause.code`:
 - `stablecoin_publication_unknown`
 - `active_price_coverage_incomplete`
 - `active_price_coverage_unknown`
+- `price_gap_reviews_expired`
+- `price_gap_reviews_invalid`
 
 ## Symptom
 
@@ -16,7 +18,7 @@ The cached `/api/stablecoins` payload is missing, malformed, has the wrong objec
 
 1. **`sync-stablecoins` cron:** Admin page → Crons section. Is the cron healthy? Last successful run recent (< 2× expected interval)?
 2. **Publication completeness:** for `stablecoin_publication_*`, inspect `/api/status.dataQuality.stablecoinPublication`: missing IDs, active-ID waivers, expected/present/waived counts, expired waivers, and the `observedAt` timestamp of the publication evidence. A schema-valid cache can still be incomplete.
-3. **Active current-price coverage:** for `active_price_coverage_*`, inspect `/api/health.activePriceCoverage` (it is not exposed on `/api/status`): missing IDs, eligibility/streak evidence, and per-gap source and rejection detail. This is distinct from historical chart price coverage.
+3. **Active current-price coverage:** for `active_price_coverage_*`, inspect `/api/health.activePriceCoverage` (it is not exposed on `/api/status`): missing IDs, eligibility/streak evidence, and per-gap source and rejection detail. This is distinct from historical chart price coverage. A gap covered by a valid, unexpired price-gap review still appears in `missingActiveIds` but is never alert-eligible: `acknowledgedGapIds` and the per-asset `acknowledgedGap` carry the review owner, reason, sources, and expiry, while `expiredGapReviewIds` and `invalidGapReviewIds` name entries that acknowledge nothing. Renew the review with fresh evidence or freeze/delist the asset before its expiry; never lower price floors or substitute a quote to close the gap.
 4. **Pricing provider diagnostics:** inspect the `sync-stablecoins` cron's latest-run metadata in Admin → Crons (the `providerDiagnostics` block in `cron_runs.metadata`). It is no longer projected as `/api/status.priceProviderDiagnostics`; check source, stage, status, and error details for sustained Binance, CoinGecko, or DefiLlama failures.
 
 ## Remediation

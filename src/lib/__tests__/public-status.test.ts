@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { HealthResponse } from "@shared/types";
+import { HealthResponseSchema } from "@shared/types/status/public-health";
+import { buildPublicHealthStatusCauses } from "@/lib/status/issue-evidence-model";
 import { countPublicImpactOpenCircuits, isPublicImpactCircuitKey } from "@shared/lib/public-health";
 import { makeActivePriceCoverage, makeHealthyHealthResponse, makeMissingActiveAsset } from "@/test-utils/status-fixtures";
 import {
+  getAcknowledgedPriceGapNotice,
   getImpactedPublicSurfaces,
   getPublicDivergenceNotice,
   getPublicHealthWarningPresentation,
@@ -30,11 +33,9 @@ describe("public status helpers", () => {
       ]),
     };
 
-    expect(getPublicHealthWarningPresentation(health.warnings[0]!, health)).toEqual({
-      title: "Stablecoin price coverage",
-      detail:
-        "Live prices are unavailable for 2 active assets: NXUSD and TUSD. Stablecoin listings and price-dependent analytics may be incomplete until coverage recovers.",
-    });
+    const presentation = getPublicHealthWarningPresentation(health.warnings[0]!, health);
+    expect(presentation.detail).toContain("NXUSD");
+    expect(presentation.detail).not.toContain("TUSD");
     expect(getImpactedPublicSurfaces(health).some((surface) => surface.id === "active-price-coverage")).toBe(false);
   });
 
@@ -55,11 +56,52 @@ describe("public status helpers", () => {
       ]),
     };
 
-    expect(getPublicHealthWarningPresentation(health.warnings[0]!, health)).toEqual({
-      title: "Long-running price gaps",
-      detail:
-        "1 active asset: NXUSD has had no accepted live price for more than a week. Market caps keep publishing; each is under catalog review to re-source the price or retire the listing.",
+    const presentation = getPublicHealthWarningPresentation(health.warnings[0]!, health);
+    expect(presentation.detail).toContain("NXUSD");
+    expect(presentation.detail).not.toContain("USDaf");
+  });
+
+  it("keeps acknowledged assets out of warnings and exposes their review as informational evidence", () => {
+    const acknowledgedGap = {
+      owner: "ops", reason: "Venue suspended", sources: ["https://example.com/review"],
+      reviewedAt: 1_790_121_600, expiresAt: 1_792_713_600,
+    };
+    const health: HealthResponse = {
+      ...BASE_HEALTH,
+      warnings: ["active-price-coverage-incomplete:reviewed,unreviewed"],
+      activePriceCoverage: makeActivePriceCoverage([
+        makeMissingActiveAsset({ stablecoinId: "reviewed", symbol: "REVIEWED", acknowledgedGap, alertEligible: true }),
+        makeMissingActiveAsset({ stablecoinId: "unreviewed", symbol: "UNREVIEWED", alertEligible: true }),
+      ]),
+    };
+    const detail = getPublicHealthWarningPresentation(health.warnings[0]!, health).detail;
+    expect(detail).toContain("UNREVIEWED");
+    expect(detail.replace("UNREVIEWED", "")).not.toContain("REVIEWED");
+    const warning = buildPublicHealthStatusCauses(health)[0]!;
+    expect(warning.severity).toBe("warning");
+    expect(warning.message.replace("UNREVIEWED", "")).not.toContain("REVIEWED");
+    expect(getAcknowledgedPriceGapNotice(health.activePriceCoverage)).toContain("2026-10-23");
+    health.activePriceCoverage = makeActivePriceCoverage([
+      makeMissingActiveAsset({ stablecoinId: "reviewed", acknowledgedGap, alertEligible: false }),
+    ]);
+    health.warnings = [];
+    expect(buildPublicHealthStatusCauses(health)).toEqual([
+      expect.objectContaining({ severity: "info", value: 1 }),
+    ]);
+    expect(getImpactedPublicSurfaces(health)).toEqual([]);
+  });
+
+  it("parses pre-acknowledgement health payloads with empty and null review defaults", () => {
+    const legacy = makeActivePriceCoverage([makeMissingActiveAsset({ acknowledgedGap: undefined })], {
+      acknowledgedGapIds: undefined, acknowledgedGapCount: undefined,
+      expiredGapReviewIds: undefined, invalidGapReviewIds: undefined,
     });
+    const parsed = HealthResponseSchema.parse({ ...BASE_HEALTH, activePriceCoverage: legacy }).activePriceCoverage!;
+    expect(parsed.acknowledgedGapIds).toEqual([]);
+    expect(parsed.acknowledgedGapCount).toBe(0);
+    expect(parsed.expiredGapReviewIds).toEqual([]);
+    expect(parsed.invalidGapReviewIds).toEqual([]);
+    expect(parsed.missingActiveAssets[0]?.acknowledgedGap).toBeNull();
   });
 
   it("explains degraded yield production while retaining unknown warning evidence", () => {

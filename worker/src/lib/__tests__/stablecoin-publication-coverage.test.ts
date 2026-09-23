@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
   STABLECOIN_PUBLICATION_WAIVERS,
+  STABLECOIN_PRICE_GAP_REVIEWS,
+  resolveStablecoinPriceGapReviews,
+  compactStablecoinActivePriceCoverage,
+  parsePersistedMissingActivePriceState,
   evaluateStablecoinActivePriceCoverage,
   evaluateStablecoinPublicationCoverage,
   loadPreviousStablecoinActivePriceCoverage,
@@ -94,7 +98,7 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
         priceConfidence: "low",
         circulating: { peggedUSD: 125.5 },
       },
-    ], ["priced", "missing"]);
+    ], ["priced", "missing"], { priceGapReviews: [] });
 
     expect(coverage).toEqual({
       complete: false,
@@ -119,9 +123,14 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
         lastAcceptedObservedAt: null,
         rejectionReason: "no-accepted-price",
         alertEligible: false,
+        acknowledgedGap: null,
       }],
       alertEligibleCount: 0,
       alertEligibleIds: [],
+      acknowledgedGapIds: [],
+      acknowledgedGapCount: 0,
+      expiredGapReviewIds: [],
+      invalidGapReviewIds: [],
       maxConsecutiveMissingGenerations: 1,
     });
   });
@@ -191,6 +200,80 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
       rejectionReason: "no-accepted-price",
       alertEligible: true,
     });
+  });
+
+  it("keeps acknowledged long gaps missing, re-alerts at expiry, and ignores reviews for priced assets", () => {
+    const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === "wusd-worldwide")!;
+    const ids = [review.stablecoinId, "usdt-tether"];
+    const first = evaluateStablecoinActivePriceCoverage(
+      ids.map((id) => ({ id, price: null, circulating: { peggedUSD: 100 } })),
+      ids,
+      { nowSec: review.reviewedAt, priceGapReviews: [review] },
+    );
+    first.missingActiveAssets.forEach((asset) => { asset.consecutiveMissingGenerations = 800; });
+    const acknowledged = evaluateStablecoinActivePriceCoverage(
+      ids.map((id) => ({ id, price: null, circulating: { peggedUSD: 100 } })),
+      ids,
+      { nowSec: review.expiresAt - 1, priceGapReviews: [review], previousCoverage: first },
+    );
+    expect(acknowledged).toMatchObject({
+      complete: false,
+      missingPriceCount: 2,
+      missingActiveIds: ids,
+      affectedMarketCapUsd: 200,
+      alertEligibleIds: ["usdt-tether"],
+      acknowledgedGapIds: [review.stablecoinId],
+      acknowledgedGapCount: 1,
+    });
+    expect(acknowledged.missingActiveAssets[0]).toMatchObject({
+      alertEligible: false,
+      consecutiveMissingGenerations: 801,
+      acknowledgedGap: { owner: "ops", expiresAt: review.expiresAt },
+    });
+    const compact = compactStablecoinActivePriceCoverage(acknowledged, 0);
+    const restored = parsePersistedMissingActivePriceState(compact.missingActiveState[0], { nowSec: review.expiresAt - 1 });
+    expect(restored).toMatchObject({ alertEligible: false, consecutiveMissingGenerations: 801 });
+    expect(parsePersistedMissingActivePriceState(compact.missingActiveState[0], { nowSec: review.expiresAt }))
+      .toMatchObject({ alertEligible: true, acknowledgedGap: null });
+
+    const expired = evaluateStablecoinActivePriceCoverage(ids.map((id) => ({ id, price: null })), ids, {
+      nowSec: review.expiresAt,
+      priceGapReviews: [review],
+      previousCoverage: acknowledged,
+    });
+    expect(expired.alertEligibleIds).toEqual(ids);
+    expect(expired.expiredGapReviewIds).toEqual([review.stablecoinId]);
+    expect(expired.acknowledgedGapIds).toEqual([]);
+
+    const priced = evaluateStablecoinActivePriceCoverage(ids.map((id) => ({ id, price: 0.7 })), ids, {
+      nowSec: review.expiresAt - 1,
+      priceGapReviews: [review],
+      previousCoverage: acknowledged,
+    });
+    expect(priced).toMatchObject({ complete: true, pricedActiveIds: ids, acknowledgedGapCount: 0, missingPriceCount: 0 });
+  });
+
+  it("fails closed on malformed review ownership, evidence, identity, and dates", () => {
+    const review = STABLECOIN_PRICE_GAP_REVIEWS[0]!;
+    const invalidReviews = [
+      { ...review, owner: "" },
+      { ...review, reason: " " },
+      { ...review, sources: [] },
+      { ...review, sources: ["http://example.com"] },
+      { ...review, expiresAt: review.reviewedAt },
+      { ...review, reviewedAt: Number.NaN },
+      { ...review, stablecoinId: "inactive-unknown" },
+    ];
+    for (const invalid of invalidReviews) {
+      const result = resolveStablecoinPriceGapReviews([review.stablecoinId], review.reviewedAt, [invalid]);
+      expect(result.activeById.size).toBe(0);
+      expect(result.invalidGapReviewIds).toEqual([invalid.stablecoinId]);
+    }
+    const registry = resolveStablecoinPriceGapReviews(
+      ACTIVE_STABLECOINS.map((asset) => asset.id), review.reviewedAt,
+    );
+    expect(registry.invalidGapReviewIds).toEqual([]);
+    expect(registry.activeById.size).toBe(STABLECOIN_PRICE_GAP_REVIEWS.length);
   });
 
   it("drops accepted observation timestamps outside the JavaScript Date range", () => {

@@ -1339,6 +1339,24 @@ describe("fetchTbillRate — benchmark observation guard and registry integrity"
     expect(calls.length).toBeGreaterThan(0);
   });
 
+  it("refreshes a T+1 series nearing its record bound even while USD is fresh", async () => {
+    const fetchedAt = Math.floor(FROZEN_NOW.getTime() / 1000);
+    const nearBoundDate = new Date(FROZEN_NOW.getTime() - 4.5 * 86400_000).toISOString().slice(0, 10);
+    installCacheByKey(vi.mocked(getCache), {
+      risk_free_rates: makeRiskFreeRatesCacheRow({
+        USD: makeBenchmarkCacheEntry({ key: "USD", rate: 3.91, recordDate: FRESH_FRED_OBSERVATION_DATE,
+          fetchedAt: fetchedAt - 3600, source: "fred-dgs3mo" }),
+        GBP: makeBenchmarkCacheEntry({ key: "GBP", rate: 4.1, recordDate: nearBoundDate,
+          fetchedAt: fetchedAt - 3600, source: "fred-sonia-compounded-index" }),
+      }, fetchedAt - 3600),
+    });
+    const calls: string[] = [];
+    mockTbillByUrl({}, calls);
+    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV, { minRegistryAgeSec: RETRY_BOUND_SEC });
+    expect(result.status).not.toBe("skipped_neutral");
+    expect(calls.length).toBeGreaterThan(0);
+  });
+
   it("refreshes from the hourly retry when the newest market observation exceeds the bound", async () => {
     const fetchedAt = Math.floor(FROZEN_NOW.getTime() / 1000);
     installCacheByKey(vi.mocked(getCache), {

@@ -4,6 +4,7 @@ import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { throwIfAborted, rethrowIfAborted } from "../../lib/abort";
 import { getCache, setCacheIfNewer } from "../../lib/db-cache";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
+import { dsRateLimit } from "../../lib/dexscreener";
 import { isProviderCircuitAllowed, recordProviderOutcomeSafe } from "../../lib/pricing-provider-lifecycle";
 import { hasPublishableCurrentPrice } from "../../lib/price-publication-state";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
@@ -15,7 +16,8 @@ import { loadFxRatesForPriceBounds } from "./enrich-prices-progress";
 import type { PeggedAsset } from "./enrich-prices-shared";
 
 const REFRESH_BUDGET_MS = 45_000;
-const MAX_BATCHES = 9; // Existing 45-second envelope / five-second request ceiling.
+// 45-second envelope / (five-second request ceiling + 1.1-second DexScreener pacing).
+const MAX_BATCHES = 7;
 const BATCH_SIZE = 30;
 interface ExactTarget { id: string; chain: string; target: string; observedAt?: number }
 interface RefreshState { observations: PriceCorroborationObservation[]; targets: ExactTarget[]; cursor: number }
@@ -27,6 +29,9 @@ export interface DexRefreshSummary {
   deferredBatches: number;
   unsupportedAssets: number;
   missingQuotes: number;
+  /** Attempted cohort assets whose exact route resolved in an earlier slot. */
+  hintedAttempted: number;
+  hintedResolved: number;
   timedOut: boolean;
   cacheWritten: boolean;
   errorClasses: string[];
@@ -79,6 +84,7 @@ export function planDexRefresh(assets: PeggedAsset[], hints: ExactTarget[], curs
   applyTrackedAssetOverrides(cohort);
   const chainGroups = new Map<string, DexScreenerBatchTarget[]>();
   let unsupportedAssets = 0;
+  const hintedIds = new Set<string>();
   for (const [index, asset] of cohort.entries()) {
     // Only reviewed active deployments may validate a persisted hint.
     const meta = ACTIVE_META_BY_ID.get(asset.id)!;
@@ -87,7 +93,10 @@ export function planDexRefresh(assets: PeggedAsset[], hints: ExactTarget[], curs
     const target = hint ? reviewed.find((target) => target.chain === hint.chain && target.address === hint.target)! : reviewed[0];
     clearPriceMetadata(asset);
     if (!target) { unsupportedAssets++; continue; }
-    if (hint) targetsById.set(asset.id, hint);
+    if (hint) {
+      targetsById.set(asset.id, hint);
+      hintedIds.add(asset.id);
+    }
     const group = chainGroups.get(target.chain) ?? [];
     group.push({ entry: { asset, index, exactTargets: [target], missingGenerations: 0 }, target });
     chainGroups.set(target.chain, group);
@@ -98,7 +107,7 @@ export function planDexRefresh(assets: PeggedAsset[], hints: ExactTarget[], curs
   }
   const start = allBatches.length > MAX_BATCHES ? cursor % allBatches.length : 0;
   const batches = Array.from({ length: Math.min(MAX_BATCHES, allBatches.length) }, (_, i) => allBatches[(start + i) % allBatches.length]!);
-  return { cohort, targetsById, batches, allBatchCount: allBatches.length, unsupportedAssets, start };
+  return { cohort, targetsById, hintedIds, batches, allBatchCount: allBatches.length, unsupportedAssets, start };
 }
 
 export async function runPriceDexRefresh(params: { db: D1Database; syncStartSec: number; signal?: AbortSignal }): Promise<DexRefreshSummary> {
@@ -109,19 +118,23 @@ export async function runPriceDexRefresh(params: { db: D1Database; syncStartSec:
   const plan = planDexRefresh([...previousAssetsById.values()], previous.targets, previous.cursor);
   const summary: DexRefreshSummary = { cohortSize: plan.cohort.length, resolved: 0, attemptedBatches: 0,
     deferredBatches: plan.allBatchCount, unsupportedAssets: plan.unsupportedAssets, missingQuotes: 0,
-    timedOut: false, cacheWritten: false, errorClasses: [] };
+    hintedAttempted: 0, hintedResolved: 0, timedOut: false, cacheWritten: false, errorClasses: [] };
   const diagnostics: PricingProviderAttemptDiagnostic[] = [];
   const timeout = createTimeoutSignal({ timeoutMs: REFRESH_BUDGET_MS, timeoutReason: new DOMException("DEX refresh deadline", "TimeoutError"), parentSignal: params.signal });
   let successfulBatches = 0;
   const observations: PriceCorroborationObservation[] = [];
   try {
     const allowed = plan.batches.length === 0 || await isProviderCircuitAllowed({ db: params.db,
-      circuitSource: CIRCUIT_SOURCE.DEXSCREENER_PRICES, diagnostics, errorMessage: "DEX refresh circuit open",
+      circuitSource: CIRCUIT_SOURCE.DEXSCREENER_PRICES_REFRESH, diagnostics, errorMessage: "DEX refresh circuit open",
       diagnostic: { source: "dexscreener-exact", stage: "fallback", endpoint: "api.dexscreener.com/tokens/v1" } });
     if (!allowed) summary.errorClasses.push("circuit-open");
-    else for (const batch of plan.batches) {
+    else for (const [batchIndex, batch] of plan.batches.entries()) {
+      // DexScreener throttles per egress IP; pace consecutive batches inside the
+      // lane budget — the sleep rejects as soon as the 45 s deadline passes.
+      if (batchIndex > 0) await dsRateLimit(timeout.signal);
       throwIfAborted(timeout.signal);
       summary.attemptedBatches++;
+      summary.hintedAttempted += batch.filter(({ entry }) => plan.hintedIds.has(entry.asset.id)).length;
       // Existing executor owns admission, five-second requests, response consumption,
       // provenance and quote selection. Circuit outcome is aggregated once below.
       const result = await runDexScreenerPass(plan.cohort, fxRates, undefined, timeout.signal,
@@ -138,6 +151,13 @@ export async function runPriceDexRefresh(params: { db: D1Database; syncStartSec:
         observations.push({ ...target, source: "dexscreener-exact", price: asset.price!,
           observedAt: asset.priceObservedAt, observedAtMode: asset.priceObservedAtMode ?? null });
       }
+      // A 429/Cloudflare-1015 refusal throttles the shared egress IP; issuing the
+      // remaining batches this slot would only collect the same refusal. They stay
+      // deferred and the recorded class keeps the slot degraded.
+      if (rows.some((row) => !row.success && row.errorClass === "rate-limited")) {
+        summary.errorClasses.push("rate-limited");
+        break;
+      }
     }
   } catch (error) {
     rethrowIfAborted(error, params.signal);
@@ -149,8 +169,9 @@ export async function runPriceDexRefresh(params: { db: D1Database; syncStartSec:
   summary.resolved = observations.length;
   summary.deferredBatches = Math.max(0, plan.allBatchCount - summary.attemptedBatches);
   summary.missingQuotes = Math.max(0, plan.cohort.length - summary.unsupportedAssets - observations.length);
+  summary.hintedResolved = observations.filter((observation) => plan.hintedIds.has(observation.id)).length;
   summary.errorClasses = [...new Set(summary.errorClasses)];
-  await recordProviderOutcomeSafe({ db: params.db, circuitSource: CIRCUIT_SOURCE.DEXSCREENER_PRICES,
+  await recordProviderOutcomeSafe({ db: params.db, circuitSource: CIRCUIT_SOURCE.DEXSCREENER_PRICES_REFRESH,
     attempted: summary.attemptedBatches, successful: successfulBatches });
   const written = await setCacheIfNewer(params.db, DEX_REFRESH_CACHE_KEY, JSON.stringify({
     observations, targets: [...plan.targetsById.values()], cursor: plan.allBatchCount
