@@ -333,6 +333,10 @@ export async function computeSafetyScoreV9(
     db,
     fixedInput: v9SeedInput,
     fixedInputAlreadyNormalized: true,
+    // `prepareFixedInput` below spreads this normalized input and adds the two
+    // loader-validated journal projections, so the runner must not re-normalize
+    // the whole payload a second time on this hot path.
+    preparedFixedInputAlreadyNormalized: true,
     transferMaterialityGeneration,
     prepareFixedInput: async (seedInput, publicationSignal) => {
       await reportProgress?.({
