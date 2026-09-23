@@ -31,8 +31,18 @@ export function createOptionalSourceBudget(
   label: string,
   timeoutMs: number,
   signal?: AbortSignal,
-): { signal: AbortSignal; budgetController: AbortController; cleanup: () => void } {
+): {
+  signal: AbortSignal;
+  budgetController: AbortController;
+  /**
+   * Absolute wall-clock deadline of the family budget. Callers that pace one
+   * target at a time derive each target's share from what is still left.
+   */
+  deadlineMs: number;
+  cleanup: () => void;
+} {
   const budgetController = new AbortController();
+  const deadlineMs = Date.now() + timeoutMs;
   const timer = setTimeout(() => {
     budgetController.abort(new Error(`${label} budget exhausted after ${Math.round(timeoutMs / 1000)}s`));
   }, timeoutMs);
@@ -40,6 +50,7 @@ export function createOptionalSourceBudget(
   return {
     signal: signal ? AbortSignal.any([signal, budgetController.signal]) : budgetController.signal,
     budgetController,
+    deadlineMs,
     cleanup: () => clearTimeout(timer),
   };
 }

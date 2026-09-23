@@ -16,6 +16,16 @@ import { logWorkerEvent } from "../../lib/structured-log";
 const OPTIONAL_PROTOCOL_RPC_BUDGET_MS = 30_000;
 const OPTIONAL_PROTOCOL_RPC_REQUEST_TIMEOUT_MS = 10_000;
 const OPTIONAL_PROTOCOL_RPC_MAX_RETRIES = 2;
+/**
+ * B-lane pacing: the least time a target may be given so a nearly exhausted
+ * family budget still lets the remaining inventory be probed, and the least time
+ * an endpoint attempt can plausibly use before the round-robin stops. A healthy
+ * public endpoint answers in well under the attempt floor, so the floor only
+ * engages once a target's share is nearly spent — where the alternative would be
+ * skipping the attempt entirely.
+ */
+const OPTIONAL_RPC_MIN_TARGET_BUDGET_MS = 2_000;
+const OPTIONAL_RPC_MIN_ENDPOINT_ATTEMPT_MS = 500;
 const AAVE_V3_RPC_BUDGET_MS = 28_000;
 const AAVE_V3_RPC_MAX_CONCURRENCY = 6;
 const ON_CHAIN_RATE_REQUEST_TIMEOUT_MS = 6_000;
@@ -73,6 +83,44 @@ function recordOptionalRpcMiss(
 
 function buildOptionalRpcUrls(rpc: ChainRpcConfig | undefined, rotationSeed = 0): string[] {
   return resolveRpcUrls(rpc, { order: "rotate", seed: rotationSeed });
+}
+
+/**
+ * B-lane pacing: a target may consume at most its fair share of what is left of
+ * the family budget, so a single stalled target cannot starve the remaining
+ * inventory. The Aave lane shares by batch, because a batch of concurrent
+ * probes is the unit that consumes family wall-clock.
+ */
+function computeOptionalRpcTargetBudgetMs(remainingBudgetMs: number, remainingTargets: number): number {
+  const shareMs = Math.floor(Math.max(0, remainingBudgetMs) / Math.max(1, remainingTargets));
+  return Math.max(OPTIONAL_RPC_MIN_TARGET_BUDGET_MS, shareMs);
+}
+
+/**
+ * Endpoint failover runs ahead of transport retries: every pass attempts each
+ * endpoint of the target once (`maxRetries: 0` inside the transport, so one
+ * stalled URL cannot spend the pass on same-endpoint retries), and a further
+ * pass starts only while the target's remaining share still fits a whole
+ * endpoint attempt. A hot endpoint therefore fails over to the alternate URL —
+ * and a stalled target gives the rest of the inventory its budget back —
+ * instead of absorbing the family burst.
+ */
+async function runOptionalRpcEndpointPasses<T>(
+  endpointUrls: readonly string[],
+  targetDeadlineMs: number,
+  attemptPass: (options: { timeoutMs: number; deadlineMs: number }) => Promise<T | null>,
+): Promise<T | null> {
+  const endpointCount = Math.max(1, endpointUrls.length);
+  for (let pass = 0; pass <= OPTIONAL_PROTOCOL_RPC_MAX_RETRIES; pass += 1) {
+    const perEndpointMs = Math.floor((targetDeadlineMs - Date.now()) / endpointCount);
+    if (perEndpointMs < OPTIONAL_RPC_MIN_ENDPOINT_ATTEMPT_MS) return null;
+    const value = await attemptPass({
+      timeoutMs: Math.min(OPTIONAL_PROTOCOL_RPC_REQUEST_TIMEOUT_MS, perEndpointMs),
+      deadlineMs: targetDeadlineMs,
+    });
+    if (value != null) return value;
+  }
+  return null;
 }
 
 function logOptionalRpcTelemetry(family: string, telemetry: OptionalRpcFamilyTelemetry): void {
@@ -464,14 +512,22 @@ export async function fetchCompoundV3SupplyRates(
         }
 
         telemetry.attemptedCount += 1;
-        const opts = {
-          extraRpcUrls,
-          signal: budget.signal,
-          timeoutMs: OPTIONAL_PROTOCOL_RPC_REQUEST_TIMEOUT_MS,
-          maxRetries: OPTIONAL_PROTOCOL_RPC_MAX_RETRIES,
-        };
+        const targetDeadlineMs = Date.now() + computeOptionalRpcTargetBudgetMs(
+          budget.deadlineMs - Date.now(),
+          targets.length - index,
+        );
+        const fetchCompoundWord = (data: string) =>
+          runOptionalRpcEndpointPasses<bigint>(extraRpcUrls, targetDeadlineMs, (attempt) =>
+            fetchEvmUint256AtBlock(target.chain, target.comet, data, "latest", {
+              extraRpcUrls,
+              signal: budget.signal,
+              maxRetries: 0,
+              timeoutMs: attempt.timeoutMs,
+              deadlineMs: attempt.deadlineMs,
+            }),
+          );
 
-        const utilization = await fetchEvmUint256AtBlock(target.chain, target.comet, COMPOUND_V3_GET_UTILIZATION, "latest", opts);
+        const utilization = await fetchCompoundWord(COMPOUND_V3_GET_UTILIZATION);
         if (utilization == null) {
           recordOptionalRpcMiss(telemetry, target.chain, targetLabel, "utilization-unavailable");
           accountedTargets.add(targetLabel);
@@ -479,7 +535,7 @@ export async function fetchCompoundV3SupplyRates(
         }
 
         const supplyRateData = COMPOUND_V3_GET_SUPPLY_RATE + encodeUint256(utilization);
-        const perSecondRate = await fetchEvmUint256AtBlock(target.chain, target.comet, supplyRateData, "latest", opts);
+        const perSecondRate = await fetchCompoundWord(supplyRateData);
         if (perSecondRate == null || perSecondRate === 0n) {
           recordOptionalRpcMiss(
             telemetry,
@@ -504,13 +560,7 @@ export async function fetchCompoundV3SupplyRates(
           continue;
         }
 
-        const totalSupplyRaw = await fetchEvmUint256AtBlock(
-          target.chain,
-          target.comet,
-          ERC20_TOTAL_SUPPLY_SELECTOR,
-          "latest",
-          opts,
-        );
+        const totalSupplyRaw = await fetchCompoundWord(ERC20_TOTAL_SUPPLY_SELECTOR);
         if (totalSupplyRaw == null || totalSupplyRaw === 0n) {
           recordOptionalRpcMiss(
             telemetry,
@@ -674,6 +724,14 @@ export async function fetchAaveV3SupplyRates(
         break;
       }
       const batch = targets.slice(i, i + aaveBatchSize);
+      // A batch probes its targets concurrently, so the batch — not one target —
+      // is what consumes family wall-clock: it gets an equal share of what is
+      // left, and each probe's endpoints split that share so a stalled URL fails
+      // over instead of eating the batch.
+      const batchDeadlineMs = Date.now() + computeOptionalRpcTargetBudgetMs(
+        budget.deadlineMs - Date.now(),
+        Math.ceil((targets.length - i) / aaveBatchSize),
+      );
       await Promise.all(
         batch.map(async (target, batchIndex) => {
           const targetLabel = buildAaveTargetLabel(target);
@@ -702,12 +760,18 @@ export async function fetchAaveV3SupplyRates(
 
           try {
             telemetry.attemptedCount += 1;
-            const hex = await fetchEvmCallHexAtBlock(target.chain, poolAddress, callData, "latest", {
-              extraRpcUrls: rpcUrls,
-              signal: budget.signal,
-              timeoutMs: OPTIONAL_PROTOCOL_RPC_REQUEST_TIMEOUT_MS,
-              maxRetries: OPTIONAL_PROTOCOL_RPC_MAX_RETRIES,
-            });
+            const hex = await runOptionalRpcEndpointPasses<`0x${string}`>(
+              rpcUrls,
+              batchDeadlineMs,
+              (attempt) =>
+                fetchEvmCallHexAtBlock(target.chain, poolAddress, callData, "latest", {
+                  extraRpcUrls: rpcUrls,
+                  signal: budget.signal,
+                  maxRetries: 0,
+                  timeoutMs: attempt.timeoutMs,
+                  deadlineMs: attempt.deadlineMs,
+                }),
+            );
 
             if (!hex || hex.length < 2) {
               recordOptionalRpcMiss(telemetry, target.chain, targetLabel, "reserve-data-unavailable");
@@ -750,17 +814,23 @@ export async function fetchAaveV3SupplyRates(
               accountedTargets.add(targetLabel);
               return;
             }
-            const aTokenSupplyRaw = await fetchEvmUint256AtBlock(
-              target.chain,
-              aTokenAddress,
-              ERC20_TOTAL_SUPPLY_SELECTOR,
-              "latest",
-              {
-                extraRpcUrls: rpcUrls,
-                signal: budget.signal,
-                timeoutMs: OPTIONAL_PROTOCOL_RPC_REQUEST_TIMEOUT_MS,
-                maxRetries: OPTIONAL_PROTOCOL_RPC_MAX_RETRIES,
-              },
+            const aTokenSupplyRaw = await runOptionalRpcEndpointPasses<bigint>(
+              rpcUrls,
+              batchDeadlineMs,
+              (attempt) =>
+                fetchEvmUint256AtBlock(
+                  target.chain,
+                  aTokenAddress,
+                  ERC20_TOTAL_SUPPLY_SELECTOR,
+                  "latest",
+                  {
+                    extraRpcUrls: rpcUrls,
+                    signal: budget.signal,
+                    maxRetries: 0,
+                    timeoutMs: attempt.timeoutMs,
+                    deadlineMs: attempt.deadlineMs,
+                  },
+                ),
             );
             if (aTokenSupplyRaw == null || aTokenSupplyRaw === 0n) {
               recordOptionalRpcMiss(
