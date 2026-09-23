@@ -11,6 +11,7 @@ import { tryParseJson } from "../../lib/json-parse";
 import {
   STAGED_POOL_CONFIDENCE_HORIZON_HOURS,
   STAGED_POOL_MAX_TVL_USD,
+  STAGED_POOL_PRICE_MAX_AGE_HOURS,
   type DiscoveryMeta,
   type StagedPool,
 } from "./types";
@@ -334,12 +335,18 @@ export async function recordDiscoveryAttemptFence(
 /**
  * Cleanup stale staging data.
  * - Delete rows past the delete TTL (merge horizon plus a day), after confidence has fully decayed.
- * - NULL raw provider payloads after four hours.
+ * - NULL raw provider payloads after four hours — except CoinGecko-tickers rows,
+ *   whose raw payload carries the orderbook-depth evidence behind published
+ *   `direct-orderbook-depth` routes. That evidence follows the staged price
+ *   window instead: clearing it after four hours made every cg-tickers route
+ *   blink off until the tier rotation revisited the coin, while the staged row
+ *   itself stayed mergeable for fourteen days.
  * - Bound both oldest-first passes so a retention shortening drains gradually.
  */
 export interface DexPoolStagingRetentionResult {
   rowCutoff: number;
   rawJsonCutoff: number;
+  tickerRawJsonCutoff: number;
   deletedRows: number;
   rawJsonClearedRows: number;
   oldestRemainingAt: number | null;
@@ -355,6 +362,7 @@ export async function cleanupStaging(
 ): Promise<DexPoolStagingRetentionResult> {
   const rowCutoff = nowSec - STAGING_DELETE_TTL_SEC;
   const rawJsonCutoff = nowSec - STAGING_RAW_JSON_TTL_SEC;
+  const tickerRawJsonCutoff = nowSec - STAGED_POOL_PRICE_MAX_AGE_HOURS * 3600;
   const family = await runCappedPruneFamily({
     db,
     signal,
@@ -379,11 +387,11 @@ export async function cleanupStaging(
               SELECT rowid
                 FROM dex_pool_registry
                WHERE raw_json IS NOT NULL
-                 AND refreshed_at < ?
+                 AND refreshed_at < CASE WHEN source = 'cg_tickers' THEN ? ELSE ? END
                ORDER BY refreshed_at ASC, rowid ASC
                LIMIT ?
             )`,
-        bindsForLimit: (limit) => [rawJsonCutoff, limit],
+        bindsForLimit: (limit) => [tickerRawJsonCutoff, rawJsonCutoff, limit],
         batchLimit: STAGING_CLEANUP_MAX_ROWS_PER_RUN,
         runLimit: STAGING_CLEANUP_MAX_ROWS_PER_RUN,
       },
@@ -399,6 +407,7 @@ export async function cleanupStaging(
   return {
     rowCutoff,
     rawJsonCutoff,
+    tickerRawJsonCutoff,
     deletedRows: family.changed.rows,
     rawJsonClearedRows: family.changed.rawJson,
     oldestRemainingAt: family.probes.oldest.oldest_remaining_at ?? null,

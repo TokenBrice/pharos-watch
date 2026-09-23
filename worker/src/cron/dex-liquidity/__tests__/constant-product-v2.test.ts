@@ -1174,7 +1174,7 @@ describe("constant-product V2 execution", () => {
     expect(result.pool.extra?.ammExecutionModel).toBeUndefined();
     expect(result.pool.extra?.executionCapabilityGate).toEqual({
       family: "constant-product-v2",
-      reason: "incomplete-exact-capture",
+      reason: "transport-unavailable",
     });
   });
 });

@@ -7,6 +7,7 @@ import type { DexAmmExecutionModel, DexExecutionCapabilityGate } from "@shared/t
 import { decodeAbiParameters, keccak256 } from "viem/utils";
 
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
+import { getScheduledSlotControlledDeadlineMs } from "../../lib/cron-timeouts";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import {
   fetchEvmBlockHeader,
@@ -366,12 +367,18 @@ async function enrichDeployment(input: {
   contractMetaByChainAddress: SymbolLookups["contractMetaByChainAddress"];
   stablecoinPriceById: Map<string, number>;
   dependencies: EvmV2ExecutionDependencies;
+  deadlineMs: number;
 }): Promise<void> {
   const rpcOptions = {
     chainRpcs: input.chainRpcs,
     signal: input.signal,
     timeoutMs: 15_000,
-    maxRetries: 0,
+    // One network-only retry per URL for transient 429/timeout blips. The
+    // deadline bounds the whole loop's wall time: each URL attempt skips
+    // itself once the remaining budget is spent, and the batch loop below
+    // stops issuing requests past it.
+    maxRetries: 1,
+    deadlineMs: input.deadlineMs,
   };
   const gateAll = (reason: V2GateReason) => {
     for (const probe of input.probes)
@@ -427,7 +434,7 @@ async function enrichDeployment(input: {
         blockNumber,
         rpcOptions,
       );
-      if (!rawResults) return { ok: false, reason: "incomplete-exact-capture" };
+      if (!rawResults) return { ok: false, reason: "transport-unavailable" };
       const results = mapEvmCaptureResults(rawResults);
       if (
         decodeAddressResult(results.get("v2-factory-implementation")) !==
@@ -451,6 +458,15 @@ async function enrichDeployment(input: {
       };
       for (let startIndex = 0; startIndex < input.probes.length; startIndex += MAX_PROBES_PER_MULTICALL) {
         throwIfAborted(input.signal);
+        // Check the remaining wall budget before issuing (or retrying) another
+        // request: once spent, gate the remaining probes as transport
+        // failures instead of letting retries extend the loop.
+        if (Date.now() >= input.deadlineMs) {
+          for (let remaining = startIndex; remaining < input.probes.length; remaining += 1) {
+            gate(input.probes[remaining]!.references, "transport-unavailable");
+          }
+          break;
+        }
         const probes = input.probes.slice(startIndex, startIndex + MAX_PROBES_PER_MULTICALL);
         const poolCalls = probes.flatMap((probe, batchIndex) => {
           const index = startIndex + batchIndex;
@@ -486,7 +502,9 @@ async function enrichDeployment(input: {
           rpcOptions,
         );
         if (!rawResults) {
-          for (const probe of probes) gate(probe.references, "incomplete-exact-capture");
+          // Request-level transport failure: nothing was observed for this
+          // batch, which is a provider condition, not a pool refusal.
+          for (const probe of probes) gate(probe.references, "transport-unavailable");
           continue;
         }
         const results = mapEvmCaptureResults(rawResults);
@@ -548,8 +566,28 @@ async function enrichDeployment(input: {
     onResults: (actions) => {
       for (const apply of actions) apply();
     },
-    onFailure: (reason) => gateAll(reason ?? "incomplete-exact-capture"),
+    onFailure: (reason) => {
+      // A missing reason is the pinned block or header fetch failing: a
+      // transport condition observed nothing. Explicit verifyDeployment
+      // refusals (code mismatch, paused) remain semantic gates.
+      gateAll(reason ?? "transport-unavailable");
+    },
   });
+}
+
+/**
+ * Wall-time bound for one run of the whole staged V2 verification loop,
+ * retries included. Independent of the stage slot so a provider brownout
+ * cannot crowd out the scoring pass that follows.
+ */
+export const V2_ENRICHMENT_MAX_WALL_MS = 5 * 60_000;
+
+/** Enrichment deadline: the earlier of the stage slot's budget and the loop cap. */
+export function resolveV2EnrichmentDeadlineMs(slotStartedAtSec?: number): number {
+  const slotControlledDeadlineMs = slotStartedAtSec != null
+    ? getScheduledSlotControlledDeadlineMs(slotStartedAtSec * 1_000)
+    : Number.POSITIVE_INFINITY;
+  return Math.min(slotControlledDeadlineMs, Date.now() + V2_ENRICHMENT_MAX_WALL_MS);
 }
 
 export async function enrichEvmV2ExecutionModels(input: {
@@ -560,6 +598,8 @@ export async function enrichEvmV2ExecutionModels(input: {
   chainRpcs?: Map<string, ChainRpcConfig>;
   signal?: AbortSignal;
   dependencies?: EvmV2ExecutionDependencies;
+  /** Source-stage slot start, bounding verification against the stage budget. */
+  slotStartedAtSec?: number;
 }): Promise<void> {
   const references: CandidateReference[] = [];
   for (const [stablecoinId, metric] of input.metrics) {
@@ -570,7 +610,7 @@ export async function enrichEvmV2ExecutionModels(input: {
   }
   if (references.length === 0) return;
   if (!input.chainRpcs) {
-    for (const reference of references) gateReference(reference, "incomplete-exact-capture");
+    for (const reference of references) gateReference(reference, "transport-unavailable");
     return;
   }
 
@@ -591,7 +631,7 @@ export async function enrichEvmV2ExecutionModels(input: {
     probes.set(keyForCandidate, probe);
     probesByDeployment.set(key, probes);
   }
-
+  const deadlineMs = resolveV2EnrichmentDeadlineMs(input.slotStartedAtSec);
   const dependencies = input.dependencies ?? DEFAULT_DEPENDENCIES;
   for (const [key, probes] of probesByDeployment) {
     const deployment = deployments.get(key)!;
@@ -605,11 +645,14 @@ export async function enrichEvmV2ExecutionModels(input: {
         contractMetaByChainAddress: input.contractMetaByChainAddress,
         stablecoinPriceById: input.stablecoinPriceById,
         dependencies,
+        deadlineMs,
       });
     } catch (error) {
       rethrowIfAborted(error, input.signal);
+      // A thrown transport error observed nothing: classify it with the
+      // request-level transport failures, not the semantic refusals.
       for (const probe of probes.values()) {
-        for (const reference of probe.references) gateReference(reference, "incomplete-exact-capture");
+        for (const reference of probe.references) gateReference(reference, "transport-unavailable");
       }
     }
   }

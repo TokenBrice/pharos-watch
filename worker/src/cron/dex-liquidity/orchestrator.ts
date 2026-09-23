@@ -198,6 +198,7 @@ export async function stageDexLiquidityScoring(
     reportProgress,
     reportDexProgress,
     syncStartSec,
+    sourceSlotStartedAt,
     fallbackCounters,
   };
   const { scoringSourceState, poolState } = await buildDexLiquidityScoringStageState(ctx);
@@ -358,6 +359,8 @@ export interface DexLiquidityRunContext {
   db: D1Database;
   graphApiKey: string | null;
   syncStartSec: number;
+  /** Source-stage slot start; bounds wall-time budgets like V2 verification. */
+  sourceSlotStartedAt?: number;
   signal?: AbortSignal;
   coingeckoApiKey?: string | null;
   chainRpcs?: Map<string, ChainRpcConfig>;
@@ -834,6 +837,7 @@ async function buildDexLiquidityPoolState(
     stablecoinPriceById: sourceState.stablecoinPriceById,
     chainRpcs: ctx.chainRpcs,
     signal: ctx.signal,
+    slotStartedAtSec: ctx.sourceSlotStartedAt,
   });
   await enrichCurveStableswapRateInputExecutionModels({
     metrics,
