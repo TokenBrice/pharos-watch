@@ -64,8 +64,9 @@ describe("Safety Score v9 USDT premium production integration", () => {
     }
 
     const usdt = evaluatedById.get("usdt-tether")!;
-    // P1-03: tron left matureChains, so this capture's 48.9% tron slice is priced as a
-    // common-mode deployment adjustment and the premium's 75-point base-score gate is missed.
+    // Tron is not a mature chain (block-production-finality pending since the 2026-09-23 re-review),
+    // so this capture's 48.9% tron slice is priced as a common-mode deployment adjustment and the
+    // premium's 75-point base-score gate is missed.
     expect(usdt.trace).toMatchObject({
       finalScore: 73,
       inheritableScore: 73,
