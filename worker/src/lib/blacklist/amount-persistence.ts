@@ -1,3 +1,4 @@
+import type { BlacklistAmountStatus } from "@shared/types/market";
 import type { ContractEventConfig } from "../blacklist-contracts";
 import { shouldSuppressAsMirrorZero } from "./shared";
 
@@ -7,11 +8,59 @@ export interface RecoveredBlacklistAmountPersistenceInput {
   config: ContractEventConfig;
   amount: number;
   amountUsd: number | null;
-  amountSource: "event" | "historical_balance" | "unavailable";
+  amountSource: "event" | "historical_balance" | "derived" | "unavailable";
   amountStatus: "resolved" | "provider_failed";
   attemptedAt: number;
   lastErrorClass: string | null;
   lastProvider: string;
+  /** Exact evidence origin, written only by lanes that attach replay provenance. */
+  provenanceSource?: string | null;
+  provenanceObservedAt?: number | null;
+}
+
+/**
+ * Attempt bookkeeping shared by every recovery lane. `amountStatus` is optional
+ * because derived-zero retries keep their legacy status until they exhaust.
+ */
+export function buildBlacklistAmountAttemptUpdate(
+  db: D1Database,
+  input: {
+    eventId: string;
+    attemptedAt: number;
+    errorClass: string | null;
+    lastProvider: string;
+    amountStatus?: BlacklistAmountStatus;
+  },
+  options: BlacklistAmountWriteGuardOptions = {},
+): D1PreparedStatement {
+  const statusClause = input.amountStatus !== undefined ? `,\n               amount_status = ?` : "";
+  const statement = db.prepare(
+    `UPDATE blacklist_events
+           SET amount_attempt_count = COALESCE(amount_attempt_count, 0) + 1,
+               amount_last_attempted_at = ?,
+               amount_last_error_class = ?,
+               amount_last_provider = ?${statusClause}
+           WHERE id = ?${unresolvedAmountGuard(options)}`,
+  );
+  const binds: Array<string | number | null> = [input.attemptedAt, input.errorClass, input.lastProvider];
+  if (input.amountStatus !== undefined) binds.push(input.amountStatus);
+  binds.push(input.eventId);
+  return statement.bind(...binds);
+}
+
+/**
+ * Lanes whose whole candidate set is unresolved pass this so a row resolved by
+ * another writer (typically the operator repair CLI) between candidate selection
+ * and the deferred batch write is never overwritten.
+ */
+export interface BlacklistAmountWriteGuardOptions {
+  requireUnresolvedAmount?: boolean;
+}
+
+function unresolvedAmountGuard(options: BlacklistAmountWriteGuardOptions): string {
+  return options.requireUnresolvedAmount
+    ? "\n             AND amount_native IS NULL\n             AND suppression_reason IS NULL"
+    : "";
 }
 
 export interface RecoveredBlacklistAmountPersistence {
@@ -28,6 +77,7 @@ export interface RecoveredBlacklistAmountPersistence {
 export function buildRecoveredBlacklistAmountPersistence(
   db: D1Database,
   input: RecoveredBlacklistAmountPersistenceInput,
+  options: BlacklistAmountWriteGuardOptions = {},
 ): RecoveredBlacklistAmountPersistence {
   const suppressed = shouldSuppressAsMirrorZero(
     input.config.stablecoin,
@@ -48,8 +98,10 @@ export function buildRecoveredBlacklistAmountPersistence(
            amount_attempt_count = COALESCE(amount_attempt_count, 0) + 1,
            amount_last_attempted_at = ?,
            amount_last_error_class = ?,
-           amount_last_provider = ?
-       WHERE id = ?`,
+           amount_last_provider = ?,
+           provenance_source = COALESCE(?, provenance_source),
+           provenance_observed_at = COALESCE(?, provenance_observed_at)
+       WHERE id = ?${unresolvedAmountGuard(options)}`,
     )
     .bind(
       input.amount,
@@ -62,6 +114,8 @@ export function buildRecoveredBlacklistAmountPersistence(
       input.attemptedAt,
       input.lastErrorClass,
       input.lastProvider,
+      input.provenanceSource ?? null,
+      input.provenanceObservedAt ?? null,
       input.eventId,
     );
   return { statement, suppressed, targetStatus };

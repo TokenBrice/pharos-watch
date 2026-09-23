@@ -197,6 +197,7 @@ const mockD1 = createMockD1Preset([
   { match: "FROM blacklist_reconciliation_runs", rows: [], first: null },
   { match: "blacklist-amount-repair-queue-", rows: [] },
   { match: "blacklist-amount-recovery-evm-candidates", rows: [] },
+  { match: "blacklist-tron-replay-candidates", rows: [] },
   { match: "UPDATE blacklist_events", rows: [] },
   { match: "INSERT OR IGNORE INTO blacklist_events", rows: [] },
   { match: "blacklist-summary-snapshot-write", rows: [] },
@@ -577,7 +578,10 @@ describe("syncBlacklist", () => {
     const meta = JSON.parse(result.metadata);
 
     expect(result.status).toBe("degraded");
-    expect(meta.tronGridCircuitSkips).toBe(1);
+    // The scan skips every Tron config and the replay tail skips its own lane.
+    expect(meta.tronGridCircuitSkips).toBeGreaterThan(0);
+    expect(meta.tronAmountRepairAttempted).toBe(0);
+    expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-tron-replay-candidates"))).toBe(false);
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes("trongrid.io/v1/contracts"))).toBe(false);
   });
 
