@@ -69,7 +69,6 @@ interface CachedBlacklistSummarySnapshot {
   payload: BlacklistSummaryPayload;
 }
 
-const BLACKLIST_SUMMARY_CURRENT_BALANCE_MAX_AGE_SEC = API_FRESHNESS_MAX_AGE_SEC.blacklistSummary * 2;
 const BLACKLIST_SUMMARY_REQUEST_CLAIM_KEY = "blacklist-summary:request-materialization-claim";
 const BLACKLIST_SUMMARY_REQUEST_CLAIM_STALE_SEC = 120;
 const BLACKLIST_SUMMARY_REQUEST_WAIT_ATTEMPTS = 100;
@@ -572,7 +571,7 @@ async function buildBlacklistSummaryPayload(
         freeze_usd_7d: number;
       }>(),
 
-    loadBlacklistCurrentBalanceMap(db, now - BLACKLIST_SUMMARY_CURRENT_BALANCE_MAX_AGE_SEC),
+    loadBlacklistCurrentBalanceMap(db),
 
     queryLatestEventTypeHistory(db),
     queryBlacklistGapMetrics(db, now, {

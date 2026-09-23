@@ -1,5 +1,4 @@
-import { fetchWithRetry } from "../fetch-retry";
-import { cancelResponseBodyQuietly, readResponseJsonWithinLimitWithSignal } from "../response-body";
+import { fetchJsonWithRetry } from "../fetch-retry";
 import { logWorkerEventArgs } from "../structured-log";
 import { rethrowIfAborted } from "../abort";
 import { budgetExhausted, type RateLimitedFetch } from "../evm-logs";
@@ -59,6 +58,8 @@ export interface TronTransactionInfo {
 }
 
 export interface TronTrc20Transfer {
+  /** Provider transaction identity; no log index exists, so dedupe uses the full composite below. */
+  transactionId: string;
   timestampMs: number;
   from: string;
   to: string;
@@ -103,8 +104,8 @@ async function readTronJson<T>(
   }
   ctx.budget.count++;
   try {
-    const response = await ctx.limiter(() =>
-      fetchWithRetry(
+    const result = await ctx.limiter(() =>
+      fetchJsonWithRetry(
         options.url,
         {
           ...options.init,
@@ -112,18 +113,19 @@ async function readTronJson<T>(
           ...(ctx.signal ? { signal: ctx.signal } : {}),
         },
         2,
+        // The body reader keeps the per-request timeout alive until the payload
+        // is fully consumed, so a stalled TronGrid body cannot outlive the
+        // request deadline and fall through to the cron's outer signal.
         // Without the final response a retry-exhausted 429/5xx is indistinguishable
         // from a transport failure, and operators cannot tell a rate limit from an outage.
-        { returnFinalResponse: true, logUrl: options.label },
+        { returnFinalResponse: true, logUrl: options.label, maxResponseBytes: TRON_REPLAY_MAX_RESPONSE_BYTES },
       ),
     );
-    if (!response) throw new TronReplayProviderError("provider_timeout", `${options.label} transport failure`);
-    if (!response.ok) {
-      const status = response.status;
-      await cancelResponseBodyQuietly(response);
-      throw new TronReplayProviderError("provider_http_error", `${options.label} HTTP ${status}`);
+    if (!result) throw new TronReplayProviderError("provider_timeout", `${options.label} transport failure`);
+    if (!result.response.ok) {
+      throw new TronReplayProviderError("provider_http_error", `${options.label} HTTP ${result.response.status}`);
     }
-    return await readResponseJsonWithinLimitWithSignal<T>(response, TRON_REPLAY_MAX_RESPONSE_BYTES, ctx.signal);
+    return result.body as T;
   } catch (error) {
     rethrowIfAborted(error, ctx.signal);
     if (error instanceof TronReplayProviderError) throw error;
@@ -295,6 +297,7 @@ export async function fetchTronTransferWindow(
     for (const transfer of parsed.data.data) {
       if (transfer.type !== "Transfer") continue;
       transfers.push({
+        transactionId: transfer.transaction_id,
         timestampMs: transfer.block_timestamp,
         from: transfer.from,
         to: transfer.to,

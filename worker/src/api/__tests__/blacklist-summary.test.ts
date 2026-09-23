@@ -70,7 +70,7 @@ describe("handleBlacklistSummary", () => {
     const now = Math.floor(Date.now() / 1000);
     await materializeBlacklistSummarySnapshot(db, now, now - 30);
     const stored = sqlite.prepare("SELECT value FROM cache WHERE key = ?")
-      .get("blacklist:summary:producer:v1") as { value: string };
+      .get("blacklist:summary:producer:v2") as { value: string };
     const snapshot = JSON.parse(stored.value) as { payload: BlacklistSummaryResponse };
     const response = await handleBlacklistSummary(db);
     expect(await readJsonResponse(response, 200)).toEqual(snapshot.payload);
@@ -83,9 +83,9 @@ describe("handleBlacklistSummary", () => {
       {
         match: "blacklist-summary-snapshot-read",
         rows: [{
-          key: "blacklist:summary:producer:v1",
+          key: "blacklist:summary:producer:v2",
           value: JSON.stringify({
-            version: 1,
+            version: 2,
             materializedAt: now - 60,
             freshnessTs: now - 60,
             payload,
@@ -109,9 +109,9 @@ describe("handleBlacklistSummary", () => {
       {
         match: "blacklist-summary-snapshot-read",
         rows: [{
-          key: "blacklist:summary:producer:v1",
+          key: "blacklist:summary:producer:v2",
           value: JSON.stringify({
-            version: 1,
+            version: 2,
             materializedAt: now,
             freshnessTs: now,
             payload: { stats: {} },
@@ -138,7 +138,7 @@ describe("handleBlacklistSummary", () => {
       payload.totalEvents = 99;
       const db = mockD1([
         { match: "blacklist-summary-snapshot-read", rows: [{ value: JSON.stringify({
-          version: 1, materializedAt: now, freshnessTs: now, payload,
+          version: 2, materializedAt: now, freshnessTs: now, payload,
         }) }] },
         ...makeBlacklistSummaryFallbackTables(),
       ]);
@@ -156,7 +156,7 @@ describe("handleBlacklistSummary", () => {
       payload.totalEvents = 99;
       const db = mockD1([
         { match: "blacklist-summary-snapshot-read", rows: [{ value: JSON.stringify({
-          version: 1, materializedAt: now, freshnessTs: now, payload,
+          version: 2, materializedAt: now, freshnessTs: now, payload,
         }) }] },
         ...makeBlacklistSummaryFallbackTables(),
       ]);
@@ -172,9 +172,9 @@ describe("handleBlacklistSummary", () => {
       {
         match: "blacklist-summary-snapshot-read",
         rows: [{
-          key: "blacklist:summary:producer:v1",
+          key: "blacklist:summary:producer:v2",
           value: JSON.stringify({
-            version: 1,
+            version: 2,
             materializedAt: staleAt,
             freshnessTs: staleAt,
             payload,
@@ -202,7 +202,7 @@ describe("handleBlacklistSummary", () => {
         match: "blacklist-summary-snapshot-read",
         rows: [{
           value: JSON.stringify({
-            version: 1,
+            version: 2,
             materializedAt: now,
             freshnessTs: now,
             payload,
@@ -250,7 +250,7 @@ describe("handleBlacklistSummary", () => {
         {
           match: "blacklist-summary-snapshot-read",
           rows: [{
-            key: "blacklist:summary:producer:v1",
+            key: "blacklist:summary:producer:v2",
             value: "{",
             updated_at: now,
           }],
@@ -278,14 +278,14 @@ describe("handleBlacklistSummary", () => {
 
     expect(result).toEqual({ written: true });
     const write = db.getHistory().find((entry) => entry.sql.includes("blacklist-summary-snapshot-write"));
-    expect(write?.binds[0]).toBe("blacklist:summary:producer:v1");
+    expect(write?.binds[0]).toBe("blacklist:summary:producer:v2");
     const payload = JSON.parse(String(write?.binds[1])) as {
       version: number;
       materializedAt: number;
       freshnessTs: number;
       payload: { stats: unknown; chart: unknown[]; totalEvents: number };
     };
-    expect(payload.version).toBe(1);
+    expect(payload.version).toBe(2);
     expect(payload.materializedAt).toBe(now);
     expect(payload.freshnessTs).toBe(now - 300);
     expect(payload.payload.totalEvents).toBe(0);
@@ -864,6 +864,52 @@ describe("handleBlacklistSummary", () => {
     expect(json.dataQuality.freezeLedger.providerFailedCount).toBe(0);
     expect(json.dataQuality.status).toBe("ok");
     expect(json.dataQuality.warnings).toEqual([]);
+  });
+
+  it("keeps historical, NULL-timestamp, and provider-failed ledger rows in tracked totals", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-15T12:00:00Z"));
+    const now = Math.floor(Date.now() / 1000);
+    const { sqlite, db } = sqliteFixtures.open();
+    const insert = sqlite.prepare(`INSERT INTO blacklist_current_balances
+      (id, stablecoin, chain_id, address, amount_native, amount_usd, source, status, observed_at,
+       config_key, contract_address, last_successful_observed_at, attempt_count, last_attempted_at,
+       last_error_class, consecutive_failures)
+      VALUES (?, 'USDT', 'tron', ?, 100, 40, ?, ?, ?, 'tron-tr7nhqjekqxgtci8q8zy4pl8otszgjlj6t', NULL, ?, 1, ?, ?, ?)`);
+    // Resolved legacy row: NULL successful-observation timestamp must fall back
+    // to observed_at, not disappear before mapping.
+    insert.run("usdt:tron:legacy", "0xlegacy", "current_balance", "resolved", now - 90 * 86400, null, null, null, null);
+    // Destroy snapshot: the event timestamp is the immutable success timestamp.
+    insert.run("usdt:tron:destroy", "0xdestroy", "destroy_event", "resolved", now - 30 * 86400, now - 30 * 86400, null, null, null);
+    // Provider-failed refresh: prior value retained with the failure visible.
+    insert.run("usdt:tron:failed", "0xfailed", "current_balance", "provider_failed", now - 3 * 86400, now - 3 * 86400, now - 60, "provider_null", 2);
+    // Fresh control row.
+    insert.run("usdt:tron:fresh", "0xfresh", "current_balance", "resolved", now - 60, now - 60, null, null, null);
+
+    const json = await readJsonResponse<{
+      stats: {
+        trackedAddressCount: number;
+        trackedFrozenTotal: number;
+        perCoinFrozenTotal: Record<string, number>;
+      };
+      freezeLedgerMeta: {
+        totalRows: number;
+        freshnessDistribution: { stale: number };
+      };
+      dataQuality: {
+        status: string;
+        warnings: string[];
+        freezeLedger: { providerFailedCount: number };
+      };
+    }>(await handleBlacklistSummary(db), 200);
+    expect(json.stats.trackedAddressCount).toBe(4);
+    expect(json.stats.trackedFrozenTotal).toBe(160);
+    expect(json.stats.perCoinFrozenTotal.USDT).toBe(120);
+    expect(json.freezeLedgerMeta.totalRows).toBe(4);
+    expect(json.freezeLedgerMeta.freshnessDistribution.stale).toBe(3);
+    expect(json.dataQuality.freezeLedger.providerFailedCount).toBe(1);
+    expect(json.dataQuality.status).toBe("degraded");
+    expect(json.dataQuality.warnings).toContain("current-balance-provider-failures");
   });
 
   it("excludes only suppressed events from public aggregates", async () => {

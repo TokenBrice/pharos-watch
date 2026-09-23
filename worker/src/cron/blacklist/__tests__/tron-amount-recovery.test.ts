@@ -95,6 +95,9 @@ async function stubEvidence(flows: Flow[], overrides: StubOptions = {}) {
   const counterparty = "T-Counterparty";
   const toTransfers = (source: Flow[]) =>
     source.map((flow) => ({
+      // Identity keyed on flow content, so repeating a flow repeats its identity
+      // exactly the way a duplicated provider record does.
+      transactionId: `tx-${flow.direction}-${flow.timestampMs}-${flow.value}`,
       timestampMs: flow.timestampMs,
       from: flow.direction === "in" ? counterparty : account,
       to: flow.direction === "in" ? account : counterparty,
@@ -171,10 +174,10 @@ beforeEach(() => {
 describe("sumSignedTransfers", () => {
   it("nets only transfers at or before the bound and flags boundary ambiguity", () => {
     const ledger = [
-      { timestampMs: 1_000, from: "T1", to: "account", value: BigInt(500) },
-      { timestampMs: 2_000, from: "account", to: "T1", value: BigInt(200) },
-      { timestampMs: 3_000, from: "account", to: "T1", value: BigInt(100) },
-      { timestampMs: 3_000, from: "T1", to: "T2", value: BigInt(7) },
+      { transactionId: "a", timestampMs: 1_000, from: "T1", to: "account", value: BigInt(500) },
+      { transactionId: "b", timestampMs: 2_000, from: "account", to: "T1", value: BigInt(200) },
+      { transactionId: "c", timestampMs: 3_000, from: "account", to: "T1", value: BigInt(100) },
+      { transactionId: "d", timestampMs: 3_000, from: "T1", to: "T2", value: BigInt(7) },
     ];
     const sum = sumSignedTransfers(ledger, "account", 3_000);
     expect(sum.net).toBe(BigInt(200));
@@ -209,6 +212,19 @@ describe("recoverTronFreezeAmountForRow", () => {
     await stubEvidence([{ timestampMs: FREEZE_MS - 60_000, value: BigInt(2_000_000), direction: "in" }], {
       balance: BigInt(2_500_000),
     });
+    const recovery = await recoverTronFreezeAmountForRow(await makeRow(), config, provider());
+    expect(recovery.amount).toBeNull();
+    expect(recovery.lastErrorClass).toBe("evidence_mismatch");
+  });
+
+  it("refuses duplicated transfer records even when the net flow reconciles", async () => {
+    const base = { timestampMs: FREEZE_MS - 120_000, value: BigInt(3_000_000), direction: "in" as const };
+    const matchedIn = { timestampMs: FREEZE_MS - 60_000, value: BigInt(2_000_000), direction: "in" as const };
+    const matchedOut = { timestampMs: FREEZE_MS + 30_000, value: BigInt(2_000_000), direction: "out" as const };
+    // The provider repeats the ±2M pair with identical identities. The doubled
+    // flows still cancel at the current-balance checkpoint (net 3M), but the
+    // duplicated pre-freeze inflow would inflate the derived freeze balance.
+    await stubEvidence([base, matchedIn, matchedOut, matchedIn, matchedOut]);
     const recovery = await recoverTronFreezeAmountForRow(await makeRow(), config, provider());
     expect(recovery.amount).toBeNull();
     expect(recovery.lastErrorClass).toBe("evidence_mismatch");

@@ -1,7 +1,7 @@
 import { BLACKLIST_RECENT_WINDOW_SEC } from "@shared/lib/status-thresholds";
 
 export const BLACKLIST_GAP_METRICS_CACHE_VERSION = 1;
-export const BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION = 1;
+export const BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION = 2;
 export const BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY =
   `blacklist:summary:producer:v${BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION}`;
 

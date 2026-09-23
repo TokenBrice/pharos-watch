@@ -350,7 +350,7 @@ describe("handleRemediateBlacklistAmountGaps", () => {
       "blacklist:gap-metrics:producer:v1:86400:full",
       "blacklist:gap-metrics:v1:86400:core",
       "blacklist:gap-metrics:v1:86400:full",
-      "blacklist:summary:producer:v1",
+      "blacklist:summary:producer:v2",
     ]);
   });
 
