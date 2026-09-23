@@ -38,6 +38,50 @@ import {
   SAFETY_SCORE_V9_TRANSFER_MATERIALITY_CACHE_KEY,
   type SafetyScoreV9TransferMaterialityGeneration,
 } from "../lib/safety-score-v9/transfer-materiality";
+import type { V9PublicationHoldReason } from "@shared/types/report-cards-v9";
+import type { V9PublicationCoverageFloor } from "../lib/safety-score-v9/publication-assessment";
+
+/**
+ * A held attempt is only attributable if the numbers it was decided on reach
+ * `cron_runs.metadata`. The metadata compactor reduces every array diagnostic to
+ * a `<key>Count` scalar once the payload crosses the 64 KiB cap — which this
+ * producer always does — so `coverageFloors` and `reasons` arrive as bare counts
+ * and a `coverage-floor-failed` hold shows no observed-vs-required value at all.
+ * These two formatters mirror the same verdicts as bounded scalars that survive
+ * compaction.
+ */
+function summarizeCoverageFloors(
+  floors: readonly V9PublicationCoverageFloor[],
+): string {
+  return floors
+    .map(
+      (floor) =>
+        `${floor.id}:${floor.status}:observed=${floor.observed ?? "null"},required=${floor.required}`,
+    )
+    .join(";");
+}
+
+function summarizeHoldReasons(
+  reasons: readonly V9PublicationHoldReason[],
+): string {
+  return reasons
+    .map((reason) => {
+      if (reason.code === "coverage-floor-failed") {
+        return `${reason.code}:${reason.floorIds.join("|")}`;
+      }
+      if (
+        reason.code === "producer-failed-downgrade" ||
+        reason.code === "producer-failed-nr"
+      ) {
+        return `${reason.code}:${reason.assetId}:${reason.reasonCode}:${reason.effect}`;
+      }
+      if (reason.code === "assessment-failed") {
+        return `${reason.code}:${reason.detail}`;
+      }
+      return reason.code;
+    })
+    .join(",");
+}
 
 function unavailable(
   reason: string,
@@ -355,6 +399,15 @@ export async function computeSafetyScoreV9(
       ? [`supply-attribution-generation-${supplyAttributionGenerationState.status}`]
       : []),
   ];
+  const publicationDiagnostics = publication.status === "held"
+    ? {
+        ...publication,
+        // Compaction drops array diagnostics to counts; keep the verdict and the
+        // reason codes readable from the run row itself.
+        coverageFloorVerdicts: summarizeCoverageFloors(publication.coverageFloors),
+        holdReasonCodes: summarizeHoldReasons(publication.reasons),
+      }
+    : publication;
 
   return {
     status: degradationReasons.length === 0 ? "ok" : "degraded",
@@ -375,7 +428,7 @@ export async function computeSafetyScoreV9(
         ).length,
       },
       supplyAttributionGeneration: supplyAttributionGenerationState,
-      publication,
+      publication: publicationDiagnostics,
     }),
     productivity: {
       productive: publication.status === "published",

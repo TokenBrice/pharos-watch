@@ -286,6 +286,12 @@ export const DexExecutionCapabilityGateSchema = z.object({
     "paused-or-swap-disabled",
     "metapool-unsupported",
     "incomplete-exact-capture",
+    // The verification transport failed before anything was observed (request
+    // failure, pinned block unavailable, or exhausted wall-time budget). The
+    // pool was NOT semantically refused: distinct from
+    // `incomplete-exact-capture`, which asserts an observed capture was
+    // incomplete, so operators can tell a provider blip from a data refusal.
+    "transport-unavailable",
     "invalid-invariant-parameters",
     "ambiguous-token-identity",
     "tracked-input-unresolved",

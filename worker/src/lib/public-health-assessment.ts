@@ -1,4 +1,4 @@
-import { getBlacklistGapStatus, getMissingPriceDurationStatus } from "@shared/lib/status-thresholds";
+import { STATUS_MISSING_PRICE_THRESHOLDS, getBlacklistGapStatus, getMissingPriceDurationStatus } from "@shared/lib/status-thresholds";
 import { getD1CapacityImpactStatus } from "@shared/lib/d1-capacity";
 import {
   countPublicImpactOpenCircuits,
@@ -685,21 +685,24 @@ export async function assessPublicHealth(
   // and the warning below names every alert-eligible id. Only missing coverage
   // evidence itself fails closed. A gap that has outlived the duration bands,
   // which the ratio bands cannot see, is a catalog decision (re-source or
-  // retire): it degrades availability and is named on its own, but it never
+  // retire): it is always named, and it degrades availability only for a
+  // material asset (market cap >= durationMaterialMarketCapUsd). It never
   // reports the public surface as stale — the data is served, one price is not.
   // Reviewed gaps remain missing in the payload but do not warn or contribute
   // to duration degradation. The coverage reader re-arms them at expiry.
   const acknowledgedGapIds = new Set(activePriceCoverage.acknowledgedGapIds ?? []);
   const alertEligibleIds = activePriceCoverage.alertEligibleIds.filter((id) => !acknowledgedGapIds.has(id));
   const activePriceCoverageAlertEligible = alertEligibleIds.length > 0;
-  const criticalDurationIds = activePriceCoverage.missingActiveAssets
-    .filter((asset) => asset.alertEligible && !asset.acknowledgedGap
-      && !acknowledgedGapIds.has(asset.stablecoinId)
-      && getMissingPriceDurationStatus(asset.consecutiveMissingGenerations) === "stale")
+  const unacknowledgedAlertGaps = activePriceCoverage.missingActiveAssets
+    .filter((asset) => asset.alertEligible && !asset.acknowledgedGap && !acknowledgedGapIds.has(asset.stablecoinId));
+  const criticalDurationIds = unacknowledgedAlertGaps
+    .filter((asset) => getMissingPriceDurationStatus(asset.consecutiveMissingGenerations) === "stale")
     .map((asset) => asset.stablecoinId);
+  // Unknown size (compacted evidence) fails closed as material.
   const activePriceCoverageDurationStatus = getMissingPriceDurationStatus(
-    activePriceCoverage.missingActiveAssets.reduce(
-      (worst, asset) => (asset.alertEligible && !asset.acknowledgedGap && !acknowledgedGapIds.has(asset.stablecoinId)
+    unacknowledgedAlertGaps.reduce(
+      (worst, asset) => (asset.marketCapUsd == null
+        || asset.marketCapUsd >= STATUS_MISSING_PRICE_THRESHOLDS.durationMaterialMarketCapUsd
         ? Math.max(worst, asset.consecutiveMissingGenerations) : worst),
       0,
     ),
@@ -724,7 +727,6 @@ export async function assessPublicHealth(
     : blacklistResult.metrics
       ? getBlacklistGapStatus({
           missingRatio: blacklistResult.metrics.missingRatio,
-          recentMissingAmounts: blacklistResult.metrics.recentMissingAmounts,
         })
       : "healthy";
 

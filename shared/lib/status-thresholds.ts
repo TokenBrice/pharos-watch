@@ -34,34 +34,23 @@ export function classifyFreshnessRatio(ratio: number): FreshnessStatus {
 // --- Blacklist gap thresholds ---
 /** Rolling window (seconds) used to count "recent" missing blacklist amounts when classifying blacklist gap status. */
 export const BLACKLIST_RECENT_WINDOW_SEC = 24 * 3600;
-/** Ratios are fractions of total events (0.01 = 1%); recent counts are absolute amounts within BLACKLIST_RECENT_WINDOW_SEC. */
+/**
+ * Ratios are fractions of total events (0.01 = 1%) and are the only inputs that
+ * degrade status: a material share of events without amounts. A burst of recent
+ * freezes whose amounts are still being recovered (one issuer wave can add dozens
+ * in an hour) is a watch signal at `missingRecentWatch` absolute amounts within
+ * BLACKLIST_RECENT_WINDOW_SEC, never an app-wide degradation on its own.
+ */
 export const STATUS_BLACKLIST_THRESHOLDS = {
   missingRatioDegraded: 0.01,
   missingRatioStale: 0.02,
-  missingRecentDegraded: 5,
-  missingRecentStale: 25,
+  missingRecentWatch: 5,
 } as const;
 
-/** Classify blacklist coverage gaps. Stale tier wins over degraded when either condition triggers. */
-export function getBlacklistGapStatus({
-  missingRatio,
-  recentMissingAmounts,
-}: {
-  missingRatio: number;
-  recentMissingAmounts: number;
-}): StatusHealthValue {
-  if (
-    missingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioStale
-    || recentMissingAmounts >= STATUS_BLACKLIST_THRESHOLDS.missingRecentStale
-  ) {
-    return "stale";
-  }
-  if (
-    recentMissingAmounts >= STATUS_BLACKLIST_THRESHOLDS.missingRecentDegraded
-    || missingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded
-  ) {
-    return "degraded";
-  }
+/** Classify blacklist coverage gaps by missing-amount share. Stale tier wins over degraded. */
+export function getBlacklistGapStatus({ missingRatio }: { missingRatio: number }): StatusHealthValue {
+  if (missingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioStale) return "stale";
+  if (missingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded) return "degraded";
   return "healthy";
 }
 
@@ -114,6 +103,12 @@ export const STATUS_MISSING_PRICE_THRESHOLDS = {
   ratioStale: 0.45,
   generationsElevated: MISSING_PRICE_GENERATIONS_PER_DAY,
   generationsCritical: 7 * MISSING_PRICE_GENERATIONS_PER_DAY,
+  /**
+   * A long-running gap degrades status only for an asset at least this large.
+   * Smaller long-running gaps stay named warnings: one thin asset without a
+   * price is a catalog follow-up, not an app-wide degradation.
+   */
+  durationMaterialMarketCapUsd: 100_000_000,
 } as const;
 
 /**

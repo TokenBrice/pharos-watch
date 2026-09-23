@@ -9,6 +9,7 @@ import { makePriceCoverageMetadata } from "./public-health.test-support";
 import { STABLECOIN_PRICE_GAP_REVIEWS } from "../stablecoin-publication-coverage";
 
 const fixtures = createLatestSchemaFixtureTracker();
+const MATERIAL_MARKET_CAP_USD = STATUS_MISSING_PRICE_THRESHOLDS.durationMaterialMarketCapUsd;
 afterEach(() => fixtures.closeAll());
 
 /**
@@ -334,7 +335,7 @@ describe("assessPublicHealth upstream provider enrichment", () => {
     const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === "wusd-worldwide")!;
     for (const compact of [false, true]) {
       const nowSec = review.expiresAt - 1;
-      const metadata = makePriceCoverageMetadata(nowSec, review.stablecoinId, 800, true, compact);
+      const metadata = makePriceCoverageMetadata(nowSec, review.stablecoinId, 800, true, compact, MATERIAL_MARKET_CAP_USD);
       const before = await assessPublicHealth(makeMintBurnAssessmentDb(nowSec, {
         publicationMetadata: metadata,
       }), nowSec, { logPrefix: "test" });
@@ -344,7 +345,7 @@ describe("assessPublicHealth upstream provider enrichment", () => {
         status: "incomplete",
         missingPriceCount: 1,
         missingActiveIds: [review.stablecoinId],
-        affectedMarketCapUsd: 88_000_000,
+        ...(compact ? {} : { affectedMarketCapUsd: MATERIAL_MARKET_CAP_USD }),
         acknowledgedGapIds: [review.stablecoinId],
         alertEligibleCount: 0,
       });
@@ -358,7 +359,7 @@ describe("assessPublicHealth upstream provider enrichment", () => {
     }
   });
 
-  it("escalates once an alert-eligible price gap outlives the elevated duration band", async () => {
+  it("escalates once a material alert-eligible price gap outlives the elevated duration band", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const activeIds = [...ACTIVE_IDS];
     const missingId = activeIds[0]!;
@@ -367,12 +368,15 @@ describe("assessPublicHealth upstream provider enrichment", () => {
     }), nowSec, { logPrefix: "test" });
     expect(baseline.overallStatus).toBe("healthy");
     // One gap in a full active set is far below `missingPriceRatio` bands; only
-    // its persistence escalates.
+    // its persistence on a material asset escalates.
     const db = makeMintBurnAssessmentDb(nowSec, {
       publicationMetadata: makePriceCoverageMetadata(
         nowSec,
         missingId,
         STATUS_MISSING_PRICE_THRESHOLDS.generationsElevated,
+        true,
+        false,
+        MATERIAL_MARKET_CAP_USD,
       ),
     });
 
@@ -381,6 +385,27 @@ describe("assessPublicHealth upstream provider enrichment", () => {
     expect(result.activePriceCoverageImpactStatus).toBe("degraded");
     expect(result.overallStatus).toBe("degraded");
     expect(result.warnings).toContain(`active-price-coverage-incomplete:${missingId}`);
+  });
+
+  it("names a long-running gap on a small asset without degrading public health", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const missingId = [...ACTIVE_IDS][0]!;
+    const db = makeMintBurnAssessmentDb(nowSec, {
+      publicationMetadata: makePriceCoverageMetadata(
+        nowSec,
+        missingId,
+        STATUS_MISSING_PRICE_THRESHOLDS.generationsCritical,
+        true,
+        false,
+        STATUS_MISSING_PRICE_THRESHOLDS.durationMaterialMarketCapUsd - 1,
+      ),
+    });
+
+    const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
+
+    expect(result.activePriceCoverageImpactStatus).toBe("healthy");
+    expect(result.overallStatus).toBe("healthy");
+    expect(result.warnings).toContain(`active-price-coverage-critical-duration:${missingId}`);
   });
 
   it("names an alert-eligible price gap past the critical duration band without reporting the surface stale", async () => {
@@ -396,6 +421,9 @@ describe("assessPublicHealth upstream provider enrichment", () => {
         nowSec,
         missingId,
         STATUS_MISSING_PRICE_THRESHOLDS.generationsCritical,
+        true,
+        false,
+        MATERIAL_MARKET_CAP_USD,
       ),
     });
 

@@ -2,12 +2,13 @@
 
 Triggered by `StatusCause.code`:
 
-- `blacklist_gaps_degraded`
-- `blacklist_gaps_stale`
+- `blacklist_gaps_degraded` (missing-amount share ≥ 1%)
+- `blacklist_gaps_stale` (missing-amount share ≥ 2%)
+- `blacklist_gaps_recent` (info only: ≥ 5 recent events awaiting amount recovery below the 1% share; never degrades status)
 
 ## Symptom
 
-The blacklist ingestion pipeline has unresolved gaps in recent blocks. Missing amounts exceed the threshold in `shared/lib/status-thresholds.ts`.
+The blacklist ingestion pipeline has unresolved gaps. The missing-amount share or the recent count exceeds the thresholds in `shared/lib/status-thresholds.ts` (`STATUS_BLACKLIST_THRESHOLDS`). The share drives status; the recent count is a watch signal only.
 
 ## First checks
 

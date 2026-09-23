@@ -235,7 +235,6 @@ export function getImpactedPublicSurfaces(
   const mintBurnStatus = getPublicMintBurnStatus(healthData.mintBurn.sync);
   const blacklistStatus = getBlacklistGapStatus({
     missingRatio: healthData.blacklist.missingRatio,
-    recentMissingAmounts: healthData.blacklist.recentMissingAmounts,
   });
 
   // Mirror the worker's public-impact gate (public-health-assessment.ts):

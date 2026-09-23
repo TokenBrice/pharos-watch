@@ -22,7 +22,6 @@ export function PublicServiceSummarySection({
   const mintBurnStatus = getPublicMintBurnStatus(healthData.mintBurn.sync);
   const blacklistStatus = getBlacklistGapStatus({
     missingRatio: healthData.blacklist.missingRatio,
-    recentMissingAmounts: healthData.blacklist.recentMissingAmounts,
   });
   const blacklistWindowHours = Math.max(1, Math.round(healthData.blacklist.recentWindowSec / 3600));
   const telegramSummary = healthData.telegramSummary ?? null;

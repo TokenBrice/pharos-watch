@@ -314,7 +314,6 @@ Computed from missing prices + blacklist gaps + on-chain supply monitor, with be
   - stablecoins cache is unavailable/corrupt (`dataQuality.stablecoinsCacheStatus === "error"`)
   - `missingPriceRatio > 0.45`
   - `blacklistMissingRatio >= 0.02` (2%)
-  - `blacklistRecentMissingAmounts >= <!-- GENERATED-START: status-blacklist-recent-stale-threshold -->25<!-- GENERATED-END: status-blacklist-recent-stale-threshold -->` (last 24h)
   - `staleOnchainSupply >= 10`
   - `onchainSupplyDivergences >= 25`
   - `onchainStaleRatio >= 0.25` when `onchainSupplyTrackedCoins >= 10`
@@ -323,13 +322,13 @@ Computed from missing prices + blacklist gaps + on-chain supply monitor, with be
 - `degraded` if any of:
   - stablecoins cache is degraded but still usable (`dataQuality.stablecoinsCacheStatus === "degraded"`, currently legacy-array payloads only)
   - exact stablecoin publication coverage is not complete (`dataQuality.stablecoinPublication.status !== "complete"`, i.e. `incomplete` or `unknown`)
-  - exact active-price coverage is unreadable or has a day-old gap (`activePriceCoverageImpactStatus === "degraded"` from `active_price_coverage_unknown`, or from an alert-eligible gap at `generationsElevated` = 96 consecutive missing generations — one day at the 15-minute cadence, including gaps past `generationsCritical`; shorter gaps stay warning-only)
+  - exact active-price coverage is unreadable or has a day-old gap on a material asset (`activePriceCoverageImpactStatus === "degraded"` from `active_price_coverage_unknown`, or from an unacknowledged alert-eligible gap at `generationsElevated` = 96 consecutive missing generations — one day at the 15-minute cadence, including gaps past `generationsCritical` — whose market cap is at least `STATUS_MISSING_PRICE_THRESHOLDS.durationMaterialMarketCapUsd` ($100M) or unknown; smaller long-running gaps stay named warnings)
   - `missingPriceRatio > 0.18`
-  - `blacklistRecentMissingAmounts >= <!-- GENERATED-START: status-blacklist-recent-degraded-threshold -->5<!-- GENERATED-END: status-blacklist-recent-degraded-threshold -->` (last 24h)
   - `blacklistMissingRatio >= 0.01` (1%)
   - `onchainStaleRatio >= 0.1` when `onchainSupplyTrackedCoins >= 10`
   - `onchainDivergenceRatio >= 0.1` when `onchainSupplyTrackedCoins >= 10`
   - `reserveComposition.status === "degraded"`
+- `healthy` with an info `blacklist_gaps_recent` cause when `blacklistRecentMissingAmounts >= <!-- GENERATED-START: status-blacklist-recent-watch-threshold -->5<!-- GENERATED-END: status-blacklist-recent-watch-threshold -->` (last 24h) but the missing share is below 1%: a burst of freezes awaiting amount recovery is a watch signal, not a degraded surface. The public `/api/health` blacklist impact uses the same ratio-only rule.
 - else `healthy`
 
 #### Missing-price ratio bands (2026-04-13)
@@ -346,14 +345,14 @@ The `missing_prices_elevated` info cause exists to preserve operator observabili
 
 #### Active-price gap duration bands (2026-09-21)
 
-`missingPriceRatio` counts assets; it says nothing about how long a gap has lasted. Nine of 335 active assets (2.7%) sat below the 15% elevated band while `aznd-mu-digital` published a $16.3 M market cap with no accepted price for 5,957 consecutive 15-minute generations (~62 days). The duration dimension therefore escalates independently of the ratio, from the per-asset `consecutiveMissingGenerations` in the coverage payload and only for alert-eligible gaps:
+`missingPriceRatio` counts assets; it says nothing about how long a gap has lasted. Nine of 335 active assets (2.7%) sat below the 15% elevated band while `aznd-mu-digital` published a $16.3 M market cap with no accepted price for 5,957 consecutive 15-minute generations (~62 days). The duration dimension therefore escalates independently of the ratio, from the per-asset `consecutiveMissingGenerations` in the coverage payload and only for unacknowledged alert-eligible gaps. Every such gap is named; only a gap on a material asset (market cap ≥ `durationMaterialMarketCapUsd` = $100M, or unknown) changes the impact status:
 
-| Band | Enter (consecutive missing generations) | `activePriceCoverageImpactStatus` | `/api/health` warning |
-| ---- | --------------------------------------- | --------------------------------- | --------------------- |
+| Band | Enter (consecutive missing generations) | `activePriceCoverageImpactStatus` (material asset) | `/api/health` warning |
+| ---- | --------------------------------------- | -------------------------------------------------- | --------------------- |
 | elevated | ≥ 96 — one day at the current `sync-stablecoins` cadence | `degraded` | `active-price-coverage-incomplete:<ids>` |
 | critical | ≥ 672 — one week | `degraded` (never `stale`) | additionally `active-price-coverage-critical-duration:<ids>` |
 
-Both bands live in `STATUS_MISSING_PRICE_THRESHOLDS` as `generationsElevated` / `generationsCritical`; the ratio bands above are unchanged and still drive the `missing_prices_*` causes. The duration dimension is a data-quality verdict, not an availability one: the public surface is being served with one price missing, so it degrades `/api/health` and names the asset, but it never reports the surface stale (the 2026-09-22 release briefly did, and seven long-unpriced minor assets turned the whole status page, the browser probes and every deploy acceptance stale). A gap past the critical band is a catalog decision — re-source the price or retire the asset — rather than a fetch gap to wait out; see [Adding a Stablecoin](./process/adding-a-stablecoin.md).
+All three thresholds live in `STATUS_MISSING_PRICE_THRESHOLDS` (`generationsElevated`, `generationsCritical`, `durationMaterialMarketCapUsd`). The ratio bands above are unchanged and still drive the `missing_prices_*` causes. The duration dimension is a data-quality verdict, not an availability one. The public surface is still served with one price missing, so a material gap degrades `/api/health` and names the asset, but never reports the surface stale. The 2026-09-22 release briefly did, and seven long-unpriced minor assets turned the whole status page, the browser probes and every deploy acceptance stale. Since 2026-09-23, a long-running gap on a sub-$100M asset is a named warning only: one thin asset without a price must not degrade the whole application. A gap past the critical band is a catalog decision — re-source the price, add a reviewed price-gap acknowledgement, or retire the asset — rather than a fetch gap to wait out. See [Adding a Stablecoin](./process/adding-a-stablecoin.md).
 
 `dataQuality.sourceFailures` still records failed data-quality subqueries, but those failures now emit info-level causes and increment `summary.diagnosticIssueCount` instead of degrading `dataQualityStatus` on their own. Only the stablecoins cache remains a hard dependency in this path.
 

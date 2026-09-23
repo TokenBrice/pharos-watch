@@ -3,6 +3,7 @@ import {
   buildSafetyScoreV9InputIdentity,
 } from "@shared/lib/safety-score-v9-input-identity";
 import { createNativeSafetyScoreV9FullRegistryInput } from "../../lib/__tests__/fixtures/safety-score-v9-full-registry-input";
+import { compactCronMetadataForPersistence } from "../../lib/cron-metadata-persistence";
 import type { NativeSafetyScoreV9Input } from "../../lib/safety-score-v9/native-input";
 
 const mocks = vi.hoisted(() => ({
@@ -298,6 +299,75 @@ describe("computeSafetyScoreV9", () => {
         status: "published",
         outcome: "partial",
       },
+    });
+  });
+
+  it("keeps the coverage-floor verdict readable after metadata compaction", async () => {
+    mocks.supplyGenerationCadenceDeferred.mockReturnValue(false);
+    mocks.runPublication.mockImplementationOnce(async (input: {
+      fixedInput: unknown;
+      prepareFixedInput?: (fixedInput: unknown, signal: AbortSignal) => Promise<unknown>;
+    }) => {
+      await input.prepareFixedInput?.(
+        input.fixedInput,
+        new AbortController().signal,
+      );
+      return {
+        status: "held",
+        attemptId: "safety-score-v9-publication:1790124736",
+        attemptedPublicationGenerationId: "report-cards:v9:v1:6d64205b",
+        reasons: [
+          { code: "coverage-floor-failed", floorIds: ["minimum-rateable-assets"] },
+        ],
+        coverageFloors: [
+          {
+            id: "active-result-count",
+            status: "pass",
+            observed: 332,
+            required: "= 332",
+            detail: "one result per active asset",
+          },
+          {
+            id: "minimum-rateable-assets",
+            status: "fail",
+            observed: 264,
+            required: ">= 271",
+            detail: "below the active-asset rateability floor",
+          },
+        ],
+        quarantines: [],
+        affectedAssetIds: [],
+        bridgeJoinDiagnostics: [],
+      };
+    });
+
+    const result = await computeSafetyScoreV9({} as D1Database);
+
+    expect(result.status).toBe("degraded");
+    expect(result.productivity).toMatchObject({
+      productive: false,
+      reason: "v9-publication-held",
+    });
+
+    // Production metadata for this producer is far past the 64 KiB cap, where the
+    // compactor rewrites every array diagnostic as a `<key>Count` scalar. Pad the
+    // payload to force that path and assert the floor verdict survives it.
+    const padded = JSON.stringify({
+      ...JSON.parse(result.metadata ?? "{}"),
+      bridgeJoinDiagnostics: Array.from({ length: 400 }, (_, index) => ({
+        assetId: `asset-${index}`,
+        path: "x".repeat(140),
+      })),
+    });
+    const compacted = compactCronMetadataForPersistence(padded);
+    expect(compacted.compacted).toBe(true);
+    const envelope = JSON.parse(compacted.metadata ?? "{}") as {
+      diagnostics?: { publication?: Record<string, unknown> };
+    };
+    expect(envelope.diagnostics?.publication).toMatchObject({
+      coverageFloorVerdicts:
+        "active-result-count:pass:observed=332,required== 332;minimum-rateable-assets:fail:observed=264,required=>= 271",
+      holdReasonCodes: "coverage-floor-failed:minimum-rateable-assets",
     });
   });
 
