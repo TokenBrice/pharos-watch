@@ -18,7 +18,7 @@ export const DEX_EXIT_ROUTE_TURNOVER_SNAPSHOT_CACHE_KEY = "dex-exit-route-turnov
 /**
  * Alert at 0.5 Jaccard distance: for two equally sized route sets this means
  * at least one third of the published slots were replaced. A coin alerts only
- * when this distance is reached with enough churn (see
+ * when this distance is reached with enough REMOVED routes (see
  * `DEX_EXIT_ROUTE_TURNOVER_MIN_CHANGED_ROUTES`) and is sustained across two
  * consecutive published generations against the last confirmed baseline;
  * smaller changes remain visible in metadata without degrading the cron,
@@ -27,10 +27,14 @@ export const DEX_EXIT_ROUTE_TURNOVER_SNAPSHOT_CACHE_KEY = "dex-exit-route-turnov
 export const DEX_EXIT_ROUTE_TURNOVER_ALERT_THRESHOLD = 0.5;
 
 /**
- * Minimum route churn (removed + added) that can alert alongside the Jaccard
- * threshold. A single route appearing or disappearing on a 1-2 route coin
- * trivially crosses 0.5 Jaccard distance without being real exit-route
- * turnover, so those flaps stay metadata-only.
+ * Minimum REMOVED routes that can alert alongside the Jaccard threshold.
+ * Exit-route turnover is published exit capacity disappearing, so coverage
+ * gains never meet the churn gate: a discovery-tier refresh reviving staged
+ * CoinGecko evidence, or a new venue listing, can add a coin's whole route
+ * set (Jaccard distance 1.0) without removing a single route. Likewise a
+ * single route swapping for another on a 1-2 route coin trivially crosses
+ * 0.5 Jaccard distance without being turnover. Those additions and swaps
+ * stay metadata-only even when sustained across generations.
  */
 const DEX_EXIT_ROUTE_TURNOVER_MIN_CHANGED_ROUTES = 2;
 
@@ -244,8 +248,13 @@ function meetsAlertCriteria(evaluation: TurnoverEvaluation): boolean {
   // Losing every published route is the strongest turnover signal regardless
   // of how few routes the coin had; it still needs the sustain window.
   if (evaluation.previousRouteCount > 0 && evaluation.currentRouteCount === 0) return true;
+  // Turnover is exit capacity disappearing, so the churn gate counts removed
+  // routes only. Pure additions — staged CoinGecko evidence revived by a
+  // discovery refresh, or a new venue listing — and one-for-one route swaps
+  // cross the Jaccard threshold without removing exit capacity and must not
+  // degrade the sentinel.
   return evaluation.jaccardDistance >= DEX_EXIT_ROUTE_TURNOVER_ALERT_THRESHOLD
-    && evaluation.removedRouteCount + evaluation.addedRouteCount >= DEX_EXIT_ROUTE_TURNOVER_MIN_CHANGED_ROUTES;
+    && evaluation.removedRouteCount >= DEX_EXIT_ROUTE_TURNOVER_MIN_CHANGED_ROUTES;
 }
 
 export async function runDexExitRouteTurnoverWatchdog(

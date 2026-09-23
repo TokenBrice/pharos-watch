@@ -383,6 +383,94 @@ describe("DEX exit-route turnover watchdog", () => {
     });
   });
 
+  it("never alerts on sustained pure route additions, including a coin gaining its first routes", async () => {
+    // A discovery refresh can revive staged CoinGecko evidence wholesale: the
+    // coin's published route set grows (Jaccard distance 1.0 from empty, or
+    // past 0.5 on top of existing routes) without a single route being
+    // removed. Coverage gains are not exit-route turnover and must not
+    // degrade the sentinel even when sustained.
+    const firstDb = watchdogDb(
+      [
+        publishedRow("coin-a", routes("route-a", "route-b", "route-c")),
+        publishedRow("coin-b", routes("route-x", "route-y")),
+      ],
+      previousSnapshot([
+        { stablecoinId: "coin-a", routes: routes("route-a") },
+        { stablecoinId: "coin-b", routes: [] },
+      ]),
+      CURRENT_GENERATION,
+    );
+    const first = await runDexExitRouteTurnoverWatchdog(firstDb);
+    const firstWrite = JSON.parse(lastSnapshotWrite(firstDb) ?? "{}");
+
+    expect(first.status).toBeUndefined();
+    expect(JSON.parse(String(first.metadata))).toMatchObject({
+      alertingCoinCount: 0,
+      candidateCoinCount: 0,
+      highestObservedTurnover: 1,
+    });
+    expect(firstWrite.candidates).toBeUndefined();
+    // No candidate holds the baseline, so it advances to the grown route set.
+    expect(firstWrite.coins).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        stablecoinId: "coin-a",
+        routes: ["route-a", "route-b", "route-c"].map((routeId) =>
+          expect.objectContaining({ routeId })),
+      }),
+    ]));
+
+    const secondDb = watchdogDb(
+      [
+        publishedRow("coin-a", routes("route-a", "route-b", "route-c")),
+        publishedRow("coin-b", routes("route-x", "route-y")),
+      ],
+      lastSnapshotWrite(firstDb),
+      SUSTAINED_GENERATION,
+    );
+    const second = await runDexExitRouteTurnoverWatchdog(secondDb);
+
+    expect(second.status).toBeUndefined();
+    expect(JSON.parse(String(second.metadata))).toMatchObject({
+      alertingCoinCount: 0,
+      candidateCoinCount: 0,
+    });
+    expect(JSON.parse(lastSnapshotWrite(secondDb) ?? "{}").pendingAlert).toBeUndefined();
+  });
+
+  it("never alerts on a sustained one-for-one route swap of a single-route coin", async () => {
+    // A lane substitution replaces a coin's only route with an equivalent one
+    // (Jaccard distance 1.0, one removed and one added). Exit capacity
+    // exists either way, so the swap stays metadata-only even when the
+    // replacement persists.
+    const firstDb = watchdogDb(
+      [publishedRow("coin-a", routes("route-new"))],
+      previousSnapshot([{ stablecoinId: "coin-a", routes: routes("route-old") }]),
+      CURRENT_GENERATION,
+    );
+    const first = await runDexExitRouteTurnoverWatchdog(firstDb);
+
+    expect(first.status).toBeUndefined();
+    expect(JSON.parse(String(first.metadata))).toMatchObject({
+      alertingCoinCount: 0,
+      candidateCoinCount: 0,
+      highestObservedTurnover: 1,
+    });
+    expect(JSON.parse(lastSnapshotWrite(firstDb) ?? "{}").candidates).toBeUndefined();
+
+    const secondDb = watchdogDb(
+      [publishedRow("coin-a", routes("route-new"))],
+      lastSnapshotWrite(firstDb),
+      SUSTAINED_GENERATION,
+    );
+    const second = await runDexExitRouteTurnoverWatchdog(secondDb);
+
+    expect(second.status).toBeUndefined();
+    expect(JSON.parse(String(second.metadata))).toMatchObject({
+      alertingCoinCount: 0,
+      candidateCoinCount: 0,
+    });
+  });
+
   it.each([[["route-a"]], [["route-a", "route-b"]]])("treats a coin losing all %j routes as complete turnover only when sustained", async (lost) => {
     const firstDb = watchdogDb(
       [],
