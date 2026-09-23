@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.30",
+    title: "Coherence-guarded pool admission and fail-closed DEX publication",
+    date: "2026-09-23",
+    effectiveAt: 1790160000,
+    summary:
+      "GeckoTerminal and CoinGecko Onchain pool admission now rejects rows whose tracked-leg USD price is incoherent with the pool's own pair ratio and the counter-leg's USD price, and DEX price publication withholds a row instead of running its primary-anchored guards against a NULL primary.",
+    impact: [
+      "One policy module owns the thresholds and rejection vocabulary for both admission paths (`POOL_PRICE_COHERENCE_POLICY` in `worker/src/cron/dex-liquidity/pool-price-coherence.ts`): the tracked leg's USD price must agree with the pool's own pair ratio times the counter-leg's USD price within `maxPairDivergenceBps = 500`, and the provider broken-price signature — leg USD prices published while every pair-ratio input is null or `0.0` — is rejected with reason `pool-pair-ratio-unavailable` (a usable but conflicting ratio uses `pool-pair-price-incoherent`)",
+      "The whole pool is rejected, not just its price: a broken row stages nothing and emits no price observation or challenger row, because the same break also invalidates its `reserve_in_usd`. Rejections are counted per machine-readable reason and emitted as one warn summary per crawl run. The pre-ship dry-run over the 483 published guard-scope challenger rows rejects 24 (422 admitted, no threshold tuning) — the two Sophon USN/sUSN rows plus 21 further provider-broken GT rows across 20 tracked assets — so the DEX evidence those rows carried is removed rather than re-weighted; the retention and liquidity consequence is recorded in the liquidity-score changelog",
+      "Zero volume and zero transactions are never rejection inputs — pool prices derive from reserves and quiet pools are legitimate — and rows whose payload omits every pair-ratio field are admitted unchecked so the guard stays inert for transports that do not carry the fields",
+      "`dex_prices` publication fails closed when the preloaded trusted map has no usable primary: the row is withheld before staging with machine-readable reason `primary-missing` in the new `withheldByStablecoin` / `truncatedWithheldStablecoins` diagnostics, and the pre-median outlier filter, `deviation_from_primary_bps`, and display-ratio band now structurally require the primary instead of silently degrading to no-ops",
+      "navToken measured-execution input legs price from the guarded ERC-4626 NAV override: a navToken whose published price is a high-confidence protocol-redeem override observed within the depeg primary freshness window enters the trusted quote-leg map (`isGuardedNavReferencePrice`), while a missing or stale NAV stays unpriced and never falls back to a peg or generic reference print",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.29",
     title: "CMC verified-quote staleness calibrated to the fetch cadence",
     date: "2026-09-23",

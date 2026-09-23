@@ -11,6 +11,7 @@ import type { PagedTokenPoolsResult } from "../../lib/paged-token-pools";
 import type { DexPriceObs, GtNewPool } from "./types";
 import { buildPoolFingerprint, normalizeProtocol } from "./pool-normalization";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
+import { evaluatePoolPriceCoherence, type PoolPriceCoherenceRejectReason } from "./pool-price-coherence";
 import { buildChainAddressKey } from "./token-resolution";
 
 export type CrawlToken = {
@@ -29,6 +30,11 @@ export type ParsedPool = {
   quoteTokenAddress: string;
   baseTokenPriceUsd: number;
   quoteTokenPriceUsd: number;
+  /** Pair-ratio inputs for the pool-price coherence policy; `undefined` = field absent from the payload, `null` = present but unusable. */
+  baseTokenPriceQuoteToken?: number | null;
+  quoteTokenPriceBaseToken?: number | null;
+  baseTokenPriceNativeCurrency?: number | null;
+  quoteTokenPriceNativeCurrency?: number | null;
   createdAt: string | null;
   poolName: string;
 };
@@ -147,6 +153,8 @@ export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(
   const startMs = Date.now();
   const minTvlUsd = config.minTvlUsd ?? 10_000;
   let requestCount = 0;
+  const coherenceRejections = new Map<PoolPriceCoherenceRejectReason, number>();
+  let stoppedEarly = false;
   for (const token of config.tokens) {
     throwIfAborted(config.signal);
 
@@ -158,7 +166,8 @@ export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(
         signal: config.signal,
       });
       if (!shouldContinue) {
-        return { stoppedEarly: true };
+        stoppedEarly = true;
+        break;
       }
     }
     requestCount++;
@@ -191,6 +200,20 @@ export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(
           config.chainAddressToId,
         );
         if (!side) continue;
+
+        const coherence = evaluatePoolPriceCoherence({
+          side,
+          baseTokenPriceUsd: parsed.baseTokenPriceUsd,
+          quoteTokenPriceUsd: parsed.quoteTokenPriceUsd,
+          baseTokenPriceQuoteToken: parsed.baseTokenPriceQuoteToken,
+          quoteTokenPriceBaseToken: parsed.quoteTokenPriceBaseToken,
+          baseTokenPriceNativeCurrency: parsed.baseTokenPriceNativeCurrency,
+          quoteTokenPriceNativeCurrency: parsed.quoteTokenPriceNativeCurrency,
+        });
+        if (coherence.verdict === "reject") {
+          coherenceRejections.set(coherence.reason, (coherenceRejections.get(coherence.reason) ?? 0) + 1);
+          continue;
+        }
 
         const price = side === "base" ? parsed.baseTokenPriceUsd : parsed.quoteTokenPriceUsd;
         const hasUsablePrice = Number.isFinite(price) && price > 0;
@@ -246,5 +269,11 @@ export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(
     }
   }
 
-  return { stoppedEarly: false };
+  if (coherenceRejections.size > 0) {
+    logWorkerEventArgs("handler", "warn",
+      `[dex-liquidity] ${config.sourceLabel} rejected incoherent pool prices by reason: ${JSON.stringify(Object.fromEntries(coherenceRejections))}`,
+    );
+  }
+
+  return { stoppedEarly };
 }

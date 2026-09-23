@@ -70,6 +70,11 @@ export function PricingPipelineMethodologySection() {
           downside from multiple candidate sources including a depeg-authoritative source can be downgraded by pool
           challenge, but its price is preserved and the same evidence satisfies the temporal-jump guard. Dead blocked DEX
           slugs such as Bunni are excluded upstream and never qualify as challenger or DEX-bridge inputs.
+          Challenger and DEX-bridge pools are built only from rows that passed the discovery-time pair-price coherence
+          gate — the tracked leg&apos;s USD price must agree with the pool&apos;s own pair ratio × the counter-leg&apos;s USD
+          price — so a provider row whose published leg prices conflict with its own pair ratio never becomes challenge
+          evidence. A DEX price row with no usable primary to anchor its deviation, outlier, and display-ratio guards is
+          withheld rather than published.
         </p>
 
         <p>

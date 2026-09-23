@@ -71,6 +71,16 @@ export interface DexPricePersistenceDiagnostics {
     truncated: number;
   }>;
   truncatedStablecoins: number;
+  /** Fail-closed withhold records: a primary-anchored publication whose
+   *  primary reference is NULL cannot pass its guards, so the row is withheld
+   *  (R2/R4) instead of publishing as if the guards had passed. */
+  withheldByStablecoin?: Array<{
+    stablecoinId: string;
+    reason: "primary-missing";
+    observationCount: number;
+    totalTvlUsd: number;
+  }>;
+  truncatedWithheldStablecoins?: number;
   retention?: DexPriceStageRetentionResult;
 }
 
@@ -141,7 +151,9 @@ export async function computeDexPrices(
   let collapsedDuplicateObservations = 0;
   let rejectedObservationCount = 0;
   let rejectedStablecoinCount = 0;
+  let withheldStablecoinCount = 0;
   const rejectedByStablecoin: DexPricePersistenceDiagnostics["rejectedByStablecoin"] = [];
+  const withheldByStablecoin: NonNullable<DexPricePersistenceDiagnostics["withheldByStablecoin"]> = [];
   for (const [id, retainedPools] of retainedPoolsByStablecoin) {
     throwIfAborted(signal);
     const observations =
@@ -190,17 +202,34 @@ export async function computeDexPrices(
       }
     }
     if (plausibleObservations.length === 0) continue;
-    observedIds.add(id);
 
-    // Look up primary price early — used for outlier filtering and deviation calc
+    // Look up primary price early — used for outlier filtering and deviation calc.
+    // Fail closed (R2/R4): every guard below (outlier filter, deviation band,
+    // display-ratio band) is primary-anchored, and a NULL primary used to turn
+    // all of them into no-ops — the path that published an unguardable DEX row
+    // from broken Sophon pools. Withhold the row with a machine-readable
+    // reason instead of publishing as if the guards had passed.
     const primaryPrice = prices.get(id);
+    if (primaryPrice == null || !(primaryPrice > 0)) {
+      withheldStablecoinCount++;
+      if (withheldByStablecoin.length < MAX_DEX_PRICE_REJECTION_ASSETS) {
+        withheldByStablecoin.push({
+          stablecoinId: id,
+          reason: "primary-missing",
+          observationCount: plausibleObservations.length,
+          totalTvlUsd: Math.round(plausibleObservations.reduce((sum, obs) => sum + obs.tvl, 0)),
+        });
+      }
+      continue;
+    }
+    observedIds.add(id);
 
     // Filter extreme outliers relative to primary price before computing median.
     // When a source (e.g. CoinGecko aggregate) reports a price near peg for a severely
     // depegged stablecoin, its high TVL can dominate the TVL-weighted median.
     // Only apply when 3+ observations exist and majority by count agrees with primary.
     let medianInputObs = plausibleObservations;
-    if (primaryPrice != null && primaryPrice > 0 && plausibleObservations.length >= 3) {
+    if (plausibleObservations.length >= 3) {
       const nearPrimary = plausibleObservations.filter((o) => {
         const ratio = o.price / primaryPrice;
         return (
@@ -227,10 +256,7 @@ export async function computeDexPrices(
 
     // Raw TVL for DB storage (represents actual on-chain liquidity, not confidence-weighted)
     const totalTvl = plausibleObservations.reduce((s, o) => s + o.tvl, 0);
-    let deviationBps: number | null = null;
-    if (primaryPrice != null && primaryPrice > 0) {
-      deviationBps = relativeBps(medianPrice, primaryPrice)?.bps ?? null;
-    }
+    const deviationBps = relativeBps(medianPrice, primaryPrice)?.bps ?? null;
 
     // Guard against retained pools whose prices are off-peg for the tracked stablecoin.
     // This protects price_sources_json (the "show all sources" UI) from alias-collapse
@@ -239,11 +265,8 @@ export async function computeDexPrices(
     // depegged stablecoins. For the per-protocol display surface, apply a tighter 50%
     // primary-price ratio guard on top so near-peg alias-collapse rows are filtered.
     const sanePriceObs = plausibleObservations.filter((obs) => {
-      if (primaryPrice != null && primaryPrice > 0) {
-        const ratio = obs.price / primaryPrice;
-        if (ratio < DISPLAY_PRICE_RATIO_MIN || ratio > DISPLAY_PRICE_RATIO_MAX) return false;
-      }
-      return true;
+      const ratio = obs.price / primaryPrice;
+      return ratio >= DISPLAY_PRICE_RATIO_MIN && ratio <= DISPLAY_PRICE_RATIO_MAX;
     });
     const protocolSources = aggregateProtocolSources(sanePriceObs);
 
@@ -274,7 +297,7 @@ export async function computeDexPrices(
           plausibleObservations.length,
           Math.round(totalTvl),
           deviationBps,
-          primaryPrice ?? null,
+          primaryPrice,
           JSON.stringify(protocolSources),
           nowSec,
           generationId,
@@ -386,19 +409,28 @@ export async function computeDexPrices(
     logWorkerEventArgs("handler", "warn", `[dex-liquidity] Failed to clean published DEX price stage ${generationId}: ${String(error)}`);
   }
 
-  if (observedIds.size > 0 || retiredCount > 0) {
-    logWorkerEventArgs("handler", "info",
+  if (observedIds.size > 0 || retiredCount > 0 || withheldStablecoinCount > 0) {
+    logWorkerEventArgs("handler", withheldStablecoinCount > 0 ? "warn" : "info",
       `[dex-liquidity] Wrote ${observedIds.size} DEX price observations to dex_prices` +
         (collapsedDuplicateGroups > 0
           ? ` after collapsing ${collapsedDuplicateObservations} duplicate observations across ${collapsedDuplicateGroups} pool group(s)`
           : "") +
-        (retiredCount > 0 ? ` and retired ${retiredCount} stale rows` : ""),
+        (retiredCount > 0 ? ` and retired ${retiredCount} stale rows` : "") +
+        (withheldStablecoinCount > 0
+          ? `; withheld ${withheldStablecoinCount} asset(s) with no trusted primary price (reason: primary-missing)`
+          : ""),
     );
   }
   return {
     rejectedObservationCount,
     rejectedByStablecoin,
     truncatedStablecoins: Math.max(0, rejectedStablecoinCount - rejectedByStablecoin.length),
+    ...(withheldStablecoinCount > 0
+      ? {
+          withheldByStablecoin,
+          truncatedWithheldStablecoins: Math.max(0, withheldStablecoinCount - withheldByStablecoin.length),
+        }
+      : {}),
     retention,
   };
 }

@@ -50,6 +50,9 @@ export function getTokenReferenceUsdPrice(
       return trackedPrice;
     }
 
+    // navToken legs price only from a guarded NAV reference carried in the
+    // trusted map (orchestrator-phases/lookups admits fresh protocol-redeem
+    // NAV overrides). Missing NAV stays null — never a peg/reference print.
     if (TRACKED_META_BY_ID.get(resolved.stablecoinId)?.flags.navToken === true) return null;
 
     const context = buildPriceValidationContext({ stablecoinId: resolved.stablecoinId });

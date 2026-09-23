@@ -651,6 +651,103 @@ describe("crawlCoin DexScreener hardening", () => {
     expect(result.pools).toEqual([]);
   });
 
+  it("rejects CoinGecko onchain pools with the broken-price signature before staging", async () => {
+    // Live CG-onchain shape of the Sophon USDT/USN pool: both leg USD prices
+    // published, every pair-ratio input null or "0.0" — the provider pricing
+    // break that printed USN at $0.3323 against an on-chain tick of 0.998.
+    const brokenPool = {
+      ...coinGeckoPool({
+        id: "sophon_0x0cdb3454293fdfa187b14025f29cda3319fcd3b5",
+        address: "0x0cdb3454293fdfa187b14025f29cda3319fcd3b5",
+        name: "USDT / USN 0.04%",
+        network: "sophon",
+        basePrice: "0.3323456606",
+        quotePrice: "0.3323290599",
+        reserve: "324992.0345",
+        volume: "0",
+        baseToken: "0x6386da",
+        quoteToken: "0xc1aa99",
+        dex: "syncswap-v3-sophon",
+      }),
+      attributes: {
+        ...coinGeckoPool().attributes,
+        address: "0x0cdb3454293fdfa187b14025f29cda3319fcd3b5",
+        name: "USDT / USN 0.04%",
+        base_token_price_usd: "0.3323456606",
+        quote_token_price_usd: "0.3323290599",
+        reserve_in_usd: "324992.0345",
+        volume_usd: { h24: "0" },
+        base_token_price_native_currency: "0.0",
+        quote_token_price_native_currency: "0.0",
+        base_token_price_quote_token: null,
+        quote_token_price_base_token: null,
+      },
+    } as never;
+    vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({
+      transportOk: true,
+      schemaDegraded: false,
+      complete: true,
+      pools: [brokenPool],
+    });
+
+    const result = await crawlCoin(
+      createMockDb(),
+      "usn-noon",
+      [{ chain: "sophon", address: "0xc1aa99", decimals: 18 }],
+      "test-key",
+      new Set(),
+    );
+
+    expect(result.pools).toEqual([]);
+  });
+
+  it("keeps admitting coherent CoinGecko onchain pools that carry healthy pair ratios", async () => {
+    const coherentPool = {
+      ...coinGeckoPool({
+        address: "0xpool",
+        name: "USN / USDC",
+        network: "zksync",
+        basePrice: "1.0018122159",
+        quotePrice: "1.0016693845",
+        reserve: "52313.2779",
+        volume: "0",
+        baseToken: "0xusn",
+        quoteToken: "0xusdc",
+        dex: "syncswap-v3-zksync",
+      }),
+      attributes: {
+        ...coinGeckoPool().attributes,
+        address: "0xpool",
+        name: "USN / USDC",
+        base_token_price_usd: "1.0018122159",
+        quote_token_price_usd: "1.0016693845",
+        reserve_in_usd: "52313.2779",
+        volume_usd: { h24: "0" },
+        base_token_price_quote_token: "1.0005451588",
+        quote_token_price_base_token: "0.9994551383",
+        base_token_price_native_currency: "0.000401420873955884",
+        quote_token_price_native_currency: "0.000401202155087959",
+      },
+    } as never;
+    vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({
+      transportOk: true,
+      schemaDegraded: false,
+      complete: true,
+      pools: [coherentPool],
+    });
+
+    const result = await crawlCoin(
+      createMockDb(),
+      "test-coin",
+      [{ chain: "zksync", address: "0xusn", decimals: 18 }],
+      "test-key",
+      new Set(),
+    );
+
+    expect(result.pools).toHaveLength(1);
+    expect(result.pools[0]).toMatchObject({ poolId: "zksync:0xpool", priceUsd: 1.0018122159 });
+  });
+
   it("records CoinGecko onchain failures when the helper reports a bad response", async () => {
     vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({
       transportOk: false,

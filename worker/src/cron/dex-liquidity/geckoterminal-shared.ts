@@ -63,6 +63,10 @@ type GtShapedPool = {
     base_token_price_usd?: string | null;
     quote_token_price_usd?: string | null;
     reserve_in_usd?: string | null;
+    base_token_price_native_currency?: string | null;
+    quote_token_price_native_currency?: string | null;
+    base_token_price_quote_token?: string | null;
+    quote_token_price_base_token?: string | null;
   };
   relationships?: {
     base_token?: { data?: { id?: string } };
@@ -70,6 +74,15 @@ type GtShapedPool = {
     dex?: { data?: { id?: string } };
   };
 };
+
+// Pair-ratio projection for the pool-price coherence policy: `undefined`
+// keeps "field absent from the payload" (guard stays inert) distinct from
+// `null` "present but unusable" (the provider broken-price signature).
+function parseOptionalPairRatio(value: string | null | undefined): number | null | undefined {
+  if (value === undefined) return undefined;
+  const parsed = Number.parseFloat(value ?? "");
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
 
 // Shared projection for both GT-shaped providers; the 24h volume and the
 // pool_created_at normalization are provider-specific and passed in.
@@ -97,6 +110,10 @@ export function parseGtShapedPool(
     quoteTokenAddress,
     baseTokenPriceUsd: parseFloat(attrs.base_token_price_usd ?? ""),
     quoteTokenPriceUsd: parseFloat(attrs.quote_token_price_usd ?? ""),
+    baseTokenPriceQuoteToken: parseOptionalPairRatio(attrs.base_token_price_quote_token),
+    quoteTokenPriceBaseToken: parseOptionalPairRatio(attrs.quote_token_price_base_token),
+    baseTokenPriceNativeCurrency: parseOptionalPairRatio(attrs.base_token_price_native_currency),
+    quoteTokenPriceNativeCurrency: parseOptionalPairRatio(attrs.quote_token_price_native_currency),
     createdAt,
     poolName: attrs.name,
   };

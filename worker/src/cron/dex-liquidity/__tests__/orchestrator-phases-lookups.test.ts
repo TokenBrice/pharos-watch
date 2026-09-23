@@ -110,6 +110,97 @@ describe("loadTrackedStablecoinMaps", () => {
     expect(stablecoinPriceById.has("slvon-ondo")).toBe(false);
   });
 
+  it("admits a fresh guarded protocol-redeem NAV price for a navToken", async () => {
+    loadStablecoinsCache.mockResolvedValue({
+      kind: "ok",
+      updatedAt: NOW_SEC,
+      payload: {
+        peggedAssets: [
+          makeAsset({
+            id: "susn-noon",
+            price: 1.2241,
+            priceSource: "protocol-redeem",
+            priceConfidence: "high",
+            agreeSources: ["protocol-redeem"],
+          }),
+        ],
+      },
+    });
+
+    const { stablecoinPriceById, stablecoinMcapById } = await loadTrackedStablecoinMaps({} as D1Database, NOW_SEC);
+
+    expect(stablecoinPriceById.get("susn-noon")).toBe(1.2241);
+    expect(stablecoinMcapById).toEqual(new Map([["susn-noon", 1_000_000]]));
+  });
+
+  it("rejects the cached-rate NAV degradation lane for a navToken", async () => {
+    loadStablecoinsCache.mockResolvedValue({
+      kind: "ok",
+      updatedAt: NOW_SEC,
+      payload: {
+        peggedAssets: [
+          makeAsset({
+            id: "susn-noon",
+            price: 1.2241,
+            priceSource: "protocol-redeem-cached-rate",
+            priceConfidence: "low",
+            agreeSources: ["protocol-redeem-cached-rate"],
+          }),
+        ],
+      },
+    });
+
+    const { stablecoinPriceById } = await loadTrackedStablecoinMaps({} as D1Database, NOW_SEC);
+
+    expect(stablecoinPriceById.has("susn-noon")).toBe(false);
+  });
+
+  it("rejects a stale guarded NAV price for a navToken", async () => {
+    loadStablecoinsCache.mockResolvedValue({
+      kind: "ok",
+      updatedAt: NOW_SEC,
+      payload: {
+        peggedAssets: [
+          makeAsset({
+            id: "susn-noon",
+            price: 1.2241,
+            priceSource: "protocol-redeem",
+            priceConfidence: "high",
+            agreeSources: ["protocol-redeem"],
+            priceObservedAt: NOW_SEC - 1_801,
+            priceUpdatedAt: NOW_SEC - 1_801,
+          }),
+        ],
+      },
+    });
+
+    const { stablecoinPriceById } = await loadTrackedStablecoinMaps({} as D1Database, NOW_SEC);
+
+    expect(stablecoinPriceById.has("susn-noon")).toBe(false);
+  });
+
+  it("does not admit a protocol-redeem price for a non-navToken", async () => {
+    loadStablecoinsCache.mockResolvedValue({
+      kind: "ok",
+      updatedAt: NOW_SEC,
+      payload: {
+        peggedAssets: [
+          makeAsset({
+            id: "usdc-circle",
+            price: 1.0001,
+            priceSource: "protocol-redeem",
+            priceConfidence: "high",
+            agreeSources: ["protocol-redeem"],
+          }),
+        ],
+      },
+    });
+
+    const { stablecoinPriceById } = await loadTrackedStablecoinMaps({} as D1Database, NOW_SEC);
+
+    expect(stablecoinPriceById.has("usdc-circle")).toBe(false);
+  });
+
   it("omits nonpositive circulating amounts without dropping trusted prices", async () => {
     loadStablecoinsCache.mockResolvedValue({
       kind: "ok",

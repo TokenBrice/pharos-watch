@@ -255,12 +255,15 @@ export const DEX_PRICE_SCENARIOS: readonly PriceScenario[] = [
         price: 0.00074113379,
         source: "direct_api",
       }],
+      primaryPrices: [["krwq-iq", 0.00074113379]],
       expectedRows: [makeExpectedPublicPriceRow({
         stablecoin_id: "krwq-iq",
         symbol: "KRWQ",
         dex_price_usd: 0.000741,
         source_pool_count: 1,
         source_total_tvl: 82_806,
+        deviation_from_primary_bps: 0,
+        primary_price_at_calc: 0.00074113379,
         price_sources_json: JSON.stringify([{
           protocol: "pancakeswap",
           chain: "BSC",
@@ -314,24 +317,31 @@ export const DEX_PRICE_SCENARIOS: readonly PriceScenario[] = [
     }],
   },
   {
-    label: "does not restore an untrusted primary price omitted from the preloaded map",
+    label: "withholds the DEX price row when the preloaded map omits the primary as untrusted",
     nowSec: DEFAULT_DEX_SCORING_NOW_SEC + 1,
     steps: [{
       retainedPools: DEPEG_USDT_POOLS,
       primaryPrices: [["usdc-circle", 1]],
-      expectedRows: [makeExpectedPublicPriceRow({
-        stablecoin_id: "usdt-tether",
-        symbol: "USDT",
-        dex_price_usd: 1,
-        source_pool_count: 3,
-        source_total_tvl: 1_200_000,
-        price_sources_json: JSON.stringify([
-          { protocol: "raydium", chain: "Solana", price: 1, tvl: 1_000_000, sourceFamily: "gecko_terminal" },
-          { protocol: "curve", chain: "Ethereum", price: 0.3, tvl: 100_000, sourceFamily: "dl" },
-          { protocol: "uniswap-v3", chain: "Base", price: 0.31, tvl: 100_000, sourceFamily: "direct_api" },
-        ]),
-        updated_at: DEFAULT_DEX_SCORING_NOW_SEC + 1,
-      })],
+      expectedRows: [],
+      expectedDiagnostics: {
+        rejectedObservationCount: 0,
+        rejectedByStablecoin: [],
+        truncatedStablecoins: 0,
+        withheldByStablecoin: [{
+          stablecoinId: "usdt-tether",
+          reason: "primary-missing",
+          observationCount: 3,
+          totalTvlUsd: 1_200_000,
+        }],
+        truncatedWithheldStablecoins: 0,
+        retention: {
+          cutoff: DEFAULT_DEX_SCORING_NOW_SEC + 1 - 3 * 60 * 60,
+          deletedRows: 0,
+          oldestRemainingAt: null,
+          durationMs: null,
+          error: null,
+        },
+      },
     }],
   },
   {
@@ -370,12 +380,15 @@ export const DEX_PRICE_SCENARIOS: readonly PriceScenario[] = [
         price: 0.99,
         source: "dl",
       }],
+      primaryPrices: [["usdt-tether", 1]],
       expectedRows: [makeExpectedPublicPriceRow({
         stablecoin_id: "usdt-tether",
         symbol: "USDT",
         dex_price_usd: 0.99,
         source_pool_count: 1,
         source_total_tvl: DEX_PRICE_OBSERVATION_MIN_TVL_USD,
+        deviation_from_primary_bps: -100,
+        primary_price_at_calc: 1,
         price_sources_json: JSON.stringify([{
           protocol: "curve",
           chain: "Ethereum",
