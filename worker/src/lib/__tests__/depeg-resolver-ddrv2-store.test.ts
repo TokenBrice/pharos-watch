@@ -144,6 +144,50 @@ describe("DDRv2 storage contract cases", () => {
     expect(row<{ relation: string }>(db, "SELECT relation FROM depeg_resolver_incident_event_links WHERE event_id = 2").relation).toBe("repair_replacement");
   }));
 
+  it("clears a concurrently written pre-lock close marker when adopting a successor event", async () => withSqliteD1(async (db) => {
+    insertOpenEvent(db, 1);
+    const incident = await ensureIncident(db, 1, 100500);
+    db.sqlite.prepare("UPDATE depeg_events SET ended_at = 101200, recovery_price = 1 WHERE id = 1").run();
+    insertLiveEvent(db, { eventId: 2, startedAt: 100900, peakDeviationBps: -350 });
+
+    const closeAt = 101200 + DDR_INCIDENT_REOPEN_MERGE_WINDOW_SEC + DDR_PRE_LOCK_CLOSE_SETTLE_MARGIN_SEC_V1;
+    // Interpose a second resolver execution's closer between the adoption
+    // candidate SELECT and its atomic batch: the selected row still had a
+    // NULL marker, so the adoption write must clear the raced marker itself.
+    const originalPrepare = db.prepare.bind(db);
+    const originalBatch = db.batch.bind(db);
+    let adoptionPrepared = false;
+    let closedByRace = 0;
+    Object.assign(db, {
+      prepare: (sql: string) => {
+        if (sql.includes("UPDATE depeg_resolver_incidents") && sql.includes("current_started_at = ?")) {
+          adoptionPrepared = true;
+        }
+        return originalPrepare(sql);
+      },
+      batch: async (statements: Parameters<SqliteD1["batch"]>[0]) => {
+        if (adoptionPrepared) {
+          adoptionPrepared = false;
+          closedByRace = await closeRecoveredPreLockIncidents(db, closeAt);
+        }
+        return originalBatch(statements);
+      },
+    });
+
+    const [adopted] = await ensureCanonicalIncidents(db, [eventInput(2, 100900, -350)], { nowSec: closeAt, predictionPolicyVersion: "sticky-24h-v1", ddrV2EffectiveAt: 90000, createdBy: "vitest" });
+
+    expect(closedByRace).toBe(1);
+    expect(adopted).toMatchObject({ incidentKey: incident.incidentKey, currentEventId: 2, closedPreLockAt: null });
+    expect(row<{ closed_pre_lock_at: number | null; current_event_id: number }>(
+      db,
+      "SELECT closed_pre_lock_at, current_event_id FROM depeg_resolver_incidents WHERE incident_key = ?",
+      incident.incidentKey,
+    )).toEqual({ closed_pre_lock_at: null, current_event_id: 2 });
+    const visible = await loadCanonicalIncidents(db, {});
+    expect(visible).toHaveLength(1);
+    expect(visible[0]).toMatchObject({ incidentKey: incident.incidentKey, currentEventId: 2, incidentState: "active" });
+  }));
+
   it("quarantines out-of-order overlaps, but processes clean events in the same batch", async () => withSqliteD1(async (db) => {
     const incident = await ensureIncident(db, 1, 100500);
     insertLiveEvent(db, { eventId: 2, startedAt: 99900 });

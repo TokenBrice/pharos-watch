@@ -866,7 +866,7 @@ Backfills protocol API yield-history rows for the curated target set used by yie
 
 ### `POST /api/backfill-tape`
 
-Runs the same TAPE projectors used by the `project-tape` cron with operator-supplied window and limit overrides. Writes are idempotent on `(source_table, source_row_id, transition)`, so the endpoint is safe to re-run. `depeg.peak_worsened` honors `since` / `until` against open rows' `started_at` and paginates through all matching rows. The first-observation projectors `methodology.bumped`, `cemetery.entry.added`, and `lifecycle.tracked.frozen` are window- and cap-blind: they ignore `since`, `until`, and `maxRows` because they scan static sources keyed by ID.
+Runs the same TAPE projectors used by the `project-tape` cron with operator-supplied window and limit overrides. Writes are idempotent on `(source_table, source_row_id, transition)`, so the endpoint is safe to re-run. `depeg.peak_worsened` honors `since` / `until` against open rows' `started_at` and pages through matches in batches of 500, stopping once `maxRows` source rows have been scanned; without `maxRows` it scans every matching open row, like the cron. The first-observation projectors `methodology.bumped`, `cemetery.entry.added`, and `lifecycle.tracked.frozen` are window- and cap-blind: they ignore `since`, `until`, and `maxRows` because they scan static sources keyed by ID.
 
 **Request body or query parameters**
 

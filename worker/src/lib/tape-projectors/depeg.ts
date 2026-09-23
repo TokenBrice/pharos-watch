@@ -239,10 +239,14 @@ export async function projectDepegPeakWorsened(
   db: D1Database,
   options?: ProjectorOptions,
 ): Promise<ProjectorResult> {
-  const limit = options?.maxRows ?? DEFAULT_BATCH_LIMIT;
   const dryRun = options?.dryRun === true;
   const since = options?.since ?? null;
   const until = options?.until ?? null;
+  // `maxRows` caps the total source rows scanned in one call, matching the
+  // shared ProjectorOptions contract; paging itself always uses the default
+  // page size so a small operator cap cannot amplify into one query per row.
+  // The cron path passes no cap and drains every matching open row.
+  const maxRows = options?.maxRows ?? null;
   const seenMap = await loadPeakSeenMap(db);
   // Keep observations outside a bounded backfill window intact. An unbounded
   // cron scan can rebuild the map from currently open rows and prune closures.
@@ -252,8 +256,10 @@ export async function projectDepegPeakWorsened(
   const events: TapeEventInsert[] = [];
   const nowMs = Date.now();
   let afterId: number | null = null;
+  let scanned = 0;
 
   while (true) {
+    const limit = maxRows == null ? DEFAULT_BATCH_LIMIT : Math.min(DEFAULT_BATCH_LIMIT, maxRows - scanned);
     const rows = await fetchOpenDepegRows(db, since, until, afterId, limit);
     for (const row of rows) {
       const key = String(row.id);
@@ -305,7 +311,9 @@ export async function projectDepegPeakWorsened(
       });
     }
 
+    scanned += rows.length;
     if (rows.length < limit) break;
+    if (maxRows != null && scanned >= maxRows) break;
     const lastId = rows[rows.length - 1]?.id;
     if (lastId == null || (afterId != null && lastId <= afterId)) break;
     afterId = lastId;

@@ -34,6 +34,7 @@
 | 0245     | `0245_cron_runs_degraded_reason.sql`                       | Add the nullable projected non-ok cron-run reason so status aggregates and operator paging need no per-job metadata JSON paths. |
 | 0246     | `0246_telegram_watcher_lifecycle_events.sql`              | Add privacy-preserving daily watcher transition counters and atomic active-state tracking for real subscribe, unsubscribe, and reactivate analytics. |
 | 0247     | `0247_scheduled_checkpoint_retention_index.sql`           | Add the terminal-state/update-time covering index used by bounded scheduled-checkpoint retention drains. |
+| 0248     | `0248_ddr_publication_sequence_cross_table_unique.sql`    | Guard triggers making ddr_public snapshot_sequence globally unique across the legacy, compressed-v2, and payload-reference publication tables. |
 
 ## Squashed Individual Migrations (absorbed into the 0000 baseline on 2026-07-30)
 
@@ -348,6 +349,7 @@ Duplicate numeric prefixes 0056 and 0061 existed in the squashed range (0001–0
 - `0245_cron_runs_degraded_reason.sql`: apply before Worker activation — the new Worker binds `degraded_reason` on every `cron_runs` insert. Worker rollback ignores the nullable column and resumes writing rows without it; retained values stay valid history. Dropping the column requires a separate coordinated cleanup rollout.
 - `0246_telegram_watcher_lifecycle_events.sql`: apply before the Worker release that reads lifecycle-event counters. Existing subscriber state is initialized without creating historical events; compatibility triggers then record transitions from both old and new Worker writes. Worker rollback ignores the additive columns/table while trigger capture continues. Removing the capture requires a separate coordinated cleanup rollout.
 - `0247_scheduled_checkpoint_retention_index.sql`: roll back by restoring the prior Worker; keep the additive partial index because it is inert to older Workers and prevents terminal-checkpoint retention scans. Drop it only in a later measured cleanup migration.
+- `0248_ddr_publication_sequence_cross_table_unique.sql`: apply before Worker activation. This is the rollback fence itself: a prior Worker whose allocator ignores `depeg_resolver_publication_snapshot_refs` cannot reuse a sequence a reference row already claimed — its publication batch aborts loudly instead of silently duplicating publication ordering. If such failures appear after a rollback, roll forward to a reference-aware Worker; do not drop the triggers or delete reference rows to work around them.
 
 ## Rollback Procedure
 
