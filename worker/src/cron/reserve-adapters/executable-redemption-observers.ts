@@ -11,7 +11,18 @@ import {
   fetchEvmStorageAtBlock,
 } from "../../lib/evm-rpc";
 import type { Abi } from "abitype";
-import { parseAbi } from "viem/utils";
+import {
+  DSTAKE_ROUTER_ABI,
+  DSTAKE_TOKEN_ABI,
+  EARN_PROTOCOL_CONFIG_ABI,
+  EARN_VALIDATOR_ABI,
+  EARN_VAULT_ABI,
+  NOON_SUSN_VAULT_ABI,
+  NOON_SUSN_WITHDRAWAL_HANDLER_ABI,
+  STATIC_ATOKEN_ABI,
+  erc20Abi,
+  erc4626Abi,
+} from "./executable-redemption-abis";
 import type { AdapterContext } from "./types";
 import { runAdapterIo } from "./concurrency";
 import { normalizeEvmAddress } from "./evm";
@@ -34,59 +45,6 @@ const RPC_DEADLINE_MS = 10_000;
 const BLOCK_MAX_AGE_SEC = 10 * 60;
 const BLOCK_FUTURE_SKEW_SEC = 60;
 const OBSERVATION_BLOCK_LAG = 2;
-
-const erc20Abi = parseAbi([
-  "function balanceOf(address account) view returns (uint256)",
-  "function decimals() view returns (uint8)",
-]);
-const erc4626Abi = parseAbi([
-  "function asset() view returns (address)",
-  "function totalAssets() view returns (uint256)",
-  "function maxWithdraw(address owner) view returns (uint256)",
-]);
-
-const EARN_VAULT_ABI = parseAbi([
-  "function vaultValidator() view returns (address)",
-  "function protocolConfig() view returns (address)",
-  "function pauseStatus() view returns (bool depositsPaused, bool withdrawalsPaused, bool privilegedOperationsPaused)",
-  "function getPendingWithdrawalsLength() view returns (uint256)",
-  "function minWithdrawableShares() view returns (uint256)",
-]);
-const EARN_VALIDATOR_ABI = parseAbi([
-  "function withdrawalFee(address vault) view returns (uint256 permanentFeePercentage, uint256 timeBasedFeePercentage, uint256 balanceThreshold)",
-  "function depositAllowListCount(address vault) view returns (uint256)",
-]);
-const EARN_PROTOCOL_CONFIG_ABI = parseAbi([
-  "function getProtocolPauseStatus() view returns (bool)",
-]);
-const DSTAKE_TOKEN_ABI = parseAbi([
-  "function router() view returns (address)",
-  "function collateralVault() view returns (address)",
-]);
-const DSTAKE_ROUTER_ABI = parseAbi([
-  "function governanceModule() view returns (address)",
-  "function rebalanceModule() view returns (address)",
-  "function dStakeToken() view returns (address)",
-  "function collateralVault() view returns (address)",
-  "function paused() view returns (bool)",
-  "function withdrawalFeeBps() view returns (uint256)",
-  "function maxWithdrawalFeeBps() view returns (uint256)",
-  "function currentShortfall() view returns (uint256)",
-  "function getActiveVaultsForWithdrawals() view returns (address[])",
-  "function strategyShareToAdapter(address strategyShare) view returns (address)",
-  "function isVaultHealthyForWithdrawals(address strategyShare) view returns (bool)",
-]);
-const STATIC_ATOKEN_ABI = parseAbi([
-  "function POOL() view returns (address)",
-  "function aToken() view returns (address)",
-]);
-const NOON_SUSN_VAULT_ABI = parseAbi([
-  "function paused() view returns (bool)",
-]);
-const NOON_SUSN_WITHDRAWAL_HANDLER_ABI = parseAbi([
-  "function usn() view returns (address)",
-  "function withdrawPeriod() view returns (uint256)",
-]);
 
 
 interface ProxyIdentity extends EvmCodeIdentity {

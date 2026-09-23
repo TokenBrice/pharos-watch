@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { encodeFunctionData, encodeFunctionResult, parseAbi } from "viem/utils";
+import { encodeFunctionData, encodeFunctionResult } from "viem/utils";
 import type { Abi } from "abitype";
 import type {
   EvmMulticall3Call,
@@ -11,6 +11,18 @@ import {
   type ExecutableRedemptionReadClient,
 } from "../executable-redemption-observers";
 import { EIP1967_IMPLEMENTATION_SLOT } from "../onchain-identity";
+import {
+  DSTAKE_ROUTER_ABI,
+  DSTAKE_TOKEN_ABI,
+  EARN_PROTOCOL_CONFIG_ABI,
+  EARN_VALIDATOR_ABI,
+  EARN_VAULT_ABI,
+  NOON_SUSN_VAULT_ABI,
+  NOON_SUSN_WITHDRAWAL_HANDLER_ABI,
+  STATIC_ATOKEN_ABI,
+  erc20Abi,
+  erc4626Abi,
+} from "../executable-redemption-abis";
 
 type Hex = `0x${string}`;
 
@@ -36,59 +48,6 @@ const NOON_SUSN_VAULT_IMPL = "0xebbcbc6672683e1956125e7c5e89e14ceac8cd3d";
 const NOON_WITHDRAWAL_HANDLER = "0x0dabc0d9b270c9b0c4c77aaceaa712b56d0f9178";
 const NOON_HANDLER_SLOT = "0xeb35582a09ab498623cb7b45bfdff1ae6ef9e826b054d3e2fb048e4d27a9fce";
 const USN_NOON = "0xda67b4284609d2d48e5d10cfac411572727dc1ed";
-
-const erc20Abi = parseAbi([
-  "function balanceOf(address account) view returns (uint256)",
-  "function decimals() view returns (uint8)",
-]);
-const erc4626Abi = parseAbi([
-  "function asset() view returns (address)",
-  "function totalAssets() view returns (uint256)",
-  "function maxWithdraw(address owner) view returns (uint256)",
-]);
-
-const EARN_VAULT_ABI = parseAbi([
-  "function vaultValidator() view returns (address)",
-  "function protocolConfig() view returns (address)",
-  "function pauseStatus() view returns (bool depositsPaused, bool withdrawalsPaused, bool privilegedOperationsPaused)",
-  "function getPendingWithdrawalsLength() view returns (uint256)",
-  "function minWithdrawableShares() view returns (uint256)",
-]);
-const EARN_VALIDATOR_ABI = parseAbi([
-  "function withdrawalFee(address vault) view returns (uint256 permanentFeePercentage, uint256 timeBasedFeePercentage, uint256 balanceThreshold)",
-  "function depositAllowListCount(address vault) view returns (uint256)",
-]);
-const EARN_PROTOCOL_CONFIG_ABI = parseAbi([
-  "function getProtocolPauseStatus() view returns (bool)",
-]);
-const DSTAKE_TOKEN_ABI = parseAbi([
-  "function router() view returns (address)",
-  "function collateralVault() view returns (address)",
-]);
-const DSTAKE_ROUTER_ABI = parseAbi([
-  "function governanceModule() view returns (address)",
-  "function rebalanceModule() view returns (address)",
-  "function dStakeToken() view returns (address)",
-  "function collateralVault() view returns (address)",
-  "function paused() view returns (bool)",
-  "function withdrawalFeeBps() view returns (uint256)",
-  "function maxWithdrawalFeeBps() view returns (uint256)",
-  "function currentShortfall() view returns (uint256)",
-  "function getActiveVaultsForWithdrawals() view returns (address[])",
-  "function strategyShareToAdapter(address strategyShare) view returns (address)",
-  "function isVaultHealthyForWithdrawals(address strategyShare) view returns (bool)",
-]);
-const STATIC_ATOKEN_ABI = parseAbi([
-  "function POOL() view returns (address)",
-  "function aToken() view returns (address)",
-]);
-const NOON_SUSN_VAULT_ABI = parseAbi([
-  "function paused() view returns (bool)",
-]);
-const NOON_SUSN_WITHDRAWAL_HANDLER_ABI = parseAbi([
-  "function usn() view returns (address)",
-  "function withdrawPeriod() view returns (uint256)",
-]);
 
 const CODE_HASH_BY_ADDRESS: Record<string, string> = {
   [EARN_VAULT]: "0x864cc9ad53b338b82da1f7cab85ab0b3d5c8861acb422b6fec63cf36234f36a6",
