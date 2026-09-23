@@ -201,6 +201,19 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     reviewedAt: PRICE_GAP_REVIEWED_AT_SEC,
     expiresAt: Date.UTC(2026, 9, 22) / 1000,
   },
+  {
+    stablecoinId: "usdn-smardex",
+    owner: "ops",
+    reason:
+      "The only admissible lane is CMC's targeted quote, which CMC refreshes intermittently for this thin asset (missing in 83 of 99 publications over 2026-09-22). CoinGecko has been stale since 2026-08-26 (~$13/day volume), and the only exact DEX pair is a Curve USDN/fxUSD pool with ~$285 liquidity, far below the $50K floor. Priced whenever a fresh CMC quote is admitted; re-source via a guarded protocol-NAV adapter or review listing disposition by the expiry.",
+    sources: [
+      "https://coinmarketcap.com/currencies/smardex-usdn/",
+      "https://www.coingecko.com/en/coins/smardex-usdn",
+      "https://dexscreener.com/ethereum/0xde17a000ba631c5d7c2bd9fb692efea52d90dee2",
+    ],
+    reviewedAt: Date.UTC(2026, 8, 23, 5) / 1000,
+    expiresAt: Date.UTC(2026, 9, 23) / 1000,
+  },
 ];
 
 export interface ResolvedStablecoinPriceGapReviews {
