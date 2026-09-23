@@ -114,6 +114,9 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
   const selfServeRateLimits = await pruneOldApiKeyRequestRateLimits(
     db,
     now - SELF_SERVE_RATE_LIMIT_RETENTION_SEC,
+    5_000,
+    100_000,
+    signal,
   );
   throwIfAborted(signal);
 
