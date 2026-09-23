@@ -171,3 +171,35 @@ it("runs secret scanning from trusted base code and policy before checking out P
   expect(scanner).toBeLessThan(steps.indexOf(checkouts[1]));
   expect(steps[scanner].env.GITLEAKS_HEAD_REF).toBe("${{ github.event.pull_request.head.sha }}");
 });
+
+it("scans PR merge-resolution lines for the full PR range including historical merges", () => {
+  const workflow = parseYaml(readRepoFile(".github/workflows/pull-request-checks.yml"));
+  const steps = workflow.jobs.preflight.steps;
+  const tree = steps.findIndex((step: { run?: string }) => step.run?.includes("run-gitleaks.ts --tree"));
+  expect(tree).toBeGreaterThan(-1);
+  expect(steps[tree].env.GITLEAKS_BASE_REF).toBe("${{ github.event.pull_request.base.sha }}");
+  expect(steps[tree].env.GITLEAKS_HEAD_REF).toBe("${{ github.event.pull_request.head.sha }}");
+});
+
+it("runs the mechanism-refresh verifier only from a trusted snapshot inside the token step", () => {
+  const workflow = parseYaml(readRepoFile(".github/workflows/protocol-api-mechanism-refresh.yml"));
+  const steps = workflow.jobs.refresh.steps as Array<{ name?: string; env?: Record<string, string>; run?: string }>;
+  const tokenStep = steps.find((step) => step.env?.GH_TOKEN?.includes("MECHANISM_REFRESH_GITHUB_TOKEN"));
+  expect(tokenStep).toBeDefined();
+  const run = tokenStep!.run!;
+  const snapshot = run.indexOf("cp scripts/ci/verify-mechanism-refresh-diff.ts");
+  const prepareBranch = run.indexOf("--stage prepare-branch");
+  expect(snapshot).toBeGreaterThanOrEqual(0);
+  expect(snapshot).toBeLessThan(prepareBranch);
+  // After prepare-branch switches the worktree to the automation branch, every
+  // verifier invocation must resolve outside the mutable worktree.
+  for (const line of run.split("\n")) {
+    if (!line.includes("verify-mechanism-refresh-diff.ts") || line.includes("cp ")) continue;
+    expect(line).toContain("$TRUSTED_VERIFIER/");
+  }
+  // The snapshot must carry each of the verifier's own relative imports.
+  const verifier = readRepoFile("scripts/ci/verify-mechanism-refresh-diff.ts");
+  const imports = [...verifier.matchAll(/from "\.\.\/lib\/([^"]+)"/g)].map((match) => match[1]);
+  expect(imports.length).toBeGreaterThan(0);
+  for (const lib of imports) expect(run).toContain(`scripts/lib/${lib}`);
+});

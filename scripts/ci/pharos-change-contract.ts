@@ -563,7 +563,11 @@ function commandHasOpaqueGuardedConstruct(analysis: ShellCommandAnalysis): boole
   const hasOpaqueHereDocBody = analysis.hereDocBodies.some(
     (body) => (body.includes("$(") || body.includes("`")) && textHasGuardedKeyword(body),
   );
-  return hasOpaqueHereDocBody || (
+  // An unterminated heredoc means the scanner and the shell disagree about
+  // which lines execute; never let that ambiguity hide a guarded command.
+  const hasUnresolvedHereDocBody =
+    analysis.unresolvedHereDocBody !== "" && textHasGuardedKeyword(analysis.unresolvedHereDocBody);
+  return hasOpaqueHereDocBody || hasUnresolvedHereDocBody || (
     (
       analysis.hasOpaqueSyntax ||
       analysis.hasPipedShell ||
