@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { encodeFunctionData, encodeFunctionResult } from "viem/utils";
+import { encodeFunctionData, encodeFunctionResult, keccak256, toBytes, toHex } from "viem/utils";
 import type { Abi } from "abitype";
 import type {
   EvmMulticall3Call,
@@ -46,7 +46,9 @@ const DLEND_ATOKEN = "0x5cc741931d01cb1adde193222dfb1ad75930fd60";
 const NOON_SUSN_VAULT = "0xe24a3dc889621612422a64e6388927901608b91d";
 const NOON_SUSN_VAULT_IMPL = "0xebbcbc6672683e1956125e7c5e89e14ceac8cd3d";
 const NOON_WITHDRAWAL_HANDLER = "0x0dabc0d9b270c9b0c4c77aaceaa712b56d0f9178";
-const NOON_HANDLER_SLOT = "0xeb35582a09ab498623cb7b45bfdff1ae6ef9e826b054d3e2fb048e4d27a9fce";
+// Derived, not transcribed: a hand-copied slot once dropped a nibble and the
+// fixture echoed it, so production read an empty slot while tests passed.
+const NOON_HANDLER_SLOT = toHex(BigInt(keccak256(toBytes("StakingVault.storage.location"))) + 1n, { size: 32 });
 const USN_NOON = "0xda67b4284609d2d48e5d10cfac411572727dc1ed";
 
 const CODE_HASH_BY_ADDRESS: Record<string, string> = {
