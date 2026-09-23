@@ -1,4 +1,5 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
+import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 /**
  * Quarter-hourly trigger (every 15 min):
  *   sync-fx-rates (3) -> sync-stablecoins (4) -> snapshots (0)
@@ -50,18 +51,26 @@ function currentUtcDay(slotStartedAt: number) {
 }
 
 async function hasPsiDailySnapshot(db: D1Database, computedAt: number): Promise<boolean> {
-  const row = await db
-    .prepare("SELECT 1 AS present FROM stability_index WHERE computed_at = ? LIMIT 1")
-    .bind(computedAt)
-    .first<{ present: number }>();
+  // Same-day precheck read. Idempotent SELECT: a transient D1 overload here
+  // must be retried, not recorded as the job's error run (a failed read
+  // proves nothing about the period either way — R2).
+  const row = await runWithOverloadRetry(() =>
+    db
+      .prepare("SELECT 1 AS present FROM stability_index WHERE computed_at = ? LIMIT 1")
+      .bind(computedAt)
+      .first<{ present: number }>(),
+  );
   return row?.present === 1;
 }
 
 async function hasPublicDatasetSnapshot(db: D1Database, snapshotDate: string): Promise<boolean> {
-  const row = await db
-    .prepare("SELECT 1 AS present FROM public_snapshots WHERE snapshot_date = ? LIMIT 1")
-    .bind(snapshotDate)
-    .first<{ present: number }>();
+  // Same-day precheck read; see hasPsiDailySnapshot.
+  const row = await runWithOverloadRetry(() =>
+    db
+      .prepare("SELECT 1 AS present FROM public_snapshots WHERE snapshot_date = ? LIMIT 1")
+      .bind(snapshotDate)
+      .first<{ present: number }>(),
+  );
   return row?.present === 1;
 }
 

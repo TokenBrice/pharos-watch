@@ -1026,6 +1026,75 @@ describe("runScheduledSlotWithFence", () => {
     warnSpy.mockRestore();
   });
 
+  it("starts a replacement heartbeat when a heartbeat write is queued behind D1", async () => {
+    // 2026-09-23 depegResolverOffset incident: during a D1 overload the
+    // heartbeat UPDATE queued without settling, the in-flight guard skipped
+    // every later tick, and the live slot was reconciled as abandoned after
+    // one silence window. A heartbeat stalled beyond one period must not
+    // suppress the next attempt.
+    const slotStartedAt = Math.floor(Date.now() / 1000);
+    const db = makeLeaseDb();
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    let heartbeatBinds = 0;
+    let releaseStalledHeartbeat: (() => void) | undefined;
+    const originalPrepare = db.prepare.bind(db);
+    const queuedHeartbeatDb = {
+      ...db,
+      prepare: (sql: string) => {
+        const statement = originalPrepare(sql);
+        return {
+          bind: (...args: unknown[]) => {
+            const bound = statement.bind(...args);
+            const isHeartbeat = sql.includes("UPDATE cron_slot_executions") && sql.includes("SET updated_at = ?");
+            if (!isHeartbeat || heartbeatBinds++ > 0) return bound;
+            return {
+              run: () =>
+                new Promise<D1Result>((resolve) => {
+                  releaseStalledHeartbeat = () => resolve(bound.run() as unknown as D1Result);
+                }),
+            };
+          },
+        };
+      },
+    } as unknown as D1Database;
+    let finish: ((value: { jobsErrored: number; jobsDegraded: number; jobsSkipped: number }) => void) | undefined;
+    const fn = vi.fn(
+      () =>
+        new Promise<{ jobsErrored: number; jobsDegraded: number; jobsSkipped: number }>((resolve) => {
+          finish = resolve;
+        }),
+    );
+
+    try {
+      const runPromise = runScheduledSlotWithFence(queuedHeartbeatDb, "daily0800Utc", fn, {
+        slotStartedAt,
+        owner: "owner-stalled-heartbeat",
+        heartbeatSec: 15,
+      });
+
+      await vi.waitFor(() => expect(fn).toHaveBeenCalledTimes(1));
+      await vi.advanceTimersByTimeAsync(15_000);
+      expect(heartbeatBinds).toBe(1);
+      expect(releaseStalledHeartbeat).toBeInstanceOf(Function);
+
+      await vi.advanceTimersByTimeAsync(15_000);
+      await vi.waitFor(() => expect(heartbeatBinds).toBe(2));
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining(`[cron-slot] Slot daily0800Utc@${slotStartedAt} heartbeat still in flight after 15s`),
+      );
+      // The replacement attempt landed and kept the row fresh even though the
+      // first write is still queued.
+      expect(db.getSlot("daily0800Utc", slotStartedAt)?.updated_at).toBe(slotStartedAt + 30);
+
+      releaseStalledHeartbeat?.();
+      finish?.({ jobsErrored: 0, jobsDegraded: 0, jobsSkipped: 0 });
+      await expect(runPromise).resolves.toMatchObject({ status: "ok" });
+      expect(db.getSlot("daily0800Utc", slotStartedAt)).toMatchObject({ state: "finished", result_status: "ok" });
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
   it("aborts work and rejects a late finalizer after heartbeat ownership is lost", async () => {
     const slotStartedAt = Math.floor(Date.now() / 1000);
     const db = makeLeaseDb();

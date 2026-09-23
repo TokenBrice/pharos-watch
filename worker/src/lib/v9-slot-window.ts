@@ -94,10 +94,20 @@ async function hasActiveV9MemoryLane(
   return row != null;
 }
 
+/**
+ * The publication-evidence join deliberately ignores `worker_version`: a
+ * deploy routinely lands between the quarter-hourly core slot finishing and
+ * the next V9 lane trigger, and requiring the publishing Worker to still be
+ * the current one turned every such deploy into a false
+ * `v9-core-slot-not-ready` skip. The freshness guarantee is carried entirely
+ * by the slot-window bounds plus the live-cache join — the row must be a
+ * published `sync-stablecoins` generation from this slot that is still the
+ * current `stablecoins` cache generation — so a stale or no-write run cannot
+ * match regardless of which Worker version wrote it.
+ */
 async function hasMatchingCoreStablecoinsPublication(
   db: D1Database,
   coreSlotStartedAt: number,
-  workerVersion: string,
 ): Promise<boolean> {
   const nextCoreSlotStartedAt = coreSlotStartedAt + 15 * 60;
   const row = await runWithOverloadRetry(() =>
@@ -113,7 +123,6 @@ async function hasMatchingCoreStablecoinsPublication(
             AND publication.producer_schedule_key = 'quarterHourly'
             AND publication.producer_job = 'sync-stablecoins'
             AND publication.artifact_cache_key = 'stablecoins'
-            AND publication.worker_version = ?
             AND publication.started_at >= ?
             AND publication.started_at < ?
             AND publication.published_at >= ?
@@ -122,7 +131,6 @@ async function hasMatchingCoreStablecoinsPublication(
           LIMIT 1`,
       )
       .bind(
-        workerVersion,
         coreSlotStartedAt,
         nextCoreSlotStartedAt,
         coreSlotStartedAt,
@@ -149,13 +157,15 @@ export async function waitForV9MemoryLaneRelease(
 /**
  * Admits canonical V9 work only after the matching public quarter-hour slot
  * has completed on the active Worker version, or when the durable publication
- * ledger proves that the same Worker published the current stablecoins cache
- * during that slot, and while an absolute pre-quarter execution window remains.
- * This keeps an isolated parent-slot terminal-row failure from starving V9
- * without allowing a stale/no-write stablecoin run through. The shared V9 lane
- * lease serializes V9 work and keeps later triggers from loading their job
- * graphs. A prior active invocation of the same V9 schedule lane still fails
- * closed, while unrelated scheduled slots cannot suppress canonical publication.
+ * ledger proves that this slot's `sync-stablecoins` run published the current
+ * stablecoins cache generation (whichever Worker version wrote it), and while
+ * an absolute pre-quarter execution window remains. This keeps an isolated
+ * parent-slot terminal-row failure — or a deploy landing between the core slot
+ * and this trigger — from starving V9 without allowing a stale/no-write
+ * stablecoin run through. The shared V9 lane lease serializes V9 work and
+ * keeps later triggers from loading their job graphs. A prior active
+ * invocation of the same V9 schedule lane still fails closed, while unrelated
+ * scheduled slots cannot suppress canonical publication.
  */
 export async function runV9AfterCoreWithinWindow(
   options: V9SlotWindowOptions,
@@ -219,7 +229,6 @@ export async function runV9AfterCoreWithinWindow(
             await hasMatchingCoreStablecoinsPublication(
               options.db,
               coreSlotStartedAt,
-              workerVersion,
             );
         } catch (error) {
           return degradedAdmission(

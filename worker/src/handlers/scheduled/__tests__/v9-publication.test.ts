@@ -1,10 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ScheduledRuntimeContext } from "../context";
-import type { CronProgressReporter } from "../../../lib/cron-logger";
+import type { CronProgressReporter, CronResult } from "../../../lib/cron-logger";
+import { buildScheduledSlotSummary, summarizeCronResult } from "../slot-summary";
 import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
+import { makeNoopD1 } from "../../../test-helpers/noop-d1";
+import { parseObjectMetadata } from "../../../lib/json-metadata";
 
 const mocks = vi.hoisted(() => ({
   runScheduledSlotGroups: vi.fn(),
+
   runV9AfterCoreWithinWindow: vi.fn(),
   computeSafetyScoreV9: vi.fn(),
   logWorkerEvent: vi.fn(),
@@ -23,8 +27,35 @@ vi.mock("../../../cron/compute-safety-score-v9", () => ({
 vi.mock("../../../lib/structured-log", () => ({
   logWorkerEvent: mocks.logWorkerEvent,
 }));
-
 import { runV9PublicationSlot } from "../v9-publication";
+
+interface CapturedInsert {
+  sql: string;
+  bindings: unknown[];
+}
+
+function capturingRuntime(): { scheduledRuntime: ScheduledRuntimeContext; inserts: CapturedInsert[] } {
+  const inserts: CapturedInsert[] = [];
+  const scheduledRuntime = makeScheduledRuntime({
+    db: makeNoopD1({
+      prepare: (sql: string) => ({
+        bind: (...bindings: unknown[]) => ({
+          run: async () => {
+            inserts.push({ sql, bindings });
+            return { success: true };
+          },
+        }),
+      }),
+    }),
+    env: {} as ScheduledRuntimeContext["env"],
+    cron: "22,52 * * * *",
+    scheduleKey: "v9PublicationOffset",
+    scheduledTimeMs: 1_800_000,
+    slotStartedAt: 1_800,
+    workerVersion: "worker-v1",
+  });
+  return { scheduledRuntime, inserts };
+}
 
 function runtime(): ScheduledRuntimeContext {
   return makeScheduledRuntime({
@@ -136,5 +167,136 @@ describe("V9 publication scheduling", () => {
       event: "safety_score_v9_shadow_workflow_trigger_failed",
       metadata: { instanceId: "v9-publication-1800", slotStartedAt: 1800, errorName: "Error" },
     }));
+  });
+
+
+  function neutralComputeRuntime(compute: { status: string; metadata: Record<string, unknown> }) {
+    const { scheduledRuntime, inserts } = capturingRuntime();
+    const workflow = { create: vi.fn().mockResolvedValue({}), get: vi.fn() };
+    scheduledRuntime.env = {
+      ...scheduledRuntime.env,
+      WORKER_V9_WORKFLOW_MODE: "shadow",
+      SAFETY_SCORE_V9_WORKFLOW: workflow,
+    } as unknown as ScheduledRuntimeContext["env"];
+    mocks.runV9AfterCoreWithinWindow.mockImplementation(async (_options, run) => run(new AbortController().signal));
+    const compiled = {
+      status: compute.status as "skipped_neutral",
+      metadata: JSON.stringify(compute.metadata),
+    };
+    mocks.computeSafetyScoreV9.mockResolvedValue(compiled);
+    // A neutral or degraded compiler result must not count as a succeeded job,
+    // which is what decides whether the Workflow trigger has work to shadow.
+    mocks.runScheduledSlotGroups.mockImplementation(async (
+      _scheduledRuntime: ScheduledRuntimeContext,
+      _label: string,
+      groups: Array<{ tasks: Array<{ run: (signal: AbortSignal) => Promise<unknown> }> }>,
+    ) => {
+      const result = await groups[0]?.tasks[0]?.run(new AbortController().signal);
+      return buildScheduledSlotSummary([
+        summarizeCronResult("compute-safety-score-v9", result as CronResult),
+      ]);
+    });
+    return { scheduledRuntime, inserts, workflow };
+  }
+  it("records a neutral workflow row naming the upstream reason when compute publishes nothing", async () => {
+    const { scheduledRuntime, inserts, workflow } = neutralComputeRuntime({
+      status: "skipped_neutral",
+      metadata: { reason: "v9-core-slot-not-ready" },
+    });
+
+    await runV9PublicationSlot(scheduledRuntime);
+
+    expect(workflow.create).not.toHaveBeenCalled();
+    expect(inserts).toHaveLength(1);
+    const insert = inserts[0]!;
+    expect(insert.sql).toContain("INSERT INTO cron_runs");
+    expect(insert.sql).toContain("'skipped_neutral'");
+    expect(insert.bindings[0]).toBe("compute-safety-score-v9-workflow");
+    expect(parseObjectMetadata(String(insert.bindings[3]))).toMatchObject({
+      reason: "upstream-compute-publication-absent",
+      instanceId: "v9-publication-1800",
+      slotStartedAt: 1_800,
+      upstreamJob: "compute-safety-score-v9",
+      upstreamStatus: "skipped_neutral",
+      upstreamReason: "v9-core-slot-not-ready",
+    });
+    expect(insert.bindings[4]).toBe(1_800);
+    expect(insert.bindings[5]).toBe(
+      "workflow:compute-safety-score-v9-workflow:v9-publication-1800:upstream-absent",
+    );
+  });
+
+  it("records a neutral workflow row for an identity-bearing cadence deferral", async () => {
+    const { scheduledRuntime, inserts, workflow } = neutralComputeRuntime({
+      status: "skipped_neutral",
+      metadata: {
+        stage: "supply-generation",
+        reason: "supply-attribution-generation-cadence-deferred",
+        ...identities,
+      },
+    });
+
+    await runV9PublicationSlot(scheduledRuntime);
+
+    expect(workflow.create).not.toHaveBeenCalled();
+    expect(inserts).toHaveLength(1);
+    expect(parseObjectMetadata(String(inserts[0]!.bindings[3]))).toMatchObject({
+      reason: "upstream-compute-publication-absent",
+      upstreamStatus: "skipped_neutral",
+      upstreamReason: "supply-attribution-generation-cadence-deferred",
+      upstreamStage: "supply-generation",
+    });
+  });
+
+  it("records a neutral workflow row when the compiler fails closed on a stale input", async () => {
+    const { scheduledRuntime, inserts, workflow } = neutralComputeRuntime({
+      status: "degraded",
+      metadata: {
+        stage: "input-load",
+        reason: "stablecoins-generation-mismatch",
+      },
+    });
+
+    await runV9PublicationSlot(scheduledRuntime);
+
+    expect(workflow.create).not.toHaveBeenCalled();
+    expect(inserts).toHaveLength(1);
+    expect(parseObjectMetadata(String(inserts[0]!.bindings[3]))).toMatchObject({
+      reason: "upstream-compute-publication-absent",
+      upstreamStatus: "degraded",
+      upstreamReason: "stablecoins-generation-mismatch",
+      upstreamStage: "input-load",
+    });
+  });
+
+  it("stays silent while a competing invocation still owns the V9 lane", async () => {
+    const { scheduledRuntime, inserts, workflow } = neutralComputeRuntime({
+      status: "skipped_neutral",
+      metadata: { reason: "v9-memory-lane-active" },
+    });
+
+    await runV9PublicationSlot(scheduledRuntime);
+
+    expect(workflow.create).not.toHaveBeenCalled();
+    expect(inserts).toHaveLength(0);
+    expect(mocks.logWorkerEvent).not.toHaveBeenCalled();
+  });
+
+  it("does not record a workflow row when the execution window skipped the compiler", async () => {
+    const { scheduledRuntime, inserts, workflow } = neutralComputeRuntime({
+      status: "skipped_neutral",
+      metadata: { reason: "v9-core-slot-not-ready" },
+    });
+    mocks.runV9AfterCoreWithinWindow.mockResolvedValue({
+      status: "skipped_neutral",
+      itemCount: 0,
+    });
+    mocks.computeSafetyScoreV9.mockClear();
+
+    await runV9PublicationSlot(scheduledRuntime);
+
+    expect(mocks.computeSafetyScoreV9).not.toHaveBeenCalled();
+    expect(workflow.create).not.toHaveBeenCalled();
+    expect(inserts).toHaveLength(0);
   });
 });

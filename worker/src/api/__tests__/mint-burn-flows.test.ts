@@ -112,8 +112,19 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(firstHourQuery?.sql).not.toContain("GROUP BY");
     const recentAggregateQueries = scopedDb
       .getHistory()
-      .filter((entry) => entry.sql.includes("FROM mint_burn_hourly INDEXED BY idx_mbh_ts"));
+      .filter((entry) => entry.sql.includes("FROM mint_burn_hourly INDEXED BY idx_mbh_chain_coin_hour"));
     expect(recentAggregateQueries.length).toBeGreaterThanOrEqual(5);
+    // The tracked-pair filter must stay index-driven: a row-value IN over
+    // json_each lets each (chain, coin) prefix be seeked. A correlated
+    // EXISTS (SELECT ... FROM json_each(?)) re-scans the whole pair array per
+    // index row and turned these into ~1.6M-row reads per call.
+    expect(recentAggregateQueries.every((entry) => entry.sql.includes("json_each(?)"))).toBe(true);
+    expect(
+      recentAggregateQueries.every((entry) => !entry.sql.includes("EXISTS (SELECT 1 FROM json_each")),
+    ).toBe(true);
+    expect(
+      recentAggregateQueries.every((entry) => entry.sql.includes("(chain_id, stablecoin_id) IN")),
+    ).toBe(true);
     const largestEventQuery = scopedDb
       .getHistory()
       .find((entry) => entry.sql.includes("WITH ranked_events AS"));
@@ -123,7 +134,6 @@ describe("handleMintBurnFlows contract tests", () => {
       "ORDER BY amount_usd DESC, timestamp DESC, block_number DESC, id DESC",
     );
     expect(largestEventQuery?.sql).toContain("WHERE row_num = 1");
-    expect(recentAggregateQueries.every((entry) => entry.sql.includes("json_each(?)"))).toBe(true);
   });
 
   it("excludes historical rows for quarantined mint/burn configs from the public aggregate", async () => {
@@ -287,7 +297,10 @@ describe("handleMintBurnFlows contract tests", () => {
     const history = db.getHistory();
     const windowScans = history.filter((entry) => entry.sql.includes("pharos:mint-burn-flows:window-rows"));
     expect(windowScans).toHaveLength(1);
-    expect(windowScans[0]?.binds.slice(0, 3)).toEqual(["ethereum", "base", "arbitrum"]);
+    expect(typeof windowScans[0]?.binds[0]).toBe("string");
+    expect((windowScans[0]?.binds[0] as string).includes('["usdt-tether","ethereum"]')).toBe(true);
+    // binds are just the tracked-pair JSON plus the window start: no per-chain binds.
+    expect(windowScans[0]?.binds).toHaveLength(2);
     expect(windowScans[0]?.binds[windowScans[0].binds.length - 1]).toBe(sevenDayStart);
     expect(history.some((entry) => entry.sql.includes("pharos:mint-burn-flows:window-24h-rows"))).toBe(false);
   });
@@ -368,7 +381,10 @@ describe("handleMintBurnFlows contract tests", () => {
     const history = db.getHistory();
     const windowScans = history.filter((entry) => entry.sql.includes("pharos:mint-burn-flows:window-rows"));
     expect(windowScans).toHaveLength(1);
-    expect(windowScans[0]?.binds.slice(0, 3)).toEqual(["ethereum", "base", "arbitrum"]);
+    expect(typeof windowScans[0]?.binds[0]).toBe("string");
+    expect((windowScans[0]?.binds[0] as string).includes('["usdt-tether","ethereum"]')).toBe(true);
+    // binds are just the tracked-pair JSON plus the window start: no per-chain binds.
+    expect(windowScans[0]?.binds).toHaveLength(2);
     expect(windowScans[0]?.binds[windowScans[0].binds.length - 1]).toBe(twentyFourHourStart);
     expect(history.some((entry) => entry.sql.includes("pharos:mint-burn-flows:window-24h-rows"))).toBe(false);
   });

@@ -1041,6 +1041,10 @@ export async function loadDexLiquidityScoringStage(
   };
 }
 
+/** Whether a consumer keeps waiting for the exact source slot ("wait") or
+ *  stops and lets its caller recover or fail fast ("stop"). */
+export type DexLiquidityScoringStageWaitDecision = "wait" | "stop";
+
 export async function loadDexLiquidityScoringStageWhenReady(
   db: D1Database,
   options: {
@@ -1049,6 +1053,14 @@ export async function loadDexLiquidityScoringStageWhenReady(
     pollIntervalMs?: number;
     nowMs?: () => number;
     wait?: (ms: number, signal?: AbortSignal) => Promise<void>;
+    /**
+     * Consulted after every miss, before sleeping. "stop" rethrows the missing
+     * error so a caller can recover the slot or fail fast with its own reason
+     * instead of waiting out a deadline on a stage that can no longer appear.
+     */
+    onMissing?: (
+      signal?: AbortSignal,
+    ) => Promise<DexLiquidityScoringStageWaitDecision> | DexLiquidityScoringStageWaitDecision;
   },
   signal?: AbortSignal,
 ): Promise<LoadedDexLiquidityScoringStage> {
@@ -1076,6 +1088,7 @@ export async function loadDexLiquidityScoringStageWhenReady(
     } catch (error) {
       rethrowIfAborted(error, signal);
       if (!(error instanceof Error) || error.message !== missingMessage) throw error;
+      if (options.onMissing != null && await options.onMissing(signal) === "stop") throw error;
       const remainingMs = options.readyDeadlineMs - nowMs();
       if (remainingMs <= 0) throw error;
       await wait(Math.min(pollIntervalMs, remainingMs), signal);
@@ -1106,4 +1119,76 @@ export async function markDexLiquidityScoringStageConsumed(
   if (Number(result.meta?.changes ?? 0) !== 1) {
     throw new Error("DEX liquidity scoring stage consumption fence did not match a ready generation");
   }
+}
+
+const DEX_LIQUIDITY_SCORING_STAGE_JOB = "sync-dex-liquidity-stage";
+
+export interface DexLiquidityScoringStageSlotProbe {
+  /** Current manifest state for the slot's generation; "missing" when no row exists. */
+  manifestState: "missing" | "writing" | "failed" | "ready" | "consumed";
+  /** A live cron lease for the stage job means a producer may still finalize this slot. */
+  activeStageRun: boolean;
+  /** Status of the newest stage cron run recorded for this exact slot, if any. */
+  lastStageRunStatus: string | null;
+}
+
+/**
+ * Read the production-side state of one source slot's stage so consumers can
+ * distinguish "still being written" from "terminally failed" without waiting
+ * out their readiness deadline. D1-only and idempotent; every query tolerates
+ * transient overload so a probe never fails the run it is meant to rescue.
+ */
+export async function probeDexLiquidityScoringStageSlot(
+  db: D1Database,
+  sourceSlotStartedAt: number,
+  signal?: AbortSignal,
+): Promise<DexLiquidityScoringStageSlotProbe> {
+  assertTimestamp("sourceSlotStartedAt", sourceSlotStartedAt);
+  throwIfAborted(signal);
+  const manifest = await runWithOverloadRetry(
+    () =>
+      db.prepare(
+        `SELECT state
+           FROM dex_liquidity_scoring_stages
+          WHERE generation_id = ?
+          LIMIT 1`,
+      ).bind(stageGenerationId(sourceSlotStartedAt)).first<{ state: string }>(),
+    3,
+    signal,
+  );
+  const lease = await runWithOverloadRetry(
+    () =>
+      db.prepare(
+        `SELECT lease_until
+           FROM cron_leases
+          WHERE job = ?
+          LIMIT 1`,
+      ).bind(DEX_LIQUIDITY_SCORING_STAGE_JOB).first<{ lease_until: number }>(),
+    3,
+    signal,
+  );
+  const lastRun = await runWithOverloadRetry(
+    () =>
+      db.prepare(
+        `SELECT status
+           FROM cron_runs
+          WHERE job = ? AND slot_started_at = ?
+          ORDER BY started_at DESC
+          LIMIT 1`,
+      ).bind(DEX_LIQUIDITY_SCORING_STAGE_JOB, sourceSlotStartedAt).first<{ status: string }>(),
+    3,
+    signal,
+  );
+  const manifestState = manifest?.state;
+  return {
+    manifestState:
+      manifestState === "writing"
+      || manifestState === "failed"
+      || manifestState === "ready"
+      || manifestState === "consumed"
+        ? manifestState
+        : "missing",
+    activeStageRun: lease != null && lease.lease_until > Math.floor(Date.now() / 1000),
+    lastStageRunStatus: lastRun?.status ?? null,
+  };
 }

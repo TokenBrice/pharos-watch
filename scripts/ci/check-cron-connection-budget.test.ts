@@ -17,7 +17,9 @@ describe("check-cron-connection-budget", () => {
     ["v9SupplyAttributionOffset", ["sync-v9-supply-attribution"], 3],
     ["depegResolverOffset", ["compute-depeg-resolver"], 0],
     ["v9PublicationOffset", ["compute-safety-score-v9"], 0],
-    ["halfHourlyChartsOffset", ["sync-dex-liquidity", "cron-sentinel", "prepare-safety-score-v9-input", "sync-stablecoin-charts"], 3],
+    // The D1-only consumer's bounded inline stage-recovery re-run reuses the
+    // stage job's nested direct-API peak, so the serial chain peaks at 5.
+    ["halfHourlyChartsOffset", ["sync-dex-liquidity", "cron-sentinel", "prepare-safety-score-v9-input", "sync-stablecoin-charts"], 5],
   ] as const)("preserves reviewed %s serial topology", (scheduleKey, jobs, peak) => {
     const trigger = reviewedReport.triggerReports.find((entry) => entry.scheduleKey === scheduleKey);
     expect(trigger?.chains).toEqual([{ chainKey: "chain-1", jobs, peak }]);
@@ -27,6 +29,7 @@ describe("check-cron-connection-budget", () => {
   it.each([
     ["sync-stablecoins", 4], ["compute-depeg-resolver", 0], ["compute-safety-score-v9", 0],
     ["compute-safety-score-v9-workflow", 0], ["sync-dex-liquidity-stage", 5],
+    ["sync-dex-liquidity", 5],
     ["prepare-safety-score-v9-input", 3],
   ] as const)("preserves reviewed %s job pressure", (job, peak) => {
     expect(CRON_CONNECTION_BUDGET_ENTRIES.find((entry) => entry.job === job)?.maxConnections).toBe(peak);

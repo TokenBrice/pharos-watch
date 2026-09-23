@@ -1,3 +1,4 @@
+import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { isMissingTableError } from "../../lib/db";
 import { logWorkerEvent } from "../../lib/structured-log";
 import type {
@@ -77,17 +78,23 @@ export async function readDexSourcePaginationState(
     return { cursor: null, cycleStartedAt: null, updatedAt: null, completedAt: null, pagesFetched: 0 };
   }
   try {
-    const row = await db.prepare(
-      `SELECT cursor, cycle_started_at, updated_at, completed_at, pages_fetched
+    // Idempotent read: transient D1 overload previously fell through to the
+    // head fallback and silently restarted cursor rotation.
+    const row = await runWithOverloadRetry(
+      () =>
+        db.prepare(
+          `SELECT cursor, cycle_started_at, updated_at, completed_at, pages_fetched
          FROM dex_source_pagination_state
         WHERE source_key = ?`,
-    ).bind(sourceKey).first<{
-      cursor: string | null;
-      cycle_started_at: number | null;
-      updated_at: number | null;
-      completed_at: number | null;
-      pages_fetched: number | null;
-    }>();
+        ).bind(sourceKey).first<{
+          cursor: string | null;
+          cycle_started_at: number | null;
+          updated_at: number | null;
+          completed_at: number | null;
+          pages_fetched: number | null;
+        }>(),
+      3,
+    );
     return {
       cursor: row?.cursor ?? null,
       cycleStartedAt: row?.cycle_started_at ?? null,
@@ -116,8 +123,13 @@ export async function writeDexSourcePaginationState(params: {
   if (!params.db) return { written: false, errorClass: "not-configured" };
   const diagnostics = (params.diagnostics ?? []).slice(0, 12).map((value) => value.slice(0, 240));
   try {
-    await params.db.prepare(
-      `INSERT INTO dex_source_pagination_state
+    // Idempotent upsert: retry transient D1 overload so a brief contention
+    // window does not fail the whole shadow collection after its quotes
+    // already persisted.
+    await runWithOverloadRetry(
+      () =>
+        params.db!.prepare(
+          `INSERT INTO dex_source_pagination_state
          (source_key, cursor, cycle_started_at, updated_at, completed_at, pages_fetched, diagnostics_json)
        VALUES (?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(source_key) DO UPDATE SET
@@ -127,15 +139,17 @@ export async function writeDexSourcePaginationState(params: {
          completed_at = excluded.completed_at,
          pages_fetched = excluded.pages_fetched,
          diagnostics_json = excluded.diagnostics_json`,
-    ).bind(
-      params.sourceKey,
-      params.cursor,
-      params.cycleStartedAt,
-      params.nowSec,
-      params.completed ? params.nowSec : null,
-      params.pagesFetched,
-      JSON.stringify(diagnostics),
-    ).run();
+        ).bind(
+          params.sourceKey,
+          params.cursor,
+          params.cycleStartedAt,
+          params.nowSec,
+          params.completed ? params.nowSec : null,
+          params.pagesFetched,
+          JSON.stringify(diagnostics),
+        ).run(),
+      3,
+    );
     return { written: true, errorClass: null };
   } catch (error) {
     warnStateFailure(error, "write", params.job);

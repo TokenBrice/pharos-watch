@@ -1,4 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import type { DatabaseSync } from "node:sqlite";
+import type { D1Database } from "@shared/types/cloudflare-runtime";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import type { StablecoinData } from "@shared/types/market";
 import type { DexApiPool } from "../../lib/dex-api-common";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
@@ -261,7 +264,11 @@ import {
   reuseCurrentDexLiquidityScoringGeneration,
   stageDexLiquidityScoring,
 } from "../dex-liquidity/orchestrator";
-import { loadDexLiquidityScoringStage } from "../dex-liquidity/scoring-stage";
+import {
+  loadDexLiquidityScoringStage,
+  markDexLiquidityScoringStageConsumed,
+  persistDexLiquidityScoringStage,
+} from "../dex-liquidity/scoring-stage";
 import { UNIV3_SUBGRAPHS } from "../dex-liquidity/constants";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { convertToGtNewPools, extractPriceObservations } from "../../lib/dex-api-common";
@@ -1430,5 +1437,255 @@ describe("dex liquidity scoring stage cycle", () => {
       expect.objectContaining({ stablecoinId: "usds-sky", poolCountPctDelta: null }),
       expect.objectContaining({ stablecoinId: "usde-ethena", poolCountPctDelta: null }),
     ]);
+  });
+});
+
+describe("dex liquidity stage same-hour recovery", () => {
+  const openDatabases: DatabaseSync[] = [];
+  const scheduledAtMs = Date.parse("2026-09-23T15:16:00Z");
+  const consumerSlot = getCronSlotStartedAtForSchedule("halfHourlyChartsOffset", scheduledAtMs);
+  const sourceSlot = consumerSlot - DEX_LIQUIDITY_STAGE_LEAD_SEC;
+  const halfHourSlot = getCronSlotStartedAtForSchedule(
+    "halfHourlyChartsOffset",
+    Date.parse("2026-09-23T15:46:00Z"),
+  );
+
+  interface RecoveryHarness {
+    sqlite: DatabaseSync;
+    db: D1Database;
+  }
+
+  let actualScoringStage: typeof import("../dex-liquidity/scoring-stage");
+
+  beforeAll(async () => {
+    actualScoringStage = await vi.importActual<typeof import("../dex-liquidity/scoring-stage")>(
+      "../dex-liquidity/scoring-stage",
+    );
+  });
+
+  function openHarness(): RecoveryHarness {
+    const harness = createLatestSchemaSqlite();
+    openDatabases.push(harness.sqlite);
+    return harness;
+  }
+
+  function recordStageRunError(harness: RecoveryHarness) {
+    harness.sqlite.prepare(
+      `INSERT INTO cron_runs (job, started_at, duration_ms, status, slot_started_at)
+       VALUES ('sync-dex-liquidity-stage', ?, 83_449, 'error', ?)`,
+    ).run(sourceSlot + 13, sourceSlot);
+  }
+
+  /** Produce the exact slot's real stage generation through the real producer. */
+  async function stageHourGeneration(harness: RecoveryHarness) {
+    await stageDexLiquidityScoring(
+      harness.db,
+      "graph-key",
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      sourceSlot,
+    );
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+    for (const sqlite of openDatabases.splice(0)) sqlite.close();
+  });
+
+  beforeEach(() => {
+    // Pin the incident clock so slot ages, leases, and run stamps are exact.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(scheduledAtMs);
+    vi.clearAllMocks();
+    // The producer, its persistence, its loader, and its consumption marker run
+    // for real against SQLite here; only the scoring/publication stages stay mocked.
+    vi.mocked(persistDexLiquidityScoringStage).mockImplementation(
+      actualScoringStage.persistDexLiquidityScoringStage,
+    );
+    vi.mocked(loadDexLiquidityScoringStage).mockImplementation(
+      actualScoringStage.loadDexLiquidityScoringStage,
+    );
+    vi.mocked(markDexLiquidityScoringStageConsumed).mockImplementation(
+      actualScoringStage.markDexLiquidityScoringStageConsumed,
+    );
+  });
+
+  it("re-runs an errored source stage inline and publishes with recovery metadata", async () => {
+    const harness = openHarness();
+    recordStageRunError(harness);
+
+    const result = await consumeDexLiquidityScoringStage(harness.db, undefined, undefined, consumerSlot, {
+      stageReadyDeadlineMs: scheduledAtMs + 90_000,
+      stageRecovery: { graphApiKey: "graph-key" },
+    });
+
+    expect(result.status).toBe("ok");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      stageRecovery: {
+        reason: "stage-run-errored",
+        sourceSlotStartedAt: sourceSlot,
+        generationId: `dex-liquidity-scoring-stage:${sourceSlot}`,
+      },
+    });
+    // The recovery rewrote the exact slot's generation and consumed it, and it
+    // released the stage-job lease it fenced the rewrite with.
+    expect(
+      harness.sqlite
+        .prepare(`SELECT state FROM dex_liquidity_scoring_stages WHERE source_slot_started_at = ?`)
+        .get(sourceSlot),
+    ).toEqual({ state: "consumed" });
+    expect(
+      harness.sqlite
+        .prepare(`SELECT lease_until FROM cron_leases WHERE job = 'sync-dex-liquidity-stage'`)
+        .get(),
+    ).toBeUndefined();
+  });
+
+  it("re-runs a failed stage generation inline instead of waiting out the deadline", async () => {
+    const harness = openHarness();
+    await stageHourGeneration(harness);
+    harness.sqlite
+      .prepare(`UPDATE dex_liquidity_scoring_stages SET state = 'failed' WHERE source_slot_started_at = ?`)
+      .run(sourceSlot);
+
+    const result = await consumeDexLiquidityScoringStage(harness.db, undefined, undefined, consumerSlot, {
+      stageReadyDeadlineMs: scheduledAtMs + 90_000,
+      stageRecovery: { graphApiKey: "graph-key" },
+    });
+
+    expect(result.status).toBe("ok");
+    expect(JSON.parse(result.metadata ?? "{}").stageRecovery).toMatchObject({
+      reason: "stage-generation-failed",
+      sourceSlotStartedAt: sourceSlot,
+    });
+  });
+
+  it("recovers a never-started stage once the readiness deadline has passed", async () => {
+    const harness = openHarness();
+
+    const result = await consumeDexLiquidityScoringStage(harness.db, undefined, undefined, consumerSlot, {
+      stageReadyDeadlineMs: scheduledAtMs - 1,
+      stageRecovery: { graphApiKey: "graph-key" },
+    });
+
+    expect(result.status).toBe("ok");
+    expect(JSON.parse(result.metadata ?? "{}").stageRecovery).toMatchObject({
+      reason: "stage-missing",
+      sourceSlotStartedAt: sourceSlot,
+    });
+  });
+
+  it("fails fast with a machine-readable reason when a terminal stage has no recovery", async () => {
+    const harness = openHarness();
+    recordStageRunError(harness);
+
+    await expect(consumeDexLiquidityScoringStage(harness.db, undefined, undefined, consumerSlot, {
+      stageReadyDeadlineMs: scheduledAtMs + 90_000,
+    })).rejects.toThrow(`DEX liquidity scoring stage run errored for source slot ${sourceSlot}`);
+    // No rewrite happened: the terminal slot was refused, not staged.
+    expect(
+      harness.sqlite
+        .prepare(`SELECT COUNT(*) AS count FROM dex_liquidity_scoring_stages`)
+        .get(),
+    ).toEqual({ count: 0 });
+  });
+
+  it("keeps waiting for a live producer instead of recovering over it", async () => {
+    const harness = openHarness();
+    const leaseUntil = Math.floor(scheduledAtMs / 1000) + 60;
+    harness.sqlite.prepare(
+      `INSERT INTO cron_leases (job, lease_owner, lease_until, heartbeat_at, updated_at)
+       VALUES ('sync-dex-liquidity-stage', 'stage-owner', ?, ?, ?)`,
+    ).run(leaseUntil, leaseUntil - 1, leaseUntil - 1);
+
+    await expect(consumeDexLiquidityScoringStage(harness.db, undefined, undefined, consumerSlot, {
+      stageReadyDeadlineMs: scheduledAtMs - 1,
+      stageRecovery: { graphApiKey: "graph-key" },
+    })).rejects.toThrow(`DEX liquidity scoring stage is missing for source slot ${sourceSlot}`);
+    expect(
+      harness.sqlite
+        .prepare(`SELECT COUNT(*) AS count FROM dex_liquidity_scoring_stages`)
+        .get(),
+    ).toEqual({ count: 0 });
+  });
+
+  it("publishes the hour's unconsumed stage from the half-hour reuse tick", async () => {
+    const harness = openHarness();
+    await stageHourGeneration(harness);
+    vi.setSystemTime(Date.parse("2026-09-23T15:46:00Z"));
+
+    const result = await reuseCurrentDexLiquidityScoringGeneration(
+      harness.db,
+      undefined,
+      undefined,
+      halfHourSlot,
+      { stageRecovery: { graphApiKey: "graph-key" } },
+    );
+
+    expect(result.status).toBe("ok");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      stageRecovery: {
+        reason: "stage-unconsumed",
+        sourceSlotStartedAt: sourceSlot,
+        generationId: `dex-liquidity-scoring-stage:${sourceSlot}`,
+      },
+    });
+    expect(
+      harness.sqlite
+        .prepare(`SELECT state FROM dex_liquidity_scoring_stages WHERE source_slot_started_at = ?`)
+        .get(sourceSlot),
+    ).toEqual({ state: "consumed" });
+  });
+
+  it("re-runs a terminally failed source stage from the half-hour tick", async () => {
+    const harness = openHarness();
+    recordStageRunError(harness);
+    vi.setSystemTime(Date.parse("2026-09-23T15:46:00Z"));
+
+    const result = await reuseCurrentDexLiquidityScoringGeneration(
+      harness.db,
+      undefined,
+      undefined,
+      halfHourSlot,
+      { stageRecovery: { graphApiKey: "graph-key" } },
+    );
+
+    expect(result.status).toBe("ok");
+    expect(JSON.parse(result.metadata ?? "{}").stageRecovery).toMatchObject({
+      reason: "stage-run-errored",
+      sourceSlotStartedAt: sourceSlot,
+    });
+    expect(
+      harness.sqlite
+        .prepare(`SELECT state FROM dex_liquidity_scoring_stages WHERE source_slot_started_at = ?`)
+        .get(sourceSlot),
+    ).toEqual({ state: "consumed" });
+  });
+
+  it("still skips neutral at the half-hour tick when the hour's stage was consumed", async () => {
+    const harness = openHarness();
+    await stageHourGeneration(harness);
+    harness.sqlite
+      .prepare(`UPDATE dex_liquidity_scoring_stages SET state = 'consumed' WHERE source_slot_started_at = ?`)
+      .run(sourceSlot);
+    vi.mocked(loadCurrentDexScoringGenerationId).mockResolvedValue("dex-liquidity-current");
+    vi.setSystemTime(Date.parse("2026-09-23T15:46:00Z"));
+
+    const result = await reuseCurrentDexLiquidityScoringGeneration(
+      harness.db,
+      undefined,
+      undefined,
+      halfHourSlot,
+      { stageRecovery: { graphApiKey: "graph-key" } },
+    );
+
+    expect(result.status).toBe("skipped_neutral");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      cadenceReuse: true,
+      persistence: { generationId: "dex-liquidity-current" },
+    });
   });
 });

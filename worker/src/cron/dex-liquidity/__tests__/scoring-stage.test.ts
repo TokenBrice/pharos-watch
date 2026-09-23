@@ -13,6 +13,7 @@ import {
   loadDexLiquidityScoringStage,
   loadDexLiquidityScoringStageWhenReady,
   persistDexLiquidityScoringStage,
+  probeDexLiquidityScoringStageSlot,
   pruneScoringStages,
   type DexLiquidityScoringStageChunk,
 } from "../scoring-stage";
@@ -526,6 +527,110 @@ describe("DEX liquidity scoring stage", () => {
       wait,
     })).rejects.toThrow(`missing for source slot ${sourceSlotStartedAt}`);
     expect(wait).not.toHaveBeenCalled();
+  });
+
+  it("lets a caller stop waiting on a missing stage instead of burning the deadline", async () => {
+    const harness = createLatestSchemaSqlite();
+    openDatabases.push(harness.sqlite);
+    const sourceSlotStartedAt = 15_000;
+    const deadlineMs = (sourceSlotStartedAt + 6 * 60) * 1_000;
+    const wait = vi.fn(async () => {});
+    const onMissing = vi.fn(() => "stop" as const);
+
+    await expect(loadDexLiquidityScoringStageWhenReady(harness.db, {
+      expectedSourceSlotStartedAt: sourceSlotStartedAt,
+      readyDeadlineMs: deadlineMs,
+      nowMs: () => deadlineMs - 30_000,
+      wait,
+      onMissing,
+    })).rejects.toThrow(`missing for source slot ${sourceSlotStartedAt}`);
+    expect(onMissing).toHaveBeenCalledOnce();
+    expect(wait).not.toHaveBeenCalled();
+  });
+
+  it("keeps waiting while the caller reports the producer as live", async () => {
+    const harness = createLatestSchemaSqlite();
+    openDatabases.push(harness.sqlite);
+    const sourceSlotStartedAt = 15_500;
+    const deadlineMs = (sourceSlotStartedAt + 6 * 60) * 1_000;
+    const staged = await persistDexLiquidityScoringStage(harness.db, {
+      sourceSlotStartedAt,
+      syncStartSec: sourceSlotStartedAt + 10,
+      sourceState: sourceState(),
+      poolState: poolState(20),
+    });
+    harness.sqlite
+      .prepare(`UPDATE dex_liquidity_scoring_stages SET state = 'writing' WHERE generation_id = ?`)
+      .run(staged.generationId);
+    const onMissing = vi.fn(() => "wait" as const);
+    const wait = vi.fn(async () => {
+      harness.sqlite
+        .prepare(`UPDATE dex_liquidity_scoring_stages SET state = 'ready' WHERE generation_id = ?`)
+        .run(staged.generationId);
+    });
+
+    const loaded = await loadDexLiquidityScoringStageWhenReady(harness.db, {
+      expectedSourceSlotStartedAt: sourceSlotStartedAt,
+      readyDeadlineMs: deadlineMs,
+      nowMs: () => deadlineMs - 30_000,
+      wait,
+      onMissing,
+    });
+
+    expect(loaded.generationId).toBe(staged.generationId);
+    expect(onMissing).toHaveBeenCalledOnce();
+    expect(wait).toHaveBeenCalledOnce();
+  });
+
+  it("probes run terminality for the exact source slot", async () => {
+    const harness = createLatestSchemaSqlite();
+    openDatabases.push(harness.sqlite);
+    const sourceSlotStartedAt = 16_000;
+
+    const empty = await probeDexLiquidityScoringStageSlot(harness.db, sourceSlotStartedAt);
+    expect(empty).toEqual({
+      manifestState: "missing",
+      activeStageRun: false,
+      lastStageRunStatus: null,
+    });
+
+    const stored = await persistDexLiquidityScoringStage(harness.db, {
+      sourceSlotStartedAt,
+      syncStartSec: sourceSlotStartedAt + 10,
+      sourceState: sourceState(),
+      poolState: poolState(20),
+    });
+    const nowSec = Math.floor(Date.now() / 1000);
+    harness.sqlite.prepare(
+      `INSERT INTO cron_leases (job, lease_owner, lease_until, heartbeat_at, updated_at)
+       VALUES ('sync-dex-liquidity-stage', 'stage-owner', ?, ?, ?)`,
+    ).run(nowSec + 60, nowSec, nowSec);
+    harness.sqlite.prepare(
+      `INSERT INTO cron_runs (job, started_at, duration_ms, status, slot_started_at)
+       VALUES ('sync-dex-liquidity-stage', ?, 83_449, 'error', ?)`,
+    ).run(sourceSlotStartedAt + 13, sourceSlotStartedAt);
+
+    // A live lease keeps the slot non-terminal even though its last run errored.
+    const liveProducer = await probeDexLiquidityScoringStageSlot(harness.db, sourceSlotStartedAt);
+    expect(liveProducer).toEqual({
+      manifestState: "ready",
+      activeStageRun: true,
+      lastStageRunStatus: "error",
+    });
+
+    harness.sqlite
+      .prepare(`UPDATE cron_leases SET lease_until = ? WHERE job = 'sync-dex-liquidity-stage'`)
+      .run(nowSec - 1);
+    harness.sqlite
+      .prepare(`UPDATE dex_liquidity_scoring_stages SET state = 'failed' WHERE generation_id = ?`)
+      .run(stored.generationId);
+
+    const terminal = await probeDexLiquidityScoringStageSlot(harness.db, sourceSlotStartedAt);
+    expect(terminal).toEqual({
+      manifestState: "failed",
+      activeStageRun: false,
+      lastStageRunStatus: "error",
+    });
   });
 
   it("recovers exact chunks and finalization after ambiguous committed D1 responses", async () => {

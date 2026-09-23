@@ -1,5 +1,6 @@
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { DEX_LIQUIDITY_STAGE_LEAD_SEC } from "@shared/lib/cron-jobs";
+import { CRON_SCHEDULE_CADENCES, isHourlyDexPriceSlot } from "@shared/lib/cron-cadences";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
 import { createCronResult } from "../../lib/cron-result";
@@ -7,6 +8,11 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { LiquidityFallbackCounters, LiquidityMetrics, LlamaPool } from "./types";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
+import {
+  acquireCronLease,
+  createLeaseOwner,
+  releaseCronLease,
+} from "../../lib/cron-lease-primitives";
 import { loadPriceValidationReferences } from "../../lib/price-validation";
 import { upsertStagedPools } from "../dex-discovery/persistence";
 import {
@@ -87,6 +93,8 @@ import {
   loadDexLiquidityScoringStageWhenReady,
   markDexLiquidityScoringStageConsumed,
   persistDexLiquidityScoringStage,
+  probeDexLiquidityScoringStageSlot,
+  type LoadedDexLiquidityScoringStage,
 } from "./scoring-stage";
 import type {
   DexLiquidityPoolState,
@@ -262,6 +270,26 @@ export async function stageDexLiquidityScoring(
   };
 }
 
+/** Credentials for the bounded same-hour stage re-run a scoring tick performs
+ *  when the hourly source stage for its expected slot failed or never started. */
+export interface DexLiquidityStageRecoveryInput {
+  graphApiKey: string | null;
+  coingeckoApiKey?: string | null;
+  chainRpcs?: Map<string, ChainRpcConfig>;
+}
+
+type DexLiquidityStageRecoveryReason =
+  | "stage-generation-failed"
+  | "stage-run-errored"
+  | "stage-missing"
+  | "stage-unconsumed";
+
+export interface DexLiquidityStageRecoveryOutcome {
+  reason: DexLiquidityStageRecoveryReason;
+  sourceSlotStartedAt: number;
+  generationId: string;
+}
+
 export async function consumeDexLiquidityScoringStage(
   db: D1Database,
   signal?: AbortSignal,
@@ -270,28 +298,55 @@ export async function consumeDexLiquidityScoringStage(
   options: {
     publishShadowTargets?: boolean;
     stageReadyDeadlineMs?: number;
+    /** When provided, a terminally failed or never-started source stage is
+     *  re-run inline for the exact expected slot instead of failing the run. */
+    stageRecovery?: DexLiquidityStageRecoveryInput;
   } = {},
 ): Promise<CronResult> {
   const expectedSourceSlotStartedAt = consumerSlotStartedAt == null
     ? undefined
     : consumerSlotStartedAt - DEX_LIQUIDITY_STAGE_LEAD_SEC;
-  const staged = expectedSourceSlotStartedAt != null && options.stageReadyDeadlineMs != null
-    ? await loadDexLiquidityScoringStageWhenReady(
-        db,
-        {
-          expectedSourceSlotStartedAt,
-          readyDeadlineMs: options.stageReadyDeadlineMs,
-        },
-        signal,
-      )
-    : await loadDexLiquidityScoringStage(
-        db,
-        {
-          nowSec: Math.floor(Date.now() / 1000),
-          expectedSourceSlotStartedAt,
-        },
-        signal,
-      );
+  let staged: LoadedDexLiquidityScoringStage;
+  let recovery: DexLiquidityStageRecoveryOutcome | null = null;
+  if (expectedSourceSlotStartedAt != null && options.stageReadyDeadlineMs != null) {
+    ({ staged, recovery } = await loadDexLiquidityScoringStageForConsumer(
+      db,
+      {
+        expectedSourceSlotStartedAt,
+        readyDeadlineMs: options.stageReadyDeadlineMs,
+        recovery: options.stageRecovery ?? null,
+      },
+      reportProgress,
+      signal,
+    ));
+  } else {
+    staged = await loadDexLiquidityScoringStage(
+      db,
+      {
+        nowSec: Math.floor(Date.now() / 1000),
+        expectedSourceSlotStartedAt,
+      },
+      signal,
+    );
+  }
+  return await consumeLoadedDexLiquidityScoringStage(
+    db,
+    staged,
+    { publishShadowTargets: options.publishShadowTargets },
+    reportProgress,
+    signal,
+    recovery,
+  );
+}
+
+async function consumeLoadedDexLiquidityScoringStage(
+  db: D1Database,
+  staged: LoadedDexLiquidityScoringStage,
+  options: { publishShadowTargets?: boolean },
+  reportProgress: CronProgressReporter | undefined,
+  signal: AbortSignal | undefined,
+  recovery: DexLiquidityStageRecoveryOutcome | null,
+): Promise<CronResult> {
   const ctx: DexLiquidityRunContext = {
     db,
     graphApiKey: null,
@@ -331,13 +386,31 @@ export async function consumeDexLiquidityScoringStage(
       error: toErrorMessage(error),
     }));
   }
+  if (recovery != null) {
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    metadata.stageRecovery = recovery;
+    result.metadata = JSON.stringify(metadata);
+  }
   return result;
 }
 
 export async function reuseCurrentDexLiquidityScoringGeneration(
   db: D1Database,
   signal?: AbortSignal,
+  reportProgress?: CronProgressReporter,
+  consumerSlotStartedAt?: number,
+  options: { stageRecovery?: DexLiquidityStageRecoveryInput } = {},
 ): Promise<CronResult> {
+  if (consumerSlotStartedAt != null) {
+    const published = await publishHourStageAtHalfHourTick(
+      db,
+      dexLiquidityStageSourceSlotForConsumerSlot(consumerSlotStartedAt),
+      options.stageRecovery ?? null,
+      reportProgress,
+      signal,
+    );
+    if (published != null) return published;
+  }
   const generationId = await loadCurrentDexScoringGenerationId(db, signal);
   if (!generationId) {
     return createCronResult({
@@ -353,6 +426,227 @@ export async function reuseCurrentDexLiquidityScoringGeneration(
     metadata: { cadenceReuse: true, persistence: { generationId, skipped: false, skippedReason: "liquidity-cadence-reuse" } },
     productivity: { productive: false, reason: "liquidity-cadence-reuse" },
   });
+}
+
+/** The hour's :10 source slot a charts-offset consumer occurrence maps to:
+ *  :16 leads it by the registered stage lead; the half-hour :46 occurrence
+ *  leads it by one further consumer cadence. */
+function dexLiquidityStageSourceSlotForConsumerSlot(consumerSlotStartedAt: number): number {
+  const publicationLeadSlot = consumerSlotStartedAt - DEX_LIQUIDITY_STAGE_LEAD_SEC;
+  return isHourlyDexPriceSlot(consumerSlotStartedAt)
+    ? publicationLeadSlot
+    : publicationLeadSlot - CRON_SCHEDULE_CADENCES.halfHourlyChartsOffset.intervalSec;
+}
+
+/**
+ * The half-hour consumer's second chance at the hour's source stage. A stage
+ * that is ready but was never consumed is published; a terminal (failed,
+ * errored, or abandoned) or never-started stage is bounded-recovered for the
+ * exact slot first. A consumed stage — the healthy :16 publication — and a
+ * stage with a live producer keep the existing cadence-reuse path, so a
+ * successful hourly publication still yields the neutral skip. Never throws:
+ * an unusable stage defers to the reuse path and the next hourly stage run.
+ */
+async function publishHourStageAtHalfHourTick(
+  db: D1Database,
+  expectedSourceSlotStartedAt: number,
+  recovery: DexLiquidityStageRecoveryInput | null,
+  reportProgress: CronProgressReporter | undefined,
+  signal?: AbortSignal,
+): Promise<CronResult | null> {
+  try {
+    const probe = await probeDexLiquidityScoringStageSlot(db, expectedSourceSlotStartedAt, signal);
+    if (probe.manifestState === "consumed") return null;
+    if (recovery == null && probe.manifestState !== "ready") return null;
+    if (probe.manifestState === "ready") {
+      const staged = await loadDexLiquidityScoringStage(
+        db,
+        {
+          nowSec: Math.floor(Date.now() / 1000),
+          expectedSourceSlotStartedAt,
+        },
+        signal,
+      );
+      return await consumeLoadedDexLiquidityScoringStage(
+        db,
+        staged,
+        { publishShadowTargets: false },
+        reportProgress,
+        signal,
+        {
+          reason: "stage-unconsumed",
+          sourceSlotStartedAt: expectedSourceSlotStartedAt,
+          generationId: staged.generationId,
+        },
+      );
+    }
+    // Missing, writing, or failed without a live producer: re-run the stage for
+    // the exact slot if it is terminal or absent, then publish what it wrote.
+    const { staged, recovery: outcome } = await loadDexLiquidityScoringStageForConsumer(
+      db,
+      {
+        expectedSourceSlotStartedAt,
+        readyDeadlineMs: Date.now(),
+        recovery,
+      },
+      reportProgress,
+      signal,
+    );
+    return await consumeLoadedDexLiquidityScoringStage(
+      db,
+      staged,
+      { publishShadowTargets: false },
+      reportProgress,
+      signal,
+      outcome,
+    );
+  } catch (error) {
+    rethrowIfAborted(error, signal);
+    logWorkerEventArgs("handler", "warn", JSON.stringify({
+      scope: "dex-liquidity",
+      message: "Half-hour DEX stage publication deferred to the next hourly stage run",
+      sourceSlotStartedAt: expectedSourceSlotStartedAt,
+      error: toErrorMessage(error),
+    }));
+    return null;
+  }
+}
+
+const DEX_LIQUIDITY_STAGE_RECOVERY_JOB = "sync-dex-liquidity-stage";
+const DEX_LIQUIDITY_STAGE_RECOVERY_LEASE_TTL_SEC = 14 * 60;
+
+/**
+ * Wait for the exact source slot through the shared readiness primitive, but
+ * stop waiting the moment the slot's stage is provably terminal: a failed
+ * generation, or an errored stage run with no live lease. Terminal slots are
+ * either re-run inline (recovery credentials provided — the scheduled :16
+ * consumer) or fail fast with a machine-readable reason instead of burning the
+ * readiness deadline on a stage that can no longer appear.
+ */
+async function loadDexLiquidityScoringStageForConsumer(
+  db: D1Database,
+  options: {
+    expectedSourceSlotStartedAt: number;
+    readyDeadlineMs: number;
+    recovery: DexLiquidityStageRecoveryInput | null;
+  },
+  reportProgress: CronProgressReporter | undefined,
+  signal?: AbortSignal,
+): Promise<{ staged: LoadedDexLiquidityScoringStage; recovery: DexLiquidityStageRecoveryOutcome | null }> {
+  const { expectedSourceSlotStartedAt } = options;
+  const missingMessage =
+    `DEX liquidity scoring stage is missing for source slot ${expectedSourceSlotStartedAt}`;
+  let stopReason: DexLiquidityStageRecoveryReason | null = null;
+  try {
+    const staged = await loadDexLiquidityScoringStageWhenReady(
+      db,
+      {
+        expectedSourceSlotStartedAt,
+        readyDeadlineMs: options.readyDeadlineMs,
+        onMissing: async (waitSignal) => {
+          const probe = await probeDexLiquidityScoringStageSlot(db, expectedSourceSlotStartedAt, waitSignal);
+          // A live producer is never overwritten: keep waiting for it.
+          if (probe.activeStageRun) return "wait";
+          const generationFailed = probe.manifestState === "failed";
+          if (generationFailed || probe.lastStageRunStatus === "error") {
+            stopReason = generationFailed ? "stage-generation-failed" : "stage-run-errored";
+            return "stop";
+          }
+          // Deadline reached with no live producer: the stage can no longer
+          // appear on its own, so the caller may stage the slot itself.
+          if (Date.now() >= options.readyDeadlineMs) {
+            stopReason = "stage-missing";
+            return "stop";
+          }
+          return "wait";
+        },
+      },
+      signal,
+    );
+    return { staged, recovery: null };
+  } catch (error) {
+    rethrowIfAborted(error, signal);
+    const reason = stopReason;
+    if (!(error instanceof Error) || error.message !== missingMessage || reason == null) throw error;
+    if (options.recovery == null) {
+      throw new Error(
+        reason === "stage-missing"
+          ? missingMessage
+          : reason === "stage-generation-failed"
+            ? `DEX liquidity scoring stage generation failed for source slot ${expectedSourceSlotStartedAt}`
+            : `DEX liquidity scoring stage run errored for source slot ${expectedSourceSlotStartedAt}`,
+      );
+    }
+    return await recoverDexLiquidityScoringStageOutput(
+      db,
+      options.recovery,
+      expectedSourceSlotStartedAt,
+      reason,
+      reportProgress,
+      signal,
+    );
+  }
+}
+
+/** Re-run the source stage for the exact failed slot under the stage job's own
+ *  lease (so a late producer invocation can never interleave with the rewrite),
+ *  then load the generation the recovery just wrote. */
+async function recoverDexLiquidityScoringStageOutput(
+  db: D1Database,
+  recovery: DexLiquidityStageRecoveryInput,
+  expectedSourceSlotStartedAt: number,
+  reason: DexLiquidityStageRecoveryReason,
+  reportProgress: CronProgressReporter | undefined,
+  signal?: AbortSignal,
+): Promise<{ staged: LoadedDexLiquidityScoringStage; recovery: DexLiquidityStageRecoveryOutcome }> {
+  const leaseOwner = createLeaseOwner(DEX_LIQUIDITY_STAGE_RECOVERY_JOB);
+  const acquired = await runWithOverloadRetry(
+    () => acquireCronLease(db, DEX_LIQUIDITY_STAGE_RECOVERY_JOB, leaseOwner, DEX_LIQUIDITY_STAGE_RECOVERY_LEASE_TTL_SEC),
+    3,
+    signal,
+  );
+  if (!acquired) {
+    throw new Error(
+      `DEX liquidity scoring stage recovery skipped for source slot ${expectedSourceSlotStartedAt}: stage lease is held`,
+    );
+  }
+  try {
+    await stageDexLiquidityScoring(
+      db,
+      recovery.graphApiKey,
+      signal,
+      recovery.coingeckoApiKey,
+      recovery.chainRpcs,
+      reportProgress,
+      expectedSourceSlotStartedAt,
+    );
+  } finally {
+    try {
+      await releaseCronLease(db, DEX_LIQUIDITY_STAGE_RECOVERY_JOB, leaseOwner);
+    } catch (error) {
+      logWorkerEventArgs("handler", "warn", JSON.stringify({
+        scope: "dex-liquidity",
+        message: "Failed to release DEX scoring-stage recovery lease",
+        error: toErrorMessage(error),
+      }));
+    }
+  }
+  const staged = await loadDexLiquidityScoringStage(
+    db,
+    {
+      nowSec: Math.floor(Date.now() / 1000),
+      expectedSourceSlotStartedAt,
+    },
+    signal,
+  );
+  return {
+    staged,
+    recovery: {
+      reason,
+      sourceSlotStartedAt: expectedSourceSlotStartedAt,
+      generationId: staged.generationId,
+    },
+  };
 }
 
 export interface DexLiquidityRunContext {
@@ -812,6 +1106,7 @@ async function buildDexLiquidityPoolState(
     sourceState.validationReferences,
     sourceState.authoritativeConfirmation,
     ctx.fallbackCounters,
+    ctx.signal,
   );
   mergeDexPriceObservationMap(sourceState.priceObservations, staged.priceObservations);
   staged.priceObservations.clear();

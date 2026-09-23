@@ -553,7 +553,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     intervalSec: 3600,
     scheduleKey: "halfHourlyChartsOffset",
     triggerMode: "shared",
-    maxConnections: 0, // D1-only consumer of the complete source-stage generation.
+    maxConnections: 5, // D1-only consumer of the complete source-stage generation; the bounded inline :16 stage-recovery re-run reuses the stage job's nested direct-API peak.
     connectionGroup: "half-hourly-scoring-charts-chain",
   },
   {
@@ -905,6 +905,27 @@ export function getCronJobMeta(job: string): CronJobMeta | null {
 
 export function getCronStatusImpact(job: string): CronStatusImpact {
   return getCronJobMeta(job)?.statusImpact ?? "watch";
+}
+
+/**
+ * Neutral-skip `metadata.reason` values that prove the period's write-once
+ * artifact already exists. Each is recorded only after a successful precheck
+ * read found the artifact (for example today's `public_snapshots` row), so a
+ * fresh `skipped_neutral` run carrying one of these reasons is positive
+ * evidence that the period's output exists — unlike a generic admission skip,
+ * which proves nothing about the period (ADR-29). Cron-health availability and
+ * the admin cron lanes both resolve neutral skips through this single
+ * vocabulary (ADR-32).
+ */
+const PROVEN_SATISFIED_NEUTRAL_SKIP_REASONS: readonly string[] = [
+  // snapshot-psi / snapshot-public-dataset same-day catch-up precheck.
+  "same_day_snapshot_exists",
+  // weekly-recap already-generated precheck.
+  "weekly-recap-exists",
+];
+
+export function isProvenSatisfiedNeutralSkipReason(reason: unknown): boolean {
+  return typeof reason === "string" && PROVEN_SATISFIED_NEUTRAL_SKIP_REASONS.includes(reason);
 }
 
 function normalizeCronSlotStartedAt(timestampSec: number, intervalSec: number, offsetSec = 0): number {

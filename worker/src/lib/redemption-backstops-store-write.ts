@@ -359,6 +359,10 @@ function prunableRedemptionBackstopRunsSubquery(): string {
            LIMIT ?`;
 }
 
+/** Delete run rows whose snapshot manifest no longer exists. Bounded per
+ * distinct orphan run id (not per scanned row): the candidate set comes from a
+ * covering-index DISTINCT scan instead of a full table walk with a correlated
+ * manifest probe per row, so an empty pass no longer reads ~28k rows. */
 async function deleteOrphanRedemptionBackstopRunRowsBatch(
   db: D1Database,
   args: { batchSize: number },
@@ -368,14 +372,18 @@ async function deleteOrphanRedemptionBackstopRunRowsBatch(
       .prepare(
         `DELETE FROM redemption_backstop_run_rows
           WHERE snapshot_run_id IN (
-            SELECT snapshot_run_id
-              FROM redemption_backstop_run_rows AS rr
+            SELECT rr.snapshot_run_id
+              FROM (
+                SELECT DISTINCT snapshot_run_id
+                  FROM redemption_backstop_run_rows
+                 INDEXED BY idx_redemption_backstop_run_rows_run_id
+              ) AS rr
              WHERE NOT EXISTS (
                SELECT 1
                  FROM redemption_backstop_runs AS manifest
                 WHERE manifest.run_id = rr.snapshot_run_id
              )
-             ORDER BY rr.rowid ASC
+             ORDER BY rr.snapshot_run_id ASC
              LIMIT ?
           )`,
       )

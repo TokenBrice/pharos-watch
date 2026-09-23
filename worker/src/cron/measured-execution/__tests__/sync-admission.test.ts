@@ -6,14 +6,18 @@ import {
 } from "@shared/types/measured-execution";
 import type { DexExitRouteObservation } from "@shared/types/market";
 import {
+  CONSERVATIVE_MULTICALL_BATCH_SIZE,
+  MIN_MEASURED_EXECUTION_PACING_SAMPLES,
   MEASURED_EXECUTION_ADMISSION_RUN_METADATA,
   admitTargetsWithinBudget,
   estimateAdmissionCohortRpcRequestBreakdown,
   estimateAdmissionCohortRpcRequests,
   estimateAdmissionRotationCycles,
+  estimateRemainingMeasuredQuoteRpcRequests,
   hasCompleteDexMeasuredQuoteProgress,
   isDexMeasuredExecutionTargetScoreEligible,
   isDiagnosticDexMeasuredQuoteFailure,
+  projectMeasuredExecutionPacingStop,
   resolveMeasuredExecutionCronStatus,
   selectExpiringScoreBearingPriorityPacket,
   summarizeMeasuredExecutionQuoteFailures,
@@ -869,5 +873,106 @@ describe("measured profile score-eligibility contract", () => {
         isDexMeasuredExecutionTargetScoreEligible(target as DexMeasuredExecutionTarget),
       ).toBe(scoreEligible);
     }
+  });
+});
+
+describe("measured execution quote pacing", () => {
+  interface PacingState {
+    target: DexMeasuredExecutionTarget;
+    failedReason: string | null;
+    stopped: boolean;
+    points: ReadonlyArray<{ inputUsd: number }>;
+    bracketGapUsd: number | null;
+  }
+
+  it("estimates remaining quote requests from uncovered probe notionals and open brackets", () => {
+    const states: PacingState[] = [
+      // Complete five-notch ladder with no bracket: nothing remaining.
+      {
+        target: target("usd1-world-liberty-financial", 10_000_000),
+        failedReason: null,
+        stopped: false,
+        points: [1_000, 100_000, 1_000_000, 10_000_000, 25_000_000].map((inputUsd) => ({ inputUsd })),
+        bracketGapUsd: null,
+      },
+      // Marginal only on the same ladder plus one open refinement bracket.
+      {
+        target: target("susds-sky", 10_000_000, "susds-ladder"),
+        failedReason: null,
+        stopped: false,
+        points: [{ inputUsd: 1_000 }],
+        bracketGapUsd: 0.5,
+      },
+      // Failed and cost-bound-stopped targets never owe more work.
+      {
+        target: target("usdt-tether", 10_000_000, "failed"),
+        failedReason: "pool-uninitialized-or-empty",
+        stopped: false,
+        points: [],
+        bracketGapUsd: null,
+      },
+      {
+        target: target("usdc-circle", 10_000_000, "stopped"),
+        failedReason: null,
+        stopped: true,
+        points: [{ inputUsd: 1_000 }],
+        bracketGapUsd: null,
+      },
+    ];
+    const openLadderCalls = 4 + 3;
+    expect(estimateRemainingMeasuredQuoteRpcRequests(states)).toBe(
+      Math.ceil(openLadderCalls / CONSERVATIVE_MULTICALL_BATCH_SIZE),
+    );
+  });
+
+  it("treats a probe notional within $0.02 of a recorded point as covered", () => {
+    expect(
+      estimateRemainingMeasuredQuoteRpcRequests([
+        {
+          target: target("usdt-tether", 100_000),
+          failedReason: null,
+          stopped: false,
+          points: [{ inputUsd: 999.99 }, { inputUsd: 100_000.01 }],
+          bracketGapUsd: null,
+        },
+      ]),
+    ).toBe(0);
+  });
+
+  it("stops further stages only when the projected finish misses the soft deadline", () => {
+    const base = {
+      nowMs: 0,
+      softDeadlineMs: 10_000,
+      observedQuoteRpcRequests: 100,
+      observedQuoteElapsedMs: 100,
+    };
+    expect(projectMeasuredExecutionPacingStop({ ...base, remainingEstimatedRpcRequests: 50_000 }))
+      .toEqual({ stop: true, projectedFinishMs: 50_000 });
+    expect(projectMeasuredExecutionPacingStop({ ...base, remainingEstimatedRpcRequests: 5_000 }))
+      .toEqual({ stop: false, projectedFinishMs: 5_000 });
+  });
+
+  it("keeps following the hard runtime wall until the observed sample is large enough", () => {
+    expect(
+      projectMeasuredExecutionPacingStop({
+        nowMs: 0,
+        softDeadlineMs: 10_000,
+        observedQuoteRpcRequests: MIN_MEASURED_EXECUTION_PACING_SAMPLES - 1,
+        observedQuoteElapsedMs: 100,
+        remainingEstimatedRpcRequests: 50_000,
+      }),
+    ).toEqual({ stop: false, projectedFinishMs: null });
+  });
+
+  it("never stops when no quote work remains", () => {
+    expect(
+      projectMeasuredExecutionPacingStop({
+        nowMs: 999_999,
+        softDeadlineMs: 0,
+        observedQuoteRpcRequests: 100,
+        observedQuoteElapsedMs: 100,
+        remainingEstimatedRpcRequests: 0,
+      }),
+    ).toEqual({ stop: false, projectedFinishMs: null });
   });
 });

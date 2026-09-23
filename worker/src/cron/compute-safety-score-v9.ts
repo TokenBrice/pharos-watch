@@ -33,6 +33,7 @@ import {
 } from "../lib/safety-score-v9/supply-attribution-generation";
 import { loadSupplyAttributionJournalByIdV1 } from "../lib/safety-score-v9/supply-attribution-journal-store";
 import { loadExactDexPublicationGeneration } from "../lib/report-cards-snapshot";
+import type { SafetyScoreV9BridgeJoinDiagnostic } from "../lib/safety-score-v9/candidate";
 import {
   parseSafetyScoreV9TransferMaterialityGeneration,
   SAFETY_SCORE_V9_TRANSFER_MATERIALITY_CACHE_KEY,
@@ -81,6 +82,41 @@ function summarizeHoldReasons(
       return reason.code;
     })
     .join(",");
+}
+
+/**
+ * Per-asset bridge-join diagnostics are the largest field this producer emits
+ * (~240 assets carrying nested join arrays) and alone hold the row past the
+ * 64 KiB persistence cap — where the compactor rewrote the whole array as a
+ * single count anyway and stamped the run `cron-metadata-over-64-kib`,
+ * masking its real degradation reason. Emit the bounded aggregate eagerly so
+ * the counts survive under the cap; per-asset detail stays replayable from the
+ * publication candidate.
+ */
+function summarizeBridgeJoinDiagnostics(
+  diagnostics: readonly SafetyScoreV9BridgeJoinDiagnostic[],
+): {
+  assetCount: number;
+  applicableAssetCount: number;
+  unmatchedRowIdentityCount: number;
+  unprovenRouteJoinCount: number;
+} {
+  let applicableAssetCount = 0;
+  let unmatchedRowIdentityCount = 0;
+  let unprovenRouteJoinCount = 0;
+  for (const diagnostic of diagnostics) {
+    if (diagnostic.applicabilityBranch === "applicable") {
+      applicableAssetCount += 1;
+    }
+    unmatchedRowIdentityCount += diagnostic.unmatchedRowIdentities.length;
+    unprovenRouteJoinCount += diagnostic.unprovenRouteJoins.length;
+  }
+  return {
+    assetCount: diagnostics.length,
+    applicableAssetCount,
+    unmatchedRowIdentityCount,
+    unprovenRouteJoinCount,
+  };
 }
 
 function unavailable(
@@ -399,15 +435,26 @@ export async function computeSafetyScoreV9(
       ? [`supply-attribution-generation-${supplyAttributionGenerationState.status}`]
       : []),
   ];
-  const publicationDiagnostics = publication.status === "held"
-    ? {
-        ...publication,
-        // Compaction drops array diagnostics to counts; keep the verdict and the
-        // reason codes readable from the run row itself.
-        coverageFloorVerdicts: summarizeCoverageFloors(publication.coverageFloors),
-        holdReasonCodes: summarizeHoldReasons(publication.reasons),
-      }
-    : publication;
+  const publicationDiagnostics =
+    publication.status === "published"
+      ? {
+          ...publication,
+          bridgeJoinDiagnostics: summarizeBridgeJoinDiagnostics(
+            publication.bridgeJoinDiagnostics,
+          ),
+        }
+      : publication.status === "held"
+        ? {
+            ...publication,
+            // Compaction drops array diagnostics to counts; keep the verdict and the
+            // reason codes readable from the run row itself.
+            coverageFloorVerdicts: summarizeCoverageFloors(publication.coverageFloors),
+            holdReasonCodes: summarizeHoldReasons(publication.reasons),
+            bridgeJoinDiagnostics: summarizeBridgeJoinDiagnostics(
+              publication.bridgeJoinDiagnostics,
+            ),
+          }
+        : publication;
 
   return {
     status: degradationReasons.length === 0 ? "ok" : "degraded",

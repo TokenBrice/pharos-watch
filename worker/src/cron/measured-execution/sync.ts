@@ -72,7 +72,8 @@ import {
   MEASURED_EXECUTION_ADMISSION_SOURCE_KEY, MEASURED_EXECUTION_REFINEMENT_ROUNDS,
   MEASURED_EXECUTION_RPC_REQUEST_LIMIT, SHADOW_MEASURED_EXECUTION_ADMISSION_SOURCE_KEY,
   admitTargetsWithinBudget, estimateAdmissionRotationCycles,
-  hasCompleteDexMeasuredQuoteProgress, selectExpiringScoreBearingPriorityPacket,
+  estimateRemainingMeasuredQuoteRpcRequests, hasCompleteDexMeasuredQuoteProgress,
+  projectMeasuredExecutionPacingStop, selectExpiringScoreBearingPriorityPacket,
   loadPublishedScoreBearingDexRoutes,
   resolveMeasuredExecutionCronStatus, resolveTargetDeployment, summarizeMeasuredExecutionQuoteFailures,
   type TargetDeployment,
@@ -80,7 +81,15 @@ import {
 export { isDexMeasuredExecutionTargetScoreEligible } from "./admission";
 
 const MAX_QUOTE_CALLS = 6_400;
-const MAX_RUNTIME_MS = 8 * 60 * 1_000;
+const MAX_RUNTIME_MS = 8 * 60_1_000;
+/**
+ * Soft ceiling for starting further quote stages. The eight-minute hard wall
+ * above still bounds in-flight work; when observed provider latency projects
+ * the remaining ladder/refinement work past this deadline, the lane stops
+ * early, publishes the quotes it measured, and releases the lease instead of
+ * contending with the D1-heavy :10/:13/:16 lanes for the full budget.
+ */
+const MAX_PACED_QUOTE_RUNTIME_MS = 5 * 60_1_000;
 
 interface TargetQuoteState {
   target: DexMeasuredExecutionTarget;
@@ -654,10 +663,12 @@ async function syncDexMeasuredExecutionLane(
   markBudgetStop(states, rpcBudget.stopReason);
 
   let quoteCallCount = 0;
-  const runStage = async (requests: Array<{ state: TargetQuoteState; inputUsd: number }>): Promise<void> => {
+  const runStage = async (
+    requests: Array<{ state: TargetQuoteState; inputUsd: number }>,
+  ): Promise<{ requests: number; elapsedMs: number }> => {
     if (rpcBudget.stopReason) {
       markBudgetStop(states, rpcBudget.stopReason);
-      return;
+      return { requests: 0, elapsedMs: 0 };
     }
     const runnable = requests.filter(
       ({ state }) =>
@@ -677,12 +688,14 @@ async function syncDexMeasuredExecutionLane(
           state.curveCompositeProof != null
         ),
     );
-    if (runnable.length === 0) return;
+    if (runnable.length === 0) return { requests: 0, elapsedMs: 0 };
     if (quoteCallCount + runnable.length > MAX_QUOTE_CALLS) {
       for (const { state } of runnable) state.failedReason = "quote-call-budget-exhausted";
-      return;
+      return { requests: 0, elapsedMs: 0 };
     }
     quoteCallCount += runnable.length;
+    const stageStartRequests = rpcBudget.requestsUsed;
+    const stageStartedAtMs = Date.now();
 
     const byChain = new Map<string, typeof runnable>();
     for (const request of runnable) {
@@ -713,35 +726,90 @@ async function syncDexMeasuredExecutionLane(
       }
     });
     markBudgetStop(states, rpcBudget.stopReason);
+    return { requests: rpcBudget.requestsUsed - stageStartRequests, elapsedMs: Date.now() - stageStartedAtMs };
   };
 
-  await runStage(states.map((state) => ({ state, inputUsd: 1_000 })));
+  // Pacing projection: measured quote-phase throughput decides whether further
+  // stages are still worth starting before the soft deadline. Stopped stages
+  // keep their already-measured points; targets missing their probe ladder are
+  // marked with the same runtime-deadline failure the hard wall produces.
+  const pacingSoftDeadlineMs = startedAtMs + MAX_PACED_QUOTE_RUNTIME_MS;
+  let observedQuoteRpcRequests = 0;
+  let observedQuoteElapsedMs = 0;
+  // Assigned inside shouldStopForPacing(); the cast keeps TypeScript from
+  // narrowing the outer binding to `null` across that closure boundary.
+  let pacingStop = null as {
+    projectedFinishMs: number;
+    remainingEstimatedRpcRequests: number;
+  } | null;
+  const recordQuoteStage = (stage: { requests: number; elapsedMs: number }): void => {
+    if (stage.requests <= 0) return;
+    observedQuoteRpcRequests += stage.requests;
+    observedQuoteElapsedMs += stage.elapsedMs;
+  };
+  const shouldStopForPacing = (): boolean => {
+    if (pacingStop != null || rpcBudget.stopReason != null) return pacingStop != null;
+    const remainingEstimatedRpcRequests = estimateRemainingMeasuredQuoteRpcRequests(
+      states.map((state) => ({
+        target: state.target,
+        failedReason: state.failedReason,
+        stopped: state.stopped,
+        points: state.points,
+        bracketGapUsd: state.bracket
+          ? state.bracket.upperFailingUsd - state.bracket.lowerPassingUsd
+          : null,
+      })),
+    );
+    const projection = projectMeasuredExecutionPacingStop({
+      nowMs: Date.now(),
+      softDeadlineMs: pacingSoftDeadlineMs,
+      observedQuoteRpcRequests,
+      observedQuoteElapsedMs,
+      remainingEstimatedRpcRequests,
+    });
+    if (projection.stop && projection.projectedFinishMs != null) {
+      pacingStop = {
+        projectedFinishMs: projection.projectedFinishMs,
+        remainingEstimatedRpcRequests,
+      };
+      markBudgetStop(states, "runtime-deadline-exceeded");
+    }
+    return projection.stop;
+  };
+
+  recordQuoteStage(await runStage(states.map((state) => ({ state, inputUsd: 1_000 }))));
   for (const notional of [100_000, 1_000_000, 10_000_000, 25_000_000]) {
     throwIfAborted(signal);
-    await runStage(
-      states
-        .filter(
-          (state) =>
-            !state.failedReason &&
-            !state.stopped &&
-            getDexMeasuredExecutionProbeNotionals(state.target.retainedTvlUsd).includes(notional),
-        )
-        .map((state) => ({ state, inputUsd: notional })),
+    if (shouldStopForPacing()) break;
+    recordQuoteStage(
+      await runStage(
+        states
+          .filter(
+            (state) =>
+              !state.failedReason &&
+              !state.stopped &&
+              getDexMeasuredExecutionProbeNotionals(state.target.retainedTvlUsd).includes(notional),
+          )
+          .map((state) => ({ state, inputUsd: notional })),
+      ),
     );
   }
   for (let round = 0; round < MEASURED_EXECUTION_REFINEMENT_ROUNDS; round++) {
     throwIfAborted(signal);
-    await runStage(
-      states.flatMap((state) => {
-        if (state.failedReason || !state.bracket) return [];
-        if (state.bracket.upperFailingUsd - state.bracket.lowerPassingUsd <= 0.02) return [];
-        return [
-          {
-            state,
-            inputUsd: (state.bracket.lowerPassingUsd + state.bracket.upperFailingUsd) / 2,
-          },
-        ];
-      }),
+    if (shouldStopForPacing()) break;
+    recordQuoteStage(
+      await runStage(
+        states.flatMap((state) => {
+          if (state.failedReason || !state.bracket) return [];
+          if (state.bracket.upperFailingUsd - state.bracket.lowerPassingUsd <= 0.02) return [];
+          return [
+            {
+              state,
+              inputUsd: (state.bracket.lowerPassingUsd + state.bracket.upperFailingUsd) / 2,
+            },
+          ];
+        }),
+      ),
     );
     for (const state of states) {
       if (!state.bracket || state.failedReason) continue;
@@ -914,6 +982,17 @@ async function syncDexMeasuredExecutionLane(
     quoteCallCount,
     rpcRequestCount: rpcBudget.requestsUsed,
     runtimeBudgetStopReason: rpcBudget.stopReason,
+    ...(pacingStop
+      ? {
+          pacingStop: {
+            softDeadlineMs: pacingSoftDeadlineMs,
+            projectedFinishMs: pacingStop.projectedFinishMs,
+            remainingEstimatedRpcRequests: pacingStop.remainingEstimatedRpcRequests,
+            observedQuoteRpcRequests,
+            observedQuoteElapsedMs,
+          },
+        }
+      : {}),
     openChainCircuits: rpcBudget.openChains,
     retention,
     failuresByReason: outcomes.reduce<Record<string, number>>((counts, outcome) => {
