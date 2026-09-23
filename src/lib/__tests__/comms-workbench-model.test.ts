@@ -163,6 +163,42 @@ describe("buildCommsWorkbenchModel", () => {
     expect(model.delivery.recoveryLinks.some((link) => link.href.includes("telegram-no-delivery.md"))).toBe(true);
   });
 
+  it("treats an absent fresh retry counter as zero only on an ok dispatch with its sibling present", () => {
+    // Live 2026-09-22 shape: dispatch ok, 0 permanent failures, empty backlog,
+    // but the last run's metadata predates the fresh-side retry breakdown and
+    // only carries pendingRetryQueued. Health must classify as healthy rather
+    // than forcing the whole panel Unknown off one absent counter.
+    const legacyShape = buildCommsWorkbenchModel({
+      telegramBot: makeCompleteTelegramBotStatus(),
+      dispatchCron: dispatchCron(completeDispatchMetadata({ freshRetryQueued: undefined })),
+      nowSeconds: NOW_SECONDS,
+    });
+    expect(legacyShape.delivery.health).toBe("healthy");
+    expect(legacyShape.delivery.retries.totalQueued).toBe(0);
+    expect(legacyShape.delivery.retries.freshQueued).toBe(0);
+    expect(legacyShape.delivery.retries.pendingQueued).toBe(0);
+
+    // Sibling counter missing too, or a non-ok dispatch: evidence stays
+    // unknown instead of manufacturing a zero.
+    const noSibling = buildCommsWorkbenchModel({
+      telegramBot: makeCompleteTelegramBotStatus(),
+      dispatchCron: dispatchCron(
+        completeDispatchMetadata({ freshRetryQueued: undefined, pendingRetryQueued: undefined }),
+      ),
+      nowSeconds: NOW_SECONDS,
+    });
+    expect(noSibling.delivery.health).toBe("unknown");
+    expect(noSibling.delivery.retries.totalQueued).toBeNull();
+
+    const degradedDispatch = buildCommsWorkbenchModel({
+      telegramBot: makeCompleteTelegramBotStatus(),
+      dispatchCron: dispatchCron(completeDispatchMetadata({ freshRetryQueued: undefined }), "degraded"),
+      nowSeconds: NOW_SECONDS,
+    });
+    expect(degradedDispatch.delivery.health).toBe("degraded");
+    expect(degradedDispatch.delivery.retries.totalQueued).toBeNull();
+  });
+
   it("keeps absent per-alert values unknown instead of manufacturing zeroes", () => {
     const model = buildCommsWorkbenchModel({
       telegramBot: makeCompleteTelegramBotStatus(),

@@ -2,7 +2,7 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { makeHealthyHealthResponse } from "@/test-utils/status-fixtures";
+import { makeActivePriceCoverage, makeHealthyHealthResponse, makeMissingActiveAsset } from "@/test-utils/status-fixtures";
 import { PublicServiceSummarySection } from "../public-service-summary-section";
 
 describe("PublicServiceSummarySection", () => {
@@ -26,7 +26,6 @@ describe("PublicServiceSummarySection", () => {
     );
     expect(screen.getByText("Alert Queue")).toBeTruthy();
     expect(screen.getByText("2 alerts pending delivery")).toBeTruthy();
-    expect(screen.getByText("No current public surface impact flags are active beyond the hero summary.")).toBeTruthy();
   });
 
   it("surfaces degraded blacklist ingestion in both summary and impact cards", () => {
@@ -56,5 +55,52 @@ describe("PublicServiceSummarySection", () => {
 
     expect(screen.getByText("Last Successful Sync")).toBeTruthy();
     expect(screen.queryByText("Latest Hourly Rollup")).toBeNull();
+  });
+
+  it("does not claim there are no impact flags while health warnings are active", () => {
+    render(
+      <PublicServiceSummarySection
+        healthData={{
+          ...makeHealthyHealthResponse(),
+          status: "degraded",
+          warnings: ["cache-quality-degraded: yield-data:producer-degraded-since-last-clean-run"],
+        }}
+      />,
+    );
+
+    expect(screen.queryByText("No current public surface impact flags are active beyond the hero summary.")).toBeNull();
+    expect(
+      screen.getByText("Health warnings are summarized above. No additional surfaces meet the impact thresholds tracked in this section."),
+    ).toBeTruthy();
+  });
+
+  it("reports acknowledged price gaps as informational review text, not as an impacted surface", () => {
+    render(
+      <PublicServiceSummarySection
+        healthData={{
+          ...makeHealthyHealthResponse(),
+          activePriceCoverage: makeActivePriceCoverage([
+            makeMissingActiveAsset({
+              stablecoinId: "wusd-worldwide",
+              symbol: "WUSD",
+              alertEligible: false,
+              consecutiveMissingGenerations: 2000,
+              acknowledgedGap: {
+                owner: "ops",
+                reason: "No admissible quote on any lane; issuer data requested.",
+                sources: ["https://example.com/review"],
+                reviewedAt: 1_790_121_600,
+                expiresAt: 1_792_713_600,
+              },
+            }),
+          ]),
+        }}
+      />,
+    );
+
+    expect(
+      screen.getByText("1 acknowledged price gap under review; next review expires 2026-10-23 (UTC). Prices remain unavailable and gaps re-alert when their reviews expire."),
+    ).toBeTruthy();
+    expect(screen.queryByText("Impacted Surfaces")).toBeNull();
   });
 });

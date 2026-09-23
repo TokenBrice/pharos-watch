@@ -403,6 +403,53 @@ describe("Telegram digest outbox", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("bounds retained review counts to the terminal operator-review window while keeping forensic totals", async () => {
+    const { sqlite, db } = fixtures.open();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const insertTerminalRow = (
+      editionKey: string,
+      state: "execution_unknown" | "failed_permanent",
+      updatedAtAgoSec: number,
+    ) => {
+      sqlite.prepare(
+        `INSERT INTO telegram_digest_outbox (
+           edition_key, digest_kind, digest_generated_at, target_chat_id,
+           payload_chunks_json, success_actions_json, safety_context_json, state, next_attempt_at,
+           last_error_class, created_at, updated_at
+         ) VALUES (?, 'daily', ?, ?, '[]', '[]', ?, ?, NULL, 'stale_safety_identity:identity-mismatch', ?, ?)`,
+      ).run(
+        editionKey,
+        nowSec,
+        creds.chatId,
+        JSON.stringify(safetyContext),
+        state,
+        nowSec - updatedAtAgoSec,
+        nowSec - updatedAtAgoSec,
+      );
+    };
+    insertTerminalRow("daily:2026-06-10", "failed_permanent", 30 * 86_400);
+    insertTerminalRow("daily:2026-06-11", "execution_unknown", 30 * 86_400);
+    insertTerminalRow("daily:2026-07-09", "failed_permanent", 86_400);
+    const fetchMock = mockFetch([], { requireMatch: true });
+
+    const summary = await drainTelegramDigestOutbox(db, creds);
+
+    expect(summary).toMatchObject({
+      due: 0,
+      attempted: 0,
+      retainedExecutionUnknown: 0,
+      retainedFailedPermanent: 1,
+      retainedExecutionUnknownTotal: 1,
+      retainedFailedPermanentTotal: 2,
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(
+      sqlite
+        .prepare("SELECT COUNT(*) AS count FROM telegram_digest_outbox WHERE state IN ('execution_unknown', 'failed_permanent')")
+        .get(),
+    ).toEqual({ count: 3 });
+  });
+
   it("terminalizes a daily edition that exhausts its retry budget", async () => {
     const { sqlite, db } = fixtures.open();
     await enqueueDaily(db);

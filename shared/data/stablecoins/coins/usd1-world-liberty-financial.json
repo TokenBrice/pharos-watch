@@ -16,22 +16,22 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://por.worldlibertyfinancial.com",
-    "provider": "Crowe LLP / Chainlink",
-    "attestorTier": "regional",
+    "provider": "KPMG LLP / Chainlink",
+    "attestorTier": "big4",
     "cadence": "real-time",
     "attestorJurisdiction": "United States",
     "latestReport": {
-      "periodEnd": "2026-05-31",
-      "publishedAt": "2026-06-29",
+      "periodEnd": "2026-07-31",
+      "publishedAt": "2026-08-27",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "OpenAI Codex backing review",
+      "reviewer": "Pharos safety-score curation 2026-09-23",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Crowe USD1 Reserve Attestation Report - May 2026",
-          "url": "https://landing.bitgo.com/rs/552-OGK-141/images/USD1_Reserve_Attestation_Report_May_2026.pdf?version=0"
+          "label": "KPMG USD1 Reserve Report - July 2026 (examination dated August 27, 2026)",
+          "url": "https://landing.bitgo.com/rs/552-OGK-141/images/USD1_Reserve_Attestation_Report_July_2026.pdf"
         }
       ]
     }

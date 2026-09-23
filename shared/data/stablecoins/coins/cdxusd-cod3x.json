@@ -3,6 +3,18 @@
   "name": "Cod3x USD",
   "symbol": "cdxUSD",
   "oneLiner": "cdxUSD is Cod3x's dollar stablecoin on Base, minted and burned by protocol-permissioned Facilitators against strategy-managed crypto and stablecoin collateral.",
+  "status": "frozen",
+  "frozenAt": "2026-09-23",
+  "obituary": {
+    "causeOfDeath": "abandoned",
+    "deathDate": "2026-08-27",
+    "epitaph": "Minted by facilitators, redeemable by no one",
+    "obituary": "cdxUSD was Cod3x's GHO-style credit dollar on Base, where a 3-of-9 facilitator Safe held the only mint and burn keys and ordinary holders were never given a redemption route. The peg broke on August 27, 2026, when the hourly series first printed $0.8724 and both CoinGecko's daily close and the Aerodrome cdxUSD/WETH pool ended below $0.90; the price fell through $0.54 on August 28 and bottomed at $0.2457 on September 17. Supply never moved, holding at exactly 6,150,000 cdxUSD since January 2026 with the facilitator bucket level equal to total supply, so no token was burned at par during the collapse. Cod3x had already stopped supporting it: cod3x.org, its documentation index, and the technical article Pharos cites now describe only AI perp-trading agents, and that article returns 404. With roughly $23 of daily volume left across pools whose deepest executable side holds about $1,600, and DefiLlama flagging the project dead, Pharos freezes cdxUSD as an archived abandoned asset rather than an active stablecoin.",
+    "peakMcap": 7015571,
+    "sourceUrl": "https://www.coingecko.com/en/coins/cod3x-usd",
+    "sourceLabel": "CoinGecko Cod3x USD market data (below $0.90 since 2026-08-27)"
+  },
+  "marketAvailability": "legacy-or-wind-down",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
@@ -40,22 +52,5 @@
     }
   ],
   "governanceQuality": "multisig",
-  "liveReservesConfig": {
-    "adapter": "curated-validated",
-    "version": 1,
-    "semantics": "collateral-mix",
-    "breakerScope": "cdxusd-cod3x",
-    "display": {
-      "url": "https://www.cod3x.org/unveiling-the-cod3x-tech-stack/",
-      "label": "Cod3x overview"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "base",
-        "rpcMode": "public-rpc"
-      }
-    }
-  },
   "launchDate": "2024-10-14"
 }

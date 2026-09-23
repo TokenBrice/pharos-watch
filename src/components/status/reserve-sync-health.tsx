@@ -2,6 +2,7 @@ import type { StatusResponse } from "@shared/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { formatElapsedSeconds } from "@shared/lib/format";
+import { hasReserveScoreInputHold } from "@shared/lib/status-thresholds";
 import { getStatusTone } from "@/lib/status-dashboard-model";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
@@ -35,12 +36,7 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
   // One definition of the healthy/degraded/stale badge palette: this used to be
   // a byte-identical re-implementation of `STATUS_TONE[...].badgeClassName`.
   const statusTone = getStatusTone(health.status).badgeClassName;
-  const scoreInputHold =
-    health.status !== "healthy" ||
-    health.deferredCoins > 0 ||
-    health.runBudgetTruncated ||
-    health.writeTimeoutUncertain > 0 ||
-    health.authoritativeFreshCoverageRatio < 1;
+  const scoreInputHold = hasReserveScoreInputHold(health);
 
   return (
     <Card>

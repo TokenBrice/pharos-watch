@@ -3,7 +3,7 @@ import { getPollingWindow } from "@/lib/api-query-polling";
 import { CRON_1MIN } from "@/lib/cron-intervals";
 import { deriveStatusActionRecommendations } from "@/lib/status/action-recommendations";
 import { STATUS_CAUSE_SEVERITY_RANK } from "@/lib/status/cause-severity";
-import { getActivePriceCoverageImpactDetail, getPublicHealthWarningPresentation } from "@/lib/status/public-status";
+import { getAcknowledgedPriceGapNotice, getActivePriceCoverageImpactDetail, getPublicHealthWarningPresentation } from "@/lib/status/public-status";
 import { transitionHasPublicImpact } from "@shared/lib/status-public-impact";
 import { STATUS_PRIORITY, STATUS_TONE } from "@/lib/status/dashboard-presentation";
 import type {
@@ -114,7 +114,25 @@ export function buildPublicHealthStatusCauses(healthData: HealthResponse | null 
   if (!healthData) return [];
   const coverage = healthData.activePriceCoverage;
   const warning = healthData.warnings.find((item) => item.startsWith("active-price-coverage-incomplete:"));
-  if (!warning) return [];
+  const acknowledgement = getAcknowledgedPriceGapNotice(coverage);
+  const alertIds = coverage
+    ? (coverage.alertEligibleIds ?? []).filter((id) =>
+      !(coverage.acknowledgedGapIds ?? []).includes(id)
+      && !(coverage.missingActiveAssets ?? []).find((asset) => asset.stablecoinId === id)?.acknowledgedGap,
+    )
+    : undefined;
+  if ((!warning || alertIds?.length === 0) && acknowledgement) {
+    return [{
+      code: ACTIVE_PRICE_COVERAGE_CAUSE_CODE,
+      layer: "data-quality",
+      severity: "info",
+      message: acknowledgement,
+      metric: "missingActivePrices",
+      value: coverage?.missingPriceCount,
+      threshold: 1,
+    }];
+  }
+  if (!warning || alertIds?.length === 0) return [];
   const message =
     coverage?.status === "incomplete"
       ? getActivePriceCoverageImpactDetail(coverage)

@@ -58,9 +58,10 @@ describe("yield-source-risk-registry (shared/lib structural integrity)", () => {
 
     expect(YIELD_RISK_CONFIG_PROTOCOLS).toHaveLength(61);
     expect(createHash("sha256").update(bytes).digest("hex")).toBe(
-      "c2f7b1489df348493fd61f44a553a207f2602f070e3263a919d82b06521c4962",
+      "ff38bd2278f21af9c60ad0162b0b94b860a5f1d534eb62e311eef9d13abd4e53",
     );
   });
+
 
   it("derives a non-unknown tier with a weighted score in [1,5] for every protocol", () => {
     for (const protocol of YIELD_RISK_CONFIG_PROTOCOLS) {
@@ -184,7 +185,7 @@ describe("yield-source-risk-registry (shared/lib structural integrity)", () => {
     );
   });
 
-  it("queues the six dependency-concentration reviews past the quarterly bound", () => {
+  it("queues only the dependency-concentration reviews still past the quarterly bound", () => {
     const concentrationIds: Record<string, true> = {
       "yvusdc-yearn": true,
       "gtusdc-gauntlet": true,
@@ -195,16 +196,20 @@ describe("yield-source-risk-registry (shared/lib structural integrity)", () => {
       "syrupusdc-maple": true,
       "syrupusdt-maple": true,
     };
-    const stale = findStaleVenueRiskScores(Date.parse("2026-09-21T00:00:00Z"))
+    // The 2026-09-23 drain re-reviewed the five Morpho curator notes against
+    // live vault pages, so only the yvUSDC note is queued at the drain date.
+    const staleAtDrain = findStaleVenueRiskScores(Date.parse("2026-09-23T00:00:00Z"))
       .filter((entry) => concentrationIds[entry.protocol]);
-
-    expect(stale.map((entry) => [entry.protocol, entry.ageDays])).toEqual([
-      ["yvusdc-yearn", 98],
-      ["gtusdc-gauntlet", 98],
-      ["gtusdcp-gauntlet", 98],
-      ["steakusdc-steakhouse", 98],
-      ["steakusdt-steakhouse", 98],
-      ["bbqusdc-steakhouse", 93],
+    expect(staleAtDrain.map((entry) => [entry.protocol, entry.ageDays])).toEqual([
+      ["yvusdc-yearn", 100],
+    ]);
+    // The Maple pair crosses the 90-day bound inside the October audit window.
+    const staleAtNextAudit = findStaleVenueRiskScores(Date.parse("2026-10-01T06:00:00Z"))
+      .filter((entry) => concentrationIds[entry.protocol]);
+    expect(staleAtNextAudit.map((entry) => [entry.protocol, entry.ageDays])).toEqual([
+      ["yvusdc-yearn", 108],
+      ["syrupusdc-maple", 92],
+      ["syrupusdt-maple", 92],
     ]);
   });
 });

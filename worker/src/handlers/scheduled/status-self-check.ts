@@ -91,7 +91,14 @@ export async function runStatusSelfCheckSlot(runtime: ScheduledRuntimeContext) {
       const summary = collected.corroboration ? summarizePriceCorroboration(collected.corroboration) : null;
       const dex = collected.dex;
       const phaseFailed = Object.keys(collected.phaseErrors).length > 0;
-      const degraded = phaseFailed || !!dex && (dex.errorClasses.length > 0 || dex.deferredBatches > 0 || dex.unsupportedAssets > 0 || dex.missingQuotes > 0)
+      // Cohort composition (assets with no reviewed DEX target or no DEX market)
+      // is not a lane failure: unsupportedAssets and missingQuotes stay telemetry
+      // metadata only. Transport failures, timeouts, budget-exhaustion deferrals,
+      // phase errors, hourly pass/provider failures, and a slot where no
+      // previously resolvable exact route produced a quote still degrade.
+      const degraded = phaseFailed
+        || !!dex && (dex.errorClasses.length > 0 || dex.timedOut || dex.deferredBatches > 0
+          || (dex.hintedAttempted > 0 && dex.hintedResolved === 0))
         || !!summary && (summary.failedPasses.length > 0 || summary.providerDiagnostics.some((row) => !row.success));
       await recordBudgetSurfaceTelemetry(runtime.db, {
         surface: "price-corroboration", durationMs: Date.now() - startedMs,

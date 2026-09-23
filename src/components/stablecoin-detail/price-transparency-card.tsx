@@ -110,6 +110,7 @@ const SOURCE_LOGO_PATHS: Record<string, string> = {
   "uniswap-v3-dex": PROTOCOL_LOGOS["uniswap-v3"],
   "uniswap-v3-exact": PROTOCOL_LOGOS["uniswap-v3"],
   "uniswap-v4-dex": PROTOCOL_LOGOS["uniswap-v4"],
+  "uniswap-v4-exact": PROTOCOL_LOGOS["uniswap-v4"],
   "raydium-dex": PROTOCOL_LOGOS.raydium,
   "orca-dex": PROTOCOL_LOGOS.orca,
   "meteora-dex": PROTOCOL_LOGOS.meteora,

@@ -14,7 +14,7 @@ import {
   toNonNegativeInteger,
 } from "./normalization";
 import { toErrorMessage } from "@shared/lib/error-utils";
-import { SUPPLEMENTAL_SOURCE_FAMILY_KEYS } from "../supplemental-source-families";
+import { SUPPLEMENTAL_SOURCE_FAMILY_KEYS } from "../supplemental-source-family-keys";
 
 /**
  * B28: one version constant owns the family cache key prefix, the persisted
@@ -45,28 +45,47 @@ export type SupplementalFamilyCacheResult =
   | "skipped-newer"
   | "empty"
   | "empty-published"
-  | "retained-previous";
+  | "retained-previous"
+  /** PENDLE-RL: neutral skip — the family kept its retained row because its per-family fetch cadence had not elapsed. */
+  | "skipped-not-due"
+  /** PENDLE-RL: neutral skip — the family kept its retained row because an active 429 backoff refused the call. */
+  | "skipped-backoff";
 
 export interface YieldSupplementalRunOutcome {
   version: number;
   checkedAt: number;
   familyCacheResults: Record<SupplementalSourceFamilyKey, SupplementalFamilyCacheResult>;
   degradedFamilies: SupplementalSourceFamilyKey[];
+  /**
+   * PENDLE-RL: machine-readable cause per degraded family (R4). Additive:
+   * rows written before the field exists parse as no reasons.
+   */
+  degradedFamilyReasons?: Record<string, string>;
 }
 
 export function buildYieldSupplementalRunOutcome(
   familyCacheResults: Record<SupplementalSourceFamilyKey, SupplementalFamilyCacheResult>,
   degradedFamilies: SupplementalSourceFamilyKey[],
   checkedAt = Math.floor(Date.now() / 1000),
+  degradedFamilyReasons?: Record<string, string>,
 ): string {
   const payload: YieldSupplementalRunOutcome = {
     version: YIELD_SUPPLEMENTAL_SOURCES_CACHE_VERSION,
     checkedAt,
     familyCacheResults,
     degradedFamilies,
+    ...(degradedFamilyReasons && Object.keys(degradedFamilyReasons).length > 0
+      ? { degradedFamilyReasons }
+      : {}),
   };
   return JSON.stringify(payload);
 }
+
+export interface ParsedYieldSupplementalRunOutcome {
+  degradedFamilies: SupplementalSourceFamilyKey[];
+  degradedFamilyReasons: Record<string, string>;
+}
+
 
 /**
  * Families whose last fetch ended degraded. A missing, version-mismatched or
@@ -76,22 +95,122 @@ export function buildYieldSupplementalRunOutcome(
 export function parseYieldSupplementalRunOutcome(
   raw: string,
 ): SupplementalSourceFamilyKey[] {
+  return parseYieldSupplementalRunOutcomeDetailed(raw).degradedFamilies;
+}
+
+export function parseYieldSupplementalRunOutcomeDetailed(
+  raw: string,
+): ParsedYieldSupplementalRunOutcome {
   try {
     const parsed = JSON.parse(raw) as unknown;
-    if (!isRecord(parsed)) return [];
+    if (!isRecord(parsed)) return { degradedFamilies: [], degradedFamilyReasons: {} };
     if (parsed.version !== YIELD_SUPPLEMENTAL_SOURCES_CACHE_VERSION) {
       logWorkerEventArgs("handler", "warn",
         `[yield-sync] Ignored supplemental run outcome written by cache version ${String(parsed.version)}`,
       );
-      return [];
+      return { degradedFamilies: [], degradedFamilyReasons: {} };
     }
-    if (!Array.isArray(parsed.degradedFamilies)) return [];
-    return parsed.degradedFamilies.filter(isSupplementalSourceFamilyKey);
+    const degradedFamilies = Array.isArray(parsed.degradedFamilies)
+      ? parsed.degradedFamilies.filter(isSupplementalSourceFamilyKey)
+      : [];
+    const degradedFamilyReasons: Record<string, string> = {};
+    if (isRecord(parsed.degradedFamilyReasons)) {
+      for (const family of degradedFamilies) {
+        const reason = parsed.degradedFamilyReasons[family];
+        if (typeof reason === "string" && reason.trim()) {
+          degradedFamilyReasons[family] = reason.trim();
+        }
+      }
+    }
+    return { degradedFamilies, degradedFamilyReasons };
   } catch (err) {
     logWorkerEventArgs("handler", "warn",
       `[yield-sync] Failed to parse supplemental run outcome: ${toErrorMessage(err)}`,
     );
-    return [];
+    return { degradedFamilies: [], degradedFamilyReasons: {} };
+  }
+}
+
+/** PENDLE-RL: machine-readable cause recorded when the unkeyed quota backoff degrades the family. */
+export const PENDLE_RATE_LIMIT_BACKOFF_REASON = "pendle-rate-limited-backoff";
+
+export type YieldSupplementalPendleBackoffSource =
+  | "retry-after"
+  | "x-ratelimit-weekly-reset"
+  | "x-ratelimit-reset"
+  | "default";
+
+export interface YieldSupplementalPendleBackoff {
+  backoffUntilSec: number;
+  reason: string;
+  source: YieldSupplementalPendleBackoffSource;
+  recordedAtSec: number;
+}
+
+/**
+ * PENDLE-RL: persisted 429 backoff for the unkeyed Pendle API. The row records
+ * when the per-IP quota window is expected to replenish; the pendle family
+ * loader refuses to call Pendle again before that time. An expired or
+ * malformed row reads as "no active backoff", so a lost or corrupt row can
+ * only cost one request, never wedge the lane.
+ */
+export function getYieldSupplementalPendleBackoffCacheKey(): string {
+  return `${YIELD_SUPPLEMENTAL_FAMILY_CACHE_PREFIX}pendle-backoff`;
+}
+
+const PENDLE_BACKOFF_SOURCES: readonly YieldSupplementalPendleBackoffSource[] = [
+  "retry-after",
+  "x-ratelimit-weekly-reset",
+  "x-ratelimit-reset",
+  "default",
+];
+
+export function buildYieldSupplementalPendleBackoff(input: {
+  backoffUntilSec: number;
+  source: YieldSupplementalPendleBackoffSource;
+  recordedAtSec: number;
+}): string {
+  return JSON.stringify({
+    backoffUntilSec: input.backoffUntilSec,
+    reason: PENDLE_RATE_LIMIT_BACKOFF_REASON,
+    source: input.source,
+    recordedAtSec: input.recordedAtSec,
+  } satisfies YieldSupplementalPendleBackoff);
+}
+
+export function parseYieldSupplementalPendleBackoff(
+  raw: string | null | undefined,
+  nowSec: number,
+): YieldSupplementalPendleBackoff | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!isRecord(parsed)) return null;
+    const backoffUntilSec = parsed.backoffUntilSec;
+    if (
+      typeof backoffUntilSec !== "number"
+      || !Number.isInteger(backoffUntilSec)
+      || backoffUntilSec <= nowSec
+      || typeof parsed.recordedAtSec !== "number"
+      || !Number.isSafeInteger(parsed.recordedAtSec)
+      || parsed.recordedAtSec < 0
+      || parsed.recordedAtSec > nowSec + 60
+      || backoffUntilSec <= parsed.recordedAtSec
+      || backoffUntilSec - parsed.recordedAtSec > 7 * 86400
+    ) {
+      return null;
+    }
+    const source = PENDLE_BACKOFF_SOURCES.includes(parsed.source as YieldSupplementalPendleBackoffSource)
+      ? (parsed.source as YieldSupplementalPendleBackoffSource)
+      : "default";
+    return {
+      backoffUntilSec,
+      reason: PENDLE_RATE_LIMIT_BACKOFF_REASON,
+      source,
+      recordedAtSec: parsed.recordedAtSec,
+    };
+  } catch {
+    return null;
   }
 }
 

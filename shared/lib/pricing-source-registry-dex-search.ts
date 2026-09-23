@@ -123,6 +123,18 @@ export const PRICING_SOURCE_REGISTRY_DEX_SEARCH = [
     defaultWeight: 2,
   }),
   definePricingSource(PRICING_SOURCE_PRESETS.softDex, {
+    key: "uniswap-v4-exact",
+    label: "Uniswap V4 exact-pool quote",
+    shortLabel: "Uniswap V4 exact",
+    depegSourceFamily: "dex:uniswap-v4",
+    maxTrustedAgeSec: 5 * 60,
+    defaultWeight: 1,
+    isReplaySafe: false,
+    freshnessKind: "upstream",
+    supportsUpstreamObservedAt: true,
+    defaultObservedAtMode: "upstream",
+  }),
+  definePricingSource(PRICING_SOURCE_PRESETS.softDex, {
     key: "raydium-dex",
     label: "Raydium",
     shortLabel: "Raydium",
