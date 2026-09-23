@@ -1118,12 +1118,26 @@
     ]
   },
   "usn-noon": {
-    "title": "Yield Portfolio, Base Token",
-    "text": "Noon's USN is the base dollar in a yield machine that would prefer you notice the par wrapper before the credit stack. The Accountable real-time feed Pharos reads puts most reserves in Fasanara private credit, with a material Treasury-bill sleeve and smaller CLO, HYPE funding-rate arbitrage, and Morpho and Euler lending positions behind it, and backing is the weakest of the three pillars on the card. Base USN does not itself accrue the yield; that job belongs to sUSN, while USN holders still rely on the same permissioned mint and redemption machinery. The setup is more transparent than many credit-backed dollars, but transparency does not ensure that private-credit liquidity arrives during stress. USN is stablecoin-shaped, yet the balance sheet underneath reads more like an institutional yield portfolio with a dollar label taped to the front.",
-    "updatedAt": "2026-09-07",
+    "title": "Noon's Private-Credit Dollar",
+    "text": "Noon's USN is a dollar token issued over an institutional credit book. Every reserve dollar in Accountable's 2026-09-22 {{term:attestation}}attestation{{/term}} reconciles to a named custodian: 62% sits in Fasanara FTAC private credit with a three-month redemption window, 13.4% in HYPE funding-rate arbitrage, 9.9% in tokenized Treasury bills through Dinari's permissioned USD+, 5.4% in undeployed USDC and USDT, and the rest in JAAA CLOs and Morpho and Euler lending. The yield accrues to sUSN; base USN is the settlement token. Minting and {{term:redemption}}redemption{{/term}} are issuer-processed off-chain for KYC-verified users. ToS Section 6 commits to 1:1 redemption less applicable fees within five Business Days and makes a submitted claim unsecured debt, while Section 29 lets Noon gate redemptions at its discretion. Fasanara both deploys and custodies that majority position, and no trust or special-purpose vehicle is named behind the reserve. Pharos removed USN's five recorded depeg episodes in the September 2026 correction after forensics showed price-feed artifacts, with no economic-size trade printing above 1.0011 in any window. The durable mismatch is duration: most backing sits in three-month credit behind a five-Business-Day promise.",
+    "updatedAt": "2026-09-23",
     "authoredBy": "ai",
-    "model": "claude-fable-5-1",
-    "factsAsOf": "2026-09-07"
+    "model": "glm-5.3",
+    "factsAsOf": "2026-09-23",
+    "sources": [
+      {
+        "label": "Noon USN Terms of Service",
+        "url": "https://docs.noon.capital/additional-resources/terms-and-policies/asset-terms-usn-terms-of-service"
+      },
+      {
+        "label": "Noon Accountable dashboard",
+        "url": "https://noon.accountable.capital/"
+      },
+      {
+        "label": "Noon liquidity",
+        "url": "https://docs.noon.capital/noon-the-basics/liquidity"
+      }
+    ]
   },
   "honey-berachain": {
     "title": "Proof of Liquidity's Dollar",
@@ -5290,18 +5304,36 @@
     ]
   },
   "susn-noon": {
-    "title": "Noon's Yield Receipt",
-    "text": "sUSN is the staked savings form of Noon USN, so its NAV appreciates while base USN remains the non-yielding settlement token. The wrapper inherits a reserve mix that is far busier than the name suggests: private credit, CLO exposure, DeFi lending, principal tokens, and a small Treasury-bill sleeve, with Accountable providing a real-time proof feed. That makes sUSN a yield receipt over a credit portfolio, with no clean par redemption promise of its own. Pharos tracks it separately because wrapper supply, NAV, and liquidity can diverge from liquid USN even though final exits still route through Noon whitelisting and USN reserve constraints. The canonical Ethereum vault carries a per-account blacklist under a Noon admin Safe, and the zkSync, Sophon, and Starknet deployments are Hyperlane representations of that same locked inventory. Backing is the weakest of the three pillars, and the {{grade}} overall grade is capped at the parent USN score: the wrapper accounting is transparent, but every door between savings yield and cash belongs to Noon.",
-    "updatedAt": "2026-09-07",
+    "title": "Yield Receipt, Seven-Day Exit",
+    "text": "sUSN is the staked form of Noon USN: deposits mint appreciating shares, and the vault backs them entirely with idle USN, its token balance matching totalAssets to the wei at the 2026-09-22 review. Exits run a holder-initiated request and claim rail with no operator step. A withdrawal locks USN in the WithdrawalHandler in the same transaction that records its timestamp, and claimWithdrawal pays once the handler's on-chain seven-day period has passed, while ten whitelisted addresses clear the path in one transaction. The bound is enforced on-chain but admin-owned. Changes pass a 48-hour timelock, yet the value is unbounded in both directions and a change applies retroactively to requests already waiting. The vault's upgrade timelock still holds an armed, expiry-free operation scheduled 2026-06-10, so the 3-of-6 Noon Safe can replace wrapper logic without further notice, and the same Safe can pause new unstake requests or freeze the USN claim leg after its wait. Backing inherits the parent's private-credit-led mix, and the zkSync, Sophon, and Starknet tokens are {{term:bridge}}bridge{{/term}} representations of the same locked inventory. The {{grade}} overall grade reflects both the wrapper's queue and the parent's credit book.",
+    "updatedAt": "2026-09-23",
     "authoredBy": "ai",
-    "model": "claude-fable-5-1",
-    "factsAsOf": "2026-09-07",
+    "model": "glm-5.3",
+    "factsAsOf": "2026-09-23",
     "claimTokens": [
       {
         "token": "grade",
         "placeholder": "{{grade}}",
         "source": "report-card.grade",
-        "factsAsOf": "2026-09-07"
+        "factsAsOf": "2026-09-23"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Noon sUSN staking vault (Ethereum)",
+        "url": "https://etherscan.io/address/0xE24a3DC889621612422A64E6388927901608B91D#readContract"
+      },
+      {
+        "label": "Noon WithdrawalHandler (Ethereum)",
+        "url": "https://etherscan.io/address/0x0DaBc0D9B270c9B0C4C77AaCeAa712b56D0F9178#readContract"
+      },
+      {
+        "label": "WithdrawalHandler admin timelock (Ethereum)",
+        "url": "https://etherscan.io/address/0x36857EF0B10A61A68d58C29eE256990fa9699722#readContract"
+      },
+      {
+        "label": "Noon USN and sUSN documentation",
+        "url": "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn"
       }
     ]
   },

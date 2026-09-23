@@ -1372,23 +1372,23 @@
     },
     {
       "assetId": "usn-noon",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Codex P2 access acc-2",
+      "reviewedAt": "2026-09-22",
+      "reviewer": "Codex P2 access acc-2; Pharos WS-H adverse re-review",
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0xda67b4284609d2d48e5d10cfac411572727dc1ed",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "Noon's official registry identifies this exact address as Ethereum Mainnet USN, distinct from its listed USN OFT representations. The exact-matched ERC-1967 proxy currently resolves to verified USNUpgradeableHyperlane implementation 0x6bdc8104ec827cd48b9cac526420b59a31bc8397. Current permissionless() is true, but the implementation's _update rejects blacklisted senders and recipients, and its nonzero owner can blacklist accounts. The live ProxyAdmin is also nonzero and has a nonzero owner, so holder transfers are selectively restrictable rather than permissionless.",
+          "evidence": "At Ethereum block 26036288 on 2026-09-22, Noon's official registry address 0xda67b4284609d2d48e5d10cfac411572727dc1ed remained the canonical USN ERC-1967 proxy, resolving to verified USNUpgradeableHyperlane implementation 0x961e78b26f6984a2ddac42e4ce5b8014a311608e (the 2026-07-20 review's 0x6bdc8104... was superseded by the timelocked 2026-08-04 upgrade). Current permissionless() is true, but the implementation's _update is guarded by whenNotPaused and rejects blacklisted senders and recipients, and its nonzero owner, the Noon 3-of-6 admin Safe, can pause all transfers or blacklist accounts instantly with no timelock; the 48-hour timelock covers only proxy upgrades through ProxyAdmin 0x55f39512cb43111a13e8440ee3e3602e72628239, whose owner is also nonzero. Holder transfers are therefore selectively restrictable rather than permissionless.",
           "sources": [
             {
               "label": "Sourcify exact-matched Ethereum USN proxy",
               "url": "https://sourcify.dev/server/v2/contract/1/0xda67b4284609d2d48e5d10cfac411572727dc1ed?fields=all"
             },
             {
-              "label": "Sourcify verified USN implementation source",
-              "url": "https://sourcify.dev/server/v2/contract/1/0x6bdc8104ec827cd48b9cac526420b59a31bc8397?fields=all"
+              "label": "Sourcify verified current USN implementation source",
+              "url": "https://sourcify.dev/server/v2/contract/1/0x961e78b26f6984a2ddac42e4ce5b8014a311608e?fields=all"
             },
             {
               "label": "Noon official USN deployment registry",
@@ -3828,19 +3828,19 @@
     },
     {
       "assetId": "susn-noon",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Claude ACC-B TRANSFER-FACT",
+      "reviewedAt": "2026-09-22",
+      "reviewer": "Claude ACC-B TRANSFER-FACT; Pharos WS-H adverse re-review",
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0xe24a3dc889621612422a64e6388927901608b91d",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "At Ethereum block 25575197 this proxy reported symbol sUSN, its EIP-1967 implementation slot resolved to Sourcify exact-match StakingVaultOFTUpgradeableHyperlane 0xd1ffb6a6a42c86b931b2a6d388d1f25c1c775b34, and its EIP-1967 admin slot held nonzero 0x1908284b50ee152c9f00c8e65a81fc1c4520bd81. The verified implementation's _update reverts with BlacklistedAddress whenever the sender or recipient is on the internal blacklist, and blacklistAccount(address) is callable by any BLACKLIST_MANAGER_ROLE holder, so a single privileged call freezes a named holder.",
+          "evidence": "At Ethereum block 26036288 on 2026-09-22, this proxy still reported symbol sUSN, its EIP-1967 implementation slot resolved to Sourcify exact-match StakingVaultOFTUpgradeableHyperlane 0xebbcbc6672683e1956125e7c5e89e14ceac8cd3d (the 2026-07-20 review's 0xd1ffb6a6... was superseded by the timelocked 2026-08-04 upgrade), and its EIP-1967 admin slot held ProxyAdmin 0x1908284b50ee152c9f00c8e65a81fc1c4520bd81. The verified implementation's _update reverts with BlacklistedAddress whenever the sender or recipient is on the internal blacklist, and blacklistAccount(address) is callable by any BLACKLIST_MANAGER_ROLE holder, a role currently held by no account but grantable instantly by the owning 3-of-6 Noon Safe, which can also pause the vault and thereby block new unstake requests with no timelock. The proxy's upgrade path additionally holds an armed, expiry-free timelock operation scheduled 2026-06-10, so transfer logic is replaceable without further notice until it is cancelled. A single privileged call therefore freezes a named holder.",
           "sources": [
             {
-              "label": "Sourcify verified StakingVaultOFTUpgradeableHyperlane implementation (chain 1)",
-              "url": "https://sourcify.dev/server/v2/contract/1/0xd1ffb6a6a42c86b931b2a6d388d1f25c1c775b34"
+              "label": "Sourcify exact-match current sUSN implementation",
+              "url": "https://sourcify.dev/server/v2/contract/1/0xebbcbc6672683e1956125e7c5e89e14ceac8cd3d?fields=all"
             },
             {
               "label": "Ethereum public RPC used for the block 25575197 slot reads",

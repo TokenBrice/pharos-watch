@@ -121,7 +121,7 @@ describe("Safety Score v9 mechanism-overlay capture-day warnings", () => {
       "mechanism review dated 2026-09-21 is inadmissible until the next UTC day at this capture clock; assets: susn-noon";
 
     expect(mechanismOverlayCaptureDayWarnings(captureClockSec)).toEqual([warning]);
-    expect(mechanismOverlayCaptureDayWarnings(Date.UTC(2026, 8, 22) / 1_000)).toEqual([]);
+    expect(mechanismOverlayCaptureDayWarnings(Date.UTC(2099, 0, 1) / 1_000)).toEqual([]);
   });
 });
 

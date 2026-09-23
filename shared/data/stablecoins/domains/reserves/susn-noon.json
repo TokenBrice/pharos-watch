@@ -44,5 +44,56 @@
     "scope": "full-composition",
     "knownUnknownExposure": "No additional direct sUSN reserve slice is identified; upstream USN strategy allocations are tracked on the parent asset.",
     "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Noon sUSN staking vault 0xE24a3DC889621612422A64E6388927901608B91D (ERC-4626 proxy holding 100% of staked USN idle on-chain)",
+        "role": "other",
+        "sharePct": 100,
+        "jurisdiction": "British Virgin Islands"
+      },
+      {
+        "name": "Noon WithdrawalHandler 0x0DaBc0D9B270c9B0C4C77AaCeAa712b56D0F9178 (non-upgradeable escrow holding USN for requested unstakes until claimWithdrawal)",
+        "role": "other"
+      },
+      {
+        "name": "Noon governance Safe 0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f (Safe v1.4.1, 3-of-6; holds vault pause, rescueToken, whitelist, and upgrade authority)",
+        "role": "other"
+      },
+      {
+        "name": "USN reserve custodians inherited from the parent (Fasanara, ForDefi, Alpaca Securities via Dinari, and the Noon collateral Safe)",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "none",
+    "rehypothecation": "conditional",
+    "reviewedAt": "2026-09-22",
+    "reviewer": "Codex Noon reserve and custody re-review 2026-09-22 (USN listing-feedback verification)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Noon sUSN staking terms (non-custodial platform; suspension and principal-reduction rights)",
+        "url": "https://docs.noon.capital/additional-resources/terms-and-policies/asset-terms-susn-staking-terms"
+      },
+      {
+        "label": "Noon USN Terms of Service (Section 1 segregation; Section 6 unsecured redemption debt)",
+        "url": "https://docs.noon.capital/additional-resources/terms-and-policies/asset-terms-usn-terms-of-service"
+      },
+      {
+        "label": "sUSN staking vault 0xE24a3DC889621612422A64E6388927901608B91D on Etherscan",
+        "url": "https://etherscan.io/address/0xe24a3dc889621612422a64e6388927901608b91d#code"
+      },
+      {
+        "label": "Noon WithdrawalHandler 0x0DaBc0D9B270c9B0C4C77AaCeAa712b56D0F9178 on Etherscan",
+        "url": "https://etherscan.io/address/0x0dabc0d9b270c9b0c4c77aaceaa712b56d0f9178#code"
+      },
+      {
+        "label": "Noon custody documentation (upstream USN reserve custodians)",
+        "url": "https://docs.noon.capital/built-for-safety/1.-custody-you-can-trust"
+      }
+    ],
+    "uncertainty": "Wrapper-layer custody is fully observable, so the undisclosed share is 0%: at Ethereum block 25,977,621 (2026-09-14T18:55:11Z) the vault's totalAssets() of 33,783,615.331659 USN equalled its USN balance to the wei, and the handler's 130,138.304265 USN equalled requests created minus requests claimed exactly; the same identities held at block 26,036,288. Segregation here means that staked USN sits in dedicated vault and escrow contracts rather than with Noon's corporate funds or the USN reserve wallets, and the sUSN staking terms describe the platform as non-custodial. It does not mean per-holder accounts: stakers hold pro-rata ERC-4626 claims on one pooled balance, and contract-level segregation is defeasible because the 3-of-6 Safe can pause the vault, call rescueToken, and grant itself the blacklist role with no timelock, while an armed upgrade to implementation 0xb9E5B8d826939580db142faBA61FcdEA9AAca6E7, scheduled 2026-06-10 and executable since 2026-06-12, has no expiry. Nothing is bankruptcy remote: USN Terms of Service Section 6 makes a redemption claim an unsecured debt of the issuer, and staking-terms Section 11 lets the operator freeze withdrawals and cut staked principal by the proportional loss if an exchange, custodial platform, or yield protocol used by the Noon treasury fails. Rehypothecation is conditional rather than permitted because the vault itself lends nothing and holds only idle USN, while the economic backing is redeployed by the issuer inside the disclosed ToS Section 5 category list. Provider shares below the vault layer are inherited from the parent custody profile and move with every USN deployment change."
   }
 }

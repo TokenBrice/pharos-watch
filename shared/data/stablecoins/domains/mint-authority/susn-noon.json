@@ -4,7 +4,7 @@
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "Mint Authority covers only canonical Ethereum sUSN issuance and its inherited USN collateral dependency. Shares mint against deposited USN; the reviewed MinterHandlerV2 and 3-of-6 Noon admin Safe bound the inherited collateral path, while the Ethereum wrapper is a transparent proxy whose ProxyAdmin is governed by a 48-hour timelock owned by that Safe. Cross-chain lock/unlock, Hyperlane messaging, destination representations, and bridge administration are scored only under bridgeRouteRisk.",
+    "summary": "Mint Authority covers only canonical Ethereum sUSN issuance and its inherited USN collateral dependency. Shares mint against deposited USN; the reviewed MinterHandlerV2 and 3-of-6 Noon admin Safe bound the inherited collateral path, while the Ethereum wrapper is a transparent proxy whose ProxyAdmin is governed by a 48-hour timelock owned by that Safe. That timelock currently holds an armed, expiry-free upgrade operation scheduled 2026-06-10 and executable since 2026-06-12, so wrapper logic can be replaced at any moment with zero further notice until the operation is executed or cancelled; the same Safe separately holds instant no-timelock vault powers (pause, withdrawal-handler replacement, whitelist grants, token rescue, blacklist-role self-grant). Cross-chain lock/unlock, Hyperlane messaging, destination representations, and bridge administration are scored only under bridgeRouteRisk.",
     "inheritedFrom": "usn-noon",
     "upgradeability": {
       "model": "transparent-proxy",
@@ -24,8 +24,8 @@
       "canChangeMintLogic": true,
       "delaySec": 172800,
       "controlRef": "sUSN Ethereum upgrade timelock",
-      "observedAt": "2026-08-16",
-      "observedBlock": 25771191,
+      "observedAt": "2026-09-22",
+      "observedBlock": 26036288,
       "sources": [
         {
           "label": "sUSN proxy on Etherscan",
@@ -36,8 +36,12 @@
           "url": "https://sourcify.dev/server/v2/contract/1/0xebbcbc6672683e1956125e7c5e89e14ceac8cd3d?fields=sources,abi,metadata"
         },
         {
-          "label": "Noon upgrade timelock source",
-          "url": "https://sourcify.dev/server/v2/contract/1/0xe5e412c212b4fbbf550a94e7bd5e83db0b315a7f?fields=sources,abi,metadata"
+          "label": "Armed dormant sUSN upgrade target source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xb9e5b8d826939580db142faba61fcdea9aaaca6e7?fields=sources,abi,metadata"
+        },
+        {
+          "label": "sUSN upgrade timelock event history on Etherscan",
+          "url": "https://etherscan.io/address/0xE5e412C212B4FBbF550A94e7BD5e83dB0B315A7F#events"
         }
       ]
     },
@@ -54,9 +58,9 @@
         "directMintAbility": "none",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-08-16",
-        "observedBlock": 25771191,
-        "capDescription": "Transparent proxy; upgrade path: ProxyAdmin (0x1908284b) → owner 0xe5e412c → owner Safe 0x1ea169. Wrapper owner() also returns the same 3/6 Safe.",
+        "observedAt": "2026-09-22",
+        "observedBlock": 26036288,
+        "capDescription": "Transparent proxy; upgrade path: ProxyAdmin (0x1908284b) → owner 0xe5e412c → owner Safe 0x1ea169. Wrapper owner() also returns the same 3/6 Safe. The timelock holds an armed dormant upgrade to implementation 0xb9E5B8d826939580db142faBA61FcdEA9AAca6E7 (scheduled 2026-06-10, executable since 2026-06-12, no expiry), so the effective notice for a wrapper logic change is zero until that operation is executed or cancelled.",
         "sources": [
           {
             "label": "sUSN proxy (Etherscan)",
@@ -67,7 +71,7 @@
             "url": "https://docs.noon.capital/"
           }
         ],
-        "evidence": "At Ethereum block 25771191, the wrapper implementation slot returned 0xebbcbc6672683e1956125e7c5e89e14ceac8cd3d and the admin slot returned ProxyAdmin 0x190828...bd81. The current verified implementation adds PausableUpgradeable and a 48-hour stuck-message correction flow; those cross-chain transfer-rail surfaces are separately scored under bridgeRouteRisk. The wrapper itself has no separate privileged base-USN mint path; its native supply is issued through the staking deposit flow."
+        "evidence": "At Ethereum block 25771191, the wrapper implementation slot returned 0xebbcbc6672683e1956125e7c5e89e14ceac8cd3d and the admin slot returned ProxyAdmin 0x190828...bd81; both reads were unchanged at block 26036288 on 2026-09-22. The current verified implementation adds PausableUpgradeable and a 48-hour stuck-message correction flow; those cross-chain transfer-rail surfaces are separately scored under bridgeRouteRisk. The wrapper itself has no separate privileged base-USN mint path; its native supply is issued through the staking deposit flow. The upgrade timelock still reports the operation scheduled 2026-06-10T17:24:59Z for implementation 0xb9E5B8d826939580db142faBA61FcdEA9AAca6E7 as armed (executable since 2026-06-12T17:24:59Z) with no expiry in the verified Timelock source, so the owning Safe can install it at any moment with zero further notice."
       },
       {
         "chain": "ethereum",
@@ -104,6 +108,15 @@
         "directMintAbility": "cap-limited",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "safe:ethereum:0x1ea169ecccf7714e7ba04900e1a3357cca77327f",
+          "safe:shared:noon-four-owner-overlap"
+        ],
+        "bypassSurfaces": [
+          "Vault pause(), setWithdrawalHandler, whitelistAccount grants, rescueToken, and a self-granted BLACKLIST_MANAGER_ROLE followed by blacklistAccount all execute instantly with no timelock; pausing the vault blocks new unstake requests, and neither pause nor blacklist has ever been used to date.",
+          "The WithdrawalHandler's setWithdrawPeriod enforces no minimum or maximum and the claim check reads the live value, so a change applies retroactively to withdrawal requests already in flight; the parameter is bounded only by the 48-hour GenericTimelock that has held the handler admin role since 2026-07-28, and that timelock's own ownership transfer is not timelocked. 7 of the 8 historical changes, including three 0-second windows, were direct calls that bypassed the timelock, the last one 46 minutes before the Safe renounced the handler admin role.",
+          "Three of this Safe's six owner keys (0xe45Bb0D3cC77702E1310BB621c59c778304A42D0, 0x09CE2d1C37772F7fF666B6447a66a5EBd2833799, 0x8B3641db7737fFab752718fcc772161eC09FaD01) are also owners of the 4-of-5 Noon collateral Safe; that overlap equals this Safe's threshold, so those three keys alone form a valid admin quorum for every power above."
+        ],
         "threshold": 3,
         "signerCount": 6,
         "safe": {
@@ -123,15 +136,15 @@
           "observedAt": "2026-07-14",
           "source": "safe-api"
         },
-        "observedAt": "2026-07-14",
-        "observedBlock": 25530462,
+        "observedAt": "2026-09-22",
+        "observedBlock": 26036288,
         "sources": [
           {
             "label": "Noon admin Safe API",
             "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f/"
           }
         ],
-        "evidence": "The parent USN review confirms this 3-of-6 Safe holds MinterHandlerV2 MINTER_ROLE and DEFAULT_ADMIN_ROLE, so it can execute bounded mints and change the handler's limits. Current Safe reads show six owners, threshold 3, no enabled modules, and a zero guard."
+        "evidence": "The parent USN review confirms this 3-of-6 Safe holds MinterHandlerV2 MINTER_ROLE and DEFAULT_ADMIN_ROLE, so it can execute bounded mints and change the handler's limits. Current Safe reads show six owners, threshold 3, no enabled modules, and a zero guard. Re-derived 2026-09-22 at block 26036288: on-chain getThreshold()/getOwners() still return 3-of-6, and the Safe remains the vault's DEFAULT_ADMIN_ROLE holder and owner() while no account holds the vault's BLACKLIST_MANAGER_ROLE, so the Safe must self-grant that role before blacklisting, an instant untimelocked step. The Safe also owns the USN token directly, whose owner-only pause() and blacklistAccount(address) carry no timelock and can freeze the USN claim leg of an sUSN withdrawal after its 7-day wait."
       },
       {
         "chain": "ethereum",
@@ -146,22 +159,29 @@
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
         "timelockDelaySec": 172800,
+        "bypassSurfaces": [
+          "A dormant operation scheduled 2026-06-10T17:24:59Z (executable since 2026-06-12T17:24:59Z) would upgrade the sUSN vault proxy to implementation 0xb9E5B8d826939580db142faBA61FcdEA9AAca6E7; the verified Timelock source defines no expiry or grace period, so the owner Safe can execute it at any moment with zero further notice until it is cancelled, and the 172800-second delay does not currently bind a vault logic change."
+        ],
         "failureDomainKeys": [
           "safe:ethereum:0x1ea169ecccf7714e7ba04900e1a3357cca77327f"
         ],
-        "observedAt": "2026-07-14",
-        "observedBlock": 25530817,
+        "observedAt": "2026-09-22",
+        "observedBlock": 26036288,
         "sources": [
           {
             "label": "Noon upgrade timelock source",
             "url": "https://sourcify.dev/server/v2/contract/1/0xe5e412c212b4fbbf550a94e7bd5e83db0b315a7f?fields=sources,abi,metadata"
           },
           {
-            "label": "sUSN ProxyAdmin on Etherscan",
-            "url": "https://etherscan.io/address/0x1908284b50ee152c9f00c8e65a81fc1c4520bd81#code"
+            "label": "Armed dormant sUSN upgrade target source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xb9e5b8d826939580db142faba61fcdea9aaaca6e7?fields=sources,abi,metadata"
+          },
+          {
+            "label": "sUSN upgrade timelock event history on Etherscan",
+            "url": "https://etherscan.io/address/0xE5e412C212B4FBbF550A94e7BD5e83dB0B315A7F#events"
           }
         ],
-        "evidence": "At block 25530817, the sUSN proxy admin slot returned ProxyAdmin 0x190828...bd81; its owner was the verified Noon timelock 0xe5e412...15a7f. delay() returned 172800 seconds and owner() returned the Noon 3-of-6 admin Safe."
+        "evidence": "At block 25530817, the sUSN proxy admin slot returned ProxyAdmin 0x190828...bd81; its owner was the verified Noon timelock 0xe5e412...15a7f. delay() returned 172800 seconds and owner() returned the Noon 3-of-6 admin Safe. Re-read at block 26036288 on 2026-09-22: delay() and owner() are unchanged, and the timelock's event history shows three UpgradeScheduled and two UpgradeExecuted operations. The two 2026-07-31 schedulings (vault to 0xEbBcbC66..., USN proxy to 0x961e78b2...) were executed on 2026-08-04, while the 2026-06-10 scheduling of 0xb9E5B8... for the vault proxy remains armed with no expiry, an effective zero-notice upgrade path until it is executed or cancelled. The verified source allows setDelay to increase the delay only, capped at two days."
       }
     ],
     "economicCapSemantics": "raiseable",
@@ -182,13 +202,21 @@
           "url": "https://docs.noon.capital/"
         },
         {
-          "label": "MinterHandlerV2 implementation",
-          "url": "https://sourcify.dev/server/v2/contract/1/0xb91b361ebe4022bb62df0651bdd09b21209ac058?fields=sources"
+          "label": "Armed dormant sUSN upgrade target source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xb9e5b8d826939580db142faba61fcdea9aaaca6e7?fields=sources,abi,metadata"
+        },
+        {
+          "label": "sUSN WithdrawalHandler source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x0dabc0d9b270c9b0c4c77aaceaa712b56d0f9178?fields=sources,abi,metadata"
+        },
+        {
+          "label": "Noon handler-admin GenericTimelock source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x36857ef0b10a61a68d58c29ee256990fa9699722?fields=sources,abi,metadata"
         }
       ],
-      "evidence": "The sUSN wrapper mints only against deposited USN and inherits the parent MinterHandlerV2 plus Noon 3-of-6 admin Safe. At Ethereum block 25771191, its transparent proxy resolved to current implementation 0xebbcbc6672683e1956125e7c5e89e14ceac8cd3d and ProxyAdmin 0x190828...bd81; the ProxyAdmin owner was a verified 172800-second timelock owned by the same Safe. The current implementation adds PausableUpgradeable and a 48-hour stuck-message correction flow; these cross-chain transfer-rail capabilities are reviewed under bridgeRouteRisk and are not independent issuer mint paths. Non-Ethereum contracts are reviewed as third-party bridge representations, not independent issuer mint paths. Local sUSN supply is deposit-gated, mint-logic replacement is enforced through the 48-hour timelock, and live ERC-4626 accounting covers all wrapper shares through Accountable without a named prudential supervisor.",
-      "reviewer": "Codex mint-bridge-boundary migration",
-      "reviewedAt": "2026-08-16"
+      "evidence": "The sUSN wrapper mints only against deposited USN and inherits the parent MinterHandlerV2 plus Noon 3-of-6 admin Safe. At Ethereum block 25771191, its transparent proxy resolved to current implementation 0xebbcbc6672683e1956125e7c5e89e14ceac8cd3d and ProxyAdmin 0x190828...bd81; the ProxyAdmin owner was a verified 172800-second timelock owned by the same Safe. The current implementation adds PausableUpgradeable and a 48-hour stuck-message correction flow; these cross-chain transfer-rail capabilities are reviewed under bridgeRouteRisk and are not independent issuer mint paths. Non-Ethereum contracts are reviewed as third-party bridge representations, not independent issuer mint paths. Local sUSN supply is deposit-gated, and live ERC-4626 accounting covers all wrapper shares through Accountable without a named prudential supervisor. Adverse re-review on 2026-09-22 at block 26036288 corrects the earlier unqualified 48-hour-upgrade claim: the upgrade timelock still holds the armed, expiry-free operation scheduled 2026-06-10 that would install vault implementation 0xb9E5B8...a6e7, so replacing wrapper mint logic currently requires no notice at all until that operation is executed or cancelled. The admin Safe separately holds instant, no-timelock powers over the vault (pause, which blocks new unstake requests; setWithdrawalHandler; whitelist grants; rescueToken; self-grant of BLACKLIST_MANAGER_ROLE followed by blacklistAccount) and over USN, whose owner-only pause and blacklistAccount can freeze the USN claim leg of a withdrawal after its 7-day wait. The WithdrawalHandler's withdrawPeriod is unbounded in both directions: setWithdrawPeriod enforces no minimum or maximum, the claim check reads the live value so a change applies retroactively to requests already in flight, and the only bound is the 48-hour GenericTimelock that became handler admin on 2026-07-28. 7 of the 8 historical changes, including three 0-second windows, were direct calls that bypassed the timelock, and that timelock's own ownership transfer is not timelocked. Three of the admin Safe's six owner keys are shared with the 4-of-5 collateral Safe, matching the admin threshold, so those keys alone form a valid admin quorum.",
+      "reviewer": "Codex mint-bridge-boundary migration; Pharos WS-H adverse re-review",
+      "reviewedAt": "2026-09-22"
     }
   }
 }

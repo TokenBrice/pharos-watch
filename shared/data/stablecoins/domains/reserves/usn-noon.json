@@ -4,14 +4,15 @@
     {
       "sourceKey": "accountable:noon:deployment:private-credit-ftac",
       "name": "Private Credit (Fasanara FTAC)",
-      "pct": 62.8,
+      "pct": 62,
       "risk": "high",
       "assetClass": "private-credit",
-      "issuerOrObligor": "Fasanara Capital and FTAC borrowers",
+      "issuerOrObligor": "Fasanara Capital's FTAC fund, which both deploys and custodies the position, and its underlying borrowers",
       "riskFactors": [
         "credit",
         "liquidity",
         "counterparty",
+        "custody",
         "market",
         "legal",
         "concentration"
@@ -21,21 +22,23 @@
     {
       "sourceKey": "accountable:noon:deployment:us-treasury-bills",
       "name": "US Treasury Bills",
-      "pct": 21.5,
+      "pct": 9.9,
       "risk": "very-low",
-      "assetClass": "treasury-bill",
-      "issuerOrObligor": "United States Treasury",
+      "assetClass": "tokenized-security",
+      "issuerOrObligor": "Dinari (USD+ tokenized Treasury-bill position held in Noon's EOA 0x4fD04553468610e5a88a2cffA38E057C954312Da; underlying bills held at Alpaca Securities)",
       "riskFactors": [
         "duration",
         "liquidity",
-        "custody"
+        "custody",
+        "counterparty",
+        "smart-contract"
       ],
-      "liquidityHorizon": "one-day"
+      "liquidityHorizon": "seven-days"
     },
     {
       "sourceKey": "accountable:noon:deployment:clos-jaaa",
       "name": "CLOs (JAAA)",
-      "pct": 4.6,
+      "pct": 4.5,
       "risk": "high",
       "coinId": "jaaa-janus-henderson-anemoy",
       "depType": "collateral",
@@ -54,14 +57,15 @@
     {
       "sourceKey": "accountable:noon:deployment:funding-rate-arb-hype",
       "name": "Funding Rate Arb (HYPE)",
-      "pct": 4,
+      "pct": 13.4,
       "risk": "high",
       "assetClass": "hedged-crypto",
-      "issuerOrObligor": "Noon cash-and-carry strategy, HYPE spot/perpetual venues, and funding counterparties",
+      "issuerOrObligor": "Noon cash-and-carry strategy collateralized inside the ForDefi custody bucket, with HYPE spot and perpetual venues and tri-party settlement counterparties undisclosed",
       "riskFactors": [
         "basis",
         "market",
         "counterparty",
+        "custody",
         "liquidity"
       ],
       "liquidityHorizon": "seven-days"
@@ -69,7 +73,7 @@
     {
       "sourceKey": "accountable:noon:deployment:defi-lending-euler",
       "name": "DeFi Lending (Euler)",
-      "pct": 2.5,
+      "pct": 2.4,
       "risk": "medium",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Euler lending protocol, curated vaults, borrowers, and underlying reserve-asset issuers",
@@ -85,7 +89,7 @@
     {
       "sourceKey": "accountable:noon:deployment:defi-lending-morpho",
       "name": "DeFi Lending (Morpho)",
-      "pct": 2.5,
+      "pct": 2.4,
       "risk": "medium",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Morpho lending protocol, curated vaults, borrowers, and underlying reserve-asset issuers",
@@ -101,30 +105,42 @@
     {
       "sourceKey": "accountable:noon:deployment:undeployed",
       "name": "Undeployed",
-      "pct": 2.1,
+      "pct": 5.4,
       "risk": "high",
-      "assetClass": "other",
-      "issuerOrObligor": "Undisclosed Noon assets and custodians in Accountable's Undeployed bucket",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "On-chain USDC/USDT (Accountable Undeployed bucket) held via ForDefi MPC wallet(s) and Noon Safe multisig",
       "riskFactors": [
         "liquidity",
         "custody",
         "counterparty"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "seven-days"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-29",
-    "reviewer": "Codex Noon Accountable reserve re-review 2026-08-29",
+    "reviewedAt": "2026-09-22",
+    "reviewer": "Codex Noon reserve and custody re-review 2026-09-22 (USN listing-feedback verification)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Noon Accountable live deployment API snapshot (data timestamp 2026-08-29T18:02:09.156Z)",
+        "label": "Noon Accountable dashboard API payload (data timestamp 2026-09-22T20:31:03.926Z)",
         "url": "https://cache.accountable.capital/dashboard/noon"
       },
       {
         "label": "Noon Accountable proof-of-solvency dashboard",
         "url": "https://noon.accountable.capital/"
+      },
+      {
+        "label": "Noon USN Terms of Service (reserve categories in Section 5; redemption and unsecured-debt terms in Section 6)",
+        "url": "https://docs.noon.capital/additional-resources/terms-and-policies/asset-terms-usn-terms-of-service"
+      },
+      {
+        "label": "Noon custody documentation (Alpaca via Dinari for bills and CLOs, Fasanara for private credit, ForDefi MPC for DeFi positions, Ceffu for funding-rate arbitrage)",
+        "url": "https://docs.noon.capital/built-for-safety/1.-custody-you-can-trust"
+      },
+      {
+        "label": "Noon transparency page (published on-chain collateral wallets)",
+        "url": "https://docs.noon.capital/built-for-safety/transparency"
       },
       {
         "label": "Noon deployment strategies (cash-and-carry funding-rate arbitrage; Morpho/Euler lending)",
@@ -135,85 +151,142 @@
         "url": "https://docs.noon.capital/built-for-high-yields/our-deployment-strategies/defi-lending"
       },
       {
-        "label": "Noon liquidity disclosures (funding arbitrage T+0 to T+3; lending T+0)",
+        "label": "Noon liquidity disclosures (T-bills and CLOs T+0 to T+3; lending T+0; T+5 waterfall)",
         "url": "https://docs.noon.capital/noon-the-basics/liquidity"
       },
       {
-        "label": "Noon reserve transparency methodology (Accountable source and live proof of solvency)",
-        "url": "https://docs.noon.capital/built-for-safety/3.-radical-transparency-of-reserves-and-returns"
+        "label": "Dinari USD+ token 0xc9e3df3d230980b45adc623c81c3df4a73a5350f on Etherscan",
+        "url": "https://etherscan.io/token/0xc9e3df3d230980b45adc623c81c3df4a73a5350f"
+      },
+      {
+        "label": "Dinari USD+ product documentation",
+        "url": "https://usd.dinari.com/"
+      },
+      {
+        "label": "Noon Collateral 1 Safe 0x365bd6fb4200e422a2b1f7b9Dfb1C00471E6D089 on Etherscan",
+        "url": "https://etherscan.io/address/0x365bd6fb4200e422a2b1f7b9Dfb1C00471E6D089"
+      },
+      {
+        "label": "Noon Collateral 3 wallet 0x4fD04553468610e5a88a2cffA38E057C954312Da on Etherscan",
+        "url": "https://etherscan.io/address/0x4fD04553468610e5a88a2cffA38E057C954312Da"
       }
     ],
-    "rationale": "Re-review of the Accountable Noon deployment snapshot at data timestamp 1788026529156 (2026-08-29T18:02:09.156Z; total reserves $39,271,873.89; verifiability 100%). Raw deployment values are Private Credit (Fasanara FTAC) $24,667,649.67, US Treasury Bills $8,445,951.04, CLOs (JAAA) $1,800,175.38, Funding Rate Arb (HYPE) $1,584,299.43, DeFi Lending (Euler) $973,759.73, DeFi Lending (Morpho) $974,723.03, Undeployed $825,314.61, and Funding Rate Arb (BTC) $0.997. The current Accountable adapter normalizes positive values to one decimal: 62.8%, 21.5%, 4.6%, 4.0%, 2.5%, 2.5%, and 2.1%, respectively; the BTC balance is 0.0000025% and rounds to 0.0%, so the seven emitted rows sum to 100.0%. Noon's deployment-strategy documentation defines funding-rate arbitrage as a spot-long/perpetual-short delta-neutral cash-and-carry strategy, supporting the hedged-crypto classification of the HYPE-labeled row while leaving its venues, hedge notional, margin, and counterparties undisclosed. Noon documents Morpho and Euler as overcollateralized USDC/USDT lending strategies with protocol, oracle, liquidity, counterparty, and smart-contract risks; current vault addresses, pool weights, and borrowers are not published. Accountable's Undeployed label does not prove cash or stablecoin holdings, so that row is conservatively classified as other. FTAC, Treasury, and JAAA classifications are retained from the prior review.",
-    "compositionBasis": "Accountable Noon deployment snapshot at data timestamp 1788026529156, normalized by the current one-decimal Accountable deployment adapter",
-    "compositionAsOf": "2026-08-29",
+    "rationale": "Re-review of the Accountable Noon dashboard payload at data timestamp 1790109063926 (2026-09-22T20:31:03.926Z; total reserves $40,086,693.58; verifiability 100%; reported collateralization 1.034388), captured while verifying Noon's 2026-09-23 listing feedback. Raw deployment values are Private Credit (Fasanara FTAC) $24,821,598.61, Funding Rate Arb (HYPE) $5,370,082.56, US Treasury Bills $3,960,515.97, Undeployed $2,179,938.83, CLOs (JAAA) $1,799,287.72, DeFi Lending (Morpho) $977,965.99, DeFi Lending (Euler) $977,302.87, and Funding Rate Arb (BTC) $1.02. The current Accountable adapter converts positive values to one decimal and lets the largest row absorb the rounding residual, which emits 62.0%, 13.4%, 9.9%, 5.4%, 4.5%, 2.4% and 2.4%; the BTC balance is 0.0000025% and is not emitted. The pinned 2026-08-29 composition is superseded: funding-rate arbitrage rose from 4.0% to 13.4% and the Undeployed bucket from 2.1% to 5.4%, while the tokenized Treasury-bill row fell from 21.5% to 9.9%. The same payload's reserves_split reconciles every deployment row to a named custodian to within a cent. Fasanara $24,821,598.61 equals the private-credit row; Alpaca $5,759,803.69 equals the Treasury-bill row plus the JAAA row; Ceffu $1.02 equals the Funding Rate Arb (BTC) dust; ForDefi $9,195,978.92 equals HYPE plus Euler plus Morpho plus a $1,870,627.50 residual; and that residual plus the Safe's $309,311.33 equals the Undeployed row exactly. The Undeployed bucket is therefore on-chain USDC/USDT under ForDefi MPC wallets and the 4-of-5 Noon Safe 0x365bd6fb4200e422a2b1f7b9Dfb1C00471E6D089, which matches the first reserve category in ToS Section 5, and it is classified as a stablecoin holding instead of the prior unclassified other. Its liquidity horizon stays conservative at seven days because the bucket does not reconcile with the two published collateral wallets: those held $3,048,146.55 of USDC and USDT at block 25,977,621 (2026-09-14T18:55:11Z) and $574,101.01 at block 26,036,288 (2026-09-22T23:24:47Z), a shortfall of about $1.62M against the Undeployed figure. The US Treasury Bills row is a tokenized position rather than direct bill ownership. Accountable's $3,960,515.97 equals, at par, the Dinari USD+ balance of Noon's EOA 0x4fD04553468610e5a88a2cffA38E057C954312Da in token 0xc9e3df3d230980b45adc623c81c3df4a73a5350f read at block 26,036,288. That token is permissioned and rebasing: balances grow through balancePerShare, a Dinari TransferRestrictor can freeze holders, its implementation 0xd5b7ca2a0b6c1f63b658b676e914f57f205cb520 is unverified in Sourcify and Etherscan, redemption runs through UsdPlusRedeemer.requestRedeem with fulfilment gated by FULFILLER_ROLE, and 99.68% of the token's supply sits in this one wallet. Three observed redemptions settled in USDC 27 to 33 hours after the burn (3,100,000 on 2026-09-01, 2,200,000 on 2026-09-02, 800,000 on 2026-09-08), against Noon's stated T+0 to T+3 bill liquidity. The row therefore moves from treasury-bill to tokenized-security with a Dinari obligor and a seven-day horizon, and it no longer claims sovereign issuer identity. Legacy risk tiers on every row still mirror the live Accountable adapter risk map so that live-versus-curated drift monitoring stays comparable; the structured slice fields carry the corrected view. Funding-rate arbitrage keeps the hedged-crypto classification supported by Noon's cash-and-carry documentation, but its collateral is attributed to the ForDefi bucket, which the dated split shows rather than the Ceffu mapping on the custody page. Morpho and Euler remain documented overcollateralized USDC/USDT lending strategies whose vault addresses, pool weights and borrowers are unpublished. FTAC and JAAA classifications otherwise carry over from the prior review.",
+    "compositionBasis": "Accountable Noon deployment snapshot at data timestamp 1790109063926, normalized by the current one-decimal Accountable deployment adapter, with custodian attribution taken from the same payload's reserves_split",
+    "compositionAsOf": "2026-09-22",
     "scope": "full-composition",
-    "knownUnknownExposure": "FTAC borrower identities, terms, seniority, and custody; Morpho/Euler vault addresses, current pool weights, and borrowers; HYPE execution venues, hedge notional, margin, and counterparties; and the assets and custodian behind Accountable's Undeployed bucket remain undisclosed. The $0.997 Funding Rate Arb (BTC) balance is below the adapter's one-decimal emission threshold and is not a separate static row.",
-    "knownUnknownExposurePct": 73.9,
+    "knownUnknownExposure": "FTAC borrower identities, terms, seniority and the fund's own custody arrangements; Morpho and Euler vault addresses, current pool weights and borrowers; HYPE execution venues, hedge notional, margin and tri-party settlement counterparties; and the specific ForDefi wallets behind the Undeployed bucket, which does not reconcile with the two published collateral wallets, all remain undisclosed. The $1.02 Funding Rate Arb (BTC) balance is below the adapter's one-decimal emission threshold and is not a separate static row. A second Dinari USD+ contract 0x98C6616F1CC0D3E938A16200830DD55663dd7DD3, holding 7,718,967.41 units and dormant since 2026-01-28, maps to no Accountable bucket and is not counted in this composition.",
+    "knownUnknownExposurePct": 85.6,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Private Credit (Fasanara FTAC)",
-        "pct": 62.8,
+        "pct": 62,
         "disposition": "insufficient-evidence",
-        "rationale": "Accountable identifies the FTAC strategy, but current borrower identities, terms, seniority, and custody are not published in the reviewed sources."
+        "rationale": "Accountable identifies the FTAC strategy and Noon's custody page states that the private-credit fund custodies the position it deploys, but current borrower identities, terms, seniority, and any independent custodian remain unpublished."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "US Treasury Bills",
+        "pct": 9.9,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The row is a Dinari USD+ position in token 0xc9e3df3d230980b45adc623c81c3df4a73a5350f rather than direct Treasury-bill ownership. Dinari USD+ is not a tracked Pharos asset, and this instance does not appear in Dinari's public deployment list, so the slice stays an exogenous token claim on Dinari instead of a dependency link."
       },
       {
         "reserveIndex": 3,
         "reserveName": "Funding Rate Arb (HYPE)",
-        "pct": 4,
+        "pct": 13.4,
         "disposition": "insufficient-evidence",
-        "rationale": "Accountable identifies the HYPE funding-arbitrage strategy and Noon documents the generic cash-and-carry structure, but current venues, hedge notional, margin, and counterparties are not published."
+        "rationale": "Accountable identifies the HYPE funding-arbitrage strategy and attributes its collateral to the ForDefi bucket, and Noon documents the generic cash-and-carry structure, but current venues, hedge notional, margin, and tri-party settlement counterparties are not published."
       },
       {
         "reserveIndex": 4,
         "reserveName": "DeFi Lending (Euler)",
-        "pct": 2.5,
+        "pct": 2.4,
         "disposition": "insufficient-evidence",
         "rationale": "Accountable identifies Euler lending, but current vault addresses, pool weights, borrowers, and reserve-asset split are not published."
       },
       {
         "reserveIndex": 5,
         "reserveName": "DeFi Lending (Morpho)",
-        "pct": 2.5,
+        "pct": 2.4,
         "disposition": "insufficient-evidence",
         "rationale": "Accountable identifies Morpho lending, but current vault addresses, pool weights, borrowers, and reserve-asset split are not published."
       },
       {
         "reserveIndex": 6,
         "reserveName": "Undeployed",
-        "pct": 2.1,
+        "pct": 5.4,
         "disposition": "insufficient-evidence",
-        "rationale": "Accountable labels this balance Undeployed but does not establish whether the balance is cash, a stablecoin, or another asset, nor identify its custodian."
+        "rationale": "The dated reserves_split pins this bucket to the ForDefi residual plus the Noon Safe balance, and ToS Section 5 limits the category to USDC and USDT, but the ForDefi wallet set is unpublished and the total does not reconcile with the two collateral wallets on Noon's transparency page, so the holding cannot be verified independently."
       }
     ]
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "Undisclosed institutional custodians and exchanges (balances ingested by Accountable inside the Noon perimeter)",
-        "role": "custodian"
+        "name": "Fasanara Capital (FTAC private-credit fund; deploys and custodies the private-credit position)",
+        "role": "custodian",
+        "sharePct": 61.92
       },
       {
-        "name": "Accountable (third-party proof-of-solvency attestation)",
+        "name": "ForDefi (institutional MPC wallet custody for the on-chain funding-rate-arbitrage collateral, Morpho and Euler lending positions, and the undeployed USDC/USDT residual)",
+        "role": "custodian",
+        "sharePct": 22.94
+      },
+      {
+        "name": "Alpaca Securities via Dinari (broker-dealer holding the Treasury bills and JAAA CLO exposure behind Noon's tokenized positions)",
+        "role": "custodian",
+        "sharePct": 14.37,
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Noon Collateral 1 Safe multisig 0x365bd6fb4200e422a2b1f7b9Dfb1C00471E6D089 (Safe v1.3.0, 4-of-5, no modules or guard; issuer self-custody)",
+        "role": "other",
+        "sharePct": 0.77
+      },
+      {
+        "name": "Ceffu (named by Noon's custody page as the off-exchange custodian for funding-rate arbitrage; $1.02 attributed in the dated split)",
+        "role": "custodian",
+        "sharePct": 0
+      },
+      {
+        "name": "Accountable (third-party verification engine inside the Noon perimeter; reports balances and holds no assets)",
         "role": "other"
       }
     ],
-    "segregation": "unknown",
-    "bankruptcyRemoteness": "unknown",
-    "rehypothecation": "permitted",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-1 (lead usde-ethena)",
-    "confidence": "manual-review",
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "none",
+    "rehypothecation": "conditional",
+    "reviewedAt": "2026-09-22",
+    "reviewer": "Codex Noon reserve and custody re-review 2026-09-22 (USN listing-feedback verification)",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Noon transparency documentation",
-        "url": "https://docs.noon.capital/security/transparency"
+        "label": "Noon custody documentation (Alpaca via Dinari, Fasanara, ForDefi MPC, Ceffu)",
+        "url": "https://docs.noon.capital/built-for-safety/1.-custody-you-can-trust"
       },
       {
-        "label": "Noon Accountable dashboard API",
+        "label": "Noon USN Terms of Service (Section 1 segregation from corporate operating funds; Section 6 unsecured redemption debt)",
+        "url": "https://docs.noon.capital/additional-resources/terms-and-policies/asset-terms-usn-terms-of-service"
+      },
+      {
+        "label": "Noon transparency page (published on-chain collateral wallets)",
+        "url": "https://docs.noon.capital/built-for-safety/transparency"
+      },
+      {
+        "label": "Noon Accountable dashboard API payload with reserves_split (data timestamp 2026-09-22T20:31:03.926Z)",
         "url": "https://cache.accountable.capital/dashboard/noon"
+      },
+      {
+        "label": "Noon Collateral 1 Safe 0x365bd6fb4200e422a2b1f7b9Dfb1C00471E6D089 on Etherscan",
+        "url": "https://etherscan.io/address/0x365bd6fb4200e422a2b1f7b9Dfb1C00471E6D089"
+      },
+      {
+        "label": "Dinari USD+ token 0xc9e3df3d230980b45adc623c81c3df4a73a5350f on Etherscan",
+        "url": "https://etherscan.io/token/0xc9e3df3d230980b45adc623c81c3df4a73a5350f"
       }
     ],
-    "uncertainty": "Noon states that Accountable's verification engine ingests data directly from Noon's asset custodians and exchanges within the Noon perimeter, but does not name those custodians or exchanges. Account segregation, insolvency treatment, provider shares, and rehypothecation terms are not publicly documented; deployment of reserves into yield strategies is part of Noon's disclosed design rather than custodian rehypothecation."
+    "uncertainty": "Provider shares are pinned to the reserves_split in the Accountable payload of 2026-09-22T20:31:03.926Z and move with every deployment change, so they are a dated snapshot rather than a standing allocation. A 0% undisclosed share means every reserve dollar in that snapshot carries a named custodian of record; it does not mean the custody chain is documented end to end. Noon's custody page is about nine months old and assigns funding-rate-arbitrage collateral to Ceffu, while the dated split leaves Ceffu with $1.02 and places the entire $5,370,082.56 funding-rate book inside the ForDefi bucket. The ForDefi wallet set behind that bucket is unpublished, and its undeployed USDC/USDT residual does not reconcile with the two collateral wallets on Noon's transparency page. Fasanara both deploys and custodies the private-credit position, so no independent custodian stands behind 61.92% of reserves, and no sub-custodian, trust, or special-purpose vehicle is named anywhere. Alpaca's FINRA and SIPC membership and its excess Lloyd's of London cover are issuer claims from the custody page rather than verified documents, and Noon reaches Alpaca only through Dinari's permissioned USD+ token and the JAAA fund token. A second Dinari USD+ contract 0x98C6616F1CC0D3E938A16200830DD55663dd7DD3 holds 7,718,967.41 units and maps to no Accountable bucket. Segregation is contractual only: ToS Section 1 segregates the reserves from the Company's corporate operating funds, names no custodian, trust, or special-purpose vehicle, and ToS Section 6 makes a validly submitted redemption request an unsecured debt of the issuer, so holders have no bankruptcy-remote structure. Rehypothecation is conditional because ToS Section 5 authorizes redeployment only within a disclosed category list of stablecoin balances, tokenized and direct traditional-finance products, lending protocols, and delta-neutral funding-rate positions, rather than granting custodians open reuse rights."
   }
 }
