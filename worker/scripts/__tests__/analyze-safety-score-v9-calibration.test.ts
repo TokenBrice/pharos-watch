@@ -518,6 +518,18 @@ describe("Safety Score V9 distribution gates D1-D6", () => {
     expect(metrics.maxNrSupplyUsd).toBe(42);
   });
 
+  it("D2b reports the largest NR supply as unavailable and fails closed when any NR supply is unknown", () => {
+    const metrics = metricsFor([
+      { id: "known", grade: "C", supplyUsd: 100 },
+      { id: "unrated-known", grade: "NR", supplyUsd: 42 },
+      { id: "unrated-missing", grade: "NR", supplyUsd: null },
+    ]);
+
+    // An unobserved NR supply makes the maximum unavailable, not zero.
+    expect(metrics.maxNrSupplyUsd).toBeNull();
+    expect(distributionGates(metrics).d2bMaxNrSupplyUsd).toBe(false);
+  });
+
   it.each([
     { driver: "compromisedMintPosture", asset: { control: 25 } },
     { driver: "subFloorPillar", asset: { backing: 34 } },

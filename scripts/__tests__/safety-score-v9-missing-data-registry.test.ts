@@ -32,7 +32,9 @@ function classify(reasonCode: string, componentKey = "fixture"): V9MissingDataWo
   } as Parameters<typeof classifyV9MissingDataWorkType>[0]);
 }
 
-function generateExitProjectionFixture(reasonCode: "unproven-settlement-bound" | "unsupported-same-notional-route") {
+function generateExitProjectionFixture(
+  reasonCodes: readonly ("unproven-settlement-bound" | "unsupported-same-notional-route")[],
+) {
   const assetId = "exit-fixture";
   const core = coreFixture();
   const asset = minimalAsset(assetId);
@@ -62,15 +64,15 @@ function generateExitProjectionFixture(reasonCode: "unproven-settlement-bound" |
   });
   const policy = loadV9MethodologyPolicy(policyAsset);
   const pillars = makeReportCardsV9Pillars({ backing: 80, exit: 80, control: 80 });
-  pillars.exit.reasons = [{
-    code: reasonCode,
+  pillars.exit.reasons = reasonCodes.map((code) => ({
+    code,
     path: "exit:fixture-route",
-    message: `${reasonCode} fixture`,
-  }];
+    message: `${code} fixture`,
+  }));
   const card = makeReportCardsV9Card({
     id: assetId,
     pillars,
-    reasonCodes: [reasonCode],
+    reasonCodes: [...reasonCodes].sort(),
   });
 
   return generateV9MissingDataRegistry({
@@ -174,7 +176,7 @@ describe("Safety Score v9 missing-data work routing", () => {
   ] as const)(
     "consolidates score projection reason %s only with compiled work type %s",
     (reasonCode, workType, requiresSupplementalTask) => {
-      const registry = generateExitProjectionFixture(reasonCode);
+      const registry = generateExitProjectionFixture([reasonCode]);
       const stablecoin = registry.stablecoins[0]!;
       const projection = stablecoin.scoreProjectionGaps.find((gap) => gap.reasonCode === reasonCode);
 
@@ -191,6 +193,43 @@ describe("Safety Score v9 missing-data work routing", () => {
       );
     },
   );
+
+  it("associates projection coverage with the exact work type when one stream mixes EXIT work types", () => {
+    const registry = generateExitProjectionFixture([
+      "unsupported-same-notional-route",
+      "unproven-settlement-bound",
+    ]);
+    const stablecoin = registry.stablecoins[0]!;
+    const compiledTaskIds = stablecoin.missingItems
+      .filter((item) => item.taskSource === "compiled-fact-gap")
+      .map((item) => item.taskId);
+    const supplementalTaskIds = stablecoin.missingItems
+      .filter((item) => item.taskSource === "score-projection-gap")
+      .map((item) => item.taskId);
+    const dexProjection = stablecoin.scoreProjectionGaps.find(
+      (gap) => gap.reasonCode === "unsupported-same-notional-route",
+    );
+    const settlementProjection = stablecoin.scoreProjectionGaps.find(
+      (gap) => gap.reasonCode === "unproven-settlement-bound",
+    );
+
+    // EXIT_DEX_COVERAGE and EXIT_SETTLEMENT_BOUND share the EXIT stream, but the
+    // compiled DEX task covers only the DEX projection; the settlement
+    // projection is covered by its own supplemental task, never by the DEX task.
+    expect(compiledTaskIds).toHaveLength(1);
+    expect(supplementalTaskIds).toHaveLength(1);
+    expect(dexProjection).toMatchObject({
+      workType: "EXIT_DEX_COVERAGE",
+      coveredByTaskIds: compiledTaskIds,
+      requiresSupplementalTask: false,
+    });
+    expect(settlementProjection).toMatchObject({
+      workType: "EXIT_SETTLEMENT_BOUND",
+      coveredByTaskIds: supplementalTaskIds,
+      requiresSupplementalTask: true,
+    });
+    expect(registry.summary.scoreProjectionReasonNeedingSupplementCount).toBe(1);
+  });
 
   it("does not turn explicitly non-curation structural risk into a missing-data task", () => {
     expect(classifyV9ScoreProjectionWorkType("correlated-exit-routes")).toBeNull();

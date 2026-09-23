@@ -467,8 +467,12 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
     const items = [...factItems, ...supplementalItems];
     const scoreProjectionGaps = projections.map((reason) => {
       const stream = WORK_TYPES[reason.workType].stream;
+      // Coverage is exact-work-type: two projections may share a stream (for
+      // example EXIT_DEX_COVERAGE and EXIT_SETTLEMENT_BOUND are both EXIT), and
+      // crediting one work type's task to the other would misreport
+      // requiresSupplementalTask and downstream producer fan-out.
       const coveredByTaskIds = items
-        .filter((item) => WORK_TYPES[item.workType].stream === stream)
+        .filter((item) => item.workType === reason.workType)
         .map((item) => item.taskId);
       if (coveredByTaskIds.length === 0) {
         throw new Error(`Score projection ${assetId}:${reason.reasonCode}:${reason.path ?? ""} has no agent task`);

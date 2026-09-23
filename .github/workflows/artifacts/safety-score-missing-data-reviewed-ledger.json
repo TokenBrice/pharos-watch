@@ -7,6 +7,7 @@
     "workType",
     "resolutionMode",
     "decision",
+    "deferState",
     "reviewedAt",
     "reviewer",
     "evidence",
@@ -24157,7 +24158,8 @@
       ],
       "workType": "EXIT_OUTPUT",
       "resolutionMode": "agent-curation",
-      "decision": "structured-pending-production",
+      "decision": "defer",
+      "deferState": "structured-pending-production",
       "reviewedAt": "2026-09-21",
       "reviewer": "Claude curation campaign 2026-09-21 (PhysicalDeliveryB)",
       "evidence": [
@@ -24183,7 +24185,8 @@
       ],
       "workType": "EXIT_OUTPUT",
       "resolutionMode": "agent-curation",
-      "decision": "structured-pending-production",
+      "decision": "defer",
+      "deferState": "structured-pending-production",
       "reviewedAt": "2026-09-21",
       "reviewer": "Claude curation campaign 2026-09-21 (PhysicalDeliveryB)",
       "evidence": [
@@ -24209,7 +24212,8 @@
       ],
       "workType": "EXIT_OUTPUT",
       "resolutionMode": "agent-curation",
-      "decision": "structured-pending-production",
+      "decision": "defer",
+      "deferState": "structured-pending-production",
       "reviewedAt": "2026-09-21",
       "reviewer": "Claude curation campaign 2026-09-21 (PhysicalDeliveryB)",
       "evidence": [
@@ -24235,7 +24239,8 @@
       ],
       "workType": "EXIT_OUTPUT",
       "resolutionMode": "agent-curation",
-      "decision": "structured-pending-production",
+      "decision": "defer",
+      "deferState": "structured-pending-production",
       "reviewedAt": "2026-09-21",
       "reviewer": "Claude curation campaign 2026-09-21 (PhysicalDeliveryB)",
       "evidence": [
@@ -24290,7 +24295,8 @@
       ],
       "workType": "EXIT_OUTPUT",
       "resolutionMode": "agent-curation",
-      "decision": "structured-pending-production",
+      "decision": "defer",
+      "deferState": "structured-pending-production",
       "reviewedAt": "2026-09-21",
       "reviewer": "Claude curation campaign 2026-09-21 (PhysicalDeliveryB)",
       "evidence": [
@@ -24317,7 +24323,8 @@
       ],
       "workType": "EXIT_OUTPUT",
       "resolutionMode": "agent-curation",
-      "decision": "structured-pending-production",
+      "decision": "defer",
+      "deferState": "structured-pending-production",
       "reviewedAt": "2026-09-21",
       "reviewer": "Claude curation campaign 2026-09-21 (PhysicalDeliveryB)",
       "evidence": [
@@ -24344,7 +24351,8 @@
       ],
       "workType": "EXIT_OUTPUT",
       "resolutionMode": "agent-curation",
-      "decision": "structured-pending-production",
+      "decision": "defer",
+      "deferState": "structured-pending-production",
       "reviewedAt": "2026-09-21",
       "reviewer": "Claude curation campaign 2026-09-21 (PhysicalDeliveryB)",
       "evidence": [
@@ -24635,7 +24643,8 @@
       ],
       "workType": "EXIT_DEX_COVERAGE",
       "resolutionMode": "producer-runtime",
-      "decision": "shadow-collecting",
+      "decision": "defer",
+      "deferState": "shadow-collecting",
       "reviewedAt": "2026-09-21",
       "reviewer": "Claude curation campaign 2026-09-21 (RaydiumNative)",
       "evidence": [
@@ -24666,7 +24675,8 @@
       ],
       "workType": "EXIT_DEX_COVERAGE",
       "resolutionMode": "producer-runtime",
-      "decision": "shadow-collecting",
+      "decision": "defer",
+      "deferState": "shadow-collecting",
       "reviewedAt": "2026-09-21",
       "reviewer": "Claude curation campaign 2026-09-21 (RaydiumNative)",
       "evidence": [
@@ -24697,7 +24707,8 @@
       ],
       "workType": "EXIT_DEX_COVERAGE",
       "resolutionMode": "producer-runtime",
-      "decision": "shadow-collecting",
+      "decision": "defer",
+      "deferState": "shadow-collecting",
       "reviewedAt": "2026-09-21",
       "reviewer": "Claude curation campaign 2026-09-21 (RaydiumNative)",
       "evidence": [
@@ -24728,7 +24739,8 @@
       ],
       "workType": "EXIT_DEX_COVERAGE",
       "resolutionMode": "producer-runtime",
-      "decision": "shadow-collecting",
+      "decision": "defer",
+      "deferState": "shadow-collecting",
       "reviewedAt": "2026-09-21",
       "reviewer": "Claude curation campaign 2026-09-21 (RaydiumNative)",
       "evidence": [
@@ -24759,7 +24771,8 @@
       ],
       "workType": "EXIT_DEX_COVERAGE",
       "resolutionMode": "producer-runtime",
-      "decision": "shadow-collecting",
+      "decision": "defer",
+      "deferState": "shadow-collecting",
       "reviewedAt": "2026-09-21",
       "reviewer": "Claude curation campaign 2026-09-21 (RaydiumNative)",
       "evidence": [
@@ -24790,7 +24803,8 @@
       ],
       "workType": "EXIT_DEX_COVERAGE",
       "resolutionMode": "producer-runtime",
-      "decision": "shadow-collecting",
+      "decision": "defer",
+      "deferState": "shadow-collecting",
       "reviewedAt": "2026-09-21",
       "reviewer": "Claude curation campaign 2026-09-21 (RaydiumNative)",
       "evidence": [
@@ -24821,7 +24835,8 @@
       ],
       "workType": "EXIT_DEX_COVERAGE",
       "resolutionMode": "producer-runtime",
-      "decision": "shadow-collecting",
+      "decision": "defer",
+      "deferState": "shadow-collecting",
       "reviewedAt": "2026-09-21",
       "reviewer": "Claude curation campaign 2026-09-21 (RaydiumNative)",
       "evidence": [
@@ -24852,7 +24867,8 @@
       ],
       "workType": "EXIT_DEX_COVERAGE",
       "resolutionMode": "producer-runtime",
-      "decision": "shadow-collecting",
+      "decision": "defer",
+      "deferState": "shadow-collecting",
       "reviewedAt": "2026-09-21",
       "reviewer": "Claude curation campaign 2026-09-21 (RaydiumNative)",
       "evidence": [
@@ -24883,7 +24899,8 @@
       ],
       "workType": "EXIT_DEX_COVERAGE",
       "resolutionMode": "producer-runtime",
-      "decision": "shadow-collecting",
+      "decision": "defer",
+      "deferState": "shadow-collecting",
       "reviewedAt": "2026-09-21",
       "reviewer": "Claude curation campaign 2026-09-21 (RaydiumNative)",
       "evidence": [
@@ -24914,7 +24931,8 @@
       ],
       "workType": "EXIT_OUTPUT",
       "resolutionMode": "agent-curation",
-      "decision": "structured-pending-production",
+      "decision": "defer",
+      "deferState": "structured-pending-production",
       "reviewedAt": "2026-09-21",
       "reviewer": "Claude curation campaign 2026-09-21 (PhysicalDeliveryB)",
       "evidence": [
@@ -24939,7 +24957,8 @@
       ],
       "workType": "EXIT_OUTPUT",
       "resolutionMode": "agent-curation",
-      "decision": "structured-pending-production",
+      "decision": "defer",
+      "deferState": "structured-pending-production",
       "reviewedAt": "2026-09-21",
       "reviewer": "Claude curation campaign 2026-09-21 (PhysicalDeliveryB)",
       "evidence": [
@@ -24964,7 +24983,8 @@
       ],
       "workType": "EXIT_OUTPUT",
       "resolutionMode": "agent-curation",
-      "decision": "structured-pending-production",
+      "decision": "defer",
+      "deferState": "structured-pending-production",
       "reviewedAt": "2026-09-21",
       "reviewer": "Claude curation campaign 2026-09-21 (PhysicalDeliveryB)",
       "evidence": [
@@ -24989,7 +25009,8 @@
       ],
       "workType": "EXIT_OUTPUT",
       "resolutionMode": "agent-curation",
-      "decision": "structured-pending-production",
+      "decision": "defer",
+      "deferState": "structured-pending-production",
       "reviewedAt": "2026-09-21",
       "reviewer": "Claude curation campaign 2026-09-21 (PhysicalDeliveryB)",
       "evidence": [
