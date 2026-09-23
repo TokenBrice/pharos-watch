@@ -65,6 +65,55 @@ describe("PSI condition band contract", () => {
       StabilityIndexResponseSchema.safeParse({ ...psiResponse("STEADY"), malformedRows: "2" }).success,
     ).toBe(false);
   });
+
+  it("accepts the unpriced-open-depeg degradation fields and keeps them optional", () => {
+    const degraded = StabilityIndexResponseSchema.safeParse({
+      ...psiResponse("TREMOR"),
+      current: {
+        ...psiResponse("TREMOR").current,
+        inputDegradation: {
+          dewsUnavailable: false,
+          dewsFailureReason: null,
+          depegEventsUnavailable: false,
+          depegEventsFailureReason: null,
+          openDepegNoPrice: true,
+          openDepegsWithoutPrice: 1,
+        },
+      },
+    });
+    expect(degraded.success).toBe(true);
+
+    const legacyDegradation = StabilityIndexResponseSchema.safeParse({
+      ...psiResponse("TREMOR"),
+      current: {
+        ...psiResponse("TREMOR").current,
+        inputDegradation: {
+          dewsUnavailable: true,
+          dewsFailureReason: "stress_signals unavailable",
+          depegEventsUnavailable: false,
+          depegEventsFailureReason: null,
+        },
+      },
+    });
+    expect(legacyDegradation.success).toBe(true);
+
+    expect(
+      StabilityIndexResponseSchema.safeParse({
+        ...psiResponse("TREMOR"),
+        current: {
+          ...psiResponse("TREMOR").current,
+          inputDegradation: {
+            dewsUnavailable: false,
+            dewsFailureReason: null,
+            depegEventsUnavailable: false,
+            depegEventsFailureReason: null,
+            openDepegNoPrice: true,
+            openDepegsWithoutPrice: "2",
+          },
+        },
+      }).success,
+    ).toBe(false);
+  });
 });
 
 describe("USDS status served shape", () => {

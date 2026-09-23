@@ -144,7 +144,10 @@ describe("conservation producer publication and cursor fences", () => {
     const result = await run();
     expect(result.newLastBlock).toBeNull();
     expect(result.summary.errors).toBeGreaterThan(0);
-    if (kind === "parser") expect(persistMintBurnRows).toHaveBeenCalledWith(expect.anything(), [], expect.anything(), expect.anything());
+    // The pre-write fence is also a write barrier: only the post-write persisted
+    // readback failure ("persisted") had legitimately written rows to suppress.
+    expect(persistMintBurnRows).toHaveBeenCalledWith(expect.anything(),
+      kind === "persisted" ? [row] : [], expect.anything(), expect.anything());
   });
   it("preserves normal cursor advancement through diagnostic RPC unavailability", async () => {
     vi.mocked(completeMintBurnConservationAudit).mockReturnValue({ ...audit, status: "unavailable", reason: "audit-rpc-unavailable" });
@@ -161,9 +164,11 @@ describe("conservation producer publication and cursor fences", () => {
     expect(persistMintBurnConservation).toHaveBeenCalledTimes(1);
     expect(vi.mocked(persistMintBurnConservation).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(persistMintBurnRows).mock.invocationCallOrder[0]);
   });
-  it.each(["invalid-raw-log", "boundary-reorg", "closing-log-hash-mismatch"])("fences %s", async (reason) => {
+  it.each(["invalid-raw-log", "boundary-reorg", "closing-log-hash-mismatch"])("fences %s and suppresses its row write", async (reason) => {
     vi.mocked(completeMintBurnConservationAudit).mockReturnValue({ ...audit, status: "unavailable", reason });
-    expect((await run()).newLastBlock).toBeNull();
+    const result = await run();
+    expect(result.newLastBlock).toBeNull();
+    expect(persistMintBurnRows).toHaveBeenCalledWith(expect.anything(), [], expect.anything(), expect.anything());
   });
   it("propagates cache write failure without returning an advanced cursor", async () => {
     vi.mocked(persistMintBurnConservation).mockRejectedValue(new Error("cache write failed"));

@@ -39,6 +39,9 @@ export const StabilityIndexInputDegradationSchema = z.object({
   dewsFailureReason: z.string().nullable(),
   depegEventsUnavailable: z.boolean(),
   depegEventsFailureReason: z.string().nullable(),
+  /** Open depegs the producer could not price: missing severity input, not zero severity. */
+  openDepegNoPrice: z.boolean().optional(),
+  openDepegsWithoutPrice: z.number().int().nullable().optional(),
 });
 
 export const StabilityIndexCurrentSchema = z.object({

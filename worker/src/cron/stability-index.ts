@@ -296,6 +296,11 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
 
   logWorkerEventArgs("handler", "info", `[stability-index] score=${result.score} band=${result.band}`);
   return createCronResult({
+    // R1: an unpriced open depeg is missing severity input, not zero severity input.
+    // The sample still publishes (the remaining components are computable), but the run
+    // is degraded with a machine-readable reason so cron summaries cannot normalize a
+    // partially-scored window to "ok" while the API carries inputDegradation.
+    ...(openDepegsWithoutPrice > 0 ? { status: "degraded" as const } : {}),
     itemCount: 1,
     productivity: {
       productive: true,
@@ -313,6 +318,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
       ],
     },
     metadata: {
+      ...(openDepegsWithoutPrice > 0 ? { reason: "open-depeg-no-price" } : {}),
       aggregateUniverse: CORE_STABLECOIN_AGGREGATE_UNIVERSE,
       score: result.score,
       band: result.band,

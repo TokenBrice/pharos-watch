@@ -481,7 +481,6 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
     summary.eventCoverage.every((coverage) => coverage.complete && coverage.scannedToBlock >= scanTo) &&
     summary.rowsDroppedDecode === (summary.rowsQuarantinedDecode ?? 0);
   let conservationFence = false;
-  let parserFailure = false;
   let conservationAudit: MintBurnConservationRecord | null = null;
   if (getMintBurnConservationEligibility(config).supported) {
     const audit = completeMintBurnConservationAudit({
@@ -496,7 +495,6 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
       try {
         validateMintBurnParsedConservation(config, allConfigLogs, fromBlock, scanTo, allParsedRows);
       } catch {
-        parserFailure = true;
         conservationFence = true;
         if (audit.status !== "mismatch") audit.status = "unavailable";
         audit.reason = "parsed-raw-event-correspondence-failed";
@@ -518,7 +516,12 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
   }
   let persistResult;
   try {
-    persistResult = await persistMintBurnRows(db, parserFailure ? [] : persistableRows, affectedHours, { signal });
+    // Conservation write barrier: a fenced audit (verified supply mismatch or unreliable
+    // raw evidence) must not reach the canonical event table. The fence also holds the
+    // cursor, so a clean retry re-covers this range; rows written now could outlive the
+    // fence because the retry's persisted-row readback only verifies the rows that the
+    // retry itself returned.
+    persistResult = await persistMintBurnRows(db, conservationFence ? [] : persistableRows, affectedHours, { signal });
   } catch (error) {
     if (conservationAudit && conservationAudit.status !== "mismatch") {
       await persistMintBurnConservation(db, { ...conservationAudit, status: "unavailable", reason: "event-row-write-failed" }, signal);
