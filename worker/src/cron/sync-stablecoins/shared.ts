@@ -355,8 +355,10 @@ export const SUPPLEMENTAL_RESTORE_MAX_FUTURE_SKEW_SEC = 60;
  * Fill a primary coverage gap from a supplemental row. Only an absent or
  * wholly invalid primary bucket is a gap: an explicit finite zero is an
  * observed redemption and is published as read, never swapped for a positive
- * supplemental amount. A row that is swapped carries `supplyRestored`, so the
- * published supply never claims to be the primary lane's own reading.
+ * supplemental amount. The supplemental row is a fresh observation and is
+ * published as itself: its own `supplySource` and `supplyObservedAt` carry
+ * the provenance, and it must not carry `supplyRestored`, which snapshot
+ * generation and the detail page treat as stale cache carry-forward.
  */
 export function replaceZeroSupplyPrimaryAssets(
   primaryAssets: readonly PeggedAsset[],
@@ -374,7 +376,7 @@ export function replaceZeroSupplyPrimaryAssets(
     const replacement = positiveSupplementalById.get(String(asset.id));
     if (!replacement) return asset;
     replacedIds.push(String(asset.id));
-    return markRestoredSupply(replacement);
+    return replacement;
   });
 
   return { assets, replacedIds: [...new Set(replacedIds)].sort() };

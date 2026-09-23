@@ -411,7 +411,7 @@ describe("selector-snapshot Pages Function", () => {
       expect(response.status).toBe(503);
     });
 
-    it("returns 503 when the D1 quota reservation fails", async () => {
+    it("returns 503 before any canonical recomputation when the D1 quota reservation fails", async () => {
       const db = makeD1();
       db.__setRunHandler(() => {
         throw new Error("d1 unavailable");
@@ -423,9 +423,10 @@ describe("selector-snapshot Pages Function", () => {
         }), makeEnv({ DB: db })),
       );
       expect(response.status).toBe(503);
+      expect(recomputeVerifiedSelectorSnapshotMock).not.toHaveBeenCalled();
     });
 
-    it("leaves the daily quota unspent when canonical recomputation fails", async () => {
+    it("refunds the daily quota reservation when canonical recomputation fails", async () => {
       recomputeVerifiedSelectorSnapshotMock.mockRejectedValueOnce(new Error("canonical source unavailable"));
       const db = makeD1();
       const env = makeEnv({ DB: db });
@@ -439,7 +440,34 @@ describe("selector-snapshot Pages Function", () => {
       expect(response.status).toBe(503);
       await expect(response.json()).resolves.toEqual({ error: "Canonical selector data temporarily unavailable" });
       expect((env.SELECTOR_SNAPSHOTS as TestKVNamespace).__getStore().size).toBe(0);
-      expect(db.__getQuotaRows().size).toBe(0);
+      // The reservation is refunded to zero rather than left spent: a
+      // canonical outage must not consume the client's daily POSTs.
+      expect([...db.__getQuotaRows().values()]).toEqual([0]);
+    });
+
+    it("refunds the reserved bucket when canonical recomputation crosses UTC midnight", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-06-23T23:59:59Z"));
+      const db = makeD1();
+      const env = makeEnv({ DB: db });
+      const ip = "203.0.113.96";
+      const hash = createHmac("sha256", env.SELECTOR_SNAPSHOT_IP_HASH_SECRET!).update(ip).digest("hex").slice(0, 32);
+      recomputeVerifiedSelectorSnapshotMock.mockImplementationOnce(async () => {
+        vi.setSystemTime(new Date("2026-06-24T00:00:05Z"));
+        throw new Error("canonical source unavailable");
+      });
+
+      const response = await onRequest(
+        snapshotContext(postRequest(buildSelectorSnapshotOutput(), {
+          ...POST_HEADERS,
+          "CF-Connecting-IP": ip,
+        }), env),
+      );
+
+      expect(response.status).toBe(503);
+      // The refund must target the bucket the reservation charged, not a
+      // fresh new-day row.
+      expect(db.__getQuotaRows()).toEqual(new Map([[`2026-06-23:${hash}`, 0]]));
     });
 
     it("returns 503 when the KV write fails", async () => {
@@ -683,6 +711,28 @@ describe("selector-snapshot Pages Function", () => {
       [`2026-06-19:${hash}`, 100],
       [`2026-06-20:${hash}`, 1],
     ]));
+  });
+
+  it("rejects an over-quota POST before any canonical recomputation", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-22T12:00:00Z"));
+    const db = makeD1();
+    const env = makeEnv({ DB: db });
+    const ip = "203.0.113.95";
+    const hash = createHmac("sha256", env.SELECTOR_SNAPSHOT_IP_HASH_SECRET!).update(ip).digest("hex").slice(0, 32);
+    db.__seedQuota("2026-06-22", hash, 100);
+
+    const response = await onRequest(
+      snapshotContext(postRequest(buildSelectorSnapshotOutput(), {
+        ...POST_HEADERS, "CF-Connecting-IP": ip,
+      }), env),
+    );
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get("Retry-After")).toBe("86400");
+    expect(recomputeVerifiedSelectorSnapshotMock).not.toHaveBeenCalled();
+    expect((env.SELECTOR_SNAPSHOTS as TestKVNamespace).__getPutCalls()).toEqual([]);
+    expect(db.__getQuotaRows().get(`2026-06-22:${hash}`)).toBe(100);
   });
 
   it("uses deterministic, IP-separated and configured-pepper HMAC quota identities", async () => {

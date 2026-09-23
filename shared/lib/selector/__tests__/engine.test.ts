@@ -274,6 +274,76 @@ describe("runSelector — Yield happy path", () => {
     }
   });
 
+  it("caps yield confidence on the selected alternate rail's short observation history", () => {
+    const rowsWithAlternateHistory = (alternateObservationDays: number) => {
+      const rows = new Map(buildFixtureData().rows);
+      const base = rows.get("usdc-circle");
+      expect(base).toBeDefined();
+      rows.set("usdc-circle", {
+        ...base!,
+        yieldSources: [
+          {
+            sourceKey: "primary-wrapper",
+            protocol: "Issuer wrapper",
+            chain: "Ethereum",
+            yieldType: "rebase",
+            apy30d: 4.8,
+            pharosYieldScore: 78,
+            sourceTvlUsd: 100_000_000,
+            dataSource: "test",
+            sourceRiskScore: 15,
+            venueRiskTier: "low",
+            deploymentPlace: "issuer-savings",
+            sourceDepthRatio: 0.8,
+            sourceSwitchCount30d: 0,
+            observationCount30d: 30,
+            freshness: { capturedAt: 1_700_000_000, ageSeconds: 120 },
+            isPrimary: true,
+          },
+          {
+            sourceKey: "dex-lp",
+            protocol: "Curve",
+            chain: "Ethereum",
+            yieldType: "lp-receipt",
+            apy30d: 4.5,
+            pharosYieldScore: 78,
+            sourceTvlUsd: 80_000_000,
+            dataSource: "test",
+            sourceRiskScore: 18,
+            venueRiskTier: "low",
+            deploymentPlace: "lp",
+            sourceDepthRatio: 0.7,
+            sourceSwitchCount30d: 0,
+            observationCount30d: alternateObservationDays,
+            freshness: { capturedAt: 1_700_000_000, ageSeconds: 90 },
+            isPrimary: false,
+          },
+        ],
+      });
+      return rows;
+    };
+    const input = makeInput({
+      profile: "yield",
+      depegTolerance: "tight",
+      venuePreferences: ["dex"],
+    });
+
+    const matureAlternate = runSelector(input, { rows: rowsWithAlternateHistory(30) }, FIXTURE_DATASET)
+      .recommended.find((rec) => rec.id === "usdc-circle");
+    const shortHistoryAlternate = runSelector(input, { rows: rowsWithAlternateHistory(2) }, FIXTURE_DATASET)
+      .recommended.find((rec) => rec.id === "usdc-circle");
+
+    expect(shortHistoryAlternate?.profile).toBe("yield");
+    expect(matureAlternate?.profile).toBe("yield");
+    if (shortHistoryAlternate?.profile === "yield" && matureAlternate?.profile === "yield") {
+      expect(shortHistoryAlternate.recommendedSource.sourceKey).toBe("dex-lp");
+      expect(matureAlternate.recommendedSource.sourceKey).toBe("dex-lp");
+      expect(shortHistoryAlternate.confidence).toBe(Math.min(matureAlternate.confidence, 80));
+      expect(shortHistoryAlternate.confidenceReasons).toContain("short-yield-history");
+      expect(matureAlternate.confidenceReasons).not.toContain("short-yield-history");
+    }
+  });
+
   it("sourceRiskInverted null contributes neutral 50 while lowering confidence", () => {
     const rows = new Map(buildFixtureData().rows);
     const base = rows.get("usds-sky");
