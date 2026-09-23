@@ -71,6 +71,28 @@ const AUTHORITATIVE_PRICE_PROVIDERS: PriceSourceProvider[] = [
 export const AUTHORITATIVE_LIVE_OVERRIDE_BUDGET_MS = 10_000;
 export const AUTHORITATIVE_LIVE_CANDIDATE_TIMEOUT_MS = 2_500;
 
+/**
+ * Candidate lanes inside the shared wall-clock budget. This matches the
+ * `sync-stablecoins` scheduler connection declaration
+ * (`maxConnections: 4` in `shared/lib/cron-jobs.ts`): the authoritative stage is
+ * the only fetch phase in flight while it runs, so the trigger-wide outbound
+ * budget stays at its declared peak instead of the stage serializing every
+ * candidate and spending the whole deadline on one slow chain route.
+ */
+export const AUTHORITATIVE_LIVE_OVERRIDE_MAX_CONCURRENCY = 4;
+
+/** Bounded per-adapter timing so production can attribute the shared budget. */
+export interface AuthoritativeLivePriceAdapterStats {
+  attempted: number;
+  resolved: number;
+  empty: number;
+  failed: number;
+  skippedCircuitOpen: number;
+  skippedBudget: number;
+  durationMs: number;
+  maxDurationMs: number;
+}
+
 export interface AuthoritativeLivePriceOverrideStats {
   budgetMs: number;
   candidateCount: number;
@@ -83,6 +105,7 @@ export interface AuthoritativeLivePriceOverrideStats {
   cachedRateFallbacks: number;
   timedOut: boolean;
   assetAttempts: PricingAssetAttemptRecord[];
+  perAdapter?: Record<string, AuthoritativeLivePriceAdapterStats>;
 }
 
 const MAX_AUTHORITATIVE_ASSET_ATTEMPTS = 512;
@@ -113,6 +136,15 @@ function getProviderLiveTimeoutMs(provider: PriceSourceProvider): number {
   return typeof timeoutMs === "number" && Number.isFinite(timeoutMs) && timeoutMs > 0
     ? timeoutMs
     : AUTHORITATIVE_LIVE_CANDIDATE_TIMEOUT_MS;
+}
+
+/** Lane count stays inside the `sync-stablecoins` connection declaration and the candidate count. */
+function resolveLiveCandidateConcurrency(requested: number | undefined, candidateCount: number): number {
+  const configured =
+    typeof requested === "number" && Number.isFinite(requested) && requested > 0
+      ? Math.floor(requested)
+      : AUTHORITATIVE_LIVE_OVERRIDE_MAX_CONCURRENCY;
+  return Math.max(1, Math.min(configured, Math.max(1, candidateCount)));
 }
 
 function shouldRecordLiveCircuitFailure(provider: PriceSourceProvider, asset: PeggedAsset): boolean {
@@ -203,6 +235,7 @@ export function createAuthoritativeLivePriceOverrideStats(
     cachedRateFallbacks: 0,
     timedOut: false,
     assetAttempts: [],
+    perAdapter: {},
   };
 }
 
@@ -213,6 +246,8 @@ export interface AuthoritativeLivePriceOverrideOptions {
   stats?: AuthoritativeLivePriceOverrideStats;
   maxProviderLivePriority?: number;
   previousMissingGenerationsById?: ReadonlyMap<string, number>;
+  /** Candidate lanes inside the shared budget; defaults to the job connection declaration. */
+  maxConcurrency?: number;
 }
 
 function applyOverrideToLiveContext(context: LivePriceContext, assetId: string, override: CurrentPriceOverride): void {
@@ -238,13 +273,13 @@ function readLastUntrustedParent(context: LivePriceContext): { parentId: string;
 async function shouldAttemptLiveFetch(
   db: D1Database,
   source: string,
-  circuitAttempts: Map<string, boolean>,
+  circuitAttempts: Map<string, Promise<boolean>>,
 ): Promise<boolean> {
   const memoized = circuitAttempts.get(source);
-  if (typeof memoized === "boolean") return memoized;
-  const allowed = await shouldAttemptFetch(db, source);
-  circuitAttempts.set(source, allowed);
-  return allowed;
+  if (memoized) return memoized;
+  const read = shouldAttemptFetch(db, source);
+  circuitAttempts.set(source, read);
+  return read;
 }
 
 export async function fetchAuthoritativeLivePriceOverrides(
@@ -294,7 +329,7 @@ export async function fetchAuthoritativeLivePriceOverrides(
   }
   const budgetSignal = budgetMs > 0 ? AbortSignal.timeout(budgetMs) : undefined;
   const liveSignal = signal && budgetSignal ? AbortSignal.any([signal, budgetSignal]) : (budgetSignal ?? signal);
-  const circuitAttempts = new Map<string, boolean>();
+  const circuitAttempts = new Map<string, Promise<boolean>>();
   const circuitOutcomes = new Map<string, boolean>();
   // A shared provider is available if any live target succeeds. Asset failures
   // remain diagnostic failures, but must not close the gate on later targets.
@@ -302,7 +337,14 @@ export async function fetchAuthoritativeLivePriceOverrides(
     circuitOutcomes.set(source, circuitOutcomes.get(source) === true || success);
   };
 
+  // Attempts are staged per candidate and flushed in dispatch order after the
+  // pass, so parallel lanes cannot scramble the ledger the way completion order would.
+  const attemptRecordsByCandidate = stats
+    ? prioritizedCandidates.map(() => [] as PricingAssetAttemptRecord[])
+    : null;
+
   const recordAttempt = (
+    candidateIndex: number,
     asset: PeggedAsset,
     provider: LivePriceProvider,
     input: Omit<
@@ -312,45 +354,80 @@ export async function fetchAuthoritativeLivePriceOverrides(
       source?: string;
     },
   ): void => {
-    if (!stats) return;
+    const staged = attemptRecordsByCandidate?.[candidateIndex];
+    if (!staged) return;
     const target = getRegistryLivePriceDiagnosticTarget(asset.id);
-    appendPricingAssetAttempts(
-      stats.assetAttempts,
-      [
-        createPricingAssetAttempt({
-          assetId: asset.id,
-          adapter: provider.source,
-          source: input.source ?? provider.source,
-          ...(target ?? {}),
-          ...input,
-        }),
-      ],
-      MAX_AUTHORITATIVE_ASSET_ATTEMPTS,
+    staged.push(
+      createPricingAssetAttempt({
+        assetId: asset.id,
+        adapter: provider.source,
+        source: input.source ?? provider.source,
+        ...(target ?? {}),
+        ...input,
+      }),
     );
+  };
+
+  const flushAttemptRecords = (): void => {
+    if (!stats || !attemptRecordsByCandidate) return;
+    appendPricingAssetAttempts(stats.assetAttempts, attemptRecordsByCandidate.flat(), MAX_AUTHORITATIVE_ASSET_ATTEMPTS);
+  };
+
+  const adapterStats = stats ? (stats.perAdapter ?? (stats.perAdapter = {})) : null;
+  const recordAdapterStat = (
+    source: string,
+    update: {
+      outcome?: "resolved" | "empty" | "failed";
+      skippedCircuitOpen?: number;
+      skippedBudget?: number;
+      durationMs?: number;
+    },
+  ): void => {
+    if (!adapterStats) return;
+    const bucket = adapterStats[source] ?? (adapterStats[source] = {
+      attempted: 0,
+      resolved: 0,
+      empty: 0,
+      failed: 0,
+      skippedCircuitOpen: 0,
+      skippedBudget: 0,
+      durationMs: 0,
+      maxDurationMs: 0,
+    });
+    if (update.outcome) {
+      bucket.attempted += 1;
+      bucket[update.outcome] += 1;
+    }
+    if (update.skippedCircuitOpen) bucket.skippedCircuitOpen += update.skippedCircuitOpen;
+    if (update.skippedBudget) bucket.skippedBudget += update.skippedBudget;
+    if (update.durationMs != null) {
+      bucket.durationMs += update.durationMs;
+      bucket.maxDurationMs = Math.max(bucket.maxDurationMs, update.durationMs);
+    }
   };
 
   const recordSkippedBudget = (startIndex: number): void => {
     const candidateAt = Math.floor(Date.now() / 1000);
-    for (const candidate of prioritizedCandidates.slice(startIndex)) {
-      recordAttempt(candidate.asset, candidate.provider, {
+    for (let index = startIndex; index < prioritizedCandidates.length; index += 1) {
+      const candidate = prioritizedCandidates[index];
+      recordAttempt(index, candidate.asset, candidate.provider, {
         state: "skipped",
         skipReason: "budget",
         rejectionClass: "timeout",
         candidateAt,
       });
+      recordAdapterStat(candidate.provider.source, { skippedBudget: 1 });
     }
   };
 
-  for (let index = 0; index < prioritizedCandidates.length; index += 1) {
-    if (budgetSignal?.aborted) {
-      if (stats) {
-        stats.timedOut = true;
-        stats.skippedBudget += prioritizedCandidates.length - index;
-      }
-      recordSkippedBudget(index);
-      break;
-    }
+  let budgetExhaustedLogged = false;
+  const logBudgetExhaustedOnce = (): void => {
+    if (budgetExhaustedLogged) return;
+    budgetExhaustedLogged = true;
+    logWorkerEventArgs("lib", "warn", `[authoritative-price-sources] live override budget exhausted after ${budgetMs}ms`);
+  };
 
+  const runCandidate = async (index: number): Promise<void> => {
     const { asset, provider } = prioritizedCandidates[index];
     const candidateAt = Math.floor(Date.now() / 1000);
     const circuitSource = provider.liveCircuitSource;
@@ -358,16 +435,18 @@ export async function fetchAuthoritativeLivePriceOverrides(
       const allowed = await shouldAttemptLiveFetch(options.db, circuitSource, circuitAttempts);
       if (!allowed) {
         if (stats) stats.skippedCircuitOpen += 1;
-        recordAttempt(asset, provider, {
+        recordAdapterStat(provider.source, { skippedCircuitOpen: 1 });
+        recordAttempt(index, asset, provider, {
           state: "skipped",
           skipReason: "circuit-open",
           rejectionClass: "blocked",
           candidateAt,
         });
-        continue;
+        return;
       }
     }
     if (stats) stats.attemptedCount += 1;
+    const startedAtMs = Date.now();
 
     const providerTimeoutMs = getProviderLiveTimeoutMs(provider);
     const usesCandidateTimeout = providerTimeoutMs > 0 && (budgetMs <= 0 || providerTimeoutMs < budgetMs);
@@ -380,19 +459,26 @@ export async function fetchAuthoritativeLivePriceOverrides(
       : null;
     const candidateSignal = candidateTimeout?.signal ?? liveSignal;
 
-    liveContext.lastUntrustedParent = null;
-    liveContext.lastRejectionReason = null;
+    // Per-candidate diagnostic slots stay candidate-local so parallel lanes
+    // cannot overwrite each other's rejection reason back into the ledger.
+    const candidateContext: LivePriceContext = {
+      ...liveContext,
+      lastUntrustedParent: null,
+      lastRejectionReason: null,
+    };
+    let outcome: "resolved" | "empty" | "failed" = "failed";
     try {
-      const liveResult = await provider.fetchLivePrice(asset, liveContext, candidateSignal);
+      const liveResult = await provider.fetchLivePrice(asset, candidateContext, candidateSignal);
       const override = isValidatedLivePriceNoQuote(liveResult) ? null : liveResult;
       if (override) {
+        outcome = "resolved";
         results.set(asset.id, override);
         applyOverrideToLiveContext(liveContext, asset.id, override);
         if (stats) {
           stats.successCount += 1;
           if (override.source === CACHED_VAULT_RATE_SOURCE) stats.cachedRateFallbacks += 1;
         }
-        recordAttempt(asset, provider, {
+        recordAttempt(index, asset, provider, {
           state: "attempted",
           result: "resolved",
           source: override.source,
@@ -407,14 +493,15 @@ export async function fetchAuthoritativeLivePriceOverrides(
           }
         }
       } else {
+        outcome = "empty";
         if (stats) stats.emptyCount += 1;
-        const untrustedParent = readLastUntrustedParent(liveContext);
-        recordAttempt(asset, provider, {
+        const untrustedParent = readLastUntrustedParent(candidateContext);
+        recordAttempt(index, asset, provider, {
           state: "attempted",
           result: "empty",
           rejectionClass: untrustedParent
             ? `untrusted-parent:${untrustedParent.parentId}:${untrustedParent.reason}`
-            : liveContext.lastRejectionReason ?? "missing-quote",
+            : candidateContext.lastRejectionReason ?? "missing-quote",
           candidateAt,
         });
         const explicitCircuitOutcome = isValidatedLivePriceNoQuote(liveResult)
@@ -436,9 +523,9 @@ export async function fetchAuthoritativeLivePriceOverrides(
       if (budgetSignal?.aborted && !signal?.aborted) {
         if (stats) {
           stats.timedOut = true;
-          stats.skippedBudget += prioritizedCandidates.length - index - 1;
+          stats.failedCount += 1;
         }
-        recordAttempt(asset, provider, {
+        recordAttempt(index, asset, provider, {
           state: "attempted",
           result: "failed",
           rejectionClass: "timeout",
@@ -447,13 +534,12 @@ export async function fetchAuthoritativeLivePriceOverrides(
         if (circuitSource && options?.db && shouldRecordLiveCircuitFailure(provider, asset)) {
           recordLiveOutcome(circuitSource, false);
         }
-        recordSkippedBudget(index + 1);
-        logWorkerEventArgs("lib", "warn", `[authoritative-price-sources] live override budget exhausted after ${budgetMs}ms`);
-        break;
+        logBudgetExhaustedOnce();
+        return;
       }
       if (candidateTimeout?.isTimedOut() && !signal?.aborted) {
         if (stats) stats.failedCount += 1;
-        recordAttempt(asset, provider, {
+        recordAttempt(index, asset, provider, {
           state: "attempted",
           result: "failed",
           rejectionClass: "timeout",
@@ -462,10 +548,10 @@ export async function fetchAuthoritativeLivePriceOverrides(
         logWorkerEventArgs("lib", "warn",
           `[authoritative-price-sources] ${asset.id} live override exceeded ${providerTimeoutMs}ms candidate budget`,
         );
-        continue;
+        return;
       }
       if (stats) stats.failedCount += 1;
-      recordAttempt(asset, provider, {
+      recordAttempt(index, asset, provider, {
         state: "attempted",
         result: "failed",
         rejectionClass: errorClassFor(error),
@@ -477,8 +563,50 @@ export async function fetchAuthoritativeLivePriceOverrides(
       logWorkerEventArgs("lib", "warn", `[authoritative-price-sources] ${asset.id} live override failed:`, error);
     } finally {
       candidateTimeout?.dispose();
+      recordAdapterStat(provider.source, { outcome, durationMs: Date.now() - startedAtMs });
     }
+  };
+
+  // Bounded lanes: each lane pulls the next candidate in priority order, so the
+  // documented dispatch order (alert-eligible missing, then the rest of the
+  // missing cohort, then priced refresh candidates) and the per-candidate
+  // deadlines are unchanged while one slow chain route can no longer serialize
+  // ahead of every cheap local/cache-backed repair.
+  const concurrency = resolveLiveCandidateConcurrency(options?.maxConcurrency, prioritizedCandidates.length);
+  let nextIndex = 0;
+  let outerAbort: unknown = null;
+  const runLane = async (): Promise<void> => {
+    while (!liveSignal?.aborted && nextIndex < prioritizedCandidates.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      try {
+        await runCandidate(index);
+      } catch (error) {
+        // Only the caller's own abort escapes a candidate handler: stop this lane
+        // and rethrow after the remaining lanes drain.
+        outerAbort ??= error;
+        return;
+      }
+    }
+  };
+
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, prioritizedCandidates.length) }, () => runLane()),
+  );
+
+  if (outerAbort === null && budgetSignal?.aborted && !signal?.aborted && nextIndex < prioritizedCandidates.length) {
+    if (stats) {
+      stats.timedOut = true;
+      stats.skippedBudget += prioritizedCandidates.length - nextIndex;
+    }
+    recordSkippedBudget(nextIndex);
   }
+
+  // Flush once every lane has settled so the ledger keeps dispatch order and
+  // carries the budget skips recorded above.
+  flushAttemptRecords();
+
+  if (outerAbort !== null) throw outerAbort;
 
   if (options?.db) {
     for (const [source, success] of circuitOutcomes) {
