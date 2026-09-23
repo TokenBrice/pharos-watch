@@ -183,6 +183,11 @@ export async function computeDepegResolver(
       ddrRunId: options.ddrRunId,
       runAt: options.runAt,
     });
+  // The universe rows are read once (into the canonical-incident ensure above)
+  // and only their count is reported later, so release them here instead of
+  // holding the whole policy universe through resolution and publication.
+  const policyUniverseEventCount = policyUniverseRows.length;
+  policyUniverseRows.length = 0;
   // Repair-required events are excluded from the run entirely so the rest of
   // the universe keeps resolving and publishing; each still needs its explicit
   // repair migration and is surfaced via repair-debt metadata below.
@@ -372,7 +377,7 @@ export async function computeDepegResolver(
       ddrrDegradedReason: reviewError,
       incidentCount: lineage?.incidentCount ?? 0,
       quarantinedCoins: lineage?.quarantinedCoins ?? 0,
-      v2PolicyUniverseEvents: policyUniverseRows.length,
+      v2PolicyUniverseEvents: policyUniverseEventCount,
       v2CanonicalIncidents: new Set([...incidentsByEventId.values()].map((incident) => incident.incidentKey)).size,
       v2PendingLocks,
       v2LockedPredictions,

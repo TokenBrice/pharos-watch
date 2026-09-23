@@ -124,6 +124,100 @@ export async function queryRowsChunked<T>(
   return { rows, error: null };
 }
 
+/**
+ * Rows retained per coin *below* the supply-context window.
+ *
+ * The resolver reads supply only through `buildSupplyContext`, which resolves
+ * `supplyAt(snapshots, ts)` (the newest row at or before `ts`) at four targets
+ * per active event — `startedAt`, `startedAt - 7d`, `nowSec`, and
+ * `nowSec - 30d` — and falls back to the newest row plus the
+ * `snapshots.length < 2` coverage guard. Rows older than the window start
+ * (`resolveSupplyWindowStart`) can therefore only serve the earliest target
+ * through its nearest-earlier row and the coverage guard, and two retained rows
+ * below the window reproduce both exactly.
+ */
+export const SUPPLY_CONTEXT_LOOKBACK_ROWS = 2;
+
+/**
+ * Window start for the active cohort's supply read.
+ *
+ * Every supply lookup the resolver performs is a `supplyAt(snapshots, ts)`
+ * target (`startedAt`, `startedAt - 7d`, `nowSec`, `nowSec - 30d`), so the read
+ * must reach back to the *earliest* of them: a cohort whose events all started
+ * within the last month still resolves `nowSec - 30d`, which is older than
+ * `min(startedAt) - 7d`. With no active events nothing reads supply, and the
+ * `nowSec - 30d` target keeps the expression shape identical.
+ */
+export function resolveSupplyWindowStart(
+  activeStartedAtSec: readonly number[],
+  nowSec: number,
+): number {
+  const thirtyDayTarget = nowSec - 30 * DAY;
+  if (activeStartedAtSec.length === 0) return thirtyDayTarget;
+  return Math.min(Math.min(...activeStartedAtSec) - 7 * DAY, thirtyDayTarget);
+}
+
+export interface ActiveSupplyHistoryRow {
+  stablecoin_id: string;
+  snapshot_date: number;
+  circulating_usd: number;
+}
+
+/**
+ * Reads the supply series the resolver consumes for the active cohort.
+ *
+ * The previous unbounded `stablecoin_id IN (…)` read returned every daily row
+ * for every active coin — 32,095 rows for the 2026-09-23 cohort, growing by one
+ * row per coin per day — so an old coin's whole history was buffered on each
+ * fifteen-minute run to answer four point lookups. The window keeps the read
+ * proportional to active-event age instead of coin age, with the lookback rows
+ * above preserving `supplyAt` and the coverage guard for every target.
+ */
+/**
+ * Two arms on purpose. Folding the lookback into the window predicate
+ * (`snapshot_date >= ? OR snapshot_date IN (…)`) makes SQLite evaluate the
+ * correlated lookback once per candidate supply row: measured on production D1
+ * for the 2026-09-23 cohort that shape read 78,107 rows for 9,180 returned.
+ * Driving both arms from the coin list keeps every read anchored to an index
+ * seek — 18,550 rows read, 29.5 ms, and the same 9,180 rows (identical
+ * count/date/amount fingerprint) — against 32,179 rows read for the previous
+ * unbounded read on the same cohort.
+ */
+const ACTIVE_SUPPLY_HISTORY_SQL =
+  "SELECT h.stablecoin_id, h.snapshot_date, h.circulating_usd " +
+  "FROM supply_history h " +
+  "JOIN (SELECT value AS coin_id FROM json_each(?)) c ON c.coin_id = h.stablecoin_id " +
+  "WHERE h.snapshot_date >= ? " +
+  "UNION ALL " +
+  "SELECT h.stablecoin_id, h.snapshot_date, h.circulating_usd " +
+  "FROM supply_history h " +
+  "JOIN (SELECT value AS coin_id FROM json_each(?)) c ON c.coin_id = h.stablecoin_id " +
+  "WHERE h.snapshot_date IN (" +
+  "SELECT h2.snapshot_date FROM supply_history h2 " +
+  "WHERE h2.stablecoin_id = c.coin_id AND h2.snapshot_date < ? " +
+  "ORDER BY h2.snapshot_date DESC " +
+  `LIMIT ${SUPPLY_CONTEXT_LOOKBACK_ROWS}) ` +
+  "ORDER BY stablecoin_id, snapshot_date ASC";
+
+export async function readActiveSupplyHistory(
+  db: D1Database,
+  activeCoinIds: readonly string[],
+  windowStartSec: number,
+): Promise<QueryRowsResult<ActiveSupplyHistoryRow>> {
+  const rows: ActiveSupplyHistoryRow[] = [];
+  for (const chunk of chunkArray(activeCoinIds)) {
+    if (chunk.length === 0) continue;
+    const coinIdsJson = JSON.stringify(chunk);
+    const result = await queryRows("supply_history", () => db
+      .prepare(ACTIVE_SUPPLY_HISTORY_SQL)
+      .bind(coinIdsJson, windowStartSec, coinIdsJson, windowStartSec)
+      .all<ActiveSupplyHistoryRow>());
+    if (result.error) return { rows: [], error: result.error };
+    rows.push(...result.rows);
+  }
+  return { rows, error: null };
+}
+
 export async function buildCurrentDeviationMap(
   db: D1Database,
   nowSec: number,
@@ -261,6 +355,12 @@ export async function loadDdrContext(
     recoveryPrice: r.recovery_price,
     closeReason: r.close_reason,
   }));
+  // The raw rows are not read again after the projection above (only
+  // `trainingRowsTruncated` was captured from their count), so release them
+  // before the rest of the context loads. Without this the invocation holds two
+  // copies of the 4-year training read — the raw rows and the projection —
+  // across the supply, mint/burn, DEX-history, and safety-snapshot reads.
+  histRows.length = 0;
 
   const incidents: DdrIncident[] = groupIncidents(historical, currencyOf).map((inc) => ({
     ...inc,
@@ -268,13 +368,16 @@ export async function loadDdrContext(
   }));
   const quarantined = quarantinedCoins(incidents);
 
-  const supplyResult = await queryRowsChunked("supply_history", activeCoinIds, (inClauseSql, binds) => db
-    .prepare(
-      `SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history ` +
-        `WHERE stablecoin_id IN (${inClauseSql}) ORDER BY stablecoin_id, snapshot_date ASC`,
-    )
-    .bind(...binds)
-    .all<{ stablecoin_id: string; snapshot_date: number; circulating_usd: number }>());
+  // Every consumer reads supply through `buildSupplyContext`
+  // (`supplyAt(snapshots, ts)`) at `startedAt`, `startedAt - 7d`, `nowSec`, and
+  // `nowSec - 30d` for the active events only, so the read is windowed to
+  // `min(startedAt) - 7d` plus the per-coin lookback rows that keep the
+  // nearest-earlier and coverage-guard behaviour identical.
+  const supplyWindowStart = resolveSupplyWindowStart(
+    active.map((event) => event.startedAt),
+    nowSec,
+  );
+  const supplyResult = await readActiveSupplyHistory(db, activeCoinIds, supplyWindowStart);
   const supplyByCoin = new Map<string, { date: number; usd: number }[]>();
   for (const s of supplyResult.rows) {
     const list = supplyByCoin.get(s.stablecoin_id) ?? [];
