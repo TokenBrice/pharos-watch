@@ -14,6 +14,7 @@ import { buildDexScreenerTargets, runDexScreenerPass, type DexScreenerBatchTarge
 import { DEX_REFRESH_CACHE_KEY, PRICE_CORROBORATION_OBSERVATIONS_KEY, type PriceCorroborationObservation } from "./price-corroboration-observations";
 import { loadFxRatesForPriceBounds } from "./enrich-prices-progress";
 import type { PeggedAsset } from "./enrich-prices-shared";
+import { resolveStablecoinPriceGapReviews } from "../../lib/stablecoin-publication-coverage";
 
 const REFRESH_BUDGET_MS = 45_000;
 // 45-second envelope / (five-second request ceiling + 1.1-second DexScreener pacing).
@@ -29,6 +30,8 @@ export interface DexRefreshSummary {
   deferredBatches: number;
   unsupportedAssets: number;
   missingQuotes: number;
+  /** Missing-price assets skipped because a valid price-gap review covers them. */
+  acknowledgedGapsSkipped: number;
   /** Attempted cohort assets whose exact route resolved in an earlier slot. */
   hintedAttempted: number;
   hintedResolved: number;
@@ -68,7 +71,18 @@ async function readState(db: D1Database, signal?: AbortSignal): Promise<RefreshS
   return result;
 }
 
-export function planDexRefresh(assets: PeggedAsset[], hints: ExactTarget[], cursor: number) {
+/**
+ * `reviewedGapIds` are missing-price assets under a valid price-gap review
+ * (reviewed as having no admissible market). The narrow refresh skips them;
+ * the hourly corroboration passes still probe them, so a returning market is
+ * still discovered.
+ */
+export function planDexRefresh(
+  assets: PeggedAsset[],
+  hints: ExactTarget[],
+  cursor: number,
+  reviewedGapIds: ReadonlySet<string> = new Set(),
+) {
   const targetsById = new Map<string, ExactTarget>();
   for (const hint of [...hints].sort((a, b) => (b.observedAt ?? 0) - (a.observedAt ?? 0))) {
     const meta = ACTIVE_META_BY_ID.get(hint.id);
@@ -78,9 +92,17 @@ export function planDexRefresh(assets: PeggedAsset[], hints: ExactTarget[], curs
       targetsById.set(hint.id, hint);
     }
   }
-  const cohort = assets.filter((asset) => ACTIVE_META_BY_ID.has(asset.id) && (
-    !hasPublishableCurrentPrice(asset) || splitCompositePriceSource(asset.priceSource ?? "").includes("dexscreener-exact")
-  )).map((asset) => ({ ...asset }));
+  let acknowledgedGapsSkipped = 0;
+  const cohort = assets.filter((asset) => {
+    if (!ACTIVE_META_BY_ID.has(asset.id)) return false;
+    if (splitCompositePriceSource(asset.priceSource ?? "").includes("dexscreener-exact")) return true;
+    if (hasPublishableCurrentPrice(asset)) return false;
+    if (reviewedGapIds.has(asset.id)) {
+      acknowledgedGapsSkipped++;
+      return false;
+    }
+    return true;
+  }).map((asset) => ({ ...asset }));
   applyTrackedAssetOverrides(cohort);
   const chainGroups = new Map<string, DexScreenerBatchTarget[]>();
   let unsupportedAssets = 0;
@@ -107,7 +129,7 @@ export function planDexRefresh(assets: PeggedAsset[], hints: ExactTarget[], curs
   }
   const start = allBatches.length > MAX_BATCHES ? cursor % allBatches.length : 0;
   const batches = Array.from({ length: Math.min(MAX_BATCHES, allBatches.length) }, (_, i) => allBatches[(start + i) % allBatches.length]!);
-  return { cohort, targetsById, hintedIds, batches, allBatchCount: allBatches.length, unsupportedAssets, start };
+  return { cohort, targetsById, hintedIds, batches, allBatchCount: allBatches.length, unsupportedAssets, acknowledgedGapsSkipped, start };
 }
 
 export async function runPriceDexRefresh(params: { db: D1Database; syncStartSec: number; signal?: AbortSignal }): Promise<DexRefreshSummary> {
@@ -115,9 +137,13 @@ export async function runPriceDexRefresh(params: { db: D1Database; syncStartSec:
   if (cacheState.state !== "ok") throw new Error("DEX refresh requires valid published stablecoins cache");
   const previous = await readState(params.db, params.signal);
   const fxRates = await loadFxRatesForPriceBounds(params.db);
-  const plan = planDexRefresh([...previousAssetsById.values()], previous.targets, previous.cursor);
+  const reviewedGapIds = new Set(
+    resolveStablecoinPriceGapReviews([...ACTIVE_META_BY_ID.keys()], params.syncStartSec).activeById.keys(),
+  );
+  const plan = planDexRefresh([...previousAssetsById.values()], previous.targets, previous.cursor, reviewedGapIds);
   const summary: DexRefreshSummary = { cohortSize: plan.cohort.length, resolved: 0, attemptedBatches: 0,
     deferredBatches: plan.allBatchCount, unsupportedAssets: plan.unsupportedAssets, missingQuotes: 0,
+    acknowledgedGapsSkipped: plan.acknowledgedGapsSkipped,
     hintedAttempted: 0, hintedResolved: 0, timedOut: false, cacheWritten: false, errorClasses: [] };
   const diagnostics: PricingProviderAttemptDiagnostic[] = [];
   const timeout = createTimeoutSignal({ timeoutMs: REFRESH_BUDGET_MS, timeoutReason: new DOMException("DEX refresh deadline", "TimeoutError"), parentSignal: params.signal });

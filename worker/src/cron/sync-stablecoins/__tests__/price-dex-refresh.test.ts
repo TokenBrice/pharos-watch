@@ -67,6 +67,17 @@ describe("DEX refresh continuity", () => {
     expect(planDexRefresh(rows, [], 0).cohort.map((row) => row.id)).toEqual([id, "usdc-circle"]);
   });
 
+  it("skips missing rows under a reviewed price gap but keeps reviewed rows that are DEX-priced", () => {
+    const rows = [
+      makePeggedAsset({ id: "wusd-worldwide", price: null }),
+      makePeggedAsset({ id: "pht-pht", price: 0.017, priceSource: "dexscreener-exact", priceObservedAt: now, priceObservedAtMode: "local_fetch", priceConfidence: "fallback" }),
+      makePeggedAsset({ id: "usdt-tether", price: null }),
+    ];
+    const plan = planDexRefresh(rows, [], 0, new Set(["wusd-worldwide", "pht-pht"]));
+    expect(plan.cohort.map((row) => row.id)).toEqual(["pht-pht", "usdt-tether"]);
+    expect(plan.acknowledgedGapsSkipped).toBe(1);
+  });
+
   it("bounds batches and advances fairly under overflow", () => {
     const assets = [...ACTIVE_META_BY_ID.values()].map((meta) => makePeggedAsset({ id: meta.id, symbol: meta.symbol, price: null }));
     const first = planDexRefresh(assets, [], 0);
