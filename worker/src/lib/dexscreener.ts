@@ -10,11 +10,20 @@ import { RATE_LIMITS } from "./rate-limit";
 import { sleepWithSignal } from "./abort";
 import { USER_AGENT } from "./constants";
 import { toErrorMessage } from "@shared/lib/error-utils";
-import { readResponseTextBoundedWithSignal, readResponseTextWithSignal } from "./response-body";
+import { readResponseTextBoundedWithSignal, readResponseTextWithinLimitWithSignal } from "./response-body";
 
 
 const DS_TOKEN_API = "https://api.dexscreener.com/tokens/v1";
 const DS_TOKEN_PAIRS_API = "https://api.dexscreener.com/token-pairs/v1";
+/**
+ * Hard per-response byte cap for token-pair payloads. A token's pair list is a
+ * few kilobytes to low hundreds of kilobytes across every chain it trades on,
+ * so this leaves an order of magnitude of headroom while keeping a mis-served
+ * response from being buffered and parsed inside the isolate. The reader
+ * rejects a declared over-cap `Content-Length` before reading and streams with
+ * an abort at the cap otherwise.
+ */
+const DEXSCREENER_MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 const DEXSCREENER_API_HEADERS = {
   Accept: "application/json",
   "User-Agent": USER_AGENT,
@@ -92,7 +101,7 @@ async function readBodyText(res: Response, timeoutMs: number, signal?: AbortSign
     parentSignal: signal,
   });
   try {
-    return await readResponseTextWithSignal(res, timeout.signal);
+    return await readResponseTextWithinLimitWithSignal(res, DEXSCREENER_MAX_RESPONSE_BYTES, timeout.signal);
   } finally {
     timeout.dispose();
   }

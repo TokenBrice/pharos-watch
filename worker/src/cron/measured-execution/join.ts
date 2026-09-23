@@ -88,9 +88,15 @@ function increment(record: Record<string, number>, reason: string): void {
 export async function loadDexMeasuredExecutionJoinEvidence(
   db: D1Database,
   signal?: AbortSignal,
+  options: { publishedAtCeilingSec?: number } = {},
 ): Promise<LoadedDexMeasuredQuoteEvidence | null> {
   try {
-    return await loadLatestPublishedDexMeasuredQuoteEvidence(db, signal, { deferProfiles: true });
+    return await loadLatestPublishedDexMeasuredQuoteEvidence(db, signal, {
+      deferProfiles: true,
+      ...(options.publishedAtCeilingSec === undefined
+        ? {}
+        : { publishedAtCeilingSec: options.publishedAtCeilingSec }),
+    });
   } catch (error) {
     logWorkerEvent({
       scope: "lib",

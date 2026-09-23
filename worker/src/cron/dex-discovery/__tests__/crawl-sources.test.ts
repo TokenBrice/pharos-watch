@@ -1148,6 +1148,11 @@ describe("crawlCoin DexScreener hardening", () => {
       },
     ]);
     expect(vi.mocked(fetchJsonWithRetry).mock.calls[0]?.[0]).toContain("depth=true");
+    const tickerFetchOptions = vi.mocked(fetchJsonWithRetry).mock.calls[0]?.[3] as
+      | { maxResponseBytes?: number }
+      | undefined;
+    expect(tickerFetchOptions?.maxResponseBytes ?? 0).toBeGreaterThan(0);
+    expect(tickerFetchOptions?.maxResponseBytes ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(512 * 1024);
   });
 
   it("keeps same-exchange CoinGecko tickers pools distinct across stablecoins", async () => {

@@ -164,4 +164,15 @@ describe("dexscreener", () => {
       pairs: [pair],
     });
   });
+
+  it("refuses an over-cap token-pool body instead of buffering it into the isolate", async () => {
+    const oversizedBody = JSON.stringify(Array.from({ length: 12_000 }, () => validPair()));
+    expect(oversizedBody.length).toBeGreaterThan(2 * 1024 * 1024);
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(new Response(oversizedBody, { status: 200 }));
+
+    const result = await fetchDsTokenPoolsWithStatus("base", "0xoversize");
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toMatch(/Response body exceeded \d+ bytes/);
+  });
 });

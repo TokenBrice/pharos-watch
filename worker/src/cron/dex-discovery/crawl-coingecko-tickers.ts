@@ -29,6 +29,16 @@ const defaultCoinGeckoTickersStageDependencies: CoinGeckoTickersStageDependencie
   sleepWithSignal,
 };
 
+/**
+ * Hard per-response byte cap for the `depth=true` tickers payload. CoinGecko
+ * serves at most 100 tickers per page and the heaviest tracked coin measures
+ * ~76 KiB, so this keeps the run's largest variable-size provider body bounded
+ * with several times' headroom. The shared reader rejects an over-cap declared
+ * `Content-Length` before reading and streams with an abort otherwise, so a
+ * mis-served body can neither be buffered into the isolate nor parsed.
+ */
+const CG_TICKERS_MAX_RESPONSE_BYTES = 512 * 1024;
+
 interface CrawlCoinGeckoTickersStageOptions {
   cgApiKey: string | null;
   geckoId: string | undefined;
@@ -55,7 +65,7 @@ export async function crawlCoinGeckoTickersStage({
     const result = await dependencies.fetchJsonWithRetry<{ tickers?: CgTicker[] }>(url, {
       headers: cgHeaders({ "User-Agent": USER_AGENT }, cgApiKey),
       signal: context.buildStageSignal(DISCOVERY_STAGE_TIMEOUT_MS.cgTickers),
-    }, 0, { timeoutMs: DISCOVERY_STAGE_TIMEOUT_MS.cgTickers });
+    }, 0, { timeoutMs: DISCOVERY_STAGE_TIMEOUT_MS.cgTickers, maxResponseBytes: CG_TICKERS_MAX_RESPONSE_BYTES });
     if (result?.response.ok) {
       const data = result.body;
       const exchangeSummaries = buildCgTickerExchangeSummaries(

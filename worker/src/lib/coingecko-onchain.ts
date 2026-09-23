@@ -12,7 +12,7 @@ import { USER_AGENT } from "./constants";
 import { fetchPagedTokenPools } from "./paged-token-pools";
 import { RATE_LIMITS } from "./rate-limit";
 import { sleepWithSignal } from "./abort";
-import { cancelResponseBodyQuietly, readResponseTextWithSignal } from "./response-body";
+import { cancelResponseBodyQuietly, readResponseTextWithinLimitWithSignal } from "./response-body";
 import { CG_ONCHAIN_TOKEN_POOLS_MAX_PAGES, CG_ONCHAIN_TOKEN_POOLS_PAGE_SIZE } from "../cron/dex-liquidity/constants";
 
 // ---------------------------------------------------------------------------
@@ -61,6 +61,15 @@ export interface CgTokenPoolsResult {
 
 const CG_ONCHAIN_LOOKUP_MISS_STATUSES = new Set([400, 404]);
 const CG_ONCHAIN_DEFAULT_TIMEOUT_MS = 15_000;
+/**
+ * Hard per-response byte cap for onchain pool pages. A 20-row page is tens of
+ * kilobytes, so this leaves two orders of magnitude of headroom while keeping a
+ * mis-served response (HTML error page, upstream body blow-up) from being
+ * buffered and parsed inside a 128 MiB isolate. The reader streams and aborts
+ * at the cap and rejects the declared `Content-Length` before reading, so an
+ * oversized body never reaches memory.
+ */
+const CG_ONCHAIN_MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 /** Documented plan boundary: pages past this need a higher CoinGecko tier. */
 const CG_ONCHAIN_PLAN_MAX_PAGE = 10;
 
@@ -123,7 +132,9 @@ async function readCgOnchainJsonBody<T>(
     parentSignal: signal,
   });
   try {
-    return JSON.parse(await readResponseTextWithSignal(response, timeout.signal)) as T;
+    return JSON.parse(
+      await readResponseTextWithinLimitWithSignal(response, CG_ONCHAIN_MAX_RESPONSE_BYTES, timeout.signal),
+    ) as T;
   } finally {
     timeout.dispose();
   }

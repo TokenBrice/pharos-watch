@@ -301,7 +301,15 @@ export async function computeStablecoinScores(
   };
   targetInventoryById.clear();
 
-  const joinEvidence = await loadDexMeasuredExecutionJoinEvidence(db, signal);
+  // The run's route-evidence clock is pinned to its source slot. The measured
+  // lane publishes its cohort minutes later, so a read-time "latest published"
+  // cohort would postdate this clock and every profile in it would fail the
+  // no-lookahead `future-history` guard — silently dropping those exit routes
+  // from publication. Read the newest cohort the pinned clock already covered
+  // instead; the guard and its freshness bounds stay untouched.
+  const joinEvidence = await loadDexMeasuredExecutionJoinEvidence(db, signal, {
+    publishedAtCeilingSec: routeObservedAt,
+  });
   const measuredExecutionJoin = joinDexMeasuredExecutionEvidence({
     poolsByStablecoin: preparedRetainedPools,
     evidence: joinEvidence,
