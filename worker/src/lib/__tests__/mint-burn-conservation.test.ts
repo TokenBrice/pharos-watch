@@ -260,6 +260,15 @@ describe("raw token conservation", () => {
     }
     for (const [key, count] of seen) expect(count, key).toBe(1);
   });
+  it("leaves no configured contract on the generic unreviewed fallback", () => {
+    const reviewed = new Set(sidecarEntries.map((entry) =>
+      reviewedConservationIdentityKey(entry.chainId, entry.stablecoinId, entry.address, entry.decimals)));
+    const unreviewed = MINT_BURN_CONFIGS.filter((item) => !reviewed.has(
+      reviewedConservationIdentityKey(item.chain.chainId, item.stablecoinId, item.contractAddress, item.decimals)));
+    expect(unreviewed.map((item) => `${item.chain.chainId}:${item.stablecoinId}`)).toEqual([]);
+    expect(MINT_BURN_CONFIGS.map((item) => getMintBurnConservationEligibility(item).reason)
+      .filter((reason) => reason === "unreviewed-contract-or-event-semantics")).toEqual([]);
+  });
   it("admits exactly the sidecar's admitted entries", () => {
     const admitted = new Set(sidecarEntries.filter((entry) => entry.disposition === "admitted")
       .map((entry) => reviewedConservationIdentityKey(entry.chainId, entry.stablecoinId, entry.address, entry.decimals)));
