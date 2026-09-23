@@ -70,6 +70,75 @@ describe("address price providers", () => {
     }]);
   });
 
+  it("refreshes the rows this lane prices before rows that only lost a price", () => {
+    const assets = [
+      {
+        id: "lane-owned",
+        symbol: "USDA",
+        address: "berachain:0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+        price: 0.975,
+        priceSource: "coingecko-onchain-address",
+        priceConfidence: "fallback",
+        priceObservedAt: 1_800_000_000,
+      },
+      {
+        id: "priced-elsewhere",
+        symbol: "THIN",
+        address: "base:0x0000000000000000000000000000000000000001",
+        price: 1,
+        priceSource: "coingecko",
+        priceObservedAt: 1_800_000_000,
+      },
+      {
+        id: "no-price",
+        symbol: "NONE",
+        address: "base:0x0000000000000000000000000000000000000002",
+        price: null,
+      },
+    ];
+    const shared = {
+      providers: [LIVE_PROVIDER] as const,
+      assets,
+      previousAssetsById: new Map(assets.map((asset) => [asset.id, asset])),
+      nowSec: 1_800_000_100,
+    };
+
+    expect(buildAddressPriceTargetsByProvider({ ...shared, cohort: "coverage-refresh" })
+      .get(LIVE_PROVIDER)?.map((target) => target.stablecoinId))
+      .toEqual(["lane-owned", "no-price"]);
+    // The hourly cohort still discovers a thin row whose fresh price comes from
+    // somewhere else, because coverage depth rather than lifetime drives it.
+    expect(buildAddressPriceTargetsByProvider(shared).get(LIVE_PROVIDER)?.map((target) => target.stablecoinId))
+      .toEqual(expect.arrayContaining(["lane-owned", "priced-elsewhere", "no-price"]));
+  });
+
+  it("narrows a hinted row to its last successful deployment and ignores unknown hints", () => {
+    const asset = {
+      id: "lane-owned",
+      symbol: "USDA",
+      address: "0x0000000000000000000000000000000000000003",
+      chains: ["ethereum", "base"],
+      price: 0.975,
+      priceSource: "coingecko-onchain-address",
+      priceConfidence: "fallback",
+      priceObservedAt: 1_800_000_000,
+    };
+    const targetChains = (hint?: { chain: string; address: string }) =>
+      buildAddressPriceTargetsByProvider({
+        providers: [LIVE_PROVIDER],
+        assets: [asset],
+        cohort: "coverage-refresh",
+        ...(hint ? { deploymentHints: new Map([[asset.id, hint]]) } : {}),
+      }).get(LIVE_PROVIDER)?.map((target) => target.chain);
+
+    expect(targetChains()).toEqual(["base", "ethereum"]);
+    expect(targetChains({ chain: "base", address: asset.address })).toEqual(["base"]);
+    // A hint the canonical metadata no longer lists never invents a target.
+    expect(targetChains({ chain: "solana", address: asset.address })).toEqual(["base", "ethereum"]);
+    expect(targetChains({ chain: "base", address: "0x0000000000000000000000000000000000000004" }))
+      .toEqual(["base", "ethereum"]);
+  });
+
   it("treats bare EVM fallback addresses as undecidable and non-EVM addresses as Solana", () => {
     expect(resolveFallbackChain("0x0000000000000000000000000000000000000001")).toBeNull();
     expect(resolveFallbackChain("So11111111111111111111111111111111111111112")).toBe("solana");

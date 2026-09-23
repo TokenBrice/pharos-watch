@@ -76,14 +76,15 @@ export async function runStatusSelfCheckSlot(runtime: ScheduledRuntimeContext) {
               return null;
             }
           };
-          const dex = await collect("dex-refresh", () => runPriceDexRefresh({ db: runtime.db, syncStartSec: runtime.slotStartedAt, signal }));
+          const addressProvider = { enabledProviders: runtime.env.ADDRESS_PRICE_PROVIDERS_ENABLED,
+            cgApiKey: runtime.coingeckoApiKey };
+          const dex = await collect("dex-refresh", () => runPriceDexRefresh({ db: runtime.db, syncStartSec: runtime.slotStartedAt, signal, addressProvider }));
           const corroboration = isPriceCorroborationSlot(runtime.slotStartedAt)
             ? await collect("hourly", () => runPriceCorroboration({
                 db: runtime.db, syncStartSec: runtime.slotStartedAt, signal,
                 cmcApiKey: runtime.env.CMC_API_KEY, jupiterApiKey: runtime.env.JUPITER_API_KEY,
                 coingeckoApiKey: runtime.coingeckoApiKey, chainRpcs: runtime.chainRpcs,
-                addressProvider: { enabledProviders: runtime.env.ADDRESS_PRICE_PROVIDERS_ENABLED,
-                  cgApiKey: runtime.coingeckoApiKey },
+                addressProvider,
               })) : null;
           return { dex, corroboration, phaseErrors };
         },
@@ -99,25 +100,33 @@ export async function runStatusSelfCheckSlot(runtime: ScheduledRuntimeContext) {
       // A slot refused only by DexScreener's shared-egress throttle is recorded
       // as a circuit failure instead: three consecutive throttled slots open the
       // refresh circuit, and the resulting `circuit-open` class degrades.
+      // The address coverage lane degrades on its own terms: its circuit state,
+      // a spent deadline, or a failed request all mean the rows only this lane
+      // can price lose their quote before the next publication.
       const throttledOnly = !!dex && !dex.timedOut && dex.errorClasses.length > 0
         && dex.errorClasses.every((errorClass) => errorClass === "rate-limited");
+      const addressRefreshRefused = !!dex?.addressRefresh?.enabled
+        && (dex.addressRefresh.circuitOpen || dex.addressRefresh.timedOut || dex.addressRefresh.failureClasses.length > 0);
       const degraded = phaseFailed
         || !!dex && !throttledOnly && (dex.errorClasses.length > 0 || dex.timedOut || dex.deferredBatches > 0
           || (dex.hintedAttempted > 0 && dex.hintedResolved === 0))
+        || addressRefreshRefused
         || !!summary && (summary.failedPasses.length > 0 || summary.providerDiagnostics.some((row) => !row.success));
       await recordBudgetSurfaceTelemetry(runtime.db, {
         surface: "price-corroboration", durationMs: Date.now() - startedMs,
         dueCount: collected.corroboration?.cohortSize ?? dex?.cohortSize ?? 0, processedCount: collected.corroboration?.cacheEntriesWritten ?? dex?.resolved ?? 0,
         outcome: phaseFailed ? "error" : degraded ? "degraded" : "ok",
         ...(phaseFailed ? { error: Object.values(collected.phaseErrors)[0] } : {}),
-        metadata: { slotStartedAt: runtime.slotStartedAt, workerVersion: runtime.workerVersion ?? null, dexRefresh: dex, phaseErrors: collected.phaseErrors, ...(phaseFailed ? { errorClass: Object.values(collected.phaseErrors)[0] } : {}) },
+        metadata: { slotStartedAt: runtime.slotStartedAt, workerVersion: runtime.workerVersion ?? null, dexRefresh: dex, addressRefresh: dex?.addressRefresh ?? null, phaseErrors: collected.phaseErrors, ...(phaseFailed ? { errorClass: Object.values(collected.phaseErrors)[0] } : {}) },
       });
       await logCronEvent(runtime.db, {
         job: "sync-stablecoins",
         eventType: "price-corroboration",
         severity: degraded ? "warning" : "info",
-        message: `Price observation collection refreshed ${dex?.resolved ?? 0}/${dex?.cohortSize ?? 0} DEX rows${summary ? " and completed hourly corroboration" : ""}`,
-        metadata: { slotStartedAt: runtime.slotStartedAt, workerVersion: runtime.workerVersion ?? null, ...(summary ?? {}), dexRefresh: dex, phaseErrors: collected.phaseErrors, ...(phaseFailed ? { errorClass: Object.values(collected.phaseErrors)[0] } : {}) },
+        message: `Price observation collection refreshed ${dex?.resolved ?? 0}/${dex?.cohortSize ?? 0} DEX rows`
+          + `${dex?.addressRefresh.enabled ? ` and ${dex.addressRefresh.resolved}/${dex.addressRefresh.cohortSize} exact-address rows` : ""}`
+          + `${summary ? " and completed hourly corroboration" : ""}`,
+        metadata: { slotStartedAt: runtime.slotStartedAt, workerVersion: runtime.workerVersion ?? null, ...(summary ?? {}), dexRefresh: dex, addressRefresh: dex?.addressRefresh ?? null, phaseErrors: collected.phaseErrors, ...(phaseFailed ? { errorClass: Object.values(collected.phaseErrors)[0] } : {}) },
       });
     } catch (error) {
       rethrowIfAborted(error, runtime.slotSignal);

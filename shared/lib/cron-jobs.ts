@@ -832,7 +832,7 @@ const CRON_CONNECTION_BUDGET_ONLY_DEFINITIONS: readonly CronConnectionBudgetDefi
     connectionGroup: "status-self-check-chain",
     statusTracked: false,
     notes:
-      "Every 15 minutes after monitors, refreshes exact DEX observations serially; broad fallback corroboration remains hourly at :09.",
+      "Every 15 minutes after monitors, refreshes exact DEX observations plus the exact-address rows whose quote lifetime is one publication, all serially; broad fallback corroboration remains hourly at :09.",
   },
   {
     job: "telegram-registration-reconciliation",

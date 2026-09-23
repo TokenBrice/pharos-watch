@@ -46,6 +46,19 @@ const COINGECKO_ONCHAIN_PROVIDER = "coingecko-onchain-address" as const;
 
 const NEXT_PRICE_GENERATION_SEC = 15 * 60;
 
+/**
+ * `corroboration` is the hourly cohort: every asset missing a price or short of
+ * three consensus sources, so thin coverage is discovered.
+ *
+ * `coverage-refresh` is the 15-minute cohort: only rows this lane already
+ * prices plus rows with no price at all. An exact-address quote lives for one
+ * publication window (`maxTrustedAgeSec` of `coingecko-onchain-address`) and is
+ * never replayable from `price_cache`, so a row it prices must be re-observed
+ * every generation or it drops to no price. Rows with a fresh price from any
+ * other lane are left to the hourly pass instead of spending the request cap.
+ */
+export type AddressPriceTargetCohort = "corroboration" | "coverage-refresh";
+
 export function resolveEnabledAddressPriceProviders(
   config?: AddressPriceProviderRuntimeConfig,
 ): AddressPriceProviderKey[] {
@@ -87,6 +100,7 @@ function shouldTargetAsset(
   previousAssetsById: Map<string, AddressPriceAssetLike> | undefined,
   previousMissingGenerationsById: ReadonlyMap<string, number> | undefined,
   nowSec: number,
+  cohort: AddressPriceTargetCohort,
 ): {
   previousSourceDepth: number;
   previousMissingGenerations: number;
@@ -95,6 +109,7 @@ function shouldTargetAsset(
   expiresBeforeNextGeneration: boolean;
   lowConfidencePrice: boolean;
   missingPrice: boolean;
+  addressLaneOwned: boolean;
   include: boolean;
 } {
   const previous = previousAssetsById?.get(asset.id);
@@ -114,6 +129,7 @@ function shouldTargetAsset(
     priceSource === "cached" ||
     priceSource === "coingecko-low-volume";
   const expiring = expiresBeforeNextGeneration(previous ?? asset, nowSec);
+  const addressLaneOwned = normalizePricingSourceKeys(priceSource ?? "").includes(COINGECKO_ONCHAIN_PROVIDER);
   return {
     previousSourceDepth,
     previousMissingGenerations,
@@ -122,18 +138,23 @@ function shouldTargetAsset(
     expiresBeforeNextGeneration: expiring,
     lowConfidencePrice,
     missingPrice,
+    addressLaneOwned,
     // `expiring` is deliberately not an inclusion reason on its own: thin
     // coverage is already captured by `previousSourceDepth < 3`, so an
     // expiring-only rule would re-target deep high-confidence majors every run
     // (their labels carry short-window oracle members), wasting the request cap
     // and appending a non-replay-safe lane to their consensus provenance.
     // `expiring` still orders cohorts among assets included for other reasons.
-    include:
-      !previousAssetsById ||
-      previousSourceDepth < 3 ||
-      missingPrice ||
-      recentlyMissingPrice ||
-      lowConfidencePrice,
+    include: cohort === "coverage-refresh"
+      // Rows this lane already prices cannot survive a generation without a
+      // re-read, and rows with no price at all need a first quote before they
+      // can ever be corroborated. Everything else stays on the hourly cohort.
+      ? missingPrice || addressLaneOwned
+      : !previousAssetsById ||
+        previousSourceDepth < 3 ||
+        missingPrice ||
+        recentlyMissingPrice ||
+        lowConfidencePrice,
   };
 }
 
@@ -204,7 +225,18 @@ function buildAssetDeployments(asset: AddressPriceAssetLike): Array<{
   ];
 }
 
-function compareAddressPriceTargets(left: AddressPriceTarget, right: AddressPriceTarget): number {
+function compareAddressPriceTargets(
+  left: AddressPriceTarget,
+  right: AddressPriceTarget,
+  laneOwnedIds: ReadonlySet<string>,
+): number {
+  // In the coverage-refresh cohort, a row this lane prices has a quote that
+  // lapses at the next publication while a merely-missing row has none to
+  // lose. Rank the lane's own rows first so the bounded request cap refreshes
+  // what is about to disappear before it re-discovers anything.
+  const leftOwned = laneOwnedIds.has(left.stablecoinId);
+  const rightOwned = laneOwnedIds.has(right.stablecoinId);
+  if (leftOwned !== rightOwned) return leftOwned ? -1 : 1;
   if (left.alertEligibleMissingPrice !== right.alertEligibleMissingPrice) {
     return left.alertEligibleMissingPrice ? -1 : 1;
   }
@@ -234,6 +266,14 @@ export function buildAddressPriceTargetsByProvider(params: {
   previousMissingGenerationsById?: ReadonlyMap<string, number>;
   providers: readonly AddressPriceProviderKey[];
   nowSec?: number;
+  cohort?: AddressPriceTargetCohort;
+  /**
+   * Deployment hints from the last successful read, keyed by stablecoin. A
+   * hint only narrows a row to a deployment the canonical metadata still
+   * lists; an unknown or stale hint falls back to the reviewed deployment set
+   * so routing state can never invent a target.
+   */
+  deploymentHints?: ReadonlyMap<string, { chain: string; address: string }>;
 }): Map<AddressPriceProviderKey, AddressPriceTarget[]> {
   const result = new Map<AddressPriceProviderKey, AddressPriceTarget[]>();
   if (!params.providers.includes(COINGECKO_ONCHAIN_PROVIDER)) return result;
@@ -242,6 +282,7 @@ export function buildAddressPriceTargetsByProvider(params: {
   const chainMap = CG_CHAIN_MAP;
   const targets: AddressPriceTarget[] = [];
   const seen = new Set<string>();
+  const laneOwnedIds = new Set<string>();
 
   for (const asset of params.assets) {
     const targeting = shouldTargetAsset(
@@ -249,6 +290,7 @@ export function buildAddressPriceTargetsByProvider(params: {
       params.previousAssetsById,
       params.previousMissingGenerationsById,
       params.nowSec ?? Math.floor(Date.now() / 1000),
+      params.cohort ?? "corroboration",
     );
     if (!targeting.include) continue;
 
@@ -264,8 +306,16 @@ export function buildAddressPriceTargetsByProvider(params: {
       metadataDeployments,
       providerChainMap: chainMap,
     });
+    if (params.cohort === "coverage-refresh" && targeting.addressLaneOwned) laneOwnedIds.add(asset.id);
+    const hint = params.deploymentHints?.get(asset.id);
+    const hintedDeployments = hint
+      ? deployments.filter((deployment) =>
+          resolveChainId(deployment.chain) === hint.chain &&
+          normalizeAddressForKey(deployment.address) === hint.address)
+      : [];
+    const selectedDeployments = hintedDeployments.length > 0 ? hintedDeployments : deployments;
 
-    for (const deployment of deployments) {
+    for (const deployment of selectedDeployments) {
       const chain = resolveChainId(deployment.chain);
       if (!chain) continue;
       const providerChainId = chainMap[chain];
@@ -294,7 +344,7 @@ export function buildAddressPriceTargetsByProvider(params: {
     }
   }
 
-  targets.sort(compareAddressPriceTargets);
+  targets.sort((left, right) => compareAddressPriceTargets(left, right, laneOwnedIds));
   result.set(provider, targets);
   return result;
 }
@@ -322,11 +372,14 @@ export async function collectAddressPriceProviderQuotes(params: {
   config: AddressPriceProviderRuntimeConfig;
   signal?: AbortSignal;
   nowSec: number;
+  /** Lane budget for this call. Slot-scoped callers pass a bounded window so a
+   * slow provider cannot consume the next publication's budget. */
+  budgetMs?: number;
 }): Promise<AddressPriceProviderCollectionResult> {
   const quotesByStablecoinId = new Map<string, AddressPriceQuote[]>();
   const diagnostics: AddressPriceProviderCollectionResult["diagnostics"] = [];
   const providerOutcomes: AddressPriceProviderCollectionResult["providerOutcomes"] = new Map();
-  const deadlineMs = Date.now() + ADDRESS_PROVIDER_RUN_BUDGET_MS;
+  const deadlineMs = Date.now() + (params.budgetMs ?? ADDRESS_PROVIDER_RUN_BUDGET_MS);
   const provider = COINGECKO_ONCHAIN_PROVIDER;
 
   if (params.providers.includes(provider)) {
@@ -339,7 +392,7 @@ export async function collectAddressPriceProviderQuotes(params: {
         stage: "no-candidates",
         endpoint: provider,
       }));
-      return { quotesByStablecoinId, diagnostics, providerOutcomes };
+      return { quotesByStablecoinId, diagnostics, providerOutcomes, attemptedRequests: 0, successfulRequests: 0 };
     }
 
     if (!params.sourceAllowed[provider]) {
@@ -361,7 +414,7 @@ export async function collectAddressPriceProviderQuotes(params: {
         candidateAt: params.nowSec,
       }));
       diagnostics.push(diagnostic);
-      return { quotesByStablecoinId, diagnostics, providerOutcomes };
+      return { quotesByStablecoinId, diagnostics, providerOutcomes, attemptedRequests: 0, successfulRequests: 0 };
     }
 
     const result = await runAddressProvider({
@@ -372,11 +425,16 @@ export async function collectAddressPriceProviderQuotes(params: {
       deadlineMs,
     });
     diagnostics.push(...result.diagnostics);
+    // A 404 is the provider's definitive "this deployment is not indexed"
+    // answer, not an outage. Counting it as a failure would let a cohort made
+    // mostly of unindexed deployments open the circuit on healthy traffic.
+    const failedRequests = result.diagnostics
+      .filter((diagnostic) => !diagnostic.success && diagnostic.status !== 404);
     providerOutcomes.set(
       provider,
       result.attemptedRequests === 0
         ? "neutral"
-        : result.successfulRequests > 0
+        : result.successfulRequests > 0 || failedRequests.length === 0
           ? "success"
           : "failure",
     );
@@ -385,7 +443,9 @@ export async function collectAddressPriceProviderQuotes(params: {
       list.push(quote);
       quotesByStablecoinId.set(quote.stablecoinId, list);
     }
+    return { quotesByStablecoinId, diagnostics, providerOutcomes,
+      attemptedRequests: result.attemptedRequests, successfulRequests: result.successfulRequests };
   }
 
-  return { quotesByStablecoinId, diagnostics, providerOutcomes };
+  return { quotesByStablecoinId, diagnostics, providerOutcomes, attemptedRequests: 0, successfulRequests: 0 };
 }
