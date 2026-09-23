@@ -96,8 +96,13 @@ export async function runStatusSelfCheckSlot(runtime: ScheduledRuntimeContext) {
       // metadata only. Transport failures, timeouts, budget-exhaustion deferrals,
       // phase errors, hourly pass/provider failures, and a slot where no
       // previously resolvable exact route produced a quote still degrade.
+      // A slot refused only by DexScreener's shared-egress throttle is recorded
+      // as a circuit failure instead: three consecutive throttled slots open the
+      // refresh circuit, and the resulting `circuit-open` class degrades.
+      const throttledOnly = !!dex && !dex.timedOut && dex.errorClasses.length > 0
+        && dex.errorClasses.every((errorClass) => errorClass === "rate-limited");
       const degraded = phaseFailed
-        || !!dex && (dex.errorClasses.length > 0 || dex.timedOut || dex.deferredBatches > 0
+        || !!dex && !throttledOnly && (dex.errorClasses.length > 0 || dex.timedOut || dex.deferredBatches > 0
           || (dex.hintedAttempted > 0 && dex.hintedResolved === 0))
         || !!summary && (summary.failedPasses.length > 0 || summary.providerDiagnostics.some((row) => !row.success));
       await recordBudgetSurfaceTelemetry(runtime.db, {
