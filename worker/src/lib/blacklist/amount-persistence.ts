@@ -31,6 +31,7 @@ export function buildBlacklistAmountAttemptUpdate(
     lastProvider: string;
     amountStatus?: BlacklistAmountStatus;
   },
+  options: BlacklistAmountWriteGuardOptions = {},
 ): D1PreparedStatement {
   const statusClause = input.amountStatus !== undefined ? `,\n               amount_status = ?` : "";
   const statement = db.prepare(
@@ -39,12 +40,27 @@ export function buildBlacklistAmountAttemptUpdate(
                amount_last_attempted_at = ?,
                amount_last_error_class = ?,
                amount_last_provider = ?${statusClause}
-           WHERE id = ?`,
+           WHERE id = ?${unresolvedAmountGuard(options)}`,
   );
   const binds: Array<string | number | null> = [input.attemptedAt, input.errorClass, input.lastProvider];
   if (input.amountStatus !== undefined) binds.push(input.amountStatus);
   binds.push(input.eventId);
   return statement.bind(...binds);
+}
+
+/**
+ * Lanes whose whole candidate set is unresolved pass this so a row resolved by
+ * another writer (typically the operator repair CLI) between candidate selection
+ * and the deferred batch write is never overwritten.
+ */
+export interface BlacklistAmountWriteGuardOptions {
+  requireUnresolvedAmount?: boolean;
+}
+
+function unresolvedAmountGuard(options: BlacklistAmountWriteGuardOptions): string {
+  return options.requireUnresolvedAmount
+    ? "\n             AND amount_native IS NULL\n             AND suppression_reason IS NULL"
+    : "";
 }
 
 export interface RecoveredBlacklistAmountPersistence {
@@ -61,6 +77,7 @@ export interface RecoveredBlacklistAmountPersistence {
 export function buildRecoveredBlacklistAmountPersistence(
   db: D1Database,
   input: RecoveredBlacklistAmountPersistenceInput,
+  options: BlacklistAmountWriteGuardOptions = {},
 ): RecoveredBlacklistAmountPersistence {
   const suppressed = shouldSuppressAsMirrorZero(
     input.config.stablecoin,
@@ -84,7 +101,7 @@ export function buildRecoveredBlacklistAmountPersistence(
            amount_last_provider = ?,
            provenance_source = COALESCE(?, provenance_source),
            provenance_observed_at = COALESCE(?, provenance_observed_at)
-       WHERE id = ?`,
+       WHERE id = ?${unresolvedAmountGuard(options)}`,
     )
     .bind(
       input.amount,

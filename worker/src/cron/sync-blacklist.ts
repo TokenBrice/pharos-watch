@@ -17,6 +17,8 @@ import {
   type BlacklistRunBudget,
 } from "../lib/blacklist/run-budget";
 import { deriveSyncBlacklistStatus } from "./blacklist/sync-support";
+import { shouldAttemptFetch } from "../lib/circuit-breaker";
+import { CIRCUIT_SOURCE } from "../lib/constants";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { getOldestBlacklistSuccessAt } from "./blacklist/state";
 import { scanBlacklistConfigs } from "./blacklist/config-scan";
@@ -86,7 +88,6 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     apiErrors,
     rpcLogConfigs,
     providerCircuitSkips,
-    tronGridCircuitSkips,
     incompleteRuntimeConfigs,
     counters,
     apiErrorClasses,
@@ -101,7 +102,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     zeroCursorConfigs,
     etherscanCircuitAllowed,
   } = scan;
-  let { runtimeBudgetHit, etherscanCircuitSkips } = scan;
+  let { runtimeBudgetHit, etherscanCircuitSkips, tronGridCircuitSkips } = scan;
   let producerGapMetricSnapshots = 0;
   let producerSummarySnapshot = false;
   let producerSnapshotSkipped = false;
@@ -118,6 +119,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     attempted: 0,
     resolved: 0,
     retried: 0,
+    parked: 0,
     limit: 0,
   };
 
@@ -148,9 +150,11 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
   }
 
   // Tron freeze amounts need TronGrid only, so the replay tail runs even when the
-  // Etherscan circuit is open. It keeps the same maintenance window and the same
+  // Etherscan circuit is open, but it must respect the TronGrid circuit the scan
+  // lane already consults. It keeps the same maintenance window and the same
   // subrequest budget as every other tail lane.
-  if (!blacklistRuntimeBudgetReached(maintenanceRunBudget) && !blacklistSubrequestBudgetReached(maintenanceRunBudget)) {
+  const tronGridCircuitAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.TRONGRID);
+  if (tronGridCircuitAllowed && !blacklistRuntimeBudgetReached(maintenanceRunBudget) && !blacklistSubrequestBudgetReached(maintenanceRunBudget)) {
     try {
       tronAmountBackfill = await backfillTronBlacklistAmounts(db, {
         trongridApiKey,
@@ -162,6 +166,9 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     } catch (err) {
       logWorkerEventArgs("handler", "warn", "[sync-blacklist] Tron amount replay failed:", err);
     }
+  } else if (!tronGridCircuitAllowed) {
+    tronGridCircuitSkips++;
+    logWorkerEventArgs("handler", "warn", "[sync-blacklist] TronGrid circuit open, skipping Tron amount replay");
   }
   const subrequestBudgetReached = blacklistSubrequestBudgetReached(runBudget);
   runtimeBudgetHit ||= counters.currentBalanceCacheCounters.budgetExhausted;
@@ -272,6 +279,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
         tronAmountRepairAttempted: tronAmountBackfill.attempted,
         tronAmountRepairResolved: tronAmountBackfill.resolved,
         tronAmountRepairRetried: tronAmountBackfill.retried,
+        tronAmountRepairParked: tronAmountBackfill.parked,
         tronAmountRepairLimit: tronAmountBackfill.limit,
         maintenanceRuntimeBudgetMs: SYNC_BLACKLIST_MAINTENANCE_BUDGET_MS,
         runtimeBudgetReached: runtimeBudgetHit,

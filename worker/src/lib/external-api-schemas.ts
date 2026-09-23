@@ -35,7 +35,7 @@ export const TronEventsResponseSchema = z.object({
 const TronHex64Schema = z.string().regex(/^[0-9a-f]{64}$/i);
 const TronEventTimestampMsSchema = z.number().int().nonnegative();
 
-export const TronNowBlockSchema = z.object({
+export const TronBlockHeaderSchema = z.object({
   blockID: TronHex64Schema,
   block_header: z.object({
     raw_data: z.object({
@@ -63,6 +63,11 @@ const TronTrc20TransferSchema = z.object({
   to: z.string(),
   type: z.string(),
   value: z.string().regex(/^\d+$/),
+});
+
+export const TronTriggerConstantContractSchema = z.object({
+  result: z.object({ result: z.boolean() }).optional(),
+  constant_result: z.array(z.string().regex(/^(0x)?[0-9a-f]{64}$/i)).min(1).optional(),
 });
 
 export const TronTrc20HistorySchema = z.object({

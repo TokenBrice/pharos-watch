@@ -578,7 +578,10 @@ describe("syncBlacklist", () => {
     const meta = JSON.parse(result.metadata);
 
     expect(result.status).toBe("degraded");
-    expect(meta.tronGridCircuitSkips).toBe(1);
+    // The scan skips every Tron config and the replay tail skips its own lane.
+    expect(meta.tronGridCircuitSkips).toBeGreaterThan(0);
+    expect(meta.tronAmountRepairAttempted).toBe(0);
+    expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-tron-replay-candidates"))).toBe(false);
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes("trongrid.io/v1/contracts"))).toBe(false);
   });
 

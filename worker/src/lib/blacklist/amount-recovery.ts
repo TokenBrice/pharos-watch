@@ -49,6 +49,8 @@ export type BlacklistRecoveryErrorClass =
   | "ambiguous_config"
   | "ambiguous"
   | "evidence_mismatch"
+  | "history_over_cap"
+  | "state_raced"
   | "runtime_budget"
   | "budget_exhausted";
 
