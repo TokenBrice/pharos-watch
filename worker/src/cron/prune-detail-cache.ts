@@ -1,4 +1,4 @@
-import { WORKER_READABLE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { WORKER_ACTIVE_IDS, WORKER_READABLE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { CronResult } from "../lib/cron-logger";
 import { throwIfAborted } from "../lib/abort";
 import { SECONDS } from "../lib/time-constants";
@@ -13,6 +13,9 @@ const DETAIL_KEY_PREFIX = "detail:";
 // either an unvisited coin whose next visit refreshes it anyway or an orphan.
 // Production accumulated 221 such rows (46.7 MB) including legacy numeric keys
 // because no DELETE path existed for detail:* at all.
+// Non-active readable coins (frozen, quarantined, delisted) are exempt from the age
+// rule: the detail API never refreshes them, so their last row is the only copy and
+// deleting it turns every later read into a permanent 404.
 const DETAIL_ROW_MAX_AGE_SEC = SECONDS.ONE_WEEK;
 const DETAIL_CACHE_PAGE_SIZE = 500;
 
@@ -48,7 +51,7 @@ export async function runPruneDetailCache(db: D1Database, signal?: AbortSignal):
       if (!WORKER_READABLE_IDS.has(stablecoinId)) {
         orphanCount += 1;
         doomedKeys.push(row.key);
-      } else if (row.updated_at < cutoff) {
+      } else if (row.updated_at < cutoff && WORKER_ACTIVE_IDS.has(stablecoinId)) {
         staleCount += 1;
         doomedKeys.push(row.key);
       }

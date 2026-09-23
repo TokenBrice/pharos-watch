@@ -46,6 +46,8 @@ interface UseStablecoinDetailViewModelParams {
   coin: StablecoinDetailCoinMeta;
   summary: StablecoinDetailSummary | null;
   logoSrc?: string;
+  /** Frozen coins only: archived list row used when the live detail row is unavailable. */
+  archivedLiveSummary?: StablecoinLiveSummary | null;
   supplementalQueryControls?: StablecoinDetailSupplementalQueryControls;
 }
 
@@ -117,6 +119,7 @@ export function useStablecoinDetailViewModel({
   coin,
   summary,
   logoSrc,
+  archivedLiveSummary = null,
   supplementalQueryControls,
 }: UseStablecoinDetailViewModelParams): StablecoinDetailViewModel {
   const liquidityEnabled = supplementalQueryControls?.liquidity ?? true;
@@ -129,16 +132,21 @@ export function useStablecoinDetailViewModel({
   const liveSummaryQuery = useRegisteredApiQuery<StablecoinLiveSummary>(
     FRONTEND_API_QUERY_DESCRIPTORS.stablecoinLiveSummary(id),
   );
-  const listQuery = useMemo(() => ({
-    data: liveSummaryQuery.data
-      ? { peggedAssets: [projectLiveSummary(coin, liveSummaryQuery.data)] }
-      : undefined,
-    isLoading: liveSummaryQuery.isLoading,
-    isError: liveSummaryQuery.isError,
-    error: liveSummaryQuery.error,
-    dataUpdatedAt: liveSummaryQuery.dataUpdatedAt,
-    meta: null,
-  }), [coin, liveSummaryQuery.data, liveSummaryQuery.dataUpdatedAt, liveSummaryQuery.error,
+  const listQuery = useMemo(() => {
+    // Live detail wins when present (as in sync-stablecoins intake). A frozen coin's detail row
+    // is never refreshed, so once that row is gone the archived row backs the page; it has no freshness clock.
+    const summaryData = liveSummaryQuery.data ?? archivedLiveSummary;
+    const usingArchive = liveSummaryQuery.data == null && archivedLiveSummary != null;
+    return {
+      data: summaryData ? { peggedAssets: [projectLiveSummary(coin, summaryData)] } : undefined,
+      isLoading: !usingArchive && liveSummaryQuery.isLoading,
+      isError: !usingArchive && liveSummaryQuery.isError,
+      error: usingArchive ? null : liveSummaryQuery.error,
+      dataUpdatedAt: usingArchive ? 0 : liveSummaryQuery.dataUpdatedAt,
+      meta: null,
+      enabled: !usingArchive,
+    };
+  }, [archivedLiveSummary, coin, liveSummaryQuery.data, liveSummaryQuery.dataUpdatedAt, liveSummaryQuery.error,
     liveSummaryQuery.isError, liveSummaryQuery.isLoading]);
   const pegQuery = usePegSummary();
   const liquidityQuery = useDexLiquidity({ enabled: liquidityEnabled });

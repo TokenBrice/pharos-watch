@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { runPruneDetailCache } from "../prune-detail-cache";
-import { READABLE_IDS } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_IDS, FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 const fixtures = createLatestSchemaFixtureTracker();
@@ -8,9 +8,9 @@ const createTestDb = fixtures.open;
 afterEach(fixtures.closeAll);
 
 describe("runPruneDetailCache", () => {
-  it("deletes orphaned and week-stale rows, keeps fresh readable rows", async () => {
-    const liveId = [...READABLE_IDS][0];
-    const otherLiveId = [...READABLE_IDS][1];
+  it("deletes orphaned and week-stale active rows, keeps fresh readable rows", async () => {
+    const liveId = [...ACTIVE_IDS][0];
+    const otherLiveId = [...ACTIVE_IDS][1];
     const nowSec = Math.floor(Date.now() / 1000);
     const { sqlite, db } = createTestDb();
     const insert = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
@@ -35,6 +35,21 @@ describe("runPruneDetailCache", () => {
     expect(metadata.staleDeleted).toBe(1);
     expect(sqlite.prepare("SELECT key FROM cache WHERE key LIKE 'detail:%' ORDER BY key").all()).toEqual([
       { key: `detail:${otherLiveId}` },
+    ]);
+  });
+
+  it("keeps week-stale rows for frozen coins because the detail API never refreshes them", async () => {
+    const frozenId = [...FROZEN_IDS][0];
+    const nowSec = Math.floor(Date.now() / 1000);
+    const { sqlite, db } = createTestDb();
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run(`detail:${frozenId}`, "{}", nowSec - 90 * 24 * 3600);
+
+    const result = await runPruneDetailCache(db);
+
+    expect(result.itemCount).toBe(0);
+    expect(sqlite.prepare("SELECT key FROM cache WHERE key LIKE 'detail:%'").all()).toEqual([
+      { key: `detail:${frozenId}` },
     ]);
   });
 

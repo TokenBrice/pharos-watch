@@ -64,7 +64,7 @@ The health banner distinguishes an old producer snapshot, a failed refresh using
 The hook currently wires these sources:
 
 - `useSupplyHistory(id)` for the chart series
-- the registered `stablecoinLiveSummary(id)` query for the compact coin-detail price/supply projection (never a partial write to the global stablecoins cache)
+- the registered `stablecoinLiveSummary(id)` query for the compact coin-detail price/supply projection (never a partial write to the global stablecoins cache). For frozen coins the server page also passes `archivedLiveSummary`, projected by `projectFrozenSnapshotLiveSummary()` from the coin's `shared/data/stablecoins/frozen-snapshots.json` row (supply observed at `capturedAt`). Live detail wins when present, matching sync-stablecoins intake precedence; when the live row is unavailable (the Worker returns 404 for a non-active coin with no cached `detail:<id>` row), the archive backs the page instead of the `list-error` state and is excluded from the freshness banner because it has no producer clock.
 - `usePegSummary()` for peg score and depeg metadata
 - `useDexLiquidity()` for liquidity score and DEX context
 - `useReportCardsV9()` for the main Safety Score card

@@ -3,6 +3,8 @@
 import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { FROZEN_SNAPSHOTS_BY_ID } from "@shared/lib/stablecoins/frozen-snapshots";
+import { projectFrozenSnapshotLiveSummary } from "@/lib/api-query-descriptors";
 import { DISABLED_DETAIL_QUERY_CONTROLS, queryResult } from "./use-stablecoin-detail-view-model.test-support";
 
 const mocks = vi.hoisted(() => ({
@@ -351,5 +353,53 @@ describe("useStablecoinDetailViewModel", () => {
     expect(mocks.refetchFlows).toHaveBeenCalled();
     expect(mocks.refetchBlacklist).toHaveBeenCalled();
     expect(mocks.refetchReserves).toHaveBeenCalled();
+  });
+
+  describe("frozen archive fallback", () => {
+    const coin = TRACKED_META_BY_ID.get("usnd-nerite")!;
+    const archived = projectFrozenSnapshotLiveSummary(FROZEN_SNAPSHOTS_BY_ID.get(coin.id)!)!;
+
+    function mockLiveSummary(overrides: Parameters<typeof queryResult>[0]) {
+      mocks.useRegisteredApiQuery.mockImplementation((descriptor: { queryKey: readonly unknown[] }) =>
+        descriptor.queryKey[0] === "stablecoin-live-summary"
+          ? queryResult({ ...overrides, refetch: mocks.refetchList })
+          : queryResult({ refetch: mocks.refetchRedemptionBackstops }));
+    }
+
+    function renderedStablecoinList() {
+      renderHook(() =>
+        useStablecoinDetailViewModel({
+          id: coin.id,
+          coin,
+          summary: null,
+          archivedLiveSummary: archived,
+          supplementalQueryControls: DISABLED_DETAIL_QUERY_CONTROLS,
+        }),
+      );
+      return mocks.buildStablecoinDetailViewModel.mock.calls.at(-1)![0].queries.stablecoinList;
+    }
+
+    it("backs the page with the archived row when the live detail row is gone", () => {
+      mockLiveSummary({ isError: true, error: new Error("HTTP 404") });
+
+      const list = renderedStablecoinList();
+
+      expect(list).toMatchObject({ isError: false, isLoading: false, error: null, enabled: false });
+      expect(list.data.peggedAssets[0]).toMatchObject({
+        id: coin.id,
+        price: archived.price,
+        circulating: archived.circulating,
+        supplyObservedAt: archived.supplyObservedAt,
+      });
+    });
+
+    it("prefers the live detail row over the archive when it exists", () => {
+      mockLiveSummary({ data: { ...archived, price: 0.42 }, dataUpdatedAt: 5 } as Parameters<typeof queryResult>[0]);
+
+      const list = renderedStablecoinList();
+
+      expect(list).toMatchObject({ isError: false, enabled: true, dataUpdatedAt: 5 });
+      expect(list.data.peggedAssets[0].price).toBe(0.42);
+    });
   });
 });
