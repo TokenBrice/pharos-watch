@@ -31,7 +31,7 @@ import type { BlacklistRow } from "./shared";
 import type { ChainRpcConfig } from "../chain-registry";
 import { blacklistRuntimeBudgetReached, blacklistSubrequestBudgetReached, type BlacklistRunBudget } from "./run-budget";
 import { buildBlacklistAmountRepairQueueUpdate, refreshBlacklistAmountRepairQueue } from "./amount-repair-queue";
-import { buildRecoveredBlacklistAmountPersistence } from "./amount-persistence";
+import { buildBlacklistAmountAttemptUpdate, buildRecoveredBlacklistAmountPersistence } from "./amount-persistence";
 
 // Conservative scheduled recovery cap: one D1 batch chunk and well below the
 // sync-blacklist 900-subrequest run budget observed in production.
@@ -47,11 +47,13 @@ export type BlacklistRecoveryErrorClass =
   | "provider_unsupported"
   | "config_missing"
   | "ambiguous_config"
+  | "ambiguous"
+  | "evidence_mismatch"
   | "runtime_budget"
   | "budget_exhausted";
 
 export type BlacklistRecoveryProvider =
-  "etherscan" | "drpc" | "chain_rpc" | "event_receipt" | "none";
+  "etherscan" | "drpc" | "chain_rpc" | "event_receipt" | "trongrid" | "none";
 
 function getHistoricalBalanceBlock(blockNumber: number): number {
   return Math.max(0, blockNumber - 1);
@@ -475,20 +477,14 @@ export async function backfillAmounts(
     errorClass: BlacklistRecoveryErrorClass | null,
     provider: BlacklistRecoveryProvider,
     status?: BlacklistAmountStatus,
-  ): D1PreparedStatement => {
-    const statusClause = status !== undefined ? `,\n               amount_status = ?` : "";
-    const stmt = db.prepare(
-      `UPDATE blacklist_events
-           SET amount_attempt_count = COALESCE(amount_attempt_count, 0) + 1,
-               amount_last_attempted_at = ?,
-               amount_last_error_class = ?,
-               amount_last_provider = ?${statusClause}
-           WHERE id = ?`,
-    );
-    return status !== undefined
-      ? stmt.bind(attemptAtSec, errorClass, provider, status, eventId)
-      : stmt.bind(attemptAtSec, errorClass, provider, eventId);
-  };
+  ): D1PreparedStatement =>
+    buildBlacklistAmountAttemptUpdate(db, {
+      eventId,
+      attemptedAt: attemptAtSec,
+      errorClass,
+      lastProvider: provider,
+      amountStatus: status,
+    });
 
   const result = await db
     .prepare(

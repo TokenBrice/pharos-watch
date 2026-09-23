@@ -7,6 +7,10 @@ import type { CronProgressReporter } from "../lib/cron-logger";
 import { reportCronProgress, withBudgetMetadata } from "../lib/cron-progress";
 import { backfillAmounts, type BlacklistAmountBackfillResult } from "../lib/blacklist/amount-recovery";
 import {
+  backfillTronBlacklistAmounts,
+  type TronAmountBackfillResult,
+} from "../lib/blacklist/tron-amount-recovery";
+import {
   blacklistRuntimeBudgetReached,
   blacklistSubrequestBudgetReached,
   createBlacklistRunBudget,
@@ -109,9 +113,16 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     retried: 0,
     unrecoverable: 0,
   };
+  let tronAmountBackfill: TronAmountBackfillResult = {
+    runtimeBudgetReached: false,
+    attempted: 0,
+    resolved: 0,
+    retried: 0,
+    limit: 0,
+  };
 
-  // Historical amount repair and ledger mirroring are maintenance work. They
-  // run only after every admissible event source has had its turn. A short,
+  // Historical amount repair and Tron freeze-amount replay are maintenance work.
+  // They run only after every admissible event source has had its turn. A short,
   // separately capped tail window lets the durable repair queue make progress
   // after scan-budget exhaustion without taking time away from event scans.
   const scanBudgetExhausted = blacklistRuntimeBudgetReached(runBudget);
@@ -134,6 +145,23 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
   } else if (!etherscanCircuitAllowed) {
     etherscanCircuitSkips++;
     logWorkerEventArgs("handler", "warn", "[sync-blacklist] Etherscan circuit open, skipping EVM amount backfill");
+  }
+
+  // Tron freeze amounts need TronGrid only, so the replay tail runs even when the
+  // Etherscan circuit is open. It keeps the same maintenance window and the same
+  // subrequest budget as every other tail lane.
+  if (!blacklistRuntimeBudgetReached(maintenanceRunBudget) && !blacklistSubrequestBudgetReached(maintenanceRunBudget)) {
+    try {
+      tronAmountBackfill = await backfillTronBlacklistAmounts(db, {
+        trongridApiKey,
+        limiter: tronLimiter,
+        runBudget: maintenanceRunBudget,
+        signal,
+      });
+      runtimeBudgetHit ||= tronAmountBackfill.runtimeBudgetReached;
+    } catch (err) {
+      logWorkerEventArgs("handler", "warn", "[sync-blacklist] Tron amount replay failed:", err);
+    }
   }
   const subrequestBudgetReached = blacklistSubrequestBudgetReached(runBudget);
   runtimeBudgetHit ||= counters.currentBalanceCacheCounters.budgetExhausted;
@@ -241,6 +269,10 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
         amountRepairUnrecoverable: amountBackfill.unrecoverable,
         amountRepairTailWindowUsed: scanBudgetExhausted,
         amountRepairTailLimit: scanBudgetExhausted ? BLACKLIST_AMOUNT_REPAIR_EXHAUSTED_SCAN_LIMIT : 100,
+        tronAmountRepairAttempted: tronAmountBackfill.attempted,
+        tronAmountRepairResolved: tronAmountBackfill.resolved,
+        tronAmountRepairRetried: tronAmountBackfill.retried,
+        tronAmountRepairLimit: tronAmountBackfill.limit,
         maintenanceRuntimeBudgetMs: SYNC_BLACKLIST_MAINTENANCE_BUDGET_MS,
         runtimeBudgetReached: runtimeBudgetHit,
         subrequestBudgetReached,

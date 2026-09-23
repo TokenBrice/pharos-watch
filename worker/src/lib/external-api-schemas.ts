@@ -31,6 +31,49 @@ export const TronEventsResponseSchema = z.object({
   }).optional(),
 }).passthrough();
 
+// --- TronGrid freeze-amount replay evidence (Q11) ---
+const TronHex64Schema = z.string().regex(/^[0-9a-f]{64}$/i);
+const TronEventTimestampMsSchema = z.number().int().nonnegative();
+
+export const TronNowBlockSchema = z.object({
+  blockID: TronHex64Schema,
+  block_header: z.object({
+    raw_data: z.object({
+      number: z.number().int().nonnegative(),
+      timestamp: TronEventTimestampMsSchema,
+    }),
+  }),
+});
+
+export const TronTransactionInfoSchema = z.object({
+  id: TronHex64Schema,
+  blockNumber: z.number().int().nonnegative(),
+  blockTimeStamp: TronEventTimestampMsSchema,
+  receipt: z.object({ result: z.string() }).optional(),
+  log: z.array(z.object({
+    address: z.string(),
+    topics: z.array(z.string()),
+  })).optional(),
+});
+
+const TronTrc20TransferSchema = z.object({
+  transaction_id: z.string(),
+  block_timestamp: TronEventTimestampMsSchema,
+  from: z.string(),
+  to: z.string(),
+  type: z.string(),
+  value: z.string().regex(/^\d+$/),
+});
+
+export const TronTrc20HistorySchema = z.object({
+  success: z.literal(true),
+  data: z.array(TronTrc20TransferSchema),
+  meta: z.object({
+    at: TronEventTimestampMsSchema,
+    links: z.object({ next: z.string().optional() }).optional(),
+  }).optional(),
+});
+
 // --- CoinGecko market chart (Q11) ---
 export const CoinGeckoMarketChartSchema = z.object({
   prices: z.array(z.tuple([z.number(), z.number()])),

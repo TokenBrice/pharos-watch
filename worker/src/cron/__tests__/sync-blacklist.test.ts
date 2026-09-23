@@ -197,6 +197,7 @@ const mockD1 = createMockD1Preset([
   { match: "FROM blacklist_reconciliation_runs", rows: [], first: null },
   { match: "blacklist-amount-repair-queue-", rows: [] },
   { match: "blacklist-amount-recovery-evm-candidates", rows: [] },
+  { match: "blacklist-tron-replay-candidates", rows: [] },
   { match: "UPDATE blacklist_events", rows: [] },
   { match: "INSERT OR IGNORE INTO blacklist_events", rows: [] },
   { match: "blacklist-summary-snapshot-write", rows: [] },

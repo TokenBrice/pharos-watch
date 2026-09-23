@@ -125,7 +125,10 @@ describe("enrichRowBalances", () => {
 
     await backfillAmounts(db, null, null, limiter, makeRunBudget());
 
-    expect(db.getHistory()[0]?.sql).toContain("AND chain_id != 'tron'");
+    const candidates = db
+      .getHistory()
+      .find((entry) => entry.sql.includes("blacklist-amount-recovery-evm-candidates"));
+    expect(candidates?.sql).toContain("chain_id != 'tron'");
   });
 
   it("leaves historical Tron event amounts unresolved", async () => {
