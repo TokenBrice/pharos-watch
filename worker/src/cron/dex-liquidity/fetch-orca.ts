@@ -7,7 +7,11 @@ import {
 } from "../../lib/dex-api-common";
 import { rethrowIfAborted, sleepWithSignal } from "../../lib/abort";
 import { USER_AGENT } from "../../lib/constants";
-import { cancelResponseBodyQuietly } from "../../lib/response-body";
+import {
+  cancelResponseBodyQuietly,
+  isResponseBodyTooLargeError,
+  readResponseJsonWithinLimitWithSignal,
+} from "../../lib/response-body";
 import { resolveRateLimitDelayMs } from "../../lib/fetch-retry";
 import {
   buildDirectApiRequestSignal,
@@ -24,6 +28,15 @@ import {
 } from "./source-pagination-state";
 
 const ORCA_API = "https://api.orca.so/v2/solana/pools";
+/**
+ * Hard per-response byte cap for one Orca page. Measured 2026-09-23 against the
+ * live endpoint (see `docs/worker-and-api-limits.md#response-body-limits`): a
+ * `size=200` page returned 672 KB, i.e. ~3.4 KB per pool. 4 MiB is ~6x that
+ * page, so the cap cannot touch a legitimate page while keeping a mis-served
+ * body out of the isolate.
+ */
+const ORCA_MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
+
 const ORCA_RATE_LIMIT_RETRIES = 3;
 const ORCA_RATE_LIMIT_BACKOFF_MS = 1_000;
 // Ceiling for an upstream-declared Retry-After wait: the paginated run must stay
@@ -167,10 +180,12 @@ export async function fetchOrcaPools(signal?: AbortSignal, db?: D1Database): Pro
 
     let json: unknown;
     try {
-      json = await res.json() as unknown;
+      json = await readResponseJsonWithinLimitWithSignal<unknown>(res, ORCA_MAX_RESPONSE_BYTES, signal);
     } catch (error) {
       rethrowIfAborted(error, signal);
-      errors.push(`returned invalid JSON: ${toErrorMessage(error)}`);
+      errors.push(isResponseBodyTooLargeError(error)
+        ? `response body exceeded ${ORCA_MAX_RESPONSE_BYTES} bytes`
+        : `returned invalid JSON: ${toErrorMessage(error)}`);
       break;
     }
     if (!isOrcaResponse(json)) {

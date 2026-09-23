@@ -960,6 +960,7 @@ describe("dex liquidity scoring stage cycle", () => {
       uniV3PriceObs: new Map(),
       uniV3ExecutionCandidates,
       failedChains: [],
+      failedChainReasons: {},
     });
     vi.mocked(mergeStagedPools).mockImplementationOnce(
       async (_db, _metrics, _known, _now, _references, confirmation) => {

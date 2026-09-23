@@ -263,4 +263,28 @@ describe("runPaginatedDirectApiFetch", () => {
       await pending.catch(() => undefined);
     }
   });
+
+  it("rejects an over-cap page as the source's error without partial rows", async () => {
+    const encoder = new TextEncoder();
+    const oversized = new ReadableStream<Uint8Array>({
+      start(controller) {
+        // A valid first row would be admitted if the cap were not enforced.
+        controller.enqueue(encoder.encode('{"items":["first-row"],"pad":"'));
+        controller.enqueue(encoder.encode("x".repeat(4096)));
+        controller.enqueue(encoder.encode('"}'));
+        controller.close();
+      },
+    });
+    mockFetch([{ match: "api.example.com", respond: () => new Response(oversized, { status: 200 }) }], { requireMatch: true });
+
+    const result = await runPaginatedDirectApiFetch(stringPageOptions({
+      pageSize: 1,
+      maxResponseBytes: 1024,
+    }));
+
+    expect(result.rows).toEqual([]);
+    expect(result.errors).toEqual(["test page 1 response body exceeded 1024 bytes"]);
+    expect(result.successfulPages).toBe(0);
+    expect(result.completed).toBe(false);
+  });
 });

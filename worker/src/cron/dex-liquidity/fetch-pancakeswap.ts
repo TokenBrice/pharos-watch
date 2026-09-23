@@ -7,6 +7,7 @@ import { makeDexApiFetchResult, type DexApiFetchResult, type DexApiPool } from "
 import { classifyClPoolType } from "./direct-source-helpers";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { DIRECT_API_REQUEST_TIMEOUT_MS } from "./direct-api-policy";
+import { SUBGRAPH_PAGE_MAX_RESPONSE_BYTES } from "./constants";
 import {
   describeDexPaginationWriteFailure,
   isDegradingDexPaginationWriteFailure,
@@ -141,7 +142,12 @@ async function fetchSubgraphJson<T>(subgraphUrl: string, query: string, signal?:
       signal,
     },
     2,
-    { timeoutMs: SUBGRAPH_ATTEMPT_TIMEOUT_MS, throwOnFinalNetworkError: true },
+    {
+      timeoutMs: SUBGRAPH_ATTEMPT_TIMEOUT_MS,
+      throwOnFinalNetworkError: true,
+      // Same 1,000-row page budget as the Uni V3 / V4 families.
+      maxResponseBytes: SUBGRAPH_PAGE_MAX_RESPONSE_BYTES,
+    },
   );
   if (!result?.response.ok) throw new Error(`returned ${result?.response.status ?? "unknown"}`);
 

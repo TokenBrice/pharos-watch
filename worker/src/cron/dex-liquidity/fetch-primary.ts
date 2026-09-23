@@ -43,6 +43,25 @@ import { attachDefiLlamaV4PoolIdentities, DEFILLAMA_V4_IDENTITIES_URL } from "./
 const PRIMARY_SOURCE_JSON_TIMEOUT_MS = 30_000;
 const CURVE_API_FETCH_CONCURRENCY = 4;
 
+/**
+ * Per-source body caps for the primary DEX sources. Measured 2026-09-23 against
+ * the same public endpoints (see
+ * `docs/worker-and-api-limits.md#response-body-limits`):
+ *
+ * - DeFiLlama yields: 11,816,252 B / 17,188 pools.
+ * - DeFiLlama protocols: 8,911,702 B / 8,339 rows.
+ * - Curve `getPools/all`: largest single chain body 4,806,780 B (ethereum);
+ *   the fourteen chain bodies total ~14.5 MB and are fetched four at a time.
+ *
+ * The caps sit deliberately at ~1.4-1.75x the measured maximum. These bodies
+ * are parsed into the largest trees the stage holds, so an anomaly is rejected
+ * as that source's failure and the stage degrades to its documented fallback
+ * (`CG/GT will be the primary pool source`) instead of risking the isolate.
+ */
+const DEFILLAMA_YIELDS_MAX_RESPONSE_BYTES = 16 * 1024 * 1024;
+const DEFILLAMA_PROTOCOLS_MAX_RESPONSE_BYTES = 12 * 1024 * 1024;
+const CURVE_MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
+
 interface DefiLlamaYieldsPayload {
   data?: LlamaPool[];
 }
@@ -112,12 +131,13 @@ export async function fetchDataSources(
           DEFILLAMA_YIELDS_URL,
           { headers: { "User-Agent": USER_AGENT }, signal },
           2,
-          { timeoutMs: PRIMARY_SOURCE_JSON_TIMEOUT_MS },
+          { timeoutMs: PRIMARY_SOURCE_JSON_TIMEOUT_MS, maxResponseBytes: DEFILLAMA_YIELDS_MAX_RESPONSE_BYTES },
         )
       : Promise.resolve(null),
     dlProtocolsAllowed
       ? fetchJsonWithRetry<unknown>(DEFILLAMA_PROTOCOLS_URL, { headers: { "User-Agent": USER_AGENT }, signal }, 2, {
           timeoutMs: PRIMARY_SOURCE_JSON_TIMEOUT_MS,
+          maxResponseBytes: DEFILLAMA_PROTOCOLS_MAX_RESPONSE_BYTES,
         })
       : Promise.resolve(null),
   ]);
@@ -367,7 +387,7 @@ export async function fetchDataSources(
         `${CURVE_API_BASE}/${CURVE_API_CHAIN_PATHS[chain] ?? chain}`,
         { headers: { "User-Agent": USER_AGENT }, signal },
         2,
-        { timeoutMs: PRIMARY_SOURCE_JSON_TIMEOUT_MS },
+        { timeoutMs: PRIMARY_SOURCE_JSON_TIMEOUT_MS, maxResponseBytes: CURVE_MAX_RESPONSE_BYTES },
       ),
     );
     curvePayloads = curveResults.map((result) => result?.body ?? null);

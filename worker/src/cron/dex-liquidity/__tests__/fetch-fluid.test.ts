@@ -74,4 +74,39 @@ describe("fetchFluidPools", () => {
     expect(counters.fluidFeeRateUnmeasured).toBe(0);
     expect(counters.fluidBalancesUnmeasured).toBe(0);
   });
+
+  it("fails an over-cap chain as that chain's error instead of parsing a truncated ticker list", async () => {
+    const tickerRow = {
+      pool_id: "0xabc0000000000000000000000000000000000000",
+      base_currency: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      target_currency: "0xdac17f958d2fe523a2206206994597c13d831ec7",
+      base_volume: "100",
+      target_volume: "200",
+      liquidity_in_usd: "50000000",
+      last_price: "1.0001",
+    };
+    const encoder = new TextEncoder();
+    const oversizedTickerPage = () => new Response(new ReadableStream<Uint8Array>({
+      start(controller) {
+        // The valid head would be admitted as a pool if the cap were not enforced.
+        controller.enqueue(encoder.encode(`[${JSON.stringify(tickerRow)},`));
+        controller.enqueue(encoder.encode(" ".repeat(300 * 1024)));
+        controller.enqueue(encoder.encode("]"));
+        controller.close();
+      },
+    }), { status: 200 });
+    mockFetch([
+      { match: "/v2/1/dexes/stats/tickers", respond: oversizedTickerPage },
+      { match: "api.fluid.instadapp.io", body: [] },
+    ], { requireMatch: true });
+
+    const result = await fetchFluidPools(undefined, new Map());
+
+    // The over-cap chain contributes no pools and names its own error; the other
+    // five chains still publish their (empty) results.
+    expect(result.pools).toEqual([]);
+    expect(result.degraded).toBe(true);
+    expect(result.errors).toContain(`fluid ethereum response body exceeded ${256 * 1024} bytes`);
+    expect(result.ok).toBe(true);
+  });
 });

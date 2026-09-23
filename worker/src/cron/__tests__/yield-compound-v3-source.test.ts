@@ -68,7 +68,9 @@ describe("fetchCompoundV3SupplyRates", () => {
           "https://fallback.ethereum.example.com",
           "https://rpc.ethereum.example.com",
         ],
-        maxRetries: 2,
+        // B-lane pacing: transport retries stay off so a stalled URL fails over
+        // to the alternate endpoint before either one is retried.
+        maxRetries: 0,
       }),
     );
   });

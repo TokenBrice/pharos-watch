@@ -302,15 +302,18 @@ describe("fetchAaveV3SupplyRates", () => {
 
     await fetchAaveV3SupplyRates([USDC_TARGET], undefined, makeChainRpcs());
 
-    expect(mockFetchEvmCallHexAtBlock).toHaveBeenCalledOnce();
-    const callData = mockFetchEvmCallHexAtBlock.mock.calls[0][2] as string;
-
-    // Must start with getReserveData selector
-    expect(callData.startsWith("0x35ea6a75")).toBe(true);
-    // The asset address must appear padded to 32 bytes (64 hex chars)
-    const addressPart = callData.slice(10).toLowerCase(); // after selector
-    expect(addressPart).toHaveLength(64);
-    expect(addressPart).toContain(USDC_TARGET.assetAddress.replace("0x", "").toLowerCase());
+    // B-lane pacing retries a failed target across its endpoints, so every
+    // attempt must carry the same getReserveData calldata.
+    const attemptedCallData = mockFetchEvmCallHexAtBlock.mock.calls.map((call) => call[2] as string);
+    expect(attemptedCallData.length).toBeGreaterThan(0);
+    for (const callData of attemptedCallData) {
+      // Must start with getReserveData selector
+      expect(callData.startsWith("0x35ea6a75")).toBe(true);
+      // The asset address must appear padded to 32 bytes (64 hex chars)
+      const addressPart = callData.slice(10).toLowerCase(); // after selector
+      expect(addressPart).toHaveLength(64);
+      expect(addressPart).toContain(USDC_TARGET.assetAddress.replace("0x", "").toLowerCase());
+    }
   });
 
   it("stamps the run clock on every Aave candidate the family publishes", async () => {
@@ -364,7 +367,9 @@ describe("fetchAaveV3SupplyRates", () => {
           "https://fallback.base.example.com",
           "https://rpc.base.example.com",
         ],
-        maxRetries: 2,
+        // B-lane pacing: transport retries stay off so a stalled URL fails over
+        // to the alternate endpoint before either one is retried.
+        maxRetries: 0,
       }),
     );
   });

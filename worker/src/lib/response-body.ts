@@ -62,6 +62,21 @@ class ResponseBodyTooLargeError extends Error {
   }
 }
 
+/**
+ * Classifies a capped body read that rejected. Callers that must publish a
+ * machine-readable source reason (rather than a generic transport failure) use
+ * this to name the overflow class without string matching.
+ */
+export function isResponseBodyTooLargeError(error: unknown): error is ResponseBodyTooLargeError {
+  if (error instanceof ResponseBodyTooLargeError) return true;
+  return (
+    typeof error === "object"
+    && error !== null
+    && "name" in error
+    && error.name === "ResponseBodyTooLargeError"
+  );
+}
+
 function declaredResponseLength(response: Response): number | null {
   const getHeader = response.headers?.get;
   const raw = typeof getHeader === "function"

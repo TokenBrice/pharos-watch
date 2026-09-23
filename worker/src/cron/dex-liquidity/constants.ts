@@ -53,6 +53,20 @@ export const UNIV3_SUBGRAPHS: Record<string, string> = {
 export const UNIV3_POOL_PAGE_SIZE = 1000;
 export const UNIV3_POOL_MAX_PAGES = 5;
 
+/**
+ * Hard per-response byte cap for one subgraph page, shared by the bounded
+ * Uni V3 / Uniswap V4 family pages (`first: 1000`) and the PancakeSwap pages.
+ *
+ * Justification (measured 2026-09-23, see `docs/worker-and-api-limits.md#response-body-limits`):
+ * the same 1,000-row page budget measured 2.0 MB (Raydium concentrated) and
+ * 1.0 MB (Meteora, 500 rows) against real provider responses, i.e. the
+ * legitimate page for these 14-field pool queries is around 0.5-1 MB. 8 MiB
+ * leaves roughly an order of magnitude of headroom for schema growth while
+ * keeping a mis-served response (HTML error page, doubled body) from being
+ * buffered and parsed inside the 128 MB isolate.
+ */
+export const SUBGRAPH_PAGE_MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
+
 export const buildUniV3PoolQuery = (skip: number): string => `{
   pools(
     first: ${UNIV3_POOL_PAGE_SIZE},
