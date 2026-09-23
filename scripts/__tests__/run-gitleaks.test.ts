@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -107,6 +108,7 @@ describe("run-gitleaks", () => {
     expect(scan[1].some((arg) => arg.startsWith("--log-opts"))).toBe(false);
     expect(scan[2]).toMatchObject({ input: resolution });
     expect(buildWorktreeInput).not.toHaveBeenCalled();
+    expect(buildMergeResolutionInput).toHaveBeenCalledWith({ baseRef: "origin/main", headRef: "HEAD" });
   });
 
   it("extracts combined-diff lines present in neither parent and nothing for a non-merge HEAD", () => {
@@ -120,13 +122,64 @@ describe("run-gitleaks", () => {
       " +from parent one only",
       "++token = \"resolution-only\"",
     ].join("\n");
-    const execFile = vi.fn((_file: string, args: string[]) =>
-      args[0] === "rev-list" ? "merge parent1 parent2\n" : combined);
-    expect(buildGitleaksMergeResolutionInput({ execFile }).toString()).toBe("token = \"resolution-only\"\n");
+    const execFile = vi.fn((_file: string, args: readonly string[]) =>
+      args.includes("--merges") ? "historical-merge\n" : args.includes("--parents") ? "merge parent1 parent2\n" : combined);
+    expect(buildGitleaksMergeResolutionInput({ execFile }).toString()).toBe("token = \"resolution-only\"\ntoken = \"resolution-only\"\n");
+    expect(execFile).toHaveBeenCalledWith("git", ["rev-list", "--merges", "origin/main..HEAD"], { encoding: "utf8" });
+    expect(execFile).toHaveBeenCalledWith("git", ["diff-tree", "--cc", "--no-color", "-r", "historical-merge"], { encoding: "utf8" });
 
-    const single = vi.fn((_file: string, args: string[]) => (args[0] === "rev-list" ? "head parent1\n" : combined));
+    const single = vi.fn((_file: string, args: readonly string[]) =>
+      args.includes("--merges") ? "\n" : args.includes("--parents") ? "head parent1\n" : combined);
     expect(buildGitleaksMergeResolutionInput({ execFile: single }).toString()).toBe("\n");
-    expect(single).toHaveBeenCalledTimes(1);
+    expect(single).toHaveBeenCalledTimes(2);
+  });
+
+  it("extracts resolution-only lines introduced by historical merges inside the scan range", () => {
+    const repo = mkdtempSync(join(tmpdir(), "gitleaks-merge-history-"));
+    const git = (args: string[]) =>
+      execFileSync("git", args, { cwd: repo, encoding: "utf8" });
+    try {
+      git(["init", "-q", "-b", "main", "."]);
+      git(["config", "user.email", "t@example.com"]);
+      git(["config", "user.name", "t"]);
+      writeFileSync(join(repo, "config.txt"), "base\n");
+      git(["add", "."]);
+      git(["commit", "-qm", "base"]);
+      const base = git(["rev-parse", "HEAD"]).trim();
+
+      writeFileSync(join(repo, "config.txt"), "main-side\n");
+      git(["commit", "-qam", "main side"]);
+      git(["checkout", "-qb", "pr"]);
+      git(["reset", "-q", "--hard", base]);
+      writeFileSync(join(repo, "config.txt"), "pr-side\n");
+      git(["commit", "-qam", "pr side"]);
+      // Merge main into the PR branch; the intended conflict makes git exit nonzero.
+      try {
+        execFileSync("git", ["merge", "--no-commit", "main"], { cwd: repo, encoding: "utf8", stdio: "ignore" });
+      } catch {
+        // conflict as planned
+      }
+      // Resolve with a line that exists in neither parent: only a merge-aware lane can see it.
+      // Assembled at runtime so the repository's own scan never sees a literal credential.
+      const credentialLine = ["api", "_key = \"", "A1b2C3d4E5f6G7h8", "I9j0K1l2M3n4O5p6\""].join("");
+      writeFileSync(join(repo, "config.txt"), `${credentialLine}\n`);
+      git(["add", "."]);
+      git(["commit", "-qm", "merge with resolution-only credential"]);
+      writeFileSync(join(repo, "trailer.txt"), "later commit\n");
+      git(["add", "."]);
+      git(["commit", "-qm", "later pr commit"]);
+      const head = git(["rev-parse", "HEAD"]).trim();
+
+      const execFile = (file: string, args: string[], options: { encoding: "utf8" }) =>
+        execFileSync(file, args, { ...options, cwd: repo }) as string;
+      const input = buildGitleaksMergeResolutionInput({ baseRef: base, execFile, headRef: head }).toString();
+      expect(input).toContain(credentialLine);
+      // The checked-out HEAD is a plain commit here, so the historical merge is
+      // the only lane that can carry the resolution-only line.
+      expect(git(["rev-list", "--parents", "-n", "1", "HEAD"]).trim().split(/\s+/g)).toHaveLength(2);
+    } finally {
+      rmSync(repo, { force: true, recursive: true });
+    }
   });
 
   it("rejects untrusted downloads and never extracts them", async () => {

@@ -107,20 +107,14 @@ async function markExistingCurrentBalanceProviderFailed(
 
 export async function loadBlacklistCurrentBalanceMap(
   db: D1Database,
-  minLastSuccessfulObservedAt?: number,
 ): Promise<Map<string, BlacklistCurrentBalanceRow>> {
-  const statement = db.prepare(
+  const result = await db.prepare(
     `SELECT id, stablecoin, chain_id, address, config_key, contract_address,
             amount_native, amount_usd, source, status, observed_at,
             last_successful_observed_at, attempt_count, last_attempted_at,
             last_error_class, consecutive_failures
-     FROM blacklist_current_balances${
-       minLastSuccessfulObservedAt == null ? "" : "\n     WHERE last_successful_observed_at >= ?"
-     }`,
-  );
-  const result = await (minLastSuccessfulObservedAt == null
-    ? statement
-    : statement.bind(minLastSuccessfulObservedAt)).all<{
+     FROM blacklist_current_balances`,
+  ).all<{
     id: string;
     stablecoin: BlacklistStablecoin;
     chain_id: string;

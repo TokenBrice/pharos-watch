@@ -240,10 +240,14 @@ function makeIdempotencyDb(options: TestDbOptions = {}): D1Database & {
         }
 
         if (sql.includes("DELETE FROM admin_idempotency_keys")) {
-          const [cutoff, pendingStatus] = args as [number, number];
+          const [cutoff, pendingStatus, unknownStatus] = args as [number, number, number];
           let changes = 0;
           for (const [key, record] of store) {
-            if (record.created_at < cutoff && record.response_status !== pendingStatus) {
+            if (
+              record.created_at < cutoff
+              && record.response_status !== pendingStatus
+              && record.response_status !== unknownStatus
+            ) {
               store.delete(key);
               changes++;
             }
@@ -656,7 +660,8 @@ describe("runIdempotentAction", () => {
     vi.restoreAllMocks();
   });
 
-  it("ages execution_unknown records out with the terminal TTL", async () => {
+
+  it("keeps execution_unknown rows out of the terminal TTL so their key can never re-run", async () => {
     const now = 1_800_000_000;
     vi.spyOn(Date, "now").mockReturnValue(now * 1000);
     const db = makeIdempotencyDb();
@@ -672,22 +677,28 @@ describe("runIdempotentAction", () => {
     );
     expect(unknown.status).toBe(503);
 
+    const ok = await runIdempotentAction(db, "backfill-depegs", request("old-terminal-ok"), async () =>
+      Response.json({ ok: true }),
+    );
+    expect(ok.status).toBe(200);
+
+    db.getRecord("backfill-depegs", "old-execution-unknown")!.created_at = now - 8 * 24 * 60 * 60;
+    db.getRecord("backfill-depegs", "old-terminal-ok")!.created_at = now - 8 * 24 * 60 * 60;
+    await runIdempotentAction(db, "backfill-depegs", request("trigger-prune"), async () =>
+      Response.json({ ok: true }),
+    );
+
+    expect(db.getRecord("backfill-depegs", "old-terminal-ok")).toBeUndefined();
+
     const replay = await runIdempotentAction(db, "backfill-depegs", request("old-execution-unknown"), async () =>
       Response.json({ impossible: ++unknownCalls }),
     );
     expect(replay.status).toBe(503);
     expect(replay.headers.get("X-Idempotent-Replay")).toBe("true");
+    expect(db.getRecord("backfill-depegs", "old-execution-unknown")?.response_status).toBe(-2);
     expect(unknownCalls).toBe(1);
-
-    db.getRecord("backfill-depegs", "old-execution-unknown")!.created_at = now - 8 * 24 * 60 * 60;
-    await runIdempotentAction(db, "backfill-depegs", request("trigger-prune"), async () =>
-      Response.json({ ok: true }),
-    );
-
-    expect(db.getRecord("backfill-depegs", "old-execution-unknown")).toBeUndefined();
     vi.restoreAllMocks();
   });
-
   it("stores and replays execution_unknown when execution throws", async () => {
     const db = makeIdempotencyDb();
     let calls = 0;

@@ -29,15 +29,26 @@ interface PsiInputDegradation {
   dewsFailureReason: string | null;
   depegEventsUnavailable: boolean;
   depegEventsFailureReason: string | null;
+  openDepegNoPrice: boolean;
+  openDepegsWithoutPrice: number | null;
 }
 
 function readPsiInputDegradation(snapshot: Record<string, unknown>): PsiInputDegradation | undefined {
+  // R1: an open depeg without any usable price is missing severity input, not zero
+  // severity input — the producer counts it instead of letting it vanish from the
+  // contributors list, and the count is what makes the omission visible here.
+  const unpricedOpenDepegs = typeof snapshot.openDepegsWithoutPrice === "number" &&
+    Number.isFinite(snapshot.openDepegsWithoutPrice) && snapshot.openDepegsWithoutPrice > 0
+    ? snapshot.openDepegsWithoutPrice
+    : 0;
   const degradation: PsiInputDegradation = {
     dewsUnavailable: snapshot.dewsUnavailable === true,
     dewsFailureReason: typeof snapshot.dewsFailureReason === "string" ? snapshot.dewsFailureReason : null,
     depegEventsUnavailable: snapshot.depegEventsUnavailable === true,
     depegEventsFailureReason:
       typeof snapshot.depegEventsFailureReason === "string" ? snapshot.depegEventsFailureReason : null,
+    openDepegNoPrice: unpricedOpenDepegs > 0,
+    openDepegsWithoutPrice: unpricedOpenDepegs > 0 ? unpricedOpenDepegs : null,
   };
 
   return (
@@ -45,6 +56,7 @@ function readPsiInputDegradation(snapshot: Record<string, unknown>): PsiInputDeg
     || degradation.dewsFailureReason != null
     || degradation.depegEventsUnavailable
     || degradation.depegEventsFailureReason != null
+    || degradation.openDepegNoPrice
   )
     ? degradation
     : undefined;

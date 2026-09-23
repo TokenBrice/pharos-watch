@@ -101,7 +101,9 @@ describe("runPostEnrichmentPricePipeline", () => {
     ["cadm-mento", "peggedCAD", 0.73, "coingecko-low-volume", 40 * 3600, 900, true],
     ["usdt-tether", "peggedUSD", 1, "coinmarketcap", 1200, 900, true],
     ["usdt-tether", "peggedUSD", 1, "coingecko-low-volume", 8 * 86400, 900, false],
-    ["usdt-tether", "peggedUSD", 1, "coinmarketcap", 3601, 900, false],
+    ["usdt-tether", "peggedUSD", 1, "coinmarketcap", 3601, 900, true],
+    ["usdt-tether", "peggedUSD", 1, "coinmarketcap", 7292, 900, true],
+    ["usdt-tether", "peggedUSD", 1, "coinmarketcap", 8401, 900, false],
     ["usdt-tether", "peggedUSD", 1, "coingecko-onchain-address", 901, 900, false],
     ["gbpm-mento", "peggedGBP", 1.32, "coingecko-low-volume", 41 * 3600, 3601, true],
     ["usdt-tether", "peggedUSD", 1, "coingecko-low-volume", 40 * 3600, 4501, false],
@@ -174,9 +176,9 @@ describe("runPostEnrichmentPricePipeline", () => {
       expect(result.priceObservationEffectiveness).toEqual({
         stagingStatus: "ok", stagingSlotStartedAt: now - 30, stagingAgeSec: 30, hourlyStagingStatus: "ok", dexStagingStatus: "missing",
         loadedObservationCount: 9, eligibleObservationCount: 3,
-        discarded: { sourceIneligible: 1, unknownTime: 1, futureTime: 1, sourceExpired: 1, superseded: 2 },
+        discarded: { sourceIneligible: 1, unknownTime: 1, futureTime: 1, sourceExpired: 0, superseded: 3 },
         publication: { alreadyPriced: 1, assetAbsent: 1, policyRejected: 0, selected: 1, notNeededAfterSelection: 0 },
-        minimumFreshnessHeadroomSec: 3540,
+        minimumFreshnessHeadroomSec: 8340,
       });
       const effectiveness = result.priceObservationEffectiveness!;
       expect(Object.values(effectiveness.discarded).reduce((sum, count) => sum + count, 0)

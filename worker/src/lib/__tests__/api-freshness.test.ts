@@ -600,7 +600,7 @@ describe("buildCacheStatuses sentinel validation", () => {
     });
   });
 
-  it("publishes an unknown degraded streak when the producer-history read fails", async () => {
+  it("publishes unknown quality, never a clean verdict, when the producer-history read fails", async () => {
     const now = 1_800_000_000;
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
@@ -624,9 +624,11 @@ describe("buildCacheStatuses sentinel validation", () => {
       const { caches } = await buildCacheStatuses(db, now);
 
       expect(caches["yield-data"]).toMatchObject({
+        freshnessSource: "freshness-sentinel",
         streakDegradedRuns: null,
-        degraded: false,
-        healthy: true,
+        degraded: null,
+        degradedReason: "producer-history-unreadable",
+        healthy: false,
       });
     } finally {
       warnSpy.mockRestore();

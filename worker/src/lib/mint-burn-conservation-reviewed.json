@@ -5875,6 +5875,24 @@
               "selector": "0x1a32aad6"
             },
             "expect": "0x2a8e1e676ec238d8a992307b495b45b3feaa5e86"
+          },
+          {
+            "name": "tokenImplementation",
+            "address": "0x2a8e1e676ec238d8a992307b495b45b3feaa5e86",
+            "call": {
+              "kind": "eth_getStorageAt",
+              "slot": "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc"
+            },
+            "expect": "0xa7b7c59a1705e4a624ea8a4ad8a06f9de22dcc33"
+          },
+          {
+            "name": "vaultImplementation",
+            "address": "0xe75d77b1865ae93c7eaa3040b038d7aa7bc02f70",
+            "call": {
+              "kind": "eth_getStorageAt",
+              "slot": "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc"
+            },
+            "expect": "0x82948060c4b72684bededec342350ab344975145"
           }
         ]
       },
@@ -5951,7 +5969,7 @@
       "zeroRecipientTransferReverts": true,
       "zeroRecipientTransferBurns": null,
       "identityIssue": null,
-      "notes": "Exact additive law: totalSupply(to) − totalSupply(from) = Σ zero-address Transfer mints − burns + Σ(YieldDistribution.yield − fee), events in (from,to]. Two 7200-block rehearsals with two rebases each have BigInt residual 0; deleting any of the four actual fee-mint Transfer logs produces the exact nonzero cross-contract residual the checkpoint-reset alternative masks (P6 report). Guards: mutual token↔vault identity pinned by vaultAddress()/oToken() at both boundaries; every YieldDistribution must pair with a later TotalSupplyUpdatedHighres in the same transaction; newSupply == uint128.max fails closed as rebase-supply-saturation; legacy TotalSupplyUpdated and proxy Upgraded events fail closed. Fee Transfer is counted once (in Transfers), so only yield − fee is added. Evidence: agents/2026-09-22-mint-burn-conservation-expansion/admission/p6-ousd-origin-protocol/ (REPORT.md, invariant.json, rehearsal.json, rpc-journal.json) and p56-identity/probe-result.json.",
+      "notes": "Exact additive law: totalSupply(to) − totalSupply(from) = Σ zero-address Transfer mints − burns + Σ(YieldDistribution.yield − fee), events in (from,to]. Two 7200-block rehearsals with two rebases each have BigInt residual 0; deleting any of the four actual fee-mint Transfer logs produces the exact nonzero cross-contract residual the checkpoint-reset alternative masks (P6 report). Guards: mutual token↔vault identity pinned by vaultAddress()/oToken(), and both proxies' reviewed implementations pinned by their EIP-1967 implementation slots, at both boundaries — an upgrade permanently fails the pin at every later boundary rather than only the range containing the Upgraded event; every YieldDistribution must pair with a later TotalSupplyUpdatedHighres in the same transaction; newSupply == uint128.max fails closed as rebase-supply-saturation; legacy TotalSupplyUpdated and proxy Upgraded events fail closed. Fee Transfer is counted once (in Transfers), so only yield − fee is added. Evidence: agents/2026-09-22-mint-burn-conservation-expansion/admission/p6-ousd-origin-protocol/ (REPORT.md, invariant.json, rehearsal.json, rpc-journal.json) and p56-identity/probe-result.json.",
       "windows": [
         {
           "fromBlock": 26028858,

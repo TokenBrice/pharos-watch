@@ -48,7 +48,7 @@ import type {
   SkippedCoin,
 } from "./types";
 import { SELECTOR_VERSION } from "./version";
-import { selectYieldSource } from "./yield-source";
+import { selectYieldSourceRail, type SelectedYieldSourceRail } from "./yield-source";
 
 export const ENGINE_VERSION = SELECTOR_VERSION;
 export { scoreIgnoringExclusion };
@@ -151,12 +151,12 @@ interface ScoredEntryResult {
  * so a new field had to be added in every one of them.
  */
 function toScoredEntry(row: MergedRow, input: SelectorInput): ScoredEntryResult {
-  const result = scoreRow(row, input.profile, input);
+  const rail = input.profile === "yield" ? selectYieldSourceRail(row, input) : null;
+  const result = scoreRow(rowForRailHistory(row, rail), input.profile, input);
   if (result == null || result.degenerate) {
     return { entry: null, missingSignal: "every-signal-null" };
   }
-  const recommendedSource = input.profile === "yield" ? selectYieldSource(row, input) : null;
-  if (input.profile === "yield" && recommendedSource == null) {
+  if (input.profile === "yield" && rail == null) {
     return { entry: null, missingSignal: "recommendedSource" };
   }
   return {
@@ -167,12 +167,25 @@ function toScoredEntry(row: MergedRow, input: SelectorInput): ScoredEntryResult 
       confidence: result.confidence,
       confidenceReasons: result.confidenceReasons,
       redistributedSlots: result.redistributedSlots,
-      recommendedSource,
+      recommendedSource: rail?.source ?? null,
       perInputStaleness: input.profile === "trading" ? tradingPerInputStaleness(row) : null,
       relaxedReason: null,
     },
     missingSignal: null,
   };
+}
+
+/**
+ * The yield profile's `< 21` observation-day confidence rule must judge the
+ * rail the run actually recommends: a mature primary can no longer lend its
+ * history to a venue-preferred alternate that published only a few
+ * observation days. Rows without a selected rail, or rails without a
+ * published count, keep the row-level primary reading.
+ */
+function rowForRailHistory(row: MergedRow, rail: SelectedYieldSourceRail | null): MergedRow {
+  if (rail?.observationDays30d == null) return row;
+  if (rail.observationDays30d === row.yieldObservationDays30d) return row;
+  return { ...row, yieldObservationDays30d: rail.observationDays30d };
 }
 
 function runScoringPhase(

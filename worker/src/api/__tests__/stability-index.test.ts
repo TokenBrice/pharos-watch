@@ -315,6 +315,38 @@ describe("handleStabilityIndex contract tests", () => {
       dewsFailureReason: "stress_signals unavailable",
       depegEventsUnavailable: false,
       depegEventsFailureReason: null,
+      openDepegNoPrice: false,
+      openDepegsWithoutPrice: null,
+    });
+  });
+
+  it("surfaces unpriced open depegs as input degradation, not as zero severity", async () => {
+    const unpricedSample = {
+      ...sampleRow,
+      input_snapshot: JSON.stringify({
+        totalMcapUsd: 1e11,
+        contributors: [],
+        depegCount: 0,
+        openDepegsWithoutPrice: 2,
+        degradedComponents: ["open-depeg-no-price"],
+      }),
+    };
+    const db = mockD1([
+      { match: "stability_index_samples", rows: [unpricedSample], first: unpricedSample },
+      { match: "stability_index", rows: [historyRow] },
+    ]);
+
+    const res = await handleStabilityIndex(db, new URL("https://x/api/stability-index"));
+
+    const body = (await readJsonResponse(res, 200)) as {
+      current: { inputDegradation?: Record<string, unknown> };
+    };
+
+    expect(body.current.inputDegradation).toMatchObject({
+      dewsUnavailable: false,
+      depegEventsUnavailable: false,
+      openDepegNoPrice: true,
+      openDepegsWithoutPrice: 2,
     });
   });
 });

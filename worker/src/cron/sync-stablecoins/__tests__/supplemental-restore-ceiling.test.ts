@@ -284,7 +284,7 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
 });
 
 describe("replaceZeroSupplyPrimaryAssets", () => {
-  it("fills an unreadable primary bucket from supplemental coverage and marks the swap", () => {
+  it("fills an unreadable primary bucket from fresh supplemental coverage without the stale marker", () => {
     const primary = asset({
       id: "eurq-quantoz",
       symbol: "EURQ",
@@ -303,9 +303,13 @@ describe("replaceZeroSupplyPrimaryAssets", () => {
     expect(result.replacedIds).toEqual(["eurq-quantoz"]);
     expect(result.assets[0]).toMatchObject({
       circulating: { peggedEUR: 5_200_000 },
+      supplySource: "coingecko-fallback",
       supplyObservedAt: NOW_SEC,
-      supplyRestored: true,
     });
+    // A fresh supplemental observation is not stale carry-forward: the
+    // `supplyRestored` marker would skip it in snapshot generation and show
+    // "Stale supply" on the detail page.
+    expect(result.assets[0].supplyRestored).toBeUndefined();
   });
 
   it("publishes an observed zero rather than a positive supplemental substitute", () => {

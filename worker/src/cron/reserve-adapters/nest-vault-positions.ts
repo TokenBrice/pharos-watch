@@ -78,6 +78,17 @@ interface NestPendingTransactionValue {
 
 // These vaults publish explicit pending deposits alongside settled positions.
 const PENDING_DEPOSIT_VAULTS = new Set(["nopal-nest", "nbasis-nest"]);
+
+/**
+ * `/price.nav` and `/calculated-price` are two valuations of the same vault, so
+ * a pending-withdrawal reconciliation that rebuilds one of them from
+ * `/positions` must agree with the other. Live reads differ by $0.13 on a
+ * $184k NAV (fee accrual timing), far inside this bound; a real cross-source
+ * contradiction is orders of magnitude larger. Mirrors the Avant NAV
+ * cross-check: 1e-4 relative with a $1 absolute floor.
+ */
+const NAV_RECONCILIATION_RELATIVE_TOLERANCE = 1e-4;
+const NAV_RECONCILIATION_ABSOLUTE_TOLERANCE_USD = 1;
 const parsePositionValue = strictAmountParser("nest-vault-positions");
 
 function readParams(config: LiveReservesConfig): NestVaultPositionsParams {
@@ -339,6 +350,20 @@ export async function fetchNestVaultPositionsReserves(
       || Math.abs(grossNavUsd - settledPositionUsd - pendingDepositUsd - pendingWithdrawalUsd) > 0.01
       || Math.abs(grossNavUsd - claimableFeesUsd - calculatedNavUsd) > 0.01) {
       throw new Error("nest-vault-positions pending withdrawal NAV reconciliation failed");
+    }
+    // The vault publishes NAV twice: `/price.nav`, and the net NAV rebuilt here
+    // from `/positions`. Accepting a reconciliation that contradicts the
+    // published NAV would suppress the published-NAV residual, report gross NAV
+    // as total reserves, and score coverage over a contradiction (R1), so it
+    // fails closed naming both values.
+    if (
+      navUsd != null &&
+      Math.abs(calculatedNavUsd - navUsd) >
+        Math.max(NAV_RECONCILIATION_ABSOLUTE_TOLERANCE_USD, Math.abs(navUsd) * NAV_RECONCILIATION_RELATIVE_TOLERANCE)
+    ) {
+      throw new Error(
+        `nest-vault-positions calculated NAV ${calculatedNavUsd} does not match the published NAV ${navUsd}`,
+      );
     }
   }
   const settledCoverageUsd = settledPositionUsd + pendingDepositUsd + pendingWithdrawalUsd;

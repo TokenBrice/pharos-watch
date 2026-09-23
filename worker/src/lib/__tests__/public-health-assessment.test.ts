@@ -76,6 +76,7 @@ function makeMintBurnAssessmentDb(
     publicationMetadata?: Record<string, unknown>;
     publicationQueryError?: unknown;
     yieldSafetyError?: unknown;
+    producerHistoryError?: unknown;
   } = {},
 ): D1Database {
   const latestRunStatus = options.latestRunStatus !== undefined ? options.latestRunStatus : "ok";
@@ -161,7 +162,11 @@ function makeMintBurnAssessmentDb(
     },
     { match: "SELECT key, value FROM cache WHERE key LIKE 'circuit:%'", rows: [] },
     { match: "blacklist-gap-metrics-cache-read", rows: [], first: null },
-    { match: "GROUP BY job", rows: [] },
+    {
+      match: "GROUP BY job",
+      rows: [],
+      ...(options.producerHistoryError ? { throwError: options.producerHistoryError } : {}),
+    },
     { match: "blacklist-gap-aggregate", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
     {
       match: "SELECT status",
@@ -292,6 +297,33 @@ describe("assessPublicHealth upstream provider enrichment", () => {
     expect(result.stablecoinPublicationImpactStatus).toBe("degraded");
     expect(result.overallStatus).not.toBe("healthy");
     expect(result.warnings).toContain("stablecoin-publication-unknown");
+  });
+
+  it("degrades public health with a named warning when producer history is unreadable", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const db = makeMintBurnAssessmentDb(nowSec, {
+        producerHistoryError: new Error("cron lookup failed"),
+      });
+
+      const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
+
+      expect(result.caches["yield-data"]).toMatchObject({
+        freshnessSource: "freshness-sentinel",
+        degraded: null,
+        degradedReason: "producer-history-unreadable",
+        streakDegradedRuns: null,
+        healthy: false,
+      });
+      expect(result.overallStatus).not.toBe("healthy");
+      expect(result.warnings.some((warning) =>
+        warning.startsWith("cache-quality-unknown:")
+        && warning.includes("yield-data:producer-history-unreadable"))).toBe(true);
+      expect(result.warnings.some((warning) => warning.startsWith("cache-quality-degraded:"))).toBe(false);
+    } finally {
+      warnSpy.mockRestore();
+    }
   });
 
   it("warns without degrading health for missing active prices while row publication remains complete", async () => {

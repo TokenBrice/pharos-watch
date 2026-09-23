@@ -34,6 +34,7 @@
 | 0245     | `0245_cron_runs_degraded_reason.sql`                       | Add the nullable projected non-ok cron-run reason so status aggregates and operator paging need no per-job metadata JSON paths. |
 | 0246     | `0246_telegram_watcher_lifecycle_events.sql`              | Add privacy-preserving daily watcher transition counters and atomic active-state tracking for real subscribe, unsubscribe, and reactivate analytics. |
 | 0247     | `0247_scheduled_checkpoint_retention_index.sql`           | Add the terminal-state/update-time covering index used by bounded scheduled-checkpoint retention drains. |
+| 0248     | `0248_ddr_publication_sequence_cross_table_unique.sql`    | Guard triggers making ddr_public snapshot_sequence globally unique across the legacy, compressed-v2, and payload-reference publication tables. |
 
 ## Squashed Individual Migrations (absorbed into the 0000 baseline on 2026-07-30)
 
@@ -250,7 +251,7 @@ Current owner rulings for append-only operational/product tables that are intent
 
 ## Reviewed Data Migrations
 
-Destructive DML is not permitted under the rollout-safety header alone. A new migration containing `DELETE FROM`, `UPDATE`, or `INSERT OR REPLACE` must also declare `-- data-migration: reviewed`, have a row below, and pass the seeded pre-migration fixture replay. Migration 0236 predates this annotation and is grandfathered only through its explicit review row.
+Destructive DML is not permitted under the rollout-safety header alone. A new migration containing `DELETE FROM`, `UPDATE` (including qualified and `OR REPLACE` spellings), `INSERT OR REPLACE` or its `REPLACE INTO` alias, or `INSERT ... ON CONFLICT ... DO UPDATE` must also declare `-- data-migration: reviewed`, have a row below, and pass the seeded pre-migration fixture replay. Migration 0236 predates this annotation and is grandfathered only through its explicit review row.
 
 | Sequence | Filename | Predicate | Old-Worker compatibility | Rollback / bookmark | Expected row bounds |
 | --- | --- | --- | --- | --- | --- |
@@ -269,7 +270,7 @@ Duplicate numeric prefixes 0056 and 0061 existed in the squashed range (0001–0
 - `npm run check:migrations` verifies this manifest's active and retired migration rows against `worker/migrations/*.sql`.
 - `npm run check:migrations` also replays the complete fresh schema and compares object names by type with `EXPECTED_SCHEMA.txt`; regenerate that checked-in manifest after an accepted schema change with `npm run check:migrations -- --write-schema-manifest`.
 - `backward-compatible` means additive or compatibility-preserving changes only. Do not drop or rename tables/columns in the default deploy path, do not drop indexes (`DROP INDEX` is grandfathered only through migration `0230` and otherwise requires the coordinated cleanup rollout), and do not add `NOT NULL` columns without a `DEFAULT` because the still-live Worker may still issue inserts before deployment completes.
-- A migration containing `DELETE FROM`, `UPDATE`, or `INSERT OR REPLACE` is rejected under plain `backward-compatible`. New reviewed DML also requires `-- data-migration: reviewed` and a Reviewed Data Migrations row naming its predicate, old-Worker compatibility, rollback bookmark plan, and expected row bounds. The gate replays it against seeded existing rows immediately before that migration; each new target table must add a representative fixture.
+- A migration containing `DELETE FROM`, `UPDATE` (including qualified and `OR REPLACE` spellings), `INSERT OR REPLACE` or its `REPLACE INTO` alias, or `INSERT ... ON CONFLICT ... DO UPDATE` is rejected under plain `backward-compatible`. New reviewed DML also requires `-- data-migration: reviewed` and a Reviewed Data Migrations row naming its predicate, old-Worker compatibility, rollback bookmark plan, and expected row bounds. The gate replays it against seeded existing rows immediately before that migration; each pre-existing target table must add a representative fixture, while tables created by the same migration are covered by the fresh replay.
 - The deploy workflow reruns `npm run check:migrations`, applies remote D1 migrations, deploys once with `wrangler deploy --strict`, and verifies that the SHA-tagged deployment owns 100% of production traffic.
 - Destructive cleanup must be scheduled as a separate, coordinated rollout after the old Worker code is no longer serving traffic. Do not merge those cleanup migrations into the normal deploy path without an explicit runbook/workflow change.
 - Worker rollback is an explicit operator action. It restores Worker code traffic but does not undo D1 schema or data changes.
@@ -348,6 +349,7 @@ Duplicate numeric prefixes 0056 and 0061 existed in the squashed range (0001–0
 - `0245_cron_runs_degraded_reason.sql`: apply before Worker activation — the new Worker binds `degraded_reason` on every `cron_runs` insert. Worker rollback ignores the nullable column and resumes writing rows without it; retained values stay valid history. Dropping the column requires a separate coordinated cleanup rollout.
 - `0246_telegram_watcher_lifecycle_events.sql`: apply before the Worker release that reads lifecycle-event counters. Existing subscriber state is initialized without creating historical events; compatibility triggers then record transitions from both old and new Worker writes. Worker rollback ignores the additive columns/table while trigger capture continues. Removing the capture requires a separate coordinated cleanup rollout.
 - `0247_scheduled_checkpoint_retention_index.sql`: roll back by restoring the prior Worker; keep the additive partial index because it is inert to older Workers and prevents terminal-checkpoint retention scans. Drop it only in a later measured cleanup migration.
+- `0248_ddr_publication_sequence_cross_table_unique.sql`: apply before Worker activation. This is the rollback fence itself: a prior Worker whose allocator ignores `depeg_resolver_publication_snapshot_refs` cannot reuse a sequence a reference row already claimed — its publication batch aborts loudly instead of silently duplicating publication ordering. If such failures appear after a rollback, roll forward to a reference-aware Worker; do not drop the triggers or delete reference rows to work around them.
 
 ## Rollback Procedure
 

@@ -195,7 +195,12 @@ Finish every reviewed claim group as exactly one of:
   trigger. Rejection normally leaves the public fact open.
 - **defer** — a named prerequisite remains (for example issuer disclosure, owner
   ruling, reusable adapter, production observation, or source recovery). Record the
-  blocker, owner, and a date or event trigger; never use an undated deferral.
+  blocker, owner, and a date or event trigger; never use an undated deferral. A
+  deferral that has already landed an intermediate milestone may record it in the
+  optional ledger field `deferState` — `structured-pending-production` (structuring
+  merged; facts close only after a fresh production replay) or `shadow-collecting`
+  (producer deployed in shadow; awaiting first production observation). The
+  intermediate state never replaces the three-outcome decision itself.
 
 Append the decision to
 `.github/workflows/artifacts/safety-score-missing-data-reviewed-ledger.json`. Each

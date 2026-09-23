@@ -404,6 +404,13 @@ export function buildDexDirectApiFetchers(params: {
       // No `bsc`: the BSC subgraph is not fetched (see fetch-pancakeswap.ts), and
       // claiming it here would let the census veto every staged BSC Pancake pool.
       supportedChains: ["ethereum", "base"],
+      // Each run captures the highest-TVL head page plus two rotating tail
+      // pages; the pages between the head and the persisted cursor are read on
+      // other runs. A pool missing from any single response is therefore not
+      // evidence that it does not exist, so this fetcher may not veto staged
+      // rows — enforcing its per-run key set on a cycle-completion run rejected
+      // every staged Pancake pool outside that run's three pages.
+      censusScope: "bounded-sample",
       fn: (signal) => fetchPancakeSwapPools(params.graphApiKey, signal, params.db),
     },
     {

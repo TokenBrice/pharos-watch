@@ -110,6 +110,12 @@ interface BridgeBasketProbe {
     expectedUnitValueUsd: number;
     basketWeights: Array<{ assetId: string; weight: number }>;
   } | null;
+  /**
+   * R1: a measured positive inventory that published no observed unit value
+   * says why, so the withheld valuation reads as a named gap rather than an
+   * omission.
+   */
+  outputValuationUnavailableReason: "output-tokens-unpriced" | null;
   bridgeInventories: Array<{
     label: string;
     bridgeAddress: string;
@@ -484,10 +490,34 @@ async function fetchBridgeBasketImmediateRedeemableUsd(
       : null;
     if (eurUsdReference == null || !Number.isFinite(eurUsdReference) || eurUsdReference <= 0) return null;
 
-    const capacityUsd = capacityEur * eurUsdReference;
+    // R1: the observed basket unit value must come from pricing each weighted
+    // output token, never from the EUR/USD reference. That reference is the peg
+    // *expectation* for a Euro stablecoin; reusing it as the observed value
+    // pins observed === expected, so the output haircut is always zero and an
+    // impaired member is scored at par. When any member is unpriced the whole
+    // valuation is withheld with a named reason instead (the priced legs alone
+    // cannot value the basket).
+    const outputUsdPrices = bridgeInventories.map(
+      (inventory) => prices[inventory.tokenAddress.toLowerCase()]?.price?.usd,
+    );
+    const outputsPriced = outputUsdPrices.every(
+      (usdPrice) => typeof usdPrice === "number" && Number.isFinite(usdPrice) && usdPrice > 0,
+    );
+    const observedUnitValueUsd =
+      capacityEur > 0 && outputsPriced
+        ? bridgeInventories.reduce(
+            (sum, inventory, index) =>
+              sum + (inventory.inventoryEur / capacityEur) * outputUsdPrices[index]!,
+            0,
+          )
+        : null;
+    // Prefer the market value of the measured inventory; only a basket that
+    // cannot be priced falls back to the nominal FX conversion of its face
+    // amount, and that fallback never carries an observed valuation.
+    const capacityUsd = capacityEur * (observedUnitValueUsd ?? eurUsdReference);
     if (!Number.isFinite(capacityUsd) || capacityUsd < 0) return null;
     const outputValuation =
-      capacityEur > 0
+      observedUnitValueUsd != null
         ? {
             sourceId: `collateral-positions-api:deuro-bridge-basket:${basket.eurUsdPriceAddress.toLowerCase()}`,
             observedAt:
@@ -495,7 +525,7 @@ async function fetchBridgeBasketImmediateRedeemableUsd(
               ctx?.observedBlock?.timestamp ??
               ctx?.nowSec ??
               Math.floor(Date.now() / 1_000),
-            unitValueUsd: eurUsdReference,
+            unitValueUsd: observedUnitValueUsd,
             expectedUnitValueUsd: eurUsdReference,
             basketWeights: bridgeInventories.map((inventory) => ({
               assetId: DEURO_OUTPUT_ASSET_KEY_BY_LABEL[inventory.label]!,
@@ -509,7 +539,15 @@ async function fetchBridgeBasketImmediateRedeemableUsd(
     ) {
       return null;
     }
-    return { capacityEur, capacityUsd, eurUsdReference, outputValuation, bridgeInventories };
+    return {
+      capacityEur,
+      capacityUsd,
+      eurUsdReference,
+      outputValuation,
+      outputValuationUnavailableReason:
+        capacityEur > 0 && outputValuation == null ? "output-tokens-unpriced" : null,
+      bridgeInventories,
+    };
   } catch (error) {
     rethrowIfAborted(error, signal);
     return null;
@@ -589,6 +627,8 @@ export async function fetchCollateralPositionsApiReserves(
             eurUsdReferenceSource: params.redemptionBridgeBasket.eurUsdPriceAddress,
             ...(bridgeBasketProbe.outputValuation
               ? { outputValuation: bridgeBasketProbe.outputValuation }
+              : bridgeBasketProbe.outputValuationUnavailableReason
+              ? { outputValuationUnavailableReason: bridgeBasketProbe.outputValuationUnavailableReason }
               : {}),
             bridgeInventories: bridgeBasketProbe.bridgeInventories,
           },

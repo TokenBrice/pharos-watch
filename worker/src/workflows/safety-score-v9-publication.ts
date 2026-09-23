@@ -344,6 +344,14 @@ function terminalIdempotencyKey(instanceId: string): string {
   return `workflow:${SAFETY_SCORE_V9_WORKFLOW_JOB}:${instanceId}`;
 }
 
+/**
+ * Commits the admitted shadow generation and its terminal `cron_runs` row in
+ * one batch. The terminal row is derived from the same admission result as the
+ * cache write: a generation the monotonic guard rejects commits neither, so the
+ * postcondition throw below can still record the conflict as an error row.
+ * Committing a non-error row for a rejected generation would make the durable
+ * terminal history contradict the instance's own returned status.
+ */
 export async function writeSafetyScoreV9ShadowPublication(
   db: D1Database,
   instanceId: string,
@@ -395,7 +403,14 @@ export async function writeSafetyScoreV9ShadowPublication(
       `INSERT INTO cron_runs
          (job, started_at, duration_ms, status, item_count, metadata,
           slot_started_at, error, idempotency_key)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+       SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?
+        WHERE EXISTS (
+          SELECT 1
+            FROM cache
+           WHERE key = ?
+             AND value = ?
+             AND updated_at = ?
+        )
        ON CONFLICT DO NOTHING`,
     ).bind(
       SAFETY_SCORE_V9_WORKFLOW_JOB,
@@ -407,6 +422,9 @@ export async function writeSafetyScoreV9ShadowPublication(
       slotStartedAt,
       gated.error,
       terminalIdempotencyKey(instanceId),
+      gated.shadowKey,
+      gated.shadowValue,
+      gated.updatedAt,
     ),
   ]);
 

@@ -295,6 +295,38 @@ describe("buildDexPriceObservationsFromRetainedPools", () => {
 
     expect(result.has("usp-pareto-credit")).toBe(false);
   });
+
+  it("attributes a cross-source price to the family that observed it with capped TVL weight", () => {
+    const hybrid = makePool({
+      poolId: "ethereum:0xhybrid",
+      project: "uniswap-v3",
+      tvlUsd: 200_000,
+      price: 0.998,
+      source: "dl",
+      priceSource: "cg_onchain",
+      priceEvidenceTvlUsd: 100_000,
+    });
+    const sameSource = makePool({
+      poolId: "ethereum:0xsame",
+      project: "curve",
+      tvlUsd: 80_000,
+      price: 0.999,
+      source: "cg_onchain",
+    });
+    const result = buildDexPriceObservationsFromRetainedPools(
+      new Map([["test-dollar", [hybrid, sameSource]]]),
+    );
+
+    expect(result.get("test-dollar")).toEqual([
+      expect.objectContaining({
+        price: 0.998,
+        // Weighted at the price row's own $100K claim, not the dl row's $200K.
+        tvl: 100_000,
+        sourceFamily: "cg_onchain",
+      }),
+      expect.objectContaining({ price: 0.999, tvl: 80_000, sourceFamily: "cg_onchain" }),
+    ]);
+  });
 });
 
 describe("filterRetainedPools", () => {

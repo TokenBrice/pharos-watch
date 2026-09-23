@@ -317,6 +317,58 @@ describe("Safety Score V9 publication Workflow", () => {
       value: "shadow-1788434100",
       updated_at: 1788434100,
     }]);
+    // The rejected generation commits no terminal row of its own, so the
+    // Workflow's failure handler can still record the conflict as its error.
+    expect(
+      sqlite.prepare("SELECT status, idempotency_key FROM cron_runs ORDER BY id").all(),
+    ).toEqual([{
+      status: "ok",
+      idempotency_key: `workflow:${SAFETY_SCORE_V9_WORKFLOW_JOB}:newer-instance`,
+    }]);
+  });
+
+  it("records the stale-generation rejection as the older instance's only terminal row", async () => {
+    const step = new ReplayFakeStep();
+    const { db, sqlite } = createWorkflowDb();
+    computeSafetyScoreV9.mockImplementation(compileCanonicalPublication);
+    await writeSafetyScoreV9ShadowPublication(db, "newer-instance", 1788434100, EVENT.timestamp.getTime(), {
+      shadowKey: `${SAFETY_SCORE_V9_SHADOW_CACHE_PREFIX}:report-cards:v9:1788434100`,
+      shadowValue: "shadow-1788434100",
+      updatedAt: 1788434100,
+      cronStatus: "ok" as const,
+      itemCount: 200,
+      error: null,
+      cronMetadata: "{\"sourceGeneration\":\"report-cards:v9:1788434100\"}",
+    });
+
+    const result = await runSafetyScoreV9PublicationWorkflow(
+      { DB: db },
+      EVENT,
+      step as unknown as WorkflowStep,
+    );
+
+    expect(result).toEqual({
+      instanceId: EVENT.instanceId,
+      shadowKey: null,
+      sourceGeneration: null,
+      status: "error",
+    });
+    expect(
+      sqlite.prepare(
+        "SELECT status, error, item_count, idempotency_key FROM cron_runs WHERE idempotency_key = ?",
+      ).all(`workflow:${SAFETY_SCORE_V9_WORKFLOW_JOB}:${EVENT.instanceId}`),
+    ).toEqual([{
+      status: "error",
+      error: expect.stringContaining("conflicts with an existing value"),
+      item_count: null,
+      idempotency_key: `workflow:${SAFETY_SCORE_V9_WORKFLOW_JOB}:${EVENT.instanceId}`,
+    }]);
+    expect(
+      sqlite.prepare("SELECT key, value FROM cache WHERE key LIKE 'safety-score-v9:shadow:%'").all(),
+    ).toEqual([{
+      key: `${SAFETY_SCORE_V9_SHADOW_CACHE_PREFIX}:report-cards:v9:1788434100`,
+      value: "shadow-1788434100",
+    }]);
   });
 
   it("records terminal errors without shadow publication for missing, newer or advanced inputs", async () => {

@@ -128,6 +128,15 @@ jobs:
           git config core.hooksPath "$EMPTY_HOOKS"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Snapshot the verifier and its imports from the trusted default-branch
+          # checkout before prepare-branch switches the worktree to the automation
+          # branch: relative scripts/ paths resolve against that unreviewed branch
+          # afterwards, and no branch-controlled code may run while the automation
+          # token is in the step environment.
+          TRUSTED_VERIFIER="$ARTIFACT_TMP/trusted-verifier"
+          mkdir -p "$TRUSTED_VERIFIER/scripts/ci" "$TRUSTED_VERIFIER/scripts/lib"
+          cp scripts/ci/verify-mechanism-refresh-diff.ts "$TRUSTED_VERIFIER/scripts/ci/"
+          cp scripts/lib/cli-args.mjs scripts/lib/smoke-runtime.mjs "$TRUSTED_VERIFIER/scripts/lib/"
           NEW_FILES="$(git ls-files --others --exclude-standard -- "$ROOT")"
           while IFS= read -r path; do
             [ -z "$path" ] && continue
@@ -135,8 +144,8 @@ jobs:
             cp "$path" "$ARTIFACT_TMP/$path"
           done <<< "$NEW_FILES"
 
-          node --import tsx scripts/ci/verify-mechanism-refresh-diff.ts --asset "$ASSET_ID" --stage prepare-branch
-          node --import tsx scripts/ci/verify-mechanism-refresh-diff.ts --asset "$ASSET_ID" --stage verify-diff
+          node --import tsx "$TRUSTED_VERIFIER/scripts/ci/verify-mechanism-refresh-diff.ts" --asset "$ASSET_ID" --stage prepare-branch
+          node --import tsx "$TRUSTED_VERIFIER/scripts/ci/verify-mechanism-refresh-diff.ts" --asset "$ASSET_ID" --stage verify-diff
 
           while IFS= read -r path; do
             [ -z "$path" ] && continue
@@ -149,7 +158,7 @@ jobs:
             -m "chore(v9): refresh ${ASSET_ID} protocol API evidence" \
             -m "Capture append-only producer evidence without changing mechanism overlays or score identity."
 
-          node --import tsx scripts/ci/verify-mechanism-refresh-diff.ts --asset "$ASSET_ID" --stage verify-diff
+          node --import tsx "$TRUSTED_VERIFIER/scripts/ci/verify-mechanism-refresh-diff.ts" --asset "$ASSET_ID" --stage verify-diff
 
           ARTIFACT_PATH="$(git diff-tree --no-commit-id --name-only -r HEAD -- "$ROOT" | head -n 1)"
           export ARTIFACT_PATH ASSET_ID

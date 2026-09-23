@@ -195,7 +195,13 @@ export const PRICING_SOURCE_REGISTRY_DEX_SEARCH = [
     label: "CoinMarketCap",
     shortLabel: "CMC",
     depegSourceFamily: "coinmarketcap",
-    maxTrustedAgeSec: 60 * 60,
+    // Provider-local admission admits live quotes for one fetch cadence plus
+    // grace (3,900 s) and identity-verified cache quotes for two cadences plus
+    // grace (7,500 s). The publication window covers that bridge plus one
+    // 15-minute slot so a quote the pass admits at :09 survives the staging
+    // handoff to the :15 publication instead of being discarded downstream
+    // while suppressing the fresh retrieval that would have replaced it.
+    maxTrustedAgeSec: (2 * 60 + 20) * 60,
     defaultWeight: 1,
     isListAggregator: true,
   }),

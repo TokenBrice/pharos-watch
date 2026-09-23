@@ -58,6 +58,7 @@ const CURRENT_GENERATION_ENGINE_VERSIONS = new Set<string>([
   "selector-v2.3",
   "selector-v2.4",
   "selector-v2.5",
+  "selector-v2.6",
   SELECTOR_VERSION,
 ]);
 

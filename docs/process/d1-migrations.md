@@ -13,7 +13,7 @@ Additive migrations do not need data-migration metadata.
 
 ## Reviewed data migrations
 
-`DELETE FROM`, `UPDATE`, and `INSERT OR REPLACE` can mutate rows used by the still-running old Worker. A new migration containing one of these statements must include both headers:
+`DELETE FROM`, `UPDATE` (including `UPDATE OR REPLACE` and `schema.table`-qualified targets), `REPLACE INTO` (SQLite's spelling of `INSERT OR REPLACE`), and `INSERT ... ON CONFLICT ... DO UPDATE` can mutate rows used by the still-running old Worker. A new migration containing one of these statements must include both headers:
 
 ```sql
 -- rollout-safety: backward-compatible
@@ -27,7 +27,7 @@ It must also add a row to the manifest's **Reviewed Data Migrations** table docu
 - the pre-deploy Time Travel bookmark and rollback plan; and
 - the expected minimum or maximum affected-row bound.
 
-The migration gate replays each reviewed data migration from its immediate pre-migration schema, seeds representative existing rows for every DML target, and then executes the migration. A new target table requires a representative fixture in `scripts/ci/check-worker-migrations.ts`; an empty fresh-database replay is not sufficient evidence. Migration 0236 is the only annotation grandfather and remains approved through its explicit manifest row.
+The migration gate replays each reviewed data migration from its immediate pre-migration schema, seeds representative existing rows for every DML target, and then executes the migration. A table created by the same migration has no pre-migration rows, so its state is covered by the fresh replay instead of a seeded fixture. A new pre-existing target table requires a representative fixture in `scripts/ci/check-worker-migrations.ts`; an empty fresh-database replay is not sufficient evidence. Migration 0236 is the only annotation grandfather and remains approved through its explicit manifest row.
 
 A data-migration annotation is review evidence, not permission for destructive cleanup. If the previous Worker can no longer use the affected rows, use a separate cleanup rollout after the compatible Worker has soaked.
 

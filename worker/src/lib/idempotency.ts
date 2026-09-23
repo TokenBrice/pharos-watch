@@ -400,15 +400,20 @@ async function releasePreExecutionReservation(
   }
 }
 
-/** Table-wide TTL sweep: every terminal row, including `execution_unknown`, ages out together. */
+/**
+ * Table-wide TTL sweep for terminal rows. `execution_unknown` rows are
+ * exempt: deleting one would let the same key reserve a fresh row and
+ * re-execute an unconfirmed mutation (ADR-27), so they persist as permanent
+ * reconciliation tombstones alongside still-pending reservations.
+ */
 async function pruneTerminalIdempotencyRecords(db: D1Database, now: number): Promise<void> {
   await db
     .prepare(
       `DELETE FROM admin_idempotency_keys
         WHERE created_at < ?
-          AND response_status <> ?`,
+          AND response_status NOT IN (?, ?)`,
     )
-    .bind(now - 7 * DAY_SECONDS, PENDING_RESPONSE_STATUS)
+    .bind(now - 7 * DAY_SECONDS, PENDING_RESPONSE_STATUS, EXECUTION_UNKNOWN_RESPONSE_STATUS)
     .run()
     .catch((error) => {
       logWorkerEvent({

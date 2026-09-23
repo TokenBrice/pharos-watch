@@ -40,7 +40,7 @@ Many router-dispatched mutating admin endpoints also support optional `Idempoten
 
 When an `Idempotency-Key` is supplied on one of those routes, the worker fingerprints the request and reserves the key with owner/generation fencing before execution. Terminal responses echo `Idempotency-Key` plus `X-Idempotent-Replay`; a stored terminal response is replayed without rerunning the action, while reuse with a different request fingerprint returns `409`. Only an abandoned reservation whose execution never started can be reclaimed after its takeover window.
 
-Once execution has been marked as started, an unconfirmed outcome is never retried automatically. An in-flight duplicate, a handler throw after that point, or a terminal response that cannot be confirmed as persisted returns `503` with `error: "execution_unknown"`; subsequent requests with the same key also return `503` with `X-Idempotent-Replay: true` and do not invoke the handler again. Operators must reconcile whether the external effect occurred before deciding whether to submit a new idempotency key.
+Once execution has been marked as started, an unconfirmed outcome is never retried automatically. An in-flight duplicate, a handler throw after that point, or a terminal response that cannot be confirmed as persisted returns `503` with `error: "execution_unknown"`; subsequent requests with the same key also return `503` with `X-Idempotent-Replay: true` and do not invoke the handler again. `execution_unknown` rows are exempt from the seven-day terminal TTL, so the original key can never age out and reserve a fresh row. Operators must reconcile whether the external effect occurred before deciding whether to submit a new idempotency key.
 
 A stale started reservation stays terminally `execution_unknown`: it is never handed back for re-execution unless the action ships a reconciliation callback that proves the original effect did not commit. No API-key or feedback action ships one today, so those keys are operator-reconciled.
 
@@ -866,7 +866,7 @@ Backfills protocol API yield-history rows for the curated target set used by yie
 
 ### `POST /api/backfill-tape`
 
-Runs the same TAPE projectors used by the `project-tape` cron with operator-supplied window and limit overrides. Writes are idempotent on `(source_table, source_row_id, transition)`, so the endpoint is safe to re-run. `depeg.peak_worsened` honors `since` / `until` against open rows' `started_at` and paginates through all matching rows. The first-observation projectors `methodology.bumped`, `cemetery.entry.added`, and `lifecycle.tracked.frozen` are window- and cap-blind: they ignore `since`, `until`, and `maxRows` because they scan static sources keyed by ID.
+Runs the same TAPE projectors used by the `project-tape` cron with operator-supplied window and limit overrides. Writes are idempotent on `(source_table, source_row_id, transition)`, so the endpoint is safe to re-run. `depeg.peak_worsened` honors `since` / `until` against open rows' `started_at` and pages through matches in batches of 500, stopping once `maxRows` source rows have been scanned; without `maxRows` it scans every matching open row, like the cron. The first-observation projectors `methodology.bumped`, `cemetery.entry.added`, and `lifecycle.tracked.frozen` are window- and cap-blind: they ignore `since`, `until`, and `maxRows` because they scan static sources keyed by ID.
 
 **Request body or query parameters**
 

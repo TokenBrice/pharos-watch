@@ -144,4 +144,73 @@ describe("DDR publication payload storage", () => {
       { snapshotToken: "ddrpub:test:1" },
     ]);
   }));
+
+  it("rejects a reference-unaware allocator that would reuse a claimed publication sequence", async () => withSqliteD1(async (db) => {
+    await writePublicationManifest(db, {
+      snapshotToken: "ddrpub:test:1",
+      snapshotGeneration: 2,
+      publishedAt: 200000,
+      validatorVersion: "vitest",
+      basePayload: emptyBasePayload(200000),
+    });
+    await writePublicationManifest(db, {
+      snapshotToken: "ddrpub:test:2",
+      snapshotGeneration: 2,
+      publishedAt: 200900,
+      validatorVersion: "vitest",
+      basePayload: emptyBasePayload(200900),
+    });
+    expect(count(db, "depeg_resolver_publication_snapshot_refs")).toBe(1);
+
+    // The pre-reference Worker allocated the next sequence from the legacy and
+    // compressed tables only. After a rollback that allocator computes 2, which
+    // the reference row already claims, so the guard must abort the insert.
+    const referenceUnawareAllocator = `(SELECT COALESCE(MAX(snapshot_sequence), 0) + 1
+         FROM (
+           SELECT snapshot_sequence FROM depeg_resolver_publication_snapshots WHERE snapshot_kind = 'ddr_public'
+           UNION ALL
+           SELECT snapshot_sequence FROM depeg_resolver_publication_snapshots_v2 WHERE snapshot_kind = 'ddr_public'
+         ))`;
+    expect(() =>
+      db.sqlite
+        .prepare(
+          `INSERT INTO depeg_resolver_publication_snapshots_v2
+           (snapshot_token, snapshot_kind, snapshot_sequence, snapshot_generation, published_at,
+            base_payload_hash, base_payload_content_hash, public_prediction_ids_hash,
+            public_prediction_ids_json, public_prediction_row_hashes_json, base_payload_gzip,
+            base_payload_bytes, compressed_payload_bytes, base_row_count, public_prediction_count,
+            created_at, finalized_at, validator_version)
+           VALUES (?, 'ddr_public', ${referenceUnawareAllocator}, 2, 300000, ?, ?, ?, '[]', '{}', ?, 1, 1, 0, 0, 300000, 300000, 'vitest')`,
+        )
+        .run("ddrpub:test:rollback", "3".repeat(64), "4".repeat(64), "5".repeat(64), new Uint8Array([0x1f])),
+    ).toThrow(/snapshot_sequence is already claimed by another publication table/);
+
+    // The guard is symmetric: a reference row cannot claim a compressed row's
+    // sequence either.
+    expect(() =>
+      db.sqlite
+        .prepare(
+          `INSERT INTO depeg_resolver_publication_snapshot_refs
+           (snapshot_token, snapshot_kind, snapshot_sequence, snapshot_generation, published_at,
+            base_payload_hash, base_payload_content_hash, payload_snapshot_token, base_payload_clock_json,
+            public_prediction_ids_hash, public_prediction_ids_json, public_prediction_row_hashes_json,
+            base_row_count, public_prediction_count, created_at, finalized_at, validator_version)
+           VALUES (?, 'ddr_public', 1, 2, 300000, ?, ?, 'ddrpub:test:1', '{"methodologyAsOf":300000}',
+                   ?, '[]', '{}', 0, 0, 300000, 300000, 'vitest')`,
+        )
+        .run("ddrpub:test:colliding-ref", "6".repeat(64), "7".repeat(64), "8".repeat(64)),
+    ).toThrow(/snapshot_sequence is already claimed by another publication table/);
+
+    // The current three-table allocator still publishes past the reference.
+    const changed = emptyBasePayload(301800);
+    changed._meta.lineage.incidentCount = 2;
+    const next = await writePublicationManifest(db, {
+      snapshotToken: "ddrpub:test:3",
+      snapshotGeneration: 2,
+      publishedAt: 301800,
+      validatorVersion: "vitest",
+      basePayload: changed,
+    });
+    expect(next.snapshotSequence).toBe(3);
+  }));
 });

@@ -125,6 +125,82 @@ describe("mergeStagedPools", () => {
     vi.restoreAllMocks();
   });
 
+  it("carries cross-source price provenance through the merged pool", async () => {
+    const now = 1_710_000_000;
+    const dlValueRow = makeStagedPoolRow({
+      source: "dl",
+      tvl_usd: 200_000,
+      price_usd: null,
+      refreshed_at: now,
+    });
+    const cgPriceRow = makeStagedPoolRow({
+      source: "cg_onchain",
+      tvl_usd: 100_000,
+      price_usd: 0.998,
+      refreshed_at: now,
+    });
+    const metrics = new Map();
+
+    const result = await mergeStagedPools(
+      createMockDb([dlValueRow, cgPriceRow]),
+      metrics as never,
+      makeKnownPoolIndex(),
+      now,
+    );
+
+    expect(result.mergedCount).toBe(1);
+    expect(result.skippedCount).toBe(0);
+    // The retained pool keeps the dl value row's family and TVL but records
+    // that a cg_onchain row observed the attached price, with that row's own
+    // TVL claim capping the price evidence weight.
+    expect(metrics.get("usdt-tether")?.topPools[0]).toMatchObject({
+      source: "dl",
+      tvlUsd: 200_000,
+      price: 0.998,
+      priceSource: "cg_onchain",
+      priceEvidenceTvlUsd: 100_000,
+    });
+    expect(result.priceObservations.get("usdt-tether")?.[0]).toMatchObject({
+      sourceFamily: "cg_onchain",
+    });
+  });
+
+  it("drops an implausible cross-source price without discarding the trusted value row", async () => {
+    const now = 1_710_000_000;
+    const dlValueRow = makeStagedPoolRow({
+      stablecoin_id: "usdc-circle",
+      source: "dl",
+      tvl_usd: 200_000,
+      price_usd: null,
+      refreshed_at: now,
+    });
+    const cgPriceRow = makeStagedPoolRow({
+      stablecoin_id: "usdc-circle",
+      source: "cg_onchain",
+      tvl_usd: 100_000,
+      price_usd: 0.005,
+      refreshed_at: now,
+    });
+    const metrics = new Map();
+
+    const result = await mergeStagedPools(
+      createMockDb([dlValueRow, cgPriceRow]),
+      metrics as never,
+      makeKnownPoolIndex(),
+      now,
+    );
+
+    expect(result.mergedCount).toBe(1);
+    expect(result.skippedCount).toBe(0);
+    expect(result.skipDimensions).toEqual([]);
+    // Only the fallback price is gone; the dl value row still contributes its
+    // TVL, published without a price.
+    const pool = metrics.get("usdc-circle")?.topPools[0];
+    expect(pool).toMatchObject({ source: "dl", tvlUsd: 200_000 });
+    expect(pool?.price).toBeUndefined();
+    expect(pool?.extra?.measurement?.priceMeasured).toBe(false);
+  });
+
   it("retains case-distinct Solana staged pools as separate identities", async () => {
     const now = 1_710_000_000;
     const upperPool = "9j7M8s9d5M5x6o8N9vQm3P4r5T6u7V8w9X1y2Z3a4Bc";

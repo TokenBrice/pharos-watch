@@ -344,6 +344,13 @@ export async function handleApiKeyRequestVerify(
     if (!allowedByIp.allowed) {
       return selfServeError(429, "Too many verification attempts. Please wait before trying again.", allowedByIp.retryAfterSec);
     }
+    const row = await selectPendingRequestByTokenHash(db, tokenHash);
+    if (!row || row.status !== "pending_verification" || !row.verification_token_hash) {
+      return selfServeError(400, "Invalid or expired verification token.");
+    }
+    // The token bucket is spent only after the lookup proves the token exists:
+    // writing a `verification_token` row per unknown token would let an
+    // unauthenticated caller grow this table faster than retention drains it.
     const allowedByToken = await checkApiKeyRequestRateLimit(
       db,
       "verification_token",
@@ -354,11 +361,6 @@ export async function handleApiKeyRequestVerify(
     );
     if (!allowedByToken.allowed) {
       return selfServeError(429, "Too many verification attempts. Please wait before trying again.", allowedByToken.retryAfterSec);
-    }
-
-    const row = await selectPendingRequestByTokenHash(db, tokenHash);
-    if (!row || row.status !== "pending_verification" || !row.verification_token_hash) {
-      return selfServeError(400, "Invalid or expired verification token.");
     }
     if (row.verification_expires_at == null || row.verification_expires_at < nowSec) {
       await markRequestExpired(db, row.request_id, nowSec).catch((error) => {

@@ -602,12 +602,14 @@ describe("computeAndStoreStabilityIndex", () => {
     const result = await computeAndStoreStabilityIndex(db);
     const snapshot = readInsertedInputSnapshot(db);
     const metadata = JSON.parse(result.metadata ?? "{}") as {
+      reason?: string;
       openDepegsWithoutPrice: number;
       degradedComponents: string[];
     };
 
-    expect(result.status).toBeUndefined();
+    expect(result.status).toBe("degraded");
     expect(result.itemCount).toBe(1);
+    expect(metadata.reason).toBe("open-depeg-no-price");
     expect(metadata.openDepegsWithoutPrice).toBe(1);
     expect(metadata.degradedComponents).toEqual(["open-depeg-no-price"]);
     expect(snapshot.degradedComponents).toEqual(["open-depeg-no-price"]);

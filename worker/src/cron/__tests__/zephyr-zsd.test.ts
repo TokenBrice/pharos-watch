@@ -61,17 +61,46 @@ describe("parseZephyrZsdStats", () => {
   });
 
   it("carries the upstream scanner observation time instead of fetch time", () => {
+    const nowSec = 1_790_000_060;
     expect(parseZephyrZsdStats({
       zsd_circ: 385_038.0963333748,
       zsd_price: 1.003,
-      captured_at: "2026-09-21T05:24:56.925Z",
-    })?.observedAt).toBe(1_789_968_296);
+      captured_at: "2026-09-21T13:17:20.000Z",
+    }, nowSec)?.observedAt).toBe(1_789_996_640);
 
     expect(parseZephyrZsdStats({
       zsd_circ: 385_038.0963333748,
       zsd_price: 1.003,
-      block_timestamp: 1_790_000_000,
-    })?.observedAt).toBe(1_790_000_000);
+      block_timestamp: 1_789_996_640,
+    }, nowSec)?.observedAt).toBe(1_789_996_640);
+  });
+
+  it("rejects scanner timestamps outside the registered zephyr-scanner trust window", () => {
+    const nowSec = 1_790_000_060;
+    // Future beyond the shared 10-minute pricing-source skew allowance.
+    expect(parseZephyrZsdStats({
+      zsd_circ: 385_038.0963333748,
+      zsd_price: 1.003,
+      block_timestamp: nowSec + 601,
+    }, nowSec)?.observedAt).toBeNull();
+    // Stale beyond the four-hour zephyr-scanner window.
+    expect(parseZephyrZsdStats({
+      zsd_circ: 385_038.0963333748,
+      zsd_price: 1.003,
+      block_timestamp: nowSec - 4 * 60 * 60 - 1,
+    }, nowSec)?.observedAt).toBeNull();
+    // Inside the skew allowance the upstream observation is kept.
+    expect(parseZephyrZsdStats({
+      zsd_circ: 385_038.0963333748,
+      zsd_price: 1.003,
+      block_timestamp: nowSec + 599,
+    }, nowSec)?.observedAt).toBe(nowSec + 599);
+    // Millisecond epochs are normalized to seconds before validation.
+    expect(parseZephyrZsdStats({
+      zsd_circ: 385_038.0963333748,
+      zsd_price: 1.003,
+      timestamp: (nowSec - 60) * 1000,
+    }, nowSec)?.observedAt).toBe(nowSec - 60);
   });
 
   it("ignores unreasonable live zsd_price values for ZSD market-cap metadata", () => {

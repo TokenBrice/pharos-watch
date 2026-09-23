@@ -244,6 +244,43 @@ describe("api key self-serve request handlers", () => {
     ).toEqual({ n: 0 });
   });
 
+  it("mints no verification_token limiter rows for unknown tokens", async () => {
+    for (const token of ["a".repeat(40), "b".repeat(40), "c".repeat(40)]) {
+      const response = await handleApiKeyRequestVerify(
+        db,
+        postRequest("/api/api-key-requests/verify", { token }),
+        env(),
+        "api-key-pepper",
+      );
+      expect(response.status).toBe(400);
+    }
+
+    expect(
+      sqlite
+        .prepare("SELECT COUNT(*) AS n FROM api_key_request_rate_limit_v2 WHERE scope = 'verification_token'")
+        .get(),
+    ).toEqual({ n: 0 });
+  });
+
+  it("spends the verification_token bucket for a real token after the lookup", async () => {
+    await handleApiKeyRequest(db, postRequest("/api/api-key-requests", validBody()), env());
+    const token = extractVerificationToken(sentEmails[0]);
+
+    const response = await handleApiKeyRequestVerify(
+      db,
+      postRequest("/api/api-key-requests/verify", { token }),
+      env(),
+      "api-key-pepper",
+    );
+
+    expect(response.status).toBe(201);
+    expect(
+      sqlite
+        .prepare("SELECT COUNT(*) AS n FROM api_key_request_rate_limit_v2 WHERE scope = 'verification_token'")
+        .get(),
+    ).toEqual({ n: 1 });
+  });
+
   it("finalizes the self-serve request before activating the returned key", async () => {
     const runSqlLog: string[] = [];
     db = createSqliteD1(sqlite, { onRun: (sql) => runSqlLog.push(sql) });
@@ -743,6 +780,47 @@ describe("api key self-serve request handlers", () => {
     expect(sqlite.prepare(
       "SELECT subject_hash FROM api_key_self_serve_issuance_limits ORDER BY subject_hash",
     ).all()).toEqual([{ subject_hash: "current-issuance" }]);
+  });
+
+  it("drains a limiter backlog larger than one delete batch", async () => {
+    const cutoff = 2_000_000_000 - 2 * 24 * 60 * 60;
+    const values: string[] = [];
+    for (let i = 0; i < 5; i++) {
+      values.push(`('verification_token', 'backlog-${i}', ${cutoff - 1 - i}, 1, ${cutoff - 1 - i})`);
+    }
+    values.push(`('verification_token', 'current', ${cutoff}, 1, ${cutoff})`);
+    sqlite.exec(`
+      INSERT INTO api_key_request_rate_limit_v2
+        (scope, subject_hash, bucket_start, count, last_seen_at)
+      VALUES ${values.join(", ")}
+    `);
+
+    const drained = await pruneOldApiKeyRequestRateLimits(db, cutoff, 2);
+
+    expect(drained).toEqual({ deleted: 5, truncated: false });
+    expect(sqlite.prepare(
+      "SELECT subject_hash FROM api_key_request_rate_limit_v2 ORDER BY subject_hash",
+    ).all()).toEqual([{ subject_hash: "current" }]);
+  });
+
+  it("reports truncation when the run budget leaves limiter rows behind", async () => {
+    const cutoff = 2_000_000_000 - 2 * 24 * 60 * 60;
+    const values: string[] = [];
+    for (let i = 0; i < 5; i++) {
+      values.push(`('verification_token', 'backlog-${i}', ${cutoff - 1 - i}, 1, ${cutoff - 1 - i})`);
+    }
+    sqlite.exec(`
+      INSERT INTO api_key_request_rate_limit_v2
+        (scope, subject_hash, bucket_start, count, last_seen_at)
+      VALUES ${values.join(", ")}
+    `);
+
+    const capped = await pruneOldApiKeyRequestRateLimits(db, cutoff, 2, 3);
+
+    expect(capped).toEqual({ deleted: 3, truncated: true });
+    expect(sqlite.prepare(
+      "SELECT subject_hash FROM api_key_request_rate_limit_v2 ORDER BY subject_hash",
+    ).all()).toEqual([{ subject_hash: "backlog-0" }, { subject_hash: "backlog-1" }]);
   });
 
 });

@@ -738,6 +738,78 @@ describe("status cause text", () => {
       }),
     );
     expect(causes.find((cause) => cause.code === "active_price_coverage_incomplete")?.message).not.toContain("coin-c");
+    expect(causes.find((cause) => cause.code === "active_price_coverage_duration_degraded")).toBeUndefined();
+  });
+
+  it("emits a public-impact duration cause when a material gap outlives the duration budget", () => {
+    const generations = STATUS_MISSING_PRICE_THRESHOLDS.generationsElevated + 4;
+    const activePriceCoverage = {
+      ...makePublicHealth().activePriceCoverage,
+      status: "incomplete" as const,
+      expectedActiveCount: 3,
+      presentActiveCount: 3,
+      pricedActiveCount: 1,
+      missingPriceCount: 2,
+      pricedActiveIds: ["coin-a"],
+      missingActiveIds: ["coin-b", "coin-c"],
+      missingActiveAssets: [
+        {
+          stablecoinId: "coin-b",
+          symbol: "B",
+          marketCapUsd: STATUS_MISSING_PRICE_THRESHOLDS.durationMaterialMarketCapUsd,
+          currentPrice: null,
+          currentSource: null,
+          currentObservedAt: null,
+          currentConfidence: null,
+          consecutiveMissingGenerations: generations,
+          lastAcceptedPrice: null,
+          lastAcceptedSource: null,
+          lastAcceptedObservedAt: null,
+          rejectionReason: "missing",
+          alertEligible: true,
+        },
+        {
+          stablecoinId: "coin-c",
+          symbol: "C",
+          marketCapUsd: 10_000_000,
+          currentPrice: null,
+          currentSource: null,
+          currentObservedAt: null,
+          currentConfidence: null,
+          consecutiveMissingGenerations: 1,
+          lastAcceptedPrice: null,
+          lastAcceptedSource: null,
+          lastAcceptedObservedAt: null,
+          rejectionReason: "missing",
+          alertEligible: false,
+        },
+      ],
+      alertEligibleCount: 1,
+      alertEligibleIds: ["coin-b"],
+    };
+
+    const result = evaluateDataQualityStatus(makeDataQualityEvaluationInput({
+      dataQuality: makeDataQuality(),
+      activePriceCoverage,
+      activePriceCoverageImpactStatus: "degraded",
+      missingPriceRatio: 0,
+      blacklistMissingRatio: 0,
+      blacklistRecentMissing: 0,
+      onchainAssessmentCauses: [],
+      reserveCompositionQueryFailed: false,
+      reserveComposition: makeReserveComposition(),
+    }));
+
+    expect(result.status).toBe("degraded");
+    const durationCause = result.causes.find((cause) => cause.code === "active_price_coverage_duration_degraded");
+    expect(durationCause).toEqual(expect.objectContaining({
+      severity: "warning",
+      metric: "missingPriceDurationGenerations",
+      value: generations,
+      threshold: STATUS_MISSING_PRICE_THRESHOLDS.generationsElevated,
+    }));
+    expect(durationCause?.message).toContain("coin-b");
+    expect(durationCause?.message).not.toContain("coin-c");
   });
 
   it("emits an info-severity, non-degrading cause for a transient non-alert-eligible price miss", () => {

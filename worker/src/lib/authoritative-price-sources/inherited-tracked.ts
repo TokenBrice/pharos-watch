@@ -1,8 +1,11 @@
+import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
+import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types/core";
 import { fetchMarketBackfillPriceSeries } from "../../api/backfill-price-sources";
-import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
+import { validateCompositePricingSourceFreshness } from "../pricing-source-freshness";
 import { hasPublishableCurrentPrice } from "../price-publication-state";
+import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import {
   buildParentDerivedLiveOverride,
   PROTOCOL_REDEEM_SOURCE,
@@ -74,6 +77,33 @@ function getInheritedTrackedPriceConfig(stablecoinId: string): InheritedTrackedP
   ] ?? null;
 }
 
+/**
+ * A market price only wins over the redemption fallback while it is a current,
+ * registry-admitted market observation. Restored or carry-forward rows keep
+ * their original observation time (only `priceSyncedAt` moves), so provenance
+ * age — never the sync stamp — decides whether the incumbent is usable, and
+ * protocol/cached provenance is not a market quote at any age.
+ */
+function hasCurrentMarketPriceWin(asset: PeggedAsset, nowSec: number): boolean {
+  if (!hasPublishableCurrentPrice(asset)) return false;
+  const source = asset.priceSource;
+  if (!source) return false;
+  for (const part of splitCompositePriceSource(source)) {
+    const entry = getPricingSourceRegistryEntry(part);
+    if (!entry || entry.isRetired || entry.isProtocolOverride || entry.trustTier === "cached_replay") {
+      return false;
+    }
+  }
+  const observedAt = asset.priceObservedAt ?? asset.priceUpdatedAt ?? null;
+  if (observedAt == null) return false;
+  return validateCompositePricingSourceFreshness({
+    source,
+    observedAt,
+    nowSec,
+    requireObservedAt: true,
+  }).accepted;
+}
+
 async function replayInheritedTrackedPriceSeries(
   config: InheritedTrackedPriceConfig,
   context: HistoricalPriceContext,
@@ -105,7 +135,8 @@ export const inheritedTrackedPriceProvider: PriceSourceProvider = {
   ): Promise<CurrentPriceOverride | null> {
     const config = getInheritedTrackedPriceConfig(asset.id);
     if (!config) return null;
-    if (config.marketPriceWins && hasPublishableCurrentPrice(asset)) return null;
+    const nowSec = Math.floor(Date.now() / 1000);
+    if (config.marketPriceWins && hasCurrentMarketPriceWin(asset, nowSec)) return null;
 
     const parent = resolveTrustedOverrideParent(
       context,

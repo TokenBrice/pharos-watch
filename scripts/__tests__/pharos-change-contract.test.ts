@@ -677,6 +677,39 @@ describe("hard-block hook outputs", () => {
       ].join("\n"),
       "opaque shell construct",
     ],
+    [
+      "a remote D1 mutation hidden behind a comment fake heredoc marker",
+      [
+        "cat <<EOF # <<FAKE",
+        "benign",
+        "EOF",
+        "npx --no-install wrangler d1 execute stablecoin-db --remote --command 'delete from cache'",
+      ].join("\n"),
+      "Remote D1 mutation commands",
+    ],
+    [
+      "a remote D1 mutation hidden behind a quoted fake heredoc marker",
+      [
+        "cat <<EOF '<<FAKE'",
+        "benign",
+        "EOF",
+        "npx --no-install wrangler d1 execute stablecoin-db --remote --command 'delete from cache'",
+      ].join("\n"),
+      "Remote D1 mutation commands",
+    ],
+    [
+      "a deploy hidden behind a comment fake heredoc marker",
+      ["cat <<EOF # <<FAKE", "benign", "EOF", "npx --no-install wrangler pages deploy out"].join("\n"),
+      "Raw production deploy commands",
+    ],
+    [
+      "a guarded command hidden in an unterminated heredoc",
+      [
+        "cat <<EOF",
+        "npx --no-install wrangler d1 execute stablecoin-db --remote --command 'delete from cache'",
+      ].join("\n"),
+      "opaque shell construct",
+    ],
   ])("blocks %s with its denial category", (_name, command, reason) => {
     const output = buildPreToolUseHookOutput({ tool_input: { command } });
     expect(output).toMatchObject({
@@ -684,6 +717,22 @@ describe("hard-block hook outputs", () => {
       hookSpecificOutput: { permissionDecision: "deny" },
     });
     expect(requireBlockingReason(output)).toContain(reason);
+  });
+
+  it("denies fake-heredoc-marker-hidden mutations in both hook modes", () => {
+    const command = [
+      "cat <<EOF # <<FAKE",
+      "benign",
+      "EOF",
+      "npx --no-install wrangler d1 execute stablecoin-db --remote --command 'delete from cache'",
+    ].join("\n");
+
+    const preToolUse = buildPreToolUseHookOutput({ tool_input: { command } });
+    expect(preToolUse).toMatchObject({ hookSpecificOutput: { permissionDecision: "deny" } });
+    expect(requireBlockingReason(preToolUse)).toContain("Remote D1 mutation commands");
+    expect(buildPermissionRequestHookOutput({ tool_input: { command } })).toMatchObject({
+      hookSpecificOutput: { decision: { behavior: "deny" } },
+    });
   });
 
   it.each([

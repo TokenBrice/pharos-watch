@@ -15,6 +15,8 @@ export interface ShellCommandAnalysis {
   readonly cwd: string;
   readonly executableText: string;
   readonly hereDocBodies: readonly string[];
+  /** Lines swallowed by a heredoc whose delimiter never arrived; non-empty means the parser diverged from the shell. */
+  readonly unresolvedHereDocBody: string;
   readonly tokens: readonly string[];
   readonly invocations: readonly AnalyzedShellInvocation[];
   readonly hasBackgroundSeparator: boolean;
@@ -79,38 +81,120 @@ export function commandIsRawPatchPayload(command: unknown): boolean {
 interface HereDocScan {
   bodies: string[];
   executableText: string;
+  /** Lines swallowed by a heredoc that never met its delimiter; empty when every heredoc terminated. */
+  unresolvedBody: string;
 }
 
+/**
+ * Recognizes heredoc delimiters only where the shell itself would start one:
+ * outside quotes, comments, and backslash escapes, and never for `<<<`
+ * here-strings. Lexical `<<MARKER` text in a comment or quoted argument must
+ * not queue a delimiter, because the shell will still execute the commands
+ * after the real heredoc ends. A delimiter that never terminates by end of
+ * input is reported through `unresolvedBody` instead of silently dropping the
+ * swallowed lines, so callers fail closed on any command hidden there.
+ */
 function scanHereDocs(command: unknown): HereDocScan {
   const lines = String(command ?? "").split(/\r?\n/g);
   const bodies: string[] = [];
   const kept: string[] = [];
-  const pending: Array<{ body: string[] | null; marker: string }> = [];
+  const pending: Array<{ lines: string[]; marker: string; quoted: boolean }> = [];
+  let quote = "";
 
   for (const line of lines) {
     const active = pending[0];
     if (active) {
       if (line.trim() === active.marker) {
-        if (active.body) bodies.push(active.body.join("\n"));
+        if (!active.quoted) bodies.push(active.lines.join("\n"));
         pending.shift();
-      } else if (active.body) {
-        active.body.push(line);
+        quote = "";
+      } else {
+        active.lines.push(line);
       }
       continue;
     }
 
     kept.push(line);
-    for (const match of line.matchAll(/<<-?\s*(?:(['"])([A-Za-z0-9_.-]+)\1|([A-Za-z0-9_.-]+))/g)) {
-      pending.push({
-        body: match[1] ? null : [],
-        marker: match[2] ?? match[3],
-      });
-    }
+    const scanned = scanHereDocMarkers(line, quote);
+    quote = scanned.quote;
+    for (const marker of scanned.markers) pending.push({ lines: [], marker: marker.marker, quoted: marker.quoted });
   }
   const active = pending[0];
-  if (active?.body) bodies.push(active.body.join("\n"));
+  if (active && !active.quoted) bodies.push(active.lines.join("\n"));
 
-  return { bodies, executableText: kept.join("\n") };
+  return {
+    bodies,
+    executableText: kept.join("\n"),
+    unresolvedBody: active ? active.lines.join("\n") : "",
+  };
+}
+
+function scanHereDocMarkers(line: string, carriedQuote: string): { markers: Array<{ marker: string; quoted: boolean }>; quote: string } {
+  const markers: Array<{ marker: string; quoted: boolean }> = [];
+  let quote = carriedQuote;
+  let word = false;
+
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+    if (quote) {
+      if (char === "\\" && quote === "\"") {
+        index += 1;
+      } else if (char === quote) {
+        quote = "";
+      }
+      continue;
+    }
+    if (char === "\\") {
+      index += 1;
+      word = true;
+      continue;
+    }
+    if (char === "'" || char === "\"") {
+      quote = char;
+      word = true;
+      continue;
+    }
+    if (char === "#" && !word) break;
+    if (char === "<" && line[index + 1] === "<") {
+      let cursor = index + 2;
+      if (line[cursor] === "<" || line[cursor] === "=") {
+        word = true;
+        index = cursor;
+        continue;
+      }
+      if (line[cursor] === "-") cursor += 1;
+      while (line[cursor] === " " || line[cursor] === "\t") cursor += 1;
+      let quoted = false;
+      let marker = "";
+      if (line[cursor] === "'" || line[cursor] === "\"") {
+        const delimiter = line[cursor];
+        quoted = true;
+        cursor += 1;
+        while (cursor < line.length && /[A-Za-z0-9_.-]/.test(line[cursor])) {
+          marker += line[cursor];
+          cursor += 1;
+        }
+        if (line[cursor] !== delimiter || !marker) {
+          word = true;
+          index = cursor - 1;
+          continue;
+        }
+        cursor += 1;
+      } else {
+        while (cursor < line.length && /[A-Za-z0-9_.-]/.test(line[cursor])) {
+          marker += line[cursor];
+          cursor += 1;
+        }
+      }
+      if (marker) markers.push({ marker, quoted });
+      index = cursor - 1;
+      word = false;
+      continue;
+    }
+    word = !/[\s;()&|]/.test(char);
+  }
+
+  return { markers, quote };
 }
 
 function stripHereDocBodies(command: unknown): string {
@@ -690,6 +774,7 @@ export function analyzeShellCommand(command: string, cwd: string): ShellCommandA
     cwd,
     executableText,
     hereDocBodies: Object.freeze([...hereDocs.bodies]),
+    unresolvedHereDocBody: hereDocs.unresolvedBody,
     tokens: Object.freeze([...tokens]),
     invocations: Object.freeze(analyzedInvocations),
     hasBackgroundSeparator: tokens.some(

@@ -587,12 +587,17 @@ export function buildDexPriceObservationsFromRetainedPools(
       if (typeof pool.price === "number" && Number.isFinite(pool.price) && pool.price > 0) {
         pricedPools.push({
           price: pool.price,
-          tvl: pool.tvlUsd,
+          // A cross-source price (value row and price row from different
+          // registry observations) is weighted by the TVL the price-observing
+          // row itself claims, never by the value row's larger TVL.
+          tvl: Math.min(pool.tvlUsd, pool.priceEvidenceTvlUsd ?? pool.tvlUsd),
           chain: pool.chain,
           protocol: pool.project,
           poolKey: pool.poolId,
           identityConfidence: "exact",
-          sourceFamily: pool.source,
+          // Confidence and published attribution follow the family that
+          // observed the price, not the family that supplied the value.
+          sourceFamily: pool.priceSource ?? pool.source,
         });
         continue;
       }

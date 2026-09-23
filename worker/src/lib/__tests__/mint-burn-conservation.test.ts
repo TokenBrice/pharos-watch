@@ -260,6 +260,26 @@ describe("raw token conservation", () => {
     }
     for (const [key, count] of seen) expect(count, key).toBe(1);
   });
+  it("pins both reviewed OUSD proxy implementations at every audit boundary", () => {
+    // An Upgraded(address) event only fails the range that contains it; without a
+    // pinned implementation the next governor upgrade would let later ranges verify
+    // unreviewed token/vault code as ok. The EIP-1967 slots must pin exactly the
+    // implementations the review evidence names.
+    const ousd = sidecarEntries.find((entry) => entry.stablecoinId === "ousd-origin-protocol")!;
+    const identity = ousd.identity as unknown as {
+      proxy?: { implementation?: string };
+      vault?: { proxyAddress?: string; implementation?: string };
+    };
+    const views = new Map((ousd.invariantParams?.boundaryViews ?? []).map((view) => [view.name, view]));
+    const token = views.get("tokenImplementation");
+    const vault = views.get("vaultImplementation");
+    expect(token?.address).toBe(ousd.address);
+    expect(token?.call).toEqual({ kind: "eth_getStorageAt", slot: "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc" });
+    expect(token?.expect).toBe(identity.proxy?.implementation);
+    expect(vault?.address).toBe(identity.vault?.proxyAddress);
+    expect(vault?.call).toEqual({ kind: "eth_getStorageAt", slot: "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc" });
+    expect(vault?.expect).toBe(identity.vault?.implementation);
+  });
   it("leaves no configured contract on the generic unreviewed fallback", () => {
     const reviewed = new Set(sidecarEntries.map((entry) =>
       reviewedConservationIdentityKey(entry.chainId, entry.stablecoinId, entry.address, entry.decimals)));

@@ -82,16 +82,20 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
     jobChains: [["compute-dews", "stability-index", "project-tape"]],
   },
   fourHourlyReserveSync: {
-    // Three independent chains, not one queue. sync-live-reserves is the
-    // slot's measured head (p95 458s); when it stalls, the slot fence
-    // abandons everything still queued behind it. Only the backstop
-    // computation actually consumes its output, so kinesis supply and the
-    // reserve watchdog run beside it: a watchdog must never be abandoned by
-    // the thing it watches. Declared peak 2 + 1 + 1 = 4/6.
+    // Two chains, not one queue. sync-live-reserves is the slot's measured
+    // head (p95 458s), and both consumers of the generation it writes stay
+    // ordered behind it: the backstop computation and the reserve watchdog.
+    // `cron-sentinel` publishes a reserve-drift envelope stamped with the
+    // current time, so running it beside the head let it observe and re-publish
+    // the previous generation before this slot's rows landed. Kinesis supply
+    // reads no reserve output and keeps running beside the head. A head the
+    // slot fence abandons delays the watchdog instead of losing it: the
+    // five-minute reserve-recovery lane replays the abandoned checkpoint in
+    // chain order (chain prerequisites are derived from this plan).
+    // Declared peak 2 + 1 = 3/6.
     jobChains: [
-      ["sync-live-reserves", "sync-redemption-backstops"],
+      ["sync-live-reserves", "sync-redemption-backstops", "cron-sentinel"],
       ["sync-kinesis-supply"],
-      ["cron-sentinel"],
     ],
   },
   hourlyYieldSync: {

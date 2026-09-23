@@ -20,6 +20,7 @@ import {
   validateRolloutSafetyPolicy,
   validateSchemaObjectManifest,
   validateWorkerMigrations,
+  findDataMigrationTargets,
 } from "../ci/check-worker-migrations.ts";
 
 const manifestText = `
@@ -371,6 +372,18 @@ describe("validateRolloutSafetyAnnotation", () => {
     ["DELETE FROM cron_runs WHERE started_at < 1;", "DELETE FROM"],
     ["UPDATE cron_runs SET status = 'ok' WHERE id = 1;", "UPDATE"],
     ["INSERT OR REPLACE INTO cron_runs (id, job, started_at, duration_ms, status) VALUES (1, 'x', 1, 0, 'ok');", "INSERT OR REPLACE"],
+    ["REPLACE INTO cron_runs (id, job, started_at, duration_ms, status) VALUES (1, 'x', 1, 0, 'ok');", "INSERT OR REPLACE"],
+    [
+      ["REPLACE", "  INTO cron_runs (id, job, started_at, duration_ms, status)", "  VALUES (1, 'x', 1, 0, 'ok');"].join("\n"),
+      "INSERT OR REPLACE",
+    ],
+    ["UPDATE main.cron_runs SET status = 'ok' WHERE id = 1;", "UPDATE"],
+    ["UPDATE OR REPLACE cron_runs SET status = 'ok' WHERE id = 1;", "UPDATE"],
+    [
+      "INSERT INTO cron_runs (id, job, started_at, duration_ms, status) VALUES (1, 'x', 1, 0, 'ok') ON CONFLICT (id) DO UPDATE SET status = excluded.status;",
+      "DO UPDATE",
+    ],
+    ["DELETE FROM main.cron_runs WHERE started_at < 1;", "DELETE FROM"],
   ])("rejects %s without reviewed data-migration metadata", (statement, operation) => {
     expect(() =>
       validateRolloutSafetyAnnotation(
@@ -409,6 +422,28 @@ describe("validateRolloutSafetyAnnotation", () => {
         ].join("\n"),
       ),
     ).not.toThrow();
+  });
+});
+
+describe("findDataMigrationTargets", () => {
+  it("extracts the bare table from schema-qualified and quoted destructive statements", () => {
+    const sql = [
+      "DELETE FROM main.cron_runs WHERE started_at < 1;",
+      "UPDATE OR REPLACE \"cron_runs\" SET status = 'ok';",
+      "REPLACE INTO main.`cron_runs` (id) VALUES (1);",
+    ].join("\n");
+    expect(findDataMigrationTargets(sql)).toEqual(["cron_runs"]);
+  });
+
+  it("extracts the upsert target but leaves insert-only and DO NOTHING statements untracked", () => {
+    expect(
+      findDataMigrationTargets(
+        "INSERT INTO cron_runs (id, job) VALUES (1, 'x') ON CONFLICT (id) DO UPDATE SET job = excluded.job;",
+      ),
+    ).toEqual(["cron_runs"]);
+    expect(
+      findDataMigrationTargets("INSERT INTO cron_runs (id, job) VALUES (1, 'x') ON CONFLICT (id) DO NOTHING;"),
+    ).toEqual([]);
   });
 });
 
@@ -465,6 +500,128 @@ describe("seeded data-migration replay", () => {
           deleteStatement,
           "",
         ].join("\n"),
+      );
+      await expect(
+        validateWorkerMigrations({ migrationsDir, manifestPath, expectedSchemaPath }),
+      ).resolves.toMatchObject({ dataMigrationFixtureCheckedCount: 1 });
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it("gates REPLACE INTO through reviewed metadata and the seeded cron_runs fixture", async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "pharos-migration-gate-test-"));
+    const migrationsDir = join(tempDir, "migrations");
+    const manifestPath = join(tempDir, "MANIFEST.md");
+    const expectedSchemaPath = join(tempDir, "EXPECTED_SCHEMA.txt");
+    mkdirSync(migrationsDir);
+    writeFileSync(
+      join(migrationsDir, "0000_baseline.sql"),
+      "CREATE TABLE cron_runs (id INTEGER PRIMARY KEY, job TEXT NOT NULL, started_at INTEGER NOT NULL, duration_ms INTEGER NOT NULL, status TEXT NOT NULL);",
+    );
+    writeFileSync(expectedSchemaPath, "table\tcron_runs\n");
+    writeFileSync(
+      manifestPath,
+      `
+## Individual Migrations
+| Sequence | Filename | Description |
+| --- | --- | --- |
+| 0071 | \`0071_replace_cron_runs.sql\` | Reviewed fixture replacement |
+## Retired Individual Migrations
+| Sequence | Former Filename | Retirement Note |
+| --- | --- | --- |
+| 0086 | \`0086_retired.sql\` | Retired |
+## Reviewed Data Migrations
+| Sequence | Filename | Predicate | Old-Worker compatibility | Rollback / bookmark | Expected row bounds |
+| --- | --- | --- | --- | --- | --- |
+| 0071 | \`0071_replace_cron_runs.sql\` | fixture job only | old Worker does not require fixture rows | capture a Time Travel bookmark | zero or one fixture row |
+## Known Anomalies
+## Rollout Safety
+- Rollout-safety enforcement starts at: \`0071\`
+- Required rollout-safety header: \`-- rollout-safety: backward-compatible\`
+`,
+    );
+    const migrationPath = join(migrationsDir, "0071_replace_cron_runs.sql");
+    const replaceStatement =
+      "REPLACE INTO cron_runs (id, job, started_at, duration_ms, status) VALUES (1, 'migration-gate-fixture', 1, 0, 'ok');";
+
+    try {
+      writeFileSync(
+        migrationPath,
+        `-- rollout-safety: ${REQUIRED_ROLLOUT_SAFETY_MODE}\n${replaceStatement}\n`,
+      );
+      await expect(
+        validateWorkerMigrations({ migrationsDir, manifestPath, expectedSchemaPath }),
+      ).rejects.toThrow(`-- data-migration: ${REQUIRED_DATA_MIGRATION_MODE}`);
+
+      writeFileSync(
+        migrationPath,
+        [
+          `-- rollout-safety: ${REQUIRED_ROLLOUT_SAFETY_MODE}`,
+          `-- data-migration: ${REQUIRED_DATA_MIGRATION_MODE}`,
+          replaceStatement,
+          "",
+        ].join("\n"),
+      );
+      await expect(
+        validateWorkerMigrations({ migrationsDir, manifestPath, expectedSchemaPath }),
+      ).resolves.toMatchObject({ dataMigrationFixtureCheckedCount: 1 });
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it("gates INSERT ... ON CONFLICT ... DO UPDATE and skips fixtures for tables the migration creates", async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "pharos-migration-gate-test-"));
+    const migrationsDir = join(tempDir, "migrations");
+    const manifestPath = join(tempDir, "MANIFEST.md");
+    const expectedSchemaPath = join(tempDir, "EXPECTED_SCHEMA.txt");
+    mkdirSync(migrationsDir);
+    writeFileSync(
+      join(migrationsDir, "0000_baseline.sql"),
+      "CREATE TABLE cron_runs (id INTEGER PRIMARY KEY, job TEXT NOT NULL, started_at INTEGER NOT NULL, duration_ms INTEGER NOT NULL, status TEXT NOT NULL);",
+    );
+    writeFileSync(expectedSchemaPath, "table\tcron_runs\ntable\twatcher_lifecycle_daily\n");
+    writeFileSync(
+      manifestPath,
+      `
+## Individual Migrations
+| Sequence | Filename | Description |
+| --- | --- | --- |
+| 0072 | \`0072_upsert_lifecycle_daily.sql\` | Reviewed self-created upsert target |
+## Retired Individual Migrations
+| Sequence | Former Filename | Retirement Note |
+| --- | --- | --- |
+| 0086 | \`0086_retired.sql\` | Retired |
+## Reviewed Data Migrations
+| Sequence | Filename | Predicate | Old-Worker compatibility | Rollback / bookmark | Expected row bounds |
+| --- | --- | --- | --- | --- | --- |
+| 0072 | \`0072_upsert_lifecycle_daily.sql\` | no existing rows; the table is created by this migration | old Worker ignores the new table | capture a Time Travel bookmark | no pre-existing rows affected |
+## Known Anomalies
+## Rollout Safety
+- Rollout-safety enforcement starts at: \`0071\`
+- Required rollout-safety header: \`-- rollout-safety: backward-compatible\`
+`,
+    );
+    const migrationPath = join(migrationsDir, "0072_upsert_lifecycle_daily.sql");
+    const migrationBody = [
+      "CREATE TABLE watcher_lifecycle_daily (day TEXT PRIMARY KEY, events INTEGER NOT NULL DEFAULT 0);",
+      "INSERT INTO watcher_lifecycle_daily (day, events) VALUES ('1970-01-01', 1)",
+      "  ON CONFLICT (day) DO UPDATE SET events = events + 1;",
+    ].join("\n");
+
+    try {
+      writeFileSync(
+        migrationPath,
+        `-- rollout-safety: ${REQUIRED_ROLLOUT_SAFETY_MODE}\n${migrationBody}\n`,
+      );
+      await expect(
+        validateWorkerMigrations({ migrationsDir, manifestPath, expectedSchemaPath }),
+      ).rejects.toThrow(`-- data-migration: ${REQUIRED_DATA_MIGRATION_MODE}`);
+
+      writeFileSync(
+        migrationPath,
+        [`-- rollout-safety: ${REQUIRED_ROLLOUT_SAFETY_MODE}`, `-- data-migration: ${REQUIRED_DATA_MIGRATION_MODE}`, migrationBody, ""].join("\n"),
       );
       await expect(
         validateWorkerMigrations({ migrationsDir, manifestPath, expectedSchemaPath }),

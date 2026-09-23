@@ -99,22 +99,43 @@ export function buildGitleaksWorktreeInput({
 }
 
 /**
- * Lines the checked-out merge commit introduces relative to *both* parents —
- * i.e. content that came from the conflict resolution rather than from either
- * side's already-scanned history. Combined diff prefixes those lines with `++`.
- * A non-merge HEAD has no resolution and yields no input.
+ * Lines merge commits introduce relative to *both* parents — i.e. content that
+ * came from the conflict resolution rather than from either side's
+ * already-scanned history. Combined diff prefixes those lines with `++`. The
+ * checked-out HEAD contributes its own resolution lines, and every merge
+ * commit inside the requested range is enumerated the same way: the range scan
+ * uses `--no-merges`, and a resolution-only line from an earlier merge is
+ * already present in the PR-head parent by the time the checked-out merge is
+ * diffed, so HEAD alone cannot see it.
  */
 export function buildGitleaksMergeResolutionInput({
+  baseRef = "origin/main",
   execFile = execFileSync,
-}: { execFile?: (file: string, args: string[], options: { encoding: "utf8" }) => string } = {}): Buffer {
+  headRef = "HEAD",
+}: {
+  baseRef?: string;
+  execFile?: (file: string, args: string[], options: { encoding: "utf8" }) => string;
+  headRef?: string;
+} = {}): Buffer {
   const parents = execFile("git", ["rev-list", "--parents", "-n", "1", "HEAD"], { encoding: "utf8" }).trim().split(/\s+/g);
-  if (parents.length < 3) return Buffer.from("\n");
-  const combined = execFile("git", ["diff-tree", "--cc", "--no-color", "-r", "HEAD"], { encoding: "utf8" });
-  const resolutionLines = combined
+  const resolutionLines: string[] = [];
+  if (parents.length >= 3) resolutionLines.push(...combinedDiffResolutionLines(execFile, "HEAD"));
+  const merges = execFile("git", ["rev-list", "--merges", `${baseRef}..${headRef}`], { encoding: "utf8" });
+  for (const merge of merges.trim().split(/\n+/g).filter(Boolean)) {
+    resolutionLines.push(...combinedDiffResolutionLines(execFile, merge));
+  }
+  return Buffer.from(`${resolutionLines.join("\n")}\n`);
+}
+
+function combinedDiffResolutionLines(
+  execFile: (file: string, args: string[], options: { encoding: "utf8" }) => string,
+  commit: string,
+): string[] {
+  const combined = execFile("git", ["diff-tree", "--cc", "--no-color", "-r", commit], { encoding: "utf8" });
+  return combined
     .split(/\r?\n/g)
     .filter((line) => line.startsWith("++") && !line.startsWith("+++"))
     .map((line) => line.slice(2));
-  return Buffer.from(`${resolutionLines.join("\n")}\n`);
 }
 
 export async function ensurePinnedGitleaks({
@@ -286,7 +307,7 @@ export async function runGitleaks({
   argv?: string[];
   env?: NodeJS.ProcessEnv;
   ensureBinary?: () => Promise<string>;
-  buildMergeResolutionInput?: () => Buffer;
+  buildMergeResolutionInput?: (refs: { baseRef: string; headRef: string }) => Buffer;
   buildWorktreeInput?: () => Buffer;
   platformKey?: string;
   runBinary?: GitleaksRunner;
@@ -331,7 +352,7 @@ export async function runGitleaks({
         ];
   const result = runBinary(binaryPath, args, {
     ...(options.mode === "worktree" ? { input: buildWorktreeInput() } : {}),
-    ...(options.mode === "tree" ? { input: buildMergeResolutionInput() } : {}),
+    ...(options.mode === "tree" ? { input: buildMergeResolutionInput({ baseRef: options.baseRef, headRef: options.headRef }) } : {}),
     stdio: stdinMode ? ["pipe", "inherit", "inherit"] : "inherit",
   });
   return { status: result.status ?? 1 };

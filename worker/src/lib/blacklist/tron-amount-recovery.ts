@@ -208,6 +208,18 @@ export async function recoverTronFreezeAmountForRow(
       // The ledger only grows, so a cap-exceeded history can never resolve on retry.
       throw new TronReplayEvidenceError("history_over_cap", "confirmed transfer ledger exceeds the replay page cap");
     }
+    // A duplicated record can cancel at the final-balance checkpoint while
+    // doubling the derived freeze-time balance, so identity uniqueness is a
+    // precondition for the ledger, not a nicety. TronGrid history exposes no
+    // log index, so identity is the reviewed operator-CLI composite.
+    const transferIdentities = new Set<string>();
+    for (const transfer of history.transfers) {
+      const identity = `${transfer.transactionId}:${transfer.timestampMs}:${transfer.from}:${transfer.to}:${transfer.value}`;
+      if (transferIdentities.has(identity)) {
+        throw new TronReplayEvidenceError("evidence_mismatch", "duplicate transfer record requires receipt-level review");
+      }
+      transferIdentities.add(identity);
+    }
     const ledger = sumSignedTransfers(history.transfers, accountBase58, anchor.timestampMs);
     if (ledger.unrelatedTransfers > 0) {
       throw new TronReplayEvidenceError("evidence_mismatch", "ledger contains unrelated records");

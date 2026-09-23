@@ -1,7 +1,11 @@
 import type { StatusCause } from "@shared/types/status";
 
 const OVERALL_CAUSE_PERSISTENCE_LIMIT = 12;
-const DURABLE_ACTIVE_PRICE_CAUSE_CODES = new Set(["active_price_coverage_incomplete", "active_price_coverage_unknown"]);
+const DURABLE_ACTIVE_PRICE_CAUSE_CODES = new Set([
+  "active_price_coverage_incomplete",
+  "active_price_coverage_duration_degraded",
+  "active_price_coverage_unknown",
+]);
 
 export function synthesizeOverallCauses(availability: StatusCause[], dataQuality: StatusCause[]): StatusCause[] {
   const severityOrder = { critical: 0, warning: 1, info: 2 } as const;

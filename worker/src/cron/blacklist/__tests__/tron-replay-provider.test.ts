@@ -109,8 +109,8 @@ describe("fetchTronTransferWindow", () => {
     expect(window.stopped).toBe(false);
     expect(ctx.pagesFetched.count).toBe(2);
     expect(window.transfers).toEqual([
-      { timestampMs: WINDOW_START + 1000, from: "TOther", to: ACCOUNT, value: BigInt(500) },
-      { timestampMs: WINDOW_START + 2000, from: ACCOUNT, to: "TOther", value: BigInt(250) },
+      { transactionId: "tx1", timestampMs: WINDOW_START + 1000, from: "TOther", to: ACCOUNT, value: BigInt(500) },
+      { transactionId: "tx2", timestampMs: WINDOW_START + 2000, from: ACCOUNT, to: "TOther", value: BigInt(250) },
     ]);
   });
 
@@ -176,9 +176,41 @@ describe("readTronJson status classification", () => {
     }
   });
 
-  it("classifies an unparseable success body as a null provider payload", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => new Response("<html>nope</html>", { status: 200 })));
-    await expect(fetchTronHeadBlock(providerContext())).rejects.toMatchObject({ errorClass: "provider_null" });
+  it("classifies a retry-exhausted unparseable success body as a transport timeout", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.stubGlobal("fetch", vi.fn(async () => new Response("<html>nope</html>", { status: 200 })));
+      const pending = expect(fetchTronHeadBlock(providerContext())).rejects.toMatchObject({
+        errorClass: "provider_timeout",
+      });
+      await vi.advanceTimersByTimeAsync(30_000);
+      await pending;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("times out a stalled 200 response body inside the per-request deadline", async () => {
+    vi.useFakeTimers();
+    try {
+      // Headers arrive immediately; the body never yields a byte, so only the
+      // per-request timeout can end the read.
+      vi.stubGlobal("fetch", vi.fn(async () => new Response(
+        new ReadableStream<Uint8Array>({
+          start() {
+            /* never enqueue, never close */
+          },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      )));
+      const pending = expect(fetchTronHeadBlock(providerContext())).rejects.toMatchObject({
+        errorClass: "provider_timeout",
+      });
+      await vi.advanceTimersByTimeAsync(50_000);
+      await pending;
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("classifies a transport failure as a timeout", async () => {

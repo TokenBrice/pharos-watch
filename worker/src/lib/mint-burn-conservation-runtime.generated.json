@@ -605,6 +605,24 @@
               "selector": "0x1a32aad6"
             },
             "expect": "0x2a8e1e676ec238d8a992307b495b45b3feaa5e86"
+          },
+          {
+            "name": "tokenImplementation",
+            "address": "0x2a8e1e676ec238d8a992307b495b45b3feaa5e86",
+            "call": {
+              "kind": "eth_getStorageAt",
+              "slot": "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc"
+            },
+            "expect": "0xa7b7c59a1705e4a624ea8a4ad8a06f9de22dcc33"
+          },
+          {
+            "name": "vaultImplementation",
+            "address": "0xe75d77b1865ae93c7eaa3040b038d7aa7bc02f70",
+            "call": {
+              "kind": "eth_getStorageAt",
+              "slot": "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc"
+            },
+            "expect": "0x82948060c4b72684bededec342350ab344975145"
           }
         ]
       }

@@ -166,7 +166,23 @@ function fallbackYieldSources(row: MergedRow): YieldSourceCandidate[] {
   ];
 }
 
+/**
+ * The winning rail plus the engine-internal maturity reading the confidence
+ * rule needs. `observationDays30d` is deliberately not part of the published
+ * `RecommendedSource` contract: selection is the single place that knows
+ * which rail's observation history the engine's `< 21` day rule must judge.
+ */
+export interface SelectedYieldSourceRail {
+  source: RecommendedSource;
+  /** Distinct UTC observation days behind the winning rail; null when it published none. */
+  observationDays30d: number | null;
+}
+
 export function selectYieldSource(row: MergedRow, input: SelectorInput): RecommendedSource | null {
+  return selectYieldSourceRail(row, input)?.source ?? null;
+}
+
+export function selectYieldSourceRail(row: MergedRow, input: SelectorInput): SelectedYieldSourceRail | null {
   const pool = row.yieldSources?.length ? row.yieldSources : fallbackYieldSources(row);
   // A rail whose venue chain the yield domain never resolved cannot be rendered
   // as a destination, but it is one rail — not the coin's whole yield coverage.
@@ -192,22 +208,25 @@ export function selectYieldSource(row: MergedRow, input: SelectorInput): Recomme
   });
   const selected = rankedCandidates[0]!.candidate;
   return {
-    sourceKey: selected.sourceKey,
-    protocol: selected.protocol,
-    chain: selected.chain,
-    yieldType: selected.yieldType,
-    apy30d: selected.apy30d,
-    pharosYieldScore: selected.pharosYieldScore,
-    sourceTvlUsd: selected.sourceTvlUsd,
-    // Unknown stays unknown, here as for `freshness`: an unsourced venue tier
-    // published as `"mid"` is a measurement the registry never made.
-    // `riskTierScore` keeps its neutral 55 for ordering.
-    sourceRiskTier: selected.venueRiskTier,
-    // Unknown stays unknown: `sourceFreshnessScore` ranks a missing reading as
-    // neutral 50, and rendering `{ 0, 0 }` would print "0s old" for the same row.
-    freshness: selected.freshness,
-    selectionReason: venueMatchesPreference(selected, input)
-      ? "venue-preference"
-      : "risk-depth-freshness",
+    source: {
+      sourceKey: selected.sourceKey,
+      protocol: selected.protocol,
+      chain: selected.chain,
+      yieldType: selected.yieldType,
+      apy30d: selected.apy30d,
+      pharosYieldScore: selected.pharosYieldScore,
+      sourceTvlUsd: selected.sourceTvlUsd,
+      // Unknown stays unknown, here as for `freshness`: an unsourced venue tier
+      // published as `"mid"` is a measurement the registry never made.
+      // `riskTierScore` keeps its neutral 55 for ordering.
+      sourceRiskTier: selected.venueRiskTier,
+      // Unknown stays unknown: `sourceFreshnessScore` ranks a missing reading as
+      // neutral 50, and rendering `{ 0, 0 }` would print "0s old" for the same row.
+      freshness: selected.freshness,
+      selectionReason: venueMatchesPreference(selected, input)
+        ? "venue-preference"
+        : "risk-depth-freshness",
+    },
+    observationDays30d: selected.observationCount30d,
   };
 }

@@ -54,10 +54,11 @@ export interface CacheFreshnessDiagnostic {
  * Input quality for the generation a freshness verdict describes (rule R3). A
  * sentinel records *which* generation is served; this records whether the run
  * that produced it had clean inputs, so a fresh timestamp can no longer imply
- * a clean publication.
+ * a clean publication. `degraded: null` means the quality evidence itself
+ * could not be read — unknown, never clean (rule R2).
  */
 export interface CacheQualityVerdict {
-  degraded: boolean;
+  degraded: boolean | null;
   reason: string | null;
   /** Producer runs that degraded/errored since its last clean run; `null` when unreadable (rule R1). */
   streakDegradedRuns: number | null;
@@ -224,6 +225,12 @@ function buildCacheQuality(params: {
           : "freshness-sentinel-missing",
       streakDegradedRuns,
     };
+  }
+  if (params.historyReadFailed) {
+    // The quality evidence itself is unreadable: publish unknown with a
+    // machine-readable reason instead of letting a valid sentinel launder the
+    // failed read into a clean verdict (rules R2/R4).
+    return { degraded: null, reason: "producer-history-unreadable", streakDegradedRuns: null };
   }
   if (streakDegradedRuns != null && streakDegradedRuns > 0) {
     return { degraded: true, reason: "producer-degraded-since-last-clean-run", streakDegradedRuns };
@@ -484,17 +491,20 @@ export async function buildCacheStatuses(
     const healthyMaxRatio = getCacheHealthyMaxRatio(key);
     if (!caches[key]) {
       const diagnostic = diagnostics.find((entry) => entry.key === key);
+      const quality = qualityByKey.get(key);
       caches[key] = {
         ageSeconds,
         maxAge,
         healthyMaxRatio,
         healthyMaxAge: maxAge * healthyMaxRatio,
-        healthy: ratio <= healthyMaxRatio && qualityByKey.get(key)?.degraded !== true,
+        // Unknown quality (degraded === null) fails closed: a lane is healthy
+        // only when its quality verdict is explicitly clean (rule R2).
+        healthy: ratio <= healthyMaxRatio && (quality == null || quality.degraded === false),
         ...(qualityByKey.has(key)
           ? {
-              degraded: qualityByKey.get(key)?.degraded,
-              degradedReason: qualityByKey.get(key)?.reason,
-              streakDegradedRuns: qualityByKey.get(key)?.streakDegradedRuns,
+              degraded: quality?.degraded,
+              degradedReason: quality?.reason,
+              streakDegradedRuns: quality?.streakDegradedRuns,
             }
           : {}),
         ...(freshnessSourceByKey.has(key) ? { freshnessSource: freshnessSourceByKey.get(key) } : {}),

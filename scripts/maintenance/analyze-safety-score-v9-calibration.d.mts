@@ -57,21 +57,22 @@ export function qualifyingCompositeCards(cards: readonly unknown[]): QualifyingC
 export function measuredAdverseFDrivers(card: unknown): Record<string, boolean>;
 
 /**
- * The re-derived D1-D6 gate metrics. Supply-weighted members are nullable and
- * read as null - not zero - when their selected cohort contains unknown supply,
- * so their gates fail closed rather than passing with an incomplete numerator.
+ * The re-derived D1-D6 gate metrics. Members whose cohort can be empty or mix
+ * in unknown supply are nullable and read as null - not zero - when their
+ * input is unobserved, so their gates fail closed rather than passing
+ * vacuously or with an incomplete numerator.
  */
 export interface DistributionGateMetrics {
   materialEvidenceCoverageExTop2: number | null;
-  supplyObservationCoverage: number;
-  maxNrSupplyUsd: number;
+  supplyObservationCoverage: number | null;
+  maxNrSupplyUsd: number | null;
   unattributedFCount: number;
   unattributedFSupplyShare: number | null;
   freeFloatingLargestBucketShare: number | null;
   freeFloatingLargestTupleShare: number | null;
   materialCohortCMinusOrBetterShare: number | null;
   materialCohortBMinusOrBetterCount: number;
-  scoreIqr: number;
+  scoreIqr: number | null;
 }
 export function distributionGates(metrics: DistributionGateMetrics): Record<string, boolean>;
 

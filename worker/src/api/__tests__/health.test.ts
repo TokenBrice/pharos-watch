@@ -1,5 +1,5 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
-import { afterEach, describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import type { FreshnessStatus } from "@shared/lib/status-thresholds";
 import type { MockTableConfig } from "@shared/test-utils/mock-d1";
 import { handleHealth } from "../health";
@@ -16,6 +16,7 @@ type HealthDbOptions = {
   extras?: MockTableConfig[];
   yieldSentinelAge?: number | null;
   producerCronRows?: Record<string, unknown>[];
+  producerCronError?: unknown;
 };
 
 const STABLECOIN_COVERAGE_QUERY_MATCH =
@@ -119,6 +120,7 @@ function makeHealthyHealthDb(now: number, options: HealthDbOptions = {}) {
     extras = [],
     yieldSentinelAge = 60,
     producerCronRows = [],
+    producerCronError,
   } = options;
 
   return healthD1([
@@ -167,7 +169,11 @@ function makeHealthyHealthDb(now: number, options: HealthDbOptions = {}) {
     { match: "SELECT MAX(timestamp) as latest FROM mint_burn_events", rows: [], first: { latest: now - 30 } },
     { match: "SELECT MAX(hour_ts) as latest FROM mint_burn_hourly", rows: [], first: { latest: now - 3600 } },
     { match: "SELECT symbol, MAX(timestamp) as latest", rows: symbolRows },
-    { match: "GROUP BY job", rows: producerCronRows },
+    {
+      match: "GROUP BY job",
+      rows: producerCronRows,
+      ...(producerCronError ? { throwError: producerCronError } : {}),
+    },
     { match: "SELECT status", rows: [], first: { status: "ok" } },
     { match: "status = 'ok'", rows: [], first: { started_at: statusStartedAt } },
     ...extras,
@@ -753,6 +759,44 @@ describe("handleHealth", () => {
     expect(body.warnings).toContain(
       "cache-quality-degraded: yield-data:producer-degraded-since-last-clean-run",
     );
+  });
+
+  it("cannot stay overall healthy without a warning when producer history is unreadable", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const db = makeHealthyHealthDb(now, {
+        producerCronError: new Error("cron lookup failed"),
+      });
+
+      const res = await handleHealth(db);
+      const body = (await readJsonResponse(res, 200)) as {
+        status: string;
+        warnings: string[];
+        caches: Record<string, {
+          freshnessSource?: string;
+          degraded?: boolean | null;
+          degradedReason?: string | null;
+          streakDegradedRuns?: number | null;
+          healthy: boolean;
+        }>;
+      };
+
+      expect(body.status).toBe("degraded");
+      expect(body.caches["yield-data"]).toMatchObject({
+        freshnessSource: "freshness-sentinel",
+        degraded: null,
+        degradedReason: "producer-history-unreadable",
+        streakDegradedRuns: null,
+        healthy: false,
+      });
+      expect(body.warnings.some((warning) =>
+        warning.startsWith("cache-quality-unknown:")
+        && warning.includes("yield-data:producer-history-unreadable"))).toBe(true);
+      expect(body.warnings.some((warning) => warning.startsWith("cache-quality-degraded:"))).toBe(false);
+    } finally {
+      warnSpy.mockRestore();
+    }
   });
 
   it("reports yield-data healthy again after a clean recovery run", async () => {

@@ -9,6 +9,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 // are newest-first by version.
 export const LIQUIDITY_SCORE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.8",
+    title: "Slipstream 100bp multiplier, PancakeSwap bounded-sample census, and cross-source price handling",
+    date: "2026-09-23",
+    effectiveAt: 1790167200,
+    summary:
+      "Three DEX-liquidity corrections shipped together: the reviewed 100bp Slipstream fee tier regains its documented 0.4x quality multiplier, the PancakeSwap rotating capture loses its staged-pool veto authority, and an implausible cross-source price drops only the price instead of erasing the whole staged pool.",
+    impact: [
+      "aerodrome-slipstream-100bp and velodrome-slipstream-100bp carry the documented 30bp+ 0.4x multiplier (previously the silent generic 0.3x fallback, a 25% underweight); a classifier contract test now fails when a fee-bearing bucket lacks a table entry",
+      "The PancakeSwap direct fetcher is declared bounded-sample: its per-run response holds only the head page plus two rotating tail pages, so since the 2026-09-18 BSC removal, cycle-completion runs had been enforcing those three pages as an exhaustive census and vetoing every staged Pancake pool read on earlier runs; Balancer, Raydium, and Orca keep exhaustive authority and identity dedupe is unchanged, so staged rows duplicating direct pools still collapse",
+      "When the per-source registry resolver pairs a trusted value row with a cross-source price that fails peg-aware sanity, only the price is dropped (priceMeasured: false) instead of skipping the whole hybrid view as invalid_price (R8); same-source rows keep the previous whole-row skip. Price-attribution and weight changes for surviving cross-source prices are recorded in the pricing-pipeline changelog",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.7",
     title: "Pair-price coherence gate at pool admission",
     date: "2026-09-23",

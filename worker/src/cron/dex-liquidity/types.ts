@@ -133,6 +133,15 @@ export interface PoolEntry {
   source: LiquidityPoolSourceFamily;
   /** DEX-implied price of the tracked stablecoin in this pool (USD). */
   price?: number;
+  /**
+   * Family of the registry row that actually observed `price` when the
+   * resolver attached a cross-source price (value row and price row come from
+   * different sources). Price confidence and weight at publication follow
+   * this family, never the value row's `source`.
+   */
+  priceSource?: LiquidityPoolSourceFamily;
+  /** The price-observing row's own TVL claim; caps the price observation's weight. */
+  priceEvidenceTvlUsd?: number;
   extra?: {
     amplificationCoefficient?: number;
     balanceRatio?: number;
@@ -365,6 +374,14 @@ export interface GtNewPool {
    * the decay penalty) instead of being relabelled as discovery evidence.
    */
   sourceFamily: LiquidityPoolSourceFamily;
+  /**
+   * Family of the registry row that actually observed `price` when the staged
+   * view carries a cross-source price (value row and price row from different
+   * sources). Undefined when the price came from the value row's own source.
+   */
+  priceSourceFamily?: LiquidityPoolSourceFamily;
+  /** The price-observing row's own TVL claim; caps the price observation's weight. */
+  priceEvidenceTvlUsd?: number;
   /** Optional per-pool 7d volume when source provides it */
   volume7dUsd?: number | null;
   /** Optional measured balance ratio from richer direct/discovery APIs. */

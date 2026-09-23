@@ -52,7 +52,9 @@ function jsonOk(body: unknown): Response {
  * across colos) but bounds the realistic single-source write-spam case.
  * Legitimate use is 1-2 snapshot creations per session.
  * The durable daily quota uses D1 conditional upsert semantics because KV
- * read-modify-write counters are not atomic across isolates/colos.
+ * read-modify-write counters are not atomic across isolates/colos. It is
+ * reserved before the canonical recomputation so over-quota requests never
+ * reach the expensive work, and refunded when that recomputation fails.
  * Accepted residual risk and KV cost ceiling: see docs/screener-picker-page.md.
  */
 const POST_RATE_LIMIT_WINDOW_MS = 60_000;
@@ -92,11 +94,14 @@ function isPostRateLimited(key: string | null): boolean {
   return false;
 }
 
-async function consumeDailyPostQuota(env: SelectorSnapshotEnv, ipHash: string | null): Promise<Response | null> {
+async function consumeDailyPostQuota(
+  env: SelectorSnapshotEnv,
+  ipHash: string | null,
+  bucketDate: string,
+): Promise<Response | null> {
   if (!ipHash) return null;
   if (!env.DB) return jsonError(503, "Snapshot quota store is not configured");
 
-  const bucketDate = dailyQuotaDate();
   const nowSec = Math.floor(Date.now() / 1000);
 
   try {
@@ -126,6 +131,33 @@ async function consumeDailyPostQuota(env: SelectorSnapshotEnv, ipHash: string | 
   }
 
   return null;
+}
+
+/**
+ * Best-effort refund of a reservation whose canonical recomputation failed.
+ * Refunds the bucket the reservation charged — recomputation can outlive a
+ * UTC midnight rollover, and re-deriving the date at refund time would
+ * decrement the wrong (new) day's row. The decrement is guarded so concurrent
+ * refunds cannot underflow the counter, and a failed refund costs the client
+ * one quota unit at most — never quota it did not spend.
+ */
+async function refundDailyPostQuota(
+  env: SelectorSnapshotEnv,
+  ipHash: string | null,
+  bucketDate: string,
+): Promise<void> {
+  if (!ipHash || !env.DB) return;
+  try {
+    await env.DB.prepare(
+      `UPDATE selector_snapshot_daily_quota
+       SET count = CASE WHEN count > 0 THEN count - 1 ELSE 0 END
+       WHERE quota_date = ? AND ip_hash = ?`,
+    )
+      .bind(bucketDate, ipHash)
+      .run();
+  } catch (error) {
+    console.warn("[selector-snapshot] quota refund failure", error);
+  }
 }
 
 interface SelectorSnapshotEnv {
@@ -223,19 +255,26 @@ async function handlePost(context: SelectorSnapshotContext): Promise<Response> {
     return responseForValidationFailure(inputValidation.error);
   }
 
+  // Reserve the durable daily quota before the canonical recomputation: the
+  // recomputation makes seven internal API fetches and runs the selector, and
+  // an over-quota client must be cut off before that work, not after it. The
+  // bucket date is captured here so a refund after a midnight rollover still
+  // targets the bucket this request charged.
+  const quotaBucketDate = dailyQuotaDate();
+  const quotaRejected = await consumeDailyPostQuota(env, ipHash, quotaBucketDate);
+  if (quotaRejected) return quotaRejected;
+
   let snapshot: Awaited<ReturnType<typeof recomputeVerifiedSelectorSnapshot>>;
   try {
     snapshot = await recomputeVerifiedSelectorSnapshot(inputValidation.input, request, env);
   } catch (error) {
     console.warn("[selector-snapshot] canonical recomputation failure", error);
+    // Refund the reservation so a canonical outage does not spend a client's
+    // daily POSTs on the retries the outage itself provoked, locking them out
+    // for the UTC day.
+    await refundDailyPostQuota(env, ipHash, quotaBucketDate);
     return jsonError(503, "Canonical selector data temporarily unavailable");
   }
-
-  // The durable daily counter is charged only once the work it pays for has
-  // succeeded: an upstream outage used to spend a client's daily POSTs on the
-  // retries the outage itself provoked, locking them out for the UTC day.
-  const quotaRejected = await consumeDailyPostQuota(env, ipHash);
-  if (quotaRejected) return quotaRejected;
 
   const sid = computeSelectorSnapshotSid(snapshot);
   const kvKey = `s:${sid}`;

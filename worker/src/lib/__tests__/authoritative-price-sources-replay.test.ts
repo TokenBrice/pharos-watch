@@ -263,6 +263,42 @@ describe("authoritative-price-sources", () => {
     expect(overrides.has("weusd-picwe")).toBe(false);
   });
 
+  it("re-derives the WEUSD fallback when the incumbent market quote is stale restored data", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const overrides = await fetchLiveOverrides([
+      // A restored row keeps its original observation time for up to seven
+      // days while priceSyncedAt moves to the current run, so only the
+      // observation age can disqualify it from the market-price-wins guard.
+      freshParent("weusd-picwe", 0.91, "coingecko", { nowSec, observedAt: nowSec - 6 * 86400 }),
+      freshParent("usdc-circle", 0.99998, "coingecko+pyth", { nowSec }),
+    ]);
+
+    expect(overrides.get("weusd-picwe")).toMatchObject({
+      price: 0.9899802,
+      source: "protocol-redeem",
+      confidence: "high",
+      metadata: { inheritedFrom: "usdc-circle" },
+    });
+  });
+
+  it.each([
+    ["protocol-derived", "protocol-redeem"],
+    ["cached replay", "cached"],
+    ["unregistered", "not-a-registered-source"],
+  ])("treats a fresh %s incumbent as a non-market WEUSD price", async (_kind, incumbentSource) => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const overrides = await fetchLiveOverrides([
+      freshParent("weusd-picwe", 0.99, incumbentSource, { nowSec }),
+      freshParent("usdc-circle", 0.99998, "coingecko+pyth", { nowSec }),
+    ]);
+
+    expect(overrides.get("weusd-picwe")).toMatchObject({
+      price: 0.9899802,
+      source: "protocol-redeem",
+      metadata: { inheritedFrom: "usdc-circle" },
+    });
+  });
+
   it("returns protocol-par live overrides only for active direct-redeem fiat assets", async () => {
     const overrides = await fetchLiveOverrides(
       [

@@ -469,7 +469,7 @@ describe("handleYieldHistory", () => {
       ]),
     );
     expect(YIELD_HISTORY_OWNERSHIP_HANDOFFS["reusd-re-protocol"]).toEqual([
-      "protocol-api:re-protocol-reusd",
+      "protocol-api:re-protocol-reusde",
     ]);
 
     for (const [stablecoinId, sourceKeys] of Object.entries(YIELD_HISTORY_OWNERSHIP_HANDOFFS)) {
@@ -493,24 +493,32 @@ describe("handleYieldHistory", () => {
     }
   });
 
-  it("anchors every ownership handoff to an emitted registry source key", () => {
-    // Handoffs retain historical keys, so each entry must keep at least one
-    // source that is still emitted by the current adapter registry.
-    const emittedSourceKeys = new Set(
-      YIELD_SOURCE_REGISTRY.flatMap((entry) => [
-        entry.nativePoolId,
-        entry.weightedPoolGroupSourceKey,
-        entry.onChainRate ? `onchain:${entry.stablecoinId}` : undefined,
-        entry.directProtocolApiSourceKey,
-        entry.autoLendingPoolId,
-      ].filter((sourceKey): sourceKey is string => typeof sourceKey === "string")),
+  it("never anchors an ownership handoff to the same stablecoin's active source key", () => {
+    // Handoff suppression is destructive: the guarded purge deletes every
+    // matching row and the history API hides survivors. A key that is still
+    // actively emitted for the SAME stablecoin must therefore never appear in
+    // its handoff list, or healthy publications would be deleted (as happened
+    // when the active `protocol-api:re-protocol-reusd` key was listed).
+    const activeSourceKeysByStablecoin = new Map(
+      YIELD_SOURCE_REGISTRY.map((entry) => [
+        entry.stablecoinId,
+        new Set(
+          [
+            entry.nativePoolId,
+            entry.weightedPoolGroupSourceKey,
+            entry.onChainRate ? `onchain:${entry.stablecoinId}` : undefined,
+            entry.directProtocolApiSourceKey,
+            entry.autoLendingPoolId,
+          ].filter((sourceKey): sourceKey is string => typeof sourceKey === "string"),
+        ),
+      ]),
     );
 
     for (const [stablecoinId, sourceKeys] of Object.entries(YIELD_HISTORY_OWNERSHIP_HANDOFFS)) {
-      expect(
-        sourceKeys.some((sourceKey) => emittedSourceKeys.has(sourceKey)),
-        stablecoinId,
-      ).toBe(true);
+      const activeKeys = activeSourceKeysByStablecoin.get(stablecoinId) ?? new Set<string>();
+      for (const sourceKey of sourceKeys) {
+        expect(activeKeys.has(sourceKey), `${stablecoinId}:${sourceKey}`).toBe(false);
+      }
     }
   });
 

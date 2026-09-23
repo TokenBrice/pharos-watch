@@ -7,8 +7,11 @@ import type { StatusCause } from "../types/status";
  * coverage, on-chain monitor) are intentionally excluded so the public
  * transition history and the `/api/health`-backed hero badge tell one
  * coherent story. Missing exact active-price coverage remains public-impacting
- * because the public surface cannot prove its own price coverage; incomplete
- * active-price coverage is warning-only and does not open uptime incidents.
+ * because the public surface cannot prove its own price coverage; ordinary
+ * incomplete active-price coverage is warning-only and does not open uptime
+ * incidents, but a persistent gap that outlives the duration budget degrades
+ * public health and therefore opens one through its dedicated
+ * `active_price_coverage_duration_degraded` cause.
  *
  * The 2026-04-13 status-stability hardening defined the included/excluded
  * code list.
@@ -22,6 +25,7 @@ const PUBLIC_IMPACT_CODES: ReadonlySet<string> = new Set([
   "mint_burn_public_stale",
   "mint_burn_public_degraded",
   "mint_burn_health_query_failed",
+  "active_price_coverage_duration_degraded",
   "active_price_coverage_unknown",
   "open_circuit_groups",
   "circuit_query_failed",

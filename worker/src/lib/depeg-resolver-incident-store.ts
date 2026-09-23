@@ -739,10 +739,13 @@ function buildIncidentAdoptionStatements(
       .bind(row.incident_key, row.current_event_id, event.eventId, reason, ...current.idBinds, ...current.atBinds, createdBy),
     db
       .prepare(
-        // Only a resurrected pre-lock incident has a closed_pre_lock_at to clear.
+        // Adoption reopens the incident, so the close marker clears
+        // unconditionally: a closer that raced this batch after the candidate
+        // SELECT must not leave its concurrently written marker behind.
         `UPDATE depeg_resolver_incidents
          SET current_event_id = ?,
-             current_started_at = ?,${row.closed_pre_lock_at == null ? "" : "\n             closed_pre_lock_at = NULL,"}
+             current_started_at = ?,
+             closed_pre_lock_at = NULL,
              updated_at = ?
          WHERE incident_key = ?`,
       )
