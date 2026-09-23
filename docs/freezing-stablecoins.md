@@ -44,6 +44,8 @@ Some worker subsystems maintain their own per-coin tables. Remove the frozen coi
 - `worker/src/lib/blacklist-contracts.ts` — remove from `CONTRACT_CONFIGS` if present.
 - `shared/lib/bluechip-slugs.ts` — remove from `BLUECHIP_SLUG_MAP` if present.
 - `worker/src/lib/yield-config/yield-config-pools.ts` — remove from `YIELD_POOL_MAP` if present; `yield-config.ts` derives/re-exports it.
+- `worker/src/lib/yield-config/yield-config-variants.ts` — remove from `YIELD_VARIANT_MAP` if present. The pool-map guard does not cover variants, and a leftover entry makes the yield coverage audit report a permanent `variant-pool` missing-pool pin for a coin that can never resolve again.
+- `shared/data/coverage-dispositions/redemption-coverage-dispositions.ts` — remove the coin's reviewed row. Reviewed dispositions are only valid for active unconfigured stablecoins, so `npm run check:stablecoin-data` blocks on a row whose coin is no longer active; the frozen lifecycle default classification takes over from there.
 - `src/lib/compare-pages.ts` — remove from `STATIC_COMPARE_PAIRS` if any pair includes the coin.
 - Any per-coin sync cron (e.g. `sync-usds-status.ts`, `sync-kinesis-supply.ts`) — disable or remove.
 - **`liveReservesConfig` block in the coin's own meta JSON.** If the frozen coin has a `liveReservesConfig` field on its `StablecoinMeta`, **delete that field**. Otherwise the live-reserves cron's `ACTIVE_STABLECOINS.filter(coin.liveReservesConfig)` would still include the coin once the registry filter widens (it is currently safe because `ACTIVE_STABLECOINS` excludes frozen, but removing the config eliminates ambiguity and matches the "no live data sources" intent of the freeze).

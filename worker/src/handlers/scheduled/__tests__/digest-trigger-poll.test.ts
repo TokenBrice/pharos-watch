@@ -96,6 +96,8 @@ describe("runDigestTriggerPollSlot", () => {
       staleSendingReconciled: 0,
       retainedExecutionUnknown: 0,
       retainedFailedPermanent: 0,
+      retainedExecutionUnknownTotal: 0,
+      retainedFailedPermanentTotal: 0,
       prunedSent: 0,
     });
   });
@@ -172,6 +174,8 @@ describe("runDigestTriggerPollSlot", () => {
       staleSendingReconciled: 0,
       retainedExecutionUnknown: 1,
       retainedFailedPermanent: 2,
+      retainedExecutionUnknownTotal: 1,
+      retainedFailedPermanentTotal: 2,
       prunedSent: 0,
     });
     vi.mocked(getCache).mockResolvedValueOnce(null);
@@ -190,6 +194,38 @@ describe("runDigestTriggerPollSlot", () => {
     );
   });
 
+  it("keeps the outbox drain surface ok when retained terminal rows are older than the review window", async () => {
+    vi.mocked(buildTelegramCreds).mockReturnValue({ botToken: "bot", chatId: "channel" });
+    vi.mocked(drainTelegramDigestOutbox).mockResolvedValueOnce({
+      due: 0,
+      attempted: 0,
+      sent: 0,
+      pending: 0,
+      executionUnknown: 0,
+      failedPermanent: 0,
+      skipped: 0,
+      staleSendingReconciled: 0,
+      retainedExecutionUnknown: 0,
+      retainedFailedPermanent: 0,
+      retainedExecutionUnknownTotal: 0,
+      retainedFailedPermanentTotal: 1,
+      prunedSent: 0,
+    });
+    vi.mocked(getCache).mockResolvedValueOnce(null);
+
+    await runDigestTriggerPollSlot(buildRuntime());
+
+    expect(recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        surface: "telegram-digest-outbox-drain",
+        outcome: "ok",
+        error: null,
+        metadata: expect.objectContaining({ retainedFailedPermanentTotal: 1 }),
+      }),
+    );
+  });
+
   it("drains a stored Telegram edition without invoking digest generation", async () => {
     vi.mocked(buildTelegramCreds).mockReturnValue({ botToken: "bot", chatId: "channel" });
     vi.mocked(drainTelegramDigestOutbox).mockResolvedValueOnce({
@@ -203,6 +239,8 @@ describe("runDigestTriggerPollSlot", () => {
       staleSendingReconciled: 0,
       retainedExecutionUnknown: 0,
       retainedFailedPermanent: 0,
+      retainedExecutionUnknownTotal: 0,
+      retainedFailedPermanentTotal: 0,
       prunedSent: 0,
     });
     vi.mocked(getCache).mockResolvedValueOnce(null);

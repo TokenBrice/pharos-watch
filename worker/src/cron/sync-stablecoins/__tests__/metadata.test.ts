@@ -8,6 +8,7 @@ import {
   compactCronMetadataForPersistence,
   MAX_CRON_METADATA_BEFORE_SCHEDULER_ENRICHMENT_BYTES,
 } from "../../../lib/cron-metadata-persistence";
+import { STABLECOIN_PRICE_GAP_REVIEWS } from "../../../lib/stablecoin-publication-coverage";
 
 function syncInput(
   assets: PeggedAsset[],
@@ -68,6 +69,49 @@ describe("stablecoins pricing metadata", () => {
     expect(metadata.priceSourceHealth).toMatchObject({ totalAssets: ACTIVE_IDS.size + 1, sourceDistribution: { missing: 3 },
       confidenceDistribution: { high: ACTIVE_IDS.size - 2 }, active: { totalAssets: ACTIVE_IDS.size,
         sourceDistribution: { missing: 2 }, confidenceDistribution: { high: ACTIVE_IDS.size - 2 } } });
+  });
+
+  it("weights active confidence by circulating value and acknowledges reviewed price gaps", () => {
+    const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === "wusd-worldwide");
+    expect(review).toBeDefined();
+    const nowSec = review!.reviewedAt + Math.floor((review!.expiresAt - review!.reviewedAt) / 2);
+    const assets: PeggedAsset[] = ACTIVE_STABLECOINS.map((asset): PeggedAsset => {
+      const circulating: Record<string, number> =
+        asset.id === "usdt-tether" ? { peggedUSD: 300_000_000_000 }
+          : asset.id === "eurc-circle" ? { peggedEUR: 3_000_000_000 }
+            : asset.id === "usdy-ondo-finance" ? { peggedUSD: 2_000_000_000 }
+              : { peggedUSD: 0 };
+      if (asset.id === "wusd-worldwide") {
+        return { id: asset.id, name: asset.name, symbol: asset.symbol, price: null, priceSource: "missing", priceConfidence: null, circulating };
+      }
+      if (asset.id === "usdy-ondo-finance") {
+        return { id: asset.id, name: asset.name, symbol: asset.symbol, price: 1, priceSource: "redstone", priceConfidence: "single-source", circulating };
+      }
+      return { id: asset.id, name: asset.name, symbol: asset.symbol, price: 1, priceSource: "coingecko", priceConfidence: "high", circulating };
+    });
+    const result = buildStablecoinsSyncResult({ ...syncInput(assets), syncStartSec: nowSec });
+    const active = JSON.parse(result.metadata!).priceSourceHealth.active;
+    expect(active).toMatchObject({
+      totalAssets: ACTIVE_IDS.size,
+      confidenceDistribution: { high: ACTIVE_IDS.size - 2, "single-source": 1, low: 0, fallback: 0 },
+      confidenceMarketCapUsd: { high: 303_000_000_000, "single-source": 2_000_000_000, low: 0, fallback: 0 },
+      pricedMarketCapUsd: 305_000_000_000,
+      // The reviewed gap stays a raw missing row but is acknowledged.
+      acknowledgedMissingCount: 1,
+    });
+    expect(active.sourceDistribution.missing).toBe(1);
+  });
+
+  it("re-alerts a reviewed price gap once its review window has expired", () => {
+    const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === "wusd-worldwide");
+    const assets: PeggedAsset[] = ACTIVE_STABLECOINS.map((asset) => ({
+      id: asset.id, name: asset.name, symbol: asset.symbol,
+      price: asset.id === "wusd-worldwide" ? null : 1,
+      priceSource: asset.id === "wusd-worldwide" ? "missing" : "coingecko",
+      priceConfidence: asset.id === "wusd-worldwide" ? null : "high" as const,
+    }));
+    const result = buildStablecoinsSyncResult({ ...syncInput(assets), syncStartSec: review!.expiresAt + 1 });
+    expect(JSON.parse(result.metadata!).priceSourceHealth.active.acknowledgedMissingCount).toBe(0);
   });
 
   it("summarizes weak source coverage and provider rejection counts", () => {

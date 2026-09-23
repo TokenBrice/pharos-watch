@@ -28,6 +28,7 @@ export function makeMissingActiveAsset(overrides: Partial<ActivePriceCoverageGap
     lastAcceptedObservedAt: null,
     rejectionReason: "no-accepted-price",
     alertEligible: false,
+    acknowledgedGap: null,
     ...overrides,
   };
 }
@@ -36,7 +37,8 @@ export function makeActivePriceCoverage(
   missingAssets: ActivePriceCoverageGap[],
   overrides: Partial<ActivePriceCoverageHealth> = {},
 ): ActivePriceCoverageHealth {
-  const alertEligibleIds = missingAssets.filter((asset) => asset.alertEligible).map((asset) => asset.stablecoinId);
+  const alertEligibleIds = missingAssets.filter((asset) => asset.alertEligible && !asset.acknowledgedGap).map((asset) => asset.stablecoinId);
+  const acknowledgedGapIds = missingAssets.filter((asset) => asset.acknowledgedGap).map((asset) => asset.stablecoinId);
   return {
     status: "incomplete",
     expectedActiveCount: 190,
@@ -49,6 +51,10 @@ export function makeActivePriceCoverage(
     missingActiveAssets: missingAssets,
     alertEligibleCount: alertEligibleIds.length,
     alertEligibleIds,
+    acknowledgedGapIds,
+    acknowledgedGapCount: acknowledgedGapIds.length,
+    expiredGapReviewIds: [],
+    invalidGapReviewIds: [],
     maxConsecutiveMissingGenerations: Math.max(0, ...missingAssets.map((asset) => asset.consecutiveMissingGenerations)),
     observedAt: STATUS_FIXTURE_NOW_SECONDS,
     ...overrides,

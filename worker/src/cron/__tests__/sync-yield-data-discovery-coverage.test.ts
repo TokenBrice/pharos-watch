@@ -28,7 +28,7 @@ import { cacheRow, dlPoolsCacheRow, installYieldCacheReader, supplementalFamilyC
 import { makeDlYieldPool } from "./yield-resolve.test-support";
 import { getYieldSupplementalFamilyCacheKey } from "../yield-sync/cache";
 import { loadYieldSyncState } from "../yield-sync/state-loading";
-import { SUPPLEMENTAL_SOURCE_FAMILY_KEYS } from "../yield-sync/supplemental-source-families";
+import { SUPPLEMENTAL_SOURCE_FAMILY_KEYS } from "../yield-sync/supplemental-source-family-keys";
 import type { ResolvedYieldCandidate } from "../yield-sync/types";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 

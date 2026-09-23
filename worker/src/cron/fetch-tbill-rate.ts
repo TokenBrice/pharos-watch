@@ -59,6 +59,9 @@ const TREASURY_CIRCUIT_PREFIX = "TREASURY_RATES:";
 // stamped as fresh market data for another 48 hours.
 const USD_FRED_MAX_OBSERVATION_AGE_DAYS = YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.USD / DAY_SECONDS;
 const USD_EFFR_FRED_MAX_OBSERVATION_AGE_DAYS = YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.USD_EFFR / DAY_SECONDS;
+// Series whose next print lands after the following business day's 08:00 UTC
+// fetch; see resolveBenchmarkRefreshNeed.
+const REFRESH_AHEAD_BENCHMARK_KEYS: readonly YieldBenchmarkKey[] = ["USD", "USD_EFFR", "GBP"];
 
 function benchmarkCircuitKey(key: string): string {
   return `${TREASURY_CIRCUIT_PREFIX}${key}`;
@@ -265,6 +268,12 @@ async function updateUsdFreshStreakMonitor(params: {
  * let two consecutive failures reach the 48h NR cliff. USD is evaluated on its
  * own because it is the reference hurdle every non-USD row is scored against —
  * a healthy peg feed must not mask a USD outage.
+ *
+ * FRED DGS3MO, NY Fed EFFR, and FRED's SONIA index publish a business day's
+ * print after the next business day's 08:00 UTC fetch, so an ordinary Friday
+ * print is still the newest one into Wednesday. Those series refresh hourly
+ * once their observation is within a day of its record bound, picking up the
+ * next print as soon as it is published instead of first crossing the bound.
  */
 function resolveBenchmarkRefreshNeed(params: {
   registry: ParsedYieldBenchmarkRegistry;
@@ -275,11 +284,19 @@ function resolveBenchmarkRefreshNeed(params: {
   const marketFetchedAt: number[] = [];
   let usdMarketFetchedAt: number | null = null;
   let expiredUsdObservation = false;
+  let nearingRecordBound = false;
   for (const [key, benchmark] of Object.entries(registry) as Array<[YieldBenchmarkKey, ParsedYieldBenchmarkMeta | null | undefined]>) {
     if (!benchmark?.lastMarketFetchedAt) continue;
     const observationAge = benchmarkRecordAgeSeconds(benchmark.lastMarketRecordDate, nowSec);
     if (key === "USD" && observationAge != null && observationAge > YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.USD) {
       expiredUsdObservation = true;
+    }
+    if (
+      REFRESH_AHEAD_BENCHMARK_KEYS.includes(key)
+      && observationAge != null
+      && observationAge > YIELD_BENCHMARK_RECORD_MAX_AGE_SEC[key] - DAY_SECONDS
+    ) {
+      nearingRecordBound = true;
     }
     marketFetchedAt.push(benchmark.lastMarketFetchedAt);
     if (benchmark.key === "USD") usdMarketFetchedAt = benchmark.lastMarketFetchedAt;
@@ -290,6 +307,7 @@ function resolveBenchmarkRefreshNeed(params: {
   return {
     refresh:
       expiredUsdObservation
+      || nearingRecordBound
       || newestMarketAgeSec == null
       || newestMarketAgeSec > minRegistryAgeSec
       || usdMarketAgeSec == null

@@ -6,6 +6,7 @@ import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { STATUS_MISSING_PRICE_THRESHOLDS } from "@shared/lib/status-thresholds";
 import { makePriceCoverageMetadata } from "./public-health.test-support";
+import { STABLECOIN_PRICE_GAP_REVIEWS } from "../stablecoin-publication-coverage";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
@@ -327,6 +328,34 @@ describe("assessPublicHealth upstream provider enrichment", () => {
     expect(result.activePriceCoverageImpactStatus).toBe("healthy");
     expect(result.overallStatus).toBe("healthy");
     expect(result.warnings).toContain(`active-price-coverage-incomplete:${missingId}`);
+  });
+
+  it("keeps an acknowledged critical-duration gap visible without warnings, then re-alerts at expiry", async () => {
+    const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === "wusd-worldwide")!;
+    for (const compact of [false, true]) {
+      const nowSec = review.expiresAt - 1;
+      const metadata = makePriceCoverageMetadata(nowSec, review.stablecoinId, 800, true, compact);
+      const before = await assessPublicHealth(makeMintBurnAssessmentDb(nowSec, {
+        publicationMetadata: metadata,
+      }), nowSec, { logPrefix: "test" });
+      expect(before.overallStatus).toBe("healthy");
+      expect(before.warnings.some((warning) => warning.startsWith("active-price-coverage"))).toBe(false);
+      expect(before.activePriceCoverage).toMatchObject({
+        status: "incomplete",
+        missingPriceCount: 1,
+        missingActiveIds: [review.stablecoinId],
+        affectedMarketCapUsd: 88_000_000,
+        acknowledgedGapIds: [review.stablecoinId],
+        alertEligibleCount: 0,
+      });
+      const after = await assessPublicHealth(makeMintBurnAssessmentDb(review.expiresAt, {
+        publicationMetadata: metadata,
+      }), review.expiresAt, { logPrefix: "test" });
+      expect(after.overallStatus).toBe("degraded");
+      expect(after.warnings).toContain(`active-price-coverage-incomplete:${review.stablecoinId}`);
+      expect(after.warnings).toContain(`active-price-coverage-critical-duration:${review.stablecoinId}`);
+      expect(after.activePriceCoverage.expiredGapReviewIds).toContain(review.stablecoinId);
+    }
   });
 
   it("escalates once an alert-eligible price gap outlives the elevated duration band", async () => {

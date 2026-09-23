@@ -686,6 +686,34 @@ describe("loadYieldHealthSummary", () => {
     expect(summary.supplemental.families?.morpho?.sourceCount).toBe(4);
   });
 
+  it("grades each supplemental family against its own staleness budget", async () => {
+    // PENDLE-RL: the daily Pendle lane keeps its retained row authoritative for
+    // 48h; the other families keep the 1.5x producer-cadence bound.
+    const summary = await loadYieldHealthSummary(
+      makeDb([
+        yieldCacheRow("yield-rankings", NOW - 300, {
+          rankings: [],
+          provenance: {
+            safetySnapshot: { coverageRatio: 1, coveredCount: 1, trackedCount: 1, reason: null },
+            benchmark: { fetchedAt: NOW - 3600, ageSeconds: 3600, source: "tbill-cache", isFallback: false },
+          },
+        }),
+        ...supplementalFamilyRows(NOW - 1800).filter((row) => row.key !== "yield:supplemental-sources:v1:pendle"),
+        yieldCacheRow("yield:supplemental-sources:v1:pendle", NOW - 20 * 3600, { sourceCount: 3 }),
+        yieldCacheRow("yield-coverage-audit", NOW - 86400, emptyYieldAudit()),
+      ]),
+      NOW,
+      { "sync-yield-data": cron() },
+    );
+
+    expect(summary.supplemental.families?.pendle).toMatchObject({
+      status: "healthy",
+      maxAgeSec: 48 * 3600,
+    });
+    expect(summary.supplemental.families?.morpho?.maxAgeSec).toBe(6 * 3600);
+    expect(summary.supplemental.status).toBe("healthy");
+  });
+
   it("degrades a family the run outcome retained even while its marker is fresh", async () => {
     // SRC-SUPP-1: the fetch failed this run and the snapshot was retained, which
     // the family row alone cannot show — its marker stays inside the fresh band.
@@ -1006,7 +1034,11 @@ describe("loadYieldHealthSummary", () => {
         provenance: healthyYieldProvenance(NOW, 1),
       })]),
       NOW,
-      { "sync-yield-data": cron("ok", 120, { pysInputsPersistedCount: 100, pysInputsNullCount: 57 }) },
+      {
+        "sync-yield-data": cron("ok", 120, {
+          publicationStats: { pysInputsPersistedCount: 100, pysInputsNullCount: 57 },
+        }),
+      },
     );
 
     expect(summary.pysInputs).toMatchObject({
@@ -1016,6 +1048,48 @@ describe("loadYieldHealthSummary", () => {
       nullRate: 0.3631,
     });
     expect(summary.status).toBe("degraded");
+  });
+
+  it("reports healthy PYS inputs from the writer's publicationStats metadata", async () => {
+    const summary = await loadYieldHealthSummary(
+      makeDb([yieldCacheRow("yield-rankings", NOW - 300, {
+        updatedAt: NOW - 300,
+        rankings: [{ id: "usdc-circle" }],
+        provenance: healthyYieldProvenance(NOW, 1),
+      })]),
+      NOW,
+      {
+        "sync-yield-data": cron("ok", 120, {
+          publicationStats: { pysInputsPersistedCount: 242, pysInputsNullCount: 0 },
+        }),
+      },
+    );
+
+    expect(summary.pysInputs).toMatchObject({
+      status: "healthy",
+      persistedCount: 242,
+      nullCount: 0,
+      nullRate: 0,
+    });
+  });
+
+  it("keeps PYS inputs unknown when the run published no counters", async () => {
+    const summary = await loadYieldHealthSummary(
+      makeDb([yieldCacheRow("yield-rankings", NOW - 300, {
+        updatedAt: NOW - 300,
+        rankings: [{ id: "usdc-circle" }],
+        provenance: healthyYieldProvenance(NOW, 1),
+      })]),
+      NOW,
+      { "sync-yield-data": cron("ok", 120, { cacheWriteSkipped: "stale-inputs" }) },
+    );
+
+    expect(summary.pysInputs).toMatchObject({
+      status: "unknown",
+      persistedCount: null,
+      nullCount: null,
+      nullRate: null,
+    });
   });
 
   it("surfaces a publish-time-snapshot safety fallback and its stale-coherent expiry", async () => {

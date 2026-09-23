@@ -8,6 +8,7 @@ import {
   unknownStablecoinPublicationHealth,
 } from "../stablecoin-publication-health";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { STABLECOIN_PRICE_GAP_REVIEWS } from "../stablecoin-publication-coverage";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(fixtures.closeAll);
@@ -86,57 +87,25 @@ describe("stablecoin publication health", () => {
   it("reports unknown health when no run carries publication or price evidence", async () => {
     const { db } = fixtures.open();
     const result = await loadStablecoinCoverageHealth(db, 1_000);
-    expect(result.publication).toEqual({
-      status: "unknown",
-      expectedActiveCount: activeIds.length,
-      presentActiveCount: 0,
-      waivedActiveCount: 0,
-      missingActiveIds: [],
-      waivedActiveIds: [],
-      expiredWaiverIds: [],
-      observedAt: null,
-    });
-    expect(result.activePriceCoverage).toEqual({
-      status: "unknown",
-      expectedActiveCount: activeIds.length,
-      presentActiveCount: 0,
-      pricedActiveCount: 0,
-      missingPriceCount: 0,
-      pricedActiveIds: [],
-      missingActiveIds: [],
-      affectedMarketCapUsd: 0,
-      missingActiveAssets: [],
-      alertEligibleCount: 0,
-      alertEligibleIds: [],
-      maxConsecutiveMissingGenerations: 0,
-      observedAt: null,
-    });
+    expect(result.publication).toEqual(unknownStablecoinPublicationHealth(null));
+    expect(result.activePriceCoverage).toEqual(unknownActivePriceCoverageHealth(null));
   });
 
-  it("exposes unknown factories with an explicit observation time", () => {
-    expect(unknownStablecoinPublicationHealth(1_700)).toEqual({
+  it("exposes unknown factories with an explicit observation time and no claimed coverage", () => {
+    expect(unknownStablecoinPublicationHealth(1_700)).toMatchObject({
       status: "unknown",
       expectedActiveCount: activeIds.length,
       presentActiveCount: 0,
-      waivedActiveCount: 0,
       missingActiveIds: [],
-      waivedActiveIds: [],
-      expiredWaiverIds: [],
       observedAt: 1_700,
     });
-    expect(unknownActivePriceCoverageHealth(1_800)).toEqual({
+    expect(unknownActivePriceCoverageHealth(1_800)).toMatchObject({
       status: "unknown",
       expectedActiveCount: activeIds.length,
-      presentActiveCount: 0,
       pricedActiveCount: 0,
-      missingPriceCount: 0,
-      pricedActiveIds: [],
       missingActiveIds: [],
-      affectedMarketCapUsd: 0,
-      missingActiveAssets: [],
-      alertEligibleCount: 0,
       alertEligibleIds: [],
-      maxConsecutiveMissingGenerations: 0,
+      acknowledgedGapIds: [],
       observedAt: 1_800,
     });
   });
@@ -298,6 +267,7 @@ describe("stablecoin publication health", () => {
         lastAcceptedObservedAt: 1_750,
         rejectionReason: "depegged",
         alertEligible: true,
+        acknowledgedGap: null,
       },
       {
         stablecoinId: "ghost-usd",
@@ -313,6 +283,7 @@ describe("stablecoin publication health", () => {
         lastAcceptedObservedAt: null,
         rejectionReason: "no-accepted-price",
         alertEligible: false,
+        acknowledgedGap: null,
       },
       {
         stablecoinId: "ghost-2",
@@ -328,6 +299,7 @@ describe("stablecoin publication health", () => {
         lastAcceptedObservedAt: null,
         rejectionReason: "no-accepted-price",
         alertEligible: true,
+        acknowledgedGap: null,
       },
     ]);
     expect(price.alertEligibleIds).toEqual([trackedId, "ghost-2"]);
@@ -335,7 +307,7 @@ describe("stablecoin publication health", () => {
     expect(price.maxConsecutiveMissingGenerations).toBe(5);
   });
 
-  it("honors explicit alert fields and drops missing ids without parsed details", async () => {
+  it("retains explicit eligible IDs but derives their count instead of trusting contradictory metadata", async () => {
     const { sqlite, db } = fixtures.open();
     insertRun(sqlite, "sync-stablecoins", 100, {
       activePublicationCoverage: publicationCoverage(),
@@ -381,10 +353,11 @@ describe("stablecoin publication health", () => {
         lastAcceptedObservedAt: null,
         rejectionReason: "no-accepted-price",
         alertEligible: false,
+        acknowledgedGap: null,
       },
     ]);
     expect(price.alertEligibleIds).toEqual(["somewhere-else"]);
-    expect(price.alertEligibleCount).toBe(9);
+    expect(price.alertEligibleCount).toBe(1);
     expect(price.maxConsecutiveMissingGenerations).toBe(7);
   });
 
@@ -496,6 +469,47 @@ describe("stablecoin publication health", () => {
       activePriceCoverage: priceCoverage(),
     });
     expect((await loadStablecoinCoverageHealth(db, 1_000)).activePriceCoverage.status).toBe("complete");
+  });
+
+  it("recomputes reviews for compact legacy state and re-arms an acknowledged streak at exact expiry", async () => {
+    const { sqlite, db } = fixtures.open();
+    const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === "wusd-worldwide")!;
+    insertRun(sqlite, "sync-stablecoins", review.expiresAt - 60, {
+      activePublicationCoverage: publicationCoverage(),
+      activePriceCoverage: priceCoverage({
+        complete: false,
+        pricedActiveCount: activeIds.length - 1,
+        pricedActiveIds: activeIds.filter((id) => id !== review.stablecoinId),
+        missingActiveIds: [review.stablecoinId],
+        missingPriceCount: 1,
+        missingActiveState: [[review.stablecoinId, 800, 0.99, "coingecko", review.reviewedAt, "no-accepted-price"]],
+        // An acknowledged producer writes zero eligible IDs. The compact
+        // streak, not this persisted decision, must re-arm at expiry.
+        alertEligibleIds: [],
+        alertEligibleCount: 0,
+      }),
+    });
+    const before = (await loadStablecoinCoverageHealth(db, review.expiresAt - 1)).activePriceCoverage;
+    expect(before).toMatchObject({
+      status: "incomplete",
+      missingPriceCount: 1,
+      acknowledgedGapIds: [review.stablecoinId],
+      alertEligibleIds: [],
+      alertEligibleCount: 0,
+    });
+    expect(before.missingActiveAssets[0]).toMatchObject({
+      acknowledgedGap: { owner: review.owner, expiresAt: review.expiresAt },
+      alertEligible: false,
+    });
+    const after = (await loadStablecoinCoverageHealth(db, review.expiresAt)).activePriceCoverage;
+    expect(after).toMatchObject({
+      missingPriceCount: 1,
+      acknowledgedGapIds: [],
+      alertEligibleIds: [review.stablecoinId],
+      alertEligibleCount: 1,
+    });
+    expect(after.expiredGapReviewIds).toContain(review.stablecoinId);
+    expect(after.missingActiveAssets[0]?.acknowledgedGap).toBeNull();
   });
 
   it("exposes the publication slice through loadStablecoinPublicationHealth", async () => {

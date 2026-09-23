@@ -9,6 +9,7 @@ import { tryParseJson } from "./json-parse";
 import {
   parseMissingActivePriceDetail,
   parsePersistedMissingActivePriceState,
+  resolveStablecoinPriceGapReviews,
 } from "./stablecoin-publication-coverage";
 
 export function unknownStablecoinPublicationHealth(
@@ -41,6 +42,10 @@ export function unknownActivePriceCoverageHealth(
     missingActiveAssets: [],
     alertEligibleCount: 0,
     alertEligibleIds: [],
+    acknowledgedGapIds: [],
+    acknowledgedGapCount: 0,
+    expiredGapReviewIds: [],
+    invalidGapReviewIds: [],
     maxConsecutiveMissingGenerations: 0,
     observedAt,
   };
@@ -94,6 +99,7 @@ function parseStablecoinPublicationHealth(
 function parseActivePriceCoverageHealth(
   metadataJson: string,
   observedAt: number,
+  nowSec: number,
 ): ActivePriceCoverageHealth {
   const metadata = tryParseJson(metadataJson);
   const coverage = isRecord(metadata) && isRecord(metadata.activePriceCoverage)
@@ -107,18 +113,20 @@ function parseActivePriceCoverageHealth(
   const pricedActiveIds = stringArray(coverage.pricedActiveIds);
   const missingActiveIds = stringArray(coverage.missingActiveIds);
   const missingPriceCount = finiteNumber(coverage.missingPriceCount, missingActiveIds.length);
+  const reviews = resolveStablecoinPriceGapReviews([...ACTIVE_IDS], nowSec);
+  const parseOptions = { nowSec, reviewsById: reviews.activeById };
   const missingDetailsById = new Map(
     (Array.isArray(coverage.missingActiveState)
       ? coverage.missingActiveState
           .slice(0, ACTIVE_IDS.size)
-          .map(parsePersistedMissingActivePriceState)
+          .map((value) => parsePersistedMissingActivePriceState(value, parseOptions))
           .filter((entry): entry is ActivePriceCoverageGap => entry != null)
       : [])
       .map((entry) => [entry.stablecoinId, entry] as const),
   );
   const verboseMissingDetails = Array.isArray(coverage.missingActiveAssets)
     ? coverage.missingActiveAssets
-        .map(parseMissingActivePriceDetail)
+        .map((value) => parseMissingActivePriceDetail(value, parseOptions))
         .filter((entry): entry is ActivePriceCoverageGap => entry != null)
     : [];
   for (const entry of verboseMissingDetails) {
@@ -132,7 +140,19 @@ function parseActivePriceCoverageHealth(
   const derivedAlertEligibleIds = missingActiveAssets
     .filter((entry) => entry.alertEligible)
     .map((entry) => entry.stablecoinId);
-  const alertEligibleIds = stringArray(coverage.alertEligibleIds);
+  // Recompute from registry truth even for metadata written before a review
+  // was added, renewed, removed, or expired. Compact streaks keep re-alerting
+  // after expiry even when the producer persisted an empty eligible-ID list.
+  const acknowledgedGapIds = missingActiveIds.filter((id) =>
+    reviews.activeById.has(id)
+    && !pricedActiveIds.includes(id)
+    && (missingDetailsById.get(id)?.currentPrice ?? 0) <= 0,
+  );
+  const acknowledgedIds = new Set(acknowledgedGapIds);
+  const alertEligibleIds = [...new Set([
+    ...stringArray(coverage.alertEligibleIds),
+    ...derivedAlertEligibleIds,
+  ])].filter((id) => !acknowledgedIds.has(id));
   const complete = coverage.complete === true
     && expectedActiveCount === ACTIVE_IDS.size
     && presentActiveCount === ACTIVE_IDS.size
@@ -153,8 +173,12 @@ function parseActivePriceCoverageHealth(
     missingActiveIds,
     affectedMarketCapUsd: finiteNumber(coverage.affectedMarketCapUsd),
     missingActiveAssets,
-    alertEligibleCount: finiteNumber(coverage.alertEligibleCount, derivedAlertEligibleIds.length),
-    alertEligibleIds: alertEligibleIds.length > 0 ? alertEligibleIds : derivedAlertEligibleIds,
+    alertEligibleCount: alertEligibleIds.length,
+    alertEligibleIds,
+    acknowledgedGapIds,
+    acknowledgedGapCount: acknowledgedGapIds.length,
+    expiredGapReviewIds: reviews.expiredGapReviewIds,
+    invalidGapReviewIds: reviews.invalidGapReviewIds,
     maxConsecutiveMissingGenerations: finiteNumber(
       coverage.maxConsecutiveMissingGenerations,
       missingActiveAssets.reduce(
@@ -195,7 +219,7 @@ export async function loadStablecoinCoverageHealth(
   return row?.metadata
     ? {
         publication: parseStablecoinPublicationHealth(row.metadata, row.started_at),
-        activePriceCoverage: parseActivePriceCoverageHealth(row.metadata, row.started_at),
+        activePriceCoverage: parseActivePriceCoverageHealth(row.metadata, row.started_at, now),
       }
     : {
         publication: unknownStablecoinPublicationHealth(),

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { derivePysSourceRiskPenalty } from "@shared/lib/yield-scoring";
 import {
   findStaleVenueRiskScores,
+  findStaleVenueRiskScoresByEntries,
   resolveDependencyConcentration,
   resolveReviewedYieldRiskConfig,
   venueRiskTierOf,
@@ -244,16 +245,20 @@ describe("yield source-risk registry", () => {
   });
 
   it("flags venue-risk scores older than the max age for re-review", () => {
-    // Every entry was reviewed 2026-05-15..2026-07-01, so nothing is stale soon after.
-    expect(findStaleVenueRiskScores(Date.parse("2026-06-16T00:00:00Z"))).toEqual([]);
+    const entries = {
+      "old-venue": { reviewedAt: "2026-05-15", confidence: "verified" as const },
+      "older-venue": { reviewedAt: "2026-05-01", confidence: "partial" as const },
+      "recent-venue": { reviewedAt: "2026-06-15", confidence: "verified" as const },
+      "bad-date": { reviewedAt: "not-a-date" },
+    };
+    expect(findStaleVenueRiskScoresByEntries(entries, Date.parse("2026-06-16T00:00:00Z"))).toEqual([]);
 
-    // ~109 days after the oldest cohort (2026-05-15), those entries cross 90d.
-    const stale = findStaleVenueRiskScores(Date.parse("2026-09-01T00:00:00Z"));
-    expect(stale.length).toBeGreaterThan(0);
+    const stale = findStaleVenueRiskScoresByEntries(entries, Date.parse("2026-09-01T00:00:00Z"));
+    expect(stale.map((s) => s.protocol)).toEqual(["older-venue", "old-venue"]); // oldest first; 78d entry excluded
     expect(stale.every((s) => s.ageDays > 90)).toBe(true);
-    expect(stale.map((s) => s.protocol)).toContain("aave-v3"); // reviewed 2026-05-15
-    expect(stale.map((s) => s.protocol)).not.toContain("clearpool"); // reviewed 2026-06-15 (~78d)
-    expect(stale[0]!.ageDays).toBeGreaterThanOrEqual(stale[stale.length - 1]!.ageDays); // oldest first
+
+    // The live registry is always re-reviewable: far enough out, every entry is stale.
+    expect(findStaleVenueRiskScores(Date.parse("2030-01-01T00:00:00Z")).length).toBeGreaterThan(0);
   });
 
   it("resolves reviewer-set dependency concentration by stablecoin id", () => {

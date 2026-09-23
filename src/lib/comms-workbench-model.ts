@@ -321,8 +321,19 @@ export function buildCommsWorkbenchModel(input: {
   const pendingPermanentFailures = readOptionalNumber(metadata?.pendingDroppedPermanentFailure);
   const maxAttemptsFailures = readOptionalNumber(metadata?.pendingDroppedMaxAttemptsFallback);
   const permanentFailures = sumKnown([freshPermanentFailures, pendingPermanentFailures, maxAttemptsFailures]);
-  const freshRetryQueued = readOptionalNumber(metadata?.freshRetryQueued);
+  const rawFreshRetryQueued = readOptionalNumber(metadata?.freshRetryQueued);
   const pendingRetryQueued = readOptionalNumber(metadata?.pendingRetryQueued);
+  // The dispatcher emits both retry counters on every run
+  // (dispatch-telegram-result.ts spreads the full result into cron metadata),
+  // but rows written before that breakdown — or recovery re-writes of them —
+  // carry only the pending-side counter. Treat the absent fresh counter as 0
+  // only when the dispatch itself completed ok and the sibling counter is
+  // present; any other shape stays unknown rather than manufacturing a zero.
+  const freshRetryQueued = rawFreshRetryQueued == null
+    && lastDispatch?.status === "ok"
+    && pendingRetryQueued != null
+      ? 0
+      : rawFreshRetryQueued;
   const retryTotal = sumKnown([freshRetryQueued, pendingRetryQueued]);
   const rateLimited = readOptionalBoolean(metadata?.pendingRateLimited);
 
