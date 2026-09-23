@@ -85,7 +85,11 @@ function resolveRouteEvidence(input: BuildRedemptionExitRouteObservationInput): 
     return {
       evidenceKind: "documented-terms",
       confidence: "medium",
-      observedAt: reviewTimestamp,
+      // The observation time is when the evidence was read, not when the
+      // terms were reviewed: a same-run direct read carries its own
+      // timestamp, and only evidence without one falls back to the review.
+      observedAt: (directFreshness ? floorTimestampSec(input.sourceTimestamp) : null)
+        ?? reviewTimestamp,
       supportsScoring: true,
     };
   }
@@ -309,10 +313,14 @@ export function buildRedemptionExitRouteObservation(
     completionRatio: 0,
   };
   const { scope, commonModeKeys } = resolveScopeAndCommonModes(input.stablecoinId, input.config.routeFamily);
-  const settlementHorizonSec = Math.max(
-    REDEMPTION_SETTLEMENT_HORIZON_CEILING_SEC[input.config.settlementModel],
-    input.settlementDelaySec ?? 0,
-  );
+  // A live same-run settlement delay is the observed horizon (R6); the
+  // reviewed model's ceiling is only the fallback when no live delay exists.
+  const settlementHorizonSec =
+    input.settlementDelaySec != null &&
+    Number.isFinite(input.settlementDelaySec) &&
+    input.settlementDelaySec >= 0
+      ? input.settlementDelaySec
+      : REDEMPTION_SETTLEMENT_HORIZON_CEILING_SEC[input.config.settlementModel];
 
   return {
     routeId: `redemption:${input.stablecoinId}:${input.config.routeFamily}`,

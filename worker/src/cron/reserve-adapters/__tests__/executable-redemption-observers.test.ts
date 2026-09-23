@@ -10,6 +10,7 @@ import {
   observeExecutableRedemptionRoute,
   type ExecutableRedemptionReadClient,
 } from "../executable-redemption-observers";
+import { EIP1967_IMPLEMENTATION_SLOT } from "../onchain-identity";
 
 type Hex = `0x${string}`;
 
@@ -30,6 +31,11 @@ const DLEND_ADAPTER = "0x1a5bb485c58a86c193b823d0ea031b68813e100f";
 const DUSD = "0x07fff99e1664d9b116fbc158c0e99785f81ca236";
 const DLEND_POOL = "0x6598dad18bda89a0e58a1f427c8cebc0de90f153";
 const DLEND_ATOKEN = "0x5cc741931d01cb1adde193222dfb1ad75930fd60";
+const NOON_SUSN_VAULT = "0xe24a3dc889621612422a64e6388927901608b91d";
+const NOON_SUSN_VAULT_IMPL = "0xebbcbc6672683e1956125e7c5e89e14ceac8cd3d";
+const NOON_WITHDRAWAL_HANDLER = "0x0dabc0d9b270c9b0c4c77aaceaa712b56d0f9178";
+const NOON_HANDLER_SLOT = "0xeb35582a09ab498623cb7b45bfdff1ae6ef9e826b054d3e2fb048e4d27a9fce";
+const USN_NOON = "0xda67b4284609d2d48e5d10cfac411572727dc1ed";
 
 const erc20Abi = parseAbi([
   "function balanceOf(address account) view returns (uint256)",
@@ -76,6 +82,13 @@ const STATIC_ATOKEN_ABI = parseAbi([
   "function POOL() view returns (address)",
   "function aToken() view returns (address)",
 ]);
+const NOON_SUSN_VAULT_ABI = parseAbi([
+  "function paused() view returns (bool)",
+]);
+const NOON_SUSN_WITHDRAWAL_HANDLER_ABI = parseAbi([
+  "function usn() view returns (address)",
+  "function withdrawPeriod() view returns (uint256)",
+]);
 
 const CODE_HASH_BY_ADDRESS: Record<string, string> = {
   [EARN_VAULT]: "0x864cc9ad53b338b82da1f7cab85ab0b3d5c8861acb422b6fec63cf36234f36a6",
@@ -96,6 +109,9 @@ const CODE_HASH_BY_ADDRESS: Record<string, string> = {
   [REBALANCE_MODULE]: "0x747c8358f0f87437ec23361620e04745b8d7e103a18a09d0a69dec933820407b",
   [DLEND_STRATEGY]: "0xe448349ec1a422118e4244e737f124d1f5e65ccf696a8eecfe48fc8008e082e2",
   [DLEND_ADAPTER]: "0x958bacf03625c8460aa5b3f30ba4fb4610b47a6c8580e257c2e108c53a1787c4",
+  [NOON_SUSN_VAULT]: "0xb108840d91ea6f26d83fc692d0ac870fe1e895debcd9e67c1d7d4317296a88e6",
+  [NOON_SUSN_VAULT_IMPL]: "0x2fec4424636a25ee95ed7135af071433609bce018d51aca35d222ea4787876ef",
+  [NOON_WITHDRAWAL_HANDLER]: "0x48f64f2a52f543354cd46deeb67405df9544289012d18bd9b48920d44d0a4c13",
 };
 
 const IMPLEMENTATION_BY_PROXY: Record<string, string> = {
@@ -103,6 +119,7 @@ const IMPLEMENTATION_BY_PROXY: Record<string, string> = {
   [EARN_VALIDATOR]: "0x2bebb55c0ca126b0d883fb94843c0a2c13102522",
   [EARN_PROTOCOL_CONFIG]: "0x540db273e41587a748365f01f35adb095b58bfeb",
   [DSTAKE_TOKEN]: "0x9c278036c3c4529472751502dfc71bb1f0a3bfd4",
+  [NOON_SUSN_VAULT]: NOON_SUSN_VAULT_IMPL,
 };
 
 function storageWord(address: string): Hex {
@@ -148,6 +165,17 @@ const EXPECTED_REQUESTS = {
   "dlend-atoken": request(DLEND_STRATEGY, STATIC_ATOKEN_ABI, "aToken"),
   "dlend-available-liquidity": request(DUSD, erc20Abi, "balanceOf", [DLEND_ATOKEN]),
   "dstake-asset-decimals": request(DUSD, erc20Abi, "decimals"),
+  "susn-asset": request(NOON_SUSN_VAULT, erc4626Abi, "asset"),
+  "susn-total-assets": request(NOON_SUSN_VAULT, erc4626Abi, "totalAssets"),
+  "susn-vault-paused": request(NOON_SUSN_VAULT, NOON_SUSN_VAULT_ABI, "paused"),
+  "susn-idle-usn": request(USN_NOON, erc20Abi, "balanceOf", [NOON_SUSN_VAULT]),
+  "susn-asset-decimals": request(USN_NOON, erc20Abi, "decimals"),
+  "handler-usn": request(NOON_WITHDRAWAL_HANDLER, NOON_SUSN_WITHDRAWAL_HANDLER_ABI, "usn"),
+  "handler-withdraw-period": request(
+    NOON_WITHDRAWAL_HANDLER,
+    NOON_SUSN_WITHDRAWAL_HANDLER_ABI,
+    "withdrawPeriod",
+  ),
 } satisfies Record<string, { contract: string; data: Hex }>;
 
 function verifyRequests(calls: readonly EvmMulticall3Call[]) {
@@ -348,12 +376,62 @@ function dStakeResults(
   }));
 }
 
+interface SusnNoonOverrides {
+  vaultPaused?: boolean;
+  withdrawPeriod?: bigint;
+  failWithdrawPeriodRead?: boolean;
+}
+
+function susnNoonResults(
+  calls: readonly EvmMulticall3Call[],
+  overrides: SusnNoonOverrides = {},
+): EvmMulticall3Result[] {
+  verifyRequests(calls);
+  const totalAssets = 35_610_286_304_365_360_371_879_357n;
+  const values: Record<string, Hex> = {
+    "susn-asset": encodeFunctionResult({ abi: erc4626Abi, functionName: "asset", result: USN_NOON }),
+    "susn-total-assets": encodeFunctionResult({
+      abi: erc4626Abi,
+      functionName: "totalAssets",
+      result: totalAssets,
+    }),
+    "susn-vault-paused": encodeFunctionResult({
+      abi: NOON_SUSN_VAULT_ABI,
+      functionName: "paused",
+      result: overrides.vaultPaused ?? false,
+    }),
+    "susn-idle-usn": encodeFunctionResult({
+      abi: erc20Abi,
+      functionName: "balanceOf",
+      result: totalAssets,
+    }),
+    "susn-asset-decimals": encodeFunctionResult({ abi: erc20Abi, functionName: "decimals", result: 18 }),
+    "handler-usn": encodeFunctionResult({
+      abi: NOON_SUSN_WITHDRAWAL_HANDLER_ABI,
+      functionName: "usn",
+      result: USN_NOON,
+    }),
+    "handler-withdraw-period": encodeFunctionResult({
+      abi: NOON_SUSN_WITHDRAWAL_HANDLER_ABI,
+      functionName: "withdrawPeriod",
+      result: overrides.withdrawPeriod ?? 604_800n,
+    }),
+  };
+  return calls.map((call) => ({
+    label: call.label,
+    success: !(overrides.failWithdrawPeriodRead && call.label === "handler-withdraw-period"),
+    returnData: values[call.label]!,
+  }));
+}
+
 function client(
-  coin: "earn" | "dstake",
+  coin: "earn" | "dstake" | "noon",
   options: {
     driftAddress?: string;
     dStakeOverrides?: DStakeOverrides;
     earnOverrides?: EarnOverrides;
+    susnNoonOverrides?: SusnNoonOverrides;
+    handlerPointer?: Hex | null;
   } = {},
 ): ExecutableRedemptionReadClient {
   return {
@@ -369,19 +447,25 @@ function client(
         : CODE_HASH_BY_ADDRESS[address.toLowerCase()] ?? null;
     }),
     storage: vi.fn().mockImplementation(async (address: string, slot: string, block: number) => {
-      if (slot !== "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc" || block !== BLOCK) {
-        throw new Error(`Unexpected storage observation ${slot} at ${block}`);
+      if (block !== BLOCK) throw new Error(`Unexpected storage observation ${slot} at ${block}`);
+      if (slot === NOON_HANDLER_SLOT) {
+        return options.handlerPointer === undefined
+          ? storageWord(NOON_WITHDRAWAL_HANDLER)
+          : options.handlerPointer;
+      }
+      if (slot !== EIP1967_IMPLEMENTATION_SLOT) {
+        throw new Error(`Unexpected storage observation ${slot}`);
       }
       const implementation = IMPLEMENTATION_BY_PROXY[address.toLowerCase()];
       return implementation ? storageWord(implementation) : null;
     }),
     multicall: vi.fn().mockImplementation(async (calls: readonly EvmMulticall3Call[], block: number) => {
       if (block !== BLOCK) throw new Error(`Unexpected multicall block ${block}`);
-      return (
-      coin === "earn"
+      return coin === "earn"
         ? earnResults(calls, options.earnOverrides)
-        : dStakeResults(calls, options.dStakeOverrides)
-      );
+        : coin === "noon"
+          ? susnNoonResults(calls, options.susnNoonOverrides)
+          : dStakeResults(calls, options.dStakeOverrides);
     }),
   };
 }
@@ -497,6 +581,71 @@ describe("specialized executable redemption observers", () => {
         currentWithdrawalFeeRaw: "1000",
       },
     });
+  });
+
+  it("publishes the measured idle USN with the live 7-day withdrawPeriod bound", async () => {
+    const observation = await observeExecutableRedemptionRoute(
+      "susn-noon",
+      NOON_SUSN_VAULT,
+      new AbortController().signal,
+      undefined,
+      { client: client("noon"), nowSec: NOW },
+    );
+
+    expect(observation).toMatchObject({
+      capacityRaw: 35_610_286_304_365_360_371_879_357n,
+      capacitySource: "noon-susn-withdrawal-handler-idle-usn",
+      capacityKind: "live-direct-bounded",
+      settlementDelaySec: 604_800,
+      routeStatus: "open",
+      routeStatusSource: "onchain",
+      holderEligibility: "any-holder",
+      blockNumber: BLOCK,
+      sourceTimestamp: NOW - 30,
+      diagnostics: {
+        withdrawalHandlerAddress: NOON_WITHDRAWAL_HANDLER,
+        withdrawPeriodSec: 604_800,
+        vaultPaused: false,
+      },
+    });
+    expect(observation).not.toHaveProperty("settlementBoundUnproven");
+  });
+
+  it("fails susn-noon closed on withdrawal-handler pointer drift", async () => {
+    await expect(observeExecutableRedemptionRoute(
+      "susn-noon",
+      NOON_SUSN_VAULT,
+      new AbortController().signal,
+      undefined,
+      { client: client("noon", { handlerPointer: storageWord(USN_NOON) }), nowSec: NOW },
+    )).rejects.toThrow(/withdrawal-handler pointer/);
+  });
+
+  it.each([
+    { failWithdrawPeriodRead: true },
+    { withdrawPeriod: 2n ** 60n },
+  ] satisfies SusnNoonOverrides[])(
+    "leaves the susn-noon settlement bound unknown when the live read fails or is out of range: %o",
+    async (susnNoonOverrides) => {
+      await expect(observeExecutableRedemptionRoute(
+        "susn-noon",
+        NOON_SUSN_VAULT,
+        new AbortController().signal,
+        undefined,
+        { client: client("noon", { susnNoonOverrides }), nowSec: NOW },
+      )).rejects.toThrow(/failed closed/);
+    },
+  );
+
+  it("publishes a measured zero with the live bound while the noon vault is paused", async () => {
+    const observation = await observeExecutableRedemptionRoute(
+      "susn-noon",
+      NOON_SUSN_VAULT,
+      new AbortController().signal,
+      undefined,
+      { client: client("noon", { susnNoonOverrides: { vaultPaused: true } }), nowSec: NOW },
+    );
+    expect(observation).toMatchObject({ capacityRaw: 0n, routeStatus: "paused", settlementDelaySec: 604_800 });
   });
 
   it.each([DSTAKE_ROUTER, GOVERNANCE_MODULE, REBALANCE_MODULE])("rejects unreviewed dTRINITY code at %s", async (driftAddress) => {

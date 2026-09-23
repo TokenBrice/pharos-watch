@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const REDEMPTION_BACKSTOP_V4: readonly MethodologyChangelogEntry[] = [
   {
+    version: "4.44",
+    title: "Noon USN and sUSN settlement corrections",
+    date: "2026-09-23",
+    effectiveAt: 1790121600,
+    summary:
+      "Noon's USN route now publishes its issuer-processed, days-settled rail against the binding terms, and sUSN's request/claim rail publishes a live on-chain settlement bound read from the WithdrawalHandler's own `withdrawPeriod()` instead of excluding capacity as an unproven asynchronous request. A documented-bound observation also carries the time its evidence was read rather than its review date.",
+    impact: [
+      "`usn-noon` moves from atomic to days settlement with a 7-calendar-day bound taken from the five-Business-Day processing clause, rules-based-nav execution for the issuer-processed rail, and the issuer's discretion to gate redemptions; fees stay undisclosed-reviewed against the non-binding fees page, and capacity keeps its 15% supply-ratio heuristic with a majority-private-credit rationale.",
+      "`susn-noon` no longer carries the registry `async-request` marker: a dedicated observer re-reads the vault's withdrawal-handler pointer from pinned namespaced storage first (failing closed on drift or an unreadable read), then publishes measured idle-USN capacity as `live-direct-bounded`, same-run route status, and the handler's live `withdrawPeriod()` (604,800 seconds today) as `settlementDelaySec`. The period sits behind the handler's 48-hour timelock and applies retroactively to in-flight requests; an unreadable period leaves the route unrated instead of substituting a fixed delay.",
+      "A documented-bound route's exit-route observation now uses its same-run chain-read time as `observedAt` when the observation carries a direct freshness kind; the reviewed date is only the fallback for evidence that has no such timestamp.",
+      "Detail-card copy for a route withheld without reviewed scoring terms now describes the request-and-claim (queued withdrawal) process instead of asserting an operator-batched queue. Producer-supplied route-status reasons still pass through verbatim.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "4.43",
     title: "Live route status requires same-run route evidence",
     date: "2026-09-21",
