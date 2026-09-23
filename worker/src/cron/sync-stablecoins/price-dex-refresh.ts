@@ -159,12 +159,18 @@ export async function runPriceDexRefresh(params: { db: D1Database; syncStartSec:
       // lane budget — the sleep rejects as soon as the 45 s deadline passes.
       if (batchIndex > 0) await dsRateLimit(timeout.signal);
       throwIfAborted(timeout.signal);
-      summary.attemptedBatches++;
-      summary.hintedAttempted += batch.filter(({ entry }) => plan.hintedIds.has(entry.asset.id)).length;
-      // Existing executor owns admission, five-second requests, response consumption,
-      // provenance and quote selection. Circuit outcome is aggregated once below.
+      // The existing executor owns admission, five-second requests, response
+      // consumption, provenance and quote selection; the circuit outcome is
+      // aggregated once below. Count a batch as attempted only once its
+      // outcome is definitive: a batch whose fetch this lane's own deadline
+      // aborted never reached a provider verdict, and counting it would
+      // record a DexScreener failure for a local wall-clock abort while the
+      // provider may be healthy. The aborted batch stays deferred and the
+      // slot still degrades via `timedOut`/`deferredBatches`.
       const result = await runDexScreenerPass(plan.cohort, fxRates, undefined, timeout.signal,
         undefined, undefined, undefined, batch);
+      summary.attemptedBatches++;
+      summary.hintedAttempted += batch.filter(({ entry }) => plan.hintedIds.has(entry.asset.id)).length;
       const rows = result.diagnostics ?? [];
       if (rows.some((row) => row.success)) successfulBatches++;
       summary.errorClasses.push(...rows.filter((row) => !row.success).map((row) => row.errorClass ?? "upstream-error"));

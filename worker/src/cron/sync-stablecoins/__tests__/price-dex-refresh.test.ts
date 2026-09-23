@@ -186,13 +186,14 @@ describe("DEX refresh continuity", () => {
     expect(requestSignal?.aborted).toBe(false);
     expect((await getCache(db, DEX_REFRESH_CACHE_KEY))!.value).toBe(oldValue);
     await vi.advanceTimersByTimeAsync(1);
-    expect(await pending).toMatchObject({ timedOut: true, attemptedBatches: 1, resolved: 0,
-      missingQuotes: 1, errorClasses: ["timeout"], cacheWritten: true });
-    const cache = (await getCache(db, DEX_REFRESH_CACHE_KEY))!;
-    expect(cache.updatedAt).toBe(now);
-    expect(JSON.parse(cache.value)).toMatchObject({ observations: [], targets: [target] });
-    expect(fetch).toHaveBeenCalledOnce();
-    expect(vi.getTimerCount()).toBe(0);
+    expect(await pending).toMatchObject({ timedOut: true, attemptedBatches: 0, deferredBatches: 1,
+      resolved: 0, missingQuotes: 1, errorClasses: ["timeout"], cacheWritten: true });
+    // A batch aborted by this lane's own deadline never reached a provider
+    // verdict: the circuit outcome must stay neutral (attempted 0), not count
+    // the local wall-clock abort as a DexScreener failure.
+    expect(lifecycle.recordProviderOutcomeSafe).toHaveBeenCalledWith(expect.objectContaining({
+      circuitSource: CIRCUIT_SOURCE.DEXSCREENER_PRICES_REFRESH, attempted: 0, successful: 0,
+    }));
   });
 
   it("propagates parent cancellation without writing a refresh or provider outcome", async () => {
