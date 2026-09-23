@@ -9,6 +9,16 @@ import { getDatasetFreshness, getMintBurnReconciliation } from "../derived-data"
 
 const NOW = 1_800_000_000;
 
+// Per-scenario stored sync cursors. `lagging` puts the cursor far below the audited window, so the
+// record-scoped clauses demote it. `lagging-but-covered` is the production shape: 301 Ethereum blocks
+// (one hour, > the 300-block threshold) behind the snapshot head, yet at or after the audited window's
+// own opening block and inside the snapshot's observed head.
+const LAST_BLOCK_BY_COVERAGE: Readonly<Record<string, number>> = {
+  lagging: 90_000_000,
+  "lagging-but-covered": 99_999_699,
+  quiet: 99_999_925,
+};
+
 function conservationFixture(config = MINT_BURN_CONFIGS.find((entry) => entry.stablecoinId === "usds-sky")!) {
   return {
     version: 1 as const, key: conservationModule.mintBurnConservationCacheKey(config),
@@ -41,7 +51,7 @@ async function reconcile(options: {
     { match: "pharos:status-derived:mint-burn-24h", rows: [{ stablecoin_id: id, chain_id: "ethereum", net_flow_usd: 10 }] },
     { match: "pharos:status-derived:mint-burn-first-hour-seek", rows: [] },
     { match: "FROM mint_burn_sync_state", rows: options.coverage === "missing-cursor" ? [] : MINT_BURN_CONFIGS.map((config) => ({
-      config_key: `${config.chain.chainId}-${config.contractAddress}`, last_block: options.coverage === "lagging" ? 90_000_000 : options.coverage === "quiet" ? 99_999_925 : 99_999_999,
+      config_key: `${config.chain.chainId}-${config.contractAddress}`, last_block: LAST_BLOCK_BY_COVERAGE[options.coverage ?? ""] ?? 99_999_999,
     })) },
     ...["sync-mint-burn", "sync-mint-burn-extended"].map((job) => ({
       match: "FROM cron_runs", matchBinds: [job], rows: [{
@@ -110,6 +120,15 @@ describe("getMintBurnReconciliation verified conservation", () => {
 
   it.each(["stale", "error", "missing-cursor", "lagging"])("gates positive evidence on %s scan coverage", async (coverage) => {
     expect((await reconcile({ coverage })).rows[0].status).toBe("insufficient-source");
+  });
+
+  it("keeps a verified pass whose audited window is covered while the coin's flow cursor reads lagging", async () => {
+    // Head 100_000_000 vs cursor 99_999_699 => 301 blocks, past the 300-block Ethereum coverage budget,
+    // so the row's coverageStatus is "lagging" — the by-design extended-lane deferral shape. The audited
+    // window is still inside [cursor, snapshot head], so the conservation verdict must stay verified.
+    const record = { ...conservationFixture(), fromBlock: 99_999_600, toBlock: 99_999_699 };
+    const result = await reconcile({ records: [record], coverage: "lagging-but-covered" });
+    expect(result.rows[0]).toMatchObject({ status: "ok", coverageStatus: "lagging" });
   });
 
   it("accepts a completed quiet scan whose replay-safe cursor intentionally trails its audited end", async () => {
