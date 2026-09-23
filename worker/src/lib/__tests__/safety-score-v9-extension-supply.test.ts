@@ -151,6 +151,21 @@ describe("buildSafetyScoreV9SupplyReview", () => {
       reviewRouteCount: 2,
       attributionRejectionCode: "chain-rpc-unavailable",
     });
+
+    // No per-chain rows, no runtime partition owed, nothing rejected: there was
+    // no route join to be ambiguous about, so the cause is the absent partition.
+    const unpartitioned = {
+      ...base,
+      chainCirculatingById: { alpha: {} },
+    } as unknown as ReportCardsFixedInput;
+    expect(diagnose(unpartitioned, "bounded-unknown")).toEqual({
+      state: "unpartitioned-aggregate",
+      responsibility: "integration-missing",
+      chainRowCount: 0,
+      canonicalizationFailureCount: 0,
+      reviewRouteCount: 2,
+      attributionRejectionCode: null,
+    });
   });
 
   it("joins a reviewed deployment packet by exact wM route ID and retains zero supply", () => {

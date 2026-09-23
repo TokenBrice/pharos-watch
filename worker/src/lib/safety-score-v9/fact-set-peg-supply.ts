@@ -109,6 +109,8 @@ function nullSupplyReviewMessage(outcome: SafetyScoreV9NullSupplyReviewOutcome):
       return "Circulating USD is known, but the required bridge profile is missing or invalid.";
     case "ambiguous-route-join":
       return "Circulating USD is known, but bridge routes do not form one canonical, unique attribution join.";
+    case "unpartitioned-aggregate":
+      return "Circulating USD is known, but intake published no per-chain partition to attribute to bridge routes.";
     case "stale-review":
       return "Circulating USD is known, but the supply review or its runtime chain input is stale.";
     case "generation-outcome-missing":
@@ -483,25 +485,39 @@ function buildAggregateSupply(context: AssetBuildContext): V9AssetFactsV2["suppl
   const supplyReviewOutcome = review === null
     ? nullSupplyReviewOutcome(context, evidence.freshness.state === "stale")
     : null;
-  const supplyReviewOutcomeEvidenceId = supplyReviewOutcome === null
+  // This lane never joins per-chain rows to bridge routes — intake published no
+  // partition, so no join ran and none failed. Bridge-materiality availability
+  // is the bridge control's own fact, and `evaluateV9EconomicControl` already
+  // raises `runtime-bridge-materiality-unavailable` for exactly these assets
+  // off its own bounded bridge observation. Re-publishing that gap as a bounded
+  // circulating *quantity* was a second authority over one vocabulary (R5):
+  // its only distinct effect was to null the exit pillar's stress request for
+  // an asset whose supply USD is published and current. A broken producer
+  // promise still fails closed here, because the producer owed the partition
+  // this lane cannot derive.
+  const boundedSupplyReviewOutcome =
+    supplyReviewOutcome === null || supplyReviewOutcome.state === "unpartitioned-aggregate"
+      ? null
+      : supplyReviewOutcome;
+  const supplyReviewOutcomeEvidenceId = boundedSupplyReviewOutcome === null
     ? null
-    : addNullSupplyReviewOutcomeEvidence(context, supplyReviewOutcome);
+    : addNullSupplyReviewOutcomeEvidence(context, boundedSupplyReviewOutcome);
   const status =
     evidence.freshness.state === "stale"
       ? staleSupplyStatus(context, {
           message: "The aggregate circulating observation is past the supplemental carry-forward ceiling.",
           evidenceId,
-          supplyReviewOutcome,
+          supplyReviewOutcome: boundedSupplyReviewOutcome,
           supplyReviewOutcomeEvidenceId,
         })
-      : supplyReviewOutcome !== null && supplyReviewOutcomeEvidenceId !== null
+      : boundedSupplyReviewOutcome !== null && supplyReviewOutcomeEvidenceId !== null
         ? missingLocalFact(context, {
             componentKey: "bridge-materiality",
             reasonCode: "runtime-bridge-materiality-unavailable",
             ownerDomain: "control",
-            responsibility: supplyReviewOutcome.responsibility,
+            responsibility: boundedSupplyReviewOutcome.responsibility,
             policyRuleId: "v9.supply.bridge-materiality",
-            message: nullSupplyReviewMessage(supplyReviewOutcome),
+            message: nullSupplyReviewMessage(boundedSupplyReviewOutcome),
             observationState: "bounded-unknown",
             evidenceRefIds: [evidenceId, supplyReviewOutcomeEvidenceId],
           }).status

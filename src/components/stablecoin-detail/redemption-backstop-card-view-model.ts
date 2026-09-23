@@ -87,11 +87,14 @@ function getResolutionSummary(entry: RedemptionBackstopEntry): string | null {
   if (entry.resolutionState === "missing-capacity") {
     if (entry.capacityProfile?.settlementBoundUnproven) {
       // The producer's on-chain route-status reason carries the exact
-      // modality (for eEARN: requests are open, settlement is
-      // operator-batched with no proven completion bound).
+      // modality (for eEARN: an operator-batched queue). The fallback stays
+      // modality-neutral: rails with an unproven settlement bound differ in
+      // who moves settlement forward (sUSN is a holder-initiated
+      // request/claim rail with an on-chain waiting period), so the card must
+      // never assert operator batching the producer did not report.
       const modality =
         entry.routeStatusReason ??
-        "Redemption requests are open, but settlement is operator-batched with no proven completion bound.";
+        "Redemption proceeds through a request-and-claim (queued withdrawal) process, and no settlement completion bound is proven for it.";
       return `${modality} No executable capacity can be established for scoring, so the route is unrated rather than scored zero.`;
     }
     return "This route is configured, but the current snapshot could not resolve enough capacity data to produce a usable redemption score.";

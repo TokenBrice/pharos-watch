@@ -46,6 +46,7 @@ export interface BuildSafetyScoreV9SupplyReviewOptions {
 export type SafetyScoreV9NullSupplyReviewOutcomeState =
   | "missing-profile"
   | "ambiguous-route-join"
+  | "unpartitioned-aggregate"
   | "stale-review"
   | "generation-outcome-missing"
   | "attribution-rpc-rejection";
@@ -76,7 +77,10 @@ const INTEGRATION_ATTRIBUTION_REJECTION_CODES = new Set([
  * Projects the exact null-review cause into score-bearing generation metadata.
  * Missing/invalid bridge profiles and non-unique/canonicalization joins belong
  * to integration; stale runtime input and rejected/missing attribution packets
- * belong to the producer. No branch manufactures a route or a supply share.
+ * belong to the producer. An asset whose intake published only an aggregate
+ * offers no per-chain rows to join at all, so its cause is the absent
+ * partition, not an ambiguous one. No branch manufactures a route or a supply
+ * share.
  */
 export function diagnoseSafetyScoreV9NullSupplyReviewOutcome(input: {
   fixedInput: Readonly<SafetyScoreV9CompilerInput>;
@@ -133,6 +137,13 @@ export function diagnoseSafetyScoreV9NullSupplyReviewOutcome(input: {
       responsibility: "producer-failed",
       ...base,
     };
+  }
+  // No per-chain rows exist, no runtime partition was owed, and nothing was
+  // rejected: there was never a route join to be ambiguous about. Naming it
+  // `ambiguous-route-join` sent curation looking for a duplicate or missing
+  // reviewed route that does not exist.
+  if (chainLabels.length === 0) {
+    return { state: "unpartitioned-aggregate", responsibility: "integration-missing", ...base };
   }
   return { state: "ambiguous-route-join", responsibility: "integration-missing", ...base };
 }
