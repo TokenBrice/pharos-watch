@@ -7,6 +7,15 @@ import type { ParsedPool } from "./crawl-helpers";
 import type { GtPool } from "./types";
 import { GT_TOKEN_POOLS_MAX_PAGES, GT_TOKEN_POOLS_PAGE_SIZE } from "./constants";
 
+/**
+ * Hard per-response byte cap for GeckoTerminal token-pool pages. A 20-row page
+ * is tens of kilobytes — the provider serves at most `GT_TOKEN_POOLS_PAGE_SIZE`
+ * rows per page and the scan stops at `GT_TOKEN_POOLS_MAX_PAGES` — so this keeps
+ * a mis-served body from being buffered and parsed inside the isolate while
+ * leaving an order of magnitude of headroom for legitimate pages.
+ */
+const GT_TOKEN_POOLS_MAX_RESPONSE_BYTES = 1024 * 1024;
+
 type GtPoolKind = "concentrated" | "stable-amm" | "amm";
 
 export function fetchGtTokenPools(
@@ -33,7 +42,7 @@ export function fetchGtTokenPools(
             signal,
           },
           maxRetries,
-          { timeoutMs, passthrough404: true },
+          { timeoutMs, passthrough404: true, maxResponseBytes: GT_TOKEN_POOLS_MAX_RESPONSE_BYTES },
         );
         if (!result) throw new Error(`GeckoTerminal ${gtChain} token-pools request failed`);
         if (result.response.status === 404) return [];

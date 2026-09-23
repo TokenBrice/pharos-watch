@@ -11,6 +11,7 @@ import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { parseJson } from "../../lib/json-parse";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { DEX_MEASURED_QUOTE_SURFACE, DEX_MEASURED_TARGET_SURFACE, hashMeasuredTargetIds, latestPublishedGeneration,
+  latestPublishedGenerationAtOrBefore,
   loadSupersededQuoteGenerationIds, parsePersistedJson, type MeasuredQuoteGenerationDependency, type SurfaceGenerationRow } from "./generation-store";
 import { summarizeDexMeasuredExecutionHistory, type DexMeasuredExecutionHistoryCycle } from "./history";
 // This generation-level query must cover the longest adapter-specific freshness
@@ -230,6 +231,7 @@ async function loadCurrentMeasuredQuoteEvidence<
   profileSchema: { parse(value: unknown): TProfile };
   deferProfiles?: boolean;
   targetIds?: readonly string[];
+  publishedAtCeilingSec?: number;
   signal?: AbortSignal;
 }): Promise<{
   quoteGenerationId: string;
@@ -246,7 +248,14 @@ async function loadCurrentMeasuredQuoteEvidence<
     }
   >;
 } | null> {
-  const generation = await latestPublishedGeneration(input.db, input.quoteSurface, input.signal);
+  const generation = input.publishedAtCeilingSec === undefined
+    ? await latestPublishedGeneration(input.db, input.quoteSurface, input.signal)
+    : await latestPublishedGenerationAtOrBefore(
+        input.db,
+        input.quoteSurface,
+        input.publishedAtCeilingSec,
+        input.signal,
+      );
   if (!generation) return null;
   const summary = await runWithOverloadRetry(
     () =>
@@ -471,10 +480,23 @@ async function loadCurrentMeasuredQuoteEvidence<
   };
 }
 
+/**
+ * Newest measured quote evidence a consumer may read.
+ *
+ * `publishedAtCeilingSec` is the consumer's observation clock. A clock-pinned
+ * consumer (the hourly DEX scoring run pins `routeObservedAt` to its source
+ * slot, while the measured lane publishes minutes later) passes it so it reads
+ * the newest cohort that already existed at its clock instead of loading a
+ * newer one whose history the `future-history` guard must reject.
+ */
 export async function loadLatestPublishedDexMeasuredQuoteEvidence(
   db: D1Database,
   signal?: AbortSignal,
-  options: { deferProfiles?: boolean; targetIds?: readonly string[] } = {},
+  options: {
+    deferProfiles?: boolean;
+    targetIds?: readonly string[];
+    publishedAtCeilingSec?: number;
+  } = {},
 ): Promise<LoadedDexMeasuredQuoteEvidence | null> {
   const currentEvidence = await loadCurrentMeasuredQuoteEvidence({
     db,
@@ -485,6 +507,9 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
     profileSchema: DexMeasuredExecutionProfileSchema,
     deferProfiles: options.deferProfiles,
     targetIds: options.targetIds,
+    ...(options.publishedAtCeilingSec === undefined
+      ? {}
+      : { publishedAtCeilingSec: options.publishedAtCeilingSec }),
     signal,
   });
   if (!currentEvidence) return null;
@@ -545,6 +570,9 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
       db,
       quoteSurface: DEX_MEASURED_QUOTE_SURFACE,
       publishedAtFloor: latestPublishedAt - DEX_MEASURED_HISTORY_LOOKBACK_MAX_SEC,
+      ...(options.publishedAtCeilingSec === undefined
+        ? {}
+        : { publishedAtCeiling: options.publishedAtCeilingSec }),
       signal,
     });
     if (historyGenerationIds.length > 0) {

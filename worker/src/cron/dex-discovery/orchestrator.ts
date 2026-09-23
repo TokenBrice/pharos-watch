@@ -1,6 +1,6 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { recordCronFailure, type CronProgressReporter, type CronResult } from "../../lib/cron-logger";
-import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
+import { rethrowIfAborted, throwIfAborted, yieldToEventLoop } from "../../lib/abort";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { ContractDeployment } from "@shared/types/core";
@@ -466,6 +466,12 @@ export async function syncDexDiscovery(
     for (let index = 0; index < eligibleCoins.length; index++) {
       const candidate = eligibleCoins[index];
       throwIfAborted(signal);
+      // Yield once per coin so the slot fence's wall-clock heartbeat, the child
+      // lease renewal timer and the queued D1 progress writes are serviced even
+      // when the current coin's classification/parse work is CPU-bound. A sweep
+      // that is busy but alive must never look like a dead isolate: the stale
+      // slot sweep can only tell the difference through those writes.
+      await yieldToEventLoop(signal);
       if (!hasDiscoveryFinalizationWindow(deadlineMs)) {
         budgetExhausted = true;
         break;

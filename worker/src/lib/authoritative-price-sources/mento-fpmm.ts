@@ -29,7 +29,7 @@ export async function fetchMentoFpmmPrice(context: LivePriceContext, signal?: Ab
     context.lastRejectionReason = `mento-fpmm:${reason}`;
     return null;
   };
-  const parent = resolveTrustedOverrideParent(context, "cusd-celo",
+  const parent = resolveTrustedOverrideParent(context, MENTO_FPMM_PARENT_ID,
     () => "[authoritative-price-sources] CHFm: trusted USDm quote unavailable",
     { allowFreshReplaySafeSingleSourceParent: true });
   if (!parent) return null;
@@ -120,10 +120,15 @@ export async function fetchMentoFpmmPrice(context: LivePriceContext, signal?: Ab
   }
 }
 
+const CHFM_MENTO_ID = "chfm-mento";
+/** Celo USDm row this route multiplies its pool quote by. */
+const MENTO_FPMM_PARENT_ID = "cusd-celo";
+
 export const mentoFpmmProvider: PriceSourceProvider = {
   source: "mento-fpmm", liveMissingOnly: true, liveCircuitSource: CIRCUIT_SOURCE.MENTO_FPMM,
   livePriority: 1, liveTimeoutMs: 6_000,
-  matches: (id) => id === "chfm-mento",
+  liveParentByAssetId: { [CHFM_MENTO_ID]: MENTO_FPMM_PARENT_ID },
+  matches: (id) => id === CHFM_MENTO_ID,
   async fetchLivePrice(asset: PeggedAsset, context: LivePriceContext, signal?: AbortSignal) {
     return hasPublishableCurrentPrice(asset) ? null : fetchMentoFpmmPrice(context, signal);
   },

@@ -77,6 +77,11 @@ function getInheritedTrackedPriceConfig(stablecoinId: string): InheritedTrackedP
   ] ?? null;
 }
 
+/** Child -> tracked parent row the live route reads, declared for the scheduler. */
+const INHERITED_TRACKED_PARENT_BY_ID: Readonly<Record<string, string>> = Object.fromEntries(
+  Object.entries(INHERITED_TRACKED_PRICE_CONFIGS).map(([stablecoinId, config]) => [stablecoinId, config.parentId]),
+);
+
 /**
  * A market price only wins over the redemption fallback while it is a current,
  * registry-admitted market observation. Restored or carry-forward rows keep
@@ -126,6 +131,7 @@ async function replayInheritedTrackedPriceSeries(
 export const inheritedTrackedPriceProvider: PriceSourceProvider = {
   source: PROTOCOL_REDEEM_SOURCE,
   livePriority: 0,
+  liveParentByAssetId: INHERITED_TRACKED_PARENT_BY_ID,
   matches(stablecoinId: string): boolean {
     return getInheritedTrackedPriceConfig(stablecoinId) != null;
   },

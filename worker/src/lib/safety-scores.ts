@@ -39,8 +39,18 @@ function result(
 }
 
 /**
- * Loads the canonical published V9 score map. Held or unavailable publications
- * fail closed so downstream yield and audit jobs cannot mix scoring identities.
+ * Loads the canonical published V9 score map: the same accepted generation the
+ * report-card surfaces serve, in both health states. A hold rejects the newest
+ * publication attempt; it does not withdraw the accepted ratings
+ * (`report-cards.md`: a held response serves the last accepted ratings with the
+ * accepted timestamp). Dropping the accepted map on a hold made every
+ * downstream row unrateable for as long as the hold lasted, while the public
+ * report-card route kept serving exactly those ratings.
+ *
+ * `kind` and `reason` still name the health state, so a consumer that requires
+ * *current* ratings keeps rejecting a held publication by checking them
+ * (`yield-coverage-audit`, the live yield read-path hydration); a consumer that
+ * can serve the accepted generation applies its own freshness budget.
  */
 export async function computeSafetyScoresSnapshot(
   db: D1Database,
@@ -59,31 +69,21 @@ export async function computeSafetyScoresSnapshot(
     });
   }
   const identity = active.snapshot.safetyScoreIdentity;
-  if (active.kind === "held") {
-    return result({
-      kind: "degraded",
-      reason: active.reason,
-      scores: new Map(),
-      trackedCount: active.snapshot.completeness.expectedCount,
-      safetyScoreIdentity: identity,
-      publicationGenerationId: identity.publicationGenerationId,
-      methodologyVersion: identity.methodologyVersion,
-      publishedAt: active.snapshot.updatedAt,
-    });
-  }
   const scores = new Map<string, SafetyResult>();
   for (const card of active.snapshot.cards) {
     if (card.score !== null) {
       scores.set(card.id, { score: card.score, grade: card.grade });
     }
   }
-  return result({
-    kind: "ok",
+  const acceptedGeneration = {
     scores,
     trackedCount: active.snapshot.completeness.expectedCount,
     safetyScoreIdentity: identity,
     publicationGenerationId: identity.publicationGenerationId,
     methodologyVersion: identity.methodologyVersion,
     publishedAt: active.snapshot.updatedAt,
-  });
+  };
+  return active.kind === "held"
+    ? result({ kind: "degraded", reason: active.reason, ...acceptedGeneration })
+    : result({ kind: "ok", ...acceptedGeneration });
 }

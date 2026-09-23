@@ -226,6 +226,7 @@ function createVaultNavProvider(input: {
     source: PROTOCOL_REDEEM_SOURCE,
     liveCircuitSource: CIRCUIT_SOURCE.PROTOCOL_REDEEM,
     ...(input.livePriority != null ? { livePriority: input.livePriority } : {}),
+    liveParentByAssetId: Object.fromEntries([...input.vaultsById].map(([stablecoinId, config]) => [stablecoinId, config.parentId])),
     matches(stablecoinId: string): boolean {
       return input.vaultsById.has(stablecoinId);
     },

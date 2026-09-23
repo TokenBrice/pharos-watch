@@ -731,7 +731,7 @@ describe("authoritative-price-sources", () => {
     expect(stats).toMatchObject({
       candidateCount: 1,
       attemptedCount: 1,
-      failedCount: 0,
+      failedCount: 1,
       timedOut: true,
     });
     expect(stats.assetAttempts).toEqual([
@@ -773,7 +773,9 @@ describe("authoritative-price-sources", () => {
             nowSec: Math.floor(Date.now() / 1000),
           }),
         ],
-        { stats },
+        // One lane reproduces a saturated scheduler: every candidate costs its full
+        // candidate deadline, so the shared budget must still skip the tail.
+        { stats, maxConcurrency: 1 },
       ).then((result) => {
         settled = true;
         return result;
@@ -788,6 +790,11 @@ describe("authoritative-price-sources", () => {
       expect(stats.assetAttempts.filter((attempt) => attempt.state === "skipped")).toEqual([
         expect.objectContaining({ skipReason: "budget", rejectionClass: "timeout" }),
       ]);
+      const adapterSkips = Object.values(stats.perAdapter ?? {}).reduce(
+        (total, entry) => total + entry.skippedBudget,
+        0,
+      );
+      expect(adapterSkips).toBe(stats.skippedBudget);
     } finally {
       timeoutSpy.mockRestore();
       warnSpy.mockRestore();
@@ -881,7 +888,9 @@ describe("authoritative-price-sources", () => {
 
     const overrides = await fetchLiveOverrides(
       [unpricedChild("cusd-cap"), unpricedChild("iusd-infinifi")],
-      { db, wallClockBudgetMs: 5, stats },
+      // Keep the admitted probe as the only in-flight candidate so the abort
+      // accounting under test stays unambiguous.
+      { db, wallClockBudgetMs: 5, stats, maxConcurrency: 1 },
     );
 
     expect(overrides.size).toBe(0);
@@ -907,5 +916,250 @@ describe("authoritative-price-sources", () => {
       state: "open",
       consecutiveFailures: 4,
     });
+  });
+
+  it("attempts every override-only candidate inside the shared budget with bounded lanes", async () => {
+    vi.useFakeTimers();
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      fetchEvmCallHexAtBlockMock.mockImplementation(
+        (_chain: string, _to: string, _data: string, _block: number | "latest", options?: { signal?: AbortSignal }) =>
+          new Promise<never>((_resolve, reject) => {
+            options?.signal?.addEventListener("abort", () => reject(options.signal?.reason), { once: true });
+          }),
+      );
+      const stats = createAuthoritativeLivePriceOverrideStats();
+      const run = fetchLiveOverrides(
+        [
+          unpricedChild("cusd-cap"),
+          unpricedChild("iusd-infinifi"),
+          unpricedChild("susdc-spark"),
+          unpricedChild("steakusdc-steakhouse"),
+          unpricedChild("bbqusdc-steakhouse"),
+          freshParent("usdc-circle", 1, "protocol-redeem", {
+            nowSec: Math.floor(Date.now() / 1000),
+          }),
+        ],
+        { stats },
+      );
+
+      // Every lane is busy before any candidate deadline fires: a serial pass
+      // would still be waiting on its first candidate here.
+      await vi.advanceTimersByTimeAsync(AUTHORITATIVE_LIVE_CANDIDATE_TIMEOUT_MS - 1);
+      expect(stats.attemptedCount).toBe(4);
+      expect(stats.skippedBudget).toBe(0);
+
+      // The first wave fails on its own candidate deadline; the fifth candidate
+      // takes the freed lane instead of being skipped by the shared budget.
+      await vi.advanceTimersByTimeAsync(1);
+      expect(stats.attemptedCount).toBe(5);
+      await vi.advanceTimersByTimeAsync(AUTHORITATIVE_LIVE_CANDIDATE_TIMEOUT_MS);
+
+      expect((await run).size).toBe(0);
+      expect(stats).toMatchObject({
+        candidateCount: 5,
+        attemptedCount: 5,
+        successCount: 0,
+        emptyCount: 0,
+        failedCount: 5,
+        skippedBudget: 0,
+        timedOut: false,
+      });
+      expect(stats.assetAttempts).toHaveLength(5);
+      expect(stats.perAdapter?.["protocol-redeem"]).toMatchObject({
+        attempted: 5,
+        failed: 5,
+        skippedBudget: 0,
+        skippedCircuitOpen: 0,
+      });
+      expect(stats.perAdapter?.["protocol-redeem"]?.durationMs).toBeGreaterThanOrEqual(
+        AUTHORITATIVE_LIVE_CANDIDATE_TIMEOUT_MS,
+      );
+    } finally {
+      warnSpy.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps one slow chain route from budget-skipping the remaining override-only candidates", async () => {
+    vi.useFakeTimers();
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    // Virtual-clock stand-in for AbortSignal.timeout so the shared budget is
+    // driven by fake timers instead of real wall time.
+    const timeoutSpy = vi.spyOn(AbortSignal, "timeout").mockImplementation((milliseconds) => {
+      const controller = new AbortController();
+      setTimeout(() => controller.abort(new DOMException("Timed out", "TimeoutError")), milliseconds);
+      return controller.signal;
+    });
+    const kavaOverride = {
+      price: 0.66,
+      source: "kava-pricefeed",
+      confidence: "high" as const,
+      observedAt: Math.floor(Date.now() / 1000),
+    };
+    const gateKavaOn = (gate: Promise<typeof kavaOverride>): void => {
+      kavaFetchLivePriceMock.mockImplementation(async (_asset, _context, signal: AbortSignal) => {
+        const aborted = new Promise<never>((_resolve, reject) => {
+          signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+        });
+        return await Promise.race([gate, aborted]);
+      });
+    };
+    const gatedRoute = (): { call: Promise<typeof kavaOverride>; release: () => void } => {
+      let release!: (value: typeof kavaOverride) => void;
+      const call = new Promise<typeof kavaOverride>((resolve) => {
+        release = resolve;
+      });
+      return { call, release: () => release(kavaOverride) };
+    };
+    try {
+      fetchEvmCallHexAtBlockMock.mockImplementation(
+        (_chain: string, _to: string, _data: string, _block: number | "latest", options?: { signal?: AbortSignal }) =>
+          new Promise<never>((_resolve, reject) => {
+            options?.signal?.addEventListener("abort", () => reject(options.signal?.reason), { once: true });
+          }),
+      );
+      const assets = [
+        unpricedChild("usdx-kava"),
+        unpricedChild("cusd-cap"),
+        unpricedChild("iusd-infinifi"),
+        unpricedChild("susdc-spark"),
+        unpricedChild("steakusdc-steakhouse"),
+        freshParent("usdc-circle", 1, "protocol-redeem", {
+          nowSec: Math.floor(Date.now() / 1000),
+        }),
+      ];
+
+      const lanesGate = gatedRoute();
+      gateKavaOn(lanesGate.call);
+      const lanesStats = createAuthoritativeLivePriceOverrideStats();
+      const lanesRun = fetchLiveOverrides(assets, { stats: lanesStats });
+      // The four remaining candidates burn their own deadlines while the Kava
+      // route is still in flight, so every override-only asset is attempted.
+      await vi.advanceTimersByTimeAsync(5_001);
+      expect(lanesStats.attemptedCount).toBe(5);
+      lanesGate.release();
+      const laneOverrides = await lanesRun;
+
+      const serialGate = gatedRoute();
+      gateKavaOn(serialGate.call);
+      const serialStats = createAuthoritativeLivePriceOverrideStats();
+      const serialRun = fetchLiveOverrides(assets, { stats: serialStats, maxConcurrency: 1 });
+      // The same four-second route on one lane leaves room for one candidate
+      // deadline and one in-flight abort before the shared budget expires.
+      await vi.advanceTimersByTimeAsync(4_000);
+      serialGate.release();
+      await vi.advanceTimersByTimeAsync(6_001);
+      await serialRun;
+
+      expect(laneOverrides.get("usdx-kava")?.price).toBe(0.66);
+      expect(lanesStats).toMatchObject({
+        candidateCount: 5,
+        attemptedCount: 5,
+        successCount: 1,
+        skippedBudget: 0,
+        timedOut: false,
+      });
+      // The serial queue spends the budget on the slow route and its first stalled
+      // sibling, which is the starvation this pass used to ship.
+      expect(serialStats).toMatchObject({
+        candidateCount: 5,
+        attemptedCount: 4,
+        successCount: 1,
+        skippedBudget: 1,
+        timedOut: true,
+      });
+    } finally {
+      timeoutSpy.mockRestore();
+      warnSpy.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it("waits for a same-pass parent even when the child is scheduled first, without idling a lane", async () => {
+    vi.useFakeTimers();
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      fetchEvmCallHexAtBlockMock.mockImplementation(
+        (_chain: string, _to: string, _data: string, _block: number | "latest", options?: { signal?: AbortSignal }) =>
+          new Promise<never>((_resolve, reject) => {
+            options?.signal?.addEventListener("abort", () => reject(options.signal?.reason), { once: true });
+          }),
+      );
+      const nowSec = Math.floor(Date.now() / 1000);
+      const stats = createAuthoritativeLivePriceOverrideStats();
+      const run = fetchLiveOverrides(
+        [
+          // `usdn-noble` inherits `m-m0`, which is itself a candidate; the
+          // circuit-backed `cusd-cap` probe sits ahead of both in the queue.
+          unpricedChild("usdn-noble"),
+          unpricedChild("cusd-cap", { circulating: { peggedUSD: 114_000_000 } }),
+          unpricedChild("m-m0"),
+          freshParent("wm-m0", 0.999812, "coingecko", { nowSec, priceConfidence: "single-source" }),
+        ],
+        { stats },
+      );
+
+      // The blocked child cannot hold the queue head: the independent probe and the
+      // parent are both in flight before any candidate deadline fires.
+      await vi.advanceTimersByTimeAsync(0);
+      expect(stats.attemptedCount).toBe(3);
+
+      await vi.advanceTimersByTimeAsync(AUTHORITATIVE_LIVE_CANDIDATE_TIMEOUT_MS);
+      const overrides = await run;
+
+      // The child only resolves from the parent's own same-pass override.
+      expect(overrides.get("m-m0")).toMatchObject({
+        price: 0.999812,
+        metadata: { inheritedFrom: "wm-m0" },
+      });
+      expect(overrides.get("usdn-noble")).toMatchObject({
+        price: 0.999812,
+        metadata: { inheritedFrom: "m-m0" },
+      });
+      expect(stats).toMatchObject({
+        candidateCount: 3,
+        attemptedCount: 3,
+        successCount: 2,
+        failedCount: 1,
+        skippedBudget: 0,
+        timedOut: false,
+      });
+    } finally {
+      warnSpy.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps every attempted candidate accounted for exactly once", async () => {
+    vi.useFakeTimers();
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      fetchEvmCallHexAtBlockMock
+        .mockImplementationOnce(
+          (_chain: string, _to: string, _data: string, _block: number | "latest", options?: { signal?: AbortSignal }) =>
+            new Promise<never>((_resolve, reject) => {
+              options?.signal?.addEventListener("abort", () => reject(options.signal?.reason), { once: true });
+            }),
+        )
+        .mockResolvedValueOnce(IUSD_QUOTE_HEX);
+      const stats = createAuthoritativeLivePriceOverrideStats();
+      const run = fetchLiveOverrides(
+        [
+          unpricedChild("cusd-cap", { circulating: { peggedUSD: 114_000_000 } }),
+          unpricedChild("iusd-infinifi", { circulating: { peggedUSD: 180_000_000 } }),
+        ],
+        { stats, wallClockBudgetMs: 10_000 },
+      );
+      await vi.advanceTimersByTimeAsync(AUTHORITATIVE_LIVE_CANDIDATE_TIMEOUT_MS);
+      const overrides = await run;
+
+      expect(overrides.size).toBe(1);
+      expect(stats.attemptedCount).toBe(stats.successCount + stats.emptyCount + stats.failedCount);
+      expect(stats.attemptedCount + stats.skippedBudget + stats.skippedCircuitOpen).toBe(stats.candidateCount);
+    } finally {
+      warnSpy.mockRestore();
+      vi.useRealTimers();
+    }
   });
 });

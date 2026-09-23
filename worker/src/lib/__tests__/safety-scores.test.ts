@@ -41,29 +41,43 @@ describe("canonical published safety scores", () => {
     ]);
   });
 
-  it("fails closed while publication is held", async () => {
-    const current = makeReportCardsV9Response();
+  it("keeps the accepted score map while publication is held", async () => {
+    const current = makeReportCardsV9Response({
+      cards: [
+        makeWorkerV9Card({ id: "rated", score: 80, grade: "A-" }),
+        makeWorkerV9Card({ id: "unrated", score: null, grade: "NR" }),
+      ],
+    });
+    const heldSnapshot = makeReportCardsV9Response({
+      cards: [
+        makeWorkerV9Card({ id: "rated", score: 80, grade: "A-" }),
+        makeWorkerV9Card({ id: "unrated", score: null, grade: "NR" }),
+      ],
+      publicationHealth: {
+        ...current.publicationHealth,
+        status: "held",
+        attemptedAtSec: current.updatedAt + 1_800,
+        heldSinceSec: current.updatedAt + 1_800,
+        reasons: [{ code: "dex-stale" }],
+      },
+    });
     mockLoadActiveSafetyScoreSource.mockResolvedValue({
       kind: "held",
       reason: "v9-publication-held",
       detail:
         "Canonical Safety Score V9 ratings are held at the last verified snapshot",
-      snapshot: makeReportCardsV9Response({
-        publicationHealth: {
-          ...current.publicationHealth,
-          status: "held",
-          attemptedAtSec: current.updatedAt + 1_800,
-          heldSinceSec: current.updatedAt + 1_800,
-          reasons: [{ code: "dex-stale" }],
-        },
-      }),
+      snapshot: heldSnapshot,
     });
 
     const result = await computeSafetyScoresSnapshot({} as D1Database);
 
+    // A hold rejects the newest attempt; the accepted ratings stay served, so a
+    // consumer that can use the accepted generation still receives its map.
     expect(result.kind).toBe("degraded");
     expect(result.reason).toBe("v9-publication-held");
-    expect(result.scores.size).toBe(0);
+    expect(result.safetyScoreIdentity).toEqual(heldSnapshot.safetyScoreIdentity);
+    expect(result.coveredCount).toBe(1);
+    expect([...result.scores]).toEqual([["rated", { score: 80, grade: "A-" }]]);
   });
 
   it("returns no scores or publication identity when the source errors", async () => {

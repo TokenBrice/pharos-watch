@@ -616,6 +616,93 @@ describe("measured execution last-known-good selection", () => {
   });
 });
 
+describe("measured execution clock-bounded cohort reads", () => {
+  it("reads the newest cohort published at or before the consumer clock", async () => {
+    const { db, sqlite } = databases.open();
+    const target = fixtureTarget("ethereum");
+    const targetGenerationId = "target-generation-clocked";
+    const cohorts = [
+      { generationId: "quote-generation-admitted", publishedAt: 1_300, state: "superseded" as const, quotedAt: 1_000 },
+      { generationId: "quote-generation-displaced", publishedAt: 1_600, state: "superseded" as const, quotedAt: 1_240 },
+      { generationId: "quote-generation-latest", publishedAt: 1_900, state: "published" as const, quotedAt: 1_600 },
+    ];
+    for (const cohort of cohorts) {
+      seedGeneration(sqlite, { generationId: cohort.generationId, targetGenerationId,
+        publishedAt: cohort.publishedAt, state: cohort.state,
+        rows: [{ target, profile: fixtureProfile(target, {
+          targetGenerationId,
+          quoteGenerationId: cohort.generationId,
+          quotedAt: cohort.quotedAt,
+        }) }] });
+    }
+
+    // The consumer's pinned observation clock: the hourly DEX scoring run pins
+    // routeObservedAt to its source slot, which measured cohort publication can
+    // land after.
+    const clockSec = 1_400;
+    const unbounded = await loadLatestPublishedDexMeasuredQuoteEvidence(db);
+    expect(unbounded?.quoteGenerationId).toBe("quote-generation-latest");
+    expect(unbounded?.byTargetId.get(target.targetId)?.observationHistory?.observationWindowEndedAt)
+      .toBeGreaterThan(clockSec);
+
+    const clocked = await loadLatestPublishedDexMeasuredQuoteEvidence(db, undefined, {
+      publishedAtCeilingSec: clockSec,
+    });
+    expect(clocked?.quoteGenerationId).toBe("quote-generation-admitted");
+    const entry = clocked?.byTargetId.get(target.targetId);
+    expect(entry?.profile?.quoteGenerationId).toBe("quote-generation-admitted");
+    // Admitting the cohort is not enough: a cohort published after the clock
+    // must not re-enter the observation history either, or its window end is
+    // what the no-lookahead `future-history` guard rejects.
+    expect(entry?.observationHistory?.observationWindowEndedAt).toBeLessThanOrEqual(clockSec);
+
+    const deferred = await loadLatestPublishedDexMeasuredQuoteEvidence(db, undefined, {
+      deferProfiles: true,
+      publishedAtCeilingSec: clockSec,
+    });
+    const deferredEntry = deferred?.byTargetId.get(target.targetId);
+    expect(deferredEntry && materializeDexMeasuredQuoteProfile(deferredEntry)?.quoteGenerationId)
+      .toBe("quote-generation-admitted");
+  });
+
+  it("keeps last-known-good resolution inside the consumer clock", async () => {
+    const { db, sqlite } = databases.open();
+    const measured = fixtureTarget("ethereum");
+    const deferred = fixtureTarget("base");
+    const targetGenerationId = "target-generation-lkg-clocked";
+    const cohorts = [
+      { generationId: "quote-generation-admitted", publishedAt: 1_300, state: "superseded" as const, quotedAt: 1_000 },
+      { generationId: "quote-generation-displaced", publishedAt: 1_600, state: "superseded" as const, quotedAt: 1_240 },
+      { generationId: "quote-generation-latest", publishedAt: 1_900, state: "published" as const, quotedAt: 1_600 },
+    ];
+    for (const cohort of cohorts) {
+      seedGeneration(sqlite, { generationId: cohort.generationId, targetGenerationId,
+        publishedAt: cohort.publishedAt, state: cohort.state,
+        rows: [
+          { target: measured, profile: fixtureProfile(measured, {
+            targetGenerationId, quoteGenerationId: cohort.generationId, quotedAt: cohort.quotedAt,
+          }) },
+          // The deferred direction is only ever measured by the displaced cohort,
+          // so a clock-pinned read has no admissible evidence for it at all.
+          cohort.generationId === "quote-generation-displaced"
+            ? { target: deferred, profile: fixtureProfile(deferred, {
+              targetGenerationId, quoteGenerationId: cohort.generationId, quotedAt: cohort.quotedAt,
+            }) }
+            : { target: deferred, status: "failed" as const, failureReason: "budget-deferred" },
+        ] });
+    }
+
+    const clockSec = 1_400;
+    expect((await loadLatestPublishedDexMeasuredQuoteEvidence(db))?.byTargetId.get(deferred.targetId))
+      .toMatchObject({ status: "measured", resolution: "last-known-good", quoteGenerationId: "quote-generation-displaced" });
+
+    expect((await loadLatestPublishedDexMeasuredQuoteEvidence(db, undefined, {
+      publishedAtCeilingSec: clockSec,
+    }))?.byTargetId.get(deferred.targetId))
+      .toMatchObject({ status: "failed", resolution: "latest" });
+  });
+});
+
 describe("measured execution generation prune", () => {
   it("prunes terminal rows in bounded batches while retaining referenced and cutoff generations", async () => {
     const { db, sqlite } = databases.open();

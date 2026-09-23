@@ -1,5 +1,7 @@
 import { vi } from "vitest";
 import { mockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
+import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
+import type { PublishedSafetyScoresResultMap } from "../../lib/safety-scores";
 import type { MockRegistryStablecoin } from "../../test-helpers/cron/mock-registry";
 import {
   mockCircuitBreaker,
@@ -504,6 +506,67 @@ function mockHealthyRiskFreeRateCache() {
       : null,
   });
 }
+
+/**
+ * The published-safety identity the yield tests stamp on their fixtures. One
+ * home, so a test that only needs a *different* identity states the delta
+ * instead of re-typing the whole publication identity.
+ */
+function testSafetyScoreIdentity(
+  overrides: Partial<SafetyScoreV9PublicationIdentity> = {},
+): SafetyScoreV9PublicationIdentity {
+  return {
+    model: "v9",
+    schemaVersion: 1,
+    methodologyVersion: "9.0",
+    policyId: "safety-score-v9",
+    policyDigest: "a".repeat(64),
+    evaluationBuildDigest: "b".repeat(64),
+    baseInputGenerationId: `report-cards-input:v1:${"c".repeat(64)}`,
+    publicationGenerationId: "report-cards:v9:test",
+    ...overrides,
+  };
+}
+
+/**
+ * Published-safety fixture for the sync-yield tests. `coveredCount` and
+ * `coverageRatio` derive from the score map the way
+ * `computeSafetyScoresSnapshot` derives them, so a fixture cannot claim a
+ * coverage its map does not carry. A fixture without an identity is a
+ * publication that does not exist, so it carries no publish time either.
+ */
+function testSafetyScoresSnapshot(fixture: {
+  kind?: "ok" | "degraded";
+  reason?: string;
+  trackedCount?: number;
+  scores?: Map<string, { score: number; grade: string }>;
+  publishedAt?: number;
+  safetyScoreIdentity?: SafetyScoreV9PublicationIdentity | null;
+  publicationGenerationId?: string | null;
+} = {}): PublishedSafetyScoresResultMap {
+  const scores = fixture.scores ?? new Map<string, { score: number; grade: string }>();
+  const trackedCount = fixture.trackedCount ?? Math.max(scores.size, 1);
+  const safetyScoreIdentity =
+    fixture.safetyScoreIdentity === undefined ? testSafetyScoreIdentity() : fixture.safetyScoreIdentity;
+  return {
+    kind: fixture.kind ?? "ok",
+    mode: "map",
+    ...(fixture.reason === undefined ? {} : { reason: fixture.reason }),
+    coveredCount: scores.size,
+    trackedCount,
+    coverageRatio: trackedCount > 0 ? scores.size / trackedCount : 1,
+    scores,
+    source: "safety-score-v9-publication",
+    safetyScoreIdentity,
+    publicationGenerationId:
+      fixture.publicationGenerationId ?? safetyScoreIdentity?.publicationGenerationId ?? null,
+    methodologyVersion: safetyScoreIdentity?.methodologyVersion ?? null,
+    publishedAt:
+      fixture.publishedAt ??
+      (safetyScoreIdentity === null ? null : Math.floor(Date.now() / 1000)),
+  };
+}
+
 function resetSyncYieldDataTest() {
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2025-06-15T12:00:00Z"));
@@ -537,41 +600,31 @@ function resetSyncYieldDataTest() {
   vi.mocked(getChainRpc).mockReset().mockReturnValue(undefined);
   vi.mocked(yieldHelpersModule.findBestLendingPool).mockReset().mockReturnValue(null);
   vi.mocked(yieldHelpersModule.detectWarningSignals).mockReset().mockReturnValue([]);
-  vi.spyOn(safetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValue({
-    kind: "ok",
-    mode: "map",
-    coveredCount: 4,
-    trackedCount: 4,
-    coverageRatio: 1,
-    source: "safety-score-v9-publication",
-    safetyScoreIdentity: {
-      model: "v9",
-      schemaVersion: 1,
-      methodologyVersion: "9.0",
-      policyId: "safety-score-v9",
-      policyDigest: "a".repeat(64),
-      evaluationBuildDigest: "b".repeat(64),
-      baseInputGenerationId: `report-cards-input:v1:${"c".repeat(64)}`,
-      publicationGenerationId: "report-cards:v9:test",
-    },
-    publicationGenerationId: "report-cards:v9:test",
-    methodologyVersion: "9.0",
-    publishedAt: Math.floor(Date.now() / 1000),
-    scores: new Map([
-      ["100", { score: 80, grade: "B+" }],
-      ["usdc-circle", { score: 78, grade: "B+" }],
-      ["u-united-stables", { score: 55, grade: "C" }],
-      ["lusd-liquity", { score: 86, grade: "A-" }],
-    ]),
-  } as never);
+  vi.spyOn(safetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValue(
+    testSafetyScoresSnapshot({
+      trackedCount: 4,
+      scores: new Map([
+        ["100", { score: 80, grade: "B+" }],
+        ["usdc-circle", { score: 78, grade: "B+" }],
+        ["u-united-stables", { score: 55, grade: "C" }],
+        ["lusd-liquity", { score: 86, grade: "A-" }],
+      ]),
+    }),
+  );
   // Identity-only publish-time guard: mirror whatever published snapshot the
-  // test has staged so per-test safety identities keep driving the guard.
+  // test has staged so per-test safety identities keep driving the guard. The
+  // three states follow `loadActiveSafetyScoreIdentity`: an identity-less result
+  // is an unavailable publication, a healthy map is the current publication, and
+  // a map that only travels with `kind: "degraded"` is the held accepted one.
   vi.spyOn(safetyScoreActiveSourceModule, "loadActiveSafetyScoreIdentity").mockImplementation(
     async (db) => {
       const snapshot = await safetyScoresModule.computeSafetyScoresSnapshot(db);
-      return snapshot.kind === "ok" && snapshot.safetyScoreIdentity !== null
+      if (snapshot.safetyScoreIdentity === null) {
+        return { kind: "error", safetyScoreIdentity: null };
+      }
+      return snapshot.kind === "ok"
         ? { kind: "v9", safetyScoreIdentity: snapshot.safetyScoreIdentity }
-        : { kind: "error", safetyScoreIdentity: null };
+        : { kind: "held", safetyScoreIdentity: snapshot.safetyScoreIdentity };
     },
   );
 }
@@ -593,6 +646,8 @@ export {
   findPublishedYieldHistoryRow,
   getYieldRankingsCachePayload,
   mockHealthyRiskFreeRateCache,
+  testSafetyScoreIdentity,
+  testSafetyScoresSnapshot,
   resetSyncYieldDataTest,
   cleanupSyncYieldDataTest,
   type ChainRpcConfig,

@@ -1,5 +1,6 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { YieldBenchmarkMeta, YieldSourceInputMeta } from "@shared/types/yield";
+import { YIELD_SAFETY_STALE_COHERENT_MAX_AGE_SEC } from "@shared/lib/yield-safety-fallback";
 import { getCache, getCaches, setCacheIfNewer } from "../../lib/db-cache";
 import {
   computeSafetyScoresSnapshot,
@@ -84,7 +85,12 @@ export interface YieldSyncLoadedState {
   safetySnapshot: PublishedSafetyScoresResultMap;
   safetyScores: PublishedSafetyScoresResultMap["scores"];
   safetyCoverageRatio: number;
+  /** A score map can be used: a current publication, or a held accepted one inside the read-path budget. */
   safetySnapshotAvailable: boolean;
+  /** True when the canonical publication health is held (accepted generation still served). */
+  safetySnapshotHeld: boolean;
+  /** Age of the accepted publication, or null when no publication identity is published. */
+  acceptedSafetyPublicationAgeSeconds: number | null;
   safetySnapshotDegraded: boolean;
 }
 
@@ -277,26 +283,24 @@ export function buildNextDeterministicOnChainHealthState(params: {
 }
 
 async function loadStablecoinSupplyMap(db: D1Database): Promise<StablecoinSupplyMapLoadResult> {
-  try {
-    const cacheRow = await getCache(db, "stablecoins");
-    const result = loadStablecoinSupplyMapFromCacheValue(cacheRow?.value);
-    if (result.state === "malformed") {
-      logWorkerEventArgs(
-        "handler",
-        "warn",
-        "[sync-yield-data] Failed to parse stablecoins cache for lending size gates",
-      );
-    }
-    return result;
-  } catch (error) {
+  // R2: a failed read must never become a claim about the data. This used to
+  // catch the D1 error and return `malformed`, which made an unreachable cache
+  // indistinguishable from a genuinely unparseable payload — the run then
+  // published `fallbackMode: yield-supply-map:malformed` and silently dropped every
+  // external-opportunity row the fail-closed gate could not size. The read is
+  // idempotent and overload-retried inside `getCache`, so an exhausted read
+  // belongs to the run as a visible failure with the previous generation
+  // retained; only real payload problems keep the `malformed` state.
+  const cacheRow = await getCache(db, "stablecoins");
+  const result = loadStablecoinSupplyMapFromCacheValue(cacheRow?.value);
+  if (result.state === "malformed") {
     logWorkerEventArgs(
       "handler",
       "warn",
-      "[sync-yield-data] Failed to read stablecoins cache for lending size gates:",
-      error,
+      "[sync-yield-data] Failed to parse stablecoins cache for lending size gates",
     );
-    return { state: "malformed", supplyById: new Map() };
   }
+  return result;
 }
 
 export async function loadYieldSyncState(params: {
@@ -361,10 +365,27 @@ export async function loadYieldSyncState(params: {
   const { state: stablecoinSupplyMapState, supplyById: stablecoinSupplyById } = stablecoinSupplyMap;
   const safetyScores = safetySnapshot.scores;
   const safetyCoverageRatio = safetySnapshot.coverageRatio;
+  // `computeSafetyScoresSnapshot` reports `kind: "degraded"` for exactly two
+  // states: no published generation at all (always with a null identity) and a
+  // health-held publication (always with the accepted generation's identity).
+  // A hold rejects the newest attempt; the accepted ratings stay the ones the
+  // report-card surfaces serve, so the yield lane may publish against them
+  // inside the same budget the read path uses before it blanks safety to NR.
+  const safetySnapshotIdentityPresent = safetySnapshot.safetyScoreIdentity != null;
+  const acceptedSafetyPublicationAgeSeconds =
+    safetySnapshot.publishedAt == null ? null : Math.max(0, params.startSec - safetySnapshot.publishedAt);
+  const safetySnapshotHeld = safetySnapshot.kind === "degraded" && safetySnapshotIdentityPresent;
+  const safetySnapshotWithinHeldBudget =
+    safetySnapshotHeld &&
+    acceptedSafetyPublicationAgeSeconds != null &&
+    acceptedSafetyPublicationAgeSeconds <= YIELD_SAFETY_STALE_COHERENT_MAX_AGE_SEC;
   const safetySnapshotAvailable =
-    safetySnapshot.kind === "ok" && safetySnapshot.safetyScoreIdentity != null;
+    safetySnapshotIdentityPresent &&
+    (safetySnapshot.kind === "ok" || safetySnapshotWithinHeldBudget);
+  // A held publication never counts as a clean safety input: the run stays
+  // degraded (and skips destructive cleanup) while it publishes.
   const safetySnapshotDegraded =
-    !safetySnapshotAvailable || safetyCoverageRatio < MIN_SAFETY_SCORE_COVERAGE_RATIO;
+    !safetySnapshotAvailable || safetySnapshotHeld || safetyCoverageRatio < MIN_SAFETY_SCORE_COVERAGE_RATIO;
 
   return {
     dlPools,
@@ -389,6 +410,8 @@ export async function loadYieldSyncState(params: {
     safetyScores,
     safetyCoverageRatio,
     safetySnapshotAvailable,
+    safetySnapshotHeld,
+    acceptedSafetyPublicationAgeSeconds,
     safetySnapshotDegraded,
   };
 }

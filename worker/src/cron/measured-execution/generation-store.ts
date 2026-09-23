@@ -49,6 +49,9 @@ export function buildDexShadowMeasuredQuoteGenerationId(nowSec: number): string 
   return measuredGenerationId("dex-shadow-measured-quotes", nowSec);
 }
 
+const SURFACE_GENERATION_COLUMNS = `SELECT generation_id, state, started_at, published_at, expected_rows, published_rows, dependency_snapshot_json
+       FROM surface_publication_generations`;
+
 export async function latestPublishedGeneration(
   db: D1Database,
   surface: string,
@@ -58,8 +61,7 @@ export async function latestPublishedGeneration(
     () =>
       db
         .prepare(
-          `SELECT generation_id, state, started_at, published_at, expected_rows, published_rows, dependency_snapshot_json
-       FROM surface_publication_generations
+          `${SURFACE_GENERATION_COLUMNS}
        WHERE surface = ? AND state = 'published'
        ORDER BY published_at DESC, started_at DESC
        LIMIT 1`,
@@ -71,13 +73,64 @@ export async function latestPublishedGeneration(
   );
 }
 
-/** Superseded quote generations inside the lookback whose row count still matches the published ledger, newest first. */
+/**
+ * Newest generation a consumer pinned to an earlier clock may read.
+ *
+ * A producer surface publishes on its own transport schedule, which can land
+ * after a consumer's observation clock: the hourly DEX scoring run pins
+ * `routeObservedAt` to its source slot while the measured-execution lane
+ * publishes its cohort minutes later. A cohort that only became available
+ * after that clock cannot be admitted — its observation history ends in the
+ * future and downstream validation rejects the whole profile as
+ * `future-history` — so the consumer must read the newest cohort the clock
+ * already covered instead of dropping the evidence entirely.
+ *
+ * A bounded read therefore also admits a `superseded` generation: the newest
+ * cohort inside the clock is normally the one the newest publication
+ * displaced. Callers with no pinned clock keep using
+ * {@link latestPublishedGeneration}, which reads the live `published` pointer.
+ */
+export async function latestPublishedGenerationAtOrBefore(
+  db: D1Database,
+  surface: string,
+  publishedAtCeilingSec: number,
+  signal?: AbortSignal,
+): Promise<SurfaceGenerationRow | null> {
+  return runWithOverloadRetry(
+    () =>
+      db
+        .prepare(
+          `${SURFACE_GENERATION_COLUMNS}
+       WHERE surface = ? AND state IN ('published', 'superseded')
+         AND published_at IS NOT NULL AND published_at <= ?
+       ORDER BY published_at DESC, started_at DESC
+       LIMIT 1`,
+        )
+        .bind(surface, publishedAtCeilingSec)
+        .first<SurfaceGenerationRow>(),
+    3,
+    signal,
+  );
+}
+
+/**
+ * Superseded quote generations inside the lookback whose row count still matches the published ledger, newest first.
+ *
+ * `publishedAtCeiling` mirrors {@link latestPublishedGenerationAtOrBefore}: a
+ * clock-pinned consumer must not fold a cohort it cannot admit into its
+ * observation history either, because that window end is exactly what the
+ * `future-history` guard compares against the same clock.
+ */
 export async function loadSupersededQuoteGenerationIds(input: {
   db: D1Database;
   quoteSurface: string;
   publishedAtFloor: number;
+  publishedAtCeiling?: number;
   signal?: AbortSignal;
 }): Promise<string[]> {
+  const ceilingFilter = input.publishedAtCeiling === undefined
+    ? ""
+    : "\n         AND history_generation.published_at <= ?";
   const result = await runWithOverloadRetry(
     () =>
       input.db
@@ -85,7 +138,7 @@ export async function loadSupersededQuoteGenerationIds(input: {
           `SELECT history_generation.generation_id
        FROM surface_publication_generations history_generation
        WHERE history_generation.surface = ? AND history_generation.state = 'superseded'
-         AND history_generation.published_at IS NOT NULL AND history_generation.published_at >= ?
+         AND history_generation.published_at IS NOT NULL AND history_generation.published_at >= ?${ceilingFilter}
          AND history_generation.expected_rows IS NOT NULL
          AND history_generation.published_rows = history_generation.expected_rows
          AND history_generation.expected_rows = (
@@ -95,7 +148,11 @@ export async function loadSupersededQuoteGenerationIds(input: {
          )
        ORDER BY history_generation.published_at DESC, history_generation.generation_id DESC`,
         )
-        .bind(input.quoteSurface, input.publishedAtFloor)
+        .bind(
+          ...(input.publishedAtCeiling === undefined
+            ? [input.quoteSurface, input.publishedAtFloor]
+            : [input.quoteSurface, input.publishedAtFloor, input.publishedAtCeiling]),
+        )
         .all<{ generation_id: string }>(),
     3,
     input.signal,

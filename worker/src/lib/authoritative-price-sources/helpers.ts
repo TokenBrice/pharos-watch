@@ -254,6 +254,15 @@ export interface PriceSourceProvider {
   recordNullLiveResultAsCircuitFailure?: boolean;
   /** Do not let optional refresh failures poison a recovery circuit while the input price remains usable. */
   recordLiveCircuitFailuresOnlyWhenMissing?: boolean;
+  /**
+   * Tracked parent asset per child id, for routes that read the parent's row
+   * from the same live context instead of protocol-internal or FX references.
+   * When a declared parent is also a candidate in the same pass, the scheduler
+   * runs the child only after that parent attempt settles, so a same-run rescue
+   * chain (for example `wm-m0` -> `m-m0` -> `usdn-noble`) still resolves under
+   * parallel lanes instead of reading a parent row that has no price yet.
+   */
+  liveParentByAssetId?: Readonly<Record<string, string>>;
   matches(stablecoinId: string): boolean;
   matchesHistoricalPrices?(stablecoinId: string): boolean;
   fetchLivePrice?(

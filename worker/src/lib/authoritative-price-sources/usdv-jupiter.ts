@@ -4,7 +4,7 @@ import { fetchJsonWithRetry } from "../fetch-retry";
 import { getAlchemyAuthHeaders } from "../chain-registry";
 import { sleepWithSignal, throwIfAborted } from "../abort";
 import { hasPublishableCurrentPrice } from "../price-publication-state";
-import { resolveTrustedOverrideParent, type CurrentPriceOverride, type LivePriceContext, type PriceSourceProvider } from "./helpers";
+import { resolveTrustedOverrideParent, USDC_CIRCLE_ID, type CurrentPriceOverride, type LivePriceContext, type PriceSourceProvider } from "./helpers";
 
 const POOL = "DmXXwEcK2c7fuVoW6TBzF5UDByhuQBHZS1qHnwprvHFH";
 const USDV = "Ex5DaKYMCN6QWFA4n67TmMwsH8MJV68RX6YXTmVM532C";
@@ -62,7 +62,7 @@ export function validateUsdvPoolState(state: State): { activeOutput: bigint; bin
 
 export async function fetchUsdvJupiterPrice(context: LivePriceContext, signal?: AbortSignal): Promise<CurrentPriceOverride | null> {
   const reject = (reason: string): null => { context.lastRejectionReason = `jupiter-exact:${reason}`; return null; };
-  const parent = resolveTrustedOverrideParent(context, "usdc-circle", () => "USDv: trusted USDC unavailable", { allowFreshReplaySafeSingleSourceParent: true });
+  const parent = resolveTrustedOverrideParent(context, USDC_CIRCLE_ID, () => "USDv: trusted USDC unavailable", { allowFreshReplaySafeSingleSourceParent: true });
   if (!parent || !fresh(parent.trustedParent.observedAt)) return reject("parent-unavailable");
   const configured = context.chainRpcs?.get("solana");
   const urls = [...new Set([configured?.rpcUrl, configured?.fallbackRpcUrl, "https://api.mainnet-beta.solana.com", "https://solana-rpc.publicnode.com"].filter((s): s is string => !!s))];
@@ -126,6 +126,7 @@ export async function fetchUsdvJupiterPrice(context: LivePriceContext, signal?: 
 }
 export const usdvJupiterProvider: PriceSourceProvider = {
   source: "jupiter-exact", liveMissingOnly: true, liveCircuitSource: CIRCUIT_SOURCE.USDV_JUPITER, livePriority: 1, liveTimeoutMs: 6000,
+  liveParentByAssetId: { "usdv-solomon": USDC_CIRCLE_ID },
   matches: (id) => id === "usdv-solomon",
   async fetchLivePrice(asset: PeggedAsset, context: LivePriceContext, signal?: AbortSignal) { return hasPublishableCurrentPrice(asset) ? null : fetchUsdvJupiterPrice(context, signal); },
 };

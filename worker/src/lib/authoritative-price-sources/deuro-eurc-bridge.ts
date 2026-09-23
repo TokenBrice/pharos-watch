@@ -95,6 +95,7 @@ export const deuroEurcBridgeProvider: PriceSourceProvider = {
   liveMissingOnly: true,
   liveCircuitSource: CIRCUIT_SOURCE.PROTOCOL_REDEEM,
   liveTimeoutMs: 6_000,
+  liveParentByAssetId: { "deuro-deuro": "eurc-circle" },
   matches: (id) => id === "deuro-deuro",
   fetchLivePrice: (_asset, context, signal) => fetchDeuroEurcBridgePrice(context, signal),
 };

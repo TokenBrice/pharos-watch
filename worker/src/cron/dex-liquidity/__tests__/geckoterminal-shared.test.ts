@@ -62,6 +62,16 @@ describe("geckoterminal shared helpers", () => {
     expect(result.failedAfterRows).toBe(20);
   });
 
+  it("refuses an over-cap token-pool page instead of buffering it into the isolate", async () => {
+    const oversizedPage = Array.from({ length: 4_000 }, (_, index) => ({
+      ...GT_POOL_FIXTURE,
+      id: `ethereum_0xpool${index}`,
+    }));
+    mockFetch([{ match: "/pools?page=1", body: { data: oversizedPage } }], { requireMatch: true });
+
+    await expect(fetchGtTokenPools("0xtoken", "eth")).rejects.toThrow(/token-pools request failed/);
+  });
+
   it("normalizes raw GT pools into crawl-helper shape", () => {
     expect(parseGtPool(GT_POOL_FIXTURE, "ethereum")).toEqual({
       dexId: "uniswap-v3",

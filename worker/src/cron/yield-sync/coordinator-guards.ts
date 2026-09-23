@@ -1,6 +1,6 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { CronResult } from "../../lib/cron-logger";
-import { createCronResult } from "../../lib/cron-result";
+import { createCronResult, type CronMetadataRecord } from "../../lib/cron-result";
 import {
   derivePreviousYieldRankingsCount,
   type PreviousYieldPublicationRanking,
@@ -114,6 +114,7 @@ function buildPublishedCoverageRegressionResult(params: {
   currentPublishedOpportunityCount: number;
   previousPublishedRankingCount: number;
   currentPublishedRankingCount: number;
+  inputDiagnostics?: CronMetadataRecord;
 }): CronResult {
   return createCronResult({
     status: "degraded",
@@ -127,6 +128,10 @@ function buildPublishedCoverageRegressionResult(params: {
       previousPublishedRankingCount: params.previousPublishedRankingCount,
       currentPublishedRankingCount: params.currentPublishedRankingCount,
       publishedRankingCountDelta: params.currentPublishedRankingCount - params.previousPublishedRankingCount,
+      // A regression guard result replaces the run metadata, so without the
+      // input diagnostics a collapsed count cannot be attributed to an empty
+      // input from cron history alone.
+      ...(params.inputDiagnostics ? { inputDiagnostics: params.inputDiagnostics } : {}),
     },
   });
 }
@@ -134,6 +139,8 @@ function buildPublishedCoverageRegressionResult(params: {
 export function guardTrackedYieldCoverage(params: {
   resolvedYieldBearingCount: number;
   expectedYieldBearingCount: number;
+  /** Loaded-input counters; see {@link guardPublishedYieldCoverage}. */
+  inputDiagnostics?: CronMetadataRecord;
 }): CronResult | null {
   const yieldCoverageRatio =
     params.expectedYieldBearingCount > 0
@@ -160,6 +167,7 @@ export function guardTrackedYieldCoverage(params: {
       coverage: yieldCoverageRatio,
       resolvedCount: params.resolvedYieldBearingCount,
       totalCount: params.expectedYieldBearingCount,
+      ...(params.inputDiagnostics ? { inputDiagnostics: params.inputDiagnostics } : {}),
     },
   });
 }
@@ -175,6 +183,12 @@ export async function guardPublishedYieldCoverage(params: {
   };
   yieldCoinIdSet: Set<string>;
   opportunityCoinIdSet: Set<string>;
+  /**
+   * Input/cohort counters from the run that produced the preview payload. The
+   * guard's result replaces the run metadata, so a blocked publication keeps
+   * these to stay attributable from cron history.
+   */
+  inputDiagnostics?: CronMetadataRecord;
 }): Promise<{
   result: CronResult | null;
   previousPublishedYieldBearingCount: number;
@@ -205,7 +219,10 @@ export async function guardPublishedYieldCoverage(params: {
       result: createCronResult({
         status: "degraded",
         itemCount: currentPublishedYieldBearingCount,
-        metadata: { reason: "previous-yield-rankings-cache-invalid" },
+        metadata: {
+          reason: "previous-yield-rankings-cache-invalid",
+          ...(params.inputDiagnostics ? { inputDiagnostics: params.inputDiagnostics } : {}),
+        },
       }),
       previousPublishedYieldBearingCount: 0,
       currentPublishedYieldBearingCount,
@@ -234,6 +251,7 @@ export async function guardPublishedYieldCoverage(params: {
         currentPublishedOpportunityCount,
         previousPublishedRankingCount,
         currentPublishedRankingCount,
+        inputDiagnostics: params.inputDiagnostics,
       }),
       previousPublishedYieldBearingCount,
       currentPublishedYieldBearingCount,
@@ -258,6 +276,7 @@ export async function guardPublishedYieldCoverage(params: {
         currentPublishedOpportunityCount,
         previousPublishedRankingCount,
         currentPublishedRankingCount,
+        inputDiagnostics: params.inputDiagnostics,
       }),
       previousPublishedYieldBearingCount,
       currentPublishedYieldBearingCount,
@@ -282,6 +301,7 @@ export async function guardPublishedYieldCoverage(params: {
         currentPublishedOpportunityCount,
         previousPublishedRankingCount,
         currentPublishedRankingCount,
+        inputDiagnostics: params.inputDiagnostics,
       }),
       previousPublishedYieldBearingCount,
       currentPublishedYieldBearingCount,
@@ -320,6 +340,7 @@ export async function guardPublishedYieldCoverage(params: {
               previousPublishedRankingCount,
               currentPublishedRankingCount,
               publishedRankingCountDelta: currentPublishedRankingCount - previousPublishedRankingCount,
+              ...(params.inputDiagnostics ? { inputDiagnostics: params.inputDiagnostics } : {}),
             },
           }),
           previousPublishedYieldBearingCount,

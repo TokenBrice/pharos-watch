@@ -192,6 +192,20 @@ describe("coingecko-onchain", () => {
     expect(result.pools).toHaveLength(60);
   });
 
+  it("refuses an over-cap pool page instead of buffering it into the isolate", async () => {
+    const oversizedPage = JSON.stringify({ data: Array.from({ length: 6_000 }, () => validPool) });
+    expect(oversizedPage.length).toBeGreaterThan(2 * 1024 * 1024);
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(new Response(oversizedPage, { status: 200 }));
+
+    const error = (await fetchCgTokenPoolsWithStatus("eth", "0xoversize").then(
+      () => null,
+      (thrown: unknown) => thrown as { name?: string; maxBytes?: number; observedBytes?: number },
+    ));
+
+    expect(error?.name).toBe("ResponseBodyTooLargeError");
+    expect(error?.observedBytes ?? 0).toBeGreaterThan(error?.maxBytes ?? 0);
+  });
+
   it("parses pool volume from flat, nested, and invalid payloads", () => {
     expect(
       parseCgPoolVolume({
