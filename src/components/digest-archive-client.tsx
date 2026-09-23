@@ -73,7 +73,7 @@ function formatWeeklyMasthead(ts: number): string {
 // Editorial typography imported from @/lib/digest for consistent wire-service aesthetic
 
 function formatArchiveRiskSignal(signal: DigestRiskSignal): string {
-  return `${signal.symbol} ${formatBps(Math.abs(signal.bps))}`;
+  return `${signal.symbol} ${formatBps(signal.bps)}`;
 }
 
 export type DigestArchiveView = "all" | "daily" | "weekly";

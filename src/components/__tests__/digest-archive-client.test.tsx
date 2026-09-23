@@ -79,3 +79,34 @@ describe("DigestArchiveClient UTC dates", () => {
     expect(link.textContent).toContain("AUG 30");
   });
 });
+
+describe("DigestArchiveClient risk-signal badges", () => {
+  it("renders below-peg risk signals with a negative bps sign", () => {
+    useDigestArchiveMock.mockReturnValue({
+      data: {
+        digests: [
+          digest(Date.parse("2026-08-31T00:30:00Z") / 1000, "Latest digest"),
+          {
+            ...digest(Date.parse("2026-08-30T00:30:00Z") / 1000, "Below-peg digest"),
+            riskSignal: { kind: "depeg", symbol: "PMUSD", bps: -5284, mcapUsd: null, severity: "critical" },
+          },
+        ],
+      },
+      isLoading: false,
+      dataUpdatedAt: 0,
+      error: null,
+      refetch: vi.fn(),
+      meta: null,
+    });
+    useUrlFiltersMock.mockReturnValue({
+      searchParams: new URLSearchParams(),
+      setParam: vi.fn(),
+      replaceParams: vi.fn(),
+    });
+
+    render(<DigestArchiveClient />);
+
+    expect(screen.getAllByText("PMUSD -5284 bps").length).toBeGreaterThan(0);
+    expect(screen.queryByText("PMUSD +5284 bps")).toBeNull();
+  });
+});
