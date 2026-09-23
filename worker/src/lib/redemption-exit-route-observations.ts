@@ -314,11 +314,13 @@ export function buildRedemptionExitRouteObservation(
   };
   const { scope, commonModeKeys } = resolveScopeAndCommonModes(input.stablecoinId, input.config.routeFamily);
   // A live same-run settlement delay is the observed horizon (R6); the
-  // reviewed model's ceiling is only the fallback when no live delay exists.
+  // reviewed model's ceiling is the fallback when no positive integer live
+  // delay exists (the exit-route contract requires a positive integer horizon,
+  // and a zero delay is an instant route, not a horizon).
   const settlementHorizonSec =
     input.settlementDelaySec != null &&
-    Number.isFinite(input.settlementDelaySec) &&
-    input.settlementDelaySec >= 0
+    Number.isSafeInteger(input.settlementDelaySec) &&
+    input.settlementDelaySec > 0
       ? input.settlementDelaySec
       : REDEMPTION_SETTLEMENT_HORIZON_CEILING_SEC[input.config.settlementModel];
 
