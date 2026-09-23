@@ -18,6 +18,9 @@ A 225-commit holistic review makes unavailable data fail closed repo-wide, and S
 - **Cron and retention bounds**: Every retention delete and unbounded read is bounded, slot fencing stops one slow head abandoning its chain, each degraded run names a machine-readable reason, and four additive migrations land first.
 - **Telegram and digest delivery**: Delivery gains fencing, backoff and ingress guards, the risk-alert SLO is enforced at the 1,000-watcher tier the planner actually meets, and digest edition numbers derive from the full non-blocked history.
 - **Deduplication and test lanes**: Shared contracts got single owners and the oversized V9, Telegram and yield modules split leafward, taking the clone ratchet from 7,568 to 3,073 duplicated lines; nine test lanes replaced pins with outcomes.
+- **AZND and XTUSD frozen**: Mu Digital AZND freezes after the issuer's July 10 wind-down announcement left only a ~$767 Curve pool near $0.03, and XTUSD freezes after XT.com's official market went stale on July 18 with an empty book and no admissible route. Both keep archived detail pages and cemetery records.
+- **Cod3x cdxUSD frozen**: Cod3x cdxUSD freezes after the peg broke on August 27 and bottomed at $0.2457 while supply held at 6,150,000 with zero burns; the issuer's site and docs now cover only AI trading agents and DefiLlama flags it dead.
+- **Freeze-day supply cliff is honest**: AZND's published $16.3M circulating equals the CoinGecko token count rather than USD value; the aggregate drops that phantom figure when the freeze takes effect, an honest cliff explained here rather than smoothed over.
 
 ## 2026-09-14 to 2026-09-20
 
