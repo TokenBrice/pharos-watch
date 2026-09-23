@@ -664,10 +664,15 @@ function buildDegradedYieldRankingsResponse(
   source: LiveSafetyHydrationSource,
   project: (payload: YieldRankingsResponse) => YieldRankingsResponse | YieldRankingsSummaryResponse,
 ): Response {
-  const fallbackPayload = canServePublishTimeSafety(payload, cached)
+  // A within-window publish-time fallback is coherent and fully populated —
+  // /api/health rates it healthy (`yield-safety-publish-time-fallback:*`) and the
+  // body carries `yield-safety-hydration-stale`. Only blanked NR safety earns the
+  // HTTP Warning that clients render as a data-quality degradation.
+  const servePublishTime = canServePublishTimeSafety(payload, cached);
+  const fallbackPayload = servePublishTime
     ? markYieldRankingsSafetyStale(payload, reason, source)
     : degradeYieldRankingsSafety(payload, reason, source);
-  return buildYieldRankingsResponse(project(fallbackPayload), cached, [reason]);
+  return buildYieldRankingsResponse(project(fallbackPayload), cached, servePublishTime ? [] : [reason]);
 }
 
 /**
