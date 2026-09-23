@@ -1,5 +1,14 @@
 [
   {
+    "slug": "vchf-2026-09-18",
+    "stablecoinId": "vchf-vnx",
+    "symbol": "VCHF",
+    "pegType": "peggedCHF",
+    "direction": "above",
+    "peakDeviationBps": 640,
+    "startedAt": 1789699588
+  },
+  {
     "slug": "hollar-2026-08-25",
     "stablecoinId": "hollar-hydrated",
     "symbol": "HOLLAR",
@@ -1485,15 +1494,6 @@
     "startedAt": 1772467226
   },
   {
-    "slug": "usn-2026-03-02",
-    "stablecoinId": "usn-noon",
-    "symbol": "USN",
-    "pegType": "peggedUSD",
-    "direction": "above",
-    "peakDeviationBps": 1200,
-    "startedAt": 1772463628
-  },
-  {
     "slug": "kau-2026-03-01-up-78555",
     "stablecoinId": "kau-kinesis",
     "symbol": "KAU",
@@ -1870,24 +1870,6 @@
     "direction": "below",
     "peakDeviationBps": -965,
     "startedAt": 1771200000
-  },
-  {
-    "slug": "usn-2026-02-14-up-24424",
-    "stablecoinId": "usn-noon",
-    "symbol": "USN",
-    "pegType": "peggedUSD",
-    "direction": "above",
-    "peakDeviationBps": 569,
-    "startedAt": 1771075505
-  },
-  {
-    "slug": "usn-2026-02-14-up-49237",
-    "stablecoinId": "usn-noon",
-    "symbol": "USN",
-    "pegType": "peggedUSD",
-    "direction": "above",
-    "peakDeviationBps": 567,
-    "startedAt": 1771074028
   },
   {
     "slug": "kau-2026-02-14",
