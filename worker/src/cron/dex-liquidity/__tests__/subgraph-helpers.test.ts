@@ -53,6 +53,7 @@ describe("subgraph helpers", () => {
       observations: new Map(),
       shouldLogIndex: false,
       failed: true,
+      failureReason: "http",
     });
   });
 

@@ -16,6 +16,12 @@ const METEORA_API = "https://dlmm.datapi.meteora.ag/pools";
 // `censusScope: "bounded-sample"`.
 const PAGE_SIZE = 500;
 const MAX_PAGES = 3;
+/**
+ * Hard per-page byte cap. Measured 2026-09-23 against the live endpoint (see
+ * `docs/worker-and-api-limits.md#response-body-limits`): a `page_size=500` page
+ * returned 995 KB, i.e. ~2 KB per pool. 4 MiB is ~4x that page.
+ */
+const METEORA_MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
 
 interface MeteoraToken {
   address: string;
@@ -72,6 +78,7 @@ export async function fetchMeteoraPools(signal?: AbortSignal): Promise<DexApiFet
     buildUrl: (page) => `${METEORA_API}?page=${page}&page_size=${PAGE_SIZE}`,
     pageSize: PAGE_SIZE,
     maxPages: MAX_PAGES,
+    maxResponseBytes: METEORA_MAX_RESPONSE_BYTES,
     signal,
     parsePage: (body, page) => {
       const { data: rows, pages, current_page: currentPage } = body as MeteoraResponse;

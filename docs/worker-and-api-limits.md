@@ -223,6 +223,53 @@ Large cache-backed endpoints can opt into a response-ready companion cache when 
 
 JSON/text fetch callers that need per-request timeout coverage across body consumption should use `fetchJsonWithRetry()` or `fetchTextWithRetry()` rather than calling `fetchWithRetry()` and then consuming the returned `Response` separately. Provider execution wrappers (`providerJson()` and `providerTextBounded()`) keep their provider timeout active through body reads and record body-read timeouts as provider failures.
 
+### Response-Body Limits
+
+`fetchJsonWithRetry()` / `fetchTextWithRetry()` default to a `16 MiB` body cap, and the DEX source stage names a tighter cap for every source it reads so that one mis-served response (HTML error page, doubled payload, proxy interstitial) cannot be buffered and parsed inside the 128 MB isolate. Caps are stated per source because the legitimate shape differs by an order of magnitude between a ticker list and a whole-catalog catalog payload.
+
+Measured 2026-09-23 by calling the same public endpoints from a workstation with the repository's own query and page parameters (`worker/src/cron/dex-liquidity/constants.ts` query builders, `pageSize`/`page_size` values as configured). The `The Graph` gateway refused the measurement without `GRAPH_API_KEY`, so the Uni V3 / V4 / PancakeSwap page caps are justified against the measured page budget of the same 1,000-row shape rather than a re-fetch of the credentialed endpoint.
+
+| Source (Worker call site) | Endpoint shape | Measured 2026-09-23 | Cap | Constant |
+| --- | --- | --- | --- | --- |
+| DeFiLlama Yields | `GET /pools` | 11,816,252 B / 17,188 pools | `16 MiB` (≈1.4x) | `DEFILLAMA_YIELDS_MAX_RESPONSE_BYTES` (`fetch-primary.ts`) |
+| DeFiLlama Protocols | `GET /protocols` | 8,911,702 B / 8,339 rows | `12 MiB` (≈1.4x) | `DEFILLAMA_PROTOCOLS_MAX_RESPONSE_BYTES` (`fetch-primary.ts`) |
+| Curve `getPools/all/:chain` | 14 chain bodies, 4 at a time | 4,806,780 B (ethereum, largest) | `8 MiB` (≈1.75x) | `CURVE_MAX_RESPONSE_BYTES` (`fetch-primary.ts`) |
+| Uni V3 / Uniswap V4 / PancakeSwap subgraph pages | `first: 1000` pool page | not measurable without `GRAPH_API_KEY`; same 1,000-row budget as the measured pages below (0.5-1 MB) | `8 MiB` | `SUBGRAPH_PAGE_MAX_RESPONSE_BYTES` (`constants.ts`) |
+| Direct-API paginated runner default | any paginated provider | Raydium `pageSize=1000` 2,138,442 B; Meteora `page_size=500` 995,192 B; Balancer 1,000-row list page 182,322 B for 246 rows | `8 MiB` (≈3.9x) | `DIRECT_API_DEFAULT_MAX_RESPONSE_BYTES` (`direct-api-policy.ts`) |
+| Raydium `pools/info/list` | `pageSize=1000` | 2,138,442 B (standard), 2,013,086 B (concentrated) | `8 MiB` (≈3.7x) | `RAYDIUM_MAX_RESPONSE_BYTES` (`fetch-raydium.ts`) |
+| Meteora `dlmm.datapi.meteora.ag/pools` | `page_size=500` | 995,192 B / 500 rows | `4 MiB` (≈4x) | `METEORA_MAX_RESPONSE_BYTES` (`fetch-meteora.ts`) |
+| Balancer `api-v3.balancer.fi` GraphQL | `first: 1000` pool page | 182,322 B / 246 pools (≈740 B/row) | `4 MiB` | `BALANCER_MAX_RESPONSE_BYTES` (`fetch-balancer.ts`) |
+| Orca `api.orca.so/v2/solana/pools` | `size=200` | 671,680 B / 200 rows (declared `162,596 B` compressed) | `4 MiB` (≈6x) | `ORCA_MAX_RESPONSE_BYTES` (`fetch-orca.ts`) |
+| Fluid tickers | `GET /v2/:chainId/dexes/stats/tickers` | 15,029 B (ethereum, largest of six chains) | `256 KiB` (≈17x) | `FLUID_MAX_RESPONSE_BYTES` (`fetch-fluid.ts`) |
+
+Overflow semantics (R1-R8: unavailable is not zero, a failed read never becomes a positive claim):
+
+- The reader rejects a declared over-cap `Content-Length` before reading and otherwise streams and aborts at the cap, so an over-cap body is never parsed and never becomes partial data; the connection returns to the pool immediately.
+- The DEX stage turns the overflow into that source's own failure: `fetchSubgraphEntities()` reports `failed: true` with the machine-readable `failureReason: "body-over-cap"` (also `"http"` / `"graphql"`), `readDexApiJson()` returns `"<context> response body exceeded <n> bytes"`, and `fetchFluidPools()` records `fluid <chain> response body exceeded <n> bytes`. Consumers keep the existing degraded/failed-source accounting (`failedSources`, `criticalSourceFailures`, circuit outcomes) instead of publishing a short pool list.
+- `worker/src/lib/response-body.ts` exports `ResponseBodyTooLargeError` and `isResponseBodyTooLargeError()` so callers can classify the overflow without string matching; `fetchJsonWithRetry()` remains the owner of the cap check, retries, and body cancellation.
+- Callers that must classify the final failure pass `throwOnFinalNetworkError: true` (DEX subgraph pages, Fluid tickers, PancakeSwap subgraph pages); the retry loop still retries the earlier attempts, and the last attempt's typed error reaches the caller's failure path.
+
+Long synchronous work in these phases yields between pages (`yieldToEventLoop()` in the subgraph page loop and the direct-API pagination loop) so slot heartbeats and abort timers keep firing during a multi-page fan-out instead of waiting for the whole provider family to drain.
+
+**Why the DEX caps exist.** A mid-run isolate death leaves no terminal write, so the slot is reconciled as `platform-abandoned` roughly five minutes later and the cron surfaces as red with no source-level diagnostic. On 2026-09-23 at `00:10:15 UTC` Cloudflare recorded an `exceededMemory` invocation outcome that killed `sync-dex-liquidity-stage` during `subgraph-enrichment` (cpu 4.69 s, duration 8.69 s, 186 subrequests, reported peak allocation 171.8 MB against the 128 MB isolate limit); the reconciliation row carries `failureCategory: "platform-abandoned"`, `progressStage: "subgraph-enrichment"`, and `slotKey: "halfHourlyOffset"`. That stage loads whole catalogs into memory — 11.8 MB of DeFiLlama Yields JSON, 8.9 MB of Protocols, ~14.5 MB of Curve bodies, then the accumulating subgraph family maps — so a source that over-delivers is exactly the shape that ends a run. The caps above bound each of those reads individually; see `docs/architecture.md` for the lane-level memory topology.
+
+### Memory-Kill Triage (2026-09-23)
+
+Three isolate deaths were recorded that day. Cloudflare invocation analytics reports the exact invocation second for the affected rows, which is what makes attribution possible without Workers Logs; the scheduled dataset carries the same cpu time for `scheduled`-handler kills, and `cron_runs` plus `cron_slot_executions` carry the slot identity when one exists.
+
+| Invocation (UTC) | Workload | cpu / duration | Subreqs | Reported peak | D1 evidence |
+| --- | --- | --- | --- | --- | --- |
+| `2026-09-23 00:10:15` | `sync-dex-liquidity-stage` (`halfHourlyOffset`, progress stage `subgraph-enrichment`) | 4.69 s / 8.69 s | 186 | 171.8 MB | error row with `failureCategory: "platform-abandoned"`, `childDisposition: "abandoned"`, closed by the `:16` reconciliation |
+| `2026-09-23 07:52:46` | `safety-score-v9-publication` Workflow instance `v9-publication-1790149920` (compile step) | 25.78 s / 25.78 s | 0 | 217.0 MB | workflow terminal row `started_at 07:52:46`, `publicationStatus: "published"` after the engine retried the killed attempt |
+| `2026-09-23 11:22:53` | `safety-score-v9-publication` Workflow instance `v9-publication-1790162520` (compile step) | 18.86 s / 18.86 s | 0 | 223.2 MB | workflow terminal row `started_at 11:22:51`, `publicationStatus: "published"` |
+
+Reading the triage:
+
+- Only the `00:10` kill has cron-slot identity. The two Workflow kills are invocations of the same script that the `:22` / `:52` scheduled invocation creates immediately after it finishes compiling, so they leave no `cron_slot_executions` row and no `platform-abandoned` reconciliation; a green terminal row is written once the Workflow engine retries the killed step. Per-invocation cpu equal to duration on both rows is the signature of a pure-compute compile step, and the neighbouring half-hours show the same ~20-25 s, ~211-221 MB invocation succeeding, so this lane sits permanently near the limit rather than failing on a single bad input.
+- The `00:10` profile is the opposite shape: only 4.7 s of cpu across 8.7 s of wall time with 186 subrequests, i.e. the isolate died while provider bodies were flowing, which is why this workstream bounds every one of those reads.
+- Residual risk: the V9 shadow compile re-runs the full V9 compiler inside a Workflow invocation in the same minutes as the scheduled compile, and its memory is dominated by compiler graph modules outside this workstream's reviewed surface. Bounding those bodies does not change that lane's peak.
+
+
 ### What this means operationally
 
 - `sync-dex-liquidity-stage` consumes discovery output, loads external source families, constructs the ordered pool graph, and stores it as generation-fenced 192-KiB chunks hourly at `:10`. Its idempotent D1 reads and writes retry transient D1 overload/internal errors (`runWithOverloadRetry`) instead of failing the run, including the `dex_pool_registry` staged-pool read.

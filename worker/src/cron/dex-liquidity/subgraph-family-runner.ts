@@ -5,6 +5,7 @@ import {
   fetchSubgraphEntities,
   type FetchSubgraphEntitiesConfig,
   type FetchSubgraphEntitiesResult,
+  type SubgraphFailureReason,
 } from "./subgraph-helpers";
 
 interface RunSubgraphFamilyParams<TEntity, TLookups> {
@@ -33,6 +34,12 @@ interface RunSubgraphFamilyParams<TEntity, TLookups> {
 /** Lookups plus the chains whose source did not answer this run. */
 export type SubgraphFamilyResult<TLookups> = TLookups & {
   failedChains: string[];
+  /**
+   * Why each failed chain failed. `univ3-subgraph:ethereum` labels stay stable
+   * for status consumers; this map is the machine-readable reason behind the
+   * label and is logged with the family summary.
+   */
+  failedChainReasons: Record<string, SubgraphFailureReason>;
 };
 
 export async function runSubgraphFamily<TEntity, TLookups extends object>(
@@ -40,12 +47,13 @@ export async function runSubgraphFamily<TEntity, TLookups extends object>(
 ): Promise<SubgraphFamilyResult<TLookups>> {
   const lookups = params.createLookups();
   const failedChains: string[] = [];
+  const failedChainReasons: Record<string, SubgraphFailureReason> = {};
 
   if (!params.graphApiKey) {
     if (params.missingApiKeyMessage) {
       logWorkerEventArgs("handler", "info", params.missingApiKeyMessage);
     }
-    return { ...lookups, failedChains };
+    return { ...lookups, failedChains, failedChainReasons };
   }
 
   const subgraphs = Object.entries(params.subgraphs);
@@ -63,19 +71,26 @@ export async function runSubgraphFamily<TEntity, TLookups extends object>(
           params.buildConfig(chain, subgraphUrl, combinedSignal, lookups),
         );
         params.handleResult(lookups, chain, result);
-        if (result.failed) failedChains.push(chain);
+        if (result.failed) {
+          failedChains.push(chain);
+          failedChainReasons[chain] = result.failureReason ?? "http";
+        }
         if (result.shouldLogIndex && params.buildChainSummary) {
           logWorkerEventArgs("handler", "info", params.buildChainSummary(chain, result));
         }
       } catch (error) {
         if (params.signal?.aborted) throw error;
         failedChains.push(chain);
+        failedChainReasons[chain] = "http";
         logWorkerEventArgs("handler", "warn", `[dex-liquidity] ${params.familyLabel} ${chain} failed (non-fatal):`, error);
       }
     },
     { signal: params.signal },
   );
 
+  if (failedChains.length > 0) {
+    logWorkerEventArgs("handler", "warn", `[dex-liquidity] ${params.familyLabel} failed chains:`, failedChainReasons);
+  }
   logWorkerEventArgs("handler", "info", params.buildFinalSummary(lookups));
-  return { ...lookups, failedChains };
+  return { ...lookups, failedChains, failedChainReasons };
 }

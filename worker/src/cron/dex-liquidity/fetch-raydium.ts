@@ -11,6 +11,13 @@ import { runPaginatedDirectApiFetch } from "./direct-api-paginated";
 
 const RAYDIUM_API = "https://api-v3.raydium.io/pools/info/list";
 const PAGE_SIZE = 1000;
+/**
+ * Hard per-page byte cap. Measured 2026-09-23 against the live endpoint (see
+ * `docs/worker-and-api-limits.md#response-body-limits`): a `pageSize=1000` page
+ * returned 2.01 MB (concentrated) and 2.14 MB (standard), i.e. ~2 KB per pool.
+ * 8 MiB is ~3.9x that page.
+ */
+const RAYDIUM_MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
 
 interface RaydiumPool {
   type: string;
@@ -62,6 +69,7 @@ async function fetchPoolType(
     buildUrl: (page) =>
       `${RAYDIUM_API}?poolType=${poolType}&poolSortField=liquidity&sortType=desc&pageSize=${PAGE_SIZE}&page=${page}`,
     pageSize: PAGE_SIZE,
+    maxResponseBytes: RAYDIUM_MAX_RESPONSE_BYTES,
     signal,
     parsePage: (body, page) => {
       const json = body as RaydiumResponse;

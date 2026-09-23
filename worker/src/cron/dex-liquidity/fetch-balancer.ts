@@ -6,6 +6,15 @@ import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { logWorkerEvent } from "../../lib/structured-log";
 
 const BALANCER_API = "https://api-v3.balancer.fi/";
+/**
+ * Hard per-page byte cap for the Balancer list page. Measured 2026-09-23
+ * against the live GraphQL endpoint (see
+ * `docs/worker-and-api-limits.md#response-body-limits`): the head page returned
+ * 182 KB for 246 pools (~740 B per pool), so a full 1,000-row page is ~0.74 MB.
+ * 4 MiB is ~5x that page.
+ */
+const BALANCER_MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
+
 
 /** Balancer chain enum values mapped to our internal chain keys */
 const BALANCER_CHAIN_MAP: Record<string, string> = {
@@ -253,6 +262,7 @@ async function fetchBalancerCapabilities(
     source: "capability sweep",
     pageSize,
     maxPages: DIRECT_API_DEFAULT_MAX_PAGES,
+    maxResponseBytes: BALANCER_MAX_RESPONSE_BYTES,
     signal,
     buildRequest: (page) => ({
       url: BALANCER_API,
@@ -451,6 +461,7 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFe
     source: "balancer",
     pageSize,
     maxPages: DIRECT_API_DEFAULT_MAX_PAGES,
+    maxResponseBytes: BALANCER_MAX_RESPONSE_BYTES,
     signal,
     buildRequest: (page) => ({
       url: BALANCER_API,

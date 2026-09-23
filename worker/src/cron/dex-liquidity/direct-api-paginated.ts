@@ -1,13 +1,14 @@
 import { USER_AGENT } from "../../lib/constants";
 import { cancelUnsuccessfulResponseBodyQuietly } from "../../lib/response-body";
+import { rethrowIfAborted, yieldToEventLoop } from "../../lib/abort";
 import { readDexApiJson } from "./direct-api-json";
 import {
   DIRECT_API_DEFAULT_MAX_PAGES,
+  DIRECT_API_DEFAULT_MAX_RESPONSE_BYTES,
   DIRECT_API_REQUEST_TIMEOUT_MS,
   buildDirectApiRequestSignal,
 } from "./direct-api-policy";
 import { toErrorMessage } from "@shared/lib/error-utils";
-import { rethrowIfAborted } from "../../lib/abort";
 
 type PaginatedRequest = {
   url: string;
@@ -24,6 +25,8 @@ export type PaginatedFetchOptions<TRow> = PaginatedRequestSource & {
   startPage?: number;
   maxPages?: number;
   timeoutMs?: number;
+  /** Hard per-page body cap; defaults to `DIRECT_API_DEFAULT_MAX_RESPONSE_BYTES`. */
+  maxResponseBytes?: number;
   signal?: AbortSignal;
   parsePage: (body: unknown, page: number) => unknown[] | { rows: unknown[] } | { error: string } | null;
   mapRow: (raw: unknown, context: { page: number }) => TRow | null;
@@ -62,6 +65,7 @@ export async function runPaginatedDirectApiFetch<TRow>(
     startPage = 1,
     maxPages = DIRECT_API_DEFAULT_MAX_PAGES,
     timeoutMs = DIRECT_API_REQUEST_TIMEOUT_MS,
+    maxResponseBytes = DIRECT_API_DEFAULT_MAX_RESPONSE_BYTES,
     signal,
     parsePage,
     mapRow,
@@ -106,7 +110,7 @@ export async function runPaginatedDirectApiFetch<TRow>(
       break;
     }
 
-    const parsed = await readDexApiJson(res, pageContext(page));
+    const parsed = await readDexApiJson(res, pageContext(page), maxResponseBytes);
     if (!parsed.ok) {
       errors.push(parsed.error);
       break;
@@ -163,6 +167,11 @@ export async function runPaginatedDirectApiFetch<TRow>(
       errors.push(formatPaginationCapError(page, nextPage));
       break;
     }
+
+    // Row mapping over a full page is synchronous; yield before requesting the
+    // next page so slot heartbeats and abort timers keep firing during a
+    // multi-page sweep instead of waiting for the whole provider to drain.
+    await yieldToEventLoop(signal);
   }
 
   return { rows, errors, warnings, successfulPages, completed, nextPage };

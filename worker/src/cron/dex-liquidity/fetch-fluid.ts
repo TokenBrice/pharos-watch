@@ -15,9 +15,22 @@ import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { rawAmountToDecimal } from "./staged-pool-recovery";
 import { DIRECT_API_REQUEST_TIMEOUT_MS } from "./direct-api-policy";
 import { rethrowIfAborted } from "../../lib/abort";
+import { isResponseBodyTooLargeError } from "../../lib/response-body";
 import type { LiquidityFallbackCounters } from "./types";
 
 const FLUID_API_BASE = "https://api.fluid.instadapp.io/v2";
+/**
+ * Hard per-response byte cap for one chain's ticker list.
+ *
+ * Measured 2026-09-23 against the live endpoint (see
+ * `docs/worker-and-api-limits.md#response-body-limits`): the largest chain body
+ * was 15 KB for 34 tickers (ethereum), and every other chain returned 1.7-6.7
+ * KB. 256 KiB is ~17x the measured maximum, so it cannot touch a legitimate
+ * ticker list while still rejecting a mis-served body before it is buffered and
+ * parsed inside the isolate.
+ */
+const FLUID_MAX_RESPONSE_BYTES = 256 * 1024;
+
 const FLUID_RESOLVER_CALL_GAS = "0x0F4240";
 const FLUID_GET_COLLATERAL_RESERVES_SELECTOR = "0x957755e6";
 const FLUID_GET_DEBT_RESERVES_SELECTOR = "0x55181f11";
@@ -188,7 +201,14 @@ export async function fetchFluidPools(
           signal,
         },
         2,
-        { timeoutMs: DIRECT_API_REQUEST_TIMEOUT_MS, maxRetryDelayMs: FLUID_RETRY_DELAY_CAP_MS },
+        {
+          timeoutMs: DIRECT_API_REQUEST_TIMEOUT_MS,
+          maxRetryDelayMs: FLUID_RETRY_DELAY_CAP_MS,
+          maxResponseBytes: FLUID_MAX_RESPONSE_BYTES,
+          // Preserve the final thrown failure so an over-cap body fails this
+          // chain with the source's own error instead of a generic no-response.
+          throwOnFinalNetworkError: true,
+        },
       );
       if (!result) {
         throw new Error(`${chain} request failed after retries`);
@@ -268,7 +288,9 @@ export async function fetchFluidPools(
       results.push(...pools);
     } catch (error) {
       rethrowIfAborted(error, signal);
-      const reason = toErrorMessage(error);
+      const reason = isResponseBodyTooLargeError(error)
+        ? `fluid ${chain} response body exceeded ${FLUID_MAX_RESPONSE_BYTES} bytes`
+        : toErrorMessage(error);
       errors.push(reason);
       logWorkerEventArgs("handler", "warn", "[fetch-fluid] Chain fetch failed:", reason);
     }
