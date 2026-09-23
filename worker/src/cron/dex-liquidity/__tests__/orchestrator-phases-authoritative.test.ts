@@ -223,5 +223,9 @@ describe("direct API census scope declarations", () => {
     expect(scopeByName.get("Fluid")).toBe("bounded-sample");
     expect(scopeByName.get("Aerodrome Slipstream")).toBe("bounded-sample");
     expect(scopeByName.get("Velodrome Slipstream")).toBe("bounded-sample");
+    // PancakeSwap refreshes the head page but rotates only two tail pages per
+    // run, so a pool absent from one response was usually just read on an
+    // earlier run; its per-run key set must never veto staged rows.
+    expect(scopeByName.get("PancakeSwap")).toBe("bounded-sample");
   });
 });

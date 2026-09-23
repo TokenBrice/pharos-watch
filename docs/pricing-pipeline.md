@@ -33,7 +33,7 @@ Every published main and CoinGecko-supply-fallback `sync-stablecoins` run writes
 
 ## Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.30`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.31`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
 - **Canonical version module:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -336,9 +336,12 @@ Current tracked-base inheritance paths are:
 - `usdnr-nerona -> wm-m0`
 - `weusd-picwe -> usdc-circle` with a 1% redemption-fee haircut, only when no usable live market price exists
 
-WEUSD is market-price-wins: a usable live market quote is never replaced by the 0.99 redemption floor. Historical
-replay likewise uses market history rather than synthesizing the redemption floor; unavailable market history fails
-closed by preserving existing replay rows.
+WEUSD is market-price-wins: a usable live market quote is never replaced by the 0.99 redemption floor. "Usable" means
+the incumbent is a current registry-admitted market observation — every composite component is a non-retired,
+non-protocol, non-cached source and its `priceObservedAt` passes that source's `maxTrustedAgeSec` and future-skew
+window; a restored or carry-forward row that only refreshed `priceSyncedAt`, or protocol-redeem/cached provenance,
+does not suppress the fresh fallback. Historical replay likewise uses market history rather than synthesizing the
+redemption floor; unavailable market history fails closed by preserving existing replay rows.
 
 For the other inheritance paths, this prevents thin secondary-market child-token prints, or missing child-market
 coverage, from dragging PegScore away from the executable value of the tracked parent rail.
@@ -454,12 +457,13 @@ Strict primary CoinGecko admission everywhere else is untouched.
 - ZSD uses official `zsd_circ` for circulating supply and keeps CoinGecko as the preferred market price when available; if CoinGecko is missing, the protocol's reported `zsd_price` is used as a scoped `zephyr-scanner` fallback.
 - ZYS uses official `zys_circ` and `zys_price` because neither CoinGecko nor DefiLlama exposes the yield-share wrapper.
 - The emitted `zephyr-scanner` pricing source is registered as protocol telemetry with no dedicated circuit breaker and is only reachable from this narrow supplemental path.
+- Scanner-supplied `captured_at` / `block_timestamp` / `timestamp` values are validated against the registered `zephyr-scanner` trust window before they become price or supply provenance: a timestamp future-skewed beyond the shared 10-minute pricing-source allowance, or older than the four-hour window, drops the provenance to `null` (supply still publishes) with a logged machine-readable reason, so a faulty scanner clock can never publish an impossible observation time or poison V9 evidence.
 
 The enrichment path is intentionally narrower than primary pricing:
 
 - it exists to fill holes, not overrule good consensus
 - fallback results are validated before they can enter hourly corroboration provenance or later claim an asset during publication
-- the global price cache stores publication-safe continuity plus hourly fallback candidates with explicit fallback confidence; fallback candidates are revalidated on read and remain non-depeg-authoritative, while the verified CMC targeted cache remains a separate provider-local lane that never refreshes the original observation time or upgrades fallback confidence. Its staleness budget is calibrated against the producer cadence instead of equal to it: live targeted and category quotes stay admissible for one fetch cadence (one hour) plus a five-minute grace because CMC rolls `last_updated` hourly and the consumer fetch lands just after each roll boundary, and a cached verified quote bridges up to two cadences plus grace so a single missed CMC roll or one rotation-skipped fetch hour (the 25-slug request cap rotates candidates) does not blank the asset; anything older still goes missing rather than publishing stale
+- the global price cache stores publication-safe continuity plus hourly fallback candidates with explicit fallback confidence; fallback candidates are revalidated on read and remain non-depeg-authoritative, while the verified CMC targeted cache remains a separate provider-local lane that never refreshes the original observation time or upgrades fallback confidence. Its staleness budget is calibrated against the producer cadence instead of equal to it: live targeted and category quotes stay admissible for one fetch cadence (one hour) plus a five-minute grace because CMC rolls `last_updated` hourly and the consumer fetch lands just after each roll boundary, and a cached verified quote bridges up to two cadences plus grace so a single missed CMC roll or one rotation-skipped fetch hour (the 25-slug request cap rotates candidates) does not blank the asset; anything older still goes missing rather than publishing stale. The `coinmarketcap` registry entry's publication `maxTrustedAgeSec` (two hours twenty minutes) covers that bridge plus one 15-minute publication slot, so a quote admitted during the :09 probe survives the staging handoff to the :15 publication instead of being discarded as `sourceExpired` after it had already suppressed the fresh retrieval that would have replaced it
 - the effective replay age is the smaller of that six-hour ceiling and every component source's registry `maxTrustedAgeSec`; any non-replay-safe component makes the cache entry immediately ineligible
 - previous-trusted continuity now merges the last authoritative stablecoins publication with fresh replay-safe `price_cache` rows, so a temporarily `low` or unusable publication does not make an already-confirmed severe depeg forget its prior corroborated state on the next run
 - replay-safe cached fallback is applied to any asset that is still missing after post-validation, including assets that became missing later in the same sync run because a current-run candidate was rejected

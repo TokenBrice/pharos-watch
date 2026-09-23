@@ -7,6 +7,7 @@ import {
 } from "@shared/lib/onchain-supply-probe";
 import { USER_AGENT } from "../../lib/constants";
 import { fetchTextWithRetry } from "../../lib/fetch-retry";
+import { validatePricingSourceFreshness } from "../../lib/pricing-source-freshness";
 import { isReasonablePrice } from "../../lib/price-validation";
 import type { PeggedAsset } from "./enrich-prices";
 import { pegTypeKey, getSupplementalChainLabels, toPositiveFiniteNumber } from "./supplemental-assets/shared";
@@ -41,14 +42,34 @@ export interface ZephyrZsdPriceResolution {
 // Zephyr Scanner stamps protocol observations with `captured_at` (ISO) on reserve
 // snapshots and `block_timestamp`/`timestamp` (unix seconds) on stats records. Live
 // stats may omit all of them; absence stays absent rather than becoming fetch time.
-function normalizeZephyrObservedAt(value: unknown): number | null {
+// The provider's timestamps become both price and supply provenance, so they face
+// the registered `zephyr-scanner` trust window like every other observation: a
+// future-skewed or stale scanner clock drops the provenance (with a logged,
+// machine-readable reason) instead of publishing an impossible observation time.
+function normalizeZephyrObservedAt(value: unknown, nowSec: number): number | null {
   const numeric = toPositiveFiniteNumber(value);
-  if (numeric != null) return Math.floor(numeric > 10_000_000_000 ? numeric / 1000 : numeric);
-  if (typeof value === "string") {
-    const parsed = Date.parse(value);
-    if (Number.isFinite(parsed) && parsed > 0) return Math.floor(parsed / 1000);
+  const parsed = numeric != null
+    ? Math.floor(numeric > 10_000_000_000 ? numeric / 1000 : numeric)
+    : typeof value === "string" && Number.isFinite(Date.parse(value)) && Date.parse(value) > 0
+      ? Math.floor(Date.parse(value) / 1000)
+      : null;
+  if (parsed == null) return null;
+  const freshness = validatePricingSourceFreshness({
+    source: ZEPHYR_SUPPLY_SOURCE,
+    observedAt: parsed,
+    observedAtMode: "upstream",
+    nowSec,
+    requireObservedAt: true,
+  });
+  if (!freshness.accepted) {
+    logWorkerEventArgs(
+      "handler",
+      "warn",
+      `[zephyr-scanner] Dropped ${freshness.reason} observation timestamp (${parsed}) at now=${nowSec}`,
+    );
+    return null;
   }
-  return null;
+  return freshness.observedAt;
 }
 
 function parseZephyrAssetStats(
@@ -57,6 +78,7 @@ function parseZephyrAssetStats(
   priceKey: string,
   fallbackPrice: number | null,
   opts?: { pegType?: string; navToken?: boolean },
+  nowSec: number = Math.floor(Date.now() / 1000),
 ): ZephyrScannerAssetStats | null {
   if (!payload || typeof payload !== "object") return null;
   const record = payload as Record<string, unknown>;
@@ -73,6 +95,7 @@ function parseZephyrAssetStats(
   if (mcapPrice == null) return null;
   const observedAt = normalizeZephyrObservedAt(
     record.captured_at ?? record.block_timestamp ?? record.timestamp,
+    nowSec,
   );
   return {
     supply,
@@ -83,21 +106,21 @@ function parseZephyrAssetStats(
   };
 }
 
-export function parseZephyrZsdStats(payload: unknown): ZephyrScannerAssetStats | null {
-  return parseZephyrAssetStats(payload, "zsd_circ", "zsd_price", 1.0, { pegType: "peggedUSD" });
+export function parseZephyrZsdStats(payload: unknown, nowSec: number = Math.floor(Date.now() / 1000)): ZephyrScannerAssetStats | null {
+  return parseZephyrAssetStats(payload, "zsd_circ", "zsd_price", 1.0, { pegType: "peggedUSD" }, nowSec);
 }
 
-export function parseZephyrZysStats(payload: unknown): ZephyrScannerAssetStats | null {
-  return parseZephyrAssetStats(payload, "zys_circ", "zys_price", null, { pegType: "peggedUSD", navToken: true });
+export function parseZephyrZysStats(payload: unknown, nowSec: number = Math.floor(Date.now() / 1000)): ZephyrScannerAssetStats | null {
+  return parseZephyrAssetStats(payload, "zys_circ", "zys_price", null, { pegType: "peggedUSD", navToken: true }, nowSec);
 }
 
-export function parseZephyrProtocolStats(payload: unknown): ZephyrProtocolStats | null {
-  const zsd = parseZephyrZsdStats(payload);
+export function parseZephyrProtocolStats(payload: unknown, nowSec: number = Math.floor(Date.now() / 1000)): ZephyrProtocolStats | null {
+  const zsd = parseZephyrZsdStats(payload, nowSec);
   if (!zsd) return null;
 
   return {
     zsd,
-    zys: parseZephyrZysStats(payload),
+    zys: parseZephyrZysStats(payload, nowSec),
   };
 }
 

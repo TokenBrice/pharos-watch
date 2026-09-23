@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.31",
+    title: "Cross-source price provenance and CMC publication trust window",
+    date: "2026-09-23",
+    effectiveAt: 1790163600,
+    summary:
+      "DEX price publication now attributes and confidence-weights a retained pool's cross-source price by the family that actually observed it, with the TVL weight capped at the price row's own claim; and the CoinMarketCap publication trust window now covers the v6.29 calibrated admission windows so a bridged verified quote survives the observation handoff to the next publication.",
+    impact: [
+      "A cg_onchain/gecko_terminal/dexscreener price attached to a trusted dl or direct_api value row is weighted at its own family confidence (0.85x/0.55x) rather than 1.0x and at min(retained TVL, price-row TVL), so a compromised fallback provider can no longer borrow trusted-source median weight; price_sources_json attribution names the observing family, and the auxiliary staged evidence lane still admits only exact direct_api supplemental evidence",
+      "The CoinMarketCap registry entry's maxTrustedAgeSec rises from one hour to 8,400 s: the verified-cache bridge (two fetch cadences plus five-minute grace, 7,500 s) plus one 15-minute publication slot for the :09 staging to :15 publication handoff, so a CMC-only asset no longer stays missing between a rotation-skipped fetch and its next targeted refresh",
+      "Live targeted and category admission (3,900 s), the verified-cache identity guards, observed-timestamp preservation, fallback confidence, and non-depeg-authoritative status are unchanged; CMC remains non-replay-safe, so price_cache replay continuity is unaffected",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.30",
     title: "Coherence-guarded pool admission and fail-closed DEX publication",
     date: "2026-09-23",

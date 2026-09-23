@@ -13,7 +13,7 @@ export const GT_API_BASE = "https://api.geckoterminal.com/api/v2";
 /**
  * Pool-type-adjusted TVL multipliers for liquidity score quality weighting.
  * Values are expert-judgment calibration, not measured slippage; last table
- * change 2026-04-23, last reviewed 2026-08-19 (Liquidity v6 Phase 2).
+ * change 2026-09-23, last reviewed 2026-08-19 (Liquidity v6 Phase 2).
  */
 export const QUALITY_MULTIPLIERS: Record<string, number> = {
   "curve-stableswap-high-a": 1.0,
@@ -37,6 +37,11 @@ export const QUALITY_MULTIPLIERS: Record<string, number> = {
   "velodrome-slipstream-1bp": 1.1,
   "velodrome-slipstream-5bp": 0.85,
   "velodrome-slipstream-30bp": 0.4,
+  // Slipstream fees above 30 bp (reviewed 100 bp tier) stay on the documented
+  // 30bp+ 0.4x policy; without these entries the exact lookup silently fell
+  // through to the generic 0.3x bucket.
+  "aerodrome-slipstream-100bp": 0.4,
+  "velodrome-slipstream-100bp": 0.4,
   "fluid-dex": 0.85,
   "raydium-clmm": 0.85,
   "raydium-amm": 0.4,

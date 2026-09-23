@@ -542,10 +542,15 @@ export async function mergeStagedPools(
       discoveredAt: view.discoveredAt,
       priceUsd: view.price?.priceUsd ?? view.value.priceUsd,
     };
+    // The resolver may pair a trusted value row with a price observed by a
+    // different source (e.g. a remembered dl TVL row plus a fresh cg_onchain
+    // price). That price keeps the value row's family for pool attribution,
+    // but it must never inherit it for price confidence or weight.
+    const crossSourcePrice = view.price != null && view.price.source !== view.value.source;
 
     const entry = buildStagedPoolEntry(stagedPool, nowSec);
     const { dexId, poolType, qualityMultiplier, identity, confidence } = entry;
-    const priceEligible = view.price != null;
+    let priceEligible = view.price != null;
     const normalizedProtocol = normalizeProtocol(stagedPool.protocol || dexId);
     // Preserve the full suffix after the first colon. Orderbook ids and any colon-bearing
     // native ids stay intact. EVM/base58 addresses are colon-free so this is safe.
@@ -575,11 +580,28 @@ export async function mergeStagedPools(
       stagedPool.priceUsd > 0 &&
       !isPlausibleDexObservationPrice(stagedPool.stablecoinId, stagedPool.priceUsd, references)
     ) {
-      skippedCount++;
-      incrementSkipDimension(skipDimensions, "invalid_price", stagedPool);
-      continue;
+      if (crossSourcePrice) {
+        // Only the fallback provider's price failed peg-aware sanity. Drop that
+        // price and keep the independently selected value row instead of letting
+        // one bad observation erase otherwise valid evidence (R8).
+        stagedPool.priceUsd = null;
+        priceEligible = false;
+      } else {
+        skippedCount++;
+        incrementSkipDimension(skipDimensions, "invalid_price", stagedPool);
+        continue;
+      }
     }
-
+    const crossSourcePriceProvenance = crossSourcePrice && priceEligible
+      ? {
+          priceSourceFamily: Object.prototype.hasOwnProperty.call(STAGED_SOURCE_FAMILY, view.price!.source)
+            ? STAGED_SOURCE_FAMILY[view.price!.source]
+            : ("gecko_terminal" as const),
+          ...(view.price!.tvlUsd != null && Number.isFinite(view.price!.tvlUsd)
+            ? { priceEvidenceTvlUsd: view.price!.tvlUsd }
+            : {}),
+        }
+      : undefined;
     if (
       requiresAuthoritativeProtocolConfirmation(
         authoritativeConfirmation,
@@ -712,6 +734,7 @@ export async function mergeStagedPools(
         price: priceEligible ? stagedPool.priceUsd ?? 0 : 0,
         symbol: stagedPool.symbol,
         sourceFamily: "cg_onchain",
+        ...(crossSourcePriceProvenance ?? {}),
         balanceRatio: stagedPool.balanceRatio,
         lockedLiquidityPct: stagedPool.lockedLiqPct,
         feePercentage: stagedPool.feeTier ? stagedPool.feeTier / 100 : null,
@@ -744,6 +767,7 @@ export async function mergeStagedPools(
       sourceFamily: Object.prototype.hasOwnProperty.call(STAGED_SOURCE_FAMILY, stagedPool.source)
         ? STAGED_SOURCE_FAMILY[stagedPool.source]
         : "gecko_terminal",
+      ...(crossSourcePriceProvenance ?? {}),
       ...(evmV2ExecutionCandidate ? { evmV2ExecutionCandidate } : {}),
       ...(stagedPool.source === "cg_tickers"
         ? {
