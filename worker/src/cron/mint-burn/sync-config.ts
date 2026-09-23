@@ -1,5 +1,5 @@
 import type { MintBurnConservationRecord } from "@shared/types/status";
-import { completeMintBurnConservationAudit, getMintBurnConservationEligibility, persistMintBurnConservation, validateMintBurnParsedConservation, verifyPersistedMintBurnConservation, type ConservationBoundaryEvidence } from "../../lib/mint-burn-conservation";
+import { completeMintBurnConservationAudit, conservationOnlyEventDefsFor, getMintBurnConservationEligibility, persistMintBurnConservation, validateMintBurnParsedConservation, verifyPersistedMintBurnConservation, type ConservationBoundaryEvidence, type ConservationLogBatch } from "../../lib/mint-burn-conservation";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { AlchemyLogEntry, AlchemyTopicFilter } from "../../lib/alchemy-logs";
 import { fetchAlchemyLogs, resolveBlockTimestamps } from "../../lib/alchemy-logs";
@@ -204,7 +204,7 @@ async function shouldQuarantineDecodeFailure(
  * Topic filters for one event def's eth_getLogs call. Shared by the config scan and the
  * conservation admission CLI so both build identical production filters.
  */
-export function eventDefTopicFilters(eventDef: MintBurnEventDef): AlchemyTopicFilter[] {
+export function eventDefTopicFilters(eventDef: { topicHash: string; filterTopic?: { index: number; value: string } }): AlchemyTopicFilter[] {
   const topics: AlchemyTopicFilter[] = [{ index: 0, value: eventDef.topicHash }];
   if (eventDef.filterTopic) {
     topics.push({ index: eventDef.filterTopic.index, value: eventDef.filterTopic.value });
@@ -307,6 +307,41 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
     }
   }
 
+  // Sidecar conservation-only events (reviewed alternative laws): fetched in the same scan with
+  // the same fetcher and completeness semantics, but never parsed into rows and never counted as
+  // public flow. Incomplete coverage only downgrades the audit to unavailable.
+  const conservationLogs: ConservationLogBatch[] = [];
+  let conservationCoverageComplete = true;
+  for (const eventDef of conservationOnlyEventDefsFor(config)) {
+    const label = `conservation:${eventDef.signature}`;
+    if (budgetExhausted(configBudget)) {
+      conservationCoverageComplete = false;
+      summary.failedEventDefs.push(`${label}:budget`);
+      continue;
+    }
+    const fetched = await fetchAlchemyLogs(
+      alchemyUrl,
+      eventDef.emitter ?? config.contractAddress,
+      eventDefTopicFilters(eventDef),
+      fromBlock,
+      scanTo,
+      configBudget,
+      signal,
+      deadlineMs != null ? { deadlineMs } : undefined,
+    );
+    if (!fetched) {
+      conservationCoverageComplete = false;
+      summary.failedEventDefs.push(`${label}:fetch-failed`);
+      continue;
+    }
+    if (!fetched.complete) {
+      conservationCoverageComplete = false;
+      summary.failedEventDefs.push(`${label}:partial-coverage`);
+    }
+    if (fetched.logs.length > 0) {
+      conservationLogs.push({ eventDef, logs: fetched.logs });
+    }
+  }
   const timestampRequiredBlocks = [
     ...new Set(allConfigLogs.flatMap(({ eventDef, logs }) =>
       logs
@@ -450,8 +485,8 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
   let conservationAudit: MintBurnConservationRecord | null = null;
   if (getMintBurnConservationEligibility(config).supported) {
     const audit = completeMintBurnConservationAudit({
-      config, logs: allConfigLogs, fromBlock, toBlock: scanTo, checkedAt: Math.floor(Date.now() / 1000),
-      complete: fullEventCoverage, boundary: input.conservationBoundary,
+      config, logs: allConfigLogs, conservationLogs, fromBlock, toBlock: scanTo, checkedAt: Math.floor(Date.now() / 1000),
+      complete: fullEventCoverage && conservationCoverageComplete, boundary: input.conservationBoundary,
     });
     conservationFence = audit.status === "mismatch" || [
       "invalid-rpc-quantity", "unsafe-rpc-quantity", "invalid-raw-log", "inconsistent-log-block-hash",

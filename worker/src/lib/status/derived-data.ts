@@ -423,10 +423,14 @@ export async function getMintBurnReconciliation(
         const record = validateConservationRecord(config, conservationRecords.get(mintBurnConservationCacheKey(config)), now);
         if (record.status !== "ok") return record;
         const snapshot = config.tier === "extended" ? extendedSnapshot : cronSnapshot;
+        // The gate certifies the audited window, not the coin's current sync backlog. The row-level
+        // `coverageStatus` folds in "lagging" (a config's cursor more than coverageLagThresholdBlocks
+        // behind the head merged across both lanes), which the extended lane's budget deferral produces
+        // by design while the deferred config's own audited window was still covered. The record-scoped
+        // clauses below decide the verdict; `coverageStatus` stays published on the row for display.
         const freshScan = snapshot.startedAt != null && snapshot.startedAt <= now
           && now - snapshot.startedAt <= MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC
           && (snapshot.status === "ok" || snapshot.status === "degraded")
-          && (coverageStatus === "full" || coverageStatus === "partial-history")
           && (lastBlocks.get(`${config.chain.chainId}-${config.contractAddress}`) ?? -1) >= record.fromBlock!
           && (snapshot.chainHeads.get(config.chain.chainId) ?? -1) >= record.toBlock!;
         return freshScan ? record : { ...record, status: "unavailable" as const, reason: "A fresh scan covering the audited blocks is required." };
