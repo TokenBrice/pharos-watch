@@ -478,6 +478,15 @@
     },
     {
       "chainId": "ethereum",
+      "stablecoinId": "m-m0",
+      "address": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
+      "decimals": 6,
+      "disposition": "unsupported",
+      "unsupportedReason": "rebasing-supply-without-events",
+      "eventSet": "transfer"
+    },
+    {
+      "chainId": "ethereum",
       "stablecoinId": "meusd-mezo",
       "address": "0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186",
       "decimals": 18,
@@ -529,6 +538,76 @@
       "disposition": "admitted",
       "eventSet": "transfer",
       "invariant": "transfer-supply"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "ousd-origin-protocol",
+      "address": "0x2a8e1e676ec238d8a992307b495b45b3feaa5e86",
+      "decimals": 18,
+      "disposition": "admitted",
+      "eventSet": "transfer",
+      "invariant": "transfer-plus-vault-yield",
+      "conservationOnlyEvents": [
+        {
+          "signature": "YieldDistribution(address,uint256,uint256)",
+          "topicHash": "0x09516ecf4a8a86e59780a9befc6dee948bc9e60a36e3be68d31ea817ee8d2c80",
+          "direction": "mint",
+          "role": "sum",
+          "amountEncoding": "data-minus-data-uint256",
+          "dataSlot": 1,
+          "secondDataSlot": 2,
+          "topicArity": 1,
+          "emitter": "0xe75d77b1865ae93c7eaa3040b038d7aa7bc02f70"
+        },
+        {
+          "signature": "TotalSupplyUpdatedHighres(uint256,uint256,uint256)",
+          "topicHash": "0x41645eb819d3011b13f97696a8109d14bfcddfaca7d063ec0564d62a3e257235",
+          "role": "guard",
+          "topicArity": 1
+        },
+        {
+          "signature": "TotalSupplyUpdated(uint256,uint256,uint256)",
+          "topicHash": "0x99e56f783b536ffacf422d59183ea321dd80dcd6d23daa13023e8afea38c3df1",
+          "role": "guard",
+          "topicArity": 1,
+          "note": "Legacy low-resolution rebase event; any occurrence fails the audit closed (the reviewed law covers the high-resolution implementations only)."
+        },
+        {
+          "signature": "Upgraded(address)",
+          "topicHash": "0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b",
+          "role": "guard",
+          "topicArity": 2
+        },
+        {
+          "signature": "Upgraded(address)",
+          "topicHash": "0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b",
+          "role": "guard",
+          "topicArity": 2,
+          "emitter": "0xe75d77b1865ae93c7eaa3040b038d7aa7bc02f70"
+        }
+      ],
+      "invariantParams": {
+        "boundaryViews": [
+          {
+            "name": "vaultAddress",
+            "address": "0x2a8e1e676ec238d8a992307b495b45b3feaa5e86",
+            "call": {
+              "kind": "eth_call",
+              "selector": "0x430bf08a"
+            },
+            "expect": "0xe75d77b1865ae93c7eaa3040b038d7aa7bc02f70"
+          },
+          {
+            "name": "oToken",
+            "address": "0xe75d77b1865ae93c7eaa3040b038d7aa7bc02f70",
+            "call": {
+              "kind": "eth_call",
+              "selector": "0x1a32aad6"
+            },
+            "expect": "0x2a8e1e676ec238d8a992307b495b45b3feaa5e86"
+          }
+        ]
+      }
     },
     {
       "chainId": "ethereum",
@@ -910,6 +989,61 @@
     },
     {
       "chainId": "ethereum",
+      "stablecoinId": "usdo-openeden",
+      "address": "0x8238884ec9668ef77b90c6dff4d1a9f4f4823bfe",
+      "decimals": 18,
+      "disposition": "admitted",
+      "eventSet": "transfer",
+      "invariant": "usdo-bonus-multiplier-shares",
+      "conservationOnlyEvents": [
+        {
+          "signature": "BonusMultiplier(uint256)",
+          "topicHash": "0x4b7ac0698dfdcfd64b5836a7035abedc13637e97b8be52f30736b0644c669ab0",
+          "role": "guard",
+          "topicArity": 2,
+          "note": "Value is the absolute new multiplier in 1e18 fixed-point units, indexed in topics[1]; data is empty. Consumed by the ordered shares fold, not summed as an amount."
+        },
+        {
+          "signature": "Upgraded(address)",
+          "topicHash": "0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b",
+          "role": "guard",
+          "topicArity": 2,
+          "note": "UUPS upgradeTo/upgradeToAndCall (UPGRADE_ROLE); a window containing an upgrade fails closed unless the new implementation is separately reviewed."
+        }
+      ],
+      "invariantParams": {
+        "supplySelector": "0x3a98ef39",
+        "boundaryViews": [
+          {
+            "name": "bonusMultiplier",
+            "address": "0x8238884ec9668ef77b90c6dff4d1a9f4f4823bfe",
+            "call": {
+              "kind": "eth_call",
+              "selector": "0xa8b973a1"
+            }
+          },
+          {
+            "name": "totalSupply",
+            "address": "0x8238884ec9668ef77b90c6dff4d1a9f4f4823bfe",
+            "call": {
+              "kind": "eth_call",
+              "selector": "0x18160ddd"
+            }
+          },
+          {
+            "name": "implementation",
+            "address": "0x8238884ec9668ef77b90c6dff4d1a9f4f4823bfe",
+            "call": {
+              "kind": "eth_getStorageAt",
+              "slot": "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc"
+            },
+            "expect": "0x87e3ba929c71c0e28fc1c817d107a888a59c523e"
+          }
+        ]
+      }
+    },
+    {
+      "chainId": "ethereum",
       "stablecoinId": "usdp-parallel",
       "address": "0x9b3a8f7cec208e247d97dee13313690977e24459",
       "decimals": 18,
@@ -943,6 +1077,31 @@
       "disposition": "admitted",
       "eventSet": "transfer",
       "invariant": "transfer-supply"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "usdt-tether",
+      "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "decimals": 6,
+      "disposition": "admitted",
+      "eventSet": "config-events",
+      "invariant": "transfer-supply",
+      "conservationOnlyEvents": [
+        {
+          "signature": "DestroyedBlackFunds(address,uint256)",
+          "topicHash": "0x61e6e66b0d6339b2980aecc6ccc0039736791f0ccde9ed512e789a7fbdd698c6",
+          "direction": "burn",
+          "role": "sum",
+          "amountEncoding": "nth-data-uint256",
+          "dataSlot": 1,
+          "topicArity": 1,
+          "counterpartyEncoding": {
+            "source": "data",
+            "slot": 0
+          }
+        }
+      ],
+      "requiresNotDeprecated": true
     },
     {
       "chainId": "ethereum",

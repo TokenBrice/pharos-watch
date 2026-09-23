@@ -5172,6 +5172,73 @@
     },
     {
       "chainId": "ethereum",
+      "stablecoinId": "m-m0",
+      "address": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
+      "decimals": 6,
+      "disposition": "unsupported",
+      "unsupportedReason": "rebasing-supply-without-events",
+      "eventSet": "transfer",
+      "identity": {
+        "explorerSourceUrl": "https://eth.blockscout.com/address/0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b?tab=contract",
+        "sourceVerified": true,
+        "contractName": "MToken",
+        "compiler": "v0.8.23+commit.f704f362",
+        "proxy": {
+          "isProxy": false,
+          "kind": "none",
+          "implementation": null,
+          "implementationSourceVerified": true
+        },
+        "onChain": {
+          "block": 26035985,
+          "blockHash": "0xc89c33d4e01809328448d529c9b0d8260b51b113ba1d6b24e2d4ba31ee658d14",
+          "decimals": 6,
+          "symbol": "M",
+          "totalSupplyRaw": "195689777666111",
+          "hasCode": true
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "mint(address,uint256)",
+          "emitsZeroTransfer": true,
+          "sameAmount": false,
+          "note": "MToken.sol L236-265; non-earning recipients add exactly amt to totalNonEarningSupply, earning recipients add floor(amt*1e12/index) principal — per-op dust makes the Transfer amount inexact for supply."
+        },
+        {
+          "function": "burn(address,uint256)",
+          "emitsZeroTransfer": true,
+          "sameAmount": false,
+          "note": "MToken.sol L217-229; earning burns subtract ceil(amt*1e12/index) principal."
+        }
+      ],
+      "unpairedPaths": [
+        {
+          "function": "startEarning()",
+          "reason": "StartedEarning(address) carries no amount; moves the account's whole balance between the non-earning and principal buckets (N -= rawBalance, P += floor(raw*1e12/i)) with no Transfer event."
+        },
+        {
+          "function": "stopEarning()/stopEarning(address)",
+          "reason": "StoppedEarning(address) carries no amount; moves floor(p*i/1e12) from P into N with no Transfer event."
+        },
+        {
+          "function": "updateIndex()",
+          "reason": "Continuous index accrual: totalSupply() = N + floor(P*currentIndex()/1e12) grows with block.timestamp between IndexUpdated snapshots with zero events."
+        }
+      ],
+      "totalSupplyView": {
+        "isStoredSum": false,
+        "note": "totalSupply() is computed from shares x index (MToken.sol L132-141): N + floor(P*currentIndex()/1e12); currentIndex() is a pure function of wall-clock time since the last updateIndex()."
+      },
+      "zeroRecipientTransferReverts": true,
+      "identityIssue": null,
+      "notes": "No exact windowed event-sum invariant exists (exactInvariantFound: false, P6 report): plain-law residual over two disjoint 24h windows is 16,723,486,234 and 16,593,385,346 base units from time accrual with zero events, plus unbounded start/stopEarning bucket moves whose events carry no amounts. A zero-residual identity exists only as a seeded per-account state fold (boundary views for every account in the window logs plus index state), which is not the conservation producer's shape; per plan P6 stop condition no tolerance is admitted. The wrapper wm-m0 is a separate wave-A1 identity. Evidence: agents/2026-09-22-mint-burn-conservation-expansion/admission/p6-m-m0/ (REPORT.md, invariant.json, artifact-rehearsal.json, rehearse.mjs).",
+      "windows": [],
+      "reviewedAt": "2026-09-23",
+      "reviewer": "P56Invariants"
+    },
+    {
+      "chainId": "ethereum",
       "stablecoinId": "meusd-mezo",
       "address": "0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186",
       "decimals": 18,
@@ -5740,6 +5807,183 @@
       ],
       "reviewedAt": "2026-09-22",
       "reviewer": "SemA33"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "ousd-origin-protocol",
+      "address": "0x2a8e1e676ec238d8a992307b495b45b3feaa5e86",
+      "decimals": 18,
+      "disposition": "admitted",
+      "unsupportedReason": null,
+      "eventSet": "transfer",
+      "invariant": "transfer-plus-vault-yield",
+      "conservationOnlyEvents": [
+        {
+          "signature": "YieldDistribution(address,uint256,uint256)",
+          "topicHash": "0x09516ecf4a8a86e59780a9befc6dee948bc9e60a36e3be68d31ea817ee8d2c80",
+          "direction": "mint",
+          "role": "sum",
+          "amountEncoding": "data-minus-data-uint256",
+          "dataSlot": 1,
+          "secondDataSlot": 2,
+          "topicArity": 1,
+          "emitter": "0xe75d77b1865ae93c7eaa3040b038d7aa7bc02f70"
+        },
+        {
+          "signature": "TotalSupplyUpdatedHighres(uint256,uint256,uint256)",
+          "topicHash": "0x41645eb819d3011b13f97696a8109d14bfcddfaca7d063ec0564d62a3e257235",
+          "role": "guard",
+          "topicArity": 1
+        },
+        {
+          "signature": "TotalSupplyUpdated(uint256,uint256,uint256)",
+          "topicHash": "0x99e56f783b536ffacf422d59183ea321dd80dcd6d23daa13023e8afea38c3df1",
+          "role": "guard",
+          "topicArity": 1,
+          "note": "Legacy low-resolution rebase event; any occurrence fails the audit closed (the reviewed law covers the high-resolution implementations only)."
+        },
+        {
+          "signature": "Upgraded(address)",
+          "topicHash": "0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b",
+          "role": "guard",
+          "topicArity": 2
+        },
+        {
+          "signature": "Upgraded(address)",
+          "topicHash": "0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b",
+          "role": "guard",
+          "topicArity": 2,
+          "emitter": "0xe75d77b1865ae93c7eaa3040b038d7aa7bc02f70"
+        }
+      ],
+      "invariantParams": {
+        "boundaryViews": [
+          {
+            "name": "vaultAddress",
+            "address": "0x2a8e1e676ec238d8a992307b495b45b3feaa5e86",
+            "call": {
+              "kind": "eth_call",
+              "selector": "0x430bf08a"
+            },
+            "expect": "0xe75d77b1865ae93c7eaa3040b038d7aa7bc02f70"
+          },
+          {
+            "name": "oToken",
+            "address": "0xe75d77b1865ae93c7eaa3040b038d7aa7bc02f70",
+            "call": {
+              "kind": "eth_call",
+              "selector": "0x1a32aad6"
+            },
+            "expect": "0x2a8e1e676ec238d8a992307b495b45b3feaa5e86"
+          }
+        ]
+      },
+      "identity": {
+        "explorerSourceUrl": "https://eth.blockscout.com/address/0x2a8e1e676ec238d8a992307b495b45b3feaa5e86?tab=contract",
+        "sourceVerified": true,
+        "contractName": "InitializeGovernedUpgradeabilityProxy",
+        "compiler": "v0.5.11",
+        "proxy": {
+          "isProxy": true,
+          "kind": "custom (governor-controlled upgradeability; EIP-1967 admin slot zero because governance uses separate custom storage)",
+          "implementation": "0xa7b7c59a1705e4a624ea8a4ad8a06f9de22dcc33",
+          "implementationName": "OUSD",
+          "implementationSourceVerified": true,
+          "implementationCompiler": "v0.8.28"
+        },
+        "vault": {
+          "proxyAddress": "0xe75d77b1865ae93c7eaa3040b038d7aa7bc02f70",
+          "proxySourceVerified": true,
+          "proxyName": "VaultProxy",
+          "implementation": "0x82948060c4b72684bededec342350ab344975145",
+          "implementationSourceVerified": true,
+          "implementationName": "OUSDVault (VaultCore)"
+        },
+        "externalMatches": [
+          {
+            "source": "coingecko",
+            "geckoId": "origin-dollar",
+            "value": "0x2a8e1e676ec238d8a992307b495b45b3feaa5e86",
+            "matches": true,
+            "decimalPlace": 18
+          }
+        ],
+        "onChain": {
+          "block": 26035968,
+          "blockHash": "0xba6ce8f31811af6bcc673d9d768014392e6eae34c3be16de461590f4df918b98",
+          "decimals": 18,
+          "symbol": "OUSD",
+          "totalSupplyRaw": "6144569966301286844472217",
+          "hasCode": true,
+          "vaultAddress": "0xe75d77b1865ae93c7eaa3040b038d7aa7bc02f70",
+          "vaultOToken": "0x2a8e1e676ec238d8a992307b495b45b3feaa5e86"
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "mint(address,uint256)",
+          "internal": "totalSupply += _amount",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "OUSD.sol L414-428, only the configured vault; emits Transfer(0, account, _amount). A zero-amount mint contributes zero."
+        },
+        {
+          "function": "burn(address,uint256)",
+          "internal": "totalSupply -= _amount",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "OUSD.sol L434-450, only the vault; zero amount returns without a log."
+        },
+        {
+          "function": "changeSupply(uint256)",
+          "internal": "totalSupply = min(_newTotalSupply, uint128.max)",
+          "emitsZeroTransfer": false,
+          "sameAmount": false,
+          "accountedByInvariant": true,
+          "note": "OUSD.sol L597-628, only the vault; emits TotalSupplyUpdatedHighres and no zero-address Transfer. The vault's _rebase (VaultCore L431-467) is the only caller in the reviewed implementation: it emits YieldDistribution(trustee, yield, fee) first, mints the fee (counted as a Transfer), then calls changeSupply(supply+yield). The rebase's non-Transfer contribution is exactly yield − fee, summed from the vault's emitted already-rounded event words (yield slot 1 minus fee slot 2; reviewed guard yield > fee)."
+        }
+      ],
+      "unpairedPaths": [],
+      "totalSupplyView": {
+        "isStoredSum": true,
+        "note": "uint256 public totalSupply (OUSD.sol L72); the getter returns the stored integer, not a credits quotient. changeSupply assigns min(new, uint128.max); a TotalSupplyUpdatedHighres.newSupply equal to uint128.max means the requested supply was clamped, and the audit fails closed as rebase-supply-saturation for such a window instead of asserting the additive law."
+      },
+      "zeroRecipientTransferReverts": true,
+      "zeroRecipientTransferBurns": null,
+      "identityIssue": null,
+      "notes": "Exact additive law: totalSupply(to) − totalSupply(from) = Σ zero-address Transfer mints − burns + Σ(YieldDistribution.yield − fee), events in (from,to]. Two 7200-block rehearsals with two rebases each have BigInt residual 0; deleting any of the four actual fee-mint Transfer logs produces the exact nonzero cross-contract residual the checkpoint-reset alternative masks (P6 report). Guards: mutual token↔vault identity pinned by vaultAddress()/oToken() at both boundaries; every YieldDistribution must pair with a later TotalSupplyUpdatedHighres in the same transaction; newSupply == uint128.max fails closed as rebase-supply-saturation; legacy TotalSupplyUpdated and proxy Upgraded events fail closed. Fee Transfer is counted once (in Transfers), so only yield − fee is added. Evidence: agents/2026-09-22-mint-burn-conservation-expansion/admission/p6-ousd-origin-protocol/ (REPORT.md, invariant.json, rehearsal.json, rpc-journal.json) and p56-identity/probe-result.json.",
+      "windows": [
+        {
+          "fromBlock": 26028858,
+          "fromBlockHash": "0x232554cd538da3e671150e4f8e3038a3282236becc7ddb70cbe7120da6bf40ba",
+          "fromTimestamp": 1790029703,
+          "toBlock": 26036009,
+          "toBlockHash": "0xfa50a659824fc4442c4bafa142a42d4fb14fcb4ca73693d3cdf6df69902a1f14",
+          "toTimestamp": 1790116103,
+          "mintRaw": "1171681003948971154450",
+          "burnRaw": "25842170000000000000000",
+          "supplyDeltaRaw": "-24670488996051028845550",
+          "residualRaw": "0",
+          "logCount": 8,
+          "journalSha256": "3bfc36b48ca33c29815148f0df558b1d10b02518824677172ebd2d3ed982e186"
+        },
+        {
+          "fromBlock": 26021714,
+          "fromBlockHash": "0x9ede749535344f1a2e301896aefc6218cc107e51b8a162b31d19dda843744157",
+          "fromTimestamp": 1789943303,
+          "toBlock": 26028858,
+          "toBlockHash": "0x232554cd538da3e671150e4f8e3038a3282236becc7ddb70cbe7120da6bf40ba",
+          "toTimestamp": 1790029703,
+          "mintRaw": "1166886502321090290023",
+          "burnRaw": "0",
+          "supplyDeltaRaw": "1166886502321090290023",
+          "residualRaw": "0",
+          "logCount": 4,
+          "journalSha256": "3bfc36b48ca33c29815148f0df558b1d10b02518824677172ebd2d3ed982e186"
+        }
+      ],
+      "reviewedAt": "2026-09-23",
+      "reviewer": "P56Invariants"
     },
     {
       "chainId": "ethereum",
@@ -9773,6 +10017,158 @@
     },
     {
       "chainId": "ethereum",
+      "stablecoinId": "usdo-openeden",
+      "address": "0x8238884ec9668ef77b90c6dff4d1a9f4f4823bfe",
+      "decimals": 18,
+      "disposition": "admitted",
+      "unsupportedReason": null,
+      "eventSet": "transfer",
+      "invariant": "usdo-bonus-multiplier-shares",
+      "conservationOnlyEvents": [
+        {
+          "signature": "BonusMultiplier(uint256)",
+          "topicHash": "0x4b7ac0698dfdcfd64b5836a7035abedc13637e97b8be52f30736b0644c669ab0",
+          "role": "guard",
+          "topicArity": 2,
+          "note": "Value is the absolute new multiplier in 1e18 fixed-point units, indexed in topics[1]; data is empty. Consumed by the ordered shares fold, not summed as an amount."
+        },
+        {
+          "signature": "Upgraded(address)",
+          "topicHash": "0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b",
+          "role": "guard",
+          "topicArity": 2,
+          "note": "UUPS upgradeTo/upgradeToAndCall (UPGRADE_ROLE); a window containing an upgrade fails closed unless the new implementation is separately reviewed."
+        }
+      ],
+      "invariantParams": {
+        "supplySelector": "0x3a98ef39",
+        "boundaryViews": [
+          {
+            "name": "bonusMultiplier",
+            "address": "0x8238884ec9668ef77b90c6dff4d1a9f4f4823bfe",
+            "call": {
+              "kind": "eth_call",
+              "selector": "0xa8b973a1"
+            }
+          },
+          {
+            "name": "totalSupply",
+            "address": "0x8238884ec9668ef77b90c6dff4d1a9f4f4823bfe",
+            "call": {
+              "kind": "eth_call",
+              "selector": "0x18160ddd"
+            }
+          },
+          {
+            "name": "implementation",
+            "address": "0x8238884ec9668ef77b90c6dff4d1a9f4f4823bfe",
+            "call": {
+              "kind": "eth_getStorageAt",
+              "slot": "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc"
+            },
+            "expect": "0x87e3ba929c71c0e28fc1c817d107a888a59c523e"
+          }
+        ]
+      },
+      "identity": {
+        "explorerSourceUrl": "https://eth.blockscout.com/address/0x8238884ec9668ef77b90c6dff4d1a9f4f4823bfe?tab=contract",
+        "sourceVerified": true,
+        "contractName": "ERC1967Proxy",
+        "proxy": {
+          "isProxy": true,
+          "kind": "eip1967",
+          "implementation": "0x87e3ba929c71c0e28fc1c817d107a888a59c523e",
+          "implementationName": "USDO",
+          "implementationSourceVerified": true,
+          "implementationCompiler": "v0.8.18+commit.87f61d96"
+        },
+        "externalMatches": [
+          {
+            "source": "coingecko",
+            "geckoId": "openeden-open-dollar",
+            "value": "0x8238884ec9668ef77b90c6dff4d1a9f4f4823bfe",
+            "matches": true,
+            "decimalPlace": 18
+          }
+        ],
+        "onChain": {
+          "block": 26035968,
+          "blockHash": "0xba6ce8f31811af6bcc673d9d768014392e6eae34c3be16de461590f4df918b98",
+          "decimals": 18,
+          "symbol": "USDO",
+          "totalSupplyRaw": "14376908149474724323875351",
+          "hasCode": true,
+          "eip1967ImplementationSlot": "0x87e3ba929c71c0e28fc1c817d107a888a59c523e"
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "mint(address,uint256)",
+          "internal": "_totalShares += floor(amount*1e18/bonusMultiplier)",
+          "emitsZeroTransfer": true,
+          "sameAmount": false,
+          "note": "USDO.sol L227-255, MINTER_ROLE; the emitted Transfer(0,to,amount) and Mint(to,amount) carry the original ASSET amount, while the share delta is floor(amount*1e18/M) at the multiplier effective at the event. The audited units are raw shares; the Mint event is a redundant observation and is never summed in addition to the Transfer."
+        },
+        {
+          "function": "burn(address,uint256)",
+          "internal": "_totalShares -= floor(amount*1e18/bonusMultiplier)",
+          "emitsZeroTransfer": true,
+          "sameAmount": false,
+          "note": "USDO.sol L271-303, BURNER_ROLE; same asset-vs-share distinction. A sub-share input may convert to zero shares — exactly captured by floor conversion."
+        },
+        {
+          "function": "_updateBonusMultiplier(uint256)",
+          "internal": "bonusMultiplier = newM (>= 1e18)",
+          "emitsZeroTransfer": false,
+          "sameAmount": false,
+          "accountedByInvariant": true,
+          "note": "USDO.sol L490-520 via updateBonusMultiplier (DEFAULT_ADMIN_ROLE, may decrease while >= 1e18) and addBonusMultiplier (MULTIPLIER_ROLE, strictly positive increment); emits BonusMultiplier(newM) with the absolute new value indexed in topics[1]. Replaces the fold multiplier before subsequent events in (blockNumber, logIndex) order."
+        }
+      ],
+      "unpairedPaths": [],
+      "totalSupplyView": {
+        "isStoredSum": false,
+        "note": "totalSupply() = convertToTokens(_totalShares) = floor(totalShares*bonusMultiplier/1e18) (USDO.sol L186-188) — computed, not stored. The audited supply view is totalShares() (0x3a98ef39), the stored uint256 sum whose only writers are _mint L235 and _burn L288; invariantParams.supplySelector pins that read. The floor(S*M/1e18) == totalSupply() identity is checked at both boundaries, and ordinary _transfer moves equal shares between accounts (L375-387) without changing the total."
+      },
+      "zeroRecipientTransferReverts": true,
+      "zeroRecipientTransferBurns": null,
+      "identityIssue": null,
+      "notes": "Exact stateful integer invariant in raw shares: seed M from the pinned opening bonusMultiplier, replace M with every BonusMultiplier value in (blockNumber, logIndex) order, convert each zero-address Transfer amount A to q = floor(A*1e18/M_at_event); then totalShares(to) − totalShares(from) == Σq_mint − Σq_burn exactly. The replayed multiplier must equal the pinned closing view, and floor(S*M/1e18) must equal totalSupply() at both boundaries; record arithmetic fields (mintRaw, burnRaw, supplyDeltaRaw, residualRaw) are raw shares (units raw-shares). Two eventful 7200-block rehearsals (real mint + six burns + two rebases) have zero share, supply and multiplier residuals, while the plain Transfer law fails by the rebase and rounding dust (P6 report). No continuous accrual or timestamp term exists. Evidence: agents/2026-09-22-mint-burn-conservation-expansion/admission/p6-usdo-openeden/ (REPORT.md, invariant.json, rehearsal.json, rpc-journal.json) and p56-identity/probe-result.json.",
+      "windows": [
+        {
+          "fromBlock": 26028860,
+          "fromBlockHash": "0xea587516f942e167c951cf5e9494b3db678457009db4ffc679e964fa52b0d5e8",
+          "fromTimestamp": 1790029727,
+          "toBlock": 26036011,
+          "toBlockHash": "0xaeae9001613882d0d0cdf9cb2acfe6e7ee30559dec43f37953ad17d63f46711c",
+          "toTimestamp": 1790116127,
+          "mintRaw": "0",
+          "burnRaw": "0",
+          "supplyDeltaRaw": "0",
+          "residualRaw": "0",
+          "logCount": 0,
+          "journalSha256": "64cccc5cdd25bf57b76000d4fe1a7b1f15e2a08ee72d9792ff493ecce64956db"
+        },
+        {
+          "fromBlock": 26021716,
+          "fromBlockHash": "0x7b703bfa68d8037d86fa903eedeb383eb3dc097599fb4bef0dedc487f8299bb9",
+          "fromTimestamp": 1789943327,
+          "toBlock": 26028860,
+          "toBlockHash": "0xea587516f942e167c951cf5e9494b3db678457009db4ffc679e964fa52b0d5e8",
+          "toTimestamp": 1790029727,
+          "mintRaw": "0",
+          "burnRaw": "471031945728039883094262",
+          "supplyDeltaRaw": "-471031945728039883094262",
+          "residualRaw": "0",
+          "logCount": 2,
+          "journalSha256": "64cccc5cdd25bf57b76000d4fe1a7b1f15e2a08ee72d9792ff493ecce64956db"
+        }
+      ],
+      "reviewedAt": "2026-09-23",
+      "reviewer": "P56Invariants"
+    },
+    {
+      "chainId": "ethereum",
       "stablecoinId": "usdp-parallel",
       "address": "0x9b3a8f7cec208e247d97dee13313690977e24459",
       "decimals": 18,
@@ -10189,6 +10585,125 @@
       ],
       "reviewedAt": "2026-09-22",
       "reviewer": "SemExisting1"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "usdt-tether",
+      "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "decimals": 6,
+      "disposition": "admitted",
+      "unsupportedReason": null,
+      "eventSet": "config-events",
+      "invariant": "transfer-supply",
+      "conservationOnlyEvents": [
+        {
+          "signature": "DestroyedBlackFunds(address,uint256)",
+          "topicHash": "0x61e6e66b0d6339b2980aecc6ccc0039736791f0ccde9ed512e789a7fbdd698c6",
+          "direction": "burn",
+          "role": "sum",
+          "amountEncoding": "nth-data-uint256",
+          "dataSlot": 1,
+          "topicArity": 1,
+          "counterpartyEncoding": {
+            "source": "data",
+            "slot": 0
+          }
+        }
+      ],
+      "requiresNotDeprecated": true,
+      "identity": {
+        "explorerSourceUrl": "https://eth.blockscout.com/address/0xdac17f958d2ee523a2206206994597c13d831ec7?tab=contract",
+        "sourceVerified": true,
+        "contractName": "TetherToken",
+        "compiler": "v0.4.18+commit.9cf6e910",
+        "proxy": {
+          "isProxy": false,
+          "kind": "none",
+          "implementation": null,
+          "implementationSourceVerified": true
+        },
+        "externalMatches": [
+          {
+            "source": "coingecko",
+            "geckoId": "tether",
+            "value": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+            "matches": true,
+            "decimalPlace": 6
+          }
+        ],
+        "onChain": {
+          "block": 26035968,
+          "blockHash": "0xba6ce8f31811af6bcc673d9d768014392e6eae34c3be16de461590f4df918b98",
+          "decimals": 6,
+          "symbol": "USDT",
+          "totalSupplyRaw": "88304342264551152",
+          "hasCode": true
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "issue(uint256)",
+          "internal": "_totalSupply += amount",
+          "emitsZeroTransfer": false,
+          "sameAmount": true,
+          "note": "TetherToken.sol L402-409, onlyOwner; balances[owner] += amount; emits Issue(amount) only. Paired with the config's Issue mint def."
+        },
+        {
+          "function": "redeem(uint256)",
+          "internal": "_totalSupply -= amount",
+          "emitsZeroTransfer": false,
+          "sameAmount": true,
+          "note": "TetherToken.sol L416-423, onlyOwner; emits Redeem(amount) only. Paired with the config's Redeem burn def."
+        },
+        {
+          "function": "destroyBlackFunds(address)",
+          "internal": "_totalSupply -= dirtyFunds",
+          "emitsZeroTransfer": false,
+          "sameAmount": true,
+          "note": "BlackList mixin L287-293, onlyOwner; balances[user] = 0; emits DestroyedBlackFunds(user, dirtyFunds) only. Paired with the sidecar conservationOnlyEvents burn def (non-indexed: topics.length 1, amount data slot 1; can fire with amount 0 — a zero balance contributes 0)."
+        }
+      ],
+      "unpairedPaths": [],
+      "totalSupplyView": {
+        "isStoredSum": true,
+        "note": "TetherToken.totalSupply() returns the stored _totalSupply (ERC20Basic L78/L390-396) unless deprecated, in which case it forwards to StandardToken(upgradedAddress).totalSupply(). The deprecated() guard (0x0e136b19, both boundary hashes) fails the audit closed as deprecated-upgrade-forwarding; deprecate() has never been called on-chain (0 Deprecate events over full history)."
+      },
+      "zeroRecipientTransferReverts": false,
+      "zeroRecipientTransferBurns": false,
+      "identityIssue": null,
+      "notes": "Exact conservation over the custom event set {Issue mint, Redeem burn, DestroyedBlackFunds burn}: genesis + ΣIssue − ΣRedeem − ΣDestroyed == totalSupply over full history (233/14/1278 events to block 26035745, exact to the unit; P5 report §5) and in four 7200-block rehearsals including a DestroyedBlackFunds window (residual 0 with the event, +1642752780747 without). Transfer events are NOT conservation events: 6582 Transfer(x, address(0), v) exist with no supply change (no recipient check in the 0.4.x source) and zero Transfer(address(0), x, v) — hence eventSet config-events and the plain transfer law's zero-address-transfer-without-supply-change:transfer/:transferFrom findings. Deprecate(address) is never emitted and not summed. Evidence: agents/2026-09-22-mint-burn-conservation-expansion/admission/p5-usdt/ (REPORT.md, proposed-events.json, journal.jsonl) and p56-identity/probe-result.json.",
+      "windows": [
+        {
+          "fromBlock": 26028857,
+          "fromBlockHash": "0x02d9851d21a99c4d0a79049252b1ded42a8165da52ad01673410b953541c0874",
+          "fromTimestamp": 1790029691,
+          "toBlock": 26036008,
+          "toBlockHash": "0xace0804f2d9d6059ce45ab1f0c9a3244bf0e6142d98341d5c9b707f530b8737c",
+          "toTimestamp": 1790116091,
+          "mintRaw": "0",
+          "burnRaw": "0",
+          "supplyDeltaRaw": "0",
+          "residualRaw": "0",
+          "logCount": 0,
+          "journalSha256": "69441ccece51304c5931c0326a888d6e912af0cc16cb22fc112bd57c7cf4a138"
+        },
+        {
+          "fromBlock": 26021713,
+          "fromBlockHash": "0x6a9fba02707d057f492a501d750ed8843932f3fd4d178a51581d44496e1b162f",
+          "fromTimestamp": 1789943291,
+          "toBlock": 26028857,
+          "toBlockHash": "0x02d9851d21a99c4d0a79049252b1ded42a8165da52ad01673410b953541c0874",
+          "toTimestamp": 1790029691,
+          "mintRaw": "0",
+          "burnRaw": "0",
+          "supplyDeltaRaw": "0",
+          "residualRaw": "0",
+          "logCount": 0,
+          "journalSha256": "69441ccece51304c5931c0326a888d6e912af0cc16cb22fc112bd57c7cf4a138"
+        }
+      ],
+      "reviewedAt": "2026-09-23",
+      "reviewer": "P56Invariants"
     },
     {
       "chainId": "ethereum",

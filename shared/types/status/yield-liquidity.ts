@@ -317,6 +317,7 @@ export const MintBurnConservationRecordSchema = z.object({
   supplyDeltaRaw: ConservationSignedRawSchema.optional(),
   residualRaw: ConservationSignedRawSchema.optional(),
   logCount: ConservationBlockSchema.optional(),
+  units: z.string().max(32).optional(),
 });
 export type MintBurnConservationRecord = z.output<typeof MintBurnConservationRecordSchema>;
 

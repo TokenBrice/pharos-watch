@@ -36,13 +36,13 @@ import { fetchEvmRpcBatchDetailed } from "../src/lib/evm-rpc";
 import {
   completeMintBurnConservationAudit,
   fetchConservationBoundaries,
-  resolveMintBurnConservationEligibility,
   reviewedConservationIdentityKey,
   validateReviewedConservationEntry,
   type ConservationBoundaryRequest,
-  type MintBurnConservationEligibilityResolver,
+  type ConservationLogBatch,
   type ReviewedConservationEntry,
   type ReviewedConservationIdentity,
+  type MintBurnConservationLawResolver,
   type ReviewedConservationWindow,
 } from "../src/lib/mint-burn-conservation";
 
@@ -127,6 +127,9 @@ interface SemanticReview {
   notes: string | null;
   reviewedAt: string;
   reviewer: string;
+  conservationOnlyEvents?: unknown;
+  requiresNotDeprecated?: unknown;
+  invariantParams?: unknown;
 }
 
 interface ConfigAudit {
@@ -266,8 +269,21 @@ function parseSemanticReview(path: string, config: MintBurnContractConfig): Sema
     `semantic file ${path} has malformed supplyPaths`);
   assertCliUsage(review.unpairedPaths === undefined || Array.isArray(review.unpairedPaths),
     `semantic file ${path} has malformed unpairedPaths`);
+  assertCliUsage(review.conservationOnlyEvents === undefined || Array.isArray(review.conservationOnlyEvents),
+    `semantic file ${path} has malformed conservationOnlyEvents`);
+  assertCliUsage(review.requiresNotDeprecated === undefined || typeof review.requiresNotDeprecated === "boolean",
+    `semantic file ${path} has malformed requiresNotDeprecated`);
+  assertCliUsage(review.invariantParams === undefined || (typeof review.invariantParams === "object" && review.invariantParams !== null),
+    `semantic file ${path} has malformed invariantParams`);
   return review;
 }
+// Semantic verdict -> reviewed conservation law. One authority: the verdict names the law.
+const VERDICT_LAWS: Readonly<Record<string, { eventSet: "transfer" | "config-events"; invariant: string }>> = {
+  "standard-transfer": { eventSet: "transfer", invariant: "transfer-supply" },
+  "config-events": { eventSet: "config-events", invariant: "transfer-supply" },
+  "transfer-plus-vault-yield": { eventSet: "transfer", invariant: "transfer-plus-vault-yield" },
+  "usdo-bonus-multiplier-shares": { eventSet: "transfer", invariant: "usdo-bonus-multiplier-shares" },
+};
 
 function candidateEntryFor(review: SemanticReview | undefined, config: MintBurnContractConfig): ReviewedConservationEntry {
   const base = { chainId: config.chain.chainId, stablecoinId: config.stablecoinId,
@@ -279,7 +295,12 @@ function candidateEntryFor(review: SemanticReview | undefined, config: MintBurnC
     (review.identity?.sourceVerified === false || review.identity?.proxy?.implementationSourceVerified === false)) {
     return { ...base, disposition: "unsupported", unsupportedReason: "unverified-implementation-source", eventSet: "transfer" };
   }
-  return { ...base, disposition: "admitted", unsupportedReason: null, eventSet: "transfer" };
+  const law = review != null ? VERDICT_LAWS[review.semanticVerdict] : undefined;
+  return { ...base, disposition: "admitted", unsupportedReason: null,
+    eventSet: law?.eventSet ?? "transfer", invariant: law?.invariant ?? "transfer-supply",
+    ...(Array.isArray(review?.conservationOnlyEvents) ? { conservationOnlyEvents: review!.conservationOnlyEvents as ReviewedConservationEntry["conservationOnlyEvents"] } : {}),
+    ...(review?.requiresNotDeprecated !== undefined ? { requiresNotDeprecated: review.requiresNotDeprecated as boolean } : {}),
+    ...(review?.invariantParams != null && typeof review.invariantParams === "object" ? { invariantParams: review.invariantParams as ReviewedConservationEntry["invariantParams"] } : {}) };
 }
 
 function sidecarWindowFromRecord(record: MintBurnConservationRecord, journalSha256: string): ReviewedConservationWindow {
@@ -325,6 +346,7 @@ function writeSummary(outDir: string, audits: readonly ConfigAudit[]): void {
 
 function buildSidecarEntry(review: SemanticReview, config: MintBurnContractConfig, disposition: "admitted" | "unsupported",
   windows: ReviewedConservationWindow[]): ReviewedConservationEntry {
+  const law = disposition === "admitted" ? VERDICT_LAWS[review.semanticVerdict] : undefined;
   const entry: ReviewedConservationEntry = {
     chainId: config.chain.chainId,
     stablecoinId: config.stablecoinId,
@@ -332,8 +354,11 @@ function buildSidecarEntry(review: SemanticReview, config: MintBurnContractConfi
     decimals: config.decimals,
     disposition,
     unsupportedReason: disposition === "unsupported" ? review.unsupportedReason : null,
-    eventSet: "transfer",
-    invariant: "transfer-supply",
+    eventSet: law?.eventSet ?? "transfer",
+    invariant: law?.invariant ?? "transfer-supply",
+    ...(Array.isArray(review.conservationOnlyEvents) ? { conservationOnlyEvents: review.conservationOnlyEvents as ReviewedConservationEntry["conservationOnlyEvents"] } : {}),
+    ...(typeof review.requiresNotDeprecated === "boolean" ? { requiresNotDeprecated: review.requiresNotDeprecated } : {}),
+    ...(review.invariantParams != null && typeof review.invariantParams === "object" ? { invariantParams: review.invariantParams as ReviewedConservationEntry["invariantParams"] } : {}),
     identity: review.identity,
     supplyPaths: Array.isArray(review.supplyPaths) ? review.supplyPaths : [],
     unpairedPaths: Array.isArray(review.unpairedPaths) ? review.unpairedPaths : [],
@@ -445,10 +470,9 @@ async function runAdmissionAuditCli(argv: readonly string[]): Promise<void> {
     }
   }
   // Candidate identities are audited through the same production gate shape the committed
-  // sidecar will apply once merged; only the entry source differs.
-  const eligibility: MintBurnConservationEligibilityResolver = (config) => resolveMintBurnConservationEligibility(
-    candidateEntryFor(reviews.get(reviewedConservationIdentityKey(config.chain.chainId, config.stablecoinId, config.contractAddress, config.decimals)), config),
-    config);
+  // sidecar will apply once merged; only the law source differs.
+  const lawFor: MintBurnConservationLawResolver = (config) =>
+    candidateEntryFor(reviews.get(reviewedConservationIdentityKey(config.chain.chainId, config.stablecoinId, config.contractAddress, config.decimals)), config);
 
   const exchanges: JournalExchange[] = [];
   let replayHeader: JournalRunHeader | null = null;
@@ -520,13 +544,14 @@ async function runAdmissionAuditCli(argv: readonly string[]): Promise<void> {
       boundaryRequests.push({ key: boundaryKey(config, window), config, fromBlock: window.fromBlock, toBlock: window.toBlock });
     }
   }
-  const boundaries = await fetchConservationBoundaries({ requests: boundaryRequests, rpcUrlByChain, budget, checkedAt, eligibility });
+  const boundaries = await fetchConservationBoundaries({ requests: boundaryRequests, rpcUrlByChain, budget, checkedAt, lawFor });
 
   const audits: ConfigAudit[] = [];
   for (const config of configs) {
     const rpcUrl = rpcUrlByChain.get(config.chain.chainId)!;
     for (const window of windowsOf(config)) {
       const batches: Array<{ eventDef: MintBurnEventDef; logs: AlchemyLogEntry[] }> = [];
+      const conservationBatches: ConservationLogBatch[] = [];
       let complete = true;
       for (const eventDef of config.events) {
         const fetched = await fetchAlchemyLogs(rpcUrl, config.contractAddress, eventDefTopicFilters(eventDef),
@@ -534,12 +559,18 @@ async function runAdmissionAuditCli(argv: readonly string[]): Promise<void> {
         if (!fetched || !fetched.complete || fetched.scannedToBlock < window.toBlock) complete = false;
         if (fetched) batches.push({ eventDef, logs: fetched.logs });
       }
+      for (const eventDef of lawFor(config)?.conservationOnlyEvents ?? []) {
+        const fetched = await fetchAlchemyLogs(rpcUrl, eventDef.emitter ?? config.contractAddress,
+          eventDefTopicFilters(eventDef), window.fromBlock, window.toBlock, budget);
+        if (!fetched || !fetched.complete || fetched.scannedToBlock < window.toBlock) complete = false;
+        if (fetched) conservationBatches.push({ eventDef, logs: fetched.logs });
+      }
       audits.push({
         config,
         window,
         record: completeMintBurnConservationAudit({
-          config, logs: batches, fromBlock: window.fromBlock, toBlock: window.toBlock, checkedAt,
-          complete, boundary: boundaries.get(boundaryKey(config, window)), eligibility,
+          config, logs: batches, conservationLogs: conservationBatches, fromBlock: window.fromBlock, toBlock: window.toBlock, checkedAt,
+          complete, boundary: boundaries.get(boundaryKey(config, window)), lawFor,
         }),
       });
     }
@@ -586,7 +617,7 @@ async function runAdmissionAuditCli(argv: readonly string[]): Promise<void> {
     for (const [config, group] of auditsByConfig) {
       const review = reviews.get(reviewedConservationIdentityKey(config.chain.chainId, config.stablecoinId, config.contractAddress, config.decimals))!;
       const allOk = group.length > 0 && group.every(({ record }) => record.status === "ok");
-      if (review.semanticVerdict === "standard-transfer" && allOk) {
+      if (VERDICT_LAWS[review.semanticVerdict] !== undefined && allOk) {
         entries.push(buildSidecarEntry(review, config, "admitted",
           group.map(({ record }) => sidecarWindowFromRecord(record, journalSha256))));
       } else if (review.semanticVerdict === "unsupported" ||
