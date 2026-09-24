@@ -21,6 +21,7 @@ import {
   PARITY_REGISTRY_CHAIN,
   parityRunWindow,
   PARITY_REGISTRY_CHAIN_HEIGHTS,
+  stepFailures,
   type ParityRunFixture,
 } from "./rpc-parity-test-support";
 
@@ -62,7 +63,7 @@ describe("rpc parity gate math", () => {
     const summary = summaryFor(PARITY_REGISTRY_CHAIN, runs);
     expect(summary.runs).toBe(RPC_PARITY_GATE_MIN_RUNS + 6);
     expect(summary.dwellirSuccessRate).toBe(1);
-    expect(summary.headLagBlocks).toEqual({ p50: 2, p95: 2 });
+    expect(summary.headLagBlocks).toEqual({ p50: 2, p95: 2, samples: RPC_PARITY_GATE_MIN_RUNS + 6 });
     expect(summary.stateParity).toEqual({ checked: RPC_PARITY_GATE_MIN_RUNS + 6, matched: RPC_PARITY_GATE_MIN_RUNS + 6, mismatched: 0, lastMismatch: null });
     expect(summary.logParity).toEqual({ checked: RPC_PARITY_GATE_MIN_RUNS + 6, matched: RPC_PARITY_GATE_MIN_RUNS + 6, mismatched: 0, skippedReason: null });
     expect(summary.errorClasses).toEqual({});
@@ -122,13 +123,224 @@ describe("rpc parity gate math", () => {
     expect(summary.gate.failing).toContain("success-rate");
   });
 
+  it("refuses head-lag and latency on too few comparable samples", () => {
+    const comparable = 10;
+    const runs = parityRunWindow(RPC_PARITY_GATE_MIN_RUNS, (chainId, runIndex) => (
+      chainId === PARITY_REGISTRY_CHAIN && runIndex >= comparable
+        ? {
+          headOk: false,
+          dwellirHead: null,
+          comparatorHeadOk: false,
+          comparatorHead: null,
+          commonBlock: null,
+          lagBlocks: null,
+          dwellirLatencyMs: null,
+          comparatorLatencyMs: null,
+          stateChecked: false,
+          stateMatched: false,
+          logChecked: false,
+          logMatched: false,
+          failedSteps: { dwellir: stepFailures({ head: true }), comparator: stepFailures({ head: true }) },
+        }
+        : {}
+    ));
+
+    const summary = summaryFor(PARITY_REGISTRY_CHAIN, runs);
+    expect(summary.runs).toBe(RPC_PARITY_GATE_MIN_RUNS);
+    expect(summary.headLagBlocks.samples).toBe(comparable);
+    expect(summary.gate.failing).toContain("insufficient-comparable-samples");
+    // The measured lag is still healthy: the gate fails on evidence, not values.
+    expect(summary.headLagBlocks.p95).toBe(2);
+    expect(summary.gate.failing).not.toContain("head-lag");
+    expect(summary.gate.failing).not.toContain("latency");
+  });
+
+  it("refuses state parity on too few state checks", () => {
+    const checked = 12;
+    const runs = parityRunWindow(RPC_PARITY_GATE_MIN_RUNS, (chainId, runIndex) => (
+      chainId === PARITY_REGISTRY_CHAIN && runIndex >= checked
+        ? { stateChecked: false, stateMatched: false, failedSteps: { dwellir: stepFailures({ state: true }), comparator: stepFailures() } }
+        : {}
+    ));
+
+    const summary = summaryFor(PARITY_REGISTRY_CHAIN, runs);
+    expect(summary.stateParity.checked).toBe(checked);
+    expect(summary.stateParity.mismatched).toBe(0);
+    expect(summary.gate.failing).toContain("insufficient-state-checks");
+    expect(summary.gate.failing).not.toContain("state-parity");
+  });
+
+  it("refuses log parity on too few log checks, but not where logs are absent by declaration", () => {
+    const checked = 9;
+    const runs = parityRunWindow(RPC_PARITY_GATE_MIN_RUNS, (chainId, runIndex) => (
+      chainId === PARITY_REGISTRY_CHAIN && runIndex >= checked
+        ? { logChecked: false, logMatched: false, failedSteps: { dwellir: stepFailures({ logs: true }), comparator: stepFailures() } }
+        : {}
+    ));
+
+    const summary = summaryFor(PARITY_REGISTRY_CHAIN, runs);
+    expect(summary.logParity.checked).toBe(checked);
+    expect(summary.gate.failing).toContain("insufficient-log-checks");
+    expect(summary.gate.failing).not.toContain("log-parity");
+
+    // zkSync declares no log history, so it carries no log-check requirement.
+    const prunedRuns = parityRunWindow(RPC_PARITY_GATE_MIN_RUNS, (chainId) => (
+      chainId === PARITY_PRUNED_LOG_CHAIN
+        ? { logChecked: false, logMatched: false, prunedLogChecked: true, prunedLogTrap: true }
+        : {}
+    ));
+    const pruned = summaryFor(PARITY_PRUNED_LOG_CHAIN, prunedRuns, { logsHistoryIsNone: true });
+    expect(pruned.gate.failing).not.toContain("insufficient-log-checks");
+    expect(pruned.gate.passed).toBe(true);
+  });
+
+  it("passes every sufficiency rule exactly at the retained-run floor", () => {
+    const summary = summaryFor(PARITY_REGISTRY_CHAIN, parityRunWindow(RPC_PARITY_GATE_MIN_RUNS));
+    expect(summary.headLagBlocks.samples).toBe(RPC_PARITY_GATE_MIN_RUNS);
+    expect(summary.stateParity.checked).toBe(RPC_PARITY_GATE_MIN_RUNS);
+    expect(summary.logParity.checked).toBe(RPC_PARITY_GATE_MIN_RUNS);
+    expect(summary.gate).toEqual({ passed: true, failing: [] });
+  });
+
+  it("counts comparator-side failures separately from Dwellir failures", () => {
+    const runs = parityRunWindow(RPC_PARITY_GATE_MIN_RUNS, (chainId) => (
+      chainId === PARITY_REGISTRY_CHAIN
+        ? {
+          headOk: true,
+          comparatorHeadOk: false,
+          comparatorHead: null,
+          lagBlocks: null,
+          comparatorErrorClass: "capability",
+          comparatorHttpStatus: 1010,
+          failedSteps: { dwellir: stepFailures(), comparator: stepFailures({ head: true }) },
+        }
+        : {}
+    ));
+
+    const summary = summaryFor(PARITY_REGISTRY_CHAIN, runs);
+    // A refused baseline is a comparator fact, never a Dwellir error class.
+    expect(summary.errorClasses).toEqual({});
+    expect(summary.comparatorErrorClasses).toEqual({ capability: RPC_PARITY_GATE_MIN_RUNS });
+    expect(summary.failedSteps).toEqual({
+      dwellir: { head: 0, state: 0, logs: 0 },
+      comparator: { head: RPC_PARITY_GATE_MIN_RUNS, state: 0, logs: 0 },
+    });
+    expect(summary.lastComparatorFailure).toEqual({
+      atSec: PARITY_NOW_SEC,
+      step: "head",
+      errorClass: "capability",
+      httpStatus: 1010,
+    });
+    // No comparator baseline means no lag evidence, so the lag gate stays failed.
+    expect(summary.headLagBlocks.p95).toBeNull();
+    expect(summary.gate.failing).toContain("head-lag");
+  });
+
+  it("keeps an unavailable Dwellir read out of the mismatch counts and in the availability rate", () => {
+    const runs = parityRunWindow(RPC_PARITY_GATE_MIN_RUNS, (chainId, runIndex) => {
+      if (chainId !== PARITY_REGISTRY_CHAIN) return {};
+      if (runIndex === RPC_PARITY_GATE_MIN_RUNS - 2) {
+        return {
+          stateChecked: false,
+          stateMatched: false,
+          failedSteps: { dwellir: stepFailures({ state: true }), comparator: stepFailures() },
+          errorClass: "timeout",
+        };
+      }
+      if (runIndex === RPC_PARITY_GATE_MIN_RUNS - 1) {
+        return {
+          logChecked: false,
+          logMatched: false,
+          failedSteps: { dwellir: stepFailures({ logs: true }), comparator: stepFailures() },
+          errorClass: "timeout",
+        };
+      }
+      return {};
+    });
+
+    const summary = summaryFor(PARITY_REGISTRY_CHAIN, runs);
+    // Unavailable is not unequal: neither read becomes a parity claim.
+    expect(summary.stateParity.checked).toBe(RPC_PARITY_GATE_MIN_RUNS - 1);
+    expect(summary.stateParity.mismatched).toBe(0);
+    expect(summary.logParity.checked).toBe(RPC_PARITY_GATE_MIN_RUNS - 1);
+    expect(summary.logParity.mismatched).toBe(0);
+    expect(summary.gate.failing).toEqual(expect.arrayContaining([
+      "insufficient-state-checks",
+      "insufficient-log-checks",
+      "success-rate",
+    ]));
+    expect(summary.gate.failing).not.toContain("state-parity");
+    expect(summary.gate.failing).not.toContain("log-parity");
+    // Availability is where the failed reads belong.
+    expect(summary.dwellirSuccessRate).toBeCloseTo((RPC_PARITY_GATE_MIN_RUNS - 2) / RPC_PARITY_GATE_MIN_RUNS, 6);
+    expect(summary.errorClasses).toEqual({ timeout: 2 });
+    expect(summary.failedSteps.dwellir).toEqual({ head: 0, state: 1, logs: 1 });
+  });
+
+  it("does not count a plan refusal as a Dwellir availability failure", () => {
+    const runs = parityRunWindow(RPC_PARITY_GATE_MIN_RUNS + 2, (chainId, runIndex) => (
+      chainId === PARITY_REGISTRY_CHAIN && runIndex >= RPC_PARITY_GATE_MIN_RUNS
+        ? {
+          headOk: false,
+          dwellirHead: null,
+          errorClass: "capability",
+          failedSteps: { dwellir: stepFailures({ head: true }), comparator: stepFailures() },
+        }
+        : {}
+    ));
+
+    const summary = summaryFor(PARITY_REGISTRY_CHAIN, runs);
+    // Refusals leave the denominator, so the rate still describes served calls.
+    expect(summary.dwellirSuccessRate).toBe(1);
+    expect(summary.errorClasses).toEqual({ capability: 2 });
+    expect(summary.gate.failing).not.toContain("success-rate");
+  });
+
+  it("reports the newest comparator failure with its step, class, and status", () => {
+    const runs = parityRunWindow(RPC_PARITY_GATE_MIN_RUNS, (chainId, runIndex) => (
+      chainId === PARITY_REGISTRY_CHAIN && runIndex === RPC_PARITY_GATE_MIN_RUNS - 2
+        ? {
+          failedSteps: { dwellir: stepFailures(), comparator: stepFailures({ state: true }) },
+          comparatorErrorClass: "timeout",
+          comparatorHttpStatus: null,
+        }
+        : chainId === PARITY_REGISTRY_CHAIN && runIndex === RPC_PARITY_GATE_MIN_RUNS - 1
+          ? {
+            failedSteps: { dwellir: stepFailures({ logs: true }), comparator: stepFailures({ logs: true }) },
+            comparatorErrorClass: "server-error",
+            comparatorHttpStatus: 502,
+          }
+          : {}
+    ));
+
+    const summary = summaryFor(PARITY_REGISTRY_CHAIN, runs);
+    expect(summary.failedSteps.comparator).toEqual({ head: 0, state: 1, logs: 1 });
+    expect(summary.failedSteps.dwellir).toEqual({ head: 0, state: 0, logs: 1 });
+    expect(summary.lastComparatorFailure).toEqual({
+      atSec: PARITY_NOW_SEC,
+      step: "logs",
+      errorClass: "server-error",
+      httpStatus: 502,
+    });
+  });
+
+  it("leaves diagnostics empty for samples that never recorded a failure", () => {
+    const summary = summaryFor(PARITY_REGISTRY_CHAIN, parityRunWindow(RPC_PARITY_GATE_MIN_RUNS));
+    expect(summary.comparatorErrorClasses).toEqual({});
+    expect(summary.failedSteps).toEqual({
+      dwellir: { head: 0, state: 0, logs: 0 },
+      comparator: { head: 0, state: 0, logs: 0 },
+    });
+    expect(summary.lastComparatorFailure).toBeNull();
+  });
+
   it("fails head-lag against the chain's own block time", () => {
     const runs = parityRunWindow(RPC_PARITY_GATE_MIN_RUNS, (chainId) => (
       chainId === PARITY_REGISTRY_CHAIN ? { lagBlocks: 4 } : {}
     ));
     // base runs at ~2s blocks: six seconds of tolerance is three blocks.
     const summary = summaryFor(PARITY_REGISTRY_CHAIN, runs, { blockTimeSec: 2 });
-    expect(summary.headLagBlocks).toEqual({ p50: 4, p95: 4 });
+    expect(summary.headLagBlocks).toEqual({ p50: 4, p95: 4, samples: RPC_PARITY_GATE_MIN_RUNS });
     expect(summary.gate.failing).toContain("head-lag");
 
     const tolerant = summaryFor(
@@ -309,13 +521,15 @@ describe("rpc parity chain summary edge cases", () => {
     expect(summary.dwellirHost).toBe("api-base-mainnet-archive.n.dwellir.com");
   });
 
-  it("fails state parity when nothing was ever checked", () => {
+  it("fails state parity sufficiency when nothing was ever checked", () => {
     const runs = [{
       atSec: PARITY_NOW_SEC,
       samples: [sampleWith({ chainId: PARITY_REGISTRY_CHAIN, stateChecked: false, stateMatched: false })],
     }];
     const summary = summaryFor(PARITY_REGISTRY_CHAIN, runs);
     expect(summary.stateParity.checked).toBe(0);
-    expect(summary.gate.failing).toContain("state-parity");
+    expect(summary.gate.failing).toContain("insufficient-state-checks");
+    // A comparison that never happened is not a parity failure claim either.
+    expect(summary.gate.failing).not.toContain("state-parity");
   });
 });

@@ -154,15 +154,189 @@ describe("rpc parity probe", () => {
     ]);
     const logsCalls = transport.calls.filter((call) => call.method === "eth_getLogs");
     expect(logsCalls).toHaveLength(2);
+    const baseWindowBlocks = target("base").logWindowBlocks ?? RPC_PARITY_LOG_WINDOW_BLOCKS;
     for (const call of logsCalls) {
       expect(call.params).toEqual([
         {
           address: target("base").contract,
-          fromBlock: `0x${(98 - (RPC_PARITY_LOG_WINDOW_BLOCKS - 1)).toString(16)}`,
+          fromBlock: `0x${(98 - (baseWindowBlocks - 1)).toString(16)}`,
           toBlock: "0x62",
         },
       ]);
     }
+  });
+
+  it("narrows the log window on high-volume chains and reports an all-clear sample", async () => {
+    const transport = createFakeTransport((call) => {
+      if (call.method === "eth_blockNumber") return rpcResult("0x64");
+      if (call.method === "eth_call") return rpcResult("0x1");
+      return rpcResult([]);
+    });
+
+    const result = await runProbe({
+      // ethereum's USDC log volume overflows the lane's response bound on a
+      // ten-block window, so the target narrows it; arbitrum keeps the default.
+      targets: [target("ethereum"), target("arbitrum")],
+      fetchText: transport.fetchText,
+    });
+
+    const [ethereum, arbitrum] = result.samples;
+    expect(ethereum.logChecked).toBe(true);
+    expect(ethereum.logMatched).toBe(true);
+    expect(ethereum.failedSteps).toEqual({
+      dwellir: { head: false, state: false, logs: false },
+      comparator: { head: false, state: false, logs: false },
+    });
+    expect(ethereum.comparatorErrorClass).toBeNull();
+    expect(ethereum.comparatorHttpStatus).toBeNull();
+
+    const logsWindowFor = (chainId: string) => transport.calls.filter((call) => (
+      call.method === "eth_getLogs"
+      && JSON.stringify(call.params[0]).includes(target(chainId).contract)
+    ));
+    // Both operators read the same narrowed window on ethereum.
+    const ethereumWindow = logsWindowFor("ethereum");
+    expect(ethereumWindow).toHaveLength(2);
+    for (const call of ethereumWindow) {
+      expect(call.params).toEqual([
+        {
+          address: target("ethereum").contract,
+          fromBlock: `0x${(98 - (target("ethereum").logWindowBlocks ?? 10) + 1).toString(16)}`,
+          toBlock: "0x62",
+        },
+      ]);
+    }
+
+    // A chain with no override keeps the ten-block window on both operators.
+    const arbitrumWindow = logsWindowFor("arbitrum");
+    expect(arbitrumWindow).toHaveLength(2);
+    for (const call of arbitrumWindow) {
+      expect(call.params).toEqual([
+        {
+          address: target("arbitrum").contract,
+          fromBlock: `0x${(84 - 9).toString(16)}`,
+          toBlock: "0x54",
+        },
+      ]);
+    }
+    expect(arbitrum.logChecked).toBe(true);
+  });
+
+  it("records which step and status failed on the comparator side", async () => {
+    const transport = createFakeTransport((call) => {
+      if (call.url.startsWith("https://base-mainnet.g.alchemy.com")) {
+        return { kind: "raw", body: "error code: 1010", status: 403 };
+      }
+      if (call.method === "eth_blockNumber") return rpcResult("0x64");
+      if (call.method === "eth_call") return rpcResult("0x1");
+      return rpcResult([]);
+    });
+
+    const result = await runProbe({
+      targets: [target("base")],
+      fetchText: transport.fetchText,
+      chainRpcs: buildChainRpcs("parity-test-alchemy-key"),
+    });
+
+    const [sample] = result.samples;
+    // The baseline is unreadable, so no lag, state, or log claim is made.
+    expect(sample.comparatorHeadOk).toBe(false);
+    expect(sample.headOk).toBe(true);
+    expect(sample.lagBlocks).toBeNull();
+    expect(sample.stateChecked).toBe(false);
+    expect(sample.logChecked).toBe(false);
+    expect(sample.failedSteps).toEqual({
+      dwellir: { head: false, state: false, logs: false },
+      comparator: { head: true, state: false, logs: false },
+    });
+    expect(sample.comparatorErrorClass).toBe("capability");
+    expect(sample.comparatorHttpStatus).toBe(403);
+    // The Dwellir side carries no fault of its own.
+    expect(sample.errorClass).toBeNull();
+    expect(sample.failedSteps.dwellir.head).toBe(false);
+  });
+
+  it("attributes a mid-step comparator failure without blaming the Dwellir side", async () => {
+    let comparatorStateCalls = 0;
+    const transport = createFakeTransport((call) => {
+      const comparator = !isDwellir(call.url);
+      if (comparator && call.method === "eth_call") {
+        comparatorStateCalls += 1;
+        return { kind: "raw", body: "error code: 1010", status: 403 };
+      }
+      if (call.method === "eth_blockNumber") return rpcResult("0x64");
+      if (call.method === "eth_call") return rpcResult("0x1");
+      return rpcResult([]);
+    });
+
+    const result = await runProbe({ targets: [target("megaeth")], fetchText: transport.fetchText });
+
+    expect(comparatorStateCalls).toBe(1);
+    const [sample] = result.samples;
+    expect(sample.headOk).toBe(true);
+    expect(sample.comparatorHeadOk).toBe(true);
+    expect(sample.stateChecked).toBe(false);
+    expect(sample.failedSteps.comparator.state).toBe(true);
+    expect(sample.failedSteps.dwellir.state).toBe(false);
+    expect(sample.comparatorErrorClass).toBe("capability");
+    expect(sample.comparatorHttpStatus).toBe(403);
+    // Only the state step is written off: the window still compares logs, so
+    // the sample keeps the evidence it could gather.
+    expect(sample.logChecked).toBe(true);
+  });
+
+  it("treats an unavailable operator read as unchecked rather than as a mismatch (R1)", async () => {
+    const transport = createFakeTransport((call) => {
+      // base: Dwellir's log read never answers; megaeth: its state read does not.
+      if (isDwellir(call.url) && call.url.includes("api-base-mainnet") && call.method === "eth_getLogs") {
+        return { kind: "throw", error: new DOMException("fetch timed out after 8000ms", "TimeoutError") };
+      }
+      if (isDwellir(call.url) && call.url.includes("api-megaeth-mainnet") && call.method === "eth_call") {
+        return { kind: "throw", error: new DOMException("fetch timed out after 8000ms", "TimeoutError") };
+      }
+      if (call.method === "eth_blockNumber") return rpcResult("0x64");
+      if (call.method === "eth_call") return rpcResult("0x1");
+      return rpcResult([{ transactionHash: "0xaa", logIndex: "0x0" }]);
+    });
+
+    const result = await runProbe({ targets: [target("base"), target("megaeth")], fetchText: transport.fetchText });
+    const [base, megaeth] = result.samples;
+
+    // A read that produced no value is unavailable: no check, and no mismatch claim.
+    expect(base.headOk).toBe(true);
+    expect(base.stateChecked).toBe(true);
+    expect(base.stateMatched).toBe(true);
+    expect(base.logChecked).toBe(false);
+    expect(base.logMatched).toBe(false);
+    expect(base.failedSteps.dwellir.logs).toBe(true);
+    expect(base.failedSteps.comparator.logs).toBe(false);
+    expect(base.errorClass).toBe("timeout");
+
+    // The same rule for the state step: the log window is still compared.
+    expect(megaeth.stateChecked).toBe(false);
+    expect(megaeth.stateMatched).toBe(false);
+    expect(megaeth.failedSteps.dwellir.state).toBe(true);
+    expect(megaeth.logChecked).toBe(true);
+    expect(megaeth.logMatched).toBe(true);
+  });
+
+  it("flags a Dwellir head failure as a Dwellir step failure", async () => {
+    const transport = createFakeTransport((call) => {
+      if (isDwellir(call.url) && call.method === "eth_blockNumber") {
+        return { kind: "raw", body: "upstream unavailable", status: 503 };
+      }
+      if (call.method === "eth_blockNumber") return rpcResult("0x64");
+      if (call.method === "eth_call") return rpcResult("0x1");
+      return rpcResult([]);
+    });
+
+    const result = await runProbe({ targets: [target("base")], fetchText: transport.fetchText });
+    const [sample] = result.samples;
+    expect(sample.failedSteps.dwellir.head).toBe(true);
+    expect(sample.failedSteps.comparator.head).toBe(false);
+    expect(sample.errorClass).toBe("server-error");
+    expect(sample.comparatorErrorClass).toBeNull();
+    expect(sample.comparatorHttpStatus).toBeNull();
   });
 
   it("replays the comparator operator's auth, keeps pins keyless, and identifies every request", async () => {

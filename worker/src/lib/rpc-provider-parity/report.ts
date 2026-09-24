@@ -15,7 +15,10 @@ import type {
   RpcParityChainSummary,
   RpcParityComparatorRef,
   RpcParityErrorClass,
+  RpcParityFailedStepCounts,
   RpcParityLatencySummary,
+  RpcParityProbeStep,
+  RpcParityStepFailures,
   RpcProviderTrialReport,
 } from "./types";
 
@@ -28,7 +31,11 @@ import type {
  * trial's state must get that state, not a 500.
  */
 
-/** Minimum retained runs before a chain's window is treated as evidence. */
+/**
+ * Evidence floor for a chain's window: the minimum retained runs, and the
+ * minimum performed comparisons of each kind (comparable head pairs, state
+ * checks, log checks) before the corresponding gate may pass.
+ */
 export const RPC_PARITY_GATE_MIN_RUNS = 24;
 /** Dwellir head-read success rate over the window, with plan-capability refusals excluded. */
 export const RPC_PARITY_GATE_MIN_SUCCESS_RATE = 0.995;
@@ -51,6 +58,17 @@ export function percentileNearestRank(values: readonly number[], percentile: num
   return sorted[rank] ?? null;
 }
 
+const PROBE_STEPS: readonly RpcParityProbeStep[] = ["head", "state", "logs"];
+
+function emptyFailedStepCounts(): RpcParityFailedStepCounts {
+  return { head: 0, state: 0, logs: 0 };
+}
+
+/** The first failing step in probe order, which is the one whose call lost the comparison. */
+function firstFailedStep(failures: RpcParityStepFailures): RpcParityProbeStep | null {
+  return PROBE_STEPS.find((step) => failures[step]) ?? null;
+}
+
 function summarizeLatency(values: readonly (number | null)[]): RpcParityLatencySummary {
   const measured = values.filter((value): value is number => value !== null);
   return {
@@ -63,6 +81,12 @@ function summarizeLatency(values: readonly (number | null)[]): RpcParityLatencyS
 /**
  * Gate ids reported in `gate.failing`. Each one is an observable claim about
  * the retained window, evaluated per chain.
+ *
+ * Sufficiency is gated separately from the measured values: a comparison the
+ * lane could not perform is never a passing gate, so `head-lag` and `latency`
+ * need `RPC_PARITY_GATE_MIN_RUNS` comparable samples, `state-parity` needs that
+ * many state checks, and — where the chain is expected to serve logs at all —
+ * `log-parity` needs that many log checks.
  */
 export function evaluateRpcParityGate(summary: RpcParityChainSummary, blockTimeSec: number): { passed: boolean; failing: string[] } {
   const failing: string[] = [];
@@ -72,15 +96,26 @@ export function evaluateRpcParityGate(summary: RpcParityChainSummary, blockTimeS
   if (summary.dwellirSuccessRate === null || summary.dwellirSuccessRate < RPC_PARITY_GATE_MIN_SUCCESS_RATE) {
     failing.push("success-rate");
   }
+  if (summary.headLagBlocks.samples < RPC_PARITY_GATE_MIN_RUNS) {
+    failing.push("insufficient-comparable-samples");
+  }
   const lagThreshold = headLagThresholdBlocks(blockTimeSec);
   if (summary.headLagBlocks.p95 === null || summary.headLagBlocks.p95 > lagThreshold) {
     failing.push("head-lag");
   }
-  if (summary.stateParity.checked === 0 || summary.stateParity.mismatched > 0) {
+  if (summary.stateParity.checked < RPC_PARITY_GATE_MIN_RUNS) {
+    failing.push("insufficient-state-checks");
+  }
+  if (summary.stateParity.mismatched > 0) {
     failing.push("state-parity");
   }
-  if (summary.logParity.skippedReason === null && (summary.logParity.checked === 0 || summary.logParity.mismatched > 0)) {
-    failing.push("log-parity");
+  if (summary.logParity.skippedReason === null) {
+    if (summary.logParity.checked < RPC_PARITY_GATE_MIN_RUNS) {
+      failing.push("insufficient-log-checks");
+    }
+    if (summary.logParity.mismatched > 0) {
+      failing.push("log-parity");
+    }
   }
   const dwellirP95 = summary.latency.dwellir.p95Ms;
   const comparatorP95 = summary.latency.comparator.p95Ms;
@@ -124,10 +159,15 @@ export function buildRpcParityChainSummary(input: {
   const newest = samples[samples.length - 1]?.sample ?? null;
   const comparator = newest?.comparator ?? input.fallbackComparator;
 
+  // Availability, not parity: Dwellir is credited only for runs in which every
+  // read it was asked for answered. Plan refusals leave the denominator, so the
+  // rate describes the calls the key was entitled to serve.
   const capabilitySamples = samples.filter(({ sample }) => sample.errorClass !== "capability");
-  const headOkSamples = samples.filter(({ sample }) => sample.headOk);
+  const servedSamples = capabilitySamples.filter(({ sample }) => (
+    sample.headOk && !sample.failedSteps.dwellir.state && !sample.failedSteps.dwellir.logs
+  ));
   const dwellirSuccessRate =
-    capabilitySamples.length === 0 ? null : headOkSamples.length / capabilitySamples.length;
+    capabilitySamples.length === 0 ? null : servedSamples.length / capabilitySamples.length;
 
   const lagValues = samples
     .map(({ sample }) => sample.lagBlocks)
@@ -141,6 +181,9 @@ export function buildRpcParityChainSummary(input: {
   let prunedChecked = 0;
   let prunedTraps = 0;
   const errorClasses: Partial<Record<RpcParityErrorClass, number>> = {};
+  const comparatorErrorClasses: Partial<Record<RpcParityErrorClass, number>> = {};
+  const failedSteps = { dwellir: emptyFailedStepCounts(), comparator: emptyFailedStepCounts() };
+  let lastComparatorFailure: RpcParityChainSummary["lastComparatorFailure"] = null;
   for (const { atSec, sample } of samples) {
     if (sample.stateChecked) {
       stateChecked += 1;
@@ -162,6 +205,23 @@ export function buildRpcParityChainSummary(input: {
     if (sample.errorClass) {
       errorClasses[sample.errorClass] = (errorClasses[sample.errorClass] ?? 0) + 1;
     }
+    if (sample.comparatorErrorClass) {
+      comparatorErrorClasses[sample.comparatorErrorClass] = (comparatorErrorClasses[sample.comparatorErrorClass] ?? 0) + 1;
+    }
+    for (const operator of ["dwellir", "comparator"] as const) {
+      for (const step of PROBE_STEPS) {
+        if (sample.failedSteps[operator][step]) failedSteps[operator][step] += 1;
+      }
+    }
+    const comparatorStep = firstFailedStep(sample.failedSteps.comparator);
+    if (comparatorStep !== null) {
+      lastComparatorFailure = {
+        atSec,
+        step: comparatorStep,
+        errorClass: sample.comparatorErrorClass ?? "invalid-response",
+        httpStatus: sample.comparatorHttpStatus,
+      };
+    }
   }
 
   const summary: RpcParityChainSummary = {
@@ -173,6 +233,7 @@ export function buildRpcParityChainSummary(input: {
     headLagBlocks: {
       p50: percentileNearestRank(lagValues, 0.5),
       p95: percentileNearestRank(lagValues, 0.95),
+      samples: lagValues.length,
     },
     stateParity: {
       checked: stateChecked,
@@ -198,6 +259,9 @@ export function buildRpcParityChainSummary(input: {
       ),
     },
     errorClasses,
+    comparatorErrorClasses,
+    failedSteps,
+    lastComparatorFailure,
     gate: { passed: false, failing: [] },
     last: input.latest
       ? {

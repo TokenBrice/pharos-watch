@@ -1254,7 +1254,7 @@ Operator-only report for the Dwellir supplemental-RPC trial. It answers three qu
 
 - credit ledger — this UTC month's metered Dwellir JSON-RPC response items against the configured cap (`budget`)
 - `dwellir-evm` circuit state, so an operator can see whether the trial is currently demoted or held open (`circuit`)
-- per-chain parity of the supplemental operator against that chain's incumbent operator: retained runs, success rate, head lag, state and log parity, latency percentiles, error classes, and the plan's pass/fail gates (`observation.chains[]`)
+- per-chain parity of the supplemental operator against that chain's incumbent operator: retained runs, success rate, head lag, state and log parity, latency percentiles, error classes for both operators, per-step failure counts, the newest comparator failure with its HTTP status, and the plan's pass/fail gates (`observation.chains[]`)
 
 Diagnostic only: it never feeds scoring, public health, or the public API, and no other lane reads it. The response never contains the Dwellir API key — the report carries key presence (`budget.configured`) and credit accounting only. Registration lives in `worker/src/routes/admin-routes.ts`; the loader is `loadRpcProviderTrialReport` in `worker/src/lib/rpc-provider-parity/report.ts`.
 
@@ -1296,6 +1296,12 @@ Diagnostic only: it never feeds scoring, public health, or the public API, and n
           "comparator": { "p50Ms": 140, "p95Ms": 300, "samples": 6 }
         },
         "errorClasses": {},
+        "comparatorErrorClasses": {},
+        "failedSteps": {
+          "dwellir": { "head": 0, "state": 0, "logs": 0 },
+          "comparator": { "head": 0, "state": 0, "logs": 0 }
+        },
+        "lastComparatorFailure": null,
         "gate": { "passed": true, "failing": [] },
         "last": { "atSec": 1779999000, "dwellirHead": 21000000, "comparatorHead": 21000000, "commonBlock": 21000000 }
       }
@@ -1304,6 +1310,10 @@ Diagnostic only: it never feeds scoring, public health, or the public API, and n
   "observationError": null
 }
 ```
+
+`gate.failing` names every rule a chain does not currently satisfy. Sufficiency and values are separate rules, because a comparison the lane could not perform is never a passing gate: `runs` needs 24 retained runs; `success-rate` needs 99.5% of runs in which every Dwellir read answered (plan refusals excluded from the denominator); `insufficient-comparable-samples` needs 24 runs in which both operators answered `eth_blockNumber`, which is also what `head-lag` (p95 lag ≤ `max(3, ceil(6 / block time))` blocks) and `latency` (Dwellir p95 ≤ comparator p95 + 500 ms) are measured over; `insufficient-state-checks` needs 24 `totalSupply` comparisons before `state-parity` can pass on zero mismatches; and, where the chain is expected to serve logs at all, `insufficient-log-checks` needs 24 log-window comparisons before `log-parity` can pass — chains whose Dwellir history is declared `none` (zkSync) carry no log-check requirement and report `logParity.skippedReason: "logs-history-none"` instead.
+
+Each stored sample records failures for both operators, so a chain that produced no parity claim says why. `errorClasses` and `comparatorErrorClasses` count Dwellir-side and comparator-side failure classes over the window (same vocabulary: `range-cap`, `result-cap`, `rate-limited`, `capability`, `server-error`, `timeout`, `network`, `rpc-error`, `invalid-response`). `failedSteps` counts samples in which the `head`, `state`, or `logs` step produced no usable answer for that operator — a comparator that refuses logs is not a Dwellir fault, and the report keeps them apart. An unavailable read is never a mismatch (R1): `stateParity.checked` and `logParity.checked` count only comparisons in which *both* operators answered, so `mismatched` strictly means different values, and a Dwellir read that never answered instead lowers `dwellirSuccessRate` — the availability measure, whose denominator excludes plan refusals — and appears in `failedSteps.dwellir` with its error class. `lastComparatorFailure` carries the newest such comparator failure with the step, the class, and the HTTP status when a response arrived (a Cloudflare `403`/`1010` egress block is otherwise indistinguishable from a timeout). A chain whose comparator never answers cannot prove parity: its `headLagBlocks` percentiles stay `null` and the corresponding gates stay in `gate.failing`.
 
 `budget.reason` is `ok` when the ledger is readable and under cap, and otherwise `not-configured`, `provider-budget-exhausted`, or `ledger-unreadable`; `budget.usedCredits` is `null` when the ledger row could not be read. `circuit` is `null` until the `dwellir-evm` circuit has been written at least once. `observation` is `null` with `observationError` set when the stored parity samples could not be read — that is still a `200`, because a degraded sample store is exactly the state an operator needs to see, and the budget and circuit sections remain live diagnostics.
 

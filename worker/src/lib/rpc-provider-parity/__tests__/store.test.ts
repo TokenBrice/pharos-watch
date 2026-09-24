@@ -19,6 +19,7 @@ import {
   fullParityRun,
   PARITY_NOW_SEC as NOW_SEC,
   paritySample,
+  stepFailures,
 } from "./rpc-parity-test-support";
 
 const fixtures = createLatestSchemaFixtureTracker();
@@ -148,6 +149,99 @@ describe("rpc parity store wire form", () => {
       // The refused chain never reached a comparable block, so the latest
       // observation records no height to read.
       commonBlock: null,
+    });
+  });
+
+  it("stores failure diagnostics sparsely and reads them back", () => {
+    const run = {
+      atSec: NOW_SEC,
+      samples: [
+        // A healthy chain: no diagnostics entry at all.
+        paritySample("base"),
+        paritySample("robinhood", {
+          headOk: true,
+          comparatorHeadOk: false,
+          comparatorHead: null,
+          lagBlocks: null,
+          comparatorErrorClass: "capability",
+          comparatorHttpStatus: 403,
+          failedSteps: { dwellir: stepFailures(), comparator: stepFailures({ head: true }) },
+        }),
+        paritySample("arc", {
+          comparatorErrorClass: "server-error",
+          comparatorHttpStatus: 502,
+          failedSteps: { dwellir: stepFailures({ logs: true }), comparator: stepFailures({ state: true, logs: true }) },
+        }),
+      ],
+    };
+    const merged = mergeRpcParityRun(null, run, { nowSec: NOW_SEC });
+    const wire = JSON.parse(encodeRpcParityStoreRow(merged.row)) as { runs: unknown[][] };
+    // One diagnostics section for the two chains that failed, none for the healthy one.
+    expect(wire.runs[0]).toHaveLength(3);
+    expect(String(wire.runs[0][2]).split(";")).toHaveLength(3);
+
+    const decoded = decodeRpcParityStoreRow(encodeRpcParityStoreRow(merged.row));
+    const samples = decoded?.runs[0].samples ?? [];
+    expect(samples[0].failedSteps).toEqual({
+      dwellir: { head: false, state: false, logs: false },
+      comparator: { head: false, state: false, logs: false },
+    });
+    expect(samples[0].comparatorErrorClass).toBeNull();
+    expect(samples[0].comparatorHttpStatus).toBeNull();
+    expect(samples[1]).toMatchObject({
+      chainId: "robinhood",
+      comparatorErrorClass: "capability",
+      comparatorHttpStatus: 403,
+      failedSteps: { dwellir: { head: false, state: false, logs: false }, comparator: { head: true, state: false, logs: false } },
+    });
+    expect(samples[2]).toMatchObject({
+      chainId: "arc",
+      comparatorErrorClass: "server-error",
+      comparatorHttpStatus: 502,
+      failedSteps: { dwellir: { head: false, state: false, logs: true }, comparator: { head: false, state: true, logs: true } },
+    });
+  });
+
+  it("keeps a healthy run free of a diagnostics section", () => {
+    const merged = mergeRpcParityRun(null, fullParityRun(NOW_SEC), { nowSec: NOW_SEC });
+    const wire = JSON.parse(encodeRpcParityStoreRow(merged.row)) as { runs: unknown[][] };
+    expect(wire.runs[0]).toHaveLength(2);
+  });
+
+  it("reads rows written before the diagnostics section existed", () => {
+    // Literal pre-change wire shape: no third run element, no diagnostics.
+    const legacy = JSON.stringify({
+      v: 1,
+      chains: ["base"],
+      comparators: [["alchemy", "base-mainnet.g.alchemy.com", "registry"]],
+      hosts: ["api-base-mainnet-archive.n.dwellir.com"],
+      runs: [[NOW_SEC, `0|63|${(380_000_000).toString(36)}|1|412|398|0|0|0`]],
+      latest: { base: [NOW_SEC, 380_000_000, 380_000_002, 379_999_000] },
+    });
+    const decoded = decodeRpcParityStoreRow(legacy);
+    expect(decoded).not.toBeNull();
+    const [sample] = decoded?.runs[0].samples ?? [];
+    expect(sample).toMatchObject({
+      chainId: "base",
+      headOk: true,
+      comparatorHeadOk: true,
+      lagBlocks: 1,
+      commonBlock: 380_000_000,
+      dwellirLatencyMs: 412,
+      comparatorLatencyMs: 398,
+      errorClass: null,
+    });
+    expect(sample.comparatorErrorClass).toBeNull();
+    expect(sample.comparatorHttpStatus).toBeNull();
+    expect(sample.failedSteps).toEqual({
+      dwellir: { head: false, state: false, logs: false },
+      comparator: { head: false, state: false, logs: false },
+    });
+    expect(decoded?.latest.base).toEqual({
+      atSec: NOW_SEC,
+      dwellirHead: 380_000_000,
+      comparatorHead: 380_000_002,
+      commonBlock: 379_999_000,
     });
   });
 
