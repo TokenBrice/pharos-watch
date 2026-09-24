@@ -151,6 +151,7 @@ export const CIRCUIT_SOURCE = {
   TREASURY_RATES: "treasury-rates",
   ETHERSCAN: "etherscan",
   ALCHEMY: "alchemy",
+  DWELLIR_EVM: "dwellir-evm",
   TWITTER_API: "twitter-api",
   TELEGRAM_API: "telegram-api",
   BINANCE_PRICES: "binance-prices",

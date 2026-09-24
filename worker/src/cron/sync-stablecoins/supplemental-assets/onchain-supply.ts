@@ -11,7 +11,12 @@ import {
   selectSupplementalOnchainSupplyProbeContract,
   type OnchainSupplyProbeFamily,
 } from "@shared/lib/onchain-supply-probe";
-import type { ChainRpcConfig } from "../../../lib/chain-registry";
+import {
+  hasRegistryRpc,
+  primaryRpcUrl,
+  registryRpcUrls,
+  type ChainRpcConfig,
+} from "../../../lib/chain-registry";
 import { throwIfAborted } from "../../../lib/abort";
 import { encodeBalanceOfCallData } from "../../../lib/evm-selectors";
 import { logWorkerEvent } from "../../../lib/structured-log";
@@ -214,8 +219,8 @@ async function adjustOnChainSupplyForExcludedBalances(input: {
         contract: input.supplyContract.address,
         data: encodeBalanceOfCallData(holderAddress),
         signal: input.signal,
-        rpcUrl: input.curatedRpc?.rpcUrl ?? input.chainRpc?.rpcUrl,
-        fallbackRpcUrl: input.curatedRpc?.fallbackRpcUrl ?? input.chainRpc?.fallbackRpcUrl,
+        rpcUrl: input.curatedRpc?.rpcUrl ?? primaryRpcUrl(input.chainRpc),
+        fallbackRpcUrl: input.curatedRpc?.fallbackRpcUrl ?? registryRpcUrls(input.chainRpc)[1],
         rpcMode: "public-rpc",
         chain: input.supplyContract.chain,
       }),
@@ -266,8 +271,8 @@ async function fetchOnChainSupplyForContract(input: {
   const observedAt = Math.floor(Date.now() / 1000);
 
   try {
-    const rpcUrl = input.curated?.rpcUrl ?? chainRpc?.rpcUrl;
-    const fallbackRpcUrl = input.curated?.fallbackRpcUrl ?? chainRpc?.fallbackRpcUrl;
+    const rpcUrl = input.curated?.rpcUrl ?? primaryRpcUrl(chainRpc);
+    const fallbackRpcUrl = input.curated?.fallbackRpcUrl ?? registryRpcUrls(chainRpc)[1];
     const raw = await readContractSupplyRaw({
       meta: input.meta,
       supplyContract: input.supplyContract,
@@ -281,13 +286,13 @@ async function fetchOnChainSupplyForContract(input: {
 
     if (family === "movement") {
       const ethereumRpc = input.chainRpcs?.get("ethereum");
-      if (!ethereumRpc) throw new Error("Ethereum xReserve RPC is unavailable");
+      if (!hasRegistryRpc(ethereumRpc)) throw new Error("Ethereum xReserve RPC is unavailable");
       const backingRaw = await fetchOnchainUint256({
         contract: MOVEMENT_XRESERVE,
         data: MOVEMENT_XRESERVE_CALL,
         signal: supplySignal,
-        rpcUrl: ethereumRpc.rpcUrl,
-        fallbackRpcUrl: ethereumRpc.fallbackRpcUrl,
+        rpcUrl: primaryRpcUrl(ethereumRpc),
+        fallbackRpcUrl: registryRpcUrls(ethereumRpc)[1],
         rpcMode: "public-rpc",
         chain: "ethereum",
       });
@@ -358,8 +363,8 @@ async function fetchEscrowHeldMcap(input: {
       contract: input.supplyContract.address,
       data: encodeBalanceOfCallData(input.escrowAddress),
       signal: input.signal ?? AbortSignal.timeout(10_000),
-      rpcUrl: input.curated?.rpcUrl ?? chainRpc?.rpcUrl,
-      fallbackRpcUrl: input.curated?.fallbackRpcUrl ?? chainRpc?.fallbackRpcUrl,
+      rpcUrl: input.curated?.rpcUrl ?? primaryRpcUrl(chainRpc),
+      fallbackRpcUrl: input.curated?.fallbackRpcUrl ?? registryRpcUrls(chainRpc)[1],
       rpcMode: "public-rpc",
       chain: input.supplyContract.chain,
     });

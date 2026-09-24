@@ -1,7 +1,7 @@
 import { CHAIN_META, resolveChainId } from "@shared/lib/chains";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { rethrowIfAborted, throwIfAborted } from "../abort";
-import type { ChainRpcConfig } from "../chain-registry";
+import { hasRegistryRpc, type ChainRpcConfig, type RpcEndpoint } from "../chain-registry";
 import { fetchEvmBlockHeader, fetchEvmMulticall3Aggregate3AtBlock, resolveClosestBlockAtOrBeforeTimestamp } from "../evm-rpc";
 import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR } from "../evm-selectors";
 import { getPublicRpcUrl, getSecondaryFallbackRpcUrl } from "../public-rpc-registry";
@@ -47,8 +47,24 @@ export function transferMaterialityObserverResolvesRpc(
   return rpcConfig(chainId, configured) !== null;
 }
 
+/** Registry endpoint shape for the observer-local public RPCs: keyless, full history. */
+function publicRegistryEndpoints(...urls: readonly (string | undefined)[]): RpcEndpoint[] {
+  return urls
+    .filter((url): url is string => typeof url === "string" && url.length > 0)
+    .map((url): RpcEndpoint => ({
+      url,
+      operator: "public",
+      keyed: false,
+      position: "registry",
+      stateHistory: "archive",
+      logsHistory: "full",
+    }));
+}
+
 function rpcConfig(chainId: string, configured: Map<string, ChainRpcConfig>): Map<string, ChainRpcConfig> | null {
-  if (configured.has(chainId)) return configured;
+  // Only a registry endpoint makes the chain RPC-readable; a config carrying just a
+  // supplemental (Dwellir) endpoint falls through to the observer-local public RPC.
+  if (hasRegistryRpc(configured.get(chainId))) return configured;
   const meta = CHAIN_META[chainId];
   const extra = TRANSFER_MATERIALITY_EXTRA_RPCS[chainId];
   const rpcUrl = extra?.rpcUrl ?? getPublicRpcUrl(chainId);
@@ -57,8 +73,10 @@ function rpcConfig(chainId: string, configured: Map<string, ChainRpcConfig>): Ma
     chainId,
     chainName: meta.name,
     type: "evm",
-    rpcUrl,
-    fallbackRpcUrl: extra?.fallbackRpcUrl ?? getSecondaryFallbackRpcUrl(chainId),
+    endpoints: publicRegistryEndpoints(
+      rpcUrl,
+      extra?.fallbackRpcUrl ?? getSecondaryFallbackRpcUrl(chainId),
+    ),
     explorerUrl: meta.explorerUrl,
   });
 }

@@ -8,6 +8,7 @@ import {
   fetchEvmCodeAtBlock,
   fetchEvmMulticall3Aggregate3AtBlock,
 } from "../../lib/evm-rpc";
+import { getChainRpc, hasRegistryRpc } from "../../lib/chain-registry";
 import { rethrowIfAborted } from "../../lib/abort";
 import {
   FpiControllerV9RouteAttemptSchema,
@@ -391,15 +392,21 @@ async function observeWithClient(
     return rejected(attemptedAtSec, "controller-state-invalid");
   }
 
+  const chainRpcs = ctx?.chainRpcs;
   const rpcOptions: EvmRpcOptions = {
     extraRpcUrls: [params.rpcUrl, params.fallbackRpcUrl].filter((url): url is string => Boolean(url)),
-    chainRpcs: ctx?.chainRpcs,
+    chainRpcs,
     signal,
     timeoutMs: 3_000,
     deadlineMs: Date.now() + RPC_DEADLINE_MS,
     maxRetries: 0,
   };
-  if ((rpcOptions.extraRpcUrls?.length ?? 0) === 0 && !rpcOptions.chainRpcs?.has(CHAIN)) {
+  // A supplemental-only config is not a registry read path, so it cannot make
+  // this route available.
+  if (
+    (rpcOptions.extraRpcUrls?.length ?? 0) === 0 &&
+    !hasRegistryRpc(chainRpcs ? getChainRpc(chainRpcs, CHAIN) : undefined)
+  ) {
     return rejected(attemptedAtSec, "rpc-unavailable");
   }
 

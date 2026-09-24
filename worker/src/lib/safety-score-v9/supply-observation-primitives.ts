@@ -1,7 +1,10 @@
 import type { sha256HexFromBytes } from "@shared/lib/sha256";
 import { throwIfAborted } from "../abort";
 import {
-  getAlchemyAuthHeaders,
+  getChainRpc,
+  getRpcAuthHeaders,
+  hasRegistryRpc,
+  registryRpcUrls,
   type ChainRpcConfig,
 } from "../chain-registry";
 import type {
@@ -94,7 +97,7 @@ export async function observeReviewedEvmDeployment<Identity>(input: {
   if (!identity) return rejectDeployment("deployment-identity-unavailable");
 
   const extraRpcUrls = input.extraRpcUrls(identity, chainId);
-  if (!chainRpcs.has(chainId) && (extraRpcUrls?.length ?? 0) === 0) {
+  if (!hasRegistryRpc(getChainRpc(chainRpcs, chainId)) && (extraRpcUrls?.length ?? 0) === 0) {
     return rejectDeployment("chain-rpc-unavailable");
   }
   const options = safetyScoreV9EvmObservationOptions({ chainRpcs,
@@ -414,8 +417,7 @@ export async function fetchSafetyScoreV9SolanaRpc<T>(
 ): Promise<T | null> {
   const configured = chainRpcs?.get("solana");
   const rpcUrls = [
-    configured?.rpcUrl,
-    configured?.fallbackRpcUrl,
+    ...registryRpcUrls(configured),
     ...SOLANA_RPC_URLS,
   ].filter((rpcUrl, index, values): rpcUrl is string =>
     typeof rpcUrl === "string" && values.indexOf(rpcUrl) === index,
@@ -428,7 +430,7 @@ export async function fetchSafetyScoreV9SolanaRpc<T>(
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...getAlchemyAuthHeaders(rpcUrl),
+          ...getRpcAuthHeaders(rpcUrl),
         },
         body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
         signal,

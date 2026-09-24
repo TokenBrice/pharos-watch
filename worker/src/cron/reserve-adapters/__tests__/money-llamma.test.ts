@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Abi } from "abitype";
 import { encodeAbiParameters, encodeFunctionData, parseAbi, parseAbiParameters, toFunctionSelector } from "viem/utils";
+import { primaryRpcUrl } from "../../../lib/chain-registry";
 import { expectWarnings, runAdapter, type AdapterNetworkSpec } from "./reserve-adapter.test-support";
 
 const CONTROLLER = "0x1337F001E280420EcCe9E7B934Fa07D67fdb62CD";
@@ -291,7 +292,7 @@ describe("money-llamma adapter", () => {
       network: moneyNetwork({}, 2, { wbtcMaxBand: 1_500 }),
       nowSec: NOW_SEC,
     });
-    const arbitrumUrl = run.network.chainRpcs.get("arbitrum")?.rpcUrl ?? "";
+    const arbitrumUrl = primaryRpcUrl(run.network.chainRpcs.get("arbitrum")) ?? "";
     expect(arbitrumUrl).not.toBe("");
     // 1 501 bands x (y + x) = 3 002 band reads on top of the two block reads
     // and the head/operators/metadata rounds. They must fit two Multicall3

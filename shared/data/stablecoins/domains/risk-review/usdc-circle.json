@@ -2577,6 +2577,40 @@
             "url": "https://pharosscan.xyz/address/0xC879C018dB60520F4355C26eD1a6D572cdAC1815"
           }
         ]
+      },
+      {
+        "id": "arc:0x3600000000000000000000000000000000000000",
+        "destinationChain": "arc",
+        "contractAddress": "0x3600000000000000000000000000000000000000",
+        "protocol": "Circle native USDC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Arc is Circle's own L1 and USDC is its native gas asset; Circle's USDC contract registry lists Arc at 0x3600000000000000000000000000000000000000 and CCTP lists Arc as domain 26. Read at Arc block 22427887 on 2026-09-24, that address returns name() 'USDC', symbol() 'USDC', decimals() 6, totalSupply() 626750606.136837, owner() 0xf5a5658b55983e2aa037cac7a8431b510e8a97f4, masterMinter() 0x5a6e6899ad7387ee1aae23041e3eb29ba11140e3, pauser() 0x51fa31e029abf0ce307bca9ee6bf48aed6345212 and blacklister() 0x2a2b7ff330f15f9a8c52af5fec27d775f5138467 - the Circle FiatToken control surface. DefiLlama classifies Arc USDC as issued (native) rather than bridged. Supply unit: Arc accounts the native gas asset at 18 decimals while this ERC-20 interface reports 6, so any USDC supply figure must be read through the ERC-20 interface and never the 18-decimal native balance.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-24",
+        "observedBlock": 22427887,
+        "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses (Arc entry)",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          },
+          {
+            "label": "Circle CCTP supported blockchains and domains (Arc domain 26)",
+            "url": "https://developers.circle.com/cctp/concepts/supported-chains-and-domains"
+          },
+          {
+            "label": "USDC ERC-20 interface on the Arc explorer",
+            "url": "https://explorer.arc.io/address/0x3600000000000000000000000000000000000000"
+          },
+          {
+            "label": "DefiLlama pegged-assets USDC config (arc issued entry)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/usd-coin/config.ts"
+          }
+        ]
       }
     ]
   }

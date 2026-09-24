@@ -28,7 +28,7 @@ import { toErrorMessage } from "@shared/lib/error-utils";
 import { fetchJsonWithRetry } from "../fetch-retry";
 import { fetchEvmTokenBalance } from "./balance-providers";
 import type { BlacklistRow } from "./shared";
-import type { ChainRpcConfig } from "../chain-registry";
+import { getChainRpc, hasRegistryRpc, type ChainRpcConfig } from "../chain-registry";
 import { blacklistRuntimeBudgetReached, blacklistSubrequestBudgetReached, type BlacklistRunBudget } from "./run-budget";
 import { buildBlacklistAmountRepairQueueUpdate, refreshBlacklistAmountRepairQueue } from "./amount-repair-queue";
 import { buildBlacklistAmountAttemptUpdate, buildRecoveredBlacklistAmountPersistence } from "./amount-persistence";
@@ -316,13 +316,15 @@ export interface BlacklistAmountBackfillOptions {
   maxRows?: number;
 }
 
+/** Labels the first provider the lane will try. A Dwellir-only config is not readable. */
 function inferHistoricalBalanceProvider(
   drpcApiKey: string | null,
   etherscanApiKey: string | null,
-  chainRpcs?: Map<string, ChainRpcConfig>,
+  chainRpcs: Map<string, ChainRpcConfig> | undefined,
+  chainId: string,
 ): BlacklistRecoveryProvider {
   if (drpcApiKey) return "drpc";
-  if (chainRpcs) return "chain_rpc";
+  if (chainRpcs && hasRegistryRpc(getChainRpc(chainRpcs, chainId))) return "chain_rpc";
   if (etherscanApiKey) return "etherscan";
   return "chain_rpc";
 }
@@ -388,7 +390,7 @@ async function recoverEvmAmountFromEventOrHistory(opts: {
     }
   }
 
-  lastProvider = inferHistoricalBalanceProvider(drpcApiKey, etherscanApiKey, chainRpcs);
+  lastProvider = inferHistoricalBalanceProvider(drpcApiKey, etherscanApiKey, chainRpcs, config.chain.chainId);
   onProviderAttempt?.(lastProvider);
   amount = await fetchEvmTokenBalance(
     config,
@@ -620,6 +622,7 @@ export async function backfillAmounts(
       drpcApiKey,
       etherscanApiKey,
       chainRpcs,
+      config.chain.chainId,
     );
 
     // Tron rows remain unresolved because no historical balance provider is available.

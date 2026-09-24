@@ -1,6 +1,7 @@
 import { mockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import type { MockRoute } from "@shared/test-utils/mock-fetch";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import { registryRpcEndpoint } from "../../test-helpers/chain-rpc-fixtures.test-support";
 
 export type MockUrlResponse = Response | null | ((url: string, opts?: RequestInit) => Response | null);
 export type BenchmarkFetchRoutes = Record<string, MockUrlResponse>;
@@ -140,12 +141,18 @@ export function makeFxRatesMeta(
 }
 
 const CHAINLINK_FX_CHAINS = {
-  base: { chainId: "base", chainName: "Base", type: "evm", rpcUrl: "https://rpc.base.test", explorerUrl: "https://basescan.org" },
+  base: {
+    chainId: "base",
+    chainName: "Base",
+    type: "evm",
+    endpoints: [registryRpcEndpoint("https://rpc.base.test")],
+    explorerUrl: "https://basescan.org",
+  },
   ethereum: {
     chainId: "ethereum",
     chainName: "Ethereum",
     type: "evm",
-    rpcUrl: "https://rpc.ethereum.test",
+    endpoints: [registryRpcEndpoint("https://rpc.ethereum.test")],
     explorerUrl: "https://etherscan.io",
   },
 } satisfies Record<string, ChainRpcConfig>;
@@ -171,7 +178,7 @@ export function makeChainlinkFxFeed({
   const word = (value: bigint | number) => BigInt(value).toString(16).padStart(64, "0");
   const rpcConfig = CHAINLINK_FX_CHAINS[chain];
   const callRoute = (data: string, result: string): MockRoute => ({
-    match: rpcConfig.rpcUrl,
+    match: rpcConfig.endpoints[0].url,
     matchBody: `"to":"${feedAddress}","data":"${data}"`,
     body: { jsonrpc: "2.0", id: 1, result },
   });

@@ -229,6 +229,7 @@ describe("public status helpers", () => {
     expect(isPublicImpactCircuitKey("mento-broker")).toBe(false);
     expect(isPublicImpactCircuitKey("kava-pricefeed")).toBe(false);
     expect(isPublicImpactCircuitKey("jusd-citrea-bridge")).toBe(false);
+    expect(isPublicImpactCircuitKey("dwellir-evm")).toBe(false);
     expect(isPublicImpactCircuitKey("defillama-stablecoins")).toBe(true);
 
     const circuit = {
@@ -250,6 +251,7 @@ describe("public status helpers", () => {
         "mento-broker": circuit,
         "kava-pricefeed": circuit,
         "jusd-citrea-bridge": circuit,
+        "dwellir-evm": circuit,
       }),
     ).toBe(0);
   });

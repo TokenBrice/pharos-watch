@@ -1,9 +1,11 @@
-import type { ChainRpcConfig } from "../../lib/chain-registry";
+import { registryRpcUrls, type ChainRpcConfig } from "../../lib/chain-registry";
 
 export { normalizeChainId as resolveCanonicalChain } from "@shared/lib/chains";
 
 /**
- * Build a deduped list of RPC URLs from a ChainRpcConfig.
+ * Build a deduped list of RPC URLs from a ChainRpcConfig's registry endpoints.
+ * Supplemental endpoints (Dwellir) are never part of these lists: the evm-rpc
+ * transport is what appends them, after every URL returned here.
  * @param order  'fallback-first' (default) | 'primary-first' | 'rotate'
  * @param seed   Rotation index used when order='rotate' (even → fallback-first, odd → primary-first)
  */
@@ -13,9 +15,9 @@ export function resolveRpcUrls(
 ): string[] {
   if (!rpc) return [];
   const { order = "fallback-first", seed = 0 } = options;
-  const primary = typeof rpc.rpcUrl === "string" && rpc.rpcUrl.length > 0 ? rpc.rpcUrl : null;
-  const fallback =
-    typeof rpc.fallbackRpcUrl === "string" && rpc.fallbackRpcUrl.length > 0 ? rpc.fallbackRpcUrl : null;
+  const [primaryUrl, fallbackUrl] = registryRpcUrls(rpc);
+  const primary = primaryUrl || null;
+  const fallback = fallbackUrl || null;
   let ordered: (string | null)[];
   if (order === "primary-first") {
     ordered = [primary, fallback];

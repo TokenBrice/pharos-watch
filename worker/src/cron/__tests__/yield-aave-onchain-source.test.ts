@@ -30,6 +30,7 @@ import { fetchEvmCallHexAtBlock, fetchEvmUint256AtBlock } from "../../lib/evm-rp
 import { fetchAaveV3SupplyRates, type AaveV3RateTarget } from "../yield-sync/sources-rpc";
 import { loadSupplementalSourceFamilies } from "../yield-sync/supplemental-source-families";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import { makeChainRpcConfig } from "../../test-helpers/chain-rpc-fixtures.test-support";
 
 const mockFetchEvmCallHexAtBlock = vi.mocked(fetchEvmCallHexAtBlock);
 const mockFetchEvmUint256AtBlock = vi.mocked(fetchEvmUint256AtBlock);
@@ -37,18 +38,14 @@ const mockFetchEvmUint256AtBlock = vi.mocked(fetchEvmUint256AtBlock);
 afterEach(() => vi.clearAllMocks());
 
 function makeChainRpcs(chains: string[] = ["ethereum", "arbitrum", "base"]): Map<string, ChainRpcConfig> {
-  const map = new Map<string, ChainRpcConfig>();
-  for (const chain of chains) {
-    map.set(chain, {
+  return new Map(chains.map((chain): [string, ChainRpcConfig] => [
+    chain,
+    makeChainRpcConfig({
       chainId: chain,
-      chainName: chain,
-      type: "evm",
-      rpcUrl: `https://rpc.${chain}.example.com`,
-      fallbackRpcUrl: `https://fallback.${chain}.example.com`,
+      rpcUrls: [`https://rpc.${chain}.example.com`, `https://fallback.${chain}.example.com`],
       explorerUrl: `https://explorer.${chain}.example.com`,
-    });
-  }
-  return map;
+    }),
+  ]));
 }
 
 /**

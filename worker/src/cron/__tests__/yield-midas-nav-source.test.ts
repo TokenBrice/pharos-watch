@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import { makeChainRpcConfig } from "../../test-helpers/chain-rpc-fixtures.test-support";
 import { DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR } from "../../lib/evm-selectors";
 import { fetchMidasMmevNavOracleSource } from "../yield-sync/midas-mmev-nav-oracle";
 import { cleanupYieldSourceTest, mockYieldSourceRoutes } from "./yield-source.test-support";
@@ -10,13 +11,12 @@ const NOW_SEC = 1_780_000_000;
 function makeChainRpcs(): Map<string, ChainRpcConfig> {
   return new Map([[
     "ethereum",
-    {
+    makeChainRpcConfig({
       chainId: "ethereum",
       chainName: "Ethereum",
-      type: "evm",
-      rpcUrl: "https://rpc.ethereum.test",
+      rpcUrls: ["https://rpc.ethereum.test"],
       explorerUrl: "https://etherscan.io",
-    },
+    }),
   ]]);
 }
 

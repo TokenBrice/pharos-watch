@@ -476,18 +476,7 @@ describe("constant-product V2 execution", () => {
       [canonicalExitRouteAssetKey("ethereum", A7A5), "a7a5-old-vector"],
       [canonicalExitRouteAssetKey("ethereum", USDT_ETHEREUM), "usdt-tether"],
     ]);
-    const chainRpcs = new Map([
-      [
-        "ethereum",
-        {
-          chainId: "ethereum",
-          chainName: "Ethereum",
-          type: "evm",
-          rpcUrl: "https://rpc.example",
-          explorerUrl: "https://example.com",
-        },
-      ],
-    ]);
+    const chainRpcs = captureRpcs("ethereum", "Ethereum");
     const fetchMulticall = vi.fn(async (_chain: string, calls: readonly { label: string }[]) =>
       calls.map((call) => ({
         label: call.label,
@@ -785,18 +774,7 @@ describe("constant-product V2 execution", () => {
       chainAddressToId: new Map([[canonicalExitRouteAssetKey("bsc", U), metric.stablecoinId]]),
       contractMetaByChainAddress: new Map(),
       stablecoinPriceById: new Map([[metric.stablecoinId, 1]]),
-      chainRpcs: new Map([
-        [
-          "bsc",
-          {
-            chainId: "bsc",
-            chainName: "BSC",
-            type: "evm",
-            rpcUrl: "https://rpc.example",
-            explorerUrl: "https://example.com",
-          },
-        ],
-      ]),
+      chainRpcs: captureRpcs("bsc", "BSC"),
       dependencies: {
         fetchBlockNumber: vi.fn(async () => 50_000_000),
         fetchBlockHeader: vi.fn(async (_chain: string, blockNumber: number | "finalized") =>
@@ -988,18 +966,7 @@ describe("constant-product V2 execution", () => {
       chainAddressToId: new Map(),
       contractMetaByChainAddress: new Map(),
       stablecoinPriceById: new Map(),
-      chainRpcs: new Map([
-        [
-          "bsc",
-          {
-            chainId: "bsc",
-            chainName: "BSC",
-            type: "evm",
-            rpcUrl: "https://rpc.example",
-            explorerUrl: "https://example.com",
-          },
-        ],
-      ]),
+      chainRpcs: captureRpcs("bsc", "BSC"),
       dependencies: {
         fetchBlockNumber: vi.fn(async () => 50_000_000),
         fetchBlockHeader: vi.fn(async (_chain: string, blockNumber: number | "finalized") =>

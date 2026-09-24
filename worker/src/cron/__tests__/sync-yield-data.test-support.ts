@@ -2,6 +2,7 @@ import { vi } from "vitest";
 import { mockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
 import type { PublishedSafetyScoresResultMap } from "../../lib/safety-scores";
+import type * as ChainRegistryModule from "../../lib/chain-registry";
 import type { MockRegistryStablecoin } from "../../test-helpers/cron/mock-registry";
 import {
   mockCircuitBreaker,
@@ -114,11 +115,15 @@ vi.mock("../../lib/db", async (importOriginal) => {
 
 vi.mock("../../lib/db-cache", () => mockDbCache());
 
-// Stub chain-registry
-vi.mock("../../lib/chain-registry", () => ({
-  getChainRpc: vi.fn(() => null),
-  getAlchemyAuthHeaders: vi.fn(() => undefined),
-}));
+// Stub chain-registry — the registry helpers stay real (yield sources resolve
+// their endpoint URLs through them); only the chain lookup is stubbed per test.
+vi.mock("../../lib/chain-registry", async (importOriginal) => {
+  const orig = await importOriginal<typeof ChainRegistryModule>();
+  return {
+    ...orig,
+    getChainRpc: vi.fn(() => null),
+  };
+});
 
 // Stub yield-helpers — keep matchAllDlPools real (pure function, no I/O)
 vi.mock("../yield-helpers", async (importOriginal) => {
@@ -200,6 +205,7 @@ import { batchExecute } from "../../lib/db";
 import { getCache, getCaches, setCache, setCacheIfNewer, writeFreshnessSentinel } from "../../lib/db-cache";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { getChainRpc, type ChainRpcConfig } from "../../lib/chain-registry";
+import { makeChainRpcConfig } from "../../test-helpers/chain-rpc-fixtures.test-support";
 import type { CronProgressUpdate } from "../../lib/cron-logger";
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import * as safetyScoreActiveSourceModule from "../../lib/safety-score-active-source";
@@ -371,18 +377,18 @@ export function makeEthereumRpcHandler(
   };
 }
 
-export function makeEthereumRpcMap(overrides: Partial<ChainRpcConfig> = {}): Map<string, ChainRpcConfig> {
+export function makeEthereumRpcMap(
+  rpcUrls: readonly string[] = ["https://rpc.example/eth"],
+): Map<string, ChainRpcConfig> {
   return new Map([
     [
       "ethereum",
-      {
+      makeChainRpcConfig({
         chainId: "ethereum",
         chainName: "Ethereum",
-        type: "evm",
-        rpcUrl: "https://rpc.example/eth",
+        rpcUrls,
         explorerUrl: "https://etherscan.io",
-        ...overrides,
-      },
+      }),
     ],
   ]);
 }

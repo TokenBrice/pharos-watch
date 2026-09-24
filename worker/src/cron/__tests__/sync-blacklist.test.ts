@@ -139,20 +139,35 @@ vi.mock("../../lib/evm-logs", () => ({
   }),
 }));
 
-vi.mock("../../lib/chain-registry", () => ({
-  getAlchemyAuthHeaders: () => undefined,
-  getChainRpc: vi.fn((_chainRpcs: Map<string, unknown>, chainId: string) =>
-    chainId === "base"
-      ? {
-          chainId: "base",
-          chainName: "Base",
-          type: "evm",
-          rpcUrl: "https://base-rpc.example",
-          explorerUrl: "https://basescan.org",
-        }
-      : undefined,
-  ),
-}));
+vi.mock("../../lib/chain-registry", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../../lib/chain-registry")>();
+  return {
+    ...original,
+    getChainRpc: vi.fn((_chainRpcs: Map<string, unknown>, chainId: string) =>
+      chainId === "base" ? baseChainRpcConfig() : undefined,
+    ),
+  };
+});
+
+/** Hoisted so the `vi.mock` factory above can build the same fixture the tests use. */
+function baseChainRpcConfig(): ChainRpcConfig {
+  return {
+    chainId: "base",
+    chainName: "Base",
+    type: "evm",
+    endpoints: [
+      {
+        url: "https://base-rpc.example",
+        operator: "public",
+        keyed: false,
+        position: "registry",
+        stateHistory: "archive",
+        logsHistory: "full",
+      },
+    ],
+    explorerUrl: "https://basescan.org",
+  };
+}
 
 // Stub bigint helper
 vi.mock("../../lib/bigint", () => ({
@@ -206,18 +221,7 @@ const mockD1 = createMockD1Preset([
 
 // --- Helpers ---
 
-const testChainRpcs = new Map<string, ChainRpcConfig>([
-  [
-    "base",
-    {
-      chainId: "base",
-      chainName: "Base",
-      type: "evm",
-      rpcUrl: "https://base-rpc.example",
-      explorerUrl: "https://basescan.org",
-    },
-  ],
-]);
+const testChainRpcs = new Map<string, ChainRpcConfig>([["base", baseChainRpcConfig()]]);
 
 function buildTestOpts(overrides: Partial<SyncBlacklistOptions> = {}): SyncBlacklistOptions {
   return {
@@ -277,15 +281,7 @@ describe("syncBlacklist", () => {
     vi.mocked(getAlchemyBlockNumber).mockResolvedValue(20010000);
     vi.mocked(resolveBlockTimestamps).mockResolvedValue(new Map());
     vi.mocked(getChainRpc).mockImplementation((_chainRpcs: Map<string, unknown>, chainId: string) =>
-      chainId === "base"
-        ? {
-            chainId: "base",
-            chainName: "Base",
-            type: "evm",
-            rpcUrl: "https://base-rpc.example",
-            explorerUrl: "https://basescan.org",
-          }
-        : undefined,
+      chainId === "base" ? baseChainRpcConfig() : undefined,
     );
   });
 

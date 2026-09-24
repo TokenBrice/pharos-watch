@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import { makeChainRpcConfig } from "../../test-helpers/chain-rpc-fixtures.test-support";
 import { fetchBalancerPools } from "../dex-liquidity/fetch-balancer";
 import { fetchFluidPools } from "../dex-liquidity/fetch-fluid";
 import { fetchOrcaPools } from "../dex-liquidity/fetch-orca";
@@ -110,13 +111,12 @@ describe("fetchFluidPools", () => {
     });
 
     const chainRpcs = new Map<string, ChainRpcConfig>([
-      ["ethereum", {
+      ["ethereum", makeChainRpcConfig({
         chainId: "ethereum",
         chainName: "Ethereum",
-        type: "evm",
-        rpcUrl: "https://rpc.example",
+        rpcUrls: ["https://rpc.example"],
         explorerUrl: "https://etherscan.io",
-      }],
+      })],
     ]);
 
     const pools = await fetchFluidPools(undefined, chainRpcs);
@@ -144,13 +144,12 @@ describe("fetchFluidPools", () => {
     });
 
     const chainRpcs = new Map<string, ChainRpcConfig>([
-      ["ethereum", {
+      ["ethereum", makeChainRpcConfig({
         chainId: "ethereum",
         chainName: "Ethereum",
-        type: "evm",
-        rpcUrl: "https://rpc.example",
+        rpcUrls: ["https://rpc.example"],
         explorerUrl: "https://etherscan.io",
-      }],
+      })],
     ]);
 
     const pools = await fetchFluidPools(undefined, chainRpcs);
@@ -203,13 +202,12 @@ describe("fetchFluidPools", () => {
     });
 
     const chainRpcs = new Map<string, ChainRpcConfig>([
-      ["ethereum", {
+      ["ethereum", makeChainRpcConfig({
         chainId: "ethereum",
         chainName: "Ethereum",
-        type: "evm",
-        rpcUrl: "https://rpc.example",
+        rpcUrls: ["https://rpc.example"],
         explorerUrl: "https://etherscan.io",
-      }],
+      })],
     ]);
 
     const pools = await fetchFluidPools(undefined, chainRpcs);

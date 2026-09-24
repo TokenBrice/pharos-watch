@@ -1,5 +1,13 @@
 import { logWorkerEventArgs } from "./structured-log";
-import { getAlchemyAuthHeaders, getChainRpc, type ChainRpcConfig } from "./chain-registry";
+import {
+  getChainRpc,
+  getRpcAuth,
+  getRpcAuthHeaders,
+  registryRpcUrls,
+  supplementalRpcEndpoints,
+  type ChainRpcConfig,
+} from "./chain-registry";
+import { recordDwellirCredits } from "./rpc-provider-budget";
 import { ETHERSCAN_V2_BASE } from "./constants";
 import { encodeAddress, encodeUint256 } from "./evm-selectors";
 import { fetchJsonWithRetry } from "./fetch-retry";
@@ -23,8 +31,14 @@ export interface EvmRpcOptions {
   timeoutMs?: number;
   /** Absolute wall-clock deadline. Each retry/fallback caps its timeout to the remaining time. */
   deadlineMs?: number;
-  /** Invoked immediately before each RPC URL attempt. False prevents the request. */
-  beforeRequest?: () => boolean;
+  /** Invoked immediately before each RPC URL attempt with the URL about to be requested. False prevents the request. */
+  beforeRequest?: (url: string) => boolean;
+  /**
+   * Registry endpoints and `extraRpcUrls` only. Log lanes (blacklist, mint/burn)
+   * must never reach a supplemental operator, so they set this on every call
+   * that passes `chainRpcs`.
+   */
+  excludeSupplementalRpc?: boolean;
   maxRetries?: number;
   /** Gas limit for eth_call (hex string, e.g. "0x7A120"). Needed for cross-contract calls. */
   gas?: string;
@@ -224,27 +238,123 @@ function resolveMulticallBatchSize(callsLength: number, rawBatchSize: number | u
   return rawBatchSize;
 }
 
-function buildRpcUrls(chainId?: string, extraRpcUrls?: string[], chainRpcs?: Map<string, ChainRpcConfig>): string[] {
-  const urls: string[] = [];
-  if (chainId && chainRpcs) {
-    const chainRpc = getChainRpc(chainRpcs, chainId);
-    if (chainRpc) {
-      urls.push(chainRpc.rpcUrl);
-      if (chainRpc.fallbackRpcUrl) urls.push(chainRpc.fallbackRpcUrl);
-    }
+interface BuildRpcUrlsOptions {
+  /** True when the request can pin a historical block; near-head-only endpoints are then skipped. */
+  historicalBlock?: boolean;
+  /** Registry endpoints and `extraRpcUrls` only. */
+  excludeSupplementalRpc?: boolean;
+}
+
+/**
+ * Supplemental origins demoted after a failed attempt, keyed by the per-run
+ * `chainRpcs` Map object. The run owns the lifetime: entries are only reachable
+ * through the map that observed the failure, so a demotion never outlives its
+ * run and registry endpoints are never demoted.
+ */
+const demotedSupplementalRpcOriginsByRun = new WeakMap<Map<string, ChainRpcConfig>, Set<string>>();
+
+/** Dedupe/graph identity of a URL. Returns null when the URL cannot be parsed. */
+function endpointOrigin(url: string): string | null {
+  try {
+    return new URL(url).origin;
+  } catch {
+    return null;
   }
+}
+
+/** True when the url's registered origin carries the Dwellir key. */
+function isDwellirRpcUrl(rpcUrl: string): boolean {
+  const origin = endpointOrigin(rpcUrl);
+  return origin != null && getRpcAuth(rpcUrl)?.provider === "dwellir";
+}
+
+/**
+ * Counts one credit per JSON-RPC response item before the request is sent, so a
+ * provider that answers with an error still consumes budget.
+ */
+function meterDwellirRpcRequest(rpcUrl: string, credits: number): void {
+  if (isDwellirRpcUrl(rpcUrl)) recordDwellirCredits(credits);
+}
+
+/** A timeout or network failure takes the origin out of this run's failover order. */
+function demoteFailedDwellirAttempt(
+  chainRpcs: Map<string, ChainRpcConfig> | undefined,
+  rpcUrl: string,
+): void {
+  if (!chainRpcs) return;
+  const origin = endpointOrigin(rpcUrl);
+  if (origin == null || !isDwellirRpcUrl(rpcUrl)) return;
+
+  const demoted = demotedSupplementalRpcOriginsByRun.get(chainRpcs) ?? new Set<string>();
+  demoted.add(origin);
+  demotedSupplementalRpcOriginsByRun.set(chainRpcs, demoted);
+}
+
+/**
+ * A block number (or its hex quantity form) may be pruned on a near-head-only
+ * operator; the JSON-RPC tag strings cannot.
+ */
+function isHistoricalBlockTag(blockTag: string | number | undefined): boolean {
+  if (typeof blockTag === "number") return true;
+  return blockTag != null && /^0x[0-9a-fA-F]+$/.test(blockTag);
+}
+
+/**
+ * Every url a read may try, in order: registry endpoints, then adapter-pinned
+ * `extraRpcUrls`, then supplemental endpoints (Dwellir is always last, so no
+ * existing operator is ever reordered).
+ */
+function buildRpcUrls(
+  chainId?: string,
+  extraRpcUrls?: string[],
+  chainRpcs?: Map<string, ChainRpcConfig>,
+  blockTag?: string | number,
+  options?: BuildRpcUrlsOptions,
+): string[] {
+  const urls: string[] = [];
+  const historicalBlock = options?.historicalBlock ?? isHistoricalBlockTag(blockTag);
+  const chainRpc = chainId && chainRpcs ? getChainRpc(chainRpcs, chainId) : undefined;
+  const demoted = chainRpcs == null ? undefined : demotedSupplementalRpcOriginsByRun.get(chainRpcs);
+
+  urls.push(...registryRpcUrls(chainRpc));
   if (extraRpcUrls) {
     urls.push(...extraRpcUrls);
+  }
+  if (!options?.excludeSupplementalRpc) {
+    for (const endpoint of supplementalRpcEndpoints(chainRpc, { historicalBlock })) {
+      if (demoted?.has(endpointOrigin(endpoint.url) ?? endpoint.url)) continue;
+      urls.push(endpoint.url);
+    }
   }
 
   return Array.from(new Set(urls.filter((url) => typeof url === "string" && url.length > 0)));
 }
 
+/** Url resolution for a read that already knows its block tag. */
+function requestRpcUrls(
+  chainId: string | undefined,
+  options: EvmRpcOptions | undefined,
+  blockTag?: string | number,
+): string[] {
+  return buildRpcUrls(chainId, options?.extraRpcUrls, options?.chainRpcs, blockTag, {
+    excludeSupplementalRpc: options?.excludeSupplementalRpc,
+  });
+}
+
 function buildJsonRpcHeaders(rpcUrl: string): Record<string, string> {
   return {
     "Content-Type": "application/json",
-    ...(getAlchemyAuthHeaders(rpcUrl) ?? {}),
+    ...(getRpcAuthHeaders(rpcUrl) ?? {}),
   };
+}
+
+/** Key-free failure text for one attempt; never includes the URL query or headers. */
+function describeRpcFailure(result: { response: Response } | null, rpcUrl: string): string {
+  if (result == null) return "HTTP no-response";
+  if (result.response.status === 403 && isDwellirRpcUrl(rpcUrl)) {
+    return "provider-capability (HTTP 403)";
+  }
+  return `HTTP ${result.response.status}`;
 }
 
 async function fetchJsonRpcResult<T>(
@@ -266,12 +376,13 @@ async function fetchJsonRpcResult<T>(
       failures.push(`${rpcUrl}: request deadline exceeded`);
       break;
     }
-    if (options?.beforeRequest && !options.beforeRequest()) {
+    if (options?.beforeRequest && !options.beforeRequest(rpcUrl)) {
       failures.push(`${rpcUrl}: request budget exhausted`);
       break;
     }
     const timeoutMs = Math.min(configuredTimeoutMs, remainingMs);
     try {
+      meterDwellirRpcRequest(rpcUrl, 1);
       const result = await fetchJsonWithRetry<JsonRpcEnvelope<unknown>>(
         rpcUrl,
         {
@@ -289,8 +400,13 @@ async function fetchJsonRpcResult<T>(
         { timeoutMs, retryMode: "network-only" },
       );
 
-      if (!result?.response.ok) {
-        failures.push(`${rpcUrl}: HTTP ${result?.response.status ?? "no-response"}`);
+      if (result == null || !result.response.ok) {
+        // A null result is a transport failure (timeout/network) that never
+        // produced a status; a Dwellir 403 is a provider capability/plan
+        // rejection, so it is reported as such and never retried (network-only
+        // mode returns the first HTTP status instead of retrying it).
+        if (result == null) demoteFailedDwellirAttempt(options?.chainRpcs, rpcUrl);
+        failures.push(`${rpcUrl}: ${describeRpcFailure(result, rpcUrl)}`);
         continue;
       }
 
@@ -314,6 +430,7 @@ async function fetchJsonRpcResult<T>(
       return body.result as T;
     } catch (err) {
       rethrowIfAborted(err, options?.signal);
+      demoteFailedDwellirAttempt(options?.chainRpcs, rpcUrl);
       failures.push(`${rpcUrl}: ${toErrorMessage(err)}`);
       continue;
     }
@@ -361,12 +478,25 @@ async function runEvmRpcBatch<Value>(
   options: EvmRpcOptions | undefined,
   project: (rowsById: ReadonlyMap<number, JsonRpcEnvelope<unknown>>) => Value | null,
 ): Promise<Value | null> {
-  const urls = buildRpcUrls(chainId, options?.extraRpcUrls, options?.chainRpcs);
+  const urls = buildRpcUrls(chainId, options?.extraRpcUrls, options?.chainRpcs, undefined, {
+    // A batch may carry pinned block parameters, so a near-head-only endpoint
+    // must never be allowed to answer one.
+    historicalBlock: true,
+    excludeSupplementalRpc: options?.excludeSupplementalRpc,
+  });
   if (urls.length === 0 || calls.length === 0) return null;
 
+  const configuredTimeoutMs = options?.timeoutMs ?? 10_000;
   const maxRetries = options?.maxRetries ?? 1;
   for (const rpcUrl of urls) {
+    const remainingMs = options?.deadlineMs == null
+      ? configuredTimeoutMs
+      : Math.floor(options.deadlineMs - Date.now());
+    if (remainingMs <= 0) break;
+    if (options?.beforeRequest && !options.beforeRequest(rpcUrl)) break;
+
     try {
+      meterDwellirRpcRequest(rpcUrl, calls.length);
       const result = await fetchJsonWithRetry<Array<JsonRpcEnvelope<unknown>>>(
         rpcUrl,
         {
@@ -383,9 +513,13 @@ async function runEvmRpcBatch<Value>(
           ),
         },
         maxRetries,
-        { timeoutMs: options?.timeoutMs ?? 10_000, retryMode: "network-only" },
+        { timeoutMs: Math.min(configuredTimeoutMs, remainingMs), retryMode: "network-only" },
       );
-      if (!result?.response.ok || !Array.isArray(result.body) || result.body.length !== calls.length) continue;
+      if (result == null) {
+        demoteFailedDwellirAttempt(options?.chainRpcs, rpcUrl);
+        continue;
+      }
+      if (!result.response.ok || !Array.isArray(result.body) || result.body.length !== calls.length) continue;
 
       const byId = new Map<number, JsonRpcEnvelope<unknown>>();
       let valid = true;
@@ -407,6 +541,7 @@ async function runEvmRpcBatch<Value>(
       if (projected !== null) return projected;
     } catch (error) {
       rethrowIfAborted(error, options?.signal);
+      demoteFailedDwellirAttempt(options?.chainRpcs, rpcUrl);
     }
   }
 
@@ -491,7 +626,7 @@ export async function fetchEvmCallHexAtBlock(
   blockNumberOrTag: number | "latest" = "latest",
   options?: EvmRpcOptions,
 ): Promise<`0x${string}` | null> {
-  const urls = buildRpcUrls(chainId, options?.extraRpcUrls, options?.chainRpcs);
+  const urls = requestRpcUrls(chainId, options, blockNumberOrTag);
   if (urls.length === 0) return null;
 
   const callObj: Record<string, string> = { to, data };
@@ -516,7 +651,7 @@ export async function fetchEvmCodeStatusAtBlock(
   blockNumberOrTag: number | "latest" = "latest",
   options?: EvmRpcOptions,
 ): Promise<EvmCodeAtBlockResult> {
-  const urls = buildRpcUrls(chainId, options?.extraRpcUrls, options?.chainRpcs);
+  const urls = requestRpcUrls(chainId, options, blockNumberOrTag);
   if (urls.length === 0) return { status: "unavailable" };
 
   const result = await fetchJsonRpcResult<string>(
@@ -557,7 +692,7 @@ export async function fetchEvmStorageAtBlock(
   blockNumberOrTag: number | "latest" = "latest",
   options?: EvmRpcOptions,
 ): Promise<`0x${string}` | null> {
-  const urls = buildRpcUrls(chainId, options?.extraRpcUrls, options?.chainRpcs);
+  const urls = requestRpcUrls(chainId, options, blockNumberOrTag);
   if (urls.length === 0) return null;
 
   const result = await fetchJsonRpcResult<string>(
@@ -675,7 +810,7 @@ export async function fetchEtherscanUint256AtBlock(
 }
 
 export async function fetchEvmBlockNumber(chainId: string, options?: EvmRpcOptions): Promise<number | null> {
-  const urls = buildRpcUrls(chainId, options?.extraRpcUrls, options?.chainRpcs);
+  const urls = requestRpcUrls(chainId, options, "latest");
   if (urls.length === 0) return null;
 
   const result = await fetchJsonRpcResult<string>(urls, "eth_blockNumber", [], options);
@@ -687,7 +822,7 @@ export async function fetchEvmBlockTimestamp(
   blockNumber: number,
   options?: EvmRpcOptions,
 ): Promise<number | null> {
-  const urls = buildRpcUrls(chainId, options?.extraRpcUrls, options?.chainRpcs);
+  const urls = requestRpcUrls(chainId, options, blockNumber);
   if (urls.length === 0) return null;
 
   const block = await fetchJsonRpcResult<EvmBlockResult>(
@@ -705,7 +840,7 @@ export async function fetchEvmBlockHeader(
   blockNumberOrTag: number | "finalized",
   options?: EvmRpcOptions,
 ): Promise<EvmBlockHeader | null> {
-  const urls = buildRpcUrls(chainId, options?.extraRpcUrls, options?.chainRpcs);
+  const urls = requestRpcUrls(chainId, options, blockNumberOrTag);
   if (
     urls.length === 0 ||
     (typeof blockNumberOrTag === "number" &&

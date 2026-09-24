@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import { makeChainRpcConfig } from "../../test-helpers/chain-rpc-fixtures.test-support";
 import { cleanupYieldSourceTest, mockYieldSourceFetchRetryModule } from "./yield-source.test-support";
 
 vi.mock("../../lib/fetch-retry", () => mockYieldSourceFetchRetryModule());
@@ -16,25 +17,21 @@ const TEST_START_SEC = 1_800_000_000;
 const TEST_CHAIN_RPCS = new Map<string, ChainRpcConfig>([
   [
     "base",
-    {
+    makeChainRpcConfig({
       chainId: "base",
       chainName: "Base",
-      type: "evm",
-      rpcUrl: "https://rpc.example/base",
-      fallbackRpcUrl: "https://rpc-fallback.example/base",
+      rpcUrls: ["https://rpc.example/base", "https://rpc-fallback.example/base"],
       explorerUrl: "https://basescan.org",
-    },
+    }),
   ],
   [
     "ethereum",
-    {
+    makeChainRpcConfig({
       chainId: "ethereum",
       chainName: "Ethereum",
-      type: "evm",
-      rpcUrl: "https://rpc.example/ethereum",
-      fallbackRpcUrl: "https://rpc-fallback.example/ethereum",
+      rpcUrls: ["https://rpc.example/ethereum", "https://rpc-fallback.example/ethereum"],
       explorerUrl: "https://etherscan.io",
-    },
+    }),
   ],
 ]);
 

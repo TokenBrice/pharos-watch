@@ -49,6 +49,7 @@ function sanitize(message: string, maxLength: number): string {
 const PROVIDER_URL_HOST_PATTERNS = [
   /(?:^|\.)alchemy\.com$/i,
   /(?:^|\.)drpc\.org$/i,
+  /(?:^|\.)n\.dwellir\.com$/i,
   /(?:^|\.)etherscan\.io$/i,
   /(?:^|\.)telegram\.org$/i,
   /(?:^|\.)twitter\.com$/i,

@@ -7,22 +7,19 @@ vi.mock("../../lib/evm-rpc", () => ({
 import { fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
 import { fetchCompoundV3SupplyRates } from "../yield-sync/sources-rpc";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import { makeChainRpcConfig } from "../../test-helpers/chain-rpc-fixtures.test-support";
 
 const mockEvmCall = vi.mocked(fetchEvmUint256AtBlock);
 
 function makeChainRpcs(chains: string[] = ["ethereum"]): Map<string, ChainRpcConfig> {
-  const map = new Map<string, ChainRpcConfig>();
-  for (const chain of chains) {
-    map.set(chain, {
+  return new Map(chains.map((chain): [string, ChainRpcConfig] => [
+    chain,
+    makeChainRpcConfig({
       chainId: chain,
-      chainName: chain,
-      type: "evm",
-      rpcUrl: `https://rpc.${chain}.example.com`,
-      fallbackRpcUrl: `https://fallback.${chain}.example.com`,
+      rpcUrls: [`https://rpc.${chain}.example.com`, `https://fallback.${chain}.example.com`],
       explorerUrl: `https://explorer.${chain}.example.com`,
-    });
-  }
-  return map;
+    }),
+  ]));
 }
 
 describe("fetchCompoundV3SupplyRates", () => {
@@ -95,13 +92,11 @@ describe("fetchCompoundV3SupplyRates", () => {
 
     const chainRpcs = new Map<string, ChainRpcConfig>([[
       "ethereum",
-      {
+      makeChainRpcConfig({
         chainId: "ethereum",
-        chainName: "ethereum",
-        type: "evm",
-        rpcUrl: "https://rpc.ethereum.example.com",
+        rpcUrls: ["https://rpc.ethereum.example.com"],
         explorerUrl: "https://explorer.ethereum.example.com",
-      },
+      }),
     ]]);
 
     const { results } = await fetchCompoundV3SupplyRates(

@@ -1,18 +1,33 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ChainRpcConfig } from "../../../lib/chain-registry";
+import type { ChainRpcConfig, RpcEndpoint } from "../../../lib/chain-registry";
+import { registryRpcEndpoint } from "../../../test-helpers/chain-rpc-fixtures.test-support";
 import {
   createOptionalSourceBudget,
   resolveCanonicalChain,
   resolveRpcUrls,
 } from "../sources-helpers";
 
+function supplementalEndpoint(url: string): RpcEndpoint {
+  return {
+    url,
+    operator: "dwellir",
+    keyed: true,
+    position: "supplemental",
+    stateHistory: "archive",
+    logsHistory: "full",
+    verifiedAt: "2026-09-23",
+  };
+}
+
 function makeRpc(overrides: Partial<ChainRpcConfig> = {}): ChainRpcConfig {
   return {
     chainId: "ethereum",
     chainName: "Ethereum",
     type: "evm",
-    rpcUrl: "https://rpc.example.com",
-    fallbackRpcUrl: "https://fallback.example.com",
+    endpoints: [
+      registryRpcEndpoint("https://rpc.example.com"),
+      registryRpcEndpoint("https://fallback.example.com"),
+    ],
     explorerUrl: "https://etherscan.io",
     ...overrides,
   };
@@ -33,10 +48,19 @@ describe("resolveRpcUrls", () => {
       "https://fallback.example.com",
       "https://rpc.example.com",
     ]);
-    expect(resolveRpcUrls(makeRpc({ fallbackRpcUrl: undefined }))).toEqual([
+    expect(resolveRpcUrls(makeRpc({ endpoints: [registryRpcEndpoint("https://rpc.example.com")] }))).toEqual([
       "https://rpc.example.com",
     ]);
-    expect(resolveRpcUrls(makeRpc({ rpcUrl: "" }))).toEqual(["https://fallback.example.com"]);
+    expect(
+      resolveRpcUrls(
+        makeRpc({
+          endpoints: [
+            registryRpcEndpoint(""),
+            registryRpcEndpoint("https://fallback.example.com"),
+          ],
+        }),
+      ),
+    ).toEqual(["https://fallback.example.com"]);
     expect(resolveRpcUrls(undefined)).toEqual([]);
   });
 
@@ -68,10 +92,43 @@ describe("resolveRpcUrls", () => {
   });
 
   it("deduplicates a primary that repeats the fallback URL in every order", () => {
-    const rpc = makeRpc({ fallbackRpcUrl: "https://rpc.example.com" });
+    const rpc = makeRpc({
+      endpoints: [
+        registryRpcEndpoint("https://rpc.example.com"),
+        registryRpcEndpoint("https://rpc.example.com"),
+      ],
+    });
     expect(resolveRpcUrls(rpc)).toEqual(["https://rpc.example.com"]);
     expect(resolveRpcUrls(rpc, { order: "primary-first" })).toEqual(["https://rpc.example.com"]);
     expect(resolveRpcUrls(rpc, { order: "rotate", seed: 1 })).toEqual(["https://rpc.example.com"]);
+  });
+
+  it("ignores a trailing supplemental endpoint in every order", () => {
+    const withDwellir = makeRpc({
+      endpoints: [
+        registryRpcEndpoint("https://rpc.example.com"),
+        registryRpcEndpoint("https://fallback.example.com"),
+        supplementalEndpoint("https://api-ethereum-mainnet-erigon.n.dwellir.com"),
+      ],
+    });
+
+    expect(resolveRpcUrls(withDwellir)).toEqual(resolveRpcUrls(makeRpc()));
+    expect(resolveRpcUrls(withDwellir, { order: "primary-first" })).toEqual([
+      "https://rpc.example.com",
+      "https://fallback.example.com",
+    ]);
+    expect(resolveRpcUrls(withDwellir, { order: "rotate", seed: 1 })).toEqual([
+      "https://rpc.example.com",
+      "https://fallback.example.com",
+    ]);
+    expect(resolveRpcUrls(withDwellir)).not.toContain("https://api-ethereum-mainnet-erigon.n.dwellir.com");
+    // A supplemental-only config (pin-only chain + Dwellir key) has no readable
+    // registry URL at all.
+    expect(
+      resolveRpcUrls(
+        makeRpc({ endpoints: [supplementalEndpoint("https://api-base-mainnet-archive.n.dwellir.com")] }),
+      ),
+    ).toEqual([]);
   });
 });
 

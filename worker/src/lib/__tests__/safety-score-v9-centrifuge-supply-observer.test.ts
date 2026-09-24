@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ChainRpcConfig } from "../chain-registry";
+import { makeChainRpcs } from "../../test-helpers/chain-rpc-fixtures.test-support";
 import type {
   EvmMulticall3Call,
   EvmMulticall3Result,
@@ -66,18 +67,7 @@ function uint256(value: bigint): `0x${string}` {
 }
 
 function chainRpcs(): Map<string, ChainRpcConfig> {
-  return new Map(
-    ["ethereum", "arbitrum", "avalanche", "base", "bsc"].map((chainId) => [
-      chainId,
-      {
-        chainId,
-        chainName: chainId,
-        type: "evm" as const,
-        rpcUrl: `https://${chainId}.example`,
-        explorerUrl: `https://${chainId}.example/explorer`,
-      },
-    ]),
-  );
+  return makeChainRpcs(["ethereum", "arbitrum", "avalanche", "base", "bsc"]);
 }
 
 function routeForChain(chainId: string) {
