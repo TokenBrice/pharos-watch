@@ -226,7 +226,7 @@ const DEFAULT_ONCHAIN_LOG_SCAN_MAX_CALLS = 4;
 const DEFAULT_ONCHAIN_LOG_MIN_RANGE_BLOCKS = 1_000;
 const ADDRESS_HEX_PATTERN = /^0x[0-9a-fA-F]{40}$/;
 const TOPIC_HEX_PATTERN = /^0x[0-9a-fA-F]{64}$/;
-const DATA_HEX_PATTERN = /^0x(?:[0-9a-fA-F]{2})*$/;
+const DATA_HEX_PATTERN = /^0x[0-9a-fA-F]*$/;
 const QUANTITY_HEX_PATTERN = /^0x[0-9a-fA-F]+$/;
 const SPLITTABLE_RANGE_HINTS = [
   "block range",
@@ -263,7 +263,7 @@ function parseOnchainLogEntry(
   const topics = entry.topics as string[];
   if (expected.topic0 != null && topics[0]?.toLowerCase() !== expected.topic0.toLowerCase()) return null;
   if (entry.removed === true) return null;
-  if (typeof entry.data !== "string" || !DATA_HEX_PATTERN.test(entry.data)) return null;
+  if (typeof entry.data !== "string" || !DATA_HEX_PATTERN.test(entry.data) || entry.data.length % 2 !== 0) return null;
   if (typeof entry.blockNumber !== "string" || !QUANTITY_HEX_PATTERN.test(entry.blockNumber)) return null;
   return { address: entry.address, topics, data: entry.data, blockNumber: entry.blockNumber };
 }
