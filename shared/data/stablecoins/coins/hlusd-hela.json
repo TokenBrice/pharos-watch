@@ -56,5 +56,15 @@
       "title": "Native chain not yet supported",
       "message": "CoinGecko lists HLUSD without a supported Pharos contract platform. Runtime coverage uses the CoinGecko price and market-cap path while contract coverage remains intentionally absent."
     }
-  ]
+  ],
+  "status": "quarantined",
+  "listingStatusReview": {
+    "changedAt": "2026-09-24",
+    "reason": "No tracked contract exists on any supported chain, so no on-chain supply path can be probed, and the CoinGecko row has been stale since 2026-08-14, when Biconomy suspended HLUSD trading. Re-source a native-HeLa supply reader or an issuer supply feed.",
+    "reviewBy": "2026-10-24",
+    "source": {
+      "label": "Biconomy announcement on the suspension of HLUSD trading",
+      "url": "https://biconomy.zendesk.com/hc/en-us/articles/61142386396057-Biconomy-com-Announcement-on-the-Suspension-of-HLUSD-Trading"
+    }
+  }
 }

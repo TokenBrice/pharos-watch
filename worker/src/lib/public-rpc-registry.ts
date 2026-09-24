@@ -48,6 +48,10 @@ const PUBLIC_RPC_URLS: Record<string, string> = {
   // Arc (Circle's L1) — required by the Dwellir provider-parity observation
   // lane, which reads the chain's first registry operator as its baseline.
   arc: "https://rpc.mainnet.arc.io",
+  // Hemi — required by vcred-vcred's reviewed on-chain circulating-supply probe
+  // (its only tracked deployment). Same reviewed public endpoint as the coin's
+  // liveReservesConfig; dRPC serves as an independent second operator below.
+  hemi: "https://rpc.hemi.network/rpc",
 };
 
 const EXTRA_FALLBACK_RPC_URLS: Record<string, string[]> = {
@@ -62,6 +66,9 @@ const EXTRA_FALLBACK_RPC_URLS: Record<string, string[]> = {
   polygon: ["https://polygon.drpc.org"],
   // dRPC as an independent second operator behind rpc.mainnet.arc.io.
   arc: ["https://arc.drpc.org"],
+  // dRPC as an independent second operator behind rpc.hemi.network; verified
+  // 2026-09-24 returning the same VCRED totalSupply and Safe balanceOf reads.
+  hemi: ["https://hemi.drpc.org"],
 };
 
 export function getPublicRpcUrl(chainId: string): string | undefined {

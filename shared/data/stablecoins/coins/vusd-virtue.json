@@ -41,5 +41,15 @@
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "governanceQuality": "single-entity",
-  "launchDate": "2025-07-14"
+  "launchDate": "2025-07-14",
+  "status": "quarantined",
+  "listingStatusReview": {
+    "changedAt": "2026-09-24",
+    "reason": "Native VUSD is an IOTA Move coin no configured supply-probe family can read, and reviewed aggregates refuse a partial roster; the IOTA EVM leg is not a defensible circulating figure. CoinGecko stale since 2026-08-15; re-source a native-IOTA supply reader.",
+    "reviewBy": "2026-10-24",
+    "source": {
+      "label": "CoinGecko page for Virtue USD (last updated 2026-08-15)",
+      "url": "https://www.coingecko.com/en/coins/virtue-usd"
+    }
+  }
 }

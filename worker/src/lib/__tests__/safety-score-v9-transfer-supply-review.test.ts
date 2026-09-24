@@ -324,7 +324,14 @@ describe("Safety Score V9 transfer-materiality supply partition", () => {
     expect(compiled.supply.selectedBridgeRoutes).toEqual([]);
   });
 
-  it.each(["idrt-rupiah-token", "vusd-virtue"])(
+  // idrt and GLDT both carry multi-deployment representation inventories whose
+  // raw totalSupply() rows must never be summed into a partition: GLDT is native
+  // on the Internet Computer and reaches Ethereum/Base/Arbitrum through Omnity's
+  // ICP-custody lock/mint bridge, so summing the four deployments would double
+  // count the same liability. The review path must fail closed (null) instead.
+  // (vusd-virtue was the prior second fixture; it is quarantined as of the
+  // 2026-09-24 coverage review and no longer enters V9 evaluation.)
+  it.each(["idrt-rupiah-token", "gldt-gold-dao"])(
     "does not sum the excluded %s representation inventory",
     (assetId) => {
       expect(review(assetId, generation(assetId))).toBeNull();

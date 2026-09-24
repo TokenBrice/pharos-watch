@@ -471,11 +471,15 @@ describe("dex-liquidity persistence", () => {
   });
 
   it("classifies the deployment census for a scored row that retained no pool", async () => {
-    // hlusd-hela shape: a metrics row sends the asset down the scoring path, so
-    // it never reaches the placeholder loop and would otherwise publish an
-    // `unknown` coverage with an empty unsupportedReasons map.
-    const meta = ACTIVE_STABLECOINS.find((coin) => coin.id === "hlusd-hela");
-    if (!meta) throw new Error("expected hlusd-hela in active registry");
+    // Shape under test (formerly the hlusd-hela fixture, now quarantined): an
+    // active coin with no tracked deployments whose metrics row sends the asset
+    // down the scoring path, so it never reaches the placeholder loop and would
+    // otherwise publish an `unknown` coverage with an empty unsupportedReasons
+    // map. Resolve by shape so a lifecycle change cannot strand this fixture.
+    const meta = ACTIVE_STABLECOINS.find(
+      (coin) => (coin.contracts?.length ?? 0) === 0 && (coin.tradedContracts?.length ?? 0) === 0,
+    );
+    if (!meta) throw new Error("expected an active stablecoin with no tracked deployments");
     const nowSec = 1_800_000_000;
     const metrics = initMetrics(meta.id, meta.symbol);
     metrics.totalTvlUsd = 1_000;

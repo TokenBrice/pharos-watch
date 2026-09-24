@@ -165,16 +165,18 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     expiresAt: Date.UTC(2026, 9, 15) / 1000,
   },
   {
-    stablecoinId: "hlusd-hela",
+    stablecoinId: "usda-avalon",
     owner: "ops",
     reason:
-      "Biconomy suspended HLUSD spot trading indefinitely on 2026-08-14 and CoinGecko went stale the same day; no other lane is admissible (Cytoswap global swaps stale, WHLUSD/hUSDT vs hUSDC pool ratios disagree, Biconomy API now Not Found). Trading resumption would self-heal the CoinGecko lane; freeze on the suspension evidence if it persists past the expiry.",
+      "DefiLlama publishes USDA supply but no list price (detail 220 price null), CoinGecko has been stale since 2026-08-14, and every venue sits below the admissibility floors: the only fresh-looking lane is DefiLlama's per-deployment quote (nibiru 0xf4e0…2003, ~$0.9998), which DefiLlama re-stamps only intermittently (last observation 2026-09-24 05:07 UTC) so it is stale beyond the lane's 15-minute budget in most runs; the PancakeSwap BSC USDA/USDT pair trades ~$5.59/day against the $50K address-provider floor; and Ethereum onchain marks have zero 24h volume while diverging ~9% from the contract quote. Issuer 1:1 USDT convertibility is not yet a machine-read route; re-source a reviewed redemption or venue lane by the expiry.",
     sources: [
-      "https://biconomy.zendesk.com/hc/en-us/articles/61142386396057-Biconomy-com-Announcement-on-the-Suspension-of-HLUSD-Trading",
-      "https://docs.helalabs.com/hlusd/minting-redemption-of-hlusd",
+      "https://stablecoins.llama.fi/stablecoin/220",
+      "https://www.coingecko.com/en/coins/usda-2",
+      "https://dexscreener.com/bsc/0x9a4d3d78aa3a0372335ee43e08575c65a027f653",
+      "https://docs.avalonfinance.xyz",
     ],
-    reviewedAt: PRICE_GAP_REVIEWED_AT_SEC,
-    expiresAt: Date.UTC(2026, 9, 13) / 1000,
+    reviewedAt: Date.UTC(2026, 8, 24) / 1000,
+    expiresAt: Date.UTC(2026, 9, 24) / 1000,
   },
   {
     stablecoinId: "vcred-vcred",
