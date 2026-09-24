@@ -32,13 +32,26 @@ describe("registry universes", () => {
   });
 
   it("QUARANTINED and DELISTED retain readable records without entering active", () => {
-    expect(QUARANTINED_STABLECOINS).toHaveLength(12);
-    expect(DELISTED_STABLECOINS).toHaveLength(9);
     expect(QUARANTINED_STABLECOINS.every(isQuarantinedStablecoinMeta)).toBe(true);
     expect(DELISTED_STABLECOINS.every(isDelistedStablecoinMeta)).toBe(true);
+    const isQuarantinedId = (id: string): boolean => QUARANTINED_STABLECOINS.some((coin) => coin.id === id);
     for (const coin of [...QUARANTINED_STABLECOINS, ...DELISTED_STABLECOINS]) {
       expect(ACTIVE_IDS.has(coin.id)).toBe(false);
       expect(READABLE_IDS.has(coin.id)).toBe(true);
+      // Every hold carries its own dated, reasoned review; the reversible
+      // quarantine additionally pins a manual follow-up date.
+      expect(coin.listingStatusReview?.changedAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(coin.listingStatusReview?.reason.trim()).not.toBe("");
+      if (isQuarantinedStablecoinMeta(coin)) {
+        expect(coin.listingStatusReview?.reviewBy).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      }
+    }
+    // The 2026-09-24 coverage review's runtime holds must stay out of the active
+    // publication contract while remaining readable detail records.
+    for (const id of ["hlusd-hela", "vusd-virtue", "luausd-lumi-finance", "bib01-backed"]) {
+      expect(isQuarantinedId(id)).toBe(true);
+      expect(ACTIVE_IDS.has(id)).toBe(false);
+      expect(READABLE_IDS.has(id)).toBe(true);
     }
   });
 

@@ -10,7 +10,7 @@ import {
   isSevereFixedPegDownside,
   validatePriceCandidate,
 } from "../../lib/price-validation";
-import { POOL_CHALLENGE_HIGH_TVL_USD, POOL_CHALLENGE_MIN_TVL, getDepegThresholdBps } from "../../lib/constants";
+import { POOL_CHALLENGE_HIGH_TVL_USD, POOL_CHALLENGE_MIN_TVL, corroboratingProtocolGroupsOutvote, divergingProtocolGroupsOutvote, getDepegThresholdBps } from "../../lib/constants";
 import { loadDexPoolChallengers } from "../../lib/depeg-helpers";
 import { aggregateProtocolPrices, computeWeightedMedianPrice } from "../../lib/dex-price-estimators";
 import { midDivergenceBps } from "../../lib/price-divergence";
@@ -153,7 +153,20 @@ export function applyPoolChallenge(
       validationContext: challengeContext,
     });
 
-    if (divergingProtocolGroups.length > 0 || replacementProtocolGroups.length > 0) {
+    // 2026-09-24 (vchf-vnx): a consensus that a strictly larger set of at least
+    // POOL_CHALLENGE_CONFIRM_MIN independent protocols corroborates is not a
+    // downgraded consensus — only a losing diverging minority disagrees with it,
+    // and the confidence tier is what the depeg recovery gate consumes. The
+    // replacement decision itself is unchanged, and any replacement still
+    // downgrades because DEX evidence displaced the consensus.
+    const corroboratedMajority = corroboratingProtocolGroupsOutvote({
+      divergingCount: divergingProtocolGroups.length,
+      corroboratingCount: challengeableProtocolGroups.length - divergingProtocolGroups.length,
+    });
+    if (
+      (divergingProtocolGroups.length > 0 && !corroboratedMajority) ||
+      replacementProtocolGroups.length > 0
+    ) {
       if (result.confidence === "high") {
         result.confidence = "low";
         stats.high--;
@@ -218,7 +231,15 @@ function selectReplacementProtocolGroups(params: {
   references?: PriceValidationReferences;
   validationContext: PriceValidationContext;
 }): Array<{ price: number; tvl: number; observedAt?: number | null }> {
-  if (params.divergingProtocolGroups.length >= 2) {
+  // 2026-09-24 (vchf-vnx): the diverging-vs-corroborating majority rule lives in
+  // `divergingProtocolGroupsOutvote` (worker/src/lib/constants.ts), shared with the
+  // depeg recovery veto and pool confirmation, which carry the full rationale.
+  // `protocolGroups` is the post-validation challengeable set, so peg-rejected
+  // medians can never count as corroboration. Downgrade is unaffected, and the
+  // high-TVL directional / hard-corroborated paths below still replace.
+  const divergentCount = params.divergingProtocolGroups.length;
+  const corroboratingCount = params.protocolGroups.length - divergentCount;
+  if (divergingProtocolGroupsOutvote({ divergingCount: divergentCount, corroboratingCount })) {
     return params.divergingProtocolGroups;
   }
 

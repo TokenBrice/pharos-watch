@@ -243,6 +243,109 @@ describe("applyPoolChallenge", () => {
     expect(results.get("dusd-test")!.price).toBeCloseTo(0.8, 6);
   });
 
+  it("stays at the boundary: replacement still fires when diverging protocols are not outnumbered", () => {
+    const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
+      assetId: "dusd-test",
+      result: makePriceConsensusResult(),
+      pools: [
+        { price: 0.8, tvlUsd: 500_000, protocol: "curve", chain: "ethereum" },
+        { price: 0.82, tvlUsd: 300_000, protocol: "uniswap", chain: "ethereum" },
+        { price: 0.999, tvlUsd: 400_000, protocol: "balancer", chain: "ethereum" },
+        { price: 1.001, tvlUsd: 200_000, protocol: "uniswap-v3", chain: "ethereum" },
+      ],
+    });
+
+    applyPoolChallenge(results, pools, pegTypes, stats);
+
+    // Two diverging protocols against two corroborating ones still replaces:
+    // the precedence guard only blocks a diverging minority.
+    expect(results.get("dusd-test")!.source).toBe("pool-tvl-weighted");
+    expect(results.get("dusd-test")!.price).toBeCloseTo(0.8, 6);
+  });
+
+  it("does NOT replace a consensus that a larger set of independent protocols corroborates", () => {
+    const assetId = "vchf-vnx";
+    const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
+      assetId,
+      pegType: "peggedCHF",
+      result: makePrimaryPriceResult({
+        price: 1.2193769497121019,
+        source: "coingecko",
+        selectedSource: "coingecko",
+        confidence: "single-source",
+        dlPrice: null,
+        cgPrice: 1.2193769497121019,
+        candidateSources: ["coingecko"],
+        agreeSources: ["coingecko"],
+      }),
+      // Celo uniswap-v3 and ICP kongswap last traded 2026-03-15 and 0-volume
+      // respectively while carrying large provider-reported reserves; the other
+      // four protocols sit on the ECB CHF rate.
+      pools: [
+        { price: 1.2887194119, tvlUsd: 4_712_969.3671, protocol: "uniswap-v3", chain: "celo" },
+        { price: 1.2745982598, tvlUsd: 380_730.3996, protocol: "kongswap", chain: "icp" },
+        { price: 1.2130161427, tvlUsd: 524_244.1538, protocol: "icpswap", chain: "icp" },
+        { price: 1.2211210441086737, tvlUsd: 414_750.15, protocol: "raydium", chain: "solana" },
+        { price: 1.2180939432328262, tvlUsd: 184_761.44573944493, protocol: "aerodrome", chain: "base" },
+        { price: 1.2000335351, tvlUsd: 130_340.6422, protocol: "meteora", chain: "solana" },
+      ],
+      stats: { high: 0, singleSource: 1 },
+    });
+    const references: PriceValidationReferences = {
+      rates: { peggedCHF: 1.2152292529985782 },
+      type: "fresh",
+      updatedAt: Math.floor(Date.now() / 1000),
+    };
+    const validationContext: PriceValidationContext = {
+      stablecoinId: assetId,
+      pegCurrency: "CHF",
+      pegType: "peggedCHF",
+      pegClass: "fiat_fx",
+      navToken: false,
+      tracked: true,
+    };
+
+    const downgrades = applyPoolChallenge(
+      results,
+      pools,
+      pegTypes,
+      stats,
+      references,
+      undefined,
+      new Map([[assetId, validationContext]]),
+    );
+    const result = results.get(assetId)!;
+
+    // Two dormant protocols diverge against four live ones: the diverging
+    // minority is strictly outvoted, so neither the price nor the confidence
+    // tier moves (the downgrade only tracks unresolved divergence).
+    expect(downgrades).toBe(0);
+    expect(result.confidence).toBe("single-source");
+    expect(result.price).toBe(1.2193769497121019);
+    expect(result.source).toBe("coingecko");
+    expect(result.agreeSources).toEqual(["coingecko"]);
+  });
+
+  it("still downgrades when one diverging protocol is not strictly outvoted", () => {
+    const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
+      assetId: "dusd-test",
+      result: makePriceConsensusResult(),
+      pools: [
+        { price: 0.8, tvlUsd: 500_000, protocol: "curve", chain: "ethereum" },
+        { price: 1.0005, tvlUsd: 300_000, protocol: "uniswap", chain: "ethereum" },
+      ],
+    });
+
+    const downgrades = applyPoolChallenge(results, pools, pegTypes, stats);
+
+    // A 1-vs-1 split is not a corroborating majority: the tie keeps today's
+    // downgrade and a single diverging protocol still cannot replace.
+    expect(downgrades).toBe(1);
+    expect(results.get("dusd-test")!.confidence).toBe("low");
+    expect(results.get("dusd-test")!.price).toBe(1.0);
+    expect(results.get("dusd-test")!.source).not.toBe("pool-tvl-weighted");
+  });
+
   it("does NOT replace price when multiple pools from SAME protocol diverge", () => {
     const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
       assetId: "xusd-test",
@@ -603,8 +706,12 @@ describe("applyPoolChallenge", () => {
 
     const downgrades = applyPoolChallenge(results, pools, pegTypes, stats);
 
-    expect(downgrades).toBe(1);
-    expect(results.get("usr-test")!.confidence).toBe("low");
+    // The uniswap group's outlier pool does not make it diverging: bunni is the
+    // only diverging protocol, and uniswap's median plus curve strictly outvote
+    // it, so the consensus keeps its tier (and would be replaced if the grouping
+    // were wrong and two protocols diverged).
+    expect(downgrades).toBe(0);
+    expect(results.get("usr-test")!.confidence).toBe("high");
     expect(results.get("usr-test")!.price).toBe(0.125);
     expect(results.get("usr-test")!.source).not.toBe("pool-tvl-weighted");
   });

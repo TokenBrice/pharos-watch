@@ -14,6 +14,7 @@
   "llamaId": "157",
   "detailProvider": "defillama",
   "geckoId": "vnx-swiss-franc",
+  "cmcSlug": "vnx-swiss-franc",
   "links": [
     {
       "label": "Website",

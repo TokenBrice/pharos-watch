@@ -2,9 +2,11 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { URL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
+import { LIVE_RESERVE_ADAPTER_DEFINITIONS, NEXT_MONTH_DISCLOSURE_SOURCE_MAX_AGE_SEC } from "@shared/lib/live-reserve-adapters";
 import { getIndependentAssuranceManifest, reconcileIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
+import { getReserveAdapter } from "../index";
 import { RLUSD_INDEPENDENT_ASSURANCE_PROFILE as profile } from "../rlusd-independent-assurance";
+import { validateAdapterOutput } from "../validate";
 import { verifyIndependentAssuranceReport } from "../independent-assurance";
 import { installAdapterNetwork } from "./reserve-adapter.test-support";
 
@@ -46,11 +48,25 @@ describe("rlusd-independent-assurance", () => {
     }
   });
 
-  it("uses the existing independent-assurance V2 freshness policy", () => {
+  it("admits the reviewed July observation under the next-month disclosure age policy", () => {
     expect(LIVE_RESERVE_ADAPTER_DEFINITIONS["rlusd-independent-assurance"]).toMatchObject({
       evidenceClass: "independent", sourceOriginClass: "independent-assurance",
-      validation: { maxSourceAgeSec: 4_000_000 },
     });
+    const adapter = getReserveAdapter("rlusd-independent-assurance") ?? undefined;
+    // Ripple publishes each month-end report 25-29 days later, so the July 31 observation is
+    // ~54 days old three weeks before the September 27 successor is due; it ages out only at the cap.
+    const sourceTimestamp = Math.floor(Date.parse(reviewed.reportAsOf) / 1000);
+    for (const [ageSec, expectedStale] of [
+      [54 * 86_400 + 12 * 3_600, false],
+      [NEXT_MONTH_DISCLOSURE_SOURCE_MAX_AGE_SEC, false],
+      [NEXT_MONTH_DISCLOSURE_SOURCE_MAX_AGE_SEC + 1, true],
+    ] as const) {
+      const warnings = validateAdapterOutput(
+        { slices: [{ name: "Cash", pct: 100, risk: "very-low" }], metadata: { sourceTimestamp, freshnessMode: "verified" } },
+        { adapter, now: sourceTimestamp + ageSec },
+      ).warnings;
+      expect(warnings.some((warning) => warning.code === "stale-source-data"), `at ${ageSec}s`).toBe(expectedStale);
+    }
   });
 
   it("dates every real archive row, including escaped apostrophes and two-digit years", async () => {

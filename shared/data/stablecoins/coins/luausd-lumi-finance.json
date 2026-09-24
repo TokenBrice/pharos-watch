@@ -78,5 +78,15 @@
       "title": "Nonstandard stable reference",
       "message": "LUAUSD is included because providers classify it as a dollar asset, but its mechanics are closer to a floor-price synthetic than a hard 1:1 redemption token."
     }
-  ]
+  ],
+  "status": "quarantined",
+  "listingStatusReview": {
+    "changedAt": "2026-09-24",
+    "reason": "NAV token with no admissible price lane: CoinGecko has no coin page, DefiLlama returns no price, and the only venue (Arbitrum LUAUSD/2CRV Curve pool) carries ~$3.4K effective TVL with zero 24h volume. Re-source a reviewed pool or issuer NAV lane.",
+    "reviewBy": "2026-10-24",
+    "source": {
+      "label": "GeckoTerminal Arbitrum LUAUSD/2CRV pool",
+      "url": "https://www.geckoterminal.com/arbitrum/pools/0xd2239b95890018a8f52ffd17d7f94c3a82f05389"
+    }
+  }
 }

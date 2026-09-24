@@ -23,6 +23,7 @@ import {
   PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_DELAY_MS,
 } from "../lib/public-dataset-snapshot-budget";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
+import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../lib/dex-liquidity";
@@ -198,11 +199,24 @@ function safetySourcesMatch(
   );
 }
 
-async function loadExistingSnapshot(db: D1Database, snapshotDate: string): Promise<ExistingSnapshotRow | null> {
-  return db
-    .prepare("SELECT content_hash, byte_size, created_at FROM public_snapshots WHERE snapshot_date = ?")
-    .bind(snapshotDate)
-    .first<ExistingSnapshotRow>();
+/** Write-once precheck read for the day's row. Idempotent SELECT: a transient
+ *  D1 overload here must retry, exactly like the scheduled not-due checks in
+ *  `handlers/scheduled/quarter-hourly.ts`; one queued read must not fail the
+ *  run that owns the day's artifact (2026-09-23 09:31 UTC error run). */
+async function loadExistingSnapshot(
+  db: D1Database,
+  snapshotDate: string,
+  signal?: AbortSignal,
+): Promise<ExistingSnapshotRow | null> {
+  return runWithOverloadRetry(
+    () =>
+      db
+        .prepare("SELECT content_hash, byte_size, created_at FROM public_snapshots WHERE snapshot_date = ?")
+        .bind(snapshotDate)
+        .first<ExistingSnapshotRow>(),
+    3,
+    signal,
+  );
 }
 
 function stablecoinsCachePredatesGate(
@@ -233,7 +247,7 @@ export async function snapshotPublicDataset(
   const snapshotDate = isoDateUtc(new Date(nowSec * 1000));
   const expectedPsiComputedAt = bucketUnixSecondsToUtcDay(nowSec) - DAY_SECONDS;
 
-  const existingSnapshot = await loadExistingSnapshot(db, snapshotDate);
+  const existingSnapshot = await loadExistingSnapshot(db, snapshotDate, signal);
   throwIfAborted(signal);
   if (existingSnapshot) {
     return createCronResult({
@@ -509,7 +523,7 @@ export async function snapshotPublicDataset(
       )
       .run();
     if (result.meta.changes === 0) {
-      const snapshotNowExists = await loadExistingSnapshot(db, snapshotDate);
+      const snapshotNowExists = await loadExistingSnapshot(db, snapshotDate, signal);
       if (!snapshotNowExists) {
         return createCronResult({
           status: "degraded",

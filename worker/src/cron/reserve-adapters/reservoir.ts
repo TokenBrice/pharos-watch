@@ -323,9 +323,15 @@ async function fetchReservoirPayload(
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<ReservoirReservesResponse> {
+  // The same-origin fetch identity must follow the configured input host: the
+  // three coins now fetch the protocol application's un-geofenced Vercel
+  // deployment because the canonical app.reservoir.xyz zone answers Worker
+  // egress with a country-gate 403 (the restricted list includes the US, and
+  // both the browser-style and neutral identities receive it).
+  const requestUrl = new URL(url);
   return fetchWithBrowserFallback(
-    "https://app.reservoir.xyz",
-    "https://app.reservoir.xyz/reserves",
+    requestUrl.origin,
+    new URL("/reserves", requestUrl.origin).toString(),
     (headers) => {
       const requestHeaders = new Headers(headers);
       requestHeaders.set("Accept", "application/json, text/plain, */*");

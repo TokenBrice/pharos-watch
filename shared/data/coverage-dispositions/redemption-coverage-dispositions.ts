@@ -175,19 +175,6 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     allowedRouteFamilyIfProven: null,
   }),
   reviewed({
-    id: "luausd-lumi-finance",
-    disposition: "needs-research",
-    reasonCode: "capacity-unpublished",
-    blocker:
-      "Lumi materials do not provide a source-reviewed LUAUSD holder redemption limit, cooldown, output asset, and current route status.",
-    rationale:
-      "The NAV-token classification suggests a queued or vault exit, but a route family is not assigned without product-specific evidence.",
-    evidenceNeeded:
-      "Official LUAUSD redeem or withdraw docs, deployed contract, underlying output, queue terms, fees, and capacity.",
-    evidenceUrls: ["https://lumi-finance.gitbook.io/docs/", "https://lumi.finance/"],
-    allowedRouteFamilyIfProven: null,
-  }),
-  reviewed({
     id: "lvusd-leverup",
     disposition: "defer",
     reasonCode: "borrower-repay-only",
@@ -395,18 +382,6 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     evidenceNeeded:
       "Live vault contracts and official deposit, redeem, cooldown, fee, capacity, and status documentation.",
     evidenceUrls: ["https://vcred.trade/"],
-    allowedRouteFamilyIfProven: null,
-  }),
-  reviewed({
-    id: "vusd-virtue",
-    disposition: "hard-reject",
-    reasonCode: "no-holder-route",
-    blocker: "Virtue explicitly states that redemption is temporarily restricted to protocol-level actors.",
-    rationale:
-      "The collateral redemption design exists but is not exercisable by ordinary holders in the documented launch state.",
-    evidenceNeeded:
-      "An official access update plus live contract evidence that general-holder redemption has been enabled.",
-    evidenceUrls: ["https://docs.virtue.money/redemption"],
     allowedRouteFamilyIfProven: null,
   }),
   reviewedOn("2026-08-12", {

@@ -77,16 +77,16 @@ describe("ChainProfilePage", () => {
     expect(JSON.stringify(jsonLd)).not.toContain("/_site-data/");
   });
 
-  it("renders the IOTA profile with its tracked stablecoin deployment anchor", async () => {
+  it("renders a single-deployment chain profile with its tracked stablecoin anchor", async () => {
     const html = renderToStaticMarkup(
-      await ChainProfilePage({ params: Promise.resolve({ chain: "iota" }) }),
+      await ChainProfilePage({ params: Promise.resolve({ chain: "hydration" }) }),
     );
 
-    expect(html).toContain("IOTA Stablecoins: VUSD, Supply &amp; Risk");
-    expect(html).toContain("IOTA has 1 tracked deployment");
-    expect(html).toContain("Tracked Stablecoins On IOTA");
-    expect(html).toContain('href="/stablecoin/vusd-virtue"');
-    expect(html).toContain("Virtue USD");
-    expect(html).toContain("VUSD");
+    expect(html).toContain("Hydration Stablecoins: HOLLAR, Supply &amp; Risk");
+    expect(html).toContain("Hydration has 1 tracked deployment");
+    expect(html).toContain("Tracked Stablecoins On Hydration");
+    expect(html).toContain('href="/stablecoin/hollar-hydrated"');
+    expect(html).toContain("Hydrated Dollar");
+    expect(html).toContain("HOLLAR");
   });
 });

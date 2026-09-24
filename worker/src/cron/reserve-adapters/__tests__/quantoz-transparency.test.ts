@@ -1,43 +1,71 @@
 import { describe, expect, it } from "vitest";
 import { adaptQuantozTransparency } from "../quantoz-transparency";
 import { expectWarningEffect, expectWarnings, installAdapterNetwork, runAdapter } from "./reserve-adapter.test-support";
+
 const QUANTOZ_HTML = `
-<div class="text-style-tagline gradient-normal">UPDATED: April 20th, 2026</div>
-<div>Reserve Status Overview</div>
-<div role="row" class="table5_item">
-  <div role="cell"><div class="text-weight-medium">EURQ</div></div>
-  <div role="cell"><div>€3.881.707</div></div>
-  <div role="cell"><div>100,20%</div></div>
-  <div role="cell"><div><strong>30% / 70%</strong></div></div>
-</div>
-<div role="row" class="table5_item">
-  <div role="cell"><div class="text-weight-medium">USDQ</div></div>
-  <div role="cell"><div>$6.099.501</div></div>
-  <div role="cell"><div>100,67%</div></div>
-  <div role="cell"><div><strong>30% / 70%</strong></div></div>
-</div>
+<div class="qtr-snapshot-heading"><p><span>Published snapshot <time datetime="2026-04-20">20 April 2026</time></span></p></div>
+<article class="qtr-token qtr-euro" aria-labelledby="qtr-eurq-title">
+  <div class="qtr-token-head"><div><h3 id="qtr-eurq-title">EURQ</h3><p>Euro e-money token</p></div></div>
+  <dl class="qtr-reserve-values">
+    <div><dt>Tokens in circulation</dt><dd>€3,881,707</dd></div>
+    <div class="qtr-ratio"><dt><svg aria-hidden="true"><path d="M1 1"/></svg> Reserve ratio</dt><dd>100.20%</dd></div>
+  </dl>
+  <div class="qtr-assets"><p class="qtr-label">Reported reserve composition</p>
+    <dl>
+      <div><dt><svg aria-hidden="true"><path d="M1 1"/></svg> Cash</dt><dd>30%</dd></div>
+      <div><dt><svg aria-hidden="true"><path d="M1 1"/></svg> Government bonds</dt><dd>70%</dd></div>
+    </dl>
+  </div>
+</article>
+<article class="qtr-token qtr-dollar" aria-labelledby="qtr-usdq-title">
+  <div class="qtr-token-head"><div><h3 id="qtr-usdq-title">USDQ</h3><p>US dollar e-money token</p></div></div>
+  <dl class="qtr-reserve-values">
+    <div><dt>Tokens in circulation</dt><dd>$6,099,501</dd></div>
+    <div class="qtr-ratio"><dt><svg aria-hidden="true"><path d="M1 1"/></svg> Reserve ratio</dt><dd>100.67%</dd></div>
+  </dl>
+  <div class="qtr-assets"><p class="qtr-label">Reported reserve composition</p>
+    <dl>
+      <div><dt><svg aria-hidden="true"><path d="M1 1"/></svg> Cash</dt><dd>30%</dd></div>
+      <div><dt><svg aria-hidden="true"><path d="M1 1"/></svg> Government bonds</dt><dd>70%</dd></div>
+    </dl>
+  </div>
+</article>
 `;
 
 /**
- * Trimmed live HTML fetched from https://www.quantoz.com/transparency on 2026-09-17.
- * The content following the final USDQ row intentionally retains the page's unrelated
- * "100%" claim: it must not be mistaken for part of the final allocation cell.
+ * Trimmed live markup fetched from https://www.quantoz.com/transparency on 2026-09-24 after
+ * the site redesign replaced the old "Reserve Status Overview" table (`UPDATED: <date>` tagline,
+ * EUR-style `€4.302.714` numbers) with per-token cards dated by a
+ * `Published snapshot <time datetime="…">` heading and US-formatted numbers.
  */
 const LIVE_QUANTOZ_HTML = `
-<div class="text-style-tagline gradient-normal">UPDATED: AUGUST 30th, 2026</div>
-<div class="text-size-large text-weight-semibold">Reserve Status Overview</div>
-<div role="row" class="table5_item">
-  <div role="cell" class="table5_column"><img src="eurq.svg" alt=""><div class="text-weight-medium">EURQ</div></div>
-  <div role="cell" class="table5_column is-width-large"><div>€4.302.714</div></div>
-  <div role="cell" class="table5_column is-width-small"><div>100,76%</div></div>
-  <div role="cell" class="table5_column is-width-large"><div><strong>33% / 66%</strong></div></div>
-</div>
-<div role="row" class="table5_item">
-  <div role="cell" class="table5_column"><img src="usdq.svg" alt=""><div class="text-weight-medium">USDQ</div></div>
-  <div role="cell" class="table5_column is-width-large"><div>$5.684.016</div></div>
-  <div role="cell" class="table5_column is-width-small"><div>101,91%</div></div>
-  <div role="cell" class="table5_column is-width-large"><div><strong>33% / 66%</strong></div></div>
-</div>
+<div class="qtr-snapshot-heading"><p><svg class="qv-icon" aria-hidden="true" focusable="false"></svg><span>Published snapshot <time datetime="2026-08-30">30 August 2026</time></span></p></div>
+<article class="qtr-token qtr-euro" aria-labelledby="qtr-eurq-title">
+  <div class="qtr-token-head"><img src="/assets/token-eurq.svg" width="78" height="78" alt=""><div><h3 id="qtr-eurq-title">EURQ</h3><p>Euro e-money token</p></div></div>
+  <dl class="qtr-reserve-values">
+    <div><dt>Tokens in circulation</dt><dd>€4,302,714</dd></div>
+    <div class="qtr-ratio"><dt><svg class="qv-icon" aria-hidden="true" focusable="false"></svg> Reserve ratio</dt><dd>100.76%</dd></div>
+  </dl>
+  <div class="qtr-assets"><p class="qtr-label">Reported reserve composition</p>
+    <dl>
+      <div><dt><svg class="qv-icon" aria-hidden="true" focusable="false"></svg> Cash</dt><dd>33%</dd></div>
+      <div><dt><svg class="qv-icon" aria-hidden="true" focusable="false"></svg> Government bonds</dt><dd>66%</dd></div>
+    </dl>
+  </div>
+</article>
+<article class="qtr-token qtr-dollar" aria-labelledby="qtr-usdq-title">
+  <div class="qtr-token-head"><img src="/assets/token-usdq.svg" width="78" height="78" alt=""><div><h3 id="qtr-usdq-title">USDQ</h3><p>US dollar e-money token</p></div></div>
+  <dl class="qtr-reserve-values">
+    <div><dt>Tokens in circulation</dt><dd>$5,684,016</dd></div>
+    <div class="qtr-ratio"><dt><svg class="qv-icon" aria-hidden="true" focusable="false"></svg> Reserve ratio</dt><dd>101.91%</dd></div>
+  </dl>
+  <div class="qtr-assets"><p class="qtr-label">Reported reserve composition</p>
+    <dl>
+      <div><dt><svg class="qv-icon" aria-hidden="true" focusable="false"></svg> Cash</dt><dd>33%</dd></div>
+      <div><dt><svg class="qv-icon" aria-hidden="true" focusable="false"></svg> Government bonds</dt><dd>66%</dd></div>
+    </dl>
+  </div>
+</article>
 <section><h3>100% Highly Liquid Reserves</h3></section>
 `;
 
@@ -74,7 +102,7 @@ describe("adaptQuantozTransparency", () => {
   });
 
   it("emits a degraded warning when the reserve ratio is below threshold", () => {
-    const result = adaptQuantozTransparency(QUANTOZ_HTML.replace("100,67%", "99,00%"), "USDQ");
+    const result = adaptQuantozTransparency(QUANTOZ_HTML.replace("100.67%", "99.00%"), "USDQ");
 
     expectWarnings(result, ["reserve-undercollateralized"]);
   });
@@ -92,6 +120,7 @@ describe("adaptQuantozTransparency", () => {
       reserveRatioPct: 100.76,
       cashPct: 33,
       governmentBondPct: 66,
+      sourceTimestamp: Date.UTC(2026, 7, 30) / 1000,
     });
     // The 99% published sum stays out of the shared percentage-sum gate's raw input,
     // because the source's own rounding envelope explains it.
@@ -100,18 +129,27 @@ describe("adaptQuantozTransparency", () => {
   });
 
   it("throws when the update timestamp is missing", () => {
-    expect(() => adaptQuantozTransparency(QUANTOZ_HTML.replace("UPDATED: April 20th, 2026", ""), "EURQ"))
-      .toThrow(/layout-changed/);
+    expect(() => adaptQuantozTransparency(
+      QUANTOZ_HTML.replace('<span>Published snapshot <time datetime="2026-04-20">20 April 2026</time></span>', ""),
+      "EURQ",
+    )).toThrow(/layout-changed/);
   });
 
-  it("rejects a surplus percentage inside the allocation cell", () => {
+  it("fails closed when the circulation label is renamed", () => {
+    expect(() => adaptQuantozTransparency(
+      QUANTOZ_HTML.replace("<dt>Tokens in circulation</dt>", "<dt>Circulating supply</dt>"),
+      "EURQ",
+    )).toThrow(/missing or malformed EURQ total-supply column/);
+  });
+
+  it("rejects a surplus percentage inside the composition list", () => {
     const ambiguousHtml = LIVE_QUANTOZ_HTML.replace(
-      "<strong>33% / 66%</strong>",
-      "<strong>33% / 66% / 1%</strong>",
+      "<dd>66%</dd>",
+      "<dd>66%</dd><div><dt>Other bonds</dt><dd>1%</dd></div>",
     );
 
     expect(() => adaptQuantozTransparency(ambiguousHtml, "EURQ"))
-      .toThrow("missing, reordered, or extra reserve-allocation percentages");
+      .toThrow("missing, reordered, or extra reserve-composition percentages");
   });
 });
 describe("fetchQuantozTransparencyReserves", () => {
@@ -127,9 +165,9 @@ describe("fetchQuantozTransparencyReserves", () => {
     expect(network.requests).toEqual([{ url, method: "GET" }]);
   });
 
-  it("rejects a renamed update field instead of publishing stale data", async () => {
+  it("rejects a renamed snapshot heading instead of publishing stale data", async () => {
     await expect(runAdapter("quantoz-transparency", "eurq-quantoz", {
-      network: installAdapterNetwork({ html: { [url]: QUANTOZ_HTML.replace("UPDATED:", "REFRESHED:") } }),
+      network: installAdapterNetwork({ html: { [url]: QUANTOZ_HTML.replace("Published snapshot", "Page generated") } }),
       nowSec,
       validate: false,
     })).rejects.toThrow("layout-changed");
@@ -156,7 +194,7 @@ describe("fetchQuantozTransparencyReserves", () => {
 
   it("degrades when the published allocation drifts past the whole-number rounding envelope", async () => {
     const { result, report } = await runAdapter("quantoz-transparency", "eurq-quantoz", {
-      network: installAdapterNetwork({ html: { [url]: LIVE_QUANTOZ_HTML.replace("33% / 66%", "32% / 66%") } }),
+      network: installAdapterNetwork({ html: { [url]: LIVE_QUANTOZ_HTML.replace("<dd>33%</dd>", "<dd>32%</dd>") } }),
       nowSec: LIVE_NOW_SEC,
     });
 
@@ -167,7 +205,7 @@ describe("fetchQuantozTransparencyReserves", () => {
 
   it("fails closed when the published allocation cannot be reconciled with 100%", async () => {
     await expect(runAdapter("quantoz-transparency", "eurq-quantoz", {
-      network: installAdapterNetwork({ html: { [url]: LIVE_QUANTOZ_HTML.replace("33% / 66%", "30% / 66%") } }),
+      network: installAdapterNetwork({ html: { [url]: LIVE_QUANTOZ_HTML.replace("<dd>33%</dd>", "<dd>30%</dd>") } }),
       nowSec: LIVE_NOW_SEC,
       validate: false,
     })).rejects.toThrow(/sum to 96/);

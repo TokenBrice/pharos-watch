@@ -35,9 +35,11 @@ import {
   MATERIAL_UNKNOWN_EXPOSURE_PCT,
   MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
   MONTHLY_VERIFIED_VALIDATION,
+  NEXT_MONTH_VERIFIED_VALIDATION,
   QUARTERLY_ASSURANCE_MAX_AGE_SEC,
   TIMESTAMPED_FEED_VALIDATION,
   TIMESTAMPLESS_WITH_UNKNOWN_CAP_VALIDATION,
+  UNVERIFIED_ONLY_WITH_UNKNOWN_CAP_VALIDATION,
   VERIFIED_ONLY_FRESHNESS,
   VERIFIED_ONLY_VALIDATION,
   VERIFIED_OR_UNVERIFIED_FRESHNESS,
@@ -179,6 +181,15 @@ const HTTP_DISCLOSURE_ATTESTATION_V2 = {
   sourceOriginClass: "independent-assurance",
   configValidation: CONFIG_ATTESTATION_V2,
   validation: LATE_MONTHLY_VERIFIED_VALIDATION,
+} as const satisfies AdapterProfile;
+
+// Same disclosure and origin class as V2, but for publishers whose month-end
+// report lands weeks into the following month (measured 12-32 days across the
+// 2026-01..07 cycles): the late-monthly 46.3-day cap degraded a healthy cycle
+// for part of every month. See NEXT_MONTH_DISCLOSURE_SOURCE_MAX_AGE_SEC.
+const HTTP_DISCLOSURE_ATTESTATION_V3 = {
+  ...HTTP_DISCLOSURE_ATTESTATION_V2,
+  validation: NEXT_MONTH_VERIFIED_VALIDATION,
 } as const satisfies AdapterProfile;
 
 const HTTP_PROTOCOL_V1 = {
@@ -1925,7 +1936,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
   },
   "anchorage-independent-assurance": declareAdapter(
     anchorageAssuranceParamsSchema,
-    HTTP_DISCLOSURE_ATTESTATION_V2,
+    HTTP_DISCLOSURE_ATTESTATION_V3,
   ),
   accountable: {
     primaryInputKinds: ["http-json"],
@@ -1938,7 +1949,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: DASHBOARD_VALIDATION,
   },
-  "agora-independent-assurance": declareAdapter(agoraAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V2),
+  "agora-independent-assurance": declareAdapter(agoraAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V3),
   "anzen-usdz": declareAdapter(noParamsSchema, ONCHAIN_SINGLE_ASSET_V2, {
     sourceOriginClass: "onchain-observation",
   }),
@@ -1985,7 +1996,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
   ),
   "audx-independent-assurance": declareAdapter(
     audxAssuranceParamsSchema,
-    HTTP_DISCLOSURE_ATTESTATION_V2,
+    HTTP_DISCLOSURE_ATTESTATION_V3,
   ),
   "blast-usdb-yield-manager": {
     primaryInputKinds: ["onchain-evm"],
@@ -2265,7 +2276,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: { capacity: "proxy", fee: "none" },
   }),
   "fdusd-independent-assurance": declareAdapter(fdusdAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V2),
-  "fidd-independent-assurance": declareAdapter(fiddAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V2),
+  "fidd-independent-assurance": declareAdapter(fiddAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V3),
   "flying-tulip-ftusd": {
     primaryInputKinds: ["http-json"],
     paramsSchema: noParamsSchema,
@@ -2663,9 +2674,23 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     // MANAGER-settable redeemFee(), read in the same run because no static
     // bound is defensible.
     redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
-    validation: DASHBOARD_WITH_UNKNOWN_CAP_VALIDATION,
+    // The balance-sheet payload carries no accounting timestamp and the
+    // adapter can therefore only ever attest `unverified` freshness (see
+    // freshnessLimitation above). Allowing `verified` alongside it made
+    // validate.ts report the declared 3-day budget as unevaluable
+    // (`stale-source-undeterminable`, degraded) on every successful run, which
+    // no upstream behaviour could clear. Per docs/live-reserves.md a
+    // heuristic-freshness adapter keeps its budget but publishes the miss as
+    // the informational `freshness-unverified` warning; the snapshot still
+    // cannot enter collateral scoring. Decision 2026-09-24: the canonical
+    // app.reservoir.xyz host also turned out to sit behind a country gate that
+    // blocks Worker egress (see the coin configs), and the 2026-09-21 capture
+    // claimed the full browser identity cleared that 403 -- production now
+    // records 403 for both identities, so the gate, not the header set, is the
+    // operative cause.
+    validation: UNVERIFIED_ONLY_WITH_UNKNOWN_CAP_VALIDATION,
   },
-  "rlusd-independent-assurance": declareAdapter(rlusdAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V2),
+  "rlusd-independent-assurance": declareAdapter(rlusdAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V3),
   "sgforge-coinvertible": {
     primaryInputKinds: ["http-html"],
     paramsSchema: sgForgeCoinvertibleParamsSchema,
@@ -2767,7 +2792,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: { capacity: "direct", fee: "none" },
     validation: TIMESTAMPED_FEED_VALIDATION,
   },
-  "paxos-independent-assurance": declareAdapter(paxosAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V2, {
+  "paxos-independent-assurance": declareAdapter(paxosAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V3, {
     // PAXG/PYUSD/USDG/USDP resolve through the same paxos.com Framer site and
     // the identical script_main module, so one run's fetched payloads are
     // valid for every product; per-product index/page/PDF URLs still differ
@@ -2776,7 +2801,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
   }),
   "straitsx-independent-assurance": declareAdapter(
     straitsxAssuranceParamsSchema,
-    HTTP_DISCLOSURE_ATTESTATION_V2,
+    HTTP_DISCLOSURE_ATTESTATION_V3,
   ),
   "river-protocol-info": declareAdapter(noParamsSchema, HTTP_PROTOCOL_V1, {
     redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
@@ -2821,7 +2846,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: DASHBOARD_VERIFIED_VALIDATION,
   },
-  "usdgo-transparency": declareAdapter(usdgoAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V2, {
+  "usdgo-transparency": declareAdapter(usdgoAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V3, {
     configValidation: configPolicy(["attestation-mix"], [3]),
   }),
   "usdh-native-markets": {

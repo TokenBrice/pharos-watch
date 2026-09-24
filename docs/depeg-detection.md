@@ -6,7 +6,7 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 (detection) runs eve
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.25`<!-- GENERATED-END: methodology-version-depeg-detection -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.26`<!-- GENERATED-END: methodology-version-depeg-detection -->
 - **Runtime/version source:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/depeg-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/depeg-dews/`
@@ -36,7 +36,7 @@ Confirmed `depeg_events` are the trigger for the Depeg Duration Resolver (DDR), 
 | `DEX_FRESHNESS_SEC` | <!-- GENERATED-START: depeg-dex-freshness -->4500 (75 min)<!-- GENERATED-END: depeg-dex-freshness --> | Hourly DEX prices older than this are ignored |
 | `DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD` | <!-- GENERATED-START: depeg-dex-min-tvl -->1,000,000<!-- GENERATED-END: depeg-dex-min-tvl --> | Minimum aggregate DEX source TVL required before depeg logic trusts a DEX row |
 | `DEPEG_DEX_PROTOCOL_CORROBORATION_MIN` | 2 protocol groups | Minimum protocol-level DEX corroborations required before aggregate DEX rows can directly suppress or resolve live depeg state |
-| `POOL_CHALLENGE_CONFIRM_MIN` | 2 protocol/source-family groups | Number of independent pool challenger groups that can veto a primary recovery or confirm a pending depeg |
+| `POOL_CHALLENGE_CONFIRM_MIN` | 2 protocol/source-family groups | Number of independent pool challenger groups that can veto a primary recovery or confirm a pending depeg. A diverging set must also be at least as numerous as the groups corroborating the recovered/at-peg price (`divergingProtocolGroupsOutvote` in `worker/src/lib/constants.ts`, shared with the pricing pool challenge) |
 | `POOL_CHALLENGE_HIGH_TVL_USD` | $5,000,000 | Single-pool TVL threshold that can veto a primary recovery or confirm a pending depeg without a second pool group |
 
 `getDepegThresholdBps(pegType)` returns 100 for `peggedUSD`, 150 for all other peg types.
@@ -266,7 +266,7 @@ Detection persistence commits all mutations for one stablecoin as one ordered at
 
 - If a supported CoinGecko native-currency quote still shows the same-direction depeg: keep the event open and ignore the derived recovery
 - If a fresh trusted aggregate DEX row still crosses the depeg threshold in the existing event direction, with at least 2 protocol-level DEX groups corroborating that direction: keep the event open and ignore the primary recovery print
-- If qualifying individual pool challengers still cross the threshold in the existing event direction — either one pool with at least $5M TVL or at least 2 independent protocol/source-family groups — keep the event open and ignore the primary recovery print
+- If qualifying individual pool challengers still cross the threshold in the existing event direction — either one pool with at least $5M TVL or at least 2 independent protocol/source-family groups that are also at least as numerous as the challenger groups corroborating the recovered (inside-threshold) price — keep the event open and ignore the primary recovery print. A minority of diverging groups no longer vetoes a corroborated recovery: the 2026-09-24 `vchf-vnx` event 90792 was vetoed by two dormant diverging venues (a months-silent Celo Uniswap v3 pool with 24h volume 0 and a provider-reported $4.7M reserve, plus a zero-volume ICP kongswap pool) against four live protocols sitting at the ECB CHF rate
 - A qualifying recovery must be at or inside 50% of the trigger threshold: 50 bps for USD pegs and 75 bps for non-USD pegs. The first qualifying observation sets both recovery timestamps; each consecutive qualifying observation refreshes `recovery_last_seen_at`. The row closes only after total recovery age reaches 15 minutes and the gap from the prior qualified observation is no more than 1200 seconds.
 - A later qualifying recovery after a gap greater than 1200 seconds resets both recovery timestamps to the new observation. Missing data leaves the event open, but the missing interval never proves recovery.
 - A reading between the recovery and trigger thresholds is a deadband: keep the event open and clear any partial recovery timer.
@@ -330,7 +330,7 @@ Age checks:
 
 - Loads qualifying individual DEX pool challengers from the published challenger snapshot tables via `loadDexPoolChallengers(...)`
 - Uses the same freshness / minimum-TVL guardrail family as the depeg helper layer
-- Counts as confirmation only when **at least two distinct protocol/source-family groups** reach the full trigger threshold in the same direction, **or** a single qualifying pool with `>= $5M` TVL does so. Multiple same-protocol pools from the same source family count as one group.
+- Counts as confirmation only when **at least two distinct protocol/source-family groups** reach the full trigger threshold in the same direction, **or** a single qualifying pool with `>= $5M` TVL does so, and the confirming groups are at least as numerous as the groups contradicting the pending direction (opposite-direction or back inside the bar). Multiple same-protocol pools from the same source family count as one group.
 - Non-fatal: missing challenger tables or incomplete published snapshots fall back through the helper's legacy path and still yield `null`/`false` safely
 - Persisted confirmation keys use `pool:<protocol>:<sourceFamily>`.
 

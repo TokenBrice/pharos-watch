@@ -17,122 +17,132 @@ import {
 const ADAPTER_KEY = "quantoz-transparency";
 const MIN_RESERVE_RATIO_PCT = 99.5;
 /**
- * The transparency table publishes whole-number percentages (e.g. `33% / 66%`) and no
- * absolute amount per category, so each of the N allocation categories can carry up to
- * half a point of rounding error and a genuine 100% split can still sum to 100 ± N × 0.5.
- * Quantoz shows N = 2, so 99/101 is rounding while anything wider is a real inconsistency
- * in the source: only that wider drift is forwarded to the shared percentage-sum gate as
- * upstream noise.
+ * The transparency cards publish whole-number percentages (`Cash 33%`,
+ * `Government bonds 66%`) and no absolute amount per category, so each of the N
+ * allocation categories can carry up to half a point of rounding error and a
+ * genuine 100% split can still sum to 100 ± N × 0.5. Quantoz shows N = 2, so
+ * 99/101 is rounding while anything wider is a real inconsistency in the
+ * source: only that wider drift is forwarded to the shared percentage-sum gate
+ * as upstream noise.
  */
 const INTEGER_PERCENT_ROUNDING_PCT = 0.5;
+/**
+ * The redesigned page (live 2026-09-24) dates the figures in the
+ * "Published snapshot <time datetime="…">" heading, replacing the old
+ * `UPDATED: Month Dth, YYYY` tagline. Anchoring on the heading label keeps an
+ * unrelated `<time>` elsewhere on the page from standing in for the reserve
+ * snapshot date.
+ */
+const SNAPSHOT_TIMESTAMP_RE = /Published snapshot\b[\s\S]{0,200}?<time\b[^>]*\bdatetime\s*=\s*["']([^"']+)["']/i;
+const CIRCULATION_LABEL = "Tokens in circulation";
+const RESERVE_RATIO_LABEL = "Reserve ratio";
+/**
+ * Composition categories the adapter maps to reserve slices. The page is
+ * expected to publish exactly this set: a card that adds or drops a category
+ * fails closed instead of silently omitting backing from the published mix.
+ */
+const COMPOSITION_LABELS = ["Cash", "Government bonds"] as const;
 
-function parseLocalizedNumber(raw: string): number | null {
-  const cleaned = raw
-    .replace(/[€$£,\s]/g, (char) => (char === "," ? "," : ""))
-    .replace(/[^\d.,-]/g, "");
-  if (!cleaned) return null;
-  const dotCount = (cleaned.match(/\./g) ?? []).length;
-  const normalized = cleaned.includes(",")
-    ? cleaned.replace(/\./g, "").replace(",", ".")
-    : dotCount > 1
-      ? cleaned.replace(/\./g, "")
-    : cleaned.replace(/,/g, "");
-  const parsed = Number.parseFloat(normalized);
+/**
+ * The redesigned cards publish US-formatted numbers (`€4,302,714`,
+ * `100.76%`), so grouping commas are stripped and the remaining shape is
+ * validated strictly: anything else is a layout change, not a number to guess
+ * at.
+ */
+function parsePublishedNumber(raw: string): number | null {
+  const cleaned = stripTags(raw).replace(/[€$£\s]/g, "");
+  const [integerPart, fractionPart, ...extra] = cleaned.split(".");
+  if (extra.length > 0 || integerPart == null) return null;
+  const [leadGroup, ...thousandGroups] = integerPart.replace(/^-/, "").split(",");
+  if (!/^\d+$/.test(leadGroup ?? "")) return null;
+  if (thousandGroups.length > 0 && (leadGroup!.length > 3 || !thousandGroups.every((group) => /^\d{3}$/.test(group)))) {
+    return null;
+  }
+  if (fractionPart != null && !/^\d+$/.test(fractionPart)) return null;
+  const parsed = Number.parseFloat(cleaned.replace(/,/g, ""));
   return Number.isFinite(parsed) ? parsed : null;
 }
 
 function extractQuantozTimestamp(html: string): number {
-  const match = html.match(/\bUPDATED:\s*([A-Za-z]+)\s+(\d{1,2})(?:st|nd|rd|th)?,\s*(\d{4})\b/i);
-  const timestamp = parseTimestampLikeToUnixSeconds(match ? `${match[1]} ${match[2]}, ${match[3]}` : undefined);
+  const match = html.match(SNAPSHOT_TIMESTAMP_RE);
+  const timestamp = parseTimestampLikeToUnixSeconds(match?.[1]);
   if (timestamp == null) {
     throw htmlLayoutChangedError(ADAPTER_KEY, "missing or unreadable update timestamp");
   }
   return timestamp;
 }
 
-function extractDivElement(html: string, start: number, label: string): string {
-  const tags = html.slice(start).matchAll(/<\/?div\b[^>]*>/gi);
-  let depth = 0;
-  for (const match of tags) {
-    const tag = match[0];
-    depth += /^<div\b/i.test(tag) && !/\/>$/.test(tag) ? 1 : -1;
-    if (depth === 0) {
-      return html.slice(start, start + (match.index ?? 0) + tag.length);
+/**
+ * `<dt>label</dt><dd>value</dd>` pairs from a token card, read by visible label
+ * text so attribute/class churn does not break the extraction. `dt` cells embed
+ * icons, so the matcher spans everything between the opening tag and `</dt>`.
+ */
+function extractDefinedValuePairs(html: string): Array<{ label: string; value: string }> {
+  const pairs: Array<{ label: string; value: string }> = [];
+  for (const match of html.matchAll(/<dt\b[^>]*>([\s\S]*?)<\/dt>\s*<dd\b[^>]*>([\s\S]*?)<\/dd>/gi)) {
+    pairs.push({ label: stripTags(match[1] ?? ""), value: stripTags(match[2] ?? "") });
+  }
+  return pairs;
+}
+
+/**
+ * The token card is the `<article>` whose `<h3>` names the requested token,
+ * identified by content rather than by id/class so a styling-only redesign
+ * keeps working while a structural change fails closed.
+ */
+function extractTokenCard(html: string, token: string): string {
+  for (const match of html.matchAll(/<article\b[^>]*>[\s\S]*?<\/article>/gi)) {
+    const heading = match[0].match(/<h3\b[^>]*>([\s\S]*?)<\/h3>/i);
+    if (heading && stripTags(heading[1] ?? "").toUpperCase() === token.toUpperCase()) {
+      return match[0];
     }
   }
-  throw htmlLayoutChangedError(ADAPTER_KEY, `unterminated ${label}`);
+  throw htmlLayoutChangedError(ADAPTER_KEY, `missing ${token} reserve card`);
 }
 
-function extractTokenRow(html: string, token: string): string {
-  const tableStart = html.indexOf("Reserve Status Overview");
-  if (tableStart < 0) {
-    throw htmlLayoutChangedError(ADAPTER_KEY, "missing reserve status table");
-  }
-  const table = html.slice(tableStart);
-  const tokenIndex = table.indexOf(`>${token}<`);
-  if (tokenIndex < 0) {
-    throw htmlLayoutChangedError(ADAPTER_KEY, `missing ${token} reserve row`);
-  }
-  const rowStart = table.lastIndexOf('<div role="row"', tokenIndex);
-  if (rowStart < 0) {
-    throw htmlLayoutChangedError(ADAPTER_KEY, `missing ${token} row start`);
-  }
-  return extractDivElement(table, rowStart, `${token} reserve row`);
-}
-
-function extractLabeledRowCells(row: string, token: string): {
-  totalSupply: string;
-  reserveRatio: string;
-  allocation: string;
-} {
-  const cellStarts = [...row.matchAll(/<div\b[^>]*\brole=["']cell["'][^>]*>/gi)];
-  if (cellStarts.length !== 4) {
-    throw htmlLayoutChangedError(ADAPTER_KEY, `missing or extra labelled columns in ${token} reserve row`);
-  }
-  const cells = cellStarts.map((match, index) => {
-    const start = (match.index ?? 0) + match[0].length;
-    const end = cellStarts[index + 1]?.index ?? row.length;
-    return stripTags(row.slice(start, end)).trim();
-  });
-  // Public HTML label comparison; not a secret.
-  // eslint-disable-next-line security/detect-possible-timing-attacks
-  if (cells[0] !== token) {
-    throw htmlLayoutChangedError(ADAPTER_KEY, `currency column does not identify ${token}`);
-  }
-  return {
-    totalSupply: cells[1] ?? "",
-    reserveRatio: cells[2] ?? "",
-    allocation: cells[3] ?? "",
-  };
-}
-
-function parseLabeledPercentage(raw: string, label: string): number {
-  const match = raw.match(/^([\d.,-]+)\s*%$/);
-  const value = match ? parseLocalizedNumber(match[1] ?? "") : null;
+function parseLabeledPercentage(raw: string | null, label: string): number {
+  const match = raw?.match(/^([\d.,-]+)\s*%$/);
+  const value = match ? parsePublishedNumber(match[1] ?? "") : null;
   if (value == null) {
     throw htmlLayoutChangedError(ADAPTER_KEY, `missing or malformed ${label} column`);
   }
   return value;
 }
 
-function parseLabeledAllocation(raw: string): [cashPct: number, governmentBondPct: number] {
-  const match = raw.match(/^([\d.,-]+)\s*%\s*\/\s*([\d.,-]+)\s*%$/);
-  const cashPct = match ? parseLocalizedNumber(match[1] ?? "") : null;
-  const governmentBondPct = match ? parseLocalizedNumber(match[2] ?? "") : null;
+function parseCompositionPercentages(
+  pairs: Array<{ label: string; value: string }>,
+): [cashPct: number, governmentBondPct: number] {
+  const entries = pairs
+    .filter((pair) => pair.label.toLowerCase() !== RESERVE_RATIO_LABEL.toLowerCase())
+    .flatMap((pair) => {
+      const match = pair.value.match(/^([\d.,-]+)\s*%$/);
+      return match ? [{ label: pair.label, pct: parsePublishedNumber(match[1] ?? "") }] : [];
+    });
+  const labels = entries.map((entry) => entry.label.toLowerCase()).sort();
+  const expected = COMPOSITION_LABELS.map((label) => label.toLowerCase()).sort();
+  if (labels.length !== expected.length || labels.some((label, index) => label !== expected[index])) {
+    throw htmlLayoutChangedError(ADAPTER_KEY, "missing, reordered, or extra reserve-composition percentages");
+  }
+  const cashPct = entries.find((entry) => entry.label.toLowerCase() === "cash")?.pct;
+  const governmentBondPct = entries.find((entry) => entry.label.toLowerCase() === "government bonds")?.pct;
   if (cashPct == null || governmentBondPct == null) {
-    throw htmlLayoutChangedError(ADAPTER_KEY, "missing, reordered, or extra reserve-allocation percentages");
+    throw htmlLayoutChangedError(ADAPTER_KEY, "missing or malformed reserve-composition percentages");
   }
   return [cashPct, governmentBondPct];
 }
 
 export function adaptQuantozTransparency(html: string, token: string): AdapterResult {
   const sourceTimestamp = extractQuantozTimestamp(html);
-  const row = extractTokenRow(html, token);
-  const cells = extractLabeledRowCells(row, token);
-  const supplyMatch = cells.totalSupply.match(/^[€$]\s*[\d.,]+$/);
-  const totalSupply = supplyMatch ? parseLocalizedNumber(supplyMatch[0]) : null;
-  const reserveRatioPct = parseLabeledPercentage(cells.reserveRatio, "reserve ratio");
-  const [cashPct, governmentBondPct] = parseLabeledAllocation(cells.allocation);
+  const card = extractTokenCard(html, token);
+  const pairs = extractDefinedValuePairs(card);
+  const totalSupply = parsePublishedNumber(
+    pairs.find((pair) => pair.label.toLowerCase() === CIRCULATION_LABEL.toLowerCase())?.value ?? "",
+  );
+  const reserveRatioPct = parseLabeledPercentage(
+    pairs.find((pair) => pair.label.toLowerCase() === RESERVE_RATIO_LABEL.toLowerCase())?.value ?? null,
+    "reserve ratio",
+  );
+  const [cashPct, governmentBondPct] = parseCompositionPercentages(pairs);
 
   if (totalSupply == null) {
     throw htmlLayoutChangedError(ADAPTER_KEY, `missing or malformed ${token} total-supply column`);

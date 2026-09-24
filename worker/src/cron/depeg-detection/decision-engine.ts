@@ -3,7 +3,7 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
 import { DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC } from "@shared/lib/depeg-closure";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import { getCirculatingRaw } from "@shared/lib/supply";
-import { getDepegRecoveryThresholdBps, getDepegThresholdBps, POOL_CHALLENGE_CONFIRM_MIN, POOL_CHALLENGE_HIGH_TVL_USD } from "../../lib/constants";
+import { divergingProtocolGroupsOutvote, getDepegRecoveryThresholdBps, getDepegThresholdBps, POOL_CHALLENGE_HIGH_TVL_USD } from "../../lib/constants";
 import {
   buildPendingReason,
   countDexProtocolCorroborations,
@@ -68,6 +68,7 @@ interface DecisionContext {
   dexRecoveryChallenged: boolean;
   poolRecoveryVeto: boolean;
   poolRecoveryVetoGroupCount: number;
+  poolRecoveryVetoCorroboratingGroupCount: number;
   poolRecoveryVetoHighTvl: boolean;
   dexSupportsDirection: boolean;
   dexSupportsExistingDirection: boolean;
@@ -127,26 +128,38 @@ function derivePoolRecoveryVeto(params: {
   pegRef: number;
   threshold: number;
   depegDirection: DepegDirection;
-}): { veto: boolean; groupCount: number; highTvl: boolean } {
+}): { veto: boolean; groupCount: number; corroboratingGroupCount: number; highTvl: boolean } {
   const groups = new Set<string>();
+  const corroboratingGroups = new Set<string>();
   let highTvl = false;
   for (const pool of params.challengers ?? []) {
     const signal = deriveDepegSignal(pool.price, params.pegRef);
-    if (
-      signal == null ||
-      !signalCrossesThreshold(signal, params.threshold) ||
-      signal.direction !== params.depegDirection
-    ) {
+    if (signal == null) continue;
+    if (signalCrossesThreshold(signal, params.threshold) && signal.direction === params.depegDirection) {
+      groups.add(dexPoolIndependentGroupKey(pool));
+      if (pool.tvlUsd >= POOL_CHALLENGE_HIGH_TVL_USD) {
+        highTvl = true;
+      }
       continue;
     }
-    groups.add(dexPoolIndependentGroupKey(pool));
-    if (pool.tvlUsd >= POOL_CHALLENGE_HIGH_TVL_USD) {
-      highTvl = true;
+    // 2026-09-24 (vchf-vnx): the veto used to fire on POOL_CHALLENGE_CONFIRM_MIN
+    // diverging groups with no test against the pools that agree with the recovery.
+    // Two dormant diverging venues (a months-silent Celo Uniswap v3 pool with a
+    // provider-reported $4.7M reserve and a zero-volume kongswap pool) therefore
+    // outvoted the four live protocols that corroborated the at-peg price. Pools
+    // inside the trigger threshold now corroborate the recovered price through the
+    // shared majority rule; the high-TVL single-pool carve-out is unchanged.
+    if (signalIsWithinThreshold(signal, params.threshold)) {
+      corroboratingGroups.add(dexPoolIndependentGroupKey(pool));
     }
   }
   return {
-    veto: highTvl || groups.size >= POOL_CHALLENGE_CONFIRM_MIN,
+    veto: highTvl || divergingProtocolGroupsOutvote({
+      divergingCount: groups.size,
+      corroboratingCount: corroboratingGroups.size,
+    }),
     groupCount: groups.size,
+    corroboratingGroupCount: corroboratingGroups.size,
     highTvl,
   };
 }
@@ -203,6 +216,7 @@ interface DexEvidence {
   dexRecoveryChallenged: boolean;
   poolRecoveryVeto: boolean;
   poolRecoveryVetoGroupCount: number;
+  poolRecoveryVetoCorroboratingGroupCount: number;
   poolRecoveryVetoHighTvl: boolean;
   dexSupportsDirection: boolean;
   dexSupportsExistingDirection: boolean;
@@ -269,6 +283,7 @@ function deriveDexEvidence(params: {
     dexRecoveryChallenged,
     poolRecoveryVeto: poolRecoveryVetoEvidence.veto,
     poolRecoveryVetoGroupCount: poolRecoveryVetoEvidence.groupCount,
+    poolRecoveryVetoCorroboratingGroupCount: poolRecoveryVetoEvidence.corroboratingGroupCount,
     poolRecoveryVetoHighTvl: poolRecoveryVetoEvidence.highTvl,
     dexSupportsDirection,
     dexSupportsExistingDirection,
@@ -348,6 +363,7 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
     dexRecoveryChallenged,
     poolRecoveryVeto,
     poolRecoveryVetoGroupCount,
+    poolRecoveryVetoCorroboratingGroupCount,
     poolRecoveryVetoHighTvl,
     dexSupportsDirection,
     dexSupportsExistingDirection,
@@ -394,6 +410,7 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
       dexRecoveryChallenged,
       poolRecoveryVeto,
       poolRecoveryVetoGroupCount,
+      poolRecoveryVetoCorroboratingGroupCount,
       poolRecoveryVetoHighTvl,
       dexSupportsDirection,
       dexSupportsExistingDirection,
@@ -597,6 +614,7 @@ function decideRecovery(
     dexRecoveryChallenged,
     poolRecoveryVeto,
     poolRecoveryVetoGroupCount,
+    poolRecoveryVetoCorroboratingGroupCount,
     poolRecoveryVetoHighTvl,
     dexSupportsExistingDirection,
     dexSupportsRecovery,
@@ -661,7 +679,8 @@ function decideRecovery(
         "warn",
         `[depeg] Kept ${asset.symbol} open despite primary recovery: ` +
         `pool challengers still show the ${existing.direction} depeg ` +
-        `(groups=${poolRecoveryVetoGroupCount}, highTvl=${poolRecoveryVetoHighTvl})`,
+        `(groups=${poolRecoveryVetoGroupCount}, corroborating=${poolRecoveryVetoCorroboratingGroupCount}, ` +
+        `highTvl=${poolRecoveryVetoHighTvl})`,
       ));
     } else if (isDexFresh(dexRow, dexAbsBps, now) && dexRow && dexAbsBps != null && dexAbsBps <= recoveryThreshold) {
       diagnostics.push(withDiagnostic(

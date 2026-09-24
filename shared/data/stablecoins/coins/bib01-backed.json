@@ -177,5 +177,15 @@
     }
   ],
   "launchDate": "2023-03-02",
-  "marketAvailability": "legacy-or-wind-down"
+  "marketAvailability": "legacy-or-wind-down",
+  "status": "quarantined",
+  "listingStatusReview": {
+    "changedAt": "2026-09-24",
+    "reason": "NAV tracker in wind-down with no admissible price lane: CoinGecko has been frozen since 2026-09-17 and DefiLlama only re-stamps that same 121.86 mirror value, so the reviewed seven-chain supply aggregate cannot be valued. Re-source a Backed NAV route before reactivation.",
+    "reviewBy": "2026-10-24",
+    "source": {
+      "label": "CoinGecko market page for bIB01 (last updated 2026-09-17)",
+      "url": "https://www.coingecko.com/en/coins/backed-ib01-treasury-bond-0-1yr"
+    }
+  }
 }

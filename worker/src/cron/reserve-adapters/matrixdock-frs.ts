@@ -1,7 +1,10 @@
 import { z } from "zod";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
-import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import {
+  MATRIXDOCK_BULLION_RESERVE_FEED_MAX_AGE_SEC,
+  parseLiveReserveAdapterParams,
+} from "@shared/lib/live-reserve-adapters";
 import { DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR, TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
 import { requireChainlinkLatestRoundData } from "../../lib/chainlink-round-data";
 import type { AdapterContext, AdapterResult } from "./types";
@@ -27,9 +30,14 @@ const SILVER_SOURCE_KEY = "matrixdock-frs:silver";
 const UNIT_PIN_TOLERANCE_PCT = 0.5;
 const EXPECTED_DECIMALS = 9;
 const MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC = 600;
-// The issuer feed is updated on a roughly monthly cadence. Allow the normal
-// month-end operating lag, but surface a frozen round beyond that heartbeat.
-const MAX_RESERVE_FEED_AGE_SEC = 4_000_000;
+// `setReserve()` is the only writer of the feed's `reserve`/`roundId`/
+// `updatedAt`, so a round advances only when the issuer changes the reserve:
+// the feed is reserve-change-triggered, not heartbeat-driven. The budget is
+// calibrated to the contract's own `ReserveSet` round history in
+// MATRIXDOCK_BULLION_RESERVE_FEED_MAX_AGE_SEC; a stale round still publishes
+// because the unit pin below reconciles the frozen answer against live
+// `ozPerToken()` x supply.
+const MAX_RESERVE_FEED_AGE_SEC = MATRIXDOCK_BULLION_RESERVE_FEED_MAX_AGE_SEC;
 
 const OZ_PER_TOKEN_SELECTOR = "0x73b16bc7"; // ozPerToken()
 const SUI_GRAPHQL_ENDPOINT = "https://graphql.mainnet.sui.io/graphql";

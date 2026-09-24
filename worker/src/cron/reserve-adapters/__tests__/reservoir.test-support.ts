@@ -7,7 +7,8 @@ import {
   type AdapterRun,
 } from "./reserve-adapter.test-support";
 
-export const RESERVOIR_ENDPOINT = "https://app.reservoir.xyz/api/reserves/raw";
+export const RESERVOIR_ENDPOINT = "https://fireworks-git-master-fortunafi.vercel.app/api/reserves/raw";
+const RESERVOIR_ORIGIN = "https://fireworks-git-master-fortunafi.vercel.app";
 
 const PSM_ADDRESS = "0x4809010926aec940b550d34a46a52739f996d75d";
 const USDC_ADDRESS = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
@@ -47,8 +48,8 @@ export function reservoirNetwork(
   return {
     json: {
       [RESERVOIR_ENDPOINT]: (request: Request) => {
-        const browser = request.headers.get("origin") === "https://app.reservoir.xyz"
-          && request.headers.get("referer") === "https://app.reservoir.xyz/reserves"
+        const browser = request.headers.get("origin") === RESERVOIR_ORIGIN
+          && request.headers.get("referer") === `${RESERVOIR_ORIGIN}/reserves`
           && request.headers.get("accept") === "application/json, text/plain, */*"
           && request.headers.get("sec-fetch-dest") === "empty"
           && request.headers.get("sec-fetch-mode") === "cors"
