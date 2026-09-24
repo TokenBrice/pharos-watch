@@ -1,14 +1,32 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import musdReserves from "@shared/data/stablecoins/domains/reserves/musd-metamask.json";
 import ctusdReserves from "@shared/data/stablecoins/domains/reserves/ctusd-citrea.json";
 import usdatReserves from "@shared/data/stablecoins/domains/reserves/usdat-saturn.json";
 import ctusdCoin from "@shared/data/stablecoins/coins/ctusd-citrea.json";
 import usdatCoin from "@shared/data/stablecoins/coins/usdat-saturn.json";
 import type { StablecoinMeta } from "@shared/types/core";
-import { adaptM0Collateral } from "../m0";
+import type * as OnchainModule from "../onchain";
+import * as onchain from "../onchain";
+import type { OnchainLogEntry } from "../onchain";
+import { adaptM0Collateral, adaptM0OnchainCollateral } from "../m0";
 import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
-import { runAdapter } from "./reserve-adapter.test-support";
+import { expectWarningEffect, expectWarnings, runAdapter } from "./reserve-adapter.test-support";
+
+// The CollateralUpdated scan is the only M0 on-chain fallback step the adapter
+// harness cannot answer (it routes eth_call/block methods only), so it is
+// wrapped here: tests can script a completed window scan, while the default
+// implementation still exercises the real vetted RPC log path and its
+// fail-closed `complete: false` result.
+vi.mock("../onchain", async (importOriginal) => {
+  const actual = await importOriginal<typeof OnchainModule>();
+  return { ...actual, fetchOnchainLogs: vi.fn(actual.fetchOnchainLogs) };
+});
+
+afterEach(() => {
+  vi.mocked(onchain.fetchOnchainLogs).mockClear();
+});
+
 // Live payload shape observed against protocol-api.m0.org on 2026-08-20, after
 // M0 retired the off-chain CollateralCurrent composition feed and moved the
 // endpoint to keyed access. Values are 6-decimal token units.
@@ -275,5 +293,294 @@ describe("fetchM0Reserves", () => {
         nowSec: 1_787_171_387 + 3_600,
       })).rejects.toThrow(/M0_API_KEY not configured/);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// On-chain fallback (decision 2026-09-24)
+//
+// The fallback derives the contributing minter set from the gateway's own
+// CollateralUpdated events over a window bounded by `updateCollateralInterval()`:
+// `collateralOf()` returns zero once an update expires, so the window is a
+// provable superset of minters that still contribute collateral. The fixtures
+// below pin one such window (block 23,000,000 at 1,800,000,000; interval
+// 108,000s) and prove the fail-closed edges.
+// ---------------------------------------------------------------------------
+
+const ONCHAIN_BLOCK = { number: 23_000_000, timestamp: 1_800_000_000 };
+const ONCHAIN_INTERVAL_SEC = 108_000;
+const ONCHAIN_WINDOW_BLOCKS = Math.ceil((ONCHAIN_INTERVAL_SEC * 2) / 12);
+const ONCHAIN_WINDOW_FROM_BLOCK = ONCHAIN_BLOCK.number - ONCHAIN_WINDOW_BLOCKS;
+const ONCHAIN_WINDOW_FROM_TIMESTAMP = ONCHAIN_BLOCK.timestamp - ONCHAIN_INTERVAL_SEC * 2;
+const ONCHAIN_COLLATERAL_UPDATED_TOPIC0 =
+  "0x8c7a373ea6d1cedfcb77f0e5520921cc5d5a1a16b960c0c13c0f96b8dc24caa8";
+const MINTER_CONTRIBUTING_A = "0x1d5b695d13f231a605d231631c688fb33477b249";
+const MINTER_CONTRIBUTING_B = "0x5d238f4eac94da0a635ee39fa389a4754395d5d9";
+const MINTER_WITHOUT_COLLATERAL = "0xcd1394d24e1e404f9eb3609f872b0736becb9d74";
+const STALE_INDEXER_PAYLOAD = {
+  data: {
+    ...SAMPLE_PAYLOAD.data,
+    // The last internally consistent indexed snapshot: the frozen total equals
+    // its per-minter sum (so only the timestamp makes this payload stale), four
+    // days before the pinned on-chain block the fallback observes.
+    minterGateway_totalCollateralSnapshots: [
+      { timestamp: String(ONCHAIN_BLOCK.timestamp - 4 * 86_400), value: "277096415879488" },
+    ],
+  },
+};
+const ONCHAIN_WINDOW_FROM_KEY = `eth_getBlockByNumber:0x${ONCHAIN_WINDOW_FROM_BLOCK.toString(16)}`;
+const ONCHAIN_INTERVAL_KEY = "ethereum:updateCollateralInterval()";
+
+function m0CollateralUpdatedLog(minter: string, blockNumber: number): OnchainLogEntry {
+  return {
+    address: "0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e",
+    topics: [ONCHAIN_COLLATERAL_UPDATED_TOPIC0, `0x${minter.slice(2).padStart(64, "0")}`],
+    data: `0x${"00".repeat(96)}`,
+    blockNumber: `0x${blockNumber.toString(16)}`,
+  };
+}
+
+function m0OnchainNetwork(options: {
+  collateralByMinter: Record<string, bigint>;
+  updatedByMinter: Record<string, number>;
+}) {
+  return {
+    block: ONCHAIN_BLOCK,
+    rpc: {
+      [ONCHAIN_INTERVAL_KEY]: ONCHAIN_INTERVAL_SEC,
+      [ONCHAIN_WINDOW_FROM_KEY]: { timestamp: ONCHAIN_WINDOW_FROM_TIMESTAMP },
+      "ethereum:isMinterApproved(address)": true,
+      "ethereum:collateralOf(address)": (call: { data: string }) =>
+        options.collateralByMinter[`0x${call.data.slice(-40)}`] ?? 0n,
+      "ethereum:collateralUpdateTimestampOf(address)": (call: { data: string }) =>
+        options.updatedByMinter[`0x${call.data.slice(-40)}`] ?? 0n,
+    },
+  };
+}
+
+describe("adaptM0OnchainCollateral", () => {
+  const observation = {
+    reads: [
+      { minter: MINTER_CONTRIBUTING_A, approved: true, collateralRaw: 1_000_000_000_000n, updatedAtSec: 1_799_996_400 },
+      { minter: MINTER_CONTRIBUTING_B, approved: true, collateralRaw: 500_000_000_000n, updatedAtSec: 1_799_992_800 },
+      { minter: MINTER_WITHOUT_COLLATERAL, approved: true, collateralRaw: 0n, updatedAtSec: 1_799_996_400 },
+    ],
+    discoveredMinterCount: 3,
+    updateCollateralIntervalSec: ONCHAIN_INTERVAL_SEC,
+    windowFromBlock: ONCHAIN_WINDOW_FROM_BLOCK,
+    windowCoverageSec: 216_000,
+    observedBlock: { chain: "ethereum", ...ONCHAIN_BLOCK },
+  };
+
+  it("derives the total and the oldest contributing update timestamp", () => {
+    const result = adaptM0OnchainCollateral(observation);
+
+    expect(result.slices).toEqual([
+      {
+        sourceKey: "m0:eligible-collateral",
+        name: "U.S. Treasury bills & cash (M0 eligible collateral)",
+        pct: 100,
+        risk: "very-low",
+      },
+    ]);
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "verified",
+      sourceTimestamp: 1_799_992_800,
+      collateralValueDivisor: 1_000_000,
+      normalizedReserveTotal: 1_500_000,
+      minterCount: 2,
+      minterCollateralTotalUsd: 1_500_000,
+      earliestCollateralUpdateTimestamp: 1_799_992_800,
+      latestCollateralUpdateTimestamp: 1_799_996_400,
+      observedBlock: { chain: "ethereum", ...ONCHAIN_BLOCK },
+      details: {
+        collateralSource: "minter-gateway-collateral-updated-window",
+        fallbackReason: "indexer-snapshot-stale",
+        discoveredMinterCount: 3,
+        nonContributingMinterCount: 1,
+        updateCollateralIntervalSec: ONCHAIN_INTERVAL_SEC,
+        collateralWindowFromBlock: ONCHAIN_WINDOW_FROM_BLOCK,
+        collateralWindowToBlock: ONCHAIN_BLOCK.number,
+        collateralWindowBlocks: ONCHAIN_BLOCK.number - ONCHAIN_WINDOW_FROM_BLOCK + 1,
+        collateralWindowCoverageSec: 216_000,
+      },
+    });
+    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("m0") ?? undefined, now: ONCHAIN_BLOCK.timestamp }).valid).toBe(true);
+  });
+
+  it("treats a window with no unexpired collateral as unavailable, never as zero reserves", () => {
+    expect(() => adaptM0OnchainCollateral({
+      ...observation,
+      reads: observation.reads.map((read) => ({ ...read, collateralRaw: 0n })),
+    })).toThrow(/no minter with unexpired collateral/);
+  });
+
+  it("fails closed on a discovered minter that is not TTG-approved", () => {
+    expect(() => adaptM0OnchainCollateral({
+      ...observation,
+      reads: observation.reads.map((read) =>
+        read.minter === MINTER_CONTRIBUTING_B ? { ...read, approved: false } : read,
+      ),
+    })).toThrow(/not approved by the TTG Registrar/);
+  });
+
+  it("fails closed on a contributing update outside the update interval", () => {
+    expect(() => adaptM0OnchainCollateral({
+      ...observation,
+      reads: observation.reads.map((read) =>
+        read.minter === MINTER_CONTRIBUTING_B
+          ? { ...read, updatedAtSec: ONCHAIN_BLOCK.timestamp - ONCHAIN_INTERVAL_SEC }
+          : read,
+      ),
+    })).toThrow(/outside the 108000s update interval/);
+  });
+
+  it("fails closed on a future-dated contributing update", () => {
+    expect(() => adaptM0OnchainCollateral({
+      ...observation,
+      reads: observation.reads.map((read) =>
+        read.minter === MINTER_CONTRIBUTING_A
+          ? { ...read, updatedAtSec: ONCHAIN_BLOCK.timestamp + 1 }
+          : read,
+      ),
+    })).toThrow(/future collateral update timestamp/);
+  });
+
+  it("fails closed when the window does not cover one update interval", () => {
+    expect(() => adaptM0OnchainCollateral({ ...observation, windowCoverageSec: ONCHAIN_INTERVAL_SEC - 1 }))
+      .toThrow(/less than the 108000s update interval/);
+  });
+
+  it("fails closed when reads do not cover every discovered minter", () => {
+    expect(() => adaptM0OnchainCollateral({ ...observation, discoveredMinterCount: 4 }))
+      .toThrow(/discovered 4 minters but only 3 were read/);
+  });
+});
+
+describe("fetchM0Reserves on-chain fallback", () => {
+  it("publishes verified on-chain collateral when the indexer snapshot is beyond the source-age cap", async () => {
+    vi.mocked(onchain.fetchOnchainLogs).mockResolvedValueOnce({
+      logs: [
+        m0CollateralUpdatedLog(MINTER_CONTRIBUTING_A, ONCHAIN_BLOCK.number - 100),
+        m0CollateralUpdatedLog(MINTER_CONTRIBUTING_B, ONCHAIN_BLOCK.number - 50),
+        m0CollateralUpdatedLog(MINTER_WITHOUT_COLLATERAL, ONCHAIN_BLOCK.number - 10),
+      ],
+      complete: true,
+      calls: 1,
+    });
+
+    const { result, report } = await runAdapter("m0", "musd-metamask", {
+      network: {
+        json: { "https://protocol-api.m0.org/graphql": STALE_INDEXER_PAYLOAD },
+        ...m0OnchainNetwork({
+          collateralByMinter: {
+            [MINTER_CONTRIBUTING_A]: 1_000_000_000_000n,
+            [MINTER_CONTRIBUTING_B]: 500_000_000_000n,
+          },
+          updatedByMinter: {
+            [MINTER_CONTRIBUTING_A]: 1_799_996_400,
+            [MINTER_CONTRIBUTING_B]: 1_799_992_800,
+            [MINTER_WITHOUT_COLLATERAL]: 1_799_996_400,
+          },
+        }),
+      },
+      ctx: { m0ApiKey: "test-key" },
+      nowSec: ONCHAIN_BLOCK.timestamp,
+    });
+
+    expectWarnings(result, ["m0-onchain-collateral-fallback"]);
+    expectWarningEffect(result, "m0-onchain-collateral-fallback", "info");
+    expect(result.slices).toEqual([
+      {
+        sourceKey: "m0:eligible-collateral",
+        name: "U.S. Treasury bills & cash (M0 eligible collateral)",
+        pct: 100,
+        risk: "very-low",
+      },
+    ]);
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "verified",
+      sourceTimestamp: 1_799_992_800,
+      normalizedReserveTotal: 1_500_000,
+      minterCount: 2,
+      observedBlock: { chain: "ethereum", ...ONCHAIN_BLOCK },
+      details: {
+        collateralSource: "minter-gateway-collateral-updated-window",
+        fallbackReason: "indexer-snapshot-stale",
+        discoveredMinterCount: 3,
+        nonContributingMinterCount: 1,
+        collateralWindowFromBlock: ONCHAIN_WINDOW_FROM_BLOCK,
+        collateralWindowToBlock: ONCHAIN_BLOCK.number,
+        collateralWindowCoverageSec: ONCHAIN_BLOCK.timestamp - ONCHAIN_WINDOW_FROM_TIMESTAMP,
+      },
+    });
+    expect(report.valid).toBe(true);
+    expect(report.warnings.map((warning) => warning.code)).not.toContain("stale-source-data");
+
+    const scanCall = vi.mocked(onchain.fetchOnchainLogs).mock.calls[0];
+    expect(scanCall?.[0]).toMatchObject({
+      chain: "ethereum",
+      topics: [ONCHAIN_COLLATERAL_UPDATED_TOPIC0],
+      fromBlock: ONCHAIN_WINDOW_FROM_BLOCK,
+      toBlock: ONCHAIN_BLOCK.number,
+      maxCalls: 4,
+    });
+  });
+
+  it("keeps the degraded indexer snapshot when the window scan is incomplete", async () => {
+    const { result, report, network } = await runAdapter("m0", "musd-metamask", {
+      network: {
+        json: { "https://protocol-api.m0.org/graphql": STALE_INDEXER_PAYLOAD },
+        block: ONCHAIN_BLOCK,
+        rpc: {
+          [ONCHAIN_INTERVAL_KEY]: ONCHAIN_INTERVAL_SEC,
+          [ONCHAIN_WINDOW_FROM_KEY]: { timestamp: ONCHAIN_WINDOW_FROM_TIMESTAMP },
+        },
+      },
+      ctx: { m0ApiKey: "test-key" },
+      nowSec: ONCHAIN_BLOCK.timestamp,
+      allowUnmatched: true,
+    });
+
+    expectWarnings(result, ["m0-onchain-fallback-unavailable"]);
+    expectWarningEffect(result, "m0-onchain-fallback-unavailable", "info");
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "verified",
+      sourceTimestamp: ONCHAIN_BLOCK.timestamp - 4 * 86_400,
+      normalizedReserveTotal: 277_096_415.879488,
+    });
+    expect(report.warnings.map((warning) => warning.code)).toContain("stale-source-data");
+    expect(network.unmatched.some((entry) => entry.includes("eth_getLogs"))).toBe(true);
+  });
+
+  it("keeps the degraded indexer snapshot when the window discovers more minters than the cap", async () => {
+    const manyMinters = Array.from(
+      { length: 33 },
+      (_, index) => `0x${(index + 1).toString(16).padStart(40, "0")}`,
+    );
+    vi.mocked(onchain.fetchOnchainLogs).mockResolvedValueOnce({
+      logs: manyMinters.map((minter, index) => m0CollateralUpdatedLog(minter, ONCHAIN_BLOCK.number - 1 - index)),
+      complete: true,
+      calls: 1,
+    });
+
+    const { result } = await runAdapter("m0", "musd-metamask", {
+      network: {
+        json: { "https://protocol-api.m0.org/graphql": STALE_INDEXER_PAYLOAD },
+        block: ONCHAIN_BLOCK,
+        rpc: {
+          [ONCHAIN_INTERVAL_KEY]: ONCHAIN_INTERVAL_SEC,
+          [ONCHAIN_WINDOW_FROM_KEY]: { timestamp: ONCHAIN_WINDOW_FROM_TIMESTAMP },
+        },
+      },
+      ctx: { m0ApiKey: "test-key" },
+      nowSec: ONCHAIN_BLOCK.timestamp,
+    });
+
+    expectWarnings(result, ["m0-onchain-fallback-unavailable"]);
+    expect(result.metadata).toMatchObject({
+      sourceTimestamp: ONCHAIN_BLOCK.timestamp - 4 * 86_400,
+      normalizedReserveTotal: 277_096_415.879488,
+    });
   });
 });

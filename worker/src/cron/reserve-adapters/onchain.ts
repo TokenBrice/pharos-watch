@@ -5,7 +5,10 @@ import {
   fetchEvmUint256AtBlock,
   fetchEvmCallHexAtBlock,
   fetchEtherscanProxyHex,
+  fetchEvmRpcBatchDetailed,
+  toBlockTag,
   type EvmMulticall3Result,
+  type EvmRpcBatchError,
 } from "../../lib/evm-rpc";
 import { tronBase58ToHex } from "../../lib/tron-address";
 import { rethrowIfAborted } from "../../lib/abort";
@@ -184,6 +187,165 @@ export async function fetchOnchainMulticall3(options: EvmMulticall3Options): Pro
       },
     );
   });
+}
+
+export interface OnchainLogEntry {
+  address: string;
+  topics: string[];
+  data: string;
+  blockNumber: string;
+}
+
+export interface OnchainLogsResult {
+  logs: readonly OnchainLogEntry[];
+  /** False means the requested range was not fully scanned; callers must fail closed. */
+  complete: boolean;
+  calls: number;
+  failureReason?: string;
+}
+
+export interface OnchainLogsOptions {
+  chain: string;
+  contract: string;
+  /** Positional topic filter; `null` matches any topic at that position. */
+  topics: readonly (string | null)[];
+  fromBlock: number;
+  toBlock: number;
+  signal: AbortSignal;
+  ctx?: AdapterContext;
+  rpcUrl?: string;
+  fallbackRpcUrl?: string;
+  timeoutMs?: number;
+  /** Provider calls the bounded range split may spend before failing closed. */
+  maxCalls?: number;
+  /** A split stops at this range size instead of recursing further. */
+  minRangeBlocks?: number;
+}
+
+const DEFAULT_ONCHAIN_LOG_SCAN_MAX_CALLS = 4;
+const DEFAULT_ONCHAIN_LOG_MIN_RANGE_BLOCKS = 1_000;
+const ADDRESS_HEX_PATTERN = /^0x[0-9a-fA-F]{40}$/;
+const TOPIC_HEX_PATTERN = /^0x[0-9a-fA-F]{64}$/;
+const DATA_HEX_PATTERN = /^0x(?:[0-9a-fA-F]{2})*$/;
+const QUANTITY_HEX_PATTERN = /^0x[0-9a-fA-F]+$/;
+const SPLITTABLE_RANGE_HINTS = [
+  "block range",
+  "query timeout",
+  "timed out",
+  "too many results",
+  "response size",
+  "result set too large",
+  "more than",
+  "limit exceeded",
+] as const;
+
+function isSplittableLogRangeError(error: EvmRpcBatchError): boolean {
+  if (error.code === -32005 || error.code === -32000) return true;
+  const message = (error.message ?? "").toLowerCase();
+  return SPLITTABLE_RANGE_HINTS.some((hint) => message.includes(hint));
+}
+
+/**
+ * Strict log decoder. Every entry must carry the address, topics, data, and
+ * block number the range filter requested; a removed or malformed entry makes
+ * the whole scan incomplete so the caller never treats a partial set as whole.
+ */
+function parseOnchainLogEntry(
+  value: unknown,
+  expected: { contract: string; topic0: string | null },
+): OnchainLogEntry | null {
+  if (!value || typeof value !== "object") return null;
+  const entry = value as Record<string, unknown>;
+  if (typeof entry.address !== "string" || !ADDRESS_HEX_PATTERN.test(entry.address)) return null;
+  if (entry.address.toLowerCase() !== expected.contract.toLowerCase()) return null;
+  if (!Array.isArray(entry.topics) || entry.topics.length === 0) return null;
+  if (entry.topics.some((topic) => typeof topic !== "string" || !TOPIC_HEX_PATTERN.test(topic))) return null;
+  const topics = entry.topics as string[];
+  if (expected.topic0 != null && topics[0]?.toLowerCase() !== expected.topic0.toLowerCase()) return null;
+  if (entry.removed === true) return null;
+  if (typeof entry.data !== "string" || !DATA_HEX_PATTERN.test(entry.data)) return null;
+  if (typeof entry.blockNumber !== "string" || !QUANTITY_HEX_PATTERN.test(entry.blockNumber)) return null;
+  return { address: entry.address, topics, data: entry.data, blockNumber: entry.blockNumber };
+}
+
+/**
+ * Generic `eth_getLogs` read over one bounded block window through the vetted
+ * EVM RPC transport (registry endpoints only, same as every other reserve
+ * adapter read; never Alchemy-specific helpers). The range is scanned
+ * depth-first with a hard provider-call budget: a provider that rejects the
+ * range splits it, and anything the budget cannot cover returns
+ * `complete: false` instead of a silently partial log set.
+ */
+export async function fetchOnchainLogs(options: OnchainLogsOptions): Promise<OnchainLogsResult | null> {
+  return runAdapterIo(
+    options.ctx,
+    `evm-getlogs:${options.chain}:${options.contract}`,
+    async (): Promise<OnchainLogsResult | null> => {
+      const extraRpcUrls = [options.rpcUrl, options.fallbackRpcUrl].filter(
+        (url): url is string => typeof url === "string" && url.length > 0,
+      );
+      const maxCalls = Math.max(1, options.maxCalls ?? DEFAULT_ONCHAIN_LOG_SCAN_MAX_CALLS);
+      const minRangeBlocks = Math.max(1, options.minRangeBlocks ?? DEFAULT_ONCHAIN_LOG_MIN_RANGE_BLOCKS);
+      const expected = { contract: options.contract, topic0: options.topics[0] ?? null };
+      const topicFilter = options.topics;
+
+      let calls = 0;
+      const logs: OnchainLogEntry[] = [];
+      const pendingRanges: Array<{ from: number; to: number }> = [{ from: options.fromBlock, to: options.toBlock }];
+      while (pendingRanges.length > 0) {
+        const range = pendingRanges.pop()!;
+        if (calls >= maxCalls) return { logs: [], complete: false, calls, failureReason: "split-call-budget-exhausted" };
+        calls += 1;
+
+        const batch = await fetchEvmRpcBatchDetailed(
+          options.chain,
+          [{
+            method: "eth_getLogs",
+            params: [{
+              address: options.contract,
+              fromBlock: toBlockTag(range.from),
+              toBlock: toBlockTag(range.to),
+              topics: topicFilter,
+            }],
+          }],
+          {
+            extraRpcUrls,
+            signal: options.signal,
+            timeoutMs: options.timeoutMs ?? 10_000,
+            chainRpcs: options.ctx?.chainRpcs,
+          },
+        );
+        if (!batch) return { logs: [], complete: false, calls, failureReason: "provider-unavailable" };
+
+        const error = batch.errors[0];
+        if (error) {
+          const splittable = isSplittableLogRangeError(error);
+          const rangeSize = range.to - range.from + 1;
+          if (splittable && rangeSize > minRangeBlocks && calls < maxCalls) {
+            const mid = Math.floor((range.from + range.to) / 2);
+            pendingRanges.push({ from: mid + 1, to: range.to }, { from: range.from, to: mid });
+            continue;
+          }
+          return {
+            logs: [],
+            complete: false,
+            calls,
+            failureReason: splittable ? "split-call-budget-exhausted" : "provider-error",
+          };
+        }
+
+        const raw = batch.results[0];
+        if (!Array.isArray(raw)) return { logs: [], complete: false, calls, failureReason: "malformed-result" };
+        for (const value of raw) {
+          const entry = parseOnchainLogEntry(value, expected);
+          if (!entry) return { logs: [], complete: false, calls, failureReason: "malformed-log-entry" };
+          logs.push(entry);
+        }
+      }
+
+      return { logs, complete: true, calls };
+    },
+  );
 }
 
 export async function fetchOnchainRateBps(
