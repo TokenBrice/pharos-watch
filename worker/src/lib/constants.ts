@@ -202,7 +202,7 @@ export const KINESIS_KAG_HORIZON = "https://kag-mainnet.kinesisgroup.io";
 export const POOL_CHALLENGE_MIN_TVL = 100_000; // $100K
 
 /** Number of qualifying pools that must agree to promote a pending depeg via pool-only confirmation. */
-export const POOL_CHALLENGE_CONFIRM_MIN = 2;
+const POOL_CHALLENGE_CONFIRM_MIN = 2;
 
 /** Single-pool TVL above which pool-only confirmation can promote with a single pool. */
 export const POOL_CHALLENGE_HIGH_TVL_USD = 5_000_000; // $5M
