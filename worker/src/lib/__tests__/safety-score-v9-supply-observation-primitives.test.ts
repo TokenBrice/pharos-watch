@@ -1,9 +1,17 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { sha256HexFromBytes } from "@shared/lib/sha256";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import {
   buildAlchemyRpcUrl,
   type ChainRpcConfig,
 } from "../chain-registry";
+import {
+  fetchEvmBlockHeader,
+  fetchEvmBlockNumber,
+  fetchEvmCodeAtBlock,
+  fetchEvmMulticall3Aggregate3AtBlock,
+  fetchEvmStorageAtBlock,
+} from "../evm-rpc";
 import {
   decodeEvmAddress,
   decodeEvmAddressHex,
@@ -11,6 +19,7 @@ import {
   decodeEvmUint256,
   fetchReviewedDeploymentSolanaObservation,
   fetchSafetyScoreV9SolanaRpc,
+  observeReviewedEvmDeployment,
 } from "../safety-score-v9/supply-observation-primitives";
 
 
@@ -103,9 +112,16 @@ describe("Safety Score V9 supply observation primitives", () => {
         chainId: "solana",
         chainName: "Solana",
         type: "other",
-        rpcUrl: configuredUrl,
+        endpoints: [{
+          url: configuredUrl,
+          operator: "public",
+          keyed: false,
+          position: "registry",
+          stateHistory: "archive",
+          logsHistory: "full",
+        }],
         explorerUrl: "https://solscan.io",
-      },
+      } satisfies ChainRpcConfig,
     ]]);
 
     await expect(
@@ -135,9 +151,16 @@ describe("Safety Score V9 supply observation primitives", () => {
         chainId: "solana",
         chainName: "Solana",
         type: "other",
-        rpcUrl: configuredUrl,
+        endpoints: [{
+          url: configuredUrl,
+          operator: "public",
+          keyed: false,
+          position: "registry",
+          stateHistory: "archive",
+          logsHistory: "full",
+        }],
         explorerUrl: "https://solscan.io",
-      },
+      } satisfies ChainRpcConfig,
     ]]);
 
     await expect(fetchReviewedDeploymentSolanaObservation({
@@ -199,5 +222,54 @@ describe("Safety Score V9 supply observation primitives", () => {
       "https://api.mainnet.solana.com",
       "https://solana.api.pocket.network",
     ]);
+  });
+
+  it("rejects a supplemental-only chain config as chain-rpc-unavailable", async () => {
+    const supplementalOnly = new Map<string, ChainRpcConfig>([[
+      "ethereum",
+      {
+        chainId: "ethereum",
+        chainName: "Ethereum",
+        type: "evm",
+        endpoints: [{
+          url: "https://api-ethereum-mainnet-erigon.n.dwellir.com",
+          operator: "dwellir",
+          keyed: true,
+          position: "supplemental",
+          stateHistory: "archive",
+          logsHistory: "full",
+          verifiedAt: "2026-09-23",
+        }],
+        explorerUrl: "https://etherscan.io",
+      } satisfies ChainRpcConfig,
+    ]]);
+    const fetchMock = mockFetch([]);
+
+    await expect(observeReviewedEvmDeployment({
+      routeId: "ethereum:demo-token",
+      chainId: "ethereum",
+      contractAddress: "0x0000000000000000000000000000000000000001",
+      scoringClockSec: 1_700_000_000,
+      chainRpcs: supplementalOnly,
+      dependencies: {
+        sha256HexFromBytes,
+        fetchEvmBlockNumber,
+        fetchEvmBlockHeader,
+        fetchEvmCodeAtBlock,
+        fetchEvmMulticall3Aggregate3AtBlock,
+        fetchEvmStorageAtBlock,
+      },
+      identity: () => ({ routeId: "ethereum:demo-token" }),
+      safeBlockLag: () => 64,
+      extraRpcUrls: () => undefined,
+      protocolCalls: () => [],
+      decodeProtocolObservation: () => ({ status: "accepted" as const, observation: {} }),
+      identityValidationError: () => null,
+    })).resolves.toEqual({
+      status: "rejected",
+      rejectionCode: "chain-rpc-unavailable",
+      failedRouteId: "ethereum:demo-token",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

@@ -33,6 +33,14 @@ export const ROUTE_DEPENDENCY_HYDRATORS = {
   coingeckoApiKey(routeCtx, env) {
     routeCtx.coingeckoApiKey = normalizeCgApiKey(env.COINGECKO_API_KEY);
   },
+  // Read-only env subset for the Dwellir trial report route. This deliberately
+  // does not touch chainRpcs: routes never enable Dwellir on the request path.
+  dwellirBudgetEnv(routeCtx, env) {
+    routeCtx.dwellirBudgetEnv = {
+      DWELLIR_API_KEY: env.DWELLIR_API_KEY,
+      DWELLIR_MAX_CREDITS_PER_MONTH: env.DWELLIR_MAX_CREDITS_PER_MONTH,
+    };
+  },
   apiKeySelfServeEnv(routeCtx, env) {
     routeCtx.apiKeySelfServeEnv = {
       API_KEY_SELF_SERVE_IP_SALT: env.API_KEY_SELF_SERVE_IP_SALT,

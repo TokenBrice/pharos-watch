@@ -156,6 +156,13 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   chiliz:         { name: "Chiliz Chain",    explorerUrl: "https://scan.chiliz.com",                      evmChainId: 88888,    type: "evm",   logoPath: "/chains/chiliz.png"         },
   tac:            { name: "TAC",             explorerUrl: "https://explorer.tac.build",                    evmChainId: 239,      type: "evm",   logoPath: "/chains/tac.png"            },
   gatelayer:      { name: "Gate Layer",      explorerUrl: "https://www.gatescan.org/gatelayer",             evmChainId: 10088,    type: "evm",   logoPath: "/chains/gatelayer.png"      },
+  // Arc is Circle's USDC-native L1 (chain ID 5042, mainnet live 2026-09-16).
+  // The chain ID was read back live from the network's own RPC via eth_chainId
+  // and the explorer comes from the chain's registry entry. No `providers`
+  // block: no token-pool provider registration was sourced for Arc, so its
+  // deployments read "no registered token-pool provider supports this chain"
+  // rather than claiming a query that cannot run.
+  arc:            { name: "Arc",             explorerUrl: "https://arc.etherscan.io",                       evmChainId: 5042,     type: "evm",   logoPath: "/chains/arc.png"              },
 };
 
 /**
@@ -204,6 +211,7 @@ const CHAIN_RESILIENCE_TIER: Partial<Record<string, ChainResilienceTier>> = {
   robinhood: 3,     // new exchange-adjacent L2 (mainnet 2026-07)
   stable: 3,        // new USDT-focused chain
   bevm: 3,          // newer BTC-aligned L2
+  arc: 3,           // new PoA-validator L1 from Circle
 
   // Everything else defaults to tier 2 via getChainResilienceTier()
 };

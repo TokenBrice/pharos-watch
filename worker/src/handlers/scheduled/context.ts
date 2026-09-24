@@ -12,6 +12,10 @@ import {
 import { logCronRun, type CronProgressReporter, type CronResult } from "../../lib/cron-logger";
 import { normalizeCgApiKey } from "../../lib/coingecko";
 import { buildChainRpcs, type ChainRpcConfig } from "../../lib/chain-registry";
+import { CIRCUIT_SOURCE } from "../../lib/constants";
+import { shouldAttemptFetch } from "../../lib/circuit-breaker";
+import { flushDwellirCredits, loadDwellirBudgetState } from "../../lib/rpc-provider-budget";
+import { logWorkerEvent } from "../../lib/structured-log";
 import { normalizeCronMetadataWithLease } from "../../lib/cron-metadata";
 import { parseCsvEnv, type Env } from "../../lib/env";
 import {
@@ -52,6 +56,50 @@ const PER_JOB_LEASE_OPTIONS: Record<string, Pick<CronLeaseOptions, "heartbeatSec
   "daily-digest": LONG_RUNNING_LEASE_OPTIONS,
   "weekly-recap": LONG_RUNNING_LEASE_OPTIONS,
 };
+
+/**
+ * Contract C (Dwellir trial): `runtime.chainRpcs` is always built without
+ * Dwellir, and each runtime opts into the supplemental endpoints at most once,
+ * keyed by its own chainRpcs Map. Every failure mode is fail-closed — an
+ * unreadable ledger, an exhausted budget, an open circuit, or an unexpected
+ * error leaves `chainRpcs` registry-only.
+ */
+const dwellirEnablementByChainRpcs = new WeakMap<Map<string, ChainRpcConfig>, Promise<void>>();
+
+async function applyDwellirEndpoints(runtime: ScheduledRuntimeContext): Promise<void> {
+  const budget = await loadDwellirBudgetState(runtime.db, runtime.env, Math.floor(Date.now() / 1000));
+  if (!budget.usable) return;
+  if (!(await shouldAttemptFetch(runtime.db, CIRCUIT_SOURCE.DWELLIR_EVM))) return;
+
+  const keyedChainRpcs = buildChainRpcs(runtime.env.ALCHEMY_API_KEY, runtime.env.DRPC_API_KEY, {
+    dwellirApiKey: runtime.env.DWELLIR_API_KEY,
+  });
+  // Copied in place so every holder of this runtime's Map observes the
+  // supplemental endpoints, and the registry configs keep the same operators
+  // in the same order (Dwellir only ever appends after them).
+  for (const [chainId, config] of keyedChainRpcs) {
+    runtime.chainRpcs.set(chainId, config);
+  }
+}
+
+function ensureDwellirEndpointsEnabled(runtime: ScheduledRuntimeContext): Promise<void> {
+  const chainRpcs = runtime.chainRpcs;
+  const pending = dwellirEnablementByChainRpcs.get(chainRpcs);
+  if (pending) return pending;
+
+  const enablement = applyDwellirEndpoints(runtime).catch((error: unknown) => {
+    logWorkerEvent({
+      scope: "handler",
+      level: "warn",
+      event: "dwellir_runtime_enablement_failed",
+      message: "Dwellir supplemental RPC endpoints stayed disabled for this runtime",
+      provider: "dwellir",
+      error,
+    });
+  });
+  dwellirEnablementByChainRpcs.set(chainRpcs, enablement);
+  return enablement;
+}
 
 export interface ScheduledRuntimeContext {
   db: D1Database;
@@ -207,99 +255,108 @@ export function createScheduledRuntimeContext(
         : runtime.slotSignal ?? slotAbortSignal;
 
       return fetchBudget.run(descriptor.maxConnections, combinedSlotSignal, async () => {
-        return logCronRun(db, job, async (signal, reportProgress): Promise<CronResult> => {
-          const slotMeta = {
-            slotStartedAt: scheduled.slotStartedAt,
-            scheduleKey: scheduled.scheduleKey,
-            producerPath: descriptor.producerPath,
-            invocationId,
-            workerVersion,
-            attemptNo: jobAttemptNo,
-            producerKind,
-          };
-          const leaseOwner = createLeaseOwner(job);
-          const perJobLeaseOptions = PER_JOB_LEASE_OPTIONS[job] ?? {};
-          const buildLeaseMeta = (lease: Awaited<ReturnType<typeof runCronWithLease>>) => ({
-            leaseOwner: lease.leaseOwner,
-            renewFailures: lease.renewFailures,
-            leaseLost: lease.leaseLost ?? false,
-            leaseTtlSec: lease.leaseTtlSec,
-            leaseHeartbeatSec: lease.leaseHeartbeatSec,
-            leaseMaxRenewFailures: lease.leaseMaxRenewFailures,
-            leaseRenewAttempts: lease.leaseRenewAttempts,
-            leaseRenewSuccesses: lease.leaseRenewSuccesses,
-            leaseRenewFailuresTotal: lease.leaseRenewFailuresTotal,
-            leaseLastRenewedAt: lease.leaseLastRenewedAt,
-            ...(timeoutBudgetMetadata ? { timeoutBudget: timeoutBudgetMetadata } : {}),
-            ...slotMeta,
-          });
-          const leaseOptions: CronLeaseOptions = {
-            owner: leaseOwner,
-            abortSignal: signal,
-            timeoutBudget,
-            ...perJobLeaseOptions,
-          };
-          const lease = await runCronWithLease(db, job, async ({ signal: leaseSignal }) => {
-            await reportProgress({
-              stage: "started",
-              message: `Starting ${job}`,
-              leaseOwner,
-              metadata: slotMeta,
+        // Contract C: opt this runtime into the Dwellir supplemental endpoints
+        // (memoized, fail-closed) before the job body can read chainRpcs.
+        await ensureDwellirEndpointsEnabled(runtime);
+        try {
+          return await logCronRun(db, job, async (signal, reportProgress): Promise<CronResult> => {
+            const slotMeta = {
+              slotStartedAt: scheduled.slotStartedAt,
+              scheduleKey: scheduled.scheduleKey,
+              producerPath: descriptor.producerPath,
+              invocationId,
+              workerVersion,
+              attemptNo: jobAttemptNo,
+              producerKind,
+            };
+            const leaseOwner = createLeaseOwner(job);
+            const perJobLeaseOptions = PER_JOB_LEASE_OPTIONS[job] ?? {};
+            const buildLeaseMeta = (lease: Awaited<ReturnType<typeof runCronWithLease>>) => ({
+              leaseOwner: lease.leaseOwner,
+              renewFailures: lease.renewFailures,
+              leaseLost: lease.leaseLost ?? false,
+              leaseTtlSec: lease.leaseTtlSec,
+              leaseHeartbeatSec: lease.leaseHeartbeatSec,
+              leaseMaxRenewFailures: lease.leaseMaxRenewFailures,
+              leaseRenewAttempts: lease.leaseRenewAttempts,
+              leaseRenewSuccesses: lease.leaseRenewSuccesses,
+              leaseRenewFailuresTotal: lease.leaseRenewFailuresTotal,
+              leaseLastRenewedAt: lease.leaseLastRenewedAt,
+              ...(timeoutBudgetMetadata ? { timeoutBudget: timeoutBudgetMetadata } : {}),
+              ...slotMeta,
             });
-            await reportProgress({
-              stage: "lease-acquired",
-              message: `Lease acquired for ${job}`,
-              leaseOwner,
-              metadata: slotMeta,
-            });
-            return fn(leaseSignal, reportProgress);
-          }, leaseOptions);
+            const leaseOptions: CronLeaseOptions = {
+              owner: leaseOwner,
+              abortSignal: signal,
+              timeoutBudget,
+              ...perJobLeaseOptions,
+            };
+            const lease = await runCronWithLease(db, job, async ({ signal: leaseSignal }) => {
+              await reportProgress({
+                stage: "started",
+                message: `Starting ${job}`,
+                leaseOwner,
+                metadata: slotMeta,
+              });
+              await reportProgress({
+                stage: "lease-acquired",
+                message: `Lease acquired for ${job}`,
+                leaseOwner,
+                metadata: slotMeta,
+              });
+              return fn(leaseSignal, reportProgress);
+            }, leaseOptions);
 
-          if (lease.status === "skipped_locked") {
+            if (lease.status === "skipped_locked") {
+              await reportProgress({
+                stage: "skipped-locked",
+                message: `Lease already held for ${job}`,
+                leaseOwner: lease.leaseOwner,
+                metadata: slotMeta,
+              });
+              return {
+                status: "skipped_locked",
+                metadata: JSON.stringify({
+                  reason: "lease-locked",
+                  ...buildLeaseMeta(lease),
+                }),
+              };
+            }
+
+            const result = lease.result;
+            if (!result) {
+              return {
+                metadata: JSON.stringify({
+                  ...buildLeaseMeta(lease),
+                }),
+              };
+            }
+
+            const leaseMeta = buildLeaseMeta(lease);
+
+            const metadata = normalizeCronMetadataWithLease(result, leaseMeta);
+
             await reportProgress({
-              stage: "skipped-locked",
-              message: `Lease already held for ${job}`,
+              stage: "completed",
+              message: `Completed ${job}`,
               leaseOwner: lease.leaseOwner,
               metadata: slotMeta,
             });
-            return {
-              status: "skipped_locked",
-              metadata: JSON.stringify({
-                reason: "lease-locked",
-                ...buildLeaseMeta(lease),
-              }),
-            };
-          }
 
-          const result = lease.result;
-          if (!result) {
-            return {
-              metadata: JSON.stringify({
-                ...buildLeaseMeta(lease),
-              }),
-            };
-          }
-
-          const leaseMeta = buildLeaseMeta(lease);
-
-          const metadata = normalizeCronMetadataWithLease(result, leaseMeta);
-
-          await reportProgress({
-            stage: "completed",
-            message: `Completed ${job}`,
-            leaseOwner: lease.leaseOwner,
-            metadata: slotMeta,
+            return { ...result, metadata };
+          }, {
+            slotStartedAt: scheduled.slotStartedAt,
+            timeoutBudget,
+            abortSignal: combinedSlotSignal,
+            producer: {
+              ...getRuntimeProducerIdentity(runtime, job),
+            },
           });
-
-          return { ...result, metadata };
-        }, {
-          slotStartedAt: scheduled.slotStartedAt,
-          timeoutBudget,
-          abortSignal: combinedSlotSignal,
-          producer: {
-            ...getRuntimeProducerIdentity(runtime, job),
-          },
-        });
+        } finally {
+          // Contract C: drain this isolate's Dwellir credits after the job body
+          // settles; flushing never throws, so it cannot change the job result.
+          await flushDwellirCredits(db, Math.floor(Date.now() / 1000));
+        }
       });
     },
     runBudgetOnlyTask: (job, fn) => {

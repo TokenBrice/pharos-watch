@@ -35,6 +35,7 @@
     "data-invariant-canary",
     "dispatch-telegram-alerts",
     "fetch-tbill-rate",
+    "observe-rpc-provider-parity",
     "project-tape",
     "prune-cron-history",
     "prune-detail-cache",

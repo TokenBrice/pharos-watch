@@ -533,6 +533,8 @@ Blacklist and mint/burn have independent circuit breakers:
 
 An Alchemy outage does not block blacklist sync, and vice versa. Each circuit breaker opens after consecutive failures and probes independently.
 
+During the Dwellir trial this lane never reaches the supplemental Dwellir operator (`excludeSupplementalRpc` on every batch call, including the conservation pre-pass), because mint/burn depends on full-history `eth_getLogs` while the trial's Dwellir endpoints are plan-capped at 500 blocks per request and zkSync answers pruned ranges with a silent empty result.
+
 ---
 
 ## Testing

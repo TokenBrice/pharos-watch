@@ -1,10 +1,11 @@
 {
-  "last_reviewed_at": 1789047685,
+  "last_reviewed_at": 1790207238,
   "items": [
     { "label": "Ike", "category": "team", "usd_per_month": 1500, "note": "Growth & comms" },
     { "label": "Brice", "category": "team", "usd_per_month": 0, "note": "Uncompensated" },
     { "label": "CoinGecko API", "category": "infra", "usd_per_month": 129, "note": "Analyst tier" },
     { "label": "Alchemy", "category": "infra", "usd_per_month": 40, "note": "Pay-as-you-go, ~$40 typical" },
+    { "label": "Dwellir", "category": "infra", "usd_per_month": 0, "note": "Multi-chain RPC; 1-year Developer plan sponsored in kind" },
     { "label": "Claude API", "category": "infra", "usd_per_month": 30, "note": "Daily digest generation" },
     { "label": "Cloudflare Workers", "category": "infra", "usd_per_month": 5, "note": "Paid plan" },
     { "label": "Domain registration", "category": "infra", "usd_per_month": 2.85, "note": "pharos.watch, annualized" },

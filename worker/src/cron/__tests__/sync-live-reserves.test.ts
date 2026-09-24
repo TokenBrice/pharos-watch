@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CHAIN_META } from "@shared/lib/chains";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { buildChainRpcs } from "../../lib/chain-registry";
+import { buildChainRpcs, hasRegistryRpc } from "../../lib/chain-registry";
 import { unverifiedFreshnessMetadata } from "../reserve-adapters/freshness";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { buildSharedSourceCacheKey, SYNC_ORDERED_CONFIGURED_COINS } from "../sync-live-reserves-shared";
@@ -162,7 +162,7 @@ describe("syncLiveReserves", () => {
             // The primary input may resolve through its own configured RPC URL;
             // every other referenced chain is read through buildChainRpcs().
             if (chain === primary.chain && hasExplicitRpcUrl) return false;
-            return !chainRpcs.has(chain);
+            return !hasRegistryRpc(chainRpcs.get(chain));
           })
           .map((chain) => `${coin.id}:${chain}`);
       });

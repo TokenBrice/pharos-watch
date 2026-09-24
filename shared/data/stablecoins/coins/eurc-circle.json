@@ -113,6 +113,11 @@
       "chain": "cardano",
       "address": "25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff93545555243",
       "decimals": 6
+    },
+    {
+      "chain": "arc",
+      "address": "0xbef5f6d51cb62b58e6a8f77868681825c6fe21c1",
+      "decimals": 6
     }
   ],
   "custodyModel": "institutional-top",

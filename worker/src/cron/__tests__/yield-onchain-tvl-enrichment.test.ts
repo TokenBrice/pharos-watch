@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { mockRegistry } from "../../test-helpers/cron";
+import { makeChainRpcConfig } from "../../test-helpers/chain-rpc-fixtures.test-support";
 import { makeDlYieldPool } from "./yield-resolve.test-support";
 
 vi.mock("@shared/lib/stablecoins/registry", () => {
@@ -264,13 +265,12 @@ describe("fetchOnChainRates optional ERC-4626 tvlRead", () => {
     return new Map([
       [
         "ethereum",
-        {
+        makeChainRpcConfig({
           chainId: "ethereum",
           chainName: "Ethereum",
-          type: "evm",
-          rpcUrl: "https://rpc.ethereum.example.com",
+          rpcUrls: ["https://rpc.ethereum.example.com"],
           explorerUrl: "https://etherscan.io",
-        },
+        }),
       ],
     ]);
   }

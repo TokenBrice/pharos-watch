@@ -100,6 +100,7 @@ Current-balance cache telemetry preserves the canonical `skippedDueBudget` count
 - Etherscan v2 is an explorer source for supported EVM log scans and a best-effort final historical-call fallback.
 - Base, Optimism, Avalanche, BSC, and Gnosis prefer chain RPC `eth_getLogs`; chain RPC configuration comes from `worker/src/lib/chain-registry.ts`.
 - Historical EVM balance lookup prefers dRPC when configured, then the shared chain RPC path, then best-effort Etherscan.
+- The lane never reaches the supplemental Dwellir operator: log-scan target resolution and historical balance reads select registry endpoints only (`logScanRpcEndpoints` / `registryRpcUrls` in `worker/src/lib/chain-registry.ts`), because a blacklist scan needs provable history and Dwellir's `eth_getLogs` plan cap is 500 blocks per request.
 - Tron event scans and current-balance reads use TronGrid. Pagination URLs are origin/path validated before credentials are forwarded.
 
 All credentials in `worker/src/lib/env.ts` are optional at the type boundary:

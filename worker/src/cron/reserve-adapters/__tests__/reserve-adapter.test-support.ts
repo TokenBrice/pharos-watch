@@ -23,7 +23,7 @@ import type {
   LiveReservesConfig,
   LiveReserveWarning,
 } from "@shared/types/live-reserves";
-import { buildChainRpcs, type ChainRpcConfig } from "../../../lib/chain-registry";
+import { buildChainRpcs, registryRpcEndpoints, type ChainRpcConfig } from "../../../lib/chain-registry";
 import { MULTICALL3_ADDRESS } from "../../../lib/evm-rpc";
 import { getReserveAdapter } from "../index";
 import type { AdapterContext, AdapterResult } from "../types";
@@ -349,19 +349,26 @@ export function installAdapterNetwork(spec: AdapterNetworkSpec = {}): AdapterNet
   const chainRpcs = buildChainRpcs();
   for (const [chainId, rpcUrl] of Object.entries(spec.chains ?? {})) {
     const existing = chainRpcs.get(chainId);
+    const registry = registryRpcEndpoints(existing);
     chainRpcs.set(chainId, {
       chainId,
       chainName: existing?.chainName ?? chainId,
       type: existing?.type ?? "evm",
       explorerUrl: existing?.explorerUrl ?? "https://explorer.example",
       ...existing,
-      rpcUrl,
+      // The override replaces the chain's primary read URL and keeps the
+      // remaining registry endpoints, so URL→chain attribution is unchanged.
+      endpoints: [
+        { url: rpcUrl, operator: "public", keyed: false, position: "registry", stateHistory: "archive", logsHistory: "full" },
+        ...registry.slice(1),
+      ],
     });
   }
   const chainByRpcUrl: Record<string, string> = {};
   for (const config of chainRpcs.values()) {
-    chainByRpcUrl[normalizeUrl(config.rpcUrl)] = config.chainId;
-    if (config.fallbackRpcUrl) chainByRpcUrl[normalizeUrl(config.fallbackRpcUrl)] = config.chainId;
+    for (const endpoint of registryRpcEndpoints(config)) {
+      chainByRpcUrl[normalizeUrl(endpoint.url)] = config.chainId;
+    }
   }
 
   const httpTable: Record<string, { responder: Responder<unknown>; contentType: string }> = {};

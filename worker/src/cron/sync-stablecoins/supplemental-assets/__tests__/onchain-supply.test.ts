@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types/core";
+import type { ChainRpcConfig } from "../../../../lib/chain-registry";
 
 const fetchEearnSuiSupplyMock = vi.hoisted(() => vi.fn());
 vi.mock("../sui-vault-supply", () => ({ fetchEearnSuiSupply: fetchEearnSuiSupplyMock }));
@@ -53,10 +54,10 @@ function makeMovementMeta(): StablecoinMeta {
   });
 }
 
-function movementChainRpcs() {
-  return new Map([
-    ["movement", { chainId: "movement", chainName: "Movement", type: "other" as const, rpcUrl: "https://mainnet.movementnetwork.xyz/v1", explorerUrl: "https://explorer.movementnetwork.xyz" }],
-    ["ethereum", { chainId: "ethereum", chainName: "Ethereum", type: "evm" as const, rpcUrl: "https://ethereum-rpc.publicnode.com", explorerUrl: "https://etherscan.io" }],
+function movementChainRpcs(): Map<string, ChainRpcConfig> {
+  return new Map<string, ChainRpcConfig>([
+    ["movement", { chainId: "movement", chainName: "Movement", type: "other", endpoints: [{ url: "https://mainnet.movementnetwork.xyz/v1", operator: "public", keyed: false, position: "registry", stateHistory: "archive", logsHistory: "full" }], explorerUrl: "https://explorer.movementnetwork.xyz" }],
+    ["ethereum", { chainId: "ethereum", chainName: "Ethereum", type: "evm", endpoints: [{ url: "https://ethereum-rpc.publicnode.com", operator: "public", keyed: false, position: "registry", stateHistory: "archive", logsHistory: "full" }], explorerUrl: "https://etherscan.io" }],
   ]);
 }
 

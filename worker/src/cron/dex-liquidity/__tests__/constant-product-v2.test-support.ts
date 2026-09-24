@@ -1,11 +1,11 @@
 import { canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
+import { makeChainRpcConfig } from "../../../test-helpers/chain-rpc-fixtures.test-support";
 import type { EvmV2ReplayCase } from "./fixtures/evm-v2-fixtures";
 
 export function captureRpcs(chainId: string, chainName: string) {
-  return new Map([[chainId, {
-    chainId, chainName, type: "evm" as const,
-    rpcUrl: "https://rpc.example", explorerUrl: "https://example.com",
-  }]]);
+  return new Map([[chainId, makeChainRpcConfig({
+    chainId, chainName, rpcUrls: ["https://rpc.example"], explorerUrl: "https://example.com",
+  })]]);
 }
 
 export function replayTokenLookups(replay: EvmV2ReplayCase) {

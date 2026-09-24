@@ -1,5 +1,5 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { type ChainRpcConfig, getChainRpc } from "../../lib/chain-registry";
+import { type ChainRpcConfig, getChainRpc, hasRegistryRpc } from "../../lib/chain-registry";
 import { resolveRpcUrls } from "./sources-helpers";
 import { cgHeaders, cgSimplePricePath, cgUrl } from "../../lib/coingecko";
 import { USER_AGENT } from "../../lib/constants";
@@ -190,7 +190,7 @@ export async function fetchBprotocolLqtyOnlySource(
     return null;
   }
   const rpc = getChainRpc(chainRpcs, "ethereum");
-  if (!rpc) {
+  if (!hasRegistryRpc(rpc)) {
     logWorkerEvent({
       scope: "lib",
       job: "sync-yield-data",
@@ -299,7 +299,7 @@ export async function fetchLiquityV2StabilityPoolSource(
     return null;
   }
   const rpc = getChainRpc(chainRpcs, config.chain);
-  if (!rpc) {
+  if (!hasRegistryRpc(rpc)) {
     logWorkerEvent({
       scope: "lib",
       job: "sync-yield-data",
@@ -424,7 +424,7 @@ export async function fetchCurveScrvusdCurrentRateSource(
     return null;
   }
   const rpc = getChainRpc(chainRpcs, "ethereum");
-  if (!rpc) {
+  if (!hasRegistryRpc(rpc)) {
     logWorkerEvent({
       scope: "lib",
       job: "sync-yield-data",

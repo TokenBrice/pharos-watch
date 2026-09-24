@@ -29,6 +29,8 @@ Two hand-maintained JSON files:
 
 The Monthly costs card separately discloses $5,800 in exceptional, one-time design expenses for the full website redesign and logo. TokenBrice paid and sponsored those expenses, so they are not included in the recurring monthly total.
 
+The same card carries Pharos's single in-kind sponsorship row: `Dwellir` (`category: "infra"`, `usd_per_month: 0`, note "Multi-chain RPC; 1-year Developer plan sponsored in kind"). The zero keeps the sponsored plan visible in the ledger without inflating the monthly running cost, and `CostBreakdown` renders an acknowledgment paragraph beside the TokenBrice one-time note — "Dwellir sponsors Pharos's multi-chain RPC access with a free one-year Developer plan (about $40/month in kind). Thank you, Dwellir." — with the vendor name linking to `https://www.dwellir.com`. Keep that wording aligned with whatever disclosure the sponsorship requires, and treat the row as disclosure rather than revenue: it is never repriced to a market rate unless the sponsorship actually becomes a paid line item.
+
 Row shape for donations is defined and validated by `shared/lib/funding/schema.ts` (`DonationSchema`, with the `Donation` type inferred from it). Each row carries `usd_at_receipt` priced at the transfer's block date, a `kind` field (`founder | pool | community`), and a `display` field with a forward-verified ENS name, custom/human label, or truncated-address fallback.
 
 ## Intentional simplifications

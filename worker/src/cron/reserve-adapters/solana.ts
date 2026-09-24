@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { AdapterContext } from "./types";
 import { fetchJsonPostWithRetry } from "./request";
-import { getAlchemyAuthHeaders } from "../../lib/chain-registry";
+import { getRpcAuthHeaders, registryRpcUrls } from "../../lib/chain-registry";
 import { throwIfAborted } from "../../lib/abort";
 import { redactProviderUrls } from "../../lib/safe-error-message";
 import { base64ToBytes } from "@shared/lib/base64";
@@ -15,12 +15,12 @@ export interface SolanaAccount { owner: string; data: Uint8Array }
 async function fetchSolanaAccountCensus(addresses: string[], signal: AbortSignal, ctx: AdapterContext | undefined, minContextSlot: number | undefined, includeBlockTime: boolean, maxResponseBytes: number) {
   if (addresses.length === 0 || addresses.length > 100 || new Set(addresses).size !== addresses.length) throw new Error("Solana census requires 1–100 unique accounts");
   const configured = ctx?.chainRpcs?.get("solana");
-  const urls = [...new Set([configured?.rpcUrl, configured?.fallbackRpcUrl, "https://api.mainnet-beta.solana.com", "https://api.mainnet.solana.com", "https://solana-rpc.publicnode.com"].filter((url): url is string => !!url))];
+  const urls = [...new Set([...registryRpcUrls(configured), "https://api.mainnet-beta.solana.com", "https://api.mainnet.solana.com", "https://solana-rpc.publicnode.com"].filter((url): url is string => !!url))];
   let lastError: unknown;
   for (const url of urls) {
     throwIfAborted(signal);
     try {
-      const options = { headers: getAlchemyAuthHeaders(url), maxResponseBytes, maxRetries: 1 };
+      const options = { headers: getRpcAuthHeaders(url), maxResponseBytes, maxRetries: 1 };
       const raw = await fetchJsonPostWithRetry<unknown>(url, { jsonrpc: "2.0", id: 1, method: "getMultipleAccounts", params: [addresses, { encoding: "base64", commitment: "finalized", ...(minContextSlot === undefined ? {} : { minContextSlot }) }] }, signal, 10_000, ctx, options);
       const { result } = responseSchema.parse(raw);
       if (result.value.length !== addresses.length || result.context.slot < (minContextSlot ?? 0)) throw new Error("Invalid Solana account census context");

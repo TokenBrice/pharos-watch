@@ -7,7 +7,7 @@ const fetchWithRetryMock = vi.hoisted(() => vi.fn());
 vi.mock("../../../lib/fetch-retry", () => mockFetchRetry({ fetchWithRetry: fetchWithRetryMock }));
 
 import { fetchWithRetry } from "../../../lib/fetch-retry";
-import { buildAlchemyRpcUrl } from "../../../lib/chain-registry";
+import { buildAlchemyRpcUrl, type ChainRpcConfig, type RpcEndpoint } from "../../../lib/chain-registry";
 import {
   ADAPTER_USER_AGENT,
   buildCoverageShortfallWarnings,
@@ -41,9 +41,13 @@ function solanaCoin(): StablecoinMeta {
 }
 
 function solanaContext(rpcUrl: string, fallbackRpcUrl?: string) {
-  return { chainRpcs: new Map([["solana", {
-    chainId: "solana", chainName: "Solana", type: "other" as const,
-    rpcUrl, fallbackRpcUrl, explorerUrl: "https://solscan.io",
+  const urls = [rpcUrl, fallbackRpcUrl].filter((url): url is string => typeof url === "string" && url.length > 0);
+  return { chainRpcs: new Map<string, ChainRpcConfig>([["solana", {
+    chainId: "solana", chainName: "Solana", type: "other",
+    endpoints: urls.map((url): RpcEndpoint => ({
+      url, operator: "public", keyed: false, position: "registry", stateHistory: "archive", logsHistory: "full",
+    })),
+    explorerUrl: "https://solscan.io",
   }]]) };
 }
 

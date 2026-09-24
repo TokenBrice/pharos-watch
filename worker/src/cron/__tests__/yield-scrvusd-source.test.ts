@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import { makeChainRpcConfig } from "../../test-helpers/chain-rpc-fixtures.test-support";
 import { cleanupYieldSourceTest, mockYieldSourceFetchRetryModule, mockYieldSourceRoutes } from "./yield-source.test-support";
 
 vi.mock("../../lib/fetch-retry", () => mockYieldSourceFetchRetryModule());
@@ -9,13 +10,12 @@ import { fetchCurveScrvusdCurrentRateSource } from "../yield-sync/sources";
 const TEST_CHAIN_RPCS = new Map<string, ChainRpcConfig>([
   [
     "ethereum",
-    {
+    makeChainRpcConfig({
       chainId: "ethereum",
       chainName: "Ethereum",
-      type: "evm",
-      rpcUrl: "https://rpc.example/eth",
+      rpcUrls: ["https://rpc.example/eth"],
       explorerUrl: "https://etherscan.io",
-    },
+    }),
   ],
 ]);
 

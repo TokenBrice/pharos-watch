@@ -481,6 +481,11 @@
       "chain": "pharos",
       "address": "0xc879c018db60520f4355c26ed1a6d572cdac1815",
       "decimals": 6
+    },
+    {
+      "chain": "arc",
+      "address": "0x3600000000000000000000000000000000000000",
+      "decimals": 6
     }
   ],
   "custodyModel": "institutional-top",

@@ -15,7 +15,7 @@ import {
   type ContractEventConfig,
 } from "../../lib/blacklist-contracts";
 import type { BlacklistEventType } from "@shared/types/market";
-import { getChainRpc, type ChainRpcConfig } from "../../lib/chain-registry";
+import { getChainRpc, logScanRpcEndpoints, type ChainRpcConfig } from "../../lib/chain-registry";
 import {
   decodeAddressWord,
   decodeUint256AtSlotOrNull,
@@ -71,20 +71,33 @@ type RpcLogTarget = {
   scanWindowBlocks: number | null;
 };
 
+/** Which column of `RPC_LOG_SCAN_WINDOWS` bounds a candidate's scan range. */
+type RpcLogWindowClass = "alchemy" | "fallback";
+
+type RpcLogCandidate = {
+  url: string;
+  windowClass: RpcLogWindowClass;
+};
+
+/**
+ * Registry log-scan endpoints in failover order. `logScanRpcEndpoints` is the
+ * only endpoint source here: the blacklist log lane must never reach a
+ * supplemental (Dwellir) endpoint, even as a last-resort fallback.
+ */
 function getRpcLogCandidates(
   chainId: string,
   chainRpcs?: Map<string, ChainRpcConfig>,
-): Array<{ url: string; alchemyPrimary: boolean }> {
+): RpcLogCandidate[] {
   if (!chainRpcs) return [];
   const rpc = getChainRpc(chainRpcs, chainId);
   if (!rpc || rpc.type !== "evm") return [];
-  return [
-    { url: rpc.rpcUrl, alchemyPrimary: rpc.alchemyPrimary === true },
-    { url: rpc.fallbackRpcUrl, alchemyPrimary: false },
-  ].filter(
-    (target): target is { url: string; alchemyPrimary: boolean } =>
-      typeof target.url === "string" && target.url.length > 0,
-  );
+  return logScanRpcEndpoints(rpc)
+    .filter((endpoint) => endpoint.url.length > 0)
+    .map((endpoint) => ({
+      url: endpoint.url,
+      // Today's `alchemyPrimary`: only an Alchemy primary earns the wide window.
+      windowClass: endpoint.operator === "alchemy" ? "alchemy" : "fallback",
+    }));
 }
 
 export interface FetchEvmEventsIncrementalResult {
@@ -284,7 +297,7 @@ async function resolveRpcLogTarget(
       return {
         rpcUrl: target.url,
         chainHead,
-        scanWindowBlocks: chainWindow ? (target.alchemyPrimary ? chainWindow.alchemy : chainWindow.fallback) : null,
+        scanWindowBlocks: chainWindow ? chainWindow[target.windowClass] : null,
       };
     }
   }

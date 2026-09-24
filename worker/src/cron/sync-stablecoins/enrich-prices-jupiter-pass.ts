@@ -7,7 +7,7 @@ import { fetchTextWithRetry } from "../../lib/fetch-retry";
 import { pricesAgreeWithinBps } from "../../lib/price-divergence";
 import { JupiterPriceResponseSchema, SolanaSlotResponseSchema } from "../../lib/schemas";
 import { throwIfAborted } from "../../lib/abort";
-import { getAlchemyAuthHeaders, type ChainRpcConfig } from "../../lib/chain-registry";
+import { getRpcAuthHeaders, registryRpcUrls, type ChainRpcConfig } from "../../lib/chain-registry";
 import {
   applyJsonParseFailureDiagnostic,
   applyNonOkProviderDiagnostic,
@@ -326,7 +326,7 @@ async function fetchSolanaCurrentSlot(signal?: AbortSignal, configured?: ChainRp
   const diagnostics: PricingProviderAttemptDiagnostic[] = [];
 
   const rpcUrls = configured
-    ? [configured.rpcUrl, configured.fallbackRpcUrl, SOLANA_SLOT_RPC_URLS[2], ...SOLANA_SLOT_RPC_URLS]
+    ? [...registryRpcUrls(configured), SOLANA_SLOT_RPC_URLS[2], ...SOLANA_SLOT_RPC_URLS]
       .filter((url, index, urls): url is string => typeof url === "string" && urls.indexOf(url) === index)
       .slice(0, SOLANA_SLOT_RPC_URLS.length)
     : SOLANA_SLOT_RPC_URLS;
@@ -346,7 +346,7 @@ async function fetchSolanaCurrentSlot(signal?: AbortSignal, configured?: ChainRp
           Accept: "application/json",
           "Content-Type": "application/json",
           "User-Agent": USER_AGENT,
-          ...getAlchemyAuthHeaders(rpcUrl),
+          ...getRpcAuthHeaders(rpcUrl),
         },
         body: JSON.stringify({
           jsonrpc: "2.0",

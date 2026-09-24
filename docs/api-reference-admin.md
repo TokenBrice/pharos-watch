@@ -1248,6 +1248,67 @@ Returns current blacklist sync state for all configured chains. Useful for diagn
 ]
 ```
 
+### `GET /api/rpc-provider-trial`
+
+Operator-only report for the Dwellir supplemental-RPC trial. It answers three questions from one read:
+
+- credit ledger — this UTC month's metered Dwellir JSON-RPC response items against the configured cap (`budget`)
+- `dwellir-evm` circuit state, so an operator can see whether the trial is currently demoted or held open (`circuit`)
+- per-chain parity of the supplemental operator against that chain's incumbent operator: retained runs, success rate, head lag, state and log parity, latency percentiles, error classes, and the plan's pass/fail gates (`observation.chains[]`)
+
+Diagnostic only: it never feeds scoring, public health, or the public API, and no other lane reads it. The response never contains the Dwellir API key — the report carries key presence (`budget.configured`) and credit accounting only. Registration lives in `worker/src/routes/admin-routes.ts`; the loader is `loadRpcProviderTrialReport` in `worker/src/lib/rpc-provider-parity/report.ts`.
+
+**Query parameters:** none.
+
+**Response shape:** `RpcProviderTrialReport` (defined in `worker/src/lib/rpc-provider-parity/types.ts`).
+
+```json
+{
+  "provider": "dwellir",
+  "generatedAtSec": 1780000000,
+  "budget": {
+    "configured": true,
+    "usable": true,
+    "reason": "ok",
+    "window": "2026-09",
+    "usedCredits": 12345,
+    "capCredits": 20000000,
+    "observedAtSec": 1780000000
+  },
+  "circuit": { "state": "closed", "consecutiveFailures": 0, "updatedAtSec": 1779999000 },
+  "observation": {
+    "windowStartSec": 1771000000,
+    "lastRunAtSec": 1779999000,
+    "runsRetained": 6,
+    "chains": [
+      {
+        "chainId": "base",
+        "dwellirHost": "api-base-mainnet-archive.n.dwellir.com",
+        "comparator": { "operator": "alchemy", "host": "base-mainnet.g.alchemy.com", "source": "registry" },
+        "runs": 6,
+        "dwellirSuccessRate": 1,
+        "headLagBlocks": { "p50": 0, "p95": 1 },
+        "stateParity": { "checked": 6, "matched": 6, "mismatched": 0, "lastMismatch": null },
+        "logParity": { "checked": 6, "matched": 6, "mismatched": 0, "skippedReason": null },
+        "prunedLogProbe": null,
+        "latency": {
+          "dwellir": { "p50Ms": 180, "p95Ms": 420, "samples": 6 },
+          "comparator": { "p50Ms": 140, "p95Ms": 300, "samples": 6 }
+        },
+        "errorClasses": {},
+        "gate": { "passed": true, "failing": [] },
+        "last": { "atSec": 1779999000, "dwellirHead": 21000000, "comparatorHead": 21000000, "commonBlock": 21000000 }
+      }
+    ]
+  },
+  "observationError": null
+}
+```
+
+`budget.reason` is `ok` when the ledger is readable and under cap, and otherwise `not-configured`, `provider-budget-exhausted`, or `ledger-unreadable`; `budget.usedCredits` is `null` when the ledger row could not be read. `circuit` is `null` until the `dwellir-evm` circuit has been written at least once. `observation` is `null` with `observationError` set when the stored parity samples could not be read — that is still a `200`, because a degraded sample store is exactly the state an operator needs to see, and the budget and circuit sections remain live diagnostics.
+
+**Error responses:** `401` without a valid admin credential, as for every ops route. Diagnostic failures inside the report are reported in the body rather than as an HTTP error status.
+
 ### `POST /api/remediate-blacklist-amount-gaps`
 
 Admin-only bounded remediation endpoint for recoverable blacklist rows.

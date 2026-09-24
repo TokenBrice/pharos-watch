@@ -22,7 +22,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "EURC's seven Circle native issuer deployments are not evidence of a CCTP route. No current EURC CCTP v1/v2 burn-mint path was verified: the official V2 TokenMinter 0xfd78EE919681417d192449715b2594ab58f5D002 returned zero EURC minterAllowance at Ethereum block 25770757, Base block 50066185, and Avalanche block 92981816, while the official Ethereum V1 TokenMinter 0xc4922d64a24675E16e1586e3e3Aa56C06fABe907 also returned zero EURC allowance at Ethereum block 25770757. Polygon and Sonic remain reviewed bridge representations; Tempo's Stargate pool, peers, and controller are incomplete; Cardano's Wanchain route is unresolved after the current token-pairs API omitted Cardano. Bridge exposure therefore remains conservatively classified as single-chain-or-native.",
+    "summary": "EURC's eight Circle native issuer deployments, now including Arc, are not evidence of a CCTP route. No current EURC CCTP v1/v2 burn-mint path was verified: the official V2 TokenMinter 0xfd78EE919681417d192449715b2594ab58f5D002 returned zero EURC minterAllowance at Ethereum block 25770757, Base block 50066185, and Avalanche block 92981816, while the official Ethereum V1 TokenMinter 0xc4922d64a24675E16e1586e3e3Aa56C06fABe907 also returned zero EURC allowance at Ethereum block 25770757. Polygon and Sonic remain reviewed bridge representations; Tempo's Stargate pool, peers, and controller are incomplete; Cardano's Wanchain route is unresolved after the current token-pairs API omitted Cardano. Bridge exposure therefore remains conservatively classified as single-chain-or-native.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex EURC mint-bridge-boundary migration",
     "confidence": "verified",
@@ -384,6 +384,36 @@
           }
         ],
         "observedBlock": 13883854
+      },
+      {
+        "id": "arc:0xbef5f6d51cb62b58e6a8f77868681825c6fe21c1",
+        "destinationChain": "arc",
+        "contractAddress": "0xbef5f6d51cb62b58e6a8f77868681825c6fe21c1",
+        "protocol": "Circle native EURC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on Arc at block 22427887 (2026-09-24): EURC 0xbef5f6d51cb62b58e6a8f77868681825c6fe21c1 reports name() 'EURC', symbol() 'EURC', decimals() 6 and totalSupply() 6713548.541964, with owner() 0x1b127715bb61d1561227748cabeaef51a745f371, masterMinter() 0x75f7e0800bb98ab6a965b0d9cb0ff5c27355bb57, pauser() 0xea2f020633b235f14aaa24930238cc211f874e0b and blacklister() 0x24584e31ada775628f72dfea5829122cf65a5c01 - the Circle FiatToken control surface. Circle's EURC contract-address registry lists this address as the Arc mainnet deployment, so this is Circle-native EURC issuance and not a bridge representation. No EURC CCTP path was verified, matching the profile-level finding that Circle's current CCTP documentation describes USDC. Supply unit: read EURC supply through this 6-decimal ERC-20 interface; Arc's 18-decimal native balance unit belongs to the USDC gas asset, so the two must not be conflated.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-09-24",
+        "observedBlock": 22427887,
+        "sources": [
+          {
+            "label": "Circle EURC current contract addresses (Arc entry)",
+            "url": "https://developers.circle.com/stablecoins/eurc-contract-addresses"
+          },
+          {
+            "label": "EURC on the Arc explorer (verified 2026-09-24)",
+            "url": "https://explorer.arc.io/address/0xbef5f6d51cb62b58e6a8f77868681825c6fe21c1"
+          },
+          {
+            "label": "DefiLlama EURC chain balances",
+            "url": "https://stablecoins.llama.fi/stablecoin/50"
+          }
+        ]
       }
     ]
   }

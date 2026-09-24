@@ -25,11 +25,18 @@ export function supplyMetadata(): StablecoinMeta[] {
 }
 
 export function ethereumSupplyRpc(): Map<string, ChainRpcConfig> {
-  return new Map([["ethereum", {
+  return new Map<string, ChainRpcConfig>([["ethereum", {
     chainId: "ethereum",
     chainName: "Ethereum",
     type: "evm",
-    rpcUrl: "https://fake-eth-rpc.test",
+    endpoints: [{
+      url: "https://fake-eth-rpc.test",
+      operator: "public",
+      keyed: false,
+      position: "registry",
+      stateHistory: "archive",
+      logsHistory: "full",
+    }],
     explorerUrl: "https://etherscan.io",
   }]]);
 }

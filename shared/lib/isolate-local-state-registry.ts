@@ -274,11 +274,19 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
   },
   {
     sourcePath: "worker/src/lib/chain-registry.ts",
-    stateNames: ["ALCHEMY_AUTHORIZATION_BY_URL"],
-    owner: "Alchemy RPC bearer-auth routing",
+    stateNames: ["RPC_AUTH_BY_ORIGIN"],
+    owner: "RPC provider auth routing (Alchemy bearer, Dwellir X-Api-Key)",
     kind: "key",
-    resetOrTtl: "Repopulated on every buildAlchemyRpcUrl call for the configured key; resets with the isolate.",
-    durableTruth: "Env ALCHEMY_API_KEY is authoritative; the map only pairs key-free URLs with their Authorization header.",
+    resetOrTtl: "Repopulated by buildAlchemyRpcUrl/buildChainRpcs calls that supply a key and resets with the isolate; Dwellir entries are never cleared in-isolate, so a build without the key cannot break a concurrent scheduled slot.",
+    durableTruth: "Env ALCHEMY_API_KEY and DWELLIR_API_KEY are authoritative; the map only pairs key-free origins with their auth header.",
+  },
+  {
+    sourcePath: "worker/src/lib/rpc-provider-budget.ts",
+    stateNames: ["pendingDwellirCredits"],
+    owner: "Dwellir supplemental-RPC credit accounting",
+    kind: "counter",
+    resetOrTtl: "Credits recorded per JSON-RPC response item accumulate until the next flushDwellirCredits() drains them through a successful month-ledger compare-and-swap; a failed flush restores them, and isolate recycle drops the remainder.",
+    durableTruth: "The cache-table row rpc:dwellir:credits:v1:<YYYY-MM> is authoritative; the pending counter is a per-isolate write buffer only.",
   },
   {
     sourcePath: "worker/src/lib/telegram/mini-app-auth.ts",
@@ -303,6 +311,22 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     kind: "cache",
     resetOrTtl: "WeakMap keyed by each price stage's LivePriceContext; a head is reused only while under 300 s old and dies with the context or isolate.",
     durableTruth: "Celo RPC state is authoritative; every route rereads full broker state and rechecks the block's canonical hash before publishing.",
+  },
+  {
+    sourcePath: "worker/src/lib/evm-rpc.ts",
+    stateNames: ["demotedSupplementalRpcOriginsByRun"],
+    owner: "EVM RPC supplemental failover (Dwellir trial)",
+    kind: "cache",
+    resetOrTtl: "WeakMap keyed by each run's chainRpcs Map; demoted origins live only as long as that map object and are garbage-collectable, then reset with the isolate.",
+    durableTruth: "None: it only shortens supplemental failover within a single run, registry endpoints are never demoted, and no read result depends on it.",
+  },
+  {
+    sourcePath: "worker/src/handlers/scheduled/context.ts",
+    stateNames: ["dwellirEnablementByChainRpcs"],
+    owner: "Scheduled-runtime Dwellir enablement (provider trial)",
+    kind: "cache",
+    resetOrTtl: "WeakMap keyed by each scheduled runtime's chainRpcs Map; memoizes one budget + circuit read per runtime and dies with that map object or the isolate.",
+    durableTruth: "The Dwellir credit ledger row and the dwellir-evm circuit row are authoritative; the memo only prevents repeat reads within one runtime.",
   },
 ] as const satisfies readonly IsolateLocalStateRegistryEntry[];
 

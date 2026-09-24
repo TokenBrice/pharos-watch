@@ -20,6 +20,7 @@ const PHAROS_FUNDING_WALLET_DISPLAY = "0x5d698362EDb8AEa1C2b2483096BDeE3265D860D
 const PHAROS_FUNDING_ENS = "pharos-watch.eth";
 const GIVETH_URL = "https://giveth.io/project/pharos-watch:-transparent-stablecoins-analytics";
 const GITHUB_URL = "https://github.com/TokenBrice/pharos-watch";
+const DWELLIR_URL = "https://www.dwellir.com";
 const TWITTER_URL = "https://x.com/PharosWatch";
 const TELEGRAM_GROUP_URL = "https://t.me/pharoswatchers";
 const SUPPORTED_CHAINS: FundingChain[] = ["ethereum", "base", "optimism", "arbitrum", "polygon", "gnosis"];
@@ -320,6 +321,18 @@ export function CostBreakdown({ items, currentCommunityUsd, lastReviewedAt }: Co
         <p className="rounded-lg border border-border/60 bg-muted/25 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
           TokenBrice also sponsored $5,800 in one-time design expenses for the full website redesign and logo.
           These exceptional expenses are not included in the monthly total above.
+        </p>
+        <p className="rounded-lg border border-border/60 bg-muted/25 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
+          <a
+            href={DWELLIR_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline underline-offset-2 hover:text-foreground"
+          >
+            Dwellir
+          </a>{" "}
+          sponsors Pharos&apos;s multi-chain RPC access with a free one-year Developer plan (about $40/month in kind).
+          Thank you, Dwellir.
         </p>
         <div className="space-y-0.5 text-xs text-muted-foreground">
           <p>

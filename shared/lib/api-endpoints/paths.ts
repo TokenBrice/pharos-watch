@@ -150,6 +150,7 @@ export const API_PATHS = {
   adminActionLog: () => "/api/admin-action-log",
   resetBlacklistSync: () => "/api/reset-blacklist-sync",
   debugSyncState: () => "/api/debug-sync-state",
+  rpcProviderTrial: () => "/api/rpc-provider-trial",
   remediateBlacklistAmountGaps: () => "/api/remediate-blacklist-amount-gaps",
   backfillBlacklistCurrentBalances: () => "/api/backfill-blacklist-current-balances",
   backfillDepegs: () => "/api/backfill-depegs",

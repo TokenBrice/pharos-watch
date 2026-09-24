@@ -153,7 +153,10 @@
         "worker/src/lib/cron-lease-primitives.ts",
         "worker/src/lib/cron-timeouts.ts",
         "worker/src/lib/v9-slot-window.ts",
-        "worker/src/cron/**"
+        "worker/src/lib/rpc-provider-budget.ts",
+        "worker/src/lib/rpc-provider-parity/**",
+        "worker/src/cron/**",
+        "worker/src/cron/rpc-provider-parity/**"
       ],
       "docs": ["docs/process/cron-trigger-policy.md"],
       "background": [

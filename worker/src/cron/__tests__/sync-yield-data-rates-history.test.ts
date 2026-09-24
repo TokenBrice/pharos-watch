@@ -514,10 +514,10 @@ describe("syncYieldData", () => {
       risk_free_rate: healthyRiskFreeRateCacheRow(4, nowSec),
     });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
-    const testChainRpcs = makeEthereumRpcMap({
-      rpcUrl: "https://rpc.example/primary",
-      fallbackRpcUrl: "https://rpc.example/fallback",
-    });
+    const testChainRpcs = makeEthereumRpcMap([
+      "https://rpc.example/primary",
+      "https://rpc.example/fallback",
+    ]);
     vi.mocked(getChainRpc).mockReturnValue(testChainRpcs.get("ethereum"));
 
     mockFetch([
@@ -581,10 +581,10 @@ describe("syncYieldData", () => {
       risk_free_rate: healthyRiskFreeRateCacheRow(4, nowSec),
     });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
-    const testChainRpcs = makeEthereumRpcMap({
-      rpcUrl: "https://rpc.example/primary",
-      fallbackRpcUrl: "https://rpc.example/fallback",
-    });
+    const testChainRpcs = makeEthereumRpcMap([
+      "https://rpc.example/primary",
+      "https://rpc.example/fallback",
+    ]);
     vi.mocked(getChainRpc).mockReturnValue(testChainRpcs.get("ethereum"));
     mockFetch([]);
     const rawRpcSpy = vi.spyOn(evmRpcModule, "fetchEvmUint256AtBlock").mockResolvedValue(null);
@@ -656,10 +656,10 @@ describe("syncYieldData", () => {
       risk_free_rate: healthyRiskFreeRateCacheRow(4, nowSec),
     });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
-    const testChainRpcs = makeEthereumRpcMap({
-      rpcUrl: "https://rpc.example/primary",
-      fallbackRpcUrl: "https://rpc.example/fallback",
-    });
+    const testChainRpcs = makeEthereumRpcMap([
+      "https://rpc.example/primary",
+      "https://rpc.example/fallback",
+    ]);
     vi.mocked(getChainRpc).mockReturnValue(testChainRpcs.get("ethereum"));
     mockFetch([]);
     vi.spyOn(evmRpcModule, "fetchEvmUint256AtBlock").mockResolvedValue(null);

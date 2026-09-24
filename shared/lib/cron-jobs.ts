@@ -764,6 +764,20 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     maxConnections: 1,
   },
   {
+    // Dwellir trial observation lane. Watch-tier on purpose: a parity finding is
+    // evidence for the provider decision, not a public data surface, so it must
+    // never register as availability-impacting or public-impacting (ADR-32
+    // separates admin-watch from public-critical).
+    job: "observe-rpc-provider-parity",
+    label: "RPC provider parity",
+    group: "hourly",
+    scheduleKey: "hourlyYieldSync",
+    triggerMode: "shared",
+    statusImpact: "watch",
+    freshnessSurface: "none",
+    maxConnections: 1, // Strictly serial probe: one request in flight, one chain at a time
+  },
+  {
     job: "prune-status-probe-runs",
     label: "Status probe TTL prune",
     group: "daily",

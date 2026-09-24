@@ -1,6 +1,6 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { type ChainRpcConfig, getChainRpc } from "../../lib/chain-registry";
+import { type ChainRpcConfig, getChainRpc, registryRpcUrls } from "../../lib/chain-registry";
 import { finiteDecimalNumberFromBigInt } from "../../lib/bigint";
 import { USER_AGENT } from "../../lib/constants";
 import { fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
@@ -325,7 +325,8 @@ export async function fetchOndoUsdyOracleSource(
 ): Promise<ResolvedYield | null> {
   try {
     const rpc = chainRpcs ? getChainRpc(chainRpcs, "ethereum") : undefined;
-    const extraRpcUrls = rpc?.fallbackRpcUrl ? [rpc.fallbackRpcUrl] : [];
+    const fallbackRpcUrl = registryRpcUrls(rpc)[1];
+    const extraRpcUrls = fallbackRpcUrl ? [fallbackRpcUrl] : [];
     const currentPrice = await fetchEvmUint256AtBlock(
       "ethereum", ONDO_USDY_ORACLE, ONDO_GET_PRICE_SELECTOR, "latest",
       { extraRpcUrls, signal },

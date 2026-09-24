@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { registerRpcAuth, type ChainRpcConfig, type RpcEndpoint } from "../chain-registry";
 
 const fetchWithRetryMock = vi.fn();
+const { recordDwellirCreditsMock } = vi.hoisted(() => ({ recordDwellirCreditsMock: vi.fn() }));
 
 vi.mock("../fetch-retry", () => ({
   fetchJsonWithRetry: async (...args: unknown[]) => {
@@ -12,9 +14,8 @@ vi.mock("../fetch-retry", () => ({
   },
 }));
 
-vi.mock("../chain-registry", () => ({
-  getChainRpc: () => null,
-  getAlchemyAuthHeaders: () => undefined,
+vi.mock("../rpc-provider-budget", () => ({
+  recordDwellirCredits: recordDwellirCreditsMock,
 }));
 
 const {
@@ -68,8 +69,46 @@ function encodeAggregate3Return(results: Array<{ success: boolean; returnData: s
 }
 
 describe("evm-rpc helpers", () => {
+  function registryEndpoint(url: string, operator: "alchemy" | "public" = "public"): RpcEndpoint {
+    return {
+      url,
+      operator,
+      keyed: operator !== "public",
+      position: "registry",
+      stateHistory: "archive",
+      logsHistory: "full",
+    };
+  }
+
+  function dwellirEndpoint(url: string, stateHistory: RpcEndpoint["stateHistory"] = "archive"): RpcEndpoint {
+    registerRpcAuth("dwellir", url, { "X-Api-Key": "dwellir-key" });
+    return {
+      url,
+      operator: "dwellir",
+      keyed: true,
+      position: "supplemental",
+      stateHistory,
+      logsHistory: "full",
+    };
+  }
+
+  function chainRpcsWith(chainId: string, endpoints: RpcEndpoint[]): Map<string, ChainRpcConfig> {
+    return new Map([
+      [chainId, { chainId, chainName: chainId, type: "evm", endpoints, explorerUrl: "https://explorer.example" }],
+    ]);
+  }
+
+  function attemptedUrls(): string[] {
+    return fetchWithRetryMock.mock.calls.map(([url]) => url as string);
+  }
+
+  function httpFailure(status: number): Response {
+    return new Response(JSON.stringify({ error: "nope" }), { status });
+  }
+
   afterEach(() => {
     fetchWithRetryMock.mockReset();
+    recordDwellirCreditsMock.mockReset();
     vi.restoreAllMocks();
   });
 
@@ -179,7 +218,7 @@ describe("evm-rpc helpers", () => {
       beforeRequest,
     });
 
-    expect(beforeRequest).toHaveBeenCalledTimes(2);
+    expect(beforeRequest.mock.calls).toEqual([["https://rpc.primary"], ["https://rpc.fallback"]]);
     expect(fetchWithRetryMock).toHaveBeenCalledTimes(1);
   });
 
@@ -813,5 +852,280 @@ describe("evm-rpc helpers", () => {
     });
 
     expect(result).toBeNull();
+  });
+
+  it("tries registry endpoints, then pinned extras, then Dwellir last", async () => {
+    const chainRpcs = chainRpcsWith("ethereum", [
+      registryEndpoint("https://eth-mainnet.g.alchemy.com/v2/", "alchemy"),
+      registryEndpoint("https://ethereum-public-a.example"),
+      dwellirEndpoint("https://api-ethereum-mainnet-erigon.n.dwellir.com"),
+    ]);
+    fetchWithRetryMock.mockResolvedValue(null);
+
+    await expect(
+      fetchEvmUint256AtBlock("ethereum", "0xToken", "0x18160ddd", "latest", {
+        chainRpcs,
+        extraRpcUrls: ["https://pinned.example"],
+        maxRetries: 0,
+      }),
+    ).resolves.toBeNull();
+
+    expect(attemptedUrls()).toEqual([
+      "https://eth-mainnet.g.alchemy.com/v2/",
+      "https://ethereum-public-a.example",
+      "https://pinned.example",
+      "https://api-ethereum-mainnet-erigon.n.dwellir.com",
+    ]);
+  });
+
+  it("sends the Dwellir X-Api-Key and the Alchemy bearer from origin-keyed auth", async () => {
+    registerRpcAuth("alchemy", "https://arb-mainnet.g.alchemy.com/v2/", { Authorization: "Bearer alchemy-key" });
+    const chainRpcs = chainRpcsWith("arbitrum", [
+      registryEndpoint("https://arb-mainnet.g.alchemy.com/v2/", "alchemy"),
+      dwellirEndpoint("https://api-arbitrum-mainnet-archive.n.dwellir.com"),
+    ]);
+    fetchWithRetryMock.mockResolvedValue(null);
+
+    await fetchEvmUint256AtBlock("arbitrum", "0xToken", "0x18160ddd", "latest", { chainRpcs, maxRetries: 0 });
+
+    const headersByUrl = new Map(
+      fetchWithRetryMock.mock.calls.map(([url, init]) => [url as string, (init as RequestInit).headers]),
+    );
+    expect(headersByUrl.get("https://arb-mainnet.g.alchemy.com/v2/")).toEqual(
+      expect.objectContaining({ Authorization: "Bearer alchemy-key" }),
+    );
+    expect(headersByUrl.get("https://api-arbitrum-mainnet-archive.n.dwellir.com")).toEqual(
+      expect.objectContaining({ "X-Api-Key": "dwellir-key" }),
+    );
+  });
+
+  it("keeps log lanes on registry endpoints when supplemental RPC is excluded", async () => {
+    const chainRpcs = chainRpcsWith("base", [
+      registryEndpoint("https://base-public-a.example"),
+      dwellirEndpoint("https://api-base-mainnet-archive.n.dwellir.com"),
+    ]);
+    fetchWithRetryMock.mockResolvedValue(null);
+
+    await fetchEvmUint256AtBlock("base", "0xToken", "0x18160ddd", "latest", {
+      chainRpcs,
+      extraRpcUrls: ["https://pinned.example"],
+      excludeSupplementalRpc: true,
+      maxRetries: 0,
+    });
+
+    expect(attemptedUrls()).toEqual(["https://base-public-a.example", "https://pinned.example"]);
+  });
+
+  it("skips near-head-only supplemental endpoints for a historical block", async () => {
+    const recentUrl = "https://api-polygon-mainnet-full.n.dwellir.com";
+    const archiveUrl = "https://api-polygon-archive.n.dwellir.com";
+    const endpoints = [
+      registryEndpoint("https://polygon-public-a.example"),
+      dwellirEndpoint(recentUrl, "recent"),
+      dwellirEndpoint(archiveUrl),
+    ];
+    fetchWithRetryMock.mockResolvedValue(null);
+
+    await fetchEvmStorageAtBlock("polygon", "0xContract", "0x0", 1_234, {
+      chainRpcs: chainRpcsWith("polygon", endpoints),
+      maxRetries: 0,
+    });
+    expect(attemptedUrls()).toEqual(["https://polygon-public-a.example", archiveUrl]);
+
+    fetchWithRetryMock.mockClear();
+    await fetchEvmStorageAtBlock("polygon", "0xContract", "0x0", "latest", {
+      chainRpcs: chainRpcsWith("polygon", endpoints),
+      maxRetries: 0,
+    });
+    expect(attemptedUrls()).toEqual(["https://polygon-public-a.example", recentUrl, archiveUrl]);
+  });
+
+  it("treats every batch as potentially historical for supplemental selection", async () => {
+    const chainRpcs = chainRpcsWith("tempo", [
+      registryEndpoint("https://tempo-public-a.example"),
+      dwellirEndpoint("https://api-tempo-mainnet.n.dwellir.com", "recent"),
+    ]);
+    fetchWithRetryMock.mockResolvedValue(null);
+
+    await fetchEvmRpcBatch(
+      "tempo",
+      [{ method: "eth_call", params: [{ to: "0xToken", data: "0x18160ddd" }, "0x4d2"] }],
+      { chainRpcs, maxRetries: 0 },
+    );
+
+    expect(attemptedUrls()).toEqual(["https://tempo-public-a.example"]);
+  });
+
+  it("meters one credit per Dwellir attempt and none for registry operators", async () => {
+    const chainRpcs = chainRpcsWith("celo", [
+      registryEndpoint("https://celo-public-a.example"),
+      dwellirEndpoint("https://api-celo-mainnet-archive.n.dwellir.com"),
+    ]);
+    fetchWithRetryMock.mockResolvedValueOnce(httpFailure(500)).mockResolvedValueOnce(rpcResponse({ result: "0x64" }));
+
+    await expect(
+      fetchEvmUint256AtBlock("celo", "0xToken", "0x18160ddd", "latest", { chainRpcs, maxRetries: 0 }),
+    ).resolves.toBe(100n);
+
+    expect(recordDwellirCreditsMock.mock.calls).toEqual([[1]]);
+
+    // The raw-URL helper reaches the provider through the same metered path.
+    recordDwellirCreditsMock.mockClear();
+    fetchWithRetryMock.mockReset();
+    fetchWithRetryMock.mockResolvedValue(rpcResponse({ result: "0xdeadbeef" }));
+    await expect(
+      fetchJsonRpcHexAtUrl("https://api-celo-mainnet-archive.n.dwellir.com", "eth_chainId", []),
+    ).resolves.toBe("0xdeadbeef");
+    expect(recordDwellirCreditsMock.mock.calls).toEqual([[1]]);
+  });
+
+  it("meters one credit per batch item on the Dwellir attempt", async () => {
+    const chainRpcs = chainRpcsWith("gnosis", [
+      registryEndpoint("https://gnosis-public-a.example"),
+      dwellirEndpoint("https://api-gnosis-mainnet.n.dwellir.com"),
+    ]);
+    fetchWithRetryMock
+      .mockResolvedValueOnce(httpFailure(500))
+      .mockResolvedValueOnce(
+        rpcResponse([
+          { jsonrpc: "2.0", id: 1, result: "first" },
+          { jsonrpc: "2.0", id: 2, result: "second" },
+        ]),
+      );
+
+    await expect(
+      fetchEvmRpcBatch(
+        "gnosis",
+        [{ method: "eth_blockNumber", params: [] }, { method: "eth_chainId", params: [] }],
+        { chainRpcs, maxRetries: 0 },
+      ),
+    ).resolves.toEqual(["first", "second"]);
+
+    expect(recordDwellirCreditsMock.mock.calls).toEqual([[2]]);
+  });
+
+  it("demotes a failed Dwellir origin only for the run that observed the failure", async () => {
+    const publicUrl = "https://optimism-public-a.example";
+    const dwellirUrl = "https://api-optimism-mainnet-archive.n.dwellir.com";
+    const endpoints = [registryEndpoint(publicUrl), dwellirEndpoint(dwellirUrl)];
+    const failedTransportRun = chainRpcsWith("optimism", endpoints);
+    const thrownTransportRun = chainRpcsWith("optimism", endpoints);
+    const healthyRun = chainRpcsWith("optimism", endpoints);
+
+    fetchWithRetryMock.mockResolvedValueOnce(httpFailure(500)).mockResolvedValueOnce(null);
+    await expect(
+      fetchEvmUint256AtBlock("optimism", "0xToken", "0x18160ddd", "latest", {
+        chainRpcs: failedTransportRun,
+        maxRetries: 0,
+      }),
+    ).resolves.toBeNull();
+    expect(attemptedUrls()).toEqual([publicUrl, dwellirUrl]);
+
+    // The same run no longer retries the demoted origin...
+    fetchWithRetryMock.mockClear();
+    fetchWithRetryMock.mockResolvedValueOnce(httpFailure(500));
+    await expect(
+      fetchEvmUint256AtBlock("optimism", "0xToken", "0x18160ddd", "latest", {
+        chainRpcs: failedTransportRun,
+        maxRetries: 0,
+      }),
+    ).resolves.toBeNull();
+    expect(attemptedUrls()).toEqual([publicUrl]);
+
+    // ...while a fresh run keeps it.
+    fetchWithRetryMock.mockClear();
+    fetchWithRetryMock.mockResolvedValueOnce(httpFailure(500)).mockResolvedValueOnce(rpcResponse({ result: "0x64" }));
+    await expect(
+      fetchEvmUint256AtBlock("optimism", "0xToken", "0x18160ddd", "latest", {
+        chainRpcs: healthyRun,
+        maxRetries: 0,
+      }),
+    ).resolves.toBe(100n);
+    expect(attemptedUrls()).toEqual([publicUrl, dwellirUrl]);
+
+    // A thrown transport failure demotes the same way.
+    fetchWithRetryMock.mockClear();
+    fetchWithRetryMock.mockResolvedValueOnce(httpFailure(500)).mockRejectedValueOnce(new Error("network error"));
+    await expect(
+      fetchEvmUint256AtBlock("optimism", "0xToken", "0x18160ddd", "latest", {
+        chainRpcs: thrownTransportRun,
+        maxRetries: 0,
+      }),
+    ).resolves.toBeNull();
+    expect(attemptedUrls()).toEqual([publicUrl, dwellirUrl]);
+  });
+
+  it("reports a Dwellir 403 as a capability failure without retrying the url", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const chainRpcs = chainRpcsWith("bsc", [
+      registryEndpoint("https://bsc-public-a.example"),
+      dwellirEndpoint("https://api-bsc-mainnet-full.n.dwellir.com"),
+    ]);
+    fetchWithRetryMock.mockImplementation(async (url: string) =>
+      url === "https://api-bsc-mainnet-full.n.dwellir.com"
+        ? new Response(JSON.stringify({ error: { message: "plan does not include this method" } }), { status: 403 })
+        : httpFailure(500),
+    );
+
+    await expect(
+      fetchEvmUint256AtBlock("bsc", "0xToken", "0x18160ddd", "latest", { chainRpcs, maxRetries: 1 }),
+    ).resolves.toBeNull();
+
+    expect(attemptedUrls()).toEqual(["https://bsc-public-a.example", "https://api-bsc-mainnet-full.n.dwellir.com"]);
+    expect(fetchWithRetryMock.mock.calls[1]?.[2]).toBe(1);
+    expect(fetchWithRetryMock.mock.calls[1]?.[3]).toEqual(expect.objectContaining({ retryMode: "network-only" }));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("provider-capability"));
+    warnSpy.mockRestore();
+  });
+
+  it("caps each batch attempt to the remaining deadline and stops when it is exhausted", async () => {
+    let nowMs = 1_000;
+    const nowSpy = vi.spyOn(Date, "now").mockImplementation(() => nowMs);
+    fetchWithRetryMock.mockImplementation(async () => {
+      nowMs += 600;
+      return null;
+    });
+    const batch = [{ method: "eth_blockNumber", params: [] }];
+
+    await fetchEvmRpcBatch(undefined, batch, {
+      extraRpcUrls: ["https://rpc.primary", "https://rpc.fallback"],
+      timeoutMs: 10_000,
+      deadlineMs: 2_000,
+      maxRetries: 0,
+    });
+    expect(fetchWithRetryMock.mock.calls.map((call) => call[3])).toEqual([
+      { timeoutMs: 1_000, retryMode: "network-only" },
+      { timeoutMs: 400, retryMode: "network-only" },
+    ]);
+
+    fetchWithRetryMock.mockClear();
+    nowMs = 1_000;
+    fetchWithRetryMock.mockImplementation(async () => {
+      nowMs = 3_500;
+      return null;
+    });
+    await fetchEvmRpcBatch(undefined, batch, {
+      extraRpcUrls: ["https://rpc.primary", "https://rpc.fallback"],
+      timeoutMs: 10_000,
+      deadlineMs: 2_000,
+      maxRetries: 0,
+    });
+    expect(fetchWithRetryMock).toHaveBeenCalledTimes(1);
+
+    nowSpy.mockRestore();
+  });
+
+  it("stops a batch at the request guard and passes each attempted url", async () => {
+    fetchWithRetryMock.mockResolvedValue(null);
+    const beforeRequest = vi.fn((url: string) => url === "https://rpc.primary");
+
+    await fetchEvmRpcBatch(undefined, [{ method: "eth_blockNumber", params: [] }], {
+      extraRpcUrls: ["https://rpc.primary", "https://rpc.fallback"],
+      maxRetries: 0,
+      beforeRequest,
+    });
+
+    expect(beforeRequest.mock.calls).toEqual([["https://rpc.primary"], ["https://rpc.fallback"]]);
+    expect(fetchWithRetryMock).toHaveBeenCalledTimes(1);
   });
 });

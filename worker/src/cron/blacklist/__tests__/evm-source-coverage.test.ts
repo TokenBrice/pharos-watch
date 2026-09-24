@@ -290,8 +290,16 @@ describe("EVM blacklist contiguous coverage", () => {
       chainId: "base",
       chainName: "Base",
       type: "evm",
-      rpcUrl: "https://base.example",
-      alchemyPrimary: true,
+      endpoints: [
+        {
+          url: "https://base.example",
+          operator: "alchemy",
+          keyed: true,
+          position: "registry",
+          stateHistory: "archive",
+          logsHistory: "full",
+        },
+      ],
       explorerUrl: "https://basescan.org",
     });
     vi.mocked(getChainRpc).mockReturnValue(chainRpcs.get("base"));
@@ -344,8 +352,16 @@ describe("EVM blacklist contiguous coverage", () => {
       chainId: "arbitrum",
       chainName: "Arbitrum",
       type: "evm",
-      rpcUrl: "https://arb.example",
-      alchemyPrimary: false,
+      endpoints: [
+        {
+          url: "https://arb.example",
+          operator: "public",
+          keyed: false,
+          position: "registry",
+          stateHistory: "archive",
+          logsHistory: "full",
+        },
+      ],
       explorerUrl: "https://arbiscan.io",
     });
     vi.mocked(getChainRpc).mockReturnValue(chainRpcs.get("arbitrum"));
@@ -382,9 +398,24 @@ describe("EVM blacklist contiguous coverage", () => {
       chainId: "base",
       chainName: "Base",
       type: "evm",
-      rpcUrl: "https://primary.example",
-      fallbackRpcUrl: "https://fallback.example",
-      alchemyPrimary: true,
+      endpoints: [
+        {
+          url: "https://primary.example",
+          operator: "alchemy",
+          keyed: true,
+          position: "registry",
+          stateHistory: "archive",
+          logsHistory: "full",
+        },
+        {
+          url: "https://fallback.example",
+          operator: "public",
+          keyed: false,
+          position: "registry",
+          stateHistory: "archive",
+          logsHistory: "full",
+        },
+      ],
       explorerUrl: "https://basescan.org",
     });
     vi.mocked(getChainRpc).mockReturnValue(chainRpcs.get("base"));

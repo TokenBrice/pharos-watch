@@ -21,7 +21,16 @@ const testChainRpcs = new Map<string, ChainRpcConfig>([
     chainId: "avalanche",
     chainName: "Avalanche",
     type: "evm",
-    rpcUrl: "https://avalanche-rpc.example",
+    endpoints: [
+      {
+        url: "https://avalanche-rpc.example",
+        operator: "public",
+        keyed: false,
+        position: "registry",
+        stateHistory: "archive",
+        logsHistory: "full",
+      },
+    ],
     explorerUrl: "https://snowtrace.io",
   }],
 ]);

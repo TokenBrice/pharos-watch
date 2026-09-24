@@ -1,5 +1,6 @@
 import type { ContractDeployment, StablecoinMeta } from "@shared/types/core";
 import { CHAIN_META } from "@shared/lib/chains";
+import { hasRegistryRpc } from "../../lib/chain-registry";
 import { rethrowIfAborted } from "../../lib/abort";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { fetchTronErc20TotalSupply } from "./onchain";
@@ -28,15 +29,20 @@ export function isTronContract(contract: ContractDeployment): boolean {
 }
 
 /**
- * True when an EVM chain has an RPC entry in the context's chainRpc map.
+ * True when an EVM chain has a registry RPC entry in the context's chainRpc map.
  * Tron resolves through TronGrid rather than chainRpcs, so callers should
  * only consult this for EVM contracts. A missing chainRpc map (smoke/test
  * contexts) means the caller did not supply RPC resolution, so the chain is
  * treated as readable and left to fail through its normal read path.
+ *
+ * Supplemental endpoints do not count: a config whose only endpoints are
+ * supplemental (a pin-only chain reached through the Dwellir trial) is not a
+ * registry read path, so supply aggregates keep omitting exactly the chains
+ * they omit without the trial key.
  */
 export function chainHasRpc(chain: string, ctx?: AdapterContext): boolean {
   const chainRpcs = ctx?.chainRpcs;
-  return chainRpcs == null || chainRpcs.has(chain);
+  return chainRpcs == null || hasRegistryRpc(chainRpcs.get(chain));
 }
 
 interface SupplyRead {

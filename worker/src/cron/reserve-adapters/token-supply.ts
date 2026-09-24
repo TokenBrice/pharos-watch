@@ -4,7 +4,7 @@ import type { AdapterContext } from "./types";
 import { throwIfAborted } from "../../lib/abort";
 import { redactProviderUrls } from "../../lib/safe-error-message";
 import { toErrorMessage } from "@shared/lib/error-utils";
-import { getAlchemyAuthHeaders } from "../../lib/chain-registry";
+import { getRpcAuthHeaders, registryRpcUrls } from "../../lib/chain-registry";
 import { fetchErc20TotalSupply } from "./onchain";
 import { fetchJsonPostWithRetry, fetchJsonWithRetry } from "./request";
 import { requireOnchainInput } from "./input-guards";
@@ -101,8 +101,7 @@ export async function fetchSolanaTokenSupply(
   let lastError: unknown = null;
   const configuredRpc = ctx?.chainRpcs?.get("solana");
   const rpcUrls = [...new Set([
-    configuredRpc?.rpcUrl,
-    configuredRpc?.fallbackRpcUrl,
+    ...registryRpcUrls(configuredRpc),
     rpcUrl,
     fallbackRpcUrl,
     ...SOLANA_RPC_URLS,
@@ -122,7 +121,7 @@ export async function fetchSolanaTokenSupply(
         signal,
         10_000,
         ctx,
-        { headers: getAlchemyAuthHeaders(rpcUrl) },
+        { headers: getRpcAuthHeaders(rpcUrl) },
       );
 
       const amount = body.result?.value?.amount;

@@ -6,9 +6,31 @@ import {
   fetchTronTokenCurrentBalance,
 } from "../../../lib/blacklist/balance-providers";
 import type { ContractEventConfig } from "../../../lib/blacklist-contracts";
+import type { ChainRpcConfig, RpcEndpoint } from "../../../lib/chain-registry";
 import { createBudget } from "../../../lib/evm-logs";
 
 import { ethereumConfig } from "./balance.test-support";
+
+/** Registry-only chain config: this lane resolves chain RPCs from registry endpoints. */
+function chainRpcFixture(urls: string[]): Map<string, ChainRpcConfig> {
+  const endpoints: RpcEndpoint[] = urls.map((url) => ({
+    url,
+    operator: "public",
+    keyed: false,
+    position: "registry",
+    stateHistory: "archive",
+    logsHistory: "full",
+  }));
+  return new Map([
+    ["ethereum", {
+      chainId: "ethereum",
+      chainName: "Ethereum",
+      type: "evm",
+      endpoints,
+      explorerUrl: "https://etherscan.io",
+    }],
+  ]);
+}
 
 const tronConfig: ContractEventConfig = {
   configKey: "tron-tr7nhqjekqxgtci8q8zy4pl8otszgjlj6t",
@@ -111,7 +133,7 @@ describe("fetchEvmTokenCurrentBalance", () => {
     const amount = await fetchEvmTokenCurrentBalance(
       ethereumConfig, "0x0000000000000000000000000000000000000abc",
       "etherscan-key", "drpc-key", async (fn) => fn(), createBudget(10), undefined,
-      new Map([["ethereum", { ...ethereumConfig.chain, rpcUrl: "https://chain-rpc.test" }]]),
+      chainRpcFixture(["https://chain-rpc.test"]),
     );
     expect(amount).toBe(1);
     expect(fetchMock.getHistory()).toHaveLength(1);
@@ -134,7 +156,7 @@ describe("fetchEvmTokenBalance", () => {
     const amount = await fetchEvmTokenBalance(
       ethereumConfig, "0x0000000000000000000000000000000000000abc", 19000000,
       "etherscan-key", "drpc-key", async (fn) => fn(), createBudget(10), undefined,
-      new Map([["ethereum", { ...ethereumConfig.chain, rpcUrl: "https://chain-rpc.test" }]]),
+      chainRpcFixture(["https://chain-rpc.test"]),
     );
     expect(amount).toBe(failures + 1);
     const history = fetchMock.getHistory();

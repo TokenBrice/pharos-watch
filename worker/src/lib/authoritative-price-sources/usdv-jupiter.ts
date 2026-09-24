@@ -1,7 +1,7 @@
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { CIRCUIT_SOURCE } from "../constants";
 import { fetchJsonWithRetry } from "../fetch-retry";
-import { getAlchemyAuthHeaders } from "../chain-registry";
+import { getRpcAuthHeaders, registryRpcUrls } from "../chain-registry";
 import { sleepWithSignal, throwIfAborted } from "../abort";
 import { hasPublishableCurrentPrice } from "../price-publication-state";
 import { resolveTrustedOverrideParent, USDC_CIRCLE_ID, type CurrentPriceOverride, type LivePriceContext, type PriceSourceProvider } from "./helpers";
@@ -65,10 +65,10 @@ export async function fetchUsdvJupiterPrice(context: LivePriceContext, signal?: 
   const parent = resolveTrustedOverrideParent(context, USDC_CIRCLE_ID, () => "USDv: trusted USDC unavailable", { allowFreshReplaySafeSingleSourceParent: true });
   if (!parent || !fresh(parent.trustedParent.observedAt)) return reject("parent-unavailable");
   const configured = context.chainRpcs?.get("solana");
-  const urls = [...new Set([configured?.rpcUrl, configured?.fallbackRpcUrl, "https://api.mainnet-beta.solana.com", "https://solana-rpc.publicnode.com"].filter((s): s is string => !!s))];
+  const urls = [...new Set([...registryRpcUrls(configured), "https://api.mainnet-beta.solana.com", "https://solana-rpc.publicnode.com"])];
   async function rpcOnce<T>(url: string, method: string, params: unknown[]) {
     throwIfAborted(signal);
-    return fetchJsonWithRetry<{ result?: T; error?: { code?: number } }>(url, { method: "POST", headers: { "Content-Type": "application/json", ...getAlchemyAuthHeaders(url) }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }), signal }, 0, { timeoutMs: 2000, maxResponseBytes: 64000 });
+    return fetchJsonWithRetry<{ result?: T; error?: { code?: number } }>(url, { method: "POST", headers: { "Content-Type": "application/json", ...getRpcAuthHeaders(url) }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }), signal }, 0, { timeoutMs: 2000, maxResponseBytes: 64000 });
   }
   async function rpc<T>(method: string, params: unknown[]): Promise<T | null> {
     for (const url of urls) {

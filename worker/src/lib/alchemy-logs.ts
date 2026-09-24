@@ -1,4 +1,4 @@
-import { ALCHEMY_CHAINS, buildAlchemyRpcUrl, getAlchemyAuthHeaders } from "./chain-registry";
+import { ALCHEMY_CHAINS, buildAlchemyRpcUrl, getRpcAuthHeaders } from "./chain-registry";
 import { parseQuantityHex } from "./bigint";
 import type { SubrequestBudget } from "./evm-logs";
 import { budgetExhausted } from "./evm-logs";
@@ -140,7 +140,7 @@ async function jsonRpcCall<T>(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...(getAlchemyAuthHeaders(alchemyUrl) ?? {}),
+        ...(getRpcAuthHeaders(alchemyUrl) ?? {}),
       },
       body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
       signal,
@@ -318,7 +318,7 @@ export async function getAlchemyTransactionContextBatchMany(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...(getAlchemyAuthHeaders(alchemyUrl) ?? {}),
+        ...(getRpcAuthHeaders(alchemyUrl) ?? {}),
       },
       body: JSON.stringify(payload),
       signal,
@@ -701,7 +701,7 @@ async function fetchBlockTimestampBatch(
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(getAlchemyAuthHeaders(alchemyUrl) ?? {}),
+          ...(getRpcAuthHeaders(alchemyUrl) ?? {}),
         },
         body: JSON.stringify(payload),
         signal,

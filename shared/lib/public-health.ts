@@ -58,6 +58,8 @@ export function isPublicImpactCircuitKey(key: string): boolean {
   if (key === "aznd-curve-pool") return false;
   if (key === "mento-broker") return false;
   if (key === "usdaf-uniswap-v4") return false;
+  // Supplemental Dwellir RPC sits strictly last in every chain's endpoint list during its trial.
+  if (key === "dwellir-evm") return false;
   return true;
 }
 

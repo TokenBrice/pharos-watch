@@ -45,6 +45,9 @@ const PUBLIC_RPC_URLS: Record<string, string> = {
   // Consumed by the youves-tezos reserve adapter through the tzkt.ts bounded
   // reader.
   tezos: "https://api.tzkt.io",
+  // Arc (Circle's L1) — required by the Dwellir provider-parity observation
+  // lane, which reads the chain's first registry operator as its baseline.
+  arc: "https://rpc.mainnet.arc.io",
 };
 
 const EXTRA_FALLBACK_RPC_URLS: Record<string, string[]> = {
@@ -57,6 +60,8 @@ const EXTRA_FALLBACK_RPC_URLS: Record<string, string[]> = {
   // dRPC as an independent second operator behind publicnode; polygon-rpc.com
   // is deliberately absent (it served zero-valued eth_call results 2026-07-09).
   polygon: ["https://polygon.drpc.org"],
+  // dRPC as an independent second operator behind rpc.mainnet.arc.io.
+  arc: ["https://arc.drpc.org"],
 };
 
 export function getPublicRpcUrl(chainId: string): string | undefined {

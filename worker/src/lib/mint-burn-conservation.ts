@@ -685,6 +685,8 @@ export async function fetchConservationBoundaries(input: {
       try {
         result = await fetchEvmRpcBatchDetailed(undefined, chunk.map(({ call }) => call), {
           extraRpcUrls: [rpcUrl], signal, maxRetries: 0,
+          // Trial invariant 2: the mint/burn lane never reads a supplemental (Dwellir) endpoint.
+          excludeSupplementalRpc: true,
           timeoutMs: Math.max(1, Math.min(MINT_BURN_CONSERVATION_CHUNK_TIMEOUT_MS, (deadlineMs ?? Infinity) - now)),
         });
       } catch {

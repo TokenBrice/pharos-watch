@@ -9,6 +9,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import { makeChainRpcConfig } from "../../test-helpers/chain-rpc-fixtures.test-support";
 import { COMPOUND_V3_COMETS } from "../yield-sync/sources-optional-protocols-constants";
 import {
   fetchAaveV3SupplyRates,
@@ -73,19 +74,14 @@ function installRpcFetchStub(params: {
 }
 
 function makeChainRpcs(chains: readonly string[]): Map<string, ChainRpcConfig> {
-  return new Map(
-    chains.map((chain) => [
-      chain,
-      {
-        chainId: chain,
-        chainName: chain,
-        type: "evm" as const,
-        rpcUrl: `https://rpc.${chain}.example.com`,
-        fallbackRpcUrl: `https://fallback.${chain}.example.com`,
-        explorerUrl: `https://explorer.${chain}.example.com`,
-      },
-    ]),
-  );
+  return new Map(chains.map((chain): [string, ChainRpcConfig] => [
+    chain,
+    makeChainRpcConfig({
+      chainId: chain,
+      rpcUrls: [`https://rpc.${chain}.example.com`, `https://fallback.${chain}.example.com`],
+      explorerUrl: `https://explorer.${chain}.example.com`,
+    }),
+  ]));
 }
 
 /**

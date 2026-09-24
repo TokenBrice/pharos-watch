@@ -783,13 +783,7 @@ describe("syncYieldData", () => {
     const db = makeDb();
     mockHealthyRiskFreeRateCache();
 
-    vi.mocked(getChainRpc).mockReturnValue({
-      chainId: "ethereum",
-      chainName: "Ethereum",
-      type: "evm",
-      rpcUrl: "https://rpc.example/eth",
-      explorerUrl: "https://etherscan.io",
-    });
+    vi.mocked(getChainRpc).mockReturnValue(makeEthereumRpcMap().get("ethereum"));
 
     vi.spyOn(safetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValue({
       kind: "ok",

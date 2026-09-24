@@ -14,6 +14,7 @@ export type EndpointDependency =
   | "mintBurnFreshnessConfig"
   | "coingeckoApiKey"
   | "apiKeySelfServeEnv"
+  | "dwellirBudgetEnv"
   | "donorKeyClaimRateLimit"
   | "workerStatusConfig"
   | "workerVersion"
@@ -686,6 +687,14 @@ const BASE_ENDPOINT_DEFINITIONS = [
   adminGet({
     key: "admin-action-log",
     path: API_PATHS.adminActionLog(),
+  }),
+  // Operator-only trial diagnostic. Deliberately not in the "admin" probe group:
+  // the status self-check builds route contexts without hydrating dependencies,
+  // and this handler requires the hydrated Dwellir env subset.
+  adminGet({
+    key: "rpc-provider-trial",
+    path: API_PATHS.rpcProviderTrial(),
+    routeDependencies: ["dwellirBudgetEnv"],
   }),
   adminAction({
     key: "trigger-digest",

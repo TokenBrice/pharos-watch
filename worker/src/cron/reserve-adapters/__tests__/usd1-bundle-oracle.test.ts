@@ -280,7 +280,14 @@ describe("fetchUsd1BundleOracleReserves", () => {
         chainId: "ethereum",
         chainName: "Ethereum",
         type: "evm",
-        rpcUrl: "https://ethereum-rpc.publicnode.com",
+        endpoints: [{
+          url: "https://ethereum-rpc.publicnode.com",
+          operator: "public",
+          keyed: false,
+          position: "registry",
+          stateHistory: "archive",
+          logsHistory: "full",
+        }],
         explorerUrl: "https://etherscan.io",
       }],
     ]);

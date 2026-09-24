@@ -1,6 +1,6 @@
 import { sha256HexFromBytes } from "@shared/lib/sha256";
 import { throwIfAborted } from "../abort";
-import type { ChainRpcConfig } from "../chain-registry";
+import { getChainRpc, hasRegistryRpc, type ChainRpcConfig } from "../chain-registry";
 import { fetchTextWithRetry } from "../fetch-retry";
 import {
   fetchEvmBlockHeader,
@@ -295,7 +295,7 @@ export async function observeXautRepresentationGroupSupplyAttributionAttempt(
   if (!transparencySource) {
     return reject("transparency-source-config-unavailable", null);
   }
-  if (!input.chainRpcs.has(XAUT_CANONICAL_CHAIN_ID)) {
+  if (!hasRegistryRpc(getChainRpc(input.chainRpcs, XAUT_CANONICAL_CHAIN_ID))) {
     return reject("chain-rpc-unavailable", null);
   }
 

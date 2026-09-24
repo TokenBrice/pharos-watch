@@ -104,7 +104,16 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
     // reads in the same slot, so they must land first. One serial chain keeps
     // the trigger's declared peak at max(3, 1, 2) instead of summing the three
     // jobs' budgets.
-    jobChains: [["sync-yield-supplemental", "fetch-tbill-rate", "sync-yield-data"]],
+    //
+    // `observe-rpc-provider-parity` is a second, independent chain: it shares
+    // the one invocation per hour the yield publication already pays for, is
+    // strictly serial (one connection), and reads no yield output, so it must
+    // neither delay the publication nor inherit its chain's stop-on-failure.
+    // Declared peak: max(3, 1, 2) + 1 = 4/6.
+    jobChains: [
+      ["sync-yield-supplemental", "fetch-tbill-rate", "sync-yield-data"],
+      ["observe-rpc-provider-parity"],
+    ],
   },
   fourHourlyYieldSupplemental: {
     jobChains: [["sync-yield-supplemental"]],
