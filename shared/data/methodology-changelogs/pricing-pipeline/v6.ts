@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.32",
+    title: "Pool-challenge replacement cannot be carried by a diverging protocol minority",
+    date: "2026-09-24",
+    effectiveAt: 1790233200,
+    summary:
+      "The ≥2-independent-protocol pool-challenge replacement no longer fires when the diverging protocol medians are outnumbered by the challenger protocols that corroborate the selected price, because the replacement weight is provider-reported challenger TVL and a dormant pool keeps its last traded price behind a large nominal reserve. The same precedence test now also skips the confidence downgrade when at least two independent protocol medians corroborate the selected price, so a losing diverging minority can no longer strip the tier the depeg recovery gate consumes.",
+    impact: [
+      "`selectReplacementProtocolGroups` in `worker/src/cron/sync-stablecoins/enrich-prices-primary-hardening.ts` now also requires the diverging protocol count to be greater than or equal to the count of protocol medians that agree with the selected price before that path returns a replacement. The guard is a precedence test over protocol medians: it neither reads nor re-weights challenger TVL, and the per-pool $100K admission floor, `DEX_FRESHNESS_SEC` freshness window, peg-aware `dex_observation` validation, and the `≥2 protocols` / 500-bps (USD) / 300-bps (non-USD) thresholds are unchanged",
+      "Confidence downgrades only while the divergence is unresolved: the `downgrades` path is skipped when at least two independent protocol medians corroborate the selected price and strictly outnumber the diverging set (`corroboratingProtocolGroupsOutvote`, one authority with `divergingProtocolGroupsOutvote` in `worker/src/lib/constants.ts`). A tie, a diverging majority, or a single corroborating protocol still downgrades to `low` exactly as before, and any replacement that does happen still downgrades because DEX evidence displaced the consensus. A corroborated-majority asset therefore keeps the confidence tier that depeg recovery, confirmation, and peg-summary read instead of inheriting `low` from a dormant minority",
+      "The high-TVL multi-protocol path (at least `$5M` per protocol median, directional coherence, hard-candidate agreement) and `preserveCorroboratedSevereDownside` keep replacing or preserving as before, so a genuine multi-million-dollar DEX dislocation still overrides a near-peg soft result",
+      "Incident: `vchf-vnx` published 1.2887194119 on 2026-09-24 (status `coingeckoPriceDiff` mismatch, CoinGecko 1.2193769497, `pool-tvl-weighted`, `low`). The replacement was carried by the Celo Uniswap v3 `VCHF/USD₮` pool `0x899f68521196b4db5e3525e8ce1695efa9b05533` — whose last trade was 2026-03-15 and whose on-chain reserves hold 70.69 USDT plus 57.06 VCHF against a provider-reported $4.7M reserve and zero 24h volume — plus the ICP kongswap VCHF/ICP median, against four protocols (icpswap, raydium, aerodrome, meteora) between 1.2000 and 1.2211 and an ECB franc rate of 1.2152. The asset returns to its CoinGecko consensus with its confidence tier intact instead of a dormant pool's mark",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.31",
     title: "Cross-source price provenance and CMC publication trust window",
     date: "2026-09-23",

@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const DEPEG_DEWS_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.26",
+    title: "Pool challenger majority rule for depeg recovery and confirmation",
+    date: "2026-09-24",
+    effectiveAt: 1790208000,
+    summary:
+      "A minority of diverging pool-challenger protocol groups can no longer veto a corroborated primary recovery or confirm a pending depeg. Both pool-challenger decisions now require the diverging groups to be at least as numerous as the groups that corroborate the recovered (inside-threshold) price, matching the pricing pool challenge rule in v6.32.",
+    impact: [
+      "The primary-recovery pool veto (`derivePoolRecoveryVeto` in `worker/src/cron/depeg-detection/decision-engine.ts`) fires only when the diverging challenger groups reach `POOL_CHALLENGE_CONFIRM_MIN` and are at least as numerous as the challenger groups inside the trigger threshold that corroborate the recovered price; the single-pool `>= $5M` TVL carve-out is unchanged",
+      "Pool-only pending-depeg confirmation applies the same majority test against the groups contradicting the pending direction (opposite-direction or back inside the bar), so two diverging groups no longer confirm while four independent protocols sit at the reference rate",
+      "The rule is one exported authority, `divergingProtocolGroupsOutvote` plus its complement `corroboratingProtocolGroupsOutvote` in `worker/src/lib/constants.ts`, shared with the pricing pool challenge (`selectReplacementProtocolGroups` and its confidence downgrade, pricing v6.32) so the pricing and depeg lanes cannot drift; it keeps the shared `POOL_CHALLENGE_CONFIRM_MIN` = 2 independent-group bar",
+      "Reproduction: live event 90792 (`vchf-vnx`) opened 2026-09-18 from a +640 bps print that two dormant venues carried — the Celo Uniswap v3 VCHF/USD₮ pool (last trade 2026-03-15, provider-reported $4.7M reserve against ~$141 on-chain, 24h volume 0) and the ICP kongswap VCHF/ICP pool (24h volume 0) — against four live protocols at the ECB CHF rate; the veto had blocked the primary recovery on every subsequent detection run",
+      "Trigger thresholds, recovery window timing, pool TVL minimums, the aggregate-DEX corroboration rule, and every DEWS formula are unchanged; only protocol-group precedence in the two pool-challenger decisions moves",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.25",
     title: "Backfill replay honors reviewed suppressions and live-overlap dedupe",
     date: "2026-09-23",

@@ -1,5 +1,5 @@
 import { DEPEG_DEX_PROTOCOL_CORROBORATION_MIN } from "@shared/lib/depeg-config";
-import { CIRCUIT_SOURCE, POOL_CHALLENGE_CONFIRM_MIN, POOL_CHALLENGE_HIGH_TVL_USD, USER_AGENT } from "../lib/constants";
+import { CIRCUIT_SOURCE, divergingProtocolGroupsOutvote, POOL_CHALLENGE_HIGH_TVL_USD, USER_AGENT } from "../lib/constants";
 import { cgHeaders, cgSimplePricePath, cgUrl } from "../lib/coingecko";
 import { recordOutcomeSafe } from "../lib/circuit-breaker";
 import {
@@ -453,7 +453,16 @@ export async function collectConfirmationEvidence(
         poolRecoverFamilies.add(dexProtocolGroupKey(pool));
       }
     }
-    if (poolHighTvlConfirm != null || poolConfirmGroups.size >= POOL_CHALLENGE_CONFIRM_MIN) {
+    // 2026-09-24 (vchf-vnx): pool-only confirmation requires the confirming
+    // protocol groups to outvote the groups that contradict the pending depeg
+    // (opposite-direction or back inside the bar), mirroring the price-hardening
+    // replacement rule. Two dormant diverging pools confirmed the VCHF depeg
+    // while four live protocols sat at the reference rate.
+    const poolConfirmOutvotes = divergingProtocolGroupsOutvote({
+      divergingCount: poolConfirmGroups.size,
+      corroboratingCount: poolRecoverGroups.size + poolContradictGroups.size,
+    });
+    if (poolHighTvlConfirm != null || poolConfirmOutvotes) {
       evidence.poolStatus = "confirm";
       addSources(
         evidence.confirmingSources,

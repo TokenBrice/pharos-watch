@@ -35,6 +35,21 @@ const brlMeta: StablecoinMeta = {
   geckoId: "brz",
 };
 
+const chfMeta: StablecoinMeta = {
+  id: "vchf-vnx",
+  name: "VNX Swiss Franc",
+  symbol: "VCHF",
+  flags: {
+    backing: "rwa-backed",
+    pegCurrency: "CHF",
+    governance: "centralized",
+    yieldBearing: false,
+    rwa: true,
+    navToken: false,
+  },
+  geckoId: "vnx-swiss-franc",
+};
+
 function makeAsset(overrides: Partial<PegAssetBase> = {}): PegAssetBase {
   return {
     id: "usdt-tether",
@@ -1105,7 +1120,7 @@ describe("decideDepegAsset", () => {
     expect(decision.diagnostics).toEqual([
       {
         level: "warn",
-        message: "[depeg] Kept apxUSD open despite primary recovery: pool challengers still show the below depeg (groups=1, highTvl=true)",
+        message: "[depeg] Kept apxUSD open despite primary recovery: pool challengers still show the below depeg (groups=1, corroborating=0, highTvl=true)",
       },
     ]);
   });
@@ -1154,6 +1169,155 @@ describe("decideDepegAsset", () => {
         id: 42,
         firstSeenAt: 1_780_630_000,
         lastSeenAt: 1_780_630_000,
+      },
+    ]);
+  });
+
+  it("allows primary recovery when two dormant diverging pools are outvoted by four at-peg pools", () => {
+    const now = 1_790_226_624;
+    const decision = decideDepegAsset({
+      now,
+      asset: makeAsset({
+        id: "vchf-vnx",
+        symbol: "VCHF",
+        price: 1.2130161427,
+        priceSource: "coingecko+defillama-list",
+        priceConfidence: "high",
+        agreeSources: ["coingecko", "defillama-list"],
+        priceUpdatedAt: now - 60,
+        pegType: "peggedCHF",
+        circulating: { ethereum: 5_000_000 },
+      }),
+      meta: chfMeta,
+      existing: makeExistingEvent({
+        id: 90792,
+        stablecoin_id: "vchf-vnx",
+        symbol: "VCHF",
+        peg_type: "peggedCHF",
+        direction: "above",
+        peak_deviation_bps: 640,
+        started_at: now - 6 * 86_400,
+        start_price: 1.2887194119,
+        peak_price: 1.2887194119,
+        peg_reference: 1.2128709869131222,
+      }),
+      pegRates: { peggedCHF: 1.2128709869131222 },
+      pegRateSources: { peggedCHF: "median" },
+      pegRateCounts: { peggedCHF: 4 },
+      // Reproduced 2026-09-24 from dex_price_challengers for vchf-vnx: the two
+      // diverging venues are the dormant Celo Uniswap v3 pool (24h volume 0,
+      // provider-reported $4.7M reserve, last trade 2026-03-15) and the
+      // zero-volume ICP kongswap pool; four live protocols sat at the reference.
+      challengerPools: [
+        { price: 1.2887194119, tvlUsd: 4_712_969.3671, protocol: "uniswap-v3", chain: "celo", sourceFamily: "cg_onchain" },
+        { price: 1.2745982598, tvlUsd: 380_730.3996, protocol: "kongswap", chain: "icp", sourceFamily: "cg_onchain" },
+        { price: 1.2130161427, tvlUsd: 524_244.1538, protocol: "icpswap", chain: "icp", sourceFamily: "cg_onchain" },
+        { price: 1.2211210441, tvlUsd: 414_750.15, protocol: "raydium", chain: "solana", sourceFamily: "direct_api" },
+        { price: 1.2180939432, tvlUsd: 184_761.4457, protocol: "aerodrome", chain: "base", sourceFamily: "direct_api" },
+        { price: 1.2000335351, tvlUsd: 130_340.6422, protocol: "meteora", chain: "solana", sourceFamily: "cg_onchain" },
+      ],
+    });
+
+    expect(decision.trackedCoinId).toBe("vchf-vnx");
+    expect(decision.seenEventIds).toEqual([90792]);
+    expect(decision.commands).toEqual([
+      {
+        type: "begin-recovery",
+        id: 90792,
+        firstSeenAt: now,
+        lastSeenAt: now,
+      },
+    ]);
+    expect(decision.diagnostics).toEqual([]);
+  });
+
+  it("keeps an event open when the diverging pools are the majority against the recovered price", () => {
+    const now = 1_780_630_000;
+    const decision = decideDepegAsset({
+      now,
+      asset: makeAsset({
+        price: 1.0004,
+        priceSource: "coingecko+defillama-list",
+        priceConfidence: "high",
+        agreeSources: ["coingecko", "defillama-list"],
+        priceUpdatedAt: now - 60,
+        circulating: { ethereum: 353_000_000 },
+      }),
+      meta: usdMeta,
+      existing: makeExistingEvent({
+        id: 42,
+        stablecoin_id: "usdt-tether",
+        symbol: "USDT",
+        peg_type: "peggedUSD",
+        direction: "above",
+        peak_deviation_bps: 250,
+        started_at: now - 3_600,
+        start_price: 1.025,
+        peak_price: 1.025,
+        peg_reference: 1,
+      }),
+      pegRates: { peggedUSD: 1 },
+      pegRateSources: { peggedUSD: "median" },
+      pegRateCounts: { peggedUSD: 4 },
+      challengerPools: [
+        { price: 1.02, tvlUsd: 1_000_000, protocol: "curve", chain: "ethereum", sourceFamily: "geckoterminal" },
+        { price: 1.021, tvlUsd: 1_000_000, protocol: "uniswap-v3", chain: "ethereum", sourceFamily: "cg_onchain" },
+        { price: 1.0005, tvlUsd: 1_000_000, protocol: "raydium", chain: "solana", sourceFamily: "direct_api" },
+      ],
+    });
+
+    expect(decision.seenEventIds).toEqual([42]);
+    expect(decision.commands).toEqual([]);
+    expect(decision.diagnostics).toEqual([
+      {
+        level: "warn",
+        message: "[depeg] Kept USDT open despite primary recovery: pool challengers still show the above depeg (groups=2, corroborating=1, highTvl=false)",
+      },
+    ]);
+  });
+
+  it("keeps the diverging set decisive on a tie against corroborating pools", () => {
+    const now = 1_780_630_000;
+    const decision = decideDepegAsset({
+      now,
+      asset: makeAsset({
+        price: 1.0004,
+        priceSource: "coingecko+defillama-list",
+        priceConfidence: "high",
+        agreeSources: ["coingecko", "defillama-list"],
+        priceUpdatedAt: now - 60,
+        circulating: { ethereum: 353_000_000 },
+      }),
+      meta: usdMeta,
+      existing: makeExistingEvent({
+        id: 42,
+        stablecoin_id: "usdt-tether",
+        symbol: "USDT",
+        peg_type: "peggedUSD",
+        direction: "above",
+        peak_deviation_bps: 250,
+        started_at: now - 3_600,
+        start_price: 1.025,
+        peak_price: 1.025,
+        peg_reference: 1,
+      }),
+      pegRates: { peggedUSD: 1 },
+      pegRateSources: { peggedUSD: "median" },
+      pegRateCounts: { peggedUSD: 4 },
+      challengerPools: [
+        { price: 1.02, tvlUsd: 1_000_000, protocol: "curve", chain: "ethereum", sourceFamily: "geckoterminal" },
+        { price: 1.021, tvlUsd: 1_000_000, protocol: "uniswap-v3", chain: "ethereum", sourceFamily: "cg_onchain" },
+        { price: 1.0005, tvlUsd: 1_000_000, protocol: "raydium", chain: "solana", sourceFamily: "direct_api" },
+        { price: 0.9995, tvlUsd: 1_000_000, protocol: "orca", chain: "solana", sourceFamily: "cg_onchain" },
+      ],
+    });
+
+    expect(decision.seenEventIds).toEqual([42]);
+    expect(decision.commands).toEqual([]);
+    expect(decision.diagnostics).toEqual([
+      {
+        level: "warn",
+        message: "[depeg] Kept USDT open despite primary recovery: pool challengers still show the above depeg (groups=2, corroborating=2, highTvl=false)",
       },
     ]);
   });

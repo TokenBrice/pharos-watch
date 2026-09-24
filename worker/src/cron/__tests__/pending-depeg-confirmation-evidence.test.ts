@@ -160,6 +160,10 @@ describe("collectConfirmationEvidence pool challenger status classification", ()
     { label: "reports poolStatus='contradict' when at least one qualifying pool is opposite-direction above bar", values: [{ price: 0.997, tvlUsd: 5_000_000, protocol: "curve", sourceFamily: "curve" }, { price: 1.012, tvlUsd: 5_000_000, protocol: "uniswap", sourceFamily: "uniswap" }], status: "contradict", opposing: "pool:uniswap:uniswap", confirmations: 0 },
     { label: "reports poolStatus='confirm' with highTvl=true when a single qualifying pool has TVL >= $5M", values: [{ price: 0.98, tvlUsd: 6_000_000, protocol: "curve", sourceFamily: "curve" }], status: "confirm", confirmations: 1 },
     { label: "reports poolStatus='recover' only when every qualifying pool is under the secondary bar", values: [{ price: 0.998, tvlUsd: 5_000_000, protocol: "curve", sourceFamily: "curve" }, { price: 0.999, tvlUsd: 5_000_000, protocol: "uniswap", sourceFamily: "uniswap" }], status: "recover", opposing: "pool:curve:curve", confirmations: 0 },
+    // 2026-09-24 (vchf-vnx): two dormant diverging protocol groups (24h volume 0,
+    // provider-reported reserves carrying a months-old price) must not confirm a
+    // depeg while four independent protocols sit inside the bar.
+    { label: "withholds poolStatus='confirm' when two diverging groups are outvoted by four inside-bar groups", values: [{ price: 0.98, tvlUsd: 1_000_000, protocol: "uniswap-v3", sourceFamily: "cg_onchain" }, { price: 0.979, tvlUsd: 1_000_000, protocol: "kongswap", sourceFamily: "cg_onchain" }, { price: 0.997, tvlUsd: 1_000_000, protocol: "icpswap", sourceFamily: "cg_onchain" }, { price: 0.9975, tvlUsd: 1_000_000, protocol: "raydium", sourceFamily: "direct_api" }, { price: 0.998, tvlUsd: 1_000_000, protocol: "aerodrome", sourceFamily: "direct_api" }, { price: 0.9985, tvlUsd: 1_000_000, protocol: "meteora", sourceFamily: "cg_onchain" }], status: "insufficient", confirmations: 2 },
   ];
   it.each(poolCases)("$label", async ({ values, status, opposing, confirmations }) => {
     const evidence = await collect(noOffchain({ poolChallengers: pools(values) }));
