@@ -2,6 +2,24 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const DEPEG_DEWS_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.27",
+    title: "Challenger-pool majority can carry a recovery when the aggregate DEX row is withheld",
+    date: "2026-09-24",
+    effectiveAt: 1790232000,
+    summary:
+      "The published pool-challenger snapshot now feeds the recovery decision in both directions. When the primary lane is ambiguous and no fresh trusted aggregate `dex_prices` row is available, at least two independent challenger groups inside the recovery band that strictly outvote the groups still crossing the trigger threshold close the event, using the same shared majority authority as the veto.",
+    impact: [
+      "`decideRecovery` in `worker/src/cron/depeg-detection/decision-engine.ts` gains a recovery lane for assets with no fresh trusted aggregate DEX row, alongside the authoritative/fresh-multi-source primary and the corroborated aggregate-DEX row: `derivePoolChallengerEvidence` reports `recoverySupported` when the fresh published challenger snapshot holds at least `POOL_CHALLENGE_CONFIRM_MIN` independent protocol/source-family groups inside the recovery band (50 bps USD, 75 bps non-USD) that strictly outvote the groups still crossing the trigger in the event direction (`corroboratingProtocolGroupsOutvote` in `worker/src/lib/constants.ts`); the `>= $5M` single-pool carve-out still vetoes, and while a fresh trusted aggregate row is available it remains the only DEX recovery lane while the snapshot only vetoes",
+      "The lane persists the TVL-weighted median of the corroborating pools as `recovery_price` with `close_reason = 'recovered-dex'`, and logs a `Pool-challenger majority recovery` diagnostic naming the group counts; the 15-minute continuous recovery window, the 1200-second continuity tolerance, and the deadband rule are unchanged",
+      "Root cause: `computeDexPrices` only publishes an aggregate `dex_prices` row for an asset whose primary price already clears the primary trust gates (`loadTrackedStablecoinMaps` feeds the publisher a trust-filtered price map and the row is withheld as `primary-missing` otherwise), so the aggregate-DEX recovery lane was structurally unreachable for exactly the `confirm_required` primaries that need independent corroboration",
+      "Reproduction from live D1: event 90781 (`usdb-blast`, CoinGecko single-source, open since 2026-08-20 at +129 bps peak) sat at -1 bps with five published challenger pools (thruster-v3, monoswap-v3-blast, blasterswap; three independent groups) inside the band and no aggregate row; event 90760 (`vnxau-vnx`, gold peg, open since 2026-08-05) sat at +3 bps with raydium and aerodrome inside the band",
+      "Guard evidence: event 90786 (`hollar-hydrated`) stays open on the single $11.9M hydration-dex pool still printing -526 bps, and event 90777 (`audf-forte`) stays open with one corroborating curve group below the two-group bar; a 2-vs-2 tie resolves to no recovery and clears any partial timer",
+      "Onset behavior is unchanged: opening or refreshing a depeg still requires the primary to cross the trigger threshold, and the challenger snapshot is not consulted for onsets",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.26",
     title: "Pool challenger majority rule for depeg recovery and confirmation",
     date: "2026-09-24",

@@ -6,7 +6,7 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 (detection) runs eve
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.26`<!-- GENERATED-END: methodology-version-depeg-detection -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.27`<!-- GENERATED-END: methodology-version-depeg-detection -->
 - **Runtime/version source:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/depeg-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/depeg-dews/`
@@ -36,7 +36,7 @@ Confirmed `depeg_events` are the trigger for the Depeg Duration Resolver (DDR), 
 | `DEX_FRESHNESS_SEC` | <!-- GENERATED-START: depeg-dex-freshness -->4500 (75 min)<!-- GENERATED-END: depeg-dex-freshness --> | Hourly DEX prices older than this are ignored |
 | `DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD` | <!-- GENERATED-START: depeg-dex-min-tvl -->1,000,000<!-- GENERATED-END: depeg-dex-min-tvl --> | Minimum aggregate DEX source TVL required before depeg logic trusts a DEX row |
 | `DEPEG_DEX_PROTOCOL_CORROBORATION_MIN` | 2 protocol groups | Minimum protocol-level DEX corroborations required before aggregate DEX rows can directly suppress or resolve live depeg state |
-| `POOL_CHALLENGE_CONFIRM_MIN` | 2 protocol/source-family groups | Number of independent pool challenger groups that can veto a primary recovery or confirm a pending depeg. A diverging set must also be at least as numerous as the groups corroborating the recovered/at-peg price (`divergingProtocolGroupsOutvote` in `worker/src/lib/constants.ts`, shared with the pricing pool challenge) |
+| `POOL_CHALLENGE_CONFIRM_MIN` | 2 protocol/source-family groups | Number of independent pool challenger groups that can veto a primary recovery, carry a recovery when the primary is ambiguous and no aggregate DEX row is published, or confirm a pending depeg. A diverging set must also be at least as numerous as the groups corroborating the recovered/at-peg price (`divergingProtocolGroupsOutvote` / `corroboratingProtocolGroupsOutvote` in `worker/src/lib/constants.ts`, shared with the pricing pool challenge) |
 | `POOL_CHALLENGE_HIGH_TVL_USD` | $5,000,000 | Single-pool TVL threshold that can veto a primary recovery or confirm a pending depeg without a second pool group |
 
 `getDepegThresholdBps(pegType)` returns 100 for `peggedUSD`, 150 for all other peg types.
@@ -267,11 +267,12 @@ Detection persistence commits all mutations for one stablecoin as one ordered at
 - If a supported CoinGecko native-currency quote still shows the same-direction depeg: keep the event open and ignore the derived recovery
 - If a fresh trusted aggregate DEX row still crosses the depeg threshold in the existing event direction, with at least 2 protocol-level DEX groups corroborating that direction: keep the event open and ignore the primary recovery print
 - If qualifying individual pool challengers still cross the threshold in the existing event direction — either one pool with at least $5M TVL or at least 2 independent protocol/source-family groups that are also at least as numerous as the challenger groups corroborating the recovered (inside-threshold) price — keep the event open and ignore the primary recovery print. A minority of diverging groups no longer vetoes a corroborated recovery: the 2026-09-24 `vchf-vnx` event 90792 was vetoed by two dormant diverging venues (a months-silent Celo Uniswap v3 pool with 24h volume 0 and a provider-reported $4.7M reserve, plus a zero-volume ICP kongswap pool) against four live protocols sitting at the ECB CHF rate
+- The same published challenger snapshot can also carry the recovery when no fresh trusted aggregate `dex_prices` row exists for the asset. `computeDexPrices` publishes an aggregate row only for an asset whose primary already clears the primary trust gates (`loadTrackedStablecoinMaps` preloads a trust-filtered price map and withholds the row as `primary-missing` otherwise), so a `confirm_required` primary never receives one; while a fresh trusted aggregate row is available it stays the only DEX recovery lane and the snapshot only vetoes. When the aggregate lane is unavailable, at least 2 independent protocol/source-family challenger groups inside the recovery band that strictly outvote the groups still crossing the trigger in the event direction (`corroboratingProtocolGroupsOutvote`, the complement of the veto rule) close the event with `close_reason = 'recovered-dex'` and the TVL-weighted median of the corroborating pools as `recovery_price`; the `>= $5M` single-pool carve-out still vetoes. Reproduced 2026-09-24 on live events 90781 (`usdb-blast`: five thruster-v3 / monoswap-v3-blast / blasterswap pools inside 50 bps, three independent groups, no aggregate row) and 90760 (`vnxau-vnx`: raydium and aerodrome inside 75 bps); event 90786 (`hollar-hydrated`) stayed open on the $11.9M high-TVL pool veto and 90777 (`audf-forte`) stayed open below the two-group bar
 - A qualifying recovery must be at or inside 50% of the trigger threshold: 50 bps for USD pegs and 75 bps for non-USD pegs. The first qualifying observation sets both recovery timestamps; each consecutive qualifying observation refreshes `recovery_last_seen_at`. The row closes only after total recovery age reaches 15 minutes and the gap from the prior qualified observation is no more than 1200 seconds.
 - A later qualifying recovery after a gap greater than 1200 seconds resets both recovery timestamps to the new observation. Missing data leaves the event open, but the missing interval never proves recovery.
 - A reading between the recovery and trigger thresholds is a deadband: keep the event open and clear any partial recovery timer.
 - When the existing row was opened from a native-fiat quote, prefer the recovered native quote and persist it with `close_reason = 'recovered-native'`; if only a qualifying USD primary or DEX recovery exists, close with `recovery_price = NULL` to preserve the row's quote-domain invariant.
-- Authoritative or fresh multi-source primary recovery can advance the timer. Ambiguous primary recovery requires a trusted aggregate DEX row, at least 2 corroborating DEX protocol groups, and no qualifying challenger showing the old direction.
+- Authoritative or fresh multi-source primary recovery can advance the timer. Ambiguous primary recovery requires a trusted aggregate DEX row, at least 2 corroborating DEX protocol groups, and no qualifying challenger majority showing the old direction — or, when no fresh trusted aggregate row exists for the asset, the corroborating challenger-pool majority described above.
 - Any renewed same-direction depeg or contradictory trusted evidence clears the partial recovery timer.
 
 ### Orphan Cleanup
@@ -436,7 +437,7 @@ While event is open:
   - Direction change with authoritative or DEX-confirmed input: close old, queue new pending candidate
   - Direction change with `confirm_required` input: keep the old-direction row open and log a warning; the flip is only acted on once authoritative or DEX-confirmed input arrives
   - Trusted DEX disagreement on the same side is logged, but does not by itself close the event
-  - Price reaches the 50% recovery band: start or continue a 15-minute recovery timer only when the primary recovery is authoritative, or when trusted aggregate DEX recovery has enough protocol corroboration and no challenger veto
+  - Price reaches the 50% recovery band: start or continue a 15-minute recovery timer when the primary recovery is authoritative, when trusted aggregate DEX recovery has enough protocol corroboration and no challenger majority veto, or — when no fresh trusted aggregate DEX row exists — when the published challenger snapshot has at least 2 corroborating groups inside the band outvoting the diverging set
   - Price returns to the deadband or depeg range: clear the recovery timer and keep the event open
 
 Orphan cleanup:
