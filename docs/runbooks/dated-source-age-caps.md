@@ -12,36 +12,36 @@ This runbook covers reserve sources and retained-data windows whose publication 
 
 ## Expected publication windows
 
-Escalate a missing report at the end of its window. A discovered newer independent-assurance report is never accepted provisionally: verify and update its exact artifact identity before publication resumes.
+Escalate a missing report at the end of its window. A discovered newer independent-assurance report is never accepted provisionally: verify and update its exact artifact identity before publication resumes. Where a product is bound to a live adapter, its window tracks that adapter's declared source-age tier (`LAGGED_MONTHLY_EXAMINATION_SOURCE_MAX_AGE_SEC` for GUSD, `NEXT_MONTH_DISCLOSURE_SOURCE_MAX_AGE_SEC` for the month-end publishers whose successor lands weeks into the following month, the shared late-monthly tier otherwise), so the escalation deadline and the runtime admission ceiling stay one authority; products without a runtime binding keep their reviewed-manifest publication window.
 
 | Product | Expected publication window | Owner |
 | --- | --- | --- |
 | AUDD | Monthly; by 47 days after period end | Reserve evidence maintainer |
 | AUDM | Monthly; by 47 days after period end | Reserve evidence maintainer |
-| AUDX | Monthly; by 47 days after period end | Reserve evidence maintainer |
-| AUSD | Monthly; by 47 days after period end | Reserve evidence maintainer |
+| AUDX | Monthly; by 70 days after period end | Reserve evidence maintainer |
+| AUSD | Monthly; by 70 days after period end | Reserve evidence maintainer |
 | BRLA | Monthly; by 47 days after period end | Reserve evidence maintainer |
 | BRLV | Monthly; by 47 days after period end | Reserve evidence maintainer |
 | CADD | Monthly; by 47 days after period end | Reserve evidence maintainer |
 | EUROP | Quarterly; by 100 days after period end | Reserve evidence maintainer |
 | FDUSD | Monthly; by 47 days after period end | Reserve evidence maintainer |
-| FIDD | Monthly; by 47 days after period end | Reserve evidence maintainer |
+| FIDD | Monthly; by 70 days after period end | Reserve evidence maintainer |
 | GUSD | Monthly; by 75 days after period end | Reserve evidence maintainer |
-| PAXG | Monthly; by 47 days after period end | Reserve evidence maintainer |
+| PAXG | Monthly; by 70 days after period end | Reserve evidence maintainer |
 | PGOLD | Monthly; by 47 days after period end | Reserve evidence maintainer |
-| PYUSD | Monthly; by 47 days after period end | Reserve evidence maintainer |
-| RLUSD | Monthly; by 47 days after period end | Reserve evidence maintainer |
+| PYUSD | Monthly; by 70 days after period end | Reserve evidence maintainer |
+| RLUSD | Monthly; by 70 days after period end | Reserve evidence maintainer |
 | SBC | Monthly; by 47 days after period end | Reserve evidence maintainer |
 | TGBP | Monthly; by 47 days after period end | Reserve evidence maintainer |
 | TRYB | Monthly; by 47 days after period end | Reserve evidence maintainer |
-| USAT | Monthly; by 47 days after period end | Reserve evidence maintainer |
-| USDG | Monthly; by 47 days after period end | Reserve evidence maintainer |
-| USDGO | Monthly; by 47 days after period end | Reserve evidence maintainer |
-| USDP | Monthly; by 47 days after period end | Reserve evidence maintainer |
-| USDPT | Monthly; by 47 days after period end | Reserve evidence maintainer |
+| USAT | Monthly; by 70 days after period end | Reserve evidence maintainer |
+| USDG | Monthly; by 70 days after period end | Reserve evidence maintainer |
+| USDGO | Monthly; by 70 days after period end | Reserve evidence maintainer |
+| USDP | Monthly; by 70 days after period end | Reserve evidence maintainer |
+| USDPT | Monthly; by 70 days after period end | Reserve evidence maintainer |
 | USX | Monthly; by 47 days after period end | Reserve evidence maintainer |
-| XSGD | Monthly; by 47 days after period end | Reserve evidence maintainer |
-| XUSD | Monthly; by 47 days after period end | Reserve evidence maintainer |
+| XSGD | Monthly; by 70 days after period end | Reserve evidence maintainer |
+| XUSD | Monthly; by 70 days after period end | Reserve evidence maintainer |
 
 ## Refresh checklist
 

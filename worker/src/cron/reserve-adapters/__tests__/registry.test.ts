@@ -154,7 +154,7 @@ describe("adapter registry completeness", () => {
     expect(parsed.success).toBe(true);
   });
 
-  it("pins the reviewed FDUSD Webflow index and Reservoir cohort fallbacks", () => {
+  it("pins the reviewed FDUSD Webflow index and Reservoir cohort hosts", () => {
     const configsById = new Map(ACTIVE_STABLECOINS.map((coin) => [coin.id, coin.liveReservesConfig]));
 
     // The issuer domain blocks Worker egress, so the compiled assurance
@@ -165,9 +165,17 @@ describe("adapter registry completeness", () => {
       url: "https://firstdigitallabs.webflow.io/transparency",
     });
     expect(configsById.get("fdusd-first-digital")?.inputs.fallbacks).toBeUndefined();
+    // Reservoir's canonical app.reservoir.xyz zone answers Worker egress with
+    // its country-gate 403 (the restricted list includes the US) under both
+    // the browser-style and neutral fetch identities, so the cohort pins the
+    // protocol application's un-geofenced Vercel deployments instead.
     for (const id of ["rusd-reservoir", "srusd-reservoir", "wsrusd-reservoir"]) {
+      expect(configsById.get(id)?.inputs.primary).toEqual({
+        kind: "http-json",
+        url: "https://fireworks-git-master-fortunafi.vercel.app/api/reserves/raw",
+      });
       expect(configsById.get(id)?.inputs.fallbacks).toEqual([
-        { kind: "http-json", url: "https://fireworks-git-master-fortunafi.vercel.app/api/reserves/raw" },
+        { kind: "http-json", url: "https://fireworks-fortunafi.vercel.app/api/reserves/raw" },
       ]);
     }
   });

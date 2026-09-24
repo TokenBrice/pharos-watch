@@ -195,8 +195,9 @@ describe("validateAdapterOutput redemption telemetry", () => {
   });
 
   it("suppresses redemption-capacity-unverified when the adapter policy is unverified-only", () => {
-    // No registry adapter is unverified-only anymore, so cover the suppression
-    // branch with a synthetic unverified-only policy.
+    // Reservoir is the registry's own unverified-only adapter (covered by the
+    // next case); keep the generic branch covered here for a policy that is
+    // unverified-only without inheriting a declared budget.
     const baseAdapter = getReserveAdapter("infinifi");
     expect(baseAdapter).not.toBeNull();
     const adapter: ReserveAdapterDefinition = {
@@ -221,7 +222,12 @@ describe("validateAdapterOutput redemption telemetry", () => {
     expect(result.warnings.some((w) => w.code === "redemption-capacity-unverified")).toBe(false);
   });
 
-  it("flags unverified redemption freshness under reservoir's timestamp-less API policy", () => {
+  it("suppresses redemption-capacity-unverified under reservoir's unverified-only API policy", () => {
+    // Reservoir's balance sheet can only ever attest `unverified` freshness
+    // (decision 2026-09-24), and an unverified-only policy deliberately
+    // suppresses the capacity-freshness duplicate: the adapter's real capacity
+    // telemetry is a same-run PSM read that withholds the whole block when the
+    // read fails, so the suppressed duplicate carries no signal here.
     const adapter = getReserveAdapter("reservoir");
     const result = validateAdapterOutput(
       {
@@ -239,7 +245,7 @@ describe("validateAdapterOutput redemption telemetry", () => {
     );
 
     expect(result.valid).toBe(true);
-    expect(result.warnings.some((w) => w.code === "redemption-capacity-unverified")).toBe(true);
+    expect(result.warnings.some((w) => w.code === "redemption-capacity-unverified")).toBe(false);
     expect(result.warnings.some((w) => w.code === "freshness-mode-disallowed")).toBe(false);
   });
 

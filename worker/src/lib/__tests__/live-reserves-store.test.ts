@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
+import { getLiveReserveAdapterDefinition, NEXT_MONTH_DISCLOSURE_SOURCE_MAX_AGE_SEC } from "@shared/lib/live-reserve-adapters";
 import {
   LIVE_SLICES,
   makeReservesDb,
@@ -19,9 +19,9 @@ import { parseSnapshotMetadata } from "../live-reserves/store-row-decoding";
 describe("live-reserves-store", () => {
   it.each([
     ["fdusd-first-digital", "fdusd-independent-assurance", 36 * 86400, 60, false],
-    ["xsgd-straitsx", "straitsx-independent-assurance", 67 * 86400, 60, true],
-    ["xsgd-straitsx", "straitsx-independent-assurance", 4_000_000, 60, false],
-    ["xsgd-straitsx", "straitsx-independent-assurance", 4_000_001, 60, true],
+    ["xsgd-straitsx", "straitsx-independent-assurance", 63 * 86400, 60, false],
+    ["xsgd-straitsx", "straitsx-independent-assurance", NEXT_MONTH_DISCLOSURE_SOURCE_MAX_AGE_SEC, 60, false],
+    ["xsgd-straitsx", "straitsx-independent-assurance", NEXT_MONTH_DISCLOSURE_SOURCE_MAX_AGE_SEC + 1, 60, true],
     ["xsgd-straitsx", "straitsx-independent-assurance", 86400, 3 * 86400, true],
   ])("aligns detail, scoring and overview source/fetch freshness for %s (%i, %i)", async (id, adapter, sourceAge, fetchAge, stale) => {
     const now = 1_800_000_000;

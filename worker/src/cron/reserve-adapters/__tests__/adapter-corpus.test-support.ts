@@ -438,7 +438,7 @@ CORPUS_CASES["makina-strategy"] = {
 
 // Trimmed happy-path fixture from reservoir.test.ts plus the same-run PSM
 // reads (underlying()/underlyingBalance()/paused() at the reviewed PSM).
-const RESERVOIR_ENDPOINT = "https://app.reservoir.xyz/api/reserves/raw";
+const RESERVOIR_ENDPOINT = "https://fireworks-git-master-fortunafi.vercel.app/api/reserves/raw";
 const RESERVOIR_CAPTURE = {
   assets: [
     { label: "Dolomite - USD1", totalBalanceValue: "30" },

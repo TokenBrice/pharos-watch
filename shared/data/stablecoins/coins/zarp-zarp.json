@@ -23,17 +23,17 @@
     "attestorJurisdiction": "South Africa",
     "attestorLicense": "IRBA-registered auditors",
     "latestReport": {
-      "periodEnd": "2026-08-01",
-      "publishedAt": "2026-08-12",
+      "periodEnd": "2026-08-31",
+      "publishedAt": "2026-09-01",
       "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "partial",
-      "reviewer": "OpenAI Codex Safety Score V9 stale-audited reserve refresh 2026-08-29",
+      "reviewer": "Pharos live-reserve sync repair 2026-09-24",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Kempen ZARP agreed-upon procedures report - August 12, 2026",
-          "url": "https://kempengroup.co.za/wp-content/uploads/2026/08/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-08-12.pdf"
+          "label": "Kempen ZARP agreed-upon procedures report - September 1, 2026 (published with the site filename suffix for a signed draft)",
+          "url": "https://kempengroup.co.za/wp-content/uploads/2026/09/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-09-01-signed-draft.pdf"
         },
         {
           "label": "ZARP transparency page (report index)",
@@ -122,8 +122,8 @@
         }
       ],
       "reviewedReport": {
-        "url": "https://kempengroup.co.za/wp-content/uploads/2026/08/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-08-12.pdf",
-        "balanceDate": "2026-08-01"
+        "url": "https://kempengroup.co.za/wp-content/uploads/2026/09/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-09-01-signed-draft.pdf",
+        "balanceDate": "2026-08-31"
       }
     }
   },

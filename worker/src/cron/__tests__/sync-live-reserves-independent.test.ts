@@ -318,9 +318,14 @@ describe("syncLiveReserves", () => {
   });
 
   it("keeps an allowlisted degraded warning recorded while admitting the snapshot to scoring", async () => {
+    // Admission to the independent scoring map requires scoring-eligible
+    // freshness, i.e. a `verified` source timestamp (or latest-state
+    // `not-applicable`). Reservoir can only ever attest `unverified` freshness,
+    // so the allowlist case is exercised on a verified-freshness adapter whose
+    // coin allowlists a degraded code.
     const coin = ACTIVE_STABLECOINS.find((candidate) =>
-      candidate.liveReservesConfig?.adapter === "reservoir"
-      && candidate.liveReservesConfig.scoring?.allowedDegradedWarningCodes?.includes("unknown-position")
+      candidate.liveReservesConfig?.adapter === "chainlink-por"
+      && candidate.liveReservesConfig.scoring?.allowedDegradedWarningCodes?.includes("partial-supply-read-failure")
     ) as ConfiguredCoin | undefined;
     expect(coin).toBeDefined();
     const { syncReserveCoin } = await import("../sync-live-reserves-core");
@@ -332,11 +337,11 @@ describe("syncLiveReserves", () => {
       signal: new AbortController().signal,
       adapter: adapterForCoin(coin!),
       runAdapter: async () => ({
-        slices: [{ name: "Reservoir reserve", pct: 100, risk: "low" as const }],
+        slices: [{ name: "Aggregated reserve", pct: 100, risk: "low" as const }],
         metadata: { freshnessMode: "verified" as const, sourceTimestamp: now },
         warnings: [{
-          code: "unknown-position",
-          message: "Unmapped reserve position: new-farm",
+          code: "partial-supply-read-failure",
+          message: "Supply aggregation omits chains whose totalSupply() read failed: fixture-chain",
           severity: "warning" as const,
           effect: "degraded" as const,
         }],
@@ -356,10 +361,10 @@ describe("syncLiveReserves", () => {
     ));
     expect(finalizeSuccess?.binds).toContain("ok");
     expect(finalizeSuccess?.binds.some((bind) =>
-      typeof bind === "string" && bind.includes("unknown-position")
+      typeof bind === "string" && bind.includes("partial-supply-read-failure")
     )).toBe(true);
     expect(compositionWrite?.binds.some((bind) =>
-      typeof bind === "string" && bind.includes("unknown-position")
+      typeof bind === "string" && bind.includes("partial-supply-read-failure")
     )).toBe(true);
 
     expect(finalizeSuccess).toBeDefined();
@@ -412,7 +417,6 @@ describe("syncLiveReserves", () => {
     expect(coin).toBeDefined();
     const { syncReserveCoin } = await import("../sync-live-reserves-core");
     const db = mockLiveReserveD1();
-    const now = Math.floor(Date.now() / 1000);
     const result = await syncReserveCoin({
       db,
       coin: coin!,
@@ -420,7 +424,13 @@ describe("syncLiveReserves", () => {
       adapter: adapterForCoin(coin!),
       runAdapter: async () => ({
         slices: [{ name: "Reservoir reserve", pct: 100, risk: "low" as const }],
-        metadata: { freshnessMode: "verified" as const, sourceTimestamp: now },
+        metadata: {
+          freshnessMode: "unverified" as const,
+          details: {
+            freshnessSource: "protocol-balance-sheet-api",
+            freshnessReason: "fixture balance sheet carries no timestamp",
+          },
+        },
         warnings: [
           {
             code: "unknown-position",
