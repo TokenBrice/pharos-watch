@@ -6,7 +6,9 @@ import type {
   RpcParityChainSample,
   RpcParityComparatorRef,
   RpcParityErrorClass,
+  RpcParityProbeStep,
   RpcParityRunSamples,
+  RpcParityStepFailures,
 } from "./types";
 
 /**
@@ -74,14 +76,37 @@ export interface RpcParityStoreRow {
 const SAMPLE_FIELD_SEPARATOR = "|";
 const SAMPLE_SEPARATOR = ";";
 const SAMPLE_FIELD_COUNT = 9;
+/**
+ * Layout tag for the optional per-run diagnostics section. A row written by a
+ * newer lane version never breaks an older reader: the tag is checked before
+ * the entries are interpreted, and an unknown tag is ignored so the samples
+ * themselves stay readable.
+ */
+const DIAGNOSTICS_LAYOUT = "1";
+const DIAGNOSTICS_FIELD_COUNT = 4;
+
+/** Step-failure bits, per operator, in the sparse diagnostics section. */
+const STEP_FAILURE_BITS: Record<"dwellir" | "comparator", Record<RpcParityProbeStep, number>> = {
+  dwellir: { head: 1, state: 2, logs: 4 },
+  comparator: { head: 8, state: 16, logs: 32 },
+};
+
+function emptyStepFailures(): RpcParityStepFailures {
+  return { head: false, state: false, logs: false };
+}
 
 interface RpcParityWireRow {
   v: number;
   chains: string[];
   comparators: [string, string, string][];
   hosts: string[];
-  /** `[atSec, "<chainIdx>|<flags>|...;<chainIdx>|<flags>|..."[]]` — a fixed-arity field list per sample. */
-  runs: [number, string][];
+  /**
+   * `[atSec, "<chainIdx>|<flags>|...;<chainIdx>|<flags>|..."]` — a fixed-arity
+   * field list per sample — plus, when a chain (or its comparator) had a failed
+   * step, a sparse diagnostics section. Rows written before diagnostics existed
+   * are simply two elements long.
+   */
+  runs: ([number, string] | [number, string, string])[];
   latest: Record<string, [number, number | null, number | null, number | null]>;
 }
 
@@ -122,6 +147,54 @@ function encodeSample(
     comparatorIndex,
     hostIndex,
   ].join(SAMPLE_FIELD_SEPARATOR);
+}
+
+/**
+ * Per-sample diagnostics, written only when something failed, so a healthy run
+ * costs nothing in the retained row.
+ */
+function encodeSampleDiagnostics(sample: RpcParityChainSample, chainIndex: number): string | null {
+  const stepMask =
+    (sample.failedSteps.dwellir.head ? STEP_FAILURE_BITS.dwellir.head : 0)
+    | (sample.failedSteps.dwellir.state ? STEP_FAILURE_BITS.dwellir.state : 0)
+    | (sample.failedSteps.dwellir.logs ? STEP_FAILURE_BITS.dwellir.logs : 0)
+    | (sample.failedSteps.comparator.head ? STEP_FAILURE_BITS.comparator.head : 0)
+    | (sample.failedSteps.comparator.state ? STEP_FAILURE_BITS.comparator.state : 0)
+    | (sample.failedSteps.comparator.logs ? STEP_FAILURE_BITS.comparator.logs : 0);
+  const errorCode = sample.comparatorErrorClass
+    ? RPC_PARITY_ERROR_CLASSES.indexOf(sample.comparatorErrorClass) + 1
+    : 0;
+  const httpStatus = sample.comparatorHttpStatus === null ? "" : String(sample.comparatorHttpStatus);
+  if (stepMask === 0 && errorCode === 0 && httpStatus === "") return null;
+  return [chainIndex, stepMask, errorCode, httpStatus].join(SAMPLE_FIELD_SEPARATOR);
+}
+
+interface SampleDiagnostics {
+  stepMask: number;
+  comparatorErrorClass: RpcParityErrorClass | null;
+  comparatorHttpStatus: number | null;
+}
+
+function decodeDiagnostics(section: string | undefined): Map<number, SampleDiagnostics> {
+  const byChainIndex = new Map<number, SampleDiagnostics>();
+  if (section == null || section === "") return byChainIndex;
+  const [layout, ...entries] = section.split(SAMPLE_SEPARATOR);
+  if (layout !== DIAGNOSTICS_LAYOUT) return byChainIndex;
+  for (const entry of entries) {
+    const fields = entry.split(SAMPLE_FIELD_SEPARATOR);
+    if (fields.length !== DIAGNOSTICS_FIELD_COUNT) continue;
+    const chainIndex = readWireNumber(fields[0]);
+    const stepMask = readWireNumber(fields[1]);
+    if (chainIndex === null || stepMask === null) continue;
+    const errorCode = readWireNumber(fields[2]) ?? 0;
+    const httpStatus = readWireNumber(fields[3]);
+    byChainIndex.set(chainIndex, {
+      stepMask,
+      comparatorErrorClass: errorCode > 0 ? RPC_PARITY_ERROR_CLASSES[errorCode - 1] ?? null : null,
+      comparatorHttpStatus: httpStatus === null ? null : Math.trunc(httpStatus),
+    });
+  }
+  return byChainIndex;
 }
 
 function readWireNumber(field: string | undefined): number | null {
@@ -173,6 +246,35 @@ function decodeSample(
     dwellirLatencyMs: readWireNumber(fields[4]),
     comparatorLatencyMs: readWireNumber(fields[5]),
     errorClass,
+    // Rows written before the diagnostics section existed decode to "nothing
+    // failed that we recorded", which is exactly what they claimed; the run
+    // decoder overlays the section when this row carries one.
+    comparatorErrorClass: null,
+    comparatorHttpStatus: null,
+    failedSteps: { dwellir: emptyStepFailures(), comparator: emptyStepFailures() },
+  };
+}
+
+function decodeDiagnosticFields(diagnostics: SampleDiagnostics): Pick<
+  RpcParityChainSample,
+  "comparatorErrorClass" | "comparatorHttpStatus" | "failedSteps"
+> {
+  return {
+    comparatorErrorClass: diagnostics.comparatorErrorClass,
+    comparatorHttpStatus: diagnostics.comparatorHttpStatus,
+    failedSteps: {
+      dwellir: stepFailuresFromMask(diagnostics.stepMask, "dwellir"),
+      comparator: stepFailuresFromMask(diagnostics.stepMask, "comparator"),
+    },
+  };
+}
+
+function stepFailuresFromMask(mask: number, operator: "dwellir" | "comparator"): RpcParityStepFailures {
+  const bits = STEP_FAILURE_BITS[operator];
+  return {
+    head: (mask & bits.head) !== 0,
+    state: (mask & bits.state) !== 0,
+    logs: (mask & bits.logs) !== 0,
   };
 }
 
@@ -184,16 +286,19 @@ export function encodeRpcParityStoreRow(row: RpcParityStoreRow): string {
   const comparators: RpcParityComparatorRef[] = [...row.comparators];
   const hosts: string[] = [...row.dwellirHosts];
   const chains = [...row.chains];
-  const runs: [number, string][] = row.runs.map((run) => [
-    run.atSec,
-    run.samples
-      .flatMap((sample) => {
-        const chainIndex = chains.indexOf(sample.chainId);
-        if (chainIndex === -1) return [];
-        return [encodeSample(sample, chainIndex, comparators, hosts)];
-      })
-      .join(SAMPLE_SEPARATOR),
-  ]);
+  const runs: ([number, string] | [number, string, string])[] = row.runs.map((run) => {
+    const diagnostics: string[] = [];
+    const samples = run.samples.flatMap((sample) => {
+      const chainIndex = chains.indexOf(sample.chainId);
+      if (chainIndex === -1) return [];
+      const diagnostic = encodeSampleDiagnostics(sample, chainIndex);
+      if (diagnostic !== null) diagnostics.push(diagnostic);
+      return [encodeSample(sample, chainIndex, comparators, hosts)];
+    });
+    const samplePayload = samples.join(SAMPLE_SEPARATOR);
+    if (diagnostics.length === 0) return [run.atSec, samplePayload];
+    return [run.atSec, samplePayload, [DIAGNOSTICS_LAYOUT, ...diagnostics].join(SAMPLE_SEPARATOR)];
+  });
   const latest: RpcParityWireRow["latest"] = {};
   for (const [chainId, state] of Object.entries(row.latest)) {
     latest[chainId] = [state.atSec, state.dwellirHead, state.comparatorHead, state.commonBlock];
@@ -239,16 +344,27 @@ export function decodeRpcParityStoreRow(value: string): RpcParityStoreRow | null
   const hosts = wire.hosts;
   const runs: RpcParityStoredRun[] = [];
   for (const run of wire.runs) {
-    if (!Array.isArray(run) || run.length !== 2) return null;
-    const [atSec, samples] = run;
+    if (!Array.isArray(run) || (run.length !== 2 && run.length !== 3)) return null;
+    const [atSec, samples, diagnosticsSection] = run;
     if (typeof atSec !== "number" || !Number.isSafeInteger(atSec) || typeof samples !== "string") return null;
+    if (diagnosticsSection !== undefined && typeof diagnosticsSection !== "string") return null;
+    const diagnostics = decodeDiagnostics(diagnosticsSection);
     const decoded: RpcParityChainSample[] = [];
     for (const sample of samples === "" ? [] : samples.split(SAMPLE_SEPARATOR)) {
       const value = decodeSample(sample, chains, comparators, hosts);
       if (!value) return null;
       decoded.push(value);
     }
-    runs.push({ atSec, samples: decoded });
+    // Diagnostics are keyed by the sample's own chain index; a sample whose
+    // index carried no entry keeps its all-clear defaults.
+    runs.push({
+      atSec,
+      samples: decoded.map((sample) => {
+        const chainIndex = chains.indexOf(sample.chainId);
+        const entry = chainIndex === -1 ? undefined : diagnostics.get(chainIndex);
+        return entry === undefined ? sample : { ...sample, ...decodeDiagnosticFields(entry) };
+      }),
+    });
   }
 
   const latest: Record<string, RpcParityLatestState> = {};

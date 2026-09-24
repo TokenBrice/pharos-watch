@@ -10,7 +10,12 @@ import {
   type RpcParityComparatorTarget,
   type RpcParityTarget,
 } from "../../lib/rpc-provider-parity/targets";
-import type { RpcParityChainSample, RpcParityErrorClass } from "../../lib/rpc-provider-parity/types";
+import type {
+  RpcParityChainSample,
+  RpcParityErrorClass,
+  RpcParityProbeStep,
+  RpcParityStepFailures,
+} from "../../lib/rpc-provider-parity/types";
 
 /**
  * The trial probe: one strictly serial pass over every Dwellir chain, reading
@@ -31,6 +36,13 @@ const RPC_PARITY_REQUEST_TIMEOUT_MS = 8_000;
  */
 export const RPC_PARITY_RUN_BUDGET_MS = 4 * 60_000;
 const RPC_PARITY_MAX_RESPONSE_BYTES = 128 * 1024;
+/**
+ * `eth_getLogs` answers are legitimately large: a 10-block address-filtered
+ * window on a busy chain runs into megabytes. The lane keeps its general bound
+ * and raises it only for log reads, still bounded so one response cannot
+ * dominate the isolate's heap.
+ */
+const RPC_PARITY_LOGS_MAX_RESPONSE_BYTES = 1024 * 1024;
 /** Inclusive window of blocks read for log parity, ending at the common block. */
 export const RPC_PARITY_LOG_WINDOW_BLOCKS = 10;
 /** How far below the common block the pruned-history probe reads on `logsHistory: "none"` chains. */
@@ -97,6 +109,8 @@ interface RpcCallResult {
   result: unknown;
   latencyMs: number | null;
   errorClass: RpcParityErrorClass | null;
+  /** HTTP status of an answered request; null when no response arrived. */
+  httpStatus: number | null;
 }
 
 async function callRpcEndpoint(input: {
@@ -108,10 +122,11 @@ async function callRpcEndpoint(input: {
   signal: AbortSignal;
   timeoutMs: number;
   deadlineMs: number;
+  maxResponseBytes?: number;
   deps: RpcParityProbeDeps;
 }): Promise<RpcCallResult> {
   if (input.deps.nowMs() >= input.deadlineMs) {
-    return { status: "deadline", result: null, latencyMs: null, errorClass: null };
+    return { status: "deadline", result: null, latencyMs: null, errorClass: null, httpStatus: null };
   }
   const startedAtMs = input.deps.nowMs();
   if (input.metered) input.deps.recordCredits(1);
@@ -130,18 +145,26 @@ async function callRpcEndpoint(input: {
         timeoutMs: input.timeoutMs,
         returnFinalResponse: true,
         throwOnFinalNetworkError: true,
-        maxResponseBytes: RPC_PARITY_MAX_RESPONSE_BYTES,
+        maxResponseBytes: input.maxResponseBytes ?? RPC_PARITY_MAX_RESPONSE_BYTES,
       },
     );
   } catch (error) {
     const latencyMs = Math.max(0, input.deps.nowMs() - startedAtMs);
-    if (input.signal.aborted) return { status: "aborted", result: null, latencyMs, errorClass: null };
-    return { status: "error", result: null, latencyMs, errorClass: classifyRpcParityTransportError(error) };
+    if (input.signal.aborted) {
+      return { status: "aborted", result: null, latencyMs, errorClass: null, httpStatus: null };
+    }
+    return {
+      status: "error",
+      result: null,
+      latencyMs,
+      errorClass: classifyRpcParityTransportError(error),
+      httpStatus: null,
+    };
   }
   const latencyMs = Math.max(0, input.deps.nowMs() - startedAtMs);
   if (!outcome) {
     // Only reachable if the transport stops throwing on final network errors.
-    return { status: "error", result: null, latencyMs, errorClass: "network" };
+    return { status: "error", result: null, latencyMs, errorClass: "network", httpStatus: null };
   }
   if (!outcome.response.ok) {
     return {
@@ -149,24 +172,31 @@ async function callRpcEndpoint(input: {
       result: null,
       latencyMs,
       errorClass: classifyRpcParityHttpFailure(outcome.response.status, outcome.body),
+      httpStatus: outcome.response.status,
     };
   }
 
   const parsed = parseJson(outcome.body);
   if (!parsed.ok || parsed.value === null || typeof parsed.value !== "object" || Array.isArray(parsed.value)) {
-    return { status: "error", result: null, latencyMs, errorClass: "invalid-response" };
+    return { status: "error", result: null, latencyMs, errorClass: "invalid-response", httpStatus: outcome.response.status };
   }
   const payload = parsed.value as { result?: unknown; error?: unknown };
   if (payload.error != null) {
     const errorObject = typeof payload.error === "object" ? (payload.error as { code?: unknown; message?: unknown }) : {};
     const code = typeof errorObject.code === "number" ? errorObject.code : null;
     const message = typeof errorObject.message === "string" ? errorObject.message : JSON.stringify(payload.error);
-    return { status: "error", result: null, latencyMs, errorClass: classifyRpcParityJsonRpcError(code, message) };
+    return {
+      status: "error",
+      result: null,
+      latencyMs,
+      errorClass: classifyRpcParityJsonRpcError(code, message),
+      httpStatus: outcome.response.status,
+    };
   }
   if (!("result" in payload)) {
-    return { status: "error", result: null, latencyMs, errorClass: "invalid-response" };
+    return { status: "error", result: null, latencyMs, errorClass: "invalid-response", httpStatus: outcome.response.status };
   }
-  return { status: "ok", result: payload.result, latencyMs, errorClass: null };
+  return { status: "ok", result: payload.result, latencyMs, errorClass: null, httpStatus: outcome.response.status };
 }
 
 /** Hex-quantity comparison that ignores leading zeros; null when the value is not a quantity. */
@@ -216,6 +246,28 @@ function sortedLogIdentities(result: unknown): string[] | null {
     identities.push(identity);
   }
   return identities.sort();
+}
+
+function emptyStepFailures(): RpcParityStepFailures {
+  return { head: false, state: false, logs: false };
+}
+
+/**
+ * Records one failed call against its operator and step. The first comparator
+ * failure in the sample keeps its class and status: later steps only run when
+ * the earlier ones produced something to compare against.
+ */
+function recordStepFailure(
+  sample: RpcParityChainSample,
+  operator: "dwellir" | "comparator",
+  step: RpcParityProbeStep,
+  call: RpcCallResult | null,
+): void {
+  if (!call || call.status !== "error") return;
+  sample.failedSteps[operator][step] = true;
+  if (operator !== "comparator" || sample.comparatorErrorClass !== null) return;
+  sample.comparatorErrorClass = call.errorClass;
+  sample.comparatorHttpStatus = call.httpStatus;
 }
 
 interface ChainProbeContext {
@@ -271,6 +323,9 @@ async function probeRpcParityChain(
     dwellirLatencyMs: null,
     comparatorLatencyMs: null,
     errorClass: null,
+    comparatorErrorClass: null,
+    comparatorHttpStatus: null,
+    failedSteps: { dwellir: emptyStepFailures(), comparator: emptyStepFailures() },
   };
 
   const comparatorHead = await callRpcEndpoint({
@@ -287,6 +342,7 @@ async function probeRpcParityChain(
   if (comparatorHead.status === "aborted" || comparatorHead.status === "deadline") {
     return { sample, stop: comparatorHead.status };
   }
+  recordStepFailure(sample, "comparator", "head", comparatorHead);
   sample.comparatorLatencyMs = comparatorHead.latencyMs;
   const comparatorHeadNumber = normalizeBlockNumber(comparatorHead.result);
   sample.comparatorHeadOk = comparatorHeadNumber !== null;
@@ -306,6 +362,7 @@ async function probeRpcParityChain(
   if (dwellirHead.status === "aborted" || dwellirHead.status === "deadline") {
     return { sample, stop: dwellirHead.status };
   }
+  recordStepFailure(sample, "dwellir", "head", dwellirHead);
   sample.dwellirLatencyMs = dwellirHead.latencyMs;
   const dwellirHeadNumber = normalizeBlockNumber(dwellirHead.result);
   sample.headOk = dwellirHeadNumber !== null;
@@ -321,26 +378,50 @@ async function probeRpcParityChain(
   sample.commonBlock = commonBlock;
 
   const state = await probeStateParity(input, context, commonBlock, comparatorHeaders);
+  recordStepFailure(sample, "comparator", "state", state.comparatorCall);
+  recordStepFailure(sample, "dwellir", "state", state.dwellirCall);
   if (state.stop !== "none") return { sample, stop: state.stop };
   sample.stateChecked = state.checked;
   sample.stateMatched = state.matched;
-  sample.errorClass = sample.errorClass ?? state.errorClass;
+  sample.errorClass = sample.errorClass ?? state.dwellirCall?.errorClass ?? null;
 
   if (input.logsHistory === "none") {
     const pruned = await probePrunedLogTrap(input, context, commonBlock, comparatorHeaders);
+    recordStepFailure(sample, "comparator", "logs", pruned.comparatorCall);
+    recordStepFailure(sample, "dwellir", "logs", pruned.dwellirCall);
     if (pruned.stop !== "none") return { sample, stop: pruned.stop };
     sample.prunedLogChecked = pruned.checked;
     sample.prunedLogTrap = pruned.trap;
-    sample.errorClass = sample.errorClass ?? pruned.errorClass;
+    sample.errorClass = sample.errorClass ?? pruned.dwellirCall?.errorClass ?? null;
     return { sample, stop: "none" };
   }
 
   const logs = await probeLogParity(input, context, commonBlock, comparatorHeaders);
+  recordStepFailure(sample, "comparator", "logs", logs.comparatorCall);
+  recordStepFailure(sample, "dwellir", "logs", logs.dwellirCall);
   if (logs.stop !== "none") return { sample, stop: logs.stop };
   sample.logChecked = logs.checked;
   sample.logMatched = logs.matched;
-  sample.errorClass = sample.errorClass ?? logs.errorClass;
+  sample.errorClass = sample.errorClass ?? logs.dwellirCall?.errorClass ?? null;
   return { sample, stop: "none" };
+}
+
+/** One comparison step's outcome plus the calls behind it, for per-step diagnostics. */
+interface ParityStepProbe {
+  checked: boolean;
+  matched: boolean;
+  stop: "none" | RpcCallStop;
+  comparatorCall: RpcCallResult | null;
+  dwellirCall: RpcCallResult | null;
+}
+
+/** The pruned-history probe answers with a trap flag instead of a parity verdict. */
+interface PrunedLogProbe {
+  checked: boolean;
+  trap: boolean;
+  stop: "none" | RpcCallStop;
+  comparatorCall: RpcCallResult | null;
+  dwellirCall: RpcCallResult | null;
 }
 
 async function probeStateParity(
@@ -348,7 +429,7 @@ async function probeStateParity(
   context: ChainProbeContext,
   commonBlock: number,
   comparatorHeaders: Record<string, string>,
-): Promise<{ checked: boolean; matched: boolean; errorClass: RpcParityErrorClass | null; stop: "none" | RpcCallStop }> {
+): Promise<ParityStepProbe> {
   const callParams = [{ to: input.target.contract, data: RPC_PARITY_TOTAL_SUPPLY_SELECTOR }, toHexQuantity(commonBlock)];
   const comparatorCall = await callRpcEndpoint({
     url: input.comparator.url,
@@ -362,10 +443,12 @@ async function probeStateParity(
     deps: context.deps,
   });
   if (comparatorCall.status === "aborted" || comparatorCall.status === "deadline") {
-    return { checked: false, matched: false, errorClass: null, stop: comparatorCall.status };
+    return { checked: false, matched: false, stop: comparatorCall.status, comparatorCall, dwellirCall: null };
   }
   const comparatorSupply = normalizeRpcQuantity(comparatorCall.result);
-  if (comparatorSupply === null) return { checked: false, matched: false, errorClass: null, stop: "none" };
+  if (comparatorSupply === null) {
+    return { checked: false, matched: false, stop: "none", comparatorCall, dwellirCall: null };
+  }
 
   const dwellirCall = await callRpcEndpoint({
     url: input.dwellirUrl,
@@ -379,14 +462,18 @@ async function probeStateParity(
     deps: context.deps,
   });
   if (dwellirCall.status === "aborted" || dwellirCall.status === "deadline") {
-    return { checked: false, matched: false, errorClass: null, stop: dwellirCall.status };
+    return { checked: false, matched: false, stop: dwellirCall.status, comparatorCall, dwellirCall };
   }
   const dwellirSupply = normalizeRpcQuantity(dwellirCall.result);
+  // R1: a read that produced no value is unavailable, not unequal. Only a pair
+  // of answers is a comparison, and only a pair of answers can mismatch.
+  const checked = dwellirSupply !== null;
   return {
-    checked: true,
-    matched: dwellirSupply !== null && dwellirSupply === comparatorSupply,
-    errorClass: dwellirCall.errorClass,
+    checked,
+    matched: checked && dwellirSupply === comparatorSupply,
     stop: "none",
+    comparatorCall,
+    dwellirCall,
   };
 }
 
@@ -395,8 +482,9 @@ async function probeLogParity(
   context: ChainProbeContext,
   commonBlock: number,
   comparatorHeaders: Record<string, string>,
-): Promise<{ checked: boolean; matched: boolean; errorClass: RpcParityErrorClass | null; stop: "none" | RpcCallStop }> {
-  const fromBlock = Math.max(0, commonBlock - (RPC_PARITY_LOG_WINDOW_BLOCKS - 1));
+): Promise<ParityStepProbe> {
+  const windowBlocks = input.target.logWindowBlocks ?? RPC_PARITY_LOG_WINDOW_BLOCKS;
+  const fromBlock = Math.max(0, commonBlock - (windowBlocks - 1));
   const params = [{ address: input.target.contract, fromBlock: toHexQuantity(fromBlock), toBlock: toHexQuantity(commonBlock) }];
   const comparatorLogs = await callRpcEndpoint({
     url: input.comparator.url,
@@ -407,15 +495,18 @@ async function probeLogParity(
     signal: context.signal,
     timeoutMs: remainingRequestTimeoutMs(context),
     deadlineMs: context.deadlineMs,
+    maxResponseBytes: RPC_PARITY_LOGS_MAX_RESPONSE_BYTES,
     deps: context.deps,
   });
   if (comparatorLogs.status === "aborted" || comparatorLogs.status === "deadline") {
-    return { checked: false, matched: false, errorClass: null, stop: comparatorLogs.status };
+    return { checked: false, matched: false, stop: comparatorLogs.status, comparatorCall: comparatorLogs, dwellirCall: null };
   }
   // The comparator's own logs read is the window's reference: without it there
   // is nothing to compare against, so the sample records no log parity claim.
   const comparatorIdentities = comparatorLogs.status === "ok" ? sortedLogIdentities(comparatorLogs.result) : null;
-  if (comparatorIdentities === null) return { checked: false, matched: false, errorClass: null, stop: "none" };
+  if (comparatorIdentities === null) {
+    return { checked: false, matched: false, stop: "none", comparatorCall: comparatorLogs, dwellirCall: null };
+  }
 
   const dwellirLogs = await callRpcEndpoint({
     url: input.dwellirUrl,
@@ -426,20 +517,23 @@ async function probeLogParity(
     signal: context.signal,
     timeoutMs: remainingRequestTimeoutMs(context),
     deadlineMs: context.deadlineMs,
+    maxResponseBytes: RPC_PARITY_LOGS_MAX_RESPONSE_BYTES,
     deps: context.deps,
   });
   if (dwellirLogs.status === "aborted" || dwellirLogs.status === "deadline") {
-    return { checked: false, matched: false, errorClass: null, stop: dwellirLogs.status };
+    return { checked: false, matched: false, stop: dwellirLogs.status, comparatorCall: comparatorLogs, dwellirCall: dwellirLogs };
   }
   const dwellirIdentities = dwellirLogs.status === "ok" ? sortedLogIdentities(dwellirLogs.result) : null;
+  const checked = dwellirIdentities !== null;
   return {
-    checked: true,
+    checked,
     matched:
-      dwellirIdentities !== null
+      checked
       && dwellirIdentities.length === comparatorIdentities.length
       && dwellirIdentities.every((identity, index) => identity === comparatorIdentities[index]),
-    errorClass: dwellirLogs.errorClass,
     stop: "none",
+    comparatorCall: comparatorLogs,
+    dwellirCall: dwellirLogs,
   };
 }
 
@@ -453,9 +547,10 @@ async function probePrunedLogTrap(
   context: ChainProbeContext,
   commonBlock: number,
   comparatorHeaders: Record<string, string>,
-): Promise<{ checked: boolean; trap: boolean; errorClass: RpcParityErrorClass | null; stop: "none" | RpcCallStop }> {
+): Promise<PrunedLogProbe> {
+  const windowBlocks = input.target.logWindowBlocks ?? RPC_PARITY_LOG_WINDOW_BLOCKS;
   const toBlock = Math.max(0, commonBlock - RPC_PARITY_PRUNED_LOG_DEPTH_BLOCKS);
-  const fromBlock = Math.max(0, toBlock - (RPC_PARITY_LOG_WINDOW_BLOCKS - 1));
+  const fromBlock = Math.max(0, toBlock - (windowBlocks - 1));
   const params = [{ address: input.target.contract, fromBlock: toHexQuantity(fromBlock), toBlock: toHexQuantity(toBlock) }];
   const comparatorLogs = await callRpcEndpoint({
     url: input.comparator.url,
@@ -466,13 +561,16 @@ async function probePrunedLogTrap(
     signal: context.signal,
     timeoutMs: remainingRequestTimeoutMs(context),
     deadlineMs: context.deadlineMs,
+    maxResponseBytes: RPC_PARITY_LOGS_MAX_RESPONSE_BYTES,
     deps: context.deps,
   });
   if (comparatorLogs.status === "aborted" || comparatorLogs.status === "deadline") {
-    return { checked: false, trap: false, errorClass: null, stop: comparatorLogs.status };
+    return { checked: false, trap: false, stop: comparatorLogs.status, comparatorCall: comparatorLogs, dwellirCall: null };
   }
   const comparatorCount = comparatorLogs.status === "ok" && Array.isArray(comparatorLogs.result) ? comparatorLogs.result.length : null;
-  if (comparatorCount === null) return { checked: false, trap: false, errorClass: null, stop: "none" };
+  if (comparatorCount === null) {
+    return { checked: false, trap: false, stop: "none", comparatorCall: comparatorLogs, dwellirCall: null };
+  }
 
   const dwellirLogs = await callRpcEndpoint({
     url: input.dwellirUrl,
@@ -483,17 +581,20 @@ async function probePrunedLogTrap(
     signal: context.signal,
     timeoutMs: remainingRequestTimeoutMs(context),
     deadlineMs: context.deadlineMs,
+    maxResponseBytes: RPC_PARITY_LOGS_MAX_RESPONSE_BYTES,
     deps: context.deps,
   });
   if (dwellirLogs.status === "aborted" || dwellirLogs.status === "deadline") {
-    return { checked: false, trap: false, errorClass: null, stop: dwellirLogs.status };
+    return { checked: false, trap: false, stop: dwellirLogs.status, comparatorCall: comparatorLogs, dwellirCall: dwellirLogs };
   }
   const dwellirCount = dwellirLogs.status === "ok" && Array.isArray(dwellirLogs.result) ? dwellirLogs.result.length : null;
+  const checked = dwellirCount !== null;
   return {
-    checked: true,
-    trap: comparatorCount > 0 && dwellirCount === 0,
-    errorClass: dwellirLogs.errorClass,
+    checked,
+    trap: checked && comparatorCount > 0 && dwellirCount === 0,
     stop: "none",
+    comparatorCall: comparatorLogs,
+    dwellirCall: dwellirLogs,
   };
 }
 

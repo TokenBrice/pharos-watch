@@ -1,6 +1,6 @@
 import { RPC_PARITY_TARGETS } from "../targets";
 import { mergeRpcParityRun, type RpcParityStoreRow } from "../store";
-import type { RpcParityChainSample, RpcParityRunSamples } from "../types";
+import type { RpcParityChainSample, RpcParityRunSamples, RpcParityStepFailures } from "../types";
 
 /**
  * Shared fixtures for the parity lane's tests. Heights and latencies use
@@ -37,8 +37,16 @@ export function paritySample(
     dwellirLatencyMs: 1_000,
     comparatorLatencyMs: 1_000,
     errorClass: null,
+    comparatorErrorClass: null,
+    comparatorHttpStatus: null,
+    failedSteps: { dwellir: stepFailures(), comparator: stepFailures() },
     ...overrides,
   };
+}
+
+/** Step-failure flags for one operator; every step is healthy unless named. */
+export function stepFailures(overrides: Partial<RpcParityStepFailures> = {}): RpcParityStepFailures {
+  return { head: false, state: false, logs: false, ...overrides };
 }
 
 export function fullParityRun(

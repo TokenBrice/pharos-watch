@@ -34,12 +34,28 @@ export interface RpcParityTarget {
   readonly contract: string;
   /** Nominal seconds per block. */
   readonly blockTimeSec: number;
+  /**
+   * Proxy for the log window below the common block. Defaults to
+   * `RPC_PARITY_LOG_WINDOW_BLOCKS` (10); high-volume chains narrow it so the
+   * address-filtered `eth_getLogs` answer stays inside the lane's bounded
+   * response size and both operators are genuinely compared.
+   */
+  readonly logWindowBlocks?: number;
   readonly comparator: RpcParityComparatorPlan;
 }
 
 export type RpcParityComparatorPlan =
   | { readonly source: "registry" }
   | { readonly source: "pin"; readonly url: string };
+
+/**
+ * Log window for chains whose tracked token emits enough logs per block that a
+ * 10-block window no longer fits the lane's response bound (production
+ * 2026-09-24: ethereum/base/optimism USDC windows exceeded it and were stored
+ * unchecked). Two blocks still compare both operators on the same range, and
+ * still expose shifted/missing log sets.
+ */
+const HIGH_VOLUME_LOG_WINDOW_BLOCKS = 2;
 
 /**
  * Address provenance: `shared/data/stablecoins/coins/usdc-circle.json`,
@@ -51,10 +67,10 @@ export type RpcParityComparatorPlan =
  * `rpc.xdcrpc.com` (verified eth_chainId 0x32 with and without a User-Agent).
  */
 export const RPC_PARITY_TARGETS: readonly RpcParityTarget[] = [
-  { chainId: "ethereum", coinId: "usdc-circle", contract: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", blockTimeSec: 12, comparator: { source: "registry" } },
+  { chainId: "ethereum", logWindowBlocks: HIGH_VOLUME_LOG_WINDOW_BLOCKS, coinId: "usdc-circle", contract: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", blockTimeSec: 12, comparator: { source: "registry" } },
   { chainId: "arbitrum", coinId: "usdc-circle", contract: "0xaf88d065e77c8cc2239327c5edb3a432268e5831", blockTimeSec: 0.25, comparator: { source: "registry" } },
-  { chainId: "base", coinId: "usdc-circle", contract: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", blockTimeSec: 2, comparator: { source: "registry" } },
-  { chainId: "optimism", coinId: "usdc-circle", contract: "0x0b2c639c533813f4aa9d7837caf62653d097ff85", blockTimeSec: 2, comparator: { source: "registry" } },
+  { chainId: "base", logWindowBlocks: HIGH_VOLUME_LOG_WINDOW_BLOCKS, coinId: "usdc-circle", contract: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", blockTimeSec: 2, comparator: { source: "registry" } },
+  { chainId: "optimism", logWindowBlocks: HIGH_VOLUME_LOG_WINDOW_BLOCKS, coinId: "usdc-circle", contract: "0x0b2c639c533813f4aa9d7837caf62653d097ff85", blockTimeSec: 2, comparator: { source: "registry" } },
   { chainId: "polygon", coinId: "usdc-circle", contract: "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359", blockTimeSec: 2, comparator: { source: "registry" } },
   { chainId: "avalanche", coinId: "usdc-circle", contract: "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e", blockTimeSec: 2, comparator: { source: "registry" } },
   { chainId: "bsc", coinId: "usdc-circle", contract: "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d", blockTimeSec: 0.75, comparator: { source: "registry" } },
