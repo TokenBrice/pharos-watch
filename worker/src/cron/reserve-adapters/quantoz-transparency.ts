@@ -51,7 +51,14 @@ const COMPOSITION_LABELS = ["Cash", "Government bonds"] as const;
  */
 function parsePublishedNumber(raw: string): number | null {
   const cleaned = stripTags(raw).replace(/[€$£\s]/g, "");
-  if (!/^-?\d+(?:,\d{3})*(?:\.\d+)?$/.test(cleaned)) return null;
+  const [integerPart, fractionPart, ...extra] = cleaned.split(".");
+  if (extra.length > 0 || integerPart == null) return null;
+  const [leadGroup, ...thousandGroups] = integerPart.replace(/^-/, "").split(",");
+  if (!/^\d+$/.test(leadGroup ?? "")) return null;
+  if (thousandGroups.length > 0 && (leadGroup!.length > 3 || !thousandGroups.every((group) => /^\d{3}$/.test(group)))) {
+    return null;
+  }
+  if (fractionPart != null && !/^\d+$/.test(fractionPart)) return null;
   const parsed = Number.parseFloat(cleaned.replace(/,/g, ""));
   return Number.isFinite(parsed) ? parsed : null;
 }
