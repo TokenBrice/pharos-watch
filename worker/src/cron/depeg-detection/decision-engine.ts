@@ -3,7 +3,8 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
 import { DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC } from "@shared/lib/depeg-closure";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import { getCirculatingRaw } from "@shared/lib/supply";
-import { divergingProtocolGroupsOutvote, getDepegRecoveryThresholdBps, getDepegThresholdBps, POOL_CHALLENGE_HIGH_TVL_USD } from "../../lib/constants";
+import { weightedMedian } from "@shared/lib/stats";
+import { corroboratingProtocolGroupsOutvote, divergingProtocolGroupsOutvote, getDepegRecoveryThresholdBps, getDepegThresholdBps, POOL_CHALLENGE_HIGH_TVL_USD } from "../../lib/constants";
 import {
   buildPendingReason,
   countDexProtocolCorroborations,
@@ -70,6 +71,9 @@ interface DecisionContext {
   poolRecoveryVetoGroupCount: number;
   poolRecoveryVetoCorroboratingGroupCount: number;
   poolRecoveryVetoHighTvl: boolean;
+  poolRecoverySupported: boolean;
+  poolRecoverySupportGroupCount: number;
+  poolRecoveryPrice: number | null;
   dexSupportsDirection: boolean;
   dexSupportsExistingDirection: boolean;
   dexSupportsRecovery: boolean;
@@ -123,44 +127,89 @@ function hasRecoveryChallenge(
   });
 }
 
-function derivePoolRecoveryVeto(params: {
+interface PoolChallengerEvidence {
+  veto: boolean;
+  groupCount: number;
+  corroboratingGroupCount: number;
+  highTvl: boolean;
+  recoverySupported: boolean;
+  recoveryGroupCount: number;
+  recoveryPrice: number | null;
+}
+
+/**
+ * Derives the pool-challenger evidence for an open event from the published
+ * challenger snapshot: the diverging majority veto and the corroborating
+ * majority that can carry a recovery when the primary lane is ambiguous and no
+ * fresh trusted aggregate DEX row is available.
+ *
+ * 2026-09-24 (vchf-vnx): the veto used to fire on POOL_CHALLENGE_CONFIRM_MIN
+ * diverging groups with no test against the pools that agree with the recovery.
+ * Two dormant diverging venues (a months-silent Celo Uniswap v3 pool with a
+ * provider-reported $4.7M reserve and a zero-volume kongswap pool) therefore
+ * outvoted the four live protocols that corroborated the at-peg price. Pools
+ * inside the trigger threshold now corroborate the recovered price through the
+ * shared majority rule; the high-TVL single-pool carve-out is unchanged.
+ *
+ * 2026-09-24 (usdb-blast): `computeDexPrices` only publishes an aggregate
+ * `dex_prices` row when the asset's primary price already clears
+ * `classifyPrimaryDepegTrust`/`hasFreshMultiSourcePrimaryAgreement`
+ * (`loadTrackedStablecoinMaps` feeds the publisher a trust-filtered price map,
+ * and a weak primary withholds the row), so the documented aggregate-DEX
+ * recovery lane is structurally unreachable for exactly the ambiguous
+ * primaries that need independent corroboration. The same challenger snapshot
+ * the veto already consumes is the independent lane: at least
+ * POOL_CHALLENGE_CONFIRM_MIN independent groups inside the recovery band that
+ * strictly outvote the diverging set support recovery, mirroring
+ * `corroboratingProtocolGroupsOutvote`.
+ */
+function derivePoolChallengerEvidence(params: {
   challengers: DexPoolChallenger[] | undefined;
   pegRef: number;
   threshold: number;
+  recoveryThreshold: number;
   depegDirection: DepegDirection;
-}): { veto: boolean; groupCount: number; corroboratingGroupCount: number; highTvl: boolean } {
-  const groups = new Set<string>();
+}): PoolChallengerEvidence {
+  const divergingGroups = new Set<string>();
   const corroboratingGroups = new Set<string>();
+  const recoveryGroups = new Set<string>();
+  const recoveryPools: Array<{ value: number; weight: number }> = [];
   let highTvl = false;
   for (const pool of params.challengers ?? []) {
     const signal = deriveDepegSignal(pool.price, params.pegRef);
     if (signal == null) continue;
+    const groupKey = dexPoolIndependentGroupKey(pool);
     if (signalCrossesThreshold(signal, params.threshold) && signal.direction === params.depegDirection) {
-      groups.add(dexPoolIndependentGroupKey(pool));
+      divergingGroups.add(groupKey);
       if (pool.tvlUsd >= POOL_CHALLENGE_HIGH_TVL_USD) {
         highTvl = true;
       }
       continue;
     }
-    // 2026-09-24 (vchf-vnx): the veto used to fire on POOL_CHALLENGE_CONFIRM_MIN
-    // diverging groups with no test against the pools that agree with the recovery.
-    // Two dormant diverging venues (a months-silent Celo Uniswap v3 pool with a
-    // provider-reported $4.7M reserve and a zero-volume kongswap pool) therefore
-    // outvoted the four live protocols that corroborated the at-peg price. Pools
-    // inside the trigger threshold now corroborate the recovered price through the
-    // shared majority rule; the high-TVL single-pool carve-out is unchanged.
     if (signalIsWithinThreshold(signal, params.threshold)) {
-      corroboratingGroups.add(dexPoolIndependentGroupKey(pool));
+      corroboratingGroups.add(groupKey);
+    }
+    if (signalIsWithinThreshold(signal, params.recoveryThreshold)) {
+      recoveryGroups.add(groupKey);
+      recoveryPools.push({ value: pool.price, weight: pool.tvlUsd });
     }
   }
+  const groupCount = divergingGroups.size;
+  const recoveryGroupCount = recoveryGroups.size;
   return {
     veto: highTvl || divergingProtocolGroupsOutvote({
-      divergingCount: groups.size,
+      divergingCount: groupCount,
       corroboratingCount: corroboratingGroups.size,
     }),
-    groupCount: groups.size,
+    groupCount,
     corroboratingGroupCount: corroboratingGroups.size,
     highTvl,
+    recoverySupported: !highTvl && corroboratingProtocolGroupsOutvote({
+      divergingCount: groupCount,
+      corroboratingCount: recoveryGroupCount,
+    }),
+    recoveryGroupCount,
+    recoveryPrice: weightedMedian(recoveryPools),
   };
 }
 
@@ -218,6 +267,9 @@ interface DexEvidence {
   poolRecoveryVetoGroupCount: number;
   poolRecoveryVetoCorroboratingGroupCount: number;
   poolRecoveryVetoHighTvl: boolean;
+  poolRecoverySupported: boolean;
+  poolRecoverySupportGroupCount: number;
+  poolRecoveryPrice: number | null;
   dexSupportsDirection: boolean;
   dexSupportsExistingDirection: boolean;
   dexSupportsRecovery: boolean;
@@ -254,10 +306,11 @@ function deriveDexEvidence(params: {
   const dexRecoveryProtocolCount = countDexProtocolCorroborations(input.protocolSources, pegRef, recoveryThreshold, direction, "recover");
   const recoveryVetoDirection: DepegDirection = existingDirection;
   const dexRecoveryChallenged = hasRecoveryChallenge(input.challengerPools, pegRef, threshold, recoveryVetoDirection);
-  const poolRecoveryVetoEvidence = derivePoolRecoveryVeto({
+  const poolChallengerEvidence = derivePoolChallengerEvidence({
     challengers: input.challengerPools,
     pegRef,
     threshold,
+    recoveryThreshold,
     depegDirection: recoveryVetoDirection,
   });
   const dexSupportsDirection =
@@ -281,10 +334,13 @@ function deriveDexEvidence(params: {
     dexExistingDirectionProtocolCount,
     dexRecoveryProtocolCount,
     dexRecoveryChallenged,
-    poolRecoveryVeto: poolRecoveryVetoEvidence.veto,
-    poolRecoveryVetoGroupCount: poolRecoveryVetoEvidence.groupCount,
-    poolRecoveryVetoCorroboratingGroupCount: poolRecoveryVetoEvidence.corroboratingGroupCount,
-    poolRecoveryVetoHighTvl: poolRecoveryVetoEvidence.highTvl,
+    poolRecoveryVeto: poolChallengerEvidence.veto,
+    poolRecoveryVetoGroupCount: poolChallengerEvidence.groupCount,
+    poolRecoveryVetoCorroboratingGroupCount: poolChallengerEvidence.corroboratingGroupCount,
+    poolRecoveryVetoHighTvl: poolChallengerEvidence.highTvl,
+    poolRecoverySupported: poolChallengerEvidence.recoverySupported,
+    poolRecoverySupportGroupCount: poolChallengerEvidence.recoveryGroupCount,
+    poolRecoveryPrice: poolChallengerEvidence.recoveryPrice,
     dexSupportsDirection,
     dexSupportsExistingDirection,
     dexSupportsRecovery,
@@ -365,6 +421,9 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
     poolRecoveryVetoGroupCount,
     poolRecoveryVetoCorroboratingGroupCount,
     poolRecoveryVetoHighTvl,
+    poolRecoverySupported,
+    poolRecoverySupportGroupCount,
+    poolRecoveryPrice,
     dexSupportsDirection,
     dexSupportsExistingDirection,
     dexSupportsRecovery,
@@ -412,6 +471,9 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
       poolRecoveryVetoGroupCount,
       poolRecoveryVetoCorroboratingGroupCount,
       poolRecoveryVetoHighTvl,
+      poolRecoverySupported,
+      poolRecoverySupportGroupCount,
+      poolRecoveryPrice,
       dexSupportsDirection,
       dexSupportsExistingDirection,
       dexSupportsRecovery,
@@ -595,7 +657,8 @@ function decideNewDepeg(ctx: DecisionContext): Omit<DepegAssetDecision, "tracked
 
 /**
  * Handles an existing open event where price has recovered below threshold.
- * Closes via authoritative primary or confirming DEX data, otherwise keeps open.
+ * Closes via an authoritative/multi-source primary, a corroborated aggregate
+ * DEX row, or a corroborating challenger-pool majority; otherwise keeps open.
  */
 function decideRecovery(
   ctx: DecisionContext,
@@ -616,6 +679,9 @@ function decideRecovery(
     poolRecoveryVetoGroupCount,
     poolRecoveryVetoCorroboratingGroupCount,
     poolRecoveryVetoHighTvl,
+    poolRecoverySupported,
+    poolRecoverySupportGroupCount,
+    poolRecoveryPrice,
     dexSupportsExistingDirection,
     dexSupportsRecovery,
   } = ctx;
@@ -633,14 +699,30 @@ function decideRecovery(
       (isDexFresh(dexRow, dexAbsBps, now) && dexSupportsExistingDirection) || poolRecoveryVeto,
   });
 
+  const trustedAggregateDexLane = isDexFresh(dexRow, dexAbsBps, now) && dexRow != null;
+  const aggregateDexRecovery = trustedAggregateDexLane && dexSupportsRecovery;
+  const poolChallengerRecovery = !trustedAggregateDexLane && poolRecoverySupported;
   const recovery = directRecovery ?? (
-    isDexFresh(dexRow, dexAbsBps, now) && dexRow && dexSupportsRecovery
+    aggregateDexRecovery && dexRow
       ? {
           recoveryPrice: recoveryPriceForEvent(existing, dexRow.dex_price_usd),
           closeReason: "recovered-dex" as const,
         }
-      : null
+      : poolChallengerRecovery
+        ? {
+            recoveryPrice: recoveryPriceForEvent(existing, poolRecoveryPrice ?? price),
+            closeReason: "recovered-dex" as const,
+          }
+        : null
   );
+  if (!directRecovery && poolChallengerRecovery) {
+    diagnostics.push(withDiagnostic(
+      "log",
+      `[depeg] Pool-challenger majority recovery for ${asset.symbol}: ` +
+      `${poolRecoverySupportGroupCount} independent group(s) inside the ${recoveryThreshold}bps recovery band ` +
+      `outvote ${poolRecoveryVetoGroupCount} diverging group(s)`,
+    ));
+  }
 
   if (recovery) {
     const recoveryFirstSeenAt = existing.recovery_first_seen_at;

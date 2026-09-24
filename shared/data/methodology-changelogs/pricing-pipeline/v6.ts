@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.33",
+    title: "No-candidate DEX refresh recovery",
+    date: "2026-09-24",
+    effectiveAt: 1790236800,
+    summary:
+      "The 15-minute narrow DEX refresh now applies the exact pass's documented no-candidate recovery instead of short-circuiting its own breaker gate. A run whose candidate plan is empty closes a non-closed `dexscreener-prices-refresh` breaker without spending a half-open probe or recording a provider verdict, so a temporarily empty cohort can no longer pin the refresh circuit open until candidates happen to return.",
+    impact: [
+      "`runPriceDexRefresh` (`worker/src/cron/sync-stablecoins/price-dex-refresh.ts`) calls `recoverProviderOnNoCandidates` — the same authority the hourly DexScreener exact, Jupiter, and CMC passes use — whenever `planDexRefresh` returns no batch. The half-open probe gate (`shouldAttemptFetch`) and the once-per-run `recordProviderOutcomeSafe` verdict are consulted only when a batch exists, so an empty plan neither consumes the probe interval nor records an upstream success or failure",
+      "Price semantics are unchanged: candidate selection, the 30-address batch limit, the seven-batch/45-second envelope, pacing, the `rate-limited` and `circuit-open` degradation classes, and the staged `price:dex-refresh:v1` payload an empty run still writes are untouched",
+      "Observed 2026-09-24: `dexscreener-prices-refresh` opened at 05:39:51 UTC after three throttled slots and stayed open for 59m46s. The 06:24 slot ran after the 30-minute probe interval had elapsed and completed its staging write, but its batch plan was empty, so the short-circuited gate never transitioned the breaker to half-open and nothing was recorded against it; the 06:39 slot's one-candidate cohort then closed it through an admitted probe. The empty-cohort recovery closes the breaker in the first empty slot instead of waiting for candidates to return",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.32",
     title: "Pool-challenge replacement cannot be carried by a diverging protocol minority",
     date: "2026-09-24",

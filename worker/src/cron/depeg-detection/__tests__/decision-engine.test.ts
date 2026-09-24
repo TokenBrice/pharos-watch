@@ -50,6 +50,22 @@ const chfMeta: StablecoinMeta = {
   geckoId: "vnx-swiss-franc",
 };
 
+const goldMeta: StablecoinMeta = {
+  id: "vnxau-vnx",
+  name: "VNX Gold",
+  symbol: "VNXAU",
+  flags: {
+    backing: "rwa-backed",
+    pegCurrency: "GOLD",
+    governance: "centralized",
+    yieldBearing: false,
+    rwa: true,
+    navToken: false,
+  },
+  geckoId: "vnx-gold",
+  commodityOunces: 0.0321507466,
+};
+
 function makeAsset(overrides: Partial<PegAssetBase> = {}): PegAssetBase {
   return {
     id: "usdt-tether",
@@ -1318,6 +1334,388 @@ describe("decideDepegAsset", () => {
       {
         level: "warn",
         message: "[depeg] Kept USDT open despite primary recovery: pool challengers still show the above depeg (groups=2, corroborating=2, highTvl=false)",
+      },
+    ]);
+  });
+
+  it("closes a soft-source recovery on a corroborating challenger-pool majority when the aggregate DEX row is withheld", () => {
+    // Reproduced 2026-09-24 from live D1 (event 90781, usdb-blast). The coin's
+    // only primary lane is a fresh CoinGecko single-source print, and
+    // computeDexPrices withholds its aggregate dex_prices row because
+    // loadTrackedStablecoinMaps preloads only prices that already clear the
+    // primary trust gates — so the aggregate-DEX recovery lane was structurally
+    // unreachable. All five published challenger pools (thruster-v3,
+    // monoswap-v3-blast, blasterswap) sat inside the 50 bps recovery band.
+    const now = 1_790_231_427;
+    const decision = decideDepegAsset({
+      now,
+      asset: makeAsset({
+        id: "usdb-blast",
+        symbol: "USDB",
+        price: 0.9998628369821569,
+        priceSource: "coingecko",
+        priceConfidence: "single-source",
+        agreeSources: ["coingecko"],
+        priceUpdatedAt: now - 107,
+        priceObservedAt: now - 107,
+        priceObservedAtMode: "upstream",
+        pegType: "peggedUSD",
+        circulating: { blast: 11_348_078.487122247 },
+      }),
+      meta: { ...usdMeta, id: "usdb-blast", name: "USDB Blast", symbol: "USDB", geckoId: "usdb" },
+      existing: makeExistingEvent({
+        id: 90781,
+        stablecoin_id: "usdb-blast",
+        symbol: "USDB",
+        peg_type: "peggedUSD",
+        direction: "above",
+        peak_deviation_bps: 129,
+        started_at: 1_787_295_709,
+        start_price: 1.0102326760456513,
+        peak_price: 1.0129092357526068,
+        peg_reference: 0.999963,
+        recovery_first_seen_at: now - 1_000,
+        recovery_last_seen_at: now - 450,
+      }),
+      pegRates: { peggedUSD: 1 },
+      pegRateSources: { peggedUSD: "median" },
+      pegRateCounts: { peggedUSD: 4 },
+      challengerPools: [
+        { price: 0.995936075327477, tvlUsd: 1_047_212.8546, protocol: "thruster-v3", chain: "blast", sourceFamily: "cg_onchain" },
+        { price: 0.997280614842842, tvlUsd: 290_687.4629, protocol: "thruster-v3", chain: "blast", sourceFamily: "cg_onchain" },
+        { price: 0.999821125971321, tvlUsd: 157_208.1985, protocol: "thruster-v3", chain: "blast", sourceFamily: "cg_onchain" },
+        { price: 1.0007739191, tvlUsd: 108_478.947, protocol: "monoswap-v3-blast", chain: "blast", sourceFamily: "cg_onchain" },
+        { price: 0.996110886724201, tvlUsd: 103_778.0611, protocol: "blasterswap", chain: "blast", sourceFamily: "cg_onchain" },
+      ],
+    });
+
+    expect(decision.seenEventIds).toEqual([]);
+    expect(decision.commands).toEqual([
+      {
+        type: "close-event",
+        id: 90781,
+        endedAt: now,
+        recoveryPrice: 0.995936075327477,
+        closeReason: "recovered-dex",
+      },
+    ]);
+    expect(decision.diagnostics).toEqual([
+      {
+        level: "log",
+        message: "[depeg] Pool-challenger majority recovery for USDB: 3 independent group(s) inside the 50bps recovery band outvote 0 diverging group(s)",
+      },
+    ]);
+  });
+
+  it("closes a gold-peg recovery on a corroborating challenger-pool majority", () => {
+    // Reproduced 2026-09-24 from live D1 (event 90760, vnxau-vnx): the
+    // CoinGecko single-source gram price sat inside the 75 bps commodity
+    // recovery band while the published raydium and aerodrome pools confirmed.
+    const now = 1_790_231_427;
+    const decision = decideDepegAsset({
+      now,
+      asset: makeAsset({
+        id: "vnxau-vnx",
+        symbol: "VNXAU",
+        price: 137.80559627497053,
+        priceSource: "coingecko",
+        priceConfidence: "single-source",
+        agreeSources: ["coingecko"],
+        priceUpdatedAt: now - 77,
+        priceObservedAt: now - 77,
+        priceObservedAtMode: "upstream",
+        pegType: "peggedGOLD",
+        circulating: { ethereum: 6_063_570.880773928 },
+      }),
+      meta: goldMeta,
+      existing: makeExistingEvent({
+        id: 90760,
+        stablecoin_id: "vnxau-vnx",
+        symbol: "VNXAU",
+        peg_type: "peggedGOLD",
+        direction: "below",
+        peak_deviation_bps: -178,
+        started_at: 1_785_939_393,
+        start_price: 133.18916240810498,
+        peak_price: 133.36101778049144,
+        peg_reference: 135.77096114706222,
+        recovery_first_seen_at: now - 1_000,
+        recovery_last_seen_at: now - 450,
+      }),
+      pegRates: { peggedGOLD: 4285 },
+      pegRateSources: { peggedGOLD: "median" },
+      pegRateCounts: { peggedGOLD: 4 },
+      challengerPools: [
+        { price: 137.508294070839, tvlUsd: 263_932, protocol: "raydium", chain: "solana", sourceFamily: "direct_api" },
+        { price: 138.145893, tvlUsd: 103_282, protocol: "aerodrome", chain: "base", sourceFamily: "direct_api" },
+      ],
+    });
+
+    expect(decision.commands).toEqual([
+      {
+        type: "close-event",
+        id: 90760,
+        endedAt: now,
+        recoveryPrice: 137.508294070839,
+        closeReason: "recovered-dex",
+      },
+    ]);
+    expect(decision.diagnostics).toEqual([
+      {
+        level: "log",
+        message: "[depeg] Pool-challenger majority recovery for VNXAU: 2 independent group(s) inside the 75bps recovery band outvote 0 diverging group(s)",
+      },
+    ]);
+  });
+
+  it("keeps an in-band soft-source event open when a high-TVL challenger pool still shows the depeg", () => {
+    // Reproduced 2026-09-24 from live D1 (event 90786, hollar-hydrated): the
+    // low-confidence CoinGecko print sat at -18 bps while every published
+    // hydration-dex pool still printed ~-526 bps, one of them above the $5M
+    // single-pool challenge carve-out.
+    const now = 1_790_231_427;
+    const decision = decideDepegAsset({
+      now,
+      asset: makeAsset({
+        id: "hollar-hydrated",
+        symbol: "HOLLAR",
+        price: 0.9981523059225438,
+        priceSource: "coingecko",
+        priceConfidence: "low",
+        agreeSources: ["coingecko"],
+        priceUpdatedAt: now - 77,
+        priceObservedAt: now - 77,
+        priceObservedAtMode: "upstream",
+        pegType: "peggedUSD",
+        circulating: { hydration: 12_833_596.24937689 },
+      }),
+      meta: { ...usdMeta, id: "hollar-hydrated", name: "Hydrated Dollar", symbol: "HOLLAR", geckoId: "hydrated-dollar" },
+      existing: makeExistingEvent({
+        id: 90786,
+        stablecoin_id: "hollar-hydrated",
+        symbol: "HOLLAR",
+        peg_type: "peggedUSD",
+        direction: "below",
+        peak_deviation_bps: -525,
+        started_at: 1_787_695_308,
+        start_price: 0.947458,
+        peak_price: 0.947458,
+        peg_reference: 1,
+        recovery_first_seen_at: now - 1_000,
+        recovery_last_seen_at: now - 450,
+      }),
+      pegRates: { peggedUSD: 1 },
+      pegRateSources: { peggedUSD: "median" },
+      pegRateCounts: { peggedUSD: 4 },
+      challengerPools: [
+        { price: 0.9474579112, tvlUsd: 11_916_235.7742, protocol: "hydration-dex", chain: "hydration", sourceFamily: "cg_onchain" },
+        { price: 0.9474396418, tvlUsd: 2_460_799.2408, protocol: "hydration-dex", chain: "hydration", sourceFamily: "cg_onchain" },
+        { price: 0.9474579112, tvlUsd: 2_255_904.79, protocol: "hydration-dex", chain: "hydration", sourceFamily: "cg_onchain" },
+        { price: 0.947411, tvlUsd: 746_895.7, protocol: "hydration-dex", chain: "hydration", sourceFamily: "cg_onchain" },
+      ],
+    });
+
+    expect(decision.seenEventIds).toEqual([90786]);
+    expect(decision.commands).toEqual([{ type: "clear-recovery", id: 90786 }]);
+    expect(decision.diagnostics).toEqual([
+      {
+        level: "warn",
+        message: "[depeg] Kept HOLLAR open despite primary recovery: pool challengers still show the below depeg (groups=1, corroborating=0, highTvl=true)",
+      },
+    ]);
+  });
+
+  it("keeps an in-band soft-source event open when only one challenger group corroborates the band", () => {
+    // Reproduced 2026-09-24 from live D1 (event 90777, audf-forte): the single
+    // published curve pool (-24 bps) is corroboration, but one group is below
+    // the POOL_CHALLENGE_CONFIRM_MIN bar for carrying a recovery.
+    const now = 1_790_231_427;
+    const decision = decideDepegAsset({
+      now,
+      asset: makeAsset({
+        id: "audf-forte",
+        symbol: "AUDF",
+        price: 0.7030877342041957,
+        priceSource: "coingecko",
+        priceConfidence: "single-source",
+        agreeSources: ["coingecko"],
+        priceUpdatedAt: now - 77,
+        priceObservedAt: now - 77,
+        priceObservedAtMode: "upstream",
+        pegType: "peggedAUD",
+        circulating: { ethereum: 3_566_436.4980290816 },
+      }),
+      meta: {
+        ...usdMeta,
+        id: "audf-forte",
+        name: "Forte AUD",
+        symbol: "AUDF",
+        geckoId: "forte-aud",
+        flags: { ...usdMeta.flags, pegCurrency: "AUD" },
+      },
+      existing: makeExistingEvent({
+        id: 90777,
+        stablecoin_id: "audf-forte",
+        symbol: "AUDF",
+        peg_type: "peggedAUD",
+        direction: "below",
+        peak_deviation_bps: -287,
+        started_at: 1_786_944_681,
+        start_price: 0.9849393364193147,
+        peak_price: 0.699732524541874,
+        peg_reference: 0.71128258,
+      }),
+      pegRates: { peggedAUD: 0.7067137809187279 },
+      pegRateSources: { peggedAUD: "fx" },
+      pegRateCounts: { peggedAUD: 4 },
+      challengerPools: [
+        { price: 0.704981734354013, tvlUsd: 111_651.66302719248, protocol: "curve", chain: "ethereum", sourceFamily: "dl" },
+      ],
+    });
+
+    expect(decision.seenEventIds).toEqual([90777]);
+    expect(decision.commands).toEqual([]);
+    expect(decision.diagnostics).toEqual([]);
+  });
+
+  it("requires the challenger corroborating groups to outvote the diverging set", () => {
+    // The same majority rule decides both directions: two diverging groups
+    // still block a two-group corroborating set, and a third corroborating
+    // group flips the recovery.
+    const now = 1_780_630_000;
+    const makeDecision = (corroboratingPools: Array<{ price: number; tvlUsd: number; protocol: string; chain: string; sourceFamily: string }>) =>
+      decideDepegAsset({
+        now,
+        asset: makeAsset({
+          id: "dusd-test",
+          symbol: "DUSD",
+          price: 0.9995,
+          priceSource: "coingecko",
+          priceConfidence: "single-source",
+          agreeSources: ["coingecko"],
+          priceUpdatedAt: now - 60,
+          priceObservedAt: now - 60,
+          priceObservedAtMode: "upstream",
+          circulating: { ethereum: 5_000_000 },
+        }),
+        meta: { ...usdMeta, id: "dusd-test", name: "DUSD", symbol: "DUSD", geckoId: "dusd" },
+        existing: makeExistingEvent({
+          id: 55,
+          stablecoin_id: "dusd-test",
+          symbol: "DUSD",
+          peg_type: "peggedUSD",
+          direction: "below",
+          peak_deviation_bps: -300,
+          started_at: now - 86_400,
+          start_price: 0.97,
+          peak_price: 0.97,
+          peg_reference: 1,
+          recovery_first_seen_at: now - 1_000,
+          recovery_last_seen_at: now - 450,
+        }),
+        pegRates: { peggedUSD: 1 },
+        pegRateSources: { peggedUSD: "median" },
+        pegRateCounts: { peggedUSD: 4 },
+        challengerPools: [
+          { price: 0.985, tvlUsd: 1_000_000, protocol: "curve", chain: "ethereum", sourceFamily: "cg_onchain" },
+          { price: 0.986, tvlUsd: 1_000_000, protocol: "uniswap-v3", chain: "ethereum", sourceFamily: "cg_onchain" },
+          ...corroboratingPools,
+        ],
+      });
+
+    const tie = makeDecision([
+      { price: 0.9985, tvlUsd: 1_000_000, protocol: "raydium", chain: "solana", sourceFamily: "direct_api" },
+      { price: 0.999, tvlUsd: 1_000_000, protocol: "orca", chain: "solana", sourceFamily: "cg_onchain" },
+    ]);
+    expect(tie.commands).toEqual([{ type: "clear-recovery", id: 55 }]);
+    expect(tie.diagnostics).toEqual([
+      {
+        level: "warn",
+        message: "[depeg] Kept DUSD open despite primary recovery: pool challengers still show the below depeg (groups=2, corroborating=2, highTvl=false)",
+      },
+    ]);
+
+    const outvoted = makeDecision([
+      { price: 0.9985, tvlUsd: 1_000_000, protocol: "raydium", chain: "solana", sourceFamily: "direct_api" },
+      { price: 0.999, tvlUsd: 1_000_000, protocol: "orca", chain: "solana", sourceFamily: "cg_onchain" },
+      { price: 0.9975, tvlUsd: 1_000_000, protocol: "meteora", chain: "solana", sourceFamily: "cg_onchain" },
+    ]);
+    expect(outvoted.commands).toEqual([
+      {
+        type: "close-event",
+        id: 55,
+        endedAt: now,
+        recoveryPrice: 0.9985,
+        closeReason: "recovered-dex",
+      },
+    ]);
+    expect(outvoted.diagnostics).toEqual([
+      {
+        level: "log",
+        message: "[depeg] Pool-challenger majority recovery for DUSD: 3 independent group(s) inside the 50bps recovery band outvote 2 diverging group(s)",
+      },
+    ]);
+  });
+
+  it("does not bypass a challenged aggregate DEX lane with the pool-challenger majority", () => {
+    // While a fresh trusted aggregate row exists it stays the only DEX recovery
+    // lane: a single diverging challenger pool (below the majority veto) blocks
+    // the aggregate recovery, and the challenger snapshot may not overrule it.
+    const now = 1_780_630_000;
+    const decision = decideDepegAsset({
+      now,
+      asset: makeAsset({
+        id: "dusd-test",
+        symbol: "DUSD",
+        price: 1.0005,
+        priceSource: "coingecko",
+        priceConfidence: "single-source",
+        agreeSources: ["coingecko"],
+        priceUpdatedAt: now - 60,
+        priceObservedAt: now - 60,
+        priceObservedAtMode: "upstream",
+        circulating: { ethereum: 5_000_000 },
+      }),
+      meta: { ...usdMeta, id: "dusd-test", name: "DUSD", symbol: "DUSD", geckoId: "dusd" },
+      existing: makeExistingEvent({
+        id: 55,
+        stablecoin_id: "dusd-test",
+        symbol: "DUSD",
+        peg_type: "peggedUSD",
+        direction: "above",
+        peak_deviation_bps: 250,
+        started_at: now - 86_400,
+        start_price: 1.025,
+        peak_price: 1.025,
+        peg_reference: 1,
+      }),
+      pegRates: { peggedUSD: 1 },
+      pegRateSources: { peggedUSD: "median" },
+      pegRateCounts: { peggedUSD: 4 },
+      dexRow: {
+        stablecoin_id: "dusd-test",
+        dex_price_usd: 1.0005,
+        deviation_from_primary_bps: 5,
+        source_pool_count: 3,
+        source_total_tvl: 6_000_000,
+        updated_at: now - 60,
+      },
+      protocolSources: [
+        { protocol: "curve", chain: "ethereum", sourceFamily: "dl", price: 1.0005, tvl: 3_000_000, updatedAt: now - 60 },
+        { protocol: "uniswap-v3", chain: "ethereum", sourceFamily: "cg_onchain", price: 1.0006, tvl: 3_000_000, updatedAt: now - 60 },
+      ],
+      challengerPools: [
+        { price: 1.02, tvlUsd: 200_000, protocol: "curve", chain: "ethereum", sourceFamily: "dl" },
+        { price: 1.0004, tvlUsd: 150_000, protocol: "uniswap-v3", chain: "ethereum", sourceFamily: "cg_onchain" },
+      ],
+    });
+
+    expect(decision.seenEventIds).toEqual([55]);
+    expect(decision.commands).toEqual([]);
+    expect(decision.diagnostics).toEqual([
+      {
+        level: "warn",
+        message: "[depeg] Ignored aggregate DEX recovery for DUSD: 2 corroborating protocol group(s), challenged=true; keeping event open until corroborated recovery appears",
       },
     ]);
   });

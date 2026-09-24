@@ -147,6 +147,53 @@ describe("DEX refresh continuity", () => {
     }));
   });
 
+  it("recovers a non-closed refresh breaker when no candidate batch remains", async () => {
+    const fetch = prepareRefresh();
+    vi.mocked(shared.loadPreviousStablecoinsById).mockResolvedValue({
+      previousAssetsById: new Map([[id, makePeggedAsset({ id, symbol: "USDaf", price: 0.99, priceSource: "coingecko",
+        priceConfidence: "single-source", priceObservedAt: now, priceObservedAtMode: "upstream" })]]),
+      cacheState: { state: "ok" },
+    });
+    for (let attempt = 0; attempt < 3; attempt++) await circuit.recordOutcome(db, CIRCUIT_SOURCE.DEXSCREENER_PRICES_REFRESH, false);
+    expect((await circuit.getCircuitRecord(db, CIRCUIT_SOURCE.DEXSCREENER_PRICES_REFRESH)).state).toBe("open");
+    const recover = vi.spyOn(lifecycle, "recoverProviderOnNoCandidates");
+
+    const summary = await runPriceDexRefresh({ db, syncStartSec: now });
+
+    // The empty cohort must not consume a probe or a provider verdict; it
+    // applies the documented no-candidate recovery instead of leaving the
+    // breaker open until a future slot happens to have candidates again.
+    expect(recover).toHaveBeenCalledWith(expect.objectContaining({
+      circuitSource: CIRCUIT_SOURCE.DEXSCREENER_PRICES_REFRESH,
+    }));
+    expect(fetch).not.toHaveBeenCalled();
+    expect(summary).toMatchObject({ cohortSize: 0, attemptedBatches: 0, resolved: 0, deferredBatches: 0,
+      errorClasses: [], cacheWritten: true });
+    expect(lifecycle.recordProviderOutcomeSafe).toHaveBeenCalledWith(expect.objectContaining({
+      circuitSource: CIRCUIT_SOURCE.DEXSCREENER_PRICES_REFRESH, attempted: 0, successful: 0,
+    }));
+    const record = await circuit.getCircuitRecord(db, CIRCUIT_SOURCE.DEXSCREENER_PRICES_REFRESH);
+    expect(record.state).toBe("closed");
+    expect(record.consecutiveFailures).toBe(0);
+  });
+
+  it("writes no circuit outcome for an empty cohort while the breaker is healthy", async () => {
+    prepareRefresh();
+    vi.mocked(shared.loadPreviousStablecoinsById).mockResolvedValue({
+      previousAssetsById: new Map([[id, makePeggedAsset({ id, symbol: "USDaf", price: 0.99, priceSource: "coingecko",
+        priceConfidence: "single-source", priceObservedAt: now, priceObservedAtMode: "upstream" })]]),
+      cacheState: { state: "ok" },
+    });
+    const recordOutcome = vi.spyOn(circuit, "recordOutcomeSafe");
+
+    const summary = await runPriceDexRefresh({ db, syncStartSec: now });
+
+    expect(summary).toMatchObject({ cohortSize: 0, attemptedBatches: 0, errorClasses: [], cacheWritten: true });
+    // A no-candidate run never fabricates an upstream success: the recovery is
+    // a no-op on a closed breaker.
+    expect(recordOutcome).not.toHaveBeenCalled();
+  });
+
   it("persists only newly fetched observations and retains routing hints after a failed refresh", async () => {
     const fetch = prepareRefresh();
     fetch.mockImplementation(async (assets, _fx, _db, _signal, _history, _now, _missing, batch) => {
