@@ -83,12 +83,20 @@ describe("runHourlyYieldSlot", () => {
     const summary = await runHourlyYieldSlot(runtime);
 
     // Order is the contract: both retries publish evidence that the publication
-    // reads inside the same slot.
-    expect(leasedJobs).toEqual(["sync-yield-supplemental", "fetch-tbill-rate", "sync-yield-data"]);
+    // reads inside the same slot. The Dwellir parity lane is a separate chain in
+    // the same slot, so it may interleave with this chain's leases; its summary
+    // row always lands after the chain's outcomes.
+    expect(leasedJobs.filter((job) => job !== "observe-rpc-provider-parity")).toEqual([
+      "sync-yield-supplemental",
+      "fetch-tbill-rate",
+      "sync-yield-data",
+    ]);
+    expect(leasedJobs).toContain("observe-rpc-provider-parity");
     expect(summary.jobs.map((job) => job.job)).toEqual([
       "sync-yield-supplemental",
       "fetch-tbill-rate",
       "sync-yield-data",
+      "observe-rpc-provider-parity",
     ]);
     expect(mocks.syncYieldSupplemental).toHaveBeenCalledWith(
       runtime.db,
@@ -123,6 +131,7 @@ describe("runHourlyYieldSlot", () => {
       ["sync-yield-supplemental", "ok", undefined, undefined],
       ["fetch-tbill-rate", "skipped", true, "deferred-after-supplemental-catch-up"],
       ["sync-yield-data", "ok", undefined, undefined],
+      ["observe-rpc-provider-parity", "skipped", true, "not-configured"],
     ]);
     expect(mocks.syncYieldData).toHaveBeenCalledTimes(1);
   });
@@ -133,10 +142,12 @@ describe("runHourlyYieldSlot", () => {
 
     const summary = await runHourlyYieldSlot(runtime);
 
+    // The parity chain is independent: a failed yield catch-up must not drag it down.
     expect(summary.jobs.map(({ job, outcome }) => [job, outcome])).toEqual([
       ["sync-yield-supplemental", "error"],
       ["fetch-tbill-rate", "ok"],
       ["sync-yield-data", "ok"],
+      ["observe-rpc-provider-parity", "skipped"],
     ]);
     expect(mocks.syncYieldData).toHaveBeenCalledTimes(1);
   });
@@ -158,6 +169,7 @@ describe("runHourlyYieldSlot", () => {
       ["sync-yield-supplemental", "skipped", true],
       ["fetch-tbill-rate", "ok", undefined],
       ["sync-yield-data", "ok", undefined],
+      ["observe-rpc-provider-parity", "skipped", true],
     ]);
     expect(summary.jobs[0]?.reason).toBe("supplemental-catch-up-not-due");
     expect(mocks.syncYieldData).toHaveBeenCalledTimes(1);
@@ -187,6 +199,7 @@ describe("runHourlyYieldSlot", () => {
       ["sync-yield-supplemental", "skipped"],
       ["fetch-tbill-rate", "skipped"],
       ["sync-yield-data", "ok"],
+      ["observe-rpc-provider-parity", "skipped"],
     ]);
     expect(mocks.syncYieldData).toHaveBeenCalledTimes(1);
   });

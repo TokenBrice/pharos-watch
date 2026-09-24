@@ -638,7 +638,10 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
       reconcilerWorkerVersion: "worker-new",
     });
 
-    expect(summary).toMatchObject({ slotsReconciled: 1, syntheticCronRuns: 3, notStartedCronRuns: 0 });
+    // Three planned members had written progress; the Dwellir parity chain
+    // member never started in this (replayed 2026-09-23) shape, so it is
+    // reconciled as a not-started run alongside them.
+    expect(summary).toMatchObject({ slotsReconciled: 1, syntheticCronRuns: 4, notStartedCronRuns: 1 });
     const yieldRun = sqlite.prepare(
       `SELECT status, error, duration_ms, metadata
          FROM cron_runs

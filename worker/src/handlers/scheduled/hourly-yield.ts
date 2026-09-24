@@ -1,5 +1,6 @@
 import { fetchTbillRate } from "../../cron/fetch-tbill-rate";
 import type { CronResult } from "../../lib/cron-logger";
+import { syncRpcProviderParity } from "../../cron/rpc-provider-parity";
 import { syncYieldData } from "../../cron/sync-yield-data";
 import { syncYieldSupplemental } from "../../cron/sync-yield-supplemental";
 import { resolveVaultsFyiConfig } from "../../lib/env";
@@ -46,9 +47,12 @@ function buildHourlyYieldSlotGroups(runtime: ScheduledRuntimeContext) {
   let supplementalCatchUpRan = false;
   // Serially ordered on purpose: the catch-up and the benchmark refresh both
   // publish evidence the publication reads in the same slot.
+  // The Dwellir parity lane is a second, independent chain: it publishes no
+  // yield input, so it runs beside the publication instead of in front of it.
   return bindScheduledSlotPlan("hourlyYieldSync", {
-    mode: "serial",
+    mode: "parallel-serial",
     label: "post-V9 yield slot",
+    chainLabels: ["post-V9 yield publication", "dwellir parity observation"],
     implementations: {
       "sync-yield-supplemental": async (signal, reportProgress) => {
         const result = await syncYieldSupplemental(runtime.db, signal, runtime.chainRpcs, reportProgress, vaultsFyi, {
@@ -72,6 +76,8 @@ function buildHourlyYieldSlotGroups(runtime: ScheduledRuntimeContext) {
           runtime.env.ETHERSCAN_API_KEY ?? null,
           reportProgress,
         ),
+      "observe-rpc-provider-parity": (signal, reportProgress) =>
+        syncRpcProviderParity(runtime.db, runtime.env, signal, reportProgress),
     },
   });
 }
