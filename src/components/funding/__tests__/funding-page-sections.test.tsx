@@ -110,6 +110,10 @@ describe("CostBreakdown", () => {
     expect(screen.getByText(/This month: \$300 community · \$1,240 still open/)).toBeTruthy();
     expect(screen.getByText(/TokenBrice also sponsored \$5,800 in one-time design expenses/)).toBeTruthy();
     expect(screen.getByText(/not included in the monthly total/)).toBeTruthy();
+    const dwellirLink = screen.getByRole("link", { name: "Dwellir" });
+    expect(dwellirLink.getAttribute("href")).toBe("https://www.dwellir.com");
+    expect(dwellirLink.getAttribute("rel")).toBe("noopener noreferrer");
+    expect(screen.getByText(/Thank you, Dwellir\./)).toBeTruthy();
   });
 });
 
