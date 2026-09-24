@@ -6,7 +6,7 @@ import { getCache, setCacheIfNewer } from "../../lib/db-cache";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { recordOutcomeDecision, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { dsRateLimit } from "../../lib/dexscreener";
-import { isProviderCircuitAllowed, recordProviderOutcomeSafe } from "../../lib/pricing-provider-lifecycle";
+import { isProviderCircuitAllowed, recoverProviderOnNoCandidates, recordProviderOutcomeSafe } from "../../lib/pricing-provider-lifecycle";
 import { hasPublishableCurrentPrice } from "../../lib/price-publication-state";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
 import {
@@ -299,7 +299,22 @@ export async function runPriceDexRefresh(params: {
   let successfulBatches = 0;
   const observations: PriceCorroborationObservation[] = [];
   try {
-    const allowed = plan.batches.length === 0 || await isProviderCircuitAllowed({ db: params.db,
+    // An empty batch plan is not a provider verdict, so it must not consume the
+    // breaker's probe or be recorded as one. Mirror the exact pass's documented
+    // no-candidate recovery instead: a non-closed breaker is closed without an
+    // upstream request, because no eligible DexScreener work remains this slot.
+    // Without it a temporarily empty cohort pins the refresh circuit open
+    // indefinitely (nothing else ever records an outcome for this source).
+    const hasBatches = plan.batches.length > 0;
+    if (!hasBatches) {
+      await recoverProviderOnNoCandidates({
+        db: params.db,
+        circuitSource: CIRCUIT_SOURCE.DEXSCREENER_PRICES_REFRESH,
+        diagnostic: { source: "dexscreener-exact", stage: "no-candidates", endpoint: "api.dexscreener.com/tokens/v1" },
+        diagnostics,
+      });
+    }
+    const allowed = !hasBatches || await isProviderCircuitAllowed({ db: params.db,
       circuitSource: CIRCUIT_SOURCE.DEXSCREENER_PRICES_REFRESH, diagnostics, errorMessage: "DEX refresh circuit open",
       diagnostic: { source: "dexscreener-exact", stage: "fallback", endpoint: "api.dexscreener.com/tokens/v1" } });
     if (!allowed) summary.errorClasses.push("circuit-open");
