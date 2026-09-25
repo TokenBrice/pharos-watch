@@ -244,6 +244,7 @@ export async function resolveTrackedYieldSources(params: {
       chainFilter: buildDlChainFilter(meta),
       contractAddresses: getTrackedContractAddresses(meta),
       reservedPoolIds: reservedExplicitPoolIds,
+      skipBaseSymbolFallback: rateConfig != null,
     });
     for (const dlPool of dlSources) {
       if (

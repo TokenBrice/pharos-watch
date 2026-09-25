@@ -9,46 +9,46 @@
     "governance": "decentralized"
   },
   "collateral": "Synthetic gold exposure minted through Polaris CDP infrastructure using pETH / ETH-derived collateral, with no physical gold reserve or custodian",
-  "pegMechanism": "Pre-launch CDP-style pAsset: users are expected to post pETH collateral, borrow pGOLD debt that tracks one troy ounce of gold, and redeem or liquidate through Polaris protocol mechanics rather than issuer-managed bullion redemption",
+  "pegMechanism": "Pre-launch CDP-style pAsset: users are expected to post pETH collateral, borrow GOLDp debt that tracks one troy ounce of gold, and redeem or liquidate through Polaris protocol mechanics rather than issuer-managed bullion redemption",
   "detailProvider": "defillama",
   "links": [
     {
       "label": "Website",
-      "url": "https://polarisfinance.io"
+      "url": "https://polaris.finance"
     },
     {
       "label": "Twitter",
-      "url": "https://x.com/polarisfinance_"
+      "url": "https://x.com/polarisfnd"
     }
   ],
   "governanceQuality": "single-entity",
   "status": "pre-launch",
   "announcedDate": "2026-01",
   "launchPhase": "testnet",
-  "launchPhaseDetail": "Public testnet open on Sepolia at testnet.polaris.finance (shared infrastructure with USDp; the earlier app.testnet.polarisfinance.io host no longer resolves); official documentation is live at docs.polaris.finance with commits through September 10 2026, and the protocol now labels the asset GOLDp rather than pGOLD. Security review and audit-preparation phase underway with professional audits upcoming; mainnet date uncommitted (issuer prioritising security over speed). A $1M angel round with Ethereum Foundation, Liquity, LI.FI, Altitude, and Fusion participation was reported on September 4 2026, without a mainnet date.",
+  "launchPhaseDetail": "Public testnet open on Sepolia at testnet.polaris.finance (shared infrastructure with USDp; the earlier app.testnet.polarisfinance.io host no longer resolves); official documentation is live at docs.polaris.finance. Polaris has moved from polarisfinance.io to polaris.finance (currently a coming-soon page linking the testnet, docs, and @polarisfnd), took its earlier blog offline, and now brands the asset GOLDp rather than pGOLD. Security review and audit-preparation phase underway with professional audits upcoming; mainnet date uncommitted (issuer prioritising security over speed). A $1M angel round with Ethereum Foundation, Liquity, LI.FI, Altitude, and Fusion participation was reported on September 4 2026, without a mainnet date.",
   "featuredContent": [
     {
       "type": "blog",
-      "url": "https://polarisfinance.io/blog/pGOLD-finishing-what-digixdao-started/",
+      "url": "https://web.archive.org/web/20260411195323/https://polarisfinance.io/blog/pGOLD-finishing-what-digixdao-started/",
       "title": "pGOLD: Finishing what DigixDAO started",
       "description": "A decentralized alternative to centralized gold stablecoins, offering trustless gold exposure backed by pETH collateral via CDP infrastructure.",
       "image": "/featured/polaris-pgold-cover.png",
-      "source": "Polaris Finance Blog"
+      "source": "Polaris Finance Blog (archived)"
     },
     {
       "type": "blog",
-      "url": "https://polarisfinance.io/blog/polaris-mints-anything/",
+      "url": "https://web.archive.org/web/20260512040721/https://polarisfinance.io/blog/polaris-mints-anything/",
       "title": "CDPs Mint Dollars. Polaris Mints Anything",
       "description": "Polaris advances the CDP model with pETH collateral, autonomous interest rate mechanisms, and a multi-stablecoin factory framework.",
       "image": "/featured/polaris-mints-anything.png",
-      "source": "Polaris Finance Blog"
+      "source": "Polaris Finance Blog (archived)"
     },
     {
       "type": "blog",
-      "url": "https://polarisfinance.io/blog/path-to-the-north-star/",
+      "url": "https://web.archive.org/web/20260512023301/https://polarisfinance.io/blog/path-to-the-north-star/",
       "title": "The Path to the North Star",
       "description": "TokenBrice traces Polaris's origins from Robert Lauko's bonding-curve research to today's three-pillar mission: counterparty-free yield, ETH-correlated alternatives, and restoring DeFi credibility against a backdrop where only $184.79M of the $338.9B stablecoin supply is non-freezable.",
-      "source": "Polaris Finance Blog"
+      "source": "Polaris Finance Blog (archived)"
     },
     {
       "type": "blog",
@@ -62,49 +62,49 @@
     {
       "date": "2026-01-27",
       "type": "announcement",
-      "title": "Polaris reveals multi-asset stablecoin OS including pGOLD",
-      "description": "pGOLD part of the Stablecoin OS vision: tokenize any unit of value using pETH as common collateral.",
-      "sourceUrl": "https://x.com/polarisfinance_/status/2016180350087549420"
+      "title": "Polaris reveals multi-asset stablecoin OS including GOLDp (then pGOLD)",
+      "description": "GOLDp (then pGOLD) is part of the Stablecoin OS vision: tokenize any unit of value using pETH as common collateral.",
+      "sourceUrl": "https://x.com/polarisfnd/status/2016180350087549420"
     },
     {
       "date": "2026-02-24",
       "type": "announcement",
-      "title": "pGOLD formally presented: Finishing what DigixDAO started",
+      "title": "GOLDp (then pGOLD) formally presented: Finishing what DigixDAO started",
       "description": "Decentralized gold stablecoin without physical backing, using pETH collateral via CDP infrastructure.",
-      "sourceUrl": "https://polarisfinance.io/blog/pGOLD-finishing-what-digixdao-started/"
+      "sourceUrl": "https://web.archive.org/web/20260411195323/https://polarisfinance.io/blog/pGOLD-finishing-what-digixdao-started/"
     },
     {
       "date": "2026-03-04",
       "type": "testnet",
-      "title": "Private testnet live (shared infrastructure with pUSD)",
-      "sourceUrl": "https://x.com/polarisfinance_/status/2029136552564056238"
+      "title": "Private testnet live (shared infrastructure with USDp)",
+      "sourceUrl": "https://x.com/polarisfnd/status/2029136552564056238"
     },
     {
       "date": "2026-04-13",
       "type": "milestone",
       "title": "'Sustaining the Ecosystem: pETH & pUSD Flows' published",
-      "description": "Documents Polaris's autonomous protocol-revenue distribution mechanism routing borrower interest and liquidation flows to participants (including pGOLD CDPs) by holdings.",
-      "sourceUrl": "https://polarisfinance.io/blog/polaris-flows/"
+      "description": "Documents Polaris's autonomous protocol-revenue distribution mechanism routing borrower interest and liquidation flows to participants (including GOLDp CDPs) by holdings.",
+      "sourceUrl": "https://web.archive.org/web/20260512032200/https://polarisfinance.io/blog/polaris-flows/"
     },
     {
       "date": "2026-04-27",
       "type": "milestone",
       "title": "TokenBrice publishes 'The Path to the North Star' founder narrative",
-      "description": "Long-form post outlining Polaris's three-pillar mission and the multi-stablecoin factory vision that includes pGOLD; mainnet timeline still uncommitted.",
-      "sourceUrl": "https://polarisfinance.io/blog/path-to-the-north-star/"
+      "description": "Long-form post outlining Polaris's three-pillar mission and the multi-stablecoin factory vision that includes GOLDp (then pGOLD); mainnet timeline still uncommitted.",
+      "sourceUrl": "https://web.archive.org/web/20260512023301/https://polarisfinance.io/blog/path-to-the-north-star/"
     },
     {
       "date": "2026-06-22",
       "type": "announcement",
       "title": "Polaris documentation renames pGOLD to GOLDp",
-      "description": "The official docs at docs.polaris.finance describe GOLDp as a synthetic asset tracking the gold price by oracle against pETH collateral at a 115% minimum collateral ratio, with no physical gold; the Sepolia testnet app uses the GOLDp label throughout. Earlier blog posts on polarisfinance.io still say pGOLD.",
+      "description": "The official docs at docs.polaris.finance describe GOLDp as a synthetic asset tracking the gold price by oracle against pETH collateral at a 115% minimum collateral ratio, with no physical gold; the Sepolia testnet app uses the GOLDp label throughout. The earlier Polaris blog posts used pGOLD.",
       "sourceUrl": "https://docs.polaris.finance/core-assets/goldp"
     },
     {
       "date": "2026-09-04",
       "type": "announcement",
       "title": "Polaris closes $1M angel round with Ethereum Foundation, Liquity, and LI.FI participation",
-      "description": "Polaris reported a $1 million angel round joined by the Ethereum Foundation, Fusion (IPOR), Altitude, Liquity, LI.FI, and more than 30 founders and contributors including Anthony Sassano, to build pETH as yield-bearing collateral for USDp and GOLDp. No mainnet date accompanied the round; polarisfinance.io carries no post about it.",
+      "description": "Polaris reported a $1 million angel round joined by the Ethereum Foundation, Fusion (IPOR), Altitude, Liquity, LI.FI, and more than 30 founders and contributors including Anthony Sassano, to build pETH as yield-bearing collateral for USDp and GOLDp. No mainnet date accompanied the round, and the Polaris blog carried no post about it.",
       "sourceUrl": "https://www.odaily.news/en/newsflash/515541"
     }
   ],

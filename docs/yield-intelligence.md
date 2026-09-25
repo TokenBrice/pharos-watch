@@ -8,7 +8,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-yield-methodology -->`v8.43`<!-- GENERATED-END: methodology-version-yield-methodology -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-yield-methodology -->`v8.44`<!-- GENERATED-END: methodology-version-yield-methodology -->
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/methodology-versions/registry.ts`
 
@@ -188,7 +188,7 @@ This keeps wrapper pools like `fxSAVE` and `msY` eligible even when DeFiLlama ma
 
 **Layer 2 — Variant map:** `YIELD_VARIANT_MAP` maps to a wrapper/savings pool symbol and can also pin the wrapper chain, address, and preferred DeFiLlama project. Resolution prefers `(chain, address, project)` when configured, then `(chain, address)`, and only falls back to symbol on an unambiguous chain-scoped match. Filters for `exposure === "single"` only (stablecoin flag intentionally relaxed, since savings wrappers like fxSAVE are not flagged `stablecoin = true` in DeFiLlama).
 
-**Layer 3 — Base-symbol fallback:** Used only when both static maps miss. Resolution first tries underlying-token address matches, then exact normalized symbol equality. Substring-only symbol matches are no longer accepted, so prefixed/suffixed wrapper symbols must be corroborated by underlying-token address evidence. Symbols shorter than 4 characters are still excluded from fallback symbol matching to prevent false positives. Filters for `exposure === "single"` and `stablecoin === true`. Ambiguous fallback candidates are dropped instead of guessed.
+**Layer 3 — Base-symbol fallback:** Used only when both static maps miss and the coin has no Tier-1 on-chain rate config (a configured on-chain rate already measures the coin's intrinsic yield, so a symbol guess could only add a third-party venue; the skip holds even when that run's read fails). Resolution first tries underlying-token address matches, then exact normalized symbol equality. Substring-only symbol matches are no longer accepted, so prefixed/suffixed wrapper symbols must be corroborated by underlying-token address evidence. Symbols shorter than 4 characters are still excluded from fallback symbol matching to prevent false positives. Filters for `exposure === "single"` and `stablecoin === true`, and excludes yield-tokenization markets (`pendle-v2`, `spectra-v2`): DeFiLlama lists their PT and LP markets under the wrapper's own symbol and underlying address, but their APY is a PT implied rate and their TVL is the market's, not the wrapper's (v8.44). Pendle markets publish separately as `fixed-yield` protocol-API rows. Ambiguous fallback candidates are dropped instead of guessed.
 
 **Exact weighted pool groups:** `YIELD_WEIGHTED_POOL_GROUPS` can collapse multiple exact DeFiLlama pool UUIDs into one TVL-weighted APY row when Pharos tracks one protocol asset but the yield wrapper is deployed as chain-isolated, non-fungible vaults. This is currently used for `sdusd-dtrinity`, where Ethereum and Fraxtal sdUSD dStake pools publish under one synthetic DeFiLlama source key.
 

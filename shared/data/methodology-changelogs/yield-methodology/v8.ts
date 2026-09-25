@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.44",
+    title: "Pendle PT Markets Stop Posing as Native Wrapper Yield",
+    date: "2026-09-25",
+    effectiveAt: 1790294400,
+    summary:
+      "Noon reported that USN showed $1.18M of TVL. The USN row was publishing a Pendle PT-sUSN market — its fixed implied rate and its market TVL — under the \"Noon staking (sUSN)\" label, because the DeFiLlama base-symbol fallback adopted the PT market as sUSN's own pool and linked-variant projection carried it to USN. The fallback no longer adopts yield-tokenization PT/LP markets, and it no longer runs for coins whose yield is already read on-chain, so USN now publishes sUSN's on-chain staking yield and vault TVL (~$36.2M).",
+    impact: [
+      "Layer-3 DeFiLlama fallback excludes `pendle-v2` and `spectra-v2` pools. DeFiLlama lists their \"For buying PT\" and \"For LP\" markets under the wrapper's own symbol and underlying address, flagged stablecoin and single exposure, so address corroboration alone accepted them as the wrapper's intrinsic source. The same markets still publish as `fixed-yield` Pendle protocol-API alternatives, which never project onto a parent",
+      "Layer-3 fallback is skipped for any coin with a Tier-1 on-chain rate config, whether or not this run's read succeeded, so the coin cannot flip to a symbol-matched third-party venue on a failed read. With PT markets excluded, the fallback would otherwise pick a zero-APY lending market holding the token as collateral for sUSN (Vesu on Starknet) and stUSDS (Morpho on Ethereum)",
+      "Rows that changed on the 2026-09-25 publication inputs: USN's headline moves from the PT-sUSN market (8.69%, $1.18M) to linked-variant `onchain:susn-noon` (7.47%, $36.2M). K3 sBOLD moves from PT-sBOLD (6.22%, $259K) to its K3 Stability Pool vault (4.35%, $8.44M). Strata srUSDe moves from PT-srUSDe (5.21%, $4.23M) to Strata's native pool (3.93%, $18.8M). sUSDD and USDD, and apxUSD, lose their PT-market headlines (5.36%/$5.13M and 14.59%/$19.5M) and resolve through the NAV price-derived fallback where one exists. stUSDS and USDS drop a 0% Morpho collateral alternative ($12.5M). apyUSD has no on-chain rate config, so its fallback now lands on a 0% Morpho collateral market ($16.1M) that ranks below every positive-APY source",
+      "PYS formula, benchmarks, source-risk calibration, confidence tiers, arbitration order, and publication guards are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.43",
     title: "PYS Re-Bases Non-USD Hurdles onto the USD Risk-Free Rate",
     date: "2026-09-11",

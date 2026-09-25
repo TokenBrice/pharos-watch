@@ -8,18 +8,18 @@
     "governance": "decentralized",
     "yieldBearing": true
   },
-  "collateral": "pETH / ETH-derived collateral posted in Polaris CDPs, with protocol revenue and liquidation flows routed to pUSD Stability Pool participants rather than offchain reserve yield",
-  "pegMechanism": "Pre-launch Liquity-style CDP stablecoin: borrowers post pETH collateral to mint pUSD, undercollateralized positions are liquidated through a Stability Pool, and pUSD holders can earn borrower-interest and liquidation-flow yield once runtime sources are live",
+  "collateral": "pETH / ETH-derived collateral posted in Polaris CDPs, with protocol revenue and liquidation flows routed to USDp Stability Pool participants rather than offchain reserve yield",
+  "pegMechanism": "Pre-launch Liquity-style CDP stablecoin: borrowers post pETH collateral to mint USDp, undercollateralized positions are liquidated through a Stability Pool, and USDp holders can earn borrower-interest and liquidation-flow yield once runtime sources are live",
   "mechanismArchetype": "cdp",
   "detailProvider": "defillama",
   "links": [
     {
       "label": "Website",
-      "url": "https://polarisfinance.io"
+      "url": "https://polaris.finance"
     },
     {
       "label": "Twitter",
-      "url": "https://x.com/polarisfinance_"
+      "url": "https://x.com/polarisfnd"
     }
   ],
   "governanceQuality": "single-entity",
@@ -32,36 +32,36 @@
     }
   ],
   "launchPhase": "testnet",
-  "launchPhaseDetail": "Public testnet open on Sepolia at testnet.polaris.finance (the earlier app.testnet.polarisfinance.io host no longer resolves); official documentation is live at docs.polaris.finance with commits through September 10 2026, and the protocol now labels the asset USDp rather than pUSD. Security review in progress with professional audits upcoming per the site roadmap; mainnet date uncommitted; polarisfinance.io explicitly states no date is set and prioritises security over speed, so the earlier 2026-Q4 expectation was retired on 2026-08-05. Blog and press quiet since late April 2026. A $1M angel round with Ethereum Foundation, Liquity, LI.FI, Altitude, and Fusion participation was reported on September 4 2026, without a mainnet date.",
+  "launchPhaseDetail": "Public testnet open on Sepolia at testnet.polaris.finance (the earlier app.testnet.polarisfinance.io host no longer resolves); official documentation is live at docs.polaris.finance. Polaris has moved from polarisfinance.io to polaris.finance (currently a coming-soon page linking the testnet, docs, and @polarisfnd), took its earlier blog offline, and now brands the asset USDp rather than pUSD. Security review in progress with professional audits upcoming per the former polarisfinance.io roadmap; mainnet date uncommitted: the former site stated no date was set and prioritised security over speed, so the earlier 2026-Q4 expectation was retired on 2026-08-05. A $1M angel round with Ethereum Foundation, Liquity, LI.FI, Altitude, and Fusion participation was reported on September 4 2026, without a mainnet date.",
   "featuredContent": [
     {
       "type": "tweet",
-      "url": "https://x.com/polarisfinance_/status/2016180350087549420",
-      "title": "pUSD announcement thread",
-      "source": "@polarisfinance_"
+      "url": "https://x.com/polarisfnd/status/2016180350087549420",
+      "title": "USDp (then pUSD) announcement thread",
+      "source": "@polarisfnd"
     },
     {
       "type": "blog",
-      "url": "https://polarisfinance.io/blog/pusd-no-counterparty/",
+      "url": "https://web.archive.org/web/20260512032457/https://polarisfinance.io/blog/pusd-no-counterparty/",
       "title": "pUSD: No Counterparty, No Ceiling",
-      "description": "How pUSD delivers counterparty-free yield that scales alongside protocol adoption and the developing ecosystem supporting it.",
+      "description": "How USDp (then pUSD) delivers counterparty-free yield that scales alongside protocol adoption and the developing ecosystem supporting it.",
       "image": "/featured/polaris-pusd-no-counterparty.png",
-      "source": "Polaris Finance Blog"
+      "source": "Polaris Finance Blog (archived)"
     },
     {
       "type": "blog",
-      "url": "https://polarisfinance.io/blog/polaris-flows/",
+      "url": "https://web.archive.org/web/20260512032200/https://polarisfinance.io/blog/polaris-flows/",
       "title": "Sustaining the Ecosystem: pETH & pUSD Flows",
       "description": "Polaris replaces emission-based incentives with an autonomous protocol-revenue distribution mechanism that flows to participants based on their asset holdings: no governance-driven allocation, no bribery.",
       "image": "/featured/polaris-flows-cover.png",
-      "source": "Polaris Finance Blog"
+      "source": "Polaris Finance Blog (archived)"
     },
     {
       "type": "blog",
-      "url": "https://polarisfinance.io/blog/path-to-the-north-star/",
+      "url": "https://web.archive.org/web/20260512023301/https://polarisfinance.io/blog/path-to-the-north-star/",
       "title": "The Path to the North Star",
       "description": "TokenBrice traces Polaris's origins from Robert Lauko's bonding-curve research to today's three-pillar mission: counterparty-free yield, ETH-correlated alternatives, and restoring DeFi credibility against a backdrop where only $184.79M of the $338.9B stablecoin supply is non-freezable.",
-      "source": "Polaris Finance Blog"
+      "source": "Polaris Finance Blog (archived)"
     },
     {
       "type": "blog",
@@ -76,41 +76,41 @@
       "date": "2026-01-27",
       "type": "announcement",
       "title": "Polaris introduces self-scaling stablecoin operating system",
-      "description": "Three-token model (pETH, pUSD, POLAR) with immutable code design and uncorrelated yield from protocol revenues.",
-      "sourceUrl": "https://x.com/polarisfinance_/status/2016180350087549420"
+      "description": "Three-token model (pETH, pUSD, POLAR) with immutable code design and uncorrelated yield from protocol revenues; pUSD has since been renamed USDp.",
+      "sourceUrl": "https://x.com/polarisfnd/status/2016180350087549420"
     },
     {
       "date": "2026-03-04",
       "type": "testnet",
       "title": "Private testnet goes live",
-      "sourceUrl": "https://x.com/polarisfinance_/status/2029136552564056238"
+      "sourceUrl": "https://x.com/polarisfnd/status/2029136552564056238"
     },
     {
       "date": "2026-04-13",
       "type": "milestone",
       "title": "'Sustaining the Ecosystem: pETH & pUSD Flows' published",
-      "description": "Documents Polaris's autonomous protocol-revenue distribution mechanism routing borrower interest and liquidation flows to pUSD Stability Pool participants by holdings.",
-      "sourceUrl": "https://polarisfinance.io/blog/polaris-flows/"
+      "description": "Documents Polaris's autonomous protocol-revenue distribution mechanism routing borrower interest and liquidation flows to USDp (then pUSD) Stability Pool participants by holdings.",
+      "sourceUrl": "https://web.archive.org/web/20260512032200/https://polarisfinance.io/blog/polaris-flows/"
     },
     {
       "date": "2026-04-27",
       "type": "milestone",
       "title": "TokenBrice publishes 'The Path to the North Star' founder narrative",
       "description": "Long-form post outlining Polaris's three-pillar mission (counterparty-free yield, ETH-correlated yield alternatives, restoring DeFi credibility) and tracing the protocol's lineage to Robert Lauko's bonding-curve research; mainnet timeline still uncommitted.",
-      "sourceUrl": "https://polarisfinance.io/blog/path-to-the-north-star/"
+      "sourceUrl": "https://web.archive.org/web/20260512023301/https://polarisfinance.io/blog/path-to-the-north-star/"
     },
     {
       "date": "2026-06-22",
       "type": "announcement",
       "title": "Polaris documentation renames pUSD to USDp",
-      "description": "The official docs at docs.polaris.finance describe USDp as the native Polaris dollar (115% minimum collateral ratio, pETH collateral, Earn Vault), and the Sepolia testnet app at testnet.polaris.finance uses the USDp label throughout. The docs repository was created on June 8 2026 and its diagrams switched to USDp wording on June 22; earlier blog posts on polarisfinance.io still say pUSD.",
+      "description": "The official docs at docs.polaris.finance describe USDp as the native Polaris dollar (115% minimum collateral ratio, pETH collateral, Earn Vault), and the Sepolia testnet app at testnet.polaris.finance uses the USDp label throughout. The docs repository was created on June 8 2026 and its diagrams switched to USDp wording on June 22; the earlier Polaris blog posts used pUSD.",
       "sourceUrl": "https://docs.polaris.finance/core-assets/usdp"
     },
     {
       "date": "2026-09-04",
       "type": "announcement",
       "title": "Polaris closes $1M angel round with Ethereum Foundation, Liquity, and LI.FI participation",
-      "description": "Polaris reported a $1 million angel round joined by the Ethereum Foundation, Fusion (IPOR), Altitude, Liquity, LI.FI, and more than 30 founders and contributors including Anthony Sassano, to build pETH as yield-bearing collateral for USDp and GOLDp. No mainnet date accompanied the round; polarisfinance.io carries no post about it.",
+      "description": "Polaris reported a $1 million angel round joined by the Ethereum Foundation, Fusion (IPOR), Altitude, Liquity, LI.FI, and more than 30 founders and contributors including Anthony Sassano, to build pETH as yield-bearing collateral for USDp and GOLDp. No mainnet date accompanied the round, and the Polaris blog carried no post about it.",
       "sourceUrl": "https://www.odaily.news/en/newsflash/515541"
     }
   ]

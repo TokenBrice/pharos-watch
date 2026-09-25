@@ -4,15 +4,15 @@
     "reviewedStatus": false,
     "sources": [
       {
-        "label": "pGOLD blog",
-        "url": "https://polarisfinance.io/blog/pGOLD-finishing-what-digixdao-started/"
+        "label": "Archived Polaris blog: GOLDp (then pGOLD)",
+        "url": "https://web.archive.org/web/20260411195323/https://polarisfinance.io/blog/pGOLD-finishing-what-digixdao-started/"
       },
       {
-        "label": "Polaris overview",
-        "url": "https://polarisfinance.io/blog/polaris-mints-anything/"
+        "label": "Archived Polaris blog: overview",
+        "url": "https://web.archive.org/web/20260512040721/https://polarisfinance.io/blog/polaris-mints-anything/"
       }
     ],
-    "evidence": "Reviewed No: pGOLD is pre-launch/testnet-only, and Polaris describes it as CDP-minted synthetic gold backed by pETH collateral rather than an issuer-managed token or custodial bullion claim with a holder freeze/blacklist surface.",
+    "evidence": "Reviewed No: GOLDp (formerly pGOLD) is pre-launch/testnet-only, and Polaris describes it as CDP-minted synthetic gold backed by pETH collateral rather than an issuer-managed token or custodial bullion claim with a holder freeze/blacklist surface.",
     "reviewer": "Codex stablecoin audit",
     "reviewedAt": "2026-05-13"
   }

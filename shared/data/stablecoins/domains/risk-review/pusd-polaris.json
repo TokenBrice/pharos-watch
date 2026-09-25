@@ -4,15 +4,15 @@
     "reviewedStatus": false,
     "sources": [
       {
-        "label": "pUSD blog",
-        "url": "https://polarisfinance.io/blog/pusd-no-counterparty/"
+        "label": "Archived Polaris blog: USDp (then pUSD)",
+        "url": "https://web.archive.org/web/20260512032457/https://polarisfinance.io/blog/pusd-no-counterparty/"
       },
       {
-        "label": "Polaris flows",
-        "url": "https://polarisfinance.io/blog/polaris-flows/"
+        "label": "Archived Polaris blog: flows",
+        "url": "https://web.archive.org/web/20260512032200/https://polarisfinance.io/blog/polaris-flows/"
       }
     ],
-    "evidence": "Reviewed No: pUSD is pre-launch/testnet-only, and Polaris describes a CDP/Stability Pool design using pETH collateral and protocol flows rather than an issuer-managed token with a holder freeze/blacklist surface.",
+    "evidence": "Reviewed No: USDp (formerly pUSD) is pre-launch/testnet-only, and Polaris describes a CDP/Stability Pool design using pETH collateral and protocol flows rather than an issuer-managed token with a holder freeze/blacklist surface.",
     "reviewer": "Codex stablecoin audit",
     "reviewedAt": "2026-05-13"
   }

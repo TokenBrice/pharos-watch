@@ -254,6 +254,30 @@ describe("on-chain measured TVL enrichment", () => {
       dataSource: "onchain",
     });
   });
+
+  it("never adds a symbol-matched third-party pool to a coin whose yield is read on-chain", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const underlyingTokens = ["0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9"];
+    const dlPools = [
+      makeDlPool({ pool: "collateral", project: "morpho-blue", symbol: "STUSDS", stablecoin: true, tvlUsd: 12_500_000, apy: 0, apyBase: 0, underlyingTokens }),
+    ];
+    // A failed on-chain read this run must not flip the coin onto the collateral market either.
+    for (const [onChainRates, expected] of [
+      [new Map([["stusds-sky", { rate: 1.001 }]]), ["onchain:stusds-sky"]],
+      [new Map(), []],
+    ] as const) {
+      const result = await resolveTrackedYieldSources({
+        db: makeDb(),
+        startSec: nowSec,
+        sevenDaysAgoSec: nowSec - 7 * 86_400,
+        dlPools,
+        onChainRates,
+        safetyScores: new Map(),
+        riskFreeRates: {} as never,
+      });
+      expect(result.resolved.flatMap((row) => row.id === "stusds-sky" && row.yield ? [row.yield.sourceKey] : [])).toEqual(expected);
+    }
+  });
 });
 
 describe("fetchOnChainRates optional ERC-4626 tvlRead", () => {

@@ -436,6 +436,10 @@ describe("syncYieldData", () => {
   it("keeps the run healthy when deterministic on-chain reads fail but every affected coin has non-onchain coverage", async () => {
     const onChainConfigs =
       yieldConfigModule.ON_CHAIN_RATE_CONFIGS as typeof yieldConfigModule.ON_CHAIN_RATE_CONFIGS;
+    // Alternative coverage for an on-chain coin comes from its curated pool pin;
+    // the base-symbol fallback never runs for a coin with an on-chain rate config.
+    const poolMap = yieldConfigModule.YIELD_POOL_MAP as Record<string, string>;
+    poolMap["100"] = "pool-sdai-1";
     onChainConfigs.push({
       stablecoinId: "100",
       chain: "ethereum",
@@ -482,6 +486,7 @@ describe("syncYieldData", () => {
     expect(metadata.sourceCoverage?.onChainAlternativeCoverageMissingIds).toEqual([]);
     expect(metadata.sourceCoverage?.onChainFailures).toEqual({ "no-chain-rpcs": 1 });
 
+    delete poolMap["100"];
     onChainConfigs.length = 0;
   });
 

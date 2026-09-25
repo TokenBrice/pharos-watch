@@ -172,14 +172,25 @@ function corroboratesUnderlyingSet(
 }
 
 /**
+ * Yield-tokenization venues list their principal-token and LP markets under the
+ * wrapped token's own symbol and underlying address, flagged stablecoin +
+ * single exposure. Such a pool's APY is the PT's fixed implied rate and its TVL
+ * is the market's, never the token's intrinsic yield, so the base-symbol
+ * fallback must not adopt one under the coin's own yield label. Pendle markets
+ * reach rankings through the Pendle supplemental family as `fixed-yield` rows.
+ */
+const YIELD_TOKENIZATION_PROJECTS: Record<string, true> = { "pendle-v2": true, "spectra-v2": true };
+
+/**
  * Returns ALL DL pools that are yield sources for the given coin.
  *
  * Layer 1: YIELD_POOL_MAP (native/primary pool — stablecoin + single exposure required)
  * Layer 2: YIELD_VARIANT_MAP (wrapper/savings pool — single exposure only; stablecoin
  *          flag relaxed because savings wrappers like fxSAVE are not flagged as
  *          stablecoin=true in DeFiLlama)
- * Layer 3: Base-symbol fallback (only when both static maps miss — stablecoin + single
- *          exposure required, picks highest TVL)
+ * Layer 3: Base-symbol fallback (only when both static maps miss and the caller has no
+ *          deterministic on-chain rate source — stablecoin + single exposure required,
+ *          yield-tokenization PT/LP markets excluded, picks highest TVL)
  *
  * Deduplicates by pool UUID. Used by sync-yield-data to support multiple sources per coin.
  */
@@ -205,6 +216,12 @@ export function matchAllDlPools(
     chainFilter?: Set<string>;
     contractAddresses?: string[];
     reservedPoolIds?: Set<string>;
+    /**
+     * The coin's intrinsic yield is already read on-chain, so a symbol/address
+     * guess can only add third-party venues (collateral markets, PT markets)
+     * under the coin's own yield label.
+     */
+    skipBaseSymbolFallback?: boolean;
   },
 ): Array<{ pool: string; apy: number; apyBase: number | null; apyReward: number | null; tvlUsd: number }> {
   const found: Array<{ pool: string; apy: number; apyBase: number | null; apyReward: number | null; tvlUsd: number }> = [];
@@ -285,13 +302,14 @@ export function matchAllDlPools(
   // Prefer address corroboration first, then exact normalized symbol equality. Substring-only
   // matches are intentionally excluded because they can attach a base asset to an unrelated
   // prefixed/suffixed wrapper.
-  if (found.length === 0) {
+  if (found.length === 0 && !options?.skipBaseSymbolFallback) {
     const sym = normalizeDexSymbol(symbol);
     if (sym.length >= 4) {
       const baseCandidates = dlPools.filter(
         (pool) =>
           pool.exposure === "single" &&
           pool.stablecoin &&
+          YIELD_TOKENIZATION_PROJECTS[(pool.project ?? "").trim().toLowerCase()] !== true &&
           !isReservedForAnotherCoin(pool.pool) &&
           isEligibleChain(pool.chain),
       );
