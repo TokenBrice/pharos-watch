@@ -1,6 +1,8 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { raceWithTimeout } from "@shared/lib/timeout-signal";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
+import type { LiveReserveWarning } from "@shared/types/live-reserves";
 import type { AdapterResult, ReserveAdapterDefinition } from "./reserve-adapters/index";
 import { shouldAttemptFetch } from "../lib/circuit-breaker";
 import { hasDegradingWarnings, hasFatalWarnings, validateAdapterOutput } from "./reserve-adapters/validate";
@@ -23,10 +25,19 @@ import {
   didReserveSyncSuccessBecomeAuthoritative,
   finalizeReserveSyncAttempt,
   finalizeReserveSyncSuccess,
+  getReserveCompositionRow,
   type ReserveCompositionRecord,
+  type ReserveCompositionRow,
   type ReserveSyncStateRecord,
   selectScoringDegradedWarnings,
 } from "../lib/live-reserves/store";
+import { parseReserveCompositionRow } from "../lib/live-reserves/store-row-decoding";
+import { evaluateLiveReserveAdmission } from "../lib/live-reserves/store-snapshot-state";
+
+/** Stamped by the fallback runner on a result read from `inputs.fallbacks` after the primary failed. */
+export const PRIMARY_FALLBACK_USED_WARNING_CODE = "primary-fallback-used";
+/** A score-ineligible fallback read was not persisted because the stored snapshot is still admissible. */
+export const FALLBACK_WITHHELD_WARNING_CODE = "fallback-withheld-score-grade-retained";
 
 const TRACKED_STABLECOIN_IDS = new Set(TRACKED_META_BY_ID.keys());
 export const ADAPTER_LATENCY_BUCKET_UPPER_BOUNDS_MS = [
@@ -359,7 +370,7 @@ export async function syncReserveCoin(args: {
   let d1DurationMs = 0;
   let failureStage: "adapter-exception" | "storage-exception" = "storage-exception";
   const deadlineMs = args.deadlineMs ?? Number.POSITIVE_INFINITY;
-  const timeStage = async <T>(stage: keyof NonNullable<LiveReservePhaseTimings["stages"]>, operation: () => Promise<T>): Promise<T> => {
+  const timeStage = async <T>(stage: keyof NonNullable<LiveReservePhaseTimings["stages"]> | null, operation: () => Promise<T>): Promise<T> => {
     if (Date.now() >= deadlineMs) throw new Error("run-budget-exhausted");
     const started = Date.now();
     try {
@@ -368,7 +379,7 @@ export async function syncReserveCoin(args: {
         ? await pending
         : await raceWithTimeout(pending, Math.max(1, deadlineMs - Date.now()), "run-budget-exhausted");
     } finally {
-      if (args.stageTimings) args.stageTimings[stage] += Date.now() - started;
+      if (stage && args.stageTimings) args.stageTimings[stage] += Date.now() - started;
     }
   };
 
@@ -522,6 +533,70 @@ export async function syncReserveCoin(args: {
       lastSuccessAt: attemptStartedAt,
       lastSuccessAttemptId: attemptId,
     });
+
+    // A fallback read that cannot score must not displace a stored snapshot
+    // that still can: a partially successful run would otherwise be worse for
+    // scoring than a failed one, which writes nothing. Both snapshots are
+    // judged by the scoring admission rule on one clock.
+    const primaryFallbackWarning = warnings.find((warning) => warning.code === PRIMARY_FALLBACK_USED_WARNING_CODE);
+    if (primaryFallbackWarning) {
+      const admissionNow = Math.floor(Date.now() / 1000);
+      const fallbackAdmission = evaluateLiveReserveAdmission(
+        { ...compositionRecord, configFingerprint: computeLiveReserveConfigFingerprint(config) },
+        successState,
+        coin,
+        admissionNow,
+      );
+      if (!fallbackAdmission.eligible) {
+        const retainedReadStartedMs = Date.now();
+        let retainedRow: ReserveCompositionRow | null;
+        try {
+          retainedRow = await timeStage(null, () => getReserveCompositionRow(db, coin.id));
+        } finally {
+          d1DurationMs += Date.now() - retainedReadStartedMs;
+        }
+        const retained = retainedRow ? parseReserveCompositionRow(retainedRow, previousState).record : null;
+        if (retained && evaluateLiveReserveAdmission(retained, previousState, coin, admissionNow).eligible) {
+          const withheldWarning: LiveReserveWarning = {
+            code: FALLBACK_WITHHELD_WARNING_CODE,
+            message: `Fallback reserve read withheld (not score-grade: ${fallbackAdmission.reasons.join(", ")}); the score-grade snapshot fetched at ${retained.fetchedAt} stays authoritative until it stops being admissible`,
+            severity: "warning",
+            effect: "degraded",
+          };
+          const attemptWarnings = [...warnings, withheldWarning];
+          logWorkerEventArgs("handler", "warn", `[sync-live-reserves] ${coin.id}: ${withheldWarning.message}`);
+          const { finalized } = await recordFailure(
+            "degraded",
+            primaryFallbackWarning.message,
+            FALLBACK_WITHHELD_WARNING_CODE,
+            attemptWarnings,
+            {
+              withheldFallback: {
+                admissionReasons: fallbackAdmission.reasons,
+                retainedSnapshotAttemptId: retained.attemptId ?? null,
+                retainedSnapshotFetchedAt: retained.fetchedAt,
+              },
+              warningEffects: {
+                info: attemptWarnings.filter((warning) => warning.effect === "info").length,
+                degraded: attemptWarnings.filter((warning) => warning.effect === "degraded").length,
+                fatal: attemptWarnings.filter((warning) => warning.effect === "fatal").length,
+              },
+              durationMs,
+            },
+          );
+          if (!finalized) {
+            return timedResult({ breakerKey, status: "failed", warningMessages: [], hasWarnings: false });
+          }
+          return timedResult({
+            breakerKey,
+            status: "synced",
+            breakerOutcome: true,
+            warningMessages: attemptWarnings.map((warning) => `${coin.id}:${warning.code}`),
+            hasWarnings: true,
+          });
+        }
+      }
+    }
 
     let finalizeSucceeded = false;
     let failureAlreadyRecorded = false;

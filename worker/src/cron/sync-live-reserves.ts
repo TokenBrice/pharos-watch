@@ -11,6 +11,7 @@ import {
 } from "../lib/live-reserves/store";
 import {
   createAdapterLatencyCollector,
+  PRIMARY_FALLBACK_USED_WARNING_CODE,
   syncReserveCoin,
   type AdapterLatencyCollector,
   type AdapterLatencyStage,
@@ -463,7 +464,7 @@ function createReserveAdapterRunner(args: {
             ? `${primaryMessage.slice(0, 200)}…`
             : primaryMessage;
           const fallbackWarning = {
-            code: "primary-fallback-used",
+            code: PRIMARY_FALLBACK_USED_WARNING_CODE,
             message: `Primary reserve source failed; fell through to fallback. Primary error: ${truncated}`,
             severity: "info" as const,
             effect: "info" as const,

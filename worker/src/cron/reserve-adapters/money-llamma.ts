@@ -26,6 +26,12 @@ const ADAPTER_KEY = "money-llamma";
 // MarketOperator contracts, each holding collateral in Curve-style bands
 // (bands_x = MONEY from soft liquidations, bands_y = collateral, both scaled
 // to 18 decimals) against MONEY debt. Same address on all three chains.
+// defidotmoney/dfm-contracts `contracts/cdp/AMM.vy` keeps crvUSD's band
+// invariant: `deposit_range` only fills bands above `active_band` whose
+// `bands_x` is zero, and `_exchange` rewrites every crossed band as pure MONEY
+// (x) below the new active band or pure collateral (y) above it. Collateral
+// therefore lives only in [max(min_band, active_band), max_band] and MONEY
+// only in [min_band, min(max_band, active_band)]; the other axis is zero.
 const MONEY_CONTROLLER = "0x1337F001E280420EcCe9E7B934Fa07D67fdb62CD";
 const MONEY_TOKEN = "0x69420f9E38a4e60a62224C489be4BF7a94402496";
 const CHAIN_LEGS = ["arbitrum", "base", "optimism"] as const;
@@ -35,9 +41,10 @@ const MONEY_MAX_BANDS_PER_MARKET = 2_048;
 // configured RPCs: a 2 000-call aggregate3 page (≈640 KB response, the largest
 // size every endpoint accepted) completes in 0.2–0.5 s, while 4 000-call pages
 // are rejected by the publicnode fallbacks ("Request body size limit
-// reached"). The full census (~25 000 band reads across 17 markets) needs 14
-// such pages instead of ~64 at the former 500-call size.
+// reached"). Band calls from every market on a chain share one page queue.
 const LLAMMA_MULTICALL_BATCH_SIZE = 2_000;
+// Leaves the fallback RPC room inside the 20 s adapter attempt.
+const MONEY_MULTICALL_TIMEOUT_MS = 12_000;
 const MONEY_PAR_DEVIATION_INFO_PCT = 1;
 
 const MONEY_CONTROLLER_ABI = parseAbi([
@@ -52,6 +59,7 @@ const MONEY_MARKET_OPERATOR_ABI = parseAbi([
 const MONEY_LLAMMA_ABI = parseAbi([
   "function min_band() view returns (int256)",
   "function max_band() view returns (int256)",
+  "function active_band() view returns (int256)",
   "function bands_x(int256) view returns (uint256)",
   "function bands_y(int256) view returns (uint256)",
 ]);
@@ -105,6 +113,7 @@ interface MarketDescriptor {
   debtTokens: number;
   minBand: number;
   maxBand: number;
+  activeBand: number;
 }
 
 interface MarketExposure extends MarketDescriptor {
@@ -160,7 +169,7 @@ async function fetchChainMulticall(
         ctx,
         rpcUrl: leg.rpcUrl,
         fallbackRpcUrl: leg.fallbackRpcUrl,
-        timeoutMs: 20_000,
+        timeoutMs: MONEY_MULTICALL_TIMEOUT_MS,
         multicallBatchSize: LLAMMA_MULTICALL_BATCH_SIZE,
       }),
   });
@@ -262,10 +271,10 @@ async function fetchChainCensus(
     if (!Number.isFinite(debtTokens)) {
       throw new Error(`${ADAPTER_KEY}: ${chain} market ${marketId} debt overflows the number range`);
     }
-    return { marketId, operator: normalizeAddress(operator), collateralAddress, ammAddress, symbol: "", decimals: 18, debtTokens, minBand: 0, maxBand: 0 };
+    return { marketId, operator: normalizeAddress(operator), collateralAddress, ammAddress, symbol: "", decimals: 18, debtTokens, minBand: 0, maxBand: 0, activeBand: 0 };
   });
 
-  // Collateral identity + band span.
+  // Collateral identity + band span + active band.
   const metadataResults = await fetchChainMulticall(
     chain,
     descriptors.flatMap((market): OnchainMulticall3Call[] => [
@@ -273,6 +282,7 @@ async function fetchChainCensus(
       { label: `${market.marketId}:decimals`, contract: market.collateralAddress, data: encodeFunctionData({ abi: MONEY_ERC20_METADATA_ABI, functionName: "decimals" }) },
       { label: `${market.marketId}:min_band`, contract: market.ammAddress, data: encodeFunctionData({ abi: MONEY_LLAMMA_ABI, functionName: "min_band" }) },
       { label: `${market.marketId}:max_band`, contract: market.ammAddress, data: encodeFunctionData({ abi: MONEY_LLAMMA_ABI, functionName: "max_band" }) },
+      { label: `${market.marketId}:active_band`, contract: market.ammAddress, data: encodeFunctionData({ abi: MONEY_LLAMMA_ABI, functionName: "active_band" }) },
     ]),
     "metadata",
     signal,
@@ -315,24 +325,34 @@ async function fetchChainCensus(
       }) as bigint,
       `market ${market.marketId} max_band`,
     );
+    market.activeBand = safeInt256ToNumber(
+      decodeFunctionResult({
+        abi: MONEY_LLAMMA_ABI,
+        functionName: "active_band",
+        data: requireResult(metadataResults, `${market.marketId}:active_band`, "metadata"),
+      }) as bigint,
+      `market ${market.marketId} active_band`,
+    );
     const bandCount = market.maxBand - market.minBand + 1;
     if (bandCount < 1 || bandCount > MONEY_MAX_BANDS_PER_MARKET) {
       throw new Error(`${ADAPTER_KEY}: ${chain} band span invalid for market ${market.marketId}: ${market.minBand}..${market.maxBand}`);
     }
   }
 
-  // Band balances (collateral y + soft-liquidated MONEY x). The census covers
-  // every band in every market, so the range is split into full Multicall3
-  // pages dispatched together: the shared adapter I/O limiter (2 concurrent
+  // Band balances: collateral (y) at or above the active band, soft-liquidated
+  // MONEY (x) at or below it. The census is split into full Multicall3 pages
+  // dispatched together: the shared adapter I/O limiter (2 concurrent
   // requests under the runner) is what paces the RPC, not a sequential loop.
   const bandCalls: OnchainMulticall3Call[] = [];
   for (const market of descriptors) {
-    for (let band = market.minBand; band <= market.maxBand; band += 1) {
+    for (let band = Math.max(market.minBand, market.activeBand); band <= market.maxBand; band += 1) {
       bandCalls.push({
         label: `${market.marketId}:y:${band}`,
         contract: market.ammAddress,
         data: encodeFunctionData({ abi: MONEY_LLAMMA_ABI, functionName: "bands_y", args: [BigInt(band)] }),
       });
+    }
+    for (let band = market.minBand; band <= Math.min(market.maxBand, market.activeBand); band += 1) {
       bandCalls.push({
         label: `${market.marketId}:x:${band}`,
         contract: market.ammAddress,
@@ -352,11 +372,15 @@ async function fetchChainCensus(
     for (const [label, returnData] of page) bandResults.set(label, returnData);
   }
 
-  const rawByMarket = new Map<number, PricedMarketInput>();
+  const rawByMarket = new Map<number, PricedMarketInput>(
+    descriptors.map((descriptor) => [descriptor.marketId, { descriptor, bandsY: 0n, bandsX: 0n }]),
+  );
   for (const [label, returnData] of bandResults) {
     const [marketPart, axis] = label.split(":");
-    const marketId = Number(marketPart);
-    const entry = rawByMarket.get(marketId) ?? { descriptor: descriptors[marketId], bandsY: 0n, bandsX: 0n };
+    const entry = rawByMarket.get(Number(marketPart));
+    if (!entry) {
+      throw new Error(`${ADAPTER_KEY}: ${chain} band call returned unknown market: ${label}`);
+    }
     if (axis === "y") {
       entry.bandsY += decodeFunctionResult({
         abi: MONEY_LLAMMA_ABI,
@@ -370,7 +394,6 @@ async function fetchChainCensus(
         data: returnData,
       }) as bigint;
     }
-    rawByMarket.set(marketId, entry);
   }
 
   // Price every collateral token that holds bands (plus MONEY, fetched by the

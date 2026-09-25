@@ -36,6 +36,10 @@ const YIELD_BASIS_LT_ABI = parseAbi([
   "function preview_emergency_withdraw(uint256 shares) view returns (uint256,int256)",
 ]);
 const ERC20_ABI = parseAbi(["function symbol() view returns (string)", "function decimals() view returns (uint8)"]);
+const CURVE_AMM_BANDS_ABI = parseAbi([
+  "function bands_x(int256) view returns (uint256)",
+  "function bands_y(int256) view returns (uint256)",
+]);
 
 const BANDS_Y_SELECTOR = toFunctionSelector("bands_y(int256)");
 const BANDS_X_SELECTOR = toFunctionSelector("bands_x(int256)");
@@ -262,8 +266,21 @@ interface LlammaScenario {
   marketCount?: number;
   collateralByIndex?: Readonly<Record<number, TestHexAddress>>;
   bandRange?: { min?: number; max?: number };
-  bandY?: bigint;
-  bandX?: bigint;
+  activeBand?: number;
+  bandY?: bigint | ((band: number) => bigint);
+  bandX?: bigint | ((band: number) => bigint);
+}
+
+function bandAnswer(value: bigint | ((band: number) => bigint) | undefined, fallback: bigint) {
+  if (typeof value !== "function") return value ?? fallback;
+  return (call: AdapterRpcCall) => {
+    const decoded = decodeFunctionData({ abi: CURVE_AMM_BANDS_ABI, data: call.data as `0x${string}` });
+    return value(Number(decoded.args[0]));
+  };
+}
+
+function bandOf(call: AdapterRpcCall): number {
+  return Number(decodeFunctionData({ abi: CURVE_AMM_BANDS_ABI, data: call.data as `0x${string}` }).args[0]);
 }
 
 interface YieldBasisScenario {
@@ -326,8 +343,9 @@ function crvUsdNetwork(scenario: CrvUsdScenario): AdapterNetworkSpec {
     rpc[`${CURVE_CONTROLLER_FACTORY}:amms(uint256)`] = LLAMMA_AMM;
     rpc[`${LLAMMA_AMM}:min_band()`] = llamma.bandRange?.min ?? 0;
     rpc[`${LLAMMA_AMM}:max_band()`] = llamma.bandRange?.max ?? 0;
-    rpc[`${LLAMMA_AMM}:bands_y(int256)`] = llamma.bandY ?? 10n ** 18n;
-    rpc[`${LLAMMA_AMM}:bands_x(int256)`] = llamma.bandX ?? 0n;
+    rpc[`${LLAMMA_AMM}:active_band()`] = llamma.activeBand ?? 0;
+    rpc[`${LLAMMA_AMM}:bands_y(int256)`] = bandAnswer(llamma.bandY, 10n ** 18n);
+    rpc[`${LLAMMA_AMM}:bands_x(int256)`] = bandAnswer(llamma.bandX, 0n);
     for (const address of collateralSet) {
       rpc[`${address}:symbol()`] = symbolResult(address === ETH_ASSET.toLowerCase() ? "WETH" : "WBTC");
     }
@@ -414,11 +432,12 @@ describe("fetchCrvUsdReserves", () => {
     });
 
     expect(result.metadata).toMatchObject({ directMarketCount: 3, directActiveMarketCount: 3 });
-    // 1501 bands x (y + x) per market, every read inside a Multicall3 batch.
+    // Active band 0: 1501 collateral reads plus the active band's crvUSD read
+    // per market, every read inside a Multicall3 batch.
     const bandMembers = network.rpcCalls.filter(
       (call) => call.viaMulticall && (call.selector === BANDS_Y_SELECTOR || call.selector === BANDS_X_SELECTOR),
     );
-    expect(bandMembers).toHaveLength(3 * 1501 * 2);
+    expect(bandMembers).toHaveLength(3 * 1502);
   });
 
   it("drops Yield Basis when its untrusted market count exceeds the adapter cap before scheduling market reads", async () => {
@@ -440,7 +459,7 @@ describe("fetchCrvUsdReserves", () => {
       .toEqual([toFunctionSelector("market_count()")]);
   });
 
-  it("reads every Yield Basis market descriptor in one Multicall3 wave before the withdraw reads", async () => {
+  it("reads Yield Basis market descriptors and withdraw previews as Multicall3 waves", async () => {
     const { result, network } = await runCrvUsd({
       curvePayload: { chains: { ethereum: { data: [] } } },
       yieldBasis: { marketCount: 2 },
@@ -450,6 +469,11 @@ describe("fetchCrvUsdReserves", () => {
       (call) => call.viaMulticall && call.selector === toFunctionSelector("markets(uint256)"),
     );
     expect(marketsMembers.map((call) => call.data.slice(-8))).toEqual(["00000000", "00000001"]);
+    const withdrawPreviews = network.rpcCalls.filter(
+      (call) => call.selector === toFunctionSelector("preview_emergency_withdraw(uint256)"),
+    );
+    expect(withdrawPreviews).toHaveLength(2);
+    expect(withdrawPreviews.every((call) => call.viaMulticall)).toBe(true);
     expect(result.metadata).toMatchObject({
       yieldBasisMarketCount: 2,
       yieldBasisActiveMarketCount: 2,
@@ -549,28 +573,37 @@ describe("fetchCrvUsdReserves", () => {
     expect(network.requests.some((request) => request.url.includes("prices/current"))).toBe(false);
   });
 
-  it("loads direct LLAMMA bands onchain when configured for onchain input", async () => {
+  it("reads LLAMMA collateral at or above the active band and crvUSD at or below it", async () => {
     const { result, network } = await runCrvUsd({
-      llamma: { marketCount: 1, bandRange: { max: 1 }, bandY: 5n * 10n ** 18n, bandX: 1n * 10n ** 18n },
+      llamma: {
+        marketCount: 1,
+        bandRange: { min: 0, max: 9 },
+        activeBand: 4,
+        // Nonzero on every band, so reading an axis outside its side would inflate the totals.
+        bandY: (band) => BigInt(band + 1) * 10n ** 18n,
+        bandX: 10n ** 18n,
+      },
       yieldBasis: {},
     });
 
     expect(result.slices).toEqual([{ sourceKey: "crvusd:btc",
       name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 100, risk: "medium" }]);
-    // Both bands (y) sum per market: 2 bands x 5 units x $100 default price.
+    // Bands 4..9 hold (5 + 6 + 7 + 8 + 9 + 10) collateral units at the $100 default price;
+    // bands 0..4 hold one crvUSD each.
     expect(result.metadata).toMatchObject({
       freshnessMode: "not-applicable",
       directMarketCount: 1,
       directActiveMarketCount: 1,
-      directCollateralUsd: 1000,
-      softLiquidatedCrvUsdUsd: 2,
-      bandReadCount: 2,
+      directCollateralUsd: 4500,
+      softLiquidatedCrvUsdUsd: 5,
+      bandReadCount: 10,
     });
     const bandMembers = network.rpcCalls.filter(
       (call) => call.selector === BANDS_Y_SELECTOR || call.selector === BANDS_X_SELECTOR,
     );
-    expect(bandMembers).toHaveLength(4);
     expect(bandMembers.every((call) => call.viaMulticall)).toBe(true);
+    expect(bandMembers.filter((call) => call.selector === BANDS_Y_SELECTOR).map(bandOf)).toEqual([4, 5, 6, 7, 8, 9]);
+    expect(bandMembers.filter((call) => call.selector === BANDS_X_SELECTOR).map(bandOf)).toEqual([0, 1, 2, 3, 4]);
   });
 
   it("fails closed with a degraded warning when the Curve payload's collateral amounts are unreadable", async () => {
