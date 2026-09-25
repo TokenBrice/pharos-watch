@@ -477,7 +477,7 @@ describe("adaptAccountableDashboard", () => {
     }).valid).toBe(true);
   });
 
-  it("maps new Yuzu USDG positions without inventing token links or clearing the signed-negative guard", async () => {
+  it("maps new Yuzu USDG positions without inventing token links and keeps the dust signed bucket informational", async () => {
     const config = yzusd.liveReservesConfig as LiveReservesConfig;
     const result = await runAccountablePayload(config, makeTimestampedYuzuPayload({
       exposure_split_ts: "2026.09.11 15:47:21 UTC",
@@ -498,9 +498,88 @@ describe("adaptAccountableDashboard", () => {
       expect(slice?.depType).toBeUndefined();
     }
     expect(result.warnings?.map((warning) => warning.code)).toEqual(["signed-negative-bucket"]);
-    expect(result.warnings?.[0].effect).toBe("degraded");
+    expect(result.warnings?.[0]).toMatchObject({ severity: "info", effect: "info" });
+    expect(result.warnings?.[0]?.message).toContain("[Sky]_sUSDS_Loop (0.00% of positive reserve buckets)");
     expect(result.metadata?.sourceTimestamp).toBe(Date.parse("2026-09-11T15:47:21Z") / 1000);
     expect(result.metadata?.unknownBucketCount).toBeUndefined();
+  });
+
+  it("keeps sub-material signed exposure informational while material signed exposure still degrades", async () => {
+    const config = yzusd.liveReservesConfig as LiveReservesConfig;
+
+    const subMaterial = await runAccountablePayload(config, {
+      collateralization: 1,
+      ts: "1787848065315",
+      reserves: {
+        exposure_split: {
+          Liquidity_Buffer: { "": 100 },
+          "[Sky]_sUSDS_Loop": { "": -4 },
+        },
+      },
+    });
+    expect(subMaterial.warnings).toEqual([
+      expect.objectContaining({ code: "signed-negative-bucket", severity: "info", effect: "info" }),
+    ]);
+    expect(subMaterial.slices.map((slice) => slice.name)).toEqual(["Liquidity buffer"]);
+    expect(subMaterial.metadata).toMatchObject({ signedBucketNames: ["[Sky]_sUSDS_Loop"], signedBucketValue: -4 });
+
+    const material = await runAccountablePayload(config, {
+      collateralization: 1,
+      ts: "1787848065315",
+      reserves: {
+        exposure_split: {
+          Liquidity_Buffer: { "": 100 },
+          "[Sky]_sUSDS_Loop": { "": -6 },
+        },
+      },
+    });
+    expect(material.warnings).toEqual([
+      expect.objectContaining({ code: "signed-negative-bucket", severity: "warning", effect: "degraded" }),
+    ]);
+    expect(material.slices.map((slice) => slice.name)).toEqual(["Liquidity buffer"]);
+  });
+
+  it("maps the new Yuzu [Re]_reUSD_LP and [Morpho]_USDC buckets with reviewed classifications", async () => {
+    const config = yzusd.liveReservesConfig as LiveReservesConfig;
+
+    const result = await runAccountablePayload(config, {
+      collateralization: 1.101272,
+      ts: "1781945117382",
+      reserves: {
+        exposure_split: {
+          "[Re]_reUSD_LP": { value: 30 },
+          "[Morpho]_USDC": { value: 70 },
+        },
+      },
+    });
+
+    expect(result.warnings).toBeUndefined();
+    expect(result.metadata).toMatchObject({
+      bucket: "exposure_split",
+      breakdownCount: 2,
+      mappedBucketCount: 2,
+    });
+    expect(result.metadata?.unknownBucketCount).toBeUndefined();
+    expect(result.slices).toContainEqual(expect.objectContaining({
+      sourceKey: "accountable:yuzu:deployment:re-reusd-lp",
+      name: "Re reUSD LP",
+      pct: 30,
+      risk: "high",
+      coinId: "reusd-re-protocol",
+      depType: "collateral",
+    }));
+    expect(result.slices).toContainEqual(expect.objectContaining({
+      sourceKey: "accountable:yuzu:deployment:morpho-usdc",
+      name: "Morpho USDC",
+      pct: 70,
+      risk: "medium",
+      coinId: "usdc-circle",
+      depType: "collateral",
+    }));
+    expect(validateAdapterOutput(result, {
+      adapter: getReserveAdapter("accountable") ?? undefined,
+      now: Date.UTC(2026, 5, 20, 10) / 1000,
+    }).valid).toBe(true);
   });
 
   it("omits the current signed Yuzu USDG loop bucket without inflating reserve composition", async () => {

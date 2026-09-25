@@ -329,10 +329,23 @@ export async function fetchNestVaultPositionsReserves(
   let calculatedNavUsd: number | null = null;
   let claimableFeesUsd: number | null = null;
   if (pendingWithdrawalUsd > 0) {
-    if (coin.id !== "nbasis-nest" || pendingTransactions.some((transaction) =>
+    // Pending withdrawals are admitted per reviewed vault only: nBASIS limits
+    // them to Superstate USCC redemption receivables, while nOPAL redemptions
+    // run against the vault's own credit positions (a 2026-08-28..31 window
+    // held an in-flight liquid-stone redemption across 19 consecutive
+    // snapshots), so any position is reviewable there. Either way the
+    // receivable is only admitted after the issuer's own gross and net NAV
+    // accounting below corroborates it; everything else fails closed.
+    const withdrawalReviewed = coin.id === "nopal-nest"
+      ? () => true
+      : coin.id === "nbasis-nest"
+        ? (transaction: NestPendingTransactionValue) =>
+          transaction.positionKind === "yield" && transaction.assetSlug === "superstate-uscc"
+          && transaction.symbol === "USCC"
+        : () => false;
+    if (pendingTransactions.some((transaction) =>
       transaction.type === "PendingWithdrawal" && transaction.valueUsd > 0
-      && (transaction.positionKind !== "yield" || transaction.assetSlug !== "superstate-uscc"
-        || transaction.symbol !== "USCC"))) {
+      && !withdrawalReviewed(transaction))) {
       throw new Error(`nest-vault-positions cannot reconcile positive ${coin.symbol} pending withdrawals`);
     }
     const calculated = await fetchJsonWithRetry<{ data?: {
@@ -379,7 +392,9 @@ export async function fetchNestVaultPositionsReserves(
       ? [{
           sourceKey: "nest-vault-positions:pending-withdrawals",
           value: pendingWithdrawalUsd,
-          name: "Nest pending USCC redemption receivables",
+          name: coin.id === "nbasis-nest"
+            ? "Nest pending USCC redemption receivables"
+            : "Nest pending redemption receivables",
           risk: "high" as const,
         }]
       : []),

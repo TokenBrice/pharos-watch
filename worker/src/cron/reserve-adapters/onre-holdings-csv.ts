@@ -342,13 +342,17 @@ export function adaptOnReSchedule(schedule: OnReSchedule): AdapterResult {
   const totalVsAumUsd = amountSum - declaredAum;
   const totalVsAumPct = (totalVsAumUsd / amountSum) * 100;
   if (Math.abs(totalVsAumUsd) / Math.max(1, amountSum) > TOTAL_AUM_REL_TOLERANCE) {
+    // Direction word follows the sign so a Total below the declared AUM is not
+    // reported as "exceeds ... by $-..."; magnitudes stay absolute in the
+    // message while metadata carries the signed drift.
+    const directionWord = totalVsAumUsd >= 0 ? "exceeds" : "falls short of";
     warnings.push(
       reserveDegradedWarning(
         "total-aum-mismatch",
         `OnRe schedule Total $${amountSum.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} `
-        + `exceeds declared AUM $${declaredAum.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} `
-        + `by $${totalVsAumUsd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} `
-        + `(${totalVsAumPct.toFixed(4)}%); the unreconciled drift is published, not absorbed.`,
+        + `${directionWord} declared AUM $${declaredAum.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} `
+        + `by $${Math.abs(totalVsAumUsd).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} `
+        + `(${Math.abs(totalVsAumPct).toFixed(4)}%); the unreconciled drift is published, not absorbed.`,
       ),
     );
   }

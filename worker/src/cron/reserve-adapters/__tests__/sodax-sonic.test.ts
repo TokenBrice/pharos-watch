@@ -24,7 +24,7 @@ function reserveData(aToken: string, decimals: number): string {
   words[10] = BigInt(VARIABLE);
   return `0x${words.map((w) => w.toString(16).padStart(64, "0")).join("")}`;
 }
-function network(overrides: { borrowers?: string[]; scaledTotal?: bigint; ethPrice?: bigint; timestamp?: number; extraReserve?: string } = {}): AdapterNetworkSpec {
+function network(overrides: { borrowers?: string[]; scaledTotal?: bigint; ethPrice?: bigint; timestamp?: number; extraReserve?: string; slowSourceReserve?: string; slowSourceTimestamp?: number } = {}): AdapterNetworkSpec {
   const reserves = [DEBT, USDC, ETH, ...(overrides.extraReserve ? [overrides.extraReserve] : [])];
   return {
     block: { number: 78_947_506, timestamp: NOW },
@@ -40,8 +40,13 @@ function network(overrides: { borrowers?: string[]; scaledTotal?: bigint; ethPri
       "scaledBalanceOf(address)": ({ data }) => data.endsWith(ALICE.slice(2)) ? WAD : data.endsWith(BOB.slice(2)) ? 2n * WAD : 0n,
       "BASE_CURRENCY_UNIT()": 100_000_000n,
       "getAssetPrice(address)": ({ data }) => data.endsWith(ETH.slice(2)) ? overrides.ethPrice ?? 2000n * 100_000_000n : 100_000_000n,
-      "getSourceOfAsset(address)": SOURCE,
+      "getSourceOfAsset(address)": ({ data }) => overrides.slowSourceReserve === `0x${data.slice(-40)}`
+        ? "0xb4e83e2521c27da46b40d4990ad91157394d7c23"
+        : SOURCE,
       "latestTimestamp()": overrides.timestamp ?? NOW,
+      ...(overrides.slowSourceTimestamp != null
+        ? { ["0xb4e83e2521c27da46b40d4990ad91157394d7c23:latestTimestamp()"]: BigInt(overrides.slowSourceTimestamp) }
+        : {}),
       [`${A_USDC}:balanceOf(address)`]: ({ data }) => data.endsWith(ALICE.slice(2)) ? 100_000_000n : 300_000_000n,
       [`${A_ETH}:balanceOf(address)`]: WAD / 10n,
       [`${A_DEBT}:balanceOf(address)`]: 0n,
@@ -94,6 +99,26 @@ describe("sodax-sonic", () => {
     expect(result.slices.find((s) => s.sourceKey === `sodax-sonic:${extra}`)?.coinId).toBeUndefined();
     expect(result.metadata?.unknownExposurePct).toBeCloseTo(0.2 / 800.2 * 100);
     expect(result.metadata?.totalReserveUsd).toBeCloseTo(800.2);
+  });
+
+  it("applies the calibrated multi-hour budget to the slow SODA/USD oracle source while fast feeds keep the one-hour ceiling", async () => {
+    const extra = "0x0000000000000000000000000000000000000042";
+    const withinSlowBudget = await run(network({
+      extraReserve: extra,
+      slowSourceReserve: extra,
+      slowSourceTimestamp: NOW - 5 * 3600,
+      timestamp: NOW - 3601,
+    }));
+    // Only the fast feed (SOURCE, one-hour budget) degrades for USDC and ETH;
+    // the slow SODA/USD source at five hours old is inside its calibrated
+    // ceiling, so no stale warning names the slow-sourced reserve.
+    const staleWarnings = withinSlowBudget.result.warnings?.filter((warning) => warning.code === "sodax-oracle-stale") ?? [];
+    expect(staleWarnings).toHaveLength(2);
+    expect(staleWarnings.every((warning) => !warning.message.includes(extra))).toBe(true);
+
+    const stuckSlowFeed = await run(network({ extraReserve: extra, slowSourceReserve: extra, slowSourceTimestamp: NOW - 25 * 3600 }));
+    expect(stuckSlowFeed.result.warnings?.filter((warning) => warning.code === "sodax-oracle-stale")).toHaveLength(1);
+    expectWarningEffect(stuckSlowFeed.result, "sodax-oracle-stale", "degraded");
   });
 
   it("accepts the reviewed immutable oracle without inventing an update timestamp", async () => {

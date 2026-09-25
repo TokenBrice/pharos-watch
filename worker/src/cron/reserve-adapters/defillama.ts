@@ -16,6 +16,10 @@ const quotePayloadSchema = z.object({
   })).optional(),
 });
 
+export function defillamaAssetKey(chain: string, address: string): string {
+  return `${DEFILLAMA_PRICE_CHAIN_ALIASES[chain] ?? chain}:${chain === "solana" ? address : address.toLowerCase()}`;
+}
+
 export async function fetchDefiLlamaPrices(
   assets: Array<{ key: string; chain: string; address: string }>,
   signal: AbortSignal,
@@ -25,7 +29,7 @@ export async function fetchDefiLlamaPrices(
   if (assets.length === 0) return new Map();
   const lookups = assets.map(({ key, chain, address }) => ({
     key,
-    assetKey: `${DEFILLAMA_PRICE_CHAIN_ALIASES[chain] ?? chain}:${chain === "solana" ? address : address.toLowerCase()}`,
+    assetKey: defillamaAssetKey(chain, address),
   }));
   const assetKeys = [...new Set(lookups.map(({ assetKey }) => assetKey))].sort();
   const quotes = await getCachedRequest(`defillama-prices:${assetKeys.join(",")}`, async () =>

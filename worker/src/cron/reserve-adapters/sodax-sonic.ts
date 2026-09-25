@@ -36,6 +36,18 @@ const MAX_BORROWERS = 128;
 const MAX_RESERVES = 40;
 const PAGE_SIZE = 650;
 const MAX_ORACLE_AGE = 3600;
+// Calibrated per-source ceilings for feeds whose real cadence exceeds the
+// one-hour default. The SODA/USD source migrated on-chain at 2026-09-24
+// 09:39 UTC (a getSourceOfAsset swap) from 0xf590d0f82b1c7ecb088188f6ef5400b26e70d4b2,
+// which updated on minute scale, to this address: its own on-chain record
+// shows 14 updates across 2026-09-23..2026-09-25 with inter-update gaps of
+// 1h05m..6h41m, so the default budget flags the feed's normal operation.
+// 86400s (~3.6x the largest observed gap, decision 2026-09-25) catches a
+// genuinely stuck feed; any future source-address migration falls back to the
+// strict default until reviewed here.
+const MAX_ORACLE_AGE_SEC_BY_SOURCE: Record<string, number> = {
+  "0xb4e83e2521c27da46b40d4990ad91157394d7c23": 86_400,
+};
 
 // Verified immutable deployments. RedemptionOracle.latestTimestamp() reverts
 // because its fixed USD leg has no timestamp; its immutable rate-feed address
@@ -212,8 +224,9 @@ export async function fetchSodaxSonicReserves(
     if (!reviewed || reviewed.timestampSource) {
       const timestamp = uint(observations.get(`timestamp:${r.source}`), `oracle timestamp ${r.reserve}`);
       if (timestamp <= 0n || timestamp > BigInt(plan.observedBlock.timestamp + 600)) throw new Error(`${KEY}: invalid oracle timestamp ${r.reserve}`);
-      if (BigInt(plan.observedBlock.timestamp) - timestamp > BigInt(MAX_ORACLE_AGE)) {
-        warnings.push(reserveDegradedWarning("sodax-oracle-stale", `Oracle price for ${r.reserve} is older than one hour`));
+      const maxAgeSec = MAX_ORACLE_AGE_SEC_BY_SOURCE[r.source] ?? MAX_ORACLE_AGE;
+      if (BigInt(plan.observedBlock.timestamp) - timestamp > BigInt(maxAgeSec)) {
+        warnings.push(reserveDegradedWarning("sodax-oracle-stale", `Oracle price for ${r.reserve} is older than ${maxAgeSec}s`));
       }
     }
     const identity = IDENTITIES[r.reserve];

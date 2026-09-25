@@ -109,6 +109,38 @@ describe("adaptSolomonProtocolData", () => {
     );
   });
 
+  it("fails closed when protocolTvl has been repurposed to the replacement USDv mint", () => {
+    // Production payload observed 2026-09-25: protocolTvl equals the
+    // replacement Chancery mint's on-chain supply (6,059,987.4834) while the
+    // legacy buckets hold only vestigial components, so no truthful legacy
+    // envelope exists and the residual must not be republished against it.
+    const payload: SolomonProtocolDataResponse = {
+      protocolTvl: "6059987.4834",
+      custodyNotionalUsd: "73.73",
+      vaultNotionalUsd: "0",
+      yieldDistributorsNotionalUsd: "0.37",
+      reserveFundNotionalUsd: "0",
+      positionsNotionalUsd: "561679.99",
+      updatedAt: "2026-09-25T00:12:10.050Z",
+      dataValidForTimestamp: 1790208000000,
+      custody: [
+        { name: "Ceffu", asset: "USDC", amount: "2.43", amountUsd: "2.43" },
+        { name: "Ceffu", asset: "SOL", amount: "0.60494612", amountUsd: "71.06" },
+      ],
+      vault: [],
+      yieldDistributors: [],
+      reserveFund: [],
+      positions: [
+        { exchange: "Binance", baseAsset: "SOL", notionalUsd: "2480" },
+        { exchange: "Binance", baseAsset: "BTC", notionalUsd: "559199.99" },
+      ],
+    };
+
+    expect(() => adaptSolomonProtocolData(payload)).toThrow(
+      /legacy beta cap; the protocol-data endpoint now headlines the replacement USDv mint/,
+    );
+  });
+
   it("throws when identified components exceed protocolTvl", () => {
     expect(() =>
       adaptSolomonProtocolData({

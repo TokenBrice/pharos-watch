@@ -44,42 +44,51 @@ function payload() {
           currentBorrows: { amountUsd: "$178,112.49" },
         }],
       },
-      // Binance Smart Chain ships as an inactive placeholder (zero TVL/supply) ahead
-      // of its launch; the reviewed chain set already includes it so it must not error.
+      // BNB Smart Chain went live on 2026-09-24, renamed from "Binance Smart
+      // Chain" in the same payload change, carrying a ~$94 pilot (production
+      // snapshot 2026-09-25T20:10Z). FDUSD is a reviewed slot at zero capital.
       {
         chainId: 56,
-        chainName: "Binance Smart Chain",
-        tvlUsd: 0,
-        metrics: { totalSupplyUsd: 0 },
+        chainName: "BNB Smart Chain",
+        tvlUsd: 94.22842593601962,
+        metrics: { totalSupplyUsd: 94.222301 },
         collaterals: [
-          { symbol: "USDC", address: BSC_USDC, tvlAmountUsd: 0 },
-          { symbol: "USDT", address: BSC_USDT, tvlAmountUsd: 0 },
+          { symbol: "USDC", address: BSC_USDC, tvlAmountUsd: 44.04782812867962 },
+          { symbol: "USDT", address: BSC_USDT, tvlAmountUsd: 50.18059780734 },
           { symbol: "FDUSD", address: BSC_FDUSD, tvlAmountUsd: 0 },
         ],
+        strategies: [{
+          tokens: { deposit: "USDC", borrow: ["WBNB"], staking: ["asBNB"] },
+          leverage: { value: "1.082x" },
+          healthFactor: { value: "6.55" },
+          currentBorrows: { amountUsd: "$7.75" },
+        }],
       },
     ],
   };
 }
 
 describe("adaptFlyingTulipFtUsd", () => {
-  it("aggregates collateral across both active chains and preserves issuer diagnostics", () => {
+  it("aggregates collateral across all three active chains and preserves issuer diagnostics", () => {
     const result = adaptFlyingTulipFtUsd(payload());
     expect(result.warnings).toEqual([]);
     expect(result.slices).toEqual([
-      expect.objectContaining({ name: "USDC strategy wrappers (Ethereum and Sonic)", coinId: "usdc-circle", pct: 68.7 }),
-      expect.objectContaining({ name: "USDT strategy wrapper (Ethereum)", coinId: "usdt-tether", pct: 31.1 }),
+      expect.objectContaining({ name: "USDC strategy wrappers (Ethereum, Sonic, and BNB Smart Chain)", coinId: "usdc-circle", pct: 68.7 }),
+      expect.objectContaining({ name: "USDT strategy wrappers (Ethereum and BNB Smart Chain)", coinId: "usdt-tether", pct: 31.1 }),
       expect.objectContaining({ name: "USSD strategy wrapper (Sonic)", coinId: "ussd-sonic-labs", pct: 0.2 }),
     ]);
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",
       sourceTimestamp: 1786310565,
-      totalReserveUsd: expect.closeTo(4_686_811.9099, 4),
+      totalReserveUsd: expect.closeTo(4_686_906.1383, 4),
+      supplyUsd: expect.closeTo(4_685_472.3934, 4),
       unknownExposurePct: 0,
       details: {
         assurance: "first-party index of publicly verifiable on-chain reserve state",
         strategies: [
           expect.objectContaining({ chainName: "Ethereum", borrow: "WETH", stake: "wstETH", leverage: 1.042 }),
           expect.objectContaining({ chainName: "Sonic", borrow: "wS", stake: "stS", leverage: 1.568 }),
+          expect.objectContaining({ chainName: "BNB Smart Chain", borrow: "WBNB", stake: "asBNB", leverage: 1.082 }),
         ],
       },
     });
@@ -88,11 +97,11 @@ describe("adaptFlyingTulipFtUsd", () => {
     expect(adapter?.evidenceClass).toBe("weak-live-probe");
   });
 
-  it("passes when all three reviewed chains are active and maps the FDUSD collateral", () => {
+  it("maps the FDUSD collateral once BNB Smart Chain carries FDUSD capital", () => {
     const three = payload();
     three.chains[2] = {
       chainId: 56,
-      chainName: "Binance Smart Chain",
+      chainName: "BNB Smart Chain",
       tvlUsd: 100_000,
       metrics: { totalSupplyUsd: 95_000 },
       collaterals: [
@@ -100,6 +109,12 @@ describe("adaptFlyingTulipFtUsd", () => {
         { symbol: "USDT", address: BSC_USDT, tvlAmountUsd: 40_000 },
         { symbol: "FDUSD", address: BSC_FDUSD, tvlAmountUsd: 20_000 },
       ],
+      strategies: [{
+        tokens: { deposit: "USDC", borrow: ["WBNB"], staking: ["asBNB"] },
+        leverage: { value: "1.082x" },
+        healthFactor: { value: "6.55" },
+        currentBorrows: { amountUsd: "$7.75" },
+      }],
     } as (typeof three.chains)[number];
 
     const result = adaptFlyingTulipFtUsd(three);
@@ -109,20 +124,20 @@ describe("adaptFlyingTulipFtUsd", () => {
     expect(result.slices).toHaveLength(4);
     expect(result.slices).toContainEqual(
       expect.objectContaining({
-        name: "FDUSD strategy wrapper (Binance Smart Chain)",
+        name: "FDUSD strategy wrapper (BNB Smart Chain)",
         coinId: "fdusd-first-digital",
         risk: "medium",
         depType: "collateral",
       }),
     );
-    // USDC and USDT from BSC aggregate into the existing cross-chain symbol slices.
-    expect(result.slices.find((s) => s.name === "USDC strategy wrappers (Ethereum and Sonic)")?.pct).toBeCloseTo(68.1, 1);
-    expect(result.slices.find((s) => s.name === "FDUSD strategy wrapper (Binance Smart Chain)")?.pct).toBeCloseTo(0.4, 1);
-    // No borrow/stake profile is reviewed for BSC yet, so only the two carry legs emit diagnostics.
+    // USDC and USDT from BNB Smart Chain aggregate into the cross-chain symbol slices.
+    expect(result.slices.find((s) => s.name === "USDC strategy wrappers (Ethereum, Sonic, and BNB Smart Chain)")?.pct).toBeCloseTo(68.1, 1);
+    expect(result.slices.find((s) => s.name === "FDUSD strategy wrapper (BNB Smart Chain)")?.pct).toBeCloseTo(0.4, 1);
     expect(result.metadata?.details).toMatchObject({
       strategies: [
         expect.objectContaining({ chainName: "Ethereum" }),
         expect.objectContaining({ chainName: "Sonic" }),
+        expect.objectContaining({ chainName: "BNB Smart Chain" }),
       ],
     });
   });
@@ -131,7 +146,7 @@ describe("adaptFlyingTulipFtUsd", () => {
     const missing = payload();
     missing.chains = missing.chains.filter((chain) => chain.chainId !== 56);
     expect(() => adaptFlyingTulipFtUsd(missing)).toThrow(
-      "flying-tulip-ftusd missing expected Binance Smart Chain chain payload",
+      "flying-tulip-ftusd missing expected BNB Smart Chain chain payload",
     );
   });
 
@@ -147,9 +162,28 @@ describe("adaptFlyingTulipFtUsd", () => {
     expect(() => adaptFlyingTulipFtUsd(changed)).toThrow("Ethereum borrow/stake strategy disappeared");
   });
 
+  it("fails closed when the BNB Smart Chain carry leg disappears", () => {
+    const changed = payload();
+    changed.chains[2].strategies = [];
+    expect(() => adaptFlyingTulipFtUsd(changed)).toThrow("BNB Smart Chain borrow/stake strategy disappeared");
+  });
+
+  it("drops a zero-capital reviewed collateral slot instead of fabricating exposure", () => {
+    const result = adaptFlyingTulipFtUsd(payload());
+    expect(result.warnings).toEqual([]);
+    expect(result.slices.some((slice) => slice.coinId === "fdusd-first-digital")).toBe(false);
+    expect(result.metadata?.unknownExposurePct).toBe(0);
+  });
+
+  it("fails closed when a reviewed collateral publishes a negative amount", () => {
+    const changed = payload();
+    changed.chains[2].collaterals[2].tvlAmountUsd = -1;
+    expect(() => adaptFlyingTulipFtUsd(changed)).toThrow(/FDUSD tvlAmountUsd/);
+  });
+
   it("ignores an inactive zero-TVL, zero-supply chain placeholder outside the reviewed set", () => {
     const baseline = adaptFlyingTulipFtUsd(payload());
-    expect(baseline.metadata?.totalReserveUsd).toBeCloseTo(4_686_811.9099, 4);
+    expect(baseline.metadata?.totalReserveUsd).toBeCloseTo(4_686_906.1383, 4);
     const withPlaceholder = payload();
     withPlaceholder.chains.push({
       chainId: 137,
@@ -162,7 +196,7 @@ describe("adaptFlyingTulipFtUsd", () => {
     expect(result.warnings).toEqual([]);
     expect(result.metadata).toMatchObject({
       totalReserveUsd: baseline.metadata?.totalReserveUsd,
-      supplyUsd: 4_685_378.1711,
+      supplyUsd: 4_685_472.393401,
     });
   });
 
@@ -201,7 +235,7 @@ describe("flying-tulip-ftusd fetch boundary", () => {
       sourceTimestamp: 1_786_310_565,
     });
     expect(result.slices).toContainEqual(expect.objectContaining({
-      name: "USDC strategy wrappers (Ethereum and Sonic)",
+      name: "USDC strategy wrappers (Ethereum, Sonic, and BNB Smart Chain)",
       coinId: "usdc-circle",
     }));
   });
