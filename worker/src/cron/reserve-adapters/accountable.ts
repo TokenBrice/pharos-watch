@@ -1,7 +1,7 @@
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { formatPercentFromRatio } from "@shared/lib/format";
-import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import { getLiveReserveAdapterMaxUnknownExposurePct, parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   buildCoverageShortfallWarnings,
@@ -11,6 +11,7 @@ import {
   freshnessMetadataFromTimestamp,
   parseTimestampLikeToUnixSeconds,
   reserveDegradedWarning,
+  reserveInfoWarning,
   slicesFromValues,
 } from "./helpers";
 import { buildBrowserHeaders } from "./request";
@@ -288,7 +289,8 @@ function buildCollateralizationReconciliationWarning(
 
 /** A mapped bucket the dashboard reports as exactly zero would vanish from the published mix
  *  without any trace, so it still fails closed. Signed buckets are a distinct, reported case:
- *  they are excluded from slice weights and surfaced as a degraded warning instead. */
+ *  they are excluded from slice weights and surfaced as a `signed-negative-bucket` warning
+ *  (degraded only when the omitted exposure is material) instead. */
 function validateMappedBucketValues(
   mapped: Array<{ name: string; value: number }>,
   bucket: string,
@@ -349,6 +351,13 @@ function findNearestExposureSplitReserveTotal(
   return nearest;
 }
 
+/** Signed buckets are always omitted from slice weights and named in metadata; the degraded
+ *  effect is reserved for material omissions. Materiality rides the same adapter policy
+ *  ceiling the `unmapped-bucket` warning uses (5% unless the declaration overrides it), so a
+ *  fully unwound loop that nets to dust (observed: -$0.11 on a $64M book) stays informational
+ *  while levered books whose netted legs move whole percents of reserves still degrade. A
+ *  signed net above the reconciled reserve total is already material by the reconciliation
+ *  tolerance, so it keeps the degraded effect regardless of the percentage. */
 function buildSignedBucketWarning(
   signedBuckets: Array<{ name: string; value: number }>,
   totalValue: number,
@@ -359,12 +368,12 @@ function buildSignedBucketWarning(
   const residualSuffix = signedResidual == null
     ? ""
     : `; their signed total is ${signedResidual.toFixed(2)} USD above the reconciled reserve total`;
-  return reserveDegradedWarning(
-    "signed-negative-bucket",
-    `Accountable signed exposure buckets are omitted from reserve slices: ${
-      signedBuckets.map((entry) => entry.name).sort().join(", ")
-    } (${exposurePct.toFixed(2)}% of positive reserve buckets)${residualSuffix}`,
-  );
+  const message = `Accountable signed exposure buckets are omitted from reserve slices: ${
+    signedBuckets.map((entry) => entry.name).sort().join(", ")
+  } (${exposurePct.toFixed(2)}% of positive reserve buckets)${residualSuffix}`;
+  return exposurePct > getLiveReserveAdapterMaxUnknownExposurePct("accountable") || signedResidual != null
+    ? reserveDegradedWarning("signed-negative-bucket", message)
+    : reserveInfoWarning("signed-negative-bucket", message);
 }
 
 function buildDeploymentSnapshotMetadata(

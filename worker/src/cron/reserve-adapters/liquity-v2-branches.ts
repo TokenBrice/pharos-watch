@@ -15,6 +15,7 @@ import { rethrowIfAborted } from "../../lib/abort";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { AdapterContext, AdapterResult } from "./types";
 import { executeEvmObservationPlan, rawObservation } from "./evm-observation-plan";
+import { defillamaAssetKey } from "./defillama";
 import { ERC4626_ASSET_SELECTOR, ERC4626_TOTAL_ASSETS_SELECTOR } from "./erc4626";
 import {
   buildRedemptionSnapshotMetadata,
@@ -436,6 +437,28 @@ async function fetchBranchProtocolPriceMap(
       "branch-protocol-price-fallback",
       `Used branch oracle price fallback for: ${[...protocolPriceMap.keys()].join(", ")}`,
     ));
+    // A DefiLlama gap on a branch this same-run branch oracle priced is not a
+    // degraded observation: the price is live, protocol-sourced, and disclosed
+    // by the informational fallback warning above. Only branches with no
+    // reviewed price path keep the degraded defillama-quote-missing warning
+    // (and a branch priced by neither path still fails closed).
+    const oraclePricedAssetKeys = new Set(
+      missingPricedBranches
+        .filter(({ branch }) => protocolPriceMap.has(branch.name))
+        .map(({ branch }) => defillamaAssetKey(
+          branch.priceToken?.chain ?? branch.token.chain,
+          branch.priceToken?.address ?? branch.token.address,
+        )),
+    );
+    if (oraclePricedAssetKeys.size > 0) {
+      for (let index = warnings.length - 1; index >= 0; index -= 1) {
+        const warning = warnings[index];
+        if (warning.code === "defillama-quote-missing"
+          && [...oraclePricedAssetKeys].some((assetKey) => warning.message.includes(assetKey))) {
+          warnings.splice(index, 1);
+        }
+      }
+    }
   }
   return protocolPriceMap;
 }

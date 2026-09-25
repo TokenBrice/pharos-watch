@@ -153,7 +153,9 @@
         "[Aave]_USDC": "medium",
         "[Curvance]_AUSD": "high",
         "[Aave]_USDG": "medium",
-        "[Global_Dollar]_PT_USDG_Loop": "high"
+        "[Global_Dollar]_PT_USDG_Loop": "high",
+        "[Morpho]_USDC": "medium",
+        "[Re]_reUSD_LP": "high"
       },
       "coinIdMap": {
         "[Fluid]_fUSDT0": "usdt-tether",
@@ -191,7 +193,9 @@
         "[Agora]_PT_AUSD_Loop": "ausd-agora",
         "[Aave]_USDT0": "usdt-tether",
         "[Aave]_USDC": "usdc-circle",
-        "[Curvance]_AUSD": "ausd-agora"
+        "[Curvance]_AUSD": "ausd-agora",
+        "[Morpho]_USDC": "usdc-circle",
+        "[Re]_reUSD_LP": "reusd-re-protocol"
       },
       "depTypeMap": {
         "[Fluid]_fUSDT0": "collateral",
@@ -229,7 +233,9 @@
         "[Agora]_PT_AUSD_Loop": "collateral",
         "[Aave]_USDT0": "collateral",
         "[Aave]_USDC": "collateral",
-        "[Curvance]_AUSD": "collateral"
+        "[Curvance]_AUSD": "collateral",
+        "[Morpho]_USDC": "collateral",
+        "[Re]_reUSD_LP": "collateral"
       },
       "renameMap": {
         "[Fluid]_fUSDT0": "Fluid fUSDT0",
@@ -275,7 +281,9 @@
         "[Aave]_USDC": "Aave USDC",
         "[Curvance]_AUSD": "Curvance AUSD",
         "[Aave]_USDG": "Aave USDG",
-        "[Global_Dollar]_PT_USDG_Loop": "Global Dollar USDG Pendle PT loop"
+        "[Global_Dollar]_PT_USDG_Loop": "Global Dollar USDG Pendle PT loop",
+        "[Morpho]_USDC": "Morpho USDC",
+        "[Re]_reUSD_LP": "Re reUSD LP"
       },
       "sourceKeyMap": {
         "[Fluid]_fUSDT0": "accountable:yuzu:deployment:fluid-fusdt0",
@@ -321,7 +329,9 @@
         "[Aave]_USDC": "accountable:yuzu:deployment:aave-usdc",
         "[Curvance]_AUSD": "accountable:yuzu:deployment:curvance-ausd",
         "[Aave]_USDG": "accountable:yuzu:deployment:aave-usdg",
-        "[Global_Dollar]_PT_USDG_Loop": "accountable:yuzu:deployment:global-dollar-pt-usdg-loop"
+        "[Global_Dollar]_PT_USDG_Loop": "accountable:yuzu:deployment:global-dollar-pt-usdg-loop",
+        "[Morpho]_USDC": "accountable:yuzu:deployment:morpho-usdc",
+        "[Re]_reUSD_LP": "accountable:yuzu:deployment:re-reusd-lp"
       }
     }
   },

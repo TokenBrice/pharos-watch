@@ -3,13 +3,13 @@
   "product": "PYUSD",
   "profile": "pyusd-v1",
   "officialIndexUrl": "https://www.paxos.com/pyusd-transparency",
-  "reportUrl": "https://framerusercontent.com/assets/AzDCU1EG16dVKso3JV6W7I5Bk.pdf",
-  "reportSha256": "1873676ebec2ba586dcfdaad163bdcb767bbbac30960cfb264bcdb37b7bdc5b9",
-  "reportByteLength": 545442,
-  "reportDate": "2026-07-31",
-  "reportAsOf": "2026-07-31T17:00:00-04:00",
+  "reportUrl": "https://framerusercontent.com/assets/VdMoM8qevL5j7tgTTmLhkemRdY.pdf",
+  "reportSha256": "d198b809aaf8506dd18d88bee33ea9514824572da557260e0917733f3cf55f66",
+  "reportByteLength": 536031,
+  "reportDate": "2026-08-31",
+  "reportAsOf": "2026-08-31T17:00:00-04:00",
   "reportTimeZone": "Eastern Daylight Time (UTC-4)",
-  "reportIssuedAt": "2026-08-25T23:59:00-04:00",
+  "reportIssuedAt": "2026-09-24T23:59:00-04:00",
   "attestor": "KPMG LLP",
   "engagement": "Independent accountants examination under AICPA attestation standards",
   "conclusion": "unmodified",
@@ -18,63 +18,63 @@
     {
       "code": "cash",
       "label": "Cash",
-      "amount": "94699538"
+      "amount": "111173415"
     },
     {
       "code": "reverse-repo",
       "label": "Repurchase agreements, at fair value",
-      "amount": "2200625000"
+      "amount": "2408763000"
     },
     {
       "code": "treasury-bills",
       "label": "Obligations of U.S. Treasury, at fair value",
-      "amount": "398747625"
+      "amount": "373999462"
     }
   ],
   "liabilities": [
     {
       "code": "ethereum",
       "label": "PYUSD redeemable ethereum tokens",
-      "amount": "1790065386"
+      "amount": "1840077337"
     },
     {
       "code": "solana",
       "label": "PYUSD redeemable solana tokens",
-      "amount": "675295029"
+      "amount": "743923272"
     },
     {
       "code": "arbitrum",
       "label": "PYUSD redeemable arbitrum tokens",
-      "amount": "205920633"
+      "amount": "277212847"
     },
     {
       "code": "stellar",
       "label": "PYUSD redeemable stellar tokens",
-      "amount": "7902125"
+      "amount": "13392135"
     },
     {
       "code": "polygon",
       "label": "PYUSD redeemable polygon tokens",
-      "amount": "10152379"
+      "amount": "10343131"
     },
     {
       "code": "ink",
       "label": "PYUSD redeemable ink tokens",
-      "amount": "22"
+      "amount": "24"
     },
     {
       "code": "x-layer",
       "label": "PYUSD redeemable x-layer tokens",
-      "amount": "100"
+      "amount": "2000099"
     }
   ],
-  "reportedAssetTotal": "2694072163",
-  "computedAssetTotal": "2694072163",
-  "reportedLiabilityTotal": "2689335674",
+  "reportedAssetTotal": "2893935877",
+  "computedAssetTotal": "2893935877",
+  "reportedLiabilityTotal": "2886948845",
   "extraction": {
     "tool": "Poppler pdftotext -layout",
-    "parserVersion": "26.07.0",
-    "normalizedTextSha256": "d5f1e5fb9250faf9d78c7020a6cf9e318a5c39f48124f13f0083edd64ebe19a4",
+    "parserVersion": "26.08.0",
+    "normalizedTextSha256": "b6191f3b340a5c8d6069d68b0a460c6864bcd0e9d57ef84f05ff84a5d430d7ba",
     "pageCount": 12
   },
   "assuranceTier": "independent-assurance"

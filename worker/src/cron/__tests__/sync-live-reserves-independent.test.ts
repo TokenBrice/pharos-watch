@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import type { LiveReserveSnapshotMetadata } from "@shared/types/live-reserves";
 import type { ReserveAdapterDefinition } from "../reserve-adapters/index";
 import {
   mockLiveReserveD1,
@@ -640,6 +641,131 @@ describe("syncLiveReserves", () => {
       lastSuccessAt,
     });
     expect(scoringMap.has(coin.id)).toBe(true);
+  });
+
+  describe("fallback snapshot admission guard", () => {
+    async function syncFallbackResult(args: {
+      storedAgeSec: number;
+      fallbackMetadata: LiveReserveSnapshotMetadata;
+    }) {
+      const coin = getIndependentConfiguredCoin();
+      const now = Math.floor(Date.now() / 1000);
+      const lastSuccessAt = now - args.storedAgeSec;
+      const previousLastSuccessAttemptId = `${coin.id}:previous-success`;
+      const breakerKey = `live-reserves:${coin.liveReservesConfig.breakerScope ?? coin.liveReservesConfig.adapter}`;
+      const db = dbWithPreviousLiveReserveRows(buildPreviousLiveReserveRows({
+        coin, lastStatus: "ok", lastAttemptedAt: lastSuccessAt, lastSuccessAt,
+      }));
+      const { syncReserveCoin } = await import("../sync-live-reserves-core");
+      const result = await syncReserveCoin({
+        db,
+        coin,
+        signal: new AbortController().signal,
+        adapter: adapterForCoin(coin),
+        // Shape of the orchestrator runner's output after the primary threw.
+        runAdapter: async () => ({
+          slices: [{ name: "Fallback API reserves", pct: 100, risk: "low" as const }],
+          metadata: args.fallbackMetadata,
+          warnings: [{
+            code: "primary-fallback-used",
+            message: "Primary reserve source failed; fell through to fallback. Primary error: adapter-timeout",
+            severity: "info" as const,
+            effect: "info" as const,
+          }],
+        }),
+        breakerCanFetch: new Map([[breakerKey, true]]),
+        d1FinalizeTimeoutMs: 30_000,
+        previousState: {
+          stablecoinId: coin.id,
+          adapterKey: coin.liveReservesConfig.adapter,
+          breakerKey,
+          lastAttemptedAt: lastSuccessAt,
+          lastSuccessAt,
+          lastStatus: "ok",
+          warningCount: 0,
+          warnings: [],
+          lastError: null,
+          metadata: {},
+          lastAttemptId: previousLastSuccessAttemptId,
+          pendingAttemptId: null,
+          lastSuccessAttemptId: previousLastSuccessAttemptId,
+        },
+      });
+      const { resolveReserveResult, loadFreshIndependentLiveReserveMap } = await import("../../lib/live-reserves/store");
+      return {
+        result,
+        lastSuccessAt,
+        previousLastSuccessAttemptId,
+        resolved: await resolveReserveResult(db, coin.id, now),
+        scoringReserves: (await loadFreshIndependentLiveReserveMap(db, now)).get(coin.id),
+        state: await db.prepare(
+          "SELECT last_status, last_success_at, last_success_attempt_id, warnings, metadata FROM reserve_sync_state WHERE stablecoin_id = ?",
+        ).bind(coin.id).first<{
+          last_status: string; last_success_at: number; last_success_attempt_id: string; warnings: string | null; metadata: string;
+        }>(),
+        attemptStatuses: (await db.prepare(
+          "SELECT status FROM reserve_sync_attempt_history WHERE stablecoin_id = ? ORDER BY attempted_at",
+        ).bind(coin.id).all<{ status: string }>()).results.map((row) => row.status),
+      };
+    }
+
+    const unverifiedFallback: LiveReserveSnapshotMetadata = {
+      freshnessMode: "unverified",
+      details: { freshnessSource: "fallback-api", freshnessReason: "Fallback API publishes no source timestamp" },
+    };
+    const priorSlices = [{ name: "Prior verified reserves", pct: 100, risk: "low" }];
+    const fallbackSlices = [{ name: "Fallback API reserves", pct: 100, risk: "low" }];
+
+    it("withholds a score-ineligible fallback read while the stored snapshot still scores", async () => {
+      const outcome = await syncFallbackResult({ storedAgeSec: 4 * 60 * 60, fallbackMetadata: unverifiedFallback });
+
+      expect(outcome.result.status).toBe("synced");
+      expect(outcome.resolved?.reserves).toEqual(priorSlices);
+      expect(outcome.resolved?.provenance?.scoringEligible).toBe(true);
+      expect(outcome.scoringReserves).toEqual(priorSlices);
+      expect(outcome.state).toMatchObject({
+        last_status: "degraded",
+        last_success_at: outcome.lastSuccessAt,
+        last_success_attempt_id: outcome.previousLastSuccessAttemptId,
+      });
+      const warnings = JSON.parse(outcome.state!.warnings ?? "[]") as Array<{ code: string; effect: string }>;
+      expect(warnings.map((warning) => warning.code)).toEqual(expect.arrayContaining([
+        "primary-fallback-used",
+        "fallback-withheld-score-grade-retained",
+      ]));
+      expect(warnings.find((warning) => warning.code === "fallback-withheld-score-grade-retained")?.effect).toBe("degraded");
+      expect(JSON.parse(outcome.state!.metadata)).toMatchObject({
+        reason: "fallback-withheld-score-grade-retained",
+        withheldFallback: {
+          admissionReasons: expect.arrayContaining(["invalid-freshness"]),
+          retainedSnapshotAttemptId: outcome.previousLastSuccessAttemptId,
+          retainedSnapshotFetchedAt: outcome.lastSuccessAt,
+        },
+      });
+      expect(outcome.attemptStatuses).toEqual(["degraded"]);
+    });
+
+    it("writes the fallback read once the stored snapshot has aged out of admission", async () => {
+      const outcome = await syncFallbackResult({ storedAgeSec: 3 * 24 * 60 * 60, fallbackMetadata: unverifiedFallback });
+
+      expect(outcome.result.status).toBe("synced");
+      expect(outcome.resolved?.reserves).toEqual(fallbackSlices);
+      expect(outcome.resolved?.provenance?.scoringEligible).toBe(false);
+      expect(outcome.scoringReserves).toBeUndefined();
+      expect(outcome.state?.last_success_attempt_id).not.toBe(outcome.previousLastSuccessAttemptId);
+    });
+
+    it("lets a score-grade fallback read replace the stored snapshot", async () => {
+      const outcome = await syncFallbackResult({
+        storedAgeSec: 4 * 60 * 60,
+        fallbackMetadata: { freshnessMode: "verified", sourceTimestamp: Math.floor(Date.now() / 1000) - 60 },
+      });
+
+      expect(outcome.result.status).toBe("synced");
+      expect(outcome.resolved?.reserves).toEqual(fallbackSlices);
+      expect(outcome.scoringReserves).toEqual(fallbackSlices);
+      expect(outcome.state?.last_status).toBe("ok");
+    });
   });
 
 });

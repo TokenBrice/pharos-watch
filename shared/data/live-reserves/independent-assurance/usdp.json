@@ -3,13 +3,13 @@
   "product": "USDP",
   "profile": "usdp-v1",
   "officialIndexUrl": "https://www.paxos.com/usdp-transparency",
-  "reportUrl": "https://framerusercontent.com/assets/Kk04pJ7gWRmVlVJvl5rmYWj25M.pdf",
-  "reportSha256": "40694d8d3162da294c41e72317e23e12ca4b0368029855741413c0327ec69d28",
-  "reportByteLength": 522676,
-  "reportDate": "2026-07-31",
-  "reportAsOf": "2026-07-31T17:00:00-04:00",
+  "reportUrl": "https://framerusercontent.com/assets/YXrlcnHgVxcHy66TMLVHn2fM71U.pdf",
+  "reportSha256": "aef3f04264d829804e45ccf24b2d5a084e7fa3aed2395a763fe5ee731f486ebc",
+  "reportByteLength": 512421,
+  "reportDate": "2026-08-31",
+  "reportAsOf": "2026-08-31T17:00:00-04:00",
   "reportTimeZone": "Eastern Daylight Time (UTC-4)",
-  "reportIssuedAt": "2026-08-25T23:59:00-04:00",
+  "reportIssuedAt": "2026-09-24T23:59:00-04:00",
   "attestor": "KPMG LLP",
   "engagement": "Independent accountants examination under AICPA attestation standards",
   "conclusion": "unmodified",
@@ -18,33 +18,33 @@
     {
       "code": "cash",
       "label": "Cash",
-      "amount": "24935703"
+      "amount": "22220905"
     },
     {
       "code": "reverse-repo",
       "label": "Repurchase agreements, at fair value",
-      "amount": "7040000"
+      "amount": "6969000"
     }
   ],
   "liabilities": [
     {
       "code": "ethereum",
       "label": "USDP redeemable ethereum tokens",
-      "amount": "29650135"
+      "amount": "27473280"
     },
     {
       "code": "solana",
       "label": "USDP redeemable solana tokens",
-      "amount": "2303892"
+      "amount": "1694981"
     }
   ],
-  "reportedAssetTotal": "31975703",
-  "computedAssetTotal": "31975703",
-  "reportedLiabilityTotal": "31954027",
+  "reportedAssetTotal": "29189905",
+  "computedAssetTotal": "29189905",
+  "reportedLiabilityTotal": "29168261",
   "extraction": {
     "tool": "Poppler pdftotext -layout",
-    "parserVersion": "26.07.0",
-    "normalizedTextSha256": "bb5962243035437103763ebdab4efe63502920b23e29ae2685d166ce19863cde",
+    "parserVersion": "26.08.0",
+    "normalizedTextSha256": "0d453e80dcb481e8d4282a66132d704d9a29880ad5c1da04031eec5f8b52ef68",
     "pageCount": 9
   },
   "assuranceTier": "independent-assurance"

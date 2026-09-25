@@ -93,7 +93,7 @@
     {
       "type": "warning",
       "title": "Partial reserve coverage",
-      "message": "At the September 14, 2026 reserve observation, the issuer API identified about 18.6% of reported protocol TVL; 81.4% remained unmapped. Exchange hedge notional and mirrored custody balances cannot be added as separate backing to fill that gap. The tracked legacy mint uses a Ceffu-custodied delta-neutral strategy; documentation for the replacement USDv does not establish this token's reserve composition."
+      "message": "At the September 14, 2026 reserve observation, the issuer API identified about 18.6% of reported protocol TVL; 81.4% remained unmapped. From the September 20, 2026 data cut the legacy protocol-data endpoint itemizes only vestigial components (Ceffu custody below $100, empty vault and reserve fund) and its protocol TVL headline now equals the replacement USDv mint's on-chain supply, so live tracking fails closed rather than attribute the replacement token's supply to this legacy mint. Exchange hedge notional and mirrored custody balances cannot be added as separate backing to fill that gap. The tracked legacy mint uses a Ceffu-custodied delta-neutral strategy; documentation for the replacement USDv does not establish this token's reserve composition."
     }
   ],
   "marketAvailability": "legacy-or-wind-down"

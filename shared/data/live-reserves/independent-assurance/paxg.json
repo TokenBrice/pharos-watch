@@ -3,13 +3,13 @@
   "product": "PAXG",
   "profile": "paxg-v1",
   "officialIndexUrl": "https://www.paxos.com/paxg-transparency",
-  "reportUrl": "https://framerusercontent.com/assets/mZxm7J7vQTwbTmOGENYENSpEU.pdf",
-  "reportSha256": "78b777fa8653a38f2f770cd7af905257200c306ed1a58d94ffbf2f63d6d3839e",
-  "reportByteLength": 505159,
-  "reportDate": "2026-07-31",
-  "reportAsOf": "2026-07-31T17:00:00-04:00",
+  "reportUrl": "https://framerusercontent.com/assets/9bk8TbTXouqOrpoxLSn5XIf7Ufo.pdf",
+  "reportSha256": "65fa4148facf8d6256a5bff8db39c969cae329fdf5afc39ce89baddf44ac1b3c",
+  "reportByteLength": 495271,
+  "reportDate": "2026-08-31",
+  "reportAsOf": "2026-08-31T17:00:00-04:00",
   "reportTimeZone": "Eastern Daylight Time (UTC-4)",
-  "reportIssuedAt": "2026-08-25T23:59:00-04:00",
+  "reportIssuedAt": "2026-09-24T23:59:00-04:00",
   "attestor": "KPMG LLP",
   "engagement": "Independent accountants' examination under AICPA attestation standards",
   "conclusion": "unmodified",
@@ -18,28 +18,34 @@
     {
       "code": "allocated-gold",
       "label": "London Good Delivery gold in fine troy ounces",
-      "amount": "442217"
+      "amount": "431313"
     }
   ],
   "liabilities": [
     {
       "code": "ethereum",
       "label": "PAXG redeemable Ethereum tokens",
-      "amount": "441939"
+      "amount": "428830"
     },
     {
       "code": "solana",
       "label": "PAXG redeemable Solana tokens",
-      "amount": "278"
+      "amount": "2478"
+    },
+    {
+      "code": "robinhood",
+      "label": "PAXG redeemable Robinhood tokens",
+      "amount": "5"
     }
   ],
-  "reportedAssetTotal": "442217",
-  "computedAssetTotal": "442217",
-  "reportedLiabilityTotal": "442217",
+  "reportedAssetTotal": "431313",
+  "computedAssetTotal": "431313",
+  "reportedLiabilityTotal": "431313",
   "extraction": {
     "tool": "Poppler pdftotext -layout",
     "parserVersion": "26.08.0",
-    "normalizedTextSha256": "6643e7345c415b6eb1e6c125b195d5bb7c3049222803f1c29cee5b2b34a8bd51",
+    "normalizedTextSha256": "815b6d76dd382e861b687135c9e556489875b82b1ea450835ed5893c460cc2b6",
     "pageCount": 8
-  }
+  },
+  "assuranceTier": "independent-assurance"
 }

@@ -74,6 +74,7 @@ interface LlammaMarketDescriptor {
   symbol: string;
   minBand: number;
   maxBand: number;
+  activeBand: number;
 }
 
 interface LlammaMarketExposure {
@@ -119,13 +120,14 @@ const ETHEREUM_RPC_URLS = [getPublicRpcUrl(ETHEREUM_CHAIN), getSecondaryFallback
   (url): url is string => typeof url === "string" && url.length > 0,
 );
 const CURVE_CONTROLLER_FACTORY = "0xC9332fdCB1C491Dcc683bAe86Fe3cb70360738BC";
+// Band reads from every market share one page queue; 500 calls keeps each
+// aggregate3 request near 225 KB, inside public RPC request-body limits.
 const DIRECT_LLAMMA_MULTICALL_BATCH_SIZE = 500;
-const CRVUSD_MARKET_READ_CONCURRENCY = 2;
+const CRVUSD_MULTICALL_PAGE_CONCURRENCY = 2;
 const CRVUSD_MAX_LLAMMA_MARKETS = 256;
 const CRVUSD_MAX_LLAMMA_BANDS_PER_MARKET = 2_048;
 const CRVUSD_MAX_YIELD_BASIS_MARKETS = 256;
 const YIELD_BASIS_FACTORY = "0x370a449febb9411c95bf897021377fe0b7d100c0";
-const YIELD_BASIS_VIEW_GAS = "0x5B8D80";
 const YIELD_BASIS_OPTIONAL_TIMEOUT_MS = 6_000;
 const CURVE_CONTROLLER_FACTORY_ABI = parseAbi([
   "function n_collaterals() view returns (uint256)",
@@ -136,6 +138,7 @@ const CURVE_CONTROLLER_FACTORY_ABI = parseAbi([
 const CURVE_AMM_ABI = parseAbi([
   "function min_band() view returns (int256)",
   "function max_band() view returns (int256)",
+  "function active_band() view returns (int256)",
   "function bands_x(int256) view returns (uint256)",
   "function bands_y(int256) view returns (uint256)",
 ]);
@@ -289,13 +292,10 @@ async function readEthereumContract(
   functionName: string,
   signal: AbortSignal,
   ctx?: AdapterContext,
-  args: readonly unknown[] = [],
-  gas?: string,
 ): Promise<unknown> {
   const data = encodeFunctionData({
     abi,
     functionName,
-    args,
   });
   const raw = await runAdapterIo(ctx, `crvusd-evm-call:${address}:${functionName}`, () =>
     fetchEvmCallHexAtBlock(ETHEREUM_CHAIN, address, data, ctx?.observedBlock?.number ?? "latest", {
@@ -303,7 +303,6 @@ async function readEthereumContract(
       timeoutMs: 12_000,
       chainRpcs: ctx?.chainRpcs,
       extraRpcUrls: ETHEREUM_RPC_URLS,
-      ...(gas ? { gas } : {}),
     }),
   );
   if (!raw) {
@@ -321,7 +320,6 @@ async function fetchCrvUsdMulticallResults(
   label: string,
   signal: AbortSignal,
   ctx?: AdapterContext,
-  multicallBatchSize?: number,
 ): Promise<Map<string, `0x${string}`>> {
   if (calls.length === 0) return new Map();
 
@@ -340,8 +338,7 @@ async function fetchCrvUsdMulticallResults(
       ctx,
       rpcUrl: ETHEREUM_RPC_URLS[0],
       fallbackRpcUrl: ETHEREUM_RPC_URLS[1],
-      timeoutMs: multicallBatchSize == null ? 12_000 : 20_000,
-      ...(multicallBatchSize != null ? { multicallBatchSize } : {}),
+      timeoutMs: 12_000,
     }),
   });
   return new Map(snapshot.rawByLabel);
@@ -479,6 +476,11 @@ async function fetchLlammaMarketDescriptors(
         contract: market.ammAddress,
         data: encodeFunctionData({ abi: CURVE_AMM_ABI, functionName: "max_band" }),
       },
+      {
+        label: `${market.marketId}:active_band`,
+        contract: market.ammAddress,
+        data: encodeFunctionData({ abi: CURVE_AMM_ABI, functionName: "active_band" }),
+      },
     ]),
     "LLAMMA metadata",
     signal,
@@ -511,6 +513,14 @@ async function fetchLlammaMarketDescriptors(
       }) as bigint,
       `market ${market.marketId} max_band`,
     );
+    const activeBand = safeInt256ToNumber(
+      decodeFunctionResult({
+        abi: CURVE_AMM_ABI,
+        functionName: "active_band",
+        data: requireCrvUsdMulticallResult(metadataResults, `${market.marketId}:active_band`, "LLAMMA metadata"),
+      }) as bigint,
+      `market ${market.marketId} active_band`,
+    );
     if (maxBand < minBand) return null;
     validateLlammaBandCount(minBand, maxBand, market.marketId);
     return {
@@ -518,69 +528,72 @@ async function fetchLlammaMarketDescriptors(
       symbol: symbolRaw,
       minBand,
       maxBand,
+      activeBand,
     };
   });
 
   return descriptors.filter((descriptor): descriptor is LlammaMarketDescriptor => descriptor != null);
 }
 
-async function fetchLlammaMarketExposures(signal: AbortSignal, ctx: AdapterContext | undefined, warnings: LiveReserveWarning[]): Promise<LlammaMarketExposure[]> {
-  const descriptors = await fetchLlammaMarketDescriptors(signal, ctx);
-  if (descriptors.length === 0) return [];
+/**
+ * LLAMMA bands are single-sided away from the active band: `deposit_range`
+ * only fills bands above `active_band` whose `bands_x` is zero, and every
+ * exchange rewrites the crossed bands as pure crvUSD (x) below the new active
+ * band or pure collateral (y) above it. Collateral therefore lives only in
+ * [max(min_band, active_band), max_band] and crvUSD only in
+ * [min_band, min(max_band, active_band)]; the opposite axis is exactly zero.
+ */
+function llammaBandCalls(market: LlammaMarketDescriptor, signal: AbortSignal): OnchainMulticall3Call[] {
+  const calls: OnchainMulticall3Call[] = [];
+  for (let band = Math.max(market.minBand, market.activeBand); band <= market.maxBand; band += 1) {
+    throwIfAborted(signal);
+    calls.push({
+      label: `${market.marketId}:y:${band}`,
+      contract: market.ammAddress,
+      data: encodeFunctionData({ abi: CURVE_AMM_ABI, functionName: "bands_y", args: [BigInt(band)] }),
+    });
+  }
+  for (let band = market.minBand; band <= Math.min(market.maxBand, market.activeBand); band += 1) {
+    throwIfAborted(signal);
+    calls.push({
+      label: `${market.marketId}:x:${band}`,
+      contract: market.ammAddress,
+      data: encodeFunctionData({ abi: CURVE_AMM_ABI, functionName: "bands_x", args: [BigInt(band)] }),
+    });
+  }
+  return calls;
+}
 
-  const priceMap = await fetchDefiLlamaPrices(
-    Array.from(
-      new Map(
-        descriptors.map((market) => [
-          normalizeAddress(market.collateralAddress),
-          {
-            key: normalizeAddress(market.collateralAddress),
-            chain: ETHEREUM_CHAIN,
-            address: market.collateralAddress,
-          },
-        ]),
-      ).values(),
-    ),
-    signal,
-    ctx,
-    warnings,
+async function fetchLlammaBandTotals(
+  descriptors: readonly LlammaMarketDescriptor[],
+  signal: AbortSignal,
+  ctx: AdapterContext | undefined,
+): Promise<Map<number, { y: bigint; x: bigint }>> {
+  const calls = descriptors.flatMap((market) => llammaBandCalls(market, signal));
+  const pages: OnchainMulticall3Call[][] = [];
+  for (let start = 0; start < calls.length; start += DIRECT_LLAMMA_MULTICALL_BATCH_SIZE) {
+    pages.push(calls.slice(start, start + DIRECT_LLAMMA_MULTICALL_BATCH_SIZE));
+  }
+  const pageResults = await mapWithConcurrency(pages, CRVUSD_MULTICALL_PAGE_CONCURRENCY, (page, index) =>
+    fetchCrvUsdMulticallResults(page, `LLAMMA bands page ${index + 1}/${pages.length}`, signal, ctx),
   );
 
-  return mapWithConcurrency(descriptors, CRVUSD_MARKET_READ_CONCURRENCY, async (market) => {
-    const calls: OnchainMulticall3Call[] = [];
-    for (let band = market.minBand; band <= market.maxBand; band += 1) {
-      throwIfAborted(signal);
-      calls.push({
-        label: `${market.marketId}:y:${band}`,
-        contract: market.ammAddress,
-        data: encodeFunctionData({ abi: CURVE_AMM_ABI, functionName: "bands_y", args: [BigInt(band)] }),
-      });
-      calls.push({
-        label: `${market.marketId}:x:${band}`,
-        contract: market.ammAddress,
-        data: encodeFunctionData({ abi: CURVE_AMM_ABI, functionName: "bands_x", args: [BigInt(band)] }),
-      });
-    }
-
-    const results = await fetchCrvUsdMulticallResults(
-      calls,
-      `LLAMMA bands for market ${market.marketId}`,
-      signal,
-      ctx,
-      DIRECT_LLAMMA_MULTICALL_BATCH_SIZE,
-    );
-
-    const totals = { y: 0n, x: 0n };
+  const totals = new Map(descriptors.map((market) => [market.marketId, { y: 0n, x: 0n }]));
+  for (const results of pageResults) {
     for (const [label, returnData] of results) {
-      const [, axis] = label.split(":");
+      const [marketId, axis] = label.split(":");
+      const marketTotals = totals.get(Number(marketId));
+      if (!marketTotals) {
+        throw new Error(`crvUSD LLAMMA band call returned unknown market: ${label}`);
+      }
       if (axis === "y") {
-        totals.y += decodeFunctionResult({
+        marketTotals.y += decodeFunctionResult({
           abi: CURVE_AMM_ABI,
           functionName: "bands_y",
           data: returnData,
         }) as bigint;
       } else if (axis === "x") {
-        totals.x += decodeFunctionResult({
+        marketTotals.x += decodeFunctionResult({
           abi: CURVE_AMM_ABI,
           functionName: "bands_x",
           data: returnData,
@@ -589,7 +602,40 @@ async function fetchLlammaMarketExposures(signal: AbortSignal, ctx: AdapterConte
         throw new Error(`crvUSD LLAMMA band call returned invalid axis: ${label}`);
       }
     }
+  }
+  return totals;
+}
 
+async function fetchLlammaMarketExposures(signal: AbortSignal, ctx: AdapterContext | undefined, warnings: LiveReserveWarning[]): Promise<LlammaMarketExposure[]> {
+  const descriptors = await fetchLlammaMarketDescriptors(signal, ctx);
+  if (descriptors.length === 0) return [];
+
+  const [priceMap, bandTotals] = await Promise.all([
+    fetchDefiLlamaPrices(
+      Array.from(
+        new Map(
+          descriptors.map((market) => [
+            normalizeAddress(market.collateralAddress),
+            {
+              key: normalizeAddress(market.collateralAddress),
+              chain: ETHEREUM_CHAIN,
+              address: market.collateralAddress,
+            },
+          ]),
+        ).values(),
+      ),
+      signal,
+      ctx,
+      warnings,
+    ),
+    fetchLlammaBandTotals(descriptors, signal, ctx),
+  ]);
+
+  return descriptors.map((market) => {
+    const totals = bandTotals.get(market.marketId);
+    if (!totals) {
+      throw new Error(`crvUSD LLAMMA band totals missing for market ${market.marketId}`);
+    }
     const price = priceMap.get(normalizeAddress(market.collateralAddress));
     if (price == null) {
       throw new Error(`crvUSD LLAMMA missing DefiLlama price for market ${market.marketId} (${market.symbol})`);
@@ -714,36 +760,43 @@ async function fetchYieldBasisMarketPositions(
     })
     .filter((market): market is YieldBasisMarketWithdrawCandidate => market != null);
 
-  const positions = await mapWithConcurrency(
-    withdrawCandidates,
-    CRVUSD_MARKET_READ_CONCURRENCY,
-    async (market): Promise<YieldBasisMarketPosition | null> => {
-      throwIfAborted(signal);
-      // Newer YB markets can revert on preview_withdraw(totalSupply); preview_emergency_withdraw
-      // still exposes the full-market external asset balance without relying on that swap path.
-      const emergencyWithdraw = (await readEthereumContract(
-        market.ltAddress,
-        YIELD_BASIS_LT_ABI,
-        "preview_emergency_withdraw",
-        signal,
-        ctx,
-        [market.supply],
-        YIELD_BASIS_VIEW_GAS,
-      )) as readonly [bigint, bigint];
-      const assetAmount = emergencyWithdraw[0];
-      if (assetAmount <= 0n) return null;
-
-      return {
-        marketId: market.marketId,
-        symbol: market.symbol,
-        assetAddress: market.assetAddress,
-        assetDecimals: market.assetDecimals,
-        assetAmount,
-      };
-    },
+  // Newer YB markets can revert on preview_withdraw(totalSupply); preview_emergency_withdraw
+  // still exposes the full-market external asset balance without relying on that swap path.
+  const withdrawResults = await fetchCrvUsdMulticallResults(
+    withdrawCandidates.map((market) => ({
+      label: `${market.marketId}:preview_emergency_withdraw`,
+      contract: market.ltAddress,
+      data: encodeFunctionData({
+        abi: YIELD_BASIS_LT_ABI,
+        functionName: "preview_emergency_withdraw",
+        args: [market.supply],
+      }),
+    })),
+    "Yield Basis withdraw previews",
+    signal,
+    ctx,
   );
 
-  return positions.filter((position): position is YieldBasisMarketPosition => position != null);
+  return withdrawCandidates.flatMap((market): YieldBasisMarketPosition[] => {
+    const [assetAmount] = decodeFunctionResult({
+      abi: YIELD_BASIS_LT_ABI,
+      functionName: "preview_emergency_withdraw",
+      data: requireCrvUsdMulticallResult(
+        withdrawResults,
+        `${market.marketId}:preview_emergency_withdraw`,
+        "Yield Basis withdraw previews",
+      ),
+    }) as readonly [bigint, bigint];
+    if (assetAmount <= 0n) return [];
+
+    return [{
+      marketId: market.marketId,
+      symbol: market.symbol,
+      assetAddress: market.assetAddress,
+      assetDecimals: market.assetDecimals,
+      assetAmount,
+    }];
+  });
 }
 
 async function fetchYieldBasisMarketExposures(

@@ -78,6 +78,9 @@ function custodySliceName(asset: string): { name: string; risk: "medium" | "high
   };
 }
 
+/** Issuer-documented ceiling for the winding-down legacy protocol's TVL. */
+const LEGACY_PROTOCOL_TVL_CAP_USD = 3_000_000;
+
 /**
  * Live Solomon USDv composition from the issuer protocol-data API.
  * Custody/vault/yield-distributor balances are itemized; any residual of
@@ -88,6 +91,22 @@ export function adaptSolomonProtocolData(payload: SolomonProtocolDataResponse): 
   const protocolTvl = parseUsd(payload.protocolTvl, "protocolTvl");
   if (protocolTvl <= 0) {
     throw new Error("solomon-protocol protocolTvl must be positive");
+  }
+  // The issuer capped the legacy beta at $3M and is winding that mint down
+  // (https://blog.solomonlabs.org/p/winding-down-the-original-usdv); legacy
+  // protocolTvl never exceeded ~$1.52M in any observation. From the 2026-09-20
+  // data cut the endpoint's protocolTvl equals the replacement Chancery USDv
+  // mint's on-chain supply (6,059,987.4834 via getTokenSupply on
+  // USDvUSpnhCr9yBgj3UyVrD239HRUv4RsHwH2FxsWuMk) while the legacy buckets hold
+  // only vestigial components. An envelope above the documented cap cannot
+  // describe this mint, so the adapter fails closed instead of attributing the
+  // replacement token's supply to the legacy profile.
+  if (protocolTvl > LEGACY_PROTOCOL_TVL_CAP_USD) {
+    throw new Error(
+      `solomon-protocol protocolTvl $${protocolTvl.toFixed(2)} exceeds the issuer-documented ` +
+        `$${LEGACY_PROTOCOL_TVL_CAP_USD.toLocaleString("en-US")} legacy beta cap; the protocol-data ` +
+        "endpoint now headlines the replacement USDv mint, so no legacy reserve envelope exists",
+    );
   }
 
   const values: Array<{

@@ -4,12 +4,12 @@ import * as assurance from "@shared/lib/independent-assurance";
 import * as hashing from "../../../lib/hash";
 import { runAdapter, installAdapterNetwork } from "./reserve-adapter.test-support";
 
-const MAIN_URL = "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/script_main.C4JWkZrF.mjs";
-const MAIN_HASH = "f4402618007ce4a444f44f01b8b77053dd6e8f974124ca19ec5b05ea7b73d4ab";
+const MAIN_URL = "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/script_main.CWLEQCuQ.mjs";
+const MAIN_HASH = "bd0df948d197229e1ac0c93f1b692ca412550deda3d5f9f66d8323474f388010";
 const CASES = [
-  { product: "PYUSD", id: "pyusd-paypal", module: "gaXXeRLPJVU8xNh11dsVtC1bnIYsH9HFFZN3Q7yy4xM.IfH84ZmG.mjs", hash: "44d14ce9b5c16fdc3232f6d1923e627022062d5f96adde9307feb3235f354daf", assets: 2694072163, liabilities: 2689335674, classes: ["bank-deposit", "repo", "treasury-bill"] },
-  { product: "USDG", id: "usdg-paxos", module: "Dpx7vvLtZ0_GXJdsd7UXSGLBYctWInqJeDbtf1NUTGo.C0bhEwZo.mjs", hash: "a6246bd82da7e0f879685de1b19736c7b7f54f5cf664f5f7de8f343b9622ed4e", assets: 3404876225, liabilities: 3400474143, classes: ["bank-deposit", "money-market-fund", "treasury-bill"] },
-  { product: "USDP", id: "usdp-paxos", module: "T6xLeGdnaKeagfQVSfjAmjg0_UAsdgPLW9gmBy9jinM.D8kbxxWZ.mjs", hash: "ecdec99301d4656684d0ce651596d854567022c32006ac5b13ad48fb52a42a03", assets: 31975703, liabilities: 31954027, classes: ["bank-deposit", "repo"] },
+  { product: "PYUSD", id: "pyusd-paypal", module: "gaXXeRLPJVU8xNh11dsVtC1bnIYsH9HFFZN3Q7yy4xM.B8sYMhM5.mjs", hash: "ef47b724d86d212455d3655ac7f989c92308d2d3a3859991df1841eb881f7659", assets: 2893935877, liabilities: 2886948845, asOf: "2026-08-31T17:00:00-04:00", classes: ["bank-deposit", "repo", "treasury-bill"] },
+  { product: "USDG", id: "usdg-paxos", module: "Dpx7vvLtZ0_GXJdsd7UXSGLBYctWInqJeDbtf1NUTGo.CVko8HBl.mjs", hash: "ed57577183855e71271dcdf7731d2f620e586c46b23b67d0a2f83b57ced32359", assets: 3404876225, liabilities: 3400474143, asOf: "2026-07-31T17:00:00-04:00", classes: ["bank-deposit", "money-market-fund", "treasury-bill"] },
+  { product: "USDP", id: "usdp-paxos", module: "T6xLeGdnaKeagfQVSfjAmjg0_UAsdgPLW9gmBy9jinM.Ba4icBkY.mjs", hash: "3692a790a0ef3b54b1c5a006aa1bbcc608083e11c9452604dc21ed59fa64d735", assets: 29189905, liabilities: 29168261, asOf: "2026-08-31T17:00:00-04:00", classes: ["bank-deposit", "repo"] },
 ] as const;
 
 describe("Paxos fiat product assurance", () => {
@@ -36,10 +36,10 @@ describe("Paxos fiat product assurance", () => {
     });
     const { result } = await runAdapter("paxos-independent-assurance", row.id, {
       network,
-      nowSec: Math.floor(Date.parse("2026-08-01T00:00:00Z") / 1000),
+      nowSec: Math.floor(Date.parse("2026-09-25T00:00:00Z") / 1000),
     });
     expect(result.metadata?.collateralizationRatio).toBeCloseTo(row.assets / row.liabilities, 12);
-    expect(result.metadata?.sourceTimestamp).toBe(Date.parse("2026-07-31T17:00:00-04:00") / 1000);
+    expect(result.metadata?.sourceTimestamp).toBe(Date.parse(row.asOf) / 1000);
     expect(result.slices.map((slice) => slice.assetClass).sort()).toEqual([...row.classes].sort());
     expect(() => assurance.reconcileIndependentAssuranceManifest({
       ...original, liabilities: original.liabilities.map((liability, index) => index === 0 ? { ...liability, amount: String(Number(liability.amount) - 1) } : liability),

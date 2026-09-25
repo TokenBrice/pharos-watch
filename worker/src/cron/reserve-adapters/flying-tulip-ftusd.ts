@@ -72,24 +72,26 @@ const EXPECTED_CHAINS: ReadonlyMap<number, ExpectedChainProfile> = new Map([
     stake: "stS",
   }],
   [56, {
-    name: "Binance Smart Chain",
+    name: "BNB Smart Chain",
     collaterals: new Map([
       ["USDC", "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d"],
       ["USDT", "0x55d398326f99059ff775485246999027b3197955"],
       ["FDUSD", "0xc5f0f7b66764f6ec8c8dff7ba683102295e16409"],
     ]),
+    borrow: "WBNB",
+    stake: "asBNB",
   }],
 ]);
 
 const SLICE_META: Record<string, Pick<ReserveSlice, "name" | "risk" | "coinId" | "depType">> = {
   USDC: {
-    name: "USDC strategy wrappers (Ethereum and Sonic)",
+    name: "USDC strategy wrappers (Ethereum, Sonic, and BNB Smart Chain)",
     risk: "medium",
     coinId: "usdc-circle",
     depType: "collateral",
   },
   USDT: {
-    name: "USDT strategy wrapper (Ethereum)",
+    name: "USDT strategy wrappers (Ethereum and BNB Smart Chain)",
     risk: "medium",
     coinId: "usdt-tether",
     depType: "collateral",
@@ -101,7 +103,7 @@ const SLICE_META: Record<string, Pick<ReserveSlice, "name" | "risk" | "coinId" |
     depType: "collateral",
   },
   FDUSD: {
-    name: "FDUSD strategy wrapper (Binance Smart Chain)",
+    name: "FDUSD strategy wrapper (BNB Smart Chain)",
     risk: "medium",
     coinId: "fdusd-first-digital",
     depType: "collateral",
@@ -111,6 +113,13 @@ const SLICE_META: Record<string, Pick<ReserveSlice, "name" | "risk" | "coinId" |
 function requirePositiveFinite(value: unknown, label: string): number {
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
     throw new Error(`flying-tulip-ftusd ${label} must be a positive finite number`);
+  }
+  return value;
+}
+
+function requireNonNegativeFinite(value: unknown, label: string): number {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+    throw new Error(`flying-tulip-ftusd ${label} must be a non-negative finite number`);
   }
   return value;
 }
@@ -130,7 +139,7 @@ export function adaptFlyingTulipFtUsd(payload: FlyingTulipPayload): AdapterResul
   }
 
   const payloadChains = payload.chains ?? [];
-  // A chain that ships with zero TVL and zero supply (e.g. chain 56 ahead of its BSC
+  // A chain that ships with zero TVL and zero supply (e.g. a chain ahead of its
   // launch) is an inactive placeholder carrying no reserve yet.
   const chainIsActive = (chain: FlyingTulipChain) =>
     chain.tvlUsd !== 0 || chain.metrics?.totalSupplyUsd !== 0;
@@ -167,13 +176,15 @@ export function adaptFlyingTulipFtUsd(payload: FlyingTulipPayload): AdapterResul
       if (!collateral || collateral.address?.toLowerCase() !== expectedAddress) {
         throw new Error(`flying-tulip-ftusd ${expected.name} ${symbol} address changed or disappeared`);
       }
-      const value = requirePositiveFinite(collateral.tvlAmountUsd, `${expected.name} ${symbol} tvlAmountUsd`);
+      // A reviewed collateral slot may legitimately publish zero capital (FDUSD on
+      // BNB Smart Chain at its 2026-09-24 launch); the row and its pinned address
+      // stay required, and normalizeSlices drops the resulting 0% slice.
+      const value = requireNonNegativeFinite(collateral.tvlAmountUsd, `${expected.name} ${symbol} tvlAmountUsd`);
       collateralUsd.set(symbol, (collateralUsd.get(symbol) ?? 0) + value);
     }
 
     // Only chains with a reviewed borrow-and-stake profile pin a strategy and emit
-    // carry diagnostics. A freshly-deployed chain (BSC) may run lend-only wrappers
-    // until its leverage profile is reviewed.
+    // carry diagnostics; BNB Smart Chain launched 2026-09-24 carrying WBNB/asBNB.
     if (!expected.borrow || !expected.stake) continue;
     const borrow = expected.borrow;
     const stake = expected.stake;

@@ -370,6 +370,7 @@ async function anchorUsdAiComposition(
       { label: "supply", contract: anchor.vaultAddress, data: TOTAL_SUPPLY_SELECTOR },
       { label: "vault-decimals", contract: anchor.vaultAddress, data: DECIMALS_SELECTOR },
       { label: "asset-decimals", contract: anchor.assetAddress, data: DECIMALS_SELECTOR },
+      { label: "idle-asset", contract: anchor.assetAddress, data: encodeBalanceOfCallData(anchor.vaultAddress) },
       ...anchor.liquidReserves.flatMap((reserve, index) => [
         { label: `balance-${index}`, contract: reserve.tokenAddress, data: encodeBalanceOfCallData(reserve.holderAddress) },
         { label: `decimals-${index}`, contract: reserve.tokenAddress, data: DECIMALS_SELECTOR },
@@ -398,6 +399,23 @@ async function anchorUsdAiComposition(
     (actual > expected ? actual - expected : expected - actual) * 10_000n <= expected * BigInt(anchor.toleranceBps);
   const totalShare = entries.reduce((sum, row) => sum + (parseIntegerLike(row.share) ?? 0n), 0n);
   if (!withinTolerance(totalShare, SHARE_SCALE)) return mismatch("composition shares are incomplete");
+  // No on-chain total matches the composition share basis: the payload's shares
+  // divide the hub PYUSD sleeve plus legacy deals at their remaining balances,
+  // while the vault's ERC-4626 totalAssets (idle asset plus loan positions, per
+  // docs.usd.ai "Share Pricing - Net Asset Value") reconciles with the idle asset
+  // plus the amount-only rows the composition ignores. Those scope-mixed sums are
+  // recorded as diagnostics instead of thresholded, so no false mismatch can be
+  // manufactured by comparing aggregates the issuer itself keeps inconsistent.
+  const idleAsset = uint("idle-asset");
+  let shareBasisDealAmount = 0n;
+  let amountOnlyDealAmount = 0n;
+  for (const row of entries) {
+    if (row.type?.trim().toUpperCase() !== "DEAL") continue;
+    const amount = parseIntegerLike(row.amount);
+    if (amount == null) continue;
+    if (parseIntegerLike(row.share) == null) amountOnlyDealAmount += amount;
+    else shareBasisDealAmount += amount;
+  }
   const checkedRows = [];
   let totalLiquidBalance = 0n;
   for (const [index, reserve] of anchor.liquidReserves.entries()) {
@@ -408,8 +426,8 @@ async function anchorUsdAiComposition(
     if (uint(`decimals-${index}`) !== BigInt(reserve.decimals)) return mismatch(`${reserve.name} decimals changed`);
     const balance = uint(`balance-${index}`) * 10n ** BigInt(18 - reserve.decimals);
     totalLiquidBalance += balance;
-    if (!withinTolerance(amount, balance) || !withinTolerance(share * totalAssets, balance * SHARE_SCALE)) {
-      return mismatch(`${reserve.name} exceeds ${anchor.toleranceBps} bps tolerance at block ${block}: amount=${amount}, balance=${balance}, share=${share}, vaultAssets=${totalAssets} (18-decimal accounting)`);
+    if (!withinTolerance(amount, balance)) {
+      return mismatch(`${reserve.name} exceeds ${anchor.toleranceBps} bps tolerance at block ${block}: amount=${amount}, balance=${balance} (18-decimal accounting)`);
     }
     checkedRows.push({ name: reserve.name, tokenAddress: reserve.tokenAddress, amountRaw: amount.toString(), balanceRaw: balance.toString() });
   }
@@ -420,6 +438,8 @@ async function anchorUsdAiComposition(
         freshnessSource: "same-run-onchain",
         anchor: {
           block: Number(block), checkedRows, tolerance: anchor.toleranceBps / 10_000,
+          idleAssetRaw: idleAsset.toString(), shareBasisDealAmountRaw: shareBasisDealAmount.toString(),
+          amountOnlyDealAmountRaw: amountOnlyDealAmount.toString(),
           totalAssetsRaw: totalAssets.toString(), totalSupplyRaw: totalSupply.toString(),
         },
       }),

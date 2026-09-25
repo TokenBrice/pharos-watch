@@ -327,11 +327,6 @@ describe("fetchNestVaultPositionsReserves", () => {
       pendingTransactions: [{ type: "PendingDeposit", amount: 1, price: 1, value: "unknown" }],
       error: "invalid pending PendingDeposit value",
     },
-    {
-      label: "a positive pending withdrawal with unknown NAV treatment",
-      pendingTransactions: [{ type: "PendingWithdrawal", amount: 1, price: 1, value: 1 }],
-      error: "cannot reconcile positive nOPAL pending withdrawals",
-    },
   ])("fails nOPAL closed for $label", async ({ pendingTransactions, error }) => {
     await expect(runNest(
       "nopal-nest",
@@ -347,6 +342,38 @@ describe("fetchNestVaultPositionsReserves", () => {
       { data: { lastPriceUpdates: [{ updatedAt: FIXTURE_NOW }] } },
       false,
     )).rejects.toThrow(error);
+  });
+
+  it.each([
+    { label: "corroborated liquid-stone redemption", gross: 120, net: 119, fees: 1, nav: 119, accepted: true },
+    { label: "omitted receivable", gross: 100, net: 99, fees: 1, nav: 119, accepted: false },
+    { label: "missing gross NAV", gross: null, net: 119, fees: 1, nav: 119, accepted: false },
+    { label: "published NAV contradiction", gross: 120, net: 119, fees: 1, nav: 1_000, accepted: false },
+  ])("corroborates nOPAL pending redemption receivables: $label", async (fixture) => {
+    const network = nestNetwork("nopal-nest", { data: { positions: {
+      liquidAssets: [], yieldAssets: [{ slug: "liquid-stone", tokens: [{
+        symbol: "OALS2T", position: { value: 100 },
+        pendingTransactions: [{ type: "PendingWithdrawal", amount: 2, price: 10, value: 20 }],
+      }] }],
+    } } }, { data: { nav: fixture.nav } }, { data: { lastPriceUpdates: [{ updatedAt: FIXTURE_NOW }] } });
+    network.json!["https://api.nest.credit/v1/vaults/nest-opal-vault/calculated-price"] = { data: {
+      grossCalculatedNav: fixture.gross, calculatedNav: fixture.net, claimableFees: fixture.fees,
+      claimableFeesAdjusted: true,
+    } };
+    const attempt = runAdapter("nest-vault-positions", "nopal-nest", {
+      network: installAdapterNetwork(network), nowSec: FIXTURE_NOW,
+    });
+    if (!fixture.accepted) {
+      await expect(attempt).rejects.toThrow(/reconcil|does not match the published NAV/);
+      return;
+    }
+    const { result } = await attempt;
+    expect(result.metadata).toMatchObject({ totalReserveUsd: 120, calculatedNavUsd: 119,
+      claimableFeesUsd: 1, pendingWithdrawalUsd: 20, unknownExposurePct: 100 });
+    expect(result.metadata?.navReconciliationResidualUsd).toBeUndefined();
+    expect(result.slices.find((slice) => slice.sourceKey === "nest-vault-positions:pending-withdrawals"))
+      .toMatchObject({ name: "Nest pending redemption receivables", pct: 16.7, risk: "high" });
+    expectWarnings(result, []);
   });
 
   it("rejects a renamed positions field instead of publishing a zero snapshot", async () => {

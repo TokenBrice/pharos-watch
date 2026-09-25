@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { Abi } from "abitype";
-import { encodeAbiParameters, encodeFunctionData, parseAbi, parseAbiParameters, toFunctionSelector } from "viem/utils";
+import { decodeFunctionData, encodeAbiParameters, encodeFunctionData, parseAbi, parseAbiParameters, toFunctionSelector } from "viem/utils";
 import { primaryRpcUrl } from "../../../lib/chain-registry";
-import { expectWarnings, runAdapter, type AdapterNetworkSpec } from "./reserve-adapter.test-support";
+import { expectWarnings, runAdapter, type AdapterNetworkSpec, type AdapterRpcCall } from "./reserve-adapter.test-support";
 
 const CONTROLLER = "0x1337F001E280420EcCe9E7B934Fa07D67fdb62CD";
 const MONEY = "0x69420f9E38a4e60a62224C489be4BF7a94402496";
@@ -30,6 +30,7 @@ const OPERATOR_ABI = parseAbi([
 const LLAMMA_ABI = parseAbi([
   "function min_band() view returns (int256)",
   "function max_band() view returns (int256)",
+  "function active_band() view returns (int256)",
   "function bands_x(int256) view returns (uint256)",
   "function bands_y(int256) view returns (uint256)",
 ]);
@@ -59,6 +60,10 @@ function addressListWord(addresses: readonly `0x${string}`[]): `0x${string}` {
   return encodeAbiParameters(parseAbiParameters("address[]"), [addresses]);
 }
 
+function bandOf(call: AdapterRpcCall): number {
+  return Number(decodeFunctionData({ abi: LLAMMA_ABI, data: call.data as `0x${string}` }).args?.[0]);
+}
+
 const NOW_SEC = 1_757_003_600;
 const PRICE_ENDPOINT = "https://coins.llama.fi/prices/current";
 
@@ -71,11 +76,16 @@ interface Scenario {
 
 interface MoneyNetworkOptions {
   /**
-   * Route the arbitrum WBTC market's bands by selector and widen its span to
-   * `0..wbtcMaxBand`, so a realistic census exercises many Multicall3 pages
-   * without 1 500 hand-written routes.
+   * Replace the arbitrum WBTC market's two fixed bands with a `0..maxBand`
+   * span routed by selector, so a test can exercise many bands without one
+   * hand-written route per band.
    */
-  wbtcMaxBand?: number;
+  wbtc?: {
+    maxBand: number;
+    activeBand: number;
+    bandY: (band: number) => bigint;
+    bandX: (band: number) => bigint;
+  };
 }
 
 const ARB_SUPPLY = 5_000_000n * 10n ** 18n;
@@ -114,18 +124,16 @@ function moneyNetwork(
   put("arbitrum", WBTC, ERC20_ABI, "symbol", [], stringWord("WBTC"));
   put("arbitrum", WBTC, ERC20_ABI, "decimals", [], word(8n));
   put("arbitrum", AMM1, LLAMMA_ABI, "min_band", [], intWord(0n));
-  const wbtcMaxBand = options.wbtcMaxBand ?? 1;
-  put("arbitrum", AMM1, LLAMMA_ABI, "max_band", [], intWord(BigInt(wbtcMaxBand)));
-  if (options.wbtcMaxBand == null) {
+  const { wbtc } = options;
+  put("arbitrum", AMM1, LLAMMA_ABI, "max_band", [], intWord(BigInt(wbtc?.maxBand ?? 1)));
+  put("arbitrum", AMM1, LLAMMA_ABI, "active_band", [], intWord(BigInt(wbtc?.activeBand ?? 0)));
+  if (wbtc == null) {
     put("arbitrum", AMM1, LLAMMA_ABI, "bands_y", [0n], word(500_000n * 10n ** 12n));
     put("arbitrum", AMM1, LLAMMA_ABI, "bands_x", [0n], word(0n));
     put("arbitrum", AMM1, LLAMMA_ABI, "bands_y", [1n], word(1n * 10n ** 18n));
-    put("arbitrum", AMM1, LLAMMA_ABI, "bands_x", [1n], word(0n));
   } else {
-    // Every band answers identically: the wide-span case only measures how the
-    // census is batched, not per-band values.
-    rpc[`arbitrum:${AMM1}:bands_y(int256)`] = word(500_000n * 10n ** 12n);
-    rpc[`arbitrum:${AMM1}:bands_x(int256)`] = word(0n);
+    rpc[`arbitrum:${AMM1}:bands_y(int256)`] = (call) => word(wbtc.bandY(bandOf(call)));
+    rpc[`arbitrum:${AMM1}:bands_x(int256)`] = (call) => word(wbtc.bandX(bandOf(call)));
   }
   put("arbitrum", OP2, OPERATOR_ABI, "COLLATERAL_TOKEN", [], addressWord(WETH));
   put("arbitrum", OP2, OPERATOR_ABI, "AMM", [], addressWord(AMM2));
@@ -134,10 +142,10 @@ function moneyNetwork(
   put("arbitrum", WETH, ERC20_ABI, "decimals", [], word(18n));
   put("arbitrum", AMM2, LLAMMA_ABI, "min_band", [], intWord(-1n));
   put("arbitrum", AMM2, LLAMMA_ABI, "max_band", [], intWord(0n));
+  put("arbitrum", AMM2, LLAMMA_ABI, "active_band", [], intWord(-1n));
   put("arbitrum", AMM2, LLAMMA_ABI, "bands_y", [-1n], word(0n));
   put("arbitrum", AMM2, LLAMMA_ABI, "bands_x", [-1n], word(0n));
   put("arbitrum", AMM2, LLAMMA_ABI, "bands_y", [0n], word(10n * 10n ** 18n));
-  put("arbitrum", AMM2, LLAMMA_ABI, "bands_x", [0n], word(0n));
 
   // Base: wstETH market (1 band).
   put("base", CONTROLLER, CONTROLLER_ABI, "get_market_count", [], word(1n));
@@ -150,6 +158,7 @@ function moneyNetwork(
   put("base", WSTETH, ERC20_ABI, "decimals", [], word(18n));
   put("base", AMM3, LLAMMA_ABI, "min_band", [], intWord(5n));
   put("base", AMM3, LLAMMA_ABI, "max_band", [], intWord(5n));
+  put("base", AMM3, LLAMMA_ABI, "active_band", [], intWord(5n));
   put("base", AMM3, LLAMMA_ABI, "bands_y", [5n], word(50n * 10n ** 18n));
   put("base", AMM3, LLAMMA_ABI, "bands_x", [5n], word(2n * 10n ** 18n));
 
@@ -287,16 +296,42 @@ describe("money-llamma adapter", () => {
     await expect(fetchFixture({}, 3)).rejects.toThrow("get_all_markets returned 2 entries for count 3");
   });
 
+  it("reads LLAMMA collateral at or above the active band and MONEY at or below it", async () => {
+    const run = await runAdapter("money-llamma", "money-defi-money", {
+      network: moneyNetwork({}, 2, {
+        wbtc: {
+          maxBand: 9,
+          activeBand: 4,
+          // Nonzero on every band, so reading an axis outside its side would inflate the totals.
+          bandY: (band) => BigInt(band + 1) * 10n ** 16n,
+          bandX: () => 10n ** 18n,
+        },
+      }),
+      nowSec: NOW_SEC,
+    });
+
+    // WBTC bands 4..9 hold (5 + 6 + 7 + 8 + 9 + 10) / 100 BTC at $100 000;
+    // bands 0..4 hold one MONEY each, plus the base market's 2.
+    expect(run.result.metadata).toMatchObject({ totalReserveUsd: 45_000 + 30_000 + 200_000 });
+    expect(run.result.metadata?.details).toMatchObject({ softLiquidatedMoneyTokens: 5 + 2, bandReadCount: 10 + 2 + 1 });
+    const wbtcBandCalls = run.network.rpcCalls.filter((call) => call.contract.toLowerCase() === AMM1.toLowerCase());
+    expect(wbtcBandCalls.filter((call) => call.selector === BANDS_Y_SELECTOR).map(bandOf)).toEqual([4, 5, 6, 7, 8, 9]);
+    expect(wbtcBandCalls.filter((call) => call.selector === BANDS_X_SELECTOR).map(bandOf)).toEqual([0, 1, 2, 3, 4]);
+  });
+
   it("fits a wide band span into bounded Multicall3 pages", async () => {
     const run = await runAdapter("money-llamma", "money-defi-money", {
-      network: moneyNetwork({}, 2, { wbtcMaxBand: 1_500 }),
+      network: moneyNetwork({}, 2, {
+        wbtc: { maxBand: 2_047, activeBand: 0, bandY: () => 500_000n * 10n ** 12n, bandX: () => 0n },
+      }),
       nowSec: NOW_SEC,
     });
     const arbitrumUrl = primaryRpcUrl(run.network.chainRpcs.get("arbitrum")) ?? "";
     expect(arbitrumUrl).not.toBe("");
-    // 1 501 bands x (y + x) = 3 002 band reads on top of the two block reads
-    // and the head/operators/metadata rounds. They must fit two Multicall3
-    // pages (2 000 calls each); per-band or 500-call batching would make this
+    // 2 048 collateral reads plus the active band's MONEY read for WBTC and
+    // 3 WETH reads = 2 052 band reads on top of the two block reads and the
+    // head/operators/metadata rounds. They must fit two Multicall3 pages
+    // (2 000 calls each); per-band or 500-call batching would make this
     // count larger.
     const arbitrumPosts = run.network.requests.filter((request) => request.url.startsWith(arbitrumUrl)).length;
     expect(arbitrumPosts).toBe(2 + 3 + 2);
@@ -304,6 +339,6 @@ describe("money-llamma adapter", () => {
       !call.viaMulticall && (call.selector === BANDS_Y_SELECTOR || call.selector === BANDS_X_SELECTOR)
     )).toHaveLength(0);
     expect(run.network.unmatched).toHaveLength(0);
-    expect(run.result.metadata?.details).toMatchObject({ bandReadCount: 1_501 + 2 + 1 });
+    expect(run.result.metadata?.details).toMatchObject({ bandReadCount: 2_048 + 2 + 1 });
   });
 });

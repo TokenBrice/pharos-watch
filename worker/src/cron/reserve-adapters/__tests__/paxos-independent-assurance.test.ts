@@ -6,7 +6,7 @@ import type { AdapterHttpResponse } from "./reserve-adapter.test-support";
 import { verifyPaxosDiscovery, type PaxosDiscoveryPin } from "../paxos-independent-assurance";
 
 const MAIN = "reviewed product route";
-const PAGE = "reviewed PAXG July 2026 PDF selection";
+const PAGE = "reviewed PAXG August 2026 PDF selection";
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
 const PIN: PaxosDiscoveryPin = {
   mainUrl: "https://framerusercontent.com/sites/reviewed/script_main.mjs",
@@ -57,14 +57,15 @@ describe("Paxos reviewed Framer discovery", () => {
     await expect(verifyPaxosDiscovery(HTML, PIN, AbortSignal.timeout(1000))).rejects.toThrow("response URL drifted");
   });
 
-  it("reconciles both native chains to gold ounces and rejects an omitted Solana liability", () => {
+  it("reconciles every native chain to gold ounces and rejects an omitted Solana liability", () => {
     const manifest = getIndependentAssuranceManifest("PAXG");
     expect(reconcileIndependentAssuranceManifest(manifest)).toMatchObject({
-      computedAssetTotal: "442217", liabilityTotal: "442217", collateralizationRatio: 1,
+      computedAssetTotal: "431313", liabilityTotal: "431313", collateralizationRatio: 1,
     });
-    expect(manifest.liabilities).toContainEqual({ code: "solana", label: "PAXG redeemable Solana tokens", amount: "278" });
+    expect(manifest.liabilities).toContainEqual({ code: "solana", label: "PAXG redeemable Solana tokens", amount: "2478" });
+    expect(manifest.liabilities).toContainEqual({ code: "robinhood", label: "PAXG redeemable Robinhood tokens", amount: "5" });
     expect(() => reconcileIndependentAssuranceManifest({
       ...manifest, liabilities: manifest.liabilities.filter((row) => row.code !== "solana"),
-    })).toThrow("liability total 441939 does not match manifest 442217");
+    })).toThrow("liability total 428835 does not match manifest 431313");
   });
 });
