@@ -548,6 +548,19 @@ describe("matchAllDlPools", () => {
     expect(result[0]?.pool).toBe("p1");
   });
 
+  it("never adopts a yield-tokenization PT market as the wrapper's own Layer 3 source", () => {
+    const susn = "0xe24a3dc889621612422a64e6388927901608b91d";
+    const pools = [
+      makeDlYieldPool({ pool: "pt-market", symbol: "SUSN", project: "pendle-v2", tvlUsd: 1_178_153, apy: 8.69, apyBase: 8.69, stablecoin: true, underlyingTokens: [susn] }),
+      makeDlYieldPool({ pool: "spectra-pt", symbol: "SUSN", project: "spectra-v2", tvlUsd: 2_000_000, apy: 9.1, apyBase: 9.1, stablecoin: true, underlyingTokens: [susn] }),
+      makeDlYieldPool({ pool: "native", symbol: "SUSN", project: "noon", tvlUsd: 900_000, apy: 7.4, apyBase: 7.4, stablecoin: true, underlyingTokens: [susn] }),
+    ];
+    const options = { contractAddresses: ["0xE24a3DC889621612422A64E6388927901608B91D"] };
+
+    expect(matchAllDlPools("susn-noon", "sUSN", pools, {}, {}, options).map((match) => match.pool)).toEqual(["native"]);
+    expect(matchAllDlPools("susn-noon", "sUSN", pools.slice(0, 2), {}, {}, options)).toEqual([]);
+  });
+
   it("rejects a multi-asset vault whose underlying set only contains the coin (B19)", () => {
     const pools = [
       makeDlYieldPool({

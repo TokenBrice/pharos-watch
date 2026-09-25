@@ -824,7 +824,7 @@ Returns current Yield Intelligence rankings and risk-adjusted fields.
 
 ```json
 {
-  "currentVersion": "8.43",
+  "currentVersion": "8.44",
   "methodologyVersion": "9.92"
 }
 ```
@@ -843,7 +843,7 @@ Returns the public adapter-coverage and source-status manifest.
 
 ```json
 {
-  "methodologyVersion": "v8.43"
+  "methodologyVersion": "v8.44"
 }
 ```
 
@@ -861,8 +861,8 @@ Returns bounded yield history for one stablecoin and optional source projection.
 
 ```json
 {
-  "currentVersion": "8.43",
-  "methodologyVersion": "8.43"
+  "currentVersion": "8.44",
+  "methodologyVersion": "8.44"
 }
 ```
 
