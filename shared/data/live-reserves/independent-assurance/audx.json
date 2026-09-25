@@ -3,11 +3,11 @@
   "product": "AUDX",
   "profile": "audx-v1",
   "officialIndexUrl": "https://www.audxtoken.com/transparency",
-  "reportUrl": "https://www.audxtoken.com/_files/ugd/539754_d2b6ce0bfdd947bda8375fe3283a0491.pdf",
-  "reportSha256": "e6a260f26d38a318ad36c3d0ed6539b36d053c9a68bce844c6d358db282a3913",
-  "reportByteLength": 615133,
-  "reportDate": "2026-07-31",
-  "reportAsOf": "2026-07-31T23:59:00+11:00",
+  "reportUrl": "https://www.audxtoken.com/_files/ugd/539754_e06dd9a1842d4b4a97777c64ed096bbe.pdf",
+  "reportSha256": "e8cd051253563ab475fb4125232a2100494516c71aa3fb4e083fcccfee56429a",
+  "reportByteLength": 476466,
+  "reportDate": "2026-08-31",
+  "reportAsOf": "2026-08-31T23:59:00+11:00",
   "reportTimeZone": "AEDT (as printed in the report; normalized conservatively to UTC)",
   "attestor": "Aura Partners",
   "engagement": "Independent limited assurance engagement under ASAE 3000 and ASAE 3100",
@@ -17,19 +17,19 @@
     {
       "code": "designated-bank-accounts",
       "label": "Australian Dollar reserves held in designated TAU accounts",
-      "amount": "3231371.79"
+      "amount": "3521466.68"
     }
   ],
   "liabilities": [
     {
       "code": "polygon",
       "label": "Polygon AUDX supply",
-      "amount": "1321016.00"
+      "amount": "1611016.00"
     },
     {
       "code": "ethereum",
       "label": "Ethereum AUDX supply",
-      "amount": "1635040.00"
+      "amount": "1635050.00"
     },
     {
       "code": "conflux",
@@ -57,13 +57,14 @@
       "amount": "1.00"
     }
   ],
-  "reportedAssetTotal": "3231371.79",
-  "computedAssetTotal": "3231371.79",
-  "reportedLiabilityTotal": "3208057.00",
+  "reportedAssetTotal": "3521466.68",
+  "computedAssetTotal": "3521466.68",
+  "reportedLiabilityTotal": "3498067.00",
   "extraction": {
     "tool": "Poppler pdftotext -layout",
     "parserVersion": "26.08.0",
-    "normalizedTextSha256": "4989b32c3d379e755f5715f4d4cbb5013d113422648b5e146362f5149860204e",
+    "normalizedTextSha256": "490e1220e110b773ef41bdd826d53358bb36a1aca816b9f9e65101f625e3bc4f",
     "pageCount": 4
-  }
+  },
+  "assuranceTier": "independent-assurance"
 }
