@@ -130,7 +130,6 @@ import source113 from "./coins/nect-beraborrow.json";
 import source114 from "./coins/ousd-origin-protocol.json";
 import source115 from "./coins/ousg-ondo-finance.json";
 import source116 from "./coins/paxg-paxos.json";
-import source117 from "./coins/pusd-polaris.json";
 import source118 from "./coins/reusd-resupply.json";
 import source119 from "./coins/susd-synthetix.json";
 import source120 from "./coins/usdb-blast.json";
@@ -287,7 +286,6 @@ const CURATED_SOURCES: Readonly<Record<string, CuratedAnnotationSourceAsset>> = 
   "ousd-origin-protocol": source114,
   "ousg-ondo-finance": source115,
   "paxg-paxos": source116,
-  "pusd-polaris": source117,
   "reusd-resupply": source118,
   "susd-synthetix": source119,
   "usdb-blast": source120,

@@ -2983,19 +2983,19 @@
   },
   "pusd-polaris": {
     "title": "Immutable CDP, Yield Included",
-    "text": "USDp, the token Polaris's documentation now labels in place of the earlier pUSD name, is Polaris Finance's pre-launch Liquity-style immutable CDP stablecoin on Ethereum, built by co-founders TokenBrice and 0xLuude as what they call the successor to Liquity's ethos: immutable core contracts, no admin keys, and no off-chain assets. USDp is minted against pETH collateral via {{term:cdp}}CDPs{{/term}}, and the {{term:yield-bearing}}yield-bearing{{/term}} angle comes from protocol revenue: borrowing interest, swap fees, conversion gains, and DEX fees, rather than from depositing reserves into Aave. The public testnet is live on Sepolia with audits still ahead and no mainnet date set, since the team says it prioritises security over speed, which leaves it time to prove that you can ship immutability without sacrificing usability. For a market saturated with centralized fiat-backed tokens and yield products built on leverage, USDp is a deliberate bet that there's still demand for the Liquity V1 philosophy, upgraded.",
-    "updatedAt": "2026-09-13",
+    "text": "USDp (formerly pUSD) is Polaris Finance's pre-launch Liquity-style immutable CDP stablecoin on Ethereum, built by co-founders TokenBrice and 0xLuude as what they call the successor to Liquity's ethos: immutable core contracts, no admin keys, and no off-chain assets. USDp is minted against pETH collateral via {{term:cdp}}CDPs{{/term}}, and the {{term:yield-bearing}}yield-bearing{{/term}} angle comes from protocol revenue: borrowing interest, swap fees, conversion gains, and DEX fees, rather than from depositing reserves into Aave. The public testnet is live on Sepolia with audits still ahead and no mainnet date set, since the team says it prioritises security over speed, which leaves it time to prove that you can ship immutability without sacrificing usability. For a market saturated with centralized fiat-backed tokens and yield products built on leverage, USDp is a deliberate bet that there's still demand for the Liquity V1 philosophy, upgraded.",
+    "updatedAt": "2026-09-25",
     "authoredBy": "ai",
-    "model": "claude-opus-5",
-    "factsAsOf": "2026-09-13"
+    "model": "claude-opus-5-5",
+    "factsAsOf": "2026-09-25"
   },
   "pgold-polaris": {
     "title": "Synthetic Gold, No Vault Required",
-    "text": "GOLDp (labelled pGOLD in Polaris's earlier posts) is a pre-launch synthetic gold exposure that shares infrastructure with its sibling USDp but pegs to gold rather than the dollar, with no physical backing and the protocol risk that comes with a decentralized design. Unlike XAUT or PAXG, which tokenize actual bars in Swiss vaults, GOLDp is minted from the same pETH collateral pool via {{term:cdp}}CDPs{{/term}} on Ethereum. This makes it arguably more decentralized than any gold-pegged token on the market, at the cost of carrying all the risks of crypto collateral in a down market. Whether DeFi users want synthetic gold exposure from immutable contracts instead of custodied metal from Tether or Paxos is an experiment Polaris is willing to run.",
-    "updatedAt": "2026-09-13",
+    "text": "GOLDp (formerly pGOLD) is a pre-launch synthetic gold exposure that shares infrastructure with its sibling USDp but pegs to gold rather than the dollar, with no physical backing and the protocol risk that comes with a decentralized design. Unlike XAUT or PAXG, which tokenize actual bars in Swiss vaults, GOLDp is minted from the same pETH collateral pool via {{term:cdp}}CDPs{{/term}} on Ethereum. This makes it arguably more decentralized than any gold-pegged token on the market, at the cost of carrying all the risks of crypto collateral in a down market. Whether DeFi users want synthetic gold exposure from immutable contracts instead of custodied metal from Tether or Paxos is an experiment Polaris is willing to run.",
+    "updatedAt": "2026-09-25",
     "authoredBy": "ai",
-    "model": "claude-opus-5",
-    "factsAsOf": "2026-09-13"
+    "model": "claude-opus-5-5",
+    "factsAsOf": "2026-09-25"
   },
   "usg-tangent": {
     "title": "Productive Collateral, Dynamic Rates",
