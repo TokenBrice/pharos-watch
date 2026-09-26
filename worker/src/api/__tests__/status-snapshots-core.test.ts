@@ -1,5 +1,6 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { StatusResponseSchema } from "@shared/types/status";
 import { registerUnauthorizedEndpointContract } from "../../test-helpers/__shared/endpoint-contracts";
 import {
@@ -132,6 +133,45 @@ describe("handleStatus", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("blacklist_events"))).toBe(false);
   });
 
+  it("rebuilds cron-derived availability causes from the same live cron evidence as the summary", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const snapshotDegradedCause = {
+      code: "degraded_cron_warning",
+      layer: "availability",
+      severity: "info",
+      message: "2 cron job(s) are in fallback/degraded mode (warning-only).",
+      metric: "degradedCrons",
+      value: 2,
+      threshold: 1,
+    };
+    const db = fixtureMockD1([
+      { match: "FROM cache WHERE key = ?", matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY], rows: [
+        makeRawStatusSnapshotRow(now, 120, {
+          causes: {
+            availability: [snapshotDegradedCause],
+            dataQuality: [],
+            overall: [snapshotDegradedCause],
+          },
+        }),
+      ] },
+      { match: "cron_runs", rows: Object.keys(CRON_INTERVALS).map((job) => makeCronRow(
+        job,
+        job === "sync-v9-supply-attribution" ? "degraded" : "ok",
+        60,
+      )) },
+    ]);
+
+    const res = await handleStatus({ db, trustedAdmin: true,
+      request: fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" }) });
+    const body = StatusResponseSchema.parse(await readJsonResponse(res, 200));
+
+    expect(body.summary.degradedCrons).toBe(1);
+    const degradedCause = body.causes.availability.find((cause) => cause.code === "degraded_cron_warning");
+    expect(degradedCause?.value).toBe(1);
+    expect(degradedCause?.message).toContain("1 cron job(s)");
+    expect(body.causes.overall.find((cause) => cause.code === "degraded_cron_warning")?.value).toBe(1);
+  });
+
   it("serves raw status fields from a fresh cron snapshot", async () => {
     const now = Math.floor(Date.now() / 1000);
     const db = fixtureMockD1([
@@ -203,6 +243,10 @@ describe("handleStatus", () => {
       severity: "warning",
       message: "Public cache freshness exceeded the degraded threshold.",
     };
+    // The fresh-snapshot path reads cron history live to rebuild `crons`,
+    // `summary`, and the cron-derived availability causes; mock a successful
+    // (empty) read so the scenarios exercise their intended tuples.
+    const liveCronHistoryRead = { match: "cron_runs", rows: [] };
     const scenarios = [
       {
         name: "healthy",
@@ -247,6 +291,7 @@ describe("handleStatus", () => {
           matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY],
           rows: [makeRawStatusSnapshotRow(now, 60, scenario.raw)],
         },
+        liveCronHistoryRead,
         ...scenario.tables,
       ]);
       const response = await handleStatus({ db, trustedAdmin: true, request: fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" }) });

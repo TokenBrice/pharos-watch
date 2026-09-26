@@ -75,6 +75,20 @@ function cronsWithPriceSourceHealth(priceSourceHealth: unknown): StatusResponse[
   } as unknown as StatusResponse["crons"];
 }
 
+function cronsWithDexLiquidityRuns(
+  runs: Array<Record<string, unknown>>,
+  expectedIntervalSec = 1800,
+): StatusResponse["crons"] {
+  return {
+    "sync-dex-liquidity": {
+      lastRun: runs[0] ?? null,
+      recentRuns: runs,
+      expectedIntervalSec,
+    },
+  } as unknown as StatusResponse["crons"];
+}
+
+
 describe("loadStatusSupplements", () => {
   it("preserves absent operational dispatch flags as null", () => {
     expect(parseTelegramDispatchCronMetadata({})).toMatchObject({
@@ -130,5 +144,54 @@ describe("loadStatusSupplements", () => {
       sourceDepthDistribution: { "1": 1 },
     });
     expect(supplements.sectionErrors.priceSourceHealth).toBeUndefined();
+  });
+
+  it("derives liquidity health from the newest run that carries sourceCoverage", async () => {
+    // Production shape: the cadence-reuse `skipped_neutral` run persists
+    // `sourceCoverage: null` while the previous `ok` run holds the freshest
+    // completed measurement.
+    const crons = cronsWithDexLiquidityRuns([
+      { startedAt: NOW - 600, durationMs: 4, status: "skipped_neutral", metadata: { sourceCoverage: null } },
+      {
+        startedAt: NOW - 2100,
+        durationMs: 5000,
+        status: "ok",
+        metadata: {
+          sourceCoverage: {
+            currentCoverage: 274,
+            previousCoverage: 273,
+            nearCoverageGuard: false,
+          },
+        },
+      },
+    ]);
+
+    const supplements = await loadStatusSupplements(statusDb(), NOW, crons);
+
+    expect(supplements.liquidityHealth).toMatchObject({
+      lastRunStatus: "ok",
+      sourceRunStartedAt: NOW - 2100,
+      currentCoverage: 274,
+      previousCoverage: 273,
+      nearCoverageGuard: false,
+    });
+    expect(supplements.sectionErrors.liquidityHealth).toBeUndefined();
+  });
+
+  it("publishes null liquidity health when no run inside the freshness budget carries sourceCoverage", async () => {
+    const crons = cronsWithDexLiquidityRuns([
+      { startedAt: NOW - 600, durationMs: 4, status: "skipped_neutral", metadata: { sourceCoverage: null } },
+      {
+        startedAt: NOW - 3700,
+        durationMs: 5000,
+        status: "ok",
+        metadata: { sourceCoverage: { currentCoverage: 274 } },
+      },
+    ]);
+
+    const supplements = await loadStatusSupplements(statusDb(), NOW, crons);
+
+    expect(supplements.liquidityHealth).toBeNull();
+    expect(supplements.sectionErrors.liquidityHealth).toBeUndefined();
   });
 });

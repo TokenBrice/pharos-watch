@@ -13,6 +13,8 @@ import {
 import { computeRawStatus } from "../lib/status-evaluation";
 import { loadCronHealth } from "../lib/status/cron-health";
 import { applyCronHealthSectionErrors } from "../lib/status/evaluation-context";
+import { synthesizeOverallCauses } from "../lib/status/evaluation-causes";
+import { rebuildCronDerivedAvailabilityCauses } from "../lib/status/evaluation-rules";
 import { buildStatusSummary } from "../lib/status/summary";
 import {
   loadStatusRawSnapshot,
@@ -139,6 +141,19 @@ async function resolveRawStatusForResponse(
   if (snapshot.kind === "fresh") {
     // Five-minute jobs must not inherit the fifteen-minute assessment's run history.
     const cronHealth = await loadCronHealth(db, now);
+    // Informational cron causes (degraded_cron_warning and friends) must be
+    // re-derived from the same live cron-health read that replaces `crons`
+    // and rebuilds `summary` below; otherwise one response can show a cached
+    // cause count next to a live summary count that disagrees with it (R5).
+    const availabilityCauses = rebuildCronDerivedAvailabilityCauses(snapshot.raw.causes.availability, {
+      degradedCronRuns: cronHealth.degradedCronRuns,
+      cronErrorCount: cronHealth.cronErrorCount,
+      availabilityImpactingCronErrors: cronHealth.availabilityImpactingCronErrors,
+      watchUnhealthyCrons: cronHealth.watchUnhealthyCrons,
+      cronHistoryQueryFailed: cronHealth.cronHistoryQueryFailed,
+      cronProgressQueryFailed: cronHealth.cronProgressQueryFailed,
+      cronLeaseQueryFailed: cronHealth.cronLeaseQueryFailed,
+    });
     const sectionErrors = { ...snapshot.raw.sectionErrors };
     delete sectionErrors.scheduledSlots;
     applyCronHealthSectionErrors(sectionErrors, cronHealth);
@@ -146,6 +161,11 @@ async function resolveRawStatusForResponse(
       raw: {
         ...snapshot.raw,
         crons: cronHealth.crons,
+        causes: {
+          availability: availabilityCauses,
+          dataQuality: snapshot.raw.causes.dataQuality,
+          overall: synthesizeOverallCauses(availabilityCauses, snapshot.raw.causes.dataQuality),
+        },
         sectionErrors,
         summary: buildStatusSummary({
           cronHealth,
