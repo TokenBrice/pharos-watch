@@ -41,9 +41,23 @@ const BALANCE_OF_WAUSDC_SELECTOR = "0x4251c354";
 const SUPPLIED_WAUSDC_SELECTOR = "0xa9b89c07";
 const GET_MARKET_LIQUIDITY_SELECTOR = "0x59ddbab2";
 const AVAILABLE_WITHDRAW_LIMIT_SELECTOR = "0x04bd4629";
-const MIN_COMMITMENT_TIME_SELECTOR = "0x0517bbab";
 const IS_SHUTDOWN_SELECTOR = "0xbf86d690";
 const THREE_JANE_NAV_MISMATCH_HARD_LIMIT = 0.02;
+
+/*
+ * USD3 implementation reviewed 2026-09-26 after the 2026-09-25 22:05:47 UTC
+ * proxy upgrade (Ethereum block 26057337, tx 0xfe5683b394e9ee06378f87a6df75fd668c1193f14d2af752d7facf19f67b8472)
+ * moved the EIP-1967 slot from 0xb606fb370eaaad03d71b49ae5e42aa4aec7458d9 to the source-verified
+ * USD3 at 0xd1f1c3f485063712873285bf4ef25ab068f13893 (Blockscout, solc 0.8.22). The reviewed
+ * implementation preserves every reserve-composition read this adapter depends on — nav(),
+ * balanceOfWaUSDC(), suppliedWaUSDC(), and getMarketLiquidity() are unchanged, and
+ * availableWithdrawLimit(address) remains a bounded same-block withdrawable amount (now also
+ * net of ring-fence/redemption floors). It deletes the deposit commitment feature entirely:
+ * minCommitmentTime() is gone, depositTimestamp is __deprecated_ and unread, and no withdrawal or
+ * transfer path consults the (still zero) ProtocolConfig getUsd3CommitmentTime() knob. The
+ * commitment observation was therefore removed rather than re-sourced from ProtocolConfig, which
+ * the upgraded vault no longer reads.
+ */
 
 interface ThreeJaneUsd3Snapshot {
   contractAddress: string;
@@ -62,16 +76,7 @@ interface ThreeJaneUsd3Snapshot {
   liquidPositionAssetsRaw: bigint;
   creditPositionAssetsRaw: bigint;
   availableWithdrawRaw: bigint;
-  minCommitmentTimeRaw: bigint;
   isShutdown: boolean;
-}
-
-function safeIntegerFromBigInt(value: bigint, label: string): number {
-  const converted = Number(value);
-  if (!Number.isSafeInteger(converted) || converted < 0) {
-    throw new Error(`${ADAPTER_KEY} ${label} is outside the safe integer range`);
-  }
-  return converted;
 }
 
 function decodeMarketLiquidity(raw: `0x${string}`): readonly [bigint, bigint, bigint, bigint] {
@@ -118,7 +123,6 @@ export function adaptThreeJaneUsd3Snapshot(snapshot: ThreeJaneUsd3Snapshot): Ada
   const totalAssetsUsd = decimalNumberFromBigInt(snapshot.totalAssetsRaw, USDC_DECIMALS);
   const navUsd = decimalNumberFromBigInt(snapshot.navRaw, USDC_DECIMALS);
   const immediateRedeemableUsd = decimalNumberFromBigInt(snapshot.availableWithdrawRaw, USDC_DECIMALS);
-  const commitmentTimeSec = safeIntegerFromBigInt(snapshot.minCommitmentTimeRaw, "minimum commitment time");
 
   const navMismatchRatio = navUsd > 0 ? Math.abs(totalReserveUsd - navUsd) / navUsd : 1;
   if (navMismatchRatio > 0.001) {
@@ -152,16 +156,12 @@ export function adaptThreeJaneUsd3Snapshot(snapshot: ThreeJaneUsd3Snapshot): Ada
     ? "paused"
     : snapshot.isShutdown
       ? "degraded"
-      : commitmentTimeSec > 0
-        ? "cohort-limited"
-        : "open";
+      : "open";
   const routeStatusReason = immediateRedeemableUsd <= 0
     ? "USD3 availableWithdrawLimit(address(0)) currently reports no withdrawable USDC"
     : snapshot.isShutdown
       ? "USD3 is shut down, but the strategy still reports bounded recoverable USDC liquidity"
-      : commitmentTimeSec > 0
-        ? `USD3 withdrawals are liquidity-bounded and deposits must satisfy a ${commitmentTimeSec}-second commitment period`
-        : "USD3 withdrawals are permissionless and bounded by current idle USDC plus redeemable waUSDC liquidity";
+      : "USD3 withdrawals are permissionless and bounded by current idle USDC plus redeemable waUSDC liquidity";
 
   return {
     slices: slicesFromValues([
@@ -217,9 +217,9 @@ export function adaptThreeJaneUsd3Snapshot(snapshot: ThreeJaneUsd3Snapshot): Ada
         routeStatusSource: "onchain",
         routeObserved: true,
         routeStatusReason,
-        routeStatusReviewedAt: "2026-07-13",
+        routeStatusReviewedAt: "2026-09-26",
         holderEligibility: "any-holder",
-        settlementDelaySec: commitmentTimeSec,
+        settlementDelaySec: 0,
         feeBps: 0,
         sourceUrls: [
           "https://docs.3jane.xyz/architecture/core-money-market/suppliers",
@@ -274,7 +274,6 @@ export async function fetchThreeJaneUsd3Reserves(
       contract: contractAddress,
       data: `${AVAILABLE_WITHDRAW_LIMIT_SELECTOR}${ZERO_ADDRESS.slice(2).padStart(64, "0")}`,
     }),
-    uint256Observation({ label: "minCommitmentTime", contract: contractAddress, data: MIN_COMMITMENT_TIME_SELECTOR }),
     boolObservation({ label: "isShutdown", contract: contractAddress, data: IS_SHUTDOWN_SELECTOR }),
     uint256Observation({ label: "idleUsdc", contract: USDC_ADDRESS, data: encodeBalanceOfCallData(contractAddress) }),
   ] as const, input.chain, signal, blockPlan.ctx);
@@ -329,7 +328,6 @@ export async function fetchThreeJaneUsd3Reserves(
     liquidPositionAssetsRaw: conversion.values.liquidPositionAssets,
     creditPositionAssetsRaw: conversion.values.creditPositionAssets,
     availableWithdrawRaw: core.values.availableWithdraw,
-    minCommitmentTimeRaw: core.values.minCommitmentTime,
     isShutdown: core.values.isShutdown,
   });
 }
