@@ -2,6 +2,51 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.36",
+    title: "Hard CEX ticker coverage for MXNB and AUDD",
+    date: "2026-09-27",
+    effectiveAt: 1790467200,
+    summary:
+      "Kraken MXNB/USD and Coinbase AUDD-USDC join the hard CEX ticker rosters as evidence-verified, identity-pinned markets, restoring multi-source high-confidence publication for two pool-challenge-downgraded CoinGecko single-source rows.",
+    impact: [
+      "`shared/lib/pricing-provider-config.ts` adds `{ symbol: \"MXNB\", requestPair: \"MXNBUSD\", responseKeys: [\"MXNBUSD\"] }` to `KRAKEN_MARKETS` and `{ symbol: \"AUDD\", productId: \"AUDD-USDC\" }` to `COINBASE_PRODUCTS`; this is roster config inside the already-registered adapter families, with weights, trust tiers, and freshness semantics unchanged (Kraken stays one batched ticker request; Coinbase products are serial and gain one request)",
+      "`mxnb-juno` had been downgraded to `low` by the Trader Joe Avalanche pool challenge (364 bps divergence on the 300 bps non-USD threshold); the live Kraken MXNB/USD mid (0.0566, 41 bps from CoinGecko) corroborates as a pool-challenge-exempt hard market, so the row publishes `coingecko+kraken` at `high` confidence instead of a single-source CoinGecko print",
+      "`audd-novatti` had been downgraded to `low` by an XDC curve-family pool challenge (868 bps divergence); Coinbase's AUDD-USDC `fx_stablecoin` book pins to the tracked Novatti AUDD Ethereum contract `0x4cCe605eD955295432958d8951D0B176C10720d5`, quotes USDC at USD par, and publishes `coinbase+coingecko` at `high` confidence while the pair's last trade is inside the 10-minute hard-market admission window — outside that window the row reverts to its previous single-source behavior",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
+    version: "6.35",
+    title: "Solayer sUSD Token-2022 NAV pricing",
+    date: "2026-09-27",
+    effectiveAt: 1790467200,
+    summary:
+      "`susd-solayer` is priced from its on-chain Token-2022 interest-bearing exchange rate after DefiLlama's stablecoins list stopped returning a price for asset 216, CoinGecko kept only a stale thin-market ticker ($12/day, ~16 h old), and the asset's single ~$7.8K-liquidity DEX pool sat below the $50K Jupiter/DEX floors.",
+    impact: [
+      "`worker/src/lib/authoritative-price-sources/susd-solayer.ts` reads the confirmed jsonParsed mint account and its block time in two serial body-consumed Solana RPCs (registry routes, then public fallbacks), validates Token-2022 program ownership, mint type, 6 decimals, and a complete interestBearingConfig, and computes the exact SPL exchange rate including the on-chain whole-bps average-rate rounding (observed 1.1555805 at slot 450811104; DefiLlama circulating 732,710.146212 / raw supply 634,202.057862 = 1.15533 cross-checks it within 0.02%)",
+      "The result publishes as high-confidence `protocol-redeem` observed at the block time inside the existing hard-protocol registry policy (replay-safe, 15-minute trusted age, depeg-authoritative-capable but not single-source); NAV band 0.5–10, fixed `susd-nav:*` rejection codes, and a dedicated `susd-solayer-nav` circuit (`CIRCUIT_SOURCE.SUSD_SOLAYER_NAV`) fail closed without touching the grouped EVM `protocol-redeem` breaker. No liquidity floor or admissibility rule changed",
+      "Block times older than 5 minutes or more than 60 seconds in the future, future-dated rate updates, and incomplete interest configs are rejected, so the route fails closed to missing, never to a wrong price; the mint's authority-set accrual rate (3091 bps current vs 6.84% lifetime average) stays bounded by the NAV band and the non-single-source depeg corroboration policy",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
+    version: "6.34",
+    title: "Curve on-chain quote sizing",
+    date: "2026-09-27",
+    effectiveAt: 1790467200,
+    summary:
+      "Curve `get_dy` quotes are now sized so the floored integer output spans at least 10,000 quanta, after the 2-decimal GUSD metapool output turned a 1-unit quote into a systematic 1.0101 print.",
+    impact: [
+      "`getDyQuoteAmount` (`worker/src/lib/curve-onchain.ts`) replaces the fixed 1-unit input: units = max(1, ceil(10_000 / 10^outputDecimals)), so a 2-decimal output quotes 100 input units while pools with at least 6-decimal outputs keep byte-identical 1-unit calldata (GUSD is the only one of 36 configured pools with outputDecimals < 6)",
+      "get_dy floors its return to whole output quanta, so the GUSD/3Crv metapool (`useUnderlying`, USDC in) quoted 1 USDC as raw 99 = 0.99 GUSD and published 1/0.99 = 1.0101010101 (production `price_cache` `gusd-gemini`, source `curve-onchain`, confidence `low`; reproduced on-chain at Ethereum block 26064625, where a 100-unit quote prices 100/99.97 = 1.0003, the true pool price including the 0.04% fee)",
+      "Pool admission, corroboration, and sanity validation are unchanged; residual floor bias at the sized quote is under 0.01%, the trade stays negligible against StableSwap pool depth, and the next publication restores multi-source agreement for `gusd-gemini` (coingecko/cmc re-join `agree_sources` and confidence leaves `low`)",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.33",
     title: "No-candidate DEX refresh recovery",
     date: "2026-09-24",
