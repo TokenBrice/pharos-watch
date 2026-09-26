@@ -18,7 +18,6 @@ function usd3Network(dropSelector?: string, shareDecimals = 6n) {
     "0xa9b89c07": 80n * ONE,
     "0x59ddbab2": `0x${[100n, 100n, 75n, 25n].map((value) => abiWord(value * ONE)).join("")}`,
     "0x04bd4629": 40n * ONE,
-    "0x0517bbab": 0n,
     "0xbf86d690": false,
     "balanceOf(address)": 15n * ONE,
     "0x07a2d13a": (call) => call.data.endsWith(abiWord(25n * ONE)) ? 25n * ONE : 60n * ONE,
@@ -81,7 +80,6 @@ describe("adaptThreeJaneUsd3Snapshot", () => {
       liquidPositionAssetsRaw: 25n * ONE,
       creditPositionAssetsRaw: 60n * ONE,
       availableWithdrawRaw: 40n * ONE,
-      minCommitmentTimeRaw: 0n,
       isShutdown: false,
     });
 
@@ -140,7 +138,6 @@ describe("adaptThreeJaneUsd3Snapshot", () => {
       liquidPositionAssetsRaw: 25n * ONE,
       creditPositionAssetsRaw: 100n * ONE,
       availableWithdrawRaw: 40n * ONE,
-      minCommitmentTimeRaw: 0n,
       isShutdown: false,
     })).toThrow(/reviewed 2% bound/);
   });
@@ -163,7 +160,6 @@ describe("adaptThreeJaneUsd3Snapshot", () => {
       liquidPositionAssetsRaw: 20n * ONE,
       creditPositionAssetsRaw: 60n * ONE,
       availableWithdrawRaw: 40n * ONE,
-      minCommitmentTimeRaw: 0n,
       isShutdown: true,
     });
 

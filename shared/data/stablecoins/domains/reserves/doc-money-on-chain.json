@@ -18,13 +18,25 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-07",
-    "reviewer": "OpenAI Codex pinned MoC V1 reserve accounting review",
+    "reviewedAt": "2026-09-26",
+    "reviewer": "GLM MoC 3.0.7 implementation pin review (live re-read)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "MoCState verified deployed implementation reviewed 2026-09-07",
-        "url": "https://rootstock.blockscout.com/address/0xf65BE577b252A41887e2f1a19b576A0925201186?tab=contract"
+        "label": "MoC verified 3.0.7 implementation reviewed 2026-09-26",
+        "url": "https://rootstock.blockscout.com/address/0xfaf8b802c934af857b58471b6daa66dc5d8a7d07?tab=contract"
+      },
+      {
+        "label": "MoCState verified 3.0.7 implementation reviewed 2026-09-26",
+        "url": "https://rootstock.blockscout.com/address/0xe348149646f721ff5e5eb47692299b3796d0b7ed?tab=contract"
+      },
+      {
+        "label": "MoC governance upgrade tx 0x30983b67…bf495 rotating all eight MoC proxies at Rootstock block 9271198 (2026-09-25 18:49:32 UTC)",
+        "url": "https://rootstock.blockscout.com/tx/0x30983b6767dc7807f87d9f31f6a4b6f9c68c74c192e38a6b9794690cc00bf495"
+      },
+      {
+        "label": "money-on-chain/main-RBTC-contract tag v3.0.7, byte-identical to both verified deployed sources",
+        "url": "https://github.com/money-on-chain/main-RBTC-contract/tree/v3.0.7"
       },
       {
         "label": "MoC canonical state and BTC oracle addresses",
@@ -35,17 +47,17 @@
         "url": "https://moneyonchain.com/protocol-faq/"
       },
       {
-        "label": "Rootstock pinned block 9219109",
-        "url": "https://rootstock.blockscout.com/block/9219109"
+        "label": "Rootstock pinned block 9271864",
+        "url": "https://rootstock.blockscout.com/block/9271864"
       },
       {
         "label": "Rootstock public RPC used for pinned state reads",
         "url": "https://public-node.rsk.co"
       }
     ],
-    "rationale": "At Rootstock block 9219109 (2026-09-07T12:47:43Z), canonical MoC custody and MoCState collateralRbtcInSystem()/rbtcInSystem() both report 273.257760878423658725 rBTC. DOC supply is 2,825,549.027393543076353703, and the valid protocol BTC oracle reports $79,465.80, giving 7.685106987665169x coverage. The verified deployed MoCState implementation returns accounted rBTC as total collateral because X2 leveraged positions are disabled; the X2 share count is zero. globalLockedBitcoin() reserves 35.556793329879559211 rBTC for senior DOC claims and getRbtcRemainder() reports 237.700967548544099514 rBTC of residual risk capital. BPRO bears the residual Bitcoin exposure rather than a second fixed-dollar liability; the full accounted collateral is therefore the correct system coverage numerator, not a DOC-only wallet and not raw unaccounted donations. The live adapter pins reviewed implementation identities, reconciles state DOC supply against the canonical token, checks oracle validity and accounting at one block, caps admitted backing at the actual custody balance, and degrades custody deficits, undercoverage, pause or liquidation.",
+    "rationale": "At Rootstock block 9271864 (2026-09-26T00:26:15Z), canonical MoC custody and MoCState collateralRbtcInSystem()/rbtcInSystem() both report 271.275435479226201142 rBTC. DOC supply is 2,890,309.2875148873, and the valid protocol BTC oracle reports $84,026, giving 7.886418882588202x coverage. globalLockedBitcoin() reserves 34.397796961831901450 rBTC for senior DOC claims and getRbtcRemainder() reports 236.877638517394299692 rBTC of residual risk capital. BPRO bears the residual Bitcoin exposure rather than a second fixed-dollar liability; the full accounted collateral is therefore the correct system coverage numerator, not a DOC-only wallet and not raw unaccounted donations. The live adapter pins reviewed implementation identities, reconciles state DOC supply against the canonical token, checks oracle validity and accounting at one block, caps admitted backing at the actual custody balance, and degrades custody deficits, undercoverage, pause or liquidation. Implementation review 2026-09-26: governance upgrade tx 0x30983b6767dc7807f87d9f31f6a4b6f9c68c74c192e38a6b9794690cc00bf495 (via the MoC VotingMachine proxy, Rootstock block 9271198) rotated the MoC and MoCState proxies to the Blockscout-verified money-on-chain@3.0.7 implementations 0xfaf8b802c934af857b58471b6daa66dc5d8a7d07 and 0xe348149646f721ff5e5eb47692299b3796d0b7ed (byte-identical to GitHub tag v3.0.7). Diffed against the pinned 0.1.14 sources, every adapter-read function (collateralRbtcInSystem, rbtcInSystem, docTotalSupply, getBitcoinPrice, getBtcPriceProvider, globalLockedBitcoin, getRbtcRemainder, globalCoverage, state, freeDoc, getLiq, getPeg, getProtected, reserve/moc precisions, getBucketNBPro for X2, connector, paused) is byte-identical and the proxy storage layout is preserved (the retired MoCEMACalculator block-span slots are kept as deprecated words and the 50-slot gap shrank to 48); the only deltas — EMA scheduling moving to a one-day timestamp span and removal of the MoC getBitProInterestBlockSpan passthrough — touch no read the adapter depends on, and the verified deployed MoCState still returns accounted rBTC as total collateral because X2 leveraged positions remain disabled with a zero nBPro count.",
     "compositionBasis": "Canonical Rootstock MoCState accounted rBTC, DOC supply and protocol-valid BTC oracle at one block; custody balance and senior DOC/junior BPRO accounting reconciled",
-    "compositionAsOf": "2026-09-07",
+    "compositionAsOf": "2026-09-26",
     "scope": "full-composition",
     "knownUnknownExposure": "The only backing asset class is rBTC. Protocol oracle valuation, Rootstock peg/custody and upgrade risks remain; BPRO residual risk capital is shared system collateral, not a separately guaranteed DOC reserve. Ethereum and Arbitrum DOC representations are not additional collateral or additional canonical DOC liabilities.",
     "knownUnknownExposurePct": 0,

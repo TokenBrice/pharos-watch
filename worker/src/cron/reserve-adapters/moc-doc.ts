@@ -16,8 +16,11 @@ const DOC = "0xe700691da7b9851f2f35f8b8182c69c53ccad9db";
 const ORACLE = "0xe2927a0620b82a66d67f678fc9b826b0e01b1bfd";
 const LEGACY_IMPLEMENTATION_SLOT = "0x7050c9e0f4ca769c69bd3a8ef740bc37934f8e2c036e5a723fd8ee048ed3f8c3";
 const IMPLEMENTATIONS = [
-  [MOC, LEGACY_IMPLEMENTATION_SLOT, "0x8cf0035b1d1bcd6821f563b3db0530ef59c5d226"],
-  [STATE, LEGACY_IMPLEMENTATION_SLOT, "0xf65be577b252a41887e2f1a19b576a0925201186"],
+  // Reviewed after the 2026-09-25 governance upgrade (tx 0x30983b67…bf495, block 9271198) rotated all
+  // MoC proxies to money-on-chain 3.0.7; every read function is byte-identical to the pinned 0.1.14
+  // sources except EMA scheduling (block span → 1-day timestamp span), which no adapter read touches.
+  [MOC, LEGACY_IMPLEMENTATION_SLOT, "0xfaf8b802c934af857b58471b6daa66dc5d8a7d07"],
+  [STATE, LEGACY_IMPLEMENTATION_SLOT, "0xe348149646f721ff5e5eb47692299b3796d0b7ed"],
   [CONNECTOR, LEGACY_IMPLEMENTATION_SLOT, "0x437221b50b0066186e58412b0ba940441a7b7df5"],
   [ORACLE, EIP1967_IMPLEMENTATION_SLOT, "0xa7e86af8eb19e3dab8e7353cb27d286372aac87d"],
 ] as const;

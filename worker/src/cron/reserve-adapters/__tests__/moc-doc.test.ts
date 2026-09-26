@@ -28,7 +28,7 @@ function accounting(collateral = 200n * WAD): string[] {
   const supply = 2_000_000n * WAD;
   const locked = supply * WAD / price;
   return [
-    "0x8cf0035b1d1bcd6821f563b3db0530ef59c5d226", "0xf65be577b252a41887e2f1a19b576a0925201186",
+    "0xfaf8b802c934af857b58471b6daa66dc5d8a7d07", "0xe348149646f721ff5e5eb47692299b3796d0b7ed",
     "0x437221b50b0066186e58412b0ba940441a7b7df5", "0xa7e86af8eb19e3dab8e7353cb27d286372aac87d",
     "0xce2a128cc73e5d98355aafb2595647f2d3171faa", "0xf773b590af754d597770937fa8ea7abdf2668370",
     "0xb9c42efc8ec54490a37ca91c423f7285fa01e257", "0xe700691da7b9851f2f35f8b8182c69c53ccad9db",
@@ -155,6 +155,8 @@ describe("MoC DOC accounted rBTC", () => {
 
   it.each([
     [0, word(1), "implementation"],
+    [0, word("0x8cf0035b1d1bcd6821f563b3db0530ef59c5d226"), "implementation"],
+    [1, word("0xf65be577b252a41887e2f1a19b576a0925201186"), "implementation"],
     [7, word(1), "identity"],
     [13, word(WAD), "accounting state"],
     [16, word(1), "reconcile"],
