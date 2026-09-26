@@ -139,12 +139,43 @@ describe("makina-strategy adapter", () => {
     expect(result.metadata?.details?.lastReportedAumDiffPct).toBeCloseTo(8.333333333);
   });
 
-  it("rejects allocation totals that do not reconcile to current AUM", () => {
+  it("degrades when the allocation book reconciles only to the last reported AUM", () => {
+    // Production shape (2026-09-26 04:13Z run): the live AUM had moved 0.68%
+    // past the book with deposits while the allocation packet still reconciled
+    // to the on-chain reported AUM, erroring for hours until the operator's
+    // next accounting batch. The book matching its report anchor now degrades
+    // with a lag warning instead of erroring.
     const strategy = structuredClone(STRATEGY_FIXTURE);
     strategy.data.aum = "12000000000";
 
+    const result = adaptMakinaStrategyReserves(strategy, ALLOCATIONS_FIXTURE, PARAMS);
+
+    expectWarningEffect(result, "makina-allocation-aum-lag", "degraded");
+    expect(result.metadata?.totalReserveUsd).toBe(11000);
+    expect(result.metadata?.details?.reconciliationKind).toBe("allocation-net-value-equals-last-reported-aum");
+    expect(result.metadata?.details?.reconciliationAumUsd).toBe(11000);
+    expect(result.metadata?.details?.reconciliationDiffPct).toBeCloseTo(8.333333333);
+    const validation = validateAdapterOutput(result, { adapter: getReserveAdapter("makina-strategy") ?? undefined });
+    expect(validation.valid).toBe(true);
+  });
+
+  it("rejects allocation totals that reconcile to neither current nor last reported AUM", () => {
+    const strategy = structuredClone(STRATEGY_FIXTURE);
+    strategy.data.aum = "12000000000";
+    strategy.data.lastReportedAum = "13000000000";
+
     expect(() => adaptMakinaStrategyReserves(strategy, ALLOCATIONS_FIXTURE, PARAMS)).toThrow(
-      /differs from current AUM/,
+      /differs from current AUM by 8\.333% and from last reported AUM by 15\.385%/,
+    );
+  });
+
+  it("rejects allocation drift when no last reported AUM is published", () => {
+    const strategy = structuredClone(STRATEGY_FIXTURE);
+    strategy.data.aum = "12000000000";
+    delete strategy.data.lastReportedAum;
+
+    expect(() => adaptMakinaStrategyReserves(strategy, ALLOCATIONS_FIXTURE, PARAMS)).toThrow(
+      /differs from current AUM by 8\.333%$/,
     );
   });
 

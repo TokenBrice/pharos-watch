@@ -22,6 +22,7 @@ import {
   TRACKED_STABLECOINS,
 } from "@shared/lib/stablecoins/registry";
 import { SHADOW_STABLECOINS } from "@shared/lib/shadow-stablecoins";
+import { selectSupplementalOnchainSupplyProbeContract } from "@shared/lib/onchain-supply-probe";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 
 const USDT_META = REGISTRY_BY_LLAMA_ID.get("1");
@@ -66,6 +67,29 @@ describe("REGISTRY_BY_LLAMA_ID", () => {
     ).length;
 
     expect(REGISTRY_BY_LLAMA_ID.size).toBe(llamaIdCount);
+  });
+});
+
+describe("reused Solomon provider identity", () => {
+  it("keeps the re-pointed DefiLlama 261 row out of the legacy profile's supply lane", () => {
+    // DefiLlama re-pointed stablecoin asset 261 to the replacement Chancery
+    // mint on 2026-09-24; ingesting that row as usdv-solomon attributed the
+    // replacement's ~6.06M supply to the legacy ~1.51M mint and double-counted
+    // it against usdv-solomon-v2. The legacy coin must stay off the llama lane.
+    expect(REGISTRY_BY_LLAMA_ID.get("261")).toBeUndefined();
+    expect(REGISTRY_BY_ID.get("usdv-solomon")?.llamaId).toBeUndefined();
+  });
+
+  it("sources legacy supply from the exact legacy mint and leaves solomon-usdv to the replacement", () => {
+    const legacy = REGISTRY_BY_ID.get("usdv-solomon");
+    expect(legacy?.detailProvider).toBe("coingecko");
+    const probe = selectSupplementalOnchainSupplyProbeContract(legacy!);
+    expect(probe).toMatchObject({
+      chain: "solana",
+      address: "Ex5DaKYMCN6QWFA4n67TmMwsH8MJV68RX6YXTmVM532C",
+    });
+    expect(REGISTRY_BY_GECKO_ID.get("solomon-usdv")?.id).toBe("usdv-solomon-v2");
+    expect(REGISTRY_BY_LLAMA_ID.get("261")?.id).not.toBe("usdv-solomon-v2");
   });
 });
 

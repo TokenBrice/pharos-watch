@@ -2749,6 +2749,13 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "none", fee: "none" },
+    provenance: {
+      status: "parked",
+      rationale:
+        "The protocol-data endpoint stopped describing the legacy beta mint: from the 2026-09-20 data cut its protocolTvl equals the replacement Chancery USDv mint's on-chain supply (6,059,987.4834 by getTokenSupply on USDvUSpnhCr9yBgj3UyVrD239HRUv4RsHwH2FxsWuMk; 6,072,504.4834 at the 2026-09-27 probe) while the legacy itemized buckets are vestigial (custody $76.25, empty vault and reserve fund), and the adapter fails closed above the issuer-documented $3,000,000 legacy beta cap. The usdv-solomon liveReservesConfig was removed on 2026-09-27 to stop the error loop; the curated September composition is served instead and the replacement mint is tracked separately as usdv-solomon-v2. Review after the 2026-10-16 legacy wind-down endpoint: re-enable only if the issuer republishes a legacy-mint reserve envelope.",
+      parkedSince: "2026-09-27",
+      nextReview: "2026-10-31",
+    },
     validation: DASHBOARD_WITH_UNKNOWN_CAP_VALIDATION,
   },
 
