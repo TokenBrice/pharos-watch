@@ -336,7 +336,7 @@ function evaluateWatchTailDiagnostics(input: WatchTailInput): Partial<StatusRule
  * claim "N cron job(s) are in fallback/degraded mode" (cached) next to
  * `summary.degradedCrons` (live) with different values (R5: one authority).
  */
-export const CRON_DERIVED_AVAILABILITY_CAUSE_CODES = [
+const CRON_DERIVED_AVAILABILITY_CAUSE_CODES = [
   "cron_history_query_failed",
   "cron_progress_query_failed",
   "cron_lease_query_failed",
