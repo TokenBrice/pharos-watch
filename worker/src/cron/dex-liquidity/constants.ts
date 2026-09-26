@@ -40,9 +40,25 @@ export const DEX_LIQUIDITY_POOL_MIN_TVL_USD = 10_000;
 // review.
 export const UNIV3_SUBGRAPHS: Record<string, string> = {
   ethereum: "5zvR82QoaXYFyDEKLZ9t6v9adgnptxYpKpSbxtgVENFV",
-  base: "FUbEPQw1oMghy39fwWBFY5fE6MXPXZQtjncQy2cXdrNS",
+  // 2026-09-27: replaced FUbEPQw1… (deployment QmawEzRNeDyaTgjPKb1eRrbyzxczgSHUYzvTMaMnN8jyuh),
+  // which serves the Messari subgraph-standard schema (`liquidityPools`, no
+  // `pools` field), so the native-schema page query below can never answer;
+  // every run since 2026-09-22 16:10 UTC (when the failed-source flag made it
+  // visible) recorded `univ3-subgraph:base`. The pinned replacement is the
+  // "Uniswap V3 Base" network subgraph (deployment
+  // Qmb4VUcAY9LsVgeCuCCMs7X1XrkbRcaiuAbSK8SqhmsAfP), which serves the native
+  // schema and answered the exact production query with 1000 pools including
+  // every tracked Base stablecoin pool above the $50K observation floor.
+  base: "43Hwfi3dJSoGpyas9VwNoDAv55yjgGrPpNSmbQZArzMG",
   arbitrum: "FbCGRftH4a3yZugY7TnbYgPJVEv2LvMT6oF1fxPe9aJM",
   polygon: "3hCPRGf4z88VC5rsBKU5AA9FBBq5nF3jbKJG7VZCbhjm",
+  // Celo: "Uniswap V3 Celo" (deployment QmXfJmxY7C4A4UoWEexvei8XzcSxMegr78rt3Rzz8szkZA,
+  // last version 2024-03-12) is the only published Celo deployment, and since
+  // 2026-09-22 every serving indexer is bad (two HTTP 400s plus
+  // indexing_error on the sole attestor, at any `first` including 1). No
+  // admissible replacement deployment exists on the network, so the lane
+  // keeps failing closed and visibly in `failedSources` until indexer health
+  // returns; per-source quarantine keeps the other chains publishing.
   celo: "ESdrTJ3twMwWVoQ1hUE2u7PugEHX3QkenudD6aXCkDQ4",
   bsc: "F85MNzUGYqgSHSHRGgeVMNsdnW1KtZSVgFULumXRZTw2",
 };
@@ -52,6 +68,19 @@ export const UNIV3_SUBGRAPHS: Record<string, string> = {
 // strictly lower-TVL pools).
 export const UNIV3_POOL_PAGE_SIZE = 1000;
 export const UNIV3_POOL_MAX_PAGES = 5;
+
+/**
+ * The Base Uni V3 lane reads exactly one page. The 2026-09-27 replacement
+ * deployment answers a full 1000-pool page in a measured 7.8-8.8s, and the
+ * family's per-chain timeout (`SUBGRAPH_PER_CHAIN_TIMEOUT_MS`, 15s) covers
+ * every page of a chain with one shared signal, so a second page would abort
+ * the whole chain mid-run and discard its observations. The TVL-desc page
+ * already contains every tracked Base stablecoin pool above the $50K
+ * observation floor (probed 2026-09-27: 124 tracked pools, of which the
+ * second page added zero), so the unmeasured tail is below every admission
+ * floor anyway.
+ */
+export const UNIV3_BASE_POOL_MAX_PAGES = 1;
 
 /**
  * Hard per-response byte cap for one subgraph page, shared by the bounded
@@ -98,7 +127,14 @@ export const buildUniV3PoolQuery = (skip: number): string => `{
  */
 export const UNISWAP_V4_SUBGRAPHS: Record<string, string> = {
   ethereum: "DiYPVdygkfjDWhbxGSqAQxwBKmfKnkWQojqeM2rkLb3G",
-  base: "CHz2jQ8g62rewnrMyGF9yHktmkGjMwKBw4rVx82E64Um",
+  // 2026-09-27: replaced CHz2jQ8g… (deployment QmaoSfxT45Q3tKnQEcmCACRFKpv8SogxEcZ4kAvRDmgnrU),
+  // whose only serving indexer (0xf92f430d…) answers non-JSON after ~15s, so
+  // every run since 2026-09-22 recorded `uniswap-v4-subgraph:base`. The pinned
+  // replacement is the actively curated "uniswap-v4-base-3" network subgraph
+  // (deployment Qmbsc6XQWbiv4DfLVfaNciScqYLyDWUYjWzrFBbzzmRsMB, highest-signalled
+  // Uniswap V4 deployment): identical pool set (same pool ids/hook/liquidity
+  // rows probed side by side) at 1.5-2.7s per 1000-pool page instead of 15s.
+  base: "Gqm2b5J85n1bhCyDMpGbtbVn4935EvvdyHdHrx3dibyj",
   arbitrum: "EpEZyTnADuwvqpMh7vcTPFHDN3MwqiUN9QHapCBPbRWW",
   polygon: "2CB2uQxcDKWDenagn2z17KQVCtfwSx5eXYuvqTciRTJu",
   bsc: "EAq1nJKgjnuKH6Gj4RFjCW7LcL7E2uipbncdwV7TTWkX",

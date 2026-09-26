@@ -6,6 +6,8 @@ import {
 import {
   UNISWAP_V4_SUBGRAPHS,
   UNISWAP_V4_POOL_PAGE_SIZE,
+  UNIV3_BASE_POOL_MAX_PAGES,
+  UNIV3_POOL_MAX_PAGES,
   UNIV3_POOL_PAGE_SIZE,
   UNIV3_SUBGRAPHS,
   buildUniswapV4PoolQuery,
@@ -145,6 +147,47 @@ describe("subgraph source families", () => {
       "polygon",
       "celo",
     ]);
+  });
+
+  it("stops the Base Uni V3 lane after one full page so the slow Base deployment stays inside the shared per-chain timeout", async () => {
+    const token0 = "0x1111111111111111111111111111111111111111";
+    const token1 = "0x2222222222222222222222222222222222222222";
+    const fullPage = Array.from({ length: UNIV3_POOL_PAGE_SIZE }, (_, i) => ({
+      id: `0x${(i + 1).toString(16).padStart(40, "0")}`,
+      token0: { id: token0, symbol: "USDC", decimals: "6" },
+      token1: { id: token1, symbol: "USDT", decimals: "18" },
+      feeTier: "3000",
+      totalValueLockedUSD: "1000000",
+      volumeUSD: "500000",
+      token0Price: "1",
+      token1Price: "1",
+      totalValueLockedToken0: "500000",
+      totalValueLockedToken1: "500000",
+    }));
+
+    const fetchMock = mockFetch([{
+      match: (request) => request.url.endsWith(UNIV3_SUBGRAPHS.base),
+      respond: () => ({ body: { data: { pools: fullPage } } }),
+    }, {
+      match: (request) => request.url.endsWith(UNIV3_SUBGRAPHS.ethereum),
+      respond: () => ({ body: { data: { pools: fullPage } } }),
+    }, {
+      match: "gateway.thegraph.com/api/graph-key/subgraphs/id/",
+      respond: () => ({ body: { data: { pools: [] } } }),
+    }], { requireMatch: true });
+
+    const result = await fetchUniV3Data("graph-key", new Map(), new Map());
+
+    expect(result.failedChains).toEqual([]);
+    // Base answers a full 1000-pool page in a measured ~8s, and the family's
+    // single 15s per-chain signal covers every page, so Base must stop after
+    // one page; the other chains keep the full page budget.
+    expect(fetchMock.getHistory().filter(({ url }) => url.endsWith(UNIV3_SUBGRAPHS.base)).length)
+      .toBe(UNIV3_BASE_POOL_MAX_PAGES);
+    expect(fetchMock.getHistory().filter(({ url }) => url.endsWith(UNIV3_SUBGRAPHS.ethereum)).length)
+      .toBe(UNIV3_POOL_MAX_PAGES);
+    expect(result.uniV3ExecutionCandidates.get(buildUniV3ExecutionCandidateKey("base", [token0, token1], 3000)!))
+      .toHaveLength(UNIV3_POOL_PAGE_SIZE);
   });
 
   it("requests exact V4 PoolKey fields and retains hooked collisions", async () => {

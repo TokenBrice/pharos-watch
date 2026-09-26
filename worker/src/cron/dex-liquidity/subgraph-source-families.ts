@@ -10,6 +10,7 @@ import type {
   UniV3Lookups,
 } from "./types";
 import {
+  UNIV3_BASE_POOL_MAX_PAGES,
   UNIV3_POOL_MAX_PAGES,
   UNIV3_POOL_PAGE_SIZE,
   UNIV3_SUBGRAPHS,
@@ -123,7 +124,7 @@ export async function fetchUniV3Data(
       chain,
       buildQuery: (skip) => buildUniV3PoolQuery(skip),
       pageSize: UNIV3_POOL_PAGE_SIZE,
-      maxPages: UNIV3_POOL_MAX_PAGES,
+      maxPages: chain === "base" ? UNIV3_BASE_POOL_MAX_PAGES : UNIV3_POOL_MAX_PAGES,
       signal: combinedSignal,
       extractEntities: (data) => (data as { pools?: UniV3SubgraphPool[] } | undefined)?.pools,
       mapEntity: (pool) => {
