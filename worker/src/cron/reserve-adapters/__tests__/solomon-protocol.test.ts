@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import type { StablecoinMeta } from "@shared/types/core";
+import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
 import { adaptSolomonProtocolData, type SolomonProtocolDataResponse } from "../solomon-protocol";
@@ -154,9 +156,20 @@ describe("adaptSolomonProtocolData", () => {
 describe("fetchSolomonProtocolReserves", () => {
   const url = "https://data.solomonlabs.io/api/solomon-protocol/protocol-data";
   const nowSec = 1_787_097_700;
+  // The adapter is parked (no catalog liveReservesConfig since 2026-09-27),
+  // so these runs carry the pre-park config the way parked-adapter tests do.
+  const config: LiveReservesConfig = {
+    adapter: "solomon-protocol",
+    version: 1,
+    semantics: "collateral-mix",
+    breakerScope: "usdv-solomon",
+    display: { url, label: "Solomon protocol data" },
+    inputs: { primary: { kind: "http-json", url } },
+  };
+  const coin = { id: "usdv-solomon", liveReservesConfig: config } as StablecoinMeta;
 
   it("fetches protocol data through the shared network harness", async () => {
-    const { result, network } = await runAdapter("solomon-protocol", "usdv-solomon", {
+    const { result, network } = await runAdapter("solomon-protocol", coin, {
       network: installAdapterNetwork({ json: { [url]: FIXTURE } }),
       nowSec,
     });
@@ -167,7 +180,7 @@ describe("fetchSolomonProtocolReserves", () => {
   it("rejects a renamed protocolTvl field instead of publishing a zero snapshot", async () => {
     const drifted = { ...FIXTURE };
     Reflect.deleteProperty(drifted, "protocolTvl");
-    await expect(runAdapter("solomon-protocol", "usdv-solomon", {
+    await expect(runAdapter("solomon-protocol", coin, {
       network: installAdapterNetwork({ json: { [url]: drifted } }),
       nowSec,
       validate: false,

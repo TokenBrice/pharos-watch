@@ -742,10 +742,38 @@ export function adaptMakinaStrategyReserves(
   const reconciliationDiffPct = Math.abs(netReserveUsd - currentAumUsd) / currentAumUsd * 100;
   const reconciliationTolerancePct =
     params.reconciliationTolerancePct ?? DEFAULT_RECONCILIATION_TOLERANCE_PCT;
+  let reconciliationAumUsd = currentAumUsd;
+  let reconciliationKind = "allocation-net-value-equals-current-aum";
   if (reconciliationDiffPct > reconciliationTolerancePct) {
-    throw new Error(
-      `makina-strategy allocation net value differs from current AUM by ${reconciliationDiffPct.toFixed(3)}%`,
-    );
+    // Makina assembles `aum` on demand from idle balances plus Caliber
+    // accounting (docs.makina.finance/concepts/architecture/machine/share-price),
+    // so deposits and redemptions move it immediately, while allocation
+    // positions are re-accounted only on the operator's batch cadence. Between
+    // accountings the position book reconciles to `lastReportedAum` — the
+    // on-chain AUM the book was accounted against — rather than to the
+    // indexer's live AUM. Accept that anchor with a degraded lag warning
+    // instead of erroring through every flow window (production error plateaus
+    // on 2026-09-21..22 and 2026-09-26 sat 0.5-0.7% apart for hours); a book
+    // matching neither issuer anchor still aborts the run.
+    const reportedDiffPct = lastReportedAumUsd != null && lastReportedAumUsd > 0
+      ? Math.abs(netReserveUsd - lastReportedAumUsd) / lastReportedAumUsd * 100
+      : null;
+    if (lastReportedAumUsd != null && reportedDiffPct != null && reportedDiffPct <= reconciliationTolerancePct) {
+      reconciliationAumUsd = lastReportedAumUsd;
+      reconciliationKind = "allocation-net-value-equals-last-reported-aum";
+      warnings.push(reserveDegradedWarning(
+        "makina-allocation-aum-lag",
+        `Makina allocation book reconciles to the last reported AUM but lags the current AUM`
+          + ` by ${reconciliationDiffPct.toFixed(3)}%`,
+      ));
+    } else {
+      throw new Error(
+        `makina-strategy allocation net value differs from current AUM by ${reconciliationDiffPct.toFixed(3)}%`
+          + (reportedDiffPct != null
+            ? ` and from last reported AUM by ${reportedDiffPct.toFixed(3)}%`
+            : ""),
+      );
+    }
   }
 
   const otherThresholdPct = params.otherThresholdPct ?? DEFAULT_OTHER_THRESHOLD_PCT;
@@ -826,9 +854,9 @@ export function adaptMakinaStrategyReserves(
       ...(redemptionState ? buildMakinaRedemptionMetadata(redemptionState) : {}),
       details: {
         proofKind: "makina-strategy-accounting-api",
-        reconciliationKind: "allocation-net-value-equals-current-aum",
+        reconciliationKind,
         reconciliationDiffPct,
-        reconciliationAumUsd: currentAumUsd,
+        reconciliationAumUsd,
         ...(lastReportedAumUsd != null && lastReportedAumUsd > 0
           ? { lastReportedAumDiffPct: Math.abs(netReserveUsd - lastReportedAumUsd) / lastReportedAumUsd * 100 }
           : {}),

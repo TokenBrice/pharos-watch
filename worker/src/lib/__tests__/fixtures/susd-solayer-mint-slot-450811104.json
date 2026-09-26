@@ -1,0 +1,69 @@
+{
+  "source": "Confirmed Solana getAccountInfo (jsonParsed) + getBlockTime for mint susdabGDNbhrnCa6ncrYo81u4s9GM8ecK2UwMyZiq4X at slot 450811104, captured 2026-09-26T22:38:14Z from api.mainnet-beta.solana.com. interestBearingConfig: initializationTimestamp 1727476198, lastUpdateTimestamp 1789420162, preUpdateAverageRate 684 bps, currentRate 3091 bps; the SPL token-2022 exchange rate at block time 1790462294 is 1.1555804623631452 (DefiLlama circulating 732710.146212 USD / raw supply 634202.057862 = 1.15533 cross-checks it).",
+  "account": {
+    "jsonrpc": "2.0",
+    "result": {
+      "context": {
+        "apiVersion": "4.3.0",
+        "slot": 450811104
+      },
+      "value": {
+        "data": {
+          "parsed": {
+            "info": {
+              "decimals": 6,
+              "extensions": [
+                {
+                  "extension": "metadataPointer",
+                  "state": {
+                    "authority": "3sUxQAhNNkProjXEbSfPQfAvWeGMozsCMzPUHw47ixiQ",
+                    "metadataAddress": "susdabGDNbhrnCa6ncrYo81u4s9GM8ecK2UwMyZiq4X"
+                  }
+                },
+                {
+                  "extension": "interestBearingConfig",
+                  "state": {
+                    "currentRate": 3091,
+                    "initializationTimestamp": 1727476198,
+                    "lastUpdateTimestamp": 1789420162,
+                    "preUpdateAverageRate": 684,
+                    "rateAuthority": "FhVcYNEe58SMtxpZGnTu2kpYJrTu2vwCZDGpPLqbd2yG"
+                  }
+                },
+                {
+                  "extension": "tokenMetadata",
+                  "state": {
+                    "additionalMetadata": [],
+                    "mint": "susdabGDNbhrnCa6ncrYo81u4s9GM8ecK2UwMyZiq4X",
+                    "name": "Solayer USD",
+                    "symbol": "sUSD",
+                    "updateAuthority": "FhVcYNEe58SMtxpZGnTu2kpYJrTu2vwCZDGpPLqbd2yG",
+                    "uri": "https://metadata.solayer.org/susd/meta-data.json"
+                  }
+                }
+              ],
+              "freezeAuthority": "FhVcYNEe58SMtxpZGnTu2kpYJrTu2vwCZDGpPLqbd2yG",
+              "isInitialized": true,
+              "mintAuthority": "FhVcYNEe58SMtxpZGnTu2kpYJrTu2vwCZDGpPLqbd2yG",
+              "supply": "634202057862"
+            },
+            "type": "mint"
+          },
+          "program": "spl-token-2022",
+          "space": 437
+        },
+        "executable": false,
+        "lamports": 4946320,
+        "owner": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+        "rentEpoch": 18446744073709552000,
+        "space": 437
+      }
+    },
+    "id": 1
+  },
+  "blockTime": {
+    "jsonrpc": "2.0",
+    "result": 1790462294,
+    "id": 1
+  }
+}

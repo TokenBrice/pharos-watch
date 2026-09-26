@@ -90,7 +90,7 @@ export async function fetchCurveOnchainPrices(
   for (const config of configs) {
     rpcAttempts++;
     try {
-      const inputAmount = BigInt(10) ** BigInt(config.inputDecimals); // 1 unit
+      const inputAmount = getDyQuoteAmount(config);
       const selector = config.useUnderlying ? GET_DY_UNDERLYING_SELECTOR : GET_DY_SELECTOR;
       const calldata = encodeGetDy(selector, config.inputIndex, config.outputIndex, inputAmount);
 
@@ -159,6 +159,19 @@ export async function fetchCurveOnchainPrices(
     return { kind: "no-data", value };
   }
   return { kind: "ok", value };
+}
+
+// get_dy floors its return value to whole output quanta. A 1-unit quote
+// against a low-decimal output token loses up to one quantum per unit — for
+// the 2-decimal GUSD metapool output, 1 USDC in quotes exactly 0.99 GUSD out
+// (implied price 1/0.99 = 1.0101). Size the quote so the output spans at
+// least 10_000 quanta, keeping floor quantization under ~0.01% while the
+// trade itself stays negligible against StableSwap pool depth.
+const GET_DY_MIN_OUTPUT_QUANTA = 10_000;
+
+function getDyQuoteAmount(config: CurvePoolConfig): bigint {
+  const units = Math.max(1, Math.ceil(GET_DY_MIN_OUTPUT_QUANTA / 10 ** config.outputDecimals));
+  return BigInt(units) * BigInt(10) ** BigInt(config.inputDecimals);
 }
 
 function encodeGetDy(selector: string, i: number, j: number, dx: bigint): string {

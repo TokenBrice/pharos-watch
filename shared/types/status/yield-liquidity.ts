@@ -7,6 +7,14 @@ import { StatusHealthOrUnknownSchema } from "./schema-primitives";
 
 export const LiquidityHealthSchema = z.object({
   lastRunStatus: z.string().nullable(),
+  /**
+   * Unix seconds of the cron run this health snapshot was derived from. The
+   * half-hourly sync-dex-liquidity cadence only remeasures once per hour, so
+   * the source run can be the previous `ok` run when the newest run is a
+   * cadence-reuse `skipped_neutral` skip carrying `sourceCoverage: null`.
+   * Absent on payloads written before this field existed.
+   */
+  sourceRunStartedAt: z.number().optional(),
   currentCoverage: z.number(),
   previousCoverage: z.number().nullable(),
   currentGlobalTvl: z.number().nullable(),

@@ -234,14 +234,14 @@ Longer sequential failover chains cost latency, not correctness. Each extra URL 
 
 `fetchJsonWithRetry()` / `fetchTextWithRetry()` default to a `16 MiB` body cap, and the DEX source stage names a tighter cap for every source it reads so that one mis-served response (HTML error page, doubled payload, proxy interstitial) cannot be buffered and parsed inside the 128 MB isolate. Caps are stated per source because the legitimate shape differs by an order of magnitude between a ticker list and a whole-catalog catalog payload.
 
-Measured 2026-09-23 by calling the same public endpoints from a workstation with the repository's own query and page parameters (`worker/src/cron/dex-liquidity/constants.ts` query builders, `pageSize`/`page_size` values as configured). The `The Graph` gateway refused the measurement without `GRAPH_API_KEY`, so the Uni V3 / V4 / PancakeSwap page caps are justified against the measured page budget of the same 1,000-row shape rather than a re-fetch of the credentialed endpoint.
+Measured 2026-09-23 by calling the same public endpoints from a workstation with the repository's own query and page parameters (`worker/src/cron/dex-liquidity/constants.ts` query builders, `pageSize`/`page_size` values as configured). The `The Graph` gateway refused the 2026-09-23 measurement without `GRAPH_API_KEY`, so the Uni V3 / V4 / PancakeSwap page caps were first justified against the measured page budget of the same 1,000-row shape; the 2026-09-27 subgraph-lane repair re-measured the credentialed gateway directly with the repository's own key and confirmed the estimate (table row below).
 
-| Source (Worker call site) | Endpoint shape | Measured 2026-09-23 | Cap | Constant |
+| Source (Worker call site) | Endpoint shape | Measured | Cap | Constant |
 | --- | --- | --- | --- | --- |
 | DeFiLlama Yields | `GET /pools` | 11,816,252 B / 17,188 pools | `16 MiB` (≈1.4x) | `DEFILLAMA_YIELDS_MAX_RESPONSE_BYTES` (`fetch-primary.ts`) |
 | DeFiLlama Protocols | `GET /protocols` | 8,911,702 B / 8,339 rows | `12 MiB` (≈1.4x) | `DEFILLAMA_PROTOCOLS_MAX_RESPONSE_BYTES` (`fetch-primary.ts`) |
 | Curve `getPools/all/:chain` | 14 chain bodies, 4 at a time | 4,806,780 B (ethereum, largest) | `8 MiB` (≈1.75x) | `CURVE_MAX_RESPONSE_BYTES` (`fetch-primary.ts`) |
-| Uni V3 / Uniswap V4 / PancakeSwap subgraph pages | `first: 1000` pool page | not measurable without `GRAPH_API_KEY`; same 1,000-row budget as the measured pages below (0.5-1 MB) | `8 MiB` | `SUBGRAPH_PAGE_MAX_RESPONSE_BYTES` (`constants.ts`) |
+| Uni V3 / Uniswap V4 / PancakeSwap subgraph pages | `first: 1000` pool page | measured 2026-09-27 with `GRAPH_API_KEY` against the pinned Base deployments: Uni V3 574,513-574,539 B, Uniswap V4 462,509 B per 1,000-pool page (2026-09-23 estimate of 0.5-1 MB confirmed) | `8 MiB` (≈14x) | `SUBGRAPH_PAGE_MAX_RESPONSE_BYTES` (`constants.ts`) |
 | Direct-API paginated runner default | any paginated provider | Raydium `pageSize=1000` 2,138,442 B; Meteora `page_size=500` 995,192 B; Balancer 1,000-row list page 182,322 B for 246 rows | `8 MiB` (≈3.9x) | `DIRECT_API_DEFAULT_MAX_RESPONSE_BYTES` (`direct-api-policy.ts`) |
 | Raydium `pools/info/list` | `pageSize=1000` | 2,138,442 B (standard), 2,013,086 B (concentrated) | `8 MiB` (≈3.7x) | `RAYDIUM_MAX_RESPONSE_BYTES` (`fetch-raydium.ts`) |
 | Meteora `dlmm.datapi.meteora.ag/pools` | `page_size=500` | 995,192 B / 500 rows | `4 MiB` (≈4x) | `METEORA_MAX_RESPONSE_BYTES` (`fetch-meteora.ts`) |

@@ -216,6 +216,35 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     reviewedAt: Date.UTC(2026, 8, 23, 5) / 1000,
     expiresAt: Date.UTC(2026, 9, 23) / 1000,
   },
+  {
+    stablecoinId: "chfm-mento",
+    owner: "ops",
+    reason:
+      "Mento's v3 FX oracle gate closes the only executable CHFm venue every weekend: the CHFm/USDm FPMM 0xdc81135f…3e8b8 prices getAmountOut through OracleAdapter 0xa472fbbf…4383a getFXRateIfValid, which reverts FXMarketClosed (selector 0xa407143a) from Friday 21:00 UTC until Sunday 23:00 UTC (MarketHoursBreaker weekend rules), and the Chainlink-backed sortedOracles reports stop with the Friday close (last reports 2026-09-25 20:56-20:59 UTC, ~92ks stale by Saturday evening). The mento-fpmm lane therefore returns empty every weekend and re-prices automatically at the Sunday 23:00 UTC reopen (quote verified live again 2026-09-20 23:30 UTC). No admissible alternative lane exists: CoinGecko cchf is stale since 2026-07-29, DefiLlama publishes no list price, and DexScreener lists no CHFm pair. Renew while Mento keeps the weekly FX closure; a weekday gap is a different cause.",
+    sources: [
+      "https://github.com/mento-protocol/mento-core/blob/main/contracts/oracles/breakers/MarketHoursBreaker.sol",
+      "https://github.com/mento-protocol/mento-core/blob/main/contracts/oracles/OracleAdapter.sol",
+      "https://github.com/mento-protocol/mento-core/blob/main/contracts/swap/FPMM.sol",
+      "https://docs.mento.org/mento-v3/build/deployments/addresses",
+      "https://www.coingecko.com/en/coins/cchf",
+    ],
+    reviewedAt: Date.UTC(2026, 8, 27) / 1000,
+    expiresAt: Date.UTC(2026, 9, 25) / 1000,
+  },
+  {
+    stablecoinId: "copm-mento",
+    owner: "ops",
+    reason:
+      "Mento's weekend FX closure also empties the only executable COPm lane: Broker 0x777a8255…b4cad getAmountOut on the COPm/USDm BiPoolManager exchange reverts 'no valid median' because sortedOracles reports for feed 0x0196d1f4…39f1 stop at the Friday close (last report 2026-09-25 20:58 UTC, isOldestReportExpired true, median ~92ks stale by Saturday evening) and resume only at the Sunday 23:00 UTC reopen (fresh median verified 2026-09-20 23:30 UTC). The mento-broker lane re-prices COPm automatically after the reopen. No admissible alternative lane exists: CoinGecko ccop is stale since 2026-08-16 and DexScreener's COPm pools hold at most $373 liquidity against the $50K address-provider floor. Renew while Mento keeps the weekly FX closure; a weekday gap is a different cause.",
+    sources: [
+      "https://github.com/mento-protocol/mento-core/blob/main/contracts/swap/BiPoolManager.sol",
+      "https://github.com/mento-protocol/mento-core/blob/main/contracts/oracles/OracleAdapter.sol",
+      "https://docs.mento.org/mento-v3/build/deployments/addresses",
+      "https://www.coingecko.com/en/coins/ccop",
+    ],
+    reviewedAt: Date.UTC(2026, 8, 27) / 1000,
+    expiresAt: Date.UTC(2026, 9, 25) / 1000,
+  },
 ];
 
 export interface ResolvedStablecoinPriceGapReviews {

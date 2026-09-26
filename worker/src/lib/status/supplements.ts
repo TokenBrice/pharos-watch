@@ -8,6 +8,7 @@ import type {
   CanaryStatus,
   ClassificationWarning,
   CoinGeckoPriceDiff,
+  CronRun,
   LiquidityHealth,
   MintBurnReconciliationSummary,
   PublicationHealth,
@@ -281,6 +282,37 @@ async function loadCoinGeckoPriceDiff(
   };
 }
 
+// sync-dex-liquidity only remeasures once per hour; its cadence-reuse
+// `skipped_neutral` partner run persists `sourceCoverage: null` (verified in
+// production cron_runs). The newest run therefore often carries no coverage
+// while the previous `ok` run still holds the freshest completed measurement,
+// so derive liquidity health from the newest run that actually carries
+// sourceCoverage. The 2x-interval budget matches loadCronHealth's run
+// freshness rule: a sync stalled beyond it publishes null rather than stale
+// numbers (R1/R3).
+function selectDexLiquidityCoverageRun(
+  dexLiquidityCron: StatusResponse["crons"][string] | undefined,
+  now: number,
+): CronRun | null {
+  if (!dexLiquidityCron) return null;
+  const runs = dexLiquidityCron.recentRuns.length > 0 || dexLiquidityCron.lastRun == null
+    ? dexLiquidityCron.recentRuns
+    : [dexLiquidityCron.lastRun];
+  // CronStatus always carries the registry interval; the 1800s fallback only
+  // guards malformed callers (sync-dex-liquidity runs every 30 minutes).
+  const intervalSec = dexLiquidityCron.expectedIntervalSec > 0
+    ? dexLiquidityCron.expectedIntervalSec
+    : 1800;
+  for (const run of runs) {
+    if (now - run.startedAt > intervalSec * 2) return null;
+    const sourceCoverage = run.metadata?.sourceCoverage;
+    if (sourceCoverage != null && typeof sourceCoverage === "object") {
+      return run;
+    }
+  }
+  return null;
+}
+
 export async function loadStatusSupplements(
   db: D1Database,
   now: number,
@@ -312,12 +344,13 @@ export async function loadStatusSupplements(
 
   let liquidityHealth: LiquidityHealth | null = null;
   try {
-    const dexLiquidityCron = crons["sync-dex-liquidity"];
-    const metadata = dexLiquidityCron?.lastRun?.metadata;
+    const coverageRun = selectDexLiquidityCoverageRun(crons["sync-dex-liquidity"], now);
+    const metadata = coverageRun?.metadata;
     const sourceCoverage = metadata?.sourceCoverage as Record<string, unknown> | undefined;
-    if (dexLiquidityCron?.lastRun && sourceCoverage) {
+    if (coverageRun && sourceCoverage) {
       liquidityHealth = {
-        lastRunStatus: dexLiquidityCron.lastRun.status,
+        lastRunStatus: coverageRun.status,
+        sourceRunStartedAt: coverageRun.startedAt,
         currentCoverage: Number(sourceCoverage.currentCoverage ?? 0),
         previousCoverage: sourceCoverage.previousCoverage != null ? Number(sourceCoverage.previousCoverage) : null,
         currentGlobalTvl: sourceCoverage.currentGlobalTvl != null ? Number(sourceCoverage.currentGlobalTvl) : null,

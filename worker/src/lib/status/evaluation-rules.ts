@@ -289,7 +289,20 @@ function evaluateD1Status(input: AvailabilityEvaluationInput): Partial<StatusRul
   return ruleResult(status, cause ? [cause] : []);
 }
 
-function evaluateCronDiagnosticQueries(input: AvailabilityEvaluationInput): Partial<StatusRuleEvaluation> | null {
+type CronDiagnosticsInput = Pick<
+  AvailabilityEvaluationInput,
+  "cronHistoryQueryFailed" | "cronProgressQueryFailed" | "cronLeaseQueryFailed"
+>;
+type WatchCronErrorsInput = Pick<
+  AvailabilityEvaluationInput,
+  "cronErrorCount" | "availabilityImpactingCronErrors"
+>;
+type WatchTailInput = Pick<
+  AvailabilityEvaluationInput,
+  "watchUnhealthyCrons" | "degradedCronRuns"
+>;
+
+function evaluateCronDiagnosticQueries(input: CronDiagnosticsInput): Partial<StatusRuleEvaluation> | null {
   const causes: StatusCause[] = [];
   if (input.cronHistoryQueryFailed) causes.push(makeCause("availability", "cron_history_query_failed", "info", "Cron history query failed; cron health is temporarily unknown rather than unhealthy."));
   if (input.cronProgressQueryFailed) causes.push(makeCause("availability", "cron_progress_query_failed", "info", "Cron progress query failed; in-flight cron telemetry is temporarily unavailable."));
@@ -297,14 +310,14 @@ function evaluateCronDiagnosticQueries(input: AvailabilityEvaluationInput): Part
   return ruleResult("healthy", causes);
 }
 
-function evaluateWatchCronErrors(input: AvailabilityEvaluationInput): Partial<StatusRuleEvaluation> | null {
+function evaluateWatchCronErrors(input: WatchCronErrorsInput): Partial<StatusRuleEvaluation> | null {
   const watchCronErrors = Math.max(0, input.cronErrorCount - input.availabilityImpactingCronErrors);
   return watchCronErrors > 0
     ? ruleResult("healthy", [makeCause("availability", "watch_cron_error_runs", "info", `${watchCronErrors} watch-tier cron job(s) currently have last-run status=error.`, { metric: "watchCronErrors", value: watchCronErrors, threshold: 1 })])
     : null;
 }
 
-function evaluateWatchTailDiagnostics(input: AvailabilityEvaluationInput): Partial<StatusRuleEvaluation> | null {
+function evaluateWatchTailDiagnostics(input: WatchTailInput): Partial<StatusRuleEvaluation> | null {
   const causes: StatusCause[] = [];
   if (input.watchUnhealthyCrons > 0) {
     causes.push(makeCause("availability", "watch_unhealthy_crons_present", "info", `${input.watchUnhealthyCrons} watch-tier cron job(s) are unavailable/stale.`, { metric: "watchUnhealthyCrons", value: input.watchUnhealthyCrons, threshold: 1 }));
@@ -313,6 +326,41 @@ function evaluateWatchTailDiagnostics(input: AvailabilityEvaluationInput): Parti
     causes.push(makeCause("availability", "degraded_cron_warning", "info", `${input.degradedCronRuns} cron job(s) are in fallback/degraded mode (warning-only).`, { metric: "degradedCrons", value: input.degradedCronRuns, threshold: 1 }));
   }
   return ruleResult("healthy", causes);
+}
+
+/**
+ * Informational availability causes whose numbers come straight from the cron
+ * health read. `/api/status` rebuilds `crons` and `summary` from a live
+ * `loadCronHealth` call while serving the cached raw assessment, so these
+ * causes must be re-derived from that same read — otherwise one response can
+ * claim "N cron job(s) are in fallback/degraded mode" (cached) next to
+ * `summary.degradedCrons` (live) with different values (R5: one authority).
+ */
+const CRON_DERIVED_AVAILABILITY_CAUSE_CODES = [
+  "cron_history_query_failed",
+  "cron_progress_query_failed",
+  "cron_lease_query_failed",
+  "watch_cron_error_runs",
+  "watch_unhealthy_crons_present",
+  "degraded_cron_warning",
+] as const;
+
+export type CronDerivedAvailabilityCauseInputs = CronDiagnosticsInput & WatchCronErrorsInput & WatchTailInput;
+
+export function rebuildCronDerivedAvailabilityCauses(
+  availabilityCauses: StatusCause[],
+  input: CronDerivedAvailabilityCauseInputs,
+): StatusCause[] {
+  const cronDerivedCodes: readonly string[] = CRON_DERIVED_AVAILABILITY_CAUSE_CODES;
+  const liveCauses = [
+    evaluateCronDiagnosticQueries(input),
+    evaluateWatchCronErrors(input),
+    evaluateWatchTailDiagnostics(input),
+  ].flatMap((rule) => rule?.causes ?? []);
+  return [
+    ...availabilityCauses.filter((cause) => !cronDerivedCodes.includes(cause.code)),
+    ...liveCauses,
+  ];
 }
 
 const AVAILABILITY_STATUS_RULES: readonly StatusRule<AvailabilityEvaluationInput>[] = [

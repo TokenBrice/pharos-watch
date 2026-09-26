@@ -165,6 +165,7 @@ export const CIRCUIT_SOURCE = {
   MENTO_BROKER: "mento-broker",
   BD_AERODROME: "bd-aerodrome",
   USDV_JUPITER: "usdv-jupiter",
+  SUSD_SOLAYER_NAV: "susd-solayer-nav",
   USDAF_UNISWAP_V4: "usdaf-uniswap-v4",
   PROTOCOL_REDEEM: "protocol-redeem",
   CURVE_ONCHAIN: "curve-onchain",

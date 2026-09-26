@@ -107,7 +107,7 @@ export function applyTrackedAssetOverrides(assets: PeggedAsset[]): void {
       asset.name = meta?.name ?? asset.name;
       delete asset.geckoId;
       delete asset.gecko_id;
-      asset.price = null; // DefiLlama supply remains legacy; its price now identifies V2.
+      asset.price = null; // On-chain supplemental supply since 2026-09-27 (no llamaId); every DefiLlama price lane — list row 261 and the supplemental solana:Ex5Da… contract quote — aliases the replacement mint, so the price must come from an identity-safe source (jupiter-exact).
     } else if (meta?.geckoId) {
       asset.geckoId = meta.geckoId;
     }
