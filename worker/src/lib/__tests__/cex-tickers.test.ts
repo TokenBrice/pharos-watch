@@ -284,6 +284,29 @@ describe("fetchCoinbasePrices", () => {
     const expectedSec = Math.floor(Date.parse("2026-04-17T15:05:04.183Z") / 1000);
     expect(outcome.value.observedAtBySymbol.get("USDT")).toBe(expectedSec);
   });
+  it("prices the AUDD-USDC FX-stablecoin product from its bid/ask midpoint", async () => {
+    // Live shape probed 2026-09-26 from
+    // https://api.exchange.coinbase.com/products/AUDD-USDC/ticker (fx_stablecoin
+    // book; USDC quote treated at USD par). Midpoint must win over the last
+    // trade so the thin book's prints cannot skew the hard-market voice.
+    mockFetch([
+      {
+        match: "/products/AUDD-USDC/ticker",
+        body: {
+          ask: "0.7075",
+          bid: "0.7036",
+          price: "0.7036",
+          time: "2026-09-26T22:28:40.333586513Z",
+        },
+      },
+      { match: () => true, body: {}, status: 404 },
+    ], { requireMatch: true });
+    const outcome = await fetchCoinbasePrices(["AUDD"]);
+    expect(outcome.kind).toBe("ok");
+    expect(outcome.value.prices.get("AUDD")).toBeCloseTo(0.70555, 6);
+    const expectedSec = Math.floor(Date.parse("2026-09-26T22:28:40.333586513Z") / 1000);
+    expect(outcome.value.observedAtBySymbol.get("AUDD")).toBe(expectedSec);
+  });
 
   it("cancels failed product responses and returns upstream-error outcome", async () => {
     const cancel = vi.fn(async () => undefined);
@@ -404,17 +427,20 @@ describe("fetchKrakenPrices", () => {
               USDCUSD: { c: ["0.9998"] },
               DAIUSD: { c: ["1.0000"] },
               TGBPUSD: { a: ["1.3538"], b: ["1.3535"], c: ["1.3531"] },
+              // Live shape probed 2026-09-26: MXNBUSD bid/ask midpoint preferred over last.
+              MXNBUSD: { a: ["0.056620"], b: ["0.056580"], c: ["0.056530"] },
               BTCUSD: { c: ["65000"] },
             },
       },
     }]);
 
-    const outcome = await fetchKrakenPrices(["USDT", "USDC", "DAI", "TGBP"]);
+    const outcome = await fetchKrakenPrices(["USDT", "USDC", "DAI", "TGBP", "MXNB"]);
     expect(outcome.kind).toBe("ok");
     expect(outcome.value.get("USDT")).toBeCloseTo(1.0002, 4);
     expect(outcome.value.get("USDC")).toBeCloseTo(0.9998, 4);
     expect(outcome.value.get("DAI")).toBeCloseTo(1.0, 4);
     expect(outcome.value.get("TGBP")).toBeCloseTo(1.35365, 5);
+    expect(outcome.value.get("MXNB")).toBeCloseTo(0.0566, 8);
     expect(outcome.value.has("BTC")).toBe(false);
   });
 

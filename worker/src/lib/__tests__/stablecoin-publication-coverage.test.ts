@@ -253,6 +253,54 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
     expect(priced).toMatchObject({ complete: true, pricedActiveIds: ids, acknowledgedGapCount: 0, missingPriceCount: 0 });
   });
 
+  it("acknowledges the recurring Mento weekend FX-closure gaps for CHFm and COPm", () => {
+    const mentoReviews = STABLECOIN_PRICE_GAP_REVIEWS.filter(
+      (entry) => entry.stablecoinId === "chfm-mento" || entry.stablecoinId === "copm-mento",
+    );
+    expect(mentoReviews).toHaveLength(2);
+    for (const review of mentoReviews) {
+      expect(review.owner).toBe("ops");
+      expect(review.reason).toMatch(/weekend/i);
+      expect(review.sources.length).toBeGreaterThanOrEqual(1);
+      expect(review.sources.every((source) => /^https:\/\/\S+$/.test(source))).toBe(true);
+      expect(review.expiresAt).toBeGreaterThan(review.reviewedAt);
+      expect(review.expiresAt - review.reviewedAt).toBeLessThanOrEqual(30 * 86_400);
+    }
+
+    const ids = mentoReviews.map((review) => review.stablecoinId);
+    const fridayClose = evaluateStablecoinActivePriceCoverage(
+      ids.map((id) => ({ id, price: null, circulating: { peggedUSD: 100 } })),
+      ids,
+      { nowSec: Date.UTC(2026, 8, 25, 21, 30) / 1000, priceGapReviews: mentoReviews },
+    );
+    const saturday = evaluateStablecoinActivePriceCoverage(
+      ids.map((id) => ({ id, price: null, circulating: { peggedUSD: 100 } })),
+      ids,
+      { nowSec: Date.UTC(2026, 9, 3, 12) / 1000, priceGapReviews: mentoReviews, previousCoverage: fridayClose },
+    );
+    expect(saturday).toMatchObject({
+      missingPriceCount: 2,
+      missingActiveIds: ids,
+      alertEligibleIds: [],
+      alertEligibleCount: 0,
+      acknowledgedGapIds: ids,
+      acknowledgedGapCount: 2,
+    });
+    expect(saturday.missingActiveAssets.every((asset) => asset.consecutiveMissingGenerations >= 2 && !asset.alertEligible)).toBe(true);
+
+    const mondayReopen = evaluateStablecoinActivePriceCoverage(
+      ids.map((id) => ({ id, price: 1.2 })),
+      ids,
+      { nowSec: Date.UTC(2026, 8, 28, 0, 15) / 1000, priceGapReviews: mentoReviews, previousCoverage: saturday },
+    );
+    expect(mondayReopen).toMatchObject({
+      complete: true,
+      pricedActiveIds: ids,
+      missingPriceCount: 0,
+      acknowledgedGapCount: 0,
+    });
+  });
+
   it("fails closed on malformed review ownership, evidence, identity, and dates", () => {
     const review = STABLECOIN_PRICE_GAP_REVIEWS[0]!;
     const invalidReviews = [

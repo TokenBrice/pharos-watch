@@ -170,6 +170,42 @@ describe("fetchCurveOnchainPrices", () => {
     expect(outcome.value.prices.get("dai-makerdao")).toBeCloseTo(0.999, 3);
   });
 
+  it("sizes get_dy quotes up for low-decimal outputs (GUSD 2-decimal artifact)", async () => {
+    // Reproduces the production bug: get_dy_underlying(2, 0, 1 USDC) on the
+    // GUSD/3Crv metapool floors 0.9996 GUSD to 0.99 (raw 99), reporting an
+    // implied price of exactly 1/0.99 = 1.0101010101. At a 100-unit quote the
+    // same pool returns 9997 raw (99.97 GUSD), implying the true ~1.0003 price
+    // (values observed on-chain at block 26064625).
+    mockEvmCall.mockResolvedValue(hexWord(9997));
+
+    const config = makeCurveConfig({
+      stablecoinId: "gusd-gemini",
+      poolAddress: "0x4f062658EaAF2C1ccf8C8e36D6824CDf41167956",
+      inputIndex: 2, // USDC (underlying)
+      outputIndex: 0, // GUSD (underlying)
+      inputDecimals: 6,
+      outputDecimals: 2,
+      useUnderlying: true,
+    });
+    const outcome = await fetchCurveOnchainPrices([config]);
+
+    const calldata = mockEvmCall.mock.calls[0][2] as string;
+    const dx = BigInt(`0x${calldata.slice(-64)}`);
+    expect(dx).toBe(BigInt(100) * BigInt(10) ** BigInt(6)); // 100 USDC, not 1
+    expect(outcome.value.prices.get("gusd-gemini")).toBeCloseTo(100 / 99.97, 8);
+    expect(outcome.value.prices.get("gusd-gemini")).not.toBeCloseTo(1 / 0.99, 8);
+  });
+
+  it("keeps 1-unit quotes for outputs with >= 6 decimals", async () => {
+    mockEvmCall.mockResolvedValue(hexWord(999000));
+
+    const config = makeCurveConfig(); // USDT out, 6 decimals
+    await fetchCurveOnchainPrices([config]);
+
+    const calldata = mockEvmCall.mock.calls[0][2] as string;
+    expect(BigInt(`0x${calldata.slice(-64)}`)).toBe(BigInt(10) ** BigInt(6));
+  });
+
   it("returns no-data outcome when RPC returns null for every pool", async () => {
     mockEvmCall.mockResolvedValue(null);
     const config = makeCurveConfig();
