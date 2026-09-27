@@ -342,7 +342,7 @@ The 2026-09-27 owner decision retains this supplemental aggregate path as an exp
 | wCOP | $196K | $185K | — | Rejected (`history-ratio-above-bound`), not inside the admitted band |
 | reUSD | — | Retained | 1.0504 | Retained by hysteresis |
 
-**History discontinuity and live-depeg impact:** the rejected fills return to canonical DefiLlama totals, so published supply and the next daily `supply_history` observation step down once. This is a methodology change, not a redemption; prior rows are not rewritten. USDXL and scUSD fall below the **$1M live-depeg floor**, lose live detection, and any open event closes as `coverage-lost-supply`. Recorded owner approval of these impacts remains required.
+**History discontinuity and live-depeg impact:** the rejected fills return to canonical DefiLlama totals, so published supply and the next daily `supply_history` observation step down once. This is a methodology change, not a redemption; prior rows are not rewritten. USDXL and scUSD fall below the **$1M live-depeg floor**, lose live detection, and any open event closes as `coverage-lost-supply`. The bound was set under the delegated DEC-01 decision (2026-09-27) and remains subject to owner review.
 
 **Release A rollback boundary:** unavailable chain observations remain absent in in-run computations, but canonical `stablecoins` cache writes, the response-ready companion and public dataset snapshots all use `projectLegacyChainCirculatingWire` (legacy zero values). Release B removes these wire projections together.
 
