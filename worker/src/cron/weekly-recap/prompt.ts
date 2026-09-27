@@ -3,6 +3,7 @@ import { formatCurrency } from "@shared/lib/format";
 import { round1 } from "@shared/lib/math";
 import { ALLOWED_TONES, type DigestValidationProfile } from "../daily-digest/response";
 import { buildSafetyMapCensusLines } from "../daily-digest/prompt";
+import { SUPPLY_ACCOUNTING_RULES } from "../daily-digest/prompt/policy";
 import { WEEKLY_ROLLUP_EXPECTED_DAYS } from "../daily-digest/collectors-shared";
 import type { WeeklyInputData } from "./types";
 
@@ -23,6 +24,8 @@ export const WEEKLY_SYSTEM_PROMPT = [
   "STANDING CONDITIONS get one line each at most and never the headline; NEW THIS WEEK signals are the story.",
   "Do not dramatize suppressed, stale, zero-dollar, tiny, or artifact-prone signals. If the week was genuinely calm, say so clearly.",
   "Synthesize causally: reuse at most two numbers verbatim from the daily copy. Daily headlines may establish chronology or sequence, but never factual evidence.",
+  "",
+  SUPPLY_ACCOUNTING_RULES,
   "",
   "FORWARD-LOOK MANDATE.",
   "The last paragraph must contain an anticipatory sentence about next week. Acceptable: 'next week will decide whether X', 'watch the Y threshold if Z continues', 'the next trigger is W crossing V'.",

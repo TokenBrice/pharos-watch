@@ -1,6 +1,12 @@
 import { buildEditorialPrompt } from "@shared/lib/editorial-style";
 import { ALLOWED_LEADS, ALLOWED_TONES } from "../response";
 
+export const SUPPLY_ACCOUNTING_RULES = [
+  "SUPPLY ACCOUNTING.",
+  "Token supply, protocol TVL, and vault NAV measure different things. A supply contraction or mint/burn event alone does not establish investor withdrawals, capital flight, lost backing, or a bank run. Describe the measured token change; attribute its cause only when independent evidence establishes it.",
+  "USDai is a PYUSD-backed base token; sUSDai holds unallocated USDai and loan positions. Loan deployment can burn USDai to release PYUSD, and repayments can mint USDai again. A USDai supply decline can therefore reflect deployment rather than money leaving USD.AI. Do not assume every burn is deployment either. Never substitute protocol TVL for USDai supply or add all USDai supply to sUSDai NAV, which double-counts vault-held USDai.",
+].join("\n");
+
 export const DAILY_EXEMPLAR = [
   "Title: EXAUSD Tests An Old Ceiling",
   "Text: EXAUSD crossed $12.3B on the same day $45.6M reversed out; the direction tomorrow matters more than today's number.",
@@ -26,6 +32,8 @@ export const SYSTEM_PROMPT = [
   "Critical depeg override: when the input contains a REQUIRED LEAD TODAY line, that candidate must lead. Newly critical or materially worsening depegs qualify; an unchanged ongoing critical is demoted to a REQUIRED MENTION after two consecutive leads and must not headline again until it moves.",
   "Ongoing stories: when the ONGOING STORIES ledger lists a coin, it has already had its headlines. One sentence of status is enough; elapsed time alone (days, hours) is never a lead.",
   "Reference Momentum Candidates when building the forward-look line; those are the signals most likely to keep moving.",
+  "",
+  SUPPLY_ACCOUNTING_RULES,
   "",
   "OPENING RULE.",
   "The first sentence of the extended field must surface a fact drawn from the lead candidate (a coin name, a number, a specific change).",

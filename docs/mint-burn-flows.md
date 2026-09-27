@@ -19,6 +19,8 @@ Public `/api/mint-burn-flows` freshness metadata and the `/flows` page intention
 
 > **Agent navigation** — Grep the heading you need: Methodology Versioning · Cron Schedule · Constants & Thresholds · Contract Configurations · Sync Algorithm · Shared Ingestion Pipeline Boundaries · Scoring · Retention · Database Schema · API Endpoints · Cron Metadata Fields · Frontend · Error Handling & Edge Cases · Testing · Future Work.
 
+Mint and burn events measure token creation and destruction, not investor intent. USDai is the reviewed counterexample: a burn can release PYUSD from the hub for sUSDai loan deployment without an equivalent fall in protocol assets. The public FAQ and USDai's curated chart annotation therefore keep the measured burn visible without calling it a redemption or investor outflow. The flow classifier and Bank Run Gauge methodology are unchanged; a future protocol-internal burn class would need its own reviewed methodology change and replay.
+
 ---
 
 ## Methodology Versioning

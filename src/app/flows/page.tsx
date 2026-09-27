@@ -25,7 +25,7 @@ const FLOW_FAQ_ITEMS = [
   {
     question: "What do mint and burn events indicate?",
     answer:
-      "On this page, mint and burn events reflect tracked issuance and redemption activity on each stablecoin's configured native issuance chain. Minting events signal new demand or capital inflow, while burn events signal redemption or outflow. Sustained net burn pressure above baseline levels can indicate early bank-run dynamics and is factored into the Bank Run Gauge and DEWS early warning signals.",
+      "Mint and burn events measure token creation and destruction on each stablecoin's configured native issuance chain. They do not by themselves establish investor inflows or withdrawals: USDai, for example, can be burned when PYUSD is deployed into sUSDai loan positions without an equivalent loss of protocol assets. Sustained net burn pressure feeds the Bank Run Gauge and DEWS, but its cause requires separate evidence.",
   },
   {
     question: "What does Pressure Shift vs 30D mean?",

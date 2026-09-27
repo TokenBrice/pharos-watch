@@ -2,13 +2,13 @@
   "id": "usdai-usd-ai",
   "name": "USD.AI",
   "symbol": "USDai",
-  "oneLiner": "USDai is USD.AI's non-yielding base dollar, backed 1:1 by PYUSD and separately stakeable into sUSDai for GPU-loan yield.",
+  "oneLiner": "USDai is USD.AI's PYUSD-backed base dollar. Its supply can fall when sUSDai deploys funds into loans, without money leaving the protocol.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
   "collateral": "PYUSD held by the canonical USDai contract on Arbitrum and reconciled 1:1 against canonical plus bridged USDai liabilities; GPU-loan DEAL exposure belongs to the separate sUSDai yield layer",
-  "pegMechanism": "Users mint and redeem canonical USDai against PYUSD through the Arbitrum hub. Satellite USDai supply is tracked as bridgedSupply against the same PYUSD pool, while sUSDai separately deploys deposited USDai into GPU-backed credit strategies.",
+  "pegMechanism": "Whitelisted institutions mint and redeem canonical USDai against PYUSD through the Arbitrum hub. Satellite USDai liabilities share the same PYUSD pool. The separate sUSDai vault can burn USDai to release PYUSD for loan deployment; repayments can mint USDai again. These supply changes do not by themselves measure investor deposits or withdrawals.",
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
@@ -41,6 +41,25 @@
     {
       "label": "Docs",
       "url": "https://docs.usd.ai"
+    },
+    {
+      "label": "Protocol accounting",
+      "url": "https://docs.usd.ai/technical-overview/technical-protocol-overview"
+    },
+    {
+      "label": "Protocol TVL and reserve history",
+      "url": "https://app.usd.ai/dashboard"
+    },
+    {
+      "label": "September 23, 2026 loan-deployment burn",
+      "url": "https://arbiscan.io/tx/0x46dc4ae95582c3d92d2ada242fc7445b6f4408284d271f69e2f98668993559d7"
+    }
+  ],
+  "notices": [
+    {
+      "type": "info",
+      "title": "USDai supply is not USD.AI protocol TVL",
+      "message": "This page tracks outstanding base USDai, including USDai held inside sUSDai. On September 23, 2026, a transaction burned 128.90M USDai while the issuer's reported loan reserves rose by the same amount. Loan deployment can reduce USDai supply without an equivalent investor outflow. Protocol TVL also includes loans and accrued yield; adding sUSDai NAV to all USDai supply would double-count the vault's USDai holdings."
     }
   ],
   "jurisdiction": {
