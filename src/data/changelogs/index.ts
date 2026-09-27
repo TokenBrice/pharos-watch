@@ -29,7 +29,6 @@ import { entry as e20260830 } from "./2026-08-30";
 import { entry as e20260906 } from "./2026-09-06";
 import { entry as e20260913 } from "./2026-09-13";
 import { entry as e20260920 } from "./2026-09-20";
-import { entry as e20260922 } from "./2026-09-22";
 import { entry as e20260927 } from "./2026-09-27";
 
 const all: ChangelogEntry[] = [
@@ -62,7 +61,6 @@ const all: ChangelogEntry[] = [
   e20260906,
   e20260913,
   e20260920,
-  e20260922,
   e20260927,
 ];
 
