@@ -61,13 +61,19 @@ describe("depeg chronology contract", () => {
       DepegPendingIncidentSchema.safeParse({ ...baseIncident, lastSeenAt: baseIncident.firstSeenAt - 1 }).success,
     ).toBe(false);
     expect(
-      DepegPendingIncidentSchema.safeParse({ ...baseIncident, expiresAt: baseIncident.lastSeenAt - 1 }).success,
+      DepegPendingIncidentSchema.safeParse({ ...baseIncident, expiresAt: baseIncident.firstSeenAt }).success,
     ).toBe(false);
+  });
+
+  it("accepts a pending incident still seen after its base expiry", () => {
+    // The confirmation cron holds rows past the base expiry under the extended
+    // and severe limits; rejecting them emptied the whole /depeg events feed.
     expect(
       DepegPendingIncidentSchema.safeParse({
         ...baseIncident,
-        lastSeenAt: baseIncident.firstSeenAt,
-        expiresAt: baseIncident.lastSeenAt,
+        lastSeenAt: baseIncident.firstSeenAt + 6_264,
+        ageSec: 6_880,
+        expiresAt: baseIncident.firstSeenAt + 2_700,
       }).success,
     ).toBe(true);
   });
