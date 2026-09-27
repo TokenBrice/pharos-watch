@@ -193,11 +193,18 @@ function loadCoverageBaseline(
     return null;
   }
   try {
-    const parsed = JSON.parse(fsImpl.readFileSync(path, "utf8"));
-    if (parsed && typeof parsed === "object" && parsed.files && typeof parsed.files === "object") {
-      return parsed.files;
+    const parsed: unknown = JSON.parse(fsImpl.readFileSync(path, "utf8"));
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new Error("Baseline must be a non-null record");
     }
-    return parsed;
+    const record = parsed as Record<string, unknown>;
+    if ("files" in record) {
+      if (record.files === null || typeof record.files !== "object" || Array.isArray(record.files)) {
+        throw new Error("Baseline files must be a non-null record");
+      }
+      return record.files as Record<string, unknown>;
+    }
+    return record;
   } catch (err) {
     consoleImpl.error(`[coverage] Failed to parse baseline file ${path}: ${String(err).slice(0, 200)}`);
     exit(1);

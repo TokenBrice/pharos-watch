@@ -124,9 +124,9 @@ export async function loadStablecoinsPublicationContinuity(
       : { missingActiveIds: [], missingActiveAssets: [], unavailableReason: previousRead.reason };
   const reviews = resolveStablecoinPriceGapReviews(WORKER_ACTIVE_STABLECOINS.map((asset) => asset.id), syncStartSec);
   // Provider input is a priority projection, not persisted continuity evidence.
-  // Unknown continuity gets the escalation threshold; reviewed gaps do not.
+  // Unknown continuity stays conservatively alert-eligible, but cannot prioritize every provider lookup.
   const priorityEntries: [string, number][] = previousRead.status === "read-error"
-    ? WORKER_ACTIVE_STABLECOINS.map((asset) => [asset.id, ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS])
+    ? []
     : (previousActivePriceCoverage?.missingActiveAssets ?? []).map((detail) => [
         detail.stablecoinId, detail.consecutiveMissingGenerations ?? ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS,
       ]);

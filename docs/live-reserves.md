@@ -877,6 +877,8 @@ Reviewed 2026-09-27 from primary sources; the config `liabilityScope` blocks in 
 
 The six-chain native sum was 4,416,180,470.74 at 2026-09-27T20:43:47–20:44:16Z, 51 h 12 m 40 s after the latest bundle (2026-09-25T17:31:07Z, $4,416,592,902.74), so that quotient compares two instants and is withheld; it is not a backing claim. Per-chain historical supply at a bundle's timestamp cannot be reconstructed for Solana or Tron through public RPCs, which is why time identity is enforced by the skew bound instead of back-dated reads. Open item: the KPMG per-chain token columns were not reconciled against on-chain supply at the report instant.
 
+**Availability limitation — pending owner review:** with the current 4-hour reserve/supply skew bound, USD1's collateralization ratio is expected to be withheld much of the time even when all six supply reads succeed. Historical bundle publication delays observed during review ranged from 556 seconds to 18 h 48 m; a subsequent live review measured roughly 53 hours of skew (190,758 seconds). Ten-minute oracle posting cadence does not establish timely advancement of the embedded reserve timestamp. The 4-hour value is pending owner review against these publication delays; no availability assurance or owner approval is implied, and the bound has not been widened.
+
 ### Adding a New Adapter
 
 To register a new adapter for a coin's `liveReservesConfig.adapter`, edit these surfaces in order: **5 files, 6 edit sites** (4 files / 5 sites when the adapter takes no per-coin params). The shared schema and Worker registry tests fail if definition or fetcher coverage drifts.

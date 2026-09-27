@@ -45,6 +45,28 @@ const DEFILLAMA_ZERO_SUPPLY_MIN_MARKET_CAP = 1_000_000;
 const MAX_CURRENT_POINT_AGE_MS = 2 * 24 * 60 * 60 * 1000;
 const MAX_LOOKBACK_POINT_DISTANCE_MS = 3 * 24 * 60 * 60 * 1000;
 
+// Two missed 15-minute publications bridge a transient outage without indefinite stale gap-fill.
+const MAX_GAP_FILL_CARRY_RUNS = 2;
+
+/** Carry one coherent previous observation, never a fresh-price/old-chain synthetic supply. */
+export function carryForwardSupplyGapFill(asset: PeggedAsset, previous: PeggedAsset | undefined): boolean {
+  const provenance = previous?.supplyGapFill;
+  if (previous?.supplySource !== "coingecko-gap-fill" || !provenance) return false;
+  const runs = provenance.carryForwardRuns ?? 0;
+  if (runs >= MAX_GAP_FILL_CARRY_RUNS) return false;
+  asset.circulating = previous.circulating;
+  asset.circulatingPrevDay = previous.circulatingPrevDay;
+  asset.circulatingPrevWeek = previous.circulatingPrevWeek;
+  asset.circulatingPrevMonth = previous.circulatingPrevMonth;
+  asset.chainCirculating = previous.chainCirculating;
+  asset.chains = previous.chains;
+  asset.supplySource = previous.supplySource;
+  asset.supplyObservedAt = previous.supplyObservedAt;
+  asset.supplyRestored = true;
+  asset.supplyGapFill = { ...provenance, carryForwardRuns: runs + 1 };
+  return true;
+}
+
 interface CoinGeckoCurrentMcapRow {
   usd_market_cap?: number;
   last_updated_at?: number;
@@ -454,9 +476,11 @@ function buildSupplyGapCandidates(
         observedAtMode: "upstream",
         requireObservedAt: true,
       });
-      if (!freshness.accepted) continue;
       const cgMarketCap = toPositiveFiniteNumber(currentMarketCap?.usd_market_cap);
-      if (cgMarketCap == null) continue;
+      if (!freshness.accepted || cgMarketCap == null) {
+        carryForwardSupplyGapFill(asset, previousAssetsById?.get(assetId));
+        continue;
+      }
 
       const ratio = cgMarketCap / dlMarketCap;
       const previouslyFilled = previousAssetsById?.get(assetId)?.supplySource === "coingecko-gap-fill";
@@ -710,6 +734,12 @@ export async function reconcileTrackedSupplyGaps(
     });
   }
   const candidates = prioritizeSupplyGapCandidateOrder(allCandidates).slice(0, MAX_SUPPLY_GAP_CANDIDATES);
+  const selectedIds = new Set(candidates.map((candidate) => candidate.asset.id));
+  for (const candidate of allCandidates) {
+    if (!selectedIds.has(candidate.asset.id)) {
+      carryForwardSupplyGapFill(candidate.asset, previousAssetsById?.get(candidate.asset.id));
+    }
+  }
   if (candidates.length === 0) {
     return {
       reconciledIds: [],
@@ -735,6 +765,7 @@ export async function reconcileTrackedSupplyGaps(
       : await fetchRecentCoinGeckoMarketCaps(candidate.geckoId, signal, coingeckoApiKey);
     if (marketCaps.length === 0 && candidate.kind !== "zero-supply-collapse") {
       gapFillRejections.push({ id: candidate.asset.id, reason: "history-incomplete", ratio: null });
+      carryForwardSupplyGapFill(candidate.asset, previousAssetsById?.get(candidate.asset.id));
       continue;
     }
 
@@ -772,6 +803,7 @@ export async function reconcileTrackedSupplyGaps(
     if (candidate.kind === "missing-chain") {
       if (currentFromHistory == null) {
         gapFillRejections.push({ id: candidate.asset.id, reason: "history-incomplete", ratio: null });
+        carryForwardSupplyGapFill(candidate.asset, previousAssetsById?.get(candidate.asset.id));
         continue;
       }
       const observedAt = currentFromHistory.observedAt;
@@ -795,6 +827,9 @@ export async function reconcileTrackedSupplyGaps(
       }
       if (application.reconciledCurrent == null) {
         if (application.rejection) {
+          if (application.rejection === "history-incomplete") {
+            carryForwardSupplyGapFill(candidate.asset, previousAssetsById?.get(candidate.asset.id));
+          }
           const dlCurrent = getCirculatingRawOrNull(candidate.asset);
           gapFillRejections.push({
             id: candidate.asset.id,
@@ -805,6 +840,7 @@ export async function reconcileTrackedSupplyGaps(
         continue;
       }
       candidate.asset.supplyObservedAt = observedAt;
+      delete candidate.asset.supplyRestored;
       candidate.asset.chains = buildKnownDisplayChains(candidate.asset.id, candidate.asset.chains);
       reconciledIds.push(candidate.asset.id);
       reconciledAssets.push({

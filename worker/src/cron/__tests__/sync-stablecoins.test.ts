@@ -280,9 +280,9 @@ describe("syncStablecoins", () => {
       expect(publishedIds).not.toContain(quarantined);
     }
     expect(published.find((asset) => asset.id === "zero-supply")?.circulating).toEqual({ peggedUSD: 0 });
-    // Canonical storage keeps the empty prevDay as unavailable; a numeric zero stays zero.
+    // Release A keeps canonical storage rollback-compatible; Release B activates nullable storage.
     expect(published.find((asset) => asset.id === "usdt-tether")?.chainCirculating).toEqual({
-      Ethereum: { current: 1_000_000, circulatingPrevDay: null, circulatingPrevWeek: 0 },
+      Ethereum: { current: 1_000_000, circulatingPrevDay: 0, circulatingPrevWeek: 0 },
     });
     // RELEASE A: the public companion keeps the legacy wire value for the unavailable key.
     const companion = writes.find((write) => write.key === getResponseReadyCacheKey("stablecoins"));
@@ -293,6 +293,10 @@ describe("syncStablecoins", () => {
     expect(result).toMatchObject({ itemCount: 61, productivity: { publications: [expect.objectContaining({ candidateRows: 62, publishedRows: 61 })] } });
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ rowsRead: 68, rowsDropped: 6 });
     expect(vi.mocked(detectDepegEvents).mock.calls[0]?.[1]).toHaveLength(61);
+    const inRunAssets = vi.mocked(detectDepegEvents).mock.calls[0]?.[1] as PeggedAsset[] | undefined;
+    expect(inRunAssets?.find((asset) => asset.id === "usdt-tether")?.chainCirculating).toEqual({
+      Ethereum: { current: 1_000_000, circulatingPrevDay: null, circulatingPrevWeek: 0 },
+    });
   });
 
   it("fails closed without dereferencing a non-array peggedAssets envelope", async () => {

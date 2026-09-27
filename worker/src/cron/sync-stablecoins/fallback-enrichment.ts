@@ -52,7 +52,6 @@ export async function runFallbackPriceEnrichmentPhase(
 
   prevalidatePrices({
     assets: input.assets,
-    nowSec: input.syncStartSec,
     previousTrustedPrices: input.previousTrustedPrices,
     validationContexts: input.validationContexts,
     validationReferences: input.validationReferences,

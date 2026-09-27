@@ -83,9 +83,9 @@ const SupplyBucketsSchema = z.record(z.string(), z.number().finite().nonnegative
 
 /**
  * Per-chain supply scalars. `null` = the chain row exists but that observation was unavailable (empty or
- * invalid provider bucket); it is never a zero. RELEASE A: storage and internal consumers carry `null`, and
- * `/api/stablecoins` still projects it to the legacy `0` (`projectLegacyChainCirculatingWire`) until the
- * Release B activation publishes `null` on the wire. Readers must already tolerate `null`.
+ * invalid provider bucket); it is never a zero. RELEASE A: in-run consumers retain `null`, while canonical
+ * storage and public wires project to legacy `0` (`projectLegacyChainCirculatingWire`) for rollback safety.
+ * Release B activates nullable storage and wire output. Readers must already tolerate `null`.
  */
 const ChainSupplyValueSchema = z.number().finite().nonnegative().nullable();
 
@@ -116,6 +116,8 @@ export const SupplyGapFillProvenanceSchema = z.object({
   ratio: z.number().finite().positive(),
   maxRatio: z.number().finite().positive(),
   observedAt: z.number().int().nonnegative(),
+  /** Consecutive no-decision publications; fresh reconciliation resets this bounded carry. */
+  carryForwardRuns: z.number().int().nonnegative().optional(),
 });
 export type SupplyGapFillProvenance = z.infer<typeof SupplyGapFillProvenanceSchema>;
 

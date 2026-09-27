@@ -115,9 +115,10 @@ export const handleStabilityIndex = async (db: D1Database, url: URL): Promise<Re
   const now = Math.floor(Date.now() / 1000);
   const todayMidnight = bucketUnixSecondsToUtcDay(now);
 
-  // Project only small daily provenance fields, never the heavy per-row replay inputs.
+  // Only parse recent provenance: legacy replay blobs can be large.
   // Detail history remains unbounded so historical annotations retain their date range.
-  const dailyProvenanceProjection = `CASE WHEN json_valid(input_snapshot) THEN
+  const dailyProvenanceProjection = `CASE WHEN computed_at >= ? THEN
+    CASE WHEN json_valid(input_snapshot) THEN
     CASE WHEN json_extract(input_snapshot, '$.source') = 'daily-avg' THEN
       json_object(
         'aggregation', 'all-day',
@@ -125,6 +126,7 @@ export const handleStabilityIndex = async (db: D1Database, url: URL): Promise<Re
         'componentSampleCounts', json_extract(input_snapshot, '$.componentSampleCounts'),
         'methodologyBreakdown', json_extract(input_snapshot, '$.methodologyBreakdown')
       )
+    END
     END
   END AS daily_provenance`;
   const historyQuery = `SELECT computed_at, score, band, components, methodology_version,
@@ -146,6 +148,7 @@ export const handleStabilityIndex = async (db: D1Database, url: URL): Promise<Re
       .first<{ avg: number | null }>(),
     db
       .prepare(historyQuery)
+      .bind(now - 91 * DAY_SECONDS)
       .all<{ computed_at: number; score: number; band: string; components: string; methodology_version: string | null; daily_provenance: string | null }>(),
   ]);
   const results = rows.results ?? [];

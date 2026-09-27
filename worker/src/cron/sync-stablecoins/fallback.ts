@@ -26,6 +26,7 @@ import {
   runStablecoinsPostIntakePublication,
 } from "./publication";
 import type { PeggedAsset } from "./enrich-prices";
+import { carryForwardSupplyGapFill } from "./supply-gap-reconciliation";
 
 function isFallbackCronResult(result: unknown): result is CronResult {
   return typeof result === "object" && result !== null && "metadata" in result;
@@ -44,6 +45,10 @@ export async function restoreFallbackCacheState({
     const nowSec = Math.floor(Date.now() / 1000);
     for (const asset of assets) {
       const prev = previousAssetsById.get(String(asset.id));
+      if (prev?.supplySource === "coingecko-gap-fill") {
+        carryForwardSupplyGapFill(asset, prev);
+        continue;
+      }
       const observedAt = prev?.supplyObservedAt;
       if (
         !prev ||

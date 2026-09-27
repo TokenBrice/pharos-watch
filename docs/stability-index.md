@@ -133,6 +133,8 @@ If the strict-mode stablecoins cache is unavailable, the cron returns `status: "
 
 Daily provenance is additive inside the existing `input_snapshot` JSON; no migration is required. All-day averaging remains authoritative across methodology transitions. Summary/detail history and the current daily fallback expose optional `dailyProvenance`: `{ aggregation: "all-day", sampleCount, methodologyBreakdown: Record<string, number>, componentSampleCounts: { severity, breadth, stressBreadth, trend } | null }`. A modal compatibility version label is not the sole attribution. Legacy rows without recorded component counts expose `null` counts rather than inventing coverage. Optional `componentsUnavailable` identifies null/missing components or components with known zero sample counts.
 
+History provenance extraction is limited to rows with `computed_at >= now - 91 days`: SQL short-circuits older `input_snapshot` blobs before JSON parsing and returns NULL provenance (omitted from the wire). Detail history itself remains unbounded, preserving older scores, components, versions, and annotation dates. The separately fetched current daily fallback retains its provenance.
+
 Release A accepts nullable daily components end-to-end but deliberately retains the snapshot writer's current numeric fallback output. The later nullable-producer activation is separately gated. Readers preserve explicit nulls and show missing component history as gaps/unavailable, never measured zero; observed zero stays numeric. Snapshot read failure returns `db_query_failed` without replacing the previous daily row.
 
 ## API

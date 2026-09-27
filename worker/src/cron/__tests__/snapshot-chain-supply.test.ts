@@ -82,8 +82,103 @@ describe("snapshotChainSupply", () => {
   });
   afterEach(() => vi.useRealTimers());
 
+  it.each([false, true])(
+    "publishes unaffected chains for a restored small-asset cohort and recovers same-day (prior row: %s)",
+    async (hasPriorRow) => {
+      const { sqlite, db } = createLatestSchemaSqlite();
+      try {
+        const nowSec = Math.floor(Date.now() / 1000);
+        const snapshotDate = Date.UTC(2026, 2, 16) / 1000;
+        const payload = completePayload();
+        const healthyChains = [
+          "ethereum", "arbitrum", "base", "optimism", "polygon", "avalanche",
+          "bsc", "gnosis", "tron", "aptos", "sui", "solana", "near", "algorand",
+        ];
+        payload.peggedAssets[0]!.chainCirculating = Object.fromEntries(
+          healthyChains.map((chainId) => [chainId, { chainId, current: 1_000_000_000 }]),
+        );
+        payload.peggedAssets[1]!.chainCirculating = { Ethereum: { current: 20_000_000_000 } };
+        // Production-shaped attribution: HBD/MXNE have no chain partition;
+        // PGOLD's restored partition spans these four known chains.
+        const smallAssets = [
+          makeSnapshotAsset({ id: "hbd-hive", circulating: { peggedUSD: 30_000_000 }, chainCirculating: {} }),
+          makeSnapshotAsset({ id: "mxne-real-mxn", circulating: { peggedUSD: 1_000_000 }, chainCirculating: {} }),
+          makeSnapshotAsset({
+            id: "pgold-pleasing",
+            circulating: { peggedUSD: 84_000_000 },
+            chainCirculating: {
+              Arbitrum: { current: 79_000_000 },
+              Ethereum: { current: 500_000 },
+              ApeChain: { current: 200 },
+              "Pharos Network": { chainId: "pharos", current: 4_000_000 },
+            },
+          }),
+        ];
+        for (const asset of smallAssets) {
+          Object.assign(asset, { supplyRestored: true, supplyObservedAt: nowSec - 144_443 });
+        }
+        payload.peggedAssets.push(...smallAssets);
+        const requiredActiveIds = payload.peggedAssets.map((asset) => String(asset.id));
+        const putCache = sqlite.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
+        putCache.run("stablecoins", JSON.stringify(payload), nowSec);
+        if (hasPriorRow) {
+          sqlite.prepare(
+            "INSERT INTO chain_supply_history (chain_id, snapshot_date, total_usd, stablecoin_count) VALUES (?, ?, ?, ?)",
+          ).run("ethereum", snapshotDate, 21_000_400_000, 3);
+        }
+        const result = await snapshotChainSupply(db, undefined, { nowSec, requiredActiveIds });
+        expect(result.status).toBe("ok");
+        expect(result.itemCount).toBe(12);
+        expect(JSON.parse(result.metadata!)).toMatchObject({
+          reason: "chain_observations_partially_deferred",
+          quality: "partial",
+          restoredOnlyIds: ["hbd-hive", "mxne-real-mxn", "pgold-pleasing"],
+          deferredChains: {
+            apechain: ["pgold-pleasing"], arbitrum: ["pgold-pleasing"],
+            ethereum: ["pgold-pleasing"], pharos: ["pgold-pleasing"],
+          },
+        });
+        const rows = () => sqlite.prepare(
+          "SELECT chain_id, total_usd, stablecoin_count FROM chain_supply_history ORDER BY chain_id",
+        ).all();
+        expect(rows()).toEqual([
+          ...healthyChains.filter((chainId) => !["ethereum", "arbitrum"].includes(chainId)).map((chain_id) => ({
+            chain_id, total_usd: 1_000_000_000, stablecoin_count: 1,
+          })),
+          ...(hasPriorRow ? [{ chain_id: "ethereum", total_usd: 21_000_400_000, stablecoin_count: 3 }] : []),
+        ].sort((a, b) => a.chain_id.localeCompare(b.chain_id)));
+        const marker = () => JSON.parse(String(sqlite.prepare(
+          "SELECT value FROM cache WHERE key = 'snapshot-chain-supply:last-write'",
+        ).get()!.value));
+        expect(marker().chainObservationAdmissionVersion).toBeUndefined();
+        // A retry while still restored must not seal the day.
+        expect((await snapshotChainSupply(db, undefined, { nowSec, requiredActiveIds })).itemCount).toBe(12);
+
+        for (const asset of smallAssets) {
+          Object.assign(asset, { supplyRestored: false, supplyObservedAt: nowSec + 60 });
+        }
+        putCache.run("stablecoins", JSON.stringify(payload), nowSec + 60);
+        const recovered = await snapshotChainSupply(db, undefined, { nowSec: nowSec + 60, requiredActiveIds });
+        expect(recovered.status).toBe("ok");
+        expect(recovered.itemCount).toBe(16);
+        expect(rows().filter((row) => ["ethereum", "arbitrum", "apechain", "pharos"].includes(String(row.chain_id)))).toEqual([
+          { chain_id: "apechain", total_usd: 200, stablecoin_count: 1 },
+          { chain_id: "arbitrum", total_usd: 1_079_000_000, stablecoin_count: 2 },
+          { chain_id: "ethereum", total_usd: 21_000_500_000, stablecoin_count: 3 },
+          { chain_id: "pharos", total_usd: 4_000_000, stablecoin_count: 1 },
+        ]);
+        expect(marker().chainObservationAdmissionVersion).toBe(1);
+        expect(JSON.parse((await snapshotChainSupply(
+          db, undefined, { nowSec: nowSec + 60, requiredActiveIds },
+        )).metadata!).reason).toBe("already_written_today");
+      } finally {
+        sqlite.close();
+      }
+    },
+  );
+
   it.each(["restored", "stale", "missing"] as const)(
-    "preserves the daily generation on %s chain input and replaces a legacy marker on recovery",
+    "preserves all affected rows on %s chain input and replaces a legacy marker on recovery",
     async (unavailable) => {
       const { sqlite, db } = createLatestSchemaSqlite();
       try {
@@ -185,7 +280,6 @@ describe("snapshotChainSupply", () => {
     const boundaryUpdatedAt = Math.floor(Date.now() / 1000) - 1799;
     const db = mockD1({ stablecoins: { assets: payload, updatedAt: boundaryUpdatedAt } });
     const result = await snapshotChainSupply(db);
-    expect(result.status).toBeUndefined();
     expect(result.itemCount).toBe(3);
   });
 

@@ -27,6 +27,19 @@ import { buildCriticalLcov, runCoverageFixture } from "./check-critical-coverage
 
 
 describe("critical coverage changed-file detection", () => {
+  it.each([null, [], 42, { files: null }, { files: [] }].map((baseline) => ({ baseline })))("rejects a malformed baseline $baseline even with below-floor LCOV", ({ baseline }) => {
+    const { exits, errors, logs } = runCoverageFixture({
+      env: {},
+      baseline,
+      lcov: buildCriticalLcov({
+        lineCoverage: { [CRITICAL_FILES[0]]: { lf: 100, lh: 0 } },
+      }),
+    });
+    expect(exits).toEqual([1]);
+    expect(errors).toContainEqual(expect.stringContaining("baseline"));
+    expect(logs).not.toContain("[coverage] Critical coverage gate passed.");
+  });
+
   it("parses explicit changed files before falling back to git", () => {
     expect(
       parseChangedFilesFromEnv(testEnv({

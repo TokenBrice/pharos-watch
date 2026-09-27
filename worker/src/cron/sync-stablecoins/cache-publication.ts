@@ -187,16 +187,13 @@ export async function validateAndWriteStablecoinsCache(
     validationContext === "fallback" ? "fallback-cache-write" : "persist-main-cache",
   );
   if (cacheWriteAbort) return cacheWriteAbort;
-  const stablecoinsCacheBody = JSON.stringify(admission.payload);
+  // Release A persists the rollback-compatible wire; in-run assets retain unavailable observations.
+  const stablecoinsCacheBody = JSON.stringify(projectLegacyChainCirculatingWire(admission.payload));
   const cacheResult = await setCacheIfNewer(db, "stablecoins", stablecoinsCacheBody, syncStartSec);
   let responseReadyCacheError: string | null = null;
   if (cacheResult.written) {
     try {
-      // RELEASE A: the canonical cache keeps unavailable chain observations as `null` for internal
-      // readers; the public companion body keeps the legacy wire until the Release B activation.
-      const publicPayload = projectLegacyChainCirculatingWire(admission.payload);
-      const publicBody = publicPayload === admission.payload ? stablecoinsCacheBody : JSON.stringify(publicPayload);
-      await writeResponseReadyCache(db, "stablecoins", publicBody, syncStartSec, {
+      await writeResponseReadyCache(db, "stablecoins", stablecoinsCacheBody, syncStartSec, {
         schemaId: RESPONSE_READY_CACHE_SCHEMA_IDS.stablecoins,
       });
     } catch (error) {

@@ -135,18 +135,25 @@ export function buildBlacklistActiveRecords(
 ): BlacklistActiveRecord[] {
   const active = new Map<string, BlacklistActiveRecord>();
   const ordered = [...events].sort(compareBlacklistEvents);
-  const tronGroups = new Map<string, { txHash: string; ambiguous: boolean }>();
+  const tronGroups = new Map<string, { effects: Map<string, Set<string>>; ambiguous: boolean }>();
   for (const event of ordered) {
     if (event.chainId !== "tron") continue;
-    const groupKey = `${buildBlacklistRecordIdentityKey(event)}:${event.timestamp}:${event.blockNumber}`;
-    const prior = tronGroups.get(groupKey);
-    if (!prior) tronGroups.set(groupKey, { txHash: event.txHash, ambiguous: false });
-    else if (prior.txHash !== event.txHash) prior.ambiguous = true;
+    const groupKey = `${buildBlacklistRecordIdentityKey(event)}:${event.blockNumber}`;
+    const group = tronGroups.get(groupKey) ?? { effects: new Map<string, Set<string>>(), ambiguous: false };
+    for (const [effect, transactions] of group.effects) {
+      if (effect !== event.eventType
+        && (effect === "blacklist" || event.eventType === "blacklist")
+        && (transactions.size > 1 || !transactions.has(event.txHash))) group.ambiguous = true;
+    }
+    const transactions = group.effects.get(event.eventType) ?? new Set<string>();
+    transactions.add(event.txHash);
+    group.effects.set(event.eventType, transactions);
+    tronGroups.set(groupKey, group);
   }
 
   for (const event of ordered) {
     const key = buildBlacklistRecordIdentityKey(event);
-    if (event.chainId === "tron" && tronGroups.get(`${key}:${event.timestamp}:${event.blockNumber}`)?.ambiguous) {
+    if (event.chainId === "tron" && tronGroups.get(`${key}:${event.blockNumber}`)?.ambiguous) {
       active.set(key, {
         key, stablecoin: event.stablecoin, chainId: event.chainId, address: event.address,
         blacklistedAt: event.timestamp, destroyedAt: null, frozenAmountUsd: null,

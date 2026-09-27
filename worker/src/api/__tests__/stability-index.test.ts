@@ -1,12 +1,15 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
-import { afterEach, describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { handleStabilityIndex } from "../stability-index";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { StabilityIndexResponseSchema } from "@shared/types/stability";
 
 const fixtures = createLatestSchemaFixtureTracker();
-afterEach(fixtures.closeAll);
+afterEach(() => {
+  fixtures.closeAll();
+  vi.useRealTimers();
+});
 
 describe("handleStabilityIndex contract tests", () => {
   const nowSec = Math.floor(Date.now() / 1000);
@@ -333,6 +336,8 @@ describe("daily PSI stored provenance compatibility", () => {
   it("serves mixed all-day provenance and nullable components from stored rows in summary, detail, and current fallback", async () => {
     const { sqlite, db } = fixtures.open();
     const day = 1_772_755_200;
+    vi.useFakeTimers();
+    vi.setSystemTime((day + 86400) * 1000);
     const provenance = {
       aggregation: "all-day",
       sampleCount: 3,
@@ -366,5 +371,29 @@ describe("daily PSI stored provenance compatibility", () => {
         methodologyBreakdown: { "2.1": 1, "3.0": 1 },
       });
     }
+  });
+
+  it("retains unbounded detail history but withholds provenance before the 91-day boundary", async () => {
+    const { sqlite, db } = fixtures.open();
+    const now = 1_800_000_000;
+    vi.useFakeTimers();
+    vi.setSystemTime(now * 1000);
+    const cutoff = now - 91 * 86400;
+    const insert = sqlite.prepare(`INSERT INTO stability_index
+      (computed_at, score, band, components, input_snapshot, methodology_version)
+      VALUES (?, 90, 'STEADY', ?, ?, '3.0')`);
+    const snapshot = JSON.stringify({
+      source: "daily-avg", sampleCount: 24, methodologyBreakdown: { "3.0": 24 },
+      replay: "x".repeat(100_000),
+    });
+    for (const day of [now - 86400, cutoff, cutoff - 1]) {
+      insert.run(day, JSON.stringify({ severity: 0, breadth: 0, stressBreadth: 0, trend: 0 }), snapshot);
+    }
+    const response = await handleStabilityIndex(db, new URL("https://x/api/stability-index?detail=true"));
+    const body = StabilityIndexResponseSchema.parse(await response.json());
+    expect(body.history.map((row) => row.date)).toEqual([now - 86400, cutoff, cutoff - 1]);
+    expect(body.history[1].dailyProvenance?.sampleCount).toBe(24);
+    expect(body.history[2].dailyProvenance).toBeUndefined();
+    expect(body.history[2].score).toBe(90);
   });
 });

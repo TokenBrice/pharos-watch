@@ -85,6 +85,21 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
     expect(previous.price).toBe(1);
     expect(previous.priceSource).toBe(source);
   });
+  it.each([
+    ["coingecko", null],
+    ["coingecko", Number.NaN],
+    ["coingecko", NOW_SEC + 601],
+    ["defillama", null],
+  ] as const)("drops a carried %s price whose original observation %s is unproven", (source, priceObservedAt) => {
+    const previous = asset({
+      id: "usdc-circle", symbol: "USDC", price: 1, priceSource: source, priceObservedAt,
+      supplyObservedAt: NOW_SEC - 60, circulating: { peggedUSD: 123_456 },
+    });
+    const [restored] = restoreMissingTrackedAssets([], new Map([["usdc-circle", previous]]), NOW_SEC).assets;
+    expect(restored.circulating).toEqual(previous.circulating);
+    expect(restored.supplyRestored).toBe(true);
+    expect(restored.price).toBeNull();
+  });
   it("strips legacy synthetic chain history before cache restoration, preserving observed zero", async () => {
     const db = mockD1([{ match: "FROM cache", rows: [{ updated_at: NOW_SEC, value: JSON.stringify({ peggedAssets: [
       asset({ id: "paxg-paxos", symbol: "PAXG", supplySource: "onchain-total-supply", chainCirculating: { Ethereum: chainRow(100) } }),

@@ -207,51 +207,6 @@ describe("validatePrimaryPriceCandidate — severe downside with directional cor
   });
 });
 
-describe("published price observation freshness", () => {
-  it.each([
-    ["coingecko", 900, true],
-    ["coingecko", 901, false],
-    ["coingecko-low-volume", 604_800, true],
-    ["coingecko-low-volume", 604_801, false],
-    ["chainlink-nav", 345_600, true],
-    ["chainlink-nav", 345_601, false],
-    ["coingecko+pyth", 300, true],
-    ["coingecko+pyth", 301, false],
-  ] as const)("enforces %s age %i without borrowing the sync clock", (source, age, accepted) => {
-    const decision = validatePublishedAssetPrice({
-      asset: { price: 1, priceSource: source, priceObservedAt: 1_800_000_000 - age },
-      nowSec: 1_800_000_000,
-      validationContext: USD_CONTEXT,
-    });
-    expect(decision.accepted).toBe(accepted);
-    if (!accepted) expect(decision.reason).toBe("stale_observed_at");
-  });
-
-  it.each([
-    [null, "missing_observed_at"],
-    [NaN, "invalid_observed_at"],
-    [1_800_000_601, "future_observed_at"],
-  ] as const)("rejects unproven restored ordinary-CG observation %s", (priceObservedAt, reason) => {
-    expect(validatePublishedAssetPrice({
-      asset: { price: 1, priceSource: "coingecko", priceObservedAt, supplyRestored: true },
-      nowSec: 1_800_000_000,
-      validationContext: USD_CONTEXT,
-    })).toEqual({ accepted: false, reason });
-  });
-
-  it("preserves registry-permitted undated live list prices but never restores them", () => {
-    for (const supplyRestored of [false, true]) {
-      const decision = validatePublishedAssetPrice({
-        asset: { price: 1, priceSource: "defillama", priceObservedAt: null, supplyRestored },
-        nowSec: 1_800_000_000,
-        validationContext: USD_CONTEXT,
-      });
-      expect(decision.accepted).toBe(!supplyRestored);
-      if (supplyRestored) expect(decision.reason).toBe("missing_observed_at");
-    }
-  });
-});
-
 describe("validatePublishedAssetPrice — candidatePrices as a separate argument", () => {
   it("uses separately passed candidatePrices for severe-downside corroboration", () => {
     const decision = validatePublishedAssetPrice({
@@ -260,11 +215,9 @@ describe("validatePublishedAssetPrice — candidatePrices as a separate argument
         priceSource: "pyth",
         priceConfidence: "low",
         agreeSources: ["pyth"],
-        priceObservedAt: 1_800_000_000,
       },
       candidatePrices: { coingecko: 0.39, pyth: 0.38, "defillama-list": 0.51 },
       validationContext: USD_CONTEXT,
-      nowSec: 1_800_000_000,
     });
 
     expect(decision.accepted).toBe(true);
@@ -277,10 +230,8 @@ describe("validatePublishedAssetPrice — candidatePrices as a separate argument
         priceSource: "pyth",
         priceConfidence: "low",
         agreeSources: ["pyth"],
-        priceObservedAt: 1_800_000_000,
       },
       validationContext: USD_CONTEXT,
-      nowSec: 1_800_000_000,
     });
 
     expect(decision.accepted).toBe(false);

@@ -348,7 +348,6 @@ export function prevalidatePrices(input: {
   validationContexts: ValidationContextResolver;
   validationReferences?: PriceValidationReferences;
   logLabel: string;
-  nowSec?: number;
 }): void {
   const {
     assets,
@@ -363,7 +362,6 @@ export function prevalidatePrices(input: {
     if (asset.price == null || typeof asset.price !== "number" || asset.price === 0) continue;
     const decision = validatePublishedAssetPrice({
       asset,
-      nowSec: input.nowSec,
       candidatePrices: getPrimaryCandidatePricesForCurrentAsset(asset, primaryPriceResults),
       validationContext: validationContexts.get(asset),
       validationReferences,

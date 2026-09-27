@@ -215,7 +215,8 @@ describe("validateAndWriteStablecoinsCache", () => {
     expect(assets.map((asset) => asset.id)).toEqual(healthy.map((asset) => asset.id));
     const canonical = JSON.parse((await getCache(db, "stablecoins"))!.value) as { peggedAssets: Array<{ id: string; chainCirculating: unknown }> };
     expect(canonical.peggedAssets.map((asset) => asset.id)).toEqual(healthy.map((asset) => asset.id));
-    expect(canonical.peggedAssets[0]?.chainCirculating).toEqual({ Ethereum: { current: 5, circulatingPrevDay: null } });
+    expect(canonical.peggedAssets[0]?.chainCirculating).toEqual({ Ethereum: { current: 5, circulatingPrevDay: 0 } });
+    expect(assets[0]?.chainCirculating).toEqual({ Ethereum: { current: 5, circulatingPrevDay: null } });
     const companion = JSON.parse((await getCache(db, getResponseReadyCacheKey("stablecoins")))!.value) as { body: string };
     expect((JSON.parse(companion.body) as typeof canonical).peggedAssets[0]?.chainCirculating)
       .toEqual({ Ethereum: { current: 5, circulatingPrevDay: 0 } });

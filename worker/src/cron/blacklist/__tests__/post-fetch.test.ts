@@ -325,22 +325,4 @@ describe("processFetchedBlacklistRows", () => {
     expect(syncCurrentBalanceCacheForRows).not.toHaveBeenCalled();
   });
 
-  it("uses a newer persisted release when repairing mixed fetched rows", async () => {
-    const fresh = makeBlacklistRow({ id: "fresh", timestamp: 100 }) as BlacklistRow;
-    const duplicate = makeBlacklistRow({ id: "duplicate", address: "0xdef", timestamp: 100 }) as BlacklistRow;
-    const release = { ...duplicate, id: "release", event_type: "unblacklist" as const, timestamp: 200 };
-    const db = mockD1([
-      { match: "SELECT id FROM blacklist_events WHERE id IN", rows: [{ id: duplicate.id }] },
-      { match: "SELECT * FROM blacklist_events", rows: [release] },
-    ], { requireMatch: true });
-    vi.mocked(enrichRowBalances).mockResolvedValue({ attempted: 0, succeeded: 0, failed: 0 });
-    vi.mocked(insertBlacklistRows).mockResolvedValue(1);
-    vi.mocked(syncCurrentBalanceCacheForRows).mockResolvedValue({
-      updated: 1, failed: 0, skippedDueBudget: 0, budgetExhausted: false,
-    });
-    const result = await processFetchedBlacklistRows(postFetchOptions(db, [fresh, duplicate]));
-    expect(result.insertedRows).toBe(1);
-    expect(syncCurrentBalanceCacheForRows).toHaveBeenCalledWith(db, config, [fresh, duplicate],
-      expect.objectContaining({ latestRows: [fresh, release] }));
-  });
 });

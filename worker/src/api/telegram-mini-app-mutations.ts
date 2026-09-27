@@ -238,6 +238,7 @@ function buildPortablePreview(current: WatchlistTokenV2State, desired: Watchlist
 }
 
 function previewFingerprint(value: unknown): string {
+  // Consistency fence only, not an authorization token.
   const input = JSON.stringify(value);
   return `preview-v1-${input.length}-${fnv1a32Hex(input)}`;
 }

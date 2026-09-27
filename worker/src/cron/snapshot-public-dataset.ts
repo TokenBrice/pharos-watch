@@ -18,6 +18,7 @@ import { logWorkerEventArgs } from "../lib/structured-log";
  * snapshot URLs can be cached immutably without later same-day mutation.
  */
 import { rethrowIfAborted, sleepWithSignal, throwIfAborted } from "../lib/abort";
+import { projectLegacyChainCirculatingWire } from "@shared/lib/chains/circulating";
 import {
   PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_ATTEMPTS,
   PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_DELAY_MS,
@@ -410,7 +411,7 @@ export async function snapshotPublicDataset(
     generatedAt: nowSec,
     methodologyVersions,
     safetyScoreIdentity,
-    stablecoins: stablecoinsCache.payload.peggedAssets,
+    stablecoins: projectLegacyChainCirculatingWire(stablecoinsCache.payload).peggedAssets,
     fxFallbackRates: stablecoinsCache.payload.fxFallbackRates ?? null,
     reportCards,
     psi: {

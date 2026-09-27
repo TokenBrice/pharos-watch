@@ -203,6 +203,7 @@ import { CONTRACT_CONFIGS } from "../../lib/blacklist-contracts";
 
 const mockD1 = createMockD1Preset([
   { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+  { match: "blacklist:decode-retry:", rows: [] },
   { match: "INSERT OR REPLACE INTO cache", rows: [] },
   { match: "FROM blacklist_current_balances", rows: [] },
   { match: "INSERT INTO blacklist_current_balances", rows: [] },
@@ -653,6 +654,25 @@ describe("syncBlacklist", () => {
       amount_native: 1,
       amount_usd: 1,
     }]);
+  });
+
+  it("reports retained decode retries per config without counting unrelated cache rows", async () => {
+    const { sqlite } = sqliteFixtures.open();
+    const db = createSqliteD1(sqlite);
+    const insert = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
+    const evmKey = CONTRACT_CONFIGS[0].configKey;
+    const tronKey = CONTRACT_CONFIGS.find((config) => config.chain.chainId === "tron")!.configKey;
+    for (const key of [
+      `blacklist:decode-retry:${evmKey}:10:tx:0`,
+      `blacklist:decode-retry:${evmKey}:11:tx:1`,
+      `blacklist:decode-retry:${tronKey}:20:tx:0`,
+      "blacklist:other-cache",
+    ]) insert.run(key, "{}", 100);
+    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
+      headers: { "Content-Type": "application/json" },
+    }));
+    const result = await syncBlacklist(buildTestOpts({ db }));
+    expect(JSON.parse(result.metadata).decodeRetryCounts).toEqual({ [evmKey]: 2, [tronKey]: 1 });
   });
 
   it("returns zero events when all APIs return empty", async () => {

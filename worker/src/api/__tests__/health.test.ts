@@ -230,7 +230,8 @@ describe("handleHealth", () => {
           priorState === "read-error" ? "previous-coverage-read-failed" : "previous-coverage-malformed",
         );
         expect(body.warnings).toContain(`active-price-coverage-incomplete:${missingId}`);
-        expect(continuity.previousMissingGenerationsById.get(missingId)).toBeGreaterThanOrEqual(2);
+        expect(gap.alertEligible).toBe(true);
+        expect(continuity.previousMissingGenerationsById.size).toBe(0);
       }
     },
   );

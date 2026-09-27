@@ -17,6 +17,11 @@ vi.mock("@shared/lib/stablecoins/registry", async (importOriginal) => {
   const zarm = ACTIVE_META_BY_ID.get("zarm-mento");
   if (!zarm) throw new Error("missing ZARm test metadata");
   ACTIVE_META_BY_ID.set("zarm-mento", { ...zarm, detailProvider: "defillama" });
+  const eurcv = ACTIVE_META_BY_ID.get("eurcv-societe-generale-forge")!;
+  for (let index = 0; index < 16; index++) {
+    const id = `gap-cap-fixture-${index}`;
+    ACTIVE_META_BY_ID.set(id, { ...eurcv, id });
+  }
   return { ...actual, ACTIVE_META_BY_ID };
 });
 
@@ -112,6 +117,65 @@ describe("supply-gap reconciliation ordering", () => {
 });
 
 describe("CoinGecko missing-chain remainder reconciliation", () => {
+  it("carries previously filled candidates deferred by the per-run request cap", async () => {
+    const first = makeAsset();
+    mockCoinGeckoAt(130);
+    await reconcileTrackedSupplyGaps([first]);
+    const assets = Array.from({ length: 16 }, (_, index) => ({ ...makeAsset(), id: `gap-cap-fixture-${index}` }));
+    const deferred = assets[15]!;
+    const previous = new Map([[deferred.id, { ...first, id: deferred.id }]]);
+    const result = await reconcileTrackedSupplyGaps(assets, undefined, null, undefined, undefined, previous);
+    expect(result.totalReconciled).toBe(15);
+    expect(deferred.circulating).toEqual({ peggedEUR: 130 });
+    expect(deferred.supplyGapFill).toEqual({ ...first.supplyGapFill, carryForwardRuns: 1 });
+    expect(deferred.supplyRestored).toBe(true);
+  });
+
+  it.each(["simple-price", "market-chart"] as const)("carries a coherent gap-fill across %s failure, then expires", async (failure) => {
+    const original = makeAsset();
+    mockCoinGeckoAt(106);
+    await reconcileTrackedSupplyGaps([original]);
+    const provenance = original.supplyGapFill;
+    expect(provenance?.admission).toBe("entered");
+    let previous: PeggedAsset = original;
+    for (let run = 1; run <= 3; run++) {
+      mockCoinGeckoAt(104);
+      const successfulFetch = fetchTextWithRetryMock.getMockImplementation()!;
+      fetchTextWithRetryMock.mockImplementation((url: string) =>
+        url.includes(failure === "simple-price" ? "/simple/price" : "/market_chart")
+          ? { response: { ok: false, status: 429 }, body: "" }
+          : successfulFetch(url));
+      const current = makeAsset();
+      await reconcileTrackedSupplyGaps([current], undefined, null, undefined, undefined, new Map([[previous.id, previous]]));
+      if (run <= 2) {
+        expect(current.circulating).toEqual(original.circulating);
+        expect(current.chainCirculating).toEqual(original.chainCirculating);
+        expect(current.supplyGapFill).toEqual({ ...provenance, carryForwardRuns: run });
+        expect(current.supplyRestored).toBe(true);
+      } else {
+        expect(current.circulating).toEqual({ peggedEUR: 100 });
+        expect(current.supplyGapFill).toBeUndefined();
+      }
+      previous = current;
+    }
+  });
+
+  it("retains the hysteresis band on recovery after a failed run", async () => {
+    const first = makeAsset();
+    mockCoinGeckoAt(106);
+    await reconcileTrackedSupplyGaps([first]);
+    fetchTextWithRetryMock.mockResolvedValue(null);
+    const carried = makeAsset();
+    await reconcileTrackedSupplyGaps([carried], undefined, null, undefined, undefined, new Map([[first.id, first]]));
+    mockCoinGeckoAt(104);
+    const recovered = makeAsset();
+    await reconcileTrackedSupplyGaps([recovered], undefined, null, undefined, undefined, new Map([[carried.id, carried]]));
+    expect(recovered.circulating).toEqual({ peggedEUR: 104 });
+    expect(recovered.supplyGapFill?.admission).toBe("retained");
+    expect(recovered.supplyGapFill?.carryForwardRuns).toBeUndefined();
+    expect(recovered.supplyRestored).toBeUndefined();
+  });
+
   it("publishes every aggregate bucket from the single CoinGecko series and attributes only the nonnegative remainder", async () => {
     const nowMs = Date.now();
     const asset = makeAsset();

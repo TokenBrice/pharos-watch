@@ -99,7 +99,7 @@ export async function snapshotChainSupply(
   const restoredOnlyIds = new Set<string>();
   const staleSupplyIds = new Set<string>();
   const missingSupplyIds = new Set<string>();
-  const deferredChainIds = new Set<string>();
+  const deferredChains = new Map<string, Set<string>>();
 
   for (const asset of cache.payload.peggedAssets) {
     if (!expectedActiveIdSet.has(String(asset.id))) continue;
@@ -114,7 +114,9 @@ export async function snapshotChainSupply(
     for (const [chainId, data] of canonicalChainCirculating) {
       if (!CHAIN_META[chainId]) continue;
       if (restored || stale || data.current == null) {
-        deferredChainIds.add(chainId);
+        const assetIds = deferredChains.get(chainId) ?? new Set<string>();
+        assetIds.add(String(asset.id));
+        deferredChains.set(chainId, assetIds);
         if (data.current == null) missingSupplyIds.add(String(asset.id));
         continue;
       }
@@ -127,31 +129,29 @@ export async function snapshotChainSupply(
       chainTotals.set(chainId, existing);
     }
   }
-  // There is no partial-history coverage contract. Preserve the whole daily
-  // generation, not a fresh subtotal that silently subtracts unavailable peers.
-  if (deferredChainIds.size > 0 || restoredOnlyIds.size > 0 || staleSupplyIds.size > 0) {
-    return createCronResult({
-      status: "degraded",
-      itemCount: 0,
-      metadata: {
-        reason: "chain_observations_unavailable",
-        restoredOnlyIds: [...restoredOnlyIds].sort(),
-        staleSupplyIds: [...staleSupplyIds].sort(),
-        missingSupplyIds: [...missingSupplyIds].sort(),
-        deferredChainIds: [...deferredChainIds].sort(),
-      },
-    });
-  }
+  const deferredChainIds = [...deferredChains.keys()].sort();
+  const observationMetadata = {
+    restoredOnlyIds: [...restoredOnlyIds].sort(),
+    staleSupplyIds: [...staleSupplyIds].sort(),
+    missingSupplyIds: [...missingSupplyIds].sort(),
+    deferredChainIds,
+    deferredChains: Object.fromEntries(
+      deferredChainIds.map((chainId) => [chainId, [...deferredChains.get(chainId)!].sort()]),
+    ),
+  };
   if (
     lastWrite?.snapshotDate === snapshotDate
     && lastWrite.exactCoverageVerified
     && lastWrite.chainObservationAdmissionVerified
+    && deferredChainIds.length === 0
   ) {
     return createCronResult({ itemCount: 0, metadata: { reason: "already_written_today", snapshotDate } });
   }
 
   const chainRows: Array<readonly [string, number, number, number]> = [];
   for (const [chainId, { totalUsd, coinCount }] of chainTotals) {
+    // Never publish a subtotal that subtracts an unavailable contributor.
+    if (deferredChains.has(chainId)) continue;
     chainRows.push([chainId, snapshotDate, totalUsd, coinCount]);
   }
 
@@ -160,7 +160,11 @@ export async function snapshotChainSupply(
     return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: { reason: "no-valid-chain-rows", assetCount: cache.payload.peggedAssets.length },
+      metadata: {
+        reason: deferredChainIds.length > 0 ? "chain_observations_unavailable" : "no-valid-chain-rows",
+        assetCount: cache.payload.peggedAssets.length,
+        ...observationMetadata,
+      },
     });
   }
 
@@ -173,10 +177,16 @@ export async function snapshotChainSupply(
         ownedRowIds: chainRows.map(([chainId]) => chainId),
       }),
       writtenChains: chainRows.length,
-      chainObservationAdmissionVersion: 1,
+      // Version 1 certifies complete observation admission, not partial progress.
+      ...(deferredChainIds.length === 0 ? { chainObservationAdmissionVersion: 1 } : {}),
+      ...observationMetadata,
     });
     const replacementStatements = [
-      db.prepare("DELETE FROM chain_supply_history WHERE snapshot_date = ?").bind(snapshotDate),
+      // Preserve any already-observed rows for deferred chains, without refreshing
+      // them or deleting their unavailable contributors. Drop obsolete peers.
+      db.prepare(
+        "DELETE FROM chain_supply_history WHERE snapshot_date = ? AND chain_id NOT IN (SELECT value FROM json_each(?))",
+      ).bind(snapshotDate, JSON.stringify(deferredChainIds)),
       ...prepareMultiRowInsertStatements(
         db,
         "INSERT OR REPLACE INTO chain_supply_history (chain_id, snapshot_date, total_usd, stablecoin_count)",
@@ -196,5 +206,13 @@ export async function snapshotChainSupply(
   }
 
   logWorkerEventArgs("handler", "info", `[snapshot-chain-supply] Inserted ${chainRows.length} rows for ${formatIsoDate(snapshotDate)}`);
-  return { itemCount: chainRows.length };
+  return createCronResult({
+    status: "ok",
+    itemCount: chainRows.length,
+    metadata: {
+      quality: deferredChainIds.length > 0 ? "partial" : "complete",
+      ...(deferredChainIds.length > 0 ? { reason: "chain_observations_partially_deferred" } : {}),
+      ...observationMetadata,
+    },
+  });
 }

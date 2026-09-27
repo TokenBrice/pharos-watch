@@ -345,6 +345,38 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
     });
   });
 
+  it("bounds gap-fill carry during repeated DefiLlama outage publications", async () => {
+    let previous: PeggedAsset = {
+      id: "fixture-usd", name: "Fixture", symbol: "FIX",
+      circulating: { peggedUSD: 130 }, supplySource: "coingecko-gap-fill",
+      supplyObservedAt: NOW_SEC, chainCirculating: { Ethereum: { current: 100 }, Base: { current: 30 } },
+      supplyGapFill: {
+        method: "coingecko-single-missing-chain", admission: "entered", missingChainId: "base",
+        canonicalSource: "defillama", canonicalCurrentUsd: 100, supplementalSource: "coingecko",
+        supplementalCurrentUsd: 130, ratio: 1.3, maxRatio: 1.5, observedAt: NOW_SEC,
+      },
+    };
+    for (let run = 1; run <= 3; run++) {
+      subPhaseMocks.loadPreviousStablecoinsById.mockResolvedValueOnce({
+        previousAssetsById: new Map([[previous.id, previous]]), cacheState: { state: "ok" },
+      });
+      const current: PeggedAsset = {
+        id: previous.id, name: "Fixture", symbol: "FIX",
+        circulating: { peggedUSD: 120 }, supplySource: "coingecko-fallback", chainCirculating: {},
+      };
+      await restoreFallbackCacheState({ db: mockD1([]), assets: [current] });
+      expect(current.circulating).toEqual({ peggedUSD: run <= 2 ? 130 : 120 });
+      if (run <= 2) {
+        expect(current.supplyGapFill?.carryForwardRuns).toBe(run);
+        expect(current.supplyRestored).toBe(true);
+      } else {
+        expect(current.supplyGapFill).toBeUndefined();
+        expect(current.chainCirculating).toEqual({});
+      }
+      previous = current;
+    }
+  });
+
   it("(i) carries previous buckets only within the seven-day restore ceiling", async () => {
     const freshObservedAt = NOW_SEC - 7 * 86400;
     const staleObservedAt = freshObservedAt - 1;
