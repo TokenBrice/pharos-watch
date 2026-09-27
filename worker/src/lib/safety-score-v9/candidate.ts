@@ -22,6 +22,7 @@ import type {
   SafetyScoreV9EvidenceFreshness,
 } from "@shared/types/safety-score-v9-public";
 import type { V9ValidatedPolicyEnvelope } from "@shared/types/safety-score-v9";
+import { Sha256Schema } from "@shared/types/safety-schema-primitives";
 import { z } from "zod";
 import {
   compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension,
@@ -41,7 +42,6 @@ const SAFETY_SCORE_V9_COMPILER_FACT_SCHEMA_DIGEST_DOMAIN = "safety-score-v9.comp
 const SAFETY_SCORE_V9_PRODUCER_CAPABILITY_DIGEST_DOMAIN = "safety-score-v9.producer-capability-build.v1";
 const SAFETY_SCORE_V9_CANDIDATE_ID_DIGEST_DOMAIN = "safety-score-v9.publication-id.v1";
 
-const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
 const ReleaseCandidateIdSchema = z.string().regex(/^v9-rc-[1-9][0-9]*$/);
 const CanonicalStringArraySchema = z.array(z.string().min(1)).superRefine((values, ctx) => {
   if (

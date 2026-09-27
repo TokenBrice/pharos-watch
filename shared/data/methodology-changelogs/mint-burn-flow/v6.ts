@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const MINT_BURN_FLOW_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.23",
+    title: "Event-time pricing and published valuation gating",
+    date: "2026-09-28",
+    effectiveAt: 1790640000,
+    summary:
+      "A mint or burn is valued only with a price observed within 24 hours of the event, and the public flow API stops publishing nets, directions, pressure and flight-to-quality that missing valuation could change.",
+    impact: [
+      "Ingestion and the automatic 48-hour heal share one admission rule: a price counts only when its recorded observation time is within ±24 hours of the event (boundaries inclusive), its source is replay-safe, it is an actual observation rather than a nominal par reference, and it passes the peg-plausibility check. The daily supply snapshot qualifies for the event's own UTC day; the prior day's snapshot no longer does. The current price is never applied to an old event, and the stored price timestamp is the evidence's observation time, not the run time. Events without admissible evidence stay unpriced and mark their hour partial.",
+      "Per coin, chain, hourly bucket and per-coin window, a signed net with partial valuation is published as null; gross mint and burn volumes remain known subtotals and lower bounds. Direction is published only when missing valuation cannot change it, so an unpriced mint beside a priced burn yields no direction rather than an outflow, and flat requires complete valuation. Flight-to-quality is null unless exact or provably inactive.",
+      "Pressure shift needs a complete 24h window and a baseline that is not partial, so partial coins leave the Bank Run Gauge (partialValuationInputs is 0). Stablecoin preview cards show a partial seven-day window as a gross lower bound, never a signed net.",
+      "Transition: hourly buckets aggregated before v6.22 read as unknown. Buckets inside the eight-day raw-event window are rebuilt; older ones cannot be and keep their old-method nets, labelled unknown, until they age out of the 30-day baseline and the 7/30/90-day net windows (about 90 days).",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.22",
     title: "Recorded valuation completeness",
     date: "2026-09-27",

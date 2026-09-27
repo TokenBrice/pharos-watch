@@ -6,7 +6,7 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 (detection) runs eve
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.29`<!-- GENERATED-END: methodology-version-depeg-detection -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.30`<!-- GENERATED-END: methodology-version-depeg-detection -->
 - **Runtime/version source:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/depeg-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/depeg-dews/`
@@ -164,6 +164,8 @@ Side-table provenance for depeg rows. Legacy `depeg_events` rows remain valid wh
 
 Stored fields include source kind, replay run ID/version, source price providers, quote mode, peg-reference source, supply source, confirmation policy, confirmation point count, market diagnostics, policy adjustments, confidence tier, audit verdict, and created/updated timestamps.
 
+Audit vocabulary is owned by `shared/types/depeg-audit.ts`: `confirmed`, `disputed`, `false_positive`, `no_data`, and `repaired`. Archived event parsing rejects unknown verdicts rather than coercing them to null. Migration `0252_depeg_audit_verdict_vocabulary.sql` rejects unknown insert/update values while preserving stored archives. Null continues to mean legacy unaudited evidence.
+
 ### depeg_backfill_runs (migration 0128)
 
 Backfill replay manifest table. Each mutating replay records stablecoin/window, source type, expected event count, expected fingerprint, removed/added/inserted counts, status (`started`, `complete`, or `incomplete`), timestamps, and any failure message. Chunked insert failures mark the run `incomplete` so operators can repair or re-run instead of assuming the historical slice is complete.
@@ -218,7 +220,7 @@ Primary-price trust gates:
 
 - `authoritative`: fresh `high` / `single-source` current-sync prices
 - `confirm_required`: cached, fallback, low-confidence, or stale primary prices
-- `unusable`: invalid/missing/non-finite price
+- `unusable`: invalid/missing/non-finite price, or a non-observed price (`priceObservedAtMode: "nominal_reference"`, an unsupported mode, or any `protocol-par` source component). Since pricing v6.38 the eight nominal par routes publish par this way whenever no trusted market quote is admitted, so par can neither open, confirm nor recover an event; an open row stays open (tracked coins are never orphan-closed) until observed price evidence decides it, while a trusted market discount on those assets is evaluated like any other primary price
 
 Before those gates are applied, `priceSource` and `agreeSources` are normalized through the pricing-source registry. Composite labels are expanded into their component source keys, unknown sources do not become pool-challenge eligible by accident, and each known key resolves to its registered `depegSourceFamily`. CoinGecko variants, DefiLlama list/detail/contract variants, and CoinMarketCap-style list aggregators are therefore not counted as independent hard corroboration just because their labels differ; promoted DEX protocol lanes and hard market/oracle/protocol sources keep provider- or protocol-specific families.
 
@@ -495,7 +497,7 @@ interface DepegEvent {
     confirmationPolicy?: string | null
     confirmationPointCount?: number | null
     confidenceTier?: string | null
-    auditVerdict?: string | null
+    auditVerdict?: DepegAuditVerdict | null
     pegScoreEligible?: boolean | null
     updatedAt?: number | null
   } | null
@@ -604,7 +606,7 @@ activeDepegPenalty = if ongoing: min(50, max(5, |peakBps| / 50))
 pegScore = max(0, min(100, round(0.5*pegPct + 0.5*severityScore - activeDepegPenalty - spreadPenalty)))
 ```
 
-v6.0 quality gate: events with provenance `auditVerdict` of `false_positive` or `disputed` are excluded from PegScore inputs. Included events with `confidenceTier = "low"` retain time-at-peg impact but receive a 0.5 severity/spread weight. The result includes quality counters so consumers can tell when provenance changed the score inputs.
+The quality gate uses `PEG_SCORE_EXCLUDED_AUDIT_VERDICTS` from `shared/types/depeg-audit.ts`: `false_positive` and `disputed` are excluded. `no_data` remains eligible for PegScore but is excluded by DDR's separate `DDR_INELIGIBLE_AUDIT_VERDICTS` policy. As of v6.30, unknown non-null verdicts fail closed in direct scoring and SQL recomputation, and archived/V9 parsing rejects them without coercion to null. Null legacy verdicts remain eligible. Included events with `confidenceTier = "low"` retain time-at-peg impact but receive a 0.5 severity/spread weight. Quality counters expose changed score inputs.
 
 **Tracking window**: `coinTrackingStart()` first honors a reviewed `pegScoreCoverage.startDate` when an operator has
 verified replay plus continuous live coverage. Otherwise it prefers a curated launch date, then the

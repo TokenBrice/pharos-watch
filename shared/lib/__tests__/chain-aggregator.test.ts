@@ -462,7 +462,9 @@ describe("aggregateChains", () => {
     }).chains.find((chain) => chain.id === "ethereum")!;
     expect(missing.healthFactors.pegStability).toBe(100);
     expect(referenced.healthFactors.pegStability).toBe(45);
-    expect(missing.healthScore).toBeGreaterThan(referenced.healthScore!);
+    expect(missing.healthScore).toBeNull();
+    expect(missing.healthBand).toBeNull();
+    expect(referenced.healthScore).not.toBeNull();
     // The missing-reference supply stays in the coverage denominator rather than vanishing.
     expect(missing.pegStabilityCoverage).toMatchObject({
       status: "partial",
@@ -475,12 +477,13 @@ describe("aggregateChains", () => {
     expect(referenced.pegStabilityCoverage?.status).toBe("complete");
   });
 
-  it("reports zero peg coverage beside the Release A neutral placeholder when every price is missing", () => {
+  it("publishes NR factor and composite when every price is missing", () => {
     const input = makeInput();
     for (const coin of input.peggedAssets) coin.price = null;
     const eth = aggregateChains(input).chains.find((chain) => chain.id === "ethereum")!;
-    // RELEASE A: the published factor keeps the neutral-50 imputation; coverage shows it is unobserved.
-    expect(eth.healthFactors.pegStability).toBe(50);
+    expect(eth.healthFactors.pegStability).toBeNull();
+    expect(eth.healthScore).toBeNull();
+    expect(eth.healthBand).toBeNull();
     expect(eth.pegStabilityCoverage).toEqual({
       status: "unavailable",
       observedSupplyUsd: 0,
@@ -488,7 +491,7 @@ describe("aggregateChains", () => {
       coverage: 0,
       noUsablePriceSupplyUsd: 550,
       noPegReferenceSupplyUsd: 0,
-      neutralImputedSupplyUsd: 550,
+      neutralImputedSupplyUsd: 0,
       observedScore: null,
     });
   });

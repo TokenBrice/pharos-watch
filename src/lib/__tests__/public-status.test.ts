@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { HealthResponse } from "@shared/types";
 import { buildPublicHealthStatusCauses } from "@/lib/status/issue-evidence-model";
-import { countPublicImpactOpenCircuits, isPublicImpactCircuitKey } from "@shared/lib/public-health";
+import { countPublicImpactOpenCircuits, getCircuitImpactStatus, isPublicImpactCircuitKey } from "@shared/lib/public-health";
+import { CIRCUIT_SOURCE_REGISTRY } from "@shared/lib/circuit-sources";
 import { makeActivePriceCoverage, makeHealthyHealthResponse, makeMissingActiveAsset } from "@/test-utils/status-fixtures";
 import {
   getAcknowledgedPriceGapNotice,
@@ -207,17 +208,9 @@ describe("public status helpers", () => {
     expect(impacted).not.toContainEqual(expect.objectContaining({ id: "cache-fx-rates", tone: "degraded" }));
   });
 
-  it("excludes optional circuit breakers from public-impact circuit counts", () => {
+  it("keeps dedicated outages scoped while shared source families degrade availability", () => {
     expect(isPublicImpactCircuitKey("live-reserves:ousg-ondo")).toBe(false);
-    expect(isPublicImpactCircuitKey("dexscreener-liquidity")).toBe(false);
-    expect(isPublicImpactCircuitKey("dexscreener-search")).toBe(false);
-    expect(isPublicImpactCircuitKey("usx-stable-pools")).toBe(false);
-    expect(isPublicImpactCircuitKey("aznd-curve-pool")).toBe(false);
-    expect(isPublicImpactCircuitKey("mento-broker")).toBe(false);
-    expect(isPublicImpactCircuitKey("kava-pricefeed")).toBe(false);
-    expect(isPublicImpactCircuitKey("jusd-citrea-bridge")).toBe(false);
-    expect(isPublicImpactCircuitKey("dwellir-evm")).toBe(false);
-    expect(isPublicImpactCircuitKey("defillama-stablecoins")).toBe(true);
+    expect(isPublicImpactCircuitKey("unregistered-source")).toBe(true);
 
     const circuit = {
       state: "open",
@@ -227,20 +220,28 @@ describe("public status helpers", () => {
       openedAt: 1_700_000_000,
     } as const;
 
-    expect(
-      countPublicImpactOpenCircuits({
-        "live-reserves:ousg-ondo": circuit,
-        "live-reserves:mtbill-midas": circuit,
-        "dexscreener-liquidity": circuit,
-        "dexscreener-search": circuit,
-        "usx-stable-pools": circuit,
-        "aznd-curve-pool": circuit,
-        "mento-broker": circuit,
-        "kava-pricefeed": circuit,
-        "jusd-citrea-bridge": circuit,
-        "dwellir-evm": circuit,
-      }),
-    ).toBe(0);
+    const dedicated = Object.fromEntries(
+      Object.values(CIRCUIT_SOURCE_REGISTRY)
+        .filter((entry) => entry.scope !== "source-wide")
+        .map((entry) => [entry.key, circuit]),
+    );
+    expect(countPublicImpactOpenCircuits(dedicated)).toBe(0);
+    // These dedicated routes formerly contributed four false source-wide outages.
+    const dedicatedOutage = {
+      "mento-fpmm": circuit,
+      "bd-aerodrome": circuit,
+      "usdv-jupiter": circuit,
+      "susd-solayer-nav": circuit,
+    };
+    expect(getCircuitImpactStatus(countPublicImpactOpenCircuits(dedicatedOutage))).toBe("healthy");
+    const sharedOutage = {
+      ...dedicatedOutage,
+      "defillama-stablecoins": circuit,
+      "coingecko-prices": circuit,
+      "protocol-redeem": circuit,
+    };
+    expect(countPublicImpactOpenCircuits(sharedOutage)).toBe(3);
+    expect(getCircuitImpactStatus(countPublicImpactOpenCircuits(sharedOutage))).toBe("degraded");
   });
 });
 

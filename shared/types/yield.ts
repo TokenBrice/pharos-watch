@@ -2,7 +2,7 @@ import { z } from "zod";
 import { MethodologyEnvelopeSchema, YieldTypeSchema } from "./core";
 import { ReportCardGradeSchema } from "./report-card-grade";
 import { SafetyScorePublicationIdentitySchema } from "./safety-score-publication";
-import { FreshnessAssessmentSchema } from "./api-meta";
+import { FreshnessAssessmentSchema, FreshnessStatusSchema } from "./api-meta";
 import {
   YIELD_ADAPTER_LIFECYCLE_VALUES,
   YIELD_BENCHMARK_KEY_VALUES,
@@ -268,7 +268,7 @@ const YieldResponseFreshnessMetaSchema = FreshnessAssessmentSchema
     updatedAt: z.number(),
     ageSeconds: z.number(),
     reason: z.string().nullable(),
-    status: z.enum(["fresh", "degraded", "stale"]),
+    status: FreshnessStatusSchema,
   })
   .strict();
 

@@ -158,7 +158,8 @@ const CAP_HISTORICAL_MIN_COVERAGE = 0.8;
 export interface CurrentPriceOverride {
   price: number;
   source: string;
-  confidence: PriceConfidence;
+  /** Null only for nominal references, which carry no observed-price confidence. */
+  confidence: PriceConfidence | null;
   observedAt?: number | null;
   observedAtMode?: PriceObservedAtMode | null;
   metadata?: {
@@ -675,7 +676,7 @@ export function getUsdcQuotedRedeemConfig(stablecoinId: string): {
   };
 }
 
-export function normalizeHistoricalTimestamps(candidateTimestamps: number[]): number[] {
+function normalizeHistoricalTimestamps(candidateTimestamps: number[]): number[] {
   return Array.from(
     new Set(candidateTimestamps.filter((timestamp) => Number.isFinite(timestamp) && timestamp > 0)),
   ).sort((a, b) => a - b);

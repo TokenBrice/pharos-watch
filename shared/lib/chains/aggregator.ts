@@ -284,7 +284,7 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
       chainEnvironment: chainEnvironmentEvidence.score,
     };
 
-    const healthScore = computeHealthScore(healthFactors);
+    const healthScore = computeHealthScore(healthFactors, pegAssessment.coverage.status);
     const healthBand = getHealthBand(healthScore);
 
     chains.push({

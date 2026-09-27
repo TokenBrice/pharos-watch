@@ -1,5 +1,13 @@
 # Classification System, Peg Handling & Gold Stablecoins
 
+> **Agent navigation** — Start at [Classification entry](#classification-entry); use the focused taxonomy headings instead of reading the complete classification chapter.
+
+## Classification entry
+
+For catalog flags, read [Type](#type-governance-field-internally), [Backing](#backing), [Peg Currency](#peg-currency), and [Listing Class And Lifecycle](#listing-class-and-lifecycle), plus [Additional Metadata](#additional-metadata) for the field being changed. Authoring and admission rules remain in the [registry editing entry](./stablecoin-data.md#registry-editing-entry).
+
+For reviewed controls, use [Mint Authority Taxonomy](#mint-authority-taxonomy), [Implementation Age Policy](#implementation-age-policy), or [Infrastructure Tagging](#infrastructure-tagging). Price/peg work uses [Non-USD Peg Handling](#non-usd-peg-handling) and [Commodity & Non-DefiLlama Stablecoins](#commodity--non-defillama-stablecoins), not the entire taxonomy.
+
 ## Stablecoin Classification System
 
 Each tracked stablecoin is defined in the checked-in per-coin data assets under `shared/data/stablecoins/coins/*.json`, loaded through `shared/lib/stablecoins/registry.ts` from the generated `shared/data/stablecoins/coins.generated.json` aggregate, and validated by `shared/lib/stablecoins/schema.ts` at generation/test time. Import stablecoin helpers from their explicit submodules; use the registry module for the complete catalog and explicit lifecycle splits. Each entry carries these flags:

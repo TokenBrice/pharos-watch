@@ -4,6 +4,7 @@ import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evid
 import type { ContractDeployment } from "@shared/types/core";
 import { safetyScoreV9TransferDeploymentKey, type SafetyScoreV9ReviewedTransferFact } from "@shared/types/safety-score-v9-transfer-overlays";
 import { getCirculatingRaw } from "@shared/lib/supply";
+import { BaseInputGenerationIdSchema, Sha256Schema, UnixSecondsSchema } from "@shared/types/safety-schema-primitives";
 import { z } from "zod";
 import { createCanonicalGenerationCodec } from "../canonical-generation-codec";
 import type { V9ExtensionRegistryMeta } from "./extension-shared";
@@ -32,7 +33,7 @@ const DeploymentObservationSchema = z.object({
   rawTokenUnits: z.string().regex(/^(0|[1-9][0-9]*)$/).nullable(),
   decimals: z.number().int().min(0).max(255).nullable(),
   blockNumber: z.string().regex(/^(0|[1-9][0-9]*)$/).nullable(),
-  observedAtSec: z.number().int().nonnegative().nullable(),
+  observedAtSec: UnixSecondsSchema.nullable(),
   status: z.enum(["accepted", "rejected"]),
 }).strict().superRefine((row, ctx) => {
   const complete = row.rawTokenUnits !== null && row.decimals !== null && row.blockNumber !== null && row.observedAtSec !== null;
@@ -45,9 +46,9 @@ export type SafetyScoreV9TransferMaterialityObservation = z.infer<typeof Deploym
 const GenerationPayloadSchema = z.object({
   schemaVersion: z.literal(1),
   kind: z.literal("safety-score-v9-transfer-materiality-generation"),
-  sourceBaseInputGenerationId: z.string().regex(/^report-cards-input:v1:[a-f0-9]{64}$/),
-  registryFingerprint: z.string().regex(/^[a-f0-9]{64}$/),
-  capturedAtSec: z.number().int().nonnegative(),
+  sourceBaseInputGenerationId: BaseInputGenerationIdSchema,
+  registryFingerprint: Sha256Schema,
+  capturedAtSec: UnixSecondsSchema,
   observationsByAssetId: z.record(z.string(), z.array(DeploymentObservationSchema)),
 }).strict();
 

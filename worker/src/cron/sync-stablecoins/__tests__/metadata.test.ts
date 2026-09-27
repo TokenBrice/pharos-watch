@@ -40,6 +40,21 @@ const observationEffectiveness: PriceObservationEffectiveness = {
 };
 
 describe("stablecoins pricing metadata", () => {
+  it.each(["kava-pricefeed", "mento-fpmm", "mento-broker", "protocol-redeem-cached-rate"])(
+    "retains %s fallback observations in source health",
+    (source) => {
+      const assets: PeggedAsset[] = ACTIVE_STABLECOINS.map((asset) => ({
+        id: asset.id, name: asset.name, symbol: asset.symbol,
+        price: 1, priceSource: asset.id === "usdc-circle" ? source : "coingecko",
+        priceConfidence: "high",
+      }));
+      const health = JSON.parse(buildStablecoinsSyncResult(syncInput(assets)).metadata!).priceSourceHealth;
+      expect(health.sourceDistribution[source]).toBe(1);
+      expect(health.sourceDistribution.missing).toBe(0);
+      expect(Object.values(health.sourceDistribution).reduce<number>((sum, count) => sum + Number(count), 0)).toBe(assets.length);
+    },
+  );
+
   it("preserves observation effectiveness and unknown counts in both publication paths", () => {
     const main = buildStablecoinsSyncResult({ ...syncInput([]), priceObservationEffectiveness: observationEffectiveness });
     const metadata = JSON.parse(main.metadata!);

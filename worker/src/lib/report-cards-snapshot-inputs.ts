@@ -208,6 +208,8 @@ export function computeDexDeploymentSupplyCoverage(
 ): DexDeploymentSupplyCoverage | null {
   const supplyByChain = new Map<string, number>();
   for (const [chain, point] of Object.entries(asset.chainCirculating ?? {})) {
+    // An unknown chain balance cannot be dropped from a full-supply coverage denominator.
+    if (typeof point?.current !== "number" || !Number.isFinite(point.current) || point.current < 0) return null;
     const canonical = canonicalChain(chain);
     supplyByChain.set(canonical, addFiniteSupply(supplyByChain.get(canonical) ?? 0, point?.current));
   }

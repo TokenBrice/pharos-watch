@@ -37,6 +37,7 @@
 | 0248     | `0248_ddr_publication_sequence_cross_table_unique.sql`    | Guard triggers making ddr_public snapshot_sequence globally unique across the legacy, compressed-v2, and payload-reference publication tables. |
 | 0249     | `0249_dex_volume_availability.sql`                        | Add nullable DEX 24h/7d measured-volume availability records (completeness, reason, partial gross sum, observation-window clock) on current, run-row and history tables; NULL = legacy unknown completeness. |
 | 0251     | `0251_mint_burn_hourly_valuation_completeness.sql`        | Add nullable per-side unpriced counted-event counts to `mint_burn_hourly` (volume/net columns stay known-valuation subtotals; NULL = legacy unknown coverage on sides with counted events) and the partial `idx_mbh_valuation_unrecorded` index for the bounded legacy-bucket rebuild. |
+| 0252     | `0252_depeg_audit_verdict_vocabulary.sql`                 | Add insert/update vocabulary guards rejecting unknown non-null audit verdicts; preserve stored archives and existing DDR invalidation authorization triggers. |
 
 ## Squashed Individual Migrations (absorbed into the 0000 baseline on 2026-07-30)
 
@@ -276,6 +277,8 @@ Duplicate numeric prefixes 0056 and 0061 existed in the squashed range (0001–0
 - The deploy workflow reruns `npm run check:migrations`, applies remote D1 migrations, deploys once with `wrangler deploy --strict`, and verifies that the SHA-tagged deployment owns 100% of production traffic.
 - Destructive cleanup must be scheduled as a separate, coordinated rollout after the old Worker code is no longer serving traffic. Do not merge those cleanup migrations into the normal deploy path without an explicit runbook/workflow change.
 - Worker rollback is an explicit operator action. It restores Worker code traffic but does not undo D1 schema or data changes.
+
+Migration `0252` is pre-Worker compatible: existing writers emit the five known verdicts or NULL. It preserves archived values and adds no data mutation. Record the pre-window D1 Time Travel bookmark, migration ledger, and Worker version before rollout; a Worker rollback leaves the additive guards in place. Schema restoration requires the separately verified bookmark, not an automatic rollback.
 
 ## Recent Migration Rollback Notes
 

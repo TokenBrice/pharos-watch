@@ -96,7 +96,7 @@ function makeRow(overrides?: Partial<MintBurnRow>): MintBurnRow {
     amount_usd: overrides?.amount_usd ?? 100,
     price_used: overrides?.price_used ?? 1,
     price_timestamp: overrides?.price_timestamp ?? 1_700_000_000,
-    price_source: overrides?.price_source ?? "price-cache-current",
+    price_source: overrides?.price_source ?? "price-cache-event-window",
     burn_type: overrides?.burn_type ?? null,
     burn_review_reason: overrides?.burn_review_reason ?? null,
     flow_type: overrides?.flow_type ?? "standard",
@@ -754,9 +754,7 @@ describe("parseMintBurnLogs — custom counterparty encoding", () => {
       eventDef,
       logs,
       new Map([[100, 1700000000]]),
-      new Map(),
-      new Map(),
-      1700000100,
+      { priceObservations: new Map(), priceHistory: new Map() },
     );
     expect(rows[0].counterparty).toBe("0xaaaa1111aaaa2222aaaa3333aaaa4444aaaa5555");
   });

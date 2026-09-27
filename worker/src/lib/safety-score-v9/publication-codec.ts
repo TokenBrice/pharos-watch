@@ -6,6 +6,7 @@ import {
   type SafetyScoreV9CurrentResponse,
 } from "@shared/types/safety-score-v9-public";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
+import { BaseInputGenerationIdSchema, Sha256Schema } from "@shared/types/safety-schema-primitives";
 import { z } from "zod";
 import { throwIfAborted } from "../abort";
 import { gunzipBytesBounded, gzipCanonicalJson } from "../canonical-json-gzip";
@@ -21,13 +22,12 @@ const SAFETY_SCORE_V9_PUBLICATION_MAX_STORED_BYTES = 1_900_000;
 const SAFETY_SCORE_V9_PUBLICATION_MAX_COMPRESSED_BYTES = 1_350_000;
 const SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES = 8_000_000;
 
-const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
 const CacheIdentitySchema = z
   .object({
     candidateId: z.string().min(1),
     policyVersion: z.string().min(1),
     publicationGenerationId: z.string().min(1),
-    baseInputGenerationId: z.string().regex(/^report-cards-input:v1:[a-f0-9]{64}$/),
+    baseInputGenerationId: BaseInputGenerationIdSchema,
     factSetDigest: Sha256Schema,
     policyId: z.string().min(1),
     policyDigest: Sha256Schema,

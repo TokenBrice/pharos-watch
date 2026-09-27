@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const DEPEG_RESOLVER_V4: readonly MethodologyChangelogEntry[] = [
   {
+    version: "4.6",
+    title: "Unknown audit provenance fails closed",
+    date: "2026-09-28",
+    effectiveAt: 1790553600,
+    summary: "DDR eligibility and repair admission now reject unknown non-null audit verdicts rather than admitting them through a negative exclusion list.",
+    impact: [
+      "DDR continues to exclude false_positive, disputed, and no_data while retaining confirmed, repaired, and legacy null verdicts",
+      "Bound SQL eligibility is derived from the shared audit vocabulary and the DDR-specific exclusion policy",
+      "Migration 0252 rejects new unknown verdict writes without rewriting archives or changing sealed prediction history",
+      "Resolution weights, duration landmarks, and existing invalidation authorization requirements are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "4.5",
     title: "Derived mint posture drives structural recovery inputs",
     date: "2026-09-12",

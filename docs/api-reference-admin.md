@@ -1,6 +1,6 @@
 # Pharos API Admin Reference
 
-> **Agent navigation** — Internal operator reference. Grep the heading or route you need: Admin Auth And Idempotency · Admin Endpoints.
+> **Agent navigation** — Internal operator reference. Start at [Admin endpoint entry](#admin-endpoint-entry), read Admin Auth And Idempotency, then search the exact route heading.
 
 This operator-only companion to [api-reference.md](./api-reference.md) is not published through `/docs/` or listed in `PUBLIC_DOCS`.
 
@@ -54,6 +54,10 @@ The `/admin/` UI now sends an `Idempotency-Key` automatically for supported manu
 
 ## Admin Endpoints
 
+### Admin endpoint entry
+
+Read [Admin Auth And Idempotency](#admin-auth-and-idempotency) before changing an operator handler. Then search the exact method and route heading below and read only that contract; the endpoint sections retain their existing anchors. For dashboard payload changes, use the [status backend contract](./status-dashboard.md#backend-contract-get-apistatus) alongside the `GET /api/status` section. Public endpoint work belongs in the [public API reference](./api-reference.md), not this operator catalog.
+
 Preferred operator access now splits by surface:
 
 - Browser / human operators: use `https://ops.pharos.watch/admin/`, which talks to same-origin `/api/admin/*` Pages Functions routes behind Cloudflare Access.
@@ -64,6 +68,8 @@ Endpoint sections below do not repeat the CLI header pair. Unless an endpoint sa
 ### `GET /api/status`
 
 Full admin dashboard: cron run history, cache freshness for all keys, data quality metrics, Telegram bot subscriber stats, and operator reconciliation signals.
+
+Since 2026-09-27 dedicated asset-scoped circuit outages no longer count as source-wide degradation; the shared `protocol-redeem` circuit remains source-wide. The `priceSourceHealth.sourceDistribution` vocabulary now includes all six previously omitted registry buckets: `kava-pricefeed`, `aerodrome-onchain`, `velodrome-onchain`, `mento-fpmm`, `mento-broker`, and `protocol-redeem-cached-rate`. A bucket's availability in the contract does not imply that a current asset uses that source.
 
 **Response shape:** `StatusResponse` (exported through `shared/types/index.ts`). The JSON below is illustrative rather than exhaustive; the canonical field list lives in `shared/types/status/response.ts`, with `shared/types/status.ts` retained as its compatibility barrel. It currently includes diagnostics such as `summary.transitionsLast24h`, `yieldHealth`, `publicationHealth`, `providerCircuitHealth`, `canaries`, `dependencyHealth`, `reserveDrift`, `classificationWarnings`, and `reserveComposition.persistentlyStaleIndependentCoins`.
 

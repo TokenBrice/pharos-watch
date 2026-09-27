@@ -39,6 +39,10 @@ export function unknownActivePriceCoverageHealth(
     presentActiveCount: null,
     pricedActiveCount: null,
     missingPriceCount: null,
+    nominalReferenceCount: null,
+    nominalReferenceMarketCapUsd: null,
+    nominalReferenceIds: [],
+    nominalReferenceReason: "reviewed-nominal-reference",
     pricedActiveIds: [],
     missingActiveIds: [],
     affectedMarketCapUsd: null,
@@ -117,6 +121,9 @@ function parseActivePriceCoverageHealth(
     expectedActiveCount, presentActiveCount, pricedActiveCount,
     pricedActiveIds, missingActiveIds, missingPriceCount,
   } = parsed.data;
+  const nominalReferenceIds = parsed.data.nominalReferenceIds ?? [];
+  const nominalReferenceCount = parsed.data.nominalReferenceCount ?? 0;
+  const accountedIds = [...pricedActiveIds, ...nominalReferenceIds];
   const reviews = resolveStablecoinPriceGapReviews([...ACTIVE_IDS], nowSec);
   const parseOptions = { nowSec, reviewsById: reviews.activeById };
   const missingDetailsById = new Map(
@@ -156,14 +163,15 @@ function parseActivePriceCoverageHealth(
   const alertEligibleIds = [...new Set([
     ...stringArray(coverage.alertEligibleIds),
     ...derivedAlertEligibleIds,
-  ])].filter((id) => !acknowledgedIds.has(id));
+  ])].filter((id) => !acknowledgedIds.has(id) && !nominalReferenceIds.includes(id));
   const complete = coverage.complete === true
     && expectedActiveCount === ACTIVE_IDS.size
     && presentActiveCount === ACTIVE_IDS.size
-    && pricedActiveCount === ACTIVE_IDS.size
-    && pricedActiveIds.length === ACTIVE_IDS.size
-    && new Set(pricedActiveIds).size === ACTIVE_IDS.size
-    && pricedActiveIds.every((stablecoinId) => ACTIVE_IDS.has(stablecoinId))
+    && pricedActiveCount != null && pricedActiveCount + nominalReferenceCount === ACTIVE_IDS.size
+    && nominalReferenceCount === nominalReferenceIds.length
+    && accountedIds.length === ACTIVE_IDS.size
+    && new Set(accountedIds).size === ACTIVE_IDS.size
+    && accountedIds.every((stablecoinId) => ACTIVE_IDS.has(stablecoinId))
     && missingPriceCount === 0
     && missingActiveIds.length === 0;
 
@@ -173,6 +181,11 @@ function parseActivePriceCoverageHealth(
     presentActiveCount,
     pricedActiveCount,
     missingPriceCount,
+    nominalReferenceCount,
+    nominalReferenceMarketCapUsd: parsed.data.nominalReferenceMarketCapUsd === undefined
+      ? 0 : parsed.data.nominalReferenceMarketCapUsd,
+    nominalReferenceIds,
+    nominalReferenceReason: "reviewed-nominal-reference",
     pricedActiveIds,
     missingActiveIds,
     affectedMarketCapUsd: parsed.data.affectedMarketCapUsd,

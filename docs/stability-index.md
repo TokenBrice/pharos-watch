@@ -4,7 +4,7 @@ Composite ecosystem health score (0–100) measuring how stable the stablecoin m
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-stability-index -->`v3.63`<!-- GENERATED-END: methodology-version-stability-index -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-stability-index -->`v3.64`<!-- GENERATED-END: methodology-version-stability-index -->
 - **Public changelog page:** `/methodology/stability-index-changelog/`
 - **Canonical source:** `shared/lib/methodology-versions/registry.ts`, with shared constants in `shared/lib/methodology-versions/constants.ts` and changelog entries in `shared/data/methodology-changelogs/stability-index/`
 
@@ -135,7 +135,9 @@ Daily provenance is additive inside the existing `input_snapshot` JSON; no migra
 
 History provenance extraction is limited to rows with `computed_at >= now - 91 days`: SQL short-circuits older `input_snapshot` blobs before JSON parsing and returns NULL provenance (omitted from the wire). Detail history itself remains unbounded, preserving older scores, components, versions, and annotation dates. The separately fetched current daily fallback retains its provenance.
 
-Release A accepts nullable daily components end-to-end but deliberately retains the snapshot writer's current numeric fallback output. The later nullable-producer activation is separately gated. Readers preserve explicit nulls and show missing component history as gaps/unavailable, never measured zero; observed zero stays numeric. Snapshot read failure returns `db_query_failed` without replacing the previous daily row.
+Since v3.64, the daily snapshot writer persists an all-null component as `null`, an observed zero as `0`, and a partially observed component as the average of its observed samples alongside its count. Readers preserve explicit nulls and show missing component history as gaps/unavailable, never measured zero. Legacy stored rows retain their original values and methodology; missing legacy counts remain unknown rather than inferred complete. Snapshot read failure returns `db_query_failed` without replacing the previous daily row. Activation requires observed Release A Worker/Pages readiness; rollback is limited to that nullable-compatible pair, not pre-A clients.
+
+Cutover observation: wait for the next daily snapshot after activation, then refetch `/api/stability-index?detail=true` after its standard edge 300-second/browser 60-second cache windows. Verify persisted component values against `componentSampleCounts`; old historical rows are not rewritten or relabelled by deployment.
 
 ## API
 

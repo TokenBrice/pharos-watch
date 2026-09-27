@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { NET_FLOW_DIRECTION_24H_VALUES, PRESSURE_SHIFT_STATE_VALUES } from "./mint-burn-signals";
 import { SafetyScorePublicationIdentitySchema } from "./safety-score-publication";
+import { FreshnessStatusSchema } from "./api-meta";
 
 export {
   NET_FLOW_DIRECTION_24H_VALUES,
@@ -58,8 +59,8 @@ const MintBurnGaugeSchema = z.object({
    */
   mcapUnavailableCoins: z.number().int().nonnegative().optional(),
   /**
-   * Weighted coins whose pressure input entering `score` has `partial` valuation (unpriced events in
-   * the 24h window or the baseline), so missing valuation can alter the composite. Absent on payloads
+   * Weighted coins whose pressure input entering `score` has `partial` valuation. Producers since
+   * mint-burn-flow v6.23 withhold pressure for partial inputs, so they publish `0`. Absent on payloads
    * produced before valuation completeness existed (unknown).
    */
   partialValuationInputs: z.number().int().nonnegative().optional(),
@@ -73,7 +74,7 @@ const MintBurnScopeSchema = z.object({
 
 const MintBurnSyncSchema = z.object({
   lastSuccessfulSyncAt: z.number().nullable(),
-  freshnessStatus: z.enum(["fresh", "degraded", "stale"]),
+  freshnessStatus: FreshnessStatusSchema,
   warning: z.string().nullable(),
   classificationWarning: z.string().nullable().optional(),
   criticalLaneHealthy: z.boolean(),
@@ -129,9 +130,9 @@ const MintBurnCoinFlowSchema = z.object({
   baselineDailyAbsUsd: z.number().nullable(),
   baselineDataDays: z.number().nullable(),
   /**
-   * Signed nets are nullable for valuation gating: `null` means valuation is not complete. Until the
-   * producer gates them, a non-`complete` `valuation` entry marks the number as unproven (a partial
-   * signed net is not a bound).
+   * Signed nets are `null` when the matching window valuation is `partial` (a partial signed net is
+   * not a bound in either direction). An `unknown` window (legacy buckets aggregated before
+   * completeness was recorded) keeps its known-valuation net, labelled by `valuation`.
    */
   netFlow24hUsd: z.number().finite().nullable(),
   /** Known-valuation subtotals: lower bounds unless the matching `valuation` side is `complete`. */

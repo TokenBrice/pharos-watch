@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const STABILITY_INDEX_V3: readonly MethodologyChangelogEntry[] = [
   {
+    version: "3.64",
+    title: "Null daily components without fabricated zero",
+    date: "2026-09-28",
+    effectiveAt: 1790553600,
+    summary:
+      "Daily PSI snapshots persist missing components as null while retaining all-day score averages and per-component observation counts.",
+    impact: [
+      "An all-null component remains null; an observed zero remains numeric zero",
+      "Partially observed components average only their observations and disclose their sample count",
+      "All-day averaging and mixed-version provenance are unchanged; historical rows are not rewritten",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "3.63",
     title: "Quote-domain-safe event inputs and daily provenance",
     date: "2026-09-27",

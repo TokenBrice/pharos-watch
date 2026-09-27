@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const CHAIN_HEALTH_V1: readonly MethodologyChangelogEntry[] = [
   {
+    version: "1.6",
+    title: "Observed-only peg factors and complete-coverage health",
+    date: "2026-09-28",
+    effectiveAt: 1790553600,
+    summary:
+      "Chain Health removes neutral-50 peg imputation and withholds the composite unless peg evidence covers every positive-supply holding.",
+    impact: [
+      "Zero observed peg supply publishes a null peg factor and null health score/band",
+      "Partial coverage publishes the observed-supply-weighted peg factor plus full-universe coverage, but no composite; no partial-coverage threshold is assumed",
+      "Fully observed chains retain the existing formula and weights; neutralImputedSupplyUsd is zero for new payloads",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "1.5",
     title: "Not-rated supply excluded from chain quality",
     date: "2026-08-10",

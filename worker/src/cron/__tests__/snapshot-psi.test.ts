@@ -137,7 +137,7 @@ describe("snapshotPsiDaily", () => {
     });
   });
 
-  it("records all-null, observed-zero, and partial component counts without changing release-A numeric output", async () => {
+  it("persists all-null components as null, observed zero as zero, and partial observed averages with counts", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
     const computedAt = yesterdayMidnightFrom(Date.now());
     seedSample(sqlite, computedAt + 900, 80);
@@ -151,7 +151,7 @@ describe("snapshotPsiDaily", () => {
     const row = sqlite.prepare("SELECT score, components, input_snapshot FROM stability_index WHERE computed_at = ?")
       .get(computedAt) as { score: number; components: string; input_snapshot: string };
     expect(row.score).toBe(85);
-    expect(JSON.parse(row.components)).toEqual({ severity: 0, breadth: 0, stressBreadth: 4, trend: 3 });
+    expect(JSON.parse(row.components)).toEqual({ severity: null, breadth: 0, stressBreadth: 4, trend: 3 });
     expect(JSON.parse(row.input_snapshot)).toMatchObject({
       sampleCount: 2,
       componentSampleCounts: { severity: 0, breadth: 2, stressBreadth: 1, trend: 2 },

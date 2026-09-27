@@ -25,6 +25,13 @@ import { API_CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { STRESS_SIGNALS_DEGRADED_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { loadStressSignalCurrentRowForCoin, loadStressSignalCurrentRows } from "../lib/stress-signals-current-rows";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { summarizeMintBurnValuation } from "@shared/lib/mint-burn-valuation";
+import type { MintBurnValuationCompleteness } from "@shared/types/mint-burn";
+import {
+  MINT_BURN_HOURLY_VALUATION_TALLY_SQL,
+  type MintBurnValuationTallyRow,
+  readMintBurnValuationTallyRow,
+} from "../lib/mint-burn-hourly-valuation";
 import { getVariantDisplay } from "@shared/lib/variant-display";
 import type { BackingType } from "@shared/types";
 import { loadActiveSafetyScoreSource } from "../lib/safety-score-active-source";
@@ -211,6 +218,13 @@ interface StablecoinOgCoinInput {
   circulatingPrevWeek?: Record<string, number> | null;
 }
 
+/** Seven-day stored mint/burn window: known-valuation subtotals with their completeness. */
+interface OgMintBurnFlow7d {
+  knownNetUsd: number;
+  knownGrossUsd: number;
+  completeness: MintBurnValuationCompleteness;
+}
+
 interface StablecoinOgSignalsInput {
   coin: StablecoinOgCoinInput;
   dexLiquidityScore: number | null;
@@ -218,7 +232,8 @@ interface StablecoinOgSignalsInput {
   grade: string | null | undefined;
   sparklineRows: Array<{ price: number }>;
   hasActiveDepeg: boolean;
-  flow7d: number | null | undefined;
+  /** `null` when no hourly bucket exists in the window. */
+  mintBurn7d: OgMintBurnFlow7d | null;
   pegScore: number | null;
   backing: BackingType | null;
   governance: string | null;
@@ -236,7 +251,7 @@ export function deriveStablecoinOgCardData({
   grade,
   sparklineRows,
   hasActiveDepeg,
-  flow7d,
+  mintBurn7d,
   pegScore,
   backing,
   governance,
@@ -251,6 +266,18 @@ export function deriveStablecoinOgCardData({
   const prevWeekMcap = getPrevWeekRawOrNull(coin);
   const sparklineData = sparklineRows.map((row) => row.price).reverse();
   const supplyDelta = mcap != null && prevWeekMcap != null ? mcap - prevWeekMcap : null;
+  // A partial window shows only its known gross subtotal as a lower bound; a
+  // signed partial net is not a bound. Legacy (unknown) buckets keep their net,
+  // labelled as unverified.
+  let flow7d: number | null = supplyDelta;
+  let flow7dSource: StablecoinCardData["flow7dSource"] = supplyDelta != null ? "supply-delta" : null;
+  if (mintBurn7d?.completeness === "partial") {
+    flow7d = mintBurn7d.knownGrossUsd;
+    flow7dSource = "mint-burn-partial-gross";
+  } else if (mintBurn7d) {
+    flow7d = mintBurn7d.knownNetUsd;
+    flow7dSource = mintBurn7d.completeness === "complete" ? "mint-burn" : "mint-burn-coverage-unknown";
+  }
 
   return {
     name: coin.name,
@@ -260,8 +287,8 @@ export function deriveStablecoinOgCardData({
     dewsBand: dewsBand ?? null,
     liquidityScore: dexLiquidityScore,
     mcap,
-    flow7d: flow7d ?? supplyDelta,
-    flow7dSource: flow7d != null ? "mint-burn" : supplyDelta != null ? "supply-delta" : null,
+    flow7d,
+    flow7dSource,
     sparklineData: sparklineData.length >= 2 ? sparklineData : null,
     hasActiveDepeg,
     pegScore,
@@ -324,12 +351,15 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
       .first<{ id: number }>(),
     db
       .prepare(
-        `SELECT SUM(net_flow_usd) as net_flow
+        `SELECT COUNT(*) AS bucket_count,
+                SUM(net_flow_usd) AS net_flow,
+                SUM(mint_volume_usd + burn_volume_usd) AS gross_flow,
+                ${MINT_BURN_HOURLY_VALUATION_TALLY_SQL}
          FROM mint_burn_hourly
          WHERE stablecoin_id = ? AND hour_ts >= ?`,
       )
       .bind(id, Math.floor(Date.now() / 1000) - 7 * DAY_SECONDS)
-      .first<{ net_flow: number | null }>(),
+      .first<{ bucket_count: number; net_flow: number | null; gross_flow: number | null } & MintBurnValuationTallyRow>(),
     db
       .prepare(
         `WITH current_snapshot AS (
@@ -411,7 +441,13 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
       grade: reportCardRow?.grade,
       sparklineRows: sparklineRows.results ?? [],
       hasActiveDepeg: activeDepegRow !== null,
-      flow7d: flowRow?.net_flow,
+      mintBurn7d: flowRow && flowRow.bucket_count > 0
+        ? {
+            knownNetUsd: flowRow.net_flow ?? 0,
+            knownGrossUsd: flowRow.gross_flow ?? 0,
+            completeness: summarizeMintBurnValuation(readMintBurnValuationTallyRow(flowRow)).completeness,
+          }
+        : null,
       pegScore,
       backing: meta?.flags.backing ?? null,
       governance: meta?.flags.governance ?? null,

@@ -273,6 +273,11 @@ export const ActivePriceCoverageHealthSchema = z.object({
   presentActiveCount: z.number().int().nonnegative().nullable(),
   pricedActiveCount: z.number().int().nonnegative().nullable(),
   missingPriceCount: z.number().int().nonnegative().nullable(),
+  // Additive: legacy publications predate the separately reviewed nominal category.
+  nominalReferenceCount: z.number().int().nonnegative().nullable().optional(),
+  nominalReferenceMarketCapUsd: z.number().nonnegative().nullable().optional(),
+  nominalReferenceIds: z.array(z.string()).optional(),
+  nominalReferenceReason: z.literal("reviewed-nominal-reference").optional(),
   pricedActiveIds: z.array(z.string()),
   missingActiveIds: z.array(z.string()),
   affectedMarketCapUsd: z.number().nonnegative().nullable(),
@@ -291,6 +296,17 @@ export const ActivePriceCoverageHealthSchema = z.object({
   for (const key of countKeys) {
     if ((coverage.status === "unknown") !== (coverage[key] == null)) {
       ctx.addIssue({ code: "custom", path: [key], message: "Unknown coverage requires null measurements; observed coverage requires measurements" });
+    }
+  }
+  if (coverage.nominalReferenceCount !== undefined || coverage.nominalReferenceIds !== undefined
+    || coverage.nominalReferenceMarketCapUsd !== undefined || coverage.nominalReferenceReason !== undefined) {
+    const ids = coverage.nominalReferenceIds;
+    if (!ids || coverage.nominalReferenceMarketCapUsd === undefined || !coverage.nominalReferenceReason
+      || (coverage.status === "unknown" ? coverage.nominalReferenceCount !== null
+        : coverage.nominalReferenceCount !== ids.length)
+      || new Set(ids).size !== ids.length
+      || ids.some((id) => coverage.pricedActiveIds.includes(id) || coverage.missingActiveIds.includes(id))) {
+      ctx.addIssue({ code: "custom", path: ["nominalReferenceCount"], message: "Nominal reference evidence must be complete and separate from observed and missing assets" });
     }
   }
   if (coverage.status === "unknown" && (coverage.unavailableReason == null || coverage.maxConsecutiveMissingGenerations != null)) {

@@ -2,6 +2,14 @@
 
 Stablecoin metadata is the checked-in source of truth for the asset universe. Use this document when adding, removing, or correcting a stablecoin entry.
 
+> **Agent navigation** — Start at [Registry editing entry](#registry-editing-entry), then read the authoring and admission contracts relevant to the change rather than the whole file.
+
+## Registry editing entry
+
+Read [Editing Rules](#editing-rules) for every catalog change, then [Source Files](#source-files) to locate the owning base row or domain sidecar. [Required Checks](#required-checks) and [Cache Admission](#cache-admission) cover generation and active-asset admission; locating a source file alone is not an authoring checklist.
+
+For native issuance or cross-chain controls, also read [Mint Authority and Bridge Risk ownership](#mint-authority-and-bridge-risk-ownership) and [Mint Authority Review](#mint-authority-review). Use [Documentation Touchpoints](#documentation-touchpoints) for related taxonomy and lifecycle contracts.
+
 ## Source Files
 
 | Surface                                           | Source                                                                                                                                                                                                                                                                                       |

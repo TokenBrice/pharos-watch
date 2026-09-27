@@ -8,7 +8,11 @@ import {
 } from "../../lib/price-validation";
 import type { PeggedAsset, PrimaryPriceResult } from "./enrich-prices-shared";
 import { clearPriceMetadata, stampPriceMetadata } from "./shared";
-import { classifyPrimaryDepegTrust } from "../../lib/depeg-trust-policy";
+import { classifyPrimaryDepegTrust, hasFreshMultiSourcePrimaryAgreement } from "../../lib/depeg-trust-policy";
+import { isPricingSourceProtocolOverride } from "@shared/lib/pricing-source-registry";
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
+import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
+import type { NominalPriceReference } from "@shared/types/core";
 import type { PriceCacheEntry } from "../../lib/db-cache";
 import type { DlListQuote } from "../../lib/primary-price-collector";
 import {
@@ -438,6 +442,48 @@ export function applyConsensusResults(input: {
   }
 }
 
+/**
+ * DEC-02 trusted-market admission. The incumbent wins over a nominal reference
+ * only when the existing trusted-tracked-price gates already admit it — depeg
+ * primary trust `authoritative` or fresh multi-family high-confidence agreement,
+ * the same pair that admits tracked DEX quote legs. Those gates carry the
+ * reviewed freshness (`DEPEG_PRIMARY_PRICE_MAX_AGE_SEC`) and liquidity/authority
+ * admission (registry depeg authority, consensus confidence, venue floors), so
+ * thin, stale, cached, fallback or single aggregator marks never qualify, and
+ * protocol or nominal provenance is never a market quote.
+ */
+export function isTrustedMarketQuote(asset: PeggedAsset, nowSec: number): boolean {
+  if (!hasCurrentAssetPrice(asset)) return false;
+  const sources = normalizePricingSourceKeys([...(asset.agreeSources ?? []), asset.priceSource]);
+  if (sources.some(isPricingSourceProtocolOverride)) return false;
+  return classifyPrimaryDepegTrust(asset, nowSec) === "authoritative" ||
+    hasFreshMultiSourcePrimaryAgreement(asset, nowSec);
+}
+
+/** Publishes par explicitly as a nominal reference: no observation clock, no confidence, no consensus. */
+function publishNominalPriceReference(asset: PeggedAsset, reference: NominalPriceReference, syncStartSec: number): void {
+  asset.price = reference.price;
+  asset.priceSource = reference.source;
+  asset.priceSelectedSource = reference.source;
+  asset.priceConfidence = null;
+  asset.priceObservedAt = null;
+  asset.priceObservedAtMode = "nominal_reference";
+  asset.priceUpdatedAt = null;
+  asset.priceSyncedAt = syncStartSec;
+  asset.consensusSources = [];
+  asset.agreeSources = [];
+  asset.priceSourceConfidenceProfile = null;
+}
+
+/**
+ * Applies protocol-backed live overrides. Nominal par overrides
+ * (`observedAtMode: "nominal_reference"`) never become observed prices: each
+ * sets the asset's `nominalPriceReference`, and the reference is published as
+ * the price only while no trusted market quote is admitted
+ * (`isTrustedMarketQuote`). References and nominal prices are derived from this
+ * pass only: an asset without an accepted nominal override loses any carried
+ * reference and any carried nominal price.
+ */
 export function applyProtocolPriceOverrides(input: {
   assets: PeggedAsset[];
   overrides: Map<string, ProtocolPriceOverride>;
@@ -460,6 +506,8 @@ export function applyProtocolPriceOverrides(input: {
   let appliedCount = 0;
   for (const asset of assets) {
     const override = overrides.get(asset.id);
+    delete asset.nominalPriceReference;
+    if (hasCurrentAssetPrice(asset) && !isObservedPrice(asset)) clearPriceMetadata(asset);
     if (!override) continue;
 
     const decision = validatePrimaryPriceCandidate({
@@ -486,14 +534,24 @@ export function applyProtocolPriceOverrides(input: {
       continue;
     }
 
+    const trustedMarket = isTrustedMarketQuote(asset, syncStartSec);
     if (asset.price != null && asset.price > 0 && override.price > 0) {
       const divergenceBps = relativeBps(override.price, asset.price)!.absBps;
       if (divergenceBps > 100) {
         logWorkerEventArgs("handler", "warn",
-          `[sync] Protocol override for ${asset.symbol} diverges ${divergenceBps}bps from consensus ` +
+          `[sync] Protocol override for ${asset.symbol} diverges ${divergenceBps}bps from ` +
+          `${trustedMarket ? "trusted market quote (market published)" : "consensus"} ` +
           `(override=$${override.price.toFixed(4)}, consensus=$${asset.price.toFixed(4)})`,
         );
       }
+    }
+
+    if (override.observedAtMode === "nominal_reference") {
+      asset.nominalPriceReference = { price: override.price, source: override.source, mode: "nominal_reference" };
+      if (trustedMarket) continue;
+      publishNominalPriceReference(asset, asset.nominalPriceReference, syncStartSec);
+      appliedCount++;
+      continue;
     }
 
     applyAcceptedPriceCandidate({
@@ -513,4 +571,19 @@ export function applyProtocolPriceOverrides(input: {
   }
 
   return appliedCount;
+}
+
+/**
+ * Final DEC-02 precedence after post-enrichment validation and cached fallback:
+ * an asset carrying this run's nominal reference publishes it unless its
+ * current price is still a trusted market quote. A rejected market quote, or a
+ * cached/fallback fill, never displaces par.
+ */
+export function settleNominalPriceReferences(assets: PeggedAsset[], syncStartSec: number): void {
+  for (const asset of assets) {
+    const reference = asset.nominalPriceReference;
+    if (!reference || asset.priceObservedAtMode === "nominal_reference") continue;
+    if (isTrustedMarketQuote(asset, syncStartSec)) continue;
+    publishNominalPriceReference(asset, reference, syncStartSec);
+  }
 }

@@ -3,6 +3,7 @@ import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtim
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { ActivePriceCoverageHealthSchema } from "@shared/types/status/core";
+import { NominalPriceReferenceSchema, type NominalPriceReference } from "@shared/types/core";
 import type {
   ActivePriceCoverageGap,
   ActivePriceCoverageGapAcknowledgement,
@@ -45,6 +46,7 @@ export interface StablecoinPriceCoverageAsset {
   priceObservedAt?: number | null;
   priceObservedAtMode?: string | null;
   priceUpdatedAt?: number | null;
+  nominalPriceReference?: NominalPriceReference | null;
   circulating?: Record<string, number> | null;
 }
 
@@ -70,10 +72,11 @@ export interface StablecoinPriceGapReview {
  * can be unknown. The public reader also represents unavailable current data. */
 export type StablecoinActivePriceCoverage = {
   [Key in Exclude<keyof ActivePriceCoverageHealth,
-    "status" | "observedAt" | "unavailableReason" | "maxConsecutiveMissingGenerations">]-?: NonNullable<ActivePriceCoverageHealth[Key]>;
+    "status" | "observedAt" | "unavailableReason" | "maxConsecutiveMissingGenerations" | "nominalReferenceMarketCapUsd">]-?: NonNullable<ActivePriceCoverageHealth[Key]>;
 } & {
   complete: boolean;
   maxConsecutiveMissingGenerations: ActivePriceCoverageHealth["maxConsecutiveMissingGenerations"];
+  nominalReferenceMarketCapUsd: number | null;
 };
 
 export interface PreviousStablecoinActivePriceCoverage {
@@ -636,6 +639,7 @@ export function evaluateStablecoinActivePriceCoverage(
   }
 
   const pricedActiveIds: string[] = [];
+  const nominalReferenceIds: string[] = [];
   const missingActiveIds: string[] = [];
   const missingActiveAssets: MissingActivePriceDetail[] = [];
   const alertEligibleIds: string[] = [];
@@ -652,6 +656,7 @@ export function evaluateStablecoinActivePriceCoverage(
   );
   let presentActiveCount = 0;
   let affectedMarketCapUsd = 0;
+  let nominalReferenceMarketCapUsd: number | null = 0;
   let maxConsecutiveMissingGenerations: number | null = 0;
 
   for (const stablecoinId of expectedActiveIds) {
@@ -665,6 +670,12 @@ export function evaluateStablecoinActivePriceCoverage(
     }
 
     const marketCapUsd = marketCapOrNull(asset);
+    if (NominalPriceReferenceSchema.safeParse(asset?.nominalPriceReference).success) {
+      nominalReferenceIds.push(stablecoinId);
+      nominalReferenceMarketCapUsd = nominalReferenceMarketCapUsd == null || marketCapUsd == null
+        ? null : nominalReferenceMarketCapUsd + marketCapUsd;
+      continue;
+    }
     if (marketCapUsd != null && marketCapUsd > 0) {
       affectedMarketCapUsd += marketCapUsd;
     }
@@ -716,6 +727,10 @@ export function evaluateStablecoinActivePriceCoverage(
     presentActiveCount,
     pricedActiveCount: pricedActiveIds.length,
     missingPriceCount: missingActiveIds.length,
+    nominalReferenceCount: nominalReferenceIds.length,
+    nominalReferenceMarketCapUsd,
+    nominalReferenceIds,
+    nominalReferenceReason: "reviewed-nominal-reference",
     pricedActiveIds,
     missingActiveIds,
     affectedMarketCapUsd,

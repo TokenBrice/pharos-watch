@@ -339,52 +339,17 @@ describe("authoritative-price-sources", () => {
       },
     );
 
+    // Par is a nominal reference: no runtime observation clock (not even the FX
+    // reference's), no observed-price confidence, never the redemption source key.
     expect(overrides.has("sofid-sofi")).toBe(false);
-    expect(overrides.get("usbd-bima")).toMatchObject({
-      price: 1,
-      source: "protocol-redeem",
-      confidence: "high",
-    });
-    expect(overrides.get("usdq-quill")).toMatchObject({
-      price: 1,
-      source: "protocol-redeem",
-      confidence: "high",
-    });
-    expect(overrides.get("chfau-allunity")).toMatchObject({
-      price: 1.27,
-      source: "protocol-redeem",
-      confidence: "high",
-      observedAt: 1_778_000_000,
-      observedAtMode: "upstream",
-    });
-    expect(overrides.get("cadd-cad-digital")).toMatchObject({
-      price: 0.73,
-      source: "protocol-redeem",
-      confidence: "high",
-      observedAt: 1_778_000_001,
-      observedAtMode: "upstream",
-    });
-    expect(overrides.get("jpym-mento")).toMatchObject({
-      price: 0.00628,
-      source: "protocol-redeem",
-      confidence: "high",
-      observedAt: 1_778_000_002,
-      observedAtMode: "upstream",
-    });
-    expect(overrides.get("zarm-mento")).toMatchObject({
-      price: 0.0608,
-      source: "protocol-redeem",
-      confidence: "high",
-      observedAt: 1_778_000_003,
-      observedAtMode: "upstream",
-    });
-    expect(overrides.get("xofm-mento")).toMatchObject({
-      price: 0.00172,
-      source: "protocol-redeem",
-      confidence: "high",
-      observedAt: 1_778_000_004,
-      observedAtMode: "upstream",
-    });
+    const nominal = { source: "protocol-par", confidence: null, observedAt: null, observedAtMode: "nominal_reference" };
+    expect(overrides.get("usbd-bima")).toEqual({ price: 1, ...nominal });
+    expect(overrides.get("usdq-quill")).toEqual({ price: 1, ...nominal });
+    expect(overrides.get("chfau-allunity")).toEqual({ price: 1.27, ...nominal });
+    expect(overrides.get("cadd-cad-digital")).toEqual({ price: 0.73, ...nominal });
+    expect(overrides.get("jpym-mento")).toEqual({ price: 0.00628, ...nominal });
+    expect(overrides.get("zarm-mento")).toEqual({ price: 0.0608, ...nominal });
+    expect(overrides.get("xofm-mento")).toEqual({ price: 0.00172, ...nominal });
   });
 
   it("skips CHF protocol-par overrides when the FX reference is missing or stale", async () => {
@@ -409,7 +374,7 @@ describe("authoritative-price-sources", () => {
     expect(missing.has("chfau-allunity")).toBe(false);
   });
 
-  it("labels static CHF protocol-par overrides as local fetches", async () => {
+  it("publishes static-FX CHF par as a nominal reference without an observation clock", async () => {
     const overrides = await fetchLiveOverrides(
       [
         asset("chfau-allunity", { circulating: { peggedCHF: 6_300_000 } }),
@@ -423,34 +388,25 @@ describe("authoritative-price-sources", () => {
       },
     );
 
-    expect(overrides.get("chfau-allunity")).toMatchObject({
+    expect(overrides.get("chfau-allunity")).toEqual({
       price: 1.25,
-      source: "protocol-redeem",
-      confidence: "high",
+      source: "protocol-par",
+      confidence: null,
       observedAt: null,
-      observedAtMode: "local_fetch",
+      observedAtMode: "nominal_reference",
     });
   });
 
-  it("does not claim authoritative historical protocol-par coverage for CHF parity", async () => {
+  it.each([
+    ["usbd-bima", "USD"],
+    ["chfau-allunity", "CHF"],
+  ] as const)("never synthesizes par replay history for %s, so replay preserves existing rows", async (id, pegCurrency) => {
     const result = await fetchAuthoritativeHistoricalPriceSeries(
-      makeHistoricalMeta("chfau-allunity", "AllUnity CHF", "CHFAU", {
-        flags: {
-          pegCurrency: "CHF",
-          governance: "centralized",
-          rwa: true,
-        },
-      }),
-      {
-        candidateTimestamps: [1_778_000_000],
-      },
+      makeHistoricalMeta(id, id, id.toUpperCase(), { flags: { pegCurrency, governance: "centralized" } }),
+      { candidateTimestamps: [1_778_000_000, 1_778_086_400] },
     );
 
-    expect(result).toEqual({
-      matched: false,
-      source: null,
-      prices: null,
-    });
+    expect(result).toEqual({ matched: true, source: "protocol-par", prices: null });
   });
 
   it("replays historical iUSD prices through the infiniFi redeem quote", async () => {

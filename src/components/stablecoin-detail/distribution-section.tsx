@@ -288,24 +288,27 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
   const query = useStablecoins();
   const { data: listData, isLoading } = query;
 
-  const { data, total } = useMemo(() => {
+  const { data, total, unavailable } = useMemo(() => {
     const coin = listData?.peggedAssets.find((a) => a.id === stablecoinId);
-    if (!coin?.chainCirculating) return { data: [], total: 0 };
+    if (!coin?.chainCirculating) return { data: [], total: 0, unavailable: false };
 
     const raw: Record<string, number> = {};
+    let unavailable = false;
     for (const [chainId, info] of canonicalizeChainCirculating(coin.chainCirculating)) {
-      // `null` = unavailable chain observation; it is omitted, not drawn as a zero slice.
-      if (info.current != null && info.current > 0) raw[chainId] = info.current;
+      // An unknown balance also makes the full distribution denominator unknown.
+      if (info.current == null) unavailable = true;
+      else if (info.current > 0) raw[chainId] = info.current;
     }
+    if (unavailable) return { data: [], total: 0, unavailable: true };
 
-    return buildDonutData(raw, {
+    return { ...buildDonutData(raw, {
       labelForKey: normalizeChain,
       hexForKey: (key) => CHAIN_HEX[key],
       logoForKey: (key) => {
         const meta = CHAIN_META[key];
         return meta?.logoPath ? { path: meta.logoPath, darkInvert: meta.darkInvert } : null;
       },
-    });
+    }), unavailable: false };
   }, [listData, stablecoinId]);
 
   if (isLoading && !listData) {
@@ -316,7 +319,7 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
     );
   }
 
-  if (query.error && !listData) {
+  if ((query.error && !listData) || unavailable) {
     return (
       <DistributionUnavailableCard
         title={<MethodologyLabel topic="chainHealthConcentration">Supply by Chain</MethodologyLabel>}

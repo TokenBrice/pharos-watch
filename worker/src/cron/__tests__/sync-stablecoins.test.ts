@@ -284,12 +284,12 @@ describe("syncStablecoins", () => {
     expect(published.find((asset) => asset.id === "usdt-tether")?.chainCirculating).toEqual({
       Ethereum: { current: 1_000_000, circulatingPrevDay: 0, circulatingPrevWeek: 0 },
     });
-    // RELEASE A: the public companion keeps the legacy wire value for the unavailable key.
+    // The public companion preserves the canonical unavailable-versus-observed-zero distinction.
     const companion = writes.find((write) => write.key === getResponseReadyCacheKey("stablecoins"));
     const companionBody = (JSON.parse(companion!.value) as { body: string }).body;
     expect(companion!.value).toBe(encodeResponseReadyCacheValue(companionBody, RESPONSE_READY_CACHE_SCHEMA_IDS.stablecoins));
     expect((JSON.parse(companionBody) as { peggedAssets: PeggedAsset[] }).peggedAssets.find((asset) => asset.id === "usdt-tether")?.chainCirculating)
-      .toEqual({ Ethereum: { current: 1_000_000, circulatingPrevDay: 0, circulatingPrevWeek: 0 } });
+      .toEqual({ Ethereum: { current: 1_000_000, circulatingPrevDay: null, circulatingPrevWeek: 0 } });
     expect(result).toMatchObject({ itemCount: 61, productivity: { publications: [expect.objectContaining({ candidateRows: 62, publishedRows: 61 })] } });
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ rowsRead: 68, rowsDropped: 6 });
     expect(vi.mocked(detectDepegEvents).mock.calls[0]?.[1]).toHaveLength(61);

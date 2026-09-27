@@ -1,4 +1,7 @@
 import { computePegScore, type PegScoreResult } from "@shared/lib/peg-score";
+import { DepegAuditVerdictSchema } from "@shared/types/depeg-audit";
+import { isPegScoreExcludedAuditVerdict } from "@shared/lib/depeg-audit";
+import { CanonicalTextSchema, Sha256Schema, UnixSecondsSchema } from "@shared/types/safety-schema-primitives";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
@@ -50,23 +53,11 @@ const VERIFIED_ONLY_OMITTED_CLASSES = [
   "legacy-backfill-unprovenanced",
 ] as const satisfies readonly SafetyScoreV9PegEvidenceClass[];
 
-const CanonicalTextSchema = z
-  .string()
-  .min(1)
-  .refine((value) => value.trim() === value, "Value must not have surrounding whitespace");
-const SafeTimestampSchema = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
+const SafeTimestampSchema = UnixSecondsSchema.max(Number.MAX_SAFE_INTEGER);
 const PositiveSafeIntegerSchema = z.number().int().positive().max(Number.MAX_SAFE_INTEGER);
 const FiniteNumberSchema = z.number().finite();
 const PositiveFiniteNumberSchema = FiniteNumberSchema.positive();
-const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
 const ConfidenceTierSchema = z.enum(["high", "medium", "low"]);
-const AuditVerdictSchema = z.enum([
-  "confirmed",
-  "disputed",
-  "false_positive",
-  "no_data",
-  "repaired",
-]);
 
 const PegEventProvenanceSchema = z
   .object({
@@ -80,7 +71,7 @@ const PegEventProvenanceSchema = z
     confirmationPolicy: CanonicalTextSchema.nullable().optional().default(null),
     confirmationPointCount: z.number().int().nonnegative().nullable().optional().default(null),
     confidenceTier: ConfidenceTierSchema.nullable().optional().default(null),
-    auditVerdict: AuditVerdictSchema.nullable().optional().default(null),
+    auditVerdict: DepegAuditVerdictSchema.nullable().optional().default(null),
     pegScoreEligible: z.boolean().nullable().optional().default(null),
     updatedAt: SafeTimestampSchema.nullable().optional().default(null),
   })
@@ -495,9 +486,7 @@ function assertEventProvenance(event: CanonicalPegEvent, clockSec: number): void
     );
   }
 
-  const excludedByAudit =
-    provenance.auditVerdict === "false_positive" ||
-    provenance.auditVerdict === "disputed";
+  const excludedByAudit = isPegScoreExcludedAuditVerdict(provenance.auditVerdict);
   if (provenance.pegScoreEligible === excludedByAudit) {
     throw new Error(
       `[safety-score-v9-peg-provenance] ${eventLabel(event)} has contradictory peg-score eligibility`,
@@ -558,10 +547,7 @@ function assertEventProvenance(event: CanonicalPegEvent, clockSec: number): void
 
 function classifyEvent(event: CanonicalPegEvent): SafetyScoreV9PegEvidenceClass {
   const provenance = event.provenance;
-  if (
-    provenance?.auditVerdict === "false_positive" ||
-    provenance?.auditVerdict === "disputed"
-  ) {
+  if (isPegScoreExcludedAuditVerdict(provenance?.auditVerdict)) {
     return "audit-excluded";
   }
   if (provenance?.confidenceTier != null) {

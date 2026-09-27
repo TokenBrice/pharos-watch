@@ -1,15 +1,19 @@
-import type { PriceObservedAtMode, StablecoinMeta } from "@shared/types/core";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import type { PriceValidationReferences } from "../price-validation";
-import {
-  normalizeHistoricalTimestamps,
-  PROTOCOL_REDEEM_SOURCE,
-  type CurrentPriceOverride,
-  type HistoricalPriceContext,
-  type HistoricalPricePoint,
-  type LivePriceContext,
-  type PriceSourceProvider,
+import type {
+  CurrentPriceOverride,
+  HistoricalPricePoint,
+  LivePriceContext,
+  PriceSourceProvider,
 } from "./helpers";
+
+/**
+ * Registry key for the nominal par reference (DEC-02 / CR-43). Par is a reviewed
+ * constant, not a runtime redemption read: overrides carry no observation clock,
+ * no confidence and `observedAtMode: "nominal_reference"`, and the sync decides
+ * whether a trusted market quote takes precedence over it.
+ */
+const PROTOCOL_PAR_SOURCE = "protocol-par";
 
 const SOFID_SOFI_ID = "sofid-sofi";
 const CHFAU_ALLUNITY_ID = "chfau-allunity";
@@ -50,36 +54,24 @@ function getReferenceType(
 function getProtocolParPrice(
   config: ProtocolParConfig,
   references: PriceValidationReferences | undefined,
-): { price: number; observedAt: number | null; observedAtMode: PriceObservedAtMode } | null {
-  if (config.pegType === "peggedUSD") {
-    return {
-      price: 1,
-      observedAt: null,
-      observedAtMode: "local_fetch",
-    };
-  }
+): number | null {
+  if (config.pegType === "peggedUSD") return 1;
 
+  // Non-USD par is only expressible in USD through a usable FX reference; the
+  // reference's own clock is FX provenance, not an observation of this token.
   const referenceType = getReferenceType(references, config.pegType);
   if (referenceType !== "fresh" && referenceType !== "static") return null;
 
   const rate = references?.rates[config.pegType];
   if (typeof rate !== "number" || !Number.isFinite(rate) || rate <= 0) return null;
-
-  return {
-    price: rate,
-    observedAt: references?.updatedAtByPeg?.[config.pegType] ?? references?.updatedAt ?? null,
-    observedAtMode: referenceType === "fresh" ? "upstream" : "local_fetch",
-  };
+  return rate;
 }
 
 export const protocolParProvider: PriceSourceProvider = {
-  source: PROTOCOL_REDEEM_SOURCE,
+  source: PROTOCOL_PAR_SOURCE,
   livePriority: 0,
   matches(stablecoinId: string): boolean {
     return PROTOCOL_PAR_PRICE_CONFIGS_BY_ID.has(stablecoinId);
-  },
-  matchesHistoricalPrices(stablecoinId: string): boolean {
-    return PROTOCOL_PAR_PRICE_CONFIGS_BY_ID.get(stablecoinId)?.pegType === "peggedUSD";
   },
   async fetchLivePrice(
     asset: PeggedAsset,
@@ -88,25 +80,21 @@ export const protocolParProvider: PriceSourceProvider = {
     const config = PROTOCOL_PAR_PRICE_CONFIGS_BY_ID.get(asset.id);
     if (!config) return null;
 
-    const resolved = getProtocolParPrice(config, context.validationReferences);
-    if (!resolved) return null;
+    const price = getProtocolParPrice(config, context.validationReferences);
+    if (price == null) return null;
 
     return {
-      price: resolved.price,
-      source: PROTOCOL_REDEEM_SOURCE,
-      confidence: "high",
-      observedAt: resolved.observedAt,
-      observedAtMode: resolved.observedAtMode,
+      price,
+      source: PROTOCOL_PAR_SOURCE,
+      confidence: null,
+      observedAt: null,
+      observedAtMode: "nominal_reference",
     };
   },
-  async fetchHistoricalPrices(
-    meta: StablecoinMeta,
-    context: HistoricalPriceContext,
-  ): Promise<HistoricalPricePoint[] | null> {
-    const config = PROTOCOL_PAR_PRICE_CONFIGS_BY_ID.get(meta.id);
-    if (!config || config.pegType !== "peggedUSD") return null;
-
-    const timestamps = normalizeHistoricalTimestamps(context.candidateTimestamps);
-    return timestamps.map((timestamp) => ({ timestamp, price: 1 }));
+  // Nominal par has no observed history. Matching every route with an empty
+  // series makes depeg replay preserve existing rows instead of synthesizing
+  // par points or replaying unadmitted market history.
+  async fetchHistoricalPrices(): Promise<HistoricalPricePoint[] | null> {
+    return null;
   },
 };

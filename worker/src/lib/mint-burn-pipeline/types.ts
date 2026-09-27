@@ -39,8 +39,17 @@ export interface MintBurnPriceHistoryPoint {
   price: number;
 }
 
+/** One `price_cache` row projected for event-time admission (see `context.ts`). */
+export interface MintBurnPriceObservation {
+  price: number;
+  /** Actual observation clock (`observed_at`, else the writer's effective `updated_at`). */
+  observedAt: number;
+  source: string | null;
+  observedAtMode: string | null;
+}
+
 export interface MintBurnPriceContext {
-  prices: Map<string, number>;
+  priceObservations: Map<string, MintBurnPriceObservation>;
   priceHistory: Map<string, MintBurnPriceHistoryPoint[]>;
 }
 

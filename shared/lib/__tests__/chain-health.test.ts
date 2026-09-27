@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   computeConcentrationScore,
   computeBackingDiversityScore,
-  computePegStabilityScore,
+  assessPegStability,
   computeQualityScore,
   computeChainEnvironmentAssessment,
   computeHealthScore,
@@ -86,40 +86,49 @@ describe("computeBackingDiversityScore", () => {
   });
 });
 
-describe("computePegStabilityScore", () => {
-  it("returns 100 for perfect peg", () => {
-    const coins = [{ price: 1.0, pegRef: 1.0, supplyUsd: 1_000_000 }];
-    expect(computePegStabilityScore(coins)).toBe(100);
+describe("assessPegStability", () => {
+  it("preserves perfect peg and observed depeg zero", () => {
+    expect(assessPegStability([{ price: 1, pegRef: 1, supplyUsd: 100 }]).score).toBe(100);
+    expect(assessPegStability([{ price: 0.94, pegRef: 1, supplyUsd: 100 }]).score).toBe(0);
   });
 
-  it("returns 0 when deviation exceeds 500 bps", () => {
-    const coins = [{ price: 0.94, pegRef: 1.0, supplyUsd: 1_000_000 }];
-    expect(computePegStabilityScore(coins)).toBe(0);
+  it("supply-weights fully observed coins", () => {
+    const result = assessPegStability([
+      { price: 1, pegRef: 1, supplyUsd: 900 },
+      { price: 0.97, pegRef: 1, supplyUsd: 100 },
+    ]);
+    expect(result.score).toBe(94);
+    expect(result.coverage.status).toBe("complete");
   });
 
-  it("returns 50 for no-price coins", () => {
-    const coins = [{ price: null as number | null, pegRef: 1.0, supplyUsd: 1_000_000 }];
-    expect(computePegStabilityScore(coins)).toBe(50);
+  it("withholds absent evidence instead of imputing a neutral score", () => {
+    for (const coins of [
+      [],
+      [{ price: null, pegRef: 1, supplyUsd: 100 }],
+      [{ price: 1, pegRef: 0, supplyUsd: 100 }],
+      [{ price: 1, pegRef: null, supplyUsd: 100 }],
+      [{ price: 1, pegRef: 1, supplyUsd: 0 }],
+    ]) {
+      expect(assessPegStability(coins)).toMatchObject({
+        score: null,
+        coverage: { status: "unavailable", observedScore: null, neutralImputedSupplyUsd: 0 },
+      });
+    }
   });
 
-  it("supply-weights multiple coins", () => {
-    const coins = [
-      { price: 1.0, pegRef: 1.0, supplyUsd: 900_000 },
-      { price: 0.97, pegRef: 1.0, supplyUsd: 100_000 },
-    ];
-    const score = computePegStabilityScore(coins);
-    // 90% weight at 100, 10% weight at 40 => 94
-    expect(score).toBe(94);
-  });
-  it("ignores nonpositive supply and treats unusable references neutrally", () => {
-    expect(computePegStabilityScore([
-      { price: 1, pegRef: 1, supplyUsd: 100 },
+  it("publishes only the observed factor while retaining missing supply in coverage", () => {
+    expect(assessPegStability([
+      { price: 0.97, pegRef: 1, supplyUsd: 100 },
+      { price: null, pegRef: 1, supplyUsd: 200 },
+      { price: 1, pegRef: null, supplyUsd: 100 },
       { price: 0.5, pegRef: 1, supplyUsd: -100 },
-      { price: 0.5, pegRef: 1, supplyUsd: 0 },
-    ])).toBe(100);
-    expect(computePegStabilityScore([{ price: 1, pegRef: 0, supplyUsd: 100 }])).toBe(50);
-    expect(computePegStabilityScore([{ price: 1, pegRef: 1, supplyUsd: 0 }])).toBe(50);
-    expect(computePegStabilityScore([])).toBe(50);
+    ])).toMatchObject({
+      score: 40,
+      coverage: {
+        status: "partial", coverage: 0.25, observedSupplyUsd: 100, eligibleSupplyUsd: 400,
+        noUsablePriceSupplyUsd: 200, noPegReferenceSupplyUsd: 100, neutralImputedSupplyUsd: 0,
+      },
+    });
   });
 });
 
@@ -234,7 +243,7 @@ describe("computeHealthScore", () => {
       concentration: 60,
       pegStability: 90,
       backingDiversity: 40,
-    });
+    }, "complete");
     // 0.30*80 + 0.20*60 + 0.20*60 + 0.20*90 + 0.10*40 = 24+12+12+18+4 = 70
     expect(score).toBe(70);
   });
@@ -246,7 +255,7 @@ describe("computeHealthScore", () => {
       concentration: 60,
       pegStability: 90,
       backingDiversity: 40,
-    })).toBeNull();
+    }, "complete")).toBeNull();
   });
 
   it("returns null when the peg factor is not rated rather than imputing it", () => {
@@ -256,13 +265,19 @@ describe("computeHealthScore", () => {
       concentration: 60,
       pegStability: null,
       backingDiversity: 40,
-    })).toBeNull();
+    }, "unavailable")).toBeNull();
+  });
+
+  it("withholds the composite even for almost-complete peg coverage", () => {
+    expect(computeHealthScore({
+      quality: 100, chainEnvironment: 100, concentration: 100, pegStability: 100, backingDiversity: 100,
+    }, "partial")).toBeNull();
   });
 
   it("tier 1 chains score higher than tier 3", () => {
     const base = { quality: 70, concentration: 50, pegStability: 90, backingDiversity: 30 };
-    const tier1Score = computeHealthScore({ ...base, chainEnvironment: CHAIN_ENVIRONMENT_SCORES[1] })!;
-    const tier3Score = computeHealthScore({ ...base, chainEnvironment: CHAIN_ENVIRONMENT_SCORES[3] })!;
+    const tier1Score = computeHealthScore({ ...base, chainEnvironment: CHAIN_ENVIRONMENT_SCORES[1] }, "complete")!;
+    const tier3Score = computeHealthScore({ ...base, chainEnvironment: CHAIN_ENVIRONMENT_SCORES[3] }, "complete")!;
     expect(tier1Score).toBeGreaterThan(tier3Score);
     // 20% weight * (100 - 20) = 16 point difference
     expect(tier1Score - tier3Score).toBe(16);

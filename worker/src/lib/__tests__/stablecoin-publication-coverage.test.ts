@@ -81,6 +81,23 @@ describe("evaluateStablecoinPublicationCoverage", () => {
 });
 
 describe("evaluateStablecoinActivePriceCoverage", () => {
+  it("keeps nominal market-cap availability distinct from zero and missing prices", () => {
+    const reference = { price: 1, source: "protocol-par", mode: "nominal_reference" as const };
+    const circulatingCases: Array<Record<string, number> | undefined> = [undefined, {}, { peggedUSD: 0 }, { peggedUSD: 125 }];
+    for (const circulating of circulatingCases) {
+      const coverage = evaluateStablecoinActivePriceCoverage([{
+        id: "nominal", price: 1, priceObservedAtMode: "nominal_reference" as const,
+        nominalPriceReference: reference, circulating,
+      }], ["nominal"]);
+      expect(coverage).toMatchObject({
+        complete: true, pricedActiveCount: 0, missingPriceCount: 0,
+        nominalReferenceCount: 1, nominalReferenceIds: ["nominal"],
+        nominalReferenceMarketCapUsd: circulating?.peggedUSD ?? null,
+        nominalReferenceReason: "reviewed-nominal-reference",
+        alertEligibleCount: 0, maxConsecutiveMissingGenerations: 0,
+      });
+    }
+  });
   it("reports missing prices independently from complete row coverage", () => {
     const coverage = evaluateStablecoinActivePriceCoverage([
       {

@@ -153,8 +153,15 @@ export function MintBurnFlowMethodologySection() {
                     <li>
                       <span className="text-foreground">Valuation completeness</span> &mdash; events without a USD price
                       are counted as unpriced, never as $0. Known mint and burn totals are then lower bounds, and a signed
-                      net is not a bound: a direction is shown only when missing valuation cannot flip it, otherwise it is
-                      unavailable. Buckets aggregated before v6.22 read as coverage unknown.
+                      net is not a bound: a partial window publishes no net, and a direction is shown only when missing
+                      valuation cannot flip it. Buckets aggregated before v6.22 read as coverage unknown and keep their
+                      old-method net, labelled, until they leave the 30-day baseline and 7/30/90-day windows.
+                    </li>
+                    <li>
+                      <span className="text-foreground">Event-time pricing</span> &mdash; an event is valued only with a
+                      replay-safe, plausible price observed within &plusmn;24 hours of the event (inclusive): the event
+                      day&apos;s supply snapshot or a cached observation stamped with its own observation time. A
+                      current price is never applied to an old event; without such evidence the event stays unpriced.
                     </li>
                   </ul>
                 </div>
@@ -185,6 +192,10 @@ export function MintBurnFlowMethodologySection() {
                     <li>
                       <span className="text-foreground">Activity gate</span> &mdash; windows with no 24h mint/burn activity
                       or less than $50K absolute 24h flow are marked NR and excluded from gauge weighting
+                    </li>
+                    <li>
+                      <span className="text-foreground">Valuation gate</span> &mdash; pressure is NR, and the coin leaves
+                      gauge weighting, unless the 24h window is fully valued and the baseline has no unpriced events
                     </li>
                     <li>
                       <span className="text-foreground">Ingestion safety</span> &mdash; sync state advances only to the

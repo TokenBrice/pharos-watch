@@ -1,6 +1,7 @@
 import { logWorkerEvent, logWorkerEventArgs } from "./structured-log";
 import { MAX_OPEN_DEPEG_EVENTS } from "./constants";
 import { DEX_PROTOCOL_SOURCE_FRESHNESS_SEC } from "@shared/lib/depeg-config";
+import { DepegAuditVerdictSchema } from "@shared/types/depeg-audit";
 import {
   DEPEG_EVENT_CLOSE_REASON_VALUES,
   type DepegEvent,
@@ -423,13 +424,21 @@ export function rowToDepegEvent(row: DepegRow): DepegEvent {
       provenance = null;
     }
   }
+  // Validate outside the JSON-syntax catch: unknown archived evidence must not
+  // become a null verdict and silently regain score eligibility.
+  if (provenance?.auditVerdict != null) {
+    DepegAuditVerdictSchema.parse(provenance.auditVerdict);
+  }
+  if (row.provenance_audit_verdict != null) {
+    DepegAuditVerdictSchema.parse(row.provenance_audit_verdict);
+  }
   if (
     provenance == null &&
     (row.provenance_confidence_tier || row.provenance_audit_verdict || row.provenance_replay_run_id || row.provenance_replay_version)
   ) {
     provenance = {
       confidenceTier: row.provenance_confidence_tier ?? null,
-      auditVerdict: row.provenance_audit_verdict ?? null,
+      auditVerdict: DepegAuditVerdictSchema.nullable().parse(row.provenance_audit_verdict ?? null),
       replayRunId: row.provenance_replay_run_id ?? null,
       replayVersion: row.provenance_replay_version ?? null,
     };

@@ -11,10 +11,10 @@ type PricingSourcePreset = Omit<PricingSourceRegistryEntry, RequiredPricingSourc
 type PricingSourceInput = Pick<PricingSourceRegistryEntry, RequiredPricingSourceFields>
   & Partial<Omit<PricingSourceRegistryEntry, RequiredPricingSourceFields>>;
 
-export function definePricingSource(
+export function definePricingSource<const T extends PricingSourceInput>(
   preset: PricingSourcePreset,
-  input: PricingSourceInput,
-): PricingSourceRegistryEntry {
+  input: T,
+): PricingSourceRegistryEntry & T {
   return { ...preset, ...input };
 }
 
@@ -116,5 +116,20 @@ export const PRICING_SOURCE_PRESETS = {
     requiresObservedAt: true,
     isSearchDerived: false,
     defaultObservedAtMode: null,
+  },
+  /** Reviewed nominal values (protocol par): never observed, replayed, or depeg-authoritative. */
+  nominalReference: {
+    trustTier: "nominal_reference",
+    freshnessKind: "unknown",
+    isSoftSource: false,
+    isReplaySafe: false,
+    isPoolChallengeExempt: true,
+    isGtProbeEligible: false,
+    canBeDepegAuthoritative: false,
+    canSingleSourceDepegAuthoritative: false,
+    supportsUpstreamObservedAt: false,
+    requiresObservedAt: false,
+    isSearchDerived: false,
+    defaultObservedAtMode: "nominal_reference",
   },
 } as const satisfies Record<string, PricingSourcePreset>;

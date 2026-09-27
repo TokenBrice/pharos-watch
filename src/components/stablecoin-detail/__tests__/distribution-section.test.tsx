@@ -39,6 +39,24 @@ it("keeps both distribution modules visible as unavailable when their sources fa
   expect(screen.getByText(/DEX distribution data is temporarily unavailable/)).toBeTruthy();
 });
 
+it.each([null, 100])("renders unavailable rather than a distribution with an unknown chain balance (peer %s)", (current) => {
+  useStablecoinsMock.mockReturnValue({
+    data: { peggedAssets: [{
+      id: "usdc-circle",
+      chainCirculating: { Ethereum: { current: null }, Base: { current } },
+    }] },
+    isLoading: false, error: null, dataUpdatedAt: Date.now(), refetch: vi.fn(),
+  });
+  useDexLiquidityMock.mockReturnValue({
+    data: {}, isLoading: false, error: null, dataUpdatedAt: Date.now(), refetch: vi.fn(),
+  });
+
+  render(<DistributionSection stablecoinId="usdc-circle" />);
+
+  expect(screen.getByRole("alert")).toBeTruthy();
+  expect(screen.queryByRole("figure")).toBeNull();
+});
+
 it("states a single-category distribution as a figure rather than a one-color ring", () => {
   useStablecoinsMock.mockReturnValue({
     data: {
@@ -106,7 +124,7 @@ it("keeps a chain at exactly the Other threshold as its own slice", () => {
   expect(screen.getAllByText("2%")).toHaveLength(2);
 });
 
-it("excludes zero and negative chain balances from the distribution denominator", () => {
+it("preserves observed positive shares alongside an explicit zero chain balance", () => {
   useStablecoinsMock.mockReturnValue({
     data: {
       peggedAssets: [
@@ -116,7 +134,6 @@ it("excludes zero and negative chain balances from the distribution denominator"
             Ethereum: { current: 60_000 },
             Base: { current: 40_000 },
             Solana: { current: 0 },
-            Tron: { current: -50_000 },
           },
         },
       ],
@@ -136,12 +153,10 @@ it("excludes zero and negative chain balances from the distribution denominator"
 
   render(<DistributionSection stablecoinId="usdc-circle" />);
 
-  // A polluted denominator would push these shares past 100%.
   expect(screen.getByRole("figure", { name: "Circulating supply distribution across 2 chains" })).toBeTruthy();
   expect(screen.getByText("60%")).toBeTruthy();
   expect(screen.getByText("40%")).toBeTruthy();
   expect(screen.queryByText("Solana")).toBeNull();
-  expect(screen.queryByText("Tron")).toBeNull();
   expect(screen.queryByText("Other")).toBeNull();
 });
 

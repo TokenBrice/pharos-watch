@@ -59,6 +59,7 @@ import {
   applyProtocolPriceOverrides,
   getPostEnrichmentCandidatePricesForCurrentAsset,
   recordProtocolPriceOverridePublicationRejection,
+  settleNominalPriceReferences,
   type ProtocolPriceOverride,
 } from "./pricing";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
@@ -292,6 +293,8 @@ export async function runPostEnrichmentPricePipeline(
     }
 
     if (asset.price == null || typeof asset.price !== "number") continue;
+    // Nominal par was validated when applied and carries no observation clock to age.
+    if (asset.priceObservedAtMode === "nominal_reference") continue;
 
     const decision = validatePublishedAssetPrice({
       asset,
@@ -507,6 +510,7 @@ export async function runSharedPriceCompletion(
     authoritativeOverrideStats,
   }, abortStagePrefix);
   if (isAbortResult(priceResult)) return priceResult;
+  settleNominalPriceReferences(input.assets, input.syncStartSec);
 
   return {
     authoritativeOverrideCount,

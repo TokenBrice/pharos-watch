@@ -3,6 +3,7 @@ import type { StatusHealthValue } from "./core";
 import { ActivePriceCoverageHealthSchema, StablecoinPublicationHealthSchema, StatusHealthValueSchema } from "./core";
 import { AlertBrokerHealthSummarySchema } from "./operational";
 import { CacheStatusSchema } from "./schema-primitives";
+import { FreshnessStatusSchema } from "../api-meta";
 import {
   RESERVE_ALERT_SOURCE_STATE_VALUES,
   SAFETY_ALERT_SOURCE_STATE_VALUES,
@@ -97,7 +98,7 @@ export const HealthResponseSchema = z.object({
     queryErrors: MintBurnHealthQueryErrorsSchema.optional(),
     sync: z.object({
       lastSuccessfulSyncAt: z.number().nullable(),
-      freshnessStatus: z.enum(["fresh", "degraded", "stale"]),
+      freshnessStatus: FreshnessStatusSchema,
       warning: z.string().nullable(),
       criticalLaneHealthy: z.boolean(),
     }),

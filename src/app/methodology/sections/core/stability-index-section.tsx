@@ -224,7 +224,8 @@ export function StabilityIndexMethodologySection() {
             <li>
               <span className="text-foreground font-medium">Daily provenance:</span> daily scores average all samples,
               including methodology transitions, with the version breakdown and component sample counts disclosed.
-              Missing component values display as unavailable chart gaps, not measured zero.
+              All-null components are stored as null and display as unavailable chart gaps; observed zero stays zero.
+              Partially observed components average their observed samples and disclose the count.
             </li>
             <li>
               <span className="text-foreground font-medium">Historical rebuild parity:</span> completed-day backfills

@@ -30,7 +30,7 @@ The `agent:route` alias invokes `scripts/ci/pharos-change-contract.ts`. Its `--f
 
 Routing rejects unknown options, missing values, invalid hook modes, and failed Git selections instead of reporting an empty successful contract. Git-based selection retains deletions and both sides of renames; commands that require existing files filter those paths only when executing. Ordinary text and JSON output include every required doc, check, and rule; SessionStart remains a bounded hint and explicitly reports unavailable Git evidence.
 
-Single-path `Read first` is capped at six entries; overflow remains in `Also relevant`. Domain mappings for reserves, yield, route contracts, and compliance add ownership and rules without adding broad test trees. The reviewed mapping cap is 29 (DEC-14); maintain the one registry rather than introducing another source inventory. Newly routed primary sections must remain at most 25 KB, measured from their heading through the next heading of the same or higher level.
+Single-path `Read first` is capped at six entries; overflow remains in `Also relevant`. Domain mappings for reserves, yield, route contracts, and compliance add ownership and rules without adding broad test trees. The reviewed mapping cap is 29 (DEC-14); maintain the one registry rather than introducing another source inventory. Primary Markdown sections must remain at most 25 KB, measured in UTF-8 bytes from their heading through the next heading of the same or higher level (or the entire file for unanchored references). The registry test retains explicit byte ceilings for legacy oversized sections: these exceptions must shrink, never grow, and must be removed when a section fits the budget or is no longer routed as primary. New domain owners cannot use legacy exceptions.
 
 Use `--staged` when the intended change is staged but not committed. The command reports:
 
@@ -100,4 +100,4 @@ The pre-commit hook may regenerate and stage registered artifacts marked `autoSt
 
 ## 9. Methodology Changes
 
-Methodology history is structured under `shared/data/methodology-changelogs/` and rendered by the public `/methodology/*-changelog/` routes. ADR-3 in [`architecture.md`](../architecture.md#architectural-decision-records) lists every target a methodology change must update. Do not create a second Markdown timeline. Methodology versions increase numerically: after `v5.9`, use `v5.91` or `v6.0`, not `v5.10`.
+Methodology history is structured under `shared/data/methodology-changelogs/` and rendered by the public `/methodology/*-changelog/` routes. [ADR-3](../architecture.md#adr-3) lists every target a methodology change must update. Do not create a second Markdown timeline. Methodology versions increase numerically: after `v5.9`, use `v5.91` or `v6.0`, not `v5.10`.

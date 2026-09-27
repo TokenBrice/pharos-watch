@@ -5,13 +5,19 @@ import { errorResponse } from "../lib/api-response";
 import { getLatestSuccessfulCronTimestampResult } from "../lib/api-freshness";
 import { buildMintBurnScope, getMintBurnConfigsForStablecoin } from "../lib/mint-burn-contracts";
 import { buildMintBurnSyncHealth } from "../lib/mint-burn-health-config";
-import { computeGaugeScore, detectFlightToQuality, getGaugeBand } from "../lib/mint-burn-scoring";
+import {
+  computeGaugeScore,
+  detectFlightToQualityFromValuedNets,
+  getGaugeBand,
+  type ValuedNetFlow24h,
+} from "../lib/mint-burn-scoring";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import type { StablecoinData } from "@shared/types/market";
 import { MintBurnFlowsResponseSchema } from "@shared/types/mint-burn";
 import {
   addMintBurnValuationTally,
   emptyMintBurnValuationTally,
+  resolveMintBurnValuation,
   summarizeMintBurnValuation,
 } from "@shared/lib/mint-burn-valuation";
 import { MINT_BURN_HOURLY_BUCKET_COLUMNS_SQL } from "../lib/mint-burn-hourly-valuation";
@@ -148,11 +154,9 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
   const {
     coins,
     gaugeInputs,
-    safeNet24h,
-    riskyNet24h,
+    flightToQuality,
     trackedMcapUsd,
     mcapUnavailableCoins,
-    partialValuationInputs,
   } = buildCoinSummaries(
     data,
     mcapById,
@@ -161,33 +165,38 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
 
   const gaugeScore = computeGaugeScore(gaugeInputs);
   const gaugeBand = gaugeScore !== null ? getGaugeBand(gaugeScore) : null;
-  const ftq = detectFlightToQuality({ safeNet24h, riskyNet24h });
   const hourly = buildHourlyFlowSeries(data.hourlyRows);
   const updatedAt = resolveFlowUpdatedAt(data.hourlyRows, nowSec);
   // Per-chain 24h net flow over the same tracked-pair universe as `coins`, so
   // consumers of the published payload (daily digest) never re-derive a chain
-  // breakdown from a different universe.
+  // breakdown from a different universe. A partial chain net is unavailable and
+  // sorts after every published net.
   const chains = [...aggregateHourlyRowsByChain(data.hourly24hRows).entries()]
-    .map(([chainId, aggregate]) => ({
-      chainId,
-      netFlow24hUsd: aggregate.netFlow,
-      valuation: summarizeMintBurnValuation(aggregate.valuation).completeness,
-    }))
-    .sort((a, b) => Math.abs(b.netFlow24hUsd) - Math.abs(a.netFlow24hUsd));
+    .map(([chainId, aggregate]) => {
+      const valuation = summarizeMintBurnValuation(aggregate.valuation).completeness;
+      return { chainId, netFlow24hUsd: valuation === "partial" ? null : aggregate.netFlow, valuation };
+    })
+    .sort((a, b) => {
+      if (a.netFlow24hUsd === null || b.netFlow24hUsd === null) {
+        return Number(a.netFlow24hUsd === null) - Number(b.netFlow24hUsd === null);
+      }
+      return Math.abs(b.netFlow24hUsd) - Math.abs(a.netFlow24hUsd);
+    });
 
   const body = {
     gauge: {
       score: gaugeScore,
       band: gaugeBand,
       intensitySemantics: "signed-v2",
-      flightToQuality: ftq.active,
-      flightIntensity: ftq.intensity,
+      flightToQuality: flightToQuality?.active ?? null,
+      flightIntensity: flightToQuality?.intensity ?? null,
       classificationSource,
       safetyScoreIdentity,
       trackedCoins: coins.length,
       trackedMcapUsd,
       mcapUnavailableCoins,
-      partialValuationInputs,
+      // Partial inputs are withheld from pressure, so none enters `score`.
+      partialValuationInputs: 0,
     },
     coins,
     chains,
@@ -268,22 +277,19 @@ async function reconcileCachedAggregateSafetyResponse(
           if (reason === "identity-mismatch" && current.kind === "ok") {
             const coins = MintBurnFlowsResponseSchema.shape.coins.safeParse(payload.coins);
             if (coins.success) {
-              let safeNet24h = 0;
-              let riskyNet24h = 0;
-              // A null classified net (valuation-gated payload) leaves FTQ undecidable here.
-              let unresolvedNet = false;
+              // Same valuation rule as the producer: a cached coin without `valuation`
+              // predates completeness and reads as `unknown`, never complete.
+              const safe: ValuedNetFlow24h[] = [];
+              const risky: ValuedNetFlow24h[] = [];
               for (const coin of coins.data) {
-                const isSafe = current.classification.safeIds.has(coin.stablecoinId);
-                if (!isSafe && !current.classification.riskyIds.has(coin.stablecoinId)) continue;
-                if (coin.netFlow24hUsd === null) {
-                  unresolvedNet = true;
-                } else if (isSafe) {
-                  safeNet24h += coin.netFlow24hUsd;
-                } else {
-                  riskyNet24h += coin.netFlow24hUsd;
-                }
+                const flow = {
+                  knownNetUsd: coin.netFlow24hUsd,
+                  valuation: resolveMintBurnValuation(coin.valuation?.window24h),
+                };
+                if (current.classification.safeIds.has(coin.stablecoinId)) safe.push(flow);
+                else if (current.classification.riskyIds.has(coin.stablecoinId)) risky.push(flow);
               }
-              const ftq = unresolvedNet ? null : detectFlightToQuality({ safeNet24h, riskyNet24h });
+              const ftq = detectFlightToQualityFromValuedNets({ safe, risky });
               return cloneResponse(fallback, {
                 body: JSON.stringify({
                   ...payload,
@@ -402,15 +408,19 @@ async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number
     // Per-chain breakdown
     const chainMap = aggregateHourlyRowsByChain(rows);
 
-    const chains = [...chainMap.entries()].map(([chainId, v]) => ({
-      chainId,
-      mintVolumeUsd: v.mintVolume,
-      burnVolumeUsd: v.burnVolume,
-      mintCount: v.mintCount,
-      burnCount: v.burnCount,
-      netFlowUsd: v.netFlow,
-      valuation: summarizeMintBurnValuation(v.valuation),
-    }));
+    // Signed nets of a partial window are unavailable; volumes stay known subtotals.
+    const chains = [...chainMap.entries()].map(([chainId, v]) => {
+      const valuation = summarizeMintBurnValuation(v.valuation);
+      return {
+        chainId,
+        mintVolumeUsd: v.mintVolume,
+        burnVolumeUsd: v.burnVolume,
+        mintCount: v.mintCount,
+        burnCount: v.burnCount,
+        netFlowUsd: valuation.completeness === "partial" ? null : v.netFlow,
+        valuation,
+      };
+    });
 
     const hourly = buildHourlyFlowSeries(rows);
 
@@ -429,18 +439,19 @@ async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number
     }
 
     const updatedAt = resolveFlowUpdatedAt(rows, nowSec);
+    const valuation = summarizeMintBurnValuation(totalValuation);
 
     const body = {
       stablecoinId,
       symbol,
       mintVolumeUsd: totalMint,
       burnVolumeUsd: totalBurn,
-      netFlowUsd: totalMint - totalBurn,
+      netFlowUsd: valuation.completeness === "partial" ? null : totalMint - totalBurn,
       mintCount: totalMintCount,
       burnCount: totalBurnCount,
       chains,
       hourly,
-      valuation: summarizeMintBurnValuation(totalValuation),
+      valuation,
       updatedAt,
       windowHours: hours,
       scope: {

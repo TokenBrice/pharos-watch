@@ -113,21 +113,41 @@ describe("doc-ownership registry integrity", () => {
       if (bounded) expect(reference.anchor, `${path} requires a bounded anchor`).toBeTruthy();
     }
   });
-  it("bounds newly routed domain sections without growing their check suites", () => {
+  it("keeps primary Markdown sections within 25KB and ratchets legacy exceptions", () => {
+    // Existing out-of-scope sections only. Remove entries once bounded; new
+    // primary sections must stay within 25KB.
+    const legacySectionCeilings: Record<string, number> = {
+      "docs/supply-snapshot.md#supply-pipeline": 36_670,
+      // Release B adds nullable flow/supply/PSI, nominal-price, and audit-verdict
+      // wire contracts to this existing generated catalogue; retain its ratchet.
+      "docs/api-reference.md#public-endpoints": 45_451,
+      "docs/telegram-alerts.md#commands": 33_389,
+      "docs/telegram-mini-app.md": 44_446,
+      "docs/worker-infrastructure.md#shared-database-helpers": 25_871,
+      "docs/report-cards.md#v9-model": 43_771,
+      "docs/digest-pipeline.md#generation": 41_846,
+      "docs/worker-infrastructure.md#env-interface": 26_930,
+      "docs/scripts.md": 26_143,
+      "docs/status-dashboard.md#backend-contract-get-apistatus": 65_370,
+    };
+    const remainingExceptions = new Set(Object.keys(legacySectionCeilings));
     const domainIds = [
       "live-reserves", "yield-intelligence", "homepage", "about-page",
       "coverage-page", "start-page", "feedback-pipeline", "compliance", "worker-admin-api",
     ];
-    for (const mapping of mappings.filter((entry) => domainIds.includes(entry.id))) {
-      expect(mapping.checks ?? [], mapping.id).toEqual([]);
+    for (const mapping of mappings) {
+      const newDomain = domainIds.includes(mapping.id);
+      if (newDomain) expect(mapping.checks ?? [], mapping.id).toEqual([]);
       for (const reference of mapping.docs.map(normalizeDoc)) {
-        expect(reference.anchor, mapping.id).toBeTruthy();
+        if (!reference.path.endsWith(".md")) continue;
+        if (newDomain) expect(reference.anchor, mapping.id).toBeTruthy();
+        const key = reference.path + (reference.anchor ? `#${reference.anchor}` : "");
         const lines = readFileSync(resolve(REPO_ROOT, reference.path), "utf8").split("\n");
-        let start = -1;
+        let start = reference.anchor ? -1 : 0;
         let level = 0;
         let end = lines.length;
         let fence: string | undefined;
-        for (let index = 0; index < lines.length; index++) {
+        for (let index = 0; reference.anchor && index < lines.length; index++) {
           const marker = /^\s*(`{3,}|~{3,})/.exec(lines[index])?.[1];
           if (marker) {
             if (!fence) fence = marker;
@@ -146,11 +166,16 @@ describe("doc-ownership registry integrity", () => {
             level = heading[1].length;
           }
         }
-        expect(start, `${reference.path}#${reference.anchor}`).toBeGreaterThanOrEqual(0);
-        expect(Buffer.byteLength(lines.slice(start, end).join("\n")), `${reference.path}#${reference.anchor}`)
-          .toBeLessThanOrEqual(25_000);
+        expect(start, key).toBeGreaterThanOrEqual(0);
+        const bytes = Buffer.byteLength(lines.slice(start, end).join("\n"));
+        expect(bytes, key).toBeLessThanOrEqual(newDomain ? 25_000 : legacySectionCeilings[key] ?? 25_000);
+        if (Object.hasOwn(legacySectionCeilings, key)) {
+          expect(bytes, `Remove resolved section exception: ${key}`).toBeGreaterThan(25_000);
+          remainingExceptions.delete(key);
+        }
       }
     }
+    expect([...remainingExceptions], "Remove exceptions no longer routed as primary sections").toEqual([]);
   });
   it("keeps npm run checks wired to package scripts", () => {
     for (const mapping of mappings) {

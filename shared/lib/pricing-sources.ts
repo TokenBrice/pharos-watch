@@ -14,8 +14,10 @@ export const PRICE_TRANSPARENCY_SOURCE_KEYS = [
 
 const PRICE_SOURCE_HEALTH_BUCKET_DEFS = [
   { key: "coingecko+defillama-list", label: "CoinGecko + DefiLlama (list)", shortLabel: "CG+DL-list" },
-  ...PRICING_SOURCE_REGISTRY.filter((entry) => !entry.isRetired).map((entry) => ({
-    key: entry.key as PriceSourceHealthBucketKey,
+  ...PRICING_SOURCE_REGISTRY.filter(
+    (entry): entry is Exclude<typeof entry, { isRetired: true }> => !entry.isRetired,
+  ).map((entry) => ({
+    key: entry.key,
     label: entry.label,
     shortLabel: entry.shortLabel,
   })),
@@ -37,11 +39,8 @@ export function createEmptyPriceSourceHealthDistribution(): Record<PriceSourceHe
 export function getPricingSourceLabel(sourceKey: string): string {
   const parts = normalizePricingSourceKeys(sourceKey);
   if (parts.length > 1) {
-    return parts.map((part) => part === "protocol-par"
-      ? "nominal par reference (not an observed price)"
-      : getPricingSourceRegistryEntry(part)?.label ?? part).join(" + ");
+    return parts.map((part) => getPricingSourceRegistryEntry(part)?.label ?? part).join(" + ");
   }
-  if (parts[0] === "protocol-par") return "nominal par reference (not an observed price)";
   return getPricingSourceRegistryEntry(parts[0] ?? sourceKey)?.label ?? sourceKey;
 }
 

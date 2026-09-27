@@ -5,6 +5,16 @@ by the Safety Score V9 Economic Control pillar's mint component. This document i
 kept because the methodology lane still renders its history at
 `/methodology/#mint-authority-score`; nothing on the site scores from it.
 
+> **Agent navigation** — Start at [Mint authority entry](#mint-authority-entry). Current V9 guidance and the retired standalone score are separate; do not apply historical formulas to live grades.
+
+## Mint authority entry
+
+For current scoring and evidence, read [Current V9 scope](#current-v9-scope), the [Mint Authority Taxonomy](./classification.md#mint-authority-taxonomy), and the [native issuance / Bridge Risk authoring boundary](./stablecoin-data.md#mint-authority-and-bridge-risk-ownership). [Report cards](./report-cards.md) owns the live Safety Score methodology.
+
+The sections from [Methodology Versioning](#methodology-versioning) through the historical formula, caps, and bands describe the retired lane only. Read them for historical interpretation, not live score changes.
+
+### Retired signal migration
+
 Where the signals went:
 
 | Retired signal | Where it lives now |

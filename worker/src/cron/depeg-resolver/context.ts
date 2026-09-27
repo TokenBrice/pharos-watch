@@ -1,4 +1,6 @@
 import { derivePegRates } from "@shared/lib/peg-rates";
+import { DDR_INELIGIBLE_AUDIT_VERDICTS } from "@shared/types/depeg-audit";
+import { auditVerdictNotInSql } from "../../lib/depeg-audit";
 import {
   groupIncidents,
   quarantinedCoins,
@@ -273,31 +275,34 @@ export async function buildCurrentDeviationMap(
 }
 
 export async function loadPolicyUniverseEvents(db: D1Database): Promise<DdrEventDbRow[]> {
+  const auditEligible = auditVerdictNotInSql("provenance_audit_verdict", DDR_INELIGIBLE_AUDIT_VERDICTS);
   const result = await runWithOverloadRetry(() => db
     .prepare(
       "SELECT id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, " +
         "recovery_price, peg_reference, source, confirmation_sources, pending_reason, " +
         "provenance_replay_run_id, provenance_replay_version " +
         "FROM depeg_events_with_provenance " +
-        "WHERE (provenance_audit_verdict IS NULL OR provenance_audit_verdict NOT IN ('false_positive', 'disputed', 'no_data')) " +
+        `WHERE ${auditEligible.sql} ` +
         "AND (started_at >= ? OR (started_at < ? AND (ended_at IS NULL OR ended_at >= ?))) " +
         "ORDER BY started_at ASC, id ASC",
     )
-    .bind(DDR_V2_EFFECTIVE_AT, DDR_V2_EFFECTIVE_AT, DDR_V2_EFFECTIVE_AT)
+    .bind(...auditEligible.binds, DDR_V2_EFFECTIVE_AT, DDR_V2_EFFECTIVE_AT, DDR_V2_EFFECTIVE_AT)
     .all<DdrEventDbRow>());
   return result.results ?? [];
 }
 
 export async function loadActiveConfirmedEvents(db: D1Database): Promise<DdrEventDbRow[]> {
+  const auditEligible = auditVerdictNotInSql("provenance_audit_verdict", DDR_INELIGIBLE_AUDIT_VERDICTS);
   const activeResult = await runWithOverloadRetry(() => db
     .prepare(
       "SELECT id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, " +
         "recovery_price, peg_reference, source, confirmation_sources, pending_reason, " +
         "provenance_replay_run_id, provenance_replay_version " +
         "FROM depeg_events_with_provenance WHERE ended_at IS NULL " +
-        "AND (provenance_audit_verdict IS NULL OR provenance_audit_verdict NOT IN ('false_positive', 'disputed', 'no_data')) " +
+        `AND ${auditEligible.sql} ` +
         "ORDER BY started_at ASC",
     )
+    .bind(...auditEligible.binds)
     .all<DdrEventDbRow>());
 
   return (activeResult.results ?? []).filter((row) => {

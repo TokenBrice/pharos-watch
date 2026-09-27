@@ -8,7 +8,8 @@ import {
   ddrAssessmentInsertSql,
   type DdrAssessmentCheckpoint,
 } from "./depeg-resolver-assessment-store";
-import type { DdrIncidentDirection, DdrLockHealthStatus, DdrLockTrigger } from "./depeg-resolver-incident-store";
+import type { DdrIncidentDirection, DdrLockHealthStatus } from "./depeg-resolver-incident-store";
+import type { DdrLockTrigger } from "@shared/types/depeg-resolver";
 import {
   DDR_LOCK_AUDIT_INSERT_COLUMNS_SQL,
   DDR_LOCK_METADATA_COLUMNS_SQL,

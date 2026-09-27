@@ -11,8 +11,9 @@ export interface StablecoinCardData {
   dewsBand: string | null;
   liquidityScore: number | null;
   mcap: number | null;
+  /** Signed net, except `mint-burn-partial-gross`, where it is a known gross lower bound. */
   flow7d: number | null;
-  flow7dSource: "mint-burn" | "supply-delta" | null;
+  flow7dSource: "mint-burn" | "mint-burn-coverage-unknown" | "mint-burn-partial-gross" | "supply-delta" | null;
   sparklineData: number[] | null;
   hasActiveDepeg: boolean;
   // Fields
@@ -109,6 +110,32 @@ function MetricRow({
   );
 }
 
+const FLOW_LABEL_BY_SOURCE: Record<NonNullable<StablecoinCardData["flow7dSource"]>, string> = {
+  "mint-burn": "7D NET MINT/BURN",
+  "mint-burn-coverage-unknown": "7D NET (UNVERIFIED)",
+  "mint-burn-partial-gross": "7D GROSS (MIN)",
+  "supply-delta": "7D SUPPLY DELTA",
+};
+
+/**
+ * Seven-day flow cell. A partial mint/burn window never shows a signed net: its
+ * known gross subtotal renders as a lower bound (`$X+`) without direction color.
+ * Legacy buckets aggregated before valuation completeness keep their net with an
+ * unverified label and neutral color.
+ */
+function flowMetric(data: StablecoinCardData): Metric {
+  const label = FLOW_LABEL_BY_SOURCE[data.flow7dSource ?? "mint-burn"];
+  if (data.flow7d == null) return { label, value: "—" };
+  if (data.flow7dSource === "mint-burn-partial-gross") {
+    return { label, value: `${formatCurrency(data.flow7d, 1)}+`, color: TEXT_SECONDARY };
+  }
+  return {
+    label,
+    value: `${data.flow7d > 0 ? "+" : ""}${formatCurrency(data.flow7d, 1)}`,
+    color: data.flow7dSource === "mint-burn-coverage-unknown" ? TEXT_SECONDARY : getChangeColor(data.flow7d),
+  };
+}
+
 export function StablecoinCard({ data }: { data: StablecoinCardData }) {
   const treatment = getAdaptiveTreatment(data);
   const gradeColor = GRADE_COLORS[data.grade] ?? TEXT_SECONDARY;
@@ -139,11 +166,7 @@ export function StablecoinCard({ data }: { data: StablecoinCardData }) {
       value: data.change24h != null ? `${data.change24h >= 0 ? "+" : ""}${data.change24h.toFixed(2)}%` : "—",
       color: getChangeColor(data.change24h),
     },
-    { 
-      label: data.flow7dSource === "supply-delta" ? "7D SUPPLY DELTA" : "7D NET MINT/BURN",
-      value: data.flow7d != null ? `${data.flow7d > 0 ? "+" : ""}${formatCurrency(data.flow7d, 1)}` : "—",
-      color: getChangeColor(data.flow7d),
-    },
+    flowMetric(data),
     { 
       label: "BACKING", 
       value: data.backing != null ? getBackingLabelShort(data.backing) : "—",

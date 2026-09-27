@@ -84,13 +84,11 @@ export async function snapshotPsiDaily(
 
   const score = round1(row.avg_score);
   const band = getConditionBand(score);
-  // Release A retains numeric output until nullable readers have shipped; the
-  // additive counts below distinguish unobserved components from observed zero.
   const components = {
-    severity: Math.round((row.avg_severity ?? 0) * 100) / 100,
-    breadth: Math.round((row.avg_breadth ?? 0) * 100) / 100,
-    stressBreadth: Math.round((row.avg_stress_breadth ?? 0) * 100) / 100,
-    trend: Math.round((row.avg_trend ?? 0) * 100) / 100,
+    severity: row.avg_severity == null ? null : Math.round(row.avg_severity * 100) / 100,
+    breadth: row.avg_breadth == null ? null : Math.round(row.avg_breadth * 100) / 100,
+    stressBreadth: row.avg_stress_breadth == null ? null : Math.round(row.avg_stress_breadth * 100) / 100,
+    trend: row.avg_trend == null ? null : Math.round(row.avg_trend * 100) / 100,
   };
   const methodologyVersion = versionRows.results?.[0]?.methodology_version ?? PSI_METHODOLOGY_VERSION;
   const methodologyBreakdown = Object.fromEntries(

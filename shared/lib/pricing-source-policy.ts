@@ -4,7 +4,6 @@ import { getPricingSourceRegistryEntry } from "./pricing-source-registry";
 import { normalizePricingSourceKeys } from "./pricing-sources";
 
 export const FIXED_PEG_SEVERE_DOWNSIDE_RATIO = 0.5;
-const NOMINAL_PRICE_SOURCE = /(?:^|\+)\s*protocol-par\s*(?:\+|$)/i;
 
 /**
  * Whether provenance permits treating a price as observed. Callers still validate
@@ -16,7 +15,10 @@ export function isObservedPrice(asset: {
 }): boolean {
   const mode = asset.priceObservedAtMode;
   if (mode != null && mode !== "upstream" && mode !== "local_fetch" && mode !== "unknown") return false;
-  return !NOMINAL_PRICE_SOURCE.test(asset.priceSource ?? "");
+  // Any nominal-reference component (e.g. `protocol-par`) disqualifies the whole composite.
+  return !normalizePricingSourceKeys(asset.priceSource).some(
+    (part) => getPricingSourceRegistryEntry(part)?.trustTier === "nominal_reference",
+  );
 }
 
 /**

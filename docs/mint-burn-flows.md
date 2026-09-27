@@ -29,7 +29,7 @@ Mint and burn events measure token creation and destruction, not investor intent
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-mint-burn-flow -->`v6.22`<!-- GENERATED-END: methodology-version-mint-burn-flow -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-mint-burn-flow -->`v6.23`<!-- GENERATED-END: methodology-version-mint-burn-flow -->
 - **Public changelog page:** `/methodology/mint-burn-flow-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/mint-burn-flow/`
 
@@ -173,7 +173,7 @@ The operator view reads cached evidence only, displays each latest audited range
 2. **Apply runtime policy** — filter disabled configs (`MINT_BURN_DISABLED_IDS`, `MINT_BURN_DISABLED_SYMBOLS`), select the requested lane (`critical`, `extended`, or `all`), rotate start index from the lane-specific `mint_burn_run_state.job`, front-load critical configs inside mixed/all runs, and assign a per-config request cap inside the global budget. The cron runner reserves a 9-minute self-budget inside the 10-minute wrapper timeout and skips the remaining config tail once fewer than 60 seconds remain for starting another config.
 3. **Skip deferred configs** — load active deferrals from `mint_burn_config_deferral` (rows with `deferred_until > now`) and remove them from the run. A config is deferred for a 1-hour grace period when it exits a run with `apiErrors > 5` AND `coverage < 0.8`, so chronically failing configs cannot starve healthy ones of subrequest budget.
 4. **Get chain head** — Alchemy `eth_blockNumber` call per chain (cached per chain ID).
-5. **Load price cache** — query `price_cache` for all tracked stablecoin IDs (used for USD conversion).
+5. **Load price evidence** — read the tracked IDs' `supply_history` price series and their `price_cache` rows projected with the actual observation clock (`observed_at`, else the writer's effective `updated_at`), source and observation mode. Rows with an unusable price, a missing/invalid clock, or a clock after the read are not evidence.
 6. **For each contract config:**
    - Skip if `fromBlock > chainHead` or the lane/global budget is exhausted.
    - For each event definition, call Alchemy `eth_getLogs` with adaptive recursive block-range splitting on provider/range failures.
@@ -181,7 +181,7 @@ The operator view reads cached evidence only, displays each latest audited range
    - Resolve block timestamps — batch `eth_getBlockByNumber` for unique blocks that contain non-dust candidate logs, using local + persistent (`block_timestamp_cache`) caches. Dust-only blocks are dropped before timestamp resolution so they cannot pin the sync frontier.
    - Parse logs per event definition: decode amount (respecting decimals), derive counterparty address, compute `amount_usd = amount * price` (null if no price), and initialize `flow_type='standard'`.
    - An undecodable amount is retried across at most three scheduled observations using a per-log cache identity. The first two failures hold the cursor at the safe frontier. A third identical failure writes a quarantine record with reason `amount-decode-retry-exhausted`, excludes only that row, and lets valid peers and the cursor advance; amount decoding and dust rules are unchanged.
-   - Event-day pricing contract: a `supply_history` snapshot is used only when it is dated the event's UTC day or the day before **and** passes the same `historical_backfill` peg-plausibility validation the historical price-repair scanner applies. An older or implausible snapshot is never used; the row falls through to the current `price_cache` price, and to NULL when that is missing too.
+   - Event-time pricing contract (DEC-08, v6.23): a price values an event only when `abs(priceObservedAt - eventTimestamp) <= 86_400` seconds, boundaries inclusive, and it passes the `historical_backfill` peg-plausibility validation the historical price-repair scanner applies. The `supply_history` snapshot is tried first; its recorded observation clock is its UTC snapshot date, so in practice only the event's own UTC day qualifies (the prior day only for an event at exactly midnight). Otherwise a `price_cache` observation is admitted when it is also replay-safe (`isReplaySafePriceSource`) and an actual observation (`isObservedPrice`, so a nominal par reference never counts); it is stamped with its own observation time (`price_source=price-cache-event-window`), never the run time. With no admissible evidence the row stays NULL; a current quote never values an old event. Rows written before v6.23 may carry the retired `price-cache-current` label with a run-time `price_timestamp`.
    - Resolve transaction-context receipts for candidate bridge rows in chunks of 20 transaction hashes with the local `mapWithConcurrency` helper (`TX_CONTEXT_BATCH_CONCURRENCY = 3`) instead of one HTTP request per transaction. Each HTTP request carries both transaction and receipt JSON-RPC calls for its chunk, so high-volume USDC-style bridge-aware windows consume a handful of Worker subrequests instead of hundreds.
    - Classify bridge transfers after all parsed rows for the config chunk are assembled so bridge-related mints and burns can be tagged together while still sharing the same transaction-context budget.
    - Timestamp and bridge-classification phases receive the cron lane deadline; when the 9-minute self-budget is reached they stop adding remote work and surface ordinary partial-frontier diagnostics instead of relying on the outer 10-minute cron timeout.
@@ -198,8 +198,8 @@ The operator view reads cached evidence only, displays each latest audited range
      - If no safe frontier exists for the config in that run: do not advance. A decode row that reaches its bounded retry limit is quarantined per row and no longer holds this frontier.
 7. **Recalculate affected hourly buckets** — for each unique `(stablecoinId, chainId, hourTs)` touched, `INSERT OR REPLACE` into `mint_burn_hourly` by re-aggregating from `mint_burn_events`, counting only `flow_type='standard'` rows so bridge transfers and atomic roundtrips do not leak into flow statistics.
    - Recalc runs inside a `finally` block so it still fires after partial-run failures. If the recalc itself throws, the critical lane downgrades `status=ok` to `status=degraded` and surfaces `recalcFailed: true` plus `recalcError: <message>` in cron metadata (previously failures were only logged silently). The cron abort signal is also passed into this recalc path and into post-run null-price healing / roundtrip sweep recalcs.
-8. **Auto-heal recent NULL prices** — on non-error runs, query up to 500 events with `amount_usd IS NULL` in the last 48 hours, resolve the event-day price from `supply_history` first (`price_source=supply-history-heal`) and fall back to a replay-safe `price_cache` row (`price_source=price_cache_heal`), update `amount_usd/price_*`, and re-aggregate only newly affected hourly buckets.
-   - The `supply_history` arm obeys the same event-day pricing contract as parse (one-day lookback plus peg-plausibility gate). When no snapshot qualifies and no replay-safe cache row exists, `amount_usd` stays NULL for `backfill-mint-burn-prices` rather than being valued from a stale snapshot; this deliberately grows the historical repair backlog.
+8. **Auto-heal recent NULL prices** — on non-error runs, query up to 500 events with `amount_usd IS NULL` in the last 48 hours, value them with the same `resolveMintBurnEventPrice()` admission parse uses (`price_source=supply-history-heal` or `price_cache_heal`, stamped with the evidence's observation time), update `amount_usd/price_*`, and re-aggregate only newly affected hourly buckets.
+   - Replay-safe provenance alone is not enough: a cache observation outside ±24h of the event is rejected. When nothing qualifies, `amount_usd` stays NULL for `backfill-mint-burn-prices` rather than being valued from a stale snapshot or a later quote; this deliberately grows the historical repair backlog.
    - Cron metadata now includes both `nullPricesHealed` and `nullPriceBacklog` (`recent`, `historical`) so operators can distinguish live healable gaps from older debt.
    - If the backlog metadata read remains unavailable after D1 overload retries, the completed ingestion run continues with an explicit unavailable marker and warning; it never fabricates a zero backlog.
 9. **Emit active progress** — long runs call the shared cron `reportProgress(...)` hook so `/api/status` can surface the active stage, queue position, and budget heartbeat while the lease is still live.
@@ -220,12 +220,12 @@ Cron (`sync-mint-burn`) and admin backfill (`backfill-mint-burn`) now share a si
 | Module | Responsibility |
 |--------|----------------|
 | `types.ts` | Shared ingestion row/context/counter types and sync-state mode union |
-| `parse.ts` | `parseMintBurnLogs()` and event-level price resolution (`supply-history` then `price_cache` fallback) |
+| `parse.ts` | `parseMintBurnLogs()`; values each event through the shared event-time admission in `context.ts` |
 | `roundtrip-detection.ts` | Same-transaction `(tx_hash, stablecoin_id, chain_id)` atomic roundtrip detection for `flow_type` tagging |
 | `classification.ts` | Bridge-aware burn classification and transaction-context loading |
-| `context.ts` | Shared loaders for current prices and historical price series, and the canonical bounded event-day price lookup shared by parse and heal |
+| `context.ts` | Price evidence loaders (`supply_history` series, `price_cache` observation projection) and `resolveMintBurnEventPrice()`, the ±24h event-time admission shared by parse and heal |
 | `persistence.ts` | `INSERT OR IGNORE` event writes, burn classification updates, affected-hour aggregation |
-| `price-heal.ts` | Auto-heal recent NULL-price rows from `supply_history` first, then a replay-safe `price_cache` fallback, and return affected hours |
+| `price-heal.ts` | Auto-heal recent NULL-price rows through the shared event-time admission and return affected hours |
 | `roundtrip-sweep.ts` | Post-cron sweep for cross-run atomic roundtrip detection (7-day window, 200-group limit per run) |
 | `sync-state.ts` | Sync-state key helpers plus mode-specific upserts; cron and backfill both use `monotonic-max` so a partial run cannot regress the stored frontier (`replace` remains available but has no production caller) |
 
@@ -373,7 +373,9 @@ Since methodology v6.22 (CR-18 release A, migration `0251`), every hourly bucket
 - **Legacy rebuild:** after each completed run, `rebuildRetainedLegacyValuationHours` re-aggregates up to 500 NULL-count buckets that start at least one hour inside the 8-day event-retention window (their raw events cannot have been pruned), newest first, through the partial index `idx_mbh_valuation_unrecorded`. Older legacy buckets stay `unknown` until hourly retention prunes them; nothing reconstructs pruned history.
 - **Proven direction:** unpriced mints can only raise the true net and unpriced burns can only lower it. A direction survives only when that proven range excludes zero; `flat` requires complete valuation.
 - **Internal consumers (active now):** DEWS flow is unavailable (`mint-burn-valuation-partial` / `-unknown`) unless the 24h window is complete, and when its burn baseline is partial (`mint-burn-baseline-valuation-partial`); an unknown legacy baseline is tolerated until it ages out of the 30-day window. DDR mint surge uses hourly evidence only when the proven range decides the 20% threshold, otherwise the supply-history proxy. The daily digest withholds the gauge when `gauge.partialValuationInputs > 0`, restates pressure and chain nets only for complete 24h windows, and marks FTQ unavailable (`valuation-incomplete`) unless exact or provably inactive.
-- **Public API (release A):** additive `valuation` fields on coins, chains, hourly buckets and per-coin totals/chains, plus `gauge.partialValuationInputs`; nets, direction and FTQ are schema-nullable but still published with today's known-valuation values. Release B (before CR-23's stricter event-time price admission) publishes `null` where valuation is not complete.
+- **Public API (v6.23 activation):** additive `valuation` fields on coins, chains, hourly buckets and per-coin totals/chains, plus `gauge.partialValuationInputs`. A signed net (`netFlow24hUsd`, `netFlow7d/30d/90dUsd`, chain `netFlow24hUsd`, per-coin `netFlowUsd`, hourly `netFlowUsd`) is `null` when its window is `partial`; gross volumes stay known subtotals. `netFlowDirection24h` comes from `provenNetFlowDirection24h()` and is `null` whenever missing valuation (partial or unknown) could change it. Pressure is computed only for a `complete` 24h window whose baseline is not `partial`, so no partial input enters the gauge and `partialValuationInputs` is published as `0`. Flight-to-quality uses `detectFlightToQualityFromValuedNets()`: exact, provably inactive, or `null`; a cached aggregate reclassified for a newer Safety Score publication applies the same rule, and a cached coin without `valuation` reads as `unknown`. The stablecoin OG card shows a partial seven-day window as `7D GROSS (MIN)` (`$X+`) and an unknown one as `7D NET (UNVERIFIED)`, never a signed partial net.
+- **Transition window:** `unknown` legacy buckets keep their old-method net and the pressure baseline, labelled through `valuation`, because the legacy rebuild only reaches the eight-day raw-event window. They leave the 30-day baseline about 30 days after `0251` reached production and the 7/30/90-day net windows after 7/30/90 days. Until then an unknown 24h window publishes its net but no direction or pressure, and flight-to-quality can be `null`.
+- **Event-time pricing (v6.23):** parse and the 48-hour heal value an event only through `resolveMintBurnEventPrice()` (`worker/src/lib/mint-burn-pipeline/context.ts`); see [Sync Algorithm](#sync-algorithm). More events can therefore stay unpriced (backfills, new configs, `price_cache` outages); those hours are `partial` and their raw rows stay retention-protected debt for the historical repair path.
 
 ## Retention
 
@@ -470,7 +472,7 @@ Auth/idempotency, scope parameters, batch progression, counters, and errors are 
 | `atomicRoundtripsDetected` | number | Rows tagged in-memory this run |
 | `bridgeClassification.txContextShortfalls` | number | Transaction/receipt context lookup shortfalls for bridge-enabled configs |
 | `bridgeClassification.deferredRows` | number | Parsed rows excluded from economic flow because bridge classification context was unavailable |
-| `nullPricesHealed` | number | Rows auto-valued from `supply_history` or a replay-safe `price_cache` row this run (48h window) |
+| `nullPricesHealed` | number | Rows valued this run by the shared ±24h event-time admission (event-day `supply_history` snapshot or in-window replay-safe `price_cache` observation; 48h window) |
 | `degradedSignal`, `degradedStreak`, `coverageRatio` | mixed | Critical-lane health signals |
 | `recalcFailed` | boolean | `true` when `recalcAffectedHours` threw during the run's `finally` block; critical lane downgrades `ok → degraded` when this is set |
 | `recalcError` | string (optional) | Error message captured from the failed recalc call |
@@ -528,11 +530,11 @@ All hooks use Zod schema validation for aggregate and per-coin responses (`MintB
 Frontend consumers read the additive `valuation` fields through `resolveMintBurnValuation()` / `resolveMintBurnValuationCompleteness()` (`shared/lib/mint-burn-valuation.ts`), so a payload without `valuation` is `unknown`, never complete. Presentation helpers live in `src/lib/mint-burn-valuation-display.ts` and `src/lib/mint-burn-coin-helpers.ts`; the shared `FlowSignedNetValue` / `FlowVolumeValue` components (`src/components/flow-valuation-value.tsx`) render them.
 
 - **Signed nets** (`netFlow*Usd`, hourly `netFlowUsd`): `null` or a `partial` window renders the component's unavailable placeholder (`—` or `NR`) with an accessible reason naming the unpriced mint/burn event counts; a partial signed net is not a bound, so it is never shown as a number or `$0`. `unknown` keeps the value with a `*` coverage-unknown marker.
-- **24h direction**: a partial window is re-derived with `provenNetFlowDirection24h()` from the published known net; a `null` direction renders "Direction unavailable", never `flat` or `No activity`.
+- **24h direction**: v6.23 producers publish the proven direction (or `null`); a partial window from an earlier payload that still carries a numeric known net is re-derived with `provenNetFlowDirection24h()`; a `null` direction renders "Direction unavailable", never `flat` or `No activity`.
 - **Pressure shift**: a coin whose `window24h` or `baseline` valuation is `partial` renders `NR` with a partial-valuation reason, sorts last, and its baseline average daily net is withheld.
 - **Gross volumes**: a non-complete side renders as a `≥` lower bound (known-valuation subtotal).
 - **Client-side sums** (overview/receipt totals, home mini card, chart re-bucketing): any null or partial component makes the summed signed net unavailable; leaders and sorts rank only displayable nets. The aggregate chart draws no bar for a partial bucket, stops the cumulative line at the first one, and lists bucket valuation in its accessible table; the compare chart omits such hours.
-- **Gauge**: `flightToQuality: null` renders "FTQ unavailable"; `partialValuationInputs > 0` adds a note that N weighted coins have partial valuation.
+- **Gauge**: `flightToQuality: null` renders "FTQ unavailable"; `partialValuationInputs > 0` (only legacy/pre-v6.23 payloads; current producers publish `0`) adds a note that N weighted coins have partial valuation.
 - No frontend CSV/NDJSON export carries mint/burn flow values.
 
 ### Dashboard Integration
@@ -545,7 +547,7 @@ Frontend consumers read the additive `valuation` fields through `resolveMintBurn
 
 | Condition | Behavior |
 |-----------|----------|
-| Price unavailable at sync time | `amount_usd` stored as NULL initially; cron auto-heals recent rows (48h window) and admin endpoint handles older history |
+| No admissible price within ±24h of the event | `amount_usd` stored as NULL and the hour is `partial` (net unavailable, pressure NR); cron auto-heals recent rows (48h window) only with in-window evidence, and the admin endpoint handles older history |
 | Fewer than 7 days of flow history | Pressure shift returns `null`; coin excluded from gauge weighting |
 | No 24h mint/burn activity in a sparse window | Pressure shift returns `null` (NR) for that window; coin excluded from gauge weighting |
 | All coins have null pressure shift | Gauge score returns `null`; frontend shows "Calibrating" state |

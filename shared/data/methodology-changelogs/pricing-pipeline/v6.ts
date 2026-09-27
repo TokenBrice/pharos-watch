@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.38",
+    title: "Nominal par references and trusted-market precedence",
+    date: "2026-09-28",
+    effectiveAt: 1790553600,
+    summary:
+      "The eight reviewed direct-redemption par routes (sofid-sofi, usbd-bima, usdq-quill, chfau-allunity, cadd-cad-digital, jpym-mento, zarm-mento, xofm-mento) no longer publish par as a high-confidence `protocol-redeem` observation stamped with the sync clock. Par is now a separate `nominalPriceReference` under the non-observed `protocol-par` source; a fresh trusted market quote wins when one is admitted, and otherwise the published price is par with `priceObservedAtMode: \"nominal_reference\"`, no observation time and no confidence.",
+    impact: [
+      "New registry source `protocol-par` (trust tier `nominal_reference`): never replay-safe, never depeg-authoritative, no freshness budget. Overrides carry `confidence: null`, `observedAt: null` and `observedAtMode: \"nominal_reference\"`; non-USD par still needs a fresh or static FX reference, but the FX clock is no longer presented as the token's observation time",
+      "Trusted-market precedence (`isTrustedMarketQuote` in `worker/src/cron/sync-stablecoins/pricing.ts`) reuses the existing trusted-tracked-price gates: depeg primary trust `authoritative` or fresh multi-family high-confidence agreement within `DEPEG_PRIMARY_PRICE_MAX_AGE_SEC`, with no protocol-override provenance. Thin single-source aggregator marks, stale quotes, cached/fallback fills and legacy `protocol-redeem` par rows do not displace par; the rule is re-applied after post-enrichment validation and cached fallback, so a rejected market quote falls back to par, not to a fallback mark. No new threshold was introduced",
+      "Every published row for these assets carries this run's `nominalPriceReference` (`{ price, source: \"protocol-par\", mode: \"nominal_reference\" }`). References and nominal prices are derived per run and never carried forward: an asset whose route cannot produce par (e.g. no usable FX reference) publishes neither",
+      "Depeg consequences: a nominal price is not an observation, so it can neither open nor confirm depeg events, is excluded from active observed-price coverage (these assets report `non-observed-price` until a trusted market quote exists), and never enters the replay `price_cache`. A trusted market discount is published and evaluated like any other trusted primary price, so a real market depeg is no longer masked by par",
+      "Depeg replay no longer synthesizes USD 1.0 history, and non-USD routes no longer replay unadmitted market history: all eight routes resolve to `protocol-par` with no series, so backfill preserves existing event rows. Historical rows published before this version keep their `protocol-redeem` provenance and remain attributable to v6.37",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.37",
     title: "Bounded CoinGecko supply gap-fill and per-asset supply admission",
     date: "2026-09-27",

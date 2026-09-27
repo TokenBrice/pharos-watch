@@ -1,5 +1,7 @@
 import { computePegScore } from "@shared/lib/peg-score";
 import type { DepegEvent } from "@shared/types/market";
+import type { DepegAuditVerdict } from "@shared/types/depeg-audit";
+import { isPegScoreExcludedAuditVerdict } from "@shared/lib/depeg-audit";
 import { describe, expect, it } from "vitest";
 import {
   buildSafetyScoreV9PegProvenanceSummary,
@@ -18,13 +20,13 @@ const replayProvenance = (confidence: "high" | "medium" | "low", providers?: str
   buildReplayProvenance(CLOCK_SEC, confidence, providers);
 
 function auditProvenance(
-  auditVerdict: "confirmed" | "disputed" | "false_positive" | "no_data" | "repaired",
+  auditVerdict: DepegAuditVerdict,
   confidenceTier: "high" | "medium" | "low",
 ): NonNullable<DepegEvent["provenance"]> {
   return {
     confidenceTier,
     auditVerdict,
-    pegScoreEligible: auditVerdict !== "false_positive" && auditVerdict !== "disputed",
+    pegScoreEligible: !isPegScoreExcludedAuditVerdict(auditVerdict),
     updatedAt: CLOCK_SEC - DAY_SEC,
   };
 }

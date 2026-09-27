@@ -1,4 +1,6 @@
 import type { D1Database } from "@cloudflare/workers-types";
+import type { DepegAuditVerdict } from "@shared/types/depeg-audit";
+import { isPegScoreExcludedAuditVerdict } from "@shared/lib/depeg-audit";
 import type { BackfillEvent } from "../backfill-depegs-extraction";
 import type { BackfillReplayWindow } from "../backfill-depegs-window";
 import { fnv1aHash } from "../../lib/hash";
@@ -18,7 +20,7 @@ export interface BackfillEventProvenanceInput {
   marketDiagnostics: Record<string, unknown> | null;
   policyAdjustments: unknown[];
   confidenceTier: BackfillConfidenceTier;
-  auditVerdict: "confirmed" | "disputed" | "false_positive" | "no_data" | "repaired" | null;
+  auditVerdict: DepegAuditVerdict | null;
 }
 
 export interface BackfillRunInput {
@@ -83,7 +85,7 @@ function buildPublicProvenance(input: BackfillEventProvenanceInput, updatedAt: n
     confirmationPointCount: input.confirmationPointCount,
     confidenceTier: input.confidenceTier,
     auditVerdict: input.auditVerdict,
-    pegScoreEligible: input.auditVerdict !== "false_positive" && input.auditVerdict !== "disputed",
+    pegScoreEligible: !isPegScoreExcludedAuditVerdict(input.auditVerdict),
     updatedAt,
   };
 }

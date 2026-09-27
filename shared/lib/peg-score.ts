@@ -1,4 +1,5 @@
 import type { DepegEvent } from "../types";
+import { isPegScoreExcludedAuditVerdict } from "./depeg-audit";
 import { mergeDepegSeconds, worstDeviation } from "./peg-utils";
 import { DAY_SECONDS } from "./time-constants";
 
@@ -71,7 +72,7 @@ export interface PegScoreResult {
   eventCount: number;
   /** Events included after provenance/audit-quality filtering */
   scoredEventCount: number;
-  /** Events excluded because audit provenance marked them false-positive/disputed */
+  /** Events excluded because audit provenance is false-positive, disputed, or unknown */
   excludedEventCount: number;
   /** Included low-confidence events that receive reduced severity weight */
   lowConfidenceEventCount: number;
@@ -113,10 +114,6 @@ export const NULL_PEG_SCORE_RESULT: PegScoreResult = {
   trackingSpanDays: 0,
 };
 
-function isExcludedByAudit(event: DepegEvent): boolean {
-  const verdict = event.provenance?.auditVerdict;
-  return verdict === "false_positive" || verdict === "disputed";
-}
 
 function eventSeverityWeight(event: DepegEvent): number {
   const confidenceTier = event.provenance?.confidenceTier;
@@ -139,7 +136,7 @@ export function computeRecentPegStats(
   const observedStartSec = Math.max(trackingStartSec, nominalStartSec);
   const observedSpanSec = Math.max(nowSec - observedStartSec, 1);
   const recentEvents = events.filter((event) => {
-    if (isExcludedByAudit(event)) return false;
+    if (isPegScoreExcludedAuditVerdict(event.provenance?.auditVerdict)) return false;
     const eventEndSec = event.endedAt ?? nowSec;
     return event.startedAt <= nowSec && eventEndSec > observedStartSec;
   });
@@ -189,7 +186,7 @@ export function computePegScore(
     const eventEndSec = event.endedAt ?? now;
     return event.startedAt <= now && eventEndSec > startSec;
   });
-  const scoringEvents = coverageEvents.filter((event) => !isExcludedByAudit(event));
+  const scoringEvents = coverageEvents.filter((event) => !isPegScoreExcludedAuditVerdict(event.provenance?.auditVerdict));
   const excludedEventCount = coverageEvents.length - scoringEvents.length;
   const lowConfidenceEventCount = scoringEvents.filter((event) => eventSeverityWeight(event) < 1).length;
   const qualityAdjusted = excludedEventCount > 0 || lowConfidenceEventCount > 0;
