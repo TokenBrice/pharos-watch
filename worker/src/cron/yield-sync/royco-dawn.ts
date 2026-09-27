@@ -1,3 +1,4 @@
+import { getCronJobMeta } from "@shared/lib/cron-jobs";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { numberValue as finiteNumber } from "@shared/lib/type-guards";
 import type { StablecoinMeta } from "@shared/types/core";
@@ -18,7 +19,7 @@ const ROYCO_DAWN_PAGE_SIZE = 100;
 const ROYCO_DAWN_MIN_MARKET_TVL_USD = 100_000;
 const ROYCO_DAWN_MIN_TRANCHE_TVL_USD = 100_000;
 const ROYCO_DAWN_MAX_APY_RATIO = 2;
-const ROYCO_DAWN_DETAIL_CONCURRENCY = 6;
+const ROYCO_DAWN_DETAIL_CONCURRENCY = getCronJobMeta("sync-yield-supplemental")!.maxConnections!;
 
 interface RoycoToken {
   symbol?: string | null;

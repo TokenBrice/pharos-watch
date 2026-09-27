@@ -314,8 +314,8 @@ function nestedReasonString(value: unknown, key: string): string | null {
  * R4: every non-`ok` run records a machine-readable reason, projected into
  * `cron_runs.degraded_reason` so aggregates need no per-job JSON paths.
  * `metadata.reason` is the contract producers own; the remaining keys are the
- * historical homes the yield (`fallbackMode`), V9 (`publication.code`) and
- * watchdog (`degradedReasons`) paths already write. The reason is resolved from
+ * historical homes other producers (`fallbackMode`), V9 (`publication.code`)
+ * and watchdog (`degradedReasons`) still write. The reason is resolved from
  * the producer's own metadata, i.e. before the 64 KiB persistence cap can
  * truncate the diagnostics that explain it.
  */

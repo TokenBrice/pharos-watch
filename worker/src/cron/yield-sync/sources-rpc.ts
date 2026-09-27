@@ -1,3 +1,4 @@
+import { getCronJobMeta } from "@shared/lib/cron-jobs";
 import { CHAIN_META } from "@shared/lib/chains";
 import { getChainRpc, type ChainRpcConfig } from "../../lib/chain-registry";
 import { finiteDecimalNumberFromBigInt } from "../../lib/bigint";
@@ -27,7 +28,7 @@ const OPTIONAL_PROTOCOL_RPC_MAX_RETRIES = 2;
 const OPTIONAL_RPC_MIN_TARGET_BUDGET_MS = 2_000;
 const OPTIONAL_RPC_MIN_ENDPOINT_ATTEMPT_MS = 500;
 const AAVE_V3_RPC_BUDGET_MS = 28_000;
-const AAVE_V3_RPC_MAX_CONCURRENCY = 6;
+const AAVE_V3_RPC_MAX_CONCURRENCY = getCronJobMeta("sync-yield-supplemental")!.maxConnections!;
 const ON_CHAIN_RATE_REQUEST_TIMEOUT_MS = 6_000;
 export const OPTIONAL_RPC_MISSING_TARGET_EXAMPLE_LIMIT = 20;
 

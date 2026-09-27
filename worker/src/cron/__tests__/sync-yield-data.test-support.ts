@@ -133,8 +133,6 @@ vi.mock("../yield-helpers", async (importOriginal) => {
     computeApyFromRate: vi.fn(() => 5.0),
     computeApyFromPrice: vi.fn(() => 4.0),
     computePYS: vi.fn(() => 75.0),
-    computeYieldStability: vi.fn(() => 0.95),
-    computeApyVarianceScore: vi.fn(() => 0.1),
     detectWarningSignals: vi.fn(() => []),
     findBestLendingPool: vi.fn(() => null),
   };
@@ -215,7 +213,6 @@ import * as yieldHelpersModule from "../yield-helpers";
 import {
   healthyRiskFreeRateCacheRow,
   installYieldCacheReader,
-  stablecoinsCacheRow,
 } from "./yield-cache.test-support";
 
 const mutableActiveStablecoins = ACTIVE_STABLECOINS as typeof ACTIVE_STABLECOINS extends readonly (infer T)[]
@@ -490,7 +487,7 @@ function findPublishedYieldHistoryRow(
   stablecoinId: string,
   predicate: (row: YieldHistoryTestRow) => boolean,
 ): YieldHistoryTestRow | undefined {
-  const entry = db.getHistory().find((item) => item.sql.includes("INSERT OR IGNORE INTO yield_history"));
+  const entry = db.getHistory().find((item) => item.sql.includes("INSERT INTO yield_history"));
   const rows = entry ? (JSON.parse(String(entry.binds[0] ?? "[]")) as YieldHistoryTestRow[]) : [];
   return rows.find((row) => row.stablecoin_id === stablecoinId && predicate(row));
 }
@@ -584,9 +581,7 @@ function resetSyncYieldDataTest() {
     yieldConfigModule.EXPLICIT_YIELD_SOURCE_POOL_MAP as typeof yieldConfigModule.EXPLICIT_YIELD_SOURCE_POOL_MAP;
   for (const key of Object.keys(explicitPoolMap)) delete explicitPoolMap[key];
   // Reset mocks to factory defaults
-  vi.mocked(getCache).mockReset().mockImplementation(async (_db, key) =>
-    key === "stablecoins" ? stablecoinsCacheRow() : null
-  );
+  installYieldCacheReader(vi.mocked(getCache).mockReset(), {});
   vi.mocked(getCaches)
     .mockReset()
     .mockImplementation(async (db, keys) => {

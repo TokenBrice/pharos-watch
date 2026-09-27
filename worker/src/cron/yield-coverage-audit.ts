@@ -9,7 +9,6 @@
 
 import { logCronEvent, type CronProgressReporter, type CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
-import { toErrorMessage } from "@shared/lib/error-utils";
 import { readCachedJson } from "../lib/api-cache-read";
 import { getCache, setCache } from "../lib/db-cache";
 import { CIRCUIT_SOURCE } from "../lib/constants";
@@ -25,7 +24,7 @@ import {
   YIELD_WEIGHTED_POOL_GROUPS,
 } from "../lib/yield-config/yield-config";
 import { computeSafetyScoresSnapshot, type PublishedSafetyScoresResultMap } from "../lib/safety-scores";
-import { buildStablecoinSupplyMapFromCacheValue } from "./yield-sync/supply-map";
+import { loadStablecoinSupplyMapFromCacheValue, type StablecoinSupplyMapLoadResult } from "./yield-sync/supply-map";
 import type { YieldAdapterLifecycleEntry } from "../lib/yield-config/yield-config-registry";
 import { YIELD_ADAPTER_LIFECYCLE } from "../lib/yield-config/yield-config-rate-sources";
 import { probeQuarantinedDeterministicAdapters } from "./yield-coverage-audit-quarantine";
@@ -203,24 +202,9 @@ export function summarizeAdapterLifecycle(
   };
 }
 
-async function loadStablecoinSupplyMapForAudit(db: D1Database): Promise<Map<string, number>> {
+async function loadStablecoinSupplyMapForAudit(db: D1Database): Promise<StablecoinSupplyMapLoadResult> {
   const stablecoinsCache = await getCache(db, "stablecoins");
-  if (!stablecoinsCache?.value) return new Map();
-
-  try {
-    return buildStablecoinSupplyMapFromCacheValue(stablecoinsCache.value);
-  } catch (error) {
-    await logCronEvent(db, {
-      job: "yield-coverage-audit",
-      eventType: "stablecoins-cache-parse-failed",
-      severity: "warning",
-      message: "Failed to parse stablecoins cache for lending size gates; falling back to absolute TVL floors.",
-      metadata: {
-        error: toErrorMessage(error),
-      },
-    });
-    return new Map();
-  }
+  return loadStablecoinSupplyMapFromCacheValue(stablecoinsCache?.value);
 }
 
 async function loadSafetyScoresForAudit(db: D1Database): Promise<PublishedSafetyScoresResultMap> {
@@ -366,7 +350,8 @@ export async function runYieldCoverageAudit(
   await reportAuditProgress("safety-supply-load", "Loading stablecoin supply and safety snapshots", 2, {
     providerFamilies: ["stablecoins-cache", "safety-scores"],
   });
-  const stablecoinSupplyById = await loadStablecoinSupplyMapForAudit(db);
+  const supplySnapshot = await loadStablecoinSupplyMapForAudit(db);
+  const stablecoinSupplyById = supplySnapshot.supplyById;
   const safetySnapshot = await loadSafetyScoresForAudit(db);
   await reportAuditProgress("safety-supply-load", "Loaded stablecoin supply and safety snapshots", 3, {
     providerFamilies: ["stablecoins-cache", "safety-scores"],
@@ -376,6 +361,7 @@ export async function runYieldCoverageAudit(
       safetyScoresExpected: safetySnapshot.trackedCount,
     },
     safetySnapshotKind: safetySnapshot.kind,
+    stablecoinSupplyMapState: supplySnapshot.state,
     safetySnapshotReason: safetySnapshot.reason ?? null,
     safetySnapshotSource: safetySnapshot.source,
     safetyScoreIdentity: safetySnapshot.safetyScoreIdentity,
@@ -401,8 +387,21 @@ export async function runYieldCoverageAudit(
       },
     });
   }
+  if (supplySnapshot.state !== "ok") {
+    const reason = `stablecoins-cache-${supplySnapshot.state}`;
+    await reportAuditProgress("complete", "Yield coverage audit deferred pending an available supply snapshot", 6, {
+      reason,
+      stablecoinSupplyMapState: supplySnapshot.state,
+    });
+    return createCronResult({
+      status: "degraded",
+      itemCount: 0,
+      metadata: { reason, stablecoinSupplyMapState: supplySnapshot.state },
+    });
+  }
   const staleAutoLendingOverrides = identifyStaleAutoLendingOverrides(dlPools, {
     stablecoinSupplyById,
+    stablecoinSupplyMapState: supplySnapshot.state,
     safetyScores: safetySnapshot.scores,
   });
   const deadCuratedPins = identifyDeadCuratedPins(dlPools, {
@@ -543,7 +542,7 @@ export async function runYieldCoverageAudit(
     lendingAllowlistRecommendations: gaps.lendingAllowlistRecommendations.slice(0, OPERATOR_QUEUE_ITEM_LIMIT),
     venueRiskConfigMissing: gaps.venueRiskConfigMissing.slice(0, OPERATOR_QUEUE_ITEM_LIMIT),
     staleAutoLendingOverrides: staleAutoLendingOverrides.slice(0, OPERATOR_QUEUE_ITEM_LIMIT),
-    staleVenueRiskScores: staleVenueRiskScores.slice(0, OPERATOR_QUEUE_ITEM_LIMIT),
+    staleVenueRiskScores,
     operatorQueue,
     operatorReviewSummary,
     queueTotals,

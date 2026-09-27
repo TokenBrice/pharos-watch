@@ -47,21 +47,15 @@ const DECISION_RETENTION_DELETE_PREDICATE =
  */
 const YIELD_PUBLICATION_GENERATION_RETENTION_DAYS = 90;
 
-const YIELD_DAILY_MATERIALIZATION_MAX_DAYS_PER_RUN = 31;
+const YIELD_DAILY_MATERIALIZATION_MAX_ROWS_PER_RUN = 1_000;
 
-type YieldDailyMaterializationResult = {
-  changes: number;
-  lastSnapshotDate: number | null;
-};
-
-async function materializeYieldHistoryDailyRange(
+export async function materializeYieldHistoryDaily(
   db: D1Database,
   startSec: number,
-): Promise<YieldDailyMaterializationResult> {
+): Promise<number> {
   const rawPruneCutoff = bucketUnixSecondsToUtcDay(
     startSec - YIELD_HISTORY_RAW_DAYS * DAY_SECONDS,
   );
-  const snapshotDate = rawPruneCutoff - DAY_SECONDS;
   const result = await db
     .prepare(
       `/* pharos:yield-sync:daily-history-materialize */
@@ -72,31 +66,28 @@ async function materializeYieldHistoryDailyRange(
          publication_generation_id, publication_state, pys_at_publish,
          safety_at_publish, variance_at_publish, pys_inputs_at_publish
        )
-       WITH materialization_state AS (
-         SELECT COALESCE(MAX(snapshot_date) + ${DAY_SECONDS}, ?) AS first_snapshot_date
-           FROM yield_history_daily
-       ), pending_days AS (
-         SELECT DISTINCT
-                CAST(h.recorded_at / ${DAY_SECONDS} AS INTEGER) * ${DAY_SECONDS} AS snapshot_date
+       WITH pending AS (
+         SELECT h.stablecoin_id, h.source_key,
+                CAST(h.recorded_at / ${DAY_SECONDS} AS INTEGER) * ${DAY_SECONDS} AS snapshot_date,
+                MAX(h.recorded_at) AS recorded_at
            FROM yield_history h
-           CROSS JOIN materialization_state state
-          WHERE h.recorded_at >= state.first_snapshot_date
-            AND h.recorded_at < ?
+          WHERE h.recorded_at < ?
             AND (h.publication_state IS NULL OR h.publication_state = 'published')
-          ORDER BY snapshot_date ASC
-          LIMIT ${YIELD_DAILY_MATERIALIZATION_MAX_DAYS_PER_RUN}
+            AND NOT EXISTS (
+              SELECT 1 FROM yield_history_daily d
+               WHERE d.stablecoin_id = h.stablecoin_id AND d.source_key = h.source_key
+                 AND d.snapshot_date = CAST(h.recorded_at / ${DAY_SECONDS} AS INTEGER) * ${DAY_SECONDS}
+                 AND d.recorded_at >= h.recorded_at
+            )
+          GROUP BY h.stablecoin_id, h.source_key, snapshot_date
+          ORDER BY snapshot_date, h.stablecoin_id, h.source_key
+          LIMIT ${YIELD_DAILY_MATERIALIZATION_MAX_ROWS_PER_RUN}
        ), ranked AS (
-         SELECT h.*,
-                pending_days.snapshot_date,
-                ROW_NUMBER() OVER (
-                  PARTITION BY h.stablecoin_id, h.source_key, pending_days.snapshot_date
-                  ORDER BY h.recorded_at DESC, h.rowid DESC
-                ) AS row_rank
-           FROM pending_days
-           JOIN yield_history h
-             ON h.recorded_at >= pending_days.snapshot_date
-            AND h.recorded_at < pending_days.snapshot_date + ${DAY_SECONDS}
-          WHERE h.publication_state IS NULL OR h.publication_state = 'published'
+         SELECT h.*, pending.snapshot_date
+           FROM pending JOIN yield_history h
+             ON h.stablecoin_id = pending.stablecoin_id
+            AND h.source_key = pending.source_key
+            AND h.recorded_at = pending.recorded_at
        )
        SELECT stablecoin_id, source_key, snapshot_date, recorded_at, is_best,
               apy, apy_base, apy_reward, exchange_rate, source_tvl_usd,
@@ -104,7 +95,7 @@ async function materializeYieldHistoryDailyRange(
               publication_generation_id, publication_state, pys_at_publish,
               safety_at_publish, variance_at_publish, pys_inputs_at_publish
          FROM ranked
-        WHERE row_rank = 1
+        WHERE true
        ON CONFLICT(stablecoin_id, source_key, snapshot_date) DO UPDATE SET
          recorded_at = excluded.recorded_at,
          is_best = excluded.is_best,
@@ -126,29 +117,9 @@ async function materializeYieldHistoryDailyRange(
        WHERE excluded.recorded_at > yield_history_daily.recorded_at
        RETURNING snapshot_date`,
     )
-    .bind(snapshotDate, rawPruneCutoff)
+    .bind(rawPruneCutoff)
     .all<{ snapshot_date: number }>();
-  let lastSnapshotDate: number | null = null;
-  for (const row of result.results ?? []) {
-    const returnedSnapshotDate = Number(row.snapshot_date);
-    if (
-      Number.isFinite(returnedSnapshotDate) &&
-      (lastSnapshotDate == null || returnedSnapshotDate > lastSnapshotDate)
-    ) {
-      lastSnapshotDate = returnedSnapshotDate;
-    }
-  }
-  return {
-    changes: result.meta?.changes ?? result.results?.length ?? 0,
-    lastSnapshotDate,
-  };
-}
-
-export async function materializeYieldHistoryDaily(
-  db: D1Database,
-  startSec: number,
-): Promise<number> {
-  return (await materializeYieldHistoryDailyRange(db, startSec)).changes;
+  return result.meta?.changes ?? result.results?.length ?? 0;
 }
 
 /**
@@ -420,12 +391,10 @@ async function pruneYieldTablesOnce(
     .bind(startSec, startSec - HOUR_SECONDS)
     .run();
 
-  const dailyMaterialization = await materializeYieldHistoryDailyRange(db, startSec);
+  await materializeYieldHistoryDaily(db, startSec);
 
-  // yield_history_daily now carries the year-long public window, so raw hourly
-  // rows only need the 30-day full-fidelity policy; the daily tier keeps the
-  // 365-day cutoff. Materialization above ran first, so the trailing raw day
-  // was already closed into the daily tier before it leaves the raw window.
+  // Raw rows are deletable only when their source/day has a daily close at
+  // least as new. A bounded backfill never authorizes deleting its remainder.
   //
   // Both deletes are drained in bounded statements. A retention boundary change
   // (v8.43 moved the raw cutoff from 365d to 30d) leaves the whole backlog
@@ -437,15 +406,7 @@ async function pruneYieldTablesOnce(
   const desiredRawPruneCutoff = bucketUnixSecondsToUtcDay(
     startSec - YIELD_HISTORY_RAW_DAYS * DAY_SECONDS,
   );
-  // If a long outage leaves more than one bounded materialization batch, retain
-  // the untouched raw suffix. The next run resumes after the newest daily row.
-  const rawPruneCutoff =
-    dailyMaterialization.lastSnapshotDate == null
-      ? desiredRawPruneCutoff
-      : Math.min(
-          desiredRawPruneCutoff,
-          dailyMaterialization.lastSnapshotDate + DAY_SECONDS,
-        );
+  const rawPruneCutoff = desiredRawPruneCutoff;
   const pruneCutoff = startSec - YIELD_HISTORY_MAX_DAYS * DAY_SECONDS;
   const frozenIdsList = [...FROZEN_IDS];
   const frozenClause =
@@ -460,6 +421,13 @@ async function pruneYieldTablesOnce(
     cutoffSec: rawPruneCutoff,
     frozenIdsList,
     frozenClause,
+    eligibilityClause: `AND EXISTS (
+      SELECT 1 FROM yield_history_daily d
+       WHERE d.stablecoin_id = yield_history.stablecoin_id
+         AND d.source_key = yield_history.source_key
+         AND d.snapshot_date = CAST(yield_history.recorded_at / ${DAY_SECONDS} AS INTEGER) * ${DAY_SECONDS}
+         AND d.recorded_at >= yield_history.recorded_at
+    )`,
   });
   await drainRowsBeforeCutoff({
     db,

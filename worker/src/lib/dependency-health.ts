@@ -67,7 +67,7 @@ function cacheQualityReason(cache: CacheStatus): string | null {
   const reason = cache.degradedReason ?? "unknown";
   const streak = cache.streakDegradedRuns;
   return `Cache input quality degraded: ${reason}` +
-    (streak != null ? ` (${streak} degraded run${streak === 1 ? "" : "s"} since the last clean run)` : "") +
+    (streak != null ? ` (${streak} non-clean run${streak === 1 ? "" : "s"} since the last clean run)` : "") +
     ".";
 }
 

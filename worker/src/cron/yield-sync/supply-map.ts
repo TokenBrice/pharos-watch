@@ -7,7 +7,7 @@ export interface StablecoinSupplyMapLoadResult {
   supplyById: Map<string, number>;
 }
 
-export function buildStablecoinSupplyMapFromCacheValue(value: string): Map<string, number> {
+function buildStablecoinSupplyMapFromCacheValue(value: string): Map<string, number> {
   const parsed = JSON.parse(value) as unknown;
   const rawAssets = Array.isArray(parsed)
     ? parsed

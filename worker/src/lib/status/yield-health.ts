@@ -939,14 +939,20 @@ export async function loadYieldHealthSummary(
     { missingIs: "unknown", degradedAfterOne: true },
   );
   const coverageAuditCounts = buildCoverageAuditCounts(coverageAuditPayload);
-  const headlineGapCount = sumKnown([
+  const reviewSummary = getObject(coverageAuditPayload?.operatorReviewSummary);
+  const visibleHeadlineGapCount = getNumber(reviewSummary?.visibleHeadlineGapCount);
+  const visibleRecommendationCandidateCount = getNumber(reviewSummary?.visibleRecommendationCandidateCount);
+  const hasPostDispositionCounts =
+    visibleHeadlineGapCount != null && visibleRecommendationCandidateCount != null;
+  const queueBudgetBasis = hasPostDispositionCounts ? "post-disposition" : "raw-detectors";
+  const headlineGapCount = hasPostDispositionCounts ? visibleHeadlineGapCount : sumKnown([
     coverageAuditCounts.manifestMissingCount,
     coverageAuditCounts.yieldBearingMissingFromRankingsCount,
     coverageAuditCounts.staleAutoLendingOverrideCount,
     coverageAuditCounts.unmatchedHighTvlPoolCount,
     coverageAuditCounts.missingProtocolCount,
   ]);
-  const recommendationCandidateCount = sumKnown([
+  const recommendationCandidateCount = hasPostDispositionCounts ? visibleRecommendationCandidateCount : sumKnown([
     coverageAuditCounts.nativeExactPoolRecommendationCount,
     coverageAuditCounts.sourceFamilyAdapterRecommendationCount,
     coverageAuditCounts.lendingAllowlistRecommendationCount,
@@ -971,6 +977,9 @@ export async function loadYieldHealthSummary(
     benchmarkRegistry.status,
     coverageAuditStatus,
     sourceRiskCoverage.status,
+    ...(getBoolean(getObject(getSyncYieldDataMetadata(crons)?.quality)?.degraded) === true
+      ? ["degraded" as const]
+      : []),
     // Unmeasurable is not degraded for these two: both depend on evidence the
     // producer may not have emitted for this run.
     ...(liveSafetyHydration.status === "unknown" ? [] : [liveSafetyHydration.status]),
@@ -1006,6 +1015,7 @@ export async function loadYieldHealthSummary(
       headlineGapCount,
       recommendationCandidateCount,
       queueBudget: COVERAGE_AUDIT_QUEUE_BUDGET,
+      queueBudgetBasis,
       ...coverageAuditCounts,
       ...coverageAuditQueue,
     },

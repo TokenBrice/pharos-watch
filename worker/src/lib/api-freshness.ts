@@ -6,6 +6,7 @@ import {
   STATUS_CACHE_RATIO_THRESHOLDS,
   classifyFreshnessRatio,
   getCacheHealthyMaxRatio,
+  getCacheRatioThresholds,
   type FreshnessStatus,
 } from "@shared/lib/status-thresholds";
 import {
@@ -82,6 +83,7 @@ interface CacheRow {
 interface ProducerCronObservation {
   lastOkStartedAt: number | null;
   degradedRunsSinceOk: number | null;
+  latestReason: string | null;
 }
 
 interface ProducerCronHistoryRead {
@@ -108,18 +110,22 @@ const TABLE_FRESHNESS_FALLBACK_QUERIES: Partial<Record<FreshnessSentinelBackedCa
   "yield-data": "SELECT (? - MAX(updated_at)) as age FROM yield_data WHERE is_best = 1 AND (publication_generation_id IS NULL OR publication_state = 'published')",
 };
 
-export function buildFreshnessMeta(updatedAt: number, maxAgeSec: number): FreshnessMeta {
+export function buildFreshnessMeta(updatedAt: number, maxAgeSec: number, cacheKey?: string): FreshnessMeta {
   const { ageSeconds, futureSkewSeconds } = measureFreshnessAge(
     Date.now() / 1000,
     updatedAt,
     API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC,
   );
+  const bands = cacheKey ? getCacheRatioThresholds(cacheKey) : null;
   return {
     updatedAt,
     ageSeconds,
     status: futureSkewSeconds > API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC
       ? "degraded"
-      : classifyFreshnessRatio(ageSeconds / maxAgeSec),
+      : bands
+        ? ageSeconds <= maxAgeSec * bands.degraded ? "fresh"
+          : ageSeconds <= maxAgeSec * bands.stale ? "degraded" : "stale"
+        : classifyFreshnessRatio(ageSeconds / maxAgeSec),
   };
 }
 
@@ -170,20 +176,33 @@ async function readProducerCronHistory(
     const inClause = buildInClause(producerJobs);
     const rows = await db
       .prepare(
-        `SELECT job,
+        `WITH producer_runs AS (
+           SELECT job, started_at, status, degraded_reason,
+                  CASE WHEN json_valid(metadata) THEN json_extract(metadata, '$.quality.degraded') ELSE 0 END AS quality_degraded,
+                  CASE WHEN json_valid(metadata) THEN
+                    COALESCE(json_extract(metadata, '$.quality.reasons[0]'), json_extract(metadata, '$.quality.reason'))
+                  END AS quality_reason
+           FROM cron_runs WHERE job IN (${inClause.sql})
+         )
+         SELECT job,
                 MAX(CASE WHEN status = 'ok' THEN started_at END) as started_at,
                 SUM(CASE
-                      WHEN status IN ('degraded', 'error')
+                      WHEN (status IN ('degraded', 'error') OR quality_degraded = 1)
                         AND started_at > COALESCE((
-                          SELECT MAX(clean_run.started_at) FROM cron_runs clean_run
-                          WHERE clean_run.job = cron_runs.job AND clean_run.status = 'ok'), 0)
-                      THEN 1 ELSE 0 END) as degraded_runs_since_ok
-         FROM cron_runs
-         WHERE job IN (${inClause.sql})
+                          SELECT MAX(clean_run.started_at) FROM producer_runs clean_run
+                          WHERE clean_run.job = producer_runs.job AND clean_run.status = 'ok'
+                            AND COALESCE(clean_run.quality_degraded, 0) != 1), 0)
+                      THEN 1 ELSE 0 END) as degraded_runs_since_ok,
+                (SELECT COALESCE(recent.quality_reason, recent.degraded_reason)
+                 FROM producer_runs recent
+                 WHERE recent.job = producer_runs.job
+                   AND (recent.status IN ('degraded', 'error') OR recent.quality_degraded = 1)
+                 ORDER BY recent.started_at DESC LIMIT 1) as latest_reason
+         FROM producer_runs
          GROUP BY job`,
       )
       .bind(...inClause.binds)
-      .all<{ job: string; started_at: number | null; degraded_runs_since_ok: number | null }>();
+      .all<{ job: string; started_at: number | null; degraded_runs_since_ok: number | null; latest_reason: string | null }>();
     const keyByJob = new Map(
       sentinelBackedCacheKeys.map((key) => [getFreshnessSentinelProducerJob(key), key]),
     );
@@ -194,6 +213,7 @@ async function readProducerCronHistory(
       value.set(key, {
         lastOkStartedAt: row.started_at ?? null,
         degradedRunsSinceOk: row.degraded_runs_since_ok ?? null,
+        latestReason: row.latest_reason ?? null,
       });
     }
     return { value, error: null };
@@ -233,7 +253,7 @@ function buildCacheQuality(params: {
     return { degraded: null, reason: "producer-history-unreadable", streakDegradedRuns: null };
   }
   if (streakDegradedRuns != null && streakDegradedRuns > 0) {
-    return { degraded: true, reason: "producer-degraded-since-last-clean-run", streakDegradedRuns };
+    return { degraded: true, reason: params.observation?.latestReason ?? "producer-quality-reason-unavailable", streakDegradedRuns };
   }
   return { degraded: false, reason: null, streakDegradedRuns };
 }

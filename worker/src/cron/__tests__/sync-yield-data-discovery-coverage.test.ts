@@ -136,12 +136,12 @@ describe("syncYieldData", () => {
     const result = await syncYieldData(db);
 
     expect(result.itemCount).toBe(1);
-    expect(result.status).toBe("degraded");
+    expect(result.status).toBe("ok");
     const metadata = JSON.parse(result.metadata ?? "{}") as {
-      fallbackMode?: string | null;
+      quality: { degraded: boolean; reasons: string[] };
       sourceCoverage?: { supplementalFallbackMode?: string | null };
     };
-    expect(metadata.fallbackMode).toContain("yield-supplemental:partial-family-cache");
+    expect(metadata.quality.reasons).toContain("yield-supplemental:partial-family-cache");
     expect(metadata.sourceCoverage?.supplementalFallbackMode).toBe("partial-family-cache");
     const rows = getPublishedYieldRows(db);
     expect(
@@ -510,9 +510,9 @@ describe("syncYieldData", () => {
     installYieldCacheReader(vi.mocked(getCache), {
       "dl-stablecoin-pools": dlPoolsCacheRow([
             makeDlYieldPool({
-              pool: "pool-placeholder",
-              project: "aave-v3",
-              symbol: "USDC",
+              pool: "pool-u-venus",
+              project: "venus-core-pool",
+              symbol: "U",
               tvlUsd: 5_000_000,
               apy: 3.25,
               apyBase: 3.25,
@@ -544,15 +544,15 @@ describe("syncYieldData", () => {
     try {
       const result = await syncYieldData(db);
       const metadata = JSON.parse(result.metadata ?? "{}") as {
-        fallbackMode?: string | null;
+        quality: { degraded: boolean; reasons: string[] };
         sourceCoverage?: {
           onChainSkippedDueToCooldown?: boolean;
           onChainAlternativeCoverageMissingIds?: string[];
         };
       };
 
-      expect(result.status).toBe("degraded");
-      expect(metadata.fallbackMode ?? "").toContain("onchain-rates:cooldown-coverage-gap");
+      expect(result.status).toBe("ok");
+      expect(metadata.quality.reasons).toContain("onchain-rates:cooldown-coverage-gap");
       expect(metadata.sourceCoverage?.onChainSkippedDueToCooldown).toBe(true);
       expect(metadata.sourceCoverage?.onChainAlternativeCoverageMissingIds).toEqual(["100"]);
       expect(fetchSpy).not.toHaveBeenCalled();
@@ -766,12 +766,12 @@ describe("syncYieldData", () => {
     try {
       const result = await syncYieldData(db);
       const metadata = JSON.parse(result.metadata ?? "{}") as {
-        fallbackMode: string | null;
+        quality: { degraded: boolean; reasons: string[] };
         sourceCoverage: { stablecoinSupplyMapState: string };
       };
 
-      expect(result.status).toBe("degraded");
-      expect(metadata.fallbackMode).toContain(`yield-supply-map:${state}`);
+      expect(result.status).toBe("ok");
+      expect(metadata.quality.reasons).toContain(`yield-supply-map:${state}`);
       expect(metadata.sourceCoverage.stablecoinSupplyMapState).toBe(state);
       expect(findPublishedYieldRow(db, "u-united-stables", (row) => row.source_key === "pool-u-venus")).toBeUndefined();
     } finally {
@@ -875,9 +875,10 @@ describe("syncYieldData", () => {
     expect(Number(bprotocolRow?.current_apy)).toBeGreaterThan(1);
     expect(Number(bprotocolRow?.apy_reward)).toBeGreaterThan(1);
     // B11: the deterministic B.Protocol adapter publishes `sourceObservedAt` now, so
-    // the row is scorable again and is published as the coin's best row (B13's
-    // all-rejected case no longer applies).
-    expect(bprotocolRow?.pharos_yield_score).toBe(1);
+    // the row is published as the coin's best row (B13's all-rejected case no
+    // longer applies). A first observation has no measured variance, so PYS is
+    // withheld (v8.45 K06) without dropping the row.
+    expect(bprotocolRow?.pharos_yield_score).toBeNull();
     expect(bprotocolRow?.is_best).toBe(1);
 
     const aaveRow = findPublishedYieldRow(db, "lusd-liquity", (row) => row.source_key === "pool-lusd-aave");
@@ -917,8 +918,10 @@ describe("syncYieldData", () => {
     const result = await syncYieldData(db);
 
     expect(result.status).toBe("degraded");
-    const metadata = JSON.parse(result.metadata ?? "{}") as { fallbackMode: string | null };
-    expect(metadata.fallbackMode ?? "").toContain("dl-pools:direct-fetch-invalid-payload");
+    const metadata = JSON.parse(result.metadata ?? "{}") as { reason: string; inputDiagnostics: { dlPoolFallbackMode: string } };
+    expect(metadata.reason).toBe("rankings-payload-shrunk");
+    expect(metadata.inputDiagnostics.dlPoolFallbackMode).toBe("direct-fetch-invalid-payload");
+    expect(getYieldRankingsCachePayload(db)).toBeUndefined();
     expect(recordOutcome).toHaveBeenCalledWith(expect.anything(), "defillama-yields", false);
   });
 
@@ -980,7 +983,7 @@ describe("syncYieldData", () => {
       previousPublishedYieldBearingCount: number;
       currentPublishedYieldBearingCount: number;
     };
-    expect(metadata.reason).toBe("published-yield-coverage-regression");
+    expect(metadata.reason).toBe("rankings-payload-shrunk");
     expect(metadata.previousPublishedYieldBearingCount).toBe(10);
     expect(metadata.currentPublishedYieldBearingCount).toBe(0);
     expect(batchExecute).not.toHaveBeenCalled();
@@ -1030,7 +1033,7 @@ describe("syncYieldData", () => {
       previousPublishedRankingCount: number;
       currentPublishedRankingCount: number;
     };
-    expect(metadata.reason).toBe("published-lending-opportunity-coverage-regression");
+    expect(metadata.reason).toBe("rankings-payload-shrunk");
     expect(metadata.previousPublishedOpportunityCount).toBe(10);
     expect(metadata.currentPublishedOpportunityCount).toBe(0);
     expect(metadata.previousPublishedRankingCount).toBe(11);
@@ -1080,7 +1083,7 @@ describe("syncYieldData", () => {
       previousPublishedRankingCount: number;
       currentPublishedRankingCount: number;
     };
-    expect(metadata.reason).toBe("published-total-coverage-regression");
+    expect(metadata.reason).toBe("rankings-payload-shrunk");
     expect(metadata.previousPublishedRankingCount).toBe(10);
     expect(metadata.currentPublishedRankingCount).toBe(1);
     expect(batchExecute).not.toHaveBeenCalled();
@@ -1124,7 +1127,7 @@ describe("syncYieldData", () => {
     expect(getYieldRankingsCachePayload(db)).toBeDefined();
   });
 
-  it("returns early when tracked yield coverage regresses below the guard threshold", async () => {
+  it("publishes independent rows with a quality alarm when tracked coverage regresses", async () => {
     const db = makeDb();
     const originalYieldCoins = [...ACTIVE_YIELD_BEARING_STABLECOINS];
 
@@ -1163,19 +1166,10 @@ describe("syncYieldData", () => {
       ]);
 
       const result = await syncYieldData(db);
-      const metadata = JSON.parse(result.metadata ?? "{}") as {
-        reason?: string | null;
-        coverage?: number;
-        resolvedCount?: number;
-        totalCount?: number;
-      };
-
-      expect(result.status).toBe("degraded");
-      expect(metadata.reason).toBe("coverage-regression");
-      expect(metadata.coverage).toBeCloseTo(1 / 11, 6);
-      expect(metadata.resolvedCount).toBe(1);
-      expect(metadata.totalCount).toBe(11);
-      expect(batchExecute).not.toHaveBeenCalled();
+      const metadata = JSON.parse(result.metadata ?? "{}") as { quality: { reasons: string[] } };
+      expect(result.status).toBe("ok");
+      expect(metadata.quality.reasons).toContain("yield-publication:coverage-regression:tracked");
+      expect(getYieldRankingsCachePayload(db)).toBeDefined();
     } finally {
       ACTIVE_YIELD_BEARING_STABLECOINS.splice(
         0,
@@ -1187,7 +1181,11 @@ describe("syncYieldData", () => {
 
   it("skips yield-rankings cache write when response payload fails schema validation", async () => {
     const db = mockD1WithYieldPruneTables(yieldFallbackTableMatches());
-    installYieldCacheReader(vi.mocked(getCache), {});
+    installYieldCacheReader(vi.mocked(getCache), {
+      "dl-stablecoin-pools": dlPoolsCacheRow([
+        makeDlYieldPool({ pool: "pool-sdai", project: "maker", symbol: "sDAI", apy: 5, apyBase: 5 }),
+      ], Math.floor(Date.now() / 1000)),
+    });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     vi.spyOn(publicationModule, "validateYieldRankingsPayloadForPublish").mockResolvedValue({
       ok: false,

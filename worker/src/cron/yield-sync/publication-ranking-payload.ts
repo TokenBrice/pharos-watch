@@ -70,9 +70,10 @@ function finiteBaseValue(value: number | null | undefined, field: string, rowId:
 
 const YieldRankingSchema = YieldRankingsResponseSchema.shape.rankings.element;
 
-function hasFiniteCandidateValues(
+export function hasFiniteCandidateValues(
   candidate: EvaluatedYieldSource,
   selected?: EvaluatedYieldSource,
+  onInvalid?: (field: string) => void,
 ): boolean {
   const rowId = `${candidate.id}:${candidate.sourceKey}`;
   for (const [field, value] of [
@@ -82,6 +83,7 @@ function hasFiniteCandidateValues(
   ] as const) {
     if (Number.isFinite(value)) continue;
     logNonFiniteBaseValue(field, rowId, "candidate rejected");
+    onInvalid?.(field);
     return false;
   }
   if (
@@ -91,6 +93,7 @@ function hasFiniteCandidateValues(
     !Number.isFinite(candidate.sourceTvlUsd)
   ) {
     logNonFiniteBaseValue("sourceTvlUsd", rowId, "candidate rejected");
+    onInvalid?.("sourceTvlUsd");
     return false;
   }
   if (
@@ -99,6 +102,7 @@ function hasFiniteCandidateValues(
     !Number.isFinite(candidate.apy30d - selected.apy30d)
   ) {
     logNonFiniteBaseValue("apy30dDelta", rowId, "candidate rejected");
+    onInvalid?.("apy30dDelta");
     return false;
   }
   return true;
@@ -379,8 +383,12 @@ function attachRankChangeAttribution(
       previousRank: previousRankById.get(ranking.id) ?? null,
       safetyChanged: (originalRow.safetyScore ?? null) !== (ranking.safetyScore ?? null),
       methodologyChanged,
+      comparison: "publication",
     });
-    if (attribution) ranking.rankChangeAttribution = attribution;
+    if (!methodologyChanged && originalRow.publishedRank != null) {
+      // Explicit null means measured unchanged; absent means no comparison.
+      ranking.rankChangeAttribution = attribution;
+    }
   }
 }
 
@@ -423,7 +431,7 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
     riskFreeRateRegistry?: YieldBenchmarkRegistry;
     dlPoolsMeta: YieldSourceInputMeta;
     safetySnapshot: YieldSafetySnapshotMeta;
-    medianApy: number;
+    medianApy: number | null;
     startSec: number;
     publication?: YieldPublicationMetadata | null;
     /**
@@ -439,8 +447,7 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
   // mix a different best-source map with the frozen decision evidence.
   const bestRows = input.evaluatedSources
     .filter((source) =>
-      input.publicationViews.get(source.id)?.selected.sourceKey === source.sourceKey &&
-      hasFiniteCandidateValues(source)
+      input.publicationViews.get(source.id)?.selected.sourceKey === source.sourceKey
     )
     .sort((a, b) =>
       (b.pharosYieldScore ?? Number.NEGATIVE_INFINITY) -
@@ -457,9 +464,7 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
         `yield-publication view missing for selected source ${source.id}:${source.sourceKey}`,
       );
     }
-    const candidates = view.candidates.filter((candidate) =>
-      hasFiniteCandidateValues(candidate, source)
-    );
+    const candidates = view.candidates;
     const previousCandidateRetained =
       view.previousBestSourceKey == null ||
       candidates.some((candidate) => candidate.sourceKey === view.previousBestSourceKey);

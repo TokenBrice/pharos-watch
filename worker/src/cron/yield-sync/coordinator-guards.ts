@@ -70,7 +70,7 @@ export function summarizeYieldPublicationQualityMix(
   };
 }
 
-export function detectYieldQualityMixRegression(
+function detectYieldQualityMixRegression(
   previous: YieldPublicationQualityMix,
   current: YieldPublicationQualityMix,
 ): YieldQualityMixRegression | null {
@@ -136,41 +136,6 @@ function buildPublishedCoverageRegressionResult(params: {
   });
 }
 
-export function guardTrackedYieldCoverage(params: {
-  resolvedYieldBearingCount: number;
-  expectedYieldBearingCount: number;
-  /** Loaded-input counters; see {@link guardPublishedYieldCoverage}. */
-  inputDiagnostics?: CronMetadataRecord;
-}): CronResult | null {
-  const yieldCoverageRatio =
-    params.expectedYieldBearingCount > 0
-      ? params.resolvedYieldBearingCount / params.expectedYieldBearingCount
-      : 1;
-
-  if (
-    params.expectedYieldBearingCount < MIN_YIELD_COINS_FOR_GUARD ||
-    yieldCoverageRatio >= MIN_YIELD_COVERAGE_RATIO
-  ) {
-    return null;
-  }
-
-  logWorkerEventArgs("handler", "error",
-    `[sync-yield-data] Yield coverage regression: ${params.resolvedYieldBearingCount}/${params.expectedYieldBearingCount} ` +
-    `(${(yieldCoverageRatio * 100).toFixed(1)}%) — skipping persistence`,
-  );
-
-  return createCronResult({
-    status: "degraded",
-    itemCount: params.resolvedYieldBearingCount,
-    metadata: {
-      reason: "coverage-regression",
-      coverage: yieldCoverageRatio,
-      resolvedCount: params.resolvedYieldBearingCount,
-      totalCount: params.expectedYieldBearingCount,
-      ...(params.inputDiagnostics ? { inputDiagnostics: params.inputDiagnostics } : {}),
-    },
-  });
-}
 
 export async function guardPublishedYieldCoverage(params: {
   previousYieldPublicationSnapshot: PreviousYieldPublicationSnapshot;
@@ -191,6 +156,7 @@ export async function guardPublishedYieldCoverage(params: {
   inputDiagnostics?: CronMetadataRecord;
 }): Promise<{
   result: CronResult | null;
+  qualityReasons: string[];
   previousPublishedYieldBearingCount: number;
   currentPublishedYieldBearingCount: number;
   previousPublishedOpportunityCount: number;
@@ -216,6 +182,7 @@ export async function guardPublishedYieldCoverage(params: {
 
   if (previousRankingsState.malformed) {
     return {
+      qualityReasons: [],
       result: createCronResult({
         status: "degraded",
         itemCount: currentPublishedYieldBearingCount,
@@ -237,125 +204,50 @@ export async function guardPublishedYieldCoverage(params: {
   const previousPublishedOpportunityCount = previousOpportunityState.count;
   const previousPublishedRankingCount = previousTotalState.count;
 
-  if (
-    previousPublishedYieldBearingCount >= MIN_YIELD_COINS_FOR_GUARD &&
-    currentPublishedYieldBearingCount < Math.ceil(previousPublishedYieldBearingCount * MIN_YIELD_COVERAGE_RATIO)
-  ) {
-    return {
-      result: buildPublishedCoverageRegressionResult({
-        reason: "published-yield-coverage-regression",
-        itemCount: currentPublishedYieldBearingCount,
-        previousPublishedYieldBearingCount,
-        currentPublishedYieldBearingCount,
-        previousPublishedOpportunityCount,
-        currentPublishedOpportunityCount,
-        previousPublishedRankingCount,
-        currentPublishedRankingCount,
-        inputDiagnostics: params.inputDiagnostics,
-      }),
-      previousPublishedYieldBearingCount,
-      currentPublishedYieldBearingCount,
-      previousPublishedOpportunityCount,
-      currentPublishedOpportunityCount,
-      previousPublishedRankingCount,
-      currentPublishedRankingCount,
-    };
-  }
-
-  if (
-    previousPublishedOpportunityCount >= MIN_YIELD_COINS_FOR_GUARD &&
-    currentPublishedOpportunityCount < Math.ceil(previousPublishedOpportunityCount * MIN_YIELD_COVERAGE_RATIO)
-  ) {
-    return {
-      result: buildPublishedCoverageRegressionResult({
-        reason: "published-lending-opportunity-coverage-regression",
-        itemCount: currentPublishedRankingCount,
-        previousPublishedYieldBearingCount,
-        currentPublishedYieldBearingCount,
-        previousPublishedOpportunityCount,
-        currentPublishedOpportunityCount,
-        previousPublishedRankingCount,
-        currentPublishedRankingCount,
-        inputDiagnostics: params.inputDiagnostics,
-      }),
-      previousPublishedYieldBearingCount,
-      currentPublishedYieldBearingCount,
-      previousPublishedOpportunityCount,
-      currentPublishedOpportunityCount,
-      previousPublishedRankingCount,
-      currentPublishedRankingCount,
-    };
-  }
-
-  if (
-    previousPublishedRankingCount >= MIN_YIELD_COINS_FOR_GUARD &&
-    currentPublishedRankingCount < Math.ceil(previousPublishedRankingCount * MIN_YIELD_COVERAGE_RATIO)
-  ) {
-    return {
-      result: buildPublishedCoverageRegressionResult({
-        reason: "published-total-coverage-regression",
-        itemCount: currentPublishedRankingCount,
-        previousPublishedYieldBearingCount,
-        currentPublishedYieldBearingCount,
-        previousPublishedOpportunityCount,
-        currentPublishedOpportunityCount,
-        previousPublishedRankingCount,
-        currentPublishedRankingCount,
-        inputDiagnostics: params.inputDiagnostics,
-      }),
-      previousPublishedYieldBearingCount,
-      currentPublishedYieldBearingCount,
-      previousPublishedOpportunityCount,
-      currentPublishedOpportunityCount,
-      previousPublishedRankingCount,
-      currentPublishedRankingCount,
-    };
-  }
-
-  if (previousPublishedRankingCount >= MIN_YIELD_COINS_FOR_GUARD) {
-    const previousQualityMix = params.previousYieldPublicationSnapshot.status === "ok"
-      ? summarizeYieldPublicationQualityMix(params.previousYieldPublicationSnapshot.rankings)
-      : null;
-    if (previousQualityMix) {
-      const currentQualityMix = summarizeYieldPublicationQualityMix(params.previewRankingsPayload.rankings);
-      const qualityMixRegression = detectYieldQualityMixRegression(previousQualityMix, currentQualityMix);
-      if (qualityMixRegression) {
-        return {
-          result: createCronResult({
-            status: "degraded",
-            itemCount: currentPublishedRankingCount,
-            metadata: {
-              reason: "published-source-quality-mix-regression",
-              qualityMixReasons: qualityMixRegression.reasons,
-              previousPublishedDirectCuratedCount: previousQualityMix.directCuratedCount,
-              currentPublishedDirectCuratedCount: currentQualityMix.directCuratedCount,
-              publishedDirectCuratedCountDelta:
-                currentQualityMix.directCuratedCount - previousQualityMix.directCuratedCount,
-              minimumDirectCuratedCount: qualityMixRegression.minimumDirectCuratedCount,
-              previousPublishedFallbackModeledCount: previousQualityMix.fallbackModeledCount,
-              currentPublishedFallbackModeledCount: currentQualityMix.fallbackModeledCount,
-              publishedFallbackModeledCountDelta:
-                currentQualityMix.fallbackModeledCount - previousQualityMix.fallbackModeledCount,
-              minimumFallbackModeledIncrease: qualityMixRegression.minimumFallbackModeledIncrease,
-              previousPublishedRankingCount,
-              currentPublishedRankingCount,
-              publishedRankingCountDelta: currentPublishedRankingCount - previousPublishedRankingCount,
-              ...(params.inputDiagnostics ? { inputDiagnostics: params.inputDiagnostics } : {}),
-            },
-          }),
-          previousPublishedYieldBearingCount,
-          currentPublishedYieldBearingCount,
-          previousPublishedOpportunityCount,
-          currentPublishedOpportunityCount,
-          previousPublishedRankingCount,
-          currentPublishedRankingCount,
-        };
-      }
+  const qualityReasons: string[] = [];
+  for (const [cohort, previous, current] of [
+    ["tracked", previousPublishedYieldBearingCount, currentPublishedYieldBearingCount],
+    ["opportunity", previousPublishedOpportunityCount, currentPublishedOpportunityCount],
+    ["total", previousPublishedRankingCount, currentPublishedRankingCount],
+  ] as const) {
+    if (previous >= MIN_YIELD_COINS_FOR_GUARD && current < Math.ceil(previous * MIN_YIELD_COVERAGE_RATIO)) {
+      qualityReasons.push(`yield-publication:coverage-regression:${cohort}`);
     }
   }
-
+  const expectedTracked = params.inputDiagnostics?.expectedYieldBearingCount;
+  if (typeof expectedTracked === "number" && expectedTracked >= MIN_YIELD_COINS_FOR_GUARD &&
+      currentPublishedYieldBearingCount < Math.ceil(expectedTracked * MIN_YIELD_COVERAGE_RATIO) &&
+      !qualityReasons.includes("yield-publication:coverage-regression:tracked")) {
+    qualityReasons.push("yield-publication:coverage-regression:tracked");
+  }
+  const previousMix = summarizeYieldPublicationQualityMix(params.previousYieldPublicationSnapshot.rankings);
+  if (detectYieldQualityMixRegression(previousMix, summarizeYieldPublicationQualityMix(params.previewRankingsPayload.rankings)) &&
+      !qualityReasons.includes("yield-publication:coverage-regression:total")) {
+    qualityReasons.push("yield-publication:coverage-regression:total");
+  }
+  // Retain the existing absolute safety net in one place. Cohort loss alone
+  // cannot hold unrelated validated assets.
+  const hardFloorFailed = currentPublishedRankingCount === 0 ||
+    (previousPublishedRankingCount >= 5 && currentPublishedRankingCount < Math.ceil(previousPublishedRankingCount * 0.4));
+  const reason = params.inputDiagnostics?.safetySnapshotAvailable === false
+    ? "safety-snapshot-unavailable"
+    : hardFloorFailed ? "rankings-payload-shrunk" : null;
+  if (qualityReasons.length > 0) {
+    logWorkerEventArgs("handler", "error", "[sync-yield-data] Publication coverage regression", qualityReasons);
+  }
   return {
-    result: null,
+    qualityReasons,
+    result: reason == null ? null : buildPublishedCoverageRegressionResult({
+      reason,
+      itemCount: currentPublishedRankingCount,
+      previousPublishedYieldBearingCount,
+      currentPublishedYieldBearingCount,
+      previousPublishedOpportunityCount,
+      currentPublishedOpportunityCount,
+      previousPublishedRankingCount,
+      currentPublishedRankingCount,
+      inputDiagnostics: params.inputDiagnostics,
+    }),
     previousPublishedYieldBearingCount,
     currentPublishedYieldBearingCount,
     previousPublishedOpportunityCount,

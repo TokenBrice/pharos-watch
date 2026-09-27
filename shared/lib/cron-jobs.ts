@@ -574,7 +574,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "multi-hourly",
     scheduleKey: "fourHourlyYieldSupplemental",
     triggerMode: "isolated",
-    maxConnections: 3, // Supplemental families run serially; Beefy is the peak with 3 parallel API reads
+    maxConnections: 3, // Serial families: Beefy, Royco details and Aave RPC each peak at 3; hourly parity adds 1 in its separate chain.
   },
   {
     // Runs on the quarter-hourly trigger after a safe stablecoins cache write.

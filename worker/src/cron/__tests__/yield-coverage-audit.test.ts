@@ -46,6 +46,7 @@ import { buildYieldCoverageEvidenceFingerprint } from "../yield-coverage-review-
 import { makeDlYieldPool } from "./yield-resolve.test-support";
 import { makeWorkerReportCardsV9Response } from "../../test-helpers/report-cards-v9";
 import type { PublishedSafetyScoresResultMap } from "../../lib/safety-scores";
+import { findStaleVenueRiskScores, type StaleVenueRiskScore } from "@shared/lib/yield-source-risk-registry";
 
 const mockFetchEvmUint256AtBlock = vi.mocked(fetchEvmUint256AtBlock);
 const mockLoadDlStablecoinPools = vi.mocked(loadDlStablecoinPools);
@@ -130,6 +131,30 @@ describe("buildProtocolCategoryLookupFromCachePayload", () => {
 });
 
 describe("runYieldCoverageAudit", () => {
+  it.each([
+    ["missing", null],
+    ["malformed", "{"],
+    ["malformed", JSON.stringify({ unexpected: [] })],
+  ])("defers without publishing falsely clean supply evidence for %s cache", async (state, value) => {
+    mockLoadDlStablecoinPools.mockResolvedValue({
+      pools: [lendingPool({ pool: "new-usdc", project: "new-lender", symbol: "USDC", tvlUsd: 12_000_000 })],
+      meta: { mode: "dex-cache", updatedAt: 1_774_526_300, ageSeconds: 100, poolCount: 1, fallbackMode: null },
+    });
+    mockComputeSafetyScoresSnapshot.mockResolvedValue(successfulSafetySnapshot());
+    mockGetCache.mockImplementation(async (_db, key) => {
+      if (key === "yield-rankings") return { value: JSON.stringify({ rankings: [] }), updatedAt: 1_774_526_300 };
+      if (key === "stablecoins" && value != null) return { value, updatedAt: 1_774_526_300 };
+      return null;
+    });
+    const result = await runYieldCoverageAudit(mockD1());
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: `stablecoins-cache-${state}`,
+      stablecoinSupplyMapState: state,
+    });
+    expect(mockSetCache).not.toHaveBeenCalled();
+  });
+
   it("defers when the compact safety snapshot is not complete and never requests computed V8 scores", async () => {
     mockLoadDlStablecoinPools.mockResolvedValue({
       pools: [lendingPool({ pool: "new-usdc", project: "new-lender", symbol: "USDC", tvlUsd: 12_000_000 })],
@@ -246,6 +271,7 @@ describe("runYieldCoverageAudit", () => {
       },
     });
     mockGetCache.mockImplementation(async (_db, key) => {
+      if (key === "stablecoins") return { value: "[]", updatedAt: 1_774_526_300 };
       if (key === "defillama-protocols") {
         return {
           value: JSON.stringify({ protocols: [{ slug: "new-lender", category: "Lending" }] }),
@@ -407,6 +433,7 @@ describe("runYieldCoverageAudit", () => {
       },
     });
     mockGetCache.mockImplementation(async (_db, key) => {
+      if (key === "stablecoins") return { value: "[]", updatedAt: 1_774_526_300 };
       if (key === "yield-rankings") {
         return { value: JSON.stringify({ rankings: [] }), updatedAt: 1_774_526_300 };
       }
@@ -432,6 +459,8 @@ describe("runYieldCoverageAudit", () => {
   });
 
   it("publishes queue totals that account for every candidate item", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2027-09-27T00:00:00Z"));
     const dlPools: DlPool[] = [
       lendingPool({ pool: "new-usdc", project: "new-lender", symbol: "USDC", tvlUsd: 12_000_000 }),
       makeDlYieldPool({
@@ -449,6 +478,7 @@ describe("runYieldCoverageAudit", () => {
       meta: { mode: "dex-cache", updatedAt: 1_774_526_300, ageSeconds: 100, poolCount: 2, fallbackMode: null },
     });
     mockGetCache.mockImplementation(async (_db, key) => {
+      if (key === "stablecoins") return { value: "[]", updatedAt: 1_774_526_300 };
       if (key === "defillama-protocols") {
         return {
           value: JSON.stringify({
@@ -484,6 +514,7 @@ describe("runYieldCoverageAudit", () => {
       deadCuratedPinCount: number;
       lifecycleReviewDueCount: number;
       reviewDueAdapters: unknown[];
+      staleVenueRiskScores: StaleVenueRiskScore[];
     };
     const publishedItems = [
       ...report.operatorQueue.headlineGaps,
@@ -506,6 +537,9 @@ describe("runYieldCoverageAudit", () => {
     expect(report.operatorQueue.allowedActions).toEqual(["accept", "dismiss", "intentional-gap", "watch"]);
     expect(report.deadCuratedPinCount).toBeGreaterThanOrEqual(Object.keys(YIELD_POOL_MAP).length);
     expect(report.lifecycleReviewDueCount).toBe(report.reviewDueAdapters.length);
+    const staleVenues = findStaleVenueRiskScores(Date.now());
+    expect(staleVenues.length).toBeGreaterThan(20);
+    expect(report.staleVenueRiskScores).toEqual(staleVenues);
   });
 });
 
@@ -1070,7 +1104,7 @@ describe("identifyCoverageGaps", () => {
         apyMean30d: 0.01,
         underlyingTokens: ["0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b"],
       }),
-    ]);
+    ], { stablecoinSupplyById: new Map([["usdx-hex-trust", 1_000_000]]) });
 
     expect(stale).toContainEqual(
       expect.objectContaining({
@@ -1090,7 +1124,7 @@ describe("identifyCoverageGaps", () => {
         poolMeta: "wstUSR lending market",
         tvlUsd: 2_000_000,
       }),
-    ]);
+    ], { stablecoinSupplyById: new Map([["usdm-moneta", 1_000_000]]) });
 
     expect(stale).toContainEqual(
       expect.objectContaining({

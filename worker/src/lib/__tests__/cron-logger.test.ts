@@ -74,7 +74,7 @@ describe("degraded reason projection", () => {
     }));
     await logCronRun(db, "yield-style", async () => ({
       status: "degraded",
-      metadata: JSON.stringify({ fallbackMode: "yield-source:expired-selected" }),
+      metadata: JSON.stringify({ reason: "yield-publication-not-applied" }),
     }));
     await logCronRun(db, "silent-degrade", async () => ({ status: "degraded" }));
     await logCronRun(db, "neutral-skip", async () => ({ status: "skipped_neutral" }));
@@ -87,7 +87,7 @@ describe("degraded reason projection", () => {
       { job: "neutral-skip", status: "skipped_neutral", reason: "skipped_neutral" },
       { job: "silent-degrade", status: "degraded", reason: "unspecified-degraded" },
       { job: "thrown", status: "error", reason: "TypeError" },
-      { job: "yield-style", status: "degraded", reason: "yield-source:expired-selected" },
+      { job: "yield-style", status: "degraded", reason: "yield-publication-not-applied" },
     ]);
     expect(console.warn).toHaveBeenCalledWith("[cron:silent-degrade] degraded result carries no metadata.reason");
   });
@@ -97,7 +97,7 @@ describe("degraded reason projection", () => {
 
     await logCronRun(db, "restored-only", async () => ({
       itemCount: 3,
-      metadata: JSON.stringify({ quality: { reason: "snapshot_written_restored_skipped" } }),
+      metadata: JSON.stringify({ quality: { degraded: true, reasons: ["yield-supplemental:family-degraded:pendle"] } }),
     }));
 
     expect(sqlite.prepare("SELECT status, degraded_reason FROM cron_runs").all()).toEqual([

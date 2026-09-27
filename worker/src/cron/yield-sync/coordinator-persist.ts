@@ -19,7 +19,7 @@ import {
   type PreviousYieldPublicationSnapshot,
 } from "./publication";
 import type { YieldBenchmarkMeta, YieldSourceInputMeta } from "@shared/types/yield";
-import type { PreviousPublicationForAttribution } from "./publication-ranking-payload";
+import { hasFiniteCandidateValues, type PreviousPublicationForAttribution } from "./publication-ranking-payload";
 import type { CronResult } from "../../lib/cron-logger";
 import { createCronResult } from "../../lib/cron-result";
 import type { YieldRowsWriteStats } from "./publication-atomic-batch";
@@ -40,7 +40,7 @@ export function buildPreviewYieldRankingsArtifacts(params: {
   riskFreeRates: ParsedYieldBenchmarkRegistry;
   dlPoolsMeta: YieldSourceInputMeta;
   safetySnapshot: Parameters<typeof buildYieldRankingsPayloadFromEvaluatedSources>[0]["safetySnapshot"];
-  medianApy: number;
+  medianApy: number | null;
   startSec: number;
   /**
    * B7/B31: previous publication, so the preview payload carries publish-time
@@ -50,18 +50,31 @@ export function buildPreviewYieldRankingsArtifacts(params: {
 }): {
   previewRankingsPayload: ReturnType<typeof buildYieldRankingsPayloadFromEvaluatedSources>;
   publicationViews: Map<string, YieldCoinPublicationView>;
+  acceptedSources: EvaluatedYieldSource[];
+  quarantineReasons: string[];
 } {
+  const selectedByCoin = new Map(params.evaluatedSources
+    .filter((source) => params.bestSourceKeyByCoin.get(source.id) === source.sourceKey)
+    .map((source) => [source.id, source]));
+  const quarantineReasons: string[] = [];
+  const acceptedSources = params.evaluatedSources.filter((source) =>
+    hasFiniteCandidateValues(source, selectedByCoin.get(source.id), (field) => {
+      quarantineReasons.push(`yield-publication:quarantined-source:${source.id}:${field}`);
+    }),
+  );
   const { provenanceByKey, viewsByCoinId } = buildYieldPublicationViews({
-    evaluatedSources: params.evaluatedSources,
+    evaluatedSources: acceptedSources,
     bestSourceKeyByCoin: params.bestSourceKeyByCoin,
     startSec: params.startSec,
     dlPoolsMeta: params.dlPoolsMeta,
   });
 
   return {
+    acceptedSources,
+    quarantineReasons,
     publicationViews: viewsByCoinId,
     previewRankingsPayload: buildYieldRankingsPayloadFromEvaluatedSources({
-      evaluatedSources: params.evaluatedSources,
+      evaluatedSources: acceptedSources,
       publicationViews: viewsByCoinId,
       rankingProvenanceByKey: provenanceByKey,
       riskFreeRate: params.riskFreeRate,
@@ -134,12 +147,12 @@ export async function publishYieldCoordinatorResults(params: {
     divergenceFlags: params.divergenceFlags,
     sourceSwitches: params.sourceSwitches,
   });
-  throwIfAborted(params.signal);
 
   // Every exit from here must leave the generation in a terminal state: a
   // generation left `staged` reads as a live candidate on the publication
   // surface, so an abort mid-publication has to mark it failed (C11).
   try {
+    throwIfAborted(params.signal);
     const previewPublishability = await validateYieldRankingsPayloadForPublish(
       stagedRankingsPayload,
       params.previousYieldPublicationSnapshot,
@@ -209,10 +222,6 @@ export async function publishYieldCoordinatorResults(params: {
       const reason = publicationWrite.reason ?? "schema-validation-failed";
       params.degradationReasons.push(reason);
       await finalizeFailedGeneration(reason);
-      await pruneYieldTables(params.db, params.startSec, {
-        allowDestructiveCleanup: false,
-        signal: params.signal,
-      });
       return {
         ok: true,
         updatedCount,
@@ -232,7 +241,7 @@ export async function publishYieldCoordinatorResults(params: {
       params.degradationReasons.push("yield-publication:payload-oversize");
     }
     throwIfAborted(params.signal);
-    if (!params.degradationReasons.some((reason) => reason.startsWith("yield-source:"))) {
+    if (params.degradationReasons.length === 0) {
       try {
         await writeFreshnessSentinel(params.db, "yield-data", params.startSec, params.signal);
       } catch (error) {

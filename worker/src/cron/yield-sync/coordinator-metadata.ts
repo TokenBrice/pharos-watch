@@ -8,6 +8,7 @@ import type { YieldSupplementalCacheMeta } from "./state-loading";
 import type { YieldOptionalSourceOutcome } from "./optional-source-runtime";
 import type { YieldRowsWriteStats } from "./publication-atomic-batch";
 import { getComparisonAnchorStaleThresholdMs } from "../../lib/yield-ranking-helpers";
+import { REQUIRED_SUPPLEMENTAL_SOURCE_FAMILY_KEYS } from "./supplemental-source-family-keys";
 
 const YIELD_METADATA_EXAMPLE_LIMIT = 25;
 
@@ -98,6 +99,7 @@ export function buildYieldDegradationReasons(params: {
   safetySnapshotDegraded: boolean;
   safetySnapshotReason: string | null;
   defaultBenchmarkMeta: YieldBenchmarkMeta;
+  riskFreeRateRegistryCacheState?: string;
   selectedSources: readonly EvaluatedYieldSource[];
   dlPoolsMeta: YieldSourceInputMeta;
   supplementalMeta: YieldSupplementalCacheMeta;
@@ -117,6 +119,9 @@ export function buildYieldDegradationReasons(params: {
     if (params.safetySnapshotReason) {
       degradationReasons.push(`safety-snapshot:${params.safetySnapshotReason}`);
     }
+  }
+  if (params.riskFreeRateRegistryCacheState === "invalid") {
+    degradationReasons.push("yield-benchmarks:registry-invalid");
   }
   const defaultBenchmarkFreshness = classifyYieldBenchmarkFreshness(params.defaultBenchmarkMeta);
   if (defaultBenchmarkFreshness !== "healthy") {
@@ -151,18 +156,22 @@ export function buildYieldDegradationReasons(params: {
   // The chained supplemental job (A4/C16) writes these family caches earlier in
   // the same slot, so `missing-cache` means the lane was never provisioned
   // rather than lost; the coverage guards own any actual published-row loss.
-  // Every other lane state (stale/invalid cache, retained-degraded families)
-  // still degrades the run.
+  // Every other required-lane state is input quality, not a failed publication.
   const supplementalLaneUnprovisioned =
     supplemental.fallbackMode === "missing-cache" && supplemental.sourceCount === 0;
-  if (supplemental.fallbackMode === "partial-family-cache") {
+  const pendleOnlyCacheLoss = supplemental.unavailableRequiredFamilies?.length === 1
+    && supplemental.unavailableRequiredFamilies[0] === "pendle";
+  if (supplemental.fallbackMode === "partial-family-cache" && !pendleOnlyCacheLoss) {
     degradationReasons.push("yield-supplemental:partial-family-cache");
   } else if (!supplementalLaneUnprovisioned && (supplemental.mode !== "cache" || supplemental.sourceCount === 0)) {
     degradationReasons.push(`yield-supplemental:${supplemental.fallbackMode ?? supplemental.mode}`);
   }
   for (const family of supplemental.degradedFamilies) {
-    // PENDLE-RL (R4): append the producer's machine-readable cause when the
-    // run-outcome row carries one (e.g. `pendle-rate-limited-backoff`).
+    if (!REQUIRED_SUPPLEMENTAL_SOURCE_FAMILY_KEYS.some((key) => key === family)) continue;
+    // The quota-bound daily Pendle lane is advisory, including for the clean
+    // freshness sentinel. Its warning is retained separately in quality metadata.
+    if (family === "pendle") continue;
+    // Preserve the required family's concrete machine-readable failure cause.
     const familyReason = supplemental.degradedFamilyReasons?.[family];
     degradationReasons.push(
       familyReason
@@ -244,7 +253,8 @@ export function buildYieldSyncMetadata(input: {
   /** B15 optional-family failures: reported here, never as a degradation reason. */
   optionalSourceFailures: readonly YieldOptionalSourceOutcome[];
   onChain: YieldOnChainSyncMeta;
-  fallbackMode: string | null;
+  qualityReasons: string[];
+  reason?: string;
   validationFailures: number;
   riskFreeRate: number;
   cacheWriteSkipped: boolean;
@@ -256,6 +266,14 @@ export function buildYieldSyncMetadata(input: {
 }): string {
   const onChain = input.onChain;
   const onChainEnvelopeRejections = onChain.envelopeRejections.slice(0, YIELD_METADATA_EXAMPLE_LIMIT);
+  const advisoryReasons: string[] = [];
+  if (input.supplementalMeta.degradedFamilies.includes("pendle")) {
+    const reason = input.supplementalMeta.degradedFamilyReasons?.pendle;
+    advisoryReasons.push(`yield-supplemental:family-degraded:pendle${reason ? `:${reason}` : ""}`);
+  }
+  if (input.supplementalMeta.unavailableRequiredFamilies?.includes("pendle")) {
+    advisoryReasons.push("yield-supplemental:family-unavailable:pendle");
+  }
   return JSON.stringify({
     rowsRead: input.rowsRead,
     rowsWritten: input.rowsWritten,
@@ -310,7 +328,8 @@ export function buildYieldSyncMetadata(input: {
       comparisonAnchorFreshness: input.comparisonAnchorFreshness,
       previousTvlRowsTruncated: input.previousTvlRowsTruncated,
     },
-    fallbackMode: input.fallbackMode,
+    quality: { degraded: input.qualityReasons.length > 0, reasons: input.qualityReasons, advisoryReasons },
+    ...(input.reason ? { reason: input.reason } : {}),
     validationFailures: input.validationFailures,
     riskFreeRate: input.riskFreeRate,
     cacheWriteSkipped: input.cacheWriteSkipped,

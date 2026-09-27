@@ -135,6 +135,30 @@ describe("optional RPC family endpoint pacing", () => {
     vi.restoreAllMocks();
   });
 
+  it("bounds delayed Aave header waits at three and completes six targets inside the deadline", async () => {
+    let active = 0;
+    let peak = 0;
+    vi.stubGlobal("fetch", async (_input: RequestInfo | URL, init?: RequestInit) => {
+      active += 1;
+      peak = Math.max(peak, active);
+      await new Promise<void>((resolve) => setTimeout(resolve, 1_000));
+      active -= 1;
+      const body = JSON.parse(String(init?.body)) as { params: Array<{ data: string }> };
+      return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: resolveAaveResult(body.params[0]!.data) }));
+    });
+    const { value, elapsedMs } = await settleWithinBudget(
+      fetchAaveV3SupplyRates(AAVE_TARGETS, undefined, makeChainRpcs(["ethereum", "base", "arbitrum"])),
+      28_000,
+    );
+    expect(peak).toBe(3);
+    expect(active).toBe(0);
+    expect(value.results.map((row) => `${row.chain}:${row.symbol}`).sort()).toEqual(
+      AAVE_TARGETS.map((row) => `${row.chain}:${row.symbol}`).sort(),
+    );
+    expect(value.telemetry.budgetExhausted).toBe(false);
+    expect(elapsedMs).toBeLessThan(28_000);
+  });
+
   it("fails over to the alternate endpoint when the first endpoint stalls, and still probes every other target", async () => {
     const { calls, callsByUrl } = installRpcFetchStub({
       // Target 0 (ethereum:USDC, even rotation seed) tries the fallback URL first.

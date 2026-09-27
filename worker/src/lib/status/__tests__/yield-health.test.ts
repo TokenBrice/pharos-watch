@@ -756,6 +756,33 @@ describe("loadYieldHealthSummary", () => {
     expect(summary.supplemental.status).toBe("degraded");
   });
 
+  it.each([
+    ["vaultsFyi", "healthy", false],
+    ["pendle", "degraded", false],
+    ["aaveV3", "degraded", true],
+  ] as const)("keeps %s input quality separate from completed producer status", async (family, expectedStatus, degraded) => {
+    const summary = await loadYieldHealthSummary(makeDb([
+      ...supplementalFamilyRows(NOW - 60),
+      yieldCacheRow("yield:supplemental-source-run:v1", NOW - 30, {
+        version: 1,
+        checkedAt: NOW - 30,
+        familyCacheResults: { [family]: "retained-previous" },
+        degradedFamilies: [family],
+      }),
+    ]), NOW, {
+      "sync-yield-data": cron("ok", 30, {
+        quality: {
+          degraded,
+          reasons: degraded ? [`yield-supplemental:family-degraded:${family}`] : [],
+          advisoryReasons: family === "pendle" ? ["yield-supplemental:family-degraded:pendle"] : [],
+        },
+      }),
+    });
+    expect(summary.latestCronStatus).toBe("ok");
+    expect(summary.supplemental.status).toBe(expectedStatus);
+    expect(summary.supplemental.families?.[family]).toMatchObject({ status: "degraded", retained: true });
+  });
+
   it("reports a fresh non-fallback USD feed with proxy-selecting rows as healthy", async () => {
     const rows = liveShapeSourceRows();
     const usd = {
@@ -996,12 +1023,21 @@ describe("loadYieldHealthSummary", () => {
     }
   });
 
-  it("degrades a fresh coverage audit whose queue exceeds the documented drain budget", async () => {
+  it.each([
+    [150, 100, "healthy"],
+    [151, 100, "degraded"],
+    [150, 101, "degraded"],
+  ])("grades unresolved pre-truncation counts (%i/%i) as %s", async (headline, recommendations, status) => {
     const summary = await loadYieldHealthSummary(
       makeDb([
         yieldCacheRow("yield-coverage-audit", NOW - 600, emptyYieldAudit({
           manifestMissingCount: 200,
           nativeExactPoolRecommendationCount: 10,
+          deadCuratedPinCount: 1,
+          operatorReviewSummary: {
+            visibleHeadlineGapCount: headline,
+            visibleRecommendationCandidateCount: recommendations,
+          },
           queueTotals: { byKind: { "manifest-missing": 6 }, suppressedItemCount: 4, truncated: true },
           operatorQueue: {
             persistence: "durable",
@@ -1015,8 +1051,10 @@ describe("loadYieldHealthSummary", () => {
       { "sync-yield-data": cron() },
     );
 
-    expect(summary.coverageAudit.status).toBe("degraded");
-    expect(summary.coverageAudit.headlineGapCount).toBe(200);
+    expect(summary.coverageAudit.status).toBe(status);
+    expect(summary.coverageAudit.headlineGapCount).toBe(headline);
+    expect(summary.coverageAudit.recommendationCandidateCount).toBe(recommendations);
+    expect(summary.coverageAudit.queueBudgetBasis).toBe("post-disposition");
     expect(summary.coverageAudit.queueTotals).toEqual({
       byKind: { "manifest-missing": 6 },
       suppressedItemCount: 4,
@@ -1024,6 +1062,21 @@ describe("loadYieldHealthSummary", () => {
     });
     expect(summary.coverageAudit.allowedActions).toEqual(["accept", "watch"]);
     expect(summary.coverageAudit.queueDisplayOnly).toBe(true);
+  });
+
+  it("marks legacy raw detector counts as the budget fallback", async () => {
+    const summary = await loadYieldHealthSummary(
+      makeDb([yieldCacheRow("yield-coverage-audit", NOW - 600, emptyYieldAudit({
+        manifestMissingCount: 151,
+      }))]),
+      NOW,
+      { "sync-yield-data": cron() },
+    );
+    expect(summary.coverageAudit).toMatchObject({
+      status: "degraded",
+      headlineGapCount: 151,
+      queueBudgetBasis: "raw-detectors",
+    });
   });
 
   it("degrades when the publisher persisted no PYS inputs for part of the run", async () => {

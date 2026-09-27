@@ -66,7 +66,7 @@ export async function runYieldCoordinatorPersistStage(
     db: params.db,
     signal: params.signal,
     previewRankingsPayload: health.previewRankingsPayload,
-    evaluatedSources: normalized.evaluatedSources,
+    evaluatedSources: health.acceptedSources,
     publicationViews: health.publicationViews,
     startSec: fetched.startSec,
     degradationReasons: health.degradationReasons,
@@ -143,10 +143,10 @@ export async function runYieldCoordinatorPersistStage(
       },
     },
   );
-  const status = publicationResult.degradationReasons.length > 0 ? "degraded" : "ok";
+  const status = publicationApplied ? "ok" : "degraded";
   return {
     itemCount: publicationResult.updatedCount,
-    ...(status === "degraded" ? { status: "degraded" as const } : {}),
+    status,
     metadata: buildYieldSyncMetadata({
       rowsRead: fetched.yieldCoins.length,
       rowsWritten: publicationResult.updatedCount,
@@ -186,8 +186,8 @@ export async function runYieldCoordinatorPersistStage(
         consecutiveAllFailRuns: health.nextOnChainHealthState.consecutiveAllFailRuns,
         consecutiveMaskedAllFailRuns: health.nextOnChainHealthState.consecutiveMaskedAllFailRuns,
       },
-      fallbackMode:
-        publicationResult.degradationReasons.length > 0 ? publicationResult.degradationReasons.join(",") : null,
+      qualityReasons: publicationResult.degradationReasons,
+      ...(!publicationApplied ? { reason: publicationResult.skipReason ?? "yield-publication-not-applied" } : {}),
       validationFailures: publicationResult.validationFailures,
       riskFreeRate: fetched.riskFreeRate,
       cacheWriteSkipped: publicationResult.cacheWriteSkipped,
