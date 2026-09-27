@@ -25,7 +25,7 @@ const FLOW_FAQ_ITEMS = [
   {
     question: "What do mint and burn events indicate?",
     answer:
-      "Mint and burn events measure token creation and destruction on each stablecoin's configured native issuance chain. They do not by themselves establish investor inflows or withdrawals: USDai, for example, can be burned when PYUSD is deployed into sUSDai loan positions without an equivalent loss of protocol assets. Sustained net burn pressure feeds the Bank Run Gauge and DEWS, but its cause requires separate evidence.",
+      "Mint and burn events measure token creation and destruction on each stablecoin's configured native issuance chain. They do not by themselves establish investor inflows or withdrawals: USDai, for example, can be burned when PYUSD is deployed into sUSDai loan positions without an equivalent loss of protocol assets. Individually reviewed protocol-internal events, such as USD.AI's September 23, 2026 loan-deployment burn, are excluded from counted flow. Other sustained net burn pressure feeds the Bank Run Gauge and DEWS, but its cause requires separate evidence.",
   },
   {
     question: "What does Pressure Shift vs 30D mean?",

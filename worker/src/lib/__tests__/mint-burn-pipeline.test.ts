@@ -518,6 +518,45 @@ describe("mint-burn shared pipeline modules", () => {
       .toEqual({ mint_count: 1, burn_count: 0, net_flow_usd: 100 });
   });
 
+  it("replays a reviewed protocol-internal burn out of counted flow and fails closed on amount drift", async () => {
+    const { db, sqlite } = fixtures.open();
+    vi.mocked(batchExecute).mockImplementation(realDb.batchExecute);
+    const reviewedId = "arbitrum-0x46dc4ae95582c3d92d2ada242fc7445b6f4408284d271f69e2f98668993559d7-4";
+    const base = {
+      stablecoin_id: "usdai-usd-ai",
+      chain_id: "arbitrum",
+      direction: "burn" as const,
+      burn_type: "effective_burn" as const,
+      timestamp: 3_610,
+    };
+    const reviewed = makeRow({ ...base, id: reviewedId, amount: 128_895_244.1, amount_usd: 128_889_257.84 });
+    const drifted = makeRow({ ...base, id: "arbitrum-0xother-1", amount: 50, amount_usd: 50 });
+
+    // First ingestion predates the review: both burns count.
+    await insertMintBurnRows(db, [reviewed, drifted]);
+    await recalcAffectedHours(db, collectAffectedHours([reviewed, drifted]));
+    expect(sqlite.prepare("SELECT burn_count, net_flow_usd FROM mint_burn_hourly").get())
+      .toEqual({ burn_count: 2, net_flow_usd: -128_889_307.84 });
+
+    // Replay re-parses the same logs; the reviewed event leaves counted flow.
+    const affectedHours = new Map<string, { stablecoinId: string; chainId: string; hourTs: number }>();
+    const result = await persistMintBurnRows(db, [{ ...reviewed }, { ...drifted }], affectedHours);
+    await recalcAffectedHours(db, affectedHours);
+    expect(result.reviewedProtocolInternal).toBe(1);
+    expect(sqlite.prepare("SELECT id, flow_type FROM mint_burn_events ORDER BY id").all()).toEqual([
+      { id: reviewedId, flow_type: "protocol_internal" },
+      { id: "arbitrum-0xother-1", flow_type: "standard" },
+    ]);
+    expect(sqlite.prepare("SELECT burn_count, net_flow_usd FROM mint_burn_hourly").get())
+      .toEqual({ burn_count: 1, net_flow_usd: -50 });
+
+    // A reviewed id whose amount no longer matches its review stays economic.
+    const mismatched = { ...reviewed, amount: 128_000_000 };
+    await persistMintBurnRows(db, [mismatched]);
+    expect(sqlite.prepare("SELECT flow_type FROM mint_burn_events WHERE id = ?").get(reviewedId))
+      .toEqual({ flow_type: "standard" });
+  });
+
   it("updates classification rows for burns and non-standard mints", async () => {
     const db = makeDb();
     // Single batchExecute call: 3 rows (2 burns + 1 non-standard mint).

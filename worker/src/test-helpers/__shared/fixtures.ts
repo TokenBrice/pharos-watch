@@ -81,7 +81,7 @@ type MintBurnRow = {
   price_source: string | null;
   burn_type: "effective_burn" | "bridge_burn" | "review_required" | null;
   burn_review_reason: string | null;
-  flow_type: "standard" | "atomic_roundtrip" | "bridge_transfer";
+  flow_type: "standard" | "atomic_roundtrip" | "bridge_transfer" | "protocol_internal";
   counterparty: string | null;
   tx_hash: string;
   block_number: number;

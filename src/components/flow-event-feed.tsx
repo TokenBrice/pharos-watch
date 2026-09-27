@@ -73,6 +73,13 @@ function getEventBadge(event: MintBurnEvent): {
     };
   }
 
+  if (event.flowType === "protocol_internal") {
+    return {
+      label: "Protocol-internal",
+      className: "bg-sky-500/10 text-sky-700 dark:text-sky-300 border-sky-500/20 text-xs",
+    };
+  }
+
   if (event.direction === "burn" && event.burnType === "review_required") {
     return {
       label: "Review burn",

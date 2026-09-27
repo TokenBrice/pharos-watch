@@ -155,7 +155,7 @@ export const MintBurnPerCoinResponseSchema = z.object({
 });
 export type MintBurnPerCoinResponse = z.infer<typeof MintBurnPerCoinResponseSchema>;
 
-const MintBurnFlowTypeSchema = z.enum(["standard", "atomic_roundtrip", "bridge_transfer"]);
+const MintBurnFlowTypeSchema = z.enum(["standard", "atomic_roundtrip", "bridge_transfer", "protocol_internal"]);
 
 const MintBurnEventSchema = z.object({
   id: z.string(),

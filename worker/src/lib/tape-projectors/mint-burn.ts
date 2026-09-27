@@ -63,10 +63,10 @@ async function fetchLargeFlows(
   until: number | null,
   limit: number,
 ): Promise<MintBurnSourceRow[]> {
-  // Bridge transfers leak into mint/burn aggregates but represent token
-  // teleportation, not economic mint/burn — exclude them. `review_required`
-  // burns are still being classified; emit only confirmed burn types so the
-  // tape doesn't surface ambiguous rows.
+  // Bridge transfers and reviewed protocol-internal movements are not
+  // economic mint/burn — exclude them. `review_required` burns are still
+  // being classified; emit only confirmed burn types so the tape doesn't
+  // surface ambiguous rows.
   return fetchRowsWithTieExpansion<MintBurnSourceRow>(db, {
     selectSql: `SELECT id, stablecoin_id, symbol, chain_id, direction, amount_usd,
                       counterparty, timestamp, flow_type, burn_type`,
@@ -75,7 +75,7 @@ async function fetchLargeFlows(
     trailingWhereSql: `
                    AND amount_usd IS NOT NULL
                    AND amount_usd >= ?
-                   AND (flow_type IS NULL OR flow_type != 'bridge_transfer')
+                   AND (flow_type IS NULL OR flow_type NOT IN ('bridge_transfer', 'protocol_internal'))
                    AND (direction = 'mint' OR burn_type IS NULL OR burn_type != 'review_required')`,
     trailingBinds: [NOTICE_USD],
     orderBySql: "timestamp ASC, id ASC",

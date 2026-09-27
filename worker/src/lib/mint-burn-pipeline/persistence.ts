@@ -1,6 +1,7 @@
 import { batchExecute } from "../db";
 import { throwIfAborted } from "../abort";
 import { detectAtomicRoundtrips } from "./roundtrip-detection";
+import { applyReviewedProtocolInternalFlows } from "./reviewed-protocol-flows";
 import type { MintBurnAffectedHour, MintBurnRow } from "./types";
 
 const MINT_BURN_EVENT_INSERT_BATCH_SIZE = 50;
@@ -174,8 +175,11 @@ export async function persistMintBurnRows(
   burnTypeChanges: number;
   rowsUpdated: number;
   roundtripsDetected: number;
+  reviewedProtocolInternal: number;
 }> {
   const roundtripsDetected = detectAtomicRoundtrips(rows);
+  // Reviewed issuer-internal events win over heuristic tagging.
+  const reviewedProtocolInternal = applyReviewedProtocolInternalFlows(rows);
   if (rows.length === 0) {
     return {
       inserted: 0,
@@ -184,6 +188,7 @@ export async function persistMintBurnRows(
       burnTypeChanges: 0,
       rowsUpdated: 0,
       roundtripsDetected,
+      reviewedProtocolInternal,
     };
   }
   throwIfAborted(options.signal);
@@ -201,5 +206,6 @@ export async function persistMintBurnRows(
     burnTypeChanges,
     rowsUpdated,
     roundtripsDetected,
+    reviewedProtocolInternal,
   };
 }

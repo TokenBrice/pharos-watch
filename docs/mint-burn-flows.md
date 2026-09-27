@@ -19,13 +19,13 @@ Public `/api/mint-burn-flows` freshness metadata and the `/flows` page intention
 
 > **Agent navigation** — Grep the heading you need: Methodology Versioning · Cron Schedule · Constants & Thresholds · Contract Configurations · Sync Algorithm · Shared Ingestion Pipeline Boundaries · Scoring · Retention · Database Schema · API Endpoints · Cron Metadata Fields · Frontend · Error Handling & Edge Cases · Testing · Future Work.
 
-Mint and burn events measure token creation and destruction, not investor intent. USDai is the reviewed counterexample: a burn can release PYUSD from the hub for sUSDai loan deployment without an equivalent fall in protocol assets. The public FAQ and USDai's curated chart annotation therefore keep the measured burn visible without calling it a redemption or investor outflow. The flow classifier and Bank Run Gauge methodology are unchanged; a future protocol-internal burn class would need its own reviewed methodology change and replay.
+Mint and burn events measure token creation and destruction, not investor intent. USDai is the reviewed counterexample: a burn can release PYUSD from the hub for sUSDai loan deployment without an equivalent fall in protocol assets. Since methodology v6.21, individually reviewed events of this kind are tagged `flow_type='protocol_internal'` and leave counted flow; see [Reviewed protocol-internal events](#reviewed-protocol-internal-events). The public FAQ and USDai's curated chart annotation keep the measured burn visible without calling it a redemption or investor outflow.
 
 ---
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-mint-burn-flow -->`v6.2`<!-- GENERATED-END: methodology-version-mint-burn-flow -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-mint-burn-flow -->`v6.21`<!-- GENERATED-END: methodology-version-mint-burn-flow -->
 - **Public changelog page:** `/methodology/mint-burn-flow-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/mint-burn-flow/`
 
@@ -109,7 +109,13 @@ Window maturity accepts either the oldest retained hourly event or the shortest 
 
 Current rule: the March 24 long-tail transfer wave that inherited the blanket `21_900_000` Ethereum floor is labeled `startBlockSource = default-coverage-floor-2026-03-24` and `startBlockConfidence = low`, so the public API no longer implies contract-specific historical certainty where none exists.
 
-Events are also classified by `flow_type` (`standard`, `bridge_transfer`, or `atomic_roundtrip`) so non-economic bridge transfers and same-tx roundtrip noise stay out of aggregate flow metrics.
+Events are also classified by `flow_type` (`standard`, `bridge_transfer`, `atomic_roundtrip`, or `protocol_internal`) so non-economic bridge transfers, same-tx roundtrip noise, and reviewed issuer-internal movements stay out of aggregate flow metrics.
+
+### Reviewed protocol-internal events
+
+`worker/src/lib/mint-burn-pipeline/reviewed-protocol-flows.ts` holds individually reviewed events that moved tokens inside an issuer's own balance sheet. `persistMintBurnRows()` applies it after atomic-roundtrip detection, in both the cron and `POST /api/backfill-mint-burn` paths, so a replay over the event's block rewrites the stored row and recalculates its hourly bucket. Matching requires the exact event id (chain, transaction hash, log index), stablecoin, chain, direction, and the reviewed token amount; a row whose amount drifts keeps its normal classification. There is no address-level rule.
+
+The only entry is USDai's September 23, 2026 burn of 128,895,244.1 tokens (block 508,237,173). The sUSDai vault funded USD.AI's EscrowTimelock escrow-admin Safe with exactly that amount through two same-evening strategy transfers; the Safe then called the hub's `withdraw()`, burning the USDai and paying 128,895,243.0 PYUSD to a recipient address. USD.AI's dashboard loan-reserve series rose by exactly 128,895,244.1 in the same half hour while protocol TVL stayed near $609.05M. The withdrawal path is the one an ordinary redemption uses, which is why the rule is per event. Four earlier escrow-admin Safe burns (July 10, July 20, August 21, September 14) and four repayment re-deposit mints lacked matching half-hour loan-reserve evidence at review and remain counted. `reviewedProtocolInternal` in persistence results counts rows tagged during a run.
 
 ### Event Detection
 
@@ -221,7 +227,7 @@ Cron (`sync-mint-burn`) and admin backfill (`backfill-mint-burn`) now share a si
 
 Implementation invariant: `worker/src/api/backfill-mint-burn.ts` does not import from `worker/src/cron/sync-mint-burn.ts`; both entrypoints import shared helpers from `mint-burn-pipeline/*`.
 
-`mint_burn_events.flow_type` is orthogonal to `burn_type`: `burn_type` still classifies burns as economic vs bridge/review, while `flow_type` applies to both mints and burns and now marks tx-level bridge noise as `bridge_transfer` plus same-transaction mint+burn noise as `atomic_roundtrip`.
+`mint_burn_events.flow_type` is orthogonal to `burn_type`: `burn_type` still classifies burns as economic vs bridge/review, while `flow_type` applies to both mints and burns and marks tx-level bridge noise as `bridge_transfer`, same-transaction mint+burn noise as `atomic_roundtrip`, and reviewed issuer-internal movements as `protocol_internal`. Large-flow Tape projection skips `bridge_transfer` and `protocol_internal` rows; the Tape row already projected for the September 23 USDai burn before the review remains, because it records a burn that did occur.
 
 Cron metadata includes `atomicRoundtripsDetected`, an observability counter for how many rows were tagged during the run.
 
@@ -372,7 +378,7 @@ Exact columns, constraints, and indexes live in `worker/migrations/0000_baseline
 
 ### mint_burn_events (current excerpt; baseline plus later indexes)
 
-`mint_burn_events` is the transaction-addressable recent event ledger with the protected 8-day retention policy above. It preserves token-native amount, optional event valuation and its source timestamp, chain/transaction provenance, counterparty, burn classification, and economic-flow classification. `standard`, `bridge_transfer`, and `atomic_roundtrip` semantics decide whether a row contributes to aggregates; burn rows additionally distinguish effective burns, bridge burns, and review-required evidence.
+`mint_burn_events` is the transaction-addressable recent event ledger with the protected 8-day retention policy above. It preserves token-native amount, optional event valuation and its source timestamp, chain/transaction provenance, counterparty, burn classification, and economic-flow classification. `standard`, `bridge_transfer`, `atomic_roundtrip`, and `protocol_internal` semantics decide whether a row contributes to aggregates; burn rows additionally distinguish effective burns, bridge burns, and review-required evidence.
 
 Migration `0178_historical_data_debt_closure.sql` owns bounded historical price-repair state and its provenance columns; migration `0234_mint_burn_price_repair_backlog_index.sql` owns the repair backlog index (`idx_mbe_historical_price_repair_backlog`). Repair provenance distinguishes retryable unclassified debt, aggregate rebuild pending, recovered rows, and irreducible exact-day gaps; it also binds mutation attempts to their operator run and pre-run Time Travel bookmark. Migration `0097_mbe_flow_type_ts_index.sql` owns flow-classification query support. Exact index membership stays in the migrations.
 
