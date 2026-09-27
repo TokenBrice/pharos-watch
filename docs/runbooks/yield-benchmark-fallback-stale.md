@@ -1,7 +1,7 @@
 # Runbook: Yield Benchmark Fallback Or Stale State
 
 Triggered by:
-- `sync-yield-data` metadata `fallbackMode` containing `risk-free-rate:*`
+- `sync-yield-data` metadata `quality.reasons` containing `risk-free-rate:*`
 - `/api/yield-rankings` provenance showing retained benchmark fallback
 - `/admin/` -> Crons showing failing or stale `fetch-tbill-rate`
 - Dashboard observation of the retained GBP SONIA fallback after consecutive daily runs
@@ -15,7 +15,7 @@ Yield rows still publish, but benchmark provenance shows a fallback or retained 
 
 ## Impact
 
-Rankings are usually available, but benchmark-relative interpretation is degraded. The post-V9 publisher degrades when the default USD benchmark is a true fallback, when retained fallback mode is active, or when the retained last-known-good USD benchmark is older than 48 hours (2 days) of fetch age — or when the entry's observation (`recordDate`) is older than the key's bound in `YIELD_BENCHMARK_RECORD_MAX_AGE_SEC` in `worker/src/cron/yield-sync/benchmarks.ts` (5 days for daily/overnight series, 7 days CHF, 10 days TRY, 12 days RUB, 45 days for CAD's monthly series). Freshness is `max(fetch age, record age)`, so a frozen or rewound upstream is stale even when the fetch itself just succeeded. A non-USD benchmark that is itself fallback or stale also degrades the run on its own, reported as `risk-free-rate:<KEY>:<reason>`. Beyond that scoring TTL, affected rows are benchmark-stale and PYS is NR.
+Rankings are usually available, but benchmark-relative interpretation can be degraded. Applied publication returns `ok` with benchmark findings in `metadata.quality.reasons`; unapplied work reports `degraded` with `metadata.reason`. A benchmark's own fallback evidence degrades input quality. Fetch age above 48 hours or observation age beyond its key-specific bound makes it stale (5 days for daily/overnight series, 7 days CHF, 10 days TRY, 12 days RUB, 45 days CAD monthly). Fetch and record bounds are checked independently, so a frozen upstream remains stale after a successful fetch. Non-USD fallback or stale evidence also raises `risk-free-rate:<KEY>:<reason>` independently. Past either freshness bound, affected rows are benchmark-stale and PYS is NR.
 
 The v8.43 hurdle re-base consumes the USD reference only while it classifies healthy on its own feed evidence. A degraded reference nulls `usdBenchmarkRate`, so affected non-USD rows publish an estimated PYS with the `reference-benchmark-degraded` warning; a stale reference makes them NR (`benchmark-stale`). Documented proxy selection (`benchmarkSelectionMode: "fallback-usd"`) is a methodology choice, not a degraded feed: it is reported as `proxySelectionRowCount` / `benchmarkIsProxy` and never degrades the benchmark entry or the row by itself.
 
@@ -77,7 +77,7 @@ WHERE key = 'yield-rankings';
 - `fetch-tbill-rate` has a recent `ok` or expected `degraded` run.
 - `cache['risk_free_rates']` parses as JSON with a current USD benchmark and any available non-USD benchmark entries.
 - If GBP SONIA sources recovered, `cache['fetch-tbill-rate:gbp-retained-fallback-streak']` shows `consecutiveRetainedRuns: 0`, `consecutiveFreshRuns >= 2`, and a current `lastFreshSource` / `lastFreshRecordDate`. The `yield-gbp-benchmark-current` canary is `ok` only when the GBP row is non-fallback, fetched within 48 hours, observed within 7 days, and verified across two consecutive daily publications.
-- New `yield-rankings` rows expose benchmark fields, and `fallbackMode` is null unless an upstream outage is still active.
+- New `yield-rankings` rows expose benchmark fields, and `metadata.quality.reasons` contains no benchmark finding after recovery. The yield run no longer has a top-level `fallbackMode`; benchmark-specific fallback fields remain.
 - The `yield-usd-benchmark-current` canary is `ok` only when the USD row is direct and current and has been published fresh in two consecutive generations.
 - The retained entries carry a current `recordDate` inside the key's observation bound, not just a recent fetch timestamp.
 - `/yield/` scatter and table benchmark labels agree with the API payload.

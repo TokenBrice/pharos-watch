@@ -2,7 +2,7 @@
 
 Triggered by:
 - `sync-yield-data` metadata showing `onChainAllDeterministicFailed`, `onChainCooldownTriggered`, or `onChainSkippedDueToCooldown`
-- `fallbackMode` containing `onchain-rates:all-deterministic-failed` or `onchain-rates:cooldown-coverage-gap`
+- `metadata.quality.reasons` containing `onchain-rates:all-deterministic-failed` or `onchain-rates:cooldown-coverage-gap`
 - `cache['yield:onchain-health:v1']` showing an active `cooldownUntil`
 
 ## Symptom
@@ -11,7 +11,7 @@ Deterministic on-chain yield reads fail in a run. If all configured deterministi
 
 ## Impact
 
-Rows backed by non-onchain sources continue to publish. Native deterministic rows may be absent or replaced by lower-confidence alternatives until the cooldown expires. If a coverage gap appears while cooldown is active, `sync-yield-data` degrades and retries deterministic reads on the next post-V9 cycle.
+Rows backed by non-onchain sources continue to publish. Native deterministic rows may be absent or replaced by lower-confidence alternatives until cooldown expires. A cooldown coverage gap raises input-quality reasons and retries deterministic reads on the next post-V9 cycle. Applied publication remains `ok` with `metadata.quality`; unapplied work is `degraded` with `metadata.reason`. The top-level yield `fallbackMode` is removed.
 
 ## First Checks
 

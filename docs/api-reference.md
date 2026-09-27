@@ -125,6 +125,17 @@ Endpoints that emit `_meta` into plain-object (non-array) response bodies do so 
 
 Route-specific manual `_meta` injectors can be stricter. `GET /api/chains` uses its 1800-second budget directly (`fresh <= 1x`, `degraded <= 2x`, then `stale`) and switches its response to `no-store` whenever the chain snapshot is not fresh.
 
+Yield routes override the generic 8x/12x runway: `GET /api/yield-rankings` (full and summary) and `GET /api/yield-history` use the shared `yield-data` bands: `fresh` through 7,200 seconds (2x the hourly producer interval), `degraded` through 14,400 seconds (4x), then `stale`. Both non-fresh states return HTTP `Warning: 110` and `Cache-Control: no-store`. History freshness measures the authoritative publication cutoff, not the last point in a requested historical window. Its expanded `_meta` is already live in Phase A: `assessedAt` (response-time Unix seconds), `freshBudgetSec`, `degradedBudgetSec`, and nullable `reason`; non-fresh publication age names `yield-publication-age`, while unavailable authority is stale with `publication-cutoff-unavailable`.
+
+**Yield wire rollout:** `shared/lib/yield-wire-compat.ts` applies a serialization-only projection; persisted values remain unchanged.
+
+- **Phase A (current):** Full and summary rankings `_meta` retains only `updatedAt`, `ageSeconds`, and `status`; the expanded assessment fields described above are live on history, not rankings. Summary rows withhold `benchmarkSelectionMode` and `provenance.sourceMaxAgeSeconds`, and summary `benchmarkIsFallback` keeps its legacy currency-substitution meaning (`fallback-usd`), not feed-fallback quality. Detailed ranking rows with unavailable observation timestamp or age serialize `provenance: null`. `sourceRisk.rewardShare > 1` becomes null on rankings, alternatives, and history; rankings `medianApy: null` becomes legacy 0 on the wire only.
+- **Phase B (follow-up release):** Publishes the expanded contract directly: expanded rankings `_meta`, explicit summary selection mode and source maximum age, nullable observation evidence and median, and raw nonnegative reward shares including ratios above 1. Summary `benchmarkIsFallback` then describes feed fallback independently of selection mode. The prepared cutover is `agents/2026-09-27-yield-hardening-review/impl/phase-b-wire.patch`; it is gated on retirement of the pre-Phase-A frontend generation, not merely Worker-before-Pages deployment order.
+
+Yield source freshness is separate from publication freshness. Unknown observation evidence must not be replaced with publication time or treated as refreshed merely because the snapshot was newly served. Source and comparison-anchor ages advance at read time; selected `sourceRisk.sourceAgeSeconds` follows authoritative provenance, while alternate ages advance from the publication clock and preserve unavailable ages.
+
+Yield history may include a top-level `warning` explaining publication-cutoff fallback. A point with unreadable stored warnings returns `warningSignals: []` with `warningSignalsStatus: "unreadable"`; that marker is not a clean warning assessment. Each point's `pysReproducibility` is `exact`, `not-scored`, `legacy-partial`, or `invalid`: only `exact` affirms reproduction from the publish-time input snapshot, while legacy/absent evidence and invalid snapshots remain explicit.
+
 **Endpoints with `_meta`:**
 
 | Endpoint                         | Max Age (sec) | Source                                       |
@@ -824,7 +835,7 @@ Returns current Yield Intelligence rankings and risk-adjusted fields.
 
 ```json
 {
-  "currentVersion": "8.44",
+  "currentVersion": "8.45",
   "methodologyVersion": "9.92"
 }
 ```
@@ -843,7 +854,7 @@ Returns the public adapter-coverage and source-status manifest.
 
 ```json
 {
-  "methodologyVersion": "v8.44"
+  "methodologyVersion": "v8.45"
 }
 ```
 
@@ -861,8 +872,8 @@ Returns bounded yield history for one stablecoin and optional source projection.
 
 ```json
 {
-  "currentVersion": "8.44",
-  "methodologyVersion": "8.44"
+  "currentVersion": "8.45",
+  "methodologyVersion": "8.45"
 }
 ```
 

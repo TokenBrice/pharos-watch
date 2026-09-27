@@ -32,11 +32,22 @@ npx wrangler d1 execute stablecoin-db --remote --command "select key, value, upd
 ```
 
 If remote D1 is unavailable, use the latest fixture or prior run output. The
-audit runs only from `worker/src/handlers/scheduled/monthly-yield-audit.ts`;
-do not mutate production D1.
+audit runs from `worker/src/handlers/scheduled/monthly-yield-audit.ts` and the
+authenticated `POST /api/trigger-yield-coverage-audit` route, implemented in
+`worker/src/handlers/scheduled/yield-coverage-audit-manual.ts`. After deploying
+reviewed coverage changes, use the manual replay procedure in
+`docs/runbooks/yield-health.md`; it uses the normal audit lease. Keep production
+D1 inspection SELECT-only; do not manually mutate production D1 or dispositions.
 
 Record date, `reportedAt`, counts, and whether evidence is production, local,
 or fixture-derived.
+
+Record `queueBudgetBasis`: new reports use `post-disposition` unresolved counts
+before truncation, with budgets of 150 headline gaps and 100 recommendation
+candidates. Dead-pin and restoration queue items count once; suppressed reviewed
+work does not. Legacy reports use `raw-detectors` until refreshed. Status samples
+six items per side and the report queue twenty; neither is the full count.
+Missing or malformed supply cache defers the audit and preserves the prior report.
 
 ## Decision Workflow
 
