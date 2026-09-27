@@ -352,6 +352,7 @@ function sourceKeyFor(protocol: string, yieldType: YieldType, risk: YieldSourceR
 
 function yieldFreshnessFrom(ranking: YieldRanking | undefined, now: number): MergedRow["yieldFreshness"] {
   if (ranking?.provenance) {
+    if (ranking.provenance.sourceObservedAt == null || ranking.provenance.sourceAgeSeconds == null) return null;
     return {
       capturedAt: ranking.provenance.sourceObservedAt,
       ageSeconds: ranking.provenance.sourceAgeSeconds,

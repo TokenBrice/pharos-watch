@@ -1,9 +1,10 @@
+import { projectYieldWireCompat } from "@shared/lib/yield-wire-compat";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { logWorkerEventArgs } from "../lib/structured-log";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import { safetyScorePublicationIdentitiesAreComparable } from "@shared/lib/safety-score-publication";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
-import { YIELD_SAFETY_STALE_COHERENT_MAX_AGE_SEC } from "@shared/lib/yield-safety-fallback";
+import { isYieldSafetyFallbackWithinWindow } from "@shared/lib/yield-safety-fallback";
 import {
   YieldRankingsResponseSchema,
   YIELD_BENCHMARK_KEY_CURRENCY,
@@ -20,7 +21,7 @@ import { projectYieldRankingsSummary } from "@shared/lib/yield-rankings-summary"
 import type { YieldRankingsSummaryResponse } from "@shared/types/yield-summary";
 import { numberValue as finiteNumber } from "@shared/lib/type-guards";
 import { resolveYieldRowSafety, stripSafetyDerivedSourceRisk } from "@shared/lib/yield-opportunity-risk";
-import { classifyYieldSourceAgeTier, classifyYieldSourceFreshness, derivePysNullReason } from "../lib/yield-ranking-helpers";
+import { classifyYieldSourceAgeTier, classifyYieldSourceFreshness, derivePysNullReason, getRankingStaleThresholdMs } from "../lib/yield-ranking-helpers";
 import {
   classifyYieldBenchmarkFreshness,
   YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
@@ -33,6 +34,7 @@ import {
 } from "../lib/yield-rank-attribution";
 import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { addFreshnessHeaders, buildFreshnessMeta } from "../lib/api-freshness";
+import { getCacheRatioThresholds } from "@shared/lib/status-thresholds";
 import { createCacheHandler } from "../lib/api-cache-read";
 import { errorResponse, jsonResponseWithHeaders } from "../lib/api-response";
 
@@ -109,35 +111,82 @@ function resolveHydratedCalculationMode(row: YieldRanking): YieldCalculationMode
 }
 
 function resolveHydratedSourceFreshness(row: YieldRanking): "fresh" | "stale" | "unknown" {
-  // B21: the age bounds were tightened (price-derived 36h -> 30h, rate-derived
-  // 48h -> 36h), so an observation a cached publication stamped `fresh` is never
-  // re-served fresher than its own age allows.
-  if (
-    classifyYieldSourceAgeTier({
-      dataSource: row.dataSource,
-      sourceKey: row.provenance?.sourceKey ?? null,
-      sourceAgeSeconds: finiteNumber(row.provenance?.sourceAgeSeconds),
-    }) === "stale"
-  ) {
-    return "stale";
-  }
-  if (row.provenance?.sourceFreshness) return row.provenance.sourceFreshness;
-  if (row.warningSignals.includes("data-stale")) return "stale";
-  if (row.provenance) {
-    return classifyYieldSourceFreshness({
-      dataSource: row.dataSource,
-      sourceKey: row.provenance.sourceKey,
-      sourceAgeSeconds: finiteNumber(row.provenance.sourceAgeSeconds),
-      comparisonAnchorAgeSeconds: finiteNumber(row.provenance.comparisonAnchorAgeSeconds),
-    });
-  }
-  return "unknown";
+  const freshness = classifyYieldSourceFreshness({
+    dataSource: row.dataSource,
+    sourceKey: row.provenance?.sourceKey,
+    sourceAgeSeconds: finiteNumber(row.provenance?.sourceAgeSeconds),
+    comparisonAnchorAgeSeconds: finiteNumber(row.provenance?.comparisonAnchorAgeSeconds),
+  });
+  // Retain independently degraded product-input evidence; elapsed time can
+  // make a source worse, never rehabilitate a rejected observation.
+  if (freshness === "stale" || row.provenance?.sourceFreshness === "stale" || row.warningSignals.includes("data-stale")) return "stale";
+  return row.provenance?.sourceFreshness === "unknown" ? "unknown" : freshness;
 }
 
-function resolveHydratedBenchmarkFreshness(row: YieldRanking): "healthy" | "degraded" | "stale" {
-  if (row.provenance?.benchmarkFreshness) return row.provenance.benchmarkFreshness;
-  if (row.warningSignals.includes("benchmark-stale")) return "stale";
-  return row.warningSignals.includes("benchmark-degraded") ? "degraded" : "healthy";
+function resolveHydratedBenchmarkFreshness(
+  row: YieldRanking,
+  payload: YieldRankingsResponse,
+): "healthy" | "degraded" | "stale" {
+  const key = row.benchmarkKey ?? row.provenance?.benchmarkKey;
+  const meta = (key ? payload.benchmarks?.[key] : null) ??
+    (key != null && payload.provenance?.benchmark.key === key ? payload.provenance.benchmark : null);
+  const assessed = meta ? classifyYieldBenchmarkFreshness(meta, {
+    selectionMode: row.benchmarkSelectionMode ?? row.provenance?.benchmarkSelectionMode,
+    recordDate: meta.recordDate,
+    maxRecordAgeSec: meta.maxRecordAgeSec ?? (key ? YIELD_BENCHMARK_RECORD_MAX_AGE_SEC[key] : undefined),
+  }) : null;
+  if (assessed === "stale" || row.warningSignals.includes("benchmark-stale")) return "stale";
+  if (assessed === "degraded" || row.warningSignals.includes("benchmark-degraded")) return "degraded";
+  return assessed ?? row.provenance?.benchmarkFreshness ?? "healthy";
+}
+
+/** Advance published evidence once, before choosing either safety branch. */
+function ageYieldRankings(payload: YieldRankingsResponse, publishedAt: number): YieldRankingsResponse {
+  const now = Math.floor(Date.now() / 1000);
+  const elapsed = Math.max(0, now - publishedAt);
+  const age = (observedAt: number | null | undefined, publishedAge: number | null | undefined) =>
+    finiteNumber(observedAt) != null
+      ? Math.max(0, now - observedAt!)
+      : finiteNumber(publishedAge) != null ? Math.max(0, publishedAge!) + elapsed : null;
+  const ageBenchmark = (meta: NonNullable<YieldRankingsResponse["benchmarks"]>["USD"]) => ({
+    ...meta,
+    ageSeconds: age(meta.fetchedAt, meta.ageSeconds),
+  });
+  const publishedBenchmarks = payload.benchmarks ?? payload.provenance?.benchmarks;
+  const benchmarks = publishedBenchmarks
+    ? Object.fromEntries(Object.entries(publishedBenchmarks).map(([key, meta]) => [key, meta ? ageBenchmark(meta) : meta])) as YieldRankingsResponse["benchmarks"]
+    : undefined;
+  return {
+    ...payload,
+    benchmarks,
+    provenance: payload.provenance ? {
+      ...payload.provenance,
+      benchmark: ageBenchmark(payload.provenance.benchmark),
+      ...(benchmarks ? { benchmarks } : {}),
+    } : payload.provenance,
+    rankings: payload.rankings.map((row) => {
+      const sourceAgeSeconds = row.provenance
+        ? age(row.provenance.sourceObservedAt, row.provenance.sourceAgeSeconds)
+        : age(null, row.sourceRisk?.sourceAgeSeconds);
+      return {
+        ...row,
+        sourceRisk: row.sourceRisk ? { ...row.sourceRisk, sourceAgeSeconds } : row.sourceRisk,
+        altSources: row.altSources.map((source) => ({
+          ...source,
+          sourceRisk: source.sourceRisk ? {
+            ...source.sourceRisk,
+            sourceAgeSeconds: age(null, source.sourceRisk.sourceAgeSeconds),
+          } : source.sourceRisk,
+        })),
+        provenance: row.provenance ? {
+          ...row.provenance,
+          sourceAgeSeconds,
+          sourceMaxAgeSeconds: getRankingStaleThresholdMs(row.dataSource, row.provenance.sourceKey) / 1000,
+          comparisonAnchorAgeSeconds: age(row.provenance.comparisonAnchorObservedAt, row.provenance.comparisonAnchorAgeSeconds),
+        } : row.provenance,
+      };
+    }),
+  };
 }
 
 /**
@@ -267,16 +316,32 @@ function hydrateYieldRankingsWithLiveSafety(
   payload: YieldRankingsResponse,
   scores: Map<string, { score: number; grade: string }>,
   source: LiveSafetyHydrationSource,
+  preservePublishedSafety = false,
 ): { payload: YieldRankingsResponse; degradationReasons: string[] } {
   // Reference (USD) risk-free rate the re-based effective yield anchors on (yield v8.43).
   const { freshness: referenceBenchmarkFreshness, usdBenchmarkRate } = resolvePublishedReferenceBenchmark(payload);
   const hydratedRows = payload.rankings
     .map((row) => {
-      const safety = scores.get(row.id);
-      const hydratedSafety = resolveHydratedSafety({ row, safety });
+      const safety = preservePublishedSafety
+        ? row.provenance?.usedDefaultSafety || row.safetyScore == null || row.safetyGrade == null
+          ? undefined
+          : { score: row.sourceRisk?.underlyingSafetyScore ?? row.safetyScore, grade: row.safetyGrade }
+        : scores.get(row.id);
+      const resolvedSafety = resolveHydratedSafety({ row, safety });
+      const hydratedSafety = preservePublishedSafety ? {
+        ...resolvedSafety,
+        score: row.safetyScore ?? DEFAULT_SAFETY_SCORE,
+        grade: row.safetyGrade,
+        reason: row.safetyReason ?? null,
+        sourceRisk: row.sourceRisk,
+        provenance: row.provenance?.safetyProvenance,
+        usedDefaultSafety: row.provenance?.usedDefaultSafety ?? true,
+      } : resolvedSafety;
       const safetyInputScore = hydratedSafety.score;
-      const sourceFreshness = resolveHydratedSourceFreshness(row);
-      const benchmarkFreshness = resolveHydratedBenchmarkFreshness(row);
+      const productBenchmarkStale = row.dataSource === "rate-derived" &&
+        (referenceBenchmarkFreshness === "stale" || payload.benchmarks?.USD?.source === "hardcoded-fallback");
+      const sourceFreshness = productBenchmarkStale ? "stale" : resolveHydratedSourceFreshness(row);
+      const benchmarkFreshness = resolveHydratedBenchmarkFreshness(row, payload);
       const evidenceClass = resolveHydratedEvidenceClass(row);
       const opportunityEvidenceComplete = hydratedSafety.opportunityEvidenceComplete;
       const safetyObserved = hydratedSafety.safetyEvidenceObserved;
@@ -285,10 +350,10 @@ function hydrateYieldRankingsWithLiveSafety(
         row.provenance?.benchmarkCurrency ??
         (row.benchmarkKey != null ? YIELD_BENCHMARK_KEY_CURRENCY[row.benchmarkKey] : null) ??
         null;
-      // A3: only a non-USD benchmark consumes the USD reference rate; a USD row
-      // is already covered by its own published benchmark freshness.
+      // Rate-derived rows also consume USD as their product input even when
+      // the comparison hurdle is USD EFFR.
       const rowReferenceBenchmarkFreshness =
-        benchmarkCurrency === "USD" ? "healthy" : referenceBenchmarkFreshness;
+        benchmarkCurrency === "USD" && row.dataSource !== "rate-derived" ? "healthy" : referenceBenchmarkFreshness;
       const referenceBenchmarkDegraded = rowReferenceBenchmarkFreshness !== "healthy";
       const evidenceAssessment = assessYieldEvidence({
         evidenceClass,
@@ -316,6 +381,9 @@ function hydrateYieldRankingsWithLiveSafety(
       if (referenceBenchmarkDegraded && !warningSignals.includes("reference-benchmark-degraded")) {
         warningSignals.push("reference-benchmark-degraded");
       }
+      if (benchmarkFreshness !== "healthy" && !warningSignals.includes(`benchmark-${benchmarkFreshness}`)) {
+        warningSignals.push(`benchmark-${benchmarkFreshness}`);
+      }
       // The ladder mirrors the write path's `resolveEvidenceNullReason`, so the
       // served reason and the published one cannot disagree.
       const evidenceNullReason =
@@ -327,7 +395,9 @@ function hydrateYieldRankingsWithLiveSafety(
               ? ("benchmark-stale" as const)
               : rowReferenceBenchmarkFreshness === "stale"
                 ? ("benchmark-stale" as const)
-                : null;
+                : !opportunityEvidenceComplete
+                  ? ("opportunity-evidence-missing" as const)
+                  : null;
       // B6: the response emits `hydratedSafety.sourceRisk`, so the score must be
       // computed from that same penalty — a read-path score the emitted evidence
       // cannot reproduce is not auditable.
@@ -342,6 +412,7 @@ function hydrateYieldRankingsWithLiveSafety(
       );
       const pysNullReason =
         evidenceNullReason ??
+        (preservePublishedSafety && row.safetyScore == null ? "safety-unrated" as const : null) ??
         (recomputedPharosYieldScore > 0
           ? null
           : derivePysNullReason({
@@ -368,7 +439,7 @@ function hydrateYieldRankingsWithLiveSafety(
       if (sourceAgeTier === "aging" && !warningSignals.includes("aging")) {
         warningSignals.push("aging");
       }
-      if (sourceAgeTier === "stale" && !warningSignals.includes("data-stale")) {
+      if (sourceFreshness === "stale" && !warningSignals.includes("data-stale")) {
         warningSignals.push("data-stale");
       }
 
@@ -377,22 +448,23 @@ function hydrateYieldRankingsWithLiveSafety(
         safetyChanged: row.safetyScore !== safetyInputScore,
         row: {
           ...row,
-          safetyScore: safetyInputScore,
+          safetyScore: preservePublishedSafety ? row.safetyScore : safetyInputScore,
           safetyGrade: hydratedSafety.grade,
           safetyReason: hydratedSafety.reason,
           pharosYieldScore,
           pysNullReason,
           warningSignals,
-          yieldToRisk: 101 - safetyInputScore > 0 ? row.apy30d / (101 - safetyInputScore) : null,
+          yieldToRisk: preservePublishedSafety ? row.yieldToRisk
+            : 101 - safetyInputScore > 0 ? row.apy30d / (101 - safetyInputScore) : null,
           sourceRisk: hydratedSafety.sourceRisk,
-          altSources: hydrateAltSourcesWithLiveSafety(row, safety),
+          altSources: preservePublishedSafety ? row.altSources : hydrateAltSourcesWithLiveSafety(row, safety),
           provenance: row.provenance
             ? {
                 ...row.provenance,
                 usedDefaultSafety: hydratedSafety.usedDefaultSafety,
                 safetyProvenance: hydratedSafety.provenance,
                 safetyReason: hydratedSafety.reason,
-                safetyScoreIdentity: source.safetyScoreIdentity,
+                safetyScoreIdentity: preservePublishedSafety ? row.provenance.safetyScoreIdentity : source.safetyScoreIdentity,
                 calculationMode: resolveHydratedCalculationMode(row),
                 evidenceClass,
                 evidenceCompleteness: evidenceAssessment.evidenceCompleteness,
@@ -418,6 +490,10 @@ function hydrateYieldRankingsWithLiveSafety(
       ...entry.row,
       liveRank: index + 1,
     };
+    if (methodologyChanged || !(Number.isInteger(entry.originalRow.publishedRank) && (entry.originalRow.publishedRank ?? 0) > 0)) {
+      const { rankChangeAttribution: _unavailableAttribution, ...withoutAttribution } = row;
+      return withoutAttribution;
+    }
     const rankChangeAttribution = buildYieldRankChangeAttribution({
       originalRow: entry.originalRow,
       hydratedRow: row,
@@ -429,6 +505,9 @@ function hydrateYieldRankingsWithLiveSafety(
       ? row
       : { ...row, rankChangeAttribution };
   });
+  if (preservePublishedSafety) {
+    return { payload: { ...payload, rankings }, degradationReasons: [] };
+  }
 
   const { coveredCount, trackedCount, coverageRatio } = countRowSafetyCoverage(rankings);
   const degradationReasons = [
@@ -508,9 +587,11 @@ function canServePublishTimeSafety(
   payload: YieldRankingsResponse,
   cached: { updatedAt: number },
 ): boolean {
+  const now = Math.floor(Date.now() / 1000);
+  const safetyPublishedAt = finiteNumber(payload.provenance?.safetySnapshot.publishedAt);
   return (
     payload.provenance?.safetySnapshot.safetyScoreIdentity != null &&
-    Math.floor(Date.now() / 1000) - cached.updatedAt <= YIELD_SAFETY_STALE_COHERENT_MAX_AGE_SEC
+    isYieldSafetyFallbackWithinWindow(cached.updatedAt, safetyPublishedAt, now)
   );
 }
 
@@ -547,6 +628,10 @@ function markYieldRankingsSafetyStale(
             coverageRatio,
             reason: reasons.join(","),
             ...liveSafetySource,
+            safetyScoreIdentity: payload.provenance.safetySnapshot.safetyScoreIdentity,
+            publicationGenerationId: payload.provenance.safetySnapshot.publicationGenerationId ?? null,
+            methodologyVersion: payload.provenance.safetySnapshot.methodologyVersion ?? null,
+            publishedAt: payload.provenance.safetySnapshot.publishedAt ?? null,
           },
         }
       : payload.provenance,
@@ -634,6 +719,10 @@ function buildYieldRankingsResponse(
   cached: { updatedAt: number },
   warningReasons: string[],
 ): Response {
+  const freshness = buildFreshnessMeta(cached.updatedAt, YIELD_RANKINGS_MAX_AGE_SEC, "yield-data");
+  const bands = getCacheRatioThresholds("yield-data");
+  const freshBudgetSec = YIELD_RANKINGS_MAX_AGE_SEC * bands.degraded;
+  const degradedBudgetSec = YIELD_RANKINGS_MAX_AGE_SEC * bands.stale;
   const warning =
     warningReasons.length > 0 ? `199 - "Yield safety hydration degraded: ${warningReasons.join(",")}"` : null;
   const headers = addFreshnessHeaders(
@@ -645,14 +734,25 @@ function buildYieldRankingsResponse(
     cached.updatedAt,
     YIELD_RANKINGS_MAX_AGE_SEC,
   );
+  if (freshness.status !== "fresh") {
+    headers.Warning = `110 - "Yield publication ${freshness.status} (${freshness.ageSeconds}s old, fresh budget ${freshBudgetSec}s)"`;
+    headers["Cache-Control"] = "no-store";
+  }
   if (warning && headers.Warning && !headers.Warning.includes(warning)) {
     headers.Warning = `${headers.Warning}, ${warning}`;
   }
   return jsonResponseWithHeaders(
-    {
+    projectYieldWireCompat({
       ...payload,
-      _meta: buildFreshnessMeta(cached.updatedAt, YIELD_RANKINGS_MAX_AGE_SEC),
-    },
+      _meta: {
+        ...freshness,
+        assessedAt: Math.floor(Date.now() / 1000),
+        freshBudgetSec,
+        degradedBudgetSec,
+        reason: freshness.status !== "fresh" ? "yield-publication-age"
+          : warningReasons.length > 0 ? warningReasons.join(",") : null,
+      },
+    }),
     headers,
   );
 }
@@ -669,9 +769,10 @@ function buildDegradedYieldRankingsResponse(
   // body carries `yield-safety-hydration-stale`. Only blanked NR safety earns the
   // HTTP Warning that clients render as a data-quality degradation.
   const servePublishTime = canServePublishTimeSafety(payload, cached);
+  const reassessed = hydrateYieldRankingsWithLiveSafety(payload, new Map(), source, true).payload;
   const fallbackPayload = servePublishTime
-    ? markYieldRankingsSafetyStale(payload, reason, source)
-    : degradeYieldRankingsSafety(payload, reason, source);
+    ? markYieldRankingsSafetyStale(reassessed, reason, source)
+    : degradeYieldRankingsSafety(reassessed, reason, source);
   return buildYieldRankingsResponse(project(fallbackPayload), cached, servePublishTime ? [] : [reason]);
 }
 
@@ -694,7 +795,7 @@ function createYieldRankingsCacheHandler(
       if (!hasYieldPublicationContract(payload as YieldRankingsResponse)) {
         return errorResponse(503, "Cached yield-rankings payload is malformed");
       }
-      const validatedPayload = payload as YieldRankingsResponse;
+      const validatedPayload = ageYieldRankings(payload as YieldRankingsResponse, cached.updatedAt);
       try {
         const snapshot = await computeSafetyScoresSnapshot(db);
         const hydrationSource: LiveSafetyHydrationSource = {
@@ -717,10 +818,7 @@ function createYieldRankingsCacheHandler(
           return buildDegradedYieldRankingsResponse(validatedPayload, cached, reason, hydrationSource, project);
         }
         const hydrated = hydrateYieldRankingsWithLiveSafety(validatedPayload, snapshot.scores, hydrationSource);
-        if (hydrated.degradationReasons.length > 0) {
-          return buildYieldRankingsResponse(project(hydrated.payload), cached, hydrated.degradationReasons);
-        }
-        return project(hydrated.payload);
+        return buildYieldRankingsResponse(project(hydrated.payload), cached, hydrated.degradationReasons);
       } catch (err) {
         logWorkerEventArgs("api", "warn", "[yield-rankings] Live safety hydration failed:", err instanceof Error ? err.message : err);
         const hydrationSource: LiveSafetyHydrationSource = {

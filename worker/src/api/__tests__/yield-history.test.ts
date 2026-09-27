@@ -527,13 +527,52 @@ describe("handleYieldHistory", () => {
     vi.setSystemTime(new Date("2026-03-28T12:00:00Z"));
     const updatedAt = Math.floor(Date.now() / 1000) - 1_700;
     const historyRow = makeYieldHistoryRow({ recorded_at: updatedAt });
-    const db = mockD1([{ match: "yield_history", rows: [historyRow] }]);
+    const db = mockD1([
+      {
+        match: "MAX(started_at) as started_at FROM cron_runs",
+        rows: [],
+        first: { started_at: updatedAt },
+      },
+      { match: "yield_history", rows: [historyRow] },
+    ]);
 
     const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
 
     expect(res.status).toBe(200);
     expect(res.headers.get("Warning")).toBeNull();
     expect(res.headers.get("X-Data-Age")).toBe("1700");
+    const body = (await res.json()) as YieldHistoryResponse;
+    expect(body._meta).toMatchObject({
+      updatedAt,
+      ageSeconds: 1_700,
+      status: "fresh",
+      freshBudgetSec: 7_200,
+      degradedBudgetSec: 14_400,
+      reason: null,
+    });
+  });
+
+  it.each([
+    [7200, "fresh"], [7201, "degraded"], [14400, "degraded"], [14401, "stale"],
+  ] as const)("aligns history body and HTTP freshness at age %s", async (age, status) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-28T12:00:00Z"));
+    const updatedAt = Math.floor(Date.now() / 1000) - age;
+    const db = mockD1([
+      { match: "MAX(started_at) as started_at FROM cron_runs", rows: [], first: { started_at: updatedAt } },
+      { match: "yield_history", rows: [makeYieldHistoryRow({ recorded_at: updatedAt })] },
+    ]);
+    const response = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    const body = await response.json() as YieldHistoryResponse;
+    expect(body._meta).toMatchObject({ ageSeconds: age, status, reason: status === "fresh" ? null : "yield-publication-age" });
+    expect(response.headers.get("X-Data-Age")).toBe(String(age));
+    if (status === "fresh") {
+      expect(response.headers.get("Warning")).toBeNull();
+      expect(response.headers.get("Cache-Control")).not.toBe("no-store");
+    } else {
+      expect(response.headers.get("Warning")).toMatch(/^110 /);
+      expect(response.headers.get("Cache-Control")).toBe("no-store");
+    }
   });
 
   it("falls back to the latest successful yield cron timestamp when the yield-rankings cache is malformed", async () => {
@@ -1013,9 +1052,14 @@ describe("handleYieldHistory", () => {
 
     const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
 
-    const body = (await readJsonResponse(res, 200)) as { warning?: string; history: unknown[] };
+    const body = (await readJsonResponse(res, 200)) as YieldHistoryResponse;
     expect(body.warning).toContain("cutoff unavailable");
     expect(body.history).toHaveLength(1);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+    expect(body._meta).toMatchObject({
+      status: "stale", reason: "publication-cutoff-unavailable", assessedAt: nowSec,
+      freshBudgetSec: 7200, degradedBudgetSec: 14400,
+    });
 
     const historyQuery = db.getHistory().find((entry) => entry.sql.includes("FROM yield_history h"));
     expect(historyQuery?.binds).toContain(Number.MAX_SAFE_INTEGER);
@@ -1043,12 +1087,49 @@ describe("handleYieldHistory", () => {
 
     const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
 
-    const body = (await readJsonResponse(res, 200)) as { warning?: string };
+    const body = (await readJsonResponse(res, 200)) as YieldHistoryResponse;
     expect(body.warning).toContain("freshness lookup failed");
-    expect(() => YieldHistoryResponseSchema.parse(body)).not.toThrow();
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+    expect(body._meta).toMatchObject({
+      updatedAt: nowSec - 60, status: "stale", reason: "publication-cutoff-unavailable",
+    });
 
     const historyQuery = db.getHistory().find((entry) => entry.sql.includes("FROM yield_history h"));
     expect(historyQuery?.binds).toContain(nowSec - 60);
+  });
+  it.each(["{broken", "{}", "null", ""])("marks present invalid PYS evidence invalid: %s", async (snapshot) => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const db = mockD1([{ match: "yield_history", rows: [
+      makeYieldHistoryRow({ pys_inputs_at_publish: snapshot, pys_at_publish: 12 }),
+    ] }]);
+    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    const body = await readJsonResponse(res, 200) as YieldHistoryResponse;
+    expect(body.history[0]?.pysReproducibility).toBe("invalid");
+    expect(body.history[0]?.pysInputsAtPublish).toBeNull();
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("stablecoin=usdt-tether"));
+    warnSpy.mockRestore();
+  });
+
+  it.each(["{broken", "{}", "null", '[1]', null])("keeps history with unreadable warning evidence: %s", async (warnings) => {
+    const db = mockD1([{ match: "yield_history", rows: [
+      makeYieldHistoryRow({ warning_signals: warnings, apy: 4.25 }),
+    ] }]);
+    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    const body = await readJsonResponse(res, 200) as YieldHistoryResponse;
+    expect(body.history[0]).toMatchObject({ apy: 4.25, warningSignals: [], warningSignalsStatus: "unreadable" });
+  });
+
+  it("serves valid empty warnings without an unreadable marker and names fresh authority", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      { match: "MAX(started_at) as started_at FROM cron_runs", rows: [], first: { started_at: nowSec } },
+      { match: "yield_history", rows: [makeYieldHistoryRow({ warning_signals: "[]" })] },
+    ]);
+    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    const body = await readJsonResponse(res, 200) as YieldHistoryResponse;
+    expect(body.history[0]?.warningSignalsStatus).toBeUndefined();
+    expect(body._meta).toMatchObject({ status: "fresh", reason: null, updatedAt: nowSec });
+    expect(res.headers.get("Cache-Control")).not.toBe("no-store");
   });
 });
 

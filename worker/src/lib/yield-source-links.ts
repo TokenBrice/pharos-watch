@@ -1,8 +1,16 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { YIELD_POOL_MAP } from "./yield-config/yield-config-pools";
 
 const APP_LINK_LABEL_PRIORITY = ["App", "Portal", "Earn", "Mint", "Stake", "Dashboard"] as const;
 const FALLBACK_LINK_LABEL_PRIORITY = [...APP_LINK_LABEL_PRIORITY, "Website", "Docs"] as const;
 const APP_LIKE_DISPLAY_LABEL = /\b(app|earn|mint|portal|stake|vault)\b/i;
+
+const DL_POOL_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const POOL_SOURCE_URLS: Record<string, string> = {
+  "8b427366-7bfb-4c61-88be-8dc004fdc3da": "https://app.frankencoin.com/savings?chain=ethereum",
+  "dac71f4f-7b97-463a-b19f-9796c56c21f1": "https://liquity.app/earn/sbold",
+  "5fd328af-4203-471b-bd16-1705c726d926": "https://www.curve.finance/crvusd/ethereum/scrvUSD",
+};
 
 const YIELD_SOURCE_URLS: Record<string, string> = {
   "Aave v3": "https://app.aave.com/",
@@ -157,10 +165,38 @@ function resolveLinkedVariantSourceOwnerId(stablecoinId: string, sourceKey: stri
 
 export function resolveYieldSourceUrl(params: {
   stablecoinId: string;
-  sourceKey?: string | null;
+  sourceKey: string | null;
   yieldSource?: string | null;
 }): string | null {
-  if (params.sourceKey?.startsWith("royco-dawn:")) {
+  const sourceOwnerId = resolveLinkedVariantSourceOwnerId(params.stablecoinId, params.sourceKey);
+  const ownerId = sourceOwnerId ?? params.stablecoinId;
+  const sourceKey = sourceOwnerId
+    ? params.sourceKey!.slice(`linked-variant:${sourceOwnerId}:`.length)
+    : params.sourceKey;
+
+  if (sourceKey && DL_POOL_ID.test(sourceKey)) {
+    const poolId = sourceKey.toLowerCase();
+    const configuredUrl = POOL_SOURCE_URLS[poolId];
+    if (configuredUrl) return configuredUrl;
+
+    // Only a pinned native pool can inherit the owner's configured instrument
+    // link. An unrelated deposit venue must never inherit an issuer app URL.
+    if (YIELD_POOL_MAP[ownerId] === poolId) {
+      const nativeUrl = pickMetaYieldUrl(ownerId);
+      if (nativeUrl && new URL(nativeUrl).pathname !== "/") return nativeUrl;
+    }
+    return `https://defillama.com/yields/pool/${poolId}`;
+  }
+
+  // A weighted group represents multiple pools, not one addressable DL pool.
+  if (sourceKey?.startsWith("defillama-weighted:")) return pickMetaYieldUrl(ownerId);
+
+  const pendleMarket = sourceKey?.match(/^protocol-api:pendle:([a-z0-9-]+):(0x[0-9a-f]{40})$/i);
+  if (pendleMarket) {
+    return `https://app.pendle.finance/trade/markets/${pendleMarket[2].toLowerCase()}/swap?view=pt&chain=${pendleMarket[1].toLowerCase()}`;
+  }
+
+  if (sourceKey?.startsWith("royco-dawn:")) {
     return "https://dawn.royco.org/explore";
   }
 
@@ -180,9 +216,5 @@ export function resolveYieldSourceUrl(params: {
     return overrideByLabel;
   }
 
-  // Auto-generated source keys are not stable link targets. A linked wrapper is
-  // owned by the child encoded in its validated source key, so its retained
-  // alternatives must fall back to the child venue rather than the parent issuer.
-  const sourceOwnerId = resolveLinkedVariantSourceOwnerId(params.stablecoinId, params.sourceKey);
-  return pickMetaYieldUrl(sourceOwnerId ?? params.stablecoinId);
+  return pickMetaYieldUrl(ownerId);
 }

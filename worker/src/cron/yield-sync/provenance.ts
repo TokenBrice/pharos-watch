@@ -1,4 +1,5 @@
-import type { YieldBenchmarkMeta, YieldSourceInputMeta } from "@shared/types/yield";
+import type { YieldSourceInputMeta } from "@shared/types/yield";
+import { getRankingStaleThresholdMs } from "../../lib/yield-ranking-helpers";
 import {
   isRealSourceSwitch,
   LEGACY_BEST_YIELD_SOURCE_KEY,
@@ -13,21 +14,16 @@ export function buildYieldSourceProvenance(params: {
   dlPoolsMeta: YieldSourceInputMeta;
 }): Record<string, unknown> {
   const { source, isBest, evaluatedSources, startSec, dlPoolsMeta } = params;
-  const benchmarkMeta: YieldBenchmarkMeta = source.benchmarkMeta;
 
   const sourceObservedAt =
     source.sourceObservedAt
     ?? (source.dataSource === "defillama" || source.dataSource === "defillama-auto"
-      ? (dlPoolsMeta.updatedAt ?? startSec)
+      ? (dlPoolsMeta.updatedAt ?? (dlPoolsMeta.ageSeconds != null ? startSec - dlPoolsMeta.ageSeconds : null))
       : source.dataSource === "rate-derived"
-        ? (benchmarkMeta.fetchedAt ?? startSec)
+        ? null
         : startSec);
-  const sourceAgeSeconds =
-    source.dataSource === "defillama" || source.dataSource === "defillama-auto"
-      ? (dlPoolsMeta.ageSeconds ?? Math.max(0, startSec - sourceObservedAt))
-      : source.dataSource === "rate-derived"
-        ? (benchmarkMeta.ageSeconds ?? Math.max(0, startSec - sourceObservedAt))
-        : Math.max(0, startSec - sourceObservedAt);
+  // A source-local market print is authoritative over a family fetch age.
+  const sourceAgeSeconds = sourceObservedAt != null ? Math.max(0, startSec - sourceObservedAt) : null;
   const comparisonAnchorObservedAt = source.comparisonAnchorObservedAt ?? null;
   const comparisonAnchorAgeSeconds =
     comparisonAnchorObservedAt != null ? Math.max(0, startSec - comparisonAnchorObservedAt) : null;
@@ -37,6 +33,7 @@ export function buildYieldSourceProvenance(params: {
     sourceKey: source.sourceKey,
     sourceObservedAt,
     sourceAgeSeconds,
+    sourceMaxAgeSeconds: getRankingStaleThresholdMs(source.dataSource, source.sourceKey) / 1000,
     comparisonAnchorObservedAt,
     comparisonAnchorAgeSeconds,
     confidenceTier: source.confidenceTier,

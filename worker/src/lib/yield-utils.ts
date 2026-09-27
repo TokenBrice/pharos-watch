@@ -28,17 +28,18 @@ export function isOnChainBootstrapYieldSeed(row: OnChainBootstrapYieldSeedRow): 
     && row.apy_base == null;
 }
 
-export function parseYieldWarningSignals(raw: unknown): string[] {
-  if (typeof raw !== "string" || raw.trim() === "") return [];
+/** Null means unreadable evidence, never a clean empty warning set. */
+export function parseYieldWarningSignals(raw: unknown): string[] | null {
+  if (typeof raw !== "string" || raw.trim() === "") return null;
   try {
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) {
       logWorkerEventArgs("lib", "warn", "[yield-sync] warning_signals is not an array:", typeof parsed);
-      return [];
+      return null;
     }
-    return parsed.filter((value): value is string => typeof value === "string");
+    return parsed.every((value): value is string => typeof value === "string") ? parsed : null;
   } catch (e) {
     logWorkerEventArgs("lib", "warn", "[yield-sync] failed to parse warning_signals:", toErrorMessage(e));
-    return [];
+    return null;
   }
 }

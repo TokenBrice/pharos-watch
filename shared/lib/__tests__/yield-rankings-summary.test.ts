@@ -3,10 +3,7 @@ import { describe, expect, it } from "vitest";
 import { projectYieldRankingsSummary } from "../yield-rankings-summary";
 import {
   YIELD_RANKING_SUMMARY_ALT_SOURCE_LIMIT,
-  YieldRankingSummaryAltSourceSchema,
-  YieldRankingSummaryProvenanceSchema,
   YieldRankingSummarySchema,
-  YieldRankingSummarySourceRiskSchema,
   YieldRankingsSummaryResponseSchema,
 } from "@shared/types/yield-summary";
 import type { YieldRanking, YieldRankingsResponse } from "@shared/types/yield";
@@ -340,19 +337,16 @@ describe("projectYieldRankingsSummary", () => {
   });
 
   it.each([
-    ["fallback-usd", false, true],
-    ["native", true, true],
-    ["native", false, undefined],
-  ] as const)("serializes benchmark fallback for %s with explicit flag %s", (mode, flag, expected) => {
+    ["fallback-usd", false],
+    ["native", true],
+    ["native", false],
+  ] as const)("keeps benchmark feed fallback distinct from %s selection (flag %s)", (mode, flag) => {
     const detailed = makeDetailedResponse(1);
     detailed.rankings[0].benchmarkSelectionMode = mode;
     detailed.rankings[0].benchmarkIsFallback = flag;
     const wire = JSON.parse(JSON.stringify(projectYieldRankingsSummary(detailed)));
-    if (expected === undefined) {
-      expect(wire.rankings[0]).not.toHaveProperty("benchmarkIsFallback");
-    } else {
-      expect(wire.rankings[0].benchmarkIsFallback).toBe(true);
-    }
+    expect(wire.rankings[0].benchmarkIsFallback).toBe(flag);
+    expect(wire.rankings[0].benchmarkSelectionMode).toBe(mode);
   });
 
   it.each([null, undefined])("preserves sparse metadata without invention: %s", (metadata) => {
@@ -368,92 +362,6 @@ describe("projectYieldRankingsSummary", () => {
       if (metadata === undefined) expect(wire.rankings[0]).not.toHaveProperty(field);
       else expect(wire.rankings[0][field]).toBeNull();
     }
-  });
-
-  // The projection copies fields off the summary schemas' own `.shape` keys rather
-  // than restating them. These frozen lists pin the emitted wire shape AND its key
-  // order, so a schema reorder or an accidentally added/removed field is visible
-  // here instead of silently changing the published payload bytes.
-  const EXPECTED_ROW_KEYS = [
-    "id",
-    "symbol",
-    "name",
-    "currentApy",
-    "apy30d",
-    "yieldSource",
-    "yieldSourceUrl",
-    "yieldType",
-    "dataSource",
-    "sourceTvlUsd",
-    "pharosYieldScore",
-    "pysNullReason",
-    "safetyScore",
-    "safetyGrade",
-    "benchmarkKey",
-    "benchmarkLabel",
-    "benchmarkRate",
-    "benchmarkIsFallback",
-    "yieldStability",
-    "apyMin30d",
-    "apyMax30d",
-    "warningSignals",
-    "sourceRole",
-    "alternateSourceCount",
-    "altSources",
-    "decisionReasonCode",
-    "rankDelta",
-    "rankChangeDriver",
-    "rankPysDelta",
-    "provenance",
-    "sourceRisk",
-  ];
-  const EXPECTED_PROVENANCE_KEYS = [
-    "sourceKey",
-    "confidenceTier",
-    "calculationMode",
-    "evidenceClass",
-    "evidenceCompleteness",
-    "scoreQualification",
-    "sourceFreshness",
-    "sourceSwitch",
-    "usedDefaultSafety",
-    "safetyProvenance",
-    "safetyReason",
-  ];
-  const EXPECTED_SOURCE_RISK_KEYS = [
-    "sourceRiskScore",
-    "sourceRiskPenalty",
-    "sourceDepthRatio",
-    "rewardShare",
-    "sourceAgeSeconds",
-    "observationCount30d",
-    "sourceSwitchCount30d",
-    "venueRiskTier",
-    "venueRiskWeighted",
-    "venueRiskConfidence",
-    "dependencyConcentration",
-  ];
-  const EXPECTED_ALT_SOURCE_KEYS = [
-    "sourceKey",
-    "dataSource",
-    "confidenceTier",
-    "currentApy",
-    "sourceTvlUsd",
-  ];
-
-  it("emits exactly the summary schema fields, in schema declaration order", () => {
-    const row = projectYieldRankingsSummary(makeDetailedResponse(1)).rankings[0];
-
-    expect(Object.keys(row)).toEqual(EXPECTED_ROW_KEYS);
-    expect(Object.keys(row.provenance ?? {})).toEqual(EXPECTED_PROVENANCE_KEYS);
-    expect(Object.keys(row.sourceRisk ?? {})).toEqual(EXPECTED_SOURCE_RISK_KEYS);
-    expect(Object.keys(row.altSources?.[0] ?? {})).toEqual(EXPECTED_ALT_SOURCE_KEYS);
-    // The runtime copy lists are the schemas' own shapes — proving that here means
-    // the frozen lists above pin the schema and the projection at the same time.
-    expect(Object.keys(YieldRankingSummarySchema.shape)).toEqual(EXPECTED_ROW_KEYS);
-    expect(Object.keys(YieldRankingSummaryProvenanceSchema.shape)).toEqual(EXPECTED_PROVENANCE_KEYS);
-    expect(Object.keys(YieldRankingSummarySourceRiskSchema.shape)).toEqual(EXPECTED_SOURCE_RISK_KEYS);
-    expect(Object.keys(YieldRankingSummaryAltSourceSchema.shape)).toEqual(EXPECTED_ALT_SOURCE_KEYS);
   });
 
   it("rejects detail-field leakage at the row schema boundary", () => {

@@ -4,6 +4,7 @@ import { YieldRankingsSummaryResponseSchema } from "@shared/types/yield-summary"
 import type { YieldRankingsResponse } from "@shared/types/yield";
 import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { buildSelectorRows } from "@shared/lib/selector/data-adapter";
 
 import { handleYieldRankings } from "../cache-handlers";
 
@@ -15,6 +16,8 @@ function makePayload(): YieldRankingsResponse {
       makeYieldRanking({
         altSources: [makeAltYieldSource()],
         provenance: makeYieldProvenance({
+          sourceObservedAt: UPDATED_AT - 900,
+          sourceAgeSeconds: 900,
           calculationMode: "market-api",
           evidenceClass: "direct-first-party",
           evidenceCompleteness: 0.92,
@@ -130,7 +133,9 @@ describe("handleYieldRankings summary projection", () => {
           },
         },
       ],
-      _meta: { updatedAt: UPDATED_AT, ageSeconds: 60, status: "fresh" },
+      _meta: {
+        updatedAt: UPDATED_AT, ageSeconds: 60, status: "fresh",
+      },
     });
     // B36: the lane, the role, the bounded alternate list and the dependency
     // evidence ship with the compact row instead of being re-derived client-side.
@@ -148,6 +153,34 @@ describe("handleYieldRankings summary projection", () => {
     expect(body.rankings[0].sourceRisk).not.toHaveProperty("venueProtocol");
     expect(body.rankings[0].sourceRisk).not.toHaveProperty("investabilityFlags");
     expect(body.rankings[0].altSources?.[0]).not.toHaveProperty("sourceRisk");
+  });
+
+  it("ages full and summary source evidence without renewing alternate observations", async () => {
+    const payload = makePayload();
+    payload.rankings[0].altSources = [
+      makeAltYieldSource({ sourceKey: "aged", sourceRisk: { ...payload.rankings[0].sourceRisk!, sourceAgeSeconds: 120 } }),
+      makeAltYieldSource({ sourceKey: "unknown", sourceRisk: { ...payload.rankings[0].sourceRisk!, sourceAgeSeconds: null } }),
+    ];
+    const db = makeCacheDb(payload);
+    vi.setSystemTime((UPDATED_AT + 14401) * 1000);
+    const full = await (await handleYieldRankings(db)).json() as YieldRankingsResponse;
+    const summary = YieldRankingsSummaryResponseSchema.parse(await (await handleYieldRankings(
+      db, new URL("https://x/api/yield-rankings?projection=summary"),
+    )).json());
+    expect(full.rankings[0].provenance?.sourceAgeSeconds).toBe(15301);
+    for (const row of [full.rankings[0], summary.rankings[0]]) {
+      expect(row.sourceRisk?.sourceAgeSeconds).toBe(15301);
+    }
+    expect(full.rankings[0].altSources[0].sourceRisk?.sourceAgeSeconds).toBe(14521);
+    expect(full.rankings[0].altSources[1].sourceRisk?.sourceAgeSeconds).toBeNull();
+    const selector = buildSelectorRows({
+      stablecoinsData: null, pegCurrency: null, pegData: null, reportData: null,
+      stressData: null, dexData: null, yieldData: full, bluechipData: null,
+      now: (UPDATED_AT + 14401) * 1000,
+    }).rows.get("usdc-circle")!;
+    expect(selector.yieldSources?.find((source) => source.sourceKey === "aged")?.freshness)
+      .toEqual({ capturedAt: UPDATED_AT - 120, ageSeconds: 14521 });
+    expect(selector.yieldSources?.find((source) => source.sourceKey === "unknown")?.freshness).toBeNull();
   });
 
   it("preserves the detailed default response", async () => {

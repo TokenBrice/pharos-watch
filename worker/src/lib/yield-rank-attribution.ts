@@ -93,12 +93,12 @@ function selectRankChangeDriver(params: {
   safetyChanged: boolean;
   methodologyChanged: boolean;
   pysDelta: number | null;
+  sourceRiskDelta: number | null;
 }): YieldRankChangeDriver {
   if (params.methodologyChanged) return "methodology";
   if (params.safetyChanged) return "stablecoin-safety";
   if (params.row.provenance?.sourceSwitch) return "source-switch";
-  const sourceRiskPenalty = finiteNumber(params.row.sourceRisk?.sourceRiskPenalty);
-  if (sourceRiskPenalty != null && sourceRiskPenalty > 1) return "source-risk";
+  if (params.sourceRiskDelta != null && params.sourceRiskDelta !== 0) return "source-risk";
   if (params.row.warningSignals.includes("data-stale")) return "freshness";
   if (finiteNumber(params.row.yieldStability) != null && (params.row.yieldStability ?? 1) < 0.7) {
     return "volatility";
@@ -125,6 +125,8 @@ export interface YieldRankChangeAttributionParams {
   safetyChanged: boolean;
   /** The baseline payload was published under a different methodology version. */
   methodologyChanged: boolean;
+  /** Only hydration may retain movement measured in this same publication. */
+  comparison?: "publication" | "hydration";
 }
 
 export function buildYieldRankChangeAttribution(
@@ -133,23 +135,27 @@ export function buildYieldRankChangeAttribution(
   // Rows published before the ranking contract carry no published rank, so there
   // is no baseline to attribute against — never synthesize movement for them.
   const publishedRank = positiveInteger(params.originalRow.publishedRank);
-  const previousRank = params.previousRank;
+  const publishedAttribution = params.comparison === "publication" ? null : params.originalRow.rankChangeAttribution;
+  const previousRank = positiveInteger(publishedAttribution?.previousRank) ?? params.previousRank;
   const liveRank = positiveInteger(params.hydratedRow.liveRank);
-  if (publishedRank == null || previousRank == null || liveRank == null || previousRank === liveRank) {
-    return params.originalRow.rankChangeAttribution ?? null;
-  }
-
-  // A payload published under a different methodology version cannot be scored by
-  // this one: its `pharosYieldScore` came from other rules, so any delta compares
-  // two methodologies rather than movement in this row's evidence. Serve no
-  // movement instead of a fabricated one (B7 rollout).
   if (params.methodologyChanged) return null;
+  if (publishedRank == null || params.previousRank == null || previousRank == null || liveRank == null) return null;
+  if (params.previousRank === liveRank && params.comparison !== "publication") {
+    return publishedAttribution ?? null;
+  }
+  if (previousRank === liveRank) return null;
 
-  const previousPys = finiteNumber(params.originalRow.pharosYieldScore);
+  const previousPys = publishedAttribution
+    ? finiteNumber(publishedAttribution.previousPys)
+    : finiteNumber(params.originalRow.pharosYieldScore);
   const livePys = finiteNumber(params.hydratedRow.pharosYieldScore);
   const pysDelta = previousPys != null && livePys != null ? roundDelta(livePys - previousPys) : null;
   const rankDelta = previousRank - liveRank;
   const sourceRiskPenalty = finiteNumber(params.hydratedRow.sourceRisk?.sourceRiskPenalty);
+  const previousSourceRiskPenalty = finiteNumber(params.originalRow.sourceRisk?.sourceRiskPenalty);
+  const sourceRiskDelta = sourceRiskPenalty != null && previousSourceRiskPenalty != null
+    ? roundDelta(sourceRiskPenalty - previousSourceRiskPenalty)
+    : null;
   const sourceDepthRatio = finiteNumber(params.hydratedRow.sourceRisk?.sourceDepthRatio);
 
   const primaryDriver = selectRankChangeDriver({
@@ -157,6 +163,7 @@ export function buildYieldRankChangeAttribution(
     safetyChanged: params.safetyChanged,
     methodologyChanged: params.methodologyChanged,
     pysDelta,
+    sourceRiskDelta,
   });
 
   return {
@@ -166,12 +173,13 @@ export function buildYieldRankChangeAttribution(
     pysDelta,
     primaryDriver,
     driverContributions: {
+      // Heuristic rank-place context, not an additive causal decomposition.
       apy: primaryDriver === "apy" ? rankDelta : null,
       benchmark: primaryDriver === "benchmark" ? rankDelta : null,
-      // A rank delta with no published/live PYS pair has no measurable safety
-      // contribution: 0 claimed a scored move the row never had.
+      // Whole-row PYS-point change accompanying a safety change, not isolated causation.
       stablecoinSafety: params.safetyChanged && pysDelta != null ? pysDelta : null,
-      sourceRisk: sourceRiskPenalty != null && sourceRiskPenalty > 1 ? roundDelta(1 - sourceRiskPenalty) : null,
+      // Measured penalty-multiplier change; unchanged penalties explain no movement.
+      sourceRisk: sourceRiskDelta !== 0 ? sourceRiskDelta : null,
       sourceSwitch: params.hydratedRow.provenance?.sourceSwitch ? rankDelta : null,
       freshness: params.hydratedRow.warningSignals.includes("data-stale") ? rankDelta : null,
       volatility:

@@ -53,7 +53,7 @@ export const YieldSourceRiskSchema = z.object({
   sourceRiskScore: z.number().min(0).max(100).nullable().optional(),
   sourceRiskPenalty: z.number().min(1).nullable().optional(),
   sourceDepthRatio: z.number().min(0).nullable().optional(),
-  rewardShare: z.number().min(0).max(1).nullable().optional(),
+  rewardShare: z.number().min(0).nullable().optional(),
   sourceAgeSeconds: z.number().int().min(0).nullable().optional(),
   observationCount30d: z.number().int().min(0).nullable().optional(),
   sourceSwitchCount30d: z.number().int().min(0).nullable().optional(),
@@ -123,7 +123,8 @@ export const YieldPysInputsAtPublishSchema = z.object({
   methodologyVersion: z.string().min(1),
   apy30d: z.number(),
   safetyScore: z.number(),
-  varianceScore: z.number(),
+  /** Null when trailing variance was unavailable, so the row published NR (v8.45). */
+  varianceScore: z.number().nullable(),
   benchmarkRate: z.number(),
   sourceRiskPenalty: z.number().min(1),
   scalingFactor: z.number().positive(),
@@ -145,6 +146,7 @@ export const YieldHistoryPointSchema = z.object({
   exchangeRate: z.number().nullable(),
   sourceTvlUsd: z.number().nullable(),
   warningSignals: z.array(z.string()),
+  warningSignalsStatus: z.literal("unreadable").optional(),
   sourceKey: z.string().nullable().optional(),
   yieldSource: z.string().nullable().optional(),
   yieldSourceUrl: z.string().url().nullable().optional(),
@@ -198,6 +200,12 @@ export const YieldRankChangeAttributionSchema = z.object({
   previousPys: z.number().nullable().optional(),
   pysDelta: z.number().nullable().optional(),
   primaryDriver: z.enum(YIELD_RANK_CHANGE_DRIVER_VALUES).nullable().optional(),
+  /**
+   * Heuristic context, not additive causal contributions. APY, benchmark,
+   * switch, freshness, volatility and depth use rank places. Safety uses the
+   * whole-row PYS-point delta accompanying a safety change. Source risk uses
+   * the measured penalty-multiplier delta and is null when unchanged.
+   */
   driverContributions: z
     .object({
       apy: z.number().nullable().optional(),

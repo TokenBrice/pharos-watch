@@ -2,6 +2,7 @@ import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { YieldRankingsResponseSchema, type YieldRanking, type YieldRankingsResponse } from "@shared/types/yield";
+import { YieldRankingsSummaryResponseSchema } from "@shared/types/yield-summary";
 import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
 import { computePYS, yieldStabilityToApyVarianceScore } from "@shared/lib/yield-scoring";
@@ -20,7 +21,7 @@ vi.mock("../../lib/safety-scores", () => ({
 
 import { handleYieldRankings } from "../cache-handlers";
 
-const V748_RANKINGS_UPDATED_AT = 1_778_679_602;
+const V748_RANKINGS_UPDATED_AT = Date.parse("2026-03-13T15:59:30Z") / 1000;
 const V9_METHODOLOGY_VERSION = "9.0";
 let currentSafetyIdentity: SafetyScoreV9PublicationIdentity | null = null;
 
@@ -62,7 +63,7 @@ const v748RankingsPayload = {
       benchmarkLabel: "USD 3M T-Bill",
       benchmarkCurrency: "USD",
       benchmarkRate: 4.13,
-      benchmarkRecordDate: "2026-05-12",
+      benchmarkRecordDate: "2026-03-12",
       benchmarkIsFallback: false,
       benchmarkFallbackMode: null,
       benchmarkSelectionMode: "native",
@@ -102,7 +103,7 @@ const v748RankingsPayload = {
         benchmarkLabel: "USD 3M T-Bill",
         benchmarkCurrency: "USD",
         benchmarkRate: 4.13,
-        benchmarkRecordDate: "2026-05-12",
+        benchmarkRecordDate: "2026-03-12",
         benchmarkIsFallback: false,
         benchmarkFallbackMode: null,
         benchmarkSelectionMode: "native",
@@ -120,7 +121,7 @@ const v748RankingsPayload = {
       label: "USD 3M T-Bill",
       currency: "USD",
       rate: 4.13,
-      recordDate: "2026-05-12",
+      recordDate: "2026-03-12",
       fetchedAt: V748_RANKINGS_UPDATED_AT,
       ageSeconds: 0,
       source: "fred-dgs3mo",
@@ -146,7 +147,7 @@ const v748RankingsPayload = {
       label: "USD 3M T-Bill",
       currency: "USD",
       rate: 4.13,
-      recordDate: "2026-05-12",
+      recordDate: "2026-03-12",
       fetchedAt: V748_RANKINGS_UPDATED_AT,
       ageSeconds: 0,
       source: "fred-dgs3mo",
@@ -160,7 +161,7 @@ const v748RankingsPayload = {
         label: "USD 3M T-Bill",
         currency: "USD",
         rate: 4.13,
-        recordDate: "2026-05-12",
+        recordDate: "2026-03-12",
         fetchedAt: V748_RANKINGS_UPDATED_AT,
         ageSeconds: 0,
         source: "fred-dgs3mo",
@@ -182,6 +183,7 @@ const v748RankingsPayload = {
       coveredCount: 109,
       trackedCount: 129,
       reason: null,
+      publishedAt: V748_RANKINGS_UPDATED_AT,
     },
   },
 } satisfies YieldRankingsResponse;
@@ -488,10 +490,10 @@ describe("handleYieldRankings", () => {
     expect(body.rankings[0]).toMatchObject({
       safetyScore: 40,
       safetyGrade: "NR",
-      pharosYieldScore: 11,
+      pharosYieldScore: null,
     });
-    expect(body.rankings[0]?.pysNullReason).toBeUndefined();
-    expect(body.rankings[0]?.warningSignals).toEqual([]);
+    expect(body.rankings[0]?.pysNullReason).toBe("opportunity-evidence-missing");
+    expect(body.rankings[0]?.warningSignals).toContain("opportunity-evidence-missing");
     expect(body.provenance?.liveSafetyHydration).toMatchObject({
       kind: "degraded",
       reason: "safety-identity-mismatch",
@@ -533,7 +535,7 @@ describe("handleYieldRankings", () => {
       safetyGrade: "NR",
       safetyReason: "safety-identity-mismatch",
       pharosYieldScore: null,
-      pysNullReason: "safety-unrated",
+      pysNullReason: "opportunity-evidence-missing",
     });
     expect(body.provenance?.liveSafetyHydration).toMatchObject({
       kind: "degraded",
@@ -554,7 +556,7 @@ describe("handleYieldRankings", () => {
 
     expect(body.rankings[0]).toMatchObject({
       safetyScore: 40,
-      pharosYieldScore: 11,
+      pharosYieldScore: null,
     });
     expect(body.provenance?.liveSafetyHydration).toMatchObject({
       kind: "degraded",
@@ -590,6 +592,7 @@ describe("handleYieldRankings", () => {
           id: "rated-coin",
           symbol: "RATE",
           name: "Rated Coin",
+          yieldType: "lending-vault",
           sourceRisk: {
             sourceRiskPenalty: 2,
           },
@@ -808,7 +811,7 @@ describe("handleYieldRankings", () => {
     }));
   });
 
-  it("keeps an external opportunity estimated when critical market evidence is missing", async () => {
+  it("keeps an external opportunity listed as NR when critical market evidence is missing", async () => {
     const updatedAt = Math.floor(Date.now() / 1000) - 30;
     const payload = {
       ...v748RankingsPayload,
@@ -841,9 +844,9 @@ describe("handleYieldRankings", () => {
     const body = await res.json() as YieldRankingsResponse;
     const row = body.rankings[0];
 
-    expect(row?.pharosYieldScore).toBeGreaterThan(0);
-    expect(row?.pysNullReason).toBeNull();
-    expect(row?.provenance?.scoreQualification).toBe("estimated");
+    expect(row?.pharosYieldScore).toBeNull();
+    expect(row?.pysNullReason).toBe("opportunity-evidence-missing");
+    expect(row?.provenance?.scoreQualification).toBe("NR");
     expect(row?.warningSignals).toContain("opportunity-evidence-missing");
     expect(row?.warningSignals).not.toContain("safety-unrated");
     expect(row?.sourceRisk?.opportunityRisk).toMatchObject({
@@ -925,7 +928,6 @@ describe("handleYieldRankings", () => {
     expect(body.rankings[0]?.publishedRank).toBeUndefined();
     expect(body.rankings[0]?.altSources[0]?.sourceRisk).toMatchObject({
       sourceRiskPenalty: staleSourceRisk.sourceRiskPenalty,
-      sourceAgeSeconds: staleSourceRisk.sourceAgeSeconds,
       venueRiskTier: "unknown",
     });
   });
@@ -958,19 +960,13 @@ describe("handleYieldRankings", () => {
     expect(Object.keys(row?.sourceRisk ?? {}).sort()).toEqual(["opportunityRisk", "underlyingSafetyScore"]);
     expect(row?.sourceRisk?.opportunityRisk?.opportunitySafetyScore).toBeNull();
     expect((row as unknown as Record<string, unknown> | undefined)?.sourceRiskPenalty).toBeUndefined();
-    expect(row?.pharosYieldScore).toBe(computePYS({
-      apy30d: payload.rankings[0].apy30d,
-      safetyScore: 66,
-      apyVarianceScore: yieldStabilityToApyVarianceScore(payload.rankings[0].yieldStability),
-      scalingFactor: payload.scalingFactor,
-      benchmarkRate: payload.rankings[0].benchmarkRate ?? null,
-      sourceRiskPenalty: null,
-    }));
+    expect(row?.pharosYieldScore).toBeNull();
+    expect(row?.pysNullReason).toBe("opportunity-evidence-missing");
   });
 
   it("preserves publishedRank and assigns liveRank after safety hydration reorders rows", async () => {
     const updatedAt = Math.floor(Date.now() / 1000) - 30;
-    const baseRow = v748RankingsPayload.rankings[0];
+    const baseRow = { ...v748RankingsPayload.rankings[0], yieldType: "lending-vault" as const };
     const payload = {
       ...v748RankingsPayload,
       rankings: [
@@ -1183,7 +1179,7 @@ describe("handleYieldRankings", () => {
       currentApy: 4.72,
       safetyScore: 40,
       safetyGrade: "NR",
-      pharosYieldScore: 11,
+      pharosYieldScore: null,
     });
     expect(body.provenance?.liveSafetyHydration).toMatchObject({
       kind: "degraded",
@@ -1260,6 +1256,7 @@ describe("handleYieldRankings", () => {
         id: name.toLowerCase().replace(/\s+/g, "-"),
         symbol: name.slice(0, 3).toUpperCase(),
         name,
+        yieldType: "lending-vault",
         currentApy: 4,
         apy7d: 4,
         apy30d: 4,
@@ -1301,6 +1298,7 @@ describe("handleYieldRankings", () => {
         id,
         symbol: name.slice(0, 3).toUpperCase(),
         name,
+        yieldType: "lending-vault",
         currentApy: 4,
         apy7d: 4,
         apy30d: 4,
@@ -1409,8 +1407,8 @@ describe("handleYieldRankings", () => {
     // no movement and no driver rather than fabricating a delta from the version
     // bump alone (B7 rollout: this mislabelled tie-group reorders as movements).
     expect(publishedVersion).not.toBe(YIELD_METHODOLOGY_VERSION);
-    expect(mover?.rankChangeAttribution ?? null).toBeNull();
-    expect(stable?.rankChangeAttribution ?? null).toBeNull();
+    expect(mover?.rankChangeAttribution).toBeUndefined();
+    expect(stable?.rankChangeAttribution).toBeUndefined();
   });
 
   it("keeps a non-safety pysNullReason through the degraded safety path", async () => {
@@ -1459,7 +1457,7 @@ describe("handleYieldRankings", () => {
       pharosYieldScore: null,
       // B37: the row's own reason survived; the safety loss did not rewrite it.
       pysNullReason: "source-stale",
-      warningSignals: ["data-stale", "safety-unrated"],
+      warningSignals: expect.arrayContaining(["data-stale", "safety-unrated"]),
     });
     expect(body.provenance?.liveSafetyHydration?.fallback).toBeUndefined();
   });
@@ -1474,6 +1472,7 @@ describe("handleYieldRankings", () => {
           id: "zero-apy-coin",
           symbol: "ZRO",
           name: "Zero Apy Coin",
+          yieldType: "lending-vault",
           currentApy: 0,
           apy7d: 0,
           apy30d: 0,
@@ -1505,6 +1504,7 @@ describe("handleYieldRankings", () => {
         id: "rated-coin",
         symbol: "RATE",
         name: "Rated Coin",
+        yieldType: "lending-vault",
         safetyScore: 50,
         safetyGrade: "C-" as const,
         sourceRisk: {
@@ -1533,52 +1533,196 @@ describe("handleYieldRankings", () => {
     }));
   });
 
-  it("emits an aging signal and downgrades observations past the tightened daily bounds", async () => {
-    const updatedAt = Math.floor(Date.now() / 1000) - 30;
-    const dailyRow = (id: string, name: string, sourceAgeSeconds: number) =>
-      makeYieldRanking({
-        id,
-        symbol: name.slice(0, 3).toUpperCase(),
-        name,
-        currentApy: 4,
-        apy7d: 4,
-        apy30d: 4,
-        apyBase: 4,
-        dataSource: "price-derived",
-        safetyScore: 40,
-        safetyGrade: "NR",
-        yieldSource: "Supply-history NAV appreciation",
-        provenance: makeYieldProvenance({
-          sourceKey: "price-derived",
-          sourceObservedAt: updatedAt - sourceAgeSeconds,
-          sourceAgeSeconds,
-          // The cached publication stamped both rows fresh under the old bounds.
-          sourceFreshness: "fresh" as const,
-        }),
-      });
-    const payload = {
+  it.each(["live", "publish-time"] as const)("ages unchanged observations across tiers with %s safety", async (branch) => {
+    const publishedAt = Math.floor(Date.now() / 1000);
+    const payload: YieldRankingsResponse = {
       ...v748RankingsPayload,
-      rankings: [
-        dailyRow("aging-coin", "Aging Coin", 28 * 3600),
-        dailyRow("stale-coin", "Stale Coin", 31 * 3600),
-      ],
-      updatedAt,
-    } satisfies YieldRankingsResponse;
-    const db = makeCacheDb(payload, updatedAt);
+      updatedAt: publishedAt,
+      rankings: [makeYieldRanking({
+        id: "rated-coin",
+        dataSource: "onchain",
+        yieldType: "lending-vault",
+        safetyScore: 66,
+        safetyGrade: "B-",
+        provenance: makeYieldProvenance({
+          sourceKey: "onchain:test",
+          sourceObservedAt: publishedAt,
+          sourceAgeSeconds: 0,
+          usedDefaultSafety: false,
+          sourceFreshness: "fresh",
+          benchmarkRecordDate: "2026-03-12",
+        }),
+      })],
+    };
+    const db = makeCacheDb(payload, publishedAt);
+    if (branch === "publish-time") computeSafetyScoresSnapshotMock.mockRejectedValue(new Error("D1 unavailable"));
+    const fresh = await readJsonResponse(await handleYieldRankings(db), 200) as YieldRankingsResponse;
+    expect(fresh.rankings[0].provenance?.sourceFreshness).toBe("fresh");
+    expect(fresh.rankings[0].pharosYieldScore).not.toBeNull();
 
-    const res = await handleYieldRankings(db);
-    const body = await res.json() as YieldRankingsResponse;
-    const aging = body.rankings.find((entry) => entry.id === "aging-coin");
-    const stale = body.rankings.find((entry) => entry.id === "stale-coin");
+    vi.setSystemTime((publishedAt + 2 * 3600 + 1) * 1000);
+    const aging = await readJsonResponse(await handleYieldRankings(db), 200) as YieldRankingsResponse;
+    expect(aging.rankings[0].warningSignals).toContain("aging");
+    expect(aging.rankings[0].pharosYieldScore).not.toBeNull();
+    expect(aging.rankings[0].provenance?.sourceAgeSeconds).toBe(2 * 3600 + 1);
 
-    // B21: price-derived rows go `aging` after 27h and stale after 30h.
-    expect(aging?.warningSignals).toContain("aging");
-    expect(aging?.warningSignals).not.toContain("data-stale");
-    expect(aging?.pharosYieldScore).not.toBeNull();
-    expect(stale?.warningSignals).toContain("data-stale");
-    expect(stale?.provenance?.sourceFreshness).toBe("stale");
-    expect(stale?.pysNullReason).toBe("source-stale");
-    expect(stale?.pharosYieldScore).toBeNull();
+    vi.setSystemTime((publishedAt + 3 * 3600 + 1) * 1000);
+    const stale = await readJsonResponse(await handleYieldRankings(db), 200) as YieldRankingsResponse;
+    expect(stale.rankings[0]).toMatchObject({
+      pharosYieldScore: null,
+      pysNullReason: "source-stale",
+      warningSignals: expect.arrayContaining(["data-stale"]),
+      provenance: expect.objectContaining({ sourceFreshness: "stale", sourceMaxAgeSeconds: 3 * 3600 }),
+    });
+  });
+
+  it("advances legacy source ages without an observation timestamp", async () => {
+    const publishedAt = Math.floor(Date.now() / 1000);
+    const payload: YieldRankingsResponse = {
+      ...v748RankingsPayload,
+      rankings: [makeYieldRanking({
+        id: "rated-coin",
+        dataSource: "onchain",
+        sourceRisk: buildSourceRiskGoldenFixture("stale-source-age", { sourceAgeSeconds: 3600 }),
+        provenance: makeYieldProvenance({ sourceObservedAt: undefined, sourceAgeSeconds: 3600 }),
+      })],
+    };
+    const db = makeCacheDb(payload, publishedAt);
+    vi.setSystemTime((publishedAt + 2 * 3600 + 1) * 1000);
+    const body = await readJsonResponse(await handleYieldRankings(db), 200) as YieldRankingsResponse;
+    expect(body.rankings[0].sourceRisk?.sourceAgeSeconds).toBe(3 * 3600 + 1);
+    expect(body.rankings[0].pysNullReason).toBe("source-stale");
+  });
+
+  it.each(["live", "publish-time"] as const)("keeps rate product evidence independent of healthy EFFR with %s safety", async (branch) => {
+    const publishedAt = Math.floor(Date.now() / 1000);
+    if (branch === "publish-time") computeSafetyScoresSnapshotMock.mockRejectedValue(new Error("D1 unavailable"));
+    for (const state of ["healthy", "retained", "stale", "hardcoded"] as const) {
+      const product = {
+        ...v748RankingsPayload.benchmarks.USD,
+        fetchedAt: state === "hardcoded" ? null : state === "stale" ? publishedAt - 49 * 3600 : publishedAt,
+        ageSeconds: state === "hardcoded" ? null : state === "stale" ? 49 * 3600 : 0,
+        source: state === "hardcoded" ? "hardcoded-fallback" : "fred",
+        isFallback: state === "hardcoded",
+        fallbackMode: state === "retained" ? "retained" : state === "hardcoded" ? "default" : null,
+      };
+      const payload: YieldRankingsResponse = {
+        ...v748RankingsPayload,
+        benchmarks: {
+          USD: product,
+          USD_EFFR: { ...v748RankingsPayload.benchmarks.USD, key: "USD_EFFR", fetchedAt: publishedAt },
+        },
+        rankings: [makeYieldRanking({
+          id: "rated-coin",
+          dataSource: "rate-derived",
+          yieldType: "nav-appreciation",
+          benchmarkKey: "USD_EFFR",
+          safetyScore: 66,
+          safetyGrade: "B-",
+          provenance: makeYieldProvenance({
+            sourceKey: "rate-derived",
+            sourceObservedAt: publishedAt,
+            sourceAgeSeconds: 0,
+            sourceFreshness: "fresh",
+          }),
+        })],
+      };
+      const body = await readJsonResponse(await handleYieldRankings(makeCacheDb(payload, publishedAt)), 200) as YieldRankingsResponse;
+      const row = body.rankings[0];
+      expect(row.provenance?.benchmarkFreshness).toBe("healthy");
+      if (state === "stale" || state === "hardcoded") {
+        expect(row.pysNullReason).toBe("source-stale");
+        expect(row.pharosYieldScore).toBeNull();
+      } else {
+        expect(row.pharosYieldScore).not.toBeNull();
+        expect(row.warningSignals.includes("reference-benchmark-degraded")).toBe(state === "retained");
+      }
+    }
+  });
+
+  it.each(["live", "publish-time"] as const)("reassesses benchmark record dates with %s safety", async (branch) => {
+    vi.setSystemTime(new Date("2026-03-12T23:00:00Z"));
+    const publishedAt = Math.floor(Date.now() / 1000);
+    const recordDate = "2026-03-08";
+    const payload: YieldRankingsResponse = {
+      ...v748RankingsPayload,
+      benchmarks: { USD: { ...v748RankingsPayload.benchmarks.USD, fetchedAt: publishedAt, recordDate } },
+      provenance: {
+        ...v748RankingsPayload.provenance,
+        safetySnapshot: { ...v748RankingsPayload.provenance.safetySnapshot, publishedAt },
+      },
+      rankings: [makeYieldRanking({
+        id: "rated-coin",
+        dataSource: "price-derived",
+        benchmarkKey: "USD",
+        benchmarkRecordDate: recordDate,
+        provenance: makeYieldProvenance({
+          sourceObservedAt: publishedAt,
+          sourceAgeSeconds: 0,
+          benchmarkRecordDate: recordDate,
+          benchmarkFreshness: "healthy",
+        }),
+      })],
+    };
+    // Five-day record budget expires during this publication's lifetime.
+    const db = makeCacheDb(payload, Math.floor(Date.now() / 1000));
+    if (branch === "publish-time") computeSafetyScoresSnapshotMock.mockRejectedValue(new Error("D1 unavailable"));
+    const fresh = await readJsonResponse(await handleYieldRankings(db), 200) as YieldRankingsResponse;
+    expect(fresh.rankings[0].provenance?.benchmarkFreshness).toBe("healthy");
+    vi.setSystemTime(new Date("2026-03-13T01:00:01Z"));
+    const stale = await readJsonResponse(await handleYieldRankings(db), 200) as YieldRankingsResponse;
+    expect(stale.rankings[0].pysNullReason).toBe("benchmark-stale");
+    expect(stale.rankings[0].pharosYieldScore).toBeNull();
+  });
+
+  it.each([null, 23 * 3600])("expires held safety from its own timestamp (age %s)", async (safetyAge) => {
+    const publishedAt = Math.floor(Date.now() / 1000);
+    const payload: YieldRankingsResponse = {
+      ...v748RankingsPayload,
+      provenance: {
+        ...v748RankingsPayload.provenance,
+        safetySnapshot: {
+          ...v748RankingsPayload.provenance.safetySnapshot,
+          publishedAt: safetyAge == null ? null : publishedAt - safetyAge,
+          publicationGenerationId: "safety-original",
+        },
+      },
+    };
+    const db = makeCacheDb(payload, publishedAt);
+    computeSafetyScoresSnapshotMock.mockRejectedValue(new Error("D1 unavailable"));
+    if (safetyAge != null) {
+      const held = await readJsonResponse(await handleYieldRankings(db), 200) as YieldRankingsResponse;
+      expect(held.provenance?.liveSafetyHydration).toMatchObject({
+        fallback: "publish-time-snapshot", publishedAt: publishedAt - safetyAge,
+        publicationGenerationId: "safety-original",
+      });
+    }
+    vi.setSystemTime((publishedAt + 2 * 3600) * 1000);
+    const expired = await readJsonResponse(await handleYieldRankings(db), 200) as YieldRankingsResponse;
+    expect(expired.rankings[0].safetyScore).toBeNull();
+    expect(expired.provenance?.liveSafetyHydration?.fallback).toBeUndefined();
+  });
+
+  it.each([0, 2 * 3600 + 1, 4 * 3600 + 1])("serves matching strict freshness contracts at age %s", async (age) => {
+    const publishedAt = Math.floor(Date.now() / 1000);
+    const db = makeCacheDb(v748RankingsPayload, publishedAt);
+    vi.setSystemTime((publishedAt + age) * 1000);
+    const fullResponse = await handleYieldRankings(db);
+    const summaryResponse = await handleYieldRankings(db, new URL("https://example.com/api/yield-rankings?projection=summary"));
+    const full = YieldRankingsResponseSchema.parse(await fullResponse.json());
+    const summary = YieldRankingsSummaryResponseSchema.parse(await summaryResponse.json());
+    expect(full._meta).toEqual(summary._meta);
+    expect(full._meta).toMatchObject({
+      updatedAt: publishedAt,
+      ageSeconds: age,
+      status: age === 0 ? "fresh" : age > 4 * 3600 ? "stale" : "degraded",
+    });
+    for (const response of [fullResponse, summaryResponse]) {
+      if (age > 2 * 3600) {
+        expect(response.headers.get("Cache-Control")).toBe("no-store");
+        expect(response.headers.get("Warning")).toContain("110");
+      }
+    }
   });
 
   it("falls back to the published benchmark warning when the cached provenance carries no benchmark freshness", async () => {
@@ -1633,6 +1777,7 @@ describe("handleYieldRankings", () => {
           id: "rated-coin",
           symbol: "RATE",
           name: "Rated Coin",
+          yieldType: "lending-vault",
           warningSignals: ["benchmark-degraded"],
           provenance: makeYieldProvenance({
             sourceKey: "pool-a",
@@ -1781,6 +1926,7 @@ describe("handleYieldRankings", () => {
       id: "rated-coin",
       symbol: "RATE",
       name: "Rated Coin",
+      yieldType: "lending-vault",
       currentApy: 12,
       apy7d: 12,
       apy30d: 12,

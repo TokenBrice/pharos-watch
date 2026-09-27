@@ -577,7 +577,7 @@ describe("handleHealth", () => {
         {
           match: "stamped_identity",
           rows: [],
-          first: { updated_at: now - 1800, stamped_identity: stampedYieldIdentityJson("a".repeat(64)) },
+          first: { updated_at: now - 1800, stamped_identity: stampedYieldIdentityJson("a".repeat(64)), safety_published_at: now - 3600 },
         },
         {
           match: "publication_identity",
@@ -592,6 +592,23 @@ describe("handleHealth", () => {
 
     expect(body.status).toBe("healthy");
     expect(body.warnings).toContain("yield-safety-publish-time-fallback:safety-identity-mismatch");
+  });
+
+  it.each([25 * 3600, null, -60])("fails closed for unavailable stamped safety age %s despite a recent yield cache", async (safetyAge) => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = makeHealthyHealthDb(now, {
+      extras: [{
+        match: "stamped_identity", rows: [],
+        first: {
+          updated_at: now - 2 * 3600,
+          stamped_identity: stampedYieldIdentityJson("a".repeat(64)),
+          safety_published_at: safetyAge == null ? null : now - safetyAge,
+        },
+      }],
+    });
+    const body = await (await handleHealth(db)).json() as { status: string; warnings: string[] };
+    expect(body.status).toBe("degraded");
+    expect(body.warnings).toContain("yield-safety-unrated-serving:safety-snapshot-unavailable");
   });
 
   it("degrades health when yield rankings are serving unrated safety for lack of a stamped identity", async () => {
@@ -620,7 +637,7 @@ describe("handleHealth", () => {
         {
           match: "stamped_identity",
           rows: [],
-          first: { updated_at: now - (24 * 3600 + 120), stamped_identity: stampedYieldIdentityJson("a".repeat(64)) },
+          first: { updated_at: now - (24 * 3600 + 120), stamped_identity: stampedYieldIdentityJson("a".repeat(64)), safety_published_at: now - 3600 },
         },
         {
           match: "publication_identity",
@@ -734,6 +751,7 @@ describe("handleHealth", () => {
         job: "sync-yield-data",
         started_at: now - 3_600,
         degraded_runs_since_ok: 3,
+        latest_reason: "yield-supplemental:family-degraded:aaveV3",
       }],
     });
 
@@ -752,12 +770,12 @@ describe("handleHealth", () => {
     expect(body.status).toBe("degraded");
     expect(body.caches["yield-data"]).toMatchObject({
       degraded: true,
-      degradedReason: "producer-degraded-since-last-clean-run",
+      degradedReason: "yield-supplemental:family-degraded:aaveV3",
       streakDegradedRuns: 3,
       healthy: false,
     });
     expect(body.warnings).toContain(
-      "cache-quality-degraded: yield-data:producer-degraded-since-last-clean-run",
+      "cache-quality-degraded: yield-data:yield-supplemental:family-degraded:aaveV3",
     );
   });
 
