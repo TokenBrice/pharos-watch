@@ -266,10 +266,10 @@ const YieldResponseFreshnessMetaSchema = z
   .object({
     updatedAt: z.number(),
     ageSeconds: z.number(),
-    assessedAt: z.number().optional(),
-    freshBudgetSec: z.number().optional(),
-    degradedBudgetSec: z.number().optional(),
-    reason: z.string().nullable().optional(),
+    assessedAt: z.number(),
+    freshBudgetSec: z.number(),
+    degradedBudgetSec: z.number(),
+    reason: z.string().nullable(),
     status: z.enum(["fresh", "degraded", "stale"]),
   })
   .strict();

@@ -67,8 +67,7 @@ export function getYieldDecisionReasonLine(row: YieldWorkbenchRanking): string |
 }
 
 export function getYieldBenchmarkSelectionMode(row: YieldWorkbenchRanking): YieldBenchmarkSelectionMode | undefined {
-  return row.benchmarkSelectionMode ??
-    (isYieldRankingSummary(row) && row.benchmarkIsFallback ? "fallback-usd" : undefined);
+  return row.benchmarkSelectionMode;
 }
 
 /** A source-risk penalty above this multiplier reads as materially risky on every yield surface. */

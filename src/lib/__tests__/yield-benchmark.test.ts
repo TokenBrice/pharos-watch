@@ -39,16 +39,6 @@ describe("row benchmark selection evidence", () => {
       expect(resolveYieldRowBenchmark(candidate, BENCHMARKS).selectionMode).toBe(selectionMode);
     }
   });
-
-  it("infers legacy summary selection only when explicit selection evidence is absent", () => {
-    const summary = projectYieldRankingsSummary({
-      rankings: [makeYieldRanking({ benchmarkIsFallback: true })],
-      updatedAt: 1, riskFreeRate: 4.25, scalingFactor: 8, medianApy: 5,
-    }).rankings[0];
-    delete summary.benchmarkSelectionMode;
-    expect(getYieldBenchmarkSelectionMode(summary)).toBe("fallback-usd");
-    expect(resolveYieldRowBenchmark(summary, BENCHMARKS).selectionMode).toBe("fallback-usd");
-  });
 });
 const BENCHMARKS: YieldBenchmarkRegistry = {
   USD: {

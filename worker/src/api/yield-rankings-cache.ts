@@ -1,4 +1,3 @@
-import { projectYieldWireCompat } from "@shared/lib/yield-wire-compat";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { logWorkerEventArgs } from "../lib/structured-log";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
@@ -742,7 +741,7 @@ function buildYieldRankingsResponse(
     headers.Warning = `${headers.Warning}, ${warning}`;
   }
   return jsonResponseWithHeaders(
-    projectYieldWireCompat({
+    {
       ...payload,
       _meta: {
         ...freshness,
@@ -752,7 +751,7 @@ function buildYieldRankingsResponse(
         reason: freshness.status !== "fresh" ? "yield-publication-age"
           : warningReasons.length > 0 ? warningReasons.join(",") : null,
       },
-    }),
+    },
     headers,
   );
 }

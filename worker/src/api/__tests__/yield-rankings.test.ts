@@ -1715,10 +1715,14 @@ describe("handleYieldRankings", () => {
     expect(full._meta).toMatchObject({
       updatedAt: publishedAt,
       ageSeconds: age,
+      assessedAt: publishedAt + age,
+      freshBudgetSec: 2 * 3600,
+      degradedBudgetSec: 4 * 3600,
       status: age === 0 ? "fresh" : age > 4 * 3600 ? "stale" : "degraded",
     });
     for (const response of [fullResponse, summaryResponse]) {
       if (age > 2 * 3600) {
+        expect(full._meta?.reason).toBe("yield-publication-age");
         expect(response.headers.get("Cache-Control")).toBe("no-store");
         expect(response.headers.get("Warning")).toContain("110");
       }

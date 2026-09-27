@@ -1,7 +1,7 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { YieldRankingsSummaryResponseSchema } from "@shared/types/yield-summary";
-import type { YieldRankingsResponse } from "@shared/types/yield";
+import { YieldRankingsResponseSchema, type YieldRankingsResponse } from "@shared/types/yield";
 import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { buildSelectorRows } from "@shared/lib/selector/data-adapter";
@@ -135,6 +135,7 @@ describe("handleYieldRankings summary projection", () => {
       ],
       _meta: {
         updatedAt: UPDATED_AT, ageSeconds: 60, status: "fresh",
+        assessedAt: UPDATED_AT + 60, freshBudgetSec: 7200, degradedBudgetSec: 14400,
       },
     });
     // B36: the lane, the role, the bounded alternate list and the dependency
@@ -153,6 +154,43 @@ describe("handleYieldRankings summary projection", () => {
     expect(body.rankings[0].sourceRisk).not.toHaveProperty("venueProtocol");
     expect(body.rankings[0].sourceRisk).not.toHaveProperty("investabilityFlags");
     expect(body.rankings[0].altSources?.[0]).not.toHaveProperty("sourceRisk");
+  });
+
+  it.each([
+    ["native", true],
+    ["fallback-usd", false],
+  ] as const)("publishes unavailable evidence and raw reward ratios with %s selection", async (mode, isFallback) => {
+    const payload = makePayload();
+    payload.medianApy = null;
+    Object.assign(payload.rankings[0], {
+      benchmarkSelectionMode: mode,
+      benchmarkIsFallback: isFallback,
+      provenance: makeYieldProvenance({
+        sourceObservedAt: null, sourceAgeSeconds: null,
+      }),
+      sourceRisk: { rewardShare: 1.5, sourceAgeSeconds: null },
+      altSources: [makeAltYieldSource({ sourceRisk: { rewardShare: 2 } })],
+    });
+    const db = makeCacheDb(payload);
+    const full = YieldRankingsResponseSchema.parse(await (await handleYieldRankings(db)).json());
+    const summary = YieldRankingsSummaryResponseSchema.parse(await (await handleYieldRankings(
+      db, new URL("https://x/api/yield-rankings?projection=summary"),
+    )).json());
+
+    for (const body of [full, summary]) {
+      expect(body.medianApy).toBeNull();
+      expect(body.rankings[0]).toMatchObject({
+        benchmarkSelectionMode: mode,
+        benchmarkIsFallback: isFallback,
+        provenance: { sourceKey: "selected-source", sourceMaxAgeSeconds: expect.any(Number) },
+        sourceRisk: { rewardShare: 1.5, sourceAgeSeconds: null },
+      });
+    }
+    expect(summary.rankings[0].provenance?.sourceMaxAgeSeconds).toBe(full.rankings[0].provenance?.sourceMaxAgeSeconds);
+    expect(full.rankings[0].provenance).toMatchObject({
+      sourceObservedAt: null, sourceAgeSeconds: null,
+    });
+    expect(full.rankings[0].altSources[0].sourceRisk?.rewardShare).toBe(2);
   });
 
   it("ages full and summary source evidence without renewing alternate observations", async () => {

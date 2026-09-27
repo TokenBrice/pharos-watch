@@ -643,6 +643,7 @@ describe("handleYieldHistory", () => {
     const rewardHeavyRisk = buildSourceRiskGoldenFixture("reward-heavy", {
       sourceRiskScore: 72,
       sourceDepthRatio: 0.18,
+      rewardShare: 1.5,
       sourceAgeSeconds: 420,
       observationCount30d: 18,
       sourceSwitchCount30d: 1,
@@ -713,7 +714,7 @@ describe("handleYieldHistory", () => {
       sourceRiskPenalty: rewardHeavyRisk.sourceRiskPenalty,
       sourceRiskScore: 72,
       sourceDepthRatio: 0.18,
-      rewardShare: rewardHeavyRisk.rewardShare,
+      rewardShare: 1.5,
       sourceAgeSeconds: 420,
       observationCount30d: 18,
       sourceSwitchCount30d: 1,

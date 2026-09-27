@@ -240,11 +240,6 @@ export interface YieldResolvedRowBenchmark {
   selectionMode: YieldBenchmarkSelectionMode | null;
 }
 
-function getYieldRowSelectionMode(row: YieldWorkbenchRanking): YieldBenchmarkSelectionMode | undefined {
-  return row.benchmarkSelectionMode ??
-    ("alternateSourceCount" in row && row.benchmarkIsFallback ? "fallback-usd" : undefined);
-}
-
 function firstFiniteNumber(...values: Array<number | null | undefined>): number | null {
   for (const value of values) {
     if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -266,7 +261,7 @@ export function resolveYieldRowBenchmark(
 ): YieldResolvedRowBenchmark {
   const benchmarkKey = getYieldRankingBenchmarkKey(row);
   const meta = getYieldBenchmarkForKey(registry, benchmarkKey);
-  const selectionMode = getYieldRowSelectionMode(row) ?? null;
+  const selectionMode = row.benchmarkSelectionMode ?? null;
   const isFallback = selectionMode === "fallback-usd" || row.benchmarkIsFallback === true;
   const rate = firstFiniteNumber(
     row.benchmarkRate,
