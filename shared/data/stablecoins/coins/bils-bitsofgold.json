@@ -42,7 +42,7 @@
   "announcedDate": "2024-03",
   "expectedLaunchDate": "2026",
   "launchPhase": "launching-soon",
-  "launchPhaseDetail": "Bits of Gold, a Tel Aviv-based licensed crypto broker/custodian operating since 2013, received full regulatory approval on April 28 2026 from Israel's Capital Market, Insurance and Savings Authority (CMISA) to issue BILS, the first regulated shekel-pegged stablecoin, following a two-year sandbox pilot approved in March 2024. Backed 1:1 by New Israeli Shekels held in segregated dedicated bank accounts within Israel (foreign custody excluded), audited by Ernst & Young, with Fireblocks custody/issuance infrastructure and QEDIT zero-knowledge privacy, issued on Solana via token extensions. The regulator mandates a deliberately gradual, small-scale rollout (likely institutional/qualified participants first) before wide availability; no firm public-launch date set. As of September 13 2026 the Solana mint (CDxFUPSRK4dC68jWV7SCPezU1vNYXz87Y6fjhhRvsuhd) holds a flat 100,000 BILS with no mint activity since August 6 2026; bils.co.il now describes issuance on Solana and Ethereum but publishes no Ethereum address; the transparency page lists the EY Q3 2026 report as pending; and the Bits of Gold help centre still states BILS cannot yet be purchased. CoinGecko carries the mint with no price or tickers. Distinct from Israel's broader Stablecoin Law, which remains in draft/public-comment stage. Pharos tracks the ILS peg as OTHER until shekel peg support is built.",
+  "launchPhaseDetail": "Bits of Gold, a Tel Aviv-based licensed crypto broker/custodian operating since 2013, received full regulatory approval on April 28 2026 from Israel's Capital Market, Insurance and Savings Authority (CMISA) to issue BILS, the first regulated shekel-pegged stablecoin, following a two-year sandbox pilot approved in March 2024. Backed 1:1 by New Israeli Shekels held in segregated dedicated bank accounts within Israel (foreign custody excluded), audited by Ernst & Young, with Fireblocks custody/issuance infrastructure and QEDIT zero-knowledge privacy, issued on Solana via token extensions. The regulator mandates a deliberately gradual, small-scale rollout (likely institutional/qualified participants first) before wide availability; no firm public-launch date set. As of September 27 2026 the Solana mint (CDxFUPSRK4dC68jWV7SCPezU1vNYXz87Y6fjhhRvsuhd) still holds a flat 100,000 BILS with no mint activity since August 6 2026, while the bils.co.il transparency page states 1.1M BILS in circulation, a figure the published Solana contract does not support; the site also describes issuance on Solana and Ethereum but publishes no Ethereum address. On August 16 2026 Bits of Gold disclosed a breach of up to 250,000 customers' personal details through a third-party analytics provider, reporting it to CMISA with funds unaffected. The transparency page lists the EY Q3 2026 report as pending, and the white paper served as new in September 2026 is internally dated June 2025. CoinGecko carries the mint with no price or tickers. Distinct from Israel's broader Stablecoin Law, which remains in draft/public-comment stage. Pharos tracks the ILS peg as OTHER until shekel peg support is built.",
   "featuredContent": [
     {
       "type": "blog",
@@ -84,6 +84,13 @@
       "title": "Bits of Gold announces move to wide distribution of BILS",
       "description": "Official blog post states the sandbox pilot is complete and BILS is moving to wide distribution, with a live purchase and transparency site at bils.co.il; roughly 100,000 BILS minted on Solana as of early August 2026.",
       "sourceUrl": "https://blog.bitsofgold.co.il/bils/"
+    },
+    {
+      "date": "2026-08-16",
+      "type": "milestone",
+      "title": "Bits of Gold discloses customer-data breach through a third-party analytics provider",
+      "description": "Personal details of up to 250,000 customers, including names, identification numbers, emails, and IP addresses, were exposed through a global cyberattack on an external analytics service provider exploiting Metabase; customer funds and cryptocurrencies were not affected, and the incident was reported to the Capital Market, Insurance and Savings Authority. Paz froze Bitcoin purchases on its Yellow app in response.",
+      "sourceUrl": "https://www.calcalistech.com/ctechnews/article/hkserzkvfe"
     }
   ]
 }

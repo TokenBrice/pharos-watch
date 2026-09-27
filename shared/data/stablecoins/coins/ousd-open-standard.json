@@ -34,7 +34,7 @@
   "announcedDate": "2026-06",
   "expectedLaunchDate": "2026",
   "launchPhase": "announced",
-  "launchPhaseDetail": "Announced June 30, 2026 by Open Standard, an independent company operated by a board of 140+ partner businesses spanning payments, banking, fintech, tech, and crypto (Visa, Mastercard, American Express, Discover, Stripe, Adyen, BlackRock, BNY Mellon, Standard Chartered, U.S. Bank, BBVA, Coinbase, PayPay Corporation, Google, Samsung, Shopify, and more). OUSD is pitched as a GENIUS Act-compliant, fully-reserved dollar with zero mint/redeem fees and no volume limits, sharing most reserve earnings with partners after an operating fee. Zach Abrams (Bridge co-founder, now at Stripe) is interim CEO; Fireblocks is named for settlement infrastructure. Announced to launch natively on Solana, with Stellar and Plasma also named as launch partners, targeting 'later in 2026'. No mainnet contracts, named reserve custodian, audit, or attestation are public yet. Incumbents Circle, Tether, and PayPal's PYUSD are notably absent. Circle shares fell ~15-17% on the news.",
+  "launchPhaseDetail": "Announced June 30, 2026 by Open Standard, an independent company operated by a board of 140+ partner businesses spanning payments, banking, fintech, tech, and crypto (Visa, Mastercard, American Express, Discover, Stripe, Adyen, BlackRock, BNY Mellon, Standard Chartered, U.S. Bank, BBVA, Coinbase, PayPay Corporation, Google, Samsung, Shopify, and more). OUSD is pitched as a GENIUS Act-compliant, fully-reserved dollar with zero mint/redeem fees and no volume limits, sharing most reserve earnings with partners after a per-transaction developer fee, a model CEO Zach Abrams (Bridge co-founder) described as incentivizing utility rather than assets under management; Abrams became full-time CEO on September 24 2026. On that date Coinbase, Mastercard, Shopify, Stripe, and Visa were named initial founding partners, each investing and helping establish OUSD supply for $1B+ in near-term launch liquidity. Fireblocks is named for settlement infrastructure. Announced to launch natively on Solana, with Stellar and Plasma also named as launch partners, targeting 'later in 2026'. No official contract address is published and the Open Standard site still describes OUSD as not yet live; CoinGecko carries only a preview placeholder. No named reserve custodian, audit, or attestation is public. Incumbents Circle, Tether, and PayPal's PYUSD are notably absent. Circle shares fell ~15-17% on the June 30 news.",
   "featuredContent": [
     {
       "type": "blog",
@@ -80,6 +80,20 @@
       "type": "milestone",
       "title": "Zach Abrams (Bridge co-founder) named interim CEO; Fireblocks selected for settlement; OUSD to launch natively on Solana",
       "sourceUrl": "https://thedefiant.io/converge/tradfi-and-fintech/open-standard-open-usd-ousd-stablecoin-consortium-blackrock-visa-mastercard"
+    },
+    {
+      "date": "2026-09-09",
+      "type": "announcement",
+      "title": "Open Standard CEO essay sets OUSD economics: 'incentivize utility, not AUM'",
+      "description": "Zach Abrams's post described the business model: fee-free minting and redemption, a small per-transaction developer fee, and shared reserve revenue structured to reward transaction utility over assets under management. No launch date or contracts were given.",
+      "sourceUrl": "https://joinopenstandard.com/blog/stablecoins-are-better-dollars"
+    },
+    {
+      "date": "2026-09-24",
+      "type": "partnership",
+      "title": "Coinbase, Mastercard, Shopify, Stripe, and Visa named initial founding partners with $1B+ launch liquidity commitment",
+      "description": "Open Standard named its five initial founding partners, each investing in the company and helping establish OUSD supply for more than $1 billion of near-term launch liquidity, and Zach Abrams moved from interim to full-time CEO. Open Standard publishes no contract address and the site still describes OUSD as not yet live; CoinGecko carries only a preview placeholder.",
+      "sourceUrl": "https://joinopenstandard.com/blog/company-structure-and-leadership"
     }
   ]
 }

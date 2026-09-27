@@ -106,6 +106,13 @@
       "title": "Polaris closes $1M angel round with Ethereum Foundation, Liquity, and LI.FI participation",
       "description": "Polaris reported a $1 million angel round joined by the Ethereum Foundation, Fusion (IPOR), Altitude, Liquity, LI.FI, and more than 30 founders and contributors including Anthony Sassano, to build pETH as yield-bearing collateral for USDp and GOLDp. No mainnet date accompanied the round, and the Polaris blog carried no post about it.",
       "sourceUrl": "https://www.odaily.news/en/newsflash/515541"
+    },
+    {
+      "date": "2026-09-24",
+      "type": "milestone",
+      "title": "Polaris consolidates on polaris.finance; former domain now serves only a move notice",
+      "description": "A polaris-docs commit repointed documentation at polaris.finance; polarisfinance.io now shows only the move notice and the retired blog survives solely in web.archive.org captures. The Sepolia testnet app remains labelled Alpha, docs state no production addresses, audit status, or launch status may be inferred from testnet values, and no mainnet date or audit announcement accompanied the consolidation.",
+      "sourceUrl": "https://docs.polaris.finance/"
     }
   ],
   "mechanismArchetype": "cdp"

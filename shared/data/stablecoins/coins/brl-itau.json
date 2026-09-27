@@ -74,6 +74,13 @@
       "title": "BCB Resolution 561 bans stablecoin settlement in regulated cross-border FX",
       "description": "Brazil's central bank publishes Resolution 561 (effective Oct 1 2026) prohibiting authorised FX providers from using stablecoins or crypto to settle cross-border remittances, a restrictive backdrop for any BRL stablecoin, though it does not name Itau.",
       "sourceUrl": "https://www.coindesk.com/policy/2026/05/02/brazil-s-central-bank-bans-stablecoin-and-crypto-settlement-in-cross-border-payments"
+    },
+    {
+      "date": "2026-09-21",
+      "type": "milestone",
+      "title": "Itaú digital-assets head reiterates watchful stance; no own-stablecoin decision",
+      "description": "Guto Antunes told BitNotícias that Itaú's crypto client base grew 252 percent since the December 2024 retail expansion and that the bank is closely tracking tokenization and stablecoins as potential enablers of new payment models, while arguing at Blockchain.RIO on August 12 that stablecoins and tokenized deposits need an equilibrium rather than full migration. The Drex pilot has ended; no issuance decision, peg choice, ticker, or date has been announced.",
+      "sourceUrl": "https://bitnoticias.com.br/noticias/exclusivo-clientes-cripto-do-itau-aumentaram-252-e-banco-prepara-novidades"
     }
   ]
 }

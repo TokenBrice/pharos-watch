@@ -1,0 +1,54 @@
+{
+  "id": "usd-bank-consortium",
+  "name": "Bank Consortium USD Stablecoin",
+  "symbol": "USD-CONSORTIUM",
+  "oneLiner": "A pre-launch dollar stablecoin from a joint venture of 21 global banks including Bank of America, Citi, and Goldman Sachs, targeted for market in H1 2027.",
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized"
+  },
+  "collateral": "Pre-launch: the joint venture has announced no reserve composition, custodians, or attestation arrangements. The October 2025 precursor announcement from an initial group of ten banks described the initiative as a 1:1 reserve-backed form of digital money providing a stable payment asset available on public blockchains.",
+  "pegMechanism": "Pre-launch: issuer-managed USD-denominated stablecoin intended for wholesale, institutional, and retail use cases including cross-border payments and digital asset settlement. Mint, redemption, and reserve-reporting design have not been published; the group intends to be GENIUS Act and MiCA-compliant, as applicable.",
+  "mechanismArchetype": "fiat-cash",
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Announcement",
+      "url": "https://www.santander.com/en/press-room/press-releases/2026/09/group-of-leading-international-financial-institutions-to-establish-stablecoin-enterprise"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Multinational joint venture (North America, Europe, East Asia, Middle East, Africa)"
+  },
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "single-entity",
+  "status": "pre-launch",
+  "announcedDate": "2026-09-01",
+  "expectedLaunchDate": "2027-H1",
+  "launchPhase": "announced",
+  "launchPhaseDetail": "Announced September 1 2026 in a joint press release issued from London and New York: twenty-one financial institutions committed to establish a new jointly owned company in H2 2026, subject to closing conditions, to support the issuance of a stablecoin. The company name will be announced in due course. The group comprises Bank of America, Capital One, Citi, Fidelity Investments, Goldman Sachs, PNC Financial Services, Scotiabank, TD Bank Group, Wells Fargo, and WisdomTree (North America); Banco Santander, BBVA, Commerzbank, Credit Agricole, Deutsche Bank, Lloyds Banking Group, Cooperatieve Rabobank U.A., and UBS (Europe); MUFG Bank (East Asia); Sirius International Holding (Middle East); and Standard Bank (Africa). The initial focus is a USD-denominated stablecoin, with a longer-term ambition to expand into additional G7 currencies and a EUR offering as a priority, and the group aims for its stablecoin solution to go to market in the first half of 2027. The initiative follows an October 2025 announcement in which an initial group of ten banks explored a 1:1 reserve-backed form of digital money on public blockchains, and it intends to be GENIUS Act and MiCA-compliant, as applicable. No company name, ticker, chain, contracts, reserve composition, custodian, or attestation arrangement has been announced.",
+  "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://www.santander.com/en/press-room/press-releases/2026/09/group-of-leading-international-financial-institutions-to-establish-stablecoin-enterprise",
+      "title": "Group of leading international financial institutions to establish stablecoin enterprise",
+      "description": "Twenty-one institutions commit to establish a new company in H2 2026 to issue a USD stablecoin, with a EUR offering as the next priority and market entry targeted for H1 2027.",
+      "source": "Santander joint press release"
+    },
+    {
+      "type": "article",
+      "url": "https://www.coindesk.com/business/2026/09/01/citi-goldman-other-global-banks-and-asset-managers-team-up-on-stablecoin-venture",
+      "title": "Citi, Goldman, other global banks and asset managers team up on stablecoin venture",
+      "source": "CoinDesk"
+    }
+  ],
+  "milestones": [
+    {
+      "date": "2026-09-01",
+      "type": "announcement",
+      "title": "Twenty-one banks commit to establish a joint stablecoin company; USD token targeted for market in H1 2027",
+      "description": "Bank of America, Citi, Goldman Sachs, Deutsche Bank, Santander, UBS, MUFG Bank and fourteen other institutions committed to establish a new company in H2 2026, subject to closing conditions, to support issuance of a stablecoin, with an initial focus on a USD-denominated offering, a EUR offering as the next priority, and market entry targeted for the first half of 2027. The initiative intends GENIUS Act and MiCA compliance, as applicable, and follows an October 2025 exploration by an initial group of ten banks.",
+      "sourceUrl": "https://www.santander.com/en/press-room/press-releases/2026/09/group-of-leading-international-financial-institutions-to-establish-stablecoin-enterprise"
+    }
+  ]
+}

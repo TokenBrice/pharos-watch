@@ -409,6 +409,8 @@
     "kusd-kerne": "core-stablecoin",
     "ousd-open-standard": "core-stablecoin",
     "rd-rai-dollar": "core-stablecoin",
-    "usdv-solomon-v2": "core-stablecoin"
+    "usdv-solomon-v2": "core-stablecoin",
+    "usd-bank-consortium": "core-stablecoin",
+    "jpy-megabank-consortium": "core-stablecoin"
   }
 }

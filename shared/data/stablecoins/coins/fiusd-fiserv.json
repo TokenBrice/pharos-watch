@@ -57,7 +57,7 @@
       "type": "announcement",
       "title": "Fiserv announces FIUSD stablecoin on Solana",
       "description": "FIUSD built for 10,000 financial institution clients and 6 million merchant locations, leveraging Paxos and Circle infrastructure.",
-      "sourceUrl": "https://investors.fiserv.com/newsroom/detail/2848/fiserv-launches-new-fiusd-stablecoin-for-financial-institutions"
+      "sourceUrl": "https://investors.fiserv.com/news-events/news-release-details/fiserv-launches-new-fiusd-stablecoin-for-financial-institutions"
     },
     {
       "date": "2025-06-23",
@@ -69,7 +69,7 @@
       "date": "2025-06-23",
       "type": "partnership",
       "title": "PayPal partnership for FIUSD interoperability",
-      "sourceUrl": "https://investors.fiserv.com/newsroom/detail/2849/fiserv-and-paypal-expand-partnership-to-advance-stablecoin-payments"
+      "sourceUrl": "https://investors.fiserv.com/news-events/news-release-details/fiserv-and-paypal-expand-partnership-to-advance-stablecoin-payments"
     },
     {
       "date": "2025-09-29",
@@ -81,7 +81,7 @@
       "date": "2025-10-08",
       "type": "partnership",
       "title": "Fiserv powers Roughrider Coin for Bank of North Dakota",
-      "sourceUrl": "https://investors.fiserv.com/newsroom/detail/2868/bank-of-north-dakota-and-fiserv-partner-to-launch-roughrider-coin-north-dakotas-first-stablecoin"
+      "sourceUrl": "https://investors.fiserv.com/news-events/news-release-details/bank-of-north-dakota-and-fiserv-partner-to-launch-roughrider-coin-north-dakotas-first-stablecoin"
     },
     {
       "date": "2025-12-17",
@@ -116,6 +116,13 @@
       "title": "CEO Lyons confirms FIUSD goes live in July 2026 at Bernstein conference",
       "description": "At the Bernstein Strategic Decisions conference, CEO Michael Lyons stated 'FIUSD goes live in July,' setting July 2026 for the interbank platform launch.",
       "sourceUrl": "https://www.paymentsdive.com/news/fiserv-stablecoin-arrives-next-month/821877/"
+    },
+    {
+      "date": "2026-06-15",
+      "type": "milestone",
+      "title": "Fiserv CEO transition: Mike Lyons departs for Truist; successor has not addressed FIUSD",
+      "description": "Mike Lyons, who had set the July 2026 FIUSD go-live window, stepped down as Fiserv CEO on June 15 2026 to become Truist's CEO; Takis Georgakopoulos succeeded him. At the Goldman Sachs Communacopia conference on September 10 the new CEO outlined a unified issuing-platform, debit-network, and Stonecastle strategy without mentioning FIUSD, stablecoins, or digital assets, leaving the pilot unaddressed nine weeks after the July window closed.",
+      "sourceUrl": "https://investors.fiserv.com/news-releases/news-release-details/fiserv-announces-leadership-transition"
     },
     {
       "date": "2026-08-06",

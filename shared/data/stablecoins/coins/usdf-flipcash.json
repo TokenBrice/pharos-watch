@@ -47,7 +47,7 @@
     }
   ],
   "launchPhase": "launching-soon",
-  "launchPhaseDetail": "Debut token on Coinbase's Custom Stablecoin platform; went live 2026-05-20 on Solana, 1:1 backed by USDC, with Coinbase Onramp fiat access; serves as the settlement asset for Flipcash's user-created currencies; the on-chain reserve contract (github.com/code-payments/flipcash-program) was audited by Sec3. The Solana mint is 5AMAA9JV9H97YYVxx8F6FsCMmTwXSuTTQneiup4RYAUQ (6 decimals, pinned in the issuer's flipcash-program repository, created January 8 2026); on September 13 2026 it carried 2,875,649.80 USDF across 529 holders with no DEX pairs and no price on Jupiter. USDF is not listed on DefiLlama or CoinGecko, so it cannot yet enter Pharos runtime data. As of July 2026 the token remains in Coinbase-exchange operational-only backend testing (no trading, deposits, or withdrawals) and the May 2026 public-launch window has lapsed without a confirmed go-live.",
+  "launchPhaseDetail": "Debut token on Coinbase's Custom Stablecoin platform; went live 2026-05-20 on Solana, 1:1 backed by USDC, with Coinbase Onramp fiat access; serves as the settlement asset for Flipcash's user-created currencies; the on-chain reserve contract (github.com/code-payments/flipcash-program) was audited by Sec3. The Solana mint is 5AMAA9JV9H97YYVxx8F6FsCMmTwXSuTTQneiup4RYAUQ (6 decimals, pinned in the issuer's flipcash-program repository, created January 8 2026); it carried 2,875,649.80 USDF across 529 holders with no DEX pairs and no price on Jupiter on September 13 2026, and by September 27 2026 supply had grown to 3,181,003.29 USDF. USDF is not listed on DefiLlama or CoinGecko and Jupiter returns no market for the mint, so it cannot yet enter Pharos runtime data. As of July 2026 the token remains in Coinbase-exchange operational-only backend testing (no trading, deposits, or withdrawals) and the May 2026 public-launch window has lapsed without a confirmed go-live.",
   "dependencies": [
     {
       "id": "usdc-circle",
@@ -109,6 +109,13 @@
       "title": "USDF goes live on Solana via Coinbase's Custom Stablecoin platform",
       "description": "Flipcash launches USDF, 1:1 USDC-backed, on Solana with Coinbase Onramp fiat access.",
       "sourceUrl": "https://cryptobriefing.com/coinbase-usdf-launch-flipcash/"
+    },
+    {
+      "date": "2026-09-27",
+      "type": "milestone",
+      "title": "USDF supply reaches 3.18 million on Solana with still no market, price feed, or trading launch",
+      "description": "On-chain supply at the Coinbase Custom Stablecoins mint grew about 10.6 percent in two weeks, from 2,875,650 USDF on September 13 to 3,181,003 on September 27. Jupiter lists no pair for the mint, CoinGecko has no entry, and no trading launch or platform news accompanied the growth.",
+      "sourceUrl": "https://solscan.io/token/5AMAA9JV9H97YYVxx8F6FsCMmTwXSuTTQneiup4RYAUQ"
     }
   ]
 }

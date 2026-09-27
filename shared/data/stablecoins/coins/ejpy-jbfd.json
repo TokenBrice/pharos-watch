@@ -59,6 +59,13 @@
       "title": "Japan Blockchain Foundation decides to issue trust-type yen stablecoin EJPY",
       "description": "JBFD announces a trust-type JPY-pegged stablecoin for Japan Open Chain and Ethereum, with the trust scheme structure clarified and a trustee under negotiation; issuance targeted within FY2026.",
       "sourceUrl": "https://www.jbfd.org/en/news/joc-ejpy"
+    },
+    {
+      "date": "2026-09-24",
+      "type": "milestone",
+      "title": "JBF launches 'Stablecoin Pilot Partners' with Toshiba among 26 institutions using test EJPY",
+      "description": "Japan Blockchain Foundation opened a free roughly six-month pilot program (September 2026 to February 2027) in which 26 enterprises, financial institutions, and local governments, including Toshiba, SCSK, Asahi Broadcasting, Hachijuni Nagano Bank, and Tagawa City, explore stablecoin use cases spanning remittances, B2B payments, RWA settlement, and Web3 using test EJPY tokens and JOC wallets. The trustee bank remains unnamed and commercial issuance is still targeted within FY2026 (through March 2027).",
+      "sourceUrl": "https://finance.biggo.com/news/7896476e-2c62-44a6-8294-626fa5bce46c"
     }
   ]
 }

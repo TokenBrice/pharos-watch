@@ -88,7 +88,7 @@
       "date": "2025-10-08",
       "type": "partnership",
       "title": "Fiserv confirmed as technology and platform partner",
-      "sourceUrl": "https://investors.fiserv.com/newsroom/detail/2868/bank-of-north-dakota-and-fiserv-partner-to-launch-roughrider-coin-north-dakotas-first-stablecoin"
+      "sourceUrl": "https://investors.fiserv.com/news-events/news-release-details/bank-of-north-dakota-and-fiserv-partner-to-launch-roughrider-coin-north-dakotas-first-stablecoin"
     },
     {
       "date": "2026-03-09",
@@ -110,6 +110,13 @@
       "title": "Fiserv CEO confirms FIUSD platform slips to July 2026; Roughrider September pilot still planned",
       "description": "At the Bernstein Strategic Decisions conference, Fiserv's CEO confirmed the FIUSD platform goes live in July 2026 (from an earlier end-2025 target), compressing the runway to Roughrider's September 2026 state-bank pilot.",
       "sourceUrl": "https://www.paymentsdive.com/news/fiserv-stablecoin-arrives-next-month/821877/"
+    },
+    {
+      "date": "2026-09-27",
+      "type": "delay",
+      "title": "September pilot window passes with no Roughrider start announced",
+      "description": "The September 2026 bank-to-bank pilot timing reaffirmed at the March 25 Industrial Commission vote passed without a start announcement: the Bank of North Dakota Roughrider page was last modified February 17 2026 and still describes a not-yet-started beta under a non-binding, zero-cost agreement, the Fiserv contract conclusion was never announced, and the FIUSD platform it depends on has no confirmed go-live.",
+      "sourceUrl": "https://bnd.nd.gov/roughrider/"
     }
   ]
 }
