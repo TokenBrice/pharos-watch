@@ -1,0 +1,10 @@
+[
+  {
+    "date": "2026-09-23T20:48:00Z",
+    "kind": "mint-burn-spike",
+    "label": "128.90M USDai burned for loan deployment, not equivalent protocol outflow",
+    "severity": "high",
+    "href": "https://arbiscan.io/tx/0x46dc4ae95582c3d92d2ada242fc7445b6f4408284d271f69e2f98668993559d7",
+    "note": "Reviewed September 27, 2026: Arbitrum block 508237173 records 128,895,244.1 USDai burned and the same amount of PYUSD transferred out of the canonical hub. The issuer dashboard at https://app.usd.ai/dashboard reports loan reserves rising from $272,340,412.885676 to $401,235,656.985676 between September 23 20:29:59 and 20:59:59 UTC, while protocol TVL stays near $609.05M. Base-token supply genuinely contracted; the matched deployment does not establish investor withdrawal. This does not attribute every burn or the entire weekly net supply change to deployment."
+  }
+]

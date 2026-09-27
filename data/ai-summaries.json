@@ -1909,27 +1909,45 @@
   },
   "usdai-usd-ai": {
     "title": "The Liquid Base Token",
-    "text": "USDai is the non-yielding base token in USD.AI, and the important current detail is that Pharos metadata shows the base reserve as 100% PYUSD held by the USDai contract. USDC and USDT are deposit and exit currencies for users, not the assets currently sitting underneath the base token, which is exactly the kind of distinction stablecoin marketing tends to blur when nobody is watching. The GPU-backed loan book belongs to sUSDai, the separate staking sleeve, so base USDai holders are taking PYUSD dependency and platform-admin risk rather than AI-credit yield risk. The real-time proof-of-reserves API is a genuine transparency upgrade, especially for a young product spread across multiple chains. The catch is centralized mint and upgrade control through bridge/admin roles and a Safe-governed path, so the base token is liquid and observable, not permissionless.",
-    "updatedAt": "2026-06-12",
+    "text": "USDai is the non-yielding base token in USD.AI, backed by PYUSD held in the canonical Arbitrum contract. Its outstanding supply includes USDai held inside the separate sUSDai vault as well as tokens held elsewhere. When funds are deployed into GPU-backed lending, USDai can be burned to release PYUSD while the resulting loan exposure remains in sUSDai's portfolio. Base-token supply can therefore fall without an equivalent withdrawal of assets from the protocol. Loan repayments redeposited as PYUSD can mint USDai again. The issuer's total value locked also includes loan positions and accrued yield, so it is not interchangeable with USDai supply. Adding sUSDai's full asset value to base-token supply would double count the USDai still held by the vault. Pharos tracks the base token separately from that credit strategy. Primary minting and redemption use PYUSD through an eligibility-controlled hub; holders remain exposed to PYUSD, protocol administration, and the controls on their bridge route.",
+    "updatedAt": "2026-09-27",
     "authoredBy": "ai",
-    "model": "gpt-5-codex",
-    "reviewedBy": "Codex data review",
-    "reviewedAt": "2026-06-12",
-    "factsAsOf": "2026-06-12"
+    "model": "gpt-6-astra",
+    "factsAsOf": "2026-09-27",
+    "sources": [
+      {
+        "label": "USD.AI technical protocol overview",
+        "url": "https://docs.usd.ai/technical-overview/technical-protocol-overview"
+      },
+      {
+        "label": "USD.AI protocol TVL and token breakdown",
+        "url": "https://app.usd.ai/dashboard"
+      },
+      {
+        "label": "USDai burn and PYUSD withdrawal on September 23, 2026",
+        "url": "https://arbiscan.io/tx/0x46dc4ae95582c3d92d2ada242fc7445b6f4408284d271f69e2f98668993559d7"
+      }
+    ]
   },
   "susdai-usd-ai": {
     "title": "The GPU-Credit Sleeve",
-    "text": "sUSDai is where USD.AI moves from a PYUSD-backed base dollar into the actual AI-credit bet. The reserve stack currently combines a large PYUSD liquid sleeve with a smaller but meaningful GPU-backed infrastructure-loan sleeve, so the token behaves like a NAV-appreciating credit product rather than a clean payment stablecoin. USD.AI's on-chain reserve index separates the liquid assets from the loan book, and Pharos can reconstruct the PYUSD balance and loan principal from Arbitrum, but GPU identity, appraisal, insurance, and SPV enforceability remain issuer disclosures. Exits run through staking mechanics and a queued withdrawal flow with thirty-day processing windows rather than an always-on issuer redemption promise. Satellite tokens on Ethereum, Base, and Plasma sit behind a LayerZero adapter and a chain-local Safe that can burn holder balances. Exit and backing sit together as the weakest lines on the card, and the {{grade}} overall grade reflects a loan book whose collateral, appraisal, and enforceability rest on issuer disclosure.",
-    "updatedAt": "2026-09-07",
+    "text": "sUSDai is USD.AI's yield-bearing vault share, with a net asset value combining unallocated USDai and GPU-backed lending positions. Its share price reflects portfolio value rather than a fixed dollar redemption promise. Deploying funds into lending can burn the underlying USDai to release PYUSD while preserving the loan exposure in the vault's assets. That movement can reduce base USDai supply without an equivalent fall in protocol value. Conversely, adding the full sUSDai asset value to outstanding USDai would double count the unallocated USDai held by the vault. USD.AI's reserve index separates liquid assets from lending exposure, including funds escrowed ahead of loan execution. Onchain balances do not independently verify GPU identity, appraisal, insurance, or borrower-entity enforceability. Exits run through staking mechanics and a queued withdrawal flow with thirty-day processing windows. Satellite tokens on Ethereum, Base, and Plasma add LayerZero and chain-local administrative controls. Redemption ultimately depends on available liquidity and the performance and enforceability of the credit portfolio.",
+    "updatedAt": "2026-09-27",
     "authoredBy": "ai",
-    "model": "claude-fable-5-1",
-    "factsAsOf": "2026-09-07",
-    "claimTokens": [
+    "model": "gpt-6-astra",
+    "factsAsOf": "2026-09-27",
+    "sources": [
       {
-        "token": "grade",
-        "placeholder": "{{grade}}",
-        "source": "report-card.grade",
-        "factsAsOf": "2026-09-07"
+        "label": "USD.AI technical protocol overview",
+        "url": "https://docs.usd.ai/technical-overview/technical-protocol-overview"
+      },
+      {
+        "label": "USD.AI protocol TVL and loan deployment breakdown",
+        "url": "https://app.usd.ai/dashboard"
+      },
+      {
+        "label": "USD.AI reserve index",
+        "url": "https://api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161"
       }
     ]
   },

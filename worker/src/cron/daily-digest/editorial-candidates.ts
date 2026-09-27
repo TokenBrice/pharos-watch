@@ -183,7 +183,7 @@ function addSupplyCandidates(candidates: DigestEditorialCandidate[], data: Diges
         `${sign(velocity.change7d)}${formatCurrency(velocity.change7d)} in 7d`,
         `${velocity.signal}`,
       ],
-      whyItMatters: "Top-tier supply velocity shows capital preference changing before peg data moves.",
+      whyItMatters: "Supply velocity measures changes in outstanding tokens; investor flows or protocol-internal allocation require separate evidence.",
     });
   }
 
@@ -202,7 +202,7 @@ function addSupplyCandidates(candidates: DigestEditorialCandidate[], data: Diges
         `${sign(mover.changeUsd)}${formatCurrency(mover.changeUsd)} in 7d`,
         `${formatCurrency(mover.currentMcap)} current market cap`,
       ],
-      whyItMatters: "The largest weekly mover frames where balance-sheet growth or contraction actually landed.",
+      whyItMatters: "The largest weekly mover identifies a token-supply change, not necessarily a change in protocol assets or investor capital.",
     });
   }
 }
