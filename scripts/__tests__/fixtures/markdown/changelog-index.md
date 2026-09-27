@@ -6,34 +6,22 @@ description: "Weekly release notes for Pharos."
 
 # Changelog
 
-## 2026-09-23 to 2026-09-27
+## 2026-09-21 to 2026-09-27
 
-A false VCHF depeg brings protocol-majority pool rules, and pricing moves through nine versions to 6.36.
+Holistic review makes unavailable data fail closed, a false VCHF depeg brings majority pool rules, and yield hits 8.45.
 
-- **Pool-challenger majority**: Two dormant pools priced VCHF 6% above the ECB rate and held a false depeg open; pool challengers now need a protocol-group majority to replace consensus, confirm a depeg or veto recovery.
-- **Pricing 6.28 to 6.36**: Nine versions: coherence-guarded pool admission, fail-closed DEX publication, cross-source price provenance, Curve quote sizing, Solayer sUSD NAV pricing and hard CEX tickers for MXNB and AUDD.
-- **Noon correction series**: Noon's correction request was verified on-chain and USN/sUSN evidence re-pinned under Safety Score 9.92, backstop 4.44, liquidity 6.7 and DEWS 6.25; a TRON re-review keeps USDT at 74/B.
-- **Yield 8.44**: Pendle PT markets no longer pose as native wrapper yield: the fallback layer excludes yield-tokenization venues, clearing PT headlines from sUSN, USN, K3 sBOLD, Strata srUSDe, sUSDD and apxUSD.
-- **Reserve adapter repairs**: Seven adapters realigned with upstream changes, DOC and USD3 re-pinned after contract upgrades, KPMG's August reports admitted for PAXG, PYUSD and USDP, and AUDX's Aura Partners report accepted.
-- **Cron recovery and memory caps**: One D1 overload no longer cascades into hours of red crons, DEX provider bodies are capped after a 172 MB memory kill, and full publication returns after four supply-less coins were quarantined.
+- **Fail-closed data contracts**: Review waves replaced optimistic defaults across supply, DEWS, yield, freeze, blacklist and route-status producers: an unavailable observation publishes null and a reason, never zero, healthy or open.
+- **Safety Score 9.92**: Six versions since 9.5: chain maturity needs dated citations, assurance expires 100 days after period end, and Noon's USN/sUSN corrections were verified on-chain first. USDT settles at 74/B.
+- **Pricing 6.24 to 6.36**: Thirteen versions: lane-scoped DEX corroboration, guarded recovery routes for BD, AUDm, legacy USDv and USDaf, coherence-guarded pool admission, fail-closed DEX publication and Solayer sUSD NAV pricing.
+- **DEWS 6.23 to 6.27**: Absent evidence no longer scores as calm, and after two dormant pools held a false VCHF depeg open, pool challengers need a protocol-group majority to confirm a depeg or veto recovery.
+- **Yield 8.44 and 8.45**: Pendle PT markets stop posing as native wrapper yield; sources must now prove asset identity and holder return, missing score evidence withholds PYS, and detail cards show where yield comes from.
+- **Liquidity, backstop and PSI**: Liquidity 6.8 adds pair-price coherence at pool admission, backstop 4.44 requires same-run route evidence for a live status, and PSI 3.62 replays supply as-of the day.
+- **Reserve and conservation audits**: Seven drifted adapters realigned, DOC and USD3 re-pinned after upgrades, August KPMG reports admitted for Paxos products, and mint/burn conservation gains four waves plus laws for USDT, OUSD and USDO.
+- **Cron and delivery reliability**: Retention and reads are bounded, degraded runs name a reason, one D1 overload no longer cascades into red crons, DEX bodies are capped after a 172 MB kill, and Telegram delivery gains fencing.
 - **Dwellir RPC trial**: Dwellir sponsors a year of RPC access as a metered last-position operator across 29 EVM endpoints, watched by an hourly parity monitor against incumbent operators; Arc joins the chain registry.
+- **Three coins frozen**: AZND and XTUSD freeze after a wind-down and a stale official market, cdxUSD after its peg broke to $0.2457; AZND's $16.3M was a token count, so the aggregate drop is an honest cliff.
+- **Deduplication and test lanes**: Shared contracts got single owners and oversized V9, Telegram and yield modules split leafward, cutting duplicated lines from 7,568 to 3,073; nine test lanes replaced pins with outcomes.
 - **Registry and funding ledger**: Twenty pre-launch coins refreshed and two bank-led programmes tracked, taking the registry to 409; msUSD's September depeg low is annotated and two USDC receipts reconciled into the funding ledger.
-
-## 2026-09-21 to 2026-09-22
-
-A 225-commit holistic review makes unavailable data fail closed repo-wide, and Safety Score 9.9 moves USDT to 73/B.
-
-- **Fail-closed data contracts**: The P0 and P1 waves replaced optimistic defaults across supply, DEWS, yield, freeze, blacklist and route-status producers: an unavailable observation publishes null and a reason, never zero, healthy or open.
-- **Safety Score 9.91**: Five versions since 9.5: chain maturity became a clock-bound, citation-backed admission and assurance reports expire 100 days after their period end, moving USDT 87/A+ to 73/B on the frozen review capture.
-- **Pricing 6.24 and 6.25**: A promoted DEX protocol lane enters primary consensus only when that individual lane is corroborated, and wclp-ripio gains a direct CoinGecko CLP quote behind a registry-guarded native-peg map.
-- **DEWS 6.23 and 6.24**: Absent evidence no longer scores as measured calm: an unmapped price-confidence tier takes the worst value and smoothing needs a prior reading, and a degraded run no longer advances the published generation.
-- **Liquidity, backstop and PSI**: Liquidity 6.6 records the concentration bands September's card consolidation shipped without an entry, backstop 4.43 requires same-run route evidence for a live status, and PSI 3.62 replays supply as-of the day.
-- **Cron and retention bounds**: Every retention delete and unbounded read is bounded, slot fencing stops one slow head abandoning its chain, each degraded run names a machine-readable reason, and four additive migrations land first.
-- **Telegram and digest delivery**: Delivery gains fencing, backoff and ingress guards, the risk-alert SLO is enforced at the 1,000-watcher tier the planner actually meets, and digest edition numbers derive from the full non-blocked history.
-- **Deduplication and test lanes**: Shared contracts got single owners and the oversized V9, Telegram and yield modules split leafward, taking the clone ratchet from 7,568 to 3,073 duplicated lines; nine test lanes replaced pins with outcomes.
-- **AZND and XTUSD frozen**: Mu Digital AZND freezes after the issuer's July 10 wind-down announcement left only a ~$767 Curve pool near $0.03, and XTUSD freezes after XT.com's official market went stale on July 18 with an empty book and no admissible route. Both keep archived detail pages and cemetery records.
-- **Cod3x cdxUSD frozen**: Cod3x cdxUSD freezes after the peg broke on August 27 and bottomed at $0.2457 while supply held at 6,150,000 with zero burns; the issuer's site and docs now cover only AI trading agents and DefiLlama flags it dead.
-- **Freeze-day supply cliff is honest**: AZND's published $16.3M circulating equals the CoinGecko token count rather than USD value; the aggregate drops that phantom figure when the freeze takes effect, an honest cliff explained here rather than smoothed over.
 
 ## 2026-09-14 to 2026-09-20
 
