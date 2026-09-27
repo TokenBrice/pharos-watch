@@ -101,6 +101,13 @@
       "title": "DefiLlama lists Bridge USDB as 'USDBridge' on Tempo with about $30M circulating",
       "description": "DefiLlama merged its tempo-usdb adapter (peggedassets-server PR #907) and began tracking the Tempo deployment at 0x20c0000000000000000000003158081efd85bfc2 as stablecoin id 439. The first data point on September 9 2026 was $29.99M, rising to $31.77M by September 13, matching the on-chain total supply of 31,703,146.58 USDB. The listing's price field is null and no CoinGecko entry resolves.",
       "sourceUrl": "https://github.com/DefiLlama/peggedassets-server/pull/907"
+    },
+    {
+      "date": "2026-09-27",
+      "type": "milestone",
+      "title": "USDB Tempo float grows to about $83.6 million; still no price listing",
+      "description": "DefiLlama id 439 shows circulating supply rising from about $30.5 million on September 18 to $76.9 million on September 19, an unexplained one-day jump near $46 million with no Bridge statement, peaking at $90.2 million on September 23 before settling at $83.59 million on September 27; on-chain totalSupply on Tempo is 83.85 million USDB. CoinGecko has no USDBridge entry and DefiLlama's price field remains null, so no verified price path exists for promotion.",
+      "sourceUrl": "https://stablecoins.llama.fi/stablecoin/439"
     }
   ],
   "launchDate": "2025-05-07"

@@ -41,7 +41,7 @@ const { getVariants, isTrackedVariant } = createVariantRelationshipHelpers({
 });
 
 const EURR_PRE_LAUNCH_ID = "eurr-revolut";
-const EXPECTED_TRACKED_STABLECOIN_COUNT = 407;
+const EXPECTED_TRACKED_STABLECOIN_COUNT = 409;
 
 function makeStablecoinAsset(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -146,6 +146,8 @@ describe("tracked stablecoin metadata", () => {
       "kusd-kerne",
       "ousd-open-standard",
       "rd-rai-dollar",
+      "usd-bank-consortium",
+      "jpy-megabank-consortium",
     ]);
   });
 

@@ -1,0 +1,63 @@
+{
+  "id": "jpy-megabank-consortium",
+  "name": "Japan Megabank JPY Stablecoin",
+  "symbol": "JPY-MEGABANKS",
+  "oneLiner": "A pre-launch yen stablecoin planned by MUFG, Mizuho, and SMBC under a trust structure with the banks as joint settlors, targeting live use within FY2026.",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "JPY",
+    "governance": "centralized"
+  },
+  "collateral": "Pre-launch: the stablecoin is to be issued pursuant to a trust agreement under which MUFG Bank, Mizuho Bank, and Sumitomo Mitsui Banking Corporation act as joint settlors and a trust bank or similar institution acts as trustee. The trustee, reserve composition, and custodians are not yet named.",
+  "pegMechanism": "Pre-launch: jointly issued yen stablecoin to be created under a trust agreement with Japan's three megabanks as joint settlors and a licensed trust bank or similar institution as trustee. Redemption design, issuance infrastructure, and governance are being examined by a joint council, with actual commercial transactions targeted during fiscal year 2026 (through March 2027).",
+  "mechanismArchetype": "fiat-cash",
+  "detailProvider": "defillama",
+  "links": [
+    {
+      "label": "Announcement",
+      "url": "https://www.bk.mufg.jp/global/newsroom/news2026/pdf/newse0610.pdf"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Japan",
+    "regulator": "Financial Services Agency (FinTech Proof-of-Concept Hub)"
+  },
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
+  "status": "pre-launch",
+  "announcedDate": "2026-06-10",
+  "expectedLaunchDate": "2027",
+  "launchPhase": "announced",
+  "launchPhaseDetail": "Announced June 10 2026 by MUFG Bank, Mizuho Bank, and Sumitomo Mitsui Banking Corporation, Japan's three largest banks, which entered a memorandum of understanding to establish a voluntary council for jointly examining operational frameworks, governance, and related matters toward a jointly issued stablecoin. The Three Banks aim to conduct actual commercial transactions during fiscal year 2026 (ending March 2027) using a stablecoin issued pursuant to a trust agreement under which they act as joint settlors and a trust bank or similar institution acts as trustee; the trustee is not yet named. The council examines issuance infrastructure, system and scheme design, and governance, and will consider collaboration with other financial institutions that may participate in the future. The initiative builds on a demonstration experiment selected in November 2025 as a supported project under the Financial Services Agency's FinTech Proof-of-Concept Hub, part of the joint exploration the three banks have conducted since 2024 under the Project Pax lineage. Nikkei reporting on June 9 2026 described a yen-denominated token issued on MUFG's Progmat platform with a US dollar version to follow and a one trillion yen business-to-business volume target by 2028; the banks' own release names neither denomination nor platform. No ticker, chain, trustee, reserve composition, or attestation arrangement has been announced.",
+  "featuredContent": [
+    {
+      "type": "blog",
+      "url": "https://www.bk.mufg.jp/global/newsroom/news2026/pdf/newse0610.pdf",
+      "title": "On the Launch of Live Transactions of a Three-Bank Jointly Issued Stablecoin in FY2026 and the Establishment of a Council for Jointly Examining Related Matters",
+      "description": "The Three Banks enter an MOU to establish a council and aim to conduct actual commercial transactions during FY2026 using a trust-issued stablecoin with the banks as joint settlors.",
+      "source": "MUFG Bank / Mizuho Bank / SMBC joint release"
+    },
+    {
+      "type": "article",
+      "url": "https://www.coindesk.com/business/2026/06/10/japan-s-three-largest-banks-aim-for-joint-stablecoin-issue-by-march",
+      "title": "Japan's three largest banks eye joint stablecoin issue by March 2027",
+      "source": "CoinDesk"
+    }
+  ],
+  "milestones": [
+    {
+      "date": "2025-11",
+      "type": "milestone",
+      "title": "Three-bank stablecoin demonstration experiment selected for the FSA FinTech Proof-of-Concept Hub",
+      "description": "The joint release records that the Three Banks had been jointly holding discussions aimed at issuance of the stablecoin through a demonstration experiment selected in November 2025 as a supported project under the Financial Services Agency's FinTech Proof-of-Concept Hub.",
+      "sourceUrl": "https://www.bk.mufg.jp/global/newsroom/news2026/pdf/newse0610.pdf"
+    },
+    {
+      "date": "2026-06-10",
+      "type": "announcement",
+      "title": "MUFG, Mizuho, and SMBC sign MOU for a jointly issued stablecoin with live transactions targeted in FY2026",
+      "description": "Japan's three largest banks entered a memorandum of understanding to establish a voluntary council for jointly examining operational frameworks, governance, and related matters, and aim to conduct actual commercial transactions during fiscal year 2026 using a stablecoin issued pursuant to a trust agreement with the banks as joint settlors and a trust bank or similar institution as trustee.",
+      "sourceUrl": "https://www.bk.mufg.jp/global/newsroom/news2026/pdf/newse0610.pdf"
+    }
+  ]
+}

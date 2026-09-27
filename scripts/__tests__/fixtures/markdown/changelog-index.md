@@ -6,6 +6,19 @@ description: "Weekly release notes for Pharos."
 
 # Changelog
 
+## 2026-09-23 to 2026-09-27
+
+A false VCHF depeg brings protocol-majority pool rules, and pricing moves through nine versions to 6.36.
+
+- **Pool-challenger majority**: Two dormant pools priced VCHF 6% above the ECB rate and held a false depeg open; pool challengers now need a protocol-group majority to replace consensus, confirm a depeg or veto recovery.
+- **Pricing 6.28 to 6.36**: Nine versions: coherence-guarded pool admission, fail-closed DEX publication, cross-source price provenance, Curve quote sizing, Solayer sUSD NAV pricing and hard CEX tickers for MXNB and AUDD.
+- **Noon correction series**: Noon's correction request was verified on-chain and USN/sUSN evidence re-pinned under Safety Score 9.92, backstop 4.44, liquidity 6.7 and DEWS 6.25; a TRON re-review keeps USDT at 74/B.
+- **Yield 8.44**: Pendle PT markets no longer pose as native wrapper yield: the fallback layer excludes yield-tokenization venues, clearing PT headlines from sUSN, USN, K3 sBOLD, Strata srUSDe, sUSDD and apxUSD.
+- **Reserve adapter repairs**: Seven adapters realigned with upstream changes, DOC and USD3 re-pinned after contract upgrades, KPMG's August reports admitted for PAXG, PYUSD and USDP, and AUDX's Aura Partners report accepted.
+- **Cron recovery and memory caps**: One D1 overload no longer cascades into hours of red crons, DEX provider bodies are capped after a 172 MB memory kill, and full publication returns after four supply-less coins were quarantined.
+- **Dwellir RPC trial**: Dwellir sponsors a year of RPC access as a metered last-position operator across 29 EVM endpoints, watched by an hourly parity monitor against incumbent operators; Arc joins the chain registry.
+- **Registry and funding ledger**: Twenty pre-launch coins refreshed and two bank-led programmes tracked, taking the registry to 409; msUSD's September depeg low is annotated and two USDC receipts reconciled into the funding ledger.
+
 ## 2026-09-21 to 2026-09-22
 
 A 225-commit holistic review makes unavailable data fail closed repo-wide, and Safety Score 9.9 moves USDT to 73/B.

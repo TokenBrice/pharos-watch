@@ -1,0 +1,10 @@
+{
+  "id": "usd-bank-consortium",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "USD-CONSORTIUM resolves to Yes: it is announced as a centralized, jointly owned bank consortium stablecoin with bank-grade compliance as a stated design goal, so an issuer freeze or blacklist surface is expected once contracts deploy. No contract is public yet to point at a specific freeze function.",
+    "reviewer": "GLM pre-launch addition",
+    "reviewedAt": "2026-09-27"
+  }
+}

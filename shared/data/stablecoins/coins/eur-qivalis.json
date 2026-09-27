@@ -125,6 +125,20 @@
       "title": "EMI licence application confirmed formally pending before DNB",
       "description": "Third-party analysis and Qivalis's own site confirm the electronic-money-institution application has been formally submitted and is pending before De Nederlandsche Bank ('applied… not yet authorised'); the exact filing date is unpublished. Date reflects the confirming publication, not the filing.",
       "sourceUrl": "https://efri.io/wise-denial-qivalis-emi-licence-dnb/"
+    },
+    {
+      "date": "2026-09-08",
+      "type": "milestone",
+      "title": "Qivalis confirms its euro stablecoin will issue on public Ethereum",
+      "description": "Issuer confirmation, reported by Genfinity and echoed by Ethereum institutional ecosystem accounts, that the 37-bank consortium's token will be issued on public Ethereum using Fireblocks ERC-20F with built-in allowlist and denylist controls, with exchange and market-maker liquidity talks continuing pending the DNB licence.",
+      "sourceUrl": "https://genfinity.io/2026/09/08/qivalis-euro-stablecoin-ethereum-37-european-banks/"
+    },
+    {
+      "date": "2026-09-24",
+      "type": "regulatory",
+      "title": "Qivalis says it is close to securing the DNB EMI licence and targets go-live by end of 2026",
+      "description": "CEO Jan-Oliver Sell told CoinDesk the company has grown to about 40 staff and is close to securing the Dutch electronic-money-institution licence, with the aim of going live with a regulated euro stablecoin by the end of the year. DNB authorisation remains the gate; the H2 2026 window is unchanged and no token has launched.",
+      "sourceUrl": "https://www.coindesk.com/business/2026/09/24/european-stablecoin-issuer-qivalis-sees-transformation-of-global-trade-finance"
     }
   ]
 }

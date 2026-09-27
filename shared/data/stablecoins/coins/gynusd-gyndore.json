@@ -56,6 +56,13 @@
       "title": "Gyndore Liquidity Bootstrapping Event opens and sells out",
       "description": "The Gyndore app opened the Liquidity Bootstrapping Event, a capital raise for the GYND launch market and protocol-owned liquidity, on September 15 2026; the DropWave page now reports the allocation 100% sold out and bGYND allocations distributed to nominated wallets, with GYND markets to open on Hydrex at an unannounced date. It was the project's first dated commitment; mainnet gynUSD contracts remain unpublished.",
       "sourceUrl": "https://app.gyndore.com/dropwave"
+    },
+    {
+      "date": "2026-09-27",
+      "type": "milestone",
+      "title": "Gyndore retires DropWave for the upcoming LNMS hub; gynUSD mainnet contracts still unpublished",
+      "description": "app.gyndore.com/dropwave now redirects to LNMS, described as Gyndore's upcoming incentive hub for social rewards and community campaigns, closing out the liquidity-bootstrapping event that sold out on September 15. The contracts page still states the protocol is not live on Base mainnet, gynUSD addresses publish only at launch, and the Sherlock engagement has produced no published report; the GYND token holds 147 holders with no market.",
+      "sourceUrl": "https://docs.gyndore.com/security/contracts"
     }
   ],
   "featuredContent": [],

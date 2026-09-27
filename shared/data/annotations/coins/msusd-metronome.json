@@ -1,0 +1,10 @@
+[
+  {
+    "date": "2026-09-02",
+    "kind": "depeg",
+    "label": "Oracle-latency underbacking, msUSD depeg low ~$0.44 (−5,561 bps)",
+    "severity": "high",
+    "href": "https://paragraph.com/@metronomedao/post-mortem-msethmsusd-underbacking",
+    "note": "2026-09-02: Metronome's 2026-07-30 post-mortem attributed ~4.57M msUSD of unbacked float to Chainlink price latency in its synth swap module and sized treasury backstops to settle a roughly 30% depeg. The peg broke through that level in late August and recorded a low of −5,561 bps (~$0.44) on 2026-09-02. Recovery stayed partial: ~$0.89 as of 2026-09-27 per CoinGecko."
+  }
+]

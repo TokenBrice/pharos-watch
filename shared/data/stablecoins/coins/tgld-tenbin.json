@@ -58,7 +58,7 @@
   "announcedDate": "2026-01",
   "expectedLaunchDate": "2026",
   "launchPhase": "beta",
-  "launchPhaseDetail": "Live on Ethereum mainnet since 2026-02-10 in private beta (about $611K market cap, 139.74 tGLD, 74 holders on September 12 2026, up from ~54 tGLD and ~36 holders in June). tGLD is a synthetic gold debt-note from Tenbin AssetCo (BVI) SPC: USDC-collateralized with gold exposure hedged via CME futures, KYC-gated mint/redeem, redeemable in USD stablecoin (no physical metal). Its only public market is a dormant Uniswap V4 tGLD/USDC pool, so CoinGecko's price updates are stale (multi-day) and currently fail Pharos's gold price-freshness gate. Live tracking begins once a usable public price feed exists. A staked variant stGLD (ERC-4626) exists, and sibling FX tokens tBRL and tMXN are now listed as Ethereum mainnet deployments in the Tenbin docs; in May 2026 Tenbin deprecated LayerZero following internal security audits and migrated tGLD (and the FX siblings) exclusively to Chainlink CCIP. Q3 2026 audit reports from Zellic and Verilog were published to the contracts repository on August 26 2026; the docs still describe the proof-of-reserves framework as coming soon.",
+  "launchPhaseDetail": "Live on Ethereum mainnet since 2026-02-10 in private beta (about $597K market cap, 139.74 tGLD, 72 holders on September 27 2026, up from ~54 tGLD and ~36 holders in June). tGLD is a synthetic gold debt-note from Tenbin AssetCo (BVI) SPC: USDC-collateralized with gold exposure hedged via CME futures, KYC-gated mint/redeem, redeemable in USD stablecoin (no physical metal). Its only public market is a dormant Uniswap V4 tGLD/USDC pool, and CoinGecko's tenbin-gold price ($4,272.46, $597,027 market cap, 139.74 circulating) updated same-day on September 27 2026 on $2.20 of 24-hour volume, so the feed is currently fresh while trading remains near zero; the 14-day price history endpoint returns no points, so freshness continuity is unproven and the gold price-freshness gate has not been re-run. Live tracking begins once a usable public price feed exists. A staked variant stGLD (ERC-4626) exists, and sibling FX tokens tBRL and tMXN are now listed as Ethereum mainnet deployments in the Tenbin docs; in May 2026 Tenbin deprecated LayerZero following internal security audits and migrated tGLD (and the FX siblings) exclusively to Chainlink CCIP. Q3 2026 audit reports from Zellic and Verilog were published to the contracts repository on August 26 2026; remediation fixes landed through August 31, v1.5.1 and bug-bounty information followed on September 14, and the docs still describe the proof-of-reserves framework as coming soon.",
   "featuredContent": [
     {
       "type": "article",
@@ -115,6 +115,13 @@
       "title": "Q3 2026 audits by Zellic and Verilog published with remediation reports",
       "description": "Reports dated August 3 2026 (Zellic final, Verilog marked draft) with remediation notes were added to the tenbin-contracts repository on August 26 2026, followed by fix commits through August 31. Whether the remediated contracts are deployed on mainnet is not stated.",
       "sourceUrl": "https://github.com/tenbinlabs/tenbin-contracts/tree/master/audit"
+    },
+    {
+      "date": "2026-09-14",
+      "type": "audit",
+      "title": "Tenbin ships v1.5.1 and a bug bounty after landing audit remediations",
+      "description": "Following the August 3 audit publications, Tenbin landed Verilog remediation fixes from August 21 to 31, including P0 and P1 severity items, then tagged v1.5.1 and added bug-bounty information on September 14. The beta float is unchanged at 139.74 tGLD with 72 holders on September 27, and CoinGecko's tenbin-gold price updated same-day on $2.20 of 24-hour volume.",
+      "sourceUrl": "https://github.com/tenbinlabs/tenbin-contracts"
     }
   ]
 }

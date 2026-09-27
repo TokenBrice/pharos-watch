@@ -1,0 +1,10 @@
+{
+  "id": "jpy-megabank-consortium",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "JPY-MEGABANKS resolves to Yes: it is planned as a centralized, trust-issued stablecoin jointly settled by three regulated Japanese megabanks under FSA-related frameworks, so an issuer or trustee freeze and reissue surface is expected once the token deploys. No contract or trustee is public yet to point at a specific freeze function.",
+    "reviewer": "GLM pre-launch addition",
+    "reviewedAt": "2026-09-27"
+  }
+}

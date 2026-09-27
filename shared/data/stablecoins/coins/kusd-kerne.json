@@ -130,6 +130,13 @@
       "sourceUrl": "https://basescan.org/tx/0xed24d495789540dae543793a5d8c9d884d8abfc386c0e726084da9183933d9b8"
     },
     {
+      "date": "2026-08-20",
+      "type": "audit",
+      "title": "Hexens audit report reissued: eight of ten KerneVault findings fixed in source, vault remains closed to deposits",
+      "description": "The reissued final report records 10 findings, all confined to KerneVault, with eight fixed in source and two acknowledged, verified by the auditors. The vault stays closed to deposits and DefiLlama methodology treats it as superseded by a v2 redeploy, so the audited code and the deployed code still differ. Supply held near 1,110 kUSD against 1,110.89 USDC across the three PSMs (100.1 percent backing) as of September 24 2026, with no CoinGecko listing.",
+      "sourceUrl": "https://github.com/kerne-protocol/contracts-public/blob/main/audits/hexens-kerne-protocol-final-2026-07-31-updated-2026-08-20.pdf"
+    },
+    {
       "date": "2026-08-09",
       "type": "milestone",
       "title": "Kerne deploys an ungoverned kUSD/USDC isolated market on Euler v2 (Base)",
