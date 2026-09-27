@@ -28,9 +28,11 @@ export function isOnChainBootstrapYieldSeed(row: OnChainBootstrapYieldSeedRow): 
     && row.apy_base == null;
 }
 
-/** Null means unreadable evidence, never a clean empty warning set. */
+/** The publisher stores empty warnings as SQL NULL in yield_data and yield_history; null output means malformed evidence. */
 export function parseYieldWarningSignals(raw: unknown): string[] | null {
-  if (typeof raw !== "string" || raw.trim() === "") return null;
+  if (raw == null) return [];
+  if (typeof raw !== "string") return null;
+  if (raw.trim() === "") return [];
   try {
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) {

@@ -840,9 +840,8 @@ describe("findBestLendingPool with chain scope", () => {
 });
 
 describe("parseWarningSignals", () => {
-  it("distinguishes unreadable empty storage from a valid empty warning array", () => {
-    expect(parseWarningSignals("")).toBeNull();
-    expect(parseWarningSignals("[]")).toEqual([]);
+  it.each([null, undefined, "", " \t\n", "[]"])("treats absent or empty warnings as clean: %s", (raw) => {
+    expect(parseWarningSignals(raw)).toEqual([]);
   });
 
   it("parses valid JSON array of strings", () => {
