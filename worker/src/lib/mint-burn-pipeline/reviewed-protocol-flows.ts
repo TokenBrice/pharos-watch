@@ -13,7 +13,7 @@ import type { MintBurnRow } from "./types";
  * uses, so only per-event evidence can separate the two. A row whose amount no
  * longer matches its review keeps its normal classification (fail closed).
  */
-export interface ReviewedProtocolInternalFlow {
+interface ReviewedProtocolInternalFlow {
   eventId: string;
   stablecoinId: string;
   chainId: string;
@@ -25,7 +25,7 @@ export interface ReviewedProtocolInternalFlow {
   sources: readonly string[];
 }
 
-export const REVIEWED_PROTOCOL_INTERNAL_FLOWS: readonly ReviewedProtocolInternalFlow[] = [
+const REVIEWED_PROTOCOL_INTERNAL_FLOWS: readonly ReviewedProtocolInternalFlow[] = [
   {
     eventId: "arbitrum-0x46dc4ae95582c3d92d2ada242fc7445b6f4408284d271f69e2f98668993559d7-4",
     stablecoinId: "usdai-usd-ai",
