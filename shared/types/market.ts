@@ -626,11 +626,14 @@ export const DepegPendingIncidentSchema = z
         message: "A pending incident cannot be last seen before it is first seen",
       });
     }
-    if (incident.expiresAt < incident.lastSeenAt) {
+    // `expiresAt` is the base expiry (`firstSeenAt + DEPEG_PENDING_EXPIRY_SEC`).
+    // The confirmation cron keeps a row pending past it under the extended and
+    // severe limits, so a row last seen after `expiresAt` is legitimate.
+    if (incident.expiresAt <= incident.firstSeenAt) {
       ctx.addIssue({
         code: "custom",
         path: ["expiresAt"],
-        message: "A pending incident cannot expire before it is last seen",
+        message: "A pending incident's base expiry must fall after it is first seen",
       });
     }
   });

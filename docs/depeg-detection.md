@@ -534,6 +534,8 @@ Response:
 
 `total` counts public incident rows, not necessarily individual threshold crossings. Exact `counts` are included only for a stablecoin-filtered historical request with `includeTotal=true`; `counts.incidents` matches `total`, while `counts.thresholdCrossings` counts the stored detector/replay rows before DDR projection.
 
+Each `pending` row's `expiresAt` is the base expiry, `firstSeenAt + DEPEG_PENDING_EXPIRY_SEC`. The confirmation cron keeps a row pending past it under the extended and severe limits (see the timing table), so `lastSeenAt` may legitimately exceed `expiresAt`; the shared contract requires only `lastSeenAt >= firstSeenAt` and `expiresAt > firstSeenAt`.
+
 When DDR has linked multiple raw rows into one active repaired incident, the endpoint returns the incident's current event row, excludes superseded source rows from the active projection, projects the public `startedAt`/`startPrice` from the first linked row, and reports the number of linked rows in `constituentEventCount`. Unprojected rows use `constituentEventCount = 1`.
 
 Rows may include a nullable `provenance` object with public replay/audit metadata (`sourceKind`, `replayRunId`, `replayVersion`, `sourcePriceProviders`, `quoteMode`, `pegReferenceSource`, `supplySource`, `confirmationPolicy`, `confirmationPointCount`, `confidenceTier`, `auditVerdict`, `pegScoreEligible`, `updatedAt`). Legacy rows return `provenance: null`.
