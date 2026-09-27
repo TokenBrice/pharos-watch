@@ -47,7 +47,6 @@
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
   "yieldConfig": {
-    "defiLlamaPoolId": "e575606e-5642-4f87-b9ad-3e53d6f83c82",
     "yieldSource": "GAIB savings (sAID)",
     "yieldType": "nav-appreciation"
   },

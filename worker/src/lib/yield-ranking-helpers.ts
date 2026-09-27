@@ -1,5 +1,5 @@
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
-import { computePysComponents } from "@shared/lib/yield-scoring";
+import { computePysComponents, PYS_APY_SANITY_MAX, type PysComponents } from "@shared/lib/yield-scoring";
 import type { YieldPysNullReason } from "@shared/types/yield";
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -54,7 +54,7 @@ export const LONG_HORIZON_COMPARISON_ANCHOR_STALE_THRESHOLD_MS = 45 * DAY_MS;
 interface PysNullReasonInput {
   apy30d: number;
   safetyScore: number | null;
-  apyVarianceScore: number;
+  apyVarianceScore: number | null;
   scalingFactor: number;
   benchmarkRate?: number | null;
   /** Currency the row's benchmark is quoted in — see `computePysComponents` (B24). */
@@ -64,25 +64,26 @@ interface PysNullReasonInput {
   sourceRiskPenalty?: number | null;
 }
 
-// Raw apy30d/scalingFactor accompany effectiveYield because computePysComponents
-// folds a non-finite apy30d to 0, hiding it from this ladder.
+// Raw apy30d/scalingFactor accompany the components because computePysComponents
+// folds a non-finite apy30d to 0, hiding it from this ladder. An above-envelope
+// APY or non-finite effective yield is failed source math; an unavailable
+// sustainability multiplier is unmeasured variance. Both withhold the score.
 export function derivePysNullReasonFromComponents(
   apy30d: number,
   scalingFactor: number,
-  effectiveYield: number,
+  components: Pick<PysComponents, "effectiveYield" | "sustainabilityMultiplier">,
 ): YieldPysNullReason | null {
-  if (!Number.isFinite(apy30d)) return "missing-inputs";
+  const { effectiveYield } = components;
+  if (!Number.isFinite(apy30d) || apy30d > PYS_APY_SANITY_MAX || !Number.isFinite(effectiveYield)) return "missing-inputs";
   if (apy30d <= 0) return "apy-non-positive";
   if (!Number.isFinite(scalingFactor) || scalingFactor <= 0) return "scaling-invalid";
   if (effectiveYield <= 0) return "effective-yield-non-positive";
+  if (components.sustainabilityMultiplier == null) return "missing-inputs";
   return null;
 }
 
 export function derivePysNullReason(input: PysNullReasonInput): YieldPysNullReason | null {
-  if (!Number.isFinite(input.apy30d)) return "missing-inputs";
-  if (input.apy30d <= 0) return "apy-non-positive";
-  if (!Number.isFinite(input.scalingFactor) || input.scalingFactor <= 0) return "scaling-invalid";
-  const { effectiveYield } = computePysComponents({
+  const components = computePysComponents({
     apy30d: input.apy30d,
     safetyScore: input.safetyScore,
     apyVarianceScore: input.apyVarianceScore,
@@ -91,7 +92,7 @@ export function derivePysNullReason(input: PysNullReasonInput): YieldPysNullReas
     usdBenchmarkRate: input.usdBenchmarkRate,
     sourceRiskPenalty: input.sourceRiskPenalty,
   });
-  return derivePysNullReasonFromComponents(input.apy30d, input.scalingFactor, effectiveYield);
+  return derivePysNullReasonFromComponents(input.apy30d, input.scalingFactor, components);
 }
 
 function isSupplementalOnchainSource(sourceKey: string | null | undefined): boolean {

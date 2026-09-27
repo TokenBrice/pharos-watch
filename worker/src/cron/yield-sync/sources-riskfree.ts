@@ -45,7 +45,7 @@ export async function getPriceDerivedApy(
   const lookbackDays = (recentRow.snapshot_date - anchoredRow.snapshot_date) / DAY_SECONDS;
   if (!Number.isFinite(lookbackDays) || lookbackDays < 7) return null;
   const apy = computeApyFromPrice(recentRow.price, anchoredRow.price, lookbackDays);
-  if (!isDeterministicApyWithinSanityBounds(apy)) return null;
+  if (typeof apy !== "number" || !isDeterministicApyWithinSanityBounds(apy)) return null;
 
   return {
     apy,

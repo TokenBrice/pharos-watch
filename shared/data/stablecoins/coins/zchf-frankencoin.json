@@ -114,7 +114,7 @@
   },
   "yieldConfig": {
     "yieldSource": "Frankencoin Savings",
-    "yieldType": "lending-vault"
+    "yieldType": "lending-opportunity"
   },
   "launchDate": "2023-10-28"
 }

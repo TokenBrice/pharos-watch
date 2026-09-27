@@ -95,6 +95,9 @@ export function resolveYieldCandidateStablecoinId(
       };
     }
   }
+  // Address evidence is authoritative: never replace a failed identity lookup
+  // with a ticker match, even when the ticker is unique.
+  if (candidateAddress) return { status: "unresolved" };
 
   const symbolKey = normalizeYieldSymbol(candidate.symbol);
   if (!symbolKey) {

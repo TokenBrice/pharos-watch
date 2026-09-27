@@ -54,7 +54,6 @@
   "custodyModel": "onchain",
   "governanceQuality": "wrapper",
   "yieldConfig": {
-    "defiLlamaPoolId": "8a28570f-2316-488a-94a7-67c87e76c1f1",
     "yieldSource": "Main Street savings (msY)",
     "yieldType": "nav-appreciation"
   },

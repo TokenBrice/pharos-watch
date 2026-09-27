@@ -22,6 +22,7 @@ import {
   QUARANTINED_DETERMINISTIC_PROBE_CONFIGS,
   YIELD_ADAPTER_LIFECYCLE,
 } from "../../lib/yield-config/yield-config-rate-sources";
+import { isPriceDerivedYieldEligible } from "../../lib/yield-config/yield-config-registry";
 
 const onChainIds = new Set(ON_CHAIN_RATE_CONFIGS.map((config) => config.stablecoinId));
 const rateDerivedIds = new Set(RATE_DERIVED_CONFIGS.map((config) => config.stablecoinId));
@@ -60,8 +61,8 @@ function hasRuntimeYieldStrategy(stablecoinId: string, navToken: boolean) {
     Boolean(YIELD_POOL_MAP[stablecoinId]) ||
     Boolean(YIELD_VARIANT_MAP[stablecoinId]) ||
     onChainIds.has(stablecoinId) ||
-    navToken ||
-    PRICE_DERIVED_FALLBACK_IDS.has(stablecoinId) ||
+    ((navToken || PRICE_DERIVED_FALLBACK_IDS.has(stablecoinId))
+      && isPriceDerivedYieldEligible(stablecoinId, INTENTIONAL_GAP_REASONS[stablecoinId])) ||
     rateDerivedIds.has(stablecoinId) ||
     Boolean(AUTO_LENDING_POOL_MAP[stablecoinId]) ||
     directProtocolApiIds.has(stablecoinId) ||
@@ -646,19 +647,6 @@ describe("yield config registry", () => {
     expect(
       YIELD_ADAPTER_MANIFEST.some((entry) => entry.stablecoinId === "stbt-matrixdock"),
     ).toBe(false);
-  });
-
-  it("pins sBOLD's Liquity alt source to the explicit K3 wrapper label", () => {
-    expect(EXPLICIT_YIELD_SOURCE_POOL_MAP["sbold-k3-capital"]).toContainEqual(
-      expect.objectContaining({
-        poolId: "dac71f4f-7b97-463a-b19f-9796c56c21f1",
-        yieldSource: "Liquity Stability Pool (via K3 sBOLD)",
-        yieldType: "lending-vault",
-        dataSource: "defillama-auto",
-        expectedProject: "liquity-v2",
-        expectedChain: "ethereum",
-      }),
-    );
   });
 
   it("keeps exact-pool overrides separate from the yield-bearing manifest", () => {

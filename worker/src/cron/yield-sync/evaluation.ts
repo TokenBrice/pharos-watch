@@ -98,7 +98,7 @@ export interface EvaluateYieldSourcesResult {
   rowsRejected: number;
   divergenceFlags: number;
   sourceSwitches: number;
-  medianApy: number;
+  medianApy: number | null;
 }
 
 export interface EvaluateYieldSourcesProgress {
@@ -313,7 +313,7 @@ function evaluateYieldSourceGroup(
     // `yieldStability` (computeYieldStability rounds), so the served PYS cannot
     // diverge from the published one and emit a phantom ±1 `pysDelta`.
     const yieldStability = computeYieldStability(samples);
-    const apyVarianceScore = yieldStabilityToApyVarianceScore(yieldStability) ?? 0;
+    const apyVarianceScore = yieldStabilityToApyVarianceScore(yieldStability);
     const stdDev30d =
       samples.length >= 2
         ? Math.sqrt(samples.reduce((sum, value) => sum + (value - apy30d) ** 2, 0) / samples.length)
@@ -396,7 +396,7 @@ function evaluateYieldSourceGroup(
     const sourceObservedAt = resolveSourceObservedAt(y, input.dlPoolsMeta);
     const sourceAgeSeconds = resolveSourceAgeSeconds(input.startSec, y, sourceObservedAt, input.dlPoolsMeta);
     const comparisonAnchorAgeSeconds = computeSourceAgeSeconds(input.startSec, y.comparisonAnchorObservedAt);
-    const sourceFreshness = classifyYieldSourceFreshness({
+    const sourceFreshness = y.productBenchmarkFreshness === "stale" ? "stale" : classifyYieldSourceFreshness({
       dataSource: y.dataSource,
       sourceKey,
       sourceAgeSeconds,
@@ -412,11 +412,10 @@ function evaluateYieldSourceGroup(
       recordDate: benchmarkMeta.recordDate,
       maxRecordAgeSec: YIELD_BENCHMARK_RECORD_MAX_AGE_SEC[benchmarkSelection.key],
     });
-    // A3: only a non-USD benchmark consumes the USD reference rate, so only those
-    // rows can be mis-based by a retained or stale reference; USD rows are already
-    // covered by their own benchmark freshness.
-    const rowReferenceBenchmarkFreshness =
-      benchmarkCurrency === "USD" ? "healthy" : prepared.referenceBenchmarkFreshness;
+    // Rate-derived APY consumes the product benchmark independently of the
+    // comparison hurdle (USD T-bills versus EFFR). Keep retained-input evidence.
+    const rowReferenceBenchmarkFreshness = y.productBenchmarkFreshness
+      ?? (benchmarkCurrency === "USD" ? "healthy" : prepared.referenceBenchmarkFreshness);
     const referenceBenchmarkDegraded = rowReferenceBenchmarkFreshness !== "healthy";
     const calculationMode = resolveCalculationMode(y);
     const evidenceClass = resolveEvidenceClass(y);
@@ -470,6 +469,7 @@ function evaluateYieldSourceGroup(
       sourceFreshness,
       benchmarkFreshness,
       referenceBenchmarkFreshness: rowReferenceBenchmarkFreshness,
+      opportunityEvidenceComplete,
     });
 
     const penaltyDerivedFields = resolvePenaltyOrderingFields({
@@ -576,7 +576,9 @@ function evaluateYieldSourceGroup(
       anomalies,
       warnings: freshnessWarnings,
       confidenceTier: getConfidenceTier(y),
-      rejected: !scoreQualified,
+      // Missing opportunity evidence withholds PYS but still leaves the observed APY publishable.
+      rejected: safetySnapshotUnavailable || sourceFreshness !== "fresh"
+        || benchmarkFreshness === "stale" || rowReferenceBenchmarkFreshness === "stale",
       usedLegacyHistory: historySelection.usedLegacyHistory,
       usedDefaultSafety,
       previousBestSourceKey,

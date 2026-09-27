@@ -18,6 +18,7 @@ import {
 import type { EvaluatedYieldSource } from "./evaluation-types";
 import type { YieldHistorySnapshotRow } from "./history";
 import type { YieldBenchmarkFreshness } from "./benchmarks";
+import { EXPLICIT_YIELD_SOURCE_POOL_MAP } from "../../lib/yield-config/yield-config";
 
 const CROSS_SOURCE_DIVERGENCE_THRESHOLD = 0.35;
 const PYS_SWITCH_ARBITRATION_MARGIN = 0.1;
@@ -43,7 +44,7 @@ export function selectYieldSourceGroup(params: {
 }): YieldSourceGroupSelectionResult | null {
   let canonicalReference: EvaluatedYieldSource | undefined;
   for (const candidate of params.provisional) {
-    if (candidate.confidenceTier === "discovered") continue;
+    if (candidate.rejected || candidate.confidenceTier === "discovered") continue;
     if (!canonicalReference || compareCandidates(candidate, canonicalReference) < 0) {
       canonicalReference = candidate;
     }
@@ -117,6 +118,8 @@ export function selectYieldSourceGroup(params: {
             safetySnapshotUnavailable: params.safetySnapshotUnavailable,
             evidenceNullReason: resolveEvidenceNullReason({
               sourceFreshness: candidate.sourceFreshness,
+              // The evaluator emits this warning exactly when opportunity evidence is incomplete.
+              opportunityEvidenceComplete: !candidate.warnings.includes("opportunity-evidence-missing"),
               benchmarkFreshness: candidate.benchmarkFreshness,
               referenceBenchmarkFreshness:
                 candidate.benchmarkCurrency === "USD" ? "healthy" : params.referenceBenchmarkFreshness,
@@ -126,7 +129,19 @@ export function selectYieldSourceGroup(params: {
       });
 
   const sortedCandidates = [...arbitratedCandidates].sort(compareCandidates);
-  const winner = sortedCandidates.find((candidate) => !candidate.rejected) ?? sortedCandidates[0];
+  // Curated venue ownership outranks discovery of the same instrument/type,
+  // including an incumbent's switch margin. Keep discovered rows as alternatives.
+  const explicitPools = EXPLICIT_YIELD_SOURCE_POOL_MAP[params.stablecoinId] ?? [];
+  const curatedTypes = new Set(sortedCandidates
+    .filter((candidate) => !candidate.rejected && explicitPools.some((config) =>
+      config.poolId === candidate.sourceKey && config.yieldType === candidate.yieldType,
+    ))
+    .map((candidate) => candidate.yieldType));
+  const winner = sortedCandidates.find((candidate) =>
+    !candidate.rejected
+    && !(candidate.dataSource === "defillama-auto" && curatedTypes.has(candidate.yieldType)
+      && !explicitPools.some((config) => config.poolId === candidate.sourceKey)),
+  ) ?? sortedCandidates[0];
   if (!winner) return null;
 
   const winnerWouldChangeSource = isRealSourceSwitch(params.previousBestSourceKey, winner.sourceKey);
@@ -159,6 +174,7 @@ export function selectYieldSourceGroup(params: {
         safetySnapshotUnavailable: params.safetySnapshotUnavailable,
         evidenceNullReason: resolveEvidenceNullReason({
           sourceFreshness: candidate.sourceFreshness,
+          opportunityEvidenceComplete: !candidate.warnings.includes("opportunity-evidence-missing"),
           benchmarkFreshness: candidate.benchmarkFreshness,
           referenceBenchmarkFreshness:
             candidate.benchmarkCurrency === "USD" ? "healthy" : params.referenceBenchmarkFreshness,

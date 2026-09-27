@@ -96,7 +96,6 @@
     }
   },
   "yieldConfig": {
-    "defiLlamaPoolId": "f8cd444e-d99f-4132-b234-fd3482bf8806",
     "yieldSource": "3Jane senior credit tranche",
     "yieldType": "nav-appreciation"
   },

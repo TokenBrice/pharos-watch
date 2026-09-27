@@ -45,11 +45,15 @@ describe("assessYieldEvidence", () => {
     expect(assessYieldEvidence(completeEvidence(gap)).scoreQualification).toBe("NR");
   });
 
-  it.each([
-    { safetyObserved: false },
-    { opportunityEvidenceComplete: false },
-  ])("marks incomplete safety or opportunity evidence as estimated", (gap) => {
-    expect(assessYieldEvidence(completeEvidence(gap)).scoreQualification).toBe("estimated");
+  it("marks incomplete safety evidence as estimated", () => {
+    expect(assessYieldEvidence(completeEvidence({ safetyObserved: false })).scoreQualification).toBe("estimated");
+  });
+
+  it("does not rate opportunities missing critical market evidence", () => {
+    expect(assessYieldEvidence(completeEvidence({ opportunityEvidenceComplete: false }))).toEqual({
+      evidenceCompleteness: 1,
+      scoreQualification: "NR",
+    });
   });
 
   it("keeps complete opportunity evidence rated without changing completeness", () => {

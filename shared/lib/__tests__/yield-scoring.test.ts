@@ -70,9 +70,14 @@ describe("resolvePysSourceRiskPenalty", () => {
 });
 
 describe("computePysRewardShare", () => {
-  it("clamps reward-heavy rows when reward APY exceeds current APY", () => {
-    expect(computePysRewardShare(12, 8)).toBe(1);
+  it("publishes the raw reward ratio even when rewards exceed net APY", () => {
+    expect(computePysRewardShare(12, 8)).toBe(1.5);
     expect(computePysRewardShare(4, 8)).toBe(0.5);
+  });
+
+  it("caps the reward penalty without capping the measurement", () => {
+    expect(derivePysSourceRiskPenalty({ rewardShare: computePysRewardShare(12, 8) })).toBe(1.5);
+    expect(derivePysSourceRiskPenalty({ rewardShare: 1 })).toBe(1.5);
   });
 
   it("keeps invalid or non-positive current APY unmeasured", () => {
@@ -245,7 +250,7 @@ describe("computePysComponents", () => {
 
   it("floors sustainabilityMultiplier at 0.3", () => {
     const result = computePysComponents({ apy30d: 5, safetyScore: 80, apyVarianceScore: 0.9 });
-    expect(result.sustainabilityMultiplier).toBe(0.3); // 1.0 - 0.9 = 0.1, floored to 0.3
+    expect(result.sustainabilityMultiplier).toBe(PYS_SUSTAINABILITY_FLOOR); // 1.0 - 0.9 = 0.1, floored
   });
 
   it("applies explicit source-risk penalty after effective yield and before safety scaling", () => {
@@ -383,27 +388,22 @@ describe("computePYS", () => {
   });
 
   describe("non-finite measurement guards (B12/B25)", () => {
-    it("fails a non-finite variance closed to the sustainability floor", () => {
-      for (const apyVarianceScore of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
-        expect(computePysComponents({ apy30d: 5, safetyScore: 80, apyVarianceScore }).sustainabilityMultiplier).toBe(
-          PYS_SUSTAINABILITY_FLOOR,
-        );
+    it("keeps missing and non-finite variance unavailable", () => {
+      for (const apyVarianceScore of [null, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+        expect(computePysComponents({ apy30d: 5, safetyScore: 80, apyVarianceScore }).sustainabilityMultiplier).toBeNull();
+        expect(computePYS({ apy30d: 8, safetyScore: 80, apyVarianceScore, scalingFactor: 8 })).toBe(0);
       }
-      expect(
-        computePYS({ apy30d: 8, safetyScore: 80, apyVarianceScore: Number.NaN, scalingFactor: 8 }),
-      ).toBe(computePYS({ apy30d: 8, safetyScore: 80, apyVarianceScore: 1, scalingFactor: 8 }));
     });
 
-    it("keeps a missing variance at the documented best-case default", () => {
-      const result = computePysComponents({ apy30d: 5, safetyScore: 80, apyVarianceScore: null });
-      expect(result.sustainabilityMultiplier).toBe(1);
+    it("retains full credit for genuinely measured zero variance", () => {
+      expect(computePysComponents({ apy30d: 5, safetyScore: 80, apyVarianceScore: 0 }).sustainabilityMultiplier).toBe(1);
     });
 
-    it("converts missing and non-finite stabilities to the documented 0 variance", () => {
-      expect(yieldStabilityToApyVarianceScore(null)).toBe(0);
-      expect(yieldStabilityToApyVarianceScore(undefined)).toBe(0);
-      expect(yieldStabilityToApyVarianceScore(Number.NaN)).toBe(0);
-      expect(yieldStabilityToApyVarianceScore(Number.POSITIVE_INFINITY)).toBe(0);
+    it("preserves unavailable stability while bounding finite measurements", () => {
+      expect(yieldStabilityToApyVarianceScore(null)).toBeNull();
+      expect(yieldStabilityToApyVarianceScore(undefined)).toBeNull();
+      expect(yieldStabilityToApyVarianceScore(Number.NaN)).toBeNull();
+      expect(yieldStabilityToApyVarianceScore(Number.POSITIVE_INFINITY)).toBeNull();
       expect(yieldStabilityToApyVarianceScore(0.32)).toBeCloseTo(0.68, 6);
       expect(yieldStabilityToApyVarianceScore(1.4)).toBe(0);
       expect(yieldStabilityToApyVarianceScore(-0.4)).toBe(1);

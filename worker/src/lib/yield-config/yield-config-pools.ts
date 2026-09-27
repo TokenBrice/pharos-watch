@@ -1,10 +1,20 @@
 export const YIELD_POOL_MAP: Record<string, string> = {
   // USD3 - 3Jane senior credit tranche, Ethereum, native NAV appreciation
   "usd3-3jane": "f8cd444e-d99f-4132-b234-fd3482bf8806",
+  // VBILL - VanEck Treasury Fund, BSC; distributed holder yield, not NAV appreciation.
+  "vbill-vaneck": "2f7d9d91-af21-4424-92e4-1c8aef7e8f76",
+  "steakusdt-steakhouse": "ef5d3acb-b974-4db1-8076-e8db9f142493",
+  // Both Prime receipts have same-symbol siblings; the UUID owns the vault identity.
+  "steakusdc-steakhouse": "931ea9be-5f4d-428e-beaf-205fc5b4e2b5",
+  "sdola-inverse-finance": "bf0f95c9-bc46-467d-9762-1d80ff50cd74",
   // sUSDe - ethena-usde native staking, Ethereum, $3.5B TVL, ~3.6% APY
   "susde-ethena": "66985a81-9c51-46ca-9977-42b4fe7bc6df",
-  // USYC - ondo-yield-assets (listed as USDYC), Ethereum, $602M TVL, ~3.6% APY
-  "usyc-hashnote": "ee457473-3b5f-4b53-8c8a-fde6b2e16c8a",
+  // Strata's native senior receipt; DL reports its catalogued USDe deposit asset.
+  "srusde-strata": "843be062-d836-43ef-9670-c78d6ecb60bf",
+  // USTB issuer fund on Ethereum, not the Aave collateral market or bridged venues.
+  "ustb-superstate": "1910847a-f8b5-40ce-a1ab-1dafdded5fbb",
+  // USYC - Circle native fund shares, Ethereum; underlying matches the tracked contract.
+  "usyc-hashnote": "448a64ff-06fd-4e56-b63c-03662ac39010",
   // USDY - ondo-yield-assets native, Ethereum, $149M TVL, ~3.6% APY
   "usdy-ondo-finance": "ac61ee82-2fe4-4f9b-a9cd-7fb33f598859",
   // BUIDL (173) - no DL pool; Blackrock/Securitize fund not tracked by DL Yields
@@ -41,8 +51,6 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   // BOLD (269) - not yield-bearing by itself; its Stability Pool opportunity is
   //              published by the deterministic Liquity V2 branch reader
   //              (`onchain:bold-liquity`), not by a curated DeFiLlama pool.
-  // ZCHF - frankencoin native savings (no wrapper), Ethereum, $7.1M TVL, ~3.8% APY
-  "zchf-frankencoin": "8b427366-7bfb-4c61-88be-8dc004fdc3da",
   // fxUSD - fx-protocol Stability Pool, Ethereum, $33.9M TVL, ~4.0% APY
   //         (DL symbol is FXUSDSTABILITYPOOLV2.0, not fxUSD — must use static map)
   "fxusd-f-x-protocol": "abd6c9e1-3b52-459a-a31b-9022a4dcf7e2",
@@ -75,8 +83,10 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   "stcusd-cap": "bf6ca887-e357-49ec-8031-0d1a6141c455",
   // SMARDEX USDN - native rebasing vault, Ethereum, $1M+ TVL
   "usdn-smardex": "f51bb9f9-0a01-4aa2-9c62-b9ef6b55d109",
-  // HedgeCore sUSD - HedgeCore routes USDC collateral through Venus on BSC
-  "susd-hedgecore": "89eba1e5-1b1b-47b6-958b-38138a04c244",
+  // HedgeCore sUSD's Venus USDC pin is quarantined (2026-09-27): documented
+  // holder rewards are 93% of Venus APY, not the gross pool quote. Read-only BSC
+  // convertToAssets / exchangeRateStored / totalAssets calls revert on sUSD;
+  // no measurable holder exchange-rate history proves equivalence.
   // gtUSDC - morpho-blue Gauntlet USDC vault, Ethereum, $147M TVL, ~3.58% APY
   "gtusdc-gauntlet": "a306885c-001e-4479-9ae8-459a56527bc1",
   // bbqUSDC - morpho-blue Smokehouse USDC vault, Ethereum, $18M TVL, ~4.3% APY

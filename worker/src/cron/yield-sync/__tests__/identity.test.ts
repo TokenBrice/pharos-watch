@@ -47,10 +47,10 @@ describe("resolveYieldCandidateStablecoinId", () => {
         { symbol: "USDX", chain: "solana", address: targetMint.toLowerCase() },
         lookups,
       ),
-    ).toEqual({ status: "ambiguous" });
+    ).toEqual({ status: "unresolved" });
   });
 
-  it("resolves a unique chain-scoped symbol when two coins share the symbol on different chains", () => {
+  it("rejects a contradictory address even when the chain-scoped symbol is unique", () => {
     const lookups = buildYieldIdentityLookups([
       makeCoin("usdx-a", "USDX", [{ chain: "ethereum", address: "0xAAA" }]),
       makeCoin("usdx-b", "USDX", [{ chain: "arbitrum", address: "0xBBB" }]),
@@ -61,7 +61,8 @@ describe("resolveYieldCandidateStablecoinId", () => {
       lookups,
     );
 
-    expect(result).toEqual({
+    expect(result).toEqual({ status: "unresolved" });
+    expect(resolveYieldCandidateStablecoinId({ symbol: "USDX", chain: "arbitrum" }, lookups)).toEqual({
       status: "matched",
       stablecoinId: "usdx-b",
       matchType: "unique-chain-symbol",
@@ -75,7 +76,7 @@ describe("resolveYieldCandidateStablecoinId", () => {
     ]);
 
     const result = resolveYieldCandidateStablecoinId(
-      { symbol: "USDX", chain: "ethereum", address: "0xUNKNOWN" },
+      { symbol: "USDX", chain: "ethereum" },
       lookups,
     );
 

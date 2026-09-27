@@ -6,7 +6,7 @@
  * report card does not measure. This module derives a source-keyed
  * OpportunityRisk contract: underlying stablecoin safety is one component,
  * reviewed venue risk and market evidence adjust it, and missing critical
- * market evidence produces NR rather than a neutral exact score.
+ * market evidence produces NR with opportunity-evidence-missing while the row remains published.
  *
  * Royco Dawn tranches keep their bespoke market-health model in
  * `royco-tranche-safety.ts`; this module covers the remaining external
@@ -92,7 +92,7 @@ export interface YieldOpportunityRiskInput {
  * Assess a non-Royco external opportunity. Critical market evidence (a
  * reviewed venue, an observable market size, and market status for structured
  * tranches) must be present for an opportunity safety score; otherwise the
- * contract reports what is missing and the caller withholds an exact PYS (NR).
+ * contract reports what is missing and the caller withholds PYS (NR) without rejecting the row.
  * Noncritical facts (utilization, access, withdrawal constraints) penalize
  * only when observed — absence is handled by evidence-completeness
  * qualification, never invented.

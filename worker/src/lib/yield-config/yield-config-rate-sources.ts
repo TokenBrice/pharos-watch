@@ -304,6 +304,21 @@ export const DIRECT_PROTOCOL_API_SOURCE_KEYS: Record<string, string> = {
 };
 
 const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason> = {
+  "susd-hedgecore": {
+    code: "no-public-yield-source",
+    since: "2026-09-27",
+    note: "Venus gross APY pin quarantined: holder rewards pass through 93%, and on-chain exchange-rate reads revert; no measured holder-return equivalence",
+  },
+  "bc3m-backed": {
+    code: "no-public-yield-source",
+    since: "2026-09-27",
+    note: "USD supply-history prices cannot measure EUR-denominated holder return; price-derived yield is unavailable without native-currency return evidence",
+  },
+  "usdb-blast": {
+    code: "no-public-yield-source",
+    since: "2026-09-27",
+    note: "Rebasing holder yield is not price appreciation; no reviewed rebasing-return adapter is wired",
+  },
   "bfusd-binance": {
     code: "off-chain-account-product",
     since: "2026-04-14",

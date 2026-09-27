@@ -50,14 +50,14 @@ export function assessYieldEvidence(input: YieldEvidenceAssessmentInput): YieldE
   if (
     input.sourceFreshness !== "fresh" ||
     input.benchmarkFreshness === "stale" ||
-    input.referenceBenchmarkFreshness === "stale"
+    input.referenceBenchmarkFreshness === "stale" ||
+    input.opportunityEvidenceComplete === false
   ) {
     return { evidenceCompleteness, scoreQualification: "NR" };
   }
 
   if (
     !input.safetyObserved ||
-    input.opportunityEvidenceComplete === false ||
     input.evidenceClass === "modeled-proxy" ||
     input.evidenceClass === "fallback" ||
     input.benchmarkFreshness === "degraded" ||

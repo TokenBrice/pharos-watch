@@ -72,6 +72,8 @@ export function classifyYieldBenchmarkFreshness(meta: {
   recordDate?: string | null;
   /** Per-key bound, normally `YIELD_BENCHMARK_RECORD_MAX_AGE_SEC[key]`. */
   maxRecordAgeSec?: number | null;
+  /** Assessment clock; defaults to the current time. */
+  nowSec?: number;
 }): YieldBenchmarkFreshness {
   if (
     meta.ageSeconds == null ||
@@ -83,7 +85,7 @@ export function classifyYieldBenchmarkFreshness(meta: {
   }
   const maxRecordAgeSec = options?.maxRecordAgeSec;
   if (maxRecordAgeSec != null && Number.isFinite(maxRecordAgeSec)) {
-    const recordAgeSec = benchmarkRecordAgeSeconds(options?.recordDate, Math.floor(Date.now() / 1000));
+    const recordAgeSec = benchmarkRecordAgeSeconds(options?.recordDate, options?.nowSec ?? Math.floor(Date.now() / 1000));
     if (recordAgeSec == null || recordAgeSec < 0 || recordAgeSec > maxRecordAgeSec) {
       return "stale";
     }
